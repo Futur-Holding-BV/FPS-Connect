@@ -4578,6 +4578,353 @@ export const VoltooiOnderhoudResponse = zod.object({
 
 
 /**
+ * @summary Onderhoudscontracten ophalen
+ */
+export const ListOnderhoudscontractenQueryParams = zod.object({
+  "gebouw_id": zod.coerce.number().optional(),
+  "status": zod.coerce.string().optional()
+})
+
+export const ListOnderhoudscontractenResponseItem = zod.object({
+  "id": zod.number(),
+  "contractnummer": zod.string(),
+  "gebouw_id": zod.number().nullish(),
+  "gebouw_naam": zod.string().nullish(),
+  "opdrachtgever": zod.string().nullish(),
+  "contactpersoon_naam": zod.string().nullish(),
+  "contactpersoon_email": zod.string().nullish(),
+  "contactpersoon_telefoon": zod.string().nullish(),
+  "contracttype": zod.string(),
+  "ingangsdatum": zod.string().nullish(),
+  "einddatum": zod.string().nullish(),
+  "looptijd_maanden": zod.number().nullish(),
+  "automatische_verlenging": zod.boolean(),
+  "opzegtermijn_maanden": zod.number().nullish(),
+  "indexering": zod.string(),
+  "indexering_percentage": zod.number().nullish(),
+  "contractwaarde": zod.number().nullish(),
+  "facturatie_frequentie": zod.string(),
+  "onderhouds_frequentie": zod.string(),
+  "eerstvolgende_onderhoud": zod.string().nullish(),
+  "laatste_onderhoud": zod.string().nullish(),
+  "status": zod.string(),
+  "notities": zod.string().nullish(),
+  "aangemaakt_door_id": zod.number().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().nullish(),
+  "werkbonnen_telling": zod.number().nullish()
+})
+export const ListOnderhoudscontractenResponse = zod.array(ListOnderhoudscontractenResponseItem)
+
+
+/**
+ * @summary Onderhoudscontract aanmaken
+ */
+export const CreateOnderhoudscontractBody = zod.object({
+  "gebouw_id": zod.number().nullish(),
+  "opdrachtgever": zod.string().nullish(),
+  "contactpersoon_naam": zod.string().nullish(),
+  "contactpersoon_email": zod.string().nullish(),
+  "contactpersoon_telefoon": zod.string().nullish(),
+  "contracttype": zod.string(),
+  "ingangsdatum": zod.string().nullish(),
+  "einddatum": zod.string().nullish(),
+  "looptijd_maanden": zod.number().nullish(),
+  "automatische_verlenging": zod.boolean().optional(),
+  "opzegtermijn_maanden": zod.number().nullish(),
+  "indexering": zod.string(),
+  "indexering_percentage": zod.number().nullish(),
+  "contractwaarde": zod.number().nullish(),
+  "facturatie_frequentie": zod.string(),
+  "onderhouds_frequentie": zod.string(),
+  "eerstvolgende_onderhoud": zod.string().nullish(),
+  "laatste_onderhoud": zod.string().nullish(),
+  "status": zod.string().optional(),
+  "notities": zod.string().nullish()
+})
+
+export const CreateOnderhoudscontractResponse = zod.void()
+
+
+/**
+ * @summary Dashboard statistieken onderhoudscontracten
+ */
+export const GetOnderhoudscontractenStatistiekenResponse = zod.object({
+  "totaal": zod.number(),
+  "actief": zod.number(),
+  "concept": zod.number(),
+  "aflopend_30_dagen": zod.number(),
+  "verlopen": zod.number(),
+  "contractwaarde_totaal": zod.number(),
+  "onderhoud_deze_maand": zod.number(),
+  "achterstallig": zod.number(),
+  "werkbonnen_open": zod.number()
+})
+
+
+/**
+ * @summary Onderhoudscontract ophalen
+ */
+export const GetOnderhoudscontractParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetOnderhoudscontractResponse = zod.object({
+  "id": zod.number(),
+  "contractnummer": zod.string(),
+  "gebouw_id": zod.number().nullish(),
+  "gebouw_naam": zod.string().nullish(),
+  "opdrachtgever": zod.string().nullish(),
+  "contactpersoon_naam": zod.string().nullish(),
+  "contactpersoon_email": zod.string().nullish(),
+  "contactpersoon_telefoon": zod.string().nullish(),
+  "contracttype": zod.string(),
+  "ingangsdatum": zod.string().nullish(),
+  "einddatum": zod.string().nullish(),
+  "looptijd_maanden": zod.number().nullish(),
+  "automatische_verlenging": zod.boolean(),
+  "opzegtermijn_maanden": zod.number().nullish(),
+  "indexering": zod.string(),
+  "indexering_percentage": zod.number().nullish(),
+  "contractwaarde": zod.number().nullish(),
+  "facturatie_frequentie": zod.string(),
+  "onderhouds_frequentie": zod.string(),
+  "eerstvolgende_onderhoud": zod.string().nullish(),
+  "laatste_onderhoud": zod.string().nullish(),
+  "status": zod.string(),
+  "notities": zod.string().nullish(),
+  "aangemaakt_door_id": zod.number().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().nullish(),
+  "werkbonnen_telling": zod.number().nullish()
+})
+
+
+/**
+ * @summary Onderhoudscontract bijwerken
+ */
+export const UpdateOnderhoudscontractParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateOnderhoudscontractBody = zod.object({
+  "gebouw_id": zod.number().nullish(),
+  "opdrachtgever": zod.string().nullish(),
+  "contactpersoon_naam": zod.string().nullish(),
+  "contactpersoon_email": zod.string().nullish(),
+  "contactpersoon_telefoon": zod.string().nullish(),
+  "contracttype": zod.string().optional(),
+  "ingangsdatum": zod.string().nullish(),
+  "einddatum": zod.string().nullish(),
+  "looptijd_maanden": zod.number().nullish(),
+  "automatische_verlenging": zod.boolean().optional(),
+  "opzegtermijn_maanden": zod.number().nullish(),
+  "indexering": zod.string().optional(),
+  "indexering_percentage": zod.number().nullish(),
+  "contractwaarde": zod.number().nullish(),
+  "facturatie_frequentie": zod.string().optional(),
+  "onderhouds_frequentie": zod.string().optional(),
+  "eerstvolgende_onderhoud": zod.string().nullish(),
+  "laatste_onderhoud": zod.string().nullish(),
+  "status": zod.string().optional(),
+  "notities": zod.string().nullish()
+})
+
+export const UpdateOnderhoudscontractResponse = zod.object({
+  "id": zod.number(),
+  "contractnummer": zod.string(),
+  "gebouw_id": zod.number().nullish(),
+  "gebouw_naam": zod.string().nullish(),
+  "opdrachtgever": zod.string().nullish(),
+  "contactpersoon_naam": zod.string().nullish(),
+  "contactpersoon_email": zod.string().nullish(),
+  "contactpersoon_telefoon": zod.string().nullish(),
+  "contracttype": zod.string(),
+  "ingangsdatum": zod.string().nullish(),
+  "einddatum": zod.string().nullish(),
+  "looptijd_maanden": zod.number().nullish(),
+  "automatische_verlenging": zod.boolean(),
+  "opzegtermijn_maanden": zod.number().nullish(),
+  "indexering": zod.string(),
+  "indexering_percentage": zod.number().nullish(),
+  "contractwaarde": zod.number().nullish(),
+  "facturatie_frequentie": zod.string(),
+  "onderhouds_frequentie": zod.string(),
+  "eerstvolgende_onderhoud": zod.string().nullish(),
+  "laatste_onderhoud": zod.string().nullish(),
+  "status": zod.string(),
+  "notities": zod.string().nullish(),
+  "aangemaakt_door_id": zod.number().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().nullish(),
+  "werkbonnen_telling": zod.number().nullish()
+})
+
+
+/**
+ * @summary Onderhoudscontract verwijderen
+ */
+export const DeleteOnderhoudscontractParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteOnderhoudscontractResponse = zod.void()
+
+
+/**
+ * @summary Werkbonnen ophalen
+ */
+export const ListWerkbonnenQueryParams = zod.object({
+  "contract_id": zod.coerce.number().optional(),
+  "gebouw_id": zod.coerce.number().optional(),
+  "status": zod.coerce.string().optional(),
+  "monteur_id": zod.coerce.number().optional()
+})
+
+export const ListWerkbonnenResponseItem = zod.object({
+  "id": zod.number(),
+  "werkbonnummer": zod.string(),
+  "contract_id": zod.number().nullish(),
+  "contractnummer": zod.string().nullish(),
+  "gebouw_id": zod.number().nullish(),
+  "gebouw_naam": zod.string().nullish(),
+  "titel": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "type": zod.string(),
+  "geplande_kwartaal": zod.string().nullish(),
+  "geplande_periode_van": zod.string().nullish(),
+  "geplande_periode_tot": zod.string().nullish(),
+  "geplande_datum": zod.string().nullish(),
+  "uitvoer_datum": zod.string().nullish(),
+  "monteur_id": zod.number().nullish(),
+  "monteur_naam": zod.string().nullish(),
+  "duur_uren": zod.number().nullish(),
+  "status": zod.string(),
+  "opmerkingen": zod.string().nullish(),
+  "resultaat": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().nullish()
+})
+export const ListWerkbonnenResponse = zod.array(ListWerkbonnenResponseItem)
+
+
+/**
+ * @summary Werkbon aanmaken
+ */
+export const CreateWerkbonBody = zod.object({
+  "contract_id": zod.number().nullish(),
+  "gebouw_id": zod.number().nullish(),
+  "titel": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "type": zod.string(),
+  "geplande_kwartaal": zod.string().nullish(),
+  "geplande_periode_van": zod.string().nullish(),
+  "geplande_periode_tot": zod.string().nullish(),
+  "geplande_datum": zod.string().nullish(),
+  "monteur_id": zod.number().nullish(),
+  "duur_uren": zod.number().nullish(),
+  "status": zod.string().optional(),
+  "opmerkingen": zod.string().nullish()
+})
+
+export const CreateWerkbonResponse = zod.void()
+
+
+/**
+ * @summary Werkbon ophalen
+ */
+export const GetWerkbonParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetWerkbonResponse = zod.object({
+  "id": zod.number(),
+  "werkbonnummer": zod.string(),
+  "contract_id": zod.number().nullish(),
+  "contractnummer": zod.string().nullish(),
+  "gebouw_id": zod.number().nullish(),
+  "gebouw_naam": zod.string().nullish(),
+  "titel": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "type": zod.string(),
+  "geplande_kwartaal": zod.string().nullish(),
+  "geplande_periode_van": zod.string().nullish(),
+  "geplande_periode_tot": zod.string().nullish(),
+  "geplande_datum": zod.string().nullish(),
+  "uitvoer_datum": zod.string().nullish(),
+  "monteur_id": zod.number().nullish(),
+  "monteur_naam": zod.string().nullish(),
+  "duur_uren": zod.number().nullish(),
+  "status": zod.string(),
+  "opmerkingen": zod.string().nullish(),
+  "resultaat": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().nullish()
+})
+
+
+/**
+ * @summary Werkbon bijwerken
+ */
+export const UpdateWerkbonParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateWerkbonBody = zod.object({
+  "contract_id": zod.number().nullish(),
+  "gebouw_id": zod.number().nullish(),
+  "titel": zod.string().optional(),
+  "omschrijving": zod.string().nullish(),
+  "type": zod.string().optional(),
+  "geplande_kwartaal": zod.string().nullish(),
+  "geplande_periode_van": zod.string().nullish(),
+  "geplande_periode_tot": zod.string().nullish(),
+  "geplande_datum": zod.string().nullish(),
+  "uitvoer_datum": zod.string().nullish(),
+  "monteur_id": zod.number().nullish(),
+  "duur_uren": zod.number().nullish(),
+  "status": zod.string().optional(),
+  "opmerkingen": zod.string().nullish(),
+  "resultaat": zod.string().nullish()
+})
+
+export const UpdateWerkbonResponse = zod.object({
+  "id": zod.number(),
+  "werkbonnummer": zod.string(),
+  "contract_id": zod.number().nullish(),
+  "contractnummer": zod.string().nullish(),
+  "gebouw_id": zod.number().nullish(),
+  "gebouw_naam": zod.string().nullish(),
+  "titel": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "type": zod.string(),
+  "geplande_kwartaal": zod.string().nullish(),
+  "geplande_periode_van": zod.string().nullish(),
+  "geplande_periode_tot": zod.string().nullish(),
+  "geplande_datum": zod.string().nullish(),
+  "uitvoer_datum": zod.string().nullish(),
+  "monteur_id": zod.number().nullish(),
+  "monteur_naam": zod.string().nullish(),
+  "duur_uren": zod.number().nullish(),
+  "status": zod.string(),
+  "opmerkingen": zod.string().nullish(),
+  "resultaat": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().nullish()
+})
+
+
+/**
+ * @summary Werkbon verwijderen
+ */
+export const DeleteWerkbonParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteWerkbonResponse = zod.void()
+
+
+/**
  * @summary Minimale lijst van toewijsbare personen voor toewijzingen
  */
 export const ListToewijsbareGebruikersResponseItem = zod.object({

@@ -10,6 +10,28 @@ Grote roadmap-fases staan ook in `docs/roadmap/gebouwd.md` en `docs/roadmap/acti
 
 ---
 
+## 2026-06-30 — Onderhoudsmodule (contracten + werkbonnen)
+
+**Uitvoering:** volledig | **Diepere lagen:** volledig | **Getest:** typecheck + e2e groen
+
+Zelfstandige onderhoudsmodule gebouwd, los van de projectworkflow:
+
+- **DB schema** (`lib/db/src/schema/onderhoud.ts`): twee nieuwe tabellen toegevoegd:
+  - `onderhoudscontracten` — contracttype, looptijd, frequentie, indexering, contractwaarde, contactpersoon, status, automatische verlenging
+  - `werkbonnen` — gekoppeld aan contract + gebouw, kwartaalplanning, monteur, status (gepland/in_uitvoering/voltooid/geannuleerd), resultaat/bevindingen
+- **OpenAPI** (`lib/api-spec/openapi.yaml`): volledige CRUD voor beide entiteiten + statistieken-endpoint (`/onderhoudscontracten/statistieken`)
+- **API routes** (`artifacts/api-server/src/routes/`): twee nieuwe routers (`onderhoudscontracten.ts` + `werkbonnen.ts`) met auto-nummering `OC-JJJJ-NNN` / `WB-JJJJ-NNN`, bevoegdheid-gating op `onderhoud` module, activiteit-logging bij aanmaken/voltooien
+- **Frontend** (`artifacts/firevault/src/pages/onderhoud/`): zes pagina's:
+  - `index.tsx` — module-hub met tabnavigatie (Dashboard / Contracten / Werkbonnen)
+  - `dashboard.tsx` — KPI-kaarten (actieve contracten, contractwaarde, open werkbonnen, onderhoud deze maand), alerts voor aflopende contracten en achterstallig onderhoud
+  - `contracten.tsx` — lijst met zoek/filter + aanmaakdialoog
+  - `contract-detail.tsx` — detailweergave, inline bewerken, werkbonnen sub-lijst per contract
+  - `werkbonnen-lijst.tsx` — overzicht alle werkbonnen met status/type-filter + aanmaakdialoog
+  - `werkbon-detail.tsx` — detailweergave, statusmachine (Start uitvoering / Voltooien), inline bewerken
+- **Routing** (`App.tsx`): routes `/onderhoud/contracten/:id`, `/onderhoud/werkbonnen/:id`, `/onderhoud/:rest*` toegevoegd
+
+---
+
 ## 29 juni 2026
 
 ### Fix — nieuw onboarde monteur niet zichtbaar in planning

@@ -9,6 +9,10 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: onderhoudscontracten
+    description: Onderhoudscontracten en contractbeheer
+  - name: werkbonnen
+    description: Werkbonnen voor onderhoud
   - name: gebouwen
     description: Gebouw- en verdiepingsbeheer
   - name: voorzieningen
@@ -3797,6 +3801,209 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Onderhoudstaak"
+
+  # ── ONDERHOUDSCONTRACTEN ──────────────────────────────────────────────────
+  /onderhoudscontracten:
+    get:
+      operationId: listOnderhoudscontracten
+      tags: [onderhoudscontracten]
+      summary: Onderhoudscontracten ophalen
+      parameters:
+        - in: query
+          name: gebouw_id
+          schema: { type: integer }
+        - in: query
+          name: status
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Onderhoudscontract"
+    post:
+      operationId: createOnderhoudscontract
+      tags: [onderhoudscontracten]
+      summary: Onderhoudscontract aanmaken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OnderhoudscontractInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Onderhoudscontract"
+
+  /onderhoudscontracten/statistieken:
+    get:
+      operationId: getOnderhoudscontractenStatistieken
+      tags: [onderhoudscontracten]
+      summary: Dashboard statistieken onderhoudscontracten
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OnderhoudsStatistieken"
+
+  /onderhoudscontracten/{id}:
+    get:
+      operationId: getOnderhoudscontract
+      tags: [onderhoudscontracten]
+      summary: Onderhoudscontract ophalen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Onderhoudscontract"
+    patch:
+      operationId: updateOnderhoudscontract
+      tags: [onderhoudscontracten]
+      summary: Onderhoudscontract bijwerken
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OnderhoudscontractUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Onderhoudscontract"
+    delete:
+      operationId: deleteOnderhoudscontract
+      tags: [onderhoudscontracten]
+      summary: Onderhoudscontract verwijderen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "204":
+          description: Verwijderd
+
+  # ── WERKBONNEN ────────────────────────────────────────────────────────────
+  /werkbonnen:
+    get:
+      operationId: listWerkbonnen
+      tags: [werkbonnen]
+      summary: Werkbonnen ophalen
+      parameters:
+        - in: query
+          name: contract_id
+          schema: { type: integer }
+        - in: query
+          name: gebouw_id
+          schema: { type: integer }
+        - in: query
+          name: status
+          schema: { type: string }
+        - in: query
+          name: monteur_id
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Werkbon"
+    post:
+      operationId: createWerkbon
+      tags: [werkbonnen]
+      summary: Werkbon aanmaken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WerkbonInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Werkbon"
+
+  /werkbonnen/{id}:
+    get:
+      operationId: getWerkbon
+      tags: [werkbonnen]
+      summary: Werkbon ophalen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Werkbon"
+    patch:
+      operationId: updateWerkbon
+      tags: [werkbonnen]
+      summary: Werkbon bijwerken
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WerkbonUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Werkbon"
+    delete:
+      operationId: deleteWerkbon
+      tags: [werkbonnen]
+      summary: Werkbon verwijderen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "204":
+          description: Verwijderd
 
   # ── GEBRUIKERS ────────────────────────────────────────────────────────────
   /toewijsbare-gebruikers:
@@ -28081,3 +28288,166 @@ components:
           items:
             type: object
         aangemaakt_op:      { type: string }
+
+    # ── Onderhoudscontracten ──────────────────────────────────────────────────
+
+    Onderhoudscontract:
+      type: object
+      required: [id, contractnummer, contracttype, facturatie_frequentie, onderhouds_frequentie, indexering, automatische_verlenging, status, aangemaakt_op]
+      properties:
+        id:                       { type: integer }
+        contractnummer:           { type: string }
+        gebouw_id:                { type: ["integer", "null"] }
+        gebouw_naam:              { type: ["string", "null"] }
+        opdrachtgever:            { type: ["string", "null"] }
+        contactpersoon_naam:      { type: ["string", "null"] }
+        contactpersoon_email:     { type: ["string", "null"] }
+        contactpersoon_telefoon:  { type: ["string", "null"] }
+        contracttype:             { type: string }
+        ingangsdatum:             { type: ["string", "null"] }
+        einddatum:                { type: ["string", "null"] }
+        looptijd_maanden:         { type: ["integer", "null"] }
+        automatische_verlenging:  { type: boolean }
+        opzegtermijn_maanden:     { type: ["integer", "null"] }
+        indexering:               { type: string }
+        indexering_percentage:    { type: ["number", "null"] }
+        contractwaarde:           { type: ["number", "null"] }
+        facturatie_frequentie:    { type: string }
+        onderhouds_frequentie:    { type: string }
+        eerstvolgende_onderhoud:  { type: ["string", "null"] }
+        laatste_onderhoud:        { type: ["string", "null"] }
+        status:                   { type: string }
+        notities:                 { type: ["string", "null"] }
+        aangemaakt_door_id:       { type: ["integer", "null"] }
+        aangemaakt_op:            { type: string }
+        bijgewerkt_op:            { type: ["string", "null"] }
+        werkbonnen_telling:       { type: ["integer", "null"] }
+
+    OnderhoudscontractInput:
+      type: object
+      required: [contracttype, facturatie_frequentie, onderhouds_frequentie, indexering]
+      properties:
+        gebouw_id:                { type: ["integer", "null"] }
+        opdrachtgever:            { type: ["string", "null"] }
+        contactpersoon_naam:      { type: ["string", "null"] }
+        contactpersoon_email:     { type: ["string", "null"] }
+        contactpersoon_telefoon:  { type: ["string", "null"] }
+        contracttype:             { type: string }
+        ingangsdatum:             { type: ["string", "null"] }
+        einddatum:                { type: ["string", "null"] }
+        looptijd_maanden:         { type: ["integer", "null"] }
+        automatische_verlenging:  { type: boolean }
+        opzegtermijn_maanden:     { type: ["integer", "null"] }
+        indexering:               { type: string }
+        indexering_percentage:    { type: ["number", "null"] }
+        contractwaarde:           { type: ["number", "null"] }
+        facturatie_frequentie:    { type: string }
+        onderhouds_frequentie:    { type: string }
+        eerstvolgende_onderhoud:  { type: ["string", "null"] }
+        laatste_onderhoud:        { type: ["string", "null"] }
+        status:                   { type: string }
+        notities:                 { type: ["string", "null"] }
+
+    OnderhoudscontractUpdate:
+      type: object
+      properties:
+        gebouw_id:                { type: ["integer", "null"] }
+        opdrachtgever:            { type: ["string", "null"] }
+        contactpersoon_naam:      { type: ["string", "null"] }
+        contactpersoon_email:     { type: ["string", "null"] }
+        contactpersoon_telefoon:  { type: ["string", "null"] }
+        contracttype:             { type: string }
+        ingangsdatum:             { type: ["string", "null"] }
+        einddatum:                { type: ["string", "null"] }
+        looptijd_maanden:         { type: ["integer", "null"] }
+        automatische_verlenging:  { type: boolean }
+        opzegtermijn_maanden:     { type: ["integer", "null"] }
+        indexering:               { type: string }
+        indexering_percentage:    { type: ["number", "null"] }
+        contractwaarde:           { type: ["number", "null"] }
+        facturatie_frequentie:    { type: string }
+        onderhouds_frequentie:    { type: string }
+        eerstvolgende_onderhoud:  { type: ["string", "null"] }
+        laatste_onderhoud:        { type: ["string", "null"] }
+        status:                   { type: string }
+        notities:                 { type: ["string", "null"] }
+
+    OnderhoudsStatistieken:
+      type: object
+      required: [totaal, actief, concept, aflopend_30_dagen, verlopen, contractwaarde_totaal, onderhoud_deze_maand, achterstallig, werkbonnen_open]
+      properties:
+        totaal:                   { type: integer }
+        actief:                   { type: integer }
+        concept:                  { type: integer }
+        aflopend_30_dagen:        { type: integer }
+        verlopen:                 { type: integer }
+        contractwaarde_totaal:    { type: number }
+        onderhoud_deze_maand:     { type: integer }
+        achterstallig:            { type: integer }
+        werkbonnen_open:          { type: integer }
+
+    # ── Werkbonnen ────────────────────────────────────────────────────────────
+
+    Werkbon:
+      type: object
+      required: [id, werkbonnummer, titel, type, status, aangemaakt_op]
+      properties:
+        id:                     { type: integer }
+        werkbonnummer:          { type: string }
+        contract_id:            { type: ["integer", "null"] }
+        contractnummer:         { type: ["string", "null"] }
+        gebouw_id:              { type: ["integer", "null"] }
+        gebouw_naam:            { type: ["string", "null"] }
+        titel:                  { type: string }
+        omschrijving:           { type: ["string", "null"] }
+        type:                   { type: string }
+        geplande_kwartaal:      { type: ["string", "null"] }
+        geplande_periode_van:   { type: ["string", "null"] }
+        geplande_periode_tot:   { type: ["string", "null"] }
+        geplande_datum:         { type: ["string", "null"] }
+        uitvoer_datum:          { type: ["string", "null"] }
+        monteur_id:             { type: ["integer", "null"] }
+        monteur_naam:           { type: ["string", "null"] }
+        duur_uren:              { type: ["number", "null"] }
+        status:                 { type: string }
+        opmerkingen:            { type: ["string", "null"] }
+        resultaat:              { type: ["string", "null"] }
+        aangemaakt_op:          { type: string }
+        bijgewerkt_op:          { type: ["string", "null"] }
+
+    WerkbonInput:
+      type: object
+      required: [titel, type]
+      properties:
+        contract_id:            { type: ["integer", "null"] }
+        gebouw_id:              { type: ["integer", "null"] }
+        titel:                  { type: string }
+        omschrijving:           { type: ["string", "null"] }
+        type:                   { type: string }
+        geplande_kwartaal:      { type: ["string", "null"] }
+        geplande_periode_van:   { type: ["string", "null"] }
+        geplande_periode_tot:   { type: ["string", "null"] }
+        geplande_datum:         { type: ["string", "null"] }
+        monteur_id:             { type: ["integer", "null"] }
+        duur_uren:              { type: ["number", "null"] }
+        status:                 { type: string }
+        opmerkingen:            { type: ["string", "null"] }
+
+    WerkbonUpdate:
+      type: object
+      properties:
+        contract_id:            { type: ["integer", "null"] }
+        gebouw_id:              { type: ["integer", "null"] }
+        titel:                  { type: string }
+        omschrijving:           { type: ["string", "null"] }
+        type:                   { type: string }
+        geplande_kwartaal:      { type: ["string", "null"] }
+        geplande_periode_van:   { type: ["string", "null"] }
+        geplande_periode_tot:   { type: ["string", "null"] }
+        geplande_datum:         { type: ["string", "null"] }
+        uitvoer_datum:          { type: ["string", "null"] }
+        monteur_id:             { type: ["integer", "null"] }
+        duur_uren:              { type: ["number", "null"] }
+        status:                 { type: string }
+        opmerkingen:            { type: ["string", "null"] }
+        resultaat:              { type: ["string", "null"] }

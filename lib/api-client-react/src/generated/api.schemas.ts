@@ -8107,6 +8107,237 @@ export interface ImportLog {
   aangemaakt_op: string;
 }
 
+export interface Onderhoudscontract {
+  id: number;
+  contractnummer: string;
+  /** @nullable */
+  gebouw_id?: number | null;
+  /** @nullable */
+  gebouw_naam?: string | null;
+  /** @nullable */
+  opdrachtgever?: string | null;
+  /** @nullable */
+  contactpersoon_naam?: string | null;
+  /** @nullable */
+  contactpersoon_email?: string | null;
+  /** @nullable */
+  contactpersoon_telefoon?: string | null;
+  contracttype: string;
+  /** @nullable */
+  ingangsdatum?: string | null;
+  /** @nullable */
+  einddatum?: string | null;
+  /** @nullable */
+  looptijd_maanden?: number | null;
+  automatische_verlenging: boolean;
+  /** @nullable */
+  opzegtermijn_maanden?: number | null;
+  indexering: string;
+  /** @nullable */
+  indexering_percentage?: number | null;
+  /** @nullable */
+  contractwaarde?: number | null;
+  facturatie_frequentie: string;
+  onderhouds_frequentie: string;
+  /** @nullable */
+  eerstvolgende_onderhoud?: string | null;
+  /** @nullable */
+  laatste_onderhoud?: string | null;
+  status: string;
+  /** @nullable */
+  notities?: string | null;
+  /** @nullable */
+  aangemaakt_door_id?: number | null;
+  aangemaakt_op: string;
+  /** @nullable */
+  bijgewerkt_op?: string | null;
+  /** @nullable */
+  werkbonnen_telling?: number | null;
+}
+
+export interface OnderhoudscontractInput {
+  /** @nullable */
+  gebouw_id?: number | null;
+  /** @nullable */
+  opdrachtgever?: string | null;
+  /** @nullable */
+  contactpersoon_naam?: string | null;
+  /** @nullable */
+  contactpersoon_email?: string | null;
+  /** @nullable */
+  contactpersoon_telefoon?: string | null;
+  contracttype: string;
+  /** @nullable */
+  ingangsdatum?: string | null;
+  /** @nullable */
+  einddatum?: string | null;
+  /** @nullable */
+  looptijd_maanden?: number | null;
+  automatische_verlenging?: boolean;
+  /** @nullable */
+  opzegtermijn_maanden?: number | null;
+  indexering: string;
+  /** @nullable */
+  indexering_percentage?: number | null;
+  /** @nullable */
+  contractwaarde?: number | null;
+  facturatie_frequentie: string;
+  onderhouds_frequentie: string;
+  /** @nullable */
+  eerstvolgende_onderhoud?: string | null;
+  /** @nullable */
+  laatste_onderhoud?: string | null;
+  status?: string;
+  /** @nullable */
+  notities?: string | null;
+}
+
+export interface OnderhoudscontractUpdate {
+  /** @nullable */
+  gebouw_id?: number | null;
+  /** @nullable */
+  opdrachtgever?: string | null;
+  /** @nullable */
+  contactpersoon_naam?: string | null;
+  /** @nullable */
+  contactpersoon_email?: string | null;
+  /** @nullable */
+  contactpersoon_telefoon?: string | null;
+  contracttype?: string;
+  /** @nullable */
+  ingangsdatum?: string | null;
+  /** @nullable */
+  einddatum?: string | null;
+  /** @nullable */
+  looptijd_maanden?: number | null;
+  automatische_verlenging?: boolean;
+  /** @nullable */
+  opzegtermijn_maanden?: number | null;
+  indexering?: string;
+  /** @nullable */
+  indexering_percentage?: number | null;
+  /** @nullable */
+  contractwaarde?: number | null;
+  facturatie_frequentie?: string;
+  onderhouds_frequentie?: string;
+  /** @nullable */
+  eerstvolgende_onderhoud?: string | null;
+  /** @nullable */
+  laatste_onderhoud?: string | null;
+  status?: string;
+  /** @nullable */
+  notities?: string | null;
+}
+
+export interface OnderhoudsStatistieken {
+  totaal: number;
+  actief: number;
+  concept: number;
+  aflopend_30_dagen: number;
+  verlopen: number;
+  contractwaarde_totaal: number;
+  onderhoud_deze_maand: number;
+  achterstallig: number;
+  werkbonnen_open: number;
+}
+
+export interface Werkbon {
+  id: number;
+  werkbonnummer: string;
+  /** @nullable */
+  contract_id?: number | null;
+  /** @nullable */
+  contractnummer?: string | null;
+  /** @nullable */
+  gebouw_id?: number | null;
+  /** @nullable */
+  gebouw_naam?: string | null;
+  titel: string;
+  /** @nullable */
+  omschrijving?: string | null;
+  type: string;
+  /** @nullable */
+  geplande_kwartaal?: string | null;
+  /** @nullable */
+  geplande_periode_van?: string | null;
+  /** @nullable */
+  geplande_periode_tot?: string | null;
+  /** @nullable */
+  geplande_datum?: string | null;
+  /** @nullable */
+  uitvoer_datum?: string | null;
+  /** @nullable */
+  monteur_id?: number | null;
+  /** @nullable */
+  monteur_naam?: string | null;
+  /** @nullable */
+  duur_uren?: number | null;
+  status: string;
+  /** @nullable */
+  opmerkingen?: string | null;
+  /** @nullable */
+  resultaat?: string | null;
+  aangemaakt_op: string;
+  /** @nullable */
+  bijgewerkt_op?: string | null;
+}
+
+export interface WerkbonInput {
+  /** @nullable */
+  contract_id?: number | null;
+  /** @nullable */
+  gebouw_id?: number | null;
+  titel: string;
+  /** @nullable */
+  omschrijving?: string | null;
+  type: string;
+  /** @nullable */
+  geplande_kwartaal?: string | null;
+  /** @nullable */
+  geplande_periode_van?: string | null;
+  /** @nullable */
+  geplande_periode_tot?: string | null;
+  /** @nullable */
+  geplande_datum?: string | null;
+  /** @nullable */
+  monteur_id?: number | null;
+  /** @nullable */
+  duur_uren?: number | null;
+  status?: string;
+  /** @nullable */
+  opmerkingen?: string | null;
+}
+
+export interface WerkbonUpdate {
+  /** @nullable */
+  contract_id?: number | null;
+  /** @nullable */
+  gebouw_id?: number | null;
+  titel?: string;
+  /** @nullable */
+  omschrijving?: string | null;
+  type?: string;
+  /** @nullable */
+  geplande_kwartaal?: string | null;
+  /** @nullable */
+  geplande_periode_van?: string | null;
+  /** @nullable */
+  geplande_periode_tot?: string | null;
+  /** @nullable */
+  geplande_datum?: string | null;
+  /** @nullable */
+  uitvoer_datum?: string | null;
+  /** @nullable */
+  monteur_id?: number | null;
+  /** @nullable */
+  duur_uren?: number | null;
+  status?: string;
+  /** @nullable */
+  opmerkingen?: string | null;
+  /** @nullable */
+  resultaat?: string | null;
+}
+
 export type GetRecenteActiviteitParams = {
 limit?: number;
 };
@@ -8262,6 +8493,18 @@ export type ListOnderhoudParams = {
 voorziening_id?: number;
 gebouw_id?: number;
 status?: string;
+};
+
+export type ListOnderhoudscontractenParams = {
+gebouw_id?: number;
+status?: string;
+};
+
+export type ListWerkbonnenParams = {
+contract_id?: number;
+gebouw_id?: number;
+status?: string;
+monteur_id?: number;
 };
 
 export type GebruikerHerkomstBevestigenBulk200 = {
