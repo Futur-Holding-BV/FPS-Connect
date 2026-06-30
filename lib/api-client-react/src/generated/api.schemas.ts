@@ -9353,3 +9353,8 @@ export type ListDocumentStudioModellenParams = {
 werkgever_id?: number;
 };
 
+export type GetActiefDocumentStudioModelParams = {
+werkgever_id: number;
+document_type: string;
+};
+

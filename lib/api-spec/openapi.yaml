@@ -16157,6 +16157,34 @@ paths:
         "404":
           description: Niet gevonden
 
+  /studio/modellen/actief:
+    get:
+      operationId: getActiefDocumentStudioModel
+      tags: [studio]
+      summary: Actief (goedgekeurd) Document Studio model ophalen voor een werkgever + documenttype
+      parameters:
+        - in: query
+          name: werkgever_id
+          required: true
+          schema:
+            type: integer
+        - in: query
+          name: document_type
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Actief goedgekeurd model gevonden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentStudioModel"
+        "400":
+          description: werkgever_id of document_type ontbreekt
+        "404":
+          description: Geen goedgekeurd model gevonden voor dit type
+
   /studio/werkgevers:
     get:
       operationId: listStudioWerkgevers

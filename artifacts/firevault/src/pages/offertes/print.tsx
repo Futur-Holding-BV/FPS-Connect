@@ -6,13 +6,17 @@ import {
   useListOfferteRegels,
   useListOfferteBijlagen,
   useListWerkgevers,
+  useListStudioWerkgevers,
+  useGetActiefDocumentStudioModel,
   getGetOfferteQueryKey,
   getListOfferteSectiesQueryKey,
   getListOfferteRegelsQueryKey,
   getListOfferteBijlagenQueryKey,
+  getGetActiefDocumentStudioModelQueryKey,
 } from "@workspace/api-client-react";
 import { DocumentFrame, DocumentVoet } from "@/components/documentopmaak/DocumentFrame";
 import { VoorbladA } from "@/components/documentopmaak/FamilieA";
+import { CheckCircle2 } from "lucide-react";
 
 function euro(bedrag: number) {
   return new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(bedrag ?? 0);
@@ -40,6 +44,16 @@ export default function OffertePrintPagina() {
     query: { queryKey: getListOfferteBijlagenQueryKey(offerteId), enabled: !!offerteId },
   });
   const { data: werkgevers } = useListWerkgevers();
+  const { data: studioWerkgevers } = useListStudioWerkgevers();
+  const studioWerkgeverId = (studioWerkgevers ?? [])[0]?.id ?? 0;
+  const { data: actiefModel } = useGetActiefDocumentStudioModel(
+    { werkgever_id: studioWerkgeverId, document_type: "offerte" },
+    { query: {
+      queryKey: getGetActiefDocumentStudioModelQueryKey({ werkgever_id: studioWerkgeverId, document_type: "offerte" }),
+      enabled: !!studioWerkgeverId,
+      retry: false,
+    } },
+  );
 
   const klaar = !offerteLoading && !sectiesLoading && !regelsLoading;
 
@@ -114,9 +128,17 @@ export default function OffertePrintPagina() {
   const werkgever = (werkgevers ?? [])[0];
   const datum = datumNl((offerte as any).datum ?? offerte.aangemaakt_op);
 
+  const templateJson = (() => {
+    if (!actiefModel?.connect_template_json) return null;
+    try { return JSON.parse(actiefModel.connect_template_json) as { kleurschema?: { primair?: string }; voettekst?: string | null }; }
+    catch { return null; }
+  })();
+  const accentKleur = templateJson?.kleurschema?.primair ?? null;
+
   const mij = {
     naam: werkgever?.naam ?? "FPS Brandpreventie",
-    logoUrl: "/fps-logo.png",
+    logoUrl: (studioWerkgevers ?? [])[0]?.logo_url ?? "/fps-logo.png",
+    primaireKleur: accentKleur ?? undefined,
     adres: [werkgever?.adres].filter(Boolean).join("") || "",
     postcodeWoonplaats: [werkgever?.postcode, werkgever?.plaats].filter(Boolean).join("  ") || "",
     website: werkgever?.website ?? "",

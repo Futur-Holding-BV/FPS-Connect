@@ -182,6 +182,7 @@ import type {
   GereedschapInput,
   GereedschapMelding,
   GereedschapMeldingInput,
+  GetActiefDocumentStudioModelParams,
   GetAiPresentatieNiveau200,
   GetBoekhouderDashboardParams,
   GetBoekhouderUploadsParams,
@@ -57996,6 +57997,90 @@ export const useGoedkeurenStudioTemplate = <TError = ErrorType<void>,
       > => {
       return useMutation(getGoedkeurenStudioTemplateMutationOptions(options));
     }
+
+export const getGetActiefDocumentStudioModelUrl = (params: GetActiefDocumentStudioModelParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/studio/modellen/actief?${stringifiedParams}` : `/api/studio/modellen/actief`
+}
+
+/**
+ * @summary Actief (goedgekeurd) Document Studio model ophalen voor een werkgever + documenttype
+ */
+export const getActiefDocumentStudioModel = async (params: GetActiefDocumentStudioModelParams, options?: RequestInit): Promise<DocumentStudioModel> => {
+
+  return customFetch<DocumentStudioModel>(getGetActiefDocumentStudioModelUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetActiefDocumentStudioModelQueryKey = (params?: GetActiefDocumentStudioModelParams,) => {
+    return [
+    `/api/studio/modellen/actief`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetActiefDocumentStudioModelQueryOptions = <TData = Awaited<ReturnType<typeof getActiefDocumentStudioModel>>, TError = ErrorType<void>>(params: GetActiefDocumentStudioModelParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getActiefDocumentStudioModel>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetActiefDocumentStudioModelQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getActiefDocumentStudioModel>>> = ({ signal }) => getActiefDocumentStudioModel(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getActiefDocumentStudioModel>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetActiefDocumentStudioModelQueryResult = NonNullable<Awaited<ReturnType<typeof getActiefDocumentStudioModel>>>
+export type GetActiefDocumentStudioModelQueryError = ErrorType<void>
+
+
+/**
+ * @summary Actief (goedgekeurd) Document Studio model ophalen voor een werkgever + documenttype
+ */
+
+export function useGetActiefDocumentStudioModel<TData = Awaited<ReturnType<typeof getActiefDocumentStudioModel>>, TError = ErrorType<void>>(
+ params: GetActiefDocumentStudioModelParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getActiefDocumentStudioModel>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetActiefDocumentStudioModelQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
 export const getListStudioWerkgeversUrl = () => {
 

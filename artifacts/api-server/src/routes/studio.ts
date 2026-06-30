@@ -146,6 +146,44 @@ router.get("/studio/modellen", lezen, async (req, res) => {
   }
 });
 
+// ── Actief model — haal het goedgekeurde model op voor een werkgever + type ──
+
+router.get("/studio/modellen/actief", lezen, async (req, res) => {
+  try {
+    const werkgeverId = req.query.werkgever_id
+      ? parseInt(String(req.query.werkgever_id), 10)
+      : null;
+    const documentType = req.query.document_type
+      ? String(req.query.document_type)
+      : null;
+
+    if (!werkgeverId || isNaN(werkgeverId)) {
+      return res.status(400).json({ error: "werkgever_id is verplicht" });
+    }
+    if (!documentType) {
+      return res.status(400).json({ error: "document_type is verplicht" });
+    }
+
+    const [rij] = await db
+      .select({ model: documentStudioModellenTable, naam: werkgeversTable.naam })
+      .from(documentStudioModellenTable)
+      .leftJoin(werkgeversTable, eq(documentStudioModellenTable.werkgeverId, werkgeversTable.id))
+      .where(
+        and(
+          eq(documentStudioModellenTable.werkgeverId, werkgeverId),
+          eq(documentStudioModellenTable.documentType, documentType),
+          eq(documentStudioModellenTable.status, "goedgekeurd"),
+        ),
+      );
+
+    if (!rij) return res.status(404).json({ error: "Geen goedgekeurd model gevonden voor dit documenttype" });
+    res.json(mapModel(rij.model, rij.naam));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
 // ── Get by id ─────────────────────────────────────────────────────────────────
 
 router.get("/studio/modellen/:id", lezen, async (req, res) => {

@@ -222,6 +222,7 @@ export * from './gereedschapMeldingInputUrgentie';
 export * from './gereedschapMeldingSoortMelding';
 export * from './gereedschapMeldingStatus';
 export * from './gereedschapMeldingUrgentie';
+export * from './getActiefDocumentStudioModelParams';
 export * from './getAiPresentatieNiveau200';
 export * from './getBoekhouderDashboardParams';
 export * from './getBoekhouderUploadsParams';

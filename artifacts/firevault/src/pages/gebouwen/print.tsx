@@ -26,6 +26,9 @@ import {
   useMaakRapportDefinitief,
   useAccordeerCertificaat,
   useListWerkgevers,
+  useListStudioWerkgevers,
+  useGetActiefDocumentStudioModel,
+  getGetActiefDocumentStudioModelQueryKey,
   type Verdieping,
   type VoorzieningType,
   type Cluster,
@@ -1389,6 +1392,16 @@ export default function GebouwPrint() {
   const { isLoading: gebruikersLaden }      = useListToewijsbareGebruikers();
   const { data: huidigRapport }             = useGetRapport(gebouwId, rapportId ?? 0);
   const { data: werkgevers }                = useListWerkgevers();
+  const { data: studioWerkgevers }          = useListStudioWerkgevers();
+  const studioWerkgeverId = (studioWerkgevers ?? [])[0]?.id ?? 0;
+  const { data: actiefStudioModel } = useGetActiefDocumentStudioModel(
+    { werkgever_id: studioWerkgeverId, document_type: "offerte" },
+    { query: {
+      queryKey: getGetActiefDocumentStudioModelQueryKey({ werkgever_id: studioWerkgeverId, document_type: "offerte" }),
+      enabled: !!studioWerkgeverId,
+      retry: false,
+    } },
+  );
   const updateRapport = useUpdateRapport();
   const accordeerCertificaat = useAccordeerCertificaat();
 
@@ -1558,6 +1571,14 @@ export default function GebouwPrint() {
   const logoSrc = resolveAssetUrl("logo-fps.png");
   const werkgeverNaam = (gebouw as any).werkmaatschappij_naam ?? "FPS Brandpreventie";
   const huidigWerkgever = (werkgevers ?? []).find(w => w.naam === werkgeverNaam) ?? (werkgevers ?? [])[0] ?? null;
+
+  const studioTemplateJson = (() => {
+    if (!actiefStudioModel?.connect_template_json) return null;
+    try { return JSON.parse(actiefStudioModel.connect_template_json) as { kleurschema?: { primair?: string }; voettekst?: string | null }; }
+    catch { return null; }
+  })();
+  const studioAccentKleur = studioTemplateJson?.kleurschema?.primair ?? null;
+  const studioVoettekst = studioTemplateJson?.voettekst ?? null;
   const handtekeningUrl = huidigWerkgever?.handtekening_url ?? null;
 
   async function downloadBijlagenbundel() {
