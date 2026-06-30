@@ -10,6 +10,23 @@ Grote roadmap-fases staan ook in `docs/roadmap/gebouwd.md` en `docs/roadmap/acti
 
 ---
 
+## 2026-06-30 — AI veld-correcties: leren van naam, uitgever, referentie etc.
+
+**Uitvoering:** volledig | **Diepere lagen:** volledig | **Getest:** typecheck groen (TS7030 pre-existing in api-server)
+
+Uitbreiding van het AI-leermechanisme in de bedrijfsdocumenten-module: niet alleen categorie-correcties worden onthouden, maar ook correcties op andere AI-ingevulde velden.
+
+- **DB** (`lib/db/src/schema/organisatie.ts`): nieuw tabel `ai_veld_correcties` (veld_naam, ai_voorstel, gekozen, hash, tekst_fragment); schema gepusht via `drizzle-kit push`.
+- **Backend** (`artifacts/api-server/src/routes/organisatie.ts`):
+  - Nieuw endpoint `POST /organisatie/bedrijfsdocumenten/veld-correctie` — slaat correctie op voor naam/uitgever/referentie/ingangsdatum/vervaldatum/omschrijving; valideert veldnaam tegen whitelist.
+  - `analyseer`-route haalt nu parallel catCorrecties (max 10) + veldCorrecties (max 15) op en voegt beide als few-shot voorbeelden toe aan de systeemprompt met veld-specifiek formaat (`Veld <naam> — AI stelde voor: "..." — gebruiker corrigeerde naar: "..."`).
+- **Frontend** (`artifacts/firevault/src/pages/organisatie/bedrijfsdocumenten.tsx`):
+  - Nieuwe helper `stuurVeldCorrectie()` stuurt POST naar `/veld-correctie`.
+  - Nieuw ref `aiVoorgesteldeVelden` houdt bij wat de AI per veld voorstelde.
+  - `verwerkBestand` vult `aiVoorgesteldeVelden.current` bij elk AI-ingevuld veld.
+  - `setFormVeld` detecteert wanneer een AI-veld wordt aangepast: als de nieuwe waarde verschilt van het AI-voorstel, wordt automatisch een correctie verstuurd (stil, achtergrond).
+  - `resetDialoog` wist ook `aiVoorgesteldeVelden.current`.
+
 ## 2026-06-30 — Materiaallijst per opdracht in het opdrachtdossier
 
 **Uitvoering:** volledig | **Diepere lagen:** volledig | **Getest:** typecheck groen + API health check

@@ -7,7 +7,7 @@ import { randomUUID } from "crypto";
 import { Readable } from "stream";
 import { createRequire } from "module";
 import multer from "multer";
-import { db, orgVerzekeringenTable, orgJaarverslagenTable, orgBedrijfsdocumentenTable, aiCategorieCorrectiesTable } from "@workspace/db";
+import { db, orgVerzekeringenTable, orgJaarverslagenTable, orgBedrijfsdocumentenTable, aiCategorieCorrectiesTable, aiVeldCorrectiesTable } from "@workspace/db";
 import { eq, desc } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { maakOpenAiClient, heeftOpenAi } from "../lib/openai";
@@ -370,22 +370,43 @@ router.post(
         }
       }
 
-      // Laad recente correcties als few-shot voorbeelden
-      const correcties = await db
-        .select()
-        .from(aiCategorieCorrectiesTable)
-        .orderBy(desc(aiCategorieCorrectiesTable.aangemaaktOp))
-        .limit(10);
+      // Laad recente correcties als few-shot voorbeelden (categorie + overige velden)
+      const [catCorrecties, veldCorrecties] = await Promise.all([
+        db
+          .select()
+          .from(aiCategorieCorrectiesTable)
+          .orderBy(desc(aiCategorieCorrectiesTable.aangemaaktOp))
+          .limit(10),
+        db
+          .select()
+          .from(aiVeldCorrectiesTable)
+          .orderBy(desc(aiVeldCorrectiesTable.aangemaaktOp))
+          .limit(15),
+      ]);
 
       let fewShotSectie = "";
-      if (correcties.length > 0) {
-        const voorbeelden = correcties.map((c) => {
+      const voorbeeldenParts: string[] = [];
+
+      if (catCorrecties.length > 0) {
+        const catVoorbeelden = catCorrecties.map((c) => {
           const context = c.tekstFragment ? `Documentfragment: "${c.tekstFragment.slice(0, 200)}"` : "(geen tekst)";
-          return `${context}\nAI stelde voor: ${c.aiVoorstel} — gebruiker corrigeerde naar: ${c.gekozen}`;
+          return `${context}\nVeld categorie — AI stelde voor: "${c.aiVoorstel}" — gebruiker corrigeerde naar: "${c.gekozen}"`;
         }).join("\n\n");
+        voorbeeldenParts.push(catVoorbeelden);
+      }
+
+      if (veldCorrecties.length > 0) {
+        const veldVoorbeelden = veldCorrecties.map((c) => {
+          const context = c.tekstFragment ? `Documentfragment: "${c.tekstFragment.slice(0, 200)}"` : "(geen tekst)";
+          return `${context}\nVeld ${c.veldNaam} — AI stelde voor: "${c.aiVoorstel}" — gebruiker corrigeerde naar: "${c.gekozen}"`;
+        }).join("\n\n");
+        voorbeeldenParts.push(veldVoorbeelden);
+      }
+
+      if (voorbeeldenParts.length > 0) {
         fewShotSectie =
-          "\n\nLeer van deze eerdere correcties door gebruikers — pas je categoriekeuze hier op aan:\n" +
-          voorbeelden;
+          "\n\nLeer van deze eerdere correcties door gebruikers — pas je extractie hierop aan:\n" +
+          voorbeeldenParts.join("\n\n");
       }
 
       const systeemPrompt =
@@ -474,6 +495,33 @@ router.post("/organisatie/bedrijfsdocumenten/correctie", schrijven, async (req, 
     await db.insert(aiCategorieCorrectiesTable).values({
       hash: hash ?? null,
       tekstFragment: tekst_fragment ?? null,
+      aiVoorstel: String(ai_voorstel),
+      gekozen: String(gekozen),
+    });
+    res.status(204).end();
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// ── Bedrijfsdocumenten — AI veld-correctie opslaan ───────────────────────────
+
+const GELDIGE_VELDEN = ["naam", "uitgever", "referentie", "ingangsdatum", "vervaldatum", "omschrijving"] as const;
+
+router.post("/organisatie/bedrijfsdocumenten/veld-correctie", schrijven, async (req, res) => {
+  try {
+    const { veld_naam, ai_voorstel, gekozen, hash, tekst_fragment } = req.body;
+    if (!veld_naam || !ai_voorstel || gekozen === undefined || gekozen === null) {
+      return res.status(400).json({ error: "veld_naam, ai_voorstel en gekozen zijn verplicht" });
+    }
+    if (!(GELDIGE_VELDEN as readonly string[]).includes(String(veld_naam))) {
+      return res.status(400).json({ error: "Ongeldig veld" });
+    }
+    await db.insert(aiVeldCorrectiesTable).values({
+      hash: hash ?? null,
+      tekstFragment: tekst_fragment ?? null,
+      veldNaam: String(veld_naam),
       aiVoorstel: String(ai_voorstel),
       gekozen: String(gekozen),
     });

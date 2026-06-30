@@ -63,6 +63,17 @@ export const aiCategorieCorrectiesTable = pgTable("ai_categorie_correcties", {
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
 });
 
+// AI veld-correcties — leermechanisme voor niet-categorie velden (naam, uitgever, referentie, etc.)
+export const aiVeldCorrectiesTable = pgTable("ai_veld_correcties", {
+  id: serial("id").primaryKey(),
+  hash: text("hash"),
+  tekstFragment: text("tekst_fragment"),
+  veldNaam: text("veld_naam").notNull(),
+  aiVoorstel: text("ai_voorstel").notNull(),
+  gekozen: text("gekozen").notNull(),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+});
+
 export const insertOrgVerzekeringSchema = createInsertSchema(orgVerzekeringenTable).omit({
   id: true,
   aangemaaktOp: true,

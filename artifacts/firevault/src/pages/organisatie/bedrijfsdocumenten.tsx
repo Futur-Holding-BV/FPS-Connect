@@ -110,6 +110,31 @@ async function stuurCorrectie(aiVoorstel: string, gekozen: string, hash: string 
   }
 }
 
+async function stuurVeldCorrectie(
+  veldNaam: string,
+  aiVoorstel: string,
+  gekozen: string,
+  hash: string | null,
+  tekstFragment: string | null,
+) {
+  try {
+    await fetch("/api/organisatie/bedrijfsdocumenten/veld-correctie", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({
+        veld_naam: veldNaam,
+        ai_voorstel: aiVoorstel,
+        gekozen,
+        hash,
+        tekst_fragment: tekstFragment,
+      }),
+    });
+  } catch {
+    // Stil falen — niet-kritieke achtergrondactie
+  }
+}
+
 export default function BedrijfsdocumentenPagina() {
   const { data: documenten = [], isLoading } = useListOrgBedrijfsdocumenten();
   const createDoc = useCreateOrgBedrijfsdocument();
@@ -128,13 +153,18 @@ export default function BedrijfsdocumentenPagina() {
   const [verwijderBevestiging, setVerwijderBevestiging] = useState<number | null>(null);
   const [actieveCat, setActieveCat]             = useState<string>("alle");
 
-  const hashRef            = useRef<string | null>(null);
-  const tekstFragmentRef   = useRef<string | null>(null);
-  const aiVoorgesteldCat   = useRef<string | null>(null);
-  const bestandPadRef      = useRef<string | null>(null);
-  const bestandInputRef    = useRef<HTMLInputElement>(null);
+  const hashRef                = useRef<string | null>(null);
+  const tekstFragmentRef       = useRef<string | null>(null);
+  const aiVoorgesteldCat       = useRef<string | null>(null);
+  const aiVoorgesteldeVelden   = useRef<Partial<Record<keyof typeof leegForm, string>>>({});
+  const bestandPadRef          = useRef<string | null>(null);
+  const bestandInputRef        = useRef<HTMLInputElement>(null);
 
   const aiActief = aiVelden.size > 0;
+
+  const VELD_CORRECTIE_VELDEN: ReadonlyArray<keyof typeof leegForm> = [
+    "naam", "uitgever", "referentie", "ingangsdatum", "vervaldatum", "omschrijving",
+  ];
 
   const setFormVeld = (k: keyof typeof leegForm, v: string) => {
     setForm((p) => ({ ...p, [k]: v }));
@@ -143,6 +173,30 @@ export default function BedrijfsdocumentenPagina() {
       nieuw.delete(k);
       return nieuw;
     });
+    // aiVoorgesteldeVelden.current[k] blijft bewaard totdat onBlur de eindwaarde stuurt
+  };
+
+  // Correctie versturen bij verlaten veld (onBlur) — eindwaarde, niet tussenwaarde
+  const handleVeldBlur = (k: keyof typeof leegForm, eindWaarde: string) => {
+    if (!(VELD_CORRECTIE_VELDEN as ReadonlyArray<string>).includes(k)) return;
+    const aiVoorstel = aiVoorgesteldeVelden.current[k] ?? null;
+    if (aiVoorstel !== null && eindWaarde !== aiVoorstel) {
+      void stuurVeldCorrectie(k, aiVoorstel, eindWaarde, hashRef.current, tekstFragmentRef.current);
+      delete aiVoorgesteldeVelden.current[k];
+    }
+  };
+
+  const handleVeldBlur = (k: keyof typeof leegForm, eindWaarde: string) => {
+    // Als veld was AI-ingevuld — stuur correctie als de waarde verschilt van het AI-voorstel
+    const aiVoorstel = aiVoorgesteldeVelden.current[k] ?? null;
+    if (
+      aiVoorstel !== null &&
+      eindWaarde !== aiVoorstel &&
+      (VELD_CORRECTIE_VELDEN as ReadonlyArray<string>).includes(k)
+    ) {
+      void stuurVeldCorrectie(k, aiVoorstel, eindWaarde, hashRef.current, tekstFragmentRef.current);
+      delete aiVoorgesteldeVelden.current[k];
+    }
   };
 
   const kiesCategorieHandmatig = (waarde: string) => {
@@ -162,6 +216,7 @@ export default function BedrijfsdocumentenPagina() {
     tekstFragmentRef.current = null;
     aiVoorgesteldCat.current = null;
     bestandPadRef.current = null;
+    aiVoorgesteldeVelden.current = {};
     setDubbeling(null);
   };
 
@@ -228,17 +283,18 @@ export default function BedrijfsdocumentenPagina() {
       bestandPadRef.current    = data.bestand_pad ?? null;
       tekstFragmentRef.current = data.tekstFragment ?? null;
       aiVoorgesteldCat.current = data.categorie;
+      aiVoorgesteldeVelden.current = {};
 
       const ingevuldeVelden = new Set<keyof typeof leegForm>();
       const updates: Partial<typeof leegForm> = {};
 
-      if (data.naam)         { updates.naam         = data.naam;         ingevuldeVelden.add("naam");         }
+      if (data.naam)         { updates.naam         = data.naam;         ingevuldeVelden.add("naam");         aiVoorgesteldeVelden.current.naam         = data.naam;         }
       if (data.categorie)    { updates.categorie    = data.categorie;    ingevuldeVelden.add("categorie");    }
-      if (data.omschrijving) { updates.omschrijving = data.omschrijving; ingevuldeVelden.add("omschrijving"); }
-      if (data.uitgever)     { updates.uitgever     = data.uitgever;     ingevuldeVelden.add("uitgever");     }
-      if (data.referentie)   { updates.referentie   = data.referentie;   ingevuldeVelden.add("referentie");   }
-      if (data.ingangsdatum) { updates.ingangsdatum = data.ingangsdatum; ingevuldeVelden.add("ingangsdatum"); }
-      if (data.vervaldatum)  { updates.vervaldatum  = data.vervaldatum;  ingevuldeVelden.add("vervaldatum");  }
+      if (data.omschrijving) { updates.omschrijving = data.omschrijving; ingevuldeVelden.add("omschrijving"); aiVoorgesteldeVelden.current.omschrijving = data.omschrijving; }
+      if (data.uitgever)     { updates.uitgever     = data.uitgever;     ingevuldeVelden.add("uitgever");     aiVoorgesteldeVelden.current.uitgever     = data.uitgever;     }
+      if (data.referentie)   { updates.referentie   = data.referentie;   ingevuldeVelden.add("referentie");   aiVoorgesteldeVelden.current.referentie   = data.referentie;   }
+      if (data.ingangsdatum) { updates.ingangsdatum = data.ingangsdatum; ingevuldeVelden.add("ingangsdatum"); aiVoorgesteldeVelden.current.ingangsdatum = data.ingangsdatum; }
+      if (data.vervaldatum)  { updates.vervaldatum  = data.vervaldatum;  ingevuldeVelden.add("vervaldatum");  aiVoorgesteldeVelden.current.vervaldatum  = data.vervaldatum;  }
 
       setForm((prev) => ({ ...prev, ...updates }));
       setAiVelden(ingevuldeVelden);
@@ -619,6 +675,7 @@ export default function BedrijfsdocumentenPagina() {
                 <Input
                   value={form.naam}
                   onChange={(e) => setFormVeld("naam", e.target.value)}
+                  onBlur={(e) => handleVeldBlur("naam", e.target.value)}
                   className={isAi("naam") ? aiKlasse : ""}
                 />
               </div>
@@ -630,6 +687,7 @@ export default function BedrijfsdocumentenPagina() {
                 <Input
                   value={form.uitgever}
                   onChange={(e) => setFormVeld("uitgever", e.target.value)}
+                  onBlur={(e) => handleVeldBlur("uitgever", e.target.value)}
                   className={isAi("uitgever") ? aiKlasse : ""}
                 />
               </div>
@@ -641,6 +699,7 @@ export default function BedrijfsdocumentenPagina() {
                 <Input
                   value={form.referentie}
                   onChange={(e) => setFormVeld("referentie", e.target.value)}
+                  onBlur={(e) => handleVeldBlur("referentie", e.target.value)}
                   className={isAi("referentie") ? aiKlasse : ""}
                 />
               </div>
@@ -653,6 +712,7 @@ export default function BedrijfsdocumentenPagina() {
                   type="date"
                   value={form.ingangsdatum}
                   onChange={(e) => setFormVeld("ingangsdatum", e.target.value)}
+                  onBlur={(e) => handleVeldBlur("ingangsdatum", e.target.value)}
                   className={isAi("ingangsdatum") ? aiKlasse : ""}
                 />
               </div>
@@ -665,6 +725,7 @@ export default function BedrijfsdocumentenPagina() {
                   type="date"
                   value={form.vervaldatum}
                   onChange={(e) => setFormVeld("vervaldatum", e.target.value)}
+                  onBlur={(e) => handleVeldBlur("vervaldatum", e.target.value)}
                   className={isAi("vervaldatum") ? aiKlasse : ""}
                 />
               </div>
@@ -692,6 +753,7 @@ export default function BedrijfsdocumentenPagina() {
                 <Textarea
                   value={form.omschrijving}
                   onChange={(e) => setFormVeld("omschrijving", e.target.value)}
+                  onBlur={(e) => handleVeldBlur("omschrijving", e.target.value)}
                   rows={2}
                   className={isAi("omschrijving") ? aiKlasse : ""}
                 />
