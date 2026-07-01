@@ -253,6 +253,7 @@ async function aiClassificeer(
   mime: string,
   tekstFragment: string | null,
   afbeeldingBase64: string | null,
+  toelichting?: string | null,
 ): Promise<SlimUploadSuggestie> {
   const client = maakOpenAiClient();
 
@@ -260,11 +261,16 @@ async function aiClassificeer(
     ? `Geëxtraheerde tekst (${tekstFragment.trim().length} tekens):\n${tekstFragment.trim().slice(0, 5000)}`
     : "Geëxtraheerde tekst: GEEN — het bestand bevat geen machine-leesbare tekst (afbeelding, visuele lay-out of gescand document).";
 
+  const toelichtingInfo = toelichting && toelichting.trim().length > 0
+    ? `\nGebruikerscontext (gebruik dit als extra hint bij classificatie): ${toelichting.trim().slice(0, 500)}`
+    : "";
+
   const tekstBericht = [
     `Bestandsnaam: ${bestandsnaam}`,
     `MIME-type: ${mime}`,
     tekstInfo,
-  ].join("\n");
+    toelichtingInfo,
+  ].filter(Boolean).join("\n");
 
   // Bouw het user-bericht op: tekst altijd, afbeelding indien beschikbaar
   type ContentBlock =
@@ -346,7 +352,10 @@ async function haalPdfTekst(buffer: Buffer): Promise<string | null> {
 
 // ── Bestand classificeren (tekst + vision) ────────────────────────────────────
 
-async function classificeerBestand(bestand: Express.Multer.File): Promise<SlimUploadSuggestie> {
+async function classificeerBestand(
+  bestand: Express.Multer.File,
+  toelichting?: string | null,
+): Promise<SlimUploadSuggestie> {
   const bestandsnaam = bestand.originalname ?? "onbekend";
   const mime = bestand.mimetype ?? "application/octet-stream";
 
@@ -373,7 +382,7 @@ async function classificeerBestand(bestand: Express.Multer.File): Promise<SlimUp
 
   // 3. Classificeren
   if (heeftOpenAi()) {
-    return aiClassificeer(bestandsnaam, mime, tekstFragment, afbeeldingBase64);
+    return aiClassificeer(bestandsnaam, mime, tekstFragment, afbeeldingBase64, toelichting);
   }
   return heuristischClassificeer(bestandsnaam, mime, tekstFragment);
 }
@@ -392,8 +401,12 @@ router.post(
       return;
     }
 
+    const toelichting = typeof req.body?.toelichting === "string" && req.body.toelichting.trim().length > 0
+      ? req.body.toelichting.trim().slice(0, 500)
+      : null;
+
     try {
-      const resultaten = await Promise.all(bestanden.map(classificeerBestand));
+      const resultaten = await Promise.all(bestanden.map((b) => classificeerBestand(b, toelichting)));
 
       for (const [i, s] of resultaten.entries()) {
         req.log.info(

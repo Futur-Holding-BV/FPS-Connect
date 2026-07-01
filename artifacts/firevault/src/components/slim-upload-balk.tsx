@@ -10,6 +10,7 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -578,6 +579,8 @@ export function SlimUploadBalk() {
   const [regels, setRegels]                   = useState<AutomatiseringsRegel[]>([]);
   const [recenteUploads, setRecenteUploads]   = useState<RecentUpload[]>(() => laadRecenteUploads());
 
+  const [toelichting, setToelichting]             = useState("");
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const sleepTeller  = useRef(0);
   const herkomstPadRef = useRef<string>("/");
@@ -665,19 +668,35 @@ export function SlimUploadBalk() {
 
     if (teAnalyseren.length === 0) return;
 
-    // Queue openen
+    // Queue openen — items blijven in "wacht" zodat de gebruiker een toelichting kan invoeren
     setQueue(teAnalyseren);
     setHuidigId(teAnalyseren[0]?.id ?? null);
     setToonDialoog(true);
+  }
 
-    // Markeer alle items als "analyseert"
-    setQueue((prev) => prev.map((i) => ({ ...i, status: "analyseert" as const })));
+  // Ref altijd actueel houden zodat de stale closure in de drop-listener
+  // nooit een verouderde versie van verwerkBestanden aanroept.
+  verwerkBestandenRef.current = verwerkBestanden;
+
+  // ── Analyse starten (na eventuele toelichting) ────────────────────────────
+
+  async function startAnalyse() {
+    const itemsTeAnalyseren = queue.filter((i) => i.status === "wacht");
+    if (itemsTeAnalyseren.length === 0) return;
+
+    // Markeer alle wachtende items als "analyseert"
+    setQueue((prev) => prev.map((i) =>
+      i.status === "wacht" ? { ...i, status: "analyseert" as const } : i,
+    ));
 
     // Stuur alle bestanden in één aanroep
     try {
       const formData = new FormData();
-      for (const item of teAnalyseren) {
+      for (const item of itemsTeAnalyseren) {
         formData.append("bestanden", item.bestand);
+      }
+      if (toelichting.trim()) {
+        formData.append("toelichting", toelichting.trim());
       }
       const res = await fetch("/api/slim-upload/analyseer", {
         method: "POST", body: formData, credentials: "include",
@@ -687,31 +706,30 @@ export function SlimUploadBalk() {
 
       const resultaten = (await res.json()) as SlimUploadSuggestie[];
 
-      setQueue((prev) =>
-        prev.map((item, idx) => {
+      setQueue((prev) => {
+        const wachtItems = prev.filter((i) => i.status === "analyseert");
+        return prev.map((item) => {
+          const idx = wachtItems.indexOf(item);
+          if (idx === -1) return item;
           const suggestie = resultaten[idx] ?? null;
           return {
             ...item,
-            status: suggestie ? "klaar" : "fout",
+            status: suggestie ? ("klaar" as const) : ("fout" as const),
             suggestie,
             fout: suggestie ? null : "Geen resultaat ontvangen.",
           };
-        }),
-      );
+        });
+      });
     } catch {
       setQueue((prev) =>
-        prev.map((i) => ({
-          ...i,
-          status: "fout" as const,
-          fout: "Verbindingsfout — kies handmatig waar het bestand thuishoort.",
-        })),
+        prev.map((i) =>
+          i.status === "analyseert"
+            ? { ...i, status: "fout" as const, fout: "Verbindingsfout — kies handmatig waar het bestand thuishoort." }
+            : i,
+        ),
       );
     }
   }
-
-  // Ref altijd actueel houden zodat de stale closure in de drop-listener
-  // nooit een verouderde versie van verwerkBestanden aanroept.
-  verwerkBestandenRef.current = verwerkBestanden;
 
   // ── Bevestigen ────────────────────────────────────────────────────────────
 
@@ -784,6 +802,7 @@ export function SlimUploadBalk() {
     setToonDialoog(false);
     setQueue([]);
     setHuidigId(null);
+    setToelichting("");
   }
 
   const actieveAutomatiseringen = regels.filter((r) => r.geautomatiseerd);
@@ -982,8 +1001,39 @@ export function SlimUploadBalk() {
                     </div>
                   )}
 
-                  {/* Wacht */}
-                  {huidigItem.status === "wacht" && (
+                  {/* Wacht — toelichting invoeren vóór analyse */}
+                  {huidigItem.status === "wacht" && queue.every((i) => i.status === "wacht") && (
+                    <div className="flex flex-col gap-4 py-4">
+                      <div className="rounded-md bg-muted/50 p-3 flex items-start gap-2">
+                        <Sparkles className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                        <p className="text-xs text-muted-foreground">
+                          Geef optioneel een toelichting mee. De AI gebruikt dit als extra context bij het classificeren.
+                        </p>
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-medium text-foreground">
+                          Toelichting <span className="text-muted-foreground font-normal">(optioneel)</span>
+                        </label>
+                        <Textarea
+                          placeholder="Bijv.: dit is een testrapport van fabrikant X voor product Y, behoort bij project 2024-038"
+                          value={toelichting}
+                          onChange={(e) => setToelichting(e.target.value)}
+                          rows={3}
+                          className="text-sm resize-none"
+                        />
+                      </div>
+                      <Button
+                        className="w-full gap-2"
+                        onClick={() => void startAnalyse()}
+                      >
+                        <Sparkles className="h-4 w-4" />
+                        Analyseren
+                      </Button>
+                    </div>
+                  )}
+
+                  {/* Wacht — terwijl andere items al analyseert zijn */}
+                  {huidigItem.status === "wacht" && !queue.every((i) => i.status === "wacht") && (
                     <div className="flex flex-col items-center gap-3 py-10">
                       <div className="h-8 w-8 rounded-full border-2 border-muted-foreground/20 border-t-primary animate-spin" />
                       <p className="text-sm text-muted-foreground">Wacht op analyse…</p>

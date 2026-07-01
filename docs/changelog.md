@@ -10,6 +10,14 @@ Grote roadmap-fases staan ook in `docs/roadmap/gebouwd.md` en `docs/roadmap/acti
 
 ---
 
+## 2026-07-01 — Slim uploaden: toelichting voor AI vóór analyse
+
+**Uitvoering:** volledig | **Getest:** typecheck groen (firevault + api-server)
+
+Het analyse-dialoog opent nu eerst een toelichtingsscherm: een tekstgebied waar de gebruiker vrije context kan typen ("Bijv.: testrapport van fabrikant X voor project 2024-038"). Pas na klikken op "Analyseren" start de AI. De toelichting wordt als `Gebruikerscontext`-hint meegegeven aan het AI-model (max 500 tekens); zonder toelichting werkt de analyse precies zoals voorheen. Backend leest `toelichting` uit de FormData en geeft het door aan `aiClassificeer` en de heuristische fallback.
+
+---
+
 ## 2026-07-01 — Opnieuw uitnodigen ook voor actieve gebruikers (geaccepteerd)
 
 **Uitvoering:** hotfix | **Getest:** typecheck groen
