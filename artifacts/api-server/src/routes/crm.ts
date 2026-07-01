@@ -473,28 +473,45 @@ router.post("/crm/concurrenten/ai-profiel", lezen, async (req, res) => {
   if (!heeftOpenAi()) return res.status(503).json({ error: "AI niet geconfigureerd" });
   const { naam } = req.body;
   if (!naam?.trim()) return res.status(400).json({ error: "naam is verplicht" });
+  const client = maakOpenAiClient();
+
+  const systeemPrompt =
+    "Je bent een marktintelligentie-assistent voor een Nederlands brandpreventiebedrijf. " +
+    "Zoek op internet naar actuele informatie over de opgegeven concurrent. " +
+    "Geef een JSON-object terug met de volgende velden (null als echt niet te vinden): " +
+    "website (URL), regio (Nederlandse regio of stad), " +
+    "bekende_klanten (kommalijst van bekende klanten), " +
+    "bekende_projecttypes (soorten projecten bijv. branddeuren doorvoeringen), " +
+    "sterke_punten (korte tekst), zwakke_punten (korte tekst), " +
+    "where_we_encounter (aanbestedingen/beurzen/projecten waar je ze tegenkomt). " +
+    "Gebruik de meest recente informatie die je kunt vinden.";
+  const gebruikerPrompt = `Maak een concurrentprofiel voor: ${String(naam).trim()} (brandpreventie en bouw sector Nederland)`;
+
+  // Probeer Responses API met web zoeken voor actuele concurrentinfo
   try {
-    const client = maakOpenAiClient();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const webResp = await (client as any).responses.create({
+      model: "gpt-4o",
+      tools: [{ type: "web_search_preview" }],
+      input: `${systeemPrompt}\n\n${gebruikerPrompt}`,
+      text: { format: { type: "json_object" } },
+    });
+    const tekst: string = webResp.output_text ?? "{}";
+    let data: Record<string, string | null> = {};
+    try { data = JSON.parse(tekst) as Record<string, string | null>; } catch { data = {}; }
+    return res.json({ velden: data });
+  } catch (webErr) {
+    req.log.warn({ err: webErr }, "Web search niet beschikbaar voor ai-profiel, fallback naar kennismodel");
+  }
+
+  // Fallback: chat completions op basis van trainingsdata
+  try {
     const completion = await client.chat.completions.create({
       model: "gpt-4o",
       max_tokens: 800,
       messages: [
-        {
-          role: "system",
-          content:
-            "Je bent een marktintelligentie-assistent voor een Nederlands brandpreventiebedrijf. " +
-            "Geef een JSON-object terug met de volgende velden over de genoemde concurrent (null als niet bekend): " +
-            "website (URL), regio (Nederlandse regio of stad), " +
-            "bekende_klanten (kommalijst van bekende klanten), " +
-            "bekende_projecttypes (soorten projecten bijv. branddeuren doorvoeringen), " +
-            "sterke_punten (korte tekst), zwakke_punten (korte tekst), " +
-            "where_we_encounter (aanbestedingen/beurzen/projecten waar je ze tegenkomt). " +
-            "Gebruik alleen feitelijk bekende informatie; vul niets in wat je niet weet — zet dat op null.",
-        },
-        {
-          role: "user",
-          content: `Maak een concurrentprofiel voor: ${String(naam).trim()} (brandpreventie en bouw sector Nederland)`,
-        },
+        { role: "system", content: systeemPrompt },
+        { role: "user", content: gebruikerPrompt },
       ],
       response_format: { type: "json_object" },
     });

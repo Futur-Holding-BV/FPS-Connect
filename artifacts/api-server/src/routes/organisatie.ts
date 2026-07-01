@@ -638,38 +638,50 @@ router.post("/organisatie/ai-invullen", schrijven, async (req, res) => {
   if (!heeftOpenAi()) {
     return res.status(503).json({ error: "AI niet geconfigureerd" });
   }
+  const { bedrijfsnaam, sector } = req.body;
+  const naam = (bedrijfsnaam ?? "FPS Brandpreventie").trim();
+  const client = maakOpenAiClient();
+
+  const systeemPrompt =
+    "Je bent een Nederlandse bedrijfsassistent gespecialiseerd in bouw en brandpreventie. " +
+    "Zoek op internet naar de contactgegevens van het opgegeven bedrijf. " +
+    "Geef een JSON-object terug met de volgende velden (null als werkelijk niet te vinden): " +
+    "kvk (KVK-nummer 8 cijfers), btw (BTW-nummer formaat NL999999999B01), " +
+    "adres (straat + huisnummer), postcode (formaat 1234 AB), plaats, telefoon, email, website (volledige URL), iban (IBAN-nummer). " +
+    "Gebruik de meest recente informatie die je kunt vinden. Zet een veld op null alleen als het echt nergens te vinden is.";
+  const gebruikerPrompt = `Zoek en vul de bedrijfsgegevens in voor: ${naam}${sector ? ` (sector: ${sector})` : ""} — dit is een bedrijf in Nederland.`;
+
+  // Probeer Responses API met web zoeken voor actuele bedrijfsinfo
   try {
-    const { bedrijfsnaam, sector } = req.body;
-    const naam = (bedrijfsnaam ?? "FPS Brandpreventie").trim();
-    const client = maakOpenAiClient();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const webResp = await (client as any).responses.create({
+      model: "gpt-4o",
+      tools: [{ type: "web_search_preview" }],
+      input: `${systeemPrompt}\n\n${gebruikerPrompt}`,
+      text: { format: { type: "json_object" } },
+    });
+    const tekst: string = webResp.output_text ?? "{}";
+    let data: Record<string, string | null> = {};
+    try { data = JSON.parse(tekst) as Record<string, string | null>; } catch { data = {}; }
+    return res.json({ velden: data });
+  } catch (webErr) {
+    req.log.warn({ err: webErr }, "Web search niet beschikbaar voor ai-invullen, fallback naar kennismodel");
+  }
+
+  // Fallback: chat completions op basis van trainingsdata
+  try {
     const completion = await client.chat.completions.create({
       model: "gpt-4o",
       max_tokens: 600,
       messages: [
-        {
-          role: "system",
-          content:
-            "Je bent een Nederlandse bedrijfsadviseur gespecialiseerd in bouw en brandpreventie. " +
-            "Jij helpt bij het correct invullen van bedrijfsgegevens op basis van de bedrijfsnaam. " +
-            "Geef altijd een JSON-object terug met de volgende velden (null als niet bekend): " +
-            "kvk (KVK-nummer 8 cijfers), btw (BTW-nummer formaat NL999999999B01), " +
-            "adres, postcode, plaats, telefoon, email, website, iban (IBAN-nummer). " +
-            "Gebruik alleen feitelijk bekende gegevens. Vul niets in dat je niet weet — zet het dan op null.",
-        },
-        {
-          role: "user",
-          content: `Vul de bedrijfsgegevens in voor: ${naam}${sector ? ` (sector: ${sector})` : ""}`,
-        },
+        { role: "system", content: systeemPrompt },
+        { role: "user", content: gebruikerPrompt },
       ],
       response_format: { type: "json_object" },
     });
     const tekst = completion.choices[0]?.message?.content ?? "{}";
     let data: Record<string, string | null> = {};
-    try {
-      data = JSON.parse(tekst);
-    } catch {
-      data = {};
-    }
+    try { data = JSON.parse(tekst); } catch { data = {}; }
     res.json({ velden: data });
   } catch (err) {
     req.log.error(err);

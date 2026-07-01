@@ -10,6 +10,16 @@ Grote roadmap-fases staan ook in `docs/roadmap/gebouwd.md` en `docs/roadmap/acti
 
 ---
 
+## 2026-07-01 — AI-invullen: echte webzoekopdracht via web_search_preview
+
+**Uitvoering:** volledig | **Getest:** typecheck groen
+
+- `POST /organisatie/ai-invullen`: gebruikt nu de Responses API met `web_search_preview` tool zodat de AI actief op internet zoekt naar bedrijfsgegevens (adres, telefoon, e-mail, website, KVK, BTW). Val terug op trainingsdata als web search niet beschikbaar is.
+- `POST /crm/concurrenten/ai-profiel`: zelfde upgrade — zoekt nu live naar concurrentinformatie.
+- Prompt aangepast: minder conservatief ("null alleen als echt niet te vinden") en expliciet gericht op Nederland.
+
+---
+
 ## 2026-07-01 — Document Studio: werkgever-resolutie en API-contract gerepareerd
 
 **Uitvoering:** volledig | **Getest:** typecheck groen
