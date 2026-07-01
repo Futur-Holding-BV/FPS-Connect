@@ -10,6 +10,28 @@ Grote roadmap-fases staan ook in `docs/roadmap/gebouwd.md` en `docs/roadmap/acti
 
 ---
 
+## 2026-07-01 — Slim uploaden: meerdere bestanden + document-intelligentie workflow
+
+**Uitvoering:** volledig | **Getest:** typecheck groen (firevault + api-server), workflows herstart
+
+### Backend (`artifacts/api-server/src/routes/slim-upload.ts`)
+- **Meerdere bestanden tegelijk**: endpoint accepteert nu `bestanden[]` (array via `upload.any()`), verwerkt elk bestand parallel en retourneert een array van suggesties
+- **14 categorieën** (was 7): aanvraag, tekening, offerte, factuur, productdocument, testrapport, certificaat, ETA, DoP, personeelsdocument, snagstream, bibliotheek, algemeen, onbekend
+- **Rijkere AI-extractie**: prompt instrueert GPT om per documenttype specifieke velden te extraheren (leverancier/bedrag bij facturen, klant/locatie bij aanvragen, fabrikant/normen bij testrapporten, etc.)
+- **Alternatieven**: AI geeft altijd top-2/3 alternatieve categorieën terug (voor beslisscherm)
+- **Betere heuristiek**: uitgebreide fallback classificeert ook ETA, DoP, testrapport, certificaat, productdocument op bestandsnaam
+
+### Frontend (`artifacts/firevault/src/components/slim-upload-balk.tsx`)
+- **Multi-file**: `<input multiple>` + drag-drop accepteert meerdere bestanden tegelijk; queue-gebaseerde verwerking
+- **Beslisscherm per bestand**: rijke dialog met gevonden gegevens (klant, bedrag, fabrikant, etc.), redenering en alternatieven
+- **Twee-paneel layout** bij meerdere bestanden: bestandenlijst links, beslisscherm rechts
+- **Drietrapsfout-afhandeling**: AI succesvol → voorstel tonen; AI onzeker/onbekend → top-3 alternatieven als klikbare kaarten; technische fout → handmatige classificatiegrid (nooit alleen een foutmelding)
+- **AVG-waarschuwing** bij personeelsdocumenten
+- **Aanvraag-flow**: aparte vervolgknoppen "Nieuw werk aanmaken" / "Alleen opslaan in bibliotheek"
+- **Automatiseringsregels** bewaard: blijven werken met de nieuwe categorieën
+
+---
+
 ## 2026-06-30 — Login: autofocus op TOTP-invoerveld
 
 **Uitvoering:** volledig | **Getest:** typecheck groen

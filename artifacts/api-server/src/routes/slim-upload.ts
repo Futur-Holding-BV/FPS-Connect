@@ -5,18 +5,28 @@ import { maakOpenAiClient, heeftOpenAi } from "../lib/openai";
 import { logger } from "../lib/logger";
 
 const router = Router();
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 * 1024 * 1024 } });
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 25 * 1024 * 1024 },
+});
 
 // ── Categorieën ───────────────────────────────────────────────────────────────
 
 export const SLIM_UPLOAD_CATEGORIEEN = [
-  "bibliotheek",
+  "aanvraag",
+  "tekening",
   "offerte",
   "factuur",
-  "hrm",
-  "tekening",
+  "productdocument",
+  "testrapport",
+  "certificaat",
+  "eta",
+  "dop",
+  "personeelsdocument",
   "snagstream",
+  "bibliotheek",
   "algemeen",
+  "onbekend",
 ] as const;
 
 export type SlimUploadCategorie = (typeof SLIM_UPLOAD_CATEGORIEEN)[number];
@@ -31,9 +41,11 @@ export interface SlimUploadSuggestie {
   redenering: string;
   vertrouwen: "laag" | "midden" | "hoog";
   ai_beschikbaar: boolean;
+  gevonden_gegevens: Record<string, string>;
+  alternatieven: SlimUploadCategorie[];
 }
 
-// ── Heuristische fallback (zonder AI) ────────────────────────────────────────
+// ── Heuristische fallback ─────────────────────────────────────────────────────
 
 function heuristischClassificeer(bestandsnaam: string, mime: string): SlimUploadSuggestie {
   const naam = bestandsnaam.toLowerCase();
@@ -41,83 +53,87 @@ function heuristischClassificeer(bestandsnaam: string, mime: string): SlimUpload
 
   let categorie: SlimUploadCategorie = "algemeen";
 
-  if (["eta", "testrapport", "classificatierapport", "dop", "productcertificaat", "verwerkingsvoorschrift", "productblad"].some((k) => naam.includes(k))) {
-    categorie = "bibliotheek";
+  if (["eta", "european technical assessment"].some((k) => naam.includes(k))) {
+    categorie = "eta";
+  } else if (["dop", "prestatieverklaring", "declaration of performance"].some((k) => naam.includes(k))) {
+    categorie = "dop";
+  } else if (["testrapport", "classificatierapport", "brandproef", "fire test"].some((k) => naam.includes(k))) {
+    categorie = "testrapport";
+  } else if (["certificaat", "komo", "kiwa", "brl "].some((k) => naam.includes(k))) {
+    categorie = "certificaat";
+  } else if (["productblad", "productdocument", "verwerkingsvoorschrift", "tds ", "technical data"].some((k) => naam.includes(k))) {
+    categorie = "productdocument";
   } else if (["offerte", "aanbieding", "prijsopgave", "quotation"].some((k) => naam.includes(k))) {
     categorie = "offerte";
-  } else if (["factuur", "invoice", "bon", "rekening", "creditnota"].some((k) => naam.includes(k))) {
+  } else if (["factuur", "invoice", "creditnota"].some((k) => naam.includes(k))) {
     categorie = "factuur";
-  } else if (["contract", "overeenkomst", "arbeidscontract", "dienstverband", "diploma", "certificaat"].some((k) => naam.includes(k))) {
-    categorie = "hrm";
-  } else if (["tekening", "plattegrond", "dwg", "autocad", "plan"].some((k) => naam.includes(k)) || ext === "dwg") {
+  } else if (["aanvraag", "rfq", "tender", "bestek"].some((k) => naam.includes(k))) {
+    categorie = "aanvraag";
+  } else if (["arbeidscontract", "arbeidsovereenkomst", "diploma", "vca", "vog", "personeelsdossier"].some((k) => naam.includes(k))) {
+    categorie = "personeelsdocument";
+  } else if (["tekening", "plattegrond", "situatie", "autocad"].some((k) => naam.includes(k)) || ext === "dwg") {
     categorie = "tekening";
-  } else if (["rapport", "verslag", "oplevering", "inspectie", "report"].some((k) => naam.includes(k))) {
+  } else if (["rapport", "verslag", "oplevering", "inspectie", "snag"].some((k) => naam.includes(k))) {
     categorie = "snagstream";
-  } else if (mime.startsWith("image/")) {
+  } else if (mime.startsWith("image/") && !["jpg", "jpeg", "png", "webp"].includes(ext)) {
     categorie = "tekening";
   }
 
-  const voorstelNaam = bestandsnaam.replace(/\.[^.]+$/, "").replace(/[-_]/g, " ").trim();
-
   return {
     categorie,
-    voorstel_naam: voorstelNaam,
+    voorstel_naam: bestandsnaam.replace(/\.[^.]+$/, "").replace(/[-_]/g, " ").trim(),
     redenering: "Classificatie op basis van bestandsnaam en extensie (AI niet beschikbaar).",
     vertrouwen: "laag",
     ai_beschikbaar: false,
+    gevonden_gegevens: {},
+    alternatieven: ["bibliotheek", "algemeen"],
   };
 }
 
 // ── AI-classificatie ──────────────────────────────────────────────────────────
 
-const SYSTEEM_PROMPT = `Je bent een slimme bestandsclassificator voor FPS Connect, een brandpreventieplatform.
-Je krijgt de bestandsnaam, het MIME-type, hoeveel tekst kon worden gelezen en optioneel een tekstfragment.
-Classificeer het bestand naar precies één categorie en geef een nuttige uitleg — ook als de zekerheid laag is.
+const SYSTEEM_PROMPT = `Je bent een slimme documentclassificator voor FPS Connect, een brandpreventieplatform.
+Je analyseert uploads en herkent documenttype, inhoud en relevante gegevens.
 
 CATEGORIEËN:
-
-"bibliotheek" — Technische brandveiligheidsdocumenten voor de productbibliotheek.
-  Signaalwoorden: ETA, KIWA, KOMO, DoP, prestatieverklaring, testrapport, classificatierapport,
-  verwerkingsvoorschrift, productcertificaat, productblad, CE-markering, brandklasse, EI/EW-minuten.
-
-"offerte" — Financiële offertes, prijsopgaven, aanbestedingsstukken.
-  Signaalwoorden: offerte, aanbieding, prijsopgave, bestek, quotation, excl. BTW, geldig tot.
-
-"factuur" — Facturen, creditnota's, bonnen, betaalbewijzen.
-  Signaalwoorden: factuur, invoice, creditnota, rekening, IBAN, debiteurnr, betalingstermijn.
-
-"hrm" — Personeels- en HR-documenten.
-  Signaalwoorden: arbeidscontract, dienstverband, loonstrook, salaris, diploma, VOG, CAO,
-  opleidingsbewijs, personeelsdossier, ziekmelding, bijzonder verlof.
-
-"tekening" — Bouw- en installatietekeningen, plattegronden, situatietekeningen.
-  Signaalwoorden: schaal, doorsnede, aanzicht, NEN 2580, DWG, AutoCAD, verdiepingsplan.
-
-"snagstream" — Opleverrapporten, inspectierapportages, auditverslagen, punchlijsten.
-  Signaalwoorden: oplevering, inspectie, auditverslag, herstelwerkzaamheden, snag,
-  bevinding, afrondingsrapport.
-
-"algemeen" — Alle overige bedrijfsdocumenten, waaronder:
-  briefpapier, sjablonen, huisstijldocumenten, correspondentie, procedures,
-  KvK/BTW-certificaten, jaarverslagen, presentaties, notulen, interne memo's.
-  Kies "algemeen" ook als er te weinig tekst beschikbaar is om een specifieke categorie vast te stellen.
+"aanvraag"        — Aanvraag/offerteaanvraag/opdrachtverzoek/e-mail met projectverzoek. Signalen: "aanvraag", "verzoek", "graag offerte", klant vraagt om iets.
+"tekening"        — Bouw- of installatietekening, plattegrond, situatietekening. Signalen: schaal, DWG, AutoCAD, verdiepingsplan, doorsnede.
+"offerte"         — Financiële offerte of prijsopgave van FPS richting klant. Signalen: offerte, aanbieding, excl. BTW, geldig tot.
+"factuur"         — Factuur, creditnota, rekening. Signalen: factuur, invoice, IBAN, factuurnummer, betalingstermijn.
+"productdocument" — Productblad, verwerkingsvoorschrift, technisch datasheet. Signalen: TDS, verwerkingsadvies, productomschrijving.
+"testrapport"     — Brandproef, classificatierapport, fire test. Signalen: testrapport, classification report, EI/EW/EW, brandproef.
+"certificaat"     — KOMO, KIWA, BRL, CE-markering, kwaliteitscertificaat. Signalen: certificaatnummer, geldig tot, certificeringsinstantie.
+"eta"             — European Technical Assessment / Europese Technische Beoordeling. Signalen: ETA, ETB, EOTA.
+"dop"             — Declaration of Performance / Prestatieverklaring. Signalen: DoP, prestatieverklaring, verordening 305/2011.
+"personeelsdocument" — HR, arbeidscontract, diploma, VCA, loonstrook, VOG. Signalen: arbeidsovereenkomst, salaris, personeelsnummer.
+"snagstream"      — Opleverrapport, inspectieverslag, punchlijst. Signalen: oplevering, inspectie, bevinding, herstel.
+"bibliotheek"     — Overige technische brandveiligheidsdocumenten die niet in een specifieker type passen.
+"algemeen"        — Correspondentie, notulen, presentaties, jaarverslagen, sjablonen, interne memo's.
+"onbekend"        — Gebruik ALLEEN als het echt niet te classificeren is na grondige analyse.
 
 REGELS:
-1. Baseer je op bestandsnaam, MIME-type én tekstfragment samen.
-2. Een briefpapier, sjabloon of huisstijldocument is altijd "algemeen" — ook als de naam van een bedrijf erop staat.
-3. Vertrouwen "hoog": duidelijke categorie-signaalwoorden aanwezig in tekst of naam.
-4. Vertrouwen "midden": naam of inhoud wijst sterk op één categorie, maar niet onomstotelijk.
-5. Vertrouwen "laag": weinig of geen tekst, of de inhoud past bij meerdere categorieën.
-6. Bij vertrouwen "laag": leg in de redenering UIT wat je WEL zag en waarom je kiest voor deze categorie.
-   Slecht: "Bestand is niet specifiek genoeg."
-   Goed: "Weinig tekst beschikbaar; bestandsnaam en lay-out wijzen op briefpapier of intern sjabloon."
+1. Gebruik bestandsnaam, MIME-type én tekstfragment samen.
+2. Vertrouwen "hoog": duidelijke signaalwoorden aanwezig. "midden": redelijk aanwijsbaar. "laag": weinig tekst of meerdere opties.
+3. Geef altijd 2 alternatieven (op vertrouwensschaal na de hoofdkeuze).
+4. Extraheer in "gevonden_gegevens" relevante velden afhankelijk van het type:
+   - factuur: leverancier, bedrag, factuurnummer, datum, betalingstermijn
+   - aanvraag: klant, locatie, contactpersoon, projectnaam, omschrijving
+   - testrapport/eta/dop/certificaat: fabrikant, productnaam, normen, geldig_tot, classificatie
+   - personeelsdocument: naam_medewerker, type_document (AVG-gevoelig — geen BSN/salaris)
+   - offerte/factuur: klant, bedrag, referentie, datum
+   - tekening: project, schaal, revisie
+   - overig: alleen wat duidelijk zichtbaar is in de tekst
+5. Bij "onbekend": geef 3 zinvolle alternatieven.
 
-Geef uitsluitend geldige JSON terug:
-- categorie: één van de zeven categorieën
-- voorstel_naam: nette Nederlandse naam zonder extensie, max 80 tekens
-- redenering: nuttige uitleg ook bij lage zekerheid, max 140 tekens
-- vertrouwen: "laag", "midden" of "hoog"
-
+Geef uitsluitend geldige JSON:
+{
+  "categorie": "<één van de 14>",
+  "voorstel_naam": "<max 80 tekens>",
+  "redenering": "<max 150 tekens, nuttig ook bij laag vertrouwen>",
+  "vertrouwen": "laag|midden|hoog",
+  "gevonden_gegevens": { "<sleutel>": "<waarde>" },
+  "alternatieven": ["<cat1>", "<cat2>"]
+}
 Alleen JSON, geen extra tekst.`;
 
 async function aiClassificeer(
@@ -128,26 +144,22 @@ async function aiClassificeer(
   const client = maakOpenAiClient();
 
   const tekstInfo = tekstFragment && tekstFragment.trim().length > 0
-    ? `Geëxtraheerde tekst: ${tekstFragment.trim().length} tekens beschikbaar`
-    : "Geëxtraheerde tekst: geen — het bestand bevat geen leesbare tekst (mogelijk een afbeelding, sjabloon of ontwerpdocument)";
+    ? `Geëxtraheerde tekst (${tekstFragment.trim().length} tekens):`
+    : "Geen leesbare tekst beschikbaar (mogelijk afbeelding, DWG of gescand document)";
 
   const gebruikersBericht = [
     `Bestandsnaam: ${bestandsnaam}`,
     `MIME-type: ${mime}`,
     tekstInfo,
-    tekstFragment && tekstFragment.trim().length > 0
-      ? `\nTekstfragment (eerste ${Math.min(tekstFragment.trim().length, 6000)} tekens):\n${tekstFragment.trim().slice(0, 6000)}`
-      : "",
-  ]
-    .filter(Boolean)
-    .join("\n");
+    tekstFragment?.trim().length ? tekstFragment.trim().slice(0, 6000) : "",
+  ].filter(Boolean).join("\n");
 
   let completion;
   try {
     completion = await client.chat.completions.create({
       model: "gpt-4o-mini",
       response_format: { type: "json_object" },
-      max_tokens: 500,
+      max_tokens: 600,
       messages: [
         { role: "system", content: SYSTEEM_PROMPT },
         { role: "user", content: gebruikersBericht },
@@ -159,20 +171,27 @@ async function aiClassificeer(
   }
 
   const antwoord = completion.choices[0]?.message?.content;
-  if (!antwoord) {
-    return { ...heuristischClassificeer(bestandsnaam, mime), ai_beschikbaar: true };
-  }
+  if (!antwoord) return { ...heuristischClassificeer(bestandsnaam, mime), ai_beschikbaar: true };
 
   let parsed: Record<string, unknown>;
-  try {
-    parsed = JSON.parse(antwoord);
-  } catch {
+  try { parsed = JSON.parse(antwoord); }
+  catch {
     logger.warn({ antwoord }, "slim-upload: AI-JSON niet parseerbaar");
     return { ...heuristischClassificeer(bestandsnaam, mime), ai_beschikbaar: true };
   }
 
   const cat = typeof parsed.categorie === "string" ? parsed.categorie.toLowerCase() : null;
   const vertr = typeof parsed.vertrouwen === "string" ? parsed.vertrouwen.toLowerCase() : "midden";
+  const alt = Array.isArray(parsed.alternatieven)
+    ? (parsed.alternatieven as unknown[]).filter((a): a is SlimUploadCategorie => isCategorie(a)).slice(0, 3)
+    : ["bibliotheek", "algemeen"] as SlimUploadCategorie[];
+  const gevonden = typeof parsed.gevonden_gegevens === "object" && parsed.gevonden_gegevens !== null
+    ? Object.fromEntries(
+        Object.entries(parsed.gevonden_gegevens as Record<string, unknown>)
+          .filter(([, v]) => typeof v === "string")
+          .map(([k, v]) => [k, (v as string).slice(0, 200)])
+      )
+    : {};
 
   return {
     categorie: isCategorie(cat) ? cat : "algemeen",
@@ -181,9 +200,11 @@ async function aiClassificeer(
         ? parsed.voorstel_naam.trim().slice(0, 80)
         : bestandsnaam.replace(/\.[^.]+$/, ""),
     redenering:
-      typeof parsed.redenering === "string" ? parsed.redenering.trim().slice(0, 150) : "",
+      typeof parsed.redenering === "string" ? parsed.redenering.trim().slice(0, 200) : "",
     vertrouwen: vertr === "hoog" ? "hoog" : vertr === "laag" ? "laag" : "midden",
     ai_beschikbaar: true,
+    gevonden_gegevens: gevonden,
+    alternatieven: alt,
   };
 }
 
@@ -194,47 +215,56 @@ async function haalPdfTekst(buffer: Buffer): Promise<string | null> {
     const pdfParse = ((await import("pdf-parse")) as unknown as { default: (b: Buffer) => Promise<{ text: string }> }).default;
     const result = await pdfParse(buffer);
     return result.text?.trim() || null;
-  } catch {
-    return null;
+  } catch { return null; }
+}
+
+async function classificeerBestand(bestand: Express.Multer.File): Promise<SlimUploadSuggestie> {
+  const bestandsnaam = bestand.originalname ?? "onbekend";
+  const mime = bestand.mimetype ?? "application/octet-stream";
+
+  let tekstFragment: string | null = null;
+  if (mime === "application/pdf") {
+    tekstFragment = await haalPdfTekst(bestand.buffer);
+  } else if (mime.startsWith("text/") || mime === "message/rfc822") {
+    tekstFragment = bestand.buffer.toString("utf8").slice(0, 6000);
   }
+
+  if (heeftOpenAi()) {
+    return aiClassificeer(bestandsnaam, mime, tekstFragment);
+  }
+  return heuristischClassificeer(bestandsnaam, mime);
 }
 
 // ── Route: POST /slim-upload/analyseer ───────────────────────────────────────
+// Accepteert: bestanden[] (meerdere) of bestand (enkelvoud, backwards compat)
 
 router.post(
   "/slim-upload/analyseer",
   requireAuth,
-  upload.single("bestand"),
+  upload.any(),
   async (req, res) => {
-    const bestand = req.file;
-    if (!bestand) {
-      res.status(400).json({ error: "Geen bestand meegestuurd." });
+    const bestanden = (req.files as Express.Multer.File[] | undefined) ?? [];
+
+    if (bestanden.length === 0) {
+      res.status(400).json({ error: "Geen bestand(en) meegestuurd." });
       return;
     }
 
-    const bestandsnaam = bestand.originalname ?? "onbekend";
-    const mime = bestand.mimetype ?? "application/octet-stream";
+    try {
+      const resultaten = await Promise.all(bestanden.map(classificeerBestand));
 
-    let tekstFragment: string | null = null;
-    if (mime === "application/pdf") {
-      tekstFragment = await haalPdfTekst(bestand.buffer);
-    } else if (mime.startsWith("text/")) {
-      tekstFragment = bestand.buffer.toString("utf8").slice(0, 6000);
+      for (const [i, s] of resultaten.entries()) {
+        req.log.info(
+          { bestandsnaam: bestanden[i]?.originalname, categorie: s.categorie, vertrouwen: s.vertrouwen },
+          "slim-upload: analyse gereed",
+        );
+      }
+
+      res.json(resultaten);
+    } catch (err) {
+      req.log.error(err, "slim-upload: interne fout");
+      res.status(500).json({ error: "Analyse mislukt door interne fout." });
     }
-
-    let suggestie: SlimUploadSuggestie;
-    if (heeftOpenAi()) {
-      suggestie = await aiClassificeer(bestandsnaam, mime, tekstFragment);
-    } else {
-      suggestie = heuristischClassificeer(bestandsnaam, mime);
-    }
-
-    req.log.info(
-      { bestandsnaam, mime, categorie: suggestie.categorie, vertrouwen: suggestie.vertrouwen },
-      "slim-upload: analyse gereed",
-    );
-
-    res.json(suggestie);
   },
 );
 

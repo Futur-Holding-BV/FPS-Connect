@@ -1,62 +1,78 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useLocation } from "wouter";
 import {
-  Upload,
-  Sparkles,
-  X,
-  ChevronRight,
-  Trash2,
-  CheckCircle2,
-  AlertCircle,
-  FileText,
-  BookOpen,
-  Receipt,
-  Users,
-  PenLine,
-  Archive,
-  FolderOpen,
-  Zap,
-  ZapOff,
-  Settings,
+  Upload, Sparkles, X, ChevronRight, Trash2, CheckCircle2, AlertCircle,
+  FileText, BookOpen, Receipt, Users, PenLine, Archive, FolderOpen,
+  Zap, ZapOff, Settings, AlertTriangle, ShieldAlert, HelpCircle,
+  ClipboardList, BadgeCheck, FileCheck, Ruler, Package,
 } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 
-// ── Types ────────────────────────────────────────────────────────────────────
+// ── Types ─────────────────────────────────────────────────────────────────────
 
-type Categorie = "bibliotheek" | "offerte" | "factuur" | "hrm" | "tekening" | "snagstream" | "algemeen";
+type CategorieUitgebreid =
+  | "aanvraag" | "tekening" | "offerte" | "factuur"
+  | "productdocument" | "testrapport" | "certificaat" | "eta" | "dop"
+  | "personeelsdocument" | "snagstream" | "bibliotheek" | "algemeen" | "onbekend";
+
 type Vertrouwen = "laag" | "midden" | "hoog";
 
-interface Suggestie {
-  categorie: Categorie;
+interface SlimUploadSuggestie {
+  categorie: CategorieUitgebreid;
   voorstel_naam: string;
   redenering: string;
   vertrouwen: Vertrouwen;
   ai_beschikbaar: boolean;
+  gevonden_gegevens: Record<string, string>;
+  alternatieven: CategorieUitgebreid[];
+}
+
+interface UploadItem {
+  id: string;
+  bestand: File;
+  status: "wacht" | "analyseert" | "klaar" | "fout";
+  suggestie: SlimUploadSuggestie | null;
+  fout: string | null;
+  actieGenomen: boolean;
+  gekozenCategorie: CategorieUitgebreid | null;
 }
 
 interface AutomatiseringsRegel {
   id: string;
   extensie: string;
-  categorie: Categorie;
+  categorie: CategorieUitgebreid;
   bevestigingen: number;
   geautomatiseerd: boolean;
   aangemaakt: string;
 }
 
-// ── Categorie-metadata ────────────────────────────────────────────────────────
+// ── Categorie-configuratie ────────────────────────────────────────────────────
 
-const CATEGORIE_INFO: Record<Categorie, { label: string; icoon: React.ReactNode; pad: string; kleur: string }> = {
-  bibliotheek: { label: "Documentenbibliotheek", icoon: <BookOpen className="h-4 w-4" />, pad: "/documenten",  kleur: "bg-blue-50 text-blue-700 border-blue-200" },
-  offerte:     { label: "Offertes",              icoon: <FileText className="h-4 w-4" />, pad: "/offertes",   kleur: "bg-amber-50 text-amber-700 border-amber-200" },
-  factuur:     { label: "Facturen",              icoon: <Receipt className="h-4 w-4" />, pad: "/facturen",   kleur: "bg-emerald-50 text-emerald-700 border-emerald-200" },
-  hrm:         { label: "Personeel / HRM",       icoon: <Users className="h-4 w-4" />,   pad: "/personeel",  kleur: "bg-purple-50 text-purple-700 border-purple-200" },
-  tekening:    { label: "Tekeningen",            icoon: <PenLine className="h-4 w-4" />,  pad: "/documenten",  kleur: "bg-sky-50 text-sky-700 border-sky-200" },
-  snagstream:  { label: "Snagstream archief",    icoon: <Archive className="h-4 w-4" />,  pad: "/snagstream",  kleur: "bg-orange-50 text-orange-700 border-orange-200" },
-  algemeen:    { label: "Documenten (algemeen)", icoon: <FolderOpen className="h-4 w-4" />, pad: "/documenten", kleur: "bg-gray-50 text-gray-700 border-gray-200" },
+const CATEGORIE_INFO: Record<CategorieUitgebreid, {
+  label: string;
+  icoon: React.ReactNode;
+  pad: string;
+  kleur: string;
+  omschrijving: string;
+}> = {
+  aanvraag:          { label: "Nieuwe aanvraag / project",     icoon: <ClipboardList className="h-4 w-4" />, pad: "/gebouwen",   kleur: "bg-violet-50 text-violet-700 border-violet-200",  omschrijving: "Aanvraag, offerteaanvraag of opdrachtverzoek" },
+  tekening:          { label: "Tekeningen",                    icoon: <Ruler className="h-4 w-4" />,        pad: "/documenten",  kleur: "bg-sky-50 text-sky-700 border-sky-200",           omschrijving: "Bouw- of installatietekening, plattegrond" },
+  offerte:           { label: "Offertes",                      icoon: <FileText className="h-4 w-4" />,     pad: "/offertes",    kleur: "bg-amber-50 text-amber-700 border-amber-200",     omschrijving: "Prijsopgave of offerte richting klant" },
+  factuur:           { label: "Facturen",                      icoon: <Receipt className="h-4 w-4" />,      pad: "/facturen",    kleur: "bg-emerald-50 text-emerald-700 border-emerald-200", omschrijving: "Factuur, creditnota of betaalbewijs" },
+  productdocument:   { label: "Productdocumenten",             icoon: <Package className="h-4 w-4" />,      pad: "/documenten",  kleur: "bg-teal-50 text-teal-700 border-teal-200",        omschrijving: "Productblad, TDS, verwerkingsvoorschrift" },
+  testrapport:       { label: "Testrapporten",                 icoon: <FileCheck className="h-4 w-4" />,    pad: "/documenten",  kleur: "bg-orange-50 text-orange-700 border-orange-200",  omschrijving: "Brandproef, classificatierapport" },
+  certificaat:       { label: "Certificaten",                  icoon: <BadgeCheck className="h-4 w-4" />,   pad: "/documenten",  kleur: "bg-blue-50 text-blue-700 border-blue-200",        omschrijving: "KOMO, KIWA, BRL, CE-markering" },
+  eta:               { label: "ETA — Technische beoordeling",  icoon: <BadgeCheck className="h-4 w-4" />,   pad: "/documenten",  kleur: "bg-indigo-50 text-indigo-700 border-indigo-200",  omschrijving: "European Technical Assessment / ETB / EOTA" },
+  dop:               { label: "Prestatieverklaring (DoP)",     icoon: <BadgeCheck className="h-4 w-4" />,   pad: "/documenten",  kleur: "bg-cyan-50 text-cyan-700 border-cyan-200",        omschrijving: "Declaration of Performance, Reg. 305/2011" },
+  personeelsdocument:{ label: "Personeel / HRM",               icoon: <Users className="h-4 w-4" />,        pad: "/personeel",   kleur: "bg-purple-50 text-purple-700 border-purple-200",  omschrijving: "Arbeidscontract, diploma, VOG, VCA" },
+  snagstream:        { label: "Snagstream archief",            icoon: <Archive className="h-4 w-4" />,      pad: "/snagstream",  kleur: "bg-rose-50 text-rose-700 border-rose-200",        omschrijving: "Opleverrapport, inspectieverslag, punchlijst" },
+  bibliotheek:       { label: "Documentenbibliotheek",         icoon: <BookOpen className="h-4 w-4" />,     pad: "/documenten",  kleur: "bg-blue-50 text-blue-700 border-blue-200",        omschrijving: "Technisch brandveiligheidsdocument" },
+  algemeen:          { label: "Documenten (algemeen)",         icoon: <FolderOpen className="h-4 w-4" />,   pad: "/documenten",  kleur: "bg-gray-50 text-gray-700 border-gray-200",        omschrijving: "Overige bedrijfsdocumenten" },
+  onbekend:          { label: "Onbekend — handmatig kiezen",   icoon: <HelpCircle className="h-4 w-4" />,   pad: "/documenten",  kleur: "bg-gray-50 text-gray-600 border-gray-200",        omschrijving: "AI kon het type niet vaststellen" },
 };
 
 const VERTROUWEN_KLEUR: Record<Vertrouwen, string> = {
@@ -71,10 +87,25 @@ const VERTROUWEN_LABEL: Record<Vertrouwen, string> = {
   laag:  "Lage zekerheid",
 };
 
+const GEVONDEN_LABELS: Record<string, string> = {
+  leverancier: "Leverancier", klant: "Klant", bedrag: "Bedrag",
+  factuurnummer: "Factuurnummer", datum: "Datum", betalingstermijn: "Betalingstermijn",
+  locatie: "Locatie", contactpersoon: "Contactpersoon", projectnaam: "Projectnaam",
+  omschrijving: "Omschrijving", fabrikant: "Fabrikant", productnaam: "Productnaam",
+  normen: "Normen", geldig_tot: "Geldig tot", classificatie: "Classificatie",
+  naam_medewerker: "Medewerker", type_document: "Documenttype",
+  project: "Project", schaal: "Schaal", revisie: "Revisie", referentie: "Referentie",
+};
+
 // ── LocalStorage helpers ──────────────────────────────────────────────────────
 
 const LS_KEY = "fps_slim_upload_regels";
 const DREMPEL_AUTOMATISEREN = 3;
+
+function haalExtensie(naam: string): string {
+  const dot = naam.lastIndexOf(".");
+  return dot >= 0 ? naam.slice(dot).toLowerCase() : "";
+}
 
 function laadRegels(): AutomatiseringsRegel[] {
   try { return JSON.parse(localStorage.getItem(LS_KEY) ?? "[]") as AutomatiseringsRegel[]; }
@@ -85,20 +116,11 @@ function slaRegelsOp(regels: AutomatiseringsRegel[]) {
   localStorage.setItem(LS_KEY, JSON.stringify(regels));
 }
 
-function haalExtensie(bestandsnaam: string): string {
-  const dot = bestandsnaam.lastIndexOf(".");
-  return dot >= 0 ? bestandsnaam.slice(dot).toLowerCase() : "";
-}
-
-function zoekRegel(regels: AutomatiseringsRegel[], extensie: string, categorie: Categorie) {
-  return regels.find((r) => r.extensie === extensie && r.categorie === categorie);
-}
-
-function registreerBevestiging(extensie: string, categorie: Categorie): {
+function registreerBevestiging(extensie: string, categorie: CategorieUitgebreid): {
   regel: AutomatiseringsRegel; vraagAutomatiseren: boolean;
 } {
   const regels = laadRegels();
-  const bestaand = zoekRegel(regels, extensie, categorie);
+  const bestaand = regels.find((r) => r.extensie === extensie && r.categorie === categorie);
   if (bestaand) {
     bestaand.bevestigingen += 1;
     slaRegelsOp(regels);
@@ -122,7 +144,7 @@ function verwijderRegel(id: string) {
   slaRegelsOp(laadRegels().filter((r) => r.id !== id));
 }
 
-// ── Slim-upload knop (snelkoppeling in de taakbalk) ───────────────────────────
+// ── Upload knop ───────────────────────────────────────────────────────────────
 
 function SlimUploadKnop({ onClick, actieveAutomatiseringen }: {
   onClick: () => void;
@@ -137,7 +159,7 @@ function SlimUploadKnop({ onClick, actieveAutomatiseringen }: {
         "border border-white/15 hover:border-white/30",
         "transition-all duration-150 cursor-pointer select-none",
       )}
-      title="Slim uploaden — sleep of klik om een bestand te analyseren"
+      title="Slim uploaden — sleep of klik om bestanden te analyseren"
     >
       <Upload className="h-3.5 w-3.5 shrink-0" />
       <span>Slim uploaden</span>
@@ -151,27 +173,251 @@ function SlimUploadKnop({ onClick, actieveAutomatiseringen }: {
   );
 }
 
+// ── Gevonden-gegevens kaart ───────────────────────────────────────────────────
+
+function GevondenGegevens({ gegevens }: { gegevens: Record<string, string> }) {
+  const items = Object.entries(gegevens).filter(([, v]) => v?.trim());
+  if (items.length === 0) return null;
+  return (
+    <div className="rounded-md border bg-muted/30 divide-y text-sm">
+      {items.map(([k, v]) => (
+        <div key={k} className="flex gap-2 px-3 py-1.5">
+          <span className="text-muted-foreground text-xs min-w-[110px] shrink-0 pt-0.5">
+            {GEVONDEN_LABELS[k] ?? k}
+          </span>
+          <span className="font-medium text-xs leading-relaxed">{v}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ── Beslisscherm per file ─────────────────────────────────────────────────────
+
+function BeslisScherm({
+  item,
+  onBevestigen,
+  onWijzigCategorie,
+}: {
+  item: UploadItem;
+  onBevestigen: (cat: CategorieUitgebreid) => void;
+  onWijzigCategorie: (cat: CategorieUitgebreid) => void;
+}) {
+  const { suggestie, fout, status } = item;
+  const effectiefeCat = item.gekozenCategorie ?? suggestie?.categorie ?? "algemeen";
+  const catInfo = CATEGORIE_INFO[effectiefeCat];
+
+  // Technische fout → handmatig kiezen
+  if (status === "fout" || fout) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/5 p-3">
+          <AlertCircle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-medium text-destructive">Analyse tijdelijk niet beschikbaar</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Kies handmatig waar dit bestand thuishoort. Het bestand wordt niet verloren.</p>
+          </div>
+        </div>
+        <HandmatigKiezen huidig={effectiefeCat} onKiezen={onWijzigCategorie} />
+        <Button size="sm" className="w-full gap-1.5" onClick={() => onBevestigen(effectiefeCat)}>
+          <ChevronRight className="h-4 w-4" />
+          Ga naar {catInfo.label}
+        </Button>
+      </div>
+    );
+  }
+
+  if (!suggestie) return null;
+
+  const isOnzeker = suggestie.categorie === "onbekend" || suggestie.vertrouwen === "laag";
+
+  return (
+    <div className="space-y-4">
+      {/* AVG-waarschuwing voor personeelsdocumenten */}
+      {(effectiefeCat === "personeelsdocument" || suggestie.categorie === "personeelsdocument") && (
+        <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-3">
+          <ShieldAlert className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+          <div>
+            <p className="text-xs font-semibold text-amber-700">AVG — Privacygevoelig document</p>
+            <p className="text-xs text-amber-600 mt-0.5">
+              Dit lijkt een personeelsdocument. Sla het op bij Personeel / HRM en maak het niet breed zichtbaar.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Hoofdvoorstel */}
+      <div className={cn("rounded-lg border p-4 space-y-3", catInfo.kleur)}>
+        <div className="flex items-center gap-2">
+          {catInfo.icoon}
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold text-sm leading-tight">{catInfo.label}</p>
+            <p className="text-[11px] opacity-70">{catInfo.omschrijving}</p>
+          </div>
+          <span className={cn("text-xs font-medium shrink-0", VERTROUWEN_KLEUR[suggestie.vertrouwen])}>
+            {VERTROUWEN_LABEL[suggestie.vertrouwen]}
+          </span>
+        </div>
+        {suggestie.voorstel_naam && (
+          <div>
+            <p className="text-[10px] uppercase tracking-wide font-semibold opacity-60 mb-0.5">Voorgestelde naam</p>
+            <p className="text-sm font-medium">{suggestie.voorstel_naam}</p>
+          </div>
+        )}
+        {suggestie.redenering && (
+          <p className="text-xs opacity-75 leading-relaxed">{suggestie.redenering}</p>
+        )}
+        {!suggestie.ai_beschikbaar && (
+          <p className="text-[10px] opacity-50 italic">Geclassificeerd op bestandsnaam (AI niet actief)</p>
+        )}
+      </div>
+
+      {/* Gevonden gegevens */}
+      {Object.keys(suggestie.gevonden_gegevens).length > 0 && (
+        <div>
+          <p className="text-xs font-semibold text-muted-foreground mb-1.5">Herkende gegevens</p>
+          <GevondenGegevens gegevens={suggestie.gevonden_gegevens} />
+        </div>
+      )}
+
+      {/* Bij aanvraag: vervolgacties tonen */}
+      {(effectiefeCat === "aanvraag") && (
+        <div className="rounded-md border bg-violet-50 border-violet-200 p-3 space-y-2">
+          <p className="text-xs font-semibold text-violet-700">Dit lijkt een nieuwe aanvraag</p>
+          <div className="flex flex-col gap-1.5">
+            <Button size="sm" variant="default" className="justify-start gap-2 text-xs"
+              onClick={() => onBevestigen("aanvraag")}>
+              <ChevronRight className="h-3.5 w-3.5" />
+              Nieuw werk / project aanmaken
+            </Button>
+            <Button size="sm" variant="outline" className="justify-start gap-2 text-xs"
+              onClick={() => onWijzigCategorie("bibliotheek")}>
+              <BookOpen className="h-3.5 w-3.5" />
+              Alleen opslaan in documentenbibliotheek
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Onzeker / onbekend: top alternatieven */}
+      {isOnzeker && suggestie.alternatieven.length > 0 && (
+        <div>
+          <p className="text-xs font-semibold text-muted-foreground mb-1.5">
+            {suggestie.categorie === "onbekend"
+              ? "Kies de beste bestemming:"
+              : "Niet wat u verwacht? Andere opties:"}
+          </p>
+          <div className="space-y-1.5">
+            {suggestie.alternatieven.slice(0, 3).map((cat) => {
+              const info = CATEGORIE_INFO[cat];
+              return (
+                <button
+                  key={cat}
+                  onClick={() => onWijzigCategorie(cat)}
+                  className={cn(
+                    "w-full flex items-center gap-2 rounded-md border px-3 py-2 text-xs text-left transition-colors",
+                    item.gekozenCategorie === cat
+                      ? info.kleur + " font-semibold"
+                      : "border-border bg-background hover:bg-muted/50",
+                  )}
+                >
+                  {info.icoon}
+                  <div className="flex-1">
+                    <p className="font-medium">{info.label}</p>
+                    <p className="text-muted-foreground text-[10px]">{info.omschrijving}</p>
+                  </div>
+                  {item.gekozenCategorie === cat && <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Overige alternatieven / handmatig kiezen */}
+      {effectiefeCat !== "aanvraag" && (
+        <details className="group">
+          <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors select-none">
+            Handmatig een andere bestemming kiezen
+          </summary>
+          <div className="mt-2">
+            <HandmatigKiezen huidig={effectiefeCat} onKiezen={onWijzigCategorie} />
+          </div>
+        </details>
+      )}
+
+      {/* Actieknop */}
+      {effectiefeCat !== "aanvraag" && (
+        <Button size="sm" className="w-full gap-1.5" onClick={() => onBevestigen(effectiefeCat)}>
+          <ChevronRight className="h-4 w-4" />
+          Ga naar {CATEGORIE_INFO[effectiefeCat].label}
+        </Button>
+      )}
+    </div>
+  );
+}
+
+function HandmatigKiezen({
+  huidig,
+  onKiezen,
+}: {
+  huidig: CategorieUitgebreid;
+  onKiezen: (cat: CategorieUitgebreid) => void;
+}) {
+  const alleCategorieen = Object.entries(CATEGORIE_INFO) as [CategorieUitgebreid, (typeof CATEGORIE_INFO)[CategorieUitgebreid]][];
+  return (
+    <div className="grid grid-cols-2 gap-1.5">
+      {alleCategorieen.filter(([c]) => c !== "onbekend").map(([cat, info]) => (
+        <button
+          key={cat}
+          onClick={() => onKiezen(cat)}
+          className={cn(
+            "flex items-center gap-1.5 rounded border px-2.5 py-1.5 text-xs text-left transition-colors",
+            cat === huidig
+              ? info.kleur + " font-semibold"
+              : "border-border bg-background hover:bg-muted/50 text-muted-foreground hover:text-foreground",
+          )}
+        >
+          {info.icoon}
+          <span className="truncate">{info.label}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// ── Bestandsstatus badge ──────────────────────────────────────────────────────
+
+function BestandsBadge({ status }: { status: UploadItem["status"] }) {
+  if (status === "analyseert") return (
+    <span className="h-4 w-4 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+  );
+  if (status === "klaar")      return <CheckCircle2 className="h-4 w-4 text-emerald-500" />;
+  if (status === "fout")       return <AlertCircle className="h-4 w-4 text-destructive" />;
+  return <span className="h-4 w-4 rounded-full border-2 border-muted-foreground/30" />;
+}
+
 // ── Hoofd-component ───────────────────────────────────────────────────────────
 
 export function SlimUploadBalk() {
   const [, navigate] = useLocation();
-  const [sleepActief, setSleepActief] = useState(false);
-  const [analyseert, setAnalyseert] = useState(false);
-  const [suggestie, setSuggestie] = useState<Suggestie | null>(null);
-  const [gedroptBestand, setGedroptBestand] = useState<File | null>(null);
-  const [toonDialoog, setToonDialoog] = useState(false);
-  const [fout, setFout] = useState<string | null>(null);
+  const [sleepActief, setSleepActief]         = useState(false);
+  const [queue, setQueue]                     = useState<UploadItem[]>([]);
+  const [huidigId, setHuidigId]               = useState<string | null>(null);
+  const [toonDialoog, setToonDialoog]         = useState(false);
   const [toonAutomatiseren, setToonAutomatiseren] = useState<AutomatiseringsRegel | null>(null);
   const [toonInstellingen, setToonInstellingen] = useState(false);
-  const [regels, setRegels] = useState<AutomatiseringsRegel[]>([]);
+  const [regels, setRegels]                   = useState<AutomatiseringsRegel[]>([]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const sleepTeller = useRef(0);
+  const sleepTeller  = useRef(0);
 
   const herlaadRegels = useCallback(() => setRegels(laadRegels()), []);
   useEffect(() => { herlaadRegels(); }, [herlaadRegels]);
 
-  // ── Globale drag-listeners ─────────────────────────────────────────────────
+  const huidigItem = queue.find((i) => i.id === huidigId) ?? null;
+
+  // ── Drag-drop listeners ───────────────────────────────────────────────────
 
   useEffect(() => {
     function opDragEnter(e: DragEvent) {
@@ -191,136 +437,176 @@ export function SlimUploadBalk() {
       e.preventDefault();
       sleepTeller.current = 0;
       setSleepActief(false);
-      const bestand = e.dataTransfer?.files?.[0];
-      if (bestand) verwerkBestand(bestand);
+      const bestanden = Array.from(e.dataTransfer?.files ?? []);
+      if (bestanden.length) verwerkBestanden(bestanden);
     }
-
     document.addEventListener("dragenter", opDragEnter);
     document.addEventListener("dragleave", opDragLeave);
-    document.addEventListener("dragover", opDragOver);
-    document.addEventListener("drop", opDrop);
+    document.addEventListener("dragover",  opDragOver);
+    document.addEventListener("drop",      opDrop);
     return () => {
       document.removeEventListener("dragenter", opDragEnter);
       document.removeEventListener("dragleave", opDragLeave);
-      document.removeEventListener("dragover", opDragOver);
-      document.removeEventListener("drop", opDrop);
+      document.removeEventListener("dragover",  opDragOver);
+      document.removeEventListener("drop",      opDrop);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ── Bestand verwerken ──────────────────────────────────────────────────────
+  // ── Bestanden verwerken ───────────────────────────────────────────────────
 
-  async function verwerkBestand(bestand: File) {
-    setGedroptBestand(bestand);
-    setFout(null);
-    setSuggestie(null);
-
-    const extensie = haalExtensie(bestand.name);
+  async function verwerkBestanden(bestanden: File[]) {
     const regelsHuidig = laadRegels();
-    const actieveRegel = regelsHuidig.find((r) => r.extensie === extensie && r.geautomatiseerd);
-    if (actieveRegel) {
-      navigate(CATEGORIE_INFO[actieveRegel.categorie].pad);
-      return;
+
+    // Maak queue-items aan
+    const nieuweItems: UploadItem[] = bestanden.map((b) => ({
+      id: crypto.randomUUID(),
+      bestand: b,
+      status: "wacht" as const,
+      suggestie: null,
+      fout: null,
+      actieGenomen: false,
+      gekozenCategorie: null,
+    }));
+
+    // Automatiseringsregels → meteen navigeren voor bekende extensies
+    const teAnalyseren: UploadItem[] = [];
+    for (const item of nieuweItems) {
+      const ext = haalExtensie(item.bestand.name);
+      const actief = regelsHuidig.find((r) => r.extensie === ext && r.geautomatiseerd);
+      if (actief) {
+        navigate(CATEGORIE_INFO[actief.categorie].pad);
+      } else {
+        teAnalyseren.push(item);
+      }
     }
 
-    setAnalyseert(true);
+    if (teAnalyseren.length === 0) return;
+
+    // Queue openen
+    setQueue(teAnalyseren);
+    setHuidigId(teAnalyseren[0]?.id ?? null);
     setToonDialoog(true);
 
+    // Markeer alle items als "analyseert"
+    setQueue((prev) => prev.map((i) => ({ ...i, status: "analyseert" as const })));
+
+    // Stuur alle bestanden in één aanroep
     try {
       const formData = new FormData();
-      formData.append("bestand", bestand);
+      for (const item of teAnalyseren) {
+        formData.append("bestanden", item.bestand);
+      }
       const res = await fetch("/api/slim-upload/analyseer", {
         method: "POST", body: formData, credentials: "include",
       });
+
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      setSuggestie((await res.json()) as Suggestie);
+
+      const resultaten = (await res.json()) as SlimUploadSuggestie[];
+
+      setQueue((prev) =>
+        prev.map((item, idx) => {
+          const suggestie = resultaten[idx] ?? null;
+          return {
+            ...item,
+            status: suggestie ? "klaar" : "fout",
+            suggestie,
+            fout: suggestie ? null : "Geen resultaat ontvangen.",
+          };
+        }),
+      );
     } catch {
-      setFout("De analyse kon niet worden uitgevoerd. Kies hieronder handmatig waar het bestand thuishoort.");
-    } finally {
-      setAnalyseert(false);
+      setQueue((prev) =>
+        prev.map((i) => ({
+          ...i,
+          status: "fout" as const,
+          fout: "Verbindingsfout — kies handmatig waar het bestand thuishoort.",
+        })),
+      );
     }
   }
 
-  function opBevestigen() {
-    if (!suggestie || !gedroptBestand) return;
-    const extensie = haalExtensie(gedroptBestand.name);
-    const { regel, vraagAutomatiseren } = registreerBevestiging(extensie, suggestie.categorie);
-    setToonDialoog(false);
-    setSuggestie(null);
-    setGedroptBestand(null);
-    navigate(CATEGORIE_INFO[suggestie.categorie].pad);
+  // ── Bevestigen ────────────────────────────────────────────────────────────
+
+  function opBevestigen(cat: CategorieUitgebreid) {
+    if (!huidigItem) return;
+
+    const ext = haalExtensie(huidigItem.bestand.name);
+    const { regel, vraagAutomatiseren } = registreerBevestiging(ext, cat);
+
+    // Markeer als afgehandeld
+    setQueue((prev) =>
+      prev.map((i) => i.id === huidigItem.id ? { ...i, actieGenomen: true, gekozenCategorie: cat } : i),
+    );
+
+    // Ga naar volgende item of sluit
+    const volgende = queue.find((i) => !i.actieGenomen && i.id !== huidigItem.id);
+    if (volgende) {
+      setHuidigId(volgende.id);
+    } else {
+      setToonDialoog(false);
+      setQueue([]);
+      navigate(CATEGORIE_INFO[cat].pad);
+    }
+
     if (vraagAutomatiseren) {
       setTimeout(() => { setToonAutomatiseren(regel); herlaadRegels(); }, 400);
     }
   }
 
-  function opAnnuleren() {
-    setToonDialoog(false);
-    setSuggestie(null);
-    setGedroptBestand(null);
-    setFout(null);
+  function opWijzigCategorie(id: string, cat: CategorieUitgebreid) {
+    setQueue((prev) => prev.map((i) => i.id === id ? { ...i, gekozenCategorie: cat } : i));
   }
 
-  function opAutomatiseerBevestigen() {
-    if (toonAutomatiseren) { activeerAutomatisering(toonAutomatiseren.id); herlaadRegels(); }
-    setToonAutomatiseren(null);
+  function opSluiten() {
+    setToonDialoog(false);
+    setQueue([]);
+    setHuidigId(null);
   }
 
   const actieveAutomatiseringen = regels.filter((r) => r.geautomatiseerd);
+  const aantalKlaar = queue.filter((i) => i.actieGenomen).length;
+  const meerdere = queue.length > 1;
 
-  // ── Render ─────────────────────────────────────────────────────────────────
+  // ── Render ────────────────────────────────────────────────────────────────
 
   return (
     <>
-      {/* ── Taakbalk ────────────────────────────────────────────────────────── */}
+      {/* ── Taakbalk ─────────────────────────────────────────────────────── */}
       <div
         className="fixed bottom-0 right-0 z-40 flex items-center"
         style={{ left: "var(--sidebar-width, 0px)" }}
       >
-        {/* Gekleurde balk */}
         <div
           className={cn(
-            "flex items-center gap-2 px-4 w-full transition-all duration-300",
-            "border-t",
+            "flex items-center gap-2 px-4 w-full transition-all duration-300 border-t",
             sleepActief
               ? "bg-primary border-primary/80 py-6"
               : "bg-[#1e2535] border-[#2d3548] py-2",
           )}
         >
           {sleepActief ? (
-            /* Sleep-staat: grote drop-zone hint */
             <div className="flex items-center gap-3 w-full justify-center">
               <div className="rounded-full p-2 bg-white/15">
                 <Upload className="h-5 w-5 text-white" />
               </div>
               <div>
                 <p className="text-sm font-semibold text-white">Laat los om te analyseren</p>
-                <p className="text-xs text-white/70">AI bepaalt automatisch waar het bestand thuishoort</p>
+                <p className="text-xs text-white/70">AI bepaalt automatisch waar elk bestand thuishoort</p>
               </div>
             </div>
           ) : (
-            /* Rusttoestand: taakbalk met snelkoppelingen */
             <>
-              {/* Label */}
               <span className="text-[11px] text-white/40 font-medium uppercase tracking-wider shrink-0 select-none">
                 Snelkoppelingen
               </span>
-
               <div className="w-px h-4 bg-white/15 shrink-0" />
-
-              {/* Slim uploaden knop */}
               <SlimUploadKnop
                 onClick={() => fileInputRef.current?.click()}
                 actieveAutomatiseringen={actieveAutomatiseringen.length}
               />
-
-              {/* Ruimte voor toekomstige snelkoppelingen */}
-              {/* <NogEenKnop /> */}
-
-              {/* Spacer */}
               <div className="flex-1" />
-
-              {/* Instellingen tandwiel */}
               <Popover open={toonInstellingen} onOpenChange={setToonInstellingen}>
                 <PopoverTrigger asChild>
                   <button
@@ -383,107 +669,154 @@ export function SlimUploadBalk() {
         </div>
       </div>
 
-      {/* Verborgen file-input voor klik-upload */}
+      {/* Verborgen file-input — meerdere bestanden toegestaan */}
       <input
         ref={fileInputRef}
         type="file"
+        multiple
         className="hidden"
         onChange={(e) => {
-          const bestand = e.target.files?.[0];
-          if (bestand) verwerkBestand(bestand);
+          const bestanden = Array.from(e.target.files ?? []);
+          if (bestanden.length) verwerkBestanden(bestanden);
           e.target.value = "";
         }}
       />
 
-      {/* ── AI-analyse dialoog ───────────────────────────────────────────────── */}
-      <Dialog open={toonDialoog} onOpenChange={(open) => { if (!open) opAnnuleren(); }}>
-        <DialogContent className="max-w-md">
+      {/* ── Analyse-dialoog ───────────────────────────────────────────────── */}
+      <Dialog open={toonDialoog} onOpenChange={(open) => { if (!open) opSluiten(); }}>
+        <DialogContent className={meerdere ? "max-w-2xl" : "max-w-md"}>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Sparkles className="h-4 w-4 text-primary" />
               Slim uploaden
+              {meerdere && (
+                <Badge variant="secondary" className="ml-1 text-xs">
+                  {aantalKlaar}/{queue.length} verwerkt
+                </Badge>
+              )}
             </DialogTitle>
           </DialogHeader>
 
-          {analyseert && (
-            <div className="flex flex-col items-center gap-3 py-8">
-              <Sparkles className="h-8 w-8 text-primary animate-pulse" />
-              <p className="text-sm text-muted-foreground">
-                AI analyseert{" "}
-                <span className="font-medium text-foreground">{gedroptBestand?.name}</span>…
-              </p>
-            </div>
-          )}
-
-          {!analyseert && fout && (
-            <div className="space-y-4">
-              <div className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/5 p-3">
-                <AlertCircle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
-                <p className="text-sm text-destructive">{fout}</p>
-              </div>
-              <p className="text-xs text-muted-foreground">Kies zelf waar u het bestand wilt opslaan:</p>
-              <div className="grid grid-cols-2 gap-2">
-                {(Object.entries(CATEGORIE_INFO) as [Categorie, typeof CATEGORIE_INFO[Categorie]][]).map(([cat, info]) => (
-                  <Button key={cat} variant="outline" size="sm" className="justify-start gap-2 text-xs h-8"
-                    onClick={() => setSuggestie({ categorie: cat, voorstel_naam: gedroptBestand?.name.replace(/\.[^.]+$/, "") ?? "", redenering: "Handmatig gekozen.", vertrouwen: "laag", ai_beschikbaar: false })}>
-                    {info.icoon}{info.label}
-                  </Button>
+          <div className={cn("flex gap-4", meerdere ? "min-h-[360px]" : "")}>
+            {/* ── Bestandenlijst (sidebar bij meerdere) ───────────────── */}
+            {meerdere && (
+              <div className="w-44 shrink-0 border-r pr-4 space-y-1">
+                <p className="text-[10px] uppercase tracking-wide font-semibold text-muted-foreground mb-2">
+                  Bestanden ({queue.length})
+                </p>
+                {queue.map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => setHuidigId(item.id)}
+                    className={cn(
+                      "w-full flex items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs transition-colors",
+                      item.id === huidigId
+                        ? "bg-primary/10 text-primary font-medium"
+                        : item.actieGenomen
+                          ? "text-muted-foreground"
+                          : "hover:bg-muted/50",
+                    )}
+                  >
+                    <BestandsBadge status={item.actieGenomen ? "klaar" : item.status} />
+                    <span className="truncate flex-1" title={item.bestand.name}>
+                      {item.bestand.name}
+                    </span>
+                  </button>
                 ))}
               </div>
-            </div>
-          )}
-
-          {!analyseert && suggestie && (
-            <div className="space-y-4">
-              <div className={cn("rounded-lg border p-4 space-y-3", CATEGORIE_INFO[suggestie.categorie].kleur)}>
-                <div className="flex items-center gap-2">
-                  {CATEGORIE_INFO[suggestie.categorie].icoon}
-                  <span className="font-semibold text-sm">{CATEGORIE_INFO[suggestie.categorie].label}</span>
-                  <span className={cn("ml-auto text-xs font-medium", VERTROUWEN_KLEUR[suggestie.vertrouwen])}>
-                    {VERTROUWEN_LABEL[suggestie.vertrouwen]}
-                  </span>
-                </div>
-                <div>
-                  <p className="text-[10px] uppercase tracking-wide font-semibold opacity-60 mb-0.5">Voorgestelde naam</p>
-                  <p className="text-sm font-medium">{suggestie.voorstel_naam}</p>
-                </div>
-                {suggestie.redenering && (
-                  <div>
-                    <p className="text-[10px] uppercase tracking-wide font-semibold opacity-60 mb-0.5">Redenering</p>
-                    <p className="text-xs opacity-80">{suggestie.redenering}</p>
-                  </div>
-                )}
-                {!suggestie.ai_beschikbaar && (
-                  <p className="text-[10px] opacity-60 italic">Geclassificeerd op bestandsnaam (AI niet actief)</p>
-                )}
-              </div>
-              <p className="text-xs text-muted-foreground">Niet wat u verwacht? Kies een andere bestemming:</p>
-              <div className="grid grid-cols-2 gap-1.5">
-                {(Object.entries(CATEGORIE_INFO) as [Categorie, typeof CATEGORIE_INFO[Categorie]][])
-                  .filter(([cat]) => cat !== suggestie.categorie)
-                  .map(([cat, info]) => (
-                    <Button key={cat} variant="ghost" size="sm" className="justify-start gap-1.5 text-xs h-7 text-muted-foreground hover:text-foreground"
-                      onClick={() => setSuggestie({ ...suggestie, categorie: cat, vertrouwen: "laag", redenering: "Handmatig gewijzigd." })}>
-                      {info.icoon}{info.label}
-                    </Button>
-                  ))}
-              </div>
-            </div>
-          )}
-
-          <DialogFooter>
-            <Button variant="outline" size="sm" onClick={opAnnuleren}>Annuleren</Button>
-            {suggestie && (
-              <Button size="sm" onClick={opBevestigen} className="gap-1.5">
-                <ChevronRight className="h-4 w-4" />
-                Ga naar {CATEGORIE_INFO[suggestie.categorie].label}
-              </Button>
             )}
-          </DialogFooter>
+
+            {/* ── Beslisscherm voor huidig item ────────────────────────── */}
+            <div className="flex-1 min-w-0">
+              {huidigItem && (
+                <>
+                  {/* Bestandsnaam + status */}
+                  <div className="flex items-center gap-2 mb-3">
+                    <p className="text-sm font-medium truncate flex-1" title={huidigItem.bestand.name}>
+                      {huidigItem.bestand.name}
+                    </p>
+                    <span className="text-xs text-muted-foreground shrink-0">
+                      {(huidigItem.bestand.size / 1024).toFixed(0)} KB
+                    </span>
+                  </div>
+
+                  {/* Analyseert */}
+                  {huidigItem.status === "analyseert" && (
+                    <div className="flex flex-col items-center gap-3 py-10">
+                      <Sparkles className="h-8 w-8 text-primary animate-pulse" />
+                      <p className="text-sm text-muted-foreground text-center">
+                        AI analyseert {meerdere ? `${queue.length} bestanden` : "het bestand"}…
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Wacht */}
+                  {huidigItem.status === "wacht" && (
+                    <div className="flex flex-col items-center gap-3 py-10">
+                      <div className="h-8 w-8 rounded-full border-2 border-muted-foreground/20 border-t-primary animate-spin" />
+                      <p className="text-sm text-muted-foreground">Wacht op analyse…</p>
+                    </div>
+                  )}
+
+                  {/* Beslisscherm */}
+                  {(huidigItem.status === "klaar" || huidigItem.status === "fout") && !huidigItem.actieGenomen && (
+                    <BeslisScherm
+                      item={huidigItem}
+                      onBevestigen={opBevestigen}
+                      onWijzigCategorie={(cat) => opWijzigCategorie(huidigItem.id, cat)}
+                    />
+                  )}
+
+                  {/* Al afgehandeld */}
+                  {huidigItem.actieGenomen && (
+                    <div className="flex flex-col items-center gap-3 py-10 text-emerald-600">
+                      <CheckCircle2 className="h-8 w-8" />
+                      <p className="text-sm font-medium">Verwerkt</p>
+                      <p className="text-xs text-muted-foreground text-center">
+                        Dit bestand is ingedeeld bij{" "}
+                        {CATEGORIE_INFO[huidigItem.gekozenCategorie ?? huidigItem.suggestie?.categorie ?? "algemeen"].label}.
+                      </p>
+                      {queue.some((i) => !i.actieGenomen) && (
+                        <Button size="sm" variant="outline" onClick={() => {
+                          const volgende = queue.find((i) => !i.actieGenomen);
+                          if (volgende) setHuidigId(volgende.id);
+                        }}>
+                          Volgend bestand
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* Alles afgehandeld */}
+              {queue.length > 0 && queue.every((i) => i.actieGenomen) && (
+                <div className="flex flex-col items-center gap-3 py-8 text-emerald-600">
+                  <CheckCircle2 className="h-10 w-10" />
+                  <p className="text-sm font-semibold">Alle bestanden verwerkt</p>
+                  <Button size="sm" onClick={opSluiten}>Sluiten</Button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Footer met sluiten */}
+          <div className="flex justify-between items-center pt-2 border-t mt-2">
+            <Button variant="ghost" size="sm" onClick={opSluiten} className="gap-1.5">
+              <X className="h-3.5 w-3.5" />
+              Sluiten
+            </Button>
+            {meerdere && queue.some((i) => !i.actieGenomen) && (
+              <p className="text-xs text-muted-foreground">
+                <AlertTriangle className="inline h-3 w-3 mr-1 text-amber-500" />
+                {queue.filter((i) => !i.actieGenomen).length} bestand(en) nog te verwerken
+              </p>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
 
-      {/* ── Automatiseer-dialoog ─────────────────────────────────────────────── */}
+      {/* ── Automatiseer-dialoog ──────────────────────────────────────────── */}
       <Dialog open={!!toonAutomatiseren} onOpenChange={(open) => { if (!open) setToonAutomatiseren(null); }}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
@@ -518,16 +851,19 @@ export function SlimUploadBalk() {
               </div>
             </div>
           )}
-          <DialogFooter>
+          <div className="flex gap-2 justify-end">
             <Button variant="outline" size="sm" onClick={() => setToonAutomatiseren(null)} className="gap-1.5">
               <ZapOff className="h-3.5 w-3.5" />
               Nee, blijf vragen
             </Button>
-            <Button size="sm" onClick={opAutomatiseerBevestigen} className="gap-1.5">
+            <Button size="sm" onClick={() => {
+              if (toonAutomatiseren) { activeerAutomatisering(toonAutomatiseren.id); herlaadRegels(); }
+              setToonAutomatiseren(null);
+            }} className="gap-1.5">
               <Zap className="h-3.5 w-3.5" />
               Ja, automatiseer
             </Button>
-          </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
     </>
