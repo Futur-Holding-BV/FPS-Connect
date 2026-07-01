@@ -10,6 +10,17 @@ Grote roadmap-fases staan ook in `docs/roadmap/gebouwd.md` en `docs/roadmap/acti
 
 ---
 
+## 2026-07-01 — SlimUploadBalk: popup verschijnt nu altijd bij droppen
+
+**Uitvoering:** volledig | **Getest:** typecheck groen
+
+- **Root cause 1 (stale closure)**: de drop-listener was geregistreerd met `[]`-deps en belde een verouderde versie van `verwerkBestanden` aan. Opgelost met een `verwerkBestandenRef` die elke render gesynchroniseerd wordt; de listener belt nu altijd de meest recente versie aan.
+- **Root cause 2 (silent TypeError)**: `CATEGORIE_INFO[actief.categorie].pad` kon een `TypeError` gooien als een opgeslagen automatiseringsregel een ongeldige categorie bevatte (bv. uit een oudere versie). Die unhandled rejection zorgde ervoor dat `setToonDialoog(true)` nooit bereikt werd en de popup stilzwijgend uitbleef. Opgelost met defensive guard: `const catInfo = CATEGORIE_INFO[actief.categorie]; if (actief && catInfo)`.
+- **Root cause 3 (geen feedback bij automatisering)**: als een automatiseringsregel actief was, werd de gebruiker stilzwijgend doorgestuurd zonder enige indicatie. De gebruiker dacht "er gebeurt niets". Nu verschijnt een toast: "Automatisch doorgestuurd — [bestand] → [categorie]".
+- **Codegen-drift hersteld**: na merge van tasks #173/#174 was codegen niet opnieuw gedraaid; `DocumentStudioModelInputDocumentType` (enum toegevoegd in OpenAPI) ontbrak in de gegenereerde client. Nu hersteld; typecheck groen.
+
+---
+
 ## 2026-07-01 — Gebouwen: werkmaatschappij zichtbaar en bewerkbaar
 
 **Uitvoering:** volledig | **Getest:** typecheck groen

@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -567,6 +568,7 @@ function BestandsBadge({ status }: { status: UploadItem["status"] }) {
 
 export function SlimUploadBalk() {
   const [huidigeLocatie, navigate] = useLocation();
+  const { toast } = useToast();
   const [sleepActief, setSleepActief]         = useState(false);
   const [queue, setQueue]                     = useState<UploadItem[]>([]);
   const [huidigId, setHuidigId]               = useState<string | null>(null);
@@ -579,6 +581,7 @@ export function SlimUploadBalk() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const sleepTeller  = useRef(0);
   const herkomstPadRef = useRef<string>("/");
+  const verwerkBestandenRef = useRef<(bestanden: File[]) => Promise<void>>(async () => {});
 
   const herlaadRegels = useCallback(() => setRegels(laadRegels()), []);
   useEffect(() => { herlaadRegels(); }, [herlaadRegels]);
@@ -612,7 +615,7 @@ export function SlimUploadBalk() {
       sleepTeller.current = 0;
       setSleepActief(false);
       const bestanden = Array.from(e.dataTransfer?.files ?? []);
-      if (bestanden.length) verwerkBestanden(bestanden);
+      if (bestanden.length) void verwerkBestandenRef.current(bestanden);
     }
     document.addEventListener("dragenter", opDragEnter);
     document.addEventListener("dragleave", opDragLeave);
@@ -624,7 +627,6 @@ export function SlimUploadBalk() {
       document.removeEventListener("dragover",  opDragOver);
       document.removeEventListener("drop",      opDrop);
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ── Bestanden verwerken ───────────────────────────────────────────────────
@@ -648,8 +650,13 @@ export function SlimUploadBalk() {
     for (const item of nieuweItems) {
       const ext = haalExtensie(item.bestand.name);
       const actief = regelsHuidig.find((r) => r.extensie === ext && r.geautomatiseerd);
-      if (actief) {
-        navigate(CATEGORIE_INFO[actief.categorie].pad);
+      const catInfo = actief ? CATEGORIE_INFO[actief.categorie] : undefined;
+      if (actief && catInfo) {
+        navigate(catInfo.pad);
+        toast({
+          title: "Automatisch doorgestuurd",
+          description: `${item.bestand.name} → ${catInfo.label}`,
+        });
       } else {
         teAnalyseren.push(item);
       }
@@ -700,6 +707,10 @@ export function SlimUploadBalk() {
       );
     }
   }
+
+  // Ref altijd actueel houden zodat de stale closure in de drop-listener
+  // nooit een verouderde versie van verwerkBestanden aanroept.
+  verwerkBestandenRef.current = verwerkBestanden;
 
   // ── Bevestigen ────────────────────────────────────────────────────────────
 
