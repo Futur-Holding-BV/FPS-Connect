@@ -565,6 +565,23 @@ function BestandsBadge({ status }: { status: UploadItem["status"] }) {
   return <span className="h-4 w-4 rounded-full border-2 border-muted-foreground/30" />;
 }
 
+// ── Bestand naar inbox uploaden ───────────────────────────────────────────────
+
+async function uploadNaarInbox(bestand: File): Promise<boolean> {
+  try {
+    const form = new FormData();
+    form.append("bestand", bestand);
+    const res = await fetch("/api/inbox/items", {
+      method: "POST",
+      body: form,
+      credentials: "include",
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
 // ── Hoofd-component ───────────────────────────────────────────────────────────
 
 export function SlimUploadBalk() {
@@ -665,10 +682,16 @@ export function SlimUploadBalk() {
       const catInfo = actief ? CATEGORIE_INFO[actief.categorie] : undefined;
       if (actief && catInfo) {
         navigate(catInfo.pad);
-        toast({
-          title: "Automatisch doorgestuurd",
-          description: `${item.bestand.name} → ${catInfo.label}. Upload het bestand daarna handmatig op de bestemmingspagina. Regels beheren via het tandwiel-icoon in de taakbalk.`,
-          duration: 8000,
+        const bestandNaam = item.bestand.name;
+        const catLabel    = catInfo.label;
+        void uploadNaarInbox(item.bestand).then((ok) => {
+          toast({
+            title: ok ? "Doorgestuurd en opgeslagen" : "Automatisch doorgestuurd",
+            description: ok
+              ? `${bestandNaam} → ${catLabel}. Het bestand staat nu in Slim uploaden › Inbox.`
+              : `${bestandNaam} → ${catLabel}. Opslaan mislukt — upload het bestand handmatig op de bestemmingspagina.`,
+            duration: 8000,
+          });
         });
       } else {
         teAnalyseren.push(item);
@@ -745,9 +768,10 @@ export function SlimUploadBalk() {
   function opBevestigen(cat: CategorieUitgebreid) {
     if (!huidigItem) return;
 
-    const ext = haalExtensie(huidigItem.bestand.name);
+    const bestand    = huidigItem.bestand;
+    const ext        = haalExtensie(bestand.name);
     const { regel, vraagAutomatiseren } = registreerBevestiging(ext, cat);
-    const info = CATEGORIE_INFO[cat];
+    const info       = CATEGORIE_INFO[cat];
 
     // Sla de herkomstpagina op vóór navigatie
     const herkomst = huidigeLocatie;
@@ -755,7 +779,7 @@ export function SlimUploadBalk() {
     // Voeg toe aan 15-minuten paneel
     const recentItem: RecentUpload = {
       id: crypto.randomUUID(),
-      bestandsnaam: huidigItem.bestand.name,
+      bestandsnaam: bestand.name,
       categorie: cat,
       label: info.label,
       pad: info.pad,
@@ -764,6 +788,16 @@ export function SlimUploadBalk() {
     };
     voegRecentToe(recentItem);
     herlaadRecente();
+
+    // Upload het bestand naar de inbox (fire and forget)
+    void uploadNaarInbox(bestand).then((ok) => {
+      toast({
+        title: ok ? "Opgeslagen in inbox" : "Categorisering bevestigd",
+        description: ok
+          ? `${bestand.name} staat nu in Slim uploaden › Inbox.`
+          : `${bestand.name} → ${info.label}. Opslaan mislukt — upload het bestand handmatig.`,
+      });
+    });
 
     // Markeer als afgehandeld
     setQueue((prev) =>

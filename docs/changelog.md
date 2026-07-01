@@ -10,6 +10,24 @@ Grote roadmap-fases staan ook in `docs/roadmap/gebouwd.md` en `docs/roadmap/acti
 
 ---
 
+## 2026-07-01 — Slim-upload: bestand wordt nu écht opgeslagen na classificatie
+
+**Uitvoering:** volledig | **Getest:** typecheck
+
+Kernbug opgelost: de slim-upload-balk classificeerde bestanden (via AI) maar sloeg ze **nooit op**. Na bevestiging werd er alleen genavigeerd; het bestand bleef in browsergeheugen en verdween. Drie symptomen:
+- "De popup met analyse is er niet" → automatiseringsregel (na 3× zelfde extensie bevestigd) routeert bestanden stil, dialog wordt bewust overgeslagen. Diagnose: localStorage-regels actief.
+- "Het bestand nergens verschijnen" → **root cause**: geen upload naar server. Nu opgelost.
+- "Popup aan de zijkant na 3 seconden" → toast-notificatie van auto-routing.
+
+Wijzigingen in `slim-upload-balk.tsx`:
+- Nieuwe helper `uploadNaarInbox(bestand)` → POST multipart naar `/api/inbox/items` (fire-and-forget).
+- `opBevestigen`: upload het bestand naar inbox na categoriebevestiging; toast meldt "Opgeslagen in inbox".
+- Auto-routing: upload het bestand ook bij stille doorstuur via automatiseringsregel; toast meldt "Doorgestuurd en opgeslagen" of waarschuwt bij mislukking.
+
+Bestanden staan nu in Slim uploaden › Inbox na elke upload, ongeacht pad (handmatig of automatisch).
+
+---
+
 ## 2026-07-01 — Audit: volledige module-inventarisatie (routes × nav × implementaties)
 
 **Uitvoering:** analyse | **Getest:** n.v.t.
