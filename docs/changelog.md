@@ -10,6 +10,16 @@ Grote roadmap-fases staan ook in `docs/roadmap/gebouwd.md` en `docs/roadmap/acti
 
 ---
 
+## 2026-07-01 — Fix: uploaden werkte niet meer (Uppy/React 19 conflict)
+
+**Uitvoering:** hotfix | **Getest:** typecheck groen, workflow herstart
+
+`lib/object-storage-web/src/index.ts` exporteerde `ObjectUploader` die bovenin Uppy importeert (`@uppy/core`, `@uppy/react`, `@uppy/aws-s3`). Uppy is niet compatibel met React 19. Zodra Vite de module laadde, brak de hele `@workspace/object-storage-web` module — waardoor elke pagina die `useUpload` importeerde volledig vastliep en uploads nergens meer werkten (documenten, tekeningen, foto's, bijlagen, berichten, snagstream, etc.).
+
+`ObjectUploader` werd nergens in de app gebruikt. Fix: export verwijderd uit `index.ts`. Uppy-code staat nog in `ObjectUploader.tsx` maar wordt niet meer geladen.
+
+---
+
 ## 2026-07-01 — Magazijn volledig mobiel: locaties, verplaatsen, opdracht-koppeling, inkoop
 
 **Uitvoering:** volledig | **Getest:** typecheck groen (monteur-app + api-server)
