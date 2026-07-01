@@ -6,6 +6,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import { AuthProvider, useAuth } from "@/context/auth-context";
+import { WerkmaatschappijProvider } from "@/context/werkmaatschappij-context";
 import { TaalProvider } from "@/context/taal-context";
 import { useRol, RolProvider } from "@/context/rol-context";
 import { AchievementProvider } from "@/context/achievement-context";
@@ -574,7 +575,9 @@ function App() {
           <WeergaveProvider>
             <AuthProvider>
               <RolProvider>
-                <Gate />
+                <WerkmaatschappijProvider>
+                  <Gate />
+                </WerkmaatschappijProvider>
               </RolProvider>
               <Toaster />
             </AuthProvider>

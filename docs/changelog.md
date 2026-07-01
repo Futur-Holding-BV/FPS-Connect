@@ -10,6 +10,19 @@ Grote roadmap-fases staan ook in `docs/roadmap/gebouwd.md` en `docs/roadmap/acti
 
 ---
 
+## 2026-07-01 — Werkmaatschappij context: switcher in sidebar, doorwerking dashboard + documentopmaak
+
+**Uitvoering:** volledig | **Getest:** typecheck groen
+
+- Nieuw `WerkmaatschappijProvider` (React context) — slaat actieve werkgever op in localStorage (`fps.actieve_werkgever`), auto-selecteert de eerste actieve werkmaatschappij bij eerste bezoek
+- Switcher in sidebar-header: compact dropdown direct onder het logo, zichtbaar voor hoofdbeheerder of wanneer er meerdere werkmaatschappijen zijn; verdwijnt bij ingeklapte sidebar
+- Dashboard `beheerder.tsx`: toont een context-balk met de actieve werkmaatschappij (naam + vestigingsplaats) direct boven de KPI-kaarten
+- Documentopmaak (`/organisatie/documentopmaak`): pre-selecteert automatisch de actieve werkmaatschappij uit de context in plaats van altijd de eerste
+
+**Diepere lagen:** gedeeltelijk — de contextkeuze stuurt branding (documentopmaak, logo in DDS) en is platform-breed beschikbaar via `useWerkmaatschappij()`. Volledige data-scoping (gebouwen/spots/documenten filteren per werkmaatschappij) vereist backend API-parameters op tientallen endpoints — apart increment.
+
+---
+
 ## 2026-07-01 — Slim uploaden: 15-minuten notificatiepaneel met ongedaan maken
 
 **Uitvoering:** volledig | **Getest:** typecheck groen

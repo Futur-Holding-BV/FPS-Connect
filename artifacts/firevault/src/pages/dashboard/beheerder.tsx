@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { useRol } from "@/context/rol-context";
 import { useAuth } from "@/context/auth-context";
+import { useWerkmaatschappij } from "@/context/werkmaatschappij-context";
 import { Link } from "wouter";
 import { PaginaHulp } from "@/components/pagina-hulp";
 import {
@@ -53,6 +54,7 @@ export default function BeheerderDashboard() {
   const { echteRol, bevoegdheden } = useRol();
   const { gebruiker } = useAuth();
   const functietitel = gebruiker?.functietitels?.[0] ?? null;
+  const { actieveWerkgever, werkgevers } = useWerkmaatschappij();
 
   const { data: stats } = useGetDashboardStats();
   const { data: activiteit } = useGetRecenteActiviteit();
@@ -115,6 +117,17 @@ export default function BeheerderDashboard() {
         </h1>
         <p className="text-muted-foreground mt-1">{t("dashboard.ondertitel")}</p>
       </div>
+
+      {actieveWerkgever && werkgevers.length > 0 && (
+        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted/50 border text-sm text-muted-foreground w-fit">
+          <Building className="h-4 w-4 shrink-0 text-primary" />
+          <span>Actieve werkmaatschappij:</span>
+          <span className="font-medium text-foreground">{actieveWerkgever.naam}</span>
+          {actieveWerkgever.plaats && (
+            <span className="text-muted-foreground/70">— {actieveWerkgever.plaats}</span>
+          )}
+        </div>
+      )}
 
       {/* KPI kaarten */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

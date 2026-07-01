@@ -17,6 +17,7 @@ import {
   type DocumentMeta,
 } from "@/components/documentopmaak";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
+import { useWerkmaatschappij } from "@/context/werkmaatschappij-context";
 import { useToast } from "@/hooks/use-toast";
 import { useListWerkgevers, useUpdateWerkgever, type Werkgever } from "@workspace/api-client-react";
 import { useUpload } from "@workspace/object-storage-web";
@@ -93,6 +94,7 @@ const LEGE_MIJ: WerkmaatschappijInfo = {
 
 export default function DocumentDesignSystem() {
   const { heeftNiveau } = useBevoegdheid();
+  const { actieveWerkgeverId } = useWerkmaatschappij();
   const [werkgeverId, setWerkgeverId] = useState<number | null>(null);
   const [templateId, setTemplateId] = useState<TemplateId>("A1");
 
@@ -104,10 +106,13 @@ export default function DocumentDesignSystem() {
   const handtekeningInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (werkgeverId === null && werkgevers.length > 0) {
-      setWerkgeverId(werkgevers[0].id);
-    }
-  }, [werkgevers, werkgeverId]);
+    if (werkgeverId !== null) return;
+    if (werkgevers.length === 0) return;
+    const voorkeur = actieveWerkgeverId !== null && werkgevers.some((w) => w.id === actieveWerkgeverId)
+      ? actieveWerkgeverId
+      : werkgevers[0].id;
+    setWerkgeverId(voorkeur);
+  }, [werkgevers, werkgeverId, actieveWerkgeverId]);
 
   const geselecteerdeWerkgever = werkgevers.find((w) => w.id === werkgeverId) ?? null;
   const mij: WerkmaatschappijInfo = geselecteerdeWerkgever
