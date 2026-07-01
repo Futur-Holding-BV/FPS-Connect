@@ -11,10 +11,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { useListMedewerkers } from "@workspace/api-client-react";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -336,15 +339,39 @@ function GevondenGegevens({ gegevens }: { gegevens: Record<string, string> }) {
 
 // ── Beslisscherm per file ─────────────────────────────────────────────────────
 
+const PERSONEEL_DOC_TYPEN: { value: string; label: string }[] = [
+  { value: "identiteitsbewijs", label: "Identiteitsbewijs" },
+  { value: "paspoort", label: "Paspoort" },
+  { value: "verblijfsvergunning", label: "Verblijfsvergunning" },
+  { value: "arbeidscontract", label: "Arbeidscontract" },
+  { value: "diploma", label: "Diploma" },
+  { value: "vca_certificaat", label: "VCA-certificaat" },
+  { value: "bhv_certificaat", label: "BHV-certificaat" },
+  { value: "ehbo_certificaat", label: "EHBO-certificaat" },
+  { value: "rijbewijs", label: "Rijbewijs" },
+  { value: "vog", label: "VOG" },
+  { value: "cv", label: "CV" },
+  { value: "loonstrook", label: "Loonstrook" },
+  { value: "naw_formulier", label: "NAW-formulier" },
+  { value: "geheimhoudingsverklaring", label: "Geheimhoudingsverklaring" },
+  { value: "overig", label: "Overig personeelsdocument" },
+];
+
 function BeslisScherm({
   item,
   onBevestigen,
   onWijzigCategorie,
+  onBevestigenPersoneel,
 }: {
   item: UploadItem;
   onBevestigen: (cat: CategorieUitgebreid) => void;
   onWijzigCategorie: (cat: CategorieUitgebreid) => void;
+  onBevestigenPersoneel?: (medewerkerId: number, docType: string) => void;
 }) {
+  const [gekozenMedewerker, setGekozenMedewerker] = useState("");
+  const [gekozenDocType, setGekozenDocType] = useState("");
+  const { data: medewerkerLijst } = useListMedewerkers();
+
   const { suggestie, fout, status } = item;
   const effectiefeCat = item.gekozenCategorie ?? suggestie?.categorie ?? "algemeen";
   const catInfo = CATEGORIE_INFO[effectiefeCat];
@@ -517,11 +544,61 @@ function BeslisScherm({
       )}
 
       {/* Actieknop */}
-      {effectiefeCat !== "aanvraag" && (
+      {effectiefeCat !== "aanvraag" && effectiefeCat !== "personeelsdocument" && (
         <Button size="sm" className="w-full gap-1.5" onClick={() => onBevestigen(effectiefeCat)}>
           <ChevronRight className="h-4 w-4" />
           Ga naar {CATEGORIE_INFO[effectiefeCat].label}
         </Button>
+      )}
+
+      {/* Personeelsdocument → direct naar medewerker-dossier */}
+      {effectiefeCat === "personeelsdocument" && (
+        <div className="space-y-3 rounded-lg border border-purple-200 bg-purple-50/40 p-3">
+          <p className="text-xs font-semibold text-purple-700">Direct opslaan in personeelsdossier</p>
+          <div className="space-y-2">
+            <div>
+              <Label className="text-xs">Medewerker <span className="text-destructive">*</span></Label>
+              <Select value={gekozenMedewerker} onValueChange={setGekozenMedewerker}>
+                <SelectTrigger className="mt-1 h-8 text-xs">
+                  <SelectValue placeholder="Selecteer medewerker…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {(medewerkerLijst as Array<{ id: number; naam: string }> | undefined)?.map((m) => (
+                    <SelectItem key={m.id} value={String(m.id)}>{m.naam}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs">Documenttype <span className="text-destructive">*</span></Label>
+              <Select value={gekozenDocType} onValueChange={setGekozenDocType}>
+                <SelectTrigger className="mt-1 h-8 text-xs">
+                  <SelectValue placeholder="Selecteer type…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {PERSONEEL_DOC_TYPEN.map((t) => (
+                    <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <Button
+            size="sm"
+            className="w-full gap-1.5"
+            disabled={!gekozenMedewerker || !gekozenDocType}
+            onClick={() => onBevestigenPersoneel?.(Number(gekozenMedewerker), gekozenDocType)}
+          >
+            <Users className="h-3.5 w-3.5" />
+            Opslaan in dossier
+          </Button>
+          <button
+            className="w-full text-xs text-muted-foreground hover:text-foreground text-center transition-colors"
+            onClick={() => onBevestigen("personeelsdocument")}
+          >
+            Liever via inbox opslaan
+          </button>
+        </div>
       )}
     </div>
   );
@@ -575,12 +652,14 @@ function WachtrijKaart({
   onAnalyseer,
   onBevestigen,
   onWijzigCategorie,
+  onBevestigenPersoneel,
 }: {
   item: UploadItem;
   onToelichting: (tekst: string) => void;
   onAnalyseer: () => void;
   onBevestigen: (cat: CategorieUitgebreid) => void;
   onWijzigCategorie: (cat: CategorieUitgebreid) => void;
+  onBevestigenPersoneel?: (medewerkerId: number, docType: string) => void;
 }) {
   return (
     <div className="px-4 py-4 space-y-3">
@@ -601,14 +680,20 @@ function WachtrijKaart({
         <>
           {item.status === "wacht" && (
             <div className="space-y-2">
-              <Textarea
-                placeholder="Optionele toelichting (bijv. project, fabrikant, type)…"
-                value={item.toelichting}
-                onChange={(e) => onToelichting(e.target.value)}
-                rows={2}
-                className="text-xs resize-none"
-              />
-              <Button size="sm" className="w-full gap-1.5" onClick={onAnalyseer}>
+              <div className="space-y-1">
+                <Label className="text-xs font-medium">
+                  Toelichting <span className="text-destructive">*</span>
+                </Label>
+                <Textarea
+                  placeholder="Beschrijf het document (bijv. arbeidscontract Jan de Vries, VCA-certificaat 2025, offerte project X)…"
+                  value={item.toelichting}
+                  onChange={(e) => onToelichting(e.target.value)}
+                  rows={2}
+                  className="text-xs resize-none"
+                />
+                <p className="text-[10px] text-muted-foreground">Verplicht — helpt de AI het document correct te routeren.</p>
+              </div>
+              <Button size="sm" className="w-full gap-1.5" onClick={onAnalyseer} disabled={!item.toelichting.trim()}>
                 <Sparkles className="h-3.5 w-3.5" />
                 Analyseren
               </Button>
@@ -627,6 +712,7 @@ function WachtrijKaart({
               item={item}
               onBevestigen={onBevestigen}
               onWijzigCategorie={onWijzigCategorie}
+              onBevestigenPersoneel={onBevestigenPersoneel}
             />
           )}
         </>
@@ -634,7 +720,9 @@ function WachtrijKaart({
         <div className="flex items-center gap-2 text-emerald-600">
           <CheckCircle2 className="h-4 w-4 shrink-0" />
           <p className="text-xs font-medium">
-            Opgeslagen in inbox → {CATEGORIE_INFO[item.gekozenCategorie ?? item.suggestie?.categorie ?? "algemeen"].label}
+            {item.gekozenCategorie === "personeelsdocument"
+              ? "Opgeslagen in personeelsdossier"
+              : `Opgeslagen in inbox → ${CATEGORIE_INFO[item.gekozenCategorie ?? item.suggestie?.categorie ?? "algemeen"].label}`}
           </p>
         </div>
       )}
@@ -644,10 +732,11 @@ function WachtrijKaart({
 
 // ── Bestand naar inbox uploaden ───────────────────────────────────────────────
 
-async function uploadNaarInbox(bestand: File): Promise<boolean> {
+async function uploadNaarInbox(bestand: File, toelichting?: string): Promise<boolean> {
   try {
     const form = new FormData();
     form.append("bestand", bestand);
+    if (toelichting?.trim()) form.append("opmerkingen", toelichting.trim());
     const res = await fetch("/api/inbox/items", {
       method: "POST",
       body: form,
@@ -759,7 +848,7 @@ export function SlimUploadBalk() {
       const catInfo = actief ? CATEGORIE_INFO[actief.categorie] : undefined;
       if (actief && catInfo) {
         // Upload meteen naar inbox (fire and forget) — geen aparte navigatie
-        void uploadNaarInbox(item.bestand);
+        void uploadNaarInbox(item.bestand, item.toelichting);
         queueItems.push({
           ...item,
           status: "klaar" as const,
@@ -822,7 +911,7 @@ export function SlimUploadBalk() {
   }
 
   function analyseerAlle() {
-    queue.filter((i) => i.status === "wacht").forEach((item) => void startAnalyseVoorItem(item.id));
+    queue.filter((i) => i.status === "wacht" && i.toelichting.trim()).forEach((item) => void startAnalyseVoorItem(item.id));
   }
 
   // ── Bevestigen ────────────────────────────────────────────────────────────
@@ -852,7 +941,7 @@ export function SlimUploadBalk() {
     herlaadRecente();
 
     // Upload het bestand naar de inbox (fire and forget)
-    void uploadNaarInbox(bestand).then((ok) => {
+    void uploadNaarInbox(bestand, item.toelichting).then((ok) => {
       toast({
         title: ok ? "Opgeslagen in inbox" : "Categorisering bevestigd",
         description: ok
@@ -868,6 +957,36 @@ export function SlimUploadBalk() {
 
     if (vraagAutomatiseren) {
       setTimeout(() => { setToonAutomatiseren(regel); herlaadRegels(); }, 400);
+    }
+  }
+
+  // ── Direct naar personeelsdossier uploaden ────────────────────────────────
+
+  async function opBevestigenPersoneelFn(itemId: string, medewerkerId: number, docType: string) {
+    const item = queue.find((i) => i.id === itemId);
+    if (!item) return;
+
+    const form = new FormData();
+    form.append("bestand", item.bestand);
+    form.append("type", docType);
+    if (item.toelichting.trim()) form.append("label", item.toelichting.trim());
+
+    try {
+      const res = await fetch(`/api/medewerkers/${medewerkerId}/documenten`, {
+        method: "POST",
+        body: form,
+        credentials: "include",
+      });
+      if (res.ok) {
+        setQueue((prev) => prev.map((i) =>
+          i.id === itemId ? { ...i, actieGenomen: true, gekozenCategorie: "personeelsdocument" as const } : i,
+        ));
+        toast({ title: "Opgeslagen in personeelsdossier", description: `${item.bestand.name} staat nu in het dossier.` });
+      } else {
+        toast({ title: "Opslaan mislukt", description: "Probeer het opnieuw of kies 'Liever via inbox opslaan'.", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Verbindingsfout", variant: "destructive" });
     }
   }
 
@@ -1060,6 +1179,7 @@ export function SlimUploadBalk() {
                 onAnalyseer={() => void startAnalyseVoorItem(item.id)}
                 onBevestigen={(cat) => opBevestigen(item.id, cat)}
                 onWijzigCategorie={(cat) => opWijzigCategorie(item.id, cat)}
+                onBevestigenPersoneel={(mid, dt) => void opBevestigenPersoneelFn(item.id, mid, dt)}
               />
             ))}
 

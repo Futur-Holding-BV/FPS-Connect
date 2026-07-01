@@ -10,6 +10,18 @@ Grote roadmap-fases staan ook in `docs/roadmap/gebouwd.md` en `docs/roadmap/acti
 
 ---
 
+## 2026-07-01 — Slim uploaden: toelichting verplicht, personeelsdocumenten direct naar dossier, afgewezen doorsturen
+
+**Uitvoering:** volledig | **Getest:** typecheck
+
+Drie verbeteringen op de upload-workflow:
+
+- **Toelichting verplicht** — het toelichting-veld in de wachtrij-kaart is niet meer optioneel. De "Analyseer"-knop blijft grijs totdat er een beschrijving is ingevuld. De toelichting wordt als `opmerkingen` meegestuurd naar de inbox (zodat de reden van opslaan zichtbaar blijft). `analyseerAlle` slaat bestanden zonder toelichting over.
+- **Personeelsdocumenten direct naar het dossier** — wanneer de AI een bestand classificeert als "Personeel / HRM", verschijnt er een medewerker-picker en een documenttype-selector (15 typen). Het bestand wordt direct naar `/api/medewerkers/:id/documenten` geüpload en slaat de inbox over. Als de gebruiker toch via inbox wil: koppeling "Liever via inbox opslaan". Succes-bericht onderscheidt "personeelsdossier" van "inbox".
+- **Afgewezen items doorsturen** — in de inbox-detailpagina toont een afgewezen item nu een rode kaart met de afwijzingsreden en een "Doorsturen naar andere module"-knop die het bestaande verplaatsen-dialoog opent.
+
+---
+
 ## 2026-07-01 — Personeelsdossier: verloopdatum, volledigheidsoverzicht en NAW-kaart
 
 **Uitvoering:** volledig | **Getest:** typecheck + DB-migratie

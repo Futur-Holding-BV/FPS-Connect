@@ -118,6 +118,7 @@ export default function InboxDetailPagina() {
   const typedItem = item as unknown as (InboxItem & { auditlog?: Array<{ id: number; actie: string; gebruiker_id?: number | null; details?: string | null; aangemaakt_op: string | null }> }) | undefined;
 
   const kanActeren = typedItem && !["goedgekeurd", "verplaatst", "afgewezen"].includes(typedItem.status);
+  const afgewezenReden: string | undefined = typedItem ? ((typedItem as unknown as { afgewezen_reden?: string }).afgewezen_reden ?? undefined) : undefined;
 
   if (isLoading) {
     return (
@@ -157,6 +158,30 @@ export default function InboxDetailPagina() {
           )}
         </div>
       </div>
+
+      {/* Afgewezen — doorsturen actie */}
+      {typedItem.status === "afgewezen" && (
+        <div className="rounded-md border border-red-200 bg-red-50/50 p-4 space-y-3">
+          <div className="flex items-start gap-2">
+            <XCircle className="h-4 w-4 text-red-500 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-semibold text-red-700">Dit item is afgewezen</p>
+              {afgewezenReden && <p className="text-xs text-red-600 mt-0.5">{afgewezenReden}</p>}
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Het document staat nog in de inbox. Stuur het door naar de juiste module of laat het hier staan als archief.
+          </p>
+          <Button
+            size="sm"
+            variant="outline"
+            className="gap-1.5 border-blue-300 text-blue-700 hover:bg-blue-50"
+            onClick={() => { setDoelBestemming(typedItem.bestemming ?? ""); setVerplaatsenOpen(true); }}
+          >
+            <ArrowRight className="w-3.5 h-3.5" /> Doorsturen naar andere module
+          </Button>
+        </div>
+      )}
 
       {/* Acties */}
       {kanActeren && (
