@@ -10,6 +10,19 @@ Grote roadmap-fases staan ook in `docs/roadmap/gebouwd.md` en `docs/roadmap/acti
 
 ---
 
+## 2026-07-01 — Slim uploaden: 15-minuten notificatiepaneel met ongedaan maken
+
+**Uitvoering:** volledig | **Getest:** typecheck groen
+
+- Na elke bevestigde upload verschijnt rechtsonder een floating paneel ("Recente uploads").
+- Elk item toont: bestandsnaam, categorielabel met kleur, tijdstip + resterende tijd (15 minuten).
+- **Ongedaan maken**: verwijdert het item uit de lijst en navigeert terug naar de pagina van vóór de redirect (zodat de gebruiker opnieuw kan indelen).
+- **Alles wissen**: leegt het paneel in één klik.
+- TTL wordt bijgehouden via localStorage — paneel blijft zichtbaar na paginanavigatie, verdwijnt automatisch na 15 minuten per item.
+- Paneel ververst elke 30 seconden de tijdweergave.
+
+---
+
 ## 2026-07-01 — Slim uploaden: vision-analyse voor alle documenttypen
 
 **Uitvoering:** volledig | **Getest:** typecheck groen (firevault + api-server), workflows herstart

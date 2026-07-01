@@ -5,6 +5,7 @@ import {
   FileText, BookOpen, Receipt, Users, PenLine, Archive, FolderOpen,
   Zap, ZapOff, Settings, AlertTriangle, ShieldAlert, HelpCircle,
   ClipboardList, BadgeCheck, FileCheck, Ruler, Package, LayoutTemplate,
+  RotateCcw, Clock, History,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -49,6 +50,141 @@ interface AutomatiseringsRegel {
   bevestigingen: number;
   geautomatiseerd: boolean;
   aangemaakt: string;
+}
+
+// ── Recente uploads (15-minuten notificatiepaneel) ────────────────────────────
+
+interface RecentUpload {
+  id: string;
+  bestandsnaam: string;
+  categorie: CategorieUitgebreid;
+  label: string;
+  pad: string;
+  tijdstip: number;
+  herkomstPad: string;
+}
+
+const RECENT_KEY = "fps_recent_uploads";
+const RECENT_TTL = 15 * 60 * 1000;
+
+function laadRecenteUploads(): RecentUpload[] {
+  try {
+    const raw = localStorage.getItem(RECENT_KEY);
+    if (!raw) return [];
+    const items: RecentUpload[] = JSON.parse(raw);
+    const nu = Date.now();
+    return items.filter((i) => nu - i.tijdstip < RECENT_TTL);
+  } catch {
+    return [];
+  }
+}
+
+function slaRecenteUploadsOp(items: RecentUpload[]) {
+  try { localStorage.setItem(RECENT_KEY, JSON.stringify(items)); } catch { /* quota */ }
+}
+
+function voegRecentToe(upload: RecentUpload) {
+  const huidig = laadRecenteUploads();
+  slaRecenteUploadsOp([upload, ...huidig].slice(0, 20));
+}
+
+function restTijdLabel(tijdstip: number): string {
+  const rest = Math.max(0, RECENT_TTL - (Date.now() - tijdstip));
+  if (rest === 0) return "verlopen";
+  const min = Math.floor(rest / 60000);
+  const sec = Math.floor((rest % 60000) / 1000);
+  if (min > 0) return `nog ${min}m${sec > 0 ? ` ${sec}s` : ""}`;
+  return `nog ${sec}s`;
+}
+
+function RecentUploadPanel({
+  uploads,
+  onVerwijder,
+  onVerwijderAlles,
+  onOngedaanMaken,
+}: {
+  uploads: RecentUpload[];
+  onVerwijder: (id: string) => void;
+  onVerwijderAlles: () => void;
+  onOngedaanMaken: (upload: RecentUpload) => void;
+}) {
+  const [tick, setTick] = useState(0);
+
+  useEffect(() => {
+    const t = setInterval(() => setTick((n) => n + 1), 15000);
+    return () => clearInterval(t);
+  }, []);
+
+  void tick;
+
+  if (uploads.length === 0) return null;
+
+  return (
+    <div
+      className="fixed right-4 z-50 w-80 bg-white border border-slate-200 rounded-xl shadow-2xl overflow-hidden"
+      style={{ bottom: "calc(var(--upload-bar-h, 44px) + 12px)" }}
+    >
+      <div className="flex items-center justify-between px-3 py-2.5 border-b bg-slate-50">
+        <div className="flex items-center gap-2">
+          <History className="h-3.5 w-3.5 text-slate-500" />
+          <span className="text-xs font-semibold text-slate-700">Recente uploads</span>
+          <Badge variant="secondary" className="text-[10px] h-4 px-1.5">{uploads.length}</Badge>
+        </div>
+        <button
+          onClick={onVerwijderAlles}
+          className="text-[10px] text-slate-400 hover:text-slate-600 transition-colors"
+        >
+          Alles wissen
+        </button>
+      </div>
+      <ul className="max-h-72 overflow-y-auto divide-y divide-slate-100">
+        {uploads.map((u) => {
+          const info = CATEGORIE_INFO[u.categorie];
+          const verstrekenMin = Math.floor((Date.now() - u.tijdstip) / 60000);
+          return (
+            <li key={u.id} className="px-3 py-2.5 hover:bg-slate-50 transition-colors">
+              <div className="flex items-start gap-2">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium truncate text-slate-800" title={u.bestandsnaam}>
+                    {u.bestandsnaam}
+                  </p>
+                  <span className={cn(
+                    "inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium border mt-1",
+                    info.kleur,
+                  )}>
+                    {info.icoon}
+                    {u.label}
+                  </span>
+                  <p className="text-[10px] text-slate-400 mt-1 flex items-center gap-1">
+                    <Clock className="h-2.5 w-2.5 shrink-0" />
+                    {verstrekenMin === 0 ? "Zojuist" : `${verstrekenMin}m geleden`}
+                    <span className="text-slate-300">·</span>
+                    {restTijdLabel(u.tijdstip)}
+                  </p>
+                </div>
+                <button
+                  onClick={() => onVerwijder(u.id)}
+                  className="shrink-0 text-slate-300 hover:text-slate-500 transition-colors mt-0.5"
+                  title="Verwijder uit lijst"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+              <div className="flex items-center gap-3 mt-2">
+                <button
+                  onClick={() => onOngedaanMaken(u)}
+                  className="flex items-center gap-1 text-[10px] font-semibold text-primary hover:underline"
+                >
+                  <RotateCcw className="h-3 w-3" />
+                  Ongedaan maken
+                </button>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
 }
 
 // ── Categorie-configuratie ────────────────────────────────────────────────────
@@ -430,7 +566,7 @@ function BestandsBadge({ status }: { status: UploadItem["status"] }) {
 // ── Hoofd-component ───────────────────────────────────────────────────────────
 
 export function SlimUploadBalk() {
-  const [, navigate] = useLocation();
+  const [huidigeLocatie, navigate] = useLocation();
   const [sleepActief, setSleepActief]         = useState(false);
   const [queue, setQueue]                     = useState<UploadItem[]>([]);
   const [huidigId, setHuidigId]               = useState<string | null>(null);
@@ -438,12 +574,20 @@ export function SlimUploadBalk() {
   const [toonAutomatiseren, setToonAutomatiseren] = useState<AutomatiseringsRegel | null>(null);
   const [toonInstellingen, setToonInstellingen] = useState(false);
   const [regels, setRegels]                   = useState<AutomatiseringsRegel[]>([]);
+  const [recenteUploads, setRecenteUploads]   = useState<RecentUpload[]>(() => laadRecenteUploads());
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const sleepTeller  = useRef(0);
+  const herkomstPadRef = useRef<string>("/");
 
   const herlaadRegels = useCallback(() => setRegels(laadRegels()), []);
   useEffect(() => { herlaadRegels(); }, [herlaadRegels]);
+
+  const herlaadRecente = useCallback(() => setRecenteUploads(laadRecenteUploads()), []);
+  useEffect(() => {
+    const t = setInterval(herlaadRecente, 30_000);
+    return () => clearInterval(t);
+  }, [herlaadRecente]);
 
   const huidigItem = queue.find((i) => i.id === huidigId) ?? null;
 
@@ -564,6 +708,23 @@ export function SlimUploadBalk() {
 
     const ext = haalExtensie(huidigItem.bestand.name);
     const { regel, vraagAutomatiseren } = registreerBevestiging(ext, cat);
+    const info = CATEGORIE_INFO[cat];
+
+    // Sla de herkomstpagina op vóór navigatie
+    const herkomst = huidigeLocatie;
+
+    // Voeg toe aan 15-minuten paneel
+    const recentItem: RecentUpload = {
+      id: crypto.randomUUID(),
+      bestandsnaam: huidigItem.bestand.name,
+      categorie: cat,
+      label: info.label,
+      pad: info.pad,
+      tijdstip: Date.now(),
+      herkomstPad: herkomst,
+    };
+    voegRecentToe(recentItem);
+    herlaadRecente();
 
     // Markeer als afgehandeld
     setQueue((prev) =>
@@ -577,12 +738,30 @@ export function SlimUploadBalk() {
     } else {
       setToonDialoog(false);
       setQueue([]);
-      navigate(CATEGORIE_INFO[cat].pad);
+      navigate(info.pad);
     }
 
     if (vraagAutomatiseren) {
       setTimeout(() => { setToonAutomatiseren(regel); herlaadRegels(); }, 400);
     }
+  }
+
+  // ── Recente uploads handlers ───────────────────────────────────────────────
+
+  function opVerwijderRecent(id: string) {
+    const bijgewerkt = laadRecenteUploads().filter((i) => i.id !== id);
+    slaRecenteUploadsOp(bijgewerkt);
+    setRecenteUploads(bijgewerkt);
+  }
+
+  function opVerwijderAlleRecent() {
+    slaRecenteUploadsOp([]);
+    setRecenteUploads([]);
+  }
+
+  function opOngedaanMaken(upload: RecentUpload) {
+    opVerwijderRecent(upload.id);
+    navigate(upload.herkomstPad);
   }
 
   function opWijzigCategorie(id: string, cat: CategorieUitgebreid) {
@@ -603,6 +782,14 @@ export function SlimUploadBalk() {
 
   return (
     <>
+      {/* ── Recente uploads paneel ───────────────────────────────────────── */}
+      <RecentUploadPanel
+        uploads={recenteUploads}
+        onVerwijder={opVerwijderRecent}
+        onVerwijderAlles={opVerwijderAlleRecent}
+        onOngedaanMaken={opOngedaanMaken}
+      />
+
       {/* ── Taakbalk ─────────────────────────────────────────────────────── */}
       <div
         className="fixed bottom-0 right-0 z-40 flex items-center"
