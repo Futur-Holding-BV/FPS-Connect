@@ -10,6 +10,15 @@ Grote roadmap-fases staan ook in `docs/roadmap/gebouwd.md` en `docs/roadmap/acti
 
 ---
 
+## 2026-07-01 — Gebruikers: uitnodigingsknop ook in detaildialoog
+
+**Uitvoering:** volledig | **Getest:** typecheck groen
+
+- De uitnodigingsknop ("Uitnodiging versturen" / "Uitnodiging opnieuw sturen") stond alleen op de kaartweergave, niet in het detaildialoog (de geopende kaart). Nu ook toegevoegd aan het detaildialoog, direct boven de Bewerken/Sluiten-knoppen.
+- Zelfde kleur en logica als de kaartknop: amber (niet uitgenodigd) / paars (opnieuw sturen), alleen zichtbaar voor hoofdbeheerder en wanneer status niet "geaccepteerd" is.
+
+---
+
 ## 2026-07-01 — Slim uploaden: document_sjabloon navigeert nu naar Document Studio
 
 **Uitvoering:** volledig | **Getest:** typecheck groen

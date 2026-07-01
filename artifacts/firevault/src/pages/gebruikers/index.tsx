@@ -1395,6 +1395,26 @@ export default function Gebruikers() {
                   );
                 })()}
 
+                {isHoofd && status !== "geaccepteerd" && (
+                  <button
+                    type="button"
+                    className={`h-9 text-sm w-full gap-1.5 font-medium rounded-md flex items-center justify-center px-3 transition-colors ${
+                      status === "niet_uitgenodigd"
+                        ? "bg-amber-500 hover:bg-amber-600 text-white"
+                        : "bg-purple-500 hover:bg-purple-600 text-white"
+                    } disabled:opacity-60`}
+                    disabled={uitnodigingBezig === bekijkGebruiker.id}
+                    onClick={() => stuurUitnodiging(bekijkGebruiker)}
+                  >
+                    <SendHorizonal className="h-4 w-4 mr-1.5 flex-shrink-0" />
+                    {uitnodigingBezig === bekijkGebruiker.id
+                      ? "Bezig..."
+                      : status === "uitgenodigd"
+                      ? "Uitnodiging opnieuw sturen"
+                      : "Uitnodiging versturen"}
+                  </button>
+                )}
+
                 <DialogFooter className="gap-2">
                   <Button variant="outline" onClick={() => { const g = bekijkGebruiker; setBekijkGebruiker(null); openBewerken(g); }}>
                     <Pencil className="h-4 w-4 mr-1" /> Bewerken
