@@ -78,8 +78,9 @@ const FUNCTIE_GROEPEN: FunctieGroep[] = [
   { naam: "Timmerman",      beschrijving: "Timmerwerk",               rol: "gebruiker",      presetNaam: "Timmerman",        icon: Hammer,      kleur: "text-amber-700"   },
   { naam: "Controleur",     beschrijving: "Controle-inspecties",      rol: "gebruiker",      presetNaam: "Controleur",       icon: ShieldCheck, kleur: "text-teal-600"    },
   { naam: "Commercieel",    beschrijving: "Commercieel",              rol: "gebruiker",      presetNaam: "Commercieel",      icon: TrendingUp,  kleur: "text-green-600"   },
-  { naam: "Financieel",     beschrijving: "Financieel beheer",        rol: "gebruiker",      presetNaam: null,               icon: TrendingUp,  kleur: "text-emerald-600" },
-  { naam: "HRM-adviseur",   beschrijving: "HRM en personeel",         rol: "gebruiker",      presetNaam: null,               icon: Briefcase,   kleur: "text-pink-600"    },
+  { naam: "Financieel",          beschrijving: "Financieel beheer",        rol: "gebruiker",      presetNaam: null,                   icon: TrendingUp,  kleur: "text-emerald-600" },
+  { naam: "Externe boekhouder",  beschrijving: "Externe boekhouder",       rol: "gebruiker",      presetNaam: "Externe boekhouder",   icon: TrendingUp,  kleur: "text-emerald-700" },
+  { naam: "HRM-adviseur",        beschrijving: "HRM en personeel",         rol: "gebruiker",      presetNaam: null,                   icon: Briefcase,   kleur: "text-pink-600"    },
   { naam: "Klant",          beschrijving: "Rapportages en meldingen", rol: "klant",          presetNaam: null,               icon: User,        kleur: "text-gray-600"    },
 ];
 

@@ -146,23 +146,41 @@ router.post("/profielen", requireRol("hoofdbeheerder"), async (req, res) => {
 // niet (0 == ontbrekend); de sleutel wordt alleen expliciet vastgelegd zodat
 // nieuwe modules niet stil ontbreken. Moet vóór /profielen/:id staan zodat
 // "aanvullen" niet als id wordt geïnterpreteerd.
-// POST /profielen/synchroniseer-standaard — maakt ontbrekende systeem-presets aan vanuit PRESETS.
+// POST /profielen/synchroniseer-standaard — maakt ontbrekende systeem-presets aan vanuit PRESETS
+// en werkt bestaande systeem-presets bij als hun bevoegdheden afwijken van de definitie.
 // Moet vóór /profielen/:id staan zodat "synchroniseer-standaard" niet als id wordt geïnterpreteerd.
 router.post("/profielen/synchroniseer-standaard", requireRol("hoofdbeheerder"), async (req, res) => {
   try {
-    const bestaand = await db.select({ naam: profielenTable.naam }).from(profielenTable);
-    const bestaandeNamen = new Set(bestaand.map((p) => p.naam));
+    const bestaand = await db.select().from(profielenTable).where(eq(profielenTable.systeem, true));
+    const bestaandMap = new Map(bestaand.map((p) => [p.naam, p]));
     let aangemaakt = 0;
+    let bijgewerkt = 0;
     for (const preset of PRESETS) {
-      if (bestaandeNamen.has(preset.naam)) continue;
-      await db.insert(profielenTable).values({
-        naam: preset.naam,
-        bevoegdheden: preset.bevoegdheden,
-        systeem: true,
-      });
-      aangemaakt++;
+      const bestaandeProfiel = bestaandMap.get(preset.naam);
+      if (!bestaandeProfiel) {
+        await db.insert(profielenTable).values({
+          naam: preset.naam,
+          bevoegdheden: preset.bevoegdheden,
+          systeem: true,
+        });
+        aangemaakt++;
+      } else {
+        // Update bevoegdheden als ze afwijken van de huidige PRESETS-definitie
+        const huidig = (bestaandeProfiel.bevoegdheden as Record<string, number>) ?? {};
+        const gewenst = preset.bevoegdheden as Record<string, number>;
+        const isGelijk = JSON.stringify(
+          Object.fromEntries(Object.entries(huidig).sort()),
+        ) === JSON.stringify(Object.fromEntries(Object.entries(gewenst).sort()));
+        if (!isGelijk) {
+          await db
+            .update(profielenTable)
+            .set({ bevoegdheden: preset.bevoegdheden })
+            .where(eq(profielenTable.id, bestaandeProfiel.id));
+          bijgewerkt++;
+        }
+      }
     }
-    res.json({ aangemaakt });
+    res.json({ aangemaakt, bijgewerkt });
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });

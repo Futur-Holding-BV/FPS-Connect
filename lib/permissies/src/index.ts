@@ -334,7 +334,7 @@ export const PRESETS: Preset[] = [
     naam: "Externe boekhouder",
     bevoegdheden: matrix({
       rapportages: 1,
-      financieel: 2,
+      financieel: 4,
       salarisarchief: 2,
       salaris_mutaties: 1,
       boekhouder_portaal: 4,

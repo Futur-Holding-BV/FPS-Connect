@@ -10,6 +10,17 @@ Grote roadmap-fases staan ook in `docs/roadmap/gebouwd.md` en `docs/roadmap/acti
 
 ---
 
+## 2026-07-01 — Boekhouder: functiegroep en preset toegevoegd
+
+**Uitvoering:** volledig | **Getest:** typecheck groen (libs + firevault)
+
+- Preset "Externe boekhouder" had `financieel: 2` (wijzigen); aangepast naar `financieel: 4` (volledig beheer) in `lib/permissies/src/index.ts`
+- Preset aangemaakt in DB (id=9): financieel=4, boekhouder_portaal=4, salarisarchief=2, salaris_mutaties=1, rapportages=1
+- "Externe boekhouder" toegevoegd aan `FUNCTIE_GROEPEN` in de gebruikerspagina (was onzichtbaar bij gebruiker aanmaken)
+- Synchroniseer-route (`POST /profielen/synchroniseer-standaard`) werkt nu ook bestaande systeem-presets bij als ze afwijken van de codedefinitie (was: alleen nieuwe presets invoegen)
+
+---
+
 ## 2026-07-01 — Gebruikers: foutfeedback bij uitnodigen hersteld
 
 **Uitvoering:** volledig | **Getest:** typecheck groen
