@@ -94,6 +94,7 @@ import WagenparkBrandstofImportPagina from "@/pages/wagenpark/brandstof-import";
 import MagazijnDashboardPagina from "@/pages/magazijn/dashboard";
 import MagazijnArtikelenPagina from "@/pages/magazijn/artikelen";
 import MagazijnArtikelDetailPagina from "@/pages/magazijn/artikel-detail";
+import MagazijnArtikelLabelPagina from "@/pages/magazijn/artikel-label";
 import MagazijnLocatiesPagina from "@/pages/magazijn/locaties";
 import MagazijnVoorraadPagina from "@/pages/magazijn/voorraad";
 import MagazijnMutatiesPagina from "@/pages/magazijn/mutaties";
@@ -349,6 +350,7 @@ function ConnectPortal() {
         {/* ── Magazijn ── */}
         <Route path="/magazijn" component={MagazijnDashboardPagina} />
         <Route path="/magazijn/artikelen" component={MagazijnArtikelenPagina} />
+        <Route path="/magazijn/artikelen/:id/label" component={MagazijnArtikelLabelPagina} />
         <Route path="/magazijn/artikelen/:id" component={MagazijnArtikelDetailPagina} />
         <Route path="/magazijn/locaties" component={MagazijnLocatiesPagina} />
         <Route path="/magazijn/voorraad" component={MagazijnVoorraadPagina} />

@@ -10,6 +10,22 @@ Grote roadmap-fases staan ook in `docs/roadmap/gebouwd.md` en `docs/roadmap/acti
 
 ---
 
+## 2026-07-01 — Magazijn: QR-labelgenerator voor artikelen (Dymo LabelWriter 450)
+
+**Uitvoering:** volledig | **Getest:** typecheck groen
+
+- Nieuw scherm `/magazijn/artikelen/:id/label` (`artikel-label.tsx`) — standalone printpagina buiten de portallayout
+- Label toont: QR-code (linkt naar artikel in FPS Connect), artikelnaam, code, merk, leveranciersnaam + leveranciers artikelnummer, barcodewaarde en eenheid
+- Vier Dymo-labelformaten selecteerbaar in de toolbar: 89×36 mm, 89×28 mm, 57×32 mm en 54×25 mm
+- CSS `@page { size: Xmm Ymm; margin: 0; }` past zich automatisch aan het gekozen formaat aan — gebruiker selecteert Dymo LabelWriter 450 in de printdialoog
+- Aantal-selector (1-20 labels) — elk label wordt op een apart etiket afgedrukt
+- Instructiebalk toont het exacte formaat en Dymo-instelling-advies
+- Knop "QR-label afdrukken" toegevoegd aan de navigatiebalk van `artikel-detail.tsx`
+- Route `/magazijn/artikelen/:id/label` geregistreerd vóór `:id` in `App.tsx` (wouter matcht specifiekst eerst)
+- Geen backend/OpenAPI-wijzigingen nodig — volledig client-side
+
+---
+
 ## 2026-07-01 — Document Studio: templates actief in Connect-modules
 
 **Uitvoering:** volledig | **Getest:** typecheck groen
