@@ -10,6 +10,22 @@ Grote roadmap-fases staan ook in `docs/roadmap/gebouwd.md` en `docs/roadmap/acti
 
 ---
 
+## 2026-07-01 — Gebouwen: werkmaatschappij zichtbaar en bewerkbaar
+
+**Uitvoering:** volledig | **Getest:** typecheck groen
+
+- DB: ontbrekende werkgevers ingevoegd — FPS Bouw (id=6), FPS Bouw en Renovatie (id=7), FPS Onderhoud (id=8); aanmaakdialoog toont nu alle vier keuzes
+- Gebouwenlijst (`index.tsx`): werkmaatschappij-naam onder adres/stad op elke kaart
+- Gebouwenlijst: filter-dropdown "Filter op werkmaatschappij" naast status-filter (client-side, ook optie "Zonder werkmaatschappij")
+- Filter wissen-knop reset nu ook werkmaatschappij-filter
+- Detail-header (`detail.tsx`): werkmaatschappij-naam met Building2-icoon in meta-informatierij
+- Projectformulier (`gebouw-projectformulier.tsx`): `GebouwProp` uitgebreid met `werkgever_id` + `werkmaatschappij_naam`
+- Projectformulier: werkmaatschappij-dropdown in bewerkmode (Gebouwafmetingen-sectie) — sla op via PATCH `/gebouwen/:id`
+- Projectformulier: werkmaatschappij als leesregel in Projectidentiteit-sectie
+- Geen OpenAPI/schema-wijzigingen nodig — velden bestonden al
+
+---
+
 ## 2026-07-01 — Magazijn: QR-labelgenerator voor artikelen (Dymo LabelWriter 450)
 
 **Uitvoering:** volledig | **Getest:** typecheck groen

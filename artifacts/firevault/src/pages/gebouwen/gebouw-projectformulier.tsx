@@ -7,6 +7,7 @@ import {
   useCreateGebouwPartij,
   useListGebouwPartijen,
   useUpdateGebouw,
+  useListWerkgevers,
   getGetGebouwEmailSamenvattingQueryKey,
   getListGebouwPartijenQueryKey,
 } from "@workspace/api-client-react";
@@ -18,6 +19,13 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
@@ -45,6 +53,8 @@ interface GebouwProp {
   breedte?: number | null;
   diepte?: number | null;
   oppervlakte?: number | null;
+  werkgever_id?: number | null;
+  werkmaatschappij_naam?: string | null;
 }
 
 type VeldSleutel =
@@ -581,6 +591,7 @@ export function Projectformulier({
   const genereer = useGenerateGebouwEmailSamenvatting();
   const wijzigGebouw = useUpdateGebouw();
   const { data: partijen } = useListGebouwPartijen(gebouwId);
+  const { data: werkgevers } = useListWerkgevers();
 
   const [form, setForm] = useState<FormState>(leegFormulier);
   const [afmetingen, setAfmetingen] = useState<Afmetingen>({
@@ -590,6 +601,7 @@ export function Projectformulier({
     diepte: "",
     oppervlakte: "",
   });
+  const [werkgeverId, setWerkgeverId] = useState<number | null>(gebouw.werkgever_id ?? null);
   const [localContacten, setLocalContacten] = useState<EmailContactpersoon[]>([]);
   const [bewerken, setBewerken] = useState(false);
   const [versie, setVersie] = useState<string | null>(null);
@@ -652,6 +664,7 @@ export function Projectformulier({
       diepte: gebouw.diepte != null ? String(gebouw.diepte) : "",
       oppervlakte: gebouw.oppervlakte != null ? String(gebouw.oppervlakte) : "",
     });
+    setWerkgeverId(gebouw.werkgever_id ?? null);
     setBewerken(true);
   }
 
@@ -661,7 +674,7 @@ export function Projectformulier({
         id: gebouwId,
         data: bouwPayload(localContacten, bevestigen),
       });
-      // Afmetingen horen bij het gebouw zelf; partiële PATCH laat overige velden ongemoeid.
+      // Afmetingen en werkmaatschappij horen bij het gebouw zelf; partiële PATCH laat overige velden ongemoeid.
       await wijzigGebouw.mutateAsync({
         id: gebouwId,
         data: {
@@ -670,6 +683,7 @@ export function Projectformulier({
           breedte: getalOfNull(afmetingen.breedte),
           diepte: getalOfNull(afmetingen.diepte),
           oppervlakte: getalOfNull(afmetingen.oppervlakte),
+          werkgever_id: werkgeverId ?? undefined,
         },
       });
       await invalidate();
@@ -1035,6 +1049,7 @@ export function Projectformulier({
             <KVRij label="Stad" waarde={gebouw.stad} />
             <KVRij label="Postcode" waarde={gebouw.postcode} />
             <KVRij label="Gebouwtype" waarde={gebouw.gebouw_type} />
+            <KVRij label="Werkmaatschappij" waarde={gebouw.werkmaatschappij_naam} />
             {gebouw.aangemaakt_op && (
               <div>
                 <dt className="text-xs text-muted-foreground">Startdatum</dt>
@@ -1064,7 +1079,25 @@ export function Projectformulier({
             titel="Gebouwafmetingen"
           />
           {bewerken ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <Label className="text-xs">Werkmaatschappij</Label>
+                <Select
+                  value={werkgeverId != null ? String(werkgeverId) : "__geen__"}
+                  onValueChange={(v) => setWerkgeverId(v === "__geen__" ? null : Number(v))}
+                >
+                  <SelectTrigger className="text-sm">
+                    <SelectValue placeholder="Selecteer werkmaatschappij" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__geen__">Niet gekoppeld</SelectItem>
+                    {(werkgevers ?? []).map((wg) => (
+                      <SelectItem key={wg.id} value={String(wg.id)}>{wg.naam}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               {(
                 [
                   { s: "aantal_verdiepingen", t: "Verdiepingen", stap: "1" },
@@ -1090,6 +1123,7 @@ export function Projectformulier({
                   />
                 </div>
               ))}
+              </div>
             </div>
           ) : gebouw.aantal_verdiepingen != null ||
             gebouw.hoogte != null ||

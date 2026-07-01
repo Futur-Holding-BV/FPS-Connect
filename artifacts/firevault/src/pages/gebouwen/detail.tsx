@@ -612,6 +612,11 @@ export default function GebouwDetail() {
             </p>
           )}
           <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1.5 text-xs text-muted-foreground">
+            {(gebouw as any).werkmaatschappij_naam && (
+              <span className="flex items-center gap-1">
+                <Building2 className="h-3 w-3" /> {(gebouw as any).werkmaatschappij_naam as string}
+              </span>
+            )}
             {gebouw.werknummer && (
               <span className="flex items-center gap-1">
                 <Hash className="h-3 w-3" /> {gebouw.werknummer}

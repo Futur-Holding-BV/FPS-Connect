@@ -4,6 +4,7 @@ import {
   useListGebouwPartijOpties,
   useGetGebouwSpotsInzicht,
   useListGebouwToewijzingen,
+  useListWerkgevers,
   type Gebouw,
 } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -306,6 +307,11 @@ function GebouwKaart({ gebouw }: { gebouw: GebouwItem }) {
               : gebouw.naam}
           </CardTitle>
           <CardDescription>{gebouw.adres}, {gebouw.stad}</CardDescription>
+          {(gebouw as any).werkmaatschappij_naam && (
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {(gebouw as any).werkmaatschappij_naam as string}
+            </p>
+          )}
           <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
             <Calendar className="h-3 w-3 shrink-0" />
             <span>
@@ -343,8 +349,10 @@ export default function Gebouwen() {
   const [sortering, setSortering] = useVoorkeur<SorteerOptie>("gebouwen_sortering", "alfabetisch");
   const [inclusiefGearchiveerd, setInclusiefGearchiveerd] = useVoorkeur<boolean>("gebouwen_incl_gearchiveerd", false);
   const [filterStatus, setFilterStatus] = useVoorkeur<string>("gebouwen_filter_status", ALLE);
+  const [filterWerkmaatschappij, setFilterWerkmaatschappij] = useVoorkeur<string>("gebouwen_filter_wm", ALLE);
 
   const { data: partijOpties } = useListGebouwPartijOpties();
+  const { data: werkgevers } = useListWerkgevers();
 
   const beschikbareTypes = useMemo(() => {
     const set = new Set<string>();
@@ -371,12 +379,19 @@ export default function Gebouwen() {
     !!gebruiker?.rol && BEHEERDER_ROLLEN.includes(gebruiker.rol as string);
   const isHoofdBeheerder = gebruiker?.rol === "hoofdbeheerder";
 
-  const filterActief = partijType !== ALLE || partijNaam !== ALLE || filterStatus !== ALLE;
+  const filterActief = partijType !== ALLE || partijNaam !== ALLE || filterStatus !== ALLE || filterWerkmaatschappij !== ALLE;
 
   const gesorteerdeGebouwen = useMemo(() => {
     let lijst = [...(gebouwen ?? [])];
     if (filterStatus !== ALLE) {
       lijst = lijst.filter((g) => g.project_status === filterStatus);
+    }
+    if (filterWerkmaatschappij !== ALLE) {
+      lijst = lijst.filter((g) => {
+        const naam = (g as any).werkmaatschappij_naam as string | null | undefined;
+        if (filterWerkmaatschappij === "__geen__") return !naam;
+        return naam === filterWerkmaatschappij;
+      });
     }
     switch (sortering) {
       case "laatst_toegevoegd":
@@ -461,6 +476,19 @@ export default function Gebouwen() {
           </SelectContent>
         </Select>
 
+        <Select value={filterWerkmaatschappij} onValueChange={setFilterWerkmaatschappij}>
+          <SelectTrigger className="w-full sm:w-52">
+            <SelectValue placeholder="Filter op werkmaatschappij" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALLE}>Alle werkmaatschappijen</SelectItem>
+            {(werkgevers ?? []).map((wg) => (
+              <SelectItem key={wg.id} value={wg.naam}>{wg.naam}</SelectItem>
+            ))}
+            <SelectItem value="__geen__">Zonder werkmaatschappij</SelectItem>
+          </SelectContent>
+        </Select>
+
         {filterActief && (
           <Button
             variant="ghost"
@@ -469,6 +497,7 @@ export default function Gebouwen() {
               setPartijType(ALLE);
               setPartijNaam(ALLE);
               setFilterStatus(ALLE);
+              setFilterWerkmaatschappij(ALLE);
             }}
           >
             <X className="h-4 w-4 mr-1" /> Filter wissen
