@@ -10,6 +10,16 @@ Grote roadmap-fases staan ook in `docs/roadmap/gebouwd.md` en `docs/roadmap/acti
 
 ---
 
+## 2026-07-01 — Dropzone overlay bij bestand slepen
+
+**Uitvoering:** volledig | **Getest:** typecheck groen
+
+- Smalle rode/oranje balk die de taakbalk uitzette bij drag-over vervangen door een mooi gecentreerd overlay-scherm
+- Overlay: donker semi-transparant backdrop (`bg-black/50 backdrop-blur-sm`), wit afgerond kaartje met oranje gestippelde rand, grote Upload-icoon met glow-ring, kopregel + ondertitel, badge "Slimme categorisering actief", fade-in + zoom animatie via Tailwind `animate-in`
+- Taakbalk blijft altijd in zijn normale donkere staat — geen kleurwijziging meer tijdens drag
+
+---
+
 ## 2026-07-01 — Centrale AI-invullaag (Option B) — `POST /ai/invullen` + `<AiInvullenKnop />`
 
 **Uitvoering:** volledig | **Getest:** typecheck groen, endpoint bereikbaar (401 auth-guard actief)

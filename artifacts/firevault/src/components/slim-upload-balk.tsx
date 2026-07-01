@@ -790,35 +790,41 @@ export function SlimUploadBalk() {
         onOngedaanMaken={opOngedaanMaken}
       />
 
+      {/* ── Dropzone overlay ──────────────────────────────────────────── */}
+      {sleepActief && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+          <div className="relative flex flex-col items-center gap-5 rounded-2xl border-2 border-dashed border-primary bg-white shadow-2xl px-14 py-12 max-w-sm mx-4 animate-in fade-in zoom-in-95 duration-150">
+            <div className="rounded-full bg-primary/10 p-5 ring-8 ring-primary/5">
+              <Upload className="h-10 w-10 text-primary" />
+            </div>
+            <div className="text-center space-y-1.5">
+              <p className="text-lg font-semibold text-foreground">Bestand loslaten om te uploaden</p>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                AI bepaalt automatisch waar elk bestand thuishoort
+              </p>
+            </div>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground/70 bg-muted/40 rounded-full px-3 py-1.5">
+              <Sparkles className="h-3 w-3 text-primary/60" />
+              <span>Slimme categorisering actief</span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Taakbalk ─────────────────────────────────────────────────────── */}
       <div
         className="fixed bottom-0 right-0 z-40 flex items-center"
         style={{ left: "var(--sidebar-width, 0px)" }}
       >
         <div
-          className={cn(
-            "flex items-center gap-2 px-4 w-full transition-all duration-300 border-t",
-            sleepActief
-              ? "bg-primary border-primary/80 py-6"
-              : "bg-[#1e2535] border-[#2d3548] py-2",
-          )}
+          className="flex items-center gap-2 px-4 w-full border-t bg-[#1e2535] border-[#2d3548] py-2"
         >
-          {sleepActief ? (
-            <div className="flex items-center gap-3 w-full justify-center">
-              <div className="rounded-full p-2 bg-white/15">
-                <Upload className="h-5 w-5 text-white" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-white">Laat los om te analyseren</p>
-                <p className="text-xs text-white/70">AI bepaalt automatisch waar elk bestand thuishoort</p>
-              </div>
-            </div>
-          ) : (
-            <>
-              <span className="text-[11px] text-white/40 font-medium uppercase tracking-wider shrink-0 select-none">
-                Snelkoppelingen
-              </span>
-              <div className="w-px h-4 bg-white/15 shrink-0" />
+          <>
+            <span className="text-[11px] text-white/40 font-medium uppercase tracking-wider shrink-0 select-none">
+              Snelkoppelingen
+            </span>
+            <div className="w-px h-4 bg-white/15 shrink-0" />
               <SlimUploadKnop
                 onClick={() => fileInputRef.current?.click()}
                 actieveAutomatiseringen={actieveAutomatiseringen.length}
@@ -882,7 +888,6 @@ export function SlimUploadBalk() {
                 </PopoverContent>
               </Popover>
             </>
-          )}
         </div>
       </div>
 
