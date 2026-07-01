@@ -3461,6 +3461,7 @@ export interface MedewerkerDocumentUploadBody {
   bestand: Blob;
   type?: string;
   label?: string;
+  verloopdatum?: string;
 }
 
 export interface MedewerkerDocument {
@@ -3470,6 +3471,8 @@ export interface MedewerkerDocument {
   type_label?: string;
   /** @nullable */
   label?: string | null;
+  /** @nullable */
+  verloopdatum?: string | null;
   bestandsnaam: string;
   object_path: string;
   /** @nullable */

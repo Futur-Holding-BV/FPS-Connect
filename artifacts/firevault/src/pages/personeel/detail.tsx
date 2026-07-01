@@ -282,25 +282,62 @@ const DOCUMENT_TYPE_LABELS: Record<string, string> = {
   paspoort: "Paspoort",
   verblijfsvergunning: "Verblijfsvergunning",
   rijbewijs: "Rijbewijs",
-  vca_certificaat: "VCA certificaat",
-  bhv_certificaat: "BHV certificaat",
-  ehbo_certificaat: "EHBO certificaat",
   contract: "Arbeidscontract",
+  vca_certificaat: "VCA-certificaat",
+  bhv_certificaat: "BHV-certificaat",
+  ehbo_certificaat: "EHBO-certificaat",
+  diploma: "Diploma",
   loonstrook: "Loonstrook",
   cv: "CV",
-  diploma: "Diploma",
+  naw_formulier: "NAW-formulier",
+  geheimhoudingsverklaring: "Geheimhoudingsverklaring",
   overig: "Overig",
 };
 
 const DOCUMENT_TYPES = Object.keys(DOCUMENT_TYPE_LABELS);
 
-function DocumentenTab({ medewerkerId, magBewerken }: { medewerkerId: number; magBewerken: boolean }) {
+// Types waarvoor een verloopdatum relevant is
+const TYPES_MET_VERLOOPDATUM = new Set([
+  "identiteitsbewijs", "paspoort", "verblijfsvergunning", "rijbewijs",
+  "vca_certificaat", "bhv_certificaat", "ehbo_certificaat", "diploma",
+]);
+
+// Verplichte en aanbevolen documenten voor de volledigheidscheck
+const VERPLICHTE_DOCS: { types: string[]; label: string }[] = [
+  { types: ["identiteitsbewijs", "paspoort", "verblijfsvergunning"], label: "ID-bewijs / Paspoort" },
+  { types: ["contract", "arbeidscontract"], label: "Arbeidscontract" },
+];
+const AANBEVOLEN_DOCS: { types: string[]; label: string }[] = [
+  { types: ["cv"], label: "CV" },
+  { types: ["vca_certificaat"], label: "VCA" },
+  { types: ["bhv_certificaat"], label: "BHV" },
+  { types: ["ehbo_certificaat"], label: "EHBO" },
+  { types: ["rijbewijs"], label: "Rijbewijs" },
+];
+
+function DocumentenTab({
+  medewerkerId,
+  magBewerken,
+  medewerkerNaw,
+}: {
+  medewerkerId: number;
+  magBewerken: boolean;
+  medewerkerNaw?: {
+    naam: string;
+    email?: string | null;
+    telefoon?: string | null;
+    mobiel?: string | null;
+    adres?: string | null;
+    woonplaats?: string | null;
+  };
+}) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadBezig, setUploadBezig] = useState(false);
   const [uploadType, setUploadType] = useState("overig");
   const [uploadLabel, setUploadLabel] = useState("");
+  const [uploadVerloopdatum, setUploadVerloopdatum] = useState("");
   const [uploadDialoogOpen, setUploadDialoogOpen] = useState(false);
   const [geselecteerdBestand, setGeselecteerdBestand] = useState<File | null>(null);
 
@@ -324,6 +361,7 @@ function DocumentenTab({ medewerkerId, magBewerken }: { medewerkerId: number; ma
       form.append("bestand", geselecteerdBestand);
       form.append("type", uploadType);
       if (uploadLabel.trim()) form.append("label", uploadLabel.trim());
+      if (uploadVerloopdatum) form.append("verloopdatum", uploadVerloopdatum);
       const resp = await fetch(`/api/medewerkers/${medewerkerId}/documenten`, { method: "POST", body: form });
       if (!resp.ok) throw new Error(await resp.text());
       await queryClient.invalidateQueries({ queryKey: getListMedewerkerDocumentenQueryKey(medewerkerId) });
@@ -332,6 +370,7 @@ function DocumentenTab({ medewerkerId, magBewerken }: { medewerkerId: number; ma
       setGeselecteerdBestand(null);
       setUploadLabel("");
       setUploadType("overig");
+      setUploadVerloopdatum("");
     } catch {
       toast({ title: "Uploaden mislukt", variant: "destructive" });
     } finally {
@@ -351,6 +390,8 @@ function DocumentenTab({ medewerkerId, magBewerken }: { medewerkerId: number; ma
     }
   }
 
+  const aanwezigTypes = new Set(docs.map((d) => d.type));
+
   const groepenPerType = DOCUMENT_TYPES
     .map((t) => ({ type: t, label: DOCUMENT_TYPE_LABELS[t], docs: docs.filter((d) => d.type === t) }))
     .filter((g) => g.docs.length > 0);
@@ -359,15 +400,64 @@ function DocumentenTab({ medewerkerId, magBewerken }: { medewerkerId: number; ma
 
   return (
     <div className="space-y-4">
+
+      {/* NAW-gegevens uit profiel (ter referentie) */}
+      {medewerkerNaw && (medewerkerNaw.adres || medewerkerNaw.email || medewerkerNaw.telefoon || medewerkerNaw.mobiel) && (
+        <Card className="bg-muted/30">
+          <CardContent className="p-3">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">NAW-gegevens (profiel)</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 text-sm">
+              {(medewerkerNaw.adres || medewerkerNaw.woonplaats) && (
+                <div className="flex items-start gap-1.5">
+                  <MapPin className="h-3.5 w-3.5 mt-0.5 text-muted-foreground shrink-0" />
+                  <span>{[medewerkerNaw.adres, medewerkerNaw.woonplaats].filter(Boolean).join(", ")}</span>
+                </div>
+              )}
+              {(medewerkerNaw.telefoon || medewerkerNaw.mobiel) && (
+                <div className="flex items-center gap-1.5">
+                  <Phone className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                  <span>{medewerkerNaw.telefoon ?? medewerkerNaw.mobiel}</span>
+                </div>
+              )}
+              {medewerkerNaw.email && (
+                <div className="flex items-center gap-1.5">
+                  <Mail className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                  <span className="break-all">{medewerkerNaw.email}</span>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Volledigheidscheck */}
+      <Card className={VERPLICHTE_DOCS.some((v) => !v.types.some((t) => aanwezigTypes.has(t))) ? "border-amber-200 bg-amber-50/30" : "border-emerald-200 bg-emerald-50/20"}>
+        <CardContent className="p-3">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Dossier volledigheid</p>
+          <div className="flex flex-wrap gap-1.5">
+            {VERPLICHTE_DOCS.map((v) => {
+              const aanwezig = v.types.some((t) => aanwezigTypes.has(t));
+              return (
+                <span key={v.label} className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border font-medium ${aanwezig ? "bg-emerald-50 border-emerald-200 text-emerald-700" : "bg-red-50 border-red-200 text-red-700"}`}>
+                  {aanwezig ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
+                  {v.label}
+                </span>
+              );
+            })}
+            {AANBEVOLEN_DOCS.filter((v) => v.types.some((t) => aanwezigTypes.has(t))).map((v) => (
+              <span key={v.label} className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border bg-emerald-50 border-emerald-200 text-emerald-700 font-medium">
+                <Check className="h-3 w-3" />
+                {v.label}
+              </span>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Upload knop */}
       {magBewerken && (
         <div className="flex justify-end">
-          <input
-            ref={fileInputRef}
-            type="file"
-            className="hidden"
-            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.webp"
-            onChange={bestandGekozen}
-          />
+          <input ref={fileInputRef} type="file" className="hidden" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.webp" onChange={bestandGekozen} />
           <Button onClick={() => fileInputRef.current?.click()}>
             <Upload className="h-4 w-4" />
             Document uploaden
@@ -376,17 +466,13 @@ function DocumentenTab({ medewerkerId, magBewerken }: { medewerkerId: number; ma
       )}
 
       {isLoading ? (
-        <div className="space-y-2">
-          {[1,2,3].map((i) => <Skeleton key={i} className="h-14 w-full" />)}
-        </div>
+        <div className="space-y-2">{[1,2,3].map((i) => <Skeleton key={i} className="h-14 w-full" />)}</div>
       ) : docs.length === 0 ? (
         <Card>
-          <CardContent className="py-12 text-center text-muted-foreground">
+          <CardContent className="py-10 text-center text-muted-foreground">
             <FolderOpen className="h-10 w-10 mx-auto mb-3 opacity-40" />
             <p className="text-sm">Nog geen persoonsdocumenten geüpload.</p>
-            {magBewerken && (
-              <p className="text-xs mt-1">Klik op <span className="font-medium">Document uploaden</span> om te beginnen.</p>
-            )}
+            {magBewerken && <p className="text-xs mt-1">Klik op <span className="font-medium">Document uploaden</span> om te beginnen.</p>}
           </CardContent>
         </Card>
       ) : (
@@ -395,9 +481,7 @@ function DocumentenTab({ medewerkerId, magBewerken }: { medewerkerId: number; ma
             <div key={type}>
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">{label}</p>
               <div className="space-y-2">
-                {groepDocs.map((doc) => (
-                  <DocumentRegel key={doc.id} doc={doc} magBewerken={magBewerken} onVerwijder={() => verwijderen(doc)} />
-                ))}
+                {groepDocs.map((doc) => <DocumentRegel key={doc.id} doc={doc} magBewerken={magBewerken} onVerwijder={() => verwijderen(doc)} />)}
               </div>
             </div>
           ))}
@@ -405,20 +489,16 @@ function DocumentenTab({ medewerkerId, magBewerken }: { medewerkerId: number; ma
             <div>
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Overig</p>
               <div className="space-y-2">
-                {overige.map((doc) => (
-                  <DocumentRegel key={doc.id} doc={doc} magBewerken={magBewerken} onVerwijder={() => verwijderen(doc)} />
-                ))}
+                {overige.map((doc) => <DocumentRegel key={doc.id} doc={doc} magBewerken={magBewerken} onVerwijder={() => verwijderen(doc)} />)}
               </div>
             </div>
           )}
         </div>
       )}
 
-      <Dialog open={uploadDialoogOpen} onOpenChange={(o) => { if (!uploadBezig) { setUploadDialoogOpen(o); if (!o) setGeselecteerdBestand(null); } }}>
+      <Dialog open={uploadDialoogOpen} onOpenChange={(o) => { if (!uploadBezig) { setUploadDialoogOpen(o); if (!o) { setGeselecteerdBestand(null); setUploadVerloopdatum(""); } } }}>
         <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Document uploaden</DialogTitle>
-          </DialogHeader>
+          <DialogHeader><DialogTitle>Document uploaden</DialogTitle></DialogHeader>
           <div className="space-y-3 py-2">
             <div className="space-y-1.5">
               <Label>Bestandsnaam</Label>
@@ -426,29 +506,27 @@ function DocumentenTab({ medewerkerId, magBewerken }: { medewerkerId: number; ma
             </div>
             <div className="space-y-1.5">
               <Label>Type document</Label>
-              <Select value={uploadType} onValueChange={setUploadType}>
+              <Select value={uploadType} onValueChange={(v) => { setUploadType(v); if (!TYPES_MET_VERLOOPDATUM.has(v)) setUploadVerloopdatum(""); }}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {DOCUMENT_TYPES.map((t) => (
-                    <SelectItem key={t} value={t}>{DOCUMENT_TYPE_LABELS[t]}</SelectItem>
-                  ))}
+                  {DOCUMENT_TYPES.map((t) => <SelectItem key={t} value={t}>{DOCUMENT_TYPE_LABELS[t]}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-1.5">
               <Label>Label (optioneel)</Label>
-              <Input
-                value={uploadLabel}
-                onChange={(e) => setUploadLabel(e.target.value)}
-                placeholder="bijv. Geldig t/m 2026"
-              />
+              <Input value={uploadLabel} onChange={(e) => setUploadLabel(e.target.value)} placeholder="bijv. Contract 2024" />
             </div>
+            {TYPES_MET_VERLOOPDATUM.has(uploadType) && (
+              <div className="space-y-1.5">
+                <Label>Verloopdatum (optioneel)</Label>
+                <DatePicker value={uploadVerloopdatum} onChange={(v) => setUploadVerloopdatum(v)} />
+              </div>
+            )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setUploadDialoogOpen(false); setGeselecteerdBestand(null); }} disabled={uploadBezig}>Annuleren</Button>
-            <Button onClick={uploaden} disabled={uploadBezig}>
-              {uploadBezig ? "Uploaden…" : "Uploaden"}
-            </Button>
+            <Button variant="outline" onClick={() => { setUploadDialoogOpen(false); setGeselecteerdBestand(null); setUploadVerloopdatum(""); }} disabled={uploadBezig}>Annuleren</Button>
+            <Button onClick={uploaden} disabled={uploadBezig}>{uploadBezig ? "Uploaden…" : "Uploaden"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -458,34 +536,51 @@ function DocumentenTab({ medewerkerId, magBewerken }: { medewerkerId: number; ma
 
 function DocumentRegel({ doc, magBewerken, onVerwijder }: { doc: MedewerkerDocument; magBewerken: boolean; onVerwijder: () => void }) {
   const datum = new Date(doc.aangemaakt_op).toLocaleDateString("nl-NL", { day: "2-digit", month: "short", year: "numeric" });
+
+  let verloopBadge: React.ReactNode = null;
+  if (doc.verloopdatum) {
+    const vandaag = new Date();
+    const verloop = new Date(doc.verloopdatum);
+    const dagenTot = Math.floor((verloop.getTime() - vandaag.getTime()) / (1000 * 60 * 60 * 24));
+    const verloopLabel = verloop.toLocaleDateString("nl-NL", { day: "2-digit", month: "short", year: "numeric" });
+    if (dagenTot < 0) {
+      verloopBadge = (
+        <span className="inline-flex items-center gap-0.5 text-xs px-1.5 py-0.5 rounded border bg-red-50 border-red-200 text-red-700 font-medium">
+          <AlertTriangle className="h-2.5 w-2.5" /> Verlopen {verloopLabel}
+        </span>
+      );
+    } else if (dagenTot <= 60) {
+      verloopBadge = (
+        <span className="inline-flex items-center gap-0.5 text-xs px-1.5 py-0.5 rounded border bg-amber-50 border-amber-200 text-amber-700 font-medium">
+          <AlertTriangle className="h-2.5 w-2.5" /> Verloopt {verloopLabel}
+        </span>
+      );
+    } else {
+      verloopBadge = (
+        <span className="inline-flex items-center gap-0.5 text-xs px-1.5 py-0.5 rounded border bg-muted border-border text-muted-foreground">
+          Geldig t/m {verloopLabel}
+        </span>
+      );
+    }
+  }
+
   return (
     <Card>
       <CardContent className="p-3 flex items-center justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="text-sm font-medium truncate">{doc.label || doc.bestandsnaam}</div>
-          <div className="text-xs text-muted-foreground flex gap-2 mt-0.5">
+          <div className="text-xs text-muted-foreground flex flex-wrap gap-1.5 mt-0.5 items-center">
             {doc.label && <span className="truncate opacity-70">{doc.bestandsnaam}</span>}
             <span>{datum}</span>
+            {verloopBadge}
           </div>
         </div>
         <div className="flex items-center gap-1 shrink-0">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7"
-            title="Downloaden"
-            onClick={() => window.open(doc.download_url ?? "#", "_blank")}
-          >
+          <Button variant="ghost" size="icon" className="h-7 w-7" title="Downloaden" onClick={() => window.open(doc.download_url ?? "#", "_blank")}>
             <Download className="h-3.5 w-3.5" />
           </Button>
           {magBewerken && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7 text-muted-foreground hover:text-destructive"
-              title="Verwijderen"
-              onClick={onVerwijder}
-            >
+            <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" title="Verwijderen" onClick={onVerwijder}>
               <Trash2 className="h-3.5 w-3.5" />
             </Button>
           )}
@@ -1218,7 +1313,18 @@ export default function MedewerkerDetailPagina() {
 
         {/* Persoonsdocumenten */}
         <TabsContent value="documenten" className="space-y-3">
-          <DocumentenTab medewerkerId={Number(id)} magBewerken={magSchrijven} />
+          <DocumentenTab
+            medewerkerId={Number(id)}
+            magBewerken={magSchrijven}
+            medewerkerNaw={medewerker ? {
+              naam: medewerker.naam,
+              email: medewerker.email,
+              telefoon: medewerker.telefoon,
+              mobiel: medewerker.mobiel,
+              adres: medewerker.adres,
+              woonplaats: medewerker.woonplaats,
+            } : undefined}
+          />
         </TabsContent>
 
         {/* Salarisdocumenten */}

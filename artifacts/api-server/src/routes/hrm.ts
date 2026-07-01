@@ -3457,15 +3457,24 @@ router.post("/medewerkers/:id/offboard", schrijven, async (req, res) => {
 // ── Medewerker persoonsdocumenten ────────────────────────────────────────────
 
 const DOCUMENT_TYPES_LABEL: Record<string, string> = {
-  id_bewijs: "ID-bewijs",
+  identiteitsbewijs: "Identiteitsbewijs",
   paspoort: "Paspoort",
-  cv: "CV",
-  rijbewijs_scan: "Rijbewijsscan",
+  verblijfsvergunning: "Verblijfsvergunning",
+  rijbewijs: "Rijbewijs",
   vca_certificaat: "VCA-certificaat",
   bhv_certificaat: "BHV-certificaat",
   ehbo_certificaat: "EHBO-certificaat",
+  contract: "Arbeidscontract",
   arbeidscontract: "Arbeidscontract",
+  loonstrook: "Loonstrook",
+  cv: "CV",
   diploma: "Diploma",
+  naw_formulier: "NAW-formulier",
+  aow_verklaring: "AOW-verklaring",
+  geheimhoudingsverklaring: "Geheimhoudingsverklaring",
+  // legacy aliassen
+  id_bewijs: "ID-bewijs",
+  rijbewijs_scan: "Rijbewijsscan",
   overig: "Overig",
 };
 
@@ -3483,6 +3492,7 @@ function mapMedewerkerDoc(d: typeof medewerkerDocumentenTable.$inferSelect) {
     type: d.type,
     type_label: DOCUMENT_TYPES_LABEL[d.type] ?? d.type,
     label: d.label ?? null,
+    verloopdatum: d.verloopdatum ?? null,
     bestandsnaam: d.bestandsnaam,
     object_path: d.objectPath,
     content_type: d.contentType ?? null,
@@ -3518,6 +3528,7 @@ router.post(
 
       const type = (req.body.type as string | undefined)?.trim() || "overig";
       const label = (req.body.label as string | undefined)?.trim() || null;
+      const verloopdatum = (req.body.verloopdatum as string | undefined)?.trim() || null;
       const ext = bestand.originalname.split(".").pop() ?? "bin";
       const subPath = `medewerker-documenten/${medewerkerId}/${type}/${Date.now()}.${ext}`;
 
@@ -3530,6 +3541,7 @@ router.post(
           medewerkerId,
           type,
           label,
+          verloopdatum,
           bestandsnaam: bestand.originalname,
           objectPath,
           contentType: bestand.mimetype,

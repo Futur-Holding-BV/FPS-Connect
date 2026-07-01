@@ -21093,6 +21093,9 @@ components:
           type: string
         label:
           type: string
+        verloopdatum:
+          type: string
+          format: date
 
     MedewerkerDocument:
       type: object
@@ -21108,6 +21111,9 @@ components:
           type: string
         label:
           type: ["string", "null"]
+        verloopdatum:
+          type: ["string", "null"]
+          format: date
         bestandsnaam:
           type: string
         object_path:

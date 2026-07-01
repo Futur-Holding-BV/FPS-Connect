@@ -13,6 +13,8 @@ export interface MedewerkerDocument {
   type_label?: string;
   /** @nullable */
   label?: string | null;
+  /** @nullable */
+  verloopdatum?: Date | null;
   bestandsnaam: string;
   object_path: string;
   /** @nullable */

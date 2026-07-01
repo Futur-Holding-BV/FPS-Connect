@@ -10,4 +10,5 @@ export interface MedewerkerDocumentUploadBody {
   bestand: Blob;
   type?: string;
   label?: string;
+  verloopdatum?: Date;
 }

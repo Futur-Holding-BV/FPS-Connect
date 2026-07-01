@@ -8667,6 +8667,7 @@ export const ListMedewerkerDocumentenResponseItem = zod.object({
   "type": zod.string(),
   "type_label": zod.string().optional(),
   "label": zod.string().nullish(),
+  "verloopdatum": zod.coerce.date().nullish(),
   "bestandsnaam": zod.string(),
   "object_path": zod.string(),
   "content_type": zod.string().nullish(),
@@ -8686,7 +8687,8 @@ export const UploadMedewerkerDocumentParams = zod.object({
 export const UploadMedewerkerDocumentBody = zod.object({
   "bestand": zod.instanceof(File),
   "type": zod.string().optional(),
-  "label": zod.string().optional()
+  "label": zod.string().optional(),
+  "verloopdatum": zod.coerce.date().optional()
 })
 
 export const UploadMedewerkerDocumentResponse = zod.void()

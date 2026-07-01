@@ -5,7 +5,7 @@
 // werknemerstoelichting) voor de volledige FPS Groep (FPS Bouw, FPS
 // Brandpreventie, FPS Onderhoud, Fuegro). Fase 1 bevat BEWUST GEEN
 // salarisadministratie.
-import { pgTable, serial, text, integer, real, boolean, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, real, boolean, timestamp, date } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { gebruikersTable } from "./gebruikers";
@@ -322,10 +322,12 @@ export const ziekmeldingenTable = pgTable("ziekmeldingen", {
 export const medewerkerDocumentenTable = pgTable("medewerker_documenten", {
   id: serial("id").primaryKey(),
   medewerkerId: integer("medewerker_id").notNull().references(() => medewerkersTable.id, { onDelete: "cascade" }),
-  // type: id_bewijs | paspoort | cv | rijbewijs_scan | vca_certificaat | bhv_certificaat |
-  //        ehbo_certificaat | arbeidscontract | diploma | overig
+  // type: identiteitsbewijs | paspoort | verblijfsvergunning | rijbewijs | vca_certificaat |
+  //        bhv_certificaat | ehbo_certificaat | contract | loonstrook | cv | diploma |
+  //        naw_formulier | aow_verklaring | geheimhoudingsverklaring | overig
   type: text("type").notNull().default("overig"),
   label: text("label"),
+  verloopdatum: date("verloopdatum"),
   bestandsnaam: text("bestandsnaam").notNull(),
   objectPath: text("object_path").notNull(),
   contentType: text("content_type"),

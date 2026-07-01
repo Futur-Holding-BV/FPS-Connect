@@ -24160,6 +24160,9 @@ if(medewerkerDocumentUploadBody.type !== undefined) {
 if(medewerkerDocumentUploadBody.label !== undefined) {
  formData.append(`label`, medewerkerDocumentUploadBody.label);
  }
+if(medewerkerDocumentUploadBody.verloopdatum !== undefined) {
+ formData.append(`verloopdatum`, medewerkerDocumentUploadBody.verloopdatum);
+ }
 
   return customFetch<MedewerkerDocument>(getUploadMedewerkerDocumentUrl(id),
   {

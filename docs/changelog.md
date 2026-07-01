@@ -10,6 +10,19 @@ Grote roadmap-fases staan ook in `docs/roadmap/gebouwd.md` en `docs/roadmap/acti
 
 ---
 
+## 2026-07-01 — Personeelsdossier: verloopdatum, volledigheidsoverzicht en NAW-kaart
+
+**Uitvoering:** volledig | **Getest:** typecheck + DB-migratie
+
+Uitbreidingen op de bestaande Documenten-tab in `/personeel/:id`:
+
+- **Verloopdatum** — nieuw veld op `medewerker_documenten` (DB ALTER + OpenAPI + codegen + API + frontend). Upload-dialoog toont DatePicker zodra het gekozen type een verloop kent (identiteitsbewijs, rijbewijs, VCA/BHV/EHBO, diploma, paspoort, verblijfsvergunning). DocumentRegel toont badge: rood = verlopen, amber = verloopt binnen 60 dagen, grijs = geldig t/m datum.
+- **Dossier volledigheidsoverzicht** — kaart bovenaan de tab met vereiste docs (ID-bewijs/Paspoort + Arbeidscontract) en reeds aanwezige aanbevolen docs (CV, VCA, BHV, EHBO, Rijbewijs). Kaart kleurt amber bij ontbrekende verplichte stukken, groen als alles aanwezig.
+- **NAW-kaart** — toont adres, telefoon en e-mail uit het medewerker-profiel direct in de dossier-tab als referentie.
+- **Uitgebreide documenttypes** — `naw_formulier` en `geheimhoudingsverklaring` toegevoegd; typesets op backend uitgebreid met legacy-aliassen (`id_bewijs`, `rijbewijs_scan`, `arbeidscontract`).
+
+---
+
 ## 2026-07-01 — Slim-upload: Sheet opent altijd — ook bij actieve automatiseringsregels
 
 **Uitvoering:** volledig | **Getest:** typecheck
