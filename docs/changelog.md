@@ -10,6 +10,35 @@ Grote roadmap-fases staan ook in `docs/roadmap/gebouwd.md` en `docs/roadmap/acti
 
 ---
 
+## 2026-07-01 — Magazijn volledig mobiel: locaties, verplaatsen, opdracht-koppeling, inkoop
+
+**Uitvoering:** volledig | **Getest:** typecheck groen (monteur-app + api-server)
+
+**Scan-scherm uitgebreid (magazijn/scan.tsx):**
+- Drie acties: Uitgifte / Retour / **Verplaatsen** (nieuw)
+- Opdracht-keuze bij uitgifte en retour (optioneel, modal picker)
+- Locatie-keuze bij uitgifte (van-locatie), retour (naar-locatie) en verplaatsen (van + naar — verplicht)
+- Navigeerbaar met `?artikel_id=X` parameter vanuit artikelenlijst (scanner overgeslagen)
+
+**Nieuw scherm: Artikelen (magazijn/artikelen.tsx):**
+- Volledig artikelbladerscherm op de telefoon met zoekfunctie
+- Vrije voorraad per artikel, rood bij onder minimum
+- Tik om direct naar uitgifte/retour/verplaatsen te gaan
+
+**Nieuw scherm: Inkoop aanvragen (magazijn/inkoop.tsx):**
+- Toont alle artikelen onder minimumvoorraad, gegroepeerd per leverancier
+- Aantallen vooringevuld op tekort (gewenst - vrij), handmatig aanpasbaar
+- "Bestelbon versturen" per leverancier: stuurt HTML-e-mail naar leverancier (indien e-mailadres bekend) of slaat intern op
+
+**API uitgebreid (OpenAPI + server):**
+- `POST /magazijn/verplaatsingen` — atomaire locatie-naar-locatie verplaatsing (transactie: -delta van A, +delta naar B)
+- `POST /magazijn/bestelbonnen` — bestelbon aanmaken + optioneel e-mail naar leverancier (MailSoort `magazijn_bestelbon`)
+
+**Menu:**
+- Twee nieuwe items toegevoegd: "Artikelen" (cube-outline) en "Inkoop aanvragen" (cart-outline)
+
+---
+
 ## 2026-07-01 — Gebruikers: uitnodigingsknop ook in detaildialoog
 
 **Uitvoering:** volledig | **Getest:** typecheck groen

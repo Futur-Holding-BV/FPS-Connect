@@ -15959,6 +15959,40 @@ paths:
         "201":
           description: Aangemaakt
 
+  /magazijn/verplaatsingen:
+    post:
+      operationId: createMagazijnVerplaatsing
+      tags: [magazijn]
+      summary: Voorraad verplaatsen van de ene naar de andere locatie (atomair)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MagazijnVerplaatsingInput"
+      responses:
+        "201":
+          description: Verplaatsing geregistreerd
+
+  /magazijn/bestelbonnen:
+    post:
+      operationId: createMagazijnBestelbon
+      tags: [magazijn]
+      summary: Bestelbon aanmaken en optioneel per e-mail versturen naar leverancier
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MagazijnBestelbonInput"
+      responses:
+        "200":
+          description: Bestelbon verwerkt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MagazijnBestelbonResultaat"
+
   # ── IMPORT ───────────────────────────────────────────────────────────────────
 
   /import/preview:
@@ -29255,6 +29289,42 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/RetourRegelInput"
+
+    MagazijnVerplaatsingInput:
+      type: object
+      required: [artikel_id, hoeveelheid, naar_locatie_id]
+      properties:
+        artikel_id:       { type: integer }
+        hoeveelheid:      { type: number }
+        van_locatie_id:   { type: ["integer", "null"] }
+        naar_locatie_id:  { type: integer }
+        omschrijving:     { type: string }
+
+    MagazijnBestelbonRegelInput:
+      type: object
+      required: [artikel_id, hoeveelheid]
+      properties:
+        artikel_id:   { type: integer }
+        hoeveelheid:  { type: number }
+
+    MagazijnBestelbonInput:
+      type: object
+      required: [regels]
+      properties:
+        leverancier_id:  { type: ["integer", "null"] }
+        notities:        { type: string }
+        verstuur_email:  { type: boolean }
+        regels:
+          type: array
+          items:
+            $ref: "#/components/schemas/MagazijnBestelbonRegelInput"
+
+    MagazijnBestelbonResultaat:
+      type: object
+      required: [email_verstuurd]
+      properties:
+        email_verstuurd: { type: boolean }
+        bericht:         { type: ["string", "null"] }
 
     OpdrachtMateriaalRegel:
       type: object

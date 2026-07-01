@@ -8363,6 +8363,34 @@ export interface RetourInput {
   regels: RetourRegelInput[];
 }
 
+export interface MagazijnVerplaatsingInput {
+  artikel_id: number;
+  hoeveelheid: number;
+  /** @nullable */
+  van_locatie_id?: number | null;
+  naar_locatie_id: number;
+  omschrijving?: string;
+}
+
+export interface MagazijnBestelbonRegelInput {
+  artikel_id: number;
+  hoeveelheid: number;
+}
+
+export interface MagazijnBestelbonInput {
+  /** @nullable */
+  leverancier_id?: number | null;
+  notities?: string;
+  verstuur_email?: boolean;
+  regels: MagazijnBestelbonRegelInput[];
+}
+
+export interface MagazijnBestelbonResultaat {
+  email_verstuurd: boolean;
+  /** @nullable */
+  bericht?: string | null;
+}
+
 export interface OpdrachtMateriaalRegel {
   id: number;
   artikel_id: number;

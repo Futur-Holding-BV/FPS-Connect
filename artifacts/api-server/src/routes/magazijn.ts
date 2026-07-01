@@ -14,6 +14,7 @@ import {
 import { eq, and, asc, desc, ilike, lt, lte, sql } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { logger } from "../lib/logger";
+import { verstuurMail, MailFout } from "../services/email";
 
 const router = Router();
 
@@ -917,6 +918,209 @@ router.post("/magazijn/retouren", aanmaken, async (req, res) => {
   } catch (err) {
     logger.error({ err }, "magazijn retour fout");
     res.status(500).json({ error: "Serverfout" });
+  }
+});
+
+// ── VERPLAATSINGEN ──────────────────────────────────────────────────────────
+router.post("/magazijn/verplaatsingen", aanmaken, async (req, res) => {
+  try {
+    const body = req.body as {
+      artikel_id: number;
+      hoeveelheid: number;
+      van_locatie_id?: number | null;
+      naar_locatie_id: number;
+      omschrijving?: string;
+    };
+    const artikelId = Number(body.artikel_id);
+    const hoeveelheid = Number(body.hoeveelheid);
+    const vanLocatieId = body.van_locatie_id ? Number(body.van_locatie_id) : null;
+    const naarLocatieId = Number(body.naar_locatie_id);
+    const userId = (req.session as { gebruikerId?: number }).gebruikerId ?? null;
+
+    if (!artikelId || !hoeveelheid || hoeveelheid <= 0 || !naarLocatieId) {
+      return res.status(400).json({ error: "Ongeldige invoer: artikel_id, hoeveelheid (>0) en naar_locatie_id zijn verplicht" });
+    }
+
+    if (vanLocatieId === naarLocatieId) {
+      return res.status(400).json({ error: "Van- en naar-locatie zijn gelijk" });
+    }
+
+    const omschrijving = String(body.omschrijving ?? "Verplaatsing");
+
+    await db.transaction(async (tx) => {
+      // Afname van-locatie
+      const voorraadVan = vanLocatieId != null
+        ? await tx.select().from(voorraadTable)
+            .where(and(eq(voorraadTable.artikelId, artikelId), eq(voorraadTable.locatieId, vanLocatieId)))
+        : await tx.select().from(voorraadTable)
+            .where(and(eq(voorraadTable.artikelId, artikelId), sql`${voorraadTable.locatieId} IS NULL`));
+
+      const beschikbaar = voorraadVan.reduce((s, v) => s + Math.max(0, v.hoeveelheid - v.gereserveerd), 0);
+      if (beschikbaar < hoeveelheid) {
+        throw new Error(`Onvoldoende vrije voorraad op de bronlocatie (beschikbaar: ${beschikbaar})`);
+      }
+
+      // Afname van bronlocatie
+      if (vanLocatieId != null) {
+        const rij = voorraadVan[0];
+        if (rij) {
+          const nieuweHoeveelheid = rij.hoeveelheid - hoeveelheid;
+          await tx.update(voorraadTable).set({ hoeveelheid: nieuweHoeveelheid, bijgewerktOp: new Date() })
+            .where(eq(voorraadTable.id, rij.id));
+        }
+      } else {
+        const rij = voorraadVan[0];
+        if (rij) {
+          const nieuweHoeveelheid = rij.hoeveelheid - hoeveelheid;
+          await tx.update(voorraadTable).set({ hoeveelheid: nieuweHoeveelheid, bijgewerktOp: new Date() })
+            .where(eq(voorraadTable.id, rij.id));
+        }
+      }
+
+      // Mutatie van-locatie
+      await tx.insert(voorraadMutatiesTable).values({
+        artikelId,
+        locatieId: vanLocatieId,
+        type: "verplaatsing",
+        hoeveelheid: 0,
+        delta: -hoeveelheid,
+        referentieType: null,
+        referentieId: null,
+        gebruikerId: userId,
+        omschrijving,
+        aangemaaktOp: new Date(),
+      });
+
+      // Toevoeging naar-locatie
+      const voorraadNaar = await tx.select().from(voorraadTable)
+        .where(and(eq(voorraadTable.artikelId, artikelId), eq(voorraadTable.locatieId, naarLocatieId)));
+
+      if (voorraadNaar.length > 0) {
+        await tx.update(voorraadTable).set({
+          hoeveelheid: voorraadNaar[0].hoeveelheid + hoeveelheid,
+          bijgewerktOp: new Date(),
+        }).where(eq(voorraadTable.id, voorraadNaar[0].id));
+      } else {
+        await tx.insert(voorraadTable).values({
+          artikelId,
+          locatieId: naarLocatieId,
+          hoeveelheid,
+          gereserveerd: 0,
+          besteld: 0,
+          bijgewerktOp: new Date(),
+        });
+      }
+
+      // Mutatie naar-locatie
+      await tx.insert(voorraadMutatiesTable).values({
+        artikelId,
+        locatieId: naarLocatieId,
+        type: "verplaatsing",
+        hoeveelheid: 0,
+        delta: hoeveelheid,
+        referentieType: null,
+        referentieId: null,
+        gebruikerId: userId,
+        omschrijving,
+        aangemaaktOp: new Date(),
+      });
+    });
+
+    return res.status(201).json({ ok: true });
+  } catch (err: unknown) {
+    logger.error({ err }, "magazijn verplaatsing fout");
+    const msg = err instanceof Error ? err.message : "Serverfout";
+    return res.status(400).json({ error: msg });
+  }
+});
+
+// ── BESTELBONNEN ──────────────────────────────────────────────────────────────
+router.post("/magazijn/bestelbonnen", aanmaken, async (req, res) => {
+  try {
+    const body = req.body as {
+      leverancier_id?: number | null;
+      notities?: string;
+      verstuur_email?: boolean;
+      regels: Array<{ artikel_id: number; hoeveelheid: number }>;
+    };
+    const regels = body.regels ?? [];
+    const userId = (req.session as { gebruikerId?: number }).gebruikerId ?? null;
+
+    const artikelIds = [...new Set(regels.map(r => Number(r.artikel_id)))];
+    const artikelen = artikelIds.length > 0
+      ? await db.select().from(artikelenTable).where(sql`${artikelenTable.id} = ANY(ARRAY[${sql.join(artikelIds.map(id => sql`${id}`), sql`, `)}]::int[])`)
+      : [];
+
+    let leverancier: { id: number; naam: string; email: string | null } | null = null;
+    if (body.leverancier_id) {
+      const [lev] = await db.select({
+        id: leveranciersTable.id,
+        naam: leveranciersTable.naam,
+        email: leveranciersTable.email,
+      }).from(leveranciersTable).where(eq(leveranciersTable.id, body.leverancier_id));
+      leverancier = lev ?? null;
+    }
+
+    const datumStr = new Date().toLocaleDateString("nl-NL", { day: "2-digit", month: "long", year: "numeric" });
+
+    if (body.verstuur_email) {
+      const naarEmail = leverancier?.email ?? process.env.MAIL_FROM ?? null;
+      if (!naarEmail) {
+        return res.status(400).json({ error: "Geen e-mailadres beschikbaar voor de leverancier" });
+      }
+
+      const regelsHtml = regels.map(r => {
+        const art = artikelen.find(a => a.id === Number(r.artikel_id));
+        return `<tr>
+          <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb">${art?.naam ?? `Artikel ${r.artikel_id}`}</td>
+          <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb;color:#6b7280">${art?.code ?? "—"}</td>
+          <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb;text-align:right;font-weight:600">${r.hoeveelheid}</td>
+          <td style="padding:6px 10px;border-bottom:1px solid #e5e7eb">${art?.eenheid ?? ""}</td>
+        </tr>`;
+      }).join("");
+
+      const html = `
+        <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">
+          <div style="background:#F23B0D;padding:20px 24px;border-radius:8px 8px 0 0">
+            <h1 style="color:#fff;margin:0;font-size:20px">Bestelbon FPS Brandpreventie</h1>
+          </div>
+          <div style="background:#fff;padding:24px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 8px 8px">
+            <p style="color:#374151;margin:0 0 16px"><strong>Datum:</strong> ${datumStr}</p>
+            ${leverancier ? `<p style="color:#374151;margin:0 0 16px"><strong>Leverancier:</strong> ${leverancier.naam}</p>` : ""}
+            <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
+              <thead>
+                <tr style="background:#f9fafb">
+                  <th style="padding:8px 10px;text-align:left;font-size:12px;color:#6b7280;text-transform:uppercase">Artikel</th>
+                  <th style="padding:8px 10px;text-align:left;font-size:12px;color:#6b7280;text-transform:uppercase">Code</th>
+                  <th style="padding:8px 10px;text-align:right;font-size:12px;color:#6b7280;text-transform:uppercase">Aantal</th>
+                  <th style="padding:8px 10px;text-align:left;font-size:12px;color:#6b7280;text-transform:uppercase">Eenheid</th>
+                </tr>
+              </thead>
+              <tbody>${regelsHtml}</tbody>
+            </table>
+            ${body.notities ? `<p style="color:#374151;background:#f9fafb;padding:12px;border-radius:6px"><strong>Opmerkingen:</strong> ${body.notities}</p>` : ""}
+          </div>
+        </div>`;
+
+      await verstuurMail({
+        naarEmail,
+        naarNaam: leverancier?.naam ?? undefined,
+        onderwerp: `Bestelbon FPS Brandpreventie — ${datumStr}`,
+        html,
+        soort: "magazijn_bestelbon",
+        verstuurdDoorId: userId,
+      });
+
+      return res.json({ email_verstuurd: true, bericht: `Bestelbon verstuurd naar ${naarEmail}` });
+    }
+
+    return res.json({ email_verstuurd: false, bericht: "Bestelbon aangemaakt (geen e-mail verstuurd)" });
+  } catch (err: unknown) {
+    logger.error({ err }, "magazijn bestelbon fout");
+    if (err instanceof MailFout) {
+      return res.status(503).json({ error: "E-mail kon niet worden verstuurd. Controleer de mailconfiguratie." });
+    }
+    return res.status(500).json({ error: "Fout bij verwerken bestelbon" });
   }
 });
 

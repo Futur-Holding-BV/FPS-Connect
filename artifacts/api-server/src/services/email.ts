@@ -51,7 +51,7 @@ export class MailFout extends Error {
   }
 }
 
-export type MailSoort = "test" | "uitnodiging" | "wachtwoord_reset" | "offerte" | "klantvraag" | "ondertekening" | "inkoopbon" | "opdrachtbevestiging" | "magazijn_signalering";
+export type MailSoort = "test" | "uitnodiging" | "wachtwoord_reset" | "offerte" | "klantvraag" | "ondertekening" | "inkoopbon" | "opdrachtbevestiging" | "magazijn_signalering" | "magazijn_bestelbon";
 
 // ── Configuratie-helpers ─────────────────────────────────────────────────────
 export function isGeconfigureerd(): boolean {

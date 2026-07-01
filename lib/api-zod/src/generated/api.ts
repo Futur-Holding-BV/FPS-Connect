@@ -20213,6 +20213,39 @@ export const CreateRetourResponse = zod.void()
 
 
 /**
+ * @summary Voorraad verplaatsen van de ene naar de andere locatie (atomair)
+ */
+export const CreateMagazijnVerplaatsingBody = zod.object({
+  "artikel_id": zod.number(),
+  "hoeveelheid": zod.number(),
+  "van_locatie_id": zod.number().nullish(),
+  "naar_locatie_id": zod.number(),
+  "omschrijving": zod.string().optional()
+})
+
+export const CreateMagazijnVerplaatsingResponse = zod.void()
+
+
+/**
+ * @summary Bestelbon aanmaken en optioneel per e-mail versturen naar leverancier
+ */
+export const CreateMagazijnBestelbonBody = zod.object({
+  "leverancier_id": zod.number().nullish(),
+  "notities": zod.string().optional(),
+  "verstuur_email": zod.boolean().optional(),
+  "regels": zod.array(zod.object({
+  "artikel_id": zod.number(),
+  "hoeveelheid": zod.number()
+}))
+})
+
+export const CreateMagazijnBestelbonResponse = zod.object({
+  "email_verstuurd": zod.boolean(),
+  "bericht": zod.string().nullish()
+})
+
+
+/**
  * @summary Bestand uploaden en kolommen + voorbeeldrijen ophalen
  */
 export const ImportPreviewBody = zod.object({

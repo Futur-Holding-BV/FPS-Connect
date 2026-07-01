@@ -339,10 +339,13 @@ import type {
   MaakOpdrachtInput,
   MagazijnArtikelInput,
   MagazijnArtikelItem,
+  MagazijnBestelbonInput,
+  MagazijnBestelbonResultaat,
   MagazijnDashboard,
   MagazijnLocatie,
   MagazijnLocatieInput,
   MagazijnSignalering,
+  MagazijnVerplaatsingInput,
   MailActieResultaat,
   MailLogregel,
   MailOpdrachtbevestigingDemoInput,
@@ -57334,6 +57337,146 @@ export const useCreateRetour = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getCreateRetourMutationOptions(options));
+    }
+
+export const getCreateMagazijnVerplaatsingUrl = () => {
+
+
+
+
+  return `/api/magazijn/verplaatsingen`
+}
+
+/**
+ * @summary Voorraad verplaatsen van de ene naar de andere locatie (atomair)
+ */
+export const createMagazijnVerplaatsing = async (magazijnVerplaatsingInput: MagazijnVerplaatsingInput, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getCreateMagazijnVerplaatsingUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(magazijnVerplaatsingInput)
+  }
+);}
+
+
+
+
+export const getCreateMagazijnVerplaatsingMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createMagazijnVerplaatsing>>, TError,{data: BodyType<MagazijnVerplaatsingInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createMagazijnVerplaatsing>>, TError,{data: BodyType<MagazijnVerplaatsingInput>}, TContext> => {
+
+const mutationKey = ['createMagazijnVerplaatsing'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createMagazijnVerplaatsing>>, {data: BodyType<MagazijnVerplaatsingInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createMagazijnVerplaatsing(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateMagazijnVerplaatsingMutationResult = NonNullable<Awaited<ReturnType<typeof createMagazijnVerplaatsing>>>
+    export type CreateMagazijnVerplaatsingMutationBody = BodyType<MagazijnVerplaatsingInput>
+    export type CreateMagazijnVerplaatsingMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Voorraad verplaatsen van de ene naar de andere locatie (atomair)
+ */
+export const useCreateMagazijnVerplaatsing = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createMagazijnVerplaatsing>>, TError,{data: BodyType<MagazijnVerplaatsingInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createMagazijnVerplaatsing>>,
+        TError,
+        {data: BodyType<MagazijnVerplaatsingInput>},
+        TContext
+      > => {
+      return useMutation(getCreateMagazijnVerplaatsingMutationOptions(options));
+    }
+
+export const getCreateMagazijnBestelbonUrl = () => {
+
+
+
+
+  return `/api/magazijn/bestelbonnen`
+}
+
+/**
+ * @summary Bestelbon aanmaken en optioneel per e-mail versturen naar leverancier
+ */
+export const createMagazijnBestelbon = async (magazijnBestelbonInput: MagazijnBestelbonInput, options?: RequestInit): Promise<MagazijnBestelbonResultaat> => {
+
+  return customFetch<MagazijnBestelbonResultaat>(getCreateMagazijnBestelbonUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(magazijnBestelbonInput)
+  }
+);}
+
+
+
+
+export const getCreateMagazijnBestelbonMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createMagazijnBestelbon>>, TError,{data: BodyType<MagazijnBestelbonInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createMagazijnBestelbon>>, TError,{data: BodyType<MagazijnBestelbonInput>}, TContext> => {
+
+const mutationKey = ['createMagazijnBestelbon'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createMagazijnBestelbon>>, {data: BodyType<MagazijnBestelbonInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createMagazijnBestelbon(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateMagazijnBestelbonMutationResult = NonNullable<Awaited<ReturnType<typeof createMagazijnBestelbon>>>
+    export type CreateMagazijnBestelbonMutationBody = BodyType<MagazijnBestelbonInput>
+    export type CreateMagazijnBestelbonMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Bestelbon aanmaken en optioneel per e-mail versturen naar leverancier
+ */
+export const useCreateMagazijnBestelbon = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createMagazijnBestelbon>>, TError,{data: BodyType<MagazijnBestelbonInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createMagazijnBestelbon>>,
+        TError,
+        {data: BodyType<MagazijnBestelbonInput>},
+        TContext
+      > => {
+      return useMutation(getCreateMagazijnBestelbonMutationOptions(options));
     }
 
 export const getImportPreviewUrl = () => {

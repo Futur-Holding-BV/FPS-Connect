@@ -76,6 +76,8 @@ export default function MenuScherm() {
     { sleutel: "opname", label: "Opname", icoon: "clipboard-outline", onPress: () => router.push("/opname") },
     { sleutel: "documenten", label: "Documenten", icoon: "folder-outline", onPress: () => router.push("/documenten") },
     { sleutel: "magazijn", label: "Magazijn scan", icoon: "barcode-outline", onPress: () => router.push("/magazijn/scan" as "/werkdag") },
+    { sleutel: "magazijn_artikelen", label: "Artikelen", icoon: "cube-outline", onPress: () => router.push("/magazijn/artikelen" as "/werkdag") },
+    { sleutel: "magazijn_inkoop", label: "Inkoop aanvragen", icoon: "cart-outline", onPress: () => router.push("/magazijn/inkoop" as "/werkdag") },
   ];
 
   const routeMap: Record<string, string> = {
@@ -90,6 +92,8 @@ export default function MenuScherm() {
     opname: "/opname",
     documenten: "/documenten",
     magazijn: "/magazijn/scan",
+    magazijn_artikelen: "/magazijn/artikelen",
+    magazijn_inkoop: "/magazijn/inkoop",
   };
 
   // eslint-disable-next-line react-hooks/rules-of-hooks
