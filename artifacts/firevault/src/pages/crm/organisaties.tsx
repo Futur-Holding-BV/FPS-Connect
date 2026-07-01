@@ -18,6 +18,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { Building2, Plus, Search, Phone, Mail, MapPin, ChevronRight, ArrowLeft } from "lucide-react";
+import { AiInvullenKnop } from "@/components/ai-invullen-knop";
 
 const ORG_TYPES = [
   { value: "woningcorporatie", label: "Woningcorporatie" },
@@ -187,6 +188,26 @@ export default function OrganisatiesPagina() {
             <div className="col-span-2">
               <Label>Naam <span className="text-destructive">*</span></Label>
               <Input value={velden.naam} onChange={(e) => setVelden((v) => ({ ...v, naam: e.target.value }))} className="mt-1" />
+            </div>
+            <div className="col-span-2">
+              <AiInvullenKnop
+                formulierType="crm_organisatie"
+                huidigVelden={{ naam: velden.naam }}
+                onVoorstellen={(voorgesteld) =>
+                  setVelden((v) => ({
+                    ...v,
+                    ...(voorgesteld.adres    ? { adres:    voorgesteld.adres }    : {}),
+                    ...(voorgesteld.postcode ? { postcode: voorgesteld.postcode } : {}),
+                    ...(voorgesteld.stad     ? { stad:     voorgesteld.stad }     : {}),
+                    ...(voorgesteld.regio    ? { regio:    voorgesteld.regio }    : {}),
+                    ...(voorgesteld.telefoon ? { telefoon: voorgesteld.telefoon } : {}),
+                    ...(voorgesteld.email    ? { email:    voorgesteld.email }    : {}),
+                    ...(voorgesteld.website  ? { website:  voorgesteld.website }  : {}),
+                    ...(voorgesteld.branche  ? { branche:  voorgesteld.branche }  : {}),
+                    ...(voorgesteld.org_type ? { type:     voorgesteld.org_type } : {}),
+                  }))
+                }
+              />
             </div>
             <div>
               <Label>Type</Label>

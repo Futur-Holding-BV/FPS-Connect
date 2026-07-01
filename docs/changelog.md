@@ -10,6 +10,21 @@ Grote roadmap-fases staan ook in `docs/roadmap/gebouwd.md` en `docs/roadmap/acti
 
 ---
 
+## 2026-07-01 — Centrale AI-invullaag (Option B) — `POST /ai/invullen` + `<AiInvullenKnop />`
+
+**Uitvoering:** volledig | **Getest:** typecheck groen, endpoint bereikbaar (401 auth-guard actief)
+
+- **Backend**: nieuw `POST /ai/invullen` endpoint (`artifacts/api-server/src/routes/ai.ts`) — één centraal punt voor alle formulieren. Accepteert `formulier_type` (enum: 9 types), optionele `context_id` (DB-context laden per type: klant/gebouw/leverancier), en `huidige_velden`. Bouwt form-type-specifieke prompt, zoekt live via `web_search_preview` Responses API, valt terug op chat completions. Geeft `{ velden: Record<string, string|null> }` terug.
+- **OpenAPI**: path `/ai/invullen` + schemas `AiInvullenInput` / `AiInvullenResultaat` + tag `ai` toegevoegd aan `openapi.yaml`.
+- **Codegen**: `useAiCentraalInvullen` mutation hook gegenereerd in `@workspace/api-client-react`.
+- **Frontend component**: `artifacts/firevault/src/components/ai-invullen-knop.tsx` — herbruikbare `<AiInvullenKnop />` met amber UX (Sparkles-knop → amber voorstelspaneel → Overnemen / Negeren). Props: `formulierType`, `contextId?`, `huidigVelden`, `onVoorstellen`, `veldenLabels?`.
+- **Formulierdeployments**:
+  - CRM Organisaties (`crm/organisaties.tsx`): knop na naam-veld, vult adres/postcode/stad/regio/telefoon/email/website/branche/type aan.
+  - CRM Contactpersonen (`crm/detail.tsx`): knop in nieuwe-contactpersoon-dialog na naam-veld, vult email/telefoon/mobiel/functie aan (met organisatie als `contextId`).
+- Gebouwen-formulieren overgeslagen — die bevatten al `useAiAnalyseGebouw` (uitgebreider AI-systeem); dubbele AI-knoppen vermeden.
+
+---
+
 ## 2026-07-01 — AI-invullen: echte webzoekopdracht via web_search_preview
 
 **Uitvoering:** volledig | **Getest:** typecheck groen

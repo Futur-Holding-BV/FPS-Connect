@@ -19429,6 +19429,20 @@ export const SlaAiCategorieCorrectieLerenResponse = zod.void()
 
 
 /**
+ * @summary Centraal AI-invullen — vult formuliervelden in op basis van context en websearch
+ */
+export const AiCentraalInvullenBody = zod.object({
+  "formulier_type": zod.enum(['crm_organisatie', 'crm_contactpersoon', 'gebouw', 'leverancier', 'werkmaatschappij', 'concurrent', 'wagenpark_voertuig', 'medewerker', 'magazijn_artikel']),
+  "context_id": zod.number().nullish(),
+  "huidige_velden": zod.record(zod.string(), zod.string().nullable())
+})
+
+export const AiCentraalInvullenResponse = zod.object({
+  "velden": zod.record(zod.string(), zod.string().nullable())
+})
+
+
+/**
  * @summary AI prefill bedrijfsgegevens op basis van bedrijfsnaam
  */
 export const AiInvullenOrganisatieBody = zod.object({

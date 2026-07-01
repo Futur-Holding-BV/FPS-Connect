@@ -70,6 +70,7 @@ import onderhoudscontractenRouter from "./onderhoudscontracten";
 import werkbonnenRouter from "./werkbonnen";
 import magazijnRouter from "./magazijn";
 import studioRouter from "./studio";
+import aiRouter from "./ai";
 import { requireAuth } from "../middlewares/auth";
 import { meldActief } from "../lib/online-tracker";
 
@@ -156,5 +157,6 @@ router.use(onderhoudscontractenRouter);
 router.use(werkbonnenRouter);
 router.use(magazijnRouter);
 router.use(studioRouter);
+router.use(aiRouter);
 
 export default router;

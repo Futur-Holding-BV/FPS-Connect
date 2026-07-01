@@ -25,6 +25,7 @@ import {
   getListCrmFinancieelQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { AiInvullenKnop } from "@/components/ai-invullen-knop";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -303,6 +304,19 @@ function ContactpersonenTab({ klantId }: { klantId: number }) {
               <DialogHeader><DialogTitle>Nieuwe contactpersoon</DialogTitle></DialogHeader>
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="sm:col-span-2 space-y-1.5"><Label>Naam *</Label><Input value={naam} onChange={(e) => setNaam(e.target.value)} /></div>
+                <div className="sm:col-span-2">
+                  <AiInvullenKnop
+                    formulierType="crm_contactpersoon"
+                    contextId={klantId}
+                    huidigVelden={{ naam }}
+                    onVoorstellen={(voorgesteld) => {
+                      if (voorgesteld.email)    setEmail(voorgesteld.email);
+                      if (voorgesteld.telefoon) setTelefoon(voorgesteld.telefoon);
+                      if (voorgesteld.mobiel)   setMobiel(voorgesteld.mobiel);
+                      if (voorgesteld.functie)  setFunctie(voorgesteld.functie);
+                    }}
+                  />
+                </div>
                 <div className="sm:col-span-2 space-y-1.5"><Label>Functie</Label><Input value={functie} onChange={(e) => setFunctie(e.target.value)} /></div>
                 <div className="space-y-1.5"><Label>E-mail</Label><Input value={email} onChange={(e) => setEmail(e.target.value)} /></div>
                 <div className="space-y-1.5"><Label>Telefoon</Label><Input value={telefoon} onChange={(e) => setTelefoon(e.target.value)} /></div>

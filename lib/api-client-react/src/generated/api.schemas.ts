@@ -5,6 +5,36 @@
  * FPS Brandpreventie - Platform voor brandpreventieve gebouwvoorzieningen
  * OpenAPI spec version: 0.1.0
  */
+export type AiInvullenInputFormulierType = typeof AiInvullenInputFormulierType[keyof typeof AiInvullenInputFormulierType];
+
+
+export const AiInvullenInputFormulierType = {
+  crm_organisatie: 'crm_organisatie',
+  crm_contactpersoon: 'crm_contactpersoon',
+  gebouw: 'gebouw',
+  leverancier: 'leverancier',
+  werkmaatschappij: 'werkmaatschappij',
+  concurrent: 'concurrent',
+  wagenpark_voertuig: 'wagenpark_voertuig',
+  medewerker: 'medewerker',
+  magazijn_artikel: 'magazijn_artikel',
+} as const;
+
+export type AiInvullenInputHuidigeVelden = {[key: string]: string | null};
+
+export interface AiInvullenInput {
+  formulier_type: AiInvullenInputFormulierType;
+  /** @nullable */
+  context_id?: number | null;
+  huidige_velden: AiInvullenInputHuidigeVelden;
+}
+
+export type AiInvullenResultaatVelden = {[key: string]: string | null};
+
+export interface AiInvullenResultaat {
+  velden: AiInvullenResultaatVelden;
+}
+
 export interface NieuwsItem {
   titel: string;
   url: string;

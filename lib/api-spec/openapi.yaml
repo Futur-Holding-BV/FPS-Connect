@@ -61,6 +61,8 @@ tags:
     description: ENK-importmodule
   - name: magazijn
     description: Magazijn- en voorraadbeheer — locaties, voorraad, mutaties, reserveringen, uitgiftes en retouren — Excel/CSV-import van leveranciers, klanten, artikelen en projecten
+  - name: ai
+    description: Centrale AI-laag — formulierinvullen, patroonherkenning en intelligente aanvulling
 
 paths:
   /healthz:
@@ -15320,6 +15322,27 @@ paths:
         "204":
           description: Opgeslagen
 
+  # ── AI — Centraal invullen ───────────────────────────────────────────────────
+
+  /ai/invullen:
+    post:
+      operationId: aiCentraalInvullen
+      tags: [ai]
+      summary: Centraal AI-invullen — vult formuliervelden in op basis van context en websearch
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AiInvullenInput"
+      responses:
+        "200":
+          description: Voorgestelde velden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AiInvullenResultaat"
+
   # ── Organisatie — AI ──────────────────────────────────────────────────────────
   /organisatie/ai-invullen:
     post:
@@ -16249,6 +16272,29 @@ paths:
 
 components:
   schemas:
+    AiInvullenInput:
+      type: object
+      required: [formulier_type, huidige_velden]
+      properties:
+        formulier_type:
+          type: string
+          enum: [crm_organisatie, crm_contactpersoon, gebouw, leverancier, werkmaatschappij, concurrent, wagenpark_voertuig, medewerker, magazijn_artikel]
+        context_id:
+          type: ["integer", "null"]
+        huidige_velden:
+          type: object
+          additionalProperties:
+            type: ["string", "null"]
+
+    AiInvullenResultaat:
+      type: object
+      required: [velden]
+      properties:
+        velden:
+          type: object
+          additionalProperties:
+            type: ["string", "null"]
+
     NieuwsItem:
       type: object
       required: [titel, url, bron, gepubliceerd]

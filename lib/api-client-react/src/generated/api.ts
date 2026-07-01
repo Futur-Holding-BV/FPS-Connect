@@ -35,7 +35,9 @@ import type {
   Activiteit,
   AiAnalyseToolboxBerichten200,
   AiCalculatieRegels200,
+  AiInvullenInput,
   AiInvullenOrganisatie200,
+  AiInvullenResultaat,
   AiModCalcRegels200,
   AiProfielCrmConcurrent200,
   AiSuggestiesOrgVerzekeringen200,
@@ -54955,6 +54957,76 @@ export const useSlaAiCategorieCorrectieLeren = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getSlaAiCategorieCorrectieLerenMutationOptions(options));
+    }
+
+export const getAiCentraalInvullenUrl = () => {
+
+
+
+
+  return `/api/ai/invullen`
+}
+
+/**
+ * @summary Centraal AI-invullen — vult formuliervelden in op basis van context en websearch
+ */
+export const aiCentraalInvullen = async (aiInvullenInput: AiInvullenInput, options?: RequestInit): Promise<AiInvullenResultaat> => {
+
+  return customFetch<AiInvullenResultaat>(getAiCentraalInvullenUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(aiInvullenInput)
+  }
+);}
+
+
+
+
+export const getAiCentraalInvullenMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof aiCentraalInvullen>>, TError,{data: BodyType<AiInvullenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof aiCentraalInvullen>>, TError,{data: BodyType<AiInvullenInput>}, TContext> => {
+
+const mutationKey = ['aiCentraalInvullen'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof aiCentraalInvullen>>, {data: BodyType<AiInvullenInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  aiCentraalInvullen(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AiCentraalInvullenMutationResult = NonNullable<Awaited<ReturnType<typeof aiCentraalInvullen>>>
+    export type AiCentraalInvullenMutationBody = BodyType<AiInvullenInput>
+    export type AiCentraalInvullenMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Centraal AI-invullen — vult formuliervelden in op basis van context en websearch
+ */
+export const useAiCentraalInvullen = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof aiCentraalInvullen>>, TError,{data: BodyType<AiInvullenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof aiCentraalInvullen>>,
+        TError,
+        {data: BodyType<AiInvullenInput>},
+        TContext
+      > => {
+      return useMutation(getAiCentraalInvullenMutationOptions(options));
     }
 
 export const getAiInvullenOrganisatieUrl = () => {
