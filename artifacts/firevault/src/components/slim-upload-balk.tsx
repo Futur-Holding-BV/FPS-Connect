@@ -750,35 +750,30 @@ export function SlimUploadBalk() {
       toelichting: "",
     }));
 
-    // Automatiseringsregels → meteen navigeren voor bekende extensies
-    const teAnalyseren: UploadItem[] = [];
+    // Automatiseringsregels verwerken — auto-gerouteerde items direct opslaan maar
+    // altijd in de wachtrij tonen zodat de gebruiker ziet wat er is gebeurd
+    const queueItems: UploadItem[] = [];
     for (const item of nieuweItems) {
-      const ext = haalExtensie(item.bestand.name);
-      const actief = regelsHuidig.find((r) => r.extensie === ext && r.geautomatiseerd);
+      const ext     = haalExtensie(item.bestand.name);
+      const actief  = regelsHuidig.find((r) => r.extensie === ext && r.geautomatiseerd);
       const catInfo = actief ? CATEGORIE_INFO[actief.categorie] : undefined;
       if (actief && catInfo) {
-        navigate(catInfo.pad);
-        const bestandNaam = item.bestand.name;
-        const catLabel    = catInfo.label;
-        void uploadNaarInbox(item.bestand).then((ok) => {
-          toast({
-            title: ok ? "Doorgestuurd en opgeslagen" : "Automatisch doorgestuurd",
-            description: ok
-              ? `${bestandNaam} → ${catLabel}. Het bestand staat nu in Slim uploaden › Inbox.`
-              : `${bestandNaam} → ${catLabel}. Opslaan mislukt — upload het bestand handmatig op de bestemmingspagina.`,
-            duration: 8000,
-          });
+        // Upload meteen naar inbox (fire and forget) — geen aparte navigatie
+        void uploadNaarInbox(item.bestand);
+        queueItems.push({
+          ...item,
+          status: "klaar" as const,
+          actieGenomen: true,
+          gekozenCategorie: actief.categorie,
         });
       } else {
-        teAnalyseren.push(item);
+        queueItems.push(item);
       }
     }
 
-    if (teAnalyseren.length === 0) return;
-
-    // Queue openen — items blijven in "wacht" zodat de gebruiker een toelichting kan invoeren
-    setQueue(teAnalyseren);
-    setHuidigId(teAnalyseren[0]?.id ?? null);
+    // Sheet altijd openen — ook als alles al auto-gerouteerd is
+    setQueue(queueItems);
+    setHuidigId(queueItems.find((i) => !i.actieGenomen)?.id ?? queueItems[0]?.id ?? null);
     setToonDialoog(true);
   }
 

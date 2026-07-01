@@ -10,6 +10,16 @@ Grote roadmap-fases staan ook in `docs/roadmap/gebouwd.md` en `docs/roadmap/acti
 
 ---
 
+## 2026-07-01 — Slim-upload: Sheet opent altijd — ook bij actieve automatiseringsregels
+
+**Uitvoering:** volledig | **Getest:** typecheck
+
+Bug: als een bestand een actieve automatiseringsregel had, werd het stil doorgestuurd en keerde `verwerkBestanden` terug vóór `setToonDialoog(true)` — de Sheet opende nooit.
+
+Fix: auto-gerouteerde bestanden worden nu ook in de wachtrij gezet (status "klaar", actieGenomen true, gekozenCategorie ingevuld), inbox-upload blijft fire-and-forget maar er is geen aparte navigatie meer. `setToonDialoog(true)` wordt altijd aangeroepen. De Sheet toont auto-gerouteerde items als al-verwerkt met het label "Opgeslagen in inbox → [categorie]".
+
+---
+
 ## 2026-07-01 — Slim-upload: wachtrij-paneel (Sheet) vervangt blokkerend center-dialoog
 
 **Uitvoering:** volledig | **Getest:** typecheck
