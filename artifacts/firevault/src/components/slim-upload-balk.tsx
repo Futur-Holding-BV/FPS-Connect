@@ -209,7 +209,7 @@ const CATEGORIE_INFO: Record<CategorieUitgebreid, {
   personeelsdocument:{ label: "Personeel / HRM",               icoon: <Users className="h-4 w-4" />,        pad: "/personeel",   kleur: "bg-purple-50 text-purple-700 border-purple-200",  omschrijving: "Arbeidscontract, diploma, VOG, VCA" },
   snagstream:        { label: "Snagstream archief",            icoon: <Archive className="h-4 w-4" />,      pad: "/snagstream",  kleur: "bg-rose-50 text-rose-700 border-rose-200",        omschrijving: "Opleverrapport, inspectieverslag, punchlijst" },
   bibliotheek:       { label: "Documentenbibliotheek",         icoon: <BookOpen className="h-4 w-4" />,        pad: "/documenten",           kleur: "bg-blue-50 text-blue-700 border-blue-200",        omschrijving: "Technisch brandveiligheidsdocument" },
-  document_sjabloon: { label: "Document Studio — sjabloon",    icoon: <LayoutTemplate className="h-4 w-4" />, pad: "/organisatie/documentopmaak", kleur: "bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200", omschrijving: "Briefpapier, onderlegger of huisstijl-sjabloon" },
+  document_sjabloon: { label: "Document Studio — sjabloon",    icoon: <LayoutTemplate className="h-4 w-4" />, pad: "/organisatie/studio", kleur: "bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200", omschrijving: "Briefpapier, onderlegger of huisstijl-sjabloon" },
   algemeen:          { label: "Documenten (algemeen)",         icoon: <FolderOpen className="h-4 w-4" />,    pad: "/documenten",           kleur: "bg-gray-50 text-gray-700 border-gray-200",        omschrijving: "Overige bedrijfsdocumenten" },
   onbekend:          { label: "Onbekend — handmatig kiezen",   icoon: <HelpCircle className="h-4 w-4" />,    pad: "/documenten",           kleur: "bg-gray-50 text-gray-600 border-gray-200",        omschrijving: "AI kon het type niet vaststellen" },
 };
@@ -430,7 +430,7 @@ function BeslisScherm({
         <div className="rounded-md border bg-fuchsia-50 border-fuchsia-200 p-3 space-y-2">
           <p className="text-xs font-semibold text-fuchsia-700">Dit lijkt een huisstijl-sjabloon of briefpapier</p>
           <p className="text-xs text-fuchsia-600">
-            Voeg dit document toe als onderlegger in de Document Studio. Daar kunt u het koppelen aan een werkgever en instellen als briefpapier voor rapporten en klantdocumenten.
+            Klik op "Naar Document Studio" om naar de Studio te navigeren. Upload het bestand daar vervolgens handmatig bij het gewenste documenttype (bijv. Offerte of Brief) via de knop "Referentie uploaden".
           </p>
           <div className="flex flex-col gap-1.5 mt-1">
             <Button size="sm" variant="default" className="justify-start gap-2 text-xs"
@@ -655,7 +655,8 @@ export function SlimUploadBalk() {
         navigate(catInfo.pad);
         toast({
           title: "Automatisch doorgestuurd",
-          description: `${item.bestand.name} → ${catInfo.label}`,
+          description: `${item.bestand.name} → ${catInfo.label}. Upload het bestand daarna handmatig op de bestemmingspagina. Regels beheren via het tandwiel-icoon in de taakbalk.`,
+          duration: 8000,
         });
       } else {
         teAnalyseren.push(item);

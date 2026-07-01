@@ -10,6 +10,17 @@ Grote roadmap-fases staan ook in `docs/roadmap/gebouwd.md` en `docs/roadmap/acti
 
 ---
 
+## 2026-07-01 — Slim uploaden: document_sjabloon navigeert nu naar Document Studio
+
+**Uitvoering:** volledig | **Getest:** typecheck groen
+
+- `document_sjabloon` categorie had verkeerde route `/organisatie/documentopmaak` (Document Design System); gecorrigeerd naar `/organisatie/studio` (Document Studio)
+- Automiseringsregel toast heeft nu 8 seconden zichtbaarheid (was ~5s) en legt uit dat het bestand nog handmatig geüpload moet worden op de bestemmingspagina, plus verwijzing naar het tandwiel-icoon voor regelbeheer
+- BeslisScherm voor `document_sjabloon` toont nu duidelijke instructie: na navigeren naar Studio het bestand handmatig uploaden via "Referentie uploaden" bij het gewenste documenttype
+- **Automiseringsregel actief?** Als de analysedialog niet verschijnt en er alleen een korte melding opkomt, staat er een actieve automiseringsregel voor dat bestandstype. Verwijder die via het tandwiel-icoon in de taakbalk rechtsonder.
+
+---
+
 ## 2026-07-01 — Magazijn: crash door lege SelectItem-waarden opgelost
 
 **Uitvoering:** volledig | **Getest:** typecheck groen
