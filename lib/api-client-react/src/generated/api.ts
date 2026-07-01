@@ -37,6 +37,7 @@ import type {
   AiCalculatieRegels200,
   AiInvullenOrganisatie200,
   AiModCalcRegels200,
+  AiProfielCrmConcurrent200,
   AiSuggestiesOrgVerzekeringen200,
   AppInstellingen,
   AppInstellingenInput,
@@ -95,6 +96,7 @@ import type {
   CrmCommunicatie,
   CrmCommunicatieInput,
   CrmConcurrent,
+  CrmConcurrentAiProfielInput,
   CrmConcurrentInput,
   CrmContactpersoon,
   CrmContactpersoonInput,
@@ -19178,6 +19180,76 @@ export const useDeleteCrmConcurrent = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getDeleteCrmConcurrentMutationOptions(options));
+    }
+
+export const getAiProfielCrmConcurrentUrl = () => {
+
+
+
+
+  return `/api/crm/concurrenten/ai-profiel`
+}
+
+/**
+ * @summary AI concurrentprofiel ophalen
+ */
+export const aiProfielCrmConcurrent = async (crmConcurrentAiProfielInput: CrmConcurrentAiProfielInput, options?: RequestInit): Promise<AiProfielCrmConcurrent200> => {
+
+  return customFetch<AiProfielCrmConcurrent200>(getAiProfielCrmConcurrentUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(crmConcurrentAiProfielInput)
+  }
+);}
+
+
+
+
+export const getAiProfielCrmConcurrentMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof aiProfielCrmConcurrent>>, TError,{data: BodyType<CrmConcurrentAiProfielInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof aiProfielCrmConcurrent>>, TError,{data: BodyType<CrmConcurrentAiProfielInput>}, TContext> => {
+
+const mutationKey = ['aiProfielCrmConcurrent'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof aiProfielCrmConcurrent>>, {data: BodyType<CrmConcurrentAiProfielInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  aiProfielCrmConcurrent(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AiProfielCrmConcurrentMutationResult = NonNullable<Awaited<ReturnType<typeof aiProfielCrmConcurrent>>>
+    export type AiProfielCrmConcurrentMutationBody = BodyType<CrmConcurrentAiProfielInput>
+    export type AiProfielCrmConcurrentMutationError = ErrorType<void>
+
+    /**
+ * @summary AI concurrentprofiel ophalen
+ */
+export const useAiProfielCrmConcurrent = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof aiProfielCrmConcurrent>>, TError,{data: BodyType<CrmConcurrentAiProfielInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof aiProfielCrmConcurrent>>,
+        TError,
+        {data: BodyType<CrmConcurrentAiProfielInput>},
+        TContext
+      > => {
+      return useMutation(getAiProfielCrmConcurrentMutationOptions(options));
     }
 
 export const getListCrmMarktintelligentieUrl = () => {

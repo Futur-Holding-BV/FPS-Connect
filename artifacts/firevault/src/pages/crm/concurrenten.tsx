@@ -3,6 +3,7 @@ import {
   useListCrmConcurrenten,
   useCreateCrmConcurrent,
   useUpdateCrmConcurrent,
+  useAiProfielCrmConcurrent,
   getListCrmConcurrentenQueryKey,
 } from "@workspace/api-client-react";
 import type { CrmConcurrent } from "@workspace/api-client-react";
@@ -17,7 +18,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { Handshake, Plus, ArrowLeft, Globe, MapPin, Edit2, ThumbsUp, ThumbsDown } from "lucide-react";
+import { Handshake, Plus, ArrowLeft, Globe, MapPin, Edit2, ThumbsUp, ThumbsDown, Sparkles, Loader2 } from "lucide-react";
 
 export default function ConcurrentenPagina() {
   const qc = useQueryClient();
@@ -29,6 +30,28 @@ export default function ConcurrentenPagina() {
   const { data: concurrenten = [], isLoading } = useListCrmConcurrenten();
   const aanmaken = useCreateCrmConcurrent();
   const bijwerken = useUpdateCrmConcurrent();
+  const aiProfiel = useAiProfielCrmConcurrent();
+  const [aiBezig, setAiBezig] = useState(false);
+  const [aiVoorstel, setAiVoorstel] = useState<Record<string, string> | null>(null);
+
+  async function aiConcurrentPrefill() {
+    if (!velden.naam.trim()) return;
+    setAiBezig(true);
+    setAiVoorstel(null);
+    try {
+      const result = await aiProfiel.mutateAsync({ data: { naam: velden.naam.trim() } });
+      const v = result?.velden;
+      if (v) {
+        const voorstel: Record<string, string> = {};
+        const kandidaten = ["website", "regio", "bekende_klanten", "bekende_projecttypes", "sterke_punten", "zwakke_punten", "where_we_encounter"] as const;
+        for (const k of kandidaten) {
+          if (v[k]) voorstel[k] = String(v[k]);
+        }
+        if (Object.keys(voorstel).length > 0) setAiVoorstel(voorstel);
+      }
+    } catch { /* silent */ }
+    finally { setAiBezig(false); }
+  }
 
   const leegVelden = { naam: "", website: "", regio: "", bekende_klanten: "", bekende_projecttypes: "", sterke_punten: "", zwakke_punten: "", where_we_encounter: "", opmerkingen: "" };
   const [velden, setVelden] = useState(leegVelden);
@@ -64,11 +87,50 @@ export default function ConcurrentenPagina() {
     }
   }
 
+  const aiVeldLabels: Record<string, string> = {
+    website: "Website", regio: "Regio", bekende_klanten: "Bekende klanten",
+    bekende_projecttypes: "Projecttypes", sterke_punten: "Sterk", zwakke_punten: "Zwak",
+    where_we_encounter: "Tegengekomen",
+  };
+
   const Formulier = () => (
     <div className="space-y-3">
       <div>
         <Label>Naam <span className="text-destructive">*</span></Label>
-        <Input value={velden.naam} onChange={(e) => setVelden((v) => ({ ...v, naam: e.target.value }))} className="mt-1" />
+        <div className="flex gap-2 mt-1">
+          <Input value={velden.naam} onChange={(e) => setVelden((v) => ({ ...v, naam: e.target.value }))} className="flex-1" />
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => void aiConcurrentPrefill()}
+            disabled={aiBezig || !velden.naam.trim()}
+            className="shrink-0 gap-1 border-amber-300 text-amber-700 hover:bg-amber-50"
+          >
+            {aiBezig ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+            AI
+          </Button>
+        </div>
+        {aiVoorstel && (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 space-y-2 text-sm mt-2">
+            <p className="font-medium text-amber-800 flex items-center gap-1"><Sparkles className="w-3.5 h-3.5" /> AI-concurrentprofiel</p>
+            <div className="space-y-0.5 text-amber-900">
+              {Object.entries(aiVoorstel).map(([k, v]) => (
+                <div key={k} className="flex gap-2">
+                  <span className="text-amber-600 min-w-28 shrink-0">{aiVeldLabels[k] ?? k}:</span>
+                  <span className="break-words">{v}</span>
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-2 pt-1">
+              <Button size="sm" variant="outline" className="border-amber-300 text-amber-800 hover:bg-amber-100" onClick={() => {
+                setVelden((prev) => ({ ...prev, ...aiVoorstel }));
+                setAiVoorstel(null);
+              }}>Overnemen</Button>
+              <Button size="sm" variant="ghost" className="text-amber-700" onClick={() => setAiVoorstel(null)}>Negeren</Button>
+            </div>
+          </div>
+        )}
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div>

@@ -10,6 +10,26 @@ Grote roadmap-fases staan ook in `docs/roadmap/gebouwd.md` en `docs/roadmap/acti
 
 ---
 
+## 2026-07-01 — AI-invullen op leveranciers- en concurrentformulieren
+
+**Uitvoering:** volledig | **Getest:** typecheck groen
+
+**Leveranciers (detail — BewerkModal):**
+- Knop "AI invullen" naast naam in het Leverancier bewerken-dialoog
+- Vult automatisch: KvK, BTW, adres, postcode, stad, telefoon, e-mail, website en IBAN
+- Amber suggestiepaneel met leesbare veldlabels (KvK, BTW, Adres, enz.); "Overnemen" past alle velden tegelijk toe, "Negeren" sluit het paneel
+- Hergebruikt bestaande `POST /organisatie/ai-invullen` endpoint; veldmapping kvk→kvk_nummer, btw→btw_nummer, plaats→stad
+
+**Leveranciers (index — NieuweLeverancierModal):**
+- Zelfde AI-knop in het aanmaakformulier; vult e-mail, telefoon en stad in (velden beschikbaar in de snelle create-dialog)
+
+**CRM Concurrenten:**
+- Nieuw backend endpoint `POST /crm/concurrenten/ai-profiel`: genereert een concurrentprofiel via GPT-4o op basis van naam (website, regio, bekende klanten, projecttypes, sterke/zwakke punten, waar tegengekomen)
+- Nieuw OpenAPI-pad + schema `CrmConcurrentAiProfielInput`; codegen uitgevoerd; gegenereerde hook `useAiProfielCrmConcurrent`
+- Knop "AI" in het Concurrent-formulier (nieuw + bewerken); amber paneel met "AI-concurrentprofiel"; "Overnemen" vult alle velden tegelijk in
+
+---
+
 ## 2026-07-01 — Werkmaatschappijen: AI-invullen op formulier
 
 **Uitvoering:** volledig | **Getest:** typecheck groen

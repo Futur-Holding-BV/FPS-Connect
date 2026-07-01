@@ -468,6 +468,46 @@ router.delete("/crm/concurrenten/:id", schrijven, async (req, res) => {
   }
 });
 
+// ── AI — Concurrent profiel ───────────────────────────────────────────────────
+router.post("/crm/concurrenten/ai-profiel", lezen, async (req, res) => {
+  if (!heeftOpenAi()) return res.status(503).json({ error: "AI niet geconfigureerd" });
+  const { naam } = req.body;
+  if (!naam?.trim()) return res.status(400).json({ error: "naam is verplicht" });
+  try {
+    const client = maakOpenAiClient();
+    const completion = await client.chat.completions.create({
+      model: "gpt-4o",
+      max_tokens: 800,
+      messages: [
+        {
+          role: "system",
+          content:
+            "Je bent een marktintelligentie-assistent voor een Nederlands brandpreventiebedrijf. " +
+            "Geef een JSON-object terug met de volgende velden over de genoemde concurrent (null als niet bekend): " +
+            "website (URL), regio (Nederlandse regio of stad), " +
+            "bekende_klanten (kommalijst van bekende klanten), " +
+            "bekende_projecttypes (soorten projecten bijv. branddeuren doorvoeringen), " +
+            "sterke_punten (korte tekst), zwakke_punten (korte tekst), " +
+            "where_we_encounter (aanbestedingen/beurzen/projecten waar je ze tegenkomt). " +
+            "Gebruik alleen feitelijk bekende informatie; vul niets in wat je niet weet — zet dat op null.",
+        },
+        {
+          role: "user",
+          content: `Maak een concurrentprofiel voor: ${String(naam).trim()} (brandpreventie en bouw sector Nederland)`,
+        },
+      ],
+      response_format: { type: "json_object" },
+    });
+    const tekst = completion.choices[0]?.message?.content ?? "{}";
+    let data: Record<string, string | null> = {};
+    try { data = JSON.parse(tekst) as Record<string, string | null>; } catch { data = {}; }
+    res.json({ velden: data });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "AI-verzoek mislukt" });
+  }
+});
+
 // ── MARKTINTELLIGENTIE ────────────────────────────────────────────────────────
 router.get("/crm/marktintelligentie", lezen, async (req, res) => {
   try {

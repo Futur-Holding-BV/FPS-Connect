@@ -386,6 +386,10 @@ export interface CrmConcurrentInput {
   opmerkingen?: string;
 }
 
+export interface CrmConcurrentAiProfielInput {
+  naam: string;
+}
+
 export interface CrmMarktintelligentie {
   id: number;
   type: string;
@@ -8982,6 +8986,12 @@ q?: string;
 export type ListCrmProjectkansenParams = {
 fase?: string;
 klant_id?: number;
+};
+
+export type AiProfielCrmConcurrent200Velden = {[key: string]: string | null};
+
+export type AiProfielCrmConcurrent200 = {
+  velden?: AiProfielCrmConcurrent200Velden;
 };
 
 export type ScanCrmMarktintelligentieAi503 = {

@@ -6741,6 +6741,18 @@ export const DeleteCrmConcurrentResponse = zod.void()
 
 
 /**
+ * @summary AI concurrentprofiel ophalen
+ */
+export const AiProfielCrmConcurrentBody = zod.object({
+  "naam": zod.string()
+})
+
+export const AiProfielCrmConcurrentResponse = zod.object({
+  "velden": zod.record(zod.string(), zod.string().nullable()).optional()
+})
+
+
+/**
  * @summary Marktinformatie ophalen
  */
 export const ListCrmMarktintelligentieResponseItem = zod.object({

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useRoute, useLocation } from "wouter";
 import {
   useGetLeverancier, usePatchLeverancier, useDeleteLeverancier,
-  useListLeverancierArtikelen,
+  useListLeverancierArtikelen, useAiInvullenOrganisatie,
 } from "@workspace/api-client-react";
 import type { Leverancier, LeverancierInput } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import {
   Building2, Phone, Mail, Globe, MapPin, FileText, CreditCard,
-  User, Pencil, Trash2, ArrowLeft, Package, ShoppingCart,
+  User, Pencil, Trash2, ArrowLeft, Package, ShoppingCart, Sparkles, Loader2,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
@@ -381,6 +381,39 @@ function BewerkModal({
     };
   }
 
+  const aiInvullen = useAiInvullenOrganisatie();
+  const [aiBezig, setAiBezig] = useState(false);
+  const [aiVoorstel, setAiVoorstel] = useState<Record<string, string> | null>(null);
+
+  async function aiPrefill() {
+    if (!form.naam.trim()) return;
+    setAiBezig(true);
+    setAiVoorstel(null);
+    try {
+      const result = await aiInvullen.mutateAsync({ data: { bedrijfsnaam: form.naam.trim() } });
+      const v = result?.velden;
+      if (v) {
+        const voorstel: Record<string, string> = {};
+        if (v.kvk) voorstel.kvk_nummer = v.kvk;
+        if (v.btw) voorstel.btw_nummer = v.btw;
+        if (v.adres) voorstel.adres = v.adres;
+        if (v.postcode) voorstel.postcode = v.postcode;
+        if (v.plaats) voorstel.stad = v.plaats;
+        if (v.telefoon) voorstel.telefoon = v.telefoon;
+        if (v.email) voorstel.email = v.email;
+        if (v.website) voorstel.website = v.website;
+        if (v.iban) voorstel.iban = v.iban;
+        if (Object.keys(voorstel).length > 0) setAiVoorstel(voorstel);
+      }
+    } catch { /* silent */ }
+    finally { setAiBezig(false); }
+  }
+
+  const veldLabels: Record<string, string> = {
+    kvk_nummer: "KvK", btw_nummer: "BTW", adres: "Adres", postcode: "Postcode",
+    stad: "Stad", telefoon: "Telefoon", email: "E-mail", website: "Website", iban: "IBAN",
+  };
+
   function handleOpslaan() {
     const raw: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(form)) {
@@ -403,7 +436,20 @@ function BewerkModal({
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1 col-span-2">
                 <Label>Naam *</Label>
-                <Input {...veld("naam")} />
+                <div className="flex gap-2">
+                  <Input {...veld("naam")} className="flex-1" />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => void aiPrefill()}
+                    disabled={aiBezig || !form.naam.trim()}
+                    className="shrink-0 gap-1 border-amber-300 text-amber-700 hover:bg-amber-50"
+                  >
+                    {aiBezig ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                    AI invullen
+                  </Button>
+                </div>
               </div>
               <div className="space-y-1">
                 <Label>Code / debiteursnummer</Label>
@@ -415,6 +461,34 @@ function BewerkModal({
               </div>
             </div>
           </Sectie>
+          {aiVoorstel && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 space-y-2 text-sm">
+              <p className="font-medium text-amber-800 flex items-center gap-1">
+                <Sparkles className="w-3.5 h-3.5" /> AI-voorstel gevonden
+              </p>
+              <div className="space-y-0.5 text-amber-900">
+                {Object.entries(aiVoorstel).map(([k, v]) => (
+                  <div key={k} className="flex gap-2">
+                    <span className="text-amber-600 min-w-24 shrink-0">{veldLabels[k] ?? k}:</span>
+                    <span className="break-all">{v}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="flex gap-2 pt-1">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="border-amber-300 text-amber-800 hover:bg-amber-100"
+                  onClick={() => { setForm((p) => ({ ...p, ...aiVoorstel })); setAiVoorstel(null); }}
+                >
+                  Overnemen
+                </Button>
+                <Button size="sm" variant="ghost" className="text-amber-700" onClick={() => setAiVoorstel(null)}>
+                  Negeren
+                </Button>
+              </div>
+            </div>
+          )}
           {/* Adres */}
           <Sectie titel="Adres">
             <div className="grid grid-cols-3 gap-3">

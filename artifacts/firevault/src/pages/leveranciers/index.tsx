@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "wouter";
-import { useListLeveranciers, useCreateLeverancier } from "@workspace/api-client-react";
+import { useListLeveranciers, useCreateLeverancier, useAiInvullenOrganisatie } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -9,7 +9,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Plus, Search, Building2, Phone, Mail, MapPin } from "lucide-react";
+import { Plus, Search, Building2, Phone, Mail, MapPin, Sparkles, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { PaginaHulp } from "@/components/pagina-hulp";
 
@@ -143,8 +143,31 @@ function NieuweLeverancierModal({
   const [telefoon, setTelefoon] = useState("");
   const [stad, setStad] = useState("");
 
+  const aiInvullen = useAiInvullenOrganisatie();
+  const [aiBezig, setAiBezig] = useState(false);
+  const [aiVoorstel, setAiVoorstel] = useState<{ email?: string; telefoon?: string; stad?: string } | null>(null);
+
+  async function aiPrefill() {
+    if (!naam.trim()) return;
+    setAiBezig(true);
+    setAiVoorstel(null);
+    try {
+      const result = await aiInvullen.mutateAsync({ data: { bedrijfsnaam: naam.trim() } });
+      const v = result?.velden;
+      if (v) {
+        const voorstel: { email?: string; telefoon?: string; stad?: string } = {};
+        if (v.email) voorstel.email = v.email;
+        if (v.telefoon) voorstel.telefoon = v.telefoon;
+        if (v.plaats) voorstel.stad = v.plaats;
+        if (Object.keys(voorstel).length > 0) setAiVoorstel(voorstel);
+      }
+    } catch { /* silent */ }
+    finally { setAiBezig(false); }
+  }
+
   function reset() {
     setNaam(""); setCategorie(""); setEmail(""); setTelefoon(""); setStad("");
+    setAiVoorstel(null);
   }
 
   function handleClose() {
@@ -173,8 +196,40 @@ function NieuweLeverancierModal({
         <div className="space-y-4 py-2">
           <div className="space-y-1">
             <Label>Naam *</Label>
-            <Input value={naam} onChange={(e) => setNaam(e.target.value)} placeholder="Bedrijfsnaam" autoFocus />
+            <div className="flex gap-2">
+              <Input value={naam} onChange={(e) => setNaam(e.target.value)} placeholder="Bedrijfsnaam" autoFocus className="flex-1" />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => void aiPrefill()}
+                disabled={aiBezig || !naam.trim()}
+                className="shrink-0 gap-1 border-amber-300 text-amber-700 hover:bg-amber-50"
+              >
+                {aiBezig ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                AI
+              </Button>
+            </div>
           </div>
+          {aiVoorstel && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 space-y-2 text-sm">
+              <p className="font-medium text-amber-800 flex items-center gap-1"><Sparkles className="w-3.5 h-3.5" /> AI-voorstel</p>
+              <div className="space-y-0.5 text-amber-900">
+                {aiVoorstel.email && <div className="flex gap-2"><span className="text-amber-600 min-w-20">E-mail:</span><span>{aiVoorstel.email}</span></div>}
+                {aiVoorstel.telefoon && <div className="flex gap-2"><span className="text-amber-600 min-w-20">Telefoon:</span><span>{aiVoorstel.telefoon}</span></div>}
+                {aiVoorstel.stad && <div className="flex gap-2"><span className="text-amber-600 min-w-20">Stad:</span><span>{aiVoorstel.stad}</span></div>}
+              </div>
+              <div className="flex gap-2 pt-1">
+                <Button size="sm" variant="outline" className="border-amber-300 text-amber-800 hover:bg-amber-100" onClick={() => {
+                  if (aiVoorstel.email) setEmail(aiVoorstel.email);
+                  if (aiVoorstel.telefoon) setTelefoon(aiVoorstel.telefoon);
+                  if (aiVoorstel.stad) setStad(aiVoorstel.stad);
+                  setAiVoorstel(null);
+                }}>Overnemen</Button>
+                <Button size="sm" variant="ghost" className="text-amber-700" onClick={() => setAiVoorstel(null)}>Negeren</Button>
+              </div>
+            </div>
+          )}
           <div className="space-y-1">
             <Label>Categorie</Label>
             <Input value={categorie} onChange={(e) => setCategorie(e.target.value)} placeholder="bijv. Branddeuren" />

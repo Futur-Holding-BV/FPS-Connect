@@ -5436,6 +5436,33 @@ paths:
         "204":
           description: Verwijderd
 
+  /crm/concurrenten/ai-profiel:
+    post:
+      operationId: aiProfielCrmConcurrent
+      tags: [crm]
+      summary: AI concurrentprofiel ophalen
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CrmConcurrentAiProfielInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  velden:
+                    type: object
+                    additionalProperties:
+                      type: string
+                      nullable: true
+        "503":
+          description: AI niet geconfigureerd
+
   /crm/marktintelligentie:
     get:
       operationId: listCrmMarktintelligentie
@@ -16813,6 +16840,13 @@ components:
         where_we_encounter:
           type: string
         opmerkingen:
+          type: string
+
+    CrmConcurrentAiProfielInput:
+      type: object
+      required: [naam]
+      properties:
+        naam:
           type: string
 
     CrmMarktintelligentie:
