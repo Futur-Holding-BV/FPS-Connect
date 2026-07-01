@@ -5,10 +5,11 @@
  * FPS Brandpreventie - Platform voor brandpreventieve gebouwvoorzieningen
  * OpenAPI spec version: 0.1.0
  */
+import type { DocumentStudioModelInputDocumentType } from './documentStudioModelInputDocumentType';
 
 export interface DocumentStudioModelInput {
   werkgever_id: number;
-  document_type: string;
+  document_type: DocumentStudioModelInputDocumentType;
   /** @nullable */
   naam?: string | null;
   status?: string;

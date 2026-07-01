@@ -29559,7 +29559,9 @@ components:
       required: [werkgever_id, document_type]
       properties:
         werkgever_id:             { type: integer }
-        document_type:            { type: string }
+        document_type:
+          type: string
+          enum: [offerte, oplevering, brief, email, lmra, toolbox, inkoopbon, factuur, calculatie]
         naam:                     { type: ["string", "null"] }
         status:                   { type: string }
 

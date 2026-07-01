@@ -20299,7 +20299,7 @@ export const ListDocumentStudioModellenResponse = zod.array(ListDocumentStudioMo
  */
 export const UpsertDocumentStudioModelBody = zod.object({
   "werkgever_id": zod.number(),
-  "document_type": zod.string(),
+  "document_type": zod.enum(['offerte', 'oplevering', 'brief', 'email', 'lmra', 'toolbox', 'inkoopbon', 'factuur', 'calculatie']),
   "naam": zod.string().nullish(),
   "status": zod.string().optional()
 })

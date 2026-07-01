@@ -444,6 +444,7 @@ function bouwPrompt(params: {
 }): string {
   const typeNaam: Record<string, string> = {
     offerte: "Offerte",
+    oplevering: "Opleverrapport brandpreventieve voorzieningen",
     brief: "Formele brief",
     email: "E-mail sjabloon",
     lmra: "LMRA (Laatste Minuut Risico Analyse checklist)",
@@ -454,6 +455,7 @@ function bouwPrompt(params: {
   };
   const familieAdvies: Record<string, string> = {
     offerte: "A",
+    oplevering: "A",
     brief: "B",
     email: "B",
     lmra: "C",

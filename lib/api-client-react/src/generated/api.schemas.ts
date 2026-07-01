@@ -8718,9 +8718,24 @@ export interface DocumentStudioModel {
   bijgewerkt_op?: string | null;
 }
 
+export type DocumentStudioModelInputDocumentType = typeof DocumentStudioModelInputDocumentType[keyof typeof DocumentStudioModelInputDocumentType];
+
+
+export const DocumentStudioModelInputDocumentType = {
+  offerte: 'offerte',
+  oplevering: 'oplevering',
+  brief: 'brief',
+  email: 'email',
+  lmra: 'lmra',
+  toolbox: 'toolbox',
+  inkoopbon: 'inkoopbon',
+  factuur: 'factuur',
+  calculatie: 'calculatie',
+} as const;
+
 export interface DocumentStudioModelInput {
   werkgever_id: number;
-  document_type: string;
+  document_type: DocumentStudioModelInputDocumentType;
   /** @nullable */
   naam?: string | null;
   status?: string;

@@ -9,7 +9,7 @@ import {
   useGoedkeurenStudioTemplate,
   getListDocumentStudioModellenQueryKey,
 } from "@workspace/api-client-react";
-import type { DocumentStudioModel } from "@workspace/api-client-react";
+import type { DocumentStudioModel, DocumentStudioModelInputDocumentType } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -50,6 +50,7 @@ const DOCUMENT_TYPEN: {
   omschrijving: string;
 }[] = [
   { type: "offerte",    label: "Offerte",      icoon: FileText,       omschrijving: "Offertesjabloon richting klant" },
+  { type: "oplevering", label: "Opleverrapport", icoon: Building2,    omschrijving: "Opleverrapport brandpreventieve voorzieningen" },
   { type: "brief",      label: "Brief",         icoon: FileText,       omschrijving: "Formele correspondentiebrief" },
   { type: "email",      label: "E-mail",        icoon: Mail,           omschrijving: "Standaard e-mailsjabloon" },
   { type: "lmra",       label: "LMRA",          icoon: ClipboardCheck, omschrijving: "Laatste Minuut Risico Analyse" },
@@ -135,7 +136,7 @@ export default function DocumentStudioPagina() {
       setUploadModelId(bestaand.id);
     } else {
       try {
-        const nieuw = await upsert.mutateAsync({ data: { werkgever_id: werkgeverId, document_type: type } });
+        const nieuw = await upsert.mutateAsync({ data: { werkgever_id: werkgeverId, document_type: type as DocumentStudioModelInputDocumentType } });
         setUploadModelId(nieuw.id);
         invalideer();
       } catch {
@@ -189,7 +190,7 @@ export default function DocumentStudioPagina() {
     let model = modelVoorType(type);
     if (!model) {
       try {
-        model = await upsert.mutateAsync({ data: { werkgever_id: werkgeverId, document_type: type } });
+        model = await upsert.mutateAsync({ data: { werkgever_id: werkgeverId, document_type: type as DocumentStudioModelInputDocumentType } });
         invalideer();
       } catch {
         toast({ title: "Kon model niet aanmaken", variant: "destructive" });

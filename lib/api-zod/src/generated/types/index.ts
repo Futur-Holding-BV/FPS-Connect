@@ -154,6 +154,7 @@ export * from './documentSignaleringen';
 export * from './documentStatus';
 export * from './documentStudioModel';
 export * from './documentStudioModelInput';
+export * from './documentStudioModelInputDocumentType';
 export * from './documentStudioModelUpdate';
 export * from './documentStudioReferentieUploadBody';
 export * from './documentStudioWerkgever';
