@@ -10,6 +10,30 @@ Grote roadmap-fases staan ook in `docs/roadmap/gebouwd.md` en `docs/roadmap/acti
 
 ---
 
+## 2026-07-01 — Document Studio: templates actief in Connect-modules
+
+**Uitvoering:** volledig | **Getest:** typecheck groen
+
+- `calculatie/print.tsx`: Document Studio-integratie toegevoegd — laadt het goedgekeurde "calculatie" Studio Model 0 via `useActiefStudioModel` en past de merkkleur toe op header-border, sectie-koppen, totaaloverzicht-header en de totaalrij (voorheen hardcoded slate-900)
+- Werkgever-resolutie via localStorage (`fps.actieve_werkgever`) + `useListStudioWerkgevers`, gelijk aan het patroon in `offertes/print.tsx` en `gebouwen/print.tsx`
+- Badge "Opmaak: Model 0 — [werkgever]" verschijnt in de kop als er een goedgekeurd template actief is; bij geen actief model valt de accentkleur terug op `#1e2535`
+- `studio.tsx`: `calculatie: ["Calculatie intern"]` toegevoegd aan `DOCUMENT_TYPE_MODULES` zodat de Studio-pagina "Actief in: Calculatie intern" toont op goedgekeurde calculatietemplates
+- Bestaande integraties onaangeroerd: `offertes/print.tsx` (Familie A, volledig) en `gebouwen/print.tsx` (opleverrapport, accent + badge) waren al compleet
+- Factuurmodule heeft geen print.tsx (boekhoudimport-tool); `factuur: ["Facturen"]` blijft in de mapping voor toekomstige integratie
+
+---
+
+## 2026-07-01 — Crashfix magazijn: stray `</>` in slim-upload-balk
+
+**Uitvoering:** volledig | **Getest:** typecheck groen, app serveert correct
+
+- Oorzaak: dropzone-overlay-edit introduceerde een stray `)}` in de JSX-structuur van `slim-upload-balk.tsx`, waarna esbuild de transformatie van de hele app faalde → alle pagina's (inclusief magazijn) crashten met een witte scherm
+- Achtergebleven `<>…</>` fragment-wrapper en stray `</>` sluitingstag uit de vorige ternaire structuur zijn opgeruimd
+- `SlimUploadKnop`, `Popover` en separator-elementen zijn nu directe kinderen van de taakbalk-div zonder onnodige fragment-omhulling
+- Magazijn-module: alle hooks, DB-tabellen en routes zijn geverifieerd aanwezig en correct; de crash was puur de JSX-transformatiefout in de layoutcomponent
+
+---
+
 ## 2026-07-01 — AI-invullen bij nieuw leverancier
 
 **Uitvoering:** volledig | **Getest:** typecheck groen

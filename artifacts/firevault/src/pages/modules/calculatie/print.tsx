@@ -1,6 +1,8 @@
 import { useEffect } from "react";
 import { useRoute } from "wouter";
 import { useQuery } from "@tanstack/react-query";
+import { useListStudioWerkgevers, useListWerkgevers } from "@workspace/api-client-react";
+import { useActiefStudioModel } from "@/hooks/use-actief-studio-model";
 
 type PrintData = {
   header: {
@@ -53,6 +55,33 @@ export default function ModulesCalculatiePrint() {
     enabled: id !== null,
   });
 
+  // ── Document Studio — actief template ophalen ─────────────────────────────
+  const { data: werkgevers }      = useListWerkgevers();
+  const { data: studioWerkgevers } = useListStudioWerkgevers();
+
+  const _actieveWerkgeverId = (() => {
+    try { const v = localStorage.getItem("fps.actieve_werkgever"); return v ? Number(v) : null; } catch { return null; }
+  })();
+  const _actieveWerkgeverNaam = _actieveWerkgeverId
+    ? ((werkgevers ?? []).find(w => w.id === _actieveWerkgeverId)?.naam ?? null)
+    : null;
+  const studioWerkgeverId = (
+    (studioWerkgevers ?? []).find(w => _actieveWerkgeverNaam && w.naam === _actieveWerkgeverNaam)?.id
+    ?? (studioWerkgevers ?? [])[0]?.id
+    ?? null
+  );
+  const actiefStudioModel = useActiefStudioModel(studioWerkgeverId, "calculatie");
+
+  const accentKleur = (() => {
+    if (!actiefStudioModel?.connect_template_json) return null;
+    try {
+      const tmpl = JSON.parse(actiefStudioModel.connect_template_json) as { kleurschema?: { primair?: string } };
+      return tmpl.kleurschema?.primair ?? null;
+    } catch { return null; }
+  })();
+  const kleur = accentKleur ?? "#1e2535";
+  // ─────────────────────────────────────────────────────────────────────────
+
   useEffect(() => {
     if (data) {
       setTimeout(() => window.print(), 400);
@@ -101,10 +130,21 @@ export default function ModulesCalculatiePrint() {
 
       <div className="max-w-[210mm] mx-auto px-8 py-6">
         {/* Kop */}
-        <div className="flex justify-between items-start mb-6 border-b pb-4">
+        <div
+          className="flex justify-between items-start mb-6 border-b pb-4"
+          style={{ borderColor: kleur }}
+        >
           <div>
             <div className="text-lg font-bold text-slate-900">Calculatie intern — {header.naam}</div>
             {header.referentie && <div className="text-muted-foreground mt-0.5">Referentie: {header.referentie}</div>}
+            {actiefStudioModel && (
+              <div
+                className="inline-flex items-center gap-1 text-[9px] font-medium uppercase tracking-wider px-1.5 py-0.5 rounded mt-1"
+                style={{ backgroundColor: kleur + "18", color: kleur }}
+              >
+                Opmaak: Model 0 — {actiefStudioModel.werkgever_naam ?? "FPS"}
+              </div>
+            )}
           </div>
           <div className="text-right text-muted-foreground">
             <div>Printdatum: {vandaag}</div>
@@ -131,7 +171,10 @@ export default function ModulesCalculatiePrint() {
         {/* Regels per hoofdstuk */}
         {byHoofdstuk.map(({ hoofdstuk, regels: hRegels }) => (
           <div key={hoofdstuk} className="mb-4">
-            <div className="bg-slate-100 px-3 py-1.5 font-semibold text-slate-700 rounded-t border border-b-0 text-xs uppercase tracking-wide">
+            <div
+              className="px-3 py-1.5 font-semibold rounded-t border border-b-0 text-xs uppercase tracking-wide"
+              style={{ backgroundColor: kleur + "18", color: kleur, borderColor: kleur + "30" }}
+            >
               {hoofdstuk}
             </div>
             <table className="w-full border border-t-0 rounded-b text-[10px]">
@@ -176,7 +219,10 @@ export default function ModulesCalculatiePrint() {
         {/* Staartkosten */}
         {staartRegels.length > 0 && (
           <div className="mb-4">
-            <div className="bg-slate-100 px-3 py-1.5 font-semibold text-slate-700 rounded-t border border-b-0 text-xs uppercase tracking-wide">
+            <div
+              className="px-3 py-1.5 font-semibold rounded-t border border-b-0 text-xs uppercase tracking-wide"
+              style={{ backgroundColor: kleur + "18", color: kleur, borderColor: kleur + "30" }}
+            >
               Staartkosten
             </div>
             <table className="w-full border border-t-0 rounded-b text-[10px]">
@@ -194,7 +240,12 @@ export default function ModulesCalculatiePrint() {
 
         {/* Totaaloverzicht */}
         <div className="ml-auto w-80 border rounded mt-4">
-          <div className="bg-slate-50 px-3 py-1.5 font-semibold text-xs border-b uppercase tracking-wide">Totaaloverzicht</div>
+          <div
+            className="px-3 py-1.5 font-semibold text-xs border-b uppercase tracking-wide"
+            style={{ backgroundColor: kleur + "18", color: kleur, borderColor: kleur + "30" }}
+          >
+            Totaaloverzicht
+          </div>
           <table className="w-full text-xs">
             <tbody>
               <tr className="border-b">
@@ -237,7 +288,7 @@ export default function ModulesCalculatiePrint() {
                 <td className="px-3 py-1.5 text-muted-foreground">BTW 21%</td>
                 <td className="px-3 py-1.5 text-right tabular-nums">{formatBedrag(totalen.incl_btw - totalen.excl_btw)}</td>
               </tr>
-              <tr className="bg-slate-900 text-white rounded-b">
+              <tr className="text-white rounded-b" style={{ backgroundColor: kleur }}>
                 <td className="px-3 py-2 font-semibold rounded-bl">Totaal incl. BTW</td>
                 <td className="px-3 py-2 text-right tabular-nums font-bold rounded-br">{formatBedrag(totalen.incl_btw)}</td>
               </tr>
@@ -246,7 +297,7 @@ export default function ModulesCalculatiePrint() {
         </div>
 
         {/* Footer */}
-        <div className="mt-8 pt-4 border-t text-xs text-muted-foreground flex justify-between">
+        <div className="mt-8 pt-4 border-t text-xs text-muted-foreground flex justify-between" style={{ borderColor: kleur + "30" }}>
           <span>FPS Brandpreventie — Intern calculatieoverzicht</span>
           <span className="no-print">
             <button

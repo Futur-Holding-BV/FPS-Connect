@@ -820,26 +820,25 @@ export function SlimUploadBalk() {
         <div
           className="flex items-center gap-2 px-4 w-full border-t bg-[#1e2535] border-[#2d3548] py-2"
         >
-          <>
-            <span className="text-[11px] text-white/40 font-medium uppercase tracking-wider shrink-0 select-none">
-              Snelkoppelingen
-            </span>
-            <div className="w-px h-4 bg-white/15 shrink-0" />
-              <SlimUploadKnop
-                onClick={() => fileInputRef.current?.click()}
-                actieveAutomatiseringen={actieveAutomatiseringen.length}
-              />
-              <div className="flex-1" />
-              <Popover open={toonInstellingen} onOpenChange={setToonInstellingen}>
-                <PopoverTrigger asChild>
-                  <button
-                    className="flex items-center justify-center h-6 w-6 rounded text-white/40 hover:text-white/80 hover:bg-white/10 transition-colors"
-                    title="Automatiseringsregels"
-                  >
-                    <Settings className="h-3.5 w-3.5" />
-                  </button>
-                </PopoverTrigger>
-                <PopoverContent align="end" side="top" className="w-80 p-0 mb-2">
+          <span className="text-[11px] text-white/40 font-medium uppercase tracking-wider shrink-0 select-none">
+            Snelkoppelingen
+          </span>
+          <div className="w-px h-4 bg-white/15 shrink-0" />
+          <SlimUploadKnop
+            onClick={() => fileInputRef.current?.click()}
+            actieveAutomatiseringen={actieveAutomatiseringen.length}
+          />
+          <div className="flex-1" />
+          <Popover open={toonInstellingen} onOpenChange={setToonInstellingen}>
+            <PopoverTrigger asChild>
+              <button
+                className="flex items-center justify-center h-6 w-6 rounded text-white/40 hover:text-white/80 hover:bg-white/10 transition-colors"
+                title="Automatiseringsregels"
+              >
+                <Settings className="h-3.5 w-3.5" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent align="end" side="top" className="w-80 p-0 mb-2">
                   <div className="p-3 border-b">
                     <p className="text-sm font-semibold">Automatiseringsregels</p>
                     <p className="text-xs text-muted-foreground mt-0.5">
@@ -885,9 +884,8 @@ export function SlimUploadBalk() {
                       })}
                     </ul>
                   )}
-                </PopoverContent>
-              </Popover>
-            </>
+            </PopoverContent>
+          </Popover>
         </div>
       </div>
 

@@ -70,9 +70,10 @@ const STATUS_CONFIG: Record<string, { label: string; klasse: string; beschrijvin
 const TOEGESTANE_TYPES = ["application/pdf", "image/jpeg", "image/png", "image/webp"];
 
 const DOCUMENT_TYPE_MODULES: Record<string, string[]> = {
-  offerte:       ["Offertes"],
+  offerte:        ["Offertes"],
   opleverrapport: ["Opleverrapporten"],
-  factuur:       ["Facturen"],
+  factuur:        ["Facturen"],
+  calculatie:     ["Calculatie intern"],
 };
 
 export default function DocumentStudioPagina() {
