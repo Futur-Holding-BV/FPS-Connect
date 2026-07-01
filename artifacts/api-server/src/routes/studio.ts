@@ -55,7 +55,7 @@ const lezen   = requireBevoegdheid("organisatie", 1);
 const schrijven = requireBevoegdheid("organisatie", 2);
 
 const GELDIGE_TYPES = [
-  "offerte", "brief", "email", "lmra", "toolbox", "inkoopbon", "factuur", "calculatie",
+  "offerte", "brief", "email", "lmra", "toolbox", "inkoopbon", "factuur", "calculatie", "opleverrapport",
 ] as const;
 
 function parseId(v: unknown): number {

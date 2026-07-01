@@ -10,6 +10,20 @@ Grote roadmap-fases staan ook in `docs/roadmap/gebouwd.md` en `docs/roadmap/acti
 
 ---
 
+## 2026-07-01 — Document Studio: opleverrapport als volwaardig type + template-velden volledig
+
+**Uitvoering:** volledig | **Getest:** typecheck groen (firevault + api-server)
+
+- `GELDIGE_TYPES` in `studio.ts` uitgebreid met `"opleverrapport"` — aanmaken/goedkeuren van opleverrapport-modellen in Studio is nu mogelijk
+- `DOCUMENT_TYPEN` in `studio.tsx` aangevuld met Opleverrapport-entry (icoon FileText, omschrijving)
+- `DOCUMENT_TYPE_MODULES` gecorrigeerd: `offerte → ["Offertes"]`, `opleverrapport → ["Opleverrapporten"]`, `factuur → ["Facturen"]` — badges tonen nu de werkelijke koppeling
+- Beide print-bestanden parsen nu `koptekst.logo_positie` uit `connect_template_json`
+- Offerte print: `sektieHeaderKlasse` stuurt `flex-row-reverse` (links) of `justify-center gap-8` (midden) op basis van logo_positie; alle 5 sectie-headers passen dit toe
+- Offerte print: voettekst uit template-JSON getoond als tagline-tekst onder het logo in elk sectie-kopbalk
+- Gebouwen print (opleverrapport): `prt-cover-top` past `justifyContent` aan op basis van `studioLogoPositie` (flex-start / center / flex-end)
+
+---
+
 ## 2026-07-01 — Dropzone overlay bij bestand slepen
 
 **Uitvoering:** volledig | **Getest:** typecheck groen

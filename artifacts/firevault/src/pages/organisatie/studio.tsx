@@ -56,7 +56,8 @@ const DOCUMENT_TYPEN: {
   { type: "toolbox",    label: "Toolbox",       icoon: Hammer,         omschrijving: "Toolbox-meeting document" },
   { type: "inkoopbon",  label: "Inkoopbon",     icoon: Package,        omschrijving: "Interne inkoopbon" },
   { type: "factuur",    label: "Factuur",       icoon: Receipt,        omschrijving: "Factuursjabloon" },
-  { type: "calculatie", label: "Calculatie",    icoon: Calculator,     omschrijving: "Calculatie-werkblad" },
+  { type: "calculatie",    label: "Calculatie",    icoon: Calculator,    omschrijving: "Calculatie-werkblad" },
+  { type: "opleverrapport", label: "Opleverrapport", icoon: FileText,     omschrijving: "Formeel opleverrapport voor een gebouw" },
 ];
 
 const STATUS_CONFIG: Record<string, { label: string; klasse: string; beschrijving: string }> = {
@@ -69,8 +70,9 @@ const STATUS_CONFIG: Record<string, { label: string; klasse: string; beschrijvin
 const TOEGESTANE_TYPES = ["application/pdf", "image/jpeg", "image/png", "image/webp"];
 
 const DOCUMENT_TYPE_MODULES: Record<string, string[]> = {
-  offerte:  ["Offertes", "Opleverrapporten"],
-  factuur:  ["Facturen"],
+  offerte:       ["Offertes"],
+  opleverrapport: ["Opleverrapporten"],
+  factuur:       ["Facturen"],
 };
 
 export default function DocumentStudioPagina() {

@@ -1573,11 +1573,12 @@ export default function GebouwPrint() {
 
   const studioTemplateJson = (() => {
     if (!actiefStudioModel?.connect_template_json) return null;
-    try { return JSON.parse(actiefStudioModel.connect_template_json) as { kleurschema?: { primair?: string }; voettekst?: string | null }; }
+    try { return JSON.parse(actiefStudioModel.connect_template_json) as { koptekst?: { logo_positie?: string }; kleurschema?: { primair?: string }; voettekst?: string | null }; }
     catch { return null; }
   })();
-  const studioAccentKleur = studioTemplateJson?.kleurschema?.primair ?? null;
-  const studioVoettekst = studioTemplateJson?.voettekst ?? null;
+  const studioAccentKleur  = studioTemplateJson?.kleurschema?.primair ?? null;
+  const studioVoettekst    = studioTemplateJson?.voettekst ?? null;
+  const studioLogoPositie  = studioTemplateJson?.koptekst?.logo_positie ?? "rechts";
   const handtekeningUrl = huidigWerkgever?.handtekening_url ?? null;
 
   async function downloadBijlagenbundel() {
@@ -2328,7 +2329,13 @@ export default function GebouwPrint() {
           PAGINA 1 — VOORBLAD
       ════════════════════════════════════════════════════════════════ */}
       {secties.voorblad && <div className="prt-voorblad">
-        <div className="prt-cover-top">
+        <div
+          className="prt-cover-top"
+          style={{
+            display: "flex",
+            justifyContent: studioLogoPositie === "links" ? "flex-start" : studioLogoPositie === "midden" ? "center" : "flex-end",
+          }}
+        >
           <img src={logoSrc} alt="FPS Brandpreventie" className="prt-cover-logo" />
         </div>
 

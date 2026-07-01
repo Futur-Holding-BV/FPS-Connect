@@ -16,6 +16,7 @@ import { useActiefStudioModel } from "@/hooks/use-actief-studio-model";
 import { DocumentFrame, DocumentVoet } from "@/components/documentopmaak/DocumentFrame";
 import { VoorbladA } from "@/components/documentopmaak/FamilieA";
 import { CheckCircle2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 function euro(bedrag: number) {
   return new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(bedrag ?? 0);
@@ -136,10 +137,17 @@ export default function OffertePrintPagina() {
 
   const templateJson = (() => {
     if (!actiefModel?.connect_template_json) return null;
-    try { return JSON.parse(actiefModel.connect_template_json) as { kleurschema?: { primair?: string }; voettekst?: string | null }; }
+    try { return JSON.parse(actiefModel.connect_template_json) as { koptekst?: { logo_positie?: string }; kleurschema?: { primair?: string }; voettekst?: string | null }; }
     catch { return null; }
   })();
-  const accentKleur = templateJson?.kleurschema?.primair ?? null;
+  const accentKleur      = templateJson?.kleurschema?.primair ?? null;
+  const logoPositie      = templateJson?.koptekst?.logo_positie ?? "rechts";
+  const offerteVoettekst = templateJson?.voettekst ?? null;
+  const sektieHeaderKlasse = cn(
+    "bg-slate-900 text-white px-16 py-6 flex justify-between items-center",
+    logoPositie === "links" && "flex-row-reverse",
+    logoPositie === "midden" && "justify-center gap-8",
+  );
 
   const mij = {
     naam: werkgever?.naam ?? "FPS Brandpreventie",
@@ -187,17 +195,22 @@ export default function OffertePrintPagina() {
 
       {actieveSecties.map((s, idx) => (
         <DocumentFrame key={s.id} paginaEinde={idx < actieveSecties.length - 1 || (regels ?? []).length > 0}>
-          <div className="bg-slate-900 text-white px-16 py-6 flex justify-between items-center">
+          <div className={sektieHeaderKlasse}>
             <div>
               <h2 className="text-lg font-bold">{offerte.titel}</h2>
               <div className="text-slate-400 text-xs mt-0.5">{meta.projectNummer} — {offerte.opdrachtgever}</div>
             </div>
-            <img
-              src={mij.logoUrl}
-              alt={mij.naam}
-              className="h-7 object-contain brightness-0 invert"
-              onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-            />
+            <div className="flex flex-col items-end gap-0.5 shrink-0">
+              <img
+                src={mij.logoUrl}
+                alt={mij.naam}
+                className="h-7 object-contain brightness-0 invert"
+                onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+              />
+              {offerteVoettekst && (
+                <span className="text-[9px] text-slate-400 leading-none">{offerteVoettekst}</span>
+              )}
+            </div>
           </div>
           <div className="px-16 py-12 flex-1">
             <h1 className="text-2xl font-bold text-slate-900 mb-6 pb-3 border-b border-slate-200">
@@ -213,17 +226,22 @@ export default function OffertePrintPagina() {
 
       {(regels ?? []).length > 0 && (
         <DocumentFrame paginaEinde={!!voorwaardenTekst || (bijlagen ?? []).length > 0}>
-          <div className="bg-slate-900 text-white px-16 py-6 flex justify-between items-center">
+          <div className={sektieHeaderKlasse}>
             <div>
               <h2 className="text-lg font-bold">{offerte.titel}</h2>
               <div className="text-slate-400 text-xs mt-0.5">{meta.projectNummer} — {offerte.opdrachtgever}</div>
             </div>
-            <img
-              src={mij.logoUrl}
-              alt={mij.naam}
-              className="h-7 object-contain brightness-0 invert"
-              onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-            />
+            <div className="flex flex-col items-end gap-0.5 shrink-0">
+              <img
+                src={mij.logoUrl}
+                alt={mij.naam}
+                className="h-7 object-contain brightness-0 invert"
+                onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+              />
+              {offerteVoettekst && (
+                <span className="text-[9px] text-slate-400 leading-none">{offerteVoettekst}</span>
+              )}
+            </div>
           </div>
           <div className="px-16 py-12 flex-1">
             <h1 className="text-2xl font-bold text-slate-900 mb-6 pb-3 border-b border-slate-200">
@@ -415,17 +433,22 @@ export default function OffertePrintPagina() {
 
       {voorwaardenTekst && (
         <DocumentFrame paginaEinde={(bijlagen ?? []).length > 0}>
-          <div className="bg-slate-900 text-white px-16 py-6 flex justify-between items-center">
+          <div className={sektieHeaderKlasse}>
             <div>
               <h2 className="text-lg font-bold">{offerte.titel}</h2>
               <div className="text-slate-400 text-xs mt-0.5">{meta.projectNummer} — {offerte.opdrachtgever}</div>
             </div>
-            <img
-              src={mij.logoUrl}
-              alt={mij.naam}
-              className="h-7 object-contain brightness-0 invert"
-              onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-            />
+            <div className="flex flex-col items-end gap-0.5 shrink-0">
+              <img
+                src={mij.logoUrl}
+                alt={mij.naam}
+                className="h-7 object-contain brightness-0 invert"
+                onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+              />
+              {offerteVoettekst && (
+                <span className="text-[9px] text-slate-400 leading-none">{offerteVoettekst}</span>
+              )}
+            </div>
           </div>
           <div className="px-16 py-12 flex-1">
             <h1 className="text-2xl font-bold text-slate-900 mb-6 pb-3 border-b border-slate-200">
@@ -441,17 +464,22 @@ export default function OffertePrintPagina() {
 
       {heeftVervolg && (
         <DocumentFrame paginaEinde={(bijlagen ?? []).length > 0}>
-          <div className="bg-slate-900 text-white px-16 py-6 flex justify-between items-center">
+          <div className={sektieHeaderKlasse}>
             <div>
               <h2 className="text-lg font-bold">{offerte.titel}</h2>
               <div className="text-slate-400 text-xs mt-0.5">{meta.projectNummer} — {offerte.opdrachtgever}</div>
             </div>
-            <img
-              src={mij.logoUrl}
-              alt={mij.naam}
-              className="h-7 object-contain brightness-0 invert"
-              onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-            />
+            <div className="flex flex-col items-end gap-0.5 shrink-0">
+              <img
+                src={mij.logoUrl}
+                alt={mij.naam}
+                className="h-7 object-contain brightness-0 invert"
+                onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+              />
+              {offerteVoettekst && (
+                <span className="text-[9px] text-slate-400 leading-none">{offerteVoettekst}</span>
+              )}
+            </div>
           </div>
           <div className="px-16 py-12 flex-1">
             <h1 className="text-2xl font-bold text-slate-900 mb-6 pb-3 border-b border-slate-200">
@@ -483,17 +511,22 @@ export default function OffertePrintPagina() {
 
       {(bijlagen ?? []).length > 0 && (
         <DocumentFrame paginaEinde={false}>
-          <div className="bg-slate-900 text-white px-16 py-6 flex justify-between items-center">
+          <div className={sektieHeaderKlasse}>
             <div>
               <h2 className="text-lg font-bold">{offerte.titel}</h2>
               <div className="text-slate-400 text-xs mt-0.5">{meta.projectNummer} — {offerte.opdrachtgever}</div>
             </div>
-            <img
-              src={mij.logoUrl}
-              alt={mij.naam}
-              className="h-7 object-contain brightness-0 invert"
-              onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-            />
+            <div className="flex flex-col items-end gap-0.5 shrink-0">
+              <img
+                src={mij.logoUrl}
+                alt={mij.naam}
+                className="h-7 object-contain brightness-0 invert"
+                onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+              />
+              {offerteVoettekst && (
+                <span className="text-[9px] text-slate-400 leading-none">{offerteVoettekst}</span>
+              )}
+            </div>
           </div>
           <div className="px-16 py-12 flex-1">
             <h1 className="text-2xl font-bold text-slate-900 mb-6 pb-3 border-b border-slate-200">
