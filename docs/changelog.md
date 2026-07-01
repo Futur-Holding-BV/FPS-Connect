@@ -10,6 +10,17 @@ Grote roadmap-fases staan ook in `docs/roadmap/gebouwd.md` en `docs/roadmap/acti
 
 ---
 
+## 2026-07-01 — Document Studio: werkgever-resolutie en API-contract gerepareerd
+
+**Uitvoering:** volledig | **Getest:** typecheck groen
+
+- `GET /studio/modellen/actief` geeft nu `200` met `null` terug als er geen goedgekeurd model bestaat (was: `404`); sluit aan op het fallback-contract
+- `offertes/print.tsx`: werkgever-resolutie voor studio-model leest nu de actieve werkgever uit localStorage (`fps.actieve_werkgever`) in plaats van altijd `werkgevers[0]` te nemen; val terug op `werkgevers[0]` als localStorage leeg is (print-pagina valt buiten WerkmaatschappijProvider)
+- `gebouwen/print.tsx`: zelfde fix — `studioWerkgeverId` wordt nu afgeleid uit `gebouw.werkmaatschappij_naam` (met fallback naar `werkgevers[0]`); ook de `werkgever`-variabele voor de print-header wordt nu via dezelfde naam opgelost
+- `gebouwen/print.tsx`: badge "Opmaak: Model 0 — …" toegevoegd in de topbar (naast de bestaande status-badges), consistent met `offertes/print.tsx`
+
+---
+
 ## 2026-07-01 — AI-invullen op leveranciers- en concurrentformulieren
 
 **Uitvoering:** volledig | **Getest:** typecheck groen

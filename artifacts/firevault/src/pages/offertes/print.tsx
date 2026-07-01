@@ -44,8 +44,16 @@ export default function OffertePrintPagina() {
   });
   const { data: werkgevers } = useListWerkgevers();
   const { data: studioWerkgevers } = useListStudioWerkgevers();
+  // Lees de actieve werkgever uit localStorage (print-pagina valt buiten WerkmaatschappijProvider)
+  const _actieveWerkgeverId = (() => {
+    try { const v = localStorage.getItem("fps.actieve_werkgever"); return v ? Number(v) : null; } catch { return null; }
+  })();
+  const _actieveWerkgeverNaam = _actieveWerkgeverId
+    ? ((werkgevers ?? []).find(w => w.id === _actieveWerkgeverId)?.naam ?? null)
+    : null;
   const studioWerkgeverId = (
-    (studioWerkgevers ?? []).find(w => w.naam === ((werkgevers ?? [])[0]?.naam))?.id
+    (studioWerkgevers ?? []).find(w => _actieveWerkgeverNaam && w.naam === _actieveWerkgeverNaam)?.id
+    ?? (studioWerkgevers ?? []).find(w => w.naam === ((werkgevers ?? [])[0]?.naam))?.id
     ?? (studioWerkgevers ?? [])[0]?.id
     ?? null
   );
@@ -121,7 +129,9 @@ export default function OffertePrintPagina() {
   const vervolgTekst: string = (offerte as any).vervolg_tekst ?? "";
   const heeftVervolg = vervolgOpties.length > 0 || !!vervolgTekst;
 
-  const werkgever = (werkgevers ?? [])[0];
+  const werkgever = _actieveWerkgeverNaam
+    ? ((werkgevers ?? []).find(w => w.naam === _actieveWerkgeverNaam) ?? (werkgevers ?? [])[0])
+    : ((werkgevers ?? [])[0] ?? null);
   const datum = datumNl((offerte as any).datum ?? offerte.aangemaakt_op);
 
   const templateJson = (() => {

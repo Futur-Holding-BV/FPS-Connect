@@ -1392,8 +1392,11 @@ export default function GebouwPrint() {
   const { data: huidigRapport }             = useGetRapport(gebouwId, rapportId ?? 0);
   const { data: werkgevers }                = useListWerkgevers();
   const { data: studioWerkgevers }          = useListStudioWerkgevers();
+  // Leid studioWerkgeverId af uit de werkmaatschappij van het gebouw; val terug op eerste werkgever
+  const _gebouwWerkgeverNaam = (gebouw as any)?.werkmaatschappij_naam as string | undefined;
   const studioWerkgeverId = (
-    (studioWerkgevers ?? []).find(w => w.naam === ((werkgevers ?? [])[0]?.naam))?.id
+    (studioWerkgevers ?? []).find(w => _gebouwWerkgeverNaam && w.naam === _gebouwWerkgeverNaam)?.id
+    ?? (studioWerkgevers ?? []).find(w => w.naam === ((werkgevers ?? [])[0]?.naam))?.id
     ?? (studioWerkgevers ?? [])[0]?.id
     ?? null
   );
@@ -2089,6 +2092,12 @@ export default function GebouwPrint() {
             <span style={{ fontSize: 10, color: "#94a3b8", marginLeft: 4 }}>Opslaan…</span>
           )}
         </div>
+        {actiefStudioModel && (
+          <span className="inline-flex items-center gap-1 text-xs bg-green-50 text-green-700 border border-green-200 rounded px-2 py-0.5 font-medium">
+            <CheckCircle2 className="h-3 w-3" />
+            Opmaak: Model 0 — {actiefStudioModel.werkgever_naam ?? werkgeverNaam}
+          </span>
+        )}
         <div className="prt-topbar-acties">
           {rapportId && huidigRapport?.status === "concept" && (
             <span style={{ fontSize: 11, color: "#64748b", alignSelf: "center" }}>

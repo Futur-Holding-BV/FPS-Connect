@@ -176,7 +176,7 @@ router.get("/studio/modellen/actief", lezen, async (req, res) => {
         ),
       );
 
-    if (!rij) return res.status(404).json({ error: "Geen goedgekeurd model gevonden voor dit documenttype" });
+    if (!rij) return res.json(null);
     res.json(mapModel(rij.model, rij.naam));
   } catch (err) {
     req.log.error(err);
