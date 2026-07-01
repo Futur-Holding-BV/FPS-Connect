@@ -10,6 +10,14 @@ Grote roadmap-fases staan ook in `docs/roadmap/gebouwd.md` en `docs/roadmap/acti
 
 ---
 
+## 2026-07-01 — Audit: volledige module-inventarisatie (routes × nav × implementaties)
+
+**Uitvoering:** analyse | **Getest:** n.v.t.
+
+Statische audit van alle ~90 routes in App.tsx gekruist met nav-items en pagina-bestanden. Resultaat in `docs/audit-modules-2026-07.md`. Bevindingen: 6 bevestigde stubs (bedrijfsresultaten, werk-inbox, autopark-legacy, FPS One documenten/rapporten/abonnementen), overige ~85 pagina's zijn echte implementaties met API-koppeling. Prioriteitsmatrix voor opvolging opgenomen.
+
+---
+
 ## 2026-07-01 — Fix: drag-overlay verdwijnt nu als bestand teruggesleept wordt
 
 **Uitvoering:** hotfix | **Getest:** typecheck groen
