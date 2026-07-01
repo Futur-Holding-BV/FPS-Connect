@@ -10,6 +10,14 @@ Grote roadmap-fases staan ook in `docs/roadmap/gebouwd.md` en `docs/roadmap/acti
 
 ---
 
+## 2026-07-01 — Fix: drag-overlay verdwijnt nu als bestand teruggesleept wordt
+
+**Uitvoering:** hotfix | **Getest:** typecheck groen
+
+De drag-overlay bleef hangen als de gebruiker een bestand boven het venster hield en terugsleepte zonder te droppen. Oorzaak: de `dragleave`-teller liep niet terug naar 0 bij verlaten van het venster. Fix: `relatedTarget === null` detecteert dat de cursor het venster verlaat en reset de overlay direct; `dragend` (drag geannuleerd) doet hetzelfde als fallback.
+
+---
+
 ## 2026-07-01 — Slim uploaden: toelichting voor AI vóór analyse
 
 **Uitvoering:** volledig | **Getest:** typecheck groen (firevault + api-server)

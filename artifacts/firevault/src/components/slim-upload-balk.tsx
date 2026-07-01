@@ -605,9 +605,15 @@ export function SlimUploadBalk() {
       sleepTeller.current += 1;
       setSleepActief(true);
     }
-    function opDragLeave() {
+    function resetSleep() {
+      sleepTeller.current = 0;
+      setSleepActief(false);
+    }
+    function opDragLeave(e: DragEvent) {
+      // relatedTarget === null betekent: cursor verlaat het browservenster
+      if (e.relatedTarget === null) { resetSleep(); return; }
       sleepTeller.current -= 1;
-      if (sleepTeller.current <= 0) { sleepTeller.current = 0; setSleepActief(false); }
+      if (sleepTeller.current <= 0) resetSleep();
     }
     function opDragOver(e: DragEvent) {
       e.preventDefault();
@@ -615,20 +621,23 @@ export function SlimUploadBalk() {
     }
     function opDrop(e: DragEvent) {
       e.preventDefault();
-      sleepTeller.current = 0;
-      setSleepActief(false);
+      resetSleep();
       const bestanden = Array.from(e.dataTransfer?.files ?? []);
       if (bestanden.length) void verwerkBestandenRef.current(bestanden);
     }
+    // dragend valt terug voor browsers die relatedTarget niet correct vullen
+    function opDragEnd() { resetSleep(); }
     document.addEventListener("dragenter", opDragEnter);
     document.addEventListener("dragleave", opDragLeave);
     document.addEventListener("dragover",  opDragOver);
     document.addEventListener("drop",      opDrop);
+    document.addEventListener("dragend",   opDragEnd);
     return () => {
       document.removeEventListener("dragenter", opDragEnter);
       document.removeEventListener("dragleave", opDragLeave);
       document.removeEventListener("dragover",  opDragOver);
       document.removeEventListener("drop",      opDrop);
+      document.removeEventListener("dragend",   opDragEnd);
     };
   }, []);
 
