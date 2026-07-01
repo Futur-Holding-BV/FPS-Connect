@@ -10,6 +10,17 @@ Grote roadmap-fases staan ook in `docs/roadmap/gebouwd.md` en `docs/roadmap/acti
 
 ---
 
+## 2026-07-01 — Werkmaatschappijen: AI-invullen op formulier
+
+**Uitvoering:** volledig | **Getest:** typecheck groen
+
+- Knop "AI invullen" naast het naamveld in het werkmaatschappij-dialoog (nieuw + bewerken)
+- Na invullen van de bedrijfsnaam zoekt de AI automatisch: adres, postcode, plaats, KVK, BTW, telefoon, e-mail en website op via de bestaande `/organisatie/ai-invullen` endpoint
+- Resultaten verschijnen in een amber suggestiepaneel met leesbare veldlabels en "Overnemen"/"Negeren" knoppen — mens bevestigt altijd voor opslaan
+- Knop is uitgeschakeld zolang naam leeg is; toelichting onder het naamveld legt het gebruik uit
+
+---
+
 ## 2026-07-01 — Werkmaatschappij context: switcher in sidebar, doorwerking dashboard + documentopmaak
 
 **Uitvoering:** volledig | **Getest:** typecheck groen

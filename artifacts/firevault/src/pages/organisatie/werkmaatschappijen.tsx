@@ -5,6 +5,7 @@ import {
   useCreateWerkgever,
   useUpdateWerkgever,
   useListCaoOpties,
+  useAiInvullenOrganisatie,
   getListWerkgeversQueryKey,
 } from "@workspace/api-client-react";
 import type { Werkgever, WerkgeverInput } from "@workspace/api-client-react";
@@ -23,7 +24,7 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Loader2, Plus, Building2, Pencil, Globe, Phone, Mail, MapPin } from "lucide-react";
+import { Loader2, Plus, Building2, Pencil, Globe, Phone, Mail, MapPin, Sparkles } from "lucide-react";
 
 const LEEG_FORM: WerkgeverInput = {
   naam: "",
@@ -41,6 +42,17 @@ const LEEG_FORM: WerkgeverInput = {
   actief: true,
 };
 
+const VELDLABELS: Partial<Record<keyof WerkgeverInput, string>> = {
+  adres: "Adres",
+  postcode: "Postcode",
+  plaats: "Plaats",
+  kvk: "KVK-nummer",
+  btw: "BTW-nummer",
+  telefoon: "Telefoon",
+  email: "E-mailadres",
+  website: "Website",
+};
+
 export default function WerkmaatschappijPagina() {
   const { heeftNiveau } = useBevoegdheid();
   const magSchrijven = heeftNiveau("personeel", 2);
@@ -52,14 +64,18 @@ export default function WerkmaatschappijPagina() {
   const { data: caoOpties = [] } = useListCaoOpties();
   const maakWerkgever = useCreateWerkgever();
   const wijzigWerkgever = useUpdateWerkgever();
+  const aiInvullen = useAiInvullenOrganisatie();
 
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
   const [form, setForm] = useState<WerkgeverInput>(LEEG_FORM);
+  const [aiBezig, setAiBezig] = useState(false);
+  const [aiVoorstel, setAiVoorstel] = useState<Record<string, string | null> | null>(null);
 
   function startNieuw() {
     setEditId(null);
     setForm(LEEG_FORM);
+    setAiVoorstel(null);
     setOpen(true);
   }
 
@@ -80,7 +96,49 @@ export default function WerkmaatschappijPagina() {
       voettekst: w.voettekst ?? null,
       actief: w.actief,
     });
+    setAiVoorstel(null);
     setOpen(true);
+  }
+
+  async function aiPrefill() {
+    const naam = form.naam.trim();
+    if (!naam) {
+      toast({ title: "Vul eerst de naam in", description: "De AI heeft een bedrijfsnaam nodig als startpunt.", variant: "destructive" });
+      return;
+    }
+    setAiBezig(true);
+    try {
+      const result = await aiInvullen.mutateAsync({ data: { bedrijfsnaam: naam, sector: "brandpreventie en bouw" } });
+      const velden = (result as { velden: Record<string, string | null> }).velden ?? {};
+      const relevante = Object.fromEntries(
+        Object.entries(velden).filter(([k, v]) => v && k in VELDLABELS),
+      );
+      if (Object.keys(relevante).length === 0) {
+        toast({ title: "AI heeft geen gegevens gevonden", description: "Probeer een volledigere bedrijfsnaam." });
+      } else {
+        setAiVoorstel(relevante);
+        toast({ title: "AI heeft gegevens gevonden", description: "Controleer de suggesties en klik op Overnemen." });
+      }
+    } catch {
+      toast({ title: "AI niet beschikbaar", variant: "destructive" });
+    } finally {
+      setAiBezig(false);
+    }
+  }
+
+  function neemAiOver() {
+    if (!aiVoorstel) return;
+    setForm((prev) => {
+      const nieuw = { ...prev };
+      for (const [k, v] of Object.entries(aiVoorstel)) {
+        if (v && k in nieuw) {
+          (nieuw as Record<string, unknown>)[k] = v;
+        }
+      }
+      return nieuw;
+    });
+    setAiVoorstel(null);
+    toast({ title: "AI-suggesties overgenomen" });
   }
 
   async function opslaan() {
@@ -111,7 +169,6 @@ export default function WerkmaatschappijPagina() {
 
   return (
     <div className="p-6 max-w-5xl mx-auto space-y-6">
-      {/* Koptekst */}
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-xl font-bold">Werkmaatschappijen</h1>
@@ -128,7 +185,6 @@ export default function WerkmaatschappijPagina() {
         )}
       </div>
 
-      {/* Lijst */}
       {isLoading ? (
         <div className="flex items-center gap-2 text-sm text-muted-foreground py-8">
           <Loader2 className="h-4 w-4 animate-spin" />
@@ -140,9 +196,7 @@ export default function WerkmaatschappijPagina() {
             <Building2 className="h-12 w-12 mx-auto mb-4 opacity-30" />
             <p className="font-medium">Nog geen werkmaatschappijen</p>
             {magSchrijven && (
-              <p className="text-sm mt-1">
-                Klik op "Nieuwe werkmaatschappij" om te beginnen.
-              </p>
+              <p className="text-sm mt-1">Klik op "Nieuwe werkmaatschappij" om te beginnen.</p>
             )}
           </CardContent>
         </Card>
@@ -166,7 +220,6 @@ export default function WerkmaatschappijPagina() {
                   </Badge>
                 </div>
 
-                {/* Contactgegevens */}
                 {(w.adres || w.plaats || w.telefoon || w.email || w.website) && (
                   <div className="space-y-1 text-xs text-muted-foreground">
                     {(w.adres || w.plaats) && (
@@ -223,8 +276,7 @@ export default function WerkmaatschappijPagina() {
         </div>
       )}
 
-      {/* Dialoog */}
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) setAiVoorstel(null); }}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>
@@ -236,14 +288,63 @@ export default function WerkmaatschappijPagina() {
           </DialogHeader>
 
           <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
+            {/* Naam + AI-knop naast elkaar */}
             <div className="space-y-1.5">
               <Label>Naam *</Label>
-              <Input
-                value={form.naam}
-                onChange={(e) => setForm({ ...form, naam: e.target.value })}
-                placeholder="bijv. FPS Brandpreventie B.V."
-              />
+              <div className="flex gap-2">
+                <Input
+                  className="flex-1"
+                  value={form.naam}
+                  onChange={(e) => setForm({ ...form, naam: e.target.value })}
+                  placeholder="bijv. FPS Brandpreventie B.V."
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="shrink-0 gap-1.5 text-amber-700 border-amber-300 hover:bg-amber-50"
+                  disabled={aiBezig || !form.naam.trim()}
+                  onClick={() => void aiPrefill()}
+                  title="AI vult adres, KVK, BTW, telefoon, e-mail en website automatisch in op basis van de bedrijfsnaam"
+                >
+                  {aiBezig
+                    ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    : <Sparkles className="h-3.5 w-3.5" />}
+                  AI invullen
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Vul de naam in en klik op "AI invullen" — het systeem zoekt automatisch adres, KVK, BTW, contactgegevens en website op.
+              </p>
             </div>
+
+            {/* AI-suggesties paneel */}
+            {aiVoorstel && (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-1.5 text-amber-700 font-medium text-sm">
+                    <Sparkles className="h-3.5 w-3.5" />
+                    AI-suggesties gevonden
+                  </div>
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setAiVoorstel(null)}>
+                      Negeren
+                    </Button>
+                    <Button size="sm" className="h-7 text-xs" onClick={neemAiOver}>
+                      Overnemen
+                    </Button>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-1.5 text-xs text-amber-800">
+                  {Object.entries(aiVoorstel).map(([k, v]) => (
+                    <div key={k} className="bg-amber-100 rounded px-2 py-1">
+                      <span className="font-medium">{VELDLABELS[k as keyof WerkgeverInput] ?? k}:</span>{" "}
+                      <span className="break-all">{v}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className="space-y-1.5">
               <Label>CAO *</Label>
@@ -354,7 +455,7 @@ export default function WerkmaatschappijPagina() {
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>Annuleren</Button>
-            <Button onClick={opslaan} disabled={bezig}>
+            <Button onClick={() => void opslaan()} disabled={bezig}>
               {bezig ? <><Loader2 className="h-4 w-4 animate-spin" /> Bezig…</> : "Opslaan"}
             </Button>
           </DialogFooter>
