@@ -27,6 +27,7 @@ interface SlimUploadSuggestie {
   redenering: string;
   vertrouwen: Vertrouwen;
   ai_beschikbaar: boolean;
+  vision_gebruikt: boolean;
   gevonden_gegevens: Record<string, string>;
   alternatieven: CategorieUitgebreid[];
 }
@@ -267,6 +268,12 @@ function BeslisScherm({
         )}
         {suggestie.redenering && (
           <p className="text-xs opacity-75 leading-relaxed">{suggestie.redenering}</p>
+        )}
+        {suggestie.ai_beschikbaar && suggestie.vision_gebruikt && (
+          <p className="text-[10px] opacity-60 flex items-center gap-1">
+            <Sparkles className="h-3 w-3" />
+            AI heeft de visuele lay-out geanalyseerd
+          </p>
         )}
         {!suggestie.ai_beschikbaar && (
           <p className="text-[10px] opacity-50 italic">Geclassificeerd op bestandsnaam (AI niet actief)</p>

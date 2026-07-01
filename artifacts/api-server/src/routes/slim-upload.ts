@@ -1,5 +1,9 @@
 import { Router } from "express";
 import multer from "multer";
+import { execFile } from "node:child_process";
+import { writeFile, readFile, unlink } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import { requireAuth } from "../middlewares/auth";
 import { maakOpenAiClient, heeftOpenAi } from "../lib/openai";
 import { logger } from "../lib/logger";
@@ -42,13 +46,18 @@ export interface SlimUploadSuggestie {
   redenering: string;
   vertrouwen: "laag" | "midden" | "hoog";
   ai_beschikbaar: boolean;
+  vision_gebruikt: boolean;
   gevonden_gegevens: Record<string, string>;
   alternatieven: SlimUploadCategorie[];
 }
 
 // ── Heuristische fallback ─────────────────────────────────────────────────────
 
-function heuristischClassificeer(bestandsnaam: string, mime: string, tekstFragment?: string | null): SlimUploadSuggestie {
+function heuristischClassificeer(
+  bestandsnaam: string,
+  mime: string,
+  tekstFragment?: string | null,
+): SlimUploadSuggestie {
   const naam = bestandsnaam.toLowerCase();
   const ext = naam.includes(".") ? naam.split(".").pop() ?? "" : "";
   const tekstLeeg = !tekstFragment || tekstFragment.trim().length < 80;
@@ -56,27 +65,29 @@ function heuristischClassificeer(bestandsnaam: string, mime: string, tekstFragme
 
   let categorie: SlimUploadCategorie = "algemeen";
 
-  // Lege PDF: waarschijnlijk visueel document (logo, briefpapier, huisstijl)
-  const sjabloonSleutelwoorden = ["model", "briefpapier", "briefhoofd", "sjabloon", "template", "huisstijl", "logo", "onderlegger", "letterhead", "header", "footer", "opmaak"];
+  // Lege PDF: waarschijnlijk visueel document (logo, briefpapier, tekening, scan)
+  const sjabloonSleutelwoorden = ["model", "briefpapier", "briefhoofd", "sjabloon", "template",
+    "huisstijl", "logo", "onderlegger", "letterhead", "header", "footer", "opmaak"];
   if (isPdf && tekstLeeg && sjabloonSleutelwoorden.some((k) => naam.includes(k))) {
     return {
       categorie: "document_sjabloon",
       voorstel_naam: bestandsnaam.replace(/\.[^.]+$/, "").replace(/[-_]/g, " ").trim(),
-      redenering: "Lege PDF met huisstijl-sleutelwoord in naam — waarschijnlijk een briefpapier of sjabloon voor de Document Studio.",
+      redenering: "Lege PDF met huisstijl-sleutelwoord in naam — waarschijnlijk briefpapier of sjabloon voor de Document Studio.",
       vertrouwen: "hoog",
       ai_beschikbaar: false,
+      vision_gebruikt: false,
       gevonden_gegevens: {},
       alternatieven: ["algemeen", "bibliotheek"],
     };
   }
   if (isPdf && tekstLeeg) {
-    // Lege PDF zonder duidelijke naam: visueel document, lagere zekerheid
     return {
       categorie: "document_sjabloon",
       voorstel_naam: bestandsnaam.replace(/\.[^.]+$/, "").replace(/[-_]/g, " ").trim(),
-      redenering: "PDF bevat geen leesbare tekst — waarschijnlijk een visueel document, sjabloon of scan. Controleer of dit een Document Studio-onderlegger is.",
+      redenering: "PDF bevat geen leesbare tekst — waarschijnlijk een visueel document (sjabloon, scan of tekening).",
       vertrouwen: "laag",
       ai_beschikbaar: false,
+      vision_gebruikt: false,
       gevonden_gegevens: {},
       alternatieven: ["tekening", "algemeen"],
     };
@@ -114,54 +125,123 @@ function heuristischClassificeer(bestandsnaam: string, mime: string, tekstFragme
     redenering: "Classificatie op basis van bestandsnaam en extensie (AI niet beschikbaar).",
     vertrouwen: "laag",
     ai_beschikbaar: false,
+    vision_gebruikt: false,
     gevonden_gegevens: {},
     alternatieven: ["bibliotheek", "algemeen"],
   };
 }
 
-// ── AI-classificatie ──────────────────────────────────────────────────────────
+// ── Vision helpers ────────────────────────────────────────────────────────────
+
+// Eerste PDF-pagina naar JPEG via pdftoppm (poppler, beschikbaar op dit systeem)
+async function renderPdfPagina(buffer: Buffer): Promise<string | null> {
+  const id = `${Date.now()}_${Math.random().toString(36).slice(2)}`;
+  const tmpIn     = path.join(tmpdir(), `fps_in_${id}.pdf`);
+  const tmpPrefix = path.join(tmpdir(), `fps_out_${id}`);
+
+  try {
+    await writeFile(tmpIn, buffer);
+
+    await new Promise<void>((resolve, reject) => {
+      execFile(
+        "pdftoppm",
+        ["-jpeg", "-f", "1", "-l", "1", "-r", "120", tmpIn, tmpPrefix],
+        { timeout: 15_000 },
+        (err) => { if (err) reject(err); else resolve(); },
+      );
+    });
+
+    // pdftoppm legt af als prefix-01.jpg of prefix-1.jpg
+    let imgBuffer: Buffer | null = null;
+    for (const candidate of [`${tmpPrefix}-01.jpg`, `${tmpPrefix}-1.jpg`]) {
+      try {
+        imgBuffer = await readFile(candidate);
+        await unlink(candidate).catch(() => {});
+        break;
+      } catch { /* probeer volgende */ }
+    }
+    if (!imgBuffer) return null;
+
+    const sharp = (await import("sharp")).default;
+    return (await sharp(imgBuffer)
+      .resize({ width: 800, withoutEnlargement: true })
+      .jpeg({ quality: 75 })
+      .toBuffer()).toString("base64");
+  } catch (err) {
+    logger.warn({ err }, "slim-upload: PDF→afbeelding mislukt, doorgaan zonder vision");
+    return null;
+  } finally {
+    await unlink(tmpIn).catch(() => {});
+  }
+}
+
+// Afbeelding schalen + naar base64 voor vision
+async function resizeAfbeelding(buffer: Buffer): Promise<string | null> {
+  try {
+    const sharp = (await import("sharp")).default;
+    return (await sharp(buffer)
+      .resize({ width: 800, withoutEnlargement: true })
+      .jpeg({ quality: 75 })
+      .toBuffer()).toString("base64");
+  } catch (err) {
+    logger.warn({ err }, "slim-upload: afbeelding resize mislukt");
+    return null;
+  }
+}
+
+// ── AI-classificatie met vision ───────────────────────────────────────────────
 
 const SYSTEEM_PROMPT = `Je bent een slimme documentclassificator voor FPS Connect, een brandpreventieplatform.
-Je analyseert uploads en herkent documenttype, inhoud en relevante gegevens.
+Je analyseert uploads via bestandsnaam, MIME-type, tekst ÉN — indien beschikbaar — een visuele weergave van de eerste pagina.
+Gebruik ALLE beschikbare informatie. De visuele lay-out is minstens zo bepalend als tekst.
+
+VISUELE SIGNALEN (gebruik dit wanneer je een afbeelding ziet):
+- Pagina met uitsluitend bedrijfslogo, adres en lege ruimte → "document_sjabloon" (briefpapier/onderlegger)
+- Pagina met maatlijnen, schaalnotatie, north-arrow of plattegrond → "tekening"
+- Pagina met tabel van regelposten, IBAN, BTW-bedragen, betalingstermijn → "factuur"
+- Pagina met projectnaam, locatiebeschrijving en werkzaamheden → "aanvraag"
+- Pagina met brandweerstand EI/EW, testnormen, fabrikantlogo → "testrapport" of "certificaat"
+- Pagina met persoonsnaam, dienstverband, salarisgegevens → "personeelsdocument"
+- Pagina met prijstabel, "geldig tot", excl. BTW → "offerte"
+- Pagina met bevindingen, herstelacties, inspectiedatum → "snagstream"
 
 CATEGORIEËN:
-"aanvraag"        — Aanvraag/offerteaanvraag/opdrachtverzoek/e-mail met projectverzoek. Signalen: "aanvraag", "verzoek", "graag offerte", klant vraagt om iets.
-"tekening"        — Bouw- of installatietekening, plattegrond, situatietekening. Signalen: schaal, DWG, AutoCAD, verdiepingsplan, doorsnede.
-"offerte"         — Financiële offerte of prijsopgave van FPS richting klant. Signalen: offerte, aanbieding, excl. BTW, geldig tot.
-"factuur"         — Factuur, creditnota, rekening. Signalen: factuur, invoice, IBAN, factuurnummer, betalingstermijn.
-"productdocument" — Productblad, verwerkingsvoorschrift, technisch datasheet. Signalen: TDS, verwerkingsadvies, productomschrijving.
-"testrapport"     — Brandproef, classificatierapport, fire test. Signalen: testrapport, classification report, EI/EW/EW, brandproef.
-"certificaat"     — KOMO, KIWA, BRL, CE-markering, kwaliteitscertificaat. Signalen: certificaatnummer, geldig tot, certificeringsinstantie.
-"eta"             — European Technical Assessment / Europese Technische Beoordeling. Signalen: ETA, ETB, EOTA.
-"dop"             — Declaration of Performance / Prestatieverklaring. Signalen: DoP, prestatieverklaring, verordening 305/2011.
-"personeelsdocument" — HR, arbeidscontract, diploma, VCA, loonstrook, VOG. Signalen: arbeidsovereenkomst, salaris, personeelsnummer.
-"snagstream"        — Opleverrapport, inspectieverslag, punchlijst. Signalen: oplevering, inspectie, bevinding, herstel.
-"bibliotheek"       — Overige technische brandveiligheidsdocumenten die niet in een specifieker type passen.
-"document_sjabloon" — Lege PDF of afbeelding met bedrijfslogo/huisstijl, bedoeld als briefpapier, onderlegger of Document Studio-sjabloon.
-  Signalen: GEEN of nauwelijks leesbare tekst, bedrijfslogo zichtbaar, naam bevat: model, briefpapier, briefhoofd, huisstijl, sjabloon, template, logo, onderlegger, letterhead, opmaak.
-"algemeen"          — Correspondentie, notulen, presentaties, jaarverslagen, interne memo's.
+"aanvraag"          — Aanvraag, offerteaanvraag of opdrachtverzoek.
+"tekening"          — Bouw- of installatietekening, plattegrond, situatietekening, DWG.
+"offerte"           — Financiële offerte of prijsopgave van FPS richting klant.
+"factuur"           — Factuur, creditnota, rekening.
+"productdocument"   — Productblad, verwerkingsvoorschrift, technisch datasheet.
+"testrapport"       — Brandproef, classificatierapport, fire test rapport.
+"certificaat"       — KOMO, KIWA, BRL, CE-markering, kwaliteitscertificaat.
+"eta"               — European Technical Assessment / ETB / EOTA.
+"dop"               — Declaration of Performance / Prestatieverklaring.
+"personeelsdocument"— Arbeidscontract, diploma, VCA, loonstrook, VOG.
+"snagstream"        — Opleverrapport, inspectieverslag, punchlijst.
+"bibliotheek"       — Overige technische brandveiligheidsdocumenten.
+"document_sjabloon" — Lege/visuele PDF met bedrijfslogo of huisstijl, bedoeld als briefpapier of Studio-onderlegger.
+"algemeen"          — Correspondentie, notulen, presentaties, interne memo's.
 "onbekend"          — Gebruik ALLEEN als het echt niet te classificeren is na grondige analyse.
 
 REGELS:
-1. Gebruik bestandsnaam, MIME-type én tekstfragment samen.
-2. Vertrouwen "hoog": duidelijke signaalwoorden aanwezig. "midden": redelijk aanwijsbaar. "laag": weinig tekst of meerdere opties.
-3. Geef altijd 2 alternatieven (op vertrouwensschaal na de hoofdkeuze).
-4. LEGE PDF-REGEL (BELANGRIJK): Als een PDF GEEN leesbare tekst heeft (of minder dan ~80 tekens) EN de naam bevat "model", "brief", "briefhoofd", "huisstijl", "sjabloon", "template", "logo" of "onderlegger" → kies "document_sjabloon" met vertrouwen "hoog". Als de naam geen van deze woorden bevat → kies "document_sjabloon" met vertrouwen "midden" (visueel document, waarschijnlijk een sjabloon of scan).
-5. Extraheer in "gevonden_gegevens" relevante velden afhankelijk van het type:
+1. Gebruik bestandsnaam, MIME-type, tekst én visuele lay-out samen.
+2. Vertrouwen "hoog": meerdere duidelijke signalen aanwezig. "midden": één sterke aanwijzing. "laag": weinig info.
+3. Geef altijd 2–3 alternatieven.
+4. Extraheer in "gevonden_gegevens" relevante velden per type:
    - factuur: leverancier, bedrag, factuurnummer, datum, betalingstermijn
    - aanvraag: klant, locatie, contactpersoon, projectnaam, omschrijving
    - testrapport/eta/dop/certificaat: fabrikant, productnaam, normen, geldig_tot, classificatie
-   - personeelsdocument: naam_medewerker, type_document (AVG-gevoelig — geen BSN/salaris)
-   - offerte/factuur: klant, bedrag, referentie, datum
+   - personeelsdocument: naam_medewerker, type_document (GEEN BSN/salaris)
+   - offerte: klant, bedrag, referentie, datum
    - tekening: project, schaal, revisie
-   - overig: alleen wat duidelijk zichtbaar is in de tekst
-6. Bij "onbekend": geef 3 zinvolle alternatieven.
+   - document_sjabloon: bedrijf, documenttype_sjabloon
+   - overig: alleen wat duidelijk zichtbaar is
+5. Bij "onbekend": geef 3 zinvolle alternatieven.
 
 Geef uitsluitend geldige JSON:
 {
   "categorie": "<één van de 15>",
   "voorstel_naam": "<max 80 tekens>",
-  "redenering": "<max 150 tekens, nuttig ook bij laag vertrouwen>",
+  "redenering": "<max 200 tekens, beschrijf visuele én tekstuele aanwijzingen>",
   "vertrouwen": "laag|midden|hoog",
   "gevonden_gegevens": { "<sleutel>": "<waarde>" },
   "alternatieven": ["<cat1>", "<cat2>"]
@@ -172,19 +252,32 @@ async function aiClassificeer(
   bestandsnaam: string,
   mime: string,
   tekstFragment: string | null,
+  afbeeldingBase64: string | null,
 ): Promise<SlimUploadSuggestie> {
   const client = maakOpenAiClient();
 
   const tekstInfo = tekstFragment && tekstFragment.trim().length > 0
-    ? `Geëxtraheerde tekst (${tekstFragment.trim().length} tekens):`
-    : "Geen leesbare tekst beschikbaar (mogelijk afbeelding, DWG of gescand document)";
+    ? `Geëxtraheerde tekst (${tekstFragment.trim().length} tekens):\n${tekstFragment.trim().slice(0, 5000)}`
+    : "Geëxtraheerde tekst: GEEN — het bestand bevat geen machine-leesbare tekst (afbeelding, visuele lay-out of gescand document).";
 
-  const gebruikersBericht = [
+  const tekstBericht = [
     `Bestandsnaam: ${bestandsnaam}`,
     `MIME-type: ${mime}`,
     tekstInfo,
-    tekstFragment?.trim().length ? tekstFragment.trim().slice(0, 6000) : "",
-  ].filter(Boolean).join("\n");
+  ].join("\n");
+
+  // Bouw het user-bericht op: tekst altijd, afbeelding indien beschikbaar
+  type ContentBlock =
+    | { type: "text"; text: string }
+    | { type: "image_url"; image_url: { url: string; detail: "low" } };
+
+  const content: ContentBlock[] = [{ type: "text", text: tekstBericht }];
+  if (afbeeldingBase64) {
+    content.push({
+      type: "image_url",
+      image_url: { url: `data:image/jpeg;base64,${afbeeldingBase64}`, detail: "low" },
+    });
+  }
 
   let completion;
   try {
@@ -194,7 +287,7 @@ async function aiClassificeer(
       max_tokens: 600,
       messages: [
         { role: "system", content: SYSTEEM_PROMPT },
-        { role: "user", content: gebruikersBericht },
+        { role: "user", content },
       ],
     });
   } catch (err) {
@@ -232,9 +325,10 @@ async function aiClassificeer(
         ? parsed.voorstel_naam.trim().slice(0, 80)
         : bestandsnaam.replace(/\.[^.]+$/, ""),
     redenering:
-      typeof parsed.redenering === "string" ? parsed.redenering.trim().slice(0, 200) : "",
+      typeof parsed.redenering === "string" ? parsed.redenering.trim().slice(0, 250) : "",
     vertrouwen: vertr === "hoog" ? "hoog" : vertr === "laag" ? "laag" : "midden",
     ai_beschikbaar: true,
+    vision_gebruikt: afbeeldingBase64 !== null,
     gevonden_gegevens: gevonden,
     alternatieven: alt,
   };
@@ -250,10 +344,13 @@ async function haalPdfTekst(buffer: Buffer): Promise<string | null> {
   } catch { return null; }
 }
 
+// ── Bestand classificeren (tekst + vision) ────────────────────────────────────
+
 async function classificeerBestand(bestand: Express.Multer.File): Promise<SlimUploadSuggestie> {
   const bestandsnaam = bestand.originalname ?? "onbekend";
   const mime = bestand.mimetype ?? "application/octet-stream";
 
+  // 1. Tekst extraheren
   let tekstFragment: string | null = null;
   if (mime === "application/pdf") {
     tekstFragment = await haalPdfTekst(bestand.buffer);
@@ -261,14 +358,27 @@ async function classificeerBestand(bestand: Express.Multer.File): Promise<SlimUp
     tekstFragment = bestand.buffer.toString("utf8").slice(0, 6000);
   }
 
+  // 2. Vision-afbeelding voorbereiden (parallel aan tekst, indien AI beschikbaar)
+  let afbeeldingBase64: string | null = null;
   if (heeftOpenAi()) {
-    return aiClassificeer(bestandsnaam, mime, tekstFragment);
+    if (mime === "application/pdf") {
+      afbeeldingBase64 = await renderPdfPagina(bestand.buffer);
+    } else if (
+      mime.startsWith("image/") &&
+      !["image/svg+xml", "image/tiff", "image/bmp"].includes(mime)
+    ) {
+      afbeeldingBase64 = await resizeAfbeelding(bestand.buffer);
+    }
   }
-  return heuristischClassificeer(bestandsnaam, mime);
+
+  // 3. Classificeren
+  if (heeftOpenAi()) {
+    return aiClassificeer(bestandsnaam, mime, tekstFragment, afbeeldingBase64);
+  }
+  return heuristischClassificeer(bestandsnaam, mime, tekstFragment);
 }
 
 // ── Route: POST /slim-upload/analyseer ───────────────────────────────────────
-// Accepteert: bestanden[] (meerdere) of bestand (enkelvoud, backwards compat)
 
 router.post(
   "/slim-upload/analyseer",
@@ -287,7 +397,12 @@ router.post(
 
       for (const [i, s] of resultaten.entries()) {
         req.log.info(
-          { bestandsnaam: bestanden[i]?.originalname, categorie: s.categorie, vertrouwen: s.vertrouwen },
+          {
+            bestandsnaam: bestanden[i]?.originalname,
+            categorie: s.categorie,
+            vertrouwen: s.vertrouwen,
+            vision: s.vision_gebruikt,
+          },
           "slim-upload: analyse gereed",
         );
       }

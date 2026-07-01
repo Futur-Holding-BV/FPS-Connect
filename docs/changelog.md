@@ -10,6 +10,19 @@ Grote roadmap-fases staan ook in `docs/roadmap/gebouwd.md` en `docs/roadmap/acti
 
 ---
 
+## 2026-07-01 — Slim uploaden: vision-analyse voor alle documenttypen
+
+**Uitvoering:** volledig | **Getest:** typecheck groen (firevault + api-server), workflows herstart
+
+- **Vision-analyse**: eerste pagina van elke PDF wordt via `pdftoppm` omgezet naar JPEG, geschaald met `sharp` en als afbeelding meegestuurd naar OpenAI gpt-4o-mini. AI ziet nu de visuele lay-out, niet alleen de tekst.
+- **Afbeeldingen (JPEG/PNG/WEBP)**: ook rechtstreeks naar vision gestuurd (resize via sharp).
+- **AI-prompt uitgebreid** met visuele signalen per type: logo+lege pagina = document_sjabloon, maatlijnen/schaal = tekening, tabelposten+IBAN = factuur, etc.
+- **Vision-badge** in het beslisscherm: "AI heeft de visuele lay-out geanalyseerd" zichtbaar wanneer vision werd ingezet.
+- **`vision_gebruikt`** vlag in API-response en frontend.
+- Pre-existing lege-PDF heuristiek blijft als fallback wanneer AI niet beschikbaar is.
+
+---
+
 ## 2026-07-01 — Slim uploaden: meerdere bestanden + document-intelligentie workflow
 
 **Uitvoering:** volledig | **Getest:** typecheck groen (firevault + api-server), workflows herstart
