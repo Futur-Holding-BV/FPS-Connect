@@ -41,6 +41,7 @@ import {
   ListChecks, Loader2,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
 import { useRol } from "@/context/rol-context";
 import { useVoorkeur } from "@/hooks/use-voorkeur";
 import { PaginaHulp } from "@/components/pagina-hulp";
@@ -276,6 +277,7 @@ export default function Gebruikers() {
   const isHoofd = viewerRol === "hoofdbeheerder";
   const magVerwijderen = isHoofd;
 
+  const { toast } = useToast();
   const { data: gebruikers, isLoading, refetch, isFetching } = useListGebruikers();
   const { data: profielen } = useListProfielen();
   const profielMap = new Map((profielen ?? []).map((p) => [p.id, p]));
@@ -488,11 +490,22 @@ export default function Gebruikers() {
     try {
       if (status === "uitgenodigd") {
         await uitnodigingOpnieuwVersturen.mutateAsync({ id: g.id });
+        toast({ title: "Uitnodiging opnieuw verstuurd", description: `Een herinnering is verzonden naar ${g.email ?? g.naam ?? "de gebruiker"}.` });
       } else {
         await uitnodigingVersturen.mutateAsync({ id: g.id });
+        toast({ title: "Uitnodiging verstuurd", description: `${g.naam ?? g.email ?? "De gebruiker"} ontvangt een activatielink per e-mail.` });
       }
       await invalideer();
-    } catch {
+    } catch (err: unknown) {
+      const bericht =
+        err && typeof err === "object" && "message" in err
+          ? String((err as { message: unknown }).message)
+          : "Probeer het later opnieuw.";
+      toast({
+        title: "Uitnodiging niet verstuurd",
+        description: bericht,
+        variant: "destructive",
+      });
     } finally { setUitnodigingBezig(null); }
   }
 

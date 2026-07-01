@@ -10,6 +10,16 @@ Grote roadmap-fases staan ook in `docs/roadmap/gebouwd.md` en `docs/roadmap/acti
 
 ---
 
+## 2026-07-01 — Gebruikers: foutfeedback bij uitnodigen hersteld
+
+**Uitvoering:** volledig | **Getest:** typecheck groen
+
+- `stuurUitnodiging` had een stille `catch {}` — als de mail-API een 502 teruggaf (bijv. Azure niet geconfigureerd in dev), zag de gebruiker niets
+- Nu: succesbericht via toast ("Uitnodiging verstuurd" / "Uitnodiging opnieuw verstuurd" met e-mailadres) en foutmelding via destructive toast met de servermelding
+- `useToast` geïmporteerd en geïnitialiseerd in de gebruikerspagina
+
+---
+
 ## 2026-07-01 — SlimUploadBalk: popup verschijnt nu altijd bij droppen
 
 **Uitvoering:** volledig | **Getest:** typecheck groen
