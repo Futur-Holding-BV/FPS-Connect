@@ -58161,9 +58161,9 @@ export const getGetActiefDocumentStudioModelUrl = (params: GetActiefDocumentStud
 /**
  * @summary Actief (goedgekeurd) Document Studio model ophalen voor een werkgever + documenttype
  */
-export const getActiefDocumentStudioModel = async (params: GetActiefDocumentStudioModelParams, options?: RequestInit): Promise<DocumentStudioModel> => {
+export const getActiefDocumentStudioModel = async (params: GetActiefDocumentStudioModelParams, options?: RequestInit): Promise<DocumentStudioModel | null> => {
 
-  return customFetch<DocumentStudioModel>(getGetActiefDocumentStudioModelUrl(params),
+  return customFetch<DocumentStudioModel | null>(getGetActiefDocumentStudioModelUrl(params),
   {
     ...options,
     method: 'GET'

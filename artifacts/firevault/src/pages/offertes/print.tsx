@@ -143,7 +143,7 @@ export default function OffertePrintPagina() {
 
   const mij = {
     naam: werkgever?.naam ?? "FPS Brandpreventie",
-    logoUrl: (studioWerkgevers ?? [])[0]?.logo_url ?? "/fps-logo.png",
+    logoUrl: (studioWerkgevers ?? []).find(w => w.id === studioWerkgeverId)?.logo_url ?? "/fps-logo.png",
     primaireKleur: accentKleur ?? undefined,
     adres: [werkgever?.adres].filter(Boolean).join("") || "",
     postcodeWoonplaats: [werkgever?.postcode, werkgever?.plaats].filter(Boolean).join("  ") || "",

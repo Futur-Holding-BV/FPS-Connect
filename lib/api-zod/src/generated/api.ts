@@ -20492,7 +20492,7 @@ export const GetActiefDocumentStudioModelQueryParams = zod.object({
   "document_type": zod.coerce.string()
 })
 
-export const GetActiefDocumentStudioModelResponse = zod.object({
+export const GetActiefDocumentStudioModelResponse = zod.union([zod.object({
   "id": zod.number(),
   "werkgever_id": zod.number(),
   "werkgever_naam": zod.string().nullish(),
@@ -20506,7 +20506,7 @@ export const GetActiefDocumentStudioModelResponse = zod.object({
   "goedgekeurd_door": zod.number().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string().nullish()
-})
+}),zod.null()])
 
 
 /**

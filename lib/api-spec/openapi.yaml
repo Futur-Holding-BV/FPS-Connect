@@ -16225,15 +16225,15 @@ paths:
             type: string
       responses:
         "200":
-          description: Actief goedgekeurd model gevonden
+          description: Actief goedgekeurd model (null als er geen goedgekeurd model bestaat voor dit type)
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/DocumentStudioModel"
+                oneOf:
+                  - $ref: "#/components/schemas/DocumentStudioModel"
+                  - type: "null"
         "400":
           description: werkgever_id of document_type ontbreekt
-        "404":
-          description: Geen goedgekeurd model gevonden voor dit type
 
   /studio/werkgevers/{werkgever_id}/modellen/actief:
     get:

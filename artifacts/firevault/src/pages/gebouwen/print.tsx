@@ -1400,7 +1400,7 @@ export default function GebouwPrint() {
     ?? (studioWerkgevers ?? [])[0]?.id
     ?? null
   );
-  const actiefStudioModel = useActiefStudioModel(studioWerkgeverId, "offerte");
+  const actiefStudioModel = useActiefStudioModel(studioWerkgeverId, "opleverrapport");
   const updateRapport = useUpdateRapport();
   const accordeerCertificaat = useAccordeerCertificaat();
 
