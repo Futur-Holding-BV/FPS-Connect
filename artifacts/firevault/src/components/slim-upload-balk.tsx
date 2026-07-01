@@ -8,6 +8,7 @@ import {
   RotateCcw, Clock, History,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
@@ -43,6 +44,7 @@ interface UploadItem {
   fout: string | null;
   actieGenomen: boolean;
   gekozenCategorie: CategorieUitgebreid | null;
+  toelichting: string;
 }
 
 interface AutomatiseringsRegel {
@@ -565,6 +567,81 @@ function BestandsBadge({ status }: { status: UploadItem["status"] }) {
   return <span className="h-4 w-4 rounded-full border-2 border-muted-foreground/30" />;
 }
 
+// ── Upload wachtrij-kaart (per bestand in het zijpaneel) ─────────────────────
+
+function WachtrijKaart({
+  item,
+  onToelichting,
+  onAnalyseer,
+  onBevestigen,
+  onWijzigCategorie,
+}: {
+  item: UploadItem;
+  onToelichting: (tekst: string) => void;
+  onAnalyseer: () => void;
+  onBevestigen: (cat: CategorieUitgebreid) => void;
+  onWijzigCategorie: (cat: CategorieUitgebreid) => void;
+}) {
+  return (
+    <div className="px-4 py-4 space-y-3">
+      <div className="flex items-start gap-2">
+        <FileText className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium truncate leading-tight" title={item.bestand.name}>
+            {item.bestand.name}
+          </p>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            {(item.bestand.size / 1024).toFixed(0)} KB
+          </p>
+        </div>
+        <BestandsBadge status={item.actieGenomen ? "klaar" : item.status} />
+      </div>
+
+      {!item.actieGenomen ? (
+        <>
+          {item.status === "wacht" && (
+            <div className="space-y-2">
+              <Textarea
+                placeholder="Optionele toelichting (bijv. project, fabrikant, type)…"
+                value={item.toelichting}
+                onChange={(e) => onToelichting(e.target.value)}
+                rows={2}
+                className="text-xs resize-none"
+              />
+              <Button size="sm" className="w-full gap-1.5" onClick={onAnalyseer}>
+                <Sparkles className="h-3.5 w-3.5" />
+                Analyseren
+              </Button>
+            </div>
+          )}
+
+          {item.status === "analyseert" && (
+            <div className="flex items-center gap-2 py-1 text-muted-foreground">
+              <div className="h-4 w-4 rounded-full border-2 border-primary border-t-transparent animate-spin shrink-0" />
+              <p className="text-xs">AI analyseert…</p>
+            </div>
+          )}
+
+          {(item.status === "klaar" || item.status === "fout") && (
+            <BeslisScherm
+              item={item}
+              onBevestigen={onBevestigen}
+              onWijzigCategorie={onWijzigCategorie}
+            />
+          )}
+        </>
+      ) : (
+        <div className="flex items-center gap-2 text-emerald-600">
+          <CheckCircle2 className="h-4 w-4 shrink-0" />
+          <p className="text-xs font-medium">
+            Opgeslagen in inbox → {CATEGORIE_INFO[item.gekozenCategorie ?? item.suggestie?.categorie ?? "algemeen"].label}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Bestand naar inbox uploaden ───────────────────────────────────────────────
 
 async function uploadNaarInbox(bestand: File): Promise<boolean> {
@@ -596,7 +673,6 @@ export function SlimUploadBalk() {
   const [regels, setRegels]                   = useState<AutomatiseringsRegel[]>([]);
   const [recenteUploads, setRecenteUploads]   = useState<RecentUpload[]>(() => laadRecenteUploads());
 
-  const [toelichting, setToelichting]             = useState("");
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const sleepTeller  = useRef(0);
@@ -612,7 +688,6 @@ export function SlimUploadBalk() {
     return () => clearInterval(t);
   }, [herlaadRecente]);
 
-  const huidigItem = queue.find((i) => i.id === huidigId) ?? null;
 
   // ── Drag-drop listeners ───────────────────────────────────────────────────
 
@@ -672,6 +747,7 @@ export function SlimUploadBalk() {
       fout: null,
       actieGenomen: false,
       gekozenCategorie: null,
+      toelichting: "",
     }));
 
     // Automatiseringsregels → meteen navigeren voor bekende extensies
@@ -710,70 +786,61 @@ export function SlimUploadBalk() {
   // nooit een verouderde versie van verwerkBestanden aanroept.
   verwerkBestandenRef.current = verwerkBestanden;
 
-  // ── Analyse starten (na eventuele toelichting) ────────────────────────────
+  // ── Analyse starten (per item, parallel mogelijk) ────────────────────────
 
-  async function startAnalyse() {
-    const itemsTeAnalyseren = queue.filter((i) => i.status === "wacht");
-    if (itemsTeAnalyseren.length === 0) return;
+  function opToelichtingWijzigen(id: string, tekst: string) {
+    setQueue((prev) => prev.map((i) => i.id === id ? { ...i, toelichting: tekst } : i));
+  }
 
-    // Markeer alle wachtende items als "analyseert"
+  async function startAnalyseVoorItem(id: string) {
+    const item = queue.find((i) => i.id === id);
+    if (!item || item.status !== "wacht") return;
+
     setQueue((prev) => prev.map((i) =>
-      i.status === "wacht" ? { ...i, status: "analyseert" as const } : i,
+      i.id === id ? { ...i, status: "analyseert" as const } : i,
     ));
 
-    // Stuur alle bestanden in één aanroep
     try {
-      const formData = new FormData();
-      for (const item of itemsTeAnalyseren) {
-        formData.append("bestanden", item.bestand);
-      }
-      if (toelichting.trim()) {
-        formData.append("toelichting", toelichting.trim());
+      const form = new FormData();
+      form.append("bestand", item.bestand);
+      if (item.toelichting.trim()) {
+        form.append("toelichting", item.toelichting.trim());
       }
       const res = await fetch("/api/slim-upload/analyseer", {
-        method: "POST", body: formData, credentials: "include",
+        method: "POST", body: form, credentials: "include",
       });
 
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
-      const resultaten = (await res.json()) as SlimUploadSuggestie[];
+      const suggestie = (await res.json()) as SlimUploadSuggestie;
 
-      setQueue((prev) => {
-        const wachtItems = prev.filter((i) => i.status === "analyseert");
-        return prev.map((item) => {
-          const idx = wachtItems.indexOf(item);
-          if (idx === -1) return item;
-          const suggestie = resultaten[idx] ?? null;
-          return {
-            ...item,
-            status: suggestie ? ("klaar" as const) : ("fout" as const),
-            suggestie,
-            fout: suggestie ? null : "Geen resultaat ontvangen.",
-          };
-        });
-      });
+      setQueue((prev) => prev.map((i) =>
+        i.id === id ? { ...i, status: "klaar" as const, suggestie } : i,
+      ));
     } catch {
-      setQueue((prev) =>
-        prev.map((i) =>
-          i.status === "analyseert"
-            ? { ...i, status: "fout" as const, fout: "Verbindingsfout — kies handmatig waar het bestand thuishoort." }
-            : i,
-        ),
-      );
+      setQueue((prev) => prev.map((i) =>
+        i.id === id
+          ? { ...i, status: "fout" as const, fout: "Verbindingsfout — kies handmatig de bestemming." }
+          : i,
+      ));
     }
+  }
+
+  function analyseerAlle() {
+    queue.filter((i) => i.status === "wacht").forEach((item) => void startAnalyseVoorItem(item.id));
   }
 
   // ── Bevestigen ────────────────────────────────────────────────────────────
 
-  function opBevestigen(cat: CategorieUitgebreid) {
-    if (!huidigItem) return;
+  function opBevestigen(itemId: string, cat: CategorieUitgebreid) {
+    const item = queue.find((i) => i.id === itemId);
+    if (!item) return;
 
-    const bestand    = huidigItem.bestand;
+    const bestand    = item.bestand;
     const ext        = haalExtensie(bestand.name);
     const { regel, vraagAutomatiseren } = registreerBevestiging(ext, cat);
     const info       = CATEGORIE_INFO[cat];
 
-    // Sla de herkomstpagina op vóór navigatie
     const herkomst = huidigeLocatie;
 
     // Voeg toe aan 15-minuten paneel
@@ -799,20 +866,10 @@ export function SlimUploadBalk() {
       });
     });
 
-    // Markeer als afgehandeld
+    // Markeer als afgehandeld — wachtrij blijft open
     setQueue((prev) =>
-      prev.map((i) => i.id === huidigItem.id ? { ...i, actieGenomen: true, gekozenCategorie: cat } : i),
+      prev.map((i) => i.id === itemId ? { ...i, actieGenomen: true, gekozenCategorie: cat } : i),
     );
-
-    // Ga naar volgende item of sluit
-    const volgende = queue.find((i) => !i.actieGenomen && i.id !== huidigItem.id);
-    if (volgende) {
-      setHuidigId(volgende.id);
-    } else {
-      setToonDialoog(false);
-      setQueue([]);
-      navigate(info.pad);
-    }
 
     if (vraagAutomatiseren) {
       setTimeout(() => { setToonAutomatiseren(regel); herlaadRegels(); }, 400);
@@ -845,7 +902,6 @@ export function SlimUploadBalk() {
     setToonDialoog(false);
     setQueue([]);
     setHuidigId(null);
-    setToelichting("");
   }
 
   const actieveAutomatiseringen = regels.filter((r) => r.geautomatiseerd);
@@ -976,170 +1032,71 @@ export function SlimUploadBalk() {
         }}
       />
 
-      {/* ── Analyse-dialoog ───────────────────────────────────────────────── */}
-      <Dialog open={toonDialoog} onOpenChange={(open) => { if (!open) opSluiten(); }}>
-        <DialogContent className={meerdere ? "max-w-2xl" : "max-w-md"}>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+      {/* ── Upload wachtrij (zijpaneel) ───────────────────────────────────── */}
+      <Sheet open={toonDialoog} onOpenChange={(open) => { if (!open) opSluiten(); }}>
+        <SheetContent side="right" className="w-[440px] sm:max-w-[440px] p-0 flex flex-col gap-0">
+          <SheetHeader className="px-4 pt-4 pb-3 border-b shrink-0">
+            <SheetTitle className="flex items-center gap-2 text-base">
               <Sparkles className="h-4 w-4 text-primary" />
-              Slim uploaden
-              {meerdere && (
-                <Badge variant="secondary" className="ml-1 text-xs">
-                  {aantalKlaar}/{queue.length} verwerkt
-                </Badge>
-              )}
-            </DialogTitle>
-          </DialogHeader>
+              Upload wachtrij
+              <Badge variant="secondary" className="ml-auto text-xs font-normal">
+                {aantalKlaar}/{queue.length} verwerkt
+              </Badge>
+            </SheetTitle>
+            {queue.some((i) => i.status === "wacht") && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="mt-2 w-full gap-1.5"
+                onClick={analyseerAlle}
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+                Analyseer alle wachtende bestanden ({queue.filter((i) => i.status === "wacht").length})
+              </Button>
+            )}
+          </SheetHeader>
 
-          <div className={cn("flex gap-4", meerdere ? "min-h-[360px]" : "")}>
-            {/* ── Bestandenlijst (sidebar bij meerdere) ───────────────── */}
-            {meerdere && (
-              <div className="w-44 shrink-0 border-r pr-4 space-y-1">
-                <p className="text-[10px] uppercase tracking-wide font-semibold text-muted-foreground mb-2">
-                  Bestanden ({queue.length})
-                </p>
-                {queue.map((item) => (
-                  <button
-                    key={item.id}
-                    onClick={() => setHuidigId(item.id)}
-                    className={cn(
-                      "w-full flex items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs transition-colors",
-                      item.id === huidigId
-                        ? "bg-primary/10 text-primary font-medium"
-                        : item.actieGenomen
-                          ? "text-muted-foreground"
-                          : "hover:bg-muted/50",
-                    )}
-                  >
-                    <BestandsBadge status={item.actieGenomen ? "klaar" : item.status} />
-                    <span className="truncate flex-1" title={item.bestand.name}>
-                      {item.bestand.name}
-                    </span>
-                  </button>
-                ))}
+          <div className="flex-1 overflow-y-auto divide-y">
+            {queue.map((item) => (
+              <WachtrijKaart
+                key={item.id}
+                item={item}
+                onToelichting={(tekst) => opToelichtingWijzigen(item.id, tekst)}
+                onAnalyseer={() => void startAnalyseVoorItem(item.id)}
+                onBevestigen={(cat) => opBevestigen(item.id, cat)}
+                onWijzigCategorie={(cat) => opWijzigCategorie(item.id, cat)}
+              />
+            ))}
+
+            {queue.length > 0 && queue.every((i) => i.actieGenomen) && (
+              <div className="flex flex-col items-center gap-3 py-10 px-4 text-center">
+                <CheckCircle2 className="h-8 w-8 text-emerald-500" />
+                <div>
+                  <p className="text-sm font-semibold">Alle bestanden opgeslagen</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    De bestanden staan nu in Slim uploaden › Inbox.
+                  </p>
+                </div>
+                <Button size="sm" variant="outline" onClick={opSluiten}>
+                  Wachtrij sluiten
+                </Button>
               </div>
             )}
-
-            {/* ── Beslisscherm voor huidig item ────────────────────────── */}
-            <div className="flex-1 min-w-0">
-              {huidigItem && (
-                <>
-                  {/* Bestandsnaam + status */}
-                  <div className="flex items-center gap-2 mb-3">
-                    <p className="text-sm font-medium truncate flex-1" title={huidigItem.bestand.name}>
-                      {huidigItem.bestand.name}
-                    </p>
-                    <span className="text-xs text-muted-foreground shrink-0">
-                      {(huidigItem.bestand.size / 1024).toFixed(0)} KB
-                    </span>
-                  </div>
-
-                  {/* Analyseert */}
-                  {huidigItem.status === "analyseert" && (
-                    <div className="flex flex-col items-center gap-3 py-10">
-                      <Sparkles className="h-8 w-8 text-primary animate-pulse" />
-                      <p className="text-sm text-muted-foreground text-center">
-                        AI analyseert {meerdere ? `${queue.length} bestanden` : "het bestand"}…
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Wacht — toelichting invoeren vóór analyse */}
-                  {huidigItem.status === "wacht" && queue.every((i) => i.status === "wacht") && (
-                    <div className="flex flex-col gap-4 py-4">
-                      <div className="rounded-md bg-muted/50 p-3 flex items-start gap-2">
-                        <Sparkles className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-                        <p className="text-xs text-muted-foreground">
-                          Geef optioneel een toelichting mee. De AI gebruikt dit als extra context bij het classificeren.
-                        </p>
-                      </div>
-                      <div className="space-y-1.5">
-                        <label className="text-xs font-medium text-foreground">
-                          Toelichting <span className="text-muted-foreground font-normal">(optioneel)</span>
-                        </label>
-                        <Textarea
-                          placeholder="Bijv.: dit is een testrapport van fabrikant X voor product Y, behoort bij project 2024-038"
-                          value={toelichting}
-                          onChange={(e) => setToelichting(e.target.value)}
-                          rows={3}
-                          className="text-sm resize-none"
-                        />
-                      </div>
-                      <Button
-                        className="w-full gap-2"
-                        onClick={() => void startAnalyse()}
-                      >
-                        <Sparkles className="h-4 w-4" />
-                        Analyseren
-                      </Button>
-                    </div>
-                  )}
-
-                  {/* Wacht — terwijl andere items al analyseert zijn */}
-                  {huidigItem.status === "wacht" && !queue.every((i) => i.status === "wacht") && (
-                    <div className="flex flex-col items-center gap-3 py-10">
-                      <div className="h-8 w-8 rounded-full border-2 border-muted-foreground/20 border-t-primary animate-spin" />
-                      <p className="text-sm text-muted-foreground">Wacht op analyse…</p>
-                    </div>
-                  )}
-
-                  {/* Beslisscherm */}
-                  {(huidigItem.status === "klaar" || huidigItem.status === "fout") && !huidigItem.actieGenomen && (
-                    <BeslisScherm
-                      item={huidigItem}
-                      onBevestigen={opBevestigen}
-                      onWijzigCategorie={(cat) => opWijzigCategorie(huidigItem.id, cat)}
-                    />
-                  )}
-
-                  {/* Al afgehandeld */}
-                  {huidigItem.actieGenomen && (
-                    <div className="flex flex-col items-center gap-3 py-10 text-emerald-600">
-                      <CheckCircle2 className="h-8 w-8" />
-                      <p className="text-sm font-medium">Verwerkt</p>
-                      <p className="text-xs text-muted-foreground text-center">
-                        Dit bestand is ingedeeld bij{" "}
-                        {CATEGORIE_INFO[huidigItem.gekozenCategorie ?? huidigItem.suggestie?.categorie ?? "algemeen"].label}.
-                      </p>
-                      {queue.some((i) => !i.actieGenomen) && (
-                        <Button size="sm" variant="outline" onClick={() => {
-                          const volgende = queue.find((i) => !i.actieGenomen);
-                          if (volgende) setHuidigId(volgende.id);
-                        }}>
-                          Volgend bestand
-                        </Button>
-                      )}
-                    </div>
-                  )}
-                </>
-              )}
-
-              {/* Alles afgehandeld */}
-              {queue.length > 0 && queue.every((i) => i.actieGenomen) && (
-                <div className="flex flex-col items-center gap-3 py-8 text-emerald-600">
-                  <CheckCircle2 className="h-10 w-10" />
-                  <p className="text-sm font-semibold">Alle bestanden verwerkt</p>
-                  <Button size="sm" onClick={opSluiten}>Sluiten</Button>
-                </div>
-              )}
-            </div>
           </div>
 
-          {/* Footer met sluiten */}
-          <div className="flex justify-between items-center pt-2 border-t mt-2">
-            <Button variant="ghost" size="sm" onClick={opSluiten} className="gap-1.5">
-              <X className="h-3.5 w-3.5" />
-              Sluiten
-            </Button>
-            {meerdere && queue.some((i) => !i.actieGenomen) && (
+          {queue.some((i) => !i.actieGenomen) && (
+            <div className="px-4 py-3 border-t shrink-0 flex items-center justify-between">
+              <Button variant="ghost" size="sm" onClick={opSluiten} className="gap-1.5">
+                <X className="h-3.5 w-3.5" />
+                Sluiten
+              </Button>
               <p className="text-xs text-muted-foreground">
-                <AlertTriangle className="inline h-3 w-3 mr-1 text-amber-500" />
-                {queue.filter((i) => !i.actieGenomen).length} bestand(en) nog te verwerken
+                {queue.filter((i) => !i.actieGenomen).length} te verwerken
               </p>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
 
       {/* ── Automatiseer-dialoog ──────────────────────────────────────────── */}
       <Dialog open={!!toonAutomatiseren} onOpenChange={(open) => { if (!open) setToonAutomatiseren(null); }}>

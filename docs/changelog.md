@@ -10,6 +10,20 @@ Grote roadmap-fases staan ook in `docs/roadmap/gebouwd.md` en `docs/roadmap/acti
 
 ---
 
+## 2026-07-01 — Slim-upload: wachtrij-paneel (Sheet) vervangt blokkerend center-dialoog
+
+**Uitvoering:** volledig | **Getest:** typecheck
+
+De analyse-dialog is omgebouwd van een blokkerend center-dialoog naar een persistent zijpaneel (Sheet, 440px vanuit rechts):
+
+- **UploadItem** krijgt eigen `toelichting: string` veld; losse `toelichting`-state verwijderd.
+- **startAnalyse** (bulk) vervangen door `startAnalyseVoorItem(id)` (per item, parallel mogelijk) + `analyseerAlle()` + `opToelichtingWijzigen(id, tekst)`.
+- **opBevestigen** neemt nu `(itemId, cat)` — wachtrij blijft open na bevestiging, geen navigatie.
+- **WachtrijKaart** component toegevoegd: toont per bestand toelichting-textarea, Analyseer-knop, spinner of inline BeslisScherm.
+- **Sheet JSX** vervangt Dialog: header met "Analyseer alle wachtende bestanden (N)" knop, scrollbare body met alle WachtrijKaart-items, vaste footer met Sluiten + teller. Automatiseer-dialog ongewijzigd.
+
+---
+
 ## 2026-07-01 — Slim-upload: bestand wordt nu écht opgeslagen na classificatie
 
 **Uitvoering:** volledig | **Getest:** typecheck
