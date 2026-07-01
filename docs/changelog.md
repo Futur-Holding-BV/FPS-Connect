@@ -10,6 +10,14 @@ Grote roadmap-fases staan ook in `docs/roadmap/gebouwd.md` en `docs/roadmap/acti
 
 ---
 
+## 2026-07-01 — Opnieuw uitnodigen ook voor actieve gebruikers (geaccepteerd)
+
+**Uitvoering:** hotfix | **Getest:** typecheck groen
+
+De "Uitnodigen"-knop was verborgen voor gebruikers met status `geaccepteerd`. Voor Jacqueline (en anderen die al een account hebben maar een nieuwe activatielink nodig hebben) verschijnt nu ook een "Opnieuw uitnodigen"-knop — zowel op de kaartweergave als in het detaildialoog. De knop heeft een neutrale grijs/slate stijl (onderscheid van amber/paars voor nog-niet-uitgenodigde gebruikers). De backend-endpoint (`POST /gebruikers/:id/uitnodigen`) verwerkt dit correct: nieuw token, nieuwe vervaldatum, status terug naar "uitgenodigd".
+
+---
+
 ## 2026-07-01 — Fix: uploaden werkte niet meer (Uppy/React 19 conflict)
 
 **Uitvoering:** hotfix | **Getest:** typecheck groen, workflow herstart

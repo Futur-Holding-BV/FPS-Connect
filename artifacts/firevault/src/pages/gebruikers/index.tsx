@@ -714,12 +714,14 @@ export default function Gebruikers() {
                 )}
               </div>
 
-              {status !== "geaccepteerd" && (
+              {isHoofd && (
                 <button
                   type="button"
                   className={`mt-2 h-7 text-xs w-full gap-1.5 font-medium rounded-md flex items-center justify-center px-2 transition-colors ${
                     status === "niet_uitgenodigd"
                       ? "bg-amber-500 hover:bg-amber-600 text-white"
+                      : status === "geaccepteerd"
+                      ? "bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300"
                       : "bg-purple-500 hover:bg-purple-600 text-white"
                   } disabled:opacity-60`}
                   disabled={uitnodigingBezig === g.id}
@@ -729,6 +731,8 @@ export default function Gebruikers() {
                   {uitnodigingBezig === g.id
                     ? "Bezig..."
                     : status === "uitgenodigd"
+                    ? "Opnieuw uitnodigen"
+                    : status === "geaccepteerd"
                     ? "Opnieuw uitnodigen"
                     : "Uitnodigen"}
                 </button>
@@ -1395,12 +1399,14 @@ export default function Gebruikers() {
                   );
                 })()}
 
-                {isHoofd && status !== "geaccepteerd" && (
+                {isHoofd && (
                   <button
                     type="button"
                     className={`h-9 text-sm w-full gap-1.5 font-medium rounded-md flex items-center justify-center px-3 transition-colors ${
                       status === "niet_uitgenodigd"
                         ? "bg-amber-500 hover:bg-amber-600 text-white"
+                        : status === "geaccepteerd"
+                        ? "bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300"
                         : "bg-purple-500 hover:bg-purple-600 text-white"
                     } disabled:opacity-60`}
                     disabled={uitnodigingBezig === bekijkGebruiker.id}
@@ -1411,6 +1417,8 @@ export default function Gebruikers() {
                       ? "Bezig..."
                       : status === "uitgenodigd"
                       ? "Uitnodiging opnieuw sturen"
+                      : status === "geaccepteerd"
+                      ? "Opnieuw uitnodigen"
                       : "Uitnodiging versturen"}
                   </button>
                 )}
