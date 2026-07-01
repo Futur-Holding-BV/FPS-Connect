@@ -23,6 +23,7 @@ import {
 import {
   ArrowLeft, Plus, Pencil, Trash2, Upload, Download, Package, Building2, Search,
 } from "lucide-react";
+import { AiInvullenKnop } from "@/components/ai-invullen-knop";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 const BASE = "/api/modules/calculaties";
@@ -391,6 +392,20 @@ export default function ModulesCalculatieLeveranciers() {
               <Label>Naam *</Label>
               <Input value={leverancierForm.naam} onChange={(e) => setLeverancierForm((f) => ({ ...f, naam: e.target.value }))} />
             </div>
+            {leverancierDialoog === "nieuw" && (
+              <AiInvullenKnop
+                formulierType="leverancier"
+                huidigVelden={{ naam: leverancierForm.naam }}
+                onVoorstellen={(voorgesteld) =>
+                  setLeverancierForm((f) => ({
+                    ...f,
+                    ...(voorgesteld.telefoon ? { telefoon: voorgesteld.telefoon } : {}),
+                    ...(voorgesteld.email    ? { email:    voorgesteld.email }    : {}),
+                    ...(voorgesteld.website  ? { website:  voorgesteld.website }  : {}),
+                  }))
+                }
+              />
+            )}
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label>Contactpersoon</Label>

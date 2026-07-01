@@ -10,6 +10,17 @@ Grote roadmap-fases staan ook in `docs/roadmap/gebouwd.md` en `docs/roadmap/acti
 
 ---
 
+## 2026-07-01 — AI-invullen bij nieuw leverancier
+
+**Uitvoering:** volledig | **Getest:** typecheck groen
+
+- `AiInvullenKnop` toegevoegd aan het "Leverancier toevoegen"-dialog in Calculatie › Leveranciers
+- Na het invullen van de naam zoekt AI online naar telefoonnummer, e-mail en website van de leverancier
+- Knop verschijnt alleen bij nieuw aanmaken (niet bij bewerken van een bestaande leverancier)
+- Backend `POST /ai/invullen` ondersteunde `formulier_type: "leverancier"` al; alleen frontend-integratie toegevoegd
+
+---
+
 ## 2026-07-01 — Document Studio: opleverrapport als volwaardig type + template-velden volledig
 
 **Uitvoering:** volledig | **Getest:** typecheck groen (firevault + api-server)
