@@ -1568,6 +1568,7 @@ export default function GebouwPrint() {
   const nu = new Date();
   const exportDatum = `${nu.toLocaleDateString("nl-NL")} ${nu.toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" })}`;
   const logoSrc = resolveAssetUrl("logo-fps.png");
+  const coverLogoSrc = (studioWerkgevers ?? [])[0]?.logo_url || logoSrc;
   const werkgeverNaam = (gebouw as any).werkmaatschappij_naam ?? "FPS Brandpreventie";
   const huidigWerkgever = (werkgevers ?? []).find(w => w.naam === werkgeverNaam) ?? (werkgevers ?? [])[0] ?? null;
 
@@ -2336,7 +2337,7 @@ export default function GebouwPrint() {
             justifyContent: studioLogoPositie === "links" ? "flex-start" : studioLogoPositie === "midden" ? "center" : "flex-end",
           }}
         >
-          <img src={logoSrc} alt="FPS Brandpreventie" className="prt-cover-logo" />
+          <img src={coverLogoSrc} alt="FPS Brandpreventie" className="prt-cover-logo" />
         </div>
 
         <div className="prt-cover-beeld">
