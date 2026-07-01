@@ -245,7 +245,7 @@ export default function LoginPagina() {
                 </div>
                 <div className="flex flex-col items-center gap-2">
                   <Label>{t("auth.verifyTitel")}</Label>
-                  <InputOTP maxLength={6} value={code} onChange={wijzigCode} disabled={bezig}>
+                  <InputOTP maxLength={6} value={code} onChange={wijzigCode} disabled={bezig} autoFocus>
                     <InputOTPGroup>
                       <InputOTPSlot index={0} />
                       <InputOTPSlot index={1} />
@@ -281,7 +281,7 @@ export default function LoginPagina() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex flex-col items-center gap-2">
-                  <InputOTP maxLength={6} value={code} onChange={wijzigCode} disabled={bezig}>
+                  <InputOTP maxLength={6} value={code} onChange={wijzigCode} disabled={bezig} autoFocus>
                     <InputOTPGroup>
                       <InputOTPSlot index={0} />
                       <InputOTPSlot index={1} />

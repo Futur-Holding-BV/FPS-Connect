@@ -10,6 +10,14 @@ Grote roadmap-fases staan ook in `docs/roadmap/gebouwd.md` en `docs/roadmap/acti
 
 ---
 
+## 2026-06-30 — Login: autofocus op TOTP-invoerveld
+
+**Uitvoering:** volledig | **Getest:** typecheck groen
+
+- `autoFocus` toegevoegd aan `InputOTP` in stap "verify" en stap "setup" (`artifacts/firevault/src/pages/auth/login.tsx`): cursor staat nu direct in het eerste vakje zodra de 2FA-stap verschijnt, zonder muisklik.
+
+---
+
 ## 2026-06-30 — Document Studio: templates actief in Connect-modules
 
 **Uitvoering:** volledig | **Diepere lagen:** volledig | **Getest:** typecheck groen (firevault + api-server), codegen geslaagd, workflows herstart
