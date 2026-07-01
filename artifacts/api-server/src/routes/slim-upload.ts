@@ -25,6 +25,7 @@ export const SLIM_UPLOAD_CATEGORIEEN = [
   "personeelsdocument",
   "snagstream",
   "bibliotheek",
+  "document_sjabloon",
   "algemeen",
   "onbekend",
 ] as const;
@@ -47,11 +48,39 @@ export interface SlimUploadSuggestie {
 
 // ── Heuristische fallback ─────────────────────────────────────────────────────
 
-function heuristischClassificeer(bestandsnaam: string, mime: string): SlimUploadSuggestie {
+function heuristischClassificeer(bestandsnaam: string, mime: string, tekstFragment?: string | null): SlimUploadSuggestie {
   const naam = bestandsnaam.toLowerCase();
   const ext = naam.includes(".") ? naam.split(".").pop() ?? "" : "";
+  const tekstLeeg = !tekstFragment || tekstFragment.trim().length < 80;
+  const isPdf = mime === "application/pdf";
 
   let categorie: SlimUploadCategorie = "algemeen";
+
+  // Lege PDF: waarschijnlijk visueel document (logo, briefpapier, huisstijl)
+  const sjabloonSleutelwoorden = ["model", "briefpapier", "briefhoofd", "sjabloon", "template", "huisstijl", "logo", "onderlegger", "letterhead", "header", "footer", "opmaak"];
+  if (isPdf && tekstLeeg && sjabloonSleutelwoorden.some((k) => naam.includes(k))) {
+    return {
+      categorie: "document_sjabloon",
+      voorstel_naam: bestandsnaam.replace(/\.[^.]+$/, "").replace(/[-_]/g, " ").trim(),
+      redenering: "Lege PDF met huisstijl-sleutelwoord in naam — waarschijnlijk een briefpapier of sjabloon voor de Document Studio.",
+      vertrouwen: "hoog",
+      ai_beschikbaar: false,
+      gevonden_gegevens: {},
+      alternatieven: ["algemeen", "bibliotheek"],
+    };
+  }
+  if (isPdf && tekstLeeg) {
+    // Lege PDF zonder duidelijke naam: visueel document, lagere zekerheid
+    return {
+      categorie: "document_sjabloon",
+      voorstel_naam: bestandsnaam.replace(/\.[^.]+$/, "").replace(/[-_]/g, " ").trim(),
+      redenering: "PDF bevat geen leesbare tekst — waarschijnlijk een visueel document, sjabloon of scan. Controleer of dit een Document Studio-onderlegger is.",
+      vertrouwen: "laag",
+      ai_beschikbaar: false,
+      gevonden_gegevens: {},
+      alternatieven: ["tekening", "algemeen"],
+    };
+  }
 
   if (["eta", "european technical assessment"].some((k) => naam.includes(k))) {
     categorie = "eta";
@@ -106,16 +135,19 @@ CATEGORIEËN:
 "eta"             — European Technical Assessment / Europese Technische Beoordeling. Signalen: ETA, ETB, EOTA.
 "dop"             — Declaration of Performance / Prestatieverklaring. Signalen: DoP, prestatieverklaring, verordening 305/2011.
 "personeelsdocument" — HR, arbeidscontract, diploma, VCA, loonstrook, VOG. Signalen: arbeidsovereenkomst, salaris, personeelsnummer.
-"snagstream"      — Opleverrapport, inspectieverslag, punchlijst. Signalen: oplevering, inspectie, bevinding, herstel.
-"bibliotheek"     — Overige technische brandveiligheidsdocumenten die niet in een specifieker type passen.
-"algemeen"        — Correspondentie, notulen, presentaties, jaarverslagen, sjablonen, interne memo's.
-"onbekend"        — Gebruik ALLEEN als het echt niet te classificeren is na grondige analyse.
+"snagstream"        — Opleverrapport, inspectieverslag, punchlijst. Signalen: oplevering, inspectie, bevinding, herstel.
+"bibliotheek"       — Overige technische brandveiligheidsdocumenten die niet in een specifieker type passen.
+"document_sjabloon" — Lege PDF of afbeelding met bedrijfslogo/huisstijl, bedoeld als briefpapier, onderlegger of Document Studio-sjabloon.
+  Signalen: GEEN of nauwelijks leesbare tekst, bedrijfslogo zichtbaar, naam bevat: model, briefpapier, briefhoofd, huisstijl, sjabloon, template, logo, onderlegger, letterhead, opmaak.
+"algemeen"          — Correspondentie, notulen, presentaties, jaarverslagen, interne memo's.
+"onbekend"          — Gebruik ALLEEN als het echt niet te classificeren is na grondige analyse.
 
 REGELS:
 1. Gebruik bestandsnaam, MIME-type én tekstfragment samen.
 2. Vertrouwen "hoog": duidelijke signaalwoorden aanwezig. "midden": redelijk aanwijsbaar. "laag": weinig tekst of meerdere opties.
 3. Geef altijd 2 alternatieven (op vertrouwensschaal na de hoofdkeuze).
-4. Extraheer in "gevonden_gegevens" relevante velden afhankelijk van het type:
+4. LEGE PDF-REGEL (BELANGRIJK): Als een PDF GEEN leesbare tekst heeft (of minder dan ~80 tekens) EN de naam bevat "model", "brief", "briefhoofd", "huisstijl", "sjabloon", "template", "logo" of "onderlegger" → kies "document_sjabloon" met vertrouwen "hoog". Als de naam geen van deze woorden bevat → kies "document_sjabloon" met vertrouwen "midden" (visueel document, waarschijnlijk een sjabloon of scan).
+5. Extraheer in "gevonden_gegevens" relevante velden afhankelijk van het type:
    - factuur: leverancier, bedrag, factuurnummer, datum, betalingstermijn
    - aanvraag: klant, locatie, contactpersoon, projectnaam, omschrijving
    - testrapport/eta/dop/certificaat: fabrikant, productnaam, normen, geldig_tot, classificatie
@@ -123,11 +155,11 @@ REGELS:
    - offerte/factuur: klant, bedrag, referentie, datum
    - tekening: project, schaal, revisie
    - overig: alleen wat duidelijk zichtbaar is in de tekst
-5. Bij "onbekend": geef 3 zinvolle alternatieven.
+6. Bij "onbekend": geef 3 zinvolle alternatieven.
 
 Geef uitsluitend geldige JSON:
 {
-  "categorie": "<één van de 14>",
+  "categorie": "<één van de 15>",
   "voorstel_naam": "<max 80 tekens>",
   "redenering": "<max 150 tekens, nuttig ook bij laag vertrouwen>",
   "vertrouwen": "laag|midden|hoog",
@@ -167,17 +199,17 @@ async function aiClassificeer(
     });
   } catch (err) {
     logger.warn({ err }, "slim-upload: AI-aanroep mislukt, terugvallen op heuristiek");
-    return { ...heuristischClassificeer(bestandsnaam, mime), ai_beschikbaar: false };
+    return { ...heuristischClassificeer(bestandsnaam, mime, tekstFragment), ai_beschikbaar: false };
   }
 
   const antwoord = completion.choices[0]?.message?.content;
-  if (!antwoord) return { ...heuristischClassificeer(bestandsnaam, mime), ai_beschikbaar: true };
+  if (!antwoord) return { ...heuristischClassificeer(bestandsnaam, mime, tekstFragment), ai_beschikbaar: true };
 
   let parsed: Record<string, unknown>;
   try { parsed = JSON.parse(antwoord); }
   catch {
     logger.warn({ antwoord }, "slim-upload: AI-JSON niet parseerbaar");
-    return { ...heuristischClassificeer(bestandsnaam, mime), ai_beschikbaar: true };
+    return { ...heuristischClassificeer(bestandsnaam, mime, tekstFragment), ai_beschikbaar: true };
   }
 
   const cat = typeof parsed.categorie === "string" ? parsed.categorie.toLowerCase() : null;

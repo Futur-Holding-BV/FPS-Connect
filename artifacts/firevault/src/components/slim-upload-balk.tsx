@@ -4,7 +4,7 @@ import {
   Upload, Sparkles, X, ChevronRight, Trash2, CheckCircle2, AlertCircle,
   FileText, BookOpen, Receipt, Users, PenLine, Archive, FolderOpen,
   Zap, ZapOff, Settings, AlertTriangle, ShieldAlert, HelpCircle,
-  ClipboardList, BadgeCheck, FileCheck, Ruler, Package,
+  ClipboardList, BadgeCheck, FileCheck, Ruler, Package, LayoutTemplate,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -17,7 +17,7 @@ import { cn } from "@/lib/utils";
 type CategorieUitgebreid =
   | "aanvraag" | "tekening" | "offerte" | "factuur"
   | "productdocument" | "testrapport" | "certificaat" | "eta" | "dop"
-  | "personeelsdocument" | "snagstream" | "bibliotheek" | "algemeen" | "onbekend";
+  | "personeelsdocument" | "snagstream" | "bibliotheek" | "document_sjabloon" | "algemeen" | "onbekend";
 
 type Vertrouwen = "laag" | "midden" | "hoog";
 
@@ -70,9 +70,10 @@ const CATEGORIE_INFO: Record<CategorieUitgebreid, {
   dop:               { label: "Prestatieverklaring (DoP)",     icoon: <BadgeCheck className="h-4 w-4" />,   pad: "/documenten",  kleur: "bg-cyan-50 text-cyan-700 border-cyan-200",        omschrijving: "Declaration of Performance, Reg. 305/2011" },
   personeelsdocument:{ label: "Personeel / HRM",               icoon: <Users className="h-4 w-4" />,        pad: "/personeel",   kleur: "bg-purple-50 text-purple-700 border-purple-200",  omschrijving: "Arbeidscontract, diploma, VOG, VCA" },
   snagstream:        { label: "Snagstream archief",            icoon: <Archive className="h-4 w-4" />,      pad: "/snagstream",  kleur: "bg-rose-50 text-rose-700 border-rose-200",        omschrijving: "Opleverrapport, inspectieverslag, punchlijst" },
-  bibliotheek:       { label: "Documentenbibliotheek",         icoon: <BookOpen className="h-4 w-4" />,     pad: "/documenten",  kleur: "bg-blue-50 text-blue-700 border-blue-200",        omschrijving: "Technisch brandveiligheidsdocument" },
-  algemeen:          { label: "Documenten (algemeen)",         icoon: <FolderOpen className="h-4 w-4" />,   pad: "/documenten",  kleur: "bg-gray-50 text-gray-700 border-gray-200",        omschrijving: "Overige bedrijfsdocumenten" },
-  onbekend:          { label: "Onbekend — handmatig kiezen",   icoon: <HelpCircle className="h-4 w-4" />,   pad: "/documenten",  kleur: "bg-gray-50 text-gray-600 border-gray-200",        omschrijving: "AI kon het type niet vaststellen" },
+  bibliotheek:       { label: "Documentenbibliotheek",         icoon: <BookOpen className="h-4 w-4" />,        pad: "/documenten",           kleur: "bg-blue-50 text-blue-700 border-blue-200",        omschrijving: "Technisch brandveiligheidsdocument" },
+  document_sjabloon: { label: "Document Studio — sjabloon",    icoon: <LayoutTemplate className="h-4 w-4" />, pad: "/beheer/documentopmaak", kleur: "bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200", omschrijving: "Briefpapier, onderlegger of huisstijl-sjabloon" },
+  algemeen:          { label: "Documenten (algemeen)",         icoon: <FolderOpen className="h-4 w-4" />,    pad: "/documenten",           kleur: "bg-gray-50 text-gray-700 border-gray-200",        omschrijving: "Overige bedrijfsdocumenten" },
+  onbekend:          { label: "Onbekend — handmatig kiezen",   icoon: <HelpCircle className="h-4 w-4" />,    pad: "/documenten",           kleur: "bg-gray-50 text-gray-600 border-gray-200",        omschrijving: "AI kon het type niet vaststellen" },
 };
 
 const VERTROUWEN_KLEUR: Record<Vertrouwen, string> = {
@@ -277,6 +278,28 @@ function BeslisScherm({
         <div>
           <p className="text-xs font-semibold text-muted-foreground mb-1.5">Herkende gegevens</p>
           <GevondenGegevens gegevens={suggestie.gevonden_gegevens} />
+        </div>
+      )}
+
+      {/* Bij document_sjabloon: Studio-actie tonen */}
+      {effectiefeCat === "document_sjabloon" && (
+        <div className="rounded-md border bg-fuchsia-50 border-fuchsia-200 p-3 space-y-2">
+          <p className="text-xs font-semibold text-fuchsia-700">Dit lijkt een huisstijl-sjabloon of briefpapier</p>
+          <p className="text-xs text-fuchsia-600">
+            Voeg dit document toe als onderlegger in de Document Studio. Daar kunt u het koppelen aan een werkgever en instellen als briefpapier voor rapporten en klantdocumenten.
+          </p>
+          <div className="flex flex-col gap-1.5 mt-1">
+            <Button size="sm" variant="default" className="justify-start gap-2 text-xs"
+              onClick={() => onBevestigen("document_sjabloon")}>
+              <LayoutTemplate className="h-3.5 w-3.5" />
+              Naar Document Studio
+            </Button>
+            <Button size="sm" variant="outline" className="justify-start gap-2 text-xs"
+              onClick={() => onWijzigCategorie("bibliotheek")}>
+              <BookOpen className="h-3.5 w-3.5" />
+              Opslaan in documentenbibliotheek
+            </Button>
+          </div>
         </div>
       )}
 
