@@ -960,6 +960,17 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                     <SidebarMenuItem className="pl-5">
                       <SidebarMenuButton
                         asChild
+                        isActive={location === "/organisatie/werkmaatschappijen"}
+                      >
+                        <Link href="/organisatie/werkmaatschappijen">
+                          <Building2 />
+                          <span>Werkmaatschappijen</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem className="pl-5">
+                      <SidebarMenuButton
+                        asChild
                         isActive={location === "/organisatie/jaarverslagen"}
                       >
                         <Link href="/organisatie/jaarverslagen">

@@ -60,6 +60,7 @@ import ToepassingenBeheer from "@/pages/beheer/toepassingen";
 import Bibliotheek from "@/pages/beheer/bibliotheek";
 import Ontwikkelstatus from "@/pages/beheer/ontwikkelstatus";
 import DocumentopmaakBeheer from "@/pages/organisatie/documentopmaak";
+import WerkmaatschappijPagina from "@/pages/organisatie/werkmaatschappijen";
 import SpotconfiguratieBeheer from "@/pages/beheer/spotconfiguratie";
 import MailBeheer from "@/pages/beheer/mail";
 import BackupBeheer from "@/pages/beheer/backup";
@@ -395,6 +396,7 @@ function ConnectPortal() {
         <Route path="/beheer/rollen-rechten" component={RollenRechtenBeheer} />
         <Route path="/beheer/ontwikkelstatus" component={Ontwikkelstatus} />
         <Route path="/organisatie/documentopmaak" component={DocumentopmaakBeheer} />
+        <Route path="/organisatie/werkmaatschappijen" component={WerkmaatschappijPagina} />
         <Route path="/beheer/spotconfiguratie" component={SpotconfiguratieBeheer} />
         <Route path="/beheer/mail" component={MailBeheer} />
         <Route path="/beheer/backup" component={BackupBeheer} />
