@@ -156,10 +156,10 @@ export default function MagazijnVoorraadPagina() {
             </div>
             <div className="space-y-1">
               <Label>Locatie</Label>
-              <Select value={cLocatieId} onValueChange={setCLocatieId}>
+              <Select value={cLocatieId || "__geen__"} onValueChange={v => setCLocatieId(v === "__geen__" ? "" : v)}>
                 <SelectTrigger><SelectValue placeholder="Geen locatie" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Geen locatie</SelectItem>
+                  <SelectItem value="__geen__">Geen locatie</SelectItem>
                   {locaties.map(l => <SelectItem key={l.id} value={String(l.id)}>{l.naam}</SelectItem>)}
                 </SelectContent>
               </Select>

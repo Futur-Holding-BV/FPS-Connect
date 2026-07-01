@@ -73,10 +73,10 @@ function LocatieForm({ open, onOpenChange, locaties, initVals, onSubmit, bezig, 
           </div>
           <div className="space-y-1">
             <Label>Bovenliggende locatie</Label>
-            <Select value={String(parentId ?? "")} onValueChange={v => setParentId(v ? Number(v) : null)}>
+            <Select value={String(parentId ?? "__geen__")} onValueChange={v => setParentId(v === "__geen__" ? null : Number(v))}>
               <SelectTrigger><SelectValue placeholder="Geen (hoofdlocatie)" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Geen (hoofdlocatie)</SelectItem>
+                <SelectItem value="__geen__">Geen (hoofdlocatie)</SelectItem>
                 {locaties.map(l => <SelectItem key={l.id} value={String(l.id)}>{l.naam}</SelectItem>)}
               </SelectContent>
             </Select>

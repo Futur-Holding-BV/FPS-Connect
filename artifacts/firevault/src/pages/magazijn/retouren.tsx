@@ -140,10 +140,10 @@ export default function MagazijnRetourenPagina() {
               </div>
               <div className="space-y-1">
                 <Label className="text-xs">Terugplaatsen op locatie</Label>
-                <Select value={nLocatieId} onValueChange={setNLocatieId}>
+                <Select value={nLocatieId || "__geen__"} onValueChange={v => setNLocatieId(v === "__geen__" ? "" : v)}>
                   <SelectTrigger><SelectValue placeholder="Geen" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Geen locatie</SelectItem>
+                    <SelectItem value="__geen__">Geen locatie</SelectItem>
                     {locaties.map(l => <SelectItem key={l.id} value={String(l.id)}>{l.naam}</SelectItem>)}
                   </SelectContent>
                 </Select>

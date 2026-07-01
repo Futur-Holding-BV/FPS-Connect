@@ -62,10 +62,10 @@ export default function MagazijnReserveringenPagina() {
 
       {/* Filter */}
       <div className="flex gap-3">
-        <Select value={filterStatus} onValueChange={setFilterStatus}>
+        <Select value={filterStatus || "__alle__"} onValueChange={v => setFilterStatus(v === "__alle__" ? "" : v)}>
           <SelectTrigger className="w-48"><SelectValue placeholder="Alle statussen" /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Alle statussen</SelectItem>
+            <SelectItem value="__alle__">Alle statussen</SelectItem>
             {Object.entries(STATUS_LABELS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
           </SelectContent>
         </Select>

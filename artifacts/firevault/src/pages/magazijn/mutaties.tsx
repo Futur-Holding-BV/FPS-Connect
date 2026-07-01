@@ -49,17 +49,17 @@ export default function MagazijnMutatiesPagina() {
 
       {/* Filters */}
       <div className="flex flex-wrap gap-3">
-        <Select value={filterArtikel} onValueChange={setFilterArtikel}>
+        <Select value={filterArtikel || "__alle__"} onValueChange={v => setFilterArtikel(v === "__alle__" ? "" : v)}>
           <SelectTrigger className="w-56"><SelectValue placeholder="Alle artikelen" /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Alle artikelen</SelectItem>
+            <SelectItem value="__alle__">Alle artikelen</SelectItem>
             {artikelen.map(a => <SelectItem key={a.id} value={String(a.id)}>{a.naam}</SelectItem>)}
           </SelectContent>
         </Select>
-        <Select value={filterType} onValueChange={setFilterType}>
+        <Select value={filterType || "__alle__"} onValueChange={v => setFilterType(v === "__alle__" ? "" : v)}>
           <SelectTrigger className="w-40"><SelectValue placeholder="Alle types" /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Alle types</SelectItem>
+            <SelectItem value="__alle__">Alle types</SelectItem>
             {Object.entries(TYPE_LABELS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
           </SelectContent>
         </Select>

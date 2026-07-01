@@ -10,6 +10,18 @@ Grote roadmap-fases staan ook in `docs/roadmap/gebouwd.md` en `docs/roadmap/acti
 
 ---
 
+## 2026-07-01 — Magazijn: crash door lege SelectItem-waarden opgelost
+
+**Uitvoering:** volledig | **Getest:** typecheck groen
+
+- Radix UI `<Select.Item value="">` gooit een runtime-fout ("must have a value prop that is not an empty string") in alle magazijn-subpagina's
+- Gefixed in 7 bestanden: `reserveringen.tsx`, `mutaties.tsx`, `locaties.tsx`, `artikel-detail.tsx`, `uitgiftes.tsx`, `voorraad.tsx`, `retouren.tsx`
+- Filterselects (Alle statussen / Alle artikelen / Alle types): sentinel `"__alle__"` met conversie terug naar `""`
+- Nullable selects (Geen locatie / Geen reservering / Geen): sentinel `"__geen__"` met conversie terug naar `""` of `null`
+- Functionaliteit ongewijzigd — API-calls blijven `filterX || undefined` gebruiken
+
+---
+
 ## 2026-07-01 — Boekhouder: functiegroep en preset toegevoegd
 
 **Uitvoering:** volledig | **Getest:** typecheck groen (libs + firevault)

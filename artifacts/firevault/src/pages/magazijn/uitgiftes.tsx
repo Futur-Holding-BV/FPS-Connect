@@ -139,20 +139,20 @@ export default function MagazijnUitgiftesPagina() {
               </div>
               <div className="space-y-1">
                 <Label className="text-xs">Locatie</Label>
-                <Select value={nLocatieId} onValueChange={setNLocatieId}>
+                <Select value={nLocatieId || "__geen__"} onValueChange={v => setNLocatieId(v === "__geen__" ? "" : v)}>
                   <SelectTrigger><SelectValue placeholder="Geen" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Geen locatie</SelectItem>
+                    <SelectItem value="__geen__">Geen locatie</SelectItem>
                     {locaties.map(l => <SelectItem key={l.id} value={String(l.id)}>{l.naam}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-1">
                 <Label className="text-xs">Koppel reservering</Label>
-                <Select value={nReserveringId} onValueChange={setNReserveringId}>
+                <Select value={nReserveringId || "__geen__"} onValueChange={v => setNReserveringId(v === "__geen__" ? "" : v)}>
                   <SelectTrigger><SelectValue placeholder="Geen" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Geen reservering</SelectItem>
+                    <SelectItem value="__geen__">Geen reservering</SelectItem>
                     {reserveringen
                       .filter(r => !nArtikelId || r.artikel_id === Number(nArtikelId))
                       .map(r => <SelectItem key={r.id} value={String(r.id)}>#{r.id} — {r.artikel_naam ?? ""} ({r.hoeveelheid})</SelectItem>)}
