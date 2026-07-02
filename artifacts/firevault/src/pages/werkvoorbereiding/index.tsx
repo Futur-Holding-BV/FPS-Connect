@@ -19,6 +19,10 @@ import {
   XCircle,
   Clock,
   RefreshCw,
+  MessageSquare,
+  ChevronDown,
+  ChevronUp,
+  User,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -68,6 +72,28 @@ interface MateriaalAanvraag {
   ai_advies: string | null;
   behandel_notitie: string | null;
   aangemaakt_op: string | null;
+}
+
+interface UitvoerderBericht {
+  id: number;
+  rol: "monteur" | "ai";
+  tekst: string | null;
+  foto_pad: string | null;
+  aangemaakt_op: string | null;
+}
+
+interface UitvoerderSessie {
+  id: number;
+  status: "actief" | "bevestigd";
+  opdracht_id: number | null;
+  opdracht_titel?: string | null;
+  opdracht_werknummer?: string | null;
+  monteur_id: number;
+  monteur_naam?: string | null;
+  bevestigde_aanpak: string | null;
+  aangemaakt_op: string | null;
+  bijgewerkt_op: string | null;
+  berichten: UitvoerderBericht[];
 }
 
 function tijdGeleden(iso: string | null): string {
