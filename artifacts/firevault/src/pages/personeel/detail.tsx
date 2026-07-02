@@ -77,7 +77,7 @@ import {
   ArrowLeft, Pencil, Trash2, Plus, GraduationCap, Award, CalendarClock,
   Mail, Phone, Briefcase, ShieldCheck, AlertTriangle, Check, X,
   MapPin, Car, FileText, Cake, Trophy, Upload, Download, FolderOpen,
-  Building2, Star,
+  Building2, Star, Sparkles,
 } from "lucide-react";
 
 const NIVEAUS = [
@@ -694,6 +694,9 @@ export default function MedewerkerDetailPagina() {
   const [aanstellingForm, setAanstellingForm] = useState<MedewerkerAanstellingInput>({
     werkmaatschappij: "", functie_id: null, cao: "", contracturen_per_week: null,
   });
+  const [aanstellingAiBezig, setAanstellingAiBezig] = useState(false);
+  const [aanstellingAiVoorstel, setAanstellingAiVoorstel] = useState(false);
+  const [aanstellingAiToelichting, setAanstellingAiToelichting] = useState<string | null>(null);
 
   const [profielOpen, setProfielOpen] = useState(false);
   const [profielForm, setProfielForm] = useState<MedewerkerInput | null>(null);
@@ -798,7 +801,42 @@ export default function MedewerkerDetailPagina() {
       setAanstellingBewerkId(null);
       setAanstellingForm({ werkmaatschappij: "", functie_id: null, cao: "", contracturen_per_week: null });
     }
+    setAanstellingAiVoorstel(false);
+    setAanstellingAiToelichting(null);
     setAanstellingOpen(true);
+  }
+
+  async function vulAanstellingInViaAI() {
+    setAanstellingAiBezig(true);
+    setAanstellingAiToelichting(null);
+    try {
+      const resp = await fetch(`/api/medewerkers/${id}/ai-contract-analyse`, { method: "POST" });
+      const data = await resp.json() as Record<string, unknown>;
+      if (!resp.ok) {
+        toast({ title: (data.error as string) ?? "AI invullen mislukt", variant: "destructive" });
+        return;
+      }
+      const matchFunctie = (functies ?? []).find(
+        (f) => f.naam.toLowerCase() === String(data.functie_naam ?? "").toLowerCase()
+      );
+      setAanstellingForm((prev) => ({
+        werkmaatschappij: typeof data.werkmaatschappij === "string" && data.werkmaatschappij ? data.werkmaatschappij : prev.werkmaatschappij,
+        functie_id: matchFunctie ? matchFunctie.id : prev.functie_id,
+        cao: typeof data.cao === "string" && data.cao ? data.cao : prev.cao,
+        contracturen_per_week: typeof data.contracturen_per_week === "number" ? data.contracturen_per_week : prev.contracturen_per_week,
+      }));
+      setAanstellingAiVoorstel(true);
+      setAanstellingAiToelichting(
+        [
+          typeof data.ai_toelichting === "string" ? data.ai_toelichting : null,
+          matchFunctie == null && data.functie_naam ? `Functie "${data.functie_naam}" niet gevonden in het functiehuis — controleer handmatig.` : null,
+        ].filter(Boolean).join(" ") || null
+      );
+    } catch {
+      toast({ title: "Verbinding mislukt bij AI invullen", variant: "destructive" });
+    } finally {
+      setAanstellingAiBezig(false);
+    }
   }
 
   async function opslaanAanstelling() {
@@ -1095,6 +1133,30 @@ export default function MedewerkerDetailPagina() {
               <div className="text-sm">{medewerker.noodcontact_naam ?? "—"}{medewerker.noodcontact_telefoon ? ` (${medewerker.noodcontact_telefoon})` : ""}</div>
             </div>
           )}
+          {/* Functies / aanstellingen overzicht */}
+          {aanstellingen.length > 0 && (
+            <div className="space-y-1.5 sm:col-span-2 lg:col-span-3 border-t pt-3 mt-1">
+              <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-1.5">
+                <Building2 className="h-3.5 w-3.5" /> Functies
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {aanstellingen.map((a) => (
+                  <div key={a.id} className={`flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-sm ${a.is_hoofd ? "border-amber-200 bg-amber-50" : "bg-muted/40"}`}>
+                    <span className="font-medium">{a.functie_naam ?? "Geen functie"}</span>
+                    <span className="text-muted-foreground text-xs">— {a.werkmaatschappij}</span>
+                    {a.is_hoofd && (
+                      <span className="ml-1 text-[10px] font-semibold text-amber-700 uppercase tracking-wide">Hoofd</span>
+                    )}
+                    {a.cao && <span className="text-muted-foreground text-xs">· {a.cao}</span>}
+                    {a.contracturen_per_week != null && (
+                      <span className="text-muted-foreground text-xs">· {a.contracturen_per_week}u</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {medewerker.opmerkingen && (
             <div className="space-y-1.5 sm:col-span-2 lg:col-span-3">
               <div className="text-xs font-medium text-muted-foreground">Opmerkingen</div>
@@ -1206,8 +1268,32 @@ export default function MedewerkerDetailPagina() {
       <Dialog open={aanstellingOpen} onOpenChange={setAanstellingOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>{aanstellingBewerkId ? "Aanstelling bewerken" : "Aanstelling toevoegen"}</DialogTitle>
-            <DialogDescription>Koppel deze medewerker aan een werkmaatschappij met een functie en CAO.</DialogDescription>
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <DialogTitle>{aanstellingBewerkId ? "Aanstelling bewerken" : "Aanstelling toevoegen"}</DialogTitle>
+                <DialogDescription>Koppel deze medewerker aan een werkmaatschappij met een functie en CAO.</DialogDescription>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="shrink-0 text-xs gap-1.5 border-amber-200 text-amber-700 hover:bg-amber-50"
+                onClick={vulAanstellingInViaAI}
+                disabled={aanstellingAiBezig}
+                title="Leest het meest recente arbeidscontract en vult de velden automatisch in"
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+                {aanstellingAiBezig ? "Bezig…" : "AI invullen"}
+              </Button>
+            </div>
+            {aanstellingAiVoorstel && (
+              <div className="mt-2 rounded-md bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-800 flex items-start gap-1.5">
+                <Sparkles className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                <span>
+                  AI-voorstel ingevuld vanuit het arbeidscontract. Controleer en pas aan waar nodig.
+                  {aanstellingAiToelichting ? ` ${aanstellingAiToelichting}` : ""}
+                </span>
+              </div>
+            )}
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-1.5">

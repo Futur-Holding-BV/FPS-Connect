@@ -3658,6 +3658,111 @@ router.post("/medewerkers/:id/aanstellingen/:aanstellingId/hoofd", schrijven, as
   }
 });
 
+// ─── AI contractanalyse ───────────────────────────────────────────────────────
+router.post("/medewerkers/:id/ai-contract-analyse", schrijven, async (req, res) => {
+  try {
+    const medId = parseId(req.params.id);
+
+    const docs = await db
+      .select()
+      .from(medewerkerDocumentenTable)
+      .where(
+        and(
+          eq(medewerkerDocumentenTable.medewerkerId, medId),
+          inArray(medewerkerDocumentenTable.type, ["contract", "arbeidscontract"]),
+        ),
+      )
+      .orderBy(desc(medewerkerDocumentenTable.aangemaaktOp))
+      .limit(1);
+
+    if (!docs.length) {
+      return res
+        .status(404)
+        .json({ error: "Geen arbeidscontract gevonden. Upload eerst een document van het type 'Arbeidscontract'." });
+    }
+
+    if (!heeftOpenAi()) {
+      return res.status(503).json({ error: "AI is niet beschikbaar. Vul de velden handmatig in." });
+    }
+
+    const doc = docs[0];
+    let tekst = "";
+    try {
+      const storageFile = await hrmStorage.getObjectEntityFile(doc.objectPath);
+      const stream = storageFile.createReadStream();
+      const chunks: Buffer[] = [];
+      for await (const chunk of stream) {
+        chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk as string));
+      }
+      const buf = Buffer.concat(chunks);
+      const isPdf =
+        (doc.contentType ?? "").includes("pdf") ||
+        doc.bestandsnaam.toLowerCase().endsWith(".pdf");
+      if (isPdf) {
+        const parsed = await pdfParse(buf);
+        tekst = parsed.text ?? "";
+      } else {
+        tekst = buf.toString("utf-8");
+      }
+    } catch {
+      return res
+        .status(422)
+        .json({ error: "Contract kon niet worden gelezen. Gebruik een niet-gescand PDF-bestand." });
+    }
+
+    if (!tekst.trim() || tekst.trim().length < 30) {
+      return res
+        .status(422)
+        .json({ error: "Te weinig tekst gevonden. Gebruik een niet-gescand PDF-bestand." });
+    }
+
+    const client = maakOpenAiClient();
+    const prompt = `Analyseer het volgende arbeidscontract en extraheer de gevraagde velden. Antwoord UITSLUITEND met een geldig JSON-object (geen markdown, geen tekst buiten het object).
+
+CONTRACTTEKST:
+${tekst.slice(0, 6000)}
+
+Extraheer exact deze velden (gebruik null als iets ontbreekt of onduidelijk is):
+{
+  "functie_naam": "functietitel zoals vermeld in het contract of null",
+  "werkmaatschappij": "naam van de werkgever/werkmaatschappij of null",
+  "cao": "naam van de van toepassing zijnde CAO of null",
+  "contracturen_per_week": "aantal uur per week als getal (bijv. 40) of null",
+  "dienstverband": "vast | tijdelijk | oproep | stage | inhuur | zzp | uitzend of null",
+  "ai_toelichting": "korte opmerking over de betrouwbaarheid of null (max 1 zin)"
+}`;
+
+    const response = await client.chat.completions.create({
+      model: "gpt-4o",
+      messages: [{ role: "user", content: prompt }],
+      max_tokens: 400,
+      temperature: 0,
+      response_format: { type: "json_object" },
+    });
+
+    let resultaat: Record<string, unknown> = {};
+    try {
+      resultaat = JSON.parse(response.choices[0]?.message?.content ?? "{}");
+    } catch {
+      return res.status(500).json({ error: "AI gaf een ongeldig antwoord. Probeer opnieuw." });
+    }
+
+    const uren = resultaat.contracturen_per_week;
+    return res.json({
+      functie_naam: resultaat.functie_naam ?? null,
+      werkmaatschappij: resultaat.werkmaatschappij ?? null,
+      cao: resultaat.cao ?? null,
+      contracturen_per_week:
+        typeof uren === "number" ? uren : uren != null ? Number(uren) || null : null,
+      dienstverband: resultaat.dienstverband ?? null,
+      ai_toelichting: resultaat.ai_toelichting ?? null,
+    });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
 async function syncHoofdNaarMedewerker(
   medewerkerId: number,
   hoofd: typeof medewerkerAanstellingenTable.$inferSelect,

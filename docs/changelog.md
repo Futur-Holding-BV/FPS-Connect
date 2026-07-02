@@ -10,6 +10,22 @@ Grote roadmap-fases staan ook in `docs/roadmap/gebouwd.md` en `docs/roadmap/acti
 
 ---
 
+## 2026-07-02 — Functies zichtbaar op profielkaart + AI contractanalyse
+
+**Uitvoering:** volledig | **Getest:** typecheck
+
+**Profiel-kaart functies-overzicht:**
+- Alle aanstellingen compact getoond in de profiel-kaart (als chips): functienaam, werkmaatschappij, CAO, contracturen
+- Hoofdaanstelling is amber gemarkeerd met "HOOFD"-label; overige aanstellingen in neutrale stijl
+- Sectie verborgen als er nog geen aanstellingen zijn (empty state)
+
+**AI contractanalyse:**
+- Nieuwe route `POST /medewerkers/:id/ai-contract-analyse`: leest het meest recente document van type `contract`/`arbeidscontract` voor de medewerker uit object storage, parseert de PDF en gebruikt gpt-4o om werkmaatschappij, functie, CAO, contracturen en dienstverband te extraheren
+- Geeft 404 als er geen contract is geüpload; 422 bij niet-leesbare PDF; 503 als OpenAI niet beschikbaar is
+- In het aanstelling-dialoog: "AI invullen"-knop (amber stijl) — extraheert velden en vult het formulier voor; amber AI-voorstel banner met eventuele toelichting; functienaam wordt gematcht op het functiehuis, ontbrekende functie geeft een hint
+
+---
+
 ## 2026-07-02 — Medewerker aanstellingen (multi-werkmaatschappij)
 
 **Uitvoering:** volledig | **Getest:** typecheck + codegen
