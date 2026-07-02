@@ -60,7 +60,7 @@ export default function OneGebouwen() {
       {!isLoading && !isError && actief.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {actief.map((gebouw) => (
-            <Link key={gebouw.id} href={`/gebouwen/${gebouw.id}`}>
+            <Link key={gebouw.id} href={`/one/gebouwen/${gebouw.id}`}>
               <Card className="hover:border-primary/50 hover:shadow-sm transition-all cursor-pointer group">
                 <CardContent className="pt-5 flex items-start gap-4">
                   <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 group-hover:bg-primary/15 transition-colors">

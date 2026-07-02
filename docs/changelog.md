@@ -38,6 +38,41 @@ Diepgaande module-integratieaudit uitgevoerd op de volledige codebase — 83 bac
 
 ---
 
+## 2026-07-02 — Beveiliging: FPS One klant-navigatiegap + wagenpark-meldingen auth (OPDRACHT 1)
+
+**Uitvoering:** volledig | **Getest:** typecheck + build api-server
+
+### Bevindingen per onderzoeksgebied
+
+**Wagenpark-routes:** Alle routes in `wagenpark.ts` hadden al correcte `requireBevoegdheid("wagenpark", 1/2/3/4)` — geen aanpassing nodig.
+
+**Boekhouder-routes:** Alle routes in `boekhouder.ts` hadden al correcte `requireBevoegdheid("boekhouder_portaal", 1/2)` — geen aanpassing nodig.
+
+**Overige routes (vergelijkbaar patroon gevonden):** `wagenpark-meldingen.ts` `POST /meldingen` had geen expliciete auth-middleware; ook was de sessieveld-naam fout (`gebruikerId` i.p.v. `userId`).
+
+**FPS One / KlantPortal:** `pages/one/gebouwen.tsx` linkte rechtstreeks naar `/gebouwen/:id` (de interne Connect-beheerdetailpagina). Klant-rol gebruikers konden via `KlantPortal` ook `/gebouwen/:id` (GebouwDetail, vol beheer) en `/gebouwen/:id/plattegrond/:verdiepingId` (SVG-editor) openen.
+
+### Gewijzigde bestanden
+
+**Backend — `artifacts/api-server/src/routes/wagenpark-meldingen.ts`:**
+- `POST /meldingen`: `requireAuth` toegevoegd als expliciete middleware (naast de al bestaande globale requireAuth in index.ts)
+- Sessieveld gecorrigeerd van `req.session.gebruikerId` naar `req.session["userId"]`
+
+**Frontend — `artifacts/firevault/src/pages/one/gebouwen.tsx`:**
+- Link veranderd van `href="/gebouwen/${gebouw.id}"` naar `href="/one/gebouwen/${gebouw.id}"`
+
+**Frontend — nieuw bestand `artifacts/firevault/src/pages/one/gebouw-detail.tsx`:**
+- Read-only klant-gebouwdetailpagina: naam, adres, spotaantal (via `useGetGebouwSpotsInzicht`), gebouwtype/omschrijving
+- Terug-link adapteert op pathname (`/one/gebouwen` vs `/gebouwen`)
+- Geen management-acties, tabs, interne opmerking, plattegrond-editor of uitvoering-overzicht
+
+**Frontend — `artifacts/firevault/src/App.tsx`:**
+- `ConnectPortal`: route `/one/gebouwen/:id` → `OneGebouwDetail` toegevoegd (vóór `/one/gebouwen`)
+- `KlantPortal`: `/gebouwen/:id` → `GebouwDetail` vervangen door `/gebouwen/:id` → `OneGebouwDetail`
+- `KlantPortal`: route `/gebouwen/:id/plattegrond/:verdiepingId` → `Plattegrond` verwijderd (SVG-editor ongeschikt voor klanten)
+
+---
+
 ## 2026-07-02 — Bugfix: slim-upload overlay blijft hangen bij teruggetrokken drag
 
 **Uitvoering:** volledig | **Getest:** typecheck

@@ -10,7 +10,7 @@ import {
   gebruikersTable,
 } from "@workspace/db";
 import { eq, and, desc } from "drizzle-orm";
-import { requireBevoegdheid } from "../middlewares/auth";
+import { requireBevoegdheid, requireAuth } from "../middlewares/auth";
 import { logger } from "../lib/logger";
 import { ObjectStorageService } from "../lib/objectStorage";
 import { maakOpenAiClient, heeftOpenAi } from "../lib/openai";
@@ -19,8 +19,8 @@ const router = Router();
 const storageService = new ObjectStorageService();
 
 // ── POST /wagenpark/meldingen — monteur maakt melding ───────────────────────
-router.post("/meldingen", async (req, res) => {
-  const gebruikerId = (req.session as { gebruikerId?: number }).gebruikerId;
+router.post("/meldingen", requireAuth, async (req, res) => {
+  const gebruikerId = req.session?.["userId"] as number | undefined;
   if (!gebruikerId) return res.status(401).json({ error: "Niet ingelogd" });
 
   const { type, omschrijving, foto_paden } = req.body as {
