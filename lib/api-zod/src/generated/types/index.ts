@@ -458,6 +458,8 @@ export * from './mijnWerkSpot';
 export * from './modCalcHeader';
 export * from './modCalcHeaderDetail';
 export * from './modCalcHeaderInput';
+export * from './modCalcInkoopItem';
+export * from './modCalcInkoopItemInput';
 export * from './modCalcNormtijd';
 export * from './modCalcNormtijdInput';
 export * from './modCalcRegel';

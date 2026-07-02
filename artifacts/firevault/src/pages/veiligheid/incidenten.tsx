@@ -64,8 +64,9 @@ function TypeBadge({ type }: { type: string }) {
 export default function VeiligheidIncidentenPagina() {
   const { toast } = useToast();
   const qc = useQueryClient();
-  const kanSchrijven = useBevoegdheid("toolbox", 3);
-  const kanVerwijderen = useBevoegdheid("toolbox", 4);
+  const { heeftNiveau } = useBevoegdheid();
+  const kanSchrijven = heeftNiveau("toolbox", 3);
+  const kanVerwijderen = heeftNiveau("toolbox", 4);
 
   const [typeFilter, setTypeFilter] = useState("alle");
   const [statusFilter, setStatusFilter] = useState("alle");
@@ -367,20 +368,20 @@ export default function VeiligheidIncidentenPagina() {
                 </div>
               </div>
 
-              {detailIncident.getuigen.length > 0 && (
+              {(detailIncident.getuigen ?? []).length > 0 && (
                 <div>
                   <p className="font-semibold text-muted-foreground text-xs uppercase tracking-wide mb-1">Getuigen</p>
                   <ul className="list-disc list-inside space-y-0.5">
-                    {detailIncident.getuigen.map((g, i) => <li key={i}>{g}</li>)}
+                    {(detailIncident.getuigen ?? []).map((g, i) => <li key={i}>{g}</li>)}
                   </ul>
                 </div>
               )}
 
-              {detailIncident.genomen_maatregelen.length > 0 && (
+              {(detailIncident.genomen_maatregelen ?? []).length > 0 && (
                 <div>
                   <p className="font-semibold text-muted-foreground text-xs uppercase tracking-wide mb-1">Genomen maatregelen</p>
                   <ul className="list-disc list-inside space-y-0.5">
-                    {detailIncident.genomen_maatregelen.map((m, i) => <li key={i}>{m}</li>)}
+                    {(detailIncident.genomen_maatregelen ?? []).map((m, i) => <li key={i}>{m}</li>)}
                   </ul>
                 </div>
               )}

@@ -12,6 +12,12 @@ import {
   useListModCalcNormtijden,
   useListModCalcTarieven,
   useAiModCalcRegels,
+  useListModCalcInkoopItems,
+  useCreateModCalcInkoopItem,
+  useUpdateModCalcInkoopItem,
+  useDeleteModCalcInkoopItem,
+  getListModCalcInkoopItemsQueryKey,
+  type ModCalcInkoopItem,
 } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -1240,6 +1246,218 @@ function MonteurView({ regels }: { regels: RegelRow[] }) {
   );
 }
 
+// ─── Inkoopregels kaart ───────────────────────────────────────────────────────
+
+const INKOOP_STATUS_LABEL: Record<string, string> = {
+  te_versturen: "Te versturen",
+  verstuurd:    "Verstuurd",
+  ontvangen:    "Ontvangen",
+  akkoord:      "Akkoord",
+};
+const INKOOP_STATUS_KLEUR: Record<string, string> = {
+  te_versturen: "bg-muted text-muted-foreground border-border",
+  verstuurd:    "bg-blue-100 text-blue-800 border-blue-200",
+  ontvangen:    "bg-amber-100 text-amber-800 border-amber-200",
+  akkoord:      "bg-green-100 text-green-800 border-green-200",
+};
+const INKOOP_STATUS_VOLGEND: Record<string, string | null> = {
+  te_versturen: "verstuurd",
+  verstuurd:    "ontvangen",
+  ontvangen:    "akkoord",
+  akkoord:      null,
+};
+const INKOOP_TYPE_LABEL: Record<string, string> = {
+  materiaal:       "Materiaal",
+  onderaanneming:  "Onderaanneming",
+};
+
+type InkoopForm = { type: string; omschrijving: string; leverancier: string; status: string; bedrag: string; notities: string };
+
+function InkoopregelsKaart({
+  items, nieuwOpen, setNieuwOpen, form, setForm, bewerken, setBewerken,
+  onAanmaken, onStatusWijzigen, onOpslaan, onVerwijderen,
+}: {
+  calculatieId: number;
+  items: ModCalcInkoopItem[];
+  nieuwOpen: boolean;
+  setNieuwOpen: (v: boolean) => void;
+  form: InkoopForm;
+  setForm: (fn: (f: InkoopForm) => InkoopForm) => void;
+  bewerken: ModCalcInkoopItem | null;
+  setBewerken: (v: ModCalcInkoopItem | null) => void;
+  onAanmaken: (d: { type: string; omschrijving: string; leverancier?: string; status: string; bedrag?: number; notities?: string }) => void;
+  onStatusWijzigen: (itemId: number, status: string) => void;
+  onOpslaan: (itemId: number, d: { omschrijving?: string; leverancier?: string | null; status?: string; bedrag?: number | null; notities?: string | null }) => void;
+  onVerwijderen: (itemId: number) => void;
+}) {
+  const groepen: { type: string; items: ModCalcInkoopItem[] }[] = [
+    { type: "materiaal",      items: items.filter((i) => i.type === "materiaal") },
+    { type: "onderaanneming", items: items.filter((i) => i.type === "onderaanneming") },
+  ].filter((g) => g.items.length > 0 || nieuwOpen);
+
+  function handleAanmaken() {
+    if (!form.omschrijving.trim()) return;
+    onAanmaken({
+      type: form.type, omschrijving: form.omschrijving.trim(),
+      leverancier: form.leverancier || undefined, status: form.status,
+      bedrag: form.bedrag ? parseFloat(form.bedrag) : undefined,
+      notities: form.notities || undefined,
+    });
+  }
+
+  function handleOpslaan() {
+    if (!bewerken || !form.omschrijving.trim()) return;
+    onOpslaan(bewerken.id, {
+      omschrijving: form.omschrijving.trim(),
+      leverancier: form.leverancier || null,
+      status: form.status,
+      bedrag: form.bedrag ? parseFloat(form.bedrag) : null,
+      notities: form.notities || null,
+    });
+  }
+
+  function openBewerken(item: ModCalcInkoopItem) {
+    setBewerken(item);
+    setForm(() => ({
+      type: item.type, omschrijving: item.omschrijving,
+      leverancier: item.leverancier ?? "",
+      status: item.status,
+      bedrag: item.bedrag != null ? String(item.bedrag) : "",
+      notities: item.notities ?? "",
+    }));
+  }
+
+  const fmt = (v: number) => new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(v);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
+          <Wrench className="h-4 w-4 text-muted-foreground" />
+          Inkoopregels
+          {items.length > 0 && (
+            <span className="text-xs font-normal text-muted-foreground">
+              ({items.filter((i) => i.status === "akkoord").length}/{items.length} akkoord)
+            </span>
+          )}
+        </h2>
+        <Button size="sm" variant="outline" onClick={() => { setNieuwOpen(true); setBewerken(null); setForm(() => ({ type: "materiaal", omschrijving: "", leverancier: "", status: "te_versturen", bedrag: "", notities: "" })); }}>
+          <Plus className="h-3.5 w-3.5 mr-1" />
+          Toevoegen
+        </Button>
+      </div>
+
+      {items.length === 0 && !nieuwOpen && (
+        <p className="text-sm text-muted-foreground py-2">Nog geen inkoopregels. Voeg offerteaanvragen voor materialen of onderaannemers toe.</p>
+      )}
+
+      {groepen.map(({ type, items: groepItems }) => (
+        <div key={type} className="space-y-1">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{INKOOP_TYPE_LABEL[type] ?? type}</p>
+          <div className="border rounded-md divide-y">
+            {groepItems.map((item) => (
+              bewerken?.id === item.id ? (
+                <div key={item.id} className="p-3 space-y-2 bg-muted/30">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="col-span-2 space-y-1">
+                      <Label className="text-xs">Omschrijving</Label>
+                      <Input value={form.omschrijving} onChange={(e) => setForm((f) => ({ ...f, omschrijving: e.target.value }))} className="h-8 text-sm" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Leverancier</Label>
+                      <Input value={form.leverancier} onChange={(e) => setForm((f) => ({ ...f, leverancier: e.target.value }))} className="h-8 text-sm" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Bedrag (excl. BTW)</Label>
+                      <Input type="number" value={form.bedrag} onChange={(e) => setForm((f) => ({ ...f, bedrag: e.target.value }))} className="h-8 text-sm" placeholder="0" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Status</Label>
+                      <Select value={form.status} onValueChange={(v) => setForm((f) => ({ ...f, status: v }))}>
+                        <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {Object.entries(INKOOP_STATUS_LABEL).map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button size="sm" onClick={handleOpslaan}>Opslaan</Button>
+                    <Button size="sm" variant="outline" onClick={() => setBewerken(null)}>Annuleren</Button>
+                  </div>
+                </div>
+              ) : (
+                <div key={item.id} className="flex items-center gap-3 px-3 py-2.5 hover:bg-muted/30">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm font-medium truncate">{item.omschrijving}</span>
+                      {item.leverancier && <span className="text-xs text-muted-foreground">{item.leverancier}</span>}
+                      {item.bedrag != null && <span className="text-xs text-muted-foreground tabular-nums">{fmt(item.bedrag)}</span>}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <Badge
+                      variant="outline"
+                      className={`text-xs border cursor-pointer select-none ${INKOOP_STATUS_KLEUR[item.status] ?? ""}`}
+                      onClick={() => {
+                        const volgend = INKOOP_STATUS_VOLGEND[item.status];
+                        if (volgend) onStatusWijzigen(item.id, volgend);
+                      }}
+                      title={INKOOP_STATUS_VOLGEND[item.status] ? `Klik om naar "${INKOOP_STATUS_LABEL[INKOOP_STATUS_VOLGEND[item.status]!]}" te zetten` : undefined}
+                    >
+                      {INKOOP_STATUS_LABEL[item.status] ?? item.status}
+                    </Badge>
+                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => openBewerken(item)}>
+                      <Pencil className="h-3 w-3" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => onVerwijderen(item.id)}>
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </div>
+              )
+            ))}
+          </div>
+        </div>
+      ))}
+
+      {nieuwOpen && (
+        <div className="border rounded-md p-3 space-y-3 bg-muted/20">
+          <p className="text-xs font-semibold text-muted-foreground">Nieuw inkoopitem</p>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-1">
+              <Label className="text-xs">Type</Label>
+              <Select value={form.type} onValueChange={(v) => setForm((f) => ({ ...f, type: v }))}>
+                <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="materiaal">Materiaal</SelectItem>
+                  <SelectItem value="onderaanneming">Onderaanneming</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="col-span-2 space-y-1">
+              <Label className="text-xs">Omschrijving</Label>
+              <Input value={form.omschrijving} onChange={(e) => setForm((f) => ({ ...f, omschrijving: e.target.value }))} className="h-8 text-sm" placeholder="Bijv. Brandwerende beplating leverancier X" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Leverancier / onderaannemer</Label>
+              <Input value={form.leverancier} onChange={(e) => setForm((f) => ({ ...f, leverancier: e.target.value }))} className="h-8 text-sm" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Bedrag (excl. BTW)</Label>
+              <Input type="number" value={form.bedrag} onChange={(e) => setForm((f) => ({ ...f, bedrag: e.target.value }))} className="h-8 text-sm" placeholder="0" />
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <Button size="sm" onClick={handleAanmaken} disabled={!form.omschrijving.trim()}>Toevoegen</Button>
+            <Button size="sm" variant="outline" onClick={() => setNieuwOpen(false)}>Annuleren</Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Hoofdcomponent ──────────────────────────────────────────────────────────
 
 export default function ModulesCalculatieDetail() {
@@ -1258,6 +1476,10 @@ export default function ModulesCalculatieDetail() {
   });
   const { data: normtijden = [] } = useListModCalcNormtijden({ query: { queryKey: ["mod-calc-normtijden"] } });
   const { data: tarieven = [] } = useListModCalcTarieven({ query: { queryKey: ["mod-calc-tarieven"] } });
+  const { data: inkoopItems = [] } = useListModCalcInkoopItems(id, { query: { queryKey: getListModCalcInkoopItemsQueryKey(id), enabled: id > 0 } });
+  const maakInkoopItemMut    = useCreateModCalcInkoopItem();
+  const updateInkoopItemMut  = useUpdateModCalcInkoopItem();
+  const verwijderInkoopItemMut = useDeleteModCalcInkoopItem();
 
   const updateMut   = useUpdateModCalculatie({ mutation: { onSuccess: invalidate } });
   const deleteMut   = useDeleteModCalculatie({ mutation: { onSuccess: () => navigate("/modules/calculatie") } });
@@ -1318,6 +1540,9 @@ export default function ModulesCalculatieDetail() {
   const [versieOpslaanDialoog, setVersieOpslaanDialoog] = useState(false);
   const [versieLabel, setVersieLabel]           = useState("");
   const [versieOpslaanBezig, setVersieOpslaanBezig] = useState(false);
+  const [inkoopNieuwOpen, setInkoopNieuwOpen] = useState(false);
+  const [inkoopForm, setInkoopForm] = useState({ type: "materiaal", omschrijving: "", leverancier: "", status: "te_versturen", bedrag: "", notities: "" });
+  const [inkoopBewerken, setInkoopBewerken] = useState<ModCalcInkoopItem | null>(null);
 
   // Nieuw rij invoerrij (null = verborgen)
   const [nieuwDraft, setNieuwDraft] = useState<LocalDraft | null>(null);
@@ -2053,6 +2278,36 @@ export default function ModulesCalculatieDetail() {
             </div>
           )}
         </div>
+      </div>
+
+      {/* ── Inkoopregels ────────────────────────────────────────────────────── */}
+      <div className="px-6 py-4 border-t">
+        <InkoopregelsKaart
+          calculatieId={id}
+          items={inkoopItems as ModCalcInkoopItem[]}
+          nieuwOpen={inkoopNieuwOpen}
+          setNieuwOpen={setInkoopNieuwOpen}
+          form={inkoopForm}
+          setForm={setInkoopForm}
+          bewerken={inkoopBewerken}
+          setBewerken={setInkoopBewerken}
+          onAanmaken={(d) => maakInkoopItemMut.mutate(
+            { id, data: d },
+            { onSuccess: () => { queryClient.invalidateQueries({ queryKey: getListModCalcInkoopItemsQueryKey(id) }); setInkoopNieuwOpen(false); setInkoopForm({ type: "materiaal", omschrijving: "", leverancier: "", status: "te_versturen", bedrag: "", notities: "" }); } }
+          )}
+          onStatusWijzigen={(itemId, status) => updateInkoopItemMut.mutate(
+            { id, itemId, data: { status } },
+            { onSuccess: () => queryClient.invalidateQueries({ queryKey: getListModCalcInkoopItemsQueryKey(id) }) }
+          )}
+          onOpslaan={(itemId, d) => updateInkoopItemMut.mutate(
+            { id, itemId, data: d },
+            { onSuccess: () => { queryClient.invalidateQueries({ queryKey: getListModCalcInkoopItemsQueryKey(id) }); setInkoopBewerken(null); } }
+          )}
+          onVerwijderen={(itemId) => verwijderInkoopItemMut.mutate(
+            { id, itemId },
+            { onSuccess: () => queryClient.invalidateQueries({ queryKey: getListModCalcInkoopItemsQueryKey(id) }) }
+          )}
+        />
       </div>
 
       {/* ── Dialogen ─────────────────────────────────────────────────────────── */}

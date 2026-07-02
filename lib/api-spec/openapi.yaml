@@ -11023,6 +11023,98 @@ paths:
         '404':
           description: Calculatie niet gevonden
 
+  /modules/calculaties/{id}/inkoop-items:
+    get:
+      operationId: listModCalcInkoopItems
+      summary: Inkoopitems van een calculatie ophalen
+      tags: [CalulatieModule]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ModCalcInkoopItem'
+    post:
+      operationId: createModCalcInkoopItem
+      summary: Inkoopitem aanmaken
+      tags: [CalulatieModule]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModCalcInkoopItemInput'
+      responses:
+        '201':
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModCalcInkoopItem'
+
+  /modules/calculaties/{id}/inkoop-items/{itemId}:
+    patch:
+      operationId: updateModCalcInkoopItem
+      summary: Inkoopitem bijwerken
+      tags: [CalulatieModule]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: itemId
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModCalcInkoopItemInput'
+      responses:
+        '200':
+          description: Bijgewerkt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModCalcInkoopItem'
+    delete:
+      operationId: deleteModCalcInkoopItem
+      summary: Inkoopitem verwijderen
+      tags: [CalulatieModule]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: itemId
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Verwijderd
+
   /uren:
     get:
       operationId: listUren
@@ -25440,6 +25532,67 @@ components:
           type: string
           nullable: true
         toepassing_tekst:
+          type: string
+          nullable: true
+
+    ModCalcInkoopItem:
+      type: object
+      required: [id, calculatie_id, type, omschrijving, status, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id:
+          type: integer
+        calculatie_id:
+          type: integer
+        type:
+          type: string
+          description: 'materiaal | onderaanneming'
+        omschrijving:
+          type: string
+        leverancier:
+          type: string
+          nullable: true
+        status:
+          type: string
+          description: 'te_versturen | verstuurd | ontvangen | akkoord'
+        datum_verstuurd:
+          type: string
+          nullable: true
+        datum_ontvangen:
+          type: string
+          nullable: true
+        bedrag:
+          type: number
+          nullable: true
+        notities:
+          type: string
+          nullable: true
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+
+    ModCalcInkoopItemInput:
+      type: object
+      properties:
+        type:
+          type: string
+        omschrijving:
+          type: string
+        leverancier:
+          type: string
+          nullable: true
+        status:
+          type: string
+        datum_verstuurd:
+          type: string
+          nullable: true
+        datum_ontvangen:
+          type: string
+          nullable: true
+        bedrag:
+          type: number
+          nullable: true
+        notities:
           type: string
           nullable: true
 

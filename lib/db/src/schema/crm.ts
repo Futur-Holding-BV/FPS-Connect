@@ -24,7 +24,7 @@ export const FPS_BEDRIJVEN = ["FPS Bouw", "FPS Brandpreventie", "FPS Onderhoud"]
 export const BESLISROLLEN = ["beslisser", "beinvloeder", "inkoper", "technisch_adviseur", "projectmanager", "onbekend"] as const;
 export const RELATIE_STERKTES = ["onbekend", "zwak", "normaal", "sterk"] as const;
 export const KANS_TYPES = ["opname", "calculatie", "offerte", "onderhoudscontract", "brandpreventie", "bouwkundig_herstel", "rga", "droge_blusleiding"] as const;
-export const KANS_FASEN = ["signaal", "eerste_contact", "afspraak", "calculatie", "offerte", "onderhandeling", "gewonnen", "verloren"] as const;
+export const KANS_FASEN = ["signaal", "eerste_contact", "afspraak", "opname", "calculatie", "offerte", "onderhandeling", "gewonnen", "verloren"] as const;
 
 export const crmKlantenTable = pgTable("crm_klanten", {
   id: serial("id").primaryKey(),

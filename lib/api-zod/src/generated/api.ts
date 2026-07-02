@@ -13670,6 +13670,97 @@ export const AiModCalcRegelsResponse = zod.object({
 
 
 /**
+ * @summary Inkoopitems van een calculatie ophalen
+ */
+export const ListModCalcInkoopItemsParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListModCalcInkoopItemsResponseItem = zod.object({
+  "id": zod.number(),
+  "calculatie_id": zod.number(),
+  "type": zod.string().describe('materiaal | onderaanneming'),
+  "omschrijving": zod.string(),
+  "leverancier": zod.string().nullish(),
+  "status": zod.string().describe('te_versturen | verstuurd | ontvangen | akkoord'),
+  "datum_verstuurd": zod.string().nullish(),
+  "datum_ontvangen": zod.string().nullish(),
+  "bedrag": zod.number().nullish(),
+  "notities": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+export const ListModCalcInkoopItemsResponse = zod.array(ListModCalcInkoopItemsResponseItem)
+
+
+/**
+ * @summary Inkoopitem aanmaken
+ */
+export const CreateModCalcInkoopItemParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const CreateModCalcInkoopItemBody = zod.object({
+  "type": zod.string().optional(),
+  "omschrijving": zod.string().optional(),
+  "leverancier": zod.string().nullish(),
+  "status": zod.string().optional(),
+  "datum_verstuurd": zod.string().nullish(),
+  "datum_ontvangen": zod.string().nullish(),
+  "bedrag": zod.number().nullish(),
+  "notities": zod.string().nullish()
+})
+
+export const CreateModCalcInkoopItemResponse = zod.void()
+
+
+/**
+ * @summary Inkoopitem bijwerken
+ */
+export const UpdateModCalcInkoopItemParams = zod.object({
+  "id": zod.coerce.number(),
+  "itemId": zod.coerce.number()
+})
+
+export const UpdateModCalcInkoopItemBody = zod.object({
+  "type": zod.string().optional(),
+  "omschrijving": zod.string().optional(),
+  "leverancier": zod.string().nullish(),
+  "status": zod.string().optional(),
+  "datum_verstuurd": zod.string().nullish(),
+  "datum_ontvangen": zod.string().nullish(),
+  "bedrag": zod.number().nullish(),
+  "notities": zod.string().nullish()
+})
+
+export const UpdateModCalcInkoopItemResponse = zod.object({
+  "id": zod.number(),
+  "calculatie_id": zod.number(),
+  "type": zod.string().describe('materiaal | onderaanneming'),
+  "omschrijving": zod.string(),
+  "leverancier": zod.string().nullish(),
+  "status": zod.string().describe('te_versturen | verstuurd | ontvangen | akkoord'),
+  "datum_verstuurd": zod.string().nullish(),
+  "datum_ontvangen": zod.string().nullish(),
+  "bedrag": zod.number().nullish(),
+  "notities": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Inkoopitem verwijderen
+ */
+export const DeleteModCalcInkoopItemParams = zod.object({
+  "id": zod.coerce.number(),
+  "itemId": zod.coerce.number()
+})
+
+export const DeleteModCalcInkoopItemResponse = zod.void()
+
+
+/**
  * @summary Lijst urenregistraties
  */
 export const ListUrenQueryParams = zod.object({

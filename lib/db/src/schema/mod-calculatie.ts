@@ -113,3 +113,19 @@ export const modCalcVersiesTable = pgTable("mod_calc_versies", {
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
   aangemaaktDoorId: integer("aangemaakt_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
 });
+
+// Calculatie inkoopitems — offerteaanvragen bij leveranciers/onderaannemers tijdens de calculatiefase
+export const modCalcInkoopItemsTable = pgTable("mod_calc_inkoop_items", {
+  id:                serial("id").primaryKey(),
+  calculatieId:      integer("calculatie_id").notNull().references(() => modCalcHeadersTable.id, { onDelete: "cascade" }),
+  type:              text("type").notNull().default("materiaal"),    // materiaal | onderaanneming
+  omschrijving:      text("omschrijving").notNull(),
+  leverancier:       text("leverancier"),
+  status:            text("status").notNull().default("te_versturen"), // te_versturen | verstuurd | ontvangen | akkoord
+  datumVerstuurd:    text("datum_verstuurd"),
+  datumOntvangen:    text("datum_ontvangen"),
+  bedrag:            real("bedrag"),
+  notities:          text("notities"),
+  aangemaaktOp:      timestamp("aangemaakt_op").notNull().defaultNow(),
+  bijgewerktOp:      timestamp("bijgewerkt_op").notNull().defaultNow(),
+});

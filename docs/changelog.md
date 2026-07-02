@@ -10,6 +10,42 @@ Grote roadmap-fases staan ook in `docs/roadmap/gebouwd.md` en `docs/roadmap/acti
 
 ---
 
+## 2026-07-02 — Opname-fase CRM + Calculatie inkoopregels
+
+**Uitvoering:** volledig | **Getest:** typecheck
+
+**CRM kansen pijplijn:**
+- `KANS_FASEN` const uitgebreid met `"opname"` (tussen `afspraak` en `calculatie`) in `lib/db/src/schema/crm.ts`
+- Frontend `projectkansen.tsx`: `opname`-fase toegevoegd aan `FASEN` (teal kleur) en aan `openKansen` lijst (zodat actief-filter hem meeneemt)
+
+**DB schema:**
+- `lib/db/src/schema/mod-calculatie.ts`: `modCalcInkoopItemsTable` toegevoegd — calculatie_id FK, type (materiaal|onderaanneming), omschrijving, leverancier, status (te_versturen|verstuurd|ontvangen|akkoord), datum_verstuurd, datum_ontvangen, bedrag, notities
+- SQL `CREATE TABLE mod_calc_inkoop_items` rechtstreeks uitgevoerd
+
+**OpenAPI + codegen:**
+- 2 nieuwe schemas: `ModCalcInkoopItem`, `ModCalcInkoopItemInput`
+- 4 endpoints: `GET/POST /modules/calculaties/{id}/inkoop-items`, `PATCH/DELETE /modules/calculaties/{id}/inkoop-items/{itemId}`
+- Codegen uitgevoerd; `typecheck:libs` geslaagd
+
+**Backend routes (`mod-calculatie.ts`):**
+- `GET /modules/calculaties/:id/inkoop-items` — lijst ophalen
+- `POST /modules/calculaties/:id/inkoop-items` — aanmaken
+- `PATCH /modules/calculaties/:id/inkoop-items/:itemId` — bijwerken (incl. status vooruitschuiven)
+- `DELETE /modules/calculaties/:id/inkoop-items/:itemId` — verwijderen
+
+**Frontend:**
+- `InkoopregelsKaart` component toegevoegd aan `detail.tsx` (calculatie)
+- Sectie gegroepeerd per type (Materiaal / Onderaanneming)
+- Badge klikbaar om status vooruit te schuiven (te_versturen → verstuurd → ontvangen → akkoord)
+- Inline bewerken per regel; nieuw-item formulier onderaan
+- Teller in koptekst: "X/Y akkoord"
+
+**Bugfixes:**
+- `incidenten.tsx`: `useBevoegdheid` correct aangeroepen via `heeftNiveau()` i.p.v. direct als hook
+- `incidenten.tsx`: optional chaining toegevoegd op `getuigen` en `genomen_maatregelen`
+
+---
+
 ## 2026-07-02 — Incidenten module (bijna-ongevallen & arbeidsongevallen)
 
 **Uitvoering:** volledig | **Getest:** typecheck

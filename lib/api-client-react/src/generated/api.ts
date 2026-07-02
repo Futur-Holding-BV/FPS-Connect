@@ -378,6 +378,8 @@ import type {
   ModCalcHeader,
   ModCalcHeaderDetail,
   ModCalcHeaderInput,
+  ModCalcInkoopItem,
+  ModCalcInkoopItemInput,
   ModCalcNormtijd,
   ModCalcNormtijdInput,
   ModCalcRegel,
@@ -39167,6 +39169,299 @@ export const useAiModCalcRegels = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getAiModCalcRegelsMutationOptions(options));
+    }
+
+export const getListModCalcInkoopItemsUrl = (id: number,) => {
+
+
+
+
+  return `/api/modules/calculaties/${id}/inkoop-items`
+}
+
+/**
+ * @summary Inkoopitems van een calculatie ophalen
+ */
+export const listModCalcInkoopItems = async (id: number, options?: RequestInit): Promise<ModCalcInkoopItem[]> => {
+
+  return customFetch<ModCalcInkoopItem[]>(getListModCalcInkoopItemsUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListModCalcInkoopItemsQueryKey = (id: number,) => {
+    return [
+    `/api/modules/calculaties/${id}/inkoop-items`
+    ] as const;
+    }
+
+
+export const getListModCalcInkoopItemsQueryOptions = <TData = Awaited<ReturnType<typeof listModCalcInkoopItems>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listModCalcInkoopItems>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListModCalcInkoopItemsQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listModCalcInkoopItems>>> = ({ signal }) => listModCalcInkoopItems(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listModCalcInkoopItems>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListModCalcInkoopItemsQueryResult = NonNullable<Awaited<ReturnType<typeof listModCalcInkoopItems>>>
+export type ListModCalcInkoopItemsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Inkoopitems van een calculatie ophalen
+ */
+
+export function useListModCalcInkoopItems<TData = Awaited<ReturnType<typeof listModCalcInkoopItems>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listModCalcInkoopItems>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListModCalcInkoopItemsQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateModCalcInkoopItemUrl = (id: number,) => {
+
+
+
+
+  return `/api/modules/calculaties/${id}/inkoop-items`
+}
+
+/**
+ * @summary Inkoopitem aanmaken
+ */
+export const createModCalcInkoopItem = async (id: number,
+    modCalcInkoopItemInput: ModCalcInkoopItemInput, options?: RequestInit): Promise<ModCalcInkoopItem> => {
+
+  return customFetch<ModCalcInkoopItem>(getCreateModCalcInkoopItemUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(modCalcInkoopItemInput)
+  }
+);}
+
+
+
+
+export const getCreateModCalcInkoopItemMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createModCalcInkoopItem>>, TError,{id: number;data: BodyType<ModCalcInkoopItemInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createModCalcInkoopItem>>, TError,{id: number;data: BodyType<ModCalcInkoopItemInput>}, TContext> => {
+
+const mutationKey = ['createModCalcInkoopItem'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createModCalcInkoopItem>>, {id: number;data: BodyType<ModCalcInkoopItemInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  createModCalcInkoopItem(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateModCalcInkoopItemMutationResult = NonNullable<Awaited<ReturnType<typeof createModCalcInkoopItem>>>
+    export type CreateModCalcInkoopItemMutationBody = BodyType<ModCalcInkoopItemInput>
+    export type CreateModCalcInkoopItemMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Inkoopitem aanmaken
+ */
+export const useCreateModCalcInkoopItem = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createModCalcInkoopItem>>, TError,{id: number;data: BodyType<ModCalcInkoopItemInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createModCalcInkoopItem>>,
+        TError,
+        {id: number;data: BodyType<ModCalcInkoopItemInput>},
+        TContext
+      > => {
+      return useMutation(getCreateModCalcInkoopItemMutationOptions(options));
+    }
+
+export const getUpdateModCalcInkoopItemUrl = (id: number,
+    itemId: number,) => {
+
+
+
+
+  return `/api/modules/calculaties/${id}/inkoop-items/${itemId}`
+}
+
+/**
+ * @summary Inkoopitem bijwerken
+ */
+export const updateModCalcInkoopItem = async (id: number,
+    itemId: number,
+    modCalcInkoopItemInput: ModCalcInkoopItemInput, options?: RequestInit): Promise<ModCalcInkoopItem> => {
+
+  return customFetch<ModCalcInkoopItem>(getUpdateModCalcInkoopItemUrl(id,itemId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(modCalcInkoopItemInput)
+  }
+);}
+
+
+
+
+export const getUpdateModCalcInkoopItemMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateModCalcInkoopItem>>, TError,{id: number;itemId: number;data: BodyType<ModCalcInkoopItemInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateModCalcInkoopItem>>, TError,{id: number;itemId: number;data: BodyType<ModCalcInkoopItemInput>}, TContext> => {
+
+const mutationKey = ['updateModCalcInkoopItem'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateModCalcInkoopItem>>, {id: number;itemId: number;data: BodyType<ModCalcInkoopItemInput>}> = (props) => {
+          const {id,itemId,data} = props ?? {};
+
+          return  updateModCalcInkoopItem(id,itemId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateModCalcInkoopItemMutationResult = NonNullable<Awaited<ReturnType<typeof updateModCalcInkoopItem>>>
+    export type UpdateModCalcInkoopItemMutationBody = BodyType<ModCalcInkoopItemInput>
+    export type UpdateModCalcInkoopItemMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Inkoopitem bijwerken
+ */
+export const useUpdateModCalcInkoopItem = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateModCalcInkoopItem>>, TError,{id: number;itemId: number;data: BodyType<ModCalcInkoopItemInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateModCalcInkoopItem>>,
+        TError,
+        {id: number;itemId: number;data: BodyType<ModCalcInkoopItemInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateModCalcInkoopItemMutationOptions(options));
+    }
+
+export const getDeleteModCalcInkoopItemUrl = (id: number,
+    itemId: number,) => {
+
+
+
+
+  return `/api/modules/calculaties/${id}/inkoop-items/${itemId}`
+}
+
+/**
+ * @summary Inkoopitem verwijderen
+ */
+export const deleteModCalcInkoopItem = async (id: number,
+    itemId: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteModCalcInkoopItemUrl(id,itemId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteModCalcInkoopItemMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteModCalcInkoopItem>>, TError,{id: number;itemId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteModCalcInkoopItem>>, TError,{id: number;itemId: number}, TContext> => {
+
+const mutationKey = ['deleteModCalcInkoopItem'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteModCalcInkoopItem>>, {id: number;itemId: number}> = (props) => {
+          const {id,itemId} = props ?? {};
+
+          return  deleteModCalcInkoopItem(id,itemId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteModCalcInkoopItemMutationResult = NonNullable<Awaited<ReturnType<typeof deleteModCalcInkoopItem>>>
+
+    export type DeleteModCalcInkoopItemMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Inkoopitem verwijderen
+ */
+export const useDeleteModCalcInkoopItem = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteModCalcInkoopItem>>, TError,{id: number;itemId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteModCalcInkoopItem>>,
+        TError,
+        {id: number;itemId: number},
+        TContext
+      > => {
+      return useMutation(getDeleteModCalcInkoopItemMutationOptions(options));
     }
 
 export const getListUrenUrl = (params?: ListUrenParams,) => {

@@ -5852,6 +5852,34 @@ export interface ModCalcRegelInput {
   toepassing_tekst?: string | null;
 }
 
+export interface ModCalcInkoopItem {
+  id: number;
+  calculatie_id: number;
+  /** materiaal | onderaanneming */
+  type: string;
+  omschrijving: string;
+  leverancier?: string | null;
+  /** te_versturen | verstuurd | ontvangen | akkoord */
+  status: string;
+  datum_verstuurd?: string | null;
+  datum_ontvangen?: string | null;
+  bedrag?: number | null;
+  notities?: string | null;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export interface ModCalcInkoopItemInput {
+  type?: string;
+  omschrijving?: string;
+  leverancier?: string | null;
+  status?: string;
+  datum_verstuurd?: string | null;
+  datum_ontvangen?: string | null;
+  bedrag?: number | null;
+  notities?: string | null;
+}
+
 export interface UrenRegistratie {
   id: number;
   datum: string;

@@ -10,6 +10,7 @@ import {
   modCalcLeveranciersTable,
   modCalcArtekelenTable,
   modCalcVersiesTable,
+  modCalcInkoopItemsTable,
   gebouwenTable,
   gebruikersTable,
   voorzieningenTable,
@@ -1331,6 +1332,119 @@ router.get("/modules/calculaties/:id/print-data", lezenCalc, async (req, res) =>
         excl_btw: eindtotaal, incl_btw: Math.round(eindtotaal * 1.21 * 100) / 100,
       },
     });
+  } catch (e) {
+    req.log.error(e);
+    res.status(500).json({ error: "Interne fout" });
+  }
+});
+
+// ── Calculatie inkoopitems (offertes materialen / onderaannemers) ────────────
+
+router.get("/modules/calculaties/:id/inkoop-items", lezenCalc, async (req, res) => {
+  try {
+    const id = parseId(req.params["id"]);
+    const items = await db
+      .select()
+      .from(modCalcInkoopItemsTable)
+      .where(eq(modCalcInkoopItemsTable.calculatieId, id))
+      .orderBy(asc(modCalcInkoopItemsTable.aangemaaktOp));
+    res.json(items.map((i) => ({
+      id: i.id,
+      calculatie_id: i.calculatieId,
+      type: i.type,
+      omschrijving: i.omschrijving,
+      leverancier: i.leverancier,
+      status: i.status,
+      datum_verstuurd: i.datumVerstuurd,
+      datum_ontvangen: i.datumOntvangen,
+      bedrag: i.bedrag,
+      notities: i.notities,
+      aangemaakt_op: iso(i.aangemaaktOp),
+      bijgewerkt_op: iso(i.bijgewerktOp),
+    })));
+  } catch (e) {
+    req.log.error(e);
+    res.status(500).json({ error: "Interne fout" });
+  }
+});
+
+router.post("/modules/calculaties/:id/inkoop-items", schrijvenCalc, async (req, res) => {
+  try {
+    const id = parseId(req.params["id"]);
+    const [calc] = await db.select({ id: modCalcHeadersTable.id }).from(modCalcHeadersTable).where(eq(modCalcHeadersTable.id, id));
+    if (!calc) return res.status(404).json({ error: "Calculatie niet gevonden" });
+    const body = req.body as {
+      type?: string; omschrijving: string; leverancier?: string;
+      status?: string; datum_verstuurd?: string; datum_ontvangen?: string;
+      bedrag?: number; notities?: string;
+    };
+    if (!body.omschrijving?.trim()) return res.status(422).json({ error: "Omschrijving is verplicht" });
+    const [item] = await db.insert(modCalcInkoopItemsTable).values({
+      calculatieId: id,
+      type: body.type ?? "materiaal",
+      omschrijving: body.omschrijving.trim(),
+      leverancier: body.leverancier ?? null,
+      status: body.status ?? "te_versturen",
+      datumVerstuurd: body.datum_verstuurd ?? null,
+      datumOntvangen: body.datum_ontvangen ?? null,
+      bedrag: body.bedrag ?? null,
+      notities: body.notities ?? null,
+    }).returning();
+    res.status(201).json({
+      id: item.id, calculatie_id: item.calculatieId, type: item.type,
+      omschrijving: item.omschrijving, leverancier: item.leverancier,
+      status: item.status, datum_verstuurd: item.datumVerstuurd,
+      datum_ontvangen: item.datumOntvangen, bedrag: item.bedrag,
+      notities: item.notities, aangemaakt_op: iso(item.aangemaaktOp),
+      bijgewerkt_op: iso(item.bijgewerktOp),
+    });
+  } catch (e) {
+    req.log.error(e);
+    res.status(500).json({ error: "Interne fout" });
+  }
+});
+
+router.patch("/modules/calculaties/:id/inkoop-items/:itemId", schrijvenCalc, async (req, res) => {
+  try {
+    const itemId = parseId(req.params["itemId"]);
+    const body = req.body as Partial<{
+      type: string; omschrijving: string; leverancier: string | null;
+      status: string; datum_verstuurd: string | null; datum_ontvangen: string | null;
+      bedrag: number | null; notities: string | null;
+    }>;
+    const upd: Record<string, unknown> = { bijgewerktOp: new Date() };
+    if (body.type !== undefined) upd["type"] = body.type;
+    if (body.omschrijving !== undefined) upd["omschrijving"] = body.omschrijving;
+    if (body.leverancier !== undefined) upd["leverancier"] = body.leverancier;
+    if (body.status !== undefined) upd["status"] = body.status;
+    if (body.datum_verstuurd !== undefined) upd["datumVerstuurd"] = body.datum_verstuurd;
+    if (body.datum_ontvangen !== undefined) upd["datumOntvangen"] = body.datum_ontvangen;
+    if (body.bedrag !== undefined) upd["bedrag"] = body.bedrag;
+    if (body.notities !== undefined) upd["notities"] = body.notities;
+    const [item] = await db.update(modCalcInkoopItemsTable)
+      .set(upd)
+      .where(eq(modCalcInkoopItemsTable.id, itemId))
+      .returning();
+    if (!item) return res.status(404).json({ error: "Item niet gevonden" });
+    res.json({
+      id: item.id, calculatie_id: item.calculatieId, type: item.type,
+      omschrijving: item.omschrijving, leverancier: item.leverancier,
+      status: item.status, datum_verstuurd: item.datumVerstuurd,
+      datum_ontvangen: item.datumOntvangen, bedrag: item.bedrag,
+      notities: item.notities, aangemaakt_op: iso(item.aangemaaktOp),
+      bijgewerkt_op: iso(item.bijgewerktOp),
+    });
+  } catch (e) {
+    req.log.error(e);
+    res.status(500).json({ error: "Interne fout" });
+  }
+});
+
+router.delete("/modules/calculaties/:id/inkoop-items/:itemId", schrijvenCalc, async (req, res) => {
+  try {
+    const itemId = parseId(req.params["itemId"]);
+    await db.delete(modCalcInkoopItemsTable).where(eq(modCalcInkoopItemsTable.id, itemId));
+    res.status(204).end();
   } catch (e) {
     req.log.error(e);
     res.status(500).json({ error: "Interne fout" });

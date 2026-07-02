@@ -28,6 +28,7 @@ const FASEN = [
   { value: "signaal", label: "Signaal", kleur: "bg-slate-100 text-slate-700 border-slate-200" },
   { value: "eerste_contact", label: "Eerste contact", kleur: "bg-blue-100 text-blue-700 border-blue-200" },
   { value: "afspraak", label: "Afspraak", kleur: "bg-purple-100 text-purple-700 border-purple-200" },
+  { value: "opname", label: "Opname", kleur: "bg-teal-100 text-teal-700 border-teal-200" },
   { value: "calculatie", label: "Calculatie", kleur: "bg-yellow-100 text-yellow-700 border-yellow-200" },
   { value: "offerte", label: "Offerte", kleur: "bg-orange-100 text-orange-700 border-orange-200" },
   { value: "onderhandeling", label: "Onderhandeling", kleur: "bg-red-100 text-red-700 border-red-200" },
@@ -64,7 +65,7 @@ export default function ProjectkansenPagina() {
 
   const orgMap = new Map((orgs as CrmOrganisatie[]).map((o) => [o.id, o.naam]));
 
-  const openKansen = ["signaal", "eerste_contact", "afspraak", "calculatie", "offerte", "onderhandeling"];
+  const openKansen = ["signaal", "eerste_contact", "afspraak", "opname", "calculatie", "offerte", "onderhandeling"];
   const gefilterd = faseFilter === "actief"
     ? kansen.filter((k) => openKansen.includes(k.fase ?? ""))
     : faseFilter === "alle" ? kansen : kansen.filter((k) => k.fase === faseFilter);
