@@ -9,4 +9,5 @@
 export type MagazijnStellingsscanGoedkeuringInputArtikelenItem = {
   artikel_id: number;
   hoeveelheid: number;
+  locatie_id?: number;
 };

@@ -1146,11 +1146,14 @@ type StellingsscanSuggestie = {
 function mapStellingsscan(row: typeof magazijnStellingscansTable.$inferSelect) {
   return {
     id: row.id,
+    scan_type: row.scanType,
     foto_pad: row.fotoPad,
     locatie_id: row.locatieId,
     status: row.status,
     aangemaakt_op: row.aangemaaktOp?.toISOString() ?? new Date().toISOString(),
     goedgekeurd_op: row.goedgekeurdOp?.toISOString() ?? null,
+    retour_project_id: row.retourProjectId ?? null,
+    retour_omschrijving: row.retourOmschrijving ?? null,
     ai_suggesties: (row.aiSuggesties as StellingsscanSuggestie[]) ?? [],
   };
 }
@@ -1170,19 +1173,35 @@ router.post("/magazijn/stellingscans/upload-url", schrijven, async (_req, res) =
 // Stellingfoto registreren + synchrone AI-analyse
 router.post("/magazijn/stellingscans", schrijven, async (req, res) => {
   try {
-    const { foto_pad, locatie_id } = req.body as { foto_pad?: string; locatie_id?: number };
+    const {
+      foto_pad,
+      locatie_id,
+      scan_type,
+      retour_project_id,
+      retour_omschrijving,
+    } = req.body as {
+      foto_pad?: string;
+      locatie_id?: number;
+      scan_type?: string;
+      retour_project_id?: number;
+      retour_omschrijving?: string;
+    };
     if (!foto_pad) return res.status(400).json({ error: "foto_pad is verplicht" });
 
+    const isRetour = scan_type === "retour";
     const userId = (req.session as { userId?: number }).userId ?? null;
 
     // Scan aanmaken met status "analyseren"
     const [scan] = await db
       .insert(magazijnStellingscansTable)
       .values({
+        scanType: isRetour ? "retour" : "voorraadcontrole",
         fotoPad: foto_pad,
         locatieId: locatie_id ?? null,
         aangemaaaktDoorId: userId,
         status: "analyseren",
+        retourProjectId: retour_project_id ?? null,
+        retourOmschrijving: retour_omschrijving ?? null,
       })
       .returning();
 
@@ -1229,19 +1248,65 @@ router.post("/magazijn/stellingscans", schrijven, async (req, res) => {
           .slice(0, 200)
           .map((a) => {
             const huidig = voorraadMap.get(a.id) ?? 0;
-            return `${a.code ?? a.id} | ${a.naam} | ${a.eenheid ?? "st"} | huidig: ${huidig} | min: ${a.minimumVoorraad ?? 0}`;
+            return `${a.code ?? a.id} | ${a.naam} | ${a.eenheid ?? "st"} | huidig: ${huidig}`;
           })
           .join("\n");
 
         const openai = maakOpenAiClient();
-        const completion = await openai.chat.completions.create({
-          model: "gpt-4o",
-          max_tokens: 3000,
-          response_format: { type: "json_object" },
-          messages: [
-            {
-              role: "system",
-              content: `Je bent een ervaren magazijnbeheerder bij FPS Brandpreventie, een brandpreventie-installatiebedrijf.
+
+        let systemPrompt: string;
+        let userText: string;
+
+        if (isRetour) {
+          // Locaties ophalen voor retour-plaatsadvies
+          const locaties = await db
+            .select({ id: magazijnLocatiesTable.id, naam: magazijnLocatiesTable.naam, type: magazijnLocatiesTable.type })
+            .from(magazijnLocatiesTable)
+            .where(eq(magazijnLocatiesTable.actief, true))
+            .orderBy(asc(magazijnLocatiesTable.naam));
+
+          const locatieContext = locaties
+            .map((l) => `${l.id} | ${l.naam} | ${l.type}`)
+            .join("\n");
+
+          systemPrompt = `Je bent een ervaren magazijnbeheerder bij FPS Brandpreventie, een brandpreventie-installatiebedrijf.
+Je analyseert een foto van geretourneerde artikelen vanuit een project en adviseert waar ze opgeborgen moeten worden.
+
+Beschikbare artikelen in het systeem (CODE | NAAM | EENHEID | HUIDIGE VOORRAAD):
+${artikelContext}
+
+Beschikbare magazijnlocaties (ID | NAAM | TYPE):
+${locatieContext}
+
+INSTRUCTIES:
+1. Identificeer de zichtbare geretourneerde artikelen op de foto (verpakking, label, kleur, code).
+2. Koppel elk artikel aan de juiste artikel_id uit de lijst.
+3. Schat de hoeveelheid van elk artikel op de foto.
+4. Stel de meest logische magazijnlocatie voor op basis van het type artikel en de beschikbare locaties.
+5. Geef een korte toelichting waarom die locatie het meest geschikt is.
+6. Als een artikel niet herkend wordt, sla het over.
+
+Geef uitsluitend geldige JSON in dit formaat:
+{
+  "suggesties": [
+    {
+      "artikel_id": <integer uit de artikelenlijst>,
+      "code": "<artikelcode of null>",
+      "naam": "<artikelnaam>",
+      "eenheid": "<eenheid>",
+      "huidige_voorraad": <huidige voorraad in systeem of null>,
+      "minimum_voorraad": null,
+      "advies_hoeveelheid": <geschatte retourhoeveelheid>,
+      "reden": "<waarom deze locatie>",
+      "prioriteit": "middel",
+      "aanbevolen_locatie_id": <integer uit de locatielijst of null>,
+      "aanbevolen_locatie_naam": "<locatienaam of null>"
+    }
+  ]
+}`;
+          userText = "Analyseer deze foto van geretourneerde artikelen en stel per artikel een opberglocatie voor in het magazijn.";
+        } else {
+          systemPrompt = `Je bent een ervaren magazijnbeheerder bij FPS Brandpreventie, een brandpreventie-installatiebedrijf.
 Je analyseert een foto van een magazijnstelling en bepaalt welke artikelen bijbesteld moeten worden.
 
 Beschikbare artikelen (CODE | NAAM | EENHEID | HUIDIG | MINIMUM):
@@ -1266,23 +1331,27 @@ Geef uitsluitend geldige JSON in dit formaat:
       "minimum_voorraad": <minimum uit de lijst of null>,
       "advies_hoeveelheid": <aanbevolen bestelquantum>,
       "reden": "<korte Nederlandse toelichting>",
-      "prioriteit": "hoog"
+      "prioriteit": "hoog",
+      "aanbevolen_locatie_id": null,
+      "aanbevolen_locatie_naam": null
     }
   ]
 }
-Prioriteit: "hoog" = leeg of <50% minimum, "middel" = 50-100% minimum, "laag" = licht onder minimum.`,
-            },
+Prioriteit: "hoog" = leeg of <50% minimum, "middel" = 50-100% minimum, "laag" = licht onder minimum.`;
+          userText = "Analyseer deze stellingfoto en geef besteladviezen voor artikelen die bijbesteld moeten worden.";
+        }
+
+        const completion = await openai.chat.completions.create({
+          model: "gpt-4o",
+          max_tokens: 3000,
+          response_format: { type: "json_object" },
+          messages: [
+            { role: "system", content: systemPrompt },
             {
               role: "user",
               content: [
-                {
-                  type: "text",
-                  text: "Analyseer deze stellingfoto en geef besteladviezen voor artikelen die bijbesteld moeten worden.",
-                },
-                {
-                  type: "image_url",
-                  image_url: { url: `data:image/jpeg;base64,${fotoBase64}`, detail: "high" },
-                },
+                { type: "text", text: userText },
+                { type: "image_url", image_url: { url: `data:image/jpeg;base64,${fotoBase64}`, detail: "high" } },
               ],
             },
           ],
@@ -1346,7 +1415,9 @@ router.get("/magazijn/stellingscans/:id", lezen, async (req, res) => {
   }
 });
 
-// Goedkeuren: update voorraad.besteld + log mutaties + markeer goedgekeurd
+// Goedkeuren: voorraad bijwerken + log mutaties + markeer goedgekeurd
+// - voorraadcontrole: update voorraad.besteld (bestelvoorstel)
+// - retour: update voorraad.hoeveelheid op de aanbevolen locatie (retour)
 router.post("/magazijn/stellingscans/:id/goedkeuren", schrijven, async (req, res) => {
   try {
     const id = Number(req.params.id);
@@ -1362,54 +1433,105 @@ router.post("/magazijn/stellingscans/:id/goedkeuren", schrijven, async (req, res
     }
 
     const { artikelen } = req.body as {
-      artikelen: Array<{ artikel_id: number; hoeveelheid: number }>;
+      artikelen: Array<{ artikel_id: number; hoeveelheid: number; locatie_id?: number }>;
     };
     if (!Array.isArray(artikelen) || artikelen.length === 0) {
       return res.status(400).json({ error: "Geen artikelen opgegeven" });
     }
 
+    const isRetour = scan.scanType === "retour";
+
     for (const item of artikelen) {
       if (!item.artikel_id || item.hoeveelheid <= 0) continue;
 
-      // Zoek bestaand voorraadrecord voor dit artikel
-      const [bestaand] = await db
-        .select()
-        .from(voorraadTable)
-        .where(eq(voorraadTable.artikelId, item.artikel_id))
-        .limit(1);
+      if (isRetour) {
+        // Retour: hoeveelheid toevoegen aan voorraad op de aanbevolen locatie
+        const doelLocatieId = item.locatie_id ?? null;
 
-      if (bestaand) {
-        await db
-          .update(voorraadTable)
-          .set({ besteld: sql`${voorraadTable.besteld} + ${item.hoeveelheid}` })
-          .where(eq(voorraadTable.id, bestaand.id));
-        // Mutatielog
-        await db.insert(voorraadMutatiesTable).values({
-          artikelId: item.artikel_id,
-          locatieId: bestaand.locatieId ?? null,
-          type: "bestelvoorstel",
-          hoeveelheid: item.hoeveelheid,
-          delta: item.hoeveelheid,
-          omschrijving: `Stellingsscan #${id} goedgekeurd`,
-          gebruikerId: userId,
-        });
+        const bestaandQuery = db
+          .select()
+          .from(voorraadTable)
+          .where(eq(voorraadTable.artikelId, item.artikel_id));
+
+        const [bestaand] = doelLocatieId
+          ? await bestaandQuery.where(eq(voorraadTable.locatieId, doelLocatieId)).limit(1)
+          : await bestaandQuery.limit(1);
+
+        if (bestaand) {
+          await db
+            .update(voorraadTable)
+            .set({
+              hoeveelheid: sql`${voorraadTable.hoeveelheid} + ${item.hoeveelheid}`,
+              bijgewerktOp: new Date(),
+            })
+            .where(eq(voorraadTable.id, bestaand.id));
+          await db.insert(voorraadMutatiesTable).values({
+            artikelId: item.artikel_id,
+            locatieId: bestaand.locatieId ?? null,
+            type: "retour",
+            hoeveelheid: item.hoeveelheid,
+            delta: item.hoeveelheid,
+            omschrijving: `Retourscan #${id} goedgekeurd${scan.retourProjectId ? ` — project #${scan.retourProjectId}` : ""}`,
+            gebruikerId: userId,
+          });
+        } else {
+          // Geen bestaand voorraadrecord op die locatie — aanmaken
+          await db.insert(voorraadTable).values({
+            artikelId: item.artikel_id,
+            locatieId: doelLocatieId,
+            hoeveelheid: item.hoeveelheid,
+            gereserveerd: 0,
+            besteld: 0,
+          });
+          await db.insert(voorraadMutatiesTable).values({
+            artikelId: item.artikel_id,
+            locatieId: doelLocatieId,
+            type: "retour",
+            hoeveelheid: item.hoeveelheid,
+            delta: item.hoeveelheid,
+            omschrijving: `Retourscan #${id} goedgekeurd${scan.retourProjectId ? ` — project #${scan.retourProjectId}` : ""}`,
+            gebruikerId: userId,
+          });
+        }
       } else {
-        // Nog geen voorraadrecord — aanmaken
-        await db.insert(voorraadTable).values({
-          artikelId: item.artikel_id,
-          hoeveelheid: 0,
-          gereserveerd: 0,
-          besteld: item.hoeveelheid,
-        });
-        await db.insert(voorraadMutatiesTable).values({
-          artikelId: item.artikel_id,
-          locatieId: null,
-          type: "bestelvoorstel",
-          hoeveelheid: item.hoeveelheid,
-          delta: item.hoeveelheid,
-          omschrijving: `Stellingsscan #${id} goedgekeurd`,
-          gebruikerId: userId,
-        });
+        // Voorraadcontrole: besteld ophogen (bestelvoorstel)
+        const [bestaand] = await db
+          .select()
+          .from(voorraadTable)
+          .where(eq(voorraadTable.artikelId, item.artikel_id))
+          .limit(1);
+
+        if (bestaand) {
+          await db
+            .update(voorraadTable)
+            .set({ besteld: sql`${voorraadTable.besteld} + ${item.hoeveelheid}` })
+            .where(eq(voorraadTable.id, bestaand.id));
+          await db.insert(voorraadMutatiesTable).values({
+            artikelId: item.artikel_id,
+            locatieId: bestaand.locatieId ?? null,
+            type: "bestelvoorstel",
+            hoeveelheid: item.hoeveelheid,
+            delta: item.hoeveelheid,
+            omschrijving: `Stellingsscan #${id} goedgekeurd`,
+            gebruikerId: userId,
+          });
+        } else {
+          await db.insert(voorraadTable).values({
+            artikelId: item.artikel_id,
+            hoeveelheid: 0,
+            gereserveerd: 0,
+            besteld: item.hoeveelheid,
+          });
+          await db.insert(voorraadMutatiesTable).values({
+            artikelId: item.artikel_id,
+            locatieId: null,
+            type: "bestelvoorstel",
+            hoeveelheid: item.hoeveelheid,
+            delta: item.hoeveelheid,
+            omschrijving: `Stellingsscan #${id} goedgekeurd`,
+            gebruikerId: userId,
+          });
+        }
       }
     }
 

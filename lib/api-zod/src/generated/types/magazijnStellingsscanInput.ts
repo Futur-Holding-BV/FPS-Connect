@@ -9,4 +9,7 @@
 export interface MagazijnStellingsscanInput {
   foto_pad: string;
   locatie_id?: number;
+  scan_type?: string;
+  retour_project_id?: number;
+  retour_omschrijving?: string;
 }

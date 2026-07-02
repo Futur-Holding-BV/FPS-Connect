@@ -30905,33 +30905,41 @@ components:
       type: object
       required: [foto_pad]
       properties:
-        foto_pad:   { type: string }
-        locatie_id: { type: integer }
+        foto_pad:            { type: string }
+        locatie_id:          { type: integer }
+        scan_type:           { type: string }
+        retour_project_id:   { type: integer }
+        retour_omschrijving: { type: string }
 
     MagazijnStellingsscanSuggestie:
       type: object
       required: [artikel_id, naam, advies_hoeveelheid, reden, prioriteit]
       properties:
-        artikel_id:         { type: integer }
-        code:               { type: ["string", "null"] }
-        naam:               { type: string }
-        eenheid:            { type: ["string", "null"] }
-        huidige_voorraad:   { type: ["number", "null"] }
-        minimum_voorraad:   { type: ["number", "null"] }
-        advies_hoeveelheid: { type: number }
-        reden:              { type: string }
-        prioriteit:         { type: string }
+        artikel_id:              { type: integer }
+        code:                    { type: ["string", "null"] }
+        naam:                    { type: string }
+        eenheid:                 { type: ["string", "null"] }
+        huidige_voorraad:        { type: ["number", "null"] }
+        minimum_voorraad:        { type: ["number", "null"] }
+        advies_hoeveelheid:      { type: number }
+        reden:                   { type: string }
+        prioriteit:              { type: string }
+        aanbevolen_locatie_id:   { type: ["integer", "null"] }
+        aanbevolen_locatie_naam: { type: ["string", "null"] }
 
     MagazijnStellingsscan:
       type: object
-      required: [id, foto_pad, status, aangemaakt_op]
+      required: [id, foto_pad, status, scan_type, aangemaakt_op]
       properties:
-        id:             { type: integer }
-        foto_pad:       { type: string }
-        locatie_id:     { type: ["integer", "null"] }
-        status:         { type: string }
-        aangemaakt_op:  { type: string }
-        goedgekeurd_op: { type: ["string", "null"] }
+        id:                  { type: integer }
+        foto_pad:            { type: string }
+        scan_type:           { type: string }
+        locatie_id:          { type: ["integer", "null"] }
+        status:              { type: string }
+        aangemaakt_op:       { type: string }
+        goedgekeurd_op:      { type: ["string", "null"] }
+        retour_project_id:   { type: ["integer", "null"] }
+        retour_omschrijving: { type: ["string", "null"] }
         ai_suggesties:
           type: array
           items:
@@ -30949,6 +30957,7 @@ components:
             properties:
               artikel_id:  { type: integer }
               hoeveelheid: { type: number }
+              locatie_id:  { type: integer }
 
     OpdrachtMateriaalRegel:
       type: object

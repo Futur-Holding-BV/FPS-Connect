@@ -20,4 +20,8 @@ export interface MagazijnStellingsscanSuggestie {
   advies_hoeveelheid: number;
   reden: string;
   prioriteit: string;
+  /** @nullable */
+  aanbevolen_locatie_id?: number | null;
+  /** @nullable */
+  aanbevolen_locatie_naam?: string | null;
 }

@@ -10,6 +10,20 @@ Grote roadmap-fases staan ook in `docs/roadmap/gebouwd.md` en `docs/roadmap/acti
 
 ---
 
+## 2026-07-02 — Retour-artikelen scan (magazijn)
+
+**Uitvoering:** volledig | **Getest:** typecheck
+
+Uitbreiding op de stellingscans: magazijnbeheerder fotografeert geretourneerde artikelen vanuit een project, AI (GPT-4o vision) identificeert de artikelen en stelt een opberglocatie voor in het magazijn.
+
+- DB: `scan_type` (voorraadcontrole | retour), `retour_project_id` (FK opdrachten), `retour_omschrijving` toegevoegd aan `magazijn_stellingscans`; SQL ALTER uitgevoerd
+- OpenAPI: `MagazijnStellingsscanInput` uitgebreid (scan_type, retour_project_id, retour_omschrijving); `MagazijnStellingsscanSuggestie` uitgebreid (aanbevolen_locatie_id, aanbevolen_locatie_naam); `MagazijnStellingsscanGoedkeuringInput` artikelen + locatie_id; codegen uitgevoerd
+- Backend retour AI-prompt: identificeer artikelen op foto + koppel aan artikelcatalogus + stel opberglocatie voor uit beschikbare locatielijst
+- Backend goedkeuren: retour → `voorraad.hoeveelheid += x` op aanbevolen locatie + mutatie type "retour"; voorraadcontrole → bestaand `besteld += x` pad
+- Frontend: type-toggle (Voorraadcontrole / Retour), retour-projectkiezer (verplicht) + toelichting, scankaarten tonen type-badge + project/toelichting in header, plaatsadviezen tonen locatienaam (MapPin), goedkeuren-knop zegt "Bevestigen en terugplaatsen" voor retour, scans gesplitst in twee secties
+
+---
+
 ## 2026-07-02 — AI stellingfoto voorraadcontrole (magazijn)
 
 **Uitvoering:** volledig | **Getest:** typecheck

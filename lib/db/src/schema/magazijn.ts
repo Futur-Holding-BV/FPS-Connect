@@ -78,6 +78,7 @@ export const reserveringenTable = pgTable("reserveringen", {
 
 export const magazijnStellingscansTable = pgTable("magazijn_stellingscans", {
   id:                serial("id").primaryKey(),
+  scanType:          text("scan_type").notNull().default("voorraadcontrole"), // voorraadcontrole | retour
   fotoPad:           text("foto_pad").notNull(),
   locatieId:         integer("locatie_id").references(() => magazijnLocatiesTable.id, { onDelete: "set null" }),
   aangemaaaktDoorId: integer("aangemaakt_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
@@ -86,4 +87,7 @@ export const magazijnStellingscansTable = pgTable("magazijn_stellingscans", {
   aiSuggesties:      jsonb("ai_suggesties"),
   goedgekeurdOp:     timestamp("goedgekeurd_op"),
   goedgekeurdDoorId: integer("goedgekeurd_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
+  // Retour-specifiek: vanuit welk project en locatie komen de artikelen terug
+  retourProjectId:   integer("retour_project_id").references(() => opdrachtenTable.id, { onDelete: "set null" }),
+  retourOmschrijving: text("retour_omschrijving"),
 });

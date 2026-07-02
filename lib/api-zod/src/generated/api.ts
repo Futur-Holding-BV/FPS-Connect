@@ -21261,7 +21261,10 @@ export const GetMagazijnStellingsscanUploadUrlResponse = zod.object({
  */
 export const CreateMagazijnStellingsscanBody = zod.object({
   "foto_pad": zod.string(),
-  "locatie_id": zod.number().optional()
+  "locatie_id": zod.number().optional(),
+  "scan_type": zod.string().optional(),
+  "retour_project_id": zod.number().optional(),
+  "retour_omschrijving": zod.string().optional()
 })
 
 export const CreateMagazijnStellingsscanResponse = zod.void()
@@ -21273,10 +21276,13 @@ export const CreateMagazijnStellingsscanResponse = zod.void()
 export const ListMagazijnStellingscansResponseItem = zod.object({
   "id": zod.number(),
   "foto_pad": zod.string(),
+  "scan_type": zod.string(),
   "locatie_id": zod.number().nullish(),
   "status": zod.string(),
   "aangemaakt_op": zod.string(),
   "goedgekeurd_op": zod.string().nullish(),
+  "retour_project_id": zod.number().nullish(),
+  "retour_omschrijving": zod.string().nullish(),
   "ai_suggesties": zod.array(zod.object({
   "artikel_id": zod.number(),
   "code": zod.string().nullish(),
@@ -21286,7 +21292,9 @@ export const ListMagazijnStellingscansResponseItem = zod.object({
   "minimum_voorraad": zod.number().nullish(),
   "advies_hoeveelheid": zod.number(),
   "reden": zod.string(),
-  "prioriteit": zod.string()
+  "prioriteit": zod.string(),
+  "aanbevolen_locatie_id": zod.number().nullish(),
+  "aanbevolen_locatie_naam": zod.string().nullish()
 })).optional()
 })
 export const ListMagazijnStellingscansResponse = zod.array(ListMagazijnStellingscansResponseItem)
@@ -21302,10 +21310,13 @@ export const GetMagazijnStellingsscanParams = zod.object({
 export const GetMagazijnStellingsscanResponse = zod.object({
   "id": zod.number(),
   "foto_pad": zod.string(),
+  "scan_type": zod.string(),
   "locatie_id": zod.number().nullish(),
   "status": zod.string(),
   "aangemaakt_op": zod.string(),
   "goedgekeurd_op": zod.string().nullish(),
+  "retour_project_id": zod.number().nullish(),
+  "retour_omschrijving": zod.string().nullish(),
   "ai_suggesties": zod.array(zod.object({
   "artikel_id": zod.number(),
   "code": zod.string().nullish(),
@@ -21315,7 +21326,9 @@ export const GetMagazijnStellingsscanResponse = zod.object({
   "minimum_voorraad": zod.number().nullish(),
   "advies_hoeveelheid": zod.number(),
   "reden": zod.string(),
-  "prioriteit": zod.string()
+  "prioriteit": zod.string(),
+  "aanbevolen_locatie_id": zod.number().nullish(),
+  "aanbevolen_locatie_naam": zod.string().nullish()
 })).optional()
 })
 
@@ -21330,17 +21343,21 @@ export const KeurMagazijnStellingsscanGoedParams = zod.object({
 export const KeurMagazijnStellingsscanGoedBody = zod.object({
   "artikelen": zod.array(zod.object({
   "artikel_id": zod.number(),
-  "hoeveelheid": zod.number()
+  "hoeveelheid": zod.number(),
+  "locatie_id": zod.number().optional()
 }))
 })
 
 export const KeurMagazijnStellingsscanGoedResponse = zod.object({
   "id": zod.number(),
   "foto_pad": zod.string(),
+  "scan_type": zod.string(),
   "locatie_id": zod.number().nullish(),
   "status": zod.string(),
   "aangemaakt_op": zod.string(),
   "goedgekeurd_op": zod.string().nullish(),
+  "retour_project_id": zod.number().nullish(),
+  "retour_omschrijving": zod.string().nullish(),
   "ai_suggesties": zod.array(zod.object({
   "artikel_id": zod.number(),
   "code": zod.string().nullish(),
@@ -21350,7 +21367,9 @@ export const KeurMagazijnStellingsscanGoedResponse = zod.object({
   "minimum_voorraad": zod.number().nullish(),
   "advies_hoeveelheid": zod.number(),
   "reden": zod.string(),
-  "prioriteit": zod.string()
+  "prioriteit": zod.string(),
+  "aanbevolen_locatie_id": zod.number().nullish(),
+  "aanbevolen_locatie_naam": zod.string().nullish()
 })).optional()
 })
 

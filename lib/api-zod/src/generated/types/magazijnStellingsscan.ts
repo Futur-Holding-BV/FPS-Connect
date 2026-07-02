@@ -10,11 +10,16 @@ import type { MagazijnStellingsscanSuggestie } from './magazijnStellingsscanSugg
 export interface MagazijnStellingsscan {
   id: number;
   foto_pad: string;
+  scan_type: string;
   /** @nullable */
   locatie_id?: number | null;
   status: string;
   aangemaakt_op: string;
   /** @nullable */
   goedgekeurd_op?: string | null;
+  /** @nullable */
+  retour_project_id?: number | null;
+  /** @nullable */
+  retour_omschrijving?: string | null;
   ai_suggesties?: MagazijnStellingsscanSuggestie[];
 }

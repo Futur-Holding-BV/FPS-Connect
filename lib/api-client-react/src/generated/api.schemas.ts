@@ -8765,6 +8765,9 @@ export interface MagazijnBestelbonResultaat {
 export interface MagazijnStellingsscanInput {
   foto_pad: string;
   locatie_id?: number;
+  scan_type?: string;
+  retour_project_id?: number;
+  retour_omschrijving?: string;
 }
 
 export interface MagazijnStellingsscanSuggestie {
@@ -8781,23 +8784,33 @@ export interface MagazijnStellingsscanSuggestie {
   advies_hoeveelheid: number;
   reden: string;
   prioriteit: string;
+  /** @nullable */
+  aanbevolen_locatie_id?: number | null;
+  /** @nullable */
+  aanbevolen_locatie_naam?: string | null;
 }
 
 export interface MagazijnStellingsscan {
   id: number;
   foto_pad: string;
+  scan_type: string;
   /** @nullable */
   locatie_id?: number | null;
   status: string;
   aangemaakt_op: string;
   /** @nullable */
   goedgekeurd_op?: string | null;
+  /** @nullable */
+  retour_project_id?: number | null;
+  /** @nullable */
+  retour_omschrijving?: string | null;
   ai_suggesties?: MagazijnStellingsscanSuggestie[];
 }
 
 export type MagazijnStellingsscanGoedkeuringInputArtikelenItem = {
   artikel_id: number;
   hoeveelheid: number;
+  locatie_id?: number;
 };
 
 export interface MagazijnStellingsscanGoedkeuringInput {
