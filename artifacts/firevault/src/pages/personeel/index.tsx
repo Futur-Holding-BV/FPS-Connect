@@ -1377,31 +1377,42 @@ export default function PersoneelPagina() {
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label>Functie</Label>
-              <Select
-                value={medewerkerForm.functie_id ? String(medewerkerForm.functie_id) : undefined}
-                onValueChange={(v) => setMedewerkerForm({ ...medewerkerForm, functie_id: Number(v) })}
-              >
-                <SelectTrigger><SelectValue placeholder="Kies functie" /></SelectTrigger>
-                <SelectContent>
-                  {(functies ?? []).some((f) => f.uitvoerend) && (
-                    <SelectGroup>
-                      <SelectLabel className="text-xs font-semibold text-primary">Buitendienst — zichtbaar in planning</SelectLabel>
-                      {(functies ?? []).filter((f) => f.uitvoerend).map((f) => (
-                        <SelectItem key={f.id} value={String(f.id)}>{f.naam}</SelectItem>
-                      ))}
-                    </SelectGroup>
-                  )}
-                  {(functies ?? []).some((f) => !f.uitvoerend) && (
-                    <SelectGroup>
-                      <SelectLabel className="text-xs font-semibold text-muted-foreground">Kantoor / staf — niet in planning</SelectLabel>
-                      {(functies ?? []).filter((f) => !f.uitvoerend).map((f) => (
-                        <SelectItem key={f.id} value={String(f.id)}>{f.naam}</SelectItem>
-                      ))}
-                    </SelectGroup>
-                  )}
-                </SelectContent>
-              </Select>
+              <div className="flex items-center justify-between">
+                <Label>Functie</Label>
+                <Button type="button" variant="ghost" size="sm" className="h-6 gap-1 text-xs px-1.5" onClick={startFunctieNieuw}>
+                  <Plus className="h-3 w-3" /> Nieuwe functie
+                </Button>
+              </div>
+              {(functies ?? []).length === 0 ? (
+                <p className="text-xs text-muted-foreground border rounded-md px-3 py-2">
+                  Nog geen functies in het functiehuis. Klik op "Nieuwe functie" om er een toe te voegen.
+                </p>
+              ) : (
+                <Select
+                  value={medewerkerForm.functie_id ? String(medewerkerForm.functie_id) : undefined}
+                  onValueChange={(v) => setMedewerkerForm({ ...medewerkerForm, functie_id: Number(v) })}
+                >
+                  <SelectTrigger><SelectValue placeholder="Kies functie" /></SelectTrigger>
+                  <SelectContent>
+                    {(functies ?? []).some((f) => f.uitvoerend) && (
+                      <SelectGroup>
+                        <SelectLabel className="text-xs font-semibold text-primary">Buitendienst — zichtbaar in planning</SelectLabel>
+                        {(functies ?? []).filter((f) => f.uitvoerend).map((f) => (
+                          <SelectItem key={f.id} value={String(f.id)}>{f.naam}</SelectItem>
+                        ))}
+                      </SelectGroup>
+                    )}
+                    {(functies ?? []).some((f) => !f.uitvoerend) && (
+                      <SelectGroup>
+                        <SelectLabel className="text-xs font-semibold text-muted-foreground">Kantoor / staf — niet in planning</SelectLabel>
+                        {(functies ?? []).filter((f) => !f.uitvoerend).map((f) => (
+                          <SelectItem key={f.id} value={String(f.id)}>{f.naam}</SelectItem>
+                        ))}
+                      </SelectGroup>
+                    )}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
             <div className="space-y-1.5">
               <Label>Dienstverband</Label>

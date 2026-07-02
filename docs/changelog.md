@@ -10,6 +10,17 @@ Grote roadmap-fases staan ook in `docs/roadmap/gebouwd.md` en `docs/roadmap/acti
 
 ---
 
+## 2026-07-02 — Nieuwe medewerker: lege-state functies met snelkoppeling
+
+**Uitvoering:** volledig | **Getest:** typecheck
+
+De functie-Select in de "Nieuwe medewerker"-dialoog toonde een lege dropdown als er nog geen functies aangemaakt waren, zonder uitleg. Nu:
+- Lege staat: melding "Nog geen functies in het functiehuis" + "Nieuwe functie"-knop inline bij het label
+- Als er wel functies zijn: dropdown zoals voorheen (buitendienst / kantoor-staf groepen)
+- De knop opent direct het bestaande functie-aanmaak-dialoog, waarna de functie meteen selecteerbaar is
+
+---
+
 ## 2026-07-01 — Slim uploaden: toelichting verplicht, personeelsdocumenten direct naar dossier, afgewezen doorsturen
 
 **Uitvoering:** volledig | **Getest:** typecheck
