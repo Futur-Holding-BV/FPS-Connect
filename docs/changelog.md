@@ -10,6 +10,30 @@ Grote roadmap-fases staan ook in `docs/roadmap/gebouwd.md` en `docs/roadmap/acti
 
 ---
 
+## 2026-07-02 — Digitale Uitvoerder — monteur chatbot voor uitvoeringsadvies
+
+**Uitvoering:** volledig | **Getest:** typecheck api-server (clean) + firevault (clean) + api-server build geslaagd
+
+### Wat er gebouwd is
+
+- **DB**: tabellen `uitvoerder_sessies` en `uitvoerder_berichten` (via ALTER TABLE).
+- **Backend** (`artifacts/api-server/src/routes/uitvoerder.ts`): 5 routes:
+  - `POST /uitvoerder/sessies` — sessie aanmaken of hervatten per werkdag/opdracht
+  - `GET /uitvoerder/sessies/:id` — sessie + berichten ophalen
+  - `POST /uitvoerder/sessies/:id/berichten` — bericht versturen + GPT-4o antwoord (foto optioneel)
+  - `POST /uitvoerder/sessies/:id/bevestig` — aanpak vastleggen
+  - `GET /uitvoerder/log` — projectleider/werkvoorbereider bekijkt alle sessies
+- **Monteur app** (`artifacts/monteur-app/app/uitvoerder/[sessie_id].tsx`): volledig chat-scherm met FlatList, fotopicker, AI-bubbles en "Aanpak vastleggen"-paneel. Knop toegevoegd aan werkdag-detailscherm.
+- **Werkvoorbereiding web** (`artifacts/firevault/src/pages/werkvoorbereiding/index.tsx`): sectie "Uitvoerder consulten" met inklapbare sessiekaarten, bevestigde aanpak uitgelicht, chat-log inzichtelijk.
+
+### Technische noten
+
+- `db` import gecorrigeerd naar `@workspace/db` (niet `../lib/db`)
+- `requireBevoegdheid("offertes", 1)` gebruikt voor log-endpoint (werkvoorbereiders)
+- `sessie` null-guard na insert toegevoegd
+
+---
+
 ## 2026-07-02 — Materiaal melden — monteur → AI → werkvoorbereider
 
 **Uitvoering:** volledig | **Getest:** typecheck api-server (clean op nieuwe routes) + firevault (clean) + api-server build geslaagd + expo typed routes herstart

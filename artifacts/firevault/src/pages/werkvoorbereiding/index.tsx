@@ -305,6 +305,91 @@ function MateriaalAanvraagKaart({ aanvraag, onBehandeld }: { aanvraag: Materiaal
   );
 }
 
+function UitvoerderSessieKaart({ sessie }: { sessie: UitvoerderSessie }) {
+  const [open, setOpen] = useState(false);
+  const bevestigd = sessie.status === "bevestigd";
+
+  return (
+    <Card className={bevestigd ? "border-green-200 bg-green-50/40" : ""}>
+      <CardContent className="p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-start gap-2 min-w-0">
+            <MessageSquare className={`h-4 w-4 mt-0.5 shrink-0 ${bevestigd ? "text-green-600" : "text-muted-foreground"}`} />
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-sm font-medium truncate">
+                  {sessie.opdracht_werknummer
+                    ? `${sessie.opdracht_werknummer}${sessie.opdracht_titel ? ` — ${sessie.opdracht_titel}` : ""}`
+                    : (sessie.opdracht_titel ?? "Zonder opdracht")}
+                </span>
+                <Badge
+                  variant={bevestigd ? "default" : "outline"}
+                  className={`text-xs px-1.5 py-0 shrink-0 ${bevestigd ? "bg-green-600 border-0" : ""}`}
+                >
+                  {bevestigd ? "Aanpak vastgelegd" : "In gesprek"}
+                </Badge>
+              </div>
+              <div className="flex items-center gap-2 mt-0.5 text-xs text-muted-foreground">
+                <User className="h-3 w-3" />
+                <span>{sessie.monteur_naam ?? `Monteur #${sessie.monteur_id}`}</span>
+                <span>·</span>
+                <span>{tijdGeleden(sessie.bijgewerkt_op ?? sessie.aangemaakt_op)}</span>
+                <span>·</span>
+                <span>{sessie.berichten.length} berichten</span>
+              </div>
+            </div>
+          </div>
+          <button
+            onClick={() => setOpen(v => !v)}
+            className="text-xs text-muted-foreground flex items-center gap-1 shrink-0 hover:text-foreground transition-colors"
+          >
+            {open ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+            {open ? "Inklappen" : "Bekijken"}
+          </button>
+        </div>
+
+        {bevestigd && sessie.bevestigde_aanpak && (
+          <div className="mt-3 rounded-md bg-green-100 border border-green-200 px-3 py-2 text-sm text-green-900">
+            <span className="font-medium">Vastgelegde aanpak: </span>
+            {sessie.bevestigde_aanpak}
+          </div>
+        )}
+
+        {open && (
+          <div className="mt-3 space-y-2 border-t pt-3">
+            {sessie.berichten.length === 0 ? (
+              <p className="text-xs text-muted-foreground italic">Geen berichten.</p>
+            ) : (
+              sessie.berichten.map(b => (
+                <div
+                  key={b.id}
+                  className={`flex gap-2 ${b.rol === "monteur" ? "flex-row-reverse" : "flex-row"}`}
+                >
+                  <div
+                    className={`max-w-[80%] rounded-lg px-3 py-2 text-xs ${
+                      b.rol === "monteur"
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted text-foreground"
+                    }`}
+                  >
+                    {b.foto_pad && (
+                      <div className="mb-1 text-xs opacity-70 flex items-center gap-1">
+                        <Camera className="h-3 w-3" />
+                        Foto meegestuurd
+                      </div>
+                    )}
+                    {b.tekst ?? <span className="italic opacity-60">—</span>}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function WerkvoorbereidingOverzicht() {
   const { data: opdrachten, isLoading } = useListOpdrachten({ status: "actief" });
   const qc = useQueryClient();
@@ -324,14 +409,25 @@ export default function WerkvoorbereidingOverzicht() {
     refetchInterval: 15000,
   });
 
+  const { data: uitvoerderLog, isLoading: uitvoerderLaden } = useQuery<UitvoerderSessie[]>({
+    queryKey: ["uitvoerder-log"],
+    queryFn: async () => {
+      const resp = await fetch("/api/uitvoerder/log?limit=20", { credentials: "include" });
+      if (!resp.ok) return [];
+      return resp.json() as Promise<UitvoerderSessie[]>;
+    },
+    refetchInterval: 30000,
+  });
+
   const openAanvragen = aanvragen ?? [];
+  const sessies = uitvoerderLog ?? [];
 
   return (
     <div className="p-4 md:p-6 max-w-5xl mx-auto space-y-6">
       <div>
         <h1 className="text-xl font-bold tracking-tight">Werkvoorbereiding</h1>
         <p className="text-sm text-muted-foreground mt-0.5">
-          Materiaal meldingen, inkoopplanning en uitvoeringsplanning
+          Materiaal meldingen, uitvoerderconsulten en inkoopplanning
         </p>
       </div>
 
@@ -370,6 +466,38 @@ export default function WerkvoorbereidingOverzicht() {
                 onBehandeld={() => void qc.invalidateQueries({ queryKey: ["materiaal-aanvragen"] })}
               />
             ))}
+          </div>
+        )}
+      </div>
+
+      {/* ── Uitvoerder consulten ─────────────────────────────────────────────── */}
+      <div>
+        <div className="flex items-center gap-2 mb-3">
+          <h2 className="text-sm font-semibold">Uitvoerder consulten</h2>
+          {sessies.filter(s => s.status === "bevestigd").length > 0 && (
+            <Badge className="bg-green-600 text-white border-0 text-xs px-1.5 py-0">
+              {sessies.filter(s => s.status === "bevestigd").length} vastgelegd
+            </Badge>
+          )}
+          {sessies.filter(s => s.status === "actief").length > 0 && (
+            <Badge variant="outline" className="text-xs px-1.5 py-0">
+              {sessies.filter(s => s.status === "actief").length} lopend
+            </Badge>
+          )}
+          {uitvoerderLaden && <RefreshCw className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
+        </div>
+
+        {uitvoerderLaden ? (
+          <div className="space-y-3">
+            {[...Array(2)].map((_, i) => <Skeleton key={i} className="h-16 w-full" />)}
+          </div>
+        ) : sessies.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            Geen uitvoerderconsulten vandaag.
+          </p>
+        ) : (
+          <div className="space-y-3">
+            {sessies.map(s => <UitvoerderSessieKaart key={s.id} sessie={s} />)}
           </div>
         )}
       </div>
