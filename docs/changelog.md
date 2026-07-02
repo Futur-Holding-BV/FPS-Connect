@@ -10,6 +10,15 @@ Grote roadmap-fases staan ook in `docs/roadmap/gebouwd.md` en `docs/roadmap/acti
 
 ---
 
+## 2026-07-02 — Sidebar: Acquisitie-scheiding in Projectaanpak
+
+**Uitvoering:** volledig | **Getest:** visueel
+
+- `beheerder-layout.tsx`: divider "Acquisitie" toegevoegd vóór Opnames in de Projectaanpak-groep
+- De sidebar toont nu expliciet twee zones: **Acquisitie** (Opnames → Calculaties → Offertes) en **Uitvoering** (Werkvoorbereiding → Planning → ...), zodat duidelijk is dat Offerte niet tot werkvoorbereiding behoort
+
+---
+
 ## 2026-07-02 — Opname-fase CRM + Calculatie inkoopregels
 
 **Uitvoering:** volledig | **Getest:** typecheck
