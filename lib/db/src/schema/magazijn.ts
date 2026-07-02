@@ -1,5 +1,5 @@
 import {
-  pgTable, serial, text, integer, real, boolean, timestamp, pgEnum, unique,
+  pgTable, serial, text, integer, real, boolean, timestamp, pgEnum, unique, jsonb,
 } from "drizzle-orm/pg-core";
 import { artikelenTable } from "./artikelen";
 import { gebruikersTable } from "./gebruikers";
@@ -70,4 +70,20 @@ export const reserveringenTable = pgTable("reserveringen", {
   omschrijving:    text("omschrijving"),
   aangemaaktDoorId: integer("aangemaakt_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
   bijgewerktOp:    timestamp("bijgewerkt_op").notNull().defaultNow(),
+});
+
+// ═══════════════════════════════════════════════════════════
+// Stellingscans (AI-gestuurde voorraadcontrole via foto)
+// ═══════════════════════════════════════════════════════════
+
+export const magazijnStellingscansTable = pgTable("magazijn_stellingscans", {
+  id:                serial("id").primaryKey(),
+  fotoPad:           text("foto_pad").notNull(),
+  locatieId:         integer("locatie_id").references(() => magazijnLocatiesTable.id, { onDelete: "set null" }),
+  aangemaaaktDoorId: integer("aangemaakt_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
+  aangemaaktOp:      timestamp("aangemaakt_op").notNull().defaultNow(),
+  status:            text("status").notNull().default("analyseren"), // analyseren | gereed | goedgekeurd
+  aiSuggesties:      jsonb("ai_suggesties"),
+  goedgekeurdOp:     timestamp("goedgekeurd_op"),
+  goedgekeurdDoorId: integer("goedgekeurd_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
 });

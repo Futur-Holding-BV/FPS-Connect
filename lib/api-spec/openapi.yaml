@@ -16796,6 +16796,93 @@ paths:
               schema:
                 $ref: "#/components/schemas/MagazijnBestelbonResultaat"
 
+  # ── MAGAZIJN STELLINGSCANS ───────────────────────────────────────────────────
+
+  /magazijn/stellingscans/upload-url:
+    post:
+      operationId: getMagazijnStellingsscanUploadUrl
+      tags: [magazijn]
+      summary: Presigned upload-URL ophalen voor stellingfoto
+      responses:
+        "200":
+          description: Upload-URL en objectpad
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [upload_url, object_path]
+                properties:
+                  upload_url:  { type: string }
+                  object_path: { type: string }
+
+  /magazijn/stellingscans:
+    post:
+      operationId: createMagazijnStellingsscan
+      tags: [magazijn]
+      summary: Stellingfoto registreren en AI-analyse starten
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MagazijnStellingsscanInput"
+      responses:
+        "201":
+          description: Scan aangemaakt met AI-suggesties
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MagazijnStellingsscan"
+    get:
+      operationId: listMagazijnStellingscans
+      tags: [magazijn]
+      summary: Stellingscans ophalen (meest recent eerst)
+      responses:
+        "200":
+          description: Lijst van stellingscans
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MagazijnStellingsscan"
+
+  /magazijn/stellingscans/{id}:
+    get:
+      operationId: getMagazijnStellingsscan
+      tags: [magazijn]
+      summary: Stellingsscan ophalen
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        "200":
+          description: Stellingsscan
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MagazijnStellingsscan"
+
+  /magazijn/stellingscans/{id}/goedkeuren:
+    post:
+      operationId: keurMagazijnStellingsscanGoed
+      tags: [magazijn]
+      summary: Goedgekeurde artikelen markeren als te bestellen
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MagazijnStellingsscanGoedkeuringInput"
+      responses:
+        "200":
+          description: Scan bijgewerkt naar goedgekeurd
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MagazijnStellingsscan"
+
   # ── IMPORT ───────────────────────────────────────────────────────────────────
 
   /import/preview:
@@ -30813,6 +30900,55 @@ components:
       properties:
         email_verstuurd: { type: boolean }
         bericht:         { type: ["string", "null"] }
+
+    MagazijnStellingsscanInput:
+      type: object
+      required: [foto_pad]
+      properties:
+        foto_pad:   { type: string }
+        locatie_id: { type: integer }
+
+    MagazijnStellingsscanSuggestie:
+      type: object
+      required: [artikel_id, naam, advies_hoeveelheid, reden, prioriteit]
+      properties:
+        artikel_id:         { type: integer }
+        code:               { type: ["string", "null"] }
+        naam:               { type: string }
+        eenheid:            { type: ["string", "null"] }
+        huidige_voorraad:   { type: ["number", "null"] }
+        minimum_voorraad:   { type: ["number", "null"] }
+        advies_hoeveelheid: { type: number }
+        reden:              { type: string }
+        prioriteit:         { type: string }
+
+    MagazijnStellingsscan:
+      type: object
+      required: [id, foto_pad, status, aangemaakt_op]
+      properties:
+        id:             { type: integer }
+        foto_pad:       { type: string }
+        locatie_id:     { type: ["integer", "null"] }
+        status:         { type: string }
+        aangemaakt_op:  { type: string }
+        goedgekeurd_op: { type: ["string", "null"] }
+        ai_suggesties:
+          type: array
+          items:
+            $ref: "#/components/schemas/MagazijnStellingsscanSuggestie"
+
+    MagazijnStellingsscanGoedkeuringInput:
+      type: object
+      required: [artikelen]
+      properties:
+        artikelen:
+          type: array
+          items:
+            type: object
+            required: [artikel_id, hoeveelheid]
+            properties:
+              artikel_id:  { type: integer }
+              hoeveelheid: { type: number }
 
     OpdrachtMateriaalRegel:
       type: object

@@ -10,6 +10,18 @@ Grote roadmap-fases staan ook in `docs/roadmap/gebouwd.md` en `docs/roadmap/acti
 
 ---
 
+## 2026-07-02 — AI stellingfoto voorraadcontrole (magazijn)
+
+**Uitvoering:** volledig | **Getest:** typecheck
+
+- Nieuwe DB-tabel `magazijn_stellingscans` (foto_pad, locatie_id, status, ai_suggesties JSONB, goedgekeurd_op/door)
+- OpenAPI: 4 nieuwe paden (`/magazijn/stellingscans`, `/upload-url`, `/{id}`, `/{id}/goedkeuren`) + 4 schemas (`MagazijnStellingsscanInput`, `MagazijnStellingsscanSuggestie`, `MagazijnStellingsscan`, `MagazijnStellingsscanGoedkeuringInput`)
+- Backend: synchrone GPT-4o vision-analyse (base64 JPEG resize via sharp); artikelcatalogus + actuele voorraad meegestuurd als context; goedkeuren verhoogt `voorraad.besteld` en logt `voorraad_mutaties` (type "bestelvoorstel")
+- Frontend: `/magazijn/stellingscans` — foto uploaden (presigned PUT), loading-state tijdens analyse, uitklapbare scankaarten met checkboxes + bewerkbare hoeveelheden per suggestie, goedkeuringsknop
+- Nav: "Stellingscans" (ScanSearch-icoon) tussen Voorraad en Mutaties in de zijbalk
+
+---
+
 ## 2026-07-02 — Offerte verzenden: twee paden (ondertekenbare offerte + contract van klant)
 
 **Uitvoering:** volledig | **Getest:** typecheck

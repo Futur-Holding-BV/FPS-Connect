@@ -8762,6 +8762,48 @@ export interface MagazijnBestelbonResultaat {
   bericht?: string | null;
 }
 
+export interface MagazijnStellingsscanInput {
+  foto_pad: string;
+  locatie_id?: number;
+}
+
+export interface MagazijnStellingsscanSuggestie {
+  artikel_id: number;
+  /** @nullable */
+  code?: string | null;
+  naam: string;
+  /** @nullable */
+  eenheid?: string | null;
+  /** @nullable */
+  huidige_voorraad?: number | null;
+  /** @nullable */
+  minimum_voorraad?: number | null;
+  advies_hoeveelheid: number;
+  reden: string;
+  prioriteit: string;
+}
+
+export interface MagazijnStellingsscan {
+  id: number;
+  foto_pad: string;
+  /** @nullable */
+  locatie_id?: number | null;
+  status: string;
+  aangemaakt_op: string;
+  /** @nullable */
+  goedgekeurd_op?: string | null;
+  ai_suggesties?: MagazijnStellingsscanSuggestie[];
+}
+
+export type MagazijnStellingsscanGoedkeuringInputArtikelenItem = {
+  artikel_id: number;
+  hoeveelheid: number;
+};
+
+export interface MagazijnStellingsscanGoedkeuringInput {
+  artikelen: MagazijnStellingsscanGoedkeuringInputArtikelenItem[];
+}
+
 export interface OpdrachtMateriaalRegel {
   id: number;
   artikel_id: number;
@@ -9816,6 +9858,11 @@ export type ListReserveringenParams = {
 artikel_id?: number;
 opdracht_id?: number;
 status?: string;
+};
+
+export type GetMagazijnStellingsscanUploadUrl200 = {
+  upload_url: string;
+  object_path: string;
 };
 
 export type ListDocumentStudioModellenParams = {

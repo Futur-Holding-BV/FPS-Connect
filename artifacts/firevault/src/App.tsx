@@ -100,6 +100,7 @@ import MagazijnArtikelDetailPagina from "@/pages/magazijn/artikel-detail";
 import MagazijnArtikelLabelPagina from "@/pages/magazijn/artikel-label";
 import MagazijnLocatiesPagina from "@/pages/magazijn/locaties";
 import MagazijnVoorraadPagina from "@/pages/magazijn/voorraad";
+import MagazijnStellingsscansPagina from "@/pages/magazijn/stellingscans";
 import MagazijnMutatiesPagina from "@/pages/magazijn/mutaties";
 import MagazijnReserveringenPagina from "@/pages/magazijn/reserveringen";
 import MagazijnUitgiftesPagina from "@/pages/magazijn/uitgiftes";
@@ -362,6 +363,7 @@ function ConnectPortal() {
         <Route path="/magazijn/artikelen/:id" component={MagazijnArtikelDetailPagina} />
         <Route path="/magazijn/locaties" component={MagazijnLocatiesPagina} />
         <Route path="/magazijn/voorraad" component={MagazijnVoorraadPagina} />
+        <Route path="/magazijn/stellingscans" component={MagazijnStellingsscansPagina} />
         <Route path="/magazijn/mutaties" component={MagazijnMutatiesPagina} />
         <Route path="/magazijn/reserveringen" component={MagazijnReserveringenPagina} />
         <Route path="/magazijn/uitgiftes" component={MagazijnUitgiftesPagina} />

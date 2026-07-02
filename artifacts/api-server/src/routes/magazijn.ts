@@ -10,11 +10,14 @@ import {
   artikelenTable,
   leveranciersTable,
   opdrachtenTable,
+  magazijnStellingscansTable,
 } from "@workspace/db";
 import { eq, and, asc, desc, ilike, lt, lte, sql } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { logger } from "../lib/logger";
 import { verstuurMail, MailFout } from "../services/email";
+import { ObjectStorageService } from "../lib/objectStorage";
+import { maakOpenAiClient, heeftOpenAi } from "../lib/openai";
 
 const router = Router();
 
@@ -1121,6 +1124,305 @@ router.post("/magazijn/bestelbonnen", aanmaken, async (req, res) => {
       return res.status(503).json({ error: "E-mail kon niet worden verstuurd. Controleer de mailconfiguratie." });
     }
     return res.status(500).json({ error: "Fout bij verwerken bestelbon" });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════
+// Stellingscans — AI-gestuurde voorraadcontrole via foto
+// ═══════════════════════════════════════════════════════════
+
+type StellingsscanSuggestie = {
+  artikel_id: number;
+  code: string | null;
+  naam: string;
+  eenheid: string | null;
+  huidige_voorraad: number | null;
+  minimum_voorraad: number | null;
+  advies_hoeveelheid: number;
+  reden: string;
+  prioriteit: string;
+};
+
+function mapStellingsscan(row: typeof magazijnStellingscansTable.$inferSelect) {
+  return {
+    id: row.id,
+    foto_pad: row.fotoPad,
+    locatie_id: row.locatieId,
+    status: row.status,
+    aangemaakt_op: row.aangemaaktOp?.toISOString() ?? new Date().toISOString(),
+    goedgekeurd_op: row.goedgekeurdOp?.toISOString() ?? null,
+    ai_suggesties: (row.aiSuggesties as StellingsscanSuggestie[]) ?? [],
+  };
+}
+
+// Upload-URL ophalen voor stellingfoto
+router.post("/magazijn/stellingscans/upload-url", schrijven, async (_req, res) => {
+  try {
+    const storage = new ObjectStorageService();
+    const { uploadURL, objectPath } = await storage.getObjectEntityUploadURL(null, "algemeen");
+    return res.json({ upload_url: uploadURL, object_path: objectPath });
+  } catch (err) {
+    logger.error({ err }, "magazijn stellingsscan upload-url fout");
+    return res.status(500).json({ error: "Kon upload-URL niet genereren" });
+  }
+});
+
+// Stellingfoto registreren + synchrone AI-analyse
+router.post("/magazijn/stellingscans", schrijven, async (req, res) => {
+  try {
+    const { foto_pad, locatie_id } = req.body as { foto_pad?: string; locatie_id?: number };
+    if (!foto_pad) return res.status(400).json({ error: "foto_pad is verplicht" });
+
+    const userId = (req.session as { userId?: number }).userId ?? null;
+
+    // Scan aanmaken met status "analyseren"
+    const [scan] = await db
+      .insert(magazijnStellingscansTable)
+      .values({
+        fotoPad: foto_pad,
+        locatieId: locatie_id ?? null,
+        aangemaaaktDoorId: userId,
+        status: "analyseren",
+      })
+      .returning();
+
+    // Artikelcatalogus met huidige voorraad ophalen
+    const artikelen = await db
+      .select({
+        id: artikelenTable.id,
+        code: artikelenTable.code,
+        naam: artikelenTable.naam,
+        eenheid: artikelenTable.eenheid,
+        minimumVoorraad: artikelenTable.minimumVoorraad,
+      })
+      .from(artikelenTable)
+      .orderBy(asc(artikelenTable.naam));
+
+    const voorraadRijen = await db
+      .select({
+        artikelId: voorraadTable.artikelId,
+        totaal: sql<number>`SUM(${voorraadTable.hoeveelheid})`.mapWith(Number),
+      })
+      .from(voorraadTable)
+      .groupBy(voorraadTable.artikelId);
+
+    const voorraadMap = new Map(voorraadRijen.map((v) => [v.artikelId, v.totaal]));
+
+    // AI Vision analyse (optioneel — vereist OpenAI)
+    let aiSuggesties: StellingsscanSuggestie[] = [];
+
+    if (heeftOpenAi()) {
+      try {
+        const storage = new ObjectStorageService();
+        const resp = await storage.downloadObject(foto_pad);
+        const buffer = Buffer.from(await resp.arrayBuffer());
+
+        const sharp = (await import("sharp")).default;
+        const fotoBase64 = (
+          await sharp(buffer)
+            .resize({ width: 1024, withoutEnlargement: true })
+            .jpeg({ quality: 80 })
+            .toBuffer()
+        ).toString("base64");
+
+        const artikelContext = artikelen
+          .slice(0, 200)
+          .map((a) => {
+            const huidig = voorraadMap.get(a.id) ?? 0;
+            return `${a.code ?? a.id} | ${a.naam} | ${a.eenheid ?? "st"} | huidig: ${huidig} | min: ${a.minimumVoorraad ?? 0}`;
+          })
+          .join("\n");
+
+        const openai = maakOpenAiClient();
+        const completion = await openai.chat.completions.create({
+          model: "gpt-4o",
+          max_tokens: 3000,
+          response_format: { type: "json_object" },
+          messages: [
+            {
+              role: "system",
+              content: `Je bent een ervaren magazijnbeheerder bij FPS Brandpreventie, een brandpreventie-installatiebedrijf.
+Je analyseert een foto van een magazijnstelling en bepaalt welke artikelen bijbesteld moeten worden.
+
+Beschikbare artikelen (CODE | NAAM | EENHEID | HUIDIG | MINIMUM):
+${artikelContext}
+
+INSTRUCTIES:
+1. Identificeer zichtbare artikelen op de foto aan de hand van verpakking, label, kleur of code.
+2. Vergelijk zichtbare hoeveelheid met de minimumvoorraad uit de lijst.
+3. Geef alleen besteladviezen voor artikelen die (bijna) leeg zijn of onder minimum dreigen te komen.
+4. Bereken advies_hoeveelheid als minimaal (minimum_voorraad * 2) of inschatting bij onbekend minimum.
+5. Als geen artikelen herkend worden, geef een lege suggesties-array.
+
+Geef uitsluitend geldige JSON in dit formaat:
+{
+  "suggesties": [
+    {
+      "artikel_id": <integer uit de lijst>,
+      "code": "<artikelcode of null>",
+      "naam": "<artikelnaam>",
+      "eenheid": "<eenheid>",
+      "huidige_voorraad": <geschatte zichtbare hoeveelheid of null>,
+      "minimum_voorraad": <minimum uit de lijst of null>,
+      "advies_hoeveelheid": <aanbevolen bestelquantum>,
+      "reden": "<korte Nederlandse toelichting>",
+      "prioriteit": "hoog"
+    }
+  ]
+}
+Prioriteit: "hoog" = leeg of <50% minimum, "middel" = 50-100% minimum, "laag" = licht onder minimum.`,
+            },
+            {
+              role: "user",
+              content: [
+                {
+                  type: "text",
+                  text: "Analyseer deze stellingfoto en geef besteladviezen voor artikelen die bijbesteld moeten worden.",
+                },
+                {
+                  type: "image_url",
+                  image_url: { url: `data:image/jpeg;base64,${fotoBase64}`, detail: "high" },
+                },
+              ],
+            },
+          ],
+        });
+
+        const rawText = completion.choices[0]?.message?.content ?? "{}";
+        try {
+          const parsed = JSON.parse(rawText) as { suggesties?: unknown };
+          if (Array.isArray(parsed.suggesties)) {
+            aiSuggesties = parsed.suggesties as StellingsscanSuggestie[];
+          }
+        } catch {
+          // parse fout — lege suggesties bewaren
+        }
+      } catch (err) {
+        logger.warn({ err }, "magazijn stellingsscan AI-analyse fout");
+      }
+    }
+
+    // Scan bijwerken met resultaten
+    const [updated] = await db
+      .update(magazijnStellingscansTable)
+      .set({ status: "gereed", aiSuggesties })
+      .where(eq(magazijnStellingscansTable.id, scan.id))
+      .returning();
+
+    return res.status(201).json(mapStellingsscan(updated));
+  } catch (err) {
+    logger.error({ err }, "magazijn stellingsscan aanmaken fout");
+    return res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// Lijst van stellingscans (meest recent eerst)
+router.get("/magazijn/stellingscans", lezen, async (_req, res) => {
+  try {
+    const rijen = await db
+      .select()
+      .from(magazijnStellingscansTable)
+      .orderBy(desc(magazijnStellingscansTable.aangemaaktOp));
+    return res.json(rijen.map(mapStellingsscan));
+  } catch (err) {
+    logger.error({ err }, "magazijn stellingscans ophalen fout");
+    return res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// Enkele stellingsscan ophalen
+router.get("/magazijn/stellingscans/:id", lezen, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const [row] = await db
+      .select()
+      .from(magazijnStellingscansTable)
+      .where(eq(magazijnStellingscansTable.id, id));
+    if (!row) return res.status(404).json({ error: "Scan niet gevonden" });
+    return res.json(mapStellingsscan(row));
+  } catch (err) {
+    logger.error({ err }, "magazijn stellingsscan ophalen fout");
+    return res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// Goedkeuren: update voorraad.besteld + log mutaties + markeer goedgekeurd
+router.post("/magazijn/stellingscans/:id/goedkeuren", schrijven, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const userId = (req.session as { userId?: number }).userId ?? null;
+
+    const [scan] = await db
+      .select()
+      .from(magazijnStellingscansTable)
+      .where(eq(magazijnStellingscansTable.id, id));
+    if (!scan) return res.status(404).json({ error: "Scan niet gevonden" });
+    if (scan.status === "goedgekeurd") {
+      return res.status(409).json({ error: "Scan is al goedgekeurd" });
+    }
+
+    const { artikelen } = req.body as {
+      artikelen: Array<{ artikel_id: number; hoeveelheid: number }>;
+    };
+    if (!Array.isArray(artikelen) || artikelen.length === 0) {
+      return res.status(400).json({ error: "Geen artikelen opgegeven" });
+    }
+
+    for (const item of artikelen) {
+      if (!item.artikel_id || item.hoeveelheid <= 0) continue;
+
+      // Zoek bestaand voorraadrecord voor dit artikel
+      const [bestaand] = await db
+        .select()
+        .from(voorraadTable)
+        .where(eq(voorraadTable.artikelId, item.artikel_id))
+        .limit(1);
+
+      if (bestaand) {
+        await db
+          .update(voorraadTable)
+          .set({ besteld: sql`${voorraadTable.besteld} + ${item.hoeveelheid}` })
+          .where(eq(voorraadTable.id, bestaand.id));
+        // Mutatielog
+        await db.insert(voorraadMutatiesTable).values({
+          artikelId: item.artikel_id,
+          locatieId: bestaand.locatieId ?? null,
+          type: "bestelvoorstel",
+          hoeveelheid: item.hoeveelheid,
+          delta: item.hoeveelheid,
+          omschrijving: `Stellingsscan #${id} goedgekeurd`,
+          gebruikerId: userId,
+        });
+      } else {
+        // Nog geen voorraadrecord — aanmaken
+        await db.insert(voorraadTable).values({
+          artikelId: item.artikel_id,
+          hoeveelheid: 0,
+          gereserveerd: 0,
+          besteld: item.hoeveelheid,
+        });
+        await db.insert(voorraadMutatiesTable).values({
+          artikelId: item.artikel_id,
+          locatieId: null,
+          type: "bestelvoorstel",
+          hoeveelheid: item.hoeveelheid,
+          delta: item.hoeveelheid,
+          omschrijving: `Stellingsscan #${id} goedgekeurd`,
+          gebruikerId: userId,
+        });
+      }
+    }
+
+    const [updated] = await db
+      .update(magazijnStellingscansTable)
+      .set({ status: "goedgekeurd", goedgekeurdOp: new Date(), goedgekeurdDoorId: userId })
+      .where(eq(magazijnStellingscansTable.id, id))
+      .returning();
+
+    return res.json(mapStellingsscan(updated));
+  } catch (err) {
+    logger.error({ err }, "magazijn stellingsscan goedkeuren fout");
+    return res.status(500).json({ error: "Interne serverfout" });
   }
 });
 

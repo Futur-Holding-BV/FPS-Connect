@@ -203,6 +203,7 @@ import type {
   GetGebouwGevelbeeld200,
   GetJarrekeningOnderhandenWerkParams,
   GetLoonOutputParams,
+  GetMagazijnStellingsscanUploadUrl200,
   GetMedewerkerDocumentDownloadUrl200,
   GetMijnLmraStatusParams,
   GetMijnWeekUrenParams,
@@ -356,6 +357,9 @@ import type {
   MagazijnLocatie,
   MagazijnLocatieInput,
   MagazijnSignalering,
+  MagazijnStellingsscan,
+  MagazijnStellingsscanGoedkeuringInput,
+  MagazijnStellingsscanInput,
   MagazijnVerplaatsingInput,
   MailActieResultaat,
   MailLogregel,
@@ -60228,6 +60232,371 @@ export const useCreateMagazijnBestelbon = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getCreateMagazijnBestelbonMutationOptions(options));
+    }
+
+export const getGetMagazijnStellingsscanUploadUrlUrl = () => {
+
+
+
+
+  return `/api/magazijn/stellingscans/upload-url`
+}
+
+/**
+ * @summary Presigned upload-URL ophalen voor stellingfoto
+ */
+export const getMagazijnStellingsscanUploadUrl = async ( options?: RequestInit): Promise<GetMagazijnStellingsscanUploadUrl200> => {
+
+  return customFetch<GetMagazijnStellingsscanUploadUrl200>(getGetMagazijnStellingsscanUploadUrlUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getGetMagazijnStellingsscanUploadUrlMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof getMagazijnStellingsscanUploadUrl>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof getMagazijnStellingsscanUploadUrl>>, TError,void, TContext> => {
+
+const mutationKey = ['getMagazijnStellingsscanUploadUrl'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof getMagazijnStellingsscanUploadUrl>>, void> = () => {
+
+
+          return  getMagazijnStellingsscanUploadUrl(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type GetMagazijnStellingsscanUploadUrlMutationResult = NonNullable<Awaited<ReturnType<typeof getMagazijnStellingsscanUploadUrl>>>
+
+    export type GetMagazijnStellingsscanUploadUrlMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Presigned upload-URL ophalen voor stellingfoto
+ */
+export const useGetMagazijnStellingsscanUploadUrl = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof getMagazijnStellingsscanUploadUrl>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof getMagazijnStellingsscanUploadUrl>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getGetMagazijnStellingsscanUploadUrlMutationOptions(options));
+    }
+
+export const getCreateMagazijnStellingsscanUrl = () => {
+
+
+
+
+  return `/api/magazijn/stellingscans`
+}
+
+/**
+ * @summary Stellingfoto registreren en AI-analyse starten
+ */
+export const createMagazijnStellingsscan = async (magazijnStellingsscanInput: MagazijnStellingsscanInput, options?: RequestInit): Promise<MagazijnStellingsscan> => {
+
+  return customFetch<MagazijnStellingsscan>(getCreateMagazijnStellingsscanUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(magazijnStellingsscanInput)
+  }
+);}
+
+
+
+
+export const getCreateMagazijnStellingsscanMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createMagazijnStellingsscan>>, TError,{data: BodyType<MagazijnStellingsscanInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createMagazijnStellingsscan>>, TError,{data: BodyType<MagazijnStellingsscanInput>}, TContext> => {
+
+const mutationKey = ['createMagazijnStellingsscan'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createMagazijnStellingsscan>>, {data: BodyType<MagazijnStellingsscanInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createMagazijnStellingsscan(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateMagazijnStellingsscanMutationResult = NonNullable<Awaited<ReturnType<typeof createMagazijnStellingsscan>>>
+    export type CreateMagazijnStellingsscanMutationBody = BodyType<MagazijnStellingsscanInput>
+    export type CreateMagazijnStellingsscanMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Stellingfoto registreren en AI-analyse starten
+ */
+export const useCreateMagazijnStellingsscan = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createMagazijnStellingsscan>>, TError,{data: BodyType<MagazijnStellingsscanInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createMagazijnStellingsscan>>,
+        TError,
+        {data: BodyType<MagazijnStellingsscanInput>},
+        TContext
+      > => {
+      return useMutation(getCreateMagazijnStellingsscanMutationOptions(options));
+    }
+
+export const getListMagazijnStellingscansUrl = () => {
+
+
+
+
+  return `/api/magazijn/stellingscans`
+}
+
+/**
+ * @summary Stellingscans ophalen (meest recent eerst)
+ */
+export const listMagazijnStellingscans = async ( options?: RequestInit): Promise<MagazijnStellingsscan[]> => {
+
+  return customFetch<MagazijnStellingsscan[]>(getListMagazijnStellingscansUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListMagazijnStellingscansQueryKey = () => {
+    return [
+    `/api/magazijn/stellingscans`
+    ] as const;
+    }
+
+
+export const getListMagazijnStellingscansQueryOptions = <TData = Awaited<ReturnType<typeof listMagazijnStellingscans>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMagazijnStellingscans>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListMagazijnStellingscansQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listMagazijnStellingscans>>> = ({ signal }) => listMagazijnStellingscans({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listMagazijnStellingscans>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListMagazijnStellingscansQueryResult = NonNullable<Awaited<ReturnType<typeof listMagazijnStellingscans>>>
+export type ListMagazijnStellingscansQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Stellingscans ophalen (meest recent eerst)
+ */
+
+export function useListMagazijnStellingscans<TData = Awaited<ReturnType<typeof listMagazijnStellingscans>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMagazijnStellingscans>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListMagazijnStellingscansQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetMagazijnStellingsscanUrl = (id: number,) => {
+
+
+
+
+  return `/api/magazijn/stellingscans/${id}`
+}
+
+/**
+ * @summary Stellingsscan ophalen
+ */
+export const getMagazijnStellingsscan = async (id: number, options?: RequestInit): Promise<MagazijnStellingsscan> => {
+
+  return customFetch<MagazijnStellingsscan>(getGetMagazijnStellingsscanUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetMagazijnStellingsscanQueryKey = (id: number,) => {
+    return [
+    `/api/magazijn/stellingscans/${id}`
+    ] as const;
+    }
+
+
+export const getGetMagazijnStellingsscanQueryOptions = <TData = Awaited<ReturnType<typeof getMagazijnStellingsscan>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMagazijnStellingsscan>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetMagazijnStellingsscanQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMagazijnStellingsscan>>> = ({ signal }) => getMagazijnStellingsscan(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMagazijnStellingsscan>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetMagazijnStellingsscanQueryResult = NonNullable<Awaited<ReturnType<typeof getMagazijnStellingsscan>>>
+export type GetMagazijnStellingsscanQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Stellingsscan ophalen
+ */
+
+export function useGetMagazijnStellingsscan<TData = Awaited<ReturnType<typeof getMagazijnStellingsscan>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMagazijnStellingsscan>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetMagazijnStellingsscanQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getKeurMagazijnStellingsscanGoedUrl = (id: number,) => {
+
+
+
+
+  return `/api/magazijn/stellingscans/${id}/goedkeuren`
+}
+
+/**
+ * @summary Goedgekeurde artikelen markeren als te bestellen
+ */
+export const keurMagazijnStellingsscanGoed = async (id: number,
+    magazijnStellingsscanGoedkeuringInput: MagazijnStellingsscanGoedkeuringInput, options?: RequestInit): Promise<MagazijnStellingsscan> => {
+
+  return customFetch<MagazijnStellingsscan>(getKeurMagazijnStellingsscanGoedUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(magazijnStellingsscanGoedkeuringInput)
+  }
+);}
+
+
+
+
+export const getKeurMagazijnStellingsscanGoedMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof keurMagazijnStellingsscanGoed>>, TError,{id: number;data: BodyType<MagazijnStellingsscanGoedkeuringInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof keurMagazijnStellingsscanGoed>>, TError,{id: number;data: BodyType<MagazijnStellingsscanGoedkeuringInput>}, TContext> => {
+
+const mutationKey = ['keurMagazijnStellingsscanGoed'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof keurMagazijnStellingsscanGoed>>, {id: number;data: BodyType<MagazijnStellingsscanGoedkeuringInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  keurMagazijnStellingsscanGoed(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type KeurMagazijnStellingsscanGoedMutationResult = NonNullable<Awaited<ReturnType<typeof keurMagazijnStellingsscanGoed>>>
+    export type KeurMagazijnStellingsscanGoedMutationBody = BodyType<MagazijnStellingsscanGoedkeuringInput>
+    export type KeurMagazijnStellingsscanGoedMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Goedgekeurde artikelen markeren als te bestellen
+ */
+export const useKeurMagazijnStellingsscanGoed = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof keurMagazijnStellingsscanGoed>>, TError,{id: number;data: BodyType<MagazijnStellingsscanGoedkeuringInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof keurMagazijnStellingsscanGoed>>,
+        TError,
+        {id: number;data: BodyType<MagazijnStellingsscanGoedkeuringInput>},
+        TContext
+      > => {
+      return useMutation(getKeurMagazijnStellingsscanGoedMutationOptions(options));
     }
 
 export const getImportPreviewUrl = () => {

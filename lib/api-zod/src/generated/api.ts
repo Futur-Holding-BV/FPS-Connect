@@ -21248,6 +21248,114 @@ export const CreateMagazijnBestelbonResponse = zod.object({
 
 
 /**
+ * @summary Presigned upload-URL ophalen voor stellingfoto
+ */
+export const GetMagazijnStellingsscanUploadUrlResponse = zod.object({
+  "upload_url": zod.string(),
+  "object_path": zod.string()
+})
+
+
+/**
+ * @summary Stellingfoto registreren en AI-analyse starten
+ */
+export const CreateMagazijnStellingsscanBody = zod.object({
+  "foto_pad": zod.string(),
+  "locatie_id": zod.number().optional()
+})
+
+export const CreateMagazijnStellingsscanResponse = zod.void()
+
+
+/**
+ * @summary Stellingscans ophalen (meest recent eerst)
+ */
+export const ListMagazijnStellingscansResponseItem = zod.object({
+  "id": zod.number(),
+  "foto_pad": zod.string(),
+  "locatie_id": zod.number().nullish(),
+  "status": zod.string(),
+  "aangemaakt_op": zod.string(),
+  "goedgekeurd_op": zod.string().nullish(),
+  "ai_suggesties": zod.array(zod.object({
+  "artikel_id": zod.number(),
+  "code": zod.string().nullish(),
+  "naam": zod.string(),
+  "eenheid": zod.string().nullish(),
+  "huidige_voorraad": zod.number().nullish(),
+  "minimum_voorraad": zod.number().nullish(),
+  "advies_hoeveelheid": zod.number(),
+  "reden": zod.string(),
+  "prioriteit": zod.string()
+})).optional()
+})
+export const ListMagazijnStellingscansResponse = zod.array(ListMagazijnStellingscansResponseItem)
+
+
+/**
+ * @summary Stellingsscan ophalen
+ */
+export const GetMagazijnStellingsscanParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetMagazijnStellingsscanResponse = zod.object({
+  "id": zod.number(),
+  "foto_pad": zod.string(),
+  "locatie_id": zod.number().nullish(),
+  "status": zod.string(),
+  "aangemaakt_op": zod.string(),
+  "goedgekeurd_op": zod.string().nullish(),
+  "ai_suggesties": zod.array(zod.object({
+  "artikel_id": zod.number(),
+  "code": zod.string().nullish(),
+  "naam": zod.string(),
+  "eenheid": zod.string().nullish(),
+  "huidige_voorraad": zod.number().nullish(),
+  "minimum_voorraad": zod.number().nullish(),
+  "advies_hoeveelheid": zod.number(),
+  "reden": zod.string(),
+  "prioriteit": zod.string()
+})).optional()
+})
+
+
+/**
+ * @summary Goedgekeurde artikelen markeren als te bestellen
+ */
+export const KeurMagazijnStellingsscanGoedParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const KeurMagazijnStellingsscanGoedBody = zod.object({
+  "artikelen": zod.array(zod.object({
+  "artikel_id": zod.number(),
+  "hoeveelheid": zod.number()
+}))
+})
+
+export const KeurMagazijnStellingsscanGoedResponse = zod.object({
+  "id": zod.number(),
+  "foto_pad": zod.string(),
+  "locatie_id": zod.number().nullish(),
+  "status": zod.string(),
+  "aangemaakt_op": zod.string(),
+  "goedgekeurd_op": zod.string().nullish(),
+  "ai_suggesties": zod.array(zod.object({
+  "artikel_id": zod.number(),
+  "code": zod.string().nullish(),
+  "naam": zod.string(),
+  "eenheid": zod.string().nullish(),
+  "huidige_voorraad": zod.number().nullish(),
+  "minimum_voorraad": zod.number().nullish(),
+  "advies_hoeveelheid": zod.number(),
+  "reden": zod.string(),
+  "prioriteit": zod.string()
+})).optional()
+})
+
+
+/**
  * @summary Bestand uploaden en kolommen + voorbeeldrijen ophalen
  */
 export const ImportPreviewBody = zod.object({
