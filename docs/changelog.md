@@ -10,6 +10,33 @@ Grote roadmap-fases staan ook in `docs/roadmap/gebouwd.md` en `docs/roadmap/acti
 
 ---
 
+## 2026-07-02 — Inbox: automatische bevestigingsmail, aanvullende vragen en PL-planningbewaking
+
+**Uitvoering:** volledig | **Getest:** typecheck + serverlog
+
+**Automatische bevestigingsmail:**
+- Bij het verwerken van een offerte-aanvraag (`POST /inbox/offerte-aanvraag`) wordt direct een `aanvraag_planningen`-record aangemaakt met een uniek antwoord-token
+- AI-extractie uitgebreid met drie volledigheids-velden: `responstermijn`, `opname_gevraagd`, `plattegronden_status` — ontbrekende velden worden als follow-up vragen meegestuurd
+- Bevestigingsmail verstuurd naar het e-mailadres van de contactpersoon (fire-and-forget; alleen als e-mail geconfigureerd); bevat een persoonlijke aanhef, offerte-referentie en een uitnodigingsknop voor aanvullende vragen
+
+**Publiek antwoordformulier (`GET/POST /api/inbox/aanvraag-antwoord/:token`):**
+- Server-rendered HTML-formulier op uniek token-URL (geen auth vereist); FPS-branding, responsief
+- Radiogroepen voor responstermijn, opname en plattegronden-status; optioneel vrij tekstveld
+- Na verzending: planning-datum automatisch afgeleid uit responstermijn (1 week/2 weken/etc.); audit-log ingevoerd; bedanktpagina getoond
+- Token/al-ontvangen guard: herbezoek toont bevestiging zonder formulier
+
+**PL-planningbewaking:**
+- `aanvraag_planningen`-tabel in DB (velden: afzender, AI-velden, antwoorden afzender, antwoord-token, bevestiging-/antwoordtijdstip, pl_planning_datum/notitie/bijgewerkt, melding_verzond_op)
+- `GET /inbox/items/:id/planning` en `PATCH /inbox/items/:id/planning` (bevoegdheid: crm:1/2)
+- OpenAPI-schema's `AanvraagPlanning` + `AanvraagPlanningPatch` toegevoegd; codegen uitgevoerd
+- Dagelijkse scheduler (`planDagelijksePlanningMeldingen`) om 08:00 controleert aanstaande/verlopen deadlines en mailt betrokken PL's met een overzichtstabel; "Volgende planning-melding gepland" bevestigd in serverlog
+
+**Frontend — PL-planningkaart in inbox/detail.tsx:**
+- Kaart "PL-planning" zichtbaar voor `offerte_aanvraag`-items; toont afzenderinfo, bevestigingsstatus, antwoorden afzender (responstermijn/opname/plattegronden + opmerking), en responsdatum met kleurcodering (rood = verlopen, amber = ≤7 dagen, groen = ruim)
+- "Bewerken"-knop opent dialoog voor datum + notitie; muteert via `PATCH /inbox/items/:id/planning`
+
+---
+
 ## 2026-07-02 — Factuurverwerking: medewerker-beoordeling, opmerkingen en proceslog
 
 **Uitvoering:** volledig | **Getest:** typecheck

@@ -7,7 +7,10 @@ import {
   useAfwijzenInboxItem,
   useVerplaatsenInboxItem,
   useTerBeoordelingInboxItem,
+  useGetInboxItemPlanning,
+  usePatchInboxItemPlanning,
   getGetInboxItemQueryKey,
+  getGetInboxItemPlanningQueryKey,
   getListInboxItemsQueryKey,
   getGetInboxStatsQueryKey,
   useListCrmKlanten,
@@ -26,7 +29,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import {
   ArrowLeft, Sparkles, CheckCircle2, XCircle, ArrowRight,
-  FileText, Clock, AlertTriangle, History, Edit2,
+  FileText, Clock, AlertTriangle, History, Edit2, CalendarClock,
 } from "lucide-react";
 
 const STATUS_KLEUR: Record<string, string> = {
@@ -64,8 +67,13 @@ export default function InboxDetailPagina() {
   const [bewerkOpen, setBewerkOpen] = useState(false);
   const [afwijzenReden, setAfwijzenReden] = useState("");
   const [doelBestemming, setDoelBestemming] = useState("");
+  const [planningBewerkOpen, setPlanningBewerkOpen] = useState(false);
+  const [planningDatum, setPlanningDatum] = useState("");
+  const [planningNotitie, setPlanningNotitie] = useState("");
 
   const { data: item, isLoading } = useGetInboxItem(numId);
+  const { data: planning, isLoading: planningLaden } = useGetInboxItemPlanning(numId);
+  const planningBijwerken = usePatchInboxItemPlanning();
   const goedkeuren = useGoedkeurenInboxItem();
   const afwijzen = useAfwijzenInboxItem();
   const verplaatsen = useVerplaatsenInboxItem();
@@ -76,6 +84,23 @@ export default function InboxDetailPagina() {
     await qc.invalidateQueries({ queryKey: getGetInboxItemQueryKey(numId) });
     await qc.invalidateQueries({ queryKey: getListInboxItemsQueryKey() });
     await qc.invalidateQueries({ queryKey: getGetInboxStatsQueryKey() });
+  }
+
+  async function handlePlanningOpslaan() {
+    try {
+      await planningBijwerken.mutateAsync({
+        id: numId,
+        data: {
+          pl_planning_datum: planningDatum || null,
+          pl_notitie: planningNotitie || null,
+        },
+      });
+      await qc.invalidateQueries({ queryKey: getGetInboxItemPlanningQueryKey(numId) });
+      setPlanningBewerkOpen(false);
+      toast({ title: "Planning bijgewerkt" });
+    } catch {
+      toast({ title: "Fout bij opslaan planning", variant: "destructive" });
+    }
   }
 
   async function handleGoedkeuren() {
@@ -290,6 +315,120 @@ export default function InboxDetailPagina() {
         </Card>
       )}
 
+      {/* Aanvraag-planning */}
+      {typedItem.document_categorie === "offerte_aanvraag" && (
+        <Card>
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <CalendarClock className="w-4 h-4 text-orange-500" /> PL-planning
+              </CardTitle>
+              {planning && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2 gap-1 text-xs"
+                  onClick={() => {
+                    setPlanningDatum(planning.pl_planning_datum ?? "");
+                    setPlanningNotitie(planning.pl_notitie ?? "");
+                    setPlanningBewerkOpen(true);
+                  }}
+                >
+                  <Edit2 className="w-3 h-3" /> Bewerken
+                </Button>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {planningLaden ? (
+              <Skeleton className="h-12" />
+            ) : planning ? (
+              <>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  {planning.afzender_naam && (
+                    <div>
+                      <p className="text-xs text-muted-foreground font-medium">Afzender</p>
+                      <p className="text-sm mt-0.5">{planning.afzender_naam}</p>
+                      {planning.afzender_email && <p className="text-xs text-muted-foreground">{planning.afzender_email}</p>}
+                    </div>
+                  )}
+                  <div>
+                    <p className="text-xs text-muted-foreground font-medium">Bevestigingsmail</p>
+                    <p className="text-sm mt-0.5">
+                      {planning.bevestiging_verzond_op
+                        ? <span className="text-emerald-600">Verstuurd {new Date(planning.bevestiging_verzond_op).toLocaleString("nl-NL", { dateStyle: "short", timeStyle: "short" })}</span>
+                        : <span className="text-amber-600">Nog niet verstuurd</span>}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Antwoorden afzender */}
+                {(planning.gewenste_responstermijn || planning.opname_nodig || planning.plattegronden_status || planning.extra_opmerking) && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-md p-3 space-y-2">
+                    <p className="text-xs font-semibold text-blue-700">Antwoorden afzender</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {planning.gewenste_responstermijn && (
+                        <div>
+                          <p className="text-xs text-muted-foreground">Responstermijn</p>
+                          <p className="text-xs font-medium">{planning.gewenste_responstermijn}</p>
+                        </div>
+                      )}
+                      {planning.opname_nodig && (
+                        <div>
+                          <p className="text-xs text-muted-foreground">Opname</p>
+                          <p className="text-xs font-medium">{planning.opname_nodig}</p>
+                        </div>
+                      )}
+                      {planning.plattegronden_status && (
+                        <div>
+                          <p className="text-xs text-muted-foreground">Plattegronden</p>
+                          <p className="text-xs font-medium">{planning.plattegronden_status}</p>
+                        </div>
+                      )}
+                    </div>
+                    {planning.extra_opmerking && (
+                      <p className="text-xs text-muted-foreground">{planning.extra_opmerking}</p>
+                    )}
+                    {planning.antwoorden_ontvangen_op && (
+                      <p className="text-xs text-muted-foreground">Ontvangen op {new Date(planning.antwoorden_ontvangen_op).toLocaleString("nl-NL", { dateStyle: "short", timeStyle: "short" })}</p>
+                    )}
+                  </div>
+                )}
+
+                {/* PL-planning */}
+                <div className="border-t pt-3">
+                  <p className="text-xs text-muted-foreground font-medium mb-1.5">Responsdatum (PL)</p>
+                  {planning.pl_planning_datum ? (
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className={`text-xs border ${
+                        new Date(planning.pl_planning_datum) < new Date()
+                          ? "border-red-300 text-red-600 bg-red-50"
+                          : new Date(planning.pl_planning_datum) <= new Date(Date.now() + 7 * 86_400_000)
+                          ? "border-amber-300 text-amber-700 bg-amber-50"
+                          : "border-emerald-300 text-emerald-700 bg-emerald-50"
+                      }`}>
+                        <Clock className="w-3 h-3 mr-1 inline" />
+                        {new Date(planning.pl_planning_datum).toLocaleDateString("nl-NL")}
+                      </Badge>
+                      {new Date(planning.pl_planning_datum) < new Date() && (
+                        <span className="text-xs text-red-500 font-medium">Verlopen</span>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground italic">Nog niet ingesteld</p>
+                  )}
+                  {planning.pl_notitie && (
+                    <p className="text-xs text-muted-foreground mt-1.5">{planning.pl_notitie}</p>
+                  )}
+                </div>
+              </>
+            ) : (
+              <p className="text-xs text-muted-foreground italic">Geen planning-record — nog niet verwerkt als offerte-aanvraag.</p>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Audit log */}
       {typedItem.auditlog && typedItem.auditlog.length > 0 && (
         <Card>
@@ -321,6 +460,42 @@ export default function InboxDetailPagina() {
           </CardContent>
         </Card>
       )}
+
+      {/* Planning bewerken dialog */}
+      <Dialog open={planningBewerkOpen} onOpenChange={setPlanningBewerkOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>PL-planning instellen</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="planningDatum">Gewenste responsdatum</Label>
+              <Input
+                id="planningDatum"
+                type="date"
+                value={planningDatum}
+                onChange={(e) => setPlanningDatum(e.target.value)}
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label htmlFor="planningNotitie">Notitie (optioneel)</Label>
+              <Textarea
+                id="planningNotitie"
+                value={planningNotitie}
+                onChange={(e) => setPlanningNotitie(e.target.value)}
+                className="mt-1"
+                rows={2}
+                placeholder="Intern commentaar voor de projectleider..."
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPlanningBewerkOpen(false)}>Annuleren</Button>
+            <Button onClick={handlePlanningOpslaan} disabled={planningBijwerken.isPending}>
+              {planningBijwerken.isPending ? "Bezig..." : "Opslaan"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Afwijzen dialog */}
       <Dialog open={afwijzenOpen} onOpenChange={setAfwijzenOpen}>

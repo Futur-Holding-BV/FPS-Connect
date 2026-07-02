@@ -7256,6 +7256,75 @@ export const VerwerkInboxOfferteavanvraagResponse = zod.void()
 
 
 /**
+ * @summary Planning-record van een inbox-item ophalen
+ */
+export const GetInboxItemPlanningParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetInboxItemPlanningResponse = zod.object({
+  "id": zod.number(),
+  "inbox_item_id": zod.number(),
+  "offerte_id": zod.number().nullish(),
+  "afzender_email": zod.string().nullish(),
+  "afzender_naam": zod.string().nullish(),
+  "ai_responstermijn": zod.string().nullish(),
+  "ai_opname": zod.string().nullish(),
+  "ai_plattegronden": zod.string().nullish(),
+  "gewenste_responstermijn": zod.string().nullish(),
+  "opname_nodig": zod.string().nullish(),
+  "plattegronden_status": zod.string().nullish(),
+  "extra_opmerking": zod.string().nullish(),
+  "antwoord_token": zod.string(),
+  "bevestiging_verzond_op": zod.coerce.date().nullish(),
+  "antwoorden_ontvangen_op": zod.coerce.date().nullish(),
+  "pl_planning_datum": zod.coerce.date().nullish(),
+  "pl_notitie": zod.string().nullish(),
+  "pl_bijgewerkt_op": zod.coerce.date().nullish(),
+  "melding_verzond_op": zod.coerce.date().nullish(),
+  "aangemaakt_op": zod.coerce.date(),
+  "bijgewerkt_op": zod.coerce.date()
+})
+
+
+/**
+ * @summary PL-planning bijwerken voor een inbox-item
+ */
+export const PatchInboxItemPlanningParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const PatchInboxItemPlanningBody = zod.object({
+  "pl_planning_datum": zod.coerce.date().nullish(),
+  "pl_notitie": zod.string().nullish()
+})
+
+export const PatchInboxItemPlanningResponse = zod.object({
+  "id": zod.number(),
+  "inbox_item_id": zod.number(),
+  "offerte_id": zod.number().nullish(),
+  "afzender_email": zod.string().nullish(),
+  "afzender_naam": zod.string().nullish(),
+  "ai_responstermijn": zod.string().nullish(),
+  "ai_opname": zod.string().nullish(),
+  "ai_plattegronden": zod.string().nullish(),
+  "gewenste_responstermijn": zod.string().nullish(),
+  "opname_nodig": zod.string().nullish(),
+  "plattegronden_status": zod.string().nullish(),
+  "extra_opmerking": zod.string().nullish(),
+  "antwoord_token": zod.string(),
+  "bevestiging_verzond_op": zod.coerce.date().nullish(),
+  "antwoorden_ontvangen_op": zod.coerce.date().nullish(),
+  "pl_planning_datum": zod.coerce.date().nullish(),
+  "pl_notitie": zod.string().nullish(),
+  "pl_bijgewerkt_op": zod.coerce.date().nullish(),
+  "melding_verzond_op": zod.coerce.date().nullish(),
+  "aangemaakt_op": zod.coerce.date(),
+  "bijgewerkt_op": zod.coerce.date()
+})
+
+
+/**
  * @summary E-mailarchief van een gebouw
  */
 export const ListGebouwEmailsParams = zod.object({

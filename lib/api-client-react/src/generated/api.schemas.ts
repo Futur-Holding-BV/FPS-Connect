@@ -584,6 +584,53 @@ export interface InboxOfferteverwerkingResultaat {
   aangemaakt?: InboxOfferteverwerkingResultaatAangemaakt;
 }
 
+export interface AanvraagPlanning {
+  id: number;
+  inbox_item_id: number;
+  /** @nullable */
+  offerte_id?: number | null;
+  /** @nullable */
+  afzender_email?: string | null;
+  /** @nullable */
+  afzender_naam?: string | null;
+  /** @nullable */
+  ai_responstermijn?: string | null;
+  /** @nullable */
+  ai_opname?: string | null;
+  /** @nullable */
+  ai_plattegronden?: string | null;
+  /** @nullable */
+  gewenste_responstermijn?: string | null;
+  /** @nullable */
+  opname_nodig?: string | null;
+  /** @nullable */
+  plattegronden_status?: string | null;
+  /** @nullable */
+  extra_opmerking?: string | null;
+  antwoord_token: string;
+  /** @nullable */
+  bevestiging_verzond_op?: string | null;
+  /** @nullable */
+  antwoorden_ontvangen_op?: string | null;
+  /** @nullable */
+  pl_planning_datum?: string | null;
+  /** @nullable */
+  pl_notitie?: string | null;
+  /** @nullable */
+  pl_bijgewerkt_op?: string | null;
+  /** @nullable */
+  melding_verzond_op?: string | null;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export interface AanvraagPlanningPatch {
+  /** @nullable */
+  pl_planning_datum?: string | null;
+  /** @nullable */
+  pl_notitie?: string | null;
+}
+
 export interface InboxItemInput {
   bestandsnaam: string;
   bestandspad?: string;

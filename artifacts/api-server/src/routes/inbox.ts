@@ -1,19 +1,22 @@
 import { Router } from "express";
 import multer from "multer";
+import crypto from "crypto";
 import { db } from "@workspace/db";
 import {
   inboxItemsTable,
   inboxAuditLogTable,
+  aanvraagPlanningenTable,
   gebouwenTable,
   offertesTable,
   opnamesTable,
   werkgeversTable,
 } from "@workspace/db";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { parseEmailBestand } from "../services/email-ai";
 import { heeftOpenAi, maakOpenAiClient } from "../lib/openai";
 import { ObjectStorageService } from "../lib/objectStorage";
+import { stuurAanvraagBevestiging } from "../services/email";
 
 const objectStorage = new ObjectStorageService();
 
@@ -510,6 +513,10 @@ interface AiAanvraagExtractie {
   beschrijving_werkzaamheden: string | null;
   offerte_titel: string | null;
   samenvatting: string | null;
+  // Volledigheids-velden — null = niet vermeld in de e-mail → stel wél vraag
+  responstermijn: string | null;        // bijv. "2 weken" of null
+  opname_gevraagd: string | null;       // "ja", "nee", of null
+  plattegronden_status: string | null;  // "meegezonden", "nog te zenden", of null
 }
 
 async function extraheerAanvraagVeldenMetAi(
@@ -530,11 +537,14 @@ async function extraheerAanvraagVeldenMetAi(
       beschrijving_werkzaamheden: emailTekst.slice(0, 400),
       offerte_titel: onderwerp ?? "Offerte-aanvraag",
       samenvatting: emailTekst.slice(0, 200),
+      responstermijn: null,
+      opname_gevraagd: null,
+      plattegronden_status: null,
     };
   }
 
   const client = maakOpenAiClient();
-  const prompt = `Je bent een assistent voor een brandpreventie-bedrijf. Extraheer de volgende gegevens uit de offerte-aanvraag e-mail en geef ze terug als JSON. Gebruik null als een veld niet gevonden kan worden.
+  const prompt = `Je bent een assistent voor een brandpreventie-bedrijf. Extraheer de volgende gegevens uit de offerte-aanvraag e-mail en geef ze terug als JSON. Gebruik null als een veld niet gevonden of niet vermeld kan worden.
 
 E-mail onderwerp: ${onderwerp ?? "(geen)"}
 Afzender: ${afzender ?? "(onbekend)"}
@@ -553,7 +563,10 @@ Geef JSON terug met exact deze velden:
   "postcode": "postcode",
   "beschrijving_werkzaamheden": "samenvatting van gevraagde werkzaamheden (max 300 tekens)",
   "offerte_titel": "korte duidelijke titel voor de offerte (max 80 tekens)",
-  "samenvatting": "beknopte samenvatting van de aanvraag (max 200 tekens)"
+  "samenvatting": "beknopte samenvatting van de aanvraag (max 200 tekens)",
+  "responstermijn": "gewenste responstermijn als die EXPLICIET vermeld is (bijv. '2 weken', '1 maand'), anders null",
+  "opname_gevraagd": "expliciet 'ja' of 'nee' als opname van gebouw is besproken, anders null",
+  "plattegronden_status": "'meegezonden' als plattegronden zijn bijgevoegd, 'nog te zenden' als ze nog komen, anders null"
 }`;
 
   try {
@@ -578,6 +591,9 @@ Geef JSON terug met exact deze velden:
       beschrijving_werkzaamheden: emailTekst.slice(0, 400),
       offerte_titel: onderwerp ?? "Offerte-aanvraag",
       samenvatting: emailTekst.slice(0, 200),
+      responstermijn: null,
+      opname_gevraagd: null,
+      plattegronden_status: null,
     };
   }
 }
@@ -625,6 +641,9 @@ router.post(
         beschrijving_werkzaamheden: null,
         offerte_titel: "Offerte-aanvraag",
         samenvatting: null,
+        responstermijn: null,
+        opname_gevraagd: null,
+        plattegronden_status: null,
       };
 
       let emailBestandsnaam = "(geen e-mail)";
@@ -740,6 +759,44 @@ router.post(
         details: `Offerte-aanvraag verwerkt. Offerte ${offerteNummer} aangemaakt${aangemaaktGebouwId ? `, gebouw #${aangemaaktGebouwId}` : ""}${aangemaaktOpnameId ? `, opname #${aangemaaktOpnameId}` : ""}.`,
       });
 
+      // ── Bevestigingsmail + planning-record ────────────────────────────────────
+      const antwoordToken = crypto.randomBytes(24).toString("hex");
+      const vragen: Array<"responstermijn" | "opname" | "plattegronden"> = [];
+      if (!ai.responstermijn) vragen.push("responstermijn");
+      if (!ai.opname_gevraagd) vragen.push("opname");
+      if (!ai.plattegronden_status) vragen.push("plattegronden");
+
+      const [planning] = await db.insert(aanvraagPlanningenTable).values({
+        inboxItemId: inboxItem.id,
+        offerteId: offerte.id,
+        afzenderEmail: ai.contactpersoon_email ?? null,
+        afzenderNaam: ai.contactpersoon ?? null,
+        aiResponstermijn: ai.responstermijn ?? null,
+        aiOpname: ai.opname_gevraagd ?? null,
+        aiPlattegronden: ai.plattegronden_status ?? null,
+        antwoordToken,
+      }).returning();
+
+      if (ai.contactpersoon_email) {
+        const domein = (process.env.REPLIT_DOMAINS ?? "").split(",")[0]?.trim();
+        const baseUrl = domein ? `https://${domein}` : "https://fpsbrandpreventie.nl";
+        const antwoordUrl = `${baseUrl}/api/inbox/aanvraag-antwoord/${antwoordToken}`;
+
+        void stuurAanvraagBevestiging({
+          naarEmail: ai.contactpersoon_email,
+          contactpersoon: ai.contactpersoon ?? null,
+          offerteTitel: offerteTitel,
+          werkmaatschappij: werkgever.naam,
+          antwoordUrl,
+          vragen,
+          inboxItemId: inboxItem.id,
+        }).then(async () => {
+          await db.update(aanvraagPlanningenTable)
+            .set({ bevestigingVerzondOp: new Date() })
+            .where(eq(aanvraagPlanningenTable.id, planning.id));
+        }).catch(() => void 0);
+      }
+
       res.status(201).json({
         inbox_item: mapItem(inboxItem),
         offerte_id: offerte.id,
@@ -773,6 +830,210 @@ router.delete("/inbox/items/:id", schrijven, async (req, res) => {
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// ── AANVRAAG-PLANNING (PL) ───────────────────────────────────────────────────
+
+router.get("/inbox/items/:id/planning", lezen, async (req, res) => {
+  try {
+    const itemId = parseId(req.params.id);
+    const [planning] = await db
+      .select()
+      .from(aanvraagPlanningenTable)
+      .where(eq(aanvraagPlanningenTable.inboxItemId, itemId));
+    if (!planning) return res.status(404).json({ error: "Geen planning gevonden" });
+    res.json(planning);
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+router.patch("/inbox/items/:id/planning", schrijven, async (req, res) => {
+  try {
+    const itemId = parseId(req.params.id);
+    const { pl_planning_datum, pl_notitie } = req.body as { pl_planning_datum?: string | null; pl_notitie?: string | null };
+    const [bijgewerkt] = await db
+      .update(aanvraagPlanningenTable)
+      .set({
+        plPlanningDatum: pl_planning_datum ?? null,
+        plNotitie: pl_notitie ?? null,
+        plBijgewerktOp: new Date(),
+        bijgewerktOp: new Date(),
+      })
+      .where(eq(aanvraagPlanningenTable.inboxItemId, itemId))
+      .returning();
+    if (!bijgewerkt) return res.status(404).json({ error: "Geen planning gevonden" });
+    res.json(bijgewerkt);
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// ── PUBLIEK AANVRAAG-ANTWOORD FORMULIER ──────────────────────────────────────
+
+const ANTWOORD_CSS = `
+  body{font-family:system-ui,-apple-system,sans-serif;margin:0;padding:0;background:#f4f4f5;}
+  .wrap{max-width:520px;margin:48px auto;background:#fff;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,.12);overflow:hidden;}
+  .hdr{background:#212631;padding:24px 32px;display:flex;align-items:center;gap:12px;}
+  .hdr-dot{width:24px;height:24px;background:#F23B0D;border-radius:5px;flex-shrink:0;}
+  .hdr-title{color:#fff;font-size:15px;font-weight:700;letter-spacing:.4px;}
+  .body{padding:28px 32px;}
+  h1{margin:0 0 8px;font-size:18px;color:#212631;}
+  p{margin:0 0 20px;font-size:14px;color:#52525b;line-height:1.6;}
+  label{display:block;font-size:13px;font-weight:600;color:#374151;margin-bottom:6px;}
+  select,input[type=text]{width:100%;box-sizing:border-box;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;color:#111827;margin-bottom:16px;}
+  .radio-group{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;}
+  .radio-group label{font-weight:400;cursor:pointer;padding:6px 14px;border:1px solid #d1d5db;border-radius:20px;font-size:13px;color:#374151;white-space:nowrap;display:inline-flex;align-items:center;gap:6px;}
+  .radio-group input{margin:0;}
+  textarea{width:100%;box-sizing:border-box;padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;color:#111827;margin-bottom:16px;resize:vertical;}
+  button{background:#F23B0D;color:#fff;border:none;border-radius:6px;padding:10px 24px;font-size:14px;font-weight:600;cursor:pointer;letter-spacing:.3px;}
+  button:hover{background:#d63309;}
+  .ftr{background:#f4f4f5;padding:16px 32px;border-top:1px solid #e5e7eb;font-size:12px;color:#9ca3af;text-align:center;}
+  .success{text-align:center;padding:40px 32px;}
+  .success h2{font-size:20px;color:#212631;margin:0 0 12px;}
+  .check{font-size:40px;margin:0 0 16px;}
+`;
+
+function htmlPagina(inhoud: string): string {
+  return `<!DOCTYPE html><html lang="nl"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/><title>Aanvraag aanvullen</title><style>${ANTWOORD_CSS}</style></head><body><div class="wrap">${inhoud}<div class="ftr">FPS Brandpreventie &bull; Dit formulier is gekoppeld aan uw offerte-aanvraag.</div></div></body></html>`;
+}
+
+router.get("/inbox/aanvraag-antwoord/:token", async (req, res) => {
+  try {
+    const { token } = req.params;
+    const [planning] = await db
+      .select()
+      .from(aanvraagPlanningenTable)
+      .where(eq(aanvraagPlanningenTable.antwoordToken, token));
+
+    if (!planning) {
+      res.status(404).send(htmlPagina('<div class="body"><h1>Link niet gevonden</h1><p>Deze link is ongeldig of verlopen. Neem contact op met uw contactpersoon bij FPS Brandpreventie.</p></div>'));
+      return;
+    }
+    if (planning.antwoordenOntvangenOp) {
+      res.send(htmlPagina('<div class="body success"><div class="check">&#10003;</div><h2>Antwoorden al ontvangen</h2><p>Wij hebben uw antwoorden al geregistreerd. Bedankt!</p></div>'));
+      return;
+    }
+
+    const vragen: string[] = [];
+    if (!planning.aiResponstermijn) {
+      vragen.push(`<div>
+        <label for="responstermijn">Binnen welke termijn verwacht u een inhoudelijke reactie?</label>
+        <div class="radio-group">
+          ${["1 week","2 weken","1 maand","2 maanden","Geen voorkeur"].map(v =>
+            `<label><input type="radio" name="responstermijn" value="${v}" required/> ${v}</label>`
+          ).join("")}
+        </div>
+      </div>`);
+    }
+    if (!planning.aiOpname) {
+      vragen.push(`<div>
+        <label>Is een opname van het gebouw gewenst of noodzakelijk?</label>
+        <div class="radio-group">
+          <label><input type="radio" name="opname_nodig" value="ja" required/> Ja, gewenst</label>
+          <label><input type="radio" name="opname_nodig" value="nee" required/> Nee, niet nodig</label>
+          <label><input type="radio" name="opname_nodig" value="onbekend" required/> Weet ik niet</label>
+        </div>
+      </div>`);
+    }
+    if (!planning.aiPlattegronden) {
+      vragen.push(`<div>
+        <label>Zijn alle plattegrondtekeningen bijgevoegd of nog na te sturen?</label>
+        <div class="radio-group">
+          <label><input type="radio" name="plattegronden_status" value="meegezonden" required/> Bijgevoegd</label>
+          <label><input type="radio" name="plattegronden_status" value="nog te zenden" required/> Volgen nog</label>
+          <label><input type="radio" name="plattegronden_status" value="niet van toepassing" required/> Niet van toepassing</label>
+        </div>
+      </div>`);
+    }
+
+    const formulierInhoud =
+      vragen.length === 0
+        ? '<div class="body success"><div class="check">&#9745;</div><h2>Geen vragen meer open</h2><p>Alle benodigde informatie is al uit uw aanvraag opgehaald. Bedankt!</p></div>'
+        : `<div class="body">
+            <h1>Aanvraag aanvullen</h1>
+            <p>Helpt u ons door onderstaande vragen in te vullen? Dit stelt ons in staat uw aanvraag sneller te beoordelen.</p>
+            <form method="POST" action="/api/inbox/aanvraag-antwoord/${token}">
+              ${vragen.join("\n")}
+              <div>
+                <label for="extra_opmerking">Overige opmerkingen (optioneel)</label>
+                <textarea id="extra_opmerking" name="extra_opmerking" rows="3" placeholder="Bijv. bijzondere omstandigheden, specifieke wensen..."></textarea>
+              </div>
+              <button type="submit">Antwoorden verzenden</button>
+            </form>
+          </div>`;
+
+    res.send(htmlPagina(formulierInhoud));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).send(htmlPagina('<div class="body"><h1>Er is een fout opgetreden</h1><p>Probeer het later opnieuw of neem contact op.</p></div>'));
+  }
+});
+
+router.post("/inbox/aanvraag-antwoord/:token", async (req, res) => {
+  try {
+    const { token } = req.params;
+    const [planning] = await db
+      .select()
+      .from(aanvraagPlanningenTable)
+      .where(eq(aanvraagPlanningenTable.antwoordToken, token));
+
+    if (!planning) {
+      res.status(404).send(htmlPagina('<div class="body"><h1>Link niet gevonden</h1><p>Deze link is ongeldig of verlopen.</p></div>'));
+      return;
+    }
+    if (planning.antwoordenOntvangenOp) {
+      res.send(htmlPagina('<div class="body success"><div class="check">&#10003;</div><h2>Al ontvangen</h2><p>Uw antwoorden zijn al geregistreerd.</p></div>'));
+      return;
+    }
+
+    const body = req.body as Record<string, string>;
+    await db.update(aanvraagPlanningenTable).set({
+      gewensteResponstermijn: body["responstermijn"] ?? null,
+      opnameNodig: body["opname_nodig"] ?? null,
+      plattegrondenStatus: body["plattegronden_status"] ?? null,
+      extraOpmerking: body["extra_opmerking"] || null,
+      antwoordenOntvangenOp: new Date(),
+      bijgewerktOp: new Date(),
+    }).where(eq(aanvraagPlanningenTable.antwoordToken, token));
+
+    // Planning-datum afleiden uit responstermijn als PL nog geen datum heeft ingesteld
+    if (!planning.plPlanningDatum && body["responstermijn"]) {
+      const termijn = body["responstermijn"];
+      const nu = new Date();
+      let datum: Date | null = null;
+      if (termijn.includes("week")) {
+        const weken = parseInt(termijn) || 1;
+        datum = new Date(nu.getTime() + weken * 7 * 86_400_000);
+      } else if (termijn.includes("maand")) {
+        const maanden = parseInt(termijn) || 1;
+        datum = new Date(nu.setMonth(nu.getMonth() + maanden));
+      }
+      if (datum) {
+        await db.update(aanvraagPlanningenTable).set({
+          plPlanningDatum: datum.toISOString().slice(0, 10),
+          bijgewerktOp: new Date(),
+        }).where(eq(aanvraagPlanningenTable.antwoordToken, token));
+      }
+    }
+
+    // Audit log
+    if (planning.inboxItemId) {
+      await db.insert(inboxAuditLogTable).values({
+        inboxItemId: planning.inboxItemId,
+        actie: "aanvraag_antwoorden_ontvangen",
+        gebruikerId: null,
+        details: `Antwoorden ontvangen via bevestigingsmail-link.`,
+      }).catch(() => void 0);
+    }
+
+    res.send(htmlPagina(`<div class="body success"><div class="check" style="color:#16a34a;">&#10003;</div><h2>Bedankt!</h2><p>Uw antwoorden zijn ontvangen. Onze projectleider neemt contact met u op.</p></div>`));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).send(htmlPagina('<div class="body"><h1>Er is een fout opgetreden</h1><p>Probeer het later opnieuw.</p></div>'));
   }
 });
 

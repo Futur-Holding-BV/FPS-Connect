@@ -5813,6 +5813,52 @@ paths:
         "400":
           description: Ongeldige invoer
 
+  /inbox/items/{id}/planning:
+    get:
+      operationId: getInboxItemPlanning
+      tags: [inbox]
+      summary: Planning-record van een inbox-item ophalen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AanvraagPlanning"
+        "404":
+          description: Geen planning gevonden
+    patch:
+      operationId: patchInboxItemPlanning
+      tags: [inbox]
+      summary: PL-planning bijwerken voor een inbox-item
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AanvraagPlanningPatch"
+      responses:
+        "200":
+          description: Bijgewerkt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AanvraagPlanning"
+        "404":
+          description: Geen planning gevonden
+
   /gebouwen/{id}/emails:
     get:
       operationId: listGebouwEmails
@@ -17533,6 +17579,69 @@ components:
               type: boolean
             opname:
               type: boolean
+
+    AanvraagPlanning:
+      type: object
+      required: [id, inbox_item_id, antwoord_token, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id:
+          type: integer
+        inbox_item_id:
+          type: integer
+        offerte_id:
+          type: ["integer", "null"]
+        afzender_email:
+          type: ["string", "null"]
+        afzender_naam:
+          type: ["string", "null"]
+        ai_responstermijn:
+          type: ["string", "null"]
+        ai_opname:
+          type: ["string", "null"]
+        ai_plattegronden:
+          type: ["string", "null"]
+        gewenste_responstermijn:
+          type: ["string", "null"]
+        opname_nodig:
+          type: ["string", "null"]
+        plattegronden_status:
+          type: ["string", "null"]
+        extra_opmerking:
+          type: ["string", "null"]
+        antwoord_token:
+          type: string
+        bevestiging_verzond_op:
+          type: ["string", "null"]
+          format: date-time
+        antwoorden_ontvangen_op:
+          type: ["string", "null"]
+          format: date-time
+        pl_planning_datum:
+          type: ["string", "null"]
+          format: date
+        pl_notitie:
+          type: ["string", "null"]
+        pl_bijgewerkt_op:
+          type: ["string", "null"]
+          format: date-time
+        melding_verzond_op:
+          type: ["string", "null"]
+          format: date-time
+        aangemaakt_op:
+          type: string
+          format: date-time
+        bijgewerkt_op:
+          type: string
+          format: date-time
+
+    AanvraagPlanningPatch:
+      type: object
+      properties:
+        pl_planning_datum:
+          type: ["string", "null"]
+          format: date
+        pl_notitie:
+          type: ["string", "null"]
 
     InboxItemInput:
       type: object

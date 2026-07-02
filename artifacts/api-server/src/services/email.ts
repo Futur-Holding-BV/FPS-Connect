@@ -51,7 +51,7 @@ export class MailFout extends Error {
   }
 }
 
-export type MailSoort = "test" | "uitnodiging" | "wachtwoord_reset" | "offerte" | "klantvraag" | "ondertekening" | "inkoopbon" | "opdrachtbevestiging" | "magazijn_signalering" | "magazijn_bestelbon";
+export type MailSoort = "test" | "uitnodiging" | "wachtwoord_reset" | "offerte" | "klantvraag" | "ondertekening" | "inkoopbon" | "opdrachtbevestiging" | "magazijn_signalering" | "magazijn_bestelbon" | "aanvraag_bevestiging" | "planning_melding";
 
 // ── Configuratie-helpers ─────────────────────────────────────────────────────
 export function isGeconfigureerd(): boolean {
@@ -941,6 +941,143 @@ export async function stuurMagazijnSignalering(opties: {
   });
 
   await verstuurMail({ naarEmail, naarNaam: naarNaam ?? undefined, onderwerp, html, soort: "magazijn_signalering" });
+}
+
+// ── Aanvraag-bevestigingsmail ─────────────────────────────────────────────────
+
+function escapeAttr(v: string): string {
+  return v.replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+
+function aanvraagBevestigingHtml(opties: {
+  contactpersoon: string | null;
+  offerteTitel: string;
+  werkmaatschappij: string;
+  antwoordUrl: string;
+  vragen: Array<"responstermijn" | "opname" | "plattegronden">;
+}): string {
+  const { contactpersoon, offerteTitel, werkmaatschappij, antwoordUrl, vragen } = opties;
+  const aanhef = contactpersoon ? `Geachte ${escapeHtml(contactpersoon)},` : "Geachte aanvrager,";
+  const vraagsectie =
+    vragen.length === 0
+      ? ""
+      : `<tr><td style="padding:0 40px 24px;">
+          <p style="margin:0 0 12px;font-size:15px;font-weight:600;color:#212631;">Aanvullende vragen</p>
+          <p style="margin:0 0 16px;font-size:14px;color:#52525b;">Om uw aanvraag zo goed mogelijk te kunnen beoordelen, ontvangen wij graag onderstaande informatie. Het invullen duurt minder dan een minuut.</p>
+          <ul style="margin:0 0 20px;padding-left:20px;font-size:14px;color:#52525b;line-height:1.8;">
+            ${vragen.includes("responstermijn") ? "<li>Binnen welke termijn verwacht u een inhoudelijke reactie?</li>" : ""}
+            ${vragen.includes("opname") ? "<li>Is een opname van het gebouw gewenst of noodzakelijk?</li>" : ""}
+            ${vragen.includes("plattegronden") ? "<li>Zijn alle plattegrondtekeningen bijgevoegd, of nog na te sturen?</li>" : ""}
+          </ul>
+          <table cellpadding="0" cellspacing="0" style="margin:0 0 8px;">
+            <tr><td style="background:#F23B0D;border-radius:6px;">
+              <a href="${escapeAttr(antwoordUrl)}" style="display:inline-block;padding:12px 28px;color:#ffffff;font-size:14px;font-weight:600;text-decoration:none;letter-spacing:.3px;">Aanvraag aanvullen</a>
+            </td></tr>
+          </table>
+          <p style="margin:6px 0 0;font-size:11px;color:#a1a1aa;word-break:break-all;">${escapeHtml(antwoordUrl)}</p>
+        </td></tr>`;
+
+  return `<!DOCTYPE html>
+<html lang="nl"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/><title>Uw aanvraag is ontvangen</title></head>
+<body style="margin:0;padding:0;background:#f4f4f5;font-family:system-ui,-apple-system,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f5;padding:40px 0;"><tr><td align="center">
+<table width="560" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.12);">
+  <tr><td style="background:#212631;padding:28px 40px;text-align:center;">
+    <p style="margin:0;">
+      <span style="display:inline-block;width:28px;height:28px;background:#F23B0D;border-radius:6px;vertical-align:middle;"></span>
+      <span style="color:#ffffff;font-size:16px;letter-spacing:.5px;font-weight:700;vertical-align:middle;margin-left:8px;">${escapeHtml(werkmaatschappij)}</span>
+    </p>
+  </td></tr>
+  <tr><td style="padding:32px 40px 0;">
+    <p style="margin:0 0 16px;font-size:15px;color:#3f3f46;">${aanhef}</p>
+    <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#3f3f46;">Hartelijk dank voor uw aanvraag <strong>${escapeHtml(offerteTitel)}</strong>. Wij hebben deze in goede orde ontvangen en nemen haar zo spoedig mogelijk in behandeling.</p>
+    <p style="margin:0 0 24px;font-size:15px;line-height:1.6;color:#3f3f46;">U ontvangt bericht van onze projectleider zodra uw aanvraag is beoordeeld.</p>
+  </td></tr>
+  ${vraagsectie}
+  <tr><td style="background:#f4f4f5;padding:20px 40px;border-top:1px solid #e4e4e7;">
+    <p style="margin:0;font-size:12px;color:#71717a;text-align:center;">Dit bericht is automatisch verstuurd door ${escapeHtml(werkmaatschappij)} &bull; FPS Brandpreventie</p>
+  </td></tr>
+</table>
+</td></tr></table>
+</body></html>`;
+}
+
+/** Stuurt een automatische bevestigingsmail naar de aanvrager. Fire-and-forget — gooit nooit. */
+export async function stuurAanvraagBevestiging(opties: {
+  naarEmail: string;
+  contactpersoon: string | null;
+  offerteTitel: string;
+  werkmaatschappij: string;
+  antwoordUrl: string;
+  vragen: Array<"responstermijn" | "opname" | "plattegronden">;
+  inboxItemId?: number | null;
+}): Promise<void> {
+  if (!isGeconfigureerd()) {
+    logger.warn({ inboxItemId: opties.inboxItemId }, "E-mailservice niet geconfigureerd — aanvraag-bevestiging niet verstuurd");
+    return;
+  }
+  const onderwerp = `Aanvraag ontvangen \u2013 ${opties.offerteTitel}`;
+  const html = aanvraagBevestigingHtml({
+    contactpersoon: opties.contactpersoon,
+    offerteTitel: opties.offerteTitel,
+    werkmaatschappij: opties.werkmaatschappij,
+    antwoordUrl: opties.antwoordUrl,
+    vragen: opties.vragen,
+  });
+  try {
+    await verstuurMail({ naarEmail: opties.naarEmail, naarNaam: opties.contactpersoon, onderwerp, html, soort: "aanvraag_bevestiging" });
+  } catch (err) {
+    logger.error({ err, inboxItemId: opties.inboxItemId }, "Aanvraag-bevestiging verzenden mislukt");
+  }
+}
+
+// ── Planning-melding ──────────────────────────────────────────────────────────
+
+/** Stuurt een overzicht van aanstaande / verlopen planningsdeadlines naar een PL. Fire-and-forget — gooit nooit. */
+export async function stuurPlanningMelding(opties: {
+  naarEmail: string;
+  naarNaam: string | null;
+  planningen: Array<{ planning_id: number; offerte_titel: string | null; pl_planning_datum: string; dagen_tot: number }>;
+}): Promise<void> {
+  if (!isGeconfigureerd()) return;
+  const regels = opties.planningen.map((p) => {
+    const label =
+      p.dagen_tot < 0
+        ? `<span style="color:#dc2626;font-weight:600;">Verlopen (${Math.abs(p.dagen_tot)}d geleden)</span>`
+        : p.dagen_tot === 0
+        ? `<span style="color:#d97706;font-weight:600;">Vandaag</span>`
+        : `<span style="color:#16a34a;">Over ${p.dagen_tot} dag${p.dagen_tot !== 1 ? "en" : ""}</span>`;
+    return `<tr>
+      <td style="padding:8px 12px;border-bottom:1px solid #f4f4f5;font-size:14px;color:#3f3f46;">${escapeHtml(p.offerte_titel ?? "Aanvraag")}</td>
+      <td style="padding:8px 12px;border-bottom:1px solid #f4f4f5;font-size:14px;color:#3f3f46;">${escapeHtml(p.pl_planning_datum)}</td>
+      <td style="padding:8px 12px;border-bottom:1px solid #f4f4f5;font-size:14px;">${label}</td>
+    </tr>`;
+  }).join("\n");
+  const tabelHtml = `<table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e4e4e7;border-radius:6px;overflow:hidden;margin:0 0 16px;">
+    <thead><tr style="background:#f4f4f5;">
+      <th style="padding:8px 12px;text-align:left;font-size:13px;color:#71717a;font-weight:600;">Aanvraag</th>
+      <th style="padding:8px 12px;text-align:left;font-size:13px;color:#71717a;font-weight:600;">Deadline</th>
+      <th style="padding:8px 12px;text-align:left;font-size:13px;color:#71717a;font-weight:600;">Status</th>
+    </tr></thead>
+    <tbody>${regels}</tbody>
+  </table>`;
+  const html = mailShell({
+    titel: "Plannings-herinnering aanvragen",
+    kopje: "Aankomende planningsdeadlines",
+    paragrafen: [
+      `Geachte ${escapeHtml(opties.naarNaam ?? "projectleider")},`,
+      `Onderstaand een overzicht van <strong>${opties.planningen.length}</strong> aanvra${opties.planningen.length !== 1 ? "gen" : "ag"} waarvan de gewenste responsdatum nadert of al is verstreken.`,
+      tabelHtml,
+      "Log in op FPS Connect om de planning bij te werken.",
+    ],
+    voettekst: "Automatische dagelijkse signalering van FPS Connect &bull; U ontvangt dit omdat u projectleider-bevoegdheden heeft.",
+  });
+  const onderwerp = `Plannings-herinnering: ${opties.planningen.length} aanvra${opties.planningen.length !== 1 ? "gen" : "ag"} vereist aandacht`;
+  try {
+    await verstuurMail({ naarEmail: opties.naarEmail, naarNaam: opties.naarNaam, onderwerp, html, soort: "planning_melding" });
+  } catch (err) {
+    logger.error({ err }, "Planning-melding verzenden mislukt");
+  }
 }
 
 /**

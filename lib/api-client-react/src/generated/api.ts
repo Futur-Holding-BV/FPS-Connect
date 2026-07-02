@@ -20,6 +20,8 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  AanvraagPlanning,
+  AanvraagPlanningPatch,
   Abonnement,
   AbonnementInput,
   AbonnementUpdate,
@@ -20500,6 +20502,154 @@ export const useVerwerkInboxOfferteavanvraag = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getVerwerkInboxOfferteavanvraagMutationOptions(options));
+    }
+
+export const getGetInboxItemPlanningUrl = (id: number,) => {
+
+
+
+
+  return `/api/inbox/items/${id}/planning`
+}
+
+/**
+ * @summary Planning-record van een inbox-item ophalen
+ */
+export const getInboxItemPlanning = async (id: number, options?: RequestInit): Promise<AanvraagPlanning> => {
+
+  return customFetch<AanvraagPlanning>(getGetInboxItemPlanningUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetInboxItemPlanningQueryKey = (id: number,) => {
+    return [
+    `/api/inbox/items/${id}/planning`
+    ] as const;
+    }
+
+
+export const getGetInboxItemPlanningQueryOptions = <TData = Awaited<ReturnType<typeof getInboxItemPlanning>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getInboxItemPlanning>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetInboxItemPlanningQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getInboxItemPlanning>>> = ({ signal }) => getInboxItemPlanning(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getInboxItemPlanning>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetInboxItemPlanningQueryResult = NonNullable<Awaited<ReturnType<typeof getInboxItemPlanning>>>
+export type GetInboxItemPlanningQueryError = ErrorType<void>
+
+
+/**
+ * @summary Planning-record van een inbox-item ophalen
+ */
+
+export function useGetInboxItemPlanning<TData = Awaited<ReturnType<typeof getInboxItemPlanning>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getInboxItemPlanning>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetInboxItemPlanningQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getPatchInboxItemPlanningUrl = (id: number,) => {
+
+
+
+
+  return `/api/inbox/items/${id}/planning`
+}
+
+/**
+ * @summary PL-planning bijwerken voor een inbox-item
+ */
+export const patchInboxItemPlanning = async (id: number,
+    aanvraagPlanningPatch: AanvraagPlanningPatch, options?: RequestInit): Promise<AanvraagPlanning> => {
+
+  return customFetch<AanvraagPlanning>(getPatchInboxItemPlanningUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(aanvraagPlanningPatch)
+  }
+);}
+
+
+
+
+export const getPatchInboxItemPlanningMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchInboxItemPlanning>>, TError,{id: number;data: BodyType<AanvraagPlanningPatch>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof patchInboxItemPlanning>>, TError,{id: number;data: BodyType<AanvraagPlanningPatch>}, TContext> => {
+
+const mutationKey = ['patchInboxItemPlanning'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof patchInboxItemPlanning>>, {id: number;data: BodyType<AanvraagPlanningPatch>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  patchInboxItemPlanning(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PatchInboxItemPlanningMutationResult = NonNullable<Awaited<ReturnType<typeof patchInboxItemPlanning>>>
+    export type PatchInboxItemPlanningMutationBody = BodyType<AanvraagPlanningPatch>
+    export type PatchInboxItemPlanningMutationError = ErrorType<void>
+
+    /**
+ * @summary PL-planning bijwerken voor een inbox-item
+ */
+export const usePatchInboxItemPlanning = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchInboxItemPlanning>>, TError,{id: number;data: BodyType<AanvraagPlanningPatch>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof patchInboxItemPlanning>>,
+        TError,
+        {id: number;data: BodyType<AanvraagPlanningPatch>},
+        TContext
+      > => {
+      return useMutation(getPatchInboxItemPlanningMutationOptions(options));
     }
 
 export const getListGebouwEmailsUrl = (id: number,) => {

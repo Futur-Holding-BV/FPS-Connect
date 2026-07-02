@@ -67,3 +67,34 @@ export const insertInboxItemSchema = createInsertSchema(inboxItemsTable).omit({ 
 export type InsertInboxItem = z.infer<typeof insertInboxItemSchema>;
 export type InboxItem = typeof inboxItemsTable.$inferSelect;
 export type InboxAuditLog = typeof inboxAuditLogTable.$inferSelect;
+
+// ── Aanvraag-planningen (bevestigingsmail + PL planning-bewaking) ─────────────
+
+export const aanvraagPlanningenTable = pgTable("aanvraag_planningen", {
+  id: serial("id").primaryKey(),
+  inboxItemId: integer("inbox_item_id").references(() => inboxItemsTable.id, { onDelete: "cascade" }),
+  offerteId: integer("offerte_id"),
+  afzenderEmail: text("afzender_email"),
+  afzenderNaam: text("afzender_naam"),
+  // Wat de AI al herkende in de email (null = niet vermeld → vraag wél stellen)
+  aiResponstermijn: text("ai_responstermijn"),
+  aiOpname: text("ai_opname"),
+  aiPlattegronden: text("ai_plattegronden"),
+  // Antwoorden van de afzender (ingevuld via bevestigingsmail-link)
+  gewensteResponstermijn: text("gewenste_responstermijn"),
+  opnameNodig: text("opname_nodig"),
+  plattegrondenStatus: text("plattegronden_status"),
+  extraOpmerking: text("extra_opmerking"),
+  antwoordToken: text("antwoord_token").notNull().unique(),
+  bevestigingVerzondOp: timestamp("bevestiging_verzond_op"),
+  antwoordenOntvangenOp: timestamp("antwoorden_ontvangen_op"),
+  // PL-bewaking
+  plPlanningDatum: text("pl_planning_datum"),
+  plNotitie: text("pl_notitie"),
+  plBijgewerktOp: timestamp("pl_bijgewerkt_op"),
+  meldingVerzondOp: timestamp("melding_verzond_op"),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+  bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+});
+
+export type AanvraagPlanning = typeof aanvraagPlanningenTable.$inferSelect;
