@@ -8142,6 +8142,107 @@ export const DeleteMedewerkerResponse = zod.void()
 
 
 /**
+ * @summary Aanstellingen van een medewerker ophalen
+ */
+export const ListMedewerkerAanstellingenParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListMedewerkerAanstellingenResponseItem = zod.object({
+  "id": zod.number(),
+  "medewerker_id": zod.number(),
+  "werkmaatschappij": zod.string(),
+  "functie_id": zod.number().nullish(),
+  "functie_naam": zod.string().nullish(),
+  "cao": zod.string().nullish(),
+  "contracturen_per_week": zod.number().nullish(),
+  "is_hoofd": zod.boolean(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+export const ListMedewerkerAanstellingenResponse = zod.array(ListMedewerkerAanstellingenResponseItem)
+
+
+/**
+ * @summary Aanstelling toevoegen aan medewerker
+ */
+export const CreateMedewerkerAanstellingParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const CreateMedewerkerAanstellingBody = zod.object({
+  "werkmaatschappij": zod.string(),
+  "functie_id": zod.number().nullish(),
+  "cao": zod.string().optional(),
+  "contracturen_per_week": zod.number().nullish()
+})
+
+export const CreateMedewerkerAanstellingResponse = zod.void()
+
+
+/**
+ * @summary Aanstelling bijwerken
+ */
+export const UpdateMedewerkerAanstellingParams = zod.object({
+  "id": zod.coerce.number(),
+  "aanstellingId": zod.coerce.number()
+})
+
+export const UpdateMedewerkerAanstellingBody = zod.object({
+  "werkmaatschappij": zod.string(),
+  "functie_id": zod.number().nullish(),
+  "cao": zod.string().optional(),
+  "contracturen_per_week": zod.number().nullish()
+})
+
+export const UpdateMedewerkerAanstellingResponse = zod.object({
+  "id": zod.number(),
+  "medewerker_id": zod.number(),
+  "werkmaatschappij": zod.string(),
+  "functie_id": zod.number().nullish(),
+  "functie_naam": zod.string().nullish(),
+  "cao": zod.string().nullish(),
+  "contracturen_per_week": zod.number().nullish(),
+  "is_hoofd": zod.boolean(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Aanstelling verwijderen
+ */
+export const DeleteMedewerkerAanstellingParams = zod.object({
+  "id": zod.coerce.number(),
+  "aanstellingId": zod.coerce.number()
+})
+
+export const DeleteMedewerkerAanstellingResponse = zod.void()
+
+
+/**
+ * @summary Aanstelling als hoofdaanstelling markeren
+ */
+export const SetHoofdAanstellingParams = zod.object({
+  "id": zod.coerce.number(),
+  "aanstellingId": zod.coerce.number()
+})
+
+export const SetHoofdAanstellingResponse = zod.object({
+  "id": zod.number(),
+  "medewerker_id": zod.number(),
+  "werkmaatschappij": zod.string(),
+  "functie_id": zod.number().nullish(),
+  "functie_naam": zod.string().nullish(),
+  "cao": zod.string().nullish(),
+  "contracturen_per_week": zod.number().nullish(),
+  "is_hoofd": zod.boolean(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
  * @summary Behaalde opleidingen van een medewerker
  */
 export const ListMedewerkerOpleidingenParams = zod.object({

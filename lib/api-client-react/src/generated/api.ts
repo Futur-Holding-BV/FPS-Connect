@@ -353,6 +353,8 @@ import type {
   MailStatus,
   MailTestmailInput,
   Medewerker,
+  MedewerkerAanstelling,
+  MedewerkerAanstellingInput,
   MedewerkerAchievementsResponse,
   MedewerkerDocument,
   MedewerkerDocumentUploadBody,
@@ -22467,6 +22469,371 @@ export const useDeleteMedewerker = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getDeleteMedewerkerMutationOptions(options));
+    }
+
+export const getListMedewerkerAanstellingenUrl = (id: number,) => {
+
+
+
+
+  return `/api/medewerkers/${id}/aanstellingen`
+}
+
+/**
+ * @summary Aanstellingen van een medewerker ophalen
+ */
+export const listMedewerkerAanstellingen = async (id: number, options?: RequestInit): Promise<MedewerkerAanstelling[]> => {
+
+  return customFetch<MedewerkerAanstelling[]>(getListMedewerkerAanstellingenUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListMedewerkerAanstellingenQueryKey = (id: number,) => {
+    return [
+    `/api/medewerkers/${id}/aanstellingen`
+    ] as const;
+    }
+
+
+export const getListMedewerkerAanstellingenQueryOptions = <TData = Awaited<ReturnType<typeof listMedewerkerAanstellingen>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMedewerkerAanstellingen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListMedewerkerAanstellingenQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listMedewerkerAanstellingen>>> = ({ signal }) => listMedewerkerAanstellingen(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listMedewerkerAanstellingen>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListMedewerkerAanstellingenQueryResult = NonNullable<Awaited<ReturnType<typeof listMedewerkerAanstellingen>>>
+export type ListMedewerkerAanstellingenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Aanstellingen van een medewerker ophalen
+ */
+
+export function useListMedewerkerAanstellingen<TData = Awaited<ReturnType<typeof listMedewerkerAanstellingen>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMedewerkerAanstellingen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListMedewerkerAanstellingenQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateMedewerkerAanstellingUrl = (id: number,) => {
+
+
+
+
+  return `/api/medewerkers/${id}/aanstellingen`
+}
+
+/**
+ * @summary Aanstelling toevoegen aan medewerker
+ */
+export const createMedewerkerAanstelling = async (id: number,
+    medewerkerAanstellingInput: MedewerkerAanstellingInput, options?: RequestInit): Promise<MedewerkerAanstelling> => {
+
+  return customFetch<MedewerkerAanstelling>(getCreateMedewerkerAanstellingUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(medewerkerAanstellingInput)
+  }
+);}
+
+
+
+
+export const getCreateMedewerkerAanstellingMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createMedewerkerAanstelling>>, TError,{id: number;data: BodyType<MedewerkerAanstellingInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createMedewerkerAanstelling>>, TError,{id: number;data: BodyType<MedewerkerAanstellingInput>}, TContext> => {
+
+const mutationKey = ['createMedewerkerAanstelling'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createMedewerkerAanstelling>>, {id: number;data: BodyType<MedewerkerAanstellingInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  createMedewerkerAanstelling(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateMedewerkerAanstellingMutationResult = NonNullable<Awaited<ReturnType<typeof createMedewerkerAanstelling>>>
+    export type CreateMedewerkerAanstellingMutationBody = BodyType<MedewerkerAanstellingInput>
+    export type CreateMedewerkerAanstellingMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Aanstelling toevoegen aan medewerker
+ */
+export const useCreateMedewerkerAanstelling = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createMedewerkerAanstelling>>, TError,{id: number;data: BodyType<MedewerkerAanstellingInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createMedewerkerAanstelling>>,
+        TError,
+        {id: number;data: BodyType<MedewerkerAanstellingInput>},
+        TContext
+      > => {
+      return useMutation(getCreateMedewerkerAanstellingMutationOptions(options));
+    }
+
+export const getUpdateMedewerkerAanstellingUrl = (id: number,
+    aanstellingId: number,) => {
+
+
+
+
+  return `/api/medewerkers/${id}/aanstellingen/${aanstellingId}`
+}
+
+/**
+ * @summary Aanstelling bijwerken
+ */
+export const updateMedewerkerAanstelling = async (id: number,
+    aanstellingId: number,
+    medewerkerAanstellingInput: MedewerkerAanstellingInput, options?: RequestInit): Promise<MedewerkerAanstelling> => {
+
+  return customFetch<MedewerkerAanstelling>(getUpdateMedewerkerAanstellingUrl(id,aanstellingId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(medewerkerAanstellingInput)
+  }
+);}
+
+
+
+
+export const getUpdateMedewerkerAanstellingMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateMedewerkerAanstelling>>, TError,{id: number;aanstellingId: number;data: BodyType<MedewerkerAanstellingInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateMedewerkerAanstelling>>, TError,{id: number;aanstellingId: number;data: BodyType<MedewerkerAanstellingInput>}, TContext> => {
+
+const mutationKey = ['updateMedewerkerAanstelling'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateMedewerkerAanstelling>>, {id: number;aanstellingId: number;data: BodyType<MedewerkerAanstellingInput>}> = (props) => {
+          const {id,aanstellingId,data} = props ?? {};
+
+          return  updateMedewerkerAanstelling(id,aanstellingId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateMedewerkerAanstellingMutationResult = NonNullable<Awaited<ReturnType<typeof updateMedewerkerAanstelling>>>
+    export type UpdateMedewerkerAanstellingMutationBody = BodyType<MedewerkerAanstellingInput>
+    export type UpdateMedewerkerAanstellingMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Aanstelling bijwerken
+ */
+export const useUpdateMedewerkerAanstelling = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateMedewerkerAanstelling>>, TError,{id: number;aanstellingId: number;data: BodyType<MedewerkerAanstellingInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateMedewerkerAanstelling>>,
+        TError,
+        {id: number;aanstellingId: number;data: BodyType<MedewerkerAanstellingInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateMedewerkerAanstellingMutationOptions(options));
+    }
+
+export const getDeleteMedewerkerAanstellingUrl = (id: number,
+    aanstellingId: number,) => {
+
+
+
+
+  return `/api/medewerkers/${id}/aanstellingen/${aanstellingId}`
+}
+
+/**
+ * @summary Aanstelling verwijderen
+ */
+export const deleteMedewerkerAanstelling = async (id: number,
+    aanstellingId: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteMedewerkerAanstellingUrl(id,aanstellingId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteMedewerkerAanstellingMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteMedewerkerAanstelling>>, TError,{id: number;aanstellingId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteMedewerkerAanstelling>>, TError,{id: number;aanstellingId: number}, TContext> => {
+
+const mutationKey = ['deleteMedewerkerAanstelling'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteMedewerkerAanstelling>>, {id: number;aanstellingId: number}> = (props) => {
+          const {id,aanstellingId} = props ?? {};
+
+          return  deleteMedewerkerAanstelling(id,aanstellingId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteMedewerkerAanstellingMutationResult = NonNullable<Awaited<ReturnType<typeof deleteMedewerkerAanstelling>>>
+
+    export type DeleteMedewerkerAanstellingMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Aanstelling verwijderen
+ */
+export const useDeleteMedewerkerAanstelling = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteMedewerkerAanstelling>>, TError,{id: number;aanstellingId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteMedewerkerAanstelling>>,
+        TError,
+        {id: number;aanstellingId: number},
+        TContext
+      > => {
+      return useMutation(getDeleteMedewerkerAanstellingMutationOptions(options));
+    }
+
+export const getSetHoofdAanstellingUrl = (id: number,
+    aanstellingId: number,) => {
+
+
+
+
+  return `/api/medewerkers/${id}/aanstellingen/${aanstellingId}/hoofd`
+}
+
+/**
+ * @summary Aanstelling als hoofdaanstelling markeren
+ */
+export const setHoofdAanstelling = async (id: number,
+    aanstellingId: number, options?: RequestInit): Promise<MedewerkerAanstelling> => {
+
+  return customFetch<MedewerkerAanstelling>(getSetHoofdAanstellingUrl(id,aanstellingId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getSetHoofdAanstellingMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setHoofdAanstelling>>, TError,{id: number;aanstellingId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof setHoofdAanstelling>>, TError,{id: number;aanstellingId: number}, TContext> => {
+
+const mutationKey = ['setHoofdAanstelling'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof setHoofdAanstelling>>, {id: number;aanstellingId: number}> = (props) => {
+          const {id,aanstellingId} = props ?? {};
+
+          return  setHoofdAanstelling(id,aanstellingId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SetHoofdAanstellingMutationResult = NonNullable<Awaited<ReturnType<typeof setHoofdAanstelling>>>
+
+    export type SetHoofdAanstellingMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Aanstelling als hoofdaanstelling markeren
+ */
+export const useSetHoofdAanstelling = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setHoofdAanstelling>>, TError,{id: number;aanstellingId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof setHoofdAanstelling>>,
+        TError,
+        {id: number;aanstellingId: number},
+        TContext
+      > => {
+      return useMutation(getSetHoofdAanstellingMutationOptions(options));
     }
 
 export const getListMedewerkerOpleidingenUrl = (id: number,) => {

@@ -35,6 +35,12 @@ import {
   useGetSalarisarchiefDocumenten,
   useListMedewerkerDocumenten,
   getListMedewerkerDocumentenQueryKey,
+  useListMedewerkerAanstellingen,
+  useCreateMedewerkerAanstelling,
+  useUpdateMedewerkerAanstelling,
+  useDeleteMedewerkerAanstelling,
+  useSetHoofdAanstelling,
+  getListMedewerkerAanstellingenQueryKey,
 } from "@workspace/api-client-react";
 import type {
   MedewerkerInput,
@@ -45,9 +51,11 @@ import type {
   VerlofAanvraag,
   VerlofAanvraagInput,
   MedewerkerDocument,
+  MedewerkerAanstelling,
+  MedewerkerAanstellingInput,
 } from "@workspace/api-client-react";
 import { useRol } from "@/context/rol-context";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DatePicker } from "@/components/ui/date-picker";
@@ -69,6 +77,7 @@ import {
   ArrowLeft, Pencil, Trash2, Plus, GraduationCap, Award, CalendarClock,
   Mail, Phone, Briefcase, ShieldCheck, AlertTriangle, Check, X,
   MapPin, Car, FileText, Cake, Trophy, Upload, Download, FolderOpen,
+  Building2, Star,
 } from "lucide-react";
 
 const NIVEAUS = [
@@ -674,6 +683,17 @@ export default function MedewerkerDetailPagina() {
   const delBekwaamheid = useDeleteBekwaamheid();
   const maakAanvraag = useCreateVerlofAanvraag();
   const updAanvraag = useUpdateVerlofAanvraag();
+  const { data: aanstellingen = [] } = useListMedewerkerAanstellingen(id);
+  const maakAanstelling = useCreateMedewerkerAanstelling();
+  const updAanstelling = useUpdateMedewerkerAanstelling();
+  const delAanstelling = useDeleteMedewerkerAanstelling();
+  const stelHoofdIn = useSetHoofdAanstelling();
+
+  const [aanstellingOpen, setAanstellingOpen] = useState(false);
+  const [aanstellingBewerkId, setAanstellingBewerkId] = useState<number | null>(null);
+  const [aanstellingForm, setAanstellingForm] = useState<MedewerkerAanstellingInput>({
+    werkmaatschappij: "", functie_id: null, cao: "", contracturen_per_week: null,
+  });
 
   const [profielOpen, setProfielOpen] = useState(false);
   const [profielForm, setProfielForm] = useState<MedewerkerInput | null>(null);
@@ -762,6 +782,65 @@ export default function MedewerkerDetailPagina() {
       window.history.back();
     } catch {
       toast({ title: "Verwijderen mislukt", variant: "destructive" });
+    }
+  }
+
+  function openAanstelling(a?: MedewerkerAanstelling) {
+    if (a) {
+      setAanstellingBewerkId(a.id);
+      setAanstellingForm({
+        werkmaatschappij: a.werkmaatschappij,
+        functie_id: a.functie_id ?? null,
+        cao: a.cao ?? "",
+        contracturen_per_week: a.contracturen_per_week ?? null,
+      });
+    } else {
+      setAanstellingBewerkId(null);
+      setAanstellingForm({ werkmaatschappij: "", functie_id: null, cao: "", contracturen_per_week: null });
+    }
+    setAanstellingOpen(true);
+  }
+
+  async function opslaanAanstelling() {
+    if (!aanstellingForm.werkmaatschappij.trim()) {
+      toast({ title: "Werkmaatschappij is verplicht", variant: "destructive" });
+      return;
+    }
+    try {
+      if (aanstellingBewerkId) {
+        await updAanstelling.mutateAsync({ id, aanstellingId: aanstellingBewerkId, data: aanstellingForm });
+      } else {
+        await maakAanstelling.mutateAsync({ id, data: aanstellingForm });
+      }
+      await queryClient.invalidateQueries({ queryKey: getListMedewerkerAanstellingenQueryKey(id) });
+      await invalideerMedewerker();
+      toast({ title: aanstellingBewerkId ? "Aanstelling bijgewerkt" : "Aanstelling toegevoegd" });
+      setAanstellingOpen(false);
+    } catch {
+      toast({ title: "Opslaan mislukt", variant: "destructive" });
+    }
+  }
+
+  async function verwijderAanstelling(aanstellingId: number) {
+    if (!window.confirm("Deze aanstelling verwijderen?")) return;
+    try {
+      await delAanstelling.mutateAsync({ id, aanstellingId });
+      await queryClient.invalidateQueries({ queryKey: getListMedewerkerAanstellingenQueryKey(id) });
+      toast({ title: "Aanstelling verwijderd" });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "";
+      toast({ title: msg.includes("409") ? "Kan hoofdaanstelling niet verwijderen" : "Verwijderen mislukt", variant: "destructive" });
+    }
+  }
+
+  async function stelAlsHoofd(aanstellingId: number) {
+    try {
+      await stelHoofdIn.mutateAsync({ id, aanstellingId });
+      await queryClient.invalidateQueries({ queryKey: getListMedewerkerAanstellingenQueryKey(id) });
+      await invalideerMedewerker();
+      toast({ title: "Hoofdaanstelling ingesteld" });
+    } catch {
+      toast({ title: "Instellen mislukt", variant: "destructive" });
     }
   }
 
@@ -1061,6 +1140,147 @@ export default function MedewerkerDetailPagina() {
           )}
         </CardContent>
       </Card>
+
+      {/* Aanstellingen */}
+      <Card>
+        <CardHeader className="px-5 pt-4 pb-3 flex flex-row items-center justify-between">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Building2 className="h-4 w-4 text-muted-foreground" />
+            Aanstellingen
+          </CardTitle>
+          {magSchrijven && (
+            <Button variant="outline" size="sm" onClick={() => openAanstelling()}>
+              <Plus className="h-3.5 w-3.5 mr-1.5" /> Toevoegen
+            </Button>
+          )}
+        </CardHeader>
+        <CardContent className="px-5 pb-4 space-y-2">
+          {aanstellingen.length === 0 && (
+            <p className="text-sm text-muted-foreground">Geen aanstellingen geregistreerd.</p>
+          )}
+          {aanstellingen.map((a) => (
+            <div key={a.id} className="flex items-start justify-between gap-3 rounded-md border p-3">
+              <div className="min-w-0 flex-1 space-y-0.5">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-sm font-medium">{a.werkmaatschappij}</span>
+                  {a.is_hoofd && (
+                    <Badge variant="secondary" className="border-amber-200 bg-amber-50 text-amber-700 text-[11px]">
+                      <Star className="h-3 w-3 mr-1" /> Hoofd
+                    </Badge>
+                  )}
+                </div>
+                <div className="text-xs text-muted-foreground flex flex-wrap gap-x-3 gap-y-0.5">
+                  {a.functie_naam && <span>{a.functie_naam}</span>}
+                  {a.cao && <span>CAO: {a.cao}</span>}
+                  {a.contracturen_per_week != null && <span>{a.contracturen_per_week} uur/week</span>}
+                </div>
+              </div>
+              {magSchrijven && (
+                <div className="flex items-center gap-1 shrink-0">
+                  {!a.is_hoofd && (
+                    <Button variant="ghost" size="sm" className="text-xs h-7" onClick={() => stelAlsHoofd(a.id)}>
+                      Als hoofd instellen
+                    </Button>
+                  )}
+                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openAanstelling(a)}>
+                    <Pencil className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                    onClick={() => verwijderAanstelling(a.id)}
+                    disabled={a.is_hoofd}
+                    title={a.is_hoofd ? "Stel eerst een andere aanstelling als hoofd in" : "Verwijderen"}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              )}
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+
+      {/* Aanstelling toevoegen / bewerken */}
+      <Dialog open={aanstellingOpen} onOpenChange={setAanstellingOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{aanstellingBewerkId ? "Aanstelling bewerken" : "Aanstelling toevoegen"}</DialogTitle>
+            <DialogDescription>Koppel deze medewerker aan een werkmaatschappij met een functie en CAO.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <Label>Werkmaatschappij</Label>
+              <Select
+                value={aanstellingForm.werkmaatschappij}
+                onValueChange={(v) => {
+                  const cao = caoVoorWerkmaatschappij(v) ?? aanstellingForm.cao ?? "";
+                  setAanstellingForm((f) => ({ ...f, werkmaatschappij: v, cao }));
+                }}
+              >
+                <SelectTrigger><SelectValue placeholder="Kies werkmaatschappij" /></SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    {werkmaatschappijOpties(aanstellingForm.werkmaatschappij).map((w) => (
+                      <SelectItem key={w} value={w}>{w}</SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Functie</Label>
+              <Select
+                value={aanstellingForm.functie_id != null ? String(aanstellingForm.functie_id) : "geen"}
+                onValueChange={(v) => setAanstellingForm((f) => ({ ...f, functie_id: v === "geen" ? null : Number(v) }))}
+              >
+                <SelectTrigger><SelectValue placeholder="Geen functie" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="geen">Geen functie</SelectItem>
+                  {(functies ?? []).map((f) => (
+                    <SelectItem key={f.id} value={String(f.id)}>{f.naam}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>CAO</Label>
+              <Select
+                value={aanstellingForm.cao ?? ""}
+                onValueChange={(v) => setAanstellingForm((f) => ({ ...f, cao: v === "_leeg" ? "" : v }))}
+              >
+                <SelectTrigger><SelectValue placeholder="Geen CAO" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="_leeg">Geen CAO</SelectItem>
+                  {(caoOpties ?? []).map((c) => (
+                    <SelectItem key={c.naam} value={c.naam}>{c.naam}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Contracturen per week</Label>
+              <Input
+                type="number"
+                min={0}
+                max={60}
+                step={0.5}
+                placeholder="bijv. 40"
+                value={aanstellingForm.contracturen_per_week ?? ""}
+                onChange={(e) => setAanstellingForm((f) => ({
+                  ...f,
+                  contracturen_per_week: e.target.value ? Number(e.target.value) : null,
+                }))}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAanstellingOpen(false)}>Annuleren</Button>
+            <Button onClick={opslaanAanstelling}>Opslaan</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Tabs defaultValue="opleidingen">
         <TabsList>

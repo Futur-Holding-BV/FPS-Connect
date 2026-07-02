@@ -428,6 +428,8 @@ export * from './mailOpdrachtbevestigingDemoInput';
 export * from './mailStatus';
 export * from './mailTestmailInput';
 export * from './medewerker';
+export * from './medewerkerAanstelling';
+export * from './medewerkerAanstellingInput';
 export * from './medewerkerAchievementsResponse';
 export * from './medewerkerDocument';
 export * from './medewerkerDocumentUploadBody';

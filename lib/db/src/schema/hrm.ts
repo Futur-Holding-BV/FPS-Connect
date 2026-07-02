@@ -368,6 +368,23 @@ export const zzpOvereenkomstenTable = pgTable("zzp_overeenkomsten", {
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
 });
 
+// Medewerker aanstellingen — één medewerker kan voor meerdere werkmaatschappijen
+// werken, elk met een eigen functie en eventueel eigen CAO-context.
+// isHoofd = de primaire aanstelling; CAO en contracturen worden hier vandaan
+// gesynchroniseerd naar medewerkers.cao / medewerkers.werkmaatschappij.
+export const medewerkerAanstellingenTable = pgTable("medewerker_aanstellingen", {
+  id: serial("id").primaryKey(),
+  medewerkerId: integer("medewerker_id").notNull().references(() => medewerkersTable.id, { onDelete: "cascade" }),
+  werkmaatschappij: text("werkmaatschappij").notNull(),
+  werkgeverId: integer("werkgever_id").references(() => werkgeversTable.id, { onDelete: "set null" }),
+  functieId: integer("functie_id").references(() => functiesTable.id, { onDelete: "set null" }),
+  cao: text("cao"),
+  contracturenPerWeek: real("contracturen_per_week"),
+  isHoofd: boolean("is_hoofd").notNull().default(false),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+  bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+});
+
 export const insertZzpOvereenkomstSchema = createInsertSchema(zzpOvereenkomstenTable).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });
 export type InsertZzpOvereenkomst = z.infer<typeof insertZzpOvereenkomstSchema>;
 export type ZzpOvereenkomst = typeof zzpOvereenkomstenTable.$inferSelect;
@@ -420,3 +437,6 @@ export type JaarAfsluitingRegel = typeof jaarAfsluitingRegelsTable.$inferSelect;
 export type InsertZiekmelding = z.infer<typeof insertZiekmeldingenSchema>;
 export type Ziekmelding = typeof ziekmeldingenTable.$inferSelect;
 export type MedewerkerDocument = typeof medewerkerDocumentenTable.$inferSelect;
+export const insertMedewerkerAanstellingSchema = createInsertSchema(medewerkerAanstellingenTable).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });
+export type InsertMedewerkerAanstelling = z.infer<typeof insertMedewerkerAanstellingSchema>;
+export type MedewerkerAanstelling = typeof medewerkerAanstellingenTable.$inferSelect;

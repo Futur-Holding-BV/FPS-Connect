@@ -3312,6 +3312,32 @@ export interface MedewerkerInput {
   bedrijf_uitzendbureau?: string;
 }
 
+export interface MedewerkerAanstelling {
+  id: number;
+  medewerker_id: number;
+  werkmaatschappij: string;
+  /** @nullable */
+  functie_id?: number | null;
+  /** @nullable */
+  functie_naam?: string | null;
+  /** @nullable */
+  cao?: string | null;
+  /** @nullable */
+  contracturen_per_week?: number | null;
+  is_hoofd: boolean;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export interface MedewerkerAanstellingInput {
+  werkmaatschappij: string;
+  /** @nullable */
+  functie_id?: number | null;
+  cao?: string;
+  /** @nullable */
+  contracturen_per_week?: number | null;
+}
+
 export interface MijnCertificaten {
   medewerker_id: number;
   naam: string;

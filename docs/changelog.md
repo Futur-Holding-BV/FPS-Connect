@@ -10,6 +10,32 @@ Grote roadmap-fases staan ook in `docs/roadmap/gebouwd.md` en `docs/roadmap/acti
 
 ---
 
+## 2026-07-02 — Medewerker aanstellingen (multi-werkmaatschappij)
+
+**Uitvoering:** volledig | **Getest:** typecheck + codegen
+
+Een medewerker kan nu aan meerdere werkmaatschappijen tegelijk worden gekoppeld via afzonderlijke aanstellingen. Eén aanstelling is de "hoofd"-aanstelling; die bepaalt de CAO, functie en contracturen op het medewerkerprofiel.
+
+**DB:**
+- Nieuwe tabel `medewerker_aanstellingen` (id, medewerker_id FK cascade, werkgever_id FK set null, werkmaatschappij, functie_id FK set null, cao, contracturen_per_week, is_hoofd boolean, timestamps)
+
+**OpenAPI / codegen:**
+- 5 nieuwe paden: GET + POST `/medewerkers/{id}/aanstellingen`, PATCH + DELETE `/medewerkers/{id}/aanstellingen/{aanstellingId}`, POST `/medewerkers/{id}/aanstellingen/{aanstellingId}/hoofd`
+- 2 nieuwe schemas: `MedewerkerAanstelling`, `MedewerkerAanstellingInput`
+- Gegenereerde hooks: `useListMedewerkerAanstellingen`, `useCreateMedewerkerAanstelling`, `useUpdateMedewerkerAanstelling`, `useDeleteMedewerkerAanstelling`, `useSetHoofdAanstelling`
+
+**API (`hrm.ts`):**
+- 5 route handlers + `mapAanstelling` helper + `syncHoofdNaarMedewerker` (cascadeert hoofd-aanstelling naar medewerkers-tabel)
+- Hoofd-wissel via DB-transactie: alle aanstellingen `is_hoofd=false`, doelwit `is_hoofd=true`, daarna medewerkers-row bijgewerkt (werkmaatschappij/functie_id/cao/contracturen_per_week)
+- Verwijderen van de hoofdaanstelling geeft 409
+
+**UI (`personeel/detail.tsx`):**
+- Nieuw "Aanstellingen"-kaart tussen profiel-card en tabs
+- Per aanstelling: werkmaatschappij, functie, CAO, contracturen; hoofd-badge (amber); "Als hoofd instellen"-knop op niet-hoofd items; bewerk/verwijder-knoppen (verwijderen disabled bij hoofd)
+- Dialoog voor toevoegen/bewerken: werkmaatschappij-dropdown met CAO-voorinvulling, functie-dropdown, CAO-dropdown, contracturen-veld
+
+---
+
 ## 2026-07-02 — ZZP / Externen module + Oud-medewerkers
 
 **Uitvoering:** volledig | **Getest:** typecheck + codegen + DB push

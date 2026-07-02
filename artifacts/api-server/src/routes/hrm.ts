@@ -37,6 +37,7 @@ import {
   gebruikersTable,
   medewerkerDocumentenTable,
   zzpOvereenkomstenTable,
+  medewerkerAanstellingenTable,
 } from "@workspace/db";
 import { ObjectStorageService } from "../lib/objectStorage";
 import { eq, desc, and, ne, inArray, or, isNull, gte, lte, sql } from "drizzle-orm";
@@ -3485,6 +3486,196 @@ function docDownloadUrl(objectPath: string): string {
   const subPath = objectPath.startsWith("/objects/") ? objectPath.slice("/objects/".length) : objectPath;
   return `/api/storage/objects/${subPath}`;
 }
+
+// ─── Aanstellingen ────────────────────────────────────────────────────────────
+
+function mapAanstelling(
+  a: typeof medewerkerAanstellingenTable.$inferSelect,
+  functieNaam?: string | null,
+) {
+  return {
+    id: a.id,
+    medewerker_id: a.medewerkerId,
+    werkmaatschappij: a.werkmaatschappij,
+    functie_id: a.functieId ?? null,
+    functie_naam: functieNaam ?? null,
+    cao: a.cao ?? null,
+    contracturen_per_week: a.contracturenPerWeek ?? null,
+    is_hoofd: a.isHoofd,
+    aangemaakt_op: a.aangemaaktOp.toISOString(),
+    bijgewerkt_op: a.bijgewerktOp.toISOString(),
+  };
+}
+
+router.get("/medewerkers/:id/aanstellingen", lezen, async (req, res) => {
+  try {
+    const medId = parseId(req.params.id);
+    const rijen = await db
+      .select({
+        a: medewerkerAanstellingenTable,
+        functie_naam: functiesTable.naam,
+      })
+      .from(medewerkerAanstellingenTable)
+      .leftJoin(functiesTable, eq(medewerkerAanstellingenTable.functieId, functiesTable.id))
+      .where(eq(medewerkerAanstellingenTable.medewerkerId, medId))
+      .orderBy(desc(medewerkerAanstellingenTable.isHoofd), medewerkerAanstellingenTable.werkmaatschappij);
+    res.json(rijen.map((r) => mapAanstelling(r.a, r.functie_naam)));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+router.post("/medewerkers/:id/aanstellingen", schrijven, async (req, res) => {
+  try {
+    const medId = parseId(req.params.id);
+    const { werkmaatschappij, functie_id, cao, contracturen_per_week } = req.body as {
+      werkmaatschappij: string;
+      functie_id?: number | null;
+      cao?: string;
+      contracturen_per_week?: number | null;
+    };
+    if (!werkmaatschappij?.trim()) {
+      return res.status(400).json({ error: "werkmaatschappij is verplicht" });
+    }
+    const werkgeverId = await werkgeverIdVoor(werkmaatschappij.trim());
+    const [nieuw] = await db
+      .insert(medewerkerAanstellingenTable)
+      .values({
+        medewerkerId: medId,
+        werkmaatschappij: werkmaatschappij.trim(),
+        werkgeverId: werkgeverId ?? null,
+        functieId: functie_id ?? null,
+        cao: cao?.trim() || null,
+        contracturenPerWeek: contracturen_per_week ?? null,
+        isHoofd: false,
+      })
+      .returning();
+    let functieNaam: string | null = null;
+    if (nieuw.functieId) {
+      const [f] = await db.select({ naam: functiesTable.naam }).from(functiesTable).where(eq(functiesTable.id, nieuw.functieId));
+      functieNaam = f?.naam ?? null;
+    }
+    res.status(201).json(mapAanstelling(nieuw, functieNaam));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+router.patch("/medewerkers/:id/aanstellingen/:aanstellingId", schrijven, async (req, res) => {
+  try {
+    const medId = parseId(req.params.id);
+    const aanstellingId = parseId(req.params.aanstellingId);
+    const { werkmaatschappij, functie_id, cao, contracturen_per_week } = req.body as {
+      werkmaatschappij?: string;
+      functie_id?: number | null;
+      cao?: string;
+      contracturen_per_week?: number | null;
+    };
+    const huidig = await db
+      .select()
+      .from(medewerkerAanstellingenTable)
+      .where(and(eq(medewerkerAanstellingenTable.id, aanstellingId), eq(medewerkerAanstellingenTable.medewerkerId, medId)));
+    if (!huidig.length) return res.status(404).json({ error: "Niet gevonden" });
+
+    const nieuweWm = werkmaatschappij?.trim() ?? huidig[0].werkmaatschappij;
+    const werkgeverId = await werkgeverIdVoor(nieuweWm);
+    const [bijgewerkt] = await db
+      .update(medewerkerAanstellingenTable)
+      .set({
+        werkmaatschappij: nieuweWm,
+        werkgeverId: werkgeverId ?? huidig[0].werkgeverId,
+        functieId: functie_id !== undefined ? (functie_id ?? null) : huidig[0].functieId,
+        cao: cao !== undefined ? (cao?.trim() || null) : huidig[0].cao,
+        contracturenPerWeek: contracturen_per_week !== undefined ? (contracturen_per_week ?? null) : huidig[0].contracturenPerWeek,
+        bijgewerktOp: new Date(),
+      })
+      .where(eq(medewerkerAanstellingenTable.id, aanstellingId))
+      .returning();
+
+    let functieNaam: string | null = null;
+    if (bijgewerkt.functieId) {
+      const [f] = await db.select({ naam: functiesTable.naam }).from(functiesTable).where(eq(functiesTable.id, bijgewerkt.functieId));
+      functieNaam = f?.naam ?? null;
+    }
+
+    if (bijgewerkt.isHoofd) {
+      await syncHoofdNaarMedewerker(medId, bijgewerkt);
+    }
+
+    res.json(mapAanstelling(bijgewerkt, functieNaam));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+router.delete("/medewerkers/:id/aanstellingen/:aanstellingId", schrijven, async (req, res) => {
+  try {
+    const medId = parseId(req.params.id);
+    const aanstellingId = parseId(req.params.aanstellingId);
+    const [bestaand] = await db
+      .select()
+      .from(medewerkerAanstellingenTable)
+      .where(and(eq(medewerkerAanstellingenTable.id, aanstellingId), eq(medewerkerAanstellingenTable.medewerkerId, medId)));
+    if (!bestaand) return res.status(404).json({ error: "Niet gevonden" });
+    if (bestaand.isHoofd) return res.status(409).json({ error: "Kan de hoofdaanstelling niet verwijderen. Stel eerst een andere aanstelling als hoofd in." });
+    await db.delete(medewerkerAanstellingenTable).where(eq(medewerkerAanstellingenTable.id, aanstellingId));
+    res.status(204).send();
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+router.post("/medewerkers/:id/aanstellingen/:aanstellingId/hoofd", schrijven, async (req, res) => {
+  try {
+    const medId = parseId(req.params.id);
+    const aanstellingId = parseId(req.params.aanstellingId);
+    const [doelwit] = await db
+      .select()
+      .from(medewerkerAanstellingenTable)
+      .where(and(eq(medewerkerAanstellingenTable.id, aanstellingId), eq(medewerkerAanstellingenTable.medewerkerId, medId)));
+    if (!doelwit) return res.status(404).json({ error: "Niet gevonden" });
+
+    await db.transaction(async (tx) => {
+      await tx.update(medewerkerAanstellingenTable).set({ isHoofd: false, bijgewerktOp: new Date() }).where(eq(medewerkerAanstellingenTable.medewerkerId, medId));
+      await tx.update(medewerkerAanstellingenTable).set({ isHoofd: true, bijgewerktOp: new Date() }).where(eq(medewerkerAanstellingenTable.id, aanstellingId));
+    });
+
+    await syncHoofdNaarMedewerker(medId, { ...doelwit, isHoofd: true });
+
+    let functieNaam: string | null = null;
+    if (doelwit.functieId) {
+      const [f] = await db.select({ naam: functiesTable.naam }).from(functiesTable).where(eq(functiesTable.id, doelwit.functieId));
+      functieNaam = f?.naam ?? null;
+    }
+    res.json(mapAanstelling({ ...doelwit, isHoofd: true }, functieNaam));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+async function syncHoofdNaarMedewerker(
+  medewerkerId: number,
+  hoofd: typeof medewerkerAanstellingenTable.$inferSelect,
+) {
+  await db
+    .update(medewerkersTable)
+    .set({
+      werkmaatschappij: hoofd.werkmaatschappij,
+      werkgeverId: hoofd.werkgeverId ?? null,
+      functieId: hoofd.functieId ?? null,
+      cao: hoofd.cao ?? null,
+      contracturenPerWeek: hoofd.contracturenPerWeek ?? null,
+      bijgewerktOp: new Date(),
+    })
+    .where(eq(medewerkersTable.id, medewerkerId));
+}
+
+// ─── Medewerker documenten ────────────────────────────────────────────────────
 
 function mapMedewerkerDoc(d: typeof medewerkerDocumentenTable.$inferSelect) {
   return {

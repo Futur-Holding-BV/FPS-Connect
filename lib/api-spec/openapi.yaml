@@ -6345,6 +6345,122 @@ paths:
         "204":
           description: Verwijderd
 
+  /medewerkers/{id}/aanstellingen:
+    get:
+      operationId: listMedewerkerAanstellingen
+      tags: [personeel]
+      summary: Aanstellingen van een medewerker ophalen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MedewerkerAanstelling"
+    post:
+      operationId: createMedewerkerAanstelling
+      tags: [personeel]
+      summary: Aanstelling toevoegen aan medewerker
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MedewerkerAanstellingInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MedewerkerAanstelling"
+
+  /medewerkers/{id}/aanstellingen/{aanstellingId}:
+    patch:
+      operationId: updateMedewerkerAanstelling
+      tags: [personeel]
+      summary: Aanstelling bijwerken
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: aanstellingId
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MedewerkerAanstellingInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MedewerkerAanstelling"
+    delete:
+      operationId: deleteMedewerkerAanstelling
+      tags: [personeel]
+      summary: Aanstelling verwijderen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: aanstellingId
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Verwijderd
+
+  /medewerkers/{id}/aanstellingen/{aanstellingId}/hoofd:
+    post:
+      operationId: setHoofdAanstelling
+      tags: [personeel]
+      summary: Aanstelling als hoofdaanstelling markeren
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: aanstellingId
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MedewerkerAanstelling"
+
   /medewerkers/{id}/opleidingen:
     get:
       operationId: listMedewerkerOpleidingen
@@ -20977,6 +21093,44 @@ components:
           type: string
         bedrijf_uitzendbureau:
           type: string
+
+    MedewerkerAanstelling:
+      type: object
+      required: [id, medewerker_id, werkmaatschappij, is_hoofd, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id:
+          type: integer
+        medewerker_id:
+          type: integer
+        werkmaatschappij:
+          type: string
+        functie_id:
+          type: ["integer", "null"]
+        functie_naam:
+          type: ["string", "null"]
+        cao:
+          type: ["string", "null"]
+        contracturen_per_week:
+          type: ["number", "null"]
+        is_hoofd:
+          type: boolean
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+
+    MedewerkerAanstellingInput:
+      type: object
+      required: [werkmaatschappij]
+      properties:
+        werkmaatschappij:
+          type: string
+        functie_id:
+          type: ["integer", "null"]
+        cao:
+          type: string
+        contracturen_per_week:
+          type: ["number", "null"]
 
     MijnCertificaten:
       type: object
