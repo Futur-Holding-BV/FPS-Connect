@@ -36,6 +36,7 @@ import {
   ziekmeldingenTable,
   gebruikersTable,
   medewerkerDocumentenTable,
+  zzpOvereenkomstenTable,
 } from "@workspace/db";
 import { ObjectStorageService } from "../lib/objectStorage";
 import { eq, desc, and, ne, inArray, or, isNull, gte, lte, sql } from "drizzle-orm";
@@ -3590,6 +3591,273 @@ router.delete("/medewerkers/:id/documenten/:docId", schrijven, async (req, res) 
 
     await db.delete(medewerkerDocumentenTable).where(eq(medewerkerDocumentenTable.id, docId));
     req.log.info({ medewerker_id: medewerkerId, doc_id: docId }, "Medewerker document verwijderd");
+    res.status(204).end();
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// ─── ZZP-overeenkomsten ───────────────────────────────────────────────────────
+
+function mapOvereenkomst(o: typeof zzpOvereenkomstenTable.$inferSelect & { medewerker_naam?: string | null }) {
+  return {
+    id: o.id,
+    medewerker_id: o.medewerkerId,
+    medewerker_naam: o.medewerker_naam ?? null,
+    aangemaakt_door_id: o.aangemaaktDoorId ?? null,
+    opdracht_omschrijving: o.opdrachtOmschrijving,
+    specifieke_taken: o.specifiekeTaken ?? null,
+    projectnummer: o.projectnummer ?? null,
+    start_datum: o.startDatum,
+    eind_datum: o.eindDatum,
+    uurtarief: o.uurtarief ?? null,
+    vaste_prijs: o.vastePrijs ?? null,
+    betalingswijze: o.betalingswijze,
+    zzp_bedrijfsnaam: o.zzpBedrijfsnaam ?? null,
+    zzp_kvk: o.zzpKvk ?? null,
+    zzp_btw: o.zzpBtw ?? null,
+    status: o.status,
+    handtekening_fps_datum: o.handtekeningFpsDatum ?? null,
+    handtekening_zzp_datum: o.handtekeningZzpDatum ?? null,
+    ondertekend_door_id: o.ondertekendDoorId ?? null,
+    ai_ingevuld: o.aiIngevuld,
+    aangemaakt_op: o.aangemaaktOp,
+    bijgewerkt_op: o.bijgewerktOp,
+  };
+}
+
+router.get("/zzp-overeenkomsten", lezen, async (req, res) => {
+  try {
+    const medewerkerId = req.query.medewerker_id ? Number(req.query.medewerker_id) : null;
+
+    const rijen = await db
+      .select({
+        ...zzpOvereenkomstenTable,
+        medewerker_naam: medewerkersTable.naam,
+      })
+      .from(zzpOvereenkomstenTable)
+      .leftJoin(medewerkersTable, eq(zzpOvereenkomstenTable.medewerkerId, medewerkersTable.id))
+      .where(medewerkerId ? eq(zzpOvereenkomstenTable.medewerkerId, medewerkerId) : undefined)
+      .orderBy(desc(zzpOvereenkomstenTable.aangemaaktOp));
+
+    res.json(rijen.map(mapOvereenkomst));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+router.post("/zzp-overeenkomsten", schrijven, async (req, res) => {
+  try {
+    const {
+      medewerker_id, opdracht_omschrijving, specifieke_taken, projectnummer,
+      start_datum, eind_datum, uurtarief, vaste_prijs, betalingswijze,
+      zzp_bedrijfsnaam, zzp_kvk, zzp_btw, ai_ingevuld,
+    } = req.body as Record<string, unknown>;
+
+    if (!medewerker_id || !opdracht_omschrijving || !start_datum || !eind_datum) {
+      return res.status(400).json({ error: "medewerker_id, opdracht_omschrijving, start_datum en eind_datum zijn verplicht" });
+    }
+
+    const [nieuw] = await db.insert(zzpOvereenkomstenTable).values({
+      medewerkerId: Number(medewerker_id),
+      aangemaaktDoorId: req.session?.gebruikerId ?? null,
+      opdrachtOmschrijving: String(opdracht_omschrijving),
+      specifiekeTaken: specifieke_taken ? String(specifieke_taken) : null,
+      projectnummer: projectnummer ? String(projectnummer) : null,
+      startDatum: String(start_datum),
+      eindDatum: String(eind_datum),
+      uurtarief: uurtarief ? Number(uurtarief) : null,
+      vastePrijs: vaste_prijs ? Number(vaste_prijs) : null,
+      betalingswijze: betalingswijze ? String(betalingswijze) : "factuur_achteraf",
+      zzpBedrijfsnaam: zzp_bedrijfsnaam ? String(zzp_bedrijfsnaam) : null,
+      zzpKvk: zzp_kvk ? String(zzp_kvk) : null,
+      zzpBtw: zzp_btw ? String(zzp_btw) : null,
+      aiIngevuld: Boolean(ai_ingevuld),
+      bijgewerktOp: new Date(),
+    }).returning();
+
+    const [metNaam] = await db
+      .select({ ...zzpOvereenkomstenTable, medewerker_naam: medewerkersTable.naam })
+      .from(zzpOvereenkomstenTable)
+      .leftJoin(medewerkersTable, eq(zzpOvereenkomstenTable.medewerkerId, medewerkersTable.id))
+      .where(eq(zzpOvereenkomstenTable.id, nieuw.id));
+
+    req.log.info({ id: nieuw.id, medewerker_id }, "ZZP-overeenkomst aangemaakt");
+    res.status(201).json(mapOvereenkomst(metNaam));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+router.get("/zzp-overeenkomsten/ai-vullen", (_req, res) => {
+  res.status(405).json({ error: "Gebruik POST voor AI-invullen" });
+});
+
+router.post("/zzp-overeenkomsten/ai-vullen", schrijven, async (req, res) => {
+  try {
+    if (!heeftOpenAi()) {
+      return res.status(503).json({ error: "AI niet beschikbaar" });
+    }
+    const { medewerker_id, functie_naam, bedrijfsnaam, projectnummer } = req.body as Record<string, unknown>;
+
+    if (!medewerker_id) {
+      return res.status(400).json({ error: "medewerker_id is verplicht" });
+    }
+
+    // Medewerker ophalen voor context
+    const [medewerker] = await db
+      .select({ naam: medewerkersTable.naam, dienstverband: medewerkersTable.dienstverband })
+      .from(medewerkersTable)
+      .where(eq(medewerkersTable.id, Number(medewerker_id)));
+
+    const naam = medewerker?.naam ?? "de opdrachtnemer";
+    const dvb = medewerker?.dienstverband ?? "zzp";
+    const functie = functie_naam ? String(functie_naam) : "brandpreventie uitvoerder";
+    const bedrijf = bedrijfsnaam ? String(bedrijfsnaam) : null;
+    const project = projectnummer ? String(projectnummer) : null;
+
+    const openai = maakOpenAiClient();
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o",
+      max_tokens: 600,
+      messages: [
+        {
+          role: "system",
+          content: `Je bent een juridisch assistent gespecialiseerd in Nederlandse ZZP-overeenkomsten (overeenkomst van opdracht, art. 7:400 BW).
+Schrijf beknopte, wettelijk correcte teksten die:
+- Eigen verantwoordelijkheid van de opdrachtnemer voor het resultaat benadrukken
+- Geen gezagsverhouding impliceren (opdrachtnemer bepaalt zelf HOE en WANNEER)
+- Mogelijkheid tot vrije vervanging door een andere opdrachtnemer vermelden
+- Voldoen aan de Wet DBA / WBBA-criteria voor zelfstandigheid
+- In het Nederlands zijn en zakelijk van toon
+
+Geef ALLEEN geldige JSON terug, geen uitleg.`,
+        },
+        {
+          role: "user",
+          content: `Maak een opdrachtomschrijving en specifieke werkzaamheden voor:
+- Opdrachtnemer: ${naam} (${dvb})
+- Functie / vakgebied: ${functie}
+${bedrijf ? `- Bedrijfsnaam: ${bedrijf}` : ""}
+${project ? `- Project: ${project}` : ""}
+- Opdrachtgever: FPS Brandpreventie
+
+JSON-formaat:
+{
+  "opdracht_omschrijving": "<max 80 tekens, korte titel>",
+  "specifieke_taken": "<3-5 alinea's, min. 200 woorden, eigen verantwoordelijkheid + geen gezagsverhouding + vervanging>",
+  "zzp_bedrijfsnaam": "<bedrijfsnaam als bekend, anders null>"
+}`,
+        },
+      ],
+    });
+
+    const raw = completion.choices[0]?.message?.content ?? "{}";
+    let parsed: { opdracht_omschrijving?: string; specifieke_taken?: string; zzp_bedrijfsnaam?: string | null };
+    try {
+      parsed = JSON.parse(raw.replace(/^```json\s*/i, "").replace(/```\s*$/i, "").trim());
+    } catch {
+      return res.status(500).json({ error: "AI-antwoord kon niet worden verwerkt" });
+    }
+
+    res.json({
+      opdracht_omschrijving: parsed.opdracht_omschrijving ?? "",
+      specifieke_taken: parsed.specifieke_taken ?? "",
+      zzp_bedrijfsnaam: parsed.zzp_bedrijfsnaam ?? null,
+    });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+router.get("/zzp-overeenkomsten/:id", lezen, async (req, res) => {
+  try {
+    const id = parseId(req.params.id);
+    const [rij] = await db
+      .select({ ...zzpOvereenkomstenTable, medewerker_naam: medewerkersTable.naam })
+      .from(zzpOvereenkomstenTable)
+      .leftJoin(medewerkersTable, eq(zzpOvereenkomstenTable.medewerkerId, medewerkersTable.id))
+      .where(eq(zzpOvereenkomstenTable.id, id));
+
+    if (!rij) return res.status(404).json({ error: "Overeenkomst niet gevonden" });
+    res.json(mapOvereenkomst(rij));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+router.patch("/zzp-overeenkomsten/:id", schrijven, async (req, res) => {
+  try {
+    const id = parseId(req.params.id);
+    const {
+      opdracht_omschrijving, specifieke_taken, projectnummer,
+      start_datum, eind_datum, uurtarief, vaste_prijs, betalingswijze,
+      zzp_bedrijfsnaam, zzp_kvk, zzp_btw, status,
+      handtekening_fps_datum, handtekening_zzp_datum,
+    } = req.body as Record<string, unknown>;
+
+    const [bestaand] = await db.select().from(zzpOvereenkomstenTable).where(eq(zzpOvereenkomstenTable.id, id));
+    if (!bestaand) return res.status(404).json({ error: "Overeenkomst niet gevonden" });
+
+    // Status workflow: ondertekend_door_id instellen bij "ondertekend"
+    const nieuweStatus = status ? String(status) : undefined;
+    const ondertekendDoorId =
+      nieuweStatus === "ondertekend" && !bestaand.ondertekendDoorId
+        ? (req.session?.gebruikerId ?? null)
+        : bestaand.ondertekendDoorId;
+
+    const [bijgewerkt] = await db
+      .update(zzpOvereenkomstenTable)
+      .set({
+        ...(opdracht_omschrijving !== undefined && { opdrachtOmschrijving: String(opdracht_omschrijving) }),
+        ...(specifieke_taken !== undefined && { specifiekeTaken: specifieke_taken ? String(specifieke_taken) : null }),
+        ...(projectnummer !== undefined && { projectnummer: projectnummer ? String(projectnummer) : null }),
+        ...(start_datum !== undefined && { startDatum: String(start_datum) }),
+        ...(eind_datum !== undefined && { eindDatum: String(eind_datum) }),
+        ...(uurtarief !== undefined && { uurtarief: uurtarief ? Number(uurtarief) : null }),
+        ...(vaste_prijs !== undefined && { vastePrijs: vaste_prijs ? Number(vaste_prijs) : null }),
+        ...(betalingswijze !== undefined && { betalingswijze: String(betalingswijze) }),
+        ...(zzp_bedrijfsnaam !== undefined && { zzpBedrijfsnaam: zzp_bedrijfsnaam ? String(zzp_bedrijfsnaam) : null }),
+        ...(zzp_kvk !== undefined && { zzpKvk: zzp_kvk ? String(zzp_kvk) : null }),
+        ...(zzp_btw !== undefined && { zzpBtw: zzp_btw ? String(zzp_btw) : null }),
+        ...(nieuweStatus !== undefined && { status: nieuweStatus }),
+        ...(handtekening_fps_datum !== undefined && { handtekeningFpsDatum: handtekening_fps_datum ? String(handtekening_fps_datum) : null }),
+        ...(handtekening_zzp_datum !== undefined && { handtekeningZzpDatum: handtekening_zzp_datum ? String(handtekening_zzp_datum) : null }),
+        ondertekendDoorId,
+        bijgewerktOp: new Date(),
+      })
+      .where(eq(zzpOvereenkomstenTable.id, id))
+      .returning();
+
+    const [metNaam] = await db
+      .select({ ...zzpOvereenkomstenTable, medewerker_naam: medewerkersTable.naam })
+      .from(zzpOvereenkomstenTable)
+      .leftJoin(medewerkersTable, eq(zzpOvereenkomstenTable.medewerkerId, medewerkersTable.id))
+      .where(eq(zzpOvereenkomstenTable.id, bijgewerkt.id));
+
+    req.log.info({ id, status: nieuweStatus }, "ZZP-overeenkomst bijgewerkt");
+    res.json(mapOvereenkomst(metNaam));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+router.delete("/zzp-overeenkomsten/:id", schrijven, async (req, res) => {
+  try {
+    const id = parseId(req.params.id);
+    const [bestaand] = await db.select().from(zzpOvereenkomstenTable).where(eq(zzpOvereenkomstenTable.id, id));
+    if (!bestaand) return res.status(404).json({ error: "Overeenkomst niet gevonden" });
+    if (bestaand.status !== "concept") {
+      return res.status(409).json({ error: "Alleen concept-overeenkomsten kunnen worden verwijderd" });
+    }
+    await db.delete(zzpOvereenkomstenTable).where(eq(zzpOvereenkomstenTable.id, id));
+    req.log.info({ id }, "ZZP-overeenkomst verwijderd");
     res.status(204).end();
   } catch (err) {
     req.log.error(err);

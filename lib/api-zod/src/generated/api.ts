@@ -8719,6 +8719,172 @@ export const DeleteMedewerkerDocumentResponse = zod.void()
 
 
 /**
+ * @summary Alle ZZP-overeenkomsten ophalen
+ */
+export const ListZzpOvereenkomstenQueryParams = zod.object({
+  "medewerker_id": zod.coerce.number().optional()
+})
+
+export const ListZzpOvereenkomstenResponseItem = zod.object({
+  "id": zod.number(),
+  "medewerker_id": zod.number(),
+  "medewerker_naam": zod.string().nullish(),
+  "aangemaakt_door_id": zod.number().nullish(),
+  "opdracht_omschrijving": zod.string(),
+  "specifieke_taken": zod.string().nullish(),
+  "projectnummer": zod.string().nullish(),
+  "start_datum": zod.string(),
+  "eind_datum": zod.string(),
+  "uurtarief": zod.number().nullish(),
+  "vaste_prijs": zod.number().nullish(),
+  "betalingswijze": zod.string(),
+  "zzp_bedrijfsnaam": zod.string().nullish(),
+  "zzp_kvk": zod.string().nullish(),
+  "zzp_btw": zod.string().nullish(),
+  "status": zod.string(),
+  "handtekening_fps_datum": zod.string().nullish(),
+  "handtekening_zzp_datum": zod.string().nullish(),
+  "ondertekend_door_id": zod.number().nullish(),
+  "ai_ingevuld": zod.boolean(),
+  "aangemaakt_op": zod.coerce.date(),
+  "bijgewerkt_op": zod.coerce.date()
+})
+export const ListZzpOvereenkomstenResponse = zod.array(ListZzpOvereenkomstenResponseItem)
+
+
+/**
+ * @summary Nieuwe ZZP-overeenkomst aanmaken
+ */
+export const CreateZzpOvereenkomstBody = zod.object({
+  "medewerker_id": zod.number(),
+  "opdracht_omschrijving": zod.string(),
+  "specifieke_taken": zod.string().optional(),
+  "projectnummer": zod.string().optional(),
+  "start_datum": zod.string(),
+  "eind_datum": zod.string(),
+  "uurtarief": zod.number().optional(),
+  "vaste_prijs": zod.number().optional(),
+  "betalingswijze": zod.string().optional(),
+  "zzp_bedrijfsnaam": zod.string().optional(),
+  "zzp_kvk": zod.string().optional(),
+  "zzp_btw": zod.string().optional(),
+  "ai_ingevuld": zod.boolean().optional()
+})
+
+export const CreateZzpOvereenkomstResponse = zod.void()
+
+
+/**
+ * @summary ZZP-overeenkomst detail ophalen
+ */
+export const GetZzpOvereenkomstParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetZzpOvereenkomstResponse = zod.object({
+  "id": zod.number(),
+  "medewerker_id": zod.number(),
+  "medewerker_naam": zod.string().nullish(),
+  "aangemaakt_door_id": zod.number().nullish(),
+  "opdracht_omschrijving": zod.string(),
+  "specifieke_taken": zod.string().nullish(),
+  "projectnummer": zod.string().nullish(),
+  "start_datum": zod.string(),
+  "eind_datum": zod.string(),
+  "uurtarief": zod.number().nullish(),
+  "vaste_prijs": zod.number().nullish(),
+  "betalingswijze": zod.string(),
+  "zzp_bedrijfsnaam": zod.string().nullish(),
+  "zzp_kvk": zod.string().nullish(),
+  "zzp_btw": zod.string().nullish(),
+  "status": zod.string(),
+  "handtekening_fps_datum": zod.string().nullish(),
+  "handtekening_zzp_datum": zod.string().nullish(),
+  "ondertekend_door_id": zod.number().nullish(),
+  "ai_ingevuld": zod.boolean(),
+  "aangemaakt_op": zod.coerce.date(),
+  "bijgewerkt_op": zod.coerce.date()
+})
+
+
+/**
+ * @summary ZZP-overeenkomst bijwerken (incl. status)
+ */
+export const UpdateZzpOvereenkomstParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateZzpOvereenkomstBody = zod.object({
+  "opdracht_omschrijving": zod.string().optional(),
+  "specifieke_taken": zod.string().optional(),
+  "projectnummer": zod.string().optional(),
+  "start_datum": zod.string().optional(),
+  "eind_datum": zod.string().optional(),
+  "uurtarief": zod.number().optional(),
+  "vaste_prijs": zod.number().optional(),
+  "betalingswijze": zod.string().optional(),
+  "zzp_bedrijfsnaam": zod.string().optional(),
+  "zzp_kvk": zod.string().optional(),
+  "zzp_btw": zod.string().optional(),
+  "status": zod.string().optional(),
+  "handtekening_fps_datum": zod.string().optional(),
+  "handtekening_zzp_datum": zod.string().optional()
+})
+
+export const UpdateZzpOvereenkomstResponse = zod.object({
+  "id": zod.number(),
+  "medewerker_id": zod.number(),
+  "medewerker_naam": zod.string().nullish(),
+  "aangemaakt_door_id": zod.number().nullish(),
+  "opdracht_omschrijving": zod.string(),
+  "specifieke_taken": zod.string().nullish(),
+  "projectnummer": zod.string().nullish(),
+  "start_datum": zod.string(),
+  "eind_datum": zod.string(),
+  "uurtarief": zod.number().nullish(),
+  "vaste_prijs": zod.number().nullish(),
+  "betalingswijze": zod.string(),
+  "zzp_bedrijfsnaam": zod.string().nullish(),
+  "zzp_kvk": zod.string().nullish(),
+  "zzp_btw": zod.string().nullish(),
+  "status": zod.string(),
+  "handtekening_fps_datum": zod.string().nullish(),
+  "handtekening_zzp_datum": zod.string().nullish(),
+  "ondertekend_door_id": zod.number().nullish(),
+  "ai_ingevuld": zod.boolean(),
+  "aangemaakt_op": zod.coerce.date(),
+  "bijgewerkt_op": zod.coerce.date()
+})
+
+
+/**
+ * @summary ZZP-overeenkomst verwijderen (alleen concept)
+ */
+export const DeleteZzpOvereenkomstParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteZzpOvereenkomstResponse = zod.void()
+
+
+/**
+ * @summary AI-voorstel voor opdracht­omschrijving en specifieke taken
+ */
+export const AiVulZzpOvereenkomstBody = zod.object({
+  "medewerker_id": zod.number(),
+  "functie_naam": zod.string().optional(),
+  "bedrijfsnaam": zod.string().optional(),
+  "projectnummer": zod.string().optional()
+})
+
+export const AiVulZzpOvereenkomstResponse = zod.object({
+  "opdracht_omschrijving": zod.string(),
+  "specifieke_taken": zod.string(),
+  "zzp_bedrijfsnaam": zod.string().nullish()
+})
+
+
+/**
  * @summary Alle verlofaanvragen (centrale beoordelingslijst)
  */
 export const ListAlleVerlofAanvragenQueryParams = zod.object({

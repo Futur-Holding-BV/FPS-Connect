@@ -6881,6 +6881,120 @@ paths:
         "204":
           description: Verwijderd
 
+  /zzp-overeenkomsten:
+    get:
+      operationId: listZzpOvereenkomsten
+      tags: [personeel]
+      summary: Alle ZZP-overeenkomsten ophalen
+      parameters:
+        - in: query
+          name: medewerker_id
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ZzpOvereenkomst"
+    post:
+      operationId: createZzpOvereenkomst
+      tags: [personeel]
+      summary: Nieuwe ZZP-overeenkomst aanmaken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ZzpOvereenkomstInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ZzpOvereenkomst"
+
+  /zzp-overeenkomsten/{id}:
+    get:
+      operationId: getZzpOvereenkomst
+      tags: [personeel]
+      summary: ZZP-overeenkomst detail ophalen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ZzpOvereenkomst"
+        "404":
+          description: Niet gevonden
+    patch:
+      operationId: updateZzpOvereenkomst
+      tags: [personeel]
+      summary: ZZP-overeenkomst bijwerken (incl. status)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ZzpOvereenkomstPatchInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ZzpOvereenkomst"
+    delete:
+      operationId: deleteZzpOvereenkomst
+      tags: [personeel]
+      summary: ZZP-overeenkomst verwijderen (alleen concept)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Verwijderd
+
+  /zzp-overeenkomsten/ai-vullen:
+    post:
+      operationId: aiVulZzpOvereenkomst
+      tags: [personeel]
+      summary: AI-voorstel voor opdracht­omschrijving en specifieke taken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ZzpAiVullenInput"
+      responses:
+        "200":
+          description: AI-voorstel (mens bevestigt, nog niet opgeslagen)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ZzpAiVullenResultaat"
+
   /verlofaanvragen:
     get:
       operationId: listAlleVerlofAanvragen
@@ -21125,6 +21239,144 @@ components:
         aangemaakt_op:
           type: string
           format: date-time
+
+    ZzpOvereenkomst:
+      type: object
+      required: [id, medewerker_id, opdracht_omschrijving, start_datum, eind_datum, status, betalingswijze, ai_ingevuld, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id:
+          type: integer
+        medewerker_id:
+          type: integer
+        medewerker_naam:
+          type: ["string", "null"]
+        aangemaakt_door_id:
+          type: ["integer", "null"]
+        opdracht_omschrijving:
+          type: string
+        specifieke_taken:
+          type: ["string", "null"]
+        projectnummer:
+          type: ["string", "null"]
+        start_datum:
+          type: string
+        eind_datum:
+          type: string
+        uurtarief:
+          type: ["number", "null"]
+        vaste_prijs:
+          type: ["number", "null"]
+        betalingswijze:
+          type: string
+        zzp_bedrijfsnaam:
+          type: ["string", "null"]
+        zzp_kvk:
+          type: ["string", "null"]
+        zzp_btw:
+          type: ["string", "null"]
+        status:
+          type: string
+        handtekening_fps_datum:
+          type: ["string", "null"]
+        handtekening_zzp_datum:
+          type: ["string", "null"]
+        ondertekend_door_id:
+          type: ["integer", "null"]
+        ai_ingevuld:
+          type: boolean
+        aangemaakt_op:
+          type: string
+          format: date-time
+        bijgewerkt_op:
+          type: string
+          format: date-time
+
+    ZzpOvereenkomstInput:
+      type: object
+      required: [medewerker_id, opdracht_omschrijving, start_datum, eind_datum]
+      properties:
+        medewerker_id:
+          type: integer
+        opdracht_omschrijving:
+          type: string
+        specifieke_taken:
+          type: string
+        projectnummer:
+          type: string
+        start_datum:
+          type: string
+        eind_datum:
+          type: string
+        uurtarief:
+          type: number
+        vaste_prijs:
+          type: number
+        betalingswijze:
+          type: string
+        zzp_bedrijfsnaam:
+          type: string
+        zzp_kvk:
+          type: string
+        zzp_btw:
+          type: string
+        ai_ingevuld:
+          type: boolean
+
+    ZzpOvereenkomstPatchInput:
+      type: object
+      properties:
+        opdracht_omschrijving:
+          type: string
+        specifieke_taken:
+          type: string
+        projectnummer:
+          type: string
+        start_datum:
+          type: string
+        eind_datum:
+          type: string
+        uurtarief:
+          type: number
+        vaste_prijs:
+          type: number
+        betalingswijze:
+          type: string
+        zzp_bedrijfsnaam:
+          type: string
+        zzp_kvk:
+          type: string
+        zzp_btw:
+          type: string
+        status:
+          type: string
+        handtekening_fps_datum:
+          type: string
+        handtekening_zzp_datum:
+          type: string
+
+    ZzpAiVullenInput:
+      type: object
+      required: [medewerker_id]
+      properties:
+        medewerker_id:
+          type: integer
+        functie_naam:
+          type: string
+        bedrijfsnaam:
+          type: string
+        projectnummer:
+          type: string
+
+    ZzpAiVullenResultaat:
+      type: object
+      required: [opdracht_omschrijving, specifieke_taken]
+      properties:
+        opdracht_omschrijving:
+          type: string
+        specifieke_taken:
+          type: string
+        zzp_bedrijfsnaam:
+          type: ["string", "null"]
 
     MedewerkerOpleidingInput:
       type: object

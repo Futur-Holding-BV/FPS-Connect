@@ -326,6 +326,7 @@ import type {
   ListWeekStatenParams,
   ListWerkbonnenParams,
   ListZiekmeldingenParams,
+  ListZzpOvereenkomstenParams,
   LmraAiVoorstel,
   LmraAiVoorstelInput,
   LmraStatus,
@@ -652,7 +653,12 @@ import type {
   Ziekmelding,
   ZiekmeldingenInput,
   ZiekmeldingenSelfInput,
-  ZiekmeldingenStatistieken
+  ZiekmeldingenStatistieken,
+  ZzpAiVullenInput,
+  ZzpAiVullenResultaat,
+  ZzpOvereenkomst,
+  ZzpOvereenkomstInput,
+  ZzpOvereenkomstPatchInput
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -24373,6 +24379,448 @@ export const useDeleteMedewerkerDocument = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getDeleteMedewerkerDocumentMutationOptions(options));
+    }
+
+export const getListZzpOvereenkomstenUrl = (params?: ListZzpOvereenkomstenParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/zzp-overeenkomsten?${stringifiedParams}` : `/api/zzp-overeenkomsten`
+}
+
+/**
+ * @summary Alle ZZP-overeenkomsten ophalen
+ */
+export const listZzpOvereenkomsten = async (params?: ListZzpOvereenkomstenParams, options?: RequestInit): Promise<ZzpOvereenkomst[]> => {
+
+  return customFetch<ZzpOvereenkomst[]>(getListZzpOvereenkomstenUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListZzpOvereenkomstenQueryKey = (params?: ListZzpOvereenkomstenParams,) => {
+    return [
+    `/api/zzp-overeenkomsten`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListZzpOvereenkomstenQueryOptions = <TData = Awaited<ReturnType<typeof listZzpOvereenkomsten>>, TError = ErrorType<unknown>>(params?: ListZzpOvereenkomstenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listZzpOvereenkomsten>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListZzpOvereenkomstenQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listZzpOvereenkomsten>>> = ({ signal }) => listZzpOvereenkomsten(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listZzpOvereenkomsten>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListZzpOvereenkomstenQueryResult = NonNullable<Awaited<ReturnType<typeof listZzpOvereenkomsten>>>
+export type ListZzpOvereenkomstenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Alle ZZP-overeenkomsten ophalen
+ */
+
+export function useListZzpOvereenkomsten<TData = Awaited<ReturnType<typeof listZzpOvereenkomsten>>, TError = ErrorType<unknown>>(
+ params?: ListZzpOvereenkomstenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listZzpOvereenkomsten>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListZzpOvereenkomstenQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateZzpOvereenkomstUrl = () => {
+
+
+
+
+  return `/api/zzp-overeenkomsten`
+}
+
+/**
+ * @summary Nieuwe ZZP-overeenkomst aanmaken
+ */
+export const createZzpOvereenkomst = async (zzpOvereenkomstInput: ZzpOvereenkomstInput, options?: RequestInit): Promise<ZzpOvereenkomst> => {
+
+  return customFetch<ZzpOvereenkomst>(getCreateZzpOvereenkomstUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(zzpOvereenkomstInput)
+  }
+);}
+
+
+
+
+export const getCreateZzpOvereenkomstMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createZzpOvereenkomst>>, TError,{data: BodyType<ZzpOvereenkomstInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createZzpOvereenkomst>>, TError,{data: BodyType<ZzpOvereenkomstInput>}, TContext> => {
+
+const mutationKey = ['createZzpOvereenkomst'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createZzpOvereenkomst>>, {data: BodyType<ZzpOvereenkomstInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createZzpOvereenkomst(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateZzpOvereenkomstMutationResult = NonNullable<Awaited<ReturnType<typeof createZzpOvereenkomst>>>
+    export type CreateZzpOvereenkomstMutationBody = BodyType<ZzpOvereenkomstInput>
+    export type CreateZzpOvereenkomstMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Nieuwe ZZP-overeenkomst aanmaken
+ */
+export const useCreateZzpOvereenkomst = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createZzpOvereenkomst>>, TError,{data: BodyType<ZzpOvereenkomstInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createZzpOvereenkomst>>,
+        TError,
+        {data: BodyType<ZzpOvereenkomstInput>},
+        TContext
+      > => {
+      return useMutation(getCreateZzpOvereenkomstMutationOptions(options));
+    }
+
+export const getGetZzpOvereenkomstUrl = (id: number,) => {
+
+
+
+
+  return `/api/zzp-overeenkomsten/${id}`
+}
+
+/**
+ * @summary ZZP-overeenkomst detail ophalen
+ */
+export const getZzpOvereenkomst = async (id: number, options?: RequestInit): Promise<ZzpOvereenkomst> => {
+
+  return customFetch<ZzpOvereenkomst>(getGetZzpOvereenkomstUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetZzpOvereenkomstQueryKey = (id: number,) => {
+    return [
+    `/api/zzp-overeenkomsten/${id}`
+    ] as const;
+    }
+
+
+export const getGetZzpOvereenkomstQueryOptions = <TData = Awaited<ReturnType<typeof getZzpOvereenkomst>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getZzpOvereenkomst>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetZzpOvereenkomstQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getZzpOvereenkomst>>> = ({ signal }) => getZzpOvereenkomst(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getZzpOvereenkomst>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetZzpOvereenkomstQueryResult = NonNullable<Awaited<ReturnType<typeof getZzpOvereenkomst>>>
+export type GetZzpOvereenkomstQueryError = ErrorType<void>
+
+
+/**
+ * @summary ZZP-overeenkomst detail ophalen
+ */
+
+export function useGetZzpOvereenkomst<TData = Awaited<ReturnType<typeof getZzpOvereenkomst>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getZzpOvereenkomst>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetZzpOvereenkomstQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUpdateZzpOvereenkomstUrl = (id: number,) => {
+
+
+
+
+  return `/api/zzp-overeenkomsten/${id}`
+}
+
+/**
+ * @summary ZZP-overeenkomst bijwerken (incl. status)
+ */
+export const updateZzpOvereenkomst = async (id: number,
+    zzpOvereenkomstPatchInput: ZzpOvereenkomstPatchInput, options?: RequestInit): Promise<ZzpOvereenkomst> => {
+
+  return customFetch<ZzpOvereenkomst>(getUpdateZzpOvereenkomstUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(zzpOvereenkomstPatchInput)
+  }
+);}
+
+
+
+
+export const getUpdateZzpOvereenkomstMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateZzpOvereenkomst>>, TError,{id: number;data: BodyType<ZzpOvereenkomstPatchInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateZzpOvereenkomst>>, TError,{id: number;data: BodyType<ZzpOvereenkomstPatchInput>}, TContext> => {
+
+const mutationKey = ['updateZzpOvereenkomst'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateZzpOvereenkomst>>, {id: number;data: BodyType<ZzpOvereenkomstPatchInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateZzpOvereenkomst(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateZzpOvereenkomstMutationResult = NonNullable<Awaited<ReturnType<typeof updateZzpOvereenkomst>>>
+    export type UpdateZzpOvereenkomstMutationBody = BodyType<ZzpOvereenkomstPatchInput>
+    export type UpdateZzpOvereenkomstMutationError = ErrorType<unknown>
+
+    /**
+ * @summary ZZP-overeenkomst bijwerken (incl. status)
+ */
+export const useUpdateZzpOvereenkomst = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateZzpOvereenkomst>>, TError,{id: number;data: BodyType<ZzpOvereenkomstPatchInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateZzpOvereenkomst>>,
+        TError,
+        {id: number;data: BodyType<ZzpOvereenkomstPatchInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateZzpOvereenkomstMutationOptions(options));
+    }
+
+export const getDeleteZzpOvereenkomstUrl = (id: number,) => {
+
+
+
+
+  return `/api/zzp-overeenkomsten/${id}`
+}
+
+/**
+ * @summary ZZP-overeenkomst verwijderen (alleen concept)
+ */
+export const deleteZzpOvereenkomst = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteZzpOvereenkomstUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteZzpOvereenkomstMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteZzpOvereenkomst>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteZzpOvereenkomst>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteZzpOvereenkomst'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteZzpOvereenkomst>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteZzpOvereenkomst(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteZzpOvereenkomstMutationResult = NonNullable<Awaited<ReturnType<typeof deleteZzpOvereenkomst>>>
+
+    export type DeleteZzpOvereenkomstMutationError = ErrorType<unknown>
+
+    /**
+ * @summary ZZP-overeenkomst verwijderen (alleen concept)
+ */
+export const useDeleteZzpOvereenkomst = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteZzpOvereenkomst>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteZzpOvereenkomst>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteZzpOvereenkomstMutationOptions(options));
+    }
+
+export const getAiVulZzpOvereenkomstUrl = () => {
+
+
+
+
+  return `/api/zzp-overeenkomsten/ai-vullen`
+}
+
+/**
+ * @summary AI-voorstel voor opdracht­omschrijving en specifieke taken
+ */
+export const aiVulZzpOvereenkomst = async (zzpAiVullenInput: ZzpAiVullenInput, options?: RequestInit): Promise<ZzpAiVullenResultaat> => {
+
+  return customFetch<ZzpAiVullenResultaat>(getAiVulZzpOvereenkomstUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(zzpAiVullenInput)
+  }
+);}
+
+
+
+
+export const getAiVulZzpOvereenkomstMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof aiVulZzpOvereenkomst>>, TError,{data: BodyType<ZzpAiVullenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof aiVulZzpOvereenkomst>>, TError,{data: BodyType<ZzpAiVullenInput>}, TContext> => {
+
+const mutationKey = ['aiVulZzpOvereenkomst'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof aiVulZzpOvereenkomst>>, {data: BodyType<ZzpAiVullenInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  aiVulZzpOvereenkomst(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AiVulZzpOvereenkomstMutationResult = NonNullable<Awaited<ReturnType<typeof aiVulZzpOvereenkomst>>>
+    export type AiVulZzpOvereenkomstMutationBody = BodyType<ZzpAiVullenInput>
+    export type AiVulZzpOvereenkomstMutationError = ErrorType<unknown>
+
+    /**
+ * @summary AI-voorstel voor opdracht­omschrijving en specifieke taken
+ */
+export const useAiVulZzpOvereenkomst = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof aiVulZzpOvereenkomst>>, TError,{data: BodyType<ZzpAiVullenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof aiVulZzpOvereenkomst>>,
+        TError,
+        {data: BodyType<ZzpAiVullenInput>},
+        TContext
+      > => {
+      return useMutation(getAiVulZzpOvereenkomstMutationOptions(options));
     }
 
 export const getListAlleVerlofAanvragenUrl = (params?: ListAlleVerlofAanvragenParams,) => {

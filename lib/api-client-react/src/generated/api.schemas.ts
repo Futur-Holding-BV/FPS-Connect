@@ -3482,6 +3482,90 @@ export interface MedewerkerDocument {
   aangemaakt_op: string;
 }
 
+export interface ZzpOvereenkomst {
+  id: number;
+  medewerker_id: number;
+  /** @nullable */
+  medewerker_naam?: string | null;
+  /** @nullable */
+  aangemaakt_door_id?: number | null;
+  opdracht_omschrijving: string;
+  /** @nullable */
+  specifieke_taken?: string | null;
+  /** @nullable */
+  projectnummer?: string | null;
+  start_datum: string;
+  eind_datum: string;
+  /** @nullable */
+  uurtarief?: number | null;
+  /** @nullable */
+  vaste_prijs?: number | null;
+  betalingswijze: string;
+  /** @nullable */
+  zzp_bedrijfsnaam?: string | null;
+  /** @nullable */
+  zzp_kvk?: string | null;
+  /** @nullable */
+  zzp_btw?: string | null;
+  status: string;
+  /** @nullable */
+  handtekening_fps_datum?: string | null;
+  /** @nullable */
+  handtekening_zzp_datum?: string | null;
+  /** @nullable */
+  ondertekend_door_id?: number | null;
+  ai_ingevuld: boolean;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export interface ZzpOvereenkomstInput {
+  medewerker_id: number;
+  opdracht_omschrijving: string;
+  specifieke_taken?: string;
+  projectnummer?: string;
+  start_datum: string;
+  eind_datum: string;
+  uurtarief?: number;
+  vaste_prijs?: number;
+  betalingswijze?: string;
+  zzp_bedrijfsnaam?: string;
+  zzp_kvk?: string;
+  zzp_btw?: string;
+  ai_ingevuld?: boolean;
+}
+
+export interface ZzpOvereenkomstPatchInput {
+  opdracht_omschrijving?: string;
+  specifieke_taken?: string;
+  projectnummer?: string;
+  start_datum?: string;
+  eind_datum?: string;
+  uurtarief?: number;
+  vaste_prijs?: number;
+  betalingswijze?: string;
+  zzp_bedrijfsnaam?: string;
+  zzp_kvk?: string;
+  zzp_btw?: string;
+  status?: string;
+  handtekening_fps_datum?: string;
+  handtekening_zzp_datum?: string;
+}
+
+export interface ZzpAiVullenInput {
+  medewerker_id: number;
+  functie_naam?: string;
+  bedrijfsnaam?: string;
+  projectnummer?: string;
+}
+
+export interface ZzpAiVullenResultaat {
+  opdracht_omschrijving: string;
+  specifieke_taken: string;
+  /** @nullable */
+  zzp_bedrijfsnaam?: string | null;
+}
+
 export interface MedewerkerOpleidingInput {
   opleiding_id: number;
   status?: string;
@@ -9085,6 +9169,10 @@ bestemming?: string;
 
 export type GetMedewerkerDocumentDownloadUrl200 = {
   download_url: string;
+};
+
+export type ListZzpOvereenkomstenParams = {
+medewerker_id?: number;
 };
 
 export type ListAlleVerlofAanvragenParams = {

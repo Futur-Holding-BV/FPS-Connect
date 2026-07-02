@@ -335,6 +335,43 @@ export const medewerkerDocumentenTable = pgTable("medewerker_documenten", {
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
 });
 
+// ZZP-overeenkomsten — overeenkomst van opdracht per ZZP-er per project.
+// Vastlegt specifieke werkzaamheden, eigen verantwoordelijkheid en einddatum
+// zoals vereist door de Belastingdienst (Wet DBA / WBBA).
+export const zzpOvereenkomstenTable = pgTable("zzp_overeenkomsten", {
+  id: serial("id").primaryKey(),
+  medewerkerId: integer("medewerker_id").notNull().references(() => medewerkersTable.id, { onDelete: "cascade" }),
+  aangemaaktDoorId: integer("aangemaakt_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
+  // Opdracht
+  opdrachtOmschrijving: text("opdracht_omschrijving").notNull(),
+  specifiekeTaken: text("specifieke_taken"),
+  projectnummer: text("projectnummer"),
+  // Tijdsduur — einddatum verplicht (vereiste Belastingdienst)
+  startDatum: text("start_datum").notNull(),
+  eindDatum: text("eind_datum").notNull(),
+  // Financieel
+  uurtarief: real("uurtarief"),
+  vastePrijs: real("vaste_prijs"),
+  betalingswijze: text("betalingswijze").notNull().default("factuur_achteraf"),
+  // Gegevens opdrachtnemer
+  zzpBedrijfsnaam: text("zzp_bedrijfsnaam"),
+  zzpKvk: text("zzp_kvk"),
+  zzpBtw: text("zzp_btw"),
+  // Status: concept → te_ondertekenen → ondertekend | verlopen | opgezegd
+  status: text("status").notNull().default("concept"),
+  handtekeningFpsDatum: text("handtekening_fps_datum"),
+  handtekeningZzpDatum: text("handtekening_zzp_datum"),
+  ondertekendDoorId: integer("ondertekend_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
+  // AI
+  aiIngevuld: boolean("ai_ingevuld").notNull().default(false),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+  bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+});
+
+export const insertZzpOvereenkomstSchema = createInsertSchema(zzpOvereenkomstenTable).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });
+export type InsertZzpOvereenkomst = z.infer<typeof insertZzpOvereenkomstSchema>;
+export type ZzpOvereenkomst = typeof zzpOvereenkomstenTable.$inferSelect;
+
 export const insertWerkgeverSchema = createInsertSchema(werkgeversTable).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });
 export const insertFunctieSchema = createInsertSchema(functiesTable).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });
 export const insertMedewerkerSchema = createInsertSchema(medewerkersTable).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });

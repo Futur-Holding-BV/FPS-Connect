@@ -19,7 +19,7 @@ import {
   BookOpen, HardDriveUpload, CalendarCheck2, Settings2, ArchiveRestore,
   Inbox, Building2, Target, Handshake, Newspaper, CalendarRange, KeyRound,
   ClipboardCheck, AlertTriangle, FileArchive, Receipt, ArrowUpRight, ScrollText,
-  UserPlus, UserMinus, Car, GitBranch, ArrowLeft, ChevronDown, Palette, Monitor,
+  UserPlus, UserMinus, UserX, Car, GitBranch, ArrowLeft, ChevronDown, Palette, Monitor,
   Package, Upload, MapPin, Archive, ArrowLeftRight, BookmarkCheck,
 } from "lucide-react";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
@@ -1102,6 +1102,32 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                             <Link href="/personeel/uitboarden">
                               <UserMinus />
                               <span>Uitboarden</span>
+                            </Link>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      )}
+                      {toonPersoneel && (
+                        <SidebarMenuItem className="pl-5">
+                          <SidebarMenuButton
+                            asChild
+                            isActive={location === "/personeel/oud-medewerkers"}
+                          >
+                            <Link href="/personeel/oud-medewerkers">
+                              <UserX />
+                              <span>Oud-medewerkers</span>
+                            </Link>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      )}
+                      {toonPersoneel && (
+                        <SidebarMenuItem className="pl-5">
+                          <SidebarMenuButton
+                            asChild
+                            isActive={location === "/personeel/externen"}
+                          >
+                            <Link href="/personeel/externen">
+                              <Handshake />
+                              <span>Externen / ZZP</span>
                             </Link>
                           </SidebarMenuButton>
                         </SidebarMenuItem>

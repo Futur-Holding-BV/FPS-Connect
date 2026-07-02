@@ -10,6 +10,37 @@ Grote roadmap-fases staan ook in `docs/roadmap/gebouwd.md` en `docs/roadmap/acti
 
 ---
 
+## 2026-07-02 — ZZP / Externen module + Oud-medewerkers
+
+**Uitvoering:** volledig | **Getest:** typecheck + codegen + DB push
+
+Volledig nieuw ZZP/Externen subsysteem gebouwd:
+
+**Nav & routing:**
+- Twee nieuwe nav-items onder Personeel-sectie: "Oud-medewerkers" (`/personeel/oud-medewerkers`) en "Externen / ZZP" (`/personeel/externen`)
+- Routes geregistreerd in App.tsx; iconen `UserX` (oud) en `Handshake` (externen)
+
+**DB schema (`lib/db/src/schema/hrm.ts`):**
+- Nieuwe tabel `zzp_overeenkomsten` met: medewerker_id, opdracht_omschrijving, specifieke_taken, projectnummer, start/einddatum, uurtarief, vaste_prijs, betalingswijze, zzp_bedrijfsnaam/kvk/btw, status-machine (concept→te_ondertekenen→ondertekend|verlopen|opgezegd), handtekening-datums, ai_ingevuld
+- Zod insert-schema en TypeScript types geëxporteerd
+- `pnpm --filter @workspace/db run push` geslaagd
+
+**OpenAPI + codegen:**
+- Endpoints toegevoegd: `GET/POST /zzp-overeenkomsten`, `GET/PATCH/DELETE /zzp-overeenkomsten/{id}`, `POST /zzp-overeenkomsten/ai-vullen`
+- Schemas: `ZzpOvereenkomst`, `ZzpOvereenkomstInput`, `ZzpOvereenkomstPatchInput`, `ZzpAiVullenInput`, `ZzpAiVullenResultaat`
+- Codegen en typecheck:libs geslaagd; hooks `useListZzpOvereenkomsten`, `useCreateZzpOvereenkomst`, `useUpdateZzpOvereenkomst`, `useAiVulZzpOvereenkomst`, `getListZzpOvereenkomstenQueryKey` beschikbaar
+
+**API routes (`artifacts/api-server/src/routes/hrm.ts`):**
+- CRUD routes voor zzp-overeenkomsten (lezen/schrijven bevoegdheden)
+- AI-fill endpoint: GPT-4o genereert opdrachtomschrijving + specifieke werkzaamheden (eigen verantwoordelijkheid, geen gezagsverhouding, vrije vervanging) op basis van medewerkerdata
+- Delete geblokkeerd voor niet-concept statussen (409)
+
+**Pagina's:**
+- `oud-medewerkers.tsx`: filtert actief=false of uitDienstPer verstreken, zoekbalk, link naar profiel
+- `externen.tsx`: twee tabs — "Externen" (ZZP/uitzend/inhuur medewerkers met contract-status badge) en "Overeenkomsten" (contractenlijst); dialoog "Nieuwe overeenkomst" met AI-fill knop, alle Belastingdienst-vereiste velden, juridische infobox (Wet DBA / WBBA criteria)
+
+---
+
 ## 2026-07-02 — Sidebar: nav-item "Personeel" toegevoegd
 
 **Uitvoering:** volledig | **Getest:** typecheck
