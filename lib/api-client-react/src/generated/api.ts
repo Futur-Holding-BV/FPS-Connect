@@ -206,6 +206,7 @@ import type {
   GetMedewerkerDocumentDownloadUrl200,
   GetMijnLmraStatusParams,
   GetMijnWeekUrenParams,
+  GetOfferteKlantContractUploadUrl200,
   GetPlanningNacalculatieParams,
   GetPortaalAiUitleg200,
   GetRecenteActiviteitParams,
@@ -400,10 +401,13 @@ import type {
   OfferteAnalytics,
   OfferteBijlage,
   OfferteBijlageInput,
+  OfferteContractAdvies,
   OfferteEmailVoorstel,
   OfferteHoofdstuk,
   OfferteHoofdstukInput,
   OfferteInput,
+  OfferteKlantContract,
+  OfferteKlantContractInput,
   OffertePortaalToken,
   OffertePortaalTokenInput,
   OfferteRegel,
@@ -31516,6 +31520,450 @@ export const useVerzendOfferte = <TError = ErrorType<unknown>,
       > => {
       return useMutation(getVerzendOfferteMutationOptions(options));
     }
+
+export const getListOfferteKlantContractenUrl = (id: number,) => {
+
+
+
+
+  return `/api/offertes/${id}/klant-contracten`
+}
+
+/**
+ * @summary Klantcontracten van een offerte ophalen
+ */
+export const listOfferteKlantContracten = async (id: number, options?: RequestInit): Promise<OfferteKlantContract[]> => {
+
+  return customFetch<OfferteKlantContract[]>(getListOfferteKlantContractenUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListOfferteKlantContractenQueryKey = (id: number,) => {
+    return [
+    `/api/offertes/${id}/klant-contracten`
+    ] as const;
+    }
+
+
+export const getListOfferteKlantContractenQueryOptions = <TData = Awaited<ReturnType<typeof listOfferteKlantContracten>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listOfferteKlantContracten>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListOfferteKlantContractenQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listOfferteKlantContracten>>> = ({ signal }) => listOfferteKlantContracten(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listOfferteKlantContracten>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListOfferteKlantContractenQueryResult = NonNullable<Awaited<ReturnType<typeof listOfferteKlantContracten>>>
+export type ListOfferteKlantContractenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Klantcontracten van een offerte ophalen
+ */
+
+export function useListOfferteKlantContracten<TData = Awaited<ReturnType<typeof listOfferteKlantContracten>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listOfferteKlantContracten>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListOfferteKlantContractenQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateOfferteKlantContractUrl = (id: number,) => {
+
+
+
+
+  return `/api/offertes/${id}/klant-contracten`
+}
+
+/**
+ * @summary Klantcontract registreren (na upload naar storage)
+ */
+export const createOfferteKlantContract = async (id: number,
+    offerteKlantContractInput: OfferteKlantContractInput, options?: RequestInit): Promise<OfferteKlantContract> => {
+
+  return customFetch<OfferteKlantContract>(getCreateOfferteKlantContractUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(offerteKlantContractInput)
+  }
+);}
+
+
+
+
+export const getCreateOfferteKlantContractMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createOfferteKlantContract>>, TError,{id: number;data: BodyType<OfferteKlantContractInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createOfferteKlantContract>>, TError,{id: number;data: BodyType<OfferteKlantContractInput>}, TContext> => {
+
+const mutationKey = ['createOfferteKlantContract'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createOfferteKlantContract>>, {id: number;data: BodyType<OfferteKlantContractInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  createOfferteKlantContract(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateOfferteKlantContractMutationResult = NonNullable<Awaited<ReturnType<typeof createOfferteKlantContract>>>
+    export type CreateOfferteKlantContractMutationBody = BodyType<OfferteKlantContractInput>
+    export type CreateOfferteKlantContractMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Klantcontract registreren (na upload naar storage)
+ */
+export const useCreateOfferteKlantContract = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createOfferteKlantContract>>, TError,{id: number;data: BodyType<OfferteKlantContractInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createOfferteKlantContract>>,
+        TError,
+        {id: number;data: BodyType<OfferteKlantContractInput>},
+        TContext
+      > => {
+      return useMutation(getCreateOfferteKlantContractMutationOptions(options));
+    }
+
+export const getGetOfferteKlantContractUploadUrlUrl = (id: number,) => {
+
+
+
+
+  return `/api/offertes/${id}/klant-contracten/upload-url`
+}
+
+/**
+ * @summary Presigned upload-URL ophalen voor klantcontract
+ */
+export const getOfferteKlantContractUploadUrl = async (id: number, options?: RequestInit): Promise<GetOfferteKlantContractUploadUrl200> => {
+
+  return customFetch<GetOfferteKlantContractUploadUrl200>(getGetOfferteKlantContractUploadUrlUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getGetOfferteKlantContractUploadUrlMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof getOfferteKlantContractUploadUrl>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof getOfferteKlantContractUploadUrl>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['getOfferteKlantContractUploadUrl'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof getOfferteKlantContractUploadUrl>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  getOfferteKlantContractUploadUrl(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type GetOfferteKlantContractUploadUrlMutationResult = NonNullable<Awaited<ReturnType<typeof getOfferteKlantContractUploadUrl>>>
+
+    export type GetOfferteKlantContractUploadUrlMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Presigned upload-URL ophalen voor klantcontract
+ */
+export const useGetOfferteKlantContractUploadUrl = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof getOfferteKlantContractUploadUrl>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof getOfferteKlantContractUploadUrl>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getGetOfferteKlantContractUploadUrlMutationOptions(options));
+    }
+
+export const getDeleteOfferteKlantContractUrl = (id: number,
+    contractId: number,) => {
+
+
+
+
+  return `/api/offertes/${id}/klant-contracten/${contractId}`
+}
+
+/**
+ * @summary Klantcontract verwijderen
+ */
+export const deleteOfferteKlantContract = async (id: number,
+    contractId: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteOfferteKlantContractUrl(id,contractId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteOfferteKlantContractMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteOfferteKlantContract>>, TError,{id: number;contractId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteOfferteKlantContract>>, TError,{id: number;contractId: number}, TContext> => {
+
+const mutationKey = ['deleteOfferteKlantContract'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteOfferteKlantContract>>, {id: number;contractId: number}> = (props) => {
+          const {id,contractId} = props ?? {};
+
+          return  deleteOfferteKlantContract(id,contractId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteOfferteKlantContractMutationResult = NonNullable<Awaited<ReturnType<typeof deleteOfferteKlantContract>>>
+
+    export type DeleteOfferteKlantContractMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Klantcontract verwijderen
+ */
+export const useDeleteOfferteKlantContract = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteOfferteKlantContract>>, TError,{id: number;contractId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteOfferteKlantContract>>,
+        TError,
+        {id: number;contractId: number},
+        TContext
+      > => {
+      return useMutation(getDeleteOfferteKlantContractMutationOptions(options));
+    }
+
+export const getGenereerOfferteContractAdviesUrl = (id: number,
+    contractId: number,) => {
+
+
+
+
+  return `/api/offertes/${id}/klant-contracten/${contractId}/ai-advies`
+}
+
+/**
+ * @summary AI-contractadvies genereren voor directie
+ */
+export const genereerOfferteContractAdvies = async (id: number,
+    contractId: number, options?: RequestInit): Promise<OfferteContractAdvies> => {
+
+  return customFetch<OfferteContractAdvies>(getGenereerOfferteContractAdviesUrl(id,contractId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getGenereerOfferteContractAdviesMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof genereerOfferteContractAdvies>>, TError,{id: number;contractId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof genereerOfferteContractAdvies>>, TError,{id: number;contractId: number}, TContext> => {
+
+const mutationKey = ['genereerOfferteContractAdvies'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof genereerOfferteContractAdvies>>, {id: number;contractId: number}> = (props) => {
+          const {id,contractId} = props ?? {};
+
+          return  genereerOfferteContractAdvies(id,contractId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type GenereerOfferteContractAdviesMutationResult = NonNullable<Awaited<ReturnType<typeof genereerOfferteContractAdvies>>>
+
+    export type GenereerOfferteContractAdviesMutationError = ErrorType<unknown>
+
+    /**
+ * @summary AI-contractadvies genereren voor directie
+ */
+export const useGenereerOfferteContractAdvies = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof genereerOfferteContractAdvies>>, TError,{id: number;contractId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof genereerOfferteContractAdvies>>,
+        TError,
+        {id: number;contractId: number},
+        TContext
+      > => {
+      return useMutation(getGenereerOfferteContractAdviesMutationOptions(options));
+    }
+
+export const getGetOfferteContractAdviesUrl = (id: number,
+    contractId: number,) => {
+
+
+
+
+  return `/api/offertes/${id}/klant-contracten/${contractId}/advies`
+}
+
+/**
+ * @summary Bestaand AI-contractadvies ophalen
+ */
+export const getOfferteContractAdvies = async (id: number,
+    contractId: number, options?: RequestInit): Promise<OfferteContractAdvies> => {
+
+  return customFetch<OfferteContractAdvies>(getGetOfferteContractAdviesUrl(id,contractId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetOfferteContractAdviesQueryKey = (id: number,
+    contractId: number,) => {
+    return [
+    `/api/offertes/${id}/klant-contracten/${contractId}/advies`
+    ] as const;
+    }
+
+
+export const getGetOfferteContractAdviesQueryOptions = <TData = Awaited<ReturnType<typeof getOfferteContractAdvies>>, TError = ErrorType<unknown>>(id: number,
+    contractId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getOfferteContractAdvies>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetOfferteContractAdviesQueryKey(id,contractId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getOfferteContractAdvies>>> = ({ signal }) => getOfferteContractAdvies(id,contractId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined && contractId !== null && contractId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getOfferteContractAdvies>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetOfferteContractAdviesQueryResult = NonNullable<Awaited<ReturnType<typeof getOfferteContractAdvies>>>
+export type GetOfferteContractAdviesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Bestaand AI-contractadvies ophalen
+ */
+
+export function useGetOfferteContractAdvies<TData = Awaited<ReturnType<typeof getOfferteContractAdvies>>, TError = ErrorType<unknown>>(
+ id: number,
+    contractId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getOfferteContractAdvies>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetOfferteContractAdviesQueryOptions(id,contractId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
 export const getListOfferteVragenUrl = (id: number,) => {
 

@@ -84,6 +84,8 @@ export interface Offerte {
      * @nullable
      */
   vervolg_tekst?: string | null;
+  /** Verzendmodus: ondertekening (portaal + digitaal tekenen) of contract_klant (klant stuurt eigen contract terug) */
+  verzend_type?: string;
   aangemaakt_op: string;
   bijgewerkt_op: string;
 }

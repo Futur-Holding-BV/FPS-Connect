@@ -10212,6 +10212,7 @@ export const ListOffertesResponseItem = zod.object({
 
 }).passthrough().nullish().describe('Geselecteerde commerciële vervolgopties na uitvoering'),
   "vervolg_tekst": zod.string().nullish().describe('Bewerkbare tekst voor het vervolgadvies in de offerte'),
+  "verzend_type": zod.string().optional().describe('Verzendmodus: ondertekening (portaal + digitaal tekenen) of contract_klant (klant stuurt eigen contract terug)'),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })
@@ -10264,7 +10265,8 @@ export const CreateOfferteBody = zod.object({
   "vervolg_opties": zod.object({
 
 }).passthrough().nullish(),
-  "vervolg_tekst": zod.string().nullish()
+  "vervolg_tekst": zod.string().nullish(),
+  "verzend_type": zod.string().optional().describe('ondertekening | contract_klant')
 })
 
 export const CreateOfferteResponse = zod.void()
@@ -10329,6 +10331,7 @@ export const GetOfferteResponse = zod.object({
 
 }).passthrough().nullish().describe('Geselecteerde commerciële vervolgopties na uitvoering'),
   "vervolg_tekst": zod.string().nullish().describe('Bewerkbare tekst voor het vervolgadvies in de offerte'),
+  "verzend_type": zod.string().optional().describe('Verzendmodus: ondertekening (portaal + digitaal tekenen) of contract_klant (klant stuurt eigen contract terug)'),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })
@@ -10384,7 +10387,8 @@ export const UpdateOfferteBody = zod.object({
   "vervolg_opties": zod.object({
 
 }).passthrough().nullish(),
-  "vervolg_tekst": zod.string().nullish()
+  "vervolg_tekst": zod.string().nullish(),
+  "verzend_type": zod.string().optional().describe('ondertekening | contract_klant')
 })
 
 export const UpdateOfferteResponse = zod.object({
@@ -10439,6 +10443,7 @@ export const UpdateOfferteResponse = zod.object({
 
 }).passthrough().nullish().describe('Geselecteerde commerciële vervolgopties na uitvoering'),
   "vervolg_tekst": zod.string().nullish().describe('Bewerkbare tekst voor het vervolgadvies in de offerte'),
+  "verzend_type": zod.string().optional().describe('Verzendmodus: ondertekening (portaal + digitaal tekenen) of contract_klant (klant stuurt eigen contract terug)'),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })
@@ -10959,6 +10964,119 @@ export const VerzendOfferteBody = zod.object({
 
 export const VerzendOfferteResponse = zod.object({
   "ok": zod.boolean().optional()
+})
+
+
+/**
+ * @summary Klantcontracten van een offerte ophalen
+ */
+export const ListOfferteKlantContractenParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListOfferteKlantContractenResponseItem = zod.object({
+  "id": zod.number(),
+  "offerte_id": zod.number(),
+  "bestandsnaam": zod.string(),
+  "bestand_pad": zod.string(),
+  "mime_type": zod.string(),
+  "geupload_door_id": zod.number().nullish(),
+  "geupload_op": zod.string(),
+  "heeft_advies": zod.boolean().optional().describe('Of er al een AI-advies beschikbaar is voor dit contract')
+})
+export const ListOfferteKlantContractenResponse = zod.array(ListOfferteKlantContractenResponseItem)
+
+
+/**
+ * @summary Klantcontract registreren (na upload naar storage)
+ */
+export const CreateOfferteKlantContractParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const CreateOfferteKlantContractBody = zod.object({
+  "bestandsnaam": zod.string(),
+  "bestand_pad": zod.string(),
+  "mime_type": zod.string().optional(),
+  "extracted_text": zod.string().optional().describe('Door de frontend uit de PDF geëxtraheerde tekst (pdfjs-dist)')
+})
+
+export const CreateOfferteKlantContractResponse = zod.void()
+
+
+/**
+ * @summary Presigned upload-URL ophalen voor klantcontract
+ */
+export const GetOfferteKlantContractUploadUrlParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetOfferteKlantContractUploadUrlResponse = zod.object({
+  "upload_url": zod.string(),
+  "object_path": zod.string()
+})
+
+
+/**
+ * @summary Klantcontract verwijderen
+ */
+export const DeleteOfferteKlantContractParams = zod.object({
+  "id": zod.coerce.number(),
+  "contractId": zod.coerce.number()
+})
+
+export const DeleteOfferteKlantContractResponse = zod.void()
+
+
+/**
+ * @summary AI-contractadvies genereren voor directie
+ */
+export const GenereerOfferteContractAdviesParams = zod.object({
+  "id": zod.coerce.number(),
+  "contractId": zod.coerce.number()
+})
+
+export const GenereerOfferteContractAdviesResponse = zod.object({
+  "id": zod.number(),
+  "contract_id": zod.number(),
+  "risico_niveau": zod.string().describe('laag | middel | hoog'),
+  "aandachtspunten": zod.array(zod.object({
+  "titel": zod.string().optional(),
+  "beschrijving": zod.string().optional(),
+  "prioriteit": zod.string().optional().describe('laag | middel | hoog'),
+  "clausule": zod.string().nullish().describe('Relevante clausule of artikelnummer uit het contract')
+})),
+  "advies_samenvatting": zod.string().nullish(),
+  "volledig_advies": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bevestigd_door_id": zod.number().nullish(),
+  "bevestigd_op": zod.string().nullish()
+})
+
+
+/**
+ * @summary Bestaand AI-contractadvies ophalen
+ */
+export const GetOfferteContractAdviesParams = zod.object({
+  "id": zod.coerce.number(),
+  "contractId": zod.coerce.number()
+})
+
+export const GetOfferteContractAdviesResponse = zod.object({
+  "id": zod.number(),
+  "contract_id": zod.number(),
+  "risico_niveau": zod.string().describe('laag | middel | hoog'),
+  "aandachtspunten": zod.array(zod.object({
+  "titel": zod.string().optional(),
+  "beschrijving": zod.string().optional(),
+  "prioriteit": zod.string().optional().describe('laag | middel | hoog'),
+  "clausule": zod.string().nullish().describe('Relevante clausule of artikelnummer uit het contract')
+})),
+  "advies_samenvatting": zod.string().nullish(),
+  "volledig_advies": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bevestigd_door_id": zod.number().nullish(),
+  "bevestigd_op": zod.string().nullish()
 })
 
 

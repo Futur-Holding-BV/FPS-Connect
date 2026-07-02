@@ -25,7 +25,10 @@ import {
   crmKlantenTable,
   gebouwenTable,
   gebruikersTable,
+  offerteKlantContractenTable,
+  offerteContractAdviezenTable,
 } from "@workspace/db";
+import { ObjectStorageService } from "../lib/objectStorage";
 import { eq, desc, count, sql, and, not, inArray } from "drizzle-orm";
 import { randomBytes } from "crypto";
 import { requireBevoegdheid } from "../middlewares/auth";
@@ -548,7 +551,7 @@ router.patch("/offertes/:id", schrijven, async (req, res) => {
     const offerteId = parseId(req.params.id);
     if (await isOfferteBlokkeerd(offerteId))
       return res.status(409).json({ error: "Ondertekende offerte kan niet meer worden gewijzigd." });
-    const { titel, offertenummer, gebouw_id, klant_id, sjabloon_id, opdrachtgever, ons_kenmerk, uw_kenmerk, uw_brief_van, behandeld_door_id, datum, geldigheid_dagen, voorwaarden, betalingstermijn_dagen, betaalwijze, factuur_schema, voorwaarden_set_id, bedrag_excl_btw, btw_percentage, bedrag_incl_btw, status, begroting_weergave, presentatie_niveau, klant_type, vervolg_opties, vervolg_tekst } = req.body;
+    const { titel, offertenummer, gebouw_id, klant_id, sjabloon_id, opdrachtgever, ons_kenmerk, uw_kenmerk, uw_brief_van, behandeld_door_id, datum, geldigheid_dagen, voorwaarden, betalingstermijn_dagen, betaalwijze, factuur_schema, voorwaarden_set_id, bedrag_excl_btw, btw_percentage, bedrag_incl_btw, status, begroting_weergave, presentatie_niveau, klant_type, vervolg_opties, vervolg_tekst, verzend_type } = req.body;
     const [o] = await db
       .update(offertesTable)
       .set({
@@ -578,6 +581,7 @@ router.patch("/offertes/:id", schrijven, async (req, res) => {
         ...(klant_type !== undefined && { klantType: klant_type }),
         ...(vervolg_opties !== undefined && { vervolgOpties: vervolg_opties }),
         ...(vervolg_tekst !== undefined && { vervolgTekst: vervolg_tekst }),
+        ...(verzend_type !== undefined && { verzendType: verzend_type }),
         bijgewerktOp: new Date(),
       })
       .where(eq(offertesTable.id, offerteId))
@@ -1804,6 +1808,217 @@ router.post("/offertes/:id/verzenden", schrijven, async (req, res) => {
     });
 
     res.json({ ok: true, portaal_link: portaalLink });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// ── Klantcontracten (Contract-van-klant verzendmodus) ────────────────────────
+
+function contractNaarJson(c: typeof offerteKlantContractenTable.$inferSelect, heeftAdvies = false) {
+  return {
+    id: c.id,
+    offerte_id: c.offerteId,
+    bestandsnaam: c.bestandsnaam,
+    bestand_pad: c.bestandPad,
+    mime_type: c.mimeType,
+    geupload_door_id: c.geuploadDoorId ?? null,
+    geupload_op: iso(c.geuploadOp),
+    heeft_advies: heeftAdvies,
+  };
+}
+
+function adviesNaarJson(a: typeof offerteContractAdviezenTable.$inferSelect) {
+  return {
+    id: a.id,
+    contract_id: a.contractId,
+    risico_niveau: a.risicoNiveau,
+    aandachtspunten: Array.isArray(a.aandachtspunten) ? a.aandachtspunten : [],
+    advies_samenvatting: a.adviesSamenvatting ?? null,
+    volledig_advies: a.volledigAdvies ?? null,
+    aangemaakt_op: iso(a.aangemaaktOp),
+    bevestigd_door_id: a.bevestigdDoorId ?? null,
+    bevestigd_op: a.bevestigdOp ? iso(a.bevestigdOp) : null,
+  };
+}
+
+// Presigned upload-URL voor klantcontract-PDF
+router.post("/offertes/:id/klant-contracten/upload-url", schrijven, async (req, res) => {
+  try {
+    const offerteId = parseId(req.params.id);
+    const [o] = await db.select({ id: offertesTable.id }).from(offertesTable).where(eq(offertesTable.id, offerteId));
+    if (!o) return res.status(404).json({ error: "Offerte niet gevonden" });
+    const storage = new ObjectStorageService();
+    const { uploadURL, objectPath } = await storage.getObjectEntityUploadURL(null, null);
+    res.json({ upload_url: uploadURL, object_path: objectPath });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// Klantcontracten ophalen
+router.get("/offertes/:id/klant-contracten", lezen, async (req, res) => {
+  try {
+    const offerteId = parseId(req.params.id);
+    const contracten = await db
+      .select()
+      .from(offerteKlantContractenTable)
+      .where(eq(offerteKlantContractenTable.offerteId, offerteId))
+      .orderBy(desc(offerteKlantContractenTable.geuploadOp));
+    if (contracten.length === 0) return res.json([]);
+    const adviezen = await db
+      .select({ contractId: offerteContractAdviezenTable.contractId })
+      .from(offerteContractAdviezenTable)
+      .where(inArray(offerteContractAdviezenTable.contractId, contracten.map((c) => c.id)));
+    const metAdvies = new Set(adviezen.map((a) => a.contractId));
+    res.json(contracten.map((c) => contractNaarJson(c, metAdvies.has(c.id))));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// Klantcontract registreren (na upload naar storage)
+router.post("/offertes/:id/klant-contracten", schrijven, async (req, res) => {
+  try {
+    const offerteId = parseId(req.params.id);
+    const [o] = await db.select({ id: offertesTable.id }).from(offertesTable).where(eq(offertesTable.id, offerteId));
+    if (!o) return res.status(404).json({ error: "Offerte niet gevonden" });
+    const { bestandsnaam, bestand_pad, mime_type, extracted_text } = req.body;
+    if (!bestandsnaam || !bestand_pad) return res.status(400).json({ error: "bestandsnaam en bestand_pad zijn verplicht" });
+    const [c] = await db
+      .insert(offerteKlantContractenTable)
+      .values({
+        offerteId,
+        bestandsnaam,
+        bestandPad: bestand_pad,
+        mimeType: mime_type ?? "application/pdf",
+        extractedText: extracted_text ?? null,
+        geuploadDoorId: req.session.userId ?? null,
+      })
+      .returning();
+    res.status(201).json(contractNaarJson(c, false));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// Klantcontract verwijderen
+router.delete("/offertes/:id/klant-contracten/:contractId", schrijven, async (req, res) => {
+  try {
+    const offerteId = parseId(req.params.id);
+    const contractId = parseId(req.params.contractId);
+    const [c] = await db
+      .select()
+      .from(offerteKlantContractenTable)
+      .where(and(eq(offerteKlantContractenTable.id, contractId), eq(offerteKlantContractenTable.offerteId, offerteId)));
+    if (!c) return res.status(404).json({ error: "Contract niet gevonden" });
+    await db.delete(offerteKlantContractenTable).where(eq(offerteKlantContractenTable.id, contractId));
+    res.status(204).send();
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// AI-contractadvies genereren voor directie
+router.post("/offertes/:id/klant-contracten/:contractId/ai-advies", schrijven, async (req, res) => {
+  try {
+    const offerteId = parseId(req.params.id);
+    const contractId = parseId(req.params.contractId);
+    const [c] = await db
+      .select()
+      .from(offerteKlantContractenTable)
+      .where(and(eq(offerteKlantContractenTable.id, contractId), eq(offerteKlantContractenTable.offerteId, offerteId)));
+    if (!c) return res.status(404).json({ error: "Contract niet gevonden" });
+    if (!c.extractedText?.trim()) return res.status(422).json({ error: "Contracttekst ontbreekt — geen AI-analyse mogelijk. Zorg dat de PDF volledig geupload is met tekst." });
+    if (!heeftOpenAi()) return res.status(503).json({ error: "AI niet beschikbaar" });
+
+    const openai = maakOpenAiClient();
+    const systeemprompt = `Je bent een commercieel-juridisch adviseur bij FPS Brandpreventie.
+Analyseer het onderstaande klantcontract en stel een intern adviesrapport op voor de directie.
+
+Geef je analyse uitsluitend als geldig JSON-object met deze exacte structuur:
+{
+  "risico_niveau": "laag" of "middel" of "hoog",
+  "aandachtspunten": [
+    {
+      "titel": "korte titel",
+      "beschrijving": "uitleg wat het betekent voor FPS",
+      "prioriteit": "laag" of "middel" of "hoog",
+      "clausule": "artikel- of clausulereferentie uit het contract (optioneel)"
+    }
+  ],
+  "advies_samenvatting": "2-3 zinnen samenvatting voor de directie",
+  "volledig_advies": "volledig intern adviesrapport — formeel memo aan de FPS-directie"
+}
+
+Aandachtspunten om op te letten:
+- Afwijkende betalingsvoorwaarden (onze standaard: 30 dagen netto)
+- Garantieverplichtingen, onderhoudsvereisten en servicelevels
+- Aansprakelijkheidsbepalingen, boeteclausules en vrijwaringen
+- Eigendomsvoorbehoud en intellectuele eigendomsrechten
+- Geschillenbeslechting, forumkeuze en toepasselijk recht
+- Opzeg- en ontbindingsgronden
+- Prijsindexering en kostenstijgingclausules
+Geef per aandachtspunt aan of het voor FPS gunstig, neutraal of ongunstig is.`;
+
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      max_completion_tokens: 4000,
+      response_format: { type: "json_object" },
+      messages: [
+        { role: "system", content: systeemprompt },
+        { role: "user", content: `Contracttekst:\n\n${c.extractedText.slice(0, 50000)}` },
+      ],
+    });
+
+    const raw = response.choices[0]?.message?.content ?? "{}";
+    let parsed: Record<string, unknown>;
+    try { parsed = JSON.parse(raw); } catch { parsed = {}; }
+
+    const risicoNiveau = ["laag", "middel", "hoog"].includes(String(parsed.risico_niveau))
+      ? String(parsed.risico_niveau)
+      : "middel";
+    const aandachtspunten = Array.isArray(parsed.aandachtspunten) ? parsed.aandachtspunten : [];
+    const adviesSamenvatting = typeof parsed.advies_samenvatting === "string" ? parsed.advies_samenvatting : null;
+    const volledigAdvies = typeof parsed.volledig_advies === "string" ? parsed.volledig_advies : null;
+
+    const [advies] = await db
+      .insert(offerteContractAdviezenTable)
+      .values({ contractId, risicoNiveau, aandachtspunten, adviesSamenvatting, volledigAdvies })
+      .onConflictDoUpdate({
+        target: offerteContractAdviezenTable.contractId,
+        set: { risicoNiveau, aandachtspunten, adviesSamenvatting, volledigAdvies, aangemaaktOp: new Date() },
+      })
+      .returning();
+
+    res.json(adviesNaarJson(advies));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// Bestaand AI-contractadvies ophalen
+router.get("/offertes/:id/klant-contracten/:contractId/advies", lezen, async (req, res) => {
+  try {
+    const offerteId = parseId(req.params.id);
+    const contractId = parseId(req.params.contractId);
+    const [c] = await db
+      .select({ id: offerteKlantContractenTable.id })
+      .from(offerteKlantContractenTable)
+      .where(and(eq(offerteKlantContractenTable.id, contractId), eq(offerteKlantContractenTable.offerteId, offerteId)));
+    if (!c) return res.status(404).json({ error: "Contract niet gevonden" });
+    const [advies] = await db
+      .select()
+      .from(offerteContractAdviezenTable)
+      .where(eq(offerteContractAdviezenTable.contractId, contractId));
+    if (!advies) return res.status(404).json({ error: "Nog geen advies gegenereerd" });
+    res.json(adviesNaarJson(advies));
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });

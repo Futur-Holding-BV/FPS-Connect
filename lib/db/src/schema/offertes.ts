@@ -99,6 +99,7 @@ export const offertesTable = pgTable("offertes", {
   vervolgTekst: text("vervolg_tekst"),
   status: text("status").notNull().default("concept"),
   portaalStatus: text("portaal_status").notNull().default("concept"),
+  verzendType: text("verzend_type").notNull().default("ondertekening"),
   autoProjectId: integer("auto_project_id").references(() => projectenTable.id, { onDelete: "set null" }),
   aangemaaktDoorId: integer("aangemaakt_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
@@ -245,6 +246,31 @@ export const offerteTrackingTable = pgTable("offerte_tracking", {
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
 }, (t) => [index("idx_offerte_tracking_offerte").on(t.offerteId)]);
 
+// Klantcontracten — aannemers/wbv sturen eigen contract terug i.p.v. te tekenen.
+export const offerteKlantContractenTable = pgTable("offerte_klant_contracten", {
+  id:              serial("id").primaryKey(),
+  offerteId:       integer("offerte_id").notNull().references(() => offertesTable.id, { onDelete: "cascade" }),
+  bestandsnaam:    text("bestandsnaam").notNull(),
+  bestandPad:      text("bestand_pad").notNull(),
+  mimeType:        text("mime_type").notNull().default("application/pdf"),
+  extractedText:   text("extracted_text"),
+  geuploadDoorId:  integer("geupload_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
+  geuploadOp:      timestamp("geupload_op").notNull().defaultNow(),
+});
+
+// AI-contractadvies — intern advies voor de directie met aandachtspunten uit het klantcontract.
+export const offerteContractAdviezenTable = pgTable("offerte_contract_adviezen", {
+  id:               serial("id").primaryKey(),
+  contractId:       integer("contract_id").notNull().unique().references(() => offerteKlantContractenTable.id, { onDelete: "cascade" }),
+  risicoNiveau:     text("risico_niveau").notNull().default("middel"),
+  aandachtspunten:  jsonb("aandachtspunten").notNull().default([]),
+  adviesSamenvatting: text("advies_samenvatting"),
+  volledigAdvies:   text("volledig_advies"),
+  aangemaaktOp:     timestamp("aangemaakt_op").notNull().defaultNow(),
+  bevestigdDoorId:  integer("bevestigd_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
+  bevestigdOp:      timestamp("bevestigd_op"),
+});
+
 export const insertOfferteVoorwaardenSetSchema = createInsertSchema(offerteVoorwaardenSetsTable).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });
 export const insertOfferteSjabloonSchema = createInsertSchema(offerteSjablonenTable).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });
 export const insertOfferteHoofdstukSchema = createInsertSchema(offerteHoofdstukkenTable).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });
@@ -274,3 +300,5 @@ export type OfferteUitgangspunt = typeof offerteUitgangspuntenTable.$inferSelect
 export type OfferteSectie = typeof offerteSectiesTable.$inferSelect;
 export type OfferteVersie = typeof offerteVersiesTable.$inferSelect;
 export type OfferteBijlage = typeof offerteBijlagenTable.$inferSelect;
+export type OfferteKlantContract = typeof offerteKlantContractenTable.$inferSelect;
+export type OfferteContractAdvies = typeof offerteContractAdviezenTable.$inferSelect;

@@ -46,4 +46,6 @@ export interface OfferteInput {
   vervolg_opties?: OfferteInputVervolgOpties;
   /** @nullable */
   vervolg_tekst?: string | null;
+  /** ondertekening | contract_klant */
+  verzend_type?: string;
 }

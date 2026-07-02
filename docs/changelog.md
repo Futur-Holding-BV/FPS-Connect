@@ -10,6 +10,40 @@ Grote roadmap-fases staan ook in `docs/roadmap/gebouwd.md` en `docs/roadmap/acti
 
 ---
 
+## 2026-07-02 — Offerte verzenden: twee paden (ondertekenbare offerte + contract van klant)
+
+**Uitvoering:** volledig | **Getest:** typecheck
+
+**DB:**
+- `verzend_type text NOT NULL DEFAULT 'ondertekening'` toegevoegd aan `offertes`-tabel
+- Nieuwe tabel `offerte_klant_contracten` (PDF-registratie, extracted_text voor AI-analyse)
+- Nieuwe tabel `offerte_contract_adviezen` (AI-analyse resultaat, risico_niveau, aandachtspunten, volledig_advies)
+
+**OpenAPI + codegen:**
+- `verzend_type` veld toegevoegd aan `Offerte` en `OfferteInput` schemas
+- Nieuwe schemas: `OfferteKlantContract`, `OfferteKlantContractInput`, `OfferteContractAdvies`
+- 6 nieuwe endpoints: upload-url, GET/POST klant-contracten, DELETE contract, POST ai-advies, GET advies
+
+**Backend (offertes.ts):**
+- PATCH /offertes/:id slaat `verzend_type` op
+- POST /offertes/:id/klant-contracten/upload-url — presigned S3-URL via ObjectStorageService
+- GET /offertes/:id/klant-contracten — lijst met `heeft_advies` vlag
+- POST /offertes/:id/klant-contracten — registreer na upload (bestandsnaam, bestand_pad, extracted_text)
+- DELETE /offertes/:id/klant-contracten/:contractId
+- POST /offertes/:id/klant-contracten/:contractId/ai-advies — GPT-4o analyseert contracttekst, JSON-response met risico_niveau + aandachtspunten + volledig_advies, upsert op contractId
+- GET /offertes/:id/klant-contracten/:contractId/advies
+
+**Frontend (verzend-tab.tsx — volledig herschreven):**
+- Moduskeuze bovenaan: twee klikbare radiokaarten (ondertekenbare offerte / contract van klant)
+- Modus opgeslagen via PATCH offerte met optimistische update + rollback bij fout
+- Pad 1 (ondertekening): portaallinks-kaart + e-mail met portaallink + activiteit + klantvragen — ongewijzigd gedrag
+- Pad 2 (contract_klant): e-mail zonder portaallink + "Contract ontvangen"-sectie + activiteit + klantvragen
+- PDF-upload flow: pdfjs tekst-extractie → presigned upload-URL → PUT naar storage → registreer contract
+- `AdviesPanel` component: laadt bestaand advies via fetch, genereert nieuw via mutatie, toont risico-badge + aandachtspunten + inklapbaar volledig memo
+- `studio.tsx`: `verzend_type` doorgegeven als prop naar VerzendTab
+
+---
+
 ## 2026-07-02 — Sidebar: Acquisitie-scheiding in Projectaanpak
 
 **Uitvoering:** volledig | **Getest:** visueel

@@ -1,5 +1,7 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import * as pdfjsLib from "pdfjs-dist";
+import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import {
   useListOffertePortaalTokens,
   useCreateOffertePortaalToken,
@@ -7,15 +9,25 @@ import {
   useVerzendOfferte,
   useListOfferteTracking,
   useBeantwoordOfferteVraag,
+  useUpdateOfferte,
+  useListOfferteKlantContracten,
+  useCreateOfferteKlantContract,
+  useGetOfferteKlantContractUploadUrl,
+  useDeleteOfferteKlantContract,
+  useGenereerOfferteContractAdvies,
   getListOffertePortaalTokensQueryKey,
   getListOfferteTrackingQueryKey,
   getListOfferteVragenQueryKey,
+  getListOfferteKlantContractenQueryKey,
+  getGetOfferteQueryKey,
 } from "@workspace/api-client-react";
 import type {
   OffertePortaalToken,
   OfferteTrackingEvent,
   OfferteVraag,
   OfferteEmailVoorstel,
+  OfferteKlantContract,
+  OfferteContractAdvies,
 } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,8 +39,27 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import {
   Link2, Copy, Plus, Send, Sparkles, Clock, MessageSquare, CheckCircle, Eye, AlertCircle, Reply,
-  FileText, List, Paperclip,
+  FileText, List, Paperclip, Upload, Trash2, Brain, ChevronDown, ChevronUp, ShieldAlert,
+  ShieldCheck, FileCheck, CheckCircle2, Circle,
 } from "lucide-react";
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
+
+async function extracteerPdfTekst(file: File): Promise<string> {
+  try {
+    const data = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data }).promise;
+    const paginas: string[] = [];
+    for (let i = 1; i <= Math.min(pdf.numPages, 100); i++) {
+      const pagina = await pdf.getPage(i);
+      const inhoud = await pagina.getTextContent();
+      paginas.push(inhoud.items.map((item) => ("str" in item ? (item as { str: string }).str : "")).join(" "));
+    }
+    return paginas.join("\n").slice(0, 60000);
+  } catch {
+    return "";
+  }
+}
 
 function datumLabel(iso: string) {
   return new Date(iso).toLocaleString("nl-NL", {
@@ -57,6 +88,24 @@ function eventBadge(event: string) {
   return <Badge variant="outline">{EVENT_LABEL[event] ?? event}</Badge>;
 }
 
+function risicoKleur(niveau: string) {
+  if (niveau === "hoog") return "bg-rose-100 text-rose-800 border-rose-200";
+  if (niveau === "middel") return "bg-amber-100 text-amber-800 border-amber-200";
+  return "bg-emerald-100 text-emerald-800 border-emerald-200";
+}
+
+function risicoLabel(niveau: string) {
+  if (niveau === "hoog") return "Hoog risico";
+  if (niveau === "middel") return "Middel risico";
+  return "Laag risico";
+}
+
+function RisicoIcoon({ niveau }: { niveau: string }) {
+  if (niveau === "hoog") return <ShieldAlert className="h-4 w-4 text-rose-600" />;
+  if (niveau === "middel") return <ShieldAlert className="h-4 w-4 text-amber-600" />;
+  return <ShieldCheck className="h-4 w-4 text-emerald-600" />;
+}
+
 interface VerzendSectie {
   id: number;
   titel: string;
@@ -80,6 +129,7 @@ interface VerzendTabProps {
   secties?: VerzendSectie[];
   regels?: VerzendRegel[];
   bijlagenAantal?: number;
+  verzendType?: string;
 }
 
 interface AntwoordForm {
@@ -88,17 +138,196 @@ interface AntwoordForm {
   naam: string;
 }
 
-export function VerzendTab({ offerteId, opdrachtgever, titel, vragen, vragenLaden, secties, regels, bijlagenAantal }: VerzendTabProps) {
+function AdviesPanel({
+  offerteId,
+  contract,
+  onAdviesGeladen,
+}: {
+  offerteId: number;
+  contract: OfferteKlantContract;
+  onAdviesGeladen: (contractId: number, advies: OfferteContractAdvies) => void;
+}) {
+  const { toast } = useToast();
+  const [advies, setAdvies] = useState<OfferteContractAdvies | null>(null);
+  const [laden, setLaden] = useState(contract.heeft_advies);
+  const [volledigOpen, setVolledigOpen] = useState(false);
+  const genereer = useGenereerOfferteContractAdvies();
+
+  useEffect(() => {
+    if (!contract.heeft_advies) return;
+    const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+    fetch(`${base}/api/offertes/${offerteId}/klant-contracten/${contract.id}/advies`, { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data: OfferteContractAdvies | null) => {
+        if (data) { setAdvies(data); onAdviesGeladen(contract.id, data); }
+        setLaden(false);
+      })
+      .catch(() => setLaden(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function genereerAdvies() {
+    try {
+      const result = await genereer.mutateAsync({ id: offerteId, contractId: contract.id });
+      setAdvies(result);
+      onAdviesGeladen(contract.id, result);
+      toast({ title: "AI-contractadvies gegenereerd" });
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
+      toast({ title: msg ?? "Analyse mislukt", variant: "destructive" });
+    }
+  }
+
+  if (laden) {
+    return (
+      <div className="space-y-2 pt-3 border-t mt-3">
+        <Skeleton className="h-4 w-1/2" />
+        <Skeleton className="h-4 w-full" />
+      </div>
+    );
+  }
+
+  if (!advies) {
+    return (
+      <div className="pt-3 border-t mt-3 space-y-2">
+        <p className="text-sm text-muted-foreground">
+          Laat AI het klantcontract analyseren en een intern adviesrapport opstellen voor de directie.
+        </p>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={genereerAdvies}
+          disabled={genereer.isPending}
+        >
+          <Brain className="h-3.5 w-3.5" />
+          {genereer.isPending ? "Analyseren…" : "AI-analyse starten"}
+        </Button>
+        {genereer.isPending && (
+          <div className="space-y-1.5 pt-1">
+            <Skeleton className="h-3 w-3/4" />
+            <Skeleton className="h-3 w-full" />
+            <Skeleton className="h-3 w-5/6" />
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  const aandachtspunten = Array.isArray(advies.aandachtspunten) ? advies.aandachtspunten : [];
+
+  return (
+    <div className="pt-3 border-t mt-3 space-y-3">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <RisicoIcoon niveau={advies.risico_niveau} />
+          <span className="text-sm font-semibold">AI-contractadvies</span>
+          <Badge className={`text-xs ${risicoKleur(advies.risico_niveau)}`}>
+            {risicoLabel(advies.risico_niveau)}
+          </Badge>
+        </div>
+        <Button
+          size="sm"
+          variant="ghost"
+          className="h-7 text-xs text-muted-foreground"
+          onClick={genereerAdvies}
+          disabled={genereer.isPending}
+        >
+          <Brain className="h-3 w-3" />
+          {genereer.isPending ? "Analyseren…" : "Opnieuw"}
+        </Button>
+      </div>
+
+      {advies.advies_samenvatting && (
+        <div className="rounded-md bg-muted/50 border px-3 py-2 text-sm text-muted-foreground">
+          {advies.advies_samenvatting}
+        </div>
+      )}
+
+      {aandachtspunten.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+            Aandachtspunten ({aandachtspunten.length})
+          </p>
+          {aandachtspunten.map((punt: {
+            titel?: string;
+            beschrijving?: string;
+            prioriteit?: string;
+            clausule?: string | null;
+          }, i: number) => (
+            <div key={i} className="rounded-md border p-2.5 space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium">{punt.titel}</span>
+                {punt.clausule && (
+                  <Badge variant="outline" className="text-xs font-mono">{punt.clausule}</Badge>
+                )}
+                {punt.prioriteit === "hoog" && (
+                  <Badge className="text-xs bg-rose-100 text-rose-800 border-rose-200">Hoog</Badge>
+                )}
+                {punt.prioriteit === "middel" && (
+                  <Badge className="text-xs bg-amber-100 text-amber-800 border-amber-200">Middel</Badge>
+                )}
+              </div>
+              {punt.beschrijving && (
+                <p className="text-xs text-muted-foreground">{punt.beschrijving}</p>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {advies.volledig_advies && (
+        <div>
+          <button
+            type="button"
+            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+            onClick={() => setVolledigOpen((v) => !v)}
+          >
+            {volledigOpen ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+            Volledig advies voor directie
+          </button>
+          {volledigOpen && (
+            <div className="mt-2 rounded-md border bg-muted/30 p-3 text-xs text-muted-foreground whitespace-pre-wrap max-h-60 overflow-y-auto">
+              {advies.volledig_advies}
+            </div>
+          )}
+        </div>
+      )}
+
+      <p className="text-xs text-muted-foreground">
+        Gegenereerd op {datumLabel(advies.aangemaakt_op)} — intern gebruik, niet zichtbaar voor klant
+      </p>
+    </div>
+  );
+}
+
+export function VerzendTab({
+  offerteId,
+  opdrachtgever,
+  titel,
+  vragen,
+  vragenLaden,
+  secties,
+  regels,
+  bijlagenAantal,
+  verzendType: verzendTypeProp = "ondertekening",
+}: VerzendTabProps) {
   const { toast } = useToast();
   const qc = useQueryClient();
 
+  const [verzendType, setVerzendTypeLocal] = useState(verzendTypeProp);
+
   const { data: tokens, isLoading: tokensLaden } = useListOffertePortaalTokens(offerteId);
   const { data: tracking, isLoading: trackingLaden } = useListOfferteTracking(offerteId);
+  const { data: contracten, isLoading: contractenLaden } = useListOfferteKlantContracten(offerteId);
 
   const maakToken = useCreateOffertePortaalToken();
   const aiEmail = useCreateOfferteAiEmail();
   const verzend = useVerzendOfferte();
   const beantwoord = useBeantwoordOfferteVraag();
+  const werkOfferte = useUpdateOfferte();
+  const uploadUrlMutatie = useGetOfferteKlantContractUploadUrl();
+  const registreerContract = useCreateOfferteKlantContract();
+  const verwijderContract = useDeleteOfferteKlantContract();
 
   const [emailVoorstel, setEmailVoorstel] = useState<OfferteEmailVoorstel | null>(null);
   const [emailForm, setEmailForm] = useState({
@@ -110,9 +339,17 @@ export function VerzendTab({ offerteId, opdrachtgever, titel, vragen, vragenLade
 
   const [openAntwoord, setOpenAntwoord] = useState<number | null>(null);
   const [antwoordForms, setAntwoordForms] = useState<Record<number, AntwoordForm>>({});
+  const [adviesOpen, setAdviesOpen] = useState<number | null>(null);
+  const [uploadBezig, setUploadBezig] = useState(false);
+
   const autoFillGedaan = useRef(false);
+  const bestandInputRef = useRef<HTMLInputElement>(null);
 
   const baseUrl = `${window.location.origin}${import.meta.env.BASE_URL.replace(/\/$/, "")}`;
+
+  useEffect(() => {
+    setVerzendTypeLocal(verzendTypeProp);
+  }, [verzendTypeProp]);
 
   // Auto-genereer AI-voorstel zodra de tab opent (eenmalig)
   useEffect(() => {
@@ -129,11 +366,23 @@ export function VerzendTab({ offerteId, opdrachtgever, titel, vragen, vragenLade
           tekst: [voorstel.begroeting, "", voorstel.samenvatting, "", voorstel.call_to_action, "", voorstel.afsluiting].join("\n"),
         }));
       } catch {
-        // stil falen — gebruiker kan handmatig opnieuw proberen
+        // stil falen
       }
     })();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  async function wisselVerzendType(type: string) {
+    if (type === verzendType) return;
+    setVerzendTypeLocal(type);
+    try {
+      await werkOfferte.mutateAsync({ id: offerteId, data: { verzend_type: type } as never });
+      await qc.invalidateQueries({ queryKey: getGetOfferteQueryKey(offerteId) });
+    } catch {
+      setVerzendTypeLocal(verzendType);
+      toast({ title: "Opslaan mislukt", variant: "destructive" });
+    }
+  }
 
   function getAntwoordForm(vraagId: number): AntwoordForm {
     return antwoordForms[vraagId] ?? { tekst: "", email: "", naam: "" };
@@ -181,23 +430,31 @@ export function VerzendTab({ offerteId, opdrachtgever, titel, vragen, vragenLade
     }
   }
 
-  async function verstuurEmail() {
+  async function verstuurEmail(metPortaalLink: boolean) {
     if (!emailForm.naar_email.trim() || !emailForm.onderwerp.trim() || !emailForm.tekst.trim()) {
       toast({ title: "E-mail, onderwerp en tekst zijn verplicht", variant: "destructive" });
       return;
     }
-    const actieveTokens = (tokens ?? []).filter((t: OffertePortaalToken) => new Date(t.verloopt_op) > new Date());
-    let portaalToken = actieveTokens[0];
-    if (!portaalToken) {
-      try {
-        portaalToken = await maakToken.mutateAsync({ id: offerteId });
-        await qc.invalidateQueries({ queryKey: getListOffertePortaalTokensQueryKey(offerteId) });
-      } catch {
-        toast({ title: "Portaallink aanmaken mislukt", variant: "destructive" });
-        return;
+
+    let portaalLink: string | undefined;
+
+    if (metPortaalLink) {
+      const actieveTokens = (tokens ?? []).filter(
+        (t: OffertePortaalToken) => new Date(t.verloopt_op) > new Date(),
+      );
+      let portaalToken = actieveTokens[0];
+      if (!portaalToken) {
+        try {
+          portaalToken = await maakToken.mutateAsync({ id: offerteId });
+          await qc.invalidateQueries({ queryKey: getListOffertePortaalTokensQueryKey(offerteId) });
+        } catch {
+          toast({ title: "Portaallink aanmaken mislukt", variant: "destructive" });
+          return;
+        }
       }
+      portaalLink = `${baseUrl}/portaal/${portaalToken.token}`;
     }
-    const portaalLink = `${baseUrl}/portaal/${portaalToken.token}`;
+
     try {
       await verzend.mutateAsync({
         id: offerteId,
@@ -210,11 +467,61 @@ export function VerzendTab({ offerteId, opdrachtgever, titel, vragen, vragenLade
         },
       });
       await qc.invalidateQueries({ queryKey: getListOfferteTrackingQueryKey(offerteId) });
-      toast({ title: "Offerte verzonden" });
+      toast({ title: "E-mail verzonden" });
       setEmailForm({ naar_email: "", naar_naam: opdrachtgever ?? "", onderwerp: "", tekst: "" });
       setEmailVoorstel(null);
     } catch {
       toast({ title: "Verzenden mislukt", variant: "destructive" });
+    }
+  }
+
+  const verwerkBestandUpload = useCallback(async (file: File) => {
+    setUploadBezig(true);
+    try {
+      // 1. Tekst extraheren uit PDF
+      const extractedText = await extracteerPdfTekst(file);
+
+      // 2. Presigned upload-URL ophalen
+      const { upload_url: uploadUrl, object_path: objectPath } =
+        await uploadUrlMutatie.mutateAsync({ id: offerteId });
+
+      // 3. Bestand uploaden naar storage
+      const uploadResp = await fetch(uploadUrl, {
+        method: "PUT",
+        headers: { "Content-Type": file.type || "application/pdf" },
+        body: file,
+      });
+      if (!uploadResp.ok) throw new Error("Upload mislukt");
+
+      // 4. Contract registreren
+      await registreerContract.mutateAsync({
+        id: offerteId,
+        data: {
+          bestandsnaam: file.name,
+          bestand_pad: objectPath,
+          mime_type: file.type || "application/pdf",
+          extracted_text: extractedText || undefined,
+        },
+      });
+
+      await qc.invalidateQueries({ queryKey: getListOfferteKlantContractenQueryKey(offerteId) });
+      toast({ title: "Contract geregistreerd" });
+    } catch {
+      toast({ title: "Uploaden mislukt", variant: "destructive" });
+    } finally {
+      setUploadBezig(false);
+      if (bestandInputRef.current) bestandInputRef.current.value = "";
+    }
+  }, [offerteId, uploadUrlMutatie, registreerContract, qc, toast]);
+
+  async function verwijderContractHandler(contractId: number) {
+    try {
+      await verwijderContract.mutateAsync({ id: offerteId, contractId });
+      await qc.invalidateQueries({ queryKey: getListOfferteKlantContractenQueryKey(offerteId) });
+      if (adviesOpen === contractId) setAdviesOpen(null);
+      toast({ title: "Contract verwijderd" });
+    } catch {
+      toast({ title: "Verwijderen mislukt", variant: "destructive" });
     }
   }
 
@@ -255,6 +562,58 @@ export function VerzendTab({ offerteId, opdrachtgever, titel, vragen, vragenLade
 
   return (
     <div className="space-y-6">
+      {/* Moduskeuze */}
+      <div className="grid grid-cols-2 gap-3">
+        <button
+          type="button"
+          onClick={() => wisselVerzendType("ondertekening")}
+          className={`rounded-lg border p-4 text-left transition-colors ${
+            verzendType === "ondertekening"
+              ? "border-primary bg-primary/5 ring-1 ring-primary"
+              : "border-muted-foreground/20 hover:border-primary/40 bg-background"
+          }`}
+        >
+          <div className="flex items-start gap-3">
+            <div className="mt-0.5 shrink-0">
+              {verzendType === "ondertekening"
+                ? <CheckCircle2 className="h-4 w-4 text-primary" />
+                : <Circle className="h-4 w-4 text-muted-foreground" />}
+            </div>
+            <div>
+              <div className="text-sm font-semibold">Ondertekenbare offerte</div>
+              <div className="text-xs text-muted-foreground mt-0.5">
+                Klant ontvangt portaallink en tekent digitaal. Geschikt voor VvE, gebouweigenaren en reguliere opdrachtgevers.
+              </div>
+            </div>
+          </div>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => wisselVerzendType("contract_klant")}
+          className={`rounded-lg border p-4 text-left transition-colors ${
+            verzendType === "contract_klant"
+              ? "border-primary bg-primary/5 ring-1 ring-primary"
+              : "border-muted-foreground/20 hover:border-primary/40 bg-background"
+          }`}
+        >
+          <div className="flex items-start gap-3">
+            <div className="mt-0.5 shrink-0">
+              {verzendType === "contract_klant"
+                ? <CheckCircle2 className="h-4 w-4 text-primary" />
+                : <Circle className="h-4 w-4 text-muted-foreground" />}
+            </div>
+            <div>
+              <div className="text-sm font-semibold">Contract van klant</div>
+              <div className="text-xs text-muted-foreground mt-0.5">
+                Klant stuurt een eigen contractstuk retour. AI analyseert het contract en stelt intern advies op voor de directie.
+              </div>
+            </div>
+          </div>
+        </button>
+      </div>
+
+      {/* Inhoudsoverzicht */}
       {(secties !== undefined || regels !== undefined) && (
         <Card>
           <CardHeader className="pb-3">
@@ -281,7 +640,6 @@ export function VerzendTab({ offerteId, opdrachtgever, titel, vragen, vragenLade
                 )}
               </div>
             )}
-
             {regels !== undefined && (
               <div>
                 <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
@@ -307,7 +665,6 @@ export function VerzendTab({ offerteId, opdrachtgever, titel, vragen, vragenLade
                 </div>
               </div>
             )}
-
             {bijlagenAantal !== undefined && bijlagenAantal > 0 && (
               <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
                 <Paperclip className="h-3.5 w-3.5" />
@@ -318,54 +675,53 @@ export function VerzendTab({ offerteId, opdrachtgever, titel, vragen, vragenLade
         </Card>
       )}
 
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
-            <Link2 className="h-4 w-4 text-primary" />
-            Portaallinks
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <p className="text-sm text-muted-foreground">
-            Genereer een beveiligde link waarmee de klant de offerte kan bekijken en digitaal ondertekenen. Elke link is 30 dagen geldig.
-          </p>
-          {tokensLaden ? (
-            <Skeleton className="h-10 w-full" />
-          ) : (tokens ?? []).length === 0 ? (
-            <p className="text-sm text-muted-foreground italic">Nog geen portaallinks aangemaakt.</p>
-          ) : (
-            <div className="space-y-2">
-              {(tokens ?? []).map((t: OffertePortaalToken) => {
-                const url = `${baseUrl}/portaal/${t.token}`;
-                const verlopen = new Date(t.verloopt_op) < new Date();
-                return (
-                  <div key={t.id} className="flex items-center gap-2 rounded-md border bg-muted/30 p-2.5">
-                    <span className="text-xs font-mono text-muted-foreground truncate flex-1">{url}</span>
-                    {verlopen ? (
-                      <Badge variant="outline" className="text-muted-foreground shrink-0">Verlopen</Badge>
-                    ) : (
-                      <Badge variant="outline" className="bg-emerald-100 text-emerald-800 border-emerald-200 shrink-0">Actief</Badge>
-                    )}
-                    <Button size="icon" variant="ghost" className="h-7 w-7 shrink-0" onClick={() => kopieerLink(t.token)}>
-                      <Copy className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={nieuwPortaalLink}
-            disabled={maakToken.isPending}
-          >
-            <Plus className="h-3.5 w-3.5" />
-            {maakToken.isPending ? "Bezig…" : "Nieuwe link genereren"}
-          </Button>
-        </CardContent>
-      </Card>
+      {/* PAD 1 — Portaallinks (alleen ondertekening) */}
+      {verzendType === "ondertekening" && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Link2 className="h-4 w-4 text-primary" />
+              Portaallinks
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Genereer een beveiligde link waarmee de klant de offerte kan bekijken en digitaal ondertekenen. Elke link is 30 dagen geldig.
+            </p>
+            {tokensLaden ? (
+              <Skeleton className="h-10 w-full" />
+            ) : (tokens ?? []).length === 0 ? (
+              <p className="text-sm text-muted-foreground italic">Nog geen portaallinks aangemaakt.</p>
+            ) : (
+              <div className="space-y-2">
+                {(tokens ?? []).map((t: OffertePortaalToken) => {
+                  const url = `${baseUrl}/portaal/${t.token}`;
+                  const verlopen = new Date(t.verloopt_op) < new Date();
+                  return (
+                    <div key={t.id} className="flex items-center gap-2 rounded-md border bg-muted/30 p-2.5">
+                      <span className="text-xs font-mono text-muted-foreground truncate flex-1">{url}</span>
+                      {verlopen ? (
+                        <Badge variant="outline" className="text-muted-foreground shrink-0">Verlopen</Badge>
+                      ) : (
+                        <Badge variant="outline" className="bg-emerald-100 text-emerald-800 border-emerald-200 shrink-0">Actief</Badge>
+                      )}
+                      <Button size="icon" variant="ghost" className="h-7 w-7 shrink-0" onClick={() => kopieerLink(t.token)}>
+                        <Copy className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            <Button variant="outline" size="sm" onClick={nieuwPortaalLink} disabled={maakToken.isPending}>
+              <Plus className="h-3.5 w-3.5" />
+              {maakToken.isPending ? "Bezig…" : "Nieuwe link genereren"}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
+      {/* E-mail verzenden (beide modi, maar met ander gedrag) */}
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
@@ -376,7 +732,9 @@ export function VerzendTab({ offerteId, opdrachtgever, titel, vragen, vragenLade
         <CardContent className="space-y-4">
           <div className="flex justify-between items-start gap-3">
             <p className="text-sm text-muted-foreground">
-              Verstuur de offerte per e-mail. De portaallink wordt automatisch meegestuurd als er een actieve link beschikbaar is.
+              {verzendType === "ondertekening"
+                ? "Verstuur de offerte per e-mail. De portaallink wordt automatisch meegestuurd als er een actieve link beschikbaar is."
+                : "Verstuur de offerte per e-mail aan de klant. De klant dient vervolgens een getekend contractstuk aan u te retourneren."}
             </p>
             <Button
               variant="outline"
@@ -459,7 +817,10 @@ export function VerzendTab({ offerteId, opdrachtgever, titel, vragen, vragenLade
           </div>
 
           <div className="flex justify-end">
-            <Button onClick={verstuurEmail} disabled={verzend.isPending || aiEmail.isPending}>
+            <Button
+              onClick={() => verstuurEmail(verzendType === "ondertekening")}
+              disabled={verzend.isPending || aiEmail.isPending}
+            >
               <Send className="h-3.5 w-3.5" />
               {verzend.isPending ? "Verzenden…" : "Versturen"}
             </Button>
@@ -467,6 +828,114 @@ export function VerzendTab({ offerteId, opdrachtgever, titel, vragen, vragenLade
         </CardContent>
       </Card>
 
+      {/* PAD 2 — Contract ontvangen (alleen contract_klant) */}
+      {verzendType === "contract_klant" && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <FileCheck className="h-4 w-4 text-primary" />
+              Contract ontvangen
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Zodra de klant zijn eigen contractstuk heeft gestuurd, registreert u het hier. AI analyseert het contract en stelt een intern adviesrapport op voor de directie met aandachtspunten en risico-inschatting.
+            </p>
+
+            {/* Upload knop */}
+            <div>
+              <input
+                ref={bestandInputRef}
+                type="file"
+                accept="application/pdf,.pdf"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) void verwerkBestandUpload(file);
+                }}
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => bestandInputRef.current?.click()}
+                disabled={uploadBezig}
+              >
+                <Upload className="h-3.5 w-3.5" />
+                {uploadBezig ? "Uploaden en analyseren…" : "Contract uploaden (PDF)"}
+              </Button>
+              {uploadBezig && (
+                <div className="mt-2 space-y-1.5">
+                  <Skeleton className="h-3 w-1/2" />
+                  <Skeleton className="h-3 w-3/4" />
+                </div>
+              )}
+            </div>
+
+            {/* Lijst van contracten */}
+            {contractenLaden ? (
+              <Skeleton className="h-16 w-full" />
+            ) : (contracten ?? []).length === 0 ? (
+              <p className="text-sm text-muted-foreground italic">Nog geen klantcontracten geregistreerd.</p>
+            ) : (
+              <div className="space-y-3">
+                {(contracten ?? []).map((c: OfferteKlantContract) => (
+                  <div key={c.id} className="rounded-md border p-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
+                        <div className="min-w-0">
+                          <span className="text-sm font-medium truncate block">{c.bestandsnaam}</span>
+                          <span className="text-xs text-muted-foreground">{datumLabel(c.geupload_op)}</span>
+                        </div>
+                        {c.heeft_advies && (
+                          <Badge className="text-xs bg-blue-100 text-blue-800 border-blue-200 shrink-0">
+                            <Brain className="h-3 w-3 mr-1" />Advies
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 text-xs"
+                          onClick={() => setAdviesOpen((open) => open === c.id ? null : c.id)}
+                        >
+                          {adviesOpen === c.id ? (
+                            <><ChevronUp className="h-3.5 w-3.5" /> Sluiten</>
+                          ) : (
+                            <><Brain className="h-3.5 w-3.5" /> {c.heeft_advies ? "Advies" : "Analyseren"}</>
+                          )}
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                          onClick={() => verwijderContractHandler(c.id)}
+                          disabled={verwijderContract.isPending}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    {adviesOpen === c.id && (
+                      <AdviesPanel
+                        offerteId={offerteId}
+                        contract={c}
+                        onAdviesGeladen={(_contractId, _advies) => {
+                          void qc.invalidateQueries({ queryKey: getListOfferteKlantContractenQueryKey(offerteId) });
+                        }}
+                      />
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Activiteit */}
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
@@ -493,6 +962,7 @@ export function VerzendTab({ offerteId, opdrachtgever, titel, vragen, vragenLade
         </CardContent>
       </Card>
 
+      {/* Klantvragen */}
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
@@ -587,18 +1057,10 @@ export function VerzendTab({ offerteId, opdrachtgever, titel, vragen, vragenLade
                         </div>
                       </div>
                       <div className="flex items-center justify-end gap-2">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => setOpenAntwoord(null)}
-                        >
+                        <Button size="sm" variant="ghost" onClick={() => setOpenAntwoord(null)}>
                           Annuleren
                         </Button>
-                        <Button
-                          size="sm"
-                          onClick={() => slaAntwoordOp(v.id)}
-                          disabled={beantwoord.isPending}
-                        >
+                        <Button size="sm" onClick={() => slaAntwoordOp(v.id)} disabled={beantwoord.isPending}>
                           {beantwoord.isPending ? "Opslaan…" : "Opslaan"}
                         </Button>
                       </div>

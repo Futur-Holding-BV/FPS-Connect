@@ -8803,6 +8803,143 @@ paths:
                   ok:
                     type: boolean
 
+  /offertes/{id}/klant-contracten:
+    get:
+      operationId: listOfferteKlantContracten
+      tags: [offertes]
+      summary: Klantcontracten van een offerte ophalen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/OfferteKlantContract"
+    post:
+      operationId: createOfferteKlantContract
+      tags: [offertes]
+      summary: Klantcontract registreren (na upload naar storage)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OfferteKlantContractInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OfferteKlantContract"
+
+  /offertes/{id}/klant-contracten/upload-url:
+    post:
+      operationId: getOfferteKlantContractUploadUrl
+      tags: [offertes]
+      summary: Presigned upload-URL ophalen voor klantcontract
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [upload_url, object_path]
+                properties:
+                  upload_url:
+                    type: string
+                  object_path:
+                    type: string
+
+  /offertes/{id}/klant-contracten/{contractId}:
+    delete:
+      operationId: deleteOfferteKlantContract
+      tags: [offertes]
+      summary: Klantcontract verwijderen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: contractId
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Verwijderd
+
+  /offertes/{id}/klant-contracten/{contractId}/ai-advies:
+    post:
+      operationId: genereerOfferteContractAdvies
+      tags: [offertes]
+      summary: AI-contractadvies genereren voor directie
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: contractId
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OfferteContractAdvies"
+
+  /offertes/{id}/klant-contracten/{contractId}/advies:
+    get:
+      operationId: getOfferteContractAdvies
+      tags: [offertes]
+      summary: Bestaand AI-contractadvies ophalen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: contractId
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OfferteContractAdvies"
+
   /offertes/{id}/vragen:
     get:
       operationId: listOfferteVragen
@@ -23010,6 +23147,9 @@ components:
         vervolg_tekst:
           type: ["string", "null"]
           description: "Bewerkbare tekst voor het vervolgadvies in de offerte"
+        verzend_type:
+          type: string
+          description: "Verzendmodus: ondertekening (portaal + digitaal tekenen) of contract_klant (klant stuurt eigen contract terug)"
         aangemaakt_op:
           type: string
         bijgewerkt_op:
@@ -23083,6 +23223,82 @@ components:
         vervolg_opties:
           type: ["object", "null"]
         vervolg_tekst:
+          type: ["string", "null"]
+        verzend_type:
+          type: string
+          description: "ondertekening | contract_klant"
+
+    OfferteKlantContract:
+      type: object
+      required: [id, offerte_id, bestandsnaam, bestand_pad, mime_type, geupload_op]
+      properties:
+        id:
+          type: integer
+        offerte_id:
+          type: integer
+        bestandsnaam:
+          type: string
+        bestand_pad:
+          type: string
+        mime_type:
+          type: string
+        geupload_door_id:
+          type: ["integer", "null"]
+        geupload_op:
+          type: string
+        heeft_advies:
+          type: boolean
+          description: Of er al een AI-advies beschikbaar is voor dit contract
+
+    OfferteKlantContractInput:
+      type: object
+      required: [bestandsnaam, bestand_pad]
+      properties:
+        bestandsnaam:
+          type: string
+        bestand_pad:
+          type: string
+        mime_type:
+          type: string
+        extracted_text:
+          type: string
+          description: Door de frontend uit de PDF geëxtraheerde tekst (pdfjs-dist)
+
+    OfferteContractAdvies:
+      type: object
+      required: [id, contract_id, risico_niveau, aandachtspunten, aangemaakt_op]
+      properties:
+        id:
+          type: integer
+        contract_id:
+          type: integer
+        risico_niveau:
+          type: string
+          description: "laag | middel | hoog"
+        aandachtspunten:
+          type: array
+          items:
+            type: object
+            properties:
+              titel:
+                type: string
+              beschrijving:
+                type: string
+              prioriteit:
+                type: string
+                description: "laag | middel | hoog"
+              clausule:
+                type: ["string", "null"]
+                description: Relevante clausule of artikelnummer uit het contract
+        advies_samenvatting:
+          type: ["string", "null"]
+        volledig_advies:
+          type: ["string", "null"]
+        aangemaakt_op:
+          type: string
+        bevestigd_door_id:
+          type: ["integer", "null"]
+        bevestigd_op:
           type: ["string", "null"]
 
     OfferteRegel:

@@ -4309,6 +4309,8 @@ export interface Offerte {
      * @nullable
      */
   vervolg_tekst?: string | null;
+  /** Verzendmodus: ondertekening (portaal + digitaal tekenen) of contract_klant (klant stuurt eigen contract terug) */
+  verzend_type?: string;
   aangemaakt_op: string;
   bijgewerkt_op: string;
 }
@@ -4375,6 +4377,58 @@ export interface OfferteInput {
   vervolg_opties?: OfferteInputVervolgOpties;
   /** @nullable */
   vervolg_tekst?: string | null;
+  /** ondertekening | contract_klant */
+  verzend_type?: string;
+}
+
+export interface OfferteKlantContract {
+  id: number;
+  offerte_id: number;
+  bestandsnaam: string;
+  bestand_pad: string;
+  mime_type: string;
+  /** @nullable */
+  geupload_door_id?: number | null;
+  geupload_op: string;
+  /** Of er al een AI-advies beschikbaar is voor dit contract */
+  heeft_advies?: boolean;
+}
+
+export interface OfferteKlantContractInput {
+  bestandsnaam: string;
+  bestand_pad: string;
+  mime_type?: string;
+  /** Door de frontend uit de PDF geëxtraheerde tekst (pdfjs-dist) */
+  extracted_text?: string;
+}
+
+export type OfferteContractAdviesAandachtspuntenItem = {
+  titel?: string;
+  beschrijving?: string;
+  /** laag | middel | hoog */
+  prioriteit?: string;
+  /**
+     * Relevante clausule of artikelnummer uit het contract
+     * @nullable
+     */
+  clausule?: string | null;
+};
+
+export interface OfferteContractAdvies {
+  id: number;
+  contract_id: number;
+  /** laag | middel | hoog */
+  risico_niveau: string;
+  aandachtspunten: OfferteContractAdviesAandachtspuntenItem[];
+  /** @nullable */
+  advies_samenvatting?: string | null;
+  /** @nullable */
+  volledig_advies?: string | null;
+  aangemaakt_op: string;
+  /** @nullable */
+  bevestigd_door_id?: number | null;
+  /** @nullable */
+  bevestigd_op?: string | null;
 }
 
 export interface OfferteRegel {
@@ -9448,6 +9502,11 @@ jaar?: number;
 
 export type VerzendOfferte200 = {
   ok?: boolean;
+};
+
+export type GetOfferteKlantContractUploadUrl200 = {
+  upload_url: string;
+  object_path: string;
 };
 
 export type GetAiPresentatieNiveau200 = {

@@ -1236,6 +1236,7 @@ export default function ProposalStudio() {
                   secties={gesorteerdeSecties}
                   regels={regels ?? []}
                   bijlagenAantal={(bijlagen ?? []).length}
+                  verzendType={(offerte as unknown as Record<string, string>).verzend_type ?? "ondertekening"}
                 />
               </TabsContent>
             </Tabs>
