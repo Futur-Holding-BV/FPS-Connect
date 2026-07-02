@@ -192,6 +192,7 @@ function RootLayoutNav() {
         <Stack.Screen name="werkdag/index" />
         <Stack.Screen name="werkdag/[id]" />
         <Stack.Screen name="lmra" />
+        <Stack.Screen name="incidenten" />
         <Stack.Screen name="veiligheid-melding" />
         <Stack.Screen name="veiligheid/index" />
       </Stack>

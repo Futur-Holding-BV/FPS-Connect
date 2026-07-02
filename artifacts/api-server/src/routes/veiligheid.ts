@@ -9,6 +9,7 @@ import {
   veiligheidLmrasTable,
   veiligheidMeldingenTable,
   veiligheidMeldingenActiesTable,
+  veiligheidIncidentenTable,
   gebruikersTable,
   medewerkersTable,
   gebouwenTable,
@@ -16,6 +17,7 @@ import {
   planningItemsTable,
   projectBegrotingenTable,
 } from "@workspace/db";
+import { verstuurMail, isGeconfigureerd as isMailGeconfigureerd } from "../services/email.js";
 import { eq, and, desc, sql, count, gte, lt, isNotNull, min } from "drizzle-orm";
 import { requireAuth, requireBevoegdheid } from "../middlewares/auth.js";
 import { maakOpenAiClient, heeftOpenAi } from "../lib/openai.js";
@@ -1892,6 +1894,363 @@ veiligheidRouter.post("/mijn/toolbox-maandopdracht/:id/voltooien", requireAuth, 
     res.json(mapMaandStatus(bijgewerkt, opdracht, tb!));
   } catch (err) {
     req.log.error(err, "POST /mijn/toolbox-maandopdracht/:id/voltooien");
+    res.status(500).json({ error: "Interne fout" });
+  }
+});
+
+// ── Incidenten (bijna-ongevallen & ongevallen) ────────────────────────────────
+
+veiligheidRouter.get("/veiligheid/incidenten", lezenVeiligheid, async (req, res) => {
+  try {
+    const rijen = await db
+      .select({
+        i: veiligheidIncidentenTable,
+        gebouwNaam: gebouwenTable.naam,
+        opdrachtNaam: opdrachtenTable.titel,
+      })
+      .from(veiligheidIncidentenTable)
+      .leftJoin(gebouwenTable, eq(veiligheidIncidentenTable.gebouwId, gebouwenTable.id))
+      .leftJoin(opdrachtenTable, eq(veiligheidIncidentenTable.opdrachtId, opdrachtenTable.id))
+      .orderBy(desc(veiligheidIncidentenTable.aangemaaktOp));
+
+    res.json(rijen.map(r => ({
+      id: r.i.id,
+      type: r.i.type,
+      datum: r.i.datum ?? null,
+      tijdstip: r.i.tijdstip ?? null,
+      locatie_omschrijving: r.i.locatieOmschrijving,
+      gebouw_id: r.i.gebouwId ?? null,
+      gebouw_naam: r.gebouwNaam ?? null,
+      opdracht_id: r.i.opdrachtId ?? null,
+      opdracht_naam: r.opdrachtNaam ?? null,
+      omschrijving: r.i.omschrijving,
+      oorzaak: r.i.oorzaak ?? null,
+      letsel_beschrijving: r.i.letselBeschrijving ?? null,
+      eerste_hulp_verleend: r.i.eersteHulpVerleend,
+      eerste_hulp_beschrijving: r.i.eersteHulpBeschrijving ?? null,
+      getuigen: (r.i.getuigen as string[]) ?? [],
+      genomen_maatregelen: (r.i.genoemenMaatregelen as string[]) ?? [],
+      meldplichtig: r.i.meldplichtig,
+      gemeld_bij_arbeidsinspectie: r.i.gemeldBijArbeidsinspectie,
+      status: r.i.status,
+      foto_paden: (r.i.fotoPaden as string[]) ?? [],
+      ai_voorstel: r.i.aiVoorstel,
+      medewerker_naam: r.i.medewerkerNaam ?? null,
+      medewerker_id: r.i.medewerkerId ?? null,
+      aangemaakt_door_id: r.i.aangemaaktDoorId ?? null,
+      aangemaakt_op: r.i.aangemaaktOp.toISOString(),
+      bijgewerkt_op: r.i.bijgewerktOp?.toISOString() ?? null,
+    })));
+  } catch (err) {
+    req.log.error(err, "GET /veiligheid/incidenten");
+    res.status(500).json({ error: "Interne fout" });
+  }
+});
+
+veiligheidRouter.post("/veiligheid/incidenten", lezenVeiligheid, async (req, res) => {
+  try {
+    const gebruiker = (req as any).session?.gebruiker;
+    const {
+      type, datum, tijdstip, locatie_omschrijving, gebouw_id, opdracht_id,
+      omschrijving, oorzaak, letsel_beschrijving,
+      eerste_hulp_verleend, eerste_hulp_beschrijving,
+      getuigen, genomen_maatregelen, meldplichtig,
+      gemeld_bij_arbeidsinspectie, status, foto_paden, ai_voorstel,
+    } = req.body;
+
+    if (!locatie_omschrijving || !omschrijving) {
+      return res.status(400).json({ error: "locatie_omschrijving en omschrijving zijn verplicht" });
+    }
+
+    const medewerkerNaam = gebruiker
+      ? `${gebruiker.naam ?? ""} ${gebruiker.achternaam ?? ""}`.trim() || gebruiker.email
+      : null;
+
+    let resolvedMedewerkerId: number | null = null;
+    if (gebruiker?.id) {
+      const [med] = await db.select({ id: medewerkersTable.id })
+        .from(medewerkersTable)
+        .where(eq(medewerkersTable.gebruikerId, gebruiker.id))
+        .limit(1);
+      resolvedMedewerkerId = med?.id ?? null;
+    }
+
+    const [rij] = await db
+      .insert(veiligheidIncidentenTable)
+      .values({
+        type: type ?? "bijna_ongeval",
+        datum: datum ?? null,
+        tijdstip: tijdstip ?? null,
+        locatieOmschrijving: locatie_omschrijving,
+        gebouwId: gebouw_id ?? null,
+        opdrachtId: opdracht_id ?? null,
+        omschrijving,
+        oorzaak: oorzaak ?? null,
+        letselBeschrijving: letsel_beschrijving ?? null,
+        eersteHulpVerleend: eerste_hulp_verleend ?? false,
+        eersteHulpBeschrijving: eerste_hulp_beschrijving ?? null,
+        getuigen: getuigen ?? [],
+        genoemenMaatregelen: genomen_maatregelen ?? [],
+        meldplichtig: meldplichtig ?? false,
+        gemeldBijArbeidsinspectie: gemeld_bij_arbeidsinspectie ?? false,
+        status: status ?? "open",
+        fotoPaden: foto_paden ?? [],
+        aiVoorstel: ai_voorstel === true,
+        medewerkerNaam,
+        medewerkerId: resolvedMedewerkerId,
+        aangemaaktDoorId: gebruiker?.id ?? null,
+        bijgewerktOp: new Date(),
+      })
+      .returning();
+
+    let gebouwNaam: string | null = null;
+    let opdrachtNaam: string | null = null;
+    if (rij.gebouwId) {
+      const [geb] = await db.select({ naam: gebouwenTable.naam }).from(gebouwenTable).where(eq(gebouwenTable.id, rij.gebouwId)).limit(1);
+      gebouwNaam = geb?.naam ?? null;
+    }
+    if (rij.opdrachtId) {
+      const [opd] = await db.select({ naam: opdrachtenTable.titel }).from(opdrachtenTable).where(eq(opdrachtenTable.id, rij.opdrachtId)).limit(1);
+      opdrachtNaam = opd?.naam ?? null;
+    }
+
+    await logActiviteit({
+      type: "incident_aangemaakt",
+      omschrijving: `${type === "bijna_ongeval" ? "Bijna-Ongeval" : "Ongeval"} geregistreerd: ${locatie_omschrijving}`,
+      gebouwId: gebouw_id ?? null,
+      gebruikerId: gebruiker?.id ?? null,
+    });
+
+    // Notificeer projectleiders (offertes:2+) — fire-and-forget
+    if (isMailGeconfigureerd()) {
+      const allGebruikers = await db.select({
+        email: gebruikersTable.email,
+        naam: gebruikersTable.naam,
+        bevoegdheden: gebruikersTable.bevoegdheden,
+      }).from(gebruikersTable).where(isNotNull(gebruikersTable.email));
+
+      const plOntvangers = allGebruikers.filter(g => {
+        const bev = g.bevoegdheden as Record<string, number> | null;
+        return (bev?.["offertes"] ?? 0) >= 2 && g.email;
+      });
+
+      const typeLabel = type === "bijna_ongeval" ? "Bijna-Ongeval" : "Ongeval";
+      const meldplichtigWaarschuwing = meldplichtig
+        ? `<p style="color:#b91c1c;font-weight:600;">Let op: dit incident is mogelijk meldplichtig bij de Nederlandse Arbeidsinspectie. Neem zo snel mogelijk contact op.</p>`
+        : "";
+
+      for (const pl of plOntvangers) {
+        const naarNaam = pl.naam ?? null;
+        verstuurMail({
+          naarEmail: pl.email!,
+          naarNaam,
+          onderwerp: `[FPS Connect] Nieuw incident geregistreerd: ${typeLabel}`,
+          soort: "incident_melding",
+          html: `
+            <p>Beste ${naarNaam ?? "projectleider"},</p>
+            <p>Er is zojuist een <strong>${typeLabel}</strong> geregistreerd in FPS Connect.</p>
+            ${meldplichtigWaarschuwing}
+            <table style="border-collapse:collapse;width:100%;margin-bottom:16px;">
+              <tr><td style="padding:6px 12px;font-weight:600;background:#f4f4f5;">Type</td><td style="padding:6px 12px;">${typeLabel}</td></tr>
+              <tr><td style="padding:6px 12px;font-weight:600;background:#f4f4f5;">Locatie</td><td style="padding:6px 12px;">${locatie_omschrijving}</td></tr>
+              ${datum ? `<tr><td style="padding:6px 12px;font-weight:600;background:#f4f4f5;">Datum</td><td style="padding:6px 12px;">${datum}${tijdstip ? ` om ${tijdstip}` : ""}</td></tr>` : ""}
+              ${opdrachtNaam ? `<tr><td style="padding:6px 12px;font-weight:600;background:#f4f4f5;">Opdracht</td><td style="padding:6px 12px;">${opdrachtNaam}</td></tr>` : ""}
+              <tr><td style="padding:6px 12px;font-weight:600;background:#f4f4f5;">Geregistreerd door</td><td style="padding:6px 12px;">${medewerkerNaam ?? "onbekend"}</td></tr>
+              <tr><td style="padding:6px 12px;font-weight:600;background:#f4f4f5;">Omschrijving</td><td style="padding:6px 12px;">${omschrijving}</td></tr>
+            </table>
+            <p style="color:#71717a;font-size:13px;">Log in op FPS Connect om het incident te bekijken en de status te beheren.</p>
+          `,
+        }).catch((mailErr: unknown) => {
+          req.log.warn({ err: mailErr, naar: pl.email }, "Incident-notificatiemail niet verzonden");
+        });
+      }
+    }
+
+    res.status(201).json({
+      id: rij.id,
+      type: rij.type,
+      datum: rij.datum ?? null,
+      tijdstip: rij.tijdstip ?? null,
+      locatie_omschrijving: rij.locatieOmschrijving,
+      gebouw_id: rij.gebouwId ?? null,
+      gebouw_naam: gebouwNaam,
+      opdracht_id: rij.opdrachtId ?? null,
+      opdracht_naam: opdrachtNaam,
+      omschrijving: rij.omschrijving,
+      oorzaak: rij.oorzaak ?? null,
+      letsel_beschrijving: rij.letselBeschrijving ?? null,
+      eerste_hulp_verleend: rij.eersteHulpVerleend,
+      eerste_hulp_beschrijving: rij.eersteHulpBeschrijving ?? null,
+      getuigen: (rij.getuigen as string[]) ?? [],
+      genomen_maatregelen: (rij.genoemenMaatregelen as string[]) ?? [],
+      meldplichtig: rij.meldplichtig,
+      gemeld_bij_arbeidsinspectie: rij.gemeldBijArbeidsinspectie,
+      status: rij.status,
+      foto_paden: (rij.fotoPaden as string[]) ?? [],
+      ai_voorstel: rij.aiVoorstel,
+      medewerker_naam: rij.medewerkerNaam ?? null,
+      medewerker_id: rij.medewerkerId ?? null,
+      aangemaakt_door_id: rij.aangemaaktDoorId ?? null,
+      aangemaakt_op: rij.aangemaaktOp.toISOString(),
+      bijgewerkt_op: rij.bijgewerktOp?.toISOString() ?? null,
+    });
+  } catch (err) {
+    req.log.error(err, "POST /veiligheid/incidenten");
+    res.status(500).json({ error: "Interne fout" });
+  }
+});
+
+veiligheidRouter.post("/veiligheid/incidenten/ai-voorstel", lezenVeiligheid, async (req, res) => {
+  try {
+    if (!heeftOpenAi()) return res.status(503).json({ error: "AI niet beschikbaar" });
+
+    const { type, locatie_omschrijving, werkzaamheden_omschrijving, opdracht_naam } = req.body;
+    if (!locatie_omschrijving) return res.status(400).json({ error: "locatie_omschrijving is verplicht" });
+
+    const typeLabel = type === "bijna_ongeval" ? "bijna-ongeval" : "arbeidsongeval";
+    const context = [
+      `Type incident: ${typeLabel}`,
+      `Locatie: ${locatie_omschrijving}`,
+      werkzaamheden_omschrijving ? `Werkzaamheden: ${werkzaamheden_omschrijving}` : null,
+      opdracht_naam ? `Project/opdracht: ${opdracht_naam}` : null,
+    ].filter(Boolean).join("\n");
+
+    const openai = maakOpenAiClient();
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o",
+      max_tokens: 600,
+      messages: [
+        {
+          role: "system",
+          content: `Je bent een Arbo-adviseur voor een brandpreventie-bedrijf in Nederland.
+Genereer een pre-ingevulde incidentregistratie op basis van het type incident en de locatie.
+Gebruik de Nederlandse Arbeidsinspectie richtlijnen als basis.
+Retourneer uitsluitend JSON (geen extra tekst) in het formaat:
+{
+  "omschrijving": "string (wat er is gebeurd, feitelijk en volledig)",
+  "oorzaak": "string (directe en achterliggende oorzaak)",
+  "genomen_maatregelen": ["string", ...],
+  "meldplichtig_indicatie": boolean
+}
+meldplichtig_indicatie = true alleen bij: ziekenhuisopname, blijvend letsel of dodelijk.
+Genereer 3-5 realistische maatregelen die direct genomen zijn bij brandpreventiewerk.`,
+        },
+        { role: "user", content: `Incidentinformatie:\n${context}` },
+      ],
+    });
+
+    const raw = completion.choices[0].message.content ?? "{}";
+    const cleanJson = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+    let voorstel: { omschrijving: string; oorzaak: string; genomen_maatregelen: string[]; meldplichtig_indicatie: boolean };
+    try {
+      voorstel = JSON.parse(cleanJson);
+    } catch {
+      return res.status(500).json({ error: "AI-antwoord kon niet worden verwerkt" });
+    }
+
+    res.json({
+      omschrijving: voorstel.omschrijving ?? "",
+      oorzaak: voorstel.oorzaak ?? "",
+      genomen_maatregelen: Array.isArray(voorstel.genomen_maatregelen) ? voorstel.genomen_maatregelen : [],
+      meldplichtig_indicatie: voorstel.meldplichtig_indicatie === true,
+    });
+  } catch (err) {
+    req.log.error(err, "POST /veiligheid/incidenten/ai-voorstel");
+    res.status(500).json({ error: "Interne fout" });
+  }
+});
+
+veiligheidRouter.get("/veiligheid/incidenten/upload-url", lezenVeiligheid, async (req, res) => {
+  try {
+    const { uploadURL, objectPath } = await objectStorage.getObjectEntityUploadURL();
+    res.json({ upload_url: uploadURL, object_path: objectPath });
+  } catch (err) {
+    req.log.error(err, "GET /veiligheid/incidenten/upload-url");
+    res.status(500).json({ error: "Interne fout" });
+  }
+});
+
+veiligheidRouter.get("/veiligheid/incidenten/:id", lezenVeiligheid, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const [rij] = await db
+      .select({
+        i: veiligheidIncidentenTable,
+        gebouwNaam: gebouwenTable.naam,
+        opdrachtNaam: opdrachtenTable.titel,
+      })
+      .from(veiligheidIncidentenTable)
+      .leftJoin(gebouwenTable, eq(veiligheidIncidentenTable.gebouwId, gebouwenTable.id))
+      .leftJoin(opdrachtenTable, eq(veiligheidIncidentenTable.opdrachtId, opdrachtenTable.id))
+      .where(eq(veiligheidIncidentenTable.id, id))
+      .limit(1);
+
+    if (!rij) return res.status(404).json({ error: "Niet gevonden" });
+    const r = rij.i;
+    res.json({
+      id: r.id, type: r.type, datum: r.datum ?? null, tijdstip: r.tijdstip ?? null,
+      locatie_omschrijving: r.locatieOmschrijving,
+      gebouw_id: r.gebouwId ?? null, gebouw_naam: rij.gebouwNaam ?? null,
+      opdracht_id: r.opdrachtId ?? null, opdracht_naam: rij.opdrachtNaam ?? null,
+      omschrijving: r.omschrijving, oorzaak: r.oorzaak ?? null,
+      letsel_beschrijving: r.letselBeschrijving ?? null,
+      eerste_hulp_verleend: r.eersteHulpVerleend,
+      eerste_hulp_beschrijving: r.eersteHulpBeschrijving ?? null,
+      getuigen: (r.getuigen as string[]) ?? [],
+      genomen_maatregelen: (r.genoemenMaatregelen as string[]) ?? [],
+      meldplichtig: r.meldplichtig,
+      gemeld_bij_arbeidsinspectie: r.gemeldBijArbeidsinspectie,
+      status: r.status, foto_paden: (r.fotoPaden as string[]) ?? [],
+      ai_voorstel: r.aiVoorstel, medewerker_naam: r.medewerkerNaam ?? null,
+      medewerker_id: r.medewerkerId ?? null,
+      aangemaakt_door_id: r.aangemaaktDoorId ?? null,
+      aangemaakt_op: r.aangemaaktOp.toISOString(),
+      bijgewerkt_op: r.bijgewerktOp?.toISOString() ?? null,
+    });
+  } catch (err) {
+    req.log.error(err, "GET /veiligheid/incidenten/:id");
+    res.status(500).json({ error: "Interne fout" });
+  }
+});
+
+veiligheidRouter.patch("/veiligheid/incidenten/:id", schrijvenVeiligheid, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const {
+      status, meldplichtig, gemeld_bij_arbeidsinspectie, oorzaak,
+      genomen_maatregelen, eerste_hulp_verleend, eerste_hulp_beschrijving,
+    } = req.body;
+
+    const [rij] = await db
+      .update(veiligheidIncidentenTable)
+      .set({
+        ...(status !== undefined && { status }),
+        ...(meldplichtig !== undefined && { meldplichtig }),
+        ...(gemeld_bij_arbeidsinspectie !== undefined && { gemeldBijArbeidsinspectie: gemeld_bij_arbeidsinspectie }),
+        ...(oorzaak !== undefined && { oorzaak }),
+        ...(genomen_maatregelen !== undefined && { genoemenMaatregelen: genomen_maatregelen }),
+        ...(eerste_hulp_verleend !== undefined && { eersteHulpVerleend: eerste_hulp_verleend }),
+        ...(eerste_hulp_beschrijving !== undefined && { eersteHulpBeschrijving: eerste_hulp_beschrijving }),
+        bijgewerktOp: new Date(),
+      })
+      .where(eq(veiligheidIncidentenTable.id, id))
+      .returning();
+
+    if (!rij) return res.status(404).json({ error: "Niet gevonden" });
+    res.json({ id: rij.id, status: rij.status, bijgewerkt_op: rij.bijgewerktOp?.toISOString() ?? null });
+  } catch (err) {
+    req.log.error(err, "PATCH /veiligheid/incidenten/:id");
+    res.status(500).json({ error: "Interne fout" });
+  }
+});
+
+veiligheidRouter.delete("/veiligheid/incidenten/:id", verwijderenVeiligheid, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    await db.delete(veiligheidIncidentenTable).where(eq(veiligheidIncidentenTable.id, id));
+    res.status(204).send();
+  } catch (err) {
+    req.log.error(err, "DELETE /veiligheid/incidenten/:id");
     res.status(500).json({ error: "Interne fout" });
   }
 });

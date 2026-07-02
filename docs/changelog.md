@@ -10,6 +10,47 @@ Grote roadmap-fases staan ook in `docs/roadmap/gebouwd.md` en `docs/roadmap/acti
 
 ---
 
+## 2026-07-02 — Incidenten module (bijna-ongevallen & arbeidsongevallen)
+
+**Uitvoering:** volledig | **Getest:** typecheck
+
+**DB schema:**
+- `lib/db/src/schema/veiligheid.ts`: `veiligheidIncidentenTable` toegevoegd — type, datum/tijdstip, locatie, opdracht/gebouw FK, omschrijving, oorzaak, letsel, eerste hulp, getuigen (jsonb), genomen_maatregelen (jsonb), meldplichtig, gemeld_bij_arbeidsinspectie, status (open/in_behandeling/gesloten), foto_paden (jsonb), ai_voorstel, medewerker_naam/id, aangemaakt_door_id
+- SQL `CREATE TABLE veiligheid_incidenten` rechtstreeks uitgevoerd (geen drizzle push vereist)
+
+**OpenAPI + codegen:**
+- 4 nieuwe schemas: `VeiligheidIncident`, `VeiligheidIncidentInput`, `VeiligheidIncidentAiVoorstelInput`, `VeiligheidIncidentAiVoorstel`
+- 6 endpoints: `GET/POST /veiligheid/incidenten`, `GET/PATCH/DELETE /veiligheid/incidenten/{id}`, `POST /veiligheid/incidenten/ai-voorstel`
+- Codegen uitgevoerd; `typecheck:libs` geslaagd
+
+**Backend (`artifacts/api-server/src/routes/veiligheid.ts`):**
+- Volledige CRUD (lezen/aanmaken/bijwerken/verwijderen) voor incidenten
+- Bevoegdheden: `lezenVeiligheid` (toolbox:1) voor lezen+aanmaken, `schrijvenVeiligheid` (toolbox:3) voor PATCH, `verwijderenVeiligheid` (toolbox:4) voor DELETE
+- AI-voorstelroute: GPT-4o genereert omschrijving, oorzaak, maatregelen en meldplichtig-indicatie op basis van type + locatie
+- PL-notificatie: fire-and-forget e-mail naar alle gebruikers met `offertes:2+` na aanmaken incident; bevat NLA-waarschuwing als meldplichtig
+- `MailSoort` uitgebreid met `"incident_melding"`
+- `medewerkerNaam` afgeleid uit sessie; `medewerkerId` server-side opgezocht via gebruiker_id
+
+**Mobiele app (`artifacts/monteur-app/app/incidenten.tsx`):**
+- 6-staps formulier: type → locatie+project → omschrijving → letsel → maatregelen → bevestigen
+- AI-voorstel-knop op stap locatie (vult omschrijving/oorzaak/maatregelen/meldplichtig voor)
+- Opdracht-picker (hergebruikt `useGetMijnLmraOpenstaand`)
+- Meldplichtig-toggle met NLA-tekst en 24-uur-melding
+- Lijst van eigen incidenten met kleurcodering type/status
+- `Stack.Screen name="incidenten"` toegevoegd aan `_layout.tsx`
+- Incidenten-kaart toegevoegd aan `veiligheid/index.tsx`
+
+**Web (`artifacts/firevault/src/pages/veiligheid/incidenten.tsx`):**
+- Overzichtspagina met filter op type en status
+- NLA-meldplichtig banner (actieteller)
+- Status-workflow knoppen: open → in behandeling → gesloten
+- "Gemeld bij NLA" bevestigingsknop op meldplichtige incidenten
+- Detail-dialoog met alle velden; verwijderen voor beheerder
+- Route `/veiligheid/incidenten` toegevoegd aan `App.tsx`
+- `TriangleAlert` nav-item toegevoegd aan `beheerder-layout.tsx` (Veiligheid-sectie)
+
+---
+
 ## 2026-07-02 — Werkmaatschappij globale filter verwijderd + LMRA opdracht-koppeling (mobiel & web)
 
 **Uitvoering:** volledig | **Getest:** typecheck

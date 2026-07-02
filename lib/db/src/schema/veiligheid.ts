@@ -141,3 +141,34 @@ export const veiligheidMeldingenActiesTable = pgTable("veiligheid_meldingen_acti
 export type VeiligheidLmra = typeof veiligheidLmrasTable.$inferSelect;
 export type VeiligheidMelding = typeof veiligheidMeldingenTable.$inferSelect;
 export type VeiligheidMeldingActie = typeof veiligheidMeldingenActiesTable.$inferSelect;
+
+// ── Incidenten (bijna-ongevallen & ongevallen) ────────────────────────────────
+
+export const veiligheidIncidentenTable = pgTable("veiligheid_incidenten", {
+  id: serial("id").primaryKey(),
+  type: text("type").notNull().default("bijna_ongeval"),
+  datum: text("datum"),
+  tijdstip: text("tijdstip"),
+  locatieOmschrijving: text("locatie_omschrijving").notNull(),
+  gebouwId: integer("gebouw_id").references(() => gebouwenTable.id, { onDelete: "set null" }),
+  opdrachtId: integer("opdracht_id").references(() => opdrachtenTable.id, { onDelete: "set null" }),
+  omschrijving: text("omschrijving").notNull(),
+  oorzaak: text("oorzaak"),
+  letselBeschrijving: text("letsel_beschrijving"),
+  eersteHulpVerleend: boolean("eerste_hulp_verleend").notNull().default(false),
+  eersteHulpBeschrijving: text("eerste_hulp_beschrijving"),
+  getuigen: jsonb("getuigen").notNull().default([]),
+  genoemenMaatregelen: jsonb("genomen_maatregelen").notNull().default([]),
+  meldplichtig: boolean("meldplichtig").notNull().default(false),
+  gemeldBijArbeidsinspectie: boolean("gemeld_bij_arbeidsinspectie").notNull().default(false),
+  status: text("status").notNull().default("open"),
+  fotoPaden: jsonb("foto_paden").notNull().default([]),
+  aiVoorstel: boolean("ai_voorstel").notNull().default(false),
+  medewerkerNaam: text("medewerker_naam"),
+  medewerkerId: integer("medewerker_id").references(() => medewerkersTable.id, { onDelete: "set null" }),
+  aangemaaktDoorId: integer("aangemaakt_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+  bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+});
+
+export type VeiligheidIncident = typeof veiligheidIncidentenTable.$inferSelect;

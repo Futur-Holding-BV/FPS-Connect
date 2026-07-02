@@ -12854,6 +12854,131 @@ paths:
         '204':
           description: Verwijderd
 
+  /veiligheid/incidenten:
+    get:
+      operationId: getVeiligheidIncidenten
+      summary: Incidenten ophalen
+      tags: [Veiligheid]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/VeiligheidIncident'
+    post:
+      operationId: postVeiligheidIncidenten
+      summary: Incident registreren
+      tags: [Veiligheid]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VeiligheidIncidentInput'
+      responses:
+        '201':
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VeiligheidIncident'
+
+  /veiligheid/incidenten/ai-voorstel:
+    post:
+      operationId: postVeiligheidIncidentenAiVoorstel
+      summary: AI-voorstel genereren voor incident
+      tags: [Veiligheid]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VeiligheidIncidentAiVoorstelInput'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VeiligheidIncidentAiVoorstel'
+
+  /veiligheid/incidenten/upload-url:
+    get:
+      operationId: getVeiligheidIncidentenUploadUrl
+      summary: Upload-URL voor foto ophalen
+      tags: [Veiligheid]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [upload_url, object_path]
+                properties:
+                  upload_url:
+                    type: string
+                  object_path:
+                    type: string
+
+  /veiligheid/incidenten/{id}:
+    get:
+      operationId: getVeiligheidIncidentenId
+      summary: Incident ophalen
+      tags: [Veiligheid]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VeiligheidIncident'
+    patch:
+      operationId: patchVeiligheidIncidentenId
+      summary: Incident bijwerken
+      tags: [Veiligheid]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VeiligheidIncidentInput'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VeiligheidIncident'
+    delete:
+      operationId: deleteVeiligheidIncidentenId
+      summary: Incident verwijderen
+      tags: [Veiligheid]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Verwijderd
+
   /veiligheid/dashboard:
     get:
       operationId: getVeiligheidDashboard
@@ -27221,6 +27346,166 @@ components:
         toegewezen_aan_id:
           type: integer
           nullable: true
+
+    VeiligheidIncident:
+      type: object
+      required: [id, type, locatie_omschrijving, omschrijving, eerste_hulp_verleend, meldplichtig, gemeld_bij_arbeidsinspectie, status, foto_paden, ai_voorstel, aangemaakt_op]
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+        datum:
+          type: string
+          nullable: true
+        tijdstip:
+          type: string
+          nullable: true
+        locatie_omschrijving:
+          type: string
+        gebouw_id:
+          type: integer
+          nullable: true
+        gebouw_naam:
+          type: string
+          nullable: true
+        opdracht_id:
+          type: integer
+          nullable: true
+        opdracht_naam:
+          type: string
+          nullable: true
+        omschrijving:
+          type: string
+        oorzaak:
+          type: string
+          nullable: true
+        letsel_beschrijving:
+          type: string
+          nullable: true
+        eerste_hulp_verleend:
+          type: boolean
+        eerste_hulp_beschrijving:
+          type: string
+          nullable: true
+        getuigen:
+          type: array
+          items:
+            type: string
+        genomen_maatregelen:
+          type: array
+          items:
+            type: string
+        meldplichtig:
+          type: boolean
+        gemeld_bij_arbeidsinspectie:
+          type: boolean
+        status:
+          type: string
+        foto_paden:
+          type: array
+          items:
+            type: string
+        ai_voorstel:
+          type: boolean
+        medewerker_naam:
+          type: string
+          nullable: true
+        medewerker_id:
+          type: integer
+          nullable: true
+        aangemaakt_door_id:
+          type: integer
+          nullable: true
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+          nullable: true
+
+    VeiligheidIncidentInput:
+      type: object
+      required: [type, locatie_omschrijving, omschrijving]
+      properties:
+        type:
+          type: string
+        datum:
+          type: string
+          nullable: true
+        tijdstip:
+          type: string
+          nullable: true
+        locatie_omschrijving:
+          type: string
+        gebouw_id:
+          type: integer
+          nullable: true
+        opdracht_id:
+          type: integer
+          nullable: true
+        omschrijving:
+          type: string
+        oorzaak:
+          type: string
+          nullable: true
+        letsel_beschrijving:
+          type: string
+          nullable: true
+        eerste_hulp_verleend:
+          type: boolean
+        eerste_hulp_beschrijving:
+          type: string
+          nullable: true
+        getuigen:
+          type: array
+          items:
+            type: string
+        genomen_maatregelen:
+          type: array
+          items:
+            type: string
+        meldplichtig:
+          type: boolean
+        gemeld_bij_arbeidsinspectie:
+          type: boolean
+        status:
+          type: string
+        foto_paden:
+          type: array
+          items:
+            type: string
+        ai_voorstel:
+          type: boolean
+
+    VeiligheidIncidentAiVoorstelInput:
+      type: object
+      required: [type, locatie_omschrijving]
+      properties:
+        type:
+          type: string
+        locatie_omschrijving:
+          type: string
+        werkzaamheden_omschrijving:
+          type: string
+          nullable: true
+        opdracht_naam:
+          type: string
+          nullable: true
+
+    VeiligheidIncidentAiVoorstel:
+      type: object
+      required: [omschrijving, oorzaak, genomen_maatregelen, meldplichtig_indicatie]
+      properties:
+        omschrijving:
+          type: string
+        oorzaak:
+          type: string
+        genomen_maatregelen:
+          type: array
+          items:
+            type: string
+        meldplichtig_indicatie:
+          type: boolean
 
     VeiligheidMeldingActie:
       type: object

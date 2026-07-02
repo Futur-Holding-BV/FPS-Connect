@@ -26,6 +26,13 @@ const KAARTEN: Kaart[] = [
     pad: "/lmra",
   },
   {
+    sleutel: "incidenten",
+    titel: "Incidenten",
+    omschrijving: "Registreer een bijna-ongeval of arbeidsongeval conform de Arbeidsinspectie richtlijnen.",
+    icoon: "warning-outline",
+    pad: "/incidenten",
+  },
+  {
     sleutel: "toolboxen",
     titel: "Toolboxen",
     omschrijving: "Bekijk en bevestig toolbox-onderwerpen en maandopdrachten.",

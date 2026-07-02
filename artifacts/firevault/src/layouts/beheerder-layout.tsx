@@ -18,7 +18,7 @@ import {
   Trophy, HardDrive, ClipboardList, Smartphone, Plus, Hammer, PackageCheck,
   BookOpen, HardDriveUpload, CalendarCheck2, Settings2, ArchiveRestore,
   Inbox, Building2, Target, Handshake, Newspaper, CalendarRange, KeyRound,
-  ClipboardCheck, AlertTriangle, FileArchive, Receipt, ArrowUpRight, ScrollText,
+  ClipboardCheck, AlertTriangle, TriangleAlert, FileArchive, Receipt, ArrowUpRight, ScrollText,
   UserPlus, UserMinus, UserX, Car, GitBranch, ArrowLeft, ChevronDown, Palette, Monitor,
   Package, Upload, MapPin, Archive, ArrowLeftRight, BookmarkCheck,
 } from "lucide-react";
@@ -776,6 +776,17 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                                 <AlertTriangle />
                                 <span>Meldingen</span>
                                 <OpenMeldingenBadge />
+                              </Link>
+                            </SidebarMenuButton>
+                          </SidebarMenuItem>
+                          <SidebarMenuItem className="pl-5">
+                            <SidebarMenuButton
+                              asChild
+                              isActive={location === "/veiligheid/incidenten" || location.startsWith("/veiligheid/incidenten/")}
+                            >
+                              <Link href="/veiligheid/incidenten">
+                                <TriangleAlert />
+                                <span>Incidenten</span>
                               </Link>
                             </SidebarMenuButton>
                           </SidebarMenuItem>

@@ -16178,6 +16178,199 @@ export const DeleteVeiligheidMeldingenIdActiesActieIdResponse = zod.void()
 
 
 /**
+ * @summary Incidenten ophalen
+ */
+export const GetVeiligheidIncidentenResponseItem = zod.object({
+  "id": zod.number(),
+  "type": zod.string(),
+  "datum": zod.string().nullish(),
+  "tijdstip": zod.string().nullish(),
+  "locatie_omschrijving": zod.string(),
+  "gebouw_id": zod.number().nullish(),
+  "gebouw_naam": zod.string().nullish(),
+  "opdracht_id": zod.number().nullish(),
+  "opdracht_naam": zod.string().nullish(),
+  "omschrijving": zod.string(),
+  "oorzaak": zod.string().nullish(),
+  "letsel_beschrijving": zod.string().nullish(),
+  "eerste_hulp_verleend": zod.boolean(),
+  "eerste_hulp_beschrijving": zod.string().nullish(),
+  "getuigen": zod.array(zod.string()).optional(),
+  "genomen_maatregelen": zod.array(zod.string()).optional(),
+  "meldplichtig": zod.boolean(),
+  "gemeld_bij_arbeidsinspectie": zod.boolean(),
+  "status": zod.string(),
+  "foto_paden": zod.array(zod.string()),
+  "ai_voorstel": zod.boolean(),
+  "medewerker_naam": zod.string().nullish(),
+  "medewerker_id": zod.number().nullish(),
+  "aangemaakt_door_id": zod.number().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().nullish()
+})
+export const GetVeiligheidIncidentenResponse = zod.array(GetVeiligheidIncidentenResponseItem)
+
+
+/**
+ * @summary Incident registreren
+ */
+export const PostVeiligheidIncidentenBody = zod.object({
+  "type": zod.string(),
+  "datum": zod.string().nullish(),
+  "tijdstip": zod.string().nullish(),
+  "locatie_omschrijving": zod.string(),
+  "gebouw_id": zod.number().nullish(),
+  "opdracht_id": zod.number().nullish(),
+  "omschrijving": zod.string(),
+  "oorzaak": zod.string().nullish(),
+  "letsel_beschrijving": zod.string().nullish(),
+  "eerste_hulp_verleend": zod.boolean().optional(),
+  "eerste_hulp_beschrijving": zod.string().nullish(),
+  "getuigen": zod.array(zod.string()).optional(),
+  "genomen_maatregelen": zod.array(zod.string()).optional(),
+  "meldplichtig": zod.boolean().optional(),
+  "gemeld_bij_arbeidsinspectie": zod.boolean().optional(),
+  "status": zod.string().optional(),
+  "foto_paden": zod.array(zod.string()).optional(),
+  "ai_voorstel": zod.boolean().optional()
+})
+
+export const PostVeiligheidIncidentenResponse = zod.void()
+
+
+/**
+ * @summary AI-voorstel genereren voor incident
+ */
+export const PostVeiligheidIncidentenAiVoorstelBody = zod.object({
+  "type": zod.string(),
+  "locatie_omschrijving": zod.string(),
+  "werkzaamheden_omschrijving": zod.string().nullish(),
+  "opdracht_naam": zod.string().nullish()
+})
+
+export const PostVeiligheidIncidentenAiVoorstelResponse = zod.object({
+  "omschrijving": zod.string(),
+  "oorzaak": zod.string(),
+  "genomen_maatregelen": zod.array(zod.string()),
+  "meldplichtig_indicatie": zod.boolean()
+})
+
+
+/**
+ * @summary Upload-URL voor foto ophalen
+ */
+export const GetVeiligheidIncidentenUploadUrlResponse = zod.object({
+  "upload_url": zod.string(),
+  "object_path": zod.string()
+})
+
+
+/**
+ * @summary Incident ophalen
+ */
+export const GetVeiligheidIncidentenIdParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetVeiligheidIncidentenIdResponse = zod.object({
+  "id": zod.number(),
+  "type": zod.string(),
+  "datum": zod.string().nullish(),
+  "tijdstip": zod.string().nullish(),
+  "locatie_omschrijving": zod.string(),
+  "gebouw_id": zod.number().nullish(),
+  "gebouw_naam": zod.string().nullish(),
+  "opdracht_id": zod.number().nullish(),
+  "opdracht_naam": zod.string().nullish(),
+  "omschrijving": zod.string(),
+  "oorzaak": zod.string().nullish(),
+  "letsel_beschrijving": zod.string().nullish(),
+  "eerste_hulp_verleend": zod.boolean(),
+  "eerste_hulp_beschrijving": zod.string().nullish(),
+  "getuigen": zod.array(zod.string()).optional(),
+  "genomen_maatregelen": zod.array(zod.string()).optional(),
+  "meldplichtig": zod.boolean(),
+  "gemeld_bij_arbeidsinspectie": zod.boolean(),
+  "status": zod.string(),
+  "foto_paden": zod.array(zod.string()),
+  "ai_voorstel": zod.boolean(),
+  "medewerker_naam": zod.string().nullish(),
+  "medewerker_id": zod.number().nullish(),
+  "aangemaakt_door_id": zod.number().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().nullish()
+})
+
+
+/**
+ * @summary Incident bijwerken
+ */
+export const PatchVeiligheidIncidentenIdParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const PatchVeiligheidIncidentenIdBody = zod.object({
+  "type": zod.string(),
+  "datum": zod.string().nullish(),
+  "tijdstip": zod.string().nullish(),
+  "locatie_omschrijving": zod.string(),
+  "gebouw_id": zod.number().nullish(),
+  "opdracht_id": zod.number().nullish(),
+  "omschrijving": zod.string(),
+  "oorzaak": zod.string().nullish(),
+  "letsel_beschrijving": zod.string().nullish(),
+  "eerste_hulp_verleend": zod.boolean().optional(),
+  "eerste_hulp_beschrijving": zod.string().nullish(),
+  "getuigen": zod.array(zod.string()).optional(),
+  "genomen_maatregelen": zod.array(zod.string()).optional(),
+  "meldplichtig": zod.boolean().optional(),
+  "gemeld_bij_arbeidsinspectie": zod.boolean().optional(),
+  "status": zod.string().optional(),
+  "foto_paden": zod.array(zod.string()).optional(),
+  "ai_voorstel": zod.boolean().optional()
+})
+
+export const PatchVeiligheidIncidentenIdResponse = zod.object({
+  "id": zod.number(),
+  "type": zod.string(),
+  "datum": zod.string().nullish(),
+  "tijdstip": zod.string().nullish(),
+  "locatie_omschrijving": zod.string(),
+  "gebouw_id": zod.number().nullish(),
+  "gebouw_naam": zod.string().nullish(),
+  "opdracht_id": zod.number().nullish(),
+  "opdracht_naam": zod.string().nullish(),
+  "omschrijving": zod.string(),
+  "oorzaak": zod.string().nullish(),
+  "letsel_beschrijving": zod.string().nullish(),
+  "eerste_hulp_verleend": zod.boolean(),
+  "eerste_hulp_beschrijving": zod.string().nullish(),
+  "getuigen": zod.array(zod.string()).optional(),
+  "genomen_maatregelen": zod.array(zod.string()).optional(),
+  "meldplichtig": zod.boolean(),
+  "gemeld_bij_arbeidsinspectie": zod.boolean(),
+  "status": zod.string(),
+  "foto_paden": zod.array(zod.string()),
+  "ai_voorstel": zod.boolean(),
+  "medewerker_naam": zod.string().nullish(),
+  "medewerker_id": zod.number().nullish(),
+  "aangemaakt_door_id": zod.number().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().nullish()
+})
+
+
+/**
+ * @summary Incident verwijderen
+ */
+export const DeleteVeiligheidIncidentenIdParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteVeiligheidIncidentenIdResponse = zod.void()
+
+
+/**
  * @summary Veiligheids-KPI dashboard ophalen
  */
 export const GetVeiligheidDashboardResponse = zod.object({

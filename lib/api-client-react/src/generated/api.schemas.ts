@@ -6727,6 +6727,70 @@ export interface VeiligheidMeldingInput {
   toegewezen_aan_id?: number | null;
 }
 
+export interface VeiligheidIncident {
+  id: number;
+  type: string;
+  datum?: string | null;
+  tijdstip?: string | null;
+  locatie_omschrijving: string;
+  gebouw_id?: number | null;
+  gebouw_naam?: string | null;
+  opdracht_id?: number | null;
+  opdracht_naam?: string | null;
+  omschrijving: string;
+  oorzaak?: string | null;
+  letsel_beschrijving?: string | null;
+  eerste_hulp_verleend: boolean;
+  eerste_hulp_beschrijving?: string | null;
+  getuigen?: string[];
+  genomen_maatregelen?: string[];
+  meldplichtig: boolean;
+  gemeld_bij_arbeidsinspectie: boolean;
+  status: string;
+  foto_paden: string[];
+  ai_voorstel: boolean;
+  medewerker_naam?: string | null;
+  medewerker_id?: number | null;
+  aangemaakt_door_id?: number | null;
+  aangemaakt_op: string;
+  bijgewerkt_op?: string | null;
+}
+
+export interface VeiligheidIncidentInput {
+  type: string;
+  datum?: string | null;
+  tijdstip?: string | null;
+  locatie_omschrijving: string;
+  gebouw_id?: number | null;
+  opdracht_id?: number | null;
+  omschrijving: string;
+  oorzaak?: string | null;
+  letsel_beschrijving?: string | null;
+  eerste_hulp_verleend?: boolean;
+  eerste_hulp_beschrijving?: string | null;
+  getuigen?: string[];
+  genomen_maatregelen?: string[];
+  meldplichtig?: boolean;
+  gemeld_bij_arbeidsinspectie?: boolean;
+  status?: string;
+  foto_paden?: string[];
+  ai_voorstel?: boolean;
+}
+
+export interface VeiligheidIncidentAiVoorstelInput {
+  type: string;
+  locatie_omschrijving: string;
+  werkzaamheden_omschrijving?: string | null;
+  opdracht_naam?: string | null;
+}
+
+export interface VeiligheidIncidentAiVoorstel {
+  omschrijving: string;
+  oorzaak: string;
+  genomen_maatregelen: string[];
+  meldplichtig_indicatie: boolean;
+}
+
 export interface VeiligheidMeldingActie {
   id: number;
   melding_id: number;
@@ -9499,6 +9563,11 @@ export type GetVeiligheidLmrasUploadUrl200 = {
 };
 
 export type GetVeiligheidMeldingenUploadUrl200 = {
+  upload_url: string;
+  object_path: string;
+};
+
+export type GetVeiligheidIncidentenUploadUrl200 = {
   upload_url: string;
   object_path: string;
 };

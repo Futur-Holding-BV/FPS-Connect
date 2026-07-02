@@ -213,6 +213,7 @@ import type {
   GetSalarisarchiefAuditlogParams,
   GetSalarisarchiefDocumentenParams,
   GetScabMailsParams,
+  GetVeiligheidIncidentenUploadUrl200,
   GetVeiligheidLmrasUploadUrl200,
   GetVeiligheidMeldingenUploadUrl200,
   GetVeiligheidToolboxenParams,
@@ -583,6 +584,10 @@ import type {
   VeiligheidAfronding,
   VeiligheidAfrondingInput,
   VeiligheidDashboard,
+  VeiligheidIncident,
+  VeiligheidIncidentAiVoorstel,
+  VeiligheidIncidentAiVoorstelInput,
+  VeiligheidIncidentInput,
   VeiligheidLmra,
   VeiligheidLmraInput,
   VeiligheidMelding,
@@ -45800,6 +45805,518 @@ export const useDeleteVeiligheidMeldingenIdActiesActieId = <TError = ErrorType<u
         TContext
       > => {
       return useMutation(getDeleteVeiligheidMeldingenIdActiesActieIdMutationOptions(options));
+    }
+
+export const getGetVeiligheidIncidentenUrl = () => {
+
+
+
+
+  return `/api/veiligheid/incidenten`
+}
+
+/**
+ * @summary Incidenten ophalen
+ */
+export const getVeiligheidIncidenten = async ( options?: RequestInit): Promise<VeiligheidIncident[]> => {
+
+  return customFetch<VeiligheidIncident[]>(getGetVeiligheidIncidentenUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetVeiligheidIncidentenQueryKey = () => {
+    return [
+    `/api/veiligheid/incidenten`
+    ] as const;
+    }
+
+
+export const getGetVeiligheidIncidentenQueryOptions = <TData = Awaited<ReturnType<typeof getVeiligheidIncidenten>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getVeiligheidIncidenten>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetVeiligheidIncidentenQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getVeiligheidIncidenten>>> = ({ signal }) => getVeiligheidIncidenten({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getVeiligheidIncidenten>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetVeiligheidIncidentenQueryResult = NonNullable<Awaited<ReturnType<typeof getVeiligheidIncidenten>>>
+export type GetVeiligheidIncidentenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Incidenten ophalen
+ */
+
+export function useGetVeiligheidIncidenten<TData = Awaited<ReturnType<typeof getVeiligheidIncidenten>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getVeiligheidIncidenten>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetVeiligheidIncidentenQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getPostVeiligheidIncidentenUrl = () => {
+
+
+
+
+  return `/api/veiligheid/incidenten`
+}
+
+/**
+ * @summary Incident registreren
+ */
+export const postVeiligheidIncidenten = async (veiligheidIncidentInput: VeiligheidIncidentInput, options?: RequestInit): Promise<VeiligheidIncident> => {
+
+  return customFetch<VeiligheidIncident>(getPostVeiligheidIncidentenUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(veiligheidIncidentInput)
+  }
+);}
+
+
+
+
+export const getPostVeiligheidIncidentenMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postVeiligheidIncidenten>>, TError,{data: BodyType<VeiligheidIncidentInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof postVeiligheidIncidenten>>, TError,{data: BodyType<VeiligheidIncidentInput>}, TContext> => {
+
+const mutationKey = ['postVeiligheidIncidenten'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postVeiligheidIncidenten>>, {data: BodyType<VeiligheidIncidentInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  postVeiligheidIncidenten(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostVeiligheidIncidentenMutationResult = NonNullable<Awaited<ReturnType<typeof postVeiligheidIncidenten>>>
+    export type PostVeiligheidIncidentenMutationBody = BodyType<VeiligheidIncidentInput>
+    export type PostVeiligheidIncidentenMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Incident registreren
+ */
+export const usePostVeiligheidIncidenten = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postVeiligheidIncidenten>>, TError,{data: BodyType<VeiligheidIncidentInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof postVeiligheidIncidenten>>,
+        TError,
+        {data: BodyType<VeiligheidIncidentInput>},
+        TContext
+      > => {
+      return useMutation(getPostVeiligheidIncidentenMutationOptions(options));
+    }
+
+export const getPostVeiligheidIncidentenAiVoorstelUrl = () => {
+
+
+
+
+  return `/api/veiligheid/incidenten/ai-voorstel`
+}
+
+/**
+ * @summary AI-voorstel genereren voor incident
+ */
+export const postVeiligheidIncidentenAiVoorstel = async (veiligheidIncidentAiVoorstelInput: VeiligheidIncidentAiVoorstelInput, options?: RequestInit): Promise<VeiligheidIncidentAiVoorstel> => {
+
+  return customFetch<VeiligheidIncidentAiVoorstel>(getPostVeiligheidIncidentenAiVoorstelUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(veiligheidIncidentAiVoorstelInput)
+  }
+);}
+
+
+
+
+export const getPostVeiligheidIncidentenAiVoorstelMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postVeiligheidIncidentenAiVoorstel>>, TError,{data: BodyType<VeiligheidIncidentAiVoorstelInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof postVeiligheidIncidentenAiVoorstel>>, TError,{data: BodyType<VeiligheidIncidentAiVoorstelInput>}, TContext> => {
+
+const mutationKey = ['postVeiligheidIncidentenAiVoorstel'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postVeiligheidIncidentenAiVoorstel>>, {data: BodyType<VeiligheidIncidentAiVoorstelInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  postVeiligheidIncidentenAiVoorstel(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostVeiligheidIncidentenAiVoorstelMutationResult = NonNullable<Awaited<ReturnType<typeof postVeiligheidIncidentenAiVoorstel>>>
+    export type PostVeiligheidIncidentenAiVoorstelMutationBody = BodyType<VeiligheidIncidentAiVoorstelInput>
+    export type PostVeiligheidIncidentenAiVoorstelMutationError = ErrorType<unknown>
+
+    /**
+ * @summary AI-voorstel genereren voor incident
+ */
+export const usePostVeiligheidIncidentenAiVoorstel = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postVeiligheidIncidentenAiVoorstel>>, TError,{data: BodyType<VeiligheidIncidentAiVoorstelInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof postVeiligheidIncidentenAiVoorstel>>,
+        TError,
+        {data: BodyType<VeiligheidIncidentAiVoorstelInput>},
+        TContext
+      > => {
+      return useMutation(getPostVeiligheidIncidentenAiVoorstelMutationOptions(options));
+    }
+
+export const getGetVeiligheidIncidentenUploadUrlUrl = () => {
+
+
+
+
+  return `/api/veiligheid/incidenten/upload-url`
+}
+
+/**
+ * @summary Upload-URL voor foto ophalen
+ */
+export const getVeiligheidIncidentenUploadUrl = async ( options?: RequestInit): Promise<GetVeiligheidIncidentenUploadUrl200> => {
+
+  return customFetch<GetVeiligheidIncidentenUploadUrl200>(getGetVeiligheidIncidentenUploadUrlUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetVeiligheidIncidentenUploadUrlQueryKey = () => {
+    return [
+    `/api/veiligheid/incidenten/upload-url`
+    ] as const;
+    }
+
+
+export const getGetVeiligheidIncidentenUploadUrlQueryOptions = <TData = Awaited<ReturnType<typeof getVeiligheidIncidentenUploadUrl>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getVeiligheidIncidentenUploadUrl>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetVeiligheidIncidentenUploadUrlQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getVeiligheidIncidentenUploadUrl>>> = ({ signal }) => getVeiligheidIncidentenUploadUrl({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getVeiligheidIncidentenUploadUrl>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetVeiligheidIncidentenUploadUrlQueryResult = NonNullable<Awaited<ReturnType<typeof getVeiligheidIncidentenUploadUrl>>>
+export type GetVeiligheidIncidentenUploadUrlQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Upload-URL voor foto ophalen
+ */
+
+export function useGetVeiligheidIncidentenUploadUrl<TData = Awaited<ReturnType<typeof getVeiligheidIncidentenUploadUrl>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getVeiligheidIncidentenUploadUrl>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetVeiligheidIncidentenUploadUrlQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetVeiligheidIncidentenIdUrl = (id: number,) => {
+
+
+
+
+  return `/api/veiligheid/incidenten/${id}`
+}
+
+/**
+ * @summary Incident ophalen
+ */
+export const getVeiligheidIncidentenId = async (id: number, options?: RequestInit): Promise<VeiligheidIncident> => {
+
+  return customFetch<VeiligheidIncident>(getGetVeiligheidIncidentenIdUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetVeiligheidIncidentenIdQueryKey = (id: number,) => {
+    return [
+    `/api/veiligheid/incidenten/${id}`
+    ] as const;
+    }
+
+
+export const getGetVeiligheidIncidentenIdQueryOptions = <TData = Awaited<ReturnType<typeof getVeiligheidIncidentenId>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getVeiligheidIncidentenId>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetVeiligheidIncidentenIdQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getVeiligheidIncidentenId>>> = ({ signal }) => getVeiligheidIncidentenId(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getVeiligheidIncidentenId>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetVeiligheidIncidentenIdQueryResult = NonNullable<Awaited<ReturnType<typeof getVeiligheidIncidentenId>>>
+export type GetVeiligheidIncidentenIdQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Incident ophalen
+ */
+
+export function useGetVeiligheidIncidentenId<TData = Awaited<ReturnType<typeof getVeiligheidIncidentenId>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getVeiligheidIncidentenId>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetVeiligheidIncidentenIdQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getPatchVeiligheidIncidentenIdUrl = (id: number,) => {
+
+
+
+
+  return `/api/veiligheid/incidenten/${id}`
+}
+
+/**
+ * @summary Incident bijwerken
+ */
+export const patchVeiligheidIncidentenId = async (id: number,
+    veiligheidIncidentInput: VeiligheidIncidentInput, options?: RequestInit): Promise<VeiligheidIncident> => {
+
+  return customFetch<VeiligheidIncident>(getPatchVeiligheidIncidentenIdUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(veiligheidIncidentInput)
+  }
+);}
+
+
+
+
+export const getPatchVeiligheidIncidentenIdMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchVeiligheidIncidentenId>>, TError,{id: number;data: BodyType<VeiligheidIncidentInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof patchVeiligheidIncidentenId>>, TError,{id: number;data: BodyType<VeiligheidIncidentInput>}, TContext> => {
+
+const mutationKey = ['patchVeiligheidIncidentenId'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof patchVeiligheidIncidentenId>>, {id: number;data: BodyType<VeiligheidIncidentInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  patchVeiligheidIncidentenId(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PatchVeiligheidIncidentenIdMutationResult = NonNullable<Awaited<ReturnType<typeof patchVeiligheidIncidentenId>>>
+    export type PatchVeiligheidIncidentenIdMutationBody = BodyType<VeiligheidIncidentInput>
+    export type PatchVeiligheidIncidentenIdMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Incident bijwerken
+ */
+export const usePatchVeiligheidIncidentenId = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchVeiligheidIncidentenId>>, TError,{id: number;data: BodyType<VeiligheidIncidentInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof patchVeiligheidIncidentenId>>,
+        TError,
+        {id: number;data: BodyType<VeiligheidIncidentInput>},
+        TContext
+      > => {
+      return useMutation(getPatchVeiligheidIncidentenIdMutationOptions(options));
+    }
+
+export const getDeleteVeiligheidIncidentenIdUrl = (id: number,) => {
+
+
+
+
+  return `/api/veiligheid/incidenten/${id}`
+}
+
+/**
+ * @summary Incident verwijderen
+ */
+export const deleteVeiligheidIncidentenId = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteVeiligheidIncidentenIdUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteVeiligheidIncidentenIdMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteVeiligheidIncidentenId>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteVeiligheidIncidentenId>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteVeiligheidIncidentenId'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteVeiligheidIncidentenId>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteVeiligheidIncidentenId(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteVeiligheidIncidentenIdMutationResult = NonNullable<Awaited<ReturnType<typeof deleteVeiligheidIncidentenId>>>
+
+    export type DeleteVeiligheidIncidentenIdMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Incident verwijderen
+ */
+export const useDeleteVeiligheidIncidentenId = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteVeiligheidIncidentenId>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteVeiligheidIncidentenId>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteVeiligheidIncidentenIdMutationOptions(options));
     }
 
 export const getGetVeiligheidDashboardUrl = () => {
