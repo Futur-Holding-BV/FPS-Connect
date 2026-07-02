@@ -1971,12 +1971,17 @@ paths:
   /mijn/lmra-status:
     get:
       operationId: getMijnLmraStatus
-      summary: LMRA-status voor gebouw ophalen (vereist / voltooid)
+      summary: LMRA-status voor gebouw ophalen (vereist / voltooid / dwingend)
       tags: [mijn]
       parameters:
         - in: query
           name: gebouw_id
-          required: true
+          required: false
+          schema:
+            type: integer
+        - in: query
+          name: opdracht_id
+          required: false
           schema:
             type: integer
       responses:
@@ -1986,6 +1991,21 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/LmraStatus'
+
+  /mijn/lmra-openstaand:
+    get:
+      operationId: getMijnLmraOpenstaand
+      summary: Alle openstaande LMRA-vereisten voor de ingelogde medewerker
+      tags: [mijn]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LmraOpenstaandItem'
 
   /mijn/verlofsoorten:
     get:
@@ -26942,6 +26962,12 @@ components:
         gebouw_naam:
           type: string
           nullable: true
+        opdracht_id:
+          type: integer
+          nullable: true
+        opdracht_naam:
+          type: string
+          nullable: true
         project_naam:
           type: string
           nullable: true
@@ -26996,6 +27022,9 @@ components:
         gebouw_id:
           type: integer
           nullable: true
+        opdracht_id:
+          type: integer
+          nullable: true
         medewerker_id:
           type: integer
           nullable: true
@@ -27032,12 +27061,59 @@ components:
 
     LmraStatus:
       type: object
-      required: [vereist, voltooid]
+      required: [vereist, voltooid, dwingend, dagen_openstaand]
       properties:
         vereist:
           type: boolean
         voltooid:
           type: boolean
+        dwingend:
+          type: boolean
+          description: "true als de medewerker 3+ kalenderdagen op het project zit zonder LMRA"
+        dagen_openstaand:
+          type: integer
+          description: "Aantal kalenderdagen sinds eerste werkdag op dit project"
+        eerste_werkdag_datum:
+          type: string
+          nullable: true
+        opdracht_id:
+          type: integer
+          nullable: true
+        opdracht_naam:
+          type: string
+          nullable: true
+        lmra_id:
+          type: integer
+          nullable: true
+        reden_vrijstelling:
+          type: string
+          nullable: true
+
+    LmraOpenstaandItem:
+      type: object
+      required: [opdracht_id, opdracht_naam, vereist, voltooid, dwingend, dagen_openstaand]
+      properties:
+        opdracht_id:
+          type: integer
+        opdracht_naam:
+          type: string
+        gebouw_id:
+          type: integer
+          nullable: true
+        gebouw_naam:
+          type: string
+          nullable: true
+        vereist:
+          type: boolean
+        voltooid:
+          type: boolean
+        dwingend:
+          type: boolean
+        dagen_openstaand:
+          type: integer
+        eerste_werkdag_datum:
+          type: string
+          nullable: true
         lmra_id:
           type: integer
           nullable: true

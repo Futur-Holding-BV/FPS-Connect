@@ -19,8 +19,10 @@ import {
   useGetVeiligheidLmras,
   usePostVeiligheidLmras,
   useGetWerkdagVandaag,
+  useGetMijnLmraOpenstaand,
   getGetVeiligheidLmrasQueryKey,
   type VeiligheidLmra,
+  type LmraOpenstaandItem,
 } from "@workspace/api-client-react";
 import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/context/auth";
@@ -53,7 +55,8 @@ type FormState = {
   gebouwNaam: string;
   locatieOmschrijving: string;
   werkzaamheden: string;
-  projectNaam: string;
+  opdrachtId: number | null;
+  opdrachtNaam: string;
   risicos: string[];
   maatregelen: string[];
   veiligVoorAanvang: boolean;
@@ -65,7 +68,8 @@ const leegForm = (): FormState => ({
   gebouwNaam: "",
   locatieOmschrijving: "",
   werkzaamheden: "",
-  projectNaam: "",
+  opdrachtId: null,
+  opdrachtNaam: "",
   risicos: [],
   maatregelen: [],
   veiligVoorAanvang: true,
@@ -92,8 +96,8 @@ export default function LmraPagina() {
   const [isBezigOpslaan, setIsBezigOpslaan] = useState(false);
 
   const { data: lmras, isLoading, refetch } = useGetVeiligheidLmras();
-
   const { data: werkdagData } = useGetWerkdagVandaag();
+  const { data: lmraOpenstaand } = useGetMijnLmraOpenstaand();
 
   useFocusEffect(useCallback(() => { refetch(); }, [refetch]));
 
@@ -142,6 +146,23 @@ export default function LmraPagina() {
     setFormulier((f) => ({ ...f, gebouwId: null, gebouwNaam: "" }));
   };
 
+  const kiesOpdracht = (o: LmraOpenstaandItem) => {
+    setFormulier((f) => ({
+      ...f,
+      opdrachtId: o.opdracht_id,
+      opdrachtNaam: o.opdracht_naam,
+      gebouwId: f.gebouwId ?? o.gebouw_id ?? null,
+      gebouwNaam: f.gebouwNaam || o.gebouw_naam || "",
+      locatieOmschrijving: f.locatieOmschrijving || o.gebouw_naam || "",
+    }));
+  };
+
+  const wisOpdracht = () => {
+    setFormulier((f) => ({ ...f, opdrachtId: null, opdrachtNaam: "" }));
+  };
+
+  const opdrachtOpties = useMemo<LmraOpenstaandItem[]>(() => lmraOpenstaand ?? [], [lmraOpenstaand]);
+
   const aanmakenMutatie = usePostVeiligheidLmras({
     mutation: {
       onSuccess: () => {
@@ -185,9 +206,10 @@ export default function LmraPagina() {
     aanmakenMutatie.mutate({
       data: {
         gebouw_id: formulier.gebouwId ?? undefined,
+        opdracht_id: formulier.opdrachtId ?? undefined,
         locatie_omschrijving: formulier.locatieOmschrijving,
         werkzaamheden: formulier.werkzaamheden,
-        project_naam: formulier.projectNaam || null,
+        project_naam: formulier.opdrachtNaam || null,
         risicos: formulier.risicos,
         maatregelen: formulier.maatregelen,
         veilig_voor_aanvang: formulier.veiligVoorAanvang,
@@ -246,9 +268,11 @@ export default function LmraPagina() {
           {item.medewerker_naam && (
             <Text style={{ color: c.mutedForeground, fontSize: 12 }}>{item.medewerker_naam}</Text>
           )}
-          {item.project_naam && (
-            <View style={{ backgroundColor: c.muted, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 }}>
-              <Text style={{ color: c.mutedForeground, fontSize: 11 }}>{item.project_naam}</Text>
+          {(item.opdracht_naam ?? item.project_naam) && (
+            <View style={{ backgroundColor: "#dbeafe", borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 }}>
+              <Text style={{ color: "#1d4ed8", fontSize: 11, fontWeight: "500" }}>
+                {item.opdracht_naam ?? item.project_naam}
+              </Text>
             </View>
           )}
           <Text style={{ color: c.mutedForeground, fontSize: 12 }}>{datumLabel(item.aangemaakt_op)}</Text>
@@ -430,21 +454,59 @@ export default function LmraPagina() {
               />
             </View>
 
-            {/* Project */}
-            <View>
-              <Text style={{ color: c.mutedForeground, fontSize: 13, marginBottom: 4 }}>Project (optioneel)</Text>
-              <TextInput
-                value={formulier.projectNaam}
-                onChangeText={(v) => setFormulier((f) => ({ ...f, projectNaam: v }))}
-                placeholder="Projectnaam of -nummer"
-                placeholderTextColor={c.mutedForeground}
-                style={{
-                  backgroundColor: c.card, color: c.foreground, borderRadius: 8,
-                  borderWidth: 1, borderColor: c.border,
-                  paddingHorizontal: 12, paddingVertical: 10, fontSize: 15,
-                }}
-              />
-            </View>
+            {/* Opdracht koppeling */}
+            {opdrachtOpties.length > 0 && (
+              <View style={{
+                backgroundColor: formulier.opdrachtId ? "#eff6ff" : c.card,
+                borderRadius: 12, padding: 12,
+                borderWidth: 1,
+                borderColor: formulier.opdrachtId ? "#93c5fd" : c.border,
+              }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 8 }}>
+                  <Ionicons name="briefcase-outline" size={14} color={formulier.opdrachtId ? "#2563eb" : c.mutedForeground} />
+                  <Text style={{ color: formulier.opdrachtId ? "#2563eb" : c.mutedForeground, fontSize: 13, fontWeight: "500" }}>
+                    {formulier.opdrachtId ? "Opdracht gekoppeld" : "Kies opdracht / project"}
+                  </Text>
+                </View>
+                {formulier.opdrachtId ? (
+                  <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                    <Text style={{ color: "#1d4ed8", fontWeight: "600", fontSize: 15, flex: 1 }}>
+                      {formulier.opdrachtNaam}
+                    </Text>
+                    <Pressable onPress={wisOpdracht} style={{ paddingHorizontal: 8, paddingVertical: 4 }}>
+                      <Text style={{ color: "#2563eb", fontSize: 13 }}>Wijzigen</Text>
+                    </Pressable>
+                  </View>
+                ) : (
+                  <View style={{ gap: 6 }}>
+                    {opdrachtOpties.map((o) => (
+                      <Pressable
+                        key={o.opdracht_id}
+                        onPress={() => kiesOpdracht(o)}
+                        style={{
+                          backgroundColor: c.dark, borderRadius: 8, borderWidth: 1,
+                          borderColor: c.border, paddingHorizontal: 12, paddingVertical: 10,
+                          flexDirection: "row", alignItems: "center", gap: 8,
+                        }}
+                      >
+                        <Ionicons name="briefcase-outline" size={13} color={c.primary} />
+                        <View style={{ flex: 1 }}>
+                          <Text style={{ color: c.foreground, fontSize: 14, fontWeight: "500" }}>{o.opdracht_naam}</Text>
+                          {o.gebouw_naam && (
+                            <Text style={{ color: c.mutedForeground, fontSize: 12 }}>{o.gebouw_naam}</Text>
+                          )}
+                        </View>
+                        {o.dwingend && (
+                          <View style={{ backgroundColor: "#fee2e2", borderRadius: 4, paddingHorizontal: 5, paddingVertical: 2 }}>
+                            <Text style={{ color: "#dc2626", fontSize: 10, fontWeight: "600" }}>Vereist</Text>
+                          </View>
+                        )}
+                      </Pressable>
+                    ))}
+                  </View>
+                )}
+              </View>
+            )}
 
             {/* Risico's */}
             <View>

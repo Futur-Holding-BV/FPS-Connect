@@ -10,6 +10,28 @@ Grote roadmap-fases staan ook in `docs/roadmap/gebouwd.md` en `docs/roadmap/acti
 
 ---
 
+## 2026-07-02 — Werkmaatschappij globale filter verwijderd + LMRA opdracht-koppeling (mobiel & web)
+
+**Uitvoering:** volledig | **Getest:** typecheck
+
+**Werkmaatschappij — globale selector verwijderd:**
+- `beheerder-layout.tsx`: `<Select>` dropdown linksboven verwijderd; `useWerkmaatschappij` import + destructuring volledig uit de layout verwijderd
+- `dashboard/beheerder.tsx`: "Actieve werkmaatschappij"-banner verwijderd; import opgeruimd
+- `beheer/documentopmaak.tsx`: initieel werkgever-ID kiest nu altijd `werkgevers[0]` (niet meer afhankelijk van globale context)
+- `WerkmaatschappijProvider` en `useWerkmaatschappij` hook blijven als data-provider voor formulieren (per-record keuze) — de *schakelaar-UX* is weg, de data-laag niet
+
+**LMRA — mobiel (T005):**
+- `_layout.tsx`: `LmraBewaker` component toegevoegd — pollt `/mijn/lmra-openstaand` elke 60s; bij `dwingend=true` (dag 4+) toont een niet-wegklikbaar blocking Modal met projectnaam, aantal dagen en knop "LMRA invullen" → navigeert naar `/lmra`
+- `lmra.tsx` mobiel: vrij tekstveld "Project" vervangen door opdracht-picker (uit `useGetMijnLmraOpenstaand`); toont gebouwnaam als subtitel + "Vereist"-badge bij dwingend items; bij keuze wordt ook gebouw automatisch ingevuld; `opdracht_id` wordt meegezonden bij opslaan
+- Lijst: `opdracht_naam` badge (blauw) vóór `project_naam` als fallback
+
+**LMRA — web (T006):**
+- `lmra.tsx` web: `opdracht_id` toegevoegd aan `LmraFormState` + `leegFormulier` + `openBewerken` + `opslaan`
+- Form: als `useGetMijnLmraOpenstaand` items teruggeeft → Select dropdown met opdrachten (incl. "Vereist"-badge); anders vrij tekstveld als fallback
+- Lijst + detail dialoog: `opdracht_naam` badge (met Briefcase icoon) getoond; `project_naam` alleen als fallback
+
+---
+
 ## 2026-07-02 — Inbox: automatische bevestigingsmail, aanvullende vragen en PL-planningbewaking
 
 **Uitvoering:** volledig | **Getest:** typecheck + serverlog

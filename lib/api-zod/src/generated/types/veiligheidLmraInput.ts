@@ -8,6 +8,7 @@
 
 export interface VeiligheidLmraInput {
   gebouw_id?: number | null;
+  opdracht_id?: number | null;
   medewerker_id?: number | null;
   project_naam?: string | null;
   locatie_omschrijving: string;

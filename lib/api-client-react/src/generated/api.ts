@@ -336,6 +336,7 @@ import type {
   ListZzpOvereenkomstenParams,
   LmraAiVoorstel,
   LmraAiVoorstelInput,
+  LmraOpenstaandItem,
   LmraStatus,
   LoginInput,
   LoginPoging,
@@ -6692,7 +6693,7 @@ export const useVoltooienToolboxMaandopdracht = <TError = ErrorType<unknown>,
       return useMutation(getVoltooienToolboxMaandopdrachtMutationOptions(options));
     }
 
-export const getGetMijnLmraStatusUrl = (params: GetMijnLmraStatusParams,) => {
+export const getGetMijnLmraStatusUrl = (params?: GetMijnLmraStatusParams,) => {
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
@@ -6708,9 +6709,9 @@ export const getGetMijnLmraStatusUrl = (params: GetMijnLmraStatusParams,) => {
 }
 
 /**
- * @summary LMRA-status voor gebouw ophalen (vereist / voltooid)
+ * @summary LMRA-status voor gebouw ophalen (vereist / voltooid / dwingend)
  */
-export const getMijnLmraStatus = async (params: GetMijnLmraStatusParams, options?: RequestInit): Promise<LmraStatus> => {
+export const getMijnLmraStatus = async (params?: GetMijnLmraStatusParams, options?: RequestInit): Promise<LmraStatus> => {
 
   return customFetch<LmraStatus>(getGetMijnLmraStatusUrl(params),
   {
@@ -6732,7 +6733,7 @@ export const getGetMijnLmraStatusQueryKey = (params?: GetMijnLmraStatusParams,) 
     }
 
 
-export const getGetMijnLmraStatusQueryOptions = <TData = Awaited<ReturnType<typeof getMijnLmraStatus>>, TError = ErrorType<unknown>>(params: GetMijnLmraStatusParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMijnLmraStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getGetMijnLmraStatusQueryOptions = <TData = Awaited<ReturnType<typeof getMijnLmraStatus>>, TError = ErrorType<unknown>>(params?: GetMijnLmraStatusParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMijnLmraStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
@@ -6755,15 +6756,92 @@ export type GetMijnLmraStatusQueryError = ErrorType<unknown>
 
 
 /**
- * @summary LMRA-status voor gebouw ophalen (vereist / voltooid)
+ * @summary LMRA-status voor gebouw ophalen (vereist / voltooid / dwingend)
  */
 
 export function useGetMijnLmraStatus<TData = Awaited<ReturnType<typeof getMijnLmraStatus>>, TError = ErrorType<unknown>>(
- params: GetMijnLmraStatusParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMijnLmraStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+ params?: GetMijnLmraStatusParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMijnLmraStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetMijnLmraStatusQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetMijnLmraOpenstaandUrl = () => {
+
+
+
+
+  return `/api/mijn/lmra-openstaand`
+}
+
+/**
+ * @summary Alle openstaande LMRA-vereisten voor de ingelogde medewerker
+ */
+export const getMijnLmraOpenstaand = async ( options?: RequestInit): Promise<LmraOpenstaandItem[]> => {
+
+  return customFetch<LmraOpenstaandItem[]>(getGetMijnLmraOpenstaandUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetMijnLmraOpenstaandQueryKey = () => {
+    return [
+    `/api/mijn/lmra-openstaand`
+    ] as const;
+    }
+
+
+export const getGetMijnLmraOpenstaandQueryOptions = <TData = Awaited<ReturnType<typeof getMijnLmraOpenstaand>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMijnLmraOpenstaand>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetMijnLmraOpenstaandQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMijnLmraOpenstaand>>> = ({ signal }) => getMijnLmraOpenstaand({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMijnLmraOpenstaand>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetMijnLmraOpenstaandQueryResult = NonNullable<Awaited<ReturnType<typeof getMijnLmraOpenstaand>>>
+export type GetMijnLmraOpenstaandQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Alle openstaande LMRA-vereisten voor de ingelogde medewerker
+ */
+
+export function useGetMijnLmraOpenstaand<TData = Awaited<ReturnType<typeof getMijnLmraOpenstaand>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMijnLmraOpenstaand>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetMijnLmraOpenstaandQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

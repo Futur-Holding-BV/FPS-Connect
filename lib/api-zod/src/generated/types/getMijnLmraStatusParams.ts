@@ -7,5 +7,6 @@
  */
 
 export type GetMijnLmraStatusParams = {
-gebouw_id: number;
+gebouw_id?: number;
+opdracht_id?: number;
 };

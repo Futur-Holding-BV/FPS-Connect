@@ -5,9 +5,11 @@ import {
   usePostVeiligheidLmras,
   usePatchVeiligheidLmrasId,
   useDeleteVeiligheidLmrasId,
+  useGetMijnLmraOpenstaand,
   getGetVeiligheidLmrasQueryKey,
   type VeiligheidLmra,
   type VeiligheidLmraInput,
+  type LmraOpenstaandItem,
 } from "@workspace/api-client-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -28,8 +30,11 @@ import { useToast } from "@/hooks/use-toast";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
 import {
   ClipboardCheck, Plus, Trash2, CheckCircle2, XCircle, MapPin,
-  ChevronDown, ChevronUp, Loader2, Eye, Pencil, AlertTriangle,
+  ChevronDown, ChevronUp, Loader2, Eye, Pencil, AlertTriangle, Briefcase,
 } from "lucide-react";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 
 const STANDAARD_RISICOS = [
   "Val van hoogte",
@@ -54,6 +59,7 @@ type LmraFormState = {
   locatie_omschrijving: string;
   werkzaamheden: string;
   project_naam: string;
+  opdracht_id: number | null;
   risicos: string[];
   maatregelen: string[];
   veilig_voor_aanvang: boolean;
@@ -66,6 +72,7 @@ const leegFormulier = (): LmraFormState => ({
   locatie_omschrijving: "",
   werkzaamheden: "",
   project_naam: "",
+  opdracht_id: null,
   risicos: [],
   maatregelen: [],
   veilig_voor_aanvang: true,
@@ -156,6 +163,7 @@ export default function VeiligheidLmraPagina() {
   const [detailLmra, setDetailLmra] = useState<VeiligheidLmra | null>(null);
 
   const { data: lmras, isLoading } = useGetVeiligheidLmras();
+  const { data: opdrachtOpties = [] } = useGetMijnLmraOpenstaand();
 
   const aanmakenMutatie = usePostVeiligheidLmras({
     mutation: {
@@ -202,6 +210,7 @@ export default function VeiligheidLmraPagina() {
       locatie_omschrijving: lmra.locatie_omschrijving,
       werkzaamheden: lmra.werkzaamheden,
       project_naam: lmra.project_naam ?? "",
+      opdracht_id: lmra.opdracht_id ?? null,
       risicos: lmra.risicos ?? [],
       maatregelen: lmra.maatregelen ?? [],
       veilig_voor_aanvang: lmra.veilig_voor_aanvang,
@@ -225,6 +234,7 @@ export default function VeiligheidLmraPagina() {
       locatie_omschrijving: formulier.locatie_omschrijving,
       werkzaamheden: formulier.werkzaamheden,
       project_naam: formulier.project_naam || null,
+      opdracht_id: formulier.opdracht_id ?? undefined,
       risicos: formulier.risicos,
       maatregelen: formulier.maatregelen,
       veilig_voor_aanvang: formulier.veilig_voor_aanvang,
@@ -319,7 +329,13 @@ export default function VeiligheidLmraPagina() {
                       {lmra.medewerker_naam && (
                         <span className="text-xs text-muted-foreground">{lmra.medewerker_naam}</span>
                       )}
-                      {lmra.project_naam && (
+                      {lmra.opdracht_naam && (
+                        <Badge variant="outline" className="text-xs flex items-center gap-1">
+                          <Briefcase className="w-2.5 h-2.5" />
+                          {lmra.opdracht_naam}
+                        </Badge>
+                      )}
+                      {!lmra.opdracht_naam && lmra.project_naam && (
                         <Badge variant="outline" className="text-xs">{lmra.project_naam}</Badge>
                       )}
                       <span className="text-xs text-muted-foreground">
@@ -375,13 +391,21 @@ export default function VeiligheidLmraPagina() {
           </DialogHeader>
           {detailLmra && (
             <div className="space-y-4 text-sm">
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 {detailLmra.veilig_voor_aanvang ? (
                   <Badge className="bg-green-100 text-green-800 border-green-300">Veilig voor aanvang</Badge>
                 ) : (
                   <Badge variant="destructive">Niet veilig voor aanvang</Badge>
                 )}
-                {detailLmra.project_naam && <Badge variant="outline">{detailLmra.project_naam}</Badge>}
+                {detailLmra.opdracht_naam && (
+                  <Badge variant="outline" className="flex items-center gap-1">
+                    <Briefcase className="w-3 h-3" />
+                    {detailLmra.opdracht_naam}
+                  </Badge>
+                )}
+                {!detailLmra.opdracht_naam && detailLmra.project_naam && (
+                  <Badge variant="outline">{detailLmra.project_naam}</Badge>
+                )}
               </div>
               <div>
                 <p className="font-medium text-muted-foreground">Locatie</p>
@@ -456,14 +480,57 @@ export default function VeiligheidLmraPagina() {
                 placeholder="Wat ga je doen? Beschrijf de uit te voeren werkzaamheden"
               />
             </div>
-            <div className="space-y-1">
-              <Label>Project (optioneel)</Label>
-              <Input
-                value={formulier.project_naam}
-                onChange={(e) => setFormulier((f) => ({ ...f, project_naam: e.target.value }))}
-                placeholder="Projectnaam of -nummer"
-              />
-            </div>
+            {opdrachtOpties.length > 0 ? (
+              <div className="space-y-1">
+                <Label className="flex items-center gap-1.5">
+                  <Briefcase className="w-3.5 h-3.5" />
+                  Opdracht / project (optioneel)
+                </Label>
+                <Select
+                  value={formulier.opdracht_id !== null ? String(formulier.opdracht_id) : ""}
+                  onValueChange={(v) => {
+                    if (!v) {
+                      setFormulier((f) => ({ ...f, opdracht_id: null, project_naam: "" }));
+                      return;
+                    }
+                    const gevonden = opdrachtOpties.find((o: LmraOpenstaandItem) => o.opdracht_id === Number(v));
+                    if (gevonden) {
+                      setFormulier((f) => ({
+                        ...f,
+                        opdracht_id: gevonden.opdracht_id,
+                        project_naam: gevonden.opdracht_naam,
+                      }));
+                    }
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Geen opdracht geselecteerd" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Geen opdracht</SelectItem>
+                    {opdrachtOpties.map((o: LmraOpenstaandItem) => (
+                      <SelectItem key={o.opdracht_id} value={String(o.opdracht_id)}>
+                        <span className="flex items-center gap-2">
+                          {o.opdracht_naam}
+                          {o.dwingend && (
+                            <span className="text-[10px] bg-red-100 text-red-700 rounded px-1 py-0.5 font-medium">Vereist</span>
+                          )}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : (
+              <div className="space-y-1">
+                <Label>Project (optioneel)</Label>
+                <Input
+                  value={formulier.project_naam}
+                  onChange={(e) => setFormulier((f) => ({ ...f, project_naam: e.target.value }))}
+                  placeholder="Projectnaam of -nummer"
+                />
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label>Gesignaleerde risico's</Label>

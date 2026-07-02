@@ -6,16 +6,16 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface LmraStatus {
+export interface LmraOpenstaandItem {
+  opdracht_id: number;
+  opdracht_naam: string;
+  gebouw_id?: number | null;
+  gebouw_naam?: string | null;
   vereist: boolean;
   voltooid: boolean;
-  /** true als de medewerker 3+ kalenderdagen op het project zit zonder LMRA */
   dwingend: boolean;
-  /** Aantal kalenderdagen sinds eerste werkdag op dit project */
   dagen_openstaand: number;
   eerste_werkdag_datum?: string | null;
-  opdracht_id?: number | null;
-  opdracht_naam?: string | null;
   lmra_id?: number | null;
   reden_vrijstelling?: string | null;
 }

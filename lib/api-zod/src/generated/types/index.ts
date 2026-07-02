@@ -408,6 +408,7 @@ export * from './listZiekmeldingenParams';
 export * from './listZzpOvereenkomstenParams';
 export * from './lmraAiVoorstel';
 export * from './lmraAiVoorstelInput';
+export * from './lmraOpenstaandItem';
 export * from './lmraStatus';
 export * from './loginInput';
 export * from './loginPoging';

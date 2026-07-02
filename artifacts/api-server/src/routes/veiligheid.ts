@@ -13,10 +13,13 @@ import {
   medewerkersTable,
   gebouwenTable,
   opdrachtenTable,
+  planningItemsTable,
+  projectBegrotingenTable,
 } from "@workspace/db";
-import { eq, and, desc, sql, count, gte, lt, isNotNull } from "drizzle-orm";
+import { eq, and, desc, sql, count, gte, lt, isNotNull, min } from "drizzle-orm";
 import { requireAuth, requireBevoegdheid } from "../middlewares/auth.js";
 import { maakOpenAiClient, heeftOpenAi } from "../lib/openai.js";
+import { logActiviteit } from "../lib/activiteit.js";
 import { createRequire } from "module";
 import { ObjectStorageService } from "../lib/objectStorage.js";
 import { logger } from "../lib/logger.js";
@@ -724,6 +727,8 @@ veiligheidRouter.get("/veiligheid/lmras", lezenVeiligheid, async (req, res) => {
         id: veiligheidLmrasTable.id,
         gebouwId: veiligheidLmrasTable.gebouwId,
         gebouwNaam: gebouwenTable.naam,
+        opdrachtId: veiligheidLmrasTable.opdrachtId,
+        opdrachtNaam: opdrachtenTable.titel,
         projectNaam: veiligheidLmrasTable.projectNaam,
         locatieOmschrijving: veiligheidLmrasTable.locatieOmschrijving,
         werkzaamheden: veiligheidLmrasTable.werkzaamheden,
@@ -743,12 +748,15 @@ veiligheidRouter.get("/veiligheid/lmras", lezenVeiligheid, async (req, res) => {
       })
       .from(veiligheidLmrasTable)
       .leftJoin(gebouwenTable, eq(veiligheidLmrasTable.gebouwId, gebouwenTable.id))
+      .leftJoin(opdrachtenTable, eq(veiligheidLmrasTable.opdrachtId, opdrachtenTable.id))
       .orderBy(desc(veiligheidLmrasTable.aangemaaktOp));
     res.json(
       rijen.map((r) => ({
         id: r.id,
         gebouw_id: r.gebouwId ?? null,
         gebouw_naam: r.gebouwNaam ?? null,
+        opdracht_id: r.opdrachtId ?? null,
+        opdracht_naam: r.opdrachtNaam ?? null,
         project_naam: r.projectNaam ?? null,
         locatie_omschrijving: r.locatieOmschrijving,
         werkzaamheden: r.werkzaamheden,
@@ -777,7 +785,7 @@ veiligheidRouter.post("/veiligheid/lmras", lezenVeiligheid, async (req, res) => 
   try {
     const gebruiker = (req as any).session?.gebruiker;
     const {
-      gebouw_id, medewerker_id: body_medewerker_id, project_naam,
+      gebouw_id, opdracht_id, medewerker_id: body_medewerker_id, project_naam,
       locatie_omschrijving, werkzaamheden,
       risicos, maatregelen, veilig_voor_aanvang, handtekening,
       foto_paden, gps_lat, gps_lng, ai_voorstel,
@@ -818,6 +826,7 @@ veiligheidRouter.post("/veiligheid/lmras", lezenVeiligheid, async (req, res) => 
         medewerkerNaam,
         medewerkerId: resolvedMedewerkerId,
         aiVoorstel: ai_voorstel === true,
+        opdrachtId: opdracht_id ?? null,
         aangemaaktDoorId: gebruiker?.id ?? null,
         bijgewerktOp: new Date(),
       })
@@ -827,10 +836,18 @@ veiligheidRouter.post("/veiligheid/lmras", lezenVeiligheid, async (req, res) => 
       const [geb] = await db.select({ naam: gebouwenTable.naam }).from(gebouwenTable).where(eq(gebouwenTable.id, rij.gebouwId)).limit(1);
       gebouwNaam = geb?.naam ?? null;
     }
+    await logActiviteit({
+      type: "lmra_aangemaakt",
+      omschrijving: `LMRA geregistreerd: ${locatie_omschrijving}`,
+      gebouwId: gebouw_id ?? null,
+      gebruikerId: gebruiker?.id ?? null,
+    });
     res.status(201).json({
       id: rij.id,
       gebouw_id: rij.gebouwId ?? null,
       gebouw_naam: gebouwNaam,
+      opdracht_id: rij.opdrachtId ?? null,
+      opdracht_naam: null,
       project_naam: rij.projectNaam ?? null,
       locatie_omschrijving: rij.locatieOmschrijving,
       werkzaamheden: rij.werkzaamheden,
@@ -941,8 +958,12 @@ veiligheidRouter.get("/mijn/lmra-status", requireAuth, async (req, res) => {
     const gebruiker = (req as any).session?.gebruiker;
     if (!gebruiker?.id) return res.status(401).json({ error: "Niet ingelogd" });
 
-    const gebouwId = req.query.gebouw_id ? Number(req.query.gebouw_id) : null;
-    if (!gebouwId) return res.status(400).json({ error: "gebouw_id is verplicht" });
+    const gebouwIdParam = req.query.gebouw_id ? Number(req.query.gebouw_id) : null;
+    const opdrachtIdParam = req.query.opdracht_id ? Number(req.query.opdracht_id) : null;
+
+    if (!gebouwIdParam && !opdrachtIdParam) {
+      return res.status(400).json({ error: "gebouw_id of opdracht_id is verplicht" });
+    }
 
     // Medewerker opzoeken op basis van gebruiker
     const [med] = await db
@@ -950,61 +971,244 @@ veiligheidRouter.get("/mijn/lmra-status", requireAuth, async (req, res) => {
       .from(medewerkersTable)
       .where(eq(medewerkersTable.gebruikerId, gebruiker.id))
       .limit(1);
-
     const medewerkerId = med?.id ?? null;
 
-    // Controleer of LMRA verplicht is:
-    // Zoek actieve opdracht voor dit gebouw met budget_uren >= 8 of null
-    const opdrachten = await db
-      .select({ budgetUren: opdrachtenTable.budgetUren })
-      .from(opdrachtenTable)
-      .where(
-        and(
-          eq(opdrachtenTable.gebouwId, gebouwId),
-          eq(opdrachtenTable.status, "actief"),
-        ),
-      )
-      .limit(5);
+    // Opdracht & gebouw ophalen
+    let opdrachtId: number | null = opdrachtIdParam;
+    let opdrachtNaam: string | null = null;
+    let gebouwId: number | null = gebouwIdParam;
+    let gebouwNaam: string | null = null;
 
-    // Vrijgesteld als ER een opdracht is met budget_uren < 8
-    const heeftKleineOpdracht = opdrachten.some(
-      (o) => o.budgetUren !== null && o.budgetUren < 8,
-    );
+    if (opdrachtIdParam) {
+      const [opr] = await db
+        .select({ id: opdrachtenTable.id, titel: opdrachtenTable.titel, gebouwId: opdrachtenTable.gebouwId })
+        .from(opdrachtenTable)
+        .where(eq(opdrachtenTable.id, opdrachtIdParam))
+        .limit(1);
+      if (opr) {
+        opdrachtNaam = opr.titel ?? null;
+        if (!gebouwId) gebouwId = opr.gebouwId ?? null;
+      }
+    }
 
-    if (heeftKleineOpdracht) {
+    if (gebouwId) {
+      const [geb] = await db.select({ naam: gebouwenTable.naam }).from(gebouwenTable).where(eq(gebouwenTable.id, gebouwId)).limit(1);
+      gebouwNaam = geb?.naam ?? null;
+    }
+
+    // 16-uur drempel — eerst werkbegroting, dan budgetUren op opdracht
+    let totaalUren: number | null = null;
+    if (opdrachtId) {
+      const [wb] = await db
+        .select({ totaalArbeidUren: projectBegrotingenTable.totaalArbeidUren })
+        .from(projectBegrotingenTable)
+        .where(eq(projectBegrotingenTable.opdrachtId, opdrachtId))
+        .orderBy(desc(projectBegrotingenTable.aangemaaktOp))
+        .limit(1);
+      if (wb) totaalUren = wb.totaalArbeidUren;
+    }
+    if (totaalUren === null && gebouwId) {
+      const oListje = await db
+        .select({ budgetUren: opdrachtenTable.budgetUren })
+        .from(opdrachtenTable)
+        .where(and(eq(opdrachtenTable.gebouwId, gebouwId), eq(opdrachtenTable.status, "actief")))
+        .limit(5);
+      const kleinste = oListje.reduce<number | null>((acc, o) => {
+        if (o.budgetUren == null) return acc;
+        return acc == null ? o.budgetUren : Math.min(acc, o.budgetUren);
+      }, null);
+      totaalUren = kleinste;
+    }
+
+    if (totaalUren !== null && totaalUren < 16) {
       return res.json({
         vereist: false,
         voltooid: false,
+        dwingend: false,
+        dagen_openstaand: 0,
+        eerste_werkdag_datum: null,
+        opdracht_id: opdrachtId,
+        opdracht_naam: opdrachtNaam,
         lmra_id: null,
-        reden_vrijstelling: "Project heeft een geplande omvang van minder dan 8 uur",
+        reden_vrijstelling: "Project heeft een geplande omvang van minder dan 16 uur",
       });
     }
 
-    // LMRA voltooid als medewerker al een LMRA heeft voor dit gebouw
+    // Eerste werkdag voor deze medewerker op dit project
+    let eersteWerkdagDatum: string | null = null;
+    if (medewerkerId) {
+      if (opdrachtId) {
+        const [eerste] = await db
+          .select({ datumStart: min(planningItemsTable.datumStart) })
+          .from(planningItemsTable)
+          .where(and(eq(planningItemsTable.medewerkerId, medewerkerId), eq(planningItemsTable.opdrachtId, opdrachtId)));
+        eersteWerkdagDatum = (eerste?.datumStart as string | null | undefined) ?? null;
+      } else if (gebouwId) {
+        const [eerste] = await db
+          .select({ datumStart: min(planningItemsTable.datumStart) })
+          .from(planningItemsTable)
+          .where(and(eq(planningItemsTable.medewerkerId, medewerkerId), eq(planningItemsTable.gebouwId, gebouwId)));
+        eersteWerkdagDatum = (eerste?.datumStart as string | null | undefined) ?? null;
+      }
+    }
+
+    const dagenOpenstaand = eersteWerkdagDatum
+      ? Math.max(0, Math.floor((Date.now() - new Date(eersteWerkdagDatum).getTime()) / 86400000))
+      : 0;
+    const dwingend = dagenOpenstaand >= 3;
+
+    // LMRA voltooid controleren
     let bestaandeLmra: { id: number } | null = null;
     if (medewerkerId) {
-      const [lmra] = await db
-        .select({ id: veiligheidLmrasTable.id })
-        .from(veiligheidLmrasTable)
-        .where(
-          and(
-            eq(veiligheidLmrasTable.gebouwId, gebouwId),
-            eq(veiligheidLmrasTable.medewerkerId, medewerkerId),
-          ),
-        )
-        .orderBy(desc(veiligheidLmrasTable.aangemaaktOp))
-        .limit(1);
-      bestaandeLmra = lmra ?? null;
+      const where = opdrachtId
+        ? and(eq(veiligheidLmrasTable.medewerkerId, medewerkerId), eq(veiligheidLmrasTable.opdrachtId, opdrachtId))
+        : gebouwId
+          ? and(eq(veiligheidLmrasTable.medewerkerId, medewerkerId), eq(veiligheidLmrasTable.gebouwId, gebouwId))
+          : null;
+      if (where) {
+        const [lmra] = await db
+          .select({ id: veiligheidLmrasTable.id })
+          .from(veiligheidLmrasTable)
+          .where(where)
+          .orderBy(desc(veiligheidLmrasTable.aangemaaktOp))
+          .limit(1);
+        bestaandeLmra = lmra ?? null;
+      }
     }
 
     res.json({
       vereist: true,
       voltooid: !!bestaandeLmra,
+      dwingend: bestaandeLmra ? false : dwingend,
+      dagen_openstaand: dagenOpenstaand,
+      eerste_werkdag_datum: eersteWerkdagDatum,
+      opdracht_id: opdrachtId,
+      opdracht_naam: opdrachtNaam,
       lmra_id: bestaandeLmra?.id ?? null,
       reden_vrijstelling: null,
     });
   } catch (err) {
     req.log.error(err, "GET /mijn/lmra-status");
+    res.status(500).json({ error: "Interne fout" });
+  }
+});
+
+veiligheidRouter.get("/mijn/lmra-openstaand", requireAuth, async (req, res) => {
+  try {
+    const gebruiker = (req as any).session?.gebruiker;
+    if (!gebruiker?.id) return res.status(401).json({ error: "Niet ingelogd" });
+
+    const [med] = await db
+      .select({ id: medewerkersTable.id })
+      .from(medewerkersTable)
+      .where(eq(medewerkersTable.gebruikerId, gebruiker.id))
+      .limit(1);
+
+    if (!med) return res.json([]);
+    const medewerkerId = med.id;
+
+    // Planning items van de afgelopen 90 dagen met een opdracht
+    const negentigDagenGeleden = new Date(Date.now() - 90 * 86400000).toISOString().slice(0, 10);
+
+    const planningItems = await db
+      .select({
+        opdrachtId: planningItemsTable.opdrachtId,
+        gebouwId: planningItemsTable.gebouwId,
+        datumStart: planningItemsTable.datumStart,
+      })
+      .from(planningItemsTable)
+      .where(
+        and(
+          eq(planningItemsTable.medewerkerId, medewerkerId),
+          isNotNull(planningItemsTable.opdrachtId),
+          gte(planningItemsTable.datumStart, negentigDagenGeleden),
+        ),
+      );
+
+    // Groepeer op unieke opdracht — vroegste werkdag per opdracht
+    const opdrachtMap = new Map<number, { gebouwId: number | null; eersteWerkdag: string }>();
+    for (const item of planningItems) {
+      if (!item.opdrachtId) continue;
+      const bestaand = opdrachtMap.get(item.opdrachtId);
+      const datum = item.datumStart as string;
+      if (!bestaand || datum < bestaand.eersteWerkdag) {
+        opdrachtMap.set(item.opdrachtId, { gebouwId: item.gebouwId ?? null, eersteWerkdag: datum });
+      }
+    }
+
+    if (opdrachtMap.size === 0) return res.json([]);
+
+    const opdrachtIds = Array.from(opdrachtMap.keys());
+
+    const [opdrachtenRijen, begrotingen, bestaandeLmras] = await Promise.all([
+      db
+        .select({ id: opdrachtenTable.id, titel: opdrachtenTable.titel, gebouwId: opdrachtenTable.gebouwId, budgetUren: opdrachtenTable.budgetUren, status: opdrachtenTable.status })
+        .from(opdrachtenTable)
+        .where(sql`${opdrachtenTable.id} = ANY(${opdrachtIds})`),
+      db
+        .select({ opdrachtId: projectBegrotingenTable.opdrachtId, totaalArbeidUren: projectBegrotingenTable.totaalArbeidUren })
+        .from(projectBegrotingenTable)
+        .where(sql`${projectBegrotingenTable.opdrachtId} = ANY(${opdrachtIds})`),
+      db
+        .select({ opdrachtId: veiligheidLmrasTable.opdrachtId, id: veiligheidLmrasTable.id })
+        .from(veiligheidLmrasTable)
+        .where(and(eq(veiligheidLmrasTable.medewerkerId, medewerkerId), sql`${veiligheidLmrasTable.opdrachtId} = ANY(${opdrachtIds})`))
+        .orderBy(desc(veiligheidLmrasTable.aangemaaktOp)),
+    ]);
+
+    const begrotingMap = new Map<number, number>();
+    for (const b of begrotingen) {
+      if (b.opdrachtId != null && !begrotingMap.has(b.opdrachtId)) begrotingMap.set(b.opdrachtId, b.totaalArbeidUren);
+    }
+    const lmraMap = new Map<number, number>();
+    for (const l of bestaandeLmras) {
+      if (l.opdrachtId != null && !lmraMap.has(l.opdrachtId)) lmraMap.set(l.opdrachtId, l.id);
+    }
+
+    // Gebouwnamen ophalen
+    const gebouwIds = [...new Set([
+      ...opdrachtenRijen.map(o => o.gebouwId).filter((id): id is number => id != null),
+      ...Array.from(opdrachtMap.values()).map(v => v.gebouwId).filter((id): id is number => id != null),
+    ])];
+    const gebouwNaamMap = new Map<number, string>();
+    if (gebouwIds.length > 0) {
+      const rijen = await db.select({ id: gebouwenTable.id, naam: gebouwenTable.naam }).from(gebouwenTable).where(sql`${gebouwenTable.id} = ANY(${gebouwIds})`);
+      for (const g of rijen) gebouwNaamMap.set(g.id, g.naam);
+    }
+
+    const resultaat = [];
+    for (const opdracht of opdrachtenRijen) {
+      if (opdracht.status === "geannuleerd" || opdracht.status === "afgerond") continue;
+      const planningInfo = opdrachtMap.get(opdracht.id);
+      if (!planningInfo) continue;
+      const totaalUren = begrotingMap.get(opdracht.id) ?? opdracht.budgetUren;
+      if (totaalUren != null && totaalUren < 16) continue;
+
+      const eersteWerkdagDatum = planningInfo.eersteWerkdag;
+      const dagenOpenstaand = Math.max(0, Math.floor((Date.now() - new Date(eersteWerkdagDatum).getTime()) / 86400000));
+      const dwingend = dagenOpenstaand >= 3;
+      const lmraId = lmraMap.get(opdracht.id) ?? null;
+      const voltooid = lmraId != null;
+      const gebId = opdracht.gebouwId ?? planningInfo.gebouwId ?? null;
+
+      resultaat.push({
+        opdracht_id: opdracht.id,
+        opdracht_naam: opdracht.titel ?? `Opdracht #${opdracht.id}`,
+        gebouw_id: gebId,
+        gebouw_naam: gebId != null ? (gebouwNaamMap.get(gebId) ?? null) : null,
+        vereist: true,
+        voltooid,
+        dwingend: voltooid ? false : dwingend,
+        dagen_openstaand: dagenOpenstaand,
+        eerste_werkdag_datum: eersteWerkdagDatum,
+        lmra_id: lmraId,
+        reden_vrijstelling: null,
+      });
+    }
+
+    res.json(resultaat);
+  } catch (err) {
+    req.log.error(err, "GET /mijn/lmra-openstaand");
     res.status(500).json({ error: "Interne fout" });
   }
 });

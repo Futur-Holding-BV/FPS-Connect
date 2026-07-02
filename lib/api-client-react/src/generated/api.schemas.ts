@@ -6621,6 +6621,8 @@ export interface VeiligheidLmra {
   id: number;
   gebouw_id?: number | null;
   gebouw_naam?: string | null;
+  opdracht_id?: number | null;
+  opdracht_naam?: string | null;
   project_naam?: string | null;
   locatie_omschrijving: string;
   werkzaamheden: string;
@@ -6641,6 +6643,7 @@ export interface VeiligheidLmra {
 
 export interface VeiligheidLmraInput {
   gebouw_id?: number | null;
+  opdracht_id?: number | null;
   medewerker_id?: number | null;
   project_naam?: string | null;
   locatie_omschrijving: string;
@@ -6657,6 +6660,27 @@ export interface VeiligheidLmraInput {
 export interface LmraStatus {
   vereist: boolean;
   voltooid: boolean;
+  /** true als de medewerker 3+ kalenderdagen op het project zit zonder LMRA */
+  dwingend: boolean;
+  /** Aantal kalenderdagen sinds eerste werkdag op dit project */
+  dagen_openstaand: number;
+  eerste_werkdag_datum?: string | null;
+  opdracht_id?: number | null;
+  opdracht_naam?: string | null;
+  lmra_id?: number | null;
+  reden_vrijstelling?: string | null;
+}
+
+export interface LmraOpenstaandItem {
+  opdracht_id: number;
+  opdracht_naam: string;
+  gebouw_id?: number | null;
+  gebouw_naam?: string | null;
+  vereist: boolean;
+  voltooid: boolean;
+  dwingend: boolean;
+  dagen_openstaand: number;
+  eerste_werkdag_datum?: string | null;
   lmra_id?: number | null;
   reden_vrijstelling?: string | null;
 }
@@ -9134,7 +9158,8 @@ inclusief_inactief?: boolean;
 };
 
 export type GetMijnLmraStatusParams = {
-gebouw_id: number;
+gebouw_id?: number;
+opdracht_id?: number;
 };
 
 export type ListMijnActiviteitenParams = {

@@ -32,8 +32,6 @@ import { cn } from "@/lib/utils";
 import { NavigatieBewakingProvider, useNavigatieBewaking } from "@/context/navigatie-bewaking";
 import { OnlineGebruikers } from "@/components/online-gebruikers/online-gebruikers";
 import { VeiligheidMeldingBanner, OpenMeldingenBadge } from "@/components/veiligheidsmelding-banner";
-import { useWerkmaatschappij } from "@/context/werkmaatschappij-context";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 function PwaInstalleerKnop() {
   const [prompt, setPrompt] = useState<Event & { prompt: () => Promise<void> } | null>(null);
@@ -124,9 +122,6 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
   const toonMagazijn  = heeftNiveau("magazijn", 1);
   const toonLoonOutput = heeftNiveau("salarisarchief", 2);
 
-  const { werkgevers, actieveWerkgever, actieveWerkgeverId, setActieveWerkgeverId } = useWerkmaatschappij();
-  const toonWerkmaatschappijSwitcher = werkgevers.length > 1 || isHoofdbeheerder;
-
   const heeftOne = isHoofdbeheerder;
   const aantalOmgevingen = 1 + (heeftOne ? 1 : 0);
 
@@ -215,27 +210,6 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
             />
           </div>
 
-          {toonWerkmaatschappijSwitcher && werkgevers.length > 0 && (
-            <div className="mt-2 px-1 group-data-[collapsible=icon]:hidden">
-              <Select
-                value={actieveWerkgeverId !== null ? String(actieveWerkgeverId) : undefined}
-                onValueChange={(v) => setActieveWerkgeverId(Number(v))}
-              >
-                <SelectTrigger className="h-8 text-xs w-full bg-sidebar-accent/50 border-sidebar-border">
-                  <SelectValue placeholder="Kies werkmaatschappij…">
-                    {actieveWerkgever?.naam ?? "Kies werkmaatschappij…"}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {werkgevers.map((w) => (
-                    <SelectItem key={w.id} value={String(w.id)} className="text-xs">
-                      {w.naam}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
 
           {aantalOmgevingen > 1 && (
             <div className="mt-2 flex gap-1 px-1 group-data-[collapsible=icon]:hidden">
