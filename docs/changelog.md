@@ -10,6 +10,41 @@ Grote roadmap-fases staan ook in `docs/roadmap/gebouwd.md` en `docs/roadmap/acti
 
 ---
 
+## 2026-07-02 — Kennisobject-model Connect
+
+**Uitvoering:** volledig | **Getest:** niet van toepassing (read-only ontwerp)
+
+### Wat er gedaan is
+
+Kennisobject-model ontworpen voor FPS Connect. Een document is grondstof; kennis is het eindproduct. Het model beschrijft vier lagen (bronmateriaal, kern-kennisobjecten, contextuele kennisobjecten, afgeleide kennis) en werkt elk kennisobject volledig uit.
+
+**Document:** `docs/kennisobject-model-2026-07-02.md`
+
+**Vier lagen:**
+
+| Laag | Inhoud |
+|---|---|
+| 0 — Bronmateriaal | Documenten (PDF) als grondstof; documenttype bepaalt welke kennisobjecten worden geleverd |
+| 1 — Kern-kennisobjecten | Fabrikant · Product · Norm · Prestatie · Certificaat · Toepassing |
+| 2 — Contextuele kennisobjecten | Installatie (spot) · Gebouw/Project · Inspectie/Beoordeling |
+| 3 — Afgeleide kennis | Toepassingsadvies · Risicomelding · Kennisgraaf-redenering (AI) |
+
+**Zes kern-kennisobjecten uitgewerkt:**
+- Fabrikant: naam, land, keuringsinstantie, actief (uitbreiding op bestaande `fabrikantenTable`)
+- Product: naam, productlijn, artikelnummer, status, vervangen_door_id (uitbreiding op `labelsTable`)
+- Norm: code, versie, type, opvolger_id (nieuwe entiteit; nu losse tekstvelden)
+- Prestatie: brandwerendheidsklasse, installatieconditie, maten per testrapport (nieuwe entiteit)
+- Certificaat: certificaatnummer, instantie, geldig_van/tot, product_id+norm_id (nieuwe entiteit)
+- Toepassing: product_id + prestatie_id als FK's (uitbreiding op bestaande `labelsTable`)
+
+**Kennisobject-cyclus:** upload → AI-extractie → validatie-pipeline → actief → beschikbaar voor advies en signalering → verval/revisie
+
+**Mapping op bestaande infrastructuur:** 5 bestaande tabellen uitbreiden, 5 nieuwe entiteiten.
+
+**Geen code gewijzigd** — uitsluitend ontwerpdocument.
+
+---
+
 ## 2026-07-02 — Documentarchitectuur Connect
 
 **Uitvoering:** volledig | **Getest:** niet van toepassing (read-only ontwerp)
