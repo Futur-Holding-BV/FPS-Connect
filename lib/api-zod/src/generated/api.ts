@@ -15728,7 +15728,9 @@ export const GetVeiligheidToolboxenResponseItem = zod.object({
   "handtekening": zod.string().nullish(),
   "bevestigd_op": zod.string(),
   "geldig_tot": zod.string().nullish()
-}).nullish()
+}).nullish(),
+  "ai_gegenereerd": zod.boolean().optional(),
+  "foto_suggesties": zod.array(zod.string()).optional()
 })
 export const GetVeiligheidToolboxenResponse = zod.array(GetVeiligheidToolboxenResponseItem)
 
@@ -15799,7 +15801,9 @@ export const GetVeiligheidToolboxenIdResponse = zod.object({
   "handtekening": zod.string().nullish(),
   "bevestigd_op": zod.string(),
   "geldig_tot": zod.string().nullish()
-}).nullish()
+}).nullish(),
+  "ai_gegenereerd": zod.boolean().optional(),
+  "foto_suggesties": zod.array(zod.string()).optional()
 }).and(zod.object({
   "intro": zod.string().nullish(),
   "ai_samenvatting": zod.string().nullish(),
@@ -15885,7 +15889,9 @@ export const PatchVeiligheidToolboxenIdResponse = zod.object({
   "handtekening": zod.string().nullish(),
   "bevestigd_op": zod.string(),
   "geldig_tot": zod.string().nullish()
-}).nullish()
+}).nullish(),
+  "ai_gegenereerd": zod.boolean().optional(),
+  "foto_suggesties": zod.array(zod.string()).optional()
 }).and(zod.object({
   "intro": zod.string().nullish(),
   "ai_samenvatting": zod.string().nullish(),
@@ -15958,7 +15964,9 @@ export const PostVeiligheidToolboxenIdPublicerenResponse = zod.object({
   "handtekening": zod.string().nullish(),
   "bevestigd_op": zod.string(),
   "geldig_tot": zod.string().nullish()
-}).nullish()
+}).nullish(),
+  "ai_gegenereerd": zod.boolean().optional(),
+  "foto_suggesties": zod.array(zod.string()).optional()
 })
 
 
@@ -15999,7 +16007,9 @@ export const PostVeiligheidToolboxenIdAiAnalyseResponse = zod.object({
   "handtekening": zod.string().nullish(),
   "bevestigd_op": zod.string(),
   "geldig_tot": zod.string().nullish()
-}).nullish()
+}).nullish(),
+  "ai_gegenereerd": zod.boolean().optional(),
+  "foto_suggesties": zod.array(zod.string()).optional()
 }).and(zod.object({
   "intro": zod.string().nullish(),
   "ai_samenvatting": zod.string().nullish(),
@@ -16096,6 +16106,107 @@ export const PostVeiligheidToolboxenKoppelingSuggestieResponse = zod.object({
   "titel": zod.string(),
   "categorie": zod.string(),
   "reden": zod.string()
+}))
+})
+
+
+/**
+ * @summary AI genereert een batch van maximaal 50 toolboxonderwerpen als concept
+ */
+export const AiBatchGenereerToolboxenBody = zod.object({
+  "categorieen": zod.array(zod.string()),
+  "aantal": zod.number().describe('Aantal te genereren onderwerpen (max 50)'),
+  "toelichting": zod.string().nullish()
+})
+
+export const AiBatchGenereerToolboxenResponse = zod.object({
+  "aangemaakt": zod.number(),
+  "batch_id": zod.string(),
+  "onderwerpen": zod.array(zod.object({
+  "id": zod.number(),
+  "titel": zod.string(),
+  "categorie": zod.string(),
+  "moeilijkheid": zod.string(),
+  "geschatte_leestijd": zod.number().nullish(),
+  "gepubliceerd": zod.boolean(),
+  "verplicht": zod.boolean(),
+  "doelgroep": zod.string(),
+  "min_score": zod.number().optional(),
+  "geldigheid_maanden": zod.number().optional(),
+  "tags": zod.array(zod.string()).optional(),
+  "ai_verwerkt_op": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().optional(),
+  "aangemaakt_door_naam": zod.string().nullish(),
+  "afronding_count": zod.number().optional(),
+  "heeft_pdf": zod.boolean().optional(),
+  "heeft_video": zod.boolean().optional(),
+  "mijn_afronding": zod.object({
+  "id": zod.number(),
+  "toolbox_id": zod.number(),
+  "gebruiker_id": zod.number(),
+  "gebruiker_naam": zod.string().nullish(),
+  "score": zod.number(),
+  "max_score": zod.number(),
+  "geslaagd": zod.boolean().optional(),
+  "handtekening": zod.string().nullish(),
+  "bevestigd_op": zod.string(),
+  "geldig_tot": zod.string().nullish()
+}).nullish(),
+  "ai_gegenereerd": zod.boolean().optional(),
+  "foto_suggesties": zod.array(zod.string()).optional()
+})).optional()
+})
+
+
+/**
+ * @summary PL keurt AI-gegenereerd toolboxonderwerp goed of af
+ */
+export const ReviewToolboxOnderwerpPatchParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ReviewToolboxOnderwerpPatchBody = zod.object({
+  "besluit": zod.string().describe('goedkeuren of afwijzen'),
+  "toelichting": zod.string().nullish()
+})
+
+export const ReviewToolboxOnderwerpPatchResponse = zod.object({
+  "ok": zod.boolean()
+})
+
+
+/**
+ * @summary Compliance-overzicht toolbox-maandopdrachten
+ */
+export const GetToolboxComplianceQueryParams = zod.object({
+  "jaar": zod.coerce.number().optional(),
+  "maand": zod.coerce.number().optional()
+})
+
+export const GetToolboxComplianceResponse = zod.object({
+  "jaar": zod.number(),
+  "maand": zod.number(),
+  "statistieken": zod.object({
+  "totaal_opdrachten": zod.number(),
+  "totaal_gebruikers": zod.number(),
+  "voltooide_gebruikers": zod.number(),
+  "voltooiingspercentage": zod.number()
+}),
+  "opdrachten": zod.array(zod.object({
+  "id": zod.number(),
+  "toolbox_titel": zod.string(),
+  "toolbox_categorie": zod.string(),
+  "jaar": zod.number(),
+  "maand": zod.number(),
+  "totaal_voltooid": zod.number(),
+  "totaal_gebruikers": zod.number(),
+  "voltooiingspercentage": zod.number(),
+  "niet_voltooid": zod.array(zod.object({
+  "gebruiker_id": zod.number(),
+  "naam": zod.string(),
+  "eerste_aanbieding": zod.string().nullish()
+}))
 }))
 })
 

@@ -27,4 +27,6 @@ export interface VeiligheidToolbox {
   heeft_pdf?: boolean;
   heeft_video?: boolean;
   mijn_afronding?: VeiligheidAfronding | null;
+  ai_gegenereerd?: boolean;
+  foto_suggesties?: string[];
 }

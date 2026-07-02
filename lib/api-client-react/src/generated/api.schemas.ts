@@ -6625,6 +6625,8 @@ export interface VeiligheidToolbox {
   heeft_pdf?: boolean;
   heeft_video?: boolean;
   mijn_afronding?: VeiligheidAfronding | null;
+  ai_gegenereerd?: boolean;
+  foto_suggesties?: string[];
 }
 
 export type VeiligheidToolboxVraagOptiesItem = {
@@ -6690,6 +6692,57 @@ export interface MijnToolboxMaandopdracht {
 
 export interface ToolboxMaandVoltooienInput {
   vraag?: string | null;
+}
+
+export interface ToolboxAiBatchInput {
+  categorieen: string[];
+  /** Aantal te genereren onderwerpen (max 50) */
+  aantal: number;
+  toelichting?: string | null;
+}
+
+export interface ToolboxAiBatchResultaat {
+  aangemaakt: number;
+  batch_id: string;
+  onderwerpen?: VeiligheidToolbox[];
+}
+
+export interface ToolboxReviewInput {
+  /** goedkeuren of afwijzen */
+  besluit: string;
+  toelichting?: string | null;
+}
+
+export type ToolboxComplianceDashboardStatistieken = {
+  totaal_opdrachten: number;
+  totaal_gebruikers: number;
+  voltooide_gebruikers: number;
+  voltooiingspercentage: number;
+};
+
+export type ToolboxComplianceDashboardOpdrachtenItemNietVoltooidItem = {
+  gebruiker_id: number;
+  naam: string;
+  eerste_aanbieding?: string | null;
+};
+
+export type ToolboxComplianceDashboardOpdrachtenItem = {
+  id: number;
+  toolbox_titel: string;
+  toolbox_categorie: string;
+  jaar: number;
+  maand: number;
+  totaal_voltooid: number;
+  totaal_gebruikers: number;
+  voltooiingspercentage: number;
+  niet_voltooid: ToolboxComplianceDashboardOpdrachtenItemNietVoltooidItem[];
+};
+
+export interface ToolboxComplianceDashboard {
+  jaar: number;
+  maand: number;
+  statistieken: ToolboxComplianceDashboardStatistieken;
+  opdrachten: ToolboxComplianceDashboardOpdrachtenItem[];
 }
 
 export type VeiligheidToolboxDetail = VeiligheidToolbox & ({
@@ -9749,6 +9802,15 @@ verdieping_id: number;
 export type GetVeiligheidToolboxenParams = {
 categorie?: string;
 gepubliceerd?: boolean;
+};
+
+export type ReviewToolboxOnderwerpPatch200 = {
+  ok: boolean;
+};
+
+export type GetToolboxComplianceParams = {
+jaar?: number;
+maand?: number;
 };
 
 export type GetVeiligheidLmrasUploadUrl200 = {

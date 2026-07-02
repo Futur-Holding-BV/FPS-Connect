@@ -12829,6 +12829,76 @@ paths:
               schema:
                 $ref: '#/components/schemas/ToolboxKoppelingSuggestieResultaat'
 
+  /veiligheid/toolboxen/ai-batch-genereer:
+    post:
+      operationId: aiBatchGenereerToolboxen
+      summary: AI genereert een batch van maximaal 50 toolboxonderwerpen als concept
+      tags: [Veiligheid]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ToolboxAiBatchInput'
+      responses:
+        '200':
+          description: Batch aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ToolboxAiBatchResultaat'
+
+  /veiligheid/toolboxen/{id}/review:
+    patch:
+      operationId: reviewToolboxOnderwerpPatch
+      summary: PL keurt AI-gegenereerd toolboxonderwerp goed of af
+      tags: [Veiligheid]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ToolboxReviewInput'
+      responses:
+        '200':
+          description: Review verwerkt
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok]
+                properties:
+                  ok:
+                    type: boolean
+
+  /veiligheid/toolbox-compliance:
+    get:
+      operationId: getToolboxCompliance
+      summary: Compliance-overzicht toolbox-maandopdrachten
+      tags: [Veiligheid]
+      parameters:
+        - in: query
+          name: jaar
+          schema:
+            type: integer
+        - in: query
+          name: maand
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ToolboxComplianceDashboard'
+
   /veiligheid/lmras:
     get:
       operationId: getVeiligheidLmras
@@ -27395,6 +27465,12 @@ components:
         mijn_afronding:
           $ref: '#/components/schemas/VeiligheidAfronding'
           nullable: true
+        ai_gegenereerd:
+          type: boolean
+        foto_suggesties:
+          type: array
+          items:
+            type: string
 
     VeiligheidToolboxVraag:
       type: object
@@ -27521,6 +27597,101 @@ components:
         vraag:
           type: string
           nullable: true
+
+    ToolboxAiBatchInput:
+      type: object
+      required: [categorieen, aantal]
+      properties:
+        categorieen:
+          type: array
+          items:
+            type: string
+        aantal:
+          type: integer
+          description: Aantal te genereren onderwerpen (max 50)
+        toelichting:
+          type: string
+          nullable: true
+
+    ToolboxAiBatchResultaat:
+      type: object
+      required: [aangemaakt, batch_id]
+      properties:
+        aangemaakt:
+          type: integer
+        batch_id:
+          type: string
+        onderwerpen:
+          type: array
+          items:
+            $ref: '#/components/schemas/VeiligheidToolbox'
+
+    ToolboxReviewInput:
+      type: object
+      required: [besluit]
+      properties:
+        besluit:
+          type: string
+          description: goedkeuren of afwijzen
+        toelichting:
+          type: string
+          nullable: true
+
+    ToolboxComplianceDashboard:
+      type: object
+      required: [jaar, maand, opdrachten, statistieken]
+      properties:
+        jaar:
+          type: integer
+        maand:
+          type: integer
+        statistieken:
+          type: object
+          required: [totaal_opdrachten, totaal_gebruikers, voltooide_gebruikers, voltooiingspercentage]
+          properties:
+            totaal_opdrachten:
+              type: integer
+            totaal_gebruikers:
+              type: integer
+            voltooide_gebruikers:
+              type: integer
+            voltooiingspercentage:
+              type: number
+        opdrachten:
+          type: array
+          items:
+            type: object
+            required: [id, toolbox_titel, toolbox_categorie, jaar, maand, totaal_voltooid, totaal_gebruikers, voltooiingspercentage, niet_voltooid]
+            properties:
+              id:
+                type: integer
+              toolbox_titel:
+                type: string
+              toolbox_categorie:
+                type: string
+              jaar:
+                type: integer
+              maand:
+                type: integer
+              totaal_voltooid:
+                type: integer
+              totaal_gebruikers:
+                type: integer
+              voltooiingspercentage:
+                type: number
+              niet_voltooid:
+                type: array
+                items:
+                  type: object
+                  required: [gebruiker_id, naam]
+                  properties:
+                    gebruiker_id:
+                      type: integer
+                    naam:
+                      type: string
+                    eerste_aanbieding:
+                      type: string
+                      nullable: true
 
     VeiligheidToolboxDetail:
       allOf:

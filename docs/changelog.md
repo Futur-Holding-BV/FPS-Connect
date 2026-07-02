@@ -10,6 +10,36 @@ Grote roadmap-fases staan ook in `docs/roadmap/gebouwd.md` en `docs/roadmap/acti
 
 ---
 
+## 2026-07-02 — AI Toolbox-generatiesysteem: alle vier fasen gebouwd
+
+**Uitvoering:** volledig | **Getest:** typecheck firevault clean + api-server esbuild-build slaagt
+
+### Wat er gewijzigd is
+
+**Fase 1 — AI genereert toolbox-onderwerpen (web, Connect)**
+- Nieuw DB-schema: `ai_gegenereerd boolean` + `foto_suggesties jsonb` kolommen op `veiligheid_toolboxen`
+- OpenAPI uitgebreid: 3 nieuwe paden + 4 nieuwe schemas (ToolboxAiBatchInput, ToolboxAiBatchResultaat, ToolboxReviewInput, ToolboxComplianceDashboard)
+- Codegen uitgevoerd (Orval + typecheck:libs clean)
+- Backend `POST /veiligheid/toolboxen/ai-batch-genereer`: roept GPT-4o aan, genereert tot 50 VCA-toolbox-onderwerpen per batch met titel/categorie/intro/samenvatting/risico's/maatregelen/stoppen/foto-suggesties; valt terug op lege concepten als AI niet beschikbaar
+- Backend `PATCH /veiligheid/toolboxen/:id/review`: goedkeuren (→ gepubliceerd=true) of afwijzen (→ verwijderen); alleen voor ai_gegenereerd=true toolboxen
+- Web `toolboxen.tsx`: nieuw "AI-wachtrij"-blok toont alle ai_gegenereerd+ongepubliceerd toolboxen met Goedkeuren/Afwijzen-knoppen per rij; "Genereer batch"-knop opent dialog met categorieselectie (toggle-pills), aantal (1–50) en optionele context
+
+**Fase 2 — Verplichte maandpopup op mobiel**
+- `_layout.tsx`: nieuwe `ToolboxPopupBewaker`-component (zelfde patroon als LmraBewaker); pollt elke 2 min; toont amber modal met toolbox-titel + maand
+- Dag 1–3 (kan_uitstellen=true): wegklikbaar via "Uitstellen tot morgen" (roept bestaand uitstellen-endpoint aan)
+- Dag 4+ (kan_uitstellen=false): blokkerend — alleen "Toolbox nu doen" navigeert naar /toolboxen
+
+**Fase 3 — Mobiele toolbox-lezer**
+- Al volledig gebouwd in vorige sessie (`toolboxen.tsx` mobiel, 666 regels)
+
+**Fase 4 — Compliance-rapportage dashboard (web, Connect)**
+- Nieuwe pagina `/veiligheid/toolbox-compliance`: maand+jaar-selector, 4 KPI-tiles (opdrachten/deelnemers/voltooid/percentage), uitklapbare per-opdracht kaarten met voortgangsbalk + lijst niet-voltooide medewerkers
+- Backend `GET /veiligheid/toolbox-compliance`: aggregeert maandopdrachten + status + gebruikersnamen
+- Navigatie-item "Toolbox Compliance" toegevoegd aan Veiligheid-sectie sidebar
+- Route geregistreerd in `App.tsx`
+
+---
+
 ## 2026-07-02 — Fix Slim uploaden: auto-routing toont nu bevestigingsscherm + crash opgelost
 
 **Uitvoering:** volledig | **Getest:** typecheck firevault clean

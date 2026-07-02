@@ -20,7 +20,12 @@ import { AuthProvider, getHuidigToken, useAuth } from "@/context/auth";
 import { SyncProvider } from "@/context/sync";
 import { OfflineProvider } from "@/context/offline";
 import { AchievementProvider } from "@/context/achievement";
-import { useListChatGesprekken, useGetMijnLmraOpenstaand } from "@workspace/api-client-react";
+import {
+  useListChatGesprekken,
+  useGetMijnLmraOpenstaand,
+  useGetMijnToolboxMaandopdracht,
+  useUitstellenToolboxMaandopdracht,
+} from "@workspace/api-client-react";
 import { useMeldingGeluid } from "@/hooks/useMeldingGeluid";
 
 setBaseUrl(`https://${process.env.EXPO_PUBLIC_DOMAIN}`);
@@ -106,6 +111,100 @@ function LmraBewaker() {
   );
 }
 
+function ToolboxPopupBewaker() {
+  const { token } = useAuth();
+  const router = useRouter();
+  const { data: opdracht, refetch } = useGetMijnToolboxMaandopdracht();
+  const uitstellenMut = useUitstellenToolboxMaandopdracht();
+
+  useEffect(() => {
+    if (!token) return;
+    const timer = setInterval(() => void refetch(), 120000);
+    return () => clearInterval(timer);
+  }, [token, refetch]);
+
+  if (!token || !opdracht || (opdracht as any).voltooid === true) return null;
+
+  const kanUitstellen = (opdracht as any).kan_uitstellen === true;
+  const toolboxTitel = (opdracht as any).toolbox_titel ?? "Verplichte toolbox";
+  const maand = (opdracht as any).maand;
+  const jaar = (opdracht as any).jaar;
+  const opdrachtId = (opdracht as any).id;
+
+  const MAANDEN = ["jan","feb","mrt","apr","mei","jun","jul","aug","sep","okt","nov","dec"];
+  const maandLabel = maand ? MAANDEN[(maand as number) - 1] ?? "" : "";
+
+  async function uitstellen() {
+    try {
+      await uitstellenMut.mutateAsync({ id: opdrachtId });
+      void refetch();
+    } catch {
+      // stil falen — popup blijft zichtbaar
+    }
+  }
+
+  return (
+    <Modal visible animationType="fade" transparent statusBarTranslucent>
+      <View style={{
+        flex: 1,
+        backgroundColor: kanUitstellen ? "rgba(0,0,0,0.75)" : "rgba(0,0,0,0.92)",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 24,
+      }}>
+        <View style={{
+          backgroundColor: "#1c1c1e",
+          borderRadius: 16,
+          padding: 24,
+          width: "100%",
+          maxWidth: 360,
+        }}>
+          <View style={{ alignItems: "center", marginBottom: 16 }}>
+            <View style={{
+              width: 56, height: 56, borderRadius: 28,
+              backgroundColor: "#fef3c7",
+              alignItems: "center", justifyContent: "center",
+              marginBottom: 12,
+            }}>
+              <Ionicons name="book-outline" size={28} color="#d97706" />
+            </View>
+            <Text style={{ color: "#fff", fontSize: 18, fontWeight: "700", textAlign: "center" }}>
+              Verplichte maandtoolbox
+            </Text>
+            {maand != null && (
+              <Text style={{ color: "#6b7280", fontSize: 12, textAlign: "center", marginTop: 4 }}>
+                {maandLabel} {jaar}
+              </Text>
+            )}
+          </View>
+          <Text style={{ color: "#f3f4f6", fontWeight: "600", fontSize: 15, textAlign: "center", marginBottom: 6 }}>
+            {toolboxTitel}
+          </Text>
+          <Text style={{ color: "#9ca3af", fontSize: 14, textAlign: "center", marginBottom: 20, lineHeight: 20 }}>
+            {kanUitstellen
+              ? "Rond deze toolbox zo snel mogelijk af. Je kunt hem nog een dag uitstellen."
+              : "De uitstelperiode is verstreken. Voltooi deze toolbox om door te gaan."}
+          </Text>
+          <Pressable
+            onPress={() => router.push("/toolboxen")}
+            style={{ backgroundColor: "#d97706", borderRadius: 10, padding: 14, alignItems: "center", marginBottom: kanUitstellen ? 10 : 0 }}
+          >
+            <Text style={{ color: "white", fontWeight: "700", fontSize: 16 }}>Toolbox nu doen</Text>
+          </Pressable>
+          {kanUitstellen && (
+            <Pressable
+              onPress={() => void uitstellen()}
+              style={{ borderRadius: 10, padding: 12, alignItems: "center" }}
+            >
+              <Text style={{ color: "#6b7280", fontSize: 14 }}>Uitstellen tot morgen</Text>
+            </Pressable>
+          )}
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
 function BerichtMeldingMonitor() {
   const { token } = useAuth();
   const { speel } = useMeldingGeluid();
@@ -166,6 +265,7 @@ function RootLayoutNav() {
     <>
       <BerichtMeldingMonitor />
       <LmraBewaker />
+      <ToolboxPopupBewaker />
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="index" />
         <Stack.Screen name="login" />

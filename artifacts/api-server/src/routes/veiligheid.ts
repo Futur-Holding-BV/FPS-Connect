@@ -2255,4 +2255,231 @@ veiligheidRouter.delete("/veiligheid/incidenten/:id", verwijderenVeiligheid, asy
   }
 });
 
+// ── AI BATCH GENERATIE ────────────────────────────────────────────────────────
+
+veiligheidRouter.post("/veiligheid/toolboxen/ai-batch-genereer", schrijvenVeiligheid, async (req, res) => {
+  try {
+    const { categorieen, aantal, toelichting } = req.body as {
+      categorieen: string[];
+      aantal: number;
+      toelichting?: string;
+    };
+    if (!categorieen || !Array.isArray(categorieen) || categorieen.length === 0) {
+      return res.status(400).json({ error: "categorieen verplicht" });
+    }
+    const aantalGeldig = Math.min(Math.max(1, Number(aantal) || 10), 50);
+    const sess = req.session as { gebruikerId?: number };
+    const batchId = `batch-${Date.now()}`;
+
+    const CATEGORIE_BESCHRIJVING: Record<string, string> = {
+      brandveiligheid: "brandpreventie, blusmiddelen, vluchtroutes, brandmelding",
+      werken_op_hoogte: "ladders, steigers, valbescherming, dakwerkzaamheden",
+      pbm: "persoonlijke beschermingsmiddelen, helmen, veiligheidsschoenen, handschoenen",
+      elektrisch: "elektrische veiligheid, stroomgevaar, aarding, laagspanning",
+      bouwplaats: "bouwplaatsveiligheid, ordelijkheid, signalering, vergunningen",
+      gezondheid: "ARBO, ergonomie, gevaarlijke stoffen, werkdruk, hitte/kou",
+      milieu: "milieurisico's, afvalscheiding, chemische stoffen, bodemverontreiniging",
+      machines: "machine-veiligheid, noodstop, onderhoud, vergrendeling",
+      overig: "algemene veiligheid op de werkplek",
+    };
+
+    type ToolboxItem = {
+      titel: string; categorie: string; moeilijkheid: string; intro: string;
+      ai_samenvatting: string; ai_risicos: string[]; ai_maatregelen: string[];
+      ai_stoppen: string; geschatte_leestijd: number; zoekwoorden: string[];
+      tags: string[]; foto_suggesties: string[];
+    };
+
+    let items: ToolboxItem[] = [];
+
+    if (heeftOpenAi()) {
+      const catsOmschrijving = categorieen
+        .map((c) => `${c}: ${CATEGORIE_BESCHRIJVING[c] ?? c}`)
+        .join("\n");
+      const openai = maakOpenAiClient();
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o",
+        max_tokens: 16000,
+        messages: [
+          { role: "system", content: "Je bent een VCA-veiligheidscoördinator. Geef altijd geldig JSON terug zonder markdown-opmaak." },
+          {
+            role: "user",
+            content: `Genereer ${aantalGeldig} unieke toolbox-onderwerpen voor brandpreventie- en bouwplaatsmonteurs.
+
+Categorieën:
+${catsOmschrijving}
+${toelichting ? `\nExtra context: ${toelichting}` : ""}
+
+Verspreid de onderwerpen evenredig over de categorieën. Geef output als JSON-array:
+[{
+  "titel": "Korte pakkende titel (max 60 tekens)",
+  "categorie": "een van: ${categorieen.join("|")}",
+  "moeilijkheid": "eenvoudig|gemiddeld|gevorderd",
+  "intro": "Inleiding 2-3 zinnen",
+  "ai_samenvatting": "Informatieve samenvatting 100-150 woorden over veiligheidsaspecten",
+  "ai_risicos": ["risico 1","risico 2","risico 3"],
+  "ai_maatregelen": ["maatregel 1","maatregel 2","maatregel 3"],
+  "ai_stoppen": "Wanneer direct stoppen: concrete situatiebeschrijving",
+  "geschatte_leestijd": 5,
+  "zoekwoorden": ["woord1","woord2"],
+  "tags": ["tag1","tag2"],
+  "foto_suggesties": ["omschrijving van een relevante foto voor dit onderwerp"]
+}]`,
+          },
+        ],
+      });
+      const raw = completion.choices[0]?.message?.content ?? "[]";
+      try {
+        const cleaned = raw.replace(/^```json\s*/m, "").replace(/\s*```\s*$/m, "").trim();
+        const parsed = JSON.parse(cleaned);
+        if (Array.isArray(parsed)) items = parsed.slice(0, aantalGeldig) as ToolboxItem[];
+      } catch {
+        logger.warn({ raw: raw.slice(0, 500) }, "AI batch parse mislukt");
+      }
+    }
+
+    if (items.length === 0) {
+      for (let i = 0; i < aantalGeldig; i++) {
+        const cat = categorieen[i % categorieen.length] ?? "overig";
+        items.push({
+          titel: `AI-concept ${i + 1} — ${cat}`, categorie: cat, moeilijkheid: "gemiddeld",
+          intro: "Concept door AI gegenereerd. Pas aan voor publicatie.",
+          ai_samenvatting: "", ai_risicos: [], ai_maatregelen: [], ai_stoppen: "",
+          geschatte_leestijd: 5, zoekwoorden: [], tags: [], foto_suggesties: [],
+        });
+      }
+    }
+
+    const rijen = await Promise.all(
+      items.map((item) =>
+        db.insert(veiligheidToolboxenTable).values({
+          titel: item.titel,
+          categorie: item.categorie,
+          moeilijkheid: item.moeilijkheid,
+          intro: item.intro,
+          aiSamenvatting: item.ai_samenvatting || null,
+          aiRisicos: item.ai_risicos,
+          aiMaatregelen: item.ai_maatregelen,
+          aiStoppen: item.ai_stoppen || null,
+          gepubliceerd: false,
+          verplicht: false,
+          doelgroep: "iedereen",
+          aiGegenereerd: true,
+          fotoSuggesties: item.foto_suggesties,
+          geschatteLeestijd: item.geschatte_leestijd,
+          zoekwoorden: item.zoekwoorden,
+          tags: item.tags,
+          minScore: 70,
+          geldigheidMaanden: 12,
+          aangemaaktDoorId: sess.gebruikerId ?? null,
+          aiVerwerktOp: heeftOpenAi() ? new Date() : null,
+        }).returning({ id: veiligheidToolboxenTable.id })
+      )
+    );
+
+    res.json({ aangemaakt: rijen.length, batch_id: batchId, onderwerpen: rijen.map((r) => ({ id: r[0]?.id })) });
+  } catch (err) {
+    req.log.error(err, "POST /veiligheid/toolboxen/ai-batch-genereer");
+    res.status(500).json({ error: "Interne fout" });
+  }
+});
+
+// ── TOOLBOX REVIEW ────────────────────────────────────────────────────────────
+
+veiligheidRouter.patch("/veiligheid/toolboxen/:id/review", schrijvenVeiligheid, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: "Ongeldig id" });
+    const { besluit } = req.body as { besluit: string };
+    if (!besluit || !["goedkeuren", "afwijzen"].includes(besluit)) {
+      return res.status(400).json({ error: "besluit moet 'goedkeuren' of 'afwijzen' zijn" });
+    }
+    const [toolbox] = await db
+      .select({ id: veiligheidToolboxenTable.id, aiGegenereerd: veiligheidToolboxenTable.aiGegenereerd })
+      .from(veiligheidToolboxenTable).where(eq(veiligheidToolboxenTable.id, id)).limit(1);
+    if (!toolbox) return res.status(404).json({ error: "Toolbox niet gevonden" });
+    if (!toolbox.aiGegenereerd) return res.status(400).json({ error: "Alleen AI-gegenereerde toolboxen kunnen worden gereviewd" });
+
+    if (besluit === "goedkeuren") {
+      await db.update(veiligheidToolboxenTable)
+        .set({ gepubliceerd: true, bijgewerktOp: new Date() })
+        .where(eq(veiligheidToolboxenTable.id, id));
+    } else {
+      await db.delete(veiligheidToolboxenTable).where(eq(veiligheidToolboxenTable.id, id));
+    }
+    res.json({ ok: true });
+  } catch (err) {
+    req.log.error(err, "PATCH /veiligheid/toolboxen/:id/review");
+    res.status(500).json({ error: "Interne fout" });
+  }
+});
+
+// ── TOOLBOX COMPLIANCE DASHBOARD ──────────────────────────────────────────────
+
+veiligheidRouter.get("/veiligheid/toolbox-compliance", lezenVeiligheid, async (req, res) => {
+  try {
+    const nu = new Date();
+    const jaar = req.query.jaar ? Number(req.query.jaar) : nu.getFullYear();
+    const maand = req.query.maand ? Number(req.query.maand) : nu.getMonth() + 1;
+
+    const opdrachten = await db
+      .select({
+        id: toolboxMaandOpdrachtenTable.id,
+        jaar: toolboxMaandOpdrachtenTable.jaar,
+        maand: toolboxMaandOpdrachtenTable.maand,
+        toolboxTitel: veiligheidToolboxenTable.titel,
+        toolboxCategorie: veiligheidToolboxenTable.categorie,
+      })
+      .from(toolboxMaandOpdrachtenTable)
+      .leftJoin(veiligheidToolboxenTable, eq(toolboxMaandOpdrachtenTable.toolboxId, veiligheidToolboxenTable.id))
+      .where(and(eq(toolboxMaandOpdrachtenTable.jaar, jaar), eq(toolboxMaandOpdrachtenTable.maand, maand)))
+      .orderBy(desc(toolboxMaandOpdrachtenTable.aangemaaktOp));
+
+    const resultaten = await Promise.all(opdrachten.map(async (o) => {
+      const statusRijen = await db
+        .select({
+          gebruikerId: toolboxMaandStatusTable.gebruikerId,
+          naam: gebruikersTable.naam,
+          eersteAanbieding: toolboxMaandStatusTable.eersteAanbieding,
+          voltooIdOp: toolboxMaandStatusTable.voltooIdOp,
+        })
+        .from(toolboxMaandStatusTable)
+        .leftJoin(gebruikersTable, eq(toolboxMaandStatusTable.gebruikerId, gebruikersTable.id))
+        .where(eq(toolboxMaandStatusTable.opdrachtId, o.id));
+
+      const totaal = statusRijen.length;
+      const voltooid = statusRijen.filter((s) => s.voltooIdOp != null).length;
+      return {
+        id: o.id,
+        toolbox_titel: o.toolboxTitel ?? "Onbekend",
+        toolbox_categorie: o.toolboxCategorie ?? "overig",
+        jaar: o.jaar,
+        maand: o.maand,
+        totaal_voltooid: voltooid,
+        totaal_gebruikers: totaal,
+        voltooiingspercentage: totaal > 0 ? Math.round((voltooid / totaal) * 100) : 0,
+        niet_voltooid: statusRijen
+          .filter((s) => s.voltooIdOp == null)
+          .map((s) => ({ gebruiker_id: s.gebruikerId, naam: s.naam ?? "Onbekend", eerste_aanbieding: s.eersteAanbieding?.toISOString() ?? null })),
+      };
+    }));
+
+    const totaalG = resultaten.reduce((s, r) => s + r.totaal_gebruikers, 0);
+    const totaalV = resultaten.reduce((s, r) => s + r.totaal_voltooid, 0);
+    res.json({
+      jaar, maand,
+      statistieken: {
+        totaal_opdrachten: resultaten.length,
+        totaal_gebruikers: totaalG,
+        voltooide_gebruikers: totaalV,
+        voltooiingspercentage: totaalG > 0 ? Math.round((totaalV / totaalG) * 100) : 0,
+      },
+      opdrachten: resultaten,
+    });
+  } catch (err) {
+    req.log.error(err, "GET /veiligheid/toolbox-compliance");
+    res.status(500).json({ error: "Interne fout" });
+  }
+});
+
 export default veiligheidRouter;

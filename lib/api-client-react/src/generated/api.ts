@@ -219,6 +219,7 @@ import type {
   GetSalarisarchiefAuditlogParams,
   GetSalarisarchiefDocumentenParams,
   GetScabMailsParams,
+  GetToolboxComplianceParams,
   GetVeiligheidIncidentenUploadUrl200,
   GetVeiligheidLmrasUploadUrl200,
   GetVeiligheidMeldingenUploadUrl200,
@@ -517,6 +518,7 @@ import type {
   Reservering,
   ReserveringInput,
   RetourInput,
+  ReviewToolboxOnderwerpPatch200,
   SalarisBatch,
   SalarisBatchDetail,
   SalarisBatchPublicerenInput,
@@ -574,15 +576,19 @@ import type {
   ToewijsbareGebruiker,
   Toewijzing,
   ToewijzingInput,
+  ToolboxAiBatchInput,
+  ToolboxAiBatchResultaat,
   ToolboxBericht,
   ToolboxBerichtDetail,
   ToolboxBerichtInput,
+  ToolboxComplianceDashboard,
   ToolboxKoppelingSuggestieInput,
   ToolboxKoppelingSuggestieResultaat,
   ToolboxMaandStatusRegel,
   ToolboxMaandVoltooienInput,
   ToolboxMaandopdracht,
   ToolboxMaandopdrachtInput,
+  ToolboxReviewInput,
   TweeFactorSetup,
   UitgifteInput,
   UitnodigingActiveren,
@@ -45598,6 +45604,231 @@ export const usePostVeiligheidToolboxenKoppelingSuggestie = <TError = ErrorType<
       > => {
       return useMutation(getPostVeiligheidToolboxenKoppelingSuggestieMutationOptions(options));
     }
+
+export const getAiBatchGenereerToolboxenUrl = () => {
+
+
+
+
+  return `/api/veiligheid/toolboxen/ai-batch-genereer`
+}
+
+/**
+ * @summary AI genereert een batch van maximaal 50 toolboxonderwerpen als concept
+ */
+export const aiBatchGenereerToolboxen = async (toolboxAiBatchInput: ToolboxAiBatchInput, options?: RequestInit): Promise<ToolboxAiBatchResultaat> => {
+
+  return customFetch<ToolboxAiBatchResultaat>(getAiBatchGenereerToolboxenUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(toolboxAiBatchInput)
+  }
+);}
+
+
+
+
+export const getAiBatchGenereerToolboxenMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof aiBatchGenereerToolboxen>>, TError,{data: BodyType<ToolboxAiBatchInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof aiBatchGenereerToolboxen>>, TError,{data: BodyType<ToolboxAiBatchInput>}, TContext> => {
+
+const mutationKey = ['aiBatchGenereerToolboxen'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof aiBatchGenereerToolboxen>>, {data: BodyType<ToolboxAiBatchInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  aiBatchGenereerToolboxen(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AiBatchGenereerToolboxenMutationResult = NonNullable<Awaited<ReturnType<typeof aiBatchGenereerToolboxen>>>
+    export type AiBatchGenereerToolboxenMutationBody = BodyType<ToolboxAiBatchInput>
+    export type AiBatchGenereerToolboxenMutationError = ErrorType<unknown>
+
+    /**
+ * @summary AI genereert een batch van maximaal 50 toolboxonderwerpen als concept
+ */
+export const useAiBatchGenereerToolboxen = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof aiBatchGenereerToolboxen>>, TError,{data: BodyType<ToolboxAiBatchInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof aiBatchGenereerToolboxen>>,
+        TError,
+        {data: BodyType<ToolboxAiBatchInput>},
+        TContext
+      > => {
+      return useMutation(getAiBatchGenereerToolboxenMutationOptions(options));
+    }
+
+export const getReviewToolboxOnderwerpPatchUrl = (id: number,) => {
+
+
+
+
+  return `/api/veiligheid/toolboxen/${id}/review`
+}
+
+/**
+ * @summary PL keurt AI-gegenereerd toolboxonderwerp goed of af
+ */
+export const reviewToolboxOnderwerpPatch = async (id: number,
+    toolboxReviewInput: ToolboxReviewInput, options?: RequestInit): Promise<ReviewToolboxOnderwerpPatch200> => {
+
+  return customFetch<ReviewToolboxOnderwerpPatch200>(getReviewToolboxOnderwerpPatchUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(toolboxReviewInput)
+  }
+);}
+
+
+
+
+export const getReviewToolboxOnderwerpPatchMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reviewToolboxOnderwerpPatch>>, TError,{id: number;data: BodyType<ToolboxReviewInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof reviewToolboxOnderwerpPatch>>, TError,{id: number;data: BodyType<ToolboxReviewInput>}, TContext> => {
+
+const mutationKey = ['reviewToolboxOnderwerpPatch'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof reviewToolboxOnderwerpPatch>>, {id: number;data: BodyType<ToolboxReviewInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  reviewToolboxOnderwerpPatch(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ReviewToolboxOnderwerpPatchMutationResult = NonNullable<Awaited<ReturnType<typeof reviewToolboxOnderwerpPatch>>>
+    export type ReviewToolboxOnderwerpPatchMutationBody = BodyType<ToolboxReviewInput>
+    export type ReviewToolboxOnderwerpPatchMutationError = ErrorType<unknown>
+
+    /**
+ * @summary PL keurt AI-gegenereerd toolboxonderwerp goed of af
+ */
+export const useReviewToolboxOnderwerpPatch = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reviewToolboxOnderwerpPatch>>, TError,{id: number;data: BodyType<ToolboxReviewInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof reviewToolboxOnderwerpPatch>>,
+        TError,
+        {id: number;data: BodyType<ToolboxReviewInput>},
+        TContext
+      > => {
+      return useMutation(getReviewToolboxOnderwerpPatchMutationOptions(options));
+    }
+
+export const getGetToolboxComplianceUrl = (params?: GetToolboxComplianceParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/veiligheid/toolbox-compliance?${stringifiedParams}` : `/api/veiligheid/toolbox-compliance`
+}
+
+/**
+ * @summary Compliance-overzicht toolbox-maandopdrachten
+ */
+export const getToolboxCompliance = async (params?: GetToolboxComplianceParams, options?: RequestInit): Promise<ToolboxComplianceDashboard> => {
+
+  return customFetch<ToolboxComplianceDashboard>(getGetToolboxComplianceUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetToolboxComplianceQueryKey = (params?: GetToolboxComplianceParams,) => {
+    return [
+    `/api/veiligheid/toolbox-compliance`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetToolboxComplianceQueryOptions = <TData = Awaited<ReturnType<typeof getToolboxCompliance>>, TError = ErrorType<unknown>>(params?: GetToolboxComplianceParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getToolboxCompliance>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetToolboxComplianceQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getToolboxCompliance>>> = ({ signal }) => getToolboxCompliance(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getToolboxCompliance>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetToolboxComplianceQueryResult = NonNullable<Awaited<ReturnType<typeof getToolboxCompliance>>>
+export type GetToolboxComplianceQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Compliance-overzicht toolbox-maandopdrachten
+ */
+
+export function useGetToolboxCompliance<TData = Awaited<ReturnType<typeof getToolboxCompliance>>, TError = ErrorType<unknown>>(
+ params?: GetToolboxComplianceParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getToolboxCompliance>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetToolboxComplianceQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
 export const getGetVeiligheidLmrasUrl = () => {
 

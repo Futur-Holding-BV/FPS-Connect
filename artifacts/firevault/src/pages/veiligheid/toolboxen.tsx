@@ -16,6 +16,8 @@ import {
   useDeleteToolboxMaandopdracht,
   useGetToolboxMaandopdrachtVoortgang,
   getListToolboxMaandopdrachtenQueryKey,
+  useAiBatchGenereerToolboxen,
+  useReviewToolboxOnderwerpPatch,
   type VeiligheidToolbox,
   type VeiligheidToolboxInput,
   type VeiligheidToolboxDetail,
@@ -42,7 +44,7 @@ import {
   ShieldCheck, Plus, Trash2, Sparkles, Upload, FileText,
   CheckCircle, Clock, AlertTriangle, Loader2, ChevronRight,
   BookOpen, Send, Users, X, Play, ExternalLink, Calendar,
-  BarChart2, Shield,
+  BarChart2, Shield, Bot, ThumbsUp, ThumbsDown,
 } from "lucide-react";
 
 const CATEGORIEEN: { value: string; label: string }[] = [
@@ -344,6 +346,8 @@ export default function VeiligheidToolboxenPagina() {
   const verwijderToolbox = useDeleteVeiligheidToolboxenId();
   const publicerenMut = usePostVeiligheidToolboxenIdPubliceren();
   const aiAnaliseMut = usePostVeiligheidToolboxenIdAiAnalyse();
+  const aiBatchMut = useAiBatchGenereerToolboxen();
+  const reviewMut = useReviewToolboxOnderwerpPatch();
 
   const [zoek, setZoek] = useState("");
   const [categorieFilter, setCategorieFilter] = useState<string>("alle");
@@ -356,6 +360,12 @@ export default function VeiligheidToolboxenPagina() {
   const [vragen, setVragen] = useState<VraagInput[]>([]);
   const [uploadBezig, setUploadBezig] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [batchDialogOpen, setBatchDialogOpen] = useState(false);
+  const [batchBezig, setBatchBezig] = useState(false);
+  const [batchAantal, setBatchAantal] = useState(10);
+  const [batchCats, setBatchCats] = useState<string[]>(["brandveiligheid"]);
+  const [batchToelichting, setBatchToelichting] = useState("");
+  const [reviewBezig, setReviewBezig] = useState<number | null>(null);
 
   const { data: detail, isLoading: detailLaden } = useGetVeiligheidToolboxenId(
     detailId ?? 0,
@@ -476,6 +486,34 @@ export default function VeiligheidToolboxenPagina() {
       toast({ title: "Toolbox gepubliceerd" });
     } catch {
       toast({ title: "Fout bij publiceren", variant: "destructive" });
+    }
+  }
+
+  async function startBatch() {
+    setBatchBezig(true);
+    try {
+      const res = await aiBatchMut.mutateAsync({ data: { categorieen: batchCats, aantal: batchAantal, toelichting: batchToelichting || undefined } });
+      invaliderenLijst();
+      setBatchDialogOpen(false);
+      setBatchToelichting("");
+      toast({ title: `${(res as any).aangemaakt ?? batchAantal} toolbox-concepten aangemaakt voor review` });
+    } catch {
+      toast({ title: "Batch generatie mislukt", variant: "destructive" });
+    } finally {
+      setBatchBezig(false);
+    }
+  }
+
+  async function reviewToolbox(id: number, besluit: "goedkeuren" | "afwijzen") {
+    setReviewBezig(id);
+    try {
+      await reviewMut.mutateAsync({ id, data: { besluit } });
+      invaliderenLijst();
+      toast({ title: besluit === "goedkeuren" ? "Toolbox gepubliceerd" : "Concept verwijderd" });
+    } catch {
+      toast({ title: "Review mislukt", variant: "destructive" });
+    } finally {
+      setReviewBezig(null);
     }
   }
 
@@ -601,6 +639,82 @@ export default function VeiligheidToolboxenPagina() {
           )}
         </div>
       )}
+
+      {/* AI-wachtrij */}
+      {kanSchrijven && (() => {
+        const wachtrij = (toolboxen ?? []).filter((t: VeiligheidToolbox) => (t as any).ai_gegenereerd === true && t.gepubliceerd === false);
+        return (
+          <div className="rounded-xl border bg-card shadow-sm">
+            <div className="flex items-center justify-between px-5 py-4 border-b">
+              <div className="flex items-center gap-2">
+                <Bot className="h-4 w-4 text-amber-600" />
+                <span className="font-semibold text-sm">AI-wachtrij</span>
+                <Badge variant="outline" className="text-[10px] bg-amber-50 text-amber-700 border-amber-200">
+                  {wachtrij.length} ter review
+                </Badge>
+              </div>
+              <Button size="sm" variant="outline" onClick={() => setBatchDialogOpen(true)}>
+                <Sparkles className="h-3.5 w-3.5 mr-1 text-amber-600" />
+                Genereer batch
+              </Button>
+            </div>
+            {wachtrij.length === 0 ? (
+              <div className="p-6 text-center text-sm text-muted-foreground">
+                Geen AI-concepten in de wachtrij. Genereer een nieuwe batch om te starten.
+              </div>
+            ) : (
+              <div className="divide-y">
+                {wachtrij.slice(0, 10).map((t: VeiligheidToolbox) => (
+                  <div key={t.id} className="flex items-center gap-4 px-5 py-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-sm truncate">{t.titel}</div>
+                      <div className="text-xs text-muted-foreground mt-0.5">
+                        {CATEGORIEEN.find(c => c.value === t.categorie)?.label ?? t.categorie}
+                        {" · "}
+                        {(t as any).moeilijkheid}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="text-xs gap-1 text-blue-600 hover:text-blue-700"
+                        onClick={() => setDetailId(t.id)}
+                      >
+                        Bekijken
+                      </Button>
+                      <Button
+                        size="sm"
+                        className="text-xs gap-1 bg-emerald-600 hover:bg-emerald-700"
+                        disabled={reviewBezig === t.id}
+                        onClick={() => void reviewToolbox(t.id, "goedkeuren")}
+                      >
+                        {reviewBezig === t.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <ThumbsUp className="h-3 w-3" />}
+                        Goedkeuren
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-xs gap-1 text-red-600 border-red-200 hover:bg-red-50"
+                        disabled={reviewBezig === t.id}
+                        onClick={() => void reviewToolbox(t.id, "afwijzen")}
+                      >
+                        <ThumbsDown className="h-3 w-3" />
+                        Afwijzen
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+                {wachtrij.length > 10 && (
+                  <div className="px-5 py-3 text-xs text-muted-foreground text-center">
+                    + {wachtrij.length - 10} meer concepten — keur eerst de bovenstaande goed of af
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Filters */}
       <div className="flex gap-3 flex-wrap">
@@ -1234,6 +1348,79 @@ export default function VeiligheidToolboxenPagina() {
               </table>
             )}
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── AI Batch generatie dialog ── */}
+      <Dialog open={batchDialogOpen} onOpenChange={setBatchDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Bot className="h-5 w-5 text-amber-600" />
+              AI-batch genereren
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label>Aantal onderwerpen</Label>
+              <Input
+                type="number"
+                min={1}
+                max={50}
+                value={batchAantal}
+                onChange={(e) => setBatchAantal(Math.min(50, Math.max(1, Number(e.target.value))))}
+              />
+              <p className="text-xs text-muted-foreground">Maximaal 50 per keer</p>
+            </div>
+            <div className="space-y-2">
+              <Label>Categorieën</Label>
+              <div className="flex flex-wrap gap-1.5">
+                {CATEGORIEEN.map((c) => (
+                  <button
+                    key={c.value}
+                    type="button"
+                    onClick={() => setBatchCats((prev) =>
+                      prev.includes(c.value) ? prev.filter((x) => x !== c.value) : [...prev, c.value]
+                    )}
+                    className={`px-2.5 py-1 rounded-full text-xs border transition-colors ${
+                      batchCats.includes(c.value)
+                        ? "bg-amber-100 text-amber-800 border-amber-300"
+                        : "bg-muted text-muted-foreground border-border hover:border-amber-300"
+                    }`}
+                  >
+                    {c.label}
+                  </button>
+                ))}
+              </div>
+              {batchCats.length === 0 && (
+                <p className="text-xs text-red-500">Selecteer minimaal een categorie</p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label>Extra context (optioneel)</Label>
+              <Textarea
+                placeholder="Bijv. specifieke risico's, seizoensgebonden thema's, sector..."
+                value={batchToelichting}
+                onChange={(e) => setBatchToelichting(e.target.value)}
+                rows={3}
+              />
+            </div>
+            <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 text-xs text-amber-800 space-y-1">
+              <p className="font-medium">AI genereert concepten ter review</p>
+              <p>De gegenereerde toolboxen komen in de AI-wachtrij. Je keurt elk onderwerp goed of af voordat het zichtbaar wordt voor medewerkers.</p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBatchDialogOpen(false)}>Annuleren</Button>
+            <Button
+              disabled={batchBezig || batchCats.length === 0}
+              onClick={() => void startBatch()}
+              className="gap-1.5"
+            >
+              {batchBezig ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+              {batchBezig ? "Genereren..." : `${batchAantal} onderwerpen genereren`}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

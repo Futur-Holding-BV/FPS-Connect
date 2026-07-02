@@ -27,6 +27,8 @@ export const veiligheidToolboxenTable = pgTable("veiligheid_toolboxen", {
   doelgroepDetails: jsonb("doelgroep_details").notNull().default({}),
   aangemaaktDoorId: integer("aangemaakt_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
   aiVerwerktOp: timestamp("ai_verwerkt_op"),
+  aiGegenereerd: boolean("ai_gegenereerd").notNull().default(false),
+  fotoSuggesties: jsonb("foto_suggesties").notNull().default([]),
   zoekwoorden: jsonb("zoekwoorden").notNull().default([]),
   tags: jsonb("tags").notNull().default([]),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),

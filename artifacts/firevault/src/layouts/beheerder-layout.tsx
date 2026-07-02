@@ -829,6 +829,17 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                               </Link>
                             </SidebarMenuButton>
                           </SidebarMenuItem>
+                          <SidebarMenuItem className="pl-5">
+                            <SidebarMenuButton
+                              asChild
+                              isActive={location === "/veiligheid/toolbox-compliance"}
+                            >
+                              <Link href="/veiligheid/toolbox-compliance">
+                                <BarChart3 />
+                                <span>Toolbox Compliance</span>
+                              </Link>
+                            </SidebarMenuButton>
+                          </SidebarMenuItem>
                         </SidebarMenu>
                       </SidebarGroupContent>
                     </CollapsibleContent>
