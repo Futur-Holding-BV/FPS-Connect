@@ -65,3 +65,9 @@ id = "Kyn8XbvktAs2UOSYm9cpf"
 uri = "file://exports/FPS-taken-overzicht.txt"
 type = "text"
 title = "FPS — Overzicht van taken (13 juni 2026)"
+
+[[outputs]]
+id = "sbuV7vAcLDSdpZmVO75cO"
+uri = "file://docs/audit-technisch-2026-07-02.md"
+type = "text"
+title = "Technische Audit FPS Connect / FPS One — 2 juli 2026"
