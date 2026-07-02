@@ -149,8 +149,13 @@ import type {
   FactuurAfkeurenInput,
   FactuurBatchExportInput,
   FactuurBlokkerenInput,
+  FactuurDoorstuurInput,
   FactuurHerexportInput,
   FactuurInput,
+  FactuurOpmerking,
+  FactuurOpmerkingAfhandelenInput,
+  FactuurOpmerkingInput,
+  FactuurProceslogRegel,
   FactuurUpdateInput,
   FactuurUploadUrlInput,
   Feedback,
@@ -47542,6 +47547,446 @@ export const useBeoordelenFactuurWVB = <TError = ErrorType<void>,
       > => {
       return useMutation(getBeoordelenFactuurWVBMutationOptions(options));
     }
+
+export const getDoorstuurenFactuurMedewerkerUrl = (id: number,) => {
+
+
+
+
+  return `/api/facturen/${id}/doorsturen-medewerker`
+}
+
+/**
+ * @summary Factuur doorsturen naar medewerker voor extra controle
+ */
+export const doorstuurenFactuurMedewerker = async (id: number,
+    factuurDoorstuurInput: FactuurDoorstuurInput, options?: RequestInit): Promise<Factuur> => {
+
+  return customFetch<Factuur>(getDoorstuurenFactuurMedewerkerUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(factuurDoorstuurInput)
+  }
+);}
+
+
+
+
+export const getDoorstuurenFactuurMedewerkerMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof doorstuurenFactuurMedewerker>>, TError,{id: number;data: BodyType<FactuurDoorstuurInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof doorstuurenFactuurMedewerker>>, TError,{id: number;data: BodyType<FactuurDoorstuurInput>}, TContext> => {
+
+const mutationKey = ['doorstuurenFactuurMedewerker'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof doorstuurenFactuurMedewerker>>, {id: number;data: BodyType<FactuurDoorstuurInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  doorstuurenFactuurMedewerker(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DoorstuurenFactuurMedewerkerMutationResult = NonNullable<Awaited<ReturnType<typeof doorstuurenFactuurMedewerker>>>
+    export type DoorstuurenFactuurMedewerkerMutationBody = BodyType<FactuurDoorstuurInput>
+    export type DoorstuurenFactuurMedewerkerMutationError = ErrorType<void>
+
+    /**
+ * @summary Factuur doorsturen naar medewerker voor extra controle
+ */
+export const useDoorstuurenFactuurMedewerker = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof doorstuurenFactuurMedewerker>>, TError,{id: number;data: BodyType<FactuurDoorstuurInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof doorstuurenFactuurMedewerker>>,
+        TError,
+        {id: number;data: BodyType<FactuurDoorstuurInput>},
+        TContext
+      > => {
+      return useMutation(getDoorstuurenFactuurMedewerkerMutationOptions(options));
+    }
+
+export const getBeoordelenFactuurMedewerkerUrl = (id: number,) => {
+
+
+
+
+  return `/api/facturen/${id}/beoordelen-medewerker`
+}
+
+/**
+ * @summary Factuur beoordelen als aangewezen medewerker (goedkeuren of afkeuren)
+ */
+export const beoordelenFactuurMedewerker = async (id: number,
+    beoordelenInput: BeoordelenInput, options?: RequestInit): Promise<Factuur> => {
+
+  return customFetch<Factuur>(getBeoordelenFactuurMedewerkerUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(beoordelenInput)
+  }
+);}
+
+
+
+
+export const getBeoordelenFactuurMedewerkerMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof beoordelenFactuurMedewerker>>, TError,{id: number;data: BodyType<BeoordelenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof beoordelenFactuurMedewerker>>, TError,{id: number;data: BodyType<BeoordelenInput>}, TContext> => {
+
+const mutationKey = ['beoordelenFactuurMedewerker'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof beoordelenFactuurMedewerker>>, {id: number;data: BodyType<BeoordelenInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  beoordelenFactuurMedewerker(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type BeoordelenFactuurMedewerkerMutationResult = NonNullable<Awaited<ReturnType<typeof beoordelenFactuurMedewerker>>>
+    export type BeoordelenFactuurMedewerkerMutationBody = BodyType<BeoordelenInput>
+    export type BeoordelenFactuurMedewerkerMutationError = ErrorType<void>
+
+    /**
+ * @summary Factuur beoordelen als aangewezen medewerker (goedkeuren of afkeuren)
+ */
+export const useBeoordelenFactuurMedewerker = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof beoordelenFactuurMedewerker>>, TError,{id: number;data: BodyType<BeoordelenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof beoordelenFactuurMedewerker>>,
+        TError,
+        {id: number;data: BodyType<BeoordelenInput>},
+        TContext
+      > => {
+      return useMutation(getBeoordelenFactuurMedewerkerMutationOptions(options));
+    }
+
+export const getListFactuurOpmerkingenUrl = (id: number,) => {
+
+
+
+
+  return `/api/facturen/${id}/opmerkingen`
+}
+
+/**
+ * @summary Opmerkingen bij een factuur ophalen
+ */
+export const listFactuurOpmerkingen = async (id: number, options?: RequestInit): Promise<FactuurOpmerking[]> => {
+
+  return customFetch<FactuurOpmerking[]>(getListFactuurOpmerkingenUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListFactuurOpmerkingenQueryKey = (id: number,) => {
+    return [
+    `/api/facturen/${id}/opmerkingen`
+    ] as const;
+    }
+
+
+export const getListFactuurOpmerkingenQueryOptions = <TData = Awaited<ReturnType<typeof listFactuurOpmerkingen>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listFactuurOpmerkingen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListFactuurOpmerkingenQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listFactuurOpmerkingen>>> = ({ signal }) => listFactuurOpmerkingen(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listFactuurOpmerkingen>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListFactuurOpmerkingenQueryResult = NonNullable<Awaited<ReturnType<typeof listFactuurOpmerkingen>>>
+export type ListFactuurOpmerkingenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Opmerkingen bij een factuur ophalen
+ */
+
+export function useListFactuurOpmerkingen<TData = Awaited<ReturnType<typeof listFactuurOpmerkingen>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listFactuurOpmerkingen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListFactuurOpmerkingenQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getAddFactuurOpmerkingUrl = (id: number,) => {
+
+
+
+
+  return `/api/facturen/${id}/opmerkingen`
+}
+
+/**
+ * @summary Opmerking plaatsen bij een factuur
+ */
+export const addFactuurOpmerking = async (id: number,
+    factuurOpmerkingInput: FactuurOpmerkingInput, options?: RequestInit): Promise<FactuurOpmerking> => {
+
+  return customFetch<FactuurOpmerking>(getAddFactuurOpmerkingUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(factuurOpmerkingInput)
+  }
+);}
+
+
+
+
+export const getAddFactuurOpmerkingMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addFactuurOpmerking>>, TError,{id: number;data: BodyType<FactuurOpmerkingInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof addFactuurOpmerking>>, TError,{id: number;data: BodyType<FactuurOpmerkingInput>}, TContext> => {
+
+const mutationKey = ['addFactuurOpmerking'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof addFactuurOpmerking>>, {id: number;data: BodyType<FactuurOpmerkingInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  addFactuurOpmerking(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AddFactuurOpmerkingMutationResult = NonNullable<Awaited<ReturnType<typeof addFactuurOpmerking>>>
+    export type AddFactuurOpmerkingMutationBody = BodyType<FactuurOpmerkingInput>
+    export type AddFactuurOpmerkingMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Opmerking plaatsen bij een factuur
+ */
+export const useAddFactuurOpmerking = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addFactuurOpmerking>>, TError,{id: number;data: BodyType<FactuurOpmerkingInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof addFactuurOpmerking>>,
+        TError,
+        {id: number;data: BodyType<FactuurOpmerkingInput>},
+        TContext
+      > => {
+      return useMutation(getAddFactuurOpmerkingMutationOptions(options));
+    }
+
+export const getAfhandelenFactuurOpmerkingUrl = (id: number,
+    oid: number,) => {
+
+
+
+
+  return `/api/facturen/${id}/opmerkingen/${oid}`
+}
+
+/**
+ * @summary Opmerking als afgehandeld markeren (of heropenen)
+ */
+export const afhandelenFactuurOpmerking = async (id: number,
+    oid: number,
+    factuurOpmerkingAfhandelenInput: FactuurOpmerkingAfhandelenInput, options?: RequestInit): Promise<FactuurOpmerking> => {
+
+  return customFetch<FactuurOpmerking>(getAfhandelenFactuurOpmerkingUrl(id,oid),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(factuurOpmerkingAfhandelenInput)
+  }
+);}
+
+
+
+
+export const getAfhandelenFactuurOpmerkingMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof afhandelenFactuurOpmerking>>, TError,{id: number;oid: number;data: BodyType<FactuurOpmerkingAfhandelenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof afhandelenFactuurOpmerking>>, TError,{id: number;oid: number;data: BodyType<FactuurOpmerkingAfhandelenInput>}, TContext> => {
+
+const mutationKey = ['afhandelenFactuurOpmerking'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof afhandelenFactuurOpmerking>>, {id: number;oid: number;data: BodyType<FactuurOpmerkingAfhandelenInput>}> = (props) => {
+          const {id,oid,data} = props ?? {};
+
+          return  afhandelenFactuurOpmerking(id,oid,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AfhandelenFactuurOpmerkingMutationResult = NonNullable<Awaited<ReturnType<typeof afhandelenFactuurOpmerking>>>
+    export type AfhandelenFactuurOpmerkingMutationBody = BodyType<FactuurOpmerkingAfhandelenInput>
+    export type AfhandelenFactuurOpmerkingMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Opmerking als afgehandeld markeren (of heropenen)
+ */
+export const useAfhandelenFactuurOpmerking = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof afhandelenFactuurOpmerking>>, TError,{id: number;oid: number;data: BodyType<FactuurOpmerkingAfhandelenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof afhandelenFactuurOpmerking>>,
+        TError,
+        {id: number;oid: number;data: BodyType<FactuurOpmerkingAfhandelenInput>},
+        TContext
+      > => {
+      return useMutation(getAfhandelenFactuurOpmerkingMutationOptions(options));
+    }
+
+export const getGetFactuurProceslogUrl = (id: number,) => {
+
+
+
+
+  return `/api/facturen/${id}/proceslog`
+}
+
+/**
+ * @summary Volledig proceslog per factuur (statuswijzigingen + opmerkingen gecombineerd)
+ */
+export const getFactuurProceslog = async (id: number, options?: RequestInit): Promise<FactuurProceslogRegel[]> => {
+
+  return customFetch<FactuurProceslogRegel[]>(getGetFactuurProceslogUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetFactuurProceslogQueryKey = (id: number,) => {
+    return [
+    `/api/facturen/${id}/proceslog`
+    ] as const;
+    }
+
+
+export const getGetFactuurProceslogQueryOptions = <TData = Awaited<ReturnType<typeof getFactuurProceslog>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getFactuurProceslog>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetFactuurProceslogQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getFactuurProceslog>>> = ({ signal }) => getFactuurProceslog(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getFactuurProceslog>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetFactuurProceslogQueryResult = NonNullable<Awaited<ReturnType<typeof getFactuurProceslog>>>
+export type GetFactuurProceslogQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Volledig proceslog per factuur (statuswijzigingen + opmerkingen gecombineerd)
+ */
+
+export function useGetFactuurProceslog<TData = Awaited<ReturnType<typeof getFactuurProceslog>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getFactuurProceslog>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetFactuurProceslogQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
 export const getForceerHerexportFactuurUrl = (id: number,) => {
 

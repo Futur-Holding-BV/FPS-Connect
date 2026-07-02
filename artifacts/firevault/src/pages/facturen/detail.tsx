@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRoute, Link } from "wouter";
 import {
   useGetFactuur,
@@ -10,27 +10,39 @@ import {
   useListFactuurExportLogs,
   useAfkeurenFactuur,
   useForceerHerexportFactuur,
+  useDoorstuurenFactuurMedewerker,
+  useBeoordelenFactuurMedewerker,
+  useListFactuurOpmerkingen,
+  useAddFactuurOpmerking,
+  useAfhandelenFactuurOpmerking,
+  useGetFactuurProceslog,
+  useListToewijsbareGebruikers,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import {
   ArrowLeft, Sparkles, CheckCircle2, AlertTriangle, XCircle,
   ArrowUpRight, Ban, Loader2, ChevronRight, Receipt, Shield,
-  Info, Clock, RotateCcw, Eye,
+  Info, Clock, RotateCcw, Eye, MessageSquare, History, UserCheck,
+  Send, CornerDownRight, CheckCheck,
 } from "lucide-react";
-import type { Factuur, AccountviewExportLog } from "@workspace/api-client-react";
+import type { Factuur, AccountviewExportLog, FactuurOpmerking, FactuurProceslogRegel } from "@workspace/api-client-react";
 
 const STATUS_LABEL: Record<string, string> = {
   ontvangen: "Ontvangen",
   ai_gelezen: "AI gelezen",
   controle_nodig: "Controle nodig",
   klaar_voor_boeking: "Klaar voor boeking",
+  te_beoordelen_pl: "Ter accordering projectleider",
+  ter_beoordeling_medewerker: "Ter beoordeling medewerker",
+  te_beoordelen_wvb: "Ter beoordeling WVB",
   klaar_voor_accountview: "Klaar voor AccountView",
   verzonden_naar_accountview: "Verzonden naar AccountView",
   fout_bij_verzending: "Fout bij verzending",
@@ -42,6 +54,9 @@ const STATUS_KLEUR: Record<string, string> = {
   ai_gelezen: "bg-blue-100 text-blue-700",
   controle_nodig: "bg-amber-100 text-amber-700",
   klaar_voor_boeking: "bg-violet-100 text-violet-700",
+  te_beoordelen_pl: "bg-orange-100 text-orange-700",
+  ter_beoordeling_medewerker: "bg-purple-100 text-purple-700",
+  te_beoordelen_wvb: "bg-cyan-100 text-cyan-700",
   klaar_voor_accountview: "bg-emerald-100 text-emerald-700",
   verzonden_naar_accountview: "bg-green-100 text-green-700",
   fout_bij_verzending: "bg-red-100 text-red-700",
@@ -80,9 +95,29 @@ export default function FactuurDetailPagina() {
   const [aiBezig, setAiBezig] = useState(false);
   const [exportBezig, setExportBezig] = useState(false);
 
+  // Doorsturen naar medewerker
+  const [doorstuurOpen, setDoorstuurOpen] = useState(false);
+  const [doorstuurGebruikerId, setDoorstuurGebruikerId] = useState<string>("");
+  const [doorstuurOpmerking, setDoorstuurOpmerking] = useState("");
+
+  // Medewerker beoordeling
+  const [medBeoordeelOpen, setMedBeoordeelOpen] = useState(false);
+  const [medAfkeurReden, setMedAfkeurReden] = useState("");
+  const [medActie, setMedActie] = useState<"goedkeuren" | "afkeuren">("goedkeuren");
+
+  // Opmerkingen
+  const [nieuweTekst, setNieuweTekst] = useState("");
+  const [replyOpId, setReplyOpId] = useState<number | null>(null);
+  const [actievTabblad, setActiefTabblad] = useState<"opmerkingen" | "proceslog">("opmerkingen");
+  const opmerkingInputRef = useRef<HTMLTextAreaElement>(null);
+
   const invalideer = () => {
     queryClient.invalidateQueries({ queryKey: ["factuur", id] });
     queryClient.invalidateQueries({ queryKey: ["facturen"] });
+  };
+  const invalideerOpmerkingen = () => {
+    queryClient.invalidateQueries({ queryKey: ["factuur-opmerkingen", id] });
+    queryClient.invalidateQueries({ queryKey: ["factuur-proceslog", id] });
   };
 
   const { data: factuur, isLoading } = useGetFactuur(
@@ -93,10 +128,42 @@ export default function FactuurDetailPagina() {
     id,
     { query: { queryKey: ["factuur-logs", id], enabled: id > 0 } },
   );
+  const { data: opmerkingen = [] } = useListFactuurOpmerkingen(
+    id,
+    { query: { queryKey: ["factuur-opmerkingen", id], enabled: id > 0 } },
+  );
+  const { data: proceslog = [] } = useGetFactuurProceslog(
+    id,
+    { query: { queryKey: ["factuur-proceslog", id], enabled: id > 0 } },
+  );
+  const { data: toewijsbareGebruikers = [] } = useListToewijsbareGebruikers(
+    { query: { queryKey: ["toewijsbare-gebruikers"], enabled: doorstuurOpen } },
+  );
 
   const updateMut = useUpdateFactuur({ mutation: { onSuccess: invalideer } });
   const aiMut = useAiUitlezenFactuur({ mutation: { onSuccess: invalideer } });
   const accorderenMut = useAccorderenFactuur({ mutation: { onSuccess: invalideer } });
+  const doorstuurMut = useDoorstuurenFactuurMedewerker({
+    mutation: {
+      onSuccess: () => {
+        invalideer(); invalideerOpmerkingen();
+        setDoorstuurOpen(false); setDoorstuurGebruikerId(""); setDoorstuurOpmerking("");
+      },
+    },
+  });
+  const medBeoordeelMut = useBeoordelenFactuurMedewerker({
+    mutation: {
+      onSuccess: () => { invalideer(); invalideerOpmerkingen(); setMedBeoordeelOpen(false); setMedAfkeurReden(""); },
+    },
+  });
+  const opmerkingToevoegenMut = useAddFactuurOpmerking({
+    mutation: {
+      onSuccess: () => { invalideerOpmerkingen(); setNieuweTekst(""); setReplyOpId(null); },
+    },
+  });
+  const afhandelenMut = useAfhandelenFactuurOpmerking({
+    mutation: { onSuccess: () => invalideerOpmerkingen() },
+  });
   const blokkerenMut = useBlokkerenFactuur({ mutation: { onSuccess: () => { invalideer(); setBlokkerenOpen(false); } } });
   const afkeurenMut = useAfkeurenFactuur({
     mutation: {
@@ -166,6 +233,8 @@ export default function FactuurDetailPagina() {
   if (!f) return <div className="p-6 text-muted-foreground">Factuur niet gevonden.</div>;
 
   const logs = exportLogs as AccountviewExportLog[];
+  const fOpm = opmerkingen as FactuurOpmerking[];
+  const fLog = proceslog as FactuurProceslogRegel[];
   const kanAi = (f.status === "ontvangen" || f.status === "controle_nodig") && !!f.pdf_url;
   const kanAccorderen = (f.status === "klaar_voor_boeking" || f.status === "ai_gelezen" || f.status === "controle_nodig") && !f.geblokkeerd && !f.geaccordeerd;
   const kanExporteren = f.status === "klaar_voor_accountview" && !f.geblokkeerd;
@@ -174,6 +243,8 @@ export default function FactuurDetailPagina() {
   const isVerwerkt = f.status === "verwerkt";
   const heeftFout = f.status === "fout_bij_verzending";
   const isAfgekeurd = f.status === "afgekeurd";
+  const kanDoorsturen = f.status === "te_beoordelen_pl" || f.status === "klaar_voor_boeking" || f.status === "ai_gelezen" || f.status === "controle_nodig";
+  const isTerBeoordelingMedewerker = f.status === "ter_beoordeling_medewerker";
 
   return (
     <div className="p-6 space-y-5 max-w-4xl">
@@ -253,6 +324,16 @@ export default function FactuurDetailPagina() {
                   <RotateCcw className="h-3.5 w-3.5 mr-1.5" />Herexport
                 </Button>
               )}
+              {kanDoorsturen && (
+                <Button size="sm" variant="outline" onClick={() => { setDoorstuurGebruikerId(""); setDoorstuurOpmerking(""); setDoorstuurOpen(true); }}>
+                  <UserCheck className="h-3.5 w-3.5 mr-1.5" />Doorsturen naar medewerker
+                </Button>
+              )}
+              {isTerBeoordelingMedewerker && (
+                <Button size="sm" variant="outline" onClick={() => { setMedActie("goedkeuren"); setMedAfkeurReden(""); setMedBeoordeelOpen(true); }}>
+                  <UserCheck className="h-3.5 w-3.5 mr-1.5" />Beoordelen
+                </Button>
+              )}
               {kanAfkeuren && (
                 <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive" onClick={() => { setAfkeurReden(""); setAfkeurenOpen(true); }}>
                   <XCircle className="h-3.5 w-3.5 mr-1.5" />Afkeuren
@@ -278,6 +359,20 @@ export default function FactuurDetailPagina() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Ter beoordeling medewerker banner */}
+      {isTerBeoordelingMedewerker && (
+        <div className="rounded-lg bg-purple-50 border border-purple-200 px-4 py-3 text-sm text-purple-800 flex items-start gap-2">
+          <UserCheck className="h-4 w-4 mt-0.5 shrink-0" />
+          <div>
+            <p className="font-medium">Ter beoordeling bij medewerker</p>
+            {!!(f as unknown as Record<string, unknown>)["beoordelaar_naam"] && (
+              <p className="mt-0.5">Toegewezen aan: <span className="font-medium">{String((f as unknown as Record<string, unknown>)["beoordelaar_naam"])}</span></p>
+            )}
+            <p className="text-xs mt-1 text-purple-600">De medewerker kan de factuur goedkeuren of afkeuren. Na goedkeuring gaat de factuur terug naar de projectleider.</p>
+          </div>
+        </div>
+      )}
 
       {/* Afgekeurd banner */}
       {isAfgekeurd && (
@@ -466,6 +561,248 @@ export default function FactuurDetailPagina() {
           </CardContent>
         </Card>
       )}
+
+      {/* Opmerkingen + Proceslog */}
+      <Card>
+        <CardHeader className="pb-0">
+          <div className="flex items-center gap-1 border-b">
+            <button
+              className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium border-b-2 transition-colors ${actievTabblad === "opmerkingen" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+              onClick={() => setActiefTabblad("opmerkingen")}
+            >
+              <MessageSquare className="h-3.5 w-3.5" />
+              Opmerkingen {fOpm.length > 0 && <span className="bg-slate-100 text-slate-600 text-xs px-1.5 py-0.5 rounded-full ml-0.5">{fOpm.length}</span>}
+            </button>
+            <button
+              className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium border-b-2 transition-colors ${actievTabblad === "proceslog" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+              onClick={() => setActiefTabblad("proceslog")}
+            >
+              <History className="h-3.5 w-3.5" />
+              Proceslog {fLog.length > 0 && <span className="bg-slate-100 text-slate-600 text-xs px-1.5 py-0.5 rounded-full ml-0.5">{fLog.length}</span>}
+            </button>
+          </div>
+        </CardHeader>
+        <CardContent className="pt-4">
+          {actievTabblad === "opmerkingen" && (
+            <div className="space-y-4">
+              {/* Bestaande opmerkingen */}
+              {fOpm.length === 0 && (
+                <p className="text-sm text-muted-foreground text-center py-4">Nog geen opmerkingen bij deze factuur.</p>
+              )}
+              {fOpm.map((o) => (
+                <div key={o.id} className={`rounded-lg border px-3 py-2.5 text-sm ${o.afgehandeld ? "bg-slate-50 border-slate-200 opacity-60" : "bg-white border-slate-200"}`}>
+                  {o.reply_op_id && (
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1.5">
+                      <CornerDownRight className="h-3 w-3" />
+                      <span>Reactie</span>
+                    </div>
+                  )}
+                  <div className="flex items-start justify-between gap-2">
+                    <p className={`flex-1 leading-relaxed ${o.afgehandeld ? "line-through text-muted-foreground" : ""}`}>{o.tekst}</p>
+                    <button
+                      className={`shrink-0 mt-0.5 p-1 rounded hover:bg-slate-100 transition-colors ${o.afgehandeld ? "text-green-600" : "text-muted-foreground"}`}
+                      title={o.afgehandeld ? "Heropenen" : "Markeer als afgehandeld"}
+                      onClick={() => afhandelenMut.mutate({ id, oid: o.id, data: { afgehandeld: !o.afgehandeld } })}
+                    >
+                      <CheckCheck className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-2 mt-1.5 text-xs text-muted-foreground">
+                    <span className="font-medium text-slate-600">{o.gebruiker_naam ?? "Onbekend"}</span>
+                    <span>{new Date(o.aangemaakt_op).toLocaleString("nl-NL", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}</span>
+                    {o.afgehandeld && o.afgehandeld_door_naam && (
+                      <span className="text-green-600">Afgehandeld door {o.afgehandeld_door_naam}</span>
+                    )}
+                    <button
+                      className="ml-auto text-xs text-primary hover:underline"
+                      onClick={() => { setReplyOpId(o.id); opmerkingInputRef.current?.focus(); }}
+                    >
+                      Reageren
+                    </button>
+                  </div>
+                </div>
+              ))}
+
+              {/* Nieuwe opmerking invoer */}
+              <div className="space-y-2 pt-1">
+                {replyOpId && (
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground bg-slate-50 rounded px-2 py-1">
+                    <CornerDownRight className="h-3 w-3" />
+                    <span>Reactie op opmerking #{replyOpId}</span>
+                    <button className="ml-auto text-xs hover:text-foreground" onClick={() => setReplyOpId(null)}>Annuleren</button>
+                  </div>
+                )}
+                <Textarea
+                  ref={opmerkingInputRef}
+                  placeholder="Opmerking toevoegen…"
+                  value={nieuweTekst}
+                  onChange={(e) => setNieuweTekst(e.target.value)}
+                  rows={2}
+                  className="resize-none text-sm"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && nieuweTekst.trim()) {
+                      opmerkingToevoegenMut.mutate({ id, data: { tekst: nieuweTekst.trim(), reply_op_id: replyOpId ?? undefined } });
+                    }
+                  }}
+                />
+                <div className="flex justify-end">
+                  <Button
+                    size="sm"
+                    disabled={!nieuweTekst.trim() || opmerkingToevoegenMut.isPending}
+                    onClick={() => opmerkingToevoegenMut.mutate({ id, data: { tekst: nieuweTekst.trim(), reply_op_id: replyOpId ?? undefined } })}
+                  >
+                    {opmerkingToevoegenMut.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <Send className="h-3.5 w-3.5 mr-1.5" />}
+                    Plaatsen
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {actievTabblad === "proceslog" && (
+            <div className="space-y-1">
+              {fLog.length === 0 && (
+                <p className="text-sm text-muted-foreground text-center py-4">Nog geen procesactiviteit voor deze factuur.</p>
+              )}
+              {fLog.map((r, idx) => {
+                const isOpmerking = r.soort === "opmerking";
+                const detail = r.detail as Record<string, unknown> | null | undefined;
+                return (
+                  <div key={r.id} className="relative flex gap-3">
+                    {/* Tijdlijn lijn */}
+                    {idx < fLog.length - 1 && (
+                      <div className="absolute left-[11px] top-6 bottom-0 w-px bg-slate-200" />
+                    )}
+                    <div className={`shrink-0 mt-1 h-5 w-5 rounded-full flex items-center justify-center ${isOpmerking ? "bg-blue-100" : "bg-slate-100"}`}>
+                      {isOpmerking
+                        ? <MessageSquare className="h-3 w-3 text-blue-600" />
+                        : <History className="h-3 w-3 text-slate-500" />}
+                    </div>
+                    <div className="pb-4 min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-2">
+                        <p className={`text-sm leading-snug ${isOpmerking ? "text-slate-700 italic" : "text-slate-800"}`}>
+                          {isOpmerking ? `"${r.omschrijving}"` : r.omschrijving}
+                        </p>
+                        <span className="shrink-0 text-xs text-muted-foreground whitespace-nowrap">
+                          {new Date(r.aangemaakt_op).toLocaleString("nl-NL", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 mt-0.5 text-xs text-muted-foreground">
+                        {r.gebruiker_naam && <span className="font-medium text-slate-600">{r.gebruiker_naam}</span>}
+                        {!isOpmerking && typeof detail?.["notitie"] === "string" && detail["notitie"] !== r.omschrijving && (
+                          <span className="text-slate-500">{detail["notitie"] as string}</span>
+                        )}
+                        {isOpmerking && !!detail?.["afgehandeld"] && (
+                          <span className="text-green-600 flex items-center gap-0.5"><CheckCheck className="h-3 w-3" />Afgehandeld</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Doorsturen naar medewerker dialog */}
+      <Dialog open={doorstuurOpen} onOpenChange={setDoorstuurOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>Doorsturen naar medewerker</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Selecteer een medewerker om de factuur te laten beoordelen. De medewerker kan de factuur goedkeuren of afkeuren. Na goedkeuring keert de factuur terug naar de projectleider.
+            </p>
+            <div>
+              <Label>Medewerker</Label>
+              <Select value={doorstuurGebruikerId} onValueChange={setDoorstuurGebruikerId}>
+                <SelectTrigger className="mt-1">
+                  <SelectValue placeholder="Selecteer medewerker..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {(toewijsbareGebruikers as Array<{ id: number; naam: string }>).map((g) => (
+                    <SelectItem key={g.id} value={String(g.id)}>{g.naam}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Begeleidende opmerking (optioneel)</Label>
+              <Textarea
+                className="mt-1 resize-none text-sm"
+                placeholder="Bijv. controleer of het BTW-tarief klopt..."
+                rows={2}
+                value={doorstuurOpmerking}
+                onChange={(e) => setDoorstuurOpmerking(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDoorstuurOpen(false)}>Annuleren</Button>
+            <Button
+              disabled={!doorstuurGebruikerId || doorstuurMut.isPending}
+              onClick={() => doorstuurMut.mutate({ id, data: { gebruiker_id: parseInt(doorstuurGebruikerId, 10), opmerking: doorstuurOpmerking || undefined } })}
+            >
+              {doorstuurMut.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <UserCheck className="h-3.5 w-3.5 mr-1.5" />}
+              Doorsturen
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Medewerker beoordeling dialog */}
+      <Dialog open={medBeoordeelOpen} onOpenChange={setMedBeoordeelOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>Factuur beoordelen</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant={medActie === "goedkeuren" ? "default" : "outline"}
+                className="flex-1"
+                onClick={() => setMedActie("goedkeuren")}
+              >
+                <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />Goedkeuren
+              </Button>
+              <Button
+                size="sm"
+                variant={medActie === "afkeuren" ? "destructive" : "outline"}
+                className="flex-1"
+                onClick={() => setMedActie("afkeuren")}
+              >
+                <XCircle className="h-3.5 w-3.5 mr-1.5" />Afkeuren
+              </Button>
+            </div>
+            {medActie === "goedkeuren" && (
+              <p className="text-sm text-muted-foreground">
+                De factuur wordt goedgekeurd en teruggestuurd naar de projectleider voor definitieve accordering.
+              </p>
+            )}
+            {medActie === "afkeuren" && (
+              <div>
+                <Label>Reden (verplicht)</Label>
+                <Input
+                  className="mt-1"
+                  placeholder="Bijv. onjuist bedrag"
+                  value={medAfkeurReden}
+                  onChange={(e) => setMedAfkeurReden(e.target.value)}
+                />
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setMedBeoordeelOpen(false)}>Annuleren</Button>
+            <Button
+              variant={medActie === "afkeuren" ? "destructive" : "default"}
+              disabled={medBeoordeelMut.isPending || (medActie === "afkeuren" && !medAfkeurReden.trim())}
+              onClick={() => medBeoordeelMut.mutate({ id, data: { actie: medActie, reden: medActie === "afkeuren" ? medAfkeurReden.trim() : undefined } })}
+            >
+              {medBeoordeelMut.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : null}
+              {medActie === "goedkeuren" ? "Goedkeuren" : "Afkeuren"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Bewerken dialog */}
       <Dialog open={bewerkOpen} onOpenChange={setBewerkOpen}>

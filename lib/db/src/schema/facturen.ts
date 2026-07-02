@@ -122,6 +122,9 @@ export const facturenTable = pgTable("facturen", {
   geaccordeerdOp: timestamp("geaccordeerd_op"),
   geaccordeerdDoor: integer("geaccordeerd_door").references(() => gebruikersTable.id, { onDelete: "set null" }),
 
+  // Extra controle door medewerker (door projectleider toegewezen)
+  beoordelaarId: integer("beoordelaar_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
+
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
 });
@@ -131,6 +134,21 @@ export const insertFactuurSchema = createInsertSchema(facturenTable).omit({
 });
 export type InsertFactuur = z.infer<typeof insertFactuurSchema>;
 export type Factuur = typeof facturenTable.$inferSelect;
+
+// ── Factuur opmerkingen (commentaarthreads per factuur) ───────────────────────
+export const factuurOpmerkingenTable = pgTable("factuur_opmerkingen", {
+  id: serial("id").primaryKey(),
+  factuurId: integer("factuur_id").notNull().references(() => facturenTable.id, { onDelete: "cascade" }),
+  gebruikerId: integer("gebruiker_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
+  tekst: text("tekst").notNull(),
+  replyOpId: integer("reply_op_id"),   // forward ref; self-ref constraints via ALTER
+  afgehandeld: boolean("afgehandeld").notNull().default(false),
+  afgehandeldOp: timestamp("afgehandeld_op"),
+  afgehandeldDoor: integer("afgehandeld_door").references(() => gebruikersTable.id, { onDelete: "set null" }),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+});
+
+export type FactuurOpmerking = typeof factuurOpmerkingenTable.$inferSelect;
 
 // ── AccountView export logs ───────────────────────────────────────────────────
 export const accountviewExportLogsTable = pgTable("accountview_export_logs", {

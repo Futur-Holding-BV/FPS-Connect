@@ -5,6 +5,7 @@ import {
   facturenTable,
   accountviewInstellingenTable,
   accountviewExportLogsTable,
+  factuurOpmerkingenTable,
   gebouwenTable,
   gebruikersTable,
 } from "@workspace/db";
@@ -44,6 +45,9 @@ async function mapFactuur(r: typeof facturenTable.$inferSelect) {
     : [null];
   const [afgekeurder] = r.afgekeurdDoor
     ? await db.select({ naam: gebruikersTable.naam }).from(gebruikersTable).where(eq(gebruikersTable.id, r.afgekeurdDoor)).limit(1)
+    : [null];
+  const [beoordelaar] = r.beoordelaarId
+    ? await db.select({ naam: gebruikersTable.naam }).from(gebruikersTable).where(eq(gebruikersTable.id, r.beoordelaarId)).limit(1)
     : [null];
 
   return {
@@ -90,6 +94,8 @@ async function mapFactuur(r: typeof facturenTable.$inferSelect) {
     afgekeurd_door_naam: afgekeurder?.naam ?? null,
     herexport_op: r.herexportOp?.toISOString() ?? null,
     herexport_reden: r.herexportReden,
+    beoordelaar_id: r.beoordelaarId ?? null,
+    beoordelaar_naam: beoordelaar?.naam ?? null,
     aangemaakt_op: r.aangemaaktOp.toISOString(),
     bijgewerkt_op: r.bijgewerktOp.toISOString(),
   };
@@ -585,6 +591,297 @@ router.post("/facturen/:id/beoordelen-wvb", requireBevoegdheid("financieel", 3),
   }).where(eq(facturenTable.id, id)).returning();
   await db.insert(accountviewExportLogsTable).values({ factuurId: id, gebruikerId: userId, testmodus: false, actie: `wvb_${actie}`, status: "geslaagd", foutmelding: `WVB ${actie}` });
   res.json(await mapFactuur(updatedWvb));
+});
+
+// ── POST /facturen/:id/doorsturen-medewerker ──────────────────────────────────
+router.post("/facturen/:id/doorsturen-medewerker", requireBevoegdheid("financieel", 2), async (req: Request, res: Response) => {
+  const id = paramInt(req.params["id"]);
+  const { gebruiker_id, opmerking } = req.body as { gebruiker_id?: number; opmerking?: string };
+
+  if (!gebruiker_id) { res.status(400).json({ error: "gebruiker_id is verplicht" }); return; }
+
+  const [factuur] = await db.select().from(facturenTable).where(eq(facturenTable.id, id)).limit(1);
+  if (!factuur) { res.status(404).json({ error: "Niet gevonden" }); return; }
+
+  const [medewerker] = await db.select({ id: gebruikersTable.id, naam: gebruikersTable.naam })
+    .from(gebruikersTable).where(eq(gebruikersTable.id, gebruiker_id)).limit(1);
+  if (!medewerker) { res.status(404).json({ error: "Medewerker niet gevonden" }); return; }
+
+  const userId = sessionUserId(req);
+  const [updated] = await db.update(facturenTable).set({
+    beoordelaarId: gebruiker_id,
+    status: "ter_beoordeling_medewerker",
+    bijgewerktOp: new Date(),
+  }).where(eq(facturenTable.id, id)).returning();
+
+  await db.insert(accountviewExportLogsTable).values({
+    factuurId: id,
+    gebruikerId: userId,
+    testmodus: false,
+    actie: "doorsturen_medewerker",
+    status: "geslaagd",
+    foutmelding: `Doorgezet naar medewerker: ${medewerker.naam}`,
+  });
+
+  if (opmerking?.trim()) {
+    await db.insert(factuurOpmerkingenTable).values({
+      factuurId: id,
+      gebruikerId: userId,
+      tekst: opmerking.trim(),
+    });
+  }
+
+  res.json(await mapFactuur(updated));
+});
+
+// ── POST /facturen/:id/beoordelen-medewerker ──────────────────────────────────
+router.post("/facturen/:id/beoordelen-medewerker", requireBevoegdheid("financieel", 1), async (req: Request, res: Response) => {
+  const id = paramInt(req.params["id"]);
+  const { actie, reden } = req.body as { actie?: string; reden?: string };
+
+  if (!["goedkeuren", "afkeuren"].includes(actie ?? "")) {
+    res.status(422).json({ error: "Ongeldige actie. Gebruik: goedkeuren of afkeuren" }); return;
+  }
+
+  const [factuur] = await db.select().from(facturenTable).where(eq(facturenTable.id, id)).limit(1);
+  if (!factuur) { res.status(404).json({ error: "Niet gevonden" }); return; }
+  if (factuur.status !== "ter_beoordeling_medewerker") {
+    res.status(422).json({ error: "Factuur staat niet ter beoordeling bij een medewerker" }); return;
+  }
+
+  const userId = sessionUserId(req);
+
+  if (actie === "afkeuren") {
+    if (!reden?.trim()) { res.status(400).json({ error: "Afkeuringsreden is verplicht" }); return; }
+    const [updated] = await db.update(facturenTable).set({
+      status: "afgekeurd",
+      afgekeurdReden: reden.trim(),
+      afgekeurdOp: new Date(),
+      afgekeurdDoor: userId,
+      bijgewerktOp: new Date(),
+    }).where(eq(facturenTable.id, id)).returning();
+    await db.insert(accountviewExportLogsTable).values({ factuurId: id, gebruikerId: userId, testmodus: false, actie: "medewerker_afkeuren", status: "geslaagd", foutmelding: `Medewerker afgekeurd: ${reden.trim()}` });
+    res.json(await mapFactuur(updated)); return;
+  }
+
+  const [updated] = await db.update(facturenTable).set({
+    status: "te_beoordelen_pl",
+    bijgewerktOp: new Date(),
+  }).where(eq(facturenTable.id, id)).returning();
+  await db.insert(accountviewExportLogsTable).values({ factuurId: id, gebruikerId: userId, testmodus: false, actie: "medewerker_goedkeuren", status: "geslaagd", foutmelding: "Medewerker goedgekeurd — terug naar projectleider" });
+  res.json(await mapFactuur(updated));
+});
+
+// ── GET /facturen/:id/opmerkingen ─────────────────────────────────────────────
+router.get("/facturen/:id/opmerkingen", requireBevoegdheid("financieel", 1), async (req: Request, res: Response) => {
+  const id = paramInt(req.params["id"]);
+  const rijen = await db
+    .select({
+      id: factuurOpmerkingenTable.id,
+      factuurId: factuurOpmerkingenTable.factuurId,
+      gebruikerId: factuurOpmerkingenTable.gebruikerId,
+      gebruikerNaam: gebruikersTable.naam,
+      tekst: factuurOpmerkingenTable.tekst,
+      replyOpId: factuurOpmerkingenTable.replyOpId,
+      afgehandeld: factuurOpmerkingenTable.afgehandeld,
+      afgehandeldOp: factuurOpmerkingenTable.afgehandeldOp,
+      afgehandeldDoor: factuurOpmerkingenTable.afgehandeldDoor,
+      aangemaaktOp: factuurOpmerkingenTable.aangemaaktOp,
+    })
+    .from(factuurOpmerkingenTable)
+    .leftJoin(gebruikersTable, eq(factuurOpmerkingenTable.gebruikerId, gebruikersTable.id))
+    .where(eq(factuurOpmerkingenTable.factuurId, id))
+    .orderBy(factuurOpmerkingenTable.aangemaaktOp);
+
+  const afhandelaarIds = rijen.filter((r) => r.afgehandeldDoor).map((r) => r.afgehandeldDoor!);
+  const afhandelaarMap: Record<number, string> = {};
+  if (afhandelaarIds.length > 0) {
+    const namen = await db.select({ id: gebruikersTable.id, naam: gebruikersTable.naam })
+      .from(gebruikersTable).where(eq(gebruikersTable.id, afhandelaarIds[0]!));
+    namen.forEach((n) => { afhandelaarMap[n.id] = n.naam; });
+  }
+
+  res.json(rijen.map((r) => ({
+    id: r.id,
+    factuur_id: r.factuurId,
+    gebruiker_id: r.gebruikerId ?? null,
+    gebruiker_naam: r.gebruikerNaam ?? null,
+    tekst: r.tekst,
+    reply_op_id: r.replyOpId ?? null,
+    afgehandeld: r.afgehandeld,
+    afgehandeld_op: r.afgehandeldOp?.toISOString() ?? null,
+    afgehandeld_door_naam: r.afgehandeldDoor ? (afhandelaarMap[r.afgehandeldDoor] ?? null) : null,
+    aangemaakt_op: r.aangemaaktOp.toISOString(),
+  })));
+});
+
+// ── POST /facturen/:id/opmerkingen ────────────────────────────────────────────
+router.post("/facturen/:id/opmerkingen", requireBevoegdheid("financieel", 1), async (req: Request, res: Response) => {
+  const id = paramInt(req.params["id"]);
+  const { tekst, reply_op_id } = req.body as { tekst?: string; reply_op_id?: number };
+
+  if (!tekst?.trim()) { res.status(400).json({ error: "tekst is verplicht" }); return; }
+
+  const userId = sessionUserId(req);
+  const [rij] = await db.insert(factuurOpmerkingenTable).values({
+    factuurId: id,
+    gebruikerId: userId,
+    tekst: tekst.trim(),
+    replyOpId: reply_op_id ?? null,
+  }).returning();
+
+  const [gebruiker] = userId
+    ? await db.select({ naam: gebruikersTable.naam }).from(gebruikersTable).where(eq(gebruikersTable.id, userId)).limit(1)
+    : [null];
+
+  res.status(201).json({
+    id: rij!.id,
+    factuur_id: rij!.factuurId,
+    gebruiker_id: rij!.gebruikerId ?? null,
+    gebruiker_naam: gebruiker?.naam ?? null,
+    tekst: rij!.tekst,
+    reply_op_id: rij!.replyOpId ?? null,
+    afgehandeld: rij!.afgehandeld,
+    afgehandeld_op: null,
+    afgehandeld_door_naam: null,
+    aangemaakt_op: rij!.aangemaaktOp.toISOString(),
+  });
+});
+
+// ── PATCH /facturen/:id/opmerkingen/:oid ──────────────────────────────────────
+router.patch("/facturen/:id/opmerkingen/:oid", requireBevoegdheid("financieel", 1), async (req: Request, res: Response) => {
+  const factuurId = paramInt(req.params["id"]);
+  const oid = paramInt(req.params["oid"]);
+  const { afgehandeld } = req.body as { afgehandeld?: boolean };
+
+  if (typeof afgehandeld !== "boolean") { res.status(400).json({ error: "afgehandeld (boolean) is verplicht" }); return; }
+
+  const userId = sessionUserId(req);
+  const [updated] = await db.update(factuurOpmerkingenTable).set({
+    afgehandeld,
+    afgehandeldOp: afgehandeld ? new Date() : null,
+    afgehandeldDoor: afgehandeld ? userId : null,
+  }).where(and(eq(factuurOpmerkingenTable.id, oid), eq(factuurOpmerkingenTable.factuurId, factuurId))).returning();
+
+  if (!updated) { res.status(404).json({ error: "Niet gevonden" }); return; }
+
+  const [gebruiker] = updated.gebruikerId
+    ? await db.select({ naam: gebruikersTable.naam }).from(gebruikersTable).where(eq(gebruikersTable.id, updated.gebruikerId)).limit(1)
+    : [null];
+  const [afhandelaar] = updated.afgehandeldDoor
+    ? await db.select({ naam: gebruikersTable.naam }).from(gebruikersTable).where(eq(gebruikersTable.id, updated.afgehandeldDoor)).limit(1)
+    : [null];
+
+  res.json({
+    id: updated.id,
+    factuur_id: updated.factuurId,
+    gebruiker_id: updated.gebruikerId ?? null,
+    gebruiker_naam: gebruiker?.naam ?? null,
+    tekst: updated.tekst,
+    reply_op_id: updated.replyOpId ?? null,
+    afgehandeld: updated.afgehandeld,
+    afgehandeld_op: updated.afgehandeldOp?.toISOString() ?? null,
+    afgehandeld_door_naam: afhandelaar?.naam ?? null,
+    aangemaakt_op: updated.aangemaaktOp.toISOString(),
+  });
+});
+
+// ── GET /facturen/:id/proceslog ───────────────────────────────────────────────
+router.get("/facturen/:id/proceslog", requireBevoegdheid("financieel", 1), async (req: Request, res: Response) => {
+  const id = paramInt(req.params["id"]);
+
+  const acties = await db
+    .select({
+      id: accountviewExportLogsTable.id,
+      actie: accountviewExportLogsTable.actie,
+      status: accountviewExportLogsTable.status,
+      foutmelding: accountviewExportLogsTable.foutmelding,
+      exportOp: accountviewExportLogsTable.exportOp,
+      gebruikerNaam: gebruikersTable.naam,
+      accountviewBoekingId: accountviewExportLogsTable.accountviewBoekingId,
+    })
+    .from(accountviewExportLogsTable)
+    .leftJoin(gebruikersTable, eq(accountviewExportLogsTable.gebruikerId, gebruikersTable.id))
+    .where(eq(accountviewExportLogsTable.factuurId, id))
+    .orderBy(accountviewExportLogsTable.exportOp);
+
+  const opmerkingen = await db
+    .select({
+      id: factuurOpmerkingenTable.id,
+      tekst: factuurOpmerkingenTable.tekst,
+      replyOpId: factuurOpmerkingenTable.replyOpId,
+      afgehandeld: factuurOpmerkingenTable.afgehandeld,
+      aangemaaktOp: factuurOpmerkingenTable.aangemaaktOp,
+      gebruikerNaam: gebruikersTable.naam,
+    })
+    .from(factuurOpmerkingenTable)
+    .leftJoin(gebruikersTable, eq(factuurOpmerkingenTable.gebruikerId, gebruikersTable.id))
+    .where(eq(factuurOpmerkingenTable.factuurId, id))
+    .orderBy(factuurOpmerkingenTable.aangemaaktOp);
+
+  const actieLabels: Record<string, string> = {
+    export: "Factuur verzonden naar AccountView",
+    herexport: "Herexport naar AccountView",
+    afkeuren: "Factuur afgekeurd",
+    accorderen: "Factuur geaccordeerd",
+    pl_goedkeuren: "Projectleider goedgekeurd",
+    pl_afkeuren: "Projectleider afgekeurd",
+    pl_doorzetten: "Projectleider doorgezet",
+    wvb_goedkeuren: "WVB goedgekeurd",
+    wvb_afkeuren: "WVB afgekeurd",
+    wvb_doorzetten: "WVB doorgezet",
+    doorsturen_medewerker: "Doorgestuurd naar medewerker voor extra controle",
+    medewerker_goedkeuren: "Medewerker heeft goedgekeurd",
+    medewerker_afkeuren: "Medewerker heeft afgekeurd",
+  };
+
+  type LogRegel = {
+    id: string;
+    soort: string;
+    omschrijving: string;
+    gebruiker_naam: string | null;
+    aangemaakt_op: string;
+    detail: Record<string, unknown> | null;
+    _ts: Date;
+  };
+
+  const regels: LogRegel[] = [];
+
+  for (const a of acties) {
+    regels.push({
+      id: `actie-${a.id}`,
+      soort: "actie",
+      omschrijving: actieLabels[a.actie] ?? a.actie,
+      gebruiker_naam: a.gebruikerNaam ?? null,
+      aangemaakt_op: a.exportOp.toISOString(),
+      _ts: a.exportOp,
+      detail: {
+        actie: a.actie,
+        status: a.status,
+        boeking_id: a.accountviewBoekingId ?? null,
+        notitie: a.foutmelding ?? null,
+      },
+    });
+  }
+
+  for (const o of opmerkingen) {
+    regels.push({
+      id: `opmerking-${o.id}`,
+      soort: "opmerking",
+      omschrijving: o.tekst,
+      gebruiker_naam: o.gebruikerNaam ?? null,
+      aangemaakt_op: o.aangemaaktOp.toISOString(),
+      _ts: o.aangemaaktOp,
+      detail: {
+        reply_op_id: o.replyOpId ?? null,
+        afgehandeld: o.afgehandeld,
+      },
+    });
+  }
+
+  regels.sort((a, b) => a._ts.getTime() - b._ts.getTime());
+
+  res.json(regels.map(({ _ts, ...r }) => r));
 });
 
 // ── POST /facturen/:id/forceer-herexport ───────────────────────────────────────

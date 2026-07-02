@@ -51,6 +51,8 @@ export interface Factuur {
   afgekeurd_door_naam?: string | null;
   herexport_op?: string | null;
   herexport_reden?: string | null;
+  beoordelaar_id?: number | null;
+  beoordelaar_naam?: string | null;
   aangemaakt_op: string;
   bijgewerkt_op?: string;
 }

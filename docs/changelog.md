@@ -10,6 +10,28 @@ Grote roadmap-fases staan ook in `docs/roadmap/gebouwd.md` en `docs/roadmap/acti
 
 ---
 
+## 2026-07-02 — Factuurverwerking: medewerker-beoordeling, opmerkingen en proceslog
+
+**Uitvoering:** volledig | **Getest:** typecheck
+
+**Medewerker-beoordeling (doorsturen):**
+- Nieuwe status `ter_beoordeling_medewerker` toegevoegd aan enum, label- en kleurkaarten (web)
+- DB: `beoordelaarId` FK-kolom op `facturenTable`; `factuurOpmerkingenTable` nieuw aangemaakt
+- OpenAPI: nieuwe paden (`doorsturen-medewerker`, `beoordelen-medewerker`, `opmerkingen`, `proceslog`) en schemas (`FactuurDoorstuurInput`, `FactuurOpmerking`, `FactuurOpmerkingInput`, `FactuurOpmerkingAfhandelenInput`, `FactuurProceslogRegel`)
+- Codegen uitgevoerd: alle nieuwe hooks beschikbaar (`useDoorstuurenFactuurMedewerker`, `useBeoordelenFactuurMedewerker`, `useListFactuurOpmerkingen`, `useAddFactuurOpmerking`, `useAfhandelenFactuurOpmerking`, `useGetFactuurProceslog`)
+- Backend: routes `POST /facturen/:id/doorsturen-medewerker` (status → `ter_beoordeling_medewerker`, beoordelaar opslaan) en `POST /facturen/:id/beoordelen-medewerker` (goedkeuren → `te_beoordelen_pl`, afkeuren → `afgekeurd`); beide loggen naar proceslog
+- UI: knop "Doorsturen naar medewerker" (zichtbaar bij relevante statussen), medewerker-picker uit `/toewijsbare-gebruikers`, optionele begeleidende opmerking; paars banner bij `ter_beoordeling_medewerker` met naam beoordelaar
+
+**Opmerkingen:**
+- Backend: `GET /facturen/:id/opmerkingen`, `POST` (nieuwe opmerking, optioneel `reply_op_id`), `PATCH /:oid` (afhandelen)
+- UI: opmerkingen-tabblad in nieuw tweeledig tabpanel (Opmerkingen / Proceslog); inline reageer-functie, Ctrl+Enter shortcut, afhandelen (doorstrepen) per opmerking
+
+**Proceslog:**
+- Backend: `GET /facturen/:id/proceslog` — gecombineerde tijdlijn van statuswijzigingen én opmerkingen, chronologisch gesorteerd
+- UI: proceslog-tab met tijdlijn-weergave (icoon per soort, timestamp, gebruiker, notitie/afhandelstatus)
+
+---
+
 ## 2026-07-02 — Functies zichtbaar op profielkaart + AI contractanalyse
 
 **Uitvoering:** volledig | **Getest:** typecheck

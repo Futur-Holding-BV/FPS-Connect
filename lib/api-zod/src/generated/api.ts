@@ -807,6 +807,8 @@ export const ListGebouwFacturenResponseItem = zod.object({
   "afgekeurd_door_naam": zod.string().nullish(),
   "herexport_op": zod.string().nullish(),
   "herexport_reden": zod.string().nullish(),
+  "beoordelaar_id": zod.number().nullish(),
+  "beoordelaar_naam": zod.string().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string().optional()
 })
@@ -16404,6 +16406,8 @@ export const ListFacturenResponseItem = zod.object({
   "afgekeurd_door_naam": zod.string().nullish(),
   "herexport_op": zod.string().nullish(),
   "herexport_reden": zod.string().nullish(),
+  "beoordelaar_id": zod.number().nullish(),
+  "beoordelaar_naam": zod.string().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string().optional()
 })
@@ -16496,6 +16500,8 @@ export const ListFacturenKlaarVoorExportResponseItem = zod.object({
   "afgekeurd_door_naam": zod.string().nullish(),
   "herexport_op": zod.string().nullish(),
   "herexport_reden": zod.string().nullish(),
+  "beoordelaar_id": zod.number().nullish(),
+  "beoordelaar_naam": zod.string().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string().optional()
 })
@@ -16553,6 +16559,8 @@ export const GetFactuurResponse = zod.object({
   "afgekeurd_door_naam": zod.string().nullish(),
   "herexport_op": zod.string().nullish(),
   "herexport_reden": zod.string().nullish(),
+  "beoordelaar_id": zod.number().nullish(),
+  "beoordelaar_naam": zod.string().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string().optional()
 })
@@ -16629,6 +16637,8 @@ export const UpdateFactuurResponse = zod.object({
   "afgekeurd_door_naam": zod.string().nullish(),
   "herexport_op": zod.string().nullish(),
   "herexport_reden": zod.string().nullish(),
+  "beoordelaar_id": zod.number().nullish(),
+  "beoordelaar_naam": zod.string().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string().optional()
 })
@@ -16695,6 +16705,8 @@ export const AiUitlezenFactuurResponse = zod.object({
   "afgekeurd_door_naam": zod.string().nullish(),
   "herexport_op": zod.string().nullish(),
   "herexport_reden": zod.string().nullish(),
+  "beoordelaar_id": zod.number().nullish(),
+  "beoordelaar_naam": zod.string().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string().optional()
 })
@@ -16751,6 +16763,8 @@ export const AccorderenFactuurResponse = zod.object({
   "afgekeurd_door_naam": zod.string().nullish(),
   "herexport_op": zod.string().nullish(),
   "herexport_reden": zod.string().nullish(),
+  "beoordelaar_id": zod.number().nullish(),
+  "beoordelaar_naam": zod.string().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string().optional()
 })
@@ -16812,6 +16826,8 @@ export const BlokkerenFactuurResponse = zod.object({
   "afgekeurd_door_naam": zod.string().nullish(),
   "herexport_op": zod.string().nullish(),
   "herexport_reden": zod.string().nullish(),
+  "beoordelaar_id": zod.number().nullish(),
+  "beoordelaar_naam": zod.string().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string().optional()
 })
@@ -16913,6 +16929,8 @@ export const AfkeurenFactuurResponse = zod.object({
   "afgekeurd_door_naam": zod.string().nullish(),
   "herexport_op": zod.string().nullish(),
   "herexport_reden": zod.string().nullish(),
+  "beoordelaar_id": zod.number().nullish(),
+  "beoordelaar_naam": zod.string().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string().optional()
 })
@@ -16974,6 +16992,8 @@ export const BeoordelenFactuurPLResponse = zod.object({
   "afgekeurd_door_naam": zod.string().nullish(),
   "herexport_op": zod.string().nullish(),
   "herexport_reden": zod.string().nullish(),
+  "beoordelaar_id": zod.number().nullish(),
+  "beoordelaar_naam": zod.string().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string().optional()
 })
@@ -17035,9 +17055,218 @@ export const BeoordelenFactuurWVBResponse = zod.object({
   "afgekeurd_door_naam": zod.string().nullish(),
   "herexport_op": zod.string().nullish(),
   "herexport_reden": zod.string().nullish(),
+  "beoordelaar_id": zod.number().nullish(),
+  "beoordelaar_naam": zod.string().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string().optional()
 })
+
+
+/**
+ * @summary Factuur doorsturen naar medewerker voor extra controle
+ */
+export const DoorstuurenFactuurMedewerkerParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DoorstuurenFactuurMedewerkerBody = zod.object({
+  "gebruiker_id": zod.number(),
+  "opmerking": zod.string().nullish()
+})
+
+export const DoorstuurenFactuurMedewerkerResponse = zod.object({
+  "id": zod.number(),
+  "type": zod.string(),
+  "factuurnummer": zod.string().nullish(),
+  "factuurdatum": zod.string().nullish(),
+  "vervaldatum": zod.string().nullish(),
+  "omschrijving": zod.string().nullish(),
+  "relatienaam": zod.string().nullish(),
+  "relatie_code": zod.string().nullish(),
+  "relatie_adres": zod.string().nullish(),
+  "bedrag_excl_btw": zod.string().nullish(),
+  "btw_bedrag": zod.string().nullish(),
+  "bedrag_incl_btw": zod.string().nullish(),
+  "btw_code": zod.string().nullish(),
+  "grootboekrekening": zod.string().nullish(),
+  "kostenplaats": zod.string().nullish(),
+  "dagboek": zod.string().nullish(),
+  "project_code": zod.string().nullish(),
+  "pdf_url": zod.string().nullish(),
+  "bestandsnaam": zod.string().nullish(),
+  "gebouw_id": zod.number().nullish(),
+  "gebouw_naam": zod.string().nullish(),
+  "ai_metadata": zod.record(zod.string(), zod.unknown()).nullish(),
+  "status": zod.string(),
+  "geblokkeerd": zod.boolean(),
+  "blokkering_reden": zod.string().nullish(),
+  "geaccordeerd": zod.boolean(),
+  "geaccordeerd_op": zod.string().nullish(),
+  "geaccordeerd_door_naam": zod.string().nullish(),
+  "accountview_boeking_id": zod.string().nullish(),
+  "accountview_export_op": zod.string().nullish(),
+  "accountview_status": zod.string().nullish(),
+  "accountview_fout": zod.string().nullish(),
+  "payload_hash": zod.string().nullish(),
+  "betaalstatus": zod.string().nullish(),
+  "betaaldatum": zod.string().nullish(),
+  "boekingsnummer": zod.string().nullish(),
+  "terugkoppeling_op": zod.string().nullish(),
+  "afgekeurd": zod.boolean().optional(),
+  "afkeuring_reden": zod.string().nullish(),
+  "afgekeurd_op": zod.string().nullish(),
+  "afgekeurd_door_naam": zod.string().nullish(),
+  "herexport_op": zod.string().nullish(),
+  "herexport_reden": zod.string().nullish(),
+  "beoordelaar_id": zod.number().nullish(),
+  "beoordelaar_naam": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().optional()
+})
+
+
+/**
+ * @summary Factuur beoordelen als aangewezen medewerker (goedkeuren of afkeuren)
+ */
+export const BeoordelenFactuurMedewerkerParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const BeoordelenFactuurMedewerkerBody = zod.object({
+  "actie": zod.enum(['goedkeuren', 'afkeuren', 'doorzetten']),
+  "reden": zod.string().nullish()
+})
+
+export const BeoordelenFactuurMedewerkerResponse = zod.object({
+  "id": zod.number(),
+  "type": zod.string(),
+  "factuurnummer": zod.string().nullish(),
+  "factuurdatum": zod.string().nullish(),
+  "vervaldatum": zod.string().nullish(),
+  "omschrijving": zod.string().nullish(),
+  "relatienaam": zod.string().nullish(),
+  "relatie_code": zod.string().nullish(),
+  "relatie_adres": zod.string().nullish(),
+  "bedrag_excl_btw": zod.string().nullish(),
+  "btw_bedrag": zod.string().nullish(),
+  "bedrag_incl_btw": zod.string().nullish(),
+  "btw_code": zod.string().nullish(),
+  "grootboekrekening": zod.string().nullish(),
+  "kostenplaats": zod.string().nullish(),
+  "dagboek": zod.string().nullish(),
+  "project_code": zod.string().nullish(),
+  "pdf_url": zod.string().nullish(),
+  "bestandsnaam": zod.string().nullish(),
+  "gebouw_id": zod.number().nullish(),
+  "gebouw_naam": zod.string().nullish(),
+  "ai_metadata": zod.record(zod.string(), zod.unknown()).nullish(),
+  "status": zod.string(),
+  "geblokkeerd": zod.boolean(),
+  "blokkering_reden": zod.string().nullish(),
+  "geaccordeerd": zod.boolean(),
+  "geaccordeerd_op": zod.string().nullish(),
+  "geaccordeerd_door_naam": zod.string().nullish(),
+  "accountview_boeking_id": zod.string().nullish(),
+  "accountview_export_op": zod.string().nullish(),
+  "accountview_status": zod.string().nullish(),
+  "accountview_fout": zod.string().nullish(),
+  "payload_hash": zod.string().nullish(),
+  "betaalstatus": zod.string().nullish(),
+  "betaaldatum": zod.string().nullish(),
+  "boekingsnummer": zod.string().nullish(),
+  "terugkoppeling_op": zod.string().nullish(),
+  "afgekeurd": zod.boolean().optional(),
+  "afkeuring_reden": zod.string().nullish(),
+  "afgekeurd_op": zod.string().nullish(),
+  "afgekeurd_door_naam": zod.string().nullish(),
+  "herexport_op": zod.string().nullish(),
+  "herexport_reden": zod.string().nullish(),
+  "beoordelaar_id": zod.number().nullish(),
+  "beoordelaar_naam": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().optional()
+})
+
+
+/**
+ * @summary Opmerkingen bij een factuur ophalen
+ */
+export const ListFactuurOpmerkingenParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListFactuurOpmerkingenResponseItem = zod.object({
+  "id": zod.number(),
+  "factuur_id": zod.number(),
+  "gebruiker_id": zod.number().nullish(),
+  "gebruiker_naam": zod.string().nullish(),
+  "tekst": zod.string(),
+  "reply_op_id": zod.number().nullish(),
+  "afgehandeld": zod.boolean(),
+  "afgehandeld_op": zod.string().nullish(),
+  "afgehandeld_door_naam": zod.string().nullish(),
+  "aangemaakt_op": zod.string()
+})
+export const ListFactuurOpmerkingenResponse = zod.array(ListFactuurOpmerkingenResponseItem)
+
+
+/**
+ * @summary Opmerking plaatsen bij een factuur
+ */
+export const AddFactuurOpmerkingParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AddFactuurOpmerkingBody = zod.object({
+  "tekst": zod.string(),
+  "reply_op_id": zod.number().nullish()
+})
+
+export const AddFactuurOpmerkingResponse = zod.void()
+
+
+/**
+ * @summary Opmerking als afgehandeld markeren (of heropenen)
+ */
+export const AfhandelenFactuurOpmerkingParams = zod.object({
+  "id": zod.coerce.number(),
+  "oid": zod.coerce.number()
+})
+
+export const AfhandelenFactuurOpmerkingBody = zod.object({
+  "afgehandeld": zod.boolean()
+})
+
+export const AfhandelenFactuurOpmerkingResponse = zod.object({
+  "id": zod.number(),
+  "factuur_id": zod.number(),
+  "gebruiker_id": zod.number().nullish(),
+  "gebruiker_naam": zod.string().nullish(),
+  "tekst": zod.string(),
+  "reply_op_id": zod.number().nullish(),
+  "afgehandeld": zod.boolean(),
+  "afgehandeld_op": zod.string().nullish(),
+  "afgehandeld_door_naam": zod.string().nullish(),
+  "aangemaakt_op": zod.string()
+})
+
+
+/**
+ * @summary Volledig proceslog per factuur (statuswijzigingen + opmerkingen gecombineerd)
+ */
+export const GetFactuurProceslogParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetFactuurProceslogResponseItem = zod.object({
+  "id": zod.string(),
+  "soort": zod.string().describe('actie | opmerking'),
+  "omschrijving": zod.string(),
+  "gebruiker_naam": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "detail": zod.record(zod.string(), zod.unknown()).nullish()
+})
+export const GetFactuurProceslogResponse = zod.array(GetFactuurProceslogResponseItem)
 
 
 /**

@@ -13342,6 +13342,159 @@ paths:
         "422":
           description: Ongeldige actie of status
 
+  /facturen/{id}/doorsturen-medewerker:
+    post:
+      operationId: doorstuurenFactuurMedewerker
+      summary: Factuur doorsturen naar medewerker voor extra controle
+      tags: [Facturen]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FactuurDoorstuurInput"
+      responses:
+        "200":
+          description: Bijgewerkte factuur
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Factuur"
+        "404":
+          description: Niet gevonden
+
+  /facturen/{id}/beoordelen-medewerker:
+    post:
+      operationId: beoordelenFactuurMedewerker
+      summary: Factuur beoordelen als aangewezen medewerker (goedkeuren of afkeuren)
+      tags: [Facturen]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BeoordelenInput"
+      responses:
+        "200":
+          description: Bijgewerkte factuur
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Factuur"
+        "403":
+          description: Geen toegang (niet de aangewezen beoordelaar)
+        "404":
+          description: Niet gevonden
+        "422":
+          description: Ongeldige actie of status
+
+  /facturen/{id}/opmerkingen:
+    get:
+      operationId: listFactuurOpmerkingen
+      summary: Opmerkingen bij een factuur ophalen
+      tags: [Facturen]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Lijst van opmerkingen
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FactuurOpmerking"
+    post:
+      operationId: addFactuurOpmerking
+      summary: Opmerking plaatsen bij een factuur
+      tags: [Facturen]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FactuurOpmerkingInput"
+      responses:
+        "201":
+          description: Aangemaakte opmerking
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FactuurOpmerking"
+
+  /facturen/{id}/opmerkingen/{oid}:
+    patch:
+      operationId: afhandelenFactuurOpmerking
+      summary: Opmerking als afgehandeld markeren (of heropenen)
+      tags: [Facturen]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: oid
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FactuurOpmerkingAfhandelenInput"
+      responses:
+        "200":
+          description: Bijgewerkte opmerking
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FactuurOpmerking"
+
+  /facturen/{id}/proceslog:
+    get:
+      operationId: getFactuurProceslog
+      summary: Volledig proceslog per factuur (statuswijzigingen + opmerkingen gecombineerd)
+      tags: [Facturen]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Chronologisch proceslog
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FactuurProceslogRegel"
+
   /facturen/{id}/forceer-herexport:
     post:
       operationId: forceerHerexportFactuur
@@ -27366,6 +27519,12 @@ components:
         herexport_reden:
           type: string
           nullable: true
+        beoordelaar_id:
+          type: integer
+          nullable: true
+        beoordelaar_naam:
+          type: string
+          nullable: true
         aangemaakt_op:
           type: string
         bijgewerkt_op:
@@ -27606,6 +27765,84 @@ components:
           enum: [goedkeuren, afkeuren, doorzetten]
         reden:
           type: string
+          nullable: true
+
+    FactuurDoorstuurInput:
+      type: object
+      required: [gebruiker_id]
+      properties:
+        gebruiker_id:
+          type: integer
+        opmerking:
+          type: string
+          nullable: true
+
+    FactuurOpmerking:
+      type: object
+      required: [id, factuur_id, tekst, afgehandeld, aangemaakt_op]
+      properties:
+        id:
+          type: integer
+        factuur_id:
+          type: integer
+        gebruiker_id:
+          type: integer
+          nullable: true
+        gebruiker_naam:
+          type: string
+          nullable: true
+        tekst:
+          type: string
+        reply_op_id:
+          type: integer
+          nullable: true
+        afgehandeld:
+          type: boolean
+        afgehandeld_op:
+          type: string
+          nullable: true
+        afgehandeld_door_naam:
+          type: string
+          nullable: true
+        aangemaakt_op:
+          type: string
+
+    FactuurOpmerkingInput:
+      type: object
+      required: [tekst]
+      properties:
+        tekst:
+          type: string
+        reply_op_id:
+          type: integer
+          nullable: true
+
+    FactuurOpmerkingAfhandelenInput:
+      type: object
+      required: [afgehandeld]
+      properties:
+        afgehandeld:
+          type: boolean
+
+    FactuurProceslogRegel:
+      type: object
+      required: [id, soort, omschrijving, aangemaakt_op]
+      properties:
+        id:
+          type: string
+        soort:
+          type: string
+          description: actie | opmerking
+        omschrijving:
+          type: string
+        gebruiker_naam:
+          type: string
+          nullable: true
+        aangemaakt_op:
+          type: string
+        detail:
+          type: object
+          additionalProperties: true
           nullable: true
 
     OnderhandenWerkItem:

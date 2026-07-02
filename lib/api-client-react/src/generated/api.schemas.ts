@@ -6868,6 +6868,8 @@ export interface Factuur {
   afgekeurd_door_naam?: string | null;
   herexport_op?: string | null;
   herexport_reden?: string | null;
+  beoordelaar_id?: number | null;
+  beoordelaar_naam?: string | null;
   aangemaakt_op: string;
   bijgewerkt_op?: string;
 }
@@ -6980,6 +6982,45 @@ export const BeoordelenInputActie = {
 export interface BeoordelenInput {
   actie: BeoordelenInputActie;
   reden?: string | null;
+}
+
+export interface FactuurDoorstuurInput {
+  gebruiker_id: number;
+  opmerking?: string | null;
+}
+
+export interface FactuurOpmerking {
+  id: number;
+  factuur_id: number;
+  gebruiker_id?: number | null;
+  gebruiker_naam?: string | null;
+  tekst: string;
+  reply_op_id?: number | null;
+  afgehandeld: boolean;
+  afgehandeld_op?: string | null;
+  afgehandeld_door_naam?: string | null;
+  aangemaakt_op: string;
+}
+
+export interface FactuurOpmerkingInput {
+  tekst: string;
+  reply_op_id?: number | null;
+}
+
+export interface FactuurOpmerkingAfhandelenInput {
+  afgehandeld: boolean;
+}
+
+export type FactuurProceslogRegelDetail = { [key: string]: unknown } | null;
+
+export interface FactuurProceslogRegel {
+  id: string;
+  /** actie | opmerking */
+  soort: string;
+  omschrijving: string;
+  gebruiker_naam?: string | null;
+  aangemaakt_op: string;
+  detail?: FactuurProceslogRegelDetail;
 }
 
 export interface OnderhandenWerkItem {
