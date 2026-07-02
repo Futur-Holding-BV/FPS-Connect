@@ -69,6 +69,7 @@ import onderhandenWerkRouter from "./onderhanden-werk";
 import onderhoudscontractenRouter from "./onderhoudscontracten";
 import werkbonnenRouter from "./werkbonnen";
 import magazijnRouter from "./magazijn";
+import materiaalAanvragenRouter from "./materiaal-aanvragen";
 import studioRouter from "./studio";
 import aiRouter from "./ai";
 import { requireAuth } from "../middlewares/auth";
@@ -156,6 +157,7 @@ router.use(onderhandenWerkRouter);
 router.use(onderhoudscontractenRouter);
 router.use(werkbonnenRouter);
 router.use(magazijnRouter);
+router.use(materiaalAanvragenRouter);
 router.use(studioRouter);
 router.use(aiRouter);
 

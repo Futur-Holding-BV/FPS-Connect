@@ -10,6 +10,38 @@ Grote roadmap-fases staan ook in `docs/roadmap/gebouwd.md` en `docs/roadmap/acti
 
 ---
 
+## 2026-07-02 — Materiaal melden — monteur → AI → werkvoorbereider
+
+**Uitvoering:** volledig | **Getest:** typecheck api-server (clean op nieuwe routes) + firevault (clean) + api-server build geslaagd + expo typed routes herstart
+
+Monteur fotografeert een artikel dat op/beschadigd/nodig is → AI identificeert het artikel, zoekt prijs/leverancier, checkt de werkbegroting → werkvoorbereider behandelt de melding in Werkvoorbereiding.
+
+**DB** — nieuwe tabel `materiaal_aanvragen` (12 kolommen) via ALTER TABLE:
+- `id`, `opdracht_id` (FK), `ingediend_door_id` (FK), `reden` (op/beschadigd/nodig), `omschrijving`, `foto_pad`
+- `status` (nieuw/in_behandeling/goedgekeurd/afgewezen), `ai_artikel_naam`, `ai_leverancier`, `ai_prijs_indicatie`, `ai_scope_check`, `ai_advies`
+- `behandeld_door_id` (FK), `behandel_notitie`, `aangemaakt_op`, `bijgewerkt_op`
+- Schema: `lib/db/src/schema/materiaal-aanvragen.ts`, geëxporteerd uit `lib/db/src/schema/index.ts`
+
+**Backend** — nieuw routebestand `artifacts/api-server/src/routes/materiaal-aanvragen.ts`:
+- `GET /materiaal-aanvragen` — lijst voor werkvoorbereider (status-filter, opdracht-filter), met gebruikersnamen + opdrachttitels via twee losse queries (aliases vermeden voor TS-compatibiliteit)
+- `POST /materiaal-aanvragen` — monteur dient in (werkdag_id of opdracht_id, reden, foto_pad); opdracht_id wordt server-side opgelost via planning_items bij werkdag_id; triggert async AI-analyse via GPT-4o vision
+- `PATCH /materiaal-aanvragen/:id` — werkvoorbereider stelt status in (nieuw/in_behandeling/goedgekeurd/afgewezen) + notitie
+- `POST /materiaal-aanvragen/:id/heranalyseer` — handmatig AI opnieuw draaien
+- AI-analyse: foto downloaden via ObjectStorageService → sharp resize → GPT-4o vision + werkbegrotingscontext → JSON (artikel_naam, leverancier, prijs_indicatie, scope_check, scope_toelichting, advies) → opslaan
+- Route geregistreerd in `artifacts/api-server/src/routes/index.ts` na magazijnRouter
+
+**Monteur app** (`artifacts/monteur-app/`):
+- Nieuw scherm `app/materiaal-aanvraag/nieuw.tsx`: reden-picker (op/beschadigd/nodig), foto verplicht via ImagePicker, optionele omschrijving, upload via `uploadFoto()` presigned-URL flow, POST met bearer-token authenticatie
+- Knop "Materiaal melden" toegevoegd aan werkdag-detailpagina `app/werkdag/[id].tsx` (navigeert met werkdag_id + titel + werknummer params)
+
+**Firevault web** (`artifacts/firevault/src/pages/werkvoorbereiding/index.tsx`):
+- Sectie "Materiaal meldingen" bovenaan werkvoorbereiding-dashboard (voor bestaande opdrachtenlijst)
+- MateriaalAanvraagKaart: foto-thumbnail, amber AI-analyse-blok (leverancier/prijs/scope/advies), scope-badge (groen/rood/grijs), goedkeuren/afwijzen/in-behandeling knoppen, heranalyseer-knop
+- TanStack Query met 15s refetch-interval voor live updates
+- Bestaande opdrachtenlijst volledig behouden
+
+---
+
 ## 2026-07-02 — Werkinbox — volledig nieuw intelligent werkcentrum
 
 **Uitvoering:** volledig | **Getest:** typecheck firevault (clean) + api-server (alleen pre-existing TS7030) + server start bevestigd

@@ -654,6 +654,52 @@ export default function WerkdagDetailScherm() {
             )}
           </Kaart>
 
+          {/* ── Materiaal melden ──────────────────────────────────────────── */}
+          <Pressable
+            onPress={() =>
+              router.push({
+                pathname: "/materiaal-aanvraag/nieuw",
+                params: {
+                  werkdag_id: String(id),
+                  titel: String(huidigWerkorder.titel ?? ""),
+                  werknummer: String((huidigWerkorder.werknummer as string | null) ?? ""),
+                },
+              })
+            }
+            style={({ pressed }) => ({
+              backgroundColor: pressed ? c.muted : c.card,
+              borderRadius: 12,
+              padding: 16,
+              marginBottom: 12,
+              marginHorizontal: 16,
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 12,
+            })}
+          >
+            <View
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 8,
+                backgroundColor: "#d9770622",
+                justifyContent: "center",
+                alignItems: "center",
+              }}
+            >
+              <Ionicons name="bag-add-outline" size={18} color="#d97706" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: c.foreground, fontSize: 13, fontFamily: "Inter_600SemiBold" }}>
+                Materiaal melden
+              </Text>
+              <Text style={{ color: c.mutedForeground, fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 1 }}>
+                Artikel op, beschadigd of nodig
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={c.mutedForeground} />
+          </Pressable>
+
           {/* ── Tijdregistratie ────────────────────────────────────────────── */}
           <Pressable
             onPress={() => router.push("/uren")}

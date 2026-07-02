@@ -43,3 +43,4 @@ export * from "./artikelen";
 export * from "./import_logs";
 export * from "./onderhanden-werk";
 export * from "./magazijn";
+export * from "./materiaal-aanvragen";
