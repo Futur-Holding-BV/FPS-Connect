@@ -277,10 +277,10 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                         </SidebarMenuButton>
                       </SidebarMenuItem>
                     )}
-                    {/* ── scheiding: projectbeheer ↑ / acquisitie ↓ ── */}
+                    {/* ── scheiding: projectbeheer ↑ / calculatiefase ↓ ── */}
                     <div className="mx-3 my-2 flex items-center gap-2 group-data-[collapsible=icon]:hidden">
                       <div className="flex-1 h-px bg-slate-200" />
-                      <span className="text-[10px] text-muted-foreground/60 font-medium shrink-0 uppercase tracking-wider">Acquisitie</span>
+                      <span className="text-[10px] text-muted-foreground/60 font-medium shrink-0 uppercase tracking-wider">Calculatiefase</span>
                       <div className="flex-1 h-px bg-slate-200" />
                     </div>
                     {toonOpname && (
