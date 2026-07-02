@@ -820,10 +820,20 @@ export function SlimUploadBalk() {
       setSleepActief(false);
     }
     function opDragLeave(e: DragEvent) {
-      // relatedTarget === null betekent: cursor verlaat het browservenster
-      if (e.relatedTarget === null) { resetSleep(); return; }
+      // relatedTarget === null: cursor verlaat venster (Chrome/Edge)
+      // clientX/Y buiten viewport: zelfde situatie op Firefox en sommige Edge-versies
+      const buitenVenster =
+        e.relatedTarget === null ||
+        e.clientX <= 0 ||
+        e.clientY <= 0 ||
+        e.clientX >= window.innerWidth ||
+        e.clientY >= window.innerHeight;
+      if (buitenVenster) { resetSleep(); return; }
       sleepTeller.current -= 1;
       if (sleepTeller.current <= 0) resetSleep();
+    }
+    function opEscape(e: KeyboardEvent) {
+      if (e.key === "Escape") resetSleep();
     }
     function opDragOver(e: DragEvent) {
       e.preventDefault();
@@ -842,12 +852,14 @@ export function SlimUploadBalk() {
     document.addEventListener("dragover",  opDragOver);
     document.addEventListener("drop",      opDrop);
     document.addEventListener("dragend",   opDragEnd);
+    document.addEventListener("keydown",   opEscape);
     return () => {
       document.removeEventListener("dragenter", opDragEnter);
       document.removeEventListener("dragleave", opDragLeave);
       document.removeEventListener("dragover",  opDragOver);
       document.removeEventListener("drop",      opDrop);
       document.removeEventListener("dragend",   opDragEnd);
+      document.removeEventListener("keydown",   opEscape);
     };
   }, []);
 
@@ -1076,7 +1088,11 @@ export function SlimUploadBalk() {
       {/* ── Dropzone overlay ──────────────────────────────────────────── */}
       {sleepActief && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+          <div
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm cursor-pointer"
+            title="Klik om te annuleren"
+            onClick={() => { sleepTeller.current = 0; setSleepActief(false); }}
+          />
           <div className="relative flex flex-col items-center gap-5 rounded-2xl border-2 border-dashed border-primary bg-white shadow-2xl px-14 py-12 max-w-sm mx-4 animate-in fade-in zoom-in-95 duration-150">
             <div className="rounded-full bg-primary/10 p-5 ring-8 ring-primary/5">
               <Upload className="h-10 w-10 text-primary" />

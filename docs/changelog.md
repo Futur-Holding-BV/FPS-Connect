@@ -10,6 +10,19 @@ Grote roadmap-fases staan ook in `docs/roadmap/gebouwd.md` en `docs/roadmap/acti
 
 ---
 
+## 2026-07-02 — Bugfix: slim-upload overlay blijft hangen bij teruggetrokken drag
+
+**Uitvoering:** volledig | **Getest:** typecheck
+
+### Wat er gewijzigd is
+
+**Frontend — `artifacts/firevault/src/components/slim-upload-balk.tsx`:**
+- `opDragLeave` controleerde alleen `relatedTarget === null` om te detecteren dat de cursor het browservenster verliet. Op Firefox en sommige Edge-versies is `relatedTarget !== null` ook al de cursor buiten het viewport is. Fix: extra grenscheck op `clientX/Y` vs `window.innerWidth/innerHeight` — als de cursor buiten de viewport valt, wordt het overlay direct gesloten.
+- `Escape`-toets sluit het overlay nu ook (`keydown`-listener op `document`).
+- Klikken op het donkere backdrop sluit het overlay (`onClick` op de backdrop-div met `cursor-pointer` en `title="Klik om te annuleren"`).
+
+---
+
 ## 2026-07-02 — Bugfixes: slim-upload array-response + monteur-app AuthContext
 
 **Uitvoering:** volledig | **Getest:** typecheck + workflow herstarts
