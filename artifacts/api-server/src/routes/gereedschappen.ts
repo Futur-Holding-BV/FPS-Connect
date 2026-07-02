@@ -8,6 +8,9 @@ import {
 } from "@workspace/db/schema";
 import { eq, ilike, or, and, desc } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
+import { ObjectStorageService } from "../lib/objectStorage";
+import { maakOpenAiClient, heeftOpenAi } from "../lib/openai";
+import { logger } from "../lib/logger";
 
 const router = Router();
 
@@ -50,6 +53,7 @@ function mapGereedschap(
     laatste_keuring: g.laatsteKeuring ?? null,
     volgende_keuring: g.volgendeKeuring ?? null,
     opmerkingen: g.opmerkingen ?? null,
+    foto_url: g.fotoUrl ?? null,
     aangemaakt_op: g.aangemaaktOp.toISOString(),
     bijgewerkt_op: g.bijgewerktOp.toISOString(),
   };
@@ -218,7 +222,7 @@ router.patch("/gereedschappen/:id", schrijven, async (req, res) => {
     categorie, aandrijving, met_snoer, accu_inbegrepen, lader_inbegrepen,
     koffer_inbegrepen, aankoopdatum, aankoopprijs, leverancier,
     garantietermijn, status, huidige_medewerker_id, locatie,
-    keuringsplichtig, laatste_keuring, volgende_keuring, opmerkingen,
+    keuringsplichtig, laatste_keuring, volgende_keuring, opmerkingen, foto_url,
   } = req.body;
 
   const [bijgewerkt] = await db
@@ -246,6 +250,7 @@ router.patch("/gereedschappen/:id", schrijven, async (req, res) => {
       ...(laatste_keuring !== undefined && { laatsteKeuring: laatste_keuring }),
       ...(volgende_keuring !== undefined && { volgendeKeuring: volgende_keuring }),
       ...(opmerkingen !== undefined && { opmerkingen }),
+      ...(foto_url !== undefined && { fotoUrl: foto_url }),
       bijgewerktOp: new Date(),
     })
     .where(eq(gereedschappenTable.id, id))
@@ -490,6 +495,110 @@ router.patch("/bruikleen/:id/ondertekening", lezen, async (req, res) => {
     .returning();
 
   res.json(mapBruikleen(bijgewerkt));
+});
+
+// ── POST /gereedschappen/upload-url ──────────────────────────────────────────
+router.post("/gereedschappen/upload-url", schrijven, async (_req, res) => {
+  try {
+    const storage = new ObjectStorageService();
+    const { uploadURL, objectPath } = await storage.getObjectEntityUploadURL(null, "algemeen");
+    return res.json({ upload_url: uploadURL, object_path: objectPath });
+  } catch (err) {
+    logger.error({ err }, "gereedschap upload-url fout");
+    return res.status(500).json({ error: "Kon upload-URL niet genereren" });
+  }
+});
+
+// ── POST /gereedschappen/:id/ai-analyse ───────────────────────────────────────
+// Analyseert een foto van het gereedschap met GPT-4o vision en stelt
+// velden voor. Alleen een suggestie; de magazijnbeheerder bevestigt zelf.
+router.post("/gereedschappen/:id/ai-analyse", schrijven, async (req, res) => {
+  const { foto_url } = req.body as { foto_url?: string };
+  if (!foto_url) {
+    return res.status(400).json({ error: "foto_url is verplicht" });
+  }
+  if (!heeftOpenAi()) {
+    return res.status(503).json({ error: "AI niet beschikbaar" });
+  }
+
+  try {
+    const storage = new ObjectStorageService();
+    const storageFile = await storage.getObjectEntityFile(foto_url);
+    const resp = await storage.downloadObject(storageFile);
+    const buffer = Buffer.from(await resp.arrayBuffer());
+
+    const sharp = (await import("sharp")).default;
+    const fotoBase64 = (
+      await sharp(buffer)
+        .resize({ width: 1024, withoutEnlargement: true })
+        .jpeg({ quality: 80 })
+        .toBuffer()
+    ).toString("base64");
+
+    const openai = maakOpenAiClient();
+
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o",
+      max_tokens: 1000,
+      response_format: { type: "json_object" },
+      messages: [
+        {
+          role: "system",
+          content: `Je bent een ervaren magazijnbeheerder bij FPS Brandpreventie, een brandpreventie-installatiebedrijf.
+Je analyseert een foto van een stuk gereedschap of machine en vult de registratiegegevens zo nauwkeurig mogelijk in.
+
+Geef uitsluitend geldige JSON in dit formaat:
+{
+  "omschrijving": "<bondige Nederlandse naam, bijv. 'Klopboormachine'>",
+  "merk": "<merknaam of null>",
+  "type": "<type/modelnummer of null>",
+  "categorie": "<categorie in het Nederlands, bijv. 'boormachine', 'slijptol', 'zaag', 'meting', 'hand' etc.>",
+  "aandrijving": "<een van: handgereedschap | elektrisch | accu | machine | overig>",
+  "met_snoer": <true of false>,
+  "accu_inbegrepen": <true als accu zichtbaar is, anders false>,
+  "lader_inbegrepen": <true als lader zichtbaar is, anders false>,
+  "koffer_inbegrepen": <true als koffer/tas zichtbaar is, anders false>,
+  "keuringsplichtig": <true voor zware machines/heftruck/elektrisch gereedschap boven 1kW, anders false>,
+  "staat_indicatie": "<korte beoordeling van de zichtbare staat: nieuw, goed, lichte slijtage, zware slijtage, beschadigd — of null>"
+}
+
+Wees conservatief: als je iets niet zeker weet, gebruik null of false.`,
+        },
+        {
+          role: "user",
+          content: [
+            { type: "text", text: "Analyseer dit gereedschap en vul de registratiegegevens in." },
+            { type: "image_url", image_url: { url: `data:image/jpeg;base64,${fotoBase64}`, detail: "high" } },
+          ],
+        },
+      ],
+    });
+
+    const rawText = completion.choices[0]?.message?.content ?? "{}";
+    let voorstel: Record<string, unknown> = {};
+    try {
+      voorstel = JSON.parse(rawText) as Record<string, unknown>;
+    } catch {
+      return res.status(500).json({ error: "AI-antwoord kon niet worden verwerkt" });
+    }
+
+    return res.json({
+      omschrijving: typeof voorstel.omschrijving === "string" ? voorstel.omschrijving : "",
+      merk: typeof voorstel.merk === "string" ? voorstel.merk : null,
+      type: typeof voorstel.type === "string" ? voorstel.type : null,
+      categorie: typeof voorstel.categorie === "string" ? voorstel.categorie : "overig",
+      aandrijving: typeof voorstel.aandrijving === "string" ? voorstel.aandrijving : "handgereedschap",
+      met_snoer: voorstel.met_snoer === true,
+      accu_inbegrepen: voorstel.accu_inbegrepen === true,
+      lader_inbegrepen: voorstel.lader_inbegrepen === true,
+      koffer_inbegrepen: voorstel.koffer_inbegrepen === true,
+      keuringsplichtig: voorstel.keuringsplichtig === true,
+      staat_indicatie: typeof voorstel.staat_indicatie === "string" ? voorstel.staat_indicatie : null,
+    });
+  } catch (err) {
+    logger.error({ err }, "gereedschap ai-analyse fout");
+    return res.status(500).json({ error: "AI-analyse mislukt" });
+  }
 });
 
 // ── GET /mijn-gereedschappen ──────────────────────────────────────────────────

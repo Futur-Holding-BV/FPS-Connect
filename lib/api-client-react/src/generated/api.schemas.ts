@@ -6086,6 +6086,8 @@ export interface Gereedschap {
   laatste_keuring?: string | null;
   volgende_keuring?: string | null;
   opmerkingen?: string | null;
+  /** Opgeslagen pad van de gereedschapfoto */
+  foto_url?: string | null;
   aangemaakt_op: string;
   bijgewerkt_op: string;
 }
@@ -6113,6 +6115,31 @@ export interface GereedschapInput {
   laatste_keuring?: string | null;
   volgende_keuring?: string | null;
   opmerkingen?: string | null;
+  foto_url?: string | null;
+}
+
+export interface GereedschapUploadUrlResponse {
+  upload_url: string;
+  object_path: string;
+}
+
+export interface GereedschapAiAnalyseInput {
+  foto_url: string;
+}
+
+export interface GereedschapAiVoorstel {
+  omschrijving: string;
+  merk?: string | null;
+  type?: string | null;
+  categorie: string;
+  aandrijving: string;
+  met_snoer?: boolean;
+  accu_inbegrepen?: boolean;
+  lader_inbegrepen?: boolean;
+  koffer_inbegrepen?: boolean;
+  keuringsplichtig?: boolean;
+  /** AI-beoordeling van de visuele staat van het gereedschap */
+  staat_indicatie?: string | null;
 }
 
 export interface BruikleenOvereenkomst {

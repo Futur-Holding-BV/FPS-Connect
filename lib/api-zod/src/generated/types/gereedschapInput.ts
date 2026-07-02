@@ -29,4 +29,5 @@ export interface GereedschapInput {
   laatste_keuring?: string | null;
   volgende_keuring?: string | null;
   opmerkingen?: string | null;
+  foto_url?: string | null;
 }

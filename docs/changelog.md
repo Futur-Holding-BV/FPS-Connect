@@ -10,6 +10,20 @@ Grote roadmap-fases staan ook in `docs/roadmap/gebouwd.md` en `docs/roadmap/acti
 
 ---
 
+## 2026-07-02 — Foto + AI-beoordeling gereedschappen
+
+**Uitvoering:** volledig | **Getest:** typecheck firevault (clean) + api-server (alleen pre-existing TS7030) + server start bevestigd
+
+Magazijnbeheerders kunnen nu via telefoon een foto maken van gereedschap en laten GPT-4o vision automatisch velden invullen:
+
+- **DB** — `foto_url text` kolom op `gereedschappen_tabel` via directe `ALTER TABLE`
+- **OpenAPI** — `foto_url` toegevoegd aan `Gereedschap` en `GereedschapInput`; nieuwe schemas `GereedschapUploadUrlResponse`, `GereedschapAiAnalyseInput`, `GereedschapAiVoorstel`; nieuwe routes `POST /gereedschappen/upload-url` en `POST /gereedschappen/{id}/ai-analyse`
+- **Backend routes** — `POST /gereedschappen/upload-url` geeft S3 presigned URL terug; `POST /gereedschappen/:id/ai-analyse` downloadt foto via `getObjectEntityFile` + `downloadObject`, schaalt naar max 800px via sharp, analyseert met GPT-4o vision en retourneert gestructureerd voorstel (omschrijving, merk, type, categorie, aandrijving, accessoires, keuringsplichtig, staat_indicatie); `foto_url` meegenomen in `mapGereedschap` en PATCH-handler
+- **`gereedschappen/index.tsx`** — foto-capture sectie in "Gereedschap registreren"-dialoog: verborgen file input met `capture="environment"`, upload via PUT naar presigned URL, AI-voorstel banner (amber, Sparkles-icoon) met "Voorstel overnemen"-knop
+- **`gereedschappen/detail.tsx`** — zelfde foto+AI-flow in het bewerken-dialoog; foto-thumbnail (max-h-56) bovenaan de gegevens-tab; `foto_url` meegenomen in `openBewerken()`-populatie en reset bij dialoogsluit
+
+---
+
 ## 2026-07-02 — Dagelijkse AI Marktscout (CRM)
 
 **Uitvoering:** volledig | **Getest:** typecheck + server start bevestigd

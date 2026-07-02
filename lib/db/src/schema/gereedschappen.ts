@@ -40,6 +40,7 @@ export const gereedschappenTable = pgTable("gereedschappen", {
   laatsteKeuring: text("laatste_keuring"),
   volgendeKeuring: text("volgende_keuring"),
   opmerkingen: text("opmerkingen"),
+  fotoUrl: text("foto_url"),
   aangemaaktDoorId: integer("aangemaakt_door_id").references(
     () => gebruikersTable.id, { onDelete: "set null" }
   ),

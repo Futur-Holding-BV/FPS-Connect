@@ -1,7 +1,10 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useLocation } from "wouter";
-import { useListGereedschappen, useCreateGereedschap } from "@workspace/api-client-react";
-import type { GereedschapInput, Gereedschap } from "@workspace/api-client-react";
+import {
+  useListGereedschappen, useCreateGereedschap,
+  useGetGereedschapUploadUrl, useAnalyseGereedschapFoto,
+} from "@workspace/api-client-react";
+import type { GereedschapInput, Gereedschap, GereedschapAiVoorstel } from "@workspace/api-client-react";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -17,7 +20,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { ListCard } from "@/components/ui/list-card";
-import { Plus, Wrench, Search, AlertTriangle, User } from "lucide-react";
+import { Plus, Wrench, Search, User, Camera, Sparkles, CheckCircle } from "lucide-react";
 
 const STATUSSEN = [
   "Beschikbaar", "In bruikleen", "Defect gemeld", "Beschadigd",
@@ -79,6 +82,7 @@ const leegFormulier: GereedschapInput = {
   volgende_keuring: null,
   opmerkingen: null,
   huidige_medewerker_id: null,
+  foto_url: null,
 };
 
 export default function GereedschappenPagina() {
@@ -92,6 +96,14 @@ export default function GereedschappenPagina() {
   const [formulier, setFormulier] = useState<GereedschapInput>(leegFormulier);
   const [opslaan, setOpslaan] = useState(false);
 
+  const fotoInputRef = useRef<HTMLInputElement>(null);
+  const [fotoPreview, setFotoPreview] = useState<string | null>(null);
+  const [fotoObjectPad, setFotoObjectPad] = useState<string | null>(null);
+  const [fotoUploaden, setFotoUploaden] = useState(false);
+  const [aiLaden, setAiLaden] = useState(false);
+  const [aiVoorstel, setAiVoorstel] = useState<GereedschapAiVoorstel | null>(null);
+  const [fotoFout, setFotoFout] = useState<string | null>(null);
+
   const queryClient = useQueryClient();
 
   const params = {
@@ -103,6 +115,9 @@ export default function GereedschappenPagina() {
     Object.keys(params).length > 0 ? params : undefined
   );
 
+  const getUploadUrl = useGetGereedschapUploadUrl();
+  const analyseAi = useAnalyseGereedschapFoto();
+
   const maakAan = useCreateGereedschap({
     mutation: {
       onSuccess: () => {
@@ -110,10 +125,74 @@ export default function GereedschappenPagina() {
         setNieuwOpen(false);
         setFormulier(leegFormulier);
         setOpslaan(false);
+        setFotoPreview(null);
+        setFotoObjectPad(null);
+        setAiVoorstel(null);
       },
       onError: () => setOpslaan(false),
     },
   });
+
+  async function handleFotoSelectie(e: React.ChangeEvent<HTMLInputElement>) {
+    const bestand = e.target.files?.[0];
+    if (!bestand) return;
+    setFotoFout(null);
+    setAiVoorstel(null);
+    setFotoPreview(URL.createObjectURL(bestand));
+    setFotoUploaden(true);
+    try {
+      const urlData = await getUploadUrl.mutateAsync();
+      const { upload_url, object_path } = urlData as { upload_url: string; object_path: string };
+      const uploadResp = await fetch(upload_url, {
+        method: "PUT",
+        headers: { "Content-Type": bestand.type || "image/jpeg" },
+        body: bestand,
+      });
+      if (!uploadResp.ok) throw new Error("Foto uploaden mislukt");
+      setFotoObjectPad(object_path);
+      setFormulier((f) => ({ ...f, foto_url: object_path }));
+      setFotoUploaden(false);
+      setAiLaden(true);
+      const voorstel = await analyseAi.mutateAsync({ id: 0, data: { foto_url: object_path } });
+      setAiVoorstel(voorstel as GereedschapAiVoorstel);
+    } catch (err) {
+      setFotoFout(err instanceof Error ? err.message : "Upload of analyse mislukt");
+    } finally {
+      setFotoUploaden(false);
+      setAiLaden(false);
+      if (fotoInputRef.current) fotoInputRef.current.value = "";
+    }
+  }
+
+  function accepteerVoorstel() {
+    if (!aiVoorstel) return;
+    setFormulier((f) => ({
+      ...f,
+      omschrijving: aiVoorstel.omschrijving || f.omschrijving,
+      merk: aiVoorstel.merk ?? f.merk,
+      type: aiVoorstel.type ?? f.type,
+      categorie: aiVoorstel.categorie || f.categorie,
+      aandrijving: aiVoorstel.aandrijving || f.aandrijving,
+      met_snoer: aiVoorstel.met_snoer ?? f.met_snoer,
+      accu_inbegrepen: aiVoorstel.accu_inbegrepen ?? f.accu_inbegrepen,
+      lader_inbegrepen: aiVoorstel.lader_inbegrepen ?? f.lader_inbegrepen,
+      koffer_inbegrepen: aiVoorstel.koffer_inbegrepen ?? f.koffer_inbegrepen,
+      keuringsplichtig: aiVoorstel.keuringsplichtig ?? f.keuringsplichtig,
+      opmerkingen: aiVoorstel.staat_indicatie
+        ? `Staat bij registratie: ${aiVoorstel.staat_indicatie}`
+        : f.opmerkingen,
+    }));
+    setAiVoorstel(null);
+  }
+
+  function sluitNieuwDialog() {
+    setNieuwOpen(false);
+    setFormulier(leegFormulier);
+    setFotoPreview(null);
+    setFotoObjectPad(null);
+    setAiVoorstel(null);
+    setFotoFout(null);
+  }
 
   function handleOpslaan() {
     if (!formulier.omschrijving) return;
@@ -223,12 +302,71 @@ export default function GereedschappenPagina() {
         </div>
       )}
 
-      <Dialog open={nieuwOpen} onOpenChange={setNieuwOpen}>
+      <Dialog open={nieuwOpen} onOpenChange={(open) => { if (!open) sluitNieuwDialog(); else setNieuwOpen(true); }}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Gereedschap registreren</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
+            <input
+              ref={fotoInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="hidden"
+              onChange={handleFotoSelectie}
+            />
+            <div className="rounded-lg border border-dashed border-muted-foreground/30 p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-muted-foreground">Foto (optioneel)</span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => fotoInputRef.current?.click()}
+                  disabled={fotoUploaden || aiLaden}
+                  className="gap-2"
+                >
+                  <Camera className="h-4 w-4" />
+                  {fotoUploaden ? "Uploaden..." : aiLaden ? "AI analyseert..." : fotoObjectPad ? "Andere foto" : "Foto nemen"}
+                </Button>
+              </div>
+              {fotoPreview && (
+                <img
+                  src={fotoPreview}
+                  alt="Gereedschap preview"
+                  className="w-full max-h-40 object-contain rounded border"
+                />
+              )}
+              {fotoFout && (
+                <p className="text-xs text-red-600">{fotoFout}</p>
+              )}
+              {aiVoorstel && (
+                <div className="rounded-md bg-amber-50 border border-amber-200 p-3 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="h-4 w-4 text-amber-600 shrink-0" />
+                    <span className="text-xs font-semibold text-amber-800">AI-voorstel op basis van de foto</span>
+                  </div>
+                  <div className="text-xs text-amber-900 space-y-0.5">
+                    <p><span className="font-medium">Omschrijving:</span> {aiVoorstel.omschrijving}</p>
+                    {aiVoorstel.merk && <p><span className="font-medium">Merk:</span> {aiVoorstel.merk}</p>}
+                    {aiVoorstel.type && <p><span className="font-medium">Type:</span> {aiVoorstel.type}</p>}
+                    <p><span className="font-medium">Categorie:</span> {aiVoorstel.categorie} &middot; {aiVoorstel.aandrijving}</p>
+                    {aiVoorstel.staat_indicatie && <p><span className="font-medium">Staat:</span> {aiVoorstel.staat_indicatie}</p>}
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={accepteerVoorstel}
+                    className="gap-2 bg-amber-600 hover:bg-amber-700 text-white w-full"
+                  >
+                    <CheckCircle className="h-4 w-4" />
+                    Voorstel overnemen in formulier
+                  </Button>
+                </div>
+              )}
+            </div>
+
             <div className="space-y-1">
               <Label>Omschrijving <span className="text-red-500">*</span></Label>
               <Input
@@ -358,10 +496,10 @@ export default function GereedschappenPagina() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setNieuwOpen(false)}>Annuleren</Button>
+            <Button variant="outline" onClick={sluitNieuwDialog}>Annuleren</Button>
             <Button
               onClick={handleOpslaan}
-              disabled={!formulier.omschrijving || opslaan}
+              disabled={!formulier.omschrijving || opslaan || fotoUploaden || aiLaden}
               className="bg-[#F23B0D] hover:bg-[#d43309] text-white"
             >
               {opslaan ? "Registreren..." : "Registreren"}

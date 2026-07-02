@@ -32,6 +32,8 @@ export interface Gereedschap {
   laatste_keuring?: string | null;
   volgende_keuring?: string | null;
   opmerkingen?: string | null;
+  /** Opgeslagen pad van de gereedschapfoto */
+  foto_url?: string | null;
   aangemaakt_op: Date;
   bijgewerkt_op: Date;
 }

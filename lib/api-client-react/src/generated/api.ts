@@ -191,9 +191,12 @@ import type {
   GebruikerUpdate,
   GebruikersAanvullen200,
   Gereedschap,
+  GereedschapAiAnalyseInput,
+  GereedschapAiVoorstel,
   GereedschapInput,
   GereedschapMelding,
   GereedschapMeldingInput,
+  GereedschapUploadUrlResponse,
   GetActiefDocumentStudioModelParams,
   GetAiPresentatieNiveau200,
   GetBoekhouderDashboardParams,
@@ -41327,6 +41330,76 @@ export const useCreateGereedschap = <TError = ErrorType<unknown>,
       return useMutation(getCreateGereedschapMutationOptions(options));
     }
 
+export const getGetGereedschapUploadUrlUrl = () => {
+
+
+
+
+  return `/api/gereedschappen/upload-url`
+}
+
+/**
+ * @summary Upload-URL genereren voor een gereedschapfoto
+ */
+export const getGereedschapUploadUrl = async ( options?: RequestInit): Promise<GereedschapUploadUrlResponse> => {
+
+  return customFetch<GereedschapUploadUrlResponse>(getGetGereedschapUploadUrlUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getGetGereedschapUploadUrlMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof getGereedschapUploadUrl>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof getGereedschapUploadUrl>>, TError,void, TContext> => {
+
+const mutationKey = ['getGereedschapUploadUrl'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof getGereedschapUploadUrl>>, void> = () => {
+
+
+          return  getGereedschapUploadUrl(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type GetGereedschapUploadUrlMutationResult = NonNullable<Awaited<ReturnType<typeof getGereedschapUploadUrl>>>
+
+    export type GetGereedschapUploadUrlMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Upload-URL genereren voor een gereedschapfoto
+ */
+export const useGetGereedschapUploadUrl = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof getGereedschapUploadUrl>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof getGereedschapUploadUrl>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getGetGereedschapUploadUrlMutationOptions(options));
+    }
+
 export const getGetGereedschapUrl = (id: number,) => {
 
 
@@ -41768,6 +41841,77 @@ export const useCreateGereedschapMelding = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getCreateGereedschapMeldingMutationOptions(options));
+    }
+
+export const getAnalyseGereedschapFotoUrl = (id: number,) => {
+
+
+
+
+  return `/api/gereedschappen/${id}/ai-analyse`
+}
+
+/**
+ * @summary AI-beoordeling van gereedschapfoto — stelt velden voor, magazijnbeheerder bevestigt
+ */
+export const analyseGereedschapFoto = async (id: number,
+    gereedschapAiAnalyseInput: GereedschapAiAnalyseInput, options?: RequestInit): Promise<GereedschapAiVoorstel> => {
+
+  return customFetch<GereedschapAiVoorstel>(getAnalyseGereedschapFotoUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(gereedschapAiAnalyseInput)
+  }
+);}
+
+
+
+
+export const getAnalyseGereedschapFotoMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof analyseGereedschapFoto>>, TError,{id: number;data: BodyType<GereedschapAiAnalyseInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof analyseGereedschapFoto>>, TError,{id: number;data: BodyType<GereedschapAiAnalyseInput>}, TContext> => {
+
+const mutationKey = ['analyseGereedschapFoto'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof analyseGereedschapFoto>>, {id: number;data: BodyType<GereedschapAiAnalyseInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  analyseGereedschapFoto(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AnalyseGereedschapFotoMutationResult = NonNullable<Awaited<ReturnType<typeof analyseGereedschapFoto>>>
+    export type AnalyseGereedschapFotoMutationBody = BodyType<GereedschapAiAnalyseInput>
+    export type AnalyseGereedschapFotoMutationError = ErrorType<void>
+
+    /**
+ * @summary AI-beoordeling van gereedschapfoto — stelt velden voor, magazijnbeheerder bevestigt
+ */
+export const useAnalyseGereedschapFoto = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof analyseGereedschapFoto>>, TError,{id: number;data: BodyType<GereedschapAiAnalyseInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof analyseGereedschapFoto>>,
+        TError,
+        {id: number;data: BodyType<GereedschapAiAnalyseInput>},
+        TContext
+      > => {
+      return useMutation(getAnalyseGereedschapFotoMutationOptions(options));
     }
 
 export const getCreateBruikleenUrl = () => {

@@ -11652,6 +11652,20 @@ paths:
               schema:
                 $ref: '#/components/schemas/Gereedschap'
 
+  /gereedschappen/upload-url:
+    post:
+      operationId: getGereedschapUploadUrl
+      summary: Upload-URL genereren voor een gereedschapfoto
+      tags: [gereedschappen]
+      security: [{ cookieAuth: [] }]
+      responses:
+        '200':
+          description: Upload-URL en opgeslagen objectpad
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GereedschapUploadUrlResponse'
+
   /gereedschappen/{id}:
     get:
       operationId: getGereedschap
@@ -11773,6 +11787,35 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/GereedschapMelding'
+
+  /gereedschappen/{id}/ai-analyse:
+    post:
+      operationId: analyseGereedschapFoto
+      summary: AI-beoordeling van gereedschapfoto — stelt velden voor, magazijnbeheerder bevestigt
+      tags: [gereedschappen]
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GereedschapAiAnalyseInput'
+      responses:
+        '200':
+          description: AI-voorstel voor gereedschapvelden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GereedschapAiVoorstel'
+        '400':
+          description: foto_url ontbreekt
+        '503':
+          description: AI niet beschikbaar
 
   /bruikleen:
     post:
@@ -26257,6 +26300,10 @@ components:
         opmerkingen:
           type: string
           nullable: true
+        foto_url:
+          type: string
+          nullable: true
+          description: Opgeslagen pad van de gereedschapfoto
         aangemaakt_op:
           type: string
           format: date-time
@@ -26325,6 +26372,56 @@ components:
         opmerkingen:
           type: string
           nullable: true
+        foto_url:
+          type: string
+          nullable: true
+
+    GereedschapUploadUrlResponse:
+      type: object
+      required: [upload_url, object_path]
+      properties:
+        upload_url:
+          type: string
+        object_path:
+          type: string
+
+    GereedschapAiAnalyseInput:
+      type: object
+      required: [foto_url]
+      properties:
+        foto_url:
+          type: string
+
+    GereedschapAiVoorstel:
+      type: object
+      required: [omschrijving, categorie, aandrijving]
+      properties:
+        omschrijving:
+          type: string
+        merk:
+          type: string
+          nullable: true
+        type:
+          type: string
+          nullable: true
+        categorie:
+          type: string
+        aandrijving:
+          type: string
+        met_snoer:
+          type: boolean
+        accu_inbegrepen:
+          type: boolean
+        lader_inbegrepen:
+          type: boolean
+        koffer_inbegrepen:
+          type: boolean
+        keuringsplichtig:
+          type: boolean
+        staat_indicatie:
+          type: string
+          nullable: true
+          description: AI-beoordeling van de visuele staat van het gereedschap
 
     BruikleenOvereenkomst:
       type: object

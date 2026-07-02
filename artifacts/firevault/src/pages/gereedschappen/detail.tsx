@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Link, useParams } from "wouter";
 import {
   useGetGereedschap,
@@ -8,9 +8,11 @@ import {
   useCreateGereedschapMelding,
   useCreateBruikleen,
   useVerwerkRetourgave,
+  useGetGereedschapUploadUrl,
+  useAnalyseGereedschapFoto,
 } from "@workspace/api-client-react";
 import type {
-  GereedschapInput, BruikleenInput, GereedschapMeldingInput,
+  GereedschapInput, BruikleenInput, GereedschapMeldingInput, GereedschapAiVoorstel,
 } from "@workspace/api-client-react";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
 import { useListMedewerkers } from "@workspace/api-client-react";
@@ -32,6 +34,7 @@ import {
 } from "@/components/ui/table";
 import {
   ChevronLeft, Pencil, AlertTriangle, Package, ClipboardList, Wrench,
+  Camera, Sparkles, CheckCircle,
 } from "lucide-react";
 
 const STATUSSEN = [
@@ -90,6 +93,16 @@ export default function GereedschapDetailPagina() {
   const [bewerkFormulier, setBewerkFormulier] = useState<Partial<GereedschapInput>>({});
   const [innameId, setInnameId] = useState<number | null>(null);
   const [innameFormulier, setInnameFormulier] = useState({ datum_inname: new Date().toISOString().slice(0, 10), staat_bij_inname: "" });
+
+  const fotoInputRef = useRef<HTMLInputElement>(null);
+  const [fotoPreview, setFotoPreview] = useState<string | null>(null);
+  const [fotoUploaden, setFotoUploaden] = useState(false);
+  const [aiLaden, setAiLaden] = useState(false);
+  const [aiVoorstel, setAiVoorstel] = useState<GereedschapAiVoorstel | null>(null);
+  const [fotoFout, setFotoFout] = useState<string | null>(null);
+
+  const getUploadUrl = useGetGereedschapUploadUrl();
+  const analyseAi = useAnalyseGereedschapFoto();
 
   const { data: gereedschap, isLoading } = useGetGereedschap(gereedschapId);
   const { data: bruikleenHistory } = useListGereedschapBruikleen(gereedschapId);
@@ -167,6 +180,57 @@ export default function GereedschapDetailPagina() {
   if (isLoading) return <div className="p-6 text-muted-foreground">Laden...</div>;
   if (!gereedschap) return <div className="p-6 text-muted-foreground">Gereedschap niet gevonden.</div>;
 
+  async function handleFotoSelectie(e: React.ChangeEvent<HTMLInputElement>) {
+    const bestand = e.target.files?.[0];
+    if (!bestand) return;
+    setFotoFout(null);
+    setAiVoorstel(null);
+    setFotoPreview(URL.createObjectURL(bestand));
+    setFotoUploaden(true);
+    try {
+      const urlData = await getUploadUrl.mutateAsync();
+      const { upload_url, object_path } = urlData as { upload_url: string; object_path: string };
+      const uploadResp = await fetch(upload_url, {
+        method: "PUT",
+        headers: { "Content-Type": bestand.type || "image/jpeg" },
+        body: bestand,
+      });
+      if (!uploadResp.ok) throw new Error("Foto uploaden mislukt");
+      setBewerkFormulier((f) => ({ ...f, foto_url: object_path }));
+      setFotoUploaden(false);
+      setAiLaden(true);
+      const voorstel = await analyseAi.mutateAsync({ id: gereedschapId, data: { foto_url: object_path } });
+      setAiVoorstel(voorstel as GereedschapAiVoorstel);
+    } catch (err) {
+      setFotoFout(err instanceof Error ? err.message : "Upload of analyse mislukt");
+    } finally {
+      setFotoUploaden(false);
+      setAiLaden(false);
+      if (fotoInputRef.current) fotoInputRef.current.value = "";
+    }
+  }
+
+  function accepteerVoorstel() {
+    if (!aiVoorstel) return;
+    setBewerkFormulier((f) => ({
+      ...f,
+      omschrijving: aiVoorstel.omschrijving || f.omschrijving,
+      merk: aiVoorstel.merk ?? f.merk,
+      type: aiVoorstel.type ?? f.type,
+      categorie: aiVoorstel.categorie || f.categorie,
+      aandrijving: aiVoorstel.aandrijving || f.aandrijving,
+      met_snoer: aiVoorstel.met_snoer ?? f.met_snoer,
+      accu_inbegrepen: aiVoorstel.accu_inbegrepen ?? f.accu_inbegrepen,
+      lader_inbegrepen: aiVoorstel.lader_inbegrepen ?? f.lader_inbegrepen,
+      koffer_inbegrepen: aiVoorstel.koffer_inbegrepen ?? f.koffer_inbegrepen,
+      keuringsplichtig: aiVoorstel.keuringsplichtig ?? f.keuringsplichtig,
+      opmerkingen: aiVoorstel.staat_indicatie
+        ? `Staat bij wijziging: ${aiVoorstel.staat_indicatie}`
+        : f.opmerkingen,
+    }));
+    setAiVoorstel(null);
+  }
+
   function openBewerken() {
     setBewerkFormulier({
       omschrijving: gereedschap!.omschrijving,
@@ -190,7 +254,11 @@ export default function GereedschapDetailPagina() {
       laatste_keuring: gereedschap!.laatste_keuring,
       volgende_keuring: gereedschap!.volgende_keuring,
       opmerkingen: gereedschap!.opmerkingen,
+      foto_url: gereedschap!.foto_url,
     });
+    setFotoPreview(null);
+    setAiVoorstel(null);
+    setFotoFout(null);
     setBewerkOpen(true);
   }
 
@@ -262,6 +330,15 @@ export default function GereedschapDetailPagina() {
 
         <TabsContent value="gegevens" className="pt-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {gereedschap.foto_url && (
+              <div className="md:col-span-2 border rounded-lg overflow-hidden">
+                <img
+                  src={`/api/storage${gereedschap.foto_url}`}
+                  alt={gereedschap.omschrijving}
+                  className="w-full max-h-56 object-contain bg-muted"
+                />
+              </div>
+            )}
             <div className="space-y-4 border rounded-lg p-4">
               <h3 className="font-semibold text-sm uppercase tracking-wide text-muted-foreground">Identificatie</h3>
               <div className="grid grid-cols-2 gap-3">
@@ -419,12 +496,72 @@ export default function GereedschapDetailPagina() {
         </TabsContent>
       </Tabs>
 
-      <Dialog open={bewerkOpen} onOpenChange={setBewerkOpen}>
+      <Dialog open={bewerkOpen} onOpenChange={(open) => {
+        if (!open) { setAiVoorstel(null); setFotoPreview(null); setFotoFout(null); }
+        setBewerkOpen(open);
+      }}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Gereedschap bewerken</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
+            <input
+              ref={fotoInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="hidden"
+              onChange={handleFotoSelectie}
+            />
+            <div className="rounded-lg border border-dashed border-muted-foreground/30 p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-muted-foreground">Foto</span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => fotoInputRef.current?.click()}
+                  disabled={fotoUploaden || aiLaden}
+                  className="gap-2"
+                >
+                  <Camera className="h-4 w-4" />
+                  {fotoUploaden ? "Uploaden..." : aiLaden ? "AI analyseert..." : bewerkFormulier.foto_url ?? gereedschap.foto_url ? "Andere foto" : "Foto nemen"}
+                </Button>
+              </div>
+              {(fotoPreview || (bewerkFormulier.foto_url ?? gereedschap.foto_url)) && (
+                <img
+                  src={fotoPreview ?? `/api/storage${bewerkFormulier.foto_url ?? gereedschap.foto_url}`}
+                  alt="Gereedschap foto"
+                  className="w-full max-h-40 object-contain rounded border"
+                />
+              )}
+              {fotoFout && <p className="text-xs text-red-600">{fotoFout}</p>}
+              {aiVoorstel && (
+                <div className="rounded-md bg-amber-50 border border-amber-200 p-3 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="h-4 w-4 text-amber-600 shrink-0" />
+                    <span className="text-xs font-semibold text-amber-800">AI-voorstel op basis van de foto</span>
+                  </div>
+                  <div className="text-xs text-amber-900 space-y-0.5">
+                    <p><span className="font-medium">Omschrijving:</span> {aiVoorstel.omschrijving}</p>
+                    {aiVoorstel.merk && <p><span className="font-medium">Merk:</span> {aiVoorstel.merk}</p>}
+                    {aiVoorstel.type && <p><span className="font-medium">Type:</span> {aiVoorstel.type}</p>}
+                    <p><span className="font-medium">Categorie:</span> {aiVoorstel.categorie} &middot; {aiVoorstel.aandrijving}</p>
+                    {aiVoorstel.staat_indicatie && <p><span className="font-medium">Staat:</span> {aiVoorstel.staat_indicatie}</p>}
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={accepteerVoorstel}
+                    className="gap-2 bg-amber-600 hover:bg-amber-700 text-white w-full"
+                  >
+                    <CheckCircle className="h-4 w-4" />
+                    Voorstel overnemen in formulier
+                  </Button>
+                </div>
+              )}
+            </div>
+
             <div className="space-y-1">
               <Label>Omschrijving</Label>
               <Input

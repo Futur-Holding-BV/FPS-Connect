@@ -14439,6 +14439,7 @@ export const ListGereedschappenResponseItem = zod.object({
   "laatste_keuring": zod.string().nullish(),
   "volgende_keuring": zod.string().nullish(),
   "opmerkingen": zod.string().nullish(),
+  "foto_url": zod.string().nullish().describe('Opgeslagen pad van de gereedschapfoto'),
   "aangemaakt_op": zod.coerce.date(),
   "bijgewerkt_op": zod.coerce.date()
 })
@@ -14470,10 +14471,20 @@ export const CreateGereedschapBody = zod.object({
   "keuringsplichtig": zod.boolean().optional(),
   "laatste_keuring": zod.string().nullish(),
   "volgende_keuring": zod.string().nullish(),
-  "opmerkingen": zod.string().nullish()
+  "opmerkingen": zod.string().nullish(),
+  "foto_url": zod.string().nullish()
 })
 
 export const CreateGereedschapResponse = zod.void()
+
+
+/**
+ * @summary Upload-URL genereren voor een gereedschapfoto
+ */
+export const GetGereedschapUploadUrlResponse = zod.object({
+  "upload_url": zod.string(),
+  "object_path": zod.string()
+})
 
 
 /**
@@ -14509,6 +14520,7 @@ export const GetGereedschapResponse = zod.object({
   "laatste_keuring": zod.string().nullish(),
   "volgende_keuring": zod.string().nullish(),
   "opmerkingen": zod.string().nullish(),
+  "foto_url": zod.string().nullish().describe('Opgeslagen pad van de gereedschapfoto'),
   "aangemaakt_op": zod.coerce.date(),
   "bijgewerkt_op": zod.coerce.date()
 })
@@ -14543,7 +14555,8 @@ export const UpdateGereedschapBody = zod.object({
   "keuringsplichtig": zod.boolean().optional(),
   "laatste_keuring": zod.string().nullish(),
   "volgende_keuring": zod.string().nullish(),
-  "opmerkingen": zod.string().nullish()
+  "opmerkingen": zod.string().nullish(),
+  "foto_url": zod.string().nullish()
 })
 
 export const UpdateGereedschapResponse = zod.object({
@@ -14572,6 +14585,7 @@ export const UpdateGereedschapResponse = zod.object({
   "laatste_keuring": zod.string().nullish(),
   "volgende_keuring": zod.string().nullish(),
   "opmerkingen": zod.string().nullish(),
+  "foto_url": zod.string().nullish().describe('Opgeslagen pad van de gereedschapfoto'),
   "aangemaakt_op": zod.coerce.date(),
   "bijgewerkt_op": zod.coerce.date()
 })
@@ -14663,6 +14677,32 @@ export const CreateGereedschapMeldingBody = zod.object({
 })
 
 export const CreateGereedschapMeldingResponse = zod.void()
+
+
+/**
+ * @summary AI-beoordeling van gereedschapfoto — stelt velden voor, magazijnbeheerder bevestigt
+ */
+export const AnalyseGereedschapFotoParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AnalyseGereedschapFotoBody = zod.object({
+  "foto_url": zod.string()
+})
+
+export const AnalyseGereedschapFotoResponse = zod.object({
+  "omschrijving": zod.string(),
+  "merk": zod.string().nullish(),
+  "type": zod.string().nullish(),
+  "categorie": zod.string(),
+  "aandrijving": zod.string(),
+  "met_snoer": zod.boolean().optional(),
+  "accu_inbegrepen": zod.boolean().optional(),
+  "lader_inbegrepen": zod.boolean().optional(),
+  "koffer_inbegrepen": zod.boolean().optional(),
+  "keuringsplichtig": zod.boolean().optional(),
+  "staat_indicatie": zod.string().nullish().describe('AI-beoordeling van de visuele staat van het gereedschap')
+})
 
 
 /**
@@ -14820,6 +14860,7 @@ export const ListMijnGereedschappenResponseItem = zod.object({
   "laatste_keuring": zod.string().nullish(),
   "volgende_keuring": zod.string().nullish(),
   "opmerkingen": zod.string().nullish(),
+  "foto_url": zod.string().nullish().describe('Opgeslagen pad van de gereedschapfoto'),
   "aangemaakt_op": zod.coerce.date(),
   "bijgewerkt_op": zod.coerce.date()
 })
