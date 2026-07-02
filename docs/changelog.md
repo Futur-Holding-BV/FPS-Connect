@@ -10,6 +10,39 @@ Grote roadmap-fases staan ook in `docs/roadmap/gebouwd.md` en `docs/roadmap/acti
 
 ---
 
+## 2026-07-02 — Integraal verbeterplan Connect: 20 stappen
+
+**Uitvoering:** volledig | **Getest:** niet van toepassing (read-only plan)
+
+### Wat er gedaan is
+
+Integraal verbeterplan opgesteld op basis van de drie eerder gemaakte analyses (workflowanalyse, AI-architectuuranalyse, grote-bestanden-analyse). Geen nieuwe functionaliteit — uitsluitend technische verbeteringen.
+
+**Plan:** `docs/integratieplan-connect-2026-07-02.md`
+
+**20 concrete stappen in 6 fasen:**
+
+| Fase | Stappen | Onderwerp |
+|---|---|---|
+| 1 | 1–2 | AI-fundament: `lib/ai-utils.ts` + `lib/ai-model-registry.ts` |
+| 2 | 3–6 | AI-deduplicatie: veiligheid-ai, calculatie-ai, upload-ai, CrmCoachPanel-hook |
+| 3 | 7–11 | Backend-opsplitsingen: hrm.ts (3 stappen) + veiligheid.ts (2 stappen) |
+| 4 | 12–16 | Frontend-opsplitsingen: plattegrond.tsx + print.tsx |
+| 5 | 17–18 | Documenten-tab opsplitsen |
+| 6 | 19–20 | Personeel-tabs opsplitsen |
+
+**Parallelisatie:** fase 3+4+5+6 kunnen tegelijk starten. Binnen fase 3: hrm-splits parallel met veiligheid-splits. Binnen fase 4: stap 13+14 parallel na stap 12.
+
+**Prioriteiten:**
+- Hoogste: `hrm.ts` (4164r, 15 domeinen), JSON-strip deduplicatie, plattegrond-constanten
+- Laagste: `personeel/index.tsx`, `offertes.ts` klantcontracten, salaris-ai service
+
+Workflow-verbeteringen (nieuwe knoppen/routes) zijn bewust buiten scope gehouden.
+
+**Geen code gewijzigd** — uitsluitend plandocument.
+
+---
+
 ## 2026-07-02 — Grote bestanden: splitsingsvoorstel 7 bestanden
 
 **Uitvoering:** volledig | **Getest:** niet van toepassing (read-only analyse)
