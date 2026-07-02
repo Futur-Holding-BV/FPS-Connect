@@ -10,6 +10,42 @@ Grote roadmap-fases staan ook in `docs/roadmap/gebouwd.md` en `docs/roadmap/acti
 
 ---
 
+## 2026-07-02 — AI Besluitvorming ontwerp
+
+**Uitvoering:** volledig | **Getest:** niet van toepassing (read-only ontwerp)
+
+### Wat er gedaan is
+
+Uniform besluitvormingsmodel ontworpen voor alle 7 AI-assistenten in Connect. Elke AI werkt langs dezelfde 8 stappen. Uitgewerkt per assistent inclusief vraag-typen, analyse, onderbouwing, confidence-factoren, adviesformaat en workflow.
+
+**Document:** `docs/ai-besluitvorming-2026-07-02.md`
+
+**8-stappen model (universeel):**
+Vraag → Analyse → Onderbouwing → Confidence → Advies → Gebruiker beslist → Logboek → Workflow
+
+**7 AI-assistenten volledig uitgewerkt:**
+- AI Uitvoerder — spot-herkenning, toepassingsselectie, installatie-validatie
+- AI Werkvoorbereider — inkoopplanning, uitvoeringsplanning, materiaaloverzichten
+- AI Calculator — kostprijs, tarieventoepassing, margeanalyse (module geparkeerd; ontwerp klaar)
+- AI HRM — opleiding-voorstel, contract-analyse, verlofadvies, bekwaamheidsmatrix
+- AI Veiligheid — LMRA-voorstel, toolbox-vragen, incident-analyse (laag-confidence blokkeert workflow)
+- AI Financieel — factuurcontrole, salaris-mutatie validatie, debiteurenbewaking
+- AI Commercie — offerte-sectie schrijven, e-mail-inzicht, CRM-coaching, contract-analyse
+
+**Uniforme AiBesluit data-interface** beschreven (TypeScript interface, koppelt 8 stappen aan logboek + UI)
+
+**Confidence-schema:** hoog/midden/laag + 7 generieke factoren die de score verlagen; per assistent eigen aanvullende factoren
+
+**Grenzen van AI** expliciet vastgelegd: wat de AI nooit zelf beslist (veiligheid, juridisch, financieel, HR, kwaliteit, compliance, incidenten)
+
+**Escalatieprotocol** beschreven: correcties, laag-confidence bevestigingen, open adviezen
+
+**Kwaliteitsmetingen:** bevestigingsratio > 85 %, correctieratio < 10 %, afwijzingsratio < 5 %, confidentie-accuratesse > 90 %
+
+**Geen code gewijzigd** — uitsluitend ontwerpdocument.
+
+---
+
 ## 2026-07-02 — AI Logboek ontwerp
 
 **Uitvoering:** volledig | **Getest:** niet van toepassing (read-only ontwerp)
