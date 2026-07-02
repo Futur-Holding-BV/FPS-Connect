@@ -10,6 +10,39 @@ Grote roadmap-fases staan ook in `docs/roadmap/gebouwd.md` en `docs/roadmap/acti
 
 ---
 
+## 2026-07-02 — AI Logboek ontwerp
+
+**Uitvoering:** volledig | **Getest:** niet van toepassing (read-only ontwerp)
+
+### Wat er gedaan is
+
+Volledig AI-logboek ontworpen voor FPS Connect. Alle 20 AI-acties geïnventariseerd. Datamodel, privacyontwerp, kostencalculatie en schermontwerp uitgewerkt.
+
+**Document:** `docs/ai-logboek-ontwerp-2026-07-02.md`
+
+**Alle 16 vereiste log-velden gedekt:**
+gebruiker, AI-assistent, project, gebouw, document, prompt (samenvatting+hash), antwoord, confidence, gekozen actie, gebruiker bevestiging, vervolgactie, gebruikte documenten, gebruikte kennisobjecten, gebruikte modellen, kosten, tokens, duur
+
+**Privacyontwerp:** volledige prompttekst NIET opgeslagen (AVG); samenvatting (<500 tekens) + SHA-256-hash bewaard. Bewaarperioden: 2 jaar operationeel, 7 jaar compliance-kritisch/HRM.
+
+**Kostencalculatie:** per model token-prijs × wisselkoers → `kosten_eurocent`; rapportage per module/gebruiker/periode.
+
+**20 AI-acties geïnventariseerd** over 6 services + 14 routes (document-ai, spot-ai, gebouw-ai, email-ai, opleiding-ai, crm-ai, offerte-ai, contract-ai, werkvoorbereiding-ai, gereedschap-ai, toolbox-ai, slim-upload).
+
+**Schermontwerp (ASCII):**
+- Statistieken-balk: kosten, aanroepen, slagingspercentage, gem. duur
+- Filterbalk: module, status, betrouwbaarheid, gebruiker, gebouw, model, periode
+- Logboektabel met alle velden per rij
+- Detail-panel (slide-in): volledige logregel incl. bronnen, beslissing, vervolgactie
+- Kostengrafiek per module + bevestigingsratio per module
+- Export CSV (privacybewust: samenvatting/hash niet meegeëxporteerd)
+
+**Navigatie:** Beheer > AI Logboek (bevoegdheid systeem 1/2)
+
+**Geen code gewijzigd** — uitsluitend ontwerpdocument.
+
+---
+
 ## 2026-07-02 — Kennisobject-model Connect
 
 **Uitvoering:** volledig | **Getest:** niet van toepassing (read-only ontwerp)
