@@ -46,6 +46,12 @@ export const werkInboxMailsTable = pgTable("werk_inbox_mails", {
   heeftBijlage:        boolean("heeft_bijlage").notNull().default(false),
   isGelezenMs:         boolean("is_gelezen_ms").notNull().default(false),
   verwerktOp:          timestamp("verwerkt_op"),
+  afgehandeldOp:       timestamp("afgehandeld_op"),
+  actieVereist:        boolean("actie_vereist").notNull().default(false),
+  actieVereistReden:   text("actie_vereist_reden"),
+  aiVoorstelJson:      text("ai_voorstel_json"),
+  aiLogboekJson:       text("ai_logboek_json"),
+  relatieCategorieAi:  text("relatie_categorie_ai"),
   gesynchroniseerdOp:  timestamp("gesynchroniseerd_op").notNull().defaultNow(),
   bijgewerktOp:        timestamp("bijgewerkt_op").notNull().defaultNow(),
 }, (t) => [

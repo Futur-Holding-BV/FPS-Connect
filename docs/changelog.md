@@ -10,6 +10,34 @@ Grote roadmap-fases staan ook in `docs/roadmap/gebouwd.md` en `docs/roadmap/acti
 
 ---
 
+## 2026-07-02 — Werkinbox — volledig nieuw intelligent werkcentrum
+
+**Uitvoering:** volledig | **Getest:** typecheck firevault (clean) + api-server (alleen pre-existing TS7030) + server start bevestigd
+
+Placeholder vervangen door een volledig functioneel werkcentrum op basis van de Werkinbox-visie (AI verwerkt, mens onderhoudt relatie):
+
+**DB** — 6 additieve kolommen op `werk_inbox_mails` via ALTER TABLE:
+- `afgehandeld_op`, `actie_vereist`, `actie_vereist_reden` — statusbeheer per bericht
+- `ai_voorstel_json`, `ai_logboek_json` — AI-voorstellen + volledige audittrail van AI-acties
+- `relatie_categorie_ai` — AI-geclassificeerde afzendercategorie (opdrachtgever/leverancier/etc.)
+
+**Backend** — 4 nieuwe routes in `werk-inbox.ts`:
+- `PATCH /werk-inbox/mails/:id/afgehandeld` — bericht afsluiten/heropenen
+- `PATCH /werk-inbox/mails/:id/actie-vereist` — menselijke beoordeling vlaggen met reden
+- `GET /werk-inbox/relatie/:email` — CRM-opzoekroute: contactpersoon + organisatie via afzender-e-mail (crmContactpersonenTable → crmKlantenTable)
+- `POST /werk-inbox/mails/:id/analyseer` — GPT-4o analyseert onderwerp + snippet, classificeert categorie, genereert 0–3 handelingsvoorstellen met zekerheidspercentage, slaat actie_vereist + logboek-entry op
+
+**Frontend** (`werk-inbox/index.tsx`) — volledig nieuw, ~700 regels:
+- **4 tabbladen**: Alle berichten | AI Voorstellen (badge) | Actie vereist (amber badge) | Afgehandeld
+- **Split-panel layout**: 320px maillijst (links) + mail-detail (midden) + 288px relatiepaneel (rechts)
+- **Maillijst**: zoekbalk, filter Ongelezen/Bijlagen, unread-bold, iconen per status (AI/actie/bijlage/koppeling)
+- **Mail-detail**: M365 HTML via sandboxed iframe, actie-knoppen (gelezen/afhandelen/AI analyseer), amber AI-voorstel blok (type + omschrijving + zekerheid%), actie-vereist banner, bijlagen, collapsible notities (toevoegen/verwijderen), collapsible AI Logboek met checkmarks
+- **Relatiepaneel** (rechts): lazy lookup door afzender-e-mail → CRM; toont contactpersoon (naam, functie, relatiesterkte-chip), organisatie (naam, type, status), "Bekijken in CRM" link; niet gevonden → uitnodiging toe te voegen
+- **M365-verbindingsflow**: verbindingsscherm met uitleg wanneer niet gekoppeld, synchroniseer-knop, ontkoppel-knop met LogOut-icoon
+- Per bericht: `AI analyseer`-knop → GPT-4o analyse → voorstel-banner verschijnt in amber, logboek bijgewerkt
+
+---
+
 ## 2026-07-02 — Foto + AI-beoordeling gereedschappen
 
 **Uitvoering:** volledig | **Getest:** typecheck firevault (clean) + api-server (alleen pre-existing TS7030) + server start bevestigd

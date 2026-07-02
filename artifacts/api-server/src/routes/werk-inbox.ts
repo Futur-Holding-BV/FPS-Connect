@@ -8,8 +8,11 @@ import {
   werkInboxKoppelingenTable,
   WERK_INBOX_ENTITY_TYPES,
   type WerkInboxEntityType,
+  crmContactpersonenTable,
+  crmKlantenTable,
 } from "@workspace/db";
 import { eq, and, desc, sql } from "drizzle-orm";
+import { maakOpenAiClient, heeftOpenAi } from "../lib/openai";
 import { requireAuth } from "../middlewares/auth";
 import {
   isGeconfigureerd,
@@ -436,6 +439,213 @@ router.delete("/werk-inbox/koppelingen/:id", requireAuth, async (req, res) => {
   await db.delete(werkInboxKoppelingenTable)
     .where(and(eq(werkInboxKoppelingenTable.id, id), eq(werkInboxKoppelingenTable.gebruikerId, uid)));
   res.json({ ok: true });
+});
+
+// ─── Afgehandeld markeren ─────────────────────────────────────────────────────
+router.patch("/werk-inbox/mails/:messageId/afgehandeld", requireAuth, async (req, res) => {
+  const uid       = gebruikerId(req);
+  const messageId = String(req.params.messageId);
+  const { afgehandeld } = req.body as { afgehandeld: boolean };
+
+  const [rij] = await db.update(werkInboxMailsTable)
+    .set({
+      afgehandeldOp: afgehandeld ? new Date() : null,
+      bijgewerktOp:  new Date(),
+    })
+    .where(and(eq(werkInboxMailsTable.gebruikerId, uid), eq(werkInboxMailsTable.messageId, messageId)))
+    .returning();
+
+  if (!rij) { res.status(404).json({ error: "Niet gevonden." }); return; }
+  res.json({ ok: true, afgehandeldOp: rij.afgehandeldOp });
+});
+
+// ─── Actie vereist markeren ───────────────────────────────────────────────────
+router.patch("/werk-inbox/mails/:messageId/actie-vereist", requireAuth, async (req, res) => {
+  const uid       = gebruikerId(req);
+  const messageId = String(req.params.messageId);
+  const { actieVereist, reden } = req.body as { actieVereist: boolean; reden?: string };
+
+  const [rij] = await db.update(werkInboxMailsTable)
+    .set({
+      actieVereist,
+      actieVereistReden: actieVereist ? (reden ?? null) : null,
+      bijgewerktOp: new Date(),
+    })
+    .where(and(eq(werkInboxMailsTable.gebruikerId, uid), eq(werkInboxMailsTable.messageId, messageId)))
+    .returning();
+
+  if (!rij) { res.status(404).json({ error: "Niet gevonden." }); return; }
+  res.json({ ok: true });
+});
+
+// ─── Relatie opzoeken via e-mailadres (CRM) ──────────────────────────────────
+router.get("/werk-inbox/relatie/:emailAdres", requireAuth, async (req, res) => {
+  const emailAdres = String(req.params.emailAdres).toLowerCase().trim();
+  if (!emailAdres || !emailAdres.includes("@")) {
+    res.json({ gevonden: false });
+    return;
+  }
+
+  // Zoek contactpersoon op e-mail
+  const [contact] = await db.select({
+    id:              crmContactpersonenTable.id,
+    naam:            crmContactpersonenTable.naam,
+    functie:         crmContactpersonenTable.functie,
+    relatiesterkte:  crmContactpersonenTable.relatiesterkte,
+    klantId:         crmContactpersonenTable.klantId,
+    lastContact:     crmContactpersonenTable.laatste_contact_datum,
+  })
+    .from(crmContactpersonenTable)
+    .where(sql`lower(${crmContactpersonenTable.email}) = ${emailAdres}`)
+    .limit(1);
+
+  let organisatie: { id: number; naam: string; type: string | null; status: string } | null = null;
+
+  if (contact?.klantId) {
+    const [org] = await db.select({
+      id:     crmKlantenTable.id,
+      naam:   crmKlantenTable.naam,
+      type:   crmKlantenTable.type,
+      status: crmKlantenTable.status,
+    })
+      .from(crmKlantenTable)
+      .where(eq(crmKlantenTable.id, contact.klantId))
+      .limit(1);
+    if (org) organisatie = org;
+  }
+
+  if (contact) {
+    res.json({
+      gevonden: true,
+      contactpersoon: {
+        naam:           contact.naam,
+        functie:        contact.functie,
+        relatiesterkte: contact.relatiesterkte ?? "onbekend",
+        lastContact:    contact.lastContact,
+      },
+      organisatie,
+    });
+    return;
+  }
+
+  // Geen contactpersoon — zoek op organisatie-e-mail
+  const [org] = await db.select({
+    id:     crmKlantenTable.id,
+    naam:   crmKlantenTable.naam,
+    type:   crmKlantenTable.type,
+    status: crmKlantenTable.status,
+  })
+    .from(crmKlantenTable)
+    .where(sql`lower(${crmKlantenTable.email}) = ${emailAdres}`)
+    .limit(1);
+
+  if (org) {
+    res.json({ gevonden: true, contactpersoon: null, organisatie: org });
+    return;
+  }
+
+  res.json({ gevonden: false });
+});
+
+// ─── AI-analyse per mail ──────────────────────────────────────────────────────
+router.post("/werk-inbox/mails/:messageId/analyseer", requireAuth, async (req, res) => {
+  if (!heeftOpenAi()) {
+    res.status(503).json({ error: "AI niet beschikbaar." });
+    return;
+  }
+
+  const uid       = gebruikerId(req);
+  const messageId = String(req.params.messageId);
+
+  const [mail] = await db.select()
+    .from(werkInboxMailsTable)
+    .where(and(eq(werkInboxMailsTable.gebruikerId, uid), eq(werkInboxMailsTable.messageId, messageId)))
+    .limit(1);
+
+  if (!mail) { res.status(404).json({ error: "Mail niet gevonden." }); return; }
+
+  const prompt = `Je bent AI-assistent voor FPS Brandpreventie, specialist in brandpreventieve gebouwvoorzieningen.
+
+Analyseer de volgende e-mail en geef een gestructureerd oordeel in JSON.
+
+Onderwerp: ${mail.onderwerp}
+Afzender: ${mail.afzenderNaam ?? "Onbekend"} <${mail.afzenderEmail}>
+Samenvatting: ${mail.snippet ?? "(geen preview)"}
+
+Antwoord uitsluitend als geldige JSON (geen tekst eromheen):
+{
+  "categorie": "opdrachtgever" | "leverancier" | "onderaannemer" | "adviseur" | "administratief" | "intern" | "onbekend",
+  "actie_vereist": boolean,
+  "actie_vereist_reden": string | null,
+  "samenvatting": "max 2 regels NL",
+  "voorstellen": [
+    {
+      "type": "koppel_project" | "maak_taak" | "conceptantwoord" | "factuur_herkennen" | "offerte_koppelen" | "document_opslaan" | "onderhoudscontract" | "administratief_verwerken",
+      "omschrijving": "concrete actie in 1 zin NL",
+      "zekerheid": 0-100
+    }
+  ]
+}
+
+Regels:
+- Geef 0–3 voorstellen, meest relevant eerst.
+- Administratieve mails (facturen, orderbevestigingen, notificaties): actie_vereist=false, 1 voorstel "administratief_verwerken" met zekerheid 90+.
+- Relatie-mails van klanten/leveranciers/partners: stel passende actie voor, actie_vereist=true als context onduidelijk is.
+- Nieuwsbrieven/marketingmails: 0 voorstellen, actie_vereist=false.`;
+
+  try {
+    const openai = maakOpenAiClient();
+    const completion = await openai.chat.completions.create({
+      model:              "gpt-4o",
+      max_completion_tokens: 600,
+      messages: [{ role: "user", content: prompt }],
+    });
+
+    const raw = completion.choices[0]?.message?.content ?? "{}";
+    let analyse: {
+      categorie?: string;
+      actie_vereist?: boolean;
+      actie_vereist_reden?: string | null;
+      samenvatting?: string;
+      voorstellen?: { type: string; omschrijving: string; zekerheid: number }[];
+    };
+
+    try {
+      const cleaned = raw.replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/```\s*$/i, "").trim();
+      analyse = JSON.parse(cleaned) as typeof analyse;
+    } catch {
+      req.log.warn({ raw }, "werk-inbox: AI analyse JSON parse mislukt");
+      res.status(502).json({ error: "AI gaf geen geldig antwoord." });
+      return;
+    }
+
+    // Voeg logboek-entry toe
+    let logboek: { actie: string; uitgevoerdOp: string; samenvatting?: string; categorie?: string }[] = [];
+    try { logboek = JSON.parse(mail.aiLogboekJson ?? "[]") as typeof logboek; } catch { /* ignore */ }
+    logboek.unshift({
+      actie:        "AI-analyse uitgevoerd",
+      uitgevoerdOp: new Date().toISOString(),
+      samenvatting: analyse.samenvatting,
+      categorie:    analyse.categorie,
+    });
+
+    const [bijgewerkt] = await db.update(werkInboxMailsTable)
+      .set({
+        aiVoorstelJson:    JSON.stringify(analyse.voorstellen ?? []),
+        aiLogboekJson:     JSON.stringify(logboek.slice(0, 20)),
+        relatieCategorieAi: analyse.categorie ?? null,
+        actieVereist:      analyse.actie_vereist ?? false,
+        actieVereistReden: analyse.actie_vereist_reden ?? null,
+        bijgewerktOp:      new Date(),
+      })
+      .where(and(eq(werkInboxMailsTable.gebruikerId, uid), eq(werkInboxMailsTable.messageId, messageId)))
+      .returning();
+
+    res.json({ ok: true, analyse, mail: bijgewerkt });
+  } catch (err) {
+    req.log.error({ err }, "werk-inbox: AI analyse mislukt");
+    res.status(500).json({ error: "AI analyse mislukt." });
+  }
 });
 
 export default router;
