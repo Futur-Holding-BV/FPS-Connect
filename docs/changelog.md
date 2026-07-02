@@ -10,6 +10,36 @@ Grote roadmap-fases staan ook in `docs/roadmap/gebouwd.md` en `docs/roadmap/acti
 
 ---
 
+## 2026-07-02 — Grote bestanden: splitsingsvoorstel 7 bestanden
+
+**Uitvoering:** volledig | **Getest:** niet van toepassing (read-only analyse)
+
+### Wat er gedaan is
+
+Structuuranalyse van de 7 grootste bestanden in de codebase (totaal ~19.400 regels). Per bestand: huidige verantwoordelijkheden, voorstel voor opsplitsing, afhankelijkheden en risico's.
+
+**Rapport:** `docs/grote-bestanden-splitsingsvoorstel-2026-07-02.md`
+
+| Bestand | Regels | Voorstel |
+|---|---|---|
+| `hrm.ts` | 4 164 | 8 deelrouters (werkgevers, functies-opleidingen, medewerkers, verlof, ziekmeldingen, capaciteit, offboarding, ZZP, mijn) |
+| `plattegrond.tsx` | 3 249 | 6 bestanden (constanten, componenten, spot-form, serie, sidebar, orkestratie) |
+| `print.tsx` | 2 963 | 5 bestanden (constanten, componenten, secties, configuratie, orkestratie); deelt constanten met plattegrond |
+| `veiligheid.ts` | 2 485 | 5 deelrouters (toolboxen, LMRA, meldingen, incidenten, dashboard) |
+| `documenten-tab.tsx` | 2 349 | 6 bestanden (constanten, formulier, detail, koppelingen, signaleringen, orkestratie) |
+| `personeel/index.tsx` | 2 202 | 8 tab-bestanden + orkestratie |
+| `offertes.ts` | 2 028 | 5 deelrouters (sjablonen, kern, portaal, communicatie, klantcontracten) |
+
+Bijzondere bevindingen:
+- `plattegrond.tsx` en `print.tsx` dupliceren 3 constanten-blokken — extractie naar `plattegrond-constanten.ts` lost dit op voor beide bestanden tegelijk
+- `documenten-tab.tsx` exporteert functies die extern gebruikt worden (`goedkeuringBadge`, `statusBadge`, `foutmelding`) — brede impact bij opsplitsen
+- `personeel/index.tsx` heeft cross-tab state-koppeling (onboarden-flow linkt medewerkers ↔ functies)
+- `veiligheid.ts` gebruikt `veiligheidRouter` i.p.v. `router` — vandaar dat standaard grep niets vond
+
+**Geen code gewijzigd** — uitsluitend analysedocument.
+
+---
+
 ## 2026-07-02 — AI-architectuuranalyse + voorstel centrale AI-service
 
 **Uitvoering:** volledig | **Getest:** niet van toepassing (read-only analyse)
