@@ -420,7 +420,8 @@ router.post(
         );
       }
 
-      res.json(resultaten);
+      // Stuur één object terug als er één bestand is (frontend verwacht geen array)
+      res.json(resultaten.length === 1 ? resultaten[0] : resultaten);
     } catch (err) {
       req.log.error(err, "slim-upload: interne fout");
       res.status(500).json({ error: "Analyse mislukt door interne fout." });

@@ -10,6 +10,20 @@ Grote roadmap-fases staan ook in `docs/roadmap/gebouwd.md` en `docs/roadmap/acti
 
 ---
 
+## 2026-07-02 — Bugfixes: slim-upload array-response + monteur-app AuthContext
+
+**Uitvoering:** volledig | **Getest:** typecheck + workflow herstarts
+
+### Wat er gewijzigd is
+
+**Backend — `artifacts/api-server/src/routes/slim-upload.ts`:**
+- `POST /slim-upload/analyseer` stuurde altijd een array (`res.json(resultaten)`) terug, maar de frontend verwacht één object. Wanneer de AI het document niet kon classificeren (categorie "onbekend"), zag de frontend `suggestie.categorie = undefined` en viel stilzwijgend terug op "algemeen" — nooit de AI-suggestie. Fix: `res.json(resultaten.length === 1 ? resultaten[0] : resultaten)`. Nu ziet de frontend het juiste object incl. "onbekend" + alternatieven.
+
+**Monteur-app — `artifacts/monteur-app/app/pbm.tsx`:**
+- `import { useAuth } from "@/context/AuthContext"` verwees naar een niet-bestaand pad (bundler-fout bij elke build). Correcte import: `@/context/auth`.
+
+---
+
 ## 2026-07-02 — AI-chatpaneel voor Calculatie en Werkbegroting
 
 **Uitvoering:** volledig | **Getest:** typecheck firevault clean

@@ -5,7 +5,7 @@ import {
 } from "react-native";
 import { useFocusEffect } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/context/auth";
 import { useFotoUpload } from "@/hooks/useFotoUpload";
 
 // ── Types ────────────────────────────────────────────────────────────────────
