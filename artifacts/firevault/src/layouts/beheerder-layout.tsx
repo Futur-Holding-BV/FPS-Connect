@@ -807,6 +807,17 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                               </Link>
                             </SidebarMenuButton>
                           </SidebarMenuItem>
+                          <SidebarMenuItem className="pl-5">
+                            <SidebarMenuButton
+                              asChild
+                              isActive={location === "/veiligheid/pbm" || location.startsWith("/veiligheid/pbm")}
+                            >
+                              <Link href="/veiligheid/pbm">
+                                <ShieldCheck />
+                                <span>PBM & Middelen</span>
+                              </Link>
+                            </SidebarMenuButton>
+                          </SidebarMenuItem>
                         </SidebarMenu>
                       </SidebarGroupContent>
                     </CollapsibleContent>

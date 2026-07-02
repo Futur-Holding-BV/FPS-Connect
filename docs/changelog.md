@@ -10,6 +10,27 @@ Grote roadmap-fases staan ook in `docs/roadmap/gebouwd.md` en `docs/roadmap/acti
 
 ---
 
+## 2026-07-02 — PBM & Veiligheidsbeheer — persoonlijke beschermingsmiddelen + AI foto-inspectie
+
+**Uitvoering:** volledig | **Getest:** typecheck api-server (clean, TS7030 pre-existing) + firevault (clean) + api-server build geslaagd
+
+### Wat er gebouwd is
+
+- **DB** (tabellen via `CREATE TABLE`, toegevoegd aan `lib/db/src/schema/veiligheid.ts`):
+  - `pbm_items` — PBM per medewerker: type, merk/model/maat, serienummer, uitgifte/vervanging/garantie, fabrikant, keuringsinterval, status, foto-paden, QR-code
+  - `pbm_inspecties` — foto-inspecties met AI-beoordeling, slijtage-score, keur_nodig-vlag, formele status
+  - `veiligheidsmiddelen` — bedrijfsmiddelen (ladders, gereedschap, blussers, etc.) met locatie, eigenaar, keuringsinterval
+  - `veiligheidsmiddel_inspecties` — inspecties per bedrijfsmiddel
+- **Backend** (`artifacts/api-server/src/routes/pbm.ts`), geregistreerd via `pbmRouter`:
+  - CRUD `/pbm/items` (incl. `/eigen` voor monteur-sessie)
+  - `POST /pbm/items/:id/foto-inspectie` — AI (GPT-4o vision) beoordeelt foto's op slijtage per PBM-type; geeft NOOIT een formele goed-/afkeuring; slijtage-aandachtspunten per type (schoenen/helm/harnas/vallijn/etc.)
+  - CRUD `/pbm/middelen` + inspecties
+  - `GET /pbm/dashboard` — statistieken: afgekeurd/vervanging nodig/open inspecties + binnenkort-vervangen-lijst
+- **Web** (`/veiligheid/pbm`): tabbladen Dashboard / PBM-items / Bedrijfsmiddelen; badge met open meldingen; sheet-dialogen voor detail en nieuw aanmaken; statusdropdown, QR-code weergave; nav-item "PBM & Middelen" toegevoegd onder Veiligheid
+- **Mobiel** (`artifacts/monteur-app/app/pbm.tsx`): eigen PBM-overzicht, detail met kenmerken, foto-inspectie (camera + album, max 3 foto's), AI-resultaat met slijtage-kleurcodering en keuring-banner
+
+---
+
 ## 2026-07-02 — Voertuig melden — monteur rapporteert storing/schade via app + AI-analyse
 
 **Uitvoering:** volledig | **Getest:** typecheck api-server (clean) + firevault (clean) + api-server build geslaagd

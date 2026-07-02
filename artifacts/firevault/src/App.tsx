@@ -134,6 +134,7 @@ import VeiligheidToolboxenPagina from "@/pages/veiligheid/toolboxen";
 import VeiligheidLmraPagina from "@/pages/veiligheid/lmra";
 import VeiligheidMeldingenPagina from "@/pages/veiligheid/meldingen";
 import VeiligheidIncidentenPagina from "@/pages/veiligheid/incidenten";
+import VeiligheidPbmPagina from "@/pages/veiligheid/pbm";
 import SnagstreamArchiefPagina from "@/pages/snagstream/index";
 import SnagstreamDetailPagina from "@/pages/snagstream/detail";
 import FacturenPagina from "@/pages/facturen/index";
@@ -300,6 +301,7 @@ function ConnectPortal() {
         <Route path="/veiligheid/lmra" component={VeiligheidLmraPagina} />
         <Route path="/veiligheid/meldingen" component={VeiligheidMeldingenPagina} />
         <Route path="/veiligheid/incidenten" component={VeiligheidIncidentenPagina} />
+        <Route path="/veiligheid/pbm" component={VeiligheidPbmPagina} />
 
         {/* ── Snagstream ── */}
         <Route path="/snagstream" component={SnagstreamArchiefPagina} />

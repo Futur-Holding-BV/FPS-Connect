@@ -195,6 +195,7 @@ function RootLayoutNav() {
         <Stack.Screen name="incidenten" />
         <Stack.Screen name="veiligheid-melding" />
         <Stack.Screen name="veiligheid/index" />
+        <Stack.Screen name="pbm" />
       </Stack>
     </>
   );

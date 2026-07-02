@@ -172,3 +172,94 @@ export const veiligheidIncidentenTable = pgTable("veiligheid_incidenten", {
 });
 
 export type VeiligheidIncident = typeof veiligheidIncidentenTable.$inferSelect;
+
+// ── PBM-items (persoonlijke beschermingsmiddelen) ─────────────────────────────
+
+export const pbmItemsTable = pgTable("pbm_items", {
+  id: serial("id").primaryKey(),
+  medewerkerId: integer("medewerker_id").references(() => medewerkersTable.id, { onDelete: "cascade" }),
+  medewerkerNaam: text("medewerker_naam"),
+  type: text("type").notNull(),
+  merk: text("merk"),
+  model: text("model"),
+  maat: text("maat"),
+  serienummer: text("serienummer"),
+  uitgifteDatum: text("uitgifte_datum"),
+  vervangingsDatum: text("vervangings_datum"),
+  garantietermijn: text("garantietermijn"),
+  fabrikant: text("fabrikant"),
+  handleidingPad: text("handleiding_pad"),
+  keuringsIntervalMaanden: integer("keurings_interval_maanden"),
+  laatsteControle: text("laatste_controle"),
+  status: text("status").notNull().default("actief"),
+  fotoPaden: jsonb("foto_paden").notNull().default([]),
+  opmerkingen: text("opmerkingen"),
+  qrCode: text("qr_code"),
+  uitgeleendDoorId: integer("uitgeleend_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+  bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+});
+
+export const pbmInspectiesTable = pgTable("pbm_inspecties", {
+  id: serial("id").primaryKey(),
+  pbmItemId: integer("pbm_item_id").notNull().references(() => pbmItemsTable.id, { onDelete: "cascade" }),
+  medewerkerId: integer("medewerker_id").references(() => medewerkersTable.id, { onDelete: "set null" }),
+  datum: text("datum").notNull(),
+  fotoPaden: jsonb("foto_paden").notNull().default([]),
+  aiBeoordeling: text("ai_beoordeling"),
+  aiAanbeveling: text("ai_aanbeveling"),
+  aiSlijtage: text("ai_slijtage").notNull().default("onbekend"),
+  aiKeurNodig: boolean("ai_keur_nodig").notNull().default(false),
+  formeleStatus: text("formele_status").notNull().default("in_behandeling"),
+  beoordeeldDoorId: integer("beoordeeld_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
+  beoordeeldDoorNaam: text("beoordeeld_door_naam"),
+  opmerkingen: text("opmerkingen"),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+  bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+});
+
+export type PbmItem = typeof pbmItemsTable.$inferSelect;
+export type PbmInspectie = typeof pbmInspectiesTable.$inferSelect;
+
+// ── Veiligheidsmiddelen (bedrijfsmiddelen) ────────────────────────────────────
+
+export const veiligheidsmiddelenTable = pgTable("veiligheidsmiddelen", {
+  id: serial("id").primaryKey(),
+  type: text("type").notNull(),
+  naam: text("naam").notNull(),
+  merk: text("merk"),
+  model: text("model"),
+  serienummer: text("serienummer"),
+  locatie: text("locatie"),
+  eigenaarId: integer("eigenaar_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
+  eigenaarNaam: text("eigenaar_naam"),
+  keuringsIntervalMaanden: integer("keurings_interval_maanden"),
+  aanschafDatum: text("aanschaf_datum"),
+  vervangingsDatum: text("vervangings_datum"),
+  status: text("status").notNull().default("actief"),
+  fotoPaden: jsonb("foto_paden").notNull().default([]),
+  handleidingPad: text("handleiding_pad"),
+  opmerkingen: text("opmerkingen"),
+  qrCode: text("qr_code"),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+  bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+});
+
+export const veiligheidsmiddelInspectiesTable = pgTable("veiligheidsmiddel_inspecties", {
+  id: serial("id").primaryKey(),
+  middelId: integer("middel_id").notNull().references(() => veiligheidsmiddelenTable.id, { onDelete: "cascade" }),
+  datum: text("datum").notNull(),
+  fotoPaden: jsonb("foto_paden").notNull().default([]),
+  bevindingen: text("bevindingen"),
+  aiBeoordeling: text("ai_beoordeling"),
+  aiAanbeveling: text("ai_aanbeveling"),
+  aiKeurNodig: boolean("ai_keur_nodig").notNull().default(false),
+  formeleStatus: text("formele_status").notNull().default("in_behandeling"),
+  beoordeeldDoorId: integer("beoordeeld_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
+  beoordeeldDoorNaam: text("beoordeeld_door_naam"),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+  bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+});
+
+export type Veiligheidsmiddel = typeof veiligheidsmiddelenTable.$inferSelect;
+export type VeiligheidsmiddelInspectie = typeof veiligheidsmiddelInspectiesTable.$inferSelect;

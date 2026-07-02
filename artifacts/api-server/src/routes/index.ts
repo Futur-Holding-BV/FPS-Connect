@@ -74,6 +74,7 @@ import materiaalAanvragenRouter from "./materiaal-aanvragen";
 import uitvoerderRouter from "./uitvoerder";
 import studioRouter from "./studio";
 import aiRouter from "./ai";
+import { pbmRouter } from "./pbm";
 import { requireAuth } from "../middlewares/auth";
 import { meldActief } from "../lib/online-tracker";
 
@@ -164,5 +165,6 @@ router.use(materiaalAanvragenRouter);
 router.use(uitvoerderRouter);
 router.use(studioRouter);
 router.use(aiRouter);
+router.use(pbmRouter);
 
 export default router;
