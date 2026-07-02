@@ -10,6 +10,39 @@ Grote roadmap-fases staan ook in `docs/roadmap/gebouwd.md` en `docs/roadmap/acti
 
 ---
 
+## 2026-07-02 — Documentarchitectuur Connect
+
+**Uitvoering:** volledig | **Getest:** niet van toepassing (read-only ontwerp)
+
+### Wat er gedaan is
+
+Documentarchitectuurontwerp opgesteld voor FPS Connect. Drie categorieën gedefinieerd, per categorie 7 dimensies uitgewerkt. AI-zoekplatform ontworpen als tweede manier van werken — volledig synchroon met de bestaande mappenstructuur.
+
+**Document:** `docs/documentarchitectuur-2026-07-02.md`
+
+**Drie categorieën:**
+
+| Categorie | Voorbeelden | Opslag |
+|---|---|---|
+| Referentiedocumenten | ETA's, testrapporten, DoP's, productcertificaten | Centrale bibliotheek + `/objects/{id}/rapport/` |
+| Operationele documenten | Spot-foto's, plattegronden, LMRA's, toolboxen, medewerker-docs | Per entiteit-pad per type |
+| Procesdocumenten | Offertes, dossiers, rapporten, arbeidscontracten, ZZP | Per proces-entiteit-pad |
+
+**7 dimensies per categorie:** opslag, versiebeheer, eigenaarschap, rechten, AI-index, zoekfunctionaliteit, archivering.
+
+**AI-zoekplatform (nieuw, tweede ingang):**
+- Chunk-indexer: PDF → chunks → vector-embeddings (`text-embedding-3-small`)
+- `document_chunks`-tabel met HNSW-index op embedding
+- `POST /documenten/zoeken` naast bestaand `GET /documenten`
+- Frontend-toggle: Bladeren (bestaand) ↔ AI-zoeken (nieuw)
+- Synchronisatie: documenten-tabel = bron van waarheid; vector-index = afgeleid systeem, volledig herbouwbaar
+- HRM-documenten: alleen metadata-indexering (AVG)
+- Definitieve dossiers: niet geïndexeerd (bevroren juridische toestand)
+
+**Geen code gewijzigd** — uitsluitend ontwerpdocument.
+
+---
+
 ## 2026-07-02 — Integraal verbeterplan Connect: 20 stappen
 
 **Uitvoering:** volledig | **Getest:** niet van toepassing (read-only plan)
