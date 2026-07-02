@@ -343,6 +343,17 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
+                    <SidebarMenuItem className="pl-5">
+                      <SidebarMenuButton
+                        asChild
+                        isActive={location === "/regie" || location.startsWith("/regie/")}
+                      >
+                        <Link href="/regie">
+                          <ClipboardList />
+                          <span>Regiewerk</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
                     {featureFlags.planning ? (
                       <SidebarMenuItem className="pl-5">
                         <SidebarMenuButton

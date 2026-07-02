@@ -10,6 +10,33 @@ Grote roadmap-fases staan ook in `docs/roadmap/gebouwd.md` en `docs/roadmap/acti
 
 ---
 
+## 2026-07-02 — Regiewerk — volwaardige werkvorm naast aangenomen werk, onderhoud en service
+
+**Uitvoering:** volledig | **Getest:** typecheck:libs clean, typecheck firevault clean (regie), api-server build clean
+
+### Wat er gebouwd is
+
+- **DB** (4 nieuwe tabellen via `CREATE TABLE` + ALTER `uren_registraties`):
+  - `regie_voorwaarden` — contractuele afspraken per regieproject: contactpersonen, opslagen (materiaal/materieel/transport/voorrijden), toeslagen avond/weekend/spoed, betaaltermijn, facturatiefrequentie, bewijsvereisten, handtekening/weekstaat/foto-vereist
+  - `regie_tarieven` — uurtarief per functiegroep (monteur/timmerman/voorman/projectleider/werkvoorbereider/onderaannemer), FK → regie_voorwaarden
+  - `regie_begroting` — indicatief bewakingsbudget (GEEN vaste aanneemsom): verwacht uren/materiaal/materieel, maximaal budget, meldgrens opdrachtgever, AI-signalering aan/uit
+  - `regie_materialen` — materiaalboekingen per opdracht: artikel, hoeveelheid, eenheid, inkoop/verkoopprijs, bron (magazijn/busvoorraad/projectinkoop/losse bon/leverancier/onderaannemer), bon-foto, status workflow
+  - `uren_registraties` uitgebreid: +tariefgroep, +reisUren, +wachtTijd, +akkoordVereist, +akkoordGegeven, +akkoordDoorNaam
+- **Backend** (`artifacts/api-server/src/routes/regie.ts` → `regieRouter`):
+  - `GET /regie/opdrachten` — alle regie-opdrachten
+  - `GET /regie/dashboard` — budgetbewaking per actief regieproject + AI-signaleringen (meldgrens/budget/uren, ernst: waarschuwing/kritiek)
+  - `GET+PUT /regie/voorwaarden/:opdrachtId` — upsert regievoorwaarden incl. tarieven (set-replace)
+  - `GET+PUT /regie/begroting/:opdrachtId` — upsert indicatief bewakingsbudget
+  - `GET /regie/uren?opdrachtId=X` — uren geboekt op regieproject (incl. regie-velden)
+  - `GET+POST /regie/materiaal`, `PATCH+DELETE /regie/materiaal/:id` — materiaalboekingen
+- **Web** (`/regie` en `/regie/:id`):
+  - Overzichtspagina met AI-signaleringen (rode/oranje banner), 3 dashboard-kaarten, zoekbare lijst met uren/budget%-indicator per project
+  - Detail-tabs: **Voorwaarden+Tarieven** (contactpersonen, tarieven per functiegroep, opslagen, bewijsvereisten), **Begroting** (indicatief budget, bewakingsdrempels, AI-signalering toggle), **Uren** (tabel geboekte uren incl. reis/wacht/akkoord), **Materiaal** (inline aanmaken, bon-registratie)
+  - Nav-item "Regiewerk" toegevoegd onder Uitvoering (naast Werkvoorbereiding)
+- **Planning**: OPDRACHT_TYPE_LABEL uitgebreid met aangenomen/onderhoud/service/combinatie
+
+---
+
 ## 2026-07-02 — PBM & Veiligheidsbeheer — persoonlijke beschermingsmiddelen + AI foto-inspectie
 
 **Uitvoering:** volledig | **Getest:** typecheck api-server (clean, TS7030 pre-existing) + firevault (clean) + api-server build geslaagd

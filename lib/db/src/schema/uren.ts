@@ -33,6 +33,13 @@ export const urenRegistratiesTable = pgTable("uren_registraties", {
   afgewezen: boolean("afgewezen").notNull().default(false),
   afwijzingReden: text("afwijzing_reden"),
   // Audit
+  // Regie-specifieke velden (null bij niet-regieprojecten)
+  tariefgroep: text("tariefgroep"),                                       // monteur | timmerman | voorman | projectleider | werkvoorbereider | onderaannemer
+  reisUren: real("reis_uren"),
+  wachtTijd: real("wacht_tijd"),                                          // wachttijd in uren
+  akkoordVereist: boolean("akkoord_vereist").notNull().default(false),
+  akkoordGegeven: boolean("akkoord_gegeven"),
+  akkoordDoorNaam: text("akkoord_door_naam"),
   aangemaaktDoorId: integer("aangemaakt_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),

@@ -433,8 +433,12 @@ type OpdrachtenPaneelProps = {
 };
 
 const OPDRACHT_TYPE_LABEL: Record<string, string> = {
-  vast: "Vast",
+  vast: "Aangenomen",
+  aangenomen: "Aangenomen",
   regie: "Regie",
+  onderhoud: "Onderhoud",
+  service: "Service",
+  combinatie: "Combinatie",
   overig: "Overig",
 };
 

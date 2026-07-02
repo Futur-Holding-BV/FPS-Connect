@@ -123,6 +123,8 @@ import ProposalStudio from "@/pages/offertes/studio";
 import OffertePrintPagina from "@/pages/offertes/print";
 import OpdrachtDetailPagina from "@/pages/opdrachten/detail";
 import WerkvoorbereidingOverzicht from "@/pages/werkvoorbereiding/index";
+import RegiePagina from "@/pages/regie/index";
+import RegieDetailPagina from "@/pages/regie/detail";
 import DocumentenPagina from "@/pages/documenten/index";
 import { OndersteuningWidget } from "@/components/ondersteuning-widget";
 import WelkomWizard, { isWelkomAfgerond } from "@/pages/welkom/index";
@@ -291,6 +293,8 @@ function ConnectPortal() {
         <Route path="/offertes/:id" component={ProposalStudio} />
         <Route path="/opdrachten/:id" component={OpdrachtDetailPagina} />
         <Route path="/werkvoorbereiding" component={WerkvoorbereidingOverzicht} />
+        <Route path="/regie" component={RegiePagina} />
+        <Route path="/regie/:id" component={RegieDetailPagina} />
 
         {/* ── Documenten & Dossiers ── */}
         <Route path="/documenten" component={DocumentenPagina} />
