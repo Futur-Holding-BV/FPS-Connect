@@ -1451,4 +1451,176 @@ router.delete("/modules/calculaties/:id/inkoop-items/:itemId", schrijvenCalc, as
   }
 });
 
+// ── POST /modules/calculaties/:id/ai-chat ─────────────────────────────────
+router.post("/modules/calculaties/:id/ai-chat", lezenCalc, async (req, res) => {
+  try {
+    const id = parseId(req.params["id"]);
+    const { berichten, afbeelding_base64 } = req.body as {
+      berichten: Array<{ rol: "gebruiker" | "assistent"; inhoud: string }>;
+      afbeelding_base64?: string | null;
+    };
+
+    if (!Array.isArray(berichten) || berichten.length === 0) {
+      res.status(400).json({ error: "Berichten ontbreken" }); return;
+    }
+
+    const [header] = await db.select().from(modCalcHeadersTable).where(eq(modCalcHeadersTable.id, id));
+    if (!header) { res.status(404).json({ error: "Calculatie niet gevonden" }); return; }
+
+    const [bestaandeRegels, normtijden, tarieven] = await Promise.all([
+      db.select().from(modCalcRegelsTable)
+        .where(eq(modCalcRegelsTable.calculatieId, id))
+        .orderBy(asc(modCalcRegelsTable.volgorde)),
+      db.select().from(modCalcNormtijdenTable).where(eq(modCalcNormtijdenTable.actief, true)).limit(40),
+      db.select().from(modCalcTarievenTable)
+        .where(eq(modCalcTarievenTable.actief, true))
+        .orderBy(asc(modCalcTarievenTable.categorie), asc(modCalcTarievenTable.naam)),
+    ]);
+
+    let gebouwInfo = "";
+    let spotenInfo = "";
+    let opnameInfo = "";
+
+    if (header.gebouwId) {
+      const gId = header.gebouwId;
+      const [[g], spotCounts, opnameItems] = await Promise.all([
+        db.select().from(gebouwenTable).where(eq(gebouwenTable.id, gId)).limit(1),
+        db.select({ type: voorzieningenTable.type, aantal: count() })
+          .from(voorzieningenTable)
+          .where(and(eq(voorzieningenTable.gebouwId, gId), eq(voorzieningenTable.gearchiveerd, false)))
+          .groupBy(voorzieningenTable.type),
+        db.select({
+          opnameNaam: opnamesTable.naam,
+          opnameDatum: opnamesTable.datum,
+          spotType: opnameItemsTable.spotType,
+          actie: opnameItemsTable.actie,
+          aantal: opnameItemsTable.aantal,
+          afmetingen: opnameItemsTable.afmetingen,
+          prioriteit: opnameItemsTable.prioriteit,
+          beschrijving: opnameItemsTable.beschrijving,
+        })
+          .from(opnamesTable)
+          .innerJoin(opnameItemsTable, eq(opnameItemsTable.opnameId, opnamesTable.id))
+          .where(eq(opnamesTable.gebouwId, gId))
+          .orderBy(desc(opnamesTable.datum))
+          .limit(80),
+      ]);
+      if (g) {
+        gebouwInfo = `Gebouw: ${g.naam}, ${(g as any).adres ?? ""} ${(g as any).stad ?? ""}. Bouwjaar: ${(g as any).bouwjaar ?? "onbekend"}.`;
+      }
+      if (spotCounts.length > 0) {
+        spotenInfo = "Geregistreerde spots in dit gebouw:\n" +
+          spotCounts.map((s) => `- ${s.type}: ${s.aantal} stuks`).join("\n");
+      }
+      if (opnameItems.length > 0) {
+        opnameInfo = "Veldopname bevindingen:\n" +
+          opnameItems.map((item) => {
+            const d: string[] = [`${item.spotType}: ${item.actie} × ${item.aantal}`];
+            if (item.afmetingen) d.push(`afm: ${item.afmetingen}`);
+            if (item.prioriteit === "hoog") d.push("prioriteit: hoog");
+            if (item.beschrijving) d.push(item.beschrijving);
+            return `- ${d.join(" | ")}`;
+          }).join("\n");
+      }
+    }
+
+    const regelenLijst = bestaandeRegels.length > 0
+      ? bestaandeRegels.map((r) =>
+          `- ${(r as any).hoofdstuk ?? "Overige"} | ${r.categorie} | ${r.omschrijving} | ${r.hoeveelheid} ${r.eenheid} | €${r.tarief}${r.muPerEenheid ? ` | MU: ${r.muPerEenheid}` : ""}`
+        ).join("\n")
+      : "(nog geen regels ingevoerd)";
+
+    const normtijdLijst = normtijden.length > 0
+      ? normtijden.map((n) => `${n.code}: ${n.omschrijving} (${n.urenPerEenheid} uur/${n.eenheid})`).join("\n")
+      : "(geen normtijden geconfigureerd)";
+
+    const tarievenLijst = tarieven.length > 0
+      ? tarieven.map((t) => `[${t.categorie}] ${t.naam}: €${t.tarief}/${t.eenheid}`).join("\n")
+      : "(geen tarieven geconfigureerd — gebruik marktprijzen)";
+
+    const systeemPrompt = `Je bent een ervaren calculatie-expert brandpreventie voor FPS Brandpreventie (Nederland).
+Je helpt de calculateur bij het opstellen, beoordelen en verbeteren van calculaties voor brandwerende werkzaamheden.
+
+CALCULATIE: ${header.naam}${header.projectNaam ? ` — Project: ${header.projectNaam}` : ""}${header.omschrijving ? `\nOmschrijving: ${header.omschrijving}` : ""}
+Status: ${header.status ?? "concept"}
+${gebouwInfo ? `\n${gebouwInfo}` : ""}
+${spotenInfo ? `\n${spotenInfo}` : ""}
+${opnameInfo ? `\n${opnameInfo}` : ""}
+
+HUIDIGE CALCULATIEREGELS (${bestaandeRegels.length} regels):
+${regelenLijst}
+
+BESCHIKBARE NORMTIJDEN:
+${normtijdLijst}
+
+TARIEVEN UIT HET SYSTEEM:
+${tarievenLijst}
+
+Jouw taken als calculatie-assistent:
+- Beoordeel technische uitvoering van werkzaamheden (doorvoeringen, brandwerende deuren, wanden, bekleding, manchetten, coatings)
+- Signaleer ontbrekende posten (sloop, reinigen, herstel, steigers, bouwplaatskosten, risico-opslagen)
+- Controleer eenheden: st = stuks, m² = oppervlakte, m¹ of lm = lijnmeter, uur = arbeidstijd
+- Beoordeel realisme van hoeveelheden en tarieven voor brandpreventie-projecten in Nederland
+- Adviseer over technische uitvoeringsmethoden conform WBDBO, NEN-EN 1634, EN 13501, BRL 0703 e.d.
+- Vergelijk met eerder ingevoerde regels op volledigheid en consistentie
+- Analyseer schetsen of tekeningen als die worden gedeeld (benoem spots, aansluitdetails, etc.)
+
+Antwoord altijd in het Nederlands. Geef concrete, praktische adviezen. Wees kritisch maar constructief.`;
+
+    if (!heeftOpenAi()) {
+      res.json({ antwoord: "AI-chat is niet beschikbaar. Controleer de OpenAI-configuratie.", signalen: [] });
+      return;
+    }
+
+    const openai = maakOpenAiClient();
+
+    type Msg = { role: "system" | "user" | "assistant"; content: string | Array<Record<string, unknown>> };
+    const messages: Msg[] = [{ role: "system", content: systeemPrompt }];
+
+    for (let i = 0; i < berichten.length; i++) {
+      const b = berichten[i]!;
+      if (b.rol === "gebruiker") {
+        if (i === berichten.length - 1 && afbeelding_base64) {
+          messages.push({
+            role: "user",
+            content: [
+              { type: "text", text: b.inhoud },
+              { type: "image_url", image_url: { url: `data:image/jpeg;base64,${afbeelding_base64}` } },
+            ],
+          });
+        } else {
+          messages.push({ role: "user", content: b.inhoud });
+        }
+      } else {
+        messages.push({ role: "assistant", content: b.inhoud });
+      }
+    }
+
+    const completion = await openai.chat.completions.create({
+      model: "gpt-5.4",
+      messages: messages as any,
+      max_completion_tokens: 2000,
+    });
+
+    const antwoord = completion.choices[0]?.message?.content ?? "Geen antwoord ontvangen.";
+
+    const signalen: string[] = [];
+    const lw = antwoord.toLowerCase();
+    if (lw.includes("ontbreekt") || lw.includes("ontbrekend") || lw.includes("vergeten")) {
+      signalen.push("Mogelijke ontbrekende posten gesignaleerd");
+    }
+    if (lw.includes("eenheid") && (lw.includes("klopt niet") || lw.includes("onjuist") || lw.includes("let op"))) {
+      signalen.push("Eenheden controlepunt aangewezen");
+    }
+    if (lw.includes("tarief") && (lw.includes("laag") || lw.includes("hoog") || lw.includes("afwijkend"))) {
+      signalen.push("Tariefafwijking gedetecteerd");
+    }
+
+    res.json({ antwoord, signalen });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Serverfout bij AI-chat" });
+  }
+});
+
 export default router;

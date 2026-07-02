@@ -11438,6 +11438,27 @@ export const AiAnalyseWerkbegrotingResponse = zod.object({
 
 
 /**
+ * @summary AI-chatgesprek over een werkbegroting (technische uitvoering, volledigheid, eenheden)
+ */
+export const AiChatWerkbegrotingParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AiChatWerkbegrotingBody = zod.object({
+  "berichten": zod.array(zod.object({
+  "rol": zod.enum(['gebruiker', 'assistent']),
+  "inhoud": zod.string()
+})),
+  "afbeelding_base64": zod.string().nullish().describe('Base64-encoded afbeelding (schets of tekening) voor vision')
+})
+
+export const AiChatWerkbegrotingResponse = zod.object({
+  "antwoord": zod.string(),
+  "signalen": zod.array(zod.string()).optional().describe('Gesignaleerde aandachtspunten (ontbrekende eenheden, afwijkende tarieven, etc.)')
+})
+
+
+/**
  * @summary Nacalculatie — calculatie vs werkbegroting vs verbruikte uren
  */
 export const GetNacalculatieParams = zod.object({
@@ -13826,6 +13847,27 @@ export const AiModCalcRegelsResponse = zod.object({
   "toepassing_tekst": zod.string().nullish()
 })),
   "waarschuwingen": zod.array(zod.string())
+})
+
+
+/**
+ * @summary AI-chatgesprek over een calculatie (technische uitvoering, volledigheid, eenheden)
+ */
+export const AiChatCalculatieParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AiChatCalculatieBody = zod.object({
+  "berichten": zod.array(zod.object({
+  "rol": zod.enum(['gebruiker', 'assistent']),
+  "inhoud": zod.string()
+})),
+  "afbeelding_base64": zod.string().nullish().describe('Base64-encoded afbeelding (schets of tekening) voor vision')
+})
+
+export const AiChatCalculatieResponse = zod.object({
+  "antwoord": zod.string(),
+  "signalen": zod.array(zod.string()).optional().describe('Gesignaleerde aandachtspunten (ontbrekende eenheden, afwijkende tarieven, etc.)')
 })
 
 

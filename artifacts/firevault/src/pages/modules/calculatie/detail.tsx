@@ -17,8 +17,10 @@ import {
   useUpdateModCalcInkoopItem,
   useDeleteModCalcInkoopItem,
   getListModCalcInkoopItemsQueryKey,
+  useAiChatCalculatie,
   type ModCalcInkoopItem,
 } from "@workspace/api-client-react";
+import AiChatPanel from "@/components/ai-chat-panel";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -40,7 +42,7 @@ import { Separator } from "@/components/ui/separator";
 import {
   ArrowLeft, Plus, Pencil, Trash2, Copy, ChevronRight, FileText,
   LayoutList, Users, Eye, Sparkles, Wrench, CheckCircle2, X,
-  Printer, History, Save, MoreHorizontal,
+  Printer, History, Save, MoreHorizontal, MessageSquare,
 } from "lucide-react";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -1530,6 +1532,8 @@ export default function ModulesCalculatieDetail() {
     },
   });
 
+  const aiChatMut = useAiChatCalculatie();
+
   const [weergave, setWeergave] = useState<Weergave>("intern");
   const [teVerwijderen, setTeVerwijderen]       = useState(false);
   const [bewerkenDialoog, setBewerkenDialoog]   = useState(false);
@@ -1547,6 +1551,7 @@ export default function ModulesCalculatieDetail() {
   // Nieuw rij invoerrij (null = verborgen)
   const [nieuwDraft, setNieuwDraft] = useState<LocalDraft | null>(null);
   const [toonOnderaanneming, setToonOnderaanneming] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
 
   const [headerForm, setHeaderForm] = useState({
     naam: "", referentie: "", klant_naam: "", project_naam: "",
@@ -1770,6 +1775,15 @@ export default function ModulesCalculatieDetail() {
           <Button variant="outline" size="sm" onClick={() => window.open(`/modules/calculatie/${id}/print`, "_blank")}>
             <Printer className="h-3.5 w-3.5 mr-1.5" />
             Afdrukken
+          </Button>
+          <Button
+            variant={chatOpen ? "default" : "outline"}
+            size="sm"
+            onClick={() => setChatOpen(v => !v)}
+            title="AI-assistent"
+          >
+            <MessageSquare className="h-3.5 w-3.5 mr-1.5" />
+            AI-chat
           </Button>
           <Button variant="outline" size="sm" className="text-destructive hover:text-destructive" onClick={() => setTeVerwijderen(true)}>
             <Trash2 className="h-3.5 w-3.5" />
@@ -2278,6 +2292,26 @@ export default function ModulesCalculatieDetail() {
             </div>
           )}
         </div>
+
+        {/* === AI-chatpaneel === */}
+        {chatOpen && (
+          <div className="w-[400px] shrink-0 flex flex-col min-h-0 overflow-hidden">
+            <AiChatPanel
+              onVerstuur={async (berichten, afbeelding_base64) =>
+                aiChatMut.mutateAsync({ id, data: { berichten, afbeelding_base64: afbeelding_base64 ?? undefined } })
+              }
+              className="flex-1"
+              snelleActies={[
+                "Is deze calculatie volledig voor dit type project?",
+                "Kloppen de eenheden en hoeveelheden?",
+                "Zijn de urennormen realistisch?",
+                "Ontbreken er materiaal- of arbeidsregels?",
+                "Wat zijn de risico's op meerwerk?",
+              ]}
+              placeholder="Stel een vraag over volledigheid, eenheden, arbeids- of materiaalnormen..."
+            />
+          </div>
+        )}
       </div>
 
       {/* ── Inkoopregels ────────────────────────────────────────────────────── */}

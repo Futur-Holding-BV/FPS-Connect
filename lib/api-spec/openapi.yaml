@@ -9219,6 +9219,33 @@ paths:
               schema:
                 $ref: "#/components/schemas/Werkbegroting"
 
+  /opdrachten/{id}/werkbegroting/ai-chat:
+    post:
+      operationId: aiChatWerkbegroting
+      summary: AI-chatgesprek over een werkbegroting (technische uitvoering, volledigheid, eenheden)
+      tags: [opdrachten]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AiChatInput'
+      responses:
+        "200":
+          description: AI-antwoord
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AiChatAntwoord'
+        "404":
+          description: Werkbegroting niet gevonden
+
   /opdrachten/{id}/nacalculatie:
     get:
       operationId: getNacalculatie
@@ -11185,6 +11212,33 @@ paths:
                     type: array
                     items:
                       type: string
+        '404':
+          description: Calculatie niet gevonden
+
+  /modules/calculaties/{id}/ai-chat:
+    post:
+      operationId: aiChatCalculatie
+      summary: AI-chatgesprek over een calculatie (technische uitvoering, volledigheid, eenheden)
+      tags: [CalulatieModule]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AiChatInput'
+      responses:
+        '200':
+          description: AI-antwoord
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AiChatAntwoord'
         '404':
           description: Calculatie niet gevonden
 
@@ -31680,3 +31734,38 @@ components:
               titel:  { type: ["string", "null"] }
               inhoud: { type: string }
         voettekst: { type: ["string", "null"] }
+
+    AiChatBericht:
+      type: object
+      required: [rol, inhoud]
+      properties:
+        rol:
+          type: string
+          enum: [gebruiker, assistent]
+        inhoud:
+          type: string
+
+    AiChatInput:
+      type: object
+      required: [berichten]
+      properties:
+        berichten:
+          type: array
+          items:
+            $ref: '#/components/schemas/AiChatBericht'
+        afbeelding_base64:
+          type: string
+          nullable: true
+          description: "Base64-encoded afbeelding (schets of tekening) voor vision"
+
+    AiChatAntwoord:
+      type: object
+      required: [antwoord]
+      properties:
+        antwoord:
+          type: string
+        signalen:
+          type: array
+          items:
+            type: string
+          description: "Gesignaleerde aandachtspunten (ontbrekende eenheden, afwijkende tarieven, etc.)"

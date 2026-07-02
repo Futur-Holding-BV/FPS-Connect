@@ -9400,6 +9400,31 @@ export interface StudioTemplateJson {
   voettekst?: string | null;
 }
 
+export type AiChatBerichtRol = typeof AiChatBerichtRol[keyof typeof AiChatBerichtRol];
+
+
+export const AiChatBerichtRol = {
+  gebruiker: 'gebruiker',
+  assistent: 'assistent',
+} as const;
+
+export interface AiChatBericht {
+  rol: AiChatBerichtRol;
+  inhoud: string;
+}
+
+export interface AiChatInput {
+  berichten: AiChatBericht[];
+  /** Base64-encoded afbeelding (schets of tekening) voor vision */
+  afbeelding_base64?: string | null;
+}
+
+export interface AiChatAntwoord {
+  antwoord: string;
+  /** Gesignaleerde aandachtspunten (ontbrekende eenheden, afwijkende tarieven, etc.) */
+  signalen?: string[];
+}
+
 export type GetRecenteActiviteitParams = {
 limit?: number;
 };

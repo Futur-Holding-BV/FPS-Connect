@@ -37,6 +37,8 @@ import type {
   Activiteit,
   AiAnalyseToolboxBerichten200,
   AiCalculatieRegels200,
+  AiChatAntwoord,
+  AiChatInput,
   AiInvullenInput,
   AiInvullenOrganisatie200,
   AiInvullenResultaat,
@@ -32943,6 +32945,77 @@ export const useAiAnalyseWerkbegroting = <TError = ErrorType<unknown>,
       return useMutation(getAiAnalyseWerkbegrotingMutationOptions(options));
     }
 
+export const getAiChatWerkbegrotingUrl = (id: number,) => {
+
+
+
+
+  return `/api/opdrachten/${id}/werkbegroting/ai-chat`
+}
+
+/**
+ * @summary AI-chatgesprek over een werkbegroting (technische uitvoering, volledigheid, eenheden)
+ */
+export const aiChatWerkbegroting = async (id: number,
+    aiChatInput: AiChatInput, options?: RequestInit): Promise<AiChatAntwoord> => {
+
+  return customFetch<AiChatAntwoord>(getAiChatWerkbegrotingUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(aiChatInput)
+  }
+);}
+
+
+
+
+export const getAiChatWerkbegrotingMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof aiChatWerkbegroting>>, TError,{id: number;data: BodyType<AiChatInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof aiChatWerkbegroting>>, TError,{id: number;data: BodyType<AiChatInput>}, TContext> => {
+
+const mutationKey = ['aiChatWerkbegroting'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof aiChatWerkbegroting>>, {id: number;data: BodyType<AiChatInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  aiChatWerkbegroting(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AiChatWerkbegrotingMutationResult = NonNullable<Awaited<ReturnType<typeof aiChatWerkbegroting>>>
+    export type AiChatWerkbegrotingMutationBody = BodyType<AiChatInput>
+    export type AiChatWerkbegrotingMutationError = ErrorType<void>
+
+    /**
+ * @summary AI-chatgesprek over een werkbegroting (technische uitvoering, volledigheid, eenheden)
+ */
+export const useAiChatWerkbegroting = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof aiChatWerkbegroting>>, TError,{id: number;data: BodyType<AiChatInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof aiChatWerkbegroting>>,
+        TError,
+        {id: number;data: BodyType<AiChatInput>},
+        TContext
+      > => {
+      return useMutation(getAiChatWerkbegrotingMutationOptions(options));
+    }
+
 export const getGetNacalculatieUrl = (id: number,) => {
 
 
@@ -39778,6 +39851,77 @@ export const useAiModCalcRegels = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getAiModCalcRegelsMutationOptions(options));
+    }
+
+export const getAiChatCalculatieUrl = (id: number,) => {
+
+
+
+
+  return `/api/modules/calculaties/${id}/ai-chat`
+}
+
+/**
+ * @summary AI-chatgesprek over een calculatie (technische uitvoering, volledigheid, eenheden)
+ */
+export const aiChatCalculatie = async (id: number,
+    aiChatInput: AiChatInput, options?: RequestInit): Promise<AiChatAntwoord> => {
+
+  return customFetch<AiChatAntwoord>(getAiChatCalculatieUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(aiChatInput)
+  }
+);}
+
+
+
+
+export const getAiChatCalculatieMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof aiChatCalculatie>>, TError,{id: number;data: BodyType<AiChatInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof aiChatCalculatie>>, TError,{id: number;data: BodyType<AiChatInput>}, TContext> => {
+
+const mutationKey = ['aiChatCalculatie'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof aiChatCalculatie>>, {id: number;data: BodyType<AiChatInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  aiChatCalculatie(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AiChatCalculatieMutationResult = NonNullable<Awaited<ReturnType<typeof aiChatCalculatie>>>
+    export type AiChatCalculatieMutationBody = BodyType<AiChatInput>
+    export type AiChatCalculatieMutationError = ErrorType<void>
+
+    /**
+ * @summary AI-chatgesprek over een calculatie (technische uitvoering, volledigheid, eenheden)
+ */
+export const useAiChatCalculatie = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof aiChatCalculatie>>, TError,{id: number;data: BodyType<AiChatInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof aiChatCalculatie>>,
+        TError,
+        {id: number;data: BodyType<AiChatInput>},
+        TContext
+      > => {
+      return useMutation(getAiChatCalculatieMutationOptions(options));
     }
 
 export const getListModCalcInkoopItemsUrl = (id: number,) => {

@@ -12,8 +12,10 @@ import {
   getGetWerkbegrotingQueryKey,
   getGetOpdrachtQueryKey,
   getGetNacalculatieQueryKey,
+  useAiChatWerkbegroting,
 } from "@workspace/api-client-react";
 import type { Werkbegroting, OpdrachtNacalculatie } from "@workspace/api-client-react";
+import AiChatPanel from "@/components/ai-chat-panel";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,7 +29,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import {
   ArrowLeft, Sparkles, Check, Clock, AlertTriangle, CalendarCheck,
-  TrendingUp, TrendingDown, Edit2, Package, ShoppingCart, Building2, ShoppingBag,
+  TrendingUp, TrendingDown, Edit2, Package, ShoppingCart, Building2, ShoppingBag, MessageSquare, CheckCircle2,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
@@ -291,6 +293,7 @@ export default function OpdrachtDetailPagina() {
   const { toast } = useToast();
   const [vaststellenDialoog, setVaststellenDialoog] = useState(false);
   const [activeTab, setActiveTab] = useState("werkbegroting");
+  const [chatOpen, setChatOpen] = useState(false);
 
   const { data: opdracht, isLoading: opdrachtLoading } = useGetOpdracht(opdrachtId);
   const { data: werkbegroting, isLoading: wbLoading } = useGetWerkbegroting(opdrachtId);
@@ -319,6 +322,8 @@ export default function OpdrachtDetailPagina() {
       onError: () => toast({ title: "AI-analyse mislukt", variant: "destructive" }),
     },
   });
+
+  const aiChatMut = useAiChatWerkbegroting();
 
   if (opdrachtLoading) {
     return (
@@ -455,6 +460,14 @@ export default function OpdrachtDetailPagina() {
                 <Sparkles className="h-3.5 w-3.5" />
                 {aiAnalyseMutatie.isPending ? "Analyseren..." : "AI-analyse"}
               </Button>
+              <Button
+                size="sm"
+                variant={chatOpen ? "default" : "outline"}
+                onClick={() => setChatOpen(v => !v)}
+              >
+                <MessageSquare className="h-3.5 w-3.5" />
+                AI-chat
+              </Button>
               {!isVastgesteld && (
                 <Button size="sm" onClick={() => setVaststellenDialoog(true)}>
                   <Check className="h-3.5 w-3.5" /> Vaststellen
@@ -522,6 +535,26 @@ export default function OpdrachtDetailPagina() {
                 </Card>
               );
             })
+          )}
+
+          {/* AI-chatpaneel */}
+          {chatOpen && (
+            <div className="border rounded-lg overflow-hidden" style={{ height: 520 }}>
+              <AiChatPanel
+                onVerstuur={async (berichten, afbeelding_base64) =>
+                  aiChatMut.mutateAsync({ id: opdrachtId, data: { berichten, afbeelding_base64: afbeelding_base64 ?? undefined } })
+                }
+                className="h-full border-0"
+                snelleActies={[
+                  "Controleer volledigheid van de werkbegroting",
+                  "Controleer of alle eenheden kloppen",
+                  "Ontbreken er werkzaamheden voor dit type project?",
+                  "Zijn de urennormen realistisch?",
+                  "Wat zijn de risico's op meerwerk?",
+                ]}
+                placeholder="Stel een vraag over de technische uitvoering, planning of volledigheid van deze werkbegroting..."
+              />
+            </div>
           )}
         </TabsContent>
 

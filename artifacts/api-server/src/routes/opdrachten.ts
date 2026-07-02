@@ -21,6 +21,7 @@ import {
 import { eq, and, sql, sum, asc, isNull, desc, or } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { logger } from "../lib/logger";
+import { heeftOpenAi, maakOpenAiClient } from "../lib/openai";
 
 const router = Router();
 const iso = (d: Date | null | undefined) => d?.toISOString() ?? null;
@@ -688,6 +689,140 @@ router.get("/opdrachten/:id/materiaal", lezen, async (req, res) => {
   } catch (err) {
     logger.error({ err }, "getOpdrachtMateriaal fout");
     res.status(500).json({ error: "Serverfout" });
+  }
+});
+
+// ── POST /opdrachten/:id/werkbegroting/ai-chat ─────────────────────────────
+router.post("/opdrachten/:id/werkbegroting/ai-chat", schrijven, async (req, res) => {
+  const id = parseInt(String(req.params.id), 10);
+  if (isNaN(id)) { res.status(400).json({ error: "Ongeldig id" }); return; }
+
+  try {
+    const { berichten, afbeelding_base64 } = req.body as {
+      berichten: Array<{ rol: "gebruiker" | "assistent"; inhoud: string }>;
+      afbeelding_base64?: string | null;
+    };
+
+    if (!Array.isArray(berichten) || berichten.length === 0) {
+      res.status(400).json({ error: "Berichten ontbreken" }); return;
+    }
+
+    const [[opdracht], [begroting]] = await Promise.all([
+      db.select().from(opdrachtenTable).where(eq(opdrachtenTable.id, id)).limit(1),
+      db.select().from(projectBegrotingenTable).where(eq(projectBegrotingenTable.opdrachtId, id)).limit(1),
+    ]);
+
+    if (!begroting) { res.status(404).json({ error: "Werkbegroting niet gevonden" }); return; }
+
+    const regels = await db.select().from(werkbegrotingRegelsTable)
+      .where(eq(werkbegrotingRegelsTable.begrotingId, begroting.id))
+      .orderBy(asc(werkbegrotingRegelsTable.id));
+
+    let gebouwInfo = "";
+    if (opdracht?.gebouwId) {
+      const [g] = await db.select().from(gebouwenTable).where(eq(gebouwenTable.id, opdracht.gebouwId)).limit(1);
+      if (g) {
+        gebouwInfo = `Gebouw: ${g.naam}, ${(g as any).adres ?? ""} ${(g as any).stad ?? ""}.`;
+      }
+    }
+
+    const arbeidRegels = regels.filter(r => r.categorie === "arbeid");
+    const materiaalRegels = regels.filter(r => r.categorie === "materiaal");
+    const andereRegels = regels.filter(r => r.categorie !== "arbeid" && r.categorie !== "materiaal");
+
+    const regelenSamenvatting = [
+      arbeidRegels.length > 0
+        ? `ARBEID (${arbeidRegels.length} regels):\n` +
+          arbeidRegels.map(r => `  - ${r.omschrijving}: ${r.hoeveelheid} ${r.eenheid} @ €${r.tarief}/uur = €${r.totaal}`).join("\n")
+        : null,
+      materiaalRegels.length > 0
+        ? `MATERIAAL (${materiaalRegels.length} regels):\n` +
+          materiaalRegels.map(r => `  - ${r.omschrijving}: ${r.hoeveelheid} ${r.eenheid} @ €${r.tarief} = €${r.totaal}`).join("\n")
+        : null,
+      andereRegels.length > 0
+        ? `OVERIGE (${andereRegels.length} regels):\n` +
+          andereRegels.map(r => `  - [${r.categorie}] ${r.omschrijving}: ${r.hoeveelheid} ${r.eenheid} @ €${r.tarief} = €${r.totaal}`).join("\n")
+        : null,
+    ].filter(Boolean).join("\n\n") || "(geen regels)";
+
+    const systeemPrompt = `Je bent een ervaren werkvoorbereider brandpreventie voor FPS Brandpreventie (Nederland).
+Je helpt de projectleider bij het beoordelen, plannen en uitvoeren van werkbegrotingen voor brandwerende projecten.
+
+OPDRACHT: ${opdracht?.titel ?? "onbekend"}${opdracht?.werknummer ? ` (werknummer: ${opdracht.werknummer})` : ""}
+Status begroting: ${begroting.status ?? "concept"}
+Totaal arbeid: ${begroting.totaalArbeidUren ?? 0} uur
+Totaal materiaal: €${begroting.totaalMateriaalBedrag ?? 0}
+${gebouwInfo ? `\n${gebouwInfo}` : ""}
+
+WERKBEGROTINGSREGELS:
+${regelenSamenvatting}
+
+Jouw taken als werkbegroting-assistent:
+- Beoordeel de technische haalbaarheid van de werkzaamheden (brandwerende doorvoeringen, deuren, wanden, etc.)
+- Signaleer ontbrekende werkzaamheden (hulpconstructies, afstellingen, inspecties, oplevering, reinigen)
+- Controleer eenheden: st = stuks, m² = oppervlakte, m¹ of lm = lijnmeter, uur = arbeidstijd
+- Beoordeel of urennormen realistisch zijn voor brandpreventie-monteurs in Nederland
+- Adviseer over risico op meerwerk (complexe details, bereikbaarheid, oud gebouw, asbest etc.)
+- Beoordeel inkoopmogelijkheden voor materiaalposten
+- Vergelijk de begroting op volledigheid en consistentie
+- Analyseer schetsen of tekeningen als die worden gedeeld
+- Geef advies over planning en uitvoervolgorde
+
+Antwoord altijd in het Nederlands. Geef concrete, praktische adviezen. Wees kritisch maar constructief.`;
+
+    if (!heeftOpenAi()) {
+      res.json({ antwoord: "AI-chat is niet beschikbaar. Controleer de OpenAI-configuratie.", signalen: [] });
+      return;
+    }
+
+    const openai = maakOpenAiClient();
+
+    type Msg = { role: "system" | "user" | "assistant"; content: string | Array<Record<string, unknown>> };
+    const messages: Msg[] = [{ role: "system", content: systeemPrompt }];
+
+    for (let i = 0; i < berichten.length; i++) {
+      const b = berichten[i]!;
+      if (b.rol === "gebruiker") {
+        if (i === berichten.length - 1 && afbeelding_base64) {
+          messages.push({
+            role: "user",
+            content: [
+              { type: "text", text: b.inhoud },
+              { type: "image_url", image_url: { url: `data:image/jpeg;base64,${afbeelding_base64}` } },
+            ],
+          });
+        } else {
+          messages.push({ role: "user", content: b.inhoud });
+        }
+      } else {
+        messages.push({ role: "assistant", content: b.inhoud });
+      }
+    }
+
+    const completion = await openai.chat.completions.create({
+      model: "gpt-5.4",
+      messages: messages as any,
+      max_completion_tokens: 2000,
+    });
+
+    const antwoord = completion.choices[0]?.message?.content ?? "Geen antwoord ontvangen.";
+
+    const signalen: string[] = [];
+    const lw = antwoord.toLowerCase();
+    if (lw.includes("ontbreekt") || lw.includes("ontbrekend") || lw.includes("vergeten")) {
+      signalen.push("Mogelijke ontbrekende werkzaamheden gesignaleerd");
+    }
+    if (lw.includes("meerwerk") || lw.includes("risico")) {
+      signalen.push("Meerwerkrisico aangewezen");
+    }
+    if (lw.includes("urennorm") && (lw.includes("laag") || lw.includes("hoog") || lw.includes("afwijkend"))) {
+      signalen.push("Urennorm controlepunt aangewezen");
+    }
+
+    res.json({ antwoord, signalen });
+  } catch (err) {
+    logger.error({ err }, "aiChatWerkbegroting fout");
+    res.status(500).json({ error: "Serverfout bij AI-chat" });
   }
 });
 

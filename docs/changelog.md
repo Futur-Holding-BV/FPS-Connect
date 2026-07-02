@@ -10,6 +10,43 @@ Grote roadmap-fases staan ook in `docs/roadmap/gebouwd.md` en `docs/roadmap/acti
 
 ---
 
+## 2026-07-02 — AI-chatpaneel voor Calculatie en Werkbegroting
+
+**Uitvoering:** volledig | **Getest:** typecheck firevault clean
+
+### Wat er gewijzigd is
+
+**OpenAPI — `lib/api-spec/openapi.yaml`:**
+- 3 nieuwe schemas: `AiChatBericht` (rol + inhoud), `AiChatInput` (berichten[] + optionele afbeelding_base64), `AiChatAntwoord` (antwoord string)
+- Nieuw endpoint `POST /modules/calculaties/{id}/ai-chat` (operationId: `aiChatCalculatie`)
+- Nieuw endpoint `POST /opdrachten/{id}/werkbegroting/ai-chat` (operationId: `aiChatWerkbegroting`)
+- Codegen opnieuw uitgevoerd → hooks `useAiChatCalculatie` en `useAiChatWerkbegroting` gegenereerd
+
+**Backend — `artifacts/api-server/src/routes/mod-calculatie.ts`:**
+- `POST /:id/ai-chat` handler: laadt gebouw, spots, opname, normtijden en tarieven als context; geeft al die data + gesprekshistorie mee aan gpt-5.4 (`max_completion_tokens: 2000`); ondersteunt visie via `afbeelding_base64`
+
+**Backend — `artifacts/api-server/src/routes/opdrachten.ts`:**
+- `POST /:id/werkbegroting/ai-chat` handler: laadt opdracht + werkbegroting-regels als context; zelfde gpt-5.4 patroon
+
+**Frontend — `artifacts/firevault/src/components/ai-chat-panel.tsx`:**
+- Herbruikbaar chatpaneel: berichtenlijst met rol-kleuren, tekstvak, afbeelding-upload (base64), snelle-actie-knoppen, laad-indicator, auto-scroll; props: `onVerstuur`, `snelleActies?`, `placeholder?`, `className?`
+
+**Frontend — `artifacts/firevault/src/pages/modules/calculatie/detail.tsx`:**
+- Import `useAiChatCalculatie` + `AiChatPanel` + `MessageSquare`
+- Hook `aiChatMut = useAiChatCalculatie()` naast bestaande `aiMut`
+- State `chatOpen` toegevoegd
+- Header: nieuwe "AI-chat"-knop (voor de Prullenbak-knop), toggle activeert/deactiveert paneel
+- Hoofd lay-out: conditionele 3e kolom `w-[400px]` met `AiChatPanel`; 5 snelleActies (volledigheid, eenheden, urennormen, ontbrekende regels, meerwerk-risico)
+
+**Frontend — `artifacts/firevault/src/pages/opdrachten/detail.tsx`:**
+- Import `useAiChatWerkbegroting` + `AiChatPanel` + `MessageSquare` + `CheckCircle2` (ontbrak)
+- Hook `aiChatMut = useAiChatWerkbegroting()`
+- State `chatOpen` toegevoegd
+- Werkbegroting-toolbar: nieuwe "AI-chat"-knop naast bestaande "AI-analyse"-knop
+- Werkbegroting-tab: conditioneel `AiChatPanel` (hoogte 520px) na de regels; 5 snelleActies (volledigheid, eenheden, ontbrekende werkzaamheden, urennormen, meerwerk-risico)
+
+---
+
 ## 2026-07-02 — Increment 5: Meerwerk-flow voor monteurs
 
 **Uitvoering:** volledig | **Getest:** typecheck firevault + monteur-app clean
