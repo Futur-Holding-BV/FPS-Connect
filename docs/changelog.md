@@ -10,6 +10,14 @@ Grote roadmap-fases staan ook in `docs/roadmap/gebouwd.md` en `docs/roadmap/acti
 
 ---
 
+## 2026-07-02 — Sidebar: nav-item "Personeel" toegevoegd
+
+**Uitvoering:** volledig | **Getest:** typecheck
+
+Nieuw nav-item "Personeel" (Users-icoon) toegevoegd tussen Onboarden en Uitboarden in de Personeel-sectie. Links naar `/personeel` en actief op alle medewerker-detailpaden. "Onboarden" is nu alleen actief op exact `/personeel` (niet meer op sub-paden).
+
+---
+
 ## 2026-07-02 — Nieuwe medewerker: lege-state functies met snelkoppeling
 
 **Uitvoering:** volledig | **Getest:** typecheck
