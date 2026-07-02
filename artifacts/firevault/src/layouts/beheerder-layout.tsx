@@ -1066,9 +1066,9 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                         <SidebarMenuItem className="pl-5">
                           <SidebarMenuButton
                             asChild
-                            isActive={location === "/personeel"}
+                            isActive={location === "/personeel/onboarden"}
                           >
-                            <Link href="/personeel">
+                            <Link href="/personeel/onboarden">
                               <UserPlus />
                               <span>Onboarden</span>
                             </Link>
@@ -1079,12 +1079,10 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                         <SidebarMenuItem className="pl-5">
                           <SidebarMenuButton
                             asChild
-                            isActive={location.startsWith("/personeel/") &&
-                              !location.startsWith("/personeel/verlof") &&
-                              !location.startsWith("/personeel/capaciteitsplanning") &&
-                              !location.startsWith("/personeel/jaarafsluiting") &&
-                              !location.startsWith("/personeel/uitboarden") &&
-                              !location.startsWith("/personeel/jaarplanning")}
+                            isActive={
+                              location === "/personeel" ||
+                              /^\/personeel\/\d+$/.test(location)
+                            }
                           >
                             <Link href="/personeel">
                               <Users />

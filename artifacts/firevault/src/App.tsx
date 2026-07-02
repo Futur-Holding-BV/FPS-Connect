@@ -87,6 +87,7 @@ import CapaciteitsplanningPagina from "@/pages/personeel/capaciteitsplanning";
 import UitboardenPagina from "@/pages/personeel/uitboarden";
 import OudMedewerkersPagina from "@/pages/personeel/oud-medewerkers";
 import ExternenPagina from "@/pages/personeel/externen";
+import OnboardenPagina from "@/pages/personeel/onboarden";
 import JaarplanningPagina from "@/pages/personeel/jaarplanning";
 import GereedschappenPagina from "@/pages/gereedschappen/index";
 import GereedschapDetailPagina from "@/pages/gereedschappen/detail";
@@ -339,6 +340,7 @@ function ConnectPortal() {
         <Route path="/personeel/verlof-instellingen" component={VerlofInstellingenPagina} />
         <Route path="/personeel/jaarafsluiting" component={JaarAfsluitingPagina} />
         <Route path="/personeel/capaciteitsplanning" component={CapaciteitsplanningPagina} />
+        <Route path="/personeel/onboarden" component={OnboardenPagina} />
         <Route path="/personeel/uitboarden" component={UitboardenPagina} />
         <Route path="/personeel/oud-medewerkers" component={OudMedewerkersPagina} />
         <Route path="/personeel/externen" component={ExternenPagina} />
