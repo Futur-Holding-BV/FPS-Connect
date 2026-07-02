@@ -7,6 +7,7 @@
     "hello": "tsx ./src/hello.ts",
     "security-scan": "tsx ./src/security-scan.ts",
     "seed-applicaties": "tsx ./src/seed-applicaties.ts",
+    "seed-studio-opleverrapport": "tsx ./src/seed-studio-opleverrapport.ts",
     "migreer-bevoegdheden": "tsx ./src/migreer-bevoegdheden.ts",
     "e2e-monteur-testaccount": "tsx ./src/e2e-monteur-testaccount.ts",
     "e2e-monteur": "playwright test",

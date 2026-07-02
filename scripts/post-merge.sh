@@ -19,3 +19,5 @@ pnpm --filter @workspace/db run push-force
 # Faalt met exit 1 en een duidelijke foutmelding als een tabel of kolom ontbreekt.
 # De merge wordt alleen groen gerapporteerd als deze stap slaagt.
 pnpm --filter @workspace/db run schema-healthcheck
+# Stap 5: Seed Document Studio-model voor opleverrapport (idempotent; slaat over als reeds aanwezig).
+pnpm --filter @workspace/scripts run seed-studio-opleverrapport

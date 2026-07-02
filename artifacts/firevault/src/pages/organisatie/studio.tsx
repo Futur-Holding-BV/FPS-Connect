@@ -9,7 +9,7 @@ import {
   useGoedkeurenStudioTemplate,
   getListDocumentStudioModellenQueryKey,
 } from "@workspace/api-client-react";
-import type { DocumentStudioModel, DocumentStudioModelInputDocumentType } from "@workspace/api-client-react";
+import type { DocumentStudioModel, DocumentStudioModelInput } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -49,16 +49,15 @@ const DOCUMENT_TYPEN: {
   icoon: typeof FileText;
   omschrijving: string;
 }[] = [
-  { type: "offerte",    label: "Offerte",      icoon: FileText,       omschrijving: "Offertesjabloon richting klant" },
-  { type: "oplevering", label: "Opleverrapport", icoon: Building2,    omschrijving: "Opleverrapport brandpreventieve voorzieningen" },
-  { type: "brief",      label: "Brief",         icoon: FileText,       omschrijving: "Formele correspondentiebrief" },
-  { type: "email",      label: "E-mail",        icoon: Mail,           omschrijving: "Standaard e-mailsjabloon" },
-  { type: "lmra",       label: "LMRA",          icoon: ClipboardCheck, omschrijving: "Laatste Minuut Risico Analyse" },
-  { type: "toolbox",    label: "Toolbox",       icoon: Hammer,         omschrijving: "Toolbox-meeting document" },
-  { type: "inkoopbon",  label: "Inkoopbon",     icoon: Package,        omschrijving: "Interne inkoopbon" },
-  { type: "factuur",    label: "Factuur",       icoon: Receipt,        omschrijving: "Factuursjabloon" },
-  { type: "calculatie",    label: "Calculatie",    icoon: Calculator,    omschrijving: "Calculatie-werkblad" },
-  { type: "opleverrapport", label: "Opleverrapport", icoon: FileText,     omschrijving: "Formeel opleverrapport voor een gebouw" },
+  { type: "offerte",        label: "Offerte",        icoon: FileText,       omschrijving: "Offertesjabloon richting klant" },
+  { type: "opleverrapport", label: "Opleverrapport", icoon: Building2,      omschrijving: "Opleverrapport brandpreventieve voorzieningen" },
+  { type: "brief",          label: "Brief",           icoon: FileText,       omschrijving: "Formele correspondentiebrief" },
+  { type: "email",          label: "E-mail",          icoon: Mail,           omschrijving: "Standaard e-mailsjabloon" },
+  { type: "lmra",           label: "LMRA",            icoon: ClipboardCheck, omschrijving: "Laatste Minuut Risico Analyse" },
+  { type: "toolbox",        label: "Toolbox",         icoon: Hammer,         omschrijving: "Toolbox-meeting document" },
+  { type: "inkoopbon",      label: "Inkoopbon",       icoon: Package,        omschrijving: "Interne inkoopbon" },
+  { type: "factuur",        label: "Factuur",         icoon: Receipt,        omschrijving: "Factuursjabloon" },
+  { type: "calculatie",     label: "Calculatie",      icoon: Calculator,     omschrijving: "Calculatie-werkblad" },
 ];
 
 const STATUS_CONFIG: Record<string, { label: string; klasse: string; beschrijving: string }> = {
@@ -136,7 +135,7 @@ export default function DocumentStudioPagina() {
       setUploadModelId(bestaand.id);
     } else {
       try {
-        const nieuw = await upsert.mutateAsync({ data: { werkgever_id: werkgeverId, document_type: type as DocumentStudioModelInputDocumentType } });
+        const nieuw = await upsert.mutateAsync({ data: { werkgever_id: werkgeverId, document_type: type as DocumentStudioModelInput["document_type"] } });
         setUploadModelId(nieuw.id);
         invalideer();
       } catch {
@@ -190,7 +189,7 @@ export default function DocumentStudioPagina() {
     let model = modelVoorType(type);
     if (!model) {
       try {
-        model = await upsert.mutateAsync({ data: { werkgever_id: werkgeverId, document_type: type as DocumentStudioModelInputDocumentType } });
+        model = await upsert.mutateAsync({ data: { werkgever_id: werkgeverId, document_type: type as DocumentStudioModelInput["document_type"] } });
         invalideer();
       } catch {
         toast({ title: "Kon model niet aanmaken", variant: "destructive" });
