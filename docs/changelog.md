@@ -10,6 +10,31 @@ Grote roadmap-fases staan ook in `docs/roadmap/gebouwd.md` en `docs/roadmap/acti
 
 ---
 
+## 2026-07-02 — Workflowanalyse: alle bedrijfsprocessen in kaart
+
+**Uitvoering:** volledig | **Getest:** niet van toepassing (read-only analyse)
+
+### Wat er gedaan is
+
+Diepgaande workflowanalyse uitgevoerd op de volledige keten van 12 processtappen. Analyse gebaseerd op DB-schema (FK-koppelingen), OpenAPI-spec en frontend pagina-componenten.
+
+**Rapport:** `docs/workflowanalyse-2026-07-02.md`
+
+**Resultaat per stap:**
+- **VOLLEDIG (1/12):** Offerte → Opdracht (knop "Maak opdracht", volledige FK-ketting, automatische doorstuur)
+- **GEDEELTELIJK (7/12):** CRM→Project, Project→Opname, Opname→Calculatie, Calculatie→Offerte, Opdracht→Werkvoorbereiding, Werkvoorbereiding→Inkoop, Onderhoud→Financieel
+- **ONTBREEKT (4/12):** Inkoop→Magazijn (ontvangstboeking), Magazijn→Uitvoering, Uitvoering→Oplevering, Oplevering→Onderhoud
+
+**11 handmatige overdrachtspunten** geïdentificeerd en beschreven.
+
+**Aanvullende observaties:** Planning-stap buiten de 12 flows, Snagstream als kwaliteitsgate, Dossier als juridisch opleverdossier, crediteuren-sterk/debiteuren-zwak in facturering, feature flags als workflow-blokkade (calculatie uit in pilot).
+
+**Prioriteitsvolgorde gaps:** Uitvoering-module → V1.4 Oplevering → Oplevering→Onderhoud → Onderhoud→Factuur (debiteuren) → CRM→Project → Inkoop→Magazijn ontvangst → Calculatie→Offerte.
+
+**Geen code gewijzigd** — uitsluitend analysedocument.
+
+---
+
 ## 2026-07-02 — Domeinarchitectuur: migratievoorstel 6 domeinen
 
 **Uitvoering:** volledig | **Getest:** niet van toepassing (document-only)
