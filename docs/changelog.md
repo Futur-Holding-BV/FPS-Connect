@@ -10,6 +10,38 @@ Grote roadmap-fases staan ook in `docs/roadmap/gebouwd.md` en `docs/roadmap/acti
 
 ---
 
+## 2026-07-02 — AI-architectuuranalyse + voorstel centrale AI-service
+
+**Uitvoering:** volledig | **Getest:** niet van toepassing (read-only analyse)
+
+### Wat er gedaan is
+
+Volledige analyse van alle AI-code in backend (routes, services, lib) en frontend (componenten, pagina's). Voorstel opgesteld voor één centrale AI-servicelaag.
+
+**Rapport:** `docs/ai-architectuur-analyse-2026-07-02.md`
+
+**Bevindingen:**
+- 19 AI-functionaliteiten in totaal; 6 via service-bestanden, 13 inline in route-handlers
+- 1 gedeelde OpenAI-client-factory (goed fundament), 5 service-bestanden (goed patroon)
+- Centraal `/ai/`-namespace gedeeltelijk benut (5 routes), 22 AI-routes verspreid over module-handlers
+- 6 concrete dupliceringspatronen: JSON markdown-strip (10+ varianten), vision-bouw (3x), AI-chat (2x), wisselende model-selectie (4 modellen), inconsistente heeftOpenAi()-guard, CrmCoachPanel-raw-fetch
+- Mobiele app (FPS Monteur): geen AI-functionaliteit
+- `CrmCoachPanel` bypast gegenereerde API-client (directe fetch, geen caching)
+- `scoutService.ts` ligt in lib/ i.p.v. services/ (vindbaarheidsprobleem)
+
+**Voorstel (5 lagen, geen implementatie):**
+1. `lib/openai.ts` — singleton + logAiAanroep (kleine uitbreiding)
+2. `lib/ai-utils.ts` — NIEUW: parseerAiJson, bereidVisionAfbeelding, heeftAiOfGooi
+3. `services/` — 7 nieuwe service-bestanden (factuur-ai, veiligheid-ai, calculatie-ai, inkoop-ai, upload-ai, crm-ai, salaris-ai)
+4. `routes/ai.ts` — uitbreiding /ai/ namespace
+5. `lib/ai-model-registry.ts` — NIEUW: centraal modelregister (standaard/vision/chat/licht/compat)
+
+Implementatievolgorde in 8 stappen (A–H), elk afzonderlijk terugrolbaar.
+
+**Geen code gewijzigd** — uitsluitend analysedocument.
+
+---
+
 ## 2026-07-02 — Workflowanalyse: alle bedrijfsprocessen in kaart
 
 **Uitvoering:** volledig | **Getest:** niet van toepassing (read-only analyse)
