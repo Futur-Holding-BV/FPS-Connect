@@ -76,6 +76,7 @@ import studioRouter from "./studio";
 import aiRouter from "./ai";
 import { pbmRouter } from "./pbm";
 import { regieRouter } from "./regie";
+import contractBewakingRouter from "./contract-bewaking";
 import { requireAuth } from "../middlewares/auth";
 import { meldActief } from "../lib/online-tracker";
 
@@ -168,5 +169,6 @@ router.use(studioRouter);
 router.use(aiRouter);
 router.use(pbmRouter);
 router.use(regieRouter);
+router.use(contractBewakingRouter);
 
 export default router;

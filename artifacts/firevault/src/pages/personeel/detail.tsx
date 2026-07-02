@@ -73,6 +73,7 @@ import { caoVoorWerkmaatschappij, werkmaatschappijOpties } from "@/lib/werkmaats
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
+import { MedewerkerContractenTab } from "@/pages/personeel/medewerker-contracten";
 import {
   ArrowLeft, Pencil, Trash2, Plus, GraduationCap, Award, CalendarClock,
   Mail, Phone, Briefcase, ShieldCheck, AlertTriangle, Check, X,
@@ -1368,8 +1369,9 @@ export default function MedewerkerDetailPagina() {
         </DialogContent>
       </Dialog>
 
-      <Tabs defaultValue="opleidingen">
+      <Tabs defaultValue="contracten">
         <TabsList>
+          <TabsTrigger value="contracten">Contracten</TabsTrigger>
           <TabsTrigger value="opleidingen">Opleidingen & certificaten</TabsTrigger>
           <TabsTrigger value="bekwaamheden">Bekwaamheden</TabsTrigger>
           <TabsTrigger value="verlof">Verlof</TabsTrigger>
@@ -1631,6 +1633,11 @@ export default function MedewerkerDetailPagina() {
               woonplaats: medewerker.woonplaats,
             } : undefined}
           />
+        </TabsContent>
+
+        {/* Contracten */}
+        <TabsContent value="contracten">
+          <MedewerkerContractenTab medewerkerId={Number(id)} />
         </TabsContent>
 
         {/* Salarisdocumenten */}

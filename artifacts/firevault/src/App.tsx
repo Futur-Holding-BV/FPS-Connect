@@ -80,6 +80,7 @@ import OpnameDetailPagina from "@/pages/opname/detail";
 import InfoPagina from "@/pages/info/index";
 import PersoneelPagina from "@/pages/personeel/index";
 import MedewerkerDetailPagina from "@/pages/personeel/detail";
+import ContractbewakingPagina from "@/pages/personeel/contracten";
 import VerlofOverzichtPagina from "@/pages/personeel/verlof-overzicht";
 import VerlofInstellingenPagina from "@/pages/personeel/verlof-instellingen";
 import JaarAfsluitingPagina from "@/pages/personeel/jaarafsluiting";
@@ -353,6 +354,7 @@ function ConnectPortal() {
         <Route path="/personeel/uitboarden" component={UitboardenPagina} />
         <Route path="/personeel/oud-medewerkers" component={OudMedewerkersPagina} />
         <Route path="/personeel/externen" component={ExternenPagina} />
+        <Route path="/personeel/contracten" component={ContractbewakingPagina} />
         <Route path="/personeel/jaarplanning" component={JaarplanningPagina} />
         <Route path="/personeel/:id" component={MedewerkerDetailPagina} />
         <Route path="/personeel" component={PersoneelPagina} />

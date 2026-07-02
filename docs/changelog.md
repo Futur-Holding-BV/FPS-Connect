@@ -10,6 +10,33 @@ Grote roadmap-fases staan ook in `docs/roadmap/gebouwd.md` en `docs/roadmap/acti
 
 ---
 
+## 2026-07-02 — Contractbewaking (HRM) — AI-bewaking tijdelijke arbeidsovereenkomsten
+
+**Uitvoering:** volledig | **Getest:** typecheck:libs clean, firevault clean, api-server (pre-existing TS7030 only)
+
+### Wat er gebouwd is
+
+- **DB** (3 nieuwe tabellen via `CREATE TABLE`):
+  - `arbeidsovereenkomsten` — contracthistorie per medewerker: contracttype (bepaalde_tijd/onbepaalde_tijd/oproep/stage/leer_werk), startdatum, einddatum, proeftijd, salaris bruto, arbeidsduur, CAO, ondertekening, voorgaand-contract-koppeling
+  - `contract_signaleringen` — bewakingslog: type (120/90/75/60/30 dagen, verlopen, ketenregel, aanzegtermijn), ernst (info/waarschuwing/kritiek), AI-advies, gezien-status
+  - `contract_besluiten` — besluitvorming per contract: besluit (verlengen/wijzigen/onbepaalde_tijd/beëindigen/geen_besluit), AI-samenvatting, aandachtspunten, wettelijke risico's, audittrail (JSONB)
+- **Backend** (`artifacts/api-server/src/routes/contract-bewaking.ts` → `contractBewakingRouter`):
+  - `GET /contract-bewaking/dashboard` — voert bewaking uit + geeft buckets (verlopen/30/60/90/120 dagen), signaleringen, besluiten-in-behandeling
+  - `GET/POST /contract-bewaking/medewerkers/:id` — contracten per medewerker ophalen + nieuw contract aanmaken
+  - `PATCH/DELETE /contract-bewaking/:id` — contract bijwerken / verwijderen
+  - `GET /contract-bewaking/:id/signaleringen` — signaleringen per contract
+  - `PATCH /contract-bewaking/signaleringen/:id/gezien` — signalering als gezien markeren
+  - `GET/POST /contract-bewaking/:id/besluit` — besluit ophalen / vastleggen (met audittrail)
+  - `POST /contract-bewaking/:id/ai-voorbereiding` — AI-gespreksvoorbereiding genereren (dossier: opleidingen/bekwaamheden/ziekte/verlof/contracthistorie); valt terug op statische analyse zonder OpenAI
+  - Wettelijke controle ingebouwd: ketenregeling (max 3 contracten in 3 jaar / max 36 maanden), aanzegtermijn (1 maand bij >= 6 maanden contractduur)
+- **Web**:
+  - `/personeel/contracten` — Contractbewaking-dashboard: rode/oranje/gele signalerings-banners bovenaan, 4 statistieken (verlopen/30/60/90 dagen), bucket-kaarten per vervaldatum, besluiten-in-behandeling lijst
+  - Medewerker-detailpagina — nieuw tabblad "Contracten" als eerste tab (standaard open): contracthistorie, 3 sub-tabs per contract (Contractgegevens / Signaleringen / Besluitvorming), besluitvorming-paneel met AI-voorbereiding-knop, audittrail
+  - Nav Personeel: "Contractbewaking" item toegevoegd (ScrollText-icoon)
+- **AI-begrenzing**: AI genereert uitsluitend ondersteunende adviezen (samenvatting, aandachtspunten, wettelijke risico's); beslissing ligt altijd bij HR en directie
+
+---
+
 ## 2026-07-02 — Regiewerk — volwaardige werkvorm naast aangenomen werk, onderhoud en service
 
 **Uitvoering:** volledig | **Getest:** typecheck:libs clean, typecheck firevault clean (regie), api-server build clean

@@ -1158,6 +1158,19 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                         <SidebarMenuItem className="pl-5">
                           <SidebarMenuButton
                             asChild
+                            isActive={location === "/personeel/contracten"}
+                          >
+                            <Link href="/personeel/contracten">
+                              <ScrollText />
+                              <span>Contractbewaking</span>
+                            </Link>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      )}
+                      {toonPersoneel && (
+                        <SidebarMenuItem className="pl-5">
+                          <SidebarMenuButton
+                            asChild
                             isActive={location.startsWith("/personeel/verlof") && location !== "/personeel/verlof-instellingen"}
                           >
                             <Link href="/personeel/verlof">
