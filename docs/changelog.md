@@ -10,6 +10,101 @@ Grote roadmap-fases staan ook in `docs/roadmap/gebouwd.md` en `docs/roadmap/acti
 
 ---
 
+## 2026-07-02 — Increment 5: Meerwerk-flow voor monteurs
+
+**Uitvoering:** volledig | **Getest:** typecheck firevault + monteur-app clean
+
+### Wat er gewijzigd is
+
+**Mobiel — `artifacts/monteur-app/app/werkdag/[id].tsx`:**
+- Imports uitgebreid: `useListPlanningMeerwerk`, `useCreatePlanningMeerwerk`, `TextInput`
+- 3 nieuwe state-variabelen: `toonMeerwerkFormulier`, `meerwerkTekst`, `meerwerkBezig`
+- `useListPlanningMeerwerk({ planning_item_id: id })` — laadt bestaande meerwerk-aanvragen per werkorder
+- `indienMeerwerk()` — POST met status="ingediend" + omschrijving; refetcht na succes
+- Nieuwe **"Meerwerk melden"**-kaart tussen Werkzaamheden en Uitvoerend personeel:
+  - Bestaande aanvragen als statusbadge (In behandeling amber / Goedgekeurd groen / Afgewezen rood)
+  - Gestippelde "Meerwerk melden"-knop opent inline formulier
+  - TextInput met Annuleren / Indienen knoppen
+
+**Web — `artifacts/firevault/src/pages/modules/planning/index.tsx`:**
+- Imports uitgebreid: `useListPlanningMeerwerk`, `useUpdatePlanningMeerwerk`, lucide `CheckCircle2`, `XCircle`, `Wrench`
+- `activeTab` type uitgebreid met `"meerwerk"`
+- Hooks: `useListPlanningMeerwerk({})` (alle items, geen filter) + `useUpdatePlanningMeerwerk`
+- Nieuwe **"Meerwerk"**-tab naast Bezetting / Per dag in de tab-bar
+- Tab-inhoud: sectie "In behandeling" (amber) met Afwijzen/Goedkeuren knoppen → PATCH status; sectie "Afgehandeld" (groen/rood read-only); lege staat met Wrench-icoon
+
+---
+
+## 2026-07-02 — Increment 4: Financieel dashboard — Bedrijfsresultaten
+
+**Uitvoering:** volledig | **Getest:** typecheck firevault clean
+
+### Wat er gewijzigd is
+
+- `artifacts/firevault/src/pages/financieel/bedrijfsresultaten.tsx` — volledig herbouwd (was: stub):
+  - 4 KPI-kaarten: Totale opdrachtsom, Gefactureerd (% van opdrachtsom), Onderhanden werk, Gem. marge (rood/amber bij negatief/<10%)
+  - Facturen-kpi-balk: Klaar voor export, Open bedrag, Exportfouten — klikbaar naar factuurpagina's
+  - Signaleringen-paneel: opdrachten met marge_negatief / marge_laag / ohw_hoog / nog_te_factureren / overplanning, gekleurd per type
+  - Sorteerbare projecttabel: klikbare kolomkoppen (opdrachtsom, gefactureerd, te factureren, marge, OHW), statusfilter (actief/afgerond/alle), live zoekbalk
+  - Totaalrij in tabelvoet (som + gem. marge gefilterde selectie)
+  - MargeIndicator-component met TrendingUp/Down + kleurcodering
+  - Geen nieuwe API-endpoints: hergebruikt `useListOnderhandenWerk` + `useGetFinancieelDashboard`
+
+---
+
+## 2026-07-02 — Increment 3: Twee nieuwe planningweergaven (Bezetting + Per dag)
+
+**Uitvoering:** volledig | **Getest:** typecheck firevault clean
+
+### Wat er gewijzigd is
+
+- `artifacts/firevault/src/pages/modules/planning/index.tsx`:
+  - `activeTab` uitgebreid met `"bezetting"` en `"dag"` (was alleen medewerkers/projecten)
+  - Nieuw state `geselecteerdeDag` (default = vandaag) voor de per-dag tijdlijnweergave
+  - `LayoutGrid`-icoon toegevoegd aan lucide-imports
+  - Twee extra tab-knoppen in de tab-bar: **Bezetting** en **Per dag**
+  - **Tab Bezetting** — compacte heatmap-matrix: medewerkers × werkdagen, elke cel toont geplande uren als gekleurd blokje (groen ≤70%, amber 70–100%, rood >100% van dagcapaciteit contracturen/5). Gesloten dagen krijgen een slotje. Klikken op een cel opent direct het inplan-dialoog. Legenda onderaan.
+  - **Tab Per dag** — tijdlijnweergave voor één geselecteerde dag: elke medewerker in een rij met horizontale balken op een tijdas (07:30–16:00). Dagnavigatie via pijlen + datumdot-reeks. Items klikbaar voor bewerken; lege cellen openen het inplan-dialoog. Gesloten dag toont slotje + naam over de hele breedte.
+
+---
+
+## 2026-07-02 — Increment 2: AI projectcontroller-signalen op opdracht-detailpagina
+
+**Uitvoering:** volledig | **Getest:** typecheck firevault clean
+
+### Wat er gewijzigd is
+
+- `artifacts/firevault/src/pages/opdrachten/detail.tsx`:
+  - Nieuwe client-side helper `berekenSignalen()` berekent 3 signalen uit bestaande nacalculatiedata: **Urenstatus** (verbruikt/begroot), **Eindprognose** (verbruikt + gepland vs. begroting) en **Planningdekking** (geplande uren vs. resterende begroting)
+  - Kleurdrempels: groen/oranje/rood op basis van percentages (urenstatus: <75%/75–100%/>100%; prognose: ≤100%/100–115%/>115%; dekking: ≥100%/50–100%/<50%)
+  - Nieuwe component `ProjectControllerSignalen` toont de 3 signaalkaarten tussen de KPI-grid en de tabs — alleen zichtbaar als `begroting_arbeid_uren > 0`
+  - Koptekst "AI-projectcontroller — Bewaakt, blokkeert niets" met Sparkles-icoon
+  - Geen nieuwe API of DB-kolommen; hergebruikt bestaande `useGetNacalculatie` + `useListOpdrachtPlanningUren` data
+
+---
+
+## 2026-07-02 — Increment 1: Gestructureerde werkzaamheden in urenregistratie
+
+**Uitvoering:** volledig | **Getest:** typecheck api-server + firevault clean
+
+### Wat er gewijzigd is
+
+- DB: 3 nieuwe kolommen op `uren_registraties` via `ALTER TABLE IF NOT EXISTS`: `werkzaamheid_categorie text`, `ruimte text`, `object_omschrijving text`
+- DB-schema `lib/db/src/schema/uren.ts`: `werkzaamheidCategorie`, `ruimte`, `objectOmschrijving` toegevoegd
+- OpenAPI `UrenRegistratie` + `UrenRegistratieInput`: 3 nieuwe nullable velden; codegen uitgevoerd
+- Backend `uren.ts`: `mapUren()`, `POST /uren`, `PATCH /uren/:id` lezen/schrijven de 3 nieuwe velden
+- Web `uren/index.tsx`: tabelkolom "Categorie" toont gestructureerde categorie als badge + ruimte als subtekst; categorie-filter dropdown toegevoegd (client-side filteren)
+- Mobiel `uren.tsx`:
+  - `PROJECT_OPTIES` / `INTERN_OPTIES` hernoemd en uitgebreid naar `PROJECT_CATEGORIEEN` / `INTERN_CATEGORIEEN` (10 resp. 7 opties)
+  - Chip-picker selecteert nu `werkzaamheidCategorie` (opgeslagen als `werkzaamheid_categorie`)
+  - Nieuw veld "Ruimte / locatie" (tekst, optioneel, alleen project-type)
+  - Nieuw veld "Object / Spot" (tekst, optioneel, alleen project-type)
+  - Bestaand vrije-tekstveld `werkzaamheden` hernoemd naar "Toelichting" en blijft als optionele beschrijving
+  - `wisselType()` reset ook de 3 nieuwe velden
+  - `opslaan()` stuurt `werkzaamheid_categorie`, `ruimte`, `object_omschrijving` mee in payload
+
+---
+
 ## 2026-07-02 — AI Toolbox-generatiesysteem: alle vier fasen gebouwd
 
 **Uitvoering:** volledig | **Getest:** typecheck firevault clean + api-server esbuild-build slaagt

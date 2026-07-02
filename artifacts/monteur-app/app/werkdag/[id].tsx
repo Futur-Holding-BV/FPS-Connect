@@ -1,6 +1,8 @@
 import {
   useGetWerkdagItem,
   useUpdateWerkdagItemStatus,
+  useListPlanningMeerwerk,
+  useCreatePlanningMeerwerk,
 } from "@workspace/api-client-react";
 import { Ionicons } from "@expo/vector-icons";
 import * as FileSystem from "expo-file-system/legacy";
@@ -14,6 +16,7 @@ import {
   Pressable,
   ScrollView,
   Text,
+  TextInput,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -125,6 +128,9 @@ export default function WerkdagDetailScherm() {
   const [handtekeningOpgeslagen, setHandtekeningOpgeslagen] = useState(false);
   const [handtekeningBezig, setHandtekeningBezig] = useState(false);
   const fotoMapGemaakt = useRef(false);
+  const [toonMeerwerkFormulier, setToonMeerwerkFormulier] = useState(false);
+  const [meerwerkTekst, setMeerwerkTekst] = useState("");
+  const [meerwerkBezig, setMeerwerkBezig] = useState(false);
 
   if (!token) return <Redirect href="/login" />;
 
@@ -165,6 +171,35 @@ export default function WerkdagDetailScherm() {
       },
     },
   });
+
+  const { data: meerwerkItems = [], refetch: refetchMeerwerk } = useListPlanningMeerwerk(
+    { planning_item_id: id },
+    { query: { queryKey: ["meerwerk-werkdag", id], enabled: id > 0 } }
+  );
+  const maakMeerwerk = useCreatePlanningMeerwerk();
+
+  async function indienMeerwerk() {
+    if (!meerwerkTekst.trim()) {
+      Alert.alert("Omschrijving vereist", "Voer een omschrijving in voor het meerwerk.");
+      return;
+    }
+    setMeerwerkBezig(true);
+    maakMeerwerk.mutate(
+      { data: { planning_item_id: id, status: "ingediend", omschrijving: meerwerkTekst.trim() } },
+      {
+        onSuccess: () => {
+          setMeerwerkTekst("");
+          setToonMeerwerkFormulier(false);
+          setMeerwerkBezig(false);
+          void refetchMeerwerk();
+        },
+        onError: () => {
+          setMeerwerkBezig(false);
+          Alert.alert("Fout", "Meerwerk indienen mislukt. Probeer opnieuw.");
+        },
+      }
+    );
+  }
 
   async function zetStatus(nieuweStatus: string) {
     if (!isOnline) {
@@ -561,6 +596,115 @@ export default function WerkdagDetailScherm() {
               <InfoRegel icoon="chatbox-outline" label="Opmerkingen" waarde={huidigWerkorder.notities as string | null} />
             </Kaart>
           ) : null}
+
+          {/* ── Meerwerk melden ──────────────────────────────────────────────── */}
+          <Kaart titel={meerwerkItems.length > 0 ? `Meerwerk (${meerwerkItems.length})` : "Meerwerk melden"}>
+            {meerwerkItems.length > 0 && (
+              <View style={{ marginBottom: 12, gap: 8 }}>
+                {meerwerkItems.map((item) => {
+                  const kleur = item.status === "goedgekeurd" ? "#16a34a"
+                    : item.status === "afgewezen" ? "#dc2626"
+                    : "#d97706";
+                  const label = item.status === "goedgekeurd" ? "Goedgekeurd"
+                    : item.status === "afgewezen" ? "Afgewezen"
+                    : "In behandeling";
+                  return (
+                    <View
+                      key={item.id}
+                      style={{
+                        backgroundColor: kleur + "18",
+                        borderRadius: 8,
+                        borderWidth: 1,
+                        borderColor: kleur + "44",
+                        padding: 10,
+                        gap: 4,
+                      }}
+                    >
+                      {item.omschrijving ? (
+                        <Text style={{ color: c.text, fontSize: 13, fontFamily: "Inter_400Regular" }}>
+                          {item.omschrijving}
+                        </Text>
+                      ) : null}
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                        <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: kleur }} />
+                        <Text style={{ color: kleur, fontSize: 11, fontFamily: "Inter_600SemiBold" }}>
+                          {label}
+                        </Text>
+                      </View>
+                    </View>
+                  );
+                })}
+              </View>
+            )}
+            {toonMeerwerkFormulier ? (
+              <View style={{ gap: 10 }}>
+                <TextInput
+                  value={meerwerkTekst}
+                  onChangeText={setMeerwerkTekst}
+                  placeholder="Omschrijf het meerwerk..."
+                  placeholderTextColor={c.mutedForeground}
+                  multiline
+                  numberOfLines={3}
+                  style={{
+                    backgroundColor: c.background,
+                    borderWidth: 1,
+                    borderColor: c.border,
+                    borderRadius: 8,
+                    padding: 10,
+                    color: c.text,
+                    fontSize: 14,
+                    fontFamily: "Inter_400Regular",
+                    minHeight: 72,
+                    textAlignVertical: "top",
+                  }}
+                />
+                <View style={{ flexDirection: "row", gap: 8 }}>
+                  <Pressable
+                    onPress={() => { setToonMeerwerkFormulier(false); setMeerwerkTekst(""); }}
+                    style={{ flex: 1, borderWidth: 1, borderColor: c.border, borderRadius: 8, paddingVertical: 10, alignItems: "center" }}
+                  >
+                    <Text style={{ color: c.mutedForeground, fontSize: 14, fontFamily: "Inter_500Medium" }}>Annuleren</Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => void indienMeerwerk()}
+                    disabled={meerwerkBezig || !meerwerkTekst.trim()}
+                    style={{
+                      flex: 2,
+                      backgroundColor: meerwerkBezig || !meerwerkTekst.trim() ? c.muted : c.tint,
+                      borderRadius: 8,
+                      paddingVertical: 10,
+                      alignItems: "center",
+                      flexDirection: "row",
+                      justifyContent: "center",
+                      gap: 6,
+                    }}
+                  >
+                    {meerwerkBezig && <ActivityIndicator size="small" color="#fff" />}
+                    <Text style={{ color: "#fff", fontSize: 14, fontFamily: "Inter_600SemiBold" }}>Indienen</Text>
+                  </Pressable>
+                </View>
+              </View>
+            ) : (
+              <Pressable
+                onPress={() => setToonMeerwerkFormulier(true)}
+                style={({ pressed }) => ({
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 10,
+                  borderWidth: 1,
+                  borderStyle: "dashed",
+                  borderColor: pressed ? c.tint : c.border,
+                  borderRadius: 8,
+                  padding: 12,
+                })}
+              >
+                <Ionicons name="add-circle-outline" size={18} color={c.tint} />
+                <Text style={{ color: c.tint, fontSize: 14, fontFamily: "Inter_500Medium" }}>
+                  Meerwerk melden
+                </Text>
+              </Pressable>
+            )}
+          </Kaart>
 
           {/* ── Uitvoerend personeel ───────────────────────────────────────── */}
           {(huidigWerkorder.medewerker_naam as string | null) ? (

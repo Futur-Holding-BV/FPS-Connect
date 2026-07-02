@@ -18,6 +18,9 @@ export const urenRegistratiesTable = pgTable("uren_registraties", {
   projectId: integer("project_id").references(() => projectenTable.id, { onDelete: "set null" }),
   projectNaam: text("project_naam"),                                       // vrij tekst als geen gebouw_id
   werkzaamheden: text("werkzaamheden"),
+  werkzaamheidCategorie: text("werkzaamheid_categorie"),                   // gestructureerde categorie (Branddeuren, Doorvoeringen, …)
+  ruimte: text("ruimte"),                                                  // ruimte / locatie binnen gebouw
+  objectOmschrijving: text("object_omschrijving"),                         // spot of objectomschrijving
   beginTijd: text("begin_tijd").notNull(),                                 // "HH:MM"
   eindTijd: text("eind_tijd").notNull(),                                   // "HH:MM"
   pauzeMinuten: integer("pauze_minuten").notNull().default(30),

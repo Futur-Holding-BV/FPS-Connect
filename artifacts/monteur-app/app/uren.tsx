@@ -77,21 +77,22 @@ function dagLabel(datum: string): string {
 }
 
 const DAGEN = ["ma", "di", "wo", "do", "vr", "za", "zo"];
-const PROJECT_OPTIES = [
-  "Brandwerende doorvoeringen",
+const PROJECT_CATEGORIEEN = [
   "Branddeuren",
+  "Brandwerend glas",
+  "Doorvoeringen",
   "Brandkleppen",
   "Manchetten",
-  "Coating / bekleding",
+  "Coating",
+  "Applicaties",
   "Inspectie",
   "Herstelwerkzaamheden",
-  "Montage / installatie",
   "Overig",
 ];
 
-const INTERN_OPTIES = [
+const INTERN_CATEGORIEEN = [
   "Overleg",
-  "Transport materiaal",
+  "Transport / materiaal",
   "Cursus / opleiding",
   "Magazijn",
   "Reistijd",
@@ -223,15 +224,18 @@ type UrenFormulierProps = {
 function UrenFormulier({ datum, bestaand, planningItem, planningItemsVanWeek = [], weekTotaal = 0, onSluiten, onOpgeslagen }: UrenFormulierProps) {
   const c = useColors();
 
-  // Type detectie: intern als werkzaamheden in INTERN_OPTIES staat
+  // Type detectie: intern als werkzaamheid_categorie in INTERN_CATEGORIEEN staat
   const startType: "project" | "intern" =
-    bestaand?.werkzaamheden && INTERN_OPTIES.includes(bestaand.werkzaamheden) ? "intern" : "project";
+    bestaand?.werkzaamheid_categorie && INTERN_CATEGORIEEN.includes(bestaand.werkzaamheid_categorie) ? "intern" : "project";
 
   // Pre-fill vanuit planning of bestaand
   const startGebouwId = bestaand?.gebouw_id ?? planningItem?.gebouw_id ?? null;
   const startProject = bestaand?.project_naam ?? planningItem?.gebouw_naam ?? planningItem?.project_naam ?? "";
   const startWerkz = bestaand?.werkzaamheden ?? "";
   const startPauze = bestaand?.pauze_minuten ?? 30;
+  const startCategorie = bestaand?.werkzaamheid_categorie ?? "";
+  const startRuimte = bestaand?.ruimte ?? "";
+  const startObjectOmschr = bestaand?.object_omschrijving ?? "";
 
   const [urenType, setUrenType] = useState<"project" | "intern">(startType);
   const [begin, setBegin] = useState(bestaand?.begin_tijd ?? planningItem?.tijd_start ?? planningItem?.begin_tijd ?? "07:30");
@@ -240,6 +244,9 @@ function UrenFormulier({ datum, bestaand, planningItem, planningItemsVanWeek = [
   const [project, setProject] = useState(startProject);
   const [vrijeInvoer, setVrijeInvoer] = useState(!startGebouwId && !!startProject);
   const [werkzaamheden, setWerkzaamheden] = useState(startWerkz);
+  const [werkzaamheidCategorie, setWerkzaamheidCategorie] = useState(startCategorie);
+  const [ruimte, setRuimte] = useState(startRuimte);
+  const [objectOmschrijving, setObjectOmschrijving] = useState(startObjectOmschr);
   const [pauze, setPauze] = useState(startPauze);
   const [opmerkingen, setOpmerkingen] = useState(bestaand?.opmerkingen ?? "");
   const [toontWerkzOpties, setToontWerkzOpties] = useState(false);
@@ -286,6 +293,9 @@ function UrenFormulier({ datum, bestaand, planningItem, planningItemsVanWeek = [
   function wisselType(type: "project" | "intern") {
     setUrenType(type);
     setWerkzaamheden("");
+    setWerkzaamheidCategorie("");
+    setRuimte("");
+    setObjectOmschrijving("");
     setToontWerkzOpties(false);
     if (type === "intern") {
       setGebouwId(null);
@@ -396,6 +406,9 @@ function UrenFormulier({ datum, bestaand, planningItem, planningItemsVanWeek = [
       pauze_minuten: pauze,
       project_naam: urenType === "project" ? (project || null) : null,
       werkzaamheden: werkzaamheden || null,
+      werkzaamheid_categorie: werkzaamheidCategorie || null,
+      ruimte: ruimte || null,
+      object_omschrijving: objectOmschrijving || null,
       opmerkingen: opmerkingen || null,
       planning_item_id: planningItem?.id ?? null,
       gebouw_id: urenType === "project" ? (gebouwId ?? null) : null,
@@ -684,97 +697,112 @@ function UrenFormulier({ datum, bestaand, planningItem, planningItemsVanWeek = [
           </View>
         )}
 
-        {/* Werkzaamheden */}
+        {/* Categorie */}
         <View>
           <Text style={{ color: c.mutedForeground, fontSize: 12, fontFamily: "Inter_400Regular", marginBottom: 8 }}>
-            {urenType === "intern" ? "Soort werkzaamheden" : "Werkzaamheden"}
+            Categorie
           </Text>
-
-          {urenType === "intern" ? (
-            /* Intern: chips */
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-              {INTERN_OPTIES.map((opt) => (
-                <Pressable
-                  key={opt}
-                  onPress={() => setWerkzaamheden(werkzaamheden === opt ? "" : opt)}
-                  style={{
-                    paddingHorizontal: 14,
-                    paddingVertical: 8,
-                    borderRadius: 20,
-                    backgroundColor: werkzaamheden === opt ? c.primary : c.accent,
-                    borderWidth: 1,
-                    borderColor: werkzaamheden === opt ? c.primary : c.border,
-                  }}
-                >
-                  <Text style={{
-                    color: werkzaamheden === opt ? "#fff" : c.foreground,
-                    fontSize: 13,
-                    fontFamily: werkzaamheden === opt ? "Inter_600SemiBold" : "Inter_400Regular",
-                  }}>
-                    {opt}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-          ) : (
-            /* Project: dropdown */
-            <>
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+            {(urenType === "intern" ? INTERN_CATEGORIEEN : PROJECT_CATEGORIEEN).map((opt) => (
               <Pressable
-                onPress={() => setToontWerkzOpties(!toontWerkzOpties)}
+                key={opt}
+                onPress={() => setWerkzaamheidCategorie(werkzaamheidCategorie === opt ? "" : opt)}
                 style={{
+                  paddingHorizontal: 14,
+                  paddingVertical: 8,
+                  borderRadius: 20,
+                  backgroundColor: werkzaamheidCategorie === opt ? c.primary : c.accent,
                   borderWidth: 1,
-                  borderColor: c.border,
-                  borderRadius: 10,
-                  padding: 12,
-                  flexDirection: "row",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  backgroundColor: c.card,
+                  borderColor: werkzaamheidCategorie === opt ? c.primary : c.border,
                 }}
               >
                 <Text style={{
-                  fontSize: 14,
-                  fontFamily: "Inter_400Regular",
-                  color: werkzaamheden ? c.foreground : c.mutedForeground,
-                  flex: 1,
+                  color: werkzaamheidCategorie === opt ? "#fff" : c.foreground,
+                  fontSize: 13,
+                  fontFamily: werkzaamheidCategorie === opt ? "Inter_600SemiBold" : "Inter_400Regular",
                 }}>
-                  {werkzaamheden || "Kies werkzaamheden..."}
+                  {opt}
                 </Text>
-                <Ionicons name={toontWerkzOpties ? "chevron-up" : "chevron-down"} size={16} color={c.mutedForeground} />
               </Pressable>
-              {toontWerkzOpties && (
-                <View style={{
-                  borderWidth: 1,
-                  borderColor: c.border,
-                  borderRadius: 10,
-                  marginTop: 4,
-                  backgroundColor: c.card,
-                  overflow: "hidden",
-                }}>
-                  {PROJECT_OPTIES.map((opt) => (
-                    <Pressable
-                      key={opt}
-                      onPress={() => { setWerkzaamheden(opt); setToontWerkzOpties(false); }}
-                      style={{
-                        padding: 12,
-                        borderBottomWidth: 1,
-                        borderBottomColor: c.border,
-                        backgroundColor: werkzaamheden === opt ? c.primary + "15" : "transparent",
-                      }}
-                    >
-                      <Text style={{
-                        fontSize: 14,
-                        fontFamily: werkzaamheden === opt ? "Inter_600SemiBold" : "Inter_400Regular",
-                        color: werkzaamheden === opt ? c.primary : c.foreground,
-                      }}>
-                        {opt}
-                      </Text>
-                    </Pressable>
-                  ))}
-                </View>
-              )}
-            </>
-          )}
+            ))}
+          </View>
+        </View>
+
+        {/* Ruimte — alleen bij project */}
+        {urenType === "project" && (
+          <View>
+            <Text style={{ color: c.mutedForeground, fontSize: 12, fontFamily: "Inter_400Regular", marginBottom: 6 }}>
+              Ruimte / locatie (optioneel)
+            </Text>
+            <TextInput
+              value={ruimte}
+              onChangeText={setRuimte}
+              placeholder="Bijv. 3e verdieping, trappenhuis B"
+              placeholderTextColor={c.mutedForeground}
+              style={{
+                borderWidth: 1,
+                borderColor: c.border,
+                borderRadius: 10,
+                padding: 12,
+                fontSize: 14,
+                fontFamily: "Inter_400Regular",
+                color: c.foreground,
+                backgroundColor: c.card,
+              }}
+            />
+          </View>
+        )}
+
+        {/* Object / Spot — alleen bij project */}
+        {urenType === "project" && (
+          <View>
+            <Text style={{ color: c.mutedForeground, fontSize: 12, fontFamily: "Inter_400Regular", marginBottom: 6 }}>
+              Object / Spot (optioneel)
+            </Text>
+            <TextInput
+              value={objectOmschrijving}
+              onChangeText={setObjectOmschrijving}
+              placeholder="Bijv. BD-042, rookdeur hal 3A"
+              placeholderTextColor={c.mutedForeground}
+              style={{
+                borderWidth: 1,
+                borderColor: c.border,
+                borderRadius: 10,
+                padding: 12,
+                fontSize: 14,
+                fontFamily: "Inter_400Regular",
+                color: c.foreground,
+                backgroundColor: c.card,
+              }}
+            />
+          </View>
+        )}
+
+        {/* Toelichting */}
+        <View>
+          <Text style={{ color: c.mutedForeground, fontSize: 12, fontFamily: "Inter_400Regular", marginBottom: 6 }}>
+            Toelichting (optioneel)
+          </Text>
+          <TextInput
+            value={werkzaamheden}
+            onChangeText={setWerkzaamheden}
+            placeholder="Vrije omschrijving van de werkzaamheden..."
+            placeholderTextColor={c.mutedForeground}
+            multiline
+            numberOfLines={2}
+            style={{
+              borderWidth: 1,
+              borderColor: c.border,
+              borderRadius: 10,
+              padding: 12,
+              fontSize: 14,
+              fontFamily: "Inter_400Regular",
+              color: c.foreground,
+              backgroundColor: c.card,
+              minHeight: 56,
+              textAlignVertical: "top",
+            }}
+          />
         </View>
 
         {/* Opmerkingen */}

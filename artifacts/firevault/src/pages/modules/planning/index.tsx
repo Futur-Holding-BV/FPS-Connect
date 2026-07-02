@@ -15,6 +15,8 @@ import {
   useListBedrijfssluitingen,
   useCreateBedrijfsSluiting,
   useDeleteBedrijfsSluiting,
+  useListPlanningMeerwerk,
+  useUpdatePlanningMeerwerk,
 } from "@workspace/api-client-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -34,7 +36,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import {
   ChevronLeft, ChevronRight, Plus, AlertTriangle, Users,
   Briefcase, Clock, RefreshCw, X,
-  CalendarDays, ChevronDown, Lock, Trash2, MapPin,
+  CalendarDays, ChevronDown, Lock, Trash2, MapPin, LayoutGrid,
+  CheckCircle2, XCircle, Wrench,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -607,7 +610,8 @@ function OpdrachtenPaneel({ opdrachten, ingeplandUrenPerGebouw, onInplannen }: O
 export default function ModulesPlanning() {
   const [referentieDatum, setReferentieDatum] = useState(() => maandagVanWeek(new Date()));
   const [weergaveModus, setWeergaveModus] = useState<WeergaveModus>("week");
-  const [activeTab, setActiveTab] = useState<"medewerkers" | "projecten">("medewerkers");
+  const [activeTab, setActiveTab] = useState<"medewerkers" | "projecten" | "bezetting" | "dag" | "meerwerk">("medewerkers");
+  const [geselecteerdeDag, setGeselecteerdeDag] = useState<string>(() => datumNaarStr(new Date()));
   const [dialoog, setDialoog] = useState<DialooglItem | null>(null);
   const [bewerkenId, setBewerkenId] = useState<number | null>(null);
   const [opslaan, setOpslaan] = useState(false);
@@ -669,6 +673,11 @@ export default function ModulesPlanning() {
     {},
     { query: { queryKey: ["planning-afwezigheid"] } }
   );
+  const { data: alleMeerwerk = [], refetch: refetchMeerwerk } = useListPlanningMeerwerk(
+    {},
+    { query: { queryKey: ["planning-meerwerk-alle"] } }
+  );
+  const beoordeelMeerwerk = useUpdatePlanningMeerwerk();
   const { data: gebouwen = [] } = useListGebouwen(
     {},
     { query: { queryKey: ["gebouwen-planning"] } }
@@ -1123,6 +1132,27 @@ export default function ModulesPlanning() {
                 <Briefcase className="h-3.5 w-3.5 inline mr-1.5" />
                 Projecten
               </button>
+              <button
+                className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${activeTab === "bezetting" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-slate-700"}`}
+                onClick={() => setActiveTab("bezetting")}
+              >
+                <LayoutGrid className="h-3.5 w-3.5 inline mr-1.5" />
+                Bezetting
+              </button>
+              <button
+                className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${activeTab === "dag" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-slate-700"}`}
+                onClick={() => setActiveTab("dag")}
+              >
+                <CalendarDays className="h-3.5 w-3.5 inline mr-1.5" />
+                Per dag
+              </button>
+              <button
+                className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${activeTab === "meerwerk" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-slate-700"}`}
+                onClick={() => setActiveTab("meerwerk")}
+              >
+                <Wrench className="h-3.5 w-3.5 inline mr-1.5" />
+                Meerwerk
+              </button>
             </div>
           )}
 
@@ -1414,6 +1444,348 @@ export default function ModulesPlanning() {
               )}
             </div>
           )}
+
+          {/* ── TAB: BEZETTING ───────────────────────────────────────── */}
+          {weergaveModus !== "maand" && activeTab === "bezetting" && (
+            <Card className="overflow-hidden">
+              {(medewerkers as Medewerker[]).length === 0 ? (
+                <PlanningLegeStaat
+                  onVernieuwen={() => { void refetchMedewerkers(); }}
+                  filterActief={filterAlleenUitvoerend}
+                  onWisFilter={() => { setFilterAlleenUitvoerend(false); setFilterWerkmaatschappij("alle"); }}
+                />
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse" style={{ tableLayout: "fixed", minWidth: aantalWeken > 1 ? aantalWeken * 5 * 80 + 192 : "auto" }}>
+                    <colgroup>
+                      <col style={{ width: 192 }} />
+                      {alleDatumStrings.map((_, i) => <col key={i} style={{ minWidth: 72 }} />)}
+                    </colgroup>
+                    <thead>
+                      {aantalWeken > 1 && (
+                        <tr className="border-b bg-slate-100">
+                          <th className="px-4 py-2 border-r" />
+                          {weken.map((maa) => {
+                            const vrij = new Date(maa.getTime() + 4 * 86400000);
+                            return (
+                              <th key={datumNaarStr(maa)} colSpan={5} className="px-2 py-2 text-center text-[11px] font-semibold text-slate-600 border-l-2 border-l-slate-300">
+                                Week {weekNummer(maa)} · {maa.toLocaleDateString("nl-NL", { day: "numeric", month: "short" })} – {vrij.toLocaleDateString("nl-NL", { day: "numeric", month: "short" })}
+                              </th>
+                            );
+                          })}
+                        </tr>
+                      )}
+                      <tr className="border-b bg-slate-50">
+                        <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide border-r">Medewerker</th>
+                        {datumStringsPerWeek.flatMap((weekDatums, wi) =>
+                          weekDatums.map((dag, di) => (
+                            <th key={dag} className={`px-1 py-2 text-center text-xs font-medium uppercase tracking-wide ${dag === vandaagStr ? "bg-primary/5 text-primary" : geslotenDagenMap.has(dag) ? "bg-slate-100 text-slate-400" : "text-muted-foreground"} ${di === 0 && wi > 0 ? "border-l-2 border-l-slate-300" : "border-l border-l-slate-100"}`}>
+                              <div>{WERKDAGEN_KORT[di]}</div>
+                              <div className={`text-sm font-semibold mt-0.5 ${dag === vandaagStr ? "text-primary" : geslotenDagenMap.has(dag) ? "text-slate-400 line-through" : "text-slate-800"}`}>
+                                {new Date(dag + "T00:00:00").getDate()}
+                              </div>
+                            </th>
+                          ))
+                        )}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {(medewerkers as Medewerker[]).map((med) => {
+                        const dagCapaciteit = (med.contracturen_per_week ?? 40) / 5;
+                        return (
+                          <tr key={med.id} className="hover:bg-slate-50/40">
+                            <td className="px-4 py-2 border-r bg-white">
+                              <p className="text-sm font-medium text-slate-800">{med.naam}</p>
+                              {med.functie && <p className="text-xs text-muted-foreground">{med.functie}</p>}
+                            </td>
+                            {datumStringsPerWeek.flatMap((weekDatums, wi) =>
+                              weekDatums.map((dag, di) => {
+                                const dagItemsMed = (items as PlanItem[]).filter(
+                                  (it) => it.medewerker_id === med.id && it.datum_start <= dag && it.datum_eind >= dag && it.status !== "geannuleerd"
+                                );
+                                const geplandUren = dagItemsMed.reduce((s, it) => s + it.uren, 0);
+                                const pct = dagCapaciteit > 0 ? geplandUren / dagCapaciteit : 0;
+                                const gesloten = geslotenDagenMap.has(dag);
+                                let knopKleur = "";
+                                if (!gesloten && geplandUren > 0) {
+                                  knopKleur = pct > 1 ? "bg-rose-100 text-rose-700 border border-rose-200" : pct > 0.7 ? "bg-amber-50 text-amber-700 border border-amber-200" : "bg-emerald-50 text-emerald-700 border border-emerald-200";
+                                }
+                                return (
+                                  <td
+                                    key={dag}
+                                    className={`px-1 py-1.5 text-center ${di === 0 && wi > 0 ? "border-l-2 border-l-slate-300" : "border-l border-l-slate-100"} ${dag === vandaagStr && !gesloten ? "ring-1 ring-inset ring-primary/20" : ""}`}
+                                    title={dagItemsMed.length > 0 ? `${geplandUren}u / ${dagCapaciteit}u — ${dagItemsMed.map((it) => it.titel).join(", ")}` : undefined}
+                                  >
+                                    {gesloten ? (
+                                      <div className="mx-auto w-10 h-10 rounded flex items-center justify-center bg-slate-100">
+                                        <Lock className="h-3 w-3 text-slate-400" />
+                                      </div>
+                                    ) : (
+                                      <button
+                                        className={`mx-auto w-10 h-10 rounded flex flex-col items-center justify-center transition-all hover:opacity-80 ${geplandUren > 0 ? knopKleur : "border border-dashed border-slate-200 hover:border-primary/30 hover:bg-primary/5"}`}
+                                        onClick={() => handleDagKlik(med.id, dag)}
+                                      >
+                                        {geplandUren > 0 ? (
+                                          <>
+                                            <span className="text-[12px] font-bold leading-none">{geplandUren}</span>
+                                            <span className="text-[9px] leading-none opacity-60">u</span>
+                                          </>
+                                        ) : (
+                                          <Plus className="h-3 w-3 text-slate-300" />
+                                        )}
+                                      </button>
+                                    )}
+                                  </td>
+                                );
+                              })
+                            )}
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                  <div className="flex items-center gap-4 px-4 py-3 border-t bg-slate-50/60">
+                    <span className="text-xs text-muted-foreground">Bezettingsgraad per dag:</span>
+                    {[
+                      { kleur: "bg-emerald-100 border-emerald-200", label: "≤70%" },
+                      { kleur: "bg-amber-100 border-amber-200", label: "70–100%" },
+                      { kleur: "bg-rose-100 border-rose-200", label: ">100% (overplanning)" },
+                    ].map((l) => (
+                      <div key={l.label} className="flex items-center gap-1.5">
+                        <div className={`w-4 h-4 rounded border ${l.kleur}`} />
+                        <span className="text-xs text-muted-foreground">{l.label}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </Card>
+          )}
+
+          {/* ── TAB: PER DAG ─────────────────────────────────────────── */}
+          {weergaveModus !== "maand" && activeTab === "dag" && (() => {
+            const effectieveDag = alleDatumStrings.includes(geselecteerdeDag) ? geselecteerdeDag : (alleDatumStrings[0] ?? vandaagStr);
+            const dagIndex = alleDatumStrings.indexOf(effectieveDag);
+            const dagItemsAlle = (items as PlanItem[]).filter((it) => it.datum_start <= effectieveDag && it.datum_eind >= effectieveDag && it.status !== "geannuleerd");
+            const dagGesloten = geslotenDagenMap.get(effectieveDag);
+
+            const TIJDAS_START = 450;
+            const TIJDAS_EIND = 960;
+            const TIJDAS_DUUR = TIJDAS_EIND - TIJDAS_START;
+
+            function tijdNaarPct(t?: string | null) {
+              if (!t) return 0;
+              const [h, m] = t.split(":").map(Number) as [number, number];
+              return Math.max(0, Math.min(100, ((h * 60 + m) - TIJDAS_START) / TIJDAS_DUUR * 100));
+            }
+            function duurNaarPct(s?: string | null, e?: string | null) {
+              if (!s || !e) return 100;
+              const [sh, sm] = s.split(":").map(Number) as [number, number];
+              const [eh, em] = e.split(":").map(Number) as [number, number];
+              return Math.max(5, ((eh * 60 + em) - (sh * 60 + sm)) / TIJDAS_DUUR * 100);
+            }
+
+            const tijdlabels = ["07:30", "08:30", "09:30", "10:30", "11:30", "12:30", "13:30", "14:30", "15:30"];
+
+            return (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => { const p = alleDatumStrings[Math.max(0, dagIndex - 1)]; if (p) setGeselecteerdeDag(p); }} disabled={dagIndex <= 0}>
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <p className="text-sm font-semibold text-slate-800 min-w-56 text-center capitalize">
+                    {new Date(effectieveDag + "T00:00:00").toLocaleDateString("nl-NL", { weekday: "long", day: "numeric", month: "long" })}
+                    {effectieveDag === vandaagStr && <Badge variant="outline" className="ml-2 text-[10px] text-primary border-primary/30 bg-primary/5">Vandaag</Badge>}
+                    {dagGesloten && <Badge variant="outline" className="ml-2 text-[10px] text-amber-600 border-amber-200 bg-amber-50"><Lock className="h-2.5 w-2.5 inline mr-0.5" />{dagGesloten.naam}</Badge>}
+                  </p>
+                  <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => { const n = alleDatumStrings[Math.min(alleDatumStrings.length - 1, dagIndex + 1)]; if (n) setGeselecteerdeDag(n); }} disabled={dagIndex >= alleDatumStrings.length - 1}>
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                  <div className="flex gap-1 ml-1">
+                    {alleDatumStrings.map((d) => (
+                      <button
+                        key={d}
+                        onClick={() => setGeselecteerdeDag(d)}
+                        className={`w-7 h-7 rounded text-[11px] font-medium transition-colors ${d === effectieveDag ? "bg-primary text-white" : d === vandaagStr ? "bg-primary/10 text-primary" : geslotenDagenMap.has(d) ? "text-slate-400 bg-slate-100" : "text-slate-600 hover:bg-slate-100"}`}
+                      >
+                        {new Date(d + "T00:00:00").getDate()}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <Card className="overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <div style={{ minWidth: 680 }}>
+                      <div className="flex pl-48 border-b bg-slate-50">
+                        <div className="flex-1 relative" style={{ height: 32 }}>
+                          {tijdlabels.map((t) => (
+                            <div key={t} className="absolute top-0 h-full flex items-end pb-1" style={{ left: `${tijdNaarPct(t)}%` }}>
+                              <div className="absolute top-0 h-full w-px bg-slate-200" />
+                              <span className="text-[9px] text-muted-foreground ml-1 select-none">{t}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      {(medewerkers as Medewerker[]).length === 0 ? (
+                        <div className="py-12 text-center text-sm text-muted-foreground">
+                          <Users className="h-8 w-8 mx-auto mb-2 opacity-20" />
+                          Geen medewerkers beschikbaar.
+                        </div>
+                      ) : (
+                        <div className="divide-y">
+                          {(medewerkers as Medewerker[]).map((med) => {
+                            const medItems = dagItemsAlle.filter((it) => it.medewerker_id === med.id);
+                            return (
+                              <div key={med.id} className="flex hover:bg-slate-50/40 transition-colors" style={{ minHeight: 52 }}>
+                                <div className="w-48 shrink-0 px-4 py-2 border-r bg-white flex flex-col justify-center">
+                                  <p className="text-sm font-medium text-slate-800 truncate">{med.naam}</p>
+                                  {med.functie && <p className="text-xs text-muted-foreground truncate">{med.functie}</p>}
+                                  {medItems.length === 0 && !dagGesloten && (
+                                    <button className="text-[10px] text-muted-foreground hover:text-primary transition-colors mt-0.5 text-left" onClick={() => handleDagKlik(med.id, effectieveDag)}>
+                                      <Plus className="h-2.5 w-2.5 inline" /> Inplannen
+                                    </button>
+                                  )}
+                                </div>
+                                <div className="flex-1 relative py-2 px-1" style={{ minHeight: 52 }}>
+                                  {dagGesloten ? (
+                                    <div className="absolute inset-2 rounded bg-slate-100 flex items-center px-3">
+                                      <Lock className="h-3 w-3 text-slate-400 mr-1.5" />
+                                      <span className="text-xs text-slate-400">{dagGesloten.naam}</span>
+                                    </div>
+                                  ) : medItems.length === 0 ? (
+                                    <button className="absolute inset-2 rounded border border-dashed border-slate-200 hover:border-primary/30 hover:bg-primary/5 transition-colors" onClick={() => handleDagKlik(med.id, effectieveDag)} />
+                                  ) : (
+                                    medItems.map((it) => {
+                                      const links = tijdNaarPct(it.tijd_start);
+                                      const breedte = duurNaarPct(it.tijd_start, it.tijd_eind);
+                                      const dd = dagdeelUitTijd(it.tijd_start, it.tijd_eind);
+                                      const kleur = dd !== "specifiek" ? (DAGDEEL_KLEUR[dd] ?? "bg-blue-50 text-blue-700 border-blue-200") : (STATUS_KLEUR[it.status] ?? STATUS_KLEUR["concept"]);
+                                      return (
+                                        <button
+                                          key={it.id}
+                                          className={`absolute top-2 bottom-2 rounded border px-1.5 text-left overflow-hidden hover:opacity-80 transition-opacity ${kleur}`}
+                                          style={{ left: `calc(${links}% + 2px)`, width: `calc(${Math.min(breedte, 100 - links)}% - 4px)` }}
+                                          onClick={(e) => { e.stopPropagation(); openBewerken(it); }}
+                                          title={`${it.titel} · ${dagdeelLabel(it.tijd_start, it.tijd_eind) || `${it.uren}u`}`}
+                                        >
+                                          <p className="text-[10px] font-medium truncate leading-tight">{it.titel}</p>
+                                          {it.tijd_start && <p className="text-[9px] opacity-70 font-mono">{dagdeelLabel(it.tijd_start, it.tijd_eind)}</p>}
+                                        </button>
+                                      );
+                                    })
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </Card>
+              </div>
+            );
+          })()}
+
+          {/* ── MEERWERK-TAB ──────────────────────────────────────────── */}
+          {weergaveModus !== "maand" && activeTab === "meerwerk" && (() => {
+            const ingediend = alleMeerwerk.filter((m) => m.status === "ingediend");
+            const afgehandeld = alleMeerwerk.filter((m) => m.status !== "ingediend");
+
+            function beoordeel(id: number, planningItemId: number, nieuweStatus: "goedgekeurd" | "afgewezen") {
+              beoordeelMeerwerk.mutate(
+                { id, data: { planning_item_id: planningItemId, status: nieuweStatus } },
+                { onSuccess: () => void refetchMeerwerk() }
+              );
+            }
+
+            return (
+              <div className="space-y-4">
+                {alleMeerwerk.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
+                    <Wrench className="h-8 w-8 text-muted-foreground opacity-30" />
+                    <p className="text-sm text-muted-foreground">Geen meerwerk aanvragen.</p>
+                  </div>
+                ) : (
+                  <>
+                    {ingediend.length > 0 && (
+                      <div>
+                        <div className="flex items-center gap-2 mb-3">
+                          <AlertTriangle className="h-4 w-4 text-amber-500" />
+                          <h3 className="text-sm font-semibold text-amber-800">
+                            In behandeling ({ingediend.length})
+                          </h3>
+                        </div>
+                        <div className="space-y-2">
+                          {ingediend.map((item) => (
+                            <div
+                              key={item.id}
+                              className="rounded-lg border border-amber-200 bg-amber-50/40 px-4 py-3 flex items-start justify-between gap-4"
+                            >
+                              <div className="flex-1 min-w-0">
+                                {item.meerwerk_nummer && (
+                                  <p className="text-[10px] font-mono text-muted-foreground mb-0.5">#{item.meerwerk_nummer}</p>
+                                )}
+                                <p className="text-sm text-slate-800">{item.omschrijving ?? "Geen omschrijving"}</p>
+                                <p className="text-xs text-muted-foreground mt-0.5">Planning-item #{item.planning_item_id}</p>
+                              </div>
+                              <div className="flex gap-2 shrink-0">
+                                <button
+                                  onClick={() => beoordeel(item.id, item.planning_item_id, "afgewezen")}
+                                  className="flex items-center gap-1 rounded border border-rose-200 bg-white px-2.5 py-1.5 text-xs font-medium text-rose-700 hover:bg-rose-50 transition-colors"
+                                  title="Afwijzen"
+                                >
+                                  <XCircle className="h-3.5 w-3.5" />
+                                  Afwijzen
+                                </button>
+                                <button
+                                  onClick={() => beoordeel(item.id, item.planning_item_id, "goedgekeurd")}
+                                  className="flex items-center gap-1 rounded border border-emerald-200 bg-emerald-50 px-2.5 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-100 transition-colors"
+                                  title="Goedkeuren"
+                                >
+                                  <CheckCircle2 className="h-3.5 w-3.5" />
+                                  Goedkeuren
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {afgehandeld.length > 0 && (
+                      <div>
+                        <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
+                          Afgehandeld ({afgehandeld.length})
+                        </h3>
+                        <div className="space-y-1.5">
+                          {afgehandeld.map((item) => {
+                            const goedgekeurd = item.status === "goedgekeurd";
+                            return (
+                              <div
+                                key={item.id}
+                                className={`rounded-lg border px-4 py-2.5 flex items-center gap-3 ${goedgekeurd ? "border-emerald-100 bg-emerald-50/30" : "border-slate-100 bg-slate-50/50"}`}
+                              >
+                                {goedgekeurd
+                                  ? <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+                                  : <XCircle className="h-4 w-4 text-rose-500 shrink-0" />
+                                }
+                                <p className="text-sm text-slate-700 flex-1 min-w-0 truncate">{item.omschrijving ?? "Geen omschrijving"}</p>
+                                <Badge variant="outline" className={`text-[10px] shrink-0 ${goedgekeurd ? "border-emerald-200 text-emerald-700 bg-emerald-50" : "border-rose-200 text-rose-600 bg-rose-50"}`}>
+                                  {goedgekeurd ? "Goedgekeurd" : "Afgewezen"}
+                                </Badge>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            );
+          })()}
 
           {/* ── LEGENDA ──────────────────────────────────────────────── */}
           {weergaveModus !== "maand" && activeTab === "medewerkers" && (

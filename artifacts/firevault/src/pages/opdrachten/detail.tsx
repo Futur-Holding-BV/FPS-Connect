@@ -13,7 +13,7 @@ import {
   getGetOpdrachtQueryKey,
   getGetNacalculatieQueryKey,
 } from "@workspace/api-client-react";
-import type { Werkbegroting } from "@workspace/api-client-react";
+import type { Werkbegroting, OpdrachtNacalculatie } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -65,6 +65,110 @@ function groepeerOpHoofdstuk(werkbegroting: Werkbegroting) {
     groepen[h].push(r);
   }
   return groepen;
+}
+
+// ── AI-projectcontroller signalen ─────────────────────────────────────────────
+
+type SignaalStatus = "groen" | "oranje" | "rood";
+
+const SIGNAAL_KLEUR: Record<SignaalStatus, string> = {
+  groen: "bg-emerald-50 text-emerald-800 border-emerald-200",
+  oranje: "bg-amber-50 text-amber-800 border-amber-200",
+  rood: "bg-rose-50 text-rose-800 border-rose-200",
+};
+
+function berekenSignalen(
+  nacalc: OpdrachtNacalculatie | null | undefined
+): { label: string; status: SignaalStatus; waarde: string; toelichting: string }[] | null {
+  if (!nacalc || !nacalc.begroting_arbeid_uren || nacalc.begroting_arbeid_uren <= 0) return null;
+
+  const begroot = nacalc.begroting_arbeid_uren;
+  const verbruikt = nacalc.verbruikte_uren ?? 0;
+  const gepland = nacalc.planning_uren ?? 0;
+
+  const urenPct = verbruikt / begroot;
+  const urenStatus: SignaalStatus = urenPct > 1 ? "rood" : urenPct > 0.75 ? "oranje" : "groen";
+
+  const prognose = verbruikt + gepland;
+  const prognPct = prognose / begroot;
+  const prognStatus: SignaalStatus = prognPct > 1.15 ? "rood" : prognPct > 1 ? "oranje" : "groen";
+
+  const restant = Math.max(0, begroot - verbruikt);
+  let dekkingStatus: SignaalStatus;
+  let dekkingWaarde: string;
+  let dekkingToelichting: string;
+  if (restant <= 0) {
+    dekkingStatus = "groen";
+    dekkingWaarde = "Gereed";
+    dekkingToelichting = "Alle begrote uren zijn verbruikt";
+  } else {
+    const pct = gepland / restant;
+    dekkingStatus = pct >= 1 ? "groen" : pct >= 0.5 ? "oranje" : "rood";
+    dekkingWaarde = `${Math.round(pct * 100)}% gedekt`;
+    dekkingToelichting = `${uren(gepland)} gepland, ${uren(restant)} resteert`;
+  }
+
+  return [
+    {
+      label: "Urenstatus",
+      status: urenStatus,
+      waarde: `${Math.round(urenPct * 100)}%`,
+      toelichting: `${uren(verbruikt)} van ${uren(begroot)} begroot verbruikt`,
+    },
+    {
+      label: "Eindprognose",
+      status: prognStatus,
+      waarde: uren(prognose),
+      toelichting: prognPct > 1
+        ? `+${uren(prognose - begroot)} boven begroting`
+        : `${uren(begroot - prognose)} restcapaciteit`,
+    },
+    {
+      label: "Planningdekking",
+      status: dekkingStatus,
+      waarde: dekkingWaarde,
+      toelichting: dekkingToelichting,
+    },
+  ];
+}
+
+function ProjectControllerSignalen({ nacalculatie }: { nacalculatie: OpdrachtNacalculatie | null | undefined }) {
+  const signalen = berekenSignalen(nacalculatie);
+  if (!signalen) return null;
+
+  return (
+    <Card>
+      <CardHeader className="pb-2 pt-4">
+        <div className="flex items-center gap-2">
+          <Sparkles className="h-4 w-4 text-muted-foreground" />
+          <CardTitle className="text-sm font-semibold">AI-projectcontroller</CardTitle>
+          <span className="text-xs text-muted-foreground ml-auto">Bewaakt, blokkeert niets</span>
+        </div>
+      </CardHeader>
+      <CardContent className="pb-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {signalen.map((s) => (
+            <div
+              key={s.label}
+              className={`rounded-lg border px-4 py-3 flex items-start gap-3 ${SIGNAAL_KLEUR[s.status]}`}
+            >
+              <div className="mt-0.5 shrink-0">
+                {s.status === "groen"
+                  ? <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                  : <AlertTriangle className={`h-4 w-4 ${s.status === "rood" ? "text-rose-600" : "text-amber-600"}`} />
+                }
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-medium uppercase tracking-wide opacity-70">{s.label}</p>
+                <p className="text-lg font-bold leading-tight">{s.waarde}</p>
+                <p className="text-xs mt-0.5 opacity-80 leading-snug">{s.toelichting}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
 }
 
 // ── Bewerkbare werkbegroting-regel ────────────────────────────────────────────
@@ -291,6 +395,9 @@ export default function OpdrachtDetailPagina() {
           </CardContent>
         </Card>
       </div>
+
+      {/* AI-projectcontroller */}
+      <ProjectControllerSignalen nacalculatie={nacalculatie} />
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>

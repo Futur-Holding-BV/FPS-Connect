@@ -16,6 +16,12 @@ export interface UrenRegistratie {
   project_id?: number | null;
   project_naam?: string | null;
   werkzaamheden?: string | null;
+  /** Gestructureerde categorie: Branddeuren | Brandwerend glas | Doorvoeringen | Brandkleppen | Manchetten | Coating | Applicaties | Inspectie | Herstelwerkzaamheden | Overleg | Transport / materiaal | Cursus / opleiding | Magazijn | Reistijd | Kantoor | Overig */
+  werkzaamheid_categorie?: string | null;
+  /** Ruimte of locatie binnen het gebouw */
+  ruimte?: string | null;
+  /** Spotomschrijving of objectaanduiding */
+  object_omschrijving?: string | null;
   begin_tijd: string;
   eind_tijd: string;
   pauze_minuten: number;

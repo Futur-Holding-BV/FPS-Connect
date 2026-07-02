@@ -13,6 +13,9 @@ export interface UrenRegistratieInput {
   project_id?: number | null;
   project_naam?: string | null;
   werkzaamheden?: string | null;
+  werkzaamheid_categorie?: string | null;
+  ruimte?: string | null;
+  object_omschrijving?: string | null;
   begin_tijd: string;
   eind_tijd: string;
   pauze_minuten?: number;

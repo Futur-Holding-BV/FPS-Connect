@@ -26095,6 +26095,18 @@ components:
         werkzaamheden:
           type: string
           nullable: true
+        werkzaamheid_categorie:
+          type: string
+          nullable: true
+          description: 'Gestructureerde categorie: Branddeuren | Brandwerend glas | Doorvoeringen | Brandkleppen | Manchetten | Coating | Applicaties | Inspectie | Herstelwerkzaamheden | Overleg | Transport / materiaal | Cursus / opleiding | Magazijn | Reistijd | Kantoor | Overig'
+        ruimte:
+          type: string
+          nullable: true
+          description: Ruimte of locatie binnen het gebouw
+        object_omschrijving:
+          type: string
+          nullable: true
+          description: Spotomschrijving of objectaanduiding
         begin_tijd:
           type: string
         eind_tijd:
@@ -26151,6 +26163,15 @@ components:
           type: string
           nullable: true
         werkzaamheden:
+          type: string
+          nullable: true
+        werkzaamheid_categorie:
+          type: string
+          nullable: true
+        ruimte:
+          type: string
+          nullable: true
+        object_omschrijving:
           type: string
           nullable: true
         begin_tijd:
