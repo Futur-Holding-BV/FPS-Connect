@@ -10,6 +10,34 @@ Grote roadmap-fases staan ook in `docs/roadmap/gebouwd.md` en `docs/roadmap/acti
 
 ---
 
+## 2026-07-02 — Audit: module-integratieaudit FPS Connect / FPS One
+
+**Uitvoering:** volledig | **Getest:** niet van toepassing (read-only audit)
+
+### Wat er gedaan is
+
+Diepgaande module-integratieaudit uitgevoerd op de volledige codebase — 83 backend-routemodules, 189 frontend-pagina's, 42 Expo-schermen, ~568 OpenAPI-paden geanalyseerd.
+
+**Rapport:** `docs/audit-module-integratie-2026-07-02.md` — 15 secties:
+- Module-inventaris met volwassenheidsscore 0–5 per module (33 modules gescoord)
+- Integratiematrix: cross-module dataafhankelijkheden (13×13 tabel)
+- Kritische bedrijfsprocessen: 5 end-to-end procesflows geanalyseerd
+- Scaffold-detectie: 5 volledige scaffolds + 5 partiële scaffolds geïdentificeerd
+- Datamodel-koppeling: ontbrekende FK's en schema-gaps gedocumenteerd
+- Bevoegdhedengaps: 4 concrete gaten (wagenpark, boekhouder, studio, etc.)
+- 15 kritieke gaps geprioriteerd, 15 aanbevelingen geformuleerd
+- Roadmap-alignment: CRM en Toolbox zijn actief uitgebouwd voorbij "geparkeerd"-scope
+
+**Kritieke bevindingen:**
+- Inkoop-module: 0 endpoints, geen routebestand, geen DB-schema — grootste supply-chain gap
+- FPS One: 4 van 5 klantportaal-pagina's zijn pure scaffolds (score 0/5)
+- FPS One gebouwen-link stuurt klanten door naar intern portaal (beveiligingsrisico)
+- Verlof-planning en uren-salaris koppelingen ontbreken (handmatige handoffs)
+- CRM is actief gebouwd (32 endpoints, 8 DB-tabellen) terwijl roadmap "geparkeerd" zegt
+- Platformgemiddelde volwassenheidsscore: 3,2 / 5
+
+---
+
 ## 2026-07-02 — Bugfix: slim-upload overlay blijft hangen bij teruggetrokken drag
 
 **Uitvoering:** volledig | **Getest:** typecheck
