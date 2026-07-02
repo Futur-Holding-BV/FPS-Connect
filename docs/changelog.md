@@ -10,6 +10,22 @@ Grote roadmap-fases staan ook in `docs/roadmap/gebouwd.md` en `docs/roadmap/acti
 
 ---
 
+## 2026-07-02 — Voertuig melden — monteur rapporteert storing/schade via app + AI-analyse
+
+**Uitvoering:** volledig | **Getest:** typecheck api-server (clean) + firevault (clean) + api-server build geslaagd
+
+### Wat er gebouwd is
+
+- **DB**: tabel `wagenpark_meldingen` (via `CREATE TABLE`): type storing/schade, omschrijving, foto_paden[], AI-velden, status, monteur-JOIN.
+- **Backend** (`artifacts/api-server/src/routes/wagenpark-meldingen.ts`), geregistreerd onder `/wagenpark`:
+  - `POST /meldingen` — monteur maakt melding; foto optioneel als vision-input voor GPT-4o; respondeert ai_diagnose, ai_oplossing, ai_kosten_indicatie.
+  - `GET /meldingen?voertuig_id=X` — administatie/projectleider bekijkt meldingen; badge count per status.
+  - `PATCH /meldingen/:id` — status bijwerken (nieuw → in_behandeling → afgehandeld) + admin_notitie (requireBevoegdheid offertes:2).
+- **Mobiel** (`artifacts/monteur-app/app/voertuig-melding.tsx`): type-toggle, tekstveld, foto-picker, AI-resultaat met kosten-banner, bevestigingsknop; knop toegevoegd aan werkdag-detailpagina.
+- **Web** (`artifacts/firevault/src/pages/wagenpark/detail.tsx`): tab "Meldingen" met rode badge bij nieuwe meldingen; kaartjes met AI-diagnose/aanpak/kostenwaarschuwing; inline statusdropdown voor admin.
+
+---
+
 ## 2026-07-02 — Digitale Uitvoerder — monteur chatbot voor uitvoeringsadvies
 
 **Uitvoering:** volledig | **Getest:** typecheck api-server (clean) + firevault (clean) + api-server build geslaagd

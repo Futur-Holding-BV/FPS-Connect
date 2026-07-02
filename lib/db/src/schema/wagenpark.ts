@@ -285,6 +285,46 @@ export type BrandstofRegel = typeof brandstofRegelsTable.$inferSelect;
 // AVG-logboek — exporteerbaar privacyaudit-trail
 // ═══════════════════════════════════════════════════════════
 
+// ═══════════════════════════════════════════════════════════
+// Voertuig meldingen — monteur meldt storing of schade via app
+// ═══════════════════════════════════════════════════════════
+
+export const wagenparkMeldingenTable = pgTable("wagenpark_meldingen", {
+  id:              serial("id").primaryKey(),
+  voertuigId:      integer("voertuig_id").notNull().references(() => voertuigenTable.id, { onDelete: "cascade" }),
+  gemeldDoorId:    integer("gemeld_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
+
+  type:            text("type").notNull().default("storing"),
+  // "storing" | "schade"
+
+  omschrijving:    text("omschrijving").notNull(),
+  fotoPaden:       text("foto_paden").array().notNull().default([]),
+
+  aiDiagnose:      text("ai_diagnose"),
+  aiOplossing:     text("ai_oplossing"),
+  aiKostenIndicatie: boolean("ai_kosten_indicatie").notNull().default(false),
+  aiKostenTekst:   text("ai_kosten_tekst"),
+
+  status:          text("status").notNull().default("nieuw"),
+  // "nieuw" | "in_behandeling" | "afgehandeld"
+
+  adminNotitie:    text("admin_notitie"),
+
+  aangemaaktOp:    timestamp("aangemaakt_op").notNull().defaultNow(),
+  bijgewerktOp:    timestamp("bijgewerkt_op").notNull().defaultNow(),
+});
+
+export const wagenparkMeldingInsertSchema = createInsertSchema(wagenparkMeldingenTable, {
+  type:     z.enum(["storing", "schade"]),
+  status:   z.enum(["nieuw", "in_behandeling", "afgehandeld"]),
+  omschrijving: z.string().min(1),
+}).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });
+
+export type WagenparkMeldingInsert = z.infer<typeof wagenparkMeldingInsertSchema>;
+export type WagenparkMelding = typeof wagenparkMeldingenTable.$inferSelect;
+
+// ═══════════════════════════════════════════════════════════
+
 export const wagenparkAvgLogboekTable = pgTable("wagenpark_avg_logboek", {
   id:          serial("id").primaryKey(),
   datum:       timestamp("datum").notNull().defaultNow(),

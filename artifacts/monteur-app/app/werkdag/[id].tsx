@@ -747,6 +747,43 @@ export default function WerkdagDetailScherm() {
             <Ionicons name="chevron-forward" size={16} color={c.mutedForeground} />
           </Pressable>
 
+          {/* ── Voertuig melden ────────────────────────────────────────────── */}
+          <Pressable
+            onPress={() => router.push("/voertuig-melding")}
+            style={({ pressed }) => ({
+              backgroundColor: pressed ? c.muted : c.card,
+              borderRadius: 12,
+              padding: 16,
+              marginBottom: 12,
+              marginHorizontal: 16,
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 12,
+            })}
+          >
+            <View
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 8,
+                backgroundColor: "#fef3c722",
+                justifyContent: "center",
+                alignItems: "center",
+              }}
+            >
+              <Ionicons name="car-outline" size={18} color="#d97706" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: c.foreground, fontSize: 13, fontFamily: "Inter_600SemiBold" }}>
+                Voertuig melden
+              </Text>
+              <Text style={{ color: c.mutedForeground, fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 1 }}>
+                Storing of schade doorgeven
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={c.mutedForeground} />
+          </Pressable>
+
           {/* ── Tijdregistratie ────────────────────────────────────────────── */}
           <Pressable
             onPress={() => router.push("/uren")}
