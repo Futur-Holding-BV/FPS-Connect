@@ -10,6 +10,18 @@ Grote roadmap-fases staan ook in `docs/roadmap/gebouwd.md` en `docs/roadmap/acti
 
 ---
 
+## 2026-07-02 — Fix Slim uploaden: auto-routing toont nu bevestigingsscherm + crash opgelost
+
+**Uitvoering:** volledig | **Getest:** typecheck firevault clean
+
+### Wat er gewijzigd is
+
+- **Automatiseringsregel sloeg direct op zonder vraag**: wanneer een `.pdf` (of andere extensie) eerder 3× was bevestigd en de regel op "geautomatiseerd" stond, werd het bestand direct opgeslagen in de inbox zonder bevestigingsscherm of mogelijkheid voor toelichting. Fix: bij een automatiseringsregel wordt nu een synthetische suggestie aangemaakt, het item toont het volledige beslisscherm met een oranje "Automatisch herkend"-banner en wacht op expliciete bevestiging. Pas bij klikken op de actieknop wordt het bestand opgeslagen.
+- **Toelichting altijd beschikbaar**: het toelichting-tekstveld verscheen voorheen alleen in de "wacht"-fase (vóór analyse). Nu toont het ook in de "klaar"-fase zodat u altijd een opmerking kunt meegeven, ook bij reeds geanalyseerde of automatisch herkende bestanden.
+- **Crash `can't convert undefined to object`**: `Object.keys(suggestie.gevonden_gegevens)` crashte als de API `gevonden_gegevens: null/undefined` teruggaf. Zelfde risico bij `alternatieven.length`. Beide toegevoegd als `?? {}` / `?? []` defensieve guards. Zowel de `Object.keys`-check als de `<GevondenGegevens>`-prop-doorgave zijn verdedigd.
+
+---
+
 ## 2026-07-02 — Contractbewaking (HRM) — AI-bewaking tijdelijke arbeidsovereenkomsten
 
 **Uitvoering:** volledig | **Getest:** typecheck:libs clean, firevault clean, api-server (pre-existing TS7030 only)

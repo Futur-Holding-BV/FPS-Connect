@@ -400,8 +400,25 @@ function BeslisScherm({
 
   const isOnzeker = suggestie.categorie === "onbekend" || suggestie.vertrouwen === "laag";
 
+  const isAutoGerouteerd = !suggestie.ai_beschikbaar &&
+    suggestie.redenering.startsWith("Automatisch herkend op basis van eerder bevestigde regelinstelling");
+
   return (
     <div className="space-y-4">
+      {/* Banner: automatisch herkend via regel */}
+      {isAutoGerouteerd && (
+        <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-3">
+          <Zap className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+          <div>
+            <p className="text-xs font-semibold text-amber-700">Automatisch herkend</p>
+            <p className="text-xs text-amber-600 mt-0.5">
+              Dit bestandstype is eerder bevestigd als {CATEGORIE_INFO[effectiefeCat].label}.
+              Controleer de bestemming en voeg eventueel een toelichting toe voor u opslaat.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* AVG-waarschuwing voor personeelsdocumenten */}
       {(effectiefeCat === "personeelsdocument" || suggestie.categorie === "personeelsdocument") && (
         <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-3">
@@ -448,10 +465,10 @@ function BeslisScherm({
       </div>
 
       {/* Gevonden gegevens */}
-      {Object.keys(suggestie.gevonden_gegevens).length > 0 && (
+      {Object.keys(suggestie.gevonden_gegevens ?? {}).length > 0 && (
         <div>
           <p className="text-xs font-semibold text-muted-foreground mb-1.5">Herkende gegevens</p>
-          <GevondenGegevens gegevens={suggestie.gevonden_gegevens} />
+          <GevondenGegevens gegevens={suggestie.gevonden_gegevens ?? {}} />
         </div>
       )}
 
@@ -497,7 +514,7 @@ function BeslisScherm({
       )}
 
       {/* Onzeker / onbekend: top alternatieven */}
-      {isOnzeker && suggestie.alternatieven.length > 0 && (
+      {isOnzeker && (suggestie.alternatieven ?? []).length > 0 && (
         <div>
           <p className="text-xs font-semibold text-muted-foreground mb-1.5">
             {suggestie.categorie === "onbekend"
@@ -708,12 +725,24 @@ function WachtrijKaart({
           )}
 
           {(item.status === "klaar" || item.status === "fout") && (
-            <BeslisScherm
-              item={item}
-              onBevestigen={onBevestigen}
-              onWijzigCategorie={onWijzigCategorie}
-              onBevestigenPersoneel={onBevestigenPersoneel}
-            />
+            <>
+              <div className="space-y-1">
+                <Label className="text-xs font-medium">Toelichting</Label>
+                <Textarea
+                  placeholder="Optioneel — voeg een opmerking of context toe bij dit document…"
+                  value={item.toelichting}
+                  onChange={(e) => onToelichting(e.target.value)}
+                  rows={2}
+                  className="text-xs resize-none"
+                />
+              </div>
+              <BeslisScherm
+                item={item}
+                onBevestigen={onBevestigen}
+                onWijzigCategorie={onWijzigCategorie}
+                onBevestigenPersoneel={onBevestigenPersoneel}
+              />
+            </>
           )}
         </>
       ) : (
@@ -839,21 +868,31 @@ export function SlimUploadBalk() {
       toelichting: "",
     }));
 
-    // Automatiseringsregels verwerken — auto-gerouteerde items direct opslaan maar
-    // altijd in de wachtrij tonen zodat de gebruiker ziet wat er is gebeurd
+    // Automatiseringsregels verwerken — pre-fill de categorie maar altijd
+    // bevestiging vragen zodat de gebruiker een toelichting kan toevoegen.
     const queueItems: UploadItem[] = [];
     for (const item of nieuweItems) {
-      const ext     = haalExtensie(item.bestand.name);
-      const actief  = regelsHuidig.find((r) => r.extensie === ext && r.geautomatiseerd);
+      const ext    = haalExtensie(item.bestand.name);
+      const actief = regelsHuidig.find((r) => r.extensie === ext && r.geautomatiseerd);
       const catInfo = actief ? CATEGORIE_INFO[actief.categorie] : undefined;
       if (actief && catInfo) {
-        // Upload meteen naar inbox (fire and forget) — geen aparte navigatie
-        void uploadNaarInbox(item.bestand, item.toelichting);
+        // Synthetische suggestie zodat de beslisscherm-UI normaal rendert
+        const synthetischeSuggestie: SlimUploadSuggestie = {
+          categorie: actief.categorie,
+          voorstel_naam: item.bestand.name.replace(/\.[^.]+$/, "").replace(/[-_]/g, " ").trim(),
+          redenering: `Automatisch herkend op basis van eerder bevestigde regelinstelling voor ${actief.extensie}-bestanden.`,
+          vertrouwen: "hoog",
+          ai_beschikbaar: false,
+          vision_gebruikt: false,
+          gevonden_gegevens: {},
+          alternatieven: [],
+        };
         queueItems.push({
           ...item,
           status: "klaar" as const,
-          actieGenomen: true,
+          actieGenomen: false,
           gekozenCategorie: actief.categorie,
+          suggestie: synthetischeSuggestie,
         });
       } else {
         queueItems.push(item);
