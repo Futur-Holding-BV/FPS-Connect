@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { voerScoutUit, getScoutStatus } from "../lib/scoutService";
 import { db } from "@workspace/db";
 import {
   crmKlantenTable,
@@ -108,11 +109,13 @@ const mapConcurrent = (c: typeof crmConcurrentenTable.$inferSelect) => ({
 const mapMarkt = (m: typeof crmMarktintelligentieTable.$inferSelect) => ({
   id: m.id,
   type: m.type,
+  bron_type: m.bronType ?? "handmatig",
   organisatie_id: m.organisatieId,
   concurrent_id: m.concurrentId,
   titel: m.titel,
   inhoud: m.inhoud,
   bron: m.bron,
+  bron_url: m.bronUrl ?? null,
   regio: m.regio,
   datum: m.datum,
   aangemaakt_op: iso(m.aangemaaktOp),
@@ -592,6 +595,28 @@ Retourneer ALLEEN valide JSON zonder extra toelichting:
   }
 });
 
+router.get("/crm/scout/status", lezen, async (req, res) => {
+  try {
+    const status = await getScoutStatus();
+    res.json(status);
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+router.post("/crm/scout/start", schrijven, async (req, res) => {
+  if (!heeftOpenAi()) return res.status(503).json({ error: "AI niet beschikbaar" });
+  try {
+    voerScoutUit().catch((err) => req.log.error({ err }, "Scout fout (achtergrond)"));
+    const status = await getScoutStatus();
+    res.json(status);
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
 router.post("/crm/marktintelligentie", schrijven, async (req, res) => {
   try {
     const { type, organisatie_id, concurrent_id, titel, inhoud, bron, regio, datum } = req.body;
@@ -599,7 +624,7 @@ router.post("/crm/marktintelligentie", schrijven, async (req, res) => {
     const gebruikerId = req.session.userId ?? null;
     const [m] = await db
       .insert(crmMarktintelligentieTable)
-      .values({ type: type || "nieuws", organisatieId: organisatie_id ? parseId(organisatie_id) : null, concurrentId: concurrent_id ? parseId(concurrent_id) : null, titel, inhoud, bron, regio, datum, aangemaaktDoor: gebruikerId })
+      .values({ type: type || "nieuws", bronType: "handmatig", organisatieId: organisatie_id ? parseId(organisatie_id) : null, concurrentId: concurrent_id ? parseId(concurrent_id) : null, titel, inhoud, bron, regio, datum, aangemaaktDoor: gebruikerId })
       .returning();
     res.status(201).json(mapMarkt(m));
   } catch (err) {

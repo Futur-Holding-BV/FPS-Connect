@@ -132,6 +132,8 @@ export * from './crmOpdrachtInput';
 export * from './crmOrganisatie';
 export * from './crmProjectkans';
 export * from './crmProjectkansInput';
+export * from './crmScoutRun';
+export * from './crmScoutStatus';
 export * from './cvAnalyseResultaat';
 export * from './dashboardStats';
 export * from './dashboardStatsVoorzieningenPerTypeItem';

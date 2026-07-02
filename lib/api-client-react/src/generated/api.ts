@@ -116,6 +116,7 @@ import type {
   CrmOrganisatie,
   CrmProjectkans,
   CrmProjectkansInput,
+  CrmScoutStatus,
   DashboardStats,
   Document,
   DocumentAiAnalyseInput,
@@ -19580,6 +19581,153 @@ export const useScanCrmMarktintelligentieAi = <TError = ErrorType<ScanCrmMarktin
         TContext
       > => {
       return useMutation(getScanCrmMarktintelligentieAiMutationOptions(options));
+    }
+
+export const getGetCrmScoutStatusUrl = () => {
+
+
+
+
+  return `/api/crm/scout/status`
+}
+
+/**
+ * @summary Dagelijkse scout status ophalen
+ */
+export const getCrmScoutStatus = async ( options?: RequestInit): Promise<CrmScoutStatus> => {
+
+  return customFetch<CrmScoutStatus>(getGetCrmScoutStatusUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetCrmScoutStatusQueryKey = () => {
+    return [
+    `/api/crm/scout/status`
+    ] as const;
+    }
+
+
+export const getGetCrmScoutStatusQueryOptions = <TData = Awaited<ReturnType<typeof getCrmScoutStatus>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCrmScoutStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetCrmScoutStatusQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getCrmScoutStatus>>> = ({ signal }) => getCrmScoutStatus({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getCrmScoutStatus>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetCrmScoutStatusQueryResult = NonNullable<Awaited<ReturnType<typeof getCrmScoutStatus>>>
+export type GetCrmScoutStatusQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Dagelijkse scout status ophalen
+ */
+
+export function useGetCrmScoutStatus<TData = Awaited<ReturnType<typeof getCrmScoutStatus>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCrmScoutStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetCrmScoutStatusQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getStartCrmScoutUrl = () => {
+
+
+
+
+  return `/api/crm/scout/start`
+}
+
+/**
+ * @summary Dagelijkse scout handmatig starten
+ */
+export const startCrmScout = async ( options?: RequestInit): Promise<CrmScoutStatus> => {
+
+  return customFetch<CrmScoutStatus>(getStartCrmScoutUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getStartCrmScoutMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof startCrmScout>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof startCrmScout>>, TError,void, TContext> => {
+
+const mutationKey = ['startCrmScout'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof startCrmScout>>, void> = () => {
+
+
+          return  startCrmScout(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type StartCrmScoutMutationResult = NonNullable<Awaited<ReturnType<typeof startCrmScout>>>
+
+    export type StartCrmScoutMutationError = ErrorType<void>
+
+    /**
+ * @summary Dagelijkse scout handmatig starten
+ */
+export const useStartCrmScout = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof startCrmScout>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof startCrmScout>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getStartCrmScoutMutationOptions(options));
     }
 
 export const getGetCrmAiCoachUrl = () => {

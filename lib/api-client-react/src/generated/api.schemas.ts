@@ -423,6 +423,7 @@ export interface CrmConcurrentAiProfielInput {
 export interface CrmMarktintelligentie {
   id: number;
   type: string;
+  bron_type?: string;
   /** @nullable */
   organisatie_id?: number | null;
   /** @nullable */
@@ -433,11 +434,35 @@ export interface CrmMarktintelligentie {
   /** @nullable */
   bron?: string | null;
   /** @nullable */
+  bron_url?: string | null;
+  /** @nullable */
   regio?: string | null;
   /** @nullable */
   datum?: string | null;
   aangemaakt_op: string;
   bijgewerkt_op: string;
+}
+
+export interface CrmScoutRun {
+  id: number;
+  gestart_op: string;
+  /** @nullable */
+  afgerond_op?: string | null;
+  status: string;
+  /** @nullable */
+  gevonden?: number | null;
+  /** @nullable */
+  opgeslagen?: number | null;
+  /** @nullable */
+  foutmelding?: string | null;
+}
+
+export interface CrmScoutStatus {
+  /** @nullable */
+  volgende_run_op: string | null;
+  laatste_run?: CrmScoutRun | null;
+  regio?: string;
+  actief?: boolean;
 }
 
 export interface CrmMarktintelligentieVoorstel {

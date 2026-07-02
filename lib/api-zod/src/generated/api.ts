@@ -6785,11 +6785,13 @@ export const AiProfielCrmConcurrentResponse = zod.object({
 export const ListCrmMarktintelligentieResponseItem = zod.object({
   "id": zod.number(),
   "type": zod.string(),
+  "bron_type": zod.string().optional(),
   "organisatie_id": zod.number().nullish(),
   "concurrent_id": zod.number().nullish(),
   "titel": zod.string(),
   "inhoud": zod.string().nullish(),
   "bron": zod.string().nullish(),
+  "bron_url": zod.string().nullish(),
   "regio": zod.string().nullish(),
   "datum": zod.string().nullish(),
   "aangemaakt_op": zod.string(),
@@ -6831,6 +6833,44 @@ export const ScanCrmMarktintelligentieAiResponse = zod.array(ScanCrmMarktintelli
 
 
 /**
+ * @summary Dagelijkse scout status ophalen
+ */
+export const GetCrmScoutStatusResponse = zod.object({
+  "volgende_run_op": zod.string().nullable(),
+  "laatste_run": zod.object({
+  "id": zod.number(),
+  "gestart_op": zod.string(),
+  "afgerond_op": zod.string().nullish(),
+  "status": zod.string(),
+  "gevonden": zod.number().nullish(),
+  "opgeslagen": zod.number().nullish(),
+  "foutmelding": zod.string().nullish()
+}).nullish(),
+  "regio": zod.string().optional(),
+  "actief": zod.boolean().optional()
+})
+
+
+/**
+ * @summary Dagelijkse scout handmatig starten
+ */
+export const StartCrmScoutResponse = zod.object({
+  "volgende_run_op": zod.string().nullable(),
+  "laatste_run": zod.object({
+  "id": zod.number(),
+  "gestart_op": zod.string(),
+  "afgerond_op": zod.string().nullish(),
+  "status": zod.string(),
+  "gevonden": zod.number().nullish(),
+  "opgeslagen": zod.number().nullish(),
+  "foutmelding": zod.string().nullish()
+}).nullish(),
+  "regio": zod.string().optional(),
+  "actief": zod.boolean().optional()
+})
+
+
+/**
  * @summary AI Business Coach voor CRM-schermen
  */
 export const GetCrmAiCoachBody = zod.object({
@@ -6869,11 +6909,13 @@ export const UpdateCrmMarktintelligentieBody = zod.object({
 export const UpdateCrmMarktintelligentieResponse = zod.object({
   "id": zod.number(),
   "type": zod.string(),
+  "bron_type": zod.string().optional(),
   "organisatie_id": zod.number().nullish(),
   "concurrent_id": zod.number().nullish(),
   "titel": zod.string(),
   "inhoud": zod.string().nullish(),
   "bron": zod.string().nullish(),
+  "bron_url": zod.string().nullish(),
   "regio": zod.string().nullish(),
   "datum": zod.string().nullish(),
   "aangemaakt_op": zod.string(),

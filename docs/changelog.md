@@ -10,6 +10,19 @@ Grote roadmap-fases staan ook in `docs/roadmap/gebouwd.md` en `docs/roadmap/acti
 
 ---
 
+## 2026-07-02 — Dagelijkse AI Marktscout (CRM)
+
+**Uitvoering:** volledig | **Getest:** typecheck + server start bevestigd
+
+Automatische dagelijkse internet-scout voor commerciële kansen in regio Overijssel & Achterhoek:
+
+- **`scoutService.ts`** — haalt Google News RSS op voor 8 gerichte queries (bouwproject, nieuwbouw, brandveiligheid, aanbesteding, vastgoed, omgevingsvergunning etc.) in Overijssel/Achterhoek; OpenAI GPT-4o filtert op relevantie voor FPS en classificeert als kans/nieuws/aanbesteding/overig; deduplicatie voorkomt dubbele inserts (op titel en bron_url)
+- **DB** — `bron_type` (handmatig/scout/ai_scan) + `bron_url` kolommen op `crm_marktintelligentie`; nieuwe `crm_scout_runs` tabel voor run-historie (status, gevonden, opgeslagen, foutmelding)
+- **Scheduler** — dagelijks 07:00 via recursieve setTimeout (zelfde patroon als backupService); ingepland direct bij serverstart (log bevestigd)
+- **Routes** — `GET /crm/scout/status` (laatste run, volgende run, regio) + `POST /crm/scout/start` (handmatige trigger)
+- **Frontend** — marktintelligentie-pagina: groen statuspanel (laatste run, volgende run, +X vandaag gevonden), "Nu scannen" knop, bronfilter (Alle / Scout / Handmatig+AI), Scout-badge op auto-gegenereerde items, klikbare bron_url links
+- **OpenAPI + codegen** — `CrmMarktintelligentie` uitgebreid, nieuwe schemas `CrmScoutRun` + `CrmScoutStatus`, nieuwe operationIds `getCrmScoutStatus` + `startCrmScout`
+
 ## 2026-07-02 — Retour-artikelen scan (magazijn)
 
 **Uitvoering:** volledig | **Getest:** typecheck

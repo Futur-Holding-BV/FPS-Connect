@@ -5,6 +5,7 @@ import { planDagelijksBackup } from "./lib/backupService";
 import { planDagelijksePortaalOpruiming } from "./lib/portaalOpruimen";
 import { planDagelijkseMagazijnSignalering } from "./lib/magazijnSignalering";
 import { planDagelijksePlanningMeldingen } from "./lib/planningMeldingenService";
+import { planDagelijkseScout } from "./lib/scoutService";
 
 const rawPort = process.env["PORT"];
 
@@ -45,6 +46,7 @@ ensureSessionTable()
       planDagelijksePortaalOpruiming();
       planDagelijkseMagazijnSignalering();
       planDagelijksePlanningMeldingen();
+      planDagelijkseScout();
     });
   })
   .catch((err) => {

@@ -9,6 +9,7 @@
 export interface CrmMarktintelligentie {
   id: number;
   type: string;
+  bron_type?: string;
   /** @nullable */
   organisatie_id?: number | null;
   /** @nullable */
@@ -18,6 +19,8 @@ export interface CrmMarktintelligentie {
   inhoud?: string | null;
   /** @nullable */
   bron?: string | null;
+  /** @nullable */
+  bron_url?: string | null;
   /** @nullable */
   regio?: string | null;
   /** @nullable */

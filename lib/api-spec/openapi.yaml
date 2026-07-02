@@ -5541,6 +5541,34 @@ paths:
                   error:
                     type: string
 
+  /crm/scout/status:
+    get:
+      operationId: getCrmScoutStatus
+      tags: [crm]
+      summary: Dagelijkse scout status ophalen
+      responses:
+        "200":
+          description: Scout status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CrmScoutStatus"
+
+  /crm/scout/start:
+    post:
+      operationId: startCrmScout
+      tags: [crm]
+      summary: Dagelijkse scout handmatig starten
+      responses:
+        "200":
+          description: Scout gestart
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CrmScoutStatus"
+        "503":
+          description: AI niet beschikbaar
+
   /crm/ai-coach:
     post:
       operationId: getCrmAiCoach
@@ -17827,6 +17855,8 @@ components:
           type: integer
         type:
           type: string
+        bron_type:
+          type: string
         organisatie_id:
           type: ["integer", "null"]
         concurrent_id:
@@ -17837,6 +17867,8 @@ components:
           type: ["string", "null"]
         bron:
           type: ["string", "null"]
+        bron_url:
+          type: ["string", "null"]
         regio:
           type: ["string", "null"]
         datum:
@@ -17845,6 +17877,29 @@ components:
           type: string
         bijgewerkt_op:
           type: string
+
+    CrmScoutRun:
+      type: object
+      required: [id, gestart_op, status]
+      properties:
+        id:          { type: integer }
+        gestart_op:  { type: string }
+        afgerond_op: { type: ["string", "null"] }
+        status:      { type: string }
+        gevonden:    { type: ["integer", "null"] }
+        opgeslagen:  { type: ["integer", "null"] }
+        foutmelding: { type: ["string", "null"] }
+
+    CrmScoutStatus:
+      type: object
+      required: [volgende_run_op]
+      properties:
+        volgende_run_op:   { type: ["string", "null"] }
+        laatste_run:
+          nullable: true
+          $ref: "#/components/schemas/CrmScoutRun"
+        regio:             { type: string }
+        actief:            { type: boolean }
 
     CrmMarktintelligentieVoorstel:
       type: object

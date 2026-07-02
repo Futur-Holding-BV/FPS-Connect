@@ -149,16 +149,28 @@ export const crmConcurrentenTable = pgTable("crm_concurrenten", {
 export const crmMarktintelligentieTable = pgTable("crm_marktintelligentie", {
   id: serial("id").primaryKey(),
   type: text("type").notNull().default("nieuws"),
+  bronType: text("bron_type").notNull().default("handmatig"), // handmatig | ai_scan | scout
   organisatieId: integer("organisatie_id").references(() => crmKlantenTable.id, { onDelete: "set null" }),
   concurrentId: integer("concurrent_id").references(() => crmConcurrentenTable.id, { onDelete: "set null" }),
   titel: text("titel").notNull(),
   inhoud: text("inhoud"),
   bron: text("bron"),
+  bronUrl: text("bron_url"),
   regio: text("regio"),
   datum: text("datum"),
   aangemaaktDoor: integer("aangemaakt_door").references(() => gebruikersTable.id, { onDelete: "set null" }),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+});
+
+export const crmScoutRunsTable = pgTable("crm_scout_runs", {
+  id: serial("id").primaryKey(),
+  gestartOp: timestamp("gestart_op").notNull().defaultNow(),
+  afgerondOp: timestamp("afgerond_op"),
+  status: text("status").notNull().default("bezig"), // bezig | voltooid | fout
+  gevonden: integer("gevonden").default(0),
+  opgeslagen: integer("opgeslagen").default(0),
+  foutmelding: text("foutmelding"),
 });
 
 export const insertCrmKlantSchema = createInsertSchema(crmKlantenTable).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });

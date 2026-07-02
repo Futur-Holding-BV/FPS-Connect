@@ -5,7 +5,10 @@ import {
   useListCrmConcurrenten,
   useCreateCrmMarktintelligentie,
   useScanCrmMarktintelligentieAi,
+  useGetCrmScoutStatus,
+  useStartCrmScout,
   getListCrmMarktintelligentieQueryKey,
+  getGetCrmScoutStatusQueryKey,
 } from "@workspace/api-client-react";
 import type { CrmMarktintelligentie, CrmOrganisatie, CrmConcurrent, CrmMarktintelligentieVoorstel } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -22,7 +25,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { Newspaper, Plus, ArrowLeft, Calendar, Globe, Building2, Handshake, Sparkles, Loader2, Check } from "lucide-react";
+import { Newspaper, Plus, ArrowLeft, Calendar, Globe, Building2, Handshake, Sparkles, Loader2, Check, Radio, Clock, RefreshCw, MapPin } from "lucide-react";
 
 const TYPES = [
   { value: "nieuws", label: "Nieuws", kleur: "bg-blue-100 text-blue-700 border-blue-200" },
@@ -33,10 +36,20 @@ const TYPES = [
   { value: "overig", label: "Overig", kleur: "bg-muted text-muted-foreground border-border" },
 ];
 
+function formatDatum(iso: string | null | undefined): string {
+  if (!iso) return "";
+  try {
+    return new Date(iso).toLocaleDateString("nl-NL", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+  } catch {
+    return iso.slice(0, 10);
+  }
+}
+
 export default function MarktintelligentiePagina() {
   const qc = useQueryClient();
   const { toast } = useToast();
   const [typeFilter, setTypeFilter] = useState<string>("alle");
+  const [bronFilter, setBronFilter] = useState<string>("alle");
   const [nieuwOpen, setNieuwOpen] = useState(false);
 
   const [scanSheet, setScanSheet] = useState(false);
@@ -47,10 +60,21 @@ export default function MarktintelligentiePagina() {
   const { data: items = [], isLoading } = useListCrmMarktintelligentie();
   const { data: orgs = [] } = useListCrmKlanten();
   const { data: concurrenten = [] } = useListCrmConcurrenten();
+  const { data: scoutStatus } = useGetCrmScoutStatus();
   const aanmaken = useCreateCrmMarktintelligentie();
   const scan = useScanCrmMarktintelligentieAi();
+  const startScout = useStartCrmScout();
 
-  const gefilterd = typeFilter === "alle" ? (items as CrmMarktintelligentie[]) : (items as CrmMarktintelligentie[]).filter((i) => i.type === typeFilter);
+  const alleItems = items as CrmMarktintelligentie[];
+  const gefilterd = alleItems
+    .filter((i) => typeFilter === "alle" || i.type === typeFilter)
+    .filter((i) => {
+      if (bronFilter === "alle") return true;
+      if (bronFilter === "scout") return (i as unknown as { bron_type?: string }).bron_type === "scout";
+      if (bronFilter === "handmatig") return (i as unknown as { bron_type?: string }).bron_type !== "scout";
+      return true;
+    });
+
   const orgMap = new Map((orgs as CrmOrganisatie[]).map((o) => [o.id, o.naam]));
   const concMap = new Map((concurrenten as CrmConcurrent[]).map((c) => [c.id, c.naam]));
 
@@ -82,6 +106,17 @@ export default function MarktintelligentiePagina() {
     } catch {
       toast({ title: "AI-scan mislukt — controleer of AI beschikbaar is", variant: "destructive" });
       setScanSheet(false);
+    }
+  }
+
+  async function handleNuScannen() {
+    try {
+      await startScout.mutateAsync();
+      await qc.invalidateQueries({ queryKey: getGetCrmScoutStatusQueryKey() });
+      await qc.invalidateQueries({ queryKey: getListCrmMarktintelligentieQueryKey() });
+      toast({ title: "Scout gestart — resultaten verschijnen automatisch" });
+    } catch {
+      toast({ title: "Scout kon niet starten", variant: "destructive" });
     }
   }
 
@@ -119,6 +154,13 @@ export default function MarktintelligentiePagina() {
     }
   }
 
+  const scoutAantalVandaag = alleItems.filter((i) => {
+    const bt = (i as unknown as { bron_type?: string }).bron_type;
+    if (bt !== "scout") return false;
+    const vandaag = new Date().toISOString().slice(0, 10);
+    return (i.aangemaakt_op ?? "").slice(0, 10) === vandaag;
+  }).length;
+
   return (
     <div className="p-6 space-y-4 max-w-4xl mx-auto">
       <div className="flex items-center gap-3">
@@ -138,12 +180,75 @@ export default function MarktintelligentiePagina() {
         </Button>
       </div>
 
-      {/* Type filters */}
-      <div className="flex gap-2 flex-wrap">
-        <Button variant={typeFilter === "alle" ? "default" : "outline"} size="sm" className="h-8 text-xs" onClick={() => setTypeFilter("alle")}>Alles</Button>
-        {TYPES.map((t) => (
-          <Button key={t.value} variant={typeFilter === t.value ? "default" : "outline"} size="sm" className="h-8 text-xs" onClick={() => setTypeFilter(t.value)}>{t.label}</Button>
-        ))}
+      {/* Scout-statuspanel */}
+      {scoutStatus && (
+        <div className="rounded-lg border bg-muted/30 px-4 py-3">
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <div className="flex items-center gap-2.5">
+              <div className="flex items-center gap-1.5">
+                <Radio className="w-3.5 h-3.5 text-emerald-500" />
+                <span className="text-xs font-medium">Dagelijkse scout</span>
+              </div>
+              <span className="text-xs text-muted-foreground flex items-center gap-1">
+                <MapPin className="w-3 h-3" />
+                {scoutStatus.regio}
+              </span>
+              {scoutStatus.laatste_run && (
+                <span className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Clock className="w-3 h-3" />
+                  Laatste run: {formatDatum(scoutStatus.laatste_run.gestart_op)}
+                  {scoutStatus.laatste_run.opgeslagen != null && scoutStatus.laatste_run.opgeslagen > 0 && (
+                    <span className="ml-1 text-emerald-600 font-medium">+{scoutStatus.laatste_run.opgeslagen} nieuw</span>
+                  )}
+                  {scoutStatus.laatste_run.status === "fout" && (
+                    <span className="ml-1 text-destructive">fout</span>
+                  )}
+                </span>
+              )}
+              {scoutStatus.volgende_run_op && (
+                <span className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Clock className="w-3 h-3" />
+                  Volgende: {formatDatum(scoutStatus.volgende_run_op)}
+                </span>
+              )}
+              {scoutAantalVandaag > 0 && (
+                <Badge variant="outline" className="text-xs border-emerald-200 bg-emerald-50 text-emerald-700">
+                  {scoutAantalVandaag} vandaag gevonden
+                </Badge>
+              )}
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 text-xs gap-1.5 shrink-0"
+              onClick={handleNuScannen}
+              disabled={startScout.isPending}
+            >
+              {startScout.isPending ? (
+                <><Loader2 className="w-3 h-3 animate-spin" /> Bezig...</>
+              ) : (
+                <><RefreshCw className="w-3 h-3" /> Nu scannen</>
+              )}
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Filters */}
+      <div className="space-y-2">
+        <div className="flex gap-2 flex-wrap">
+          <Button variant={typeFilter === "alle" ? "default" : "outline"} size="sm" className="h-8 text-xs" onClick={() => setTypeFilter("alle")}>Alles</Button>
+          {TYPES.map((t) => (
+            <Button key={t.value} variant={typeFilter === t.value ? "default" : "outline"} size="sm" className="h-8 text-xs" onClick={() => setTypeFilter(t.value)}>{t.label}</Button>
+          ))}
+        </div>
+        <div className="flex gap-2 flex-wrap">
+          <Button variant={bronFilter === "alle" ? "secondary" : "ghost"} size="sm" className="h-7 text-xs" onClick={() => setBronFilter("alle")}>Alle bronnen</Button>
+          <Button variant={bronFilter === "scout" ? "secondary" : "ghost"} size="sm" className="h-7 text-xs gap-1" onClick={() => setBronFilter("scout")}>
+            <Radio className="w-3 h-3 text-emerald-500" /> Scout
+          </Button>
+          <Button variant={bronFilter === "handmatig" ? "secondary" : "ghost"} size="sm" className="h-7 text-xs" onClick={() => setBronFilter("handmatig")}>Handmatig / AI</Button>
+        </div>
       </div>
 
       {/* Items */}
@@ -163,19 +268,35 @@ export default function MarktintelligentiePagina() {
             const tInfo = typeInfo(item.type);
             const orgNaam = item.organisatie_id ? orgMap.get(item.organisatie_id) : null;
             const concNaam = item.concurrent_id ? concMap.get(item.concurrent_id) : null;
+            const isScout = (item as unknown as { bron_type?: string }).bron_type === "scout";
+            const bronUrl = (item as unknown as { bron_url?: string }).bron_url;
             return (
               <Card key={item.id}>
                 <CardContent className="p-4">
                   <div className="flex items-start gap-3">
                     <Badge variant="outline" className={`text-xs border shrink-0 mt-0.5 ${tInfo.kleur}`}>{tInfo.label}</Badge>
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-sm">{item.titel}</p>
-                      {item.inhoud && <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{item.inhoud}</p>}
+                      <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                        <p className="font-semibold text-sm">{item.titel}</p>
+                        {isScout && (
+                          <span className="inline-flex items-center gap-1 text-xs text-emerald-600 border border-emerald-200 bg-emerald-50 rounded px-1.5 py-0.5 shrink-0">
+                            <Radio className="w-2.5 h-2.5" /> Scout
+                          </span>
+                        )}
+                      </div>
+                      {item.inhoud && <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{item.inhoud}</p>}
                       <div className="flex items-center gap-3 mt-2 flex-wrap">
                         {orgNaam && <span className="text-xs text-muted-foreground flex items-center gap-1"><Building2 className="w-3 h-3" />{orgNaam}</span>}
                         {concNaam && <span className="text-xs text-muted-foreground flex items-center gap-1"><Handshake className="w-3 h-3" />{concNaam}</span>}
-                        {item.regio && <span className="text-xs text-muted-foreground">{item.regio}</span>}
-                        {item.bron && <span className="text-xs text-muted-foreground flex items-center gap-1"><Globe className="w-3 h-3" />{item.bron}</span>}
+                        {item.regio && <span className="text-xs text-muted-foreground flex items-center gap-1"><MapPin className="w-3 h-3" />{item.regio}</span>}
+                        {item.bron && (
+                          <span className="text-xs text-muted-foreground flex items-center gap-1">
+                            <Globe className="w-3 h-3" />
+                            {bronUrl ? (
+                              <a href={bronUrl} target="_blank" rel="noopener noreferrer" className="hover:underline hover:text-primary">{item.bron}</a>
+                            ) : item.bron}
+                          </span>
+                        )}
                         {item.datum && <span className="text-xs text-muted-foreground flex items-center gap-1"><Calendar className="w-3 h-3" />{item.datum}</span>}
                       </div>
                     </div>
