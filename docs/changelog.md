@@ -10,6 +10,34 @@ Grote roadmap-fases staan ook in `docs/roadmap/gebouwd.md` en `docs/roadmap/acti
 
 ---
 
+## 2026-07-02 — Domeinarchitectuur: migratievoorstel 6 domeinen
+
+**Uitvoering:** volledig | **Getest:** niet van toepassing (document-only)
+
+### Wat er gedaan is
+
+Volledige analyse van de huidige navigatiestructuur (`beheerder-layout.tsx`, 57 nav-items) en een gedetailleerd migratievoorstel opgesteld dat alle items mapt naar 6 nieuwe domeinen.
+
+**Rapport:** `docs/domeinarchitectuur-migratievoorstel.md` — bevat:
+- Huidige structuur (12 secties, 57 items) versus nieuwe domeinstructuur (6 domeinen)
+- Per domein: alle items met huidig pad, huidige sectie en toelichting
+- Samenvatting van 7 concrete verplaatsingen (van 57 items)
+- Impact per domein (navigatieimpact + aanbevelingen)
+- Aanbevolen implementatievolgorde (Domein 6 → 3 → 2 → 5 → 4 → 1)
+- 4 openstaande vragen ter beoordeling (Opnames, AccountView-koppeling, Toolbox-splitsing, Dashboard)
+
+**Geen code gewijzigd** — uitsluitend een analysedocument.
+
+**Domeinindeling:**
+1. Projecten & Uitvoering (10 items)
+2. Inkoop, Magazijn & Veiligheid (18 items) — Gereedschappen komt hierheen
+3. Financieel & Loon (15 items) — Financieel + Loon samengevoegd
+4. Commercie (9 items) — Opnames/Calculaties/Offertes komen hierheen
+5. Organisatie & Communicatie (19 items)
+6. Instellingen & Beheer (24 items) — Documentopmaak/Studio/Workflow komen hierheen
+
+---
+
 ## 2026-07-02 — Audit: module-integratieaudit FPS Connect / FPS One
 
 **Uitvoering:** volledig | **Getest:** niet van toepassing (read-only audit)
