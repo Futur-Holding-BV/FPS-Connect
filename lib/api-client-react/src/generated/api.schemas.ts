@@ -57,7 +57,11 @@ export interface AiAanroepLog {
   /** @nullable */
   gebouw_id?: number | null;
   /** @nullable */
+  gebouw_naam?: string | null;
+  /** @nullable */
   offerte_id?: number | null;
+  /** @nullable */
+  offerte_referentie?: string | null;
   /** @nullable */
   project_id?: number | null;
 }
@@ -10307,6 +10311,7 @@ pagina?: number;
 per_pagina?: number;
 module?: string;
 status?: string;
+gebouw_naam?: string;
 gebouw_id?: number;
 offerte_id?: number;
 datum_van?: string;

@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { aiAanroepenTable } from "@workspace/db";
-import { desc, count, eq, and, gte, lte, sql, sum } from "drizzle-orm";
+import { aiAanroepenTable, gebouwenTable, offertesTable } from "@workspace/db";
+import { desc, count, eq, and, gte, lte, sql, sum, ilike, getTableColumns } from "drizzle-orm";
 import { requireRol } from "../middlewares/auth";
 
 const router = Router();
@@ -14,6 +14,7 @@ router.get(
     const perPagina = Math.min(200, Math.max(1, parseInt(String(req.query.per_pagina ?? "50"), 10) || 50));
     const moduleFilter = typeof req.query.module === "string" ? req.query.module.trim() : null;
     const statusFilter = typeof req.query.status === "string" ? req.query.status.trim() : null;
+    const gebouwNaamFilter = typeof req.query.gebouw_naam === "string" && req.query.gebouw_naam.trim() ? req.query.gebouw_naam.trim() : null;
     const gebouwIdFilter = req.query.gebouw_id ? parseInt(String(req.query.gebouw_id), 10) : null;
     const offerteIdFilter = req.query.offerte_id ? parseInt(String(req.query.offerte_id), 10) : null;
     const datumVan = typeof req.query.datum_van === "string" ? req.query.datum_van.trim() : null;
@@ -42,13 +43,30 @@ router.get(
         sql`(${aiAanroepenTable.contextJson}->>'offerte_id')::int = ${offerteIdFilter}`
       );
     }
+    if (gebouwNaamFilter) {
+      conditions.push(ilike(gebouwenTable.naam, `%${gebouwNaamFilter}%`));
+    }
 
     const where = conditions.length > 0 ? and(...conditions) : undefined;
 
+    const offerteReferentieExpr = sql<string | null>`COALESCE(${offertesTable.offertenummer}, ${offertesTable.titel})`;
+
     const [rows, [{ totaal }], [{ totaleKosten }]] = await Promise.all([
       db
-        .select()
+        .select({
+          ...getTableColumns(aiAanroepenTable),
+          gebouwNaam: gebouwenTable.naam,
+          offerteReferentie: offerteReferentieExpr,
+        })
         .from(aiAanroepenTable)
+        .leftJoin(
+          gebouwenTable,
+          sql`${gebouwenTable.id} = (${aiAanroepenTable.contextJson}->>'gebouw_id')::int`
+        )
+        .leftJoin(
+          offertesTable,
+          sql`${offertesTable.id} = (${aiAanroepenTable.contextJson}->>'offerte_id')::int`
+        )
         .where(where)
         .orderBy(desc(aiAanroepenTable.aangemaaktOp))
         .limit(perPagina)
@@ -56,10 +74,18 @@ router.get(
       db
         .select({ totaal: count() })
         .from(aiAanroepenTable)
+        .leftJoin(
+          gebouwenTable,
+          sql`${gebouwenTable.id} = (${aiAanroepenTable.contextJson}->>'gebouw_id')::int`
+        )
         .where(where),
       db
         .select({ totaleKosten: sum(aiAanroepenTable.geschatteKostenEur) })
         .from(aiAanroepenTable)
+        .leftJoin(
+          gebouwenTable,
+          sql`${gebouwenTable.id} = (${aiAanroepenTable.contextJson}->>'gebouw_id')::int`
+        )
         .where(where),
     ]);
 
@@ -67,7 +93,9 @@ router.get(
       const c = r.contextJson as Record<string, unknown> | null;
       return {
         gebouw_id: c?.gebouw_id != null ? Number(c.gebouw_id) : null,
+        gebouw_naam: r.gebouwNaam ?? null,
         offerte_id: c?.offerte_id != null ? Number(c.offerte_id) : null,
+        offerte_referentie: r.offerteReferentie ?? null,
         project_id: c?.project_id != null ? Number(c.project_id) : null,
       };
     };

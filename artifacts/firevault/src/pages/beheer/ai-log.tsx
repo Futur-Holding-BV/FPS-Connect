@@ -81,7 +81,7 @@ export default function AiLogPagina() {
 
   const [module, setModule] = useState<string>("");
   const [status, setStatus] = useState<string>("");
-  const [gebouwId, setGebouwId] = useState<string>("");
+  const [gebouwNaam, setGebouwNaam] = useState<string>("");
   const [offerteId, setOfferteId] = useState<string>("");
   const [datumVan, setDatumVan] = useState<string>("");
   const [datumTot, setDatumTot] = useState<string>("");
@@ -92,7 +92,7 @@ export default function AiLogPagina() {
     per_pagina: 50,
     ...(module ? { module } : {}),
     ...(status ? { status } : {}),
-    ...(gebouwId && !isNaN(parseInt(gebouwId)) ? { gebouw_id: parseInt(gebouwId) } : {}),
+    ...(gebouwNaam.trim() ? { gebouw_naam: gebouwNaam.trim() } : {}),
     ...(offerteId && !isNaN(parseInt(offerteId)) ? { offerte_id: parseInt(offerteId) } : {}),
     ...(datumVan ? { datum_van: datumVan } : {}),
     ...(datumTot ? { datum_tot: datumTot } : {}),
@@ -141,7 +141,7 @@ export default function AiLogPagina() {
   function resetFilters() {
     setModule("");
     setStatus("");
-    setGebouwId("");
+    setGebouwNaam("");
     setOfferteId("");
     setDatumVan("");
     setDatumTot("");
@@ -153,7 +153,7 @@ export default function AiLogPagina() {
   }
 
   const totaalPaginas = lijst ? Math.ceil(lijst.totaal / 50) : 1;
-  const heeftFilters = module || status || gebouwId || offerteId || datumVan || datumTot;
+  const heeftFilters = module || status || gebouwNaam || offerteId || datumVan || datumTot;
 
   return (
     <div className="p-6 space-y-6 max-w-screen-xl mx-auto">
@@ -302,12 +302,12 @@ export default function AiLogPagina() {
               </Select>
             </div>
             <div>
-              <label className="text-xs text-muted-foreground mb-1 block">Gebouw-ID</label>
+              <label className="text-xs text-muted-foreground mb-1 block">Gebouw-naam</label>
               <Input
                 className="h-8 text-sm"
-                placeholder="bijv. 42"
-                value={gebouwId}
-                onChange={(e) => { setGebouwId(e.target.value); handleFilterWijzig(); }}
+                placeholder="bijv. Kantoor"
+                value={gebouwNaam}
+                onChange={(e) => { setGebouwNaam(e.target.value); handleFilterWijzig(); }}
               />
             </div>
             <div>
@@ -447,7 +447,7 @@ export default function AiLogPagina() {
                             className="underline decoration-dotted hover:text-foreground"
                             onClick={() => navigate(`/gebouwen/${r.gebouw_id}`)}
                           >
-                            Gebouw {r.gebouw_id}
+                            {r.gebouw_naam ?? `Gebouw ${r.gebouw_id}`}
                           </button>
                         )}
                         {r.offerte_id != null && (
@@ -455,7 +455,7 @@ export default function AiLogPagina() {
                             className="underline decoration-dotted hover:text-foreground ml-2"
                             onClick={() => navigate(`/offertes`)}
                           >
-                            Offerte {r.offerte_id}
+                            {r.offerte_referentie ?? `Offerte ${r.offerte_id}`}
                           </button>
                         )}
                         {r.project_id != null && (

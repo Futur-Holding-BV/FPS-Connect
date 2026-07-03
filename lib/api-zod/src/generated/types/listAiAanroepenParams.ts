@@ -11,6 +11,7 @@ pagina?: number;
 per_pagina?: number;
 module?: string;
 status?: string;
+gebouw_naam?: string;
 gebouw_id?: number;
 offerte_id?: number;
 datum_van?: Date;

@@ -16870,6 +16870,10 @@ paths:
           schema:
             type: string
         - in: query
+          name: gebouw_naam
+          schema:
+            type: string
+        - in: query
           name: gebouw_id
           schema:
             type: integer
@@ -18011,7 +18015,9 @@ components:
           additionalProperties: true
           description: Businesscontext en contextbronnen die bij deze aanroep zijn gebruikt
         gebouw_id:      { type: ["integer", "null"] }
+        gebouw_naam:    { type: ["string", "null"] }
         offerte_id:     { type: ["integer", "null"] }
+        offerte_referentie: { type: ["string", "null"] }
         project_id:     { type: ["integer", "null"] }
 
     AiAanroepenPagina:

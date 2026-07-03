@@ -21378,6 +21378,7 @@ export const ListAiAanroepenQueryParams = zod.object({
   "per_pagina": zod.coerce.number().default(listAiAanroepenQueryPerPaginaDefault),
   "module": zod.coerce.string().optional(),
   "status": zod.coerce.string().optional(),
+  "gebouw_naam": zod.coerce.string().optional(),
   "gebouw_id": zod.coerce.number().optional(),
   "offerte_id": zod.coerce.number().optional(),
   "datum_van": zod.date().optional(),
@@ -21408,7 +21409,9 @@ export const ListAiAanroepenResponse = zod.object({
   "uitvoer_tekst": zod.string().nullish().describe('Eerste 8000 tekens van het AI-antwoord (het voorstel)'),
   "context_json": zod.record(zod.string(), zod.unknown()).nullish().describe('Businesscontext en contextbronnen die bij deze aanroep zijn gebruikt'),
   "gebouw_id": zod.number().nullish(),
+  "gebouw_naam": zod.string().nullish(),
   "offerte_id": zod.number().nullish(),
+  "offerte_referentie": zod.string().nullish(),
   "project_id": zod.number().nullish()
 })),
   "totaal": zod.number(),
