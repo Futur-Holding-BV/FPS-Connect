@@ -21079,7 +21079,9 @@ export const ListAiAanroepenResponse = zod.object({
   "geschatte_kosten_eur": zod.string().nullish(),
   "duur_ms": zod.number().nullish(),
   "status": zod.string(),
-  "foutmelding": zod.string().nullish()
+  "foutmelding": zod.string().nullish(),
+  "uitvoer_tekst": zod.string().nullish().describe('Eerste 8000 tekens van het AI-antwoord (het voorstel)'),
+  "context_json": zod.record(zod.string(), zod.unknown()).nullish().describe('Businesscontext en contextbronnen die bij deze aanroep zijn gebruikt')
 })),
   "totaal": zod.number(),
   "totale_kosten_eur": zod.string().nullish(),

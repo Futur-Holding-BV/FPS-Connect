@@ -21,4 +21,5 @@ export const aiAanroepenTable = pgTable("ai_aanroepen", {
   status: text("status").notNull().default("ok"),
   foutmelding: text("foutmelding"),
   contextJson: jsonb("context_json"),
+  uitvoerTekst: text("uitvoer_tekst"),
 });

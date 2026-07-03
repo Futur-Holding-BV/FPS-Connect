@@ -5,6 +5,7 @@
  * FPS Brandpreventie - Platform voor brandpreventieve gebouwvoorzieningen
  * OpenAPI spec version: 0.1.0
  */
+import type { AiAanroepLogContextJson } from './aiAanroepLogContextJson';
 
 export interface AiAanroepLog {
   id: number;
@@ -39,4 +40,14 @@ export interface AiAanroepLog {
   status: string;
   /** @nullable */
   foutmelding?: string | null;
+  /**
+     * Eerste 8000 tekens van het AI-antwoord (het voorstel)
+     * @nullable
+     */
+  uitvoer_tekst?: string | null;
+  /**
+     * Businesscontext en contextbronnen die bij deze aanroep zijn gebruikt
+     * @nullable
+     */
+  context_json?: AiAanroepLogContextJson;
 }

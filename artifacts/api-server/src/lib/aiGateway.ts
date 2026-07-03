@@ -227,6 +227,7 @@ function logAanroep(record: {
   status: string;
   foutmelding: string | null;
   contextJson: Record<string, unknown> | null;
+  uitvoerTekst: string | null;
 }): void {
   db.insert(aiAanroepenTable).values(record).catch((err) => {
     logger.warn({ err }, "AI-aanroeplogging mislukt (fire-and-forget)");
@@ -307,6 +308,7 @@ class AiGatewayService {
           status: inhoud ? "ok" : "fout",
           foutmelding: inhoud ? null : "Geen inhoud in antwoord",
           contextJson,
+          uitvoerTekst: inhoud ? inhoud.slice(0, 8000) : null,
         });
 
         if (!inhoud) {
@@ -339,6 +341,7 @@ class AiGatewayService {
             status: statusCode,
             foutmelding: bericht.slice(0, 500),
             contextJson,
+            uitvoerTekst: null,
           });
           return { ok: false, fout: `AI-aanroep mislukt: ${bericht}` };
         }
@@ -396,6 +399,7 @@ class AiGatewayService {
           status: inhoud ? "ok" : "fout",
           foutmelding: inhoud ? null : "Geen output_text in antwoord",
           contextJson,
+          uitvoerTekst: inhoud ? inhoud.slice(0, 8000) : null,
         });
 
         if (!inhoud) {
@@ -428,6 +432,7 @@ class AiGatewayService {
             status: statusCode,
             foutmelding: bericht.slice(0, 500),
             contextJson,
+            uitvoerTekst: null,
           });
           return { ok: false, fout: `AI responses-aanroep mislukt: ${bericht}` };
         }

@@ -35,6 +35,7 @@ export * from './achievementControleerResponse';
 export * from './activiteit';
 export * from './aiAanroepenPagina';
 export * from './aiAanroepLog';
+export * from './aiAanroepLogContextJson';
 export * from './aiAnalyseToolboxBerichten200';
 export * from './aiCalculatieRegels200';
 export * from './aiChatAntwoord';

@@ -4,6 +4,23 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-03 — AI-inzicht: context en voorstellen zichtbaar in beheerdersdashboard
+
+**Uitvoering:** volledig | **Diepere lagen:** volledig | **Getest:** typecheck schoon, DB-kolom aanwezig
+
+Puur observabiliteitsuitbreiding — nul invloed op AI-gedrag. Bestaande workflows worden zichtbaarder en controleerbaar.
+
+- **DB schema** — additieve nullable kolom `uitvoer_tekst text` toegevoegd aan `ai_aanroepen` via direct ALTER SQL
+- **Gateway (`aiGateway.ts`)** — fire-and-forget logAanroep slaat nu `uitvoerTekst` op (max 8000 tekens van het AI-antwoord), zowel bij `chat()` als `responses()`; geen invloed op het return-pad
+- **API route (`ai-log.ts`)** — `uitvoer_tekst` en `context_json` nu teruggegeven in de list-response; `context_json` was al opgeslagen in de DB maar werd eerder niet blootgesteld
+- **OpenAPI spec** — `uitvoer_tekst` en `context_json` toegevoegd aan `AiAanroepLog` schema; codegen uitgevoerd
+- **Dashboard (`beheer/ai-aanroepen.tsx`)** — volledig herschreven met:
+  - Klikbare tabelrijen — klik opent een detail-drawer (Sheet)
+  - Context-kolom met iconen: blauw = context beschikbaar, groen = voorstel beschikbaar
+  - Detail-drawer toont: meta (module/model/tokens/kosten/duur), gekoppelde entiteiten (gebouw-ID, offerte-ID etc.), contextbronnen (type + label), AI-voorstel tekst met inklapbare weergave
+  - Timeout-status badge toegevoegd naast Geslaagd/Mislukt
+  - Module-filterlijst uitgebreid met `factuur`
+
 ## 2026-07-03 — Stabiliteitsfix: AI-uitval levert geen lege pagina meer op
 
 **Uitvoering:** volledig | **Diepere lagen:** volledig | **Getest:** typecheck schoon

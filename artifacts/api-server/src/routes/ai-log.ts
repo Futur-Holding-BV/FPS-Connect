@@ -71,6 +71,8 @@ router.get(
       duur_ms: r.duurMs ?? null,
       status: r.status,
       foutmelding: r.foutmelding ?? null,
+      uitvoer_tekst: r.uitvoerTekst ?? null,
+      context_json: r.contextJson ?? null,
     }));
 
     res.json({
