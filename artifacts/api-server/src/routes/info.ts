@@ -78,8 +78,23 @@ router.put(
       };
 
       const [bestaand] = await db
-        .select({ id: appInstellingenTable.id })
+        .select({
+          id: appInstellingenTable.id,
+          aiKostendrempelEur: appInstellingenTable.aiKostendrempelEur,
+          aiDrempelMeldingGestuurdMaand: appInstellingenTable.aiDrempelMeldingGestuurdMaand,
+        })
         .from(appInstellingenTable);
+
+      if (ai_kostendrempel_eur !== undefined && bestaand?.aiDrempelMeldingGestuurdMaand) {
+        const huidigeDrempel =
+          bestaand.aiKostendrempelEur != null ? parseFloat(bestaand.aiKostendrempelEur) : null;
+        const nieuweDrempel = ai_kostendrempel_eur;
+        const drempelVerlaagd =
+          nieuweDrempel != null && (huidigeDrempel == null || nieuweDrempel < huidigeDrempel);
+        if (drempelVerlaagd) {
+          payload.aiDrempelMeldingGestuurdMaand = null;
+        }
+      }
 
       let result;
       if (bestaand) {

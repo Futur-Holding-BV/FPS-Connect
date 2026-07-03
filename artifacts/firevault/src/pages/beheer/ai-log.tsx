@@ -222,6 +222,9 @@ function DrempelInstellingKaart() {
                 />
               </div>
               {fout && <p className="text-xs text-red-600 mt-1">{fout}</p>}
+              <p className="text-xs text-muted-foreground mt-1.5">
+                De drempelmelding wordt eenmalig per maand verstuurd. Als je de drempel verlaagt, wordt de melding direct opnieuw ingeschakeld.
+              </p>
             </div>
             <div className="flex gap-2">
               <Button
