@@ -77,7 +77,7 @@ import aiRouter from "./ai";
 import { pbmRouter } from "./pbm";
 import { regieRouter } from "./regie";
 import contractBewakingRouter from "./contract-bewaking";
-import { requireAuth } from "../middlewares/auth";
+import { requireAuth, laadPermissies } from "../middlewares/auth";
 import { meldActief } from "../lib/online-tracker";
 import { maakAuditMiddleware } from "../lib/audit";
 import auditRouter from "./audit";
@@ -93,6 +93,8 @@ router.use(uitnodigingRouter);
 router.use(portaalRouter);
 // Vanaf hier vereist alles een geldige sessie
 router.use(requireAuth);
+// Laad permissies één keer per request — req.permissies beschikbaar op alle routes
+router.use(laadPermissies);
 // Universele audit trail — onderschept alle muterende requests
 router.use(maakAuditMiddleware());
 // Online-aanwezigheid bijhouden (debounced, fire-and-forget)

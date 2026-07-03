@@ -15,7 +15,7 @@ import {
 } from "@workspace/db";
 import { eq, inArray, count, and, sql, max, ne, desc } from "drizzle-orm";
 import { requireBevoegdheid, requireBevoegdheidOfKlant } from "../middlewares/auth";
-import { effectieveContext, magBijGebouw, toegewezenGebouwIds } from "../utils/rol";
+import { effectieveContext, toegewezenGebouwIds } from "../utils/rol";
 import { logActiviteit } from "../lib/activiteit";
 import { mapDocument } from "../lib/documenten";
 import { logDocumentActie } from "../lib/document-logboek";
@@ -918,7 +918,7 @@ router.delete("/verdiepingen/:id", requireBevoegdheid("gebouwen", 4), async (req
 router.get("/gebouwen/:id/toewijzingen", lezenGebouwen, async (req, res) => {
   try {
     const gebouwId = parseInt(String(req.params.id));
-    if (!(await magBijGebouw(req, gebouwId))) {
+    if (!(req.permissies!.magBijGebouw(gebouwId))) {
       res.status(403).json({ error: "Geen toegang tot dit gebouw" });
       return;
     }
@@ -957,7 +957,7 @@ router.get("/gebouwen/:id/toewijzingen", lezenGebouwen, async (req, res) => {
 router.get("/gebouwen/:id/facturen", lezenGebouwen, async (req, res) => {
   const gebouwId = parseInt(String(req.params.id), 10);
   if (isNaN(gebouwId)) { res.status(400).json({ error: "Ongeldig id" }); return; }
-  if (!(await magBijGebouw(req, gebouwId))) { res.status(403).json({ error: "Geen toegang" }); return; }
+  if (!(req.permissies!.magBijGebouw(gebouwId))) { res.status(403).json({ error: "Geen toegang" }); return; }
 
   try {
     const facturen = await db.select().from(facturenTable)
@@ -1012,7 +1012,7 @@ router.get("/gebouwen/:id/facturen", lezenGebouwen, async (req, res) => {
 router.get("/gebouwen/:id/spots-inzicht", lezenGebouwen, async (req, res) => {
   try {
     const gebouwId = parseInt(String(req.params.id));
-    if (!(await magBijGebouw(req, gebouwId))) {
+    if (!(req.permissies!.magBijGebouw(gebouwId))) {
       res.status(403).json({ error: "Geen toegang tot dit gebouw" });
       return;
     }
@@ -1215,7 +1215,7 @@ function partijRij(p: typeof gebouwPartijenTable.$inferSelect) {
 router.get("/gebouwen/:id/partijen", lezenGebouwen, async (req, res) => {
   try {
     const gebouwId = parseInt(String(req.params.id));
-    if (!(await magBijGebouw(req, gebouwId))) {
+    if (!(req.permissies!.magBijGebouw(gebouwId))) {
       res.status(403).json({ error: "Geen toegang tot dit gebouw" });
       return;
     }
@@ -1329,7 +1329,7 @@ function tekeningRij(t: typeof tekeningenTable.$inferSelect) {
 router.get("/gebouwen/:id/tekeningen", lezenGebouwen, async (req, res) => {
   try {
     const gebouwId = parseInt(String(req.params.id));
-    if (!(await magBijGebouw(req, gebouwId))) {
+    if (!(req.permissies!.magBijGebouw(gebouwId))) {
       res.status(403).json({ error: "Geen toegang tot dit gebouw" });
       return;
     }

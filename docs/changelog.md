@@ -8,6 +8,19 @@ Voor elke taak drie scores:
 
 Grote roadmap-fases staan ook in `docs/roadmap/gebouwd.md` en `docs/roadmap/actief.md`.
 
+## 2026-07-03 — Task #180: Centrale Rechtenstructuur — geïntegreerd in productie
+
+**Uitvoering:** volledig | **Diepere lagen:** volledig | **Getest:** typecheck + server healthcheck
+
+De volledige rechteninfrastructuur (al gebouwd) is nu ook daadwerkelijk actief in de productie-routes:
+
+1. **`laadPermissies()` globaal aangekoppeld** (`routes/index.ts`) — recht na `requireAuth`; `req.permissies` is beschikbaar op _elke_ authenticated route.
+2. **`requireBevoegdheid` + `requireBevoegdheidOfKlant` delegeren aan `req.permissies`** — als de service al geladen is, vervalt de extra DB-query; fallback op eigen query blijft als veiligheidsnet.
+3. **32 `magBijGebouw`-aanroepen gemigreerd** — gebouwen.ts (5), voorzieningen.ts (24), inspecties.ts (3) roepen nu `req.permissies!.magBijGebouw(gebouwId)` aan (synchroon, geen DB-round meer); `magBijGebouwVoorId as magBijGebouw` imports verwijderd.
+4. **Planner preset aangemaakt in DB** (id=10) — `planning:4, toolbox:2, gebouwen:2, voorzieningen:1, onderhoud:1, personeel:1`.
+
+Wat al bestond en nu actief werkt: `objectRechtenTable`, `PermissieService`, `requireObjectRecht()`, object-rechten CRUD-routes, frontend beheerder-pagina (`/beheer/object-rechten`).
+
 ## 2026-07-03 — Acceptatierapport vijf basisopdrachten
 
 **Uitvoering:** auditrapport (geen productiecode) | **Getest:** n.v.t.

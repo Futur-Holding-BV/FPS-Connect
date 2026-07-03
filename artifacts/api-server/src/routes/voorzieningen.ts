@@ -19,7 +19,7 @@ import {
 import { eq, and, ilike, sql, inArray } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { heeftNiveau } from "@workspace/permissies";
-import { effectieveContext, magBijGebouwVoorId as magBijGebouw, toegewezenGebouwIds } from "../utils/rol";
+import { effectieveContext, toegewezenGebouwIds } from "../utils/rol";
 import { getLabelsVoorVoorziening, syncVoorzieningLabels } from "../lib/classificatie";
 import { logActiviteit } from "../lib/activiteit";
 import { analyseerSpot } from "../services/spot-ai";
@@ -234,7 +234,7 @@ router.get("/gebouwen/:id/volgend-spotnummer", lezenVoorzieningen, async (req, r
     if (!gebouw) {
       return res.status(404).json({ error: "Gebouw niet gevonden" });
     }
-    if (!(await magBijGebouw(req.session.userId!, gebouwId))) {
+    if (!(req.permissies!.magBijGebouw(gebouwId))) {
       return res.status(403).json({ error: "Geen toegang tot dit gebouw" });
     }
     const spotnummer = await volgendSpotnummer(gebouwId);
@@ -264,7 +264,7 @@ router.post("/voorzieningen", requireBevoegdheid("voorzieningen", 3), async (req
       return res.status(400).json({ error: "type en gebouw_id zijn verplicht" });
     }
 
-    if (!(await magBijGebouw(req.session.userId!, Number(gebouw_id)))) {
+    if (!(req.permissies!.magBijGebouw(Number(gebouw_id)))) {
       return res.status(403).json({ error: "Geen toegang tot dit gebouw" });
     }
 
@@ -348,7 +348,7 @@ router.post("/voorzieningen/ai-spotvoorstel", requireBevoegdheid("voorzieningen"
     if (!gebouw_id || !foto_na_url) {
       return res.status(400).json({ error: "gebouw_id en foto_na_url zijn verplicht" });
     }
-    if (!(await magBijGebouw(req.session.userId!, Number(gebouw_id)))) {
+    if (!(req.permissies!.magBijGebouw(Number(gebouw_id)))) {
       return res.status(403).json({ error: "Geen toegang tot dit gebouw" });
     }
     const voorstel = await analyseerSpot({
@@ -369,7 +369,7 @@ router.get("/voorzieningen/:id", lezenVoorzieningen, async (req, res) => {
     const id = parseInt(String(req.params.id));
     const [v] = await db.select().from(voorzieningenTable).where(eq(voorzieningenTable.id, id));
     if (!v) return res.status(404).json({ error: "Voorziening niet gevonden" });
-    if (!(await magBijGebouw(req.session.userId!, v.gebouwId))) {
+    if (!(req.permissies!.magBijGebouw(v.gebouwId))) {
       return res.status(403).json({ error: "Geen toegang tot deze voorziening" });
     }
 
@@ -422,7 +422,7 @@ router.get("/voorzieningen/:id", lezenVoorzieningen, async (req, res) => {
 router.patch("/voorzieningen/:id", requireBevoegdheid("voorzieningen", 2), async (req, res) => {
   try {
     const id = parseInt(String(req.params.id));
-    if (!(await magBijGebouw(req.session.userId!, await gebouwIdVanVoorziening(id)))) {
+    if (!(req.permissies!.magBijGebouw(await gebouwIdVanVoorziening(id)))) {
       return res.status(403).json({ error: "Geen toegang tot deze voorziening" });
     }
     const {
@@ -490,7 +490,7 @@ router.delete("/voorzieningen/:id", requireBevoegdheid("voorzieningen", 4), asyn
 router.get("/voorzieningen/:id/fotos", lezenVoorzieningen, async (req, res) => {
   try {
     const id = parseInt(String(req.params.id));
-    if (!(await magBijGebouw(req.session.userId!, await gebouwIdVanVoorziening(id)))) {
+    if (!(req.permissies!.magBijGebouw(await gebouwIdVanVoorziening(id)))) {
       res.status(403).json({ error: "Geen toegang tot deze voorziening" });
       return;
     }
@@ -515,7 +515,7 @@ router.get("/voorzieningen/:id/fotos", lezenVoorzieningen, async (req, res) => {
 router.post("/voorzieningen/:id/fotos", requireBevoegdheid("voorzieningen", 3), async (req, res) => {
   try {
     const voorzieningId = parseInt(String(req.params.id));
-    if (!(await magBijGebouw(req.session.userId!, await gebouwIdVanVoorziening(voorzieningId)))) {
+    if (!(req.permissies!.magBijGebouw(await gebouwIdVanVoorziening(voorzieningId)))) {
       res.status(403).json({ error: "Geen toegang tot deze voorziening" });
       return;
     }
@@ -543,7 +543,7 @@ router.delete("/voorzieningen/:id/fotos/:fotoId", requireBevoegdheid("voorzienin
   try {
     const fotoId = parseInt(String(req.params.fotoId));
     const voorzieningId = parseInt(String(req.params.id));
-    if (!(await magBijGebouw(req.session.userId!, await gebouwIdVanVoorziening(voorzieningId)))) {
+    if (!(req.permissies!.magBijGebouw(await gebouwIdVanVoorziening(voorzieningId)))) {
       res.status(403).json({ error: "Geen toegang tot deze voorziening" });
       return;
     }
@@ -568,7 +568,7 @@ router.delete("/voorzieningen/:id/fotos/:fotoId", requireBevoegdheid("voorzienin
 router.patch("/voorzieningen/:id/status", requireBevoegdheid("voorzieningen", 2), async (req, res) => {
   try {
     const id = parseInt(String(req.params.id));
-    if (!(await magBijGebouw(req.session.userId!, await gebouwIdVanVoorziening(id)))) {
+    if (!(req.permissies!.magBijGebouw(await gebouwIdVanVoorziening(id)))) {
       return res.status(403).json({ error: "Geen toegang tot deze voorziening" });
     }
     const { status, opmerkingen } = req.body;
@@ -599,7 +599,7 @@ router.patch("/voorzieningen/:id/status", requireBevoegdheid("voorzieningen", 2)
 router.patch("/voorzieningen/:id/archief", requireBevoegdheid("voorzieningen", 3), async (req, res) => {
   try {
     const id = parseInt(String(req.params.id));
-    if (!(await magBijGebouw(req.session.userId!, await gebouwIdVanVoorziening(id)))) {
+    if (!(req.permissies!.magBijGebouw(await gebouwIdVanVoorziening(id)))) {
       return res.status(403).json({ error: "Geen toegang tot deze voorziening" });
     }
     const gearchiveerd = req.body?.gearchiveerd === true;
@@ -760,7 +760,7 @@ router.get("/verdiepingen/:id/scheidingen", lezenVoorzieningen, async (req, res)
 router.post("/verdiepingen/:id/scheidingen", requireBevoegdheid("voorzieningen", 3), async (req, res) => {
   try {
     const id = parseInt(String(req.params.id));
-    if (!(await magBijGebouw(req.session.userId!, await gebouwIdVanVerdieping(id)))) {
+    if (!(req.permissies!.magBijGebouw(await gebouwIdVanVerdieping(id)))) {
       return res.status(403).json({ error: "Geen toegang tot deze verdieping" });
     }
     const { type, waarde, kleur, punten } = req.body ?? {};
@@ -785,7 +785,7 @@ router.post("/verdiepingen/:id/scheidingen", requireBevoegdheid("voorzieningen",
 router.patch("/verdiepingen/scheidingen/:scheidingId", requireBevoegdheid("voorzieningen", 2), async (req, res) => {
   try {
     const scheidingId = parseInt(String(req.params.scheidingId));
-    if (!(await magBijGebouw(req.session.userId!, await gebouwIdVanScheiding(scheidingId)))) {
+    if (!(req.permissies!.magBijGebouw(await gebouwIdVanScheiding(scheidingId)))) {
       return res.status(403).json({ error: "Geen toegang tot deze scheiding" });
     }
     const { type, waarde, kleur, punten } = req.body ?? {};
@@ -815,7 +815,7 @@ router.patch("/verdiepingen/scheidingen/:scheidingId", requireBevoegdheid("voorz
 router.delete("/verdiepingen/scheidingen/:scheidingId", requireBevoegdheid("voorzieningen", 3), async (req, res) => {
   try {
     const scheidingId = parseInt(String(req.params.scheidingId));
-    if (!(await magBijGebouw(req.session.userId!, await gebouwIdVanScheiding(scheidingId)))) {
+    if (!(req.permissies!.magBijGebouw(await gebouwIdVanScheiding(scheidingId)))) {
       res.status(403).json({ error: "Geen toegang tot deze scheiding" });
       return;
     }
@@ -902,7 +902,7 @@ router.get("/gebouwen/:id/clusters", lezenVoorzieningen, async (req, res) => {
 router.post("/gebouwen/:id/clusters", requireBevoegdheid("voorzieningen", 2), async (req, res) => {
   try {
     const gebouwId = parseInt(String(req.params.id));
-    if (!(await magBijGebouw(req.session.userId!, gebouwId))) {
+    if (!(req.permissies!.magBijGebouw(gebouwId))) {
       return res.status(403).json({ error: "Geen toegang tot dit gebouw" });
     }
     const { naam, verdieping_id, type, kleur } = req.body ?? {};
@@ -939,7 +939,7 @@ router.patch("/clusters/:clusterId", requireBevoegdheid("voorzieningen", 2), asy
     const clusterId = parseInt(String(req.params.clusterId));
     const gebouwId = await gebouwIdVanCluster(clusterId);
     if (gebouwId == null) return res.status(404).json({ error: "Cluster niet gevonden" });
-    if (!(await magBijGebouw(req.session.userId!, gebouwId))) {
+    if (!(req.permissies!.magBijGebouw(gebouwId))) {
       return res.status(403).json({ error: "Geen toegang tot dit cluster" });
     }
     const { naam, verdieping_id, type, kleur } = req.body ?? {};
@@ -975,7 +975,7 @@ router.delete("/clusters/:clusterId", requireBevoegdheid("voorzieningen", 2), as
     const clusterId = parseInt(String(req.params.clusterId));
     const gebouwId = await gebouwIdVanCluster(clusterId);
     if (gebouwId == null) return res.status(404).json({ error: "Cluster niet gevonden" });
-    if (!(await magBijGebouw(req.session.userId!, gebouwId))) {
+    if (!(req.permissies!.magBijGebouw(gebouwId))) {
       return res.status(403).json({ error: "Geen toegang tot dit cluster" });
     }
     await db.delete(clustersTable).where(eq(clustersTable.id, clusterId));
@@ -994,7 +994,7 @@ router.post("/clusters/:clusterId/monteur", requireBevoegdheid("voorzieningen", 
     const clusterId = parseInt(String(req.params.clusterId));
     const gebouwId = await gebouwIdVanCluster(clusterId);
     if (gebouwId == null) return res.status(404).json({ error: "Cluster niet gevonden" });
-    if (!(await magBijGebouw(req.session.userId!, gebouwId))) {
+    if (!(req.permissies!.magBijGebouw(gebouwId))) {
       return res.status(403).json({ error: "Geen toegang tot dit cluster" });
     }
     const { monteur_id } = req.body ?? {};
@@ -1044,7 +1044,7 @@ async function mapSpotAiVoorstel(r: typeof spotAiVoorstellenTable.$inferSelect) 
 router.get("/voorzieningen/:id/ai-voorstel", lezenVoorzieningen, async (req, res) => {
   try {
     const id = parseInt(String(req.params.id));
-    if (!(await magBijGebouw(req.session.userId!, await gebouwIdVanVoorziening(id)))) {
+    if (!(req.permissies!.magBijGebouw(await gebouwIdVanVoorziening(id)))) {
       return res.status(403).json({ error: "Geen toegang tot deze voorziening" });
     }
     const rijen = await db
@@ -1071,7 +1071,7 @@ router.post("/voorzieningen/:id/ai-voorstel", requireBevoegdheid("voorzieningen"
     const id = parseInt(String(req.params.id));
     const [v] = await db.select().from(voorzieningenTable).where(eq(voorzieningenTable.id, id));
     if (!v) return res.status(404).json({ error: "Voorziening niet gevonden" });
-    if (!(await magBijGebouw(req.session.userId!, v.gebouwId))) {
+    if (!(req.permissies!.magBijGebouw(v.gebouwId))) {
       return res.status(403).json({ error: "Geen toegang tot deze voorziening" });
     }
 
@@ -1135,7 +1135,7 @@ router.post("/voorzieningen/:id/ai-controle", requireBevoegdheid("voorzieningen"
     const id = parseInt(String(req.params.id));
     const [v] = await db.select().from(voorzieningenTable).where(eq(voorzieningenTable.id, id));
     if (!v) return res.status(404).json({ error: "Voorziening niet gevonden" });
-    if (!(await magBijGebouw(req.session.userId!, v.gebouwId))) {
+    if (!(req.permissies!.magBijGebouw(v.gebouwId))) {
       return res.status(403).json({ error: "Geen toegang tot deze voorziening" });
     }
 
@@ -1184,7 +1184,7 @@ router.post("/voorzieningen/:id/ai-controle", requireBevoegdheid("voorzieningen"
 router.get("/voorzieningen/:id/onderdelen", lezenVoorzieningen, async (req, res) => {
   try {
     const id = parseInt(String(req.params.id));
-    if (!(await magBijGebouw(req.session.userId!, await gebouwIdVanVoorziening(id)))) {
+    if (!(req.permissies!.magBijGebouw(await gebouwIdVanVoorziening(id)))) {
       return res.status(403).json({ error: "Geen toegang tot deze voorziening" });
     }
     const rows = await db
@@ -1203,7 +1203,7 @@ router.get("/voorzieningen/:id/onderdelen", lezenVoorzieningen, async (req, res)
 router.get("/voorzieningen/:id/tijdlijn", lezenVoorzieningen, async (req, res) => {
   try {
     const id = parseInt(String(req.params.id));
-    if (!(await magBijGebouw(req.session.userId!, await gebouwIdVanVoorziening(id)))) {
+    if (!(req.permissies!.magBijGebouw(await gebouwIdVanVoorziening(id)))) {
       return res.status(403).json({ error: "Geen toegang tot deze voorziening" });
     }
     const rows = await db
@@ -1232,7 +1232,7 @@ router.get("/voorzieningen/:id/tijdlijn", lezenVoorzieningen, async (req, res) =
 router.get("/voorzieningen/:id/dossiers", lezenVoorzieningen, async (req, res) => {
   try {
     const id = parseInt(String(req.params.id));
-    if (!(await magBijGebouw(req.session.userId!, await gebouwIdVanVoorziening(id)))) {
+    if (!(req.permissies!.magBijGebouw(await gebouwIdVanVoorziening(id)))) {
       return res.status(403).json({ error: "Geen toegang tot deze voorziening" });
     }
     const rows = await db
@@ -1264,7 +1264,7 @@ router.patch(
     try {
       const id = parseInt(String(req.params.id));
       const type = String(req.params.type);
-      if (!(await magBijGebouw(req.session.userId!, await gebouwIdVanVoorziening(id)))) {
+      if (!(req.permissies!.magBijGebouw(await gebouwIdVanVoorziening(id)))) {
         return res.status(403).json({ error: "Geen toegang tot deze voorziening" });
       }
       const { status, data } = req.body as { status?: string; data?: Record<string, unknown> };

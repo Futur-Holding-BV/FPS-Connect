@@ -8,7 +8,7 @@ import {
 } from "@workspace/db";
 import { eq, inArray } from "drizzle-orm";
 import { requireBevoegdheid, requireBevoegdheidOfKlant } from "../middlewares/auth";
-import { effectieveContext, magBijGebouwVoorId as magBijGebouw, toegewezenGebouwIds } from "../utils/rol";
+import { effectieveContext, toegewezenGebouwIds } from "../utils/rol";
 import { logActiviteit } from "../lib/activiteit";
 
 const router = Router();
@@ -89,7 +89,7 @@ router.post("/inspecties", requireBevoegdheid("inspecties", 3), async (req, res)
     if (!type || !gebouw_id) {
       return res.status(400).json({ error: "type en gebouw_id zijn verplicht" });
     }
-    if (!(await magBijGebouw(req.session.userId!, gebouw_id))) {
+    if (!(req.permissies!.magBijGebouw(gebouw_id))) {
       return res.status(403).json({ error: "Geen toegang tot dit gebouw" });
     }
     // Cross-entity integriteit: voorziening moet bij hetzelfde gebouw horen.
@@ -185,7 +185,7 @@ router.patch("/inspecties/:id", requireBevoegdheid("inspecties", 2), async (req,
       .from(inspectiesTable)
       .where(eq(inspectiesTable.id, id));
     if (!bestaand) return res.status(404).json({ error: "Inspectie niet gevonden" });
-    if (!(await magBijGebouw(req.session.userId!, bestaand.gebouwId))) {
+    if (!(req.permissies!.magBijGebouw(bestaand.gebouwId))) {
       return res.status(403).json({ error: "Geen toegang tot deze inspectie" });
     }
 

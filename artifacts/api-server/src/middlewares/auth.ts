@@ -97,6 +97,14 @@ export function requireBevoegdheid(module: ModuleId, minNiveau: number): Request
       res.status(401).json({ error: "Niet ingelogd" });
       return;
     }
+    // Als laadPermissies al heeft gedraaid, gebruik de gecachte service — geen extra DB-ronde.
+    if (req.permissies) {
+      if (req.permissies.isHoofdbeheerder) { next(); return; }
+      if (req.permissies.isKlant) { res.status(403).json({ error: "Geen toegang" }); return; }
+      if (req.permissies.heeftModuleRecht(module, minNiveau)) { next(); return; }
+      res.status(403).json({ error: "Geen toegang" });
+      return;
+    }
     try {
       const [g] = await db
         .select({ rol: gebruikersTable.rol, bevoegdheden: gebruikersTable.bevoegdheden })
@@ -145,6 +153,13 @@ export function requireBevoegdheidOfKlant(module: ModuleId, minNiveau: number): 
     const id = req.session.userId;
     if (!id) {
       res.status(401).json({ error: "Niet ingelogd" });
+      return;
+    }
+    // Als laadPermissies al heeft gedraaid, gebruik de gecachte service — geen extra DB-ronde.
+    if (req.permissies) {
+      if (req.permissies.isHoofdbeheerder || req.permissies.isKlant) { next(); return; }
+      if (req.permissies.heeftModuleRecht(module, minNiveau)) { next(); return; }
+      res.status(403).json({ error: "Geen toegang" });
       return;
     }
     try {
