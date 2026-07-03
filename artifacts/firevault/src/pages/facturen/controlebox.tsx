@@ -7,6 +7,7 @@ import {
   useAfkeurenFactuur,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -534,6 +535,7 @@ function TellerKaart({
 
 export default function ControleboxPagina() {
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const [tab, setTab] = useState("inbox");
   const [filter, setFilter] = useState<"alle" | "inkoop" | "verkoop">("alle");
   const [openRij, setOpenRij] = useState<number | null>(null);
@@ -545,7 +547,14 @@ export default function ControleboxPagina() {
     { query: { queryKey: ["facturen-controlebox"] } },
   );
   const aiMut = useAiUitlezenFactuur({
-    mutation: { onSuccess: () => queryClient.invalidateQueries({ queryKey: ["facturen-controlebox"] }) },
+    mutation: {
+      onSuccess: () => queryClient.invalidateQueries({ queryKey: ["facturen-controlebox"] }),
+      onError: () => toast({
+        title: "AI-uitlezing mislukt",
+        description: "OpenAI is niet bereikbaar of de analyse is mislukt. Probeer het later opnieuw.",
+        variant: "destructive",
+      }),
+    },
   });
   const akkoordMut = useAccorderenFactuur({
     mutation: { onSuccess: () => queryClient.invalidateQueries({ queryKey: ["facturen-controlebox"] }) },

@@ -4,6 +4,26 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-03 — Stabiliteitsfix: AI-uitval levert geen lege pagina meer op
+
+**Uitvoering:** volledig | **Diepere lagen:** volledig | **Getest:** typecheck schoon
+
+Drie concrete fixes om te voorkomen dat een uitgevallen OpenAI-aanroep de kantoorversie blokkeert:
+
+- **`App.tsx` — React Error Boundary + QueryClient retry-defaults**
+  - `AppErrorBoundary` class component toegevoegd; vangt render-crashes op en toont "Er is een technische fout opgetreden — Pagina herladen" i.p.v. een wit scherm
+  - `QueryClient` defaults: `queries: { retry: 1, retryDelay: 1000 }` (was 3×), `mutations: { retry: 0 }` — fouten komen sneller terug in plaats van 30s hangen
+  - `<Gate />` gewikkeld in `<AppErrorBoundary>`
+
+- **`facturen/detail.tsx` — Button bevriest niet meer bij AI-falen**
+  - `mutateAsync` zonder `try/finally` → bij falen bleef `aiBezig=true` en de knop permanent uitgeschakeld
+  - Fix: `try { await aiMut.mutateAsync() } catch {} finally { setAiBezig(false) }`
+  - `onError` toast toegevoegd aan `aiMut`: "AI-uitlezing mislukt — OpenAI is niet bereikbaar…"
+
+- **`facturen/controlebox.tsx` — Stille AI-falen krijgt zichtbare feedback**
+  - `aiMut` had alleen `onSuccess`; bij falen verdween de spinner zonder bericht
+  - `onError` toast toegevoegd (zelfde tekst)
+
 ## 2026-07-03 — Task #192: AI-aanroeplogging beheerdersdashboard
 
 **Uitvoering:** volledig | **Diepere lagen:** volledig | **Getest:** typecheck clean, screenshot route actief

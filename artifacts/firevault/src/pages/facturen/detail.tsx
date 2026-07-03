@@ -19,6 +19,7 @@ import {
   useListToewijsbareGebruikers,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -141,8 +142,18 @@ export default function FactuurDetailPagina() {
     { query: { queryKey: ["toewijsbare-gebruikers"], enabled: doorstuurOpen } },
   );
 
+  const { toast } = useToast();
   const updateMut = useUpdateFactuur({ mutation: { onSuccess: invalideer } });
-  const aiMut = useAiUitlezenFactuur({ mutation: { onSuccess: invalideer } });
+  const aiMut = useAiUitlezenFactuur({
+    mutation: {
+      onSuccess: invalideer,
+      onError: () => toast({
+        title: "AI-uitlezing mislukt",
+        description: "OpenAI is niet bereikbaar of de analyse is mislukt. Probeer het later opnieuw.",
+        variant: "destructive",
+      }),
+    },
+  });
   const accorderenMut = useAccorderenFactuur({ mutation: { onSuccess: invalideer } });
   const doorstuurMut = useDoorstuurenFactuurMedewerker({
     mutation: {
@@ -299,7 +310,7 @@ export default function FactuurDetailPagina() {
             </div>
             <div className="flex items-center gap-2 flex-wrap">
               {kanAi && (
-                <Button size="sm" variant="outline" disabled={aiBezig} onClick={async () => { setAiBezig(true); await aiMut.mutateAsync({ id }); setAiBezig(false); }}>
+                <Button size="sm" variant="outline" disabled={aiBezig} onClick={async () => { setAiBezig(true); try { await aiMut.mutateAsync({ id }); } catch { /* onError toast */ } finally { setAiBezig(false); } }}>
                   {aiBezig ? <><Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />AI bezig...</> : <><Sparkles className="h-3.5 w-3.5 mr-1.5" />AI uitlezen</>}
                 </Button>
               )}

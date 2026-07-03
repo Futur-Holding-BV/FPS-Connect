@@ -1,6 +1,7 @@
+import React from "react";
 import { Switch, Route, Router as WouterRouter, Redirect, useLocation } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { Loader2, Lock } from "lucide-react";
+import { Loader2, Lock, AlertTriangle } from "lucide-react";
 import { featureFlags } from "@/lib/feature-flags";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -178,7 +179,50 @@ import OneRapporten from "@/pages/one/rapporten";
 import OneAbonnementen from "@/pages/one/abonnementen";
 import { HeatmapTracker } from "@/components/heatmap-tracker";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: { retry: 1, retryDelay: 1000 },
+    mutations: { retry: 0 },
+  },
+});
+
+class AppErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { fout: Error | null }
+> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { fout: null };
+  }
+  static getDerivedStateFromError(fout: Error) {
+    return { fout };
+  }
+  render() {
+    if (this.state.fout) {
+      return (
+        <div className="flex flex-col items-center justify-center h-screen gap-4 text-center px-6">
+          <div className="w-14 h-14 rounded-full bg-red-50 flex items-center justify-center">
+            <AlertTriangle className="w-7 h-7 text-red-500" />
+          </div>
+          <div className="max-w-sm">
+            <p className="font-semibold text-lg">Er is een technische fout opgetreden</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              Laad de pagina opnieuw. Als het probleem aanhoudt, neem dan contact op met de beheerder.
+            </p>
+          </div>
+          <button
+            className="text-sm underline text-muted-foreground hover:text-foreground"
+            onClick={() => { this.setState({ fout: null }); window.location.reload(); }}
+          >
+            Pagina herladen
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 const WeekstatenPagina = () => <WeekstatenPaginaComponent />;
 
 function ModuleNietBeschikbaar({ naam }: { naam: string }) {
@@ -607,7 +651,9 @@ function App() {
             <AuthProvider>
               <RolProvider>
                 <WerkmaatschappijProvider>
-                  <Gate />
+                  <AppErrorBoundary>
+                    <Gate />
+                  </AppErrorBoundary>
                 </WerkmaatschappijProvider>
               </RolProvider>
               <Toaster />
