@@ -6,10 +6,20 @@ import {
   heeftNiveau,
   type ModuleId,
 } from "@workspace/permissies";
+import { PermissieService } from "../lib/permissie-service";
+import { effectieveContext } from "../utils/rol";
 
 declare module "express-session" {
   interface SessionData {
     rol?: string;
+  }
+}
+
+declare global {
+  namespace Express {
+    interface Request {
+      permissies?: PermissieService;
+    }
   }
 }
 
@@ -179,6 +189,65 @@ export function requireBevoegdheidOfKlant(module: ModuleId, minNiveau: number): 
  * volledige gebruikersbevoegdheid te hebben. Hoofdbeheerder mag altijd; klant
  * nooit.
  */
+/**
+ * Laadt de PermissieService voor de effectieve gebruiker (incl. impersonatie)
+ * en koppelt hem als req.permissies. Altijd na requireAuth plaatsen.
+ */
+export async function laadPermissies(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  const id = req.session.userId;
+  if (!id) {
+    next();
+    return;
+  }
+  try {
+    const ctx = await effectieveContext(req);
+    const svc = new PermissieService(ctx.userId);
+    await svc.laad();
+    req.permissies = svc;
+    next();
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+}
+
+/**
+ * Factory die een RequestHandler maakt die controleert of de gebruiker een
+ * actief object-recht heeft op het object waarvan het id uit een route-parameter
+ * komt. Valt terug op module-recht als dat voldoende is (heeftToegang).
+ *
+ * Gebruik: router.get("/:id/detail", requireObjectRecht("gebouw", "id"), handler)
+ */
+export function requireObjectRecht(
+  objectType: string,
+  idParam: string,
+  module: string,
+  minNiveau = 1,
+): RequestHandler {
+  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const rawParam = req.params[idParam];
+    const objectId = parseInt(typeof rawParam === "string" ? rawParam : "", 10);
+    if (isNaN(objectId)) {
+      res.status(400).json({ error: "Ongeldig object-id" });
+      return;
+    }
+    const permissies = req.permissies;
+    if (!permissies) {
+      res.status(401).json({ error: "Niet ingelogd" });
+      return;
+    }
+    if (!permissies.heeftToegang(objectType, objectId, module, minNiveau)) {
+      res.status(403).json({ error: "Geen toegang" });
+      return;
+    }
+    next();
+  };
+}
+
 export function requireEnigeBevoegdheid(
   eisen: Array<[ModuleId, number]>,
 ): RequestHandler {

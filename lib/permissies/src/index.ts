@@ -355,7 +355,18 @@ export const PRESETS: Preset[] = [
       offertes: 1,
     }),
   },
+  {
+    naam: "Planner",
+    bevoegdheden: matrix({
+      planning: 4, toolbox: 2, gebouwen: 2,
+      voorzieningen: 1, onderhoud: 1, personeel: 1,
+    }),
+  },
 ];
+
+// ── Re-exports centrale rechtenstructuur ──────────────────────────────────
+export type { ObjectType, ObjectRecht, PermissieContext } from "./types";
+export { PermissieEngine } from "./engine";
 
 // ── Migratie / fallback ────────────────────────────────────────────────────
 // Zet een oude systeemrol om naar een matrix. Gebruikt voor de backfill en als

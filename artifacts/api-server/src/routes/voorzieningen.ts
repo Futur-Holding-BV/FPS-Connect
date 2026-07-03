@@ -6,7 +6,6 @@ import {
   gebouwenTable,
   verdiepingenTable,
   gebruikersTable,
-  gebouwToewijzingenTable,
   inspectiesTable,
   onderhoudTable,
   scheidingenTable,
@@ -20,21 +19,13 @@ import {
 import { eq, and, ilike, sql, inArray } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { heeftNiveau } from "@workspace/permissies";
-import { effectieveContext, isBeperktTotToegewezen } from "../utils/rol";
+import { effectieveContext, magBijGebouwVoorId as magBijGebouw, toegewezenGebouwIds } from "../utils/rol";
 import { getLabelsVoorVoorziening, syncVoorzieningLabels } from "../lib/classificatie";
 import { logActiviteit } from "../lib/activiteit";
 import { analyseerSpot } from "../services/spot-ai";
 
 const router = Router();
 const lezenVoorzieningen = requireBevoegdheid("voorzieningen", 1);
-
-async function toegewezenGebouwIds(userId: number): Promise<number[]> {
-  const rows = await db
-    .select({ gebouwId: gebouwToewijzingenTable.gebouwId })
-    .from(gebouwToewijzingenTable)
-    .where(eq(gebouwToewijzingenTable.gebruikerId, userId));
-  return rows.map((r) => r.gebouwId);
-}
 
 // Geeft de gebouwId van een verdieping terug, of null als die niet bestaat.
 async function gebouwIdVanVerdieping(verdiepingId: number): Promise<number | null> {
@@ -62,17 +53,6 @@ async function gebouwIdVanScheiding(scheidingId: number): Promise<number | null>
     .where(eq(scheidingenTable.id, scheidingId));
   if (!s?.verdiepingId) return null;
   return gebouwIdVanVerdieping(s.verdiepingId);
-}
-
-// Centrale toewijzingsguard: gebruikers die tot hun toegewezen gebouwen beperkt
-// zijn (bepaald via de bevoegdheden-matrix) mogen alleen daar bij. Gebruikers met
-// gebouwbeheer en de hoofdbeheerder worden hier niet beperkt; rolafdwinging
-// gebeurt via requireBevoegdheid. Geeft true als toegestaan.
-async function magBijGebouw(userId: number, gebouwId: number | null): Promise<boolean> {
-  if (!(await isBeperktTotToegewezen(userId))) return true;
-  if (gebouwId == null) return false;
-  const ids = await toegewezenGebouwIds(userId);
-  return ids.includes(gebouwId);
 }
 
 // Afkorting uit de gebouwnaam: eerste letter van elk woord (max 3), anders eerste 3 letters.

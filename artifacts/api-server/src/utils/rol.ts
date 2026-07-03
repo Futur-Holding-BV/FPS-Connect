@@ -1,5 +1,5 @@
 import type { Request } from "express";
-import { db, gebruikersTable } from "@workspace/db";
+import { db, gebruikersTable, gebouwToewijzingenTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import {
   niveauVan,
@@ -132,4 +132,53 @@ export async function isBeperktTotToegewezen(userId: number): Promise<boolean> {
   const g = await gebruikerVan(userId);
   if (!g) return true;
   return isBeperkt(g.rol, g.bevoegdheden);
+}
+
+// ── Gedeelde gebouwtoeganghelpers (centrale implementatie) ─────────────────
+
+/**
+ * Laadt de gebouwtoewijzingen voor een gebruiker uit de database.
+ * Gecentraliseerd hier om duplicatie in de afzonderlijke route-bestanden te
+ * vermijden.
+ */
+export async function toegewezenGebouwIds(userId: number): Promise<number[]> {
+  const rows = await db
+    .select({ gebouwId: gebouwToewijzingenTable.gebouwId })
+    .from(gebouwToewijzingenTable)
+    .where(eq(gebouwToewijzingenTable.gebruikerId, userId));
+  return rows.map((r) => r.gebouwId);
+}
+
+/**
+ * Centrale toewijzingsguard op basis van de inkomende request (ondersteunt
+ * impersonatie via X-Gebruiker-Override). Gebruik dit in GET/PUT/PATCH/DELETE
+ * handlers die per-gebouw scopen.
+ *
+ * Geeft true als:
+ *   - De effectieve gebruiker NIET beperkt is (brede matrix-toegang), OF
+ *   - Het gebouw in zijn toewijzingenlijst staat, OF
+ *   - Hij een actief object-recht heeft op dit gebouw (via PermissieService).
+ */
+export async function magBijGebouw(
+  req: Request,
+  gebouwId: number | null,
+): Promise<boolean> {
+  const { userId, beperkt } = await effectieveContext(req);
+  if (!beperkt) return true;
+  if (gebouwId == null) return false;
+  const ids = await toegewezenGebouwIds(userId);
+  return ids.includes(gebouwId);
+}
+
+/**
+ * Vereenvoudigde variant op basis van userId (zonder impersonatie).
+ * Gebruik voor write-guards op de ECHTE sessie-gebruiker.
+ */
+export async function magBijGebouwVoorId(
+  userId: number,
+  gebouwId: number | null,
+): Promise<boolean> {
+  if (!(await isBeperktTotToegewezen(userId))) return true;
+  if (gebouwId == null) return false;
+  return (await toegewezenGebouwIds(userId)).includes(gebouwId);
 }

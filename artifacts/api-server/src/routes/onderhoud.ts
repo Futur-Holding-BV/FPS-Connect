@@ -5,24 +5,15 @@ import {
   gebouwenTable,
   voorzieningenTable,
   gebruikersTable,
-  gebouwToewijzingenTable,
 } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
-import { effectieveContext, isBeperktTotToegewezen } from "../utils/rol";
+import { effectieveContext, magBijGebouwVoorId as magBijGebouw, toegewezenGebouwIds } from "../utils/rol";
 import { logActiviteit } from "../lib/activiteit";
 import { workflowService, maakTransitieContext } from "../services/workflow-engine";
 
 const router = Router();
 const lezenOnderhoud = requireBevoegdheid("onderhoud", 1);
-
-async function toegewezenGebouwIds(userId: number): Promise<number[]> {
-  const rows = await db
-    .select({ gebouwId: gebouwToewijzingenTable.gebouwId })
-    .from(gebouwToewijzingenTable)
-    .where(eq(gebouwToewijzingenTable.gebruikerId, userId));
-  return rows.map((r) => r.gebouwId);
-}
 
 // Leidt het gebouw af uit een voorziening (onderhoud kan aan een voorziening
 // hangen zonder expliciet gebouw_id).
@@ -35,15 +26,6 @@ async function gebouwIdVanVoorziening(voorzieningId: number | null | undefined):
   return v?.gebouwId ?? null;
 }
 
-// Object-level guard: gebruikers die tot hun toegewezen gebouwen beperkt zijn
-// (bepaald via de bevoegdheden-matrix) mogen alleen daar muteren. Gebruikers met
-// gebouwbeheer en de hoofdbeheerder zijn niet beperkt. De echte sessie-gebruiker
-// telt: write-autorisatie blijft altijd op de werkelijke gebruiker gebaseerd.
-async function magBijGebouw(userId: number, gebouwId: number | null): Promise<boolean> {
-  if (!(await isBeperktTotToegewezen(userId))) return true;
-  if (gebouwId == null) return false;
-  return (await toegewezenGebouwIds(userId)).includes(gebouwId);
-}
 
 async function mapOnderhoud(o: typeof onderhoudTable.$inferSelect) {
   const gebouw = o.gebouwId

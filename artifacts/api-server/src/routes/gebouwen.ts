@@ -15,7 +15,7 @@ import {
 } from "@workspace/db";
 import { eq, inArray, count, and, sql, max, ne, desc } from "drizzle-orm";
 import { requireBevoegdheid, requireBevoegdheidOfKlant } from "../middlewares/auth";
-import { effectieveContext } from "../utils/rol";
+import { effectieveContext, magBijGebouw, toegewezenGebouwIds } from "../utils/rol";
 import { logActiviteit } from "../lib/activiteit";
 import { mapDocument } from "../lib/documenten";
 import { logDocumentActie } from "../lib/document-logboek";
@@ -73,26 +73,6 @@ async function klantNaam(klantId: number | null): Promise<string | null> {
   if (!klantId) return null;
   const [k] = await db.select({ naam: gebruikersTable.naam }).from(gebruikersTable).where(eq(gebruikersTable.id, klantId));
   return k?.naam ?? null;
-}
-
-async function toegewezenGebouwIds(userId: number): Promise<number[]> {
-  const rows = await db
-    .select({ gebouwId: gebouwToewijzingenTable.gebouwId })
-    .from(gebouwToewijzingenTable)
-    .where(eq(gebouwToewijzingenTable.gebruikerId, userId));
-  return rows.map((r) => r.gebouwId);
-}
-
-// Centrale toewijzingsguard: gebruikers die tot hun toegewezen gebouwen beperkt
-// zijn (bepaald via de bevoegdheden-matrix) mogen alleen daar bij. Gebruikers met
-// gebouwbeheer en de hoofdbeheerder worden hier niet beperkt; rolafdwinging
-// gebeurt via requireBevoegdheid. Geeft true als toegestaan.
-async function magBijGebouw(req: import("express").Request, gebouwId: number | null): Promise<boolean> {
-  const { userId, beperkt } = await effectieveContext(req);
-  if (!beperkt) return true;
-  if (gebouwId == null) return false;
-  const ids = await toegewezenGebouwIds(userId);
-  return ids.includes(gebouwId);
 }
 
 function gebouwRij(

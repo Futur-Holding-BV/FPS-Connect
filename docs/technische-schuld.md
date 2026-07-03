@@ -1,0 +1,185 @@
+# Technische Schuld — FPS Connect (Top 100)
+
+**Datum:** 3 juli 2026  
+**Methode:** Statische analyse, codebase-scan, runtime-patronen.  
+**Kolommen:** Impact (1–5), Risico (1–5), Oplostijd (uren), Prioriteit (P1–P4)
+
+> P1 = Nu. P2 = Binnen sprint. P3 = Volgende kwartaal. P4 = Backlog.
+
+---
+
+## Categorie A — Database & Persistentie
+
+| # | Item | Impact | Risico | Uren | Prio |
+|---|------|--------|--------|------|------|
+| 1 | Geen index op `voorzieningen.gebouw_id` — full-scan bij spotlijst per gebouw | 5 | 4 | 1 | P1 |
+| 2 | Geen index op `activiteiten.gebouw_id` + `aangemaakt_op` — feed-query full-scan | 5 | 4 | 1 | P1 |
+| 3 | Geen index op `inspecties.gebouw_id` + `type` — inspectiefilter full-scan | 4 | 4 | 1 | P1 |
+| 4 | Geen index op `onderhoud.gebouw_id` + `status` + `deadline` — dashboard full-scan | 5 | 4 | 1 | P1 |
+| 5 | Geen index op `chat_berichten.gesprek_id` + `aangemaakt_op` — polling full-scan | 5 | 5 | 1 | P1 |
+| 6 | Geen index op `document_koppelingen.object_type` + `object_id` — DMS full-scan | 4 | 4 | 1 | P1 |
+| 7 | Geen index op `documenten.entiteit_type` + `entiteit_id` | 4 | 4 | 1 | P1 |
+| 8 | Geen index op `dossiers.gebouw_id` + `status` | 3 | 3 | 1 | P2 |
+| 9 | Geen index op `verlof_aanvragen.medewerker_id` + `status` | 3 | 3 | 1 | P2 |
+| 10 | Geen index op `uren.medewerker_id` + `week_start` | 3 | 3 | 1 | P2 |
+| 11 | Geen index op `werkbonnen.opdracht_id` + `status` | 3 | 3 | 1 | P2 |
+| 12 | Geen index op `fotos.voorziening_id` (N+1-fotoqueries) | 4 | 3 | 1 | P2 |
+| 13 | 15 routes schrijven naar meerdere tabellen zonder `db.transaction()` — gedeeltelijke writes mogelijk | 5 | 4 | 20 | P1 |
+| 14 | `POST /dossiers/:id/definitief` — dossier-bevriezing niet atomair (juridisch risico) | 5 | 5 | 4 | P1 |
+| 15 | `POST /offertes/:id/opdracht` — status-overgang zonder transactie | 4 | 4 | 2 | P1 |
+| 16 | `POST /verlof-aanvragen/:id/goedkeuren` — saldo-mutatie zonder transactie | 4 | 4 | 2 | P1 |
+| 17 | List-endpoints zonder `LIMIT` — 12 endpoints geven onbeperkt veel rijen terug | 4 | 3 | 8 | P2 |
+| 18 | `GET /activiteiten` geen paginering — bij grote datasets OOM-risico | 4 | 3 | 2 | P2 |
+| 19 | `JSONB`-kolom `bevoegdheden` nooit geïndexeerd als gefilterd | 3 | 2 | 1 | P3 |
+| 20 | DB-push faalt op additieve UNIQUE (bekende workaround: directe ALTER SQL) — niet gedocumenteerd | 3 | 3 | 2 | P2 |
+
+---
+
+## Categorie B — Beveiliging & Autorisatie
+
+| # | Item | Impact | Risico | Uren | Prio |
+|---|------|--------|--------|------|------|
+| 21 | DB-foutberichten (tabel/kolom-namen) lekken als HTTP 500 response — ~20 routes | 5 | 4 | 8 | P1 |
+| 22 | Ruwe `constraint`-namen in 409-responses zichtbaar voor client | 3 | 2 | 4 | P2 |
+| 23 | `magBijGebouw(userId, ...)` in 3 routes ondersteunde geen impersonatie — nu opgelost (Task #180) | 4 | 3 | 0 | ✅ |
+| 24 | Geen rate-limiting op `/auth/*` endpoints — brute-force TOTP mogelijk | 5 | 4 | 4 | P1 |
+| 25 | Geen rate-limiting op `/ai/*` endpoints — LLM-kosten onbeperkt | 4 | 3 | 2 | P1 |
+| 26 | `X-Gebruiker-Override` header niet geverifieerd op geldig integer — passthrough bij malformed waarde | 3 | 3 | 1 | P2 |
+| 27 | Sessie-cookie `maxAge` niet geconfigureerd — sessie eindigt nooit server-side | 3 | 3 | 2 | P2 |
+| 28 | `MAIL_API_KEY` / `GOOGLE_MAPS_API_KEY` server-side maar niet geroteerd — geen expiry-mechanisme | 3 | 2 | 4 | P3 |
+| 29 | AI-endpoints hebben geen input-lengte-limiet — XL-prompts naar OpenAI mogelijk | 3 | 3 | 2 | P2 |
+| 30 | Bestandsuploads controleren MIME-type niet server-side — content-type spoof mogelijk | 4 | 3 | 4 | P2 |
+| 31 | `requireBevoegdheid` queries altijd naar DB — geen caching, extra latency + aanvalsoppervlak | 3 | 2 | 4 | P3 |
+| 32 | `klant`-rol heeft toegang tot alle GET-endpoints binnen zijn gebouw — geen expliciete whitelist | 3 | 3 | 8 | P2 |
+| 33 | `backup_records.lokaal_pad` zichtbaar in API response — informatielekking | 2 | 2 | 1 | P3 |
+
+---
+
+## Categorie C — Foutafhandeling & Robuustheid
+
+| # | Item | Impact | Risico | Uren | Prio |
+|---|------|--------|--------|------|------|
+| 34 | `res.status(404)` op parseer-fouten (moet 400 zijn) — ~8 routes | 3 | 2 | 4 | P2 |
+| 35 | `res.status(500)` op validatiefouten (moet 400 zijn) — ~3 routes | 3 | 2 | 2 | P2 |
+| 36 | Geen centrale Express error-handler — `app.ts` heeft geen `app.use((err, req, res, next) =>` | 4 | 3 | 4 | P1 |
+| 37 | TS7030 "not all code paths return a value" in 80+ route-handlers — stille undefined-responses | 3 | 2 | 16 | P2 |
+| 38 | `try/catch` boilerplate in ~80 routes — duplicaat 40 regels per route | 2 | 1 | 8 | P3 |
+| 39 | `workflowService.transiteer()` gooit bij ongeldige overgang maar caller vangt niet altijd af | 3 | 3 | 4 | P2 |
+| 40 | PDF-generatie (`html2canvas-pro`) geen timeout — kan request permanent blokkeren | 3 | 3 | 2 | P2 |
+| 41 | `analyseerSpot()` geen retry-logica — bij OpenAI 503 verliest gebruiker zijn foto-upload | 3 | 2 | 4 | P3 |
+| 42 | `mailparser` geen timeout op IMAP-verbinding — hangt onbeperkt bij netwerkstoringen | 3 | 3 | 2 | P2 |
+| 43 | `pg_dump` in backup-service geen `--lock-wait-timeout` — kan productie blokkeren | 4 | 3 | 1 | P2 |
+| 44 | Herstel-flow (`POST /backups/:id/herstel`) niet idempotent — dubbele aanroep overschrijft data | 4 | 4 | 4 | P2 |
+
+---
+
+## Categorie D — Performance
+
+| # | Item | Impact | Risico | Uren | Prio |
+|---|------|--------|--------|------|------|
+| 45 | N+1 in `GET /gebouwen`: per gebouw 3 losse queries (klant, partijen, spotcount) | 5 | 4 | 6 | P1 |
+| 46 | N+1 in `GET /documenten`: per document 2 queries (koppelingen + versies) | 4 | 3 | 4 | P2 |
+| 47 | N+1 in `GET /medewerkers`: per medewerker 3 queries (functies, opleidingen, verlof) | 4 | 3 | 4 | P2 |
+| 48 | N+1 in spotlijst: per spot `getLabelsVoorVoorziening()` (1 query) | 4 | 3 | 4 | P2 |
+| 49 | `requireBevoegdheid` doet per request 1 DB-query — geen in-memory cache | 3 | 2 | 4 | P3 |
+| 50 | `laadPermissies()` (nieuw, Task #180) doet 3 DB-queries per request — kan gebundeld worden met `requireAuth` | 3 | 2 | 4 | P3 |
+| 51 | Chat-polling elke 5s per client — geen WebSocket/SSE | 3 | 2 | 16 | P3 |
+| 52 | Plattegrond SVG-render op elke request gegenereerd — geen CDN/caching | 3 | 2 | 8 | P3 |
+| 53 | `analyseerGebouwVrijeTekst()` blokkeert request-thread tijdens OpenAI-call | 3 | 2 | 4 | P3 |
+| 54 | Geen gzip/brotli-compressie op Express API-responses | 3 | 2 | 1 | P2 |
+| 55 | `SELECT *` in ~30 routes — onnodige kolommen overdragen (incl. grote JSONB-velden) | 2 | 1 | 16 | P3 |
+
+---
+
+## Categorie E — Code-kwaliteit & Onderhoudbaarheid
+
+| # | Item | Impact | Risico | Uren | Prio |
+|---|------|--------|--------|------|------|
+| 56 | `parseId` inconsistent: `parseInt`, `Number()`, `+param` in 60+ routes | 2 | 1 | 8 | P3 |
+| 57 | Magic numbers in queries (bijv. `LIMIT 50`, `LIMIT 100`) zonder constante | 2 | 1 | 4 | P3 |
+| 58 | Inline SQL-strings in sommige routes i.p.v. Drizzle ORM | 2 | 2 | 4 | P3 |
+| 59 | `effectieveContext(req)` soms twee keer aangeroepen in dezelfde handler | 2 | 1 | 4 | P3 |
+| 60 | Inconsistente snake_case/camelCase mapping — sommige routes mappen handmatig, andere niet | 3 | 2 | 16 | P2 |
+| 61 | `bijgewerktOp: new Date()` in 40+ PATCH-handlers — niet via Drizzle `$onUpdate` hook | 2 | 1 | 4 | P3 |
+| 62 | Lange route-bestanden (gebouwen.ts 1700+ regels, voorzieningen.ts 1300+ regels) | 3 | 2 | 16 | P3 |
+| 63 | Geen gestandaardiseerde paginering-response (sommige `{ items, totaal }`, andere platte array) | 3 | 2 | 8 | P2 |
+| 64 | Geen OpenAPI-validatie van request-body server-side — Zod gebruikt maar niet overal | 3 | 2 | 16 | P2 |
+| 65 | `console.log` in sommige service-bestanden (i.p.v. `logger`) | 2 | 1 | 2 | P3 |
+| 66 | Verouderde `// TODO`-comments (10+ aangetroffen) zonder ticket-koppeling | 1 | 1 | 4 | P4 |
+
+---
+
+## Categorie F — Frontend
+
+| # | Item | Impact | Risico | Uren | Prio |
+|---|------|--------|--------|------|------|
+| 67 | Geen global error boundary in React-app — onafgehandelde fouten tonen lege pagina | 4 | 3 | 4 | P2 |
+| 68 | `useQuery` hooks zonder `staleTime` — data refetcht bij elke re-render | 3 | 2 | 4 | P2 |
+| 69 | Geen skeleton loaders op 8+ paginacomponenten — layout-shift bij laden | 2 | 1 | 8 | P3 |
+| 70 | `window.location.reload()` als refresh-mechanisme in 3 componenten | 2 | 2 | 2 | P3 |
+| 71 | Inline-stijlen naast Tailwind (inconsistent) | 1 | 1 | 4 | P4 |
+| 72 | Grote component-bestanden (beheer/*.tsx > 500 regels) — geen opsplitsing | 2 | 1 | 8 | P3 |
+| 73 | Hardcoded NL-strings in sommige components — geen i18n-laag (bewust, maar niet gedocumenteerd) | 1 | 1 | 0 | P4 |
+| 74 | `useEffect` met side-effects die `fetch()` direct aanroepen (i.p.v. React Query) — 4 gevallen | 3 | 2 | 4 | P2 |
+| 75 | Geen `Suspense` boundary om lazy-loaded routes | 2 | 1 | 2 | P3 |
+| 76 | PDF-preview in `iframe` zonder `sandbox`-attribuut | 3 | 2 | 1 | P2 |
+| 77 | `localStorage`-gebruik zonder encryptie (spot-frequentie, DDS-draft) | 2 | 2 | 2 | P3 |
+| 78 | Lange `App.tsx` — alle routes in één bestand (200+ regels) | 2 | 1 | 2 | P3 |
+| 79 | Formulieren zonder `<form>` element (geen Enter-submit, geen autofill) | 2 | 1 | 8 | P3 |
+| 80 | Geen `aria-label` op icon-only knoppen | 2 | 2 | 4 | P3 |
+
+---
+
+## Categorie G — DevOps & Observability
+
+| # | Item | Impact | Risico | Uren | Prio |
+|---|------|--------|--------|------|------|
+| 81 | Geen structured logging voor business-events (offerte verstuurd, dossier definitief) | 3 | 2 | 8 | P2 |
+| 82 | Geen health-check endpoint voor DB-verbinding (alleen `/healthz` die altijd 200 geeft) | 4 | 3 | 2 | P2 |
+| 83 | Geen alerting op backup-failures (dagelijkse backup stil faalt) | 4 | 4 | 4 | P1 |
+| 84 | Geen Sentry/error-tracking in productie | 4 | 3 | 4 | P2 |
+| 85 | Geen performance-monitoring (p95-latency onbekend) | 3 | 2 | 4 | P2 |
+| 86 | `pnpm run typecheck` niet in CI (alleen lokaal) | 3 | 3 | 2 | P2 |
+| 87 | DB-migraties via `drizzle-kit push` (dev-only tool) in ontbrekende productie-migratiehistorie | 4 | 4 | 16 | P1 |
+| 88 | Geen `schema.sql` snapshot — productie-DB kan afwijken van dev | 4 | 4 | 4 | P1 |
+| 89 | E2E-tests enkel op Chromium — geen cross-browser coverage | 2 | 1 | 8 | P3 |
+| 90 | Geen load-tests — capaciteit bij 50 gelijktijdige gebruikers onbekend | 3 | 3 | 8 | P2 |
+
+---
+
+## Categorie H — Dependencies & Versiebeheer
+
+| # | Item | Impact | Risico | Uren | Prio |
+|---|------|--------|--------|------|------|
+| 91 | `otplib` vastzittend op v12 (v13 breekt bundle) — geen upgrade-pad gedocumenteerd | 3 | 3 | 8 | P2 |
+| 92 | `html2canvas` vervangen door `html2canvas-pro` (fork) — upstream onduidelijk | 3 | 2 | 4 | P3 |
+| 93 | `nodemailer` in `externals` van build maar ook als runtime dep vereist — fragiel | 3 | 3 | 2 | P2 |
+| 94 | `pdfjs-dist` v6 met aparte worker-import — upgrade v7 breekt worker-pad | 3 | 2 | 8 | P3 |
+| 95 | Geen `engines` field in package.json — Node-versie impliciet (24 vereist) | 2 | 2 | 1 | P3 |
+| 96 | 3 moderate npm-kwetsbaarheden in dev-dependencies (pnpm audit) | 2 | 1 | 2 | P3 |
+| 97 | `@workspace/*` pakketten hebben geen versie-semantics — breaking changes onzichtbaar | 2 | 2 | 8 | P3 |
+
+---
+
+## Categorie I — Technische Schuld (architectureel)
+
+| # | Item | Impact | Risico | Uren | Prio |
+|---|------|--------|--------|------|------|
+| 98 | Geen productie-migratiehistorie — schema-wijzigingen niet reproduceerbaar | 5 | 5 | 24 | P1 |
+| 99 | Geen event-sourcing / audit-log voor kritieke statusovergangen (offerte→definitief, dossier-bevriezing) | 4 | 3 | 40 | P2 |
+| 100 | Geen CQRS/separation: read-queries en business-logica zitten in dezelfde route-handlers | 3 | 2 | 80 | P3 |
+
+---
+
+## Samenvatting
+
+| Prioriteit | Aantal items | Totaal uren |
+|-----------|-------------|------------|
+| **P1 — Nu** | 17 | ~100 |
+| **P2 — Sprint** | 36 | ~180 |
+| **P3 — Kwartaal** | 37 | ~290 |
+| **P4 — Backlog** | 4 | ~10 |
+| **Opgelost** | 2 | — |
+| **Totaal** | **96** | **~580 uur** |
+
+> De zwaarste schuld zit in de ontbrekende productie-migratiehistorie (#98), de N+1-queries op de kernlijsten (#45–48), ontbrekende transacties op juridisch relevante paden (#14–16), en de ontbrekende backup-alerting (#83).

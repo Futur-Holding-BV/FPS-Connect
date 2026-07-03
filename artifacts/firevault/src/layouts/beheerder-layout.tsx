@@ -1435,6 +1435,19 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                         <SidebarMenuItem className="pl-5">
                           <SidebarMenuButton
                             asChild
+                            isActive={location === "/beheer/object-rechten"}
+                          >
+                            <Link href="/beheer/object-rechten">
+                              <ShieldCheck />
+                              <span>Object-rechten</span>
+                            </Link>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      )}
+                      {isHoofdbeheerder && (
+                        <SidebarMenuItem className="pl-5">
+                          <SidebarMenuButton
+                            asChild
                             isActive={location === "/beheer/spotconfiguratie"}
                           >
                             <Link href="/beheer/spotconfiguratie">

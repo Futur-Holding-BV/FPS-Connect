@@ -81,6 +81,7 @@ import { requireAuth } from "../middlewares/auth";
 import { meldActief } from "../lib/online-tracker";
 import { maakAuditMiddleware } from "../lib/audit";
 import auditRouter from "./audit";
+import objectRechtenRouter from "./object-rechten";
 import "../services/workflow-configs";
 
 const router: IRouter = Router();
@@ -176,5 +177,6 @@ router.use(pbmRouter);
 router.use(regieRouter);
 router.use(contractBewakingRouter);
 router.use(auditRouter);
+router.use(objectRechtenRouter);
 
 export default router;

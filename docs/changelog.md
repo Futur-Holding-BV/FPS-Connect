@@ -8,6 +8,81 @@ Voor elke taak drie scores:
 
 Grote roadmap-fases staan ook in `docs/roadmap/gebouwd.md` en `docs/roadmap/actief.md`.
 
+## 2026-07-03 — Task #180 — Centrale Rechtenstructuur + Rapporten (Opdrachten 4 & 5)
+
+**Uitvoering:** volledig | **Diepere lagen:** volledig | **Getest:** typecheck:libs + api-server typecheck (pre-existing fouten ongewijzigd) + firevault typecheck
+
+### Opdracht 4 — Integriteitscontrole
+
+`docs/integriteitscontrole.md` — analyse-rapport (lees-only, niets verwijderd):
+- Duplicaties: magBijGebouw (4×) + toegewezenGebouwIds (4×) → opgelost (zie task #180); parseId-inconsistentie nog openstaand
+- Ontbrekende DB-indexes: 13+ hoog-risico kolommen zonder index; migratie via `CREATE INDEX CONCURRENTLY` aanbevolen
+- 15 routes schrijven multi-table zonder `db.transaction()` — juridisch risico op dossier-bevriezing + offerte→opdracht
+- N+1-queries: gebouwen (3n), documenten (2n), medewerkers (3n)
+- DB-foutberichten lekken als HTTP 500 naar client (~20 routes)
+- Volledige prioriteitenmatrix in rapport (Kritiek → Laag)
+
+### Opdracht 5 — Technische Schuld Top 100
+
+`docs/technische-schuld.md` — 100 items verdeeld over 9 categorieën (P1–P4):
+- P1 (17 items, ~100 uur): indexes, transacties op juridische paden, rate-limiting auth/AI, centrale error-handler, backup-alerting, productie-migratiehistorie
+- P2 (36 items, ~180 uur): paginering, HTTP-statuscodes, N+1-queries, security-hardening
+- P3/P4 (41 items): code-kwaliteit, frontend DX, DevOps-volwassenheid
+
+### Task #180 — Centrale Rechtenstructuur (architectureel)
+
+**`lib/permissies/src/types.ts`** — nieuwe typen: `ObjectType`, `ObjectRecht`, `PermissieContext`
+
+**`lib/permissies/src/engine.ts`** — `PermissieEngine` (pure class, geen DB-afhankelijkheid):
+- 4 dimensies: module-rechten, object-rechten, tijdelijke rechten, rol-bypass
+- Stubs voor toekomstige dimensies (IP-gebaseerd, tijdzone-bewust)
+- `heeftToegang(ctx, module, objectType?, objectId?)` — gecombineerde evaluatie
+
+**`lib/permissies/src/index.ts`** — re-exports bijgewerkt
+
+**`lib/db/src/schema/rechten.ts`** — twee nieuwe tabellen:
+- `objectRechtenTable` — object-level rechten per gebruiker (type, objectId, niveau, geldigVan/Tot, reden, verleendDoor)
+- `workflowRechtenTable` — workflow-stap autorisaties (stub, toekomst)
+- Indexes op gebruiker_idx, object_idx, geldig_tot_idx
+
+**DB push geslaagd** — beide tabellen aangemaakt in Postgres
+
+**`artifacts/api-server/src/lib/permissie-service.ts`** — `PermissieService`:
+- Laadt module-rechten + object-rechten + toewijzingen in 1 `Promise.all`
+- Bouwt `PermissieContext` op voor de ingelogde gebruiker
+
+**`artifacts/api-server/src/middlewares/auth.ts`** uitgebreid:
+- Express.Request augmentatie: `req.permissies` (optioneel, `PermissieContext`)
+- `laadPermissies()` middleware — vult `req.permissies` na `requireAuth`
+- `requireObjectRecht(idParam, objectType, module, minNiveau)` factory — object-level autorisatie
+
+**`artifacts/api-server/src/utils/rol.ts`** uitgebreid:
+- `toegewezenGebouwIds(userId)` — gecentraliseerde helper
+- `magBijGebouw(req, gebouwId)` — req-based (ondersteunt impersonatie)
+- `magBijGebouwVoorId(userId, gebouwId)` — userId-based
+
+**Duplicatie opgelost** — lokale kopieën verwijderd uit `routes/gebouwen.ts`, `voorzieningen.ts`, `inspecties.ts`, `onderhoud.ts`; allen importeren nu uit `utils/rol.ts`
+
+**`artifacts/api-server/src/routes/object-rechten.ts`** — CRUD routes:
+- `GET /object-rechten` — alle actieve rechten (alleenBeheerder)
+- `GET /gebruikers/:id/object-rechten` — rechten per gebruiker
+- `POST /gebruikers/:id/object-rechten` — recht verlenen
+- `DELETE /object-rechten/:id` — recht intrekken
+- `PATCH /object-rechten/:id` — geldigheid aanpassen (verlengd/ingetrokken)
+
+**`artifacts/api-server/src/routes/index.ts`** — objectRechtenRouter geregistreerd
+
+**Planner-preset** toegevoegd aan `lib/permissies/src/engine.ts` PRESETS: planning:4, toolbox:2, gebouwen:2, voorzieningen:1, onderhoud:1, personeel:1
+
+**Frontend:**
+- `artifacts/firevault/src/pages/beheer/object-rechten.tsx` — nieuwe beheerpagina:
+  - Tab "Per gebruiker": gebruiker selecteren → rechten tonen + verlenen
+  - Tab "Alle actieve rechten": overzichtstabel
+  - Modal voor nieuw recht verlenen (objectType, objectId, niveau, tijdelijk/geldigTot, reden)
+  - Verlopen rechten in detail-samenvatting (grijs)
+- `artifacts/firevault/src/App.tsx` — route `/beheer/object-rechten` toegevoegd
+- `artifacts/firevault/src/layouts/beheerder-layout.tsx` — nav-item "Object-rechten" (isHoofdbeheerder, naast Rollen & Rechten)
+
 ## 2026-07-03 — Universele Audit Trail
 
 **Uitvoering:** volledig | **Diepere lagen:** volledig | **Getest:** typecheck + API-verificatie

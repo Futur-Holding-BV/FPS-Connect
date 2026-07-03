@@ -48,3 +48,4 @@ export * from "./magazijn";
 export * from "./materiaal-aanvragen";
 export * from "./uitvoerder";
 export * from "./audit";
+export * from "./rechten";
