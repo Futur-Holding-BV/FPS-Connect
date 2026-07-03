@@ -4,6 +4,44 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-03 — Inkoopfacturen: leverancier-presets + factuurregels + BTW-code select
+
+**Uitvoering:** volledig | **Getest:** typecheck 0 fouten (api-server + firevault), workflows RUNNING
+
+### Gewijzigde bestanden
+- `lib/db/src/schema/leveranciers.ts` — 4 nieuwe kolommen: grootboekrekening, kostenplaats, btwCodeDefault, relatiecode
+- `lib/api-spec/openapi.yaml` — Leverancier + LeverancierInput schema uitgebreid met 4 preset-velden
+- `lib/api-client-react/src/generated/api.ts` — codegen uitgevoerd, Leverancier type bijgewerkt
+- `artifacts/api-server/src/routes/leveranciers.ts` — mapLeverancier + maakLeverancierValues bijgewerkt
+- `artifacts/api-server/src/routes/facturen.ts` — AI-uitlezen: leverancier-presets overnemen (grootboek/kostenplaats/BTW) + werknummer→opdracht-matching via opdrachtenTable
+- `artifacts/firevault/src/pages/leveranciers/detail.tsx` — boekhoud-instellingen sectie in BewerkModal + weergavekaart op gegevens-tab
+- `artifacts/firevault/src/pages/facturen/detail.tsx` — BTW-code Input→Select (H/L/V/0) + FactuurRegelsKaart component (tabel met AI-herkende regels)
+
+### Wat is gebouwd
+
+**Leverancier-presets (AI-overnamemechanisme):**
+- Vier nieuwe velden op leverancier: relatiecode (AccountView crediteurnummer), standaard grootboekrekening, standaard kostenplaats, standaard BTW-code
+- BewerkModal uitgebreid met "Boekhoud-instellingen (AI-presets)" sectie incl. BTW-code Select dropdown
+- Weergavekaart op gegevens-tab toont de ingestelde presets zichtbaar
+
+**AI-uitlezen presets overnemen:**
+- Na leverancierherkenning (IBAN/naam-match) worden presets automatisch overgenomen op de factuur
+- Volgorde: AI-herkende waarde → bestaande factuurwaarde → leverancier-preset (fail-safe, nooit overschrijven)
+- BTW-code, grootboekrekening, kostenplaats worden gevuld zonder handmatige invoer
+
+**Werknummer → opdracht-koppeling:**
+- AI herkent werknummer op factuur (nieuw veld in ParsedFactuur)
+- Zoekt op opdrachtenTable.werknummer (ilike) en zet opdrachtId automatisch
+- ProjectCode ook pre-gevuld zodat medewerker het kan bevestigen
+
+**Factuurregels tabel:**
+- FactuurRegelsKaart component toont per factuur: regelnummer, omschrijving, aantal/eenheid, stukprijs, bedrag excl., BTW-code, grootboekrekening
+- Verschijnt automatisch zodra AI regels heeft herkend (lege state = onzichtbaar)
+
+**BTW-code Select:**
+- Vrij tekstveld vervangen door dropdown: H (21%), L (9%), V (verlegd), 0 (vrijgesteld)
+- Consistent in bewerkformulier + leverancier BewerkModal
+
 ## 2026-07-03 — Controlebox: AI Financial Controller dashboard
 
 **Uitvoering:** volledig | **Getest:** typecheck 0 fouten, workflows RUNNING

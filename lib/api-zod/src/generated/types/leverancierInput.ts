@@ -35,4 +35,8 @@ export interface LeverancierInput {
   productcategorieen?: string;
   notities?: string;
   actief?: boolean;
+  grootboekrekening?: string;
+  kostenplaats?: string;
+  btw_code_default?: string;
+  relatiecode?: string;
 }

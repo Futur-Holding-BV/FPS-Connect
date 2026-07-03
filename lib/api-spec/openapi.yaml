@@ -31271,6 +31271,10 @@ components:
         notities:                 { type: ["string", "null"] }
         actief:                   { type: boolean }
         bron:                     { type: string }
+        grootboekrekening:        { type: ["string", "null"] }
+        kostenplaats:             { type: ["string", "null"] }
+        btw_code_default:         { type: ["string", "null"] }
+        relatiecode:              { type: ["string", "null"] }
         aangemaakt_op:            { type: string }
         bijgewerkt_op:            { type: string }
 
@@ -31306,6 +31310,10 @@ components:
         productcategorieen:       { type: string }
         notities:                 { type: string }
         actief:                   { type: boolean }
+        grootboekrekening:        { type: string }
+        kostenplaats:             { type: string }
+        btw_code_default:         { type: string }
+        relatiecode:              { type: string }
 
     # ── ARTIKELEN ──────────────────────────────────────────────────────────────
 

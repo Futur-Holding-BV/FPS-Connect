@@ -154,6 +154,10 @@ function maakLeverancierValues(body: Record<string, unknown>, bron?: string) {
     productcategorieen: str(body.productcategorieen),
     notities: str(body.notities),
     actief: body.actief !== undefined ? Boolean(body.actief) : true,
+    grootboekrekening: str(body.grootboekrekening),
+    kostenplaats: str(body.kostenplaats),
+    btwCodeDefault: str(body.btw_code_default),
+    relatiecode: str(body.relatiecode),
     ...(bron ? { bron } : {}),
   };
 }
@@ -192,6 +196,10 @@ function mapLeverancier(r: LeverancierRij) {
     notities: r.notities,
     actief: r.actief,
     bron: r.bron,
+    grootboekrekening: r.grootboekrekening ?? null,
+    kostenplaats: r.kostenplaats ?? null,
+    btw_code_default: r.btwCodeDefault ?? null,
+    relatiecode: r.relatiecode ?? null,
     aangemaakt_op: r.aangemaaktOp.toISOString(),
     bijgewerkt_op: r.bijgewerktOp.toISOString(),
   };

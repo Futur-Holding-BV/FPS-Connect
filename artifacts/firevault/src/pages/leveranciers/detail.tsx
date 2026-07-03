@@ -18,7 +18,11 @@ import {
 import {
   Building2, Phone, Mail, Globe, MapPin, FileText, CreditCard,
   User, Pencil, Trash2, ArrowLeft, Package, ShoppingCart, Sparkles, Loader2,
+  BookOpen,
 } from "lucide-react";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
 
@@ -232,6 +236,23 @@ export default function LeverancierDetailPagina() {
                 </CardContent>
               </Card>
             )}
+            {(leverancier.grootboekrekening || leverancier.kostenplaats || leverancier.btw_code_default || leverancier.relatiecode) && (
+              <Card className="md:col-span-2">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium flex items-center gap-2">
+                    <BookOpen className="h-4 w-4" />Boekhoud-instellingen (AI-presets)
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="text-sm space-y-1.5">
+                  <InfoRij label="Relatiecode AccountView" waarde={leverancier.relatiecode} />
+                  <InfoRij label="Standaard grootboekrekening" waarde={leverancier.grootboekrekening} />
+                  <InfoRij label="Standaard kostenplaats" waarde={leverancier.kostenplaats} />
+                  <InfoRij label="Standaard BTW-code" waarde={
+                    { H: "H — 21%", L: "L — 9%", V: "V — BTW verlegd", "0": "0 — Vrijgesteld" }[leverancier.btw_code_default ?? ""] ?? leverancier.btw_code_default
+                  } />
+                </CardContent>
+              </Card>
+            )}
           </div>
         </TabsContent>
 
@@ -371,6 +392,10 @@ function BewerkModal({
     categorie: leverancier.categorie ?? "",
     productcategorieen: leverancier.productcategorieen ?? "",
     notities: leverancier.notities ?? "",
+    grootboekrekening: leverancier.grootboekrekening ?? "",
+    kostenplaats: leverancier.kostenplaats ?? "",
+    btw_code_default: leverancier.btw_code_default ?? "",
+    relatiecode: leverancier.relatiecode ?? "",
   });
 
   function veld(key: string) {
@@ -600,6 +625,44 @@ function BewerkModal({
               className="flex min-h-[80px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm"
               {...veld("notities")}
             />
+          </Sectie>
+          {/* Boekhoud-instellingen */}
+          <Sectie titel="Boekhoud-instellingen (AI-presets)">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1 col-span-2">
+                <Label>Relatiecode AccountView (crediteurnummer)</Label>
+                <Input {...veld("relatiecode")} placeholder="bijv. LEV001" className="font-mono" />
+              </div>
+              <div className="space-y-1">
+                <Label>Standaard grootboekrekening</Label>
+                <Input {...veld("grootboekrekening")} placeholder="bijv. 4100" className="font-mono" />
+              </div>
+              <div className="space-y-1">
+                <Label>Standaard kostenplaats</Label>
+                <Input {...veld("kostenplaats")} placeholder="bijv. 10" className="font-mono" />
+              </div>
+              <div className="space-y-1 col-span-2">
+                <Label>Standaard BTW-code</Label>
+                <Select
+                  value={form["btw_code_default"] ?? ""}
+                  onValueChange={(v) => setForm((p) => ({ ...p, btw_code_default: v }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Geen standaard ingesteld" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Geen standaard</SelectItem>
+                    <SelectItem value="H">H — 21% hoog tarief</SelectItem>
+                    <SelectItem value="L">L — 9% laag tarief</SelectItem>
+                    <SelectItem value="V">V — BTW verlegd (onderaannemer)</SelectItem>
+                    <SelectItem value="0">0 — Vrijgesteld</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="mt-2 rounded border border-blue-100 bg-blue-50 px-3 py-2 text-xs text-blue-600">
+              Deze waarden worden automatisch overgenomen wanneer AI een factuur van deze leverancier uitleest. De medewerker hoeft ze dan niet meer handmatig in te vullen.
+            </div>
           </Sectie>
         </div>
         <DialogFooter>

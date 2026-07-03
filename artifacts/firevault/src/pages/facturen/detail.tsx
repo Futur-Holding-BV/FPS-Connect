@@ -25,6 +25,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useListFactuurRegels } from "@workspace/api-client-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -485,6 +486,9 @@ export default function FactuurDetailPagina() {
         </Card>
       </div>
 
+      {/* Factuurregels (AI-extractie) */}
+      <FactuurRegelsKaart factuurId={id} />
+
       {/* AI metadata */}
       {f.ai_metadata && Object.keys(f.ai_metadata).length > 0 && (
         <Card>
@@ -863,7 +867,17 @@ export default function FactuurDetailPagina() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label>BTW-code</Label>
-                <Input className="mt-1 font-mono" placeholder="bijv. H, L, V" value={bewerkVelden["btw_code"] ?? ""} onChange={(e) => bewerkVeld("btw_code", e.target.value)} />
+                <Select value={bewerkVelden["btw_code"] ?? ""} onValueChange={(v) => bewerkVeld("btw_code", v)}>
+                  <SelectTrigger className="mt-1">
+                    <SelectValue placeholder="Selecteer BTW-code" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="H">H — 21% hoog tarief</SelectItem>
+                    <SelectItem value="L">L — 9% laag tarief</SelectItem>
+                    <SelectItem value="V">V — BTW verlegd (onderaannemer)</SelectItem>
+                    <SelectItem value="0">0 — Vrijgesteld</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div>
                 <Label>Dagboek</Label>
@@ -1006,5 +1020,65 @@ export default function FactuurDetailPagina() {
         </Dialog>
       )}
     </div>
+  );
+}
+
+function FactuurRegelsKaart({ factuurId }: { factuurId: number }) {
+  const { data: regels, isLoading } = useListFactuurRegels(factuurId, {
+    query: { queryKey: ["factuur-regels", factuurId] },
+  });
+  if (isLoading) return null;
+  if (!regels || regels.length === 0) return null;
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm flex items-center gap-2">
+          Factuurregels
+          <span className="ml-auto text-xs text-muted-foreground font-normal">
+            {regels.length} regel{regels.length !== 1 ? "s" : ""}
+          </span>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="p-0">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b bg-slate-50 text-xs text-muted-foreground">
+                <th className="px-3 py-2 text-left font-medium w-8">#</th>
+                <th className="px-3 py-2 text-left font-medium">Omschrijving</th>
+                <th className="px-3 py-2 text-right font-medium">Aantal</th>
+                <th className="px-3 py-2 text-right font-medium">Stukprijs</th>
+                <th className="px-3 py-2 text-right font-medium">Bedrag excl.</th>
+                <th className="px-3 py-2 text-center font-medium">BTW</th>
+                <th className="px-3 py-2 text-left font-medium">Grootboek</th>
+              </tr>
+            </thead>
+            <tbody>
+              {regels.map((r) => (
+                <tr key={r.id} className="border-b last:border-0 hover:bg-slate-50">
+                  <td className="px-3 py-2 text-muted-foreground">{r.regelnummer}</td>
+                  <td className="px-3 py-2">{r.omschrijving ?? "—"}</td>
+                  <td className="px-3 py-2 text-right font-mono text-xs">
+                    {r.hoeveelheid != null ? `${r.hoeveelheid}${r.eenheid ? ` ${r.eenheid}` : ""}` : "—"}
+                  </td>
+                  <td className="px-3 py-2 text-right font-mono text-xs">
+                    {r.stukprijs != null ? `€ ${r.stukprijs}` : "—"}
+                  </td>
+                  <td className="px-3 py-2 text-right font-mono">
+                    {r.bedrag_excl_btw != null ? `€ ${r.bedrag_excl_btw}` : "—"}
+                  </td>
+                  <td className="px-3 py-2 text-center">
+                    {r.btw_code
+                      ? <span className="font-mono bg-slate-100 px-1.5 py-0.5 rounded text-xs">{r.btw_code}</span>
+                      : <span className="text-muted-foreground text-xs">—</span>}
+                  </td>
+                  <td className="px-3 py-2 font-mono text-xs text-muted-foreground">{r.grootboekrekening ?? "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </CardContent>
+    </Card>
   );
 }

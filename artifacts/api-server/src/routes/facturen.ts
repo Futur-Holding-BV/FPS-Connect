@@ -11,6 +11,7 @@ import {
   gebouwenTable,
   gebruikersTable,
   leveranciersTable,
+  opdrachtenTable,
 } from "@workspace/db";
 import { eq, and, desc, sql, or, gte, count, isNull, isNotNull, ne, lt, sum, ilike } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
@@ -291,6 +292,7 @@ Regels: extraheer elke factuurregel als apart object. Als er geen regelspecifica
 Bedragen: altijd als decimale string ("1234.56"), datums als "YYYY-MM-DD".
 BTW-codes: H=21%, L=9%, V=verlegd, 0=vrijgesteld.
 IBAN: exact overnemen zoals op factuur (met of zonder spaties).
+Werknummer/projectnummer: zoek naar een werknummer, projectnummer, opdrachtnummer of werkopdrachtnummer op de factuur (bijv. "Werk 2024-001", "Proj. 045", "W.O. 123"). Geef dit terug als werknummer.
 Zet controle_nodig=true als bedragen onduidelijk zijn, IBAN ontbreekt, of regelsom afwijkt van totaal.`,
         },
         {
@@ -319,6 +321,7 @@ Zet controle_nodig=true als bedragen onduidelijk zijn, IBAN ontbreekt, of regels
       bedrag_excl_btw?: string | null; btw_bedrag?: string | null; bedrag_incl_btw?: string | null;
       btw_code?: string | null; type?: string; regels?: ParsedRegel[];
       controle_nodig?: boolean; controle_reden?: string | null; confidence?: number;
+      werknummer?: string | null;
     };
     let parsed: ParsedFactuur = {};
     if (jsonMatch) {
@@ -363,6 +366,22 @@ Zet controle_nodig=true als bedragen onduidelijk zijn, IBAN ontbreekt, of regels
       normaalBedrag = (totaalInclBtw * (1 - perc)).toFixed(2);
     }
 
+    // ── Leverancier-presets overnemen (alleen als factuur nog geen waarde heeft) ─
+    const grootboekPreset = factuur.grootboekrekening ?? leverancier?.grootboekrekening ?? null;
+    const kostenplaatsPreset = factuur.kostenplaats ?? leverancier?.kostenplaats ?? null;
+    const btwCodePreset = parsed.btw_code ?? factuur.btwCode ?? leverancier?.btwCodeDefault ?? null;
+
+    // ── Werknummer → opdracht-koppeling ───────────────────────────────────────
+    let opdrachtId: number | null = factuur.opdrachtId ?? null;
+    if (!opdrachtId && parsed.werknummer) {
+      const [gevondenOpdracht] = await db
+        .select({ id: opdrachtenTable.id })
+        .from(opdrachtenTable)
+        .where(ilike(opdrachtenTable.werknummer, `%${parsed.werknummer}%`))
+        .limit(1);
+      if (gevondenOpdracht) opdrachtId = gevondenOpdracht.id;
+    }
+
     // ── Factuurregels opslaan (verwijder oude AI-regels, voeg nieuwe in) ──────
     const regels = Array.isArray(parsed.regels) ? parsed.regels : [];
     if (regels.length > 0) {
@@ -403,7 +422,9 @@ Zet controle_nodig=true als bedragen onduidelijk zijn, IBAN ontbreekt, of regels
       bedragExclBtw: parsed.bedrag_excl_btw ?? factuur.bedragExclBtw ?? null,
       btwBedrag: parsed.btw_bedrag ?? factuur.btwBedrag ?? null,
       bedragInclBtw: parsed.bedrag_incl_btw ?? factuur.bedragInclBtw ?? null,
-      btwCode: parsed.btw_code ?? factuur.btwCode ?? null,
+      btwCode: btwCodePreset,
+      grootboekrekening: grootboekPreset,
+      kostenplaats: kostenplaatsPreset,
       // Leverancier & IBAN
       leverancierId: leverancier?.id ?? factuur.leverancierId ?? null,
       ibanUitgelezen: uitgelezenIban ?? factuur.ibanUitgelezen ?? null,
@@ -412,6 +433,9 @@ Zet controle_nodig=true als bedragen onduidelijk zijn, IBAN ontbreekt, of regels
       gRekeningVanToepassing,
       gRekeningBedrag: gRekeningBedrag ?? factuur.gRekeningBedrag ?? null,
       normaalBedrag: normaalBedrag ?? factuur.normaalBedrag ?? null,
+      // Opdrachtkoppeling via werknummer (AI-voorstel)
+      opdrachtId,
+      projectCode: factuur.projectCode ?? parsed.werknummer ?? null,
       status: nieuweStatus,
       bijgewerktOp: new Date(),
     }).where(eq(facturenTable.id, id)).returning();

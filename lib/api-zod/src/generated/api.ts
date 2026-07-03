@@ -21084,6 +21084,10 @@ export const ListLeveranciersResponseItem = zod.object({
   "notities": zod.string().nullish(),
   "actief": zod.boolean(),
   "bron": zod.string(),
+  "grootboekrekening": zod.string().nullish(),
+  "kostenplaats": zod.string().nullish(),
+  "btw_code_default": zod.string().nullish(),
+  "relatiecode": zod.string().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })
@@ -21121,7 +21125,11 @@ export const CreateLeverancierBody = zod.object({
   "categorie": zod.string().optional(),
   "productcategorieen": zod.string().optional(),
   "notities": zod.string().optional(),
-  "actief": zod.boolean().optional()
+  "actief": zod.boolean().optional(),
+  "grootboekrekening": zod.string().optional(),
+  "kostenplaats": zod.string().optional(),
+  "btw_code_default": zod.string().optional(),
+  "relatiecode": zod.string().optional()
 })
 
 export const CreateLeverancierResponse = zod.void()
@@ -21165,6 +21173,10 @@ export const GetLeverancierResponse = zod.object({
   "notities": zod.string().nullish(),
   "actief": zod.boolean(),
   "bron": zod.string(),
+  "grootboekrekening": zod.string().nullish(),
+  "kostenplaats": zod.string().nullish(),
+  "btw_code_default": zod.string().nullish(),
+  "relatiecode": zod.string().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })
@@ -21205,7 +21217,11 @@ export const PatchLeverancierBody = zod.object({
   "categorie": zod.string().optional(),
   "productcategorieen": zod.string().optional(),
   "notities": zod.string().optional(),
-  "actief": zod.boolean().optional()
+  "actief": zod.boolean().optional(),
+  "grootboekrekening": zod.string().optional(),
+  "kostenplaats": zod.string().optional(),
+  "btw_code_default": zod.string().optional(),
+  "relatiecode": zod.string().optional()
 })
 
 export const PatchLeverancierResponse = zod.object({
@@ -21239,6 +21255,10 @@ export const PatchLeverancierResponse = zod.object({
   "notities": zod.string().nullish(),
   "actief": zod.boolean(),
   "bron": zod.string(),
+  "grootboekrekening": zod.string().nullish(),
+  "kostenplaats": zod.string().nullish(),
+  "btw_code_default": zod.string().nullish(),
+  "relatiecode": zod.string().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })

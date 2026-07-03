@@ -45,6 +45,12 @@ export const leveranciersTable = pgTable("leveranciers", {
   categorie: text("categorie"),                          // bijv. "Branddeuren", "Doorvoeringen"
   productcategorieen: text("productcategorieen"),        // vrij tekstveld of kommalijst
 
+  // Boekhoud-instellingen (presets — worden automatisch overgenomen bij AI-uitlezing)
+  grootboekrekening: text("grootboekrekening"),         // standaard grootboekrekening voor inkoopfacturen
+  kostenplaats: text("kostenplaats"),                   // standaard kostenplaats
+  btwCodeDefault: text("btw_code_default"),             // standaard BTW-code (H/L/V/0)
+  relatiecode: text("relatiecode"),                     // relatiecode in AccountView (crediteur/debiteurnummer)
+
   // G-rekening (wettelijke verplichting bouwsector)
   // Wanneer een leverancier een onderbouwer is met G-rekening-verplichting,
   // worden inkomende facturen automatisch gesignaleerd voor splitsing.

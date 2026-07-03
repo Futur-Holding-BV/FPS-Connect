@@ -8625,6 +8625,14 @@ export interface Leverancier {
   notities?: string | null;
   actief: boolean;
   bron: string;
+  /** @nullable */
+  grootboekrekening?: string | null;
+  /** @nullable */
+  kostenplaats?: string | null;
+  /** @nullable */
+  btw_code_default?: string | null;
+  /** @nullable */
+  relatiecode?: string | null;
   aangemaakt_op: string;
   bijgewerkt_op: string;
 }
@@ -8658,6 +8666,10 @@ export interface LeverancierInput {
   productcategorieen?: string;
   notities?: string;
   actief?: boolean;
+  grootboekrekening?: string;
+  kostenplaats?: string;
+  btw_code_default?: string;
+  relatiecode?: string;
 }
 
 export interface Artikel {

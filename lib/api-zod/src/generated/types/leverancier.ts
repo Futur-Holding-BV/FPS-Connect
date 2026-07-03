@@ -61,6 +61,14 @@ export interface Leverancier {
   notities?: string | null;
   actief: boolean;
   bron: string;
+  /** @nullable */
+  grootboekrekening?: string | null;
+  /** @nullable */
+  kostenplaats?: string | null;
+  /** @nullable */
+  btw_code_default?: string | null;
+  /** @nullable */
+  relatiecode?: string | null;
   aangemaakt_op: string;
   bijgewerkt_op: string;
 }
