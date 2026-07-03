@@ -917,6 +917,14 @@ router.post("/modules/planning/reistijd-schatting", lezenPlanning, async (req, r
       ],
       response_format: { type: "json_object" },
       max_tokens: 200,
+    }, undefined, {
+      module: "planning",
+      functie: "reistijd-schatting",
+      gebruikerId: (req as { session?: { userId?: number } }).session?.userId ?? null,
+      // planning_item_id is niet beschikbaar: reistijd-schatting is een algemeen
+      // hulpmiddel op basis van twee locatiestrings, niet gekoppeld aan een specifiek
+      // planningsitem. De aanroepende UI kan in de toekomst een optionele
+      // planning_item_id meesturen via req.body als dat gewenst is.
     });
     const raw = JSON.parse(planningAiResultaat.ok ? planningAiResultaat.inhoud : "{}") as { minuten?: unknown; beschrijving?: unknown; onzeker?: unknown };
     return res.json({

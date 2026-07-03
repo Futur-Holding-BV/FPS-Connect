@@ -1068,6 +1068,7 @@ router.post("/offerte-secties/:id/ai-schrijven", schrijven, async (req, res) => 
         opdrachtgever: offertesTable.opdrachtgever,
         gebouwNaam: gebouwenTable.naam,
         klantNaam: crmKlantenTable.naam,
+        klantId: offertesTable.klantId,
         datum: offertesTable.datum,
         voorwaarden: offertesTable.voorwaarden,
       })
@@ -1135,6 +1136,12 @@ Schrijf een professionele, overtuigende tekst voor deze sectie. Gebruik alinea's
         { role: "system", content: systeemPrompt },
         { role: "user", content: gebruikersPrompt },
       ],
+    }, undefined, {
+      module: "offertes",
+      functie: "sectie-genereren",
+      gebruikerId: req.session.userId ?? null,
+      offerte_id: sectie.offerteId,
+      klant_id: offerte?.klantId ?? null,
     });
 
     const tekst = sectieResultaat.ok ? sectieResultaat.inhoud : "";
@@ -1631,6 +1638,12 @@ Geef als JSON terug (geen extra tekst):
 }`,
         },
       ],
+    }, undefined, {
+      module: "offertes",
+      functie: "e-mail-voorstel",
+      gebruikerId: req.session.userId ?? null,
+      offerte_id: offerteId,
+      klant_id: offerte.klantId ?? null,
     });
 
     const rawMail = offerteMailResultaat.ok ? offerteMailResultaat.inhoud : "{}";
@@ -1978,6 +1991,11 @@ Geef per aandachtspunt aan of het voor FPS gunstig, neutraal of ongunstig is.`;
         { role: "system", content: systeemprompt },
         { role: "user", content: `Contracttekst:\n\n${c.extractedText.slice(0, 50000)}` },
       ],
+    }, undefined, {
+      module: "offertes",
+      functie: "contract-advies",
+      gebruikerId: req.session.userId ?? null,
+      offerte_id: offerteId,
     });
 
     const raw = contractAdviesResultaat.ok ? contractAdviesResultaat.inhoud : "{}";

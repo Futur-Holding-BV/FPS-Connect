@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer, numeric, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, numeric, timestamp, jsonb } from "drizzle-orm/pg-core";
 
 export const aiAanroepenTable = pgTable("ai_aanroepen", {
   id: serial("id").primaryKey(),
@@ -20,4 +20,5 @@ export const aiAanroepenTable = pgTable("ai_aanroepen", {
   duurMs: integer("duur_ms"),
   status: text("status").notNull().default("ok"),
   foutmelding: text("foutmelding"),
+  contextJson: jsonb("context_json"),
 });

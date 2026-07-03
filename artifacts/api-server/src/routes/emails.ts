@@ -144,7 +144,7 @@ async function herberekeningUitvoeren(
           inhoudTekst: e.inhoudTekst,
           bijlagen: [] as GeparseerdeBijlage[],
         }));
-        const nieuweSamenvatting = await genereerProjectSamenvatting(emailsMetId);
+        const nieuweSamenvatting = await genereerProjectSamenvatting(emailsMetId, { gebouw_id: gebouwId });
         const gemergd = mergeContactpersonen(
           bestaandeContacten,
           nieuweSamenvatting.contactpersonen,
@@ -169,7 +169,7 @@ async function herberekeningUitvoeren(
       bijlagen: [] as GeparseerdeBijlage[],
     }));
 
-    const samenvatting = await genereerProjectSamenvatting(emailsMetId);
+    const samenvatting = await genereerProjectSamenvatting(emailsMetId, { gebouw_id: gebouwId });
 
     // Merge: bewaar bevestigde/afgewezen contacten, voeg nieuwe AI-voorstellen toe
     const gemergdContacten = mergeContactpersonen(
@@ -457,7 +457,7 @@ router.post("/gebouwen/:id/emails", beheerderPlus, async (req, res) => {
       return res.status(422).json({ error: "Het e-mailbestand kon niet worden gelezen. Upload een geldig .eml- of .msg-bestand." });
     }
 
-    const ai = await extraheerEmailInzicht(geparseerd, { gebruikerId: req.session.userId ?? null });
+    const ai = await extraheerEmailInzicht(geparseerd, { gebruikerId: req.session.userId ?? null, gebouw_id: gebouwId });
 
     const [e] = await db
       .insert(gebouwEmailsTable)

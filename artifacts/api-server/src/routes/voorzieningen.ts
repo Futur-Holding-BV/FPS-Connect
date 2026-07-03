@@ -355,7 +355,12 @@ router.post("/voorzieningen/ai-spotvoorstel", requireBevoegdheid("voorzieningen"
       gebouwId: Number(gebouw_id),
       fotoVoorObjectPath: foto_voor_url ? String(foto_voor_url) : null,
       fotoNaObjectPath: String(foto_na_url),
-      logCtx: { gebruikerId: req.session.userId ?? null },
+      logCtx: {
+        gebruikerId: req.session.userId ?? null,
+        // voorziening_id is niet beschikbaar: de AI-analyse loopt vóór het aanmaken
+        // van de voorziening. Nadat de monteur het voorstel bevestigt en POST /voorzieningen
+        // aanroept, is het voorziening-id pas bekend.
+      },
     });
     return res.json(voorstel);
   } catch (err) {

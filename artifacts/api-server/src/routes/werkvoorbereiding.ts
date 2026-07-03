@@ -378,6 +378,11 @@ Geef je analyse als JSON:
           ],
           response_format: { type: "json_object" },
           max_tokens: 3000,
+        }, undefined, {
+          module: "werkvoorbereiding",
+          functie: "inkoopplanning-genereer",
+          gebruikerId: req.session.userId ?? null,
+          project_id: id,
         });
         if (inkoopResultaat.ok) {
           aiResultaat = JSON.parse(inkoopResultaat.inhoud) as AiInkoopResult;
@@ -712,6 +717,11 @@ Geef je suggestie als JSON:
           ],
           response_format: { type: "json_object" },
           max_tokens: 3000,
+        }, undefined, {
+          module: "werkvoorbereiding",
+          functie: "inkoopbon-genereer",
+          gebruikerId: req.session.userId ?? null,
+          project_id: id,
         });
         if (bonResultaat.ok) {
           const parsed = JSON.parse(bonResultaat.inhoud) as { bonnen?: AiSuggestieBon[] };
@@ -1099,6 +1109,11 @@ Geef je planning als JSON:
           ],
           response_format: { type: "json_object" },
           max_tokens: 3000,
+        }, undefined, {
+          module: "werkvoorbereiding",
+          functie: "uitvoeringsplan-genereer",
+          gebruikerId: req.session.userId ?? null,
+          project_id: id,
         });
         if (uitvoerResultaat.ok) {
           aiResultaat = JSON.parse(uitvoerResultaat.inhoud) as AiUitvoeringsResult;

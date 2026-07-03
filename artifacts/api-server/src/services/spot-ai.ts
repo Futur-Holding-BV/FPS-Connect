@@ -258,6 +258,7 @@ export async function analyseerSpot(opts: {
     functie: "spot-analyse",
     entiteitstype: "gebouw",
     entiteitId: opts.gebouwId,
+    gebouw_id: opts.gebouwId,
     promptNaam: SPOT_ANALYSE_PROMPT.naam,
     promptVersie: SPOT_ANALYSE_PROMPT.versie,
     ...opts.logCtx,

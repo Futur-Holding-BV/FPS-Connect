@@ -52,9 +52,47 @@ function promptHashVan(tekst: string): string {
   return crypto.createHash("sha256").update(tekst).digest("hex").slice(0, 16);
 }
 
+// ── Context-bron type ─────────────────────────────────────────────────────────
+//
+// `AiContextBron` is een uitbreidbare container voor een onafhankelijke
+// contextbron. De toekomstige Orchestrator stelt een lijst van bronnen samen
+// vóór een gateway-aanroep; bestaande modules hoeven dit type niet te vullen.
+//
+// Beschikbare type-waarden (open string-unie zodat toekomstige bronsoorten
+// naadloos kunnen worden toegevoegd zonder breaking change):
+//   "workflow"       — workflowstatus en transitieparameters
+//   "document"       — PDF- of documenttekst uit de bibliotheek of DMS
+//   "rag"            — opgehaalde fragmenten uit een kennisbase (RAG)
+//   "kennisbron"     — domeinkennis-object (bijv. ETA, testnorm, bibliotheekitem)
+//   "auditlog"       — relevante audittrailregels als historische context
+//   "gebruikersinput"— geverifieerde gebruikersinvoer als expliciete contextbron
+
+export interface AiContextBron {
+  /** Soort contextbron (open string-unie voor uitbreidbaarheid). */
+  type: "workflow" | "document" | "rag" | "kennisbron" | "auditlog" | "gebruikersinput" | string;
+  /** Optionele referentie naar de bronentiteit (bijv. document-id, dossier-id). */
+  bronId?: string;
+  /** Vrije payload; structuur per type afgesproken tussen Orchestrator en gateway. */
+  payload: Record<string, unknown>;
+}
+
 // ── Log-context ───────────────────────────────────────────────────────────────
+//
+// `LogContext` bevat twee categorieën velden:
+//
+// 1. Basale log-velden (module, functie, gebruikerId, etc.) — al aanwezig.
+//
+// 2. Flat businesscontext-velden (optioneel) — nieuw. Door modules in te vullen
+//    zodra de id al bekend is bij de gateway-aanroep. Worden opgeslagen in
+//    context_json zodat AI-aanroepen later koppelbaar zijn aan bedrijfsentiteiten.
+//    Alle velden zijn optioneel; bestaande aanroepen zonder deze velden blijven
+//    ongewijzigd werken (geen breaking change).
+//
+// 3. contextBronnen (optioneel) — voor de toekomstige Orchestrator. Bestaande
+//    modules laten dit veld leeg; de Orchestrator vult het vóór een aanroep.
 
 export interface LogContext {
+  // ── Basale log-velden ──────────────────────────────────────────────────────
   module: string;
   functie?: string;
   gebruikerId?: number | null;
@@ -62,6 +100,61 @@ export interface LogContext {
   entiteitId?: number | null;
   promptNaam?: string | null;
   promptVersie?: string | null;
+
+  // ── Flat businesscontext-velden ────────────────────────────────────────────
+  /** Type workflow (bijv. "offerte", "opleverrapport", "inkoopplanning"). */
+  workflow_type?: string | null;
+  /** Werkstroomstatus ten tijde van de aanroep (bijv. "concept", "gereed"). */
+  workflow_status?: string | null;
+  /** Opdracht-/project-id gekoppeld aan deze aanroep. */
+  project_id?: number | null;
+  /** Gebouw-id gekoppeld aan deze aanroep. */
+  gebouw_id?: number | null;
+  /** Klant-id (CRM) gekoppeld aan deze aanroep. */
+  klant_id?: number | null;
+  /** Offerte-id gekoppeld aan deze aanroep. */
+  offerte_id?: number | null;
+  /** Calculatie-id gekoppeld aan deze aanroep. */
+  calculatie_id?: number | null;
+  /** Document-id (bibliotheek/DMS) gekoppeld aan deze aanroep. */
+  document_id?: number | null;
+  /** Voorziening-/spot-id gekoppeld aan deze aanroep. */
+  voorziening_id?: number | null;
+  /** Medewerker-id (HRM) gekoppeld aan deze aanroep. */
+  medewerker_id?: number | null;
+  /** Planning-item-id gekoppeld aan deze aanroep. */
+  planning_item_id?: number | null;
+
+  // ── Uitbreidbare contextbronnen (voor de Orchestrator) ─────────────────────
+  /**
+   * Gestructureerde contextbronnen samengesteld door de Orchestrator.
+   * Bestaande modules laten dit veld leeg; de Orchestrator vult het vóór
+   * een aanroep zodat de gateway meerdere onafhankelijke contextbronnen
+   * naar het model kan doorgeven zonder dat modules dit weten of beheren.
+   */
+  contextBronnen?: AiContextBron[];
+}
+
+// ── Helpers: context_json samenstellen ────────────────────────────────────────
+
+function bouwContextJson(ctx: LogContext | undefined): Record<string, unknown> | null {
+  if (!ctx) return null;
+  const velden: Record<string, unknown> = {};
+  if (ctx.workflow_type != null)    velden.workflow_type    = ctx.workflow_type;
+  if (ctx.workflow_status != null)  velden.workflow_status  = ctx.workflow_status;
+  if (ctx.project_id != null)       velden.project_id       = ctx.project_id;
+  if (ctx.gebouw_id != null)        velden.gebouw_id        = ctx.gebouw_id;
+  if (ctx.klant_id != null)         velden.klant_id         = ctx.klant_id;
+  if (ctx.offerte_id != null)       velden.offerte_id       = ctx.offerte_id;
+  if (ctx.calculatie_id != null)    velden.calculatie_id    = ctx.calculatie_id;
+  if (ctx.document_id != null)      velden.document_id      = ctx.document_id;
+  if (ctx.voorziening_id != null)   velden.voorziening_id   = ctx.voorziening_id;
+  if (ctx.medewerker_id != null)    velden.medewerker_id    = ctx.medewerker_id;
+  if (ctx.planning_item_id != null) velden.planning_item_id = ctx.planning_item_id;
+  if (ctx.contextBronnen && ctx.contextBronnen.length > 0) {
+    velden.contextBronnen = ctx.contextBronnen;
+  }
+  return Object.keys(velden).length > 0 ? velden : null;
 }
 
 // ── Resultaattype ─────────────────────────────────────────────────────────────
@@ -133,6 +226,7 @@ function logAanroep(record: {
   duurMs: number | null;
   status: string;
   foutmelding: string | null;
+  contextJson: Record<string, unknown> | null;
 }): void {
   db.insert(aiAanroepenTable).values(record).catch((err) => {
     logger.warn({ err }, "AI-aanroeplogging mislukt (fire-and-forget)");
@@ -175,6 +269,7 @@ class AiGatewayService {
   ): Promise<ChatResultaat> {
     const model = MODEL_REGISTRY[slot];
     const promptHash = extractSystemPromptHash(params);
+    const contextJson = bouwContextJson(logCtx);
     let pogingen = 0;
     const start = Date.now();
 
@@ -211,6 +306,7 @@ class AiGatewayService {
           duurMs,
           status: inhoud ? "ok" : "fout",
           foutmelding: inhoud ? null : "Geen inhoud in antwoord",
+          contextJson,
         });
 
         if (!inhoud) {
@@ -242,6 +338,7 @@ class AiGatewayService {
             duurMs,
             status: statusCode,
             foutmelding: bericht.slice(0, 500),
+            contextJson,
           });
           return { ok: false, fout: `AI-aanroep mislukt: ${bericht}` };
         }
@@ -264,6 +361,7 @@ class AiGatewayService {
     logCtx?: LogContext,
   ): Promise<ChatResultaat> {
     const model = MODEL_REGISTRY[slot];
+    const contextJson = bouwContextJson(logCtx);
     let pogingen = 0;
     const start = Date.now();
 
@@ -297,6 +395,7 @@ class AiGatewayService {
           duurMs,
           status: inhoud ? "ok" : "fout",
           foutmelding: inhoud ? null : "Geen output_text in antwoord",
+          contextJson,
         });
 
         if (!inhoud) {
@@ -328,6 +427,7 @@ class AiGatewayService {
             duurMs,
             status: statusCode,
             foutmelding: bericht.slice(0, 500),
+            contextJson,
           });
           return { ok: false, fout: `AI responses-aanroep mislukt: ${bericht}` };
         }

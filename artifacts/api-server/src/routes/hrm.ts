@@ -506,7 +506,12 @@ router.post("/functies/:id/opleidingen-voorstel", schrijven, async (req, res) =>
       verantwoordelijkheden: f.verantwoordelijkheden,
       competenties: f.competenties,
       opleidingsvereisten: f.opleidingsvereisten,
-    }, { gebruikerId: req.session.userId ?? null });
+    }, {
+      gebruikerId: req.session.userId ?? null,
+      // medewerker_id is optioneel: wordt meegegeven als het voorstel voor een
+      // specifieke medewerker wordt aangevraagd; bij een functie-niveau-aanroep null.
+      medewerker_id: typeof req.body?.medewerker_id === "number" ? req.body.medewerker_id : null,
+    });
     res.json(resultaat);
   } catch (err) {
     req.log.error(err);

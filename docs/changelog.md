@@ -4,6 +4,36 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-03 — Task #189: AI Gateway — AiContextBron, flat businesscontext, aiOrchestrator
+
+**Uitvoering:** volledig | **Diepere lagen:** volledig | **Getest:** DB push geslaagd (context_json jsonb column), typecheck clean (0 nieuwe fouten)
+
+**1. DB-schema uitgebreid** (`lib/db/src/schema/ai-log.ts`)
+- Nieuwe kolom `contextJson: jsonb("context_json")` aan `ai_aanroepen` toegevoegd
+- Slaat flat businesscontext + contextBronnen op per AI-aanroep
+
+**2. AI Gateway — nieuw types + logica** (`artifacts/api-server/src/lib/aiGateway.ts`)
+- Nieuw geëxporteerd type `AiContextBron` (type, bronId?, payload) voor uitbreidbare contextbronnen
+- `LogContext` uitgebreid met 10 optionele flat businesscontext-velden: `workflow_type`, `workflow_status`, `project_id`, `gebouw_id`, `klant_id`, `offerte_id`, `calculatie_id`, `document_id`, `voorziening_id`, `medewerker_id`, `planning_item_id`
+- Nieuw veld `contextBronnen?: AiContextBron[]` op `LogContext` (voor de Orchestrator)
+- Nieuwe helper `bouwContextJson()` bouwt context_json object uit de flat velden + contextBronnen (slaat alleen niet-null velden op)
+- `logAanroep()` accepteert `contextJson: Record<string,unknown>|null` en slaat het op
+- Geen breaking change: bestaande aanroepen zonder deze velden werken ongewijzigd
+
+**3. AI Orchestrator — types en contractdefinities** (`artifacts/api-server/src/lib/aiOrchestrator.ts`)
+- Nieuw bestand, uitsluitend interfaces/types en JSDoc; geen implementatie
+- Enum `AiProcessStatus` (voorstel/wacht_op_gebruiker/akkoord/afgewezen/uitgevoerd/fout)
+- Interface `AiProcessRequest` (verplicht `requiresHumanApproval: boolean`, optioneel `contextBronnen`)
+- Interface `AiProcessResult` (status, resultaat, humanApprovalToken?, foutmelding?, aanroepId?)
+- Uitgebreide JSDoc: verantwoordelijkheidsgrens gateway vs. orchestrator, passthrough-contract, koppeling aan WorkflowEngine/RBAC/AuditTrail/DMS/context_json
+
+**4. Module-updates — flat context doorgeven**
+- `spot-ai.ts`: `gebouw_id: opts.gebouwId` toegevoegd aan logCtx
+- `emails.ts`: 3 AI-aanroepen uitgebreid met `gebouw_id: gebouwId`
+- `offertes.ts`: 3 AI-aanroepen (`sectie-genereren`, `e-mail-voorstel`, `contract-advies`) uitgebreid met `module/functie/gebruikerId/offerte_id`
+- `werkvoorbereiding.ts`: 3 AI-aanroepen (`inkoopplanning-genereer`, `inkoopbon-genereer`, `uitvoeringsplan-genereer`) uitgebreid met `module/functie/gebruikerId/project_id`
+- `planning-module.ts`: reistijd-schatting uitgebreid met `module/functie/gebruikerId`
+
 ## 2026-07-03 — Task #188: AI-aanroeplogging, kostenregistratie en Prompt Registry
 
 **Uitvoering:** volledig | **Diepere lagen:** volledig | **Getest:** DB push geslaagd, esbuild clean (10.6mb), typecheck (0 nieuwe fouten), server 200 OK
