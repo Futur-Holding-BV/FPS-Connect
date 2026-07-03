@@ -16,6 +16,8 @@ import {
   getGetInkoopplanningQueryKey,
   getListInkoopbonnenQueryKey,
   useListLeveranciers,
+  useCorrectieVoorraad,
+  useListArtikelen,
 } from "@workspace/api-client-react";
 import type { InkoopplanRegel, Inkoopbon, InkoopbonAiSuggestieResultaat } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
@@ -32,8 +34,9 @@ import {
 } from "@/components/ui/dialog";
 import {
   Sparkles, Check, Package, Truck, Clock, AlertTriangle,
-  Plus, Trash2, ChevronDown, ChevronUp, Mail, Send, Bot, PenLine,
+  Plus, Trash2, ChevronDown, ChevronUp, Mail, Send, Bot, PenLine, Warehouse,
 } from "lucide-react";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -618,8 +621,125 @@ interface InkoopbonKaartProps {
   leverancierEmail?: string | null;
 }
 
+function OntvangstDialog({
+  open, onClose, bon, opdrachtId,
+}: {
+  open: boolean;
+  onClose: () => void;
+  bon: Inkoopbon;
+  opdrachtId: number;
+}) {
+  const { toast } = useToast();
+  const qc = useQueryClient();
+  const { data: artikelen } = useListArtikelen({});
+
+  type RegelOntvangst = { ontvangen: string; artikel_id: string };
+  const [regels, setRegels] = useState<RegelOntvangst[]>(
+    () => (bon.regels ?? []).map((r) => ({ ontvangen: String(r.hoeveelheid), artikel_id: "" }))
+  );
+
+  const patchMutatie = usePatchInkoopbon({
+    mutation: {
+      onSuccess: () => {
+        qc.invalidateQueries({ queryKey: getListInkoopbonnenQueryKey(opdrachtId) });
+        toast({ title: "Inkoopbon gemarkeerd als geleverd" });
+        onClose();
+      },
+      onError: () => toast({ title: "Bijwerken mislukt", variant: "destructive" }),
+    },
+  });
+  const correctieMutatie = useCorrectieVoorraad();
+
+  async function bevestig() {
+    const bonRegels = bon.regels ?? [];
+    for (let i = 0; i < bonRegels.length; i++) {
+      const artikelId = parseInt(regels[i]?.artikel_id ?? "");
+      const delta = parseFloat(regels[i]?.ontvangen ?? "0");
+      if (artikelId > 0 && delta > 0) {
+        await correctieMutatie.mutateAsync({
+          data: {
+            artikel_id: artikelId,
+            delta,
+            type: "ontvangst_inkoop",
+            omschrijving: `Ontvangst inkoop: ${bon.bon_nummer ?? bon.leverancier} — ${bonRegels[i].omschrijving}`,
+          },
+        });
+      }
+    }
+    patchMutatie.mutate({ id: opdrachtId, bonId: bon.id, data: { status: "geleverd" } });
+  }
+
+  const bezig = patchMutatie.isPending || correctieMutatie.isPending;
+  const bonRegels = bon.regels ?? [];
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Ontvangst registreren</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 py-1">
+          <p className="text-sm text-muted-foreground">
+            Controleer de ontvangen hoeveelheden. Koppel optioneel een magazijnartikel om de voorraad automatisch bij te werken.
+          </p>
+          {bonRegels.length === 0 ? (
+            <p className="text-sm text-muted-foreground italic">Geen regels op deze inkoopbon.</p>
+          ) : (
+            <div className="space-y-3">
+              {bonRegels.map((regel, i) => (
+                <div key={regel.id} className="border rounded-md p-3 space-y-2">
+                  <div className="font-medium text-sm">{regel.omschrijving}</div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Label className="text-xs">Ontvangen ({regel.eenheid})</Label>
+                      <Input
+                        type="number"
+                        min={0}
+                        step="0.001"
+                        value={regels[i]?.ontvangen ?? ""}
+                        onChange={(e) => setRegels((prev) => prev.map((r, j) => j === i ? { ...r, ontvangen: e.target.value } : r))}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Magazijnartikel (optioneel)</Label>
+                      <Select
+                        value={regels[i]?.artikel_id ?? ""}
+                        onValueChange={(v) => setRegels((prev) => prev.map((r, j) => j === i ? { ...r, artikel_id: v } : r))}
+                      >
+                        <SelectTrigger className="text-xs">
+                          <SelectValue placeholder="Kies artikel..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">Niet koppelen</SelectItem>
+                          {(artikelen ?? []).map((a) => (
+                            <SelectItem key={a.id} value={String(a.id)}>
+                              {a.naam}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose} disabled={bezig}>Annuleren</Button>
+          <Button onClick={bevestig} disabled={bezig}>
+            <Warehouse className="h-4 w-4 mr-1" />
+            {bezig ? "Bezig..." : "Bevestigen als geleverd"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function InkoopbonKaart({ bon, opdrachtId, leverancierEmail }: InkoopbonKaartProps) {
   const [verzendOpen, setVerzendOpen] = useState(false);
+  const [ontvangenOpen, setOntvangenOpen] = useState(false);
   const { toast } = useToast();
   const qc = useQueryClient();
   const statusInfo = BON_STATUS_LABELS[bon.status] ?? BON_STATUS_LABELS.concept;
@@ -717,9 +837,15 @@ function InkoopbonKaart({ bon, opdrachtId, leverancierEmail }: InkoopbonKaartPro
                   size="sm"
                   className="h-7 text-xs"
                   disabled={patchMutatie.isPending}
-                  onClick={() => patchMutatie.mutate({ id: opdrachtId, bonId: bon.id, data: { status: volgendeStatus[bon.status] } })}
+                  onClick={() => {
+                    if (bon.status === "besteld") {
+                      setOntvangenOpen(true);
+                    } else {
+                      patchMutatie.mutate({ id: opdrachtId, bonId: bon.id, data: { status: volgendeStatus[bon.status] } });
+                    }
+                  }}
                 >
-                  <Check className="h-3 w-3" />
+                  {bon.status === "besteld" ? <Warehouse className="h-3 w-3" /> : <Check className="h-3 w-3" />}
                   {volgendeStatusLabel[bon.status]}
                 </Button>
               )}
@@ -778,6 +904,14 @@ function InkoopbonKaart({ bon, opdrachtId, leverancierEmail }: InkoopbonKaartPro
           open={verzendOpen}
           onClose={() => setVerzendOpen(false)}
           defaultEmail={leverancierEmail ?? bon.verzonden_naar ?? ""}
+        />
+      )}
+      {ontvangenOpen && (
+        <OntvangstDialog
+          open={ontvangenOpen}
+          onClose={() => setOntvangenOpen(false)}
+          bon={bon}
+          opdrachtId={opdrachtId}
         />
       )}
     </>

@@ -9,6 +9,7 @@ import {
   useListToewijsbareGebruikers,
   useListGebouwen,
   useListOnderhoudscontracten,
+  useGenereerWerkbonnenVoorContract,
 } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -21,7 +22,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import {
   ArrowLeft, Building, Calendar, ClipboardList, Edit, Euro,
-  FileText, Plus, RefreshCw, Trash2, User, Wrench, Check, X,
+  FileText, Plus, RefreshCw, Trash2, User, Wrench, Check, X, Wand2,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -213,9 +214,14 @@ export default function ContractDetail() {
   const update = useUpdateOnderhoudscontract();
   const remove = useDeleteOnderhoudscontract();
 
+  const genereer = useGenereerWerkbonnenVoorContract();
+
   const [bewerkOpen, setBewerkOpen] = useState(false);
   const [werkbonOpen, setWerkbonOpen] = useState(false);
   const [verwijderOpen, setVerwijderOpen] = useState(false);
+  const [genereerOpen, setGenereerOpen] = useState(false);
+  const [genereerJaar, setGenereerJaar] = useState(new Date().getFullYear().toString());
+  const [genereerResultaat, setGenereerResultaat] = useState<{ aangemaakt: number; overgeslagen: number; totaal: number } | null>(null);
 
   const [editForm, setEditForm] = useState<Record<string, string | boolean>>({});
   const [bewerkActief, setBewerkActief] = useState(false);
@@ -325,6 +331,9 @@ export default function ContractDetail() {
             </>
           ) : (
             <>
+              <Button variant="outline" size="sm" onClick={() => { setGenereerResultaat(null); setGenereerOpen(true); }}>
+                <Wand2 className="h-4 w-4 mr-1" /> Werkbonnen genereren
+              </Button>
               <Button variant="outline" size="sm" onClick={startBewerken}>
                 <Edit className="h-4 w-4 mr-1" /> Bewerken
               </Button>
@@ -537,6 +546,70 @@ export default function ContractDetail() {
         contractId={id}
         gebouwId={contract.gebouw_id}
       />
+
+      <Dialog open={genereerOpen} onOpenChange={(o) => { setGenereerOpen(o); if (!o) setGenereerResultaat(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Werkbonnen automatisch genereren</DialogTitle>
+          </DialogHeader>
+          {genereerResultaat ? (
+            <div className="space-y-4 py-2">
+              <div className="grid grid-cols-3 gap-4 text-center">
+                <div className="rounded-lg bg-green-50 border border-green-200 p-4">
+                  <div className="text-2xl font-bold text-green-700">{genereerResultaat.aangemaakt}</div>
+                  <div className="text-xs text-green-600 mt-1">Aangemaakt</div>
+                </div>
+                <div className="rounded-lg bg-gray-50 border p-4">
+                  <div className="text-2xl font-bold text-gray-600">{genereerResultaat.overgeslagen}</div>
+                  <div className="text-xs text-muted-foreground mt-1">Al bestaand</div>
+                </div>
+                <div className="rounded-lg bg-blue-50 border border-blue-200 p-4">
+                  <div className="text-2xl font-bold text-blue-700">{genereerResultaat.totaal}</div>
+                  <div className="text-xs text-blue-600 mt-1">Totaal gepland</div>
+                </div>
+              </div>
+              <p className="text-sm text-muted-foreground text-center">
+                De werkbonnen zijn aangemaakt op basis van de onderhoudsfrequentie van dit contract.
+              </p>
+              <DialogFooter>
+                <Button onClick={() => setGenereerOpen(false)}>Sluiten</Button>
+              </DialogFooter>
+            </div>
+          ) : (
+            <div className="space-y-4 py-2">
+              <p className="text-sm text-muted-foreground">
+                Genereer werkbonnen voor jaar <strong>{genereerJaar}</strong> op basis van de
+                onderhoudsfrequentie <em>{contract.onderhouds_frequentie}</em>. Al bestaande
+                werkbonnen voor dezelfde datum worden overgeslagen.
+              </p>
+              <div className="space-y-1.5">
+                <Label>Jaar</Label>
+                <Input
+                  type="number"
+                  value={genereerJaar}
+                  min={2020}
+                  max={2040}
+                  onChange={(e) => setGenereerJaar(e.target.value)}
+                />
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setGenereerOpen(false)}>Annuleren</Button>
+                <Button
+                  onClick={async () => {
+                    const res = await genereer.mutateAsync({ id, data: { jaar: parseInt(genereerJaar) } });
+                    setGenereerResultaat(res);
+                    await qc.invalidateQueries({ queryKey: ["werkbonnen"] });
+                  }}
+                  disabled={genereer.isPending}
+                >
+                  <Wand2 className="h-4 w-4 mr-1" />
+                  {genereer.isPending ? "Bezig..." : "Genereren"}
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={verwijderOpen} onOpenChange={setVerwijderOpen}>
         <DialogContent>

@@ -3931,6 +3931,62 @@ paths:
         "204":
           description: Verwijderd
 
+  /onderhoudscontracten/{id}/werkbonnen-genereren:
+    post:
+      operationId: genereerWerkbonnenVoorContract
+      tags: [onderhoudscontracten]
+      summary: Werkbonnen automatisch genereren op basis van onderhoudsfrequentie
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WerkbonnenGenereerInput"
+      responses:
+        "200":
+          description: Resultaat van de generatie
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WerkbonnenGenereerResultaat"
+
+  # ── INKOOP OVERZICHT ──────────────────────────────────────────────────────
+  /inkoop/overzicht:
+    get:
+      operationId: listInkoopoverzicht
+      tags: [inkoop]
+      summary: Globaal overzicht van alle inkoopbonnen over alle opdrachten
+      parameters:
+        - in: query
+          name: status
+          schema: { type: string }
+        - in: query
+          name: leverancier
+          schema: { type: string }
+        - in: query
+          name: opdracht_id
+          schema: { type: integer }
+        - in: query
+          name: van
+          schema: { type: string, format: date }
+        - in: query
+          name: tot
+          schema: { type: string, format: date }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/InkoopoverzichtItem"
+
   # ── WERKBONNEN ────────────────────────────────────────────────────────────
   /werkbonnen:
     get:
@@ -32785,3 +32841,54 @@ components:
           items:
             type: string
           description: "Gesignaleerde aandachtspunten (ontbrekende eenheden, afwijkende tarieven, etc.)"
+
+    WerkbonnenGenereerInput:
+      type: object
+      properties:
+        jaar:
+          type: integer
+          description: Jaar waarvoor werkbonnen gegenereerd worden (default huidige jaar)
+        type:
+          type: string
+          description: Werkbon type (default = contracttype)
+
+    WerkbonnenGenereerResultaat:
+      type: object
+      required: [aangemaakt, overgeslagen, totaal]
+      properties:
+        aangemaakt:
+          type: integer
+        overgeslagen:
+          type: integer
+          description: Werkbonnen die al bestonden voor dezelfde datum
+        totaal:
+          type: integer
+
+    InkoopoverzichtItem:
+      type: object
+      required: [id, opdracht_id, leverancier, status, aangemaakt_op]
+      properties:
+        id:
+          type: integer
+        bon_nummer:
+          type: ["string", "null"]
+        opdracht_id:
+          type: integer
+        opdracht_titel:
+          type: ["string", "null"]
+        opdracht_nummer:
+          type: ["string", "null"]
+        leverancier:
+          type: string
+        status:
+          type: string
+        totaal_bedrag:
+          type: ["number", "null"]
+        gewenste_leverdatum:
+          type: ["string", "null"]
+        verzonden_op:
+          type: ["string", "null"]
+        aangemaakt_op:
+          type: string
+        aantal_regels:
+          type: integer

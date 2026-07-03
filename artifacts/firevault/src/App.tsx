@@ -39,6 +39,7 @@ import Inspecties from "@/pages/inspecties/index";
 import InspectieDetail from "@/pages/inspecties/detail";
 import Onderhoud from "@/pages/onderhoud/index";
 import ContractDetail from "@/pages/onderhoud/contract-detail";
+import InkoopOverzicht from "@/pages/inkoop/index";
 import WerkbonDetail from "@/pages/onderhoud/werkbon-detail";
 import Gebruikers from "@/pages/gebruikers/index";
 import CrmKlanten from "@/pages/crm/index";
@@ -316,6 +317,7 @@ function ConnectPortal() {
 
         {/* ── Oplevering & Onderhoud ── */}
         <Route path="/rapporten" component={RapportenPagina} />
+        <Route path="/inkoop/overzicht" component={InkoopOverzicht} />
         <Route path="/onderhoud/contracten/:id" component={ContractDetail} />
         <Route path="/onderhoud/werkbonnen/:id" component={WerkbonDetail} />
         <Route path="/onderhoud/:rest*" component={Onderhoud} />

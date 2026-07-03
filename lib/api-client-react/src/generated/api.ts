@@ -281,6 +281,7 @@ import type {
   InkoopbonInput,
   InkoopbonPatch,
   InkoopbonVerzendInput,
+  InkoopoverzichtItem,
   InkoopplanRegel,
   InkoopplanRegelAanmaken,
   InkoopplanRegelPatch,
@@ -323,6 +324,7 @@ import type {
   ListGekoppeldeDocumentenParams,
   ListGereedschappenParams,
   ListInboxItemsParams,
+  ListInkoopoverzichtParams,
   ListInspectiesParams,
   ListJaarAfsluitingRegelsParams,
   ListLabelsParams,
@@ -696,6 +698,8 @@ import type {
   Werkbon,
   WerkbonInput,
   WerkbonUpdate,
+  WerkbonnenGenereerInput,
+  WerkbonnenGenereerResultaat,
   WerkdagItem,
   WerkdagStatusInput,
   Werkgever,
@@ -13591,6 +13595,161 @@ export const useDeleteOnderhoudscontract = <TError = ErrorType<unknown>,
       > => {
       return useMutation(getDeleteOnderhoudscontractMutationOptions(options));
     }
+
+export const getGenereerWerkbonnenVoorContractUrl = (id: number,) => {
+
+
+
+
+  return `/api/onderhoudscontracten/${id}/werkbonnen-genereren`
+}
+
+/**
+ * @summary Werkbonnen automatisch genereren op basis van onderhoudsfrequentie
+ */
+export const genereerWerkbonnenVoorContract = async (id: number,
+    werkbonnenGenereerInput?: WerkbonnenGenereerInput, options?: RequestInit): Promise<WerkbonnenGenereerResultaat> => {
+
+  return customFetch<WerkbonnenGenereerResultaat>(getGenereerWerkbonnenVoorContractUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(werkbonnenGenereerInput)
+  }
+);}
+
+
+
+
+export const getGenereerWerkbonnenVoorContractMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof genereerWerkbonnenVoorContract>>, TError,{id: number;data?: BodyType<WerkbonnenGenereerInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof genereerWerkbonnenVoorContract>>, TError,{id: number;data?: BodyType<WerkbonnenGenereerInput>}, TContext> => {
+
+const mutationKey = ['genereerWerkbonnenVoorContract'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof genereerWerkbonnenVoorContract>>, {id: number;data?: BodyType<WerkbonnenGenereerInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  genereerWerkbonnenVoorContract(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type GenereerWerkbonnenVoorContractMutationResult = NonNullable<Awaited<ReturnType<typeof genereerWerkbonnenVoorContract>>>
+    export type GenereerWerkbonnenVoorContractMutationBody = BodyType<WerkbonnenGenereerInput> | undefined
+    export type GenereerWerkbonnenVoorContractMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Werkbonnen automatisch genereren op basis van onderhoudsfrequentie
+ */
+export const useGenereerWerkbonnenVoorContract = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof genereerWerkbonnenVoorContract>>, TError,{id: number;data?: BodyType<WerkbonnenGenereerInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof genereerWerkbonnenVoorContract>>,
+        TError,
+        {id: number;data?: BodyType<WerkbonnenGenereerInput>},
+        TContext
+      > => {
+      return useMutation(getGenereerWerkbonnenVoorContractMutationOptions(options));
+    }
+
+export const getListInkoopoverzichtUrl = (params?: ListInkoopoverzichtParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/inkoop/overzicht?${stringifiedParams}` : `/api/inkoop/overzicht`
+}
+
+/**
+ * @summary Globaal overzicht van alle inkoopbonnen over alle opdrachten
+ */
+export const listInkoopoverzicht = async (params?: ListInkoopoverzichtParams, options?: RequestInit): Promise<InkoopoverzichtItem[]> => {
+
+  return customFetch<InkoopoverzichtItem[]>(getListInkoopoverzichtUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListInkoopoverzichtQueryKey = (params?: ListInkoopoverzichtParams,) => {
+    return [
+    `/api/inkoop/overzicht`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListInkoopoverzichtQueryOptions = <TData = Awaited<ReturnType<typeof listInkoopoverzicht>>, TError = ErrorType<unknown>>(params?: ListInkoopoverzichtParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listInkoopoverzicht>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListInkoopoverzichtQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listInkoopoverzicht>>> = ({ signal }) => listInkoopoverzicht(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listInkoopoverzicht>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListInkoopoverzichtQueryResult = NonNullable<Awaited<ReturnType<typeof listInkoopoverzicht>>>
+export type ListInkoopoverzichtQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Globaal overzicht van alle inkoopbonnen over alle opdrachten
+ */
+
+export function useListInkoopoverzicht<TData = Awaited<ReturnType<typeof listInkoopoverzicht>>, TError = ErrorType<unknown>>(
+ params?: ListInkoopoverzichtParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listInkoopoverzicht>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListInkoopoverzichtQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
 export const getListWerkbonnenUrl = (params?: ListWerkbonnenParams,) => {
   const normalizedParams = new URLSearchParams();

@@ -4809,6 +4809,53 @@ export const DeleteOnderhoudscontractResponse = zod.void()
 
 
 /**
+ * @summary Werkbonnen automatisch genereren op basis van onderhoudsfrequentie
+ */
+export const GenereerWerkbonnenVoorContractParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GenereerWerkbonnenVoorContractBody = zod.object({
+  "jaar": zod.number().optional().describe('Jaar waarvoor werkbonnen gegenereerd worden (default huidige jaar)'),
+  "type": zod.string().optional().describe('Werkbon type (default = contracttype)')
+})
+
+export const GenereerWerkbonnenVoorContractResponse = zod.object({
+  "aangemaakt": zod.number(),
+  "overgeslagen": zod.number().describe('Werkbonnen die al bestonden voor dezelfde datum'),
+  "totaal": zod.number()
+})
+
+
+/**
+ * @summary Globaal overzicht van alle inkoopbonnen over alle opdrachten
+ */
+export const ListInkoopoverzichtQueryParams = zod.object({
+  "status": zod.coerce.string().optional(),
+  "leverancier": zod.coerce.string().optional(),
+  "opdracht_id": zod.coerce.number().optional(),
+  "van": zod.date().optional(),
+  "tot": zod.date().optional()
+})
+
+export const ListInkoopoverzichtResponseItem = zod.object({
+  "id": zod.number(),
+  "bon_nummer": zod.string().nullish(),
+  "opdracht_id": zod.number(),
+  "opdracht_titel": zod.string().nullish(),
+  "opdracht_nummer": zod.string().nullish(),
+  "leverancier": zod.string(),
+  "status": zod.string(),
+  "totaal_bedrag": zod.number().nullish(),
+  "gewenste_leverdatum": zod.string().nullish(),
+  "verzonden_op": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "aantal_regels": zod.number().optional()
+})
+export const ListInkoopoverzichtResponse = zod.array(ListInkoopoverzichtResponseItem)
+
+
+/**
  * @summary Werkbonnen ophalen
  */
 export const ListWerkbonnenQueryParams = zod.object({

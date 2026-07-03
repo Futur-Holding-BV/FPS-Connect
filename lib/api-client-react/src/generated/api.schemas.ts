@@ -9717,6 +9717,41 @@ export interface AiChatAntwoord {
   signalen?: string[];
 }
 
+export interface WerkbonnenGenereerInput {
+  /** Jaar waarvoor werkbonnen gegenereerd worden (default huidige jaar) */
+  jaar?: number;
+  /** Werkbon type (default = contracttype) */
+  type?: string;
+}
+
+export interface WerkbonnenGenereerResultaat {
+  aangemaakt: number;
+  /** Werkbonnen die al bestonden voor dezelfde datum */
+  overgeslagen: number;
+  totaal: number;
+}
+
+export interface InkoopoverzichtItem {
+  id: number;
+  /** @nullable */
+  bon_nummer?: string | null;
+  opdracht_id: number;
+  /** @nullable */
+  opdracht_titel?: string | null;
+  /** @nullable */
+  opdracht_nummer?: string | null;
+  leverancier: string;
+  status: string;
+  /** @nullable */
+  totaal_bedrag?: number | null;
+  /** @nullable */
+  gewenste_leverdatum?: string | null;
+  /** @nullable */
+  verzonden_op?: string | null;
+  aangemaakt_op: string;
+  aantal_regels?: number;
+}
+
 export type GetRecenteActiviteitParams = {
 limit?: number;
 };
@@ -9878,6 +9913,14 @@ status?: string;
 export type ListOnderhoudscontractenParams = {
 gebouw_id?: number;
 status?: string;
+};
+
+export type ListInkoopoverzichtParams = {
+status?: string;
+leverancier?: string;
+opdracht_id?: number;
+van?: string;
+tot?: string;
 };
 
 export type ListWerkbonnenParams = {

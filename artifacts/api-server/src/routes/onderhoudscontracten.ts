@@ -308,4 +308,83 @@ router.delete("/onderhoudscontracten/:id", verwijderen, async (req, res) => {
   }
 });
 
+// POST /onderhoudscontracten/:id/werkbonnen-genereren
+router.post("/onderhoudscontracten/:id/werkbonnen-genereren", schrijven, async (req, res) => {
+  try {
+    const id = parseInt(String(req.params.id));
+    if (isNaN(id)) return res.status(400).json({ error: "Ongeldig contract-id" });
+
+    const [contract] = await db.select().from(onderhoudscontractenTable).where(eq(onderhoudscontractenTable.id, id));
+    if (!contract) return res.status(404).json({ error: "Contract niet gevonden" });
+
+    const body = req.body as { jaar?: number; type?: string };
+    const planJaar = body.jaar ?? new Date().getFullYear();
+    const werkbonType = body.type ?? contract.contracttype ?? "preventief";
+
+    type DatumPunt = { kwartaal: string; datum: string };
+    const datums: DatumPunt[] = [];
+    const freq = contract.onderhoudsFrequentie;
+
+    if (freq === "maandelijks") {
+      const kwartalen = ["Q1","Q1","Q1","Q2","Q2","Q2","Q3","Q3","Q3","Q4","Q4","Q4"];
+      for (let m = 0; m < 12; m++) {
+        const d = new Date(planJaar, m, 15);
+        datums.push({ kwartaal: kwartalen[m]!, datum: d.toISOString().split("T")[0]! });
+      }
+    } else if (freq === "kwartaal") {
+      for (let q = 0; q < 4; q++) {
+        const d = new Date(planJaar, q * 3 + 1, 15);
+        datums.push({ kwartaal: `Q${q + 1}`, datum: d.toISOString().split("T")[0]! });
+      }
+    } else if (freq === "halfjaarlijks" || freq === "2x_per_jaar") {
+      datums.push({ kwartaal: "Q2", datum: `${planJaar}-06-15` });
+      datums.push({ kwartaal: "Q4", datum: `${planJaar}-12-15` });
+    } else {
+      const eersteMonth = contract.eerstvolgendOnderhoud
+        ? new Date(contract.eerstvolgendOnderhoud).getMonth()
+        : 8;
+      const d = new Date(planJaar, eersteMonth, 15);
+      datums.push({ kwartaal: `Q${Math.floor(eersteMonth / 3) + 1}`, datum: d.toISOString().split("T")[0]! });
+    }
+
+    const bestaande = await db
+      .select({ datum: werkbonnenTable.geplandeDatum })
+      .from(werkbonnenTable)
+      .where(eq(werkbonnenTable.contractId, id));
+    const bestaandeDatums = new Set(bestaande.map((w) => w.datum));
+
+    const prefix = `WB-${planJaar}-`;
+    const [maxRow] = await db
+      .select({ max: sql<string>`max(${werkbonnenTable.werkbonnummer})` })
+      .from(werkbonnenTable)
+      .where(sql`${werkbonnenTable.werkbonnummer} like ${prefix + "%"}`);
+    let volgnr = maxRow?.max ? parseInt(maxRow.max.split("-")[2] ?? "0", 10) : 0;
+
+    let aangemaakt = 0;
+    let overgeslagen = 0;
+
+    for (const d of datums) {
+      if (bestaandeDatums.has(d.datum)) { overgeslagen++; continue; }
+      volgnr++;
+      const werkbonnummer = `${prefix}${String(volgnr).padStart(3, "0")}`;
+      await db.insert(werkbonnenTable).values({
+        werkbonnummer,
+        contractId: id,
+        gebouwId: contract.gebouwId ?? null,
+        titel: `Onderhoud ${d.kwartaal} ${planJaar}`,
+        type: werkbonType,
+        geplande_kwartaal: d.kwartaal,
+        geplandeDatum: d.datum,
+        status: "gepland",
+      });
+      aangemaakt++;
+    }
+
+    res.json({ aangemaakt, overgeslagen, totaal: datums.length });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
 export default router;

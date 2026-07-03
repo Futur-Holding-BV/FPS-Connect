@@ -124,7 +124,7 @@ export default function AiLogPagina() {
     const params = new URLSearchParams();
     if (module) params.set("module", module);
     if (status) params.set("status", status);
-    if (gebouwId && !isNaN(parseInt(gebouwId))) params.set("gebouw_id", gebouwId);
+    if (gebouwNaam) params.set("gebouw_naam", gebouwNaam);
     if (offerteId && !isNaN(parseInt(offerteId))) params.set("offerte_id", offerteId);
     if (datumVan) params.set("datum_van", datumVan);
     if (datumTot) params.set("datum_tot", datumTot);

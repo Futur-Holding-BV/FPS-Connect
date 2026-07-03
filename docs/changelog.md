@@ -4,6 +4,30 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-03 — Workflow-gaps: auto-werkbonnen, globaal inkoopoverzicht, ontvangst → magazijn
+
+**Uitvoering:** volledig | **Diepere lagen:** volledig | **Getest:** typecheck firevault + api-server schoon (0 fouten), workflows gezond
+
+**T001 — Onderhoud: automatisch werkbonnen genereren**
+- Nieuw backend endpoint `POST /onderhoudscontracten/:id/werkbonnen-genereren`: berekent datums op basis van onderhoudsfrequentie (maandelijks/kwartaal/halfjaarlijks/2x_per_jaar/jaarlijks), skip duplicaten op datum, genereert werkbonnummer `WB-{jaar}-NNN` sequentieel
+- Knop "Werkbonnen genereren" in contract-detailpagina (naast Bewerken); dialog met jaarinvoer + resultaat-summary (aangemaakt / al bestaand / totaal)
+- OpenAPI schema's `WerkbonnenGenereerInput` en `WerkbonnenGenereerResultaat` toegevoegd; codegen uitgevoerd
+
+**T002 — Globaal inkoopoverzicht pagina**
+- Nieuwe pagina `/inkoop/overzicht`: cross-project overzicht van alle inkoopbonnen met filters (status, leverancier, datumsperiode)
+- Statistieken: totaalaantal bonnen, totaalbedrag, openstaand bij leverancier, ontvangen
+- "Inkoopoverzicht" nav-item toegevoegd aan de Inkoop-sectie in de sidebar
+- Backend `GET /inkoop/overzicht` met LEFT JOIN op opdrachten + COUNT regels; bevoegdheid "offertes 1"
+- OpenAPI schema `InkoopoverzichtItem` toegevoegd
+
+**T003 — Inkoop → Magazijn ontvangst registratie**
+- "Markeer geleverd" op inkoopbonnen in status "besteld" opent nu een `OntvangstDialog`
+- Dialog toont alle bon-regels met editeerbare ontvangen-hoeveelheid en optionele koppeling aan een magazijnartikel
+- Bij bevestigen: voor gekoppelde artikelen wordt `POST /magazijn/voorraad/correctie` (type=`ontvangst_inkoop`) aangeroepen → voorraad bijwerkt automatisch; daarna bon status → "geleverd"
+
+**Overig**
+- Pre-existing bug in `ai-log.tsx`: `gebouwId` (nooit gedeclareerd, was hernoemd naar `gebouwNaam`) hersteld
+
 ## 2026-07-03 — RFQ Increment 2 — UI inkoopregels uitgebreid met offerteaanvraag-velden
 
 **Uitvoering:** volledig | **Diepere lagen:** volledig | **Getest:** typecheck firevault + api-server schoon (0 fouten), workflows gezond
