@@ -9,7 +9,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { setAuthTokenGetter, setBaseUrl } from "@workspace/api-client-react";
 import { Stack, usePathname, useRouter } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { Modal, Pressable, Text, View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -25,6 +25,8 @@ import {
   useGetMijnLmraOpenstaand,
   useGetMijnToolboxMaandopdracht,
   useUitstellenToolboxMaandopdracht,
+  useGetAiDrempelStatus,
+  type AiDrempelStatus,
 } from "@workspace/api-client-react";
 import { useMeldingGeluid } from "@/hooks/useMeldingGeluid";
 
@@ -205,6 +207,61 @@ function ToolboxPopupBewaker() {
   );
 }
 
+function AiDrempelBanner() {
+  const { token } = useAuth();
+  const [gesloten, setGesloten] = useState(false);
+  const { data, refetch } = useGetAiDrempelStatus();
+
+  useEffect(() => {
+    if (!token) return;
+    void refetch();
+    const timer = setInterval(() => void refetch(), 30 * 60 * 1000);
+    return () => clearInterval(timer);
+  }, [token, refetch]);
+
+  const status = data as AiDrempelStatus | undefined;
+  if (!status?.overschreden || gesloten) return null;
+
+  const kosten = status.huidig_maand_kosten_eur;
+  const drempel = status.drempel_eur;
+  const kostenLabel = `\u20AC ${kosten.toFixed(2)}`;
+  const drempelLabel = drempel != null ? `\u20AC ${drempel.toFixed(2)}` : "n.v.t.";
+
+  return (
+    <View style={{
+      position: "absolute",
+      top: 0,
+      left: 0,
+      right: 0,
+      zIndex: 999,
+      backgroundColor: "#7c2d12",
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+    }}>
+      <Ionicons name="warning-outline" size={18} color="#fca5a5" style={{ marginRight: 8 }} />
+      <View style={{ flex: 1 }}>
+        <Text style={{ color: "#fef2f2", fontSize: 13, fontWeight: "700" }}>
+          AI-kostendrempel overschreden
+        </Text>
+        <Text style={{ color: "#fca5a5", fontSize: 12, marginTop: 2 }}>
+          {`Maandkosten ${kostenLabel} (drempel ${drempelLabel})`}
+        </Text>
+      </View>
+      <Pressable onPress={() => setGesloten(true)} hitSlop={10}>
+        <Ionicons name="close" size={20} color="#fca5a5" />
+      </Pressable>
+    </View>
+  );
+}
+
+function AiDrempelBewaker() {
+  const { token, gebruiker } = useAuth();
+  if (!token || gebruiker?.rol !== "hoofdbeheerder") return null;
+  return <AiDrempelBanner />;
+}
+
 function BerichtMeldingMonitor() {
   const { token } = useAuth();
   const { speel } = useMeldingGeluid();
@@ -264,6 +321,7 @@ function RootLayoutNav() {
   return (
     <>
       <BerichtMeldingMonitor />
+      <AiDrempelBewaker />
       <LmraBewaker />
       <ToolboxPopupBewaker />
       <Stack screenOptions={{ headerShown: false }}>

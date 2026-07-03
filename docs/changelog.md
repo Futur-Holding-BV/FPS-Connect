@@ -4,9 +4,9 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
-## 2026-07-03 — Sprint 1: Bedrijfsworkflow end-to-end sluiten
+## 2026-07-03 — Sprint 1: Bedrijfsworkflow end-to-end sluiten & AI-kostendrempel melding
 
-**Uitvoering:** volledig | **Diepere lagen:** volledig | **Getest:** typecheck firevault + api-server schoon, workflows herstart
+**Uitvoering:** volledig | **Diepere lagen:** volledig | **Getest:** typecheck firevault + api-server schoon, workflows herstart, monteur-app banner getest
 
 **Epic 1 — Opdracht-aanmaak UX**
 - `useState("werkbegroting")` was al de default in opdracht detail.tsx — geen wijziging nodig
@@ -28,6 +28,16 @@ Voor elke taak drie scores:
 - OpenAPI-schemas: InspectieBevinding, InspectieBevindingInput, InspectieBevindingUpdate, BevindingFotoInput, BevindingHerstellInput, HerinspectieInput; codegen geslaagd
 - `inspecties/detail.tsx` volledig herschreven (~480 regels): header met status-workflow, statistieken-kaarten (totaal/goed/aandacht/afgekeurd/herstel), bevindingen-kaarten met foto-preview, 5 dialogen (bevinding toevoegen, bewerken, herstelwerkbon, herinspectie, foto toevoegen)
 - Toegangscontrole: `beperkt`-gebruikers zien alleen inspecties van eigen gebouwen of als inspecteur
+
+**AI-kostendrempel melding in monteur-app**
+- Codegen uitgevoerd: `useGetAiDrempelStatus` hook gegenereerd vanuit bestaand `getAiDrempelStatus` operationId in openapi.yaml
+- Nieuwe `AiDrempelBanner` + `AiDrempelBewaker` componenten toegevoegd aan `artifacts/monteur-app/app/_layout.tsx`
+- Bewaker activeert alleen voor gebruikers met rol `hoofdbeheerder`; voor alle andere rollen renderen beide componenten niets
+- Pollt `GET /beheer/ai-drempel-status` eenmalig bij inloggen en daarna elke 30 minuten
+- Toont een rode, niet-blokkerende sticky banner bovenaan het scherm wanneer `overschreden === true`
+- Banner toont maandkosten en drempel (bijv. "Maandkosten € 5.23 (drempel € 3.00)")
+- Wegklikknop (X) sluit de banner voor de lopende sessie; herstart van de app toont hem opnieuw als drempel nog overschreden is
+- Banner is niet-blokkerend (geen Modal) — werk kan gewoon doorgaan, in tegenstelling tot de LMRA-bewaker
 
 ## 2026-07-03 — Gebruikersfeedback voor livegang
 
