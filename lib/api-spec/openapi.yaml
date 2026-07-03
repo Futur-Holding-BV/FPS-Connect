@@ -9246,6 +9246,80 @@ paths:
         "404":
           description: Werkbegroting niet gevonden
 
+  /opdrachten/{id}/werkbegroting/senior-adviezen:
+    post:
+      operationId: aiSeniorAnalyseWerkbegroting
+      summary: AI Senior Werkvoorbereider — uitvoeringsanalyse starten
+      tags: [opdrachten]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Adviezen aangemaakt
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WbAdvies'
+        "404":
+          description: Werkbegroting niet gevonden
+    get:
+      operationId: listWbAdviezen
+      summary: AI Senior Werkvoorbereider — adviezen ophalen
+      tags: [opdrachten]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WbAdvies'
+
+  /opdrachten/{id}/werkbegroting/senior-adviezen/{adviesId}:
+    patch:
+      operationId: updateWbAdvies
+      summary: AI Senior Werkvoorbereider — advies status of notitie bijwerken
+      tags: [opdrachten]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: adviesId
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WbAdviesUpdate'
+      responses:
+        "200":
+          description: Bijgewerkt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WbAdvies'
+        "404":
+          description: Niet gevonden
+
   /opdrachten/{id}/nacalculatie:
     get:
       operationId: getNacalculatie
@@ -26567,6 +26641,47 @@ components:
           type: string
 
     CalcAdviesUpdate:
+      type: object
+      properties:
+        status:
+          type: string
+          description: 'actief | genegeerd | gecontroleerd'
+        notitie:
+          type: string
+          nullable: true
+
+    WbAdvies:
+      type: object
+      required: [id, begroting_id, run_id, type, prioriteit, titel, uitleg, status, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id:
+          type: integer
+        begroting_id:
+          type: integer
+        run_id:
+          type: string
+        type:
+          type: string
+          description: 'waarschuwing | uitvoeringsrisico | inkoopactie_nodig | planningrisico | kostenrisico | ontbrekende_voorbereiding | besparingskans'
+        prioriteit:
+          type: string
+          description: 'hoog | middel | laag'
+        titel:
+          type: string
+        uitleg:
+          type: string
+        status:
+          type: string
+          description: 'actief | genegeerd | gecontroleerd'
+        notitie:
+          type: string
+          nullable: true
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+
+    WbAdviesUpdate:
       type: object
       properties:
         status:

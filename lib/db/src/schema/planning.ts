@@ -112,6 +112,20 @@ export const werkbegrotingRegelsTable = pgTable("werkbegroting_regels", {
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
 });
 
+export const werkbegrotingAdviezenTable = pgTable("werkbegroting_adviezen", {
+  id: serial("id").primaryKey(),
+  begrotingId: integer("begroting_id").notNull(),
+  runId: text("run_id").notNull(),
+  type: text("type").notNull(),
+  prioriteit: text("prioriteit").notNull().default("middel"),
+  titel: text("titel").notNull(),
+  uitleg: text("uitleg").notNull(),
+  status: text("status").notNull().default("actief"),
+  notitie: text("notitie"),
+  aangemaaktOp: timestamp("aangemaakt_op", { withTimezone: true }).notNull().defaultNow(),
+  bijgewerktOp: timestamp("bijgewerkt_op", { withTimezone: true }).notNull().defaultNow(),
+});
+
 export const planningMeerwerkTable = pgTable("planning_meerwerk", {
   id: serial("id").primaryKey(),
   planningItemId: integer("planning_item_id").notNull().references(() => planningItemsTable.id, { onDelete: "cascade" }),

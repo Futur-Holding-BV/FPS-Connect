@@ -13,9 +13,14 @@ import {
   getGetOpdrachtQueryKey,
   getGetNacalculatieQueryKey,
   useAiChatWerkbegroting,
+  useAiSeniorAnalyseWerkbegroting,
+  useListWbAdviezen,
+  useUpdateWbAdvies,
+  getListWbAdviezenQueryKey,
 } from "@workspace/api-client-react";
 import type { Werkbegroting, OpdrachtNacalculatie } from "@workspace/api-client-react";
 import AiChatPanel from "@/components/ai-chat-panel";
+import AiSeniorWerkvoorbereiderPanel from "@/components/ai-senior-werkvoorbereider-panel";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -29,7 +34,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import {
   ArrowLeft, Sparkles, Check, Clock, AlertTriangle, CalendarCheck,
-  TrendingUp, TrendingDown, Edit2, Package, ShoppingCart, Building2, ShoppingBag, MessageSquare, CheckCircle2,
+  TrendingUp, TrendingDown, Edit2, Package, ShoppingCart, Building2, ShoppingBag, MessageSquare, CheckCircle2, HardHat,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
@@ -294,6 +299,7 @@ export default function OpdrachtDetailPagina() {
   const [vaststellenDialoog, setVaststellenDialoog] = useState(false);
   const [activeTab, setActiveTab] = useState("werkbegroting");
   const [chatOpen, setChatOpen] = useState(false);
+  const [seniorOpen, setSeniorOpen] = useState(false);
 
   const { data: opdracht, isLoading: opdrachtLoading } = useGetOpdracht(opdrachtId);
   const { data: werkbegroting, isLoading: wbLoading } = useGetWerkbegroting(opdrachtId);
@@ -462,6 +468,15 @@ export default function OpdrachtDetailPagina() {
               </Button>
               <Button
                 size="sm"
+                variant={seniorOpen ? "default" : "outline"}
+                onClick={() => setSeniorOpen(v => !v)}
+                title="AI Senior Werkvoorbereider"
+              >
+                <HardHat className="h-3.5 w-3.5" />
+                Senior
+              </Button>
+              <Button
+                size="sm"
                 variant={chatOpen ? "default" : "outline"}
                 onClick={() => setChatOpen(v => !v)}
               >
@@ -535,6 +550,11 @@ export default function OpdrachtDetailPagina() {
                 </Card>
               );
             })
+          )}
+
+          {/* AI Senior Werkvoorbereider */}
+          {seniorOpen && (
+            <AiSeniorWerkvoorbereiderPanel opdrachtId={opdrachtId} />
           )}
 
           {/* AI-chatpaneel */}

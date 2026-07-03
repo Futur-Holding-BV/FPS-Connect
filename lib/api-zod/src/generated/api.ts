@@ -11469,6 +11469,80 @@ export const AiChatWerkbegrotingResponse = zod.object({
 
 
 /**
+ * @summary AI Senior Werkvoorbereider — uitvoeringsanalyse starten
+ */
+export const AiSeniorAnalyseWerkbegrotingParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AiSeniorAnalyseWerkbegrotingResponseItem = zod.object({
+  "id": zod.number(),
+  "begroting_id": zod.number(),
+  "run_id": zod.string(),
+  "type": zod.string().describe('waarschuwing | uitvoeringsrisico | inkoopactie_nodig | planningrisico | kostenrisico | ontbrekende_voorbereiding | besparingskans'),
+  "prioriteit": zod.string().describe('hoog | middel | laag'),
+  "titel": zod.string(),
+  "uitleg": zod.string(),
+  "status": zod.string().describe('actief | genegeerd | gecontroleerd'),
+  "notitie": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+export const AiSeniorAnalyseWerkbegrotingResponse = zod.array(AiSeniorAnalyseWerkbegrotingResponseItem)
+
+
+/**
+ * @summary AI Senior Werkvoorbereider — adviezen ophalen
+ */
+export const ListWbAdviezenParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListWbAdviezenResponseItem = zod.object({
+  "id": zod.number(),
+  "begroting_id": zod.number(),
+  "run_id": zod.string(),
+  "type": zod.string().describe('waarschuwing | uitvoeringsrisico | inkoopactie_nodig | planningrisico | kostenrisico | ontbrekende_voorbereiding | besparingskans'),
+  "prioriteit": zod.string().describe('hoog | middel | laag'),
+  "titel": zod.string(),
+  "uitleg": zod.string(),
+  "status": zod.string().describe('actief | genegeerd | gecontroleerd'),
+  "notitie": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+export const ListWbAdviezenResponse = zod.array(ListWbAdviezenResponseItem)
+
+
+/**
+ * @summary AI Senior Werkvoorbereider — advies status of notitie bijwerken
+ */
+export const UpdateWbAdviesParams = zod.object({
+  "id": zod.coerce.number(),
+  "adviesId": zod.coerce.number()
+})
+
+export const UpdateWbAdviesBody = zod.object({
+  "status": zod.string().optional().describe('actief | genegeerd | gecontroleerd'),
+  "notitie": zod.string().nullish()
+})
+
+export const UpdateWbAdviesResponse = zod.object({
+  "id": zod.number(),
+  "begroting_id": zod.number(),
+  "run_id": zod.string(),
+  "type": zod.string().describe('waarschuwing | uitvoeringsrisico | inkoopactie_nodig | planningrisico | kostenrisico | ontbrekende_voorbereiding | besparingskans'),
+  "prioriteit": zod.string().describe('hoog | middel | laag'),
+  "titel": zod.string(),
+  "uitleg": zod.string(),
+  "status": zod.string().describe('actief | genegeerd | gecontroleerd'),
+  "notitie": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
  * @summary Nacalculatie — calculatie vs werkbegroting vs verbruikte uren
  */
 export const GetNacalculatieParams = zod.object({

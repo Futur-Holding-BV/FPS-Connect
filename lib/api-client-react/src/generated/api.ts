@@ -677,6 +677,8 @@ import type {
   WagenparkOnderhoudInput,
   WagenparkRit,
   WagenparkSyncLog,
+  WbAdvies,
+  WbAdviesUpdate,
   WeekSamenvatting,
   WeekStaat,
   WeekStaatAfwijzenInput,
@@ -33027,6 +33029,226 @@ export const useAiChatWerkbegroting = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getAiChatWerkbegrotingMutationOptions(options));
+    }
+
+export const getAiSeniorAnalyseWerkbegrotingUrl = (id: number,) => {
+
+
+
+
+  return `/api/opdrachten/${id}/werkbegroting/senior-adviezen`
+}
+
+/**
+ * @summary AI Senior Werkvoorbereider — uitvoeringsanalyse starten
+ */
+export const aiSeniorAnalyseWerkbegroting = async (id: number, options?: RequestInit): Promise<WbAdvies[]> => {
+
+  return customFetch<WbAdvies[]>(getAiSeniorAnalyseWerkbegrotingUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getAiSeniorAnalyseWerkbegrotingMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof aiSeniorAnalyseWerkbegroting>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof aiSeniorAnalyseWerkbegroting>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['aiSeniorAnalyseWerkbegroting'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof aiSeniorAnalyseWerkbegroting>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  aiSeniorAnalyseWerkbegroting(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AiSeniorAnalyseWerkbegrotingMutationResult = NonNullable<Awaited<ReturnType<typeof aiSeniorAnalyseWerkbegroting>>>
+
+    export type AiSeniorAnalyseWerkbegrotingMutationError = ErrorType<void>
+
+    /**
+ * @summary AI Senior Werkvoorbereider — uitvoeringsanalyse starten
+ */
+export const useAiSeniorAnalyseWerkbegroting = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof aiSeniorAnalyseWerkbegroting>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof aiSeniorAnalyseWerkbegroting>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getAiSeniorAnalyseWerkbegrotingMutationOptions(options));
+    }
+
+export const getListWbAdviezenUrl = (id: number,) => {
+
+
+
+
+  return `/api/opdrachten/${id}/werkbegroting/senior-adviezen`
+}
+
+/**
+ * @summary AI Senior Werkvoorbereider — adviezen ophalen
+ */
+export const listWbAdviezen = async (id: number, options?: RequestInit): Promise<WbAdvies[]> => {
+
+  return customFetch<WbAdvies[]>(getListWbAdviezenUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListWbAdviezenQueryKey = (id: number,) => {
+    return [
+    `/api/opdrachten/${id}/werkbegroting/senior-adviezen`
+    ] as const;
+    }
+
+
+export const getListWbAdviezenQueryOptions = <TData = Awaited<ReturnType<typeof listWbAdviezen>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listWbAdviezen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListWbAdviezenQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listWbAdviezen>>> = ({ signal }) => listWbAdviezen(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listWbAdviezen>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListWbAdviezenQueryResult = NonNullable<Awaited<ReturnType<typeof listWbAdviezen>>>
+export type ListWbAdviezenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary AI Senior Werkvoorbereider — adviezen ophalen
+ */
+
+export function useListWbAdviezen<TData = Awaited<ReturnType<typeof listWbAdviezen>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listWbAdviezen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListWbAdviezenQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUpdateWbAdviesUrl = (id: number,
+    adviesId: number,) => {
+
+
+
+
+  return `/api/opdrachten/${id}/werkbegroting/senior-adviezen/${adviesId}`
+}
+
+/**
+ * @summary AI Senior Werkvoorbereider — advies status of notitie bijwerken
+ */
+export const updateWbAdvies = async (id: number,
+    adviesId: number,
+    wbAdviesUpdate: WbAdviesUpdate, options?: RequestInit): Promise<WbAdvies> => {
+
+  return customFetch<WbAdvies>(getUpdateWbAdviesUrl(id,adviesId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(wbAdviesUpdate)
+  }
+);}
+
+
+
+
+export const getUpdateWbAdviesMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateWbAdvies>>, TError,{id: number;adviesId: number;data: BodyType<WbAdviesUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateWbAdvies>>, TError,{id: number;adviesId: number;data: BodyType<WbAdviesUpdate>}, TContext> => {
+
+const mutationKey = ['updateWbAdvies'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateWbAdvies>>, {id: number;adviesId: number;data: BodyType<WbAdviesUpdate>}> = (props) => {
+          const {id,adviesId,data} = props ?? {};
+
+          return  updateWbAdvies(id,adviesId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateWbAdviesMutationResult = NonNullable<Awaited<ReturnType<typeof updateWbAdvies>>>
+    export type UpdateWbAdviesMutationBody = BodyType<WbAdviesUpdate>
+    export type UpdateWbAdviesMutationError = ErrorType<void>
+
+    /**
+ * @summary AI Senior Werkvoorbereider — advies status of notitie bijwerken
+ */
+export const useUpdateWbAdvies = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateWbAdvies>>, TError,{id: number;adviesId: number;data: BodyType<WbAdviesUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateWbAdvies>>,
+        TError,
+        {id: number;adviesId: number;data: BodyType<WbAdviesUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateWbAdviesMutationOptions(options));
     }
 
 export const getGetNacalculatieUrl = (id: number,) => {

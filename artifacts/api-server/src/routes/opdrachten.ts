@@ -18,6 +18,7 @@ import {
   reserveringenTable,
   voorraadMutatiesTable,
   artikelenTable,
+  werkbegrotingAdviezenTable,
 } from "@workspace/db";
 import { eq, and, sql, sum, asc, isNull, desc, or } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
@@ -822,6 +823,192 @@ Antwoord altijd in het Nederlands. Geef concrete, praktische adviezen. Wees krit
   } catch (err) {
     logger.error({ err }, "aiChatWerkbegroting fout");
     res.status(500).json({ error: "Serverfout bij AI-chat" });
+  }
+});
+
+// ── AI Senior Werkvoorbereider ─────────────────────────────────────────────
+
+function mapWbAdvies(r: typeof werkbegrotingAdviezenTable.$inferSelect) {
+  return {
+    id: r.id,
+    begroting_id: r.begrotingId,
+    run_id: r.runId,
+    type: r.type,
+    prioriteit: r.prioriteit,
+    titel: r.titel,
+    uitleg: r.uitleg,
+    status: r.status,
+    notitie: r.notitie ?? null,
+    aangemaakt_op: r.aangemaaktOp instanceof Date ? r.aangemaaktOp.toISOString() : String(r.aangemaaktOp),
+    bijgewerkt_op: r.bijgewerktOp instanceof Date ? r.bijgewerktOp.toISOString() : String(r.bijgewerktOp),
+  };
+}
+
+router.post("/opdrachten/:id/werkbegroting/senior-adviezen", schrijven, async (req, res) => {
+  const id = parseInt(String(req.params.id), 10);
+  if (isNaN(id)) { res.status(400).json({ error: "Ongeldig id" }); return; }
+
+  try {
+    const [begroting] = await db.select().from(projectBegrotingenTable)
+      .where(eq(projectBegrotingenTable.opdrachtId, id));
+    if (!begroting) { res.status(404).json({ error: "Werkbegroting niet gevonden" }); return; }
+
+    const [opdracht] = await db.select().from(opdrachtenTable).where(eq(opdrachtenTable.id, id));
+    const regels = await db.select().from(werkbegrotingRegelsTable)
+      .where(eq(werkbegrotingRegelsTable.begrotingId, begroting.id))
+      .orderBy(asc(werkbegrotingRegelsTable.id));
+
+    const arbeid   = regels.filter(r => r.categorie === "arbeid");
+    const materiaal = regels.filter(r => r.categorie === "materiaal");
+
+    interface WbAdviesVoorstel {
+      type: string;
+      prioriteit: string;
+      titel: string;
+      uitleg: string;
+    }
+
+    let adviezen: WbAdviesVoorstel[] = [];
+
+    if (heeftGateway()) {
+      const prompt = `Je bent een ervaren senior werkvoorbereider in de brandpreventiesector (branddeuren, doorvoeringen, brandkleppen, manchetten, coating). 
+Analyseer deze werkbegroting kritisch op uitvoerbaarheid, inkoop, planning en voorbereiding.
+
+OPDRACHT: ${opdracht?.titel ?? "onbekend"}
+STATUS WERKBEGROTING: ${begroting.status}
+
+ARBEID (${arbeid.length} regels, totaal ${begroting.totaalArbeidUren ?? 0} uur):
+${arbeid.map(r => `- [${r.hoofdstuk}] ${r.omschrijving}: ${r.hoeveelheid} ${r.eenheid} @ €${r.tarief}/uur = €${r.totaal}`).join("\n")}
+
+MATERIAAL (${materiaal.length} regels, totaal €${begroting.totaalMateriaalBedrag ?? 0}):
+${materiaal.map(r => `- [${r.hoofdstuk}] ${r.omschrijving}: ${r.hoeveelheid} ${r.eenheid} @ €${r.tarief} = €${r.totaal}`).join("\n")}
+
+Controleer minimaal:
+- ontbrekende uitvoeringsposten voor dit type werk
+- arbeid die te laag lijkt (bijv. demonteren + afvoeren ontbreekt)
+- materiaal zonder leverancier of levertijd
+- posten die vóór start uitvoering besteld moeten zijn (lange levertijd)
+- glaswerk, branddeuren, speciale producten zonder onderaannemer
+- risico's voor planning of magazijn/voorraad
+- materiaalregels zonder inkoopkoppeling
+
+Geef je analyse als JSON array:
+[
+  {
+    "type": "waarschuwing|uitvoeringsrisico|inkoopactie_nodig|planningrisico|kostenrisico|ontbrekende_voorbereiding|besparingskans",
+    "prioriteit": "hoog|middel|laag",
+    "titel": "korte titel (max 60 tekens)",
+    "uitleg": "concrete uitleg met verwijzing naar de post (max 200 tekens)"
+  }
+]
+Geef 3–10 adviezen. Geen JSON buiten de array.`;
+
+      const resultaat = await aiGateway.chat("reasoning", {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        messages: [
+          { role: "system", content: "Je bent een kritische senior werkvoorbereider brandpreventie. Geef altijd een valide JSON array terug." },
+          { role: "user", content: prompt },
+        ] as any,
+        max_completion_tokens: 3000,
+      });
+
+      if (resultaat.ok) {
+        try {
+          const tekst = resultaat.inhoud.trim();
+          const start = tekst.indexOf("[");
+          const eind  = tekst.lastIndexOf("]");
+          if (start !== -1 && eind !== -1) {
+            adviezen = JSON.parse(tekst.slice(start, eind + 1)) as WbAdviesVoorstel[];
+          }
+        } catch {
+          logger.warn("WbAdvies JSON parsen mislukt — fallback zonder AI");
+        }
+      } else {
+        logger.warn({ fout: resultaat.fout }, "AI senior werkvoorbereider mislukt");
+      }
+    }
+
+    if (adviezen.length === 0) {
+      adviezen = [
+        { type: "ontbrekende_voorbereiding", prioriteit: "middel", titel: "AI niet beschikbaar", uitleg: "Analyse kon niet worden uitgevoerd. Controleer handmatig de werkbegroting op volledigheid." },
+      ];
+    }
+
+    const runId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const GELDIGE_TYPEN = ["waarschuwing", "uitvoeringsrisico", "inkoopactie_nodig", "planningrisico", "kostenrisico", "ontbrekende_voorbereiding", "besparingskans"];
+    const GELDIGE_PRIO  = ["hoog", "middel", "laag"];
+
+    const rijen = adviezen
+      .filter(a => a.titel && a.uitleg)
+      .map(a => ({
+        begrotingId: begroting.id,
+        runId,
+        type:       GELDIGE_TYPEN.includes(a.type)      ? a.type      : "ontbrekende_voorbereiding",
+        prioriteit: GELDIGE_PRIO.includes(a.prioriteit) ? a.prioriteit : "middel",
+        titel:  String(a.titel).slice(0, 120),
+        uitleg: String(a.uitleg).slice(0, 500),
+        status: "actief",
+      }));
+
+    const inserted = rijen.length > 0
+      ? await db.insert(werkbegrotingAdviezenTable).values(rijen).returning()
+      : [];
+
+    res.json(inserted.map(mapWbAdvies));
+  } catch (err) {
+    logger.error({ err }, "aiSeniorWerkvoorbereider fout");
+    res.status(500).json({ error: "Serverfout" });
+  }
+});
+
+router.get("/opdrachten/:id/werkbegroting/senior-adviezen", lezen, async (req, res) => {
+  const id = parseInt(String(req.params.id), 10);
+  if (isNaN(id)) { res.status(400).json({ error: "Ongeldig id" }); return; }
+
+  try {
+    const [begroting] = await db.select().from(projectBegrotingenTable)
+      .where(eq(projectBegrotingenTable.opdrachtId, id));
+    if (!begroting) { res.json([]); return; }
+
+    const rows = await db.select().from(werkbegrotingAdviezenTable)
+      .where(eq(werkbegrotingAdviezenTable.begrotingId, begroting.id))
+      .orderBy(
+        sql`CASE ${werkbegrotingAdviezenTable.prioriteit} WHEN 'hoog' THEN 1 WHEN 'middel' THEN 2 ELSE 3 END`,
+        asc(werkbegrotingAdviezenTable.aangemaaktOp),
+      );
+
+    res.json(rows.map(mapWbAdvies));
+  } catch (err) {
+    logger.error({ err }, "listWbAdviezen fout");
+    res.status(500).json({ error: "Serverfout" });
+  }
+});
+
+router.patch("/opdrachten/:id/werkbegroting/senior-adviezen/:adviesId", schrijven, async (req, res) => {
+  const id       = parseInt(String(req.params.id), 10);
+  const adviesId = parseInt(String(req.params.adviesId), 10);
+  if (isNaN(id) || isNaN(adviesId)) { res.status(400).json({ error: "Ongeldig id" }); return; }
+
+  try {
+    const [begroting] = await db.select().from(projectBegrotingenTable)
+      .where(eq(projectBegrotingenTable.opdrachtId, id));
+    if (!begroting) { res.status(404).json({ error: "Werkbegroting niet gevonden" }); return; }
+
+    const { status, notitie } = req.body as { status?: string; notitie?: string | null };
+    const updates: Partial<typeof werkbegrotingAdviezenTable.$inferInsert> = { bijgewerktOp: new Date() };
+    if (status !== undefined) updates.status = status;
+    if (notitie !== undefined) updates.notitie = notitie;
+
+    const [updated] = await db.update(werkbegrotingAdviezenTable)
+      .set(updates)
+      .where(and(eq(werkbegrotingAdviezenTable.id, adviesId), eq(werkbegrotingAdviezenTable.begrotingId, begroting.id)))
+      .returning();
+
+    if (!updated) { res.status(404).json({ error: "Advies niet gevonden" }); return; }
+    res.json(mapWbAdvies(updated));
+  } catch (err) {
+    logger.error({ err }, "updateWbAdvies fout");
+    res.status(500).json({ error: "Serverfout" });
   }
 });
 

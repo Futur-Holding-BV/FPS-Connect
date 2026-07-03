@@ -4,6 +4,20 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-03 — AI Senior Werkvoorbereider bij Werkbegroting
+
+**Uitvoering:** volledig | **Diepere lagen:** volledig | **Getest:** typecheck firevault + api-server schoon, workflows gezond
+
+Analysepaneel in de werkbegroting-tab van een opdracht: de AI kijkt als ervaren werkvoorbereider mee en geeft uitvoeringsgerichte adviezen over inkoop, planning, arbeid en ontbrekende voorbereidingen.
+
+- **DB** — `werkbegroting_adviezen` tabel: `id`, `begroting_id` (FK→project_begrotingen), `run_id`, `type`, `prioriteit`, `titel`, `uitleg`, `status`, `notitie`, tijdstempels
+- **Drizzle schema** — `werkbegrotingAdviezenTable` toegevoegd aan `lib/db/src/schema/planning.ts`
+- **OpenAPI + codegen** — 3 nieuwe paden: `POST /opdrachten/{id}/werkbegroting/senior-adviezen`, `GET .../senior-adviezen`, `PATCH .../senior-adviezen/{adviesId}`; schemas `WbAdvies` + `WbAdviesUpdate`; codegen geslaagd
+- **API route handlers** — POST: volledige werkbegrotingscontext (arbeid+materiaal per hoofdstuk) naar AI → JSON parse → bulk insert; GET: gesorteerd hoog→middel→laag; PATCH: status/notitie bijwerken; graceful fallback als AI niet beschikbaar
+- **AI prompt** — sector-specifiek (branddeuren/doorvoeringen/brandkleppen/manchetten/coating); 7 adviestypes: waarschuwing, uitvoeringsrisico, inkoopactie_nodig, planningrisico, kostenrisico, ontbrekende_voorbereiding, besparingskans
+- **`AiSeniorWerkvoorbereiderPanel`** — nieuw component met kleurgecodeerde advieskaartenlijst per type, prioriteitsdot, in/uitklappen, notitie-editor, Gecontroleerd/Negeren/Herstellen, filterblad (Actief/Gecontroleerd/Genegeerd/Alles)
+- **`detail.tsx`** (opdrachten) — "Senior"-knop in werkbegroting-tab-header; paneel inline in de tab (max 600px hoog); `seniorOpen` state; `HardHat` icoon
+
 ## 2026-07-03 — AI Senior Calculator
 
 **Uitvoering:** volledig | **Diepere lagen:** volledig | **Getest:** typecheck firevault + api-server schoon, workflows gezond

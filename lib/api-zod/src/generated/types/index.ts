@@ -854,6 +854,8 @@ export * from './wagenparkOnderhoudInputStatus';
 export * from './wagenparkOnderhoudInputType';
 export * from './wagenparkRit';
 export * from './wagenparkSyncLog';
+export * from './wbAdvies';
+export * from './wbAdviesUpdate';
 export * from './weekSamenvatting';
 export * from './weekSamenvattingPlanningItemsItem';
 export * from './weekStaat';

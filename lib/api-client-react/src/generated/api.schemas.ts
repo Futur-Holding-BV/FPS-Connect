@@ -6061,6 +6061,29 @@ export interface CalcAdviesUpdate {
   notitie?: string | null;
 }
 
+export interface WbAdvies {
+  id: number;
+  begroting_id: number;
+  run_id: string;
+  /** waarschuwing | uitvoeringsrisico | inkoopactie_nodig | planningrisico | kostenrisico | ontbrekende_voorbereiding | besparingskans */
+  type: string;
+  /** hoog | middel | laag */
+  prioriteit: string;
+  titel: string;
+  uitleg: string;
+  /** actief | genegeerd | gecontroleerd */
+  status: string;
+  notitie?: string | null;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export interface WbAdviesUpdate {
+  /** actief | genegeerd | gecontroleerd */
+  status?: string;
+  notitie?: string | null;
+}
+
 export interface UrenRegistratie {
   id: number;
   datum: string;
