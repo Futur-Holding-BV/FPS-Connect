@@ -13,7 +13,10 @@ export interface ModCalcHeader {
   klant_naam?: string | null;
   gebouw_id?: number | null;
   gebouw_naam?: string | null;
+  opname_id?: number | null;
+  opname_naam?: string | null;
   project_naam?: string | null;
+  werknummer?: string | null;
   status: string;
   omschrijving?: string | null;
   opmerkingen?: string | null;

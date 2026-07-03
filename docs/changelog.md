@@ -4,6 +4,19 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-03 — Calculatiemodule uitbreidingen: werknummer, opname-koppeling, inkoop velden, constructiehoofdstukken
+
+**Uitvoering:** volledig | **Diepere lagen:** volledig | **Getest:** typecheck firevault + api-server schoon, workflows gezond
+
+Calculatie is nu volledig zelfstandig (geen verplichte koppeling aan Project/Gebouw/Opname) met rijkere header-informatie en uitgebreidere inkoopadministratie.
+
+- **DB** — additieve ALTER TABLE op `mod_calc_headers`: `werknummer text`, `opname_id integer FK→opnames`; op `mod_calc_inkoop_items`: `artikel`, `eenheid`, `offerte_ontvangen boolean`, `gekozen_leverancier`, `levertijd`, `aantal` (numeric), `prijs` (numeric)
+- **Drizzle schema** — `lib/db/src/schema/mod-calculatie.ts` bijgewerkt met alle nieuwe kolommen
+- **OpenAPI + codegen** — `werknummer`, `opname_id`, `opname_naam` aan calculatie header schemas; inkoop item schema uitgebreid; codegen opnieuw gedraaid
+- **API route** — `mapHeader` gebruikt getypte Drizzle kolom referenties (geen `as any` meer); LEFT JOIN op `opnamesTable` via `modCalcHeadersTable.opnameId`; GET list/detail retourneert `opname_naam`; POST/PATCH accepteert `werknummer` en `opname_id`; inkoop GET/POST/PATCH stuurt alle nieuwe velden door
+- **`nieuw.tsx`** — werknummer invoerveld + opname-selector (per gebouw gefilterd, optioneel)
+- **`detail.tsx`** — `HOOFDSTUK_OPTIES` uitgebreid met 7 constructiehoofdstukken (Bouwplaatskosten/ABK, Applicaties, Timmerwerk, Glas, Installaties, Algemene kosten, Algemeen niet projectgerelateerd); inkoop formulier uitgebreid (artikel/aantal/eenheid/prijs/offerte_ontvangen/gekozen_leverancier/levertijd); bewerkdialoog bevat werknummer-veld + opname-selector (gelazyload op gebouw_id); projectgegevens-strip toont werknummer en opname_naam
+
 ## 2026-07-03 — AI-inzicht: context en voorstellen zichtbaar in beheerdersdashboard
 
 **Uitvoering:** volledig | **Diepere lagen:** volledig | **Getest:** typecheck schoon, DB-kolom aanwezig

@@ -12,7 +12,14 @@ export interface ModCalcInkoopItem {
   /** materiaal | onderaanneming */
   type: string;
   omschrijving: string;
+  artikel?: string | null;
   leverancier?: string | null;
+  gekozen_leverancier?: string | null;
+  aantal?: number | null;
+  eenheid?: string | null;
+  prijs?: number | null;
+  offerte_ontvangen?: boolean;
+  levertijd?: string | null;
   /** te_versturen | verstuurd | ontvangen | akkoord */
   status: string;
   datum_verstuurd?: string | null;

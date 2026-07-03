@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation, useSearch } from "wouter";
-import { useCreateModCalculatie } from "@workspace/api-client-react";
-import { useListGebouwen } from "@workspace/api-client-react";
+import { useCreateModCalculatie, useListGebouwen, useListOpnames, getListOpnamesQueryKey } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -26,7 +25,9 @@ export default function ModulesCalculatieNieuw() {
     naam: "",
     klant_naam: "",
     gebouw_id: vooringevuldGebouwId,
+    opname_id: "__geen__",
     project_naam: "",
+    werknummer: "",
     status: "concept",
     omschrijving: "",
     opslag_materiaal: 0,
@@ -44,12 +45,20 @@ export default function ModulesCalculatieNieuw() {
   const { data: gebouwenData } = useListGebouwen();
   const gebouwen = Array.isArray(gebouwenData) ? gebouwenData : [];
 
+  const gebouwIdNum = form.gebouw_id !== "__geen__" ? parseInt(form.gebouw_id, 10) : null;
+  const opnamesParams = gebouwIdNum ? { gebouw_id: gebouwIdNum } : undefined;
+  const { data: opnamesData } = useListOpnames(opnamesParams, {
+    query: { queryKey: getListOpnamesQueryKey(opnamesParams), enabled: gebouwIdNum != null },
+  });
+  const opnames = Array.isArray(opnamesData) ? opnamesData : [];
+
   useEffect(() => {
     const lijst = Array.isArray(gebouwenData) ? gebouwenData : [];
 
     if (form.gebouw_id === "__geen__") {
       setForm((f) => ({
         ...f,
+        opname_id: "__geen__",
         klant_naam:  klantNaamHandmatig    ? f.klant_naam  : "",
         project_naam: projectNaamHandmatig ? f.project_naam : "",
         omschrijving: omschrijvingHandmatig ? f.omschrijving : "",
@@ -109,7 +118,9 @@ export default function ModulesCalculatieNieuw() {
         naam: form.naam,
         klant_naam: form.klant_naam || undefined,
         gebouw_id: form.gebouw_id && form.gebouw_id !== "__geen__" ? Number(form.gebouw_id) : undefined,
+        opname_id: form.opname_id && form.opname_id !== "__geen__" ? Number(form.opname_id) : undefined,
         project_naam: form.project_naam || undefined,
+        werknummer: form.werknummer || undefined,
         status: form.status,
         omschrijving: form.omschrijving || undefined,
         opslag_materiaal: form.opslag_materiaal,
@@ -178,7 +189,7 @@ export default function ModulesCalculatieNieuw() {
                     setKlantNaamHandmatig(false);
                     setProjectNaamHandmatig(false);
                     setOmschrijvingHandmatig(false);
-                    setField("gebouw_id", v);
+                    setForm((f) => ({ ...f, gebouw_id: v, opname_id: "__geen__" }));
                   }}
                 >
                   <SelectTrigger>
@@ -194,6 +205,27 @@ export default function ModulesCalculatieNieuw() {
                   </SelectContent>
                 </Select>
               </div>
+              {form.gebouw_id !== "__geen__" && (
+                <div className="col-span-2 space-y-1.5">
+                  <Label htmlFor="opname_id">Koppelen aan opname (optioneel)</Label>
+                  <Select
+                    value={form.opname_id}
+                    onValueChange={(v) => setField("opname_id", v)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecteer opname..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__geen__">Geen opname</SelectItem>
+                      {opnames.map((o) => (
+                        <SelectItem key={o.id} value={String(o.id)}>
+                          {o.naam}{(o as any).datum ? ` (${new Date((o as any).datum).toLocaleDateString("nl-NL")})` : ""}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               <div className="space-y-1.5">
                 <Label htmlFor="klant_naam">
                   Opdrachtgever
@@ -226,6 +258,15 @@ export default function ModulesCalculatieNieuw() {
                     setField("project_naam", e.target.value);
                   }}
                   placeholder="Bijv. Renovatie Kantoorpand Y"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="werknummer">Werknummer</Label>
+                <Input
+                  id="werknummer"
+                  value={form.werknummer}
+                  onChange={(e) => setField("werknummer", e.target.value)}
+                  placeholder="Bijv. W2024-0123"
                 />
               </div>
               <div className="col-span-2 space-y-1.5">

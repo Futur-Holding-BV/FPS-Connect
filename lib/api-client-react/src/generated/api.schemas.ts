@@ -5885,7 +5885,10 @@ export interface ModCalcHeader {
   klant_naam?: string | null;
   gebouw_id?: number | null;
   gebouw_naam?: string | null;
+  opname_id?: number | null;
+  opname_naam?: string | null;
   project_naam?: string | null;
+  werknummer?: string | null;
   status: string;
   omschrijving?: string | null;
   opmerkingen?: string | null;
@@ -5951,7 +5954,9 @@ export interface ModCalcHeaderInput {
   referentie?: string | null;
   klant_naam?: string | null;
   gebouw_id?: number | null;
+  opname_id?: number | null;
   project_naam?: string | null;
+  werknummer?: string | null;
   status?: string;
   omschrijving?: string | null;
   opmerkingen?: string | null;
@@ -5997,7 +6002,14 @@ export interface ModCalcInkoopItem {
   /** materiaal | onderaanneming */
   type: string;
   omschrijving: string;
+  artikel?: string | null;
   leverancier?: string | null;
+  gekozen_leverancier?: string | null;
+  aantal?: number | null;
+  eenheid?: string | null;
+  prijs?: number | null;
+  offerte_ontvangen?: boolean;
+  levertijd?: string | null;
   /** te_versturen | verstuurd | ontvangen | akkoord */
   status: string;
   datum_verstuurd?: string | null;
@@ -6011,7 +6023,14 @@ export interface ModCalcInkoopItem {
 export interface ModCalcInkoopItemInput {
   type?: string;
   omschrijving?: string;
+  artikel?: string | null;
   leverancier?: string | null;
+  gekozen_leverancier?: string | null;
+  aantal?: number | null;
+  eenheid?: string | null;
+  prijs?: number | null;
+  offerte_ontvangen?: boolean;
+  levertijd?: string | null;
   status?: string;
   datum_verstuurd?: string | null;
   datum_ontvangen?: string | null;

@@ -9,7 +9,14 @@
 export interface ModCalcInkoopItemInput {
   type?: string;
   omschrijving?: string;
+  artikel?: string | null;
   leverancier?: string | null;
+  gekozen_leverancier?: string | null;
+  aantal?: number | null;
+  eenheid?: string | null;
+  prijs?: number | null;
+  offerte_ontvangen?: boolean;
+  levertijd?: string | null;
   status?: string;
   datum_verstuurd?: string | null;
   datum_ontvangen?: string | null;

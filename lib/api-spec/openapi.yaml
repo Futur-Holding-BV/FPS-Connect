@@ -26112,7 +26112,16 @@ components:
         gebouw_naam:
           type: string
           nullable: true
+        opname_id:
+          type: integer
+          nullable: true
+        opname_naam:
+          type: string
+          nullable: true
         project_naam:
+          type: string
+          nullable: true
+        werknummer:
           type: string
           nullable: true
         status:
@@ -26191,7 +26200,13 @@ components:
         gebouw_id:
           type: integer
           nullable: true
+        opname_id:
+          type: integer
+          nullable: true
         project_naam:
+          type: string
+          nullable: true
+        werknummer:
           type: string
           nullable: true
         status:
@@ -26356,7 +26371,27 @@ components:
           description: 'materiaal | onderaanneming'
         omschrijving:
           type: string
+        artikel:
+          type: string
+          nullable: true
         leverancier:
+          type: string
+          nullable: true
+        gekozen_leverancier:
+          type: string
+          nullable: true
+        aantal:
+          type: number
+          nullable: true
+        eenheid:
+          type: string
+          nullable: true
+        prijs:
+          type: number
+          nullable: true
+        offerte_ontvangen:
+          type: boolean
+        levertijd:
           type: string
           nullable: true
         status:
@@ -26386,7 +26421,27 @@ components:
           type: string
         omschrijving:
           type: string
+        artikel:
+          type: string
+          nullable: true
         leverancier:
+          type: string
+          nullable: true
+        gekozen_leverancier:
+          type: string
+          nullable: true
+        aantal:
+          type: number
+          nullable: true
+        eenheid:
+          type: string
+          nullable: true
+        prijs:
+          type: number
+          nullable: true
+        offerte_ontvangen:
+          type: boolean
+        levertijd:
           type: string
           nullable: true
         status:

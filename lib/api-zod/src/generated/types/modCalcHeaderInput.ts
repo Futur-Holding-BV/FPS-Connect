@@ -11,7 +11,9 @@ export interface ModCalcHeaderInput {
   referentie?: string | null;
   klant_naam?: string | null;
   gebouw_id?: number | null;
+  opname_id?: number | null;
   project_naam?: string | null;
+  werknummer?: string | null;
   status?: string;
   omschrijving?: string | null;
   opmerkingen?: string | null;

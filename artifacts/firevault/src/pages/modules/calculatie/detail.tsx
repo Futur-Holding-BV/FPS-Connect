@@ -18,6 +18,8 @@ import {
   useDeleteModCalcInkoopItem,
   getListModCalcInkoopItemsQueryKey,
   useAiChatCalculatie,
+  useListOpnames,
+  getListOpnamesQueryKey,
   type ModCalcInkoopItem,
 } from "@workspace/api-client-react";
 import AiChatPanel from "@/components/ai-chat-panel";
@@ -127,7 +129,14 @@ const HOOFDSTUK_OPTIES = [
   "Wanden en plafonds",
   "Schachten",
   "Onderhoud",
+  "Applicaties",
+  "Timmerwerk",
+  "Glas",
+  "Installaties",
+  "Bouwplaatskosten / ABK",
+  "Algemene kosten",
   "Overige werkzaamheden",
+  "Algemeen niet projectgerelateerd",
 ];
 
 // AI hint tabel (keyword → toepassing suggestie met normtijden)
@@ -1273,7 +1282,21 @@ const INKOOP_TYPE_LABEL: Record<string, string> = {
   onderaanneming:  "Onderaanneming",
 };
 
-type InkoopForm = { type: string; omschrijving: string; leverancier: string; status: string; bedrag: string; notities: string };
+type InkoopForm = {
+  type: string;
+  omschrijving: string;
+  artikel: string;
+  leverancier: string;
+  gekozen_leverancier: string;
+  aantal: string;
+  eenheid: string;
+  prijs: string;
+  offerte_ontvangen: boolean;
+  levertijd: string;
+  status: string;
+  bedrag: string;
+  notities: string;
+};
 
 function InkoopregelsKaart({
   items, nieuwOpen, setNieuwOpen, form, setForm, bewerken, setBewerken,
@@ -1287,9 +1310,9 @@ function InkoopregelsKaart({
   setForm: (fn: (f: InkoopForm) => InkoopForm) => void;
   bewerken: ModCalcInkoopItem | null;
   setBewerken: (v: ModCalcInkoopItem | null) => void;
-  onAanmaken: (d: { type: string; omschrijving: string; leverancier?: string; status: string; bedrag?: number; notities?: string }) => void;
+  onAanmaken: (d: Record<string, unknown>) => void;
   onStatusWijzigen: (itemId: number, status: string) => void;
-  onOpslaan: (itemId: number, d: { omschrijving?: string; leverancier?: string | null; status?: string; bedrag?: number | null; notities?: string | null }) => void;
+  onOpslaan: (itemId: number, d: Record<string, unknown>) => void;
   onVerwijderen: (itemId: number) => void;
 }) {
   const groepen: { type: string; items: ModCalcInkoopItem[] }[] = [
@@ -1300,8 +1323,17 @@ function InkoopregelsKaart({
   function handleAanmaken() {
     if (!form.omschrijving.trim()) return;
     onAanmaken({
-      type: form.type, omschrijving: form.omschrijving.trim(),
-      leverancier: form.leverancier || undefined, status: form.status,
+      type: form.type,
+      omschrijving: form.omschrijving.trim(),
+      artikel: form.artikel || undefined,
+      leverancier: form.leverancier || undefined,
+      gekozen_leverancier: form.gekozen_leverancier || undefined,
+      aantal: form.aantal ? parseFloat(form.aantal) : undefined,
+      eenheid: form.eenheid || undefined,
+      prijs: form.prijs ? parseFloat(form.prijs) : undefined,
+      offerte_ontvangen: form.offerte_ontvangen || undefined,
+      levertijd: form.levertijd || undefined,
+      status: form.status,
       bedrag: form.bedrag ? parseFloat(form.bedrag) : undefined,
       notities: form.notities || undefined,
     });
@@ -1311,7 +1343,14 @@ function InkoopregelsKaart({
     if (!bewerken || !form.omschrijving.trim()) return;
     onOpslaan(bewerken.id, {
       omschrijving: form.omschrijving.trim(),
+      artikel: form.artikel || null,
       leverancier: form.leverancier || null,
+      gekozen_leverancier: form.gekozen_leverancier || null,
+      aantal: form.aantal ? parseFloat(form.aantal) : null,
+      eenheid: form.eenheid || null,
+      prijs: form.prijs ? parseFloat(form.prijs) : null,
+      offerte_ontvangen: form.offerte_ontvangen,
+      levertijd: form.levertijd || null,
       status: form.status,
       bedrag: form.bedrag ? parseFloat(form.bedrag) : null,
       notities: form.notities || null,
@@ -1321,8 +1360,16 @@ function InkoopregelsKaart({
   function openBewerken(item: ModCalcInkoopItem) {
     setBewerken(item);
     setForm(() => ({
-      type: item.type, omschrijving: item.omschrijving,
+      type: item.type,
+      omschrijving: item.omschrijving,
+      artikel: (item as any).artikel ?? "",
       leverancier: item.leverancier ?? "",
+      gekozen_leverancier: (item as any).gekozen_leverancier ?? "",
+      aantal: (item as any).aantal != null ? String((item as any).aantal) : "",
+      eenheid: (item as any).eenheid ?? "st",
+      prijs: (item as any).prijs != null ? String((item as any).prijs) : "",
+      offerte_ontvangen: (item as any).offerte_ontvangen ?? false,
+      levertijd: (item as any).levertijd ?? "",
       status: item.status,
       bedrag: item.bedrag != null ? String(item.bedrag) : "",
       notities: item.notities ?? "",
@@ -1343,7 +1390,7 @@ function InkoopregelsKaart({
             </span>
           )}
         </h2>
-        <Button size="sm" variant="outline" onClick={() => { setNieuwOpen(true); setBewerken(null); setForm(() => ({ type: "materiaal", omschrijving: "", leverancier: "", status: "te_versturen", bedrag: "", notities: "" })); }}>
+        <Button size="sm" variant="outline" onClick={() => { setNieuwOpen(true); setBewerken(null); setForm(() => ({ type: "materiaal", omschrijving: "", artikel: "", leverancier: "", gekozen_leverancier: "", aantal: "", eenheid: "st", prijs: "", offerte_ontvangen: false, levertijd: "", status: "te_versturen", bedrag: "", notities: "" })); }}>
           <Plus className="h-3.5 w-3.5 mr-1" />
           Toevoegen
         </Button>
@@ -1366,8 +1413,32 @@ function InkoopregelsKaart({
                       <Input value={form.omschrijving} onChange={(e) => setForm((f) => ({ ...f, omschrijving: e.target.value }))} className="h-8 text-sm" />
                     </div>
                     <div className="space-y-1">
+                      <Label className="text-xs">Artikelnummer / code</Label>
+                      <Input value={form.artikel} onChange={(e) => setForm((f) => ({ ...f, artikel: e.target.value }))} className="h-8 text-sm" placeholder="Optioneel" />
+                    </div>
+                    <div className="space-y-1">
                       <Label className="text-xs">Leverancier</Label>
                       <Input value={form.leverancier} onChange={(e) => setForm((f) => ({ ...f, leverancier: e.target.value }))} className="h-8 text-sm" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Aantal</Label>
+                      <Input type="number" value={form.aantal} onChange={(e) => setForm((f) => ({ ...f, aantal: e.target.value }))} className="h-8 text-sm" placeholder="0" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Eenheid</Label>
+                      <Input value={form.eenheid} onChange={(e) => setForm((f) => ({ ...f, eenheid: e.target.value }))} className="h-8 text-sm" placeholder="st" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Prijs per eenheid</Label>
+                      <Input type="number" value={form.prijs} onChange={(e) => setForm((f) => ({ ...f, prijs: e.target.value }))} className="h-8 text-sm" placeholder="0" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Gekozen leverancier</Label>
+                      <Input value={form.gekozen_leverancier} onChange={(e) => setForm((f) => ({ ...f, gekozen_leverancier: e.target.value }))} className="h-8 text-sm" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Levertijd</Label>
+                      <Input value={form.levertijd} onChange={(e) => setForm((f) => ({ ...f, levertijd: e.target.value }))} className="h-8 text-sm" placeholder="Bijv. 3 weken" />
                     </div>
                     <div className="space-y-1">
                       <Label className="text-xs">Bedrag (excl. BTW)</Label>
@@ -1381,6 +1452,10 @@ function InkoopregelsKaart({
                           {Object.entries(INKOOP_STATUS_LABEL).map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}
                         </SelectContent>
                       </Select>
+                    </div>
+                    <div className="col-span-2 flex items-center gap-2">
+                      <input type="checkbox" id={`offerte-${item.id}`} checked={form.offerte_ontvangen} onChange={(e) => setForm((f) => ({ ...f, offerte_ontvangen: e.target.checked }))} className="h-4 w-4" />
+                      <Label htmlFor={`offerte-${item.id}`} className="text-xs cursor-pointer">Offerte ontvangen</Label>
                     </div>
                   </div>
                   <div className="flex gap-2">
@@ -1442,8 +1517,24 @@ function InkoopregelsKaart({
               <Input value={form.omschrijving} onChange={(e) => setForm((f) => ({ ...f, omschrijving: e.target.value }))} className="h-8 text-sm" placeholder="Bijv. Brandwerende beplating leverancier X" />
             </div>
             <div className="space-y-1">
+              <Label className="text-xs">Artikelnummer / code</Label>
+              <Input value={form.artikel} onChange={(e) => setForm((f) => ({ ...f, artikel: e.target.value }))} className="h-8 text-sm" placeholder="Optioneel" />
+            </div>
+            <div className="space-y-1">
               <Label className="text-xs">Leverancier / onderaannemer</Label>
               <Input value={form.leverancier} onChange={(e) => setForm((f) => ({ ...f, leverancier: e.target.value }))} className="h-8 text-sm" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Aantal</Label>
+              <Input type="number" value={form.aantal} onChange={(e) => setForm((f) => ({ ...f, aantal: e.target.value }))} className="h-8 text-sm" placeholder="0" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Eenheid</Label>
+              <Input value={form.eenheid} onChange={(e) => setForm((f) => ({ ...f, eenheid: e.target.value }))} className="h-8 text-sm" placeholder="st" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Prijs per eenheid</Label>
+              <Input type="number" value={form.prijs} onChange={(e) => setForm((f) => ({ ...f, prijs: e.target.value }))} className="h-8 text-sm" placeholder="0" />
             </div>
             <div className="space-y-1">
               <Label className="text-xs">Bedrag (excl. BTW)</Label>
@@ -1545,7 +1636,8 @@ export default function ModulesCalculatieDetail() {
   const [versieLabel, setVersieLabel]           = useState("");
   const [versieOpslaanBezig, setVersieOpslaanBezig] = useState(false);
   const [inkoopNieuwOpen, setInkoopNieuwOpen] = useState(false);
-  const [inkoopForm, setInkoopForm] = useState({ type: "materiaal", omschrijving: "", leverancier: "", status: "te_versturen", bedrag: "", notities: "" });
+  const leegInkoopForm: InkoopForm = { type: "materiaal", omschrijving: "", artikel: "", leverancier: "", gekozen_leverancier: "", aantal: "", eenheid: "st", prijs: "", offerte_ontvangen: false, levertijd: "", status: "te_versturen", bedrag: "", notities: "" };
+  const [inkoopForm, setInkoopForm] = useState<InkoopForm>(leegInkoopForm);
   const [inkoopBewerken, setInkoopBewerken] = useState<ModCalcInkoopItem | null>(null);
 
   // Nieuw rij invoerrij (null = verborgen)
@@ -1555,11 +1647,18 @@ export default function ModulesCalculatieDetail() {
 
   const [headerForm, setHeaderForm] = useState({
     naam: "", referentie: "", klant_naam: "", project_naam: "",
+    werknummer: "", opname_id: null as number | null,
     status: "", omschrijving: "", opmerkingen: "",
     opslag_materiaal: 0, opslag_arbeid: 0,
     opslag_ak: 15, opslag_abk: 10, opslag_risico: 5, opslag_winst: 10, korting: 0,
     ak_is_vast: false, abk_is_vast: false, risico_is_vast: false, winst_is_vast: false,
   });
+
+  const gebouwIdVoorOpnames = data?.gebouw_id ?? undefined;
+  const { data: opnamesVoorBewerken } = useListOpnames(
+    gebouwIdVoorOpnames ? { gebouw_id: gebouwIdVoorOpnames } : undefined,
+    { query: { queryKey: getListOpnamesQueryKey(gebouwIdVoorOpnames ? { gebouw_id: gebouwIdVoorOpnames } : undefined), enabled: !!gebouwIdVoorOpnames && bewerkenDialoog } },
+  );
 
   const { data: versieData, refetch: versiesHerladen } = useQuery<{ id: number; versienummer: number; label: string | null; aangemaakt_op: string }[]>({
     queryKey: ["calc-versies", id],
@@ -1590,6 +1689,8 @@ export default function ModulesCalculatieDetail() {
       referentie: data.referentie ?? "",
       klant_naam: data.klant_naam ?? "",
       project_naam: data.project_naam ?? "",
+      werknummer: (data as any).werknummer ?? "",
+      opname_id: (data as any).opname_id ?? null,
       status: data.status,
       omschrijving: data.omschrijving ?? "",
       opmerkingen: data.opmerkingen ?? "",
@@ -1614,6 +1715,8 @@ export default function ModulesCalculatieDetail() {
       referentie: headerForm.referentie || null,
       klant_naam: headerForm.klant_naam || null,
       project_naam: headerForm.project_naam || null,
+      werknummer: headerForm.werknummer || null,
+      opname_id: headerForm.opname_id ?? null,
       status: headerForm.status,
       omschrijving: headerForm.omschrijving || null,
       opmerkingen: headerForm.opmerkingen || null,
@@ -1792,12 +1895,18 @@ export default function ModulesCalculatieDetail() {
       </div>
 
       {/* Projectgegevens strip */}
-      {(data.referentie || data.klant_naam || data.project_naam || data.gebouw_naam || data.aangemaakt_door_naam) && (
-        <div className="flex items-center gap-6 px-6 py-2.5 border-b bg-muted/40 text-sm">
+      {(data.referentie || (data as any).werknummer || data.klant_naam || data.project_naam || data.gebouw_naam || (data as any).opname_naam || data.aangemaakt_door_naam) && (
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-1 px-6 py-2.5 border-b bg-muted/40 text-sm">
           {data.referentie && (
             <div className="flex gap-1.5 items-center">
               <span className="text-muted-foreground text-xs">Ref:</span>
               <span className="font-mono text-xs font-semibold text-foreground select-all">{data.referentie}</span>
+            </div>
+          )}
+          {(data as any).werknummer && (
+            <div className="flex gap-1.5 items-center">
+              <span className="text-muted-foreground text-xs">Werknr:</span>
+              <span className="font-mono text-xs font-semibold text-foreground select-all">{(data as any).werknummer}</span>
             </div>
           )}
           {data.klant_naam && (
@@ -1816,6 +1925,12 @@ export default function ModulesCalculatieDetail() {
             <div className="flex gap-1.5 items-center">
               <span className="text-muted-foreground text-xs">Gebouw:</span>
               <span className="font-medium">{data.gebouw_naam}</span>
+            </div>
+          )}
+          {(data as any).opname_naam && (
+            <div className="flex gap-1.5 items-center">
+              <span className="text-muted-foreground text-xs">Opname:</span>
+              <span className="font-medium">{(data as any).opname_naam}</span>
             </div>
           )}
           {data.aangemaakt_door_naam && (
@@ -2326,8 +2441,8 @@ export default function ModulesCalculatieDetail() {
           bewerken={inkoopBewerken}
           setBewerken={setInkoopBewerken}
           onAanmaken={(d) => maakInkoopItemMut.mutate(
-            { id, data: d },
-            { onSuccess: () => { queryClient.invalidateQueries({ queryKey: getListModCalcInkoopItemsQueryKey(id) }); setInkoopNieuwOpen(false); setInkoopForm({ type: "materiaal", omschrijving: "", leverancier: "", status: "te_versturen", bedrag: "", notities: "" }); } }
+            { id, data: d as any },
+            { onSuccess: () => { queryClient.invalidateQueries({ queryKey: getListModCalcInkoopItemsQueryKey(id) }); setInkoopNieuwOpen(false); setInkoopForm(leegInkoopForm); } }
           )}
           onStatusWijzigen={(itemId, status) => updateInkoopItemMut.mutate(
             { id, itemId, data: { status } },
@@ -2363,6 +2478,10 @@ export default function ModulesCalculatieDetail() {
                 <Input value={headerForm.referentie} onChange={(e) => setHeaderForm((f) => ({ ...f, referentie: e.target.value }))} />
               </div>
               <div className="space-y-1.5">
+                <Label>Werknummer</Label>
+                <Input value={headerForm.werknummer} placeholder="Bijv. W-2024-001" onChange={(e) => setHeaderForm((f) => ({ ...f, werknummer: e.target.value }))} />
+              </div>
+              <div className="space-y-1.5">
                 <Label>Klant</Label>
                 <Input value={headerForm.klant_naam} onChange={(e) => setHeaderForm((f) => ({ ...f, klant_naam: e.target.value }))} />
               </div>
@@ -2370,6 +2489,21 @@ export default function ModulesCalculatieDetail() {
                 <Label>Project</Label>
                 <Input value={headerForm.project_naam} onChange={(e) => setHeaderForm((f) => ({ ...f, project_naam: e.target.value }))} />
               </div>
+              {gebouwIdVoorOpnames && (
+                <div className="space-y-1.5 col-span-2">
+                  <Label>Opname koppelen (optioneel)</Label>
+                  <select
+                    className="w-full border rounded-md px-3 py-2 text-sm bg-background"
+                    value={headerForm.opname_id ?? ""}
+                    onChange={(e) => setHeaderForm((f) => ({ ...f, opname_id: e.target.value ? Number(e.target.value) : null }))}
+                  >
+                    <option value="">Geen opname gekoppeld</option>
+                    {(opnamesVoorBewerken ?? []).map((o) => (
+                      <option key={o.id} value={o.id}>{o.naam}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
             <div className="space-y-1.5">
               <Label>Omschrijving</Label>

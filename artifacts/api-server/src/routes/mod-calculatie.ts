@@ -104,6 +104,7 @@ function mapHeader(
   h: typeof modCalcHeadersTable.$inferSelect,
   extra?: {
     gebouwNaam?: string | null;
+    opnameNaam?: string | null;
     aangemaaktDoorNaam?: string | null;
     subtotaal?: number;
     totaalNaOpslagen?: number;
@@ -116,7 +117,10 @@ function mapHeader(
     klant_naam: h.klantNaam,
     gebouw_id: h.gebouwId,
     gebouw_naam: extra?.gebouwNaam ?? null,
+    opname_id: h.opnameId ?? null,
+    opname_naam: extra?.opnameNaam ?? null,
     project_naam: h.projectNaam,
+    werknummer: h.werknummer ?? null,
     status: h.status,
     omschrijving: h.omschrijving,
     opmerkingen: h.opmerkingen,
@@ -298,10 +302,12 @@ router.get("/modules/calculaties", lezenCalc, async (req, res) => {
       .select({
         header: modCalcHeadersTable,
         gebouwNaam: gebouwenTable.naam,
+        opnameNaam: opnamesTable.naam,
         makerNaam: gebruikersTable.naam,
       })
       .from(modCalcHeadersTable)
       .leftJoin(gebouwenTable, eq(modCalcHeadersTable.gebouwId, gebouwenTable.id))
+      .leftJoin(opnamesTable, eq(modCalcHeadersTable.opnameId, opnamesTable.id))
       .leftJoin(gebruikersTable, eq(modCalcHeadersTable.aangemaaktDoorId, gebruikersTable.id))
       .orderBy(desc(modCalcHeadersTable.aangemaaktOp));
 
@@ -343,7 +349,7 @@ router.get("/modules/calculaties", lezenCalc, async (req, res) => {
       );
     }
 
-    res.json(resultaten.map(({ header, gebouwNaam, makerNaam }) => {
+    res.json(resultaten.map(({ header, gebouwNaam, opnameNaam, makerNaam }) => {
       const calcRegels = regelsByCalc.get(header.id) ?? [];
       const { subtotaal, totaal_na_opslagen } = berekenTotalen(calcRegels, {
         opslagMateriaal: header.opslagMateriaal ?? 0,
@@ -358,7 +364,7 @@ router.get("/modules/calculaties", lezenCalc, async (req, res) => {
         risicoIsVast: header.risicoIsVast ?? false,
         winstIsVast: header.winstIsVast ?? false,
       });
-      return mapHeader(header, { gebouwNaam: gebouwNaam ?? null, aangemaaktDoorNaam: makerNaam ?? null, subtotaal, totaalNaOpslagen: totaal_na_opslagen });
+      return mapHeader(header, { gebouwNaam: gebouwNaam ?? null, opnameNaam: opnameNaam ?? null, aangemaaktDoorNaam: makerNaam ?? null, subtotaal, totaalNaOpslagen: totaal_na_opslagen });
     }));
   } catch (e) {
     req.log.error(e);
@@ -369,8 +375,8 @@ router.get("/modules/calculaties", lezenCalc, async (req, res) => {
 router.post("/modules/calculaties", aanmakenCalc, async (req, res) => {
   try {
     const {
-      naam, referentie, klant_naam, gebouw_id, project_naam, status = "concept",
-      omschrijving, opmerkingen,
+      naam, referentie, klant_naam, gebouw_id, opname_id, project_naam, werknummer,
+      status = "concept", omschrijving, opmerkingen,
       opslag_materiaal = 0, opslag_arbeid = 0,
       opslag_ak = 15, opslag_risico = 5, opslag_winst = 10, korting = 0,
     } = req.body as Record<string, unknown>;
@@ -382,7 +388,9 @@ router.post("/modules/calculaties", aanmakenCalc, async (req, res) => {
       referentie: referentie ? String(referentie) : null,
       klantNaam: klant_naam ? String(klant_naam) : null,
       gebouwId: gebouw_id ? Number(gebouw_id) : null,
+      ...(opname_id ? { opnameId: Number(opname_id) } : {}),
       projectNaam: project_naam ? String(project_naam) : null,
+      ...(werknummer ? { werknummer: String(werknummer) } : {}),
       status: String(status),
       omschrijving: omschrijving ? String(omschrijving) : null,
       opmerkingen: opmerkingen ? String(opmerkingen) : null,
@@ -626,10 +634,12 @@ router.get("/modules/calculaties/:id", lezenCalc, async (req, res) => {
       .select({
         header: modCalcHeadersTable,
         gebouwNaam: gebouwenTable.naam,
+        opnameNaam: opnamesTable.naam,
         makerNaam: gebruikersTable.naam,
       })
       .from(modCalcHeadersTable)
       .leftJoin(gebouwenTable, eq(modCalcHeadersTable.gebouwId, gebouwenTable.id))
+      .leftJoin(opnamesTable, eq(modCalcHeadersTable.opnameId, opnamesTable.id))
       .leftJoin(gebruikersTable, eq(modCalcHeadersTable.aangemaaktDoorId, gebruikersTable.id))
       .where(eq(modCalcHeadersTable.id, id));
 
@@ -670,6 +680,7 @@ router.get("/modules/calculaties/:id", lezenCalc, async (req, res) => {
     res.json({
       ...mapHeader(headerRow.header, {
         gebouwNaam: headerRow.gebouwNaam ?? null,
+        opnameNaam: headerRow.opnameNaam ?? null,
         aangemaaktDoorNaam: headerRow.makerNaam ?? null,
         subtotaal,
         totaalNaOpslagen: totaal_na_opslagen,
@@ -691,7 +702,9 @@ router.patch("/modules/calculaties/:id", schrijvenCalc, async (req, res) => {
     if (body.referentie !== undefined) update.referentie = body.referentie ? String(body.referentie) : null;
     if (body.klant_naam !== undefined) update.klantNaam = body.klant_naam ? String(body.klant_naam) : null;
     if (body.gebouw_id !== undefined) update.gebouwId = body.gebouw_id ? Number(body.gebouw_id) : null;
+    if (body.opname_id !== undefined) (update as any).opnameId = body.opname_id ? Number(body.opname_id) : null;
     if (body.project_naam !== undefined) update.projectNaam = body.project_naam ? String(body.project_naam) : null;
+    if (body.werknummer !== undefined) (update as any).werknummer = body.werknummer ? String(body.werknummer) : null;
     if (body.status !== undefined) update.status = String(body.status);
     if (body.omschrijving !== undefined) update.omschrijving = body.omschrijving ? String(body.omschrijving) : null;
     if (body.opmerkingen !== undefined) update.opmerkingen = body.opmerkingen ? String(body.opmerkingen) : null;
@@ -1338,6 +1351,30 @@ router.get("/modules/calculaties/:id/print-data", lezenCalc, async (req, res) =>
 
 // ── Calculatie inkoopitems (offertes materialen / onderaannemers) ────────────
 
+function mapInkoopItem(i: typeof modCalcInkoopItemsTable.$inferSelect) {
+  return {
+    id: i.id,
+    calculatie_id: i.calculatieId,
+    type: i.type,
+    omschrijving: i.omschrijving,
+    artikel: (i as any).artikel ?? null,
+    leverancier: i.leverancier,
+    gekozen_leverancier: (i as any).gekozenLeverancier ?? null,
+    aantal: (i as any).aantal ?? null,
+    eenheid: (i as any).eenheid ?? null,
+    prijs: (i as any).prijs ?? null,
+    offerte_ontvangen: (i as any).offerteOntvangen ?? false,
+    levertijd: (i as any).levertijd ?? null,
+    status: i.status,
+    datum_verstuurd: i.datumVerstuurd,
+    datum_ontvangen: i.datumOntvangen,
+    bedrag: i.bedrag,
+    notities: i.notities,
+    aangemaakt_op: iso(i.aangemaaktOp),
+    bijgewerkt_op: iso(i.bijgewerktOp),
+  };
+}
+
 router.get("/modules/calculaties/:id/inkoop-items", lezenCalc, async (req, res) => {
   try {
     const id = parseId(req.params["id"]);
@@ -1346,20 +1383,7 @@ router.get("/modules/calculaties/:id/inkoop-items", lezenCalc, async (req, res) 
       .from(modCalcInkoopItemsTable)
       .where(eq(modCalcInkoopItemsTable.calculatieId, id))
       .orderBy(asc(modCalcInkoopItemsTable.aangemaaktOp));
-    res.json(items.map((i) => ({
-      id: i.id,
-      calculatie_id: i.calculatieId,
-      type: i.type,
-      omschrijving: i.omschrijving,
-      leverancier: i.leverancier,
-      status: i.status,
-      datum_verstuurd: i.datumVerstuurd,
-      datum_ontvangen: i.datumOntvangen,
-      bedrag: i.bedrag,
-      notities: i.notities,
-      aangemaakt_op: iso(i.aangemaaktOp),
-      bijgewerkt_op: iso(i.bijgewerktOp),
-    })));
+    res.json(items.map((i) => mapInkoopItem(i)));
   } catch (e) {
     req.log.error(e);
     res.status(500).json({ error: "Interne fout" });
@@ -1371,31 +1395,27 @@ router.post("/modules/calculaties/:id/inkoop-items", schrijvenCalc, async (req, 
     const id = parseId(req.params["id"]);
     const [calc] = await db.select({ id: modCalcHeadersTable.id }).from(modCalcHeadersTable).where(eq(modCalcHeadersTable.id, id));
     if (!calc) return res.status(404).json({ error: "Calculatie niet gevonden" });
-    const body = req.body as {
-      type?: string; omschrijving: string; leverancier?: string;
-      status?: string; datum_verstuurd?: string; datum_ontvangen?: string;
-      bedrag?: number; notities?: string;
-    };
-    if (!body.omschrijving?.trim()) return res.status(422).json({ error: "Omschrijving is verplicht" });
+    const body = req.body as Record<string, unknown>;
+    if (!String(body.omschrijving ?? "").trim()) return res.status(422).json({ error: "Omschrijving is verplicht" });
     const [item] = await db.insert(modCalcInkoopItemsTable).values({
       calculatieId: id,
-      type: body.type ?? "materiaal",
-      omschrijving: body.omschrijving.trim(),
-      leverancier: body.leverancier ?? null,
-      status: body.status ?? "te_versturen",
-      datumVerstuurd: body.datum_verstuurd ?? null,
-      datumOntvangen: body.datum_ontvangen ?? null,
-      bedrag: body.bedrag ?? null,
-      notities: body.notities ?? null,
-    }).returning();
-    res.status(201).json({
-      id: item.id, calculatie_id: item.calculatieId, type: item.type,
-      omschrijving: item.omschrijving, leverancier: item.leverancier,
-      status: item.status, datum_verstuurd: item.datumVerstuurd,
-      datum_ontvangen: item.datumOntvangen, bedrag: item.bedrag,
-      notities: item.notities, aangemaakt_op: iso(item.aangemaaktOp),
-      bijgewerkt_op: iso(item.bijgewerktOp),
-    });
+      type: body.type ? String(body.type) : "materiaal",
+      omschrijving: String(body.omschrijving).trim(),
+      artikel: body.artikel ? String(body.artikel) : null,
+      leverancier: body.leverancier ? String(body.leverancier) : null,
+      gekozenLeverancier: body.gekozen_leverancier ? String(body.gekozen_leverancier) : null,
+      aantal: body.aantal != null ? Number(body.aantal) : null,
+      eenheid: body.eenheid ? String(body.eenheid) : "st",
+      prijs: body.prijs != null ? Number(body.prijs) : null,
+      offerteOntvangen: body.offerte_ontvangen ? Boolean(body.offerte_ontvangen) : false,
+      levertijd: body.levertijd ? String(body.levertijd) : null,
+      status: body.status ? String(body.status) : "te_versturen",
+      datumVerstuurd: body.datum_verstuurd ? String(body.datum_verstuurd) : null,
+      datumOntvangen: body.datum_ontvangen ? String(body.datum_ontvangen) : null,
+      bedrag: body.bedrag != null ? Number(body.bedrag) : null,
+      notities: body.notities ? String(body.notities) : null,
+    } as typeof modCalcInkoopItemsTable.$inferInsert).returning();
+    res.status(201).json(mapInkoopItem(item));
   } catch (e) {
     req.log.error(e);
     res.status(500).json({ error: "Interne fout" });
@@ -1405,33 +1425,29 @@ router.post("/modules/calculaties/:id/inkoop-items", schrijvenCalc, async (req, 
 router.patch("/modules/calculaties/:id/inkoop-items/:itemId", schrijvenCalc, async (req, res) => {
   try {
     const itemId = parseId(req.params["itemId"]);
-    const body = req.body as Partial<{
-      type: string; omschrijving: string; leverancier: string | null;
-      status: string; datum_verstuurd: string | null; datum_ontvangen: string | null;
-      bedrag: number | null; notities: string | null;
-    }>;
+    const body = req.body as Record<string, unknown>;
     const upd: Record<string, unknown> = { bijgewerktOp: new Date() };
     if (body.type !== undefined) upd["type"] = body.type;
     if (body.omschrijving !== undefined) upd["omschrijving"] = body.omschrijving;
-    if (body.leverancier !== undefined) upd["leverancier"] = body.leverancier;
+    if (body.artikel !== undefined) upd["artikel"] = body.artikel ?? null;
+    if (body.leverancier !== undefined) upd["leverancier"] = body.leverancier ?? null;
+    if (body.gekozen_leverancier !== undefined) upd["gekozenLeverancier"] = body.gekozen_leverancier ?? null;
+    if (body.aantal !== undefined) upd["aantal"] = body.aantal != null ? Number(body.aantal) : null;
+    if (body.eenheid !== undefined) upd["eenheid"] = body.eenheid ?? null;
+    if (body.prijs !== undefined) upd["prijs"] = body.prijs != null ? Number(body.prijs) : null;
+    if (body.offerte_ontvangen !== undefined) upd["offerteOntvangen"] = Boolean(body.offerte_ontvangen);
+    if (body.levertijd !== undefined) upd["levertijd"] = body.levertijd ?? null;
     if (body.status !== undefined) upd["status"] = body.status;
     if (body.datum_verstuurd !== undefined) upd["datumVerstuurd"] = body.datum_verstuurd;
     if (body.datum_ontvangen !== undefined) upd["datumOntvangen"] = body.datum_ontvangen;
-    if (body.bedrag !== undefined) upd["bedrag"] = body.bedrag;
-    if (body.notities !== undefined) upd["notities"] = body.notities;
+    if (body.bedrag !== undefined) upd["bedrag"] = body.bedrag ?? null;
+    if (body.notities !== undefined) upd["notities"] = body.notities ?? null;
     const [item] = await db.update(modCalcInkoopItemsTable)
       .set(upd)
       .where(eq(modCalcInkoopItemsTable.id, itemId))
       .returning();
     if (!item) return res.status(404).json({ error: "Item niet gevonden" });
-    res.json({
-      id: item.id, calculatie_id: item.calculatieId, type: item.type,
-      omschrijving: item.omschrijving, leverancier: item.leverancier,
-      status: item.status, datum_verstuurd: item.datumVerstuurd,
-      datum_ontvangen: item.datumOntvangen, bedrag: item.bedrag,
-      notities: item.notities, aangemaakt_op: iso(item.aangemaaktOp),
-      bijgewerkt_op: iso(item.bijgewerktOp),
-    });
+    res.json(mapInkoopItem(item));
   } catch (e) {
     req.log.error(e);
     res.status(500).json({ error: "Interne fout" });

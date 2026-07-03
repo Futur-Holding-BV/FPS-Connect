@@ -1,6 +1,7 @@
 import { pgTable, serial, text, integer, real, boolean, timestamp, jsonb } from "drizzle-orm/pg-core";
 import { gebouwenTable } from "./gebouwen";
 import { gebruikersTable } from "./gebruikers";
+import { opnamesTable } from "./opname";
 
 export const modCalcTarievenTable = pgTable("mod_calc_tarieven", {
   id: serial("id").primaryKey(),
@@ -56,7 +57,9 @@ export const modCalcHeadersTable = pgTable("mod_calc_headers", {
   referentie: text("referentie"),
   klantNaam: text("klant_naam"),
   gebouwId: integer("gebouw_id").references(() => gebouwenTable.id, { onDelete: "set null" }),
+  opnameId: integer("opname_id").references(() => opnamesTable.id, { onDelete: "set null" }),
   projectNaam: text("project_naam"),
+  werknummer: text("werknummer"),
   status: text("status").notNull().default("concept"),
   omschrijving: text("omschrijving"),
   opmerkingen: text("opmerkingen"),
@@ -116,16 +119,23 @@ export const modCalcVersiesTable = pgTable("mod_calc_versies", {
 
 // Calculatie inkoopitems — offerteaanvragen bij leveranciers/onderaannemers tijdens de calculatiefase
 export const modCalcInkoopItemsTable = pgTable("mod_calc_inkoop_items", {
-  id:                serial("id").primaryKey(),
-  calculatieId:      integer("calculatie_id").notNull().references(() => modCalcHeadersTable.id, { onDelete: "cascade" }),
-  type:              text("type").notNull().default("materiaal"),    // materiaal | onderaanneming
-  omschrijving:      text("omschrijving").notNull(),
-  leverancier:       text("leverancier"),
-  status:            text("status").notNull().default("te_versturen"), // te_versturen | verstuurd | ontvangen | akkoord
-  datumVerstuurd:    text("datum_verstuurd"),
-  datumOntvangen:    text("datum_ontvangen"),
-  bedrag:            real("bedrag"),
-  notities:          text("notities"),
-  aangemaaktOp:      timestamp("aangemaakt_op").notNull().defaultNow(),
-  bijgewerktOp:      timestamp("bijgewerkt_op").notNull().defaultNow(),
+  id:                  serial("id").primaryKey(),
+  calculatieId:        integer("calculatie_id").notNull().references(() => modCalcHeadersTable.id, { onDelete: "cascade" }),
+  type:                text("type").notNull().default("materiaal"),    // materiaal | onderaanneming
+  omschrijving:        text("omschrijving").notNull(),
+  artikel:             text("artikel"),
+  leverancier:         text("leverancier"),
+  gekozenLeverancier:  text("gekozen_leverancier"),
+  aantal:              real("aantal").default(1),
+  eenheid:             text("eenheid").default("st"),
+  prijs:               real("prijs"),
+  offerteOntvangen:    boolean("offerte_ontvangen").notNull().default(false),
+  levertijd:           text("levertijd"),
+  status:              text("status").notNull().default("te_versturen"), // te_versturen | verstuurd | ontvangen | akkoord
+  datumVerstuurd:      text("datum_verstuurd"),
+  datumOntvangen:      text("datum_ontvangen"),
+  bedrag:              real("bedrag"),
+  notities:            text("notities"),
+  aangemaaktOp:        timestamp("aangemaakt_op").notNull().defaultNow(),
+  bijgewerktOp:        timestamp("bijgewerkt_op").notNull().defaultNow(),
 });
