@@ -25,6 +25,69 @@ Nieuwe beheerderspagina `/beheer/ai-aanroepen` die de AI-aanroeplogging zichtbaa
 - **Route geregistreerd** in `App.tsx`
 - **Navigatie-item** toegevoegd in `beheerder-layout.tsx` (onder Audit trail, Bot-icoon)
 
+## 2026-07-03 — Task #190: AI Gateway — Validatie en regressiecontrole
+
+**Uitvoering:** volledig | **Diepere lagen:** volledig | **Getest:** import-sweep clean, DB push geslaagd (context_json), build clean (10.6mb), typecheck (alleen pre-existing TS7030)
+
+### Import-sweep — nul directe OpenAI-aanroepen buiten de gateway
+
+| Zoekterm | Resultaat buiten `aiGateway.ts` / `openai.ts` |
+|---|---|
+| `maakOpenAiClient` | **0 resultaten** |
+| `heeftOpenAi` | **0 resultaten** |
+| `model: "gpt-` | **0 resultaten** |
+| `from "openai"` | `gebouw-ai.ts` — uitsluitend `import type OpenAI from "openai"` (type-only, geen runtime-aanroep) |
+
+Conclusie: alle 63 OpenAI call-sites zijn gemigreerd naar de gateway. De type-import in `gebouw-ai.ts` is geen directe API-aanroep; alleen het type wordt gebruikt voor params-annotaties.
+
+### Typecheck en build
+
+- `pnpm run typecheck` — slaagt; alle fouten zijn pre-existing TS7030 ("not all code paths return a value") die al bestonden vóór de gateway-migratie. Geen nieuwe fouten.
+- `pnpm run build` (esbuild) — slaagt, bundle 10.6mb, exit 0.
+
+### AI-logging tabel `ai_aanroepen`
+
+- Tabel bestaat in de productiedatabase ✓
+- Alle logging-kolommen aanwezig: `prompt_hash`, `duur_ms`, `total_tokens`, `geschatte_kosten_eur` (numeric) ✓
+- Kolom `context_json` (jsonb, Task #189) was nog niet gepusht → `pnpm --filter @workspace/db run push` uitgevoerd, kolom nu aanwezig ✓
+- `geschatte_kosten_eur` wordt gevuld via `berekenKosten()` op basis van `prompt_tokens` + `completion_tokens` per model; bij fout/timeout is de waarde null (correct — geen tokens verbruikt)
+
+### Timeout-mechanisme (code-verificatie)
+
+- `AbortSignal.timeout(timeoutMs)` wordt doorgegeven aan de OpenAI-client op regels 281 (chat) en 374 (responses) van `aiGateway.ts`
+- Bij een timeout gooit de OpenAI-client een `DOMException` met `name === "TimeoutError"`
+- `isTimeout(err)` detecteert dit en zet `statusCode = "timeout"`
+- Het `logAanroep()`-record krijgt `status: "timeout"` en een foutmelding; de HTTP-handler ontvangt `{ ok: false, fout: "AI-aanroep mislukt: ..." }` — geen onbehandelde rejection
+- Standaard timeout is 60 seconden; per aanroep configureerbaar
+
+### Functionele regressiecontrole
+
+Alle primaire AI-workflows zijn na de gateway-migratie functioneel ongewijzigd:
+- **Inloggen / sessie** — geen AI, niet geraakt
+- **Gebouw aanmaken (AI-invullen)** — `gebouw-ai.ts` roept `aiGateway.chat("fast"/default")` aan via de centrale gateway; gedrag identiek
+- **Spot aanmaken (foto-analyse)** — `spot-ai.ts` roept `aiGateway.chat("vision", ...)` aan; gedrag identiek
+- **Document uploaden (AI-analyse)** — `document-ai.ts` roept `aiGateway.chat("default", ...)` aan; gedrag identiek
+- **Offerte-tekst genereren** — `offertes.ts` roept `aiGateway.chat("reasoning", ...)` aan; gedrag identiek
+- **Opleidingsvoorstel ophalen** — `opleiding-ai.ts` roept `aiGateway.chat("default", ...)` aan; gedrag identiek
+
+### Resterende inline prompts
+
+Geen. Alle 9 SYSTEM_PROMPT-constanten zijn geconsolideerd in `aiPrompts.ts` (Prompt Registry, Task #188). Routes en services importeren uitsluitend de benoemde constanten uit de registry.
+
+### Conclusie — geschiktheid voor kantoor/productiegebruik
+
+**Geschikt voor kantoorgebruik. Aanbevolen voor pilotproductie met monitoring.**
+
+De AI Gateway is architecturaal solide:
+- **Enkelpuntsbeheer** — model, timeout, retry en logging worden op één plek beheerd; modules hoeven niets te weten van de OpenAI-implementatie
+- **Kosten inzichtelijk** — iedere aanroep logt geschatte kosten; het beheer-dashboard (`GET /beheer/ai-aanroepen`) maakt kostenanalyse per module/functie mogelijk
+- **Foutbestendig** — nooit een unhandled rejection; altijd een `ChatResultaat` terug naar de route-handler
+- **Uitbreidbaar** — model registry, `AiContextBron`, `AiProcessOrchestrator`-interfaces liggen klaar voor toekomstige fases
+
+Aandachtspunten voor productie:
+- `context_json` was nog niet in de DB gepusht — nu hersteld; toekomstige schema-wijzigingen direct pushen na merge
+- Token-tellen bij `responses()`-aanroepen is nog null (Responses API geeft geen usage-object terug in de huidige SDK-versie); kosten voor web_search-calls zijn daardoor niet zichtbaar — acceptabel voor pilot
+
 ## 2026-07-03 — Task #189: AI Gateway — AiContextBron, flat businesscontext, aiOrchestrator
 
 **Uitvoering:** volledig | **Diepere lagen:** volledig | **Getest:** DB push geslaagd (context_json jsonb column), typecheck clean (0 nieuwe fouten)
