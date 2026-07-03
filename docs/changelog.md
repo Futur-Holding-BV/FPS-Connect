@@ -8,6 +8,24 @@ Voor elke taak drie scores:
 
 Grote roadmap-fases staan ook in `docs/roadmap/gebouwd.md` en `docs/roadmap/actief.md`.
 
+## 2026-07-03 — Architectuurontwerp: Documenten-inbox / Verwerkingswachtrij
+
+**Uitvoering:** architectuur-backlog (geen productiecode) | **Getest:** n.v.t.
+
+Volledige architectuur- en afhankelijkheidsanalyse op basis van de spec "Toevoeging – Documenten-inbox / Verwerkingswachtrij". Geen implementatie — dit wacht op nieuw expliciet akkoord ná beoordeling van de vijf basisopdrachten.
+
+**Rapport:** `docs/architectuur/documenten-inbox.md`
+
+Bevindingen:
+- De inbox bestaat al grotendeels: `inbox_items`-tabel, `inbox_audit_log`, volledige CRUD-routes, inboxpagina (796 regels), SlimUpload-integratie. Dit is meer dan de spec veronderstelde.
+- AI-classifier is momenteel een mock (`classificeerMockAI()` op bestandsnaam-patronen); offerte-aanvraag gebruikt al echte GPT-4o.
+- Statusmachine wijkt af van de spec; additieve uitbreiding aanbevolen (geen brekende hernoem-migratie).
+- Meervoudige koppelingen ontbreken — nieuwe `inbox_koppelingen`-tabel vereist.
+- Definitieve verwerking ("dispatcher" naar doelmodule) ontbreekt volledig.
+- Alle 5 basisopdrachten zijn harde afhankelijkheden; WorkflowEngine en Audit Trail zijn kritiek.
+- 8 openstaande beslissingen geïdentificeerd die vóór implementatie beantwoord moeten worden.
+- Bouwvolgorde opgedeeld in 5 fases (A–E) met expliciete blokkades.
+
 ## 2026-07-03 — Task #180 — Centrale Rechtenstructuur + Rapporten (Opdrachten 4 & 5)
 
 **Uitvoering:** volledig | **Diepere lagen:** volledig | **Getest:** typecheck:libs + api-server typecheck (pre-existing fouten ongewijzigd) + firevault typecheck
