@@ -9,6 +9,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { setAuthTokenGetter, setBaseUrl } from "@workspace/api-client-react";
 import { Stack, usePathname, useRouter } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { useEffect, useRef, useState } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { Modal, Pressable, Text, View } from "react-native";
@@ -207,17 +208,73 @@ function ToolboxPopupBewaker() {
   );
 }
 
+const DREMPEL_BANNER_SLEUTEL = "ai_drempel_banner_gesloten";
+
+interface DrempelBannerOpslag {
+  geslotenOp: string;
+  jaarMaand: string;
+}
+
+function huidigeJaarMaand(): string {
+  const nu = new Date();
+  return `${nu.getFullYear()}-${String(nu.getMonth() + 1).padStart(2, "0")}`;
+}
+
 function AiDrempelBanner() {
   const { token } = useAuth();
   const [gesloten, setGesloten] = useState(false);
   const { data, refetch } = useGetAiDrempelStatus();
 
   useEffect(() => {
+    async function laadGeslotenStatus() {
+      try {
+        const raw = await AsyncStorage.getItem(DREMPEL_BANNER_SLEUTEL);
+        if (!raw) return;
+        const opgeslagen = JSON.parse(raw) as DrempelBannerOpslag;
+        if (opgeslagen.jaarMaand === huidigeJaarMaand()) {
+          setGesloten(true);
+        } else {
+          await AsyncStorage.removeItem(DREMPEL_BANNER_SLEUTEL);
+        }
+      } catch {
+        // stil falen — banner tonen bij twijfel
+      }
+    }
+    void laadGeslotenStatus();
+  }, []);
+
+  useEffect(() => {
     if (!token) return;
     void refetch();
-    const timer = setInterval(() => void refetch(), 30 * 60 * 1000);
+    const timer = setInterval(() => {
+      const jaarMaand = huidigeJaarMaand();
+      AsyncStorage.getItem(DREMPEL_BANNER_SLEUTEL)
+        .then((raw) => {
+          if (!raw) return;
+          const opgeslagen = JSON.parse(raw) as DrempelBannerOpslag;
+          if (opgeslagen.jaarMaand !== jaarMaand) {
+            void AsyncStorage.removeItem(DREMPEL_BANNER_SLEUTEL);
+            setGesloten(false);
+          }
+        })
+        .catch(() => undefined);
+      void refetch();
+    }, 30 * 60 * 1000);
     return () => clearInterval(timer);
   }, [token, refetch]);
+
+  async function sluit() {
+    try {
+      const payload: DrempelBannerOpslag = {
+        geslotenOp: new Date().toISOString(),
+        jaarMaand: huidigeJaarMaand(),
+      };
+      await AsyncStorage.setItem(DREMPEL_BANNER_SLEUTEL, JSON.stringify(payload));
+    } catch {
+      // stil falen — sluiting werkt ook zonder persistentie
+    }
+    setGesloten(true);
+  }
 
   const status = data as AiDrempelStatus | undefined;
   if (!status?.overschreden || gesloten) return null;
@@ -249,7 +306,7 @@ function AiDrempelBanner() {
           {`Maandkosten ${kostenLabel} (drempel ${drempelLabel})`}
         </Text>
       </View>
-      <Pressable onPress={() => setGesloten(true)} hitSlop={10}>
+      <Pressable onPress={() => void sluit()} hitSlop={10}>
         <Ionicons name="close" size={20} color="#fca5a5" />
       </Pressable>
     </View>
