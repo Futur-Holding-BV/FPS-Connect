@@ -14207,6 +14207,24 @@ paths:
               schema:
                 $ref: "#/components/schemas/FinancieelDashboard"
 
+  /facturen/{id}/afwijkingen:
+    get:
+      operationId: getFactuurAfwijkingen
+      summary: Geconsolideerde signaleringen en afwijkingen voor de controlebox
+      tags: [Facturen]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Lijst van signaleringen
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FactuurAfwijkingen"
+
   /facturen/{id}/regels:
     get:
       operationId: listFactuurRegels
@@ -29028,6 +29046,35 @@ components:
           type: string
         bijgewerkt_op:
           type: string
+        # F1/F2: inkoop-verdieping
+        opdracht_id:
+          type: integer
+          nullable: true
+        leverancier_id:
+          type: integer
+          nullable: true
+        categorie:
+          type: string
+          nullable: true
+        voorstel_bron:
+          type: string
+          nullable: true
+        voorstel_bron_id:
+          type: integer
+          nullable: true
+        g_rekening_van_toepassing:
+          type: boolean
+        g_rekening_bedrag:
+          type: string
+          nullable: true
+        normaal_bedrag:
+          type: string
+          nullable: true
+        iban_uitgelezen:
+          type: string
+          nullable: true
+        iban_afwijking:
+          type: boolean
 
     FactuurInput:
       type: object
@@ -29439,6 +29486,22 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/AccountviewExportResultaat"
+
+    FactuurAfwijkingen:
+      type: object
+      required: [factuur_id, aantal_signalen, signalen]
+      properties:
+        factuur_id: { type: integer }
+        aantal_signalen: { type: integer }
+        signalen:
+          type: array
+          items:
+            type: object
+            required: [code, ernst, bericht]
+            properties:
+              code: { type: string }
+              ernst: { type: string, enum: [kritisch, waarschuwing, info] }
+              bericht: { type: string }
 
     FactuurRegel:
       type: object

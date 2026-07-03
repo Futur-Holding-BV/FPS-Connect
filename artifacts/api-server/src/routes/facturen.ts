@@ -10,8 +10,9 @@ import {
   factuurTermijnenTable,
   gebouwenTable,
   gebruikersTable,
+  leveranciersTable,
 } from "@workspace/db";
-import { eq, and, desc, sql, or, gte, count, isNull, isNotNull, ne, lt, sum } from "drizzle-orm";
+import { eq, and, desc, sql, or, gte, count, isNull, isNotNull, ne, lt, sum, ilike } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { ObjectStorageService } from "../lib/objectStorage";
 import { maakAccountViewClient } from "../services/accountview-client";
@@ -92,6 +93,17 @@ async function mapFactuur(r: typeof facturenTable.$inferSelect) {
     herexport_reden: r.herexportReden,
     beoordelaar_id: r.beoordelaarId ?? null,
     beoordelaar_naam: beoordelaar?.naam ?? null,
+    // F1/F2: nieuwe velden
+    opdracht_id: r.opdrachtId ?? null,
+    leverancier_id: r.leverancierId ?? null,
+    categorie: r.categorie ?? null,
+    voorstel_bron: r.voorstelBron ?? null,
+    voorstel_bron_id: r.voorstelBronId ?? null,
+    g_rekening_van_toepassing: r.gRekeningVanToepassing,
+    g_rekening_bedrag: r.gRekeningBedrag ?? null,
+    normaal_bedrag: r.normaalBedrag ?? null,
+    iban_uitgelezen: r.ibanUitgelezen ?? null,
+    iban_afwijking: r.ibanAfwijking,
     aangemaakt_op: r.aangemaaktOp.toISOString(),
     bijgewerkt_op: r.bijgewerktOp.toISOString(),
   };
@@ -219,6 +231,8 @@ router.delete("/facturen/:id", requireBevoegdheid("financieel", 4), async (req: 
 });
 
 // ── POST /facturen/:id/ai-uitlezen ─────────────────────────────────────────────
+// Fase 2: Uitgebreide AI-extractie — regels, IBAN-verificatie, leverancierherkenning,
+// G-rekening-signalering. AI stelt voor; administratie keurt goed.
 router.post("/facturen/:id/ai-uitlezen", requireBevoegdheid("financieel", 1), async (req: Request, res: Response) => {
   const id = paramInt(req.params["id"]);
   const [factuur] = await db.select().from(facturenTable).where(eq(facturenTable.id, id)).limit(1);
@@ -234,36 +248,55 @@ router.post("/facturen/:id/ai-uitlezen", requireBevoegdheid("financieel", 1), as
     await db.update(facturenTable).set({ status: "ai_gelezen", bijgewerktOp: new Date() }).where(eq(facturenTable.id, id));
 
     const facturenChatResultaat = await aiGateway.chat("default", {
-      max_tokens: 3000,
+      max_tokens: 4000,
       messages: [
         {
           role: "system",
-          content: `Je bent een expert in het uitlezen van facturen voor Nederlandse bedrijven.
-Analyseer de factuur en extraheer alle financiële gegevens nauwkeurig.
-Geef je antwoord als geldig JSON:
+          content: `Je bent een expert in het uitlezen van Nederlandse inkoopfacturen voor een brandpreventie-bedrijf.
+Analyseer de factuur en extraheer ALLE gegevens nauwkeurig — zowel de header als alle regellijnen.
+Geef je antwoord als geldig JSON (geen tekst buiten het JSON-object):
 {
   "factuurnummer": string|null,
   "factuurdatum": string|null,
   "vervaldatum": string|null,
   "relatienaam": string|null,
   "relatie_adres": string|null,
+  "relatie_iban": string|null,
+  "relatie_btwnummer": string|null,
   "omschrijving": string|null,
   "bedrag_excl_btw": string|null,
   "btw_bedrag": string|null,
   "bedrag_incl_btw": string|null,
   "btw_code": string|null,
   "type": "inkoop"|"verkoop",
+  "regels": [
+    {
+      "regelnummer": number,
+      "omschrijving": string,
+      "hoeveelheid": number|null,
+      "eenheid": string|null,
+      "stukprijs": string|null,
+      "bedrag_excl_btw": string|null,
+      "btw_code": string|null,
+      "btw_percentage": number|null,
+      "btw_bedrag": string|null,
+      "grootboekrekening": string|null
+    }
+  ],
   "controle_nodig": boolean,
   "controle_reden": string|null,
   "confidence": number
 }
-Bedragen altijd als decimale string (bv. "1234.56"), datums als "YYYY-MM-DD".
-Zet controle_nodig=true als bedragen onduidelijk zijn of gegevens ontbreken.`,
+Regels: extraheer elke factuurregel als apart object. Als er geen regelspecificatie is, geef dan een lege array.
+Bedragen: altijd als decimale string ("1234.56"), datums als "YYYY-MM-DD".
+BTW-codes: H=21%, L=9%, V=verlegd, 0=vrijgesteld.
+IBAN: exact overnemen zoals op factuur (met of zonder spaties).
+Zet controle_nodig=true als bedragen onduidelijk zijn, IBAN ontbreekt, of regelsom afwijkt van totaal.`,
         },
         {
           role: "user",
           content: [
-            { type: "text", text: "Lees deze factuur uit en extraheer alle financiële gegevens." },
+            { type: "text", text: "Lees deze factuur volledig uit inclusief alle regellijnen en het IBAN van de leverancier." },
             { type: "image_url", image_url: { url: downloadUrl, detail: "high" } },
           ],
         },
@@ -272,19 +305,92 @@ Zet controle_nodig=true als bedragen onduidelijk zijn of gegevens ontbreken.`,
 
     const rawText = facturenChatResultaat.ok ? facturenChatResultaat.inhoud : "{}";
     const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+
+    type ParsedRegel = {
+      regelnummer?: number; omschrijving?: string; hoeveelheid?: number | null;
+      eenheid?: string | null; stukprijs?: string | null; bedrag_excl_btw?: string | null;
+      btw_code?: string | null; btw_percentage?: number | null; btw_bedrag?: string | null;
+      grootboekrekening?: string | null;
+    };
     type ParsedFactuur = {
       factuurnummer?: string | null; factuurdatum?: string | null; vervaldatum?: string | null;
-      relatienaam?: string | null; relatie_adres?: string | null; omschrijving?: string | null;
+      relatienaam?: string | null; relatie_adres?: string | null; relatie_iban?: string | null;
+      relatie_btwnummer?: string | null; omschrijving?: string | null;
       bedrag_excl_btw?: string | null; btw_bedrag?: string | null; bedrag_incl_btw?: string | null;
-      btw_code?: string | null; type?: string; controle_nodig?: boolean; controle_reden?: string | null;
-      confidence?: number;
+      btw_code?: string | null; type?: string; regels?: ParsedRegel[];
+      controle_nodig?: boolean; controle_reden?: string | null; confidence?: number;
     };
     let parsed: ParsedFactuur = {};
     if (jsonMatch) {
       try { parsed = JSON.parse(jsonMatch[0]) as ParsedFactuur; } catch { /* laat leeg */ }
     }
 
-    const nieuweStatus = "te_beoordelen_pl";
+    // ── Leverancierherkenning: IBAN-match → naam-match (fuzzy) ────────────────
+    let leverancier: typeof leveranciersTable.$inferSelect | null = null;
+    const uitgelezenIban = parsed.relatie_iban?.replace(/\s/g, "") ?? null;
+
+    if (uitgelezenIban) {
+      const [gevonden] = await db.select().from(leveranciersTable)
+        .where(eq(leveranciersTable.iban, uitgelezenIban)).limit(1);
+      leverancier = gevonden ?? null;
+    }
+    if (!leverancier && parsed.relatienaam) {
+      const naam = parsed.relatienaam.trim();
+      const [gevonden] = await db.select().from(leveranciersTable)
+        .where(ilike(leveranciersTable.naam, `%${naam}%`)).limit(1);
+      leverancier = gevonden ?? null;
+      // Nauwere match als fuzzy te breed is
+      if (!gevonden) {
+        const [gevondenNauw] = await db.select().from(leveranciersTable)
+          .where(ilike(leveranciersTable.naam, `${naam.split(" ")[0]}%`)).limit(1);
+        leverancier = gevondenNauw ?? null;
+      }
+    }
+
+    // ── IBAN-verificatie ──────────────────────────────────────────────────────
+    const leveranciersIban = leverancier?.iban?.replace(/\s/g, "") ?? null;
+    const ibanAfwijking = !!(uitgelezenIban && leveranciersIban && uitgelezenIban !== leveranciersIban);
+
+    // ── G-rekening-signalering (voorstel, niet definitief) ────────────────────
+    let gRekeningVanToepassing = leverancier?.gRekeningVanToepassing ?? false;
+    let gRekeningBedrag: string | null = null;
+    let normaalBedrag: string | null = null;
+    const totaalInclBtw = parsed.bedrag_incl_btw ? parseFloat(parsed.bedrag_incl_btw) : null;
+
+    if (gRekeningVanToepassing && leverancier?.gRekeningPercentage && totaalInclBtw) {
+      const perc = leverancier.gRekeningPercentage / 100;
+      gRekeningBedrag = (totaalInclBtw * perc).toFixed(2);
+      normaalBedrag = (totaalInclBtw * (1 - perc)).toFixed(2);
+    }
+
+    // ── Factuurregels opslaan (verwijder oude AI-regels, voeg nieuwe in) ──────
+    const regels = Array.isArray(parsed.regels) ? parsed.regels : [];
+    if (regels.length > 0) {
+      await db.delete(factuurRegelsTable).where(
+        and(eq(factuurRegelsTable.factuurId, id), eq(factuurRegelsTable.bron, "ai")),
+      );
+      for (let i = 0; i < regels.length; i++) {
+        const r = regels[i]!;
+        await db.insert(factuurRegelsTable).values({
+          factuurId: id,
+          regelnummer: r.regelnummer ?? i + 1,
+          omschrijving: r.omschrijving?.trim() || `Regel ${i + 1}`,
+          hoeveelheid: r.hoeveelheid ?? null,
+          eenheid: r.eenheid ?? null,
+          stukprijs: r.stukprijs ?? null,
+          bedragExclBtw: r.bedrag_excl_btw ?? null,
+          btwCode: r.btw_code ?? null,
+          btwPercentage: r.btw_percentage ?? null,
+          btwBedrag: r.btw_bedrag ?? null,
+          grootboekrekening: r.grootboekrekening ?? null,
+          bron: "ai",
+          aiVertrouwen: parsed.confidence ?? null,
+        });
+      }
+    }
+
+    // ── Factuur updaten ───────────────────────────────────────────────────────
+    const nieuweStatus = (parsed.controle_nodig || ibanAfwijking) ? "controle_nodig" : "te_beoordelen_pl";
 
     const [updated] = await db.update(facturenTable).set({
       aiMetadata: parsed as Record<string, unknown>,
@@ -298,16 +404,122 @@ Zet controle_nodig=true als bedragen onduidelijk zijn of gegevens ontbreken.`,
       btwBedrag: parsed.btw_bedrag ?? factuur.btwBedrag ?? null,
       bedragInclBtw: parsed.bedrag_incl_btw ?? factuur.bedragInclBtw ?? null,
       btwCode: parsed.btw_code ?? factuur.btwCode ?? null,
+      // Leverancier & IBAN
+      leverancierId: leverancier?.id ?? factuur.leverancierId ?? null,
+      ibanUitgelezen: uitgelezenIban ?? factuur.ibanUitgelezen ?? null,
+      ibanAfwijking,
+      // G-rekening
+      gRekeningVanToepassing,
+      gRekeningBedrag: gRekeningBedrag ?? factuur.gRekeningBedrag ?? null,
+      normaalBedrag: normaalBedrag ?? factuur.normaalBedrag ?? null,
       status: nieuweStatus,
       bijgewerktOp: new Date(),
     }).where(eq(facturenTable.id, id)).returning();
 
-    res.json(await mapFactuur(updated));
+    res.json({
+      ...(await mapFactuur(updated)),
+      _ai_samenvatting: {
+        regels_gevonden: regels.length,
+        leverancier_herkend: !!leverancier,
+        leverancier_naam: leverancier?.naam ?? null,
+        iban_afwijking: ibanAfwijking,
+        g_rekening_van_toepassing: gRekeningVanToepassing,
+        confidence: parsed.confidence ?? null,
+      },
+    });
   } catch (err) {
     req.log.error(err);
     await db.update(facturenTable).set({ status: "controle_nodig", bijgewerktOp: new Date() }).where(eq(facturenTable.id, id));
     res.status(500).json({ error: "AI-uitlezing mislukt" });
   }
+});
+
+// ── GET /facturen/:id/afwijkingen ─────────────────────────────────────────────
+// Fase 2: Geconsolideerde lijst van signaleringen en afwijkingen voor de controlebox.
+// Codes: iban_afwijking | g_rekening_van_toepassing | geen_regels |
+//        geen_project_koppeling | hoog_bedrag | bedrag_afwijking
+// Ernst: kritisch | waarschuwing | info
+router.get("/facturen/:id/afwijkingen", requireBevoegdheid("financieel", 1), async (req: Request, res: Response) => {
+  const id = paramInt(req.params["id"]);
+  const [factuur] = await db.select().from(facturenTable)
+    .where(eq(facturenTable.id, id)).limit(1);
+  if (!factuur) { res.status(404).json({ error: "Niet gevonden" }); return; }
+
+  const signalen: Array<{ code: string; ernst: string; bericht: string }> = [];
+
+  // 1. IBAN-afwijking — kritisch, mogelijke fraude
+  if (factuur.ibanAfwijking) {
+    signalen.push({
+      code: "iban_afwijking",
+      ernst: "kritisch",
+      bericht: `Uitgelezen IBAN (${factuur.ibanUitgelezen ?? "onbekend"}) wijkt af van het geregistreerde IBAN van de leverancier. Controleer vóór betaling.`,
+    });
+  }
+
+  // 2. G-rekening (wettelijke verplichting bouwsector)
+  if (factuur.gRekeningVanToepassing) {
+    if (!factuur.gRekeningBedrag) {
+      signalen.push({
+        code: "g_rekening_niet_berekend",
+        ernst: "waarschuwing",
+        bericht: "Leverancier heeft G-rekening-verplichting maar het op te storten bedrag is nog niet berekend.",
+      });
+    } else {
+      signalen.push({
+        code: "g_rekening_van_toepassing",
+        ernst: "info",
+        bericht: `G-rekening vereist. Naar G-rekening: ${factuur.gRekeningBedrag}, normaal deel: ${factuur.normaalBedrag ?? "?"}`,
+      });
+    }
+  }
+
+  // 3. Geen regellijnen
+  const [regelCount] = await db.select({ n: count() }).from(factuurRegelsTable)
+    .where(eq(factuurRegelsTable.factuurId, id));
+  const aantalRegels = regelCount?.n ?? 0;
+  if (aantalRegels === 0) {
+    signalen.push({
+      code: "geen_regels",
+      ernst: "waarschuwing",
+      bericht: "Factuur bevat geen gespecificeerde regellijnen. Start AI-uitlezing om regels automatisch te detecteren.",
+    });
+  }
+
+  // 4. Geen project/gebouw-koppeling
+  if (!factuur.gebouwId && !factuur.opdrachtId && !factuur.projectCode) {
+    signalen.push({
+      code: "geen_project_koppeling",
+      ernst: "waarschuwing",
+      bericht: "Factuur is niet gekoppeld aan een gebouw, project of opdracht. Koppel de factuur om kostprijsdoorwerking mogelijk te maken.",
+    });
+  }
+
+  // 5. Bedrag boven drempel (>€5.000) — informerend
+  if (factuur.bedragInclBtw && parseFloat(factuur.bedragInclBtw) > 5000 && !factuur.geaccordeerd) {
+    signalen.push({
+      code: "hoog_bedrag",
+      ernst: "info",
+      bericht: `Bedrag (${parseFloat(factuur.bedragInclBtw).toLocaleString("nl-NL", { style: "currency", currency: "EUR" })}) boven de drempel van €5.000 — verplicht accorderen.`,
+    });
+  }
+
+  // 6. Regelsom vs. headertotaal afwijking
+  if (aantalRegels > 0 && factuur.bedragExclBtw) {
+    const [regelSomRow] = await db.select({
+      som: sql<string>`COALESCE(SUM(CAST(bedrag_excl_btw AS numeric)), 0)`,
+    }).from(factuurRegelsTable).where(eq(factuurRegelsTable.factuurId, id));
+    const regelSom = parseFloat(regelSomRow?.som ?? "0");
+    const headerExcl = parseFloat(factuur.bedragExclBtw);
+    if (Math.abs(headerExcl - regelSom) > 0.02) {
+      signalen.push({
+        code: "bedrag_afwijking",
+        ernst: "kritisch",
+        bericht: `Som van regellijnen (${regelSom.toFixed(2)}) wijkt meer dan €0,02 af van het factuurtotaal excl. BTW (${headerExcl.toFixed(2)}).`,
+      });
+    }
+  }
+
+  res.json({ factuur_id: id, aantal_signalen: signalen.length, signalen });
 });
 
 // ── POST /facturen/:id/accorderen ──────────────────────────────────────────────

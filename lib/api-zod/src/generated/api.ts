@@ -810,7 +810,17 @@ export const ListGebouwFacturenResponseItem = zod.object({
   "beoordelaar_id": zod.number().nullish(),
   "beoordelaar_naam": zod.string().nullish(),
   "aangemaakt_op": zod.string(),
-  "bijgewerkt_op": zod.string().optional()
+  "bijgewerkt_op": zod.string().optional(),
+  "opdracht_id": zod.number().nullish(),
+  "leverancier_id": zod.number().nullish(),
+  "categorie": zod.string().nullish(),
+  "voorstel_bron": zod.string().nullish(),
+  "voorstel_bron_id": zod.number().nullish(),
+  "g_rekening_van_toepassing": zod.boolean().optional(),
+  "g_rekening_bedrag": zod.string().nullish(),
+  "normaal_bedrag": zod.string().nullish(),
+  "iban_uitgelezen": zod.string().nullish(),
+  "iban_afwijking": zod.boolean().optional()
 })
 export const ListGebouwFacturenResponse = zod.array(ListGebouwFacturenResponseItem)
 
@@ -17167,7 +17177,17 @@ export const ListFacturenResponseItem = zod.object({
   "beoordelaar_id": zod.number().nullish(),
   "beoordelaar_naam": zod.string().nullish(),
   "aangemaakt_op": zod.string(),
-  "bijgewerkt_op": zod.string().optional()
+  "bijgewerkt_op": zod.string().optional(),
+  "opdracht_id": zod.number().nullish(),
+  "leverancier_id": zod.number().nullish(),
+  "categorie": zod.string().nullish(),
+  "voorstel_bron": zod.string().nullish(),
+  "voorstel_bron_id": zod.number().nullish(),
+  "g_rekening_van_toepassing": zod.boolean().optional(),
+  "g_rekening_bedrag": zod.string().nullish(),
+  "normaal_bedrag": zod.string().nullish(),
+  "iban_uitgelezen": zod.string().nullish(),
+  "iban_afwijking": zod.boolean().optional()
 })
 export const ListFacturenResponse = zod.array(ListFacturenResponseItem)
 
@@ -17261,7 +17281,17 @@ export const ListFacturenKlaarVoorExportResponseItem = zod.object({
   "beoordelaar_id": zod.number().nullish(),
   "beoordelaar_naam": zod.string().nullish(),
   "aangemaakt_op": zod.string(),
-  "bijgewerkt_op": zod.string().optional()
+  "bijgewerkt_op": zod.string().optional(),
+  "opdracht_id": zod.number().nullish(),
+  "leverancier_id": zod.number().nullish(),
+  "categorie": zod.string().nullish(),
+  "voorstel_bron": zod.string().nullish(),
+  "voorstel_bron_id": zod.number().nullish(),
+  "g_rekening_van_toepassing": zod.boolean().optional(),
+  "g_rekening_bedrag": zod.string().nullish(),
+  "normaal_bedrag": zod.string().nullish(),
+  "iban_uitgelezen": zod.string().nullish(),
+  "iban_afwijking": zod.boolean().optional()
 })
 export const ListFacturenKlaarVoorExportResponse = zod.array(ListFacturenKlaarVoorExportResponseItem)
 
@@ -17320,7 +17350,17 @@ export const GetFactuurResponse = zod.object({
   "beoordelaar_id": zod.number().nullish(),
   "beoordelaar_naam": zod.string().nullish(),
   "aangemaakt_op": zod.string(),
-  "bijgewerkt_op": zod.string().optional()
+  "bijgewerkt_op": zod.string().optional(),
+  "opdracht_id": zod.number().nullish(),
+  "leverancier_id": zod.number().nullish(),
+  "categorie": zod.string().nullish(),
+  "voorstel_bron": zod.string().nullish(),
+  "voorstel_bron_id": zod.number().nullish(),
+  "g_rekening_van_toepassing": zod.boolean().optional(),
+  "g_rekening_bedrag": zod.string().nullish(),
+  "normaal_bedrag": zod.string().nullish(),
+  "iban_uitgelezen": zod.string().nullish(),
+  "iban_afwijking": zod.boolean().optional()
 })
 
 
@@ -17398,7 +17438,17 @@ export const UpdateFactuurResponse = zod.object({
   "beoordelaar_id": zod.number().nullish(),
   "beoordelaar_naam": zod.string().nullish(),
   "aangemaakt_op": zod.string(),
-  "bijgewerkt_op": zod.string().optional()
+  "bijgewerkt_op": zod.string().optional(),
+  "opdracht_id": zod.number().nullish(),
+  "leverancier_id": zod.number().nullish(),
+  "categorie": zod.string().nullish(),
+  "voorstel_bron": zod.string().nullish(),
+  "voorstel_bron_id": zod.number().nullish(),
+  "g_rekening_van_toepassing": zod.boolean().optional(),
+  "g_rekening_bedrag": zod.string().nullish(),
+  "normaal_bedrag": zod.string().nullish(),
+  "iban_uitgelezen": zod.string().nullish(),
+  "iban_afwijking": zod.boolean().optional()
 })
 
 
@@ -17466,7 +17516,17 @@ export const AiUitlezenFactuurResponse = zod.object({
   "beoordelaar_id": zod.number().nullish(),
   "beoordelaar_naam": zod.string().nullish(),
   "aangemaakt_op": zod.string(),
-  "bijgewerkt_op": zod.string().optional()
+  "bijgewerkt_op": zod.string().optional(),
+  "opdracht_id": zod.number().nullish(),
+  "leverancier_id": zod.number().nullish(),
+  "categorie": zod.string().nullish(),
+  "voorstel_bron": zod.string().nullish(),
+  "voorstel_bron_id": zod.number().nullish(),
+  "g_rekening_van_toepassing": zod.boolean().optional(),
+  "g_rekening_bedrag": zod.string().nullish(),
+  "normaal_bedrag": zod.string().nullish(),
+  "iban_uitgelezen": zod.string().nullish(),
+  "iban_afwijking": zod.boolean().optional()
 })
 
 
@@ -17524,7 +17584,17 @@ export const AccorderenFactuurResponse = zod.object({
   "beoordelaar_id": zod.number().nullish(),
   "beoordelaar_naam": zod.string().nullish(),
   "aangemaakt_op": zod.string(),
-  "bijgewerkt_op": zod.string().optional()
+  "bijgewerkt_op": zod.string().optional(),
+  "opdracht_id": zod.number().nullish(),
+  "leverancier_id": zod.number().nullish(),
+  "categorie": zod.string().nullish(),
+  "voorstel_bron": zod.string().nullish(),
+  "voorstel_bron_id": zod.number().nullish(),
+  "g_rekening_van_toepassing": zod.boolean().optional(),
+  "g_rekening_bedrag": zod.string().nullish(),
+  "normaal_bedrag": zod.string().nullish(),
+  "iban_uitgelezen": zod.string().nullish(),
+  "iban_afwijking": zod.boolean().optional()
 })
 
 
@@ -17587,7 +17657,17 @@ export const BlokkerenFactuurResponse = zod.object({
   "beoordelaar_id": zod.number().nullish(),
   "beoordelaar_naam": zod.string().nullish(),
   "aangemaakt_op": zod.string(),
-  "bijgewerkt_op": zod.string().optional()
+  "bijgewerkt_op": zod.string().optional(),
+  "opdracht_id": zod.number().nullish(),
+  "leverancier_id": zod.number().nullish(),
+  "categorie": zod.string().nullish(),
+  "voorstel_bron": zod.string().nullish(),
+  "voorstel_bron_id": zod.number().nullish(),
+  "g_rekening_van_toepassing": zod.boolean().optional(),
+  "g_rekening_bedrag": zod.string().nullish(),
+  "normaal_bedrag": zod.string().nullish(),
+  "iban_uitgelezen": zod.string().nullish(),
+  "iban_afwijking": zod.boolean().optional()
 })
 
 
@@ -17690,7 +17770,17 @@ export const AfkeurenFactuurResponse = zod.object({
   "beoordelaar_id": zod.number().nullish(),
   "beoordelaar_naam": zod.string().nullish(),
   "aangemaakt_op": zod.string(),
-  "bijgewerkt_op": zod.string().optional()
+  "bijgewerkt_op": zod.string().optional(),
+  "opdracht_id": zod.number().nullish(),
+  "leverancier_id": zod.number().nullish(),
+  "categorie": zod.string().nullish(),
+  "voorstel_bron": zod.string().nullish(),
+  "voorstel_bron_id": zod.number().nullish(),
+  "g_rekening_van_toepassing": zod.boolean().optional(),
+  "g_rekening_bedrag": zod.string().nullish(),
+  "normaal_bedrag": zod.string().nullish(),
+  "iban_uitgelezen": zod.string().nullish(),
+  "iban_afwijking": zod.boolean().optional()
 })
 
 
@@ -17753,7 +17843,17 @@ export const BeoordelenFactuurPLResponse = zod.object({
   "beoordelaar_id": zod.number().nullish(),
   "beoordelaar_naam": zod.string().nullish(),
   "aangemaakt_op": zod.string(),
-  "bijgewerkt_op": zod.string().optional()
+  "bijgewerkt_op": zod.string().optional(),
+  "opdracht_id": zod.number().nullish(),
+  "leverancier_id": zod.number().nullish(),
+  "categorie": zod.string().nullish(),
+  "voorstel_bron": zod.string().nullish(),
+  "voorstel_bron_id": zod.number().nullish(),
+  "g_rekening_van_toepassing": zod.boolean().optional(),
+  "g_rekening_bedrag": zod.string().nullish(),
+  "normaal_bedrag": zod.string().nullish(),
+  "iban_uitgelezen": zod.string().nullish(),
+  "iban_afwijking": zod.boolean().optional()
 })
 
 
@@ -17816,7 +17916,17 @@ export const BeoordelenFactuurWVBResponse = zod.object({
   "beoordelaar_id": zod.number().nullish(),
   "beoordelaar_naam": zod.string().nullish(),
   "aangemaakt_op": zod.string(),
-  "bijgewerkt_op": zod.string().optional()
+  "bijgewerkt_op": zod.string().optional(),
+  "opdracht_id": zod.number().nullish(),
+  "leverancier_id": zod.number().nullish(),
+  "categorie": zod.string().nullish(),
+  "voorstel_bron": zod.string().nullish(),
+  "voorstel_bron_id": zod.number().nullish(),
+  "g_rekening_van_toepassing": zod.boolean().optional(),
+  "g_rekening_bedrag": zod.string().nullish(),
+  "normaal_bedrag": zod.string().nullish(),
+  "iban_uitgelezen": zod.string().nullish(),
+  "iban_afwijking": zod.boolean().optional()
 })
 
 
@@ -17879,7 +17989,17 @@ export const DoorstuurenFactuurMedewerkerResponse = zod.object({
   "beoordelaar_id": zod.number().nullish(),
   "beoordelaar_naam": zod.string().nullish(),
   "aangemaakt_op": zod.string(),
-  "bijgewerkt_op": zod.string().optional()
+  "bijgewerkt_op": zod.string().optional(),
+  "opdracht_id": zod.number().nullish(),
+  "leverancier_id": zod.number().nullish(),
+  "categorie": zod.string().nullish(),
+  "voorstel_bron": zod.string().nullish(),
+  "voorstel_bron_id": zod.number().nullish(),
+  "g_rekening_van_toepassing": zod.boolean().optional(),
+  "g_rekening_bedrag": zod.string().nullish(),
+  "normaal_bedrag": zod.string().nullish(),
+  "iban_uitgelezen": zod.string().nullish(),
+  "iban_afwijking": zod.boolean().optional()
 })
 
 
@@ -17942,7 +18062,17 @@ export const BeoordelenFactuurMedewerkerResponse = zod.object({
   "beoordelaar_id": zod.number().nullish(),
   "beoordelaar_naam": zod.string().nullish(),
   "aangemaakt_op": zod.string(),
-  "bijgewerkt_op": zod.string().optional()
+  "bijgewerkt_op": zod.string().optional(),
+  "opdracht_id": zod.number().nullish(),
+  "leverancier_id": zod.number().nullish(),
+  "categorie": zod.string().nullish(),
+  "voorstel_bron": zod.string().nullish(),
+  "voorstel_bron_id": zod.number().nullish(),
+  "g_rekening_van_toepassing": zod.boolean().optional(),
+  "g_rekening_bedrag": zod.string().nullish(),
+  "normaal_bedrag": zod.string().nullish(),
+  "iban_uitgelezen": zod.string().nullish(),
+  "iban_afwijking": zod.boolean().optional()
 })
 
 
@@ -18112,6 +18242,24 @@ export const GetFinancieelDashboardResponse = zod.object({
   "exports_deze_maand": zod.number(),
   "laatste_export_op": zod.string().nullish(),
   "export_fouten_open": zod.number()
+})
+
+
+/**
+ * @summary Geconsolideerde signaleringen en afwijkingen voor de controlebox
+ */
+export const GetFactuurAfwijkingenParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetFactuurAfwijkingenResponse = zod.object({
+  "factuur_id": zod.number(),
+  "aantal_signalen": zod.number(),
+  "signalen": zod.array(zod.object({
+  "code": zod.string(),
+  "ernst": zod.enum(['kritisch', 'waarschuwing', 'info']),
+  "bericht": zod.string()
+}))
 })
 
 

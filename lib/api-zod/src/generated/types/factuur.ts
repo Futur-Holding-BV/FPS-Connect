@@ -55,4 +55,14 @@ export interface Factuur {
   beoordelaar_naam?: string | null;
   aangemaakt_op: string;
   bijgewerkt_op?: string;
+  opdracht_id?: number | null;
+  leverancier_id?: number | null;
+  categorie?: string | null;
+  voorstel_bron?: string | null;
+  voorstel_bron_id?: number | null;
+  g_rekening_van_toepassing?: boolean;
+  g_rekening_bedrag?: string | null;
+  normaal_bedrag?: string | null;
+  iban_uitgelezen?: string | null;
+  iban_afwijking?: boolean;
 }

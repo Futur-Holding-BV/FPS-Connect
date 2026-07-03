@@ -7203,6 +7203,16 @@ export interface Factuur {
   beoordelaar_naam?: string | null;
   aangemaakt_op: string;
   bijgewerkt_op?: string;
+  opdracht_id?: number | null;
+  leverancier_id?: number | null;
+  categorie?: string | null;
+  voorstel_bron?: string | null;
+  voorstel_bron_id?: number | null;
+  g_rekening_van_toepassing?: boolean;
+  g_rekening_bedrag?: string | null;
+  normaal_bedrag?: string | null;
+  iban_uitgelezen?: string | null;
+  iban_afwijking?: boolean;
 }
 
 export interface FactuurInput {
@@ -7424,6 +7434,27 @@ export interface BatchExportResultaat {
   geslaagd: number;
   mislukt: number;
   resultaten: AccountviewExportResultaat[];
+}
+
+export type FactuurAfwijkingenSignalenItemErnst = typeof FactuurAfwijkingenSignalenItemErnst[keyof typeof FactuurAfwijkingenSignalenItemErnst];
+
+
+export const FactuurAfwijkingenSignalenItemErnst = {
+  kritisch: 'kritisch',
+  waarschuwing: 'waarschuwing',
+  info: 'info',
+} as const;
+
+export type FactuurAfwijkingenSignalenItem = {
+  code: string;
+  ernst: FactuurAfwijkingenSignalenItemErnst;
+  bericht: string;
+};
+
+export interface FactuurAfwijkingen {
+  factuur_id: number;
+  aantal_signalen: number;
+  signalen: FactuurAfwijkingenSignalenItem[];
 }
 
 export interface FactuurRegel {

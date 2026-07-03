@@ -866,12 +866,24 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                       <SidebarMenuItem className="pl-5">
                         <SidebarMenuButton
                           asChild
+                          isActive={location === "/facturen/controlebox"}
+                        >
+                          <Link href="/facturen/controlebox">
+                            <Inbox />
+                            <span>Controlebox</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                      <SidebarMenuItem className="pl-5">
+                        <SidebarMenuButton
+                          asChild
                           isActive={
                             location === "/facturen" ||
                             location === "/facturen/dashboard" ||
                             (location.startsWith("/facturen/") &&
                               location !== "/facturen/klaar-voor-export" &&
-                              location !== "/facturen/exportlog")
+                              location !== "/facturen/exportlog" &&
+                              location !== "/facturen/controlebox")
                           }
                         >
                           <Link href="/facturen/dashboard">

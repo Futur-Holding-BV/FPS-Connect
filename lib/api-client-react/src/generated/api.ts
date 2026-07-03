@@ -154,6 +154,7 @@ import type {
   FabrikantUpdate,
   Factuur,
   FactuurAfkeurenInput,
+  FactuurAfwijkingen,
   FactuurBatchExportInput,
   FactuurBlokkerenInput,
   FactuurDoorstuurInput,
@@ -50445,6 +50446,83 @@ export function useGetFinancieelDashboard<TData = Awaited<ReturnType<typeof getF
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetFinancieelDashboardQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetFactuurAfwijkingenUrl = (id: number,) => {
+
+
+
+
+  return `/api/facturen/${id}/afwijkingen`
+}
+
+/**
+ * @summary Geconsolideerde signaleringen en afwijkingen voor de controlebox
+ */
+export const getFactuurAfwijkingen = async (id: number, options?: RequestInit): Promise<FactuurAfwijkingen> => {
+
+  return customFetch<FactuurAfwijkingen>(getGetFactuurAfwijkingenUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetFactuurAfwijkingenQueryKey = (id: number,) => {
+    return [
+    `/api/facturen/${id}/afwijkingen`
+    ] as const;
+    }
+
+
+export const getGetFactuurAfwijkingenQueryOptions = <TData = Awaited<ReturnType<typeof getFactuurAfwijkingen>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getFactuurAfwijkingen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetFactuurAfwijkingenQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getFactuurAfwijkingen>>> = ({ signal }) => getFactuurAfwijkingen(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getFactuurAfwijkingen>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetFactuurAfwijkingenQueryResult = NonNullable<Awaited<ReturnType<typeof getFactuurAfwijkingen>>>
+export type GetFactuurAfwijkingenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Geconsolideerde signaleringen en afwijkingen voor de controlebox
+ */
+
+export function useGetFactuurAfwijkingen<TData = Awaited<ReturnType<typeof getFactuurAfwijkingen>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getFactuurAfwijkingen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetFactuurAfwijkingenQueryOptions(id,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

@@ -4,6 +4,40 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-03 — Financiële Controle: Fase 2 Inkoopverdieping + Fase 3 Controlebox
+
+**Uitvoering:** volledig | **Getest:** server build exit 0, beide workflows RUNNING
+
+### Gewijzigde bestanden
+- `artifacts/api-server/src/routes/facturen.ts` — enhanced AI uitlezen + leverancierherkenning + IBAN-verificatie + G-rekening-signalering + factuur_regels vullen; nieuw GET `/facturen/:id/afwijkingen` endpoint; mapFactuur uitgebreid met 10 F1/F2-velden; leveranciersTable + ilike toegevoegd aan imports
+- `lib/api-spec/openapi.yaml` — Factuur schema +11 velden (opdracht_id, leverancier_id, categorie, g_rekening_*, iban_*); nieuw FactuurAfwijkingen schema; nieuw GET `/facturen/{id}/afwijkingen` pad
+- `lib/api-client-react/src/generated/api.ts` — codegen: `useGetFactuurAfwijkingen` hook + Factuur type-uitbreiding
+- `artifacts/firevault/src/pages/facturen/controlebox.tsx` — nieuw (320 regels): financiële controlebox-inbox met tellerkaartjes, IBAN-afwijking-banner, tabbladen (Nieuw/Te beoordelen/Controle/Exportklaar/Fouten), rij-acties (AI uitlezen/Akkoord/Afwijzen/Detail)
+- `artifacts/firevault/src/App.tsx` — route `/facturen/controlebox` toegevoegd (vóór `/:id`)
+- `artifacts/firevault/src/layouts/beheerder-layout.tsx` — nav-item "Controlebox" in Financieel-sectie (boven Facturen)
+
+### Nieuwe routes
+- `POST /facturen/:id/ai-uitlezen` — uitgebreid: regelextractie (factuur_regels), IBAN-check, leverancierherkenning (IBAN → naam fuzzy), G-rekening-voorstel; geeft `_ai_samenvatting` object terug
+- `GET /facturen/:id/afwijkingen` — 6 signaalcodes: iban_afwijking (kritisch), g_rekening_van_toepassing (info), geen_regels (waarschuwing), geen_project_koppeling (waarschuwing), hoog_bedrag >€5.000 (info), bedrag_afwijking regelsom vs. header (kritisch)
+
+### Datamodelwijzigingen
+Geen nieuwe tabellen. Bestaande `facturen` response-API uitgebreid via mapFactuur (kolommen bestonden al uit F1):
+- `leverancier_id`, `opdracht_id`, `categorie`, `voorstel_bron`, `voorstel_bron_id`
+- `g_rekening_van_toepassing`, `g_rekening_bedrag`, `normaal_bedrag`
+- `iban_uitgelezen`, `iban_afwijking`
+
+### Welke bedrijfsworkflow verbeterd
+**Vervalt:** handmatige IBAN-controle per e-mail/Excel, G-rekening handmatig berekenen, leveranciers opzoeken in ENK
+**Vervangt:** AI leest factuur uit → herkent leverancier automatisch (IBAN/naam) → toont direct afwijkingen → administratie ziet één scherm met alle actie-items
+
+### Risico op dubbele waarheid
+Geen — factuur_regels slaan uitgelezen regels op met `bron=ai`; de boekhoudkundige bron blijft AccountView; regels zijn voorstel, mens accordeert
+
+### GO/NO GO
+**GO** — server build schoon (exit 0), codegen geslaagd, workflows RUNNING
+
+---
+
 ## 2026-07-03 — Task #187: CONNECT_AI_ENABLED centrale AI-hoofdschakelaar
 
 **Uitvoering:** volledig | **Diepere lagen:** volledig | **Getest:** typecheck clean
