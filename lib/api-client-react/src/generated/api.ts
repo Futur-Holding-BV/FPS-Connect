@@ -35,6 +35,7 @@ import type {
   AccountviewRelatieMappingInput,
   AchievementControleerResponse,
   Activiteit,
+  AiAanroepenAggregaat,
   AiAanroepenPagina,
   AiAnalyseToolboxBerichten200,
   AiCalculatieRegels200,
@@ -212,6 +213,7 @@ import type {
   GereedschapMeldingInput,
   GereedschapUploadUrlResponse,
   GetActiefDocumentStudioModelParams,
+  GetAiAanroepenAggregaatParams,
   GetAiPresentatieNiveau200,
   GetBoekhouderDashboardParams,
   GetBoekhouderUploadsParams,
@@ -60007,6 +60009,90 @@ export function useListAiAanroepen<TData = Awaited<ReturnType<typeof listAiAanro
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getListAiAanroepenQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetAiAanroepenAggregaatUrl = (params?: GetAiAanroepenAggregaatParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/beheer/ai-aanroepen/aggregaat?${stringifiedParams}` : `/api/beheer/ai-aanroepen/aggregaat`
+}
+
+/**
+ * @summary Totaalkosten en -aantallen AI-aanroepen per module (beheerder only)
+ */
+export const getAiAanroepenAggregaat = async (params?: GetAiAanroepenAggregaatParams, options?: RequestInit): Promise<AiAanroepenAggregaat> => {
+
+  return customFetch<AiAanroepenAggregaat>(getGetAiAanroepenAggregaatUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetAiAanroepenAggregaatQueryKey = (params?: GetAiAanroepenAggregaatParams,) => {
+    return [
+    `/api/beheer/ai-aanroepen/aggregaat`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetAiAanroepenAggregaatQueryOptions = <TData = Awaited<ReturnType<typeof getAiAanroepenAggregaat>>, TError = ErrorType<void>>(params?: GetAiAanroepenAggregaatParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAiAanroepenAggregaat>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAiAanroepenAggregaatQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAiAanroepenAggregaat>>> = ({ signal }) => getAiAanroepenAggregaat(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAiAanroepenAggregaat>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetAiAanroepenAggregaatQueryResult = NonNullable<Awaited<ReturnType<typeof getAiAanroepenAggregaat>>>
+export type GetAiAanroepenAggregaatQueryError = ErrorType<void>
+
+
+/**
+ * @summary Totaalkosten en -aantallen AI-aanroepen per module (beheerder only)
+ */
+
+export function useGetAiAanroepenAggregaat<TData = Awaited<ReturnType<typeof getAiAanroepenAggregaat>>, TError = ErrorType<void>>(
+ params?: GetAiAanroepenAggregaatParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAiAanroepenAggregaat>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetAiAanroepenAggregaatQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

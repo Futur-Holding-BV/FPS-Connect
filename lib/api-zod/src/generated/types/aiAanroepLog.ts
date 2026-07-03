@@ -50,4 +50,10 @@ export interface AiAanroepLog {
      * @nullable
      */
   context_json?: AiAanroepLogContextJson;
+  /** @nullable */
+  gebouw_id?: number | null;
+  /** @nullable */
+  offerte_id?: number | null;
+  /** @nullable */
+  project_id?: number | null;
 }

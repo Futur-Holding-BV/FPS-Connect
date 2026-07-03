@@ -94,6 +94,35 @@ Drie concrete fixes om te voorkomen dat een uitgevallen OpenAI-aanroep de kantoo
   - `aiMut` had alleen `onSuccess`; bij falen verdween de spinner zonder bericht
   - `onError` toast toegevoegd (zelfde tekst)
 
+## 2026-07-03 — Task #195: AI-aanroepen beheerderdashboard (/beheer/ai-log)
+
+**Uitvoering:** volledig | **Diepere lagen:** volledig | **Getest:** typecheck clean, API server restarted, route bereikbaar
+
+**1. OpenAPI spec uitgebreid** (`lib/api-spec/openapi.yaml`)
+- Nieuwe filterparameters op `GET /beheer/ai-aanroepen`: `gebouw_id`, `offerte_id`, `datum_van`, `datum_tot`
+- `AiAanroepLog` schema uitgebreid met `gebouw_id`, `offerte_id`, `project_id` (uit context_json)
+- Nieuw endpoint `GET /beheer/ai-aanroepen/aggregaat` voor totaalkosten/-aantallen per module
+- Nieuwe schemas `AiAanroepenAggregaat` en `AiAanroepenAggregaatRegel`
+
+**2. Backend route uitgebreid** (`artifacts/api-server/src/routes/ai-log.ts`)
+- Filters op datumbereik (gte/lte), gebouw_id en offerte_id (JSONB-extractie via SQL)
+- context_json uitgerekend naar flat velden (gebouw_id, offerte_id, project_id) in response
+- Nieuw aggregaat-endpoint: GROUP BY module met SUM kosten/tokens, gesorteerd op kosten desc
+
+**3. Frontend pagina aangemaakt** (`artifacts/firevault/src/pages/beheer/ai-log.tsx`)
+- Route `/beheer/ai-log`, gated op `hoofdbeheerder` rol
+- Drie samenvattingskaarten: totaal aanroepen, geschatte kosten, totaal tokens
+- Kosten-per-module-balk met aanroepen/kosten/tokens per module
+- Filterrij: module (select), status (select), gebouw-ID, offerte-ID, datum van/tot
+- Tabel met tijdstip, module, functie, model, status, tokens, kosten, duur, context-links
+- Paginering (50 per pagina)
+
+**4. App.tsx en sidebar** (`artifacts/firevault/src/App.tsx`, `artifacts/firevault/src/layouts/beheerder-layout.tsx`)
+- Route geregistreerd onder `/beheer/ai-log`
+- Nav-item "AI-aanroepen" (Bot-icoon) toegevoegd na "Audit trail" in het systeem-blok
+
+**5. Codegen uitgevoerd** — nieuwe hooks `useListAiAanroepen` (params uitgebreid) en `useGetAiAanroepenAggregaat` gegenereerd
+
 ## 2026-07-03 — Task #192: AI-aanroeplogging beheerdersdashboard
 
 **Uitvoering:** volledig | **Diepere lagen:** volledig | **Getest:** typecheck clean, screenshot route actief

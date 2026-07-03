@@ -155,6 +155,7 @@ import SalarisarchiefPagina from "@/pages/salarisarchief/index";
 import SalarisarchiefBatchDetailPagina from "@/pages/salarisarchief/batch-detail";
 import SepaBestandenPagina from "@/pages/sepa-bestanden/index";
 import MijnSalarisdocumentenPagina from "@/pages/mijn/salarisdocumenten";
+import AiLogBeheer from "@/pages/beheer/ai-log";
 import BoekhoudingBeheer from "@/pages/beheer/boekhouding";
 import GoLivePagina from "@/pages/beheer/go-live";
 import GebouwenArchiefBeheer from "@/pages/beheer/gebouwen-archief";
@@ -482,6 +483,7 @@ function ConnectPortal() {
         <Route path="/beheer/go-live" component={GoLivePagina} />
         <Route path="/beheer/projectstatus" component={ProjectstatusPagina} />
         <Route path="/beheer/pwa-test" component={PwaTest} />
+        <Route path="/beheer/ai-log" component={AiLogBeheer} />
         <Route path="/beheer/privacy" component={BeheerPrivacy} />
         <Route path="/beheer/gebouwen-archief" component={GebouwenArchiefBeheer} />
         <Route path="/mijn/privacy" component={PrivacyCentrum} />

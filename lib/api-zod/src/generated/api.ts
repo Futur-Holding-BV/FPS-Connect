@@ -21329,8 +21329,10 @@ export const ListAiAanroepenQueryParams = zod.object({
   "per_pagina": zod.coerce.number().default(listAiAanroepenQueryPerPaginaDefault),
   "module": zod.coerce.string().optional(),
   "status": zod.coerce.string().optional(),
-  "van_datum": zod.date().optional(),
-  "tot_datum": zod.date().optional()
+  "gebouw_id": zod.coerce.number().optional(),
+  "offerte_id": zod.coerce.number().optional(),
+  "datum_van": zod.date().optional(),
+  "datum_tot": zod.date().optional()
 })
 
 export const ListAiAanroepenResponse = zod.object({
@@ -21355,12 +21357,37 @@ export const ListAiAanroepenResponse = zod.object({
   "status": zod.string(),
   "foutmelding": zod.string().nullish(),
   "uitvoer_tekst": zod.string().nullish().describe('Eerste 8000 tekens van het AI-antwoord (het voorstel)'),
-  "context_json": zod.record(zod.string(), zod.unknown()).nullish().describe('Businesscontext en contextbronnen die bij deze aanroep zijn gebruikt')
+  "context_json": zod.record(zod.string(), zod.unknown()).nullish().describe('Businesscontext en contextbronnen die bij deze aanroep zijn gebruikt'),
+  "gebouw_id": zod.number().nullish(),
+  "offerte_id": zod.number().nullish(),
+  "project_id": zod.number().nullish()
 })),
   "totaal": zod.number(),
   "totale_kosten_eur": zod.string().nullish(),
   "pagina": zod.number(),
   "per_pagina": zod.number()
+})
+
+
+/**
+ * @summary Totaalkosten en -aantallen AI-aanroepen per module (beheerder only)
+ */
+export const GetAiAanroepenAggregaatQueryParams = zod.object({
+  "datum_van": zod.date().optional(),
+  "datum_tot": zod.date().optional(),
+  "module": zod.coerce.string().optional()
+})
+
+export const GetAiAanroepenAggregaatResponse = zod.object({
+  "totaal_aanroepen": zod.number(),
+  "totaal_kosten_eur": zod.string(),
+  "totaal_tokens": zod.number(),
+  "per_module": zod.array(zod.object({
+  "module": zod.string(),
+  "aanroepen": zod.number(),
+  "kosten_eur": zod.string(),
+  "tokens": zod.number()
+}))
 })
 
 

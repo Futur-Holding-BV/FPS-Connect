@@ -16842,12 +16842,20 @@ paths:
           schema:
             type: string
         - in: query
-          name: van_datum
+          name: gebouw_id
+          schema:
+            type: integer
+        - in: query
+          name: offerte_id
+          schema:
+            type: integer
+        - in: query
+          name: datum_van
           schema:
             type: string
             format: date
         - in: query
-          name: tot_datum
+          name: datum_tot
           schema:
             type: string
             format: date
@@ -16858,6 +16866,36 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AiAanroepenPagina"
+        "403":
+          description: Geen toegang
+
+  /beheer/ai-aanroepen/aggregaat:
+    get:
+      operationId: getAiAanroepenAggregaat
+      tags: [ai]
+      summary: Totaalkosten en -aantallen AI-aanroepen per module (beheerder only)
+      parameters:
+        - in: query
+          name: datum_van
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: datum_tot
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: module
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AiAanroepenAggregaat"
         "403":
           description: Geen toegang
 
@@ -17902,6 +17940,9 @@ components:
           type: ["object", "null"]
           additionalProperties: true
           description: Businesscontext en contextbronnen die bij deze aanroep zijn gebruikt
+        gebouw_id:      { type: ["integer", "null"] }
+        offerte_id:     { type: ["integer", "null"] }
+        project_id:     { type: ["integer", "null"] }
 
     AiAanroepenPagina:
       type: object
@@ -17915,6 +17956,27 @@ components:
         totale_kosten_eur: { type: ["string", "null"] }
         pagina:    { type: integer }
         per_pagina: { type: integer }
+
+    AiAanroepenAggregaatRegel:
+      type: object
+      required: [module, aanroepen, kosten_eur, tokens]
+      properties:
+        module:      { type: string }
+        aanroepen:   { type: integer }
+        kosten_eur:  { type: string }
+        tokens:      { type: integer }
+
+    AiAanroepenAggregaat:
+      type: object
+      required: [totaal_aanroepen, totaal_kosten_eur, totaal_tokens, per_module]
+      properties:
+        totaal_aanroepen:  { type: integer }
+        totaal_kosten_eur: { type: string }
+        totaal_tokens:     { type: integer }
+        per_module:
+          type: array
+          items:
+            $ref: "#/components/schemas/AiAanroepenAggregaatRegel"
 
     AiInvullenInput:
       type: object

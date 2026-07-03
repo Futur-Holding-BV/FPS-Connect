@@ -54,6 +54,12 @@ export interface AiAanroepLog {
      * @nullable
      */
   context_json?: AiAanroepLogContextJson;
+  /** @nullable */
+  gebouw_id?: number | null;
+  /** @nullable */
+  offerte_id?: number | null;
+  /** @nullable */
+  project_id?: number | null;
 }
 
 export interface AiAanroepenPagina {
@@ -63,6 +69,20 @@ export interface AiAanroepenPagina {
   totale_kosten_eur?: string | null;
   pagina: number;
   per_pagina: number;
+}
+
+export interface AiAanroepenAggregaatRegel {
+  module: string;
+  aanroepen: number;
+  kosten_eur: string;
+  tokens: number;
+}
+
+export interface AiAanroepenAggregaat {
+  totaal_aanroepen: number;
+  totaal_kosten_eur: string;
+  totaal_tokens: number;
+  per_module: AiAanroepenAggregaatRegel[];
 }
 
 export type AiInvullenInputFormulierType = typeof AiInvullenInputFormulierType[keyof typeof AiInvullenInputFormulierType];
@@ -10265,8 +10285,16 @@ pagina?: number;
 per_pagina?: number;
 module?: string;
 status?: string;
-van_datum?: string;
-tot_datum?: string;
+gebouw_id?: number;
+offerte_id?: number;
+datum_van?: string;
+datum_tot?: string;
+};
+
+export type GetAiAanroepenAggregaatParams = {
+datum_van?: string;
+datum_tot?: string;
+module?: string;
 };
 
 export type ListLeveranciersParams = {

@@ -6,13 +6,8 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type ListAiAanroepenParams = {
-pagina?: number;
-per_pagina?: number;
-module?: string;
-status?: string;
-gebouw_id?: number;
-offerte_id?: number;
+export type GetAiAanroepenAggregaatParams = {
 datum_van?: Date;
 datum_tot?: Date;
+module?: string;
 };
