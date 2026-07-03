@@ -8,6 +8,24 @@ Voor elke taak drie scores:
 
 Grote roadmap-fases staan ook in `docs/roadmap/gebouwd.md` en `docs/roadmap/actief.md`.
 
+## 2026-07-03 — Architectuurontwerp: AI Process Orchestrator
+
+**Uitvoering:** architectuur-backlog (geen productiecode) | **Getest:** n.v.t.
+
+Volledig technisch ontwerp voor de centrale AI-laag van FPS Connect als procesregisseur. Geen implementatie — wacht op nieuw expliciet akkoord ná beoordeling van de vijf basisopdrachten.
+
+**Rapport:** `docs/architectuur/ai-procesregisseur.md`
+
+Kernbevindingen:
+- Connect heeft al zeven werkende AI-diensten die volledig los van elkaar staan (document-ai, spot-ai, gebouw-ai, opleiding-ai, email-ai, inbox-mock, offerte-aanvraag-GPT4o). De APO is geen nieuw AI-model maar een coördinatie- en geheugenlaag bovenop het bestaande.
+- Twee nieuwe tabellen ontworpen: `ai_taken` (centrale werkeenheid) + `ai_logboek` (technische audit). `ai_kennisobjecten` voor naam-matching zonder embeddings.
+- `ai_voorstel` JSONB-structuur gedefinieerd: koppelingen, urgentie, acties, ontbrekende info, waarschuwingen.
+- Harde veiligheidsgrenzen geformuleerd: 9 categorieën verboden autonome AI-acties (offerte versturen, factuur goedkeuren, dossier definitief, HR-besluiten, enz.).
+- WorkflowEngine heeft een systeem-transitie-uitbreiding nodig (TransitieContext zonder req) — dit is een harde blokkade voor Fase 0.
+- 4 implementatiefases (0–3) + zelflerende fase 4, elk met expliciete blokkades.
+- 8 openstaande beslissingen geformuleerd.
+- Teststrategie: unit (pure functies), integratie (mock AI), E2E (Playwright), kosten-/tokentest.
+
 ## 2026-07-03 — Architectuurontwerp: Documenten-inbox / Verwerkingswachtrij
 
 **Uitvoering:** architectuur-backlog (geen productiecode) | **Getest:** n.v.t.
