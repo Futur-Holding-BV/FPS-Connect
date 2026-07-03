@@ -4,6 +4,12 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-03 — Fix: AI-drempelmelding bereikt beheerder ook zonder e-mailserver
+
+**Uitvoering:** volledig | **Diepere lagen:** volledig | **Getest:** typecheck schoon
+
+- `artifacts/api-server/src/lib/aiDrempelCheck.ts`: maandmarkering (`aiDrempelMeldingGestuurdMaand`) wordt niet meer gezet als mail niet geconfigureerd is — achtergrondcheck herprobeert elk uur totdat er een melding daadwerkelijk verstuurd is. Het `GET /api/beheer/ai-drempel-status`-endpoint en de monteur-app-banner werken al onafhankelijk op live kostenstatus.
+
 ## 2026-07-03 — Sprint 1: Bedrijfsworkflow end-to-end sluiten & AI-kostendrempel melding
 
 **Uitvoering:** volledig | **Diepere lagen:** volledig | **Getest:** typecheck firevault + api-server schoon, workflows herstart, monteur-app banner getest

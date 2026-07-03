@@ -50,11 +50,7 @@ async function controleerAiDrempel(): Promise<void> {
   const mailGeconfigureerd = isMailGeconfigureerd();
 
   if (!mailGeconfigureerd) {
-    logger.warn("AI drempel overschreden maar mail niet geconfigureerd — maandmarkering gezet, geen mail");
-    await db
-      .update(appInstellingenTable)
-      .set({ aiDrempelMeldingGestuurdMaand: jaarMaand, bijgewerktOp: new Date() })
-      .where(eq(appInstellingenTable.id, instelling.id));
+    logger.warn("AI drempel overschreden maar mail niet geconfigureerd — maandmarkering NIET gezet, volgende uur nieuwe poging");
     return;
   }
 
