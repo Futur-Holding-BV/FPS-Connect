@@ -1,7 +1,16 @@
 import { Router } from "express";
 import multer from "multer";
 import * as XLSX from "xlsx";
-import { db, leveranciersTable, artikelenTable, importLogsTable, crmKlantenTable } from "@workspace/db";
+import {
+  db,
+  leveranciersTable,
+  artikelenTable,
+  importLogsTable,
+  crmKlantenTable,
+  crmContactpersonenTable,
+  medewerkersTable,
+  gebouwenTable,
+} from "@workspace/db";
 import { logger } from "../lib/logger";
 import { randomUUID } from "crypto";
 
@@ -31,7 +40,7 @@ router.post(
       if (!req.file) return res.status(400).json({ error: "Geen bestand ontvangen" });
 
       const type = String(req.body.type ?? "").trim();
-      const geldige = ["leveranciers", "klanten", "artikelen", "projecten"];
+      const geldige = ["leveranciers", "klanten", "artikelen", "projecten", "medewerkers", "gebouwen", "contactpersonen", "magazijn_artikelen"];
       if (!geldige.includes(type)) {
         return res.status(400).json({ error: "Ongeldig importtype" });
       }
@@ -127,6 +136,67 @@ router.post("/import/uitvoeren", async (req, res) => {
             continue;
           }
           await db.insert(crmKlantenTable).values(values);
+          verwerkt++;
+        } catch (err) {
+          fouten.push({ rij: i + 2, fout: err instanceof Error ? err.message : "Onbekende fout" });
+          overgeslagen++;
+        }
+      }
+    } else if (type === "medewerkers") {
+      for (let i = 0; i < rijen.length; i++) {
+        const rij = rijen[i]!;
+        try {
+          const naam = haal(rij, kolomkoppeling, "naam") || haal(rij, kolomkoppeling, "volledige_naam");
+          if (!naam && overslaan_lege_naam !== false) { overgeslagen++; continue; }
+          const values = koppelMedewerker(rij, kolomkoppeling);
+          await db.insert(medewerkersTable).values(values);
+          verwerkt++;
+        } catch (err) {
+          fouten.push({ rij: i + 2, fout: err instanceof Error ? err.message : "Onbekende fout" });
+          overgeslagen++;
+        }
+      }
+    } else if (type === "gebouwen") {
+      for (let i = 0; i < rijen.length; i++) {
+        const rij = rijen[i]!;
+        try {
+          const naam = haal(rij, kolomkoppeling, "naam");
+          const adres = haal(rij, kolomkoppeling, "adres");
+          if (!naam && overslaan_lege_naam !== false) { overgeslagen++; continue; }
+          if (!adres) {
+            fouten.push({ rij: i + 2, fout: "Adres is verplicht" });
+            overgeslagen++;
+            continue;
+          }
+          const values = koppelGebouw(rij, kolomkoppeling);
+          await db.insert(gebouwenTable).values(values);
+          verwerkt++;
+        } catch (err) {
+          fouten.push({ rij: i + 2, fout: err instanceof Error ? err.message : "Onbekende fout" });
+          overgeslagen++;
+        }
+      }
+    } else if (type === "contactpersonen") {
+      for (let i = 0; i < rijen.length; i++) {
+        const rij = rijen[i]!;
+        try {
+          const naam = haal(rij, kolomkoppeling, "naam");
+          if (!naam && overslaan_lege_naam !== false) { overgeslagen++; continue; }
+          const values = koppelContactpersoon(rij, kolomkoppeling);
+          await db.insert(crmContactpersonenTable).values(values);
+          verwerkt++;
+        } catch (err) {
+          fouten.push({ rij: i + 2, fout: err instanceof Error ? err.message : "Onbekende fout" });
+          overgeslagen++;
+        }
+      }
+    } else if (type === "magazijn_artikelen") {
+      for (let i = 0; i < rijen.length; i++) {
+        const rij = rijen[i]!;
+        try {
+          const values = koppelArtikel(rij, kolomkoppeling);
+          if (!values.naam && overslaan_lege_naam !== false) { overgeslagen++; continue; }
+          await db.insert(artikelenTable).values({ ...values, bron: "import", categorie: values.categorie || "magazijn" });
           verwerkt++;
         } catch (err) {
           fouten.push({ rij: i + 2, fout: err instanceof Error ? err.message : "Onbekende fout" });
@@ -297,6 +367,82 @@ function koppelArtikel(rij: Record<string, string>, kop: Record<string, string>)
     actief: true,
   };
 }
+
+function koppelMedewerker(rij: Record<string, string>, kop: Record<string, string>) {
+  const naam = haal(rij, kop, "naam") || haal(rij, kop, "volledige_naam") || "Onbekend";
+  const dienstverband = haal(rij, kop, "dienstverband") || "vast";
+  const geldigDienstverband = ["vast", "tijdelijk", "oproep", "inhuur", "onderaannemer", "zzp"] as const;
+  type Dienstverband = typeof geldigDienstverband[number];
+  return {
+    naam,
+    email: haal(rij, kop, "email") || null,
+    telefoon: haal(rij, kop, "telefoon") || null,
+    mobiel: haal(rij, kop, "mobiel") || null,
+    werkmaatschappij: haal(rij, kop, "werkmaatschappij") || "FPS Brandpreventie",
+    dienstverband: (geldigDienstverband.includes(dienstverband as Dienstverband) ? dienstverband : "vast") as Dienstverband,
+    inDienstSinds: haal(rij, kop, "in_dienst_sinds") || null,
+    geboortedatum: haal(rij, kop, "geboortedatum") || null,
+    adres: haal(rij, kop, "adres") || null,
+    postcode: haal(rij, kop, "postcode") || null,
+    woonplaats: haal(rij, kop, "woonplaats") || haal(rij, kop, "stad") || null,
+    actief: (haal(rij, kop, "actief") || "ja").toLowerCase() !== "nee",
+  };
+}
+
+function koppelGebouw(rij: Record<string, string>, kop: Record<string, string>) {
+  return {
+    naam: haal(rij, kop, "naam") || "Onbekend",
+    adres: haal(rij, kop, "adres") || "",
+    postcode: haal(rij, kop, "postcode") || null,
+    stad: haal(rij, kop, "stad") || haal(rij, kop, "plaats") || null,
+    omschrijving: haal(rij, kop, "omschrijving") || null,
+    werknummer: haal(rij, kop, "werknummer") || null,
+    projectnummer: haal(rij, kop, "projectnummer") || null,
+    gebouwType: haal(rij, kop, "gebouw_type") || haal(rij, kop, "type") || null,
+    aantalVerdiepingen: parseInt(haal(rij, kop, "aantal_verdiepingen") || "0") || null,
+  };
+}
+
+function koppelContactpersoon(rij: Record<string, string>, kop: Record<string, string>) {
+  return {
+    naam: haal(rij, kop, "naam") || "Onbekend",
+    functie: haal(rij, kop, "functie") || null,
+    email: haal(rij, kop, "email") || null,
+    telefoon: haal(rij, kop, "telefoon") || null,
+    mobiel: haal(rij, kop, "mobiel") || null,
+    beslisrol: haal(rij, kop, "beslisrol") || "onbekend",
+    opmerkingen: haal(rij, kop, "opmerkingen") || null,
+  };
+}
+
+// ── GET /import/template/:type ─────────────────────────────────────────────────
+router.get("/import/template/:type", (req, res) => {
+  const type = req.params.type;
+
+  const TEMPLATE_KOLOMMEN: Record<string, string[]> = {
+    leveranciers: ["naam", "code", "adres", "postcode", "stad", "contactpersoon", "email", "telefoon", "kvk_nummer", "categorie", "notities"],
+    klanten: ["naam", "type", "kvk", "adres", "postcode", "stad", "telefoon", "email", "branche", "relatie_status"],
+    artikelen: ["naam", "code", "omschrijving", "eenheid", "inkoopprijs", "verkoopprijs", "categorie"],
+    medewerkers: ["naam", "email", "telefoon", "mobiel", "dienstverband", "in_dienst_sinds", "werkmaatschappij", "actief"],
+    gebouwen: ["naam", "adres", "postcode", "stad", "gebouw_type", "aantal_verdiepingen", "werknummer", "omschrijving"],
+    contactpersonen: ["naam", "functie", "email", "telefoon", "mobiel", "beslisrol", "opmerkingen"],
+    magazijn_artikelen: ["naam", "code", "omschrijving", "eenheid", "inkoopprijs", "categorie"],
+  };
+
+  const kolommen = TEMPLATE_KOLOMMEN[type];
+  if (!kolommen) {
+    return res.status(400).json({ error: "Ongeldig importtype voor template" });
+  }
+
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet([kolommen]);
+  XLSX.utils.book_append_sheet(wb, ws, "Import");
+  const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+
+  res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+  res.setHeader("Content-Disposition", `attachment; filename="template_${type}.xlsx"`);
+  return void res.send(buf);
+});
 
 logger.info("import router geladen");
 

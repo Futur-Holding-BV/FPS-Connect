@@ -3,6 +3,7 @@ import {
   DocumentType,
   useListDocumenten,
 } from "@workspace/api-client-react";
+import { LegeStatus } from "@/components/LegeStatus";
 import { Redirect, useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
@@ -128,9 +129,11 @@ export default function Documenten() {
             <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={c.primary} />
           }
           ListEmptyComponent={
-            <Text style={{ textAlign: "center", color: c.mutedForeground, marginTop: 48, fontFamily: "Inter_400Regular" }}>
-              Geen documenten gevonden.
-            </Text>
+            <LegeStatus
+              icoon="document-outline"
+              titel="Geen documenten"
+              beschrijving="Er zijn nog geen documenten door uw beheerder gedeeld."
+            />
           }
           renderItem={({ item }) => (
             <Pressable

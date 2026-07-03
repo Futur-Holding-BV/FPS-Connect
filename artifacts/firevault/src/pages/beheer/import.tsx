@@ -3,13 +3,23 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useListImportLogs } from "@workspace/api-client-react";
-import { Upload, CheckCircle2, AlertCircle, ArrowRight, FileSpreadsheet, RotateCcw } from "lucide-react";
+import { Upload, CheckCircle2, AlertCircle, ArrowRight, FileSpreadsheet, RotateCcw, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { PaginaHulp } from "@/components/pagina-hulp";
 import { formatDistanceToNow } from "date-fns";
 import { nl } from "date-fns/locale";
 
-type ImportType = "leveranciers" | "klanten" | "artikelen" | "projecten";
+type ImportType = "leveranciers" | "klanten" | "artikelen" | "medewerkers" | "gebouwen" | "contactpersonen" | "magazijn_artikelen";
+
+const IMPORT_TYPE_LABELS: Record<ImportType, string> = {
+  leveranciers: "Leveranciers",
+  klanten: "Klanten",
+  artikelen: "Artikelen",
+  medewerkers: "Medewerkers",
+  gebouwen: "Gebouwen",
+  contactpersonen: "Contactpersonen",
+  magazijn_artikelen: "Magazijnartikelen",
+};
 
 // Beschikbare velden per importtype
 const VELD_DEFINITIES: Record<ImportType, { veld: string; label: string; verplicht?: boolean }[]> = {
@@ -60,11 +70,47 @@ const VELD_DEFINITIES: Record<ImportType, { veld: string; label: string; verplic
     { veld: "relatie_status", label: "Relatiestatus (onbekend/koud/warm/actief)" },
     { veld: "opmerkingen", label: "Opmerkingen / notities" },
   ],
-  projecten: [
-    { veld: "naam", label: "Naam", verplicht: true },
-    { veld: "code", label: "Projectnummer" },
+  medewerkers: [
+    { veld: "naam", label: "Volledige naam", verplicht: true },
+    { veld: "email", label: "E-mailadres" },
+    { veld: "telefoon", label: "Telefoonnummer" },
+    { veld: "mobiel", label: "Mobiel" },
+    { veld: "dienstverband", label: "Dienstverband (vast/tijdelijk/oproep/inhuur/zzp)" },
+    { veld: "in_dienst_sinds", label: "In dienst sinds (JJJJ-MM-DD)" },
+    { veld: "werkmaatschappij", label: "Werkmaatschappij" },
+    { veld: "adres", label: "Woonadres" },
+    { veld: "postcode", label: "Postcode" },
+    { veld: "woonplaats", label: "Woonplaats" },
+    { veld: "actief", label: "Actief (ja/nee)" },
+    { veld: "opmerkingen", label: "Opmerkingen" },
+  ],
+  gebouwen: [
+    { veld: "naam", label: "Naam / projectnaam", verplicht: true },
+    { veld: "adres", label: "Straat + huisnummer", verplicht: true },
+    { veld: "postcode", label: "Postcode" },
+    { veld: "stad", label: "Stad / Plaats" },
+    { veld: "gebouw_type", label: "Gebouwtype" },
+    { veld: "aantal_verdiepingen", label: "Aantal verdiepingen" },
+    { veld: "werknummer", label: "Werknummer" },
+    { veld: "projectnummer", label: "Projectnummer" },
     { veld: "omschrijving", label: "Omschrijving" },
-    { veld: "stad", label: "Stad" },
+  ],
+  contactpersonen: [
+    { veld: "naam", label: "Volledige naam", verplicht: true },
+    { veld: "functie", label: "Functie / rol" },
+    { veld: "email", label: "E-mailadres" },
+    { veld: "telefoon", label: "Telefoonnummer" },
+    { veld: "mobiel", label: "Mobiel" },
+    { veld: "beslisrol", label: "Beslisrol (onbekend/influencer/beslisser)" },
+    { veld: "opmerkingen", label: "Opmerkingen" },
+  ],
+  magazijn_artikelen: [
+    { veld: "naam", label: "Naam", verplicht: true },
+    { veld: "code", label: "Artikelcode" },
+    { veld: "omschrijving", label: "Omschrijving" },
+    { veld: "eenheid", label: "Eenheid (st/m/m2/rol)" },
+    { veld: "inkoopprijs", label: "Inkoopprijs" },
+    { veld: "categorie", label: "Categorie" },
   ],
 };
 
@@ -173,20 +219,39 @@ export default function ImportPagina() {
           <div className="space-y-2">
             <p className="text-sm font-medium">Wat wil je importeren?</p>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              {(["leveranciers", "artikelen", "klanten", "projecten"] as ImportType[]).map((t) => (
+              {(Object.keys(IMPORT_TYPE_LABELS) as ImportType[]).map((t) => (
                 <button
                   key={t}
                   onClick={() => setType(t)}
-                  className={`px-4 py-2.5 rounded-md border text-sm font-medium transition-colors capitalize ${
+                  className={`px-4 py-2.5 rounded-md border text-sm font-medium transition-colors ${
                     type === t
                       ? "border-primary bg-primary/5 text-primary"
                       : "border-input hover:bg-muted"
                   }`}
                 >
-                  {t}
+                  {IMPORT_TYPE_LABELS[t]}
                 </button>
               ))}
             </div>
+          </div>
+
+          <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
+            <div>
+              <p className="text-sm font-medium">Template downloaden</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Download het Excel-sjabloon met de juiste kolomindeling voor {IMPORT_TYPE_LABELS[type].toLowerCase()}
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              asChild
+            >
+              <a href={`/api/import/template/${type}`} download>
+                <Download className="h-4 w-4 mr-1.5" />
+                Template
+              </a>
+            </Button>
           </div>
 
           <div

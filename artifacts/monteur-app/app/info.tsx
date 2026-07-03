@@ -1,4 +1,5 @@
 import { useGetInfoInstellingen, useWachtwoordWijzigen } from "@workspace/api-client-react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import { Image, KeyboardAvoidingView, Linking, Modal, Platform, Pressable, ScrollView, Switch, Text, TextInput, View } from "react-native";
@@ -368,6 +369,29 @@ export default function InfoScherm() {
               <Text style={{ color: c.primary, fontSize: 20, fontFamily: "Inter_400Regular" }}>›</Text>
             </Pressable>
           </View>
+        </Kaart>
+
+        <Kaart titel="Rondleiding">
+          <Text style={{ color: c.mutedForeground, fontSize: 13, fontFamily: "Inter_400Regular", lineHeight: 20, marginBottom: 12 }}>
+            Bekijk de introductierondleiding opnieuw om vertrouwd te raken met alle functies van de app.
+          </Text>
+          <Pressable
+            onPress={async () => {
+              await AsyncStorage.removeItem("fps_onboarding_voltooid");
+              router.push("/onboarding");
+            }}
+            style={({ pressed }) => ({
+              backgroundColor: pressed ? "#d63400" : "#F23B0D",
+              borderRadius: 8,
+              paddingVertical: 10,
+              paddingHorizontal: 16,
+              alignItems: "center",
+            })}
+          >
+            <Text style={{ color: "#fff", fontSize: 14, fontFamily: "Inter_600SemiBold" }}>
+              Rondleiding opnieuw bekijken
+            </Text>
+          </Pressable>
         </Kaart>
 
         <Kaart titel="Over de applicatie">

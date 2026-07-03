@@ -4,6 +4,25 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-03 — Sprint: lege toestanden, mobiele onboarding, import uitbreiding
+
+**Uitvoering:** volledig | **Diepere lagen:** volledig | **Getest:** typecheck schoon (geen nieuwe fouten)
+
+**Lege toestanden (web + mobiel)**
+- `firevault/src/components/lege-status.tsx`: nieuw herbruikbaar `<LegeStatus>` component (shadcn, varianten pagina/kaart/inline, optioneel actieknop)
+- `monteur-app/components/LegeStatus.tsx`: nieuw herbruikbaar RN-component (Ionicons, juiste kleurtokens uit constants/colors.ts)
+- `inspecties/index.tsx`: lege toestand opgewaardeerd van kale tekst naar `<LegeStatus icoon={ClipboardList}>`
+- `monteur-app/app/documenten.tsx`, `incidenten.tsx`: `ListEmptyComponent` en inline lege toestand vervangen door `<LegeStatus>`
+
+**Mobiele onboarding first-use flow**
+- `monteur-app/app/onboarding.tsx`: 6-stappen interactieve rondleiding (welkom, Expo Go-uitleg, inloggen, TOTP, app-tour met 8 functies, afsluiten); stap-indicatoren, "Overslaan"-knop, "Start werkdag"-afsluiter; `AsyncStorage` key `fps_onboarding_voltooid`
+- `monteur-app/app/_layout.tsx`: `RootLayoutNav` controleert na auth of onboarding gezien is; redirect naar `/onboarding` bij eerste start; `Stack.Screen name="onboarding"` geregistreerd
+- `monteur-app/app/info.tsx`: "Rondleiding" kaart toegevoegd met knop die AsyncStorage wist en naar `/onboarding` navigeert
+
+**Import wizard uitbreiding (7 types)**
+- `api-server/src/routes/import.ts`: 4 nieuwe importtypes (medewerkers→medewerkersTable, gebouwen→gebouwenTable, contactpersonen→crmContactpersonenTable, magazijn_artikelen→artikelenTable) met dedicated koppel-functies; nieuw `GET /import/template/:type` endpoint geeft Excel-sjabloon terug (binary, geen Orval codegen nodig)
+- `firevault/src/pages/beheer/import.tsx`: `ImportType` uitgebreid naar 7 types; `IMPORT_TYPE_LABELS` record; type-selector toont Nederlandse labels; template-downloadknop boven de dropzone via `<a href="/api/import/template/:type" download>`
+
 ## 2026-07-03 — Fix: AI-drempelmelding bereikt beheerder ook zonder e-mailserver
 
 **Uitvoering:** volledig | **Diepere lagen:** volledig | **Getest:** typecheck schoon

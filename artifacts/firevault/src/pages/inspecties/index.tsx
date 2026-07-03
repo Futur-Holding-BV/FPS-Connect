@@ -5,7 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar, Building, CheckCircle, Clock, AlertCircle, FileText, X } from "lucide-react";
+import { Calendar, Building, CheckCircle, Clock, AlertCircle, FileText, X, ClipboardList } from "lucide-react";
+import { LegeStatus } from "@/components/lege-status";
 import { useVoorkeur } from "@/hooks/use-voorkeur";
 import { PaginaHulp } from "@/components/pagina-hulp";
 
@@ -161,11 +162,12 @@ export default function Inspecties() {
             </Card>
           ))}
           {!inspecties?.length && (
-            <Card>
-              <CardContent className="py-12 text-center text-muted-foreground">
-                Geen inspecties gevonden.
-              </CardContent>
-            </Card>
+            <LegeStatus
+              icoon={ClipboardList}
+              titel="Geen inspecties gevonden"
+              beschrijving="Er zijn nog geen inspecties aangemaakt of de huidige filters geven geen resultaten."
+              variant="kaart"
+            />
           )}
         </div>
       )}

@@ -354,13 +354,22 @@ function BerichtMeldingMonitor() {
   return null;
 }
 
+const ONBOARDING_KEY = "fps_onboarding_voltooid";
+
 function RootLayoutNav() {
   const { bezigLaden, vergrendeld, token } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
+  const [onboardingGezien, setOnboardingGezien] = useState<boolean | null>(null);
 
   useEffect(() => {
-    if (bezigLaden) return;
+    AsyncStorage.getItem(ONBOARDING_KEY).then((v) => {
+      setOnboardingGezien(v === "1");
+    });
+  }, []);
+
+  useEffect(() => {
+    if (bezigLaden || onboardingGezien === null) return;
     if (vergrendeld) {
       if (pathname !== "/vergrendeld") router.replace("/vergrendeld");
       return;
@@ -372,8 +381,12 @@ function RootLayoutNav() {
     const openbaar = pathname === "/login" || pathname === "/";
     if (!token && !openbaar) {
       router.replace("/login");
+      return;
     }
-  }, [bezigLaden, vergrendeld, token, pathname, router]);
+    if (token && !onboardingGezien && pathname !== "/onboarding") {
+      router.replace("/onboarding");
+    }
+  }, [bezigLaden, vergrendeld, token, pathname, router, onboardingGezien]);
 
   return (
     <>
@@ -411,6 +424,7 @@ function RootLayoutNav() {
         <Stack.Screen name="veiligheid-melding" />
         <Stack.Screen name="veiligheid/index" />
         <Stack.Screen name="pbm" />
+        <Stack.Screen name="onboarding" options={{ gestureEnabled: false }} />
       </Stack>
     </>
   );

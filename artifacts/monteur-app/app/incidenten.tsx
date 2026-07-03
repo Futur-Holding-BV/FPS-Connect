@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from "react";
+import { LegeStatus } from "@/components/LegeStatus";
 import {
   ActivityIndicator,
   FlatList,
@@ -289,10 +290,11 @@ export default function IncidentenScherm() {
       {isLoading ? (
         <ActivityIndicator color={c.primary} style={{ marginTop: 32 }} />
       ) : incidenten.length === 0 ? (
-        <View style={{ flex: 1, alignItems: "center", justifyContent: "center", gap: 8 }}>
-          <Ionicons name="shield-checkmark-outline" size={48} color={c.textMuted} />
-          <Text style={{ color: c.textMuted, fontSize: 15 }}>Nog geen incidenten geregistreerd</Text>
-        </View>
+        <LegeStatus
+          icoon="shield-checkmark-outline"
+          titel="Geen incidenten"
+          beschrijving="Er zijn nog geen incidenten geregistreerd. Gebruik de knop hieronder om een nieuw incident te melden."
+        />
       ) : (
         <FlatList
           data={incidenten}
