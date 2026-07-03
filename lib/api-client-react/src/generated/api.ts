@@ -329,6 +329,7 @@ import type {
   ListJaarAfsluitingRegelsParams,
   ListLabelsParams,
   ListLeveranciersParams,
+  ListMeldingenParams,
   ListMijnActiviteitenParams,
   ListModCalculatiesParams,
   ListMuisGebeurtenissenParams,
@@ -402,6 +403,11 @@ import type {
   MedewerkerOnboardingInput,
   MedewerkerOpleiding,
   MedewerkerOpleidingInput,
+  MeldingDetail,
+  MeldingInput,
+  MeldingOntvangst,
+  MeldingOverzichtItem,
+  MeldingUpdate,
   MijnCertificaten,
   MijnPrivacyGegevens,
   MijnToolboxMaandopdracht,
@@ -54811,6 +54817,308 @@ export const usePostBeheerGoLiveLessen = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getPostBeheerGoLiveLessenMutationOptions(options));
+    }
+
+export const getCreateMeldingUrl = () => {
+
+
+
+
+  return `/api/meldingen`
+}
+
+/**
+ * @summary Gebruikersmelding indienen (bug / vraag / verbetersuggestie)
+ */
+export const createMelding = async (meldingInput: MeldingInput, options?: RequestInit): Promise<MeldingOntvangst> => {
+
+  return customFetch<MeldingOntvangst>(getCreateMeldingUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(meldingInput)
+  }
+);}
+
+
+
+
+export const getCreateMeldingMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createMelding>>, TError,{data: BodyType<MeldingInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createMelding>>, TError,{data: BodyType<MeldingInput>}, TContext> => {
+
+const mutationKey = ['createMelding'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createMelding>>, {data: BodyType<MeldingInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createMelding(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateMeldingMutationResult = NonNullable<Awaited<ReturnType<typeof createMelding>>>
+    export type CreateMeldingMutationBody = BodyType<MeldingInput>
+    export type CreateMeldingMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Gebruikersmelding indienen (bug / vraag / verbetersuggestie)
+ */
+export const useCreateMelding = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createMelding>>, TError,{data: BodyType<MeldingInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createMelding>>,
+        TError,
+        {data: BodyType<MeldingInput>},
+        TContext
+      > => {
+      return useMutation(getCreateMeldingMutationOptions(options));
+    }
+
+export const getListMeldingenUrl = (params?: ListMeldingenParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/meldingen?${stringifiedParams}` : `/api/meldingen`
+}
+
+/**
+ * @summary Beheerdersoverzicht meldingen
+ */
+export const listMeldingen = async (params?: ListMeldingenParams, options?: RequestInit): Promise<MeldingOverzichtItem[]> => {
+
+  return customFetch<MeldingOverzichtItem[]>(getListMeldingenUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListMeldingenQueryKey = (params?: ListMeldingenParams,) => {
+    return [
+    `/api/meldingen`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListMeldingenQueryOptions = <TData = Awaited<ReturnType<typeof listMeldingen>>, TError = ErrorType<unknown>>(params?: ListMeldingenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMeldingen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListMeldingenQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listMeldingen>>> = ({ signal }) => listMeldingen(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listMeldingen>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListMeldingenQueryResult = NonNullable<Awaited<ReturnType<typeof listMeldingen>>>
+export type ListMeldingenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Beheerdersoverzicht meldingen
+ */
+
+export function useListMeldingen<TData = Awaited<ReturnType<typeof listMeldingen>>, TError = ErrorType<unknown>>(
+ params?: ListMeldingenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMeldingen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListMeldingenQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetMeldingUrl = (id: number,) => {
+
+
+
+
+  return `/api/meldingen/${id}`
+}
+
+/**
+ * @summary Melding detail (incl. screenshot)
+ */
+export const getMelding = async (id: number, options?: RequestInit): Promise<MeldingDetail> => {
+
+  return customFetch<MeldingDetail>(getGetMeldingUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetMeldingQueryKey = (id: number,) => {
+    return [
+    `/api/meldingen/${id}`
+    ] as const;
+    }
+
+
+export const getGetMeldingQueryOptions = <TData = Awaited<ReturnType<typeof getMelding>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMelding>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetMeldingQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMelding>>> = ({ signal }) => getMelding(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMelding>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetMeldingQueryResult = NonNullable<Awaited<ReturnType<typeof getMelding>>>
+export type GetMeldingQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Melding detail (incl. screenshot)
+ */
+
+export function useGetMelding<TData = Awaited<ReturnType<typeof getMelding>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMelding>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetMeldingQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUpdateMeldingUrl = (id: number,) => {
+
+
+
+
+  return `/api/meldingen/${id}`
+}
+
+/**
+ * @summary Status en interne notitie bijwerken
+ */
+export const updateMelding = async (id: number,
+    meldingUpdate: MeldingUpdate, options?: RequestInit): Promise<MeldingOntvangst> => {
+
+  return customFetch<MeldingOntvangst>(getUpdateMeldingUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(meldingUpdate)
+  }
+);}
+
+
+
+
+export const getUpdateMeldingMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateMelding>>, TError,{id: number;data: BodyType<MeldingUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateMelding>>, TError,{id: number;data: BodyType<MeldingUpdate>}, TContext> => {
+
+const mutationKey = ['updateMelding'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateMelding>>, {id: number;data: BodyType<MeldingUpdate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateMelding(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateMeldingMutationResult = NonNullable<Awaited<ReturnType<typeof updateMelding>>>
+    export type UpdateMeldingMutationBody = BodyType<MeldingUpdate>
+    export type UpdateMeldingMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Status en interne notitie bijwerken
+ */
+export const useUpdateMelding = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateMelding>>, TError,{id: number;data: BodyType<MeldingUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateMelding>>,
+        TError,
+        {id: number;data: BodyType<MeldingUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateMeldingMutationOptions(options));
     }
 
 export const getGetSalarisMutatiesUrl = (params?: GetSalarisMutatiesParams,) => {

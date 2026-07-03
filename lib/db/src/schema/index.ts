@@ -50,3 +50,4 @@ export * from "./uitvoerder";
 export * from "./audit";
 export * from "./rechten";
 export * from "./ai-log";
+export * from "./meldingen";

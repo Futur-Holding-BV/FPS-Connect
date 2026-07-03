@@ -15430,6 +15430,92 @@ paths:
                 $ref: '#/components/schemas/GoLiveLes'
 
 
+  # ── MELDINGEN (livegang supportfunctie) ───────────────────────────────────────
+  /meldingen:
+    post:
+      operationId: createMelding
+      tags: [meldingen]
+      summary: Gebruikersmelding indienen (bug / vraag / verbetersuggestie)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MeldingInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MeldingOntvangst"
+    get:
+      operationId: listMeldingen
+      tags: [meldingen]
+      summary: Beheerdersoverzicht meldingen
+      parameters:
+        - in: query
+          name: type
+          schema: { type: string }
+        - in: query
+          name: urgentie
+          schema: { type: string }
+        - in: query
+          name: status
+          schema: { type: string }
+        - in: query
+          name: gebruiker_naam
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MeldingOverzichtItem"
+
+  /meldingen/{id}:
+    get:
+      operationId: getMelding
+      tags: [meldingen]
+      summary: Melding detail (incl. screenshot)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MeldingDetail"
+    patch:
+      operationId: updateMelding
+      tags: [meldingen]
+      summary: Status en interne notitie bijwerken
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MeldingUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MeldingOntvangst"
+
   /salaris-mutaties:
     get:
       summary: Salarismutaties lijst
@@ -30917,6 +31003,164 @@ components:
           type: string
         tijd_koste_uur:
           type: integer
+
+    # ── Meldingen ──────────────────────────────────────────────────────────────
+    MeldingInput:
+      type: object
+      required: [type, omschrijving]
+      properties:
+        type:
+          type: string
+          enum: [bug, vraag, verbetering]
+        omschrijving:
+          type: string
+        urgentie:
+          type: string
+          enum: [laag, normaal, hoog, blokkerend]
+        pagina:
+          type: string
+          nullable: true
+        browser_info:
+          type: string
+          nullable: true
+        screenshot_data:
+          type: string
+          nullable: true
+        tech_context_toestemming:
+          type: boolean
+        tech_context:
+          type: string
+          nullable: true
+
+    MeldingOntvangst:
+      type: object
+      required: [id, status, bericht]
+      properties:
+        id:
+          type: integer
+        status:
+          type: string
+        bericht:
+          type: string
+        bijgewerkt_op:
+          type: string
+          nullable: true
+
+    MeldingOverzichtItem:
+      type: object
+      required: [id, type, omschrijving, urgentie, status, aangemaakt_op]
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+        omschrijving:
+          type: string
+        urgentie:
+          type: string
+        status:
+          type: string
+        gebruiker_naam:
+          type: string
+          nullable: true
+        gebruiker_rol:
+          type: string
+          nullable: true
+        pagina:
+          type: string
+          nullable: true
+        browser_info:
+          type: string
+          nullable: true
+        heeft_screenshot:
+          type: boolean
+        tech_context_toestemming:
+          type: boolean
+        ai_reactie:
+          type: string
+          nullable: true
+        ai_classificatie:
+          type: string
+          nullable: true
+        ai_workaround:
+          type: string
+          nullable: true
+        interne_notitie:
+          type: string
+          nullable: true
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+          nullable: true
+
+    MeldingDetail:
+      type: object
+      required: [id, type, omschrijving, urgentie, status, aangemaakt_op]
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+        omschrijving:
+          type: string
+        urgentie:
+          type: string
+        status:
+          type: string
+        gebruiker_id:
+          type: integer
+          nullable: true
+        gebruiker_naam:
+          type: string
+          nullable: true
+        gebruiker_rol:
+          type: string
+          nullable: true
+        pagina:
+          type: string
+          nullable: true
+        browser_info:
+          type: string
+          nullable: true
+        screenshot_data:
+          type: string
+          nullable: true
+        tech_context_toestemming:
+          type: boolean
+        tech_context:
+          type: string
+          nullable: true
+        ai_reactie:
+          type: string
+          nullable: true
+        ai_classificatie:
+          type: string
+          nullable: true
+        ai_workaround:
+          type: string
+          nullable: true
+        interne_notitie:
+          type: string
+          nullable: true
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+          nullable: true
+
+    MeldingUpdate:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [nieuw, in_behandeling, opgelost, afgewezen]
+        interne_notitie:
+          type: string
+          nullable: true
+        ai_workaround:
+          type: string
+          nullable: true
 
     SalarisMutatie:
       type: object

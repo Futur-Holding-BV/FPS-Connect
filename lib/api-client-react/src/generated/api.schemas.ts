@@ -7978,6 +7978,101 @@ export interface GoLiveLesInput {
   tijd_koste_uur?: number;
 }
 
+export type MeldingInputType = typeof MeldingInputType[keyof typeof MeldingInputType];
+
+
+export const MeldingInputType = {
+  bug: 'bug',
+  vraag: 'vraag',
+  verbetering: 'verbetering',
+} as const;
+
+export type MeldingInputUrgentie = typeof MeldingInputUrgentie[keyof typeof MeldingInputUrgentie];
+
+
+export const MeldingInputUrgentie = {
+  laag: 'laag',
+  normaal: 'normaal',
+  hoog: 'hoog',
+  blokkerend: 'blokkerend',
+} as const;
+
+export interface MeldingInput {
+  type: MeldingInputType;
+  omschrijving: string;
+  urgentie?: MeldingInputUrgentie;
+  pagina?: string | null;
+  browser_info?: string | null;
+  screenshot_data?: string | null;
+  tech_context_toestemming?: boolean;
+  tech_context?: string | null;
+}
+
+export interface MeldingOntvangst {
+  id: number;
+  status: string;
+  bericht: string;
+  bijgewerkt_op?: string | null;
+}
+
+export interface MeldingOverzichtItem {
+  id: number;
+  type: string;
+  omschrijving: string;
+  urgentie: string;
+  status: string;
+  gebruiker_naam?: string | null;
+  gebruiker_rol?: string | null;
+  pagina?: string | null;
+  browser_info?: string | null;
+  heeft_screenshot?: boolean;
+  tech_context_toestemming?: boolean;
+  ai_reactie?: string | null;
+  ai_classificatie?: string | null;
+  ai_workaround?: string | null;
+  interne_notitie?: string | null;
+  aangemaakt_op: string;
+  bijgewerkt_op?: string | null;
+}
+
+export interface MeldingDetail {
+  id: number;
+  type: string;
+  omschrijving: string;
+  urgentie: string;
+  status: string;
+  gebruiker_id?: number | null;
+  gebruiker_naam?: string | null;
+  gebruiker_rol?: string | null;
+  pagina?: string | null;
+  browser_info?: string | null;
+  screenshot_data?: string | null;
+  tech_context_toestemming?: boolean;
+  tech_context?: string | null;
+  ai_reactie?: string | null;
+  ai_classificatie?: string | null;
+  ai_workaround?: string | null;
+  interne_notitie?: string | null;
+  aangemaakt_op: string;
+  bijgewerkt_op?: string | null;
+}
+
+export type MeldingUpdateStatus = typeof MeldingUpdateStatus[keyof typeof MeldingUpdateStatus];
+
+
+export const MeldingUpdateStatus = {
+  nieuw: 'nieuw',
+  in_behandeling: 'in_behandeling',
+  opgelost: 'opgelost',
+  afgewezen: 'afgewezen',
+} as const;
+
+export interface MeldingUpdate {
+  status?: MeldingUpdateStatus;
+  interne_notitie?: string | null;
+  ai_workaround?: string | null;
+}
+
 export interface SalarisMutatie {
   id: number;
   medewerker_id?: number | null;
@@ -10280,6 +10375,13 @@ export type GetSalarisarchiefAuditlogParams = {
 document_id?: number;
 medewerker_id?: number;
 limit?: number;
+};
+
+export type ListMeldingenParams = {
+type?: string;
+urgentie?: string;
+status?: string;
+gebruiker_naam?: string;
 };
 
 export type GetSalarisMutatiesParams = {

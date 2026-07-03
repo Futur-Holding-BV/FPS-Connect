@@ -19651,6 +19651,106 @@ export const PostBeheerGoLiveLessenResponse = zod.void()
 
 
 /**
+ * @summary Gebruikersmelding indienen (bug / vraag / verbetersuggestie)
+ */
+export const CreateMeldingBody = zod.object({
+  "type": zod.enum(['bug', 'vraag', 'verbetering']),
+  "omschrijving": zod.string(),
+  "urgentie": zod.enum(['laag', 'normaal', 'hoog', 'blokkerend']).optional(),
+  "pagina": zod.string().nullish(),
+  "browser_info": zod.string().nullish(),
+  "screenshot_data": zod.string().nullish(),
+  "tech_context_toestemming": zod.boolean().optional(),
+  "tech_context": zod.string().nullish()
+})
+
+export const CreateMeldingResponse = zod.void()
+
+
+/**
+ * @summary Beheerdersoverzicht meldingen
+ */
+export const ListMeldingenQueryParams = zod.object({
+  "type": zod.coerce.string().optional(),
+  "urgentie": zod.coerce.string().optional(),
+  "status": zod.coerce.string().optional(),
+  "gebruiker_naam": zod.coerce.string().optional()
+})
+
+export const ListMeldingenResponseItem = zod.object({
+  "id": zod.number(),
+  "type": zod.string(),
+  "omschrijving": zod.string(),
+  "urgentie": zod.string(),
+  "status": zod.string(),
+  "gebruiker_naam": zod.string().nullish(),
+  "gebruiker_rol": zod.string().nullish(),
+  "pagina": zod.string().nullish(),
+  "browser_info": zod.string().nullish(),
+  "heeft_screenshot": zod.boolean().optional(),
+  "tech_context_toestemming": zod.boolean().optional(),
+  "ai_reactie": zod.string().nullish(),
+  "ai_classificatie": zod.string().nullish(),
+  "ai_workaround": zod.string().nullish(),
+  "interne_notitie": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().nullish()
+})
+export const ListMeldingenResponse = zod.array(ListMeldingenResponseItem)
+
+
+/**
+ * @summary Melding detail (incl. screenshot)
+ */
+export const GetMeldingParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetMeldingResponse = zod.object({
+  "id": zod.number(),
+  "type": zod.string(),
+  "omschrijving": zod.string(),
+  "urgentie": zod.string(),
+  "status": zod.string(),
+  "gebruiker_id": zod.number().nullish(),
+  "gebruiker_naam": zod.string().nullish(),
+  "gebruiker_rol": zod.string().nullish(),
+  "pagina": zod.string().nullish(),
+  "browser_info": zod.string().nullish(),
+  "screenshot_data": zod.string().nullish(),
+  "tech_context_toestemming": zod.boolean().optional(),
+  "tech_context": zod.string().nullish(),
+  "ai_reactie": zod.string().nullish(),
+  "ai_classificatie": zod.string().nullish(),
+  "ai_workaround": zod.string().nullish(),
+  "interne_notitie": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().nullish()
+})
+
+
+/**
+ * @summary Status en interne notitie bijwerken
+ */
+export const UpdateMeldingParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateMeldingBody = zod.object({
+  "status": zod.enum(['nieuw', 'in_behandeling', 'opgelost', 'afgewezen']).optional(),
+  "interne_notitie": zod.string().nullish(),
+  "ai_workaround": zod.string().nullish()
+})
+
+export const UpdateMeldingResponse = zod.object({
+  "id": zod.number(),
+  "status": zod.string(),
+  "bericht": zod.string(),
+  "bijgewerkt_op": zod.string().nullish()
+})
+
+
+/**
  * @summary Salarismutaties lijst
  */
 export const GetSalarisMutatiesQueryParams = zod.object({

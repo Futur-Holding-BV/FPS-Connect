@@ -133,6 +133,7 @@ import RegiePagina from "@/pages/regie/index";
 import RegieDetailPagina from "@/pages/regie/detail";
 import DocumentenPagina from "@/pages/documenten/index";
 import { OndersteuningWidget } from "@/components/ondersteuning-widget";
+import { MeldingKnop } from "@/components/melding-knop";
 import WelkomWizard, { isWelkomAfgerond } from "@/pages/welkom/index";
 import RapportenPagina from "@/pages/rapporten/index";
 import UrenPagina from "@/pages/uren/index";
@@ -159,6 +160,7 @@ import MijnSalarisdocumentenPagina from "@/pages/mijn/salarisdocumenten";
 import AiLogBeheer from "@/pages/beheer/ai-log";
 import BoekhoudingBeheer from "@/pages/beheer/boekhouding";
 import GoLivePagina from "@/pages/beheer/go-live";
+import MeldingenBeheerPage from "@/pages/beheer/meldingen";
 import GebouwenArchiefBeheer from "@/pages/beheer/gebouwen-archief";
 import SalarisMutatiesPagina from "@/pages/salaris-mutaties/index";
 import ScabMailPagina from "@/pages/scab-mail/index";
@@ -483,6 +485,7 @@ function ConnectPortal() {
         <Route path="/beheer/import" component={ImportPagina} />
         <Route path="/beheer/boekhouding" component={BoekhoudingBeheer} />
         <Route path="/beheer/go-live" component={GoLivePagina} />
+        <Route path="/beheer/meldingen" component={MeldingenBeheerPage} />
         <Route path="/beheer/projectstatus" component={ProjectstatusPagina} />
         <Route path="/beheer/pwa-test" component={PwaTest} />
         <Route path="/beheer/ai-log" component={AiLogBeheer} />
@@ -638,6 +641,7 @@ function Gate() {
           <AchievementProvider>
             <Portalen />
             <OndersteuningWidget />
+            <MeldingKnop />
             <HeatmapTracker />
           </AchievementProvider>
         </Route>

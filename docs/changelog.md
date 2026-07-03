@@ -4,6 +4,23 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-03 — Gebruikersfeedback voor livegang
+
+**Uitvoering:** volledig | **Diepere lagen:** volledig | **Getest:** typecheck firevault + api-server schoon, API 200, DB tabel aangemaakt
+
+**Gebruikersfeedbackfunctie (livegang-supportmodule)**
+- Nieuwe DB-tabel `gebruikers_meldingen` (type / omschrijving / urgentie / status / auto-context / screenshot / AI-reactie / beheer)
+- Floating "Melden"-knop (`<MeldingKnop />`) zichtbaar op alle hoofdschermen (vast in App.tsx naast OndersteuningWidget)
+- Formulier-modal: type (bug/vraag/verbetering), urgentie (laag/normaal/hoog/blokkerend), omschrijving, optioneel screenshot (max 2MB base64), optionele technische context (browser/URL/scherm)
+- Automatisch vastgelegd: ingelogde gebruiker + rol, huidige pagina/route, tijdstip, browser/device info
+- AI eerste-reactie (async, fire-and-forget, `gpt-4o-mini`): bug → classificatie + workaround-suggestie; vraag → antwoord/verwijzing; verbetering → bevestiging. Voorzichtig geformuleerd, claimt nooit zekere oplossing
+- Poll (max 8s) in de bevestigings-stap zodat gebruiker AI-reactie direct ziet
+- Intern logrecord met statusmachine: nieuw → in_behandeling → opgelost / afgewezen
+- Nieuw beheerdersoverzicht `/beheer/meldingen`: tabel met filters (type, urgentie, status, gebruikersnaam), statistieken (totaal / nieuw / blokkerend), detail-dialog met screenshot + technische context + opvolgingsformulier
+- Nav-item "Meldingen" toegevoegd in Beheer-sectie (sidebar, positie boven Audit trail)
+- OpenAPI: `POST /meldingen`, `GET /meldingen`, `GET /meldingen/:id`, `PATCH /meldingen/:id` + schemas MeldingInput / MeldingOntvangst / MeldingOverzichtItem / MeldingDetail / MeldingUpdate; codegen uitgevoerd
+- Route `requireAuth` voor indienen, `requireBevoegdheid("systeem", 2)` voor beheerdersroutes
+
 ## 2026-07-03 — Workflow-gaps: auto-werkbonnen, globaal inkoopoverzicht, ontvangst → magazijn
 
 **Uitvoering:** volledig | **Diepere lagen:** volledig | **Getest:** typecheck firevault + api-server schoon (0 fouten), workflows gezond
