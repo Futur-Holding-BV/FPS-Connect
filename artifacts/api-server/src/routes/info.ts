@@ -22,6 +22,7 @@ router.get("/info/instellingen", async (req, res) => {
         support_website: null,
         extra_disclaimer: null,
         opdrachtbevestiging_auto_verzenden: false,
+        ai_kostendrempel_eur: null,
         bijgewerkt_op: new Date().toISOString(),
         bijgewerkt_door_id: null,
       });
@@ -34,6 +35,7 @@ router.get("/info/instellingen", async (req, res) => {
       support_website: instelling.supportWebsite,
       extra_disclaimer: instelling.extraDisclaimer,
       opdrachtbevestiging_auto_verzenden: instelling.opdrachtbevestigingAutoVerzenden,
+      ai_kostendrempel_eur: instelling.aiKostendrempelEur != null ? parseFloat(instelling.aiKostendrempelEur) : null,
       bijgewerkt_op: instelling.bijgewerktOp.toISOString(),
       bijgewerkt_door_id: instelling.bijgewerktDoorId,
     });
@@ -49,17 +51,18 @@ router.put(
   requireRol("hoofdbeheerder"),
   async (req, res) => {
     try {
-      const { support_email, support_telefoon, support_website, extra_disclaimer, opdrachtbevestiging_auto_verzenden } =
+      const { support_email, support_telefoon, support_website, extra_disclaimer, opdrachtbevestiging_auto_verzenden, ai_kostendrempel_eur } =
         req.body as {
           support_email?: string;
           support_telefoon?: string;
           support_website?: string;
           extra_disclaimer?: string;
           opdrachtbevestiging_auto_verzenden?: boolean;
+          ai_kostendrempel_eur?: number | null;
         };
       const gebruikerId = req.session.userId!;
 
-      const payload = {
+      const payload: Record<string, unknown> = {
         supportEmail: support_email ?? null,
         supportTelefoon: support_telefoon ?? null,
         supportWebsite: support_website ?? null,
@@ -68,6 +71,9 @@ router.put(
         bijgewerktDoorId: gebruikerId,
         ...(typeof opdrachtbevestiging_auto_verzenden === "boolean"
           ? { opdrachtbevestigingAutoVerzenden: opdrachtbevestiging_auto_verzenden }
+          : {}),
+        ...(ai_kostendrempel_eur !== undefined
+          ? { aiKostendrempelEur: ai_kostendrempel_eur != null ? String(ai_kostendrempel_eur) : null }
           : {}),
       };
 
@@ -98,6 +104,7 @@ router.put(
         support_website: result.supportWebsite,
         extra_disclaimer: result.extraDisclaimer,
         opdrachtbevestiging_auto_verzenden: result.opdrachtbevestigingAutoVerzenden,
+        ai_kostendrempel_eur: result.aiKostendrempelEur != null ? parseFloat(result.aiKostendrempelEur) : null,
         bijgewerkt_op: result.bijgewerktOp.toISOString(),
         bijgewerkt_door_id: result.bijgewerktDoorId,
       });

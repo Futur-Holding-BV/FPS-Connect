@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { aiAanroepenTable, gebouwenTable, offertesTable } from "@workspace/db";
+import { aiAanroepenTable, appInstellingenTable, gebouwenTable, offertesTable } from "@workspace/db";
 import { desc, count, eq, and, gte, lte, sql, sum, ilike, getTableColumns } from "drizzle-orm";
 import { requireRol } from "../middlewares/auth";
 
@@ -273,6 +273,40 @@ router.get(
         kosten_eur: parseFloat(r.kosten_eur || "0").toFixed(6),
         tokens: Number(r.tokens),
       })),
+    });
+  },
+);
+
+router.get(
+  "/api/beheer/ai-drempel-status",
+  requireRol("hoofdbeheerder"),
+  async (req, res) => {
+    const [instelling] = await db
+      .select()
+      .from(appInstellingenTable)
+      .orderBy(appInstellingenTable.id)
+      .limit(1);
+
+    const drempel = instelling?.aiKostendrempelEur != null
+      ? parseFloat(instelling.aiKostendrempelEur)
+      : null;
+
+    const nu = new Date();
+    const maandStart = new Date(nu.getFullYear(), nu.getMonth(), 1);
+
+    const [{ totaalKosten }] = await db
+      .select({
+        totaalKosten: sql<string>`COALESCE(SUM(${aiAanroepenTable.geschatteKostenEur}), '0')::text`,
+      })
+      .from(aiAanroepenTable)
+      .where(gte(aiAanroepenTable.aangemaaktOp, maandStart));
+
+    const kosten = parseFloat(totaalKosten);
+
+    res.json({
+      drempel_eur: drempel,
+      huidig_maand_kosten_eur: kosten,
+      overschreden: drempel != null && kosten > drempel,
     });
   },
 );

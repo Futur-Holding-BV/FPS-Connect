@@ -12,4 +12,9 @@ export interface AppInstellingenInput {
   support_website?: string;
   extra_disclaimer?: string;
   opdrachtbevestiging_auto_verzenden?: boolean;
+  /**
+     * Maandelijks kostenplafond voor AI-gebruik in euro. Null of weglaten om drempel te verwijderen.
+     * @nullable
+     */
+  ai_kostendrempel_eur?: number | null;
 }

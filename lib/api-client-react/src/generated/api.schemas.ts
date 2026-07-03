@@ -2559,6 +2559,11 @@ export interface AppInstellingen {
   extra_disclaimer?: string | null;
   /** Als true wordt de opdrachtbevestigingsmail automatisch naar de klant verstuurd na ondertekening. Als false wordt de mail niet verstuurd. */
   opdrachtbevestiging_auto_verzenden: boolean;
+  /**
+     * Maandelijks kostenplafond voor AI-gebruik in euro. Null betekent geen drempel.
+     * @nullable
+     */
+  ai_kostendrempel_eur?: number | null;
   bijgewerkt_op: string;
   /** @nullable */
   bijgewerkt_door_id?: number | null;
@@ -2570,6 +2575,23 @@ export interface AppInstellingenInput {
   support_website?: string;
   extra_disclaimer?: string;
   opdrachtbevestiging_auto_verzenden?: boolean;
+  /**
+     * Maandelijks kostenplafond voor AI-gebruik in euro. Null of weglaten om drempel te verwijderen.
+     * @nullable
+     */
+  ai_kostendrempel_eur?: number | null;
+}
+
+export interface AiDrempelStatus {
+  /**
+     * Ingesteld maandelijks kostenplafond, of null als er geen drempel is.
+     * @nullable
+     */
+  drempel_eur?: number | null;
+  /** Totale AI-kosten in de lopende kalendermaand. */
+  huidig_maand_kosten_eur: number;
+  /** True als de huidige maandkosten de drempel overschrijden. */
+  overschreden: boolean;
 }
 
 export interface MailOpdrachtbevestigingDemoInput {

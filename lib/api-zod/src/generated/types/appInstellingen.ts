@@ -18,6 +18,11 @@ export interface AppInstellingen {
   extra_disclaimer?: string | null;
   /** Als true wordt de opdrachtbevestigingsmail automatisch naar de klant verstuurd na ondertekening. Als false wordt de mail niet verstuurd. */
   opdrachtbevestiging_auto_verzenden: boolean;
+  /**
+     * Maandelijks kostenplafond voor AI-gebruik in euro. Null betekent geen drempel.
+     * @nullable
+     */
+  ai_kostendrempel_eur?: number | null;
   bijgewerkt_op: string;
   /** @nullable */
   bijgewerkt_door_id?: number | null;

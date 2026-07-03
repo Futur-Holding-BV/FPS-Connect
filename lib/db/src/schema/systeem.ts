@@ -1,4 +1,4 @@
-import { pgTable, serial, text, boolean, integer, timestamp, doublePrecision } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, boolean, integer, timestamp, doublePrecision, numeric } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { gebruikersTable } from "./gebruikers";
@@ -76,6 +76,8 @@ export const appInstellingenTable = pgTable("app_instellingen", {
   supportWebsite: text("support_website"),
   extraDisclaimer: text("extra_disclaimer"),
   opdrachtbevestigingAutoVerzenden: boolean("opdrachtbevestiging_auto_verzenden").notNull().default(false),
+  aiKostendrempelEur: numeric("ai_kostendrempel_eur", { precision: 10, scale: 4 }),
+  aiDrempelMeldingGestuurdMaand: text("ai_drempel_melding_gestuurd_maand"),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
   bijgewerktDoorId: integer("bijgewerkt_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
 });

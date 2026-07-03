@@ -17115,6 +17115,21 @@ paths:
         "403":
           description: Geen toegang
 
+  /beheer/ai-drempel-status:
+    get:
+      operationId: getAiDrempelStatus
+      tags: [ai]
+      summary: Huidige maandkosten en drempelstatus (beheerder only)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AiDrempelStatus"
+        "403":
+          description: Geen toegang
+
   # ── LEVERANCIERS ─────────────────────────────────────────────────────────────
 
   /leveranciers:
@@ -21613,6 +21628,9 @@ components:
         opdrachtbevestiging_auto_verzenden:
           type: boolean
           description: Als true wordt de opdrachtbevestigingsmail automatisch naar de klant verstuurd na ondertekening. Als false wordt de mail niet verstuurd.
+        ai_kostendrempel_eur:
+          type: ["number", "null"]
+          description: Maandelijks kostenplafond voor AI-gebruik in euro. Null betekent geen drempel.
         bijgewerkt_op:
           type: string
         bijgewerkt_door_id:
@@ -21631,6 +21649,23 @@ components:
           type: string
         opdrachtbevestiging_auto_verzenden:
           type: boolean
+        ai_kostendrempel_eur:
+          type: ["number", "null"]
+          description: Maandelijks kostenplafond voor AI-gebruik in euro. Null of weglaten om drempel te verwijderen.
+
+    AiDrempelStatus:
+      type: object
+      required: [huidig_maand_kosten_eur, overschreden]
+      properties:
+        drempel_eur:
+          type: ["number", "null"]
+          description: Ingesteld maandelijks kostenplafond, of null als er geen drempel is.
+        huidig_maand_kosten_eur:
+          type: number
+          description: Totale AI-kosten in de lopende kalendermaand.
+        overschreden:
+          type: boolean
+          description: True als de huidige maandkosten de drempel overschrijden.
 
     MailOpdrachtbevestigingDemoInput:
       type: object

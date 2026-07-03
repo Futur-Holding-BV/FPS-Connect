@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Bot, TrendingUp, AlertCircle, Clock, Loader2, Filter, RefreshCw, Download } from "lucide-react";
+import { Bot, TrendingUp, AlertCircle, Clock, Loader2, Filter, RefreshCw, Download, TriangleAlert, Settings2, Check } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -10,9 +10,10 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { useListAiAanroepen, useGetAiAanroepenAggregaat } from "@workspace/api-client-react";
+import { useListAiAanroepen, useGetAiAanroepenAggregaat, useGetAiDrempelStatus, useGetInfoInstellingen, useUpdateInfoInstellingen } from "@workspace/api-client-react";
 import { useRol } from "@/context/rol-context";
 import { useLocation } from "wouter";
+import { useQueryClient } from "@tanstack/react-query";
 
 const MODULE_OPTIES = [
   "bibliotheek",
@@ -53,9 +54,9 @@ function formatDatum(iso: string): string {
   });
 }
 
-function formatKosten(val: string | null | undefined): string {
+function formatKosten(val: string | number | null | undefined): string {
   if (val == null) return "—";
-  const n = parseFloat(val);
+  const n = typeof val === "number" ? val : parseFloat(val);
   if (isNaN(n)) return "—";
   if (n === 0) return "€ 0,00";
   if (n < 0.001) return `€ ${n.toFixed(6)}`;
@@ -72,6 +73,213 @@ function formatTokens(n: number | null | undefined): string {
   if (n == null) return "—";
   if (n >= 1000) return `${(n / 1000).toFixed(1)}k`;
   return String(n);
+}
+
+function DrempelInstellingKaart() {
+  const queryClient = useQueryClient();
+  const { data: instelling } = useGetInfoInstellingen();
+  const { data: drempelStatus } = useGetAiDrempelStatus({
+    query: { queryKey: ["ai-drempel-status"] },
+  });
+
+  const bestaandeDrempel = instelling?.ai_kostendrempel_eur ?? null;
+  const [invoer, setInvoer] = useState<string>("");
+  const [bewerken, setBewerken] = useState(false);
+  const [opslaan, setOpslaan] = useState(false);
+  const [fout, setFout] = useState<string | null>(null);
+
+  const updateMutatie = useUpdateInfoInstellingen();
+
+  function startBewerken() {
+    setInvoer(bestaandeDrempel != null ? String(bestaandeDrempel) : "");
+    setFout(null);
+    setBewerken(true);
+  }
+
+  function annuleren() {
+    setBewerken(false);
+    setInvoer("");
+    setFout(null);
+  }
+
+  async function opslaan_handler() {
+    const waarde = invoer.trim();
+    let numVal: number | null = null;
+
+    if (waarde !== "") {
+      numVal = parseFloat(waarde.replace(",", "."));
+      if (isNaN(numVal) || numVal < 0) {
+        setFout("Voer een geldig bedrag in (bijv. 10 of 25.50).");
+        return;
+      }
+    }
+
+    setOpslaan(true);
+    setFout(null);
+    try {
+      await updateMutatie.mutateAsync({
+        data: {
+          ...( instelling ? {
+            support_email: instelling.support_email ?? undefined,
+            support_telefoon: instelling.support_telefoon ?? undefined,
+            support_website: instelling.support_website ?? undefined,
+            extra_disclaimer: instelling.extra_disclaimer ?? undefined,
+            opdrachtbevestiging_auto_verzenden: instelling.opdrachtbevestiging_auto_verzenden,
+          } : {}),
+          ai_kostendrempel_eur: numVal,
+        },
+      });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["ai-drempel-status"] }),
+        queryClient.invalidateQueries({ queryKey: ["/api/info/instellingen"] }),
+      ]);
+      setBewerken(false);
+      setInvoer("");
+    } catch {
+      setFout("Opslaan mislukt. Probeer opnieuw.");
+    } finally {
+      setOpslaan(false);
+    }
+  }
+
+  const voortgang = drempelStatus && bestaandeDrempel != null && bestaandeDrempel > 0
+    ? Math.min(100, (drempelStatus.huidig_maand_kosten_eur / bestaandeDrempel) * 100)
+    : null;
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-sm font-semibold flex items-center gap-2">
+            <Settings2 className="h-4 w-4" />
+            Maandelijkse kostendrempel
+          </CardTitle>
+          {!bewerken && (
+            <Button variant="ghost" size="sm" onClick={startBewerken}>
+              {bestaandeDrempel != null ? "Wijzigen" : "Instellen"}
+            </Button>
+          )}
+        </div>
+      </CardHeader>
+      <CardContent>
+        {!bewerken ? (
+          <div className="space-y-3">
+            {bestaandeDrempel != null ? (
+              <>
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl font-bold">
+                    {formatKosten(bestaandeDrempel)}
+                  </span>
+                  <span className="text-sm text-muted-foreground">per maand</span>
+                </div>
+                {drempelStatus && voortgang != null && (
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span>
+                        Huidig: {formatKosten(drempelStatus.huidig_maand_kosten_eur)}
+                      </span>
+                      <span>{voortgang.toFixed(0)}% van drempel</span>
+                    </div>
+                    <div className="h-2 rounded-full bg-muted overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all ${
+                          voortgang >= 100
+                            ? "bg-red-500"
+                            : voortgang >= 80
+                            ? "bg-orange-500"
+                            : "bg-green-500"
+                        }`}
+                        style={{ width: `${Math.min(100, voortgang)}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+              </>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Geen drempel ingesteld. Klik op "Instellen" om een maandelijks kostenplafond in te stellen.
+              </p>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <div>
+              <label className="text-xs text-muted-foreground mb-1 block">
+                Kostenplafond in euro per maand (leeg = geen drempel)
+              </label>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">€</span>
+                <Input
+                  className="h-8 text-sm w-36"
+                  placeholder="bijv. 10.00"
+                  value={invoer}
+                  onChange={(e) => setInvoer(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") void opslaan_handler();
+                    if (e.key === "Escape") annuleren();
+                  }}
+                  autoFocus
+                />
+              </div>
+              {fout && <p className="text-xs text-red-600 mt-1">{fout}</p>}
+            </div>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                onClick={() => void opslaan_handler()}
+                disabled={opslaan}
+              >
+                {opslaan ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />
+                ) : (
+                  <Check className="h-3.5 w-3.5 mr-1" />
+                )}
+                Opslaan
+              </Button>
+              <Button size="sm" variant="ghost" onClick={annuleren} disabled={opslaan}>
+                Annuleren
+              </Button>
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function DrempelBanner() {
+  const [verborgen, setVerborgen] = useState(false);
+  const { data: drempelStatus } = useGetAiDrempelStatus({
+    query: { queryKey: ["ai-drempel-status"] },
+  });
+
+  if (!drempelStatus?.overschreden || verborgen) return null;
+
+  return (
+    <div
+      role="alert"
+      className="flex items-center gap-3 px-4 py-3 rounded-lg bg-orange-50 border border-orange-300 text-orange-900"
+    >
+      <TriangleAlert className="h-5 w-5 shrink-0 text-orange-600" />
+      <div className="flex-1 min-w-0">
+        <span className="font-semibold text-sm">
+          Maandelijkse kostendrempel overschreden
+        </span>
+        <p className="text-xs text-orange-700 mt-0.5">
+          De AI-kosten deze maand ({formatKosten(drempelStatus.huidig_maand_kosten_eur)}) zijn
+          hoger dan het ingestelde plafond ({formatKosten(drempelStatus.drempel_eur)}).
+          Pas de drempel aan via de instelling hieronder.
+        </p>
+      </div>
+      <button
+        type="button"
+        onClick={() => setVerborgen(true)}
+        className="shrink-0 text-orange-600 hover:text-orange-800 text-xs underline"
+      >
+        Sluiten
+      </button>
+    </div>
+  );
 }
 
 export default function AiLogPagina() {
@@ -167,6 +375,8 @@ export default function AiLogPagina() {
         </div>
       </div>
 
+      <DrempelBanner />
+
       {/* Aggregaat kaarten */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Card>
@@ -225,6 +435,9 @@ export default function AiLogPagina() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Drempel instelling */}
+      <DrempelInstellingKaart />
 
       {/* Kosten per module */}
       {agg && agg.per_module.length > 0 && (

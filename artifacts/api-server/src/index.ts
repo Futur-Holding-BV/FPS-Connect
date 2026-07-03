@@ -6,6 +6,7 @@ import { planDagelijksePortaalOpruiming } from "./lib/portaalOpruimen";
 import { planDagelijkseMagazijnSignalering } from "./lib/magazijnSignalering";
 import { planDagelijksePlanningMeldingen } from "./lib/planningMeldingenService";
 import { planDagelijkseScout } from "./lib/scoutService";
+import { planUurlijkseAiDrempelCheck } from "./lib/aiDrempelCheck";
 
 const rawPort = process.env["PORT"];
 
@@ -47,6 +48,7 @@ ensureSessionTable()
       planDagelijkseMagazijnSignalering();
       planDagelijksePlanningMeldingen();
       planDagelijkseScout();
+      planUurlijkseAiDrempelCheck();
     });
   })
   .catch((err) => {

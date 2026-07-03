@@ -41,6 +41,7 @@ import type {
   AiCalculatieRegels200,
   AiChatAntwoord,
   AiChatInput,
+  AiDrempelStatus,
   AiInvullenInput,
   AiInvullenOrganisatie200,
   AiInvullenResultaat,
@@ -60718,6 +60719,83 @@ export function useGetAiAanroepenAggregaat<TData = Awaited<ReturnType<typeof get
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetAiAanroepenAggregaatQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetAiDrempelStatusUrl = () => {
+
+
+
+
+  return `/api/beheer/ai-drempel-status`
+}
+
+/**
+ * @summary Huidige maandkosten en drempelstatus (beheerder only)
+ */
+export const getAiDrempelStatus = async ( options?: RequestInit): Promise<AiDrempelStatus> => {
+
+  return customFetch<AiDrempelStatus>(getGetAiDrempelStatusUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetAiDrempelStatusQueryKey = () => {
+    return [
+    `/api/beheer/ai-drempel-status`
+    ] as const;
+    }
+
+
+export const getGetAiDrempelStatusQueryOptions = <TData = Awaited<ReturnType<typeof getAiDrempelStatus>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAiDrempelStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAiDrempelStatusQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAiDrempelStatus>>> = ({ signal }) => getAiDrempelStatus({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAiDrempelStatus>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetAiDrempelStatusQueryResult = NonNullable<Awaited<ReturnType<typeof getAiDrempelStatus>>>
+export type GetAiDrempelStatusQueryError = ErrorType<void>
+
+
+/**
+ * @summary Huidige maandkosten en drempelstatus (beheerder only)
+ */
+
+export function useGetAiDrempelStatus<TData = Awaited<ReturnType<typeof getAiDrempelStatus>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAiDrempelStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetAiDrempelStatusQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

@@ -44,6 +44,7 @@ export * from './aiChatAntwoord';
 export * from './aiChatBericht';
 export * from './aiChatBerichtRol';
 export * from './aiChatInput';
+export * from './aiDrempelStatus';
 export * from './aiInvullenInput';
 export * from './aiInvullenInputFormulierType';
 export * from './aiInvullenInputHuidigeVelden';

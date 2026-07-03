@@ -5814,6 +5814,7 @@ export const GetInfoInstellingenResponse = zod.object({
   "support_website": zod.string().nullish(),
   "extra_disclaimer": zod.string().nullish(),
   "opdrachtbevestiging_auto_verzenden": zod.boolean().describe('Als true wordt de opdrachtbevestigingsmail automatisch naar de klant verstuurd na ondertekening. Als false wordt de mail niet verstuurd.'),
+  "ai_kostendrempel_eur": zod.number().nullish().describe('Maandelijks kostenplafond voor AI-gebruik in euro. Null betekent geen drempel.'),
   "bijgewerkt_op": zod.string(),
   "bijgewerkt_door_id": zod.number().nullish()
 })
@@ -5827,7 +5828,8 @@ export const UpdateInfoInstellingenBody = zod.object({
   "support_telefoon": zod.string().optional(),
   "support_website": zod.string().optional(),
   "extra_disclaimer": zod.string().optional(),
-  "opdrachtbevestiging_auto_verzenden": zod.boolean().optional()
+  "opdrachtbevestiging_auto_verzenden": zod.boolean().optional(),
+  "ai_kostendrempel_eur": zod.number().nullish().describe('Maandelijks kostenplafond voor AI-gebruik in euro. Null of weglaten om drempel te verwijderen.')
 })
 
 export const UpdateInfoInstellingenResponse = zod.object({
@@ -5837,6 +5839,7 @@ export const UpdateInfoInstellingenResponse = zod.object({
   "support_website": zod.string().nullish(),
   "extra_disclaimer": zod.string().nullish(),
   "opdrachtbevestiging_auto_verzenden": zod.boolean().describe('Als true wordt de opdrachtbevestigingsmail automatisch naar de klant verstuurd na ondertekening. Als false wordt de mail niet verstuurd.'),
+  "ai_kostendrempel_eur": zod.number().nullish().describe('Maandelijks kostenplafond voor AI-gebruik in euro. Null betekent geen drempel.'),
   "bijgewerkt_op": zod.string(),
   "bijgewerkt_door_id": zod.number().nullish()
 })
@@ -21602,6 +21605,16 @@ export const GetAiAanroepenAggregaatResponse = zod.object({
   "kosten_eur": zod.string(),
   "tokens": zod.number()
 }))
+})
+
+
+/**
+ * @summary Huidige maandkosten en drempelstatus (beheerder only)
+ */
+export const GetAiDrempelStatusResponse = zod.object({
+  "drempel_eur": zod.number().nullish().describe('Ingesteld maandelijks kostenplafond, of null als er geen drempel is.'),
+  "huidig_maand_kosten_eur": zod.number().describe('Totale AI-kosten in de lopende kalendermaand.'),
+  "overschreden": zod.boolean().describe('True als de huidige maandkosten de drempel overschrijden.')
 })
 
 
