@@ -30,7 +30,7 @@ import { useRol } from "@/context/rol-context";
 import { featureFlags } from "@/lib/feature-flags";
 import { cn } from "@/lib/utils";
 import { NavigatieBewakingProvider, useNavigatieBewaking } from "@/context/navigatie-bewaking";
-import { OnlineGebruikers } from "@/components/online-gebruikers/online-gebruikers";
+import { OnlineGebruikersTaakbalk } from "@/components/online-gebruikers/online-gebruikers";
 import { VeiligheidMeldingBanner, OpenMeldingenBadge } from "@/components/veiligheidsmelding-banner";
 
 function PwaInstalleerKnop() {
@@ -1697,7 +1697,6 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
 
         <SidebarFooter>
           <PwaInstalleerKnop />
-          <OnlineGebruikers />
           <GebruikerMenu />
         </SidebarFooter>
       </Sidebar>
@@ -1708,6 +1707,9 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
           <SidebarTrigger className="md:hidden" title="Menu openen" />
           <img src="/logo-fps-connect.png" alt="FPS Connect" className="h-5 w-auto md:hidden" />
           <TerugKnop />
+          <div className="ml-auto">
+            <OnlineGebruikersTaakbalk />
+          </div>
         </div>
         {toonToolboxen && <VeiligheidMeldingBanner />}
         <div className="p-3 md:p-4 xl:p-6 pb-10">
