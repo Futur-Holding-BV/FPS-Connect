@@ -4,6 +4,19 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-03 — Herstelblokkade Task #181: TypeScript-fouten en data-integriteitsbug
+
+**Uitvoering:** volledig | **Diepere lagen:** volledig | **Getest:** typecheck clean (0 nieuwe fouten) + vitest 59/59
+
+Puur herstelwerk na releasecontrole; geen nieuwe functionaliteit.
+
+1. **hrm.ts — data-integriteitsbug opgelost** — `req.session?.gebruikerId` → `req.session.userId` op twee plekken (`aangemaaktDoorId` bij POST, `ondertekendDoorId` bij PATCH). Hierdoor werd altijd `null` ingevoegd in plaats van de werkelijke gebruiker-id.
+2. **hrm.ts — SelectedFields type hersteld** — Vier `.select({ ...zzpOvereenkomstenTable, … })` spreads vervangen door `...getTableColumns(zzpOvereenkomstenTable)` (Drizzle ORM patroon); cascadefouten TS2345 op `mapOvereenkomst` meegefikst. Import `getTableColumns` toegevoegd.
+3. **magazijn.ts — StorageFile type hersteld** — `storage.downloadObject(foto_pad: string)` vervangen door `storage.getObjectEntityFile(foto_pad)` → `storage.downloadObject(storageFile)` conform de `ObjectStorageService`-interface.
+4. **magazijn.ts — chained .where() hersteld** — `bestaandQuery.where(…)` na al een `.where()` refactored naar twee aparte queries met `and()`; Drizzle ORM staat geen tweede `.where()`-aanroep toe op een al-afgesloten query.
+5. **regie.ts — Express 5 query-param types** — Zes `parseInt(req.params.x)` calls vervangen door `parseInt(String(req.params.x))`; Express 5 `req.params` kan `string | string[]` teruggeven.
+6. **Test toegevoegd** (`__tests__/hrm-zzp.test.ts`) — 3 tests die bevestigen dat `aangemaaktDoorId` correct wordt gevuld via `req.session.userId` (niet null), inclusief regressietest op de verkeerde propertynaam `gebruikerId`.
+
 ## 2026-07-03 — Task #181: Audit Trail v2 — Productiegereed
 
 **Uitvoering:** volledig | **Diepere lagen:** volledig | **Getest:** vitest (30 tests, alle geslaagd) + typecheck

@@ -234,7 +234,7 @@ router.get("/regie/dashboard", requireAuth, lezen, async (req, res) => {
 
 // ── GET /regie/voorwaarden/:opdrachtId ────────────────────────────────────────
 router.get("/regie/voorwaarden/:opdrachtId", requireAuth, lezen, async (req, res) => {
-  const id = parseInt(req.params.opdrachtId);
+  const id = parseInt(String(req.params.opdrachtId));
   const [v] = await db.select().from(regieVoorwaardenTable).where(eq(regieVoorwaardenTable.opdrachtId, id));
   if (!v) { res.status(404).json({ fout: "Geen regievoorwaarden gevonden." }); return; }
   const tarieven = await db.select().from(regieTarievenTable).where(eq(regieTarievenTable.voorwaardenId, v.id));
@@ -243,7 +243,7 @@ router.get("/regie/voorwaarden/:opdrachtId", requireAuth, lezen, async (req, res
 
 // ── PUT /regie/voorwaarden/:opdrachtId — aanmaken of bijwerken (upsert) ──────
 router.put("/regie/voorwaarden/:opdrachtId", requireAuth, schrijven, async (req, res) => {
-  const opdrachtId = parseInt(req.params.opdrachtId);
+  const opdrachtId = parseInt(String(req.params.opdrachtId));
   const {
     contactpersoonOpdrachtgever, akkoordgeverOpdrachtgever, projectleiderFps,
     materiaalopslag, materieelopslag, transportkosten, voorrijkosten,
@@ -330,7 +330,7 @@ router.put("/regie/voorwaarden/:opdrachtId", requireAuth, schrijven, async (req,
 
 // ── GET /regie/begroting/:opdrachtId ─────────────────────────────────────────
 router.get("/regie/begroting/:opdrachtId", requireAuth, lezen, async (req, res) => {
-  const id = parseInt(req.params.opdrachtId);
+  const id = parseInt(String(req.params.opdrachtId));
   const [b] = await db.select().from(regieBegrotingTable).where(eq(regieBegrotingTable.opdrachtId, id));
   if (!b) { res.status(404).json({ fout: "Geen regiebegroting gevonden." }); return; }
   res.json(mapBegroting(b));
@@ -338,7 +338,7 @@ router.get("/regie/begroting/:opdrachtId", requireAuth, lezen, async (req, res) 
 
 // ── PUT /regie/begroting/:opdrachtId ─────────────────────────────────────────
 router.put("/regie/begroting/:opdrachtId", requireAuth, schrijven, async (req, res) => {
-  const opdrachtId = parseInt(req.params.opdrachtId);
+  const opdrachtId = parseInt(String(req.params.opdrachtId));
   const {
     verwachtUren, verwachtMateriaal, verwachtMaterieel,
     verwachtDoorlooptijdDagen, maximaalBudget, meldgrensOpdrachtgever,
@@ -435,7 +435,7 @@ router.post("/regie/materiaal", requireAuth, schrijven, async (req, res) => {
 
 // ── PATCH /regie/materiaal/:id ────────────────────────────────────────────────
 router.patch("/regie/materiaal/:id", requireAuth, schrijven, async (req, res) => {
-  const id = parseInt(req.params.id);
+  const id = parseInt(String(req.params.id));
   const [existing] = await db.select().from(regieMaterialenTable).where(eq(regieMaterialenTable.id, id));
   if (!existing) { res.status(404).json({ fout: "Materiaalregel niet gevonden." }); return; }
 
@@ -469,7 +469,7 @@ router.patch("/regie/materiaal/:id", requireAuth, schrijven, async (req, res) =>
 
 // ── DELETE /regie/materiaal/:id ───────────────────────────────────────────────
 router.delete("/regie/materiaal/:id", requireAuth, schrijven, async (req, res) => {
-  const id = parseInt(req.params.id);
+  const id = parseInt(String(req.params.id));
   await db.delete(regieMaterialenTable).where(eq(regieMaterialenTable.id, id));
   res.json({ ok: true });
 });

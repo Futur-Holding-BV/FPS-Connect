@@ -40,7 +40,7 @@ import {
   medewerkerAanstellingenTable,
 } from "@workspace/db";
 import { ObjectStorageService } from "../lib/objectStorage";
-import { eq, desc, and, ne, inArray, or, isNull, gte, lte, sql } from "drizzle-orm";
+import { eq, desc, and, ne, inArray, or, isNull, gte, lte, sql, getTableColumns } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { stelOpleidingenVoor } from "../services/opleiding-ai";
 import { workflowService, maakTransitieContext } from "../services/workflow-engine";
@@ -3904,7 +3904,7 @@ router.get("/zzp-overeenkomsten", lezen, async (req, res) => {
 
     const rijen = await db
       .select({
-        ...zzpOvereenkomstenTable,
+        ...getTableColumns(zzpOvereenkomstenTable),
         medewerker_naam: medewerkersTable.naam,
       })
       .from(zzpOvereenkomstenTable)
@@ -3933,7 +3933,7 @@ router.post("/zzp-overeenkomsten", schrijven, async (req, res) => {
 
     const [nieuw] = await db.insert(zzpOvereenkomstenTable).values({
       medewerkerId: Number(medewerker_id),
-      aangemaaktDoorId: req.session?.gebruikerId ?? null,
+      aangemaaktDoorId: req.session.userId ?? null,
       opdrachtOmschrijving: String(opdracht_omschrijving),
       specifiekeTaken: specifieke_taken ? String(specifieke_taken) : null,
       projectnummer: projectnummer ? String(projectnummer) : null,
@@ -3950,7 +3950,7 @@ router.post("/zzp-overeenkomsten", schrijven, async (req, res) => {
     }).returning();
 
     const [metNaam] = await db
-      .select({ ...zzpOvereenkomstenTable, medewerker_naam: medewerkersTable.naam })
+      .select({ ...getTableColumns(zzpOvereenkomstenTable), medewerker_naam: medewerkersTable.naam })
       .from(zzpOvereenkomstenTable)
       .leftJoin(medewerkersTable, eq(zzpOvereenkomstenTable.medewerkerId, medewerkersTable.id))
       .where(eq(zzpOvereenkomstenTable.id, nieuw.id));
@@ -4049,7 +4049,7 @@ router.get("/zzp-overeenkomsten/:id", lezen, async (req, res) => {
   try {
     const id = parseId(req.params.id);
     const [rij] = await db
-      .select({ ...zzpOvereenkomstenTable, medewerker_naam: medewerkersTable.naam })
+      .select({ ...getTableColumns(zzpOvereenkomstenTable), medewerker_naam: medewerkersTable.naam })
       .from(zzpOvereenkomstenTable)
       .leftJoin(medewerkersTable, eq(zzpOvereenkomstenTable.medewerkerId, medewerkersTable.id))
       .where(eq(zzpOvereenkomstenTable.id, id));
@@ -4079,7 +4079,7 @@ router.patch("/zzp-overeenkomsten/:id", schrijven, async (req, res) => {
     const nieuweStatus = status ? String(status) : undefined;
     const ondertekendDoorId =
       nieuweStatus === "ondertekend" && !bestaand.ondertekendDoorId
-        ? (req.session?.gebruikerId ?? null)
+        ? (req.session.userId ?? null)
         : bestaand.ondertekendDoorId;
 
     const [bijgewerkt] = await db
@@ -4106,7 +4106,7 @@ router.patch("/zzp-overeenkomsten/:id", schrijven, async (req, res) => {
       .returning();
 
     const [metNaam] = await db
-      .select({ ...zzpOvereenkomstenTable, medewerker_naam: medewerkersTable.naam })
+      .select({ ...getTableColumns(zzpOvereenkomstenTable), medewerker_naam: medewerkersTable.naam })
       .from(zzpOvereenkomstenTable)
       .leftJoin(medewerkersTable, eq(zzpOvereenkomstenTable.medewerkerId, medewerkersTable.id))
       .where(eq(zzpOvereenkomstenTable.id, bijgewerkt.id));

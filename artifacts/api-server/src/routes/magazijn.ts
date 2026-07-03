@@ -1233,7 +1233,8 @@ router.post("/magazijn/stellingscans", schrijven, async (req, res) => {
     if (heeftOpenAi()) {
       try {
         const storage = new ObjectStorageService();
-        const resp = await storage.downloadObject(foto_pad);
+        const storageFile = await storage.getObjectEntityFile(foto_pad);
+        const resp = await storage.downloadObject(storageFile);
         const buffer = Buffer.from(await resp.arrayBuffer());
 
         const sharp = (await import("sharp")).default;
@@ -1448,14 +1449,13 @@ router.post("/magazijn/stellingscans/:id/goedkeuren", schrijven, async (req, res
         // Retour: hoeveelheid toevoegen aan voorraad op de aanbevolen locatie
         const doelLocatieId = item.locatie_id ?? null;
 
-        const bestaandQuery = db
-          .select()
-          .from(voorraadTable)
-          .where(eq(voorraadTable.artikelId, item.artikel_id));
-
         const [bestaand] = doelLocatieId
-          ? await bestaandQuery.where(eq(voorraadTable.locatieId, doelLocatieId)).limit(1)
-          : await bestaandQuery.limit(1);
+          ? await db.select().from(voorraadTable)
+              .where(and(eq(voorraadTable.artikelId, item.artikel_id), eq(voorraadTable.locatieId, doelLocatieId)))
+              .limit(1)
+          : await db.select().from(voorraadTable)
+              .where(eq(voorraadTable.artikelId, item.artikel_id))
+              .limit(1);
 
         if (bestaand) {
           await db
