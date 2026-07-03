@@ -15,6 +15,7 @@ Nieuw niveau in de calculatiestructuur: **Calculatie-eenheid** boven Hoofdstuk. 
 - **OpenAPI** (`lib/api-spec/openapi.yaml`): `CalcEenheid` + `CalcEenheidInput` schemas; CRUD-paden `/modules/calculaties/{id}/eenheden` (GET/POST) + `/{eenheidId}` (PUT/DELETE); `eenheid_id` op `ModCalcRegel` en `ModCalcRegelInput`. Codegen geslaagd.
 - **Route handlers** (`artifacts/api-server/src/routes/mod-calculatie.ts`): 4 nieuwe CRUD-handlers voor eenheden; `mapRegel` geeft `eenheid_id` terug; create/update regel accepteren `eenheid_id`.
 - **detail.tsx**: `EenheidBalk` component (uitklap/inklapbaar, per-eenheid subtotalen mat/arb/OA, bewerkbaar/verwijderbaar); eenheden-groepering in spreadsheet boven hoofdstukken; regels zonder eenheid in eigen sectie (backward compat); "Eenheid"-knop in toolbar; CRUD-dialoog (naam + type-dropdown, 11 types); `ingeklapteEenheden` Set-state; `toggleEenheidIngeklapt`, `openEenheidAanmaken`, `openEenheidBewerken`, `slaEenheidOp` functies; `nieuweRegel` accepteert `eenheid_id` zodat "Regel"-knop per eenheid direct de juiste eenheid-koppeling zet.
+- **monteur-app/hooks/useFotoUpload.ts** (nieuw): ontbrekende hook aangemaakt — wraps `uploadFoto` uit `@/lib/upload` met `Promise<string | null>` signatuur (null bij fout); lost bundling-fout in `pbm.tsx` op.
 
 ## 2026-07-03 — AI Senior Werkvoorbereider bij Werkbegroting
 
