@@ -16599,6 +16599,16 @@ paths:
           name: status
           schema:
             type: string
+        - in: query
+          name: van_datum
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: tot_datum
+          schema:
+            type: string
+            format: date
       responses:
         "200":
           description: OK
@@ -17653,6 +17663,7 @@ components:
           items:
             $ref: "#/components/schemas/AiAanroepLog"
         totaal:    { type: integer }
+        totale_kosten_eur: { type: ["string", "null"] }
         pagina:    { type: integer }
         per_pagina: { type: integer }
 

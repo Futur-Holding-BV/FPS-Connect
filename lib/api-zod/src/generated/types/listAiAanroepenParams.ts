@@ -11,4 +11,6 @@ pagina?: number;
 per_pagina?: number;
 module?: string;
 status?: string;
+van_datum?: Date;
+tot_datum?: Date;
 };

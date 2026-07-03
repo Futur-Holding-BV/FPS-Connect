@@ -43,6 +43,8 @@ export interface AiAanroepLog {
 export interface AiAanroepenPagina {
   items: AiAanroepLog[];
   totaal: number;
+  /** @nullable */
+  totale_kosten_eur?: string | null;
   pagina: number;
   per_pagina: number;
 }
@@ -10163,6 +10165,8 @@ pagina?: number;
 per_pagina?: number;
 module?: string;
 status?: string;
+van_datum?: string;
+tot_datum?: string;
 };
 
 export type ListLeveranciersParams = {

@@ -20,7 +20,7 @@ import {
   Inbox, Building2, Target, Handshake, Newspaper, CalendarRange, KeyRound,
   ClipboardCheck, AlertTriangle, TriangleAlert, FileArchive, Receipt, ArrowUpRight, ScrollText,
   UserPlus, UserMinus, UserX, Car, GitBranch, ArrowLeft, ChevronDown, Palette, Monitor,
-  Package, Upload, MapPin, Archive, ArrowLeftRight, BookmarkCheck, ScanSearch,
+  Package, Upload, MapPin, Archive, ArrowLeftRight, BookmarkCheck, ScanSearch, Bot,
 } from "lucide-react";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { Badge } from "@/components/ui/badge";
@@ -1500,6 +1500,16 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                               </Link>
                             </SidebarMenuButton>
                           </SidebarMenuItem>
+                          {isHoofdbeheerder && (
+                            <SidebarMenuItem className="pl-5">
+                              <SidebarMenuButton asChild isActive={location === "/beheer/ai-aanroepen"}>
+                                <Link href="/beheer/ai-aanroepen">
+                                  <Bot />
+                                  <span>AI-aanroepen</span>
+                                </Link>
+                              </SidebarMenuButton>
+                            </SidebarMenuItem>
+                          )}
                           <SidebarMenuItem className="pl-5">
                             <SidebarMenuButton asChild isActive={location === "/beheer/mail"}>
                               <Link href="/beheer/mail">

@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { aiAanroepenTable } from "@workspace/db";
-import { desc, count, eq, and } from "drizzle-orm";
+import { desc, count, eq, and, gte, lte, sum } from "drizzle-orm";
 import { requireRol } from "../middlewares/auth";
 
 const router = Router();
@@ -14,16 +14,26 @@ router.get(
     const perPagina = Math.min(200, Math.max(1, parseInt(String(req.query.per_pagina ?? "50"), 10) || 50));
     const moduleFilter = typeof req.query.module === "string" ? req.query.module.trim() : null;
     const statusFilter = typeof req.query.status === "string" ? req.query.status.trim() : null;
+    const vanDatum = typeof req.query.van_datum === "string" ? req.query.van_datum.trim() : null;
+    const totDatum = typeof req.query.tot_datum === "string" ? req.query.tot_datum.trim() : null;
 
     const offset = (pagina - 1) * perPagina;
 
     const conditions = [];
     if (moduleFilter) conditions.push(eq(aiAanroepenTable.module, moduleFilter));
     if (statusFilter) conditions.push(eq(aiAanroepenTable.status, statusFilter));
+    if (vanDatum) {
+      const van = new Date(vanDatum);
+      if (!isNaN(van.getTime())) conditions.push(gte(aiAanroepenTable.aangemaaktOp, van));
+    }
+    if (totDatum) {
+      const tot = new Date(totDatum + "T23:59:59.999Z");
+      if (!isNaN(tot.getTime())) conditions.push(lte(aiAanroepenTable.aangemaaktOp, tot));
+    }
 
     const where = conditions.length > 0 ? and(...conditions) : undefined;
 
-    const [rows, [{ totaal }]] = await Promise.all([
+    const [rows, [{ totaal }], [{ totaleKosten }]] = await Promise.all([
       db
         .select()
         .from(aiAanroepenTable)
@@ -33,6 +43,10 @@ router.get(
         .offset(offset),
       db
         .select({ totaal: count() })
+        .from(aiAanroepenTable)
+        .where(where),
+      db
+        .select({ totaleKosten: sum(aiAanroepenTable.geschatteKostenEur) })
         .from(aiAanroepenTable)
         .where(where),
     ]);
@@ -62,6 +76,7 @@ router.get(
     res.json({
       items,
       totaal: Number(totaal),
+      totale_kosten_eur: totaleKosten ?? null,
       pagina,
       per_pagina: perPagina,
     });

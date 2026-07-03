@@ -4,6 +4,27 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-03 — Task #192: AI-aanroeplogging beheerdersdashboard
+
+**Uitvoering:** volledig | **Diepere lagen:** volledig | **Getest:** typecheck clean, screenshot route actief
+
+Nieuwe beheerderspagina `/beheer/ai-aanroepen` die de AI-aanroeplogging zichtbaar maakt voor hoofdbeheerders.
+
+- **Nieuwe pagina** `artifacts/firevault/src/pages/beheer/ai-aanroepen.tsx`
+  - Samenvatting-kaarten: aantal aanroepen, geschatte kosten (gefilterd, server-side SUM), gem. duur (huidige pagina)
+  - Gepagineerde tabel (50/pagina): tijdstip, module, functie, model, tokens, kosten (EUR), duur (ms), status
+  - Filterbar: module-dropdown, status-dropdown (geslaagd/mislukt), datumbereik (van/tot, standaard laatste 30 dagen)
+  - Reset-knop bij actieve filters; paginatiebesturing
+- **OpenAPI spec uitgebreid** (`lib/api-spec/openapi.yaml`)
+  - `van_datum` en `tot_datum` queryparameters toegevoegd aan `/beheer/ai-aanroepen`
+  - `totale_kosten_eur` veld toegevoegd aan `AiAanroepenPagina` response-schema
+- **Backend route uitgebreid** (`artifacts/api-server/src/routes/ai-log.ts`)
+  - Datumfiltering via `gte`/`lte` op `aangemaaktOp`
+  - Server-side `SUM(geschatte_kosten_eur)` voor totale kosten over de gefilterde selectie
+- **Codegen uitgevoerd** — gegenereerde hook `useListAiAanroepen` bijgewerkt met `van_datum`/`tot_datum` params
+- **Route geregistreerd** in `App.tsx`
+- **Navigatie-item** toegevoegd in `beheerder-layout.tsx` (onder Audit trail, Bot-icoon)
+
 ## 2026-07-03 — Task #189: AI Gateway — AiContextBron, flat businesscontext, aiOrchestrator
 
 **Uitvoering:** volledig | **Diepere lagen:** volledig | **Getest:** DB push geslaagd (context_json jsonb column), typecheck clean (0 nieuwe fouten)
@@ -33,6 +54,7 @@ Voor elke taak drie scores:
 - `offertes.ts`: 3 AI-aanroepen (`sectie-genereren`, `e-mail-voorstel`, `contract-advies`) uitgebreid met `module/functie/gebruikerId/offerte_id`
 - `werkvoorbereiding.ts`: 3 AI-aanroepen (`inkoopplanning-genereer`, `inkoopbon-genereer`, `uitvoeringsplan-genereer`) uitgebreid met `module/functie/gebruikerId/project_id`
 - `planning-module.ts`: reistijd-schatting uitgebreid met `module/functie/gebruikerId`
+
 
 ## 2026-07-03 — Task #188: AI-aanroeplogging, kostenregistratie en Prompt Registry
 

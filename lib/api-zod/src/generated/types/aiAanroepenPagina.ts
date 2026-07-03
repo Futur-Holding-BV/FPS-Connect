@@ -10,6 +10,8 @@ import type { AiAanroepLog } from './aiAanroepLog';
 export interface AiAanroepenPagina {
   items: AiAanroepLog[];
   totaal: number;
+  /** @nullable */
+  totale_kosten_eur?: string | null;
   pagina: number;
   per_pagina: number;
 }

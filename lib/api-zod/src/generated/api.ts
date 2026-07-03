@@ -21054,7 +21054,9 @@ export const ListAiAanroepenQueryParams = zod.object({
   "pagina": zod.coerce.number().default(listAiAanroepenQueryPaginaDefault),
   "per_pagina": zod.coerce.number().default(listAiAanroepenQueryPerPaginaDefault),
   "module": zod.coerce.string().optional(),
-  "status": zod.coerce.string().optional()
+  "status": zod.coerce.string().optional(),
+  "van_datum": zod.date().optional(),
+  "tot_datum": zod.date().optional()
 })
 
 export const ListAiAanroepenResponse = zod.object({
@@ -21080,6 +21082,7 @@ export const ListAiAanroepenResponse = zod.object({
   "foutmelding": zod.string().nullish()
 })),
   "totaal": zod.number(),
+  "totale_kosten_eur": zod.string().nullish(),
   "pagina": zod.number(),
   "per_pagina": zod.number()
 })
