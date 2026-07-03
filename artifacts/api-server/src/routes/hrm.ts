@@ -506,7 +506,7 @@ router.post("/functies/:id/opleidingen-voorstel", schrijven, async (req, res) =>
       verantwoordelijkheden: f.verantwoordelijkheden,
       competenties: f.competenties,
       opleidingsvereisten: f.opleidingsvereisten,
-    });
+    }, { gebruikerId: req.session.userId ?? null });
     res.json(resultaat);
   } catch (err) {
     req.log.error(err);

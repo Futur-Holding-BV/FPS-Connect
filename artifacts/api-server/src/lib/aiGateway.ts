@@ -1,6 +1,9 @@
+import crypto from "node:crypto";
 import type OpenAI from "openai";
 import { heeftOpenAi, maakOpenAiClient } from "./openai";
 import { logger } from "./logger";
+import { db } from "@workspace/db";
+import { aiAanroepenTable } from "@workspace/db";
 
 // ── Model registry ────────────────────────────────────────────────────────────
 
@@ -13,6 +16,53 @@ const MODEL_REGISTRY: Record<ModelSlot, string> = {
   vision:    "gpt-5",
   embedding: "text-embedding-3-small",
 };
+
+// ── Prijstabel (EUR per 1 miljoen tokens) ─────────────────────────────────────
+// Bijgewerkt op basis van OpenAI-tarieven (indicatief; niet voor facturatie).
+
+interface ModelPrijs {
+  input: number;
+  output: number;
+}
+
+const PRIJS_PER_MODEL: Record<string, ModelPrijs> = {
+  "gpt-4o":                   { input: 2.50,  output: 10.00 },
+  "gpt-4o-mini":              { input: 0.15,  output: 0.60  },
+  "gpt-5":                    { input: 2.50,  output: 10.00 },
+  "gpt-4-turbo":              { input: 10.00, output: 30.00 },
+  "gpt-4":                    { input: 30.00, output: 60.00 },
+  "text-embedding-3-small":   { input: 0.02,  output: 0.00  },
+  "text-embedding-3-large":   { input: 0.13,  output: 0.00  },
+};
+
+function berekenKosten(
+  modelNaam: string,
+  promptTokens: number | null | undefined,
+  completionTokens: number | null | undefined,
+): string | null {
+  const prijs = PRIJS_PER_MODEL[modelNaam];
+  if (!prijs) return null;
+  const inp = promptTokens ?? 0;
+  const out = completionTokens ?? 0;
+  const totaal = (inp * prijs.input + out * prijs.output) / 1_000_000;
+  return totaal.toFixed(6);
+}
+
+function promptHashVan(tekst: string): string {
+  return crypto.createHash("sha256").update(tekst).digest("hex").slice(0, 16);
+}
+
+// ── Log-context ───────────────────────────────────────────────────────────────
+
+export interface LogContext {
+  module: string;
+  functie?: string;
+  gebruikerId?: number | null;
+  entiteitstype?: string | null;
+  entiteitId?: number | null;
+  promptNaam?: string | null;
+  promptVersie?: string | null;
+}
 
 // ── Resultaattype ─────────────────────────────────────────────────────────────
 
@@ -33,6 +83,12 @@ function isRetrybaar(err: unknown): boolean {
   return false;
 }
 
+function isTimeout(err: unknown): boolean {
+  if (err instanceof Error && err.name === "TimeoutError") return true;
+  if (err instanceof Error && err.message.toLowerCase().includes("timeout")) return true;
+  return false;
+}
+
 // ── Params-typen: volledige create-params minus model ────────────────────────
 
 export type ChatParams = Omit<
@@ -47,6 +103,41 @@ export type ResponsesParams = {
   text?: { format?: { type?: string; [k: string]: unknown } };
   [k: string]: unknown;
 };
+
+// ── Prompt-hash helper ────────────────────────────────────────────────────────
+
+function extractSystemPromptHash(params: ChatParams): string | null {
+  const systemMsg = params.messages?.find((m) => m.role === "system");
+  if (!systemMsg) return null;
+  const tekst = typeof systemMsg.content === "string" ? systemMsg.content : null;
+  return tekst ? promptHashVan(tekst) : null;
+}
+
+// ── Asynchroon logging (fire-and-forget) ──────────────────────────────────────
+
+function logAanroep(record: {
+  module: string;
+  functie: string | null;
+  gebruikerId: number | null;
+  entiteitstype: string | null;
+  entiteitId: number | null;
+  modelSlot: string;
+  modelNaam: string;
+  promptNaam: string | null;
+  promptVersie: string | null;
+  promptHash: string | null;
+  promptTokens: number | null;
+  completionTokens: number | null;
+  totalTokens: number | null;
+  geschatteKostenEur: string | null;
+  duurMs: number | null;
+  status: string;
+  foutmelding: string | null;
+}): void {
+  db.insert(aiAanroepenTable).values(record).catch((err) => {
+    logger.warn({ err }, "AI-aanroeplogging mislukt (fire-and-forget)");
+  });
+}
 
 // ── Singleton gateway ─────────────────────────────────────────────────────────
 
@@ -74,14 +165,18 @@ class AiGatewayService {
    * - Voegt een AbortSignal-timeout toe.
    * - Herprobeert maximaal 2x bij netwerk- of 5xx-fout; bij 4xx nooit.
    * - Geeft altijd een ChatResultaat terug — throw bereikt nooit de HTTP-handler.
+   * - Schrijft asynchroon een record naar ai_aanroepen (fire-and-forget).
    */
   async chat(
     slot: ModelSlot,
     params: ChatParams,
     timeoutMs: number = STANDAARD_TIMEOUT_MS,
+    logCtx?: LogContext,
   ): Promise<ChatResultaat> {
     const model = MODEL_REGISTRY[slot];
+    const promptHash = extractSystemPromptHash(params);
     let pogingen = 0;
+    const start = Date.now();
 
     while (pogingen < MAX_POGINGEN) {
       pogingen++;
@@ -90,7 +185,34 @@ class AiGatewayService {
           { ...params, model },
           { signal: AbortSignal.timeout(timeoutMs) },
         );
+        const duurMs = Date.now() - start;
         const inhoud = completion.choices[0]?.message?.content ?? null;
+        const usage = completion.usage;
+
+        const promptTokens = usage?.prompt_tokens ?? null;
+        const completionTokens = usage?.completion_tokens ?? null;
+        const totalTokens = usage?.total_tokens ?? null;
+
+        logAanroep({
+          module: logCtx?.module ?? "onbekend",
+          functie: logCtx?.functie ?? null,
+          gebruikerId: logCtx?.gebruikerId ?? null,
+          entiteitstype: logCtx?.entiteitstype ?? null,
+          entiteitId: logCtx?.entiteitId ?? null,
+          modelSlot: slot,
+          modelNaam: model,
+          promptNaam: logCtx?.promptNaam ?? null,
+          promptVersie: logCtx?.promptVersie ?? null,
+          promptHash,
+          promptTokens,
+          completionTokens,
+          totalTokens,
+          geschatteKostenEur: berekenKosten(model, promptTokens, completionTokens),
+          duurMs,
+          status: inhoud ? "ok" : "fout",
+          foutmelding: inhoud ? null : "Geen inhoud in antwoord",
+        });
+
         if (!inhoud) {
           return { ok: false, fout: "De AI gaf geen inhoud terug." };
         }
@@ -98,8 +220,29 @@ class AiGatewayService {
       } catch (err) {
         const isLaatste = pogingen >= MAX_POGINGEN;
         if (!isRetrybaar(err) || isLaatste) {
-          logger.error({ err, slot, model, pogingen }, "AI-gateway chat-aanroep mislukt");
+          const duurMs = Date.now() - start;
           const bericht = err instanceof Error ? err.message : String(err);
+          const statusCode = isTimeout(err) ? "timeout" : "fout";
+          logger.error({ err, slot, model, pogingen }, "AI-gateway chat-aanroep mislukt");
+          logAanroep({
+            module: logCtx?.module ?? "onbekend",
+            functie: logCtx?.functie ?? null,
+            gebruikerId: logCtx?.gebruikerId ?? null,
+            entiteitstype: logCtx?.entiteitstype ?? null,
+            entiteitId: logCtx?.entiteitId ?? null,
+            modelSlot: slot,
+            modelNaam: model,
+            promptNaam: logCtx?.promptNaam ?? null,
+            promptVersie: logCtx?.promptVersie ?? null,
+            promptHash,
+            promptTokens: null,
+            completionTokens: null,
+            totalTokens: null,
+            geschatteKostenEur: null,
+            duurMs,
+            status: statusCode,
+            foutmelding: bericht.slice(0, 500),
+          });
           return { ok: false, fout: `AI-aanroep mislukt: ${bericht}` };
         }
         logger.warn({ err, slot, model, poging: pogingen }, "AI-gateway retry na tijdelijke fout");
@@ -118,9 +261,11 @@ class AiGatewayService {
     slot: ModelSlot,
     params: ResponsesParams,
     timeoutMs: number = STANDAARD_TIMEOUT_MS,
+    logCtx?: LogContext,
   ): Promise<ChatResultaat> {
     const model = MODEL_REGISTRY[slot];
     let pogingen = 0;
+    const start = Date.now();
 
     while (pogingen < MAX_POGINGEN) {
       pogingen++;
@@ -130,8 +275,30 @@ class AiGatewayService {
           { ...params, model },
           { signal: AbortSignal.timeout(timeoutMs) },
         );
+        const duurMs = Date.now() - start;
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const inhoud: string | null = (resp as any).output_text ?? null;
+
+        logAanroep({
+          module: logCtx?.module ?? "onbekend",
+          functie: logCtx?.functie ?? null,
+          gebruikerId: logCtx?.gebruikerId ?? null,
+          entiteitstype: logCtx?.entiteitstype ?? null,
+          entiteitId: logCtx?.entiteitId ?? null,
+          modelSlot: slot,
+          modelNaam: model,
+          promptNaam: logCtx?.promptNaam ?? null,
+          promptVersie: logCtx?.promptVersie ?? null,
+          promptHash: null,
+          promptTokens: null,
+          completionTokens: null,
+          totalTokens: null,
+          geschatteKostenEur: null,
+          duurMs,
+          status: inhoud ? "ok" : "fout",
+          foutmelding: inhoud ? null : "Geen output_text in antwoord",
+        });
+
         if (!inhoud) {
           return { ok: false, fout: "De AI gaf geen output_text terug." };
         }
@@ -139,8 +306,29 @@ class AiGatewayService {
       } catch (err) {
         const isLaatste = pogingen >= MAX_POGINGEN;
         if (!isRetrybaar(err) || isLaatste) {
-          logger.error({ err, slot, model, pogingen }, "AI-gateway responses-aanroep mislukt");
+          const duurMs = Date.now() - start;
           const bericht = err instanceof Error ? err.message : String(err);
+          const statusCode = isTimeout(err) ? "timeout" : "fout";
+          logger.error({ err, slot, model, pogingen }, "AI-gateway responses-aanroep mislukt");
+          logAanroep({
+            module: logCtx?.module ?? "onbekend",
+            functie: logCtx?.functie ?? null,
+            gebruikerId: logCtx?.gebruikerId ?? null,
+            entiteitstype: logCtx?.entiteitstype ?? null,
+            entiteitId: logCtx?.entiteitId ?? null,
+            modelSlot: slot,
+            modelNaam: model,
+            promptNaam: logCtx?.promptNaam ?? null,
+            promptVersie: logCtx?.promptVersie ?? null,
+            promptHash: null,
+            promptTokens: null,
+            completionTokens: null,
+            totalTokens: null,
+            geschatteKostenEur: null,
+            duurMs,
+            status: statusCode,
+            foutmelding: bericht.slice(0, 500),
+          });
           return { ok: false, fout: `AI responses-aanroep mislukt: ${bericht}` };
         }
         logger.warn({ err, slot, model, poging: pogingen }, "AI-gateway retry na tijdelijke fout");

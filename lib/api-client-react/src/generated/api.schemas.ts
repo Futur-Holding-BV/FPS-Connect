@@ -5,6 +5,48 @@
  * FPS Brandpreventie - Platform voor brandpreventieve gebouwvoorzieningen
  * OpenAPI spec version: 0.1.0
  */
+export interface AiAanroepLog {
+  id: number;
+  aangemaakt_op: string;
+  module: string;
+  /** @nullable */
+  functie?: string | null;
+  /** @nullable */
+  gebruiker_id?: number | null;
+  /** @nullable */
+  entiteitstype?: string | null;
+  /** @nullable */
+  entiteit_id?: number | null;
+  model_slot: string;
+  model_naam: string;
+  /** @nullable */
+  prompt_naam?: string | null;
+  /** @nullable */
+  prompt_versie?: string | null;
+  /** @nullable */
+  prompt_hash?: string | null;
+  /** @nullable */
+  prompt_tokens?: number | null;
+  /** @nullable */
+  completion_tokens?: number | null;
+  /** @nullable */
+  total_tokens?: number | null;
+  /** @nullable */
+  geschatte_kosten_eur?: string | null;
+  /** @nullable */
+  duur_ms?: number | null;
+  status: string;
+  /** @nullable */
+  foutmelding?: string | null;
+}
+
+export interface AiAanroepenPagina {
+  items: AiAanroepLog[];
+  totaal: number;
+  pagina: number;
+  per_pagina: number;
+}
+
 export type AiInvullenInputFormulierType = typeof AiInvullenInputFormulierType[keyof typeof AiInvullenInputFormulierType];
 
 
@@ -10114,6 +10156,13 @@ export type AiInvullenOrganisatie200Velden = {[key: string]: string | null};
 
 export type AiInvullenOrganisatie200 = {
   velden: AiInvullenOrganisatie200Velden;
+};
+
+export type ListAiAanroepenParams = {
+pagina?: number;
+per_pagina?: number;
+module?: string;
+status?: string;
 };
 
 export type ListLeveranciersParams = {

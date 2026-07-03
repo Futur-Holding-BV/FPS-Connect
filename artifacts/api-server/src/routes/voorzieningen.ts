@@ -355,6 +355,7 @@ router.post("/voorzieningen/ai-spotvoorstel", requireBevoegdheid("voorzieningen"
       gebouwId: Number(gebouw_id),
       fotoVoorObjectPath: foto_voor_url ? String(foto_voor_url) : null,
       fotoNaObjectPath: String(foto_na_url),
+      logCtx: { gebruikerId: req.session.userId ?? null },
     });
     return res.json(voorstel);
   } catch (err) {

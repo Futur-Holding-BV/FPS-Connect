@@ -21045,6 +21045,47 @@ export const AiBedrijfsscanOrganisatieResponse = zod.object({
 
 
 /**
+ * @summary Gepagineerd overzicht van AI-aanroepen (beheerder only)
+ */
+export const listAiAanroepenQueryPaginaDefault = 1;
+export const listAiAanroepenQueryPerPaginaDefault = 50;
+
+export const ListAiAanroepenQueryParams = zod.object({
+  "pagina": zod.coerce.number().default(listAiAanroepenQueryPaginaDefault),
+  "per_pagina": zod.coerce.number().default(listAiAanroepenQueryPerPaginaDefault),
+  "module": zod.coerce.string().optional(),
+  "status": zod.coerce.string().optional()
+})
+
+export const ListAiAanroepenResponse = zod.object({
+  "items": zod.array(zod.object({
+  "id": zod.number(),
+  "aangemaakt_op": zod.coerce.date(),
+  "module": zod.string(),
+  "functie": zod.string().nullish(),
+  "gebruiker_id": zod.number().nullish(),
+  "entiteitstype": zod.string().nullish(),
+  "entiteit_id": zod.number().nullish(),
+  "model_slot": zod.string(),
+  "model_naam": zod.string(),
+  "prompt_naam": zod.string().nullish(),
+  "prompt_versie": zod.string().nullish(),
+  "prompt_hash": zod.string().nullish(),
+  "prompt_tokens": zod.number().nullish(),
+  "completion_tokens": zod.number().nullish(),
+  "total_tokens": zod.number().nullish(),
+  "geschatte_kosten_eur": zod.string().nullish(),
+  "duur_ms": zod.number().nullish(),
+  "status": zod.string(),
+  "foutmelding": zod.string().nullish()
+})),
+  "totaal": zod.number(),
+  "pagina": zod.number(),
+  "per_pagina": zod.number()
+})
+
+
+/**
  * @summary Alle leveranciers ophalen
  */
 export const ListLeveranciersQueryParams = zod.object({

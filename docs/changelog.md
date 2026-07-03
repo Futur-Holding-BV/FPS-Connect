@@ -4,6 +4,47 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-03 — Task #188: AI-aanroeplogging, kostenregistratie en Prompt Registry
+
+**Uitvoering:** volledig | **Diepere lagen:** volledig | **Getest:** DB push geslaagd, esbuild clean (10.6mb), typecheck (0 nieuwe fouten), server 200 OK
+
+Drie samenhangende onderdelen in één checkpoint:
+
+**1. DB-tabel `ai_aanroepen`** (`lib/db/src/schema/ai-log.ts`)
+- Kolommen: id, aangemaakt_op, module, functie, gebruiker_id, entiteitstype, entiteit_id, model_slot, model_naam, prompt_naam, prompt_versie, prompt_hash, prompt_tokens, completion_tokens, total_tokens, geschatte_kosten_eur (numeric), duur_ms, status, foutmelding
+- Geëxporteerd vanuit `lib/db/src/schema/index.ts`
+- `pnpm --filter @workspace/db run push` geslaagd
+
+**2. AI Gateway uitgebreid** (`artifacts/api-server/src/lib/aiGateway.ts`)
+- Nieuw type `LogContext` geëxporteerd (module, functie?, gebruikerId?, entiteitstype?, entiteitId?, promptNaam?, promptVersie?)
+- `PRIJS_PER_MODEL` kostenmodel (€/1K tokens per model-slot)
+- `berekenKosten()` berekent geschatte kosten op basis van token-tellingen
+- `promptHashVan()` berekent SHA-256 van de prompt-tekst
+- `logAanroep()` schrijft fire-and-forget naar `ai_aanroepen` (catch voor errors zodat logging nooit een AI-call blokkeert)
+- `chat()` en `responses()` accepteren optionele `logCtx?` en loggen na elke aanroep
+
+**3. Prompt Registry** (`artifacts/api-server/src/lib/aiPrompts.ts`)
+- Centrale registry met 9 prompts als benoemde constanten: DOCUMENT_ANALYSE, SPOT_ANALYSE, GEBOUW_VISION, GEBOUW_EXTRACTIE, TEKENING_ANALYSE, PLATTEGROND_ANALYSE, OPLEIDING_VOORSTEL, EMAIL_INZICHT, EMAIL_SAMENVATTING
+- Elk met `naam`, `versie` (semver) en `tekst`
+- Alle inline SYSTEM_PROMPT-constanten verwijderd uit 4 servicebestanden
+
+**4. LogContext doorgethreaded** (4 servicebestanden)
+- `document-ai.ts`, `spot-ai.ts`, `opleiding-ai.ts`, `email-ai.ts`, `gebouw-ai.ts` — alle AI-aanroepen geven nu `module`, `functie`, `promptNaam`, `promptVersie` mee
+- Service-functies accepteren optionele `logCtx?` voor aanvullende context (gebruikerId, entiteitstype, entiteit_id) vanuit route handlers
+
+**5. GET /beheer/ai-aanroepen endpoint**
+- OpenAPI spec: `lib/api-spec/openapi.yaml` — nieuw pad + `AiAanroepLog` + `AiAanroepenPagina` schemas
+- Route handler: `artifacts/api-server/src/routes/ai-log.ts` — gepagineerd, filterbaar op module en status, gated op `requireRol("hoofdbeheerder")`
+- Geregistreerd in `artifacts/api-server/src/routes/index.ts`
+- Codegen uitgevoerd (orval geslaagd)
+
+**Correcties na code review:**
+- Logging **onvoorwaardelijk**: `if (logCtx)` guards verwijderd uit alle 4 logAanroep-aanroepen in de gateway; bij ontbrekende context wordt `module="onbekend"` als fallback gebruikt
+- `gebruikerId` doorgethreaded vanuit `req.session.userId` in alle 6 belangrijkste route callsites: `documenten.ts` (document-analyse), `voorzieningen.ts` (spot-analyse), `hrm.ts` (opleiding-voorstel), `emails.ts` (email-inzicht), `gebouwen.ts` (tekening-analyse, plattegrond-analyse, gebouw-vrije-tekst)
+- LogContext-parameter toegevoegd aan 3 geëxporteerde service-functies in `gebouw-ai.ts` die dat nog misten (analyseerTekening, analyseerPlattegrond, analyseerGebouwVrijeTekst); aiGateway-aanroepen spreiden `...logCtx` uit
+
+---
+
 ## 2026-07-03 — Inkoopfacturen: leverancier-presets + factuurregels + BTW-code select
 
 **Uitvoering:** volledig | **Getest:** typecheck 0 fouten (api-server + firevault), workflows RUNNING

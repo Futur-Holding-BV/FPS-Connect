@@ -49,3 +49,4 @@ export * from "./materiaal-aanvragen";
 export * from "./uitvoerder";
 export * from "./audit";
 export * from "./rechten";
+export * from "./ai-log";

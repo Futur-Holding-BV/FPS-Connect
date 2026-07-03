@@ -36,7 +36,7 @@ router.post("/documenten/ai-analyse", requireBevoegdheid("bibliotheek", 3), asyn
     const tekst = typeof req.body?.tekst === "string" ? req.body.tekst : "";
     const bestandsnaam =
       typeof req.body?.bestandsnaam === "string" ? req.body.bestandsnaam : null;
-    const resultaat = await analyseerDocumentTekst(tekst, bestandsnaam);
+    const resultaat = await analyseerDocumentTekst(tekst, bestandsnaam, { gebruikerId: req.session.userId ?? null });
 
     // Stel passende toepassingen voor op basis van de herkende terminologie.
     const labels = await db

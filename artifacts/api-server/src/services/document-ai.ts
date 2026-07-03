@@ -1,5 +1,6 @@
 import { logger } from "../lib/logger";
-import { aiGateway } from "../lib/aiGateway";
+import { aiGateway, type LogContext } from "../lib/aiGateway";
+import { DOCUMENT_ANALYSE_PROMPT } from "../lib/aiPrompts";
 import {
   isDocumentType,
   type DocumentType,
@@ -45,25 +46,10 @@ function leegResultaat(toelichting: string): DocumentAnalyse {
 // documentmetadata staat vrijwel altijd op de eerste pagina's (kop, titelblok).
 const MAX_TEKST_LENGTE = 12000;
 
-const SYSTEM_PROMPT = `Je bent een expert in brandveiligheidsdocumentatie. Je analyseert de tekst van een geüpload bibliotheekdocument (bijvoorbeeld een ETA, classificatierapport, testrapport, productcertificaat, DoP of verwerkingsvoorschrift) en haalt de kerngegevens eruit.
-Haal alleen gegevens op die EXPLICIET in de tekst staan. Verzin niets; laat onbekende velden op null.
-Geef uitsluitend geldige JSON terug met deze velden:
-- naam (tekst of null): een nette, leesbare documentnaam in het Nederlands (bijv. "ETA Mulcol Multicollar Slim" of "Classificatierapport Hilti CFS-C P"). Combineer fabrikant + product + documenttype indien zinvol.
-- fabrikant (tekst of null): de fabrikant/producent (bijv. "Mulcol", "Hilti", "Rockwool", "Nullifire").
-- product (tekst of null): de productnaam of het systeem.
-- documenttype (tekst of null): kies exact één uit: eta, classificatierapport, testrapport, productcertificaat, dop, verwerkingsvoorschrift. Een "Declaration of Performance" is "dop". Een "European Technical Assessment" is "eta".
-- en_norm (tekst of null): de relevante EN-norm of testnorm, inclusief nummer (bijv. "EN 1366-3", "EN 13501-2", "ETAG 026").
-- rapportnummer (tekst of null): het rapport-, certificaat- of ETA-nummer (bijv. "ETA-11/0429", "WFRGENT 21-001").
-- revisie (tekst of null): de revisie- of versieaanduiding indien vermeld.
-- datum (tekst of null): de uitgifte- of revisiedatum in formaat JJJJ-MM-DD indien af te leiden, anders zoals vermeld.
-- getest_voor (tekst of null): kies exact één uit: wand, plafond, beide. Geeft aan voor welke scheidingsconstructie het document is getest of gecertificeerd. Kies "wand" bij een wandopstelling (flexibele of rigide wand), "plafond" bij een vloer/plafond-opstelling, en "beide" als het document expliciet zowel wand als vloer/plafond dekt. Laat op null als dit niet uit de tekst blijkt.
-- toelichting (korte Nederlandse tekst): waar je de gegevens vandaan haalde.
-- betrouwbaarheid (tekst): "laag", "midden" of "hoog".
-Antwoord in het Nederlands. Alleen JSON, geen extra tekst.`;
-
 export async function analyseerDocumentTekst(
   tekst: string,
   bestandsnaam?: string | null,
+  logCtx?: Partial<LogContext>,
 ): Promise<DocumentAnalyse> {
   const schoon = (tekst ?? "").trim();
   if (!schoon) {
@@ -81,9 +67,15 @@ export async function analyseerDocumentTekst(
     response_format: { type: "json_object" },
     max_completion_tokens: 4000,
     messages: [
-      { role: "system", content: SYSTEM_PROMPT },
+      { role: "system", content: DOCUMENT_ANALYSE_PROMPT.tekst },
       { role: "user", content: userTekst },
     ],
+  }, undefined, {
+    module: "bibliotheek",
+    functie: "document-analyse",
+    promptNaam: DOCUMENT_ANALYSE_PROMPT.naam,
+    promptVersie: DOCUMENT_ANALYSE_PROMPT.versie,
+    ...logCtx,
   });
   if (!resultaat.ok) {
     logger.error({ fout: resultaat.fout }, "Document AI-analyse mislukte");

@@ -5,7 +5,8 @@
 // vervolgens zelf opslaat. Op expliciet verzoek vooruit gebouwd (zie replit.md /
 // docs/roadmap/parallel-spoor.md); blijft binnen "AI stelt voor".
 import { logger } from "../lib/logger";
-import { aiGateway, heeftGateway } from "../lib/aiGateway";
+import { aiGateway, heeftGateway, type LogContext } from "../lib/aiGateway";
+import { OPLEIDING_VOORSTEL_PROMPT } from "../lib/aiPrompts";
 
 export interface OpleidingVoorstel {
   naam: string;
@@ -61,38 +62,6 @@ function soortOf(v: unknown): "opleiding" | "cursus" {
   return strOfNull(v) === "opleiding" ? "opleiding" : "cursus";
 }
 
-const SYSTEM_PROMPT = `Je bent een Nederlandse HR- en opleidingsadviseur voor een technisch bedrijf in brandpreventie en bouw (FPS Groep).
-Je krijgt een functieprofiel en stelt daarbij PASSENDE opleidingen en cursussen voor.
-
-Onderscheid expliciet:
-- "opleiding": een diplomagerichte, langdurige opleiding (bijv. MBO/HBO/WO/UT);
-- "cursus": een korte training of certificering (bijv. VCA, BHV, een vakcursus).
-
-Geef per voorstel zo realistisch mogelijk:
-- naam: de gangbare Nederlandse benaming;
-- soort: "opleiding" of "cursus";
-- categorie: korte categorie (bijv. "veiligheid", "vaktechniek", "leidinggeven", "wettelijk");
-- omschrijving: 1 korte zin waarom dit bij de functie past;
-- niveau: een van "MBO", "HBO", "WO/UT" of "Anders" (gebruik "Anders" voor losse cursussen/certificeringen zonder onderwijsniveau);
-- opleider: een gangbare aanbieder/opleider in Nederland indien bekend, anders null;
-- studieduur: bijv. "3 jaar", "6 maanden", "2 dagen";
-- studiebelasting: bijv. "16 uur per week", "40 uur totaal";
-- lesvorm: een van "klassikaal", "online", "zelfstudie", "blended", "praktijk";
-- kosten_indicatie: ruwe kostenindicatie als tekst, bijv. "EUR 1.500" of "EUR 350 per persoon", anders null;
-- kosten_werkgever_pct en kosten_werknemer_pct: gehele getallen die samen 100 zijn (gebruikelijke verdeling; werkgever betaalt meestal volledig wettelijke/veiligheidscursussen);
-- geldigheid_maanden: aantal maanden dat een certificaat geldig blijft (bijv. 12, 36, 120), of null als niet van toepassing;
-- verplicht: true als dit doorgaans wettelijk of voor de functie verplicht is, anders false.
-
-Verzin geen exacte prijzen of opleiders als je het niet weet; gebruik dan null of een ruwe indicatie.
-Geef 4 tot 8 voorstellen: een mix van opleidingen en cursussen, geprioriteerd op relevantie.
-
-Antwoord UITSLUITEND in geldige JSON met deze structuur:
-{
-  "voorstellen": [ { ...velden hierboven... } ],
-  "toelichting": "korte Nederlandse toelichting bij de selectie",
-  "betrouwbaarheid": "hoog" | "gemiddeld" | "laag"
-}
-Alle teksten in het Nederlands. Geen extra tekst buiten de JSON.`;
 
 function bouwFunctieTekst(functie: FunctieContext): string {
   const regels: string[] = [`Functie: ${functie.naam}`];
@@ -105,7 +74,7 @@ function bouwFunctieTekst(functie: FunctieContext): string {
   return regels.join("\n");
 }
 
-export async function stelOpleidingenVoor(functie: FunctieContext): Promise<OpleidingenVoorstelResultaat> {
+export async function stelOpleidingenVoor(functie: FunctieContext, logCtx?: Partial<LogContext>): Promise<OpleidingenVoorstelResultaat> {
   if (!heeftGateway()) {
     return {
       voorstellen: [],
@@ -118,9 +87,15 @@ export async function stelOpleidingenVoor(functie: FunctieContext): Promise<Ople
     response_format: { type: "json_object" },
     max_completion_tokens: 4000,
     messages: [
-      { role: "system", content: SYSTEM_PROMPT },
+      { role: "system", content: OPLEIDING_VOORSTEL_PROMPT.tekst },
       { role: "user", content: bouwFunctieTekst(functie) },
     ],
+  }, undefined, {
+    module: "hrm",
+    functie: "opleiding-voorstel",
+    promptNaam: OPLEIDING_VOORSTEL_PROMPT.naam,
+    promptVersie: OPLEIDING_VOORSTEL_PROMPT.versie,
+    ...logCtx,
   });
   if (!aiResultaat.ok) {
     logger.error({ fout: aiResultaat.fout }, "AI-opleidingenvoorstel mislukt");

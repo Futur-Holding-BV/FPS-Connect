@@ -82,6 +82,7 @@ import { meldActief } from "../lib/online-tracker";
 import { maakAuditMiddleware } from "../lib/audit";
 import auditRouter from "./audit";
 import objectRechtenRouter from "./object-rechten";
+import aiLogRouter from "./ai-log";
 import "../services/workflow-configs";
 
 const router: IRouter = Router();
@@ -180,5 +181,6 @@ router.use(regieRouter);
 router.use(contractBewakingRouter);
 router.use(auditRouter);
 router.use(objectRechtenRouter);
+router.use(aiLogRouter);
 
 export default router;

@@ -35,6 +35,7 @@ import type {
   AccountviewRelatieMappingInput,
   AchievementControleerResponse,
   Activiteit,
+  AiAanroepenPagina,
   AiAnalyseToolboxBerichten200,
   AiCalculatieRegels200,
   AiChatAntwoord,
@@ -296,6 +297,7 @@ import type {
   Leverancier,
   LeverancierInput,
   ListActieveDocumentStudioModellen200,
+  ListAiAanroepenParams,
   ListAlleVerlofAanvragenParams,
   ListArtikelenParams,
   ListBedrijfssluitingenParams,
@@ -59193,6 +59195,90 @@ export const useAiBedrijfsscanOrganisatie = <TError = ErrorType<unknown>,
       > => {
       return useMutation(getAiBedrijfsscanOrganisatieMutationOptions(options));
     }
+
+export const getListAiAanroepenUrl = (params?: ListAiAanroepenParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/beheer/ai-aanroepen?${stringifiedParams}` : `/api/beheer/ai-aanroepen`
+}
+
+/**
+ * @summary Gepagineerd overzicht van AI-aanroepen (beheerder only)
+ */
+export const listAiAanroepen = async (params?: ListAiAanroepenParams, options?: RequestInit): Promise<AiAanroepenPagina> => {
+
+  return customFetch<AiAanroepenPagina>(getListAiAanroepenUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListAiAanroepenQueryKey = (params?: ListAiAanroepenParams,) => {
+    return [
+    `/api/beheer/ai-aanroepen`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListAiAanroepenQueryOptions = <TData = Awaited<ReturnType<typeof listAiAanroepen>>, TError = ErrorType<void>>(params?: ListAiAanroepenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAiAanroepen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAiAanroepenQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAiAanroepen>>> = ({ signal }) => listAiAanroepen(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAiAanroepen>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListAiAanroepenQueryResult = NonNullable<Awaited<ReturnType<typeof listAiAanroepen>>>
+export type ListAiAanroepenQueryError = ErrorType<void>
+
+
+/**
+ * @summary Gepagineerd overzicht van AI-aanroepen (beheerder only)
+ */
+
+export function useListAiAanroepen<TData = Awaited<ReturnType<typeof listAiAanroepen>>, TError = ErrorType<void>>(
+ params?: ListAiAanroepenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAiAanroepen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListAiAanroepenQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
 export const getListLeveranciersUrl = (params?: ListLeveranciersParams,) => {
   const normalizedParams = new URLSearchParams();

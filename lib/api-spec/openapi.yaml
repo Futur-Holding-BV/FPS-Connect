@@ -16573,6 +16573,42 @@ paths:
               schema:
                 $ref: "#/components/schemas/OrgAiBedrijfsscanResultaat"
 
+  # ── BEHEER — AI-log ──────────────────────────────────────────────────────────
+
+  /beheer/ai-aanroepen:
+    get:
+      operationId: listAiAanroepen
+      tags: [ai]
+      summary: Gepagineerd overzicht van AI-aanroepen (beheerder only)
+      parameters:
+        - in: query
+          name: pagina
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: per_pagina
+          schema:
+            type: integer
+            default: 50
+        - in: query
+          name: module
+          schema:
+            type: string
+        - in: query
+          name: status
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AiAanroepenPagina"
+        "403":
+          description: Geen toegang
+
   # ── LEVERANCIERS ─────────────────────────────────────────────────────────────
 
   /leveranciers:
@@ -17584,6 +17620,42 @@ paths:
 
 components:
   schemas:
+    AiAanroepLog:
+      type: object
+      required: [id, aangemaakt_op, module, model_slot, model_naam, status]
+      properties:
+        id:             { type: integer }
+        aangemaakt_op:  { type: string, format: date-time }
+        module:         { type: string }
+        functie:        { type: ["string", "null"] }
+        gebruiker_id:   { type: ["integer", "null"] }
+        entiteitstype:  { type: ["string", "null"] }
+        entiteit_id:    { type: ["integer", "null"] }
+        model_slot:     { type: string }
+        model_naam:     { type: string }
+        prompt_naam:    { type: ["string", "null"] }
+        prompt_versie:  { type: ["string", "null"] }
+        prompt_hash:    { type: ["string", "null"] }
+        prompt_tokens:  { type: ["integer", "null"] }
+        completion_tokens: { type: ["integer", "null"] }
+        total_tokens:   { type: ["integer", "null"] }
+        geschatte_kosten_eur: { type: ["string", "null"] }
+        duur_ms:        { type: ["integer", "null"] }
+        status:         { type: string }
+        foutmelding:    { type: ["string", "null"] }
+
+    AiAanroepenPagina:
+      type: object
+      required: [items, totaal, pagina, per_pagina]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/AiAanroepLog"
+        totaal:    { type: integer }
+        pagina:    { type: integer }
+        per_pagina: { type: integer }
+
     AiInvullenInput:
       type: object
       required: [formulier_type, huidige_velden]

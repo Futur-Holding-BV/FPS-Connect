@@ -1,6 +1,12 @@
 import type OpenAI from "openai";
 import { logger } from "../lib/logger";
-import { aiGateway, heeftGateway } from "../lib/aiGateway";
+import { aiGateway, heeftGateway, type LogContext } from "../lib/aiGateway";
+import {
+  GEBOUW_VISION_PROMPT,
+  GEBOUW_EXTRACTIE_PROMPT,
+  TEKENING_ANALYSE_PROMPT,
+  PLATTEGROND_ANALYSE_PROMPT,
+} from "../lib/aiPrompts";
 
 const GOOGLE_KEY = process.env.GOOGLE_MAPS_API_KEY;
 const HEEFT_OPENAI = heeftGateway();
@@ -338,22 +344,6 @@ export async function haalStreetViewBeeld(lat: number, lng: number): Promise<str
   }
 }
 
-const SYSTEM_PROMPT = `Je bent een expert bouwkundig analist. Je analyseert beeldmateriaal van een gebouw en schat de fysieke eigenschappen.
-Je krijgt een satellietbeeld (bovenaanzicht) en/of een Street View-foto (zijaanzicht/straatniveau) van hetzelfde gebouw; bij een satellietbeeld staat het gebouw van belang in het MIDDEN van dat beeld.
-Gebruik het satellietbeeld, indien aanwezig, voor de footprint-afmetingen (breedte, diepte, oppervlakte) en de opgegeven schaal. Ontbreekt het satellietbeeld, schat de footprint dan ruw o.b.v. de Street View-foto en het gebouwtype en houd de betrouwbaarheid voor die afmetingen laag.
-Gebruik de Street View-foto, indien aanwezig, om het gebouwtype te BEPALEN en het aantal bouwlagen te tellen door de rijen ramen/verdiepingen te tellen; dat is veel betrouwbaarder dan schatten. Ontbreekt de Street View-foto, leid type en aantal dan af uit het satellietbeeld of o.b.v. gebouwtype/regio.
-Zet betrouwbaarheid op "hoog" wanneer je de verdiepingen op een Street View-foto hebt kunnen tellen.
-Geef uitsluitend geldige JSON terug met deze velden:
-- aantal_verdiepingen (geheel getal): aantal bouwlagen; tel ze op de Street View-foto indien beschikbaar, schat anders
-- hoogte (getal in meters): totale gebouwhoogte
-- breedte (getal in meters): grootste horizontale afmeting van de footprint
-- diepte (getal in meters): kleinste horizontale afmeting van de footprint
-- oppervlakte (getal in m2): grondoppervlak van de footprint
-- gebouw_type (tekst): bijv. "woonhuis", "appartementencomplex", "kantoor", "industrieel/bedrijfshal", "winkel", "school", "overig"
-- omschrijving (korte Nederlandse tekst): 1 zin over het gebouw
-- toelichting (korte Nederlandse tekst): hoe je tot de schatting kwam
-- betrouwbaarheid (tekst): "laag", "midden" of "hoog"
-Gebruik de opgegeven schaal van het beeld om footprint-afmetingen realistisch te schatten. Antwoord in het Nederlands. Alleen JSON, geen extra tekst.`;
 
 interface VisionVelden {
   aantal_verdiepingen: number | null;
@@ -447,10 +437,15 @@ async function analyseerBeeld(
     response_format: { type: "json_object" },
     max_completion_tokens: 4000,
     messages: [
-      { role: "system", content: SYSTEM_PROMPT },
+      { role: "system", content: GEBOUW_VISION_PROMPT.tekst },
       { role: "user", content },
     ],
-  });
+  }, undefined, {
+    module: "gebouwen",
+    functie: "gebouw-vision",
+    promptNaam: GEBOUW_VISION_PROMPT.naam,
+    promptVersie: GEBOUW_VISION_PROMPT.versie,
+  }); // gebouw-vision is called from analyseerBeeldUitExterneBronnen which is internal, no logCtx needed
   if (!aiResultaat.ok) return null;
   const tekst = aiResultaat.inhoud;
   let parsed: Record<string, unknown>;
@@ -473,22 +468,6 @@ async function analyseerBeeld(
   };
 }
 
-const EXTRACTIE_PROMPT = `Je helpt bij het invullen van een gebouwregistratie op basis van een vrije omschrijving van de gebruiker.
-Haal uit de tekst alle gebouwgegevens die de gebruiker EXPLICIET noemt. Verzin geen feiten; laat onbekende velden op null.
-Geef uitsluitend geldige JSON terug met deze velden:
-- zoekopdracht (tekst of null): het beste adres/zoekterm om het gebouw op Google Maps te vinden (straat + huisnummer + postcode + plaats voor zover bekend)
-- naam (tekst of null): naam van het gebouw indien genoemd
-- adres (tekst of null): straat + huisnummer
-- stad (tekst of null)
-- postcode (tekst of null)
-- gebouw_type (tekst of null): bijv. "woonhuis", "appartementencomplex", "kantoor", "industrieel/bedrijfshal", "winkel", "school", "overig"
-- aantal_verdiepingen (geheel getal of null)
-- hoogte (getal in meters of null)
-- breedte (getal in meters of null)
-- diepte (getal in meters of null)
-- oppervlakte (getal in m2 of null)
-- omschrijving (korte Nederlandse tekst of null)
-Antwoord in het Nederlands. Alleen JSON, geen extra tekst.`;
 
 interface ExtractieVelden {
   zoekopdracht: string | null;
@@ -510,10 +489,15 @@ async function extraheerUitTekst(beschrijving: string): Promise<ExtractieVelden 
     response_format: { type: "json_object" },
     max_completion_tokens: 4000,
     messages: [
-      { role: "system", content: EXTRACTIE_PROMPT },
+      { role: "system", content: GEBOUW_EXTRACTIE_PROMPT.tekst },
       { role: "user", content: beschrijving },
     ],
-  });
+  }, undefined, {
+    module: "gebouwen",
+    functie: "gebouw-extractie",
+    promptNaam: GEBOUW_EXTRACTIE_PROMPT.naam,
+    promptVersie: GEBOUW_EXTRACTIE_PROMPT.versie,
+  }); // extraheerUitTekst is called from analyseerGebouwVrijeTekst which passes logCtx further up
   if (!aiResultaat.ok) return null;
   let parsed: Record<string, unknown>;
   try {
@@ -558,15 +542,6 @@ const TEKENING_TYPES = [
   "overig",
 ];
 
-const TEKENING_PROMPT = `Je helpt bij het registreren van een bouwtekening. Op basis van de bestandsnaam (en eventueel het reeds gekozen type) bepaal je een nette tekeningnaam en op welke bouwlaag de tekening hoort.
-Geef uitsluitend geldige JSON terug met deze velden:
-- tekening_naam (tekst): een nette, leesbare naam voor de tekening (verwijder bestandsextensie, koppeltekens en technische codes; gebruik normale Nederlandse hoofdletters).
-- tekening_type (tekst): kies exact één uit: plattegrond, gevelaanzicht, doorsnede, situatietekening, installatietekening, detailtekening, overig.
-- bouwlaag_naam (tekst of null): de bouwlaag waar de tekening bij hoort. Gebruik Nederlandse standaardnamen: "Kelder", "Begane grond", "1e verdieping", "2e verdieping", "Dak", enz. Null als de tekening niet bij één specifieke bouwlaag hoort (bijv. een situatietekening of gevelaanzicht van het hele gebouw).
-- bouwlaag_niveau (geheel getal of null): het niveau van de bouwlaag. Kelder = -1 (lager = -2, -3), begane grond = 0, 1e verdieping = 1, 2e verdieping = 2, dak = hoogste verdieping + 1. Null als bouwlaag_naam null is.
-- toelichting (korte Nederlandse tekst): waarom je deze bouwlaag en naam koos.
-- betrouwbaarheid (tekst): "laag", "midden" of "hoog".
-Verzin geen verdiepingen die niet uit de bestandsnaam blijken. Antwoord in het Nederlands. Alleen JSON, geen extra tekst.`;
 
 function valideerType(v: unknown): string {
   const s = strOfNull(v);
@@ -608,6 +583,7 @@ export async function analyseerTekening(
   bestandsnaam: string,
   type: string | null,
   bestaandeVerdiepingen: { id: number; naam: string; niveau: number }[],
+  logCtx?: Partial<LogContext>,
 ): Promise<TekeningAnalyse> {
   const valterug = (toelichting: string): TekeningAnalyse => ({
     tekening_naam: basisTekeningNaam(bestandsnaam),
@@ -634,9 +610,15 @@ export async function analyseerTekening(
     response_format: { type: "json_object" },
     max_completion_tokens: 3000,
     messages: [
-      { role: "system", content: TEKENING_PROMPT },
+      { role: "system", content: TEKENING_ANALYSE_PROMPT.tekst },
       { role: "user", content: userTekst },
     ],
+  }, undefined, {
+    module: "gebouwen",
+    functie: "tekening-analyse",
+    promptNaam: TEKENING_ANALYSE_PROMPT.naam,
+    promptVersie: TEKENING_ANALYSE_PROMPT.versie,
+    ...logCtx,
   });
   if (!tekeningResultaat.ok) {
     logger.error({ fout: tekeningResultaat.fout }, "Tekening-analyse mislukte");
@@ -675,13 +657,6 @@ export interface PlattegrondAnalyse {
   betrouwbaarheid: string | null;
 }
 
-const PLATTEGROND_PROMPT = `Je analyseert een bouwkundige plattegrond van één bouwlaag van een gebouw. Bepaal bij welke bouwlaag deze plattegrond hoort op basis van de inhoud van de tekening: titelblok, stempel, labels of teksten zoals "Begane grond", "Verdieping 1", "1e verdieping", "2e verdieping", "Kelder", "Souterrain", "Dak", "Plattegrond BG", enzovoort.
-Geef uitsluitend geldige JSON terug met deze velden:
-- bouwlaag_naam (tekst of null): de bouwlaag waar de plattegrond bij hoort. Gebruik Nederlandse standaardnamen: "Kelder", "Begane grond", "1e verdieping", "2e verdieping", "Dak", enz. Null als je het niet uit de tekening kunt afleiden.
-- bouwlaag_niveau (geheel getal of null): het niveau. Kelder = -1 (lager = -2, -3), begane grond = 0, 1e verdieping = 1, 2e verdieping = 2, dak = hoogste verdieping + 1. Null als bouwlaag_naam null is.
-- toelichting (korte Nederlandse tekst): welke tekst of aanwijzing in de tekening je gebruikte.
-- betrouwbaarheid (tekst): "laag", "midden" of "hoog".
-Verzin geen bouwlaag die niet uit de tekening blijkt. Antwoord in het Nederlands. Alleen JSON, geen extra tekst.`;
 
 // Leest de inhoud van een plattegrond (afbeelding/PDF-render) met vision en
 // bepaalt de bijbehorende bouwlaag. Het matchen met een bestaande bouwlaag
@@ -689,6 +664,7 @@ Verzin geen bouwlaag die niet uit de tekening blijkt. Antwoord in het Nederlands
 export async function analyseerPlattegrond(
   afbeeldingDataUrl: string,
   bestaandeVerdiepingen: { id: number; naam: string; niveau: number }[],
+  logCtx?: Partial<LogContext>,
 ): Promise<PlattegrondAnalyse> {
   const valterug = (toelichting: string): PlattegrondAnalyse => ({
     bouwlaag_naam: null,
@@ -711,7 +687,7 @@ export async function analyseerPlattegrond(
     response_format: { type: "json_object" },
     max_completion_tokens: 3000,
     messages: [
-      { role: "system", content: PLATTEGROND_PROMPT },
+      { role: "system", content: PLATTEGROND_ANALYSE_PROMPT.tekst },
       {
         role: "user",
         content: [
@@ -720,6 +696,12 @@ export async function analyseerPlattegrond(
         ],
       },
     ],
+  }, undefined, {
+    module: "gebouwen",
+    functie: "plattegrond-analyse",
+    promptNaam: PLATTEGROND_ANALYSE_PROMPT.naam,
+    promptVersie: PLATTEGROND_ANALYSE_PROMPT.versie,
+    ...logCtx,
   });
   if (!plattegrondResultaat.ok) {
     logger.error({ fout: plattegrondResultaat.fout }, "Plattegrond-analyse mislukte");
@@ -784,7 +766,7 @@ function splitsAdres(formatted: string): {
 // als onbehandelde uitzondering naar de route-handler doorslaat.
 // Fallback-volgorde: OpenAI-extractie → als dat mislukt, geocoding op de
 // ruwe invoer → als dat ook mislukt, leeg resultaat met duidelijke melding.
-export async function analyseerGebouwVrijeTekst(beschrijving: string): Promise<GebouwAnalyse> {
+export async function analyseerGebouwVrijeTekst(beschrijving: string, logCtx?: Partial<LogContext>): Promise<GebouwAnalyse> {
   if (!HEEFT_OPENAI && !GOOGLE_KEY) {
     return leegResultaat(
       "Zowel de OpenAI API-sleutel als de Google Maps API-sleutel ontbreken. " +

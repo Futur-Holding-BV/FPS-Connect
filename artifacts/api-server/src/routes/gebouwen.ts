@@ -306,7 +306,7 @@ router.post(
       if (!beschrijving || typeof beschrijving !== "string" || !beschrijving.trim()) {
         return res.status(400).json({ error: "beschrijving is verplicht" });
       }
-      const resultaat = await analyseerGebouwVrijeTekst(beschrijving);
+      const resultaat = await analyseerGebouwVrijeTekst(beschrijving, { gebruikerId: req.session.userId ?? null });
       res.json(resultaat);
     } catch (err) {
       req.log.error(err);
@@ -334,6 +334,7 @@ router.post(
         bestandsnaam,
         typeof type === "string" ? type : null,
         verdiepingen.map((v) => ({ id: v.id, naam: v.naam, niveau: v.niveau })),
+        { gebruikerId: req.session.userId ?? null },
       );
       res.json(resultaat);
     } catch (err) {
@@ -361,6 +362,7 @@ router.post(
       const resultaat = await analyseerPlattegrond(
         afbeelding,
         verdiepingen.map((v) => ({ id: v.id, naam: v.naam, niveau: v.niveau })),
+        { gebruikerId: req.session.userId ?? null },
       );
       res.json(resultaat);
     } catch (err) {

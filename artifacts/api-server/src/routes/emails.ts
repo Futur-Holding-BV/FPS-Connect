@@ -457,7 +457,7 @@ router.post("/gebouwen/:id/emails", beheerderPlus, async (req, res) => {
       return res.status(422).json({ error: "Het e-mailbestand kon niet worden gelezen. Upload een geldig .eml- of .msg-bestand." });
     }
 
-    const ai = await extraheerEmailInzicht(geparseerd);
+    const ai = await extraheerEmailInzicht(geparseerd, { gebruikerId: req.session.userId ?? null });
 
     const [e] = await db
       .insert(gebouwEmailsTable)

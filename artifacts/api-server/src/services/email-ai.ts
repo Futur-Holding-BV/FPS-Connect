@@ -2,7 +2,8 @@ import { simpleParser } from "mailparser";
 import MsgReaderImport from "@kenjiuno/msgreader";
 import type { EmailContactpersoon } from "@workspace/db";
 import { logger } from "../lib/logger";
-import { aiGateway, heeftGateway } from "../lib/aiGateway";
+import { aiGateway, heeftGateway, type LogContext } from "../lib/aiGateway";
+import { EMAIL_INZICHT_PROMPT, EMAIL_SAMENVATTING_PROMPT } from "../lib/aiPrompts";
 
 // esbuild bundelt dit pakket als ESM en wikkelt de CJS-default in een
 // namespace-object, waardoor de echte constructor op `.default.default` belandt.
@@ -236,41 +237,6 @@ export async function parseEmailBestand(
   return geparseerd;
 }
 
-const AI_PROMPT = `Je analyseert een e-mail die hoort bij een brandpreventie-dossier van een gebouw.
-Vat de relevante informatie samen voor de dossierbeheerder. Verzin geen feiten; laat onbekende velden op null.
-Geef uitsluitend geldige JSON terug met deze velden:
-- omschrijving (korte Nederlandse tekst of null): waar gaat deze e-mail over, in 1-3 zinnen.
-- naw (tekst of null): naam, adres, woonplaats (NAW-gegevens) van personen of bedrijven die in de e-mail worden genoemd. Combineer tot leesbare regels.
-- contactinfo (tekst of null): e-mailadressen en telefoonnummers die in de e-mail worden genoemd.
-- tekeningen (tekst of null): noem bijlagen of verwijzingen die bouwtekeningen, plattegronden of technische tekeningen lijken te zijn.
-- actiepunten (tekst of null): openstaande actiepunten, verzoeken of to-do's die uit de e-mail voortvloeien, als genummerde lijst. Null als er geen zijn.
-- relevant (true, false of null): is deze e-mail inhoudelijk relevant voor het opleverdossier? Kies true wanneer de e-mail opdracht-leidend, technisch, juridisch of randvoorwaardelijk is, of over revisies of goedkeuringen gaat. Kies false bij louter logistieke, sociale of niet ter zake doende correspondentie (ontvangstbevestigingen, automatische antwoorden, planning zonder inhoud). Null als je het niet kunt bepalen.
-- relevant_reden (korte Nederlandse tekst of null): in maximaal 1 zin waarom de e-mail wel of niet relevant is voor het dossier.
-Antwoord in het Nederlands. Alleen JSON, geen extra tekst.`;
-
-const SAMENVATTING_PROMPT = `Je analyseert de gecombineerde e-mailcorrespondentie van een brandpreventie-project (FPS Brandpreventie: passieve brandpreventie, branddoorvoering, branddeuren, brandkleppen etc.).
-Maak een overzichtelijke projectsamenvatting. Geef uitsluitend geldige JSON terug met deze velden (null als onbekend):
-
-- opdrachtomschrijving: korte Nederlandse omschrijving van het project/de opdracht (1-4 zinnen) of null.
-- opdrachtgever: naam, bedrijf en/of adres van de opdrachtgever of null.
-- contactgegevens: alle e-mailadressen en telefoonnummers die zijn gevonden, als leesbare lijst of null.
-- afspraken: gemaakte afspraken, toezeggingen of deadlines als korte opsomming of null.
-- actiepunten: alle openstaande actiepunten en to-do's als genummerde lijst of null.
-- besluiten: relevante besluiten of overeenkomsten uit de correspondentie of null.
-- tekeningen: genoemde bouwtekeningen, plattegronden of technische documenten of null.
-- risicos: risico's, aandachtspunten of bezwaren die zijn geuit of null.
-- contactpersonen: array met betrokkenen. Geef per persoon een object met:
-  - rol: een van "opdrachtgever", "gebruiker", "installateur", "aannemer", "eigenaar", "aanvrager"
-  - naam: volledige naam of bedrijfsnaam (verplicht)
-  - organisatie: bedrijfsnaam of null
-  - functie: functietitel binnen de organisatie (bijv. "Projectleider", "Directeur", "Facility Manager") of null
-  - email: e-mailadres of null — verzin GEEN e-mailadressen
-  - telefoon: telefoonnummer of null
-  - relevantie: "relevant" als de persoon/organisatie een actieve rol speelt in opdracht, uitvoering, planning, communicatie of oplevering van het FPS-project; "ter_controle" als ze uitsluitend in CC staan, een onduidelijke of marginale rol hebben, of het twijfelgevallen zijn die de beheerder zelf moet beoordelen
-  - bron_email_nr: het e-mailnummer (1, 2, 3...) waaruit de informatie voornamelijk afkomstig is
-  Neem alleen echte personen of bedrijven op die daadwerkelijk in de e-mails voorkomen. Geen algemene mailboxen (info@, noreply@). Lege array als niets gevonden.
-
-Antwoord in het Nederlands. Alleen JSON, geen extra tekst.`;
 
 export interface ProjectSamenvatting {
   opdrachtomschrijving: string | null;
@@ -335,6 +301,7 @@ function parseContactpersonen(
 
 export async function genereerProjectSamenvatting(
   emails: GeparseerdeEmailMetId[],
+  logCtx?: Partial<LogContext>,
 ): Promise<ProjectSamenvatting> {
   const leeg: ProjectSamenvatting = {
     opdrachtomschrijving: null, opdrachtgever: null, contactgegevens: null,
@@ -367,9 +334,15 @@ export async function genereerProjectSamenvatting(
       response_format: { type: "json_object" },
       max_completion_tokens: 6000,
       messages: [
-        { role: "system", content: SAMENVATTING_PROMPT },
+        { role: "system", content: EMAIL_SAMENVATTING_PROMPT.tekst },
         { role: "user", content: userTekst.slice(0, 20000) },
       ],
+    }, undefined, {
+      module: "emails",
+      functie: "email-samenvatting",
+      promptNaam: EMAIL_SAMENVATTING_PROMPT.naam,
+      promptVersie: EMAIL_SAMENVATTING_PROMPT.versie,
+      ...logCtx,
     });
     if (!aiResultaat.ok) {
       logger.error({ fout: aiResultaat.fout }, "Project-samenvatting genereren mislukt");
@@ -405,6 +378,7 @@ export async function genereerProjectSamenvatting(
 
 export async function extraheerEmailInzicht(
   email: GeparseerdeEmail,
+  logCtx?: Partial<LogContext>,
 ): Promise<EmailAiResultaat> {
   const leeg: EmailAiResultaat = { omschrijving: null, naw: null, contactinfo: null, tekeningen: null, actiepunten: null, relevant: null, relevantReden: null };
   if (!heeftGateway()) return leeg;
@@ -425,9 +399,15 @@ export async function extraheerEmailInzicht(
       response_format: { type: "json_object" },
       max_completion_tokens: 4000,
       messages: [
-        { role: "system", content: AI_PROMPT },
+        { role: "system", content: EMAIL_INZICHT_PROMPT.tekst },
         { role: "user", content: userTekst },
       ],
+    }, undefined, {
+      module: "emails",
+      functie: "email-inzicht",
+      promptNaam: EMAIL_INZICHT_PROMPT.naam,
+      promptVersie: EMAIL_INZICHT_PROMPT.versie,
+      ...logCtx,
     });
     if (!aiResultaat.ok) {
       logger.error({ fout: aiResultaat.fout }, "E-mail AI-extractie mislukte");
