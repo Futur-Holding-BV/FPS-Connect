@@ -2,9 +2,36 @@ import { Router } from "express";
 import { db, auditLogTable } from "@workspace/db";
 import { and, eq, gte, lte, or, ilike, desc, sql } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
+import { getAuditDiagnostics } from "../lib/audit";
 
 const router = Router();
 const alleenBeheer = requireBevoegdheid("systeem", 1);
+
+// ── Immutabiliteitsgarantie ─────────────────────────────────────────────────────
+// Audit-records zijn onveranderlijk. Er zijn geen PATCH/PUT/DELETE-handlers op
+// audit-routes. Application-level: alle inserts gaan via logAudit() in lib/audit.ts;
+// de routes hier bieden uitsluitend leestoegang (GET). Database-level: overweeg
+// een RLS-policy `USING (false)` op UPDATE/DELETE zodra een dedicated DB-rol
+// beschikbaar is die niet superuser is.
+
+// ── CSV-kolommen (geen sessie_id, geen oude_waarde, geen nieuwe_waarde) ─────────
+
+const CSV_KOLOMMEN = [
+  "id",
+  "tijdstip",
+  "gebruiker_id",
+  "gebruiker_naam",
+  "ip_adres",
+  "module",
+  "actie",
+  "entiteit",
+  "entiteit_id",
+  "entiteit_naam",
+  "workflow_status",
+  "gebouw_id",
+  "medewerker_id",
+  "document_id",
+] as const;
 
 // ── Mapper ─────────────────────────────────────────────────────────────────────
 
@@ -15,7 +42,6 @@ function mapRegel(r: typeof auditLogTable.$inferSelect) {
     gebruiker_id: r.gebruikerId,
     gebruiker_naam: r.gebruikerNaam,
     ip_adres: r.ipAdres,
-    sessie_id: r.sessieId,
     module: r.module,
     actie: r.actie,
     entiteit: r.entiteit,
@@ -76,6 +102,7 @@ function bouwVoorwaarden(q: QueryParams) {
 }
 
 // ── GET /audit ─────────────────────────────────────────────────────────────────
+// Audit-records zijn immutable — er zijn geen PUT/PATCH/DELETE-handlers.
 
 router.get("/audit", alleenBeheer, async (req, res) => {
   try {
@@ -106,6 +133,7 @@ router.get("/audit", alleenBeheer, async (req, res) => {
 });
 
 // ── GET /audit/export ──────────────────────────────────────────────────────────
+// CSV bevat geen sessie_id, geen oude_waarde en geen nieuwe_waarde (AVG-conform).
 
 router.get("/audit/export", alleenBeheer, async (req, res) => {
   try {
@@ -120,10 +148,20 @@ router.get("/audit/export", alleenBeheer, async (req, res) => {
       .limit(10000);
 
     const koptekst = [
-      "ID", "Tijdstip", "Gebruiker ID", "Gebruiker", "IP-adres", "Sessie ID",
-      "Module", "Actie", "Entiteit", "Entiteit ID", "Entiteit naam",
-      "Workflow status", "Gebouw ID", "Medewerker ID", "Document ID",
-      "Oude waarde", "Nieuwe waarde",
+      "ID",
+      "Tijdstip",
+      "Gebruiker ID",
+      "Gebruiker",
+      "IP-adres",
+      "Module",
+      "Actie",
+      "Entiteit",
+      "Entiteit ID",
+      "Entiteit naam",
+      "Workflow status",
+      "Gebouw ID",
+      "Medewerker ID",
+      "Document ID",
     ].join(",");
 
     const rijen = regels.map((r) =>
@@ -133,7 +171,6 @@ router.get("/audit/export", alleenBeheer, async (req, res) => {
         r.gebruikerId ?? "",
         csvEscape(r.gebruikerNaam ?? ""),
         csvEscape(r.ipAdres ?? ""),
-        csvEscape(r.sessieId ?? ""),
         csvEscape(r.module),
         csvEscape(r.actie),
         csvEscape(r.entiteit),
@@ -143,8 +180,6 @@ router.get("/audit/export", alleenBeheer, async (req, res) => {
         r.gebouwId ?? "",
         r.medewerkerId ?? "",
         r.documentId ?? "",
-        csvEscape(r.oudeWaarde ? JSON.stringify(r.oudeWaarde) : ""),
-        csvEscape(r.nieuweWaarde ? JSON.stringify(r.nieuweWaarde) : ""),
       ].join(","),
     );
 
@@ -160,10 +195,18 @@ router.get("/audit/export", alleenBeheer, async (req, res) => {
   }
 });
 
+// ── GET /audit/diagnostics ─────────────────────────────────────────────────────
+// Geeft in-memory teller voor definitief mislukte audit-inserts terug.
+// Alleen toegankelijk voor beheerders (alleenBeheer).
+
+router.get("/audit/diagnostics", alleenBeheer, (_req, res) => {
+  res.json(getAuditDiagnostics());
+});
+
 // ── GET /audit/tijdlijn/gebouw/:id ─────────────────────────────────────────────
 
 router.get("/audit/tijdlijn/gebouw/:id", alleenBeheer, async (req, res) => {
-  const id = parseInt(req.params.id, 10);
+  const id = parseInt(String(req.params.id), 10);
   if (isNaN(id)) { res.status(400).json({ error: "Ongeldig id" }); return; }
   try {
     const regels = await db
@@ -182,7 +225,7 @@ router.get("/audit/tijdlijn/gebouw/:id", alleenBeheer, async (req, res) => {
 // ── GET /audit/tijdlijn/medewerker/:id ────────────────────────────────────────
 
 router.get("/audit/tijdlijn/medewerker/:id", alleenBeheer, async (req, res) => {
-  const id = parseInt(req.params.id, 10);
+  const id = parseInt(String(req.params.id), 10);
   if (isNaN(id)) { res.status(400).json({ error: "Ongeldig id" }); return; }
   try {
     const regels = await db
@@ -201,7 +244,7 @@ router.get("/audit/tijdlijn/medewerker/:id", alleenBeheer, async (req, res) => {
 // ── GET /audit/tijdlijn/document/:id ──────────────────────────────────────────
 
 router.get("/audit/tijdlijn/document/:id", alleenBeheer, async (req, res) => {
-  const id = parseInt(req.params.id, 10);
+  const id = parseInt(String(req.params.id), 10);
   if (isNaN(id)) { res.status(400).json({ error: "Ongeldig id" }); return; }
   try {
     const regels = await db
@@ -216,5 +259,10 @@ router.get("/audit/tijdlijn/document/:id", alleenBeheer, async (req, res) => {
     res.status(500).json({ error: "Serverfout" });
   }
 });
+
+// ── Export ─────────────────────────────────────────────────────────────────────
+// CSV_KOLOMMEN exporteren zodat tests de kolommen kunnen valideren zonder
+// de router zelf te importeren.
+export { CSV_KOLOMMEN };
 
 export default router;

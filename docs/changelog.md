@@ -3,6 +3,22 @@
 Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
+
+## 2026-07-03 — Task #181: Audit Trail v2 — Productiegereed
+
+**Uitvoering:** volledig | **Diepere lagen:** volledig | **Getest:** vitest (30 tests, alle geslaagd) + typecheck
+
+AVG-proof en betrouwbaar audit-systeem; geen nieuwe functionaliteit, alleen hardening van de bestaande implementatie.
+
+1. **Whitelist-sanitiser** (`lib/audit.ts`) — `saniteerPayload(body, entiteit?)`: whitelist-basis (id, status, workflowStatus, documentnummer, …) + per-entiteit extensies (gebouwen/voorzieningen/documenten/inspecties/…); vaste maskerlijst (wachtwoord, token, totpSecret, BSN, IBAN, salaris, sessieId, …) als laatste vangnet; terugval op `{ __gesaneerd: true }` bij leeg resultaat.
+2. **Payload-begrenzing** — 10 KB max serialisatie, max 3 nesting-lagen, max 20 array-items; overschrijding geeft `{ __afgekapt: true }`.
+3. **Auth-routes volledig uitgesloten** — `req.path.startsWith("/auth/")` als prefix-check in `isAuditUitgesloten()`; dekt `/auth/mobile/login`, `/auth/totp-setup`, `/auth/wachtwoord-*` en alle toekomstige `/auth/`-routes automatisch.
+4. **Actorinformatie automatisch** — middleware leest `gebruikerNaam` en `rol` uit de sessie; `sessieId` wordt bewust NIET meer opgeslagen in auditrecords.
+5. **Retry met foutregistratie** — `_logMetRetry()`: max 2 herhaalpogingen, 500 ms backoff; definitief falen logt `logger.warn` + atomaire in-memory teller; `GET /audit/diagnostics` (alleenBeheer) geeft teller + laatste fout + timestamp terug.
+6. **Immutability** — PATCH/PUT/DELETE-handlers bestaan niet op audit-routes; comment legt garantie vast; CSV-export bevat geen sessie_id, oude_waarde of nieuwe_waarde.
+7. **Partial indexes** (`lib/db/src/schema/audit.ts`) — gebouw_id, medewerker_id, document_id krijgen `WHERE kolom IS NOT NULL`; DB push uitgevoerd.
+8. **Tests** (`__tests__/audit.test.ts`) — 30 tests voor whitelist-sanitiser, gevoelige velden, auth-pad-uitsluiting, payload-afkapping, CSV-kolommen en retry-diagnostics.
+
 - **Diepere lagen** — volledig / gedeeltelijk / niet (= of de onderliggende detailscenario's ook gebouwd zijn)
 - **Getest** — e2e geautomatiseerd / typecheck / handmatig door agent / niet expliciet getest
 

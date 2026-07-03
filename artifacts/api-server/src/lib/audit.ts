@@ -1,28 +1,250 @@
 import type { Request, Response, NextFunction } from "express";
 import { db, auditLogTable } from "@workspace/db";
 import type { AuditLogInvoer } from "@workspace/db";
+import { logger } from "./logger";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
 export type AuditParams = Omit<AuditLogInvoer, "id" | "tijdstip">;
 
+// ── Gevoelige velden — worden altijd verwijderd (laatste vangnet) ───────────────
+
+const GEVOELIGE_VELDEN = new Set([
+  "wachtwoord",
+  "password",
+  "wachtwoord_hash",
+  "hash",
+  "totpSecret",
+  "totp_secret",
+  "secret",
+  "token",
+  "bearer",
+  "authorization",
+  "cookie",
+  "sessie_id",
+  "sessieId",
+  "sessionId",
+  "session_id",
+  "bsn",
+  "iban",
+  "salaris",
+  "salary",
+  "loon",
+  "creditcard",
+  "credit_card",
+  "cvv",
+  "pin",
+  "nieuw_wachtwoord",
+  "huidig_wachtwoord",
+  "nieuwWachtwoord",
+  "huidigWachtwoord",
+  "resetToken",
+  "reset_token",
+  "apiKey",
+  "api_key",
+  "privateKey",
+  "private_key",
+]);
+
+// ── Whitelist per entiteit ──────────────────────────────────────────────────────
+// Exporteer zodat route-handlers uitbreidingen kunnen meegeven
+
+export const AUDIT_WHITELIST_BASIS: ReadonlySet<string> = new Set([
+  "id",
+  "status",
+  "workflowStatus",
+  "workflow_status",
+  "documentnummer",
+  "projectnummer",
+  "gebouwId",
+  "gebouw_id",
+  "module",
+  "actie",
+  "gebruikerId",
+  "gebruiker_id",
+  "tijdstip",
+  "naam",
+  "entiteit",
+  "entiteitId",
+  "entiteit_id",
+  "entiteitNaam",
+  "entiteit_naam",
+  "actief",
+  "rol",
+  "module_sleutel",
+  "type",
+  "categorie",
+  "prioriteit",
+  "datum",
+  "vervaldatum",
+  "aangemaakt_op",
+  "bijgewerkt_op",
+  "aanmaakdatum",
+]);
+
+export const AUDIT_WHITELIST_PER_ENTITEIT: Record<string, ReadonlySet<string>> = {
+  gebouwen: new Set(["adres", "stad", "postcode", "bouwjaar", "gebouwType"]),
+  voorzieningen: new Set(["objectnummer", "locatie", "verdieping", "ruimte", "clusterId"]),
+  documenten: new Set(["bestandsnaam", "versie", "goedgekeurd", "documentType"]),
+  inspecties: new Set(["inspectieType", "resultaat", "inspecteur"]),
+  onderhoud: new Set(["omschrijving", "deadline", "toegewezeneId"]),
+  medewerkers: new Set(["functieId", "werkmaatschappij", "startdatum", "einddatum"]),
+  offertes: new Set(["offerteNummer", "bedrag", "klantId", "geldigTot"]),
+  opdrachten: new Set(["opdrachtNummer", "werkmaatschappij", "startdatum", "einddatum"]),
+};
+
+// ── Payload-sanitiser ──────────────────────────────────────────────────────────
+
+const MAX_PAYLOAD_BYTES = 10 * 1024; // 10 KB
+const MAX_NESTING = 3;
+const MAX_ARRAY_ITEMS = 20;
+
+export function saniteerPayload(
+  body: unknown,
+  entiteit?: string,
+  _huidigeNesting = 0,
+): Record<string, unknown> | null {
+  if (body === null || body === undefined) return null;
+  if (typeof body !== "object") return null;
+
+  const whitelist: Set<string> = new Set([
+    ...AUDIT_WHITELIST_BASIS,
+    ...(entiteit && AUDIT_WHITELIST_PER_ENTITEIT[entiteit]
+      ? AUDIT_WHITELIST_PER_ENTITEIT[entiteit]
+      : []),
+  ]);
+
+  const gesaneerd = _saniteerDiepte(body as Record<string, unknown>, whitelist, 0);
+
+  if (!gesaneerd || Object.keys(gesaneerd).length === 0) {
+    return { __gesaneerd: true };
+  }
+
+  const geserialiseerd = JSON.stringify(gesaneerd);
+  if (geserialiseerd.length > MAX_PAYLOAD_BYTES) {
+    return { __afgekapt: true, __reden: "payload_te_groot" };
+  }
+
+  return gesaneerd;
+}
+
+function _saniteerDiepte(
+  obj: Record<string, unknown>,
+  whitelist: Set<string>,
+  diepte: number,
+): Record<string, unknown> {
+  if (diepte >= MAX_NESTING) {
+    return { __afgekapt: true };
+  }
+
+  const resultaat: Record<string, unknown> = {};
+
+  for (const [sleutel, waarde] of Object.entries(obj)) {
+    // Verwijder altijd gevoelige velden
+    if (GEVOELIGE_VELDEN.has(sleutel)) continue;
+    // Verwijder velden buiten de whitelist
+    if (!whitelist.has(sleutel)) continue;
+
+    if (Array.isArray(waarde)) {
+      const afgekapt = waarde.length > MAX_ARRAY_ITEMS;
+      const items = waarde.slice(0, MAX_ARRAY_ITEMS).map((item) => {
+        if (typeof item === "object" && item !== null) {
+          return _saniteerDiepte(item as Record<string, unknown>, whitelist, diepte + 1);
+        }
+        return item;
+      });
+      resultaat[sleutel] = afgekapt ? [...items, { __afgekapt: true }] : items;
+    } else if (typeof waarde === "object" && waarde !== null) {
+      resultaat[sleutel] = _saniteerDiepte(
+        waarde as Record<string, unknown>,
+        whitelist,
+        diepte + 1,
+      );
+    } else {
+      resultaat[sleutel] = waarde;
+    }
+  }
+
+  return resultaat;
+}
+
+// ── Retry-teller (in-memory, voor diagnostics) ──────────────────────────────────
+
+interface RetryStats {
+  misluktTotaal: number;
+  laatstefout: string | null;
+  laatstefoutTijdstip: Date | null;
+}
+
+const _retryStats: RetryStats = {
+  misluktTotaal: 0,
+  laatstefout: null,
+  laatstefoutTijdstip: null,
+};
+
+export function getAuditDiagnostics(): RetryStats & { omschrijving: string } {
+  return {
+    ..._retryStats,
+    omschrijving: "In-memory teller voor definitief mislukte audit-inserts",
+  };
+}
+
 // ── Kern: logAudit() ───────────────────────────────────────────────────────────
-// Fire-and-forget: audit logging mag nooit de hoofdflow blokkeren of laten crashen.
+// Fire-and-forget met retry: max 2 herhaalpogingen, 500 ms backoff.
+// Bij definitief falen: logger.warn + in-memory teller ophogen.
 
 export function logAudit(params: AuditParams): void {
+  // Centraal veiligheidsnet: saniteer oudeWaarde en nieuweWaarde ongeacht
+  // waar de aanroep vandaan komt. Zo kunnen handmatige logAudit()-aanroepen
+  // nooit gevoelige data in audit_log schrijven.
+  const gesaneerdeParams: AuditParams = {
+    ...params,
+    oudeWaarde: params.oudeWaarde
+      ? saniteerPayload(params.oudeWaarde as Record<string, unknown>, params.entiteit ?? undefined)
+      : null,
+    nieuweWaarde: params.nieuweWaarde
+      ? saniteerPayload(params.nieuweWaarde as Record<string, unknown>, params.entiteit ?? undefined)
+      : null,
+    // sessieId wordt nooit opgeslagen — altijd op null zetten
+    sessieId: null,
+  };
+  _logMetRetry(gesaneerdeParams, 0);
+}
+
+function _logMetRetry(params: AuditParams, poging: number): void {
   db.insert(auditLogTable)
     .values({
       ...params,
       tijdstip: new Date(),
     })
-    .catch(() => {});
+    .catch((err: unknown) => {
+      if (poging < 2) {
+        setTimeout(() => _logMetRetry(params, poging + 1), 500);
+      } else {
+        _retryStats.misluktTotaal += 1;
+        _retryStats.laatstefout =
+          err instanceof Error ? err.message : String(err);
+        _retryStats.laatstefoutTijdstip = new Date();
+        logger.warn(
+          {
+            fout: _retryStats.laatstefout,
+            module: params.module,
+            actie: params.actie,
+            gebruikerId: params.gebruikerId,
+          },
+          "Audit-insert definitief mislukt na 3 pogingen",
+        );
+      }
+    });
 }
 
 // ── Middleware ─────────────────────────────────────────────────────────────────
 // Onderschept alle muterende requests (POST/PATCH/PUT/DELETE) automatisch en
 // schrijft een audit-regel op basis van route + methode + response.
+// Auth-routes zijn volledig uitgesloten — wachtwoorden, tokens en secrets
+// mogen nooit in audit_log terechtkomen.
 // Biedt: gebruiker, tijdstip, IP, sessie, module, actie, entiteit, entiteitId,
-//        nieuwe waarde (response body).
+//        nieuwe waarde (gesaneerde response body).
 // Biedt NIET: oude waarde (vereist expliciete logAudit()-aanroep vanuit route).
 
 const METHODE_NAAR_ACTIE: Record<string, string> = {
@@ -32,13 +254,24 @@ const METHODE_NAAR_ACTIE: Record<string, string> = {
   DELETE: "verwijderen",
 };
 
-const SLA_OVER = new Set([
+const SLA_OVER_EXACT = new Set([
   "/api/auth/login",
   "/api/auth/logout",
   "/api/auth/totp-verify",
   "/api/muis-gebeurtenissen",
   "/api/mijn/online",
 ]);
+
+function isAuditUitgesloten(path: string): boolean {
+  // Alle /auth/* routes volledig uitsluiten — wachtwoorden, TOTP-secrets,
+  // bearer-tokens en reset-tokens mogen nooit in de audit-log belanden.
+  // Zowel /auth/ als /api/auth/ worden geblokkeerd (defensief voor eventuele
+  // wijzigingen in middleware-volgorde of proxy-configuratie).
+  if (path.startsWith("/auth/") || path === "/auth") return true;
+  if (path.startsWith("/api/auth/") || path === "/api/auth") return true;
+  if (SLA_OVER_EXACT.has(path)) return true;
+  return false;
+}
 
 function routeNaarInfo(req: Request): {
   module: string;
@@ -47,7 +280,7 @@ function routeNaarInfo(req: Request): {
 } | null {
   const actie = METHODE_NAAR_ACTIE[req.method];
   if (!actie) return null;
-  if (SLA_OVER.has(req.path)) return null;
+  if (isAuditUitgesloten(req.path)) return null;
 
   const routePath: string =
     (req.route?.path as string | undefined) ?? req.path ?? "";
@@ -90,29 +323,30 @@ export function maakAuditMiddleware() {
       if (res.statusCode < 400) {
         const info = routeNaarInfo(req);
         if (info) {
-          const gebruikerId =
-            (req.session as unknown as Record<string, unknown> | undefined)?.userId as
-              | number
-              | null
-              | undefined;
+          const sessie = req.session as unknown as Record<string, unknown> | undefined;
+          const gebruikerId = sessie?.userId as number | null | undefined;
+          const gebruikerNaam = sessie?.gebruikerNaam as string | null | undefined
+            ?? sessie?.naam as string | null | undefined
+            ?? null;
+          const rol = sessie?.rol as string | null | undefined ?? null;
 
-          const nieuweWaarde =
+          const gesaneerdBody =
             typeof body === "object" && body !== null
-              ? (body as Record<string, unknown>)
+              ? saniteerPayload(body as Record<string, unknown>, info.entiteit)
               : null;
 
           logAudit({
             gebruikerId: gebruikerId ?? null,
-            gebruikerNaam: null,
+            gebruikerNaam: gebruikerNaam ?? null,
             ipAdres: req.ip ?? null,
-            sessieId: (req as unknown as { sessionID?: string }).sessionID ?? null,
+            sessieId: null,
             module: info.module,
             actie: METHODE_NAAR_ACTIE[req.method] ?? "bijwerken",
             entiteit: info.entiteit,
             entiteitId: info.entiteitId,
             entiteitNaam: null,
             oudeWaarde: null,
-            nieuweWaarde,
+            nieuweWaarde: gesaneerdBody,
             workflowStatus: null,
             gebouwId: null,
             medewerkerId: null,
@@ -121,6 +355,7 @@ export function maakAuditMiddleware() {
               methode: req.method,
               pad: req.path,
               statuscode: res.statusCode,
+              rol: rol ?? undefined,
             } as Record<string, unknown>,
           });
         }

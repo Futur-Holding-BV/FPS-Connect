@@ -1,4 +1,5 @@
 import { pgTable, serial, integer, text, timestamp, jsonb, index } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 
 export const auditLogTable = pgTable(
   "audit_log",
@@ -26,9 +27,10 @@ export const auditLogTable = pgTable(
     index("audit_log_tijdstip_idx").on(t.tijdstip),
     index("audit_log_gebruiker_idx").on(t.gebruikerId),
     index("audit_log_module_idx").on(t.module),
-    index("audit_log_gebouw_idx").on(t.gebouwId),
-    index("audit_log_medewerker_idx").on(t.medewerkerId),
-    index("audit_log_document_idx").on(t.documentId),
+    // Partial indexes voor sparse kolommen: alleen rijen met een waarde worden geïndexeerd
+    index("audit_log_gebouw_idx").on(t.gebouwId).where(sql`${t.gebouwId} IS NOT NULL`),
+    index("audit_log_medewerker_idx").on(t.medewerkerId).where(sql`${t.medewerkerId} IS NOT NULL`),
+    index("audit_log_document_idx").on(t.documentId).where(sql`${t.documentId} IS NOT NULL`),
     index("audit_log_entiteit_idx").on(t.entiteit, t.entiteitId),
   ],
 );

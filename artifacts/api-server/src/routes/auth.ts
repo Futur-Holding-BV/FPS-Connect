@@ -7,7 +7,6 @@ import { db, gebruikersTable, wachtwoordResetTokensTable } from "@workspace/db";
 import { eq, and, gt, isNull } from "drizzle-orm";
 import { maakToken } from "../lib/token";
 import { legLoginPogingVast } from "./systeem";
-import { logAudit } from "../lib/audit";
 import { verstuurWachtwoordResetMail } from "../services/email.js";
 
 const router = Router();
@@ -207,24 +206,8 @@ router.post("/auth/2fa/verify", async (req, res) => {
       userAgent: verzoekUserAgent(req),
       gelukt: true,
     });
-    logAudit({
-      gebruikerId: g.id,
-      gebruikerNaam: g.naam,
-      ipAdres: verzoekIp(req),
-      sessieId: (req as unknown as { sessionID?: string }).sessionID ?? null,
-      module: "auth",
-      actie: "inloggen",
-      entiteit: "gebruiker",
-      entiteitId: g.id,
-      entiteitNaam: g.naam,
-      oudeWaarde: null,
-      nieuweWaarde: null,
-      workflowStatus: null,
-      gebouwId: null,
-      medewerkerId: null,
-      documentId: null,
-      meta: { ip: verzoekIp(req) } as Record<string, unknown>,
-    });
+    // Auth-routes worden bewust NIET geauditlogd — wachtwoorden, tokens en
+    // TOTP-secrets mogen nooit in audit_log terechtkomen.
     res.json({ ...mapAuthGebruiker(g), nieuw_apparaat: risico.nieuwApparaat, nieuw_ip: risico.nieuwIp });
   } catch (err) {
     req.log.error(err);
