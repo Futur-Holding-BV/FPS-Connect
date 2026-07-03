@@ -409,6 +409,19 @@ export default function ObjectRechtenBeheer() {
         </p>
       </div>
 
+      <div className="rounded-md border border-amber-200 bg-amber-50 p-4 flex gap-3 items-start text-amber-800">
+        <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+        <div>
+          <p className="text-sm font-medium">Object-rechten zijn nog niet actief in de productieroutes</p>
+          <p className="text-sm mt-1">
+            De infrastructuur is gereed, maar object-rechten worden momenteel nog niet geëvalueerd bij toegangscontrole.
+            Rechten die hier worden ingesteld hebben op dit moment geen effect.
+            Gebruik <strong>Beheer &rsaquo; Rollen &amp; rechten</strong> om bevoegdheden te beheren.
+          </p>
+        </div>
+      </div>
+
+      <div className="pointer-events-none opacity-40 select-none">
       <Tabs defaultValue="per-gebruiker">
         <TabsList>
           <TabsTrigger value="per-gebruiker">Per gebruiker</TabsTrigger>
@@ -508,6 +521,7 @@ export default function ObjectRechtenBeheer() {
           </div>
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 }

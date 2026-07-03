@@ -222,15 +222,9 @@ router.post("/gebruikers", alleenBeheerder, async (req, res) => {
     // Zelf-escalatiebeveiliging: niemand mag hogere niveaus toekennen dan eigen matrix.
     let toegestaanBevoegdheden: Record<string, number> = {};
     if (typeof bevoegdheden === "object" && bevoegdheden !== null) {
-      const requesterId = req.session.userId!;
-      const [requester] = await db
-        .select({ rol: gebruikersTable.rol, bevoegdheden: gebruikersTable.bevoegdheden })
-        .from(gebruikersTable)
-        .where(eq(gebruikersTable.id, requesterId));
-      if (requester && requester.rol !== "hoofdbeheerder") {
-        const eigenBev = (requester.bevoegdheden as Record<string, number> | null) ?? {};
+      if (!req.permissies!.isHoofdbeheerder) {
         for (const [mod, lvl] of Object.entries(bevoegdheden as Record<string, number>)) {
-          if (typeof lvl === "number" && lvl > (eigenBev[mod] ?? 0)) {
+          if (typeof lvl === "number" && !req.permissies!.heeftModuleRecht(mod, lvl)) {
             return res.status(403).json({
               error: "Geen toegang: bevoegdheid kan niet hoger zijn dan uw eigen niveau",
             });
@@ -355,17 +349,11 @@ router.patch("/gebruikers/:id", alleenBeheerder, async (req, res) => {
     };
     if (bevoegdheden !== undefined && typeof bevoegdheden === "object" && bevoegdheden !== null) {
       // Zelf-escalatiebeveiliging: niemand mag hogere niveaus toekennen dan eigen matrix.
-      const requesterId = req.session.userId!;
-      const [requester] = await db
-        .select({ rol: gebruikersTable.rol, bevoegdheden: gebruikersTable.bevoegdheden })
-        .from(gebruikersTable)
-        .where(eq(gebruikersTable.id, requesterId));
-      if (requester && requester.rol !== "hoofdbeheerder") {
-        const eigenBev = (requester.bevoegdheden as Record<string, number> | null) ?? {};
+      if (!req.permissies!.isHoofdbeheerder) {
         for (const [mod, lvl] of Object.entries(
           bevoegdheden as Record<string, number>,
         )) {
-          if (typeof lvl === "number" && lvl > (eigenBev[mod] ?? 0)) {
+          if (typeof lvl === "number" && !req.permissies!.heeftModuleRecht(mod, lvl)) {
             return res.status(403).json({
               error: "Geen toegang: bevoegdheid kan niet hoger zijn dan uw eigen niveau",
             });

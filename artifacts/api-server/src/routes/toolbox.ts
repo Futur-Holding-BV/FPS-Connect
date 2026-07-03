@@ -92,7 +92,7 @@ toolboxRouter.get("/toolbox-berichten", requireAuth, async (req, res) => {
   const filterGearchiveerd =
     gearchivierdQ === "true" ? true : gearchivierdQ === "false" ? false : false; // default: actief
 
-  const isBeheerder = (req.session as unknown as Record<string, unknown>)?.["rol"] === "hoofdbeheerder";
+  const isBeheerder = req.permissies!.isHoofdbeheerder;
 
   // Auto-trigger AI-analyse elke 4 uur (fire-and-forget)
   const nuMs = Date.now();

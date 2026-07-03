@@ -86,3 +86,4 @@
 - [Canvas viewport vs. sidebar zichtbaarheid](canvas-sidebar-viewport.md) — firevault-iframe staat op Canvas positie (-974,-551) bij 1920x1080; sidebar (x=0..250) valt buiten het Canvas-viewport als dat bij (0,0) begint; gebruik Preview-pane voor volledige app-weergave.
 - [E2E getByText nav-kaart val](e2e-getbytext-navkaart.md) — getByText("Verlof").first() matcht ancestor-containers (View/ScrollView) als meer dan één DOM-element de substring bevat; gebruik testID op de Pressable en getByTestId voor betrouwbaar klikken.
 - [AccountView factuurmodule](accountview-facturen.md) — financieel module-id in permissies; BestandType uitgebreid met "factuur"; api_key nooit teruggegeven (gebruik api_gebruiker als proxy voor "geconfigureerd").
+- [Uren isManager module-mapping](uren-module-mapping.md) — "uren" bestaat niet als module-id; isManager in uren.ts mapt op heeftModuleRecht("personeel", 1|2).

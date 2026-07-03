@@ -8,7 +8,7 @@ import {
 } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
-import { effectieveContext, magBijGebouwVoorId as magBijGebouw, toegewezenGebouwIds } from "../utils/rol";
+import { effectieveContext, toegewezenGebouwIds } from "../utils/rol";
 import { logActiviteit } from "../lib/activiteit";
 import { workflowService, maakTransitieContext } from "../services/workflow-engine";
 
@@ -120,7 +120,7 @@ router.post("/onderhoud", requireBevoegdheid("onderhoud", 3), async (req, res) =
       return res.status(400).json({ error: "Voorziening hoort niet bij dit gebouw" });
     }
     const doelGebouw = gebouw_id ?? voorzieningGebouw;
-    if (!(await magBijGebouw(req.session.userId!, doelGebouw))) {
+    if (!req.permissies!.magBijGebouw(doelGebouw)) {
       return res.status(403).json({ error: "Geen toegang tot dit gebouw" });
     }
     const [o] = await db
@@ -191,7 +191,7 @@ router.patch("/onderhoud/:id", requireBevoegdheid("onderhoud", 2), async (req, r
       .where(eq(onderhoudTable.id, id));
     if (!bestaand) return res.status(404).json({ error: "Onderhoudstaak niet gevonden" });
     const doelGebouw = bestaand.gebouwId ?? (await gebouwIdVanVoorziening(bestaand.voorzieningId));
-    if (!(await magBijGebouw(req.session.userId!, doelGebouw))) {
+    if (!req.permissies!.magBijGebouw(doelGebouw)) {
       return res.status(403).json({ error: "Geen toegang tot deze taak" });
     }
 

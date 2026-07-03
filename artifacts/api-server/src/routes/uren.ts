@@ -152,14 +152,6 @@ async function medewerkerId(gebruikerId: number): Promise<number | null> {
   return m?.id ?? null;
 }
 
-async function gebruikerInfo(userId: number) {
-  const [u] = await db
-    .select({ rol: gebruikersTable.rol, bevoegdheden: gebruikersTable.bevoegdheden })
-    .from(gebruikersTable)
-    .where(eq(gebruikersTable.id, userId))
-    .limit(1);
-  return u ?? null;
-}
 
 // ── GET /uren ─────────────────────────────────────────────────────────────────
 router.get("/uren", requireAuth, async (req, res) => {
@@ -174,8 +166,8 @@ router.get("/uren", requireAuth, async (req, res) => {
   } = req.query as Record<string, string | undefined>;
 
   const userId = req.session.userId!;
-  const info = await gebruikerInfo(userId);
-  const isManager = ((info?.bevoegdheden as Record<string, number> | null)?.uren ?? 0) >= 1 || info?.rol === "hoofdbeheerder";
+
+  const isManager = req.permissies!.heeftModuleRecht("personeel", 1);
 
   let eigenMedewerkerId: number | null = null;
   if (!isManager) {
@@ -302,7 +294,7 @@ router.get("/uren/mijn-week", requireAuth, async (req, res) => {
 // ── POST /uren ────────────────────────────────────────────────────────────────
 router.post("/uren", requireAuth, async (req, res) => {
   const userId = req.session.userId!;
-  const info = await gebruikerInfo(userId);
+
   const {
     datum,
     medewerker_id: inputMedId,
@@ -324,7 +316,7 @@ router.post("/uren", requireAuth, async (req, res) => {
     return res.status(400).json({ error: "datum, begin_tijd en eind_tijd zijn verplicht" });
   }
 
-  const isManager = ((info?.bevoegdheden as Record<string, number> | null)?.uren ?? 0) >= 2 || info?.rol === "hoofdbeheerder";
+  const isManager = req.permissies!.heeftModuleRecht("personeel", 2);
   let mid: number;
 
   if (inputMedId && isManager) {
@@ -371,7 +363,7 @@ router.post("/uren", requireAuth, async (req, res) => {
 router.get("/uren/:id", requireAuth, async (req, res) => {
   const id = Number(req.params.id);
   const userId = req.session.userId!;
-  const info = await gebruikerInfo(userId);
+
 
   const [row] = await db
     .select({
@@ -388,7 +380,7 @@ router.get("/uren/:id", requireAuth, async (req, res) => {
   if (!row) return res.status(404).json({ error: "Niet gevonden" });
 
   const eigenId = await medewerkerId(userId);
-  const isManager = ((info?.bevoegdheden as Record<string, number> | null)?.uren ?? 0) >= 1 || info?.rol === "hoofdbeheerder";
+  const isManager = req.permissies!.heeftModuleRecht("personeel", 1);
   if (!isManager && row.uren.medewerkerId !== eigenId) {
     return res.status(403).json({ error: "Geen toegang" });
   }
@@ -400,7 +392,7 @@ router.get("/uren/:id", requireAuth, async (req, res) => {
 router.patch("/uren/:id", requireAuth, async (req, res) => {
   const id = Number(req.params.id);
   const userId = req.session.userId!;
-  const info = await gebruikerInfo(userId);
+
 
   const [bestaand] = await db
     .select()
@@ -411,7 +403,7 @@ router.patch("/uren/:id", requireAuth, async (req, res) => {
   if (!bestaand) return res.status(404).json({ error: "Niet gevonden" });
 
   const eigenId = await medewerkerId(userId);
-  const isManager = ((info?.bevoegdheden as Record<string, number> | null)?.uren ?? 0) >= 2 || info?.rol === "hoofdbeheerder";
+  const isManager = req.permissies!.heeftModuleRecht("personeel", 2);
   if (!isManager && bestaand.medewerkerId !== eigenId) {
     return res.status(403).json({ error: "Geen toegang" });
   }
@@ -472,7 +464,7 @@ router.patch("/uren/:id", requireAuth, async (req, res) => {
 router.delete("/uren/:id", requireAuth, async (req, res) => {
   const id = Number(req.params.id);
   const userId = req.session.userId!;
-  const info = await gebruikerInfo(userId);
+
 
   const [bestaand] = await db
     .select()
@@ -483,7 +475,7 @@ router.delete("/uren/:id", requireAuth, async (req, res) => {
   if (!bestaand) return res.status(404).json({ error: "Niet gevonden" });
 
   const eigenId = await medewerkerId(userId);
-  const isManager = ((info?.bevoegdheden as Record<string, number> | null)?.uren ?? 0) >= 2 || info?.rol === "hoofdbeheerder";
+  const isManager = req.permissies!.heeftModuleRecht("personeel", 2);
   if (!isManager && bestaand.medewerkerId !== eigenId) {
     return res.status(403).json({ error: "Geen toegang" });
   }
@@ -504,8 +496,8 @@ router.delete("/uren/:id", requireAuth, async (req, res) => {
 router.get("/weekstaten", requireAuth, async (req, res) => {
   const { medewerker_id, jaar, week, status } = req.query as Record<string, string | undefined>;
   const userId = req.session.userId!;
-  const info = await gebruikerInfo(userId);
-  const isManager = ((info?.bevoegdheden as Record<string, number> | null)?.uren ?? 0) >= 1 || info?.rol === "hoofdbeheerder";
+
+  const isManager = req.permissies!.heeftModuleRecht("personeel", 1);
 
   let eigenId: number | null = null;
   if (!isManager) {
@@ -536,14 +528,14 @@ router.get("/weekstaten", requireAuth, async (req, res) => {
 // ── POST /weekstaten ──────────────────────────────────────────────────────────
 router.post("/weekstaten", requireAuth, async (req, res) => {
   const userId = req.session.userId!;
-  const info = await gebruikerInfo(userId);
+
   const { medewerker_id: inputMedId, jaar, week_nummer, notities } = req.body;
 
   if (!jaar || !week_nummer) {
     return res.status(400).json({ error: "jaar en week_nummer zijn verplicht" });
   }
 
-  const isManager = ((info?.bevoegdheden as Record<string, number> | null)?.uren ?? 0) >= 2 || info?.rol === "hoofdbeheerder";
+  const isManager = req.permissies!.heeftModuleRecht("personeel", 2);
   let mid: number;
   if (inputMedId && isManager) {
     mid = Number(inputMedId);
@@ -609,7 +601,7 @@ router.post("/weekstaten", requireAuth, async (req, res) => {
 router.get("/weekstaten/:id", requireAuth, async (req, res) => {
   const id = Number(req.params.id);
   const userId = req.session.userId!;
-  const info = await gebruikerInfo(userId);
+
 
   const [row] = await db
     .select({
@@ -628,7 +620,7 @@ router.get("/weekstaten/:id", requireAuth, async (req, res) => {
   if (!row) return res.status(404).json({ error: "Niet gevonden" });
 
   const eigenId = await medewerkerId(userId);
-  const isManager = ((info?.bevoegdheden as Record<string, number> | null)?.uren ?? 0) >= 1 || info?.rol === "hoofdbeheerder";
+  const isManager = req.permissies!.heeftModuleRecht("personeel", 1);
   if (!isManager && row.ws.medewerkerId !== eigenId) {
     return res.status(403).json({ error: "Geen toegang" });
   }
@@ -682,13 +674,13 @@ router.patch("/weekstaten/:id", requireAuth, async (req, res) => {
 router.post("/weekstaten/:id/indienen", requireAuth, async (req, res) => {
   const id = Number(req.params.id);
   const userId = req.session.userId!;
-  const info = await gebruikerInfo(userId);
+
 
   const [bestaand] = await db.select().from(weekStatenTable).where(eq(weekStatenTable.id, id)).limit(1);
   if (!bestaand) return res.status(404).json({ error: "Niet gevonden" });
 
   const eigenId = await medewerkerId(userId);
-  const isManager = ((info?.bevoegdheden as Record<string, number> | null)?.uren ?? 0) >= 2 || info?.rol === "hoofdbeheerder";
+  const isManager = req.permissies!.heeftModuleRecht("personeel", 2);
   if (!isManager && bestaand.medewerkerId !== eigenId) {
     return res.status(403).json({ error: "Geen toegang" });
   }
@@ -750,9 +742,9 @@ router.post("/weekstaten/:id/indienen", requireAuth, async (req, res) => {
 router.post("/weekstaten/:id/goedkeuren", requireAuth, async (req, res) => {
   const id = Number(req.params.id);
   const userId = req.session.userId!;
-  const info = await gebruikerInfo(userId);
 
-  const isManager = ((info?.bevoegdheden as Record<string, number> | null)?.uren ?? 0) >= 2 || info?.rol === "hoofdbeheerder";
+
+  const isManager = req.permissies!.heeftModuleRecht("personeel", 2);
   if (!isManager) return res.status(403).json({ error: "Geen bevoegdheid" });
 
   const [bestaand] = await db.select().from(weekStatenTable).where(eq(weekStatenTable.id, id)).limit(1);
@@ -794,10 +786,10 @@ router.post("/weekstaten/:id/goedkeuren", requireAuth, async (req, res) => {
 router.post("/weekstaten/:id/afwijzen", requireAuth, async (req, res) => {
   const id = Number(req.params.id);
   const userId = req.session.userId!;
-  const info = await gebruikerInfo(userId);
+
   const { reden } = req.body;
 
-  const isManager = ((info?.bevoegdheden as Record<string, number> | null)?.uren ?? 0) >= 2 || info?.rol === "hoofdbeheerder";
+  const isManager = req.permissies!.heeftModuleRecht("personeel", 2);
   if (!isManager) return res.status(403).json({ error: "Geen bevoegdheid" });
 
   if (!reden) return res.status(400).json({ error: "reden is verplicht" });
@@ -840,9 +832,9 @@ router.post("/weekstaten/:id/afwijzen", requireAuth, async (req, res) => {
 router.post("/weekstaten/:id/vergrendelen", requireAuth, async (req, res) => {
   const id = Number(req.params.id);
   const userId = req.session.userId!;
-  const info = await gebruikerInfo(userId);
 
-  const isManager = ((info?.bevoegdheden as Record<string, number> | null)?.uren ?? 0) >= 2 || info?.rol === "hoofdbeheerder";
+
+  const isManager = req.permissies!.heeftModuleRecht("personeel", 2);
   if (!isManager) return res.status(403).json({ error: "Geen bevoegdheid" });
 
   const [bestaand] = await db.select().from(weekStatenTable).where(eq(weekStatenTable.id, id)).limit(1);
@@ -867,9 +859,9 @@ router.post("/weekstaten/:id/vergrendelen", requireAuth, async (req, res) => {
 router.post("/weekstaten/:id/ontgrendelen", requireAuth, async (req, res) => {
   const id = Number(req.params.id);
   const userId = req.session.userId!;
-  const info = await gebruikerInfo(userId);
 
-  const isManager = ((info?.bevoegdheden as Record<string, number> | null)?.uren ?? 0) >= 2 || info?.rol === "hoofdbeheerder";
+
+  const isManager = req.permissies!.heeftModuleRecht("personeel", 2);
   if (!isManager) return res.status(403).json({ error: "Geen bevoegdheid" });
 
   const [bestaand] = await db.select().from(weekStatenTable).where(eq(weekStatenTable.id, id)).limit(1);

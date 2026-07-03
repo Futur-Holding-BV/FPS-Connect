@@ -8,6 +8,26 @@ Voor elke taak drie scores:
 
 Grote roadmap-fases staan ook in `docs/roadmap/gebouwd.md` en `docs/roadmap/actief.md`.
 
+## 2026-07-03 — Task #180: Centrale Rechtenstructuur — migratie afgerond (sessie 2)
+
+**Uitvoering:** volledig | **Diepere lagen:** volledig | **Getest:** typecheck (api-server + firevault clean)
+
+Alle resterende parallelle autorisatiesystemen zijn vervangen door de centrale PermissieEngine:
+
+1. **`onderhoud.ts`** — 2× `await magBijGebouwVoorId(userId, gebouwId)` → `req.permissies!.magBijGebouw(gebouwId)` (synchroon); stale import verwijderd.
+2. **`uren.ts`** — 12× `isManager`-patroon (gebaseerd op niet-bestaand module-id `uren`) → `req.permissies!.heeftModuleRecht("personeel", 1|2)`. `gebruikerInfo`-helper volledig verwijderd (schrapt 12 extra DB-queries).
+3. **`werkdag.ts`** — 2× `req.session.rol === "hoofdbeheerder"` → `req.permissies!.isHoofdbeheerder`.
+4. **`toolbox.ts`** — `req.session["rol"] === "hoofdbeheerder"` → `req.permissies!.isHoofdbeheerder`.
+5. **`gebruikers.ts`** — 2× `requester`-fetch uit DB + `requester.rol !== "hoofdbeheerder"` → `req.permissies!.isHoofdbeheerder` + `req.permissies!.heeftModuleRecht(mod, lvl)` (vervangt ook de eigenBev-loop; schrapt 2 DB-queries).
+6. **`object-rechten.tsx`** — Beheer-UI toont nu een expliciete banner "Object-rechten zijn nog niet actief" + `pointer-events-none` wrapper om schijnfunctionaliteit te voorkomen.
+
+Bewust NIET gewijzigd (domeinlogica, geen autorisatie):
+- `golive.ts` `mijnActiesVoorRol(rol)` — pure functie, geen request-context.
+- `online-gebruikers.ts` `rol === "klant"` — functionele content-scope.
+- `gebouwen.ts` lines 1100/1344 — `gebruiker.rol` / `effectieveContext.rol` voor team- en documentzichtbaarheidslogica.
+- `toolbox.ts` line 78, `gebruikers.ts` lines 43/153 — andere gebruiker's rol als domein-eigenschap.
+- `mod-calculatie.ts`, `opdrachten.ts` `b.rol` — betrokken-entiteit rol als content-filter.
+
 ## 2026-07-03 — Task #180: Centrale Rechtenstructuur — geïntegreerd in productie
 
 **Uitvoering:** volledig | **Diepere lagen:** volledig | **Getest:** typecheck + server healthcheck

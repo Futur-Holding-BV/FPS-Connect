@@ -99,7 +99,7 @@ router.get("/modules/werkdag/items/:id", async (req, res) => {
   const id = parseInt(req.params.id, 10);
   const userId = req.session.userId!;
   const medewerkerId = await getMedewerkerId(userId);
-  const hoofdbeheerder = req.session.rol === "hoofdbeheerder";
+  const hoofdbeheerder = req.permissies!.isHoofdbeheerder;
 
   const [row] = await db
     .select({
@@ -156,7 +156,7 @@ router.patch("/modules/werkdag/items/:id/status", async (req, res) => {
 
   const userId = req.session.userId!;
   const medewerkerId = await getMedewerkerId(userId);
-  const hoofdbeheerder = req.session.rol === "hoofdbeheerder";
+  const hoofdbeheerder = req.permissies!.isHoofdbeheerder;
 
   const [existing] = await db
     .select({ medewerkerId: planningItemsTable.medewerkerId })
