@@ -3713,6 +3713,217 @@ paths:
               schema:
                 $ref: "#/components/schemas/Inspectie"
 
+  /inspecties/{id}/bevindingen:
+    get:
+      operationId: listInspectieBevindingen
+      tags: [inspecties]
+      summary: Bevindingen van een inspectie
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/InspectieBevinding"
+    post:
+      operationId: createInspectieBevinding
+      tags: [inspecties]
+      summary: Bevinding toevoegen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InspectieBevindingInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InspectieBevinding"
+
+  /inspecties/{id}/bevindingen/{bevId}:
+    patch:
+      operationId: patchInspectieBevinding
+      tags: [inspecties]
+      summary: Bevinding bijwerken
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: bevId
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InspectieBevindingUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InspectieBevinding"
+    delete:
+      operationId: deleteInspectieBevinding
+      tags: [inspecties]
+      summary: Bevinding verwijderen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: bevId
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Verwijderd
+
+  /inspecties/{id}/bevindingen/{bevId}/foto:
+    post:
+      operationId: addBevindingFoto
+      tags: [inspecties]
+      summary: Foto toevoegen aan bevinding
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: bevId
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BevindingFotoInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InspectieBevinding"
+    delete:
+      operationId: deleteBevindingFoto
+      tags: [inspecties]
+      summary: Foto verwijderen van bevinding
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: bevId
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BevindingFotoInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InspectieBevinding"
+
+  /inspecties/{id}/bevindingen/{bevId}/herstel:
+    post:
+      operationId: createBevindingHerstel
+      tags: [inspecties]
+      summary: Werkbon aanmaken vanuit bevinding
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: bevId
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BevindingHerstellInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [werkbon_id, werkbon_titel]
+                properties:
+                  werkbon_id:
+                    type: integer
+                  werkbon_titel:
+                    type: string
+
+  /inspecties/{id}/herinspectie:
+    post:
+      operationId: createHerinspectie
+      tags: [inspecties]
+      summary: Herinspectie aanmaken
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/HerinspectieInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Inspectie"
+
   # ── ONDERHOUD ─────────────────────────────────────────────────────────────
   /onderhoud:
     get:
@@ -20924,6 +21135,94 @@ components:
         aanbevelingen:
           type: string
         rapport_url:
+          type: string
+
+    InspectieBevinding:
+      type: object
+      required: [id, inspectie_id, status, herstel_vereist, foto_urls, aangemaakt_op]
+      properties:
+        id:
+          type: integer
+        inspectie_id:
+          type: integer
+        voorziening_id:
+          type: ["integer", "null"]
+        voorziening_objectnummer:
+          type: ["string", "null"]
+        voorziening_type:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [goed, aandacht, afkeur]
+        omschrijving:
+          type: ["string", "null"]
+        aanbeveling:
+          type: ["string", "null"]
+        herstel_vereist:
+          type: boolean
+        herstel_werkbon_id:
+          type: ["integer", "null"]
+        foto_urls:
+          type: array
+          items:
+            type: string
+        aangemaakt_op:
+          type: string
+
+    InspectieBevindingInput:
+      type: object
+      required: [status]
+      properties:
+        voorziening_id:
+          type: integer
+        status:
+          type: string
+          enum: [goed, aandacht, afkeur]
+        omschrijving:
+          type: string
+        aanbeveling:
+          type: string
+        herstel_vereist:
+          type: boolean
+
+    InspectieBevindingUpdate:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [goed, aandacht, afkeur]
+        omschrijving:
+          type: string
+        aanbeveling:
+          type: string
+        herstel_vereist:
+          type: boolean
+
+    BevindingFotoInput:
+      type: object
+      required: [url]
+      properties:
+        url:
+          type: string
+
+    BevindingHerstellInput:
+      type: object
+      properties:
+        titel:
+          type: string
+        omschrijving:
+          type: string
+        prioriteit:
+          type: string
+        toegewezen_aan_id:
+          type: integer
+
+    HerinspectieInput:
+      type: object
+      properties:
+        inspecteur_id:
+          type: integer
+        geplande_datum:
           type: string
 
     InspectieAfronden:

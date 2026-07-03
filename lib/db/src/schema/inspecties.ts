@@ -4,6 +4,7 @@ import { z } from "zod/v4";
 import { gebouwenTable } from "./gebouwen";
 import { voorzieningenTable } from "./voorzieningen";
 import { gebruikersTable } from "./gebruikers";
+import { onderhoudTable } from "./onderhoud";
 
 export const inspectiesTable = pgTable("inspecties", {
   id: serial("id").primaryKey(),
@@ -22,6 +23,24 @@ export const inspectiesTable = pgTable("inspecties", {
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
 });
 
+export const inspectieBevindingen = pgTable("inspectie_bevindingen", {
+  id: serial("id").primaryKey(),
+  inspectieId: integer("inspectie_id").notNull().references(() => inspectiesTable.id, { onDelete: "cascade" }),
+  voorzieningId: integer("voorziening_id").references(() => voorzieningenTable.id, { onDelete: "set null" }),
+  status: text("status").notNull().default("goed"),
+  omschrijving: text("omschrijving"),
+  aanbeveling: text("aanbeveling"),
+  herstellVereist: boolean("herstel_vereist").notNull().default(false),
+  herstellWerkbonId: integer("herstel_werkbon_id").references(() => onderhoudTable.id, { onDelete: "set null" }),
+  fotoUrls: text("foto_urls").notNull().default("[]"),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+  bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+});
+
 export const insertInspectieSchema = createInsertSchema(inspectiesTable).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });
 export type InsertInspectie = z.infer<typeof insertInspectieSchema>;
 export type Inspectie = typeof inspectiesTable.$inferSelect;
+
+export const insertInspectieBevindingSchema = createInsertSchema(inspectieBevindingen).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });
+export type InsertInspectieBevinding = z.infer<typeof insertInspectieBevindingSchema>;
+export type InspectieBevinding = typeof inspectieBevindingen.$inferSelect;

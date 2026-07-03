@@ -4,6 +4,31 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-03 — Sprint 1: Bedrijfsworkflow end-to-end sluiten
+
+**Uitvoering:** volledig | **Diepere lagen:** volledig | **Getest:** typecheck firevault + api-server schoon, workflows herstart
+
+**Epic 1 — Opdracht-aanmaak UX**
+- `useState("werkbegroting")` was al de default in opdracht detail.tsx — geen wijziging nodig
+
+**Epic 2 — Inkoopbon ontvangst → magazijn**
+- `OntvangenDialog` was al volledig gebouwd in inkoopplanning-tab.tsx — geen wijziging nodig
+
+**Epic 3 — Uren opdrachtselectie + werkdag**
+- Nieuwe `UrenInvoerDialog` met datum/tijden/pauze/categorie/werkzaamheden/opmerkingen
+- `OpdrachtCombobox`: zoekbare combobox via `useListOpdrachten` met titel, werknummer en gebouwnaam; koppelt `gebouw_id`/`project_id`/`project_naam` aan de registratie
+- `VandaagTab`: nieuw tabblad "Vandaag" met planning items via `useGetMijnWerk` (gebouwen + spots)
+- "Meerwerk" toegevoegd aan `WERKZAAMHEID_CATEGORIEEN`
+- "Registreren"-knop zowel in pagina-header als in lege-lijst-state; herlaad teller na opslaan
+- Manager krijgt tabs Vandaag / Uren / Weekstaten; medewerker krijgt Vandaag / Mijn uren
+
+**Epic 4 — Inspecties volledige workflow**
+- Nieuwe DB-tabel `inspectie_bevindingen` (inspectie_id, voorziening_id, status, omschrijving, aanbeveling, herstel_vereist, foto_urls, onderhoud_id) aangemaakt via psql + Drizzle schema
+- 8 nieuwe API-routes: `GET/POST /inspecties/:id/bevindingen`, `PATCH/DELETE /inspecties/:id/bevindingen/:bevId`, `POST/DELETE foto`, `POST herstel-werkbon`, `POST herinspectie`
+- OpenAPI-schemas: InspectieBevinding, InspectieBevindingInput, InspectieBevindingUpdate, BevindingFotoInput, BevindingHerstellInput, HerinspectieInput; codegen geslaagd
+- `inspecties/detail.tsx` volledig herschreven (~480 regels): header met status-workflow, statistieken-kaarten (totaal/goed/aandacht/afgekeurd/herstel), bevindingen-kaarten met foto-preview, 5 dialogen (bevinding toevoegen, bewerken, herstelwerkbon, herinspectie, foto toevoegen)
+- Toegangscontrole: `beperkt`-gebruikers zien alleen inspecties van eigen gebouwen of als inspecteur
+
 ## 2026-07-03 — Gebruikersfeedback voor livegang
 
 **Uitvoering:** volledig | **Diepere lagen:** volledig | **Getest:** typecheck firevault + api-server schoon, API 200, DB tabel aangemaakt

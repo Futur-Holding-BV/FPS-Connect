@@ -4478,6 +4478,179 @@ export const RonInspectieAfResponse = zod.object({
 
 
 /**
+ * @summary Bevindingen van een inspectie
+ */
+export const ListInspectieBevindingenParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListInspectieBevindingenResponseItem = zod.object({
+  "id": zod.number(),
+  "inspectie_id": zod.number(),
+  "voorziening_id": zod.number().nullish(),
+  "voorziening_objectnummer": zod.string().nullish(),
+  "voorziening_type": zod.string().nullish(),
+  "status": zod.enum(['goed', 'aandacht', 'afkeur']),
+  "omschrijving": zod.string().nullish(),
+  "aanbeveling": zod.string().nullish(),
+  "herstel_vereist": zod.boolean(),
+  "herstel_werkbon_id": zod.number().nullish(),
+  "foto_urls": zod.array(zod.string()),
+  "aangemaakt_op": zod.string()
+})
+export const ListInspectieBevindingenResponse = zod.array(ListInspectieBevindingenResponseItem)
+
+
+/**
+ * @summary Bevinding toevoegen
+ */
+export const CreateInspectieBevindingParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const CreateInspectieBevindingBody = zod.object({
+  "voorziening_id": zod.number().optional(),
+  "status": zod.enum(['goed', 'aandacht', 'afkeur']),
+  "omschrijving": zod.string().optional(),
+  "aanbeveling": zod.string().optional(),
+  "herstel_vereist": zod.boolean().optional()
+})
+
+export const CreateInspectieBevindingResponse = zod.void()
+
+
+/**
+ * @summary Bevinding bijwerken
+ */
+export const PatchInspectieBevindingParams = zod.object({
+  "id": zod.coerce.number(),
+  "bevId": zod.coerce.number()
+})
+
+export const PatchInspectieBevindingBody = zod.object({
+  "status": zod.enum(['goed', 'aandacht', 'afkeur']).optional(),
+  "omschrijving": zod.string().optional(),
+  "aanbeveling": zod.string().optional(),
+  "herstel_vereist": zod.boolean().optional()
+})
+
+export const PatchInspectieBevindingResponse = zod.object({
+  "id": zod.number(),
+  "inspectie_id": zod.number(),
+  "voorziening_id": zod.number().nullish(),
+  "voorziening_objectnummer": zod.string().nullish(),
+  "voorziening_type": zod.string().nullish(),
+  "status": zod.enum(['goed', 'aandacht', 'afkeur']),
+  "omschrijving": zod.string().nullish(),
+  "aanbeveling": zod.string().nullish(),
+  "herstel_vereist": zod.boolean(),
+  "herstel_werkbon_id": zod.number().nullish(),
+  "foto_urls": zod.array(zod.string()),
+  "aangemaakt_op": zod.string()
+})
+
+
+/**
+ * @summary Bevinding verwijderen
+ */
+export const DeleteInspectieBevindingParams = zod.object({
+  "id": zod.coerce.number(),
+  "bevId": zod.coerce.number()
+})
+
+export const DeleteInspectieBevindingResponse = zod.void()
+
+
+/**
+ * @summary Foto toevoegen aan bevinding
+ */
+export const AddBevindingFotoParams = zod.object({
+  "id": zod.coerce.number(),
+  "bevId": zod.coerce.number()
+})
+
+export const AddBevindingFotoBody = zod.object({
+  "url": zod.string()
+})
+
+export const AddBevindingFotoResponse = zod.object({
+  "id": zod.number(),
+  "inspectie_id": zod.number(),
+  "voorziening_id": zod.number().nullish(),
+  "voorziening_objectnummer": zod.string().nullish(),
+  "voorziening_type": zod.string().nullish(),
+  "status": zod.enum(['goed', 'aandacht', 'afkeur']),
+  "omschrijving": zod.string().nullish(),
+  "aanbeveling": zod.string().nullish(),
+  "herstel_vereist": zod.boolean(),
+  "herstel_werkbon_id": zod.number().nullish(),
+  "foto_urls": zod.array(zod.string()),
+  "aangemaakt_op": zod.string()
+})
+
+
+/**
+ * @summary Foto verwijderen van bevinding
+ */
+export const DeleteBevindingFotoParams = zod.object({
+  "id": zod.coerce.number(),
+  "bevId": zod.coerce.number()
+})
+
+export const DeleteBevindingFotoBody = zod.object({
+  "url": zod.string()
+})
+
+export const DeleteBevindingFotoResponse = zod.object({
+  "id": zod.number(),
+  "inspectie_id": zod.number(),
+  "voorziening_id": zod.number().nullish(),
+  "voorziening_objectnummer": zod.string().nullish(),
+  "voorziening_type": zod.string().nullish(),
+  "status": zod.enum(['goed', 'aandacht', 'afkeur']),
+  "omschrijving": zod.string().nullish(),
+  "aanbeveling": zod.string().nullish(),
+  "herstel_vereist": zod.boolean(),
+  "herstel_werkbon_id": zod.number().nullish(),
+  "foto_urls": zod.array(zod.string()),
+  "aangemaakt_op": zod.string()
+})
+
+
+/**
+ * @summary Werkbon aanmaken vanuit bevinding
+ */
+export const CreateBevindingHerstelParams = zod.object({
+  "id": zod.coerce.number(),
+  "bevId": zod.coerce.number()
+})
+
+export const CreateBevindingHerstelBody = zod.object({
+  "titel": zod.string().optional(),
+  "omschrijving": zod.string().optional(),
+  "prioriteit": zod.string().optional(),
+  "toegewezen_aan_id": zod.number().optional()
+})
+
+export const CreateBevindingHerstelResponse = zod.void()
+
+
+/**
+ * @summary Herinspectie aanmaken
+ */
+export const CreateHerinspectieParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const CreateHerinspectieBody = zod.object({
+  "inspecteur_id": zod.number().optional(),
+  "geplande_datum": zod.string().optional()
+})
+
+export const CreateHerinspectieResponse = zod.void()
+
+
+/**
  * @summary Onderhoudshistorie
  */
 export const ListOnderhoudQueryParams = zod.object({

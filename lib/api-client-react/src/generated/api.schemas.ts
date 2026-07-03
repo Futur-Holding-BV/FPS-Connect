@@ -2078,6 +2078,85 @@ export interface InspectieUpdate {
   rapport_url?: string;
 }
 
+export type InspectieBevindingStatus = typeof InspectieBevindingStatus[keyof typeof InspectieBevindingStatus];
+
+
+export const InspectieBevindingStatus = {
+  goed: 'goed',
+  aandacht: 'aandacht',
+  afkeur: 'afkeur',
+} as const;
+
+export interface InspectieBevinding {
+  id: number;
+  inspectie_id: number;
+  /** @nullable */
+  voorziening_id?: number | null;
+  /** @nullable */
+  voorziening_objectnummer?: string | null;
+  /** @nullable */
+  voorziening_type?: string | null;
+  status: InspectieBevindingStatus;
+  /** @nullable */
+  omschrijving?: string | null;
+  /** @nullable */
+  aanbeveling?: string | null;
+  herstel_vereist: boolean;
+  /** @nullable */
+  herstel_werkbon_id?: number | null;
+  foto_urls: string[];
+  aangemaakt_op: string;
+}
+
+export type InspectieBevindingInputStatus = typeof InspectieBevindingInputStatus[keyof typeof InspectieBevindingInputStatus];
+
+
+export const InspectieBevindingInputStatus = {
+  goed: 'goed',
+  aandacht: 'aandacht',
+  afkeur: 'afkeur',
+} as const;
+
+export interface InspectieBevindingInput {
+  voorziening_id?: number;
+  status: InspectieBevindingInputStatus;
+  omschrijving?: string;
+  aanbeveling?: string;
+  herstel_vereist?: boolean;
+}
+
+export type InspectieBevindingUpdateStatus = typeof InspectieBevindingUpdateStatus[keyof typeof InspectieBevindingUpdateStatus];
+
+
+export const InspectieBevindingUpdateStatus = {
+  goed: 'goed',
+  aandacht: 'aandacht',
+  afkeur: 'afkeur',
+} as const;
+
+export interface InspectieBevindingUpdate {
+  status?: InspectieBevindingUpdateStatus;
+  omschrijving?: string;
+  aanbeveling?: string;
+  herstel_vereist?: boolean;
+}
+
+export interface BevindingFotoInput {
+  url: string;
+}
+
+export interface BevindingHerstellInput {
+  titel?: string;
+  omschrijving?: string;
+  prioriteit?: string;
+  toegewezen_aan_id?: number;
+}
+
+export interface HerinspectieInput {
+  inspecteur_id?: number;
+  geplande_datum?: string;
+}
+
 export interface InspectieAfronden {
   bevindingen: string;
   aanbevelingen?: string;
@@ -10019,6 +10098,11 @@ gebouw_id?: number;
 voorziening_id?: number;
 type?: string;
 status?: string;
+};
+
+export type CreateBevindingHerstel201 = {
+  werkbon_id: number;
+  werkbon_titel: string;
 };
 
 export type ListOnderhoudParams = {

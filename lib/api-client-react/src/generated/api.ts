@@ -64,6 +64,8 @@ import type {
   Bekwaamheid,
   BekwaamheidInput,
   BeoordelenInput,
+  BevindingFotoInput,
+  BevindingHerstellInput,
   BoekhouderDashboard,
   BoekhouderUpload,
   BoekhouderUploadInput,
@@ -102,6 +104,7 @@ import type {
   CodeInput,
   ConstructieTemplate,
   ConstructieTemplateInput,
+  CreateBevindingHerstel201,
   CreateFactuurRegel201,
   CreateFactuurTermijn201,
   CrmCoachAntwoord,
@@ -261,6 +264,7 @@ import type {
   HelpdeskTicket,
   HelpdeskTicketInput,
   HelpdeskTicketUpdate,
+  HerinspectieInput,
   HerkomstBevestigenBulkInput,
   HrmStats,
   ImportLog,
@@ -289,6 +293,9 @@ import type {
   Inkoopplanning,
   Inspectie,
   InspectieAfronden,
+  InspectieBevinding,
+  InspectieBevindingInput,
+  InspectieBevindingUpdate,
   InspectieDetail,
   InspectieInput,
   InspectieUpdate,
@@ -12779,6 +12786,589 @@ export const useRonInspectieAf = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getRonInspectieAfMutationOptions(options));
+    }
+
+export const getListInspectieBevindingenUrl = (id: number,) => {
+
+
+
+
+  return `/api/inspecties/${id}/bevindingen`
+}
+
+/**
+ * @summary Bevindingen van een inspectie
+ */
+export const listInspectieBevindingen = async (id: number, options?: RequestInit): Promise<InspectieBevinding[]> => {
+
+  return customFetch<InspectieBevinding[]>(getListInspectieBevindingenUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListInspectieBevindingenQueryKey = (id: number,) => {
+    return [
+    `/api/inspecties/${id}/bevindingen`
+    ] as const;
+    }
+
+
+export const getListInspectieBevindingenQueryOptions = <TData = Awaited<ReturnType<typeof listInspectieBevindingen>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listInspectieBevindingen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListInspectieBevindingenQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listInspectieBevindingen>>> = ({ signal }) => listInspectieBevindingen(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listInspectieBevindingen>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListInspectieBevindingenQueryResult = NonNullable<Awaited<ReturnType<typeof listInspectieBevindingen>>>
+export type ListInspectieBevindingenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Bevindingen van een inspectie
+ */
+
+export function useListInspectieBevindingen<TData = Awaited<ReturnType<typeof listInspectieBevindingen>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listInspectieBevindingen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListInspectieBevindingenQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateInspectieBevindingUrl = (id: number,) => {
+
+
+
+
+  return `/api/inspecties/${id}/bevindingen`
+}
+
+/**
+ * @summary Bevinding toevoegen
+ */
+export const createInspectieBevinding = async (id: number,
+    inspectieBevindingInput: InspectieBevindingInput, options?: RequestInit): Promise<InspectieBevinding> => {
+
+  return customFetch<InspectieBevinding>(getCreateInspectieBevindingUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(inspectieBevindingInput)
+  }
+);}
+
+
+
+
+export const getCreateInspectieBevindingMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createInspectieBevinding>>, TError,{id: number;data: BodyType<InspectieBevindingInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createInspectieBevinding>>, TError,{id: number;data: BodyType<InspectieBevindingInput>}, TContext> => {
+
+const mutationKey = ['createInspectieBevinding'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createInspectieBevinding>>, {id: number;data: BodyType<InspectieBevindingInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  createInspectieBevinding(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateInspectieBevindingMutationResult = NonNullable<Awaited<ReturnType<typeof createInspectieBevinding>>>
+    export type CreateInspectieBevindingMutationBody = BodyType<InspectieBevindingInput>
+    export type CreateInspectieBevindingMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Bevinding toevoegen
+ */
+export const useCreateInspectieBevinding = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createInspectieBevinding>>, TError,{id: number;data: BodyType<InspectieBevindingInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createInspectieBevinding>>,
+        TError,
+        {id: number;data: BodyType<InspectieBevindingInput>},
+        TContext
+      > => {
+      return useMutation(getCreateInspectieBevindingMutationOptions(options));
+    }
+
+export const getPatchInspectieBevindingUrl = (id: number,
+    bevId: number,) => {
+
+
+
+
+  return `/api/inspecties/${id}/bevindingen/${bevId}`
+}
+
+/**
+ * @summary Bevinding bijwerken
+ */
+export const patchInspectieBevinding = async (id: number,
+    bevId: number,
+    inspectieBevindingUpdate: InspectieBevindingUpdate, options?: RequestInit): Promise<InspectieBevinding> => {
+
+  return customFetch<InspectieBevinding>(getPatchInspectieBevindingUrl(id,bevId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(inspectieBevindingUpdate)
+  }
+);}
+
+
+
+
+export const getPatchInspectieBevindingMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchInspectieBevinding>>, TError,{id: number;bevId: number;data: BodyType<InspectieBevindingUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof patchInspectieBevinding>>, TError,{id: number;bevId: number;data: BodyType<InspectieBevindingUpdate>}, TContext> => {
+
+const mutationKey = ['patchInspectieBevinding'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof patchInspectieBevinding>>, {id: number;bevId: number;data: BodyType<InspectieBevindingUpdate>}> = (props) => {
+          const {id,bevId,data} = props ?? {};
+
+          return  patchInspectieBevinding(id,bevId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PatchInspectieBevindingMutationResult = NonNullable<Awaited<ReturnType<typeof patchInspectieBevinding>>>
+    export type PatchInspectieBevindingMutationBody = BodyType<InspectieBevindingUpdate>
+    export type PatchInspectieBevindingMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Bevinding bijwerken
+ */
+export const usePatchInspectieBevinding = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchInspectieBevinding>>, TError,{id: number;bevId: number;data: BodyType<InspectieBevindingUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof patchInspectieBevinding>>,
+        TError,
+        {id: number;bevId: number;data: BodyType<InspectieBevindingUpdate>},
+        TContext
+      > => {
+      return useMutation(getPatchInspectieBevindingMutationOptions(options));
+    }
+
+export const getDeleteInspectieBevindingUrl = (id: number,
+    bevId: number,) => {
+
+
+
+
+  return `/api/inspecties/${id}/bevindingen/${bevId}`
+}
+
+/**
+ * @summary Bevinding verwijderen
+ */
+export const deleteInspectieBevinding = async (id: number,
+    bevId: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteInspectieBevindingUrl(id,bevId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteInspectieBevindingMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteInspectieBevinding>>, TError,{id: number;bevId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteInspectieBevinding>>, TError,{id: number;bevId: number}, TContext> => {
+
+const mutationKey = ['deleteInspectieBevinding'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteInspectieBevinding>>, {id: number;bevId: number}> = (props) => {
+          const {id,bevId} = props ?? {};
+
+          return  deleteInspectieBevinding(id,bevId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteInspectieBevindingMutationResult = NonNullable<Awaited<ReturnType<typeof deleteInspectieBevinding>>>
+
+    export type DeleteInspectieBevindingMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Bevinding verwijderen
+ */
+export const useDeleteInspectieBevinding = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteInspectieBevinding>>, TError,{id: number;bevId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteInspectieBevinding>>,
+        TError,
+        {id: number;bevId: number},
+        TContext
+      > => {
+      return useMutation(getDeleteInspectieBevindingMutationOptions(options));
+    }
+
+export const getAddBevindingFotoUrl = (id: number,
+    bevId: number,) => {
+
+
+
+
+  return `/api/inspecties/${id}/bevindingen/${bevId}/foto`
+}
+
+/**
+ * @summary Foto toevoegen aan bevinding
+ */
+export const addBevindingFoto = async (id: number,
+    bevId: number,
+    bevindingFotoInput: BevindingFotoInput, options?: RequestInit): Promise<InspectieBevinding> => {
+
+  return customFetch<InspectieBevinding>(getAddBevindingFotoUrl(id,bevId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(bevindingFotoInput)
+  }
+);}
+
+
+
+
+export const getAddBevindingFotoMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addBevindingFoto>>, TError,{id: number;bevId: number;data: BodyType<BevindingFotoInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof addBevindingFoto>>, TError,{id: number;bevId: number;data: BodyType<BevindingFotoInput>}, TContext> => {
+
+const mutationKey = ['addBevindingFoto'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof addBevindingFoto>>, {id: number;bevId: number;data: BodyType<BevindingFotoInput>}> = (props) => {
+          const {id,bevId,data} = props ?? {};
+
+          return  addBevindingFoto(id,bevId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AddBevindingFotoMutationResult = NonNullable<Awaited<ReturnType<typeof addBevindingFoto>>>
+    export type AddBevindingFotoMutationBody = BodyType<BevindingFotoInput>
+    export type AddBevindingFotoMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Foto toevoegen aan bevinding
+ */
+export const useAddBevindingFoto = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addBevindingFoto>>, TError,{id: number;bevId: number;data: BodyType<BevindingFotoInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof addBevindingFoto>>,
+        TError,
+        {id: number;bevId: number;data: BodyType<BevindingFotoInput>},
+        TContext
+      > => {
+      return useMutation(getAddBevindingFotoMutationOptions(options));
+    }
+
+export const getDeleteBevindingFotoUrl = (id: number,
+    bevId: number,) => {
+
+
+
+
+  return `/api/inspecties/${id}/bevindingen/${bevId}/foto`
+}
+
+/**
+ * @summary Foto verwijderen van bevinding
+ */
+export const deleteBevindingFoto = async (id: number,
+    bevId: number,
+    bevindingFotoInput: BevindingFotoInput, options?: RequestInit): Promise<InspectieBevinding> => {
+
+  return customFetch<InspectieBevinding>(getDeleteBevindingFotoUrl(id,bevId),
+  {
+    ...options,
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(bevindingFotoInput)
+  }
+);}
+
+
+
+
+export const getDeleteBevindingFotoMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteBevindingFoto>>, TError,{id: number;bevId: number;data: BodyType<BevindingFotoInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteBevindingFoto>>, TError,{id: number;bevId: number;data: BodyType<BevindingFotoInput>}, TContext> => {
+
+const mutationKey = ['deleteBevindingFoto'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteBevindingFoto>>, {id: number;bevId: number;data: BodyType<BevindingFotoInput>}> = (props) => {
+          const {id,bevId,data} = props ?? {};
+
+          return  deleteBevindingFoto(id,bevId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteBevindingFotoMutationResult = NonNullable<Awaited<ReturnType<typeof deleteBevindingFoto>>>
+    export type DeleteBevindingFotoMutationBody = BodyType<BevindingFotoInput>
+    export type DeleteBevindingFotoMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Foto verwijderen van bevinding
+ */
+export const useDeleteBevindingFoto = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteBevindingFoto>>, TError,{id: number;bevId: number;data: BodyType<BevindingFotoInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteBevindingFoto>>,
+        TError,
+        {id: number;bevId: number;data: BodyType<BevindingFotoInput>},
+        TContext
+      > => {
+      return useMutation(getDeleteBevindingFotoMutationOptions(options));
+    }
+
+export const getCreateBevindingHerstelUrl = (id: number,
+    bevId: number,) => {
+
+
+
+
+  return `/api/inspecties/${id}/bevindingen/${bevId}/herstel`
+}
+
+/**
+ * @summary Werkbon aanmaken vanuit bevinding
+ */
+export const createBevindingHerstel = async (id: number,
+    bevId: number,
+    bevindingHerstellInput?: BevindingHerstellInput, options?: RequestInit): Promise<CreateBevindingHerstel201> => {
+
+  return customFetch<CreateBevindingHerstel201>(getCreateBevindingHerstelUrl(id,bevId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(bevindingHerstellInput)
+  }
+);}
+
+
+
+
+export const getCreateBevindingHerstelMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createBevindingHerstel>>, TError,{id: number;bevId: number;data?: BodyType<BevindingHerstellInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createBevindingHerstel>>, TError,{id: number;bevId: number;data?: BodyType<BevindingHerstellInput>}, TContext> => {
+
+const mutationKey = ['createBevindingHerstel'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createBevindingHerstel>>, {id: number;bevId: number;data?: BodyType<BevindingHerstellInput>}> = (props) => {
+          const {id,bevId,data} = props ?? {};
+
+          return  createBevindingHerstel(id,bevId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateBevindingHerstelMutationResult = NonNullable<Awaited<ReturnType<typeof createBevindingHerstel>>>
+    export type CreateBevindingHerstelMutationBody = BodyType<BevindingHerstellInput> | undefined
+    export type CreateBevindingHerstelMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Werkbon aanmaken vanuit bevinding
+ */
+export const useCreateBevindingHerstel = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createBevindingHerstel>>, TError,{id: number;bevId: number;data?: BodyType<BevindingHerstellInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createBevindingHerstel>>,
+        TError,
+        {id: number;bevId: number;data?: BodyType<BevindingHerstellInput>},
+        TContext
+      > => {
+      return useMutation(getCreateBevindingHerstelMutationOptions(options));
+    }
+
+export const getCreateHerinspectieUrl = (id: number,) => {
+
+
+
+
+  return `/api/inspecties/${id}/herinspectie`
+}
+
+/**
+ * @summary Herinspectie aanmaken
+ */
+export const createHerinspectie = async (id: number,
+    herinspectieInput?: HerinspectieInput, options?: RequestInit): Promise<Inspectie> => {
+
+  return customFetch<Inspectie>(getCreateHerinspectieUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(herinspectieInput)
+  }
+);}
+
+
+
+
+export const getCreateHerinspectieMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createHerinspectie>>, TError,{id: number;data?: BodyType<HerinspectieInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createHerinspectie>>, TError,{id: number;data?: BodyType<HerinspectieInput>}, TContext> => {
+
+const mutationKey = ['createHerinspectie'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createHerinspectie>>, {id: number;data?: BodyType<HerinspectieInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  createHerinspectie(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateHerinspectieMutationResult = NonNullable<Awaited<ReturnType<typeof createHerinspectie>>>
+    export type CreateHerinspectieMutationBody = BodyType<HerinspectieInput> | undefined
+    export type CreateHerinspectieMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Herinspectie aanmaken
+ */
+export const useCreateHerinspectie = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createHerinspectie>>, TError,{id: number;data?: BodyType<HerinspectieInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createHerinspectie>>,
+        TError,
+        {id: number;data?: BodyType<HerinspectieInput>},
+        TContext
+      > => {
+      return useMutation(getCreateHerinspectieMutationOptions(options));
     }
 
 export const getListOnderhoudUrl = (params?: ListOnderhoudParams,) => {
