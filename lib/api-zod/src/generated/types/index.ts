@@ -87,6 +87,8 @@ export * from './bruikleenOndertekeningInput';
 export * from './bruikleenOndertekeningInputRol';
 export * from './bruikleenOvereenkomst';
 export * from './bruikleenRetourgaveInput';
+export * from './calcAdvies';
+export * from './calcAdviesUpdate';
 export * from './calculatie';
 export * from './calculatieDetail';
 export * from './calculatieInput';

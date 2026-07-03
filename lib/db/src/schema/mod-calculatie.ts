@@ -117,6 +117,21 @@ export const modCalcVersiesTable = pgTable("mod_calc_versies", {
   aangemaaktDoorId: integer("aangemaakt_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
 });
 
+// Adviezen van de AI Senior Calculator per calculatie-run
+export const modCalcAdviezenTable = pgTable("mod_calc_adviezen", {
+  id: serial("id").primaryKey(),
+  calculatieId: integer("calculatie_id").notNull().references(() => modCalcHeadersTable.id, { onDelete: "cascade" }),
+  runId: text("run_id").notNull(),
+  type: text("type").notNull(),
+  prioriteit: text("prioriteit").notNull().default("middel"),
+  titel: text("titel").notNull(),
+  uitleg: text("uitleg").notNull(),
+  status: text("status").notNull().default("actief"),
+  notitie: text("notitie"),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+  bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+});
+
 // Calculatie inkoopitems — offerteaanvragen bij leveranciers/onderaannemers tijdens de calculatiefase
 export const modCalcInkoopItemsTable = pgTable("mod_calc_inkoop_items", {
   id:                  serial("id").primaryKey(),

@@ -6038,6 +6038,29 @@ export interface ModCalcInkoopItemInput {
   notities?: string | null;
 }
 
+export interface CalcAdvies {
+  id: number;
+  calculatie_id: number;
+  run_id: string;
+  /** waarschuwing | aandachtspunt | kans_op_besparing | ontbrekende_info | vraag */
+  type: string;
+  /** hoog | middel | laag */
+  prioriteit: string;
+  titel: string;
+  uitleg: string;
+  /** actief | genegeerd | gecontroleerd */
+  status: string;
+  notitie?: string | null;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export interface CalcAdviesUpdate {
+  /** actief | genegeerd | gecontroleerd */
+  status?: string;
+  notitie?: string | null;
+}
+
 export interface UrenRegistratie {
   id: number;
   datum: string;

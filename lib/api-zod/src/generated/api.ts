@@ -13895,6 +13895,80 @@ export const AiChatCalculatieResponse = zod.object({
 
 
 /**
+ * @summary AI Senior Calculator — volledige analyse van de calculatie
+ */
+export const AiSeniorAnalyseCalculatieParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AiSeniorAnalyseCalculatieResponseItem = zod.object({
+  "id": zod.number(),
+  "calculatie_id": zod.number(),
+  "run_id": zod.string(),
+  "type": zod.string().describe('waarschuwing | aandachtspunt | kans_op_besparing | ontbrekende_info | vraag'),
+  "prioriteit": zod.string().describe('hoog | middel | laag'),
+  "titel": zod.string(),
+  "uitleg": zod.string(),
+  "status": zod.string().describe('actief | genegeerd | gecontroleerd'),
+  "notitie": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+export const AiSeniorAnalyseCalculatieResponse = zod.array(AiSeniorAnalyseCalculatieResponseItem)
+
+
+/**
+ * @summary Adviezen van de laatste analyse-run ophalen
+ */
+export const ListCalcAdviezenParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListCalcAdviezenResponseItem = zod.object({
+  "id": zod.number(),
+  "calculatie_id": zod.number(),
+  "run_id": zod.string(),
+  "type": zod.string().describe('waarschuwing | aandachtspunt | kans_op_besparing | ontbrekende_info | vraag'),
+  "prioriteit": zod.string().describe('hoog | middel | laag'),
+  "titel": zod.string(),
+  "uitleg": zod.string(),
+  "status": zod.string().describe('actief | genegeerd | gecontroleerd'),
+  "notitie": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+export const ListCalcAdviezenResponse = zod.array(ListCalcAdviezenResponseItem)
+
+
+/**
+ * @summary Advies status of notitie bijwerken
+ */
+export const UpdateCalcAdviesParams = zod.object({
+  "id": zod.coerce.number(),
+  "adviesId": zod.coerce.number()
+})
+
+export const UpdateCalcAdviesBody = zod.object({
+  "status": zod.string().optional().describe('actief | genegeerd | gecontroleerd'),
+  "notitie": zod.string().nullish()
+})
+
+export const UpdateCalcAdviesResponse = zod.object({
+  "id": zod.number(),
+  "calculatie_id": zod.number(),
+  "run_id": zod.string(),
+  "type": zod.string().describe('waarschuwing | aandachtspunt | kans_op_besparing | ontbrekende_info | vraag'),
+  "prioriteit": zod.string().describe('hoog | middel | laag'),
+  "titel": zod.string(),
+  "uitleg": zod.string(),
+  "status": zod.string().describe('actief | genegeerd | gecontroleerd'),
+  "notitie": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
  * @summary Inkoopitems van een calculatie ophalen
  */
 export const ListModCalcInkoopItemsParams = zod.object({

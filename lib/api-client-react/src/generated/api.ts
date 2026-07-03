@@ -74,6 +74,8 @@ import type {
   BruikleenOndertekeningInput,
   BruikleenOvereenkomst,
   BruikleenRetourgaveInput,
+  CalcAdvies,
+  CalcAdviesUpdate,
   Calculatie,
   CalculatieDetail,
   CalculatieInput,
@@ -39933,6 +39935,226 @@ export const useAiChatCalculatie = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getAiChatCalculatieMutationOptions(options));
+    }
+
+export const getAiSeniorAnalyseCalculatieUrl = (id: number,) => {
+
+
+
+
+  return `/api/modules/calculaties/${id}/ai-senior-analyse`
+}
+
+/**
+ * @summary AI Senior Calculator — volledige analyse van de calculatie
+ */
+export const aiSeniorAnalyseCalculatie = async (id: number, options?: RequestInit): Promise<CalcAdvies[]> => {
+
+  return customFetch<CalcAdvies[]>(getAiSeniorAnalyseCalculatieUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getAiSeniorAnalyseCalculatieMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof aiSeniorAnalyseCalculatie>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof aiSeniorAnalyseCalculatie>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['aiSeniorAnalyseCalculatie'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof aiSeniorAnalyseCalculatie>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  aiSeniorAnalyseCalculatie(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AiSeniorAnalyseCalculatieMutationResult = NonNullable<Awaited<ReturnType<typeof aiSeniorAnalyseCalculatie>>>
+
+    export type AiSeniorAnalyseCalculatieMutationError = ErrorType<void>
+
+    /**
+ * @summary AI Senior Calculator — volledige analyse van de calculatie
+ */
+export const useAiSeniorAnalyseCalculatie = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof aiSeniorAnalyseCalculatie>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof aiSeniorAnalyseCalculatie>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getAiSeniorAnalyseCalculatieMutationOptions(options));
+    }
+
+export const getListCalcAdviezenUrl = (id: number,) => {
+
+
+
+
+  return `/api/modules/calculaties/${id}/adviezen`
+}
+
+/**
+ * @summary Adviezen van de laatste analyse-run ophalen
+ */
+export const listCalcAdviezen = async (id: number, options?: RequestInit): Promise<CalcAdvies[]> => {
+
+  return customFetch<CalcAdvies[]>(getListCalcAdviezenUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListCalcAdviezenQueryKey = (id: number,) => {
+    return [
+    `/api/modules/calculaties/${id}/adviezen`
+    ] as const;
+    }
+
+
+export const getListCalcAdviezenQueryOptions = <TData = Awaited<ReturnType<typeof listCalcAdviezen>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listCalcAdviezen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListCalcAdviezenQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listCalcAdviezen>>> = ({ signal }) => listCalcAdviezen(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listCalcAdviezen>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListCalcAdviezenQueryResult = NonNullable<Awaited<ReturnType<typeof listCalcAdviezen>>>
+export type ListCalcAdviezenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Adviezen van de laatste analyse-run ophalen
+ */
+
+export function useListCalcAdviezen<TData = Awaited<ReturnType<typeof listCalcAdviezen>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listCalcAdviezen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListCalcAdviezenQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUpdateCalcAdviesUrl = (id: number,
+    adviesId: number,) => {
+
+
+
+
+  return `/api/modules/calculaties/${id}/adviezen/${adviesId}`
+}
+
+/**
+ * @summary Advies status of notitie bijwerken
+ */
+export const updateCalcAdvies = async (id: number,
+    adviesId: number,
+    calcAdviesUpdate: CalcAdviesUpdate, options?: RequestInit): Promise<CalcAdvies> => {
+
+  return customFetch<CalcAdvies>(getUpdateCalcAdviesUrl(id,adviesId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(calcAdviesUpdate)
+  }
+);}
+
+
+
+
+export const getUpdateCalcAdviesMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateCalcAdvies>>, TError,{id: number;adviesId: number;data: BodyType<CalcAdviesUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateCalcAdvies>>, TError,{id: number;adviesId: number;data: BodyType<CalcAdviesUpdate>}, TContext> => {
+
+const mutationKey = ['updateCalcAdvies'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateCalcAdvies>>, {id: number;adviesId: number;data: BodyType<CalcAdviesUpdate>}> = (props) => {
+          const {id,adviesId,data} = props ?? {};
+
+          return  updateCalcAdvies(id,adviesId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateCalcAdviesMutationResult = NonNullable<Awaited<ReturnType<typeof updateCalcAdvies>>>
+    export type UpdateCalcAdviesMutationBody = BodyType<CalcAdviesUpdate>
+    export type UpdateCalcAdviesMutationError = ErrorType<void>
+
+    /**
+ * @summary Advies status of notitie bijwerken
+ */
+export const useUpdateCalcAdvies = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateCalcAdvies>>, TError,{id: number;adviesId: number;data: BodyType<CalcAdviesUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateCalcAdvies>>,
+        TError,
+        {id: number;adviesId: number;data: BodyType<CalcAdviesUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateCalcAdviesMutationOptions(options));
     }
 
 export const getListModCalcInkoopItemsUrl = (id: number,) => {

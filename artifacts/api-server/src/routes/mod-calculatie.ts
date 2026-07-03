@@ -11,6 +11,7 @@ import {
   modCalcArtekelenTable,
   modCalcVersiesTable,
   modCalcInkoopItemsTable,
+  modCalcAdviezenTable,
   gebouwenTable,
   gebruikersTable,
   voorzieningenTable,
@@ -1632,6 +1633,272 @@ Antwoord altijd in het Nederlands. Geef concrete, praktische adviezen. Wees krit
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Serverfout bij AI-chat" });
+  }
+});
+
+// ── POST /modules/calculaties/:id/ai-senior-analyse ───────────────────────
+router.post("/modules/calculaties/:id/ai-senior-analyse", lezenCalc, async (req, res) => {
+  try {
+    const id = parseId(req.params["id"]);
+    const [header] = await db.select().from(modCalcHeadersTable).where(eq(modCalcHeadersTable.id, id));
+    if (!header) { res.status(404).json({ error: "Calculatie niet gevonden" }); return; }
+
+    if (!heeftGateway()) {
+      res.json([]);
+      return;
+    }
+
+    const [regels, inkoopItems, tarieven] = await Promise.all([
+      db.select().from(modCalcRegelsTable)
+        .where(eq(modCalcRegelsTable.calculatieId, id))
+        .orderBy(asc(modCalcRegelsTable.volgorde)),
+      db.select().from(modCalcInkoopItemsTable)
+        .where(eq(modCalcInkoopItemsTable.calculatieId, id)),
+      db.select().from(modCalcTarievenTable)
+        .where(eq(modCalcTarievenTable.actief, true))
+        .orderBy(asc(modCalcTarievenTable.categorie)),
+    ]);
+
+    let gebouwInfo = "";
+    let spotenInfo = "";
+    let opnameInfo = "";
+
+    if (header.gebouwId) {
+      const gId = header.gebouwId;
+      const [[g], spotCounts, opnameItems] = await Promise.all([
+        db.select().from(gebouwenTable).where(eq(gebouwenTable.id, gId)).limit(1),
+        db.select({ type: voorzieningenTable.type, aantal: count() })
+          .from(voorzieningenTable)
+          .where(and(eq(voorzieningenTable.gebouwId, gId), eq(voorzieningenTable.gearchiveerd, false)))
+          .groupBy(voorzieningenTable.type),
+        db.select({
+          spotType: opnameItemsTable.spotType,
+          actie: opnameItemsTable.actie,
+          aantal: opnameItemsTable.aantal,
+          prioriteit: opnameItemsTable.prioriteit,
+          beschrijving: opnameItemsTable.beschrijving,
+        })
+          .from(opnamesTable)
+          .innerJoin(opnameItemsTable, eq(opnameItemsTable.opnameId, opnamesTable.id))
+          .where(eq(opnamesTable.gebouwId, gId))
+          .orderBy(desc(opnamesTable.datum))
+          .limit(60),
+      ]);
+      if (g) gebouwInfo = `Gebouw: ${(g as any).naam}, ${(g as any).adres ?? ""} ${(g as any).stad ?? ""}`;
+      if (spotCounts.length > 0) {
+        spotenInfo = spotCounts.map((s) => `${s.type}: ${s.aantal} stuks`).join("; ");
+      }
+      if (opnameItems.length > 0) {
+        opnameInfo = opnameItems.map((i) => `${i.spotType}: ${i.actie} ×${i.aantal}${i.prioriteit === "hoog" ? " [HOOG]" : ""}${i.beschrijving ? " — " + i.beschrijving : ""}`).join("\n");
+      }
+    }
+
+    const regelsTekst = regels.length > 0
+      ? regels.map((r) => {
+          const hr = (r as any).hoofdstuk ?? "Overige";
+          const totaalMateriaal = Number(r.hoeveelheid) * Number(r.tarief);
+          const totaalArbeid = Number(r.hoeveelheid) * Number(r.muPerEenheid ?? 0) * Number(r.arbeidsTarief ?? 0);
+          return `[${hr}] ${r.categorie} | ${r.omschrijving} | ${r.hoeveelheid} ${r.eenheid} | mat €${r.tarief}/eenheid | arb MU ${r.muPerEenheid ?? 0} | OA €${r.onderaannemingBedrag ?? 0} | totaal €${(totaalMateriaal + totaalArbeid + Number(r.onderaannemingBedrag ?? 0)).toFixed(0)}`;
+        }).join("\n")
+      : "(geen regels)";
+
+    const inkoopTekst = inkoopItems.length > 0
+      ? inkoopItems.map((i) => `${i.type}: ${i.omschrijving}${(i as any).artikel ? " (" + (i as any).artikel + ")" : ""} — offerte ontvangen: ${(i as any).offerteOntvangen ? "ja" : "nee"}`).join("\n")
+      : "(geen inkoopregels)";
+
+    const opslagenTekst = [
+      `AK: ${header.opslagAk ?? 15}%`,
+      `ABK: ${(header as any).opslagAbk ?? 10}%`,
+      `Risico: ${header.opslagRisico ?? 5}%`,
+      `Winst: ${header.opslagWinst ?? 10}%`,
+      `Materiaalopslog: ${header.opslagMateriaal ?? 0}%`,
+      `Arbeidsopslag: ${header.opslagArbeid ?? 0}%`,
+      `Korting: ${header.korting ?? 0}%`,
+    ].join(" | ");
+
+    const systeemPrompt = `Je bent een ervaren senior calculator brandpreventie met 20+ jaar ervaring in Nederland. Je analyseert calculaties voor brandwerende werkzaamheden (doorvoeringen, deuren, wanden, manchetten, coatings, EPS-systemen) en geeft concrete, kritische adviezen.
+
+CALCULATIE: ${header.naam}
+Project: ${header.projectNaam ?? "(niet ingevuld)"}
+Klant: ${header.klantNaam ?? "(niet ingevuld)"}
+Status: ${header.status ?? "concept"}
+${header.omschrijving ? "Omschrijving: " + header.omschrijving : ""}
+${gebouwInfo ? "\n" + gebouwInfo : ""}
+${spotenInfo ? "Geregistreerde spots: " + spotenInfo : ""}
+${opnameInfo ? "\nVeldopname:\n" + opnameInfo : ""}
+
+OPSLAGEN: ${opslagenTekst}
+
+CALCULATIEREGELS (${regels.length}):
+${regelsTekst}
+
+INKOOPADMINISTRATIE:
+${inkoopTekst}
+
+Geef een grondige analyse als senior calculator. Retourneer UITSLUITEND een geldig JSON-array (geen markdown, geen uitleg buiten de JSON). Elk element heeft deze velden:
+- "type": één van "waarschuwing" | "aandachtspunt" | "kans_op_besparing" | "ontbrekende_info" | "vraag"
+- "prioriteit": "hoog" | "middel" | "laag"
+- "titel": korte samenvatting (max 80 tekens)
+- "uitleg": concrete toelichting met reden en voorstel (max 400 tekens)
+
+Analyseer minimaal:
+1. Ontbrekende hoofdstukken (staartkosten, bouwplaatskosten, sloopwerk)
+2. Opvallend lage of hoge tarieven voor brandpreventie in Nederland
+3. Ontbrekende arbeid bij materiaalregels
+4. Ontbrekende materiaalregels bij arbeidsregels
+5. Ontbrekende onderaanneming bij specialistisch werk (glas, kozijnen, stucwerk)
+6. Afwijkende marge (normale AK+risico+winst voor dit type werk: 30-45%)
+7. Ontbrekende staartkosten of bouwplaatskosten
+8. BTW-instelling (standaard 21% of verlegd?)
+9. Onlogische hoeveelheden voor het omschreven werk
+10. Regels zonder eenheid of zonder kostprijs
+11. Inkoopregels zonder offerte terwijl bedrag significant is
+12. Posten die waarschijnlijk offerte bij leverancier vereisen
+
+Retourneer maximaal 15 adviezen. Geef alleen zinvolle, concrete adviezen. Begin direct met "[":`;
+
+    const aiResultaat = await aiGateway.chat("reasoning", {
+      messages: [
+        { role: "system", content: systeemPrompt },
+        { role: "user", content: "Analyseer de calculatie en retourneer de JSON-array met adviezen." },
+      ],
+      max_completion_tokens: 3000,
+    } as any);
+
+    let adviezen: Array<{ type: string; prioriteit: string; titel: string; uitleg: string }> = [];
+    if (aiResultaat.ok) {
+      try {
+        const raw = aiResultaat.inhoud.trim();
+        const jsonStart = raw.indexOf("[");
+        const jsonEnd = raw.lastIndexOf("]");
+        if (jsonStart !== -1 && jsonEnd > jsonStart) {
+          const parsed = JSON.parse(raw.slice(jsonStart, jsonEnd + 1));
+          if (Array.isArray(parsed)) {
+            const geldigeTypes = ["waarschuwing", "aandachtspunt", "kans_op_besparing", "ontbrekende_info", "vraag"];
+            const geldigePriorities = ["hoog", "middel", "laag"];
+            adviezen = parsed
+              .filter((a) => a && typeof a.titel === "string" && typeof a.uitleg === "string")
+              .map((a) => ({
+                type: geldigeTypes.includes(a.type) ? a.type : "aandachtspunt",
+                prioriteit: geldigePriorities.includes(a.prioriteit) ? a.prioriteit : "middel",
+                titel: String(a.titel).slice(0, 120),
+                uitleg: String(a.uitleg).slice(0, 500),
+              }))
+              .slice(0, 15);
+          }
+        }
+      } catch {
+        req.log.warn("AI senior analyse: JSON parse mislukt");
+      }
+    }
+
+    const runId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+    await db.delete(modCalcAdviezenTable).where(eq(modCalcAdviezenTable.calculatieId, id));
+
+    if (adviezen.length > 0) {
+      await db.insert(modCalcAdviezenTable).values(
+        adviezen.map((a) => ({
+          calculatieId: id,
+          runId,
+          type: a.type,
+          prioriteit: a.prioriteit,
+          titel: a.titel,
+          uitleg: a.uitleg,
+          status: "actief",
+        })),
+      );
+    }
+
+    const result = await db.select().from(modCalcAdviezenTable)
+      .where(eq(modCalcAdviezenTable.calculatieId, id))
+      .orderBy(
+        asc(sql`CASE ${modCalcAdviezenTable.prioriteit} WHEN 'hoog' THEN 1 WHEN 'middel' THEN 2 ELSE 3 END`),
+        asc(modCalcAdviezenTable.aangemaaktOp),
+      );
+
+    res.json(result.map((a) => ({
+      id: a.id,
+      calculatie_id: a.calculatieId,
+      run_id: a.runId,
+      type: a.type,
+      prioriteit: a.prioriteit,
+      titel: a.titel,
+      uitleg: a.uitleg,
+      status: a.status,
+      notitie: a.notitie ?? null,
+      aangemaakt_op: iso(a.aangemaaktOp),
+      bijgewerkt_op: iso(a.bijgewerktOp),
+    })));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Serverfout bij AI-analyse" });
+  }
+});
+
+// ── GET /modules/calculaties/:id/adviezen ─────────────────────────────────
+router.get("/modules/calculaties/:id/adviezen", lezenCalc, async (req, res) => {
+  try {
+    const id = parseId(req.params["id"]);
+    const result = await db.select().from(modCalcAdviezenTable)
+      .where(eq(modCalcAdviezenTable.calculatieId, id))
+      .orderBy(
+        asc(sql`CASE ${modCalcAdviezenTable.prioriteit} WHEN 'hoog' THEN 1 WHEN 'middel' THEN 2 ELSE 3 END`),
+        asc(modCalcAdviezenTable.aangemaaktOp),
+      );
+    res.json(result.map((a) => ({
+      id: a.id,
+      calculatie_id: a.calculatieId,
+      run_id: a.runId,
+      type: a.type,
+      prioriteit: a.prioriteit,
+      titel: a.titel,
+      uitleg: a.uitleg,
+      status: a.status,
+      notitie: a.notitie ?? null,
+      aangemaakt_op: iso(a.aangemaaktOp),
+      bijgewerkt_op: iso(a.bijgewerktOp),
+    })));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Serverfout" });
+  }
+});
+
+// ── PATCH /modules/calculaties/:id/adviezen/:adviesId ─────────────────────
+router.patch("/modules/calculaties/:id/adviezen/:adviesId", lezenCalc, async (req, res) => {
+  try {
+    const id = parseId(req.params["id"]);
+    const adviesId = parseId(req.params["adviesId"]);
+    const { status, notitie } = req.body as { status?: string; notitie?: string | null };
+    const geldigeStatussen = ["actief", "genegeerd", "gecontroleerd"];
+    const updates: Record<string, unknown> = { bijgewerktOp: new Date() };
+    if (status && geldigeStatussen.includes(status)) updates["status"] = status;
+    if (notitie !== undefined) updates["notitie"] = notitie ?? null;
+
+    const [updated] = await db.update(modCalcAdviezenTable)
+      .set(updates)
+      .where(and(eq(modCalcAdviezenTable.id, adviesId), eq(modCalcAdviezenTable.calculatieId, id)))
+      .returning();
+
+    if (!updated) { res.status(404).json({ error: "Advies niet gevonden" }); return; }
+
+    res.json({
+      id: updated.id,
+      calculatie_id: updated.calculatieId,
+      run_id: updated.runId,
+      type: updated.type,
+      prioriteit: updated.prioriteit,
+      titel: updated.titel,
+      uitleg: updated.uitleg,
+      status: updated.status,
+      notitie: updated.notitie ?? null,
+      aangemaakt_op: iso(updated.aangemaaktOp),
+      bijgewerkt_op: iso(updated.bijgewerktOp),
+    });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Serverfout" });
   }
 });
 

@@ -4,6 +4,19 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-03 — AI Senior Calculator
+
+**Uitvoering:** volledig | **Diepere lagen:** volledig | **Getest:** typecheck firevault + api-server schoon, workflows gezond
+
+Analysepaneel naast het calculatieblad: de AI kijkt als ervaren calculator mee en geeft gestructureerde adviezen (waarschuwingen, aandachtspunten, kansen op besparing, ontbrekende info, vragen). Adviezen zijn interactief beheerbaar.
+
+- **DB** — `mod_calc_adviezen` tabel: `id`, `calculatie_id` (FK), `run_id`, `type`, `prioriteit`, `titel`, `uitleg`, `status` (actief/gecontroleerd/genegeerd), `notitie`, `aangemaakt_op`, `bijgewerkt_op`
+- **Drizzle schema** — `modCalcAdviezenTable` toegevoegd aan `lib/db/src/schema/mod-calculatie.ts`
+- **OpenAPI + codegen** — 3 nieuwe paden: `POST /modules/calculaties/{id}/ai-senior-analyse`, `GET .../adviezen`, `PATCH .../adviezen/{adviesId}`; schemas `CalcAdvies` + `CalcAdviesUpdate`; codegen opnieuw gedraaid
+- **API route handlers** — POST analyse: AI prompt met calculatiecontext → JSON parse → bulk insert adviezen; GET adviezen: gesorteerd op prioriteit (hoog→middel→laag) + aangemaakt_op; PATCH advies: status en notitie bijwerken
+- **`AiSeniorCalculatorPanel`** — nieuw component met advieskaartenlijst per type (kleur+icoon), prioriteitsdot, in/uitklappen, notitie-editor, Gecontroleerd/Negeren/Herstellen-acties, filterblad (Actief/Gecontroleerd/Genegeerd/Alles), heranalyse-knop
+- **`detail.tsx`** — "Senior"-knop in header (naast AI-chat); paneel 360px breed rechts van bestaande sidebar; `seniorOpen` state; `BrainCircuit` icoon geïmporteerd
+
 ## 2026-07-03 — Calculatiemodule uitbreidingen: werknummer, opname-koppeling, inkoop velden, constructiehoofdstukken
 
 **Uitvoering:** volledig | **Diepere lagen:** volledig | **Getest:** typecheck firevault + api-server schoon, workflows gezond

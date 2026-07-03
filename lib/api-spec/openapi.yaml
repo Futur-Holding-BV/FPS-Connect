@@ -11242,6 +11242,82 @@ paths:
         '404':
           description: Calculatie niet gevonden
 
+  /modules/calculaties/{id}/ai-senior-analyse:
+    post:
+      operationId: aiSeniorAnalyseCalculatie
+      summary: AI Senior Calculator — volledige analyse van de calculatie
+      tags: [CalulatieModule]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: AI-adviezen gegenereerd
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CalcAdvies'
+        '404':
+          description: Calculatie niet gevonden
+
+  /modules/calculaties/{id}/adviezen:
+    get:
+      operationId: listCalcAdviezen
+      summary: Adviezen van de laatste analyse-run ophalen
+      tags: [CalulatieModule]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CalcAdvies'
+
+  /modules/calculaties/{id}/adviezen/{adviesId}:
+    patch:
+      operationId: updateCalcAdvies
+      summary: Advies status of notitie bijwerken
+      tags: [CalulatieModule]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: adviesId
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CalcAdviesUpdate'
+      responses:
+        '200':
+          description: Bijgewerkt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalcAdvies'
+        '404':
+          description: Niet gevonden
+
   /modules/calculaties/{id}/inkoop-items:
     get:
       operationId: listModCalcInkoopItems
@@ -26456,6 +26532,47 @@ components:
           type: number
           nullable: true
         notities:
+          type: string
+          nullable: true
+
+    CalcAdvies:
+      type: object
+      required: [id, calculatie_id, run_id, type, prioriteit, titel, uitleg, status, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id:
+          type: integer
+        calculatie_id:
+          type: integer
+        run_id:
+          type: string
+        type:
+          type: string
+          description: 'waarschuwing | aandachtspunt | kans_op_besparing | ontbrekende_info | vraag'
+        prioriteit:
+          type: string
+          description: 'hoog | middel | laag'
+        titel:
+          type: string
+        uitleg:
+          type: string
+        status:
+          type: string
+          description: 'actief | genegeerd | gecontroleerd'
+        notitie:
+          type: string
+          nullable: true
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+
+    CalcAdviesUpdate:
+      type: object
+      properties:
+        status:
+          type: string
+          description: 'actief | genegeerd | gecontroleerd'
+        notitie:
           type: string
           nullable: true
 

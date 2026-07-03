@@ -23,6 +23,7 @@ import {
   type ModCalcInkoopItem,
 } from "@workspace/api-client-react";
 import AiChatPanel from "@/components/ai-chat-panel";
+import AiSeniorCalculatorPanel from "@/components/ai-senior-calculator-panel";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -44,7 +45,7 @@ import { Separator } from "@/components/ui/separator";
 import {
   ArrowLeft, Plus, Pencil, Trash2, Copy, ChevronRight, FileText,
   LayoutList, Users, Eye, Sparkles, Wrench, CheckCircle2, X,
-  Printer, History, Save, MoreHorizontal, MessageSquare,
+  Printer, History, Save, MoreHorizontal, MessageSquare, BrainCircuit,
 } from "lucide-react";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -1644,6 +1645,7 @@ export default function ModulesCalculatieDetail() {
   const [nieuwDraft, setNieuwDraft] = useState<LocalDraft | null>(null);
   const [toonOnderaanneming, setToonOnderaanneming] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
+  const [seniorOpen, setSeniorOpen] = useState(false);
 
   const [headerForm, setHeaderForm] = useState({
     naam: "", referentie: "", klant_naam: "", project_naam: "",
@@ -1878,6 +1880,15 @@ export default function ModulesCalculatieDetail() {
           <Button variant="outline" size="sm" onClick={() => window.open(`/modules/calculatie/${id}/print`, "_blank")}>
             <Printer className="h-3.5 w-3.5 mr-1.5" />
             Afdrukken
+          </Button>
+          <Button
+            variant={seniorOpen ? "default" : "outline"}
+            size="sm"
+            onClick={() => setSeniorOpen(v => !v)}
+            title="AI Senior Calculator"
+          >
+            <BrainCircuit className="h-3.5 w-3.5 mr-1.5" />
+            Senior
           </Button>
           <Button
             variant={chatOpen ? "default" : "outline"}
@@ -2407,6 +2418,13 @@ export default function ModulesCalculatieDetail() {
             </div>
           )}
         </div>
+
+        {/* === AI Senior Calculator paneel === */}
+        {seniorOpen && (
+          <div className="w-[360px] shrink-0 border-l bg-background flex flex-col min-h-0 overflow-hidden">
+            <AiSeniorCalculatorPanel calculatieId={id} />
+          </div>
+        )}
 
         {/* === AI-chatpaneel === */}
         {chatOpen && (
