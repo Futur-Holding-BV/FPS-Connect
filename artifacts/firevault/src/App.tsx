@@ -171,6 +171,7 @@ import ModulesCalculatie from "@/pages/modules/calculatie/index";
 import ModulesCalculatieNieuw from "@/pages/modules/calculatie/nieuw";
 import ModulesCalculatieDetail from "@/pages/modules/calculatie/detail";
 import ModulesCalculatieLeveranciers from "@/pages/modules/calculatie/leveranciers";
+import ModulesCalculatieEenheidsprijzen from "@/pages/modules/calculatie/eenheidsprijzen";
 import ModulesCalculatiePrint from "@/pages/modules/calculatie/print";
 import ModulesPlanning from "@/pages/modules/planning/index";
 import ModulesPlanningMedewerkers from "@/pages/modules/planning/medewerkers";
@@ -300,6 +301,10 @@ function ConnectPortal() {
         <Route
           path="/modules/calculatie/leveranciers"
           component={featureFlags.calculatie ? ModulesCalculatieLeveranciers : CalculatieNietBeschikbaar}
+        />
+        <Route
+          path="/modules/calculatie/eenheidsprijzen"
+          component={featureFlags.calculatie ? ModulesCalculatieEenheidsprijzen : CalculatieNietBeschikbaar}
         />
         <Route
           path="/modules/calculatie/:id"

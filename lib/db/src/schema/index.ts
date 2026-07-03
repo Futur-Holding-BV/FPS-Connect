@@ -51,3 +51,4 @@ export * from "./audit";
 export * from "./rechten";
 export * from "./ai-log";
 export * from "./meldingen";
+export * from "./eenheidsprijzen";

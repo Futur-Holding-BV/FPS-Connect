@@ -1,0 +1,28 @@
+import { pgTable, serial, text, integer, real, boolean, timestamp } from "drizzle-orm/pg-core";
+
+export const eenheidsprijzenTable = pgTable("eenheidsprijzen", {
+  id: serial("id").primaryKey(),
+  code: text("code").notNull().unique(),
+  omschrijving: text("omschrijving").notNull(),
+  categorie: text("categorie").notNull(),
+  eenheid: text("eenheid").notNull(),
+  materiaalcomponent: real("materiaalcomponent").notNull().default(0),
+  arbeidscomponent: real("arbeidscomponent").notNull().default(0),
+  normtijd: real("normtijd").notNull().default(0),
+  kostprijs: real("kostprijs").notNull().default(0),
+  verkoopprijs: real("verkoopprijs").notNull().default(0),
+  marge: real("marge").notNull().default(0),
+  btwCode: text("btw_code"),
+  geldigVanaf: text("geldig_vanaf"),
+  actief: boolean("actief").notNull().default(true),
+  opmerkingen: text("opmerkingen"),
+  inclusies: text("inclusies"),
+  exclusies: text("exclusies"),
+  prijsbasisOpmerking: text("prijsbasis_opmerking"),
+  gemWerkelijkUren: real("gem_werkelijk_uren"),
+  gemWerkelijkMateriaal: real("gem_werkelijk_materiaal"),
+  aantalKeerGebruikt: integer("aantal_keer_gebruikt").notNull().default(0),
+  afwijkingNormtijd: real("afwijking_normtijd"),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+  bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+});

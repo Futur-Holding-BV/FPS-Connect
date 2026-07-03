@@ -4,6 +4,29 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-03 — Eenheidsprijzenbibliotheek (calculatiemodule)
+
+**Uitvoering:** volledig | **Diepere lagen:** volledig | **Getest:** typecheck schoon (geen nieuwe fouten)
+
+**DB schema**
+- `lib/db/src/schema/eenheidsprijzen.ts`: nieuwe tabel `eenheidsprijzen` (id, code, omschrijving, categorie, eenheid, inkoopprijs, verkoopprijs, normtijd, leverancier_id FK, actief, aangemaakt_op); tabel via directe SQL aangemaakt in Postgres
+
+**OpenAPI & codegen**
+- `lib/api-spec/openapi.yaml`: paden `/eenheidsprijzen` (GET/POST) en `/eenheidsprijzen/{id}` (PATCH/DELETE) + schemas `EenheidsPrijs` + `EenheidsPrijsInput` toegevoegd; query-params `actief`, `zoek`, `categorie`
+- Codegen uitgevoerd: hooks `useListEenheidsprijzen`, `useCreateEenheidsprijs`, `useUpdateEenheidsprijs`, `useDeleteEenheidsprijs` beschikbaar in `@workspace/api-client-react`
+
+**API route**
+- `artifacts/api-server/src/routes/eenheidsprijzen.ts`: volledige CRUD (bevoegdheid=calculaties, return void-patroon, filteren op actief/zoek/categorie); geregistreerd in `routes/index.ts`
+
+**Import-uitbreiding**
+- `artifacts/api-server/src/routes/import.ts`: `koppelEenheidsprijs` functie + type "eenheidsprijzen" toegevoegd aan preview/uitvoeren/template
+
+**Frontend beheerpagina**
+- `artifacts/firevault/src/pages/modules/calculatie/eenheidsprijzen.tsx`: tabel met zoek/filter/sortering, CRUD-dialoog (aanmaken + bewerken), deactiveer-dialoog, lege toestand; route geregistreerd in `App.tsx`; navigatieknop in `leveranciers.tsx`
+
+**Picker-integratie in calculatiedetail**
+- `artifacts/firevault/src/pages/modules/calculatie/detail.tsx`: knop "Uit bibliotheek" toegevoegd in de toevoegrij naast Staartkosten/Bouwplaatskosten; klikt opent modaal met zoekbalk + categorie-filter + scrollbare tabel; klikken op rij vult een nieuw regelconcept voor met omschrijving, eenheid, verkoopprijs en normtijd
+
 ## 2026-07-03 — Sprint: lege toestanden, mobiele onboarding, import uitbreiding
 
 **Uitvoering:** volledig | **Diepere lagen:** volledig | **Getest:** typecheck schoon (geen nieuwe fouten)

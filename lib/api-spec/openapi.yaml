@@ -11871,6 +11871,113 @@ paths:
                   concept_mail:
                     type: string
 
+  /eenheidsprijzen:
+    get:
+      operationId: listEenheidsprijzen
+      summary: Eenheidsprijzen ophalen
+      tags: [Eenheidsprijzen]
+      parameters:
+        - in: query
+          name: zoek
+          schema:
+            type: string
+        - in: query
+          name: categorie
+          schema:
+            type: string
+        - in: query
+          name: actief
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EenheidsPrijs'
+    post:
+      operationId: createEenheidsprijs
+      summary: Eenheidsprijs aanmaken
+      tags: [Eenheidsprijzen]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EenheidsPrijsInput'
+      responses:
+        '201':
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EenheidsPrijs'
+
+  /eenheidsprijzen/{id}:
+    get:
+      operationId: getEenheidsprijs
+      summary: Eenheidsprijs ophalen
+      tags: [Eenheidsprijzen]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EenheidsPrijs'
+    patch:
+      operationId: updateEenheidsprijs
+      summary: Eenheidsprijs bijwerken
+      tags: [Eenheidsprijzen]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EenheidsPrijsInput'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EenheidsPrijs'
+    delete:
+      operationId: deleteEenheidsprijs
+      summary: Eenheidsprijs deactiveren
+      tags: [Eenheidsprijzen]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+
   /uren:
     get:
       operationId: listUren
@@ -33470,3 +33577,95 @@ components:
           type: string
         aantal_regels:
           type: integer
+
+    EenheidsPrijs:
+      type: object
+      required: [id, code, omschrijving, categorie, eenheid, materiaalcomponent, arbeidscomponent, normtijd, kostprijs, verkoopprijs, marge, actief, aantal_keer_gebruikt, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id:
+          type: integer
+        code:
+          type: string
+        omschrijving:
+          type: string
+        categorie:
+          type: string
+        eenheid:
+          type: string
+        materiaalcomponent:
+          type: number
+        arbeidscomponent:
+          type: number
+        normtijd:
+          type: number
+        kostprijs:
+          type: number
+        verkoopprijs:
+          type: number
+        marge:
+          type: number
+        btw_code:
+          type: ["string", "null"]
+        geldig_vanaf:
+          type: ["string", "null"]
+        actief:
+          type: boolean
+        opmerkingen:
+          type: ["string", "null"]
+        inclusies:
+          type: ["string", "null"]
+        exclusies:
+          type: ["string", "null"]
+        prijsbasis_opmerking:
+          type: ["string", "null"]
+        gem_werkelijk_uren:
+          type: ["number", "null"]
+        gem_werkelijk_materiaal:
+          type: ["number", "null"]
+        aantal_keer_gebruikt:
+          type: integer
+        afwijking_normtijd:
+          type: ["number", "null"]
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+
+    EenheidsPrijsInput:
+      type: object
+      required: [code, omschrijving, categorie, eenheid]
+      properties:
+        code:
+          type: string
+        omschrijving:
+          type: string
+        categorie:
+          type: string
+        eenheid:
+          type: string
+        materiaalcomponent:
+          type: number
+        arbeidscomponent:
+          type: number
+        normtijd:
+          type: number
+        kostprijs:
+          type: number
+        verkoopprijs:
+          type: number
+        marge:
+          type: number
+        btw_code:
+          type: ["string", "null"]
+        geldig_vanaf:
+          type: ["string", "null"]
+        actief:
+          type: boolean
+        opmerkingen:
+          type: ["string", "null"]
+        inclusies:
+          type: ["string", "null"]
+        exclusies:
+          type: ["string", "null"]
+        prijsbasis_opmerking:
+          type: ["string", "null"]

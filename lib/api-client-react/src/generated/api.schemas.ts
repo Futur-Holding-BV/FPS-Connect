@@ -9948,6 +9948,68 @@ export interface InkoopoverzichtItem {
   aantal_regels?: number;
 }
 
+export interface EenheidsPrijs {
+  id: number;
+  code: string;
+  omschrijving: string;
+  categorie: string;
+  eenheid: string;
+  materiaalcomponent: number;
+  arbeidscomponent: number;
+  normtijd: number;
+  kostprijs: number;
+  verkoopprijs: number;
+  marge: number;
+  /** @nullable */
+  btw_code?: string | null;
+  /** @nullable */
+  geldig_vanaf?: string | null;
+  actief: boolean;
+  /** @nullable */
+  opmerkingen?: string | null;
+  /** @nullable */
+  inclusies?: string | null;
+  /** @nullable */
+  exclusies?: string | null;
+  /** @nullable */
+  prijsbasis_opmerking?: string | null;
+  /** @nullable */
+  gem_werkelijk_uren?: number | null;
+  /** @nullable */
+  gem_werkelijk_materiaal?: number | null;
+  aantal_keer_gebruikt: number;
+  /** @nullable */
+  afwijking_normtijd?: number | null;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export interface EenheidsPrijsInput {
+  code: string;
+  omschrijving: string;
+  categorie: string;
+  eenheid: string;
+  materiaalcomponent?: number;
+  arbeidscomponent?: number;
+  normtijd?: number;
+  kostprijs?: number;
+  verkoopprijs?: number;
+  marge?: number;
+  /** @nullable */
+  btw_code?: string | null;
+  /** @nullable */
+  geldig_vanaf?: string | null;
+  actief?: boolean;
+  /** @nullable */
+  opmerkingen?: string | null;
+  /** @nullable */
+  inclusies?: string | null;
+  /** @nullable */
+  exclusies?: string | null;
+  /** @nullable */
+  prijsbasis_opmerking?: string | null;
+}
+
 export type GetRecenteActiviteitParams = {
 limit?: number;
 };
@@ -10318,6 +10380,16 @@ export type AiModCalcRegels200 = {
 
 export type GenerateRfqConceptMail200 = {
   concept_mail: string;
+};
+
+export type ListEenheidsprijzenParams = {
+zoek?: string;
+categorie?: string;
+actief?: string;
+};
+
+export type DeleteEenheidsprijs200 = {
+  ok?: boolean;
 };
 
 export type ListUrenParams = {

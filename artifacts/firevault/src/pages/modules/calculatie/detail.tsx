@@ -28,6 +28,8 @@ import {
   getListModCalcEenhedenQueryKey,
   type ModCalcInkoopItem,
   type CalcEenheid,
+  useListEenheidsprijzen,
+  type EenheidsPrijs,
 } from "@workspace/api-client-react";
 import AiChatPanel from "@/components/ai-chat-panel";
 import AiSeniorCalculatorPanel from "@/components/ai-senior-calculator-panel";
@@ -53,7 +55,7 @@ import {
   ArrowLeft, Plus, Pencil, Trash2, Copy, ChevronRight, FileText,
   LayoutList, Users, Eye, Sparkles, Wrench, CheckCircle2, X,
   Printer, History, Save, MoreHorizontal, MessageSquare, BrainCircuit,
-  ChevronDown, ChevronUp, Building2,
+  ChevronDown, ChevronUp, Building2, BookOpen, Search,
 } from "lucide-react";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -1933,6 +1935,28 @@ export default function ModulesCalculatieDetail() {
   const [eenheidType, setEenheidType] = useState("vrije_projecteenheid");
   const [ingeklapteEenheden, setIngeklapteEenheden] = useState<Set<number>>(new Set());
 
+  // Eenheidsprijzenbibliotheek picker
+  const [bibliotheekOpen, setBibliotheekOpen] = useState(false);
+  const [bibliotheekZoek, setBibliotheekZoek] = useState("");
+  const [bibliotheekCategorie, setBibliotheekCategorie] = useState("__alle__");
+  const { data: bibliotheekPrijzenRaw = [] } = useListEenheidsprijzen(
+    { actief: "true", ...(bibliotheekZoek ? { zoek: bibliotheekZoek } : {}), ...(bibliotheekCategorie !== "__alle__" ? { categorie: bibliotheekCategorie } : {}) },
+  );
+  const bibliotheekPrijzen = bibliotheekOpen ? bibliotheekPrijzenRaw : [];
+
+  function nieuweRegelUitBibliotheek(ep: EenheidsPrijs) {
+    setNieuwDraft({
+      ...LEEG_DRAFT,
+      omschrijving: ep.omschrijving,
+      eenheid: ep.eenheid,
+      tarief: String(ep.verkoopprijs),
+      mu_per_eenheid: ep.normtijd > 0 ? String(ep.normtijd) : "0",
+      hoofdstuk: "Overige werkzaamheden",
+    });
+    setBibliotheekOpen(false);
+    setBibliotheekZoek("");
+  }
+
   // Nieuw rij invoerrij (null = verborgen)
   const [nieuwDraft, setNieuwDraft] = useState<LocalDraft | null>(null);
   const [toonOnderaanneming, setToonOnderaanneming] = useState(false);
@@ -2610,6 +2634,11 @@ export default function ModulesCalculatieDetail() {
                             <Plus className="h-3 w-3" />
                             Staartkosten
                           </Button>
+                          <span className="text-border/60 select-none">|</span>
+                          <Button variant="ghost" size="sm" className="h-7 text-xs gap-1 text-primary/70 hover:text-primary hover:bg-primary/5" onClick={() => setBibliotheekOpen(true)}>
+                            <BookOpen className="h-3 w-3" />
+                            Uit bibliotheek
+                          </Button>
                         </div>
                       </td>
                     </tr>
@@ -3107,6 +3136,93 @@ export default function ModulesCalculatieDetail() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Eenheidsprijzenbibliotheek picker */}
+      <Dialog open={bibliotheekOpen} onOpenChange={(o) => { setBibliotheekOpen(o); if (!o) { setBibliotheekZoek(""); } }}>
+        <DialogContent className="max-w-3xl max-h-[80vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <BookOpen className="h-4 w-4 text-primary" />
+              Kies uit eenheidsprijzenbibliotheek
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex gap-2 mb-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <input
+                type="text"
+                value={bibliotheekZoek}
+                onChange={(e) => setBibliotheekZoek(e.target.value)}
+                placeholder="Zoeken op code of omschrijving..."
+                className="w-full pl-8 pr-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-1 focus:ring-primary"
+                autoFocus
+              />
+            </div>
+            <select
+              value={bibliotheekCategorie}
+              onChange={(e) => setBibliotheekCategorie(e.target.value)}
+              className="text-sm border rounded-md px-2 py-2 focus:outline-none focus:ring-1 focus:ring-primary"
+            >
+              <option value="__alle__">Alle categorieen</option>
+              <option value="brandpreventie">Brandpreventie</option>
+              <option value="deuren_kozijnen">Deuren & kozijnen</option>
+              <option value="elektrotechniek">Elektrotechniek</option>
+              <option value="glas">Glas</option>
+              <option value="magazijn_kleinmateriaal">Magazijn / kleinmateriaal</option>
+              <option value="schilderwerk">Schilderwerk</option>
+              <option value="timmerwerk">Timmerwerk</option>
+              <option value="werktuigbouwkundig">Werktuigbouwkundig</option>
+              <option value="algemeen_arbeid">Algemeen arbeid</option>
+              <option value="overig">Overig</option>
+            </select>
+          </div>
+          <div className="flex-1 overflow-y-auto border rounded-md">
+            {bibliotheekPrijzen.length === 0 ? (
+              <div className="p-8 text-center text-muted-foreground text-sm">
+                <BookOpen className="w-8 h-8 mx-auto mb-2 opacity-40" />
+                {bibliotheekZoek ? "Geen eenheidsprijzen gevonden voor deze zoekopdracht." : "Geen eenheidsprijzen beschikbaar. Voeg ze toe via Leveranciers & artikelen."}
+              </div>
+            ) : (
+              <table className="w-full text-sm">
+                <thead className="sticky top-0 bg-muted/80 border-b">
+                  <tr>
+                    <th className="text-left px-3 py-2 font-medium text-xs text-muted-foreground w-[90px]">Code</th>
+                    <th className="text-left px-3 py-2 font-medium text-xs text-muted-foreground">Omschrijving</th>
+                    <th className="text-center px-2 py-2 font-medium text-xs text-muted-foreground w-[60px]">Eenh.</th>
+                    <th className="text-right px-3 py-2 font-medium text-xs text-muted-foreground w-[80px]">Prijs</th>
+                    <th className="text-right px-3 py-2 font-medium text-xs text-muted-foreground w-[70px]">Normtijd</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {bibliotheekPrijzen.map((ep) => (
+                    <tr
+                      key={ep.id}
+                      className="border-b last:border-0 hover:bg-primary/5 cursor-pointer transition-colors"
+                      onClick={() => nieuweRegelUitBibliotheek(ep)}
+                    >
+                      <td className="px-3 py-2 font-mono text-xs font-medium text-muted-foreground">{ep.code}</td>
+                      <td className="px-3 py-2 font-medium">{ep.omschrijving}</td>
+                      <td className="px-2 py-2 text-center">
+                        <span className="text-xs bg-muted rounded px-1.5 py-0.5 font-mono">{ep.eenheid}</span>
+                      </td>
+                      <td className="px-3 py-2 text-right font-semibold">
+                        {new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(ep.verkoopprijs)}
+                      </td>
+                      <td className="px-3 py-2 text-right text-muted-foreground text-xs">
+                        {ep.normtijd > 0 ? `${ep.normtijd.toFixed(2)} u` : "—"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+          <div className="flex justify-between items-center pt-2 text-xs text-muted-foreground">
+            <span>{bibliotheekPrijzen.length} eenheidsprijzen</span>
+            <Button variant="outline" size="sm" onClick={() => setBibliotheekOpen(false)}>Sluiten</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

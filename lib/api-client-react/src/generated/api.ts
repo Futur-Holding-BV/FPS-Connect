@@ -132,6 +132,7 @@ import type {
   CrmProjectkansInput,
   CrmScoutStatus,
   DashboardStats,
+  DeleteEenheidsprijs200,
   Document,
   DocumentAiAnalyseInput,
   DocumentAiAnalyseResultaat,
@@ -157,6 +158,8 @@ import type {
   DossierDocumentInput,
   DossierInput,
   DownloadUrlResultaat,
+  EenheidsPrijs,
+  EenheidsPrijsInput,
   ErrorEnvelope,
   ExportAiAanroepenCsvParams,
   ExportlogRegel,
@@ -324,6 +327,7 @@ import type {
   ListDocumentLogboekParams,
   ListDocumentStudioModellenParams,
   ListDocumentenParams,
+  ListEenheidsprijzenParams,
   ListExportlogParams,
   ListFabrikantenParams,
   ListFacturenParams,
@@ -41797,6 +41801,378 @@ export const useGenerateRfqConceptMail = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getGenerateRfqConceptMailMutationOptions(options));
+    }
+
+export const getListEenheidsprijzenUrl = (params?: ListEenheidsprijzenParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/eenheidsprijzen?${stringifiedParams}` : `/api/eenheidsprijzen`
+}
+
+/**
+ * @summary Eenheidsprijzen ophalen
+ */
+export const listEenheidsprijzen = async (params?: ListEenheidsprijzenParams, options?: RequestInit): Promise<EenheidsPrijs[]> => {
+
+  return customFetch<EenheidsPrijs[]>(getListEenheidsprijzenUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListEenheidsprijzenQueryKey = (params?: ListEenheidsprijzenParams,) => {
+    return [
+    `/api/eenheidsprijzen`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListEenheidsprijzenQueryOptions = <TData = Awaited<ReturnType<typeof listEenheidsprijzen>>, TError = ErrorType<unknown>>(params?: ListEenheidsprijzenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listEenheidsprijzen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListEenheidsprijzenQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listEenheidsprijzen>>> = ({ signal }) => listEenheidsprijzen(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listEenheidsprijzen>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListEenheidsprijzenQueryResult = NonNullable<Awaited<ReturnType<typeof listEenheidsprijzen>>>
+export type ListEenheidsprijzenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Eenheidsprijzen ophalen
+ */
+
+export function useListEenheidsprijzen<TData = Awaited<ReturnType<typeof listEenheidsprijzen>>, TError = ErrorType<unknown>>(
+ params?: ListEenheidsprijzenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listEenheidsprijzen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListEenheidsprijzenQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateEenheidsprijsUrl = () => {
+
+
+
+
+  return `/api/eenheidsprijzen`
+}
+
+/**
+ * @summary Eenheidsprijs aanmaken
+ */
+export const createEenheidsprijs = async (eenheidsPrijsInput: EenheidsPrijsInput, options?: RequestInit): Promise<EenheidsPrijs> => {
+
+  return customFetch<EenheidsPrijs>(getCreateEenheidsprijsUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(eenheidsPrijsInput)
+  }
+);}
+
+
+
+
+export const getCreateEenheidsprijsMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createEenheidsprijs>>, TError,{data: BodyType<EenheidsPrijsInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createEenheidsprijs>>, TError,{data: BodyType<EenheidsPrijsInput>}, TContext> => {
+
+const mutationKey = ['createEenheidsprijs'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createEenheidsprijs>>, {data: BodyType<EenheidsPrijsInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createEenheidsprijs(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateEenheidsprijsMutationResult = NonNullable<Awaited<ReturnType<typeof createEenheidsprijs>>>
+    export type CreateEenheidsprijsMutationBody = BodyType<EenheidsPrijsInput>
+    export type CreateEenheidsprijsMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Eenheidsprijs aanmaken
+ */
+export const useCreateEenheidsprijs = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createEenheidsprijs>>, TError,{data: BodyType<EenheidsPrijsInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createEenheidsprijs>>,
+        TError,
+        {data: BodyType<EenheidsPrijsInput>},
+        TContext
+      > => {
+      return useMutation(getCreateEenheidsprijsMutationOptions(options));
+    }
+
+export const getGetEenheidsprijsUrl = (id: number,) => {
+
+
+
+
+  return `/api/eenheidsprijzen/${id}`
+}
+
+/**
+ * @summary Eenheidsprijs ophalen
+ */
+export const getEenheidsprijs = async (id: number, options?: RequestInit): Promise<EenheidsPrijs> => {
+
+  return customFetch<EenheidsPrijs>(getGetEenheidsprijsUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetEenheidsprijsQueryKey = (id: number,) => {
+    return [
+    `/api/eenheidsprijzen/${id}`
+    ] as const;
+    }
+
+
+export const getGetEenheidsprijsQueryOptions = <TData = Awaited<ReturnType<typeof getEenheidsprijs>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getEenheidsprijs>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetEenheidsprijsQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getEenheidsprijs>>> = ({ signal }) => getEenheidsprijs(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getEenheidsprijs>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetEenheidsprijsQueryResult = NonNullable<Awaited<ReturnType<typeof getEenheidsprijs>>>
+export type GetEenheidsprijsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Eenheidsprijs ophalen
+ */
+
+export function useGetEenheidsprijs<TData = Awaited<ReturnType<typeof getEenheidsprijs>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getEenheidsprijs>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetEenheidsprijsQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUpdateEenheidsprijsUrl = (id: number,) => {
+
+
+
+
+  return `/api/eenheidsprijzen/${id}`
+}
+
+/**
+ * @summary Eenheidsprijs bijwerken
+ */
+export const updateEenheidsprijs = async (id: number,
+    eenheidsPrijsInput: EenheidsPrijsInput, options?: RequestInit): Promise<EenheidsPrijs> => {
+
+  return customFetch<EenheidsPrijs>(getUpdateEenheidsprijsUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(eenheidsPrijsInput)
+  }
+);}
+
+
+
+
+export const getUpdateEenheidsprijsMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateEenheidsprijs>>, TError,{id: number;data: BodyType<EenheidsPrijsInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateEenheidsprijs>>, TError,{id: number;data: BodyType<EenheidsPrijsInput>}, TContext> => {
+
+const mutationKey = ['updateEenheidsprijs'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateEenheidsprijs>>, {id: number;data: BodyType<EenheidsPrijsInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateEenheidsprijs(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateEenheidsprijsMutationResult = NonNullable<Awaited<ReturnType<typeof updateEenheidsprijs>>>
+    export type UpdateEenheidsprijsMutationBody = BodyType<EenheidsPrijsInput>
+    export type UpdateEenheidsprijsMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Eenheidsprijs bijwerken
+ */
+export const useUpdateEenheidsprijs = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateEenheidsprijs>>, TError,{id: number;data: BodyType<EenheidsPrijsInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateEenheidsprijs>>,
+        TError,
+        {id: number;data: BodyType<EenheidsPrijsInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateEenheidsprijsMutationOptions(options));
+    }
+
+export const getDeleteEenheidsprijsUrl = (id: number,) => {
+
+
+
+
+  return `/api/eenheidsprijzen/${id}`
+}
+
+/**
+ * @summary Eenheidsprijs deactiveren
+ */
+export const deleteEenheidsprijs = async (id: number, options?: RequestInit): Promise<DeleteEenheidsprijs200> => {
+
+  return customFetch<DeleteEenheidsprijs200>(getDeleteEenheidsprijsUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteEenheidsprijsMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteEenheidsprijs>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteEenheidsprijs>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteEenheidsprijs'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteEenheidsprijs>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteEenheidsprijs(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteEenheidsprijsMutationResult = NonNullable<Awaited<ReturnType<typeof deleteEenheidsprijs>>>
+
+    export type DeleteEenheidsprijsMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Eenheidsprijs deactiveren
+ */
+export const useDeleteEenheidsprijs = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteEenheidsprijs>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteEenheidsprijs>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteEenheidsprijsMutationOptions(options));
     }
 
 export const getListUrenUrl = (params?: ListUrenParams,) => {

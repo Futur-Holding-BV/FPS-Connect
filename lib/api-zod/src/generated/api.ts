@@ -14519,6 +14519,172 @@ export const GenerateRfqConceptMailResponse = zod.object({
 
 
 /**
+ * @summary Eenheidsprijzen ophalen
+ */
+export const ListEenheidsprijzenQueryParams = zod.object({
+  "zoek": zod.coerce.string().optional(),
+  "categorie": zod.coerce.string().optional(),
+  "actief": zod.coerce.string().optional()
+})
+
+export const ListEenheidsprijzenResponseItem = zod.object({
+  "id": zod.number(),
+  "code": zod.string(),
+  "omschrijving": zod.string(),
+  "categorie": zod.string(),
+  "eenheid": zod.string(),
+  "materiaalcomponent": zod.number(),
+  "arbeidscomponent": zod.number(),
+  "normtijd": zod.number(),
+  "kostprijs": zod.number(),
+  "verkoopprijs": zod.number(),
+  "marge": zod.number(),
+  "btw_code": zod.string().nullish(),
+  "geldig_vanaf": zod.string().nullish(),
+  "actief": zod.boolean(),
+  "opmerkingen": zod.string().nullish(),
+  "inclusies": zod.string().nullish(),
+  "exclusies": zod.string().nullish(),
+  "prijsbasis_opmerking": zod.string().nullish(),
+  "gem_werkelijk_uren": zod.number().nullish(),
+  "gem_werkelijk_materiaal": zod.number().nullish(),
+  "aantal_keer_gebruikt": zod.number(),
+  "afwijking_normtijd": zod.number().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+export const ListEenheidsprijzenResponse = zod.array(ListEenheidsprijzenResponseItem)
+
+
+/**
+ * @summary Eenheidsprijs aanmaken
+ */
+export const CreateEenheidsprijsBody = zod.object({
+  "code": zod.string(),
+  "omschrijving": zod.string(),
+  "categorie": zod.string(),
+  "eenheid": zod.string(),
+  "materiaalcomponent": zod.number().optional(),
+  "arbeidscomponent": zod.number().optional(),
+  "normtijd": zod.number().optional(),
+  "kostprijs": zod.number().optional(),
+  "verkoopprijs": zod.number().optional(),
+  "marge": zod.number().optional(),
+  "btw_code": zod.string().nullish(),
+  "geldig_vanaf": zod.string().nullish(),
+  "actief": zod.boolean().optional(),
+  "opmerkingen": zod.string().nullish(),
+  "inclusies": zod.string().nullish(),
+  "exclusies": zod.string().nullish(),
+  "prijsbasis_opmerking": zod.string().nullish()
+})
+
+export const CreateEenheidsprijsResponse = zod.void()
+
+
+/**
+ * @summary Eenheidsprijs ophalen
+ */
+export const GetEenheidsprijsParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetEenheidsprijsResponse = zod.object({
+  "id": zod.number(),
+  "code": zod.string(),
+  "omschrijving": zod.string(),
+  "categorie": zod.string(),
+  "eenheid": zod.string(),
+  "materiaalcomponent": zod.number(),
+  "arbeidscomponent": zod.number(),
+  "normtijd": zod.number(),
+  "kostprijs": zod.number(),
+  "verkoopprijs": zod.number(),
+  "marge": zod.number(),
+  "btw_code": zod.string().nullish(),
+  "geldig_vanaf": zod.string().nullish(),
+  "actief": zod.boolean(),
+  "opmerkingen": zod.string().nullish(),
+  "inclusies": zod.string().nullish(),
+  "exclusies": zod.string().nullish(),
+  "prijsbasis_opmerking": zod.string().nullish(),
+  "gem_werkelijk_uren": zod.number().nullish(),
+  "gem_werkelijk_materiaal": zod.number().nullish(),
+  "aantal_keer_gebruikt": zod.number(),
+  "afwijking_normtijd": zod.number().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Eenheidsprijs bijwerken
+ */
+export const UpdateEenheidsprijsParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateEenheidsprijsBody = zod.object({
+  "code": zod.string(),
+  "omschrijving": zod.string(),
+  "categorie": zod.string(),
+  "eenheid": zod.string(),
+  "materiaalcomponent": zod.number().optional(),
+  "arbeidscomponent": zod.number().optional(),
+  "normtijd": zod.number().optional(),
+  "kostprijs": zod.number().optional(),
+  "verkoopprijs": zod.number().optional(),
+  "marge": zod.number().optional(),
+  "btw_code": zod.string().nullish(),
+  "geldig_vanaf": zod.string().nullish(),
+  "actief": zod.boolean().optional(),
+  "opmerkingen": zod.string().nullish(),
+  "inclusies": zod.string().nullish(),
+  "exclusies": zod.string().nullish(),
+  "prijsbasis_opmerking": zod.string().nullish()
+})
+
+export const UpdateEenheidsprijsResponse = zod.object({
+  "id": zod.number(),
+  "code": zod.string(),
+  "omschrijving": zod.string(),
+  "categorie": zod.string(),
+  "eenheid": zod.string(),
+  "materiaalcomponent": zod.number(),
+  "arbeidscomponent": zod.number(),
+  "normtijd": zod.number(),
+  "kostprijs": zod.number(),
+  "verkoopprijs": zod.number(),
+  "marge": zod.number(),
+  "btw_code": zod.string().nullish(),
+  "geldig_vanaf": zod.string().nullish(),
+  "actief": zod.boolean(),
+  "opmerkingen": zod.string().nullish(),
+  "inclusies": zod.string().nullish(),
+  "exclusies": zod.string().nullish(),
+  "prijsbasis_opmerking": zod.string().nullish(),
+  "gem_werkelijk_uren": zod.number().nullish(),
+  "gem_werkelijk_materiaal": zod.number().nullish(),
+  "aantal_keer_gebruikt": zod.number(),
+  "afwijking_normtijd": zod.number().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Eenheidsprijs deactiveren
+ */
+export const DeleteEenheidsprijsParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteEenheidsprijsResponse = zod.object({
+  "ok": zod.boolean().optional()
+})
+
+
+/**
  * @summary Lijst urenregistraties
  */
 export const ListUrenQueryParams = zod.object({

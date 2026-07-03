@@ -10,6 +10,7 @@ import {
   crmContactpersonenTable,
   medewerkersTable,
   gebouwenTable,
+  eenheidsprijzenTable,
 } from "@workspace/db";
 import { logger } from "../lib/logger";
 import { randomUUID } from "crypto";
@@ -40,7 +41,7 @@ router.post(
       if (!req.file) return res.status(400).json({ error: "Geen bestand ontvangen" });
 
       const type = String(req.body.type ?? "").trim();
-      const geldige = ["leveranciers", "klanten", "artikelen", "projecten", "medewerkers", "gebouwen", "contactpersonen", "magazijn_artikelen"];
+      const geldige = ["leveranciers", "klanten", "artikelen", "projecten", "medewerkers", "gebouwen", "contactpersonen", "magazijn_artikelen", "eenheidsprijzen"];
       if (!geldige.includes(type)) {
         return res.status(400).json({ error: "Ongeldig importtype" });
       }
@@ -197,6 +198,19 @@ router.post("/import/uitvoeren", async (req, res) => {
           const values = koppelArtikel(rij, kolomkoppeling);
           if (!values.naam && overslaan_lege_naam !== false) { overgeslagen++; continue; }
           await db.insert(artikelenTable).values({ ...values, bron: "import", categorie: values.categorie || "magazijn" });
+          verwerkt++;
+        } catch (err) {
+          fouten.push({ rij: i + 2, fout: err instanceof Error ? err.message : "Onbekende fout" });
+          overgeslagen++;
+        }
+      }
+    } else if (type === "eenheidsprijzen") {
+      for (let i = 0; i < rijen.length; i++) {
+        const rij = rijen[i]!;
+        try {
+          const values = koppelEenheidsprijs(rij, kolomkoppeling);
+          if (!values.code || !values.omschrijving) { overgeslagen++; continue; }
+          await db.insert(eenheidsprijzenTable).values(values).onConflictDoNothing();
           verwerkt++;
         } catch (err) {
           fouten.push({ rij: i + 2, fout: err instanceof Error ? err.message : "Onbekende fout" });
@@ -403,6 +417,34 @@ function koppelGebouw(rij: Record<string, string>, kop: Record<string, string>) 
   };
 }
 
+function koppelEenheidsprijs(rij: Record<string, string>, kop: Record<string, string>) {
+  const parseNum = (v: string) => parseFloat(v.replace(",", ".")) || 0;
+  const GELDIGE_EENHEDEN = ["m2", "m1", "stuk", "uur", "set", "m3", "dag", "lm", "kg", "pst"];
+  const GELDIGE_CATEGORIEEN = [
+    "schilderwerk", "glas", "deuren_kozijnen", "timmerwerk", "elektrotechniek",
+    "werktuigbouwkundig", "brandpreventie", "magazijn_kleinmateriaal", "algemeen_arbeid", "overig",
+  ];
+  const eenheid = haal(rij, kop, "eenheid") || "stuk";
+  const categorie = haal(rij, kop, "categorie") || "overig";
+  return {
+    code: haal(rij, kop, "code"),
+    omschrijving: haal(rij, kop, "omschrijving") || "Onbekend",
+    categorie: GELDIGE_CATEGORIEEN.includes(categorie) ? categorie : "overig",
+    eenheid: GELDIGE_EENHEDEN.includes(eenheid) ? eenheid : "stuk",
+    materiaalcomponent: parseNum(haal(rij, kop, "materiaalcomponent")),
+    arbeidscomponent: parseNum(haal(rij, kop, "arbeidscomponent")),
+    normtijd: parseNum(haal(rij, kop, "normtijd")),
+    kostprijs: parseNum(haal(rij, kop, "kostprijs")),
+    verkoopprijs: parseNum(haal(rij, kop, "verkoopprijs")),
+    marge: parseNum(haal(rij, kop, "marge")),
+    btwCode: haal(rij, kop, "btw_code") || null,
+    inclusies: haal(rij, kop, "inclusies") || null,
+    exclusies: haal(rij, kop, "exclusies") || null,
+    opmerkingen: haal(rij, kop, "opmerkingen") || null,
+    actief: true,
+  };
+}
+
 function koppelContactpersoon(rij: Record<string, string>, kop: Record<string, string>) {
   return {
     naam: haal(rij, kop, "naam") || "Onbekend",
@@ -427,6 +469,7 @@ router.get("/import/template/:type", (req, res) => {
     gebouwen: ["naam", "adres", "postcode", "stad", "gebouw_type", "aantal_verdiepingen", "werknummer", "omschrijving"],
     contactpersonen: ["naam", "functie", "email", "telefoon", "mobiel", "beslisrol", "opmerkingen"],
     magazijn_artikelen: ["naam", "code", "omschrijving", "eenheid", "inkoopprijs", "categorie"],
+    eenheidsprijzen: ["code", "omschrijving", "categorie", "eenheid", "materiaalcomponent", "arbeidscomponent", "normtijd", "kostprijs", "verkoopprijs", "marge", "btw_code", "inclusies", "exclusies", "opmerkingen"],
   };
 
   const kolommen = TEMPLATE_KOLOMMEN[type];

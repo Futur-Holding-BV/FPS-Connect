@@ -21,7 +21,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
-  ArrowLeft, Plus, Pencil, Trash2, Upload, Download, Package, Building2, Search,
+  ArrowLeft, Plus, Pencil, Trash2, Upload, Download, Package, Building2, Search, BookOpen,
 } from "lucide-react";
 import { AiInvullenKnop } from "@/components/ai-invullen-knop";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -214,10 +214,14 @@ export default function ModulesCalculatieLeveranciers() {
         <Button variant="ghost" size="icon" onClick={() => navigate("/modules/calculatie")}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
-        <div>
+        <div className="flex-1">
           <h1 className="text-2xl font-semibold text-slate-900">Leveranciers & artikelen</h1>
           <p className="text-sm text-muted-foreground">Beheer uw leverancierslijsten en productcatalogus</p>
         </div>
+        <Button variant="outline" size="sm" onClick={() => navigate("/modules/calculatie/eenheidsprijzen")}>
+          <BookOpen className="h-4 w-4 mr-1.5" />
+          Eenheidsprijzenbibliotheek
+        </Button>
       </div>
 
       <Tabs value={tabblad} onValueChange={(v) => setTabblad(v as typeof tabblad)}>
