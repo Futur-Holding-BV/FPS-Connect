@@ -147,29 +147,51 @@ export default function BeheerderDashboard() {
           )}
 
           {/* AI-kosten KPI-kaart — altijd zichtbaar voor hoofdbeheerder */}
-          <Link href="/beheer/ai-aanroepen">
-            <Card className="cursor-pointer hover:bg-muted/40 transition-colors border-dashed">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  AI-kosten deze maand
-                </CardTitle>
-                <BrainCircuit className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent className="flex items-end justify-between gap-2">
-                <div>
-                  <span className="text-2xl font-bold">
-                    {(drempelStatus.huidig_maand_kosten_eur ?? 0).toLocaleString("nl-NL", { style: "currency", currency: "EUR" })}
-                  </span>
-                  {drempelStatus.drempel_eur != null && (
-                    <span className="text-sm text-muted-foreground ml-1">
-                      / {drempelStatus.drempel_eur.toLocaleString("nl-NL", { style: "currency", currency: "EUR" })} drempel
-                    </span>
-                  )}
-                </div>
-                <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0 mb-0.5" />
-              </CardContent>
-            </Card>
-          </Link>
+          {(() => {
+            const kosten = drempelStatus.huidig_maand_kosten_eur ?? 0;
+            const drempel = drempelStatus.drempel_eur;
+            const pct = drempel != null && drempel > 0 ? Math.min(100, (kosten / drempel) * 100) : null;
+            const balkKleur =
+              pct == null ? "" :
+              pct >= 90 ? "bg-red-500" :
+              pct >= 70 ? "bg-amber-400" :
+              "bg-primary/70";
+            return (
+              <Link href="/beheer/ai-aanroepen">
+                <Card className="cursor-pointer hover:bg-muted/40 transition-colors border-dashed">
+                  <CardHeader className="flex flex-row items-center justify-between pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">
+                      AI-kosten deze maand
+                    </CardTitle>
+                    <BrainCircuit className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    <div className="flex items-end justify-between gap-2">
+                      <div>
+                        <span className="text-2xl font-bold">
+                          {kosten.toLocaleString("nl-NL", { style: "currency", currency: "EUR" })}
+                        </span>
+                        {drempel != null && (
+                          <span className="text-sm text-muted-foreground ml-1">
+                            / {drempel.toLocaleString("nl-NL", { style: "currency", currency: "EUR" })} drempel
+                          </span>
+                        )}
+                      </div>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0 mb-0.5" />
+                    </div>
+                    {pct != null && (
+                      <div className="h-2 bg-muted rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all ${balkKleur}`}
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </Link>
+            );
+          })()}
         </div>
       )}
 
