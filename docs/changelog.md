@@ -4,6 +4,39 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-03 — Controlebox: AI Financial Controller dashboard
+
+**Uitvoering:** volledig | **Getest:** typecheck 0 fouten, workflows RUNNING
+
+### Gewijzigde bestanden
+- `artifacts/firevault/src/pages/facturen/controlebox.tsx` — volledig herschreven; 6 samenvatting-kaartjes, expandeerbare AI-controller-panelen per factuur
+
+### Wat is uitgebreid (puur frontend, geen nieuwe endpoints)
+
+**6 samenvatting-kaartjes bovenaan:**
+| Kaartje | Trigger |
+|---|---|
+| Nieuwe facturen | status ontvangen + ai_gelezen |
+| AI volledig akkoord | confidence ≥80% + geen IBAN-afwijking + status te_beoordelen_pl |
+| Controle nodig | status controle_nodig |
+| Blokkades | geblokkeerd=true |
+| Export gereed | status klaar_voor_accountview / klaar_voor_boeking |
+| Export mislukt | status fout_bij_verzending |
+
+**Per factuur — expandeerbaar AI-controller-panel (klik op rij):**
+- AI-betrouwbaarheidsbalk (groen ≥80% / oranje ≥60% / rood <60%) + %-getal in rij
+- Verwachte actie (hoog/middel/laag prioriteit) op basis van status + flags
+- Projectimpact (gekoppeld aan opdracht / alleen gebouw / niet gekoppeld)
+- Budgetimpact (bedrag excl. BTW + G-rekening-splitsing indien van toepassing)
+- Marge-impact (BTW verlegd = onderaannemer/inhuur signaal; hoog bedrag; G-rekening cashflow)
+- Reden van waarschuwing (controle_reden uit ai_metadata + IBAN-afwijking + blokkadereden)
+- Toelichting financieel voorstel (G-rekening-berekening + BTW-code-uitleg in blauw info-blok)
+
+### Architectuurregel
+Alle informatie afgeleid uit bestaande DB-velden (`ai_metadata`, `iban_afwijking`, `g_rekening_*`, `btw_code`, `status`). Geen nieuwe API-calls, geen nieuwe tabellen. AI toont voorstellen; mens beslist.
+
+---
+
 ## 2026-07-03 — Financiële Controle: Fase 2 Inkoopverdieping + Fase 3 Controlebox
 
 **Uitvoering:** volledig | **Getest:** server build exit 0, beide workflows RUNNING
