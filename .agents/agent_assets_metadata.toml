@@ -77,3 +77,9 @@ id = "H1rYQzYNPEykzz_8_REAa"
 uri = "file://docs/documentarchitectuur-2026-07-02.md"
 type = "text"
 title = "Documentarchitectuur FPS Connect"
+
+[[outputs]]
+id = "u7xkRk-mJyED4-H4d0-ms"
+uri = "file://docs/rechtenstructuur-migratie-overzicht.md"
+type = "text"
+title = "Migratie-overzicht Centrale Rechtenstructuur"
