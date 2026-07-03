@@ -16897,6 +16897,48 @@ paths:
         "403":
           description: Geen toegang
 
+  /beheer/ai-aanroepen/export:
+    get:
+      operationId: exportAiAanroepenCsv
+      tags: [ai]
+      summary: Exporteer gefilterde AI-aanroepen als CSV (beheerder only)
+      parameters:
+        - in: query
+          name: module
+          schema:
+            type: string
+        - in: query
+          name: status
+          schema:
+            type: string
+        - in: query
+          name: gebouw_id
+          schema:
+            type: integer
+        - in: query
+          name: offerte_id
+          schema:
+            type: integer
+        - in: query
+          name: datum_van
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: datum_tot
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: CSV-bestand met AI-aanroepen
+          content:
+            text/csv:
+              schema:
+                type: string
+        "403":
+          description: Geen toegang
+
   /beheer/ai-aanroepen/aggregaat:
     get:
       operationId: getAiAanroepenAggregaat

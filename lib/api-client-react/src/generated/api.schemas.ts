@@ -10313,6 +10313,15 @@ datum_van?: string;
 datum_tot?: string;
 };
 
+export type ExportAiAanroepenCsvParams = {
+module?: string;
+status?: string;
+gebouw_id?: number;
+offerte_id?: number;
+datum_van?: string;
+datum_tot?: string;
+};
+
 export type GetAiAanroepenAggregaatParams = {
 datum_van?: string;
 datum_tot?: string;

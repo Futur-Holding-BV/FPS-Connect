@@ -154,6 +154,7 @@ import type {
   DossierInput,
   DownloadUrlResultaat,
   ErrorEnvelope,
+  ExportAiAanroepenCsvParams,
   ExportlogRegel,
   Fabrikant,
   FabrikantInput,
@@ -60082,6 +60083,90 @@ export function useListAiAanroepen<TData = Awaited<ReturnType<typeof listAiAanro
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getListAiAanroepenQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getExportAiAanroepenCsvUrl = (params?: ExportAiAanroepenCsvParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/beheer/ai-aanroepen/export?${stringifiedParams}` : `/api/beheer/ai-aanroepen/export`
+}
+
+/**
+ * @summary Exporteer gefilterde AI-aanroepen als CSV (beheerder only)
+ */
+export const exportAiAanroepenCsv = async (params?: ExportAiAanroepenCsvParams, options?: RequestInit): Promise<string> => {
+
+  return customFetch<string>(getExportAiAanroepenCsvUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getExportAiAanroepenCsvQueryKey = (params?: ExportAiAanroepenCsvParams,) => {
+    return [
+    `/api/beheer/ai-aanroepen/export`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getExportAiAanroepenCsvQueryOptions = <TData = Awaited<ReturnType<typeof exportAiAanroepenCsv>>, TError = ErrorType<void>>(params?: ExportAiAanroepenCsvParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof exportAiAanroepenCsv>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getExportAiAanroepenCsvQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof exportAiAanroepenCsv>>> = ({ signal }) => exportAiAanroepenCsv(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof exportAiAanroepenCsv>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ExportAiAanroepenCsvQueryResult = NonNullable<Awaited<ReturnType<typeof exportAiAanroepenCsv>>>
+export type ExportAiAanroepenCsvQueryError = ErrorType<void>
+
+
+/**
+ * @summary Exporteer gefilterde AI-aanroepen als CSV (beheerder only)
+ */
+
+export function useExportAiAanroepenCsv<TData = Awaited<ReturnType<typeof exportAiAanroepenCsv>>, TError = ErrorType<void>>(
+ params?: ExportAiAanroepenCsvParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof exportAiAanroepenCsv>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getExportAiAanroepenCsvQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

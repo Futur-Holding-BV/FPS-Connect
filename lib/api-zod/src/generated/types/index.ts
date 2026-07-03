@@ -187,6 +187,7 @@ export * from './dossierInput';
 export * from './downloadUrlResultaat';
 export * from './emailContactpersoon';
 export * from './errorEnvelope';
+export * from './exportAiAanroepenCsvParams';
 export * from './exportlogRegel';
 export * from './fabrikant';
 export * from './fabrikantInput';

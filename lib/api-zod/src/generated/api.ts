@@ -21419,6 +21419,21 @@ export const ListAiAanroepenResponse = zod.object({
 
 
 /**
+ * @summary Exporteer gefilterde AI-aanroepen als CSV (beheerder only)
+ */
+export const ExportAiAanroepenCsvQueryParams = zod.object({
+  "module": zod.coerce.string().optional(),
+  "status": zod.coerce.string().optional(),
+  "gebouw_id": zod.coerce.number().optional(),
+  "offerte_id": zod.coerce.number().optional(),
+  "datum_van": zod.date().optional(),
+  "datum_tot": zod.date().optional()
+})
+
+export const ExportAiAanroepenCsvResponse = zod.unknown()
+
+
+/**
  * @summary Totaalkosten en -aantallen AI-aanroepen per module (beheerder only)
  */
 export const GetAiAanroepenAggregaatQueryParams = zod.object({

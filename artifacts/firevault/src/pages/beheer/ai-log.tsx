@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Bot, TrendingUp, AlertCircle, Clock, Loader2, Filter, RefreshCw } from "lucide-react";
+import { Bot, TrendingUp, AlertCircle, Clock, Loader2, Filter, RefreshCw, Download } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -118,6 +118,24 @@ export default function AiLogPagina() {
         Geen toegang tot deze pagina.
       </div>
     );
+  }
+
+  function handleExportCsv() {
+    const params = new URLSearchParams();
+    if (module) params.set("module", module);
+    if (status) params.set("status", status);
+    if (gebouwId && !isNaN(parseInt(gebouwId))) params.set("gebouw_id", gebouwId);
+    if (offerteId && !isNaN(parseInt(offerteId))) params.set("offerte_id", offerteId);
+    if (datumVan) params.set("datum_van", datumVan);
+    if (datumTot) params.set("datum_tot", datumTot);
+    const query = params.toString();
+    const url = `/api/beheer/ai-aanroepen/export${query ? `?${query}` : ""}`;
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   }
 
   function resetFilters() {
@@ -335,10 +353,16 @@ export default function AiLogPagina() {
                 </span>
               )}
             </CardTitle>
-            <Button variant="ghost" size="sm" onClick={() => refetch()}>
-              <RefreshCw className="h-3.5 w-3.5 mr-1" />
-              Verversen
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="sm" onClick={handleExportCsv}>
+                <Download className="h-3.5 w-3.5 mr-1" />
+                Exporteren
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => refetch()}>
+                <RefreshCw className="h-3.5 w-3.5 mr-1" />
+                Verversen
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="p-0">

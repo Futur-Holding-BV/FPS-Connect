@@ -106,6 +106,99 @@ router.get(
 );
 
 router.get(
+  "/api/beheer/ai-aanroepen/export",
+  requireRol("hoofdbeheerder"),
+  async (req, res) => {
+    const moduleFilter = typeof req.query.module === "string" ? req.query.module.trim() : null;
+    const statusFilter = typeof req.query.status === "string" ? req.query.status.trim() : null;
+    const gebouwIdFilter = req.query.gebouw_id ? parseInt(String(req.query.gebouw_id), 10) : null;
+    const offerteIdFilter = req.query.offerte_id ? parseInt(String(req.query.offerte_id), 10) : null;
+    const datumVan = typeof req.query.datum_van === "string" ? req.query.datum_van.trim() : null;
+    const datumTot = typeof req.query.datum_tot === "string" ? req.query.datum_tot.trim() : null;
+
+    const conditions = [];
+    if (moduleFilter) conditions.push(eq(aiAanroepenTable.module, moduleFilter));
+    if (statusFilter) conditions.push(eq(aiAanroepenTable.status, statusFilter));
+    if (datumVan) {
+      const van = new Date(datumVan);
+      if (!isNaN(van.getTime())) conditions.push(gte(aiAanroepenTable.aangemaaktOp, van));
+    }
+    if (datumTot) {
+      const tot = new Date(datumTot + "T23:59:59.999Z");
+      if (!isNaN(tot.getTime())) conditions.push(lte(aiAanroepenTable.aangemaaktOp, tot));
+    }
+    if (gebouwIdFilter !== null && !isNaN(gebouwIdFilter)) {
+      conditions.push(
+        sql`(${aiAanroepenTable.contextJson}->>'gebouw_id')::int = ${gebouwIdFilter}`
+      );
+    }
+    if (offerteIdFilter !== null && !isNaN(offerteIdFilter)) {
+      conditions.push(
+        sql`(${aiAanroepenTable.contextJson}->>'offerte_id')::int = ${offerteIdFilter}`
+      );
+    }
+
+    const where = conditions.length > 0 ? and(...conditions) : undefined;
+
+    const rows = await db
+      .select()
+      .from(aiAanroepenTable)
+      .where(where)
+      .orderBy(desc(aiAanroepenTable.aangemaaktOp));
+
+    const escapeCell = (val: string | number | null | undefined): string => {
+      if (val == null) return "";
+      const s = String(val);
+      if (s.includes(",") || s.includes('"') || s.includes("\n")) {
+        return `"${s.replace(/"/g, '""')}"`;
+      }
+      return s;
+    };
+
+    const header = [
+      "datum",
+      "module",
+      "functie",
+      "model",
+      "tokens",
+      "kosten_eur",
+      "duur_ms",
+      "status",
+      "gebouw_id",
+      "offerte_id",
+    ].join(",");
+
+    const lines = rows.map((r) => {
+      const ctx = r.contextJson as Record<string, unknown> | null;
+      const gebouwId = ctx?.gebouw_id != null ? Number(ctx.gebouw_id) : null;
+      const offerteId = ctx?.offerte_id != null ? Number(ctx.offerte_id) : null;
+      return [
+        escapeCell(r.aangemaaktOp.toISOString()),
+        escapeCell(r.module),
+        escapeCell(r.functie),
+        escapeCell(r.modelNaam),
+        escapeCell(r.totalTokens),
+        escapeCell(r.geschatteKostenEur),
+        escapeCell(r.duurMs),
+        escapeCell(r.status),
+        escapeCell(gebouwId),
+        escapeCell(offerteId),
+      ].join(",");
+    });
+
+    const vanDeel = datumVan ? datumVan : (rows.length > 0 ? rows[rows.length - 1].aangemaaktOp.toISOString().slice(0, 10) : "");
+    const totDeel = datumTot ? datumTot : (rows.length > 0 ? rows[0].aangemaaktOp.toISOString().slice(0, 10) : "");
+    const bestandsnaam = vanDeel && totDeel
+      ? `ai-aanroepen-${vanDeel}-${totDeel}.csv`
+      : "ai-aanroepen.csv";
+
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader("Content-Disposition", `attachment; filename="${bestandsnaam}"`);
+    res.send([header, ...lines].join("\r\n"));
+  },
+);
+
+router.get(
   "/api/beheer/ai-aanroepen/aggregaat",
   requireRol("hoofdbeheerder"),
   async (req, res) => {
