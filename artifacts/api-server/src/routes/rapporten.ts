@@ -12,7 +12,7 @@ import {
 import { eq, desc, and, inArray } from "drizzle-orm";
 import { requireBevoegdheid, requireBevoegdheidOfKlant } from "../middlewares/auth";
 import { ObjectStorageService } from "../lib/objectStorage";
-import { heeftOpenAi, maakOpenAiClient } from "../lib/openai";
+import { aiGateway, heeftGateway } from "../lib/aiGateway";
 
 const router = Router();
 
@@ -438,15 +438,13 @@ router.get("/gebouwen/:id/rapporten/:rapportId/bijlagenbundel", lezenRapporten, 
         } else {
           // Samenvattingspagina voor langere documenten
           let samenvatting = "";
-          if (heeftOpenAi()) {
+          if (heeftGateway()) {
             try {
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               const pdfParse = ((await import("pdf-parse")) as any).default as (buf: Buffer) => Promise<{ text: string }>;
               const parsed = await pdfParse(buffer);
               const tekst  = parsed.text.slice(0, 8000);
-              const ai     = maakOpenAiClient();
-              const result = await ai.chat.completions.create({
-                model: "gpt-4o",
+              const samenvattingResultaat = await aiGateway.chat("default", {
                 messages: [
                   {
                     role: "system",
@@ -459,7 +457,7 @@ router.get("/gebouwen/:id/rapporten/:rapportId/bijlagenbundel", lezenRapporten, 
                 ],
                 max_tokens: 600,
               });
-              samenvatting = result.choices[0]?.message?.content ?? "";
+              samenvatting = samenvattingResultaat.ok ? samenvattingResultaat.inhoud : "";
             } catch (aiErr) {
               req.log.warn({ err: aiErr }, "AI-samenvatting bijlage mislukt");
               samenvatting = "(Automatische samenvatting niet beschikbaar.)";

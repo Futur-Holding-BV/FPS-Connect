@@ -21,8 +21,8 @@ import {
 } from "@workspace/db";
 import { eq, and, sql, sum, asc, isNull, desc, or } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
+import { aiGateway, heeftGateway } from "../lib/aiGateway";
 import { logger } from "../lib/logger";
-import { heeftOpenAi, maakOpenAiClient } from "../lib/openai";
 
 const router = Router();
 const iso = (d: Date | null | undefined) => d?.toISOString() ?? null;
@@ -425,12 +425,9 @@ router.post("/opdrachten/:id/werkbegroting/ai-analyse", schrijven, async (req, r
     const arbeidRegels = regels.filter(r => r.categorie === "arbeid");
     const materiaalRegels = regels.filter(r => r.categorie === "materiaal");
 
-    const apiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
-    const baseUrl = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL ?? "https://api.openai.com/v1";
-
     let analyse: Record<string, unknown> = { handmatig: true, gegenereerd_op: new Date().toISOString() };
 
-    if (apiKey) {
+    if (heeftGateway()) {
       const prompt = `Je bent een kritische werkvoorbereider in de brandpreventiesector. Analyseer de onderstaande werkbegroting en geef concrete voorstellen om winst te maximaliseren via inkoop en arbeid.
 
 ARBEID (${arbeidRegels.length} regels):
@@ -451,29 +448,24 @@ Geef je analyse als JSON met deze structuur:
   "risicos": ["risico 1"]
 }`;
 
-      try {
-        const aiRes = await fetch(`${baseUrl}/chat/completions`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-          body: JSON.stringify({
-            model: "gpt-4o",
-            messages: [
-              { role: "system", content: "Je bent een kritische werkvoorbereider. Geef altijd valide JSON terug." },
-              { role: "user", content: prompt },
-            ],
-            response_format: { type: "json_object" },
-            max_tokens: 1500,
-          }),
-          signal: AbortSignal.timeout(30000),
-        });
+      const begrotingAnalyseResultaat = await aiGateway.chat("default", {
+        response_format: { type: "json_object" },
+        max_tokens: 1500,
+        messages: [
+          { role: "system", content: "Je bent een kritische werkvoorbereider. Geef altijd valide JSON terug." },
+          { role: "user", content: prompt },
+        ],
+      });
 
-        if (aiRes.ok) {
-          const aiJson = await aiRes.json() as { choices: Array<{ message: { content: string } }> };
-          analyse = JSON.parse(aiJson.choices[0]?.message?.content ?? "{}") as Record<string, unknown>;
+      if (begrotingAnalyseResultaat.ok) {
+        try {
+          analyse = JSON.parse(begrotingAnalyseResultaat.inhoud) as Record<string, unknown>;
           analyse.gegenereerd_op = new Date().toISOString();
+        } catch {
+          logger.warn("AI analyse JSON parsen mislukt — fallback zonder AI");
         }
-      } catch (aiErr) {
-        logger.warn({ aiErr }, "AI analyse mislukt — fallback zonder AI");
+      } else {
+        logger.warn({ fout: begrotingAnalyseResultaat.fout }, "AI analyse mislukt — fallback zonder AI");
       }
     }
 
@@ -779,12 +771,10 @@ Jouw taken als werkbegroting-assistent:
 
 Antwoord altijd in het Nederlands. Geef concrete, praktische adviezen. Wees kritisch maar constructief.`;
 
-    if (!heeftOpenAi()) {
+    if (!heeftGateway()) {
       res.json({ antwoord: "AI-chat is niet beschikbaar. Controleer de OpenAI-configuratie.", signalen: [] });
       return;
     }
-
-    const openai = maakOpenAiClient();
 
     type Msg = { role: "system" | "user" | "assistant"; content: string | Array<Record<string, unknown>> };
     const messages: Msg[] = [{ role: "system", content: systeemPrompt }];
@@ -808,13 +798,13 @@ Antwoord altijd in het Nederlands. Geef concrete, praktische adviezen. Wees krit
       }
     }
 
-    const completion = await openai.chat.completions.create({
-      model: "gpt-5.4",
+    const opdrachtChatResultaat = await aiGateway.chat("reasoning", {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       messages: messages as any,
       max_completion_tokens: 2000,
     });
 
-    const antwoord = completion.choices[0]?.message?.content ?? "Geen antwoord ontvangen.";
+    const antwoord = opdrachtChatResultaat.ok ? opdrachtChatResultaat.inhoud : "Geen antwoord ontvangen.";
 
     const signalen: string[] = [];
     const lw = antwoord.toLowerCase();

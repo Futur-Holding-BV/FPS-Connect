@@ -7,7 +7,7 @@ import {
 } from "@workspace/db";
 import { eq, and, or, desc, isNotNull, lte } from "drizzle-orm";
 import { requireAuth, requireBevoegdheid } from "../middlewares/auth.js";
-import { maakOpenAiClient, heeftOpenAi } from "../lib/openai.js";
+import { aiGateway, heeftGateway } from "../lib/aiGateway";
 import { logger } from "../lib/logger.js";
 
 const toolboxRouter = Router();
@@ -96,7 +96,7 @@ toolboxRouter.get("/toolbox-berichten", requireAuth, async (req, res) => {
 
   // Auto-trigger AI-analyse elke 4 uur (fire-and-forget)
   const nuMs = Date.now();
-  if (heeftOpenAi() && filterGearchiveerd === false && nuMs - lastAutoAnalyseTrigger > VIER_UREN_MS) {
+  if (heeftGateway() && filterGearchiveerd === false && nuMs - lastAutoAnalyseTrigger > VIER_UREN_MS) {
     lastAutoAnalyseTrigger = nuMs;
     voerAiAnalyseUit().catch((e: unknown) => logger.warn({ err: e }, "Auto AI-analyse mislukt"));
   }
@@ -335,7 +335,7 @@ toolboxRouter.post("/toolbox-berichten/ai-analyse", schrijvenToolbox, async (req
 
 // ── AI-analyse implementatie ──────────────────────────────────────────────────
 async function voerAiAnalyseUit(): Promise<number> {
-  if (!heeftOpenAi()) return 0;
+  if (!heeftGateway()) return 0;
 
   const rijen = await db
     .select({
@@ -353,13 +353,11 @@ async function voerAiAnalyseUit(): Promise<number> {
 
   if (rijen.length === 0) return 0;
 
-  const client = maakOpenAiClient();
   let verwerkt = 0;
 
   for (const r of rijen) {
     try {
-      const antwoord = await client.chat.completions.create({
-        model: "gpt-4o-mini",
+      const antwoord = await aiGateway.chat("fast", {
         max_tokens: 10,
         messages: [
           {
@@ -378,7 +376,7 @@ async function voerAiAnalyseUit(): Promise<number> {
         ],
       });
 
-      const tekst = (antwoord.choices[0]?.message?.content ?? "").toLowerCase().trim();
+      const tekst = (antwoord.ok ? antwoord.inhoud : "").toLowerCase().trim();
       const isBelangrijk = tekst.startsWith("ja");
 
       await db

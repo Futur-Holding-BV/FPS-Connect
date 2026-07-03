@@ -21,6 +21,7 @@ logger.info(
 );
 
 export function heeftOpenAi(): boolean {
+  if (process.env.CONNECT_AI_ENABLED === "false") return false;
   return PROXY_VOLLEDIG || Boolean(EIGEN_KEY);
 }
 

@@ -44,7 +44,7 @@ import { eq, desc, and, ne, inArray, or, isNull, gte, lte, sql, getTableColumns 
 import { requireBevoegdheid } from "../middlewares/auth";
 import { stelOpleidingenVoor } from "../services/opleiding-ai";
 import { workflowService, maakTransitieContext } from "../services/workflow-engine";
-import { maakOpenAiClient, heeftOpenAi } from "../lib/openai";
+import { aiGateway, heeftGateway } from "../lib/aiGateway";
 import { logger } from "../lib/logger";
 
 const uploadGeheugem = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 } });
@@ -2377,7 +2377,6 @@ router.post("/hrm/capaciteit-analyse", alleenBeheerder, async (req, res) => {
       return pseudoMap.get(naam)!;
     };
 
-    const client = maakOpenAiClient();
     const systeemPrompt = `Je bent een capaciteitsplanner voor een installatiebedrijf. Analyseer de verlof-, ziekte- en saldogegevens en geef korte, praktische signalen terug als JSON object met veld "signalen" (array). Elk signaal heeft: type (capaciteit_laag|verlof_ophoping|saldo_verloopt|ziektetrend), prioriteit (hoog|midden|laag), onderwerp (string, max 60 tekens), toelichting (string, max 200 tekens), en aanbeveling (string, max 150 tekens). Maximaal 6 signalen. Namen zijn geanonimiseerd (M-1 e.d.). Reageer ALLEEN in JSON.`;
     const gebruikersTekst = JSON.stringify({
       periode: { start: startStr, eind: eindStr },
@@ -2390,8 +2389,7 @@ router.post("/hrm/capaciteit-analyse", alleenBeheerder, async (req, res) => {
       verlopende_saldi: verlopendeSaldi.slice(0, 8).map((v) => ({ medewerker: pseudoniem(v.medewerkerNaam), soort: v.verlofsoortNaam, uren: v.saldoUren, verloopt: v.vervaltOp })),
     });
 
-    const voltooiing = await client.chat.completions.create({
-      model: "gpt-5-mini",
+    const voltooiing = await aiGateway.chat("fast", {
       response_format: { type: "json_object" },
       max_completion_tokens: 1200,
       messages: [
@@ -2400,7 +2398,7 @@ router.post("/hrm/capaciteit-analyse", alleenBeheerder, async (req, res) => {
       ],
     });
 
-    const parsed = JSON.parse(voltooiing.choices[0]?.message?.content ?? "{}") as { signalen?: unknown[] };
+    const parsed = JSON.parse(voltooiing.ok ? voltooiing.inhoud : "{}") as { signalen?: unknown[] };
     const signalen = Array.isArray(parsed.signalen) ? parsed.signalen : [];
 
     res.json({
@@ -3045,11 +3043,10 @@ router.post(
         return res.status(422).json({ error: "Te weinig tekst gevonden in het bestand." });
       }
 
-      if (!heeftOpenAi()) {
+      if (!heeftGateway()) {
         return res.status(503).json({ error: "AI is niet beschikbaar. Vul de velden handmatig in." });
       }
 
-      const client = maakOpenAiClient();
       const extractiePrompt = `Analyseer het volgende CV en extraheer de gevraagde velden. Antwoord UITSLUITEND met een geldig JSON-object (geen markdown, geen tekst buiten het object).
 
 CV-TEKST:
@@ -3073,17 +3070,18 @@ Extraheer exact deze velden (gebruik null als iets ontbreekt of onduidelijk is):
   "ai_toelichting": "opmerking over leesbaarheid of null (max 1 zin)"
 }`;
 
-      const response = await client.chat.completions.create({
-        model: "gpt-4o",
+      const cvResultaat = await aiGateway.chat("default", {
         messages: [{ role: "user", content: extractiePrompt }],
         max_tokens: 500,
-        temperature: 0,
         response_format: { type: "json_object" },
       });
+      if (!cvResultaat.ok) {
+        return res.status(503).json({ error: "AI-analyse mislukt. Probeer opnieuw." });
+      }
 
       let resultaat: Record<string, unknown> = {};
       try {
-        resultaat = JSON.parse(response.choices[0]?.message?.content ?? "{}");
+        resultaat = JSON.parse(cvResultaat.inhoud);
       } catch {
         return res.status(500).json({ error: "AI gaf een ongeldig antwoord. Probeer opnieuw." });
       }
@@ -3303,7 +3301,7 @@ router.post("/medewerkers/:id/arbeidsgetuigenis-ai", schrijven, async (req, res)
     const functieName = functie_naam ?? "medewerker";
     const samenvatting = `Arbeidsgetuigenis voor ${m.naam} — ${diensttermijn} in dienst als ${functieName}${positief_getuigschrift !== false ? ", positief getuigschrift" : ""}.`;
 
-    if (!heeftOpenAi()) {
+    if (!heeftGateway()) {
       return res.json({
         brief_tekst: _briefZonderAi({
           naam: m.naam,
@@ -3320,7 +3318,6 @@ router.post("/medewerkers/:id/arbeidsgetuigenis-ai", schrijven, async (req, res)
       });
     }
 
-    const client = maakOpenAiClient();
     const behaaldeCertificaten = opleidingen
       .filter((o) => o.status === "behaald")
       .map((o) => `${o.naam}${o.behaald_op ? " (behaald " + o.behaald_op + ")" : ""}`)
@@ -3348,15 +3345,16 @@ Schrijf een ${positief_getuigschrift !== false ? "positieve" : "neutrale"} arbei
 
 Schrijf ALLEEN de brieftekst. Begin direct met de datum. Gebruik formeel Nederlands. Laat lege regels voor de handtekening onderaan.`;
 
-    const response = await client.chat.completions.create({
-      model: "gpt-4o",
+    const getuigenisResultaat = await aiGateway.chat("default", {
       messages: [{ role: "user", content: prompt }],
       max_tokens: 1200,
-      temperature: 0.3,
     });
+    if (!getuigenisResultaat.ok) {
+      return res.status(503).json({ error: "AI-aanroep mislukt. Probeer opnieuw." });
+    }
 
     return res.json({
-      brief_tekst: response.choices[0]?.message?.content ?? "",
+      brief_tekst: getuigenisResultaat.inhoud,
       samenvatting,
       ai_gebruikt: true,
     });
@@ -3656,7 +3654,7 @@ router.post("/medewerkers/:id/ai-contract-analyse", schrijven, async (req, res) 
         .json({ error: "Geen arbeidscontract gevonden. Upload eerst een document van het type 'Arbeidscontract'." });
     }
 
-    if (!heeftOpenAi()) {
+    if (!heeftGateway()) {
       return res.status(503).json({ error: "AI is niet beschikbaar. Vul de velden handmatig in." });
     }
 
@@ -3691,7 +3689,6 @@ router.post("/medewerkers/:id/ai-contract-analyse", schrijven, async (req, res) 
         .json({ error: "Te weinig tekst gevonden. Gebruik een niet-gescand PDF-bestand." });
     }
 
-    const client = maakOpenAiClient();
     const prompt = `Analyseer het volgende arbeidscontract en extraheer de gevraagde velden. Antwoord UITSLUITEND met een geldig JSON-object (geen markdown, geen tekst buiten het object).
 
 CONTRACTTEKST:
@@ -3707,17 +3704,18 @@ Extraheer exact deze velden (gebruik null als iets ontbreekt of onduidelijk is):
   "ai_toelichting": "korte opmerking over de betrouwbaarheid of null (max 1 zin)"
 }`;
 
-    const response = await client.chat.completions.create({
-      model: "gpt-4o",
+    const contractResultaat = await aiGateway.chat("default", {
       messages: [{ role: "user", content: prompt }],
       max_tokens: 400,
-      temperature: 0,
       response_format: { type: "json_object" },
     });
+    if (!contractResultaat.ok) {
+      return res.status(503).json({ error: "AI-analyse mislukt. Probeer opnieuw." });
+    }
 
     let resultaat: Record<string, unknown> = {};
     try {
-      resultaat = JSON.parse(response.choices[0]?.message?.content ?? "{}");
+      resultaat = JSON.parse(contractResultaat.inhoud);
     } catch {
       return res.status(500).json({ error: "AI gaf een ongeldig antwoord. Probeer opnieuw." });
     }
@@ -3969,7 +3967,7 @@ router.get("/zzp-overeenkomsten/ai-vullen", (_req, res) => {
 
 router.post("/zzp-overeenkomsten/ai-vullen", schrijven, async (req, res) => {
   try {
-    if (!heeftOpenAi()) {
+    if (!heeftGateway()) {
       return res.status(503).json({ error: "AI niet beschikbaar" });
     }
     const { medewerker_id, functie_naam, bedrijfsnaam, projectnummer } = req.body as Record<string, unknown>;
@@ -3990,9 +3988,7 @@ router.post("/zzp-overeenkomsten/ai-vullen", schrijven, async (req, res) => {
     const bedrijf = bedrijfsnaam ? String(bedrijfsnaam) : null;
     const project = projectnummer ? String(projectnummer) : null;
 
-    const openai = maakOpenAiClient();
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
+    const zzpResultaat = await aiGateway.chat("default", {
       max_tokens: 600,
       messages: [
         {
@@ -4026,10 +4022,12 @@ JSON-formaat:
       ],
     });
 
-    const raw = completion.choices[0]?.message?.content ?? "{}";
+    if (!zzpResultaat.ok) {
+      return res.status(503).json({ error: "AI-aanroep mislukt. Probeer opnieuw." });
+    }
     let parsed: { opdracht_omschrijving?: string; specifieke_taken?: string; zzp_bedrijfsnaam?: string | null };
     try {
-      parsed = JSON.parse(raw.replace(/^```json\s*/i, "").replace(/```\s*$/i, "").trim());
+      parsed = JSON.parse(zzpResultaat.inhoud.replace(/^```json\s*/i, "").replace(/```\s*$/i, "").trim());
     } catch {
       return res.status(500).json({ error: "AI-antwoord kon niet worden verwerkt" });
     }

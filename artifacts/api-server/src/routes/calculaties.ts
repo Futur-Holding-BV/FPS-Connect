@@ -11,7 +11,7 @@ import {
 } from "@workspace/db";
 import { eq, desc, asc, inArray } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth";
-import { heeftOpenAi, maakOpenAiClient } from "../lib/openai";
+import { aiGateway, heeftGateway } from "../lib/aiGateway";
 import { workflowService, maakTransitieContext } from "../services/workflow-engine";
 
 const router = Router();
@@ -333,7 +333,7 @@ router.delete("/calculaties/:id/regels/:regelId", async (req, res) => {
 // Mens bevestigt per regel; niets wordt automatisch opgeslagen.
 router.post("/calculaties/:id/ai-regels", requireAuth, async (req, res) => {
   try {
-    if (!heeftOpenAi()) {
+    if (!heeftGateway()) {
       return res.status(503).json({ error: "OpenAI niet beschikbaar" });
     }
     const calcId = parseId(req.params["id"]);
@@ -381,15 +381,13 @@ Geef 6-10 begrotingsregels terug als JSON object met sleutel "regels":
 {"regels":[{"categorie":"arbeid|materiaal|overhead|overig","omschrijving":"...","eenheid":"uur|st|m2|m|lump sum","hoeveelheid":1,"stukprijs":1}]}
 Alleen het JSON object, geen uitleg.`;
 
-    const openai = maakOpenAiClient();
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
+    const calcAiResultaat = await aiGateway.chat("default", {
       messages: [{ role: "user", content: prompt }],
       max_tokens: 1500,
     });
 
     let regels: object[] = [];
-    const raw = completion.choices[0]?.message?.content ?? "{}";
+    const raw = calcAiResultaat.ok ? calcAiResultaat.inhoud : "{}";
     try {
       const parsed = JSON.parse(raw) as Record<string, unknown>;
       regels = Array.isArray(parsed) ? parsed : (Array.isArray(parsed["regels"]) ? (parsed["regels"] as object[]) : []);

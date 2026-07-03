@@ -1,5 +1,5 @@
 import { logger } from "../lib/logger";
-import { maakOpenAiClient } from "../lib/openai";
+import { aiGateway } from "../lib/aiGateway";
 import {
   isDocumentType,
   type DocumentType,
@@ -72,30 +72,24 @@ export async function analyseerDocumentTekst(
     );
   }
 
-  const client = maakOpenAiClient();
   const ingekort = schoon.slice(0, MAX_TEKST_LENGTE);
   const userTekst = bestandsnaam
     ? `Bestandsnaam: ${bestandsnaam}\n\nDocumenttekst:\n${ingekort}`
     : `Documenttekst:\n${ingekort}`;
 
-  let completion;
-  try {
-    completion = await client.chat.completions.create({
-      model: "gpt-5-mini",
-      response_format: { type: "json_object" },
-      max_completion_tokens: 4000,
-      messages: [
-        { role: "system", content: SYSTEM_PROMPT },
-        { role: "user", content: userTekst },
-      ],
-    });
-  } catch (err) {
-    logger.error({ err }, "Document AI-analyse mislukte");
+  const resultaat = await aiGateway.chat("fast", {
+    response_format: { type: "json_object" },
+    max_completion_tokens: 4000,
+    messages: [
+      { role: "system", content: SYSTEM_PROMPT },
+      { role: "user", content: userTekst },
+    ],
+  });
+  if (!resultaat.ok) {
+    logger.error({ fout: resultaat.fout }, "Document AI-analyse mislukte");
     return leegResultaat("De AI-analyse kon niet worden uitgevoerd. Vul de velden handmatig in.");
   }
-
-  const antwoord = completion.choices[0]?.message?.content;
-  if (!antwoord) return leegResultaat("De AI gaf geen bruikbaar antwoord. Vul de velden handmatig in.");
+  const antwoord = resultaat.inhoud;
 
   let parsed: Record<string, unknown>;
   try {

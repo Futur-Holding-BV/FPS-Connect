@@ -17,7 +17,7 @@ import {
 } from "@workspace/db";
 import { eq, and, gte, lte, desc, asc, inArray, sql, isNull, or, type SQL } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
-import { maakOpenAiClient, heeftOpenAi } from "../lib/openai.js";
+import { aiGateway, heeftGateway } from "../lib/aiGateway";
 
 const router = Router();
 const iso = (d: Date) => d.toISOString();
@@ -900,13 +900,11 @@ router.post("/modules/planning/reistijd-schatting", lezenPlanning, async (req, r
   if (!locatie_a || !locatie_b) {
     return res.status(422).json({ error: "locatie_a en locatie_b zijn verplicht" });
   }
-  if (!heeftOpenAi()) {
+  if (!heeftGateway()) {
     return res.json({ minuten: 30, beschrijving: "Standaard schatting (AI niet beschikbaar)", onzeker: true });
   }
   try {
-    const client = maakOpenAiClient();
-    const completion = await client.chat.completions.create({
-      model: "gpt-4o-mini",
+    const planningAiResultaat = await aiGateway.chat("fast", {
       messages: [
         {
           role: "system",
@@ -920,7 +918,7 @@ router.post("/modules/planning/reistijd-schatting", lezenPlanning, async (req, r
       response_format: { type: "json_object" },
       max_tokens: 200,
     });
-    const raw = JSON.parse(completion.choices[0]?.message?.content ?? "{}") as { minuten?: unknown; beschrijving?: unknown; onzeker?: unknown };
+    const raw = JSON.parse(planningAiResultaat.ok ? planningAiResultaat.inhoud : "{}") as { minuten?: unknown; beschrijving?: unknown; onzeker?: unknown };
     return res.json({
       minuten: typeof raw.minuten === "number" ? Math.max(5, Math.round(raw.minuten)) : 30,
       beschrijving: typeof raw.beschrijving === "string" ? raw.beschrijving : "Schatting op basis van locatie",

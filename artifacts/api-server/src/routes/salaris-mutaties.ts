@@ -6,7 +6,7 @@ import {
 } from "@workspace/db";
 import { eq, and, desc } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
-import { heeftOpenAi, maakOpenAiClient } from "../lib/openai";
+import { aiGateway, heeftGateway } from "../lib/aiGateway";
 
 const router = Router();
 
@@ -154,12 +154,11 @@ router.post("/salaris-mutaties/ai-controle", lezen, async (req: Request, res: Re
     };
   }
 
-  if (!heeftOpenAi() || mutaties.length === 0) {
+  if (!heeftGateway() || mutaties.length === 0) {
     return res.json(analyseerZonderAi());
   }
 
   try {
-    const openai = maakOpenAiClient();
     const invoer = mutaties.map((m) => ({
       id: m.id,
       medewerker: m.medewerkerNaam ?? `medewerker-${m.id}`,
@@ -170,8 +169,7 @@ router.post("/salaris-mutaties/ai-controle", lezen, async (req: Request, res: Re
       bron: m.bron,
     }));
 
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
+    const scabControlResultaat = await aiGateway.chat("default", {
       max_tokens: 600,
       messages: [
         {
@@ -189,8 +187,11 @@ router.post("/salaris-mutaties/ai-controle", lezen, async (req: Request, res: Re
         },
       ],
     });
+    if (!scabControlResultaat.ok) {
+      return res.json(analyseerZonderAi());
+    }
 
-    const raw = completion.choices[0]?.message?.content ?? "";
+    const raw = scabControlResultaat.inhoud;
     const jsonStr = raw.replace(/^```json\n?/i, "").replace(/\n?```$/i, "").trim();
     const parsed = JSON.parse(jsonStr) as {
       bevindingen: { ernst: string; mutatie_naam: string; bericht: string }[];

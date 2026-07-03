@@ -12,7 +12,7 @@ import {
   crmKlantenTable,
 } from "@workspace/db";
 import { eq, and, desc, sql } from "drizzle-orm";
-import { maakOpenAiClient, heeftOpenAi } from "../lib/openai";
+import { aiGateway, heeftGateway } from "../lib/aiGateway";
 import { requireAuth } from "../middlewares/auth";
 import {
   isGeconfigureerd,
@@ -549,7 +549,7 @@ router.get("/werk-inbox/relatie/:emailAdres", requireAuth, async (req, res) => {
 
 // ─── AI-analyse per mail ──────────────────────────────────────────────────────
 router.post("/werk-inbox/mails/:messageId/analyseer", requireAuth, async (req, res) => {
-  if (!heeftOpenAi()) {
+  if (!heeftGateway()) {
     res.status(503).json({ error: "AI niet beschikbaar." });
     return;
   }
@@ -594,14 +594,12 @@ Regels:
 - Nieuwsbrieven/marketingmails: 0 voorstellen, actie_vereist=false.`;
 
   try {
-    const openai = maakOpenAiClient();
-    const completion = await openai.chat.completions.create({
-      model:              "gpt-4o",
+    const werkInboxResultaat = await aiGateway.chat("default", {
       max_completion_tokens: 600,
       messages: [{ role: "user", content: prompt }],
     });
 
-    const raw = completion.choices[0]?.message?.content ?? "{}";
+    const raw = werkInboxResultaat.ok ? werkInboxResultaat.inhoud : "{}";
     let analyse: {
       categorie?: string;
       actie_vereist?: boolean;

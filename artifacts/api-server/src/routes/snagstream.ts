@@ -11,7 +11,7 @@ import {
 import { eq, and, desc, sql } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { ObjectStorageService } from "../lib/objectStorage";
-import OpenAI from "openai";
+import { aiGateway } from "../lib/aiGateway";
 
 const router = Router();
 const objectStorage = new ObjectStorageService();
@@ -21,15 +21,6 @@ function sessionUserId(req: Request): number | null {
   const sess = req.session as unknown as Record<string, unknown>;
   const uid = sess["gebruikerId"];
   return typeof uid === "number" ? uid : null;
-}
-
-// ── AI-client ─────────────────────────────────────────────────────────────────
-function maakOpenAI() {
-  const apiKey =
-    process.env["AI_INTEGRATIONS_OPENAI_API_KEY"] ?? process.env["OPENAI_API_KEY"];
-  if (!apiKey) throw new Error("OpenAI API key ontbreekt");
-  const baseURL = process.env["AI_INTEGRATIONS_OPENAI_API_BASE_URL"];
-  return new OpenAI({ apiKey, ...(baseURL ? { baseURL } : {}) });
 }
 
 // ── Helper: param → integer ───────────────────────────────────────────────────
@@ -163,10 +154,7 @@ router.post("/snagstream/rapporten/:id/ai-uitlezen", requireBevoegdheid("gebouwe
       .set({ status: "ai_uitgelezen", bijgewerktOp: new Date() })
       .where(eq(snagstreamRapportenTable.id, id));
 
-    const openai = maakOpenAI();
-
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
+    const snagstreamChatResultaat = await aiGateway.chat("default", {
       max_tokens: 4096,
       messages: [
         {
@@ -221,7 +209,7 @@ Zet per veld een confidence-score (0.0-1.0). Onzekere velden krijgen lage score 
       ],
     });
 
-    const rawText = completion.choices[0]?.message?.content ?? "{}";
+    const rawText = snagstreamChatResultaat.ok ? snagstreamChatResultaat.inhoud : "{}";
     const jsonMatch = rawText.match(/\{[\s\S]*\}/);
     type ParsedResult = {
       rapport_info?: Record<string, unknown>;

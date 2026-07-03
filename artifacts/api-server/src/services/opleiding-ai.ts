@@ -5,7 +5,7 @@
 // vervolgens zelf opslaat. Op expliciet verzoek vooruit gebouwd (zie replit.md /
 // docs/roadmap/parallel-spoor.md); blijft binnen "AI stelt voor".
 import { logger } from "../lib/logger";
-import { heeftOpenAi, maakOpenAiClient } from "../lib/openai";
+import { aiGateway, heeftGateway } from "../lib/aiGateway";
 
 export interface OpleidingVoorstel {
   naam: string;
@@ -106,7 +106,7 @@ function bouwFunctieTekst(functie: FunctieContext): string {
 }
 
 export async function stelOpleidingenVoor(functie: FunctieContext): Promise<OpleidingenVoorstelResultaat> {
-  if (!heeftOpenAi()) {
+  if (!heeftGateway()) {
     return {
       voorstellen: [],
       toelichting: "AI is niet geconfigureerd. Stel handmatig opleidingen samen of stel een OpenAI-sleutel in.",
@@ -114,31 +114,23 @@ export async function stelOpleidingenVoor(functie: FunctieContext): Promise<Ople
     };
   }
 
-  const client = maakOpenAiClient();
-  let tekst: string | null | undefined;
-  try {
-    const completion = await client.chat.completions.create({
-      model: "gpt-5",
-      response_format: { type: "json_object" },
-      max_completion_tokens: 4000,
-      messages: [
-        { role: "system", content: SYSTEM_PROMPT },
-        { role: "user", content: bouwFunctieTekst(functie) },
-      ],
-    });
-    tekst = completion.choices[0]?.message?.content;
-  } catch (err) {
-    logger.error(err, "AI-opleidingenvoorstel mislukt");
+  const aiResultaat = await aiGateway.chat("reasoning", {
+    response_format: { type: "json_object" },
+    max_completion_tokens: 4000,
+    messages: [
+      { role: "system", content: SYSTEM_PROMPT },
+      { role: "user", content: bouwFunctieTekst(functie) },
+    ],
+  });
+  if (!aiResultaat.ok) {
+    logger.error({ fout: aiResultaat.fout }, "AI-opleidingenvoorstel mislukt");
     return {
       voorstellen: [],
       toelichting: "Het AI-voorstel kon niet worden opgehaald. Probeer het later opnieuw.",
       betrouwbaarheid: null,
     };
   }
-
-  if (!tekst) {
-    return { voorstellen: [], toelichting: "Geen AI-antwoord ontvangen.", betrouwbaarheid: null };
-  }
+  const tekst = aiResultaat.inhoud;
 
   let parsed: Record<string, unknown>;
   try {

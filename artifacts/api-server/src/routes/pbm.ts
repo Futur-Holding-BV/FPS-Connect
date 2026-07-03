@@ -10,7 +10,7 @@ import {
 } from "@workspace/db";
 import { eq, desc, and, or, lte, sql, isNotNull } from "drizzle-orm";
 import { requireAuth, requireBevoegdheid } from "../middlewares/auth.js";
-import { maakOpenAiClient, heeftOpenAi } from "../lib/openai.js";
+import { aiGateway, heeftGateway } from "../lib/aiGateway";
 import { ObjectStorageService } from "../lib/objectStorage.js";
 import { logger } from "../lib/logger.js";
 import { randomUUID } from "crypto";
@@ -326,7 +326,7 @@ router.post("/pbm/items/:id/foto-inspectie", async (req, res) => {
   const pbmItemId = parseInt(String(req.params.id), 10);
   if (isNaN(pbmItemId)) return res.status(400).json({ error: "Ongeldig id" });
 
-  if (!heeftOpenAi()) return res.status(503).json({ error: "AI niet beschikbaar" });
+  if (!heeftGateway()) return res.status(503).json({ error: "AI niet beschikbaar" });
 
   const body = req.body as { fotoPaden?: string[]; pbmType?: string };
   if (!body.fotoPaden?.length) return res.status(400).json({ error: "Minimaal één foto vereist" });
@@ -339,8 +339,6 @@ router.post("/pbm/items/:id/foto-inspectie", async (req, res) => {
   const pbmType = body.pbmType ?? (items[0]?.type as string) ?? "pbm";
   const aandachtspunten = SLIJTAGE_AANDACHTSPUNTEN[pbmType.toLowerCase()] ??
     "zichtbare beschadigingen, slijtage, scheuren of deformatie";
-
-  const openai = maakOpenAiClient();
 
   type VisionContent =
     | { type: "text"; text: string }
@@ -379,13 +377,13 @@ Antwoord ALLEEN met het JSON-object, geen extra tekst.`,
   });
 
   try {
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+    const pbmChatResultaat = await aiGateway.chat("default", {
       max_tokens: 400,
-      messages: [{ role: "user", content }],
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      messages: [{ role: "user", content } as any],
     });
 
-    const raw = response.choices[0]?.message?.content ?? "";
+    const raw = pbmChatResultaat.ok ? pbmChatResultaat.inhoud : "";
     let parsed: { beoordeling: string; aanbeveling: string; slijtage: string; keur_nodig: boolean };
     try {
       const jsonMatch = raw.match(/\{[\s\S]*\}/);

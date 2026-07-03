@@ -21,6 +21,7 @@ import { eq, and, asc } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { logger } from "../lib/logger";
 import { verstuurMail, isGeconfigureerd } from "../services/email";
+import { aiGateway, heeftGateway } from "../lib/aiGateway";
 
 const router = Router();
 const iso = (d: Date | null | undefined) => d?.toISOString() ?? null;
@@ -314,8 +315,6 @@ router.post("/opdrachten/:id/inkoopplanning/genereer", schrijven, async (req, re
       await db.delete(inkoopplannenTable).where(eq(inkoopplannenTable.id, bestaand.id));
     }
 
-    const { apiKey, baseUrl } = await getAiClient();
-
     interface AiInkoopRegel {
       omschrijving: string;
       type: string;
@@ -336,7 +335,7 @@ router.post("/opdrachten/:id/inkoopplanning/genereer", schrijven, async (req, re
     let aiResultaat: AiInkoopResult | null = null;
     let aiGegenereerd = false;
 
-    if (apiKey && materiaalRegels.length > 0) {
+    if (heeftGateway() && materiaalRegels.length > 0) {
       const prompt = `Je bent een inkoper bij een brandpreventie-installatiebedrijf in Nederland.
 Analyseer de onderstaande materiaalregels uit een werkbegroting en maak een inkoopplanning.
 
@@ -372,24 +371,16 @@ Geef je analyse als JSON:
 }`;
 
       try {
-        const aiRes = await fetch(`${baseUrl}/chat/completions`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-          body: JSON.stringify({
-            model: "gpt-4o",
-            messages: [
-              { role: "system", content: "Je bent een ervaren inkoper brandpreventie. Geef altijd valide JSON terug." },
-              { role: "user", content: prompt },
-            ],
-            response_format: { type: "json_object" },
-            max_tokens: 3000,
-          }),
-          signal: AbortSignal.timeout(35000),
+        const inkoopResultaat = await aiGateway.chat("default", {
+          messages: [
+            { role: "system", content: "Je bent een ervaren inkoper brandpreventie. Geef altijd valide JSON terug." },
+            { role: "user", content: prompt },
+          ],
+          response_format: { type: "json_object" },
+          max_tokens: 3000,
         });
-
-        if (aiRes.ok) {
-          const aiJson = await aiRes.json() as { choices: Array<{ message: { content: string } }> };
-          aiResultaat = JSON.parse(aiJson.choices[0]?.message?.content ?? "{}") as AiInkoopResult;
+        if (inkoopResultaat.ok) {
+          aiResultaat = JSON.parse(inkoopResultaat.inhoud) as AiInkoopResult;
           aiGegenereerd = true;
         }
       } catch (aiErr) {
@@ -661,8 +652,6 @@ router.post("/opdrachten/:id/inkoopplanning/inkoopbonnen/ai-suggesties", schrijv
     const leveranciers = await db.select().from(leveranciersTable)
       .where(eq(leveranciersTable.actief, true));
 
-    const { apiKey, baseUrl } = await getAiClient();
-
     interface AiBonRegel {
       inkoopplan_regel_id: number | null;
       omschrijving: string;
@@ -680,7 +669,7 @@ router.post("/opdrachten/:id/inkoopplanning/inkoopbonnen/ai-suggesties", schrijv
 
     let bonnen: AiSuggestieBon[] = [];
 
-    if (apiKey && openRegels.length > 0) {
+    if (heeftGateway() && openRegels.length > 0) {
       const leveranciersInfo = leveranciers.length > 0
         ? `\nBeschikbare leveranciers in het systeem:\n${leveranciers.map(l => `- ${l.naam} (id:${l.id})${l.email ? `, email: ${l.email}` : ""}${l.categorie ? `, categorie: ${l.categorie}` : ""}`).join("\n")}`
         : "";
@@ -716,24 +705,16 @@ Geef je suggestie als JSON:
 }`;
 
       try {
-        const aiRes = await fetch(`${baseUrl}/chat/completions`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-          body: JSON.stringify({
-            model: "gpt-4o",
-            messages: [
-              { role: "system", content: "Je bent een ervaren inkoper brandpreventie. Geef altijd valide JSON terug." },
-              { role: "user", content: prompt },
-            ],
-            response_format: { type: "json_object" },
-            max_tokens: 3000,
-          }),
-          signal: AbortSignal.timeout(35000),
+        const bonResultaat = await aiGateway.chat("default", {
+          messages: [
+            { role: "system", content: "Je bent een ervaren inkoper brandpreventie. Geef altijd valide JSON terug." },
+            { role: "user", content: prompt },
+          ],
+          response_format: { type: "json_object" },
+          max_tokens: 3000,
         });
-
-        if (aiRes.ok) {
-          const aiJson = await aiRes.json() as { choices: Array<{ message: { content: string } }> };
-          const parsed = JSON.parse(aiJson.choices[0]?.message?.content ?? "{}") as { bonnen?: AiSuggestieBon[] };
+        if (bonResultaat.ok) {
+          const parsed = JSON.parse(bonResultaat.inhoud) as { bonnen?: AiSuggestieBon[] };
           bonnen = parsed.bonnen ?? [];
         }
       } catch (aiErr) {
@@ -1047,8 +1028,6 @@ router.post("/opdrachten/:id/uitvoeringsplanning/genereer", schrijven, async (re
       await db.delete(uitvoeringsplannenTable).where(eq(uitvoeringsplannenTable.id, bestaand.id));
     }
 
-    const { apiKey, baseUrl } = await getAiClient();
-
     interface AiTaak {
       fase: string;
       omschrijving: string;
@@ -1070,7 +1049,7 @@ router.post("/opdrachten/:id/uitvoeringsplanning/genereer", schrijven, async (re
     let aiResultaat: AiUitvoeringsResult | null = null;
     let aiGegenereerd = false;
 
-    if (apiKey) {
+    if (heeftGateway()) {
       const arbeidRegels = regels.filter(r => r.categorie === "arbeid");
       const materiaalRegels = regels.filter(r => r.categorie === "materiaal");
 
@@ -1113,24 +1092,16 @@ Geef je planning als JSON:
 }`;
 
       try {
-        const aiRes = await fetch(`${baseUrl}/chat/completions`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-          body: JSON.stringify({
-            model: "gpt-4o",
-            messages: [
-              { role: "system", content: "Je bent een werkvoorbereider brandpreventie. Geef altijd valide JSON terug." },
-              { role: "user", content: prompt },
-            ],
-            response_format: { type: "json_object" },
-            max_tokens: 3000,
-          }),
-          signal: AbortSignal.timeout(35000),
+        const uitvoerResultaat = await aiGateway.chat("default", {
+          messages: [
+            { role: "system", content: "Je bent een werkvoorbereider brandpreventie. Geef altijd valide JSON terug." },
+            { role: "user", content: prompt },
+          ],
+          response_format: { type: "json_object" },
+          max_tokens: 3000,
         });
-
-        if (aiRes.ok) {
-          const aiJson = await aiRes.json() as { choices: Array<{ message: { content: string } }> };
-          aiResultaat = JSON.parse(aiJson.choices[0]?.message?.content ?? "{}") as AiUitvoeringsResult;
+        if (uitvoerResultaat.ok) {
+          aiResultaat = JSON.parse(uitvoerResultaat.inhoud) as AiUitvoeringsResult;
           aiGegenereerd = true;
         }
       } catch (aiErr) {

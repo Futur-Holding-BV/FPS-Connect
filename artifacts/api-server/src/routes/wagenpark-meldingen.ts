@@ -13,7 +13,7 @@ import { eq, and, desc } from "drizzle-orm";
 import { requireBevoegdheid, requireAuth } from "../middlewares/auth";
 import { logger } from "../lib/logger";
 import { ObjectStorageService } from "../lib/objectStorage";
-import { maakOpenAiClient, heeftOpenAi } from "../lib/openai";
+import { aiGateway, heeftGateway } from "../lib/aiGateway";
 
 const router = Router();
 const storageService = new ObjectStorageService();
@@ -59,9 +59,8 @@ router.post("/meldingen", requireAuth, async (req, res) => {
   let aiKostenIndicatie = false;
   let aiKostenTekst: string | null = null;
 
-  if (heeftOpenAi()) {
+  if (heeftGateway()) {
     try {
-      const openai = maakOpenAiClient();
       const voertuigInfo =
         [voertuig.merk, voertuig.type, voertuig.kenteken ? `(${voertuig.kenteken})` : null]
           .filter(Boolean)
@@ -116,13 +115,13 @@ router.post("/meldingen", requireAuth, async (req, res) => {
 
       content.push({ type: "text", text: prompt });
 
-      const response = await openai.chat.completions.create({
-        model: "gpt-4o",
+      const wagenparkChatResultaat = await aiGateway.chat("default", {
         max_tokens: 500,
-        messages: [{ role: "user", content }],
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        messages: [{ role: "user", content } as any],
       });
 
-      const raw = response.choices[0]?.message?.content ?? "";
+      const raw = wagenparkChatResultaat.ok ? wagenparkChatResultaat.inhoud : "";
       const match = raw.match(/\{[\s\S]*\}/);
       if (match) {
         const parsed = JSON.parse(match[0]) as {

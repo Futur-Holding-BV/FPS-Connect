@@ -20,7 +20,7 @@ import {
 import { verstuurMail, isGeconfigureerd as isMailGeconfigureerd } from "../services/email.js";
 import { eq, and, desc, sql, count, gte, lt, isNotNull, min } from "drizzle-orm";
 import { requireAuth, requireBevoegdheid } from "../middlewares/auth.js";
-import { maakOpenAiClient, heeftOpenAi } from "../lib/openai.js";
+import { aiGateway, heeftGateway } from "../lib/aiGateway";
 import { logActiviteit } from "../lib/activiteit.js";
 import { createRequire } from "module";
 import { ObjectStorageService } from "../lib/objectStorage.js";
@@ -395,7 +395,7 @@ veiligheidRouter.post("/veiligheid/toolboxen/:id/publiceren", schrijvenVeilighei
 
 veiligheidRouter.post("/veiligheid/toolboxen/:id/ai-analyse", schrijvenVeiligheid, async (req, res) => {
   try {
-    if (!heeftOpenAi()) {
+    if (!heeftGateway()) {
       return res.status(503).json({ error: "AI niet beschikbaar" });
     }
     const id = parseInt(String(req.params.id));
@@ -423,9 +423,7 @@ veiligheidRouter.post("/veiligheid/toolboxen/:id/ai-analyse", schrijvenVeilighei
 
     const bronTekst = pdfTekst || toolbox.titel;
 
-    const openai = maakOpenAiClient();
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
+    const toolboxAnalyseResultaat = await aiGateway.chat("default", {
       max_tokens: 2000,
       messages: [
         {
@@ -440,7 +438,7 @@ veiligheidRouter.post("/veiligheid/toolboxen/:id/ai-analyse", schrijvenVeilighei
       ],
     });
 
-    const raw = completion.choices[0].message.content ?? "{}";
+    const raw = toolboxAnalyseResultaat.ok ? toolboxAnalyseResultaat.inhoud : "{}";
     let analyse: any = {};
     try {
       analyse = JSON.parse(raw.replace(/^```json\s*/, "").replace(/\s*```$/, ""));
@@ -641,7 +639,7 @@ veiligheidRouter.get("/veiligheid/toolboxen/:id/mijn-afronding", lezenVeiligheid
 
 veiligheidRouter.post("/veiligheid/toolboxen/koppeling-suggestie", lezenVeiligheid, async (req, res) => {
   try {
-    if (!heeftOpenAi()) {
+    if (!heeftGateway()) {
       return res.status(503).json({ error: "AI niet beschikbaar" });
     }
     const { werkzaamheid } = req.body ?? {};
@@ -668,9 +666,7 @@ veiligheidRouter.post("/veiligheid/toolboxen/koppeling-suggestie", lezenVeilighe
       .map((t) => `ID ${t.id}: ${t.titel} (${t.categorie})`)
       .join("\n");
 
-    const openai = maakOpenAiClient();
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
+    const koppelingResultaat = await aiGateway.chat("default", {
       max_tokens: 1000,
       messages: [
         {
@@ -685,7 +681,7 @@ veiligheidRouter.post("/veiligheid/toolboxen/koppeling-suggestie", lezenVeilighe
       ],
     });
 
-    const raw = completion.choices[0].message.content ?? "{}";
+    const raw = koppelingResultaat.ok ? koppelingResultaat.inhoud : "{}";
     let parsed: { suggesties?: Array<{ id: number; titel: string; categorie: string; reden: string }> } = {};
     try {
       parsed = JSON.parse(raw.replace(/^```json\s*/, "").replace(/\s*```$/, ""));
@@ -885,7 +881,7 @@ veiligheidRouter.get("/veiligheid/lmras/upload-url", schrijvenVeiligheid, async 
 
 veiligheidRouter.post("/veiligheid/lmras/ai-voorstel", lezenVeiligheid, async (req, res) => {
   try {
-    if (!heeftOpenAi()) return res.status(503).json({ error: "AI niet beschikbaar" });
+    if (!heeftGateway()) return res.status(503).json({ error: "AI niet beschikbaar" });
 
     const { gebouw_id, werkzaamheden_omschrijving } = req.body;
     if (!gebouw_id) return res.status(400).json({ error: "gebouw_id is verplicht" });
@@ -912,9 +908,7 @@ veiligheidRouter.post("/veiligheid/lmras/ai-voorstel", lezenVeiligheid, async (r
       werkzaamheden_omschrijving ? `Geplande werkzaamheden: ${werkzaamheden_omschrijving}` : null,
     ].filter(Boolean).join("\n");
 
-    const openai = maakOpenAiClient();
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
+    const lmraResultaat = await aiGateway.chat("default", {
       max_tokens: 800,
       messages: [
         {
@@ -934,7 +928,7 @@ Zorg voor 3-5 relevante risico's en bijbehorende maatregelen voor brandpreventie
       ],
     });
 
-    const raw = completion.choices[0].message.content ?? "{}";
+    const raw = lmraResultaat.ok ? lmraResultaat.inhoud : "{}";
     const cleanJson = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
     let voorstel: { locatie_omschrijving: string; werkzaamheden: string; risicos: string[]; maatregelen: string[] };
     try {
@@ -2102,7 +2096,7 @@ veiligheidRouter.post("/veiligheid/incidenten", lezenVeiligheid, async (req, res
 
 veiligheidRouter.post("/veiligheid/incidenten/ai-voorstel", lezenVeiligheid, async (req, res) => {
   try {
-    if (!heeftOpenAi()) return res.status(503).json({ error: "AI niet beschikbaar" });
+    if (!heeftGateway()) return res.status(503).json({ error: "AI niet beschikbaar" });
 
     const { type, locatie_omschrijving, werkzaamheden_omschrijving, opdracht_naam } = req.body;
     if (!locatie_omschrijving) return res.status(400).json({ error: "locatie_omschrijving is verplicht" });
@@ -2115,9 +2109,7 @@ veiligheidRouter.post("/veiligheid/incidenten/ai-voorstel", lezenVeiligheid, asy
       opdracht_naam ? `Project/opdracht: ${opdracht_naam}` : null,
     ].filter(Boolean).join("\n");
 
-    const openai = maakOpenAiClient();
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
+    const incidentResultaat = await aiGateway.chat("default", {
       max_tokens: 600,
       messages: [
         {
@@ -2139,7 +2131,7 @@ Genereer 3-5 realistische maatregelen die direct genomen zijn bij brandpreventie
       ],
     });
 
-    const raw = completion.choices[0].message.content ?? "{}";
+    const raw = incidentResultaat.ok ? incidentResultaat.inhoud : "{}";
     const cleanJson = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
     let voorstel: { omschrijving: string; oorzaak: string; genomen_maatregelen: string[]; meldplichtig_indicatie: boolean };
     try {
@@ -2292,13 +2284,11 @@ veiligheidRouter.post("/veiligheid/toolboxen/ai-batch-genereer", schrijvenVeilig
 
     let items: ToolboxItem[] = [];
 
-    if (heeftOpenAi()) {
+    if (heeftGateway()) {
       const catsOmschrijving = categorieen
         .map((c) => `${c}: ${CATEGORIE_BESCHRIJVING[c] ?? c}`)
         .join("\n");
-      const openai = maakOpenAiClient();
-      const completion = await openai.chat.completions.create({
-        model: "gpt-4o",
+      const batchResultaat = await aiGateway.chat("default", {
         max_tokens: 16000,
         messages: [
           { role: "system", content: "Je bent een VCA-veiligheidscoördinator. Geef altijd geldig JSON terug zonder markdown-opmaak." },
@@ -2328,7 +2318,7 @@ Verspreid de onderwerpen evenredig over de categorieën. Geef output als JSON-ar
           },
         ],
       });
-      const raw = completion.choices[0]?.message?.content ?? "[]";
+      const raw = batchResultaat.ok ? batchResultaat.inhoud : "[]";
       try {
         const cleaned = raw.replace(/^```json\s*/m, "").replace(/\s*```\s*$/m, "").trim();
         const parsed = JSON.parse(cleaned);
@@ -2372,7 +2362,7 @@ Verspreid de onderwerpen evenredig over de categorieën. Geef output als JSON-ar
           minScore: 70,
           geldigheidMaanden: 12,
           aangemaaktDoorId: sess.gebruikerId ?? null,
-          aiVerwerktOp: heeftOpenAi() ? new Date() : null,
+          aiVerwerktOp: heeftGateway() ? new Date() : null,
         }).returning({ id: veiligheidToolboxenTable.id })
       )
     );

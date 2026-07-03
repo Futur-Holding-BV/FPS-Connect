@@ -16,8 +16,8 @@ import { requireBevoegdheid } from "../middlewares/auth";
 import { ObjectStorageService } from "../lib/objectStorage";
 import { maakAccountViewClient } from "../services/accountview-client";
 import type { AccountviewBoeking } from "../services/accountview-client";
-import OpenAI from "openai";
 import crypto from "crypto";
+import { aiGateway, heeftGateway } from "../lib/aiGateway";
 
 const router = Router();
 const objectStorage = new ObjectStorageService();
@@ -31,12 +31,6 @@ function paramInt(val: unknown): number {
   return parseInt(String(val), 10);
 }
 
-function maakOpenAI() {
-  const apiKey = process.env["AI_INTEGRATIONS_OPENAI_API_KEY"] ?? process.env["OPENAI_API_KEY"];
-  if (!apiKey) throw new Error("OpenAI API key ontbreekt");
-  const baseURL = process.env["AI_INTEGRATIONS_OPENAI_API_BASE_URL"];
-  return new OpenAI({ apiKey, ...(baseURL ? { baseURL } : {}) });
-}
 
 async function mapFactuur(r: typeof facturenTable.$inferSelect) {
   const [gebouw] = r.gebouwId
@@ -239,9 +233,7 @@ router.post("/facturen/:id/ai-uitlezen", requireBevoegdheid("financieel", 1), as
   try {
     await db.update(facturenTable).set({ status: "ai_gelezen", bijgewerktOp: new Date() }).where(eq(facturenTable.id, id));
 
-    const openai = maakOpenAI();
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
+    const facturenChatResultaat = await aiGateway.chat("default", {
       max_tokens: 3000,
       messages: [
         {
@@ -278,7 +270,7 @@ Zet controle_nodig=true als bedragen onduidelijk zijn of gegevens ontbreken.`,
       ],
     });
 
-    const rawText = completion.choices[0]?.message?.content ?? "{}";
+    const rawText = facturenChatResultaat.ok ? facturenChatResultaat.inhoud : "{}";
     const jsonMatch = rawText.match(/\{[\s\S]*\}/);
     type ParsedFactuur = {
       factuurnummer?: string | null; factuurdatum?: string | null; vervaldatum?: string | null;

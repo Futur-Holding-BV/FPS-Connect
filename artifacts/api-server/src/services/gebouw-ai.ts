@@ -1,9 +1,9 @@
 import type OpenAI from "openai";
 import { logger } from "../lib/logger";
-import { heeftOpenAi, maakOpenAiClient } from "../lib/openai";
+import { aiGateway, heeftGateway } from "../lib/aiGateway";
 
 const GOOGLE_KEY = process.env.GOOGLE_MAPS_API_KEY;
-const HEEFT_OPENAI = heeftOpenAi();
+const HEEFT_OPENAI = heeftGateway();
 
 const STATIC_SIZE = 640;
 const STATIC_SCALE = 2;
@@ -423,7 +423,6 @@ async function analyseerBeeld(
   straatbeeldUrl: string | null = null,
 ): Promise<VisionVelden | null> {
   if (!satellietUrl && !straatbeeldUrl) return null;
-  const client = maakOpenAiClient();
 
   let userTekst: string;
   if (satellietUrl && straatbeeldUrl) {
@@ -444,8 +443,7 @@ async function analyseerBeeld(
     content.push({ type: "image_url", image_url: { url: straatbeeldUrl } });
   }
 
-  const completion = await client.chat.completions.create({
-    model: "gpt-5",
+  const aiResultaat = await aiGateway.chat("vision", {
     response_format: { type: "json_object" },
     max_completion_tokens: 4000,
     messages: [
@@ -453,9 +451,8 @@ async function analyseerBeeld(
       { role: "user", content },
     ],
   });
-
-  const tekst = completion.choices[0]?.message?.content;
-  if (!tekst) return null;
+  if (!aiResultaat.ok) return null;
+  const tekst = aiResultaat.inhoud;
   let parsed: Record<string, unknown>;
   try {
     parsed = JSON.parse(tekst);
@@ -509,9 +506,7 @@ interface ExtractieVelden {
 }
 
 async function extraheerUitTekst(beschrijving: string): Promise<ExtractieVelden | null> {
-  const client = maakOpenAiClient();
-  const completion = await client.chat.completions.create({
-    model: "gpt-5-mini",
+  const aiResultaat = await aiGateway.chat("fast", {
     response_format: { type: "json_object" },
     max_completion_tokens: 4000,
     messages: [
@@ -519,13 +514,12 @@ async function extraheerUitTekst(beschrijving: string): Promise<ExtractieVelden 
       { role: "user", content: beschrijving },
     ],
   });
-  const tekst = completion.choices[0]?.message?.content;
-  if (!tekst) return null;
+  if (!aiResultaat.ok) return null;
   let parsed: Record<string, unknown>;
   try {
-    parsed = JSON.parse(tekst);
+    parsed = JSON.parse(aiResultaat.inhoud);
   } catch {
-    logger.error({ tekst }, "Kon extractie-JSON niet parsen");
+    logger.error({ tekst: aiResultaat.inhoud }, "Kon extractie-JSON niet parsen");
     return null;
   }
   return {
@@ -636,24 +630,23 @@ export async function analyseerTekening(
     : "(nog geen bouwlagen)";
   const userTekst = `Bestandsnaam: "${bestandsnaam}".\nReeds gekozen type: ${type || "(geen)"}.\nBestaande bouwlagen in dit gebouw:\n${bestaandTekst}\nKies, indien passend, een bouwlaagnaam en -niveau die aansluiten op de bestaande bouwlagen.`;
 
+  const tekeningResultaat = await aiGateway.chat("fast", {
+    response_format: { type: "json_object" },
+    max_completion_tokens: 3000,
+    messages: [
+      { role: "system", content: TEKENING_PROMPT },
+      { role: "user", content: userTekst },
+    ],
+  });
+  if (!tekeningResultaat.ok) {
+    logger.error({ fout: tekeningResultaat.fout }, "Tekening-analyse mislukte");
+    return valterug("AI-analyse mislukte; naam afgeleid van de bestandsnaam.");
+  }
   let parsed: Record<string, unknown>;
   try {
-    const client = maakOpenAiClient();
-    const completion = await client.chat.completions.create({
-      model: "gpt-5-mini",
-      response_format: { type: "json_object" },
-      max_completion_tokens: 3000,
-      messages: [
-        { role: "system", content: TEKENING_PROMPT },
-        { role: "user", content: userTekst },
-      ],
-    });
-    const tekst = completion.choices[0]?.message?.content;
-    if (!tekst) return valterug("Geen AI-antwoord ontvangen.");
-    parsed = JSON.parse(tekst);
-  } catch (err) {
-    logger.error({ err }, "Tekening-analyse mislukte");
-    return valterug("AI-analyse mislukte; naam afgeleid van de bestandsnaam.");
+    parsed = JSON.parse(tekeningResultaat.inhoud);
+  } catch {
+    return valterug("AI-antwoord kon niet worden verwerkt.");
   }
 
   const bouwlaagNaam = strOfNull(parsed.bouwlaag_naam);
@@ -714,30 +707,29 @@ export async function analyseerPlattegrond(
     : "(nog geen bouwlagen)";
   const userTekst = `Bestaande bouwlagen in dit gebouw:\n${bestaandTekst}\nKies, indien passend, een bouwlaagnaam en -niveau die aansluiten op de bestaande bouwlagen. Lees de tekst in de plattegrond om de bouwlaag te bepalen.`;
 
+  const plattegrondResultaat = await aiGateway.chat("vision", {
+    response_format: { type: "json_object" },
+    max_completion_tokens: 3000,
+    messages: [
+      { role: "system", content: PLATTEGROND_PROMPT },
+      {
+        role: "user",
+        content: [
+          { type: "text", text: userTekst },
+          { type: "image_url", image_url: { url: afbeeldingDataUrl } },
+        ],
+      },
+    ],
+  });
+  if (!plattegrondResultaat.ok) {
+    logger.error({ fout: plattegrondResultaat.fout }, "Plattegrond-analyse mislukte");
+    return valterug("AI-analyse mislukte; kies de bouwlaag handmatig.");
+  }
   let parsed: Record<string, unknown>;
   try {
-    const client = maakOpenAiClient();
-    const completion = await client.chat.completions.create({
-      model: "gpt-5",
-      response_format: { type: "json_object" },
-      max_completion_tokens: 3000,
-      messages: [
-        { role: "system", content: PLATTEGROND_PROMPT },
-        {
-          role: "user",
-          content: [
-            { type: "text", text: userTekst },
-            { type: "image_url", image_url: { url: afbeeldingDataUrl } },
-          ],
-        },
-      ],
-    });
-    const tekst = completion.choices[0]?.message?.content;
-    if (!tekst) return valterug("Geen AI-antwoord ontvangen.");
-    parsed = JSON.parse(tekst);
-  } catch (err) {
-    logger.error({ err }, "Plattegrond-analyse mislukte");
-    return valterug("AI-analyse mislukte; kies de bouwlaag handmatig.");
+    parsed = JSON.parse(plattegrondResultaat.inhoud);
+  } catch {
+    return valterug("AI-antwoord kon niet worden verwerkt.");
   }
 
   const bouwlaagNaam = strOfNull(parsed.bouwlaag_naam);

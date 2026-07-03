@@ -9,7 +9,7 @@ import { eq, and } from "drizzle-orm";
 import { DocumentStudioModelInputDocumentType } from "@workspace/api-zod";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { ObjectStorageService } from "../lib/objectStorage";
-import { heeftOpenAi, maakOpenAiClient } from "../lib/openai";
+import { aiGateway, heeftGateway } from "../lib/aiGateway";
 import { logActiviteit } from "../lib/activiteit";
 
 import { z } from "zod";
@@ -512,7 +512,7 @@ Gebruik maximaal 6 secties. Sectie-inhoud is placeholder-tekst (gebruiker vult l
 
 router.post("/studio/modellen/:id/genereer", schrijven, async (req, res) => {
   try {
-    if (!heeftOpenAi()) {
+    if (!heeftGateway()) {
       return res.status(503).json({ error: "AI niet beschikbaar — configureer een OpenAI-sleutel" });
     }
 
@@ -551,9 +551,7 @@ router.post("/studio/modellen/:id/genereer", schrijven, async (req, res) => {
       instructie,
     });
 
-    const openai = maakOpenAiClient();
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
+    const genereerResultaat = await aiGateway.chat("default", {
       max_tokens: 1200,
       messages: [
         { role: "system", content: "Je genereert altijd pure JSON zonder markdown. Retourneer alleen de JSON-structuur." },
@@ -561,7 +559,7 @@ router.post("/studio/modellen/:id/genereer", schrijven, async (req, res) => {
       ],
     });
 
-    const tekst = completion.choices[0]?.message?.content?.trim() ?? "";
+    const tekst = genereerResultaat.ok ? genereerResultaat.inhoud.trim() : "";
     // JSON extraheren uit mogelijke markdown-blokken
     const json = tekst.replace(/^```[a-z]*\n?/i, "").replace(/\n?```$/i, "").trim();
 
@@ -592,7 +590,7 @@ router.post("/studio/modellen/:id/genereer", schrijven, async (req, res) => {
 
 router.post("/studio/modellen/:id/bijstuur", schrijven, async (req, res) => {
   try {
-    if (!heeftOpenAi()) {
+    if (!heeftGateway()) {
       return res.status(503).json({ error: "AI niet beschikbaar — configureer een OpenAI-sleutel" });
     }
 
@@ -614,8 +612,7 @@ router.post("/studio/modellen/:id/bijstuur", schrijven, async (req, res) => {
       return res.status(400).json({ error: "Genereer eerst een concept-template via de genereer-actie" });
     }
 
-    const completion = await maakOpenAiClient().chat.completions.create({
-      model: "gpt-4o",
+    const bijstuurResultaat = await aiGateway.chat("default", {
       max_tokens: 1200,
       messages: [
         { role: "system", content: "Je past een bestaande Connect-template JSON aan op basis van een bijstuur-instructie. Retourneer ALLEEN de aangepaste JSON-structuur, geen markdown, geen uitleg." },
@@ -623,7 +620,7 @@ router.post("/studio/modellen/:id/bijstuur", schrijven, async (req, res) => {
       ],
     });
 
-    const tekst = completion.choices[0]?.message?.content?.trim() ?? "";
+    const tekst = bijstuurResultaat.ok ? bijstuurResultaat.inhoud.trim() : "";
     const json = tekst.replace(/^```[a-z]*\n?/i, "").replace(/\n?```$/i, "").trim();
 
     // Strikte schema-validatie: gooit bij ongeldige JSON én bij ontbrekende/verkeerde velden

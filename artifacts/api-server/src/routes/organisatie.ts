@@ -10,7 +10,7 @@ import multer from "multer";
 import { db, orgVerzekeringenTable, orgJaarverslagenTable, orgBedrijfsdocumentenTable, aiCategorieCorrectiesTable, aiVeldCorrectiesTable } from "@workspace/db";
 import { eq, desc } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
-import { maakOpenAiClient, heeftOpenAi } from "../lib/openai";
+import { aiGateway, heeftGateway } from "../lib/aiGateway";
 import { ObjectStorageService, ObjectNotFoundError } from "../lib/objectStorage";
 
 const _require = createRequire(import.meta.url);
@@ -344,7 +344,7 @@ router.post(
     if (!req.file) {
       return res.status(400).json({ error: "Bestand ontbreekt" });
     }
-    if (!heeftOpenAi()) {
+    if (!heeftGateway()) {
       return res.status(503).json({ error: "AI niet geconfigureerd" });
     }
 
@@ -426,9 +426,7 @@ router.post(
         ? `Documenttekst (eerste 8000 tekens):\n\n${tekstBlok}`
         : `Bestandsnaam: ${req.file.originalname}\nGeen leesbare tekst beschikbaar — probeer de velden te schatten op basis van de bestandsnaam.`;
 
-      const client = maakOpenAiClient();
-      const completion = await client.chat.completions.create({
-        model: "gpt-4o-mini",
+      const docAnalyseResultaat = await aiGateway.chat("fast", {
         max_tokens: 600,
         messages: [
           { role: "system", content: systeemPrompt },
@@ -439,7 +437,7 @@ router.post(
 
       let velden: Record<string, string | null> = {};
       try {
-        velden = JSON.parse(completion.choices[0]?.message?.content ?? "{}");
+        velden = JSON.parse(docAnalyseResultaat.ok ? docAnalyseResultaat.inhoud : "{}");
       } catch {
         velden = {};
       }
@@ -635,12 +633,11 @@ router.get("/organisatie/bedrijfsdocumenten/:id/download", lezen, async (req, re
 // ── AI — Bedrijfsgegevens invullen ────────────────────────────────────────────
 
 router.post("/organisatie/ai-invullen", schrijven, async (req, res) => {
-  if (!heeftOpenAi()) {
+  if (!heeftGateway()) {
     return res.status(503).json({ error: "AI niet geconfigureerd" });
   }
   const { bedrijfsnaam, sector } = req.body;
   const naam = (bedrijfsnaam ?? "FPS Brandpreventie").trim();
-  const client = maakOpenAiClient();
 
   const systeemPrompt =
     "Je bent een Nederlandse bedrijfsassistent gespecialiseerd in bouw en brandpreventie. " +
@@ -652,26 +649,21 @@ router.post("/organisatie/ai-invullen", schrijven, async (req, res) => {
   const gebruikerPrompt = `Zoek en vul de bedrijfsgegevens in voor: ${naam}${sector ? ` (sector: ${sector})` : ""} — dit is een bedrijf in Nederland.`;
 
   // Probeer Responses API met web zoeken voor actuele bedrijfsinfo
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const webResp = await (client as any).responses.create({
-      model: "gpt-4o",
-      tools: [{ type: "web_search_preview" }],
-      input: `${systeemPrompt}\n\n${gebruikerPrompt}`,
-      text: { format: { type: "json_object" } },
-    });
-    const tekst: string = webResp.output_text ?? "{}";
+  const webResultaatOrgInvullen = await aiGateway.responses("default", {
+    tools: [{ type: "web_search_preview" }],
+    input: `${systeemPrompt}\n\n${gebruikerPrompt}`,
+    text: { format: { type: "json_object" } },
+  });
+  if (webResultaatOrgInvullen.ok) {
     let data: Record<string, string | null> = {};
-    try { data = JSON.parse(tekst) as Record<string, string | null>; } catch { data = {}; }
+    try { data = JSON.parse(webResultaatOrgInvullen.inhoud) as Record<string, string | null>; } catch { data = {}; }
     return res.json({ velden: data });
-  } catch (webErr) {
-    req.log.warn({ err: webErr }, "Web search niet beschikbaar voor ai-invullen, fallback naar kennismodel");
   }
+  req.log.warn({ fout: webResultaatOrgInvullen.fout }, "Web search niet beschikbaar voor ai-invullen, fallback naar kennismodel");
 
   // Fallback: chat completions op basis van trainingsdata
   try {
-    const completion = await client.chat.completions.create({
-      model: "gpt-4o",
+    const aiInvullenResultaat = await aiGateway.chat("default", {
       max_tokens: 600,
       messages: [
         { role: "system", content: systeemPrompt },
@@ -679,7 +671,7 @@ router.post("/organisatie/ai-invullen", schrijven, async (req, res) => {
       ],
       response_format: { type: "json_object" },
     });
-    const tekst = completion.choices[0]?.message?.content ?? "{}";
+    const tekst = aiInvullenResultaat.ok ? aiInvullenResultaat.inhoud : "{}";
     let data: Record<string, string | null> = {};
     try { data = JSON.parse(tekst); } catch { data = {}; }
     res.json({ velden: data });
@@ -692,15 +684,13 @@ router.post("/organisatie/ai-invullen", schrijven, async (req, res) => {
 // ── AI — Verzekeringen suggesties ──────────────────────────────────────────────
 
 router.post("/organisatie/verzekeringen/ai-suggesties", schrijven, async (req, res) => {
-  if (!heeftOpenAi()) {
+  if (!heeftGateway()) {
     return res.status(503).json({ error: "AI niet geconfigureerd" });
   }
   try {
     const { bedrijfsnaam, sector } = req.body;
     const naam = (bedrijfsnaam ?? "FPS Brandpreventie").trim();
-    const client = maakOpenAiClient();
-    const completion = await client.chat.completions.create({
-      model: "gpt-4o",
+    const verzResultaat = await aiGateway.chat("default", {
       max_tokens: 1200,
       messages: [
         {
@@ -721,7 +711,7 @@ router.post("/organisatie/verzekeringen/ai-suggesties", schrijven, async (req, r
       ],
       response_format: { type: "json_object" },
     });
-    const tekst = completion.choices[0]?.message?.content ?? "{}";
+    const tekst = verzResultaat.ok ? verzResultaat.inhoud : "{}";
     let data: { suggesties?: unknown[] } = {};
     try {
       const parsed = JSON.parse(tekst);
@@ -746,7 +736,7 @@ router.post("/organisatie/verzekeringen/ai-suggesties", schrijven, async (req, r
 // ── AI — Bedrijfsscan ──────────────────────────────────────────────────────────
 
 router.post("/organisatie/ai-bedrijfsscan", schrijven, async (req, res) => {
-  if (!heeftOpenAi()) {
+  if (!heeftGateway()) {
     return res.status(503).json({ error: "AI niet geconfigureerd" });
   }
   try {
@@ -760,9 +750,7 @@ router.post("/organisatie/ai-bedrijfsscan", schrijven, async (req, res) => {
       status: p.status,
     }));
 
-    const client = maakOpenAiClient();
-    const completion = await client.chat.completions.create({
-      model: "gpt-4o",
+    const scanResultaat = await aiGateway.chat("default", {
       max_tokens: 1500,
       messages: [
         {
@@ -784,7 +772,7 @@ router.post("/organisatie/ai-bedrijfsscan", schrijven, async (req, res) => {
       ],
       response_format: { type: "json_object" },
     });
-    const tekst = completion.choices[0]?.message?.content ?? "{}";
+    const tekst = scanResultaat.ok ? scanResultaat.inhoud : "{}";
     let data: Record<string, unknown> = {};
     try {
       data = JSON.parse(tekst);

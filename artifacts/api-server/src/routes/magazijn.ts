@@ -17,7 +17,7 @@ import { requireBevoegdheid } from "../middlewares/auth";
 import { logger } from "../lib/logger";
 import { verstuurMail, MailFout } from "../services/email";
 import { ObjectStorageService } from "../lib/objectStorage";
-import { maakOpenAiClient, heeftOpenAi } from "../lib/openai";
+import { aiGateway, heeftGateway } from "../lib/aiGateway";
 
 const router = Router();
 
@@ -1230,7 +1230,7 @@ router.post("/magazijn/stellingscans", schrijven, async (req, res) => {
     // AI Vision analyse (optioneel — vereist OpenAI)
     let aiSuggesties: StellingsscanSuggestie[] = [];
 
-    if (heeftOpenAi()) {
+    if (heeftGateway()) {
       try {
         const storage = new ObjectStorageService();
         const storageFile = await storage.getObjectEntityFile(foto_pad);
@@ -1252,8 +1252,6 @@ router.post("/magazijn/stellingscans", schrijven, async (req, res) => {
             return `${a.code ?? a.id} | ${a.naam} | ${a.eenheid ?? "st"} | huidig: ${huidig}`;
           })
           .join("\n");
-
-        const openai = maakOpenAiClient();
 
         let systemPrompt: string;
         let userText: string;
@@ -1342,8 +1340,7 @@ Prioriteit: "hoog" = leeg of <50% minimum, "middel" = 50-100% minimum, "laag" = 
           userText = "Analyseer deze stellingfoto en geef besteladviezen voor artikelen die bijbesteld moeten worden.";
         }
 
-        const completion = await openai.chat.completions.create({
-          model: "gpt-4o",
+        const magazijnChatResultaat = await aiGateway.chat("default", {
           max_tokens: 3000,
           response_format: { type: "json_object" },
           messages: [
@@ -1358,7 +1355,7 @@ Prioriteit: "hoog" = leeg of <50% minimum, "middel" = 50-100% minimum, "laag" = 
           ],
         });
 
-        const rawText = completion.choices[0]?.message?.content ?? "{}";
+        const rawText = magazijnChatResultaat.ok ? magazijnChatResultaat.inhoud : "{}";
         try {
           const parsed = JSON.parse(rawText) as { suggesties?: unknown };
           if (Array.isArray(parsed.suggesties)) {

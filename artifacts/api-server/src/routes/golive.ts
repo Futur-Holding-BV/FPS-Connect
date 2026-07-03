@@ -8,7 +8,7 @@ import {
 } from "@workspace/db";
 import { eq, count, desc, gte, isNotNull } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth";
-import { maakOpenAiClient, heeftOpenAi } from "../lib/openai";
+import { aiGateway, heeftGateway } from "../lib/aiGateway";
 
 const router = Router();
 
@@ -272,7 +272,7 @@ async function voerReadinessChecksUit(): Promise<ReadinessItem[]> {
     waarde: heeftOpslag ? (process.env.S3_BUCKET ?? process.env.GOOGLE_CLOUD_BUCKET ?? null) : null,
   });
 
-  const heeftAi = heeftOpenAi();
+  const heeftAi = heeftGateway();
   items.push({
     sleutel: "ai",
     label: "AI-services geconfigureerd",
@@ -474,7 +474,7 @@ router.get("/beheer/go-live/adviezen", requireAuth, async (req, res) => {
 });
 
 router.post("/beheer/go-live/adviezen/genereer", requireAuth, async (req, res) => {
-  if (!heeftOpenAi()) {
+  if (!heeftGateway()) {
     return res.status(503).json({ error: "AI-services niet geconfigureerd" });
   }
   const readiness = await voerReadinessChecksUit();
@@ -513,16 +513,14 @@ Geef je advies als JSON:
 
 Antwoord ALLEEN met geldige JSON.`;
 
-  const openai = maakOpenAiClient();
-  const completion = await openai.chat.completions.create({
-    model: "gpt-4o",
+  const goLiveAdviesResultaat = await aiGateway.chat("default", {
     messages: [{ role: "user", content: prompt }],
     max_tokens: 800,
   });
 
   let parsed: Record<string, unknown>;
   try {
-    parsed = JSON.parse(completion.choices[0]?.message?.content ?? "{}") as Record<string, unknown>;
+    parsed = JSON.parse(goLiveAdviesResultaat.ok ? goLiveAdviesResultaat.inhoud : "{}") as Record<string, unknown>;
   } catch {
     return res.status(500).json({ error: "AI-antwoord kon niet worden verwerkt" });
   }

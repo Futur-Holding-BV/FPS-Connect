@@ -2,7 +2,7 @@ import { simpleParser } from "mailparser";
 import MsgReaderImport from "@kenjiuno/msgreader";
 import type { EmailContactpersoon } from "@workspace/db";
 import { logger } from "../lib/logger";
-import { heeftOpenAi, maakOpenAiClient } from "../lib/openai";
+import { aiGateway, heeftGateway } from "../lib/aiGateway";
 
 // esbuild bundelt dit pakket als ESM en wikkelt de CJS-default in een
 // namespace-object, waardoor de echte constructor op `.default.default` belandt.
@@ -341,7 +341,7 @@ export async function genereerProjectSamenvatting(
     afspraken: null, actiepunten: null, besluiten: null, tekeningen: null, risicos: null,
     contactpersonen: [],
   };
-  if (!heeftOpenAi() || emails.length === 0) return leeg;
+  if (!heeftGateway() || emails.length === 0) return leeg;
 
   const emailIds = emails.map((e) => e.id);
   const onderwerpPerNr = new Map<number, string | null>(
@@ -363,9 +363,7 @@ export async function genereerProjectSamenvatting(
   const userTekst = blokken.join("\n\n");
 
   try {
-    const client = maakOpenAiClient();
-    const completion = await client.chat.completions.create({
-      model: "gpt-5-mini",
+    const aiResultaat = await aiGateway.chat("fast", {
       response_format: { type: "json_object" },
       max_completion_tokens: 6000,
       messages: [
@@ -373,9 +371,11 @@ export async function genereerProjectSamenvatting(
         { role: "user", content: userTekst.slice(0, 20000) },
       ],
     });
-    const tekst = completion.choices[0]?.message?.content;
-    if (!tekst) return leeg;
-    const p = JSON.parse(tekst) as Record<string, unknown>;
+    if (!aiResultaat.ok) {
+      logger.error({ fout: aiResultaat.fout }, "Project-samenvatting genereren mislukt");
+      return leeg;
+    }
+    const p = JSON.parse(aiResultaat.inhoud) as Record<string, unknown>;
 
     // Parseer contacten en vul bron_onderwerp in vanuit de lokale email-index
     const contactpersonen = parseContactpersonen(p.contactpersonen, emailIds).map((c) => {
@@ -407,7 +407,7 @@ export async function extraheerEmailInzicht(
   email: GeparseerdeEmail,
 ): Promise<EmailAiResultaat> {
   const leeg: EmailAiResultaat = { omschrijving: null, naw: null, contactinfo: null, tekeningen: null, actiepunten: null, relevant: null, relevantReden: null };
-  if (!heeftOpenAi()) return leeg;
+  if (!heeftGateway()) return leeg;
 
   const bijlageNamen = email.bijlagen.map((b) => b.bestandsnaam).join(", ") || "(geen)";
   const userTekst = [
@@ -421,9 +421,7 @@ export async function extraheerEmailInzicht(
   ].join("\n");
 
   try {
-    const client = maakOpenAiClient();
-    const completion = await client.chat.completions.create({
-      model: "gpt-5-mini",
+    const aiResultaat = await aiGateway.chat("fast", {
       response_format: { type: "json_object" },
       max_completion_tokens: 4000,
       messages: [
@@ -431,9 +429,11 @@ export async function extraheerEmailInzicht(
         { role: "user", content: userTekst },
       ],
     });
-    const tekst = completion.choices[0]?.message?.content;
-    if (!tekst) return leeg;
-    const parsed = JSON.parse(tekst) as Record<string, unknown>;
+    if (!aiResultaat.ok) {
+      logger.error({ fout: aiResultaat.fout }, "E-mail AI-extractie mislukte");
+      return leeg;
+    }
+    const parsed = JSON.parse(aiResultaat.inhoud) as Record<string, unknown>;
     return {
       omschrijving: strOfNull(parsed.omschrijving),
       naw: strOfNull(parsed.naw),

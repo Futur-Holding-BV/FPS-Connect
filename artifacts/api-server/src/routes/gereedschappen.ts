@@ -9,7 +9,7 @@ import {
 import { eq, ilike, or, and, desc } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { ObjectStorageService } from "../lib/objectStorage";
-import { maakOpenAiClient, heeftOpenAi } from "../lib/openai";
+import { aiGateway, heeftGateway } from "../lib/aiGateway";
 import { logger } from "../lib/logger";
 
 const router = Router();
@@ -517,7 +517,7 @@ router.post("/gereedschappen/:id/ai-analyse", schrijven, async (req, res) => {
   if (!foto_url) {
     return res.status(400).json({ error: "foto_url is verplicht" });
   }
-  if (!heeftOpenAi()) {
+  if (!heeftGateway()) {
     return res.status(503).json({ error: "AI niet beschikbaar" });
   }
 
@@ -535,10 +535,7 @@ router.post("/gereedschappen/:id/ai-analyse", schrijven, async (req, res) => {
         .toBuffer()
     ).toString("base64");
 
-    const openai = maakOpenAiClient();
-
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
+    const gereedschapChatResultaat = await aiGateway.chat("default", {
       max_tokens: 1000,
       response_format: { type: "json_object" },
       messages: [
@@ -574,7 +571,7 @@ Wees conservatief: als je iets niet zeker weet, gebruik null of false.`,
       ],
     });
 
-    const rawText = completion.choices[0]?.message?.content ?? "{}";
+    const rawText = gereedschapChatResultaat.ok ? gereedschapChatResultaat.inhoud : "{}";
     let voorstel: Record<string, unknown> = {};
     try {
       voorstel = JSON.parse(rawText) as Record<string, unknown>;

@@ -16,7 +16,7 @@ import {
 } from "@workspace/db/schema";
 import { eq, and, desc, inArray, isNotNull, sql } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
-import { maakOpenAiClient, heeftOpenAi } from "../lib/openai";
+import { aiGateway, heeftGateway } from "../lib/aiGateway";
 
 const router = Router();
 const lezen = requireBevoegdheid("personeel", 1);
@@ -570,7 +570,7 @@ router.post("/contract-bewaking/:id/ai-voorbereiding", schrijven, async (req, re
     risicos.push(`Let op: dit is het ${alleContracten.filter((c) => c.contracttype === "bepaalde_tijd").length + 1}e tijdelijke contract. Bij nog één tijdelijk contract treedt de ketenregeling in werking.`);
   }
 
-  if (!heeftOpenAi()) {
+  if (!heeftGateway()) {
     // Geen AI beschikbaar — statische analyse
     const samenvatting = `Gespreksvoorbereiding voor ${contract.naam ?? "medewerker"} (contract eindigt ${contract.c.eindDatum ?? "onbepaald"}, nog ${dagen ?? "n.v.t."} dag(en)).
 
@@ -626,13 +626,11 @@ Herhaal: dit zijn ondersteunende adviezen. De beslissing ligt altijd bij HR en d
 Schrijf alles in het Nederlands.`;
 
   try {
-    const openai = maakOpenAiClient();
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
+    const contractResultaat = await aiGateway.chat("default", {
       messages: [{ role: "user", content: prompt }],
       max_tokens: 1000,
     });
-    const samenvatting = completion.choices[0]?.message?.content ?? "Geen samenvatting beschikbaar.";
+    const samenvatting = contractResultaat.ok ? contractResultaat.inhoud : "Geen samenvatting beschikbaar.";
 
     const aandachtspunten = [
       ...(opleidingen.filter((o) => o.status === "verlopen").map((o) => `Opleiding verlopen: ${o.naam}`)),

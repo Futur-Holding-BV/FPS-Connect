@@ -3,7 +3,7 @@ import { db } from "@workspace/db";
 import { crmKlantenTable, gebouwenTable, leveranciersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth";
-import { heeftOpenAi, maakOpenAiClient } from "../lib/openai";
+import { aiGateway, heeftGateway } from "../lib/aiGateway";
 
 const router = Router();
 
@@ -150,7 +150,7 @@ function bouwZoektekst(formulierType: string, huidigVelden: Record<string, strin
 // ── POST /ai/invullen ─────────────────────────────────────────────────────────
 
 router.post("/ai/invullen", requireAuth, async (req, res) => {
-  if (!heeftOpenAi()) return res.status(503).json({ error: "AI niet geconfigureerd" });
+  if (!heeftGateway()) return res.status(503).json({ error: "AI niet geconfigureerd" });
 
   const {
     formulier_type,
@@ -191,28 +191,22 @@ router.post("/ai/invullen", requireAuth, async (req, res) => {
     "Dit is een Nederlands bedrijf of persoon.",
   ].filter(Boolean).join("\n");
 
-  const client = maakOpenAiClient();
-
   // Probeer Responses API met live web search
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const webResp = await (client as any).responses.create({
-      model: "gpt-4o",
-      tools: [{ type: "web_search_preview" }],
-      input: `${systeemPrompt}\n\n${gebruikerPrompt}`,
-      text: { format: { type: "json_object" } },
-    });
+  const webResultaatInvullen = await aiGateway.responses("default", {
+    tools: [{ type: "web_search_preview" }],
+    input: `${systeemPrompt}\n\n${gebruikerPrompt}`,
+    text: { format: { type: "json_object" } },
+  });
+  if (webResultaatInvullen.ok) {
     let data: Record<string, string | null> = {};
-    try { data = JSON.parse(webResp.output_text ?? "{}") as Record<string, string | null>; } catch { data = {}; }
+    try { data = JSON.parse(webResultaatInvullen.inhoud) as Record<string, string | null>; } catch { data = {}; }
     return res.json({ velden: data });
-  } catch (webErr) {
-    req.log.warn({ err: webErr }, "Web search niet beschikbaar voor ai/invullen, fallback naar kennismodel");
   }
+  req.log.warn({ fout: webResultaatInvullen.fout }, "Web search niet beschikbaar voor ai/invullen, fallback naar kennismodel");
 
   // Fallback: chat completions
   try {
-    const completion = await client.chat.completions.create({
-      model: "gpt-4o",
+    const aiInvulResultaat = await aiGateway.chat("default", {
       max_tokens: 800,
       messages: [
         { role: "system", content: systeemPrompt },
@@ -221,7 +215,7 @@ router.post("/ai/invullen", requireAuth, async (req, res) => {
       response_format: { type: "json_object" },
     });
     let data: Record<string, string | null> = {};
-    try { data = JSON.parse(completion.choices[0]?.message?.content ?? "{}") as Record<string, string | null>; } catch { data = {}; }
+    try { data = JSON.parse(aiInvulResultaat.ok ? aiInvulResultaat.inhoud : "{}") as Record<string, string | null>; } catch { data = {}; }
     res.json({ velden: data });
   } catch (err) {
     req.log.error(err);

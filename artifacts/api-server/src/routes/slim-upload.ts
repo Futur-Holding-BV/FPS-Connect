@@ -5,7 +5,7 @@ import { writeFile, readFile, unlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { requireAuth } from "../middlewares/auth";
-import { maakOpenAiClient, heeftOpenAi } from "../lib/openai";
+import { aiGateway, heeftGateway } from "../lib/aiGateway";
 import { logger } from "../lib/logger";
 
 const router = Router();
@@ -255,8 +255,6 @@ async function aiClassificeer(
   afbeeldingBase64: string | null,
   toelichting?: string | null,
 ): Promise<SlimUploadSuggestie> {
-  const client = maakOpenAiClient();
-
   const tekstInfo = tekstFragment && tekstFragment.trim().length > 0
     ? `Geëxtraheerde tekst (${tekstFragment.trim().length} tekens):\n${tekstFragment.trim().slice(0, 5000)}`
     : "Geëxtraheerde tekst: GEEN — het bestand bevat geen machine-leesbare tekst (afbeelding, visuele lay-out of gescand document).";
@@ -285,23 +283,18 @@ async function aiClassificeer(
     });
   }
 
-  let completion;
-  try {
-    completion = await client.chat.completions.create({
-      model: "gpt-4o-mini",
-      response_format: { type: "json_object" },
-      max_tokens: 600,
-      messages: [
-        { role: "system", content: SYSTEEM_PROMPT },
-        { role: "user", content },
-      ],
-    });
-  } catch (err) {
-    logger.warn({ err }, "slim-upload: AI-aanroep mislukt, terugvallen op heuristiek");
+  const slimChatResultaat = await aiGateway.chat("fast", {
+    response_format: { type: "json_object" },
+    max_tokens: 600,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    messages: [{ role: "system", content: SYSTEEM_PROMPT }, { role: "user", content } as any],
+  });
+  if (!slimChatResultaat.ok) {
+    logger.warn({ fout: slimChatResultaat.fout }, "slim-upload: AI-aanroep mislukt, terugvallen op heuristiek");
     return { ...heuristischClassificeer(bestandsnaam, mime, tekstFragment), ai_beschikbaar: false };
   }
 
-  const antwoord = completion.choices[0]?.message?.content;
+  const antwoord = slimChatResultaat.inhoud;
   if (!antwoord) return { ...heuristischClassificeer(bestandsnaam, mime, tekstFragment), ai_beschikbaar: true };
 
   let parsed: Record<string, unknown>;
@@ -369,7 +362,7 @@ async function classificeerBestand(
 
   // 2. Vision-afbeelding voorbereiden (parallel aan tekst, indien AI beschikbaar)
   let afbeeldingBase64: string | null = null;
-  if (heeftOpenAi()) {
+  if (heeftGateway()) {
     if (mime === "application/pdf") {
       afbeeldingBase64 = await renderPdfPagina(bestand.buffer);
     } else if (
@@ -381,7 +374,7 @@ async function classificeerBestand(
   }
 
   // 3. Classificeren
-  if (heeftOpenAi()) {
+  if (heeftGateway()) {
     return aiClassificeer(bestandsnaam, mime, tekstFragment, afbeeldingBase64, toelichting);
   }
   return heuristischClassificeer(bestandsnaam, mime, tekstFragment);

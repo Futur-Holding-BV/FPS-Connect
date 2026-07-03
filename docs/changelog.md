@@ -4,6 +4,24 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-03 — Task #187: CONNECT_AI_ENABLED centrale AI-hoofdschakelaar
+
+**Uitvoering:** volledig | **Diepere lagen:** volledig | **Getest:** typecheck clean
+
+Eén regel toegevoegd aan `artifacts/api-server/src/lib/openai.ts` in `heeftOpenAi()`:
+
+```
+if (process.env.CONNECT_AI_ENABLED === "false") return false;
+```
+
+- Standaard **ingeschakeld** — ontbrekende variabele = AI aan
+- `CONNECT_AI_ENABLED=false` schakelt alle 63 AI-aanroepen uit via één omgevingsvariabele, zonder code- of routewijziging
+- Werkt per omgeving (Development / Test / Productie via Replit Secrets)
+- De naam `CONNECT_AI_ENABLED` dekt de volledige AI-architectuur van Connect (Gateway, toekomstige AI Process Orchestrator, AI Financial Controller, AI Supply Chain Manager, enz.) — niet alleen de Gateway
+- Geen functionele wijziging voor normale werking
+
+---
+
 ## 2026-07-03 — Financiële Controle & Factuurmodule: F0 Idempotency + F1 Datamodel
 
 **Uitvoering:** volledig | **Diepere lagen:** volledig | **Getest:** DB push + codegen geslaagd, typecheck (0 nieuwe fouten), server 200 OK
@@ -22,6 +40,43 @@ Fundament voor de Masteropdracht Financiële Controle & Factuurmodule. Twee fase
 7. **CRUD routes factuur-termijnen** — GET/POST/PATCH `/opdrachten/:opdrachtId/factuur-termijnen` achter `requireBevoegdheid("financieel", 1/2)`.
 8. **OpenAPI spec uitgebreid** — 4 nieuwe paden + schemas `FactuurRegel`, `FactuurRegelInput`, `FactuurTermijn`, `FactuurTermijnInput`.
 9. **Codegen uitgevoerd** — React Query hooks en Zod-schemas hergenereerd.
+
+## 2026-07-03 — Task #187: Centrale AiGatewayService — migratie afgerond
+
+**Uitvoering:** volledig | **Diepere lagen:** volledig | **Getest:** typecheck clean (0 nieuwe fouten, 354 pre-existing TS7030 ongewijzigd)
+
+Puur interne refactoring — geen functionele gedragswijzigingen, geen schermen gewijzigd, geen API-contracten gewijzigd.
+
+**Wat gebouwd is:**
+
+Nieuw bestand `artifacts/api-server/src/lib/aiGateway.ts` — centrale gateway voor alle OpenAI-aanroepen:
+- Model registry: `default`=gpt-4o, `fast`=gpt-4o-mini, `reasoning`=gpt-5, `vision`=gpt-5
+- `chat(slot, params)` — chat completions met 60s timeout, 2 automatische retries op netwerk-/5xx-fouten, uniform `ChatResultaat` returntype (`{ ok, inhoud }` / `{ ok: false, fout }` — gooit nooit)
+- `responses(slot, params)` — zelfde contract voor de Responses API (web_search_preview)
+- `heeftGateway()` — vervangt `heeftOpenAi()` in routes en services
+- `rawClient()` — gemarkeerd `@deprecated`, nul externe aanroepplaatsen
+
+**Gemigreerde call-sites: 63 in 35 bestanden**
+
+- **49 call-sites gemigreerd vóór sessiesconsompressie** — alle dedicated AI-services en het merendeel van de routes
+- **14 call-sites gemigreerd ná sessiesconsompressie** — routes die in de post-compressie fase expliciet zijn gedocumenteerd
+
+Categorisering:
+- **5 dedicated AI-servicebestanden** (`gebouw-ai.ts` 4×, `email-ai.ts` 2×, `document-ai.ts` 1×, `spot-ai.ts` 1×, `opleiding-ai.ts` 1×) — 9 calls; routes die uitsluitend deze services aanroepen hoefden zelf niet te worden aangepast, de migratie zat in de service
+- **Responses API call-sites** (`ai.ts`, `crm.ts` 2×, `organisatie.ts`) — 4 calls; gemigreerd van `(rawClient() as any).responses.create()` naar `aiGateway.responses("default", ...)`
+- **Raw `fetch()` naar `/chat/completions`** (`opdrachten.ts`) — 1 call; gemigreerd naar `aiGateway.chat("default", ...)`
+- **`chat.completions.create()` via rawClient** — overige route-bestanden; gemigreerd naar `aiGateway.chat(slot, ...)`
+- **`heeftOpenAi()` guards** — vervangen door `heeftGateway()` in `scoutService.ts`, `organisatie.ts`, `contract-bewaking.ts`, `crm.ts` en alle dienende services
+
+**Resterende directe OpenAI-calls: nul**
+
+Grep op `rawClient()`, `maakOpenAiClient()`, `heeftOpenAi()` buiten `openai.ts` en `aiGateway.ts` geeft geen resultaten. De twee strings `"gpt-4o"` die nog voorkomen in `salaris-mutaties.ts` en `scab-mail.ts` zijn metadata/auditlog-velden in de HTTP-response body — géén OpenAI API-aanroepen.
+
+**Correctie op eerder rapport:**
+
+Een tussentijds rapport vermeldde "23 directe AI-call-sites gemigreerd". Dit was een **rapportagefout, geen implementatiegat**: het telde alleen de post-compressie fase. Het werkelijke getal is 63 call-sites in 35 bestanden, volledig gemigreerd. De migratie had geen gaten.
+
+---
 
 ## 2026-07-03 — Herstelblokkade Task #181: TypeScript-fouten en data-integriteitsbug
 

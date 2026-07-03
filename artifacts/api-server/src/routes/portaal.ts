@@ -22,7 +22,7 @@ import {
 import { eq, and, desc, ne, or, isNull } from "drizzle-orm";
 import { stuurKlantvraagNotificatie, stuurOndertekeningNotificatie, stuurOpdrachtbevestiging } from "../services/email";
 import { logActiviteit } from "../lib/activiteit";
-import { heeftOpenAi, maakOpenAiClient } from "../lib/openai";
+import { aiGateway, heeftGateway } from "../lib/aiGateway";
 
 const router = Router();
 
@@ -231,7 +231,7 @@ router.post("/portaal/:token/ai-uitleg", async (req, res) => {
       return res.status(410).json({ error: "Uw uitnodiging is verlopen." });
     const tokenRecord = tokenResultaat.record;
 
-    if (!heeftOpenAi())
+    if (!heeftGateway())
       return res.status(503).json({ error: "AI niet beschikbaar." });
 
     const regelId = parseInt(String(req.body?.regel_id ?? ""), 10);
@@ -244,20 +244,18 @@ router.post("/portaal/:token/ai-uitleg", async (req, res) => {
 
     if (!regel) return res.status(404).json({ error: "Offerteregel niet gevonden." });
 
-    const openai = maakOpenAiClient();
     const prompt = `Je bent een brandpreventie-expert bij FPS Brandpreventie. Leg aan een klant in begrijpelijke taal uit wat de volgende offertepost inhoudt en waarom deze werkzaamheden nodig zijn. Schrijf maximaal 3 zinnen, in vloeiend Nederlands, zonder vakjargon. Noem géén bedragen of prijzen.
 
 Post: ${regel.maatregel}${regel.ruimte ? `\nLocatie: ${regel.ruimte}` : ""}${regel.uitgangspunten ? `\nUitgangspunten: ${regel.uitgangspunten}` : ""}
 Categorie: ${regel.categorie}
 Hoeveelheid: ${regel.aantal} ${regel.eenheid}`;
 
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
+    const portaalResultaat = await aiGateway.chat("default", {
       max_tokens: 300,
       messages: [{ role: "user", content: prompt }],
     });
 
-    const uitleg = completion.choices[0]?.message?.content?.trim() ?? "Geen uitleg beschikbaar.";
+    const uitleg = portaalResultaat.ok ? portaalResultaat.inhoud.trim() : "Geen uitleg beschikbaar.";
     res.json({ uitleg });
   } catch (err) {
     req.log.error(err);

@@ -33,7 +33,7 @@ import { ObjectStorageService } from "../lib/objectStorage";
 import { eq, desc, count, sql, and, not, inArray } from "drizzle-orm";
 import { randomBytes } from "crypto";
 import { requireBevoegdheid } from "../middlewares/auth";
-import { maakOpenAiClient, heeftOpenAi } from "../lib/openai";
+import { aiGateway, heeftGateway } from "../lib/aiGateway";
 import { verstuurMail } from "../services/email";
 
 const router = Router();
@@ -1054,7 +1054,7 @@ router.delete("/offerte-secties/:id", schrijven, async (req, res) => {
 
 // POST /offerte-secties/:id/ai-schrijven
 router.post("/offerte-secties/:id/ai-schrijven", schrijven, async (req, res) => {
-  if (!heeftOpenAi()) return res.status(503).json({ error: "AI niet beschikbaar" });
+  if (!heeftGateway()) return res.status(503).json({ error: "AI niet beschikbaar" });
   try {
     const sectieId = parseId(req.params.id);
     const [sectie] = await db.select().from(offerteSectiesTable).where(eq(offerteSectiesTable.id, sectieId));
@@ -1129,9 +1129,7 @@ ${contextExtra ? `\nAanvullende context: ${contextExtra}` : ""}
 
 Schrijf een professionele, overtuigende tekst voor deze sectie. Gebruik alinea's. Verwijs naar specifieke maatregelen en omstandigheden uit de context. Maximaal 350 woorden.`;
 
-    const client = maakOpenAiClient();
-    const completion = await client.chat.completions.create({
-      model: "gpt-5",
+    const sectieResultaat = await aiGateway.chat("reasoning", {
       max_completion_tokens: 1024,
       messages: [
         { role: "system", content: systeemPrompt },
@@ -1139,7 +1137,7 @@ Schrijf een professionele, overtuigende tekst voor deze sectie. Gebruik alinea's
       ],
     });
 
-    const tekst = completion.choices[0]?.message?.content ?? "";
+    const tekst = sectieResultaat.ok ? sectieResultaat.inhoud : "";
     res.json({ tekst });
   } catch (err) {
     req.log.error(err);
@@ -1584,7 +1582,7 @@ router.post("/offertes/:id/ai-email", schrijven, async (req, res) => {
     const bedragFormatted = new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(offerte.bedragInclBtw);
 
     // Fallback zonder OpenAI
-    if (!heeftOpenAi()) {
+    if (!heeftGateway()) {
       const onderwerp = `Offerte ${offerte.offertenummer ?? offerte.id} — ${offerte.titel}`;
       const begroeting = `Geachte ${offerte.opdrachtgever ? `heer/mevrouw ${offerte.opdrachtgever}` : "heer/mevrouw"},`;
       const samenvatting = `Hierbij ontvangt u onze offerte voor ${offerte.titel}${locatieTekst ? ` voor ${locatieTekst}` : ""}.\n\nHet totaalbedrag bedraagt ${bedragFormatted} incl. btw. De offerte is ${offerte.geldigheidDagen} dagen geldig.`;
@@ -1593,9 +1591,7 @@ router.post("/offertes/:id/ai-email", schrijven, async (req, res) => {
       return res.json({ onderwerp, begroeting, samenvatting, call_to_action, afsluiting });
     }
 
-    const ai = maakOpenAiClient();
-    const completion = await ai.chat.completions.create({
-      model: "gpt-4o",
+    const offerteMailResultaat = await aiGateway.chat("default", {
       max_tokens: 900,
       messages: [
         {
@@ -1637,8 +1633,8 @@ Geef als JSON terug (geen extra tekst):
       ],
     });
 
-    const raw = completion.choices[0]?.message?.content ?? "{}";
-    const match = raw.match(/\{[\s\S]*\}/);
+    const rawMail = offerteMailResultaat.ok ? offerteMailResultaat.inhoud : "{}";
+    const match = rawMail.match(/\{[\s\S]*\}/);
     let parsed: Record<string, string> = {};
     try { parsed = match ? JSON.parse(match[0]) : {}; } catch { parsed = {}; }
 
@@ -1945,9 +1941,8 @@ router.post("/offertes/:id/klant-contracten/:contractId/ai-advies", schrijven, a
       .where(and(eq(offerteKlantContractenTable.id, contractId), eq(offerteKlantContractenTable.offerteId, offerteId)));
     if (!c) return res.status(404).json({ error: "Contract niet gevonden" });
     if (!c.extractedText?.trim()) return res.status(422).json({ error: "Contracttekst ontbreekt — geen AI-analyse mogelijk. Zorg dat de PDF volledig geupload is met tekst." });
-    if (!heeftOpenAi()) return res.status(503).json({ error: "AI niet beschikbaar" });
+    if (!heeftGateway()) return res.status(503).json({ error: "AI niet beschikbaar" });
 
-    const openai = maakOpenAiClient();
     const systeemprompt = `Je bent een commercieel-juridisch adviseur bij FPS Brandpreventie.
 Analyseer het onderstaande klantcontract en stel een intern adviesrapport op voor de directie.
 
@@ -1976,8 +1971,7 @@ Aandachtspunten om op te letten:
 - Prijsindexering en kostenstijgingclausules
 Geef per aandachtspunt aan of het voor FPS gunstig, neutraal of ongunstig is.`;
 
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+    const contractAdviesResultaat = await aiGateway.chat("default", {
       max_completion_tokens: 4000,
       response_format: { type: "json_object" },
       messages: [
@@ -1986,7 +1980,7 @@ Geef per aandachtspunt aan of het voor FPS gunstig, neutraal of ongunstig is.`;
       ],
     });
 
-    const raw = response.choices[0]?.message?.content ?? "{}";
+    const raw = contractAdviesResultaat.ok ? contractAdviesResultaat.inhoud : "{}";
     let parsed: Record<string, unknown>;
     try { parsed = JSON.parse(raw); } catch { parsed = {}; }
 

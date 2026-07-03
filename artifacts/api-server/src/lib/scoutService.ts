@@ -10,7 +10,7 @@
 import { db } from "@workspace/db";
 import { crmMarktintelligentieTable, crmScoutRunsTable } from "@workspace/db";
 import { desc, or, ilike, eq } from "drizzle-orm";
-import { heeftOpenAi, maakOpenAiClient } from "./openai";
+import { aiGateway, heeftGateway } from "./aiGateway";
 import { logger } from "./logger";
 
 const REGIO = "Overijssel / Achterhoek";
@@ -92,9 +92,7 @@ interface AiSignaal {
 }
 
 async function filterEnClassificeer(artikelen: RssArtikel[]): Promise<AiSignaal[]> {
-  if (!heeftOpenAi() || artikelen.length === 0) return [];
-
-  const client = maakOpenAiClient();
+  if (!heeftGateway() || artikelen.length === 0) return [];
   const vandaag = new Date().toISOString().slice(0, 10);
 
   const artikelTekst = artikelen
@@ -115,13 +113,12 @@ Artikelen:
 ${artikelTekst}`;
 
   try {
-    const completion = await client.chat.completions.create({
-      model: "gpt-4o",
+    const scoutResultaat = await aiGateway.chat("default", {
       response_format: { type: "json_object" },
       messages: [{ role: "user", content: prompt }],
       max_tokens: 3000,
     });
-    const tekst = completion.choices[0]?.message?.content ?? "{}";
+    const tekst = scoutResultaat.ok ? scoutResultaat.inhoud : "{}";
     const parsed = JSON.parse(tekst) as { signalen?: AiSignaal[] };
     return (parsed.signalen ?? []).slice(0, 20);
   } catch (err) {

@@ -13,7 +13,7 @@ import { eq, and, desc, inArray } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { logger } from "../lib/logger";
 import { ObjectStorageService } from "../lib/objectStorage";
-import { maakOpenAiClient, heeftOpenAi } from "../lib/openai";
+import { aiGateway, heeftGateway } from "../lib/aiGateway";
 
 const router = Router();
 
@@ -196,7 +196,7 @@ router.post("/uitvoerder/sessies/:id/berichten", async (req, res) => {
     }
   }
 
-  if (!heeftOpenAi()) {
+  if (!heeftGateway()) {
     return res.status(503).json({ error: "AI niet beschikbaar" });
   }
 
@@ -265,14 +265,13 @@ Kennisgebied: brandwerende deuren, doorvoeringen, brandkleppen, manchetten (EPDM
   }
 
   try {
-    const openai = maakOpenAiClient();
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
+    const uitvoerderChatResultaat = await aiGateway.chat("default", {
       max_tokens: 600,
-      messages: gptMessages,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      messages: gptMessages as any,
     });
 
-    const aiTekst = completion.choices[0]?.message?.content?.trim() ?? "Geen antwoord ontvangen.";
+    const aiTekst = uitvoerderChatResultaat.ok ? uitvoerderChatResultaat.inhoud.trim() : "Geen antwoord ontvangen.";
 
     const [aiBericht] = await db
       .insert(uitvoerderBerichtenTable)

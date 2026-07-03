@@ -14,7 +14,7 @@ import {
 import { eq, desc, and } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { parseEmailBestand } from "../services/email-ai";
-import { heeftOpenAi, maakOpenAiClient } from "../lib/openai";
+import { aiGateway, heeftGateway } from "../lib/aiGateway";
 import { ObjectStorageService } from "../lib/objectStorage";
 import { stuurAanvraagBevestiging } from "../services/email";
 
@@ -524,7 +524,7 @@ async function extraheerAanvraagVeldenMetAi(
   onderwerp: string | null,
   afzender: string | null,
 ): Promise<AiAanvraagExtractie> {
-  if (!heeftOpenAi()) {
+  if (!heeftGateway()) {
     return {
       opdrachtgever: afzender ?? null,
       contactpersoon: null,
@@ -543,7 +543,6 @@ async function extraheerAanvraagVeldenMetAi(
     };
   }
 
-  const client = maakOpenAiClient();
   const prompt = `Je bent een assistent voor een brandpreventie-bedrijf. Extraheer de volgende gegevens uit de offerte-aanvraag e-mail en geef ze terug als JSON. Gebruik null als een veld niet gevonden of niet vermeld kan worden.
 
 E-mail onderwerp: ${onderwerp ?? "(geen)"}
@@ -570,13 +569,12 @@ Geef JSON terug met exact deze velden:
 }`;
 
   try {
-    const resp = await client.chat.completions.create({
-      model: "gpt-4o",
+    const inboxResultaat = await aiGateway.chat("default", {
       messages: [{ role: "user", content: prompt }],
       response_format: { type: "json_object" },
       max_completion_tokens: 800,
     });
-    const tekst = resp.choices[0]?.message?.content ?? "{}";
+    const tekst = inboxResultaat.ok ? inboxResultaat.inhoud : "{}";
     return JSON.parse(tekst) as AiAanvraagExtractie;
   } catch {
     return {
@@ -741,7 +739,7 @@ router.post(
           status: "geanalyseerd",
           documentCategorie: "offerte_aanvraag",
           bestemming: "Offertes",
-          aiBetrouwbaarheid: heeftOpenAi() ? "hoog" : "midden",
+          aiBetrouwbaarheid: heeftGateway() ? "hoog" : "midden",
           aiSamenvatting: ai.samenvatting ?? `Offerte-aanvraag van ${ai.opdrachtgever ?? "onbekend"}`,
           aiRedenering: `Werkmaatschappij: ${werkgever.naam}. Offerte ${offerteNummer} aangemaakt.`,
           aiVolgendeActie: "Offerte bekijken en uitwerken",

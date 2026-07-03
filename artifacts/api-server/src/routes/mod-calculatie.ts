@@ -23,7 +23,7 @@ import {
 } from "@workspace/db";
 import { eq, desc, asc, ilike, or, count, sql, and } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
-import { heeftOpenAi, maakOpenAiClient } from "../lib/openai";
+import { aiGateway, heeftGateway } from "../lib/aiGateway";
 
 const router = Router();
 const iso = (d: Date) => d.toISOString();
@@ -1062,18 +1062,16 @@ JSON formaat (ALLEEN dit object teruggeven, geen uitleg):
 Toegestane hoofdstukken: ${HOOFDSTUKKEN.join(", ")}
 Toegestane categorieën: ${CATEGORIEEN.join(", ")}`;
 
-    if (!heeftOpenAi()) {
+    if (!heeftGateway()) {
       return res.json({ regels: [], waarschuwingen: ["AI is niet beschikbaar in deze omgeving."] });
     }
 
-    const openai = maakOpenAiClient();
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
+    const calcRegelResultaat = await aiGateway.chat("default", {
       messages: [{ role: "user", content: prompt }],
       max_completion_tokens: 2000,
     });
 
-    const raw = (completion.choices[0]?.message?.content ?? "{}").trim();
+    const raw = (calcRegelResultaat.ok ? calcRegelResultaat.inhoud : "{}").trim();
     let regels: unknown[] = [];
     let waarschuwingen: string[] = [];
     try {
@@ -1567,12 +1565,10 @@ Jouw taken als calculatie-assistent:
 
 Antwoord altijd in het Nederlands. Geef concrete, praktische adviezen. Wees kritisch maar constructief.`;
 
-    if (!heeftOpenAi()) {
+    if (!heeftGateway()) {
       res.json({ antwoord: "AI-chat is niet beschikbaar. Controleer de OpenAI-configuratie.", signalen: [] });
       return;
     }
-
-    const openai = maakOpenAiClient();
 
     type Msg = { role: "system" | "user" | "assistant"; content: string | Array<Record<string, unknown>> };
     const messages: Msg[] = [{ role: "system", content: systeemPrompt }];
@@ -1596,13 +1592,13 @@ Antwoord altijd in het Nederlands. Geef concrete, praktische adviezen. Wees krit
       }
     }
 
-    const completion = await openai.chat.completions.create({
-      model: "gpt-5.4",
+    const calcChatResultaat = await aiGateway.chat("reasoning", {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       messages: messages as any,
       max_completion_tokens: 2000,
     });
 
-    const antwoord = completion.choices[0]?.message?.content ?? "Geen antwoord ontvangen.";
+    const antwoord = calcChatResultaat.ok ? calcChatResultaat.inhoud : "Geen antwoord ontvangen.";
 
     const signalen: string[] = [];
     const lw = antwoord.toLowerCase();

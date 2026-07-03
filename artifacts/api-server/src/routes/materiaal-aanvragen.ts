@@ -14,7 +14,7 @@ import { eq, and, desc, asc, inArray } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { logger } from "../lib/logger";
 import { ObjectStorageService } from "../lib/objectStorage";
-import { maakOpenAiClient, heeftOpenAi } from "../lib/openai";
+import { aiGateway, heeftGateway } from "../lib/aiGateway";
 
 const router = Router();
 const iso = (d: Date | null | undefined) => d?.toISOString() ?? null;
@@ -133,8 +133,6 @@ async function voerAiAnalyseUit(aanvraagId: number): Promise<void> {
             .join("\n")
         : "Geen werkbegroting beschikbaar.";
 
-    const openai = maakOpenAiClient();
-
     type ContentPart =
       | { type: "text"; text: string }
       | { type: "image_url"; image_url: { url: string; detail: "high" } };
@@ -152,8 +150,7 @@ async function voerAiAnalyseUit(aanvraagId: number): Promise<void> {
       });
     }
 
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
+    const materiaalChatResultaat = await aiGateway.chat("default", {
       max_tokens: 800,
       response_format: { type: "json_object" },
       messages: [
@@ -191,7 +188,7 @@ Retourneer uitsluitend geldige JSON:
       ],
     });
 
-    const rawText = completion.choices[0]?.message?.content ?? "{}";
+    const rawText = materiaalChatResultaat.ok ? materiaalChatResultaat.inhoud : "{}";
     let voorstel: Record<string, unknown> = {};
     try {
       voorstel = JSON.parse(rawText) as Record<string, unknown>;
@@ -338,7 +335,7 @@ router.post("/materiaal-aanvragen", async (req, res) => {
   if (!nieuw) return res.status(500).json({ error: "Aanvraag aanmaken mislukt" });
 
   // AI analyse asynchroon starten (fire-and-forget)
-  if (heeftOpenAi()) {
+  if (heeftGateway()) {
     void voerAiAnalyseUit(nieuw.id);
   }
 
@@ -391,7 +388,7 @@ router.patch("/materiaal-aanvragen/:id", lezen, async (req, res) => {
 
 router.post("/materiaal-aanvragen/:id/heranalyseer", schrijven, async (req, res) => {
   const id = parseInt(String(req.params["id"] ?? "0"), 10);
-  if (!heeftOpenAi()) return res.status(503).json({ error: "AI niet beschikbaar" });
+  if (!heeftGateway()) return res.status(503).json({ error: "AI niet beschikbaar" });
 
   const [bestaand] = await db
     .select()

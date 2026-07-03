@@ -11,7 +11,7 @@ import {
 import { eq, and, desc, inArray } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { ObjectStorageService } from "../lib/objectStorage";
-import { heeftOpenAi, maakOpenAiClient } from "../lib/openai";
+import { aiGateway, heeftGateway } from "../lib/aiGateway";
 
 const router = Router();
 const storage = new ObjectStorageService();
@@ -114,9 +114,8 @@ router.post("/scab-mails/genereer", schrijven, async (req: Request, res: Respons
     inhoud += "Er zijn geen mutaties voor deze periode.\n";
   }
 
-  if (heeftOpenAi() && mutaties.length > 0) {
+  if (heeftGateway() && mutaties.length > 0) {
     try {
-      const openai = maakOpenAiClient();
       const mutatiesJson = mutaties.map((m) => ({
         medewerker: m.medewerkerNaam ?? `medewerker-id ${m.medewerkerId}`,
         type: m.type,
@@ -125,8 +124,7 @@ router.post("/scab-mails/genereer", schrijven, async (req: Request, res: Respons
         status: m.status,
       }));
 
-      const completion = await openai.chat.completions.create({
-        model: "gpt-4o",
+      const scabResultaat = await aiGateway.chat("default", {
         max_tokens: 800,
         messages: [
           {
@@ -140,7 +138,7 @@ router.post("/scab-mails/genereer", schrijven, async (req: Request, res: Respons
         ],
       });
 
-      inhoud = completion.choices[0]?.message?.content ?? inhoud;
+      if (scabResultaat.ok) inhoud = scabResultaat.inhoud;
     } catch (err) {
       req.log.error({ err }, "AI SCAB-mail generatie mislukt, gebruik fallback");
     }
@@ -166,7 +164,7 @@ router.post("/scab-mails/genereer", schrijven, async (req: Request, res: Respons
     contactpersoon: werkgeverInfo?.boekhouderNaam ?? null,
     status: "concept",
     aantalMutaties: mutaties.length,
-    aiContextJson: { mutaties: mutaties.length, methode: heeftOpenAi() ? "gpt-4o" : "fallback" },
+    aiContextJson: { mutaties: mutaties.length, methode: heeftGateway() ? "gpt-4o" : "fallback" },
     aangemaaktDoorId: sess.userId ?? null,
     aangemaaktDoorNaam: sess.gebruikerNaam ?? null,
   }).returning();

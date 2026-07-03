@@ -15,7 +15,7 @@ import {
 } from "@workspace/db";
 import { eq, desc, ilike, or, and, count } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
-import { heeftOpenAi, maakOpenAiClient } from "../lib/openai";
+import { aiGateway, heeftGateway } from "../lib/aiGateway";
 
 const router = Router();
 
@@ -473,10 +473,9 @@ router.delete("/crm/concurrenten/:id", schrijven, async (req, res) => {
 
 // ── AI — Concurrent profiel ───────────────────────────────────────────────────
 router.post("/crm/concurrenten/ai-profiel", lezen, async (req, res) => {
-  if (!heeftOpenAi()) return res.status(503).json({ error: "AI niet geconfigureerd" });
+  if (!heeftGateway()) return res.status(503).json({ error: "AI niet geconfigureerd" });
   const { naam } = req.body;
   if (!naam?.trim()) return res.status(400).json({ error: "naam is verplicht" });
-  const client = maakOpenAiClient();
 
   const systeemPrompt =
     "Je bent een marktintelligentie-assistent voor een Nederlands brandpreventiebedrijf. " +
@@ -491,26 +490,21 @@ router.post("/crm/concurrenten/ai-profiel", lezen, async (req, res) => {
   const gebruikerPrompt = `Maak een concurrentprofiel voor: ${String(naam).trim()} (brandpreventie en bouw sector Nederland)`;
 
   // Probeer Responses API met web zoeken voor actuele concurrentinfo
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const webResp = await (client as any).responses.create({
-      model: "gpt-4o",
-      tools: [{ type: "web_search_preview" }],
-      input: `${systeemPrompt}\n\n${gebruikerPrompt}`,
-      text: { format: { type: "json_object" } },
-    });
-    const tekst: string = webResp.output_text ?? "{}";
+  const webResultaatProfiel = await aiGateway.responses("default", {
+    tools: [{ type: "web_search_preview" }],
+    input: `${systeemPrompt}\n\n${gebruikerPrompt}`,
+    text: { format: { type: "json_object" } },
+  });
+  if (webResultaatProfiel.ok) {
     let data: Record<string, string | null> = {};
-    try { data = JSON.parse(tekst) as Record<string, string | null>; } catch { data = {}; }
+    try { data = JSON.parse(webResultaatProfiel.inhoud) as Record<string, string | null>; } catch { data = {}; }
     return res.json({ velden: data });
-  } catch (webErr) {
-    req.log.warn({ err: webErr }, "Web search niet beschikbaar voor ai-profiel, fallback naar kennismodel");
   }
+  req.log.warn({ fout: webResultaatProfiel.fout }, "Web search niet beschikbaar voor ai-profiel, fallback naar kennismodel");
 
   // Fallback: chat completions op basis van trainingsdata
   try {
-    const completion = await client.chat.completions.create({
-      model: "gpt-4o",
+    const crmProfielResultaat = await aiGateway.chat("default", {
       max_tokens: 800,
       messages: [
         { role: "system", content: systeemPrompt },
@@ -518,7 +512,7 @@ router.post("/crm/concurrenten/ai-profiel", lezen, async (req, res) => {
       ],
       response_format: { type: "json_object" },
     });
-    const tekst = completion.choices[0]?.message?.content ?? "{}";
+    const tekst = crmProfielResultaat.ok ? crmProfielResultaat.inhoud : "{}";
     let data: Record<string, string | null> = {};
     try { data = JSON.parse(tekst) as Record<string, string | null>; } catch { data = {}; }
     res.json({ velden: data });
@@ -540,8 +534,7 @@ router.get("/crm/marktintelligentie", lezen, async (req, res) => {
 });
 
 router.post("/crm/marktintelligentie/ai-scan", lezen, async (req, res) => {
-  if (!heeftOpenAi()) return res.status(503).json({ error: "AI niet beschikbaar" });
-  const client = maakOpenAiClient();
+  if (!heeftGateway()) return res.status(503).json({ error: "AI niet beschikbaar" });
   const vandaag = new Date().toISOString().slice(0, 10);
 
   const systeemPrompt = `Je bent een marktintelligentie-assistent voor FPS Brandpreventie, een Nederlands bedrijf gespecialiseerd in brandveiligheid en brandpreventieve voorzieningen (branddeuren, doorvoeringen, brandkleppen, coating, manchetten). Vandaag is het ${vandaag}. Genereer realistische marktinformatie op basis van actuele trends in brandpreventie, bouw en utiliteit in Nederland.`;
@@ -560,25 +553,25 @@ Retourneer ALLEEN valide JSON zonder extra toelichting:
 {"signalen": [{"type": "nieuws|aanbesteding|concurrentie|kans|risico|overig", "titel": "max 80 tekens", "inhoud": "korte samenvatting max 200 tekens", "bron": "naam van de bron", "bron_url": "https://...", "regio": "Nederlandse provincie of stad", "datum": "YYYY-MM-DD"}, ...]}`;
 
   // Probeer Responses API met web zoeken voor actueel nieuws
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const webResp = await (client as any).responses.create({
-      model: "gpt-4o",
-      tools: [{ type: "web_search_preview" }],
-      input: `${systeemPrompt}\n\n${gebruikerPrompt}`,
-      text: { format: { type: "json_object" } },
-    });
-    const tekst: string = webResp.output_text ?? "";
-    const parsed = JSON.parse(tekst);
-    return res.json(parsed.signalen ?? []);
-  } catch (webErr) {
-    req.log.warn({ err: webErr }, "Web search niet beschikbaar, fallback naar kennismodel");
+  const webResultaatScan = await aiGateway.responses("default", {
+    tools: [{ type: "web_search_preview" }],
+    input: `${systeemPrompt}\n\n${gebruikerPrompt}`,
+    text: { format: { type: "json_object" } },
+  });
+  if (webResultaatScan.ok) {
+    try {
+      const parsed = JSON.parse(webResultaatScan.inhoud);
+      return res.json(parsed.signalen ?? []);
+    } catch {
+      req.log.warn("Web search JSON niet parseerbaar, fallback naar kennismodel");
+    }
+  } else {
+    req.log.warn({ fout: webResultaatScan.fout }, "Web search niet beschikbaar, fallback naar kennismodel");
   }
 
   // Fallback: chat completions op basis van marktkennis
   try {
-    const completion = await client.chat.completions.create({
-      model: "gpt-4o",
+    const crmScanResultaat = await aiGateway.chat("default", {
       response_format: { type: "json_object" },
       messages: [
         { role: "system", content: systeemPrompt },
@@ -586,7 +579,7 @@ Retourneer ALLEEN valide JSON zonder extra toelichting:
       ],
       max_tokens: 2000,
     });
-    const tekst = completion.choices[0]?.message?.content ?? "{}";
+    const tekst = crmScanResultaat.ok ? crmScanResultaat.inhoud : "{}";
     const parsed = JSON.parse(tekst);
     res.json(parsed.signalen ?? []);
   } catch (err) {
@@ -606,7 +599,7 @@ router.get("/crm/scout/status", lezen, async (req, res) => {
 });
 
 router.post("/crm/scout/start", schrijven, async (req, res) => {
-  if (!heeftOpenAi()) return res.status(503).json({ error: "AI niet beschikbaar" });
+  if (!heeftGateway()) return res.status(503).json({ error: "AI niet beschikbaar" });
   try {
     voerScoutUit().catch((err) => req.log.error({ err }, "Scout fout (achtergrond)"));
     const status = await getScoutStatus();
@@ -760,11 +753,9 @@ Opmerkingen: ${klant.opmerkingen ?? "geen"}
     kennisblok: "Vraag bij woningcorporaties altijd naar het MJOP (meerjaren onderhoudsplan). Daarin staan alle geplande renovaties en onderhoudsprojecten voor de komende jaren.",
   };
 
-  if (!heeftOpenAi()) {
+  if (!heeftGateway()) {
     return res.json(fallback);
   }
-
-  const client = maakOpenAiClient();
 
   const systeemPrompt = `Je bent een ervaren commercieel coach voor FPS Brandpreventie, een bedrijf dat brandpreventieve voorzieningen (branddeur, doorvoering, manchet, coating, brandklep) installeert en onderhoudt.
 
@@ -796,8 +787,7 @@ ${extraContext ? `\nExtra informatie: ${JSON.stringify(extraContext)}` : ""}
 Geef coaching voor deze gebruiker.`;
 
   try {
-    const completion = await client.chat.completions.create({
-      model: "gpt-4o",
+    const crmCoachResultaat = await aiGateway.chat("default", {
       response_format: { type: "json_object" },
       messages: [
         { role: "system", content: systeemPrompt },
@@ -805,7 +795,7 @@ Geef coaching voor deze gebruiker.`;
       ],
       max_tokens: 900,
     });
-    const tekst = completion.choices[0]?.message?.content ?? "{}";
+    const tekst = crmCoachResultaat.ok ? crmCoachResultaat.inhoud : "{}";
     let parsed: Record<string, unknown> = {};
     try { parsed = JSON.parse(tekst); } catch { /* gebruik fallback */ }
     res.json({

@@ -9,7 +9,7 @@ import {
 } from "@workspace/db";
 import { eq, and, inArray, isNotNull } from "drizzle-orm";
 import { logger } from "../lib/logger";
-import { heeftOpenAi, maakOpenAiClient } from "../lib/openai";
+import { aiGateway, heeftGateway } from "../lib/aiGateway";
 import { ObjectStorageService } from "../lib/objectStorage";
 import { stelToepassingenVoor, type ToepassingKandidaat } from "./document-ai";
 
@@ -228,7 +228,7 @@ export async function analyseerSpot(opts: {
   fotoVoorObjectPath: string | null;
   fotoNaObjectPath: string;
 }): Promise<SpotAiVoorstel> {
-  if (!heeftOpenAi()) {
+  if (!heeftGateway()) {
     return leeg("AI is niet beschikbaar. Vul de velden handmatig in.");
   }
 
@@ -269,25 +269,23 @@ export async function analyseerSpot(opts: {
   userInhoud.push({ type: "text", text: "Foto NÁ de afwerking (analyseer deze):" });
   userInhoud.push({ type: "image_url", image_url: { url: naUrl } });
 
+  const aiResultaat = await aiGateway.chat("vision", {
+    response_format: { type: "json_object" },
+    max_completion_tokens: 4000,
+    messages: [
+      { role: "system", content: SYSTEM_PROMPT },
+      { role: "user", content: userInhoud },
+    ],
+  });
+  if (!aiResultaat.ok) {
+    logger.error({ fout: aiResultaat.fout }, "Spot AI-analyse mislukte");
+    return leeg("De AI-analyse kon niet worden uitgevoerd. Vul de velden handmatig in.");
+  }
   let parsed: Record<string, unknown>;
   try {
-    const client = maakOpenAiClient();
-    const completion = await client.chat.completions.create({
-      model: "gpt-5",
-      response_format: { type: "json_object" },
-      max_completion_tokens: 4000,
-      messages: [
-        { role: "system", content: SYSTEM_PROMPT },
-        { role: "user", content: userInhoud },
-      ],
-    });
-    const antwoord = completion.choices[0]?.message?.content;
-    if (!antwoord) {
-      return leeg("De AI gaf geen bruikbaar antwoord. Vul de velden handmatig in.");
-    }
-    parsed = JSON.parse(antwoord);
-  } catch (err) {
-    logger.error({ err }, "Spot AI-analyse mislukte");
+    parsed = JSON.parse(aiResultaat.inhoud);
+  } catch {
+    logger.error({ antwoord: aiResultaat.inhoud }, "Spot AI JSON parse mislukt");
     return leeg("De AI-analyse kon niet worden uitgevoerd. Vul de velden handmatig in.");
   }
 
