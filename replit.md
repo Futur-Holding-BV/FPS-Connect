@@ -2,6 +2,8 @@
 
 FPS Brandpreventie is een Nederlands platform voor het registreren, beheren en inspecteren van brandpreventieve gebouwvoorzieningen (branddeur, doorvoering, brandklep, manchet, coating, etc.).
 
+> **Ontwikkelfilosofie:** Zie [`docs/ontwikkelfilosofie.md`](docs/ontwikkelfilosofie.md) — verplicht referentiedocument voor alle toekomstige werkzaamheden. Kernregel: stabiliteit van de kantoorversie heeft altijd voorrang op nieuwe functionaliteit.
+
 ## Naamgeving (platform)
 
 Het platform heeft twee namen, afhankelijk van de doelgroep:

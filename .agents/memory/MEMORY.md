@@ -1,3 +1,4 @@
+- [Ontwikkelfilosofie](ontwikkelfilosofie.md) — docs/ontwikkelfilosofie.md is verplicht kader; stabiliteit > functionaliteit; elke opdracht beantwoordt 5 vragen (workflow, handmatig werk, samenwerking, noodzaak vóór release, kan het later?).
 - [Changelog verplichting](changelog-verplichting.md) — docs/changelog.md bijhouden na elke fix/bouw; gebruiker heeft expliciet gevraagd dit altijd bij te werken.
 - [RN Web Modal conditioneel renderen](rn-modal-conditional-render.md) — `visible={false}` verwijdert content NIET uit DOM in RNW; gebruik `{open && <Modal visible>}` zodat Playwright tekst niet vindt na sluiten.
 - [Offline-first monteur app patroon](offline-first-monteur.md) — AsyncStorage cache + SyncQueue; expo-file-system/legacy; WachtrijItem id-conflict (gebruik urenId/etc nooit id:number); create_uren payload-based.
