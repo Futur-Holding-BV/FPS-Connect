@@ -5,6 +5,7 @@
 // offerteverzending. /offertes/:id/uit-spots leest de spots van het gekoppelde
 // gebouw en zet die om naar concept-begrotingsregels (mens beslist, AI niet).
 import { Router } from "express";
+import { workflowService, maakTransitieContext } from "../services/workflow-engine";
 import PDFDocument from "pdfkit";
 import {
   db,
@@ -552,6 +553,16 @@ router.patch("/offertes/:id", schrijven, async (req, res) => {
     if (await isOfferteBlokkeerd(offerteId))
       return res.status(409).json({ error: "Ondertekende offerte kan niet meer worden gewijzigd." });
     const { titel, offertenummer, gebouw_id, klant_id, sjabloon_id, opdrachtgever, ons_kenmerk, uw_kenmerk, uw_brief_van, behandeld_door_id, datum, geldigheid_dagen, voorwaarden, betalingstermijn_dagen, betaalwijze, factuur_schema, voorwaarden_set_id, bedrag_excl_btw, btw_percentage, bedrag_incl_btw, status, begroting_weergave, presentatie_niveau, klant_type, vervolg_opties, vervolg_tekst, verzend_type } = req.body;
+
+    // Status via de WorkflowEngine
+    if (status !== undefined) {
+      const ctx = await maakTransitieContext(req, db);
+      const result = await workflowService.transiteer("offerte", offerteId, status, ctx);
+      if (!result.ok) {
+        return res.status(result.error!.httpStatus).json({ error: result.error!.bericht });
+      }
+    }
+
     const [o] = await db
       .update(offertesTable)
       .set({
@@ -575,7 +586,6 @@ router.patch("/offertes/:id", schrijven, async (req, res) => {
         ...(bedrag_excl_btw !== undefined && { bedragExclBtw: bedrag_excl_btw }),
         ...(btw_percentage !== undefined && { btwPercentage: btw_percentage }),
         ...(bedrag_incl_btw !== undefined && { bedragInclBtw: bedrag_incl_btw }),
-        ...(status !== undefined && { status }),
         ...(begroting_weergave !== undefined && { begrotingWeergave: begroting_weergave }),
         ...(presentatie_niveau !== undefined && { presentatieNiveau: presentatie_niveau }),
         ...(klant_type !== undefined && { klantType: klant_type }),

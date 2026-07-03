@@ -1,6 +1,7 @@
 // Werkvoorbereiding — AI Inkoopplanning + Uitvoeringsplanning
 // Routes: PATCH werkbegroting-regels, inkoopplanning, inkoopbonnen, uitvoeringsplanning
 import { Router } from "express";
+import { workflowService, maakTransitieContext } from "../services/workflow-engine";
 import {
   db,
   opdrachtenTable,
@@ -783,25 +784,30 @@ router.patch("/opdrachten/:id/inkoopplanning/inkoopbonnen/:bonId", schrijven, as
   const body = req.body as Record<string, unknown>;
 
   try {
+    // Status via de WorkflowEngine — valideert de transitie en zet goedgekeurdOp/Door
+    if (body.status !== undefined) {
+      const ctx = await maakTransitieContext(req, db);
+      const result = await workflowService.transiteer(
+        "inkoopbon",
+        bonId,
+        String(body.status),
+        ctx,
+      );
+      if (!result.ok) {
+        res.status(result.error!.httpStatus).json({ error: result.error!.bericht }); return;
+      }
+    }
+
+    // Overige veldwijzigingen (leverancier, leverdatum, opmerkingen)
     const updates: Record<string, unknown> = { bijgewerktOp: new Date() };
     const bodyMap: Record<string, string> = {
       leverancier: "leverancier",
       leverancier_id: "leverancierId",
       gewenste_leverdatum: "gewensteLeverdatum",
-      status: "status",
       opmerkingen: "opmerkingen",
     };
-
-    const userId = req.session?.userId as number | undefined;
-
     for (const [bodyKey, dbKey] of Object.entries(bodyMap)) {
       if (body[bodyKey] !== undefined) updates[dbKey] = body[bodyKey];
-    }
-
-    // Bij goedkeuring: stel goedgekeurdOp en goedgekeurdDoorId in
-    if (body.status === "goedgekeurd") {
-      updates.goedgekeurdOp = new Date();
-      updates.goedgekeurdDoorId = userId ?? null;
     }
 
     const [updated] = await db.update(inkoopbonnenTable)

@@ -12,6 +12,7 @@ import {
 import { eq, desc, asc, inArray } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth";
 import { heeftOpenAi, maakOpenAiClient } from "../lib/openai";
+import { workflowService, maakTransitieContext } from "../services/workflow-engine";
 
 const router = Router();
 
@@ -175,12 +176,21 @@ router.patch("/calculaties/:id", async (req, res) => {
       status?: string;
       omschrijving?: string | null;
     };
+    // Status via de WorkflowEngine
+    if (status !== undefined) {
+      const ctx = await maakTransitieContext(req, db);
+      const result = await workflowService.transiteer("calculatie", id, status, ctx);
+      if (!result.ok) {
+        res.status(result.error!.httpStatus).json({ error: result.error!.bericht }); return;
+      }
+    }
+
+    // Overige veldwijzigingen
     const [bijgewerkt] = await db
       .update(calculatiesTable)
       .set({
         ...(naam !== undefined ? { naam: naam.trim() } : {}),
         ...(gebouw_id !== undefined ? { gebouwId: gebouw_id } : {}),
-        ...(status !== undefined ? { status } : {}),
         ...(omschrijving !== undefined ? { omschrijving } : {}),
         bijgewerktOp: new Date(),
       })

@@ -43,6 +43,7 @@ import { ObjectStorageService } from "../lib/objectStorage";
 import { eq, desc, and, ne, inArray, or, isNull, gte, lte, sql } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { stelOpleidingenVoor } from "../services/opleiding-ai";
+import { workflowService, maakTransitieContext } from "../services/workflow-engine";
 import { maakOpenAiClient, heeftOpenAi } from "../lib/openai";
 import { logger } from "../lib/logger";
 
@@ -1504,64 +1505,38 @@ router.get("/verlofaanvragen", lezen, async (req, res) => {
 router.patch("/verlofaanvragen/:id", schrijven, async (req, res) => {
   try {
     const { verlofsoort_id, start_datum, eind_datum, aantal_uren, status, reden, opmerking } = req.body;
-    // Status mag alleen een bekende waarde zijn (concept = opgeslagen maar nog niet ingediend).
-    const GELDIGE_STATUS = ["concept", "aangevraagd", "goedgekeurd", "afgewezen", "ingetrokken"];
-    if (status !== undefined && !GELDIGE_STATUS.includes(status)) {
-      return res.status(400).json({ error: "Ongeldige status.", velden: ["status"] });
-    }
-    // Afwijsreden is verplicht bij het afwijzen van een aanvraag.
-    if (status === "afgewezen" && !reden?.trim()) {
-      return res.status(400).json({ error: "Reden is verplicht bij het afwijzen van een verlofaanvraag.", velden: ["reden"] });
-    }
-    // Bij beoordeling (goedkeuren/afwijzen) de beoordelaar en het tijdstip vastleggen.
-    const beoordeeld = status === "goedgekeurd" || status === "afgewezen";
     const aanvraagId = parseId(req.params.id);
-    const gebruikerId = req.session.userId ?? null;
-    // In één transactie met row-lock: voorkomt dat gelijktijdige goedkeuringen de
-    // verlofuren dubbel toepassen. Reverse-then-apply blijft idempotent.
-    const a = await db.transaction(async (tx) => {
-      const [vorige] = await tx
-        .select()
-        .from(verlofAanvragenTable)
-        .where(eq(verlofAanvragenTable.id, aanvraagId))
-        .for("update");
-      if (!vorige) return null;
-      const [bijgewerkt] = await tx
-        .update(verlofAanvragenTable)
-        .set({
-          verlofsoortId: verlofsoort_id != null ? parseId(verlofsoort_id) : undefined,
-          startDatum: start_datum,
-          eindDatum: eind_datum,
-          aantalUren: aantal_uren,
-          status,
-          reden,
-          opmerking,
-          beoordeeldDoorId: beoordeeld ? gebruikerId : undefined,
-          beoordeeldOp: beoordeeld ? new Date() : undefined,
-          bijgewerktOp: new Date(),
-        })
-        .where(eq(verlofAanvragenTable.id, aanvraagId))
-        .returning();
-      if (!bijgewerkt) return null;
-      // Saldo bijwerken: draai een eerdere goedkeuring terug en pas de nieuwe toe.
-      if (vorige.status === "goedgekeurd") {
-        await pasVerlofSaldoAan(tx, vorige.medewerkerId, vorige.verlofsoortId, jaarVanDatum(vorige.startDatum), -vorige.aantalUren);
-      }
-      if (bijgewerkt.status === "goedgekeurd") {
-        await pasVerlofSaldoAan(tx, bijgewerkt.medewerkerId, bijgewerkt.verlofsoortId, jaarVanDatum(bijgewerkt.startDatum), bijgewerkt.aantalUren);
-      }
-      // Auditlog schrijven bij statuswijziging
-      if (status !== undefined && status !== vorige.status) {
-        await logVerlofMutatie(tx, aanvraagId, vorige.medewerkerId, status, {
-          oudStatus: vorige.status,
-          nieuwStatus: status,
-          opmerking: opmerking ?? null,
-          uitgevoerdDoorId: gebruikerId,
+
+    // Status via de WorkflowEngine — valideert de transitie, past saldo aan en schrijft
+    // de auditlog. reden en opmerking worden doorgegeven als params zodat de engine
+    // ze kan gebruiken voor de precheck (verplichte reden bij afwijzen) en de log.
+    if (status !== undefined) {
+      const ctx = await maakTransitieContext(req, db, { reden, opmerking });
+      const result = await workflowService.transiteer("verlofaanvraag", aanvraagId, status, ctx);
+      if (!result.ok) {
+        return res.status(result.error!.httpStatus).json({
+          error: result.error!.bericht,
+          ...(result.error!.velden ? { velden: result.error!.velden } : {}),
         });
       }
-      return bijgewerkt;
-    });
+    }
+
+    // Overige veldwijzigingen (verlofsoort, datums, uren, notities) los bijwerken
+    const [a] = await db
+      .update(verlofAanvragenTable)
+      .set({
+        ...(verlofsoort_id != null ? { verlofsoortId: parseId(verlofsoort_id) } : {}),
+        ...(start_datum !== undefined ? { startDatum: start_datum } : {}),
+        ...(eind_datum !== undefined ? { eindDatum: eind_datum } : {}),
+        ...(aantal_uren !== undefined ? { aantalUren: aantal_uren } : {}),
+        ...(reden !== undefined ? { reden } : {}),
+        ...(opmerking !== undefined ? { opmerking } : {}),
+        bijgewerktOp: new Date(),
+      })
+      .where(eq(verlofAanvragenTable.id, aanvraagId))
+      .returning();
     if (!a) return res.status(404).json({ error: "Verlofaanvraag niet gevonden" });
+
     res.json({
       id: a.id,
       medewerker_id: a.medewerkerId,

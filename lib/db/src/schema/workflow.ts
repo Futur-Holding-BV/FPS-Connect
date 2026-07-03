@@ -1,5 +1,5 @@
 import {
-  pgTable, serial, text, integer, boolean, timestamp,
+  pgTable, serial, text, integer, boolean, timestamp, jsonb,
 } from "drizzle-orm/pg-core";
 
 export const workflowDefinitiesTable = pgTable("workflow_definities", {
@@ -69,3 +69,21 @@ export type WorkflowLane = typeof workflowLanesTable.$inferSelect;
 export type WorkflowLaneInsert = typeof workflowLanesTable.$inferInsert;
 export type WorkflowCard = typeof workflowCardsTable.$inferSelect;
 export type WorkflowCardInsert = typeof workflowCardsTable.$inferInsert;
+
+// ── Centrale workflow-transitie auditlog ───────────────────────────────────────
+// Elke statuswijziging via WorkflowService wordt hier onveranderbaar vastgelegd.
+export const workflowTransitieLogTable = pgTable("workflow_transitie_log", {
+  id: serial("id").primaryKey(),
+  workflowId: text("workflow_id").notNull(),
+  entityId: integer("entity_id").notNull(),
+  entityType: text("entity_type").notNull(),
+  vanStatus: text("van_status").notNull(),
+  naarStatus: text("naar_status").notNull(),
+  gebruikerId: integer("gebruiker_id"),
+  gebruikerNaam: text("gebruiker_naam"),
+  reden: text("reden"),
+  metadata: jsonb("metadata"),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+});
+
+export type WorkflowTransitieLog = typeof workflowTransitieLogTable.$inferSelect;

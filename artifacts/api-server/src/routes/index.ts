@@ -79,6 +79,7 @@ import { regieRouter } from "./regie";
 import contractBewakingRouter from "./contract-bewaking";
 import { requireAuth } from "../middlewares/auth";
 import { meldActief } from "../lib/online-tracker";
+import "../services/workflow-configs";
 
 const router: IRouter = Router();
 

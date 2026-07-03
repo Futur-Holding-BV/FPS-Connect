@@ -8,6 +8,59 @@ Voor elke taak drie scores:
 
 Grote roadmap-fases staan ook in `docs/roadmap/gebouwd.md` en `docs/roadmap/actief.md`.
 
+## 2026-07-03 — WorkflowEngine centrale statusmachine
+
+**Uitvoering:** volledig | **Diepere lagen:** volledig | **Getest:** unit tests (29/29) + typecheck
+
+Alle statusovergangen in FPS Connect lopen nu via één centrale WorkflowEngine. Geen module meer die status direct in de DB schrijft zonder validatie, bevoegdheidscontrole en auditlog.
+
+### Gebouwde onderdelen
+
+**`lib/db/src/schema/workflow.ts` — nieuw schema**
+- Tabel `workflow_transitie_log`: registreert elke statusovergang met workflow-id, entity-id, van/naar-status, gebruiker, tijdstip en vrije metadata (jsonb).
+- DB-migratie via `pnpm db run push` uitgevoerd.
+
+**`artifacts/api-server/src/services/workflow-engine.ts` — kern**
+- `WorkflowService` class: `registreer()`, `transiteer()`, `toegestaneTransities()`, `isGeconfigureerd()`.
+- `transiteer()` doorloopt: config ophalen → entity laden → idempotentiecheck (zelfde status = no-op) → bevoegdheidscheck (niveau vereist, hoofdbeheerder bypass) → precheck (vrije voorwaardevalidatie) → DB-transactie: `uitvoerenTransitie` + `postTransitie` + log-insert.
+- `maakTransitieContext()` helper: bouwt `TransitieContext` op vanuit een Express-request + één DB-query voor bevoegdheden/rol.
+- Fouttypen: `NIET_GEVONDEN` (404/500), `NIET_TOEGESTAAN` (409), `BEVOEGDHEID` (403), `VOORWAARDE` (422).
+
+**`artifacts/api-server/src/services/workflow-configs.ts` — 10 geconfigureerde workflows**
+- `offerte` — concept → verstuurd → geaccepteerd → afgewezen → verlopen (+ ged. herroepen/gesloten)
+- `opdracht` — concept → actief → voltooid / geannuleerd
+- `inkoopbon` — aangevraagd → goedgekeurd → besteld → ontvangen / afgewezen; `uitvoerenTransitie` zet `goedgekeurdOp` + `goedgekeurdDoorId`
+- `inkoopplan` — concept → ingediend → goedgekeurd → afgewezen
+- `uitvoeringsplan` — concept → gepland → actief → voltooid / afgeweken
+- `verlofaanvraag` — concept → aangevraagd → goedgekeurd / afgewezen / ingetrokken; `uitvoerenTransitie` doet SELECT FOR UPDATE + saldo-aanpassing + auditlog; precheck vereist reden bij afwijzen
+- `onderhoud` — openstaand → in_uitvoering → voltooid / geannuleerd; `postTransitie` logt activiteit bij voltooiing
+- `calculatie` — concept → actief → definitief / gearchiveerd
+- `planning_item_uitvoering` — gepland → gestart → voltooid / afgebroken
+- `arbeidsovereenkomst` — concept → actief → verlopen / beëindigd
+
+**`artifacts/api-server/src/__tests__/workflow-engine.test.ts` — 14 unit tests**
+- Happy path, 404 (entity niet gevonden), 500 (workflow niet geconfigureerd)
+- Ongeldige transitie (409), dezelfde status (no-op, geen log)
+- Bevoegdheidscheck (403) + hoofdbeheerder bypass
+- Precheck fout (422) + precheck geslaagd
+- postTransitie-hook aangeroepen (mock)
+- toegestaneTransities correct gefilterd op huidige status
+- `isGeconfigureerd` detectie
+
+**Route-migraties — alle status-PATCH-handlers via engine**
+- `routes/index.ts` — side-effect import `workflow-configs` zodat singleton gevuld is bij serverstart
+- `routes/onderhoud.ts` — status via engine; inline `logActiviteit` bij voltooid verwijderd (engine postTransitie)
+- `routes/calculaties.ts` — status via engine
+- `routes/opdrachten.ts` — status via engine
+- `routes/offertes.ts` — status via engine (vóór de overige UPDATE-velden)
+- `routes/werkvoorbereiding.ts` (inkoopbon PATCH) — status via engine; goedgekeurdOp/Door naar uitvoerenTransitie verplaatst
+- `routes/hrm.ts` (verlofaanvraag PATCH) — volledige handmatige transactie vervangen; status via engine, veldwijzigingen apart
+
+### Architectuurkeuzes
+- Statuswijziging en veldwijzigingen zijn bewust gescheiden: engine schrijft uitsluitend status + log; de route doet daarna een tweede UPDATE voor overige velden. Dit houdt de engine toestandsloos en routes leesbaar.
+- Engine maakt per statuswijziging één extra DB-query (bevoegdheden ophalen). Acceptabel omdat statusovergangen zeldzaam zijn.
+- `maakTransitieContext` is de enige interface tussen Express-routes en de engine; geen directe DB-aanroepen voor status buiten deze helper.
+
 ---
 
 ## 2026-07-02 — AI Besluitvorming ontwerp

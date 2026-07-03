@@ -1,6 +1,7 @@
 // Opdrachten & Werkbegrotingen — /api/offertes/:id/maak-opdracht, /api/opdrachten/*
 // Brug tussen geaccepteerde offerte → werkbegroting → planning → uurstaten → nacalculatie
 import { Router } from "express";
+import { workflowService, maakTransitieContext } from "../services/workflow-engine";
 import {
   db,
   opdrachtenTable,
@@ -315,8 +316,16 @@ router.patch("/opdrachten/:id", schrijven, async (req, res) => {
 
   try {
     const { status, omschrijving, werknummer } = req.body as Record<string, string | undefined>;
+
+    // Status via de WorkflowEngine
+    if (status !== undefined) {
+      const ctx = await maakTransitieContext(req, db);
+      const result = await workflowService.transiteer("opdracht", id, status, ctx);
+      if (!result.ok) { res.status(result.error!.httpStatus).json({ error: result.error!.bericht }); return; }
+    }
+
+    // Overige veldwijzigingen
     const update: Partial<typeof opdrachtenTable.$inferInsert> = { bijgewerktOp: new Date() };
-    if (status !== undefined) update.status = status;
     if (omschrijving !== undefined) update.omschrijving = omschrijving;
     if (werknummer !== undefined) update.werknummer = werknummer;
 

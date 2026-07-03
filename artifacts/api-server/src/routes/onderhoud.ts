@@ -11,6 +11,7 @@ import { eq } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { effectieveContext, isBeperktTotToegewezen } from "../utils/rol";
 import { logActiviteit } from "../lib/activiteit";
+import { workflowService, maakTransitieContext } from "../services/workflow-engine";
 
 const router = Router();
 const lezenOnderhoud = requireBevoegdheid("onderhoud", 1);
@@ -212,30 +213,32 @@ router.patch("/onderhoud/:id", requireBevoegdheid("onderhoud", 2), async (req, r
       return res.status(403).json({ error: "Geen toegang tot deze taak" });
     }
 
+    // Status via de WorkflowEngine — valideert de transitie en logt activiteit
+    if (status !== undefined) {
+      const ctx = await maakTransitieContext(req, db);
+      const result = await workflowService.transiteer("onderhoud", id, status, ctx);
+      if (!result.ok) {
+        return res.status(result.error!.httpStatus).json({ error: result.error!.bericht });
+      }
+    }
+
+    // Overige veldwijzigingen (titel, prioriteit, deadline, …) los bijwerken
     const [o] = await db
       .update(onderhoudTable)
       .set({
-        titel, omschrijving, prioriteit, status,
-        toegewezenAanId: toegewezen_aan_id,
-        deadline,
-        voltooidDatum: voltooid_datum,
-        resultaat,
+        ...(titel !== undefined && { titel }),
+        ...(omschrijving !== undefined && { omschrijving }),
+        ...(prioriteit !== undefined && { prioriteit }),
+        ...(toegewezen_aan_id !== undefined && { toegewezenAanId: toegewezen_aan_id }),
+        ...(deadline !== undefined && { deadline }),
+        ...(voltooid_datum !== undefined && { voltooidDatum: voltooid_datum }),
+        ...(resultaat !== undefined && { resultaat }),
         bijgewerktOp: new Date(),
       })
       .where(eq(onderhoudTable.id, id))
       .returning();
 
     if (!o) return res.status(404).json({ error: "Onderhoudstaak niet gevonden" });
-
-    if (status === "voltooid") {
-      await logActiviteit({
-        type: "onderhoud_voltooid",
-        omschrijving: `Onderhoudstaak voltooid: ${o.titel}`,
-        gebouwId: o.gebouwId,
-        voorzieningId: o.voorzieningId,
-        gebruikerId: req.session.userId,
-      });
-    }
 
     res.json(await mapOnderhoud(o));
   } catch (err) {
