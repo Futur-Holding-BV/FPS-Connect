@@ -7,6 +7,7 @@
  */
 
 export interface ModCalcRegelInput {
+  eenheid_id?: number | null;
   categorie: string;
   omschrijving: string;
   normtijd_id?: number | null;

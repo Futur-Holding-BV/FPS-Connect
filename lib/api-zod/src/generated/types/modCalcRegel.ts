@@ -9,6 +9,7 @@
 export interface ModCalcRegel {
   id: number;
   calculatie_id: number;
+  eenheid_id?: number | null;
   categorie: string;
   omschrijving: string;
   normtijd_id?: number | null;

@@ -5917,6 +5917,7 @@ export interface MaakOfferteResult {
 export interface ModCalcRegel {
   id: number;
   calculatie_id: number;
+  eenheid_id?: number | null;
   categorie: string;
   omschrijving: string;
   normtijd_id?: number | null;
@@ -5973,7 +5974,25 @@ export interface ModCalcHeaderInput {
   winst_is_vast?: boolean;
 }
 
+export interface CalcEenheid {
+  id: number;
+  calculatie_id: number;
+  naam: string;
+  /** woning | appartement | kamer | ruimte | verdieping | compartiment | schacht | bouwdeel | gevel | installatiezone | vrije_projecteenheid */
+  type: string;
+  volgorde: number;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export interface CalcEenheidInput {
+  naam: string;
+  type?: string;
+  volgorde?: number;
+}
+
 export interface ModCalcRegelInput {
+  eenheid_id?: number | null;
   categorie: string;
   omschrijving: string;
   normtijd_id?: number | null;

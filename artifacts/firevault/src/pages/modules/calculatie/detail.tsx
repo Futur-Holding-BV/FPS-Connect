@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from "react";
+import React, { useState, useCallback, useRef, useEffect } from "react";
 import { useRoute, useLocation } from "wouter";
 import {
   useGetModCalculatie,
@@ -20,7 +20,13 @@ import {
   useAiChatCalculatie,
   useListOpnames,
   getListOpnamesQueryKey,
+  useListModCalcEenheden,
+  useCreateModCalcEenheid,
+  useUpdateModCalcEenheid,
+  useDeleteModCalcEenheid,
+  getListModCalcEenhedenQueryKey,
   type ModCalcInkoopItem,
+  type CalcEenheid,
 } from "@workspace/api-client-react";
 import AiChatPanel from "@/components/ai-chat-panel";
 import AiSeniorCalculatorPanel from "@/components/ai-senior-calculator-panel";
@@ -46,6 +52,7 @@ import {
   ArrowLeft, Plus, Pencil, Trash2, Copy, ChevronRight, FileText,
   LayoutList, Users, Eye, Sparkles, Wrench, CheckCircle2, X,
   Printer, History, Save, MoreHorizontal, MessageSquare, BrainCircuit,
+  ChevronDown, ChevronUp, Building2,
 } from "lucide-react";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -165,6 +172,7 @@ type Weergave = "intern" | "directie" | "klant" | "monteur";
 type RegelRow = {
   id: number;
   calculatie_id: number;
+  eenheid_id?: number | null;
   categorie: string;
   omschrijving: string;
   normtijd_id?: number | null;
@@ -192,6 +200,7 @@ type RegelRow = {
 };
 
 type LocalDraft = {
+  eenheid_id: number | null;
   categorie: string;
   omschrijving: string;
   eenheid: string;
@@ -212,6 +221,7 @@ type LocalDraft = {
 };
 
 const LEEG_DRAFT: LocalDraft = {
+  eenheid_id: null,
   categorie: "arbeid",
   omschrijving: "",
   eenheid: "st",
@@ -235,6 +245,7 @@ const LEEG_DRAFT: LocalDraft = {
 
 function regelToDraft(r: RegelRow): LocalDraft {
   return {
+    eenheid_id: r.eenheid_id ?? null,
     categorie: r.categorie,
     omschrijving: r.omschrijving,
     eenheid: r.eenheid,
@@ -257,6 +268,7 @@ function regelToDraft(r: RegelRow): LocalDraft {
 
 function draftToPayload(d: LocalDraft) {
   return {
+    eenheid_id: d.eenheid_id ?? null,
     categorie: d.categorie,
     omschrijving: d.omschrijving,
     eenheid: d.eenheid,
@@ -1020,6 +1032,98 @@ function HoofdstukBalk({
   );
 }
 
+// ─── EenheidBalk ─────────────────────────────────────────────────────────────
+
+const EENHEID_TYPE_LABEL: Record<string, string> = {
+  woning: "Woning",
+  appartement: "Appartement",
+  kamer: "Kamer",
+  ruimte: "Ruimte",
+  verdieping: "Verdieping",
+  compartiment: "Compartiment",
+  schacht: "Schacht",
+  bouwdeel: "Bouwdeel",
+  gevel: "Gevel",
+  installatiezone: "Installatiezone",
+  vrije_projecteenheid: "Vrije eenheid",
+};
+
+function EenheidBalk({
+  eenheid,
+  aantalKolommen,
+  weergave,
+  ingeklapt,
+  totaalMat,
+  totaalArb,
+  totaalOa,
+  totaalKosten,
+  onToggle,
+  onBewerken,
+  onVerwijderen,
+  onRegelToevoegen,
+}: {
+  eenheid: CalcEenheid;
+  aantalKolommen: number;
+  weergave: Weergave;
+  ingeklapt: boolean;
+  totaalMat: number;
+  totaalArb: number;
+  totaalOa: number;
+  totaalKosten: number;
+  onToggle: () => void;
+  onBewerken: () => void;
+  onVerwijderen: () => void;
+  onRegelToevoegen: () => void;
+}) {
+  const typeLabel = EENHEID_TYPE_LABEL[eenheid.type] ?? eenheid.type;
+  return (
+    <tr className="border-b border-primary/20 bg-primary/5 group/eb">
+      <td colSpan={aantalKolommen} className="px-3 py-2">
+        <div className="flex items-center gap-2 justify-between">
+          <div className="flex items-center gap-2 min-w-0">
+            <button
+              type="button"
+              onClick={onToggle}
+              className="flex items-center gap-1.5 hover:text-foreground text-foreground/80 transition-colors shrink-0"
+            >
+              {ingeklapt
+                ? <ChevronDown className="h-4 w-4 text-primary" />
+                : <ChevronUp className="h-4 w-4 text-primary" />}
+            </button>
+            <Building2 className="h-3.5 w-3.5 text-primary shrink-0" />
+            <span className="text-sm font-semibold text-foreground truncate">{eenheid.naam}</span>
+            <span className="text-xs text-muted-foreground bg-muted border border-border rounded px-1.5 py-0.5 shrink-0">{typeLabel}</span>
+          </div>
+          <div className="flex items-center gap-4">
+            {weergave === "intern" && totaalKosten > 0 && (
+              <div className="hidden sm:flex items-center gap-4 text-xs text-muted-foreground">
+                {totaalMat > 0 && <span>Mat: <span className="font-medium text-foreground tabular-nums">{formatBedragKort(totaalMat)}</span></span>}
+                {totaalArb > 0 && <span>Arb: <span className="font-medium text-foreground tabular-nums">{formatBedragKort(totaalArb)}</span></span>}
+                {totaalOa > 0 && <span>OA: <span className="font-medium text-foreground tabular-nums">{formatBedragKort(totaalOa)}</span></span>}
+                <span className="font-semibold text-foreground tabular-nums border-l border-border pl-3">{formatBedragKort(totaalKosten)}</span>
+              </div>
+            )}
+            {weergave === "intern" && (
+              <div className="flex items-center gap-1 opacity-0 group-hover/eb:opacity-100 transition-opacity">
+                <Button variant="ghost" size="sm" className="h-6 px-2 text-xs gap-1 text-primary/70 hover:text-primary" onClick={onRegelToevoegen}>
+                  <Plus className="h-3 w-3" />
+                  Regel
+                </Button>
+                <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground" onClick={onBewerken}>
+                  <Pencil className="h-3 w-3" />
+                </Button>
+                <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive" onClick={onVerwijderen}>
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
+      </td>
+    </tr>
+  );
+}
+
 // ─── Tabelkop helper ─────────────────────────────────────────────────────────
 
 function Th({ children, align = "left", className }: { children?: React.ReactNode; align?: "left" | "right" | "center"; className?: string }) {
@@ -1571,6 +1675,10 @@ export default function ModulesCalculatieDetail() {
   const { data: normtijden = [] } = useListModCalcNormtijden({ query: { queryKey: ["mod-calc-normtijden"] } });
   const { data: tarieven = [] } = useListModCalcTarieven({ query: { queryKey: ["mod-calc-tarieven"] } });
   const { data: inkoopItems = [] } = useListModCalcInkoopItems(id, { query: { queryKey: getListModCalcInkoopItemsQueryKey(id), enabled: id > 0 } });
+  const { data: eenheden = [] } = useListModCalcEenheden(id, { query: { queryKey: getListModCalcEenhedenQueryKey(id), enabled: id > 0 } });
+  const maakEenheidMut    = useCreateModCalcEenheid({ mutation: { onSuccess: invalidate } });
+  const updateEenheidMut  = useUpdateModCalcEenheid({ mutation: { onSuccess: invalidate } });
+  const verwijderEenheidMut = useDeleteModCalcEenheid({ mutation: { onSuccess: invalidate } });
   const maakInkoopItemMut    = useCreateModCalcInkoopItem();
   const updateInkoopItemMut  = useUpdateModCalcInkoopItem();
   const verwijderInkoopItemMut = useDeleteModCalcInkoopItem();
@@ -1640,6 +1748,13 @@ export default function ModulesCalculatieDetail() {
   const leegInkoopForm: InkoopForm = { type: "materiaal", omschrijving: "", artikel: "", leverancier: "", gekozen_leverancier: "", aantal: "", eenheid: "st", prijs: "", offerte_ontvangen: false, levertijd: "", status: "te_versturen", bedrag: "", notities: "" };
   const [inkoopForm, setInkoopForm] = useState<InkoopForm>(leegInkoopForm);
   const [inkoopBewerken, setInkoopBewerken] = useState<ModCalcInkoopItem | null>(null);
+
+  // Calculatie-eenheden state
+  const [eenheidDialoogOpen, setEenheidDialoogOpen] = useState(false);
+  const [eenheidBewerken, setEenheidBewerken] = useState<CalcEenheid | null>(null);
+  const [eenheidNaam, setEenheidNaam] = useState("");
+  const [eenheidType, setEenheidType] = useState("vrije_projecteenheid");
+  const [ingeklapteEenheden, setIngeklapteEenheden] = useState<Set<number>>(new Set());
 
   // Nieuw rij invoerrij (null = verborgen)
   const [nieuwDraft, setNieuwDraft] = useState<LocalDraft | null>(null);
@@ -1742,12 +1857,51 @@ export default function ModulesCalculatieDetail() {
     updateMut.mutate({ id, data: { naam: data.naam, status: nieuweStatus } });
   }
 
-  function nieuweRegel(opts: { hoofdstuk?: string; is_staartkosten?: boolean; is_bouwplaatskosten?: boolean }) {
+  function nieuweRegel(opts: { hoofdstuk?: string; is_staartkosten?: boolean; is_bouwplaatskosten?: boolean; eenheid_id?: number | null }) {
     setNieuwDraft({
       ...LEEG_DRAFT,
+      eenheid_id: opts.eenheid_id ?? null,
       hoofdstuk: opts.hoofdstuk ?? "Overige werkzaamheden",
       is_staartkosten: opts.is_staartkosten ?? false,
       is_bouwplaatskosten: opts.is_bouwplaatskosten ?? false,
+    });
+  }
+
+  function openEenheidAanmaken() {
+    setEenheidBewerken(null);
+    setEenheidNaam("");
+    setEenheidType("vrije_projecteenheid");
+    setEenheidDialoogOpen(true);
+  }
+
+  function openEenheidBewerken(e: CalcEenheid) {
+    setEenheidBewerken(e);
+    setEenheidNaam(e.naam);
+    setEenheidType(e.type);
+    setEenheidDialoogOpen(true);
+  }
+
+  function slaEenheidOp() {
+    if (!eenheidNaam.trim()) return;
+    if (eenheidBewerken) {
+      updateEenheidMut.mutate(
+        { id, eenheidId: eenheidBewerken.id, data: { naam: eenheidNaam.trim(), type: eenheidType, volgorde: eenheidBewerken.volgorde } },
+        { onSuccess: () => setEenheidDialoogOpen(false) },
+      );
+    } else {
+      maakEenheidMut.mutate(
+        { id, data: { naam: eenheidNaam.trim(), type: eenheidType, volgorde: eenheden.length } },
+        { onSuccess: () => setEenheidDialoogOpen(false) },
+      );
+    }
+  }
+
+  function toggleEenheidIngeklapt(eid: number) {
+    setIngeklapteEenheden((prev) => {
+      const next = new Set(prev);
+      if (next.has(eid)) next.delete(eid);
+      else next.add(eid);
+      return next;
     });
   }
 
@@ -1820,6 +1974,27 @@ export default function ModulesCalculatieDetail() {
   const regelsByHoofdstuk = HOOFDSTUK_OPTIES
     .map((h) => ({ hoofdstuk: h, regels: directeRegels.filter((r) => (r.hoofdstuk ?? "Overige werkzaamheden") === h) }))
     .filter((g) => g.regels.length > 0);
+
+  // Groepeer directe regels per calculatie-eenheid
+  const regelsByEenheid = eenheden.map((e) => {
+    const eRegels = directeRegels.filter((r) => r.eenheid_id === e.id);
+    const regelsPerHoofdstuk = HOOFDSTUK_OPTIES
+      .map((h) => ({ hoofdstuk: h, regels: eRegels.filter((r) => (r.hoofdstuk ?? "Overige werkzaamheden") === h) }))
+      .filter((g) => g.regels.length > 0);
+    const overigeRegels = eRegels.filter((r) => !HOOFDSTUK_OPTIES.includes(r.hoofdstuk ?? ""));
+    const totaalMat  = rnd(eRegels.reduce((s, r) => s + r.materiaal_totaal, 0));
+    const totaalArb  = rnd(eRegels.reduce((s, r) => s + r.arbeidsloon, 0));
+    const totaalOa   = rnd(eRegels.reduce((s, r) => s + r.onderaanneming_bedrag, 0));
+    const totaalKosten = rnd(totaalMat + totaalArb + totaalOa);
+    return { eenheid: e, regels: eRegels, regelsPerHoofdstuk, overigeRegels, totaalMat, totaalArb, totaalOa, totaalKosten };
+  });
+
+  // Regels zonder eenheid (backward compat)
+  const regelsZonderEenheid = directeRegels.filter((r) => !r.eenheid_id);
+  const regelsZonderEenheidByHoofdstuk = HOOFDSTUK_OPTIES
+    .map((h) => ({ hoofdstuk: h, regels: regelsZonderEenheid.filter((r) => (r.hoofdstuk ?? "Overige werkzaamheden") === h) }))
+    .filter((g) => g.regels.length > 0);
+  const regelsZonderEenheidOverig = regelsZonderEenheid.filter((r) => !HOOFDSTUK_OPTIES.includes(r.hoofdstuk ?? ""));
 
   // Aantal kolommen voor HoofdstukBalk colSpan
   // intern: # + omschrijving + W/P + toepassing + aantal + eenh + mat/stk + mat.tot + norm + arb.tarief + arb.tot + [OA?] + totaal + acties
@@ -1995,6 +2170,10 @@ export default function ModulesCalculatieDetail() {
                   Onderaanneming
                 </button>
                 <span className="text-xs text-muted-foreground hidden sm:block">Klik op een cel om te bewerken &bull; Enter bevestigt</span>
+                <Button variant="outline" size="sm" onClick={openEenheidAanmaken}>
+                  <Building2 className="h-3.5 w-3.5 mr-1.5" />
+                  Eenheid
+                </Button>
                 <Button size="sm" onClick={() => nieuweRegel({})}>
                   <Plus className="h-3.5 w-3.5 mr-1.5" />
                   Regel toevoegen
@@ -2040,11 +2219,82 @@ export default function ModulesCalculatieDetail() {
                     </tr>
                   ) : null}
 
-                  {/* Directe regels per hoofdstuk */}
-                  {regelsByHoofdstuk.map(({ hoofdstuk, regels: hRegels }) => (
-                    <>
+                  {/* Calculatie-eenheden met hun regels */}
+                  {regelsByEenheid.map(({ eenheid: e, regelsPerHoofdstuk, overigeRegels, totaalMat, totaalArb, totaalOa, totaalKosten }) => (
+                    <React.Fragment key={`eenheid-${e.id}`}>
+                      <EenheidBalk
+                        eenheid={e}
+                        aantalKolommen={aantalKolommen}
+                        weergave={weergave}
+                        ingeklapt={ingeklapteEenheden.has(e.id)}
+                        totaalMat={totaalMat}
+                        totaalArb={totaalArb}
+                        totaalOa={totaalOa}
+                        totaalKosten={totaalKosten}
+                        onToggle={() => toggleEenheidIngeklapt(e.id)}
+                        onBewerken={() => openEenheidBewerken(e)}
+                        onVerwijderen={() => verwijderEenheidMut.mutate({ id, eenheidId: e.id })}
+                        onRegelToevoegen={() => nieuweRegel({ eenheid_id: e.id })}
+                      />
+                      {!ingeklapteEenheden.has(e.id) && (
+                        <>
+                          {regelsPerHoofdstuk.map(({ hoofdstuk, regels: hRegels }) => (
+                            <React.Fragment key={`e${e.id}-hst-${hoofdstuk}`}>
+                              <HoofdstukBalk
+                                naam={hoofdstuk}
+                                aantalKolommen={aantalKolommen}
+                                weergave={weergave}
+                                onToevoegen={() => nieuweRegel({ hoofdstuk, eenheid_id: e.id })}
+                              />
+                              {hRegels.map((r) => (
+                                <SpreadsheetRegelRij
+                                  key={r.id}
+                                  rij={r}
+                                  weergave={weergave}
+                                  onSave={bewaarBestaandeRegel}
+                                  onDelete={(rid) => deleteRegelMut.mutate({ id, regelId: rid })}
+                                  onDuplicate={dupliceerRegel}
+                                  onEnterNaRegel={(hs, isSt, isBp) => nieuweRegel({ hoofdstuk: hs, is_staartkosten: isSt, is_bouwplaatskosten: isBp, eenheid_id: e.id })}
+                                  bezig={updateRegelMut.isPending || deleteRegelMut.isPending}
+                                  toonOnderaanneming={toonOnderaanneming}
+                                  tarieven={[]}
+                                />
+                              ))}
+                            </React.Fragment>
+                          ))}
+                          {overigeRegels.length > 0 && (
+                            <>
+                              <HoofdstukBalk
+                                naam="Overige werkzaamheden"
+                                aantalKolommen={aantalKolommen}
+                                weergave={weergave}
+                                onToevoegen={() => nieuweRegel({ hoofdstuk: "Overige werkzaamheden", eenheid_id: e.id })}
+                              />
+                              {overigeRegels.map((r) => (
+                                <SpreadsheetRegelRij
+                                  key={r.id}
+                                  rij={r}
+                                  weergave={weergave}
+                                  onSave={bewaarBestaandeRegel}
+                                  onDelete={(rid) => deleteRegelMut.mutate({ id, regelId: rid })}
+                                  onDuplicate={dupliceerRegel}
+                                  onEnterNaRegel={(hs, isSt, isBp) => nieuweRegel({ hoofdstuk: hs, is_staartkosten: isSt, is_bouwplaatskosten: isBp, eenheid_id: e.id })}
+                                  bezig={updateRegelMut.isPending || deleteRegelMut.isPending}
+                                  toonOnderaanneming={toonOnderaanneming}
+                                  tarieven={[]}
+                                />
+                              ))}
+                            </>
+                          )}
+                        </>
+                      )}
+                    </React.Fragment>
+                  ))}
+
+                  {/* Regels zonder eenheid (backward compat of als er geen eenheden zijn) */}
+                  {(eenheden.length === 0 ? regelsByHoofdstuk : regelsZonderEenheidByHoofdstuk).map(({ hoofdstuk, regels: hRegels }) => (
+                    <React.Fragment key={`hst-${hoofdstuk}`}>
                       <HoofdstukBalk
-                        key={`hst-${hoofdstuk}`}
                         naam={hoofdstuk}
                         aantalKolommen={aantalKolommen}
                         weergave={weergave}
@@ -2064,11 +2314,14 @@ export default function ModulesCalculatieDetail() {
                           tarieven={[]}
                         />
                       ))}
-                    </>
+                    </React.Fragment>
                   ))}
 
-                  {/* Overige directe regels zonder hoofdstuk in regelsByHoofdstuk */}
-                  {directeRegels.filter((r) => !HOOFDSTUK_OPTIES.includes(r.hoofdstuk ?? "")).length > 0 && (
+                  {/* Overige directe regels zonder hoofdstuk en zonder eenheid */}
+                  {(eenheden.length === 0
+                    ? directeRegels.filter((r) => !HOOFDSTUK_OPTIES.includes(r.hoofdstuk ?? ""))
+                    : regelsZonderEenheidOverig
+                  ).length > 0 && (
                     <>
                       <HoofdstukBalk
                         naam="Overige werkzaamheden"
@@ -2076,23 +2329,23 @@ export default function ModulesCalculatieDetail() {
                         weergave={weergave}
                         onToevoegen={() => nieuweRegel({ hoofdstuk: "Overige werkzaamheden" })}
                       />
-                      {directeRegels
-                        .filter((r) => !HOOFDSTUK_OPTIES.includes(r.hoofdstuk ?? ""))
-                        .map((r) => (
-                          <SpreadsheetRegelRij
-                            key={r.id}
-                            rij={r}
-                            weergave={weergave}
-                            onSave={bewaarBestaandeRegel}
-                            onDelete={(rid) => deleteRegelMut.mutate({ id, regelId: rid })}
-                            onDuplicate={dupliceerRegel}
-                            onEnterNaRegel={(hs, isSt, isBp) => nieuweRegel({ hoofdstuk: hs, is_staartkosten: isSt, is_bouwplaatskosten: isBp })}
-                            bezig={updateRegelMut.isPending || deleteRegelMut.isPending}
-                            toonOnderaanneming={toonOnderaanneming}
-                            tarieven={[]}
-                          />
-                        ))
-                      }
+                      {(eenheden.length === 0
+                        ? directeRegels.filter((r) => !HOOFDSTUK_OPTIES.includes(r.hoofdstuk ?? ""))
+                        : regelsZonderEenheidOverig
+                      ).map((r) => (
+                        <SpreadsheetRegelRij
+                          key={r.id}
+                          rij={r}
+                          weergave={weergave}
+                          onSave={bewaarBestaandeRegel}
+                          onDelete={(rid) => deleteRegelMut.mutate({ id, regelId: rid })}
+                          onDuplicate={dupliceerRegel}
+                          onEnterNaRegel={(hs, isSt, isBp) => nieuweRegel({ hoofdstuk: hs, is_staartkosten: isSt, is_bouwplaatskosten: isBp })}
+                          bezig={updateRegelMut.isPending || deleteRegelMut.isPending}
+                          toonOnderaanneming={toonOnderaanneming}
+                          tarieven={[]}
+                        />
+                      ))}
                     </>
                   )}
 
@@ -2612,6 +2865,48 @@ export default function ModulesCalculatieDetail() {
               ))
             )}
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Eenheid aanmaken / bewerken */}
+      <Dialog open={eenheidDialoogOpen} onOpenChange={setEenheidDialoogOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{eenheidBewerken ? "Eenheid bewerken" : "Eenheid toevoegen"}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">Naam</label>
+              <input
+                type="text"
+                value={eenheidNaam}
+                onChange={(e) => setEenheidNaam(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") slaEenheidOp(); }}
+                placeholder="bijv. Woning A"
+                className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm shadow-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                autoFocus
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">Type</label>
+              <Select value={eenheidType} onValueChange={setEenheidType}>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(EENHEID_TYPE_LABEL).map(([k, v]) => (
+                    <SelectItem key={k} value={k}>{v}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEenheidDialoogOpen(false)}>Annuleren</Button>
+            <Button onClick={slaEenheidOp} disabled={!eenheidNaam.trim() || maakEenheidMut.isPending || updateEenheidMut.isPending}>
+              {eenheidBewerken ? "Opslaan" : "Toevoegen"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

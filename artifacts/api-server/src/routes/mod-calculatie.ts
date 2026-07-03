@@ -12,6 +12,7 @@ import {
   modCalcVersiesTable,
   modCalcInkoopItemsTable,
   modCalcAdviezenTable,
+  modCalcEenhedenTable,
   gebouwenTable,
   gebruikersTable,
   voorzieningenTable,
@@ -156,6 +157,7 @@ function mapRegel(r: typeof modCalcRegelsTable.$inferSelect, normtijdCode?: stri
   return {
     id: r.id,
     calculatie_id: r.calculatieId,
+    eenheid_id: (r as any).eenheidId ?? null,
     categorie: r.categorie,
     omschrijving: r.omschrijving,
     normtijd_id: r.normtijdId,
@@ -805,6 +807,93 @@ router.post("/modules/calculaties/:id/dupliceer", aanmakenCalc, async (req, res)
 
 // ── Calculatie regels ──────────────────────────────────────────────────────
 
+// ── Calculatie-eenheden CRUD ────────────────────────────────────────────────
+router.get("/modules/calculaties/:id/eenheden", lezenCalc, async (req, res) => {
+  try {
+    const id = parseId(req.params["id"]);
+    const rows = await db
+      .select()
+      .from(modCalcEenhedenTable)
+      .where(eq(modCalcEenhedenTable.calculatieId, id))
+      .orderBy(asc(modCalcEenhedenTable.volgorde), asc(modCalcEenhedenTable.id));
+    res.json(rows.map((e) => ({
+      id: e.id,
+      calculatie_id: e.calculatieId,
+      naam: e.naam,
+      type: e.type,
+      volgorde: e.volgorde,
+      aangemaakt_op: e.aangemaaktOp.toISOString(),
+      bijgewerkt_op: e.bijgewerktOp.toISOString(),
+    })));
+  } catch (e) {
+    req.log.error(e);
+    res.status(500).json({ error: "Interne fout" });
+  }
+});
+
+router.post("/modules/calculaties/:id/eenheden", schrijvenCalc, async (req, res) => {
+  try {
+    const id = parseId(req.params["id"]);
+    const body = req.body as Record<string, unknown>;
+    const { naam, type = "vrije_projecteenheid", volgorde = 0 } = body;
+    if (!naam) return res.status(400).json({ error: "naam is verplicht" });
+    const [row] = await db.insert(modCalcEenhedenTable).values({
+      calculatieId: id,
+      naam: String(naam),
+      type: String(type),
+      volgorde: Number(volgorde),
+    }).returning();
+    res.status(201).json({
+      id: row.id,
+      calculatie_id: row.calculatieId,
+      naam: row.naam,
+      type: row.type,
+      volgorde: row.volgorde,
+      aangemaakt_op: row.aangemaaktOp.toISOString(),
+      bijgewerkt_op: row.bijgewerktOp.toISOString(),
+    });
+  } catch (e) {
+    req.log.error(e);
+    res.status(500).json({ error: "Interne fout" });
+  }
+});
+
+router.patch("/modules/calculaties/:id/eenheden/:eenheidId", schrijvenCalc, async (req, res) => {
+  try {
+    const eenheidId = parseId(req.params["eenheidId"]);
+    const body = req.body as Record<string, unknown>;
+    const update: Partial<typeof modCalcEenhedenTable.$inferInsert> = { bijgewerktOp: new Date() };
+    if (body.naam !== undefined) update.naam = String(body.naam);
+    if (body.type !== undefined) update.type = String(body.type);
+    if (body.volgorde !== undefined) update.volgorde = Number(body.volgorde);
+    const [row] = await db.update(modCalcEenhedenTable).set(update).where(eq(modCalcEenhedenTable.id, eenheidId)).returning();
+    if (!row) return res.status(404).json({ error: "Niet gevonden" });
+    res.json({
+      id: row.id,
+      calculatie_id: row.calculatieId,
+      naam: row.naam,
+      type: row.type,
+      volgorde: row.volgorde,
+      aangemaakt_op: row.aangemaaktOp.toISOString(),
+      bijgewerkt_op: row.bijgewerktOp.toISOString(),
+    });
+  } catch (e) {
+    req.log.error(e);
+    res.status(500).json({ error: "Interne fout" });
+  }
+});
+
+router.delete("/modules/calculaties/:id/eenheden/:eenheidId", schrijvenCalc, async (req, res) => {
+  try {
+    const eenheidId = parseId(req.params["eenheidId"]);
+    await db.delete(modCalcEenhedenTable).where(eq(modCalcEenhedenTable.id, eenheidId));
+    res.status(204).end();
+  } catch (e) {
+    req.log.error(e);
+    res.status(500).json({ error: "Interne fout" });
+  }
+});
+
 router.get("/modules/calculaties/:id/regels", lezenCalc, async (req, res) => {
   try {
     const id = parseId(req.params["id"]);
@@ -831,13 +920,14 @@ router.post("/modules/calculaties/:id/regels", schrijvenCalc, async (req, res) =
     const { categorie = "arbeid", omschrijving, normtijd_id, eenheid = "st", volgorde = 0, opmerkingen,
       regelnummer, is_staartkosten = false, is_bouwplaatskosten = false,
       hoofdstuk = "Overige werkzaamheden", klanttekst, btw_tarief = "21",
-      wand_plafond, toepassing_tekst } = body;
+      wand_plafond, toepassing_tekst, eenheid_id } = body;
     if (!omschrijving) return res.status(400).json({ error: "omschrijving is verplicht" });
 
     const { hv, t, mu, at, ob, totaal } = berekenRegelTotaal(body);
 
     const [row] = await db.insert(modCalcRegelsTable).values({
       calculatieId: id,
+      eenheidId: eenheid_id ? Number(eenheid_id) : null,
       categorie: String(categorie),
       omschrijving: String(omschrijving),
       normtijdId: normtijd_id ? Number(normtijd_id) : null,
@@ -878,6 +968,7 @@ router.patch("/modules/calculaties/:id/regels/:regelId", schrijvenCalc, async (r
     const { hv, t, mu, at, ob, totaal } = berekenRegelTotaal(body, existing as any);
 
     const update: Partial<typeof modCalcRegelsTable.$inferInsert> = { bijgewerktOp: new Date() };
+    if (body.eenheid_id !== undefined) (update as any).eenheidId = body.eenheid_id ? Number(body.eenheid_id) : null;
     if (body.categorie !== undefined) update.categorie = String(body.categorie);
     if (body.omschrijving !== undefined) update.omschrijving = String(body.omschrijving);
     if (body.normtijd_id !== undefined) update.normtijdId = body.normtijd_id ? Number(body.normtijd_id) : null;

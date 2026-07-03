@@ -79,9 +79,20 @@ export const modCalcHeadersTable = pgTable("mod_calc_headers", {
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
 });
 
+export const modCalcEenhedenTable = pgTable("mod_calc_eenheden", {
+  id: serial("id").primaryKey(),
+  calculatieId: integer("calculatie_id").notNull().references(() => modCalcHeadersTable.id, { onDelete: "cascade" }),
+  naam: text("naam").notNull(),
+  type: text("type").notNull().default("vrije_projecteenheid"),
+  volgorde: integer("volgorde").notNull().default(0),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+  bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+});
+
 export const modCalcRegelsTable = pgTable("mod_calc_regels", {
   id: serial("id").primaryKey(),
   calculatieId: integer("calculatie_id").notNull().references(() => modCalcHeadersTable.id, { onDelete: "cascade" }),
+  eenheidId: integer("eenheid_id").references(() => modCalcEenhedenTable.id, { onDelete: "set null" }),
   categorie: text("categorie").notNull().default("arbeid"),
   omschrijving: text("omschrijving").notNull(),
   normtijdId: integer("normtijd_id").references(() => modCalcNormtijdenTable.id, { onDelete: "set null" }),

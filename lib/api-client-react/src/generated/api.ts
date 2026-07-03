@@ -76,6 +76,8 @@ import type {
   BruikleenRetourgaveInput,
   CalcAdvies,
   CalcAdviesUpdate,
+  CalcEenheid,
+  CalcEenheidInput,
   Calculatie,
   CalculatieDetail,
   CalculatieInput,
@@ -39723,6 +39725,299 @@ export const useMaakOfferteVanCalculatie = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getMaakOfferteVanCalculatieMutationOptions(options));
+    }
+
+export const getListModCalcEenhedenUrl = (id: number,) => {
+
+
+
+
+  return `/api/modules/calculaties/${id}/eenheden`
+}
+
+/**
+ * @summary Calculatie-eenheden ophalen
+ */
+export const listModCalcEenheden = async (id: number, options?: RequestInit): Promise<CalcEenheid[]> => {
+
+  return customFetch<CalcEenheid[]>(getListModCalcEenhedenUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListModCalcEenhedenQueryKey = (id: number,) => {
+    return [
+    `/api/modules/calculaties/${id}/eenheden`
+    ] as const;
+    }
+
+
+export const getListModCalcEenhedenQueryOptions = <TData = Awaited<ReturnType<typeof listModCalcEenheden>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listModCalcEenheden>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListModCalcEenhedenQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listModCalcEenheden>>> = ({ signal }) => listModCalcEenheden(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listModCalcEenheden>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListModCalcEenhedenQueryResult = NonNullable<Awaited<ReturnType<typeof listModCalcEenheden>>>
+export type ListModCalcEenhedenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Calculatie-eenheden ophalen
+ */
+
+export function useListModCalcEenheden<TData = Awaited<ReturnType<typeof listModCalcEenheden>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listModCalcEenheden>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListModCalcEenhedenQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateModCalcEenheidUrl = (id: number,) => {
+
+
+
+
+  return `/api/modules/calculaties/${id}/eenheden`
+}
+
+/**
+ * @summary Calculatie-eenheid aanmaken
+ */
+export const createModCalcEenheid = async (id: number,
+    calcEenheidInput: CalcEenheidInput, options?: RequestInit): Promise<CalcEenheid> => {
+
+  return customFetch<CalcEenheid>(getCreateModCalcEenheidUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(calcEenheidInput)
+  }
+);}
+
+
+
+
+export const getCreateModCalcEenheidMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createModCalcEenheid>>, TError,{id: number;data: BodyType<CalcEenheidInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createModCalcEenheid>>, TError,{id: number;data: BodyType<CalcEenheidInput>}, TContext> => {
+
+const mutationKey = ['createModCalcEenheid'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createModCalcEenheid>>, {id: number;data: BodyType<CalcEenheidInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  createModCalcEenheid(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateModCalcEenheidMutationResult = NonNullable<Awaited<ReturnType<typeof createModCalcEenheid>>>
+    export type CreateModCalcEenheidMutationBody = BodyType<CalcEenheidInput>
+    export type CreateModCalcEenheidMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Calculatie-eenheid aanmaken
+ */
+export const useCreateModCalcEenheid = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createModCalcEenheid>>, TError,{id: number;data: BodyType<CalcEenheidInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createModCalcEenheid>>,
+        TError,
+        {id: number;data: BodyType<CalcEenheidInput>},
+        TContext
+      > => {
+      return useMutation(getCreateModCalcEenheidMutationOptions(options));
+    }
+
+export const getUpdateModCalcEenheidUrl = (id: number,
+    eenheidId: number,) => {
+
+
+
+
+  return `/api/modules/calculaties/${id}/eenheden/${eenheidId}`
+}
+
+/**
+ * @summary Calculatie-eenheid bijwerken
+ */
+export const updateModCalcEenheid = async (id: number,
+    eenheidId: number,
+    calcEenheidInput: CalcEenheidInput, options?: RequestInit): Promise<CalcEenheid> => {
+
+  return customFetch<CalcEenheid>(getUpdateModCalcEenheidUrl(id,eenheidId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(calcEenheidInput)
+  }
+);}
+
+
+
+
+export const getUpdateModCalcEenheidMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateModCalcEenheid>>, TError,{id: number;eenheidId: number;data: BodyType<CalcEenheidInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateModCalcEenheid>>, TError,{id: number;eenheidId: number;data: BodyType<CalcEenheidInput>}, TContext> => {
+
+const mutationKey = ['updateModCalcEenheid'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateModCalcEenheid>>, {id: number;eenheidId: number;data: BodyType<CalcEenheidInput>}> = (props) => {
+          const {id,eenheidId,data} = props ?? {};
+
+          return  updateModCalcEenheid(id,eenheidId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateModCalcEenheidMutationResult = NonNullable<Awaited<ReturnType<typeof updateModCalcEenheid>>>
+    export type UpdateModCalcEenheidMutationBody = BodyType<CalcEenheidInput>
+    export type UpdateModCalcEenheidMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Calculatie-eenheid bijwerken
+ */
+export const useUpdateModCalcEenheid = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateModCalcEenheid>>, TError,{id: number;eenheidId: number;data: BodyType<CalcEenheidInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateModCalcEenheid>>,
+        TError,
+        {id: number;eenheidId: number;data: BodyType<CalcEenheidInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateModCalcEenheidMutationOptions(options));
+    }
+
+export const getDeleteModCalcEenheidUrl = (id: number,
+    eenheidId: number,) => {
+
+
+
+
+  return `/api/modules/calculaties/${id}/eenheden/${eenheidId}`
+}
+
+/**
+ * @summary Calculatie-eenheid verwijderen
+ */
+export const deleteModCalcEenheid = async (id: number,
+    eenheidId: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteModCalcEenheidUrl(id,eenheidId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteModCalcEenheidMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteModCalcEenheid>>, TError,{id: number;eenheidId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteModCalcEenheid>>, TError,{id: number;eenheidId: number}, TContext> => {
+
+const mutationKey = ['deleteModCalcEenheid'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteModCalcEenheid>>, {id: number;eenheidId: number}> = (props) => {
+          const {id,eenheidId} = props ?? {};
+
+          return  deleteModCalcEenheid(id,eenheidId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteModCalcEenheidMutationResult = NonNullable<Awaited<ReturnType<typeof deleteModCalcEenheid>>>
+
+    export type DeleteModCalcEenheidMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Calculatie-eenheid verwijderen
+ */
+export const useDeleteModCalcEenheid = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteModCalcEenheid>>, TError,{id: number;eenheidId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteModCalcEenheid>>,
+        TError,
+        {id: number;eenheidId: number},
+        TContext
+      > => {
+      return useMutation(getDeleteModCalcEenheidMutationOptions(options));
     }
 
 export const getListModCalcRegelsUrl = (id: number,) => {

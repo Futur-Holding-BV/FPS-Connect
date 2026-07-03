@@ -4,6 +4,18 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-03 — Calculatie-eenheden (projectstructuur hiërarchie)
+
+**Uitvoering:** volledig | **Diepere lagen:** volledig | **Getest:** typecheck firevault + api-server schoon (0 fouten), workflows gezond
+
+Nieuw niveau in de calculatiestructuur: **Calculatie-eenheid** boven Hoofdstuk. Hiërarchie is nu Project → Calculatie-eenheid → Hoofdstuk → Calculatieregel → Subregel.
+
+- **DB**: `mod_calc_eenheden` tabel aangemaakt via SQL ALTER (id, calculatie_id, naam, type, volgorde); `eenheid_id` nullable FK op `mod_calc_regels`.
+- **Drizzle schema** (`lib/db/src/schema/mod-calculatie.ts`): `modCalcEenhedenTable` + `eenheidId` op `modCalcRegelsTable`.
+- **OpenAPI** (`lib/api-spec/openapi.yaml`): `CalcEenheid` + `CalcEenheidInput` schemas; CRUD-paden `/modules/calculaties/{id}/eenheden` (GET/POST) + `/{eenheidId}` (PUT/DELETE); `eenheid_id` op `ModCalcRegel` en `ModCalcRegelInput`. Codegen geslaagd.
+- **Route handlers** (`artifacts/api-server/src/routes/mod-calculatie.ts`): 4 nieuwe CRUD-handlers voor eenheden; `mapRegel` geeft `eenheid_id` terug; create/update regel accepteren `eenheid_id`.
+- **detail.tsx**: `EenheidBalk` component (uitklap/inklapbaar, per-eenheid subtotalen mat/arb/OA, bewerkbaar/verwijderbaar); eenheden-groepering in spreadsheet boven hoofdstukken; regels zonder eenheid in eigen sectie (backward compat); "Eenheid"-knop in toolbar; CRUD-dialoog (naam + type-dropdown, 11 types); `ingeklapteEenheden` Set-state; `toggleEenheidIngeklapt`, `openEenheidAanmaken`, `openEenheidBewerken`, `slaEenheidOp` functies; `nieuweRegel` accepteert `eenheid_id` zodat "Regel"-knop per eenheid direct de juiste eenheid-koppeling zet.
+
 ## 2026-07-03 — AI Senior Werkvoorbereider bij Werkbegroting
 
 **Uitvoering:** volledig | **Diepere lagen:** volledig | **Getest:** typecheck firevault + api-server schoon, workflows gezond

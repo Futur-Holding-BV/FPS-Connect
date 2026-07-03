@@ -13645,6 +13645,7 @@ export const GetModCalculatieResponse = zod.object({
   "regels": zod.array(zod.object({
   "id": zod.number(),
   "calculatie_id": zod.number(),
+  "eenheid_id": zod.number().nullish(),
   "categorie": zod.string(),
   "omschrijving": zod.string(),
   "normtijd_id": zod.number().nullish(),
@@ -13768,6 +13769,85 @@ export const MaakOfferteVanCalculatieResponse = zod.void()
 
 
 /**
+ * @summary Calculatie-eenheden ophalen
+ */
+export const ListModCalcEenhedenParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const listModCalcEenhedenResponseTypeDefault = `vrije_projecteenheid`;
+
+export const ListModCalcEenhedenResponseItem = zod.object({
+  "id": zod.number(),
+  "calculatie_id": zod.number(),
+  "naam": zod.string(),
+  "type": zod.string().default(listModCalcEenhedenResponseTypeDefault).describe('woning | appartement | kamer | ruimte | verdieping | compartiment | schacht | bouwdeel | gevel | installatiezone | vrije_projecteenheid'),
+  "volgorde": zod.number(),
+  "aangemaakt_op": zod.coerce.date(),
+  "bijgewerkt_op": zod.coerce.date()
+})
+export const ListModCalcEenhedenResponse = zod.array(ListModCalcEenhedenResponseItem)
+
+
+/**
+ * @summary Calculatie-eenheid aanmaken
+ */
+export const CreateModCalcEenheidParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const createModCalcEenheidBodyTypeDefault = `vrije_projecteenheid`;
+
+export const CreateModCalcEenheidBody = zod.object({
+  "naam": zod.string(),
+  "type": zod.string().default(createModCalcEenheidBodyTypeDefault),
+  "volgorde": zod.number().optional()
+})
+
+export const CreateModCalcEenheidResponse = zod.void()
+
+
+/**
+ * @summary Calculatie-eenheid bijwerken
+ */
+export const UpdateModCalcEenheidParams = zod.object({
+  "id": zod.coerce.number(),
+  "eenheidId": zod.coerce.number()
+})
+
+export const updateModCalcEenheidBodyTypeDefault = `vrije_projecteenheid`;
+
+export const UpdateModCalcEenheidBody = zod.object({
+  "naam": zod.string(),
+  "type": zod.string().default(updateModCalcEenheidBodyTypeDefault),
+  "volgorde": zod.number().optional()
+})
+
+export const updateModCalcEenheidResponseTypeDefault = `vrije_projecteenheid`;
+
+export const UpdateModCalcEenheidResponse = zod.object({
+  "id": zod.number(),
+  "calculatie_id": zod.number(),
+  "naam": zod.string(),
+  "type": zod.string().default(updateModCalcEenheidResponseTypeDefault).describe('woning | appartement | kamer | ruimte | verdieping | compartiment | schacht | bouwdeel | gevel | installatiezone | vrije_projecteenheid'),
+  "volgorde": zod.number(),
+  "aangemaakt_op": zod.coerce.date(),
+  "bijgewerkt_op": zod.coerce.date()
+})
+
+
+/**
+ * @summary Calculatie-eenheid verwijderen
+ */
+export const DeleteModCalcEenheidParams = zod.object({
+  "id": zod.coerce.number(),
+  "eenheidId": zod.coerce.number()
+})
+
+export const DeleteModCalcEenheidResponse = zod.void()
+
+
+/**
  * @summary Calculatieregels ophalen
  */
 export const ListModCalcRegelsParams = zod.object({
@@ -13780,6 +13860,7 @@ export const listModCalcRegelsResponseBtwTariefDefault = `21`;
 export const ListModCalcRegelsResponseItem = zod.object({
   "id": zod.number(),
   "calculatie_id": zod.number(),
+  "eenheid_id": zod.number().nullish(),
   "categorie": zod.string(),
   "omschrijving": zod.string(),
   "normtijd_id": zod.number().nullish(),
@@ -13816,6 +13897,7 @@ export const CreateModCalcRegelParams = zod.object({
 })
 
 export const CreateModCalcRegelBody = zod.object({
+  "eenheid_id": zod.number().nullish(),
   "categorie": zod.string(),
   "omschrijving": zod.string(),
   "normtijd_id": zod.number().nullish(),
@@ -13849,6 +13931,7 @@ export const UpdateModCalcRegelParams = zod.object({
 })
 
 export const UpdateModCalcRegelBody = zod.object({
+  "eenheid_id": zod.number().nullish(),
   "categorie": zod.string(),
   "omschrijving": zod.string(),
   "normtijd_id": zod.number().nullish(),
@@ -13876,6 +13959,7 @@ export const updateModCalcRegelResponseBtwTariefDefault = `21`;
 export const UpdateModCalcRegelResponse = zod.object({
   "id": zod.number(),
   "calculatie_id": zod.number(),
+  "eenheid_id": zod.number().nullish(),
   "categorie": zod.string(),
   "omschrijving": zod.string(),
   "normtijd_id": zod.number().nullish(),
@@ -13923,6 +14007,7 @@ export const AiModCalcRegelsParams = zod.object({
 
 export const AiModCalcRegelsResponse = zod.object({
   "regels": zod.array(zod.object({
+  "eenheid_id": zod.number().nullish(),
   "categorie": zod.string(),
   "omschrijving": zod.string(),
   "normtijd_id": zod.number().nullish(),

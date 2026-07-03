@@ -11166,6 +11166,98 @@ paths:
         '404':
           description: Calculatie niet gevonden
 
+  /modules/calculaties/{id}/eenheden:
+    get:
+      operationId: listModCalcEenheden
+      summary: Calculatie-eenheden ophalen
+      tags: [CalulatieModule]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CalcEenheid'
+    post:
+      operationId: createModCalcEenheid
+      summary: Calculatie-eenheid aanmaken
+      tags: [CalulatieModule]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CalcEenheidInput'
+      responses:
+        '201':
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalcEenheid'
+
+  /modules/calculaties/{id}/eenheden/{eenheidId}:
+    patch:
+      operationId: updateModCalcEenheid
+      summary: Calculatie-eenheid bijwerken
+      tags: [CalulatieModule]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: eenheidId
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CalcEenheidInput'
+      responses:
+        '200':
+          description: Bijgewerkt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalcEenheid'
+    delete:
+      operationId: deleteModCalcEenheid
+      summary: Calculatie-eenheid verwijderen
+      tags: [CalulatieModule]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: eenheidId
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Verwijderd
+
   /modules/calculaties/{id}/regels:
     get:
       operationId: listModCalcRegels
@@ -26390,6 +26482,41 @@ components:
         winst_is_vast:
           type: boolean
 
+    CalcEenheid:
+      type: object
+      required: [id, calculatie_id, naam, type, volgorde, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id:
+          type: integer
+        calculatie_id:
+          type: integer
+        naam:
+          type: string
+        type:
+          type: string
+          description: 'woning | appartement | kamer | ruimte | verdieping | compartiment | schacht | bouwdeel | gevel | installatiezone | vrije_projecteenheid'
+          default: vrije_projecteenheid
+        volgorde:
+          type: integer
+        aangemaakt_op:
+          type: string
+          format: date-time
+        bijgewerkt_op:
+          type: string
+          format: date-time
+
+    CalcEenheidInput:
+      type: object
+      required: [naam]
+      properties:
+        naam:
+          type: string
+        type:
+          type: string
+          default: vrije_projecteenheid
+        volgorde:
+          type: integer
+
     ModCalcRegel:
       type: object
       required: [id, calculatie_id, categorie, omschrijving, eenheid, hoeveelheid, tarief, totaal, volgorde]
@@ -26398,6 +26525,9 @@ components:
           type: integer
         calculatie_id:
           type: integer
+        eenheid_id:
+          type: integer
+          nullable: true
         categorie:
           type: string
         omschrijving:
@@ -26462,6 +26592,9 @@ components:
       type: object
       required: [categorie, omschrijving, eenheid, hoeveelheid, tarief]
       properties:
+        eenheid_id:
+          type: integer
+          nullable: true
         categorie:
           type: string
         omschrijving:
