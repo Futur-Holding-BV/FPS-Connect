@@ -4,6 +4,25 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-03 — Financiële Controle & Factuurmodule: F0 Idempotency + F1 Datamodel
+
+**Uitvoering:** volledig | **Diepere lagen:** volledig | **Getest:** DB push + codegen geslaagd, typecheck (0 nieuwe fouten), server 200 OK
+
+Fundament voor de Masteropdracht Financiële Controle & Factuurmodule. Twee fasen in één atomaire checkpoint:
+
+**F0 — Idempotency guard (herexport)**
+1. **Herexport-route geblokkeerd bij identieke payload** — Na `payloadHash`-berekening controleer op bestaande geslaagde export-log met dezelfde hash + factuurId. Bij match → HTTP 409 "Identieke herexport geblokkeerd". Voorkomt dubbele AccountView-boeking bij meervoudig klikken of race-condition.
+
+**F1 — Datamodel (alle wijzigingen additief)**
+2. **Nieuwe tabel `factuur_regels`** — Gespecificeerde regellijnen per factuur (omschrijving, hoeveelheid, eenheid, stukprijs, bedrag excl. BTW, BTW-code/percentage/bedrag, grootboekrekening, kostenplaats, categorie, bron ai|handmatig|inkooporder|regie|termijn|meerwerk). FK cascade naar facturen.
+3. **Nieuwe tabel `factuur_termijnen`** — Termijnschema per opdracht (volgnummer, omschrijving, percentage, bedrag, status gepland|factureerbaar|gefactureerd). FK naar opdrachten + soft-koppeling factuurId.
+4. **Facturen tabel uitgebreid** — 10 nieuwe kolommen: `opdracht_id` (FK opdrachten), `inkoopbon_id` (soft ref), `categorie`, `voorstel_bron`, `voorstel_bron_id`, `g_rekening_van_toepassing`, `g_rekening_bedrag`, `normaal_bedrag`, `iban_uitgelezen`, `iban_afwijking`.
+5. **Leveranciers tabel uitgebreid** — G-rekening velden: `g_rekening_van_toepassing`, `g_rekening_iban`, `g_rekening_percentage`.
+6. **CRUD routes factuurregels** — GET/POST/PATCH/DELETE `/facturen/:id/regels` achter `requireBevoegdheid("financieel", 1/2)`.
+7. **CRUD routes factuur-termijnen** — GET/POST/PATCH `/opdrachten/:opdrachtId/factuur-termijnen` achter `requireBevoegdheid("financieel", 1/2)`.
+8. **OpenAPI spec uitgebreid** — 4 nieuwe paden + schemas `FactuurRegel`, `FactuurRegelInput`, `FactuurTermijn`, `FactuurTermijnInput`.
+9. **Codegen uitgevoerd** — React Query hooks en Zod-schemas hergenereerd.
+
 ## 2026-07-03 — Herstelblokkade Task #181: TypeScript-fouten en data-integriteitsbug
 
 **Uitvoering:** volledig | **Diepere lagen:** volledig | **Getest:** typecheck clean (0 nieuwe fouten) + vitest 59/59

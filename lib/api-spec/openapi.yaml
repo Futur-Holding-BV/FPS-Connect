@@ -14207,6 +14207,181 @@ paths:
               schema:
                 $ref: "#/components/schemas/FinancieelDashboard"
 
+  /facturen/{id}/regels:
+    get:
+      operationId: listFactuurRegels
+      summary: Regellijnen van een factuur ophalen
+      tags: [Facturen]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Lijst van regellijnen
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FactuurRegel"
+    post:
+      operationId: createFactuurRegel
+      summary: Regellijn toevoegen aan factuur
+      tags: [Facturen]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FactuurRegelInput"
+      responses:
+        "201":
+          description: Regellijn aangemaakt
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, factuur_id, regelnummer]
+                properties:
+                  id: { type: integer }
+                  factuur_id: { type: integer }
+                  regelnummer: { type: integer }
+
+  /facturen/{id}/regels/{rid}:
+    patch:
+      operationId: updateFactuurRegel
+      summary: Regellijn bijwerken
+      tags: [Facturen]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+        - name: rid
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FactuurRegelInput"
+      responses:
+        "200":
+          description: Bijgewerkt
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, bijgewerkt_op]
+                properties:
+                  id: { type: integer }
+                  bijgewerkt_op: { type: string }
+    delete:
+      operationId: deleteFactuurRegel
+      summary: Regellijn verwijderen
+      tags: [Facturen]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+        - name: rid
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "204":
+          description: Verwijderd
+
+  /opdrachten/{opdrachtId}/factuur-termijnen:
+    get:
+      operationId: listFactuurTermijnen
+      summary: Termijnschema van een opdracht ophalen
+      tags: [Opdrachten]
+      parameters:
+        - name: opdrachtId
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Lijst van termijnen
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FactuurTermijn"
+    post:
+      operationId: createFactuurTermijn
+      summary: Termijn toevoegen aan opdracht
+      tags: [Opdrachten]
+      parameters:
+        - name: opdrachtId
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FactuurTermijnInput"
+      responses:
+        "201":
+          description: Termijn aangemaakt
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, opdracht_id, volgnummer]
+                properties:
+                  id: { type: integer }
+                  opdracht_id: { type: integer }
+                  volgnummer: { type: integer }
+
+  /opdrachten/{opdrachtId}/factuur-termijnen/{tid}:
+    patch:
+      operationId: updateFactuurTermijn
+      summary: Termijn bijwerken
+      tags: [Opdrachten]
+      parameters:
+        - name: opdrachtId
+          in: path
+          required: true
+          schema: { type: integer }
+        - name: tid
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FactuurTermijnInput"
+      responses:
+        "200":
+          description: Bijgewerkt
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, status, bijgewerkt_op]
+                properties:
+                  id: { type: integer }
+                  status: { type: string }
+                  bijgewerkt_op: { type: string }
+
   /financieel/onderhanden-werk:
     get:
       operationId: listOnderhandenWerk
@@ -29264,6 +29439,76 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/AccountviewExportResultaat"
+
+    FactuurRegel:
+      type: object
+      required: [id, factuur_id, regelnummer, omschrijving, bron, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id: { type: integer }
+        factuur_id: { type: integer }
+        regelnummer: { type: integer }
+        omschrijving: { type: string }
+        hoeveelheid: { type: number, nullable: true }
+        eenheid: { type: string, nullable: true }
+        stukprijs: { type: string, nullable: true }
+        bedrag_excl_btw: { type: string, nullable: true }
+        btw_code: { type: string, nullable: true }
+        btw_percentage: { type: number, nullable: true }
+        btw_bedrag: { type: string, nullable: true }
+        grootboekrekening: { type: string, nullable: true }
+        kostenplaats: { type: string, nullable: true }
+        categorie: { type: string, nullable: true }
+        inkoopbon_regel_id: { type: integer, nullable: true }
+        bron: { type: string }
+        ai_vertrouwen: { type: number, nullable: true }
+        aangemaakt_op: { type: string }
+        bijgewerkt_op: { type: string }
+
+    FactuurRegelInput:
+      type: object
+      required: [omschrijving]
+      properties:
+        regelnummer: { type: integer }
+        omschrijving: { type: string }
+        hoeveelheid: { type: number, nullable: true }
+        eenheid: { type: string, nullable: true }
+        stukprijs: { type: string, nullable: true }
+        bedrag_excl_btw: { type: string, nullable: true }
+        btw_code: { type: string, nullable: true }
+        btw_percentage: { type: number, nullable: true }
+        btw_bedrag: { type: string, nullable: true }
+        grootboekrekening: { type: string, nullable: true }
+        kostenplaats: { type: string, nullable: true }
+        categorie: { type: string, nullable: true }
+        inkoopbon_regel_id: { type: integer, nullable: true }
+        bron: { type: string }
+
+    FactuurTermijn:
+      type: object
+      required: [id, opdracht_id, volgnummer, status, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id: { type: integer }
+        opdracht_id: { type: integer }
+        volgnummer: { type: integer }
+        omschrijving: { type: string, nullable: true }
+        percentage: { type: number, nullable: true }
+        bedrag: { type: string, nullable: true }
+        status: { type: string }
+        factuur_id: { type: integer, nullable: true }
+        vervaldatum: { type: string, nullable: true }
+        aangemaakt_op: { type: string }
+        bijgewerkt_op: { type: string }
+
+    FactuurTermijnInput:
+      type: object
+      properties:
+        volgnummer: { type: integer }
+        omschrijving: { type: string, nullable: true }
+        percentage: { type: number, nullable: true }
+        bedrag: { type: string, nullable: true }
+        status: { type: string }
+        factuur_id: { type: integer, nullable: true }
+        vervaldatum: { type: string, nullable: true }
 
     FinancieelDashboard:
       type: object

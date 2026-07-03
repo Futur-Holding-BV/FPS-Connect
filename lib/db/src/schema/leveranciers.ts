@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer, boolean, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, boolean, timestamp, real } from "drizzle-orm/pg-core";
 
 export const leveranciersTable = pgTable("leveranciers", {
   id: serial("id").primaryKey(),
@@ -44,6 +44,13 @@ export const leveranciersTable = pgTable("leveranciers", {
   // Classificatie
   categorie: text("categorie"),                          // bijv. "Branddeuren", "Doorvoeringen"
   productcategorieen: text("productcategorieen"),        // vrij tekstveld of kommalijst
+
+  // G-rekening (wettelijke verplichting bouwsector)
+  // Wanneer een leverancier een onderbouwer is met G-rekening-verplichting,
+  // worden inkomende facturen automatisch gesignaleerd voor splitsing.
+  gRekeningVanToepassing: boolean("g_rekening_van_toepassing").notNull().default(false),
+  gRekeningIban: text("g_rekening_iban"),                 // IBAN van de G-rekening
+  gRekeningPercentage: real("g_rekening_percentage"),     // % van loonsom dat naar G-rekening gaat
 
   // Meta
   notities: text("notities"),

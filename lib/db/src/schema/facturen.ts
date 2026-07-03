@@ -3,6 +3,7 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { gebouwenTable } from "./gebouwen";
 import { gebruikersTable } from "./gebruikers";
+import { opdrachtenTable } from "./opdrachten";
 
 // ── AccountView instellingen (singleton per installatie) ──────────────────────
 export const accountviewInstellingenTable = pgTable("accountview_instellingen", {
@@ -125,6 +126,29 @@ export const facturenTable = pgTable("facturen", {
   // Extra controle door medewerker (door projectleider toegewezen)
   beoordelaarId: integer("beoordelaar_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
 
+  // Opdracht/project-koppeling (voor verkoopfacturen en gelinkte inkoopfacturen)
+  opdrachtId: integer("opdracht_id").references(() => opdrachtenTable.id, { onDelete: "set null" }),
+  inkoopbonId: integer("inkoopbon_id"), // soft ref naar inkoopbonnen.id (geen FK — cross-schema dep)
+
+  // Factuurcategorie (structureert inkoopfacturen)
+  // projectmateriaal | onderaanneming | algemene_kosten | investering | wagenpark |
+  // gereedschap | magazijn | representatie | software | verzekering | correctie
+  categorie: text("categorie"),
+
+  // Verkoopfactuurvoorstel — bron van het voorstel
+  // oplevering | regie | meerwerk | termijn | weekstaat | onderhoud | handmatig
+  voorstelBron: text("voorstel_bron"),
+  voorstelBronId: integer("voorstel_bron_id"), // ID van de bronentiteit
+
+  // G-rekening (wettelijke verplichting bouwsector bij specifieke projecttypen)
+  gRekeningVanToepassing: boolean("g_rekening_van_toepassing").notNull().default(false),
+  gRekeningBedrag: numeric("g_rekening_bedrag", { precision: 12, scale: 2 }),
+  normaalBedrag: numeric("normaal_bedrag", { precision: 12, scale: 2 }), // bedrag incl. BTW minus G-rekening-deel
+
+  // IBAN-verificatie: AI leest IBAN uit PDF — systeem vergelijkt met geregistreerd leveranciers-IBAN
+  ibanUitgelezen: text("iban_uitgelezen"),
+  ibanAfwijking: boolean("iban_afwijking").notNull().default(false),
+
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
 });
@@ -204,3 +228,77 @@ export const accountviewProjectMappingTable = pgTable("accountview_project_mappi
 });
 
 export type AccountviewProjectMapping = typeof accountviewProjectMappingTable.$inferSelect;
+
+// ── Factuurregels (gespecificeerde regellijnen per factuur) ───────────────────
+// Elke factuur kan nul of meer regels bevatten. AI vult ze in op basis van
+// PDF-extractie; administratie kan ze bewerken of handmatig toevoegen.
+// Bron: ai | handmatig | inkooporder | regie | termijn | meerwerk
+// Categorie (inkoopfactuur): projectmateriaal | onderaanneming | algemene_kosten |
+//   investering | wagenpark | gereedschap | magazijn | representatie |
+//   software | verzekering | correctie
+export const factuurRegelsTable = pgTable("factuur_regels", {
+  id: serial("id").primaryKey(),
+  factuurId: integer("factuur_id").notNull().references(() => facturenTable.id, { onDelete: "cascade" }),
+
+  regelnummer: integer("regelnummer").notNull().default(1),
+  omschrijving: text("omschrijving").notNull(),
+  hoeveelheid: real("hoeveelheid"),
+  eenheid: text("eenheid"),                                // stuks | uur | m2 | m | kg | ...
+  stukprijs: numeric("stukprijs", { precision: 12, scale: 2 }),
+  bedragExclBtw: numeric("bedrag_excl_btw", { precision: 12, scale: 2 }),
+
+  // BTW per regel — masteropdracht vereist meerdere BTW-tarieven op één factuur
+  btwCode: text("btw_code"),                               // H (21%) | L (9%) | V (verlegd) | 0
+  btwPercentage: real("btw_percentage"),                   // 0 | 9 | 21
+  btwBedrag: numeric("btw_bedrag", { precision: 12, scale: 2 }),
+
+  // Boekhoudkundige velden per regel
+  grootboekrekening: text("grootboekrekening"),
+  kostenplaats: text("kostenplaats"),
+  categorie: text("categorie"),
+
+  // Koppeling aan inkoopbon-regel voor 3-weg matching
+  inkoopbonRegelId: integer("inkoopbon_regel_id"),         // soft ref — geen FK (cross-schema)
+
+  // Herkomst van de regel
+  bron: text("bron").notNull().default("handmatig"),       // ai | handmatig | inkooporder | regie | termijn | meerwerk
+  aiVertrouwen: real("ai_vertrouwen"),                     // 0.0–1.0; null = handmatig
+
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+  bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+});
+
+export const insertFactuurRegelSchema = createInsertSchema(factuurRegelsTable).omit({
+  id: true, aangemaaktOp: true, bijgewerktOp: true,
+});
+export type InsertFactuurRegel = z.infer<typeof insertFactuurRegelSchema>;
+export type FactuurRegel = typeof factuurRegelsTable.$inferSelect;
+
+// ── Factuur-termijnen (termijnschema per opdracht) ────────────────────────────
+// Definieert het facturatieschema van een opdracht: bijv. 30% bij opdracht,
+// 40% halverwege, 30% bij oplevering. Wanneer een termijn gefactureerd wordt,
+// wordt factuurId gevuld en status gezet op "gefactureerd".
+// Status: gepland | factureerbaar | gefactureerd
+export const factuurTermijnenTable = pgTable("factuur_termijnen", {
+  id: serial("id").primaryKey(),
+  opdrachtId: integer("opdracht_id").notNull().references(() => opdrachtenTable.id, { onDelete: "cascade" }),
+
+  volgnummer: integer("volgnummer").notNull(),
+  omschrijving: text("omschrijving"),
+  percentage: real("percentage"),                          // % van contractsom (0–100)
+  bedrag: numeric("bedrag", { precision: 12, scale: 2 }), // berekend of handmatig ingevuld
+  status: text("status").notNull().default("gepland"),     // gepland | factureerbaar | gefactureerd
+
+  // Koppeling aan de gemaakte factuur (gezet zodra factuur is aangemaakt)
+  factuurId: integer("factuur_id").references(() => facturenTable.id, { onDelete: "set null" }),
+
+  vervaldatum: text("vervaldatum"),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+  bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+});
+
+export const insertFactuurTermijnSchema = createInsertSchema(factuurTermijnenTable).omit({
+  id: true, aangemaaktOp: true, bijgewerktOp: true,
+});
+export type InsertFactuurTermijn = z.infer<typeof insertFactuurTermijnSchema>;
+export type FactuurTermijn = typeof factuurTermijnenTable.$inferSelect;

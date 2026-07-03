@@ -18116,6 +18116,174 @@ export const GetFinancieelDashboardResponse = zod.object({
 
 
 /**
+ * @summary Regellijnen van een factuur ophalen
+ */
+export const ListFactuurRegelsParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListFactuurRegelsResponseItem = zod.object({
+  "id": zod.number(),
+  "factuur_id": zod.number(),
+  "regelnummer": zod.number(),
+  "omschrijving": zod.string(),
+  "hoeveelheid": zod.number().nullish(),
+  "eenheid": zod.string().nullish(),
+  "stukprijs": zod.string().nullish(),
+  "bedrag_excl_btw": zod.string().nullish(),
+  "btw_code": zod.string().nullish(),
+  "btw_percentage": zod.number().nullish(),
+  "btw_bedrag": zod.string().nullish(),
+  "grootboekrekening": zod.string().nullish(),
+  "kostenplaats": zod.string().nullish(),
+  "categorie": zod.string().nullish(),
+  "inkoopbon_regel_id": zod.number().nullish(),
+  "bron": zod.string(),
+  "ai_vertrouwen": zod.number().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+export const ListFactuurRegelsResponse = zod.array(ListFactuurRegelsResponseItem)
+
+
+/**
+ * @summary Regellijn toevoegen aan factuur
+ */
+export const CreateFactuurRegelParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const CreateFactuurRegelBody = zod.object({
+  "regelnummer": zod.number().optional(),
+  "omschrijving": zod.string(),
+  "hoeveelheid": zod.number().nullish(),
+  "eenheid": zod.string().nullish(),
+  "stukprijs": zod.string().nullish(),
+  "bedrag_excl_btw": zod.string().nullish(),
+  "btw_code": zod.string().nullish(),
+  "btw_percentage": zod.number().nullish(),
+  "btw_bedrag": zod.string().nullish(),
+  "grootboekrekening": zod.string().nullish(),
+  "kostenplaats": zod.string().nullish(),
+  "categorie": zod.string().nullish(),
+  "inkoopbon_regel_id": zod.number().nullish(),
+  "bron": zod.string().optional()
+})
+
+export const CreateFactuurRegelResponse = zod.void()
+
+
+/**
+ * @summary Regellijn bijwerken
+ */
+export const UpdateFactuurRegelParams = zod.object({
+  "id": zod.coerce.number(),
+  "rid": zod.coerce.number()
+})
+
+export const UpdateFactuurRegelBody = zod.object({
+  "regelnummer": zod.number().optional(),
+  "omschrijving": zod.string(),
+  "hoeveelheid": zod.number().nullish(),
+  "eenheid": zod.string().nullish(),
+  "stukprijs": zod.string().nullish(),
+  "bedrag_excl_btw": zod.string().nullish(),
+  "btw_code": zod.string().nullish(),
+  "btw_percentage": zod.number().nullish(),
+  "btw_bedrag": zod.string().nullish(),
+  "grootboekrekening": zod.string().nullish(),
+  "kostenplaats": zod.string().nullish(),
+  "categorie": zod.string().nullish(),
+  "inkoopbon_regel_id": zod.number().nullish(),
+  "bron": zod.string().optional()
+})
+
+export const UpdateFactuurRegelResponse = zod.object({
+  "id": zod.number(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Regellijn verwijderen
+ */
+export const DeleteFactuurRegelParams = zod.object({
+  "id": zod.coerce.number(),
+  "rid": zod.coerce.number()
+})
+
+export const DeleteFactuurRegelResponse = zod.void()
+
+
+/**
+ * @summary Termijnschema van een opdracht ophalen
+ */
+export const ListFactuurTermijnenParams = zod.object({
+  "opdrachtId": zod.coerce.number()
+})
+
+export const ListFactuurTermijnenResponseItem = zod.object({
+  "id": zod.number(),
+  "opdracht_id": zod.number(),
+  "volgnummer": zod.number(),
+  "omschrijving": zod.string().nullish(),
+  "percentage": zod.number().nullish(),
+  "bedrag": zod.string().nullish(),
+  "status": zod.string(),
+  "factuur_id": zod.number().nullish(),
+  "vervaldatum": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+export const ListFactuurTermijnenResponse = zod.array(ListFactuurTermijnenResponseItem)
+
+
+/**
+ * @summary Termijn toevoegen aan opdracht
+ */
+export const CreateFactuurTermijnParams = zod.object({
+  "opdrachtId": zod.coerce.number()
+})
+
+export const CreateFactuurTermijnBody = zod.object({
+  "volgnummer": zod.number().optional(),
+  "omschrijving": zod.string().nullish(),
+  "percentage": zod.number().nullish(),
+  "bedrag": zod.string().nullish(),
+  "status": zod.string().optional(),
+  "factuur_id": zod.number().nullish(),
+  "vervaldatum": zod.string().nullish()
+})
+
+export const CreateFactuurTermijnResponse = zod.void()
+
+
+/**
+ * @summary Termijn bijwerken
+ */
+export const UpdateFactuurTermijnParams = zod.object({
+  "opdrachtId": zod.coerce.number(),
+  "tid": zod.coerce.number()
+})
+
+export const UpdateFactuurTermijnBody = zod.object({
+  "volgnummer": zod.number().optional(),
+  "omschrijving": zod.string().nullish(),
+  "percentage": zod.number().nullish(),
+  "bedrag": zod.string().nullish(),
+  "status": zod.string().optional(),
+  "factuur_id": zod.number().nullish(),
+  "vervaldatum": zod.string().nullish()
+})
+
+export const UpdateFactuurTermijnResponse = zod.object({
+  "id": zod.number(),
+  "status": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
  * @summary Onderhanden werk overzicht per project (peildatum)
  */
 export const ListOnderhandenWerkQueryParams = zod.object({

@@ -7426,6 +7426,69 @@ export interface BatchExportResultaat {
   resultaten: AccountviewExportResultaat[];
 }
 
+export interface FactuurRegel {
+  id: number;
+  factuur_id: number;
+  regelnummer: number;
+  omschrijving: string;
+  hoeveelheid?: number | null;
+  eenheid?: string | null;
+  stukprijs?: string | null;
+  bedrag_excl_btw?: string | null;
+  btw_code?: string | null;
+  btw_percentage?: number | null;
+  btw_bedrag?: string | null;
+  grootboekrekening?: string | null;
+  kostenplaats?: string | null;
+  categorie?: string | null;
+  inkoopbon_regel_id?: number | null;
+  bron: string;
+  ai_vertrouwen?: number | null;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export interface FactuurRegelInput {
+  regelnummer?: number;
+  omschrijving: string;
+  hoeveelheid?: number | null;
+  eenheid?: string | null;
+  stukprijs?: string | null;
+  bedrag_excl_btw?: string | null;
+  btw_code?: string | null;
+  btw_percentage?: number | null;
+  btw_bedrag?: string | null;
+  grootboekrekening?: string | null;
+  kostenplaats?: string | null;
+  categorie?: string | null;
+  inkoopbon_regel_id?: number | null;
+  bron?: string;
+}
+
+export interface FactuurTermijn {
+  id: number;
+  opdracht_id: number;
+  volgnummer: number;
+  omschrijving?: string | null;
+  percentage?: number | null;
+  bedrag?: string | null;
+  status: string;
+  factuur_id?: number | null;
+  vervaldatum?: string | null;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export interface FactuurTermijnInput {
+  volgnummer?: number;
+  omschrijving?: string | null;
+  percentage?: number | null;
+  bedrag?: string | null;
+  status?: string;
+  factuur_id?: number | null;
+  vervaldatum?: string | null;
+}
+
 export interface FinancieelDashboard {
   facturen_totaal: number;
   inkoop_totaal: number;
@@ -9888,6 +9951,29 @@ actie?: string;
 van?: string;
 tot?: string;
 limit?: number;
+};
+
+export type CreateFactuurRegel201 = {
+  id: number;
+  factuur_id: number;
+  regelnummer: number;
+};
+
+export type UpdateFactuurRegel200 = {
+  id: number;
+  bijgewerkt_op: string;
+};
+
+export type CreateFactuurTermijn201 = {
+  id: number;
+  opdracht_id: number;
+  volgnummer: number;
+};
+
+export type UpdateFactuurTermijn200 = {
+  id: number;
+  status: string;
+  bijgewerkt_op: string;
 };
 
 export type ListOnderhandenWerkParams = {
