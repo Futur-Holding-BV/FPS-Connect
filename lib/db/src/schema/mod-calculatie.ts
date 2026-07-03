@@ -143,25 +143,36 @@ export const modCalcAdviezenTable = pgTable("mod_calc_adviezen", {
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
 });
 
-// Calculatie inkoopitems — offerteaanvragen bij leveranciers/onderaannemers tijdens de calculatiefase
+// Calculatie inkoopitems / RFQ — offerteaanvragen bij leveranciers/onderaannemers tijdens de calculatiefase
 export const modCalcInkoopItemsTable = pgTable("mod_calc_inkoop_items", {
-  id:                  serial("id").primaryKey(),
-  calculatieId:        integer("calculatie_id").notNull().references(() => modCalcHeadersTable.id, { onDelete: "cascade" }),
-  type:                text("type").notNull().default("materiaal"),    // materiaal | onderaanneming
-  omschrijving:        text("omschrijving").notNull(),
-  artikel:             text("artikel"),
-  leverancier:         text("leverancier"),
-  gekozenLeverancier:  text("gekozen_leverancier"),
-  aantal:              real("aantal").default(1),
-  eenheid:             text("eenheid").default("st"),
-  prijs:               real("prijs"),
-  offerteOntvangen:    boolean("offerte_ontvangen").notNull().default(false),
-  levertijd:           text("levertijd"),
-  status:              text("status").notNull().default("te_versturen"), // te_versturen | verstuurd | ontvangen | akkoord
-  datumVerstuurd:      text("datum_verstuurd"),
-  datumOntvangen:      text("datum_ontvangen"),
-  bedrag:              real("bedrag"),
-  notities:            text("notities"),
-  aangemaaktOp:        timestamp("aangemaakt_op").notNull().defaultNow(),
-  bijgewerktOp:        timestamp("bijgewerkt_op").notNull().defaultNow(),
+  id:                    serial("id").primaryKey(),
+  calculatieId:          integer("calculatie_id").notNull().references(() => modCalcHeadersTable.id, { onDelete: "cascade" }),
+  regelId:               integer("regel_id").references(() => modCalcRegelsTable.id, { onDelete: "set null" }),
+  type:                  text("type").notNull().default("materiaal"),    // materiaal | onderaanneming
+  omschrijving:          text("omschrijving").notNull(),
+  artikel:               text("artikel"),
+  leverancier:           text("leverancier"),
+  leverancierId:         integer("leverancier_id").references(() => modCalcLeveranciersTable.id, { onDelete: "set null" }),
+  leverancierEmail:      text("leverancier_email"),
+  gekozenLeverancier:    text("gekozen_leverancier"),
+  aantal:                real("aantal").default(1),
+  eenheid:               text("eenheid").default("st"),
+  prijs:                 real("prijs"),
+  offerteOntvangen:      boolean("offerte_ontvangen").notNull().default(false),
+  levertijd:             text("levertijd"),
+  // RFQ-datums
+  reactiedatum:          text("reactiedatum"),
+  beslisdatum:           text("beslisdatum"),
+  leverdatum:            text("leverdatum"),
+  toelichting:           text("toelichting"),
+  conceptMail:           text("concept_mail"),
+  herinneringVerstuurd:  boolean("herinnering_verstuurd").notNull().default(false),
+  // Status: concept | te_versturen | verstuurd | wacht_op_leverancier | herinnering_nodig | ontvangen | intern_te_verwerken | verwerkt | gekozen | afgewezen | vervallen
+  status:                text("status").notNull().default("concept"),
+  datumVerstuurd:        text("datum_verstuurd"),
+  datumOntvangen:        text("datum_ontvangen"),
+  bedrag:                real("bedrag"),
+  notities:              text("notities"),
+  aangemaaktOp:          timestamp("aangemaakt_op").notNull().defaultNow(),
+  bijgewerktOp:          timestamp("bijgewerkt_op").notNull().defaultNow(),
 });

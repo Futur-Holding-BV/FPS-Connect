@@ -14137,17 +14137,26 @@ export const ListModCalcInkoopItemsParams = zod.object({
 export const ListModCalcInkoopItemsResponseItem = zod.object({
   "id": zod.number(),
   "calculatie_id": zod.number(),
+  "regel_id": zod.number().nullish(),
   "type": zod.string().describe('materiaal | onderaanneming'),
   "omschrijving": zod.string(),
   "artikel": zod.string().nullish(),
   "leverancier": zod.string().nullish(),
+  "leverancier_id": zod.number().nullish(),
+  "leverancier_email": zod.string().nullish(),
   "gekozen_leverancier": zod.string().nullish(),
   "aantal": zod.number().nullish(),
   "eenheid": zod.string().nullish(),
   "prijs": zod.number().nullish(),
   "offerte_ontvangen": zod.boolean().optional(),
   "levertijd": zod.string().nullish(),
-  "status": zod.string().describe('te_versturen | verstuurd | ontvangen | akkoord'),
+  "reactiedatum": zod.string().nullish(),
+  "beslisdatum": zod.string().nullish(),
+  "leverdatum": zod.string().nullish(),
+  "toelichting": zod.string().nullish(),
+  "concept_mail": zod.string().nullish(),
+  "herinnering_verstuurd": zod.boolean().optional(),
+  "status": zod.string().describe('concept | te_versturen | verstuurd | wacht_op_leverancier | herinnering_nodig | ontvangen | intern_te_verwerken | verwerkt | gekozen | afgewezen | vervallen'),
   "datum_verstuurd": zod.string().nullish(),
   "datum_ontvangen": zod.string().nullish(),
   "bedrag": zod.number().nullish(),
@@ -14166,16 +14175,25 @@ export const CreateModCalcInkoopItemParams = zod.object({
 })
 
 export const CreateModCalcInkoopItemBody = zod.object({
+  "regel_id": zod.number().nullish(),
   "type": zod.string().optional(),
   "omschrijving": zod.string().optional(),
   "artikel": zod.string().nullish(),
   "leverancier": zod.string().nullish(),
+  "leverancier_id": zod.number().nullish(),
+  "leverancier_email": zod.string().nullish(),
   "gekozen_leverancier": zod.string().nullish(),
   "aantal": zod.number().nullish(),
   "eenheid": zod.string().nullish(),
   "prijs": zod.number().nullish(),
   "offerte_ontvangen": zod.boolean().optional(),
   "levertijd": zod.string().nullish(),
+  "reactiedatum": zod.string().nullish(),
+  "beslisdatum": zod.string().nullish(),
+  "leverdatum": zod.string().nullish(),
+  "toelichting": zod.string().nullish(),
+  "concept_mail": zod.string().nullish(),
+  "herinnering_verstuurd": zod.boolean().optional(),
   "status": zod.string().optional(),
   "datum_verstuurd": zod.string().nullish(),
   "datum_ontvangen": zod.string().nullish(),
@@ -14195,16 +14213,25 @@ export const UpdateModCalcInkoopItemParams = zod.object({
 })
 
 export const UpdateModCalcInkoopItemBody = zod.object({
+  "regel_id": zod.number().nullish(),
   "type": zod.string().optional(),
   "omschrijving": zod.string().optional(),
   "artikel": zod.string().nullish(),
   "leverancier": zod.string().nullish(),
+  "leverancier_id": zod.number().nullish(),
+  "leverancier_email": zod.string().nullish(),
   "gekozen_leverancier": zod.string().nullish(),
   "aantal": zod.number().nullish(),
   "eenheid": zod.string().nullish(),
   "prijs": zod.number().nullish(),
   "offerte_ontvangen": zod.boolean().optional(),
   "levertijd": zod.string().nullish(),
+  "reactiedatum": zod.string().nullish(),
+  "beslisdatum": zod.string().nullish(),
+  "leverdatum": zod.string().nullish(),
+  "toelichting": zod.string().nullish(),
+  "concept_mail": zod.string().nullish(),
+  "herinnering_verstuurd": zod.boolean().optional(),
   "status": zod.string().optional(),
   "datum_verstuurd": zod.string().nullish(),
   "datum_ontvangen": zod.string().nullish(),
@@ -14215,17 +14242,26 @@ export const UpdateModCalcInkoopItemBody = zod.object({
 export const UpdateModCalcInkoopItemResponse = zod.object({
   "id": zod.number(),
   "calculatie_id": zod.number(),
+  "regel_id": zod.number().nullish(),
   "type": zod.string().describe('materiaal | onderaanneming'),
   "omschrijving": zod.string(),
   "artikel": zod.string().nullish(),
   "leverancier": zod.string().nullish(),
+  "leverancier_id": zod.number().nullish(),
+  "leverancier_email": zod.string().nullish(),
   "gekozen_leverancier": zod.string().nullish(),
   "aantal": zod.number().nullish(),
   "eenheid": zod.string().nullish(),
   "prijs": zod.number().nullish(),
   "offerte_ontvangen": zod.boolean().optional(),
   "levertijd": zod.string().nullish(),
-  "status": zod.string().describe('te_versturen | verstuurd | ontvangen | akkoord'),
+  "reactiedatum": zod.string().nullish(),
+  "beslisdatum": zod.string().nullish(),
+  "leverdatum": zod.string().nullish(),
+  "toelichting": zod.string().nullish(),
+  "concept_mail": zod.string().nullish(),
+  "herinnering_verstuurd": zod.boolean().optional(),
+  "status": zod.string().describe('concept | te_versturen | verstuurd | wacht_op_leverancier | herinnering_nodig | ontvangen | intern_te_verwerken | verwerkt | gekozen | afgewezen | vervallen'),
   "datum_verstuurd": zod.string().nullish(),
   "datum_ontvangen": zod.string().nullish(),
   "bedrag": zod.number().nullish(),
@@ -14244,6 +14280,19 @@ export const DeleteModCalcInkoopItemParams = zod.object({
 })
 
 export const DeleteModCalcInkoopItemResponse = zod.void()
+
+
+/**
+ * @summary AI-conceptmail genereren voor RFQ
+ */
+export const GenerateRfqConceptMailParams = zod.object({
+  "id": zod.coerce.number(),
+  "itemId": zod.coerce.number()
+})
+
+export const GenerateRfqConceptMailResponse = zod.object({
+  "concept_mail": zod.string()
+})
 
 
 /**

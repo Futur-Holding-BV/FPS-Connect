@@ -4,6 +4,32 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-03 — RFQ Increment 2 — UI inkoopregels uitgebreid met offerteaanvraag-velden
+
+**Uitvoering:** volledig | **Diepere lagen:** volledig | **Getest:** typecheck firevault + api-server schoon (0 fouten), workflows gezond
+
+Inkoopregelskaart in de calculatie-detailpagina volledig uitgebreid met RFQ-functionaliteit:
+
+- **11 statussen** (concept → te_versturen → verstuurd → wacht_op_leverancier → herinnering_nodig → ontvangen → intern_te_verwerken → verwerkt → gekozen → afgewezen / vervallen), elk met eigen kleur; klik op badge gaat naar volgende status
+- **Nieuwe velden**: leverancier_email, reactiedatum, beslisdatum, leverdatum, toelichting (extern), interne notities — zowel in aanmaak- als bewerkformulier
+- **Uitklappaneel** per item (chevron-knop): toont datums, e-mail, toelichting/notities compact; bevat de AI-conceptmail-knop
+- **Signalering verlopen reactiedatum**: rood label in rij en in uitklappaneel als reactiedatum verstreken is en status nog actief
+- **AI conceptmail-knop**: genereert via `useGenerateRfqConceptMail` een bewerkbare mail in het uitklappaneel (Textarea editeerbaar)
+- **Teller koptekst**: toont `(N/T gekozen · €X)` i.p.v. alleen akkoord-teller; sluit aan op nieuwe statusflow
+- **leegInkoopForm** status gewijzigd van "te_versturen" naar "concept" (passend bij nieuwe statusflow)
+- `useGenerateRfqConceptMail` geïmporteerd uit `@workspace/api-client-react`
+
+## 2026-07-03 — RFQ Increment 1 — DB-uitbreiding + OpenAPI + route handlers
+
+**Uitvoering:** volledig | **Diepere lagen:** volledig | **Getest:** typecheck firevault + api-server schoon (0 fouten), workflows gezond
+
+Fundament voor RFQ (offerteaanvragen per calculatieregel) gelegd:
+
+- **DB** (`mod_calc_inkoop_items`): 8 nieuwe kolommen via ALTER TABLE — `regel_id` (FK→mod_calc_regels nullable), `leverancier_id` (FK→mod_calc_leveranciers nullable), `leverancier_email`, `reactiedatum`, `beslisdatum`, `leverdatum`, `toelichting`, `concept_mail`, `herinnering_verstuurd`; status default gewijzigd van "te_versturen" naar "concept"
+- **Drizzle schema** (`lib/db/src/schema/mod-calculatie.ts`): `modCalcInkoopItemsTable` uitgebreid met alle nieuwe velden
+- **OpenAPI** (`lib/api-spec/openapi.yaml`): `ModCalcInkoopItem` + `ModCalcInkoopItemInput` uitgebreid; nieuw endpoint `POST /modules/calculaties/{id}/inkoop-items/{itemId}/concept-mail`; codegen geslaagd (`useGenerateRfqConceptMail` hook gegenereerd)
+- **Route handlers** (`artifacts/api-server/src/routes/mod-calculatie.ts`): `mapInkoopItem` geeft alle nieuwe velden terug; POST/PATCH accepteren nieuwe velden; AI-conceptmail endpoint gebruikt `aiGateway.chat("default")`
+
 ## 2026-07-03 — Calculatie-eenheden (projectstructuur hiërarchie)
 
 **Uitvoering:** volledig | **Diepere lagen:** volledig | **Getest:** typecheck firevault + api-server schoon (0 fouten), workflows gezond

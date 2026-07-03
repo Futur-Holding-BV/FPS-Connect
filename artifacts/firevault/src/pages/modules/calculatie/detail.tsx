@@ -16,6 +16,7 @@ import {
   useCreateModCalcInkoopItem,
   useUpdateModCalcInkoopItem,
   useDeleteModCalcInkoopItem,
+  useGenerateRfqConceptMail,
   getListModCalcInkoopItemsQueryKey,
   useAiChatCalculatie,
   useListOpnames,
@@ -1365,22 +1366,47 @@ function MonteurView({ regels }: { regels: RegelRow[] }) {
 // ─── Inkoopregels kaart ───────────────────────────────────────────────────────
 
 const INKOOP_STATUS_LABEL: Record<string, string> = {
-  te_versturen: "Te versturen",
-  verstuurd:    "Verstuurd",
-  ontvangen:    "Ontvangen",
-  akkoord:      "Akkoord",
+  concept:               "Concept",
+  te_versturen:          "Te versturen",
+  verstuurd:             "Verstuurd",
+  wacht_op_leverancier:  "Wacht op leverancier",
+  herinnering_nodig:     "Herinnering nodig",
+  ontvangen:             "Ontvangen",
+  intern_te_verwerken:   "Intern te verwerken",
+  verwerkt:              "Verwerkt",
+  gekozen:               "Gekozen",
+  afgewezen:             "Afgewezen",
+  vervallen:             "Vervallen",
+  // legacy
+  akkoord:               "Akkoord",
 };
 const INKOOP_STATUS_KLEUR: Record<string, string> = {
-  te_versturen: "bg-muted text-muted-foreground border-border",
-  verstuurd:    "bg-blue-100 text-blue-800 border-blue-200",
-  ontvangen:    "bg-amber-100 text-amber-800 border-amber-200",
-  akkoord:      "bg-green-100 text-green-800 border-green-200",
+  concept:               "bg-muted text-muted-foreground border-border",
+  te_versturen:          "bg-muted text-muted-foreground border-border",
+  verstuurd:             "bg-blue-100 text-blue-800 border-blue-200",
+  wacht_op_leverancier:  "bg-blue-100 text-blue-700 border-blue-200",
+  herinnering_nodig:     "bg-orange-100 text-orange-800 border-orange-200",
+  ontvangen:             "bg-amber-100 text-amber-800 border-amber-200",
+  intern_te_verwerken:   "bg-amber-100 text-amber-700 border-amber-200",
+  verwerkt:              "bg-teal-100 text-teal-800 border-teal-200",
+  gekozen:               "bg-green-100 text-green-800 border-green-200",
+  afgewezen:             "bg-red-100 text-red-700 border-red-200",
+  vervallen:             "bg-gray-100 text-gray-500 border-gray-200",
+  akkoord:               "bg-green-100 text-green-800 border-green-200",
 };
 const INKOOP_STATUS_VOLGEND: Record<string, string | null> = {
-  te_versturen: "verstuurd",
-  verstuurd:    "ontvangen",
-  ontvangen:    "akkoord",
-  akkoord:      null,
+  concept:               "te_versturen",
+  te_versturen:          "verstuurd",
+  verstuurd:             "wacht_op_leverancier",
+  wacht_op_leverancier:  "ontvangen",
+  herinnering_nodig:     "ontvangen",
+  ontvangen:             "intern_te_verwerken",
+  intern_te_verwerken:   "verwerkt",
+  verwerkt:              "gekozen",
+  gekozen:               null,
+  afgewezen:             null,
+  vervallen:             null,
+  akkoord:               null,
 };
 const INKOOP_TYPE_LABEL: Record<string, string> = {
   materiaal:       "Materiaal",
@@ -1392,19 +1418,24 @@ type InkoopForm = {
   omschrijving: string;
   artikel: string;
   leverancier: string;
+  leverancier_email: string;
   gekozen_leverancier: string;
   aantal: string;
   eenheid: string;
   prijs: string;
   offerte_ontvangen: boolean;
   levertijd: string;
+  reactiedatum: string;
+  beslisdatum: string;
+  leverdatum: string;
+  toelichting: string;
   status: string;
   bedrag: string;
   notities: string;
 };
 
 function InkoopregelsKaart({
-  items, nieuwOpen, setNieuwOpen, form, setForm, bewerken, setBewerken,
+  calculatieId, items, nieuwOpen, setNieuwOpen, form, setForm, bewerken, setBewerken,
   onAanmaken, onStatusWijzigen, onOpslaan, onVerwijderen,
 }: {
   calculatieId: number;
@@ -1420,10 +1451,21 @@ function InkoopregelsKaart({
   onOpslaan: (itemId: number, d: Record<string, unknown>) => void;
   onVerwijderen: (itemId: number) => void;
 }) {
+  const [uitgebreidId, setUitgebreidId] = useState<number | null>(null);
+  const [conceptMail, setConceptMail] = useState<string>("");
+  const [conceptMailItemId, setConceptMailItemId] = useState<number | null>(null);
+  const [conceptMailLaden, setConceptMailLaden] = useState(false);
+  const conceptMailMut = useGenerateRfqConceptMail();
+
   const groepen: { type: string; items: ModCalcInkoopItem[] }[] = [
     { type: "materiaal",      items: items.filter((i) => i.type === "materiaal") },
     { type: "onderaanneming", items: items.filter((i) => i.type === "onderaanneming") },
   ].filter((g) => g.items.length > 0 || nieuwOpen);
+
+  const geenGekozen = items.filter((i) => i.status === "gekozen").length;
+  const totaalGekozen = items
+    .filter((i) => i.status === "gekozen")
+    .reduce((s, i) => s + (i.bedrag ?? 0), 0);
 
   function handleAanmaken() {
     if (!form.omschrijving.trim()) return;
@@ -1432,12 +1474,17 @@ function InkoopregelsKaart({
       omschrijving: form.omschrijving.trim(),
       artikel: form.artikel || undefined,
       leverancier: form.leverancier || undefined,
+      leverancier_email: form.leverancier_email || undefined,
       gekozen_leverancier: form.gekozen_leverancier || undefined,
       aantal: form.aantal ? parseFloat(form.aantal) : undefined,
       eenheid: form.eenheid || undefined,
       prijs: form.prijs ? parseFloat(form.prijs) : undefined,
       offerte_ontvangen: form.offerte_ontvangen || undefined,
       levertijd: form.levertijd || undefined,
+      reactiedatum: form.reactiedatum || undefined,
+      beslisdatum: form.beslisdatum || undefined,
+      leverdatum: form.leverdatum || undefined,
+      toelichting: form.toelichting || undefined,
       status: form.status,
       bedrag: form.bedrag ? parseFloat(form.bedrag) : undefined,
       notities: form.notities || undefined,
@@ -1450,12 +1497,17 @@ function InkoopregelsKaart({
       omschrijving: form.omschrijving.trim(),
       artikel: form.artikel || null,
       leverancier: form.leverancier || null,
+      leverancier_email: form.leverancier_email || null,
       gekozen_leverancier: form.gekozen_leverancier || null,
       aantal: form.aantal ? parseFloat(form.aantal) : null,
       eenheid: form.eenheid || null,
       prijs: form.prijs ? parseFloat(form.prijs) : null,
       offerte_ontvangen: form.offerte_ontvangen,
       levertijd: form.levertijd || null,
+      reactiedatum: form.reactiedatum || null,
+      beslisdatum: form.beslisdatum || null,
+      leverdatum: form.leverdatum || null,
+      toelichting: form.toelichting || null,
       status: form.status,
       bedrag: form.bedrag ? parseFloat(form.bedrag) : null,
       notities: form.notities || null,
@@ -1469,19 +1521,52 @@ function InkoopregelsKaart({
       omschrijving: item.omschrijving,
       artikel: (item as any).artikel ?? "",
       leverancier: item.leverancier ?? "",
+      leverancier_email: (item as any).leverancier_email ?? "",
       gekozen_leverancier: (item as any).gekozen_leverancier ?? "",
       aantal: (item as any).aantal != null ? String((item as any).aantal) : "",
       eenheid: (item as any).eenheid ?? "st",
       prijs: (item as any).prijs != null ? String((item as any).prijs) : "",
       offerte_ontvangen: (item as any).offerte_ontvangen ?? false,
       levertijd: (item as any).levertijd ?? "",
+      reactiedatum: (item as any).reactiedatum ?? "",
+      beslisdatum: (item as any).beslisdatum ?? "",
+      leverdatum: (item as any).leverdatum ?? "",
+      toelichting: (item as any).toelichting ?? "",
       status: item.status,
       bedrag: item.bedrag != null ? String(item.bedrag) : "",
       notities: item.notities ?? "",
     }));
   }
 
+  function handleGenereerConceptMail(itemId: number) {
+    setConceptMailItemId(itemId);
+    setConceptMail("");
+    setConceptMailLaden(true);
+    conceptMailMut.mutate(
+      { id: calculatieId, itemId },
+      {
+        onSuccess: (data: any) => {
+          setConceptMail(data?.concept_mail ?? "");
+          setConceptMailLaden(false);
+        },
+        onError: () => {
+          setConceptMail("Kon geen conceptmail genereren. Controleer de gegevens en probeer opnieuw.");
+          setConceptMailLaden(false);
+        },
+      }
+    );
+  }
+
   const fmt = (v: number) => new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(v);
+  const fmtDatum = (d: string | null | undefined) => {
+    if (!d) return null;
+    try { return new Date(d).toLocaleDateString("nl-NL", { day: "numeric", month: "short" }); }
+    catch { return d; }
+  };
+  const isVerlopen = (d: string | null | undefined) => {
+    if (!d) return false;
+    return new Date(d) < new Date();
+  };
 
   return (
     <div className="space-y-4">
@@ -1491,11 +1576,21 @@ function InkoopregelsKaart({
           Inkoopregels
           {items.length > 0 && (
             <span className="text-xs font-normal text-muted-foreground">
-              ({items.filter((i) => i.status === "akkoord").length}/{items.length} akkoord)
+              ({geenGekozen}/{items.length} gekozen{geenGekozen > 0 ? ` · ${fmt(totaalGekozen)}` : ""})
             </span>
           )}
         </h2>
-        <Button size="sm" variant="outline" onClick={() => { setNieuwOpen(true); setBewerken(null); setForm(() => ({ type: "materiaal", omschrijving: "", artikel: "", leverancier: "", gekozen_leverancier: "", aantal: "", eenheid: "st", prijs: "", offerte_ontvangen: false, levertijd: "", status: "te_versturen", bedrag: "", notities: "" })); }}>
+        <Button size="sm" variant="outline" onClick={() => {
+          setNieuwOpen(true);
+          setBewerken(null);
+          setForm(() => ({
+            type: "materiaal", omschrijving: "", artikel: "", leverancier: "",
+            leverancier_email: "", gekozen_leverancier: "", aantal: "", eenheid: "st",
+            prijs: "", offerte_ontvangen: false, levertijd: "",
+            reactiedatum: "", beslisdatum: "", leverdatum: "", toelichting: "",
+            status: "concept", bedrag: "", notities: "",
+          }));
+        }}>
           <Plus className="h-3.5 w-3.5 mr-1" />
           Toevoegen
         </Button>
@@ -1511,7 +1606,7 @@ function InkoopregelsKaart({
           <div className="border rounded-md divide-y">
             {groepItems.map((item) => (
               bewerken?.id === item.id ? (
-                <div key={item.id} className="p-3 space-y-2 bg-muted/30">
+                <div key={item.id} className="p-3 space-y-3 bg-muted/30">
                   <div className="grid grid-cols-2 gap-2">
                     <div className="col-span-2 space-y-1">
                       <Label className="text-xs">Omschrijving</Label>
@@ -1522,8 +1617,12 @@ function InkoopregelsKaart({
                       <Input value={form.artikel} onChange={(e) => setForm((f) => ({ ...f, artikel: e.target.value }))} className="h-8 text-sm" placeholder="Optioneel" />
                     </div>
                     <div className="space-y-1">
-                      <Label className="text-xs">Leverancier</Label>
+                      <Label className="text-xs">Leverancier / onderaannemer</Label>
                       <Input value={form.leverancier} onChange={(e) => setForm((f) => ({ ...f, leverancier: e.target.value }))} className="h-8 text-sm" />
+                    </div>
+                    <div className="col-span-2 space-y-1">
+                      <Label className="text-xs">E-mailadres leverancier</Label>
+                      <Input type="email" value={form.leverancier_email} onChange={(e) => setForm((f) => ({ ...f, leverancier_email: e.target.value }))} className="h-8 text-sm" placeholder="offertes@leverancier.nl" />
                     </div>
                     <div className="space-y-1">
                       <Label className="text-xs">Aantal</Label>
@@ -1538,16 +1637,28 @@ function InkoopregelsKaart({
                       <Input type="number" value={form.prijs} onChange={(e) => setForm((f) => ({ ...f, prijs: e.target.value }))} className="h-8 text-sm" placeholder="0" />
                     </div>
                     <div className="space-y-1">
-                      <Label className="text-xs">Gekozen leverancier</Label>
-                      <Input value={form.gekozen_leverancier} onChange={(e) => setForm((f) => ({ ...f, gekozen_leverancier: e.target.value }))} className="h-8 text-sm" />
+                      <Label className="text-xs">Bedrag (excl. BTW)</Label>
+                      <Input type="number" value={form.bedrag} onChange={(e) => setForm((f) => ({ ...f, bedrag: e.target.value }))} className="h-8 text-sm" placeholder="0" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Reactiedatum</Label>
+                      <Input type="date" value={form.reactiedatum} onChange={(e) => setForm((f) => ({ ...f, reactiedatum: e.target.value }))} className="h-8 text-sm" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Beslisdatum</Label>
+                      <Input type="date" value={form.beslisdatum} onChange={(e) => setForm((f) => ({ ...f, beslisdatum: e.target.value }))} className="h-8 text-sm" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Leverdatum</Label>
+                      <Input type="date" value={form.leverdatum} onChange={(e) => setForm((f) => ({ ...f, leverdatum: e.target.value }))} className="h-8 text-sm" />
                     </div>
                     <div className="space-y-1">
                       <Label className="text-xs">Levertijd</Label>
                       <Input value={form.levertijd} onChange={(e) => setForm((f) => ({ ...f, levertijd: e.target.value }))} className="h-8 text-sm" placeholder="Bijv. 3 weken" />
                     </div>
                     <div className="space-y-1">
-                      <Label className="text-xs">Bedrag (excl. BTW)</Label>
-                      <Input type="number" value={form.bedrag} onChange={(e) => setForm((f) => ({ ...f, bedrag: e.target.value }))} className="h-8 text-sm" placeholder="0" />
+                      <Label className="text-xs">Gekozen leverancier</Label>
+                      <Input value={form.gekozen_leverancier} onChange={(e) => setForm((f) => ({ ...f, gekozen_leverancier: e.target.value }))} className="h-8 text-sm" />
                     </div>
                     <div className="space-y-1">
                       <Label className="text-xs">Status</Label>
@@ -1557,6 +1668,14 @@ function InkoopregelsKaart({
                           {Object.entries(INKOOP_STATUS_LABEL).map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}
                         </SelectContent>
                       </Select>
+                    </div>
+                    <div className="col-span-2 space-y-1">
+                      <Label className="text-xs">Toelichting</Label>
+                      <Textarea value={form.toelichting} onChange={(e) => setForm((f) => ({ ...f, toelichting: e.target.value }))} className="text-sm min-h-[60px]" placeholder="Optionele toelichting voor de leverancier" />
+                    </div>
+                    <div className="col-span-2 space-y-1">
+                      <Label className="text-xs">Interne notities</Label>
+                      <Textarea value={form.notities} onChange={(e) => setForm((f) => ({ ...f, notities: e.target.value }))} className="text-sm min-h-[60px]" placeholder="Interne aantekeningen (niet zichtbaar voor leverancier)" />
                     </div>
                     <div className="col-span-2 flex items-center gap-2">
                       <input type="checkbox" id={`offerte-${item.id}`} checked={form.offerte_ontvangen} onChange={(e) => setForm((f) => ({ ...f, offerte_ontvangen: e.target.checked }))} className="h-4 w-4" />
@@ -1569,33 +1688,91 @@ function InkoopregelsKaart({
                   </div>
                 </div>
               ) : (
-                <div key={item.id} className="flex items-center gap-3 px-3 py-2.5 hover:bg-muted/30">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-sm font-medium truncate">{item.omschrijving}</span>
-                      {item.leverancier && <span className="text-xs text-muted-foreground">{item.leverancier}</span>}
-                      {item.bedrag != null && <span className="text-xs text-muted-foreground tabular-nums">{fmt(item.bedrag)}</span>}
+                <div key={item.id} className="space-y-0">
+                  <div className="flex items-center gap-3 px-3 py-2.5 hover:bg-muted/30">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm font-medium truncate">{item.omschrijving}</span>
+                        {item.leverancier && <span className="text-xs text-muted-foreground">{item.leverancier}</span>}
+                        {item.bedrag != null && <span className="text-xs font-medium tabular-nums">{fmt(item.bedrag)}</span>}
+                        {(item as any).reactiedatum && (
+                          <span className={`text-xs tabular-nums ${isVerlopen((item as any).reactiedatum) && !["gekozen","afgewezen","vervallen"].includes(item.status) ? "text-red-600 font-medium" : "text-muted-foreground"}`}>
+                            reactie {fmtDatum((item as any).reactiedatum)}
+                            {isVerlopen((item as any).reactiedatum) && !["gekozen","afgewezen","vervallen"].includes(item.status) && " (verlopen)"}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <Badge
+                        variant="outline"
+                        className={`text-xs border cursor-pointer select-none ${INKOOP_STATUS_KLEUR[item.status] ?? ""}`}
+                        onClick={() => {
+                          const volgend = INKOOP_STATUS_VOLGEND[item.status];
+                          if (volgend) onStatusWijzigen(item.id, volgend);
+                        }}
+                        title={INKOOP_STATUS_VOLGEND[item.status] ? `Klik om naar "${INKOOP_STATUS_LABEL[INKOOP_STATUS_VOLGEND[item.status]!]}" te zetten` : undefined}
+                      >
+                        {INKOOP_STATUS_LABEL[item.status] ?? item.status}
+                      </Badge>
+                      <Button
+                        variant="ghost" size="icon" className="h-6 w-6"
+                        title="Uitklappen / conceptmail"
+                        onClick={() => setUitgebreidId(uitgebreidId === item.id ? null : item.id)}
+                      >
+                        <ChevronDown className={`h-3 w-3 transition-transform ${uitgebreidId === item.id ? "rotate-180" : ""}`} />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => openBewerken(item)}>
+                        <Pencil className="h-3 w-3" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => onVerwijderen(item.id)}>
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
                     </div>
                   </div>
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <Badge
-                      variant="outline"
-                      className={`text-xs border cursor-pointer select-none ${INKOOP_STATUS_KLEUR[item.status] ?? ""}`}
-                      onClick={() => {
-                        const volgend = INKOOP_STATUS_VOLGEND[item.status];
-                        if (volgend) onStatusWijzigen(item.id, volgend);
-                      }}
-                      title={INKOOP_STATUS_VOLGEND[item.status] ? `Klik om naar "${INKOOP_STATUS_LABEL[INKOOP_STATUS_VOLGEND[item.status]!]}" te zetten` : undefined}
-                    >
-                      {INKOOP_STATUS_LABEL[item.status] ?? item.status}
-                    </Badge>
-                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => openBewerken(item)}>
-                      <Pencil className="h-3 w-3" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => onVerwijderen(item.id)}>
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
-                  </div>
+                  {uitgebreidId === item.id && (
+                    <div className="px-3 pb-3 pt-1 bg-muted/20 border-t space-y-3">
+                      <div className="grid grid-cols-3 gap-x-4 gap-y-1 text-xs">
+                        {(item as any).leverancier_email && (
+                          <div className="col-span-3"><span className="text-muted-foreground">E-mail: </span><span className="font-medium">{(item as any).leverancier_email}</span></div>
+                        )}
+                        {(item as any).reactiedatum && (
+                          <div><span className="text-muted-foreground">Reactie: </span><span className={`font-medium ${isVerlopen((item as any).reactiedatum) && !["gekozen","afgewezen","vervallen"].includes(item.status) ? "text-red-600" : ""}`}>{fmtDatum((item as any).reactiedatum)}</span></div>
+                        )}
+                        {(item as any).beslisdatum && (
+                          <div><span className="text-muted-foreground">Beslissing: </span><span className="font-medium">{fmtDatum((item as any).beslisdatum)}</span></div>
+                        )}
+                        {(item as any).leverdatum && (
+                          <div><span className="text-muted-foreground">Levering: </span><span className="font-medium">{fmtDatum((item as any).leverdatum)}</span></div>
+                        )}
+                        {(item as any).toelichting && (
+                          <div className="col-span-3"><span className="text-muted-foreground">Toelichting: </span><span>{(item as any).toelichting}</span></div>
+                        )}
+                        {(item as any).notities && (
+                          <div className="col-span-3"><span className="text-muted-foreground">Notities: </span><span>{(item as any).notities}</span></div>
+                        )}
+                      </div>
+                      <div className="space-y-2">
+                        <Button
+                          size="sm" variant="outline"
+                          disabled={conceptMailLaden && conceptMailItemId === item.id}
+                          onClick={() => handleGenereerConceptMail(item.id)}
+                          className="h-7 text-xs gap-1.5"
+                        >
+                          <Sparkles className="h-3 w-3" />
+                          {conceptMailLaden && conceptMailItemId === item.id ? "Genereren..." : "AI conceptmail"}
+                        </Button>
+                        {conceptMailItemId === item.id && conceptMail && (
+                          <Textarea
+                            value={conceptMail}
+                            onChange={(e) => setConceptMail(e.target.value)}
+                            className="text-xs min-h-[140px] font-mono"
+                            placeholder="Conceptmail verschijnt hier..."
+                          />
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )
             ))}
@@ -1622,12 +1799,12 @@ function InkoopregelsKaart({
               <Input value={form.omschrijving} onChange={(e) => setForm((f) => ({ ...f, omschrijving: e.target.value }))} className="h-8 text-sm" placeholder="Bijv. Brandwerende beplating leverancier X" />
             </div>
             <div className="space-y-1">
-              <Label className="text-xs">Artikelnummer / code</Label>
-              <Input value={form.artikel} onChange={(e) => setForm((f) => ({ ...f, artikel: e.target.value }))} className="h-8 text-sm" placeholder="Optioneel" />
-            </div>
-            <div className="space-y-1">
               <Label className="text-xs">Leverancier / onderaannemer</Label>
               <Input value={form.leverancier} onChange={(e) => setForm((f) => ({ ...f, leverancier: e.target.value }))} className="h-8 text-sm" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">E-mailadres leverancier</Label>
+              <Input type="email" value={form.leverancier_email} onChange={(e) => setForm((f) => ({ ...f, leverancier_email: e.target.value }))} className="h-8 text-sm" placeholder="offertes@leverancier.nl" />
             </div>
             <div className="space-y-1">
               <Label className="text-xs">Aantal</Label>
@@ -1638,8 +1815,8 @@ function InkoopregelsKaart({
               <Input value={form.eenheid} onChange={(e) => setForm((f) => ({ ...f, eenheid: e.target.value }))} className="h-8 text-sm" placeholder="st" />
             </div>
             <div className="space-y-1">
-              <Label className="text-xs">Prijs per eenheid</Label>
-              <Input type="number" value={form.prijs} onChange={(e) => setForm((f) => ({ ...f, prijs: e.target.value }))} className="h-8 text-sm" placeholder="0" />
+              <Label className="text-xs">Reactiedatum</Label>
+              <Input type="date" value={form.reactiedatum} onChange={(e) => setForm((f) => ({ ...f, reactiedatum: e.target.value }))} className="h-8 text-sm" />
             </div>
             <div className="space-y-1">
               <Label className="text-xs">Bedrag (excl. BTW)</Label>
@@ -1745,7 +1922,7 @@ export default function ModulesCalculatieDetail() {
   const [versieLabel, setVersieLabel]           = useState("");
   const [versieOpslaanBezig, setVersieOpslaanBezig] = useState(false);
   const [inkoopNieuwOpen, setInkoopNieuwOpen] = useState(false);
-  const leegInkoopForm: InkoopForm = { type: "materiaal", omschrijving: "", artikel: "", leverancier: "", gekozen_leverancier: "", aantal: "", eenheid: "st", prijs: "", offerte_ontvangen: false, levertijd: "", status: "te_versturen", bedrag: "", notities: "" };
+  const leegInkoopForm: InkoopForm = { type: "materiaal", omschrijving: "", artikel: "", leverancier: "", leverancier_email: "", gekozen_leverancier: "", aantal: "", eenheid: "st", prijs: "", offerte_ontvangen: false, levertijd: "", reactiedatum: "", beslisdatum: "", leverdatum: "", toelichting: "", status: "concept", bedrag: "", notities: "" };
   const [inkoopForm, setInkoopForm] = useState<InkoopForm>(leegInkoopForm);
   const [inkoopBewerken, setInkoopBewerken] = useState<ModCalcInkoopItem | null>(null);
 

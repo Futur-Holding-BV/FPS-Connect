@@ -9,18 +9,27 @@
 export interface ModCalcInkoopItem {
   id: number;
   calculatie_id: number;
+  regel_id?: number | null;
   /** materiaal | onderaanneming */
   type: string;
   omschrijving: string;
   artikel?: string | null;
   leverancier?: string | null;
+  leverancier_id?: number | null;
+  leverancier_email?: string | null;
   gekozen_leverancier?: string | null;
   aantal?: number | null;
   eenheid?: string | null;
   prijs?: number | null;
   offerte_ontvangen?: boolean;
   levertijd?: string | null;
-  /** te_versturen | verstuurd | ontvangen | akkoord */
+  reactiedatum?: string | null;
+  beslisdatum?: string | null;
+  leverdatum?: string | null;
+  toelichting?: string | null;
+  concept_mail?: string | null;
+  herinnering_verstuurd?: boolean;
+  /** concept | te_versturen | verstuurd | wacht_op_leverancier | herinnering_nodig | ontvangen | intern_te_verwerken | verwerkt | gekozen | afgewezen | vervallen */
   status: string;
   datum_verstuurd?: string | null;
   datum_ontvangen?: string | null;

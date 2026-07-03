@@ -11576,6 +11576,34 @@ paths:
         '204':
           description: Verwijderd
 
+  /modules/calculaties/{id}/inkoop-items/{itemId}/concept-mail:
+    post:
+      operationId: generateRfqConceptMail
+      summary: AI-conceptmail genereren voor RFQ
+      tags: [CalulatieModule]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: itemId
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Gegenereerde conceptmail
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [concept_mail]
+                properties:
+                  concept_mail:
+                    type: string
+
   /uren:
     get:
       operationId: listUren
@@ -26711,6 +26739,9 @@ components:
           type: integer
         calculatie_id:
           type: integer
+        regel_id:
+          type: integer
+          nullable: true
         type:
           type: string
           description: 'materiaal | onderaanneming'
@@ -26720,6 +26751,12 @@ components:
           type: string
           nullable: true
         leverancier:
+          type: string
+          nullable: true
+        leverancier_id:
+          type: integer
+          nullable: true
+        leverancier_email:
           type: string
           nullable: true
         gekozen_leverancier:
@@ -26739,9 +26776,26 @@ components:
         levertijd:
           type: string
           nullable: true
+        reactiedatum:
+          type: string
+          nullable: true
+        beslisdatum:
+          type: string
+          nullable: true
+        leverdatum:
+          type: string
+          nullable: true
+        toelichting:
+          type: string
+          nullable: true
+        concept_mail:
+          type: string
+          nullable: true
+        herinnering_verstuurd:
+          type: boolean
         status:
           type: string
-          description: 'te_versturen | verstuurd | ontvangen | akkoord'
+          description: 'concept | te_versturen | verstuurd | wacht_op_leverancier | herinnering_nodig | ontvangen | intern_te_verwerken | verwerkt | gekozen | afgewezen | vervallen'
         datum_verstuurd:
           type: string
           nullable: true
@@ -26762,6 +26816,9 @@ components:
     ModCalcInkoopItemInput:
       type: object
       properties:
+        regel_id:
+          type: integer
+          nullable: true
         type:
           type: string
         omschrijving:
@@ -26770,6 +26827,12 @@ components:
           type: string
           nullable: true
         leverancier:
+          type: string
+          nullable: true
+        leverancier_id:
+          type: integer
+          nullable: true
+        leverancier_email:
           type: string
           nullable: true
         gekozen_leverancier:
@@ -26789,6 +26852,23 @@ components:
         levertijd:
           type: string
           nullable: true
+        reactiedatum:
+          type: string
+          nullable: true
+        beslisdatum:
+          type: string
+          nullable: true
+        leverdatum:
+          type: string
+          nullable: true
+        toelichting:
+          type: string
+          nullable: true
+        concept_mail:
+          type: string
+          nullable: true
+        herinnering_verstuurd:
+          type: boolean
         status:
           type: string
         datum_verstuurd:

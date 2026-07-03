@@ -254,6 +254,7 @@ export * from './gebruikerTaal';
 export * from './gebruikerUitnodigingStatus';
 export * from './gebruikerUpdate';
 export * from './gebruikerUpdateBevoegdheden';
+export * from './generateRfqConceptMail200';
 export * from './gereedschap';
 export * from './gereedschapAiAnalyseInput';
 export * from './gereedschapAiVoorstel';

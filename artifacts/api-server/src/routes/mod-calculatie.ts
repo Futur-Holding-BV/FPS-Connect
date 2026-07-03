@@ -1447,21 +1447,30 @@ function mapInkoopItem(i: typeof modCalcInkoopItemsTable.$inferSelect) {
   return {
     id: i.id,
     calculatie_id: i.calculatieId,
+    regel_id: i.regelId ?? null,
     type: i.type,
     omschrijving: i.omschrijving,
-    artikel: (i as any).artikel ?? null,
-    leverancier: i.leverancier,
-    gekozen_leverancier: (i as any).gekozenLeverancier ?? null,
-    aantal: (i as any).aantal ?? null,
-    eenheid: (i as any).eenheid ?? null,
-    prijs: (i as any).prijs ?? null,
-    offerte_ontvangen: (i as any).offerteOntvangen ?? false,
-    levertijd: (i as any).levertijd ?? null,
+    artikel: i.artikel ?? null,
+    leverancier: i.leverancier ?? null,
+    leverancier_id: i.leverancierId ?? null,
+    leverancier_email: i.leverancierEmail ?? null,
+    gekozen_leverancier: i.gekozenLeverancier ?? null,
+    aantal: i.aantal ?? null,
+    eenheid: i.eenheid ?? null,
+    prijs: i.prijs ?? null,
+    offerte_ontvangen: i.offerteOntvangen ?? false,
+    levertijd: i.levertijd ?? null,
+    reactiedatum: i.reactiedatum ?? null,
+    beslisdatum: i.beslisdatum ?? null,
+    leverdatum: i.leverdatum ?? null,
+    toelichting: i.toelichting ?? null,
+    concept_mail: i.conceptMail ?? null,
+    herinnering_verstuurd: i.herinneringVerstuurd ?? false,
     status: i.status,
-    datum_verstuurd: i.datumVerstuurd,
-    datum_ontvangen: i.datumOntvangen,
-    bedrag: i.bedrag,
-    notities: i.notities,
+    datum_verstuurd: i.datumVerstuurd ?? null,
+    datum_ontvangen: i.datumOntvangen ?? null,
+    bedrag: i.bedrag ?? null,
+    notities: i.notities ?? null,
     aangemaakt_op: iso(i.aangemaaktOp),
     bijgewerkt_op: iso(i.bijgewerktOp),
   };
@@ -1491,17 +1500,24 @@ router.post("/modules/calculaties/:id/inkoop-items", schrijvenCalc, async (req, 
     if (!String(body.omschrijving ?? "").trim()) return res.status(422).json({ error: "Omschrijving is verplicht" });
     const [item] = await db.insert(modCalcInkoopItemsTable).values({
       calculatieId: id,
+      regelId: body.regel_id != null ? Number(body.regel_id) : null,
       type: body.type ? String(body.type) : "materiaal",
       omschrijving: String(body.omschrijving).trim(),
       artikel: body.artikel ? String(body.artikel) : null,
       leverancier: body.leverancier ? String(body.leverancier) : null,
+      leverancierId: body.leverancier_id != null ? Number(body.leverancier_id) : null,
+      leverancierEmail: body.leverancier_email ? String(body.leverancier_email) : null,
       gekozenLeverancier: body.gekozen_leverancier ? String(body.gekozen_leverancier) : null,
       aantal: body.aantal != null ? Number(body.aantal) : null,
       eenheid: body.eenheid ? String(body.eenheid) : "st",
       prijs: body.prijs != null ? Number(body.prijs) : null,
       offerteOntvangen: body.offerte_ontvangen ? Boolean(body.offerte_ontvangen) : false,
       levertijd: body.levertijd ? String(body.levertijd) : null,
-      status: body.status ? String(body.status) : "te_versturen",
+      reactiedatum: body.reactiedatum ? String(body.reactiedatum) : null,
+      beslisdatum: body.beslisdatum ? String(body.beslisdatum) : null,
+      leverdatum: body.leverdatum ? String(body.leverdatum) : null,
+      toelichting: body.toelichting ? String(body.toelichting) : null,
+      status: body.status ? String(body.status) : "concept",
       datumVerstuurd: body.datum_verstuurd ? String(body.datum_verstuurd) : null,
       datumOntvangen: body.datum_ontvangen ? String(body.datum_ontvangen) : null,
       bedrag: body.bedrag != null ? Number(body.bedrag) : null,
@@ -1534,6 +1550,15 @@ router.patch("/modules/calculaties/:id/inkoop-items/:itemId", schrijvenCalc, asy
     if (body.datum_ontvangen !== undefined) upd["datumOntvangen"] = body.datum_ontvangen;
     if (body.bedrag !== undefined) upd["bedrag"] = body.bedrag ?? null;
     if (body.notities !== undefined) upd["notities"] = body.notities ?? null;
+    if (body.regel_id !== undefined) upd["regelId"] = body.regel_id ?? null;
+    if (body.leverancier_id !== undefined) upd["leverancierId"] = body.leverancier_id ?? null;
+    if (body.leverancier_email !== undefined) upd["leverancierEmail"] = body.leverancier_email ?? null;
+    if (body.reactiedatum !== undefined) upd["reactiedatum"] = body.reactiedatum ?? null;
+    if (body.beslisdatum !== undefined) upd["beslisdatum"] = body.beslisdatum ?? null;
+    if (body.leverdatum !== undefined) upd["leverdatum"] = body.leverdatum ?? null;
+    if (body.toelichting !== undefined) upd["toelichting"] = body.toelichting ?? null;
+    if (body.concept_mail !== undefined) upd["conceptMail"] = body.concept_mail ?? null;
+    if (body.herinnering_verstuurd !== undefined) upd["herinneringVerstuurd"] = Boolean(body.herinnering_verstuurd);
     const [item] = await db.update(modCalcInkoopItemsTable)
       .set(upd)
       .where(eq(modCalcInkoopItemsTable.id, itemId))
@@ -1554,6 +1579,58 @@ router.delete("/modules/calculaties/:id/inkoop-items/:itemId", schrijvenCalc, as
   } catch (e) {
     req.log.error(e);
     res.status(500).json({ error: "Interne fout" });
+  }
+});
+
+// ── POST /modules/calculaties/:id/inkoop-items/:itemId/concept-mail ─────────
+
+router.post("/modules/calculaties/:id/inkoop-items/:itemId/concept-mail", schrijvenCalc, async (req, res) => {
+  try {
+    const id = parseId(req.params["id"]);
+    const itemId = parseId(req.params["itemId"]);
+
+    const [[header], [item]] = await Promise.all([
+      db.select().from(modCalcHeadersTable).where(eq(modCalcHeadersTable.id, id)),
+      db.select().from(modCalcInkoopItemsTable).where(eq(modCalcInkoopItemsTable.id, itemId)),
+    ]);
+    if (!header) { res.status(404).json({ error: "Calculatie niet gevonden" }); return; }
+    if (!item) { res.status(404).json({ error: "Item niet gevonden" }); return; }
+
+    if (!heeftGateway()) { res.status(503).json({ error: "AI niet beschikbaar" }); return; }
+
+    const prompt = `Je bent een professionele inkoper bij een brandpreventie-installatiebedrijf. Schrijf een beknopte, zakelijke offerteaanvraag-e-mail aan een leverancier.
+
+Projectgegevens:
+- Project: ${header.projectNaam ?? header.naam}
+- Werknummer: ${header.werknummer ?? "—"}
+- Klant: ${header.klantNaam ?? "—"}
+
+Gevraagd materiaal/dienst:
+- Omschrijving: ${item.omschrijving}
+- Type: ${item.type === "onderaanneming" ? "Onderaanneming" : "Materiaal"}
+- Hoeveelheid: ${item.aantal ?? "—"} ${item.eenheid ?? ""}
+- Artikel: ${item.artikel ?? "—"}
+- Gewenste leverdatum: ${item.leverdatum ?? "nog te bepalen"}
+- Uiterste reactiedatum: ${item.reactiedatum ?? "zo spoedig mogelijk"}
+${item.toelichting ? `- Toelichting: ${item.toelichting}` : ""}
+
+Schrijf de mail in formeel Nederlands. Gebruik "FPS Brandpreventie" als afzender. Vraag om prijs (inclusief BTW-tarief), levertijd en geldigheidsdatum van de offerte. Sluit professioneel af. Geen aanhef met naam (leverancier onbekend), gebruik "Geachte heer/mevrouw,". Geen markdown-opmaak, gewone tekst.`;
+
+    const antwoord = await aiGateway.chat("default", {
+      messages: [{ role: "user", content: prompt }],
+      max_completion_tokens: 600,
+    });
+
+    const conceptMail = (antwoord.ok ? antwoord.inhoud : "").trim();
+
+    await db.update(modCalcInkoopItemsTable)
+      .set({ conceptMail, bijgewerktOp: new Date() })
+      .where(eq(modCalcInkoopItemsTable.id, itemId));
+
+    res.json({ concept_mail: conceptMail });
+  } catch (e) {
+    req.log.error(e);
+    res.status(500).json({ error: "Interne fout bij genereren conceptmail" });
   }
 });
 

@@ -205,6 +205,7 @@ import type {
   GebruikerInput,
   GebruikerUpdate,
   GebruikersAanvullen200,
+  GenerateRfqConceptMail200,
   Gereedschap,
   GereedschapAiAnalyseInput,
   GereedschapAiVoorstel,
@@ -40967,6 +40968,78 @@ export const useDeleteModCalcInkoopItem = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getDeleteModCalcInkoopItemMutationOptions(options));
+    }
+
+export const getGenerateRfqConceptMailUrl = (id: number,
+    itemId: number,) => {
+
+
+
+
+  return `/api/modules/calculaties/${id}/inkoop-items/${itemId}/concept-mail`
+}
+
+/**
+ * @summary AI-conceptmail genereren voor RFQ
+ */
+export const generateRfqConceptMail = async (id: number,
+    itemId: number, options?: RequestInit): Promise<GenerateRfqConceptMail200> => {
+
+  return customFetch<GenerateRfqConceptMail200>(getGenerateRfqConceptMailUrl(id,itemId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getGenerateRfqConceptMailMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof generateRfqConceptMail>>, TError,{id: number;itemId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof generateRfqConceptMail>>, TError,{id: number;itemId: number}, TContext> => {
+
+const mutationKey = ['generateRfqConceptMail'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof generateRfqConceptMail>>, {id: number;itemId: number}> = (props) => {
+          const {id,itemId} = props ?? {};
+
+          return  generateRfqConceptMail(id,itemId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type GenerateRfqConceptMailMutationResult = NonNullable<Awaited<ReturnType<typeof generateRfqConceptMail>>>
+
+    export type GenerateRfqConceptMailMutationError = ErrorType<unknown>
+
+    /**
+ * @summary AI-conceptmail genereren voor RFQ
+ */
+export const useGenerateRfqConceptMail = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof generateRfqConceptMail>>, TError,{id: number;itemId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof generateRfqConceptMail>>,
+        TError,
+        {id: number;itemId: number},
+        TContext
+      > => {
+      return useMutation(getGenerateRfqConceptMailMutationOptions(options));
     }
 
 export const getListUrenUrl = (params?: ListUrenParams,) => {
