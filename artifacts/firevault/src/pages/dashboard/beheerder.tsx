@@ -13,7 +13,7 @@ import {
 } from "@workspace/api-client-react";
 import {
   Building, ShieldCheck, AlertTriangle, Calendar, TrendingUp, Clock,
-  Users, HeartPulse, ChevronRight, TriangleAlert,
+  Users, HeartPulse, ChevronRight, TriangleAlert, BrainCircuit,
 } from "lucide-react";
 import { useRol } from "@/context/rol-context";
 import { useAuth } from "@/context/auth-context";
@@ -122,25 +122,55 @@ export default function BeheerderDashboard() {
       </div>
 
 
-      {/* AI-kostendrempel waarschuwing (alleen hoofdbeheerder) */}
-      {echteRol === "hoofdbeheerder" && drempelStatus?.overschreden && (
-        <Link href="/beheer/ai-log">
-          <div
-            role="alert"
-            className="flex items-center gap-3 px-4 py-3 rounded-lg bg-orange-50 border border-orange-300 text-orange-900 cursor-pointer hover:bg-orange-100 transition-colors"
-          >
-            <TriangleAlert className="h-5 w-5 shrink-0 text-orange-600" />
-            <div className="flex-1 min-w-0">
-              <span className="font-semibold text-sm">
-                Maandelijkse AI-kostendrempel overschreden
-              </span>
-              <p className="text-xs text-orange-700 mt-0.5">
-                Klik om naar Beheer &rsaquo; AI-aanroepen te gaan en de drempel aan te passen.
-              </p>
-            </div>
-            <ChevronRight className="h-4 w-4 shrink-0 text-orange-600" />
-          </div>
-        </Link>
+      {/* AI-kosten sectie (alleen hoofdbeheerder) */}
+      {echteRol === "hoofdbeheerder" && drempelStatus && (
+        <div className="flex flex-col gap-2">
+          {/* Drempelwaarschuwing — alleen tonen als overschreden */}
+          {drempelStatus.overschreden && (
+            <Link href="/beheer/ai-log">
+              <div
+                role="alert"
+                className="flex items-center gap-3 px-4 py-3 rounded-lg bg-orange-50 border border-orange-300 text-orange-900 cursor-pointer hover:bg-orange-100 transition-colors"
+              >
+                <TriangleAlert className="h-5 w-5 shrink-0 text-orange-600" />
+                <div className="flex-1 min-w-0">
+                  <span className="font-semibold text-sm">
+                    Maandelijkse AI-kostendrempel overschreden
+                  </span>
+                  <p className="text-xs text-orange-700 mt-0.5">
+                    Klik om naar Beheer &rsaquo; AI-aanroepen te gaan en de drempel aan te passen.
+                  </p>
+                </div>
+                <ChevronRight className="h-4 w-4 shrink-0 text-orange-600" />
+              </div>
+            </Link>
+          )}
+
+          {/* AI-kosten KPI-kaart — altijd zichtbaar voor hoofdbeheerder */}
+          <Link href="/beheer/ai-aanroepen">
+            <Card className="cursor-pointer hover:bg-muted/40 transition-colors border-dashed">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  AI-kosten deze maand
+                </CardTitle>
+                <BrainCircuit className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent className="flex items-end justify-between gap-2">
+                <div>
+                  <span className="text-2xl font-bold">
+                    {(drempelStatus.huidig_maand_kosten_eur ?? 0).toLocaleString("nl-NL", { style: "currency", currency: "EUR" })}
+                  </span>
+                  {drempelStatus.drempel_eur != null && (
+                    <span className="text-sm text-muted-foreground ml-1">
+                      / {drempelStatus.drempel_eur.toLocaleString("nl-NL", { style: "currency", currency: "EUR" })} drempel
+                    </span>
+                  )}
+                </div>
+                <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0 mb-0.5" />
+              </CardContent>
+            </Card>
+          </Link>
+        </div>
       )}
 
       {/* KPI kaarten */}
