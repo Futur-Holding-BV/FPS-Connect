@@ -8,6 +8,23 @@ Voor elke taak drie scores:
 
 Grote roadmap-fases staan ook in `docs/roadmap/gebouwd.md` en `docs/roadmap/actief.md`.
 
+## 2026-07-03 — Acceptatierapport vijf basisopdrachten
+
+**Uitvoering:** auditrapport (geen productiecode) | **Getest:** n.v.t.
+
+Op basis van directe codebase-audit (grep + leesopdrachten) per opdracht gerapporteerd: wat gebouwd is, welke modules het gebruiken, wat niet gemigreerd is, duplicaten, beperkingen, regressierisico's en productiegereedheid.
+
+**Rapport:** `docs/acceptatierapport-basisopdrachten.md`
+
+Uitkomsten:
+- **Workflow Engine** — Geïntegreerd. Werkt in 6 routes; 12+ modules met statusmachines buiten de engine; systeem-transitie ontbreekt (blokkeert APO en inbox).
+- **Audit Trail** — Geïmplementeerd. HTTP-middleware globaal actief; business-event logging in slechts 2 modules; salarisarchief.ts heeft eigen duplicaat-logAudit(); inbox heeft eigen parallelle auditlog-tabel.
+- **RBAC** — Geïmplementeerd. Infrastructuur aanwezig; requireObjectRecht() in 0 productie-routes; workflowRechtenTable heeft geen effect; rechten in de DB zijn momenteel decoratief.
+- **Integriteitscontrole** — Ontworpen. Analyserapport, geen herstelacties uitgevoerd.
+- **Technische Schuld** — Ontworpen. Inventarisatierapport, geen schulditems ingelost.
+
+Geen van de vijf opdrachten is Productiegereed.
+
 ## 2026-07-03 — Architectuurontwerp: AI Process Orchestrator
 
 **Uitvoering:** architectuur-backlog (geen productiecode) | **Getest:** n.v.t.
