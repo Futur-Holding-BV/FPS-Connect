@@ -8,6 +8,41 @@ Voor elke taak drie scores:
 
 Grote roadmap-fases staan ook in `docs/roadmap/gebouwd.md` en `docs/roadmap/actief.md`.
 
+## 2026-07-03 — Universele Audit Trail
+
+**Uitvoering:** volledig | **Diepere lagen:** volledig | **Getest:** typecheck + API-verificatie
+
+Elke wijziging in FPS Connect wordt nu centraal geregistreerd in de `audit_log` tabel. De audit trail onderschept automatisch alle POST/PATCH/PUT/DELETE-verzoeken via middleware, en alle statusovergangen via de WorkflowEngine.
+
+### Gebouwde onderdelen
+
+**`lib/db/src/schema/audit.ts` — nieuw schema**
+- Tabel `audit_log` met 7 indexes: tijdstip (DESC), module, gebruiker, gebouw, medewerker, document, entiteit
+- Velden: id, tijdstip, gebruiker_id, gebruiker_naam, ip_adres, sessie_id, module, actie, entiteit, entiteit_id, entiteit_naam, oude_waarde (jsonb), nieuwe_waarde (jsonb), workflow_status, gebouw_id, medewerker_id, document_id, meta (jsonb)
+
+**`artifacts/api-server/src/lib/audit.ts` — audit service**
+- `logAudit()`: fire-and-forget insert (mag nooit de hoofdflow crashen)
+- `maakAuditMiddleware()`: onderschept automatisch alle muterende routes na `requireAuth`; leidt module/entiteit af uit `req.route.path`; slaat actie-body op als `nieuwe_waarde`
+
+**`artifacts/api-server/src/routes/audit.ts` — audit routes (alleenBeheer)**
+- `GET /audit` — pagineerde lijst met filters: zoek, module, actie, gebruiker_id, gebouw_id, medewerker_id, van/tot datum
+- `GET /audit/export` — CSV-download (max 10.000 regels, UTF-8 BOM voor Excel)
+- `GET /audit/tijdlijn/gebouw/:id` — tijdlijn per gebouw
+- `GET /audit/tijdlijn/medewerker/:id` — tijdlijn per medewerker
+- `GET /audit/tijdlijn/document/:id` — tijdlijn per document
+
+**WorkflowEngine integratie**
+- `workflow-engine.ts`: na elke succesvolle transitie wordt `logAudit` aangeroepen (buiten de transactie) met oude/nieuwe status als jsonb, inclusief reden in `meta`
+
+**Auth logging**
+- `auth.ts`: succesvolle TOTP-login registreert een `inloggen`-event in de audit trail
+
+**Frontend**
+- `/beheer/audit` — audit trail-pagina met zoekbalk, filters (module, actie, datum), paginering, klikbare rijen met JSON-weergave oude/nieuwe waarde, CSV-exportknop
+- Sidebar nav-item "Audit trail" onder Beheer (ScrollText-icoon, alleenBeheer)
+
+---
+
 ## 2026-07-03 — WorkflowEngine centrale statusmachine
 
 **Uitvoering:** volledig | **Diepere lagen:** volledig | **Getest:** unit tests (29/29) + typecheck

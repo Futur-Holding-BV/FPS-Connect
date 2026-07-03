@@ -53,6 +53,7 @@ import InboxDetail from "@/pages/inbox/detail";
 import WerkInboxPagina from "@/pages/werk-inbox/index";
 import Abonnementen from "@/pages/abonnementen/index";
 import LoginPogingen from "@/pages/beheer/login-pogingen";
+import AuditTrail from "@/pages/beheer/audit";
 import HelpdeskBeheer from "@/pages/beheer/helpdesk";
 import FeedbackBeheer from "@/pages/beheer/feedback";
 import Heatmaps from "@/pages/beheer/heatmaps";
@@ -413,6 +414,7 @@ function ConnectPortal() {
         <Route path="/beheer/toepassingen" component={ToepassingenBeheer} />
         <Route path="/beheer/bibliotheek" component={Bibliotheek} />
         <Route path="/beheer/login-pogingen" component={LoginPogingen} />
+        <Route path="/beheer/audit" component={AuditTrail} />
         <Route path="/beheer/helpdesk" component={HelpdeskBeheer} />
         <Route path="/beheer/feedback" component={FeedbackBeheer} />
         <Route path="/beheer/heatmaps" component={Heatmaps} />

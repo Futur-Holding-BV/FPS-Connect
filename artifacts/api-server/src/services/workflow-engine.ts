@@ -1,5 +1,6 @@
 import { db as _mainDb, workflowTransitieLogTable, gebruikersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
+import { logAudit } from "../lib/audit";
 
 type Db = typeof _mainDb;
 
@@ -146,6 +147,28 @@ export class WorkflowService {
           typeof ctx.params?.reden === "string" ? ctx.params.reden : null,
         aangemaaktOp: new Date(),
       });
+    });
+
+    // Spiegel naar de universele audit trail (buiten de transactie — fire-and-forget)
+    logAudit({
+      gebruikerId: ctx.gebruikerId,
+      gebruikerNaam: ctx.gebruikerNaam ?? null,
+      ipAdres: null,
+      sessieId: null,
+      module: config.id,
+      actie: "status_wijzigen",
+      entiteit: config.naam,
+      entiteitId: entityId,
+      entiteitNaam: null,
+      oudeWaarde: { status: entity.status } as Record<string, unknown>,
+      nieuweWaarde: { status: naarStatus } as Record<string, unknown>,
+      workflowStatus: naarStatus,
+      gebouwId: null,
+      medewerkerId: null,
+      documentId: null,
+      meta: typeof ctx.params?.reden === "string"
+        ? ({ reden: ctx.params.reden } as Record<string, unknown>)
+        : null,
     });
 
     return { ok: true, entity: updatedEntity };

@@ -47,3 +47,4 @@ export * from "./onderhanden-werk";
 export * from "./magazijn";
 export * from "./materiaal-aanvragen";
 export * from "./uitvoerder";
+export * from "./audit";

@@ -79,6 +79,8 @@ import { regieRouter } from "./regie";
 import contractBewakingRouter from "./contract-bewaking";
 import { requireAuth } from "../middlewares/auth";
 import { meldActief } from "../lib/online-tracker";
+import { maakAuditMiddleware } from "../lib/audit";
+import auditRouter from "./audit";
 import "../services/workflow-configs";
 
 const router: IRouter = Router();
@@ -90,6 +92,8 @@ router.use(uitnodigingRouter);
 router.use(portaalRouter);
 // Vanaf hier vereist alles een geldige sessie
 router.use(requireAuth);
+// Universele audit trail — onderschept alle muterende requests
+router.use(maakAuditMiddleware());
 // Online-aanwezigheid bijhouden (debounced, fire-and-forget)
 router.use((req, _res, next) => {
   const uid = req.session?.userId;
@@ -171,5 +175,6 @@ router.use(aiRouter);
 router.use(pbmRouter);
 router.use(regieRouter);
 router.use(contractBewakingRouter);
+router.use(auditRouter);
 
 export default router;
