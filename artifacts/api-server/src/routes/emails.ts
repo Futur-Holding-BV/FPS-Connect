@@ -18,6 +18,7 @@ import {
   type GeparseerdeBijlage,
   type GeparseerdeEmail,
 } from "../services/email-ai";
+import type { LogContext } from "../lib/aiGateway";
 
 const router = Router();
 const objectStorage = new ObjectStorageService();
@@ -109,6 +110,7 @@ function mergeContactpersonen(
 async function herberekeningUitvoeren(
   gebouwId: number,
   forceer = false,
+  logCtx?: Partial<LogContext>,
 ): Promise<void> {
   try {
     const emails = await db
@@ -144,7 +146,7 @@ async function herberekeningUitvoeren(
           inhoudTekst: e.inhoudTekst,
           bijlagen: [] as GeparseerdeBijlage[],
         }));
-        const nieuweSamenvatting = await genereerProjectSamenvatting(emailsMetId, { gebouw_id: gebouwId });
+        const nieuweSamenvatting = await genereerProjectSamenvatting(emailsMetId, { ...logCtx, gebouw_id: gebouwId });
         const gemergd = mergeContactpersonen(
           bestaandeContacten,
           nieuweSamenvatting.contactpersonen,
@@ -169,7 +171,7 @@ async function herberekeningUitvoeren(
       bijlagen: [] as GeparseerdeBijlage[],
     }));
 
-    const samenvatting = await genereerProjectSamenvatting(emailsMetId, { gebouw_id: gebouwId });
+    const samenvatting = await genereerProjectSamenvatting(emailsMetId, { ...logCtx, gebouw_id: gebouwId });
 
     // Merge: bewaar bevestigde/afgewezen contacten, voeg nieuwe AI-voorstellen toe
     const gemergdContacten = mergeContactpersonen(
@@ -316,7 +318,7 @@ router.get("/gebouwen/:id/emails/samenvatting", beheerderPlus, async (req, res) 
 router.post("/gebouwen/:id/emails/samenvatting", beheerderPlus, async (req, res) => {
   try {
     const gebouwId = parseId(req.params.id);
-    await herberekeningUitvoeren(gebouwId, true);
+    await herberekeningUitvoeren(gebouwId, true, { gebruikerId: req.session.userId ?? null });
     const [s] = await db
       .select()
       .from(gebouwEmailSamenvattingenTable)
@@ -499,7 +501,7 @@ router.post("/gebouwen/:id/emails", beheerderPlus, async (req, res) => {
 
     res.status(201).json(mapEmail(e, opgeslagenBijlagen));
     // Herbereken projectsamenvatting op de achtergrond
-    void herberekeningUitvoeren(gebouwId);
+    void herberekeningUitvoeren(gebouwId, false, { gebruikerId: req.session.userId ?? null });
   } catch (err) {
     if (err instanceof ObjectNotFoundError) {
       return res.status(404).json({ error: "Het geüploade bestand is niet gevonden." });
@@ -517,7 +519,7 @@ router.delete("/gebouwen/:id/emails/:emailId", beheerderPlus, async (req, res) =
     await db
       .delete(gebouwEmailsTable)
       .where(and(eq(gebouwEmailsTable.id, emailId), eq(gebouwEmailsTable.gebouwId, gebouwId)));
-    void herberekeningUitvoeren(gebouwId);
+    void herberekeningUitvoeren(gebouwId, false, { gebruikerId: req.session.userId ?? null });
     res.status(204).send();
   } catch (err) {
     req.log.error(err);
