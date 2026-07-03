@@ -9,10 +9,11 @@ import {
   useGetVervaldagen,
   useListAlleVerlofAanvragen,
   useGetZiekmeldingenStatistieken,
+  useGetAiDrempelStatus,
 } from "@workspace/api-client-react";
 import {
   Building, ShieldCheck, AlertTriangle, Calendar, TrendingUp, Clock,
-  Users, HeartPulse, ChevronRight,
+  Users, HeartPulse, ChevronRight, TriangleAlert,
 } from "lucide-react";
 import { useRol } from "@/context/rol-context";
 import { useAuth } from "@/context/auth-context";
@@ -67,6 +68,10 @@ export default function BeheerderDashboard() {
   );
   const { data: ziekStats } = useGetZiekmeldingenStatistieken();
 
+  const { data: drempelStatus } = useGetAiDrempelStatus({
+    query: { queryKey: ["ai-drempel-status"] },
+  });
+
   const statusTotalen = (verdeling ?? []).reduce(
     (acc, v) => {
       acc.goedgekeurd += v.goedgekeurd;
@@ -116,6 +121,27 @@ export default function BeheerderDashboard() {
         <p className="text-muted-foreground mt-1">{t("dashboard.ondertitel")}</p>
       </div>
 
+
+      {/* AI-kostendrempel waarschuwing (alleen hoofdbeheerder) */}
+      {echteRol === "hoofdbeheerder" && drempelStatus?.overschreden && (
+        <Link href="/beheer/ai-log">
+          <div
+            role="alert"
+            className="flex items-center gap-3 px-4 py-3 rounded-lg bg-orange-50 border border-orange-300 text-orange-900 cursor-pointer hover:bg-orange-100 transition-colors"
+          >
+            <TriangleAlert className="h-5 w-5 shrink-0 text-orange-600" />
+            <div className="flex-1 min-w-0">
+              <span className="font-semibold text-sm">
+                Maandelijkse AI-kostendrempel overschreden
+              </span>
+              <p className="text-xs text-orange-700 mt-0.5">
+                Klik om naar Beheer &rsaquo; AI-aanroepen te gaan en de drempel aan te passen.
+              </p>
+            </div>
+            <ChevronRight className="h-4 w-4 shrink-0 text-orange-600" />
+          </div>
+        </Link>
+      )}
 
       {/* KPI kaarten */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
