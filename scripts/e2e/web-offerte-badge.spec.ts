@@ -79,20 +79,20 @@ test("Web: Studio-badge op offerte-print valt niet buiten de 210mm kadrering bij
     // Wacht tot de pagina inhoud of lege staat toont.
     await expect(page.locator("body")).toBeVisible({ timeout: INHOUD_TIMEOUT });
 
-    // Zoek een link naar een offerte-detailpagina (/offertes/<id>).
-    const offerteLink = page
-      .locator("a[href]")
-      .filter({ hasText: /OFF-\d+|offerte/i })
+    // Offerte-rijen zijn role="button" divs (geen <a href>); zoek de eerste kaart.
+    const offerteRij = page
+      .locator('[role="button"]')
+      .filter({ hasText: /OFF-\d+/i })
       .first();
     const leegStaat = page.getByText(/geen offertes/i).filter({ visible: true });
 
     await expect(async () => {
-      const heeftLink = (await offerteLink.count()) > 0;
+      const heeftRij = (await offerteRij.count()) > 0;
       const heeftLeeg = (await leegStaat.count()) > 0;
-      expect(heeftLink || heeftLeeg).toBeTruthy();
+      expect(heeftRij || heeftLeeg).toBeTruthy();
     }).toPass({ timeout: INHOUD_TIMEOUT });
 
-    const heeftOffertes = (await offerteLink.count()) > 0;
+    const heeftOffertes = (await offerteRij.count()) > 0;
     if (!heeftOffertes) {
       test.skip();
       return;
@@ -102,26 +102,20 @@ test("Web: Studio-badge op offerte-print valt niet buiten de 210mm kadrering bij
   let offerteId: string | null = null;
 
   await test.step("offerte-detail openen en ID bepalen", async () => {
-    // Navigeer naar /offertes en klik op de eerste rij of link.
+    // Navigeer naar /offertes en klik op de eerste kaart (role="button" div).
     await page.goto("/offertes");
     await expect(page.locator("body")).toBeVisible({ timeout: INHOUD_TIMEOUT });
 
-    const offerteLink = page
-      .locator("a[href]")
-      .filter({ hasText: /OFF-\d+|offerte/i })
+    const offerteRij = page
+      .locator('[role="button"]')
+      .filter({ hasText: /OFF-\d+/i })
       .first();
 
-    const href = await offerteLink.getAttribute("href").catch(() => null);
-    const match = href?.match(/\/offertes\/(\d+)/);
-    if (match) {
-      offerteId = match[1];
-    } else {
-      // Probeer via URL na klik.
-      await offerteLink.click();
-      await page.waitForURL(/\/offertes\/\d+/, { timeout: INHOUD_TIMEOUT });
-      const urlMatch = page.url().match(/\/offertes\/(\d+)/);
-      if (urlMatch) offerteId = urlMatch[1];
-    }
+    await expect(offerteRij).toBeVisible({ timeout: INHOUD_TIMEOUT });
+    await offerteRij.click();
+    await page.waitForURL(/\/offertes\/\d+/, { timeout: INHOUD_TIMEOUT });
+    const urlMatch = page.url().match(/\/offertes\/(\d+)/);
+    if (urlMatch) offerteId = urlMatch[1];
 
     expect(offerteId, "Kon geen offerte-ID bepalen.").toBeTruthy();
   });

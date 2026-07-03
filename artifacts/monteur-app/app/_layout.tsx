@@ -354,22 +354,13 @@ function BerichtMeldingMonitor() {
   return null;
 }
 
-const ONBOARDING_KEY = "fps_onboarding_voltooid";
-
 function RootLayoutNav() {
   const { bezigLaden, vergrendeld, token } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
-  const [onboardingGezien, setOnboardingGezien] = useState<boolean | null>(null);
 
   useEffect(() => {
-    AsyncStorage.getItem(ONBOARDING_KEY).then((v) => {
-      setOnboardingGezien(v === "1");
-    });
-  }, []);
-
-  useEffect(() => {
-    if (bezigLaden || onboardingGezien === null) return;
+    if (bezigLaden) return;
     if (vergrendeld) {
       if (pathname !== "/vergrendeld") router.replace("/vergrendeld");
       return;
@@ -381,12 +372,8 @@ function RootLayoutNav() {
     const openbaar = pathname === "/login" || pathname === "/";
     if (!token && !openbaar) {
       router.replace("/login");
-      return;
     }
-    if (token && !onboardingGezien && pathname !== "/onboarding") {
-      router.replace("/onboarding");
-    }
-  }, [bezigLaden, vergrendeld, token, pathname, router, onboardingGezien]);
+  }, [bezigLaden, vergrendeld, token, pathname, router]);
 
   return (
     <>

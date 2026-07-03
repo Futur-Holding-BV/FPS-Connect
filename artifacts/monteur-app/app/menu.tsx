@@ -1,3 +1,4 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
 import { Redirect, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
@@ -58,6 +59,13 @@ export default function MenuScherm() {
       setModalZichtbaar(true);
     }
   }, [maandOpdracht]);
+
+  useEffect(() => {
+    if (!token) return;
+    AsyncStorage.getItem("fps_onboarding_voltooid").then((v) => {
+      if (v !== "1") router.replace("/onboarding");
+    });
+  }, [token, router]);
 
   if (!token) return <Redirect href="/login" />;
 

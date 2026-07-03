@@ -16,9 +16,9 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
-import { useAuth } from "@/lib/auth";
+import { useAuth } from "@/context/auth";
 import { uploadFoto } from "@/lib/upload";
-import { useThemeColors } from "@/lib/theme";
+import { useColors } from "@/hooks/useColors";
 
 const DOMEIN = process.env.EXPO_PUBLIC_DOMAIN ?? "";
 
@@ -39,7 +39,7 @@ interface MeldingResultaat {
 
 export default function VoertuigMeldingScherm() {
   const { token } = useAuth();
-  const c = useThemeColors();
+  const c = useColors();
 
   const [stap, setStap] = useState<Stap>("invullen");
   const [type, setType] = useState<"storing" | "schade">("storing");

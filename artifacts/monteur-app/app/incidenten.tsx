@@ -92,7 +92,7 @@ function typeLabel(type: string) {
 function statusKleur(status: string, c: ReturnType<typeof useColors>) {
   if (status === "gesloten") return c.success;
   if (status === "in_behandeling") return c.warning;
-  return c.danger;
+  return c.primary;
 }
 
 function statusLabel(status: string) {
@@ -230,21 +230,21 @@ export default function IncidentenScherm() {
       padding: 14,
       marginBottom: 10,
       borderLeftWidth: 4,
-      borderLeftColor: item.type === "ongeval" ? c.danger : c.warning,
+      borderLeftColor: item.type === "ongeval" ? c.primary : c.warning,
     }}>
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
           <Ionicons
             name={item.type === "ongeval" ? "warning" : "alert-circle-outline"}
             size={16}
-            color={item.type === "ongeval" ? c.danger : c.warning}
+            color={item.type === "ongeval" ? c.primary : c.warning}
           />
           <Text style={{ fontWeight: "700", fontSize: 13, color: c.text }}>
             {typeLabel(item.type)}
           </Text>
           {item.meldplichtig && (
-            <View style={{ backgroundColor: c.danger + "20", borderRadius: 4, paddingHorizontal: 5, paddingVertical: 1 }}>
-              <Text style={{ fontSize: 10, color: c.danger, fontWeight: "600" }}>NLA-meldplichtig</Text>
+            <View style={{ backgroundColor: c.primary + "20", borderRadius: 4, paddingHorizontal: 5, paddingVertical: 1 }}>
+              <Text style={{ fontSize: 10, color: c.primary, fontWeight: "600" }}>NLA-meldplichtig</Text>
             </View>
           )}
         </View>
@@ -257,7 +257,7 @@ export default function IncidentenScherm() {
       <Text style={{ fontSize: 13, color: c.text, marginBottom: 4 }} numberOfLines={2}>
         {item.omschrijving}
       </Text>
-      <Text style={{ fontSize: 12, color: c.textMuted }}>
+      <Text style={{ fontSize: 12, color: c.mutedForeground }}>
         {item.locatie_omschrijving}
         {item.datum ? ` — ${datumLabel(item.datum)}` : ""}
         {item.opdracht_naam ? ` | ${item.opdracht_naam}` : ""}
@@ -312,10 +312,10 @@ export default function IncidentenScherm() {
             </Pressable>
             <View style={{ alignItems: "center" }}>
               <Text style={{ fontWeight: "700", fontSize: 16, color: c.text }}>{STAP_TITELS[stap]}</Text>
-              <Text style={{ fontSize: 11, color: c.textMuted, marginTop: 2 }}>{stapIndex + 1} / {stappen.length}</Text>
+              <Text style={{ fontSize: 11, color: c.mutedForeground, marginTop: 2 }}>{stapIndex + 1} / {stappen.length}</Text>
             </View>
             <Pressable onPress={() => setFormulierOpen(false)} style={{ width: 40, alignItems: "flex-end" }}>
-              <Ionicons name="close" size={22} color={c.textMuted} />
+              <Ionicons name="close" size={22} color={c.mutedForeground} />
             </Pressable>
           </View>
 
@@ -323,7 +323,7 @@ export default function IncidentenScherm() {
 
             {stap === "type" && (
               <View style={{ gap: 12 }}>
-                <Text style={{ color: c.textMuted, fontSize: 13, marginBottom: 4 }}>
+                <Text style={{ color: c.mutedForeground, fontSize: 13, marginBottom: 4 }}>
                   Wat voor incident gaat het om?
                 </Text>
                 {(["bijna_ongeval", "ongeval"] as const).map(t => (
@@ -340,13 +340,13 @@ export default function IncidentenScherm() {
                     <Ionicons
                       name={t === "bijna_ongeval" ? "alert-circle-outline" : "warning"}
                       size={26}
-                      color={t === "bijna_ongeval" ? c.warning : c.danger}
+                      color={t === "bijna_ongeval" ? c.warning : c.primary}
                     />
                     <View style={{ flex: 1 }}>
                       <Text style={{ fontWeight: "700", fontSize: 15, color: c.text }}>
                         {t === "bijna_ongeval" ? "Bijna-Ongeval" : "Ongeval"}
                       </Text>
-                      <Text style={{ fontSize: 12, color: c.textMuted, marginTop: 2 }}>
+                      <Text style={{ fontSize: 12, color: c.mutedForeground, marginTop: 2 }}>
                         {t === "bijna_ongeval"
                           ? "Gevaarlijke situatie waarbij niemand gewond is geraakt"
                           : "Incident waarbij letsel of schade is opgetreden"}
@@ -364,14 +364,14 @@ export default function IncidentenScherm() {
                       value={form.datum}
                       onChangeText={v => setForm(f => ({ ...f, datum: v }))}
                       placeholder="JJJJ-MM-DD"
-                      placeholderTextColor={c.textMuted}
+                      placeholderTextColor={c.mutedForeground}
                     />
                     <TextInput
                       style={{ flex: 1, borderWidth: 1, borderColor: c.border, borderRadius: 8, padding: 10, color: c.text, backgroundColor: c.card, fontSize: 14 }}
                       value={form.tijdstip}
                       onChangeText={v => setForm(f => ({ ...f, tijdstip: v }))}
                       placeholder="UU:MM"
-                      placeholderTextColor={c.textMuted}
+                      placeholderTextColor={c.mutedForeground}
                     />
                   </View>
                 </View>
@@ -394,7 +394,7 @@ export default function IncidentenScherm() {
                     value={form.locatieOmschrijving}
                     onChangeText={v => setForm(f => ({ ...f, locatieOmschrijving: v }))}
                     placeholder="Bijv. 3e verdieping, trappenhuis A"
-                    placeholderTextColor={c.textMuted}
+                    placeholderTextColor={c.mutedForeground}
                     multiline
                   />
                 </View>
@@ -413,7 +413,7 @@ export default function IncidentenScherm() {
                             backgroundColor: form.opdrachtId === null ? c.primary + "10" : c.card,
                           }}
                         >
-                          <Text style={{ fontSize: 12, color: form.opdrachtId === null ? c.primary : c.textMuted, fontWeight: "600" }}>
+                          <Text style={{ fontSize: 12, color: form.opdrachtId === null ? c.primary : c.mutedForeground, fontWeight: "600" }}>
                             Geen
                           </Text>
                         </Pressable>
@@ -432,7 +432,7 @@ export default function IncidentenScherm() {
                             <Text style={{ fontSize: 12, color: form.opdrachtId === o.opdracht_id ? c.primary : c.text, fontWeight: "600" }} numberOfLines={1}>
                               {o.opdracht_naam}
                             </Text>
-                            <Text style={{ fontSize: 10, color: c.textMuted }} numberOfLines={1}>{o.gebouw_naam}</Text>
+                            <Text style={{ fontSize: 10, color: c.mutedForeground }} numberOfLines={1}>{o.gebouw_naam}</Text>
                           </Pressable>
                         ))}
                       </View>
@@ -456,7 +456,7 @@ export default function IncidentenScherm() {
                     {aiBezig ? "AI analyseert..." : "AI-voorstel ophalen"}
                   </Text>
                 </Pressable>
-                <Text style={{ fontSize: 11, color: c.textMuted, textAlign: "center" }}>
+                <Text style={{ fontSize: 11, color: c.mutedForeground, textAlign: "center" }}>
                   AI stelt een omschrijving, oorzaak en maatregelen voor. Je past alles zelf aan.
                 </Text>
 
@@ -485,7 +485,7 @@ export default function IncidentenScherm() {
                     value={form.omschrijving}
                     onChangeText={v => setForm(f => ({ ...f, omschrijving: v }))}
                     placeholder="Beschrijf het incident zo volledig mogelijk"
-                    placeholderTextColor={c.textMuted}
+                    placeholderTextColor={c.mutedForeground}
                     multiline
                   />
                 </View>
@@ -496,7 +496,7 @@ export default function IncidentenScherm() {
                     value={form.oorzaak}
                     onChangeText={v => setForm(f => ({ ...f, oorzaak: v }))}
                     placeholder="Wat was de directe of achterliggende oorzaak?"
-                    placeholderTextColor={c.textMuted}
+                    placeholderTextColor={c.mutedForeground}
                     multiline
                   />
                 </View>
@@ -508,7 +508,7 @@ export default function IncidentenScherm() {
                       value={nieuweGetuige}
                       onChangeText={setNieuweGetuige}
                       placeholder="Naam getuige"
-                      placeholderTextColor={c.textMuted}
+                      placeholderTextColor={c.mutedForeground}
                     />
                     <Pressable
                       onPress={() => {
@@ -524,10 +524,10 @@ export default function IncidentenScherm() {
                   </View>
                   {form.getuigen.map((g, i) => (
                     <View key={i} style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 4 }}>
-                      <Ionicons name="person-outline" size={14} color={c.textMuted} />
+                      <Ionicons name="person-outline" size={14} color={c.mutedForeground} />
                       <Text style={{ flex: 1, color: c.text, fontSize: 13 }}>{g}</Text>
                       <Pressable onPress={() => setForm(f => ({ ...f, getuigen: f.getuigen.filter((_, j) => j !== i) }))}>
-                        <Ionicons name="close-circle" size={18} color={c.danger} />
+                        <Ionicons name="close-circle" size={18} color={c.primary} />
                       </Pressable>
                     </View>
                   ))}
@@ -548,7 +548,7 @@ export default function IncidentenScherm() {
                 <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: c.card, padding: 14, borderRadius: 10 }}>
                   <View style={{ flex: 1 }}>
                     <Text style={{ fontWeight: "600", color: c.text, fontSize: 14 }}>Letsel opgelopen?</Text>
-                    <Text style={{ fontSize: 12, color: c.textMuted, marginTop: 2 }}>Lichamelijk letsel als gevolg van het incident</Text>
+                    <Text style={{ fontSize: 12, color: c.mutedForeground, marginTop: 2 }}>Lichamelijk letsel als gevolg van het incident</Text>
                   </View>
                   <Switch
                     value={form.letselBeschrijving.length > 0 || form.type === "ongeval"}
@@ -566,7 +566,7 @@ export default function IncidentenScherm() {
                       value={form.letselBeschrijving.trim()}
                       onChangeText={v => setForm(f => ({ ...f, letselBeschrijving: v }))}
                       placeholder="Welk letsel? Aan welk lichaamsdeel?"
-                      placeholderTextColor={c.textMuted}
+                      placeholderTextColor={c.mutedForeground}
                       multiline
                     />
                   </View>
@@ -592,7 +592,7 @@ export default function IncidentenScherm() {
                       value={form.eersteHulpBeschrijving}
                       onChangeText={v => setForm(f => ({ ...f, eersteHulpBeschrijving: v }))}
                       placeholder="Welke eerste hulp is verleend?"
-                      placeholderTextColor={c.textMuted}
+                      placeholderTextColor={c.mutedForeground}
                       multiline
                     />
                   </View>
@@ -609,38 +609,38 @@ export default function IncidentenScherm() {
 
             {stap === "maatregelen" && (
               <View style={{ gap: 12 }}>
-                <Text style={{ color: c.textMuted, fontSize: 13 }}>Welke maatregelen zijn direct genomen?</Text>
+                <Text style={{ color: c.mutedForeground, fontSize: 13 }}>Welke maatregelen zijn direct genomen?</Text>
                 {STANDAARD_MAATREGELEN.map(m => (
                   <Pressable
                     key={m}
                     onPress={() => wisselMaatregel(m)}
                     style={{ flexDirection: "row", alignItems: "center", gap: 10, padding: 12, backgroundColor: c.card, borderRadius: 10, borderWidth: 1.5, borderColor: form.genoemenMaatregelen.includes(m) ? c.primary : c.border }}
                   >
-                    <Ionicons name={form.genoemenMaatregelen.includes(m) ? "checkbox" : "square-outline"} size={20} color={form.genoemenMaatregelen.includes(m) ? c.primary : c.textMuted} />
+                    <Ionicons name={form.genoemenMaatregelen.includes(m) ? "checkbox" : "square-outline"} size={20} color={form.genoemenMaatregelen.includes(m) ? c.primary : c.mutedForeground} />
                     <Text style={{ flex: 1, color: c.text, fontSize: 13 }}>{m}</Text>
                   </Pressable>
                 ))}
 
-                <View style={{ marginTop: 4, padding: 14, backgroundColor: c.card, borderRadius: 10, borderWidth: 1.5, borderColor: form.meldplichtig ? c.danger : c.border }}>
+                <View style={{ marginTop: 4, padding: 14, backgroundColor: c.card, borderRadius: 10, borderWidth: 1.5, borderColor: form.meldplichtig ? c.primary : c.border }}>
                   <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
                     <View style={{ flex: 1 }}>
-                      <Text style={{ fontWeight: "700", color: form.meldplichtig ? c.danger : c.text, fontSize: 14 }}>
+                      <Text style={{ fontWeight: "700", color: form.meldplichtig ? c.primary : c.text, fontSize: 14 }}>
                         Meldplichtig bij Arbeidsinspectie
                       </Text>
-                      <Text style={{ fontSize: 11, color: c.textMuted, marginTop: 3 }}>
+                      <Text style={{ fontSize: 11, color: c.mutedForeground, marginTop: 3 }}>
                         Ziekenhuisopname, blijvend letsel of dodelijk ongeluk
                       </Text>
                     </View>
                     <Switch
                       value={form.meldplichtig}
                       onValueChange={v => setForm(f => ({ ...f, meldplichtig: v }))}
-                      trackColor={{ false: c.border, true: c.danger }}
+                      trackColor={{ false: c.border, true: c.primary }}
                       thumbColor="#fff"
                     />
                   </View>
                   {form.meldplichtig && (
-                    <View style={{ marginTop: 8, padding: 8, backgroundColor: c.danger + "10", borderRadius: 6 }}>
-                      <Text style={{ fontSize: 11, color: c.danger }}>
+                    <View style={{ marginTop: 8, padding: 8, backgroundColor: c.primary + "10", borderRadius: 6 }}>
+                      <Text style={{ fontSize: 11, color: c.primary }}>
                         Dit incident moet binnen 24 uur worden gemeld bij de Nederlandse Arbeidsinspectie.
                         De projectleider wordt direct geattendeerd.
                       </Text>
@@ -661,33 +661,33 @@ export default function IncidentenScherm() {
               <View style={{ gap: 14 }}>
                 <View style={{ backgroundColor: c.card, borderRadius: 10, padding: 14, gap: 10 }}>
                   <View style={{ flexDirection: "row", gap: 8 }}>
-                    <Ionicons name={form.type === "bijna_ongeval" ? "alert-circle-outline" : "warning"} size={18} color={form.type === "bijna_ongeval" ? c.warning : c.danger} />
+                    <Ionicons name={form.type === "bijna_ongeval" ? "alert-circle-outline" : "warning"} size={18} color={form.type === "bijna_ongeval" ? c.warning : c.primary} />
                     <Text style={{ fontWeight: "700", color: c.text, flex: 1 }}>{typeLabel(form.type)}</Text>
                   </View>
-                  <Text style={{ color: c.textMuted, fontSize: 12 }}>{form.datum} {form.tijdstip}</Text>
+                  <Text style={{ color: c.mutedForeground, fontSize: 12 }}>{form.datum} {form.tijdstip}</Text>
                   <Text style={{ color: c.text, fontSize: 13 }}><Text style={{ fontWeight: "600" }}>Locatie: </Text>{form.locatieOmschrijving}</Text>
                   {form.opdrachtNaam ? <Text style={{ color: c.text, fontSize: 13 }}><Text style={{ fontWeight: "600" }}>Opdracht: </Text>{form.opdrachtNaam}</Text> : null}
                   <Text style={{ color: c.text, fontSize: 13 }} numberOfLines={3}><Text style={{ fontWeight: "600" }}>Omschrijving: </Text>{form.omschrijving}</Text>
                   {form.oorzaak ? <Text style={{ color: c.text, fontSize: 13 }} numberOfLines={2}><Text style={{ fontWeight: "600" }}>Oorzaak: </Text>{form.oorzaak}</Text> : null}
                   {form.meldplichtig && (
-                    <View style={{ flexDirection: "row", gap: 6, alignItems: "center", padding: 6, backgroundColor: c.danger + "15", borderRadius: 6 }}>
-                      <Ionicons name="warning" size={14} color={c.danger} />
-                      <Text style={{ fontSize: 12, color: c.danger, fontWeight: "600" }}>Meldplichtig bij Arbeidsinspectie</Text>
+                    <View style={{ flexDirection: "row", gap: 6, alignItems: "center", padding: 6, backgroundColor: c.primary + "15", borderRadius: 6 }}>
+                      <Ionicons name="warning" size={14} color={c.primary} />
+                      <Text style={{ fontSize: 12, color: c.primary, fontWeight: "600" }}>Meldplichtig bij Arbeidsinspectie</Text>
                     </View>
                   )}
                   {form.genoemenMaatregelen.length > 0 && (
-                    <Text style={{ color: c.textMuted, fontSize: 12 }}>{form.genoemenMaatregelen.length} maatregel(en) genomen</Text>
+                    <Text style={{ color: c.mutedForeground, fontSize: 12 }}>{form.genoemenMaatregelen.length} maatregel(en) genomen</Text>
                   )}
                 </View>
 
-                <Text style={{ fontSize: 12, color: c.textMuted, textAlign: "center" }}>
+                <Text style={{ fontSize: 12, color: c.mutedForeground, textAlign: "center" }}>
                   Na opslaan wordt de projectleider direct geattendeerd op dit incident.
                 </Text>
 
                 <Pressable
                   onPress={opslaan}
                   disabled={aanmaken.isPending}
-                  style={{ backgroundColor: c.danger, borderRadius: 10, padding: 16, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 8 }}
+                  style={{ backgroundColor: c.primary, borderRadius: 10, padding: 16, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 8 }}
                 >
                   {aanmaken.isPending
                     ? <ActivityIndicator color="#fff" size="small" />
