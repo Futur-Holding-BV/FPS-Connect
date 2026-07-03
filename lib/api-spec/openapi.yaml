@@ -31662,7 +31662,7 @@ components:
         werkgever_id:             { type: integer }
         document_type:
           type: string
-          enum: [offerte, oplevering, brief, email, lmra, toolbox, inkoopbon, factuur, calculatie]
+          enum: [offerte, opleverrapport, brief, email, lmra, toolbox, inkoopbon, factuur, calculatie]
         naam:                     { type: ["string", "null"] }
         status:                   { type: string }
 

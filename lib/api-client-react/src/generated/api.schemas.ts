@@ -9291,7 +9291,7 @@ export type DocumentStudioModelInputDocumentType = typeof DocumentStudioModelInp
 
 export const DocumentStudioModelInputDocumentType = {
   offerte: 'offerte',
-  oplevering: 'oplevering',
+  opleverrapport: 'opleverrapport',
   brief: 'brief',
   email: 'email',
   lmra: 'lmra',

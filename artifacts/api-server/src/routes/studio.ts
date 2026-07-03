@@ -6,6 +6,7 @@ import { createRequire } from "node:module";
 import multer from "multer";
 import { db, documentStudioModellenTable, werkgeversTable } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
+import { DocumentStudioModelInputDocumentType } from "@workspace/api-zod";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { ObjectStorageService } from "../lib/objectStorage";
 import { heeftOpenAi, maakOpenAiClient } from "../lib/openai";
@@ -54,9 +55,7 @@ function valideerTemplateJson(json: string): z.infer<typeof studioTemplateJsonSc
 const lezen   = requireBevoegdheid("organisatie", 1);
 const schrijven = requireBevoegdheid("organisatie", 2);
 
-const GELDIGE_TYPES = [
-  "offerte", "brief", "email", "lmra", "toolbox", "inkoopbon", "factuur", "calculatie", "opleverrapport",
-] as const;
+const GELDIGE_TYPES = Object.values(DocumentStudioModelInputDocumentType);
 
 function parseId(v: unknown): number {
   return parseInt(String(v), 10);
@@ -444,7 +443,7 @@ function bouwPrompt(params: {
 }): string {
   const typeNaam: Record<string, string> = {
     offerte: "Offerte",
-    oplevering: "Opleverrapport brandpreventieve voorzieningen",
+    opleverrapport: "Opleverrapport brandpreventieve voorzieningen",
     brief: "Formele brief",
     email: "E-mail sjabloon",
     lmra: "LMRA (Laatste Minuut Risico Analyse checklist)",
@@ -455,7 +454,7 @@ function bouwPrompt(params: {
   };
   const familieAdvies: Record<string, string> = {
     offerte: "A",
-    oplevering: "A",
+    opleverrapport: "A",
     brief: "B",
     email: "B",
     lmra: "C",
