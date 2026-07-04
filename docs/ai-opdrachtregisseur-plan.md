@@ -81,12 +81,12 @@ De bestaande DMS-infrastructuur (`documenten`, `document_koppelingen`, `document
 | Fase-overgang bevestigen | Projectleider / beheerder (`offertes` niveau 2) |
 | Advies goedkeuren of afwijzen | Beheerder (`offertes` niveau 2) |
 | Werkvoorbereiding AI genereren | Beheerder (`offertes` niveau 2) |
-| Uitvoeringsstap voltooien | Monteur (eigen toegewezen opdracht) |
-| Afwijking goedkeuren | Projectleider / beheerder |
+| Uitvoeringsstap voltooien | Monteur met opdrachttoewijzing (toewijzingscheck à la mijn-werk, niet `offertes`-bevoegdheid) |
+| Afwijking goedkeuren | Projectleider / beheerder (`offertes` niveau 2) |
 | Oplevering definitief | Beheerder (`rapporten` niveau 2) |
-| Klant ziet interne velden | Nooit — server-side filter op klantperspectief |
+| Klant ziet interne velden | Nooit — expliciete klantperspectief-filter in endpoint (geen generieke org-scoping) |
 
-Organisatiescheiding: alle PIM-queries filteren op `organisatie_id` (bestaand patroon). Klant ziet alleen eigen opdrachten.
+> **Architectuurcorrectie:** het plan had organisatiescheiding via `organisatie_id`/`req.session.organisatieId` beschreven, maar dat patroon bestaat niet in deze codebase. Autorisatie verloopt via bestaande bevoegdheden-matrix + toewijzingscheck. Klantperspectief-filter is een expliciete projectie in de GET /pim endpoint (wegfilteren van interne secties voor de klantrol), niet een tenant-scope.
 
 ### 2.7 Audittrail
 
@@ -140,18 +140,37 @@ bijgewerkt_op         timestamp
 
 ```sql
 ALTER TABLE opdrachten
-  ADD COLUMN ai_fase text,                        -- nullable
-  ADD COLUMN aanvraag_via_one boolean DEFAULT false;
+  ADD COLUMN ai_fase text;                        -- nullable; aanvraag_via_one in pim_modellen (zie 3.4)
 ```
 
-### 3.4 Additieve kolom op `inkoopplan_regels`
+### 3.4 Additieve kolom op `document_koppelingen` (CHECK-constraint uitbreiden)
+
+De bestaande CHECK-constraint in `document_koppelingen` staat alleen `('gebouw','klant','offerte','dossier','voorziening')` toe als `doel_type`. PIM-documenten koppelen aan opdrachten vereist uitbreiding:
 
 ```sql
-ALTER TABLE inkoopplan_regels
-  ADD COLUMN uitvoering_stap_ref integer;         -- verwijzing naar pim_uitvoering_stappen.id
+ALTER TABLE document_koppelingen
+  DROP CONSTRAINT document_koppelingen_doel_type_check;
+ALTER TABLE document_koppelingen
+  ADD CONSTRAINT document_koppelingen_doel_type_check
+  CHECK (doel_type IN ('gebouw','klant','offerte','dossier','voorziening','opdracht'));
 ```
 
-*(Koppelt gekozen artikel aan de uitvoeringsstap waarvoor het bedoeld is)*
+Dit wordt ook doorgevoerd in het Drizzle-schema.
+
+### 3.5 Concurrency-bescherming op `pim_uitvoering_stappen`
+
+De SyncQueue-retry (MAX_POGINGEN) op mobiel kan een stap-voltooiing dupliceren. Vereiste guards:
+
+```sql
+-- Maximaal één actieve/afgeweken stap per PIM tegelijk
+CREATE UNIQUE INDEX pim_stap_actief_uniq
+  ON pim_uitvoering_stappen (pim_id)
+  WHERE status IN ('actief', 'afgeweken');
+```
+
+Alle fase-overgangen en stap-voltooiingen verlopen in één DB-transactie met status-guard (409 als stap al voltooid).
+
+> **Verwijderd:** `inkoopplan_regels.uitvoering_stap_ref` — deze koppeling had een temporele inversie: uitvoeringsstappen bestaan pas ná inkoop. In plaats daarvan bevat `pim.inkoop_context` een mapping `werkpakket_sleutel → [artikel_ids]`; de AI-stapgenerator leest inkoop_context per werkpakket uit het PIM zonder FK naar nog-niet-bestaande stappen.
 
 ---
 
