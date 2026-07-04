@@ -18457,6 +18457,233 @@ paths:
                 items:
                   $ref: "#/components/schemas/DocumentStudioWerkgever"
 
+  # ── FIE — Financial Intelligence Engine ──────────────────────────────────────
+
+  /fie/begrotingen:
+    get:
+      operationId: listFieBegrotingen
+      tags: [fie]
+      summary: Jaarbegrotingen ophalen (FIE)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FieJaarbegroting"
+    post:
+      operationId: createFieBegroting
+      tags: [fie]
+      summary: Nieuwe jaarbegroting aanmaken (FIE)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FieJaarbegrotingInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FieJaarbegroting"
+
+  /fie/begrotingen/{id}:
+    get:
+      operationId: getFieBegroting
+      tags: [fie]
+      summary: Jaarbegroting ophalen incl. AK-posten
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FieJaarbegrotingDetail"
+        "404":
+          description: Niet gevonden
+    patch:
+      operationId: updateFieBegroting
+      tags: [fie]
+      summary: Jaarbegroting bijwerken (FIE)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FieJaarbegrotingUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FieJaarbegroting"
+        "404":
+          description: Niet gevonden
+
+  /fie/begrotingen/{id}/ak-posten:
+    get:
+      operationId: listFieAkPosten
+      tags: [fie]
+      summary: AK-posten ophalen voor een jaarbegroting
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FieAkPost"
+    post:
+      operationId: createFieAkPost
+      tags: [fie]
+      summary: Nieuwe AK-post toevoegen aan jaarbegroting
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FieAkPostInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FieAkPost"
+
+  /fie/ak-posten/{id}:
+    patch:
+      operationId: updateFieAkPost
+      tags: [fie]
+      summary: AK-post bijwerken
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FieAkPostUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FieAkPost"
+        "404":
+          description: Niet gevonden
+    delete:
+      operationId: deleteFieAkPost
+      tags: [fie]
+      summary: AK-post verwijderen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Verwijderd
+
+  /fie/capaciteit/{boekjaar}:
+    get:
+      operationId: getFieCapaciteit
+      tags: [fie]
+      summary: Capaciteitsoverzicht ophalen voor een boekjaar
+      parameters:
+        - in: path
+          name: boekjaar
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FieCapaciteitsoverzicht"
+    post:
+      operationId: upsertFieCapaciteit
+      tags: [fie]
+      summary: Capaciteitssnapshot opslaan voor een boekjaar
+      parameters:
+        - in: path
+          name: boekjaar
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FieCapaciteitInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FieCapaciteitsoverzicht"
+
+  /fie/context/calculatie/{id}:
+    get:
+      operationId: getFieContextCalculatie
+      tags: [fie]
+      summary: Live FIE-context voor een calculatie (marge, AK, advies)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FieCalculatieContext"
+        "404":
+          description: Calculatie niet gevonden
+
 components:
   schemas:
     AiAanroepLog:
@@ -33669,3 +33896,153 @@ components:
           type: ["string", "null"]
         prijsbasis_opmerking:
           type: ["string", "null"]
+
+    # ── FIE schemas ───────────────────────────────────────────────────────────
+
+    FieJaarbegroting:
+      type: object
+      required: [id, boekjaar, status, doel_marge_pct, verdeelsleutel, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id:                        { type: integer }
+        boekjaar:                  { type: integer }
+        status:                    { type: string }
+        omzet_doel:                { type: ["number", "null"] }
+        directe_kosten_doel:       { type: ["number", "null"] }
+        doel_marge_pct:            { type: number }
+        ak_per_productief_uur:     { type: ["number", "null"] }
+        productieve_uren_doel:     { type: ["integer", "null"] }
+        verdeelsleutel:            { type: string }
+        opmerkingen:               { type: ["string", "null"] }
+        aangemaakt_op:             { type: string }
+        bijgewerkt_op:             { type: string }
+
+    FieJaarbegrotingDetail:
+      allOf:
+        - $ref: "#/components/schemas/FieJaarbegroting"
+        - type: object
+          required: [ak_posten, totaal_ak]
+          properties:
+            ak_posten:
+              type: array
+              items:
+                $ref: "#/components/schemas/FieAkPost"
+            totaal_ak:             { type: number }
+            ak_per_uur_berekend:   { type: ["number", "null"] }
+
+    FieJaarbegrotingInput:
+      type: object
+      required: [boekjaar]
+      properties:
+        boekjaar:                  { type: integer }
+        status:                    { type: string }
+        omzet_doel:                { type: ["number", "null"] }
+        directe_kosten_doel:       { type: ["number", "null"] }
+        doel_marge_pct:            { type: number }
+        ak_per_productief_uur:     { type: ["number", "null"] }
+        productieve_uren_doel:     { type: ["integer", "null"] }
+        verdeelsleutel:            { type: string }
+        opmerkingen:               { type: ["string", "null"] }
+
+    FieJaarbegrotingUpdate:
+      type: object
+      properties:
+        status:                    { type: string }
+        omzet_doel:                { type: ["number", "null"] }
+        directe_kosten_doel:       { type: ["number", "null"] }
+        doel_marge_pct:            { type: number }
+        ak_per_productief_uur:     { type: ["number", "null"] }
+        productieve_uren_doel:     { type: ["integer", "null"] }
+        verdeelsleutel:            { type: string }
+        opmerkingen:               { type: ["string", "null"] }
+
+    FieAkPost:
+      type: object
+      required: [id, begroting_id, categorie, omschrijving, bedrag_jaarbasis, actief, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id:                        { type: integer }
+        begroting_id:              { type: integer }
+        werkgever_id:              { type: ["integer", "null"] }
+        werkgever_naam:            { type: ["string", "null"] }
+        categorie:                 { type: string }
+        omschrijving:              { type: string }
+        bedrag_jaarbasis:          { type: number }
+        actief:                    { type: boolean }
+        aangemaakt_op:             { type: string }
+        bijgewerkt_op:             { type: string }
+
+    FieAkPostInput:
+      type: object
+      required: [categorie, omschrijving, bedrag_jaarbasis]
+      properties:
+        werkgever_id:              { type: ["integer", "null"] }
+        categorie:                 { type: string }
+        omschrijving:              { type: string }
+        bedrag_jaarbasis:          { type: number }
+        actief:                    { type: boolean }
+
+    FieAkPostUpdate:
+      type: object
+      properties:
+        werkgever_id:              { type: ["integer", "null"] }
+        categorie:                 { type: string }
+        omschrijving:              { type: string }
+        bedrag_jaarbasis:          { type: number }
+        actief:                    { type: boolean }
+
+    FieCapaciteitsoverzicht:
+      type: object
+      required: [boekjaar, snapshots, totaal_productieve_uren, totaal_fte]
+      properties:
+        boekjaar:                  { type: integer }
+        snapshots:
+          type: array
+          items:
+            $ref: "#/components/schemas/FieCapaciteitSnapshot"
+        totaal_productieve_uren:   { type: number }
+        totaal_fte:                { type: number }
+
+    FieCapaciteitSnapshot:
+      type: object
+      required: [id, boekjaar, productieve_uren, snapshot_datum, bron, aangemaakt_op]
+      properties:
+        id:                        { type: integer }
+        boekjaar:                  { type: integer }
+        werkgever_id:              { type: ["integer", "null"] }
+        werkgever_naam:            { type: ["string", "null"] }
+        productieve_uren:          { type: number }
+        fte:                       { type: ["number", "null"] }
+        snapshot_datum:            { type: string }
+        bron:                      { type: string }
+        aangemaakt_op:             { type: string }
+
+    FieCapaciteitInput:
+      type: object
+      required: [productieve_uren, snapshot_datum]
+      properties:
+        werkgever_id:              { type: ["integer", "null"] }
+        productieve_uren:          { type: number }
+        fte:                       { type: ["number", "null"] }
+        snapshot_datum:            { type: string }
+        bron:                      { type: string }
+
+    FieCalculatieContext:
+      type: object
+      required: [calculatie_id, heeft_begroting, totaal_arbeid, totaal_materiaal, totaal_onderaanneming, totaal_mu, totaal_excl_opslag, totaal_incl_opslag]
+      properties:
+        calculatie_id:             { type: integer }
+        heeft_begroting:           { type: boolean }
+        boekjaar:                  { type: ["integer", "null"] }
+        doel_marge_pct:            { type: ["number", "null"] }
+        ak_per_uur:                { type: ["number", "null"] }
+        totaal_arbeid:             { type: number }
+        totaal_materiaal:          { type: number }
+        totaal_onderaanneming:     { type: number }
+        totaal_mu:                 { type: number }
+        totaal_excl_opslag:        { type: number }
+        totaal_incl_opslag:        { type: number }
+        ak_bijdrage:               { type: ["number", "null"] }
+        verwachte_marge_abs:       { type: ["number", "null"] }
+        verwachte_marge_pct:       { type: ["number", "null"] }
+        advies_status:             { type: string }
+        advies_tekst:              { type: string }
+        opslag_ak_pct:             { type: number }

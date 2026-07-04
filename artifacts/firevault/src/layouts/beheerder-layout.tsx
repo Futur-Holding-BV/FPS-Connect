@@ -21,6 +21,7 @@ import {
   ClipboardCheck, AlertTriangle, TriangleAlert, FileArchive, Receipt, ArrowUpRight, ScrollText,
   UserPlus, UserMinus, UserX, Car, GitBranch, ArrowLeft, ChevronDown, Palette, Monitor,
   Package, Upload, MapPin, Archive, ArrowLeftRight, BookmarkCheck, ScanSearch, Bot, ShoppingCart,
+  TrendingUp,
 } from "lucide-react";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { Badge } from "@/components/ui/badge";
@@ -864,6 +865,16 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                   <SidebarGroupLabel>Financieel</SidebarGroupLabel>
                   <SidebarGroupContent>
                     <SidebarMenu>
+                      {heeftNiveau("financieel", 1) && (
+                        <SidebarMenuItem className="pl-5">
+                          <SidebarMenuButton asChild isActive={location === "/beheer/bedrijfskompas"}>
+                            <Link href="/beheer/bedrijfskompas">
+                              <TrendingUp />
+                              <span>Bedrijfskompas</span>
+                            </Link>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      )}
                       {toonSysteem && (
                         <SidebarMenuItem className="pl-5">
                           <SidebarMenuButton asChild isActive={location === "/beheer/boekhouding"}>

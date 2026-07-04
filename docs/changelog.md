@@ -4,6 +4,45 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-04 — Financial Intelligence Engine (FIE) — Bedrijfskompas
+
+**Uitvoering:** volledig | **Diepere lagen:** volledig | **Getest:** typecheck schoon (geen nieuwe fouten); api-server bouwt + start clean; e2e-web groen
+
+**DB schema**
+- `lib/db/src/schema/fie.ts`: drie nieuwe tabellen via directe SQL aangemaakt + Drizzle-schema geschreven:
+  - `fie_jaarbegrotingen`: boekjaar, status (concept/actief/gesloten), omzetDoel, doelMargePct, akPerProductiefUur, productieveUrenDoel, verdeelsleutel
+  - `fie_ak_posten`: indirecte kostenposten per begroting (categorie, omschrijving, bedragJaarbasis, actief)
+  - `fie_capaciteit_snapshots`: productieve-urenregistraties per boekjaar
+- Geëxporteerd via `lib/db/src/schema/index.ts`
+
+**OpenAPI & codegen**
+- `lib/api-spec/openapi.yaml`: FIE-paden toegevoegd (voor `components:` + schemas aan einde):
+  - `GET/POST /fie/begrotingen`, `GET/PATCH /fie/begrotingen/{id}`, `GET/POST /fie/begrotingen/{id}/ak-posten`
+  - `PATCH/DELETE /fie/ak-posten/{id}`, `GET/POST /fie/capaciteit/{boekjaar}`, `GET /fie/context/calculatie/{id}`
+  - Schemas: `FieJaarbegroting`, `FieJaarbegrotingDetail`, `FieJaarbegrotingInput/Update`, `FieAkPost`, `FieAkPostInput/Update`, `FieCapaciteitsoverzicht`, `FieCapaciteitSnapshot`, `FieCapaciteitInput`, `FieCalculatieContext`
+- Codegen uitgevoerd: alle FIE-hooks beschikbaar in `@workspace/api-client-react`
+
+**API route**
+- `artifacts/api-server/src/routes/fie.ts`: volledige implementatie:
+  - Jaarbegrotingen CRUD (bevoegdheid `financieel:1/2`)
+  - AK-posten CRUD per begroting (werkgever-join voor naam-denormalisatie)
+  - Capaciteitssnapsots per boekjaar
+  - `GET /fie/context/calculatie/:id`: live margeadvies o.b.v. actieve begroting (berekenT totalen uit regels, opslagen, AK-bijdrage via akPerUur × MU, verwachteMargePct vs doelMarge → advies_status: goed/neutraal/laag/leeg/geen_begroting)
+- Geregistreerd in `routes/index.ts`
+
+**Frontend**
+- `artifacts/firevault/src/pages/beheer/bedrijfskompas.tsx`: volledige beheerpagina
+  - Begrotingenlijst met status-badges (Concept/Actief/Gesloten) + groene actieve-begroting-banner
+  - Detail-view met AK-postenopbouw, totaal-AK en berekend AK/uur (uit posten + productieve uren)
+  - CRUD-dialogen voor begrotingen en AK-posten (categorie-select, bedrag)
+  - Lege toestand + toelichting hoe FIE werkt
+- `artifacts/firevault/src/pages/modules/calculatie/detail.tsx`: `FieContextBlok` toegevoegd in zijpaneel
+  - Roept `useGetFieContextCalculatie(id)` aan
+  - Toont adviesbadge (groen/neutraal/amber/grijs), verwachte marge vs doelmarge, AK-bijdrage per MU
+  - Laadskelet tijdens fetch; verbergt zichzelf als geen data
+- `artifacts/firevault/src/App.tsx`: route `/beheer/bedrijfskompas` geregistreerd
+- `artifacts/firevault/src/layouts/beheerder-layout.tsx`: nav-item "Bedrijfskompas" (TrendingUp-icoon) toegevoegd in Financieel-sectie, gated op `financieel:1`
+
 ## 2026-07-03 — Eenheidsprijzenbibliotheek (calculatiemodule)
 
 **Uitvoering:** volledig | **Diepere lagen:** volledig | **Getest:** typecheck schoon (geen nieuwe fouten)

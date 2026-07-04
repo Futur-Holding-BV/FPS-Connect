@@ -52,3 +52,4 @@ export * from "./rechten";
 export * from "./ai-log";
 export * from "./meldingen";
 export * from "./eenheidsprijzen";
+export * from "./fie";

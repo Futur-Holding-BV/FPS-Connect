@@ -10010,6 +10010,157 @@ export interface EenheidsPrijsInput {
   prijsbasis_opmerking?: string | null;
 }
 
+export interface FieJaarbegroting {
+  id: number;
+  boekjaar: number;
+  status: string;
+  /** @nullable */
+  omzet_doel?: number | null;
+  /** @nullable */
+  directe_kosten_doel?: number | null;
+  doel_marge_pct: number;
+  /** @nullable */
+  ak_per_productief_uur?: number | null;
+  /** @nullable */
+  productieve_uren_doel?: number | null;
+  verdeelsleutel: string;
+  /** @nullable */
+  opmerkingen?: string | null;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export interface FieAkPost {
+  id: number;
+  begroting_id: number;
+  /** @nullable */
+  werkgever_id?: number | null;
+  /** @nullable */
+  werkgever_naam?: string | null;
+  categorie: string;
+  omschrijving: string;
+  bedrag_jaarbasis: number;
+  actief: boolean;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export type FieJaarbegrotingDetail = FieJaarbegroting & ({
+  ak_posten: FieAkPost[];
+  totaal_ak: number;
+  /** @nullable */
+  ak_per_uur_berekend?: number | null;
+});
+
+export interface FieJaarbegrotingInput {
+  boekjaar: number;
+  status?: string;
+  /** @nullable */
+  omzet_doel?: number | null;
+  /** @nullable */
+  directe_kosten_doel?: number | null;
+  doel_marge_pct?: number;
+  /** @nullable */
+  ak_per_productief_uur?: number | null;
+  /** @nullable */
+  productieve_uren_doel?: number | null;
+  verdeelsleutel?: string;
+  /** @nullable */
+  opmerkingen?: string | null;
+}
+
+export interface FieJaarbegrotingUpdate {
+  status?: string;
+  /** @nullable */
+  omzet_doel?: number | null;
+  /** @nullable */
+  directe_kosten_doel?: number | null;
+  doel_marge_pct?: number;
+  /** @nullable */
+  ak_per_productief_uur?: number | null;
+  /** @nullable */
+  productieve_uren_doel?: number | null;
+  verdeelsleutel?: string;
+  /** @nullable */
+  opmerkingen?: string | null;
+}
+
+export interface FieAkPostInput {
+  /** @nullable */
+  werkgever_id?: number | null;
+  categorie: string;
+  omschrijving: string;
+  bedrag_jaarbasis: number;
+  actief?: boolean;
+}
+
+export interface FieAkPostUpdate {
+  /** @nullable */
+  werkgever_id?: number | null;
+  categorie?: string;
+  omschrijving?: string;
+  bedrag_jaarbasis?: number;
+  actief?: boolean;
+}
+
+export interface FieCapaciteitSnapshot {
+  id: number;
+  boekjaar: number;
+  /** @nullable */
+  werkgever_id?: number | null;
+  /** @nullable */
+  werkgever_naam?: string | null;
+  productieve_uren: number;
+  /** @nullable */
+  fte?: number | null;
+  snapshot_datum: string;
+  bron: string;
+  aangemaakt_op: string;
+}
+
+export interface FieCapaciteitsoverzicht {
+  boekjaar: number;
+  snapshots: FieCapaciteitSnapshot[];
+  totaal_productieve_uren: number;
+  totaal_fte: number;
+}
+
+export interface FieCapaciteitInput {
+  /** @nullable */
+  werkgever_id?: number | null;
+  productieve_uren: number;
+  /** @nullable */
+  fte?: number | null;
+  snapshot_datum: string;
+  bron?: string;
+}
+
+export interface FieCalculatieContext {
+  calculatie_id: number;
+  heeft_begroting: boolean;
+  /** @nullable */
+  boekjaar?: number | null;
+  /** @nullable */
+  doel_marge_pct?: number | null;
+  /** @nullable */
+  ak_per_uur?: number | null;
+  totaal_arbeid: number;
+  totaal_materiaal: number;
+  totaal_onderaanneming: number;
+  totaal_mu: number;
+  totaal_excl_opslag: number;
+  totaal_incl_opslag: number;
+  /** @nullable */
+  ak_bijdrage?: number | null;
+  /** @nullable */
+  verwachte_marge_abs?: number | null;
+  /** @nullable */
+  verwachte_marge_pct?: number | null;
+  advies_status?: string;
+  advies_tekst?: string;
+  opslag_ak_pct?: number;
+}
+
 export type GetRecenteActiviteitParams = {
 limit?: number;
 };

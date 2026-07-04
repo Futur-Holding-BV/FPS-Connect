@@ -23211,3 +23211,263 @@ export const ListStudioWerkgeversResponseItem = zod.object({
 export const ListStudioWerkgeversResponse = zod.array(ListStudioWerkgeversResponseItem)
 
 
+/**
+ * @summary Jaarbegrotingen ophalen (FIE)
+ */
+export const ListFieBegrotingenResponseItem = zod.object({
+  "id": zod.number(),
+  "boekjaar": zod.number(),
+  "status": zod.string(),
+  "omzet_doel": zod.number().nullish(),
+  "directe_kosten_doel": zod.number().nullish(),
+  "doel_marge_pct": zod.number(),
+  "ak_per_productief_uur": zod.number().nullish(),
+  "productieve_uren_doel": zod.number().nullish(),
+  "verdeelsleutel": zod.string(),
+  "opmerkingen": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+export const ListFieBegrotingenResponse = zod.array(ListFieBegrotingenResponseItem)
+
+
+/**
+ * @summary Nieuwe jaarbegroting aanmaken (FIE)
+ */
+export const CreateFieBegrotingBody = zod.object({
+  "boekjaar": zod.number(),
+  "status": zod.string().optional(),
+  "omzet_doel": zod.number().nullish(),
+  "directe_kosten_doel": zod.number().nullish(),
+  "doel_marge_pct": zod.number().optional(),
+  "ak_per_productief_uur": zod.number().nullish(),
+  "productieve_uren_doel": zod.number().nullish(),
+  "verdeelsleutel": zod.string().optional(),
+  "opmerkingen": zod.string().nullish()
+})
+
+export const CreateFieBegrotingResponse = zod.void()
+
+
+/**
+ * @summary Jaarbegroting ophalen incl. AK-posten
+ */
+export const GetFieBegrotingParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetFieBegrotingResponse = zod.object({
+  "id": zod.number(),
+  "boekjaar": zod.number(),
+  "status": zod.string(),
+  "omzet_doel": zod.number().nullish(),
+  "directe_kosten_doel": zod.number().nullish(),
+  "doel_marge_pct": zod.number(),
+  "ak_per_productief_uur": zod.number().nullish(),
+  "productieve_uren_doel": zod.number().nullish(),
+  "verdeelsleutel": zod.string(),
+  "opmerkingen": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+}).and(zod.object({
+  "ak_posten": zod.array(zod.object({
+  "id": zod.number(),
+  "begroting_id": zod.number(),
+  "werkgever_id": zod.number().nullish(),
+  "werkgever_naam": zod.string().nullish(),
+  "categorie": zod.string(),
+  "omschrijving": zod.string(),
+  "bedrag_jaarbasis": zod.number(),
+  "actief": zod.boolean(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})),
+  "totaal_ak": zod.number(),
+  "ak_per_uur_berekend": zod.number().nullish()
+}))
+
+
+/**
+ * @summary Jaarbegroting bijwerken (FIE)
+ */
+export const UpdateFieBegrotingParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateFieBegrotingBody = zod.object({
+  "status": zod.string().optional(),
+  "omzet_doel": zod.number().nullish(),
+  "directe_kosten_doel": zod.number().nullish(),
+  "doel_marge_pct": zod.number().optional(),
+  "ak_per_productief_uur": zod.number().nullish(),
+  "productieve_uren_doel": zod.number().nullish(),
+  "verdeelsleutel": zod.string().optional(),
+  "opmerkingen": zod.string().nullish()
+})
+
+export const UpdateFieBegrotingResponse = zod.object({
+  "id": zod.number(),
+  "boekjaar": zod.number(),
+  "status": zod.string(),
+  "omzet_doel": zod.number().nullish(),
+  "directe_kosten_doel": zod.number().nullish(),
+  "doel_marge_pct": zod.number(),
+  "ak_per_productief_uur": zod.number().nullish(),
+  "productieve_uren_doel": zod.number().nullish(),
+  "verdeelsleutel": zod.string(),
+  "opmerkingen": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary AK-posten ophalen voor een jaarbegroting
+ */
+export const ListFieAkPostenParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListFieAkPostenResponseItem = zod.object({
+  "id": zod.number(),
+  "begroting_id": zod.number(),
+  "werkgever_id": zod.number().nullish(),
+  "werkgever_naam": zod.string().nullish(),
+  "categorie": zod.string(),
+  "omschrijving": zod.string(),
+  "bedrag_jaarbasis": zod.number(),
+  "actief": zod.boolean(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+export const ListFieAkPostenResponse = zod.array(ListFieAkPostenResponseItem)
+
+
+/**
+ * @summary Nieuwe AK-post toevoegen aan jaarbegroting
+ */
+export const CreateFieAkPostParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const CreateFieAkPostBody = zod.object({
+  "werkgever_id": zod.number().nullish(),
+  "categorie": zod.string(),
+  "omschrijving": zod.string(),
+  "bedrag_jaarbasis": zod.number(),
+  "actief": zod.boolean().optional()
+})
+
+export const CreateFieAkPostResponse = zod.void()
+
+
+/**
+ * @summary AK-post bijwerken
+ */
+export const UpdateFieAkPostParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateFieAkPostBody = zod.object({
+  "werkgever_id": zod.number().nullish(),
+  "categorie": zod.string().optional(),
+  "omschrijving": zod.string().optional(),
+  "bedrag_jaarbasis": zod.number().optional(),
+  "actief": zod.boolean().optional()
+})
+
+export const UpdateFieAkPostResponse = zod.object({
+  "id": zod.number(),
+  "begroting_id": zod.number(),
+  "werkgever_id": zod.number().nullish(),
+  "werkgever_naam": zod.string().nullish(),
+  "categorie": zod.string(),
+  "omschrijving": zod.string(),
+  "bedrag_jaarbasis": zod.number(),
+  "actief": zod.boolean(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary AK-post verwijderen
+ */
+export const DeleteFieAkPostParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteFieAkPostResponse = zod.void()
+
+
+/**
+ * @summary Capaciteitsoverzicht ophalen voor een boekjaar
+ */
+export const GetFieCapaciteitParams = zod.object({
+  "boekjaar": zod.coerce.number()
+})
+
+export const GetFieCapaciteitResponse = zod.object({
+  "boekjaar": zod.number(),
+  "snapshots": zod.array(zod.object({
+  "id": zod.number(),
+  "boekjaar": zod.number(),
+  "werkgever_id": zod.number().nullish(),
+  "werkgever_naam": zod.string().nullish(),
+  "productieve_uren": zod.number(),
+  "fte": zod.number().nullish(),
+  "snapshot_datum": zod.string(),
+  "bron": zod.string(),
+  "aangemaakt_op": zod.string()
+})),
+  "totaal_productieve_uren": zod.number(),
+  "totaal_fte": zod.number()
+})
+
+
+/**
+ * @summary Capaciteitssnapshot opslaan voor een boekjaar
+ */
+export const UpsertFieCapaciteitParams = zod.object({
+  "boekjaar": zod.coerce.number()
+})
+
+export const UpsertFieCapaciteitBody = zod.object({
+  "werkgever_id": zod.number().nullish(),
+  "productieve_uren": zod.number(),
+  "fte": zod.number().nullish(),
+  "snapshot_datum": zod.string(),
+  "bron": zod.string().optional()
+})
+
+export const UpsertFieCapaciteitResponse = zod.void()
+
+
+/**
+ * @summary Live FIE-context voor een calculatie (marge, AK, advies)
+ */
+export const GetFieContextCalculatieParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetFieContextCalculatieResponse = zod.object({
+  "calculatie_id": zod.number(),
+  "heeft_begroting": zod.boolean(),
+  "boekjaar": zod.number().nullish(),
+  "doel_marge_pct": zod.number().nullish(),
+  "ak_per_uur": zod.number().nullish(),
+  "totaal_arbeid": zod.number(),
+  "totaal_materiaal": zod.number(),
+  "totaal_onderaanneming": zod.number(),
+  "totaal_mu": zod.number(),
+  "totaal_excl_opslag": zod.number(),
+  "totaal_incl_opslag": zod.number(),
+  "ak_bijdrage": zod.number().nullish(),
+  "verwachte_marge_abs": zod.number().nullish(),
+  "verwachte_marge_pct": zod.number().nullish(),
+  "advies_status": zod.string().optional(),
+  "advies_tekst": zod.string().optional(),
+  "opslag_ak_pct": zod.number().optional()
+})
+
+

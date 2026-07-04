@@ -160,6 +160,7 @@ import MijnSalarisdocumentenPagina from "@/pages/mijn/salarisdocumenten";
 import AiLogBeheer from "@/pages/beheer/ai-log";
 import BoekhoudingBeheer from "@/pages/beheer/boekhouding";
 import GoLivePagina from "@/pages/beheer/go-live";
+import BedrijfskompasPage from "@/pages/beheer/bedrijfskompas";
 import MeldingenBeheerPage from "@/pages/beheer/meldingen";
 import GebouwenArchiefBeheer from "@/pages/beheer/gebouwen-archief";
 import SalarisMutatiesPagina from "@/pages/salaris-mutaties/index";
@@ -490,6 +491,7 @@ function ConnectPortal() {
         <Route path="/beheer/import" component={ImportPagina} />
         <Route path="/beheer/boekhouding" component={BoekhoudingBeheer} />
         <Route path="/beheer/go-live" component={GoLivePagina} />
+        <Route path="/beheer/bedrijfskompas" component={BedrijfskompasPage} />
         <Route path="/beheer/meldingen" component={MeldingenBeheerPage} />
         <Route path="/beheer/projectstatus" component={ProjectstatusPagina} />
         <Route path="/beheer/pwa-test" component={PwaTest} />

@@ -30,6 +30,7 @@ import {
   type CalcEenheid,
   useListEenheidsprijzen,
   type EenheidsPrijs,
+  useGetFieContextCalculatie,
 } from "@workspace/api-client-react";
 import AiChatPanel from "@/components/ai-chat-panel";
 import AiSeniorCalculatorPanel from "@/components/ai-senior-calculator-panel";
@@ -56,6 +57,7 @@ import {
   LayoutList, Users, Eye, Sparkles, Wrench, CheckCircle2, X,
   Printer, History, Save, MoreHorizontal, MessageSquare, BrainCircuit,
   ChevronDown, ChevronUp, Building2, BookOpen, Search,
+  TrendingUp, TrendingDown, Minus,
 } from "lucide-react";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -1835,6 +1837,103 @@ function InkoopregelsKaart({
   );
 }
 
+// ─── FIE Bedrijfskompas contextblok ──────────────────────────────────────────
+
+function FieContextBlok({ calculatieId }: { calculatieId: number }) {
+  const { data, isLoading } = useGetFieContextCalculatie(calculatieId);
+
+  if (isLoading) {
+    return (
+      <div className="p-4 border-t space-y-2">
+        <Skeleton className="h-4 w-32" />
+        <Skeleton className="h-3 w-full" />
+        <Skeleton className="h-3 w-2/3" />
+      </div>
+    );
+  }
+
+  if (!data) return null;
+
+  const {
+    heeft_begroting, advies_status, advies_tekst,
+    doel_marge_pct, verwachte_marge_pct, verwachte_marge_abs,
+    ak_bijdrage, ak_per_uur, totaal_mu,
+  } = data;
+
+  const adviesKleur: Record<string, string> = {
+    goed:           "bg-green-50 border-green-200 text-green-800",
+    neutraal:       "bg-muted border-border text-muted-foreground",
+    laag:           "bg-amber-50 border-amber-200 text-amber-800",
+    leeg:           "bg-muted border-border text-muted-foreground",
+    geen_begroting: "bg-slate-50 border-slate-200 text-slate-500",
+  };
+
+  const AdviesIcoon = () => {
+    if (advies_status === "goed") return <TrendingUp className="h-3.5 w-3.5 text-green-600 shrink-0" />;
+    if (advies_status === "laag") return <TrendingDown className="h-3.5 w-3.5 text-amber-600 shrink-0" />;
+    return <Minus className="h-3.5 w-3.5 text-muted-foreground shrink-0" />;
+  };
+
+  function fmtPct(n: number | null | undefined) {
+    if (n == null) return "—";
+    return `${n.toFixed(1)}%`;
+  }
+
+  function fmtEur(n: number | null | undefined) {
+    if (n == null) return "—";
+    return new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR", minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
+  }
+
+  return (
+    <div className="p-4 border-t space-y-3">
+      <h3 className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5 uppercase tracking-wide">
+        <TrendingUp className="h-3.5 w-3.5" />
+        Bedrijfskompas
+      </h3>
+
+      {/* Adviesbadge */}
+      <div className={cn("rounded-md border p-2.5 text-xs flex items-start gap-2", adviesKleur[advies_status ?? ""] ?? adviesKleur.neutraal)}>
+        <AdviesIcoon />
+        <span className="leading-snug">{advies_tekst}</span>
+      </div>
+
+      {/* Margedetail */}
+      {heeft_begroting && verwachte_marge_pct != null && (
+        <div className="space-y-1 text-xs">
+          <div className="flex justify-between text-muted-foreground">
+            <span>Doelmarge</span>
+            <span className="tabular-nums font-medium">{fmtPct(doel_marge_pct)}</span>
+          </div>
+          <div className="flex justify-between text-muted-foreground">
+            <span>Verwachte marge</span>
+            <span className={cn("tabular-nums font-semibold", advies_status === "goed" ? "text-green-700" : advies_status === "laag" ? "text-amber-700" : "text-foreground")}>
+              {fmtPct(verwachte_marge_pct)}
+            </span>
+          </div>
+          {verwachte_marge_abs != null && (
+            <div className="flex justify-between text-muted-foreground">
+              <span>Marge (abs)</span>
+              <span className="tabular-nums">{fmtEur(verwachte_marge_abs)}</span>
+            </div>
+          )}
+          {ak_bijdrage != null && (
+            <div className="flex justify-between text-muted-foreground border-t pt-1">
+              <span>AK-bijdrage ({totaal_mu != null ? `${Math.round(totaal_mu)} MU` : "—"})</span>
+              <span className="tabular-nums">{fmtEur(ak_bijdrage)}</span>
+            </div>
+          )}
+          {ak_per_uur != null && (
+            <div className="flex justify-between text-muted-foreground">
+              <span>Norm AK/uur</span>
+              <span className="tabular-nums">{fmtEur(ak_per_uur)}</span>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Hoofdcomponent ──────────────────────────────────────────────────────────
 
 export default function ModulesCalculatieDetail() {
@@ -2869,6 +2968,9 @@ export default function ModulesCalculatieDetail() {
               <span>{marge}%</span>
             </div>
           </div>
+
+          {/* FIE Bedrijfskompas contextblok */}
+          <FieContextBlok calculatieId={id} />
 
           {data.opmerkingen && (
             <div className="p-4 border-t">

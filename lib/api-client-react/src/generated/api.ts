@@ -188,6 +188,16 @@ import type {
   FeedbackInput,
   Feestdag,
   FeestdagInput,
+  FieAkPost,
+  FieAkPostInput,
+  FieAkPostUpdate,
+  FieCalculatieContext,
+  FieCapaciteitInput,
+  FieCapaciteitsoverzicht,
+  FieJaarbegroting,
+  FieJaarbegrotingDetail,
+  FieJaarbegrotingInput,
+  FieJaarbegrotingUpdate,
   FinancieelDashboard,
   Foto,
   FotoInput,
@@ -65479,6 +65489,815 @@ export function useListStudioWerkgevers<TData = Awaited<ReturnType<typeof listSt
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getListStudioWerkgeversQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListFieBegrotingenUrl = () => {
+
+
+
+
+  return `/api/fie/begrotingen`
+}
+
+/**
+ * @summary Jaarbegrotingen ophalen (FIE)
+ */
+export const listFieBegrotingen = async ( options?: RequestInit): Promise<FieJaarbegroting[]> => {
+
+  return customFetch<FieJaarbegroting[]>(getListFieBegrotingenUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListFieBegrotingenQueryKey = () => {
+    return [
+    `/api/fie/begrotingen`
+    ] as const;
+    }
+
+
+export const getListFieBegrotingenQueryOptions = <TData = Awaited<ReturnType<typeof listFieBegrotingen>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listFieBegrotingen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListFieBegrotingenQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listFieBegrotingen>>> = ({ signal }) => listFieBegrotingen({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listFieBegrotingen>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListFieBegrotingenQueryResult = NonNullable<Awaited<ReturnType<typeof listFieBegrotingen>>>
+export type ListFieBegrotingenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Jaarbegrotingen ophalen (FIE)
+ */
+
+export function useListFieBegrotingen<TData = Awaited<ReturnType<typeof listFieBegrotingen>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listFieBegrotingen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListFieBegrotingenQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateFieBegrotingUrl = () => {
+
+
+
+
+  return `/api/fie/begrotingen`
+}
+
+/**
+ * @summary Nieuwe jaarbegroting aanmaken (FIE)
+ */
+export const createFieBegroting = async (fieJaarbegrotingInput: FieJaarbegrotingInput, options?: RequestInit): Promise<FieJaarbegroting> => {
+
+  return customFetch<FieJaarbegroting>(getCreateFieBegrotingUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(fieJaarbegrotingInput)
+  }
+);}
+
+
+
+
+export const getCreateFieBegrotingMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createFieBegroting>>, TError,{data: BodyType<FieJaarbegrotingInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createFieBegroting>>, TError,{data: BodyType<FieJaarbegrotingInput>}, TContext> => {
+
+const mutationKey = ['createFieBegroting'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createFieBegroting>>, {data: BodyType<FieJaarbegrotingInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createFieBegroting(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateFieBegrotingMutationResult = NonNullable<Awaited<ReturnType<typeof createFieBegroting>>>
+    export type CreateFieBegrotingMutationBody = BodyType<FieJaarbegrotingInput>
+    export type CreateFieBegrotingMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Nieuwe jaarbegroting aanmaken (FIE)
+ */
+export const useCreateFieBegroting = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createFieBegroting>>, TError,{data: BodyType<FieJaarbegrotingInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createFieBegroting>>,
+        TError,
+        {data: BodyType<FieJaarbegrotingInput>},
+        TContext
+      > => {
+      return useMutation(getCreateFieBegrotingMutationOptions(options));
+    }
+
+export const getGetFieBegrotingUrl = (id: number,) => {
+
+
+
+
+  return `/api/fie/begrotingen/${id}`
+}
+
+/**
+ * @summary Jaarbegroting ophalen incl. AK-posten
+ */
+export const getFieBegroting = async (id: number, options?: RequestInit): Promise<FieJaarbegrotingDetail> => {
+
+  return customFetch<FieJaarbegrotingDetail>(getGetFieBegrotingUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetFieBegrotingQueryKey = (id: number,) => {
+    return [
+    `/api/fie/begrotingen/${id}`
+    ] as const;
+    }
+
+
+export const getGetFieBegrotingQueryOptions = <TData = Awaited<ReturnType<typeof getFieBegroting>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getFieBegroting>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetFieBegrotingQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getFieBegroting>>> = ({ signal }) => getFieBegroting(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getFieBegroting>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetFieBegrotingQueryResult = NonNullable<Awaited<ReturnType<typeof getFieBegroting>>>
+export type GetFieBegrotingQueryError = ErrorType<void>
+
+
+/**
+ * @summary Jaarbegroting ophalen incl. AK-posten
+ */
+
+export function useGetFieBegroting<TData = Awaited<ReturnType<typeof getFieBegroting>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getFieBegroting>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetFieBegrotingQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUpdateFieBegrotingUrl = (id: number,) => {
+
+
+
+
+  return `/api/fie/begrotingen/${id}`
+}
+
+/**
+ * @summary Jaarbegroting bijwerken (FIE)
+ */
+export const updateFieBegroting = async (id: number,
+    fieJaarbegrotingUpdate: FieJaarbegrotingUpdate, options?: RequestInit): Promise<FieJaarbegroting> => {
+
+  return customFetch<FieJaarbegroting>(getUpdateFieBegrotingUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(fieJaarbegrotingUpdate)
+  }
+);}
+
+
+
+
+export const getUpdateFieBegrotingMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateFieBegroting>>, TError,{id: number;data: BodyType<FieJaarbegrotingUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateFieBegroting>>, TError,{id: number;data: BodyType<FieJaarbegrotingUpdate>}, TContext> => {
+
+const mutationKey = ['updateFieBegroting'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateFieBegroting>>, {id: number;data: BodyType<FieJaarbegrotingUpdate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateFieBegroting(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateFieBegrotingMutationResult = NonNullable<Awaited<ReturnType<typeof updateFieBegroting>>>
+    export type UpdateFieBegrotingMutationBody = BodyType<FieJaarbegrotingUpdate>
+    export type UpdateFieBegrotingMutationError = ErrorType<void>
+
+    /**
+ * @summary Jaarbegroting bijwerken (FIE)
+ */
+export const useUpdateFieBegroting = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateFieBegroting>>, TError,{id: number;data: BodyType<FieJaarbegrotingUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateFieBegroting>>,
+        TError,
+        {id: number;data: BodyType<FieJaarbegrotingUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateFieBegrotingMutationOptions(options));
+    }
+
+export const getListFieAkPostenUrl = (id: number,) => {
+
+
+
+
+  return `/api/fie/begrotingen/${id}/ak-posten`
+}
+
+/**
+ * @summary AK-posten ophalen voor een jaarbegroting
+ */
+export const listFieAkPosten = async (id: number, options?: RequestInit): Promise<FieAkPost[]> => {
+
+  return customFetch<FieAkPost[]>(getListFieAkPostenUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListFieAkPostenQueryKey = (id: number,) => {
+    return [
+    `/api/fie/begrotingen/${id}/ak-posten`
+    ] as const;
+    }
+
+
+export const getListFieAkPostenQueryOptions = <TData = Awaited<ReturnType<typeof listFieAkPosten>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listFieAkPosten>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListFieAkPostenQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listFieAkPosten>>> = ({ signal }) => listFieAkPosten(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listFieAkPosten>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListFieAkPostenQueryResult = NonNullable<Awaited<ReturnType<typeof listFieAkPosten>>>
+export type ListFieAkPostenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary AK-posten ophalen voor een jaarbegroting
+ */
+
+export function useListFieAkPosten<TData = Awaited<ReturnType<typeof listFieAkPosten>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listFieAkPosten>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListFieAkPostenQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateFieAkPostUrl = (id: number,) => {
+
+
+
+
+  return `/api/fie/begrotingen/${id}/ak-posten`
+}
+
+/**
+ * @summary Nieuwe AK-post toevoegen aan jaarbegroting
+ */
+export const createFieAkPost = async (id: number,
+    fieAkPostInput: FieAkPostInput, options?: RequestInit): Promise<FieAkPost> => {
+
+  return customFetch<FieAkPost>(getCreateFieAkPostUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(fieAkPostInput)
+  }
+);}
+
+
+
+
+export const getCreateFieAkPostMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createFieAkPost>>, TError,{id: number;data: BodyType<FieAkPostInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createFieAkPost>>, TError,{id: number;data: BodyType<FieAkPostInput>}, TContext> => {
+
+const mutationKey = ['createFieAkPost'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createFieAkPost>>, {id: number;data: BodyType<FieAkPostInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  createFieAkPost(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateFieAkPostMutationResult = NonNullable<Awaited<ReturnType<typeof createFieAkPost>>>
+    export type CreateFieAkPostMutationBody = BodyType<FieAkPostInput>
+    export type CreateFieAkPostMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Nieuwe AK-post toevoegen aan jaarbegroting
+ */
+export const useCreateFieAkPost = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createFieAkPost>>, TError,{id: number;data: BodyType<FieAkPostInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createFieAkPost>>,
+        TError,
+        {id: number;data: BodyType<FieAkPostInput>},
+        TContext
+      > => {
+      return useMutation(getCreateFieAkPostMutationOptions(options));
+    }
+
+export const getUpdateFieAkPostUrl = (id: number,) => {
+
+
+
+
+  return `/api/fie/ak-posten/${id}`
+}
+
+/**
+ * @summary AK-post bijwerken
+ */
+export const updateFieAkPost = async (id: number,
+    fieAkPostUpdate: FieAkPostUpdate, options?: RequestInit): Promise<FieAkPost> => {
+
+  return customFetch<FieAkPost>(getUpdateFieAkPostUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(fieAkPostUpdate)
+  }
+);}
+
+
+
+
+export const getUpdateFieAkPostMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateFieAkPost>>, TError,{id: number;data: BodyType<FieAkPostUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateFieAkPost>>, TError,{id: number;data: BodyType<FieAkPostUpdate>}, TContext> => {
+
+const mutationKey = ['updateFieAkPost'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateFieAkPost>>, {id: number;data: BodyType<FieAkPostUpdate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateFieAkPost(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateFieAkPostMutationResult = NonNullable<Awaited<ReturnType<typeof updateFieAkPost>>>
+    export type UpdateFieAkPostMutationBody = BodyType<FieAkPostUpdate>
+    export type UpdateFieAkPostMutationError = ErrorType<void>
+
+    /**
+ * @summary AK-post bijwerken
+ */
+export const useUpdateFieAkPost = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateFieAkPost>>, TError,{id: number;data: BodyType<FieAkPostUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateFieAkPost>>,
+        TError,
+        {id: number;data: BodyType<FieAkPostUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateFieAkPostMutationOptions(options));
+    }
+
+export const getDeleteFieAkPostUrl = (id: number,) => {
+
+
+
+
+  return `/api/fie/ak-posten/${id}`
+}
+
+/**
+ * @summary AK-post verwijderen
+ */
+export const deleteFieAkPost = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteFieAkPostUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteFieAkPostMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteFieAkPost>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteFieAkPost>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteFieAkPost'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteFieAkPost>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteFieAkPost(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteFieAkPostMutationResult = NonNullable<Awaited<ReturnType<typeof deleteFieAkPost>>>
+
+    export type DeleteFieAkPostMutationError = ErrorType<unknown>
+
+    /**
+ * @summary AK-post verwijderen
+ */
+export const useDeleteFieAkPost = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteFieAkPost>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteFieAkPost>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteFieAkPostMutationOptions(options));
+    }
+
+export const getGetFieCapaciteitUrl = (boekjaar: number,) => {
+
+
+
+
+  return `/api/fie/capaciteit/${boekjaar}`
+}
+
+/**
+ * @summary Capaciteitsoverzicht ophalen voor een boekjaar
+ */
+export const getFieCapaciteit = async (boekjaar: number, options?: RequestInit): Promise<FieCapaciteitsoverzicht> => {
+
+  return customFetch<FieCapaciteitsoverzicht>(getGetFieCapaciteitUrl(boekjaar),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetFieCapaciteitQueryKey = (boekjaar: number,) => {
+    return [
+    `/api/fie/capaciteit/${boekjaar}`
+    ] as const;
+    }
+
+
+export const getGetFieCapaciteitQueryOptions = <TData = Awaited<ReturnType<typeof getFieCapaciteit>>, TError = ErrorType<unknown>>(boekjaar: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getFieCapaciteit>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetFieCapaciteitQueryKey(boekjaar);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getFieCapaciteit>>> = ({ signal }) => getFieCapaciteit(boekjaar, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: boekjaar !== null && boekjaar !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getFieCapaciteit>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetFieCapaciteitQueryResult = NonNullable<Awaited<ReturnType<typeof getFieCapaciteit>>>
+export type GetFieCapaciteitQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Capaciteitsoverzicht ophalen voor een boekjaar
+ */
+
+export function useGetFieCapaciteit<TData = Awaited<ReturnType<typeof getFieCapaciteit>>, TError = ErrorType<unknown>>(
+ boekjaar: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getFieCapaciteit>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetFieCapaciteitQueryOptions(boekjaar,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUpsertFieCapaciteitUrl = (boekjaar: number,) => {
+
+
+
+
+  return `/api/fie/capaciteit/${boekjaar}`
+}
+
+/**
+ * @summary Capaciteitssnapshot opslaan voor een boekjaar
+ */
+export const upsertFieCapaciteit = async (boekjaar: number,
+    fieCapaciteitInput: FieCapaciteitInput, options?: RequestInit): Promise<FieCapaciteitsoverzicht> => {
+
+  return customFetch<FieCapaciteitsoverzicht>(getUpsertFieCapaciteitUrl(boekjaar),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(fieCapaciteitInput)
+  }
+);}
+
+
+
+
+export const getUpsertFieCapaciteitMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof upsertFieCapaciteit>>, TError,{boekjaar: number;data: BodyType<FieCapaciteitInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof upsertFieCapaciteit>>, TError,{boekjaar: number;data: BodyType<FieCapaciteitInput>}, TContext> => {
+
+const mutationKey = ['upsertFieCapaciteit'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof upsertFieCapaciteit>>, {boekjaar: number;data: BodyType<FieCapaciteitInput>}> = (props) => {
+          const {boekjaar,data} = props ?? {};
+
+          return  upsertFieCapaciteit(boekjaar,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpsertFieCapaciteitMutationResult = NonNullable<Awaited<ReturnType<typeof upsertFieCapaciteit>>>
+    export type UpsertFieCapaciteitMutationBody = BodyType<FieCapaciteitInput>
+    export type UpsertFieCapaciteitMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Capaciteitssnapshot opslaan voor een boekjaar
+ */
+export const useUpsertFieCapaciteit = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof upsertFieCapaciteit>>, TError,{boekjaar: number;data: BodyType<FieCapaciteitInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof upsertFieCapaciteit>>,
+        TError,
+        {boekjaar: number;data: BodyType<FieCapaciteitInput>},
+        TContext
+      > => {
+      return useMutation(getUpsertFieCapaciteitMutationOptions(options));
+    }
+
+export const getGetFieContextCalculatieUrl = (id: number,) => {
+
+
+
+
+  return `/api/fie/context/calculatie/${id}`
+}
+
+/**
+ * @summary Live FIE-context voor een calculatie (marge, AK, advies)
+ */
+export const getFieContextCalculatie = async (id: number, options?: RequestInit): Promise<FieCalculatieContext> => {
+
+  return customFetch<FieCalculatieContext>(getGetFieContextCalculatieUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetFieContextCalculatieQueryKey = (id: number,) => {
+    return [
+    `/api/fie/context/calculatie/${id}`
+    ] as const;
+    }
+
+
+export const getGetFieContextCalculatieQueryOptions = <TData = Awaited<ReturnType<typeof getFieContextCalculatie>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getFieContextCalculatie>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetFieContextCalculatieQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getFieContextCalculatie>>> = ({ signal }) => getFieContextCalculatie(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getFieContextCalculatie>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetFieContextCalculatieQueryResult = NonNullable<Awaited<ReturnType<typeof getFieContextCalculatie>>>
+export type GetFieContextCalculatieQueryError = ErrorType<void>
+
+
+/**
+ * @summary Live FIE-context voor een calculatie (marge, AK, advies)
+ */
+
+export function useGetFieContextCalculatie<TData = Awaited<ReturnType<typeof getFieContextCalculatie>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getFieContextCalculatie>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetFieContextCalculatieQueryOptions(id,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
