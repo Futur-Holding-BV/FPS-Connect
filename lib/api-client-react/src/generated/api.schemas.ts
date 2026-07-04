@@ -10197,6 +10197,11 @@ export interface FieKwartaalPrognose {
   prognose: number;
 }
 
+export interface FieBegrotingKwartaal {
+  kwartaal: number;
+  begroting: number;
+}
+
 export interface FieObservatiesResponse {
   boekjaar: number;
   observaties: FiePrognoseObservatie[];
@@ -10227,7 +10232,14 @@ export interface FieJaarprognose {
   ak_dekkingsgraad_pct?: number | null;
   /** @nullable */
   break_even_omzet?: number | null;
+  /** @nullable */
+  break_even_bereikt?: boolean | null;
+  /** @nullable */
+  prognose_brutowinst?: number | null;
+  /** @nullable */
+  prognose_nettoresultaat?: number | null;
   kwartaal_verdeling: FieKwartaalPrognose[];
+  begroting_per_kwartaal?: FieBegrotingKwartaal[];
   observaties: FiePrognoseObservatie[];
 }
 

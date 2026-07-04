@@ -4,6 +4,35 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-04 — FIE Fase 3: Continue jaarbedrijfsprognose — Fase 3b aanvulling (volledig)
+
+**Uitvoering:** volledig | **Getest:** typecheck clean (api-server + firevault, alleen pre-existing TS7030 in offertes.ts)
+
+Vier aanvullende prognose-KPI's toegevoegd + begroting-kwartaalvergelijking in chart:
+
+**Backend (fie-service.ts)**
+- `prognose_brutowinst` = `prognose_omzet × doelMargePct / 100` (null als geen doelmarge)
+- `prognose_nettoresultaat` = `prognose_brutowinst − totaalAk`
+- `break_even_bereikt` = boolean: `prognose_omzet >= break_even_omzet` (null als geen break-even berekend)
+- `begroting_per_kwartaal` = `[{kwartaal:1..4, begroting: omzetDoel/4}]` (gelijkmatige spreiding)
+- Return-statement bijgewerkt met alle vier nieuwe velden
+
+**Route (fie.ts)**
+- Response-mapping uitgebreid: `break_even_bereikt`, `prognose_brutowinst`, `prognose_nettoresultaat`, `begroting_per_kwartaal`
+
+**OpenAPI + codegen**
+- `FieJaarprognose` schema: vier nieuwe velden toegevoegd
+- Nieuw schema `FieBegrotingKwartaal` (`kwartaal` + `begroting`)
+- `FieJaarprognose.begroting_per_kwartaal` → `FieBegrotingKwartaal[]` ref
+- Orval opnieuw gedraaid: `FieBegrotingKwartaal` interface gegenereerd in `api.schemas.ts`
+
+**Frontend (bedrijfskompas.tsx)**
+- KPI-grid uitgebreid van 6 naar 8 tiles (2×4): `Prognose brutowinst` + `Prognose nettoresultaat` toegevoegd, rood/groen kleur op teken
+- Break-even tile: badge "bereikt" (groen) / "niet bereikt" (rood) o.b.v. `break_even_bereikt`
+- `KwartaalBalk`: verticale referentielijn (primaire kleur) op begroting-positie per kwartaal; prognose links, begroting rechts in onderschrift
+- Legenda: "Begroting" markering zichtbaar zodra `begroting_per_kwartaal` aanwezig is
+- `kwMax` berekend over max(prognose, begroting) zodat beide balken correct schalen
+
 ## 2026-07-04 — FIE Fase 3: Continue jaarbedrijfsprognose (volledig)
 
 **Uitvoering:** volledig | **Getest:** typecheck clean (api-server + firevault); beide routes bereikbaar (401 zonder auth — correct)

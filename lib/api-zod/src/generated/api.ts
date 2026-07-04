@@ -23503,12 +23503,19 @@ export const GetFiePrognoseResponse = zod.object({
   "gap_tot_doel": zod.number().nullish(),
   "ak_dekkingsgraad_pct": zod.number().nullish(),
   "break_even_omzet": zod.number().nullish(),
+  "break_even_bereikt": zod.boolean().nullish(),
+  "prognose_brutowinst": zod.number().nullish(),
+  "prognose_nettoresultaat": zod.number().nullish(),
   "kwartaal_verdeling": zod.array(zod.object({
   "kwartaal": zod.number(),
   "bevestigd": zod.number(),
   "pipeline_gewogen": zod.number(),
   "prognose": zod.number()
 })),
+  "begroting_per_kwartaal": zod.array(zod.object({
+  "kwartaal": zod.number(),
+  "begroting": zod.number()
+})).optional(),
   "observaties": zod.array(zod.object({
   "type": zod.string(),
   "ernst": zod.string(),

@@ -537,17 +537,28 @@ const OBSERVATIE_KLEUR: Record<string, string> = {
 
 const KW_LABEL: Record<number, string> = { 1: "Q1 Jan–Mrt", 2: "Q2 Apr–Jun", 3: "Q3 Jul–Sep", 4: "Q4 Okt–Dec" };
 
-function KwartaalBalk({ kw, max }: { kw: FieKwartaalPrognose; max: number }) {
+function KwartaalBalk({ kw, max, begroting }: { kw: FieKwartaalPrognose; max: number; begroting?: number }) {
   const pctB = max > 0 ? Math.min(100, (kw.bevestigd / max) * 100) : 0;
   const pctP = max > 0 ? Math.min(100, (kw.pipeline_gewogen / max) * 100) : 0;
+  const pctBegroting = begroting != null && max > 0 ? Math.min(100, (begroting / max) * 100) : null;
   return (
     <div className="space-y-1">
       <p className="text-[10px] font-medium text-muted-foreground">{KW_LABEL[kw.kwartaal]}</p>
-      <div className="h-4 rounded bg-muted overflow-hidden flex">
+      <div className="relative h-4 rounded bg-muted overflow-hidden flex">
         <div className="bg-green-500 h-full" style={{ width: `${pctB}%` }} title={`Bevestigd: ${fmt(kw.bevestigd)}`} />
         <div className="bg-amber-400 h-full" style={{ width: `${pctP}%` }} title={`Pipeline: ${fmt(kw.pipeline_gewogen)}`} />
+        {pctBegroting != null && (
+          <div
+            className="absolute top-0 bottom-0 w-0.5 bg-primary/70"
+            style={{ left: `${pctBegroting}%` }}
+            title={`Begroting: ${fmt(begroting!)}`}
+          />
+        )}
       </div>
-      <p className="text-[10px] text-muted-foreground">{fmt(kw.prognose)}</p>
+      <div className="flex justify-between text-[10px] text-muted-foreground">
+        <span>{fmt(kw.prognose)}</span>
+        {begroting != null && <span className="text-primary/70">{fmt(begroting)}</span>}
+      </div>
     </div>
   );
 }
@@ -589,7 +600,12 @@ function PrognoseTab({ boekjaar }: { boekjaar: number }) {
     : "bg-green-500";
 
   const kwVerdeling: FieKwartaalPrognose[] = p.kwartaal_verdeling ?? [];
-  const kwMax = Math.max(...kwVerdeling.map(k => k.prognose), 1);
+  const begrotingPerKw = p.begroting_per_kwartaal ?? [];
+  const kwMax = Math.max(
+    ...kwVerdeling.map(k => k.prognose),
+    ...begrotingPerKw.map(b => b.begroting),
+    1,
+  );
 
   const persistenteObservaties = obsResp?.observaties ?? [];
 
@@ -646,8 +662,8 @@ function PrognoseTab({ boekjaar }: { boekjaar: number }) {
         </Card>
       )}
 
-      {/* KPI-tiles — 6 stuks in 2×3 grid */}
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+      {/* KPI-tiles — 8 stuks in 2×4 grid */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <div className="rounded-md border p-3">
           <p className="text-[10px] text-muted-foreground">Bevestigd (100%)</p>
           <p className="text-base font-semibold mt-0.5">{fmt(p.bevestigde_omzet)}</p>
@@ -686,12 +702,36 @@ function PrognoseTab({ boekjaar }: { boekjaar: number }) {
         </div>
         <div className="rounded-md border p-3">
           <p className="text-[10px] text-muted-foreground">Break-even omzet</p>
-          <p className="text-base font-semibold mt-0.5">
-            {p.break_even_omzet != null ? fmt(p.break_even_omzet) : "—"}
-          </p>
+          <div className="flex items-center gap-1.5 mt-0.5">
+            <p className="text-base font-semibold">
+              {p.break_even_omzet != null ? fmt(p.break_even_omzet) : "—"}
+            </p>
+            {p.break_even_bereikt === true && (
+              <span className="text-[9px] font-medium text-green-700 bg-green-100 rounded px-1 py-0.5 leading-none">bereikt</span>
+            )}
+            {p.break_even_bereikt === false && (
+              <span className="text-[9px] font-medium text-red-700 bg-red-100 rounded px-1 py-0.5 leading-none">niet bereikt</span>
+            )}
+          </div>
           <p className="text-[10px] text-muted-foreground">
             {p.doel_marge_pct != null ? `Bij doelmarge ${p.doel_marge_pct.toFixed(1)}%` : "Geen doelmarge"}
           </p>
+        </div>
+        <div className="rounded-md border p-3">
+          <p className="text-[10px] text-muted-foreground">Prognose brutowinst</p>
+          <p className={cn("text-base font-semibold mt-0.5", p.prognose_brutowinst != null && p.prognose_brutowinst >= 0 ? "text-green-700" : "text-red-600")}>
+            {p.prognose_brutowinst != null ? fmt(p.prognose_brutowinst) : "—"}
+          </p>
+          <p className="text-[10px] text-muted-foreground">
+            {p.doel_marge_pct != null ? `Omzet × ${p.doel_marge_pct.toFixed(1)}% doelmarge` : "Doelmarge vereist"}
+          </p>
+        </div>
+        <div className="rounded-md border p-3">
+          <p className="text-[10px] text-muted-foreground">Prognose nettoresultaat</p>
+          <p className={cn("text-base font-semibold mt-0.5", p.prognose_nettoresultaat == null ? "" : p.prognose_nettoresultaat >= 0 ? "text-green-700" : "text-red-600")}>
+            {p.prognose_nettoresultaat != null ? fmt(p.prognose_nettoresultaat) : "—"}
+          </p>
+          <p className="text-[10px] text-muted-foreground">Brutowinst − totale AK</p>
         </div>
       </div>
 
@@ -701,9 +741,12 @@ function PrognoseTab({ boekjaar }: { boekjaar: number }) {
           <CardContent className="p-4 space-y-3">
             <p className="text-xs font-medium">Kwartaalverdeling prognose {boekjaar}</p>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              {kwVerdeling.map(kw => (
-                <KwartaalBalk key={kw.kwartaal} kw={kw} max={kwMax} />
-              ))}
+              {kwVerdeling.map(kw => {
+                const bEntry = begrotingPerKw.find(b => b.kwartaal === kw.kwartaal);
+                return (
+                  <KwartaalBalk key={kw.kwartaal} kw={kw} max={kwMax} begroting={bEntry?.begroting} />
+                );
+              })}
             </div>
             <div className="flex items-center gap-4 text-[10px] text-muted-foreground pt-1">
               <span className="flex items-center gap-1">
@@ -714,6 +757,12 @@ function PrognoseTab({ boekjaar }: { boekjaar: number }) {
                 <span className="inline-block w-3 h-2 rounded-sm bg-amber-400" />
                 Pipeline (gewogen)
               </span>
+              {begrotingPerKw.length > 0 && (
+                <span className="flex items-center gap-1">
+                  <span className="inline-block w-0.5 h-3 bg-primary/70" />
+                  Begroting
+                </span>
+              )}
             </div>
           </CardContent>
         </Card>

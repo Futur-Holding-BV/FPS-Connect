@@ -228,6 +228,7 @@ export * from './feestdagInput';
 export * from './fieAkPost';
 export * from './fieAkPostInput';
 export * from './fieAkPostUpdate';
+export * from './fieBegrotingKwartaal';
 export * from './fieCalculatieContext';
 export * from './fieCapaciteitInput';
 export * from './fieCapaciteitSnapshot';

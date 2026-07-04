@@ -508,7 +508,11 @@ router.get("/prognose/:boekjaar", lezen, async (req: Request, res: Response): Pr
     gap_tot_doel:               p.gap_tot_doel,
     ak_dekkingsgraad_pct:       p.ak_dekkingsgraad_pct,
     break_even_omzet:           p.break_even_omzet,
+    break_even_bereikt:         p.break_even_bereikt,
+    prognose_brutowinst:        p.prognose_brutowinst,
+    prognose_nettoresultaat:    p.prognose_nettoresultaat,
     kwartaal_verdeling:         p.kwartaal_verdeling,
+    begroting_per_kwartaal:     p.begroting_per_kwartaal,
     observaties:                p.observaties.map(o => ({
       type:          o.type,
       ernst:         o.ernst,

@@ -437,7 +437,11 @@ export interface FieJaarprognoseResultaat {
   gap_tot_doel: number | null;
   ak_dekkingsgraad_pct: number | null;
   break_even_omzet: number | null;
+  break_even_bereikt: boolean | null;
+  prognose_brutowinst: number | null;
+  prognose_nettoresultaat: number | null;
   kwartaal_verdeling: FieKwartaalPrognose[];
+  begroting_per_kwartaal: { kwartaal: 1 | 2 | 3 | 4; begroting: number }[];
   observaties: FiePrognoseObservatie[];
 }
 
@@ -644,18 +648,39 @@ export async function berekenJaarprognose(boekjaar: number): Promise<FieJaarprog
     });
   }
 
+  // Afgeleid: brutowinst, nettoresultaat, break-even status, begroting-kwartaalverdeling
+  const prognoseBrutowinst =
+    doelMargePct != null && doelMargePct > 0
+      ? rnd2(prognoseOmzet * (doelMargePct / 100))
+      : null;
+  const prognoseNettoresultaat =
+    prognoseBrutowinst != null
+      ? rnd2(prognoseBrutowinst - totaalAk)
+      : null;
+  const breakEvenBereikt =
+    breakEvenOmzet != null ? prognoseOmzet >= breakEvenOmzet : null;
+
+  // Begroting per kwartaal (gelijkmatige spreiding van omzetDoel over 4 kwartalen)
+  const begrotingPerKwartaal: { kwartaal: 1 | 2 | 3 | 4; begroting: number }[] =
+    omzetDoel != null
+      ? ([1, 2, 3, 4] as const).map(kw => ({
+          kwartaal: kw,
+          begroting: rnd2(omzetDoel / 4),
+        }))
+      : [];
+
   // 6. Observaties persisteren (vervang alle observaties voor dit boekjaar)
   await db.delete(fieObservatiesTable).where(eq(fieObservatiesTable.boekjaar, boekjaar));
   if (observaties.length > 0) {
     await db.insert(fieObservatiesTable).values(
       observaties.map(o => ({
         boekjaar,
-        type:         o.type,
-        ernst:        o.ernst,
-        omschrijving: o.omschrijving,
-        waarde:       o.waarde ?? undefined,
+        type:          o.type,
+        ernst:         o.ernst,
+        omschrijving:  o.omschrijving,
+        waarde:        o.waarde ?? undefined,
         drempelwaarde: o.drempelwaarde ?? undefined,
-        afwijkingPct: o.afwijking_pct ?? undefined,
+        afwijkingPct:  o.afwijking_pct ?? undefined,
       }))
     );
   }
@@ -679,7 +704,11 @@ export async function berekenJaarprognose(boekjaar: number): Promise<FieJaarprog
     gap_tot_doel:               gapTotDoel,
     ak_dekkingsgraad_pct:       akDekkingsgraadPct,
     break_even_omzet:           breakEvenOmzet,
+    break_even_bereikt:         breakEvenBereikt,
+    prognose_brutowinst:        prognoseBrutowinst,
+    prognose_nettoresultaat:    prognoseNettoresultaat,
     kwartaal_verdeling:         kwartaalVerdeling,
+    begroting_per_kwartaal:     begrotingPerKwartaal,
     observaties,
   };
 }

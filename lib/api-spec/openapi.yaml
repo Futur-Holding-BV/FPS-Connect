@@ -34141,6 +34141,13 @@ components:
         pipeline_gewogen: { type: number }
         prognose:         { type: number }
 
+    FieBegrotingKwartaal:
+      type: object
+      required: [kwartaal, begroting]
+      properties:
+        kwartaal:  { type: integer }
+        begroting: { type: number }
+
     FieObservatiesResponse:
       type: object
       required: [boekjaar, observaties]
@@ -34173,10 +34180,17 @@ components:
         gap_tot_doel:               { type: ["number", "null"] }
         ak_dekkingsgraad_pct:       { type: ["number", "null"] }
         break_even_omzet:           { type: ["number", "null"] }
+        break_even_bereikt:         { type: ["boolean", "null"] }
+        prognose_brutowinst:        { type: ["number", "null"] }
+        prognose_nettoresultaat:    { type: ["number", "null"] }
         kwartaal_verdeling:
           type: array
           items:
             $ref: "#/components/schemas/FieKwartaalPrognose"
+        begroting_per_kwartaal:
+          type: array
+          items:
+            $ref: "#/components/schemas/FieBegrotingKwartaal"
         observaties:
           type: array
           items:

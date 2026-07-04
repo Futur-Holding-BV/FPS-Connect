@@ -5,6 +5,7 @@
  * FPS Brandpreventie - Platform voor brandpreventieve gebouwvoorzieningen
  * OpenAPI spec version: 0.1.0
  */
+import type { FieBegrotingKwartaal } from './fieBegrotingKwartaal';
 import type { FieKwartaalPrognose } from './fieKwartaalPrognose';
 import type { FiePrognoseObservatie } from './fiePrognoseObservatie';
 
@@ -33,6 +34,13 @@ export interface FieJaarprognose {
   ak_dekkingsgraad_pct?: number | null;
   /** @nullable */
   break_even_omzet?: number | null;
+  /** @nullable */
+  break_even_bereikt?: boolean | null;
+  /** @nullable */
+  prognose_brutowinst?: number | null;
+  /** @nullable */
+  prognose_nettoresultaat?: number | null;
   kwartaal_verdeling: FieKwartaalPrognose[];
+  begroting_per_kwartaal?: FieBegrotingKwartaal[];
   observaties: FiePrognoseObservatie[];
 }
