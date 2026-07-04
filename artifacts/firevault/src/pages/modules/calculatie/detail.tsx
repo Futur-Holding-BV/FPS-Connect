@@ -58,7 +58,7 @@ import {
   LayoutList, Users, Eye, Sparkles, Wrench, CheckCircle2, X,
   Printer, History, Save, MoreHorizontal, MessageSquare, BrainCircuit,
   ChevronDown, ChevronUp, Building2, BookOpen, Search,
-  TrendingUp, TrendingDown, Minus,
+  TrendingUp, TrendingDown, Minus, AlertTriangle,
 } from "lucide-react";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -1860,7 +1860,12 @@ function FieContextBlok({ calculatieId }: { calculatieId: number }) {
     doel_marge_pct, verwachte_marge_pct, verwachte_marge_abs,
     ak_bijdrage, ak_per_uur, totaal_mu,
     totaal_incl_opslag, totaal_excl_opslag,
+    totaal_arbeid, totaal_materiaal,
+    correctie_factor, gecorrigeerde_arbeid, gecorrigeerde_materiaal,
   } = data;
+
+  const heeftLeereffect =
+    correctie_factor != null && correctie_factor !== 1.0;
 
   const adviesKleur: Record<string, string> = {
     goed:           "bg-green-50 border-green-200 text-green-800",
@@ -1924,6 +1929,45 @@ function FieContextBlok({ calculatieId }: { calculatieId: number }) {
               <span className={cn("tabular-nums", advies_status === "goed" ? "text-green-700" : advies_status === "laag" ? "text-amber-700" : "text-foreground")}>
                 {fmtEur(verwachte_marge_abs)}
               </span>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Leereffect-correctie: gecorrigeerde arbeid- en materiaalindicatoren */}
+      {heeftLeereffect && (gecorrigeerde_arbeid != null || gecorrigeerde_materiaal != null) && (
+        <div className="space-y-1.5 text-xs border-t pt-2">
+          <div className="flex items-center gap-1.5 text-amber-700 font-semibold">
+            <AlertTriangle className="h-3 w-3 shrink-0" />
+            <span>Leereffect-correctie</span>
+            <span className="ml-auto inline-flex items-center rounded-full border border-amber-300 bg-amber-50 px-1.5 py-px text-[10px] font-bold text-amber-800 tabular-nums">
+              &times;{correctie_factor!.toFixed(2)}
+            </span>
+          </div>
+          {totaal_arbeid != null && gecorrigeerde_arbeid != null && (
+            <div className="flex justify-between text-muted-foreground pl-4">
+              <span>
+                Arbeid origineel
+              </span>
+              <span className="tabular-nums line-through decoration-amber-400">{fmtEur(totaal_arbeid)}</span>
+            </div>
+          )}
+          {gecorrigeerde_arbeid != null && (
+            <div className="flex justify-between pl-4 font-medium text-amber-800">
+              <span>Gecorrigeerde arbeid</span>
+              <span className="tabular-nums">{fmtEur(gecorrigeerde_arbeid)}</span>
+            </div>
+          )}
+          {totaal_materiaal != null && gecorrigeerde_materiaal != null && (
+            <div className="flex justify-between text-muted-foreground pl-4">
+              <span>Materiaal origineel</span>
+              <span className="tabular-nums line-through decoration-amber-400">{fmtEur(totaal_materiaal)}</span>
+            </div>
+          )}
+          {gecorrigeerde_materiaal != null && (
+            <div className="flex justify-between pl-4 font-medium text-amber-800">
+              <span>Gecorrigeerd materiaal</span>
+              <span className="tabular-nums">{fmtEur(gecorrigeerde_materiaal)}</span>
             </div>
           )}
         </div>
