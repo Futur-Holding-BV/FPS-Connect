@@ -15,7 +15,7 @@ import {
 import { useActiefStudioModel } from "@/hooks/use-actief-studio-model";
 import { DocumentFrame, DocumentVoet } from "@/components/documentopmaak/DocumentFrame";
 import { VoorbladA } from "@/components/documentopmaak/FamilieA";
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 function euro(bedrag: number) {
@@ -58,7 +58,7 @@ export default function OffertePrintPagina() {
     ?? (studioWerkgevers ?? [])[0]?.id
     ?? null
   );
-  const actiefModel = useActiefStudioModel(studioWerkgeverId, "offerte");
+  const { model: actiefModel, isError: modelFout, isLoading: modelLaden } = useActiefStudioModel(studioWerkgeverId, "offerte");
 
   const klaar = !offerteLoading && !sectiesLoading && !regelsLoading;
 
@@ -189,6 +189,21 @@ export default function OffertePrintPagina() {
             <CheckCircle2 className="h-3 w-3" />
             Opmaak: Model 0 — {actiefModel.werkgever_naam ?? mij.naam}
           </span>
+        </div>
+      )}
+      {!modelLaden && !actiefModel && (
+        <div className="w-full max-w-[210mm] mx-auto mb-2 px-4 print:hidden overflow-hidden">
+          <div className="flex items-start gap-2 text-xs bg-amber-50 text-amber-800 border border-amber-200 rounded px-3 py-2">
+            <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+            <span>
+              {modelFout
+                ? "Documentopmaak kon niet worden geladen. Controleer uw verbinding en herlaad de pagina."
+                : "Geen goedgekeurd opmaakmodel gevonden voor dit documenttype."}{" "}
+              <a href="/beheer/documentopmaak" className="underline font-medium">
+                Stel een model in via Beheer › Documentopmaak.
+              </a>
+            </span>
+          </div>
         </div>
       )}
       <VoorbladA meta={meta} mij={mij} />

@@ -4,11 +4,17 @@ import {
   type DocumentStudioModel,
 } from "@workspace/api-client-react";
 
+export interface ActiefStudioModelResultaat {
+  model: DocumentStudioModel | null;
+  isLoading: boolean;
+  isError: boolean;
+}
+
 export function useActiefStudioModel(
   werkgeverId: number | null | undefined,
   documentType: string,
-): DocumentStudioModel | null {
-  const { data } = useListActieveDocumentStudioModellen(werkgeverId ?? 0, {
+): ActiefStudioModelResultaat {
+  const { data, isLoading, isError } = useListActieveDocumentStudioModellen(werkgeverId ?? 0, {
     query: {
       queryKey: getListActieveDocumentStudioModellenQueryKey(werkgeverId ?? 0),
       enabled: !!werkgeverId,
@@ -16,5 +22,12 @@ export function useActiefStudioModel(
       throwOnError: false,
     },
   });
-  return data?.[documentType] ?? null;
+
+  const model = data?.[documentType] ?? null;
+
+  return {
+    model,
+    isLoading: !!werkgeverId && isLoading,
+    isError: !!werkgeverId && isError,
+  };
 }

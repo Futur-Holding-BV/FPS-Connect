@@ -70,7 +70,7 @@ export default function ModulesCalculatiePrint() {
     ?? (studioWerkgevers ?? [])[0]?.id
     ?? null
   );
-  const actiefStudioModel = useActiefStudioModel(studioWerkgeverId, "calculatie");
+  const { model: actiefStudioModel } = useActiefStudioModel(studioWerkgeverId, "calculatie");
 
   const accentKleur = (() => {
     if (!actiefStudioModel?.connect_template_json) return null;
