@@ -14,6 +14,21 @@ Deployment platform health-checkt het routing pad `/api` (afgeleid van `paths = 
 
 Gewijzigd: `artifacts/api-server/src/routes/health.ts`
 
+## 2026-07-04 — Archiveer spot invalideert nacalculatie (volledig)
+
+**Uitvoering:** volledig | **Getest:** typecheck clean (geen nieuwe fouten in plattegrond.tsx)
+
+Na het archiveren van een spot via het zijpaneel van de plattegrond invalideert de frontend nu de nacalculatie-query, zodat het werktype op de nacalculatie-tab van de opdracht direct bijwerkt zonder handmatige refresh.
+
+- `SpotDetail` (plattegrond-zijpaneel) heeft een "Archiveer spot"-knop gekregen, zichtbaar voor beheerders
+- Twee-staps bevestiging (klik "Archiveer spot" → klik "Bevestigen") voorkomt per ongeluk archiveren
+- Na archiveren: nacalculatie-query geïnvalideerd (`endsWith("/nacalculatie")`), spot verdwijnt van de plattegrond (`onWijziging`), zijpaneel sluit (`onClose`)
+- Gating: `magArchiveren={isBeheerder}` (identiek aan de bestaande `GearchiveerdSectie`-gating)
+
+De terugplaats-actie (gearchiveerd: false) in `GearchiveerdSectie` invalideerde de nacalculatie al — dit is de ontbrekende andere richting.
+
+Gewijzigd: `artifacts/firevault/src/pages/gebouwen/plattegrond.tsx`
+
 ## 2026-07-04 — Spot-trigger nacalculatie herberekening (volledig)
 
 **Uitvoering:** volledig | **Getest:** typecheck clean (pre-existing TS7030 in offertes.ts ongewijzigd)

@@ -2022,6 +2022,7 @@ export default function Plattegrond() {
             id={geselecteerdId}
             gebouwId={Number(id)}
             magBewerken={magBewerken}
+            magArchiveren={isBeheerder}
             clusters={(clusters ?? []) as any[]}
             onClose={() => { setGeselecteerdId(null); setVerplaatsModus(false); }}
             onWijziging={() => { refetch(); refetchClusters(); }}
@@ -3021,6 +3022,7 @@ function SpotDetail({
   id,
   gebouwId,
   magBewerken,
+  magArchiveren,
   clusters,
   onClose,
   onWijziging,
@@ -3031,6 +3033,7 @@ function SpotDetail({
   id: number;
   gebouwId: number;
   magBewerken: boolean;
+  magArchiveren: boolean;
   clusters: any[];
   onClose: () => void;
   onWijziging: () => void;
@@ -3043,6 +3046,20 @@ function SpotDetail({
   const delFoto = useDeleteFoto();
   const updateStatus = useUpdateVoorzieningStatus();
   const updateVoorziening = useUpdateVoorziening();
+  const archiveerVoorziening = useArchiveerVoorziening();
+  const queryClient = useQueryClient();
+  const [archiveerBevestig, setArchiveerBevestig] = useState(false);
+
+  async function voerArchiveerUit() {
+    await archiveerVoorziening.mutateAsync({ id, data: { gearchiveerd: true } });
+    void queryClient.invalidateQueries({
+      predicate: (query) =>
+        typeof query.queryKey[0] === "string" &&
+        (query.queryKey[0] as string).endsWith("/nacalculatie"),
+    });
+    onWijziging();
+    onClose();
+  }
 
   const GEEN_CLUSTER = "__geen__";
   async function wijzigCluster(waarde: string) {
@@ -3228,6 +3245,34 @@ function SpotDetail({
             <Button size="sm" variant="default" asChild>
               <Link href={`/voorzieningen/${id}`} onClick={() => onWijziging()}>Volledige details</Link>
             </Button>
+            {magArchiveren && !verplaatsModus && (
+              archiveerBevestig ? (
+                <div className="flex gap-1.5">
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    className="flex-1"
+                    disabled={archiveerVoorziening.isPending}
+                    onClick={voerArchiveerUit}
+                  >
+                    <Archive className="h-3.5 w-3.5 mr-1" />
+                    {archiveerVoorziening.isPending ? "Bezig…" : "Bevestigen"}
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => setArchiveerBevestig(false)}>
+                    Annuleren
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="text-muted-foreground hover:text-destructive"
+                  onClick={() => setArchiveerBevestig(true)}
+                >
+                  <Archive className="h-3.5 w-3.5 mr-1" />Archiveer spot
+                </Button>
+              )
+            )}
           </div>
         </>
       )}
