@@ -867,6 +867,16 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                     <SidebarMenu>
                       {heeftNiveau("financieel", 2) && (
                         <SidebarMenuItem className="pl-5">
+                          <SidebarMenuButton asChild isActive={location === "/directie/kompas"}>
+                            <Link href="/directie/kompas">
+                              <LayoutDashboard />
+                              <span>Directiedashboard</span>
+                            </Link>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      )}
+                      {heeftNiveau("financieel", 2) && (
+                        <SidebarMenuItem className="pl-5">
                           <SidebarMenuButton asChild isActive={location === "/beheer/bedrijfskompas"}>
                             <Link href="/beheer/bedrijfskompas">
                               <TrendingUp />

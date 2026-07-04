@@ -4,6 +4,30 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-04 — FIE Fase 4: Directiedashboard Bedrijfskompas (volledig)
+
+**Uitvoering:** volledig | **Getest:** typecheck clean (alleen pre-existing TS7030 in offertes.ts)
+
+Nieuw directiedashboard op `/directie/kompas`, gated op `heeftNiveau("financieel", 2)` of hoofdbeheerder:
+
+**Nieuwe pagina** `artifacts/firevault/src/pages/directie/kompas.tsx`
+- Boekjaarselector (huidige jaar ± 1, met chevron-knoppen)
+- 4 KPI-kaarten: Prognose omzet / Prognose brutowinst / Prognose nettoresultaat / AK-dekkingsgraad — rood/groen kleurcodering op teken/waarde
+- Coverage-balk: prognose vs. omzetdoel met gap-indicator
+- Break-even indicator: kaart met groen/rood status ("Bereikt" / "Niet bereikt")
+- Kwartaalchart: ComposedChart (Recharts) met gestapelde bars bevestigd+pipeline en stippellijn begroting per kwartaal
+- Observaties-paneel: live + gepersisteerde signalen, kleurcodering op ernst (info/waarschuwing/kritiek), afwijking %-toelichting
+- Orderportefeuille-rij: bevestigd, pipeline, OHW, AK-dekkingsgraad als 4-koloms grid
+- Lege state + geen-toegang state + loading skeleton
+
+**Route** `artifacts/firevault/src/App.tsx`
+- `import DirectieKompasPagina` toegevoegd
+- Route `/directie/kompas` geregistreerd
+
+**Navigatie** `artifacts/firevault/src/layouts/beheerder-layout.tsx`
+- Nieuw nav-item "Directiedashboard" (LayoutDashboard icoon) toegevoegd vóór bestaand "Bedrijfskompas"
+- Zelfde gating: `heeftNiveau("financieel", 2)` — Directie-preset en hoger
+
 ## 2026-07-04 — FIE Fase 3: Continue jaarbedrijfsprognose — Fase 3b aanvulling (volledig)
 
 **Uitvoering:** volledig | **Getest:** typecheck clean (api-server + firevault, alleen pre-existing TS7030 in offertes.ts); routes /fie/prognose/:boekjaar en /fie/observaties/:boekjaar geven correct 401 zonder auth
