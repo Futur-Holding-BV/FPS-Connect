@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   useListFieBegrotingen,
   useCreateFieBegroting,
@@ -8,13 +8,11 @@ import {
   useCreateFieAkPost,
   useUpdateFieAkPost,
   useDeleteFieAkPost,
-  useGetFieCapaciteit,
-  useUpsertFieCapaciteit,
   getListFieBegrotingenQueryKey,
   getGetFieBegrotingQueryKey,
-  getGetFieCapaciteitQueryKey,
   type FieJaarbegroting,
   type FieAkPost,
+  useListMedewerkers,
 } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -35,8 +33,8 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  ArrowLeft, Plus, Pencil, Trash2, Building2, TrendingUp,
-  Calculator, CheckCircle2, Clock, XCircle, AlertTriangle,
+  ArrowLeft, Plus, Pencil, Trash2, TrendingUp,
+  Calculator, CheckCircle2, Clock, XCircle, AlertTriangle, Users, Info,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -412,6 +410,122 @@ function AkPostDialoog({
   );
 }
 
+// ─── CapaciteitSectie ─────────────────────────────────────────────────────────
+// Toont HRM-afgeleid capaciteitsoverzicht en de doelmarge-rekenexercitie.
+
+function CapaciteitSectie({
+  boekjaar,
+  productieveUrenDoel,
+  doelMargePct,
+  totaalAk,
+  akPerUurBerekend,
+}: {
+  boekjaar: number;
+  productieveUrenDoel: number | null | undefined;
+  doelMargePct: number;
+  totaalAk: number;
+  akPerUurBerekend: number | null;
+}) {
+  const { data: medewerkers = [], isLoading } = useListMedewerkers();
+
+  // Schatting productieve uren: actieve medewerkers × 1400 uur/jaar (norm monteur)
+  const aantalMedewerkers = medewerkers.length;
+  const geschatteUrenPerMedewerker = 1400;
+  const geschatteUren = aantalMedewerkers > 0 ? aantalMedewerkers * geschatteUrenPerMedewerker : null;
+
+  const ingesteldUren = productieveUrenDoel ?? null;
+  const gebuikteUren  = ingesteldUren ?? geschatteUren;
+
+  const akPerUurBerekendHier =
+    akPerUurBerekend != null
+      ? akPerUurBerekend
+      : gebuikteUren && gebuikteUren > 0 && totaalAk > 0
+        ? Math.round((totaalAk / gebuikteUren) * 100) / 100
+        : null;
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <div className="flex items-center gap-2">
+          <Users className="w-4 h-4 text-muted-foreground" />
+          <CardTitle className="text-sm">Capaciteit & doelmarge</CardTitle>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {/* HRM-afleiding */}
+        <div>
+          <p className="text-xs font-medium text-muted-foreground mb-2">Productieve uren — afgeleid uit HRM</p>
+          {isLoading ? (
+            <Skeleton className="h-10 w-full" />
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="rounded-md border p-3">
+                <p className="text-[10px] text-muted-foreground">Actieve medewerkers</p>
+                <p className="text-lg font-semibold mt-0.5">{aantalMedewerkers}</p>
+                <p className="text-[10px] text-muted-foreground">in HRM</p>
+              </div>
+              <div className="rounded-md border p-3">
+                <p className="text-[10px] text-muted-foreground">Geschat (norm 1.400 u/j)</p>
+                <p className="text-lg font-semibold mt-0.5">
+                  {geschatteUren != null
+                    ? new Intl.NumberFormat("nl-NL").format(geschatteUren)
+                    : "—"}
+                </p>
+                <p className="text-[10px] text-muted-foreground">productieve uren/jaar</p>
+              </div>
+              <div className="rounded-md border p-3">
+                <p className="text-[10px] text-muted-foreground">Ingesteld in begroting</p>
+                <p className="text-lg font-semibold mt-0.5">
+                  {ingesteldUren != null
+                    ? new Intl.NumberFormat("nl-NL").format(ingesteldUren)
+                    : <span className="text-muted-foreground text-sm">niet ingesteld</span>}
+                </p>
+                <p className="text-[10px] text-muted-foreground">productieve uren/jaar</p>
+              </div>
+              <div className="rounded-md border p-3 bg-primary/5 border-primary/20">
+                <p className="text-[10px] text-muted-foreground">AK-norm per uur</p>
+                <p className="text-lg font-semibold mt-0.5 text-primary">
+                  {akPerUurBerekendHier != null
+                    ? new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR", minimumFractionDigits: 2 }).format(akPerUurBerekendHier)
+                    : "—"}
+                </p>
+                <p className="text-[10px] text-muted-foreground">
+                  {ingesteldUren ? "op basis van begroting" : geschatteUren ? "op basis van schatting" : "voeg AK-posten toe"}
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Doelmarge-workflow */}
+        <div className="rounded-md border border-dashed p-3 bg-muted/20">
+          <div className="flex items-start gap-2">
+            <Info className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
+            <div className="text-xs text-muted-foreground space-y-1.5">
+              <p className="font-medium text-foreground">Doelmarge-rekenexercitie</p>
+              <p>
+                Doelmarge is ingesteld op <strong>{fmtPct(doelMargePct)}</strong>. 
+                Dit betekent dat van elke euro omzet minimaal {fmtPct(doelMargePct)} overblijft na directe kosten en AK.
+              </p>
+              {gebuikteUren && totaalAk > 0 && (
+                <p>
+                  Met {new Intl.NumberFormat("nl-NL").format(gebuikteUren)} productieve uren en {fmt(totaalAk)} totale AK 
+                  {" "}is de AK-norm <strong>{akPerUurBerekendHier != null ? fmtUur(akPerUurBerekendHier) : "—"}/uur</strong>.
+                  Bij een doelmarge van {fmtPct(doelMargePct)} moet de verkoopprijs de directe kosten + AK + {fmtPct(doelMargePct)} marge dekken.
+                </p>
+              )}
+              <p className="text-[10px]">
+                Stel de productieve uren in via "Nieuwe begroting" (veld "Productieve uren/jaar") om de AK-norm automatisch te berekenen.
+                Het werkelijke aantal medewerkers is afgeleid uit het HRM-register.
+              </p>
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 // ─── BegrotingDetail ─────────────────────────────────────────────────────────
 
 function BegrotingDetail({ begrotingId, onTerug }: { begrotingId: number; onTerug: () => void }) {
@@ -575,6 +689,15 @@ function BegrotingDetail({ begrotingId, onTerug }: { begrotingId: number; onTeru
           )}
         </CardContent>
       </Card>
+
+      {/* Capaciteit — afgeleid uit HRM */}
+      <CapaciteitSectie
+        boekjaar={detail.boekjaar}
+        productieveUrenDoel={detail.productieve_uren_doel}
+        doelMargePct={detail.doel_marge_pct}
+        totaalAk={totaalAk}
+        akPerUurBerekend={akPerUur}
+      />
 
       {/* Dialogen */}
       <AkPostDialoog

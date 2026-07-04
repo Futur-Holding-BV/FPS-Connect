@@ -31,6 +31,7 @@ import {
   useListEenheidsprijzen,
   type EenheidsPrijs,
   useGetFieContextCalculatie,
+  getGetFieContextCalculatieQueryKey,
 } from "@workspace/api-client-react";
 import AiChatPanel from "@/components/ai-chat-panel";
 import AiSeniorCalculatorPanel from "@/components/ai-senior-calculator-panel";
@@ -1945,6 +1946,8 @@ export default function ModulesCalculatieDetail() {
   const { toast } = useToast();
   const invalidate = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ["mod-calculatie", id] });
+    // FIE-context herberekenen na elke wijziging aan regels/header (live margeadvies).
+    queryClient.invalidateQueries({ queryKey: getGetFieContextCalculatieQueryKey(id) });
   }, [queryClient, id]);
 
   const { data, isLoading } = useGetModCalculatie(id, {

@@ -1,14 +1,18 @@
-// Financial Intelligence Engine (FIE) — centrale financiële rekenmotor.
+// Financial Intelligence Engine (FIE) — API-laag.
+// Alle financiële berekeningen lopen via fie-service.ts; hier alleen routing + validatie.
 // Fase 1+2: jaarbegrotingen, AK-posten, capaciteitssnapsots en live calculatieblok.
 import { Router, Request, Response } from "express";
-import { db, fieJaarbegrotingenTable, fieAkPostenTable, fieCapaciteitSnapshotsTable, werkgeversTable, modCalcHeadersTable, modCalcRegelsTable } from "@workspace/db";
-import { eq, desc, and, sum, sql } from "drizzle-orm";
+import { db, fieJaarbegrotingenTable, fieAkPostenTable, fieCapaciteitSnapshotsTable, werkgeversTable } from "@workspace/db";
+import { eq, desc } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
+import { berekenFieContext, rnd2 } from "../services/fie-service";
 
 const router = Router();
 
+// Beheer-endpoints: vereist financieel bevoegdheid (schrijven = niveau 2 = directeur/hoofdbeheerder).
 const lezen    = requireBevoegdheid("financieel", 1);
 const schrijven = requireBevoegdheid("financieel", 2);
+// Calculatiecontext is ook beschikbaar voor calculateurs (calculaties:1).
 const calcLezen = requireBevoegdheid("calculaties", 1);
 
 function parseId(v: unknown): number {
@@ -16,8 +20,6 @@ function parseId(v: unknown): number {
   if (isNaN(n)) throw new Error(`Ongeldig id: ${v}`);
   return n;
 }
-
-function rnd2(n: number) { return Math.round(n * 100) / 100; }
 
 // ─── Jaarbegrotingen ──────────────────────────────────────────────────────────
 
@@ -318,144 +320,33 @@ router.post("/fie/capaciteit/:boekjaar", schrijven, async (req: Request, res: Re
 });
 
 // ─── Live FIE-context voor calculatieblok ────────────────────────────────────
+// Delegeert volledige berekening aan fie-service.ts (centrale rekenmotor).
 
 // GET /fie/context/calculatie/:id
 router.get("/fie/context/calculatie/:id", calcLezen, async (req: Request, res: Response) => {
   const calcId = parseId(req.params["id"]);
 
-  const [header] = await db
-    .select()
-    .from(modCalcHeadersTable)
-    .where(eq(modCalcHeadersTable.id, calcId))
-    .limit(1);
-
-  if (!header) { res.status(404).json({ error: "Calculatie niet gevonden" }); return; }
-
-  const regels = await db
-    .select()
-    .from(modCalcRegelsTable)
-    .where(eq(modCalcRegelsTable.calculatieId, calcId));
-
-  // Totalen uit regels
-  let totaalArbeid = 0;
-  let totaalMateriaal = 0;
-  let totaalOnderaanneming = 0;
-  let totaalMu = 0;
-
-  for (const r of regels) {
-    const arb = (r.hoeveelheid ?? 0) * (r.muPerEenheid ?? 0) * (r.arbeidsTarief ?? 0);
-    const mat = (r.hoeveelheid ?? 0) * (r.tarief ?? 0);
-    const oa  = r.onderaannemingBedrag ?? 0;
-    totaalArbeid        += arb;
-    totaalMateriaal     += mat;
-    totaalOnderaanneming += oa;
-    totaalMu            += (r.hoeveelheid ?? 0) * (r.muPerEenheid ?? 0);
-  }
-
-  totaalArbeid         = rnd2(totaalArbeid);
-  totaalMateriaal      = rnd2(totaalMateriaal);
-  totaalOnderaanneming = rnd2(totaalOnderaanneming);
-  totaalMu             = rnd2(totaalMu);
-
-  const totaalExclOpslag = rnd2(totaalArbeid + totaalMateriaal + totaalOnderaanneming);
-
-  // Opslagen berekenen (zelfde logica als berekenTotalen in mod-calculatie)
-  const opslagAk     = header.opslagAk ?? 0;   // AK-opslag %
-  const opslagAbk    = header.opslagAbk ?? 0;
-  const opslagRisico = header.opslagRisico ?? 0;
-  const opslagWinst  = header.opslagWinst ?? 0;
-  const opslagMat    = header.opslagMateriaal ?? 0;
-  const opslagArb    = header.opslagArbeid ?? 0;
-  const korting      = header.korting ?? 0;
-
-  const matOpslag = rnd2(totaalMateriaal * opslagMat / 100);
-  const arbOpslag = rnd2(totaalArbeid * opslagArb / 100);
-  const naToeslag = rnd2(totaalExclOpslag + matOpslag + arbOpslag);
-
-  const akBijdrageOpslag  = header.akIsVast  ? (header.opslagAk ?? 0) : rnd2(naToeslag * opslagAk / 100);
-  const abkBijdrage       = header.abkIsVast ? (header.opslagAbk ?? 0) : rnd2(naToeslag * opslagAbk / 100);
-  const risicoBijdrage    = header.risicoIsVast ? (header.opslagRisico ?? 0) : rnd2(naToeslag * opslagRisico / 100);
-  const winstBijdrage     = header.winstIsVast  ? (header.opslagWinst ?? 0) : rnd2(naToeslag * opslagWinst / 100);
-
-  const subtotaalMetOpslagen = rnd2(naToeslag + akBijdrageOpslag + abkBijdrage + risicoBijdrage + winstBijdrage);
-  const totaalInclOpslag = rnd2(subtotaalMetOpslagen * (1 - korting / 100));
-
-  // Actieve jaarbegroting zoeken voor huidig/vorig jaar
-  const huidigJaar = new Date().getFullYear();
-  const [activeBegroting] = await db
-    .select()
-    .from(fieJaarbegrotingenTable)
-    .where(and(
-      eq(fieJaarbegrotingenTable.boekjaar, huidigJaar),
-      eq(fieJaarbegrotingenTable.status, "actief"),
-    ))
-    .limit(1);
-
-  // Fallback: meest recente begroting als geen actieve gevonden
-  const [fallbackBegroting] = activeBegroting ? [] : await db
-    .select()
-    .from(fieJaarbegrotingenTable)
-    .orderBy(desc(fieJaarbegrotingenTable.boekjaar))
-    .limit(1);
-
-  const begroting = activeBegroting ?? fallbackBegroting ?? null;
-  const heeftBegroting = !!begroting;
-
-  let akBijdrageFie: number | null = null;
-  let verwachteMarge: number | null = null;
-  let verwachteMargeP: number | null = null;
-  let adviesStatus = "geen_begroting";
-  let adviesTekst = "Geen actieve jaarbegroting gevonden. Stel een begroting in via Beheer > Bedrijfskompas.";
-
-  if (begroting) {
-    const akPerUur = begroting.akPerProductiefUur ?? null;
-    if (akPerUur !== null && totaalMu > 0) {
-      akBijdrageFie = rnd2(akPerUur * totaalMu);
-    }
-
-    const doelMargePct = begroting.doelMargePct;
-
-    if (totaalInclOpslag > 0) {
-      const directeKosten = totaalArbeid + totaalMateriaal + totaalOnderaanneming;
-      const akKosten = akBijdrageFie ?? (totaalInclOpslag * opslagAk / 100);
-      verwachteMarge = rnd2(totaalInclOpslag - directeKosten - akKosten);
-      verwachteMargeP = rnd2((verwachteMarge / totaalInclOpslag) * 100);
-
-      const afwijking = verwachteMargeP - doelMargePct;
-      if (afwijking >= 2) {
-        adviesStatus = "goed";
-        adviesTekst = `Verwachte marge ${verwachteMargeP.toFixed(1)}% — boven de doelmarge van ${doelMargePct}%.`;
-      } else if (afwijking >= -2) {
-        adviesStatus = "neutraal";
-        adviesTekst = `Verwachte marge ${verwachteMargeP.toFixed(1)}% — dicht bij de doelmarge van ${doelMargePct}%.`;
-      } else {
-        adviesStatus = "laag";
-        adviesTekst = `Verwachte marge ${verwachteMargeP.toFixed(1)}% — onder de doelmarge van ${doelMargePct}%. Overweeg tarieven of AK-opslag aan te passen.`;
-      }
-    } else {
-      adviesStatus = "leeg";
-      adviesTekst = "Calculatie heeft nog geen regels.";
-    }
-  }
+  const context = await berekenFieContext(calcId);
+  if (!context) { res.status(404).json({ error: "Calculatie niet gevonden" }); return; }
 
   res.json({
-    calculatie_id: calcId,
-    heeft_begroting: heeftBegroting,
-    boekjaar: begroting?.boekjaar ?? null,
-    doel_marge_pct: begroting?.doelMargePct ?? null,
-    ak_per_uur: begroting?.akPerProductiefUur ?? null,
-    totaal_arbeid: totaalArbeid,
-    totaal_materiaal: totaalMateriaal,
-    totaal_onderaanneming: totaalOnderaanneming,
-    totaal_mu: totaalMu,
-    totaal_excl_opslag: totaalExclOpslag,
-    totaal_incl_opslag: totaalInclOpslag,
-    ak_bijdrage: akBijdrageFie,
-    verwachte_marge_abs: verwachteMarge,
-    verwachte_marge_pct: verwachteMargeP,
-    advies_status: adviesStatus,
-    advies_tekst: adviesTekst,
-    opslag_ak_pct: opslagAk,
+    calculatie_id: context.calculatieId,
+    heeft_begroting: context.heeftBegroting,
+    boekjaar: context.boekjaar,
+    doel_marge_pct: context.doelMargePct,
+    ak_per_uur: context.akPerUur,
+    totaal_arbeid: context.totaalArbeid,
+    totaal_materiaal: context.totaalMateriaal,
+    totaal_onderaanneming: context.totaalOnderaanneming,
+    totaal_mu: context.totaalMu,
+    totaal_excl_opslag: context.totaalExclOpslag,
+    totaal_incl_opslag: context.totaalInclOpslag,
+    ak_bijdrage: context.akBijdrage,
+    verwachte_marge_abs: context.verwachteMargeAbs,
+    verwachte_marge_pct: context.verwachteMargePct,
+    advies_status: context.adviesStatus,
+    advies_tekst: context.adviesTekst,
+    opslag_ak_pct: context.opslagAkPct,
   });
 });
 
