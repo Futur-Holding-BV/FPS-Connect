@@ -78,6 +78,7 @@ import ProjectstatusPagina from "@/pages/beheer/projectstatus";
 import PwaTest from "@/pages/beheer/pwa-test";
 import PrivacyCentrum from "@/pages/mijn/privacy";
 import BeheerPrivacy from "@/pages/beheer/privacy";
+import AvgBeheer from "@/pages/beheer/avg";
 import RollenRechtenBeheer from "@/pages/beheer/rollen-rechten";
 import ObjectRechtenBeheer from "@/pages/beheer/object-rechten";
 import OpnamePagina from "@/pages/opname/index";
@@ -499,6 +500,7 @@ function ConnectPortal() {
         <Route path="/beheer/pwa-test" component={PwaTest} />
         <Route path="/beheer/ai-log" component={AiLogBeheer} />
         <Route path="/beheer/privacy" component={BeheerPrivacy} />
+        <Route path="/beheer/avg" component={AvgBeheer} />
         <Route path="/beheer/gebouwen-archief" component={GebouwenArchiefBeheer} />
         <Route path="/mijn/privacy" component={PrivacyCentrum} />
         <Route path="/mijn/salarisdocumenten" component={MijnSalarisdocumentenPagina} />

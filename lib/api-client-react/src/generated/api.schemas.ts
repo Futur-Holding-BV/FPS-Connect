@@ -5,6 +5,65 @@
  * FPS Brandpreventie - Platform voor brandpreventieve gebouwvoorzieningen
  * OpenAPI spec version: 0.1.0
  */
+export type AvgVerzoekInputType = typeof AvgVerzoekInputType[keyof typeof AvgVerzoekInputType];
+
+
+export const AvgVerzoekInputType = {
+  inzage: 'inzage',
+  verwijdering: 'verwijdering',
+} as const;
+
+export interface AvgVerzoekInput {
+  type: AvgVerzoekInputType;
+  toelichting?: string | null;
+}
+
+export type AvgVerzoekPatchStatus = typeof AvgVerzoekPatchStatus[keyof typeof AvgVerzoekPatchStatus];
+
+
+export const AvgVerzoekPatchStatus = {
+  open: 'open',
+  in_behandeling: 'in_behandeling',
+  afgerond: 'afgerond',
+  afgewezen: 'afgewezen',
+} as const;
+
+export interface AvgVerzoekPatch {
+  status?: AvgVerzoekPatchStatus;
+  beheerder_opmerking?: string | null;
+}
+
+export interface AvgVerzoek {
+  id: number;
+  gebruiker_id: number;
+  gebruiker_naam?: string | null;
+  type: string;
+  status: string;
+  toelichting?: string | null;
+  beheerder_opmerking?: string | null;
+  afgerond_op?: string | null;
+  geanonimiseerd_op?: string | null;
+  aangemaakt_op: string;
+  bijgewerkt_op?: string | null;
+}
+
+export interface InactiefAccount {
+  id: number;
+  naam: string;
+  email: string;
+  rol: string;
+  actief?: boolean;
+  laatste_online?: string | null;
+  aangemaakt_op?: string;
+}
+
+export interface AvgStats {
+  open: number;
+  in_behandeling: number;
+  afgehandeld: number;
+  inactieve_accounts: number;
+}
+
 /**
  * Businesscontext en contextbronnen die bij deze aanroep zijn gebruikt
  * @nullable
@@ -10351,6 +10410,34 @@ opdracht_id?: number;
 export type ListMijnActiviteitenParams = {
 limit?: number;
 offset?: number;
+};
+
+export type ListAvgInzageverzoekenParams = {
+status?: string;
+limiet?: number;
+offset?: number;
+};
+
+export type ListAvgInzageverzoeken200 = {
+  verzoeken: AvgVerzoek[];
+  totaal: number;
+};
+
+export type GetAvgExport200 = { [key: string]: unknown };
+
+export type AnonimiseerAvgGebruiker200 = {
+  bericht: string;
+  gebruiker_id: number;
+};
+
+export type ListAvgInactieveAccountsParams = {
+dagen?: number;
+};
+
+export type ListAvgInactieveAccounts200 = {
+  inactief_dagen: number;
+  grens: string;
+  accounts: InactiefAccount[];
 };
 
 export type ListToolboxBerichtenParams = {

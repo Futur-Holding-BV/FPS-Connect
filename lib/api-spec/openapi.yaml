@@ -63,6 +63,8 @@ tags:
     description: Magazijn- en voorraadbeheer — locaties, voorraad, mutaties, reserveringen, uitgiftes en retouren — Excel/CSV-import van leveranciers, klanten, artikelen en projecten
   - name: ai
     description: Centrale AI-laag — formulierinvullen, patroonherkenning en intelligente aanvulling
+  - name: avg
+    description: AVG / GDPR — inzageverzoeken, verwijderverzoeken, anonimisering en inactieve accounts
 
 paths:
   /healthz:
@@ -2130,6 +2132,198 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Activiteit"
+
+  /avg/inzageverzoek:
+    post:
+      operationId: createAvgInzageverzoek
+      tags: [avg]
+      summary: AVG-inzageverzoek of verwijderverzoek indienen (ingelogde gebruiker)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AvgVerzoekInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AvgVerzoek"
+        "409":
+          description: Al een open verzoek van dit type
+
+  /avg/mijn-verzoeken:
+    get:
+      operationId: listAvgMijnVerzoeken
+      tags: [avg]
+      summary: Eigen AVG-verzoeken inzien
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AvgVerzoek"
+
+  /avg/inzageverzoeken:
+    get:
+      operationId: listAvgInzageverzoeken
+      tags: [avg]
+      summary: Alle AVG-verzoeken (beheerder)
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+            default: open
+        - in: query
+          name: limiet
+          schema:
+            type: integer
+            default: 50
+        - in: query
+          name: offset
+          schema:
+            type: integer
+            default: 0
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [verzoeken, totaal]
+                properties:
+                  verzoeken:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/AvgVerzoek"
+                  totaal:
+                    type: integer
+
+  /avg/inzageverzoek/{id}:
+    patch:
+      operationId: updateAvgInzageverzoek
+      tags: [avg]
+      summary: Status of beheerderopmerking bijwerken (beheerder)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AvgVerzoekPatch"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AvgVerzoek"
+        "404":
+          description: Niet gevonden
+
+  /avg/inzageverzoek/{id}/export:
+    get:
+      operationId: getAvgExport
+      tags: [avg]
+      summary: JSON-export van alle persoonsgegevens voor een verzoek (beheerder)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: JSON-bestand met persoonsgegevens
+          content:
+            application/json:
+              schema:
+                type: object
+        "404":
+          description: Niet gevonden
+
+  /avg/inzageverzoek/{id}/anonimiseer:
+    post:
+      operationId: anonimiseerAvgGebruiker
+      tags: [avg]
+      summary: PII vervangen door pseudoniem en account uitschakelen (beheerder)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Geanonimiseerd
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [bericht, gebruiker_id]
+                properties:
+                  bericht:
+                    type: string
+                  gebruiker_id:
+                    type: integer
+        "404":
+          description: Niet gevonden
+        "409":
+          description: Al geanonimiseerd
+
+  /avg/inactieve-accounts:
+    get:
+      operationId: listAvgInactieveAccounts
+      tags: [avg]
+      summary: Accounts die langer dan X dagen niet zijn ingelogd (beheerder)
+      parameters:
+        - in: query
+          name: dagen
+          schema:
+            type: integer
+            default: 180
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [accounts, grens, inactief_dagen]
+                properties:
+                  inactief_dagen:
+                    type: integer
+                  grens:
+                    type: string
+                  accounts:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/InactiefAccount"
+
+  /avg/stats:
+    get:
+      operationId: getAvgStats
+      tags: [avg]
+      summary: Tellingen voor het AVG-beheer-dashboard (beheerder)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AvgStats"
 
   /mijn-werk:
     get:
@@ -18753,6 +18947,64 @@ paths:
 
 components:
   schemas:
+    AvgVerzoekInput:
+      type: object
+      required: [type]
+      properties:
+        type:
+          type: string
+          enum: [inzage, verwijdering]
+        toelichting:
+          type: string
+          nullable: true
+
+    AvgVerzoekPatch:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [open, in_behandeling, afgerond, afgewezen]
+        beheerder_opmerking:
+          type: string
+          nullable: true
+
+    AvgVerzoek:
+      type: object
+      required: [id, gebruiker_id, type, status, aangemaakt_op]
+      properties:
+        id:                  { type: integer }
+        gebruiker_id:        { type: integer }
+        gebruiker_naam:      { type: string, nullable: true }
+        type:                { type: string }
+        status:              { type: string }
+        toelichting:         { type: string, nullable: true }
+        beheerder_opmerking: { type: string, nullable: true }
+        afgerond_op:         { type: string, format: date-time, nullable: true }
+        geanonimiseerd_op:   { type: string, format: date-time, nullable: true }
+        aangemaakt_op:       { type: string, format: date-time }
+        bijgewerkt_op:       { type: string, format: date-time, nullable: true }
+
+    InactiefAccount:
+      type: object
+      required: [id, naam, email, rol]
+      properties:
+        id:             { type: integer }
+        naam:           { type: string }
+        email:          { type: string }
+        rol:            { type: string }
+        actief:         { type: boolean }
+        laatste_online: { type: string, format: date-time, nullable: true }
+        aangemaakt_op:  { type: string, format: date-time }
+
+    AvgStats:
+      type: object
+      required: [open, in_behandeling, afgehandeld, inactieve_accounts]
+      properties:
+        open:                { type: integer }
+        in_behandeling:      { type: integer }
+        afgehandeld:         { type: integer }
+        inactieve_accounts:  { type: integer }
+
     AiAanroepLog:
       type: object
       required: [id, aangemaakt_op, module, model_slot, model_naam, status]

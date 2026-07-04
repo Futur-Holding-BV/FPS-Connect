@@ -2569,6 +2569,154 @@ export const ListMijnActiviteitenResponse = zod.array(ListMijnActiviteitenRespon
 
 
 /**
+ * @summary AVG-inzageverzoek of verwijderverzoek indienen (ingelogde gebruiker)
+ */
+export const CreateAvgInzageverzoekBody = zod.object({
+  "type": zod.enum(['inzage', 'verwijdering']),
+  "toelichting": zod.string().nullish()
+})
+
+export const CreateAvgInzageverzoekResponse = zod.void()
+
+
+/**
+ * @summary Eigen AVG-verzoeken inzien
+ */
+export const ListAvgMijnVerzoekenResponseItem = zod.object({
+  "id": zod.number(),
+  "gebruiker_id": zod.number(),
+  "gebruiker_naam": zod.string().nullish(),
+  "type": zod.string(),
+  "status": zod.string(),
+  "toelichting": zod.string().nullish(),
+  "beheerder_opmerking": zod.string().nullish(),
+  "afgerond_op": zod.coerce.date().nullish(),
+  "geanonimiseerd_op": zod.coerce.date().nullish(),
+  "aangemaakt_op": zod.coerce.date(),
+  "bijgewerkt_op": zod.coerce.date().nullish()
+})
+export const ListAvgMijnVerzoekenResponse = zod.array(ListAvgMijnVerzoekenResponseItem)
+
+
+/**
+ * @summary Alle AVG-verzoeken (beheerder)
+ */
+export const listAvgInzageverzoekenQueryStatusDefault = `open`;
+export const listAvgInzageverzoekenQueryLimietDefault = 50;
+export const listAvgInzageverzoekenQueryOffsetDefault = 0;
+
+export const ListAvgInzageverzoekenQueryParams = zod.object({
+  "status": zod.coerce.string().default(listAvgInzageverzoekenQueryStatusDefault),
+  "limiet": zod.coerce.number().default(listAvgInzageverzoekenQueryLimietDefault),
+  "offset": zod.coerce.number().default(listAvgInzageverzoekenQueryOffsetDefault)
+})
+
+export const ListAvgInzageverzoekenResponse = zod.object({
+  "verzoeken": zod.array(zod.object({
+  "id": zod.number(),
+  "gebruiker_id": zod.number(),
+  "gebruiker_naam": zod.string().nullish(),
+  "type": zod.string(),
+  "status": zod.string(),
+  "toelichting": zod.string().nullish(),
+  "beheerder_opmerking": zod.string().nullish(),
+  "afgerond_op": zod.coerce.date().nullish(),
+  "geanonimiseerd_op": zod.coerce.date().nullish(),
+  "aangemaakt_op": zod.coerce.date(),
+  "bijgewerkt_op": zod.coerce.date().nullish()
+})),
+  "totaal": zod.number()
+})
+
+
+/**
+ * @summary Status of beheerderopmerking bijwerken (beheerder)
+ */
+export const UpdateAvgInzageverzoekParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateAvgInzageverzoekBody = zod.object({
+  "status": zod.enum(['open', 'in_behandeling', 'afgerond', 'afgewezen']).optional(),
+  "beheerder_opmerking": zod.string().nullish()
+})
+
+export const UpdateAvgInzageverzoekResponse = zod.object({
+  "id": zod.number(),
+  "gebruiker_id": zod.number(),
+  "gebruiker_naam": zod.string().nullish(),
+  "type": zod.string(),
+  "status": zod.string(),
+  "toelichting": zod.string().nullish(),
+  "beheerder_opmerking": zod.string().nullish(),
+  "afgerond_op": zod.coerce.date().nullish(),
+  "geanonimiseerd_op": zod.coerce.date().nullish(),
+  "aangemaakt_op": zod.coerce.date(),
+  "bijgewerkt_op": zod.coerce.date().nullish()
+})
+
+
+/**
+ * @summary JSON-export van alle persoonsgegevens voor een verzoek (beheerder)
+ */
+export const GetAvgExportParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetAvgExportResponse = zod.object({
+
+}).passthrough()
+
+
+/**
+ * @summary PII vervangen door pseudoniem en account uitschakelen (beheerder)
+ */
+export const AnonimiseerAvgGebruikerParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AnonimiseerAvgGebruikerResponse = zod.object({
+  "bericht": zod.string(),
+  "gebruiker_id": zod.number()
+})
+
+
+/**
+ * @summary Accounts die langer dan X dagen niet zijn ingelogd (beheerder)
+ */
+export const listAvgInactieveAccountsQueryDagenDefault = 180;
+
+export const ListAvgInactieveAccountsQueryParams = zod.object({
+  "dagen": zod.coerce.number().default(listAvgInactieveAccountsQueryDagenDefault)
+})
+
+export const ListAvgInactieveAccountsResponse = zod.object({
+  "inactief_dagen": zod.number(),
+  "grens": zod.string(),
+  "accounts": zod.array(zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "email": zod.string(),
+  "rol": zod.string(),
+  "actief": zod.boolean().optional(),
+  "laatste_online": zod.coerce.date().nullish(),
+  "aangemaakt_op": zod.coerce.date().optional()
+}))
+})
+
+
+/**
+ * @summary Tellingen voor het AVG-beheer-dashboard (beheerder)
+ */
+export const GetAvgStatsResponse = zod.object({
+  "open": zod.number(),
+  "in_behandeling": zod.number(),
+  "afgehandeld": zod.number(),
+  "inactieve_accounts": zod.number()
+})
+
+
+/**
  * @summary Overzicht van aan de ingelogde monteur toegewezen spots, gegroepeerd per gebouw
  */
 export const GetMijnWerkResponseItem = zod.object({

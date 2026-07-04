@@ -48,6 +48,7 @@ import type {
   AiModCalcRegels200,
   AiProfielCrmConcurrent200,
   AiSuggestiesOrgVerzekeringen200,
+  AnonimiseerAvgGebruiker200,
   AppInstellingen,
   AppInstellingenInput,
   ApplicatieLabelsInput,
@@ -58,6 +59,10 @@ import type {
   ArtikelInput,
   AssignClusterMonteur200,
   AuthGebruiker,
+  AvgStats,
+  AvgVerzoek,
+  AvgVerzoekInput,
+  AvgVerzoekPatch,
   BatchExportResultaat,
   BedrijfsSluiting,
   BedrijfsSluitingInput,
@@ -236,6 +241,7 @@ import type {
   GetActiefDocumentStudioModelParams,
   GetAiAanroepenAggregaatParams,
   GetAiPresentatieNiveau200,
+  GetAvgExport200,
   GetBoekhouderDashboardParams,
   GetBoekhouderUploadsParams,
   GetCapaciteitBezettingParams,
@@ -332,6 +338,10 @@ import type {
   ListAiAanroepenParams,
   ListAlleVerlofAanvragenParams,
   ListArtikelenParams,
+  ListAvgInactieveAccounts200,
+  ListAvgInactieveAccountsParams,
+  ListAvgInzageverzoeken200,
+  ListAvgInzageverzoekenParams,
   ListBedrijfssluitingenParams,
   ListBrandstofImportenParams,
   ListCrmContactpersonenAllParams,
@@ -7464,6 +7474,616 @@ export function useListMijnActiviteiten<TData = Awaited<ReturnType<typeof listMi
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getListMijnActiviteitenQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateAvgInzageverzoekUrl = () => {
+
+
+
+
+  return `/api/avg/inzageverzoek`
+}
+
+/**
+ * @summary AVG-inzageverzoek of verwijderverzoek indienen (ingelogde gebruiker)
+ */
+export const createAvgInzageverzoek = async (avgVerzoekInput: AvgVerzoekInput, options?: RequestInit): Promise<AvgVerzoek> => {
+
+  return customFetch<AvgVerzoek>(getCreateAvgInzageverzoekUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(avgVerzoekInput)
+  }
+);}
+
+
+
+
+export const getCreateAvgInzageverzoekMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAvgInzageverzoek>>, TError,{data: BodyType<AvgVerzoekInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createAvgInzageverzoek>>, TError,{data: BodyType<AvgVerzoekInput>}, TContext> => {
+
+const mutationKey = ['createAvgInzageverzoek'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createAvgInzageverzoek>>, {data: BodyType<AvgVerzoekInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createAvgInzageverzoek(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateAvgInzageverzoekMutationResult = NonNullable<Awaited<ReturnType<typeof createAvgInzageverzoek>>>
+    export type CreateAvgInzageverzoekMutationBody = BodyType<AvgVerzoekInput>
+    export type CreateAvgInzageverzoekMutationError = ErrorType<void>
+
+    /**
+ * @summary AVG-inzageverzoek of verwijderverzoek indienen (ingelogde gebruiker)
+ */
+export const useCreateAvgInzageverzoek = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAvgInzageverzoek>>, TError,{data: BodyType<AvgVerzoekInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createAvgInzageverzoek>>,
+        TError,
+        {data: BodyType<AvgVerzoekInput>},
+        TContext
+      > => {
+      return useMutation(getCreateAvgInzageverzoekMutationOptions(options));
+    }
+
+export const getListAvgMijnVerzoekenUrl = () => {
+
+
+
+
+  return `/api/avg/mijn-verzoeken`
+}
+
+/**
+ * @summary Eigen AVG-verzoeken inzien
+ */
+export const listAvgMijnVerzoeken = async ( options?: RequestInit): Promise<AvgVerzoek[]> => {
+
+  return customFetch<AvgVerzoek[]>(getListAvgMijnVerzoekenUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListAvgMijnVerzoekenQueryKey = () => {
+    return [
+    `/api/avg/mijn-verzoeken`
+    ] as const;
+    }
+
+
+export const getListAvgMijnVerzoekenQueryOptions = <TData = Awaited<ReturnType<typeof listAvgMijnVerzoeken>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAvgMijnVerzoeken>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAvgMijnVerzoekenQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAvgMijnVerzoeken>>> = ({ signal }) => listAvgMijnVerzoeken({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAvgMijnVerzoeken>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListAvgMijnVerzoekenQueryResult = NonNullable<Awaited<ReturnType<typeof listAvgMijnVerzoeken>>>
+export type ListAvgMijnVerzoekenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Eigen AVG-verzoeken inzien
+ */
+
+export function useListAvgMijnVerzoeken<TData = Awaited<ReturnType<typeof listAvgMijnVerzoeken>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAvgMijnVerzoeken>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListAvgMijnVerzoekenQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListAvgInzageverzoekenUrl = (params?: ListAvgInzageverzoekenParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/avg/inzageverzoeken?${stringifiedParams}` : `/api/avg/inzageverzoeken`
+}
+
+/**
+ * @summary Alle AVG-verzoeken (beheerder)
+ */
+export const listAvgInzageverzoeken = async (params?: ListAvgInzageverzoekenParams, options?: RequestInit): Promise<ListAvgInzageverzoeken200> => {
+
+  return customFetch<ListAvgInzageverzoeken200>(getListAvgInzageverzoekenUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListAvgInzageverzoekenQueryKey = (params?: ListAvgInzageverzoekenParams,) => {
+    return [
+    `/api/avg/inzageverzoeken`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListAvgInzageverzoekenQueryOptions = <TData = Awaited<ReturnType<typeof listAvgInzageverzoeken>>, TError = ErrorType<unknown>>(params?: ListAvgInzageverzoekenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAvgInzageverzoeken>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAvgInzageverzoekenQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAvgInzageverzoeken>>> = ({ signal }) => listAvgInzageverzoeken(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAvgInzageverzoeken>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListAvgInzageverzoekenQueryResult = NonNullable<Awaited<ReturnType<typeof listAvgInzageverzoeken>>>
+export type ListAvgInzageverzoekenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Alle AVG-verzoeken (beheerder)
+ */
+
+export function useListAvgInzageverzoeken<TData = Awaited<ReturnType<typeof listAvgInzageverzoeken>>, TError = ErrorType<unknown>>(
+ params?: ListAvgInzageverzoekenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAvgInzageverzoeken>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListAvgInzageverzoekenQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUpdateAvgInzageverzoekUrl = (id: number,) => {
+
+
+
+
+  return `/api/avg/inzageverzoek/${id}`
+}
+
+/**
+ * @summary Status of beheerderopmerking bijwerken (beheerder)
+ */
+export const updateAvgInzageverzoek = async (id: number,
+    avgVerzoekPatch: AvgVerzoekPatch, options?: RequestInit): Promise<AvgVerzoek> => {
+
+  return customFetch<AvgVerzoek>(getUpdateAvgInzageverzoekUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(avgVerzoekPatch)
+  }
+);}
+
+
+
+
+export const getUpdateAvgInzageverzoekMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAvgInzageverzoek>>, TError,{id: number;data: BodyType<AvgVerzoekPatch>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateAvgInzageverzoek>>, TError,{id: number;data: BodyType<AvgVerzoekPatch>}, TContext> => {
+
+const mutationKey = ['updateAvgInzageverzoek'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateAvgInzageverzoek>>, {id: number;data: BodyType<AvgVerzoekPatch>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateAvgInzageverzoek(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateAvgInzageverzoekMutationResult = NonNullable<Awaited<ReturnType<typeof updateAvgInzageverzoek>>>
+    export type UpdateAvgInzageverzoekMutationBody = BodyType<AvgVerzoekPatch>
+    export type UpdateAvgInzageverzoekMutationError = ErrorType<void>
+
+    /**
+ * @summary Status of beheerderopmerking bijwerken (beheerder)
+ */
+export const useUpdateAvgInzageverzoek = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAvgInzageverzoek>>, TError,{id: number;data: BodyType<AvgVerzoekPatch>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateAvgInzageverzoek>>,
+        TError,
+        {id: number;data: BodyType<AvgVerzoekPatch>},
+        TContext
+      > => {
+      return useMutation(getUpdateAvgInzageverzoekMutationOptions(options));
+    }
+
+export const getGetAvgExportUrl = (id: number,) => {
+
+
+
+
+  return `/api/avg/inzageverzoek/${id}/export`
+}
+
+/**
+ * @summary JSON-export van alle persoonsgegevens voor een verzoek (beheerder)
+ */
+export const getAvgExport = async (id: number, options?: RequestInit): Promise<GetAvgExport200> => {
+
+  return customFetch<GetAvgExport200>(getGetAvgExportUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetAvgExportQueryKey = (id: number,) => {
+    return [
+    `/api/avg/inzageverzoek/${id}/export`
+    ] as const;
+    }
+
+
+export const getGetAvgExportQueryOptions = <TData = Awaited<ReturnType<typeof getAvgExport>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAvgExport>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAvgExportQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAvgExport>>> = ({ signal }) => getAvgExport(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAvgExport>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetAvgExportQueryResult = NonNullable<Awaited<ReturnType<typeof getAvgExport>>>
+export type GetAvgExportQueryError = ErrorType<void>
+
+
+/**
+ * @summary JSON-export van alle persoonsgegevens voor een verzoek (beheerder)
+ */
+
+export function useGetAvgExport<TData = Awaited<ReturnType<typeof getAvgExport>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAvgExport>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetAvgExportQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getAnonimiseerAvgGebruikerUrl = (id: number,) => {
+
+
+
+
+  return `/api/avg/inzageverzoek/${id}/anonimiseer`
+}
+
+/**
+ * @summary PII vervangen door pseudoniem en account uitschakelen (beheerder)
+ */
+export const anonimiseerAvgGebruiker = async (id: number, options?: RequestInit): Promise<AnonimiseerAvgGebruiker200> => {
+
+  return customFetch<AnonimiseerAvgGebruiker200>(getAnonimiseerAvgGebruikerUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getAnonimiseerAvgGebruikerMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof anonimiseerAvgGebruiker>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof anonimiseerAvgGebruiker>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['anonimiseerAvgGebruiker'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof anonimiseerAvgGebruiker>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  anonimiseerAvgGebruiker(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AnonimiseerAvgGebruikerMutationResult = NonNullable<Awaited<ReturnType<typeof anonimiseerAvgGebruiker>>>
+
+    export type AnonimiseerAvgGebruikerMutationError = ErrorType<void>
+
+    /**
+ * @summary PII vervangen door pseudoniem en account uitschakelen (beheerder)
+ */
+export const useAnonimiseerAvgGebruiker = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof anonimiseerAvgGebruiker>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof anonimiseerAvgGebruiker>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getAnonimiseerAvgGebruikerMutationOptions(options));
+    }
+
+export const getListAvgInactieveAccountsUrl = (params?: ListAvgInactieveAccountsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/avg/inactieve-accounts?${stringifiedParams}` : `/api/avg/inactieve-accounts`
+}
+
+/**
+ * @summary Accounts die langer dan X dagen niet zijn ingelogd (beheerder)
+ */
+export const listAvgInactieveAccounts = async (params?: ListAvgInactieveAccountsParams, options?: RequestInit): Promise<ListAvgInactieveAccounts200> => {
+
+  return customFetch<ListAvgInactieveAccounts200>(getListAvgInactieveAccountsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListAvgInactieveAccountsQueryKey = (params?: ListAvgInactieveAccountsParams,) => {
+    return [
+    `/api/avg/inactieve-accounts`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListAvgInactieveAccountsQueryOptions = <TData = Awaited<ReturnType<typeof listAvgInactieveAccounts>>, TError = ErrorType<unknown>>(params?: ListAvgInactieveAccountsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAvgInactieveAccounts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAvgInactieveAccountsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAvgInactieveAccounts>>> = ({ signal }) => listAvgInactieveAccounts(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAvgInactieveAccounts>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListAvgInactieveAccountsQueryResult = NonNullable<Awaited<ReturnType<typeof listAvgInactieveAccounts>>>
+export type ListAvgInactieveAccountsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Accounts die langer dan X dagen niet zijn ingelogd (beheerder)
+ */
+
+export function useListAvgInactieveAccounts<TData = Awaited<ReturnType<typeof listAvgInactieveAccounts>>, TError = ErrorType<unknown>>(
+ params?: ListAvgInactieveAccountsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAvgInactieveAccounts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListAvgInactieveAccountsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetAvgStatsUrl = () => {
+
+
+
+
+  return `/api/avg/stats`
+}
+
+/**
+ * @summary Tellingen voor het AVG-beheer-dashboard (beheerder)
+ */
+export const getAvgStats = async ( options?: RequestInit): Promise<AvgStats> => {
+
+  return customFetch<AvgStats>(getGetAvgStatsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetAvgStatsQueryKey = () => {
+    return [
+    `/api/avg/stats`
+    ] as const;
+    }
+
+
+export const getGetAvgStatsQueryOptions = <TData = Awaited<ReturnType<typeof getAvgStats>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAvgStats>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAvgStatsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAvgStats>>> = ({ signal }) => getAvgStats({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAvgStats>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetAvgStatsQueryResult = NonNullable<Awaited<ReturnType<typeof getAvgStats>>>
+export type GetAvgStatsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Tellingen voor het AVG-beheer-dashboard (beheerder)
+ */
+
+export function useGetAvgStats<TData = Awaited<ReturnType<typeof getAvgStats>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAvgStats>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetAvgStatsQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

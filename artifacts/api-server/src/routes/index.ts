@@ -87,6 +87,7 @@ import { maakAuditMiddleware } from "../lib/audit";
 import auditRouter from "./audit";
 import objectRechtenRouter from "./object-rechten";
 import aiLogRouter from "./ai-log";
+import avgRouter from "./avg";
 import "../services/workflow-configs";
 
 const router: IRouter = Router();
@@ -190,5 +191,6 @@ router.use(fieRouter);
 router.use(auditRouter);
 router.use(objectRechtenRouter);
 router.use(aiLogRouter);
+router.use(avgRouter);
 
 export default router;

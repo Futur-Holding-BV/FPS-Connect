@@ -3,6 +3,7 @@ import { logger } from "./lib/logger";
 import { ensureSessionTable } from "./lib/session";
 import { planDagelijksBackup } from "./lib/backupService";
 import { planDagelijksePortaalOpruiming } from "./lib/portaalOpruimen";
+import { planDagelijkseAvgOpruiming } from "./lib/avgOpruiming";
 import { planDagelijkseMagazijnSignalering } from "./lib/magazijnSignalering";
 import { planDagelijksePlanningMeldingen } from "./lib/planningMeldingenService";
 import { planDagelijkseScout } from "./lib/scoutService";
@@ -45,6 +46,7 @@ ensureSessionTable()
       logger.info({ port }, "Server listening");
       planDagelijksBackup();
       planDagelijksePortaalOpruiming();
+      planDagelijkseAvgOpruiming();
       planDagelijkseMagazijnSignalering();
       planDagelijksePlanningMeldingen();
       planDagelijkseScout();

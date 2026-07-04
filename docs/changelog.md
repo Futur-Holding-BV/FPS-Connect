@@ -4,6 +4,55 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-04 — AVG code-review herstel: veldnamen, anonimisering, verlofexport, notificatie (volledig)
+
+**Uitvoering:** volledig | **Getest:** typecheck clean firevault + api-server; codegen OK; api-server herstart zonder fouten; alleen pre-existing TS7030 in offertes.ts
+
+Eerste ronde code-review-bevindingen opgelost (ronde 1):
+
+1. **Veldnaam-inconsistentie**: `mapVerzoek()` geeft nu `toelichting` terug (was `opmerking`); POST-body leest `toelichting`; `AvgVerzoek`-type in admin avg.tsx bijgewerkt; OpenAPI-spec was al correct
+2. **Status-inconsistentie**: OpenAPI AvgVerzoekPatch-enum bijgewerkt `afgehandeld` → `afgerond`; server en spec synchroon
+3. **`geanonimiseerd`-kolom op gebruikersTable**: anonimiseer-route zet nu ook `gebruikersTable.geanonimiseerd = nu.toISOString()`
+4. **Verlofaanvragen export + interne activiteitsmelding**: `verlofAanvragenTable`-rijen (max 200) in export; `logActiviteit` bij indienen
+
+Tweede ronde code-review-bevindingen opgelost (ronde 2):
+
+1. **Anonimiseer behoudt actief-status**: `actief: false` verwijderd — geanonimiseerd account blijft actief maar niet-identificeerbaar
+2. **Export uitgebreid**: `opdrachtenTable` (aangemaakt_door_id) toegevoegd; CSV-formaat beschikbaar via `?formaat=csv` (accountgegevens + opdrachten + activiteiten)
+3. **Stats key-mismatch**: API retourneert nu `open_verzoeken` (was `open`), in lijn met het frontend Stats-type
+4. **Inactief accounts archiveerknop**: per rij "Archiveren"-knop met bevestigingsdialog; roept `PATCH /gebruikers/:id` aan met `gearchiveerd: true`
+
+## 2026-07-04 — AVG / GDPR: inzageverzoeken, verwijderverzoeken, anonimisering en inactieve accounts (volledig)
+
+**Uitvoering:** volledig | **Getest:** typecheck clean firevault + api-server; API /avg/stats reageert 401 (auth werkt); alleen pre-existing TS7030 in offertes.ts
+
+### DB-schema
+- `lib/db/src/schema/avg.ts` — nieuw: `avg_inzageverzoeken` tabel (id, gebruiker_id, type, status, toelichting, beheerder_opmerking, afgehandeld_door, aangemaakt_op, bijgewerkt_op)
+- `lib/db/src/schema/gebruikers.ts` — nieuw kolom `geanonimiseerd text` (bewaarmoment anonimisering)
+- DB-migratie via executeSql (additief, geen drizzle push vereist)
+
+### API endpoints (`artifacts/api-server/src/routes/avg.ts`)
+- `POST /avg/inzageverzoek` — gebruiker dient inzage- of verwijderverzoek in; 409 bij open duplicaat
+- `GET /avg/mijn-verzoeken` — eigen verzoeken inzien
+- `GET /avg/inzageverzoeken` — alle verzoeken met statusfilter (beheerder)
+- `PATCH /avg/inzageverzoek/:id` — status en opmerking bijwerken (beheerder)
+- `GET /avg/inzageverzoek/:id/export` — JSON-export van alle persoonsgegevens (beheerder)
+- `POST /avg/inzageverzoek/:id/anonimiseer` — PII vervangen door pseudoniem, account uitschakelen (beheerder)
+- `GET /avg/inactieve-accounts` — accounts zonder login > X dagen (beheerder)
+- `GET /avg/stats` — open / in_behandeling / afgehandeld / inactieve_accounts tellers (beheerder)
+
+### Dagelijkse opruiming
+- `artifacts/api-server/src/lib/avgOpruiming.ts` — dagelijks om 02:30 worden activiteiten ouder dan 365 dagen verwijderd (recursieve setTimeout, geregistreerd in index.ts)
+
+### Frontend
+- `artifacts/firevault/src/pages/beheer/avg.tsx` — beheerder-paneel AVG: verzoekentabel (status/filter), detailkaart, statuswijziging, opmerking, export-knop, anonimiseer-dialog, inactieve-accounts-tab, stats-balk
+- `artifacts/firevault/src/pages/mijn/privacy.tsx` — nieuw tabblad "AVG-verzoeken": inzageverzoek indienen (optionele toelichting), verwijderverzoek (bevestigingscheckbox), open-verzoek-blokkering, historielijst met beheerderreactie
+- Route `/beheer/avg` geregistreerd in App.tsx; nav-item "AVG &amp; Privacy" (ShieldAlert) in beheerder-layout
+
+### OpenAPI + codegen
+- `lib/api-spec/openapi.yaml` — 8 nieuwe AVG-paden + 5 nieuwe schemas (AvgVerzoekInput, AvgVerzoekPatch, AvgVerzoek, InactiefAccount, AvgStats) + tag avg
+- Codegen uitgevoerd: `useCreateAvgInzageverzoek`, `useUpdateAvgInzageverzoek`, `useAnonimiseerAvgGebruiker`, `useListAvgMijnVerzoeken` gegenereerd
+
 ## 2026-07-04 — FIE Fase 4: Directiedashboard Bedrijfskompas (volledig)
 
 **Uitvoering:** volledig | **Getest:** typecheck clean (alleen pre-existing TS7030 in offertes.ts)

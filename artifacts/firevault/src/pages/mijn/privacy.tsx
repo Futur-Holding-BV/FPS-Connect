@@ -3,9 +3,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import {
   useGetMijnPrivacyGegevens,
   useListMijnActiviteiten,
+  useListAvgMijnVerzoeken,
+  useCreateAvgInzageverzoek,
+  type AvgVerzoek,
 } from "@workspace/api-client-react";
 import { useRol } from "@/context/rol-context";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
@@ -23,6 +28,10 @@ import {
   Calendar,
   Bot,
   AlertTriangle,
+  FileSearch,
+  Trash2,
+  CheckCircle2,
+  Loader2,
 } from "lucide-react";
 
 const DIENSTVERBAND_LABELS: Record<string, string> = {
@@ -56,6 +65,18 @@ const NIVEAU_LABELS: Record<string, string> = {
   anders: "Anders",
 };
 
+const VERZOEK_STATUS_LABELS: Record<string, string> = {
+  open: "Open",
+  in_behandeling: "In behandeling",
+  afgehandeld: "Afgehandeld",
+  afgewezen: "Afgewezen",
+};
+
+const VERZOEK_TYPE_LABELS: Record<string, string> = {
+  inzage: "Inzageverzoek",
+  verwijdering: "Verwijderverzoek",
+};
+
 function fmtDatum(d?: string | null) {
   if (!d) return "—";
   return new Date(d).toLocaleDateString("nl-NL", { day: "2-digit", month: "long", year: "numeric" });
@@ -66,6 +87,20 @@ function fmtTijdstip(d?: string | null) {
   return new Date(d).toLocaleString("nl-NL", {
     day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit",
   });
+}
+
+function VerzoekStatusBadge({ status }: { status: string }) {
+  const klassen: Record<string, string> = {
+    open: "bg-blue-100 text-blue-800 border-blue-200",
+    in_behandeling: "bg-amber-100 text-amber-800 border-amber-200",
+    afgehandeld: "bg-green-100 text-green-800 border-green-200",
+    afgewezen: "bg-red-100 text-red-800 border-red-200",
+  };
+  return (
+    <Badge className={`text-xs font-normal ${klassen[status] ?? "bg-muted text-muted-foreground"}`}>
+      {VERZOEK_STATUS_LABELS[status] ?? status}
+    </Badge>
+  );
 }
 
 function GegevensTab() {
@@ -324,6 +359,189 @@ function ActiviteitenTab() {
   );
 }
 
+function VerzoekFormulier({
+  type,
+  heeftOpenVerzoek,
+  onSuccess,
+}: {
+  type: "inzage" | "verwijdering";
+  heeftOpenVerzoek: boolean;
+  onSuccess: () => void;
+}) {
+  const [toelichting, setToelichting] = useState("");
+  const [bevestigd, setBevestigd] = useState(false);
+  const [ingediend, setIngediend] = useState(false);
+
+  const maakVerzoek = useCreateAvgInzageverzoek();
+
+  function indienen() {
+    maakVerzoek.mutate(
+      { data: { type, toelichting: toelichting.trim() || undefined } },
+      {
+        onSuccess: () => {
+          setIngediend(true);
+          onSuccess();
+        },
+      }
+    );
+  }
+
+  if (ingediend) {
+    return (
+      <div className="flex items-center gap-2 text-sm text-green-700 py-3">
+        <CheckCircle2 className="h-4 w-4 flex-shrink-0" />
+        Uw verzoek is ingediend. De beheerder neemt binnen 1 maand contact met u op.
+      </div>
+    );
+  }
+
+  if (heeftOpenVerzoek) {
+    return (
+      <p className="text-sm text-muted-foreground py-3">
+        Er staat al een open {type === "inzage" ? "inzageverzoek" : "verwijderverzoek"} voor uw account.
+        U kunt een nieuw verzoek indienen nadat het huidige is afgehandeld.
+      </p>
+    );
+  }
+
+  return (
+    <div className="space-y-3 pt-1">
+      <Textarea
+        placeholder="Optionele toelichting (bijv. waarover u inzage wilt of wat u wilt laten verwijderen)"
+        rows={3}
+        value={toelichting}
+        onChange={(e) => setToelichting(e.target.value)}
+        className="text-sm resize-none"
+      />
+      {type === "verwijdering" && (
+        <label className="flex items-start gap-2 text-sm cursor-pointer">
+          <input
+            type="checkbox"
+            className="mt-0.5 accent-primary"
+            checked={bevestigd}
+            onChange={(e) => setBevestigd(e.target.checked)}
+          />
+          <span className="text-muted-foreground">
+            Ik begrijp dat verwijdering van mijn gegevens leidt tot permanente anonimisering van mijn account
+            en dat dit niet ongedaan gemaakt kan worden.
+          </span>
+        </label>
+      )}
+      <Button
+        size="sm"
+        onClick={indienen}
+        disabled={maakVerzoek.isPending || (type === "verwijdering" && !bevestigd)}
+        className="flex items-center gap-2"
+      >
+        {maakVerzoek.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+        Verzoek indienen
+      </Button>
+      {maakVerzoek.isError && (
+        <p className="text-xs text-destructive">Er is iets misgegaan. Probeer het opnieuw.</p>
+      )}
+    </div>
+  );
+}
+
+function VerzoekHistorie({ verzoeken }: { verzoeken: AvgVerzoek[] | undefined }) {
+  if (!verzoeken || verzoeken.length === 0) return null;
+
+  return (
+    <div className="space-y-2 mt-4">
+      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Eerdere verzoeken</p>
+      {verzoeken.map((v) => (
+        <div key={v.id} className="rounded-md border px-3 py-2.5 text-sm space-y-1">
+          <div className="flex items-center justify-between gap-2">
+            <span className="font-medium">{VERZOEK_TYPE_LABELS[v.type] ?? v.type}</span>
+            <VerzoekStatusBadge status={v.status} />
+          </div>
+          <p className="text-xs text-muted-foreground">{fmtTijdstip(v.aangemaakt_op)}</p>
+          {v.toelichting && (
+            <p className="text-xs text-muted-foreground italic">{v.toelichting}</p>
+          )}
+          {v.beheerder_opmerking && (
+            <p className="text-xs border-t pt-1.5 mt-1.5">
+              <span className="font-medium">Reactie beheerder: </span>
+              {v.beheerder_opmerking}
+            </p>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function VerzoekTab() {
+  const { data: verzoeken, isLoading, refetch } = useListAvgMijnVerzoeken();
+
+  const heeftOpenInzage = (verzoeken ?? []).some(
+    (v) => v.type === "inzage" && (v.status === "open" || v.status === "in_behandeling")
+  );
+  const heeftOpenVerwijdering = (verzoeken ?? []).some(
+    (v) => v.type === "verwijdering" && (v.status === "open" || v.status === "in_behandeling")
+  );
+
+  if (isLoading) {
+    return (
+      <div className="space-y-3">
+        <Skeleton className="h-32 w-full" />
+        <Skeleton className="h-32 w-full" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <p className="text-sm text-muted-foreground">
+        Op grond van de AVG heeft u het recht om te weten welke gegevens FPS Connect over u bewaart (inzage)
+        en om deze te laten verwijderen (verwijdering). Dien hieronder een verzoek in; de beheerder
+        behandelt het binnen 1 maand.
+      </p>
+
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <FileSearch className="h-4 w-4 text-muted-foreground" />
+            Inzageverzoek
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground mb-3">
+            U kunt een volledig overzicht opvragen van alle persoonsgegevens die FPS Connect over u heeft opgeslagen.
+          </p>
+          <VerzoekFormulier
+            type="inzage"
+            heeftOpenVerzoek={heeftOpenInzage}
+            onSuccess={() => refetch()}
+          />
+        </CardContent>
+      </Card>
+
+      <Card className="border-destructive/20">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Trash2 className="h-4 w-4 text-destructive/70" />
+            Verwijderverzoek
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground mb-3">
+            U kunt verzoeken uw persoonsgegevens te laten verwijderen. Uw account wordt dan geanonimiseerd.
+            Wettelijk verplichte gegevens (bijv. fiscale administratie) worden niet verwijderd maar losgekoppeld.
+          </p>
+          <VerzoekFormulier
+            type="verwijdering"
+            heeftOpenVerzoek={heeftOpenVerwijdering}
+            onSuccess={() => refetch()}
+          />
+        </CardContent>
+      </Card>
+
+      <VerzoekHistorie verzoeken={verzoeken} />
+    </div>
+  );
+}
+
 const WIE_ROLLEN = [
   {
     rol: "HR-beheerder",
@@ -499,7 +717,7 @@ function HoeGebruiktTab() {
       titel: "Uw rechten als betrokkene",
       icon: null,
       tekst:
-        "U heeft recht op inzage, rectificatie, wissing, beperking van de verwerking, dataportabiliteit en bezwaar. Dien een verzoek in via uw leidinggevende of de beheerder van FPS Connect. Reactie binnen 1 maand.",
+        "U heeft het recht op inzage, rectificatie, wissing, beperking van de verwerking, dataportabiliteit en bezwaar. Gebruik het tabblad 'AVG-verzoeken' om een verzoek in te dienen — de beheerder reageert binnen 1 maand.",
     },
     {
       titel: "Beveiliging",
@@ -556,6 +774,10 @@ export default function PrivacyCentrumPagina() {
             <Clock className="h-3.5 w-3.5 mr-1.5" />
             Mijn activiteiten
           </TabsTrigger>
+          <TabsTrigger value="avg-verzoeken" className="text-xs sm:text-sm">
+            <FileSearch className="h-3.5 w-3.5 mr-1.5" />
+            AVG-verzoeken
+          </TabsTrigger>
           <TabsTrigger value="wie-ziet" className="text-xs sm:text-sm">
             <Eye className="h-3.5 w-3.5 mr-1.5" />
             Wie kan mijn gegevens zien
@@ -568,6 +790,7 @@ export default function PrivacyCentrumPagina() {
 
         <TabsContent value="gegevens" className="mt-4"><GegevensTab /></TabsContent>
         <TabsContent value="activiteiten" className="mt-4"><ActiviteitenTab /></TabsContent>
+        <TabsContent value="avg-verzoeken" className="mt-4"><VerzoekTab /></TabsContent>
         <TabsContent value="wie-ziet" className="mt-4"><WieZietTab /></TabsContent>
         <TabsContent value="hoe-gebruikt" className="mt-4"><HoeGebruiktTab /></TabsContent>
       </Tabs>
