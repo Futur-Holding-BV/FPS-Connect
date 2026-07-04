@@ -9377,6 +9377,11 @@ paths:
           name: status
           schema:
             type: string
+        - in: query
+          name: mijn
+          schema:
+            type: boolean
+          description: "Indien true: alleen opdrachten waarvoor de ingelogde gebruiker planning-items heeft (voor beheerders genegeerd)"
       responses:
         "200":
           description: OK
@@ -17914,6 +17919,11 @@ paths:
           name: type
           schema:
             type: string
+        - in: query
+          name: opdracht_id
+          schema:
+            type: integer
+          description: Filter op gekoppeld opdrachtnummer
         - in: query
           name: limit
           schema:
@@ -33237,6 +33247,8 @@ components:
         delta:           { type: number }
         referentie_type: { type: ["string", "null"] }
         referentie_id:   { type: ["integer", "null"] }
+        opdracht_id:     { type: ["integer", "null"] }
+        opdracht_titel:  { type: ["string", "null"] }
         gebruiker_id:    { type: ["integer", "null"] }
         gebruiker_naam:  { type: ["string", "null"] }
         omschrijving:    { type: ["string", "null"] }

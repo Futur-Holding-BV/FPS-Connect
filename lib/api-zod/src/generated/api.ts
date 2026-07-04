@@ -11453,7 +11453,8 @@ export const MaakOpdrachtResponse = zod.void()
  */
 export const ListOpdrachtenQueryParams = zod.object({
   "gebouw_id": zod.coerce.number().optional(),
-  "status": zod.coerce.string().optional()
+  "status": zod.coerce.string().optional(),
+  "mijn": zod.coerce.boolean().optional().describe('Indien true: alleen opdrachten waarvoor de ingelogde gebruiker planning-items heeft (voor beheerders genegeerd)')
 })
 
 export const ListOpdrachtenResponseItem = zod.object({
@@ -22607,6 +22608,7 @@ export const listVoorraadMutatiesQueryLimitDefault = 100;
 export const ListVoorraadMutatiesQueryParams = zod.object({
   "artikel_id": zod.coerce.number().optional(),
   "type": zod.coerce.string().optional(),
+  "opdracht_id": zod.coerce.number().optional().describe('Filter op gekoppeld opdrachtnummer'),
   "limit": zod.coerce.number().default(listVoorraadMutatiesQueryLimitDefault)
 })
 
@@ -22620,6 +22622,8 @@ export const ListVoorraadMutatiesResponseItem = zod.object({
   "delta": zod.number(),
   "referentie_type": zod.string().nullish(),
   "referentie_id": zod.number().nullish(),
+  "opdracht_id": zod.number().nullish(),
+  "opdracht_titel": zod.string().nullish(),
   "gebruiker_id": zod.number().nullish(),
   "gebruiker_naam": zod.string().nullish(),
   "omschrijving": zod.string().nullish(),

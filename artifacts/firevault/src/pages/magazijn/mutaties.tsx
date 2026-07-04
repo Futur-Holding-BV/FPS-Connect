@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useListVoorraadMutaties, useListArtikelen } from "@workspace/api-client-react";
+import { useListVoorraadMutaties, useListArtikelen, useListOpdrachten } from "@workspace/api-client-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -33,13 +33,18 @@ function formatDatum(iso: string) {
 export default function MagazijnMutatiesPagina() {
   const [filterArtikel, setFilterArtikel] = useState("");
   const [filterType, setFilterType] = useState("");
+  const [filterOpdracht, setFilterOpdracht] = useState("");
 
   const { data: artikelenData } = useListArtikelen();
   const artikelen = artikelenData ?? [];
 
+  const { data: opdrachtenData } = useListOpdrachten();
+  const opdrachten = opdrachtenData ?? [];
+
   const { data: mutaties = [], isLoading } = useListVoorraadMutaties({
     artikel_id: filterArtikel ? Number(filterArtikel) : undefined,
     type: filterType || undefined,
+    opdracht_id: filterOpdracht ? Number(filterOpdracht) : undefined,
     limit: 200,
   });
 
@@ -63,6 +68,17 @@ export default function MagazijnMutatiesPagina() {
             {Object.entries(TYPE_LABELS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
           </SelectContent>
         </Select>
+        <Select value={filterOpdracht || "__alle__"} onValueChange={v => setFilterOpdracht(v === "__alle__" ? "" : v)}>
+          <SelectTrigger className="w-64"><SelectValue placeholder="Alle opdrachten" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__alle__">Alle opdrachten</SelectItem>
+            {opdrachten.map(o => (
+              <SelectItem key={o.id} value={String(o.id)}>
+                {o.titel}{o.werknummer ? ` (${o.werknummer})` : ""}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="border rounded-lg overflow-hidden bg-background">
@@ -74,6 +90,7 @@ export default function MagazijnMutatiesPagina() {
               <th className="text-left py-2.5 px-4">Artikel</th>
               <th className="text-right py-2.5 px-4">Hoeveelheid</th>
               <th className="text-right py-2.5 px-4">Delta</th>
+              <th className="text-left py-2.5 px-4">Opdracht</th>
               <th className="text-left py-2.5 px-4">Omschrijving</th>
             </tr>
           </thead>
@@ -81,12 +98,12 @@ export default function MagazijnMutatiesPagina() {
             {isLoading ? (
               Array.from({ length: 8 }).map((_, i) => (
                 <tr key={i} className="border-b">
-                  <td className="py-3 px-4" colSpan={6}><Skeleton className="h-5 w-full" /></td>
+                  <td className="py-3 px-4" colSpan={7}><Skeleton className="h-5 w-full" /></td>
                 </tr>
               ))
             ) : mutaties.length === 0 ? (
               <tr>
-                <td colSpan={6} className="py-12 text-center text-muted-foreground">
+                <td colSpan={7} className="py-12 text-center text-muted-foreground">
                   Geen mutaties gevonden.
                 </td>
               </tr>
@@ -106,6 +123,9 @@ export default function MagazijnMutatiesPagina() {
                       {m.delta > 0 ? <ArrowUp className="h-3 w-3" /> : m.delta < 0 ? <ArrowDown className="h-3 w-3" /> : <Minus className="h-3 w-3" />}
                       {m.delta > 0 ? "+" : ""}{m.delta}
                     </span>
+                  </td>
+                  <td className="py-2.5 px-4 text-xs text-muted-foreground">
+                    {m.opdracht_titel ?? (m.opdracht_id ? `#${m.opdracht_id}` : "—")}
                   </td>
                   <td className="py-2.5 px-4 text-muted-foreground text-xs">{m.omschrijving ?? "—"}</td>
                 </tr>

@@ -21,6 +21,10 @@ export interface VoorraadMutatie {
   /** @nullable */
   referentie_id?: number | null;
   /** @nullable */
+  opdracht_id?: number | null;
+  /** @nullable */
+  opdracht_titel?: string | null;
+  /** @nullable */
   gebruiker_id?: number | null;
   /** @nullable */
   gebruiker_naam?: string | null;

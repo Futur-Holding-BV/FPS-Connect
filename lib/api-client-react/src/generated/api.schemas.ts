@@ -9265,6 +9265,10 @@ export interface VoorraadMutatie {
   /** @nullable */
   referentie_id?: number | null;
   /** @nullable */
+  opdracht_id?: number | null;
+  /** @nullable */
+  opdracht_titel?: string | null;
+  /** @nullable */
   gebruiker_id?: number | null;
   /** @nullable */
   gebruiker_naam?: string | null;
@@ -10558,6 +10562,10 @@ export type GetAiPresentatieNiveau200 = {
 export type ListOpdrachtenParams = {
 gebouw_id?: number;
 status?: string;
+/**
+ * Indien true: alleen opdrachten waarvoor de ingelogde gebruiker planning-items heeft (voor beheerders genegeerd)
+ */
+mijn?: boolean;
 };
 
 export type OndertekenenPortaal201 = {
@@ -10928,6 +10936,10 @@ locatie_id?: number;
 export type ListVoorraadMutatiesParams = {
 artikel_id?: number;
 type?: string;
+/**
+ * Filter op gekoppeld opdrachtnummer
+ */
+opdracht_id?: number;
 limit?: number;
 };
 

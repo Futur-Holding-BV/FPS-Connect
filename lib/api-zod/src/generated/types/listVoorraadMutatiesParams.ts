@@ -9,5 +9,9 @@
 export type ListVoorraadMutatiesParams = {
 artikel_id?: number;
 type?: string;
+/**
+ * Filter op gekoppeld opdrachtnummer
+ */
+opdracht_id?: number;
 limit?: number;
 };

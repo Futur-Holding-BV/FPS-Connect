@@ -9,4 +9,8 @@
 export type ListOpdrachtenParams = {
 gebouw_id?: number;
 status?: string;
+/**
+ * Indien true: alleen opdrachten waarvoor de ingelogde gebruiker planning-items heeft (voor beheerders genegeerd)
+ */
+mijn?: boolean;
 };

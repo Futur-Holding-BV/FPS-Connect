@@ -72,7 +72,7 @@ function mapVoorraad(r: typeof voorraadTable.$inferSelect, artikelNaam?: string 
   };
 }
 
-function mapMutatie(r: typeof voorraadMutatiesTable.$inferSelect, extra?: { artikel_naam?: string | null; gebruiker_naam?: string | null }) {
+function mapMutatie(r: typeof voorraadMutatiesTable.$inferSelect, extra?: { artikel_naam?: string | null; gebruiker_naam?: string | null; opdracht_titel?: string | null }) {
   return {
     id: r.id,
     artikel_id: r.artikelId,
@@ -83,6 +83,8 @@ function mapMutatie(r: typeof voorraadMutatiesTable.$inferSelect, extra?: { arti
     delta: r.delta,
     referentie_type: r.referentieType ?? null,
     referentie_id: r.referentieId ?? null,
+    opdracht_id: r.opdrachtId ?? null,
+    opdracht_titel: extra?.opdracht_titel ?? null,
     gebruiker_id: r.gebruikerId ?? null,
     gebruiker_naam: extra?.gebruiker_naam ?? null,
     omschrijving: r.omschrijving ?? null,
@@ -150,6 +152,7 @@ async function bijwerkenVoorraad(
   referentieType: string | null,
   referentieId: number | null,
   omschrijving: string | null,
+  opdrachtId?: number | null,
 ) {
   const whereExpr = locatieId != null
     ? and(eq(voorraadTable.artikelId, artikelId), eq(voorraadTable.locatieId, locatieId))
@@ -189,6 +192,7 @@ async function bijwerkenVoorraad(
     delta: actualDelta,
     referentieType,
     referentieId,
+    opdrachtId: opdrachtId ?? null,
     gebruikerId: gebruikerId ?? null,
     omschrijving,
   });
@@ -562,24 +566,27 @@ router.post("/magazijn/voorraad/correctie", aanmaken, async (req, res): Promise<
 
 router.get("/magazijn/mutaties", lezen, async (req, res): Promise<void> => {
   try {
-    const { artikel_id, type, limit: limitQ } = req.query as Record<string, string | undefined>;
+    const { artikel_id, type, opdracht_id, limit: limitQ } = req.query as Record<string, string | undefined>;
     const maxItems = Math.min(Number(limitQ ?? 100), 500);
 
     const conds = [];
     if (artikel_id) conds.push(eq(voorraadMutatiesTable.artikelId, Number(artikel_id)));
     if (type) conds.push(eq(voorraadMutatiesTable.type, type));
+    if (opdracht_id) conds.push(eq(voorraadMutatiesTable.opdrachtId, Number(opdracht_id)));
 
     const rijen = await db.select({
       mutatie: voorraadMutatiesTable,
       artikel_naam: artikelenTable.naam,
+      opdracht_titel: opdrachtenTable.titel,
     })
       .from(voorraadMutatiesTable)
       .leftJoin(artikelenTable, eq(voorraadMutatiesTable.artikelId, artikelenTable.id))
+      .leftJoin(opdrachtenTable, eq(voorraadMutatiesTable.opdrachtId, opdrachtenTable.id))
       .where(conds.length > 0 ? and(...(conds as [typeof conds[0], ...typeof conds])) : undefined)
       .orderBy(desc(voorraadMutatiesTable.aangemaaktOp))
       .limit(maxItems);
 
-    res.json(rijen.map(r => mapMutatie(r.mutatie, { artikel_naam: r.artikel_naam })));
+    res.json(rijen.map(r => mapMutatie(r.mutatie, { artikel_naam: r.artikel_naam, opdracht_titel: r.opdracht_titel })));
   } catch (err) {
     logger.error({ err }, "magazijn mutaties fout");
     res.status(500).json({ error: "Serverfout" });
@@ -755,6 +762,22 @@ router.post("/magazijn/uitgiftes", aanmaken, async (req, res): Promise<void> => 
 
     if (!regels.length) { res.status(422).json({ error: "Minimaal één artikel is verplicht" }); return; }
 
+    // Beheerders (hoofdbeheerder of magazijn niveau 4) mogen zonder opdracht uitgeven.
+    // Overige gebruikers (monteurs) moeten altijd een opdracht koppelen.
+    const isBeheer = req.permissies!.isHoofdbeheerder || req.permissies!.heeftModuleRecht("magazijn", 4);
+    if (!isBeheer && !opdrachtId) {
+      res.status(422).json({ error: "Een opdracht is verplicht bij uitgifte", code: "OPDRACHT_VERPLICHT" }); return;
+    }
+
+    // Valideer dat de opgegeven opdracht bestaat
+    if (opdrachtId) {
+      const [bestaandeOpdracht] = await db.select({ id: opdrachtenTable.id })
+        .from(opdrachtenTable).where(eq(opdrachtenTable.id, opdrachtId)).limit(1);
+      if (!bestaandeOpdracht) {
+        res.status(422).json({ error: `Opdracht ${opdrachtId} bestaat niet` }); return;
+      }
+    }
+
     const userId = req.session?.userId as number | undefined;
 
     // Pre-validatie: controleer per regel of er voldoende (vrije) voorraad is.
@@ -837,6 +860,7 @@ router.post("/magazijn/uitgiftes", aanmaken, async (req, res): Promise<void> => 
                 delta: -teNemen,
                 referentieType: opdrachtId ? "opdracht" : "reservering",
                 referentieId: opdrachtId ?? resId,
+                opdrachtId: opdrachtId ?? null,
                 gebruikerId: userId ?? null,
                 omschrijving: str(body.omschrijving),
               });
@@ -852,7 +876,7 @@ router.post("/magazijn/uitgiftes", aanmaken, async (req, res): Promise<void> => 
           } else {
             // Fallback: geen mutatie-rijen beschikbaar (legacy) → neem via bijwerkenVoorraad
             await bijwerkenVoorraad(tx, artikelId, locatieId, -hoeveelheid, "uitgifte", userId,
-              opdrachtId ? "opdracht" : "reservering", opdrachtId ?? resId, str(body.omschrijving));
+              opdrachtId ? "opdracht" : "reservering", opdrachtId ?? resId, str(body.omschrijving), opdrachtId);
             await tx.update(voorraadTable)
               .set({ gereserveerd: sql`GREATEST(0, ${voorraadTable.gereserveerd} - ${hoeveelheid})`, bijgewerktOp: new Date() })
               .where(eq(voorraadTable.artikelId, artikelId));
@@ -867,7 +891,7 @@ router.post("/magazijn/uitgiftes", aanmaken, async (req, res): Promise<void> => 
         } else {
           // Directe uitgifte zonder reservering
           await bijwerkenVoorraad(tx, artikelId, locatieId, -hoeveelheid, "uitgifte", userId,
-            opdrachtId ? "opdracht" : null, opdrachtId, str(body.omschrijving));
+            opdrachtId ? "opdracht" : null, opdrachtId, str(body.omschrijving), opdrachtId);
         }
       }
     });

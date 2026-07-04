@@ -20,7 +20,7 @@ import {
   artikelenTable,
   werkbegrotingAdviezenTable,
 } from "@workspace/db";
-import { eq, and, sql, sum, asc, isNull, desc, or } from "drizzle-orm";
+import { eq, and, sql, sum, asc, isNull, desc, or, inArray, isNotNull } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
 import { BEGROTING_ANALYSE_PROMPT, WERKVOORBEREIDING_ADVIES_PROMPT, WERKBEGROTING_CHAT_BASE_PROMPT } from "../lib/aiPrompts";
@@ -242,6 +242,26 @@ router.get("/opdrachten", lezen, async (req, res): Promise<void> => {
     const gebouwFilter = req.query.gebouw_id ? parseInt(String(req.query.gebouw_id), 10) : null;
     const offerteFilter = req.query.offerte_id ? parseInt(String(req.query.offerte_id), 10) : null;
     const statusFilter = typeof req.query.status === "string" ? req.query.status : null;
+    const mijnFilter = req.query.mijn === "true";
+
+    // mijn=true: filter op opdrachten waarvoor de huidige gebruiker planning-items heeft.
+    // Beheerders (isHoofdbeheerder of offertes>=2) zien altijd alle opdrachten.
+    let mijnOpdrachtIds: number[] | null = null;
+    const isBeheer = req.permissies!.isHoofdbeheerder || req.permissies!.heeftModuleRecht("magazijn", 4) || req.permissies!.heeftModuleRecht("offertes", 2);
+    if (mijnFilter && !isBeheer) {
+      const userId = req.session.userId!;
+      const planningRijen = await db
+        .selectDistinct({ opdrachtId: planningItemsTable.opdrachtId })
+        .from(planningItemsTable)
+        .innerJoin(medewerkersTable, eq(planningItemsTable.medewerkerId, medewerkersTable.id))
+        .where(and(
+          eq(medewerkersTable.gebruikerId, userId),
+          isNotNull(planningItemsTable.opdrachtId),
+        ));
+      mijnOpdrachtIds = planningRijen
+        .map(r => r.opdrachtId)
+        .filter((id): id is number => id !== null);
+    }
 
     const rows = await db.select({
       o: opdrachtenTable,
@@ -265,6 +285,9 @@ router.get("/opdrachten", lezen, async (req, res): Promise<void> => {
           gebouwFilter ? eq(opdrachtenTable.gebouwId, gebouwFilter) : undefined,
           offerteFilter ? eq(opdrachtenTable.offerteId, offerteFilter) : undefined,
           statusFilter ? eq(opdrachtenTable.status, statusFilter) : undefined,
+          mijnOpdrachtIds !== null
+            ? (mijnOpdrachtIds.length > 0 ? inArray(opdrachtenTable.id, mijnOpdrachtIds) : sql`false`)
+            : undefined,
         )
       )
       .orderBy(asc(opdrachtenTable.aangemaaktOp));

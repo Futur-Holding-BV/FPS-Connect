@@ -51,6 +51,7 @@ export const voorraadMutatiesTable = pgTable("voorraad_mutaties", {
   delta:           real("delta").notNull(),          // positief = toename, negatief = afname
   referentieType:  text("referentie_type"),          // opdracht | inkoopbon | reservering | null
   referentieId:    integer("referentie_id"),
+  opdrachtId:      integer("opdracht_id").references(() => opdrachtenTable.id, { onDelete: "set null" }),
   gebruikerId:     integer("gebruiker_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
   omschrijving:    text("omschrijving"),
   aangemaaktOp:    timestamp("aangemaakt_op").notNull().defaultNow(),

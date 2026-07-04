@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useCreateUitgifte, useListArtikelen, useListMagazijnLocaties, useListReserveringen, listArtikelen } from "@workspace/api-client-react";
+import { useCreateUitgifte, useListArtikelen, useListMagazijnLocaties, useListReserveringen, useListOpdrachten, listArtikelen } from "@workspace/api-client-react";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Plus, Trash2, PackageCheck, Search, AlertTriangle, X } from "lucide-react";
+import { Plus, Trash2, PackageCheck, Search, AlertTriangle, X, ChevronDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface UitgifteRegel {
@@ -37,13 +37,20 @@ export default function MagazijnUitgiftesPagina() {
   const { heeftNiveau } = useBevoegdheid();
   const kanSchrijven = heeftNiveau("magazijn", 3);
 
+  const kanZonderOpdracht = heeftNiveau("magazijn", 4);
+
   const { data: locaties = [] } = useListMagazijnLocaties();
   const { data: reserveringen = [] } = useListReserveringen({ status: "open" });
+  const { data: opdrachten = [] } = useListOpdrachten({ status: "actief", mijn: true });
 
   const { mutate: uitgifte, isPending } = useCreateUitgifte();
   const { toast } = useToast();
 
-  const [opdrachtId, setOpdrachtId] = useState("");
+  const [opdrachtId, setOpdrachtId] = useState<number | null>(null);
+  const [opdrachtZoek, setOpdrachtZoek] = useState("");
+  const [opdrachtOpen, setOpdrachtOpen] = useState(false);
+  const opdrachtRef = useRef<HTMLDivElement>(null);
+
   const [omschrijving, setOmschrijving] = useState("");
   const [regels, setRegels] = useState<UitgifteRegel[]>([]);
   const [nHoeveelheid, setNHoeveelheid] = useState("1");
@@ -70,10 +77,25 @@ export default function MagazijnUitgiftesPagina() {
 
   const gefilterdeResultaten = debouncedZoek.trim().length >= 1 ? zoekResultaten.slice(0, 10) : [];
 
+  const gefilterdeOpdrachten = opdrachten.filter(o => {
+    if (!opdrachtZoek.trim()) return true;
+    const z = opdrachtZoek.toLowerCase();
+    return (
+      o.titel.toLowerCase().includes(z) ||
+      (o.werknummer ?? "").toLowerCase().includes(z) ||
+      String(o.id).includes(z)
+    );
+  });
+
+  const gekozenOpdracht = opdrachten.find(o => o.id === opdrachtId) ?? null;
+
   useEffect(() => {
     function handleClickBuiten(e: MouseEvent) {
       if (zoekRef.current && !zoekRef.current.contains(e.target as Node)) {
         setZoekOpen(false);
+      }
+      if (opdrachtRef.current && !opdrachtRef.current.contains(e.target as Node)) {
+        setOpdrachtOpen(false);
       }
     }
     document.addEventListener("mousedown", handleClickBuiten);
@@ -92,6 +114,12 @@ export default function MagazijnUitgiftesPagina() {
     setZoekInput("");
     setZoekOpen(false);
     setBarcodeFout(false);
+  }
+
+  function kiesOpdracht(id: number | null) {
+    setOpdrachtId(id);
+    setOpdrachtOpen(false);
+    setOpdrachtZoek("");
   }
 
   async function scanBarcode() {
@@ -142,7 +170,7 @@ export default function MagazijnUitgiftesPagina() {
     setVoorraadFout(null);
     uitgifte({
       data: {
-        opdracht_id: opdrachtId ? Number(opdrachtId) : null,
+        opdracht_id: opdrachtId ?? null,
         omschrijving,
         regels,
       },
@@ -182,7 +210,7 @@ export default function MagazijnUitgiftesPagina() {
           <p className="text-xl font-semibold">Uitgifte geregistreerd</p>
           <p className="text-muted-foreground text-sm mt-1">De voorraad is bijgewerkt en de mutaties zijn gelogd.</p>
         </div>
-        <Button onClick={() => { setRegels([]); setOpdrachtId(""); setOmschrijving(""); setVoltooid(false); setVoorraadFout(null); }}>
+        <Button onClick={() => { setRegels([]); setOpdrachtId(null); setOpdrachtZoek(""); setOmschrijving(""); setVoltooid(false); setVoorraadFout(null); }}>
           Nieuwe uitgifte
         </Button>
       </div>
@@ -205,11 +233,88 @@ export default function MagazijnUitgiftesPagina() {
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <Card>
-          <CardHeader><CardTitle className="text-base">Opdracht</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="text-base">Opdracht koppelen</CardTitle></CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-1">
-              <Label>Opdracht ID (optioneel)</Label>
-              <Input value={opdrachtId} onChange={e => setOpdrachtId(e.target.value)} placeholder="Bijv. 42" type="number" />
+            <div className="space-y-1" ref={opdrachtRef}>
+              <Label>
+                Opdracht{kanZonderOpdracht ? " (optioneel)" : " (verplicht)"}
+              </Label>
+              <div className="relative">
+                <button
+                  type="button"
+                  className="w-full flex items-center justify-between border rounded-md px-3 py-2 text-sm bg-background hover:bg-muted/30 transition-colors"
+                  onClick={() => setOpdrachtOpen(v => !v)}
+                >
+                  <span className={gekozenOpdracht ? "font-medium" : "text-muted-foreground"}>
+                    {gekozenOpdracht
+                      ? `${gekozenOpdracht.titel}${gekozenOpdracht.werknummer ? ` (${gekozenOpdracht.werknummer})` : ""}`
+                      : "Geen opdracht — algemene uitgifte"}
+                  </span>
+                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                </button>
+                {opdrachtOpen && (
+                  <div className="absolute z-50 w-full mt-1 bg-background border rounded-md shadow-lg">
+                    <div className="p-2 border-b">
+                      <div className="relative">
+                        <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+                        <Input
+                          value={opdrachtZoek}
+                          onChange={e => setOpdrachtZoek(e.target.value)}
+                          placeholder="Zoek opdracht..."
+                          className="pl-8 h-8 text-sm"
+                          autoFocus
+                        />
+                      </div>
+                    </div>
+                    <div className="max-h-52 overflow-auto">
+                      {kanZonderOpdracht && (
+                        <button
+                          type="button"
+                          className="w-full text-left px-3 py-2 text-sm hover:bg-muted text-muted-foreground"
+                          onClick={() => kiesOpdracht(null)}
+                        >
+                          Geen opdracht — algemene uitgifte
+                        </button>
+                      )}
+                      {gefilterdeOpdrachten.length === 0 ? (
+                        <p className="px-3 py-2 text-sm text-muted-foreground">
+                          {opdrachten.length === 0
+                            ? "Geen actieve opdrachten gevonden voor uw account"
+                            : "Geen opdrachten gevonden voor deze zoekopdracht"}
+                        </p>
+                      ) : (
+                        gefilterdeOpdrachten.map(o => (
+                          <button
+                            key={o.id}
+                            type="button"
+                            className="w-full text-left px-3 py-2 text-sm hover:bg-muted flex flex-col"
+                            onClick={() => kiesOpdracht(o.id)}
+                          >
+                            <span className="font-medium">{o.titel}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {[o.werknummer, o.gebouw_naam].filter(Boolean).join(" — ") || `Opdracht #${o.id}`}
+                            </span>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+              {gekozenOpdracht && (
+                <div className="flex items-center gap-2 mt-1">
+                  <Badge variant="outline" className="text-xs">
+                    Opdracht #{gekozenOpdracht.id}{gekozenOpdracht.werknummer ? ` · ${gekozenOpdracht.werknummer}` : ""}
+                  </Badge>
+                  <button
+                    type="button"
+                    className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
+                    onClick={() => kiesOpdracht(null)}
+                  >
+                    <X className="h-3 w-3" /> Verwijder koppeling
+                  </button>
+                </div>
+              )}
             </div>
             <div className="space-y-1">
               <Label>Omschrijving</Label>
@@ -364,7 +469,7 @@ export default function MagazijnUitgiftesPagina() {
         </Card>
 
         <div className="flex justify-end">
-          <Button type="submit" disabled={!regels.length || isPending || voorraadFout !== null} className="gap-2">
+          <Button type="submit" disabled={!regels.length || isPending || voorraadFout !== null || (!kanZonderOpdracht && !opdrachtId)} className="gap-2">
             <PackageCheck className="h-4 w-4" />
             Uitgifte bevestigen ({regels.length} artikel{regels.length !== 1 ? "en" : ""})
           </Button>

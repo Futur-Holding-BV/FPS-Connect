@@ -82,6 +82,20 @@ V1.4 Opleverrapportage afgerond op basis van de bestaande `print.tsx`. De bestaa
 
 ---
 
+## 2026-07-04 — Uitgifte gekoppeld aan opdracht (traceerbaarheid magazijn)
+
+Magazijn-uitgiftes kunnen nu expliciet aan een opdracht worden gekoppeld, zodat materiaalverbruik per opdracht te traceren is.
+
+- **DB:** `opdracht_id` kolom (FK → opdrachten) toegevoegd aan `voorraad_mutaties` via `ALTER TABLE … ADD COLUMN IF NOT EXISTS`
+- **API:** `POST /magazijn/uitgiftes` valideert dat de opgegeven opdracht bestaat; slaat `opdracht_id` expliciet op in de mutatie-rij
+- **API:** `GET /magazijn/mutaties` accepteert nieuw filter-parameter `opdracht_id`; `mapMutatie` retourneert `opdracht_id` en `opdracht_titel`
+- **UI uitgiftes:** plaatgetal-invoer vervangen door doorzoekbare opdracht-dropdown (`useListOpdrachten({ mijn: true })`), met zoekbalk en "Verwijder koppeling"-knop
+- **UI mutaties:** opdracht-filterkolom toegevoegd aan de tabel; filterbar uitgebreid met opdracht-dropdown
+- **Validatie monteur (server + UI):** gebruikers zonder `magazijn>=4` bevoegdheid (beheer) moeten verplicht een opdracht koppelen bij uitgifte; beheerders mogen algemene uitgifte zonder koppeling
+- **Opdracht scoping (`GET /opdrachten?mijn=true`):** monteurs zien alleen opdrachten waarvoor ze planning-items hebben; beheerders (hoofdbeheerder / magazijn>=4 / offertes>=2) zien alle opdrachten
+
+**Uitvoering:** volledig | **Diepere lagen:** volledig | **Getest:** codegen groen; typecheck groen (pre-existing fouten in offertes.ts ongewijzigd)
+
 ## 2026-07-04 — TypeScript TS7030-opschoning api-server
 
 ## 2026-07-04 — FIE Fase 3: Continue jaarbedrijfsprognose (volledig)
