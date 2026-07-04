@@ -36,6 +36,17 @@ Monteur-endpoints voor stap-voltooien: toewijzingscheck (à la mijn-werk), NIET 
 
 ~€1,50–3 per project (20 stappen, vision gpt-5). Acceptabel. Vorige stappen samenvatten in context i.p.v. volledige historie meesturen om token-bloat te voorkomen.
 
+## FPS Knowledge Base (#303)
+
+Naast het PIM bestaat een centrale KB voor bedrijfskennis (cross-project, herbruikbaar):
+- Leveranciers: additieve KB-velden op bestaande tabel (levertijd, betrouwbaarheid, spoed, raamovereenkomst)
+- Artikelen: additieve KB-velden (goedgekeurd_door_fps, compatibele/alternatieve artikelen, montagevoorschriften)
+- Nieuwe tabellen: `leverancier_prestaties`, `fps_bedrijfsstandaarden`, `opdrachtgever_voorkeuren`
+- `kbService.ts`: assembleert KB-context als Markdown-string voor prompt-injection (geen AI-aanroepen zelf)
+- `KB_BESLISSTRUCTUUR` constant in `aiPrompts.ts`: 8-stappen beslisstructuur als standaard prompt-prefix
+
+Afhankelijkheid: #303 loopt parallel aan Fase A (#296). Fase B (#297) en C (#298) moeten #303 klaar hebben — systeem-dependency kon niet worden toegevoegd (PENDING-restrictie); staat als noot in hun beschrijving.
+
 ## Sleutelbestanden
 
 - `docs/ai-opdrachtregisseur-plan.md` — volledig plan met correcties
