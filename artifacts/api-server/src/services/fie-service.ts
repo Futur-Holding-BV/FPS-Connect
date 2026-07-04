@@ -12,6 +12,7 @@ import {
   projectBegrotingenTable,
   urenRegistratiesTable,
   voorraadMutatiesTable, artikelenTable,
+  onderaannemeOrdersTable,
 } from "@workspace/db";
 import { medewerkersTable } from "@workspace/db/schema";
 import { eq, and, desc, gte, lt, inArray, isNull } from "drizzle-orm";
@@ -240,6 +241,32 @@ export async function berekenFieContext(calculatieId: number): Promise<FieCalcul
     } else {
       adviesStatus = "leeg";
       adviesTekst = "Calculatie heeft nog geen regels.";
+    }
+  }
+
+  // Leermoment-hint: voeg historische terugkoppeling toe aan de adviesTekst
+  if (adviesStatus !== "leeg" && adviesStatus !== "geen_begroting") {
+    const [leermoment] = await db.select({
+      afwijkingPctArbeid:    fieLeerMomentenTable.afwijkingPctArbeid,
+      afwijkingPctMateriaal: fieLeerMomentenTable.afwijkingPctMateriaal,
+      gebaseerdOpNProjecten: fieLeerMomentenTable.gebaseerdOpNProjecten,
+    }).from(fieLeerMomentenTable)
+      .where(eq(fieLeerMomentenTable.werktype, "algemeen"))
+      .limit(1);
+
+    if (leermoment && leermoment.gebaseerdOpNProjecten >= 2) {
+      const hints: string[] = [];
+      if (Math.abs(leermoment.afwijkingPctArbeid) > 5) {
+        const richting = leermoment.afwijkingPctArbeid > 0 ? "meer" : "minder";
+        hints.push(`Historisch wordt gemiddeld ${Math.abs(leermoment.afwijkingPctArbeid).toFixed(0)}% ${richting} arbeid gerealiseerd dan begroot`);
+      }
+      if (Math.abs(leermoment.afwijkingPctMateriaal) > 5) {
+        const richting = leermoment.afwijkingPctMateriaal > 0 ? "hogere" : "lagere";
+        hints.push(`${richting} materiaalkosten (gem. ${Math.abs(leermoment.afwijkingPctMateriaal).toFixed(0)}% afwijking) op basis van ${leermoment.gebaseerdOpNProjecten} projecten`);
+      }
+      if (hints.length > 0) {
+        adviesTekst = `${adviesTekst} Let op: ${hints.join("; ")}.`;
+      }
     }
   }
 
@@ -819,12 +846,24 @@ const AFWIJKING_DREMPEL = 10; // procent — structurele afwijking drempel voor 
 export async function berekenEnSlaOpNacalculatie(opdrachtId: number): Promise<void> {
   // Werkbegroting als calculatiebasis (totaalArbeidUren + totaalMateriaalBedrag)
   const [begroting] = await db.select({
-    totaalArbeidUren:     projectBegrotingenTable.totaalArbeidUren,
+    totaalArbeidUren:      projectBegrotingenTable.totaalArbeidUren,
     totaalMateriaalBedrag: projectBegrotingenTable.totaalMateriaalBedrag,
   }).from(projectBegrotingenTable).where(eq(projectBegrotingenTable.opdrachtId, opdrachtId)).limit(1);
 
-  const calcArbeidUren     = begroting?.totaalArbeidUren ?? 0;
+  const calcArbeidUren      = begroting?.totaalArbeidUren ?? 0;
   const calcMateriaalBedrag = begroting?.totaalMateriaalBedrag ?? 0;
+
+  // Calculatie-onderaanneming: som van onderaannemingBedrag uit gekoppelde calculatieregels
+  const [opdracht] = await db.select({ calculatieId: opdrachtenTable.calculatieId })
+    .from(opdrachtenTable).where(eq(opdrachtenTable.id, opdrachtId)).limit(1);
+
+  let calcOnderaannemingBedrag = 0;
+  if (opdracht?.calculatieId) {
+    const oaRegels = await db.select({ bedrag: modCalcRegelsTable.onderaannemingBedrag })
+      .from(modCalcRegelsTable)
+      .where(eq(modCalcRegelsTable.calculatieId, opdracht.calculatieId));
+    calcOnderaannemingBedrag = rnd2(oaRegels.reduce((s, r) => s + (r.bedrag ?? 0), 0));
+  }
 
   // Werkelijke uren (goedgekeurde uren-registraties)
   const urenRows = await db.select({ nettoUren: urenRegistratiesTable.nettoUren })
@@ -855,12 +894,24 @@ export async function berekenEnSlaOpNacalculatie(opdrachtId: number): Promise<vo
   }
   werkelijkMateriaalBedrag = rnd2(Math.max(0, werkelijkMateriaalBedrag));
 
+  // Werkelijke onderaanneming: betaalde/uitgevoerde onderaannemer-orders
+  const oaOrders = await db.select({ bedrag: onderaannemeOrdersTable.bedragExclBtw })
+    .from(onderaannemeOrdersTable)
+    .where(and(
+      eq(onderaannemeOrdersTable.opdrachtId, opdrachtId),
+      inArray(onderaannemeOrdersTable.status, ["uitgevoerd", "betaald"]),
+    ));
+  const werkelijkOnderaannemingBedrag = rnd2(oaOrders.reduce((s, r) => s + (r.bedrag ?? 0), 0));
+
   // Afwijkingspercentages (null als er geen calculatiebasis is)
   const afwijkingPctArbeid = calcArbeidUren > 0
     ? rnd2(((werkelijkArbeidUren - calcArbeidUren) / calcArbeidUren) * 100)
     : null;
   const afwijkingPctMateriaal = calcMateriaalBedrag > 0
     ? rnd2(((werkelijkMateriaalBedrag - calcMateriaalBedrag) / calcMateriaalBedrag) * 100)
+    : null;
+  const afwijkingPctOnderaanneming = calcOnderaannemingBedrag > 0
+    ? rnd2(((werkelijkOnderaannemingBedrag - calcOnderaannemingBedrag) / calcOnderaannemingBedrag) * 100)
     : null;
 
   // Upsert: één rij per opdracht_id
@@ -869,16 +920,19 @@ export async function berekenEnSlaOpNacalculatie(opdrachtId: number): Promise<vo
 
   const values = {
     opdrachtId,
-    werktype:               "algemeen",
+    werktype:                     "algemeen",
     calcArbeidUren,
     werkelijkArbeidUren,
     afwijkingPctArbeid,
     calcMateriaalBedrag,
     werkelijkMateriaalBedrag,
     afwijkingPctMateriaal,
-    afgesloten:             true,
-    berekendOp:             new Date(),
-    bijgewerktOp:           new Date(),
+    calcOnderaannemingBedrag,
+    werkelijkOnderaannemingBedrag,
+    afwijkingPctOnderaanneming,
+    afgesloten:                   true,
+    berekendOp:                   new Date(),
+    bijgewerktOp:                 new Date(),
   };
 
   if (bestaande) {
@@ -910,11 +964,17 @@ export async function herberekeenLeermomenten(): Promise<number> {
     }
   }
 
+  const MIN_PROJECTEN = 2; // minimaal 2 projecten voor een betrouwbaar leermoment
+
   let aantalBijgewerkt = 0;
   for (const [werktype, g] of groepen.entries()) {
     const n = alle.filter(a => a.werktype === werktype).length;
     const gemArbeid = g.arbeid.length > 0 ? rnd2(g.arbeid.reduce((s, v) => s + v, 0) / g.arbeid.length) : 0;
     const gemMateriaal = g.materiaal.length > 0 ? rnd2(g.materiaal.reduce((s, v) => s + v, 0) / g.materiaal.length) : 0;
+
+    // Alleen persisteren als er minimaal 2 projecten zijn én minstens één structurele afwijking
+    const heeftStructureleAfwijking = gemArbeid !== 0 || gemMateriaal !== 0;
+    if (n < MIN_PROJECTEN || !heeftStructureleAfwijking) continue;
 
     const [bestaande] = await db.select({ id: fieLeerMomentenTable.id })
       .from(fieLeerMomentenTable).where(eq(fieLeerMomentenTable.werktype, werktype)).limit(1);

@@ -4,6 +4,17 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-04 — FIE Fase 5: Code-review herstel (volledig)
+
+**Uitvoering:** volledig | **Getest:** typecheck clean libs + api-server + firevault; api-server herstart succesvol; DB ALTER geslaagd
+
+Code-review bevindingen opgelost:
+
+1. **Leermoment-hint in berekenFieContext()**: na het berekenen van `adviesTekst` wordt nu het leermoment voor werktype "algemeen" opgezocht; als ≥2 projecten en historische afwijking >5% → tekst aangevuld met historische hint (bijv. "Historisch wordt gemiddeld 18% meer arbeid gerealiseerd dan begroot")
+2. **Leermoment-drempel hersteld**: `herberekeenLeermomenten()` persisteert nu alleen wanneer n ≥ 2 EN minstens één structurele gemiddelde afwijking bestaat — geen 0%-rijen meer
+3. **Onderaanneming toegevoegd aan nacalculatie**: `fie_nacalculaties` uitgebreid met `calc_onderaanneming_bedrag`, `werkelijk_onderaanneming_bedrag`, `afwijking_pct_onderaanneming`; calc-waarde afgeleid uit `modCalcRegelsTable.onderaannemingBedrag` (via opdracht.calculatieId); gerealiseerde waarde uit `onderaannemeOrdersTable` (status: uitgevoerd/betaald); DB ALTER uitgevoerd via psql
+4. **Import uitgebreid**: `onderaannemeOrdersTable` toegevoegd aan fie-service.ts imports
+
 ## 2026-07-04 — FIE Fase 5: Nacalculatie-terugkoppeling en leereffect (volledig)
 
 **Uitvoering:** volledig | **Getest:** typecheck clean (firevault + api-server); codegen OK; api-server herstart zonder fouten; DB-tabellen aangemaakt; alleen pre-existing TS7030 in offertes.ts
