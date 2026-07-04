@@ -4,6 +4,16 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-04 — Fix: GET /api geeft 200 i.p.v. 500 (deployment healthcheck blocker)
+
+**Uitvoering:** volledig | **Getest:** curl GET /api → 200 {"status":"ok"}, curl GET /api/healthz → 200 {"status":"ok"}
+
+Deployment platform health-checkt het routing pad `/api` (afgeleid van `paths = ["/api"]` in artifact.toml) en verwacht 2xx. De server gaf 401 zodra hij draaide (request bereikte `requireAuth` vóór er een handler was), en 500 terwijl hij opstartte (proxy kon backend niet bereiken). Geen van beide is 2xx → deployment mislukte.
+
+`GET /` toegevoegd aan `health.ts` vóór de `requireAuth` middleware (lijn 101 in routes/index.ts). De handler zit op lijn 96 (`router.use(healthRouter)`), dus geen authenticatie vereist.
+
+Gewijzigd: `artifacts/api-server/src/routes/health.ts`
+
 ## 2026-07-04 — Spot-trigger nacalculatie herberekening (volledig)
 
 **Uitvoering:** volledig | **Getest:** typecheck clean (pre-existing TS7030 in offertes.ts ongewijzigd)
