@@ -21,6 +21,11 @@ Voor elke taak drie scores:
 - `POST /opdrachten/:id/pim/werkvoorbereiding/analyseer` in `pim.ts` — achter `schrijven` middleware; vereist fase ≥ `advies_gereed`; laadt `advies_context` + spots (max 50); slaat op in `pim.werkvoorbereiding_context`; fase-transitie `advies_gereed → werkvoorbereiding`
 - `detail.tsx` AI Regisseur tab: werkvoorbereiding_context weergavesectie (volledigheid-badge; doorlooptijd/planningadvies-kaart; materiaallijst-tabel; uitvoeringsvolgorde; competenties-badges; inkoopacties-lijst; aandachtspunten-kaart)
 
+**Code review fixes (ronde 2):**
+- PATCH endpoint: phase guard toegevoegd — 409 als `ai_fase ≠ werkvoorbereiding` (data lock na vaststelling)
+- `/genereer` canoniek pad: OpenAPI pad `/opdrachten/{id}/pim/werkvoorbereiding/genereer` toegevoegd (taakspec verplichting); handler geëxtraheerd als named function en op beide paden geregistreerd (`/genereer` + `/analyseer` backward compat); `useGenereerPimWerkvoorbereiding` hook gegenereerd
+- Inline edit UI: "Aanpassen"-knop (fase werkvoorbereiding); edit form met `planningadvies`-textarea + `aandachtspunten`-lijst (add/remove/bewerken); "Bewaar aanpassingen" wired naar `pimPatchMut` / `PATCH /pim/werkvoorbereiding`; "Annuleren" sluit form; alle AI-voorstellen zijn nu bewerkbaar vóór vaststelling
+
 **Typecheck:** clean (api-server: alleen pre-existing TS7030 in offertes.ts:692; firevault: geen errors)
 
 ## 2026-07-04 — PIM Fase A — Foundation (datamodel & bare API)

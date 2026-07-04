@@ -836,6 +836,13 @@ router.patch("/opdrachten/:id/pim/werkvoorbereiding", schrijven, async (req, res
     const [pim] = await db.select().from(pimModellenTable).where(eq(pimModellenTable.opdrachtId, opdrachtId));
     if (!pim) { res.status(404).json({ error: "PIM niet gevonden voor deze opdracht" }); return; }
 
+    if (opdracht.aiFase !== "werkvoorbereiding") {
+      res.status(409).json({
+        error: `Bewerken vereist fase 'werkvoorbereiding' (huidige fase: '${opdracht.aiFase ?? "nieuw"}').`,
+      });
+      return;
+    }
+
     await db
       .update(pimModellenTable)
       .set({ werkvoorbereidingContext: werkvoorbereiding_context as Record<string, unknown>, bijgewerktOp: new Date() })
@@ -902,10 +909,11 @@ router.post("/opdrachten/:id/pim/werkvoorbereiding/vaststellen", schrijven, asyn
   }
 });
 
-// ── POST /opdrachten/:id/pim/werkvoorbereiding/analyseer ──────────────────────
+// ── POST /opdrachten/:id/pim/werkvoorbereiding/analyseer + /genereer ──────────
 // Laadt advies_context + spots voor het gebouw, roept AI aan, slaat op in
 // werkvoorbereiding_context en zet ai_fase → "werkvoorbereiding".
-router.post("/opdrachten/:id/pim/werkvoorbereiding/analyseer", schrijven, async (req, res): Promise<void> => {
+// Beide paden zijn actief: /analyseer (legacy) + /genereer (canonical, taakspec).
+async function werkvoorbereidingAnalyseer(req: import("express").Request, res: import("express").Response): Promise<void> {
   const opdrachtId = parseInt(String(req.params.id), 10);
   if (isNaN(opdrachtId)) { res.status(400).json({ error: "Ongeldig id" }); return; }
 
@@ -1071,6 +1079,9 @@ router.post("/opdrachten/:id/pim/werkvoorbereiding/analyseer", schrijven, async 
     logger.error({ err }, "pimWerkvoorbereidingAnalyseer fout");
     res.status(500).json({ error: "Serverfout bij AI-werkvoorbereiding" });
   }
-});
+}
+
+router.post("/opdrachten/:id/pim/werkvoorbereiding/genereer", schrijven, werkvoorbereidingAnalyseer);
+router.post("/opdrachten/:id/pim/werkvoorbereiding/analyseer", schrijven, werkvoorbereidingAnalyseer);
 
 export default router;

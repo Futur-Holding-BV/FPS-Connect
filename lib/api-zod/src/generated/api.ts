@@ -12570,6 +12570,24 @@ export const AnalyseerPimWerkvoorbereidingResponse = zod.object({
 
 
 /**
+ * @summary AI-werkvoorbereiding genereren op basis van advies_context en spots (canoniek pad)
+ */
+export const GenereerPimWerkvoorbereidingParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GenereerPimWerkvoorbereidingBody = zod.object({
+  "vrije_tekst": zod.string().optional().describe('Aanvullende instructies of context voor de werkvoorbereiding (max 4000 tekens)')
+})
+
+export const GenereerPimWerkvoorbereidingResponse = zod.object({
+  "opdracht_id": zod.number(),
+  "ai_fase": zod.string().describe('Nieuwe AI-fase na de analyse (werkvoorbereiding)'),
+  "voorbereiding_volledigheid": zod.string().optional().describe('onvolledig | voldoende | volledig')
+})
+
+
+/**
  * @summary Handmatige aanpassingen aan de AI-werkvoorbereiding opslaan
  */
 export const PatchPimWerkvoorbereidingParams = zod.object({

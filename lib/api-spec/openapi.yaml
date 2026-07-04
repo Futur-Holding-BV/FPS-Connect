@@ -10349,6 +10349,39 @@ paths:
         "503":
           description: AI-gateway niet geconfigureerd
 
+  /opdrachten/{id}/pim/werkvoorbereiding/genereer:
+    post:
+      summary: AI-werkvoorbereiding genereren op basis van advies_context en spots (canoniek pad)
+      operationId: genereerPimWerkvoorbereiding
+      tags: [pim]
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PimWerkvoorbereidingInput"
+      responses:
+        "200":
+          description: Werkvoorbereiding gegenereerd en opgeslagen
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PimWerkvoorbereidingResultaat"
+        "404":
+          description: Opdracht niet gevonden
+        "409":
+          description: Verkeerde fase of geen adviescontext beschikbaar
+        "503":
+          description: AI-gateway niet geconfigureerd
+
   /opdrachten/{id}/pim/werkvoorbereiding:
     patch:
       summary: Handmatige aanpassingen aan de AI-werkvoorbereiding opslaan

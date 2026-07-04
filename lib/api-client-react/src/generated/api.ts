@@ -36338,6 +36338,77 @@ export const useAnalyseerPimWerkvoorbereiding = <TError = ErrorType<void>,
       return useMutation(getAnalyseerPimWerkvoorbereidingMutationOptions(options));
     }
 
+export const getGenereerPimWerkvoorbereidingUrl = (id: number,) => {
+
+
+
+
+  return `/api/opdrachten/${id}/pim/werkvoorbereiding/genereer`
+}
+
+/**
+ * @summary AI-werkvoorbereiding genereren op basis van advies_context en spots (canoniek pad)
+ */
+export const genereerPimWerkvoorbereiding = async (id: number,
+    pimWerkvoorbereidingInput?: PimWerkvoorbereidingInput, options?: RequestInit): Promise<PimWerkvoorbereidingResultaat> => {
+
+  return customFetch<PimWerkvoorbereidingResultaat>(getGenereerPimWerkvoorbereidingUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(pimWerkvoorbereidingInput)
+  }
+);}
+
+
+
+
+export const getGenereerPimWerkvoorbereidingMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof genereerPimWerkvoorbereiding>>, TError,{id: number;data?: BodyType<PimWerkvoorbereidingInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof genereerPimWerkvoorbereiding>>, TError,{id: number;data?: BodyType<PimWerkvoorbereidingInput>}, TContext> => {
+
+const mutationKey = ['genereerPimWerkvoorbereiding'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof genereerPimWerkvoorbereiding>>, {id: number;data?: BodyType<PimWerkvoorbereidingInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  genereerPimWerkvoorbereiding(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type GenereerPimWerkvoorbereidingMutationResult = NonNullable<Awaited<ReturnType<typeof genereerPimWerkvoorbereiding>>>
+    export type GenereerPimWerkvoorbereidingMutationBody = BodyType<PimWerkvoorbereidingInput> | undefined
+    export type GenereerPimWerkvoorbereidingMutationError = ErrorType<void>
+
+    /**
+ * @summary AI-werkvoorbereiding genereren op basis van advies_context en spots (canoniek pad)
+ */
+export const useGenereerPimWerkvoorbereiding = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof genereerPimWerkvoorbereiding>>, TError,{id: number;data?: BodyType<PimWerkvoorbereidingInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof genereerPimWerkvoorbereiding>>,
+        TError,
+        {id: number;data?: BodyType<PimWerkvoorbereidingInput>},
+        TContext
+      > => {
+      return useMutation(getGenereerPimWerkvoorbereidingMutationOptions(options));
+    }
+
 export const getPatchPimWerkvoorbereidingUrl = (id: number,) => {
 
 

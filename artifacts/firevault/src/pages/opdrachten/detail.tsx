@@ -19,7 +19,7 @@ import {
   getListWbAdviezenQueryKey,
   useGetPim,
   useAnalyseerPim,
-  useAnalyseerPimWerkvoorbereiding,
+  useGenereerPimWerkvoorbereiding,
   usePatchPimWerkvoorbereiding,
   useVaststellenPimWerkvoorbereiding,
   useBevestigPimAdvies,
@@ -34,6 +34,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -386,6 +387,9 @@ export default function OpdrachtDetailPagina() {
   const [chatOpen, setChatOpen] = useState(false);
   const [seniorOpen, setSeniorOpen] = useState(false);
   const [pimKaartIngeklapt, setPimKaartIngeklapt] = useState(false);
+  const [wvBewerkModus, setWvBewerkModus] = useState(false);
+  const [wvPlanningadviesEdit, setWvPlanningadviesEdit] = useState("");
+  const [wvAandachtspuntenEdit, setWvAandachtspuntenEdit] = useState<string[]>([]);
 
   const { data: opdracht, isLoading: opdrachtLoading } = useGetOpdracht(opdrachtId);
   const { data: werkbegroting, isLoading: wbLoading } = useGetWerkbegroting(opdrachtId);
@@ -440,7 +444,29 @@ export default function OpdrachtDetailPagina() {
     },
   });
 
-  const pimWerkvoorbereidingMut = useAnalyseerPimWerkvoorbereiding({
+  const pimVaststellenMut = useVaststellenPimWerkvoorbereiding({
+    mutation: {
+      onSuccess: () => {
+        qc.invalidateQueries({ queryKey: getGetPimQueryKey(opdrachtId) });
+        qc.invalidateQueries({ queryKey: getGetOpdrachtQueryKey(opdrachtId) });
+        toast({ title: "Werkvoorbereiding vastgesteld — fase: inkoop" });
+      },
+      onError: () => toast({ title: "Vaststellen mislukt", variant: "destructive" }),
+    },
+  });
+
+  const pimPatchMut = usePatchPimWerkvoorbereiding({
+    mutation: {
+      onSuccess: () => {
+        qc.invalidateQueries({ queryKey: getGetPimQueryKey(opdrachtId) });
+        setWvBewerkModus(false);
+        toast({ title: "Aanpassingen opgeslagen" });
+      },
+      onError: () => toast({ title: "Opslaan mislukt", variant: "destructive" }),
+    },
+  });
+
+  const pimGenereerMut = useGenereerPimWerkvoorbereiding({
     mutation: {
       onSuccess: () => {
         qc.invalidateQueries({ queryKey: getGetPimQueryKey(opdrachtId) });
@@ -453,20 +479,6 @@ export default function OpdrachtDetailPagina() {
       },
     },
   });
-
-  const pimVaststellenMut = useVaststellenPimWerkvoorbereiding({
-    mutation: {
-      onSuccess: () => {
-        qc.invalidateQueries({ queryKey: getGetPimQueryKey(opdrachtId) });
-        qc.invalidateQueries({ queryKey: getGetOpdrachtQueryKey(opdrachtId) });
-        toast({ title: "Werkvoorbereiding vastgesteld — fase: inkoop" });
-      },
-      onError: () => toast({ title: "Vaststellen mislukt", variant: "destructive" }),
-    },
-  });
-
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const _pimPatchMut = usePatchPimWerkvoorbereiding();
 
   const vaststellenMutatie = useVaststellenWerkbegroting({
     mutation: {
@@ -1294,11 +1306,11 @@ export default function OpdrachtDetailPagina() {
                           size="sm"
                           variant="outline"
                           className="border-indigo-300 text-indigo-700 hover:bg-indigo-50"
-                          disabled={pimWerkvoorbereidingMut.isPending}
-                          onClick={() => pimWerkvoorbereidingMut.mutate({ id: opdrachtId })}
+                          disabled={pimGenereerMut.isPending}
+                          onClick={() => pimGenereerMut.mutate({ id: opdrachtId })}
                         >
                           <Sparkles className="h-3.5 w-3.5 mr-1.5" />
-                          {pimWerkvoorbereidingMut.isPending ? "Analyseren..." : "Werkvoorbereiding analyseren"}
+                          {pimGenereerMut.isPending ? "Analyseren..." : "Werkvoorbereiding genereren"}
                         </Button>
                       )}
 
@@ -1308,11 +1320,11 @@ export default function OpdrachtDetailPagina() {
                             size="sm"
                             variant="outline"
                             className="border-indigo-300 text-indigo-700 hover:bg-indigo-50"
-                            disabled={pimWerkvoorbereidingMut.isPending}
-                            onClick={() => pimWerkvoorbereidingMut.mutate({ id: opdrachtId })}
+                            disabled={pimGenereerMut.isPending}
+                            onClick={() => pimGenereerMut.mutate({ id: opdrachtId })}
                           >
                             <Sparkles className="h-3.5 w-3.5 mr-1.5" />
-                            {pimWerkvoorbereidingMut.isPending ? "Analyseren..." : "Opnieuw analyseren"}
+                            {pimGenereerMut.isPending ? "Genereren..." : "Opnieuw genereren"}
                           </Button>
                           <Button
                             size="sm"
@@ -1513,6 +1525,107 @@ export default function OpdrachtDetailPagina() {
                       </Badge>
                       <div className="h-px flex-1 bg-border" />
                     </div>
+
+                    {/* ── Bewerkknop (alleen fase werkvoorbereiding) ── */}
+                    {((opdracht as unknown as Record<string, unknown>)?.ai_fase as string) === "werkvoorbereiding" && !wvBewerkModus && (
+                      <div className="flex justify-end">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 text-xs text-muted-foreground"
+                          onClick={() => {
+                            setWvPlanningadviesEdit(typeof wv.planningadvies === "string" ? wv.planningadvies : "");
+                            setWvAandachtspuntenEdit(Array.isArray(wv.aandachtspunten) ? (wv.aandachtspunten as string[]).slice() : []);
+                            setWvBewerkModus(true);
+                          }}
+                        >
+                          <Edit2 className="h-3 w-3 mr-1" />
+                          Aanpassen
+                        </Button>
+                      </div>
+                    )}
+
+                    {/* ── Inline bewerken form ── */}
+                    {wvBewerkModus && (
+                      <Card className="border-indigo-200">
+                        <CardHeader className="pb-2 pt-3">
+                          <CardTitle className="text-sm text-indigo-900">Aanpassingen werkvoorbereiding</CardTitle>
+                        </CardHeader>
+                        <CardContent className="pb-4 space-y-4">
+                          <div>
+                            <label className="text-xs font-medium text-muted-foreground block mb-1">Planningadvies</label>
+                            <Textarea
+                              value={wvPlanningadviesEdit}
+                              onChange={(e) => setWvPlanningadviesEdit(e.target.value)}
+                              rows={3}
+                              className="text-sm"
+                              placeholder="Planningadvies aanpassen..."
+                            />
+                          </div>
+                          <div>
+                            <label className="text-xs font-medium text-muted-foreground block mb-1">Aandachtspunten</label>
+                            <div className="space-y-2">
+                              {wvAandachtspuntenEdit.map((ap, i) => (
+                                <div key={i} className="flex gap-2">
+                                  <Input
+                                    value={ap}
+                                    onChange={(e) => {
+                                      const bijgewerkt = [...wvAandachtspuntenEdit];
+                                      bijgewerkt[i] = e.target.value;
+                                      setWvAandachtspuntenEdit(bijgewerkt);
+                                    }}
+                                    className="text-sm h-8"
+                                  />
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-8 px-2 text-muted-foreground hover:text-destructive"
+                                    onClick={() => setWvAandachtspuntenEdit(wvAandachtspuntenEdit.filter((_, j) => j !== i))}
+                                  >
+                                    &times;
+                                  </Button>
+                                </div>
+                              ))}
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-7 text-xs"
+                                onClick={() => setWvAandachtspuntenEdit([...wvAandachtspuntenEdit, ""])}
+                              >
+                                + Aandachtspunt toevoegen
+                              </Button>
+                            </div>
+                          </div>
+                          <div className="flex gap-2 pt-1">
+                            <Button
+                              size="sm"
+                              disabled={pimPatchMut.isPending}
+                              onClick={() => {
+                                const bijgewerkt = {
+                                  ...wv,
+                                  planningadvies: wvPlanningadviesEdit,
+                                  aandachtspunten: wvAandachtspuntenEdit.filter(Boolean),
+                                };
+                                pimPatchMut.mutate({
+                                  id: opdrachtId,
+                                  data: { werkvoorbereiding_context: bijgewerkt },
+                                });
+                              }}
+                            >
+                              {pimPatchMut.isPending ? "Opslaan..." : "Bewaar aanpassingen"}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={pimPatchMut.isPending}
+                              onClick={() => setWvBewerkModus(false)}
+                            >
+                              Annuleren
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
 
                     {/* Doorlooptijd + planningadvies */}
                     {(Boolean(wv.geschatte_doorlooptijd_dagen) || Boolean(wv.planningadvies)) && (
