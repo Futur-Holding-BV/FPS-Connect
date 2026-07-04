@@ -334,6 +334,7 @@ import type {
   JaarAfsluitingResultaat,
   JarrekeningOnderhandenWerk,
   KaartEmbed,
+  KoppelPimDocument201,
   LaadBrandstofImport200,
   Label,
   LabelDocumentenInput,
@@ -554,6 +555,7 @@ import type {
   PimAfwijzenInput,
   PimAnalyseerInput,
   PimAnalyseerResultaat,
+  PimDocumentKoppelingInput,
   PimFaseInput,
   PimFaseResultaat,
   PimModel,
@@ -36190,6 +36192,77 @@ export const useAfwijzenPimAdvies = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getAfwijzenPimAdviesMutationOptions(options));
+    }
+
+export const getKoppelPimDocumentUrl = (id: number,) => {
+
+
+
+
+  return `/api/opdrachten/${id}/pim/documenten/koppel`
+}
+
+/**
+ * @summary Koppelt een bestaand DMS-document aan de opdracht (ten behoeve van PIM-analyse)
+ */
+export const koppelPimDocument = async (id: number,
+    pimDocumentKoppelingInput: PimDocumentKoppelingInput, options?: RequestInit): Promise<KoppelPimDocument201> => {
+
+  return customFetch<KoppelPimDocument201>(getKoppelPimDocumentUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(pimDocumentKoppelingInput)
+  }
+);}
+
+
+
+
+export const getKoppelPimDocumentMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof koppelPimDocument>>, TError,{id: number;data: BodyType<PimDocumentKoppelingInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof koppelPimDocument>>, TError,{id: number;data: BodyType<PimDocumentKoppelingInput>}, TContext> => {
+
+const mutationKey = ['koppelPimDocument'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof koppelPimDocument>>, {id: number;data: BodyType<PimDocumentKoppelingInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  koppelPimDocument(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type KoppelPimDocumentMutationResult = NonNullable<Awaited<ReturnType<typeof koppelPimDocument>>>
+    export type KoppelPimDocumentMutationBody = BodyType<PimDocumentKoppelingInput>
+    export type KoppelPimDocumentMutationError = ErrorType<void>
+
+    /**
+ * @summary Koppelt een bestaand DMS-document aan de opdracht (ten behoeve van PIM-analyse)
+ */
+export const useKoppelPimDocument = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof koppelPimDocument>>, TError,{id: number;data: BodyType<PimDocumentKoppelingInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof koppelPimDocument>>,
+        TError,
+        {id: number;data: BodyType<PimDocumentKoppelingInput>},
+        TContext
+      > => {
+      return useMutation(getKoppelPimDocumentMutationOptions(options));
     }
 
 export const getAnalyseerPimWerkvoorbereidingUrl = (id: number,) => {

@@ -5,6 +5,7 @@
 //         POST /opdrachten/:id/pim/advies/bevestig,
 //         POST /opdrachten/:id/pim/advies/afwijzen,
 //         POST /opdrachten/:id/pim/advies/rapport,
+//         POST /opdrachten/:id/pim/documenten/koppel,
 //         POST /opdrachten/:id/pim/werkvoorbereiding/analyseer
 import { Router } from "express";
 import type { OpenAI } from "openai";
@@ -34,16 +35,26 @@ try {
   if (pad) CHROMIUM_PAD = pad;
 } catch { /* niet gevonden */ }
 
+/** Escapet HTML-speciale tekens in user/AI-afkomstige strings. */
+function htmlEscape(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 /** Bouw een eenvoudige maar volledige HTML-representatie van de advies_context. */
 function bouwAdviesRapportHtml(ctx: Record<string, unknown>, opdrachttitel: string, datum: string): string {
   const sectie = (titel: string, inhoud: string) =>
     inhoud ? `<section><h3>${titel}</h3>${inhoud}</section>` : "";
   const lijst = (items: unknown) =>
     Array.isArray(items) && items.length > 0
-      ? `<ul>${(items as string[]).map((i) => `<li>${i}</li>`).join("")}</ul>`
+      ? `<ul>${(items as string[]).map((i) => `<li>${htmlEscape(String(i))}</li>`).join("")}</ul>`
       : "";
-  const aanbeveling = String(ctx.aanbeveling ?? "").replace(/_/g, " ");
-  const toelichting = String(ctx.aanbeveling_toelichting ?? "");
+  const aanbeveling = htmlEscape(String(ctx.aanbeveling ?? "").replace(/_/g, " "));
+  const toelichting = htmlEscape(String(ctx.aanbeveling_toelichting ?? ""));
   return `<!DOCTYPE html>
 <html lang="nl"><head><meta charset="utf-8">
 <title>PIM Adviesrapport</title>
@@ -61,11 +72,11 @@ function bouwAdviesRapportHtml(ctx: Record<string, unknown>, opdrachttitel: stri
   .vop{background:#fff3cd;border:1px solid #ffc107;border-radius:4px;padding:8px 12px;margin-top:8px;font-weight:bold}
 </style></head><body>
 <h1>PIM Adviesrapport</h1>
-<div class="meta">Opdracht: <strong>${opdrachttitel}</strong> &nbsp;|&nbsp; Datum: ${datum} &nbsp;|&nbsp; Gegenereerd door FPS Connect AI Regisseur</div>
+<div class="meta">Opdracht: <strong>${htmlEscape(opdrachttitel)}</strong> &nbsp;|&nbsp; Datum: ${htmlEscape(datum)} &nbsp;|&nbsp; Gegenereerd door FPS Connect AI Regisseur</div>
 <h2>Advies</h2>
 <div class="aanbeveling">
   <span class="badge">${aanbeveling || "—"}</span>
-  <span class="badge">betrouwbaarheid: ${String(ctx.betrouwbaarheid ?? "—")}</span>
+  <span class="badge">betrouwbaarheid: ${htmlEscape(String(ctx.betrouwbaarheid ?? "—"))}</span>
   ${toelichting ? `<p style="margin:8px 0 0">${toelichting}</p>` : ""}
 </div>
 ${ctx.vop_aandachtspunt === true ? '<div class="vop">VOP-aandachtspunt: ja — inzet VOP-gecertificeerd monteur vereist</div>' : ""}
@@ -170,6 +181,33 @@ async function objectPathNaarDataUrl(objectPath: string): Promise<string | null>
 function isAfbeelding(url: string | null): boolean {
   if (!url) return false;
   return /\.(jpg|jpeg|png|gif|webp)$/i.test(url);
+}
+
+function isPdf(url: string | null): boolean {
+  if (!url) return false;
+  return /\.pdf$/i.test(url);
+}
+
+async function objectPathNaarPdfTekst(objectPath: string): Promise<string | null> {
+  try {
+    const svc = new ObjectStorageService();
+    const genormaliseerd = svc.normalizeObjectEntityPath(objectPath);
+    const file = await svc.getObjectEntityFile(genormaliseerd);
+    const stream = file.createReadStream();
+    const chunks: Buffer[] = [];
+    await new Promise<void>((resolve, reject) => {
+      stream.on("data", (chunk: Buffer) => chunks.push(chunk));
+      stream.on("end", resolve);
+      stream.on("error", reject);
+    });
+    const buf = Buffer.concat(chunks);
+    const pdfParse = (await import("pdf-parse")).default;
+    const data = await pdfParse(buf);
+    const tekst = data.text?.trim();
+    return tekst ? tekst.slice(0, 6000) : null;
+  } catch {
+    return null;
+  }
 }
 
 // ── POST /aanvragen ──────────────────────────────────────────────────────────
@@ -388,6 +426,16 @@ router.post("/opdrachten/:id/pim/analyseer", schrijven, async (req, res): Promis
       }
     }
 
+    // 4b. PDF-tekst extraheren voor context (max 5 PDFs, max 6000 tekens per PDF)
+    const pdfTeksten: string[] = [];
+    for (const doc of documenten.slice(0, 5)) {
+      if (!doc || !doc.pdfUrl || isAfbeelding(doc.pdfUrl)) continue;
+      if (isPdf(doc.pdfUrl)) {
+        const tekst = await objectPathNaarPdfTekst(doc.pdfUrl);
+        if (tekst) pdfTeksten.push(`[PDF: ${doc.naam ?? "document"}]\n${tekst}`);
+      }
+    }
+
     // 5. Bouw de berichten op
     type ContentPart =
       | { type: "text"; text: string }
@@ -395,6 +443,13 @@ router.post("/opdrachten/:id/pim/analyseer", schrijven, async (req, res): Promis
     const userContent: ContentPart[] = [{ type: "text", text: contextTekst }];
     for (const url of imageDataUrls) {
       userContent.push({ type: "image_url", image_url: { url } });
+    }
+    if (pdfTeksten.length > 0) {
+      const eersteTextPart = userContent[0] as { type: "text"; text: string };
+      userContent[0] = {
+        type: "text",
+        text: `${eersteTextPart.text}\n\n=== GEEXTRAHEERDE PDF-INHOUD ===\n${pdfTeksten.join("\n\n---\n")}`,
+      };
     }
 
     // 6. KB-context (Task #303 stub — retourneert null totdat KB-module beschikbaar is)
@@ -712,6 +767,42 @@ router.post("/opdrachten/:id/pim/advies/afwijzen", schrijven, async (req, res): 
     res.json({ opdracht_id: opdrachtId, ai_fase: "nieuw" });
   } catch (err) {
     logger.error({ err }, "pimAdviesAfwijzen fout");
+    res.status(500).json({ error: "Serverfout" });
+  }
+});
+
+// ── POST /opdrachten/:id/pim/documenten/koppel ────────────────────────────────
+// Koppelt een bestaand DMS-document aan de opdracht (doel_type='opdracht').
+// Wordt aangeroepen door FPS One Adviescentrum direct na aanmaken van het document.
+router.post("/opdrachten/:id/pim/documenten/koppel", schrijven, async (req, res): Promise<void> => {
+  const opdrachtId = parseInt(String(req.params.id), 10);
+  if (isNaN(opdrachtId)) { res.status(400).json({ error: "Ongeldig id" }); return; }
+
+  const documentId = typeof req.body?.document_id === "number"
+    ? req.body.document_id
+    : parseInt(String(req.body?.document_id ?? ""), 10);
+  if (isNaN(documentId) || documentId <= 0) {
+    res.status(400).json({ error: "document_id is verplicht" });
+    return;
+  }
+
+  try {
+    const [opdracht] = await db
+      .select({ id: opdrachtenTable.id })
+      .from(opdrachtenTable)
+      .where(eq(opdrachtenTable.id, opdrachtId));
+    if (!opdracht) { res.status(404).json({ error: "Opdracht niet gevonden" }); return; }
+
+    await db.insert(documentKoppelingenTable).values({
+      documentId,
+      doelType: "opdracht",
+      doelId: opdrachtId,
+      aangemaaktDoorId: req.session.userId!,
+    }).onConflictDoNothing();
+
+    res.status(201).json({ ok: true });
+  } catch (err) {
+    logger.error({ err }, "pimDocumentKoppel fout");
     res.status(500).json({ error: "Serverfout" });
   }
 });

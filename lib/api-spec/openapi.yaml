@@ -10286,6 +10286,40 @@ paths:
         "409":
           description: Afwijzen alleen mogelijk in fase 'advies'
 
+  /opdrachten/{id}/pim/documenten/koppel:
+    post:
+      summary: Koppelt een bestaand DMS-document aan de opdracht (ten behoeve van PIM-analyse)
+      operationId: koppelPimDocument
+      tags: [pim]
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PimDocumentKoppelingInput"
+      responses:
+        "201":
+          description: Document gekoppeld
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+        "400":
+          description: document_id ontbreekt of ongeldig
+        "404":
+          description: Opdracht niet gevonden
+
   /opdrachten/{id}/pim/werkvoorbereiding/analyseer:
     post:
       summary: AI-werkvoorbereiding op basis van advies_context en bestaande spots in het gebouw
@@ -26300,6 +26334,15 @@ components:
           type: string
           description: Optionele toelichting bij de afwijzing (max 1000 tekens)
           maxLength: 1000
+
+    PimDocumentKoppelingInput:
+      type: object
+      required:
+        - document_id
+      properties:
+        document_id:
+          type: integer
+          description: ID van het DMS-document dat aan de opdracht gekoppeld moet worden
 
     PimWerkvoorbereidingInput:
       type: object

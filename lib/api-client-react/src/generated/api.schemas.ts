@@ -5106,6 +5106,11 @@ export interface PimAfwijzenInput {
   reden?: string;
 }
 
+export interface PimDocumentKoppelingInput {
+  /** ID van het DMS-document dat aan de opdracht gekoppeld moet worden */
+  document_id: number;
+}
+
 export interface PimWerkvoorbereidingInput {
   /** Aanvullende instructies of context voor de werkvoorbereiding (max 4000 tekens) */
   vrije_tekst?: string;
@@ -10852,6 +10857,10 @@ status?: string;
  * Indien true: alleen opdrachten waarvoor de ingelogde gebruiker planning-items heeft (voor beheerders genegeerd)
  */
 mijn?: boolean;
+};
+
+export type KoppelPimDocument201 = {
+  ok?: boolean;
 };
 
 export type OndertekenenPortaal201 = {

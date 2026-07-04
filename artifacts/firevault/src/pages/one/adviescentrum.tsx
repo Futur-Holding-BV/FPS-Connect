@@ -7,6 +7,7 @@ import {
   useListGebouwen,
   useRequestUploadUrl,
   useCreateDocument,
+  useKoppelPimDocument,
   useAnalyseerPim,
   useGetPim,
 } from "@workspace/api-client-react";
@@ -70,6 +71,7 @@ export default function OneAdviescentrum() {
 
   const uploadUrlMut = useRequestUploadUrl();
   const createDocMut = useCreateDocument();
+  const koppelDocMut = useKoppelPimDocument();
   const analyseerMut = useAnalyseerPim();
 
   const { data: pimData, isLoading: pimLoading } = useGetPim(
@@ -146,13 +148,21 @@ export default function OneAdviescentrum() {
           headers: { "Content-Type": contentType },
         });
 
-        // 3. DMS-document aanmaken (koppeling aan opdracht via Connect)
+        // 3. DMS-document aanmaken
         const doc = await createDocMut.mutateAsync({
           data: {
             naam: item.bestand.name,
             pdf_url: urlResp.objectPath,
           },
         });
+
+        // 4. Document koppelen aan opdracht zodat analyseer het meepakt
+        if (opdrachtId) {
+          await koppelDocMut.mutateAsync({
+            id: opdrachtId,
+            data: { document_id: doc.id },
+          });
+        }
 
         bijgewerkt[i] = { ...item, status: "gereed", documentId: doc.id };
       } catch (_err) {

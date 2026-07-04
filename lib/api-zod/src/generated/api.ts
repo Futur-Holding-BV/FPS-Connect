@@ -12533,6 +12533,20 @@ export const AfwijzenPimAdviesResponse = zod.object({
 
 
 /**
+ * @summary Koppelt een bestaand DMS-document aan de opdracht (ten behoeve van PIM-analyse)
+ */
+export const KoppelPimDocumentParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const KoppelPimDocumentBody = zod.object({
+  "document_id": zod.number().describe('ID van het DMS-document dat aan de opdracht gekoppeld moet worden')
+})
+
+export const KoppelPimDocumentResponse = zod.void()
+
+
+/**
  * @summary AI-werkvoorbereiding op basis van advies_context en bestaande spots in het gebouw
  */
 export const AnalyseerPimWerkvoorbereidingParams = zod.object({
