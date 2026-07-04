@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { valideerCorrectieFactor, verwerkOpmerkingen, verwerkOpmerkingenBegroting, bouwLeermomentUpdateVelden, verwerkOmschrijvingAkPost, verwerkCategorieAkPost } from "../routes/fie";
+import { valideerCorrectieFactor, verwerkOpmerkingen, verwerkOpmerkingenBegroting, bouwLeermomentUpdateVelden, verwerkOmschrijvingAkPost, verwerkCategorieAkPost, trunceerWerkgeverNaam } from "../routes/fie";
 
 // ── valideerCorrectieFactor — grenswaarden en randgevallen ────────────────────
 //
@@ -310,5 +310,47 @@ describe("verwerkCategorieAkPost", () => {
   it("knipt NIET op 500 of 1000 tekens — categorie heeft lagere limiet (100)", () => {
     const lang = "c".repeat(200);
     expect(verwerkCategorieAkPost(lang)).toHaveLength(100);
+  });
+});
+
+// ── trunceerWerkgeverNaam — naam-truncatie en null/undefined-fallback ─────────
+//
+// Legt het bewuste gedrag vast: de werkgever-naam in mapAkPost wordt stilzwijgend
+// afgekapt op 200 tekens zodat een ongewoon lange naam de UI/rapportage-weergave
+// niet verbreekt. null/undefined → null (geen werkgever gekoppeld).
+
+describe("trunceerWerkgeverNaam", () => {
+  it("kapt tekst van meer dan 200 tekens stilzwijgend af op precies 200 (geen fout)", () => {
+    const lang = "x".repeat(300);
+    const resultaat = trunceerWerkgeverNaam(lang);
+    expect(resultaat).toHaveLength(200);
+    expect(resultaat).toBe("x".repeat(200));
+  });
+
+  it("bewaart tekst van precies 200 tekens ongewijzigd", () => {
+    const precies = "a".repeat(200);
+    expect(trunceerWerkgeverNaam(precies)).toBe(precies);
+  });
+
+  it("bewaart tekst korter dan 200 tekens ongewijzigd", () => {
+    expect(trunceerWerkgeverNaam("FPS Groep BV")).toBe("FPS Groep BV");
+  });
+
+  it("geeft null terug bij null-invoer", () => {
+    expect(trunceerWerkgeverNaam(null)).toBeNull();
+  });
+
+  it("geeft null terug bij undefined-invoer", () => {
+    expect(trunceerWerkgeverNaam(undefined)).toBeNull();
+  });
+
+  it("knipt tekst van exact 201 tekens af op 200", () => {
+    const inp = "b".repeat(201);
+    expect(trunceerWerkgeverNaam(inp)).toHaveLength(200);
+  });
+
+  it("knipt NIET op 100 of 500 tekens — werkgever-naam heeft hogere limiet (200)", () => {
+    const honderdvijftig = "c".repeat(150);
+    expect(trunceerWerkgeverNaam(honderdvijftig)).toHaveLength(150);
   });
 });

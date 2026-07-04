@@ -97,6 +97,18 @@ export function verwerkCategorieAkPost(v: unknown): string {
   return s.slice(0, 100);
 }
 
+/**
+ * Trunceert een werkgever-naam voor gebruik in AK-post responses.
+ * - null / undefined → null (geen werkgever gekoppeld)
+ * - tekst            → afgekapt op 200 tekens (stille truncatie, geen fout)
+ * Voorkomt dat een ongewoon lange werkgever-naam de UI/rapportage-weergave
+ * verbreekt wanneer de naam via LEFT JOIN aan een AK-post is gekoppeld.
+ */
+export function trunceerWerkgeverNaam(v: string | null | undefined): string | null {
+  if (v === null || v === undefined) return null;
+  return String(v).slice(0, 200);
+}
+
 /** Velden die de PATCH /fie/leermomenten/:id handler kan bijwerken. */
 export type LeermomentUpdateVelden = {
   correctieFactor?: number;
@@ -186,7 +198,7 @@ function mapAkPost(r: typeof fieAkPostenTable.$inferSelect, werkgeverNaam?: stri
     id: r.id,
     begroting_id: r.begrotingId,
     werkgever_id: r.werkgeverId ?? null,
-    werkgever_naam: werkgeverNaam ?? null,
+    werkgever_naam: trunceerWerkgeverNaam(werkgeverNaam),
     categorie: r.categorie,
     omschrijving: r.omschrijving,
     bedrag_jaarbasis: r.bedragJaarbasis,
