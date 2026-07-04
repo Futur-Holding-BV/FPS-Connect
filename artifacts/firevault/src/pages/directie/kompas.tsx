@@ -431,9 +431,14 @@ function LeermomentRij({ lm, onSaved }: { lm: FieLeermoment; onSaved: () => void
   const patch = useUpdateFieLeermoment();
   const verwijder = useDeleteFieLeermoment();
 
+  const factorGeldig = (() => {
+    const f = Number(factorInput);
+    return isFinite(f) && f >= 0.5 && f <= 3.0;
+  })();
+
   function opslaan() {
+    if (!factorGeldig) return;
     const factor = Number(factorInput);
-    if (!isFinite(factor) || factor <= 0) return;
     patch.mutate(
       { id: lm.id, data: { correctie_factor: factor, opmerkingen: opmerkingenInput || null } },
       { onSuccess: () => { setBewerkModus(false); onSaved(); } },
@@ -459,12 +464,17 @@ function LeermomentRij({ lm, onSaved }: { lm: FieLeermoment; onSaved: () => void
       <td className="py-2 pr-3 text-right tabular-nums text-muted-foreground">{lm.gebaseerd_op_n_projecten}</td>
       <td className="py-2 pr-3 text-right tabular-nums">
         {bewerkModus ? (
-          <Input
-            className="h-7 w-20 text-xs text-right"
-            value={factorInput}
-            onChange={e => setFactorInput(e.target.value)}
-            type="number" step="0.01" min="0.01"
-          />
+          <div className="flex flex-col items-end gap-0.5">
+            <Input
+              className={`h-7 w-20 text-xs text-right${!factorGeldig ? " border-red-500 focus-visible:ring-red-500" : ""}`}
+              value={factorInput}
+              onChange={e => setFactorInput(e.target.value)}
+              type="number" step="0.01" min="0.5" max="3"
+            />
+            {!factorGeldig && (
+              <span className="text-[10px] text-red-600 leading-tight text-right">0,5 – 3,0</span>
+            )}
+          </div>
         ) : (
           <span>{lm.correctie_factor.toFixed(2)}×</span>
         )}
@@ -484,7 +494,7 @@ function LeermomentRij({ lm, onSaved }: { lm: FieLeermoment; onSaved: () => void
       <td className="py-2 text-right">
         {bewerkModus ? (
           <span className="flex justify-end gap-1">
-            <Button size="icon" variant="ghost" className="h-6 w-6" onClick={opslaan} disabled={patch.isPending}>
+            <Button size="icon" variant="ghost" className="h-6 w-6" onClick={opslaan} disabled={patch.isPending || !factorGeldig}>
               <Check className="h-3.5 w-3.5" />
             </Button>
             <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => setBewerkModus(false)}>
