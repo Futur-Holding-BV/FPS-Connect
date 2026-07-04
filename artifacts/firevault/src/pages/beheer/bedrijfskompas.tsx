@@ -8,10 +8,12 @@ import {
   useCreateFieAkPost,
   useUpdateFieAkPost,
   useDeleteFieAkPost,
+  useGetFiePrognose,
   getListFieBegrotingenQueryKey,
   getGetFieBegrotingQueryKey,
   type FieJaarbegroting,
   type FieAkPost,
+  type FieJaarprognose,
 } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -523,6 +525,154 @@ function CapaciteitSectie({
   );
 }
 
+// ─── PrognoseTab ──────────────────────────────────────────────────────────────
+
+const OBSERVATIE_KLEUR: Record<string, string> = {
+  info:         "border-blue-200 bg-blue-50 text-blue-800",
+  waarschuwing: "border-amber-200 bg-amber-50 text-amber-800",
+  kritiek:      "border-red-200 bg-red-50 text-red-800",
+};
+
+function PrognoseTab({ boekjaar }: { boekjaar: number }) {
+  const { data: p, isLoading } = useGetFiePrognose(boekjaar) as { data: FieJaarprognose | undefined; isLoading: boolean };
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardContent className="p-4 space-y-3">
+          <Skeleton className="h-6 w-48" />
+          <Skeleton className="h-2 w-full" />
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-2">
+            {[0, 1, 2, 3].map(i => <Skeleton key={i} className="h-20 w-full" />)}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!p) {
+    return (
+      <Card>
+        <CardContent className="p-4">
+          <p className="text-sm text-muted-foreground">Prognose kon niet worden geladen.</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const coverageNum = p.coverage_pct ?? 0;
+  const coverageBar = Math.min(100, Math.max(0, coverageNum));
+  const coverageKleur =
+    coverageNum < 80  ? "bg-red-500"
+    : coverageNum < 95 ? "bg-amber-500"
+    : coverageNum > 110 ? "bg-blue-500"
+    : "bg-green-500";
+
+  return (
+    <div className="space-y-4">
+      {/* Observaties */}
+      {p.observaties.length > 0 && (
+        <div className="space-y-2">
+          {p.observaties.map((obs, i) => (
+            <div
+              key={i}
+              className={cn(
+                "flex items-start gap-2 rounded-md border px-3 py-2.5 text-xs",
+                OBSERVATIE_KLEUR[obs.ernst] ?? "border-border bg-muted/20 text-muted-foreground"
+              )}
+            >
+              {obs.ernst === "kritiek" || obs.ernst === "waarschuwing"
+                ? <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                : <Info className="w-3.5 h-3.5 shrink-0 mt-0.5" />}
+              <p>{obs.omschrijving}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Coverage balk */}
+      {p.heeft_begroting && p.omzet_doel != null && (
+        <Card>
+          <CardContent className="p-4 space-y-2">
+            <div className="flex justify-between items-center">
+              <p className="text-xs font-medium text-muted-foreground">Prognose vs. omzetdoel</p>
+              <p className="text-xs font-semibold">
+                {p.coverage_pct != null ? `${p.coverage_pct.toFixed(1)}%` : "—"}
+              </p>
+            </div>
+            <div className="h-2 rounded-full bg-muted overflow-hidden">
+              <div
+                className={cn("h-full rounded-full transition-all", coverageKleur)}
+                style={{ width: `${coverageBar}%` }}
+              />
+            </div>
+            <div className="flex justify-between text-[10px] text-muted-foreground">
+              <span>0</span>
+              <span className="font-medium">Doel: {fmt(p.omzet_doel)}</span>
+              <span>
+                {p.gap_tot_doel != null
+                  ? p.gap_tot_doel < 0
+                    ? `+${fmt(Math.abs(p.gap_tot_doel))} voorsprong`
+                    : `${fmt(p.gap_tot_doel)} tekort`
+                  : ""}
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* KPI-tiles */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="rounded-md border p-3">
+          <p className="text-[10px] text-muted-foreground">Bevestigd (100%)</p>
+          <p className="text-lg font-semibold mt-0.5">{fmt(p.bevestigde_omzet)}</p>
+          <p className="text-[10px] text-muted-foreground">
+            {p.aantal_bevestigde_offertes} offerte{p.aantal_bevestigde_offertes !== 1 ? "s" : ""}
+          </p>
+        </div>
+        <div className="rounded-md border p-3">
+          <p className="text-[10px] text-muted-foreground">Pipeline (gewogen)</p>
+          <p className="text-lg font-semibold mt-0.5">{fmt(p.gewogen_pipeline)}</p>
+          <p className="text-[10px] text-muted-foreground">
+            {p.aantal_pipeline_offertes} offerte{p.aantal_pipeline_offertes !== 1 ? "s" : ""}
+            {p.pijplijn_bruto > 0 ? ` — bruto ${fmt(p.pijplijn_bruto)}` : ""}
+          </p>
+        </div>
+        <div className="rounded-md border p-3">
+          <p className="text-[10px] text-muted-foreground">OHW restwaarde</p>
+          <p className="text-lg font-semibold mt-0.5">{fmt(p.ohw_restwaarde)}</p>
+          <p className="text-[10px] text-muted-foreground">
+            {p.aantal_ohw_opdrachten} opdracht{p.aantal_ohw_opdrachten !== 1 ? "en" : ""} met voortgang
+          </p>
+        </div>
+        <div className="rounded-md border p-3 bg-primary/5 border-primary/20">
+          <p className="text-[10px] text-muted-foreground">Prognose totaal</p>
+          <p className="text-lg font-semibold mt-0.5 text-primary">{fmt(p.prognose_omzet)}</p>
+          <p className="text-[10px] text-muted-foreground">bevestigd + gewogen pipeline</p>
+        </div>
+      </div>
+
+      {/* Toelichting */}
+      <div className="rounded-md border border-dashed p-3 bg-muted/20">
+        <div className="flex items-start gap-2">
+          <Info className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
+          <div className="text-xs text-muted-foreground space-y-1">
+            <p className="font-medium text-foreground">Hoe wordt de prognose berekend?</p>
+            <p>
+              Bevestigd: offertes <em>akkoord</em>/<em>ondertekend</em> tellen voor 100%.
+              Pipeline: <em>concept</em> = 20%, <em>verzonden</em> = 40%, <em>bekeken</em> = 60%.
+              OHW is de restwaarde van actieve opdrachten met een voortgangsindicatie (onderhanden werk).
+            </p>
+            {p.prognose_inclusief_ohw !== p.prognose_omzet && (
+              <p>Prognose inclusief OHW: <strong>{fmt(p.prognose_inclusief_ohw)}</strong></p>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── BegrotingDetail ─────────────────────────────────────────────────────────
 
 function BegrotingDetail({ begrotingId, onTerug }: { begrotingId: number; onTerug: () => void }) {
@@ -615,11 +765,12 @@ function BegrotingDetail({ begrotingId, onTerug }: { begrotingId: number; onTeru
 
       {/* Tabs: Overzicht / AK-posten / Capaciteit / Doelmarge */}
       <Tabs value={actieveTab} onValueChange={setActieveTab}>
-        <TabsList className="grid w-full grid-cols-4 max-w-lg">
+        <TabsList className="grid w-full grid-cols-5 max-w-xl">
           <TabsTrigger value="overzicht">Overzicht</TabsTrigger>
           <TabsTrigger value="ak-posten">AK-posten</TabsTrigger>
           <TabsTrigger value="capaciteit">Capaciteit</TabsTrigger>
           <TabsTrigger value="doelmarge">Doelmarge</TabsTrigger>
+          <TabsTrigger value="prognose">Prognose</TabsTrigger>
         </TabsList>
 
         {/* Tab: Overzicht (doelmarge-toelichting + verdeelsleutel) */}
@@ -839,6 +990,11 @@ function BegrotingDetail({ begrotingId, onTerug }: { begrotingId: number; onTeru
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Tab: Prognose (continue jaarbedrijfsprognose — FIE Fase 3) */}
+        <TabsContent value="prognose" className="mt-4">
+          <PrognoseTab boekjaar={detail.boekjaar} />
         </TabsContent>
       </Tabs>
 

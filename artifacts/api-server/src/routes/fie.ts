@@ -5,7 +5,7 @@ import { Router, Request, Response } from "express";
 import { db, fieJaarbegrotingenTable, fieAkPostenTable, fieCapaciteitSnapshotsTable, werkgeversTable } from "@workspace/db";
 import { eq, desc } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
-import { berekenFieContext, berekenCapaciteit, berekenDoelmarge, rnd2 } from "../services/fie-service";
+import { berekenFieContext, berekenCapaciteit, berekenDoelmarge, berekenJaarprognose, rnd2 } from "../services/fie-service";
 
 const router = Router();
 
@@ -476,6 +476,41 @@ router.get("/fie/context/calculatie/:id", calcLezen, async (req: Request, res: R
     advies_status: context.adviesStatus,
     advies_tekst: context.adviesTekst,
     opslag_ak_pct: context.opslagAkPct,
+  });
+});
+
+// ── GET /fie/prognose/:boekjaar ───────────────────────────────────────────────
+// Continue jaarbedrijfsprognose: bevestigde omzet + gewogen pipeline + OHW restwaarde.
+router.get("/prognose/:boekjaar", lezen, async (req: Request, res: Response): Promise<void> => {
+  const boekjaar = parseId(req.params.boekjaar);
+  if (!boekjaar || boekjaar < 2000 || boekjaar > 2100) {
+    return void res.status(400).json({ error: "Ongeldig boekjaar" });
+  }
+
+  const prognose = await berekenJaarprognose(boekjaar);
+  return void res.json({
+    boekjaar:                   prognose.boekjaar,
+    heeft_begroting:            prognose.heeft_begroting,
+    omzet_doel:                 prognose.omzet_doel,
+    bevestigde_omzet:           prognose.bevestigde_omzet,
+    aantal_bevestigde_offertes: prognose.aantal_bevestigde_offertes,
+    gewogen_pipeline:           prognose.gewogen_pipeline,
+    pijplijn_bruto:             prognose.pijplijn_bruto,
+    aantal_pipeline_offertes:   prognose.aantal_pipeline_offertes,
+    ohw_restwaarde:             prognose.ohw_restwaarde,
+    aantal_ohw_opdrachten:      prognose.aantal_ohw_opdrachten,
+    prognose_omzet:             prognose.prognose_omzet,
+    prognose_inclusief_ohw:     prognose.prognose_inclusief_ohw,
+    coverage_pct:               prognose.coverage_pct,
+    gap_tot_doel:               prognose.gap_tot_doel,
+    observaties:                prognose.observaties.map(o => ({
+      type:           o.type,
+      ernst:          o.ernst,
+      omschrijving:   o.omschrijving,
+      waarde:         o.waarde,
+      drempelwaarde:  o.drempelwaarde,
+      afwijking_pct:  o.afwijking_pct,
+    })),
   });
 });
 

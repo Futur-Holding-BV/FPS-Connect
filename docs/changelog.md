@@ -4,22 +4,34 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
-## 2026-07-04 — TypeScript TS7030-opschoning api-server
+## 2026-07-04 — FIE Fase 3: Continue jaarbedrijfsprognose
 
-**Uitvoering:** volledig | **Diepere lagen:** volledig | **Getest:** api-server typecheck clean (0 fouten); firevault typecheck clean; api-server herstart + healthz HTTP 200
+**Uitvoering:** volledig | **Getest:** typecheck clean (api-server + firevault); healthz HTTP 200; route bereikbaar
 
-354 pre-existing TS7030-fouten ("Not all code paths return a value") opgelost in 35 route-bestanden — geen functionele wijzigingen.
+Nieuwe prognoselaag toegevoegd aan de Financial Intelligence Engine (FIE):
 
-**Oorzaak:** async route-handlers gebruikten `return res.json()` op sommige code-paden (retourneert `Response`) en hadden op andere paden geen `return` (retourneert `void`). TypeScript zag een inconsistent retourtype en gaf TS7030.
+**Backend**
+- `berekenJaarprognose(boekjaar)` in `fie-service.ts`: aggregeert bevestigde offertes (100%), gewogen pipeline (concept 20% / verzonden 40% / bekeken 60%) en OHW-restwaarde van actieve opdrachten
+- Observaties automatisch gegenereerd op basis van coverage-drempelwaarden: < 80% = kritiek, 80–95% = waarschuwing, > 110% = info (voorsprong), lege pipeline = waarschuwing
+- `GET /fie/prognose/:boekjaar` — nieuwe route, bevoegdheid financieel:2
 
-**Aanpak (in twee stappen):**
-1. Alle async route-handler functies voorzien van `: Promise<void>` annotatie via bulk-script (81 bestanden, ~900 handlers)
-2. Alle `return res.json(...)` / `return res.status(...).json(...)` omgezet naar `return void res.json(...)` / `return void res.status(...).json(...)` via bulk-script (55 bestanden, ~1033 calls) — de `void`-operator evalueert de expressie (stuurt de HTTP-respons) maar retourneert `undefined`, compatibel met `Promise<void>`
-3. Multiline `return res\n.status()\n.json()` patronen apart afgehandeld (auth.ts, classificatie.ts, gebouwen.ts, gebruikers.ts, hrm.ts)
-4. `return await zetGoedkeuring()` in documenten.ts omgezet naar `await zetGoedkeuring()` (return-waarde genegeerd, handler geeft void terug)
+**OpenAPI + codegen**
+- Nieuwe path `/fie/prognose/{boekjaar}` en schemas `FieJaarprognose` + `FiePrognoseObservatie` toegevoegd
+- Codegen gedraaid; `useGetFiePrognose` + types gegenereerd
 
-**Geraakte bestanden:** alle route-bestanden in `artifacts/api-server/src/routes/`
-**Niet gewijzigd:** FIE-rekenlogica, HRM-capaciteitsberekening, database-schema's, frontend
+**Frontend**
+- `PrognoseTab` component toegevoegd aan Bedrijfskompas
+- Vijfde tab "Prognose" naast Overzicht / AK-posten / Capaciteit / Doelmarge
+- Coverage-balk (kleurgecodeerd per drempel), 4 KPI-tiles, observaties-sectie en toelichting winstkansen-weging
+
+---
+
+## 2026-07-04 — TS7030-correctie api-server route-handlers
+
+**Uitvoering:** volledig | **Getest:** api-server typecheck clean; firevault typecheck clean; healthz HTTP 200
+
+354 TS7030-fouten ("Not all code paths return a value") opgelost in 35 route-bestanden.
+Wijziging beperkt tot expliciete `: Promise<void>`-typing op async handler-functies en `return void res.xxx()` bij Express-responses — geen functionele routewijzigingen.
 
 ---
 

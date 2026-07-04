@@ -18690,6 +18690,32 @@ paths:
         "404":
           description: Calculatie niet gevonden
 
+  /fie/prognose/{boekjaar}:
+    get:
+      operationId: getFiePrognose
+      tags: [fie]
+      summary: Continue jaarbedrijfsprognose ophalen voor een boekjaar
+      description: >
+        Berekent de live jaarbedrijfsprognose op basis van bevestigde offertes (100%),
+        gewogen pipeline (status-gewogen winkans) en OHW restwaarde van actieve opdrachten.
+        Vergelijkt de prognose met het omzetdoel van de actieve FIE-begroting en geeft
+        observaties terug als de afwijking buiten de drempelwaarden valt.
+      parameters:
+        - in: path
+          name: boekjaar
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FieJaarprognose"
+        "400":
+          description: Ongeldig boekjaar
+
 components:
   schemas:
     AiAanroepLog:
@@ -34069,3 +34095,37 @@ components:
         advies_status:             { type: string }
         advies_tekst:              { type: string }
         opslag_ak_pct:             { type: number }
+
+    FiePrognoseObservatie:
+      type: object
+      required: [type, ernst, omschrijving]
+      properties:
+        type:           { type: string }
+        ernst:          { type: string }
+        omschrijving:   { type: string }
+        waarde:         { type: ["number", "null"] }
+        drempelwaarde:  { type: ["number", "null"] }
+        afwijking_pct:  { type: ["number", "null"] }
+
+    FieJaarprognose:
+      type: object
+      required: [boekjaar, heeft_begroting, bevestigde_omzet, aantal_bevestigde_offertes, gewogen_pipeline, pijplijn_bruto, aantal_pipeline_offertes, ohw_restwaarde, aantal_ohw_opdrachten, prognose_omzet, prognose_inclusief_ohw, observaties]
+      properties:
+        boekjaar:                   { type: integer }
+        heeft_begroting:            { type: boolean }
+        omzet_doel:                 { type: ["number", "null"] }
+        bevestigde_omzet:           { type: number }
+        aantal_bevestigde_offertes: { type: integer }
+        gewogen_pipeline:           { type: number }
+        pijplijn_bruto:             { type: number }
+        aantal_pipeline_offertes:   { type: integer }
+        ohw_restwaarde:             { type: number }
+        aantal_ohw_opdrachten:      { type: integer }
+        prognose_omzet:             { type: number }
+        prognose_inclusief_ohw:     { type: number }
+        coverage_pct:               { type: ["number", "null"] }
+        gap_tot_doel:               { type: ["number", "null"] }
+        observaties:
+          type: array
+          items:
+            $ref: "#/components/schemas/FiePrognoseObservatie"

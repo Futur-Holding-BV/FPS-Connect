@@ -236,6 +236,8 @@ export * from './fieJaarbegroting';
 export * from './fieJaarbegrotingDetail';
 export * from './fieJaarbegrotingInput';
 export * from './fieJaarbegrotingUpdate';
+export * from './fieJaarprognose';
+export * from './fiePrognoseObservatie';
 export * from './financieelDashboard';
 export * from './foto';
 export * from './fotoFase';

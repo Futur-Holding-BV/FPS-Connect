@@ -198,6 +198,7 @@ import type {
   FieJaarbegrotingDetail,
   FieJaarbegrotingInput,
   FieJaarbegrotingUpdate,
+  FieJaarprognose,
   FinancieelDashboard,
   Foto,
   FotoInput,
@@ -66299,6 +66300,84 @@ export function useGetFieContextCalculatie<TData = Awaited<ReturnType<typeof get
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetFieContextCalculatieQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetFiePrognoseUrl = (boekjaar: number,) => {
+
+
+
+
+  return `/api/fie/prognose/${boekjaar}`
+}
+
+/**
+ * Berekent de live jaarbedrijfsprognose op basis van bevestigde offertes (100%), gewogen pipeline (status-gewogen winkans) en OHW restwaarde van actieve opdrachten. Vergelijkt de prognose met het omzetdoel van de actieve FIE-begroting en geeft observaties terug als de afwijking buiten de drempelwaarden valt.
+ * @summary Continue jaarbedrijfsprognose ophalen voor een boekjaar
+ */
+export const getFiePrognose = async (boekjaar: number, options?: RequestInit): Promise<FieJaarprognose> => {
+
+  return customFetch<FieJaarprognose>(getGetFiePrognoseUrl(boekjaar),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetFiePrognoseQueryKey = (boekjaar: number,) => {
+    return [
+    `/api/fie/prognose/${boekjaar}`
+    ] as const;
+    }
+
+
+export const getGetFiePrognoseQueryOptions = <TData = Awaited<ReturnType<typeof getFiePrognose>>, TError = ErrorType<void>>(boekjaar: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getFiePrognose>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetFiePrognoseQueryKey(boekjaar);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getFiePrognose>>> = ({ signal }) => getFiePrognose(boekjaar, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: boekjaar !== null && boekjaar !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getFiePrognose>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetFiePrognoseQueryResult = NonNullable<Awaited<ReturnType<typeof getFiePrognose>>>
+export type GetFiePrognoseQueryError = ErrorType<void>
+
+
+/**
+ * @summary Continue jaarbedrijfsprognose ophalen voor een boekjaar
+ */
+
+export function useGetFiePrognose<TData = Awaited<ReturnType<typeof getFiePrognose>>, TError = ErrorType<void>>(
+ boekjaar: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getFiePrognose>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetFiePrognoseQueryOptions(boekjaar,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

@@ -23476,3 +23476,37 @@ export const GetFieContextCalculatieResponse = zod.object({
 })
 
 
+/**
+ * Berekent de live jaarbedrijfsprognose op basis van bevestigde offertes (100%), gewogen pipeline (status-gewogen winkans) en OHW restwaarde van actieve opdrachten. Vergelijkt de prognose met het omzetdoel van de actieve FIE-begroting en geeft observaties terug als de afwijking buiten de drempelwaarden valt.
+ * @summary Continue jaarbedrijfsprognose ophalen voor een boekjaar
+ */
+export const GetFiePrognoseParams = zod.object({
+  "boekjaar": zod.coerce.number()
+})
+
+export const GetFiePrognoseResponse = zod.object({
+  "boekjaar": zod.number(),
+  "heeft_begroting": zod.boolean(),
+  "omzet_doel": zod.number().nullish(),
+  "bevestigde_omzet": zod.number(),
+  "aantal_bevestigde_offertes": zod.number(),
+  "gewogen_pipeline": zod.number(),
+  "pijplijn_bruto": zod.number(),
+  "aantal_pipeline_offertes": zod.number(),
+  "ohw_restwaarde": zod.number(),
+  "aantal_ohw_opdrachten": zod.number(),
+  "prognose_omzet": zod.number(),
+  "prognose_inclusief_ohw": zod.number(),
+  "coverage_pct": zod.number().nullish(),
+  "gap_tot_doel": zod.number().nullish(),
+  "observaties": zod.array(zod.object({
+  "type": zod.string(),
+  "ernst": zod.string(),
+  "omschrijving": zod.string(),
+  "waarde": zod.number().nullish(),
+  "drempelwaarde": zod.number().nullish(),
+  "afwijking_pct": zod.number().nullish()
+}))
+})
+
+

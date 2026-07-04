@@ -10178,6 +10178,39 @@ export interface FieCalculatieContext {
   opslag_ak_pct?: number;
 }
 
+export interface FiePrognoseObservatie {
+  type: string;
+  ernst: string;
+  omschrijving: string;
+  /** @nullable */
+  waarde?: number | null;
+  /** @nullable */
+  drempelwaarde?: number | null;
+  /** @nullable */
+  afwijking_pct?: number | null;
+}
+
+export interface FieJaarprognose {
+  boekjaar: number;
+  heeft_begroting: boolean;
+  /** @nullable */
+  omzet_doel?: number | null;
+  bevestigde_omzet: number;
+  aantal_bevestigde_offertes: number;
+  gewogen_pipeline: number;
+  pijplijn_bruto: number;
+  aantal_pipeline_offertes: number;
+  ohw_restwaarde: number;
+  aantal_ohw_opdrachten: number;
+  prognose_omzet: number;
+  prognose_inclusief_ohw: number;
+  /** @nullable */
+  coverage_pct?: number | null;
+  /** @nullable */
+  gap_tot_doel?: number | null;
+  observaties: FiePrognoseObservatie[];
+}
+
 export type GetRecenteActiviteitParams = {
 limit?: number;
 };

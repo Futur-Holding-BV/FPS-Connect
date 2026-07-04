@@ -2,9 +2,9 @@
 // Alle margeberekeningen, AK-normderivaties en context-analyses lopen via dit service-module.
 // KRITISCH: berekenFieContext gebruikt DEZELFDE berekeningsvolgorde als detail.tsx (frontend),
 // zodat projectomzet, kostprijs en margeadvies identiek zijn aan de getoonde calculatietotalen.
-import { db, fieJaarbegrotingenTable, fieAkPostenTable, fieCapaciteitSnapshotsTable, modCalcHeadersTable, modCalcRegelsTable } from "@workspace/db";
+import { db, fieJaarbegrotingenTable, fieAkPostenTable, fieCapaciteitSnapshotsTable, modCalcHeadersTable, modCalcRegelsTable, offertesTable, opdrachtenTable, onderhandenWerkOverridesTable } from "@workspace/db";
 import { medewerkersTable } from "@workspace/db/schema";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, gte, lt, inArray } from "drizzle-orm";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -385,5 +385,202 @@ export async function berekenDoelmarge(begrotingId: number): Promise<FieDoelmarg
     akPerUurBerekend,
     effectiefAkPerUur,
     verdeelsleutel: begroting.verdeelsleutel,
+  };
+}
+
+// ─── FIE Fase 3 — Continue jaarbedrijfsprognose ───────────────────────────────
+
+const WINKANS_PER_STATUS: Record<string, number> = {
+  concept:  0.20,
+  verzonden: 0.40,
+  bekeken:  0.60,
+};
+const BEVESTIGDE_STATUSSEN = new Set(["akkoord", "ondertekend"]);
+const PIPELINE_STATUSSEN   = new Set(["concept", "verzonden", "bekeken"]);
+
+export interface FiePrognoseObservatie {
+  type: string;
+  ernst: "info" | "waarschuwing" | "kritiek";
+  omschrijving: string;
+  waarde: number | null;
+  drempelwaarde: number | null;
+  afwijking_pct: number | null;
+}
+
+export interface FieJaarprognoseResultaat {
+  boekjaar: number;
+  heeft_begroting: boolean;
+  omzet_doel: number | null;
+  bevestigde_omzet: number;
+  aantal_bevestigde_offertes: number;
+  gewogen_pipeline: number;
+  pijplijn_bruto: number;
+  aantal_pipeline_offertes: number;
+  ohw_restwaarde: number;
+  aantal_ohw_opdrachten: number;
+  prognose_omzet: number;
+  prognose_inclusief_ohw: number;
+  coverage_pct: number | null;
+  gap_tot_doel: number | null;
+  observaties: FiePrognoseObservatie[];
+}
+
+export async function berekenJaarprognose(boekjaar: number): Promise<FieJaarprognoseResultaat> {
+  const jaarStart = new Date(`${boekjaar}-01-01T00:00:00.000Z`);
+  const jaarEind  = new Date(`${boekjaar + 1}-01-01T00:00:00.000Z`);
+
+  // 1. Actieve begroting voor dit boekjaar
+  const [activeBegroting] = await db
+    .select()
+    .from(fieJaarbegrotingenTable)
+    .where(and(
+      eq(fieJaarbegrotingenTable.boekjaar, boekjaar),
+      eq(fieJaarbegrotingenTable.status, "actief"),
+    ))
+    .orderBy(desc(fieJaarbegrotingenTable.id))
+    .limit(1);
+
+  const begroting = activeBegroting ?? null;
+  const omzetDoel = begroting?.omzetDoel ?? null;
+
+  // 2. Offertes aangemaakt in dit boekjaar
+  const alleOffertes = await db
+    .select({
+      id: offertesTable.id,
+      status: offertesTable.status,
+      bedragExclBtw: offertesTable.bedragExclBtw,
+    })
+    .from(offertesTable)
+    .where(and(
+      gte(offertesTable.aangemaaktOp, jaarStart),
+      lt(offertesTable.aangemaaktOp, jaarEind),
+    ));
+
+  const bevestigdeOffertes = alleOffertes.filter(o => BEVESTIGDE_STATUSSEN.has(o.status));
+  const pipelineOffertes   = alleOffertes.filter(o => PIPELINE_STATUSSEN.has(o.status));
+
+  const bevestigdeOmzet = rnd2(bevestigdeOffertes.reduce((s, o) => s + o.bedragExclBtw, 0));
+  const pijplijnBruto   = rnd2(pipelineOffertes.reduce((s, o) => s + o.bedragExclBtw, 0));
+  const gewogenPipeline = rnd2(pipelineOffertes.reduce((s, o) =>
+    s + o.bedragExclBtw * (WINKANS_PER_STATUS[o.status] ?? 0), 0));
+
+  // 3. OHW restwaarde — actieve opdrachten aangemaakt in dit boekjaar met een OHW-override
+  const actieveOpdrachten = await db
+    .select({ id: opdrachtenTable.id, offerteId: opdrachtenTable.offerteId })
+    .from(opdrachtenTable)
+    .where(and(
+      eq(opdrachtenTable.status, "actief"),
+      gte(opdrachtenTable.aangemaaktOp, jaarStart),
+      lt(opdrachtenTable.aangemaaktOp, jaarEind),
+    ));
+
+  let ohwRestwaarde      = 0;
+  let aantalOhwOpdrachten = 0;
+
+  if (actieveOpdrachten.length > 0) {
+    const opdrachtIds = actieveOpdrachten.map(o => o.id);
+    const overrides   = await db
+      .select()
+      .from(onderhandenWerkOverridesTable)
+      .where(inArray(onderhandenWerkOverridesTable.opdrachtId, opdrachtIds));
+
+    const offerteIds = actieveOpdrachten
+      .filter(o => o.offerteId != null)
+      .map(o => o.offerteId as number);
+
+    const offerteBedragen = offerteIds.length > 0
+      ? await db
+          .select({ id: offertesTable.id, bedragExclBtw: offertesTable.bedragExclBtw })
+          .from(offertesTable)
+          .where(inArray(offertesTable.id, offerteIds))
+      : [];
+
+    const bedragMap = new Map(offerteBedragen.map(o => [o.id, o.bedragExclBtw]));
+
+    for (const ov of overrides) {
+      const opdracht = actieveOpdrachten.find(o => o.id === ov.opdrachtId);
+      if (!opdracht?.offerteId) continue;
+      const bedrag = bedragMap.get(opdracht.offerteId) ?? 0;
+      if (bedrag <= 0) continue;
+      const pctGereed = ov.percentageGereed ?? 0;
+      ohwRestwaarde += bedrag * Math.max(0, 1 - pctGereed / 100);
+      aantalOhwOpdrachten++;
+    }
+    ohwRestwaarde = rnd2(ohwRestwaarde);
+  }
+
+  // 4. Prognose totaal
+  const prognoseOmzet        = rnd2(bevestigdeOmzet + gewogenPipeline);
+  const prognoseInclusiefOhw = rnd2(prognoseOmzet + ohwRestwaarde);
+  const coveragePct = omzetDoel != null && omzetDoel > 0
+    ? rnd2((prognoseOmzet / omzetDoel) * 100)
+    : null;
+  const gapTotDoel = omzetDoel != null
+    ? rnd2(omzetDoel - prognoseOmzet)
+    : null;
+
+  // 5. Observaties genereren
+  const observaties: FiePrognoseObservatie[] = [];
+
+  if (!begroting) {
+    observaties.push({
+      type: "geen_begroting",
+      ernst: "info",
+      omschrijving: `Geen actieve jaarbegroting gevonden voor ${boekjaar}. Stel een begroting in via Bedrijfskompas.`,
+      waarde: null, drempelwaarde: null, afwijking_pct: null,
+    });
+  } else if (omzetDoel != null && omzetDoel > 0 && coveragePct !== null) {
+    if (coveragePct < 80) {
+      observaties.push({
+        type: "omzet_risico",
+        ernst: "kritiek",
+        omschrijving: `Prognose dekt slechts ${coveragePct.toFixed(1)}% van het omzetdoel. Significante achterstand — pipeline versterken.`,
+        waarde: prognoseOmzet, drempelwaarde: omzetDoel,
+        afwijking_pct: rnd2(coveragePct - 100),
+      });
+    } else if (coveragePct < 95) {
+      observaties.push({
+        type: "omzet_achterstand",
+        ernst: "waarschuwing",
+        omschrijving: `Prognose is ${(100 - coveragePct).toFixed(1)}% onder het omzetdoel. Pipeline versterken of verwachtingen bijstellen.`,
+        waarde: prognoseOmzet, drempelwaarde: omzetDoel,
+        afwijking_pct: rnd2(coveragePct - 100),
+      });
+    } else if (coveragePct > 110) {
+      observaties.push({
+        type: "omzet_voorsprong",
+        ernst: "info",
+        omschrijving: `Prognose overtreft het omzetdoel met ${(coveragePct - 100).toFixed(1)}%. Controleer de beschikbare capaciteit.`,
+        waarde: prognoseOmzet, drempelwaarde: omzetDoel,
+        afwijking_pct: rnd2(coveragePct - 100),
+      });
+    }
+  }
+
+  if (bevestigdeOffertes.length === 0 && pipelineOffertes.length === 0) {
+    observaties.push({
+      type: "lege_pipeline",
+      ernst: "waarschuwing",
+      omschrijving: `Geen offertes aangetroffen in ${boekjaar}. Controleer of offertes in dit boekjaar zijn aangemaakt.`,
+      waarde: 0, drempelwaarde: null, afwijking_pct: null,
+    });
+  }
+
+  return {
+    boekjaar,
+    heeft_begroting: !!begroting,
+    omzet_doel: omzetDoel,
+    bevestigde_omzet: bevestigdeOmzet,
+    aantal_bevestigde_offertes: bevestigdeOffertes.length,
+    gewogen_pipeline: gewogenPipeline,
+    pijplijn_bruto: pijplijnBruto,
+    aantal_pipeline_offertes: pipelineOffertes.length,
+    ohw_restwaarde: ohwRestwaarde,
+    aantal_ohw_opdrachten: aantalOhwOpdrachten,
+    prognose_omzet: prognoseOmzet,
+    prognose_inclusief_ohw: prognoseInclusiefOhw,
+    coverage_pct: coveragePct,
+    gap_tot_doel: gapTotDoel,
+    observaties,
   };
 }
