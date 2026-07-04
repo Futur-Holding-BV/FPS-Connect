@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useParams, Link } from "wouter";
+import { useParams, Link, useLocation } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   useGetVoorziening,
@@ -9,6 +9,7 @@ import {
   useBevestigSpotAiControle,
   useListSpotDossiers,
   useGetVoorzieningTijdlijn,
+  useArchiveerVoorziening,
 } from "@workspace/api-client-react";
 import type { Label } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,7 +20,7 @@ import { Label as FormLabel } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   ArrowLeft, Building, Calendar, User, Package, MapPin, QrCode,
-  CheckCircle, AlertCircle, Clock, Pencil, Tag, Sparkles, FolderOpen, History, FileText,
+  CheckCircle, AlertCircle, Clock, Pencil, Tag, Sparkles, FolderOpen, History, FileText, Archive,
 } from "lucide-react";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
 import { VoorzieningStatusDialog } from "./voorziening-status-dialog";
@@ -265,8 +266,22 @@ export default function VoorzieningDetail() {
   });
   const [statusOpen, setStatusOpen] = useState(false);
   const [bewerkenOpen, setBewerkenOpen] = useState(false);
+  const [archiveerBevestig, setArchiveerBevestig] = useState(false);
+  const archiveerVoorziening = useArchiveerVoorziening();
+  const [, navigate] = useLocation();
+  const queryClient = useQueryClient();
   const magBewerken = heeftNiveau("voorzieningen", 3);
   const magControleren = heeftNiveau("voorzieningen", 4);
+
+  async function voerArchiveerUit() {
+    await archiveerVoorziening.mutateAsync({ id: Number(id), data: { gearchiveerd: true } });
+    void queryClient.invalidateQueries({
+      predicate: (query) =>
+        typeof query.queryKey[0] === "string" &&
+        (query.queryKey[0] as string).endsWith("/nacalculatie"),
+    });
+    navigate("/voorzieningen");
+  }
 
   if (isLoading) {
     return (
@@ -564,6 +579,31 @@ export default function VoorzieningDetail() {
                   <Button className="w-full" variant="outline" onClick={() => setBewerkenOpen(true)}>
                     Spot bewerken
                   </Button>
+                  {archiveerBevestig ? (
+                    <div className="flex gap-2">
+                      <Button
+                        className="flex-1"
+                        variant="destructive"
+                        size="sm"
+                        disabled={archiveerVoorziening.isPending}
+                        onClick={voerArchiveerUit}
+                      >
+                        {archiveerVoorziening.isPending ? "Bezig…" : "Bevestigen"}
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => setArchiveerBevestig(false)}>
+                        Annuleren
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button
+                      className="w-full"
+                      variant="outline"
+                      onClick={() => setArchiveerBevestig(true)}
+                    >
+                      <Archive className="h-4 w-4 mr-2" />
+                      Archiveer spot
+                    </Button>
+                  )}
                 </div>
               )}
             </div>
