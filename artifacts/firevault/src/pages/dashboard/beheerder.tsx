@@ -378,14 +378,30 @@ export default function BeheerderDashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {activiteit?.slice(0, 6).map((act) => (
-                <div key={act.id} className="flex flex-col gap-0.5 border-b pb-2 last:border-0">
-                  <div className="text-sm font-medium leading-snug">{act.omschrijving}</div>
-                  <div className="text-xs text-muted-foreground">
-                    {new Date(act.tijdstip).toLocaleString("nl-NL")} — {act.gebruiker_naam}
+              {activiteit?.slice(0, 6).map((act) => {
+                const offerteId = (act as { offerte_id?: number | null }).offerte_id;
+                const content = (
+                  <>
+                    <div className="text-sm font-medium leading-snug">{act.omschrijving}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {new Date(act.tijdstip).toLocaleString("nl-NL")} — {act.gebruiker_naam}
+                    </div>
+                  </>
+                );
+                return offerteId ? (
+                  <a
+                    key={act.id}
+                    href={`/offertes/${offerteId}`}
+                    className="flex flex-col gap-0.5 border-b pb-2 last:border-0 hover:text-primary transition-colors cursor-pointer"
+                  >
+                    {content}
+                  </a>
+                ) : (
+                  <div key={act.id} className="flex flex-col gap-0.5 border-b pb-2 last:border-0">
+                    {content}
                   </div>
-                </div>
-              ))}
+                );
+              })}
               {!activiteit?.length && <p className="text-sm text-muted-foreground">Geen recente activiteit.</p>}
             </div>
           </CardContent>

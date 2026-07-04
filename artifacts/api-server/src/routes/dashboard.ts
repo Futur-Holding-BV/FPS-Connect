@@ -145,6 +145,7 @@ router.get("/dashboard/recente-activiteit", dashboardLezen, async (req, res): Pr
         gebouw_naam: a.gebouwNaam,
         voorziening_nummer: a.voorzieningNummer,
         gebruiker_naam: a.gebruikerNaam,
+        offerte_id: a.offerteId ?? null,
       })),
     );
   } catch (err) {

@@ -20,7 +20,7 @@ import {
   appInstellingenTable,
 } from "@workspace/db";
 import { eq, and, desc, ne, or, isNull } from "drizzle-orm";
-import { stuurKlantvraagNotificatie, stuurOndertekeningNotificatie, stuurOpdrachtbevestiging } from "../services/email";
+import { stuurKlantvraagNotificatie, stuurKlantvraagBevestiging, stuurOndertekeningNotificatie, stuurOpdrachtbevestiging, stuurAfwijzingNotificatie } from "../services/email";
 import { logActiviteit } from "../lib/activiteit";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
 
@@ -327,7 +327,7 @@ router.post("/portaal/:token/vraag", async (req, res): Promise<void> => {
 
     res.status(201).json({ id: nieuw.id });
 
-    // Notificatiemail — fire-and-forget, blokkeert de respons niet.
+    // Interne notificatie + e-mails — fire-and-forget, blokkeert de respons niet.
     (async () => {
       try {
         const [offerte] = await db
@@ -336,6 +336,7 @@ router.post("/portaal/:token/vraag", async (req, res): Promise<void> => {
             offertenummer: offertesTable.offertenummer,
             titel: offertesTable.titel,
             behandeldDoorId: offertesTable.behandeldDoorId,
+            gebouwId: offertesTable.gebouwId,
           })
           .from(offertesTable)
           .where(eq(offertesTable.id, tokenRecord.offerteId));
@@ -365,9 +366,20 @@ router.post("/portaal/:token/vraag", async (req, res): Promise<void> => {
           ? `https://${domein}/offertes/${offerte.id}`
           : `https://fpsbrandpreventie.nl/offertes/${offerte.id}`;
 
-        const onderwerpPrefix = type === "wijziging" ? "Wijziging aangevraagd" : "Nieuwe klantvraag";
         const vraagTekstMetType = type === "wijziging" ? `[WIJZIGING] ${vraag}` : vraag;
+        const typeLabel = type === "wijziging" ? "wijziging" : "vraag";
 
+        // Interne notificatie
+        await logActiviteit({
+          type: "offerte_vraag_ontvangen",
+          omschrijving: `Klantvraag ontvangen voor offerte ${offerte.offertenummer ?? offerte.id}${bezoekerNaam ? ` (${bezoekerNaam})` : ""}: ${vraag.slice(0, 120)}${vraag.length > 120 ? "…" : ""}`,
+          gebouwId: offerte.gebouwId ?? null,
+          offerteId: offerte.id,
+        }).catch((logErr) => {
+          req.log.warn(logErr, "Activiteit loggen mislukt (vraag, niet-kritiek)");
+        });
+
+        // Notificatiemail naar behandelaar
         await stuurKlantvraagNotificatie({
           naarEmail,
           naarNaam,
@@ -378,6 +390,18 @@ router.post("/portaal/:token/vraag", async (req, res): Promise<void> => {
           offerteTitel: offerte.titel,
           connectUrl,
         });
+
+        // Bevestigingsmail naar klant — alleen als e-mailadres bekend
+        if (bezoekerEmail) {
+          await stuurKlantvraagBevestiging({
+            naarEmail: bezoekerEmail,
+            naarNaam: bezoekerNaam,
+            offerteId: offerte.id,
+            offertenummer: offerte.offertenummer,
+            offerteTitel: offerte.titel,
+            typeLabel,
+          });
+        }
       } catch (mailErr) {
         req.log.warn(mailErr, "Klantvraag-notificatie mislukt (niet-kritiek)");
       }
@@ -531,6 +555,7 @@ router.post("/portaal/:token/ondertekenen", async (req, res): Promise<void> => {
           type: "project_aangemaakt",
           omschrijving: `Project aangemaakt na ondertekening offerte ${offerte.offertenummer ?? offerte.id}: ${offerte.titel}`,
           gebouwId: offerte.gebouwId ?? null,
+          offerteId: offerte.id,
         });
       } catch (logErr) {
         req.log.warn(logErr, "Activiteit loggen mislukt na ondertekening (niet-kritiek)");
@@ -541,6 +566,7 @@ router.post("/portaal/:token/ondertekenen", async (req, res): Promise<void> => {
       type: "offerte_geaccepteerd",
       omschrijving: `Offerte ${offerte.offertenummer ?? offerte.id} (${offerte.titel}) ondertekend door ${naam}${bedrijf ? ` (${bedrijf})` : ""}`,
       gebouwId: offerte.gebouwId ?? null,
+      offerteId: offerte.id,
     });
 
     if (offerte.klantId != null) {
@@ -709,6 +735,68 @@ router.post("/portaal/:token/afwijzen", async (req, res): Promise<void> => {
     });
 
     res.json({ ok: true });
+
+    // Interne notificatie + e-mail naar behandelaar — fire-and-forget.
+    (async () => {
+      try {
+        const [offerte] = await db
+          .select({
+            id: offertesTable.id,
+            offertenummer: offertesTable.offertenummer,
+            titel: offertesTable.titel,
+            behandeldDoorId: offertesTable.behandeldDoorId,
+            gebouwId: offertesTable.gebouwId,
+          })
+          .from(offertesTable)
+          .where(eq(offertesTable.id, tokenRecord.offerteId));
+
+        if (!offerte) return;
+
+        await logActiviteit({
+          type: "offerte_afgewezen",
+          omschrijving: `Offerte ${offerte.offertenummer ?? offerte.id} (${offerte.titel}) afgewezen via portaal${reden ? `: ${reden.slice(0, 100)}` : ""}`,
+          gebouwId: offerte.gebouwId ?? null,
+          offerteId: offerte.id,
+        }).catch((logErr) => {
+          req.log.warn(logErr, "Activiteit loggen mislukt (afwijzing, niet-kritiek)");
+        });
+
+        let naarEmail: string;
+        let naarNaam: string | null = null;
+
+        if (offerte.behandeldDoorId) {
+          const [beheerder] = await db
+            .select({ email: gebruikersTable.email, naam: gebruikersTable.naam })
+            .from(gebruikersTable)
+            .where(eq(gebruikersTable.id, offerte.behandeldDoorId));
+          if (beheerder) {
+            naarEmail = beheerder.email;
+            naarNaam = beheerder.naam;
+          } else {
+            naarEmail = process.env.MAIL_MAILBOX ?? "app@fpsbrandpreventie.nl";
+          }
+        } else {
+          naarEmail = process.env.MAIL_MAILBOX ?? "app@fpsbrandpreventie.nl";
+        }
+
+        const domein = (process.env.REPLIT_DOMAINS ?? "").split(",")[0]?.trim();
+        const connectUrl = domein
+          ? `https://${domein}/offertes/${offerte.id}`
+          : `https://fpsbrandpreventie.nl/offertes/${offerte.id}`;
+
+        await stuurAfwijzingNotificatie({
+          naarEmail,
+          naarNaam,
+          reden,
+          offerteId: offerte.id,
+          offertenummer: offerte.offertenummer,
+          offerteTitel: offerte.titel,
+          connectUrl,
+        });
+      } catch (mailErr) {
+        req.log.warn(mailErr, "Afwijzing-notificatie mislukt (niet-kritiek)");
+      }
+    })();
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });

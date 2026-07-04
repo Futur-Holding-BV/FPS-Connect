@@ -17,4 +17,6 @@ export interface Activiteit {
   voorziening_nummer?: string | null;
   /** @nullable */
   gebruiker_naam?: string | null;
+  /** @nullable */
+  offerte_id?: number | null;
 }

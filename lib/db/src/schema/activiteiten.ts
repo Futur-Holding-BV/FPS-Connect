@@ -12,6 +12,7 @@ export const activiteitenTable = pgTable("activiteiten", {
   voorzieningNummer: text("voorziening_nummer"),
   gebruikerId: integer("gebruiker_id"),
   gebruikerNaam: text("gebruiker_naam"),
+  offerteId: integer("offerte_id"),
   tijdstip: timestamp("tijdstip").notNull().defaultNow(),
 });
 

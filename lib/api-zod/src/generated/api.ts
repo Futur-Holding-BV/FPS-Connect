@@ -50,7 +50,8 @@ export const GetRecenteActiviteitResponseItem = zod.object({
   "tijdstip": zod.string(),
   "gebouw_naam": zod.string().nullish(),
   "voorziening_nummer": zod.string().nullish(),
-  "gebruiker_naam": zod.string().nullish()
+  "gebruiker_naam": zod.string().nullish(),
+  "offerte_id": zod.number().nullish()
 })
 export const GetRecenteActiviteitResponse = zod.array(GetRecenteActiviteitResponseItem)
 
@@ -2561,7 +2562,8 @@ export const ListMijnActiviteitenResponseItem = zod.object({
   "tijdstip": zod.string(),
   "gebouw_naam": zod.string().nullish(),
   "voorziening_nummer": zod.string().nullish(),
-  "gebruiker_naam": zod.string().nullish()
+  "gebruiker_naam": zod.string().nullish(),
+  "offerte_id": zod.number().nullish()
 })
 export const ListMijnActiviteitenResponse = zod.array(ListMijnActiviteitenResponseItem)
 
@@ -10488,6 +10490,7 @@ export const ListOffertesResponseItem = zod.object({
 }).passthrough().nullish().describe('Geselecteerde commerciële vervolgopties na uitvoering'),
   "vervolg_tekst": zod.string().nullish().describe('Bewerkbare tekst voor het vervolgadvies in de offerte'),
   "verzend_type": zod.string().optional().describe('Verzendmodus: ondertekening (portaal + digitaal tekenen) of contract_klant (klant stuurt eigen contract terug)'),
+  "onbeantwoorde_vragen": zod.number().optional().describe('Aantal klantvragen zonder antwoord voor deze offerte'),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })
@@ -10607,6 +10610,7 @@ export const GetOfferteResponse = zod.object({
 }).passthrough().nullish().describe('Geselecteerde commerciële vervolgopties na uitvoering'),
   "vervolg_tekst": zod.string().nullish().describe('Bewerkbare tekst voor het vervolgadvies in de offerte'),
   "verzend_type": zod.string().optional().describe('Verzendmodus: ondertekening (portaal + digitaal tekenen) of contract_klant (klant stuurt eigen contract terug)'),
+  "onbeantwoorde_vragen": zod.number().optional().describe('Aantal klantvragen zonder antwoord voor deze offerte'),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })
@@ -10719,6 +10723,7 @@ export const UpdateOfferteResponse = zod.object({
 }).passthrough().nullish().describe('Geselecteerde commerciële vervolgopties na uitvoering'),
   "vervolg_tekst": zod.string().nullish().describe('Bewerkbare tekst voor het vervolgadvies in de offerte'),
   "verzend_type": zod.string().optional().describe('Verzendmodus: ondertekening (portaal + digitaal tekenen) of contract_klant (klant stuurt eigen contract terug)'),
+  "onbeantwoorde_vragen": zod.number().optional().describe('Aantal klantvragen zonder antwoord voor deze offerte'),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })

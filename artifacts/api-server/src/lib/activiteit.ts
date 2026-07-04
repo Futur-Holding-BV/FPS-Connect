@@ -13,6 +13,7 @@ type ActiviteitInvoer = {
   voorzieningId?: number | null;
   voorzieningNummer?: string | null;
   gebruikerId?: number | null;
+  offerteId?: number | null;
 };
 
 /**
@@ -52,5 +53,6 @@ export async function logActiviteit(invoer: ActiviteitInvoer): Promise<void> {
     voorzieningNummer: invoer.voorzieningNummer ?? null,
     gebruikerId,
     gebruikerNaam,
+    offerteId: invoer.offerteId ?? null,
   });
 }

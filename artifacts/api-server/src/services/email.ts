@@ -574,6 +574,97 @@ export async function stuurKlantvraagNotificatie(opties: {
 }
 
 /**
+ * Stuurt een bevestigingsmail naar de klant/bezoeker die een vraag heeft
+ * gesteld via het portaal. Gooit nooit — mislukkingen worden stilzwijgend genegeerd.
+ */
+export async function stuurKlantvraagBevestiging(opties: {
+  naarEmail: string;
+  naarNaam: string | null;
+  offerteId: number;
+  offertenummer: string | null;
+  offerteTitel: string;
+  typeLabel: string;
+}): Promise<void> {
+  const { naarEmail, naarNaam, offerteId, offertenummer, offerteTitel, typeLabel } = opties;
+
+  if (!isGeconfigureerd()) {
+    logger.warn({ offerteId }, "E-mailservice niet geconfigureerd — klantvraag-bevestiging niet verstuurd");
+    return;
+  }
+
+  const offerteLabel = offertenummer ? `offerte ${escapeHtml(offertenummer)}` : `offerte #${offerteId}`;
+  const aanhef = naarNaam ? `Geachte ${escapeHtml(naarNaam)},` : "Geachte klant,";
+  const typeOmschrijving = typeLabel === "wijziging" ? "wijzigingsverzoek" : "vraag";
+  const onderwerp = `Uw ${typeOmschrijving} is ontvangen — ${offertenummer ?? `#${offerteId}`}`;
+
+  const html = mailShell({
+    titel: onderwerp,
+    kopje: `Uw ${typeOmschrijving} is ontvangen`,
+    paragrafen: [
+      aanhef,
+      `Wij hebben uw ${typeOmschrijving} ontvangen over <strong>${escapeHtml(offerteTitel)}</strong> (${offerteLabel}).`,
+      "Ons team bekijkt uw bericht zo snel mogelijk en neemt contact met u op. U kunt ook rechtstreeks contact opnemen met uw contactpersoon.",
+    ],
+    voettekst: `Dit bericht is automatisch gegenereerd door FPS Brandpreventie &bull; U ontvangt dit omdat u een vraag heeft gesteld via ons portaal.`,
+  });
+
+  try {
+    await verstuurMail({ naarEmail, naarNaam: naarNaam ?? undefined, onderwerp, html, soort: "klantvraag" });
+  } catch (err) {
+    logger.warn({ err, offerteId }, "Klantvraag-bevestigingsmail mislukt (niet-kritiek)");
+  }
+}
+
+/**
+ * Stuurt een notificatiemail naar de behandelend beheerder (of algemene postbus)
+ * zodra een klant een offerte heeft afgewezen via het portaal.
+ * Gooit nooit — mislukkingen worden stilzwijgend genegeerd.
+ */
+export async function stuurAfwijzingNotificatie(opties: {
+  naarEmail: string;
+  naarNaam?: string | null;
+  reden: string | null;
+  offerteId: number;
+  offertenummer: string | null;
+  offerteTitel: string;
+  connectUrl: string;
+}): Promise<void> {
+  const { naarEmail, naarNaam, reden, offerteId, offertenummer, offerteTitel, connectUrl } = opties;
+
+  if (!isGeconfigureerd()) {
+    logger.warn({ offerteId }, "E-mailservice niet geconfigureerd — afwijzing-notificatie niet verstuurd");
+    return;
+  }
+
+  const offerteLabel = offertenummer ? `offerte ${escapeHtml(offertenummer)}` : `offerte #${offerteId}`;
+  const onderwerp = `Offerte afgewezen — ${offertenummer ?? `#${offerteId}`}`;
+
+  const paragrafen: string[] = [
+    `Via het klantportaal is <strong>${escapeHtml(offerteTitel)}</strong> (${offerteLabel}) <strong>afgewezen</strong>.`,
+  ];
+  if (reden) {
+    paragrafen.push(
+      `<strong>Opgegeven reden:</strong><br><blockquote style="margin:0 0 16px;padding:12px 16px;background:#f4f4f5;border-left:4px solid #e11d48;border-radius:4px;font-style:italic;color:#3f3f46;">${escapeHtml(knip(reden, 500))}</blockquote>`,
+    );
+  }
+  paragrafen.push("Open de offerte in FPS Connect om de afwijzing te verwerken.");
+
+  const html = mailShell({
+    titel: onderwerp,
+    kopje: "Offerte afgewezen door klant",
+    paragrafen,
+    knop: { label: "Bekijk offerte in FPS Connect", link: connectUrl },
+    voettekst: "Dit bericht is automatisch gegenereerd door FPS Connect &bull; U ontvangt dit omdat u als behandelaar op deze offerte staat.",
+  });
+
+  try {
+    await verstuurMail({ naarEmail, naarNaam: naarNaam ?? undefined, onderwerp, html, soort: "klantvraag" });
+  } catch (err) {
+    logger.warn({ err, offerteId }, "Afwijzing-notificatiemail mislukt (niet-kritiek)");
+  }
+}
+
+/**
  * Stuurt een notificatiemail naar de behandelend beheerder (of algemene postbus)
  * zodra een klant een offerte heeft ondertekend via het portaal.
  * Gooit nooit — mislukkingen worden gelogd en stilzwijgend genegeerd.

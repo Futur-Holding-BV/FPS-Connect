@@ -317,6 +317,14 @@ export default function OffertesPagina() {
                         <Sparkles className="h-3 w-3" /> AI hoog
                       </Badge>
                     )}
+                    {(o as { onbeantwoorde_vragen?: number }).onbeantwoorde_vragen != null &&
+                      (o as { onbeantwoorde_vragen?: number }).onbeantwoorde_vragen! > 0 && (
+                      <Badge className="bg-rose-600 text-white border-rose-600 gap-1">
+                        <AlertTriangle className="h-3 w-3" />
+                        {(o as { onbeantwoorde_vragen?: number }).onbeantwoorde_vragen!}{" "}
+                        {(o as { onbeantwoorde_vragen?: number }).onbeantwoorde_vragen! === 1 ? "vraag" : "vragen"}
+                      </Badge>
+                    )}
                     {o.portaal_status === "ondertekend" && o.gebouw_id && (
                       <div onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
                         <Link href={`/gebouwen/${o.gebouw_id}`}>

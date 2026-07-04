@@ -359,6 +359,23 @@ router.get("/offertes", lezen, async (req, res): Promise<void> => {
       aiScoreMap.set(s.offerteId, ratio >= 0.67 ? "hoog" : ratio >= 0.34 ? "midden" : "laag");
     }
 
+    // Onbeantwoorde vragen per offerte (vragen zonder antwoord, excl. afwijzingen).
+    const onbeantwoordeVragenRijen = await db
+      .select({
+        offerteId: offerteVragenTable.offerteId,
+        aantal: sql<number>`count(*)::int`,
+      })
+      .from(offerteVragenTable)
+      .where(and(
+        sql`${offerteVragenTable.antwoord} is null`,
+        not(sql`${offerteVragenTable.type} = 'afwijzing'`),
+      ))
+      .groupBy(offerteVragenTable.offerteId);
+    const onbeantwoordMap = new Map<number, number>();
+    for (const r of onbeantwoordeVragenRijen) {
+      if (r.offerteId) onbeantwoordMap.set(r.offerteId, r.aantal);
+    }
+
     res.json(
       rijen.map((r) => ({
         id: r.o.id,
@@ -388,6 +405,7 @@ router.get("/offertes", lezen, async (req, res): Promise<void> => {
         aangemaakt_op: iso(r.o.aangemaaktOp),
         bijgewerkt_op: iso(r.o.bijgewerktOp),
         ai_acceptatiescore: aiScoreMap.get(r.o.id) ?? null,
+        onbeantwoorde_vragen: onbeantwoordMap.get(r.o.id) ?? 0,
       })),
     );
   } catch (err) {

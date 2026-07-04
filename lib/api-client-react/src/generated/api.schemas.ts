@@ -944,6 +944,8 @@ export interface Activiteit {
   voorziening_nummer?: string | null;
   /** @nullable */
   gebruiker_naam?: string | null;
+  /** @nullable */
+  offerte_id?: number | null;
 }
 
 export interface StatusVerdeling {
@@ -4521,6 +4523,8 @@ export interface Offerte {
   vervolg_tekst?: string | null;
   /** Verzendmodus: ondertekening (portaal + digitaal tekenen) of contract_klant (klant stuurt eigen contract terug) */
   verzend_type?: string;
+  /** Aantal klantvragen zonder antwoord voor deze offerte */
+  onbeantwoorde_vragen?: number;
   aangemaakt_op: string;
   bijgewerkt_op: string;
 }

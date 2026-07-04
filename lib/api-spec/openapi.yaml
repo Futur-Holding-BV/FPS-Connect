@@ -19990,6 +19990,8 @@ components:
           type: ["string", "null"]
         gebruiker_naam:
           type: ["string", "null"]
+        offerte_id:
+          type: ["integer", "null"]
 
     StatusVerdeling:
       type: object
@@ -24938,6 +24940,9 @@ components:
         verzend_type:
           type: string
           description: "Verzendmodus: ondertekening (portaal + digitaal tekenen) of contract_klant (klant stuurt eigen contract terug)"
+        onbeantwoorde_vragen:
+          type: integer
+          description: "Aantal klantvragen zonder antwoord voor deze offerte"
         aangemaakt_op:
           type: string
         bijgewerkt_op:
