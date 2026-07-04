@@ -58,6 +58,32 @@ Vier aanvullende prognose-KPI's toegevoegd + begroting-kwartaalvergelijking in c
 - Legenda: "Begroting" markering zichtbaar zodra `begroting_per_kwartaal` aanwezig is
 - `kwMax` berekend over max(prognose, begroting) zodat beide balken correct schalen
 
+---
+
+## 2026-07-04 — V1.4 Opleverrapportage afronden
+
+**Uitvoering:** volledig | **Diepere lagen:** volledig | **Getest:** typecheck schoon
+
+V1.4 Opleverrapportage afgerond op basis van de bestaande `print.tsx`. De bestaande composer was al grotendeels gebouwd; onderstaande correcties maken de workflow sluitend.
+
+**Gecorrigeerde punten:**
+
+1. **Rapport aanmaken → direct naar print-editor** — "Nieuw conceptrapport" in `gebouw-rapporten.tsx` navigeert na aanmaken automatisch naar `/gebouwen/:id/print?rapport_id=X`, zodat auto-save direct actief is en de gebruiker direct kan samenstellen.
+
+2. **Voorblad concept-badge** — "Concept — niet definitief" op het voorblad werd altijd getoond, ook bij definitieve rapporten. Badge is nu conditioneel: verborgen wanneer `huidigRapport.status === "definitief"`.
+
+3. **Rapportversie** — was hardcoded "1.0". Wordt nu gelezen uit `huidigRapport.versie`; fallback "1.0" wanneer geen rapport gekoppeld is.
+
+4. **Rapportdatum definitief** — bij definitieve rapporten toont de koptekst nu de bevrozen datum (`bevroren_op`) in plaats van de huidige systeemtijd.
+
+5. **Definitief rapport volledig vergrendeld** — bij definitieve rapporten vervangt een vergrendelingsscherm in het composer-paneel alle bewerkingsbesturingselementen (rapporttype-radios, sectie-checkboxes, spot-selectie, tekeningen, bijlagen, e-mailmodus). Gebruikers zien alleen de opgeslagen configuratie als leesbare weergave. "Opslaan in DMS" is verborgen voor definitieve rapporten (de DMS-kopie is al aangemaakt bij definitief maken). De bijlagenbundel-download blijft beschikbaar — die leest frozen data, niet vrij te bewerken staat. Typecheck: clean.
+
+**Niet gewijzigd:** API-routes, DB-schema, OpenAPI-spec, DMS-koppeling (bewaarOpleverrapport), certificaat-accordering, spotdetail-rendering — allemaal al correct aanwezig.
+
+---
+
+## 2026-07-04 — TypeScript TS7030-opschoning api-server
+
 ## 2026-07-04 — FIE Fase 3: Continue jaarbedrijfsprognose (volledig)
 
 **Uitvoering:** volledig | **Getest:** typecheck clean (api-server + firevault); beide routes bereikbaar (401 zonder auth — correct)

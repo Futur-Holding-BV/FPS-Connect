@@ -1610,8 +1610,10 @@ export default function GebouwPrint() {
     }
   }
 
-  const rapportDatum   = nu.toLocaleDateString("nl-NL");
-  const rapportVersie  = "1.0";
+  const rapportDatum   = huidigRapport?.bevroren_op
+    ? new Date(huidigRapport.bevroren_op).toLocaleDateString("nl-NL")
+    : nu.toLocaleDateString("nl-NL");
+  const rapportVersie  = huidigRapport?.versie != null ? String(huidigRapport.versie) : "1.0";
   const documentnummer = `OPL-${gebouw.projectnummer ?? gebouw.werknummer ?? gebouwId}`;
   const opsteller      = gebruiker?.naam ?? "—";
   const magOpslaanInDms = heeftNiveau("bibliotheek", 3);
@@ -2106,7 +2108,7 @@ export default function GebouwPrint() {
               Selectie wordt automatisch opgeslagen
             </span>
           )}
-          {magOpslaanInDms && (
+          {magOpslaanInDms && huidigRapport?.status !== "definitief" && (
             <Button size="sm" variant="outline" onClick={slaOpInDms} disabled={!allesGereed || bezigOpslaan}>
               {bezigOpslaan ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
               {bezigOpslaan ? "Opslaan…" : "Opslaan in DMS"}
@@ -2146,179 +2148,232 @@ export default function GebouwPrint() {
         {/* ── Composer-paneel ── */}
         <div className="prt-cmpr no-print">
 
-          {/* Rapporttype */}
-          <div className="cmpr-sectie">
-            <div className="cmpr-sectie-kop">Rapporttype</div>
-            {(["werkpakket_monteur", "voortgang", "opleverrapport", "opleverdossier"] as RapportType[]).map(type => (
-              <label key={type} className={`cmpr-type-optie ${rapportType === type ? "cmpr-type-aktief" : ""}`}>
-                <input type="radio" name="rapporttype" value={type} checked={rapportType === type} onChange={() => kiesRapportType(type)} className="cmpr-check" style={{ marginTop: 2 }} />
-                <div>
-                  <div className="cmpr-type-naam">{RAPPORT_TYPE_LABEL[type]}</div>
-                  <div className="cmpr-type-sub">{RAPPORT_TYPE_OMSCHRIJVING[type]}</div>
+          {huidigRapport?.status === "definitief" ? (
+            /* ── Vergrendeld: definitief rapport ── */
+            <>
+              <div className="cmpr-sectie" style={{ background: "#f0fdf4" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 600, color: "#15803d" }}>
+                  <Lock size={12} />
+                  Definitief rapport
                 </div>
-              </label>
-            ))}
-          </div>
-
-          {/* Rapportmodel */}
-          <div className="cmpr-sectie">
-            <div className="cmpr-sectie-kop">
-              <LayoutTemplate size={11} />
-              Rapportmodel
-            </div>
-            <div className="cmpr-model-grid">
-              {RAPPORT_MODELLEN.map(model => (
-                <button
-                  key={model.id}
-                  type="button"
-                  className="cmpr-model-btn"
-                  onClick={() => setSecties(model.secties)}
-                >
-                  {model.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Secties */}
-          <div className="cmpr-sectie">
-            <div className="cmpr-sectie-kop">
-              <Settings2 size={11} />
-              Secties
-              <button type="button" className="cmpr-sectie-kop-actie" onClick={() => setSecties(PRESET_SECTIES[rapportType])}>Reset</button>
-            </div>
-            {SECTIES_VOLGORDE.map(sleutel => (
-              <label key={sleutel} className="cmpr-checkregel">
-                <input type="checkbox" checked={secties[sleutel]} onChange={e => updateSecties(sleutel, e.target.checked)} className="cmpr-check" />
-                {SECTIES_LABELS[sleutel]}
-              </label>
-            ))}
-            {secties.spotdetails && (
-              <label className="cmpr-checkregel cmpr-sub-optie" style={{ opacity: (clusters ?? []).length > 0 ? 1 : 0.4 }}>
-                <input type="checkbox" checked={groepeerOpCluster} disabled={(clusters ?? []).length === 0} onChange={e => setGroepeerOpCluster(e.target.checked)} className="cmpr-check" />
-                Groeperen op cluster
-              </label>
-            )}
-          </div>
-
-          {/* Spots per verdieping */}
-          {verdiepingen.length > 0 && (
-            <div className="cmpr-sectie">
-              <div className="cmpr-sectie-kop">
-                Spots
-                <button type="button" className="cmpr-sectie-kop-actie" onClick={() => setSpotSelectie({})}>Alles</button>
+                <div style={{ fontSize: 10, color: "#166534", marginTop: 4, lineHeight: 1.5 }}>
+                  Dit rapport is definitief gemaakt en kan niet meer worden gewijzigd. Gebruik "Afdrukken / PDF" om te downloaden.
+                </div>
               </div>
-              {verdiepingen.map(v => (
-                <VerdiepingSpotSelector
-                  key={v.id}
-                  verdieping={v}
-                  geselecteerdeSpotIds={spotSelectie[v.id]}
-                  onChange={updateSpotSelectie}
-                />
-              ))}
-            </div>
-          )}
+              <div className="cmpr-sectie">
+                <div className="cmpr-sectie-kop">Rapporttype</div>
+                <div style={{ fontSize: 11.5, fontWeight: 600, color: "#0f172a", padding: "2px 0" }}>
+                  {RAPPORT_TYPE_LABEL[rapportType]}
+                </div>
+              </div>
+              <div className="cmpr-sectie">
+                <div className="cmpr-sectie-kop">Opgeslagen secties</div>
+                {SECTIES_VOLGORDE.filter(s => secties[s]).map(s => (
+                  <div key={s} style={{ fontSize: 11, color: "#475569", padding: "1.5px 0" }}>
+                    {SECTIES_LABELS[s]}
+                  </div>
+                ))}
+              </div>
+              {/* Bijlagenbundel downloaden is wél toegestaan bij definitief (leest frozen data) */}
+              {secties.bijlagen && geselecteerdeBijlagen.size > 0 && rapportId && (
+                <div className="cmpr-sectie">
+                  <button
+                    type="button"
+                    className="cmpr-model-btn cmpr-bundle-btn"
+                    onClick={downloadBijlagenbundel}
+                    disabled={bundleBezig}
+                  >
+                    {bundleBezig
+                      ? <Loader2 size={11} className="animate-spin" />
+                      : <Download size={11} />}
+                    {bundleBezig
+                      ? "Genereren..."
+                      : `Bijlagenbundel downloaden (${geselecteerdeBijlagen.size})`}
+                  </button>
+                  <div className="cmpr-bundle-hint">
+                    Documenten van meer dan 5 pagina's worden samengevat door AI.
+                  </div>
+                </div>
+              )}
+            </>
+          ) : (
+            /* ── Bewerkbaar: concept rapport ── */
+            <>
+              {/* Rapporttype */}
+              <div className="cmpr-sectie">
+                <div className="cmpr-sectie-kop">Rapporttype</div>
+                {(["werkpakket_monteur", "voortgang", "opleverrapport", "opleverdossier"] as RapportType[]).map(type => (
+                  <label key={type} className={`cmpr-type-optie ${rapportType === type ? "cmpr-type-aktief" : ""}`}>
+                    <input type="radio" name="rapporttype" value={type} checked={rapportType === type} onChange={() => kiesRapportType(type)} className="cmpr-check" style={{ marginTop: 2 }} />
+                    <div>
+                      <div className="cmpr-type-naam">{RAPPORT_TYPE_LABEL[type]}</div>
+                      <div className="cmpr-type-sub">{RAPPORT_TYPE_OMSCHRIJVING[type]}</div>
+                    </div>
+                  </label>
+                ))}
+              </div>
 
-          {/* Tekeningen-selectie */}
-          {secties.tekeningen && projectTekeningen.length > 0 && (
-            <div className="cmpr-sectie">
-              <div className="cmpr-sectie-kop">
-                Tekeningen selecteren
-                <button type="button" className="cmpr-sectie-kop-actie" onClick={() => setGeselecteerdeTekeningen(new Set(projectTekeningen.map(t => t.id)))}>Alles</button>
+              {/* Rapportmodel */}
+              <div className="cmpr-sectie">
+                <div className="cmpr-sectie-kop">
+                  <LayoutTemplate size={11} />
+                  Rapportmodel
+                </div>
+                <div className="cmpr-model-grid">
+                  {RAPPORT_MODELLEN.map(model => (
+                    <button
+                      key={model.id}
+                      type="button"
+                      className="cmpr-model-btn"
+                      onClick={() => setSecties(model.secties)}
+                    >
+                      {model.label}
+                    </button>
+                  ))}
+                </div>
               </div>
-              {projectTekeningen.map(t => (
-                <label key={t.id} className="cmpr-checkregel cmpr-sub-optie">
-                  <input type="checkbox" checked={geselecteerdeTekeningen.has(t.id)} onChange={ev => {
-                    const nieuw = new Set(geselecteerdeTekeningen);
-                    if (ev.target.checked) nieuw.add(t.id); else nieuw.delete(t.id);
-                    setGeselecteerdeTekeningen(nieuw);
-                  }} className="cmpr-check" />
-                  <span className="cmpr-email-onderwerp">{t.naam} — {TEKENING_TYPELABEL[t.type] ?? t.type}</span>
-                </label>
-              ))}
-            </div>
-          )}
 
-          {/* Bijlagen (DMS) — selectie */}
-          {secties.bijlagen && (documenten ?? []).filter((d: any) => !d.gearchiveerd).length > 0 && (
-            <div className="cmpr-sectie">
-              <div className="cmpr-sectie-kop">
-                Bijlagen selecteren
-                <button type="button" className="cmpr-sectie-kop-actie" onClick={() => setGeselecteerdeBijlagen(new Set((documenten ?? []).filter((d: any) => !d.gearchiveerd).map((d: any) => d.id)))}>Alles</button>
+              {/* Secties */}
+              <div className="cmpr-sectie">
+                <div className="cmpr-sectie-kop">
+                  <Settings2 size={11} />
+                  Secties
+                  <button type="button" className="cmpr-sectie-kop-actie" onClick={() => setSecties(PRESET_SECTIES[rapportType])}>Reset</button>
+                </div>
+                {SECTIES_VOLGORDE.map(sleutel => (
+                  <label key={sleutel} className="cmpr-checkregel">
+                    <input type="checkbox" checked={secties[sleutel]} onChange={e => updateSecties(sleutel, e.target.checked)} className="cmpr-check" />
+                    {SECTIES_LABELS[sleutel]}
+                  </label>
+                ))}
+                {secties.spotdetails && (
+                  <label className="cmpr-checkregel cmpr-sub-optie" style={{ opacity: (clusters ?? []).length > 0 ? 1 : 0.4 }}>
+                    <input type="checkbox" checked={groepeerOpCluster} disabled={(clusters ?? []).length === 0} onChange={e => setGroepeerOpCluster(e.target.checked)} className="cmpr-check" />
+                    Groeperen op cluster
+                  </label>
+                )}
               </div>
-              {(documenten ?? []).filter((d: any) => !d.gearchiveerd).map((d: any) => (
-                <label key={d.id} className="cmpr-checkregel cmpr-sub-optie">
-                  <input type="checkbox" checked={geselecteerdeBijlagen.has(d.id)} onChange={ev => {
-                    const nieuw = new Set(geselecteerdeBijlagen);
-                    if (ev.target.checked) nieuw.add(d.id); else nieuw.delete(d.id);
-                    setGeselecteerdeBijlagen(nieuw);
-                  }} className="cmpr-check" />
-                  <span className="cmpr-email-onderwerp">{d.naam} <span className="cmpr-ai-badge">{DOCUMENTTYPE_LABEL[d.documenttype] ?? d.documenttype}</span></span>
-                </label>
-              ))}
-            </div>
-          )}
 
-          {/* Bijlagenbundel downloaden */}
-          {secties.bijlagen && geselecteerdeBijlagen.size > 0 && rapportId && (
-            <div className="cmpr-sectie">
-              <button
-                type="button"
-                className="cmpr-model-btn cmpr-bundle-btn"
-                onClick={downloadBijlagenbundel}
-                disabled={bundleBezig}
-              >
-                {bundleBezig
-                  ? <Loader2 size={11} className="animate-spin" />
-                  : <Download size={11} />}
-                {bundleBezig
-                  ? "Genereren..."
-                  : `Bijlagenbundel downloaden (${geselecteerdeBijlagen.size})`}
-              </button>
-              <div className="cmpr-bundle-hint">
-                Documenten van meer dan 5 pagina's worden samengevat door AI.
-              </div>
-            </div>
-          )}
+              {/* Spots per verdieping */}
+              {verdiepingen.length > 0 && (
+                <div className="cmpr-sectie">
+                  <div className="cmpr-sectie-kop">
+                    Spots
+                    <button type="button" className="cmpr-sectie-kop-actie" onClick={() => setSpotSelectie({})}>Alles</button>
+                  </div>
+                  {verdiepingen.map(v => (
+                    <VerdiepingSpotSelector
+                      key={v.id}
+                      verdieping={v}
+                      geselecteerdeSpotIds={spotSelectie[v.id]}
+                      onChange={updateSpotSelectie}
+                    />
+                  ))}
+                </div>
+              )}
 
-          {/* E-mails */}
-          {secties.relevante_emails && (
-            <div className="cmpr-sectie">
-              <div className="cmpr-sectie-kop">
-                <Mail size={11} />
-                E-mails
-              </div>
-              <div className="cmpr-email-modus">
-                <label className="cmpr-checkregel">
-                  <input type="radio" name="emailmodus" checked={emailModus === "ai"} onChange={() => setEmailModus("ai")} className="cmpr-check" />
-                  AI-filter (automatisch)
-                </label>
-                <label className="cmpr-checkregel">
-                  <input type="radio" name="emailmodus" checked={emailModus === "handmatig"} onChange={() => {
-                    setEmailModus("handmatig");
-                    if (handmatigeEmailSelectie.size === 0 && (emails ?? []).length > 0) {
-                      setHandmatigeEmailSelectie(new Set((emails ?? []).filter(e => e.ai_relevant !== false).map(e => e.id)));
-                    }
-                  }} className="cmpr-check" />
-                  Handmatig selecteren
-                </label>
-              </div>
-              {emailModus === "handmatig" && (emails ?? []).length > 0 && (
-                <div className="cmpr-email-lijst">
-                  {(emails ?? []).map(e => (
-                    <label key={e.id} className="cmpr-checkregel cmpr-email-regel">
-                      <input type="checkbox" checked={handmatigeEmailSelectie.has(e.id)} onChange={ev => {
-                        const nieuw = new Set(handmatigeEmailSelectie);
-                        if (ev.target.checked) nieuw.add(e.id); else nieuw.delete(e.id);
-                        setHandmatigeEmailSelectie(nieuw);
-                      }} className="cmpr-check" style={{ marginTop: 2 }} />
-                      <span className="cmpr-email-onderwerp">{e.onderwerp || e.bestandsnaam || "Geen onderwerp"}</span>
-                      {e.ai_relevant !== false && <span className="cmpr-ai-badge">AI</span>}
+              {/* Tekeningen-selectie */}
+              {secties.tekeningen && projectTekeningen.length > 0 && (
+                <div className="cmpr-sectie">
+                  <div className="cmpr-sectie-kop">
+                    Tekeningen selecteren
+                    <button type="button" className="cmpr-sectie-kop-actie" onClick={() => setGeselecteerdeTekeningen(new Set(projectTekeningen.map(t => t.id)))}>Alles</button>
+                  </div>
+                  {projectTekeningen.map(t => (
+                    <label key={t.id} className="cmpr-checkregel cmpr-sub-optie">
+                      <input type="checkbox" checked={geselecteerdeTekeningen.has(t.id)} onChange={ev => {
+                        const nieuw = new Set(geselecteerdeTekeningen);
+                        if (ev.target.checked) nieuw.add(t.id); else nieuw.delete(t.id);
+                        setGeselecteerdeTekeningen(nieuw);
+                      }} className="cmpr-check" />
+                      <span className="cmpr-email-onderwerp">{t.naam} — {TEKENING_TYPELABEL[t.type] ?? t.type}</span>
                     </label>
                   ))}
                 </div>
               )}
-            </div>
+
+              {/* Bijlagen (DMS) — selectie */}
+              {secties.bijlagen && (documenten ?? []).filter((d: any) => !d.gearchiveerd).length > 0 && (
+                <div className="cmpr-sectie">
+                  <div className="cmpr-sectie-kop">
+                    Bijlagen selecteren
+                    <button type="button" className="cmpr-sectie-kop-actie" onClick={() => setGeselecteerdeBijlagen(new Set((documenten ?? []).filter((d: any) => !d.gearchiveerd).map((d: any) => d.id)))}>Alles</button>
+                  </div>
+                  {(documenten ?? []).filter((d: any) => !d.gearchiveerd).map((d: any) => (
+                    <label key={d.id} className="cmpr-checkregel cmpr-sub-optie">
+                      <input type="checkbox" checked={geselecteerdeBijlagen.has(d.id)} onChange={ev => {
+                        const nieuw = new Set(geselecteerdeBijlagen);
+                        if (ev.target.checked) nieuw.add(d.id); else nieuw.delete(d.id);
+                        setGeselecteerdeBijlagen(nieuw);
+                      }} className="cmpr-check" />
+                      <span className="cmpr-email-onderwerp">{d.naam} <span className="cmpr-ai-badge">{DOCUMENTTYPE_LABEL[d.documenttype] ?? d.documenttype}</span></span>
+                    </label>
+                  ))}
+                </div>
+              )}
+
+              {/* Bijlagenbundel downloaden */}
+              {secties.bijlagen && geselecteerdeBijlagen.size > 0 && rapportId && (
+                <div className="cmpr-sectie">
+                  <button
+                    type="button"
+                    className="cmpr-model-btn cmpr-bundle-btn"
+                    onClick={downloadBijlagenbundel}
+                    disabled={bundleBezig}
+                  >
+                    {bundleBezig
+                      ? <Loader2 size={11} className="animate-spin" />
+                      : <Download size={11} />}
+                    {bundleBezig
+                      ? "Genereren..."
+                      : `Bijlagenbundel downloaden (${geselecteerdeBijlagen.size})`}
+                  </button>
+                  <div className="cmpr-bundle-hint">
+                    Documenten van meer dan 5 pagina's worden samengevat door AI.
+                  </div>
+                </div>
+              )}
+
+              {/* E-mails */}
+              {secties.relevante_emails && (
+                <div className="cmpr-sectie">
+                  <div className="cmpr-sectie-kop">
+                    <Mail size={11} />
+                    E-mails
+                  </div>
+                  <div className="cmpr-email-modus">
+                    <label className="cmpr-checkregel">
+                      <input type="radio" name="emailmodus" checked={emailModus === "ai"} onChange={() => setEmailModus("ai")} className="cmpr-check" />
+                      AI-filter (automatisch)
+                    </label>
+                    <label className="cmpr-checkregel">
+                      <input type="radio" name="emailmodus" checked={emailModus === "handmatig"} onChange={() => {
+                        setEmailModus("handmatig");
+                        if (handmatigeEmailSelectie.size === 0 && (emails ?? []).length > 0) {
+                          setHandmatigeEmailSelectie(new Set((emails ?? []).filter(e => e.ai_relevant !== false).map(e => e.id)));
+                        }
+                      }} className="cmpr-check" />
+                      Handmatig selecteren
+                    </label>
+                  </div>
+                  {emailModus === "handmatig" && (emails ?? []).length > 0 && (
+                    <div className="cmpr-email-lijst">
+                      {(emails ?? []).map(e => (
+                        <label key={e.id} className="cmpr-checkregel cmpr-email-regel">
+                          <input type="checkbox" checked={handmatigeEmailSelectie.has(e.id)} onChange={ev => {
+                            const nieuw = new Set(handmatigeEmailSelectie);
+                            if (ev.target.checked) nieuw.add(e.id); else nieuw.delete(e.id);
+                            setHandmatigeEmailSelectie(nieuw);
+                          }} className="cmpr-check" style={{ marginTop: 2 }} />
+                          <span className="cmpr-email-onderwerp">{e.onderwerp || e.bestandsnaam || "Geen onderwerp"}</span>
+                          {e.ai_relevant !== false && <span className="cmpr-ai-badge">AI</span>}
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
           )}
 
         </div>{/* .prt-cmpr */}
@@ -2353,7 +2408,9 @@ export default function GebouwPrint() {
         <div className="prt-cover-main">
           <div className="prt-cover-accentlijn" style={studioAccentKleur ? { background: studioAccentKleur } : undefined} />
           <div className="prt-cover-type">{RAPPORT_TYPE_LABEL[rapportType]}</div>
-          <div style={{ marginBottom: 4 }}><span className="prt-concept-badge" style={{ fontSize: 10, padding: "2px 8px" }}>Concept — niet definitief</span></div>
+          {(!huidigRapport || huidigRapport.status !== "definitief") && (
+            <div style={{ marginBottom: 4 }}><span className="prt-concept-badge" style={{ fontSize: 10, padding: "2px 8px" }}>Concept — niet definitief</span></div>
+          )}
           <div className="prt-cover-naam">{gebouw.naam}</div>
           {(gebouw.adres || gebouw.stad) && (
             <div className="prt-cover-adres">

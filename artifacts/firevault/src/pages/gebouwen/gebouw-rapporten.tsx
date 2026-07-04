@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import {
   useListGebouwRapporten,
   useCreateRapport,
@@ -123,6 +123,7 @@ function StatusIcoon({ status }: { status: string }) {
 export default function GebouwRapporten({ gebouwId, isBeheerder }: { gebouwId: number; isBeheerder: boolean }) {
   const { toast } = useToast();
   const qc = useQueryClient();
+  const [, setLocation] = useLocation();
 
   const { data: rapporten = [], isLoading } = useListGebouwRapporten(gebouwId);
 
@@ -147,18 +148,19 @@ export default function GebouwRapporten({ gebouwId, isBeheerder }: { gebouwId: n
 
   async function handleNieuw() {
     try {
-      await maakNieuw.mutateAsync({
+      const nieuwRapport = await maakNieuw.mutateAsync({
         id: gebouwId,
         data: {
           rapport_type: nieuwType,
           titel: nieuwTitel.trim() || null,
         },
       });
-      toast({ title: "Conceptrapport aangemaakt" });
+      toast({ title: "Conceptrapport aangemaakt", description: "U wordt doorgestuurd naar de rapporteditor." });
       setNieuwOpen(false);
       setNieuwTitel("");
       setNieuwType("opleverrapport");
       invalideer();
+      setLocation(`/gebouwen/${gebouwId}/print?rapport_id=${nieuwRapport.id}`);
     } catch {
       toast({ title: "Aanmaken mislukt", variant: "destructive" });
     }
