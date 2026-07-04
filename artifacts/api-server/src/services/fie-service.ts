@@ -2,7 +2,8 @@
 // Alle margeberekeningen, AK-normderivaties en context-analyses lopen via dit service-module.
 // KRITISCH: berekenFieContext gebruikt DEZELFDE berekeningsvolgorde als detail.tsx (frontend),
 // zodat projectomzet, kostprijs en margeadvies identiek zijn aan de getoonde calculatietotalen.
-import { db, fieJaarbegrotingenTable, fieAkPostenTable, modCalcHeadersTable, modCalcRegelsTable } from "@workspace/db";
+import { db, fieJaarbegrotingenTable, fieAkPostenTable, fieCapaciteitSnapshotsTable, modCalcHeadersTable, modCalcRegelsTable } from "@workspace/db";
+import { medewerkersTable } from "@workspace/db/schema";
 import { eq, and, desc } from "drizzle-orm";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -242,5 +243,139 @@ export async function berekenFieContext(calculatieId: number): Promise<FieCalcul
     adviesStatus,
     adviesTekst,
     opslagAkPct: opslagAk,
+  };
+}
+
+// ─── HRM-afgeleid capaciteitsoverzicht ───────────────────────────────────────
+
+export interface FieCapaciteitResultaat {
+  boekjaar: number;
+  // HRM-afgeleid (uit contracturen_per_week van actieve medewerkers)
+  aantalMedewerkersHrm: number;
+  totaalContractUrenPerWeek: number;
+  totaalBrutoUrenJaar: number;       // contracturen × 52
+  totaalProductieveUrenHrm: number;  // bruto × 0.877 (52-6,5 weken)/52
+  totaalFteHrm: number;              // contracturen / 40
+  // Snapshots (handmatig ingevoerd)
+  aantalSnapshots: number;
+  totaalProductieveUrenSnapshots: number;
+  // Effectief (voorkeur: snapshots als aanwezig, anders HRM)
+  effectieveProductieveUren: number;
+  bron: "snapshot" | "hrm" | "leeg";
+}
+
+/**
+ * berekenCapaciteit: leidt productieve uren af uit HRM-contracturen + snapshots.
+ * Productiviteitsfactor: 52 werkbare weken − 6.5 verlof/ziekte/feestdagen = 45.5 weken → factor 45.5/52 ≈ 0.875
+ */
+export async function berekenCapaciteit(boekjaar: number): Promise<FieCapaciteitResultaat> {
+  const PRODUCTIVITEITSFACTOR = 45.5 / 52; // ~87.5% van bruto uren zijn productief
+  const STANDAARD_UU_PER_WEEK = 40;
+
+  // HRM: actieve medewerkers met contracturen
+  const actieveMedewerkers = await db
+    .select({ contracturenPerWeek: medewerkersTable.contracturenPerWeek })
+    .from(medewerkersTable)
+    .where(eq(medewerkersTable.actief, true));
+
+  const aantalMedewerkersHrm = actieveMedewerkers.length;
+  const totaalContractUrenPerWeek = rnd2(
+    actieveMedewerkers.reduce((s, m) => s + (m.contracturenPerWeek ?? STANDAARD_UU_PER_WEEK), 0)
+  );
+  const totaalBrutoUrenJaar = rnd2(totaalContractUrenPerWeek * 52);
+  const totaalProductieveUrenHrm = rnd2(totaalBrutoUrenJaar * PRODUCTIVITEITSFACTOR);
+  const totaalFteHrm = rnd2(totaalContractUrenPerWeek / STANDAARD_UU_PER_WEEK);
+
+  // Snapshots voor dit boekjaar
+  const snapshots = await db
+    .select()
+    .from(fieCapaciteitSnapshotsTable)
+    .where(eq(fieCapaciteitSnapshotsTable.boekjaar, boekjaar));
+
+  const totaalProductieveUrenSnapshots = rnd2(snapshots.reduce((s, r) => s + r.productieveUren, 0));
+  const aantalSnapshots = snapshots.length;
+
+  // Effectieve uren: snapshots hebben voorrang (expliciet ingevoerd), anders HRM-afleiding
+  let effectieveProductieveUren = 0;
+  let bron: "snapshot" | "hrm" | "leeg" = "leeg";
+
+  if (aantalSnapshots > 0 && totaalProductieveUrenSnapshots > 0) {
+    effectieveProductieveUren = totaalProductieveUrenSnapshots;
+    bron = "snapshot";
+  } else if (aantalMedewerkersHrm > 0) {
+    effectieveProductieveUren = totaalProductieveUrenHrm;
+    bron = "hrm";
+  }
+
+  return {
+    boekjaar,
+    aantalMedewerkersHrm,
+    totaalContractUrenPerWeek,
+    totaalBrutoUrenJaar,
+    totaalProductieveUrenHrm,
+    totaalFteHrm,
+    aantalSnapshots,
+    totaalProductieveUrenSnapshots,
+    effectieveProductieveUren,
+    bron,
+  };
+}
+
+// ─── Doelmarge en AK-normoverzicht voor een begroting ────────────────────────
+
+export interface FieDoelmargeResultaat {
+  begrotingId: number;
+  boekjaar: number;
+  doelMargePct: number;
+  omzetDoel: number | null;
+  directeKostenDoel: number | null;
+  productieveUrenDoel: number | null;
+  akPerProductiefUurHandmatig: number | null;
+  totaalAkPosten: number;
+  akPerUurBerekend: number | null;   // uit AK-posten / productieve uren
+  effectiefAkPerUur: number | null;  // handmatig || berekend
+  verdeelsleutel: string;
+}
+
+/**
+ * berekenDoelmarge: retourneert doelmarge, AK-norm en omzetdoelen voor een begroting.
+ * Combineert de begrotingsdata met de berekende AK-norm.
+ */
+export async function berekenDoelmarge(begrotingId: number): Promise<FieDoelmargeResultaat | null> {
+  const [begroting] = await db
+    .select()
+    .from(fieJaarbegrotingenTable)
+    .where(eq(fieJaarbegrotingenTable.id, begrotingId))
+    .limit(1);
+
+  if (!begroting) return null;
+
+  const akPosten = await db
+    .select()
+    .from(fieAkPostenTable)
+    .where(and(
+      eq(fieAkPostenTable.begrotingId, begrotingId),
+      eq(fieAkPostenTable.actief, true),
+    ));
+
+  const totaalAkPosten = rnd2(akPosten.reduce((s, p) => s + p.bedragJaarbasis, 0));
+  const productieveUren = begroting.productieveUrenDoel;
+  const akPerUurBerekend = (productieveUren && productieveUren > 0 && totaalAkPosten > 0)
+    ? rnd2(totaalAkPosten / productieveUren)
+    : null;
+  const effectiefAkPerUur = begroting.akPerProductiefUur ?? akPerUurBerekend;
+
+  return {
+    begrotingId,
+    boekjaar: begroting.boekjaar,
+    doelMargePct: begroting.doelMargePct,
+    omzetDoel: begroting.omzetDoel ?? null,
+    directeKostenDoel: begroting.directeKostenDoel ?? null,
+    productieveUrenDoel: productieveUren ?? null,
+    akPerProductiefUurHandmatig: begroting.akPerProductiefUur ?? null,
+    totaalAkPosten,
+    akPerUurBerekend,
+    effectiefAkPerUur,
+    verdeelsleutel: begroting.verdeelsleutel,
   };
 }

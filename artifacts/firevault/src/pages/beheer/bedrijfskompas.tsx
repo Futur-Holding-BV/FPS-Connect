@@ -30,6 +30,7 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -531,9 +532,12 @@ function CapaciteitSectie({
 function BegrotingDetail({ begrotingId, onTerug }: { begrotingId: number; onTerug: () => void }) {
   const qc = useQueryClient();
   const { toast } = useToast();
+  const [actieveTab, setActieveTab] = useState("overzicht");
   const [akDialoog, setAkDialoog] = useState(false);
   const [bewerkenPost, setBewerkenPost] = useState<FieAkPost | undefined>();
   const [verwijderenPost, setVerwijderenPost] = useState<FieAkPost | undefined>();
+  const { heeftNiveau } = useBevoegdheid();
+  const heeftFinancieelSchrijven = heeftNiveau("financieel", 2);
 
   const { data: detail, isLoading } = useGetFieBegroting(begrotingId);
 
@@ -564,8 +568,8 @@ function BegrotingDetail({ begrotingId, onTerug }: { begrotingId: number; onTeru
   const akPerUur = detail.ak_per_uur_berekend ?? null;
 
   return (
-    <div className="space-y-6">
-      {/* Terugknop */}
+    <div className="space-y-4">
+      {/* Koptekst + status */}
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="sm" onClick={onTerug}>
           <ArrowLeft className="w-4 h-4 mr-1" />
@@ -580,7 +584,7 @@ function BegrotingDetail({ begrotingId, onTerug }: { begrotingId: number; onTeru
         </Badge>
       </div>
 
-      {/* Samenvatting kaarten */}
+      {/* KPI-kaarten (altijd zichtbaar) */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Card>
           <CardContent className="p-4">
@@ -613,91 +617,158 @@ function BegrotingDetail({ begrotingId, onTerug }: { begrotingId: number; onTeru
         </Card>
       </div>
 
-      {/* AK-posten tabel */}
-      <Card>
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-sm">Indirecte kostenposten (AK-posten)</CardTitle>
-            <Button size="sm" onClick={() => { setBewerkenPost(undefined); setAkDialoog(true); }}>
-              <Plus className="w-3.5 h-3.5 mr-1" />
-              Post toevoegen
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent className="p-0">
-          {akPosten.length === 0 ? (
-            <div className="p-6 text-center text-muted-foreground text-sm">
-              Nog geen AK-posten. Voeg huisvestingskosten, ICT, voertuigen etc. toe.
-            </div>
-          ) : (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border/50">
-                  <th className="text-left px-4 py-2 font-medium text-muted-foreground text-xs">Omschrijving</th>
-                  <th className="text-left px-4 py-2 font-medium text-muted-foreground text-xs">Categorie</th>
-                  <th className="text-right px-4 py-2 font-medium text-muted-foreground text-xs">Bedrag/jaar</th>
-                  <th className="w-20 px-4 py-2"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {akPosten.map((p) => (
-                  <tr key={p.id} className={cn("border-b border-border/30 hover:bg-muted/30", !p.actief && "opacity-40")}>
-                    <td className="px-4 py-2.5">{p.omschrijving}</td>
-                    <td className="px-4 py-2.5">
-                      <Badge variant="outline" className="text-[10px]">
-                        {AK_CATEGORIE_OPTIES.find((o) => o.value === p.categorie)?.label ?? p.categorie}
-                      </Badge>
-                    </td>
-                    <td className="px-4 py-2.5 text-right font-mono tabular-nums">
-                      {fmt(p.bedrag_jaarbasis)}
-                    </td>
-                    <td className="px-4 py-2.5">
-                      <div className="flex items-center gap-1 justify-end">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7"
-                          onClick={() => { setBewerkenPost(p); setAkDialoog(true); }}
-                        >
-                          <Pencil className="w-3.5 h-3.5" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 text-destructive hover:text-destructive"
-                          onClick={() => setVerwijderenPost(p)}
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-              <tfoot>
-                <tr className="border-t border-border bg-muted/20">
-                  <td className="px-4 py-2.5 font-semibold text-sm" colSpan={2}>
-                    Totaal AK ({actievePosten.length} actieve posten)
-                  </td>
-                  <td className="px-4 py-2.5 text-right font-semibold font-mono tabular-nums">
-                    {fmt(totaalAk)}
-                  </td>
-                  <td></td>
-                </tr>
-              </tfoot>
-            </table>
-          )}
-        </CardContent>
-      </Card>
+      {/* Tabs: Overzicht / AK-posten / Capaciteit */}
+      <Tabs value={actieveTab} onValueChange={setActieveTab}>
+        <TabsList className="grid w-full grid-cols-3 max-w-sm">
+          <TabsTrigger value="overzicht">Overzicht</TabsTrigger>
+          <TabsTrigger value="ak-posten">AK-posten</TabsTrigger>
+          <TabsTrigger value="capaciteit">Capaciteit</TabsTrigger>
+        </TabsList>
 
-      {/* Capaciteit — afgeleid uit HRM */}
-      <CapaciteitSectie
-        boekjaar={detail.boekjaar}
-        productieveUrenDoel={detail.productieve_uren_doel}
-        doelMargePct={detail.doel_marge_pct}
-        totaalAk={totaalAk}
-        akPerUurBerekend={akPerUur}
-      />
+        {/* Tab: Overzicht (doelmarge-toelichting + verdeelsleutel) */}
+        <TabsContent value="overzicht" className="mt-4">
+          <Card>
+            <CardContent className="p-4 space-y-4">
+              <div>
+                <p className="text-xs font-medium text-muted-foreground mb-1">Verdeelsleutel AK</p>
+                <p className="text-sm">
+                  {detail.verdeelsleutel === "uren"
+                    ? "Op basis van productieve uren (AK gedeeld door totale uren)"
+                    : detail.verdeelsleutel === "omzet"
+                    ? "Op basis van omzet (AK als percentage van projectomzet)"
+                    : detail.verdeelsleutel}
+                </p>
+              </div>
+              <Separator />
+              <div className="rounded-md border border-dashed p-3 bg-muted/20">
+                <div className="flex items-start gap-2">
+                  <Info className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
+                  <div className="text-xs text-muted-foreground space-y-1.5">
+                    <p className="font-medium text-foreground">Doelmarge-rekenexercitie</p>
+                    <p>
+                      Doelmarge is ingesteld op <strong>{fmtPct(detail.doel_marge_pct)}</strong>.
+                      Dit betekent dat van elke euro omzet minimaal {fmtPct(detail.doel_marge_pct)} overblijft na directe kosten en AK.
+                    </p>
+                    {detail.productieve_uren_doel != null && totaalAk > 0 && (
+                      <p>
+                        Met {new Intl.NumberFormat("nl-NL").format(detail.productieve_uren_doel)} productieve uren en {fmt(totaalAk)} totale AK
+                        {" "}is de AK-norm <strong>{akPerUur != null ? fmtUur(akPerUur) : "—"}/uur</strong>.
+                        Bij een doelmarge van {fmtPct(detail.doel_marge_pct)} moet de verkoopprijs de directe kosten + AK + {fmtPct(detail.doel_marge_pct)} marge dekken.
+                      </p>
+                    )}
+                    <p className="text-[10px]">
+                      Stel de productieve uren in via de begrotingsinstellingen (veld "Productieve uren/jaar") om de AK-norm automatisch te berekenen.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              {detail.opmerkingen && (
+                <>
+                  <Separator />
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground mb-1">Opmerkingen</p>
+                    <p className="text-sm whitespace-pre-wrap">{detail.opmerkingen}</p>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Tab: AK-posten */}
+        <TabsContent value="ak-posten" className="mt-4">
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm">Indirecte kostenposten (AK-posten)</CardTitle>
+                {heeftFinancieelSchrijven && (
+                  <Button size="sm" onClick={() => { setBewerkenPost(undefined); setAkDialoog(true); }}>
+                    <Plus className="w-3.5 h-3.5 mr-1" />
+                    Post toevoegen
+                  </Button>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent className="p-0">
+              {akPosten.length === 0 ? (
+                <div className="p-6 text-center text-muted-foreground text-sm">
+                  Nog geen AK-posten. Voeg huisvestingskosten, ICT, voertuigen etc. toe.
+                </div>
+              ) : (
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border/50">
+                      <th className="text-left px-4 py-2 font-medium text-muted-foreground text-xs">Omschrijving</th>
+                      <th className="text-left px-4 py-2 font-medium text-muted-foreground text-xs">Categorie</th>
+                      <th className="text-right px-4 py-2 font-medium text-muted-foreground text-xs">Bedrag/jaar</th>
+                      {heeftFinancieelSchrijven && <th className="w-20 px-4 py-2"></th>}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {akPosten.map((p) => (
+                      <tr key={p.id} className={cn("border-b border-border/30 hover:bg-muted/30", !p.actief && "opacity-40")}>
+                        <td className="px-4 py-2.5">{p.omschrijving}</td>
+                        <td className="px-4 py-2.5">
+                          <Badge variant="outline" className="text-[10px]">
+                            {AK_CATEGORIE_OPTIES.find((o) => o.value === p.categorie)?.label ?? p.categorie}
+                          </Badge>
+                        </td>
+                        <td className="px-4 py-2.5 text-right font-mono tabular-nums">
+                          {fmt(p.bedrag_jaarbasis)}
+                        </td>
+                        {heeftFinancieelSchrijven && (
+                          <td className="px-4 py-2.5">
+                            <div className="flex items-center gap-1 justify-end">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7"
+                                onClick={() => { setBewerkenPost(p); setAkDialoog(true); }}
+                              >
+                                <Pencil className="w-3.5 h-3.5" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 text-destructive hover:text-destructive"
+                                onClick={() => setVerwijderenPost(p)}
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </Button>
+                            </div>
+                          </td>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr className="border-t border-border bg-muted/20">
+                      <td className="px-4 py-2.5 font-semibold text-sm" colSpan={2}>
+                        Totaal AK ({actievePosten.length} actieve posten)
+                      </td>
+                      <td className="px-4 py-2.5 text-right font-semibold font-mono tabular-nums">
+                        {fmt(totaalAk)}
+                      </td>
+                      {heeftFinancieelSchrijven && <td></td>}
+                    </tr>
+                  </tfoot>
+                </table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Tab: Capaciteit (HRM-afgeleid) */}
+        <TabsContent value="capaciteit" className="mt-4">
+          <CapaciteitSectie
+            boekjaar={detail.boekjaar}
+            productieveUrenDoel={detail.productieve_uren_doel}
+            doelMargePct={detail.doel_marge_pct}
+            totaalAk={totaalAk}
+            akPerUurBerekend={akPerUur}
+          />
+        </TabsContent>
+      </Tabs>
 
       {/* Dialogen */}
       <AkPostDialoog

@@ -5,7 +5,7 @@ import { Router, Request, Response } from "express";
 import { db, fieJaarbegrotingenTable, fieAkPostenTable, fieCapaciteitSnapshotsTable, werkgeversTable } from "@workspace/db";
 import { eq, desc } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
-import { berekenFieContext, rnd2 } from "../services/fie-service";
+import { berekenFieContext, berekenCapaciteit, berekenDoelmarge, rnd2 } from "../services/fie-service";
 
 const router = Router();
 
@@ -16,10 +16,18 @@ const schrijven = requireBevoegdheid("financieel", 2);
 // Calculatiecontext is ook beschikbaar voor calculateurs (calculaties:1).
 const calcLezen = requireBevoegdheid("calculaties", 1);
 
-function parseId(v: unknown): number {
+function parseId(v: unknown): number | null {
   const n = parseInt(String(v), 10);
-  if (isNaN(n)) throw new Error(`Ongeldig id: ${v}`);
-  return n;
+  return isNaN(n) ? null : n;
+}
+
+function validId(res: import("express").Response, v: unknown): number | null {
+  const id = parseId(v);
+  if (id === null) {
+    res.status(400).json({ error: "Ongeldig of ontbrekend id" });
+    return null;
+  }
+  return id;
 }
 
 // ─── Jaarbegrotingen ──────────────────────────────────────────────────────────
@@ -93,7 +101,8 @@ router.post("/fie/begrotingen", schrijven, async (req: Request, res: Response) =
 
 // GET /fie/begrotingen/:id  (incl. ak-posten)
 router.get("/fie/begrotingen/:id", lezen, async (req: Request, res: Response) => {
-  const id = parseId(req.params["id"]);
+  const id = validId(res, req.params["id"]);
+  if (id === null) return;
 
   const [begroting] = await db
     .select()
@@ -126,7 +135,8 @@ router.get("/fie/begrotingen/:id", lezen, async (req: Request, res: Response) =>
 
 // PATCH /fie/begrotingen/:id
 router.patch("/fie/begrotingen/:id", schrijven, async (req: Request, res: Response) => {
-  const id = parseId(req.params["id"]);
+  const id = validId(res, req.params["id"]);
+  if (id === null) return;
   const {
     status, omzet_doel, directe_kosten_doel, doel_marge_pct,
     ak_per_productief_uur, productieve_uren_doel, verdeelsleutel, opmerkingen,
@@ -163,7 +173,8 @@ router.patch("/fie/begrotingen/:id", schrijven, async (req: Request, res: Respon
 
 // GET /fie/begrotingen/:id/ak-posten
 router.get("/fie/begrotingen/:id/ak-posten", lezen, async (req: Request, res: Response) => {
-  const id = parseId(req.params["id"]);
+  const id = validId(res, req.params["id"]);
+  if (id === null) return;
   const rows = await db
     .select({ post: fieAkPostenTable, werkgeverNaam: werkgeversTable.naam })
     .from(fieAkPostenTable)
@@ -174,7 +185,8 @@ router.get("/fie/begrotingen/:id/ak-posten", lezen, async (req: Request, res: Re
 
 // POST /fie/begrotingen/:id/ak-posten
 router.post("/fie/begrotingen/:id/ak-posten", schrijven, async (req: Request, res: Response) => {
-  const begrotingId = parseId(req.params["id"]);
+  const begrotingId = validId(res, req.params["id"]);
+  if (begrotingId === null) return;
 
   const [beg] = await db
     .select()
@@ -206,7 +218,8 @@ router.post("/fie/begrotingen/:id/ak-posten", schrijven, async (req: Request, re
 
 // PATCH /fie/ak-posten/:id
 router.patch("/fie/ak-posten/:id", schrijven, async (req: Request, res: Response) => {
-  const id = parseId(req.params["id"]);
+  const id = validId(res, req.params["id"]);
+  if (id === null) return;
 
   const [existing] = await db
     .select()
@@ -240,7 +253,8 @@ router.patch("/fie/ak-posten/:id", schrijven, async (req: Request, res: Response
 
 // DELETE /fie/ak-posten/:id
 router.delete("/fie/ak-posten/:id", schrijven, async (req: Request, res: Response) => {
-  const id = parseId(req.params["id"]);
+  const id = validId(res, req.params["id"]);
+  if (id === null) return;
   await db.delete(fieAkPostenTable).where(eq(fieAkPostenTable.id, id));
   res.status(204).send();
 });
@@ -249,7 +263,8 @@ router.delete("/fie/ak-posten/:id", schrijven, async (req: Request, res: Respons
 
 // GET /fie/capaciteit/:boekjaar
 router.get("/fie/capaciteit/:boekjaar", lezen, async (req: Request, res: Response) => {
-  const boekjaar = parseId(req.params["boekjaar"]);
+  const boekjaar = validId(res, req.params["boekjaar"]);
+  if (boekjaar === null) return;
   const rows = await db
     .select({ snap: fieCapaciteitSnapshotsTable, werkgeverNaam: werkgeversTable.naam })
     .from(fieCapaciteitSnapshotsTable)
@@ -275,9 +290,27 @@ router.get("/fie/capaciteit/:boekjaar", lezen, async (req: Request, res: Respons
   res.json({ boekjaar, snapshots, totaal_productieve_uren: totaalProductieveUren, totaal_fte: totaalFte });
 });
 
+// GET /fie/capaciteit/:boekjaar/hrm  — HRM-afgeleid capaciteitsoverzicht via berekenCapaciteit()
+router.get("/fie/capaciteit/:boekjaar/hrm", lezen, async (req: Request, res: Response) => {
+  const boekjaar = validId(res, req.params["boekjaar"]);
+  if (boekjaar === null) return;
+  const resultaat = await berekenCapaciteit(boekjaar);
+  res.json(resultaat);
+});
+
+// GET /fie/begrotingen/:id/doelmarge  — doelmarge + AK-norm via berekenDoelmarge()
+router.get("/fie/begrotingen/:id/doelmarge", lezen, async (req: Request, res: Response) => {
+  const id = validId(res, req.params["id"]);
+  if (id === null) return;
+  const resultaat = await berekenDoelmarge(id);
+  if (!resultaat) { res.status(404).json({ error: "Begroting niet gevonden" }); return; }
+  res.json(resultaat);
+});
+
 // POST /fie/capaciteit/:boekjaar
 router.post("/fie/capaciteit/:boekjaar", schrijven, async (req: Request, res: Response) => {
-  const boekjaar = parseId(req.params["boekjaar"]);
+  const boekjaar = validId(res, req.params["boekjaar"]);
+  if (boekjaar === null) return;
   const { werkgever_id, productieve_uren, fte, snapshot_datum, bron } = req.body as Record<string, unknown>;
 
   if (typeof productieve_uren !== "number" || !snapshot_datum) {
@@ -325,7 +358,8 @@ router.post("/fie/capaciteit/:boekjaar", schrijven, async (req: Request, res: Re
 
 // GET /fie/context/calculatie/:id
 router.get("/fie/context/calculatie/:id", calcLezen, async (req: Request, res: Response) => {
-  const calcId = parseId(req.params["id"]);
+  const calcId = validId(res, req.params["id"]);
+  if (calcId === null) return;
 
   const context = await berekenFieContext(calcId);
   if (!context) { res.status(404).json({ error: "Calculatie niet gevonden" }); return; }
