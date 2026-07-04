@@ -82,6 +82,21 @@ export function verwerkOmschrijvingAkPost(v: unknown): string | null {
   return String(v).slice(0, 500);
 }
 
+/**
+ * Verwerkt een categorie-waarde voor FIE AK-posten (POST en PATCH).
+ * - null / undefined → valt terug op "overig" (de DB-standaard)
+ * - tekst            → wordt afgekapt op 100 tekens (stille truncatie, geen fout)
+ * Gebruik deze functie altijd voor het categorie-veld in de ak-posten
+ * handlers, zodat een te lange waarde nooit stilzwijgend een DB-fout
+ * of onverwacht gedrag veroorzaakt.
+ */
+export function verwerkCategorieAkPost(v: unknown): string {
+  if (v === null || v === undefined) return "overig";
+  const s = String(v).trim();
+  if (s === "") return "overig";
+  return s.slice(0, 100);
+}
+
 /** Velden die de PATCH /fie/leermomenten/:id handler kan bijwerken. */
 export type LeermomentUpdateVelden = {
   correctieFactor?: number;
@@ -389,7 +404,7 @@ router.post("/fie/begrotingen/:id/ak-posten", schrijven, async (req: Request, re
   const [rij] = await db.insert(fieAkPostenTable).values({
     begrotingId,
     werkgeverId: (werkgever_id as number | undefined) ?? null,
-    categorie: (categorie as string | undefined) ?? "overig",
+    categorie: verwerkCategorieAkPost(categorie),
     omschrijving: verwerkOmschrijvingAkPost(omschrijving) ?? "",
     bedragJaarbasis: bedrag_jaarbasis as number,
     actief: (actief as boolean | undefined) ?? true,
@@ -418,7 +433,7 @@ router.patch("/fie/ak-posten/:id", schrijven, async (req: Request, res: Response
     bijgewerktOp: new Date(),
   };
   if (werkgever_id !== undefined)    updateData.werkgeverId = werkgever_id as number | null;
-  if (categorie !== undefined)       updateData.categorie = categorie as string;
+  if (categorie !== undefined)       updateData.categorie = verwerkCategorieAkPost(categorie);
   if (omschrijving !== undefined)    updateData.omschrijving = verwerkOmschrijvingAkPost(omschrijving) ?? "";
   if (bedrag_jaarbasis !== undefined) updateData.bedragJaarbasis = bedrag_jaarbasis as number;
   if (actief !== undefined)          updateData.actief = actief as boolean;

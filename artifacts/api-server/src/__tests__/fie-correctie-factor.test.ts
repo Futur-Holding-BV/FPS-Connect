@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { valideerCorrectieFactor, verwerkOpmerkingen, verwerkOpmerkingenBegroting, bouwLeermomentUpdateVelden, verwerkOmschrijvingAkPost } from "../routes/fie";
+import { valideerCorrectieFactor, verwerkOpmerkingen, verwerkOpmerkingenBegroting, bouwLeermomentUpdateVelden, verwerkOmschrijvingAkPost, verwerkCategorieAkPost } from "../routes/fie";
 
 // ── valideerCorrectieFactor — grenswaarden en randgevallen ────────────────────
 //
@@ -257,5 +257,58 @@ describe("verwerkOmschrijvingAkPost", () => {
     const zeshonderd = "c".repeat(600);
     const resultaat = verwerkOmschrijvingAkPost(zeshonderd);
     expect(resultaat).toHaveLength(500);
+  });
+});
+
+// ── verwerkCategorieAkPost — categorie-truncatie en null/undefined-fallback ───
+//
+// Legt het bewuste gedrag vast:
+//   • null / undefined / lege string → "overig" (DB-standaard)
+//   • tekst > 100 tekens → stilzwijgend afgekapt op 100 (geen 400-fout)
+//   • normale tekst → ongewijzigd teruggegeven
+// Dit is gedocumenteerd zodat een toekomstige refactor dit gedrag niet
+// onopgemerkt kan wijzigen.
+
+describe("verwerkCategorieAkPost", () => {
+  it("geeft 'overig' terug bij null-invoer", () => {
+    expect(verwerkCategorieAkPost(null)).toBe("overig");
+  });
+
+  it("geeft 'overig' terug bij undefined-invoer", () => {
+    expect(verwerkCategorieAkPost(undefined)).toBe("overig");
+  });
+
+  it("geeft 'overig' terug bij lege string", () => {
+    expect(verwerkCategorieAkPost("")).toBe("overig");
+  });
+
+  it("geeft 'overig' terug bij een string met alleen spaties", () => {
+    expect(verwerkCategorieAkPost("   ")).toBe("overig");
+  });
+
+  it("bewaart een normale categorienaam ongewijzigd", () => {
+    expect(verwerkCategorieAkPost("brandwerende afdichting")).toBe("brandwerende afdichting");
+  });
+
+  it("kapt tekst van meer dan 100 tekens stilzwijgend af op precies 100 (geen fout)", () => {
+    const lang = "x".repeat(150);
+    const resultaat = verwerkCategorieAkPost(lang);
+    expect(resultaat).toHaveLength(100);
+    expect(resultaat).toBe("x".repeat(100));
+  });
+
+  it("bewaart tekst van precies 100 tekens ongewijzigd", () => {
+    const precies = "a".repeat(100);
+    expect(verwerkCategorieAkPost(precies)).toBe(precies);
+  });
+
+  it("knipt tekst van exact 101 tekens af op 100", () => {
+    const inp = "b".repeat(101);
+    expect(verwerkCategorieAkPost(inp)).toHaveLength(100);
+  });
+
+  it("knipt NIET op 500 of 1000 tekens — categorie heeft lagere limiet (100)", () => {
+    const lang = "c".repeat(200);
+    expect(verwerkCategorieAkPost(lang)).toHaveLength(100);
   });
 });
