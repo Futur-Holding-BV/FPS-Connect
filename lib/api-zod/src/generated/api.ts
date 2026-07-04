@@ -23758,6 +23758,14 @@ export const HerberekeenFieLeermomentenResponse = zod.object({
 
 
 /**
+ * @summary Aantal nacalculaties met werktype algemeen waarbij het gebouw nu spots heeft
+ */
+export const GetFieNacalculatiesVerouderdAantalResponse = zod.object({
+  "aantal": zod.number()
+})
+
+
+/**
  * @summary Herbereken alle nacalculaties met werktype algemeen waarbij het gebouw inmiddels spots heeft
  */
 export const HerberekeenVerouderdeNacalculatiesResponse = zod.object({

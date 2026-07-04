@@ -5,7 +5,7 @@ import { Router, Request, Response } from "express";
 import { db, fieJaarbegrotingenTable, fieAkPostenTable, fieCapaciteitSnapshotsTable, fieLeerMomentenTable, werkgeversTable } from "@workspace/db";
 import { eq, desc } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
-import { berekenFieContext, berekenCapaciteit, berekenDoelmarge, berekenJaarprognose, leesPrognoseObservaties, rnd2, herberekeenLeermomenten, berekenEnSlaOpNacalculatie, herberekeenVerouderdeNacalculaties } from "../services/fie-service";
+import { berekenFieContext, berekenCapaciteit, berekenDoelmarge, berekenJaarprognose, leesPrognoseObservaties, rnd2, herberekeenLeermomenten, berekenEnSlaOpNacalculatie, herberekeenVerouderdeNacalculaties, telVerouderdeNacalculaties } from "../services/fie-service";
 
 const router = Router();
 
@@ -541,6 +541,13 @@ router.get("/fie/observaties/:boekjaar", lezen, async (req: Request, res: Respon
 });
 
 // ─── Nacalculaties ────────────────────────────────────────────────────────────
+
+// GET /fie/nacalculaties/verouderd-aantal
+// Geeft het aantal nacalculaties terug met werktype "algemeen" waarbij het gebouw nu spots heeft.
+router.get("/fie/nacalculaties/verouderd-aantal", lezen, async (_req: Request, res: Response): Promise<void> => {
+  const aantal = await telVerouderdeNacalculaties();
+  res.json({ aantal });
+});
 
 // POST /fie/nacalculaties/herbereken-verouderd
 // Herbereken alle nacalculaties met werktype "algemeen" waarbij het gebouw inmiddels spots heeft.

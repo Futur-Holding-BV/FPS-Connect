@@ -18981,6 +18981,23 @@ paths:
                     items:
                       $ref: "#/components/schemas/FieLeermoment"
 
+  /fie/nacalculaties/verouderd-aantal:
+    get:
+      operationId: getFieNacalculatiesVerouderdAantal
+      tags: [financieel]
+      summary: Aantal nacalculaties met werktype algemeen waarbij het gebouw nu spots heeft
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [aantal]
+                properties:
+                  aantal:
+                    type: integer
+
   /fie/nacalculaties/herbereken-verouderd:
     post:
       operationId: herberekeenVerouderdeNacalculaties

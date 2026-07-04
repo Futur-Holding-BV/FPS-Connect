@@ -15,6 +15,7 @@ import {
   useListFieLeermomenten,
   useHerberekeenFieLeermomenten,
   useHerberekeenVerouderdeNacalculaties,
+  useGetFieNacalculatiesVerouderdAantal,
   useUpdateFieLeermoment,
   useDeleteFieLeermoment,
   type FieJaarbegroting,
@@ -1283,7 +1284,10 @@ function LeereffectenBeheerTab() {
   const { data: leermomenten, isLoading, refetch } = useListFieLeermomenten();
   const herbereken = useHerberekeenFieLeermomenten();
   const herberekeenVerouderd = useHerberekeenVerouderdeNacalculaties();
+  const { data: verouderdAantal, refetch: refetchVerouderdAantal } = useGetFieNacalculatiesVerouderdAantal();
   const [verouderdResultaat, setVerouderdResultaat] = useState<number | null>(null);
+
+  const aantalVerouderd = verouderdAantal?.aantal ?? 0;
 
   function startHerbereken() {
     herbereken.mutate(undefined, { onSuccess: () => { void refetch(); } });
@@ -1295,12 +1299,23 @@ function LeereffectenBeheerTab() {
       onSuccess: (data) => {
         setVerouderdResultaat(data.herberekend);
         void refetch();
+        void refetchVerouderdAantal();
       },
     });
   }
 
   return (
     <div className="space-y-4">
+      {aantalVerouderd > 0 && (
+        <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-amber-800">
+          <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+          <p className="text-xs">
+            {aantalVerouderd === 1
+              ? "1 nacalculatie heeft werktype \u201calgemeen\u201d maar het gebouw heeft inmiddels spots. Klik op \u201cWerktype bijwerken\u201d om dit te corrigeren."
+              : `${aantalVerouderd} nacalculaties hebben werktype \u201calgemeen\u201d maar het gebouw heeft inmiddels spots. Klik op \u201cWerktype bijwerken\u201d om dit te corrigeren.`}
+          </p>
+        </div>
+      )}
       <div className="flex items-start justify-between gap-4">
         <div>
           <h2 className="text-sm font-semibold">Leereffecten — nacalculatie-terugkoppeling</h2>
@@ -1328,6 +1343,11 @@ function LeereffectenBeheerTab() {
               <RefreshCw className={cn("h-3.5 w-3.5", herberekeenVerouderd.isPending && "animate-spin")} />
               Werktype bijwerken
             </Button>
+            {aantalVerouderd > 0 && (
+              <Badge variant="destructive" className="text-[10px] px-1.5 py-0 h-4 rounded-sm">
+                {aantalVerouderd}
+              </Badge>
+            )}
           </div>
           {verouderdResultaat !== null && (
             <p className="text-xs text-muted-foreground">

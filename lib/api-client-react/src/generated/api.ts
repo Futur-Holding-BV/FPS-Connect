@@ -249,6 +249,7 @@ import type {
   GetCapaciteitBezettingParams,
   GetCrmAiCoach503,
   GetFactuurUploadUrl200,
+  GetFieNacalculatiesVerouderdAantal200,
   GetGebouwGevelbeeld200,
   GetJarrekeningOnderhandenWerkParams,
   GetLoonOutputParams,
@@ -67240,6 +67241,83 @@ export const useHerberekeenFieLeermomenten = <TError = ErrorType<unknown>,
       > => {
       return useMutation(getHerberekeenFieLeermomentenMutationOptions(options));
     }
+
+export const getGetFieNacalculatiesVerouderdAantalUrl = () => {
+
+
+
+
+  return `/api/fie/nacalculaties/verouderd-aantal`
+}
+
+/**
+ * @summary Aantal nacalculaties met werktype algemeen waarbij het gebouw nu spots heeft
+ */
+export const getFieNacalculatiesVerouderdAantal = async ( options?: RequestInit): Promise<GetFieNacalculatiesVerouderdAantal200> => {
+
+  return customFetch<GetFieNacalculatiesVerouderdAantal200>(getGetFieNacalculatiesVerouderdAantalUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetFieNacalculatiesVerouderdAantalQueryKey = () => {
+    return [
+    `/api/fie/nacalculaties/verouderd-aantal`
+    ] as const;
+    }
+
+
+export const getGetFieNacalculatiesVerouderdAantalQueryOptions = <TData = Awaited<ReturnType<typeof getFieNacalculatiesVerouderdAantal>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getFieNacalculatiesVerouderdAantal>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetFieNacalculatiesVerouderdAantalQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getFieNacalculatiesVerouderdAantal>>> = ({ signal }) => getFieNacalculatiesVerouderdAantal({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getFieNacalculatiesVerouderdAantal>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetFieNacalculatiesVerouderdAantalQueryResult = NonNullable<Awaited<ReturnType<typeof getFieNacalculatiesVerouderdAantal>>>
+export type GetFieNacalculatiesVerouderdAantalQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Aantal nacalculaties met werktype algemeen waarbij het gebouw nu spots heeft
+ */
+
+export function useGetFieNacalculatiesVerouderdAantal<TData = Awaited<ReturnType<typeof getFieNacalculatiesVerouderdAantal>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getFieNacalculatiesVerouderdAantal>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetFieNacalculatiesVerouderdAantalQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
 export const getHerberekeenVerouderdeNacalculatiesUrl = () => {
 

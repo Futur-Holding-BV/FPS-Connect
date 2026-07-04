@@ -311,6 +311,7 @@ export * from './getCapaciteitBezettingParams';
 export * from './getCrmAiCoach503';
 export * from './getestVoor';
 export * from './getFactuurUploadUrl200';
+export * from './getFieNacalculatiesVerouderdAantal200';
 export * from './getGebouwGevelbeeld200';
 export * from './getJarrekeningOnderhandenWerkParams';
 export * from './getLoonOutputParams';

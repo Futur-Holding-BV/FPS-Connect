@@ -1115,6 +1115,37 @@ export async function herberekeenLeermomenten(): Promise<number> {
 }
 
 /**
+ * Geef het aantal nacalculaties terug met werktype "algemeen" waarbij het gebouw
+ * inmiddels spots heeft. Dit is een snelle telling zonder herberekening.
+ */
+export async function telVerouderdeNacalculaties(): Promise<number> {
+  const kandidaten = await db
+    .select({
+      opdrachtId: fieNacalculatiesTable.opdrachtId,
+      gebouwId:   opdrachtenTable.gebouwId,
+    })
+    .from(fieNacalculatiesTable)
+    .innerJoin(opdrachtenTable, eq(opdrachtenTable.id, fieNacalculatiesTable.opdrachtId))
+    .where(eq(fieNacalculatiesTable.werktype, "algemeen"));
+
+  if (kandidaten.length === 0) return 0;
+
+  const gebouwIds = [...new Set(kandidaten.map((k) => k.gebouwId).filter((id): id is number => id != null))];
+  if (gebouwIds.length === 0) return 0;
+
+  const metSpots = await db
+    .selectDistinct({ gebouwId: voorzieningenTable.gebouwId })
+    .from(voorzieningenTable)
+    .where(and(
+      inArray(voorzieningenTable.gebouwId, gebouwIds),
+      eq(voorzieningenTable.gearchiveerd, false),
+    ));
+
+  const gebouwenMetSpots = new Set(metSpots.map((r) => r.gebouwId));
+  return kandidaten.filter((k) => k.gebouwId != null && gebouwenMetSpots.has(k.gebouwId)).length;
+}
+
+/**
  * Herbereken nacalculaties die verouderd zijn: werktype is "algemeen" maar het gebouw
  * heeft inmiddels spots waardoor een specifieker werktype bepaald kan worden.
  * Retourneert het aantal herberekende nacalculaties.

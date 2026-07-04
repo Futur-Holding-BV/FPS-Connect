@@ -11107,6 +11107,10 @@ export type HerberekeenFieLeermomenten200 = {
   leermomenten: FieLeermoment[];
 };
 
+export type GetFieNacalculatiesVerouderdAantal200 = {
+  aantal: number;
+};
+
 export type HerberekeenVerouderdeNacalculaties200 = {
   herberekend: number;
 };
