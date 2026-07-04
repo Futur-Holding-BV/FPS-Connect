@@ -88,12 +88,12 @@ function verzoekUserAgent(req: { headers: Record<string, unknown> }): string | n
 }
 
 // POST /auth/login — stap 1: e-mail + wachtwoord
-router.post("/auth/login", async (req, res) => {
+router.post("/auth/login", async (req, res): Promise<void> => {
   if (!checkLoginRateLimit(req, res)) return;
   try {
     const { email, wachtwoord } = req.body ?? {};
     if (!email || !wachtwoord) {
-      return res.status(400).json({ error: "E-mail en wachtwoord zijn verplicht" });
+      return void res.status(400).json({ error: "E-mail en wachtwoord zijn verplicht" });
     }
     const [g] = await db
       .select()
@@ -107,7 +107,7 @@ router.post("/auth/login", async (req, res) => {
         userAgent: verzoekUserAgent(req),
         gelukt: false,
       });
-      return res.status(401).json({ error: "Onjuiste inloggegevens" });
+      return void res.status(401).json({ error: "Onjuiste inloggegevens" });
     }
     const ok = await bcrypt.compare(String(wachtwoord), g.wachtwoord);
     if (!ok) {
@@ -118,15 +118,15 @@ router.post("/auth/login", async (req, res) => {
         userAgent: verzoekUserAgent(req),
         gelukt: false,
       });
-      return res.status(401).json({ error: "Onjuiste inloggegevens" });
+      return void res.status(401).json({ error: "Onjuiste inloggegevens" });
     }
     req.session.pendingUserId = g.id;
     delete req.session.userId;
     delete req.session.pendingSecret;
     if (g.tweeFactorIngeschakeld && g.totpSecret) {
-      return res.json({ status: "verify_2fa" });
+      return void res.json({ status: "verify_2fa" });
     }
-    return res.json({ status: "setup_2fa" });
+    return void res.json({ status: "setup_2fa" });
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });
@@ -134,18 +134,18 @@ router.post("/auth/login", async (req, res) => {
 });
 
 // POST /auth/2fa/setup — genereer secret + QR voor eerste inrichting
-router.post("/auth/2fa/setup", async (req, res) => {
+router.post("/auth/2fa/setup", async (req, res): Promise<void> => {
   try {
     const pendingId = req.session.pendingUserId;
     if (!pendingId) {
-      return res.status(401).json({ error: "Geen actieve inlogpoging" });
+      return void res.status(401).json({ error: "Geen actieve inlogpoging" });
     }
     const [g] = await db
       .select()
       .from(gebruikersTable)
       .where(eq(gebruikersTable.id, pendingId));
     if (!g) {
-      return res.status(404).json({ error: "Gebruiker niet gevonden" });
+      return void res.status(404).json({ error: "Gebruiker niet gevonden" });
     }
     const secret = authenticator.generateSecret();
     req.session.pendingSecret = secret;
@@ -159,19 +159,19 @@ router.post("/auth/2fa/setup", async (req, res) => {
 });
 
 // POST /auth/2fa/activeren — bevestig eerste code en schakel 2FA in
-router.post("/auth/2fa/activeren", async (req, res) => {
+router.post("/auth/2fa/activeren", async (req, res): Promise<void> => {
   try {
     const pendingId = req.session.pendingUserId;
     const secret = req.session.pendingSecret;
     const code = schoonCode(req.body?.code);
     if (!pendingId || !secret) {
-      return res.status(401).json({ error: "Geen actieve inrichting" });
+      return void res.status(401).json({ error: "Geen actieve inrichting" });
     }
     if (!code) {
-      return res.status(400).json({ error: "Code is verplicht" });
+      return void res.status(400).json({ error: "Code is verplicht" });
     }
     if (!authenticator.check(code, secret)) {
-      return res.status(401).json({ error: "Onjuiste code, probeer opnieuw" });
+      return void res.status(401).json({ error: "Onjuiste code, probeer opnieuw" });
     }
     const [g] = await db
       .update(gebruikersTable)
@@ -202,23 +202,23 @@ router.post("/auth/2fa/activeren", async (req, res) => {
 });
 
 // POST /auth/2fa/verify — stap 2 bij bestaande 2FA
-router.post("/auth/2fa/verify", async (req, res) => {
+router.post("/auth/2fa/verify", async (req, res): Promise<void> => {
   if (!checkLoginRateLimit(req, res)) return;
   try {
     const pendingId = req.session.pendingUserId;
     const code = schoonCode(req.body?.code);
     if (!pendingId) {
-      return res.status(401).json({ error: "Geen actieve inlogpoging" });
+      return void res.status(401).json({ error: "Geen actieve inlogpoging" });
     }
     if (!code) {
-      return res.status(400).json({ error: "Code is verplicht" });
+      return void res.status(400).json({ error: "Code is verplicht" });
     }
     const [g] = await db
       .select()
       .from(gebruikersTable)
       .where(eq(gebruikersTable.id, pendingId));
     if (!g || !g.totpSecret) {
-      return res.status(401).json({ error: "Tweestapsverificatie niet ingericht" });
+      return void res.status(401).json({ error: "Tweestapsverificatie niet ingericht" });
     }
     if (!authenticator.check(code, g.totpSecret)) {
       await legLoginPogingVast({
@@ -228,7 +228,7 @@ router.post("/auth/2fa/verify", async (req, res) => {
         userAgent: verzoekUserAgent(req),
         gelukt: false,
       });
-      return res.status(401).json({ error: "Onjuiste code, probeer opnieuw" });
+      return void res.status(401).json({ error: "Onjuiste code, probeer opnieuw" });
     }
     await db
       .update(gebruikersTable)
@@ -259,38 +259,38 @@ router.post("/auth/2fa/verify", async (req, res) => {
 
 // POST /auth/mobile/login — login in één stap voor de mobiele monteur-app
 // (e-mail + wachtwoord + bestaande TOTP-code). Retourneert een bearer-token.
-router.post("/auth/mobile/login", async (req, res) => {
+router.post("/auth/mobile/login", async (req, res): Promise<void> => {
   if (!checkLoginRateLimit(req, res)) return;
   try {
     const { email, wachtwoord, code } = req.body ?? {};
     if (!email || !wachtwoord) {
-      return res.status(400).json({ error: "E-mail en wachtwoord zijn verplicht" });
+      return void res.status(400).json({ error: "E-mail en wachtwoord zijn verplicht" });
     }
     const [g] = await db
       .select()
       .from(gebruikersTable)
       .where(eq(gebruikersTable.email, String(email).trim().toLowerCase()));
     if (!g || !g.actief || !g.wachtwoord) {
-      return res.status(401).json({ error: "Onjuiste inloggegevens" });
+      return void res.status(401).json({ error: "Onjuiste inloggegevens" });
     }
     const ok = await bcrypt.compare(String(wachtwoord), g.wachtwoord);
     if (!ok) {
-      return res.status(401).json({ error: "Onjuiste inloggegevens" });
+      return void res.status(401).json({ error: "Onjuiste inloggegevens" });
     }
     if (!g.tweeFactorIngeschakeld || !g.totpSecret) {
-      return res.status(403).json({
+      return void res.status(403).json({
         error:
           "Tweestapsverificatie is nog niet ingericht. Log eerst in via de webportal om dit te activeren.",
       });
     }
     const ingevoerdeCode = schoonCode(code);
     if (!ingevoerdeCode) {
-      return res
+      return void res
         .status(401)
         .json({ error: "Authenticatiecode is verplicht", status: "verify_2fa" });
     }
     if (!authenticator.check(ingevoerdeCode, g.totpSecret)) {
-      return res
+      return void res
         .status(401)
         .json({ error: "Onjuiste code, probeer opnieuw", status: "verify_2fa" });
     }
@@ -299,7 +299,7 @@ router.post("/auth/mobile/login", async (req, res) => {
       .set({ laatstOnline: new Date() })
       .where(eq(gebruikersTable.id, g.id));
     const token = maakToken(g.id);
-    return res.json({ token, gebruiker: mapAuthGebruiker(g) });
+    return void res.json({ token, gebruiker: mapAuthGebruiker(g) });
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });
@@ -315,10 +315,10 @@ router.post("/auth/logout", (req, res) => {
 });
 
 // POST /auth/wachtwoord-vergeten — publiek; altijd 204 (geen e-mail-enumeratie)
-router.post("/auth/wachtwoord-vergeten", async (req, res) => {
+router.post("/auth/wachtwoord-vergeten", async (req, res): Promise<void> => {
   try {
     const { email } = req.body ?? {};
-    if (!email) return res.status(204).send();
+    if (!email) return void res.status(204).send();
 
     const [g] = await db
       .select()
@@ -326,7 +326,7 @@ router.post("/auth/wachtwoord-vergeten", async (req, res) => {
       .where(eq(gebruikersTable.email, String(email).trim().toLowerCase()))
       .limit(1);
 
-    if (!g || !g.actief) return res.status(204).send();
+    if (!g || !g.actief) return void res.status(204).send();
 
     // Genereer een cryptografisch veilige token (32 bytes = 64 hex-tekens)
     const token = crypto.randomBytes(32).toString("hex");
@@ -351,22 +351,22 @@ router.post("/auth/wachtwoord-vergeten", async (req, res) => {
       req.log.warn({ email: g.email }, "Wachtwoord-reset mail kon niet worden verstuurd");
     }
 
-    return res.status(204).send();
+    return void res.status(204).send();
   } catch (err) {
     req.log.error(err, "POST /auth/wachtwoord-vergeten");
-    return res.status(204).send();
+    return void res.status(204).send();
   }
 });
 
 // POST /auth/wachtwoord-reset — publiek; token + nieuw wachtwoord
-router.post("/auth/wachtwoord-reset", async (req, res) => {
+router.post("/auth/wachtwoord-reset", async (req, res): Promise<void> => {
   try {
     const { token, nieuw_wachtwoord } = req.body ?? {};
     if (!token || !nieuw_wachtwoord) {
-      return res.status(400).json({ error: "Token en nieuw wachtwoord zijn verplicht" });
+      return void res.status(400).json({ error: "Token en nieuw wachtwoord zijn verplicht" });
     }
     if (String(nieuw_wachtwoord).length < 8) {
-      return res.status(400).json({ error: "Wachtwoord moet minimaal 8 tekens bevatten" });
+      return void res.status(400).json({ error: "Wachtwoord moet minimaal 8 tekens bevatten" });
     }
 
     const now = new Date();
@@ -383,7 +383,7 @@ router.post("/auth/wachtwoord-reset", async (req, res) => {
       .limit(1);
 
     if (!resetToken) {
-      return res.status(400).json({ error: "De resetlink is ongeldig of verlopen" });
+      return void res.status(400).json({ error: "De resetlink is ongeldig of verlopen" });
     }
 
     const gehasht = await bcrypt.hash(String(nieuw_wachtwoord), 10);
@@ -398,34 +398,34 @@ router.post("/auth/wachtwoord-reset", async (req, res) => {
       .set({ gebruiktOp: now })
       .where(eq(wachtwoordResetTokensTable.id, resetToken.id));
 
-    return res.status(204).send();
+    return void res.status(204).send();
   } catch (err) {
     req.log.error(err, "POST /auth/wachtwoord-reset");
-    return res.status(500).json({ error: "Onbekende fout" });
+    return void res.status(500).json({ error: "Onbekende fout" });
   }
 });
 
 // POST /auth/wachtwoord-wijzigen
-router.post("/auth/wachtwoord-wijzigen", async (req, res) => {
+router.post("/auth/wachtwoord-wijzigen", async (req, res): Promise<void> => {
   try {
     const id = req.session.userId;
     if (!id) {
-      return res.status(401).json({ error: "Niet ingelogd" });
+      return void res.status(401).json({ error: "Niet ingelogd" });
     }
     const { huidig_wachtwoord, nieuw_wachtwoord } = req.body ?? {};
     if (!huidig_wachtwoord || !nieuw_wachtwoord) {
-      return res.status(400).json({ error: "Huidig en nieuw wachtwoord zijn verplicht" });
+      return void res.status(400).json({ error: "Huidig en nieuw wachtwoord zijn verplicht" });
     }
     if (String(nieuw_wachtwoord).length < 8) {
-      return res.status(400).json({ error: "Nieuw wachtwoord moet minimaal 8 tekens bevatten" });
+      return void res.status(400).json({ error: "Nieuw wachtwoord moet minimaal 8 tekens bevatten" });
     }
     const [g] = await db.select().from(gebruikersTable).where(eq(gebruikersTable.id, id));
     if (!g || !g.wachtwoord) {
-      return res.status(404).json({ error: "Gebruiker niet gevonden" });
+      return void res.status(404).json({ error: "Gebruiker niet gevonden" });
     }
     const klopt = await bcrypt.compare(String(huidig_wachtwoord), g.wachtwoord);
     if (!klopt) {
-      return res.status(400).json({ error: "Huidig wachtwoord is onjuist" });
+      return void res.status(400).json({ error: "Huidig wachtwoord is onjuist" });
     }
     const gehasht = await bcrypt.hash(String(nieuw_wachtwoord), 10);
     await db
@@ -440,15 +440,15 @@ router.post("/auth/wachtwoord-wijzigen", async (req, res) => {
 });
 
 // POST /auth/taal — eigen taalvoorkeur wijzigen
-router.post("/auth/taal", async (req, res) => {
+router.post("/auth/taal", async (req, res): Promise<void> => {
   try {
     const id = req.session.userId;
     if (!id) {
-      return res.status(401).json({ error: "Niet ingelogd" });
+      return void res.status(401).json({ error: "Niet ingelogd" });
     }
     const taal = String(req.body?.taal ?? "");
     if (!TALEN.includes(taal as (typeof TALEN)[number])) {
-      return res.status(400).json({ error: "Ongeldige taalcode" });
+      return void res.status(400).json({ error: "Ongeldige taalcode" });
     }
     const [g] = await db
       .update(gebruikersTable)
@@ -456,7 +456,7 @@ router.post("/auth/taal", async (req, res) => {
       .where(eq(gebruikersTable.id, id))
       .returning();
     if (!g) {
-      return res.status(404).json({ error: "Gebruiker niet gevonden" });
+      return void res.status(404).json({ error: "Gebruiker niet gevonden" });
     }
     res.json(mapAuthGebruiker(g));
   } catch (err) {
@@ -466,9 +466,9 @@ router.post("/auth/taal", async (req, res) => {
 });
 
 // GET /auth/pwa-qr — QR-code afbeelding voor PWA-installatie (alleen ingelogd)
-router.get("/auth/pwa-qr", async (req, res) => {
+router.get("/auth/pwa-qr", async (req, res): Promise<void> => {
   try {
-    if (!req.session.userId) return res.status(401).json({ error: "Niet ingelogd" });
+    if (!req.session.userId) return void res.status(401).json({ error: "Niet ingelogd" });
     const domeinen = (process.env.REPLIT_DOMAINS ?? "").split(",").map((d) => d.trim()).filter(Boolean);
     const domein = domeinen[0] ?? req.get("host") ?? "";
     const url = domein ? `https://${domein}/connect/planning` : "/connect/planning";
@@ -488,9 +488,9 @@ router.get("/auth/pwa-qr", async (req, res) => {
 });
 
 // GET /auth/pwa-url — geeft de PWA-URL als JSON terug
-router.get("/auth/pwa-url", async (req, res) => {
+router.get("/auth/pwa-url", async (req, res): Promise<void> => {
   try {
-    if (!req.session.userId) return res.status(401).json({ error: "Niet ingelogd" });
+    if (!req.session.userId) return void res.status(401).json({ error: "Niet ingelogd" });
     const domeinen = (process.env.REPLIT_DOMAINS ?? "").split(",").map((d) => d.trim()).filter(Boolean);
     const domein = domeinen[0] ?? req.get("host") ?? "";
     const url = domein ? `https://${domein}/connect/planning` : "/connect/planning";
@@ -502,11 +502,11 @@ router.get("/auth/pwa-url", async (req, res) => {
 });
 
 // GET /auth/me
-router.get("/auth/me", async (req, res) => {
+router.get("/auth/me", async (req, res): Promise<void> => {
   try {
     const id = req.session.userId;
     if (!id) {
-      return res.status(401).json({ error: "Niet ingelogd" });
+      return void res.status(401).json({ error: "Niet ingelogd" });
     }
     const [g] = await db
       .select()
@@ -514,7 +514,7 @@ router.get("/auth/me", async (req, res) => {
       .where(eq(gebruikersTable.id, id));
     if (!g || !g.actief) {
       req.session.destroy(() => {});
-      return res.status(401).json({ error: "Niet ingelogd" });
+      return void res.status(401).json({ error: "Niet ingelogd" });
     }
     res.json(mapAuthGebruiker(g));
   } catch (err) {

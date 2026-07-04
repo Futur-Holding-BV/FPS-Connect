@@ -15,9 +15,9 @@ import { requireAuth } from "../middlewares/auth.js";
 
 const mijnPrivacyRouter = Router();
 
-mijnPrivacyRouter.get("/mijn/privacy-gegevens", requireAuth, async (req, res) => {
+mijnPrivacyRouter.get("/mijn/privacy-gegevens", requireAuth, async (req, res): Promise<void> => {
   const userId = req.session?.userId;
-  if (!userId) return res.status(401).json({ fout: "Niet ingelogd" });
+  if (!userId) return void res.status(401).json({ fout: "Niet ingelogd" });
 
   const [gebruiker] = await db
     .select({
@@ -30,7 +30,7 @@ mijnPrivacyRouter.get("/mijn/privacy-gegevens", requireAuth, async (req, res) =>
     .from(gebruikersTable)
     .where(eq(gebruikersTable.id, userId));
 
-  if (!gebruiker) return res.status(404).json({ fout: "Gebruiker niet gevonden" });
+  if (!gebruiker) return void res.status(404).json({ fout: "Gebruiker niet gevonden" });
 
   const [medewerkerRij] = await db
     .select({
@@ -87,7 +87,7 @@ mijnPrivacyRouter.get("/mijn/privacy-gegevens", requireAuth, async (req, res) =>
     opleidingen = opleidingRijen;
   }
 
-  return res.json({
+  return void res.json({
     id: gebruiker.id,
     naam: gebruiker.naam,
     email: gebruiker.email,
@@ -111,9 +111,9 @@ mijnPrivacyRouter.get("/mijn/privacy-gegevens", requireAuth, async (req, res) =>
   });
 });
 
-mijnPrivacyRouter.get("/mijn/activiteiten", requireAuth, async (req, res) => {
+mijnPrivacyRouter.get("/mijn/activiteiten", requireAuth, async (req, res): Promise<void> => {
   const userId = req.session?.userId;
-  if (!userId) return res.status(401).json({ fout: "Niet ingelogd" });
+  if (!userId) return void res.status(401).json({ fout: "Niet ingelogd" });
 
   const limit = Math.min(Number(req.query["limit"] ?? 50), 50);
   const offset = Number(req.query["offset"] ?? 0);
@@ -126,7 +126,7 @@ mijnPrivacyRouter.get("/mijn/activiteiten", requireAuth, async (req, res) => {
     .limit(limit)
     .offset(offset);
 
-  return res.json(
+  return void res.json(
     rijen.map((a) => ({
       id: a.id,
       type: a.type,

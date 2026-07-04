@@ -50,9 +50,9 @@ function mapBericht(b: typeof uitvoerderBerichtenTable.$inferSelect) {
 // Monteur start of hervat een sessie voor een werkdag
 // Returned sessie + bestaande berichten
 
-router.post("/uitvoerder/sessies", async (req, res) => {
+router.post("/uitvoerder/sessies", async (req, res): Promise<void> => {
   const gebruikerId = (req.session as { gebruikerId?: number }).gebruikerId;
-  if (!gebruikerId) return res.status(401).json({ error: "Niet ingelogd" });
+  if (!gebruikerId) return void res.status(401).json({ error: "Niet ingelogd" });
 
   const { werkdag_id, opdracht_id } = req.body as {
     werkdag_id?: number;
@@ -98,7 +98,7 @@ router.post("/uitvoerder/sessies", async (req, res) => {
     sessie = inserted[0];
   }
 
-  if (!sessie) return res.status(500).json({ error: "Sessie kon niet worden aangemaakt" });
+  if (!sessie) return void res.status(500).json({ error: "Sessie kon niet worden aangemaakt" });
 
   const berichten = await db
     .select()
@@ -106,7 +106,7 @@ router.post("/uitvoerder/sessies", async (req, res) => {
     .where(eq(uitvoerderBerichtenTable.sessieId, sessie.id))
     .orderBy(uitvoerderBerichtenTable.aangemaaktOp);
 
-  return res.json({
+  return void res.json({
     sessie: mapSessie(sessie),
     berichten: berichten.map(mapBericht),
   });
@@ -116,9 +116,9 @@ router.post("/uitvoerder/sessies", async (req, res) => {
 // Sessie ophalen inclusief berichten
 // Toegankelijk voor eigenaar (monteur) of WV/PL
 
-router.get("/uitvoerder/sessies/:id", async (req, res) => {
+router.get("/uitvoerder/sessies/:id", async (req, res): Promise<void> => {
   const gebruikerId = (req.session as { gebruikerId?: number }).gebruikerId;
-  if (!gebruikerId) return res.status(401).json({ error: "Niet ingelogd" });
+  if (!gebruikerId) return void res.status(401).json({ error: "Niet ingelogd" });
 
   const id = parseInt(String(req.params["id"] ?? "0"), 10);
 
@@ -126,12 +126,12 @@ router.get("/uitvoerder/sessies/:id", async (req, res) => {
     .select()
     .from(uitvoerderSessiesTable)
     .where(eq(uitvoerderSessiesTable.id, id));
-  if (!sessie) return res.status(404).json({ error: "Sessie niet gevonden" });
+  if (!sessie) return void res.status(404).json({ error: "Sessie niet gevonden" });
 
   // Toegang: eigenaar of bevoegdheid werkvoorbereiding:lezen
   const isEigenaar = sessie.monteurId === gebruikerId;
   if (!isEigenaar) {
-    return res.status(403).json({ error: "Geen toegang tot deze sessie" });
+    return void res.status(403).json({ error: "Geen toegang tot deze sessie" });
   }
 
   const berichten = await db
@@ -149,15 +149,15 @@ router.get("/uitvoerder/sessies/:id", async (req, res) => {
     opdracht = o ?? null;
   }
 
-  return res.json({ sessie: mapSessie(sessie), berichten: berichten.map(mapBericht), opdracht });
+  return void res.json({ sessie: mapSessie(sessie), berichten: berichten.map(mapBericht), opdracht });
 });
 
 // ── POST /uitvoerder/sessies/:id/berichten ─────────────────────────────────
 // Monteur stuurt een bericht (+ optioneel foto), AI antwoordt synchroon
 
-router.post("/uitvoerder/sessies/:id/berichten", async (req, res) => {
+router.post("/uitvoerder/sessies/:id/berichten", async (req, res): Promise<void> => {
   const gebruikerId = (req.session as { gebruikerId?: number }).gebruikerId;
-  if (!gebruikerId) return res.status(401).json({ error: "Niet ingelogd" });
+  if (!gebruikerId) return void res.status(401).json({ error: "Niet ingelogd" });
 
   const sessieId = parseInt(String(req.params["id"] ?? "0"), 10);
 
@@ -165,12 +165,12 @@ router.post("/uitvoerder/sessies/:id/berichten", async (req, res) => {
     .select()
     .from(uitvoerderSessiesTable)
     .where(eq(uitvoerderSessiesTable.id, sessieId));
-  if (!sessie) return res.status(404).json({ error: "Sessie niet gevonden" });
-  if (sessie.monteurId !== gebruikerId) return res.status(403).json({ error: "Geen toegang" });
-  if (sessie.status === "bevestigd") return res.status(409).json({ error: "Sessie is bevestigd" });
+  if (!sessie) return void res.status(404).json({ error: "Sessie niet gevonden" });
+  if (sessie.monteurId !== gebruikerId) return void res.status(403).json({ error: "Geen toegang" });
+  if (sessie.status === "bevestigd") return void res.status(409).json({ error: "Sessie is bevestigd" });
 
   const { inhoud, foto_pad } = req.body as { inhoud?: string; foto_pad?: string };
-  if (!inhoud?.trim()) return res.status(400).json({ error: "inhoud is verplicht" });
+  if (!inhoud?.trim()) return void res.status(400).json({ error: "inhoud is verplicht" });
 
   // Sla monteur-bericht op
   const [monteurBericht] = await db
@@ -197,7 +197,7 @@ router.post("/uitvoerder/sessies/:id/berichten", async (req, res) => {
   }
 
   if (!heeftGateway()) {
-    return res.status(503).json({ error: "AI niet beschikbaar" });
+    return void res.status(503).json({ error: "AI niet beschikbaar" });
   }
 
   // Foto van huidig bericht laden voor vision
@@ -283,34 +283,34 @@ Kennisgebied: brandwerende deuren, doorvoeringen, brandkleppen, manchetten (EPDM
       .set({ bijgewerktOp: new Date() })
       .where(eq(uitvoerderSessiesTable.id, sessieId));
 
-    return res.json({
+    return void res.json({
       monteur_bericht: mapBericht(monteurBericht),
       ai_bericht: mapBericht(aiBericht),
     });
   } catch (err) {
     logger.error({ err, sessieId }, "AI uitvoerder bericht mislukt");
-    return res.status(502).json({ error: "AI kon geen antwoord geven, probeer opnieuw" });
+    return void res.status(502).json({ error: "AI kon geen antwoord geven, probeer opnieuw" });
   }
 });
 
 // ── POST /uitvoerder/sessies/:id/bevestig ───────────────────────────────────
 // Monteur legt de gekozen aanpak vast — sessie wordt bevestigd
 
-router.post("/uitvoerder/sessies/:id/bevestig", async (req, res) => {
+router.post("/uitvoerder/sessies/:id/bevestig", async (req, res): Promise<void> => {
   const gebruikerId = (req.session as { gebruikerId?: number }).gebruikerId;
-  if (!gebruikerId) return res.status(401).json({ error: "Niet ingelogd" });
+  if (!gebruikerId) return void res.status(401).json({ error: "Niet ingelogd" });
 
   const sessieId = parseInt(String(req.params["id"] ?? "0"), 10);
   const { gekozen_aanpak } = req.body as { gekozen_aanpak?: string };
 
-  if (!gekozen_aanpak?.trim()) return res.status(400).json({ error: "gekozen_aanpak is verplicht" });
+  if (!gekozen_aanpak?.trim()) return void res.status(400).json({ error: "gekozen_aanpak is verplicht" });
 
   const [sessie] = await db
     .select()
     .from(uitvoerderSessiesTable)
     .where(eq(uitvoerderSessiesTable.id, sessieId));
-  if (!sessie) return res.status(404).json({ error: "Sessie niet gevonden" });
-  if (sessie.monteurId !== gebruikerId) return res.status(403).json({ error: "Geen toegang" });
+  if (!sessie) return void res.status(404).json({ error: "Sessie niet gevonden" });
+  if (sessie.monteurId !== gebruikerId) return void res.status(403).json({ error: "Geen toegang" });
 
   const nu = new Date();
   const [bijgewerkt] = await db
@@ -324,14 +324,14 @@ router.post("/uitvoerder/sessies/:id/bevestig", async (req, res) => {
     .where(eq(uitvoerderSessiesTable.id, sessieId))
     .returning();
 
-  return res.json({ sessie: mapSessie(bijgewerkt) });
+  return void res.json({ sessie: mapSessie(bijgewerkt) });
 });
 
 // ── GET /uitvoerder/log ─────────────────────────────────────────────────────
 // Projectleider / werkvoorbereider leest logs van alle sessies
 // Query: ?opdracht_id=N (optioneel)
 
-router.get("/uitvoerder/log", lezen, async (req, res) => {
+router.get("/uitvoerder/log", lezen, async (req, res): Promise<void> => {
   const { opdracht_id } = req.query as { opdracht_id?: string };
 
   const sessies = await db
@@ -344,7 +344,7 @@ router.get("/uitvoerder/log", lezen, async (req, res) => {
     )
     .orderBy(desc(uitvoerderSessiesTable.bijgewerktOp));
 
-  if (sessies.length === 0) return res.json([]);
+  if (sessies.length === 0) return void res.json([]);
 
   const sessieIds = sessies.map((s) => s.id);
   const monteurIds = [...new Set(sessies.map((s) => s.monteurId))];
@@ -376,7 +376,7 @@ router.get("/uitvoerder/log", lezen, async (req, res) => {
   const monteurMap = new Map(monteurs.map((m) => [m.id, m.naam]));
   const opdrachtMap = new Map(opdrachten.map((o) => [o.id, o]));
 
-  return res.json(
+  return void res.json(
     sessies.map((s) => ({
       ...mapSessie(s),
       monteur_naam: monteurMap.get(s.monteurId) ?? null,

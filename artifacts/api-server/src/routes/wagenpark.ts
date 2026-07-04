@@ -200,7 +200,7 @@ async function logAvg(
 // Voertuigen
 // ══════════════════════════════════════════════════════════
 
-router.get("/voertuigen", lezen, async (req, res) => {
+router.get("/voertuigen", lezen, async (req, res): Promise<void> => {
   const gearchiveerd = req.query["gearchiveerd"] === "true";
   const statusFilter = req.query["status"] as string | undefined;
 
@@ -218,7 +218,7 @@ router.get("/voertuigen", lezen, async (req, res) => {
   res.json(rijen.map(mapVoertuigSamenvatting));
 });
 
-router.post("/voertuigen", aanmaken, async (req, res) => {
+router.post("/voertuigen", aanmaken, async (req, res): Promise<void> => {
   const body = req.body;
 
   const [rij] = await db.insert(voertuigenTable).values({
@@ -252,12 +252,12 @@ router.post("/voertuigen", aanmaken, async (req, res) => {
   res.status(201).json(mapVoertuig(rij));
 });
 
-router.get("/voertuigen/:id", lezen, async (req, res) => {
+router.get("/voertuigen/:id", lezen, async (req, res): Promise<void> => {
   const id = Number(req.params["id"]);
-  if (isNaN(id)) return res.status(400).json({ fout: "Ongeldig ID" });
+  if (isNaN(id)) return void res.status(400).json({ fout: "Ongeldig ID" });
 
   const [rij] = await db.select().from(voertuigenTable).where(eq(voertuigenTable.id, id));
-  if (!rij) return res.status(404).json({ fout: "Niet gevonden" });
+  if (!rij) return void res.status(404).json({ fout: "Niet gevonden" });
 
   let chauffeurNaam: string | null = null;
   if (rij.chauffeurId) {
@@ -272,9 +272,9 @@ router.get("/voertuigen/:id", lezen, async (req, res) => {
   res.json(mapVoertuig(rij, chauffeurNaam));
 });
 
-router.patch("/voertuigen/:id", schrijven, async (req, res) => {
+router.patch("/voertuigen/:id", schrijven, async (req, res): Promise<void> => {
   const id = Number(req.params["id"]);
-  if (isNaN(id)) return res.status(400).json({ fout: "Ongeldig ID" });
+  if (isNaN(id)) return void res.status(400).json({ fout: "Ongeldig ID" });
 
   const body = req.body;
   const patch: Partial<typeof voertuigenTable.$inferInsert> = { bijgewerktOp: new Date() };
@@ -312,20 +312,20 @@ router.patch("/voertuigen/:id", schrijven, async (req, res) => {
     .where(eq(voertuigenTable.id, id))
     .returning();
 
-  if (!bijgewerkt) return res.status(404).json({ fout: "Niet gevonden" });
+  if (!bijgewerkt) return void res.status(404).json({ fout: "Niet gevonden" });
   res.json(mapVoertuig(bijgewerkt));
 });
 
-router.delete("/voertuigen/:id", beheer, async (req, res) => {
+router.delete("/voertuigen/:id", beheer, async (req, res): Promise<void> => {
   const id = Number(req.params["id"]);
-  if (isNaN(id)) return res.status(400).json({ fout: "Ongeldig ID" });
+  if (isNaN(id)) return void res.status(400).json({ fout: "Ongeldig ID" });
 
   const [bijgewerkt] = await db.update(voertuigenTable)
     .set({ gearchiveerd: true, bijgewerktOp: new Date() })
     .where(eq(voertuigenTable.id, id))
     .returning();
 
-  if (!bijgewerkt) return res.status(404).json({ fout: "Niet gevonden" });
+  if (!bijgewerkt) return void res.status(404).json({ fout: "Niet gevonden" });
   res.status(204).end();
 });
 
@@ -333,9 +333,9 @@ router.delete("/voertuigen/:id", beheer, async (req, res) => {
 // Onderhoud
 // ══════════════════════════════════════════════════════════
 
-router.get("/voertuigen/:id/onderhoud", lezen, async (req, res) => {
+router.get("/voertuigen/:id/onderhoud", lezen, async (req, res): Promise<void> => {
   const voertuigId = Number(req.params["id"]);
-  if (isNaN(voertuigId)) return res.status(400).json({ fout: "Ongeldig ID" });
+  if (isNaN(voertuigId)) return void res.status(400).json({ fout: "Ongeldig ID" });
 
   const rijen = await db
     .select()
@@ -346,9 +346,9 @@ router.get("/voertuigen/:id/onderhoud", lezen, async (req, res) => {
   res.json(rijen.map(mapOnderhoud));
 });
 
-router.post("/voertuigen/:id/onderhoud", schrijven, async (req, res) => {
+router.post("/voertuigen/:id/onderhoud", schrijven, async (req, res): Promise<void> => {
   const voertuigId = Number(req.params["id"]);
-  if (isNaN(voertuigId)) return res.status(400).json({ fout: "Ongeldig ID" });
+  if (isNaN(voertuigId)) return void res.status(400).json({ fout: "Ongeldig ID" });
 
   const body = req.body;
   const [rij] = await db.insert(wagenparkOnderhoudTable).values({
@@ -371,10 +371,10 @@ router.post("/voertuigen/:id/onderhoud", schrijven, async (req, res) => {
   res.status(201).json(mapOnderhoud(rij));
 });
 
-router.patch("/voertuigen/:id/onderhoud/:onderhoudId", schrijven, async (req, res) => {
+router.patch("/voertuigen/:id/onderhoud/:onderhoudId", schrijven, async (req, res): Promise<void> => {
   const voertuigId   = Number(req.params["id"]);
   const onderhoudId  = Number(req.params["onderhoudId"]);
-  if (isNaN(voertuigId) || isNaN(onderhoudId)) return res.status(400).json({ fout: "Ongeldig ID" });
+  if (isNaN(voertuigId) || isNaN(onderhoudId)) return void res.status(400).json({ fout: "Ongeldig ID" });
 
   const body = req.body;
   const patch: Partial<typeof wagenparkOnderhoudTable.$inferInsert> = { bijgewerktOp: new Date() };
@@ -396,7 +396,7 @@ router.patch("/voertuigen/:id/onderhoud/:onderhoudId", schrijven, async (req, re
     ))
     .returning();
 
-  if (!bijgewerkt) return res.status(404).json({ fout: "Niet gevonden" });
+  if (!bijgewerkt) return void res.status(404).json({ fout: "Niet gevonden" });
   res.json(mapOnderhoud(bijgewerkt));
 });
 
@@ -404,9 +404,9 @@ router.patch("/voertuigen/:id/onderhoud/:onderhoudId", schrijven, async (req, re
 // Kosten
 // ══════════════════════════════════════════════════════════
 
-router.get("/voertuigen/:id/kosten", lezen, async (req, res) => {
+router.get("/voertuigen/:id/kosten", lezen, async (req, res): Promise<void> => {
   const voertuigId = Number(req.params["id"]);
-  if (isNaN(voertuigId)) return res.status(400).json({ fout: "Ongeldig ID" });
+  if (isNaN(voertuigId)) return void res.status(400).json({ fout: "Ongeldig ID" });
 
   const rijen = await db
     .select()
@@ -417,9 +417,9 @@ router.get("/voertuigen/:id/kosten", lezen, async (req, res) => {
   res.json(rijen.map(mapKosten));
 });
 
-router.post("/voertuigen/:id/kosten", schrijven, async (req, res) => {
+router.post("/voertuigen/:id/kosten", schrijven, async (req, res): Promise<void> => {
   const voertuigId = Number(req.params["id"]);
-  if (isNaN(voertuigId)) return res.status(400).json({ fout: "Ongeldig ID" });
+  if (isNaN(voertuigId)) return void res.status(400).json({ fout: "Ongeldig ID" });
 
   const body = req.body;
   const [rij] = await db.insert(wagenparkKostenTable).values({
@@ -442,9 +442,9 @@ router.post("/voertuigen/:id/kosten", schrijven, async (req, res) => {
 // Ritten
 // ══════════════════════════════════════════════════════════
 
-router.get("/voertuigen/:id/ritten", lezen, async (req, res) => {
+router.get("/voertuigen/:id/ritten", lezen, async (req, res): Promise<void> => {
   const voertuigId = Number(req.params["id"]);
-  if (isNaN(voertuigId)) return res.status(400).json({ fout: "Ongeldig ID" });
+  if (isNaN(voertuigId)) return void res.status(400).json({ fout: "Ongeldig ID" });
 
   const rijen = await db
     .select()
@@ -464,7 +464,7 @@ router.get("/voertuigen/:id/ritten", lezen, async (req, res) => {
 // Traxgo Synchronisatie
 // ══════════════════════════════════════════════════════════
 
-router.post("/sync", beheer, async (req, res) => {
+router.post("/sync", beheer, async (req, res): Promise<void> => {
   const provider = getFleetProvider();
   const userId   = req.session?.["userId"] ?? null;
 
@@ -559,7 +559,7 @@ router.post("/sync", beheer, async (req, res) => {
   res.json(mapSyncLog(logRij));
 });
 
-router.get("/sync/logs", lezen, async (req, res) => {
+router.get("/sync/logs", lezen, async (req, res): Promise<void> => {
   const limit = Math.min(Number(req.query["limit"]) || 50, 200);
 
   const rijen = await db
@@ -575,7 +575,7 @@ router.get("/sync/logs", lezen, async (req, res) => {
 // AI-advies (concept — mens accordeert altijd)
 // ══════════════════════════════════════════════════════════
 
-router.get("/ai-advies", lezen, async (req, res) => {
+router.get("/ai-advies", lezen, async (req, res): Promise<void> => {
   // Haal alle actieve voertuigen op met hun laatste onderhoud en kosten
   const voertuigen = await db
     .select()
@@ -680,7 +680,7 @@ router.get("/ai-advies", lezen, async (req, res) => {
 // AVG-logboek
 // ══════════════════════════════════════════════════════════
 
-router.get("/avg-logboek", beheer, async (req, res) => {
+router.get("/avg-logboek", beheer, async (req, res): Promise<void> => {
   const van = req.query["van"] ? new Date(req.query["van"] as string) : null;
   const tot = req.query["tot"] ? new Date(req.query["tot"] as string) : null;
 

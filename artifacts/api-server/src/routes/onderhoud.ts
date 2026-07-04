@@ -70,7 +70,7 @@ async function mapOnderhoud(o: typeof onderhoudTable.$inferSelect) {
 }
 
 // GET /onderhoud
-router.get("/onderhoud", lezenOnderhoud, async (req, res) => {
+router.get("/onderhoud", lezenOnderhoud, async (req, res): Promise<void> => {
   try {
     const { userId, beperkt } = await effectieveContext(req);
     const { voorziening_id, gebouw_id, status } = req.query;
@@ -102,11 +102,11 @@ router.get("/onderhoud", lezenOnderhoud, async (req, res) => {
 });
 
 // POST /onderhoud
-router.post("/onderhoud", requireBevoegdheid("onderhoud", 3), async (req, res) => {
+router.post("/onderhoud", requireBevoegdheid("onderhoud", 3), async (req, res): Promise<void> => {
   try {
     const { voorziening_id, gebouw_id, titel, omschrijving, prioriteit, toegewezen_aan_id, deadline } = req.body;
     if (!titel || !prioriteit) {
-      return res.status(400).json({ error: "titel en prioriteit zijn verplicht" });
+      return void res.status(400).json({ error: "titel en prioriteit zijn verplicht" });
     }
     // Cross-entity integriteit: als beide zijn opgegeven moet de voorziening bij
     // hetzelfde gebouw horen, zodat toegang tot gebouw A geen taak op een
@@ -114,14 +114,14 @@ router.post("/onderhoud", requireBevoegdheid("onderhoud", 3), async (req, res) =
     const voorzieningGebouw =
       voorziening_id != null ? await gebouwIdVanVoorziening(voorziening_id) : null;
     if (voorziening_id != null && voorzieningGebouw == null) {
-      return res.status(400).json({ error: "Voorziening niet gevonden" });
+      return void res.status(400).json({ error: "Voorziening niet gevonden" });
     }
     if (gebouw_id != null && voorzieningGebouw != null && gebouw_id !== voorzieningGebouw) {
-      return res.status(400).json({ error: "Voorziening hoort niet bij dit gebouw" });
+      return void res.status(400).json({ error: "Voorziening hoort niet bij dit gebouw" });
     }
     const doelGebouw = gebouw_id ?? voorzieningGebouw;
     if (!req.permissies!.magBijGebouw(doelGebouw)) {
-      return res.status(403).json({ error: "Geen toegang tot dit gebouw" });
+      return void res.status(403).json({ error: "Geen toegang tot dit gebouw" });
     }
     const [o] = await db
       .insert(onderhoudTable)
@@ -152,13 +152,13 @@ router.post("/onderhoud", requireBevoegdheid("onderhoud", 3), async (req, res) =
 });
 
 // GET /onderhoud/:id
-router.get("/onderhoud/:id", lezenOnderhoud, async (req, res) => {
+router.get("/onderhoud/:id", lezenOnderhoud, async (req, res): Promise<void> => {
   try {
     const id = parseInt(String(req.params.id));
     const { userId, beperkt } = await effectieveContext(req);
 
     const [o] = await db.select().from(onderhoudTable).where(eq(onderhoudTable.id, id));
-    if (!o) return res.status(404).json({ error: "Onderhoudstaak niet gevonden" });
+    if (!o) return void res.status(404).json({ error: "Onderhoudstaak niet gevonden" });
 
     // Toegangscontrole voor beperkte gebruikers
     if (beperkt) {
@@ -166,7 +166,7 @@ router.get("/onderhoud/:id", lezenOnderhoud, async (req, res) => {
       const toegang =
         o.toegewezenAanId === userId ||
         (o.gebouwId != null && gebouwIds.includes(o.gebouwId));
-      if (!toegang) return res.status(403).json({ error: "Geen toegang tot deze taak" });
+      if (!toegang) return void res.status(403).json({ error: "Geen toegang tot deze taak" });
     }
 
     res.json(await mapOnderhoud(o));
@@ -177,7 +177,7 @@ router.get("/onderhoud/:id", lezenOnderhoud, async (req, res) => {
 });
 
 // PATCH /onderhoud/:id
-router.patch("/onderhoud/:id", requireBevoegdheid("onderhoud", 2), async (req, res) => {
+router.patch("/onderhoud/:id", requireBevoegdheid("onderhoud", 2), async (req, res): Promise<void> => {
   try {
     const id = parseInt(String(req.params.id));
     const {
@@ -189,10 +189,10 @@ router.patch("/onderhoud/:id", requireBevoegdheid("onderhoud", 2), async (req, r
       .select({ gebouwId: onderhoudTable.gebouwId, voorzieningId: onderhoudTable.voorzieningId })
       .from(onderhoudTable)
       .where(eq(onderhoudTable.id, id));
-    if (!bestaand) return res.status(404).json({ error: "Onderhoudstaak niet gevonden" });
+    if (!bestaand) return void res.status(404).json({ error: "Onderhoudstaak niet gevonden" });
     const doelGebouw = bestaand.gebouwId ?? (await gebouwIdVanVoorziening(bestaand.voorzieningId));
     if (!req.permissies!.magBijGebouw(doelGebouw)) {
-      return res.status(403).json({ error: "Geen toegang tot deze taak" });
+      return void res.status(403).json({ error: "Geen toegang tot deze taak" });
     }
 
     // Status via de WorkflowEngine — valideert de transitie en logt activiteit
@@ -200,7 +200,7 @@ router.patch("/onderhoud/:id", requireBevoegdheid("onderhoud", 2), async (req, r
       const ctx = await maakTransitieContext(req, db);
       const result = await workflowService.transiteer("onderhoud", id, status, ctx);
       if (!result.ok) {
-        return res.status(result.error!.httpStatus).json({ error: result.error!.bericht });
+        return void res.status(result.error!.httpStatus).json({ error: result.error!.bericht });
       }
     }
 
@@ -220,7 +220,7 @@ router.patch("/onderhoud/:id", requireBevoegdheid("onderhoud", 2), async (req, r
       .where(eq(onderhoudTable.id, id))
       .returning();
 
-    if (!o) return res.status(404).json({ error: "Onderhoudstaak niet gevonden" });
+    if (!o) return void res.status(404).json({ error: "Onderhoudstaak niet gevonden" });
 
     res.json(await mapOnderhoud(o));
   } catch (err) {
@@ -230,7 +230,7 @@ router.patch("/onderhoud/:id", requireBevoegdheid("onderhoud", 2), async (req, r
 });
 
 // DELETE /onderhoud/:id
-router.delete("/onderhoud/:id", requireBevoegdheid("onderhoud", 4), async (req, res) => {
+router.delete("/onderhoud/:id", requireBevoegdheid("onderhoud", 4), async (req, res): Promise<void> => {
   try {
     const id = parseInt(String(req.params.id));
     await db.delete(onderhoudTable).where(eq(onderhoudTable.id, id));

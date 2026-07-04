@@ -63,7 +63,7 @@ async function verrijkRecht(r: typeof objectRechtenTable.$inferSelect) {
 // ── Routes ───────────────────────────────────────────────────────────────────
 
 // GET /object-rechten — alle actieve rechten (alleen beheerder)
-router.get("/object-rechten", alleenBeheerder, async (req, res) => {
+router.get("/object-rechten", alleenBeheerder, async (req, res): Promise<void> => {
   try {
     const nu = new Date();
     const rijen = await db
@@ -80,7 +80,7 @@ router.get("/object-rechten", alleenBeheerder, async (req, res) => {
 });
 
 // GET /gebruikers/:id/object-rechten — rechten van één gebruiker
-router.get("/gebruikers/:id/object-rechten", alleenBeheerder, async (req, res) => {
+router.get("/gebruikers/:id/object-rechten", alleenBeheerder, async (req, res): Promise<void> => {
   const gebruikerId = parseId(req.params.id);
   if (!gebruikerId) { res.status(400).json({ error: "Ongeldig id" }); return; }
 
@@ -99,7 +99,7 @@ router.get("/gebruikers/:id/object-rechten", alleenBeheerder, async (req, res) =
 });
 
 // POST /gebruikers/:id/object-rechten — verleen een recht
-router.post("/gebruikers/:id/object-rechten", alleenBeheerder, async (req, res) => {
+router.post("/gebruikers/:id/object-rechten", alleenBeheerder, async (req, res): Promise<void> => {
   const gebruikerId = parseId(req.params.id);
   if (!gebruikerId) { res.status(400).json({ error: "Ongeldig id" }); return; }
 
@@ -152,7 +152,7 @@ router.post("/gebruikers/:id/object-rechten", alleenBeheerder, async (req, res) 
 });
 
 // PATCH /object-rechten/:id — pas niveau of looptijd aan
-router.patch("/object-rechten/:id", alleenBeheerder, async (req, res) => {
+router.patch("/object-rechten/:id", alleenBeheerder, async (req, res): Promise<void> => {
   const id = parseId(req.params.id);
   if (!id) { res.status(400).json({ error: "Ongeldig id" }); return; }
 
@@ -191,7 +191,7 @@ router.patch("/object-rechten/:id", alleenBeheerder, async (req, res) => {
 });
 
 // DELETE /object-rechten/:id — trek recht in
-router.delete("/object-rechten/:id", alleenBeheerder, async (req, res) => {
+router.delete("/object-rechten/:id", alleenBeheerder, async (req, res): Promise<void> => {
   const id = parseId(req.params.id);
   if (!id) { res.status(400).json({ error: "Ongeldig id" }); return; }
 

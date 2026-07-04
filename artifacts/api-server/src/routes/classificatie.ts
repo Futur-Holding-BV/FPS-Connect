@@ -16,7 +16,7 @@ const router = Router();
 
 // ── APPLICATIES (voorziening-types) ─────────────────────────────────────────
 // GET /voorziening-types
-router.get("/voorziening-types", async (req, res) => {
+router.get("/voorziening-types", async (req, res): Promise<void> => {
   try {
     const inclusiefInactief = req.query.inclusief_inactief === "true";
     let rows = await db
@@ -43,17 +43,17 @@ router.get("/voorziening-types", async (req, res) => {
 router.put(
   "/voorziening-types/:code/labels",
   requireBevoegdheid("bibliotheek", 2),
-  async (req, res) => {
+  async (req, res): Promise<void> => {
     try {
       const code = String(req.params.code);
       const [type] = await db
         .select()
         .from(voorzieningTypesTable)
         .where(eq(voorzieningTypesTable.code, code));
-      if (!type) return res.status(404).json({ error: "Applicatie niet gevonden" });
+      if (!type) return void res.status(404).json({ error: "Applicatie niet gevonden" });
       const ids = Array.isArray(req.body?.label_ids) ? req.body.label_ids : [];
       await syncApplicatieLabels(code, ids);
-      return res.json({
+      return void res.json({
         code: type.code,
         naam: type.naam,
         categorie: type.categorie,
@@ -62,23 +62,23 @@ router.put(
       });
     } catch (err) {
       req.log.error(err);
-      return res.status(500).json({ error: "Interne serverfout" });
+      return void res.status(500).json({ error: "Interne serverfout" });
     }
   },
 );
 
 // POST /voorziening-types — nieuwe applicatie toevoegen (beheerder)
-router.post("/voorziening-types", requireBevoegdheid("bibliotheek", 3), async (req, res) => {
+router.post("/voorziening-types", requireBevoegdheid("bibliotheek", 3), async (req, res): Promise<void> => {
   try {
     const { code, naam, categorie, volgorde } = req.body;
     if (!code || !String(code).trim()) {
-      return res.status(400).json({ error: "code is verplicht" });
+      return void res.status(400).json({ error: "code is verplicht" });
     }
     if (!naam || !String(naam).trim()) {
-      return res.status(400).json({ error: "naam is verplicht" });
+      return void res.status(400).json({ error: "naam is verplicht" });
     }
     if (!categorie || !String(categorie).trim()) {
-      return res.status(400).json({ error: "categorie is verplicht" });
+      return void res.status(400).json({ error: "categorie is verplicht" });
     }
     const [t] = await db
       .insert(voorzieningTypesTable)
@@ -89,7 +89,7 @@ router.post("/voorziening-types", requireBevoegdheid("bibliotheek", 3), async (r
         volgorde: typeof volgorde === "number" ? volgorde : 0,
       })
       .returning();
-    return res.status(201).json({
+    return void res.status(201).json({
       code: t.code,
       naam: t.naam,
       categorie: t.categorie,
@@ -98,40 +98,40 @@ router.post("/voorziening-types", requireBevoegdheid("bibliotheek", 3), async (r
     });
   } catch (err) {
     if ((err as { code?: string })?.code === "23505") {
-      return res.status(409).json({ error: "Er bestaat al een applicatie met deze code" });
+      return void res.status(409).json({ error: "Er bestaat al een applicatie met deze code" });
     }
     req.log.error(err);
-    return res.status(500).json({ error: "Interne serverfout" });
+    return void res.status(500).json({ error: "Interne serverfout" });
   }
 });
 
 // PATCH /voorziening-types/:code — applicatie bewerken of archiveren (beheerder)
-router.patch("/voorziening-types/:code", requireBevoegdheid("bibliotheek", 2), async (req, res) => {
+router.patch("/voorziening-types/:code", requireBevoegdheid("bibliotheek", 2), async (req, res): Promise<void> => {
   try {
     const code = String(req.params.code);
     const { naam, categorie, volgorde, actief } = req.body;
     const set: Record<string, unknown> = {};
     if (naam !== undefined) {
-      if (!String(naam).trim()) return res.status(400).json({ error: "naam mag niet leeg zijn" });
+      if (!String(naam).trim()) return void res.status(400).json({ error: "naam mag niet leeg zijn" });
       set.naam = String(naam).trim();
     }
     if (categorie !== undefined) {
       if (!String(categorie).trim())
-        return res.status(400).json({ error: "categorie mag niet leeg zijn" });
+        return void res.status(400).json({ error: "categorie mag niet leeg zijn" });
       set.categorie = String(categorie).trim();
     }
     if (volgorde !== undefined && typeof volgorde === "number") set.volgorde = volgorde;
     if (actief !== undefined) set.actief = actief === true;
     if (Object.keys(set).length === 0) {
-      return res.status(400).json({ error: "Geen wijzigingen opgegeven" });
+      return void res.status(400).json({ error: "Geen wijzigingen opgegeven" });
     }
     const [t] = await db
       .update(voorzieningTypesTable)
       .set(set)
       .where(eq(voorzieningTypesTable.code, code))
       .returning();
-    if (!t) return res.status(404).json({ error: "Applicatie niet gevonden" });
-    return res.json({
+    if (!t) return void res.status(404).json({ error: "Applicatie niet gevonden" });
+    return void res.json({
       code: t.code,
       naam: t.naam,
       categorie: t.categorie,
@@ -140,13 +140,13 @@ router.patch("/voorziening-types/:code", requireBevoegdheid("bibliotheek", 2), a
     });
   } catch (err) {
     req.log.error(err);
-    return res.status(500).json({ error: "Interne serverfout" });
+    return void res.status(500).json({ error: "Interne serverfout" });
   }
 });
 
 // ── TOEPASSINGEN (labels) ───────────────────────────────────────────────────
 // GET /labels
-router.get("/labels", async (req, res) => {
+router.get("/labels", async (req, res): Promise<void> => {
   try {
     const { type_code, inclusief_gearchiveerd } = req.query;
     let rows = await db.select().from(labelsTable).orderBy(asc(labelsTable.naam));
@@ -167,11 +167,11 @@ router.get("/labels", async (req, res) => {
 });
 
 // POST /labels (beheerder)
-router.post("/labels", requireBevoegdheid("bibliotheek", 3), async (req, res) => {
+router.post("/labels", requireBevoegdheid("bibliotheek", 3), async (req, res): Promise<void> => {
   try {
     const { applicatie_codes, naam, fabrikant, fabrikant_id, testnorm, testrapport_id } = req.body;
     if (!naam || !String(naam).trim()) {
-      return res.status(400).json({ error: "naam is verplicht" });
+      return void res.status(400).json({ error: "naam is verplicht" });
     }
     // applicatie_codes is optioneel: een toepassing mag zonder applicatie-koppeling
     // worden aangemaakt (bv. bulk-import zonder ingevulde codes) en later gekoppeld.
@@ -179,7 +179,7 @@ router.post("/labels", requireBevoegdheid("bibliotheek", 3), async (req, res) =>
     if (codes.length > 0) {
       const onbekend = await onbekendeApplicatieCodes(codes);
       if (onbekend.length > 0) {
-        return res
+        return void res
           .status(400)
           .json({ error: `Onbekende applicatie-code(s): ${onbekend.join(", ")}` });
       }
@@ -196,15 +196,15 @@ router.post("/labels", requireBevoegdheid("bibliotheek", 3), async (req, res) =>
       })
       .returning();
     await syncLabelApplicaties(l.id, codes);
-    return res.status(201).json(await mapLabel(l));
+    return void res.status(201).json(await mapLabel(l));
   } catch (err) {
     req.log.error(err);
-    return res.status(500).json({ error: "Interne serverfout" });
+    return void res.status(500).json({ error: "Interne serverfout" });
   }
 });
 
 // PATCH /labels/:id (beheerder)
-router.patch("/labels/:id", requireBevoegdheid("bibliotheek", 2), async (req, res) => {
+router.patch("/labels/:id", requireBevoegdheid("bibliotheek", 2), async (req, res): Promise<void> => {
   try {
     const id = parseInt(String(req.params.id));
     const {
@@ -256,7 +256,7 @@ router.patch("/labels/:id", requireBevoegdheid("bibliotheek", 2), async (req, re
     if (Array.isArray(applicatie_codes)) {
       const onbekend = await onbekendeApplicatieCodes(applicatie_codes);
       if (onbekend.length > 0) {
-        return res
+        return void res
           .status(400)
           .json({ error: `Onbekende applicatie-code(s): ${onbekend.join(", ")}` });
       }
@@ -267,17 +267,17 @@ router.patch("/labels/:id", requireBevoegdheid("bibliotheek", 2), async (req, re
       .set(set)
       .where(eq(labelsTable.id, id))
       .returning();
-    if (!l) return res.status(404).json({ error: "Toepassing niet gevonden" });
+    if (!l) return void res.status(404).json({ error: "Toepassing niet gevonden" });
     if (Array.isArray(applicatie_codes)) await syncLabelApplicaties(id, applicatie_codes);
-    return res.json(await mapLabel(l));
+    return void res.json(await mapLabel(l));
   } catch (err) {
     req.log.error(err);
-    return res.status(500).json({ error: "Interne serverfout" });
+    return void res.status(500).json({ error: "Interne serverfout" });
   }
 });
 
 // PUT /labels/:id/documenten — gekoppelde documenten van een toepassing instellen (beheerder)
-router.put("/labels/:id/documenten", requireBevoegdheid("bibliotheek", 2), async (req, res) => {
+router.put("/labels/:id/documenten", requireBevoegdheid("bibliotheek", 2), async (req, res): Promise<void> => {
   try {
     const id = parseInt(String(req.params.id));
     const ids = Array.isArray(req.body?.document_ids) ? req.body.document_ids : [];
@@ -287,17 +287,17 @@ router.put("/labels/:id/documenten", requireBevoegdheid("bibliotheek", 2), async
       .set({ bijgewerktOp: new Date() })
       .where(eq(labelsTable.id, id))
       .returning();
-    if (!l) return res.status(404).json({ error: "Toepassing niet gevonden" });
-    return res.json(await mapLabel(l));
+    if (!l) return void res.status(404).json({ error: "Toepassing niet gevonden" });
+    return void res.json(await mapLabel(l));
   } catch (err) {
     req.log.error(err);
-    return res.status(500).json({ error: "Interne serverfout" });
+    return void res.status(500).json({ error: "Interne serverfout" });
   }
 });
 
 // ── TESTRAPPORTEN (bibliotheek) ─────────────────────────────────────────────
 // GET /testrapporten
-router.get("/testrapporten", async (req, res) => {
+router.get("/testrapporten", async (req, res): Promise<void> => {
   try {
     const inclusiefGearchiveerd = req.query.inclusief_gearchiveerd === "true";
     let rows = await db
@@ -313,11 +313,11 @@ router.get("/testrapporten", async (req, res) => {
 });
 
 // POST /testrapporten (beheerder)
-router.post("/testrapporten", requireBevoegdheid("bibliotheek", 3), async (req, res) => {
+router.post("/testrapporten", requireBevoegdheid("bibliotheek", 3), async (req, res): Promise<void> => {
   try {
     const { naam, fabrikant, norm, rapportnummer, pdf_url } = req.body;
     if (!naam || !String(naam).trim()) {
-      return res.status(400).json({ error: "naam is verplicht" });
+      return void res.status(400).json({ error: "naam is verplicht" });
     }
     const [t] = await db
       .insert(testrapportenTable)
@@ -329,15 +329,15 @@ router.post("/testrapporten", requireBevoegdheid("bibliotheek", 3), async (req, 
         pdfUrl: pdf_url ?? null,
       })
       .returning();
-    return res.status(201).json(mapTestrapport(t));
+    return void res.status(201).json(mapTestrapport(t));
   } catch (err) {
     req.log.error(err);
-    return res.status(500).json({ error: "Interne serverfout" });
+    return void res.status(500).json({ error: "Interne serverfout" });
   }
 });
 
 // PATCH /testrapporten/:id (beheerder)
-router.patch("/testrapporten/:id", requireBevoegdheid("bibliotheek", 2), async (req, res) => {
+router.patch("/testrapporten/:id", requireBevoegdheid("bibliotheek", 2), async (req, res): Promise<void> => {
   try {
     const id = parseInt(String(req.params.id));
     const { naam, fabrikant, norm, rapportnummer, pdf_url, gearchiveerd } = req.body;
@@ -354,11 +354,11 @@ router.patch("/testrapporten/:id", requireBevoegdheid("bibliotheek", 2), async (
       .set(set)
       .where(eq(testrapportenTable.id, id))
       .returning();
-    if (!t) return res.status(404).json({ error: "Testrapport niet gevonden" });
-    return res.json(mapTestrapport(t));
+    if (!t) return void res.status(404).json({ error: "Testrapport niet gevonden" });
+    return void res.json(mapTestrapport(t));
   } catch (err) {
     req.log.error(err);
-    return res.status(500).json({ error: "Interne serverfout" });
+    return void res.status(500).json({ error: "Interne serverfout" });
   }
 });
 

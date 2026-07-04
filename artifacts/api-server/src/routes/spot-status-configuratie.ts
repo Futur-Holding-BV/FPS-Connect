@@ -7,13 +7,13 @@ import { requireBevoegdheid } from "../middlewares/auth";
 const router = Router();
 
 // GET /spot-status-configuratie
-router.get("/spot-status-configuratie", requireBevoegdheid("voorzieningen", 1), async (req, res) => {
+router.get("/spot-status-configuratie", requireBevoegdheid("voorzieningen", 1), async (req, res): Promise<void> => {
   try {
     const rows = await db
       .select()
       .from(spotStatusConfiguratieTable)
       .orderBy(spotStatusConfiguratieTable.volgorde);
-    return res.json(
+    return void res.json(
       rows.map((r) => ({
         status_code: r.statusCode,
         weergave_naam: r.weergaveNaam,
@@ -25,7 +25,7 @@ router.get("/spot-status-configuratie", requireBevoegdheid("voorzieningen", 1), 
     );
   } catch (err) {
     req.log.error(err);
-    return res.status(500).json({ error: "Interne serverfout" });
+    return void res.status(500).json({ error: "Interne serverfout" });
   }
 });
 
@@ -33,7 +33,7 @@ router.get("/spot-status-configuratie", requireBevoegdheid("voorzieningen", 1), 
 router.patch(
   "/spot-status-configuratie/:statusCode",
   requireBevoegdheid("systeem", 2),
-  async (req, res) => {
+  async (req, res): Promise<void> => {
     try {
       const statusCode = String(req.params["statusCode"] ?? "");
       const { weergave_naam, actief, volgorde } = req.body as {
@@ -59,9 +59,9 @@ router.patch(
         .where(eq(spotStatusConfiguratieTable.statusCode, statusCode))
         .returning();
 
-      if (!row) return res.status(404).json({ error: "Status niet gevonden" });
+      if (!row) return void res.status(404).json({ error: "Status niet gevonden" });
 
-      return res.json({
+      return void res.json({
         status_code: row.statusCode,
         weergave_naam: row.weergaveNaam,
         volgorde: row.volgorde,
@@ -71,7 +71,7 @@ router.patch(
       });
     } catch (err) {
       req.log.error(err);
-      return res.status(500).json({ error: "Interne serverfout" });
+      return void res.status(500).json({ error: "Interne serverfout" });
     }
   }
 );

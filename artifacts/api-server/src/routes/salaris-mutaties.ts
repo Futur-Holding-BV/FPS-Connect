@@ -41,7 +41,7 @@ function mapMutatie(m: typeof salarisMutatiesTable.$inferSelect) {
   };
 }
 
-router.get("/salaris-mutaties", lezen, async (req: Request, res: Response) => {
+router.get("/salaris-mutaties", lezen, async (req: Request, res: Response): Promise<void> => {
   const { jaar, maand, werkmaatschappij, status, medewerker_id } = req.query;
   const filters = [];
   if (jaar) filters.push(eq(salarisMutatiesTable.periodeJaar, Number(jaar)));
@@ -56,10 +56,10 @@ router.get("/salaris-mutaties", lezen, async (req: Request, res: Response) => {
     .where(filters.length ? and(...filters) : undefined)
     .orderBy(desc(salarisMutatiesTable.aangemaaktOp));
 
-  return res.json(rows.map(mapMutatie));
+  return void res.json(rows.map(mapMutatie));
 });
 
-router.post("/salaris-mutaties", schrijven, async (req: Request, res: Response) => {
+router.post("/salaris-mutaties", schrijven, async (req: Request, res: Response): Promise<void> => {
   const {
     medewerker_id, werkmaatschappij, werkgever_id,
     periode_jaar, periode_maand, type, omschrijving,
@@ -94,17 +94,17 @@ router.post("/salaris-mutaties", schrijven, async (req: Request, res: Response) 
     status: "concept",
   }).returning();
 
-  return res.status(201).json(mapMutatie(mutatie));
+  return void res.status(201).json(mapMutatie(mutatie));
 });
 
 // ── AI-controle ─────────────────────────────────────────────────────────────
 // Analyseert alle mutaties voor de opgegeven periode en werkmaatschappij.
 // Geeft terug: bevindingen (issues), compleetheid en een aanbeveling.
 
-router.post("/salaris-mutaties/ai-controle", lezen, async (req: Request, res: Response) => {
+router.post("/salaris-mutaties/ai-controle", lezen, async (req: Request, res: Response): Promise<void> => {
   const { jaar, maand, werkmaatschappij } = req.body;
   if (!jaar || !maand || !werkmaatschappij) {
-    return res.status(400).json({ message: "jaar, maand en werkmaatschappij zijn verplicht" });
+    return void res.status(400).json({ message: "jaar, maand en werkmaatschappij zijn verplicht" });
   }
 
   const mutaties = await db
@@ -155,7 +155,7 @@ router.post("/salaris-mutaties/ai-controle", lezen, async (req: Request, res: Re
   }
 
   if (!heeftGateway() || mutaties.length === 0) {
-    return res.json(analyseerZonderAi());
+    return void res.json(analyseerZonderAi());
   }
 
   try {
@@ -188,7 +188,7 @@ router.post("/salaris-mutaties/ai-controle", lezen, async (req: Request, res: Re
       ],
     });
     if (!scabControlResultaat.ok) {
-      return res.json(analyseerZonderAi());
+      return void res.json(analyseerZonderAi());
     }
 
     const raw = scabControlResultaat.inhoud;
@@ -200,7 +200,7 @@ router.post("/salaris-mutaties/ai-controle", lezen, async (req: Request, res: Re
     };
 
     const geaccordeerd = mutaties.filter((m) => m.status === "geaccordeerd").length;
-    return res.json({
+    return void res.json({
       methode: "gpt-4o",
       periode: periodeLabel,
       werkmaatschappij,
@@ -212,18 +212,18 @@ router.post("/salaris-mutaties/ai-controle", lezen, async (req: Request, res: Re
     });
   } catch (err) {
     req.log.error({ err }, "AI salarismutaties-controle mislukt, gebruik fallback");
-    return res.json(analyseerZonderAi());
+    return void res.json(analyseerZonderAi());
   }
 });
 
-router.get("/salaris-mutaties/:id", lezen, async (req: Request, res: Response) => {
+router.get("/salaris-mutaties/:id", lezen, async (req: Request, res: Response): Promise<void> => {
   const id = Number(req.params.id);
   const [mutatie] = await db.select().from(salarisMutatiesTable).where(eq(salarisMutatiesTable.id, id));
-  if (!mutatie) return res.status(404).json({ message: "Niet gevonden" });
-  return res.json(mapMutatie(mutatie));
+  if (!mutatie) return void res.status(404).json({ message: "Niet gevonden" });
+  return void res.json(mapMutatie(mutatie));
 });
 
-router.patch("/salaris-mutaties/:id", schrijven, async (req: Request, res: Response) => {
+router.patch("/salaris-mutaties/:id", schrijven, async (req: Request, res: Response): Promise<void> => {
   const id = Number(req.params.id);
   const { type, omschrijving, ingangsdatum, status, akkoord, notities } = req.body;
   const sess = req.session as { userId?: number; gebruikerNaam?: string };
@@ -252,8 +252,8 @@ router.patch("/salaris-mutaties/:id", schrijven, async (req: Request, res: Respo
     .where(eq(salarisMutatiesTable.id, id))
     .returning();
 
-  if (!updated) return res.status(404).json({ message: "Niet gevonden" });
-  return res.json(mapMutatie(updated));
+  if (!updated) return void res.status(404).json({ message: "Niet gevonden" });
+  return void res.json(mapMutatie(updated));
 });
 
 export default router;

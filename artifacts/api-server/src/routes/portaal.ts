@@ -46,20 +46,20 @@ async function valideerToken(token: string): Promise<TokenResultaat> {
 }
 
 // GET /portaal/:token — publiek, geen authenticatie
-router.get("/portaal/:token", async (req, res) => {
+router.get("/portaal/:token", async (req, res): Promise<void> => {
   try {
     const tokenResultaat = await valideerToken(req.params.token);
     if (!tokenResultaat.gevonden)
-      return res.status(404).json({ error: "Portaallink niet gevonden." });
+      return void res.status(404).json({ error: "Portaallink niet gevonden." });
     if (tokenResultaat.verlopen)
-      return res.status(410).json({ error: "Uw uitnodiging is verlopen." });
+      return void res.status(410).json({ error: "Uw uitnodiging is verlopen." });
     const tokenRecord = tokenResultaat.record;
 
     const [offerte] = await db
       .select()
       .from(offertesTable)
       .where(eq(offertesTable.id, tokenRecord.offerteId));
-    if (!offerte) return res.status(404).json({ error: "Offerte niet gevonden." });
+    if (!offerte) return void res.status(404).json({ error: "Offerte niet gevonden." });
 
     const [secties, bijlagen, optioneleRegels, verplichtRegels, handtekeningRows] = await Promise.all([
       db.select().from(offerteSectiesTable).where(eq(offerteSectiesTable.offerteId, offerte.id)).orderBy(offerteSectiesTable.volgorde),
@@ -160,7 +160,7 @@ router.get("/portaal/:token", async (req, res) => {
 });
 
 // GET /portaal/:token/pixel — tracking pixel voor e-mailopening (geopend-event)
-router.get("/portaal/:token/pixel", async (req, res) => {
+router.get("/portaal/:token/pixel", async (req, res): Promise<void> => {
   try {
     const tokenResultaat = await valideerToken(req.params.token);
     if (tokenResultaat.gevonden && !tokenResultaat.verlopen) {
@@ -194,18 +194,18 @@ router.get("/portaal/:token/pixel", async (req, res) => {
 });
 
 // PATCH /portaal/:token/tracking — publiek
-router.patch("/portaal/:token/tracking", async (req, res) => {
+router.patch("/portaal/:token/tracking", async (req, res): Promise<void> => {
   try {
     const tokenResultaat = await valideerToken(req.params.token);
     if (!tokenResultaat.gevonden)
-      return res.status(404).json({ error: "Portaallink niet gevonden." });
+      return void res.status(404).json({ error: "Portaallink niet gevonden." });
     if (tokenResultaat.verlopen)
-      return res.status(410).json({ error: "Uw uitnodiging is verlopen." });
+      return void res.status(410).json({ error: "Uw uitnodiging is verlopen." });
     const tokenRecord = tokenResultaat.record;
 
     const event = String(req.body?.event ?? "");
     const toegestaan = ["pdf_gedownload", "bijlage_gedownload"];
-    if (!toegestaan.includes(event)) return res.status(400).json({ error: "Ongeldig event." });
+    if (!toegestaan.includes(event)) return void res.status(400).json({ error: "Ongeldig event." });
 
     await db.insert(offerteTrackingTable).values({
       offerteId: tokenRecord.offerteId,
@@ -222,27 +222,27 @@ router.patch("/portaal/:token/tracking", async (req, res) => {
 });
 
 // POST /portaal/:token/ai-uitleg — AI-uitleg voor een offerteregel (publiek, rate-limited door token-check)
-router.post("/portaal/:token/ai-uitleg", async (req, res) => {
+router.post("/portaal/:token/ai-uitleg", async (req, res): Promise<void> => {
   try {
     const tokenResultaat = await valideerToken(req.params.token);
     if (!tokenResultaat.gevonden)
-      return res.status(404).json({ error: "Portaallink niet gevonden." });
+      return void res.status(404).json({ error: "Portaallink niet gevonden." });
     if (tokenResultaat.verlopen)
-      return res.status(410).json({ error: "Uw uitnodiging is verlopen." });
+      return void res.status(410).json({ error: "Uw uitnodiging is verlopen." });
     const tokenRecord = tokenResultaat.record;
 
     if (!heeftGateway())
-      return res.status(503).json({ error: "AI niet beschikbaar." });
+      return void res.status(503).json({ error: "AI niet beschikbaar." });
 
     const regelId = parseInt(String(req.body?.regel_id ?? ""), 10);
-    if (isNaN(regelId)) return res.status(400).json({ error: "Ongeldig regel_id." });
+    if (isNaN(regelId)) return void res.status(400).json({ error: "Ongeldig regel_id." });
 
     const [regel] = await db
       .select()
       .from(offerteRegelsTable)
       .where(and(eq(offerteRegelsTable.id, regelId), eq(offerteRegelsTable.offerteId, tokenRecord.offerteId)));
 
-    if (!regel) return res.status(404).json({ error: "Offerteregel niet gevonden." });
+    if (!regel) return void res.status(404).json({ error: "Offerteregel niet gevonden." });
 
     const prompt = `Je bent een brandpreventie-expert bij FPS Brandpreventie. Leg aan een klant in begrijpelijke taal uit wat de volgende offertepost inhoudt en waarom deze werkzaamheden nodig zijn. Schrijf maximaal 3 zinnen, in vloeiend Nederlands, zonder vakjargon. Noem géén bedragen of prijzen.
 
@@ -264,22 +264,22 @@ Hoeveelheid: ${regel.aantal} ${regel.eenheid}`;
 });
 
 // POST /portaal/:token/optioneel-werk — klant bevestigt welke optionele posten hij wil
-router.post("/portaal/:token/optioneel-werk", async (req, res) => {
+router.post("/portaal/:token/optioneel-werk", async (req, res): Promise<void> => {
   try {
     const tokenResultaat = await valideerToken(req.params.token);
     if (!tokenResultaat.gevonden)
-      return res.status(404).json({ error: "Portaallink niet gevonden." });
+      return void res.status(404).json({ error: "Portaallink niet gevonden." });
     if (tokenResultaat.verlopen)
-      return res.status(410).json({ error: "Uw uitnodiging is verlopen." });
+      return void res.status(410).json({ error: "Uw uitnodiging is verlopen." });
     const tokenRecord = tokenResultaat.record;
 
     const [offerte] = await db.select({ portaalStatus: offertesTable.portaalStatus }).from(offertesTable).where(eq(offertesTable.id, tokenRecord.offerteId));
     if (offerte?.portaalStatus === "ondertekend" || offerte?.portaalStatus === "afgewezen")
-      return res.status(409).json({ error: "De offerte is al afgesloten en kan niet meer worden gewijzigd." });
+      return void res.status(409).json({ error: "De offerte is al afgesloten en kan niet meer worden gewijzigd." });
 
     const geselecteerd: Record<string, boolean> = req.body?.geselecteerd ?? {};
     if (typeof geselecteerd !== "object" || Array.isArray(geselecteerd))
-      return res.status(400).json({ error: "geselecteerd moet een object zijn met regel-id's als sleutels." });
+      return void res.status(400).json({ error: "geselecteerd moet een object zijn met regel-id's als sleutels." });
 
     for (const [rawId, waarde] of Object.entries(geselecteerd)) {
       const regelId = parseInt(rawId, 10);
@@ -304,17 +304,17 @@ router.post("/portaal/:token/optioneel-werk", async (req, res) => {
 });
 
 // POST /portaal/:token/vraag — publiek
-router.post("/portaal/:token/vraag", async (req, res) => {
+router.post("/portaal/:token/vraag", async (req, res): Promise<void> => {
   try {
     const tokenResultaat = await valideerToken(req.params.token);
     if (!tokenResultaat.gevonden)
-      return res.status(404).json({ error: "Portaallink niet gevonden." });
+      return void res.status(404).json({ error: "Portaallink niet gevonden." });
     if (tokenResultaat.verlopen)
-      return res.status(410).json({ error: "Uw uitnodiging is verlopen." });
+      return void res.status(410).json({ error: "Uw uitnodiging is verlopen." });
     const tokenRecord = tokenResultaat.record;
 
     const vraag = String(req.body?.vraag ?? "").trim();
-    if (!vraag) return res.status(400).json({ error: "Vraag mag niet leeg zijn." });
+    if (!vraag) return void res.status(400).json({ error: "Vraag mag niet leeg zijn." });
     const bezoekerNaam = String(req.body?.naam ?? "").trim() || null;
     const bezoekerEmail = String(req.body?.email ?? "").trim() || null;
     const rawType = String(req.body?.type ?? "").trim();
@@ -389,30 +389,30 @@ router.post("/portaal/:token/vraag", async (req, res) => {
 });
 
 // POST /portaal/:token/ondertekenen — publiek
-router.post("/portaal/:token/ondertekenen", async (req, res) => {
+router.post("/portaal/:token/ondertekenen", async (req, res): Promise<void> => {
   try {
     const tokenResultaat = await valideerToken(req.params.token);
     if (!tokenResultaat.gevonden)
-      return res.status(404).json({ error: "Portaallink niet gevonden." });
+      return void res.status(404).json({ error: "Portaallink niet gevonden." });
     if (tokenResultaat.verlopen)
-      return res.status(410).json({ error: "Uw uitnodiging is verlopen." });
+      return void res.status(410).json({ error: "Uw uitnodiging is verlopen." });
     const tokenRecord = tokenResultaat.record;
 
     const [offerte] = await db
       .select()
       .from(offertesTable)
       .where(eq(offertesTable.id, tokenRecord.offerteId));
-    if (!offerte) return res.status(404).json({ error: "Offerte niet gevonden." });
+    if (!offerte) return void res.status(404).json({ error: "Offerte niet gevonden." });
     if (offerte.portaalStatus === "afgewezen")
-      return res.status(409).json({ error: "Afgewezen offerte kan niet meer worden ondertekend." });
+      return void res.status(409).json({ error: "Afgewezen offerte kan niet meer worden ondertekend." });
 
     const naam = String(req.body?.naam ?? "").trim();
     const bedrijf = String(req.body?.bedrijf ?? "").trim() || null;
     const functie = String(req.body?.functie ?? "").trim() || null;
     const handtekeningDataUrl = String(req.body?.handtekening_data_url ?? "").trim();
 
-    if (!naam) return res.status(400).json({ error: "Naam is verplicht." });
-    if (!handtekeningDataUrl) return res.status(400).json({ error: "Handtekening is verplicht." });
+    if (!naam) return void res.status(400).json({ error: "Naam is verplicht." });
+    if (!handtekeningDataUrl) return void res.status(400).json({ error: "Handtekening is verplicht." });
 
     const nu = new Date();
     const datum = nu.toISOString().slice(0, 10);
@@ -520,7 +520,7 @@ router.post("/portaal/:token/ondertekenen", async (req, res) => {
       });
     } catch (txErr: unknown) {
       if (reeds_ondertekend) {
-        return res.status(409).json({ error: "Offerte is al ondertekend." });
+        return void res.status(409).json({ error: "Offerte is al ondertekend." });
       }
       throw txErr;
     }
@@ -668,22 +668,22 @@ router.post("/portaal/:token/ondertekenen", async (req, res) => {
 });
 
 // POST /portaal/:token/afwijzen — publiek
-router.post("/portaal/:token/afwijzen", async (req, res) => {
+router.post("/portaal/:token/afwijzen", async (req, res): Promise<void> => {
   try {
     const tokenResultaat = await valideerToken(req.params.token);
     if (!tokenResultaat.gevonden)
-      return res.status(404).json({ error: "Portaallink niet gevonden." });
+      return void res.status(404).json({ error: "Portaallink niet gevonden." });
     if (tokenResultaat.verlopen)
-      return res.status(410).json({ error: "Uw uitnodiging is verlopen." });
+      return void res.status(410).json({ error: "Uw uitnodiging is verlopen." });
     const tokenRecord = tokenResultaat.record;
 
     const [offerte] = await db
       .select()
       .from(offertesTable)
       .where(eq(offertesTable.id, tokenRecord.offerteId));
-    if (!offerte) return res.status(404).json({ error: "Offerte niet gevonden." });
+    if (!offerte) return void res.status(404).json({ error: "Offerte niet gevonden." });
     if (offerte.portaalStatus === "ondertekend")
-      return res.status(409).json({ error: "Ondertekende offerte kan niet worden afgewezen." });
+      return void res.status(409).json({ error: "Ondertekende offerte kan niet worden afgewezen." });
 
     const reden = String(req.body?.reden ?? "").trim() || null;
 

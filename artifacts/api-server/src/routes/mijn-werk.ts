@@ -6,9 +6,9 @@ import { requireAuth } from "../middlewares/auth.js";
 
 const mijnWerkRouter = Router();
 
-mijnWerkRouter.get("/mijn-werk", requireAuth, async (req, res) => {
+mijnWerkRouter.get("/mijn-werk", requireAuth, async (req, res): Promise<void> => {
   const userId = req.session?.userId;
-  if (!userId) return res.status(401).json({ fout: "Niet ingelogd" });
+  if (!userId) return void res.status(401).json({ fout: "Niet ingelogd" });
 
   const rijen = await db
     .select({
@@ -75,7 +75,7 @@ mijnWerkRouter.get("/mijn-werk", requireAuth, async (req, res) => {
     });
   }
 
-  return res.json(Array.from(gebouwen.values()));
+  return void res.json(Array.from(gebouwen.values()));
 });
 
 export default mijnWerkRouter;

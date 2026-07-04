@@ -100,7 +100,7 @@ router.get("/fie/begrotingen", lezen, async (_req: Request, res: Response) => {
 });
 
 // POST /fie/begrotingen
-router.post("/fie/begrotingen", schrijven, async (req: Request, res: Response) => {
+router.post("/fie/begrotingen", schrijven, async (req: Request, res: Response): Promise<void> => {
   const body = req.body as Record<string, unknown>;
   const {
     boekjaar, status, omzet_doel, directe_kosten_doel,
@@ -158,7 +158,7 @@ router.post("/fie/begrotingen", schrijven, async (req: Request, res: Response) =
 });
 
 // GET /fie/begrotingen/:id  (incl. ak-posten)
-router.get("/fie/begrotingen/:id", lezen, async (req: Request, res: Response) => {
+router.get("/fie/begrotingen/:id", lezen, async (req: Request, res: Response): Promise<void> => {
   const id = validId(res, req.params["id"]);
   if (id === null) return;
 
@@ -192,7 +192,7 @@ router.get("/fie/begrotingen/:id", lezen, async (req: Request, res: Response) =>
 });
 
 // PATCH /fie/begrotingen/:id
-router.patch("/fie/begrotingen/:id", schrijven, async (req: Request, res: Response) => {
+router.patch("/fie/begrotingen/:id", schrijven, async (req: Request, res: Response): Promise<void> => {
   const id = validId(res, req.params["id"]);
   if (id === null) return;
   const body = req.body as Record<string, unknown>;
@@ -266,7 +266,7 @@ router.patch("/fie/begrotingen/:id", schrijven, async (req: Request, res: Respon
 // ─── AK-posten ────────────────────────────────────────────────────────────────
 
 // GET /fie/begrotingen/:id/ak-posten
-router.get("/fie/begrotingen/:id/ak-posten", lezen, async (req: Request, res: Response) => {
+router.get("/fie/begrotingen/:id/ak-posten", lezen, async (req: Request, res: Response): Promise<void> => {
   const id = validId(res, req.params["id"]);
   if (id === null) return;
   const rows = await db
@@ -278,7 +278,7 @@ router.get("/fie/begrotingen/:id/ak-posten", lezen, async (req: Request, res: Re
 });
 
 // POST /fie/begrotingen/:id/ak-posten
-router.post("/fie/begrotingen/:id/ak-posten", schrijven, async (req: Request, res: Response) => {
+router.post("/fie/begrotingen/:id/ak-posten", schrijven, async (req: Request, res: Response): Promise<void> => {
   const begrotingId = validId(res, req.params["id"]);
   if (begrotingId === null) return;
 
@@ -311,7 +311,7 @@ router.post("/fie/begrotingen/:id/ak-posten", schrijven, async (req: Request, re
 });
 
 // PATCH /fie/ak-posten/:id
-router.patch("/fie/ak-posten/:id", schrijven, async (req: Request, res: Response) => {
+router.patch("/fie/ak-posten/:id", schrijven, async (req: Request, res: Response): Promise<void> => {
   const id = validId(res, req.params["id"]);
   if (id === null) return;
 
@@ -346,7 +346,7 @@ router.patch("/fie/ak-posten/:id", schrijven, async (req: Request, res: Response
 });
 
 // DELETE /fie/ak-posten/:id
-router.delete("/fie/ak-posten/:id", schrijven, async (req: Request, res: Response) => {
+router.delete("/fie/ak-posten/:id", schrijven, async (req: Request, res: Response): Promise<void> => {
   const id = validId(res, req.params["id"]);
   if (id === null) return;
   await db.delete(fieAkPostenTable).where(eq(fieAkPostenTable.id, id));
@@ -356,7 +356,7 @@ router.delete("/fie/ak-posten/:id", schrijven, async (req: Request, res: Respons
 // ─── Capaciteit ───────────────────────────────────────────────────────────────
 
 // GET /fie/capaciteit/:boekjaar
-router.get("/fie/capaciteit/:boekjaar", lezen, async (req: Request, res: Response) => {
+router.get("/fie/capaciteit/:boekjaar", lezen, async (req: Request, res: Response): Promise<void> => {
   const boekjaar = validId(res, req.params["boekjaar"]);
   if (boekjaar === null) return;
   const rows = await db
@@ -385,7 +385,7 @@ router.get("/fie/capaciteit/:boekjaar", lezen, async (req: Request, res: Respons
 });
 
 // GET /fie/capaciteit/:boekjaar/hrm  — HRM-afgeleid capaciteitsoverzicht via berekenCapaciteit()
-router.get("/fie/capaciteit/:boekjaar/hrm", lezen, async (req: Request, res: Response) => {
+router.get("/fie/capaciteit/:boekjaar/hrm", lezen, async (req: Request, res: Response): Promise<void> => {
   const boekjaar = validId(res, req.params["boekjaar"]);
   if (boekjaar === null) return;
   const resultaat = await berekenCapaciteit(boekjaar);
@@ -393,7 +393,7 @@ router.get("/fie/capaciteit/:boekjaar/hrm", lezen, async (req: Request, res: Res
 });
 
 // GET /fie/begrotingen/:id/doelmarge  — doelmarge + AK-norm via berekenDoelmarge()
-router.get("/fie/begrotingen/:id/doelmarge", lezen, async (req: Request, res: Response) => {
+router.get("/fie/begrotingen/:id/doelmarge", lezen, async (req: Request, res: Response): Promise<void> => {
   const id = validId(res, req.params["id"]);
   if (id === null) return;
   const resultaat = await berekenDoelmarge(id);
@@ -402,7 +402,7 @@ router.get("/fie/begrotingen/:id/doelmarge", lezen, async (req: Request, res: Re
 });
 
 // POST /fie/capaciteit/:boekjaar
-router.post("/fie/capaciteit/:boekjaar", schrijven, async (req: Request, res: Response) => {
+router.post("/fie/capaciteit/:boekjaar", schrijven, async (req: Request, res: Response): Promise<void> => {
   const boekjaar = validId(res, req.params["boekjaar"]);
   if (boekjaar === null) return;
   const { werkgever_id, productieve_uren, fte, snapshot_datum, bron } = req.body as Record<string, unknown>;
@@ -451,7 +451,7 @@ router.post("/fie/capaciteit/:boekjaar", schrijven, async (req: Request, res: Re
 // Delegeert volledige berekening aan fie-service.ts (centrale rekenmotor).
 
 // GET /fie/context/calculatie/:id
-router.get("/fie/context/calculatie/:id", calcLezen, async (req: Request, res: Response) => {
+router.get("/fie/context/calculatie/:id", calcLezen, async (req: Request, res: Response): Promise<void> => {
   const calcId = validId(res, req.params["id"]);
   if (calcId === null) return;
 

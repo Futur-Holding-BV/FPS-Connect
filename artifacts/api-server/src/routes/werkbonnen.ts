@@ -79,7 +79,7 @@ async function mapWerkbon(w: typeof werkbonnenTable.$inferSelect) {
 }
 
 // GET /werkbonnen
-router.get("/werkbonnen", lezen, async (req, res) => {
+router.get("/werkbonnen", lezen, async (req, res): Promise<void> => {
   try {
     const { contract_id, gebouw_id, status, monteur_id } = req.query;
 
@@ -99,7 +99,7 @@ router.get("/werkbonnen", lezen, async (req, res) => {
 });
 
 // POST /werkbonnen
-router.post("/werkbonnen", aanmaken, async (req, res) => {
+router.post("/werkbonnen", aanmaken, async (req, res): Promise<void> => {
   try {
     const {
       contract_id, gebouw_id, titel, omschrijving, type,
@@ -108,7 +108,7 @@ router.post("/werkbonnen", aanmaken, async (req, res) => {
     } = req.body;
 
     if (!titel || !type) {
-      return res.status(400).json({ error: "titel en type zijn verplicht" });
+      return void res.status(400).json({ error: "titel en type zijn verplicht" });
     }
 
     const werkbonnummer = await volgendWerkbonnummer();
@@ -148,17 +148,17 @@ router.post("/werkbonnen", aanmaken, async (req, res) => {
 });
 
 // GET /werkbonnen/:id
-router.get("/werkbonnen/:id", lezen, async (req, res) => {
+router.get("/werkbonnen/:id", lezen, async (req, res): Promise<void> => {
   try {
     const id = parseInt(String(req.params.id));
-    if (isNaN(id)) return res.status(400).json({ error: "Ongeldig id" });
+    if (isNaN(id)) return void res.status(400).json({ error: "Ongeldig id" });
 
     const [w] = await db
       .select()
       .from(werkbonnenTable)
       .where(eq(werkbonnenTable.id, id));
 
-    if (!w) return res.status(404).json({ error: "Werkbon niet gevonden" });
+    if (!w) return void res.status(404).json({ error: "Werkbon niet gevonden" });
     res.json(await mapWerkbon(w));
   } catch (err) {
     req.log.error(err);
@@ -167,10 +167,10 @@ router.get("/werkbonnen/:id", lezen, async (req, res) => {
 });
 
 // PATCH /werkbonnen/:id
-router.patch("/werkbonnen/:id", schrijven, async (req, res) => {
+router.patch("/werkbonnen/:id", schrijven, async (req, res): Promise<void> => {
   try {
     const id = parseInt(String(req.params.id));
-    if (isNaN(id)) return res.status(400).json({ error: "Ongeldig id" });
+    if (isNaN(id)) return void res.status(400).json({ error: "Ongeldig id" });
 
     const {
       contract_id, gebouw_id, titel, omschrijving, type,
@@ -202,7 +202,7 @@ router.patch("/werkbonnen/:id", schrijven, async (req, res) => {
       .where(eq(werkbonnenTable.id, id))
       .returning();
 
-    if (!w) return res.status(404).json({ error: "Werkbon niet gevonden" });
+    if (!w) return void res.status(404).json({ error: "Werkbon niet gevonden" });
 
     if (status === "voltooid") {
       await logActiviteit({
@@ -221,10 +221,10 @@ router.patch("/werkbonnen/:id", schrijven, async (req, res) => {
 });
 
 // DELETE /werkbonnen/:id
-router.delete("/werkbonnen/:id", verwijderen, async (req, res) => {
+router.delete("/werkbonnen/:id", verwijderen, async (req, res): Promise<void> => {
   try {
     const id = parseInt(String(req.params.id));
-    if (isNaN(id)) return res.status(400).json({ error: "Ongeldig id" });
+    if (isNaN(id)) return void res.status(400).json({ error: "Ongeldig id" });
     await db.delete(werkbonnenTable).where(eq(werkbonnenTable.id, id));
     res.status(204).send();
   } catch (err) {

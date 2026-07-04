@@ -149,8 +149,8 @@ function bouwZoektekst(formulierType: string, huidigVelden: Record<string, strin
 
 // ── POST /ai/invullen ─────────────────────────────────────────────────────────
 
-router.post("/ai/invullen", requireAuth, async (req, res) => {
-  if (!heeftGateway()) return res.status(503).json({ error: "AI niet geconfigureerd" });
+router.post("/ai/invullen", requireAuth, async (req, res): Promise<void> => {
+  if (!heeftGateway()) return void res.status(503).json({ error: "AI niet geconfigureerd" });
 
   const body = req.body as Record<string, unknown>;
   const formulier_type = typeof body.formulier_type === "string" ? body.formulier_type.trim() : null;
@@ -158,7 +158,7 @@ router.post("/ai/invullen", requireAuth, async (req, res) => {
   const raw_velden = body.huidige_velden;
 
   if (!formulier_type || !FORMULIER_VELDBESCHRIJVINGEN[formulier_type]) {
-    return res.status(400).json({ error: "Ongeldig formulier_type" });
+    return void res.status(400).json({ error: "Ongeldig formulier_type" });
   }
 
   // context_id moet een positief integer zijn of null
@@ -221,7 +221,7 @@ router.post("/ai/invullen", requireAuth, async (req, res) => {
   if (webResultaatInvullen.ok) {
     let data: Record<string, string | null> = {};
     try { data = JSON.parse(webResultaatInvullen.inhoud) as Record<string, string | null>; } catch { data = {}; }
-    return res.json({ velden: data });
+    return void res.json({ velden: data });
   }
   req.log.warn({ fout: webResultaatInvullen.fout }, "Web search niet beschikbaar voor ai/invullen, fallback naar kennismodel");
 

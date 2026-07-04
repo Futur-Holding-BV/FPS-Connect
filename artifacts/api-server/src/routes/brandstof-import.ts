@@ -398,7 +398,7 @@ function mapRegel(
 // GET /wagenpark/brandstof-import
 // ═══════════════════════════════════════════════════════════
 
-router.get("/", lezen, async (req, res) => {
+router.get("/", lezen, async (req, res): Promise<void> => {
   const { status } = req.query;
 
   const rows = await db
@@ -417,7 +417,7 @@ router.get("/", lezen, async (req, res) => {
 // POST /wagenpark/brandstof-import  (upload + parse)
 // ═══════════════════════════════════════════════════════════
 
-router.post("/", schrijven, upload.single("bestand"), async (req, res) => {
+router.post("/", schrijven, upload.single("bestand"), async (req, res): Promise<void> => {
   if (!req.file) {
     res.status(400).json({ error: "Geen bestand meegegeven." });
     return;
@@ -554,7 +554,7 @@ router.post("/", schrijven, upload.single("bestand"), async (req, res) => {
 // GET /wagenpark/brandstof-import/:id
 // ═══════════════════════════════════════════════════════════
 
-router.get("/:id", lezen, async (req, res) => {
+router.get("/:id", lezen, async (req, res): Promise<void> => {
   const id = Number(req.params["id"]);
   if (isNaN(id)) { res.status(400).json({ error: "Ongeldig id" }); return; }
 
@@ -582,7 +582,7 @@ router.get("/:id", lezen, async (req, res) => {
 // DELETE /wagenpark/brandstof-import/:id
 // ═══════════════════════════════════════════════════════════
 
-router.delete("/:id", schrijven, async (req, res) => {
+router.delete("/:id", schrijven, async (req, res): Promise<void> => {
   const id = Number(req.params["id"]);
   if (isNaN(id)) { res.status(400).json({ error: "Ongeldig id" }); return; }
 
@@ -602,7 +602,7 @@ router.delete("/:id", schrijven, async (req, res) => {
 // PATCH /wagenpark/brandstof-import/:id/regels/:regelId
 // ═══════════════════════════════════════════════════════════
 
-router.patch("/:id/regels/:regelId", schrijven, async (req, res) => {
+router.patch("/:id/regels/:regelId", schrijven, async (req, res): Promise<void> => {
   const importId = Number(req.params["id"]);
   const regelId  = Number(req.params["regelId"]);
   if (isNaN(importId) || isNaN(regelId)) { res.status(400).json({ error: "Ongeldig id" }); return; }
@@ -662,7 +662,7 @@ router.patch("/:id/regels/:regelId", schrijven, async (req, res) => {
 // POST /wagenpark/brandstof-import/:id/laden
 // ═══════════════════════════════════════════════════════════
 
-router.post("/:id/laden", schrijven, async (req, res) => {
+router.post("/:id/laden", schrijven, async (req, res): Promise<void> => {
   const id = Number(req.params["id"]);
   if (isNaN(id)) { res.status(400).json({ error: "Ongeldig id" }); return; }
 

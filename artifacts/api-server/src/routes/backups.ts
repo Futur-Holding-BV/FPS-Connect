@@ -17,7 +17,7 @@ const storage = new ObjectStorageService();
 
 // ─── Lijst van alle back-ups ──────────────────────────────────────────────────
 
-router.get("/api/backups", requireBevoegdheid("systeem", 1), async (req, res) => {
+router.get("/api/backups", requireBevoegdheid("systeem", 1), async (req, res): Promise<void> => {
   try {
     const records = await db
       .select()
@@ -32,7 +32,7 @@ router.get("/api/backups", requireBevoegdheid("systeem", 1), async (req, res) =>
 
 // ─── Detail van één back-up ───────────────────────────────────────────────────
 
-router.get("/api/backups/:id", requireBevoegdheid("systeem", 1), async (req, res) => {
+router.get("/api/backups/:id", requireBevoegdheid("systeem", 1), async (req, res): Promise<void> => {
   const id = parseInt(String(req.params.id), 10);
   if (isNaN(id)) {
     res.status(400).json({ fout: "Ongeldig ID" });
@@ -57,7 +57,7 @@ router.get("/api/backups/:id", requireBevoegdheid("systeem", 1), async (req, res
 
 // ─── Nieuwe back-up aanmaken ─────────────────────────────────────────────────
 
-router.post("/api/backups", requireBevoegdheid("systeem", 2), async (req, res) => {
+router.post("/api/backups", requireBevoegdheid("systeem", 2), async (req, res): Promise<void> => {
   const soort = (req.body.soort as string) ?? "handmatig";
   if (!["handmatig", "pre-deploy"].includes(soort)) {
     res.status(400).json({ fout: "Ongeldig soort (handmatig of pre-deploy)" });
@@ -86,7 +86,7 @@ router.post("/api/backups", requireBevoegdheid("systeem", 2), async (req, res) =
 router.get(
   "/api/backups/:id/download",
   requireBevoegdheid("systeem", 2),
-  async (req, res) => {
+  async (req, res): Promise<void> => {
     const id = parseInt(String(req.params.id), 10);
     if (isNaN(id)) {
       res.status(400).json({ fout: "Ongeldig ID" });
@@ -154,7 +154,7 @@ router.get(
 router.post(
   "/api/backups/:id/controleer",
   requireBevoegdheid("systeem", 2),
-  async (req, res) => {
+  async (req, res): Promise<void> => {
     const id = parseInt(String(req.params.id), 10);
     if (isNaN(id)) {
       res.status(400).json({ fout: "Ongeldig ID" });
@@ -181,7 +181,7 @@ router.post(
 router.post(
   "/api/backups/:id/herstel",
   requireRol("hoofdbeheerder"),
-  async (req, res) => {
+  async (req, res): Promise<void> => {
     const id = parseInt(String(req.params.id), 10);
     if (isNaN(id)) {
       res.status(400).json({ fout: "Ongeldig ID" });
@@ -216,7 +216,7 @@ router.post(
 router.delete(
   "/api/backups/:id",
   requireRol("hoofdbeheerder"),
-  async (req, res) => {
+  async (req, res): Promise<void> => {
     const id = parseInt(String(req.params.id), 10);
     if (isNaN(id)) {
       res.status(400).json({ fout: "Ongeldig ID" });

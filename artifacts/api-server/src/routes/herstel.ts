@@ -209,10 +209,10 @@ router.get(
   async (_req, res) => {
     try {
       const status = await voerStatusCheckUit();
-      return res.json(status);
+      return void res.json(status);
     } catch (err) {
       logger.error({ err }, "Systeemstatus ophalen mislukt");
-      return res.status(500).json({ error: "Interne serverfout" });
+      return void res.status(500).json({ error: "Interne serverfout" });
     }
   },
 );

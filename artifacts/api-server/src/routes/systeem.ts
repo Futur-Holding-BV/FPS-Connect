@@ -22,7 +22,7 @@ async function huidigeGebruiker(req: { session: { userId?: number } }) {
 }
 
 // ── LOGIN-POGINGEN ──────────────────────────────────────────────────────────
-router.get("/login-pogingen", alleenBeheerder, async (req, res) => {
+router.get("/login-pogingen", alleenBeheerder, async (req, res): Promise<void> => {
   try {
     const rows = await db
       .select({
@@ -75,7 +75,7 @@ function helpdeskRij(t: typeof helpdeskTicketsTable.$inferSelect) {
   };
 }
 
-router.get("/helpdesk", alleenBeheerder, async (req, res) => {
+router.get("/helpdesk", alleenBeheerder, async (req, res): Promise<void> => {
   try {
     const rows = await db.select().from(helpdeskTicketsTable).orderBy(desc(helpdeskTicketsTable.aangemaaktOp));
     res.json(rows.map(helpdeskRij));
@@ -85,11 +85,11 @@ router.get("/helpdesk", alleenBeheerder, async (req, res) => {
   }
 });
 
-router.post("/helpdesk", async (req, res) => {
+router.post("/helpdesk", async (req, res): Promise<void> => {
   try {
     const { onderwerp, bericht } = req.body ?? {};
     if (!onderwerp || !bericht) {
-      return res.status(400).json({ error: "Onderwerp en bericht zijn verplicht" });
+      return void res.status(400).json({ error: "Onderwerp en bericht zijn verplicht" });
     }
     const g = await huidigeGebruiker(req);
     const [ticket] = await db
@@ -109,17 +109,17 @@ router.post("/helpdesk", async (req, res) => {
   }
 });
 
-router.patch("/helpdesk/:id", alleenBeheerder, async (req, res) => {
+router.patch("/helpdesk/:id", alleenBeheerder, async (req, res): Promise<void> => {
   try {
     const id = parseInt(String(req.params.id), 10);
     const { status } = req.body ?? {};
-    if (!status) return res.status(400).json({ error: "Status is verplicht" });
+    if (!status) return void res.status(400).json({ error: "Status is verplicht" });
     const [ticket] = await db
       .update(helpdeskTicketsTable)
       .set({ status: String(status), bijgewerktOp: new Date() })
       .where(eq(helpdeskTicketsTable.id, id))
       .returning();
-    if (!ticket) return res.status(404).json({ error: "Ticket niet gevonden" });
+    if (!ticket) return void res.status(404).json({ error: "Ticket niet gevonden" });
     res.json(helpdeskRij(ticket));
   } catch (err) {
     req.log.error(err);
@@ -141,7 +141,7 @@ function feedbackRij(f: typeof feedbackTable.$inferSelect) {
   };
 }
 
-router.get("/feedback", alleenBeheerder, async (req, res) => {
+router.get("/feedback", alleenBeheerder, async (req, res): Promise<void> => {
   try {
     const rows = await db.select().from(feedbackTable).orderBy(desc(feedbackTable.aangemaaktOp));
     res.json(rows.map(feedbackRij));
@@ -151,10 +151,10 @@ router.get("/feedback", alleenBeheerder, async (req, res) => {
   }
 });
 
-router.post("/feedback", async (req, res) => {
+router.post("/feedback", async (req, res): Promise<void> => {
   try {
     const { type, waardering, bericht, pagina } = req.body ?? {};
-    if (!bericht) return res.status(400).json({ error: "Bericht is verplicht" });
+    if (!bericht) return void res.status(400).json({ error: "Bericht is verplicht" });
     const g = await huidigeGebruiker(req);
     const [fb] = await db
       .insert(feedbackTable)
@@ -175,11 +175,11 @@ router.post("/feedback", async (req, res) => {
 });
 
 // ── HEATMAPS (muisgebeurtenissen) ────────────────────────────────────────────
-router.post("/muis-gebeurtenissen", async (req, res) => {
+router.post("/muis-gebeurtenissen", async (req, res): Promise<void> => {
   try {
     const { gebeurtenissen } = req.body ?? {};
     if (!Array.isArray(gebeurtenissen) || gebeurtenissen.length === 0) {
-      return res.status(204).send();
+      return void res.status(204).send();
     }
     const g = await huidigeGebruiker(req);
     const rijen = gebeurtenissen
@@ -202,7 +202,7 @@ router.post("/muis-gebeurtenissen", async (req, res) => {
   }
 });
 
-router.get("/muis-gebeurtenissen", alleenBeheerder, async (req, res) => {
+router.get("/muis-gebeurtenissen", alleenBeheerder, async (req, res): Promise<void> => {
   try {
     const pagina = req.query.pagina ? String(req.query.pagina) : null;
     const base = db
@@ -223,7 +223,7 @@ router.get("/muis-gebeurtenissen", alleenBeheerder, async (req, res) => {
   }
 });
 
-router.get("/muis-gebeurtenissen/paginas", alleenBeheerder, async (req, res) => {
+router.get("/muis-gebeurtenissen/paginas", alleenBeheerder, async (req, res): Promise<void> => {
   try {
     const rows = await db
       .selectDistinct({ pagina: muisGebeurtenissenTable.pagina })
@@ -279,26 +279,26 @@ function moduleBeoordelingRij(b: typeof moduleBeoordelingenTable.$inferSelect) {
 }
 
 // Lezen mag elke ingelogde gebruiker; schrijven is beheerder-only.
-router.get("/module-beoordelingen", async (req, res) => {
+router.get("/module-beoordelingen", async (req, res): Promise<void> => {
   try {
     const rows = await db
       .select()
       .from(moduleBeoordelingenTable)
       .orderBy(desc(moduleBeoordelingenTable.bijgewerktOp));
-    return res.json(rows.map(moduleBeoordelingRij));
+    return void res.json(rows.map(moduleBeoordelingRij));
   } catch (err) {
     req.log.error(err);
-    return res.status(500).json({ error: "Interne serverfout" });
+    return void res.status(500).json({ error: "Interne serverfout" });
   }
 });
 
-router.put("/module-beoordelingen/:sleutel", alleenBeheerder, async (req, res) => {
+router.put("/module-beoordelingen/:sleutel", alleenBeheerder, async (req, res): Promise<void> => {
   try {
     const sleutel = String(req.params.sleutel).trim();
-    if (!sleutel) return res.status(400).json({ error: "Sleutel is verplicht" });
+    if (!sleutel) return void res.status(400).json({ error: "Sleutel is verplicht" });
     const { status, opmerking } = req.body ?? {};
     if (status !== "gereed" && status !== "niet_akkoord") {
-      return res.status(400).json({ error: "Status moet 'gereed' of 'niet_akkoord' zijn" });
+      return void res.status(400).json({ error: "Status moet 'gereed' of 'niet_akkoord' zijn" });
     }
     const opm = opmerking ? String(opmerking) : null;
     const g = await huidigeGebruiker(req);
@@ -322,21 +322,21 @@ router.put("/module-beoordelingen/:sleutel", alleenBeheerder, async (req, res) =
         },
       })
       .returning();
-    return res.json(moduleBeoordelingRij(rij!));
+    return void res.json(moduleBeoordelingRij(rij!));
   } catch (err) {
     req.log.error(err);
-    return res.status(500).json({ error: "Interne serverfout" });
+    return void res.status(500).json({ error: "Interne serverfout" });
   }
 });
 
-router.delete("/module-beoordelingen/:sleutel", alleenBeheerder, async (req, res) => {
+router.delete("/module-beoordelingen/:sleutel", alleenBeheerder, async (req, res): Promise<void> => {
   try {
     const sleutel = String(req.params.sleutel).trim();
     await db.delete(moduleBeoordelingenTable).where(eq(moduleBeoordelingenTable.moduleSleutel, sleutel));
-    return res.status(204).send();
+    return void res.status(204).send();
   } catch (err) {
     req.log.error(err);
-    return res.status(500).json({ error: "Interne serverfout" });
+    return void res.status(500).json({ error: "Interne serverfout" });
   }
 });
 

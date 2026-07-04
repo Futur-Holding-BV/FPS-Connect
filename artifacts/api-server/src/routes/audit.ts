@@ -104,7 +104,7 @@ function bouwVoorwaarden(q: QueryParams) {
 // ── GET /audit ─────────────────────────────────────────────────────────────────
 // Audit-records zijn immutable — er zijn geen PUT/PATCH/DELETE-handlers.
 
-router.get("/audit", alleenBeheer, async (req, res) => {
+router.get("/audit", alleenBeheer, async (req, res): Promise<void> => {
   try {
     const q = req.query as Record<string, string | undefined>;
     const limiet = Math.min(parseInt(q.limiet ?? "50", 10) || 50, 200);
@@ -135,7 +135,7 @@ router.get("/audit", alleenBeheer, async (req, res) => {
 // ── GET /audit/export ──────────────────────────────────────────────────────────
 // CSV bevat geen sessie_id, geen oude_waarde en geen nieuwe_waarde (AVG-conform).
 
-router.get("/audit/export", alleenBeheer, async (req, res) => {
+router.get("/audit/export", alleenBeheer, async (req, res): Promise<void> => {
   try {
     const q = req.query as Record<string, string | undefined>;
     const voorwaarden = bouwVoorwaarden(q);
@@ -205,7 +205,7 @@ router.get("/audit/diagnostics", alleenBeheer, (_req, res) => {
 
 // ── GET /audit/tijdlijn/gebouw/:id ─────────────────────────────────────────────
 
-router.get("/audit/tijdlijn/gebouw/:id", alleenBeheer, async (req, res) => {
+router.get("/audit/tijdlijn/gebouw/:id", alleenBeheer, async (req, res): Promise<void> => {
   const id = parseInt(String(req.params.id), 10);
   if (isNaN(id)) { res.status(400).json({ error: "Ongeldig id" }); return; }
   try {
@@ -224,7 +224,7 @@ router.get("/audit/tijdlijn/gebouw/:id", alleenBeheer, async (req, res) => {
 
 // ── GET /audit/tijdlijn/medewerker/:id ────────────────────────────────────────
 
-router.get("/audit/tijdlijn/medewerker/:id", alleenBeheer, async (req, res) => {
+router.get("/audit/tijdlijn/medewerker/:id", alleenBeheer, async (req, res): Promise<void> => {
   const id = parseInt(String(req.params.id), 10);
   if (isNaN(id)) { res.status(400).json({ error: "Ongeldig id" }); return; }
   try {
@@ -243,7 +243,7 @@ router.get("/audit/tijdlijn/medewerker/:id", alleenBeheer, async (req, res) => {
 
 // ── GET /audit/tijdlijn/document/:id ──────────────────────────────────────────
 
-router.get("/audit/tijdlijn/document/:id", alleenBeheer, async (req, res) => {
+router.get("/audit/tijdlijn/document/:id", alleenBeheer, async (req, res): Promise<void> => {
   const id = parseInt(String(req.params.id), 10);
   if (isNaN(id)) { res.status(400).json({ error: "Ongeldig id" }); return; }
   try {

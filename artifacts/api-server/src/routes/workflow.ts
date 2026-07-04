@@ -407,16 +407,16 @@ function mapWf(w: WfRow) {
 
 // ── Routes ─────────────────────────────────────────────────────────────────────
 
-router.get("/workflow-definities", requireAuth, async (req: Request, res: Response) => {
+router.get("/workflow-definities", requireAuth, async (req: Request, res: Response): Promise<void> => {
   await zaaiWorkflowsAlsLeeg();
   const rows = await db.select().from(workflowDefinitiesTable)
     .orderBy(asc(workflowDefinitiesTable.volgorde));
-  return res.json(rows.map(mapWf));
+  return void res.json(rows.map(mapWf));
 });
 
-router.post("/workflow-definities", requireAuth, async (req: Request, res: Response) => {
+router.post("/workflow-definities", requireAuth, async (req: Request, res: Response): Promise<void> => {
   const { naam, type, omschrijving } = req.body;
-  if (!naam || !type) return res.status(400).json({ message: "naam en type zijn verplicht" });
+  if (!naam || !type) return void res.status(400).json({ message: "naam en type zijn verplicht" });
 
   const maxVolgorde = await db.select({ id: workflowDefinitiesTable.id, volgorde: workflowDefinitiesTable.volgorde })
     .from(workflowDefinitiesTable).orderBy(asc(workflowDefinitiesTable.volgorde));
@@ -427,15 +427,15 @@ router.post("/workflow-definities", requireAuth, async (req: Request, res: Respo
   const [wf] = await db.insert(workflowDefinitiesTable).values({
     naam, type, omschrijving: omschrijving ?? null, volgorde: nieuweVolgorde,
   }).returning();
-  return res.status(201).json(mapWf(wf));
+  return void res.status(201).json(mapWf(wf));
 });
 
-router.get("/workflow-definities/:id", requireAuth, async (req: Request, res: Response) => {
+router.get("/workflow-definities/:id", requireAuth, async (req: Request, res: Response): Promise<void> => {
   await zaaiWorkflowsAlsLeeg();
   const id = Number(req.params.id);
   const [wf] = await db.select().from(workflowDefinitiesTable)
     .where(eq(workflowDefinitiesTable.id, id));
-  if (!wf) return res.status(404).json({ message: "Niet gevonden" });
+  if (!wf) return void res.status(404).json({ message: "Niet gevonden" });
 
   const lanes = await db.select().from(workflowLanesTable)
     .where(eq(workflowLanesTable.workflowId, id))
@@ -449,10 +449,10 @@ router.get("/workflow-definities/:id", requireAuth, async (req: Request, res: Re
     mapLane(l, cards.filter((c) => c.laneId === l.id)),
   );
 
-  return res.json({ ...mapWf(wf), lanes: lanesMetCards });
+  return void res.json({ ...mapWf(wf), lanes: lanesMetCards });
 });
 
-router.patch("/workflow-definities/:id", requireAuth, async (req: Request, res: Response) => {
+router.patch("/workflow-definities/:id", requireAuth, async (req: Request, res: Response): Promise<void> => {
   const id = Number(req.params.id);
   const { naam, omschrijving, actief } = req.body;
   const update: Partial<typeof workflowDefinitiesTable.$inferInsert> = {
@@ -464,15 +464,15 @@ router.patch("/workflow-definities/:id", requireAuth, async (req: Request, res: 
 
   const [updated] = await db.update(workflowDefinitiesTable).set(update)
     .where(eq(workflowDefinitiesTable.id, id)).returning();
-  if (!updated) return res.status(404).json({ message: "Niet gevonden" });
-  return res.json(mapWf(updated));
+  if (!updated) return void res.status(404).json({ message: "Niet gevonden" });
+  return void res.json(mapWf(updated));
 });
 
 // ── Lanes ─────────────────────────────────────────────────────────────────────
 
-router.post("/workflow-lanes", requireAuth, async (req: Request, res: Response) => {
+router.post("/workflow-lanes", requireAuth, async (req: Request, res: Response): Promise<void> => {
   const { workflow_id, naam, kleur } = req.body;
-  if (!workflow_id || !naam) return res.status(400).json({ message: "workflow_id en naam zijn verplicht" });
+  if (!workflow_id || !naam) return void res.status(400).json({ message: "workflow_id en naam zijn verplicht" });
 
   const bestaandeLanes = await db.select({ volgorde: workflowLanesTable.volgorde })
     .from(workflowLanesTable).where(eq(workflowLanesTable.workflowId, Number(workflow_id)));
@@ -485,10 +485,10 @@ router.post("/workflow-lanes", requireAuth, async (req: Request, res: Response) 
     kleur: kleur ?? "#64748b",
     volgorde: nieuweVolgorde,
   }).returning();
-  return res.status(201).json(mapLane(lane, []));
+  return void res.status(201).json(mapLane(lane, []));
 });
 
-router.patch("/workflow-lanes/:id", requireAuth, async (req: Request, res: Response) => {
+router.patch("/workflow-lanes/:id", requireAuth, async (req: Request, res: Response): Promise<void> => {
   const id = Number(req.params.id);
   const { naam, kleur } = req.body;
   const update: Partial<typeof workflowLanesTable.$inferInsert> = {};
@@ -497,18 +497,18 @@ router.patch("/workflow-lanes/:id", requireAuth, async (req: Request, res: Respo
 
   const [updated] = await db.update(workflowLanesTable).set(update)
     .where(eq(workflowLanesTable.id, id)).returning();
-  if (!updated) return res.status(404).json({ message: "Niet gevonden" });
-  return res.json(mapLane(updated, []));
+  if (!updated) return void res.status(404).json({ message: "Niet gevonden" });
+  return void res.json(mapLane(updated, []));
 });
 
-router.delete("/workflow-lanes/:id", requireAuth, async (req: Request, res: Response) => {
+router.delete("/workflow-lanes/:id", requireAuth, async (req: Request, res: Response): Promise<void> => {
   await db.delete(workflowLanesTable).where(eq(workflowLanesTable.id, Number(req.params.id)));
-  return res.status(204).send();
+  return void res.status(204).send();
 });
 
 // ── Cards ─────────────────────────────────────────────────────────────────────
 
-router.post("/workflow-cards", requireAuth, async (req: Request, res: Response) => {
+router.post("/workflow-cards", requireAuth, async (req: Request, res: Response): Promise<void> => {
   const {
     workflow_id, lane_id, type, titel, omschrijving,
     invoer, uitvoer, rol, ai_taak, akkoord_door,
@@ -519,7 +519,7 @@ router.post("/workflow-cards", requireAuth, async (req: Request, res: Response) 
     kleur, hoofdverantwoordelijke, vervanger, benodigde_rechten,
   } = req.body;
   if (!workflow_id || !lane_id || !titel) {
-    return res.status(400).json({ message: "workflow_id, lane_id en titel zijn verplicht" });
+    return void res.status(400).json({ message: "workflow_id, lane_id en titel zijn verplicht" });
   }
 
   const bestaand = await db.select({ volgorde: workflowCardsTable.volgorde })
@@ -555,10 +555,10 @@ router.post("/workflow-cards", requireAuth, async (req: Request, res: Response) 
     vervanger: vervanger ?? null,
     benodigdeRechten: Array.isArray(benodigde_rechten) ? benodigde_rechten : [],
   }).returning();
-  return res.status(201).json(mapCard(card));
+  return void res.status(201).json(mapCard(card));
 });
 
-router.patch("/workflow-cards/:id", requireAuth, async (req: Request, res: Response) => {
+router.patch("/workflow-cards/:id", requireAuth, async (req: Request, res: Response): Promise<void> => {
   const id = Number(req.params.id);
   const {
     lane_id, type, titel, omschrijving, invoer, uitvoer,
@@ -602,13 +602,13 @@ router.patch("/workflow-cards/:id", requireAuth, async (req: Request, res: Respo
 
   const [updated] = await db.update(workflowCardsTable).set(update)
     .where(eq(workflowCardsTable.id, id)).returning();
-  if (!updated) return res.status(404).json({ message: "Niet gevonden" });
-  return res.json(mapCard(updated));
+  if (!updated) return void res.status(404).json({ message: "Niet gevonden" });
+  return void res.json(mapCard(updated));
 });
 
-router.delete("/workflow-cards/:id", requireAuth, async (req: Request, res: Response) => {
+router.delete("/workflow-cards/:id", requireAuth, async (req: Request, res: Response): Promise<void> => {
   await db.delete(workflowCardsTable).where(eq(workflowCardsTable.id, Number(req.params.id)));
-  return res.status(204).send();
+  return void res.status(204).send();
 });
 
 export default router;

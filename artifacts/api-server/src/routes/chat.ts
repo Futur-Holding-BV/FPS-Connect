@@ -79,7 +79,7 @@ async function gesprekMeta(gesprekId: number, userId: number) {
 
 // ─── GET /chat/gebruikers ─────────────────────────────────────────────────────
 
-router.get("/chat/gebruikers", requireAuth, async (req, res) => {
+router.get("/chat/gebruikers", requireAuth, async (req, res): Promise<void> => {
   const gebruikers = await db
     .select({
       id: gebruikersTable.id,
@@ -98,7 +98,7 @@ router.get("/chat/gebruikers", requireAuth, async (req, res) => {
 
 // ─── GET /chat/gesprekken ─────────────────────────────────────────────────────
 
-router.get("/chat/gesprekken", requireAuth, async (req, res) => {
+router.get("/chat/gesprekken", requireAuth, async (req, res): Promise<void> => {
   const userId = req.session.userId!;
 
   const mijnDeelnames = await db
@@ -223,7 +223,7 @@ router.get("/chat/gesprekken", requireAuth, async (req, res) => {
 
 // ─── POST /chat/gesprekken ────────────────────────────────────────────────────
 
-router.post("/chat/gesprekken", requireAuth, async (req, res) => {
+router.post("/chat/gesprekken", requireAuth, async (req, res): Promise<void> => {
   const userId = req.session.userId!;
   const { type = "direct", naam, deelnemer_ids } = req.body as {
     type?: string;
@@ -297,7 +297,7 @@ router.post("/chat/gesprekken", requireAuth, async (req, res) => {
 
 // ─── GET /chat/gesprekken/:id ─────────────────────────────────────────────────
 
-router.get("/chat/gesprekken/:id", requireAuth, async (req, res) => {
+router.get("/chat/gesprekken/:id", requireAuth, async (req, res): Promise<void> => {
   const userId = req.session.userId!;
   const gesprekId = parseInt(String(req.params.id), 10);
 
@@ -323,7 +323,7 @@ router.get("/chat/gesprekken/:id", requireAuth, async (req, res) => {
 
 // ─── GET /chat/gesprekken/:id/berichten ──────────────────────────────────────
 
-router.get("/chat/gesprekken/:id/berichten", requireAuth, async (req, res) => {
+router.get("/chat/gesprekken/:id/berichten", requireAuth, async (req, res): Promise<void> => {
   const userId = req.session.userId!;
   const gesprekId = parseInt(String(req.params.id), 10);
   const naId = req.query.na ? parseInt(req.query.na as string, 10) : undefined;
@@ -367,7 +367,7 @@ router.get("/chat/gesprekken/:id/berichten", requireAuth, async (req, res) => {
 
 // ─── POST /chat/gesprekken/:id/berichten ─────────────────────────────────────
 
-router.post("/chat/gesprekken/:id/berichten", requireAuth, async (req, res) => {
+router.post("/chat/gesprekken/:id/berichten", requireAuth, async (req, res): Promise<void> => {
   const userId = req.session.userId!;
   const gesprekId = parseInt(String(req.params.id), 10);
   const { inhoud, bijlage_url, bijlage_type } = req.body as {
@@ -431,7 +431,7 @@ router.post("/chat/gesprekken/:id/berichten", requireAuth, async (req, res) => {
 
 // ─── POST /chat/gesprekken/:id/gelezen ───────────────────────────────────────
 
-router.post("/chat/gesprekken/:id/gelezen", requireAuth, async (req, res) => {
+router.post("/chat/gesprekken/:id/gelezen", requireAuth, async (req, res): Promise<void> => {
   const userId = req.session.userId!;
   const gesprekId = parseInt(String(req.params.id), 10);
 

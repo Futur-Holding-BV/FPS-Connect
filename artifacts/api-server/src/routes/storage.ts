@@ -52,7 +52,7 @@ async function magBestandInGebouw(
  * Bestanden worden georganiseerd als {gebouw_id}/{type}s/{uuid} zodat ACL
  * en archivering per project werken.
  */
-router.post("/storage/uploads/request-url", requireAuth, async (req: Request, res: Response) => {
+router.post("/storage/uploads/request-url", requireAuth, async (req: Request, res: Response): Promise<void> => {
   const parsed = RequestUploadUrlBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: "Missing or invalid required fields" });
@@ -95,7 +95,7 @@ router.post("/storage/uploads/request-url", requireAuth, async (req: Request, re
  * Serveer publieke assets uit PUBLIC_OBJECT_SEARCH_PATHS.
  * Geen authenticatie of ACL-check — uitsluitend voor publieke assets.
  */
-router.get("/storage/public-objects/*filePath", async (req: Request, res: Response) => {
+router.get("/storage/public-objects/*filePath", async (req: Request, res: Response): Promise<void> => {
   try {
     const raw = req.params.filePath;
     const filePath = Array.isArray(raw) ? raw.join("/") : raw;
@@ -131,7 +131,7 @@ router.get("/storage/public-objects/*filePath", async (req: Request, res: Respon
  *   toegang tot dat gebouw.
  * - Legacy-paden (uploads/{uuid}) of algemeen/{uuid}: elke ingelogde gebruiker.
  */
-router.get("/storage/objects/*path", requireAuth, async (req: Request, res: Response) => {
+router.get("/storage/objects/*path", requireAuth, async (req: Request, res: Response): Promise<void> => {
   try {
     const raw = req.params.path;
     const wildcardPath = Array.isArray(raw) ? raw.join("/") : raw;
@@ -177,7 +177,7 @@ router.get("/storage/objects/*path", requireAuth, async (req: Request, res: Resp
  * De thumbnail wordt gegenereerd via sharp, verkleind naar max w×h
  * (cover-fit) en geretourneerd als WebP voor optimale compressie.
  */
-router.get("/storage/thumbnails/*path", requireAuth, async (req: Request, res: Response) => {
+router.get("/storage/thumbnails/*path", requireAuth, async (req: Request, res: Response): Promise<void> => {
   try {
     const raw = req.params.path;
     const wildcardPath = Array.isArray(raw) ? raw.join("/") : raw;

@@ -40,7 +40,7 @@ function mapUpload(u: typeof boekhouderUploadsTable.$inferSelect) {
   };
 }
 
-router.get("/boekhouder/dashboard", portaal, async (req: Request, res: Response) => {
+router.get("/boekhouder/dashboard", portaal, async (req: Request, res: Response): Promise<void> => {
   const { werkgever_id } = req.query;
 
   let werkgeverNaam = "Alle werkgevers";
@@ -86,7 +86,7 @@ router.get("/boekhouder/dashboard", portaal, async (req: Request, res: Response)
   const [scabRij] = await db.select({ n: count() })
     .from(scabMailsTable).where(scabFilter);
 
-  return res.json({
+  return void res.json({
     werkgever_id: werkgeverId ?? 0,
     werkgever_naam: werkgeverNaam,
     openstaande_mutaties: Number(mutatiesRij?.n ?? 0),
@@ -97,7 +97,7 @@ router.get("/boekhouder/dashboard", portaal, async (req: Request, res: Response)
   });
 });
 
-router.get("/boekhouder/uploads", portaal, async (req: Request, res: Response) => {
+router.get("/boekhouder/uploads", portaal, async (req: Request, res: Response): Promise<void> => {
   const { werkgever_id, map, jaar } = req.query;
   const filters = [];
   if (werkgever_id) filters.push(eq(boekhouderUploadsTable.werkgeverId, Number(werkgever_id)));
@@ -110,21 +110,21 @@ router.get("/boekhouder/uploads", portaal, async (req: Request, res: Response) =
     .where(filters.length ? and(...filters) : undefined)
     .orderBy(desc(boekhouderUploadsTable.aangemaaktOp));
 
-  return res.json(rows.map(mapUpload));
+  return void res.json(rows.map(mapUpload));
 });
 
 router.post(
   "/boekhouder/uploads",
   uploaden,
   upload.single("bestand"),
-  async (req: Request, res: Response) => {
+  async (req: Request, res: Response): Promise<void> => {
     const bestand = req.file;
-    if (!bestand) return res.status(400).json({ message: "Bestand ontbreekt" });
+    if (!bestand) return void res.status(400).json({ message: "Bestand ontbreekt" });
 
     const sess = req.session as { userId?: number; gebruikerNaam?: string };
     const { map, werkgever_id, periode_jaar, periode_maand, omschrijving } = req.body;
 
-    if (!map) return res.status(400).json({ message: "map is verplicht" });
+    if (!map) return void res.status(400).json({ message: "map is verplicht" });
 
     const mimeType = bestand.mimetype || "application/octet-stream";
     const subPath = `boekhouder-uploads/${Date.now()}-${bestand.originalname}`;
@@ -133,7 +133,7 @@ router.post(
       objectPath = await storage.uploadBestand(subPath, bestand.buffer, mimeType);
     } catch (err) {
       req.log.error({ err }, "Upload boekhouder-document mislukt");
-      return res.status(500).json({ message: "Upload mislukt" });
+      return void res.status(500).json({ message: "Upload mislukt" });
     }
 
     const [rij] = await db.insert(boekhouderUploadsTable).values({
@@ -150,7 +150,7 @@ router.post(
       uploaderNaam: sess.gebruikerNaam ?? null,
     }).returning();
 
-    return res.status(201).json(mapUpload(rij));
+    return void res.status(201).json(mapUpload(rij));
   }
 );
 

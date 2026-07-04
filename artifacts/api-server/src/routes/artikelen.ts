@@ -15,7 +15,7 @@ const aanmaken = requireBevoegdheid("magazijn", 3);
 const beheer   = requireBevoegdheid("magazijn", 4);
 
 // ── GET /artikelen ─────────────────────────────────────────────────────────────
-router.get("/artikelen", lezen, async (req, res) => {
+router.get("/artikelen", lezen, async (req, res): Promise<void> => {
   try {
     const { zoek, leverancier_id, categorie, actief, barcode } = req.query as Record<string, string | undefined>;
 
@@ -46,11 +46,11 @@ router.get("/artikelen", lezen, async (req, res) => {
 });
 
 // ── POST /artikelen ────────────────────────────────────────────────────────────
-router.post("/artikelen", aanmaken, async (req, res) => {
+router.post("/artikelen", aanmaken, async (req, res): Promise<void> => {
   try {
     const body = req.body as Record<string, unknown>;
     const naam = String(body.naam ?? "").trim();
-    if (!naam) return res.status(422).json({ error: "Naam is verplicht" });
+    if (!naam) return void res.status(422).json({ error: "Naam is verplicht" });
 
     const [nieuw] = await db
       .insert(artikelenTable)
@@ -65,7 +65,7 @@ router.post("/artikelen", aanmaken, async (req, res) => {
 });
 
 // ── GET /artikelen/:id ─────────────────────────────────────────────────────────
-router.get("/artikelen/:id", lezen, async (req, res) => {
+router.get("/artikelen/:id", lezen, async (req, res): Promise<void> => {
   try {
     const id = Number(req.params.id);
     const [rij] = await db
@@ -75,7 +75,7 @@ router.get("/artikelen/:id", lezen, async (req, res) => {
       .where(eq(artikelenTable.id, id))
       .limit(1);
 
-    if (!rij) return res.status(404).json({ error: "Artikel niet gevonden" });
+    if (!rij) return void res.status(404).json({ error: "Artikel niet gevonden" });
     res.json(mapArtikel(rij.artikel, rij.leverancier_naam));
   } catch (err) {
     req.log.error({ err }, "artikel ophalen mislukt");
@@ -84,7 +84,7 @@ router.get("/artikelen/:id", lezen, async (req, res) => {
 });
 
 // ── PATCH /artikelen/:id ───────────────────────────────────────────────────────
-router.patch("/artikelen/:id", schrijven, async (req, res) => {
+router.patch("/artikelen/:id", schrijven, async (req, res): Promise<void> => {
   try {
     const id = Number(req.params.id);
     const body = req.body as Record<string, unknown>;
@@ -95,7 +95,7 @@ router.patch("/artikelen/:id", schrijven, async (req, res) => {
       .where(eq(artikelenTable.id, id))
       .returning();
 
-    if (!bijgewerkt) return res.status(404).json({ error: "Artikel niet gevonden" });
+    if (!bijgewerkt) return void res.status(404).json({ error: "Artikel niet gevonden" });
     res.json(mapArtikel(bijgewerkt, null));
   } catch (err) {
     req.log.error({ err }, "artikel bijwerken mislukt");
@@ -104,7 +104,7 @@ router.patch("/artikelen/:id", schrijven, async (req, res) => {
 });
 
 // ── DELETE /artikelen/:id ──────────────────────────────────────────────────────
-router.delete("/artikelen/:id", beheer, async (req, res) => {
+router.delete("/artikelen/:id", beheer, async (req, res): Promise<void> => {
   try {
     const id = Number(req.params.id);
     await db.delete(artikelenTable).where(eq(artikelenTable.id, id));

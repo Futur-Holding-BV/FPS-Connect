@@ -81,9 +81,9 @@ async function heeftBeperktArchiefToegang(userId: number): Promise<boolean> {
 }
 
 // ── GET /toolbox-berichten ────────────────────────────────────────────────────
-toolboxRouter.get("/toolbox-berichten", requireAuth, async (req, res) => {
+toolboxRouter.get("/toolbox-berichten", requireAuth, async (req, res): Promise<void> => {
   const userId = req.session?.userId;
-  if (!userId) return res.status(401).json({ fout: "Niet ingelogd" });
+  if (!userId) return void res.status(401).json({ fout: "Niet ingelogd" });
 
   const gepubliceerdQ = req.query["gepubliceerd"];
   const gearchivierdQ = req.query["gearchiveerd"];
@@ -178,12 +178,12 @@ toolboxRouter.get("/toolbox-berichten", requireAuth, async (req, res) => {
     };
   });
 
-  return res.json(result);
+  return void res.json(result);
 });
 
-toolboxRouter.post("/toolbox-berichten", schrijvenToolbox, async (req, res) => {
+toolboxRouter.post("/toolbox-berichten", schrijvenToolbox, async (req, res): Promise<void> => {
   const userId = req.session?.userId;
-  if (!userId) return res.status(401).json({ fout: "Niet ingelogd" });
+  if (!userId) return void res.status(401).json({ fout: "Niet ingelogd" });
 
   const { titel, inhoud, bijlagen = [], doelgroep = "iedereen", doelgroep_gebruiker_id, koppelingen = [] } = req.body as {
     titel: string;
@@ -194,7 +194,7 @@ toolboxRouter.post("/toolbox-berichten", schrijvenToolbox, async (req, res) => {
     koppelingen?: unknown[];
   };
 
-  if (!titel || !inhoud) return res.status(422).json({ fout: "titel en inhoud zijn verplicht" });
+  if (!titel || !inhoud) return void res.status(422).json({ fout: "titel en inhoud zijn verplicht" });
 
   const [rij] = await db
     .insert(toolboxBerichtenTable)
@@ -209,15 +209,15 @@ toolboxRouter.post("/toolbox-berichten", schrijvenToolbox, async (req, res) => {
     })
     .returning();
 
-  return res.status(201).json(formatBericht(rij as unknown as Record<string, unknown>));
+  return void res.status(201).json(formatBericht(rij as unknown as Record<string, unknown>));
 });
 
-toolboxRouter.get("/toolbox-berichten/:id", requireAuth, async (req, res) => {
+toolboxRouter.get("/toolbox-berichten/:id", requireAuth, async (req, res): Promise<void> => {
   const id = parseInt(String(req.params["id"]));
-  if (isNaN(id)) return res.status(400).json({ fout: "Ongeldig id" });
+  if (isNaN(id)) return void res.status(400).json({ fout: "Ongeldig id" });
 
   const userId = req.session?.userId;
-  if (!userId) return res.status(401).json({ fout: "Niet ingelogd" });
+  if (!userId) return void res.status(401).json({ fout: "Niet ingelogd" });
 
   const [rij] = await db
     .select({
@@ -243,7 +243,7 @@ toolboxRouter.get("/toolbox-berichten/:id", requireAuth, async (req, res) => {
     .leftJoin(gebruikersTable, eq(toolboxBerichtenTable.aangemaaktDoorId, gebruikersTable.id))
     .where(eq(toolboxBerichtenTable.id, id));
 
-  if (!rij) return res.status(404).json({ fout: "Niet gevonden" });
+  if (!rij) return void res.status(404).json({ fout: "Niet gevonden" });
 
   const bevestigingen = await db
     .select({
@@ -256,12 +256,12 @@ toolboxRouter.get("/toolbox-berichten/:id", requireAuth, async (req, res) => {
     .leftJoin(gebruikersTable, eq(leesbevestigingenTable.gebruikerId, gebruikersTable.id))
     .where(eq(leesbevestigingenTable.berichtId, id));
 
-  return res.json(formatBericht(rij as unknown as Record<string, unknown>, userId, bevestigingen as never));
+  return void res.json(formatBericht(rij as unknown as Record<string, unknown>, userId, bevestigingen as never));
 });
 
-toolboxRouter.patch("/toolbox-berichten/:id", schrijvenToolbox, async (req, res) => {
+toolboxRouter.patch("/toolbox-berichten/:id", schrijvenToolbox, async (req, res): Promise<void> => {
   const id = parseInt(String(req.params["id"]));
-  if (isNaN(id)) return res.status(400).json({ fout: "Ongeldig id" });
+  if (isNaN(id)) return void res.status(400).json({ fout: "Ongeldig id" });
 
   const { titel, inhoud, bijlagen, doelgroep, doelgroep_gebruiker_id, koppelingen } = req.body as {
     titel?: string;
@@ -286,21 +286,21 @@ toolboxRouter.patch("/toolbox-berichten/:id", schrijvenToolbox, async (req, res)
     .where(eq(toolboxBerichtenTable.id, id))
     .returning();
 
-  if (!rij) return res.status(404).json({ fout: "Niet gevonden" });
-  return res.json(formatBericht(rij as unknown as Record<string, unknown>));
+  if (!rij) return void res.status(404).json({ fout: "Niet gevonden" });
+  return void res.json(formatBericht(rij as unknown as Record<string, unknown>));
 });
 
-toolboxRouter.delete("/toolbox-berichten/:id", verwijderenToolbox, async (req, res) => {
+toolboxRouter.delete("/toolbox-berichten/:id", verwijderenToolbox, async (req, res): Promise<void> => {
   const id = parseInt(String(req.params["id"]));
-  if (isNaN(id)) return res.status(400).json({ fout: "Ongeldig id" });
+  if (isNaN(id)) return void res.status(400).json({ fout: "Ongeldig id" });
 
   await db.delete(toolboxBerichtenTable).where(eq(toolboxBerichtenTable.id, id));
-  return res.status(204).send();
+  return void res.status(204).send();
 });
 
-toolboxRouter.post("/toolbox-berichten/:id/publiceren", schrijvenToolbox, async (req, res) => {
+toolboxRouter.post("/toolbox-berichten/:id/publiceren", schrijvenToolbox, async (req, res): Promise<void> => {
   const id = parseInt(String(req.params["id"]));
-  if (isNaN(id)) return res.status(400).json({ fout: "Ongeldig id" });
+  if (isNaN(id)) return void res.status(400).json({ fout: "Ongeldig id" });
 
   const [rij] = await db
     .update(toolboxBerichtenTable)
@@ -308,14 +308,14 @@ toolboxRouter.post("/toolbox-berichten/:id/publiceren", schrijvenToolbox, async 
     .where(eq(toolboxBerichtenTable.id, id))
     .returning();
 
-  if (!rij) return res.status(404).json({ fout: "Niet gevonden" });
-  return res.json(formatBericht(rij as unknown as Record<string, unknown>));
+  if (!rij) return void res.status(404).json({ fout: "Niet gevonden" });
+  return void res.json(formatBericht(rij as unknown as Record<string, unknown>));
 });
 
 // ── POST /toolbox-berichten/:id/archiveren ────────────────────────────────────
-toolboxRouter.post("/toolbox-berichten/:id/archiveren", schrijvenToolbox, async (req, res) => {
+toolboxRouter.post("/toolbox-berichten/:id/archiveren", schrijvenToolbox, async (req, res): Promise<void> => {
   const id = parseInt(String(req.params["id"]));
-  if (isNaN(id)) return res.status(400).json({ fout: "Ongeldig id" });
+  if (isNaN(id)) return void res.status(400).json({ fout: "Ongeldig id" });
 
   const [rij] = await db
     .update(toolboxBerichtenTable)
@@ -323,14 +323,14 @@ toolboxRouter.post("/toolbox-berichten/:id/archiveren", schrijvenToolbox, async 
     .where(eq(toolboxBerichtenTable.id, id))
     .returning();
 
-  if (!rij) return res.status(404).json({ fout: "Niet gevonden" });
-  return res.json(formatBericht(rij as unknown as Record<string, unknown>));
+  if (!rij) return void res.status(404).json({ fout: "Niet gevonden" });
+  return void res.json(formatBericht(rij as unknown as Record<string, unknown>));
 });
 
 // ── POST /toolbox-berichten/ai-analyse ────────────────────────────────────────
-toolboxRouter.post("/toolbox-berichten/ai-analyse", schrijvenToolbox, async (req, res) => {
+toolboxRouter.post("/toolbox-berichten/ai-analyse", schrijvenToolbox, async (req, res): Promise<void> => {
   const verwerkt = await voerAiAnalyseUit();
-  return res.json({ verwerkt });
+  return void res.json({ verwerkt });
 });
 
 // ── AI-analyse implementatie ──────────────────────────────────────────────────
@@ -393,12 +393,12 @@ async function voerAiAnalyseUit(): Promise<number> {
   return verwerkt;
 }
 
-toolboxRouter.post("/toolbox-berichten/:id/bevestigen", requireAuth, async (req, res) => {
+toolboxRouter.post("/toolbox-berichten/:id/bevestigen", requireAuth, async (req, res): Promise<void> => {
   const id = parseInt(String(req.params["id"]));
-  if (isNaN(id)) return res.status(400).json({ fout: "Ongeldig id" });
+  if (isNaN(id)) return void res.status(400).json({ fout: "Ongeldig id" });
 
   const userId = req.session?.userId;
-  if (!userId) return res.status(401).json({ fout: "Niet ingelogd" });
+  if (!userId) return void res.status(401).json({ fout: "Niet ingelogd" });
 
   const [bestaand] = await db
     .select()
@@ -411,7 +411,7 @@ toolboxRouter.post("/toolbox-berichten/:id/bevestigen", requireAuth, async (req,
     );
 
   if (bestaand) {
-    return res.status(409).json({ fout: "Al bevestigd" });
+    return void res.status(409).json({ fout: "Al bevestigd" });
   }
 
   const [rij] = await db
@@ -419,7 +419,7 @@ toolboxRouter.post("/toolbox-berichten/:id/bevestigen", requireAuth, async (req,
     .values({ berichtId: id, gebruikerId: userId })
     .returning();
 
-  return res.json({
+  return void res.json({
     id: rij.id,
     bericht_id: rij.berichtId,
     gebruiker_id: rij.gebruikerId,

@@ -28,7 +28,7 @@ router.get("/accountview/relatie-mapping", requireBevoegdheid("financieel", 1), 
 });
 
 // ── POST /accountview/relatie-mapping ─────────────────────────────────────────
-router.post("/accountview/relatie-mapping", requireBevoegdheid("financieel", 2), async (req: Request, res: Response) => {
+router.post("/accountview/relatie-mapping", requireBevoegdheid("financieel", 2), async (req: Request, res: Response): Promise<void> => {
   const body = req.body as {
     connect_relatienaam?: string;
     accountview_code?: string;
@@ -60,7 +60,7 @@ router.post("/accountview/relatie-mapping", requireBevoegdheid("financieel", 2),
 });
 
 // ── PATCH /accountview/relatie-mapping/:id ────────────────────────────────────
-router.patch("/accountview/relatie-mapping/:id", requireBevoegdheid("financieel", 2), async (req: Request, res: Response) => {
+router.patch("/accountview/relatie-mapping/:id", requireBevoegdheid("financieel", 2), async (req: Request, res: Response): Promise<void> => {
   const id = paramInt(req.params["id"]);
   const body = req.body as {
     connect_relatienaam?: string;
@@ -94,7 +94,7 @@ router.patch("/accountview/relatie-mapping/:id", requireBevoegdheid("financieel"
 });
 
 // ── DELETE /accountview/relatie-mapping/:id ───────────────────────────────────
-router.delete("/accountview/relatie-mapping/:id", requireBevoegdheid("financieel", 2), async (req: Request, res: Response) => {
+router.delete("/accountview/relatie-mapping/:id", requireBevoegdheid("financieel", 2), async (req: Request, res: Response): Promise<void> => {
   const id = paramInt(req.params["id"]);
   await db.delete(accountviewRelatieMappingTable).where(eq(accountviewRelatieMappingTable.id, id));
   res.status(204).send();
@@ -118,7 +118,7 @@ router.get("/accountview/project-mapping", requireBevoegdheid("financieel", 1), 
 });
 
 // ── POST /accountview/project-mapping ────────────────────────────────────────
-router.post("/accountview/project-mapping", requireBevoegdheid("financieel", 2), async (req: Request, res: Response) => {
+router.post("/accountview/project-mapping", requireBevoegdheid("financieel", 2), async (req: Request, res: Response): Promise<void> => {
   const body = req.body as {
     connect_project_code?: string;
     connect_gebouw_naam?: string | null;
@@ -152,7 +152,7 @@ router.post("/accountview/project-mapping", requireBevoegdheid("financieel", 2),
 });
 
 // ── PATCH /accountview/project-mapping/:id ────────────────────────────────────
-router.patch("/accountview/project-mapping/:id", requireBevoegdheid("financieel", 2), async (req: Request, res: Response) => {
+router.patch("/accountview/project-mapping/:id", requireBevoegdheid("financieel", 2), async (req: Request, res: Response): Promise<void> => {
   const id = paramInt(req.params["id"]);
   const body = req.body as {
     connect_project_code?: string;
@@ -189,7 +189,7 @@ router.patch("/accountview/project-mapping/:id", requireBevoegdheid("financieel"
 });
 
 // ── DELETE /accountview/project-mapping/:id ───────────────────────────────────
-router.delete("/accountview/project-mapping/:id", requireBevoegdheid("financieel", 2), async (req: Request, res: Response) => {
+router.delete("/accountview/project-mapping/:id", requireBevoegdheid("financieel", 2), async (req: Request, res: Response): Promise<void> => {
   const id = paramInt(req.params["id"]);
   await db.delete(accountviewProjectMappingTable).where(eq(accountviewProjectMappingTable.id, id));
   res.status(204).send();

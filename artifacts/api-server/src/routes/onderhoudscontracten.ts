@@ -67,7 +67,7 @@ async function mapContract(c: typeof onderhoudscontractenTable.$inferSelect & { 
 }
 
 // GET /onderhoudscontracten/statistieken  (vóór /:id zodat niet als id wordt geparsed)
-router.get("/onderhoudscontracten/statistieken", lezen, async (req, res) => {
+router.get("/onderhoudscontracten/statistieken", lezen, async (req, res): Promise<void> => {
   try {
     const nu = new Date();
     const over30 = new Date(nu);
@@ -128,7 +128,7 @@ router.get("/onderhoudscontracten/statistieken", lezen, async (req, res) => {
 });
 
 // GET /onderhoudscontracten
-router.get("/onderhoudscontracten", lezen, async (req, res) => {
+router.get("/onderhoudscontracten", lezen, async (req, res): Promise<void> => {
   try {
     const { gebouw_id, status } = req.query;
 
@@ -160,7 +160,7 @@ router.get("/onderhoudscontracten", lezen, async (req, res) => {
 });
 
 // POST /onderhoudscontracten
-router.post("/onderhoudscontracten", aanmaken, async (req, res) => {
+router.post("/onderhoudscontracten", aanmaken, async (req, res): Promise<void> => {
   try {
     const {
       gebouw_id, opdrachtgever, contactpersoon_naam, contactpersoon_email,
@@ -172,7 +172,7 @@ router.post("/onderhoudscontracten", aanmaken, async (req, res) => {
     } = req.body;
 
     if (!contracttype || !facturatie_frequentie || !onderhouds_frequentie || !indexering) {
-      return res.status(400).json({ error: "contracttype, facturatie_frequentie, onderhouds_frequentie en indexering zijn verplicht" });
+      return void res.status(400).json({ error: "contracttype, facturatie_frequentie, onderhouds_frequentie en indexering zijn verplicht" });
     }
 
     const contractnummer = await volgendContractnummer();
@@ -220,17 +220,17 @@ router.post("/onderhoudscontracten", aanmaken, async (req, res) => {
 });
 
 // GET /onderhoudscontracten/:id
-router.get("/onderhoudscontracten/:id", lezen, async (req, res) => {
+router.get("/onderhoudscontracten/:id", lezen, async (req, res): Promise<void> => {
   try {
     const id = parseInt(String(req.params.id));
-    if (isNaN(id)) return res.status(400).json({ error: "Ongeldig id" });
+    if (isNaN(id)) return void res.status(400).json({ error: "Ongeldig id" });
 
     const [c] = await db
       .select()
       .from(onderhoudscontractenTable)
       .where(eq(onderhoudscontractenTable.id, id));
 
-    if (!c) return res.status(404).json({ error: "Contract niet gevonden" });
+    if (!c) return void res.status(404).json({ error: "Contract niet gevonden" });
 
     const [telRow] = await db
       .select({ telling: count() })
@@ -245,10 +245,10 @@ router.get("/onderhoudscontracten/:id", lezen, async (req, res) => {
 });
 
 // PATCH /onderhoudscontracten/:id
-router.patch("/onderhoudscontracten/:id", schrijven, async (req, res) => {
+router.patch("/onderhoudscontracten/:id", schrijven, async (req, res): Promise<void> => {
   try {
     const id = parseInt(String(req.params.id));
-    if (isNaN(id)) return res.status(400).json({ error: "Ongeldig id" });
+    if (isNaN(id)) return void res.status(400).json({ error: "Ongeldig id" });
 
     const {
       gebouw_id, opdrachtgever, contactpersoon_naam, contactpersoon_email,
@@ -287,7 +287,7 @@ router.patch("/onderhoudscontracten/:id", schrijven, async (req, res) => {
       .where(eq(onderhoudscontractenTable.id, id))
       .returning();
 
-    if (!c) return res.status(404).json({ error: "Contract niet gevonden" });
+    if (!c) return void res.status(404).json({ error: "Contract niet gevonden" });
     res.json(await mapContract(c));
   } catch (err) {
     req.log.error(err);
@@ -296,10 +296,10 @@ router.patch("/onderhoudscontracten/:id", schrijven, async (req, res) => {
 });
 
 // DELETE /onderhoudscontracten/:id
-router.delete("/onderhoudscontracten/:id", verwijderen, async (req, res) => {
+router.delete("/onderhoudscontracten/:id", verwijderen, async (req, res): Promise<void> => {
   try {
     const id = parseInt(String(req.params.id));
-    if (isNaN(id)) return res.status(400).json({ error: "Ongeldig id" });
+    if (isNaN(id)) return void res.status(400).json({ error: "Ongeldig id" });
     await db.delete(onderhoudscontractenTable).where(eq(onderhoudscontractenTable.id, id));
     res.status(204).send();
   } catch (err) {
@@ -309,13 +309,13 @@ router.delete("/onderhoudscontracten/:id", verwijderen, async (req, res) => {
 });
 
 // POST /onderhoudscontracten/:id/werkbonnen-genereren
-router.post("/onderhoudscontracten/:id/werkbonnen-genereren", schrijven, async (req, res) => {
+router.post("/onderhoudscontracten/:id/werkbonnen-genereren", schrijven, async (req, res): Promise<void> => {
   try {
     const id = parseInt(String(req.params.id));
-    if (isNaN(id)) return res.status(400).json({ error: "Ongeldig contract-id" });
+    if (isNaN(id)) return void res.status(400).json({ error: "Ongeldig contract-id" });
 
     const [contract] = await db.select().from(onderhoudscontractenTable).where(eq(onderhoudscontractenTable.id, id));
-    if (!contract) return res.status(404).json({ error: "Contract niet gevonden" });
+    if (!contract) return void res.status(404).json({ error: "Contract niet gevonden" });
 
     const body = req.body as { jaar?: number; type?: string };
     const planJaar = body.jaar ?? new Date().getFullYear();

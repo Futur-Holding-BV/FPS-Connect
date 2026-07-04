@@ -19,9 +19,9 @@ const router = Router();
 const storageService = new ObjectStorageService();
 
 // ── POST /wagenpark/meldingen — monteur maakt melding ───────────────────────
-router.post("/meldingen", requireAuth, async (req, res) => {
+router.post("/meldingen", requireAuth, async (req, res): Promise<void> => {
   const gebruikerId = req.session?.["userId"] as number | undefined;
-  if (!gebruikerId) return res.status(401).json({ error: "Niet ingelogd" });
+  if (!gebruikerId) return void res.status(401).json({ error: "Niet ingelogd" });
 
   const { type, omschrijving, foto_paden } = req.body as {
     type?: string;
@@ -30,7 +30,7 @@ router.post("/meldingen", requireAuth, async (req, res) => {
   };
 
   if (!omschrijving?.trim()) {
-    return res.status(422).json({ error: "Omschrijving is verplicht" });
+    return void res.status(422).json({ error: "Omschrijving is verplicht" });
   }
 
   const meldingType: "storing" | "schade" = type === "schade" ? "schade" : "storing";
@@ -48,7 +48,7 @@ router.post("/meldingen", requireAuth, async (req, res) => {
     .limit(1);
 
   if (!voertuig) {
-    return res.status(404).json({ error: "Geen voertuig gekoppeld aan uw account" });
+    return void res.status(404).json({ error: "Geen voertuig gekoppeld aan uw account" });
   }
 
   const fotoPaden: string[] = Array.isArray(foto_paden) ? foto_paden : [];
@@ -158,9 +158,9 @@ router.post("/meldingen", requireAuth, async (req, res) => {
     .returning();
 
   const melding = inserted[0];
-  if (!melding) return res.status(500).json({ error: "Opslaan mislukt" });
+  if (!melding) return void res.status(500).json({ error: "Opslaan mislukt" });
 
-  return res.status(201).json({
+  return void res.status(201).json({
     ...melding,
     voertuig_kenteken: voertuig.kenteken,
     voertuig_merk: voertuig.merk,
@@ -169,7 +169,7 @@ router.post("/meldingen", requireAuth, async (req, res) => {
 });
 
 // ── GET /wagenpark/meldingen — beheerder bekijkt alle meldingen ──────────────
-router.get("/meldingen", requireBevoegdheid("offertes", 1), async (req, res) => {
+router.get("/meldingen", requireBevoegdheid("offertes", 1), async (req, res): Promise<void> => {
   const { voertuig_id, status } = req.query as {
     voertuig_id?: string;
     status?: string;
@@ -195,7 +195,7 @@ router.get("/meldingen", requireBevoegdheid("offertes", 1), async (req, res) => 
 
   const gefilterd = status ? rows.filter((r) => r.melding.status === status) : rows;
 
-  return res.json(
+  return void res.json(
     gefilterd.map((r) => ({
       ...r.melding,
       voertuig_kenteken: r.voertuig_kenteken,
@@ -207,9 +207,9 @@ router.get("/meldingen", requireBevoegdheid("offertes", 1), async (req, res) => 
 });
 
 // ── PATCH /wagenpark/meldingen/:id — status bijwerken / admin notitie ────────
-router.patch("/meldingen/:id", requireBevoegdheid("offertes", 2), async (req, res) => {
+router.patch("/meldingen/:id", requireBevoegdheid("offertes", 2), async (req, res): Promise<void> => {
   const id = parseInt(String(req.params.id), 10);
-  if (isNaN(id)) return res.status(400).json({ error: "Ongeldig id" });
+  if (isNaN(id)) return void res.status(400).json({ error: "Ongeldig id" });
 
   const { status, admin_notitie } = req.body as {
     status?: "nieuw" | "in_behandeling" | "afgehandeld";
@@ -228,8 +228,8 @@ router.patch("/meldingen/:id", requireBevoegdheid("offertes", 2), async (req, re
     .where(eq(wagenparkMeldingenTable.id, id))
     .returning();
 
-  if (!updated[0]) return res.status(404).json({ error: "Niet gevonden" });
-  return res.json(updated[0]);
+  if (!updated[0]) return void res.status(404).json({ error: "Niet gevonden" });
+  return void res.json(updated[0]);
 });
 
 export default router;

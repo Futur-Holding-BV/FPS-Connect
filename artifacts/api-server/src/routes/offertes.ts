@@ -70,7 +70,7 @@ const mapVoorwaardenSet = (s: typeof offerteVoorwaardenSetsTable.$inferSelect) =
   bijgewerkt_op: iso(s.bijgewerktOp),
 });
 
-router.get("/offerte-voorwaarden-sets", lezen, async (req, res) => {
+router.get("/offerte-voorwaarden-sets", lezen, async (req, res): Promise<void> => {
   try {
     const rijen = await db.select().from(offerteVoorwaardenSetsTable).orderBy(offerteVoorwaardenSetsTable.naam);
     res.json(rijen.map(mapVoorwaardenSet));
@@ -80,10 +80,10 @@ router.get("/offerte-voorwaarden-sets", lezen, async (req, res) => {
   }
 });
 
-router.post("/offerte-voorwaarden-sets", schrijven, async (req, res) => {
+router.post("/offerte-voorwaarden-sets", schrijven, async (req, res): Promise<void> => {
   try {
     const { naam, versie, tekst, actief } = req.body;
-    if (!naam) return res.status(400).json({ error: "naam is verplicht" });
+    if (!naam) return void res.status(400).json({ error: "naam is verplicht" });
     const [s] = await db
       .insert(offerteVoorwaardenSetsTable)
       .values({ naam, versie: versie || "1.0", tekst: tekst || "", actief: actief ?? true })
@@ -95,7 +95,7 @@ router.post("/offerte-voorwaarden-sets", schrijven, async (req, res) => {
   }
 });
 
-router.patch("/offerte-voorwaarden-sets/:id", schrijven, async (req, res) => {
+router.patch("/offerte-voorwaarden-sets/:id", schrijven, async (req, res): Promise<void> => {
   try {
     const { naam, versie, tekst, actief } = req.body;
     const [s] = await db
@@ -109,7 +109,7 @@ router.patch("/offerte-voorwaarden-sets/:id", schrijven, async (req, res) => {
       })
       .where(eq(offerteVoorwaardenSetsTable.id, parseId(req.params.id)))
       .returning();
-    if (!s) return res.status(404).json({ error: "Voorwaardenset niet gevonden" });
+    if (!s) return void res.status(404).json({ error: "Voorwaardenset niet gevonden" });
     res.json(mapVoorwaardenSet(s));
   } catch (err) {
     req.log.error(err);
@@ -117,7 +117,7 @@ router.patch("/offerte-voorwaarden-sets/:id", schrijven, async (req, res) => {
   }
 });
 
-router.delete("/offerte-voorwaarden-sets/:id", schrijven, async (req, res) => {
+router.delete("/offerte-voorwaarden-sets/:id", schrijven, async (req, res): Promise<void> => {
   try {
     await db.delete(offerteVoorwaardenSetsTable).where(eq(offerteVoorwaardenSetsTable.id, parseId(req.params.id)));
     res.status(204).send();
@@ -139,7 +139,7 @@ const mapSjabloon = (s: typeof offerteSjablonenTable.$inferSelect) => ({
   bijgewerkt_op: iso(s.bijgewerktOp),
 });
 
-router.get("/offerte-sjablonen", lezen, async (req, res) => {
+router.get("/offerte-sjablonen", lezen, async (req, res): Promise<void> => {
   try {
     const rijen = await db.select().from(offerteSjablonenTable).orderBy(offerteSjablonenTable.naam);
     res.json(rijen.map(mapSjabloon));
@@ -149,10 +149,10 @@ router.get("/offerte-sjablonen", lezen, async (req, res) => {
   }
 });
 
-router.post("/offerte-sjablonen", schrijven, async (req, res) => {
+router.post("/offerte-sjablonen", schrijven, async (req, res): Promise<void> => {
   try {
     const { naam, omschrijving, werkmaatschappij, doelgroep, actief } = req.body;
-    if (!naam) return res.status(400).json({ error: "naam is verplicht" });
+    if (!naam) return void res.status(400).json({ error: "naam is verplicht" });
     const [s] = await db
       .insert(offerteSjablonenTable)
       .values({ naam, omschrijving, werkmaatschappij: werkmaatschappij || "FPS Bouw", doelgroep: doelgroep || "algemeen", actief: actief ?? true })
@@ -164,7 +164,7 @@ router.post("/offerte-sjablonen", schrijven, async (req, res) => {
   }
 });
 
-router.patch("/offerte-sjablonen/:id", schrijven, async (req, res) => {
+router.patch("/offerte-sjablonen/:id", schrijven, async (req, res): Promise<void> => {
   try {
     const { naam, omschrijving, werkmaatschappij, doelgroep, actief } = req.body;
     const [s] = await db
@@ -172,7 +172,7 @@ router.patch("/offerte-sjablonen/:id", schrijven, async (req, res) => {
       .set({ naam, omschrijving, werkmaatschappij, doelgroep, actief, bijgewerktOp: new Date() })
       .where(eq(offerteSjablonenTable.id, parseId(req.params.id)))
       .returning();
-    if (!s) return res.status(404).json({ error: "Sjabloon niet gevonden" });
+    if (!s) return void res.status(404).json({ error: "Sjabloon niet gevonden" });
     res.json(mapSjabloon(s));
   } catch (err) {
     req.log.error(err);
@@ -180,7 +180,7 @@ router.patch("/offerte-sjablonen/:id", schrijven, async (req, res) => {
   }
 });
 
-router.delete("/offerte-sjablonen/:id", schrijven, async (req, res) => {
+router.delete("/offerte-sjablonen/:id", schrijven, async (req, res): Promise<void> => {
   try {
     await db.delete(offerteSjablonenTable).where(eq(offerteSjablonenTable.id, parseId(req.params.id)));
     res.status(204).send();
@@ -204,7 +204,7 @@ const mapHoofdstuk = (h: typeof offerteHoofdstukkenTable.$inferSelect) => ({
   bijgewerkt_op: iso(h.bijgewerktOp),
 });
 
-router.get("/offerte-sjablonen/:id/hoofdstukken", lezen, async (req, res) => {
+router.get("/offerte-sjablonen/:id/hoofdstukken", lezen, async (req, res): Promise<void> => {
   try {
     const rijen = await db
       .select()
@@ -218,10 +218,10 @@ router.get("/offerte-sjablonen/:id/hoofdstukken", lezen, async (req, res) => {
   }
 });
 
-router.post("/offerte-sjablonen/:id/hoofdstukken", schrijven, async (req, res) => {
+router.post("/offerte-sjablonen/:id/hoofdstukken", schrijven, async (req, res): Promise<void> => {
   try {
     const { titel, volgorde, type, standaardtekst, ai_veld, ai_hint } = req.body;
-    if (!titel) return res.status(400).json({ error: "titel is verplicht" });
+    if (!titel) return void res.status(400).json({ error: "titel is verplicht" });
     const [h] = await db
       .insert(offerteHoofdstukkenTable)
       .values({
@@ -241,7 +241,7 @@ router.post("/offerte-sjablonen/:id/hoofdstukken", schrijven, async (req, res) =
   }
 });
 
-router.patch("/offerte-hoofdstukken/:id", schrijven, async (req, res) => {
+router.patch("/offerte-hoofdstukken/:id", schrijven, async (req, res): Promise<void> => {
   try {
     const { titel, volgorde, type, standaardtekst, ai_veld, ai_hint } = req.body;
     const [h] = await db
@@ -249,7 +249,7 @@ router.patch("/offerte-hoofdstukken/:id", schrijven, async (req, res) => {
       .set({ titel, volgorde, type, standaardtekst, aiVeld: ai_veld, aiHint: ai_hint, bijgewerktOp: new Date() })
       .where(eq(offerteHoofdstukkenTable.id, parseId(req.params.id)))
       .returning();
-    if (!h) return res.status(404).json({ error: "Hoofdstuk niet gevonden" });
+    if (!h) return void res.status(404).json({ error: "Hoofdstuk niet gevonden" });
     res.json(mapHoofdstuk(h));
   } catch (err) {
     req.log.error(err);
@@ -257,7 +257,7 @@ router.patch("/offerte-hoofdstukken/:id", schrijven, async (req, res) => {
   }
 });
 
-router.delete("/offerte-hoofdstukken/:id", schrijven, async (req, res) => {
+router.delete("/offerte-hoofdstukken/:id", schrijven, async (req, res): Promise<void> => {
   try {
     await db.delete(offerteHoofdstukkenTable).where(eq(offerteHoofdstukkenTable.id, parseId(req.params.id)));
     res.status(204).send();
@@ -324,7 +324,7 @@ async function offerteNaarJson(o: typeof offertesTable.$inferSelect) {
   };
 }
 
-router.get("/offertes", lezen, async (req, res) => {
+router.get("/offertes", lezen, async (req, res): Promise<void> => {
   try {
     const rijen = await db
       .select({ o: offertesTable, gebouwNaam: gebouwenTable.naam, klantNaam: crmKlantenTable.naam, behandeldDoorNaam: gebruikersTable.naam })
@@ -387,10 +387,10 @@ router.get("/offertes", lezen, async (req, res) => {
   }
 });
 
-router.post("/offertes", schrijven, async (req, res) => {
+router.post("/offertes", schrijven, async (req, res): Promise<void> => {
   try {
     const { titel, offertenummer, gebouw_id, klant_id, sjabloon_id, opdrachtgever, ons_kenmerk, uw_kenmerk, uw_brief_van, behandeld_door_id, datum, geldigheid_dagen, voorwaarden, betalingstermijn_dagen, betaalwijze, factuur_schema, voorwaarden_set_id, bedrag_excl_btw, btw_percentage, bedrag_incl_btw, status } = req.body;
-    if (!titel) return res.status(400).json({ error: "titel is verplicht" });
+    if (!titel) return void res.status(400).json({ error: "titel is verplicht" });
     const [o] = await db
       .insert(offertesTable)
       .values({
@@ -427,7 +427,7 @@ router.post("/offertes", schrijven, async (req, res) => {
 
 // ── Analytics ─────────────────────────────────────────────────────────────────
 // MOET vóór /offertes/:id staan (Express matcht letterlijk pad eerder dan parameter).
-router.get("/offertes/analytics", lezen, async (req, res) => {
+router.get("/offertes/analytics", lezen, async (req, res): Promise<void> => {
   try {
     const rijen = await db
       .select({ portaalStatus: offertesTable.portaalStatus, count: count() })
@@ -536,10 +536,10 @@ router.get("/offertes/analytics", lezen, async (req, res) => {
   }
 });
 
-router.get("/offertes/:id", lezen, async (req, res) => {
+router.get("/offertes/:id", lezen, async (req, res): Promise<void> => {
   try {
     const [o] = await db.select().from(offertesTable).where(eq(offertesTable.id, parseId(req.params.id)));
-    if (!o) return res.status(404).json({ error: "Offerte niet gevonden" });
+    if (!o) return void res.status(404).json({ error: "Offerte niet gevonden" });
     res.json(await offerteNaarJson(o));
   } catch (err) {
     req.log.error(err);
@@ -547,11 +547,11 @@ router.get("/offertes/:id", lezen, async (req, res) => {
   }
 });
 
-router.patch("/offertes/:id", schrijven, async (req, res) => {
+router.patch("/offertes/:id", schrijven, async (req, res): Promise<void> => {
   try {
     const offerteId = parseId(req.params.id);
     if (await isOfferteBlokkeerd(offerteId))
-      return res.status(409).json({ error: "Ondertekende offerte kan niet meer worden gewijzigd." });
+      return void res.status(409).json({ error: "Ondertekende offerte kan niet meer worden gewijzigd." });
     const { titel, offertenummer, gebouw_id, klant_id, sjabloon_id, opdrachtgever, ons_kenmerk, uw_kenmerk, uw_brief_van, behandeld_door_id, datum, geldigheid_dagen, voorwaarden, betalingstermijn_dagen, betaalwijze, factuur_schema, voorwaarden_set_id, bedrag_excl_btw, btw_percentage, bedrag_incl_btw, status, begroting_weergave, presentatie_niveau, klant_type, vervolg_opties, vervolg_tekst, verzend_type } = req.body;
 
     // Status via de WorkflowEngine
@@ -559,7 +559,7 @@ router.patch("/offertes/:id", schrijven, async (req, res) => {
       const ctx = await maakTransitieContext(req, db);
       const result = await workflowService.transiteer("offerte", offerteId, status, ctx);
       if (!result.ok) {
-        return res.status(result.error!.httpStatus).json({ error: result.error!.bericht });
+        return void res.status(result.error!.httpStatus).json({ error: result.error!.bericht });
       }
     }
 
@@ -596,7 +596,7 @@ router.patch("/offertes/:id", schrijven, async (req, res) => {
       })
       .where(eq(offertesTable.id, offerteId))
       .returning();
-    if (!o) return res.status(404).json({ error: "Offerte niet gevonden" });
+    if (!o) return void res.status(404).json({ error: "Offerte niet gevonden" });
     res.json(await offerteNaarJson(o));
   } catch (err) {
     req.log.error(err);
@@ -604,11 +604,11 @@ router.patch("/offertes/:id", schrijven, async (req, res) => {
   }
 });
 
-router.post("/offertes/:id/ai-presentatieniveau", schrijven, async (req, res) => {
+router.post("/offertes/:id/ai-presentatieniveau", schrijven, async (req, res): Promise<void> => {
   try {
     const offerteId = parseId(req.params.id);
     const [o] = await db.select().from(offertesTable).where(eq(offertesTable.id, offerteId));
-    if (!o) return res.status(404).json({ error: "Offerte niet gevonden" });
+    if (!o) return void res.status(404).json({ error: "Offerte niet gevonden" });
 
     let klantType = o.klantType ?? "bedrijf";
     if (!klantType && o.klantId) {
@@ -645,11 +645,11 @@ router.post("/offertes/:id/ai-presentatieniveau", schrijven, async (req, res) =>
   }
 });
 
-router.delete("/offertes/:id", schrijven, async (req, res) => {
+router.delete("/offertes/:id", schrijven, async (req, res): Promise<void> => {
   try {
     const offerteId = parseId(req.params.id);
     if (await isOfferteBlokkeerd(offerteId))
-      return res.status(409).json({ error: "Ondertekende of afgewezen offerte kan niet worden verwijderd." });
+      return void res.status(409).json({ error: "Ondertekende of afgewezen offerte kan niet worden verwijderd." });
     await db.delete(offertesTable).where(eq(offertesTable.id, offerteId));
     res.status(204).send();
   } catch (err) {
@@ -681,7 +681,7 @@ const mapRegel = (r: typeof offerteRegelsTable.$inferSelect) => ({
   bijgewerkt_op: iso(r.bijgewerktOp),
 });
 
-router.get("/offertes/:id/regels", lezen, async (req, res) => {
+router.get("/offertes/:id/regels", lezen, async (req, res): Promise<void> => {
   try {
     const rijen = await db
       .select()
@@ -695,13 +695,13 @@ router.get("/offertes/:id/regels", lezen, async (req, res) => {
   }
 });
 
-router.post("/offertes/:id/regels", schrijven, async (req, res) => {
+router.post("/offertes/:id/regels", schrijven, async (req, res): Promise<void> => {
   try {
     const offerteId = parseId(req.params.id);
     if (await isOfferteBlokkeerd(offerteId))
-      return res.status(409).json({ error: "Ondertekende offerte kan niet meer worden gewijzigd." });
+      return void res.status(409).json({ error: "Ondertekende offerte kan niet meer worden gewijzigd." });
     const { maatregel, categorie, snag_referentie, voorziening_id, ruimte, uitgangspunten, eenheid, aantal, prijs_per_eenheid, kosten, volgorde, ai_voorstel } = req.body;
-    if (!maatregel) return res.status(400).json({ error: "maatregel is verplicht" });
+    if (!maatregel) return void res.status(400).json({ error: "maatregel is verplicht" });
     const berekendeKosten = kosten != null ? kosten : (aantal ?? 0) * (prijs_per_eenheid ?? 0);
     const [r] = await db
       .insert(offerteRegelsTable)
@@ -728,12 +728,12 @@ router.post("/offertes/:id/regels", schrijven, async (req, res) => {
   }
 });
 
-router.patch("/offerte-regels/:id", schrijven, async (req, res) => {
+router.patch("/offerte-regels/:id", schrijven, async (req, res): Promise<void> => {
   try {
     const [bestaandeRegel] = await db.select({ offerteId: offerteRegelsTable.offerteId }).from(offerteRegelsTable).where(eq(offerteRegelsTable.id, parseId(req.params.id)));
-    if (!bestaandeRegel) return res.status(404).json({ error: "Begrotingsregel niet gevonden" });
+    if (!bestaandeRegel) return void res.status(404).json({ error: "Begrotingsregel niet gevonden" });
     if (await isOfferteBlokkeerd(bestaandeRegel.offerteId))
-      return res.status(409).json({ error: "Ondertekende offerte kan niet meer worden gewijzigd." });
+      return void res.status(409).json({ error: "Ondertekende offerte kan niet meer worden gewijzigd." });
     const { maatregel, categorie, snag_referentie, voorziening_id, ruimte, uitgangspunten, eenheid, aantal, prijs_per_eenheid, kosten, volgorde, ai_voorstel, is_optioneel, weergave_override } = req.body;
     const berekendeKosten = kosten != null ? kosten : (aantal ?? 0) * (prijs_per_eenheid ?? 0);
     const [r] = await db
@@ -757,7 +757,7 @@ router.patch("/offerte-regels/:id", schrijven, async (req, res) => {
       })
       .where(eq(offerteRegelsTable.id, parseId(req.params.id)))
       .returning();
-    if (!r) return res.status(404).json({ error: "Begrotingsregel niet gevonden" });
+    if (!r) return void res.status(404).json({ error: "Begrotingsregel niet gevonden" });
     res.json(mapRegel(r));
   } catch (err) {
     req.log.error(err);
@@ -765,12 +765,12 @@ router.patch("/offerte-regels/:id", schrijven, async (req, res) => {
   }
 });
 
-router.delete("/offerte-regels/:id", schrijven, async (req, res) => {
+router.delete("/offerte-regels/:id", schrijven, async (req, res): Promise<void> => {
   try {
     const [bestaandeRegel] = await db.select({ offerteId: offerteRegelsTable.offerteId }).from(offerteRegelsTable).where(eq(offerteRegelsTable.id, parseId(req.params.id)));
-    if (!bestaandeRegel) return res.status(404).json({ error: "Begrotingsregel niet gevonden" });
+    if (!bestaandeRegel) return void res.status(404).json({ error: "Begrotingsregel niet gevonden" });
     if (await isOfferteBlokkeerd(bestaandeRegel.offerteId))
-      return res.status(409).json({ error: "Ondertekende offerte kan niet meer worden gewijzigd." });
+      return void res.status(409).json({ error: "Ondertekende offerte kan niet meer worden gewijzigd." });
     await db.delete(offerteRegelsTable).where(eq(offerteRegelsTable.id, parseId(req.params.id)));
     res.status(204).send();
   } catch (err) {
@@ -793,7 +793,7 @@ const mapUitgangspunt = (u: typeof offerteUitgangspuntenTable.$inferSelect) => (
   bijgewerkt_op: iso(u.bijgewerktOp),
 });
 
-router.get("/offertes/:id/uitgangspunten", lezen, async (req, res) => {
+router.get("/offertes/:id/uitgangspunten", lezen, async (req, res): Promise<void> => {
   try {
     const rijen = await db
       .select()
@@ -807,13 +807,13 @@ router.get("/offertes/:id/uitgangspunten", lezen, async (req, res) => {
   }
 });
 
-router.post("/offertes/:id/uitgangspunten", schrijven, async (req, res) => {
+router.post("/offertes/:id/uitgangspunten", schrijven, async (req, res): Promise<void> => {
   try {
     const offerteId = parseId(req.params.id);
     if (await isOfferteBlokkeerd(offerteId))
-      return res.status(409).json({ error: "Ondertekende offerte kan niet meer worden gewijzigd." });
+      return void res.status(409).json({ error: "Ondertekende offerte kan niet meer worden gewijzigd." });
     const { tekst, type, snag_referentie, voorziening_id, volgorde, ai_voorstel } = req.body;
-    if (!tekst) return res.status(400).json({ error: "tekst is verplicht" });
+    if (!tekst) return void res.status(400).json({ error: "tekst is verplicht" });
     const [u] = await db
       .insert(offerteUitgangspuntenTable)
       .values({
@@ -833,19 +833,19 @@ router.post("/offertes/:id/uitgangspunten", schrijven, async (req, res) => {
   }
 });
 
-router.patch("/offerte-uitgangspunten/:id", schrijven, async (req, res) => {
+router.patch("/offerte-uitgangspunten/:id", schrijven, async (req, res): Promise<void> => {
   try {
     const [bestaandUitgangspunt] = await db.select({ offerteId: offerteUitgangspuntenTable.offerteId }).from(offerteUitgangspuntenTable).where(eq(offerteUitgangspuntenTable.id, parseId(req.params.id)));
-    if (!bestaandUitgangspunt) return res.status(404).json({ error: "Uitgangspunt niet gevonden" });
+    if (!bestaandUitgangspunt) return void res.status(404).json({ error: "Uitgangspunt niet gevonden" });
     if (await isOfferteBlokkeerd(bestaandUitgangspunt.offerteId))
-      return res.status(409).json({ error: "Ondertekende offerte kan niet meer worden gewijzigd." });
+      return void res.status(409).json({ error: "Ondertekende offerte kan niet meer worden gewijzigd." });
     const { tekst, type, snag_referentie, voorziening_id, volgorde, ai_voorstel } = req.body;
     const [u] = await db
       .update(offerteUitgangspuntenTable)
       .set({ tekst, type, snagReferentie: snag_referentie, voorzieningId: voorziening_id ?? null, volgorde, aiVoorstel: ai_voorstel, bijgewerktOp: new Date() })
       .where(eq(offerteUitgangspuntenTable.id, parseId(req.params.id)))
       .returning();
-    if (!u) return res.status(404).json({ error: "Uitgangspunt niet gevonden" });
+    if (!u) return void res.status(404).json({ error: "Uitgangspunt niet gevonden" });
     res.json(mapUitgangspunt(u));
   } catch (err) {
     req.log.error(err);
@@ -853,12 +853,12 @@ router.patch("/offerte-uitgangspunten/:id", schrijven, async (req, res) => {
   }
 });
 
-router.delete("/offerte-uitgangspunten/:id", schrijven, async (req, res) => {
+router.delete("/offerte-uitgangspunten/:id", schrijven, async (req, res): Promise<void> => {
   try {
     const [bestaandUitgangspunt] = await db.select({ offerteId: offerteUitgangspuntenTable.offerteId }).from(offerteUitgangspuntenTable).where(eq(offerteUitgangspuntenTable.id, parseId(req.params.id)));
-    if (!bestaandUitgangspunt) return res.status(404).json({ error: "Uitgangspunt niet gevonden" });
+    if (!bestaandUitgangspunt) return void res.status(404).json({ error: "Uitgangspunt niet gevonden" });
     if (await isOfferteBlokkeerd(bestaandUitgangspunt.offerteId))
-      return res.status(409).json({ error: "Ondertekende offerte kan niet meer worden gewijzigd." });
+      return void res.status(409).json({ error: "Ondertekende offerte kan niet meer worden gewijzigd." });
     await db.delete(offerteUitgangspuntenTable).where(eq(offerteUitgangspuntenTable.id, parseId(req.params.id)));
     res.status(204).send();
   } catch (err) {
@@ -933,7 +933,7 @@ function mapBijlage(b: typeof offerteBijlagenTable.$inferSelect) {
 }
 
 // GET /offertes/:id/secties
-router.get("/offertes/:id/secties", lezen, async (req, res) => {
+router.get("/offertes/:id/secties", lezen, async (req, res): Promise<void> => {
   try {
     const offerteId = parseId(req.params.id);
     const rijen = await db
@@ -949,12 +949,12 @@ router.get("/offertes/:id/secties", lezen, async (req, res) => {
 });
 
 // POST /offertes/:id/secties
-router.post("/offertes/:id/secties", schrijven, async (req, res) => {
+router.post("/offertes/:id/secties", schrijven, async (req, res): Promise<void> => {
   try {
     const offerteId = parseId(req.params.id);
-    if (await isOfferteBlokkeerd(offerteId)) return res.status(409).json({ error: "Ondertekende of afgewezen offerte kan niet worden gewijzigd." });
+    if (await isOfferteBlokkeerd(offerteId)) return void res.status(409).json({ error: "Ondertekende of afgewezen offerte kan niet worden gewijzigd." });
     const { sectie_type, volgorde, actief, titel, inhoud } = req.body;
-    if (!titel && !sectie_type) return res.status(400).json({ error: "titel is verplicht" });
+    if (!titel && !sectie_type) return void res.status(400).json({ error: "titel is verplicht" });
     const titelEff = titel || (SECTIE_LABELS[sectie_type ?? "vrij"] ?? "Sectie");
     const [s] = await db
       .insert(offerteSectiesTable)
@@ -975,10 +975,10 @@ router.post("/offertes/:id/secties", schrijven, async (req, res) => {
 });
 
 // POST /offertes/:id/secties/initialiseren — standaardsecties aanmaken als er nog geen zijn
-router.post("/offertes/:id/secties/initialiseren", schrijven, async (req, res) => {
+router.post("/offertes/:id/secties/initialiseren", schrijven, async (req, res): Promise<void> => {
   try {
     const offerteId = parseId(req.params.id);
-    if (await isOfferteBlokkeerd(offerteId)) return res.status(409).json({ error: "Ondertekende of afgewezen offerte kan niet worden gewijzigd." });
+    if (await isOfferteBlokkeerd(offerteId)) return void res.status(409).json({ error: "Ondertekende of afgewezen offerte kan niet worden gewijzigd." });
     const bestaande = await db
       .select({ id: offerteSectiesTable.id })
       .from(offerteSectiesTable)
@@ -989,7 +989,7 @@ router.post("/offertes/:id/secties/initialiseren", schrijven, async (req, res) =
         .from(offerteSectiesTable)
         .where(eq(offerteSectiesTable.offerteId, offerteId))
         .orderBy(offerteSectiesTable.volgorde);
-      return res.json(rijen.map(mapSectie));
+      return void res.json(rijen.map(mapSectie));
     }
     const aangemaakt = await db
       .insert(offerteSectiesTable)
@@ -1003,15 +1003,15 @@ router.post("/offertes/:id/secties/initialiseren", schrijven, async (req, res) =
 });
 
 // PATCH /offerte-secties/:id
-router.patch("/offerte-secties/:id", schrijven, async (req, res) => {
+router.patch("/offerte-secties/:id", schrijven, async (req, res): Promise<void> => {
   try {
     const sectieId = parseId(req.params.id);
     const [bestaandeSectie] = await db
       .select({ offerteId: offerteSectiesTable.offerteId })
       .from(offerteSectiesTable)
       .where(eq(offerteSectiesTable.id, sectieId));
-    if (!bestaandeSectie) return res.status(404).json({ error: "Sectie niet gevonden" });
-    if (await isOfferteBlokkeerd(bestaandeSectie.offerteId)) return res.status(409).json({ error: "Ondertekende of afgewezen offerte kan niet worden gewijzigd." });
+    if (!bestaandeSectie) return void res.status(404).json({ error: "Sectie niet gevonden" });
+    if (await isOfferteBlokkeerd(bestaandeSectie.offerteId)) return void res.status(409).json({ error: "Ondertekende of afgewezen offerte kan niet worden gewijzigd." });
     const { sectie_type, volgorde, actief, titel, inhoud, ai_gegenereerd } = req.body;
     const [s] = await db
       .update(offerteSectiesTable)
@@ -1026,7 +1026,7 @@ router.patch("/offerte-secties/:id", schrijven, async (req, res) => {
       })
       .where(eq(offerteSectiesTable.id, sectieId))
       .returning();
-    if (!s) return res.status(404).json({ error: "Sectie niet gevonden" });
+    if (!s) return void res.status(404).json({ error: "Sectie niet gevonden" });
     res.json(mapSectie(s));
   } catch (err) {
     req.log.error(err);
@@ -1035,15 +1035,15 @@ router.patch("/offerte-secties/:id", schrijven, async (req, res) => {
 });
 
 // DELETE /offerte-secties/:id
-router.delete("/offerte-secties/:id", schrijven, async (req, res) => {
+router.delete("/offerte-secties/:id", schrijven, async (req, res): Promise<void> => {
   try {
     const sectieId = parseId(req.params.id);
     const [bestaandeSectie] = await db
       .select({ offerteId: offerteSectiesTable.offerteId })
       .from(offerteSectiesTable)
       .where(eq(offerteSectiesTable.id, sectieId));
-    if (!bestaandeSectie) return res.status(404).json({ error: "Sectie niet gevonden" });
-    if (await isOfferteBlokkeerd(bestaandeSectie.offerteId)) return res.status(409).json({ error: "Ondertekende of afgewezen offerte kan niet worden gewijzigd." });
+    if (!bestaandeSectie) return void res.status(404).json({ error: "Sectie niet gevonden" });
+    if (await isOfferteBlokkeerd(bestaandeSectie.offerteId)) return void res.status(409).json({ error: "Ondertekende of afgewezen offerte kan niet worden gewijzigd." });
     await db.delete(offerteSectiesTable).where(eq(offerteSectiesTable.id, sectieId));
     res.status(204).send();
   } catch (err) {
@@ -1053,13 +1053,13 @@ router.delete("/offerte-secties/:id", schrijven, async (req, res) => {
 });
 
 // POST /offerte-secties/:id/ai-schrijven
-router.post("/offerte-secties/:id/ai-schrijven", schrijven, async (req, res) => {
-  if (!heeftGateway()) return res.status(503).json({ error: "AI niet beschikbaar" });
+router.post("/offerte-secties/:id/ai-schrijven", schrijven, async (req, res): Promise<void> => {
+  if (!heeftGateway()) return void res.status(503).json({ error: "AI niet beschikbaar" });
   try {
     const sectieId = parseId(req.params.id);
     const [sectie] = await db.select().from(offerteSectiesTable).where(eq(offerteSectiesTable.id, sectieId));
-    if (!sectie) return res.status(404).json({ error: "Sectie niet gevonden" });
-    if (await isOfferteBlokkeerd(sectie.offerteId)) return res.status(409).json({ error: "Ondertekende of afgewezen offerte kan niet worden gewijzigd." });
+    if (!sectie) return void res.status(404).json({ error: "Sectie niet gevonden" });
+    if (await isOfferteBlokkeerd(sectie.offerteId)) return void res.status(409).json({ error: "Ondertekende of afgewezen offerte kan niet worden gewijzigd." });
 
     const [offerte] = await db
       .select({
@@ -1155,7 +1155,7 @@ Schrijf een professionele, overtuigende tekst voor deze sectie. Gebruik alinea's
 // ── Proposal Studio: versies ──────────────────────────────────────────────────
 
 // GET /offertes/:id/versies
-router.get("/offertes/:id/versies", lezen, async (req, res) => {
+router.get("/offertes/:id/versies", lezen, async (req, res): Promise<void> => {
   try {
     const offerteId = parseId(req.params.id);
     const rijen = await db
@@ -1175,15 +1175,15 @@ router.get("/offertes/:id/versies", lezen, async (req, res) => {
 });
 
 // POST /offertes/:id/versies
-router.post("/offertes/:id/versies", schrijven, async (req, res) => {
+router.post("/offertes/:id/versies", schrijven, async (req, res): Promise<void> => {
   try {
     const offerteId = parseId(req.params.id);
     const gebruikerId = (req.session as { gebruikerId?: number }).gebruikerId ?? null;
     const { samenvatting } = req.body;
 
     const [offerte] = await db.select().from(offertesTable).where(eq(offertesTable.id, offerteId));
-    if (!offerte) return res.status(404).json({ error: "Offerte niet gevonden" });
-    if (await isOfferteBlokkeerd(offerteId)) return res.status(409).json({ error: "Ondertekende of afgewezen offerte kan niet worden gewijzigd." });
+    if (!offerte) return void res.status(404).json({ error: "Offerte niet gevonden" });
+    if (await isOfferteBlokkeerd(offerteId)) return void res.status(409).json({ error: "Ondertekende of afgewezen offerte kan niet worden gewijzigd." });
 
     const secties = await db.select().from(offerteSectiesTable).where(eq(offerteSectiesTable.offerteId, offerteId)).orderBy(offerteSectiesTable.volgorde);
     const regels = await db.select().from(offerteRegelsTable).where(eq(offerteRegelsTable.offerteId, offerteId)).orderBy(offerteRegelsTable.volgorde);
@@ -1223,7 +1223,7 @@ router.post("/offertes/:id/versies", schrijven, async (req, res) => {
 // ── Proposal Studio: bijlagen ─────────────────────────────────────────────────
 
 // GET /offertes/:id/bijlagen
-router.get("/offertes/:id/bijlagen", lezen, async (req, res) => {
+router.get("/offertes/:id/bijlagen", lezen, async (req, res): Promise<void> => {
   try {
     const offerteId = parseId(req.params.id);
     const rijen = await db
@@ -1239,12 +1239,12 @@ router.get("/offertes/:id/bijlagen", lezen, async (req, res) => {
 });
 
 // POST /offertes/:id/bijlagen
-router.post("/offertes/:id/bijlagen", schrijven, async (req, res) => {
+router.post("/offertes/:id/bijlagen", schrijven, async (req, res): Promise<void> => {
   try {
     const offerteId = parseId(req.params.id);
-    if (await isOfferteBlokkeerd(offerteId)) return res.status(409).json({ error: "Ondertekende of afgewezen offerte kan niet worden gewijzigd." });
+    if (await isOfferteBlokkeerd(offerteId)) return void res.status(409).json({ error: "Ondertekende of afgewezen offerte kan niet worden gewijzigd." });
     const { bijlage_type, naam, beschrijving, url, volgorde } = req.body;
-    if (!naam) return res.status(400).json({ error: "naam is verplicht" });
+    if (!naam) return void res.status(400).json({ error: "naam is verplicht" });
     const [b] = await db
       .insert(offerteBijlagenTable)
       .values({
@@ -1264,15 +1264,15 @@ router.post("/offertes/:id/bijlagen", schrijven, async (req, res) => {
 });
 
 // PATCH /offerte-bijlagen/:id
-router.patch("/offerte-bijlagen/:id", schrijven, async (req, res) => {
+router.patch("/offerte-bijlagen/:id", schrijven, async (req, res): Promise<void> => {
   try {
     const bijlageId = parseId(req.params.id);
     const [bestaandeBijlage] = await db
       .select({ offerteId: offerteBijlagenTable.offerteId })
       .from(offerteBijlagenTable)
       .where(eq(offerteBijlagenTable.id, bijlageId));
-    if (!bestaandeBijlage) return res.status(404).json({ error: "Bijlage niet gevonden" });
-    if (await isOfferteBlokkeerd(bestaandeBijlage.offerteId)) return res.status(409).json({ error: "Ondertekende of afgewezen offerte kan niet worden gewijzigd." });
+    if (!bestaandeBijlage) return void res.status(404).json({ error: "Bijlage niet gevonden" });
+    if (await isOfferteBlokkeerd(bestaandeBijlage.offerteId)) return void res.status(409).json({ error: "Ondertekende of afgewezen offerte kan niet worden gewijzigd." });
     const { bijlage_type, naam, beschrijving, url, volgorde } = req.body;
     const [b] = await db
       .update(offerteBijlagenTable)
@@ -1286,7 +1286,7 @@ router.patch("/offerte-bijlagen/:id", schrijven, async (req, res) => {
       })
       .where(eq(offerteBijlagenTable.id, bijlageId))
       .returning();
-    if (!b) return res.status(404).json({ error: "Bijlage niet gevonden" });
+    if (!b) return void res.status(404).json({ error: "Bijlage niet gevonden" });
     res.json(mapBijlage(b));
   } catch (err) {
     req.log.error(err);
@@ -1295,15 +1295,15 @@ router.patch("/offerte-bijlagen/:id", schrijven, async (req, res) => {
 });
 
 // DELETE /offerte-bijlagen/:id
-router.delete("/offerte-bijlagen/:id", schrijven, async (req, res) => {
+router.delete("/offerte-bijlagen/:id", schrijven, async (req, res): Promise<void> => {
   try {
     const bijlageId = parseId(req.params.id);
     const [bestaandeBijlage] = await db
       .select({ offerteId: offerteBijlagenTable.offerteId })
       .from(offerteBijlagenTable)
       .where(eq(offerteBijlagenTable.id, bijlageId));
-    if (!bestaandeBijlage) return res.status(404).json({ error: "Bijlage niet gevonden" });
-    if (await isOfferteBlokkeerd(bestaandeBijlage.offerteId)) return res.status(409).json({ error: "Ondertekende of afgewezen offerte kan niet worden gewijzigd." });
+    if (!bestaandeBijlage) return void res.status(404).json({ error: "Bijlage niet gevonden" });
+    if (await isOfferteBlokkeerd(bestaandeBijlage.offerteId)) return void res.status(409).json({ error: "Ondertekende of afgewezen offerte kan niet worden gewijzigd." });
     await db.delete(offerteBijlagenTable).where(eq(offerteBijlagenTable.id, bijlageId));
     res.status(204).send();
   } catch (err) {
@@ -1316,13 +1316,13 @@ router.delete("/offerte-bijlagen/:id", schrijven, async (req, res) => {
 // Leest de spots van het gebouw dat aan de offerte hangt en maakt voor elke
 // spot een concept-begrotingsregel (prijs 0, mens vult aan). Bewust GEEN
 // AI-logica: dit is een mechanische voorbereiding, geen voorstel of goedkeuring.
-router.post("/offertes/:id/uit-spots", schrijven, async (req, res) => {
+router.post("/offertes/:id/uit-spots", schrijven, async (req, res): Promise<void> => {
   try {
     const offerteId = parseId(req.params.id);
     const [offerte] = await db.select().from(offertesTable).where(eq(offertesTable.id, offerteId));
-    if (!offerte) return res.status(404).json({ error: "Offerte niet gevonden" });
-    if (offerte.gebouwId == null) return res.status(400).json({ error: "Koppel eerst een gebouw aan de offerte." });
-    if (await isOfferteBlokkeerd(offerteId)) return res.status(409).json({ error: "Ondertekende of afgewezen offerte kan niet worden gewijzigd." });
+    if (!offerte) return void res.status(404).json({ error: "Offerte niet gevonden" });
+    if (offerte.gebouwId == null) return void res.status(400).json({ error: "Koppel eerst een gebouw aan de offerte." });
+    if (await isOfferteBlokkeerd(offerteId)) return void res.status(409).json({ error: "Ondertekende of afgewezen offerte kan niet worden gewijzigd." });
 
     const spots = await db
       .select()
@@ -1370,11 +1370,11 @@ router.post("/offertes/:id/uit-spots", schrijven, async (req, res) => {
 });
 
 // ── Portaal-token aanmaken ───────────────────────────────────────────────────
-router.post("/offertes/:id/portaal-token", schrijven, async (req, res) => {
+router.post("/offertes/:id/portaal-token", schrijven, async (req, res): Promise<void> => {
   try {
     const offerteId = parseId(req.params.id);
     const [offerte] = await db.select().from(offertesTable).where(eq(offertesTable.id, offerteId));
-    if (!offerte) return res.status(404).json({ error: "Offerte niet gevonden" });
+    if (!offerte) return void res.status(404).json({ error: "Offerte niet gevonden" });
 
     const token = randomBytes(32).toString("hex");
     const geldigDagen = Number(req.body?.geldig_dagen ?? 30);
@@ -1397,7 +1397,7 @@ router.post("/offertes/:id/portaal-token", schrijven, async (req, res) => {
 });
 
 // ── Bestaande portaal-tokens ophalen ─────────────────────────────────────────
-router.get("/offertes/:id/portaal-tokens", lezen, async (req, res) => {
+router.get("/offertes/:id/portaal-tokens", lezen, async (req, res): Promise<void> => {
   try {
     const offerteId = parseId(req.params.id);
     const tokens = await db
@@ -1421,7 +1421,7 @@ router.get("/offertes/:id/portaal-tokens", lezen, async (req, res) => {
 });
 
 // ── Vragen ophalen (admin) ────────────────────────────────────────────────────
-router.get("/offertes/:id/vragen", lezen, async (req, res) => {
+router.get("/offertes/:id/vragen", lezen, async (req, res): Promise<void> => {
   try {
     const offerteId = parseId(req.params.id);
     const vragen = await db
@@ -1447,7 +1447,7 @@ router.get("/offertes/:id/vragen", lezen, async (req, res) => {
 });
 
 // ── Vraag beantwoorden (admin) ────────────────────────────────────────────────
-router.patch("/offertes/:id/vragen/:vraagId", schrijven, async (req, res) => {
+router.patch("/offertes/:id/vragen/:vraagId", schrijven, async (req, res): Promise<void> => {
   try {
     const offerteId = parseId(req.params.id);
     const vraagId = parseId(req.params.vraagId);
@@ -1455,7 +1455,7 @@ router.patch("/offertes/:id/vragen/:vraagId", schrijven, async (req, res) => {
     const naarEmail = String(req.body?.naar_email ?? "").trim() || null;
     const naarNaam = String(req.body?.naar_naam ?? "").trim() || null;
 
-    if (!antwoord) return res.status(400).json({ error: "Antwoord is verplicht." });
+    if (!antwoord) return void res.status(400).json({ error: "Antwoord is verplicht." });
 
     const [vraag] = await db
       .select()
@@ -1463,7 +1463,7 @@ router.patch("/offertes/:id/vragen/:vraagId", schrijven, async (req, res) => {
       .where(eq(offerteVragenTable.id, vraagId));
 
     if (!vraag || vraag.offerteId !== offerteId) {
-      return res.status(404).json({ error: "Vraag niet gevonden." });
+      return void res.status(404).json({ error: "Vraag niet gevonden." });
     }
 
     const [bijgewerkt] = await db
@@ -1528,7 +1528,7 @@ router.patch("/offertes/:id/vragen/:vraagId", schrijven, async (req, res) => {
 });
 
 // ── Tracking ophalen (admin) ──────────────────────────────────────────────────
-router.get("/offertes/:id/tracking", lezen, async (req, res) => {
+router.get("/offertes/:id/tracking", lezen, async (req, res): Promise<void> => {
   try {
     const offerteId = parseId(req.params.id);
     const events = await db
@@ -1552,12 +1552,12 @@ router.get("/offertes/:id/tracking", lezen, async (req, res) => {
 });
 
 // ── AI e-mailvoorstel ─────────────────────────────────────────────────────────
-router.post("/offertes/:id/ai-email", schrijven, async (req, res) => {
+router.post("/offertes/:id/ai-email", schrijven, async (req, res): Promise<void> => {
   try {
     const offerteId = parseId(req.params.id);
 
     const [offerte] = await db.select().from(offertesTable).where(eq(offertesTable.id, offerteId));
-    if (!offerte) return res.status(404).json({ error: "Offerte niet gevonden" });
+    if (!offerte) return void res.status(404).json({ error: "Offerte niet gevonden" });
 
     // Extra context ophalen: secties, maatregelregels, gebouwnaam
     const [secties, regels, gebouwRij] = await Promise.all([
@@ -1595,7 +1595,7 @@ router.post("/offertes/:id/ai-email", schrijven, async (req, res) => {
       const samenvatting = `Hierbij ontvangt u onze offerte voor ${offerte.titel}${locatieTekst ? ` voor ${locatieTekst}` : ""}.\n\nHet totaalbedrag bedraagt ${bedragFormatted} incl. btw. De offerte is ${offerte.geldigheidDagen} dagen geldig.`;
       const call_to_action = `Via de bijgevoegde portaallink kunt u de offerte volledig bekijken en digitaal ondertekenen. Heeft u vragen? U kunt deze direct via het portaal stellen.`;
       const afsluiting = `Met vriendelijke groet,\nTeam FPS Brandpreventie`;
-      return res.json({ onderwerp, begroeting, samenvatting, call_to_action, afsluiting });
+      return void res.json({ onderwerp, begroeting, samenvatting, call_to_action, afsluiting });
     }
 
     const offerteMailResultaat = await aiGateway.chat("default", {
@@ -1665,7 +1665,7 @@ Geef als JSON terug (geen extra tekst):
 });
 
 // ── Offerte verzenden via e-mail ──────────────────────────────────────────────
-router.post("/offertes/:id/verzenden", schrijven, async (req, res) => {
+router.post("/offertes/:id/verzenden", schrijven, async (req, res): Promise<void> => {
   try {
     const offerteId = parseId(req.params.id);
     const [offerte] = await db
@@ -1684,9 +1684,9 @@ router.post("/offertes/:id/verzenden", schrijven, async (req, res) => {
       })
       .from(offertesTable)
       .where(eq(offertesTable.id, offerteId));
-    if (!offerte) return res.status(404).json({ error: "Offerte niet gevonden" });
+    if (!offerte) return void res.status(404).json({ error: "Offerte niet gevonden" });
     if (offerte.portaalStatus === "ondertekend" || offerte.portaalStatus === "afgewezen")
-      return res.status(409).json({ error: "Een ondertekende of afgewezen offerte kan niet opnieuw worden verzonden." });
+      return void res.status(409).json({ error: "Een ondertekende of afgewezen offerte kan niet opnieuw worden verzonden." });
 
     const naarEmail = String(req.body?.naar_email ?? "").trim();
     const naarNaam = String(req.body?.naar_naam ?? "").trim() || null;
@@ -1694,7 +1694,7 @@ router.post("/offertes/:id/verzenden", schrijven, async (req, res) => {
     const tekst = String(req.body?.tekst ?? "").trim();
     let portaalLink = String(req.body?.portaal_link ?? "").trim();
 
-    if (!naarEmail) return res.status(400).json({ error: "Ontvangersmailadres is verplicht." });
+    if (!naarEmail) return void res.status(400).json({ error: "Ontvangersmailadres is verplicht." });
 
     // Genereer server-side een portaal-token als de aanroeper er geen meestuurt.
     if (!portaalLink) {
@@ -1863,11 +1863,11 @@ function adviesNaarJson(a: typeof offerteContractAdviezenTable.$inferSelect) {
 }
 
 // Presigned upload-URL voor klantcontract-PDF
-router.post("/offertes/:id/klant-contracten/upload-url", schrijven, async (req, res) => {
+router.post("/offertes/:id/klant-contracten/upload-url", schrijven, async (req, res): Promise<void> => {
   try {
     const offerteId = parseId(req.params.id);
     const [o] = await db.select({ id: offertesTable.id }).from(offertesTable).where(eq(offertesTable.id, offerteId));
-    if (!o) return res.status(404).json({ error: "Offerte niet gevonden" });
+    if (!o) return void res.status(404).json({ error: "Offerte niet gevonden" });
     const storage = new ObjectStorageService();
     const { uploadURL, objectPath } = await storage.getObjectEntityUploadURL(null, null);
     res.json({ upload_url: uploadURL, object_path: objectPath });
@@ -1878,7 +1878,7 @@ router.post("/offertes/:id/klant-contracten/upload-url", schrijven, async (req, 
 });
 
 // Klantcontracten ophalen
-router.get("/offertes/:id/klant-contracten", lezen, async (req, res) => {
+router.get("/offertes/:id/klant-contracten", lezen, async (req, res): Promise<void> => {
   try {
     const offerteId = parseId(req.params.id);
     const contracten = await db
@@ -1886,7 +1886,7 @@ router.get("/offertes/:id/klant-contracten", lezen, async (req, res) => {
       .from(offerteKlantContractenTable)
       .where(eq(offerteKlantContractenTable.offerteId, offerteId))
       .orderBy(desc(offerteKlantContractenTable.geuploadOp));
-    if (contracten.length === 0) return res.json([]);
+    if (contracten.length === 0) return void res.json([]);
     const adviezen = await db
       .select({ contractId: offerteContractAdviezenTable.contractId })
       .from(offerteContractAdviezenTable)
@@ -1900,13 +1900,13 @@ router.get("/offertes/:id/klant-contracten", lezen, async (req, res) => {
 });
 
 // Klantcontract registreren (na upload naar storage)
-router.post("/offertes/:id/klant-contracten", schrijven, async (req, res) => {
+router.post("/offertes/:id/klant-contracten", schrijven, async (req, res): Promise<void> => {
   try {
     const offerteId = parseId(req.params.id);
     const [o] = await db.select({ id: offertesTable.id }).from(offertesTable).where(eq(offertesTable.id, offerteId));
-    if (!o) return res.status(404).json({ error: "Offerte niet gevonden" });
+    if (!o) return void res.status(404).json({ error: "Offerte niet gevonden" });
     const { bestandsnaam, bestand_pad, mime_type, extracted_text } = req.body;
-    if (!bestandsnaam || !bestand_pad) return res.status(400).json({ error: "bestandsnaam en bestand_pad zijn verplicht" });
+    if (!bestandsnaam || !bestand_pad) return void res.status(400).json({ error: "bestandsnaam en bestand_pad zijn verplicht" });
     const [c] = await db
       .insert(offerteKlantContractenTable)
       .values({
@@ -1926,7 +1926,7 @@ router.post("/offertes/:id/klant-contracten", schrijven, async (req, res) => {
 });
 
 // Klantcontract verwijderen
-router.delete("/offertes/:id/klant-contracten/:contractId", schrijven, async (req, res) => {
+router.delete("/offertes/:id/klant-contracten/:contractId", schrijven, async (req, res): Promise<void> => {
   try {
     const offerteId = parseId(req.params.id);
     const contractId = parseId(req.params.contractId);
@@ -1934,7 +1934,7 @@ router.delete("/offertes/:id/klant-contracten/:contractId", schrijven, async (re
       .select()
       .from(offerteKlantContractenTable)
       .where(and(eq(offerteKlantContractenTable.id, contractId), eq(offerteKlantContractenTable.offerteId, offerteId)));
-    if (!c) return res.status(404).json({ error: "Contract niet gevonden" });
+    if (!c) return void res.status(404).json({ error: "Contract niet gevonden" });
     await db.delete(offerteKlantContractenTable).where(eq(offerteKlantContractenTable.id, contractId));
     res.status(204).send();
   } catch (err) {
@@ -1944,7 +1944,7 @@ router.delete("/offertes/:id/klant-contracten/:contractId", schrijven, async (re
 });
 
 // AI-contractadvies genereren voor directie
-router.post("/offertes/:id/klant-contracten/:contractId/ai-advies", schrijven, async (req, res) => {
+router.post("/offertes/:id/klant-contracten/:contractId/ai-advies", schrijven, async (req, res): Promise<void> => {
   try {
     const offerteId = parseId(req.params.id);
     const contractId = parseId(req.params.contractId);
@@ -1952,9 +1952,9 @@ router.post("/offertes/:id/klant-contracten/:contractId/ai-advies", schrijven, a
       .select()
       .from(offerteKlantContractenTable)
       .where(and(eq(offerteKlantContractenTable.id, contractId), eq(offerteKlantContractenTable.offerteId, offerteId)));
-    if (!c) return res.status(404).json({ error: "Contract niet gevonden" });
-    if (!c.extractedText?.trim()) return res.status(422).json({ error: "Contracttekst ontbreekt — geen AI-analyse mogelijk. Zorg dat de PDF volledig geupload is met tekst." });
-    if (!heeftGateway()) return res.status(503).json({ error: "AI niet beschikbaar" });
+    if (!c) return void res.status(404).json({ error: "Contract niet gevonden" });
+    if (!c.extractedText?.trim()) return void res.status(422).json({ error: "Contracttekst ontbreekt — geen AI-analyse mogelijk. Zorg dat de PDF volledig geupload is met tekst." });
+    if (!heeftGateway()) return void res.status(503).json({ error: "AI niet beschikbaar" });
 
     const systeemprompt = `Je bent een commercieel-juridisch adviseur bij FPS Brandpreventie.
 Analyseer het onderstaande klantcontract en stel een intern adviesrapport op voor de directie.
@@ -2026,7 +2026,7 @@ Geef per aandachtspunt aan of het voor FPS gunstig, neutraal of ongunstig is.`;
 });
 
 // Bestaand AI-contractadvies ophalen
-router.get("/offertes/:id/klant-contracten/:contractId/advies", lezen, async (req, res) => {
+router.get("/offertes/:id/klant-contracten/:contractId/advies", lezen, async (req, res): Promise<void> => {
   try {
     const offerteId = parseId(req.params.id);
     const contractId = parseId(req.params.contractId);
@@ -2034,12 +2034,12 @@ router.get("/offertes/:id/klant-contracten/:contractId/advies", lezen, async (re
       .select({ id: offerteKlantContractenTable.id })
       .from(offerteKlantContractenTable)
       .where(and(eq(offerteKlantContractenTable.id, contractId), eq(offerteKlantContractenTable.offerteId, offerteId)));
-    if (!c) return res.status(404).json({ error: "Contract niet gevonden" });
+    if (!c) return void res.status(404).json({ error: "Contract niet gevonden" });
     const [advies] = await db
       .select()
       .from(offerteContractAdviezenTable)
       .where(eq(offerteContractAdviezenTable.contractId, contractId));
-    if (!advies) return res.status(404).json({ error: "Nog geen advies gegenereerd" });
+    if (!advies) return void res.status(404).json({ error: "Nog geen advies gegenereerd" });
     res.json(adviesNaarJson(advies));
   } catch (err) {
     req.log.error(err);

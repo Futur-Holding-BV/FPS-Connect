@@ -42,7 +42,7 @@ function mapBestand(b: typeof loonOutputBestandenTable.$inferSelect) {
   };
 }
 
-router.get("/loon-output", lezen, async (req: Request, res: Response) => {
+router.get("/loon-output", lezen, async (req: Request, res: Response): Promise<void> => {
   const { jaar, maand, werkmaatschappij, type, medewerker_id, status } = req.query;
   const filters = [];
   if (jaar) filters.push(eq(loonOutputBestandenTable.periodeJaar, Number(jaar)));
@@ -58,16 +58,16 @@ router.get("/loon-output", lezen, async (req: Request, res: Response) => {
     .where(filters.length ? and(...filters) : undefined)
     .orderBy(desc(loonOutputBestandenTable.aangemaaktOp));
 
-  return res.json(rows.map(mapBestand));
+  return void res.json(rows.map(mapBestand));
 });
 
 router.post(
   "/loon-output",
   schrijven,
   upload.single("bestand"),
-  async (req: Request, res: Response) => {
+  async (req: Request, res: Response): Promise<void> => {
     const bestand = req.file;
-    if (!bestand) return res.status(400).json({ message: "Bestand ontbreekt" });
+    if (!bestand) return void res.status(400).json({ message: "Bestand ontbreekt" });
 
     const sess = req.session as { userId?: number; gebruikerNaam?: string };
     const {
@@ -75,7 +75,7 @@ router.post(
       medewerker_id, bron, notities, upload_batch_ref,
     } = req.body;
 
-    if (!type) return res.status(400).json({ message: "type is verplicht" });
+    if (!type) return void res.status(400).json({ message: "type is verplicht" });
 
     const mimeType = bestand.mimetype || "application/octet-stream";
     const subPath = `loon-output/${Date.now()}-${bestand.originalname}`;
@@ -84,7 +84,7 @@ router.post(
       objectPath = await storage.uploadBestand(subPath, bestand.buffer, mimeType);
     } catch (err) {
       req.log.error({ err }, "Upload loon-output naar object storage mislukt");
-      return res.status(500).json({ message: "Upload mislukt" });
+      return void res.status(500).json({ message: "Upload mislukt" });
     }
 
     let medewerkerNaam: string | null = null;
@@ -114,11 +114,11 @@ router.post(
       uploaderNaam: sess.gebruikerNaam ?? null,
     }).returning();
 
-    return res.status(201).json(mapBestand(bestandRij));
+    return void res.status(201).json(mapBestand(bestandRij));
   }
 );
 
-router.patch("/loon-output/:id", schrijven, async (req: Request, res: Response) => {
+router.patch("/loon-output/:id", schrijven, async (req: Request, res: Response): Promise<void> => {
   const id = Number(req.params.id);
   const { status, notities, medewerker_id, werkmaatschappij } = req.body;
 
@@ -143,11 +143,11 @@ router.patch("/loon-output/:id", schrijven, async (req: Request, res: Response) 
     .where(eq(loonOutputBestandenTable.id, id))
     .returning();
 
-  if (!updated) return res.status(404).json({ message: "Niet gevonden" });
-  return res.json(mapBestand(updated));
+  if (!updated) return void res.status(404).json({ message: "Niet gevonden" });
+  return void res.json(mapBestand(updated));
 });
 
-router.post("/loon-output/:id/publiceer", requireBevoegdheid("salarisarchief", 3), async (req: Request, res: Response) => {
+router.post("/loon-output/:id/publiceer", requireBevoegdheid("salarisarchief", 3), async (req: Request, res: Response): Promise<void> => {
   const id = Number(req.params.id);
   const sess = req.session as { userId?: number };
 
@@ -163,8 +163,8 @@ router.post("/loon-output/:id/publiceer", requireBevoegdheid("salarisarchief", 3
     .where(eq(loonOutputBestandenTable.id, id))
     .returning();
 
-  if (!updated) return res.status(404).json({ message: "Niet gevonden" });
-  return res.json(mapBestand(updated));
+  if (!updated) return void res.status(404).json({ message: "Niet gevonden" });
+  return void res.json(mapBestand(updated));
 });
 
 export default router;

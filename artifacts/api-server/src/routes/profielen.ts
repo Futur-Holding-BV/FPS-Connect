@@ -64,7 +64,7 @@ function serialiseer(
   };
 }
 
-router.get("/profielen", requireBevoegdheid("gebruikers", 1), async (req, res) => {
+router.get("/profielen", requireBevoegdheid("gebruikers", 1), async (req, res): Promise<void> => {
   try {
     const [profielen, gebruikers] = await Promise.all([
       db.select().from(profielenTable).orderBy(asc(profielenTable.id)),
@@ -110,7 +110,7 @@ router.get("/profielen", requireBevoegdheid("gebruikers", 1), async (req, res) =
   }
 });
 
-router.post("/profielen", requireRol("hoofdbeheerder"), async (req, res) => {
+router.post("/profielen", requireRol("hoofdbeheerder"), async (req, res): Promise<void> => {
   try {
     const naam = String(req.body?.naam ?? "").trim();
     if (!naam) {
@@ -149,7 +149,7 @@ router.post("/profielen", requireRol("hoofdbeheerder"), async (req, res) => {
 // POST /profielen/synchroniseer-standaard — maakt ontbrekende systeem-presets aan vanuit PRESETS
 // en werkt bestaande systeem-presets bij als hun bevoegdheden afwijken van de definitie.
 // Moet vóór /profielen/:id staan zodat "synchroniseer-standaard" niet als id wordt geïnterpreteerd.
-router.post("/profielen/synchroniseer-standaard", requireRol("hoofdbeheerder"), async (req, res) => {
+router.post("/profielen/synchroniseer-standaard", requireRol("hoofdbeheerder"), async (req, res): Promise<void> => {
   try {
     const bestaand = await db.select().from(profielenTable).where(eq(profielenTable.systeem, true));
     const bestaandMap = new Map(bestaand.map((p) => [p.naam, p]));
@@ -187,7 +187,7 @@ router.post("/profielen/synchroniseer-standaard", requireRol("hoofdbeheerder"), 
   }
 });
 
-router.post("/profielen/aanvullen", requireRol("hoofdbeheerder"), async (req, res) => {
+router.post("/profielen/aanvullen", requireRol("hoofdbeheerder"), async (req, res): Promise<void> => {
   try {
     const profielen = await db.select().from(profielenTable);
     let profielenAangevuld = 0;
@@ -221,7 +221,7 @@ router.post("/profielen/aanvullen", requireRol("hoofdbeheerder"), async (req, re
   }
 });
 
-router.patch("/profielen/:id", requireRol("hoofdbeheerder"), async (req, res) => {
+router.patch("/profielen/:id", requireRol("hoofdbeheerder"), async (req, res): Promise<void> => {
   try {
     const id = Number(req.params.id);
     if (!Number.isInteger(id)) {
@@ -266,7 +266,7 @@ router.patch("/profielen/:id", requireRol("hoofdbeheerder"), async (req, res) =>
   }
 });
 
-router.delete("/profielen/:id", requireRol("hoofdbeheerder"), async (req, res) => {
+router.delete("/profielen/:id", requireRol("hoofdbeheerder"), async (req, res): Promise<void> => {
   try {
     const id = Number(req.params.id);
     if (!Number.isInteger(id)) {
@@ -296,7 +296,7 @@ router.delete("/profielen/:id", requireRol("hoofdbeheerder"), async (req, res) =
 // POST /profielen/:id/toepassen — preset opnieuw doorvoeren op alle gekoppelde
 // gebruikers (herkomstProfielId = id). Overschrijft hun bevoegdheden met de
 // huidige preset-waarden.
-router.post("/profielen/:id/toepassen", requireRol("hoofdbeheerder"), async (req, res) => {
+router.post("/profielen/:id/toepassen", requireRol("hoofdbeheerder"), async (req, res): Promise<void> => {
   try {
     const id = Number(req.params.id);
     if (!Number.isInteger(id)) {

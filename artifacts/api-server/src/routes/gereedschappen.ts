@@ -116,7 +116,7 @@ function mapMelding(
 }
 
 // ── GET /gereedschappen ───────────────────────────────────────────────────────
-router.get("/gereedschappen", lezen, async (req, res) => {
+router.get("/gereedschappen", lezen, async (req, res): Promise<void> => {
   const { status, zoek, categorie, medewerker_id } = req.query as Record<string, string>;
 
   const filters = [];
@@ -148,7 +148,7 @@ router.get("/gereedschappen", lezen, async (req, res) => {
 });
 
 // ── POST /gereedschappen ──────────────────────────────────────────────────────
-router.post("/gereedschappen", schrijven, async (req, res) => {
+router.post("/gereedschappen", schrijven, async (req, res): Promise<void> => {
   const {
     gegraveerd_nummer, omschrijving, merk, type, serienummer,
     categorie, aandrijving, met_snoer, accu_inbegrepen, lader_inbegrepen,
@@ -202,7 +202,7 @@ router.post("/gereedschappen", schrijven, async (req, res) => {
 });
 
 // ── GET /gereedschappen/:id ───────────────────────────────────────────────────
-router.get("/gereedschappen/:id", lezen, async (req, res) => {
+router.get("/gereedschappen/:id", lezen, async (req, res): Promise<void> => {
   const id = parseInt(req.params.id as string);
   const rijen = await db
     .select({ g: gereedschappenTable, medewerkerNaam: medewerkersTable.naam })
@@ -215,7 +215,7 @@ router.get("/gereedschappen/:id", lezen, async (req, res) => {
 });
 
 // ── PATCH /gereedschappen/:id ─────────────────────────────────────────────────
-router.patch("/gereedschappen/:id", schrijven, async (req, res) => {
+router.patch("/gereedschappen/:id", schrijven, async (req, res): Promise<void> => {
   const id = parseInt(req.params.id as string);
   const {
     gegraveerd_nummer, omschrijving, merk, type, serienummer,
@@ -268,7 +268,7 @@ router.patch("/gereedschappen/:id", schrijven, async (req, res) => {
 });
 
 // ── DELETE /gereedschappen/:id ────────────────────────────────────────────────
-router.delete("/gereedschappen/:id", schrijven, async (req, res) => {
+router.delete("/gereedschappen/:id", schrijven, async (req, res): Promise<void> => {
   const id = parseInt(req.params.id as string);
   await db
     .update(gereedschappenTable)
@@ -278,7 +278,7 @@ router.delete("/gereedschappen/:id", schrijven, async (req, res) => {
 });
 
 // ── GET /gereedschappen/:id/bruikleen ─────────────────────────────────────────
-router.get("/gereedschappen/:id/bruikleen", lezen, async (req, res) => {
+router.get("/gereedschappen/:id/bruikleen", lezen, async (req, res): Promise<void> => {
   const id = parseInt(req.params.id as string);
   const rijen = await db
     .select({
@@ -301,7 +301,7 @@ router.get("/gereedschappen/:id/bruikleen", lezen, async (req, res) => {
 });
 
 // ── GET /gereedschappen/:id/meldingen ─────────────────────────────────────────
-router.get("/gereedschappen/:id/meldingen", lezen, async (req, res) => {
+router.get("/gereedschappen/:id/meldingen", lezen, async (req, res): Promise<void> => {
   const id = parseInt(req.params.id as string);
   const rijen = await db
     .select({
@@ -317,7 +317,7 @@ router.get("/gereedschappen/:id/meldingen", lezen, async (req, res) => {
 });
 
 // ── POST /gereedschappen/:id/meldingen ────────────────────────────────────────
-router.post("/gereedschappen/:id/meldingen", lezen, async (req, res) => {
+router.post("/gereedschappen/:id/meldingen", lezen, async (req, res): Promise<void> => {
   const gereedschapId = parseInt(req.params.id as string);
   const { soort_melding, omschrijving, urgentie, kan_nog_veilig_gebruikt_worden, datum_melding, opmerkingen } = req.body;
 
@@ -350,7 +350,7 @@ router.post("/gereedschappen/:id/meldingen", lezen, async (req, res) => {
 });
 
 // ── POST /bruikleen ───────────────────────────────────────────────────────────
-router.post("/bruikleen", schrijven, async (req, res) => {
+router.post("/bruikleen", schrijven, async (req, res): Promise<void> => {
   const { gereedschap_id, medewerker_id, datum_uitgifte, staat_bij_uitgifte, accessoires, bruikleen_voorwaarden, opmerkingen } = req.body;
 
   if (!gereedschap_id || !medewerker_id || !datum_uitgifte) {
@@ -397,7 +397,7 @@ router.post("/bruikleen", schrijven, async (req, res) => {
 });
 
 // ── GET /bruikleen/:id ────────────────────────────────────────────────────────
-router.get("/bruikleen/:id", lezen, async (req, res) => {
+router.get("/bruikleen/:id", lezen, async (req, res): Promise<void> => {
   const id = parseInt(req.params.id as string);
   const rijen = await db
     .select({
@@ -420,7 +420,7 @@ router.get("/bruikleen/:id", lezen, async (req, res) => {
 });
 
 // ── PATCH /bruikleen/:id/retourgave ───────────────────────────────────────────
-router.patch("/bruikleen/:id/retourgave", schrijven, async (req, res) => {
+router.patch("/bruikleen/:id/retourgave", schrijven, async (req, res): Promise<void> => {
   const id = parseInt(req.params.id as string);
   const { datum_inname, staat_bij_inname, opmerkingen } = req.body;
 
@@ -457,7 +457,7 @@ router.patch("/bruikleen/:id/retourgave", schrijven, async (req, res) => {
 });
 
 // ── PATCH /bruikleen/:id/ondertekening ────────────────────────────────────────
-router.patch("/bruikleen/:id/ondertekening", lezen, async (req, res) => {
+router.patch("/bruikleen/:id/ondertekening", lezen, async (req, res): Promise<void> => {
   const id = parseInt(req.params.id as string);
   const { rol, handtekening_url } = req.body;
 
@@ -502,23 +502,23 @@ router.post("/gereedschappen/upload-url", schrijven, async (_req, res) => {
   try {
     const storage = new ObjectStorageService();
     const { uploadURL, objectPath } = await storage.getObjectEntityUploadURL(null, "algemeen");
-    return res.json({ upload_url: uploadURL, object_path: objectPath });
+    return void res.json({ upload_url: uploadURL, object_path: objectPath });
   } catch (err) {
     logger.error({ err }, "gereedschap upload-url fout");
-    return res.status(500).json({ error: "Kon upload-URL niet genereren" });
+    return void res.status(500).json({ error: "Kon upload-URL niet genereren" });
   }
 });
 
 // ── POST /gereedschappen/:id/ai-analyse ───────────────────────────────────────
 // Analyseert een foto van het gereedschap met GPT-4o vision en stelt
 // velden voor. Alleen een suggestie; de magazijnbeheerder bevestigt zelf.
-router.post("/gereedschappen/:id/ai-analyse", schrijven, async (req, res) => {
+router.post("/gereedschappen/:id/ai-analyse", schrijven, async (req, res): Promise<void> => {
   const { foto_url } = req.body as { foto_url?: string };
   if (!foto_url) {
-    return res.status(400).json({ error: "foto_url is verplicht" });
+    return void res.status(400).json({ error: "foto_url is verplicht" });
   }
   if (!heeftGateway()) {
-    return res.status(503).json({ error: "AI niet beschikbaar" });
+    return void res.status(503).json({ error: "AI niet beschikbaar" });
   }
 
   try {
@@ -576,10 +576,10 @@ Wees conservatief: als je iets niet zeker weet, gebruik null of false.`,
     try {
       voorstel = JSON.parse(rawText) as Record<string, unknown>;
     } catch {
-      return res.status(500).json({ error: "AI-antwoord kon niet worden verwerkt" });
+      return void res.status(500).json({ error: "AI-antwoord kon niet worden verwerkt" });
     }
 
-    return res.json({
+    return void res.json({
       omschrijving: typeof voorstel.omschrijving === "string" ? voorstel.omschrijving : "",
       merk: typeof voorstel.merk === "string" ? voorstel.merk : null,
       type: typeof voorstel.type === "string" ? voorstel.type : null,
@@ -594,12 +594,12 @@ Wees conservatief: als je iets niet zeker weet, gebruik null of false.`,
     });
   } catch (err) {
     logger.error({ err }, "gereedschap ai-analyse fout");
-    return res.status(500).json({ error: "AI-analyse mislukt" });
+    return void res.status(500).json({ error: "AI-analyse mislukt" });
   }
 });
 
 // ── GET /mijn-gereedschappen ──────────────────────────────────────────────────
-router.get("/mijn-gereedschappen", async (req, res) => {
+router.get("/mijn-gereedschappen", async (req, res): Promise<void> => {
   const userId = req.session.userId;
   if (!userId) { res.status(401).json({ error: "Niet ingelogd" }); return; }
 

@@ -34,7 +34,7 @@ async function gebouwScope(
 }
 
 // GET /dashboard/stats
-router.get("/dashboard/stats", dashboardLezen, async (req, res) => {
+router.get("/dashboard/stats", dashboardLezen, async (req, res): Promise<void> => {
   try {
     const { beperkt, ids } = await gebouwScope(req);
 
@@ -105,7 +105,7 @@ router.get("/dashboard/stats", dashboardLezen, async (req, res) => {
 });
 
 // GET /dashboard/recente-activiteit
-router.get("/dashboard/recente-activiteit", dashboardLezen, async (req, res) => {
+router.get("/dashboard/recente-activiteit", dashboardLezen, async (req, res): Promise<void> => {
   try {
     const { beperkt, ids } = await gebouwScope(req);
 
@@ -154,7 +154,7 @@ router.get("/dashboard/recente-activiteit", dashboardLezen, async (req, res) => 
 });
 
 // GET /dashboard/status-verdeling
-router.get("/dashboard/status-verdeling", dashboardLezen, async (req, res) => {
+router.get("/dashboard/status-verdeling", dashboardLezen, async (req, res): Promise<void> => {
   try {
     const { beperkt, ids } = await gebouwScope(req);
 
@@ -193,7 +193,7 @@ router.get("/dashboard/status-verdeling", dashboardLezen, async (req, res) => {
 });
 
 // GET /dashboard/vervaldagen
-router.get("/dashboard/vervaldagen", dashboardLezen, async (req, res) => {
+router.get("/dashboard/vervaldagen", dashboardLezen, async (req, res): Promise<void> => {
   try {
     const { beperkt, ids } = await gebouwScope(req);
 

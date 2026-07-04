@@ -199,7 +199,7 @@ async function bijwerkenVoorraad(
 
 // ── Signalering: kritieke artikelen teller (voor sidebar-badge) ──────────────
 
-router.get("/magazijn/signalering", lezen, async (req, res) => {
+router.get("/magazijn/signalering", lezen, async (req, res): Promise<void> => {
   try {
     const voorraad = await db.select({
       artikel_id: voorraadTable.artikelId,
@@ -231,7 +231,7 @@ router.get("/magazijn/signalering", lezen, async (req, res) => {
   }
 });
 
-router.get("/magazijn/dashboard", lezen, async (req, res) => {
+router.get("/magazijn/dashboard", lezen, async (req, res): Promise<void> => {
   try {
     const voorraad = await db.select({
       artikel_id: voorraadTable.artikelId,
@@ -325,7 +325,7 @@ router.get("/magazijn/dashboard", lezen, async (req, res) => {
 // LOCATIES
 // ═══════════════════════════════════════════════════════════
 
-router.get("/magazijn/locaties", lezen, async (req, res) => {
+router.get("/magazijn/locaties", lezen, async (req, res): Promise<void> => {
   try {
     const rijen = await db.select().from(magazijnLocatiesTable).orderBy(asc(magazijnLocatiesTable.naam));
     res.json(rijen.map(mapLocatie));
@@ -335,7 +335,7 @@ router.get("/magazijn/locaties", lezen, async (req, res) => {
   }
 });
 
-router.post("/magazijn/locaties", aanmaken, async (req, res) => {
+router.post("/magazijn/locaties", aanmaken, async (req, res): Promise<void> => {
   try {
     const body = req.body as Record<string, unknown>;
     const naam = String(body.naam ?? "").trim();
@@ -356,7 +356,7 @@ router.post("/magazijn/locaties", aanmaken, async (req, res) => {
   }
 });
 
-router.get("/magazijn/locaties/:id", lezen, async (req, res) => {
+router.get("/magazijn/locaties/:id", lezen, async (req, res): Promise<void> => {
   try {
     const id = Number(req.params.id);
     const [rij] = await db.select().from(magazijnLocatiesTable).where(eq(magazijnLocatiesTable.id, id)).limit(1);
@@ -368,7 +368,7 @@ router.get("/magazijn/locaties/:id", lezen, async (req, res) => {
   }
 });
 
-router.patch("/magazijn/locaties/:id", schrijven, async (req, res) => {
+router.patch("/magazijn/locaties/:id", schrijven, async (req, res): Promise<void> => {
   try {
     const id = Number(req.params.id);
     const body = req.body as Record<string, unknown>;
@@ -393,7 +393,7 @@ router.patch("/magazijn/locaties/:id", schrijven, async (req, res) => {
   }
 });
 
-router.delete("/magazijn/locaties/:id", beheer, async (req, res) => {
+router.delete("/magazijn/locaties/:id", beheer, async (req, res): Promise<void> => {
   try {
     const id = Number(req.params.id);
     await db.transaction(async (tx) => {
@@ -414,7 +414,7 @@ router.delete("/magazijn/locaties/:id", beheer, async (req, res) => {
 // ARTIKELEN — magazijn-aanvullende velden (GET detail + PATCH)
 // ═══════════════════════════════════════════════════════════
 
-router.get("/magazijn/artikelen/:id", lezen, async (req, res) => {
+router.get("/magazijn/artikelen/:id", lezen, async (req, res): Promise<void> => {
   try {
     const id = Number(req.params.id);
     const [rij] = await db.select({
@@ -433,7 +433,7 @@ router.get("/magazijn/artikelen/:id", lezen, async (req, res) => {
   }
 });
 
-router.patch("/magazijn/artikelen/:id", schrijven, async (req, res) => {
+router.patch("/magazijn/artikelen/:id", schrijven, async (req, res): Promise<void> => {
   try {
     const id = Number(req.params.id);
     const body = req.body as Record<string, unknown>;
@@ -468,7 +468,7 @@ router.patch("/magazijn/artikelen/:id", schrijven, async (req, res) => {
 // VOORRAAD
 // ═══════════════════════════════════════════════════════════
 
-router.get("/magazijn/voorraad", lezen, async (req, res) => {
+router.get("/magazijn/voorraad", lezen, async (req, res): Promise<void> => {
   try {
     const { artikel_id, locatie_id } = req.query as Record<string, string | undefined>;
 
@@ -493,7 +493,7 @@ router.get("/magazijn/voorraad", lezen, async (req, res) => {
 });
 
 // Samengevoegd voorraad per artikel (over alle locaties)
-router.get("/magazijn/voorraad/totaal", lezen, async (req, res) => {
+router.get("/magazijn/voorraad/totaal", lezen, async (req, res): Promise<void> => {
   try {
     const rijen = await db.select({
       artikel_id: voorraadTable.artikelId,
@@ -535,7 +535,7 @@ router.get("/magazijn/voorraad/totaal", lezen, async (req, res) => {
 });
 
 // POST: handmatige correctie/inkoop
-router.post("/magazijn/voorraad/correctie", aanmaken, async (req, res) => {
+router.post("/magazijn/voorraad/correctie", aanmaken, async (req, res): Promise<void> => {
   try {
     const body = req.body as Record<string, unknown>;
     const artikelId = Number(body.artikel_id);
@@ -559,7 +559,7 @@ router.post("/magazijn/voorraad/correctie", aanmaken, async (req, res) => {
 // MUTATIES
 // ═══════════════════════════════════════════════════════════
 
-router.get("/magazijn/mutaties", lezen, async (req, res) => {
+router.get("/magazijn/mutaties", lezen, async (req, res): Promise<void> => {
   try {
     const { artikel_id, type, limit: limitQ } = req.query as Record<string, string | undefined>;
     const maxItems = Math.min(Number(limitQ ?? 100), 500);
@@ -589,7 +589,7 @@ router.get("/magazijn/mutaties", lezen, async (req, res) => {
 // RESERVERINGEN
 // ═══════════════════════════════════════════════════════════
 
-router.get("/magazijn/reserveringen", lezen, async (req, res) => {
+router.get("/magazijn/reserveringen", lezen, async (req, res): Promise<void> => {
   try {
     const { artikel_id, opdracht_id, status } = req.query as Record<string, string | undefined>;
 
@@ -616,7 +616,7 @@ router.get("/magazijn/reserveringen", lezen, async (req, res) => {
   }
 });
 
-router.post("/magazijn/reserveringen", aanmaken, async (req, res) => {
+router.post("/magazijn/reserveringen", aanmaken, async (req, res): Promise<void> => {
   try {
     const body = req.body as Record<string, unknown>;
     const artikelId = Number(body.artikel_id);
@@ -681,7 +681,7 @@ router.post("/magazijn/reserveringen", aanmaken, async (req, res) => {
   }
 });
 
-router.patch("/magazijn/reserveringen/:id/annuleer", schrijven, async (req, res) => {
+router.patch("/magazijn/reserveringen/:id/annuleer", schrijven, async (req, res): Promise<void> => {
   try {
     const id = Number(req.params.id);
     const [reservering] = await db.select().from(reserveringenTable).where(eq(reserveringenTable.id, id)).limit(1);
@@ -746,7 +746,7 @@ router.patch("/magazijn/reserveringen/:id/annuleer", schrijven, async (req, res)
 // UITGIFTES
 // ═══════════════════════════════════════════════════════════
 
-router.post("/magazijn/uitgiftes", aanmaken, async (req, res) => {
+router.post("/magazijn/uitgiftes", aanmaken, async (req, res): Promise<void> => {
   try {
     const body = req.body as Record<string, unknown>;
     const opdrachtId = body.opdracht_id ? Number(body.opdracht_id) : null;
@@ -878,7 +878,7 @@ router.post("/magazijn/uitgiftes", aanmaken, async (req, res) => {
 // RETOUREN
 // ═══════════════════════════════════════════════════════════
 
-router.post("/magazijn/retouren", aanmaken, async (req, res) => {
+router.post("/magazijn/retouren", aanmaken, async (req, res): Promise<void> => {
   try {
     const body = req.body as Record<string, unknown>;
     const opdrachtId = body.opdracht_id ? Number(body.opdracht_id) : null;
@@ -925,7 +925,7 @@ router.post("/magazijn/retouren", aanmaken, async (req, res) => {
 });
 
 // ── VERPLAATSINGEN ──────────────────────────────────────────────────────────
-router.post("/magazijn/verplaatsingen", aanmaken, async (req, res) => {
+router.post("/magazijn/verplaatsingen", aanmaken, async (req, res): Promise<void> => {
   try {
     const body = req.body as {
       artikel_id: number;
@@ -941,11 +941,11 @@ router.post("/magazijn/verplaatsingen", aanmaken, async (req, res) => {
     const userId = (req.session as { gebruikerId?: number }).gebruikerId ?? null;
 
     if (!artikelId || !hoeveelheid || hoeveelheid <= 0 || !naarLocatieId) {
-      return res.status(400).json({ error: "Ongeldige invoer: artikel_id, hoeveelheid (>0) en naar_locatie_id zijn verplicht" });
+      return void res.status(400).json({ error: "Ongeldige invoer: artikel_id, hoeveelheid (>0) en naar_locatie_id zijn verplicht" });
     }
 
     if (vanLocatieId === naarLocatieId) {
-      return res.status(400).json({ error: "Van- en naar-locatie zijn gelijk" });
+      return void res.status(400).json({ error: "Van- en naar-locatie zijn gelijk" });
     }
 
     const omschrijving = String(body.omschrijving ?? "Verplaatsing");
@@ -1029,16 +1029,16 @@ router.post("/magazijn/verplaatsingen", aanmaken, async (req, res) => {
       });
     });
 
-    return res.status(201).json({ ok: true });
+    return void res.status(201).json({ ok: true });
   } catch (err: unknown) {
     logger.error({ err }, "magazijn verplaatsing fout");
     const msg = err instanceof Error ? err.message : "Serverfout";
-    return res.status(400).json({ error: msg });
+    return void res.status(400).json({ error: msg });
   }
 });
 
 // ── BESTELBONNEN ──────────────────────────────────────────────────────────────
-router.post("/magazijn/bestelbonnen", aanmaken, async (req, res) => {
+router.post("/magazijn/bestelbonnen", aanmaken, async (req, res): Promise<void> => {
   try {
     const body = req.body as {
       leverancier_id?: number | null;
@@ -1069,7 +1069,7 @@ router.post("/magazijn/bestelbonnen", aanmaken, async (req, res) => {
     if (body.verstuur_email) {
       const naarEmail = leverancier?.email ?? process.env.MAIL_FROM ?? null;
       if (!naarEmail) {
-        return res.status(400).json({ error: "Geen e-mailadres beschikbaar voor de leverancier" });
+        return void res.status(400).json({ error: "Geen e-mailadres beschikbaar voor de leverancier" });
       }
 
       const regelsHtml = regels.map(r => {
@@ -1114,16 +1114,16 @@ router.post("/magazijn/bestelbonnen", aanmaken, async (req, res) => {
         verstuurdDoorId: userId,
       });
 
-      return res.json({ email_verstuurd: true, bericht: `Bestelbon verstuurd naar ${naarEmail}` });
+      return void res.json({ email_verstuurd: true, bericht: `Bestelbon verstuurd naar ${naarEmail}` });
     }
 
-    return res.json({ email_verstuurd: false, bericht: "Bestelbon aangemaakt (geen e-mail verstuurd)" });
+    return void res.json({ email_verstuurd: false, bericht: "Bestelbon aangemaakt (geen e-mail verstuurd)" });
   } catch (err: unknown) {
     logger.error({ err }, "magazijn bestelbon fout");
     if (err instanceof MailFout) {
-      return res.status(503).json({ error: "E-mail kon niet worden verstuurd. Controleer de mailconfiguratie." });
+      return void res.status(503).json({ error: "E-mail kon niet worden verstuurd. Controleer de mailconfiguratie." });
     }
-    return res.status(500).json({ error: "Fout bij verwerken bestelbon" });
+    return void res.status(500).json({ error: "Fout bij verwerken bestelbon" });
   }
 });
 
@@ -1163,15 +1163,15 @@ router.post("/magazijn/stellingscans/upload-url", schrijven, async (_req, res) =
   try {
     const storage = new ObjectStorageService();
     const { uploadURL, objectPath } = await storage.getObjectEntityUploadURL(null, "algemeen");
-    return res.json({ upload_url: uploadURL, object_path: objectPath });
+    return void res.json({ upload_url: uploadURL, object_path: objectPath });
   } catch (err) {
     logger.error({ err }, "magazijn stellingsscan upload-url fout");
-    return res.status(500).json({ error: "Kon upload-URL niet genereren" });
+    return void res.status(500).json({ error: "Kon upload-URL niet genereren" });
   }
 });
 
 // Stellingfoto registreren + synchrone AI-analyse
-router.post("/magazijn/stellingscans", schrijven, async (req, res) => {
+router.post("/magazijn/stellingscans", schrijven, async (req, res): Promise<void> => {
   try {
     const {
       foto_pad,
@@ -1186,7 +1186,7 @@ router.post("/magazijn/stellingscans", schrijven, async (req, res) => {
       retour_project_id?: number;
       retour_omschrijving?: string;
     };
-    if (!foto_pad) return res.status(400).json({ error: "foto_pad is verplicht" });
+    if (!foto_pad) return void res.status(400).json({ error: "foto_pad is verplicht" });
 
     const isRetour = scan_type === "retour";
     const userId = (req.session as { userId?: number }).userId ?? null;
@@ -1376,10 +1376,10 @@ Prioriteit: "hoog" = leeg of <50% minimum, "middel" = 50-100% minimum, "laag" = 
       .where(eq(magazijnStellingscansTable.id, scan.id))
       .returning();
 
-    return res.status(201).json(mapStellingsscan(updated));
+    return void res.status(201).json(mapStellingsscan(updated));
   } catch (err) {
     logger.error({ err }, "magazijn stellingsscan aanmaken fout");
-    return res.status(500).json({ error: "Interne serverfout" });
+    return void res.status(500).json({ error: "Interne serverfout" });
   }
 });
 
@@ -1390,33 +1390,33 @@ router.get("/magazijn/stellingscans", lezen, async (_req, res) => {
       .select()
       .from(magazijnStellingscansTable)
       .orderBy(desc(magazijnStellingscansTable.aangemaaktOp));
-    return res.json(rijen.map(mapStellingsscan));
+    return void res.json(rijen.map(mapStellingsscan));
   } catch (err) {
     logger.error({ err }, "magazijn stellingscans ophalen fout");
-    return res.status(500).json({ error: "Interne serverfout" });
+    return void res.status(500).json({ error: "Interne serverfout" });
   }
 });
 
 // Enkele stellingsscan ophalen
-router.get("/magazijn/stellingscans/:id", lezen, async (req, res) => {
+router.get("/magazijn/stellingscans/:id", lezen, async (req, res): Promise<void> => {
   try {
     const id = Number(req.params.id);
     const [row] = await db
       .select()
       .from(magazijnStellingscansTable)
       .where(eq(magazijnStellingscansTable.id, id));
-    if (!row) return res.status(404).json({ error: "Scan niet gevonden" });
-    return res.json(mapStellingsscan(row));
+    if (!row) return void res.status(404).json({ error: "Scan niet gevonden" });
+    return void res.json(mapStellingsscan(row));
   } catch (err) {
     logger.error({ err }, "magazijn stellingsscan ophalen fout");
-    return res.status(500).json({ error: "Interne serverfout" });
+    return void res.status(500).json({ error: "Interne serverfout" });
   }
 });
 
 // Goedkeuren: voorraad bijwerken + log mutaties + markeer goedgekeurd
 // - voorraadcontrole: update voorraad.besteld (bestelvoorstel)
 // - retour: update voorraad.hoeveelheid op de aanbevolen locatie (retour)
-router.post("/magazijn/stellingscans/:id/goedkeuren", schrijven, async (req, res) => {
+router.post("/magazijn/stellingscans/:id/goedkeuren", schrijven, async (req, res): Promise<void> => {
   try {
     const id = Number(req.params.id);
     const userId = (req.session as { userId?: number }).userId ?? null;
@@ -1425,16 +1425,16 @@ router.post("/magazijn/stellingscans/:id/goedkeuren", schrijven, async (req, res
       .select()
       .from(magazijnStellingscansTable)
       .where(eq(magazijnStellingscansTable.id, id));
-    if (!scan) return res.status(404).json({ error: "Scan niet gevonden" });
+    if (!scan) return void res.status(404).json({ error: "Scan niet gevonden" });
     if (scan.status === "goedgekeurd") {
-      return res.status(409).json({ error: "Scan is al goedgekeurd" });
+      return void res.status(409).json({ error: "Scan is al goedgekeurd" });
     }
 
     const { artikelen } = req.body as {
       artikelen: Array<{ artikel_id: number; hoeveelheid: number; locatie_id?: number }>;
     };
     if (!Array.isArray(artikelen) || artikelen.length === 0) {
-      return res.status(400).json({ error: "Geen artikelen opgegeven" });
+      return void res.status(400).json({ error: "Geen artikelen opgegeven" });
     }
 
     const isRetour = scan.scanType === "retour";
@@ -1538,10 +1538,10 @@ router.post("/magazijn/stellingscans/:id/goedkeuren", schrijven, async (req, res
       .where(eq(magazijnStellingscansTable.id, id))
       .returning();
 
-    return res.json(mapStellingsscan(updated));
+    return void res.json(mapStellingsscan(updated));
   } catch (err) {
     logger.error({ err }, "magazijn stellingsscan goedkeuren fout");
-    return res.status(500).json({ error: "Interne serverfout" });
+    return void res.status(500).json({ error: "Interne serverfout" });
   }
 });
 

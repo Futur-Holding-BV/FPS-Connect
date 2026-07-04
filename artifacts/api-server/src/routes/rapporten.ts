@@ -63,7 +63,7 @@ function userId(req: Request): number | null {
 }
 
 // ── GET /rapporten (cross-gebouw) ─────────────────────────────────────────────
-router.get("/rapporten", lezenRapporten, async (req, res) => {
+router.get("/rapporten", lezenRapporten, async (req, res): Promise<void> => {
   try {
     const statusFilter = req.query.status as string | undefined;
     const q = db
@@ -84,7 +84,7 @@ router.get("/rapporten", lezenRapporten, async (req, res) => {
 });
 
 // ── GET /gebouwen/:id/rapporten ───────────────────────────────────────────────
-router.get("/gebouwen/:id/rapporten", lezenRapportenOfKlant, async (req, res) => {
+router.get("/gebouwen/:id/rapporten", lezenRapportenOfKlant, async (req, res): Promise<void> => {
   try {
     const gebouwId = parseId(req.params.id);
     const rijen = await db
@@ -101,7 +101,7 @@ router.get("/gebouwen/:id/rapporten", lezenRapportenOfKlant, async (req, res) =>
 });
 
 // ── POST /gebouwen/:id/rapporten ──────────────────────────────────────────────
-router.post("/gebouwen/:id/rapporten", aanmakenRapporten, async (req, res) => {
+router.post("/gebouwen/:id/rapporten", aanmakenRapporten, async (req, res): Promise<void> => {
   try {
     const gebouwId = parseId(req.params.id);
 
@@ -147,7 +147,7 @@ router.post("/gebouwen/:id/rapporten", aanmakenRapporten, async (req, res) => {
 });
 
 // ── GET /gebouwen/:id/rapporten/:rapportId ────────────────────────────────────
-router.get("/gebouwen/:id/rapporten/:rapportId", lezenRapportenOfKlant, async (req, res) => {
+router.get("/gebouwen/:id/rapporten/:rapportId", lezenRapportenOfKlant, async (req, res): Promise<void> => {
   try {
     const gebouwId = parseId(req.params.id);
     const rapportId = parseId(req.params.rapportId);
@@ -171,7 +171,7 @@ router.get("/gebouwen/:id/rapporten/:rapportId", lezenRapportenOfKlant, async (r
 });
 
 // ── PATCH /gebouwen/:id/rapporten/:rapportId ──────────────────────────────────
-router.patch("/gebouwen/:id/rapporten/:rapportId", schrijvenRapporten, async (req, res) => {
+router.patch("/gebouwen/:id/rapporten/:rapportId", schrijvenRapporten, async (req, res): Promise<void> => {
   try {
     const gebouwId = parseId(req.params.id);
     const rapportId = parseId(req.params.rapportId);
@@ -225,7 +225,7 @@ router.patch("/gebouwen/:id/rapporten/:rapportId", schrijvenRapporten, async (re
 });
 
 // ── DELETE /gebouwen/:id/rapporten/:rapportId ─────────────────────────────────
-router.delete("/gebouwen/:id/rapporten/:rapportId", verwijderenRapporten, async (req, res) => {
+router.delete("/gebouwen/:id/rapporten/:rapportId", verwijderenRapporten, async (req, res): Promise<void> => {
   try {
     const gebouwId = parseId(req.params.id);
     const rapportId = parseId(req.params.rapportId);
@@ -255,7 +255,7 @@ router.delete("/gebouwen/:id/rapporten/:rapportId", verwijderenRapporten, async 
 
 // ── POST /gebouwen/:id/rapporten/:rapportId/definitief ────────────────────────
 // Bevriest de documentrevisies en start de reactietermijn.
-router.post("/gebouwen/:id/rapporten/:rapportId/definitief", aanmakenRapporten, async (req, res) => {
+router.post("/gebouwen/:id/rapporten/:rapportId/definitief", aanmakenRapporten, async (req, res): Promise<void> => {
   try {
     const gebouwId = parseId(req.params.id);
     const rapportId = parseId(req.params.rapportId);
@@ -324,7 +324,7 @@ router.post("/gebouwen/:id/rapporten/:rapportId/definitief", aanmakenRapporten, 
 
 // ── POST /gebouwen/:id/rapporten/:rapportId/certificaat-akkoord ──────────────
 // Hoofdbeheerder accodeert het certificaat en plaatst zijn handtekening.
-router.post("/gebouwen/:id/rapporten/:rapportId/certificaat-akkoord", aanmakenRapporten, async (req, res) => {
+router.post("/gebouwen/:id/rapporten/:rapportId/certificaat-akkoord", aanmakenRapporten, async (req, res): Promise<void> => {
   try {
     const gebouwId = parseId(req.params.id);
     const rapportId = parseId(req.params.rapportId);
@@ -391,7 +391,7 @@ function wrapTextPdf(
 
 // ── GET /gebouwen/:id/rapporten/:rapportId/bijlagenbundel ─────────────────────
 
-router.get("/gebouwen/:id/rapporten/:rapportId/bijlagenbundel", lezenRapporten, async (req, res) => {
+router.get("/gebouwen/:id/rapporten/:rapportId/bijlagenbundel", lezenRapporten, async (req, res): Promise<void> => {
   try {
     const gebouwId  = parseId(req.params.id);
     const rapportId = parseId(req.params.rapportId);

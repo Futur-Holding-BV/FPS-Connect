@@ -120,7 +120,7 @@ function gebouwRij(
 }
 
 // GET /gebouwen
-router.get("/gebouwen", lezenGebouwenOfKlant, async (req, res) => {
+router.get("/gebouwen", lezenGebouwenOfKlant, async (req, res): Promise<void> => {
   try {
     const { userId, beperkt } = await effectieveContext(req);
     const { zoek, partij_type, partij_naam, inclusief_gearchiveerd } = req.query;
@@ -136,7 +136,7 @@ router.get("/gebouwen", lezenGebouwenOfKlant, async (req, res) => {
     if (beperkt) {
       const ids = await toegewezenGebouwIds(userId);
       if (ids.length === 0) {
-        return res.json([]);
+        return void res.json([]);
       }
       gebouwen = gebouwen.filter((g) => ids.includes(g.id));
     }
@@ -233,7 +233,7 @@ router.get("/gebouwen", lezenGebouwenOfKlant, async (req, res) => {
 });
 
 // POST /gebouwen
-router.post("/gebouwen", requireBevoegdheid("gebouwen", 3), async (req, res) => {
+router.post("/gebouwen", requireBevoegdheid("gebouwen", 3), async (req, res): Promise<void> => {
   try {
     const {
       werknummer,
@@ -255,7 +255,7 @@ router.post("/gebouwen", requireBevoegdheid("gebouwen", 3), async (req, res) => 
       werkgever_id,
     } = req.body;
     if (!naam || !adres) {
-      return res.status(400).json({ error: "naam en adres zijn verplicht" });
+      return void res.status(400).json({ error: "naam en adres zijn verplicht" });
     }
     const werknummerWaarde =
       typeof werknummer === "string" && werknummer.trim() ? werknummer.trim() : null;
@@ -300,11 +300,11 @@ router.post("/gebouwen", requireBevoegdheid("gebouwen", 3), async (req, res) => 
 router.post(
   "/gebouwen/ai-analyse",
   requireBevoegdheid("gebouwen", 3),
-  async (req, res) => {
+  async (req, res): Promise<void> => {
     try {
       const { beschrijving } = req.body ?? {};
       if (!beschrijving || typeof beschrijving !== "string" || !beschrijving.trim()) {
-        return res.status(400).json({ error: "beschrijving is verplicht" });
+        return void res.status(400).json({ error: "beschrijving is verplicht" });
       }
       const resultaat = await analyseerGebouwVrijeTekst(beschrijving, { gebruikerId: req.session.userId ?? null });
       res.json(resultaat);
@@ -319,12 +319,12 @@ router.post(
 router.post(
   "/gebouwen/:id/tekeningen/ai-analyse",
   requireBevoegdheid("gebouwen", 3),
-  async (req, res) => {
+  async (req, res): Promise<void> => {
     try {
       const gebouwId = parseInt(String(req.params.id));
       const { bestandsnaam, type } = req.body ?? {};
       if (!bestandsnaam || typeof bestandsnaam !== "string" || !bestandsnaam.trim()) {
-        return res.status(400).json({ error: "bestandsnaam is verplicht" });
+        return void res.status(400).json({ error: "bestandsnaam is verplicht" });
       }
       const verdiepingen = await db
         .select()
@@ -348,12 +348,12 @@ router.post(
 router.post(
   "/gebouwen/:id/plattegrond/ai-analyse",
   requireBevoegdheid("gebouwen", 3),
-  async (req, res) => {
+  async (req, res): Promise<void> => {
     try {
       const gebouwId = parseInt(String(req.params.id));
       const { afbeelding } = req.body ?? {};
       if (!afbeelding || typeof afbeelding !== "string" || !afbeelding.startsWith("data:")) {
-        return res.status(400).json({ error: "afbeelding is verplicht" });
+        return void res.status(400).json({ error: "afbeelding is verplicht" });
       }
       const verdiepingen = await db
         .select()
@@ -373,7 +373,7 @@ router.post(
 );
 
 // GET /gebouwen/partij-opties — unieke partijen (type + naam) voor filteropties
-router.get("/gebouwen/partij-opties", lezenGebouwen, async (req, res) => {
+router.get("/gebouwen/partij-opties", lezenGebouwen, async (req, res): Promise<void> => {
   try {
     const { userId, beperkt } = await effectieveContext(req);
 
@@ -381,7 +381,7 @@ router.get("/gebouwen/partij-opties", lezenGebouwen, async (req, res) => {
     if (beperkt) {
       zichtbareGebouwIds = await toegewezenGebouwIds(userId);
       if (zichtbareGebouwIds.length === 0) {
-        return res.json([]);
+        return void res.json([]);
       }
     }
 
@@ -405,7 +405,7 @@ router.get("/gebouwen/partij-opties", lezenGebouwen, async (req, res) => {
 });
 
 // GET /gebouwen/:id/kaart
-router.get("/gebouwen/:id/kaart", lezenGebouwen, async (req, res) => {
+router.get("/gebouwen/:id/kaart", lezenGebouwen, async (req, res): Promise<void> => {
   try {
     const id = parseInt(String(req.params.id));
     const { userId, beperkt } = await effectieveContext(req);
@@ -420,17 +420,17 @@ router.get("/gebouwen/:id/kaart", lezenGebouwen, async (req, res) => {
       .from(gebouwenTable)
       .where(eq(gebouwenTable.id, id));
 
-    if (!gebouw) return res.status(404).json({ error: "Gebouw niet gevonden" });
+    if (!gebouw) return void res.status(404).json({ error: "Gebouw niet gevonden" });
 
     if (beperkt) {
       const ids = await toegewezenGebouwIds(userId);
       if (!ids.includes(id)) {
-        return res.status(403).json({ error: "Geen toegang tot dit gebouw" });
+        return void res.status(403).json({ error: "Geen toegang tot dit gebouw" });
       }
     }
 
     const apiKey = process.env.GOOGLE_MAPS_API_KEY;
-    if (!apiKey) return res.status(503).json({ error: "Kaartservice niet beschikbaar" });
+    if (!apiKey) return void res.status(503).json({ error: "Kaartservice niet beschikbaar" });
 
     let embed_url: string;
     if (gebouw.lat != null && gebouw.lng != null) {
@@ -439,7 +439,7 @@ router.get("/gebouwen/:id/kaart", lezenGebouwen, async (req, res) => {
       const q = encodeURIComponent(`${gebouw.adres}${gebouw.stad ? " " + gebouw.stad : ""}`);
       embed_url = `https://www.google.com/maps/embed/v1/place?key=${apiKey}&q=${q}&maptype=satellite`;
     } else {
-      return res.status(404).json({ error: "Geen locatiegegevens beschikbaar" });
+      return void res.status(404).json({ error: "Geen locatiegegevens beschikbaar" });
     }
 
     res.json({ embed_url });
@@ -452,7 +452,7 @@ router.get("/gebouwen/:id/kaart", lezenGebouwen, async (req, res) => {
 // GET /gebouwen/:id/gevelbeeld — Street View gevelbeeld voor het opleverrapport-voorblad.
 // Geeft bij ontbrekend beeld bewust { beeld: null } met status 200 terug (geen 4xx/5xx),
 // zodat de print-readiness niet deadlockt op react-query retries.
-router.get("/gebouwen/:id/gevelbeeld", lezenGebouwen, async (req, res) => {
+router.get("/gebouwen/:id/gevelbeeld", lezenGebouwen, async (req, res): Promise<void> => {
   try {
     const id = parseInt(String(req.params.id));
     const { userId, beperkt } = await effectieveContext(req);
@@ -468,17 +468,17 @@ router.get("/gebouwen/:id/gevelbeeld", lezenGebouwen, async (req, res) => {
       .from(gebouwenTable)
       .where(eq(gebouwenTable.id, id));
 
-    if (!gebouw) return res.status(404).json({ error: "Gebouw niet gevonden" });
+    if (!gebouw) return void res.status(404).json({ error: "Gebouw niet gevonden" });
 
     if (beperkt) {
       const ids = await toegewezenGebouwIds(userId);
       if (!ids.includes(id)) {
-        return res.status(403).json({ error: "Geen toegang tot dit gebouw" });
+        return void res.status(403).json({ error: "Geen toegang tot dit gebouw" });
       }
     }
 
     if (!process.env.GOOGLE_MAPS_API_KEY) {
-      return res.json({ beeld: null });
+      return void res.json({ beeld: null });
     }
 
     let lat = gebouw.lat;
@@ -510,7 +510,7 @@ router.get("/gebouwen/:id/gevelbeeld", lezenGebouwen, async (req, res) => {
     }
 
     if (lat == null || lng == null) {
-      return res.json({ beeld: null });
+      return void res.json({ beeld: null });
     }
 
     let beeld: string | null = null;
@@ -527,13 +527,13 @@ router.get("/gebouwen/:id/gevelbeeld", lezenGebouwen, async (req, res) => {
 });
 
 // GET /gebouwen/:id
-router.get("/gebouwen/:id", lezenGebouwenOfKlant, async (req, res) => {
+router.get("/gebouwen/:id", lezenGebouwenOfKlant, async (req, res): Promise<void> => {
   try {
     const id = parseInt(String(req.params.id));
     const { userId, beperkt } = await effectieveContext(req);
 
     const [gebouw] = await db.select().from(gebouwenTable).where(eq(gebouwenTable.id, id));
-    if (!gebouw) return res.status(404).json({ error: "Gebouw niet gevonden" });
+    if (!gebouw) return void res.status(404).json({ error: "Gebouw niet gevonden" });
 
     const werkgeverNaamDetail = gebouw.werkgeverId
       ? ((await db.select({ naam: werkgeversTable.naam }).from(werkgeversTable).where(eq(werkgeversTable.id, gebouw.werkgeverId))).at(0)?.naam ?? null)
@@ -543,7 +543,7 @@ router.get("/gebouwen/:id", lezenGebouwenOfKlant, async (req, res) => {
     if (beperkt) {
       const ids = await toegewezenGebouwIds(userId);
       if (!ids.includes(id)) {
-        return res.status(403).json({ error: "Geen toegang tot dit gebouw" });
+        return void res.status(403).json({ error: "Geen toegang tot dit gebouw" });
       }
     }
 
@@ -620,7 +620,7 @@ router.get("/gebouwen/:id", lezenGebouwenOfKlant, async (req, res) => {
 });
 
 // PATCH /gebouwen/:id
-router.patch("/gebouwen/:id", requireBevoegdheid("gebouwen", 2), async (req, res) => {
+router.patch("/gebouwen/:id", requireBevoegdheid("gebouwen", 2), async (req, res): Promise<void> => {
   try {
     const id = parseInt(String(req.params.id));
     const {
@@ -682,7 +682,7 @@ router.patch("/gebouwen/:id", requireBevoegdheid("gebouwen", 2), async (req, res
       })
       .where(eq(gebouwenTable.id, id))
       .returning();
-    if (!gebouw) return res.status(404).json({ error: "Gebouw niet gevonden" });
+    if (!gebouw) return void res.status(404).json({ error: "Gebouw niet gevonden" });
     const [totaal] = await db
       .select({ count: count() })
       .from(voorzieningenTable)
@@ -701,7 +701,7 @@ router.patch("/gebouwen/:id", requireBevoegdheid("gebouwen", 2), async (req, res
 });
 
 // PATCH /gebouwen/:id/gereed
-router.patch("/gebouwen/:id/gereed", requireBevoegdheid("gebouwen", 3), async (req, res) => {
+router.patch("/gebouwen/:id/gereed", requireBevoegdheid("gebouwen", 3), async (req, res): Promise<void> => {
   try {
     const id = parseInt(String(req.params.id));
     const { gereed_door } = req.body;
@@ -710,7 +710,7 @@ router.patch("/gebouwen/:id/gereed", requireBevoegdheid("gebouwen", 3), async (r
       .set({ gereedOp: new Date(), gereedDoor: gereed_door ?? null, bijgewerktOp: new Date() })
       .where(eq(gebouwenTable.id, id))
       .returning();
-    if (!gebouw) return res.status(404).json({ error: "Gebouw niet gevonden" });
+    if (!gebouw) return void res.status(404).json({ error: "Gebouw niet gevonden" });
     const [totaal] = await db
       .select({ count: count() })
       .from(voorzieningenTable)
@@ -723,7 +723,7 @@ router.patch("/gebouwen/:id/gereed", requireBevoegdheid("gebouwen", 3), async (r
 });
 
 // DELETE /gebouwen/:id/gereed — reset gereed-status naar actief
-router.delete("/gebouwen/:id/gereed", requireBevoegdheid("gebouwen", 3), async (req, res) => {
+router.delete("/gebouwen/:id/gereed", requireBevoegdheid("gebouwen", 3), async (req, res): Promise<void> => {
   try {
     const id = parseInt(String(req.params.id));
     const [gebouw] = await db
@@ -731,7 +731,7 @@ router.delete("/gebouwen/:id/gereed", requireBevoegdheid("gebouwen", 3), async (
       .set({ gereedOp: null, gereedDoor: null, bijgewerktOp: new Date() })
       .where(eq(gebouwenTable.id, id))
       .returning();
-    if (!gebouw) return res.status(404).json({ error: "Gebouw niet gevonden" });
+    if (!gebouw) return void res.status(404).json({ error: "Gebouw niet gevonden" });
     const [totaal] = await db
       .select({ count: count() })
       .from(voorzieningenTable)
@@ -744,7 +744,7 @@ router.delete("/gebouwen/:id/gereed", requireBevoegdheid("gebouwen", 3), async (
 });
 
 // DELETE /gebouwen/:id
-router.delete("/gebouwen/:id", requireBevoegdheid("gebouwen", 4), async (req, res) => {
+router.delete("/gebouwen/:id", requireBevoegdheid("gebouwen", 4), async (req, res): Promise<void> => {
   try {
     const id = parseInt(String(req.params.id));
     await db.delete(gebouwenTable).where(eq(gebouwenTable.id, id));
@@ -756,7 +756,7 @@ router.delete("/gebouwen/:id", requireBevoegdheid("gebouwen", 4), async (req, re
 });
 
 // GET /gebouwen/:id/verdiepingen
-router.get("/gebouwen/:id/verdiepingen", lezenGebouwen, async (req, res) => {
+router.get("/gebouwen/:id/verdiepingen", lezenGebouwen, async (req, res): Promise<void> => {
   try {
     const id = parseInt(String(req.params.id));
 
@@ -797,7 +797,7 @@ router.get("/gebouwen/:id/verdiepingen", lezenGebouwen, async (req, res) => {
 });
 
 // POST /gebouwen/:id/verdiepingen
-router.post("/gebouwen/:id/verdiepingen", requireBevoegdheid("gebouwen", 3), async (req, res) => {
+router.post("/gebouwen/:id/verdiepingen", requireBevoegdheid("gebouwen", 3), async (req, res): Promise<void> => {
   try {
     const gebouwId = parseInt(String(req.params.id));
     const { naam, niveau, plattegrond_url, breedte, hoogte } = req.body;
@@ -822,18 +822,18 @@ router.post("/gebouwen/:id/verdiepingen", requireBevoegdheid("gebouwen", 3), asy
 });
 
 // GET /verdiepingen/:id
-router.get("/verdiepingen/:id", lezenGebouwen, async (req, res) => {
+router.get("/verdiepingen/:id", lezenGebouwen, async (req, res): Promise<void> => {
   try {
     const id = parseInt(String(req.params.id));
     const [v] = await db.select().from(verdiepingenTable).where(eq(verdiepingenTable.id, id));
-    if (!v) return res.status(404).json({ error: "Verdieping niet gevonden" });
+    if (!v) return void res.status(404).json({ error: "Verdieping niet gevonden" });
 
     // Beperkte gebruikers mogen alleen verdiepingen van toegewezen gebouwen zien.
     const { userId, beperkt } = await effectieveContext(req);
     if (beperkt) {
       const ids = await toegewezenGebouwIds(userId);
       if (!ids.includes(v.gebouwId)) {
-        return res.status(403).json({ error: "Geen toegang tot deze verdieping" });
+        return void res.status(403).json({ error: "Geen toegang tot deze verdieping" });
       }
     }
     const [totaal] = await db
@@ -860,7 +860,7 @@ router.get("/verdiepingen/:id", lezenGebouwen, async (req, res) => {
 });
 
 // PATCH /verdiepingen/:id
-router.patch("/verdiepingen/:id", requireBevoegdheid("gebouwen", 2), async (req, res) => {
+router.patch("/verdiepingen/:id", requireBevoegdheid("gebouwen", 2), async (req, res): Promise<void> => {
   try {
     const id = parseInt(String(req.params.id));
     const { naam, niveau, plattegrond_url, breedte, hoogte, logo_x, logo_y, logo_breedte } = req.body;
@@ -878,7 +878,7 @@ router.patch("/verdiepingen/:id", requireBevoegdheid("gebouwen", 2), async (req,
       .set(wijziging)
       .where(eq(verdiepingenTable.id, id))
       .returning();
-    if (!v) return res.status(404).json({ error: "Verdieping niet gevonden" });
+    if (!v) return void res.status(404).json({ error: "Verdieping niet gevonden" });
     const [totaal] = await db
       .select({ count: count() })
       .from(voorzieningenTable)
@@ -903,7 +903,7 @@ router.patch("/verdiepingen/:id", requireBevoegdheid("gebouwen", 2), async (req,
 });
 
 // DELETE /verdiepingen/:id
-router.delete("/verdiepingen/:id", requireBevoegdheid("gebouwen", 4), async (req, res) => {
+router.delete("/verdiepingen/:id", requireBevoegdheid("gebouwen", 4), async (req, res): Promise<void> => {
   try {
     const id = parseInt(String(req.params.id));
     await db.delete(verdiepingenTable).where(eq(verdiepingenTable.id, id));
@@ -917,7 +917,7 @@ router.delete("/verdiepingen/:id", requireBevoegdheid("gebouwen", 4), async (req
 // ── TOEWIJZINGEN ──────────────────────────────────────────────────────────
 
 // GET /gebouwen/:id/toewijzingen
-router.get("/gebouwen/:id/toewijzingen", lezenGebouwen, async (req, res) => {
+router.get("/gebouwen/:id/toewijzingen", lezenGebouwen, async (req, res): Promise<void> => {
   try {
     const gebouwId = parseInt(String(req.params.id));
     if (!(req.permissies!.magBijGebouw(gebouwId))) {
@@ -956,7 +956,7 @@ router.get("/gebouwen/:id/toewijzingen", lezenGebouwen, async (req, res) => {
 });
 
 // GET /gebouwen/:id/facturen — inkomende facturen gekoppeld aan dit gebouw (lezenGebouwen)
-router.get("/gebouwen/:id/facturen", lezenGebouwen, async (req, res) => {
+router.get("/gebouwen/:id/facturen", lezenGebouwen, async (req, res): Promise<void> => {
   const gebouwId = parseInt(String(req.params.id), 10);
   if (isNaN(gebouwId)) { res.status(400).json({ error: "Ongeldig id" }); return; }
   if (!(req.permissies!.magBijGebouw(gebouwId))) { res.status(403).json({ error: "Geen toegang" }); return; }
@@ -1011,7 +1011,7 @@ router.get("/gebouwen/:id/facturen", lezenGebouwen, async (req, res) => {
 });
 
 // GET /gebouwen/:id/spots-inzicht — spots per monteur per dag
-router.get("/gebouwen/:id/spots-inzicht", lezenGebouwen, async (req, res) => {
+router.get("/gebouwen/:id/spots-inzicht", lezenGebouwen, async (req, res): Promise<void> => {
   try {
     const gebouwId = parseInt(String(req.params.id));
     if (!(req.permissies!.magBijGebouw(gebouwId))) {
@@ -1079,12 +1079,12 @@ router.get("/gebouwen/:id/spots-inzicht", lezenGebouwen, async (req, res) => {
 router.post(
   "/gebouwen/:id/toewijzingen",
   requireBevoegdheid("gebouwen", 3),
-  async (req, res) => {
+  async (req, res): Promise<void> => {
     try {
       const gebouwId = parseInt(String(req.params.id));
       const { gebruiker_id, project_rol } = req.body ?? {};
       if (!gebruiker_id) {
-        return res.status(400).json({ error: "gebruiker_id is verplicht" });
+        return void res.status(400).json({ error: "gebruiker_id is verplicht" });
       }
 
       // Controleer of gebruiker bestaat
@@ -1093,7 +1093,7 @@ router.post(
         .from(gebruikersTable)
         .where(eq(gebruikersTable.id, Number(gebruiker_id)));
       if (!gebruiker) {
-        return res.status(404).json({ error: "Gebruiker niet gevonden" });
+        return void res.status(404).json({ error: "Gebruiker niet gevonden" });
       }
 
       // Projectteam-regels: een beheerder wordt gekoppeld mét een projectfunctie
@@ -1103,12 +1103,12 @@ router.post(
       if (isBeheerder) {
         const gekozen = project_rol ? String(project_rol) : "";
         if (!gekozen) {
-          return res
+          return void res
             .status(400)
             .json({ error: "Een beheerder vereist een projectfunctie" });
         }
         if (!(gebruiker.functietitels ?? []).includes(gekozen)) {
-          return res.status(400).json({
+          return void res.status(400).json({
             error: "Projectfunctie hoort niet bij het profiel van deze beheerder",
           });
         }
@@ -1137,7 +1137,7 @@ router.post(
               eq(gebouwToewijzingenTable.gebruikerId, Number(gebruiker_id)),
             ),
           );
-        return res.status(201).json({
+        return void res.status(201).json({
           id: bestaand!.id,
           gebouw_id: gebouwId,
           gebruiker_id: gebruiker.id,
@@ -1170,7 +1170,7 @@ router.post(
 router.delete(
   "/gebouwen/:id/toewijzingen/:gebruikerId",
   requireBevoegdheid("gebouwen", 4),
-  async (req, res) => {
+  async (req, res): Promise<void> => {
     try {
       const gebouwId = parseInt(String(req.params.id));
       const gebruikerId = parseInt(String(req.params.gebruikerId));
@@ -1213,7 +1213,7 @@ function partijRij(p: typeof gebouwPartijenTable.$inferSelect) {
 }
 
 // GET /gebouwen/:id/partijen
-router.get("/gebouwen/:id/partijen", lezenGebouwen, async (req, res) => {
+router.get("/gebouwen/:id/partijen", lezenGebouwen, async (req, res): Promise<void> => {
   try {
     const gebouwId = parseInt(String(req.params.id));
     if (!(req.permissies!.magBijGebouw(gebouwId))) {
@@ -1235,15 +1235,15 @@ router.get("/gebouwen/:id/partijen", lezenGebouwen, async (req, res) => {
 router.post(
   "/gebouwen/:id/partijen",
   requireBevoegdheid("gebouwen", 3),
-  async (req, res) => {
+  async (req, res): Promise<void> => {
     try {
       const gebouwId = parseInt(String(req.params.id));
       const { type, naam, organisatie, telefoon, email, website, adres, postcode, plaats, opmerkingen } = req.body ?? {};
       if (!type || !PARTIJ_TYPES.includes(type)) {
-        return res.status(400).json({ error: "Ongeldig partijtype" });
+        return void res.status(400).json({ error: "Ongeldig partijtype" });
       }
       if (!naam || typeof naam !== "string") {
-        return res.status(400).json({ error: "naam is verplicht" });
+        return void res.status(400).json({ error: "naam is verplicht" });
       }
       const [partij] = await db
         .insert(gebouwPartijenTable)
@@ -1261,12 +1261,12 @@ router.post(
 router.patch(
   "/gebouwen/partijen/:partijId",
   requireBevoegdheid("gebouwen", 2),
-  async (req, res) => {
+  async (req, res): Promise<void> => {
     try {
       const partijId = parseInt(String(req.params.partijId));
       const { type, naam, organisatie, telefoon, email, website, adres, postcode, plaats, opmerkingen } = req.body ?? {};
       if (type !== undefined && !PARTIJ_TYPES.includes(type)) {
-        return res.status(400).json({ error: "Ongeldig partijtype" });
+        return void res.status(400).json({ error: "Ongeldig partijtype" });
       }
       const updates: Record<string, unknown> = { bijgewerktOp: new Date() };
       if (type !== undefined) updates.type = type;
@@ -1285,7 +1285,7 @@ router.patch(
         .set(updates)
         .where(eq(gebouwPartijenTable.id, partijId))
         .returning();
-      if (!partij) return res.status(404).json({ error: "Partij niet gevonden" });
+      if (!partij) return void res.status(404).json({ error: "Partij niet gevonden" });
       res.json(partijRij(partij));
     } catch (err) {
       req.log.error(err);
@@ -1298,7 +1298,7 @@ router.patch(
 router.delete(
   "/gebouwen/partijen/:partijId",
   requireBevoegdheid("gebouwen", 4),
-  async (req, res) => {
+  async (req, res): Promise<void> => {
     try {
       const partijId = parseInt(String(req.params.partijId));
       await db.delete(gebouwPartijenTable).where(eq(gebouwPartijenTable.id, partijId));
@@ -1327,7 +1327,7 @@ function tekeningRij(t: typeof tekeningenTable.$inferSelect) {
 }
 
 // GET /gebouwen/:id/tekeningen
-router.get("/gebouwen/:id/tekeningen", lezenGebouwen, async (req, res) => {
+router.get("/gebouwen/:id/tekeningen", lezenGebouwen, async (req, res): Promise<void> => {
   try {
     const gebouwId = parseInt(String(req.params.id));
     if (!(req.permissies!.magBijGebouw(gebouwId))) {
@@ -1357,18 +1357,18 @@ router.get("/gebouwen/:id/tekeningen", lezenGebouwen, async (req, res) => {
 router.post(
   "/gebouwen/:id/tekeningen",
   requireBevoegdheid("gebouwen", 3),
-  async (req, res) => {
+  async (req, res): Promise<void> => {
     try {
       const gebouwId = parseInt(String(req.params.id));
       const { naam, type, schaal, url, verdieping_id, zichtbaar_monteur } = req.body ?? {};
       if (!naam || typeof naam !== "string") {
-        return res.status(400).json({ error: "naam is verplicht" });
+        return void res.status(400).json({ error: "naam is verplicht" });
       }
       if (!type || typeof type !== "string") {
-        return res.status(400).json({ error: "type is verplicht" });
+        return void res.status(400).json({ error: "type is verplicht" });
       }
       if (!url || typeof url !== "string") {
-        return res.status(400).json({ error: "url is verplicht" });
+        return void res.status(400).json({ error: "url is verplicht" });
       }
       const [tekening] = await db
         .insert(tekeningenTable)
@@ -1394,7 +1394,7 @@ router.post(
 router.patch(
   "/gebouwen/tekeningen/:tekeningId",
   requireBevoegdheid("gebouwen", 2),
-  async (req, res) => {
+  async (req, res): Promise<void> => {
     try {
       const tekeningId = parseInt(String(req.params.tekeningId));
       const { naam, type, schaal, verdieping_id, zichtbaar_monteur } = req.body ?? {};
@@ -1410,7 +1410,7 @@ router.patch(
         .set(updates)
         .where(eq(tekeningenTable.id, tekeningId))
         .returning();
-      if (!tekening) return res.status(404).json({ error: "Tekening niet gevonden" });
+      if (!tekening) return void res.status(404).json({ error: "Tekening niet gevonden" });
       res.json(tekeningRij(tekening));
     } catch (err) {
       req.log.error(err);
@@ -1423,7 +1423,7 @@ router.patch(
 router.delete(
   "/gebouwen/tekeningen/:tekeningId",
   requireBevoegdheid("gebouwen", 4),
-  async (req, res) => {
+  async (req, res): Promise<void> => {
     try {
       const tekeningId = parseInt(String(req.params.tekeningId));
       await db.delete(tekeningenTable).where(eq(tekeningenTable.id, tekeningId));
@@ -1436,13 +1436,13 @@ router.delete(
 );
 
 // PATCH /gebouwen/:id/archief — archiveren of terugplaatsen (alleen beheerder)
-router.patch("/gebouwen/:id/archief", requireBevoegdheid("gebouwen", 4), async (req, res) => {
+router.patch("/gebouwen/:id/archief", requireBevoegdheid("gebouwen", 4), async (req, res): Promise<void> => {
   try {
     const id = parseInt(String(req.params.id));
     const gearchiveerd = req.body?.gearchiveerd === true;
 
     const [gebouw] = await db.select().from(gebouwenTable).where(eq(gebouwenTable.id, id));
-    if (!gebouw) return res.status(404).json({ error: "Gebouw niet gevonden" });
+    if (!gebouw) return void res.status(404).json({ error: "Gebouw niet gevonden" });
 
     const [bijgewerkt] = await db
       .update(gebouwenTable)
@@ -1525,24 +1525,24 @@ router.patch("/gebouwen/:id/archief", requireBevoegdheid("gebouwen", 4), async (
 router.post(
   "/gebouwen/:id/opleverrapport",
   requireBevoegdheid("bibliotheek", 3),
-  async (req, res) => {
+  async (req, res): Promise<void> => {
     try {
       const id = parseInt(String(req.params.id));
       if (!Number.isInteger(id)) {
-        return res.status(400).json({ error: "Ongeldig gebouw-id" });
+        return void res.status(400).json({ error: "Ongeldig gebouw-id" });
       }
       const [gebouw] = await db
         .select()
         .from(gebouwenTable)
         .where(eq(gebouwenTable.id, id));
       if (!gebouw) {
-        return res.status(404).json({ error: "Gebouw niet gevonden" });
+        return void res.status(404).json({ error: "Gebouw niet gevonden" });
       }
 
       const pdfUrl =
         typeof req.body?.pdf_url === "string" ? req.body.pdf_url.trim() : "";
       if (!pdfUrl) {
-        return res.status(400).json({ error: "pdf_url is verplicht" });
+        return void res.status(400).json({ error: "pdf_url is verplicht" });
       }
       const bestandsgrootte = Number.isInteger(req.body?.bestandsgrootte)
         ? (req.body.bestandsgrootte as number)
@@ -1677,16 +1677,16 @@ router.post(
         detail: `opleverrapport gebouw #${id}`,
       });
 
-      return res.status(201).json(await mapDocument(doc));
+      return void res.status(201).json(await mapDocument(doc));
     } catch (err) {
       if ((err as { code?: string })?.code === "23505") {
-        return res.status(409).json({
+        return void res.status(409).json({
           error:
             "Er werd net een andere revisie opgeslagen. Probeer het opnieuw.",
         });
       }
       req.log.error(err);
-      return res.status(500).json({ error: "Interne serverfout" });
+      return void res.status(500).json({ error: "Interne serverfout" });
     }
   },
 );

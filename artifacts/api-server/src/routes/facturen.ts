@@ -111,7 +111,7 @@ async function mapFactuur(r: typeof facturenTable.$inferSelect) {
 }
 
 // ── GET /facturen/upload-url ───────────────────────────────────────────────────
-router.post("/facturen/upload-url", requireBevoegdheid("financieel", 1), async (req: Request, res: Response) => {
+router.post("/facturen/upload-url", requireBevoegdheid("financieel", 1), async (req: Request, res: Response): Promise<void> => {
   const { bestandsnaam } = req.body as { bestandsnaam?: string };
   if (!bestandsnaam) { res.status(400).json({ error: "bestandsnaam is verplicht" }); return; }
   try {
@@ -124,7 +124,7 @@ router.post("/facturen/upload-url", requireBevoegdheid("financieel", 1), async (
 });
 
 // ── GET /facturen/klaar-voor-export ───────────────────────────────────────────
-router.get("/facturen/klaar-voor-export", requireBevoegdheid("financieel", 4), async (req: Request, res: Response) => {
+router.get("/facturen/klaar-voor-export", requireBevoegdheid("financieel", 4), async (req: Request, res: Response): Promise<void> => {
   const rijen = await db.select().from(facturenTable)
     .where(and(
       eq(facturenTable.status, "klaar_voor_accountview"),
@@ -136,7 +136,7 @@ router.get("/facturen/klaar-voor-export", requireBevoegdheid("financieel", 4), a
 });
 
 // ── GET /facturen ─────────────────────────────────────────────────────────────
-router.get("/facturen", requireBevoegdheid("financieel", 1), async (req: Request, res: Response) => {
+router.get("/facturen", requireBevoegdheid("financieel", 1), async (req: Request, res: Response): Promise<void> => {
   const statusFilter = req.query["status"] ? String(req.query["status"]) : null;
   const typeFilter = req.query["type"] ? String(req.query["type"]) : null;
   const klaarFilter = req.query["klaar_voor_export"] === "true";
@@ -154,7 +154,7 @@ router.get("/facturen", requireBevoegdheid("financieel", 1), async (req: Request
 });
 
 // ── POST /facturen ─────────────────────────────────────────────────────────────
-router.post("/facturen", requireBevoegdheid("financieel", 1), async (req: Request, res: Response) => {
+router.post("/facturen", requireBevoegdheid("financieel", 1), async (req: Request, res: Response): Promise<void> => {
   const body = req.body as {
     type?: string; factuurnummer?: string; factuurdatum?: string; vervaldatum?: string;
     omschrijving?: string; relatienaam?: string; relatie_code?: string; relatie_adres?: string;
@@ -188,7 +188,7 @@ router.post("/facturen", requireBevoegdheid("financieel", 1), async (req: Reques
 });
 
 // ── GET /facturen/:id ──────────────────────────────────────────────────────────
-router.get("/facturen/:id", requireBevoegdheid("financieel", 1), async (req: Request, res: Response) => {
+router.get("/facturen/:id", requireBevoegdheid("financieel", 1), async (req: Request, res: Response): Promise<void> => {
   const id = paramInt(req.params["id"]);
   const [rij] = await db.select().from(facturenTable).where(eq(facturenTable.id, id)).limit(1);
   if (!rij) { res.status(404).json({ error: "Niet gevonden" }); return; }
@@ -196,7 +196,7 @@ router.get("/facturen/:id", requireBevoegdheid("financieel", 1), async (req: Req
 });
 
 // ── PATCH /facturen/:id ────────────────────────────────────────────────────────
-router.patch("/facturen/:id", requireBevoegdheid("financieel", 1), async (req: Request, res: Response) => {
+router.patch("/facturen/:id", requireBevoegdheid("financieel", 1), async (req: Request, res: Response): Promise<void> => {
   const id = paramInt(req.params["id"]);
   const body = req.body as Record<string, unknown>;
 
@@ -225,7 +225,7 @@ router.patch("/facturen/:id", requireBevoegdheid("financieel", 1), async (req: R
 });
 
 // ── DELETE /facturen/:id ───────────────────────────────────────────────────────
-router.delete("/facturen/:id", requireBevoegdheid("financieel", 4), async (req: Request, res: Response) => {
+router.delete("/facturen/:id", requireBevoegdheid("financieel", 4), async (req: Request, res: Response): Promise<void> => {
   const id = paramInt(req.params["id"]);
   await db.delete(facturenTable).where(eq(facturenTable.id, id));
   res.status(204).send();
@@ -234,7 +234,7 @@ router.delete("/facturen/:id", requireBevoegdheid("financieel", 4), async (req: 
 // ── POST /facturen/:id/ai-uitlezen ─────────────────────────────────────────────
 // Fase 2: Uitgebreide AI-extractie — regels, IBAN-verificatie, leverancierherkenning,
 // G-rekening-signalering. AI stelt voor; administratie keurt goed.
-router.post("/facturen/:id/ai-uitlezen", requireBevoegdheid("financieel", 1), async (req: Request, res: Response) => {
+router.post("/facturen/:id/ai-uitlezen", requireBevoegdheid("financieel", 1), async (req: Request, res: Response): Promise<void> => {
   const id = paramInt(req.params["id"]);
   const [factuur] = await db.select().from(facturenTable).where(eq(facturenTable.id, id)).limit(1);
   if (!factuur) { res.status(404).json({ error: "Niet gevonden" }); return; }
@@ -463,7 +463,7 @@ Zet controle_nodig=true als bedragen onduidelijk zijn, IBAN ontbreekt, of regels
 // Codes: iban_afwijking | g_rekening_van_toepassing | geen_regels |
 //        geen_project_koppeling | hoog_bedrag | bedrag_afwijking
 // Ernst: kritisch | waarschuwing | info
-router.get("/facturen/:id/afwijkingen", requireBevoegdheid("financieel", 1), async (req: Request, res: Response) => {
+router.get("/facturen/:id/afwijkingen", requireBevoegdheid("financieel", 1), async (req: Request, res: Response): Promise<void> => {
   const id = paramInt(req.params["id"]);
   const [factuur] = await db.select().from(facturenTable)
     .where(eq(facturenTable.id, id)).limit(1);
@@ -547,7 +547,7 @@ router.get("/facturen/:id/afwijkingen", requireBevoegdheid("financieel", 1), asy
 });
 
 // ── POST /facturen/:id/accorderen ──────────────────────────────────────────────
-router.post("/facturen/:id/accorderen", requireBevoegdheid("financieel", 4), async (req: Request, res: Response) => {
+router.post("/facturen/:id/accorderen", requireBevoegdheid("financieel", 4), async (req: Request, res: Response): Promise<void> => {
   const id = paramInt(req.params["id"]);
   const [factuur] = await db.select().from(facturenTable).where(eq(facturenTable.id, id)).limit(1);
   if (!factuur) { res.status(404).json({ error: "Niet gevonden" }); return; }
@@ -566,7 +566,7 @@ router.post("/facturen/:id/accorderen", requireBevoegdheid("financieel", 4), asy
 });
 
 // ── POST /facturen/:id/blokkeren ───────────────────────────────────────────────
-router.post("/facturen/:id/blokkeren", requireBevoegdheid("financieel", 4), async (req: Request, res: Response) => {
+router.post("/facturen/:id/blokkeren", requireBevoegdheid("financieel", 4), async (req: Request, res: Response): Promise<void> => {
   const id = paramInt(req.params["id"]);
   const { geblokkeerd, reden } = req.body as { geblokkeerd?: boolean; reden?: string | null };
 
@@ -582,7 +582,7 @@ router.post("/facturen/:id/blokkeren", requireBevoegdheid("financieel", 4), asyn
 });
 
 // ── POST /facturen/:id/export-accountview ──────────────────────────────────────
-router.post("/facturen/:id/export-accountview", requireBevoegdheid("financieel", 4), async (req: Request, res: Response) => {
+router.post("/facturen/:id/export-accountview", requireBevoegdheid("financieel", 4), async (req: Request, res: Response): Promise<void> => {
   const id = paramInt(req.params["id"]);
   const [factuur] = await db.select().from(facturenTable).where(eq(facturenTable.id, id)).limit(1);
   if (!factuur) { res.status(404).json({ error: "Niet gevonden" }); return; }
@@ -694,7 +694,7 @@ router.post("/facturen/:id/export-accountview", requireBevoegdheid("financieel",
 });
 
 // ── GET /facturen/:id/export-logs ──────────────────────────────────────────────
-router.get("/facturen/:id/export-logs", requireBevoegdheid("financieel", 1), async (req: Request, res: Response) => {
+router.get("/facturen/:id/export-logs", requireBevoegdheid("financieel", 1), async (req: Request, res: Response): Promise<void> => {
   const id = paramInt(req.params["id"]);
   const logs = await db.select().from(accountviewExportLogsTable)
     .where(eq(accountviewExportLogsTable.factuurId, id))
@@ -717,7 +717,7 @@ router.get("/facturen/:id/export-logs", requireBevoegdheid("financieel", 1), asy
 });
 
 // ── POST /facturen/:id/afkeuren ────────────────────────────────────────────────
-router.post("/facturen/:id/afkeuren", requireBevoegdheid("financieel", 4), async (req: Request, res: Response) => {
+router.post("/facturen/:id/afkeuren", requireBevoegdheid("financieel", 4), async (req: Request, res: Response): Promise<void> => {
   const id = paramInt(req.params["id"]);
   const { reden } = req.body as { reden?: string };
   if (!reden?.trim()) { res.status(400).json({ error: "Afkeuringsreden is verplicht" }); return; }
@@ -748,7 +748,7 @@ router.post("/facturen/:id/afkeuren", requireBevoegdheid("financieel", 4), async
 });
 
 // ── POST /facturen/:id/beoordelen-pl ──────────────────────────────────────────
-router.post("/facturen/:id/beoordelen-pl", requireBevoegdheid("financieel", 2), async (req: Request, res: Response) => {
+router.post("/facturen/:id/beoordelen-pl", requireBevoegdheid("financieel", 2), async (req: Request, res: Response): Promise<void> => {
   const id = paramInt(req.params["id"]);
   const { actie, reden } = req.body as { actie?: string; reden?: string };
 
@@ -786,7 +786,7 @@ router.post("/facturen/:id/beoordelen-pl", requireBevoegdheid("financieel", 2), 
 });
 
 // ── POST /facturen/:id/beoordelen-wvb ─────────────────────────────────────────
-router.post("/facturen/:id/beoordelen-wvb", requireBevoegdheid("financieel", 3), async (req: Request, res: Response) => {
+router.post("/facturen/:id/beoordelen-wvb", requireBevoegdheid("financieel", 3), async (req: Request, res: Response): Promise<void> => {
   const id = paramInt(req.params["id"]);
   const { actie, reden } = req.body as { actie?: string; reden?: string };
 
@@ -824,7 +824,7 @@ router.post("/facturen/:id/beoordelen-wvb", requireBevoegdheid("financieel", 3),
 });
 
 // ── POST /facturen/:id/doorsturen-medewerker ──────────────────────────────────
-router.post("/facturen/:id/doorsturen-medewerker", requireBevoegdheid("financieel", 2), async (req: Request, res: Response) => {
+router.post("/facturen/:id/doorsturen-medewerker", requireBevoegdheid("financieel", 2), async (req: Request, res: Response): Promise<void> => {
   const id = paramInt(req.params["id"]);
   const { gebruiker_id, opmerking } = req.body as { gebruiker_id?: number; opmerking?: string };
 
@@ -865,7 +865,7 @@ router.post("/facturen/:id/doorsturen-medewerker", requireBevoegdheid("financiee
 });
 
 // ── POST /facturen/:id/beoordelen-medewerker ──────────────────────────────────
-router.post("/facturen/:id/beoordelen-medewerker", requireBevoegdheid("financieel", 1), async (req: Request, res: Response) => {
+router.post("/facturen/:id/beoordelen-medewerker", requireBevoegdheid("financieel", 1), async (req: Request, res: Response): Promise<void> => {
   const id = paramInt(req.params["id"]);
   const { actie, reden } = req.body as { actie?: string; reden?: string };
 
@@ -903,7 +903,7 @@ router.post("/facturen/:id/beoordelen-medewerker", requireBevoegdheid("financiee
 });
 
 // ── GET /facturen/:id/opmerkingen ─────────────────────────────────────────────
-router.get("/facturen/:id/opmerkingen", requireBevoegdheid("financieel", 1), async (req: Request, res: Response) => {
+router.get("/facturen/:id/opmerkingen", requireBevoegdheid("financieel", 1), async (req: Request, res: Response): Promise<void> => {
   const id = paramInt(req.params["id"]);
   const rijen = await db
     .select({
@@ -946,7 +946,7 @@ router.get("/facturen/:id/opmerkingen", requireBevoegdheid("financieel", 1), asy
 });
 
 // ── POST /facturen/:id/opmerkingen ────────────────────────────────────────────
-router.post("/facturen/:id/opmerkingen", requireBevoegdheid("financieel", 1), async (req: Request, res: Response) => {
+router.post("/facturen/:id/opmerkingen", requireBevoegdheid("financieel", 1), async (req: Request, res: Response): Promise<void> => {
   const id = paramInt(req.params["id"]);
   const { tekst, reply_op_id } = req.body as { tekst?: string; reply_op_id?: number };
 
@@ -979,7 +979,7 @@ router.post("/facturen/:id/opmerkingen", requireBevoegdheid("financieel", 1), as
 });
 
 // ── PATCH /facturen/:id/opmerkingen/:oid ──────────────────────────────────────
-router.patch("/facturen/:id/opmerkingen/:oid", requireBevoegdheid("financieel", 1), async (req: Request, res: Response) => {
+router.patch("/facturen/:id/opmerkingen/:oid", requireBevoegdheid("financieel", 1), async (req: Request, res: Response): Promise<void> => {
   const factuurId = paramInt(req.params["id"]);
   const oid = paramInt(req.params["oid"]);
   const { afgehandeld } = req.body as { afgehandeld?: boolean };
@@ -1017,7 +1017,7 @@ router.patch("/facturen/:id/opmerkingen/:oid", requireBevoegdheid("financieel", 
 });
 
 // ── GET /facturen/:id/proceslog ───────────────────────────────────────────────
-router.get("/facturen/:id/proceslog", requireBevoegdheid("financieel", 1), async (req: Request, res: Response) => {
+router.get("/facturen/:id/proceslog", requireBevoegdheid("financieel", 1), async (req: Request, res: Response): Promise<void> => {
   const id = paramInt(req.params["id"]);
 
   const acties = await db
@@ -1115,7 +1115,7 @@ router.get("/facturen/:id/proceslog", requireBevoegdheid("financieel", 1), async
 });
 
 // ── POST /facturen/:id/forceer-herexport ───────────────────────────────────────
-router.post("/facturen/:id/forceer-herexport", requireBevoegdheid("financieel", 4), async (req: Request, res: Response) => {
+router.post("/facturen/:id/forceer-herexport", requireBevoegdheid("financieel", 4), async (req: Request, res: Response): Promise<void> => {
   const id = paramInt(req.params["id"]);
   const { reden } = req.body as { reden?: string };
 
@@ -1224,7 +1224,7 @@ router.post("/facturen/:id/forceer-herexport", requireBevoegdheid("financieel", 
 });
 
 // ── POST /facturen/batch-export ────────────────────────────────────────────────
-router.post("/facturen/batch-export", requireBevoegdheid("financieel", 4), async (req: Request, res: Response) => {
+router.post("/facturen/batch-export", requireBevoegdheid("financieel", 4), async (req: Request, res: Response): Promise<void> => {
   const { factuur_ids } = req.body as { factuur_ids?: number[] };
   if (!Array.isArray(factuur_ids) || factuur_ids.length === 0) {
     res.status(400).json({ error: "factuur_ids is verplicht en mag niet leeg zijn" }); return;
@@ -1329,7 +1329,7 @@ router.post("/facturen/batch-export", requireBevoegdheid("financieel", 4), async
 });
 
 // ── GET /facturen/exportlog ────────────────────────────────────────────────────
-router.get("/facturen/exportlog", requireBevoegdheid("financieel", 1), async (req: Request, res: Response) => {
+router.get("/facturen/exportlog", requireBevoegdheid("financieel", 1), async (req: Request, res: Response): Promise<void> => {
   const factuurIdFilter = req.query["factuur_id"] ? paramInt(req.query["factuur_id"]) : null;
   const statusFilter = req.query["status"] ? String(req.query["status"]) : null;
   const actieFilter = req.query["actie"] ? String(req.query["actie"]) : null;
@@ -1384,7 +1384,7 @@ router.get("/facturen/exportlog", requireBevoegdheid("financieel", 1), async (re
 
 // ── F1: Factuurregels CRUD ─────────────────────────────────────────────────────
 // GET /facturen/:id/regels
-router.get("/facturen/:id/regels", requireBevoegdheid("financieel", 1), async (req: Request, res: Response) => {
+router.get("/facturen/:id/regels", requireBevoegdheid("financieel", 1), async (req: Request, res: Response): Promise<void> => {
   const id = paramInt(req.params["id"]);
   const regels = await db.select().from(factuurRegelsTable)
     .where(eq(factuurRegelsTable.factuurId, id))
@@ -1413,7 +1413,7 @@ router.get("/facturen/:id/regels", requireBevoegdheid("financieel", 1), async (r
 });
 
 // POST /facturen/:id/regels
-router.post("/facturen/:id/regels", requireBevoegdheid("financieel", 2), async (req: Request, res: Response) => {
+router.post("/facturen/:id/regels", requireBevoegdheid("financieel", 2), async (req: Request, res: Response): Promise<void> => {
   const factuurId = paramInt(req.params["id"]);
   const [factuur] = await db.select({ id: facturenTable.id }).from(facturenTable)
     .where(eq(facturenTable.id, factuurId)).limit(1);
@@ -1455,7 +1455,7 @@ router.post("/facturen/:id/regels", requireBevoegdheid("financieel", 2), async (
 });
 
 // PATCH /facturen/:id/regels/:rid
-router.patch("/facturen/:id/regels/:rid", requireBevoegdheid("financieel", 2), async (req: Request, res: Response) => {
+router.patch("/facturen/:id/regels/:rid", requireBevoegdheid("financieel", 2), async (req: Request, res: Response): Promise<void> => {
   const factuurId = paramInt(req.params["id"]);
   const rid = paramInt(req.params["rid"]);
   const [rij] = await db.select().from(factuurRegelsTable)
@@ -1484,7 +1484,7 @@ router.patch("/facturen/:id/regels/:rid", requireBevoegdheid("financieel", 2), a
 });
 
 // DELETE /facturen/:id/regels/:rid
-router.delete("/facturen/:id/regels/:rid", requireBevoegdheid("financieel", 2), async (req: Request, res: Response) => {
+router.delete("/facturen/:id/regels/:rid", requireBevoegdheid("financieel", 2), async (req: Request, res: Response): Promise<void> => {
   const factuurId = paramInt(req.params["id"]);
   const rid = paramInt(req.params["rid"]);
   const [rij] = await db.select({ id: factuurRegelsTable.id }).from(factuurRegelsTable)
@@ -1496,7 +1496,7 @@ router.delete("/facturen/:id/regels/:rid", requireBevoegdheid("financieel", 2), 
 
 // ── F1: Factuur-termijnen CRUD (termijnschema per opdracht) ──────────────────
 // GET /opdrachten/:opdrachtId/factuur-termijnen
-router.get("/opdrachten/:opdrachtId/factuur-termijnen", requireBevoegdheid("financieel", 1), async (req: Request, res: Response) => {
+router.get("/opdrachten/:opdrachtId/factuur-termijnen", requireBevoegdheid("financieel", 1), async (req: Request, res: Response): Promise<void> => {
   const opdrachtId = paramInt(req.params["opdrachtId"]);
   const termijnen = await db.select().from(factuurTermijnenTable)
     .where(eq(factuurTermijnenTable.opdrachtId, opdrachtId))
@@ -1517,7 +1517,7 @@ router.get("/opdrachten/:opdrachtId/factuur-termijnen", requireBevoegdheid("fina
 });
 
 // POST /opdrachten/:opdrachtId/factuur-termijnen
-router.post("/opdrachten/:opdrachtId/factuur-termijnen", requireBevoegdheid("financieel", 2), async (req: Request, res: Response) => {
+router.post("/opdrachten/:opdrachtId/factuur-termijnen", requireBevoegdheid("financieel", 2), async (req: Request, res: Response): Promise<void> => {
   const opdrachtId = paramInt(req.params["opdrachtId"]);
   const body = req.body as {
     volgnummer?: number; omschrijving?: string; percentage?: number;
@@ -1540,7 +1540,7 @@ router.post("/opdrachten/:opdrachtId/factuur-termijnen", requireBevoegdheid("fin
 });
 
 // PATCH /opdrachten/:opdrachtId/factuur-termijnen/:tid
-router.patch("/opdrachten/:opdrachtId/factuur-termijnen/:tid", requireBevoegdheid("financieel", 2), async (req: Request, res: Response) => {
+router.patch("/opdrachten/:opdrachtId/factuur-termijnen/:tid", requireBevoegdheid("financieel", 2), async (req: Request, res: Response): Promise<void> => {
   const opdrachtId = paramInt(req.params["opdrachtId"]);
   const tid = paramInt(req.params["tid"]);
   const [rij] = await db.select().from(factuurTermijnenTable)
@@ -1562,7 +1562,7 @@ router.patch("/opdrachten/:opdrachtId/factuur-termijnen/:tid", requireBevoegdhei
 });
 
 // ── GET /facturen/financieel-dashboard ────────────────────────────────────────
-router.get("/facturen/financieel-dashboard", requireBevoegdheid("financieel", 1), async (req: Request, res: Response) => {
+router.get("/facturen/financieel-dashboard", requireBevoegdheid("financieel", 1), async (req: Request, res: Response): Promise<void> => {
   const [totalen] = await db.select({
     totaal: count(),
   }).from(facturenTable);

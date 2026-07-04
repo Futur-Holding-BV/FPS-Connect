@@ -21,24 +21,24 @@ function mapTemplate(t: typeof constructieTemplatesTable.$inferSelect) {
 }
 
 // GET /constructie-templates
-router.get("/constructie-templates", lezen, async (req, res) => {
+router.get("/constructie-templates", lezen, async (req, res): Promise<void> => {
   try {
     const rows = await db
       .select()
       .from(constructieTemplatesTable)
       .orderBy(constructieTemplatesTable.naam);
-    return res.json(rows.map(mapTemplate));
+    return void res.json(rows.map(mapTemplate));
   } catch (err) {
     req.log.error(err);
-    return res.status(500).json({ error: "Interne serverfout" });
+    return void res.status(500).json({ error: "Interne serverfout" });
   }
 });
 
 // POST /constructie-templates
-router.post("/constructie-templates", schrijven, async (req, res) => {
+router.post("/constructie-templates", schrijven, async (req, res): Promise<void> => {
   try {
     const { naam, omschrijving, onderdelen } = req.body;
-    if (!naam) return res.status(400).json({ error: "naam is verplicht" });
+    if (!naam) return void res.status(400).json({ error: "naam is verplicht" });
     const [rij] = await db
       .insert(constructieTemplatesTable)
       .values({
@@ -48,31 +48,31 @@ router.post("/constructie-templates", schrijven, async (req, res) => {
         aangemaaktDoorId: req.session.userId,
       })
       .returning();
-    return res.status(201).json(mapTemplate(rij));
+    return void res.status(201).json(mapTemplate(rij));
   } catch (err) {
     req.log.error(err);
-    return res.status(500).json({ error: "Interne serverfout" });
+    return void res.status(500).json({ error: "Interne serverfout" });
   }
 });
 
 // GET /constructie-templates/:id
-router.get("/constructie-templates/:id", lezen, async (req, res) => {
+router.get("/constructie-templates/:id", lezen, async (req, res): Promise<void> => {
   try {
     const id = parseInt(String(req.params.id));
     const [rij] = await db
       .select()
       .from(constructieTemplatesTable)
       .where(eq(constructieTemplatesTable.id, id));
-    if (!rij) return res.status(404).json({ error: "Niet gevonden" });
-    return res.json(mapTemplate(rij));
+    if (!rij) return void res.status(404).json({ error: "Niet gevonden" });
+    return void res.json(mapTemplate(rij));
   } catch (err) {
     req.log.error(err);
-    return res.status(500).json({ error: "Interne serverfout" });
+    return void res.status(500).json({ error: "Interne serverfout" });
   }
 });
 
 // PATCH /constructie-templates/:id
-router.patch("/constructie-templates/:id", schrijven, async (req, res) => {
+router.patch("/constructie-templates/:id", schrijven, async (req, res): Promise<void> => {
   try {
     const id = parseInt(String(req.params.id));
     const { naam, omschrijving, onderdelen } = req.body;
@@ -87,27 +87,27 @@ router.patch("/constructie-templates/:id", schrijven, async (req, res) => {
       .set(patch)
       .where(eq(constructieTemplatesTable.id, id))
       .returning();
-    if (!rij) return res.status(404).json({ error: "Niet gevonden" });
-    return res.json(mapTemplate(rij));
+    if (!rij) return void res.status(404).json({ error: "Niet gevonden" });
+    return void res.json(mapTemplate(rij));
   } catch (err) {
     req.log.error(err);
-    return res.status(500).json({ error: "Interne serverfout" });
+    return void res.status(500).json({ error: "Interne serverfout" });
   }
 });
 
 // DELETE /constructie-templates/:id
-router.delete("/constructie-templates/:id", schrijven, async (req, res) => {
+router.delete("/constructie-templates/:id", schrijven, async (req, res): Promise<void> => {
   try {
     const id = parseInt(String(req.params.id));
     const [rij] = await db
       .delete(constructieTemplatesTable)
       .where(eq(constructieTemplatesTable.id, id))
       .returning();
-    if (!rij) return res.status(404).json({ error: "Niet gevonden" });
-    return res.status(204).send();
+    if (!rij) return void res.status(404).json({ error: "Niet gevonden" });
+    return void res.status(204).send();
   } catch (err) {
     req.log.error(err);
-    return res.status(500).json({ error: "Interne serverfout" });
+    return void res.status(500).json({ error: "Interne serverfout" });
   }
 });
 

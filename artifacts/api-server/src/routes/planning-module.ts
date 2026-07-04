@@ -84,7 +84,7 @@ async function isGeslotenDag(datum: string): Promise<{ gesloten: boolean; naam: 
 // ── Medewerkers voor planning ─────────────────────────────────────────────
 // Standaard: alle actieve medewerkers. Optioneel filter: ?alleen_uitvoerend=true.
 
-router.get("/modules/planning/medewerkers", lezenPlanning, async (req, res) => {
+router.get("/modules/planning/medewerkers", lezenPlanning, async (req, res): Promise<void> => {
   try {
     const wmFilter = typeof req.query.werkmaatschappij === "string" ? req.query.werkmaatschappij : undefined;
     const dvFilter = typeof req.query.dienstverband    === "string" ? req.query.dienstverband    : undefined;
@@ -145,7 +145,7 @@ router.get("/modules/planning/medewerkers", lezenPlanning, async (req, res) => {
 });
 
 // ── Diagnose: waarom zijn er geen medewerkers zichtbaar in de planning ──────
-router.get("/modules/planning/diagnose", lezenPlanning, async (req, res) => {
+router.get("/modules/planning/diagnose", lezenPlanning, async (req, res): Promise<void> => {
   try {
     const [[totaalRij], [zichtbaarRij], [zonderFunctieRij], [geenUitvoerendeRolRij], [nietActiefRij]] =
       await Promise.all([
@@ -186,7 +186,7 @@ router.get("/modules/planning/diagnose", lezenPlanning, async (req, res) => {
 
 // ── Planning items ─────────────────────────────────────────────────────────
 
-router.get("/modules/planning/items", lezenPlanning, async (req, res) => {
+router.get("/modules/planning/items", lezenPlanning, async (req, res): Promise<void> => {
   try {
     const { van, tot, medewerker_id, gebouw_id, status, opdracht_type } =
       req.query as Record<string, string>;
@@ -225,7 +225,7 @@ router.get("/modules/planning/items", lezenPlanning, async (req, res) => {
   }
 });
 
-router.post("/modules/planning/items", aanmakenPlanning, async (req, res) => {
+router.post("/modules/planning/items", aanmakenPlanning, async (req, res): Promise<void> => {
   try {
     const {
       titel, omschrijving, medewerker_id, gebouw_id, project_id, project_naam,
@@ -236,7 +236,7 @@ router.post("/modules/planning/items", aanmakenPlanning, async (req, res) => {
     } = req.body as Record<string, unknown>;
 
     if (!datum_start || !datum_eind) {
-      return res.status(400).json({ error: "datum_start en datum_eind zijn verplicht" });
+      return void res.status(400).json({ error: "datum_start en datum_eind zijn verplicht" });
     }
 
     // Controleer of de datum een feestdag of bedrijfssluiting is.
@@ -246,7 +246,7 @@ router.post("/modules/planning/items", aanmakenPlanning, async (req, res) => {
     const isOverride = override_bevestigd === true;
 
     if (geslotenInfo.gesloten && !isOverride) {
-      return res.status(409).json({
+      return void res.status(409).json({
         error: "gesloten_dag",
         naam: geslotenInfo.naam,
         bron: geslotenInfo.bron,
@@ -292,7 +292,7 @@ router.post("/modules/planning/items", aanmakenPlanning, async (req, res) => {
   }
 });
 
-router.get("/modules/planning/items/:id", lezenPlanning, async (req, res) => {
+router.get("/modules/planning/items/:id", lezenPlanning, async (req, res): Promise<void> => {
   try {
     const id = parseId(req.params["id"]);
     const [row] = await db
@@ -302,7 +302,7 @@ router.get("/modules/planning/items/:id", lezenPlanning, async (req, res) => {
       .leftJoin(gebouwenTable,    eq(planningItemsTable.gebouwId,     gebouwenTable.id))
       .where(eq(planningItemsTable.id, id));
 
-    if (!row) return res.status(404).json({ error: "Niet gevonden" });
+    if (!row) return void res.status(404).json({ error: "Niet gevonden" });
     res.json(mapItem(row.item, row.medewerkNaam ?? null, row.gebouwNaam ?? null));
   } catch (e) {
     req.log.error(e);
@@ -310,7 +310,7 @@ router.get("/modules/planning/items/:id", lezenPlanning, async (req, res) => {
   }
 });
 
-router.patch("/modules/planning/items/:id", schrijvenPlanning, async (req, res) => {
+router.patch("/modules/planning/items/:id", schrijvenPlanning, async (req, res): Promise<void> => {
   try {
     const id   = parseId(req.params["id"]);
     const body = req.body as Record<string, unknown>;
@@ -336,7 +336,7 @@ router.patch("/modules/planning/items/:id", schrijvenPlanning, async (req, res) 
     if (body.notities      !== undefined) update.notities     = body.notities      ? String(body.notities)      : null;
 
     const [row] = await db.update(planningItemsTable).set(update).where(eq(planningItemsTable.id, id)).returning();
-    if (!row) return res.status(404).json({ error: "Niet gevonden" });
+    if (!row) return void res.status(404).json({ error: "Niet gevonden" });
 
     const gebouw = row.gebouwId
       ? await db.select({ naam: gebouwenTable.naam }).from(gebouwenTable).where(eq(gebouwenTable.id, row.gebouwId)).limit(1)
@@ -349,7 +349,7 @@ router.patch("/modules/planning/items/:id", schrijvenPlanning, async (req, res) 
   }
 });
 
-router.delete("/modules/planning/items/:id", aanmakenPlanning, async (req, res) => {
+router.delete("/modules/planning/items/:id", aanmakenPlanning, async (req, res): Promise<void> => {
   try {
     const id = parseId(req.params["id"]);
     await db.delete(planningItemsTable).where(eq(planningItemsTable.id, id));
@@ -362,7 +362,7 @@ router.delete("/modules/planning/items/:id", aanmakenPlanning, async (req, res) 
 
 // ── Afwezigheid ────────────────────────────────────────────────────────────
 
-router.get("/modules/planning/afwezigheid", lezenPlanning, async (req, res) => {
+router.get("/modules/planning/afwezigheid", lezenPlanning, async (req, res): Promise<void> => {
   try {
     const { medewerker_id, van, tot } = req.query as Record<string, string>;
 
@@ -397,13 +397,13 @@ router.get("/modules/planning/afwezigheid", lezenPlanning, async (req, res) => {
   }
 });
 
-router.post("/modules/planning/afwezigheid", schrijvenPlanning, async (req, res) => {
+router.post("/modules/planning/afwezigheid", schrijvenPlanning, async (req, res): Promise<void> => {
   try {
     const { medewerker_id, type = "vakantie", datum_start, datum_eind, omschrijving, status = "aangevraagd" } =
       req.body as Record<string, unknown>;
 
     if (!medewerker_id || !datum_start || !datum_eind) {
-      return res.status(400).json({ error: "medewerker_id, datum_start en datum_eind zijn verplicht" });
+      return void res.status(400).json({ error: "medewerker_id, datum_start en datum_eind zijn verplicht" });
     }
 
     const [row] = await db.insert(planningAfwezigheidTable).values({
@@ -427,7 +427,7 @@ router.post("/modules/planning/afwezigheid", schrijvenPlanning, async (req, res)
   }
 });
 
-router.patch("/modules/planning/afwezigheid/:id", schrijvenPlanning, async (req, res) => {
+router.patch("/modules/planning/afwezigheid/:id", schrijvenPlanning, async (req, res): Promise<void> => {
   try {
     const id   = parseId(req.params["id"]);
     const body = req.body as Record<string, unknown>;
@@ -439,7 +439,7 @@ router.patch("/modules/planning/afwezigheid/:id", schrijvenPlanning, async (req,
     if (body.status      !== undefined) update.status      = String(body.status);
 
     const [row] = await db.update(planningAfwezigheidTable).set(update).where(eq(planningAfwezigheidTable.id, id)).returning();
-    if (!row) return res.status(404).json({ error: "Niet gevonden" });
+    if (!row) return void res.status(404).json({ error: "Niet gevonden" });
 
     res.json({ id: row.id, medewerker_id: row.medewerkerId, medewerker_naam: null,
       type: row.type, datum_start: row.datumStart, datum_eind: row.datumEind,
@@ -450,7 +450,7 @@ router.patch("/modules/planning/afwezigheid/:id", schrijvenPlanning, async (req,
   }
 });
 
-router.delete("/modules/planning/afwezigheid/:id", schrijvenPlanning, async (req, res) => {
+router.delete("/modules/planning/afwezigheid/:id", schrijvenPlanning, async (req, res): Promise<void> => {
   try {
     const id = parseId(req.params["id"]);
     await db.delete(planningAfwezigheidTable).where(eq(planningAfwezigheidTable.id, id));
@@ -463,11 +463,11 @@ router.delete("/modules/planning/afwezigheid/:id", schrijvenPlanning, async (req
 
 // ── Gesloten dagen (feestdagen + bedrijfssluitingen samengevoegd) ─────────
 
-router.get("/modules/planning/gesloten-dagen", lezenPlanning, async (req, res) => {
+router.get("/modules/planning/gesloten-dagen", lezenPlanning, async (req, res): Promise<void> => {
   try {
     const van = String(req.query.van ?? "");
     const tot = String(req.query.tot ?? "");
-    if (!van || !tot) return res.status(400).json({ error: "van en tot zijn verplicht" });
+    if (!van || !tot) return void res.status(400).json({ error: "van en tot zijn verplicht" });
 
     const jaarVan = parseInt(van.slice(0, 4), 10);
     const jaarTot = parseInt(tot.slice(0, 4), 10);
@@ -537,7 +537,7 @@ function mapSluiting(s: typeof bedrijfssluitingenTable.$inferSelect) {
   };
 }
 
-router.get("/modules/planning/bedrijfssluitingen", lezenPlanning, async (req, res) => {
+router.get("/modules/planning/bedrijfssluitingen", lezenPlanning, async (req, res): Promise<void> => {
   try {
     const jaar = req.query.jaar ? parseInt(String(req.query.jaar), 10) : undefined;
     let rows = await db.select().from(bedrijfssluitingenTable).orderBy(asc(bedrijfssluitingenTable.datumStart));
@@ -551,11 +551,11 @@ router.get("/modules/planning/bedrijfssluitingen", lezenPlanning, async (req, re
   }
 });
 
-router.post("/modules/planning/bedrijfssluitingen", schrijvenPlanning, async (req, res) => {
+router.post("/modules/planning/bedrijfssluitingen", schrijvenPlanning, async (req, res): Promise<void> => {
   try {
     const { naam, datum_start, datum_eind, type = "bedrijfssluiting", omschrijving } = req.body as Record<string, unknown>;
     if (!naam || !datum_start || !datum_eind) {
-      return res.status(400).json({ error: "naam, datum_start en datum_eind zijn verplicht" });
+      return void res.status(400).json({ error: "naam, datum_start en datum_eind zijn verplicht" });
     }
     const [row] = await db.insert(bedrijfssluitingenTable).values({
       naam: String(naam),
@@ -572,7 +572,7 @@ router.post("/modules/planning/bedrijfssluitingen", schrijvenPlanning, async (re
   }
 });
 
-router.patch("/modules/planning/bedrijfssluitingen/:id", schrijvenPlanning, async (req, res) => {
+router.patch("/modules/planning/bedrijfssluitingen/:id", schrijvenPlanning, async (req, res): Promise<void> => {
   try {
     const id = parseId(req.params["id"]);
     const body = req.body as Record<string, unknown>;
@@ -583,7 +583,7 @@ router.patch("/modules/planning/bedrijfssluitingen/:id", schrijvenPlanning, asyn
     if (body.type        !== undefined) update.type        = String(body.type);
     if (body.omschrijving !== undefined) update.omschrijving = body.omschrijving ? String(body.omschrijving) : null;
     const [row] = await db.update(bedrijfssluitingenTable).set(update).where(eq(bedrijfssluitingenTable.id, id)).returning();
-    if (!row) return res.status(404).json({ error: "Niet gevonden" });
+    if (!row) return void res.status(404).json({ error: "Niet gevonden" });
     res.json(mapSluiting(row));
   } catch (e) {
     req.log.error(e);
@@ -591,7 +591,7 @@ router.patch("/modules/planning/bedrijfssluitingen/:id", schrijvenPlanning, asyn
   }
 });
 
-router.delete("/modules/planning/bedrijfssluitingen/:id", schrijvenPlanning, async (req, res) => {
+router.delete("/modules/planning/bedrijfssluitingen/:id", schrijvenPlanning, async (req, res): Promise<void> => {
   try {
     const id = parseId(req.params["id"]);
     await db.delete(bedrijfssluitingenTable).where(eq(bedrijfssluitingenTable.id, id));
@@ -617,7 +617,7 @@ function mapBegroting(b: typeof projectBegrotingenTable.$inferSelect, gebouwNaam
   };
 }
 
-router.get("/modules/planning/begrotingen", lezenPlanning, async (req, res) => {
+router.get("/modules/planning/begrotingen", lezenPlanning, async (req, res): Promise<void> => {
   try {
     const gebouwFilter = req.query.gebouw_id ? Number(req.query.gebouw_id) : undefined;
 
@@ -638,7 +638,7 @@ router.get("/modules/planning/begrotingen", lezenPlanning, async (req, res) => {
   }
 });
 
-router.post("/modules/planning/begrotingen", aanmakenPlanning, async (req, res) => {
+router.post("/modules/planning/begrotingen", aanmakenPlanning, async (req, res): Promise<void> => {
   try {
     const { gebouw_id, werknummer, hoofd_uren_begroot = 0, meerwerk_uren_begroot = 0, omschrijving } =
       req.body as Record<string, unknown>;
@@ -663,7 +663,7 @@ router.post("/modules/planning/begrotingen", aanmakenPlanning, async (req, res) 
   }
 });
 
-router.patch("/modules/planning/begrotingen/:id", schrijvenPlanning, async (req, res) => {
+router.patch("/modules/planning/begrotingen/:id", schrijvenPlanning, async (req, res): Promise<void> => {
   try {
     const id   = parseId(req.params["id"]);
     const body = req.body as Record<string, unknown>;
@@ -675,7 +675,7 @@ router.patch("/modules/planning/begrotingen/:id", schrijvenPlanning, async (req,
     if (body.omschrijving         !== undefined) update.omschrijving      = body.omschrijving ? String(body.omschrijving) : null;
 
     const [row] = await db.update(projectBegrotingenTable).set(update).where(eq(projectBegrotingenTable.id, id)).returning();
-    if (!row) return res.status(404).json({ error: "Niet gevonden" });
+    if (!row) return void res.status(404).json({ error: "Niet gevonden" });
 
     const gebouw = row.gebouwId
       ? await db.select({ naam: gebouwenTable.naam }).from(gebouwenTable).where(eq(gebouwenTable.id, row.gebouwId)).limit(1)
@@ -688,7 +688,7 @@ router.patch("/modules/planning/begrotingen/:id", schrijvenPlanning, async (req,
   }
 });
 
-router.delete("/modules/planning/begrotingen/:id", aanmakenPlanning, async (req, res) => {
+router.delete("/modules/planning/begrotingen/:id", aanmakenPlanning, async (req, res): Promise<void> => {
   try {
     const id = parseId(req.params["id"]);
     await db.delete(projectBegrotingenTable).where(eq(projectBegrotingenTable.id, id));
@@ -712,7 +712,7 @@ function mapMeerwerk(m: typeof planningMeerwerkTable.$inferSelect) {
   };
 }
 
-router.get("/modules/planning/meerwerk", lezenPlanning, async (req, res) => {
+router.get("/modules/planning/meerwerk", lezenPlanning, async (req, res): Promise<void> => {
   try {
     const planningItemFilter = req.query.planning_item_id ? Number(req.query.planning_item_id) : undefined;
 
@@ -732,13 +732,13 @@ router.get("/modules/planning/meerwerk", lezenPlanning, async (req, res) => {
   }
 });
 
-router.post("/modules/planning/meerwerk", aanmakenPlanning, async (req, res) => {
+router.post("/modules/planning/meerwerk", aanmakenPlanning, async (req, res): Promise<void> => {
   try {
     const { planning_item_id, meerwerk_nummer, omschrijving, status = "concept" } =
       req.body as Record<string, unknown>;
 
     if (!planning_item_id) {
-      return res.status(400).json({ error: "planning_item_id is verplicht" });
+      return void res.status(400).json({ error: "planning_item_id is verplicht" });
     }
 
     const [row] = await db.insert(planningMeerwerkTable).values({
@@ -755,7 +755,7 @@ router.post("/modules/planning/meerwerk", aanmakenPlanning, async (req, res) => 
   }
 });
 
-router.patch("/modules/planning/meerwerk/:id", schrijvenPlanning, async (req, res) => {
+router.patch("/modules/planning/meerwerk/:id", schrijvenPlanning, async (req, res): Promise<void> => {
   try {
     const id   = parseId(req.params["id"]);
     const body = req.body as Record<string, unknown>;
@@ -765,7 +765,7 @@ router.patch("/modules/planning/meerwerk/:id", schrijvenPlanning, async (req, re
     if (body.status         !== undefined) update.status         = String(body.status);
 
     const [row] = await db.update(planningMeerwerkTable).set(update).where(eq(planningMeerwerkTable.id, id)).returning();
-    if (!row) return res.status(404).json({ error: "Niet gevonden" });
+    if (!row) return void res.status(404).json({ error: "Niet gevonden" });
 
     res.json(mapMeerwerk(row));
   } catch (e) {
@@ -774,7 +774,7 @@ router.patch("/modules/planning/meerwerk/:id", schrijvenPlanning, async (req, re
   }
 });
 
-router.delete("/modules/planning/meerwerk/:id", aanmakenPlanning, async (req, res) => {
+router.delete("/modules/planning/meerwerk/:id", aanmakenPlanning, async (req, res): Promise<void> => {
   try {
     const id = parseId(req.params["id"]);
     await db.delete(planningMeerwerkTable).where(eq(planningMeerwerkTable.id, id));
@@ -789,7 +789,7 @@ router.delete("/modules/planning/meerwerk/:id", aanmakenPlanning, async (req, re
 // Geaggregeerde view: begroot (project_begrotingen) + gepland (planning_items)
 // + werkelijk (uren_registraties via planning_item_id of gebouw_id).
 
-router.get("/modules/planning/nacalculatie", lezenPlanning, async (req, res) => {
+router.get("/modules/planning/nacalculatie", lezenPlanning, async (req, res): Promise<void> => {
   try {
     const { van, tot, gebouw_id } = req.query as Record<string, string>;
 
@@ -895,13 +895,13 @@ router.get("/modules/planning/nacalculatie", lezenPlanning, async (req, res) => 
 
 // ── AI Reistijd schatting ─────────────────────────────────────────────────
 
-router.post("/modules/planning/reistijd-schatting", lezenPlanning, async (req, res) => {
+router.post("/modules/planning/reistijd-schatting", lezenPlanning, async (req, res): Promise<void> => {
   const { locatie_a, locatie_b } = req.body as { locatie_a?: string; locatie_b?: string };
   if (!locatie_a || !locatie_b) {
-    return res.status(422).json({ error: "locatie_a en locatie_b zijn verplicht" });
+    return void res.status(422).json({ error: "locatie_a en locatie_b zijn verplicht" });
   }
   if (!heeftGateway()) {
-    return res.json({ minuten: 30, beschrijving: "Standaard schatting (AI niet beschikbaar)", onzeker: true });
+    return void res.json({ minuten: 30, beschrijving: "Standaard schatting (AI niet beschikbaar)", onzeker: true });
   }
   try {
     const planningAiResultaat = await aiGateway.chat("fast", {
@@ -927,14 +927,14 @@ router.post("/modules/planning/reistijd-schatting", lezenPlanning, async (req, r
       // planning_item_id meesturen via req.body als dat gewenst is.
     });
     const raw = JSON.parse(planningAiResultaat.ok ? planningAiResultaat.inhoud : "{}") as { minuten?: unknown; beschrijving?: unknown; onzeker?: unknown };
-    return res.json({
+    return void res.json({
       minuten: typeof raw.minuten === "number" ? Math.max(5, Math.round(raw.minuten)) : 30,
       beschrijving: typeof raw.beschrijving === "string" ? raw.beschrijving : "Schatting op basis van locatie",
       onzeker: raw.onzeker === true,
     });
   } catch (e) {
     req.log.error(e);
-    return res.json({ minuten: 30, beschrijving: "Schatting niet beschikbaar", onzeker: true });
+    return void res.json({ minuten: 30, beschrijving: "Schatting niet beschikbaar", onzeker: true });
   }
 });
 

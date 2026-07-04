@@ -274,7 +274,7 @@ async function uploadBijlage(bijlage: GeparseerdeBijlage): Promise<string | null
 }
 
 // GET /gebouwen/:id/emails
-router.get("/gebouwen/:id/emails", beheerderPlus, async (req, res) => {
+router.get("/gebouwen/:id/emails", beheerderPlus, async (req, res): Promise<void> => {
   try {
     const gebouwId = parseId(req.params.id);
     const emails = await db
@@ -299,14 +299,14 @@ router.get("/gebouwen/:id/emails", beheerderPlus, async (req, res) => {
 });
 
 // GET /gebouwen/:id/emails/samenvatting — VOOR :emailId zodat Express niet "samenvatting" als id matcht
-router.get("/gebouwen/:id/emails/samenvatting", beheerderPlus, async (req, res) => {
+router.get("/gebouwen/:id/emails/samenvatting", beheerderPlus, async (req, res): Promise<void> => {
   try {
     const gebouwId = parseId(req.params.id);
     const [s] = await db
       .select()
       .from(gebouwEmailSamenvattingenTable)
       .where(eq(gebouwEmailSamenvattingenTable.gebouwId, gebouwId));
-    if (!s) return res.status(404).json({ error: "Nog geen samenvatting beschikbaar" });
+    if (!s) return void res.status(404).json({ error: "Nog geen samenvatting beschikbaar" });
     res.json(mapSamenvatting(s));
   } catch (err) {
     req.log.error(err);
@@ -315,7 +315,7 @@ router.get("/gebouwen/:id/emails/samenvatting", beheerderPlus, async (req, res) 
 });
 
 // POST /gebouwen/:id/emails/samenvatting — genereer of herbereken projectsamenvatting
-router.post("/gebouwen/:id/emails/samenvatting", beheerderPlus, async (req, res) => {
+router.post("/gebouwen/:id/emails/samenvatting", beheerderPlus, async (req, res): Promise<void> => {
   try {
     const gebouwId = parseId(req.params.id);
     await herberekeningUitvoeren(gebouwId, true, { gebruikerId: req.session.userId ?? null });
@@ -323,7 +323,7 @@ router.post("/gebouwen/:id/emails/samenvatting", beheerderPlus, async (req, res)
       .select()
       .from(gebouwEmailSamenvattingenTable)
       .where(eq(gebouwEmailSamenvattingenTable.gebouwId, gebouwId));
-    if (!s) return res.status(404).json({ error: "Geen e-mails gevonden om een samenvatting van te maken" });
+    if (!s) return void res.status(404).json({ error: "Geen e-mails gevonden om een samenvatting van te maken" });
     res.json(mapSamenvatting(s));
   } catch (err) {
     req.log.error(err);
@@ -332,7 +332,7 @@ router.post("/gebouwen/:id/emails/samenvatting", beheerderPlus, async (req, res)
 });
 
 // PATCH /gebouwen/:id/emails/samenvatting — beheerder controleert/bewerkt, bevestigt en beheert contacten
-router.patch("/gebouwen/:id/emails/samenvatting", beheerderPlus, async (req, res) => {
+router.patch("/gebouwen/:id/emails/samenvatting", beheerderPlus, async (req, res): Promise<void> => {
   try {
     const gebouwId = parseId(req.params.id);
     const body = (req.body ?? {}) as Record<string, unknown>;
@@ -417,7 +417,7 @@ router.patch("/gebouwen/:id/emails/samenvatting", beheerderPlus, async (req, res
 });
 
 // GET /gebouwen/:id/emails/:emailId
-router.get("/gebouwen/:id/emails/:emailId", beheerderPlus, async (req, res) => {
+router.get("/gebouwen/:id/emails/:emailId", beheerderPlus, async (req, res): Promise<void> => {
   try {
     const gebouwId = parseId(req.params.id);
     const emailId = parseId(req.params.emailId);
@@ -425,7 +425,7 @@ router.get("/gebouwen/:id/emails/:emailId", beheerderPlus, async (req, res) => {
       .select()
       .from(gebouwEmailsTable)
       .where(and(eq(gebouwEmailsTable.id, emailId), eq(gebouwEmailsTable.gebouwId, gebouwId)));
-    if (!e) return res.status(404).json({ error: "E-mail niet gevonden" });
+    if (!e) return void res.status(404).json({ error: "E-mail niet gevonden" });
     const bijlagen = await db
       .select()
       .from(gebouwEmailBijlagenTable)
@@ -438,15 +438,15 @@ router.get("/gebouwen/:id/emails/:emailId", beheerderPlus, async (req, res) => {
 });
 
 // POST /gebouwen/:id/emails — verwerk een geüpload .eml/.msg bestand
-router.post("/gebouwen/:id/emails", beheerderPlus, async (req, res) => {
+router.post("/gebouwen/:id/emails", beheerderPlus, async (req, res): Promise<void> => {
   try {
     const gebouwId = parseId(req.params.id);
     const { object_pad, bestandsnaam } = req.body;
     if (!object_pad || !bestandsnaam) {
-      return res.status(400).json({ error: "object_pad en bestandsnaam zijn verplicht" });
+      return void res.status(400).json({ error: "object_pad en bestandsnaam zijn verplicht" });
     }
     const [gebouw] = await db.select({ id: gebouwenTable.id }).from(gebouwenTable).where(eq(gebouwenTable.id, gebouwId));
-    if (!gebouw) return res.status(404).json({ error: "Gebouw niet gevonden" });
+    if (!gebouw) return void res.status(404).json({ error: "Gebouw niet gevonden" });
 
     const normPad = objectStorage.normalizeObjectEntityPath(String(object_pad));
 
@@ -456,7 +456,7 @@ router.post("/gebouwen/:id/emails", beheerderPlus, async (req, res) => {
       geparseerd = await parseEmailBestand(String(bestandsnaam), buffer);
     } catch (parseErr) {
       req.log.error({ err: parseErr }, "E-mail parsen mislukt");
-      return res.status(422).json({ error: "Het e-mailbestand kon niet worden gelezen. Upload een geldig .eml- of .msg-bestand." });
+      return void res.status(422).json({ error: "Het e-mailbestand kon niet worden gelezen. Upload een geldig .eml- of .msg-bestand." });
     }
 
     const ai = await extraheerEmailInzicht(geparseerd, { gebruikerId: req.session.userId ?? null, gebouw_id: gebouwId });
@@ -504,7 +504,7 @@ router.post("/gebouwen/:id/emails", beheerderPlus, async (req, res) => {
     void herberekeningUitvoeren(gebouwId, false, { gebruikerId: req.session.userId ?? null });
   } catch (err) {
     if (err instanceof ObjectNotFoundError) {
-      return res.status(404).json({ error: "Het geüploade bestand is niet gevonden." });
+      return void res.status(404).json({ error: "Het geüploade bestand is niet gevonden." });
     }
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });
@@ -512,7 +512,7 @@ router.post("/gebouwen/:id/emails", beheerderPlus, async (req, res) => {
 });
 
 // DELETE /gebouwen/:id/emails/:emailId
-router.delete("/gebouwen/:id/emails/:emailId", beheerderPlus, async (req, res) => {
+router.delete("/gebouwen/:id/emails/:emailId", beheerderPlus, async (req, res): Promise<void> => {
   try {
     const gebouwId = parseId(req.params.id);
     const emailId = parseId(req.params.emailId);

@@ -12,7 +12,7 @@ const router = Router();
 const lezen = requireBevoegdheid("offertes", 1);
 
 // GET /inkoop/overzicht — globaal cross-project inkoopbon overzicht
-router.get("/inkoop/overzicht", lezen, async (req, res) => {
+router.get("/inkoop/overzicht", lezen, async (req, res): Promise<void> => {
   try {
     const {
       status,

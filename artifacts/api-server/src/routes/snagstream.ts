@@ -56,7 +56,7 @@ async function mapRapport(r: typeof snagstreamRapportenTable.$inferSelect) {
 }
 
 // POST /snagstream/upload-url — presigned upload URL voor PDF
-router.post("/snagstream/upload-url", requireBevoegdheid("gebouwen", 1), async (req: Request, res: Response) => {
+router.post("/snagstream/upload-url", requireBevoegdheid("gebouwen", 1), async (req: Request, res: Response): Promise<void> => {
   const { bestandsnaam } = req.body as { bestandsnaam?: string };
   if (!bestandsnaam) { res.status(400).json({ error: "bestandsnaam is verplicht" }); return; }
   try {
@@ -69,7 +69,7 @@ router.post("/snagstream/upload-url", requireBevoegdheid("gebouwen", 1), async (
 });
 
 // GET /snagstream/rapporten — archief ophalen
-router.get("/snagstream/rapporten", requireBevoegdheid("gebouwen", 1), async (req: Request, res: Response) => {
+router.get("/snagstream/rapporten", requireBevoegdheid("gebouwen", 1), async (req: Request, res: Response): Promise<void> => {
   const rawGebouwId = req.query["gebouw_id"];
   const gebouwId = rawGebouwId ? parseInt(String(rawGebouwId), 10) : null;
   const rijen = await db
@@ -82,7 +82,7 @@ router.get("/snagstream/rapporten", requireBevoegdheid("gebouwen", 1), async (re
 });
 
 // POST /snagstream/rapporten — rapport toevoegen
-router.post("/snagstream/rapporten", requireBevoegdheid("gebouwen", 2), async (req: Request, res: Response) => {
+router.post("/snagstream/rapporten", requireBevoegdheid("gebouwen", 2), async (req: Request, res: Response): Promise<void> => {
   const { bestandsnaam, pdf_url, rapportdatum, opdrachtgever, project_naam, gebouw_id } = req.body as {
     bestandsnaam?: string; pdf_url?: string; rapportdatum?: string; opdrachtgever?: string;
     project_naam?: string; gebouw_id?: number;
@@ -102,7 +102,7 @@ router.post("/snagstream/rapporten", requireBevoegdheid("gebouwen", 2), async (r
 });
 
 // GET /snagstream/rapporten/:id — detail
-router.get("/snagstream/rapporten/:id", requireBevoegdheid("gebouwen", 1), async (req: Request, res: Response) => {
+router.get("/snagstream/rapporten/:id", requireBevoegdheid("gebouwen", 1), async (req: Request, res: Response): Promise<void> => {
   const id = paramInt(req.params["id"]);
   const [rij] = await db.select().from(snagstreamRapportenTable).where(eq(snagstreamRapportenTable.id, id)).limit(1);
   if (!rij) { res.status(404).json({ error: "Niet gevonden" }); return; }
@@ -110,7 +110,7 @@ router.get("/snagstream/rapporten/:id", requireBevoegdheid("gebouwen", 1), async
 });
 
 // PATCH /snagstream/rapporten/:id — koppelen / status bijwerken
-router.patch("/snagstream/rapporten/:id", requireBevoegdheid("gebouwen", 2), async (req: Request, res: Response) => {
+router.patch("/snagstream/rapporten/:id", requireBevoegdheid("gebouwen", 2), async (req: Request, res: Response): Promise<void> => {
   const id = paramInt(req.params["id"]);
   const { gebouw_id, status, rapportdatum, opdrachtgever, project_naam } = req.body as {
     gebouw_id?: number | null; status?: string; rapportdatum?: string; opdrachtgever?: string; project_naam?: string;
@@ -131,14 +131,14 @@ router.patch("/snagstream/rapporten/:id", requireBevoegdheid("gebouwen", 2), asy
 });
 
 // DELETE /snagstream/rapporten/:id
-router.delete("/snagstream/rapporten/:id", requireBevoegdheid("gebouwen", 2), async (req: Request, res: Response) => {
+router.delete("/snagstream/rapporten/:id", requireBevoegdheid("gebouwen", 2), async (req: Request, res: Response): Promise<void> => {
   const id = paramInt(req.params["id"]);
   await db.delete(snagstreamRapportenTable).where(eq(snagstreamRapportenTable.id, id));
   res.status(204).send();
 });
 
 // POST /snagstream/rapporten/:id/ai-uitlezen — AI analyseert de PDF
-router.post("/snagstream/rapporten/:id/ai-uitlezen", requireBevoegdheid("gebouwen", 2), async (req: Request, res: Response) => {
+router.post("/snagstream/rapporten/:id/ai-uitlezen", requireBevoegdheid("gebouwen", 2), async (req: Request, res: Response): Promise<void> => {
   const id = paramInt(req.params["id"]);
   const [rapport] = await db.select().from(snagstreamRapportenTable).where(eq(snagstreamRapportenTable.id, id)).limit(1);
   if (!rapport) { res.status(404).json({ error: "Niet gevonden" }); return; }
@@ -276,7 +276,7 @@ Zet per veld een confidence-score (0.0-1.0). Onzekere velden krijgen lage score 
 });
 
 // GET /snagstream/rapporten/:id/snags — snags ophalen
-router.get("/snagstream/rapporten/:id/snags", requireBevoegdheid("gebouwen", 1), async (req: Request, res: Response) => {
+router.get("/snagstream/rapporten/:id/snags", requireBevoegdheid("gebouwen", 1), async (req: Request, res: Response): Promise<void> => {
   const id = paramInt(req.params["id"]);
   const snags = await db
     .select()
@@ -303,7 +303,7 @@ router.get("/snagstream/rapporten/:id/snags", requireBevoegdheid("gebouwen", 1),
 });
 
 // POST /snagstream/snags/:id/overnemen — snag omzetten naar Connect-spot
-router.post("/snagstream/snags/:id/overnemen", requireBevoegdheid("gebouwen", 2), async (req: Request, res: Response) => {
+router.post("/snagstream/snags/:id/overnemen", requireBevoegdheid("gebouwen", 2), async (req: Request, res: Response): Promise<void> => {
   const snagId = paramInt(req.params["id"]);
   const [snag] = await db.select().from(snagstreamSnagsTable).where(eq(snagstreamSnagsTable.id, snagId)).limit(1);
   if (!snag) { res.status(404).json({ error: "Snag niet gevonden" }); return; }

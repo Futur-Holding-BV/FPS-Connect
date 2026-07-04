@@ -123,7 +123,7 @@ const mapMarkt = (m: typeof crmMarktintelligentieTable.$inferSelect) => ({
 });
 
 // ── DASHBOARD ────────────────────────────────────────────────────────────────
-router.get("/crm/dashboard", lezen, async (req, res) => {
+router.get("/crm/dashboard", lezen, async (req, res): Promise<void> => {
   try {
     const [
       organisaties,
@@ -173,7 +173,7 @@ router.get("/crm/dashboard", lezen, async (req, res) => {
 });
 
 // ── ORGANISATIES ─────────────────────────────────────────────────────────────
-router.get("/crm/klanten", lezen, async (req, res) => {
+router.get("/crm/klanten", lezen, async (req, res): Promise<void> => {
   try {
     const zoek = req.query.q ? String(req.query.q) : undefined;
     const type = req.query.type ? String(req.query.type) : undefined;
@@ -200,10 +200,10 @@ router.get("/crm/klanten", lezen, async (req, res) => {
   }
 });
 
-router.post("/crm/klanten", schrijven, async (req, res) => {
+router.post("/crm/klanten", schrijven, async (req, res): Promise<void> => {
   try {
     const { naam, type, kvk, adres, postcode, stad, regio, telefoon, email, website, linkedin_url, branche, status, relatie_status, voorkeur_fps_bedrijf, opmerkingen } = req.body;
-    if (!naam) return res.status(400).json({ error: "naam is verplicht" });
+    if (!naam) return void res.status(400).json({ error: "naam is verplicht" });
     const [k] = await db
       .insert(crmKlantenTable)
       .values({ naam, type: type || "overig", kvk, adres, postcode, stad, regio, telefoon, email, website, linkedinUrl: linkedin_url, branche, status: status || "prospect", relatieStatus: relatie_status || "onbekend", voorkeurFpsBedrijf: voorkeur_fps_bedrijf, opmerkingen })
@@ -215,7 +215,7 @@ router.post("/crm/klanten", schrijven, async (req, res) => {
   }
 });
 
-router.get("/crm/klanten/:id", lezen, async (req, res) => {
+router.get("/crm/klanten/:id", lezen, async (req, res): Promise<void> => {
   try {
     const id = parseId(req.params.id);
     const [[k], contacten, kansen, markt] = await Promise.all([
@@ -224,7 +224,7 @@ router.get("/crm/klanten/:id", lezen, async (req, res) => {
       db.select().from(crmCommercieelTable).where(eq(crmCommercieelTable.klantId, id)).orderBy(desc(crmCommercieelTable.aangemaaktOp)),
       db.select().from(crmMarktintelligentieTable).where(eq(crmMarktintelligentieTable.organisatieId, id)).orderBy(desc(crmMarktintelligentieTable.aangemaaktOp)),
     ]);
-    if (!k) return res.status(404).json({ error: "Organisatie niet gevonden" });
+    if (!k) return void res.status(404).json({ error: "Organisatie niet gevonden" });
     res.json({ ...mapOrg(k), contactpersonen: contacten.map(mapContactpersoon), projectkansen: kansen.map(mapProjectkans), marktintelligentie: markt.map(mapMarkt) });
   } catch (err) {
     req.log.error(err);
@@ -232,7 +232,7 @@ router.get("/crm/klanten/:id", lezen, async (req, res) => {
   }
 });
 
-router.patch("/crm/klanten/:id", schrijven, async (req, res) => {
+router.patch("/crm/klanten/:id", schrijven, async (req, res): Promise<void> => {
   try {
     const { naam, type, kvk, adres, postcode, stad, regio, telefoon, email, website, linkedin_url, branche, status, relatie_status, voorkeur_fps_bedrijf, opmerkingen, voorkeurs_presentatie_niveau } = req.body;
     const [k] = await db
@@ -240,7 +240,7 @@ router.patch("/crm/klanten/:id", schrijven, async (req, res) => {
       .set({ naam, type, kvk, adres, postcode, stad, regio, telefoon, email, website, linkedinUrl: linkedin_url, branche, status, relatieStatus: relatie_status, voorkeurFpsBedrijf: voorkeur_fps_bedrijf, opmerkingen, ...(voorkeurs_presentatie_niveau !== undefined && { voorkeursPresentatieNiveau: voorkeurs_presentatie_niveau }), bijgewerktOp: new Date() })
       .where(eq(crmKlantenTable.id, parseId(req.params.id)))
       .returning();
-    if (!k) return res.status(404).json({ error: "Organisatie niet gevonden" });
+    if (!k) return void res.status(404).json({ error: "Organisatie niet gevonden" });
     res.json(mapOrg(k));
   } catch (err) {
     req.log.error(err);
@@ -248,7 +248,7 @@ router.patch("/crm/klanten/:id", schrijven, async (req, res) => {
   }
 });
 
-router.delete("/crm/klanten/:id", schrijven, async (req, res) => {
+router.delete("/crm/klanten/:id", schrijven, async (req, res): Promise<void> => {
   try {
     await db.delete(crmKlantenTable).where(eq(crmKlantenTable.id, parseId(req.params.id)));
     res.status(204).end();
@@ -259,7 +259,7 @@ router.delete("/crm/klanten/:id", schrijven, async (req, res) => {
 });
 
 // ── CONTACTPERSONEN ──────────────────────────────────────────────────────────
-router.get("/crm/klanten/:id/contactpersonen", lezen, async (req, res) => {
+router.get("/crm/klanten/:id/contactpersonen", lezen, async (req, res): Promise<void> => {
   try {
     const rijen = await db
       .select()
@@ -273,7 +273,7 @@ router.get("/crm/klanten/:id/contactpersonen", lezen, async (req, res) => {
   }
 });
 
-router.get("/crm/contactpersonen", lezen, async (req, res) => {
+router.get("/crm/contactpersonen", lezen, async (req, res): Promise<void> => {
   try {
     const zoek = req.query.q ? String(req.query.q) : undefined;
     let rijen = await db.select().from(crmContactpersonenTable).orderBy(crmContactpersonenTable.naam);
@@ -292,10 +292,10 @@ router.get("/crm/contactpersonen", lezen, async (req, res) => {
   }
 });
 
-router.post("/crm/klanten/:id/contactpersonen", schrijven, async (req, res) => {
+router.post("/crm/klanten/:id/contactpersonen", schrijven, async (req, res): Promise<void> => {
   try {
     const { naam, functie, email, telefoon, mobiel, linkedin_url, beslisrol, relatiesterkte, primair, opmerkingen, laatste_contact_datum, volgende_actie } = req.body;
-    if (!naam) return res.status(400).json({ error: "naam is verplicht" });
+    if (!naam) return void res.status(400).json({ error: "naam is verplicht" });
     const [c] = await db
       .insert(crmContactpersonenTable)
       .values({ klantId: parseId(req.params.id), naam, functie, email, telefoon, mobiel, linkedinUrl: linkedin_url, beslisrol: beslisrol || "onbekend", relatiesterkte: relatiesterkte || "onbekend", primair: primair ?? false, opmerkingen, laatste_contact_datum, volgende_actie })
@@ -307,7 +307,7 @@ router.post("/crm/klanten/:id/contactpersonen", schrijven, async (req, res) => {
   }
 });
 
-router.patch("/crm/contactpersonen/:id", schrijven, async (req, res) => {
+router.patch("/crm/contactpersonen/:id", schrijven, async (req, res): Promise<void> => {
   try {
     const { naam, functie, email, telefoon, mobiel, linkedin_url, beslisrol, relatiesterkte, primair, opmerkingen, laatste_contact_datum, volgende_actie } = req.body;
     const [c] = await db
@@ -315,7 +315,7 @@ router.patch("/crm/contactpersonen/:id", schrijven, async (req, res) => {
       .set({ naam, functie, email, telefoon, mobiel, linkedinUrl: linkedin_url, beslisrol, relatiesterkte, primair, opmerkingen, laatste_contact_datum, volgende_actie, bijgewerktOp: new Date() })
       .where(eq(crmContactpersonenTable.id, parseId(req.params.id)))
       .returning();
-    if (!c) return res.status(404).json({ error: "Contactpersoon niet gevonden" });
+    if (!c) return void res.status(404).json({ error: "Contactpersoon niet gevonden" });
     res.json(mapContactpersoon(c));
   } catch (err) {
     req.log.error(err);
@@ -323,7 +323,7 @@ router.patch("/crm/contactpersonen/:id", schrijven, async (req, res) => {
   }
 });
 
-router.delete("/crm/contactpersonen/:id", schrijven, async (req, res) => {
+router.delete("/crm/contactpersonen/:id", schrijven, async (req, res): Promise<void> => {
   try {
     await db.delete(crmContactpersonenTable).where(eq(crmContactpersonenTable.id, parseId(req.params.id)));
     res.status(204).end();
@@ -334,7 +334,7 @@ router.delete("/crm/contactpersonen/:id", schrijven, async (req, res) => {
 });
 
 // ── PROJECTKANSEN ─────────────────────────────────────────────────────────────
-router.get("/crm/projectkansen", lezen, async (req, res) => {
+router.get("/crm/projectkansen", lezen, async (req, res): Promise<void> => {
   try {
     const fase = req.query.fase ? String(req.query.fase) : undefined;
     const klantId = req.query.klant_id ? parseId(req.query.klant_id) : undefined;
@@ -356,10 +356,10 @@ router.get("/crm/projectkansen", lezen, async (req, res) => {
   }
 });
 
-router.post("/crm/projectkansen", schrijven, async (req, res) => {
+router.post("/crm/projectkansen", schrijven, async (req, res): Promise<void> => {
   try {
     const { klant_id, gebouw_id, titel, kans_type, fase, waarde, kans, verwachte_datum, verantwoordelijke_id, concurrenten_betrokken, volgende_actie, opmerkingen } = req.body;
-    if (!klant_id || !titel) return res.status(400).json({ error: "klant_id en titel zijn verplicht" });
+    if (!klant_id || !titel) return void res.status(400).json({ error: "klant_id en titel zijn verplicht" });
     const [k] = await db
       .insert(crmCommercieelTable)
       .values({ klantId: parseId(klant_id), gebouwId: gebouw_id ? parseId(gebouw_id) : null, titel, kansType: kans_type || "offerte", fase: fase || "signaal", waarde, kans: kans ?? 50, verwachteDatum: verwachte_datum, verantwoordelijkeId: verantwoordelijke_id ? parseId(verantwoordelijke_id) : null, concurrentenBetrokken: concurrenten_betrokken, volgendeActie: volgende_actie, opmerkingen })
@@ -371,10 +371,10 @@ router.post("/crm/projectkansen", schrijven, async (req, res) => {
   }
 });
 
-router.get("/crm/projectkansen/:id", lezen, async (req, res) => {
+router.get("/crm/projectkansen/:id", lezen, async (req, res): Promise<void> => {
   try {
     const [k] = await db.select().from(crmCommercieelTable).where(eq(crmCommercieelTable.id, parseId(req.params.id)));
-    if (!k) return res.status(404).json({ error: "Projectkans niet gevonden" });
+    if (!k) return void res.status(404).json({ error: "Projectkans niet gevonden" });
     res.json(mapProjectkans(k));
   } catch (err) {
     req.log.error(err);
@@ -382,7 +382,7 @@ router.get("/crm/projectkansen/:id", lezen, async (req, res) => {
   }
 });
 
-router.patch("/crm/projectkansen/:id", schrijven, async (req, res) => {
+router.patch("/crm/projectkansen/:id", schrijven, async (req, res): Promise<void> => {
   try {
     const { titel, kans_type, fase, waarde, kans, verwachte_datum, verantwoordelijke_id, concurrenten_betrokken, volgende_actie, ai_samenvatting, opmerkingen } = req.body;
     const [k] = await db
@@ -390,7 +390,7 @@ router.patch("/crm/projectkansen/:id", schrijven, async (req, res) => {
       .set({ titel, kansType: kans_type, fase, waarde, kans, verwachteDatum: verwachte_datum, verantwoordelijkeId: verantwoordelijke_id ? parseId(verantwoordelijke_id) : undefined, concurrentenBetrokken: concurrenten_betrokken, volgendeActie: volgende_actie, aiSamenvatting: ai_samenvatting, opmerkingen, bijgewerktOp: new Date() })
       .where(eq(crmCommercieelTable.id, parseId(req.params.id)))
       .returning();
-    if (!k) return res.status(404).json({ error: "Projectkans niet gevonden" });
+    if (!k) return void res.status(404).json({ error: "Projectkans niet gevonden" });
     res.json(mapProjectkans(k));
   } catch (err) {
     req.log.error(err);
@@ -398,7 +398,7 @@ router.patch("/crm/projectkansen/:id", schrijven, async (req, res) => {
   }
 });
 
-router.delete("/crm/projectkansen/:id", schrijven, async (req, res) => {
+router.delete("/crm/projectkansen/:id", schrijven, async (req, res): Promise<void> => {
   try {
     await db.delete(crmCommercieelTable).where(eq(crmCommercieelTable.id, parseId(req.params.id)));
     res.status(204).end();
@@ -409,7 +409,7 @@ router.delete("/crm/projectkansen/:id", schrijven, async (req, res) => {
 });
 
 // ── CONCURRENTEN ─────────────────────────────────────────────────────────────
-router.get("/crm/concurrenten", lezen, async (req, res) => {
+router.get("/crm/concurrenten", lezen, async (req, res): Promise<void> => {
   try {
     const rijen = await db.select().from(crmConcurrentenTable).orderBy(crmConcurrentenTable.naam);
     res.json(rijen.map(mapConcurrent));
@@ -419,10 +419,10 @@ router.get("/crm/concurrenten", lezen, async (req, res) => {
   }
 });
 
-router.post("/crm/concurrenten", schrijven, async (req, res) => {
+router.post("/crm/concurrenten", schrijven, async (req, res): Promise<void> => {
   try {
     const { naam, website, linkedin_url, regio, bekende_klanten, bekende_projecttypes, sterke_punten, zwakke_punten, where_we_encounter, opmerkingen } = req.body;
-    if (!naam) return res.status(400).json({ error: "naam is verplicht" });
+    if (!naam) return void res.status(400).json({ error: "naam is verplicht" });
     const [c] = await db
       .insert(crmConcurrentenTable)
       .values({ naam, website, linkedinUrl: linkedin_url, regio, bekende_klanten, bekende_projecttypes, sterke_punten, zwakke_punten, where_we_encounter, opmerkingen })
@@ -434,10 +434,10 @@ router.post("/crm/concurrenten", schrijven, async (req, res) => {
   }
 });
 
-router.get("/crm/concurrenten/:id", lezen, async (req, res) => {
+router.get("/crm/concurrenten/:id", lezen, async (req, res): Promise<void> => {
   try {
     const [c] = await db.select().from(crmConcurrentenTable).where(eq(crmConcurrentenTable.id, parseId(req.params.id)));
-    if (!c) return res.status(404).json({ error: "Concurrent niet gevonden" });
+    if (!c) return void res.status(404).json({ error: "Concurrent niet gevonden" });
     res.json(mapConcurrent(c));
   } catch (err) {
     req.log.error(err);
@@ -445,7 +445,7 @@ router.get("/crm/concurrenten/:id", lezen, async (req, res) => {
   }
 });
 
-router.patch("/crm/concurrenten/:id", schrijven, async (req, res) => {
+router.patch("/crm/concurrenten/:id", schrijven, async (req, res): Promise<void> => {
   try {
     const { naam, website, linkedin_url, regio, bekende_klanten, bekende_projecttypes, sterke_punten, zwakke_punten, where_we_encounter, opmerkingen, ai_samenvatting } = req.body;
     const [c] = await db
@@ -453,7 +453,7 @@ router.patch("/crm/concurrenten/:id", schrijven, async (req, res) => {
       .set({ naam, website, linkedinUrl: linkedin_url, regio, bekende_klanten, bekende_projecttypes, sterke_punten, zwakke_punten, where_we_encounter, opmerkingen, aiSamenvatting: ai_samenvatting, bijgewerktOp: new Date() })
       .where(eq(crmConcurrentenTable.id, parseId(req.params.id)))
       .returning();
-    if (!c) return res.status(404).json({ error: "Concurrent niet gevonden" });
+    if (!c) return void res.status(404).json({ error: "Concurrent niet gevonden" });
     res.json(mapConcurrent(c));
   } catch (err) {
     req.log.error(err);
@@ -461,7 +461,7 @@ router.patch("/crm/concurrenten/:id", schrijven, async (req, res) => {
   }
 });
 
-router.delete("/crm/concurrenten/:id", schrijven, async (req, res) => {
+router.delete("/crm/concurrenten/:id", schrijven, async (req, res): Promise<void> => {
   try {
     await db.delete(crmConcurrentenTable).where(eq(crmConcurrentenTable.id, parseId(req.params.id)));
     res.status(204).end();
@@ -472,10 +472,10 @@ router.delete("/crm/concurrenten/:id", schrijven, async (req, res) => {
 });
 
 // ── AI — Concurrent profiel ───────────────────────────────────────────────────
-router.post("/crm/concurrenten/ai-profiel", lezen, async (req, res) => {
-  if (!heeftGateway()) return res.status(503).json({ error: "AI niet geconfigureerd" });
+router.post("/crm/concurrenten/ai-profiel", lezen, async (req, res): Promise<void> => {
+  if (!heeftGateway()) return void res.status(503).json({ error: "AI niet geconfigureerd" });
   const { naam } = req.body;
-  if (!naam?.trim()) return res.status(400).json({ error: "naam is verplicht" });
+  if (!naam?.trim()) return void res.status(400).json({ error: "naam is verplicht" });
 
   const systeemPrompt =
     "Je bent een marktintelligentie-assistent voor een Nederlands brandpreventiebedrijf. " +
@@ -498,7 +498,7 @@ router.post("/crm/concurrenten/ai-profiel", lezen, async (req, res) => {
   if (webResultaatProfiel.ok) {
     let data: Record<string, string | null> = {};
     try { data = JSON.parse(webResultaatProfiel.inhoud) as Record<string, string | null>; } catch { data = {}; }
-    return res.json({ velden: data });
+    return void res.json({ velden: data });
   }
   req.log.warn({ fout: webResultaatProfiel.fout }, "Web search niet beschikbaar voor ai-profiel, fallback naar kennismodel");
 
@@ -523,7 +523,7 @@ router.post("/crm/concurrenten/ai-profiel", lezen, async (req, res) => {
 });
 
 // ── MARKTINTELLIGENTIE ────────────────────────────────────────────────────────
-router.get("/crm/marktintelligentie", lezen, async (req, res) => {
+router.get("/crm/marktintelligentie", lezen, async (req, res): Promise<void> => {
   try {
     const rijen = await db.select().from(crmMarktintelligentieTable).orderBy(desc(crmMarktintelligentieTable.aangemaaktOp));
     res.json(rijen.map(mapMarkt));
@@ -533,8 +533,8 @@ router.get("/crm/marktintelligentie", lezen, async (req, res) => {
   }
 });
 
-router.post("/crm/marktintelligentie/ai-scan", lezen, async (req, res) => {
-  if (!heeftGateway()) return res.status(503).json({ error: "AI niet beschikbaar" });
+router.post("/crm/marktintelligentie/ai-scan", lezen, async (req, res): Promise<void> => {
+  if (!heeftGateway()) return void res.status(503).json({ error: "AI niet beschikbaar" });
   const vandaag = new Date().toISOString().slice(0, 10);
 
   const systeemPrompt = `Je bent een marktintelligentie-assistent voor FPS Brandpreventie, een Nederlands bedrijf gespecialiseerd in brandveiligheid en brandpreventieve voorzieningen (branddeuren, doorvoeringen, brandkleppen, coating, manchetten). Vandaag is het ${vandaag}. Genereer realistische marktinformatie op basis van actuele trends in brandpreventie, bouw en utiliteit in Nederland.`;
@@ -561,7 +561,7 @@ Retourneer ALLEEN valide JSON zonder extra toelichting:
   if (webResultaatScan.ok) {
     try {
       const parsed = JSON.parse(webResultaatScan.inhoud);
-      return res.json(parsed.signalen ?? []);
+      return void res.json(parsed.signalen ?? []);
     } catch {
       req.log.warn("Web search JSON niet parseerbaar, fallback naar kennismodel");
     }
@@ -588,7 +588,7 @@ Retourneer ALLEEN valide JSON zonder extra toelichting:
   }
 });
 
-router.get("/crm/scout/status", lezen, async (req, res) => {
+router.get("/crm/scout/status", lezen, async (req, res): Promise<void> => {
   try {
     const status = await getScoutStatus();
     res.json(status);
@@ -598,8 +598,8 @@ router.get("/crm/scout/status", lezen, async (req, res) => {
   }
 });
 
-router.post("/crm/scout/start", schrijven, async (req, res) => {
-  if (!heeftGateway()) return res.status(503).json({ error: "AI niet beschikbaar" });
+router.post("/crm/scout/start", schrijven, async (req, res): Promise<void> => {
+  if (!heeftGateway()) return void res.status(503).json({ error: "AI niet beschikbaar" });
   try {
     voerScoutUit().catch((err) => req.log.error({ err }, "Scout fout (achtergrond)"));
     const status = await getScoutStatus();
@@ -610,10 +610,10 @@ router.post("/crm/scout/start", schrijven, async (req, res) => {
   }
 });
 
-router.post("/crm/marktintelligentie", schrijven, async (req, res) => {
+router.post("/crm/marktintelligentie", schrijven, async (req, res): Promise<void> => {
   try {
     const { type, organisatie_id, concurrent_id, titel, inhoud, bron, regio, datum } = req.body;
-    if (!titel) return res.status(400).json({ error: "titel is verplicht" });
+    if (!titel) return void res.status(400).json({ error: "titel is verplicht" });
     const gebruikerId = req.session.userId ?? null;
     const [m] = await db
       .insert(crmMarktintelligentieTable)
@@ -626,7 +626,7 @@ router.post("/crm/marktintelligentie", schrijven, async (req, res) => {
   }
 });
 
-router.patch("/crm/marktintelligentie/:id", schrijven, async (req, res) => {
+router.patch("/crm/marktintelligentie/:id", schrijven, async (req, res): Promise<void> => {
   try {
     const { type, organisatie_id, concurrent_id, titel, inhoud, bron, regio, datum } = req.body;
     const [m] = await db
@@ -634,7 +634,7 @@ router.patch("/crm/marktintelligentie/:id", schrijven, async (req, res) => {
       .set({ type, organisatieId: organisatie_id !== undefined ? (organisatie_id ? parseId(organisatie_id) : null) : undefined, concurrentId: concurrent_id !== undefined ? (concurrent_id ? parseId(concurrent_id) : null) : undefined, titel, inhoud, bron, regio, datum, bijgewerktOp: new Date() })
       .where(eq(crmMarktintelligentieTable.id, parseId(req.params.id)))
       .returning();
-    if (!m) return res.status(404).json({ error: "Marktinformatie niet gevonden" });
+    if (!m) return void res.status(404).json({ error: "Marktinformatie niet gevonden" });
     res.json(mapMarkt(m));
   } catch (err) {
     req.log.error(err);
@@ -642,7 +642,7 @@ router.patch("/crm/marktintelligentie/:id", schrijven, async (req, res) => {
   }
 });
 
-router.delete("/crm/marktintelligentie/:id", schrijven, async (req, res) => {
+router.delete("/crm/marktintelligentie/:id", schrijven, async (req, res): Promise<void> => {
   try {
     await db.delete(crmMarktintelligentieTable).where(eq(crmMarktintelligentieTable.id, parseId(req.params.id)));
     res.status(204).end();
@@ -653,7 +653,7 @@ router.delete("/crm/marktintelligentie/:id", schrijven, async (req, res) => {
 });
 
 // ── COMMUNICATIE ──────────────────────────────────────────────────────────────
-router.get("/crm/klanten/:id/communicatie", lezen, async (req, res) => {
+router.get("/crm/klanten/:id/communicatie", lezen, async (req, res): Promise<void> => {
   try {
     const rijen = await db
       .select()
@@ -670,10 +670,10 @@ router.get("/crm/klanten/:id/communicatie", lezen, async (req, res) => {
   }
 });
 
-router.post("/crm/klanten/:id/communicatie", schrijven, async (req, res) => {
+router.post("/crm/klanten/:id/communicatie", schrijven, async (req, res): Promise<void> => {
   try {
     const { contactpersoon_id, type, onderwerp, inhoud, datum } = req.body;
-    if (!onderwerp) return res.status(400).json({ error: "onderwerp is verplicht" });
+    if (!onderwerp) return void res.status(400).json({ error: "onderwerp is verplicht" });
     const gebruikerId = req.session.userId ?? null;
     const [c] = await db
       .insert(crmCommunicatieTable)
@@ -687,14 +687,14 @@ router.post("/crm/klanten/:id/communicatie", schrijven, async (req, res) => {
 });
 
 // ── AI COACH ──────────────────────────────────────────────────────────────────
-router.post("/crm/ai-coach", lezen, async (req, res) => {
+router.post("/crm/ai-coach", lezen, async (req, res): Promise<void> => {
   const { scherm, klant_id, context: extraContext } = req.body as {
     scherm?: string;
     klant_id?: number | null;
     context?: Record<string, unknown>;
   };
 
-  if (!scherm) return res.status(400).json({ error: "scherm is verplicht" });
+  if (!scherm) return void res.status(400).json({ error: "scherm is verplicht" });
 
   let orgContext = "";
 
@@ -754,7 +754,7 @@ Opmerkingen: ${klant.opmerkingen ?? "geen"}
   };
 
   if (!heeftGateway()) {
-    return res.json(fallback);
+    return void res.json(fallback);
   }
 
   const systeemPrompt = `Je bent een ervaren commercieel coach voor FPS Brandpreventie, een bedrijf dat brandpreventieve voorzieningen (branddeur, doorvoering, manchet, coating, brandklep) installeert en onderhoudt.

@@ -24,7 +24,7 @@ const mapAbonnement = (a: typeof abonnementenTable.$inferSelect) => ({
 });
 
 // GET /abonnementen
-router.get("/abonnementen", lezenAbonnementen, async (req, res) => {
+router.get("/abonnementen", lezenAbonnementen, async (req, res): Promise<void> => {
   try {
     const abonnementen = await db.select().from(abonnementenTable);
     res.json(abonnementen.map(mapAbonnement));
@@ -35,11 +35,11 @@ router.get("/abonnementen", lezenAbonnementen, async (req, res) => {
 });
 
 // POST /abonnementen
-router.post("/abonnementen", requireBevoegdheid("abonnementen", 3), async (req, res) => {
+router.post("/abonnementen", requireBevoegdheid("abonnementen", 3), async (req, res): Promise<void> => {
   try {
     const { naam, niveau, prijs_per_maand, max_gebouwen, max_gebruikers, functies, klant_naam, klant_email, start_datum, eind_datum } = req.body;
     if (!naam || !niveau) {
-      return res.status(400).json({ error: "naam en niveau zijn verplicht" });
+      return void res.status(400).json({ error: "naam en niveau zijn verplicht" });
     }
     const [a] = await db
       .insert(abonnementenTable)
@@ -64,11 +64,11 @@ router.post("/abonnementen", requireBevoegdheid("abonnementen", 3), async (req, 
 });
 
 // GET /abonnementen/:id
-router.get("/abonnementen/:id", lezenAbonnementen, async (req, res) => {
+router.get("/abonnementen/:id", lezenAbonnementen, async (req, res): Promise<void> => {
   try {
     const id = parseInt(String(req.params.id));
     const [a] = await db.select().from(abonnementenTable).where(eq(abonnementenTable.id, id));
-    if (!a) return res.status(404).json({ error: "Abonnement niet gevonden" });
+    if (!a) return void res.status(404).json({ error: "Abonnement niet gevonden" });
     res.json(mapAbonnement(a));
   } catch (err) {
     req.log.error(err);
@@ -77,7 +77,7 @@ router.get("/abonnementen/:id", lezenAbonnementen, async (req, res) => {
 });
 
 // PATCH /abonnementen/:id
-router.patch("/abonnementen/:id", requireBevoegdheid("abonnementen", 2), async (req, res) => {
+router.patch("/abonnementen/:id", requireBevoegdheid("abonnementen", 2), async (req, res): Promise<void> => {
   try {
     const id = parseInt(String(req.params.id));
     const { naam, niveau, prijs_per_maand, max_gebouwen, max_gebruikers, functies, klant_naam, klant_email, start_datum, eind_datum, actief } = req.body;
@@ -99,7 +99,7 @@ router.patch("/abonnementen/:id", requireBevoegdheid("abonnementen", 2), async (
       })
       .where(eq(abonnementenTable.id, id))
       .returning();
-    if (!a) return res.status(404).json({ error: "Abonnement niet gevonden" });
+    if (!a) return void res.status(404).json({ error: "Abonnement niet gevonden" });
     res.json(mapAbonnement(a));
   } catch (err) {
     req.log.error(err);

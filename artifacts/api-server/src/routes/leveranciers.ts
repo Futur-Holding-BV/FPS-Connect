@@ -12,7 +12,7 @@ const aanmaken = requireBevoegdheid("magazijn", 3);
 const beheer   = requireBevoegdheid("magazijn", 4);
 
 // ── GET /leveranciers ──────────────────────────────────────────────────────────
-router.get("/leveranciers", lezen, async (req, res) => {
+router.get("/leveranciers", lezen, async (req, res): Promise<void> => {
   try {
     const { zoek, actief, categorie } = req.query as Record<string, string | undefined>;
 
@@ -35,11 +35,11 @@ router.get("/leveranciers", lezen, async (req, res) => {
 });
 
 // ── POST /leveranciers ─────────────────────────────────────────────────────────
-router.post("/leveranciers", aanmaken, async (req, res) => {
+router.post("/leveranciers", aanmaken, async (req, res): Promise<void> => {
   try {
     const body = req.body as Record<string, unknown>;
     const naam = String(body.naam ?? "").trim();
-    if (!naam) return res.status(422).json({ error: "Naam is verplicht" });
+    if (!naam) return void res.status(422).json({ error: "Naam is verplicht" });
 
     const [nieuw] = await db
       .insert(leveranciersTable)
@@ -54,11 +54,11 @@ router.post("/leveranciers", aanmaken, async (req, res) => {
 });
 
 // ── GET /leveranciers/:id ──────────────────────────────────────────────────────
-router.get("/leveranciers/:id", lezen, async (req, res) => {
+router.get("/leveranciers/:id", lezen, async (req, res): Promise<void> => {
   try {
     const id = Number(req.params.id);
     const [rij] = await db.select().from(leveranciersTable).where(eq(leveranciersTable.id, id)).limit(1);
-    if (!rij) return res.status(404).json({ error: "Leverancier niet gevonden" });
+    if (!rij) return void res.status(404).json({ error: "Leverancier niet gevonden" });
     res.json(mapLeverancier(rij));
   } catch (err) {
     req.log.error({ err }, "leverancier ophalen mislukt");
@@ -67,7 +67,7 @@ router.get("/leveranciers/:id", lezen, async (req, res) => {
 });
 
 // ── PATCH /leveranciers/:id ────────────────────────────────────────────────────
-router.patch("/leveranciers/:id", schrijven, async (req, res) => {
+router.patch("/leveranciers/:id", schrijven, async (req, res): Promise<void> => {
   try {
     const id = Number(req.params.id);
     const body = req.body as Record<string, unknown>;
@@ -78,7 +78,7 @@ router.patch("/leveranciers/:id", schrijven, async (req, res) => {
       .where(eq(leveranciersTable.id, id))
       .returning();
 
-    if (!bijgewerkt) return res.status(404).json({ error: "Leverancier niet gevonden" });
+    if (!bijgewerkt) return void res.status(404).json({ error: "Leverancier niet gevonden" });
     res.json(mapLeverancier(bijgewerkt));
   } catch (err) {
     req.log.error({ err }, "leverancier bijwerken mislukt");
@@ -87,7 +87,7 @@ router.patch("/leveranciers/:id", schrijven, async (req, res) => {
 });
 
 // ── DELETE /leveranciers/:id ───────────────────────────────────────────────────
-router.delete("/leveranciers/:id", beheer, async (req, res) => {
+router.delete("/leveranciers/:id", beheer, async (req, res): Promise<void> => {
   try {
     const id = Number(req.params.id);
     await db.delete(leveranciersTable).where(eq(leveranciersTable.id, id));
@@ -99,7 +99,7 @@ router.delete("/leveranciers/:id", beheer, async (req, res) => {
 });
 
 // ── GET /leveranciers/:id/artikelen ───────────────────────────────────────────
-router.get("/leveranciers/:id/artikelen", lezen, async (req, res) => {
+router.get("/leveranciers/:id/artikelen", lezen, async (req, res): Promise<void> => {
   try {
     const id = Number(req.params.id);
     const rijen = await db

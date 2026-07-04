@@ -31,7 +31,7 @@ function parseId(v: unknown): number {
 }
 
 // ── Dossiers ────────────────────────────────────────────────────────────────
-router.get("/dossiers", lezen, async (req, res) => {
+router.get("/dossiers", lezen, async (req, res): Promise<void> => {
   try {
     const rijen = await db
       .select({ d: dossiersTable, gebouwNaam: gebouwenTable.naam, aangemaaktDoorNaam: gebruikersTable.naam })
@@ -90,10 +90,10 @@ async function dossierNaarJson(d: typeof dossiersTable.$inferSelect) {
   };
 }
 
-router.post("/dossiers", schrijven, async (req, res) => {
+router.post("/dossiers", schrijven, async (req, res): Promise<void> => {
   try {
     const { naam, type, gebouw_id, omschrijving, status } = req.body;
-    if (!naam) return res.status(400).json({ error: "naam is verplicht" });
+    if (!naam) return void res.status(400).json({ error: "naam is verplicht" });
     const [d] = await db
       .insert(dossiersTable)
       .values({
@@ -118,10 +118,10 @@ router.post("/dossiers", schrijven, async (req, res) => {
   }
 });
 
-router.get("/dossiers/:id", lezen, async (req, res) => {
+router.get("/dossiers/:id", lezen, async (req, res): Promise<void> => {
   try {
     const [d] = await db.select().from(dossiersTable).where(eq(dossiersTable.id, parseId(req.params.id)));
-    if (!d) return res.status(404).json({ error: "Dossier niet gevonden" });
+    if (!d) return void res.status(404).json({ error: "Dossier niet gevonden" });
     res.json(await dossierNaarJson(d));
   } catch (err) {
     req.log.error(err);
@@ -129,12 +129,12 @@ router.get("/dossiers/:id", lezen, async (req, res) => {
   }
 });
 
-router.patch("/dossiers/:id", schrijven, async (req, res) => {
+router.patch("/dossiers/:id", schrijven, async (req, res): Promise<void> => {
   try {
     const [bestaand] = await db.select().from(dossiersTable).where(eq(dossiersTable.id, parseId(req.params.id)));
-    if (!bestaand) return res.status(404).json({ error: "Dossier niet gevonden" });
+    if (!bestaand) return void res.status(404).json({ error: "Dossier niet gevonden" });
     if (bestaand.status === "definitief" || bestaand.status === "gearchiveerd") {
-      return res.status(409).json({ error: "Een definitief of gearchiveerd dossier kan niet meer worden gewijzigd." });
+      return void res.status(409).json({ error: "Een definitief of gearchiveerd dossier kan niet meer worden gewijzigd." });
     }
     const { naam, type, gebouw_id, omschrijving, status } = req.body;
     const [d] = await db
@@ -149,13 +149,13 @@ router.patch("/dossiers/:id", schrijven, async (req, res) => {
   }
 });
 
-router.post("/dossiers/:id/definitief", schrijven, async (req, res) => {
+router.post("/dossiers/:id/definitief", schrijven, async (req, res): Promise<void> => {
   try {
     const id = parseId(req.params.id);
     const [bestaand] = await db.select().from(dossiersTable).where(eq(dossiersTable.id, id));
-    if (!bestaand) return res.status(404).json({ error: "Dossier niet gevonden" });
+    if (!bestaand) return void res.status(404).json({ error: "Dossier niet gevonden" });
     if (bestaand.status === "gearchiveerd") {
-      return res.status(409).json({ error: "Een gearchiveerd dossier kan niet definitief worden gemaakt." });
+      return void res.status(409).json({ error: "Een gearchiveerd dossier kan niet definitief worden gemaakt." });
     }
     // Bevriezing (V1.5): leg in één transactie de actuele revisie + PDF van elk
     // gekoppeld bibliotheekdocument vast, zodat latere revisies het definitieve
@@ -213,10 +213,10 @@ router.post("/dossiers/:id/definitief", schrijven, async (req, res) => {
   }
 });
 
-router.post("/dossiers/:id/archiveren", schrijven, async (req, res) => {
+router.post("/dossiers/:id/archiveren", schrijven, async (req, res): Promise<void> => {
   try {
     const [bestaand] = await db.select().from(dossiersTable).where(eq(dossiersTable.id, parseId(req.params.id)));
-    if (!bestaand) return res.status(404).json({ error: "Dossier niet gevonden" });
+    if (!bestaand) return void res.status(404).json({ error: "Dossier niet gevonden" });
     const [d] = await db
       .update(dossiersTable)
       .set({ status: "gearchiveerd", gearchiveerdOp: new Date(), bijgewerktOp: new Date() })
@@ -235,12 +235,12 @@ router.post("/dossiers/:id/archiveren", schrijven, async (req, res) => {
   }
 });
 
-router.delete("/dossiers/:id", schrijven, async (req, res) => {
+router.delete("/dossiers/:id", schrijven, async (req, res): Promise<void> => {
   try {
     const [bestaand] = await db.select().from(dossiersTable).where(eq(dossiersTable.id, parseId(req.params.id)));
-    if (!bestaand) return res.status(404).json({ error: "Dossier niet gevonden" });
+    if (!bestaand) return void res.status(404).json({ error: "Dossier niet gevonden" });
     if (bestaand.status === "definitief" || bestaand.status === "gearchiveerd") {
-      return res.status(409).json({ error: "Een definitief of gearchiveerd dossier kan niet worden verwijderd." });
+      return void res.status(409).json({ error: "Een definitief of gearchiveerd dossier kan niet worden verwijderd." });
     }
     await db.delete(dossiersTable).where(eq(dossiersTable.id, parseId(req.params.id)));
     res.status(204).send();
@@ -308,7 +308,7 @@ async function actueleRevisiePerDocument(
   return out;
 }
 
-router.get("/dossiers/:id/documenten", lezen, async (req, res) => {
+router.get("/dossiers/:id/documenten", lezen, async (req, res): Promise<void> => {
   try {
     const rijen = await db
       .select()
@@ -330,15 +330,15 @@ router.get("/dossiers/:id/documenten", lezen, async (req, res) => {
   }
 });
 
-router.post("/dossiers/:id/documenten", schrijven, async (req, res) => {
+router.post("/dossiers/:id/documenten", schrijven, async (req, res): Promise<void> => {
   try {
     const [dossier] = await db.select().from(dossiersTable).where(eq(dossiersTable.id, parseId(req.params.id)));
-    if (!dossier) return res.status(404).json({ error: "Dossier niet gevonden" });
+    if (!dossier) return void res.status(404).json({ error: "Dossier niet gevonden" });
     if (dossier.status === "definitief" || dossier.status === "gearchiveerd") {
-      return res.status(409).json({ error: "Aan een definitief of gearchiveerd dossier kunnen geen documenten worden toegevoegd." });
+      return void res.status(409).json({ error: "Aan een definitief of gearchiveerd dossier kunnen geen documenten worden toegevoegd." });
     }
     const { naam, document_id, bestand_url, categorie, status, versie } = req.body;
-    if (!naam) return res.status(400).json({ error: "naam is verplicht" });
+    if (!naam) return void res.status(400).json({ error: "naam is verplicht" });
     const [x] = await db
       .insert(dossierDocumentenTable)
       .values({
@@ -362,14 +362,14 @@ router.post("/dossiers/:id/documenten", schrijven, async (req, res) => {
   }
 });
 
-router.patch("/dossier-documenten/:id", schrijven, async (req, res) => {
+router.patch("/dossier-documenten/:id", schrijven, async (req, res): Promise<void> => {
   try {
     const ddId = parseId(req.params.id);
     const [bestaand] = await db
       .select()
       .from(dossierDocumentenTable)
       .where(eq(dossierDocumentenTable.id, ddId));
-    if (!bestaand) return res.status(404).json({ error: "Dossierdocument niet gevonden" });
+    if (!bestaand) return void res.status(404).json({ error: "Dossierdocument niet gevonden" });
     // Bevriezing afdwingen: documenten van een definitief/gearchiveerd dossier
     // mogen niet meer wijzigen (niet alleen in de UI, ook server-side).
     const [dossier] = await db
@@ -377,7 +377,7 @@ router.patch("/dossier-documenten/:id", schrijven, async (req, res) => {
       .from(dossiersTable)
       .where(eq(dossiersTable.id, bestaand.dossierId));
     if (dossier && (dossier.status === "definitief" || dossier.status === "gearchiveerd")) {
-      return res.status(409).json({
+      return void res.status(409).json({
         error: "Documenten van een definitief of gearchiveerd dossier kunnen niet worden gewijzigd.",
       });
     }
@@ -387,7 +387,7 @@ router.patch("/dossier-documenten/:id", schrijven, async (req, res) => {
       .set({ naam, documentId: document_id ?? null, bestandUrl: bestand_url, categorie, status, versie, bijgewerktOp: new Date() })
       .where(eq(dossierDocumentenTable.id, ddId))
       .returning();
-    if (!x) return res.status(404).json({ error: "Dossierdocument niet gevonden" });
+    if (!x) return void res.status(404).json({ error: "Dossierdocument niet gevonden" });
     const actueel = await actueleRevisiePerDocument([x.documentId]);
     res.json(
       mapDossierDocument(x, x.documentId != null ? (actueel.get(x.documentId) ?? null) : null),
@@ -398,20 +398,20 @@ router.patch("/dossier-documenten/:id", schrijven, async (req, res) => {
   }
 });
 
-router.delete("/dossier-documenten/:id", schrijven, async (req, res) => {
+router.delete("/dossier-documenten/:id", schrijven, async (req, res): Promise<void> => {
   try {
     const ddId = parseId(req.params.id);
     const [bestaand] = await db
       .select()
       .from(dossierDocumentenTable)
       .where(eq(dossierDocumentenTable.id, ddId));
-    if (!bestaand) return res.status(404).json({ error: "Dossierdocument niet gevonden" });
+    if (!bestaand) return void res.status(404).json({ error: "Dossierdocument niet gevonden" });
     const [dossier] = await db
       .select({ status: dossiersTable.status })
       .from(dossiersTable)
       .where(eq(dossiersTable.id, bestaand.dossierId));
     if (dossier && (dossier.status === "definitief" || dossier.status === "gearchiveerd")) {
-      return res.status(409).json({
+      return void res.status(409).json({
         error: "Documenten van een definitief of gearchiveerd dossier kunnen niet worden verwijderd.",
       });
     }

@@ -8,7 +8,7 @@ const router = Router();
 const TALEN = ["nl", "en", "de", "fr", "ar", "tr"] as const;
 
 // GET /uitnodiging/:token — token verifiëren en markeren als geopend (publiek)
-router.get("/uitnodiging/:token", async (req, res) => {
+router.get("/uitnodiging/:token", async (req, res): Promise<void> => {
   try {
     const { token } = req.params;
     const [g] = await db
@@ -17,13 +17,13 @@ router.get("/uitnodiging/:token", async (req, res) => {
       .where(eq(gebruikersTable.uitnodigingToken, token));
 
     if (!g) {
-      return res.status(404).json({ error: "Uitnodiging niet gevonden" });
+      return void res.status(404).json({ error: "Uitnodiging niet gevonden" });
     }
     if (g.uitnodigingStatus === "geaccepteerd") {
-      return res.status(409).json({ error: "Account is al geactiveerd" });
+      return void res.status(409).json({ error: "Account is al geactiveerd" });
     }
     if (g.uitnodigingVerlooptOp && g.uitnodigingVerlooptOp < new Date()) {
-      return res.status(410).json({ error: "Uitnodiging verlopen" });
+      return void res.status(410).json({ error: "Uitnodiging verlopen" });
     }
 
     if (!g.uitnodigingGeopendOp) {
@@ -41,19 +41,19 @@ router.get("/uitnodiging/:token", async (req, res) => {
 });
 
 // POST /uitnodiging/:token/activeren — wachtwoord + taal instellen, 2FA-setup starten (publiek)
-router.post("/uitnodiging/:token/activeren", async (req, res) => {
+router.post("/uitnodiging/:token/activeren", async (req, res): Promise<void> => {
   try {
     const { token } = req.params;
     const { wachtwoord, taal } = req.body ?? {};
 
     if (!wachtwoord || !taal) {
-      return res.status(400).json({ error: "Wachtwoord en taal zijn verplicht" });
+      return void res.status(400).json({ error: "Wachtwoord en taal zijn verplicht" });
     }
     if (String(wachtwoord).length < 8) {
-      return res.status(400).json({ error: "Wachtwoord moet minimaal 8 tekens bevatten" });
+      return void res.status(400).json({ error: "Wachtwoord moet minimaal 8 tekens bevatten" });
     }
     if (!TALEN.includes(taal as (typeof TALEN)[number])) {
-      return res.status(400).json({ error: "Ongeldige taalcode" });
+      return void res.status(400).json({ error: "Ongeldige taalcode" });
     }
 
     const [g] = await db
@@ -61,12 +61,12 @@ router.post("/uitnodiging/:token/activeren", async (req, res) => {
       .from(gebruikersTable)
       .where(eq(gebruikersTable.uitnodigingToken, token));
 
-    if (!g) return res.status(404).json({ error: "Uitnodiging niet gevonden" });
+    if (!g) return void res.status(404).json({ error: "Uitnodiging niet gevonden" });
     if (g.uitnodigingStatus === "geaccepteerd") {
-      return res.status(409).json({ error: "Account is al geactiveerd" });
+      return void res.status(409).json({ error: "Account is al geactiveerd" });
     }
     if (g.uitnodigingVerlooptOp && g.uitnodigingVerlooptOp < new Date()) {
-      return res.status(410).json({ error: "Uitnodiging verlopen" });
+      return void res.status(410).json({ error: "Uitnodiging verlopen" });
     }
 
     const gehasht = await bcrypt.hash(String(wachtwoord), 10);

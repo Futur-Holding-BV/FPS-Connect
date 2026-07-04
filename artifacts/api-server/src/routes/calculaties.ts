@@ -60,7 +60,7 @@ function mapRegel(r: typeof calculatieRegelsTable.$inferSelect) {
 
 // ── Calculaties ─────────────────────────────────────────────────────────────
 
-router.get("/calculaties", async (req, res) => {
+router.get("/calculaties", async (req, res): Promise<void> => {
   try {
     const rijen = await db
       .select({
@@ -100,7 +100,7 @@ router.get("/calculaties", async (req, res) => {
   }
 });
 
-router.post("/calculaties", async (req, res) => {
+router.post("/calculaties", async (req, res): Promise<void> => {
   try {
     const { naam, gebouw_id, status, omschrijving } = req.body as {
       naam: string;
@@ -130,7 +130,7 @@ router.post("/calculaties", async (req, res) => {
   }
 });
 
-router.get("/calculaties/:id", async (req, res) => {
+router.get("/calculaties/:id", async (req, res): Promise<void> => {
   try {
     const id = parseId(req.params.id);
     const [rij] = await db
@@ -167,7 +167,7 @@ router.get("/calculaties/:id", async (req, res) => {
   }
 });
 
-router.patch("/calculaties/:id", async (req, res) => {
+router.patch("/calculaties/:id", async (req, res): Promise<void> => {
   try {
     const id = parseId(req.params.id);
     const { naam, gebouw_id, status, omschrijving } = req.body as {
@@ -204,7 +204,7 @@ router.patch("/calculaties/:id", async (req, res) => {
   }
 });
 
-router.delete("/calculaties/:id", async (req, res) => {
+router.delete("/calculaties/:id", async (req, res): Promise<void> => {
   try {
     const id = parseId(req.params.id);
     await db.delete(calculatiesTable).where(eq(calculatiesTable.id, id));
@@ -217,7 +217,7 @@ router.delete("/calculaties/:id", async (req, res) => {
 
 // ── Regels ──────────────────────────────────────────────────────────────────
 
-router.get("/calculaties/:id/regels", async (req, res) => {
+router.get("/calculaties/:id/regels", async (req, res): Promise<void> => {
   try {
     const id = parseId(req.params.id);
     const regels = await db
@@ -232,7 +232,7 @@ router.get("/calculaties/:id/regels", async (req, res) => {
   }
 });
 
-router.post("/calculaties/:id/regels", async (req, res) => {
+router.post("/calculaties/:id/regels", async (req, res): Promise<void> => {
   try {
     const calculatieId = parseId(req.params.id);
     const { categorie, omschrijving, eenheid, hoeveelheid, stukprijs, volgorde, opmerkingen } =
@@ -273,7 +273,7 @@ router.post("/calculaties/:id/regels", async (req, res) => {
   }
 });
 
-router.patch("/calculaties/:id/regels/:regelId", async (req, res) => {
+router.patch("/calculaties/:id/regels/:regelId", async (req, res): Promise<void> => {
   try {
     const regelId = parseId(req.params.regelId);
     const { categorie, omschrijving, eenheid, hoeveelheid, stukprijs, volgorde, opmerkingen } =
@@ -318,7 +318,7 @@ router.patch("/calculaties/:id/regels/:regelId", async (req, res) => {
   }
 });
 
-router.delete("/calculaties/:id/regels/:regelId", async (req, res) => {
+router.delete("/calculaties/:id/regels/:regelId", async (req, res): Promise<void> => {
   try {
     const regelId = parseId(req.params.regelId);
     await db.delete(calculatieRegelsTable).where(eq(calculatieRegelsTable.id, regelId));
@@ -331,17 +331,17 @@ router.delete("/calculaties/:id/regels/:regelId", async (req, res) => {
 
 // POST /calculaties/:id/ai-regels — AI-gestuurde kostenregel-suggesties.
 // Mens bevestigt per regel; niets wordt automatisch opgeslagen.
-router.post("/calculaties/:id/ai-regels", requireAuth, async (req, res) => {
+router.post("/calculaties/:id/ai-regels", requireAuth, async (req, res): Promise<void> => {
   try {
     if (!heeftGateway()) {
-      return res.status(503).json({ error: "OpenAI niet beschikbaar" });
+      return void res.status(503).json({ error: "OpenAI niet beschikbaar" });
     }
     const calcId = parseId(req.params["id"]);
     const [calculatie] = await db
       .select()
       .from(calculatiesTable)
       .where(eq(calculatiesTable.id, calcId));
-    if (!calculatie) return res.status(404).json({ error: "Calculatie niet gevonden" });
+    if (!calculatie) return void res.status(404).json({ error: "Calculatie niet gevonden" });
 
     let gebouwNaam: string | null = null;
     let spotSamenvatting = "Nog geen voorzieningen geregistreerd.";

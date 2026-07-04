@@ -79,17 +79,17 @@ async function fetchAllNieuws(): Promise<NieuwsItem[]> {
 
 // ─── Route ────────────────────────────────────────────────────────────────────
 
-router.get("/nieuws", requireAuth, async (req, res) => {
+router.get("/nieuws", requireAuth, async (req, res): Promise<void> => {
   try {
     if (cache && cache.geldigTot > Date.now()) {
-      return res.json(cache.items);
+      return void res.json(cache.items);
     }
     const items = await fetchAllNieuws();
     cache = { items, geldigTot: Date.now() + CACHE_DUUR_MS };
-    return res.json(items);
+    return void res.json(items);
   } catch (err) {
     req.log.warn({ err }, "Nieuws ophalen mislukt");
-    return res.json([]);
+    return void res.json([]);
   }
 });
 

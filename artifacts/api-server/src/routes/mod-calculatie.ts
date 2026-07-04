@@ -202,7 +202,7 @@ function berekenRegelTotaal(body: Record<string, unknown>, existing?: {
 
 // ── Tarieven ───────────────────────────────────────────────────────────────
 
-router.get("/modules/calculaties/tarieven", lezenCalc, async (req, res) => {
+router.get("/modules/calculaties/tarieven", lezenCalc, async (req, res): Promise<void> => {
   try {
     const rows = await db.select().from(modCalcTarievenTable)
       .where(eq(modCalcTarievenTable.actief, true))
@@ -217,10 +217,10 @@ router.get("/modules/calculaties/tarieven", lezenCalc, async (req, res) => {
   }
 });
 
-router.post("/modules/calculaties/tarieven", schrijvenCalc, async (req, res) => {
+router.post("/modules/calculaties/tarieven", schrijvenCalc, async (req, res): Promise<void> => {
   try {
     const { naam, tarief, eenheid = "uur", categorie = "arbeid" } = req.body as Record<string, unknown>;
-    if (!naam) return res.status(400).json({ error: "naam is verplicht" });
+    if (!naam) return void res.status(400).json({ error: "naam is verplicht" });
     const [row] = await db.insert(modCalcTarievenTable).values({
       naam: String(naam), tarief: Number(tarief ?? 0), eenheid: String(eenheid), categorie: String(categorie),
     }).returning();
@@ -231,7 +231,7 @@ router.post("/modules/calculaties/tarieven", schrijvenCalc, async (req, res) => 
   }
 });
 
-router.patch("/modules/calculaties/tarieven/:id", schrijvenCalc, async (req, res) => {
+router.patch("/modules/calculaties/tarieven/:id", schrijvenCalc, async (req, res): Promise<void> => {
   try {
     const id = parseId(req.params["id"]);
     const body = req.body as Record<string, unknown>;
@@ -242,7 +242,7 @@ router.patch("/modules/calculaties/tarieven/:id", schrijvenCalc, async (req, res
     if (body.categorie !== undefined) update.categorie = String(body.categorie);
     if (body.actief !== undefined) update.actief = Boolean(body.actief);
     const [row] = await db.update(modCalcTarievenTable).set(update).where(eq(modCalcTarievenTable.id, id)).returning();
-    if (!row) return res.status(404).json({ error: "Niet gevonden" });
+    if (!row) return void res.status(404).json({ error: "Niet gevonden" });
     res.json({ id: row.id, naam: row.naam, tarief: row.tarief, eenheid: row.eenheid, categorie: row.categorie, actief: row.actief });
   } catch (e) {
     req.log.error(e);
@@ -250,7 +250,7 @@ router.patch("/modules/calculaties/tarieven/:id", schrijvenCalc, async (req, res
   }
 });
 
-router.delete("/modules/calculaties/tarieven/:id", verwijderenCalc, async (req, res) => {
+router.delete("/modules/calculaties/tarieven/:id", verwijderenCalc, async (req, res): Promise<void> => {
   try {
     const id = parseId(req.params["id"]);
     await db.delete(modCalcTarievenTable).where(eq(modCalcTarievenTable.id, id));
@@ -263,7 +263,7 @@ router.delete("/modules/calculaties/tarieven/:id", verwijderenCalc, async (req, 
 
 // ── Normtijden ─────────────────────────────────────────────────────────────
 
-router.get("/modules/calculaties/normtijden", lezenCalc, async (req, res) => {
+router.get("/modules/calculaties/normtijden", lezenCalc, async (req, res): Promise<void> => {
   try {
     const rows = await db.select().from(modCalcNormtijdenTable)
       .where(eq(modCalcNormtijdenTable.actief, true))
@@ -278,11 +278,11 @@ router.get("/modules/calculaties/normtijden", lezenCalc, async (req, res) => {
   }
 });
 
-router.post("/modules/calculaties/normtijden", schrijvenCalc, async (req, res) => {
+router.post("/modules/calculaties/normtijden", schrijvenCalc, async (req, res): Promise<void> => {
   try {
     const { code, omschrijving, categorie = "brandwerende afdichting", eenheid = "st", uren_per_eenheid = 0 } =
       req.body as Record<string, unknown>;
-    if (!code || !omschrijving) return res.status(400).json({ error: "code en omschrijving zijn verplicht" });
+    if (!code || !omschrijving) return void res.status(400).json({ error: "code en omschrijving zijn verplicht" });
     const [row] = await db.insert(modCalcNormtijdenTable).values({
       code: String(code), omschrijving: String(omschrijving), categorie: String(categorie),
       eenheid: String(eenheid), urenPerEenheid: Number(uren_per_eenheid),
@@ -297,7 +297,7 @@ router.post("/modules/calculaties/normtijden", schrijvenCalc, async (req, res) =
 
 // ── Calculatie headers ─────────────────────────────────────────────────────
 
-router.get("/modules/calculaties", lezenCalc, async (req, res) => {
+router.get("/modules/calculaties", lezenCalc, async (req, res): Promise<void> => {
   try {
     const { status, zoek } = req.query as Record<string, string>;
 
@@ -375,7 +375,7 @@ router.get("/modules/calculaties", lezenCalc, async (req, res) => {
   }
 });
 
-router.post("/modules/calculaties", aanmakenCalc, async (req, res) => {
+router.post("/modules/calculaties", aanmakenCalc, async (req, res): Promise<void> => {
   try {
     const {
       naam, referentie, klant_naam, gebouw_id, opname_id, project_naam, werknummer,
@@ -384,7 +384,7 @@ router.post("/modules/calculaties", aanmakenCalc, async (req, res) => {
       opslag_ak = 15, opslag_risico = 5, opslag_winst = 10, korting = 0,
     } = req.body as Record<string, unknown>;
 
-    if (!naam) return res.status(400).json({ error: "naam is verplicht" });
+    if (!naam) return void res.status(400).json({ error: "naam is verplicht" });
 
     const [row] = await db.insert(modCalcHeadersTable).values({
       naam: String(naam),
@@ -427,7 +427,7 @@ router.post("/modules/calculaties", aanmakenCalc, async (req, res) => {
 });
 
 // ── Leveranciers ──────────────────────────────────────────────────────────
-router.get("/modules/calculaties/leveranciers", lezenCalc, async (req, res) => {
+router.get("/modules/calculaties/leveranciers", lezenCalc, async (req, res): Promise<void> => {
   try {
     const rows = await db.select().from(modCalcLeveranciersTable).orderBy(asc(modCalcLeveranciersTable.naam));
     res.json(rows.map((r) => ({
@@ -440,10 +440,10 @@ router.get("/modules/calculaties/leveranciers", lezenCalc, async (req, res) => {
   }
 });
 
-router.post("/modules/calculaties/leveranciers", schrijvenCalc, async (req, res) => {
+router.post("/modules/calculaties/leveranciers", schrijvenCalc, async (req, res): Promise<void> => {
   try {
     const body = req.body as Record<string, unknown>;
-    if (!body.naam) return res.status(400).json({ error: "naam is verplicht" });
+    if (!body.naam) return void res.status(400).json({ error: "naam is verplicht" });
     const [row] = await db.insert(modCalcLeveranciersTable).values({
       naam: String(body.naam),
       contactpersoon: body.contactpersoon ? String(body.contactpersoon) : null,
@@ -459,7 +459,7 @@ router.post("/modules/calculaties/leveranciers", schrijvenCalc, async (req, res)
   }
 });
 
-router.patch("/modules/calculaties/leveranciers/:id", schrijvenCalc, async (req, res) => {
+router.patch("/modules/calculaties/leveranciers/:id", schrijvenCalc, async (req, res): Promise<void> => {
   try {
     const id = parseId(req.params["id"]);
     const body = req.body as Record<string, unknown>;
@@ -472,7 +472,7 @@ router.patch("/modules/calculaties/leveranciers/:id", schrijvenCalc, async (req,
     if (body.notities !== undefined) update.notities = body.notities ? String(body.notities) : null;
     if (body.actief !== undefined) update.actief = Boolean(body.actief);
     const [row] = await db.update(modCalcLeveranciersTable).set(update).where(eq(modCalcLeveranciersTable.id, id)).returning();
-    if (!row) return res.status(404).json({ error: "Niet gevonden" });
+    if (!row) return void res.status(404).json({ error: "Niet gevonden" });
     res.json({ id: row.id, naam: row.naam, contactpersoon: row.contactpersoon, email: row.email, telefoon: row.telefoon, website: row.website, notities: row.notities, actief: row.actief });
   } catch (e) {
     req.log.error(e);
@@ -480,7 +480,7 @@ router.patch("/modules/calculaties/leveranciers/:id", schrijvenCalc, async (req,
   }
 });
 
-router.delete("/modules/calculaties/leveranciers/:id", verwijderenCalc, async (req, res) => {
+router.delete("/modules/calculaties/leveranciers/:id", verwijderenCalc, async (req, res): Promise<void> => {
   try {
     const id = parseId(req.params["id"]);
     await db.delete(modCalcLeveranciersTable).where(eq(modCalcLeveranciersTable.id, id));
@@ -492,7 +492,7 @@ router.delete("/modules/calculaties/leveranciers/:id", verwijderenCalc, async (r
 });
 
 // ── Artikelen ─────────────────────────────────────────────────────────────
-router.get("/modules/calculaties/artikelen", lezenCalc, async (req, res) => {
+router.get("/modules/calculaties/artikelen", lezenCalc, async (req, res): Promise<void> => {
   try {
     const zoek = typeof req.query["zoek"] === "string" ? req.query["zoek"].trim() : "";
     const leverancierId = typeof req.query["leverancier_id"] === "string" ? parseInt(req.query["leverancier_id"], 10) : null;
@@ -527,10 +527,10 @@ router.get("/modules/calculaties/artikelen", lezenCalc, async (req, res) => {
   }
 });
 
-router.post("/modules/calculaties/artikelen", schrijvenCalc, async (req, res) => {
+router.post("/modules/calculaties/artikelen", schrijvenCalc, async (req, res): Promise<void> => {
   try {
     const body = req.body as Record<string, unknown>;
-    if (!body.omschrijving) return res.status(400).json({ error: "omschrijving is verplicht" });
+    if (!body.omschrijving) return void res.status(400).json({ error: "omschrijving is verplicht" });
     const [row] = await db.insert(modCalcArtekelenTable).values({
       leverancierId: body.leverancier_id ? Number(body.leverancier_id) : null,
       artikelcode: body.artikelcode ? String(body.artikelcode) : null,
@@ -547,7 +547,7 @@ router.post("/modules/calculaties/artikelen", schrijvenCalc, async (req, res) =>
   }
 });
 
-router.patch("/modules/calculaties/artikelen/:id", schrijvenCalc, async (req, res) => {
+router.patch("/modules/calculaties/artikelen/:id", schrijvenCalc, async (req, res): Promise<void> => {
   try {
     const id = parseId(req.params["id"]);
     const body = req.body as Record<string, unknown>;
@@ -561,7 +561,7 @@ router.patch("/modules/calculaties/artikelen/:id", schrijvenCalc, async (req, re
     if (body.categorie !== undefined) update.categorie = String(body.categorie);
     if (body.actief !== undefined) update.actief = Boolean(body.actief);
     const [row] = await db.update(modCalcArtekelenTable).set(update).where(eq(modCalcArtekelenTable.id, id)).returning();
-    if (!row) return res.status(404).json({ error: "Niet gevonden" });
+    if (!row) return void res.status(404).json({ error: "Niet gevonden" });
     res.json({ id: row.id, leverancier_id: row.leverancierId, artikelcode: row.artikelcode, omschrijving: row.omschrijving, eenheid: row.eenheid, inkoopprijs: row.inkoopprijs, verkoopprijs: row.verkoopprijs, categorie: row.categorie, actief: row.actief });
   } catch (e) {
     req.log.error(e);
@@ -569,7 +569,7 @@ router.patch("/modules/calculaties/artikelen/:id", schrijvenCalc, async (req, re
   }
 });
 
-router.delete("/modules/calculaties/artikelen/:id", verwijderenCalc, async (req, res) => {
+router.delete("/modules/calculaties/artikelen/:id", verwijderenCalc, async (req, res): Promise<void> => {
   try {
     const id = parseId(req.params["id"]);
     await db.delete(modCalcArtekelenTable).where(eq(modCalcArtekelenTable.id, id));
@@ -582,11 +582,11 @@ router.delete("/modules/calculaties/artikelen/:id", verwijderenCalc, async (req,
 
 // ── CSV import artikelen ───────────────────────────────────────────────────
 // Verwacht CSV: artikelcode;omschrijving;eenheid;inkoopprijs;verkoopprijs;categorie;leverancier_naam
-router.post("/modules/calculaties/artikelen/import-csv", schrijvenCalc, async (req, res) => {
+router.post("/modules/calculaties/artikelen/import-csv", schrijvenCalc, async (req, res): Promise<void> => {
   try {
     const body = req.body as Record<string, unknown>;
     const csv = typeof body.csv === "string" ? body.csv : "";
-    if (!csv.trim()) return res.status(400).json({ error: "Geen CSV-data ontvangen" });
+    if (!csv.trim()) return void res.status(400).json({ error: "Geen CSV-data ontvangen" });
 
     const regels = csv.split(/\r?\n/).map((r) => r.trim()).filter((r) => r && !r.startsWith("artikelcode"));
     let aangemaakt = 0;
@@ -629,7 +629,7 @@ router.post("/modules/calculaties/artikelen/import-csv", schrijvenCalc, async (r
 });
 
 // ── Calculatie detail ──────────────────────────────────────────────────────
-router.get("/modules/calculaties/:id", lezenCalc, async (req, res) => {
+router.get("/modules/calculaties/:id", lezenCalc, async (req, res): Promise<void> => {
   try {
     const id = parseId(req.params["id"]);
 
@@ -646,7 +646,7 @@ router.get("/modules/calculaties/:id", lezenCalc, async (req, res) => {
       .leftJoin(gebruikersTable, eq(modCalcHeadersTable.aangemaaktDoorId, gebruikersTable.id))
       .where(eq(modCalcHeadersTable.id, id));
 
-    if (!headerRow) return res.status(404).json({ error: "Niet gevonden" });
+    if (!headerRow) return void res.status(404).json({ error: "Niet gevonden" });
 
     const regelRows = await db
       .select({ regel: modCalcRegelsTable, normCode: modCalcNormtijdenTable.code })
@@ -696,7 +696,7 @@ router.get("/modules/calculaties/:id", lezenCalc, async (req, res) => {
   }
 });
 
-router.patch("/modules/calculaties/:id", schrijvenCalc, async (req, res) => {
+router.patch("/modules/calculaties/:id", schrijvenCalc, async (req, res): Promise<void> => {
   try {
     const id = parseId(req.params["id"]);
     const body = req.body as Record<string, unknown>;
@@ -723,7 +723,7 @@ router.patch("/modules/calculaties/:id", schrijvenCalc, async (req, res) => {
     if (body.risico_is_vast !== undefined) update.risicoIsVast = Boolean(body.risico_is_vast);
     if (body.winst_is_vast !== undefined) update.winstIsVast = Boolean(body.winst_is_vast);
     const [row] = await db.update(modCalcHeadersTable).set(update).where(eq(modCalcHeadersTable.id, id)).returning();
-    if (!row) return res.status(404).json({ error: "Niet gevonden" });
+    if (!row) return void res.status(404).json({ error: "Niet gevonden" });
     res.json(mapHeader(row));
   } catch (e) {
     req.log.error(e);
@@ -731,7 +731,7 @@ router.patch("/modules/calculaties/:id", schrijvenCalc, async (req, res) => {
   }
 });
 
-router.delete("/modules/calculaties/:id", verwijderenCalc, async (req, res) => {
+router.delete("/modules/calculaties/:id", verwijderenCalc, async (req, res): Promise<void> => {
   try {
     const id = parseId(req.params["id"]);
     await db.delete(modCalcHeadersTable).where(eq(modCalcHeadersTable.id, id));
@@ -742,11 +742,11 @@ router.delete("/modules/calculaties/:id", verwijderenCalc, async (req, res) => {
   }
 });
 
-router.post("/modules/calculaties/:id/dupliceer", aanmakenCalc, async (req, res) => {
+router.post("/modules/calculaties/:id/dupliceer", aanmakenCalc, async (req, res): Promise<void> => {
   try {
     const id = parseId(req.params["id"]);
     const [original] = await db.select().from(modCalcHeadersTable).where(eq(modCalcHeadersTable.id, id));
-    if (!original) return res.status(404).json({ error: "Niet gevonden" });
+    if (!original) return void res.status(404).json({ error: "Niet gevonden" });
 
     const [kopie] = await db.insert(modCalcHeadersTable).values({
       naam: `${original.naam} (kopie)`,
@@ -808,7 +808,7 @@ router.post("/modules/calculaties/:id/dupliceer", aanmakenCalc, async (req, res)
 // ── Calculatie regels ──────────────────────────────────────────────────────
 
 // ── Calculatie-eenheden CRUD ────────────────────────────────────────────────
-router.get("/modules/calculaties/:id/eenheden", lezenCalc, async (req, res) => {
+router.get("/modules/calculaties/:id/eenheden", lezenCalc, async (req, res): Promise<void> => {
   try {
     const id = parseId(req.params["id"]);
     const rows = await db
@@ -831,12 +831,12 @@ router.get("/modules/calculaties/:id/eenheden", lezenCalc, async (req, res) => {
   }
 });
 
-router.post("/modules/calculaties/:id/eenheden", schrijvenCalc, async (req, res) => {
+router.post("/modules/calculaties/:id/eenheden", schrijvenCalc, async (req, res): Promise<void> => {
   try {
     const id = parseId(req.params["id"]);
     const body = req.body as Record<string, unknown>;
     const { naam, type = "vrije_projecteenheid", volgorde = 0 } = body;
-    if (!naam) return res.status(400).json({ error: "naam is verplicht" });
+    if (!naam) return void res.status(400).json({ error: "naam is verplicht" });
     const [row] = await db.insert(modCalcEenhedenTable).values({
       calculatieId: id,
       naam: String(naam),
@@ -858,7 +858,7 @@ router.post("/modules/calculaties/:id/eenheden", schrijvenCalc, async (req, res)
   }
 });
 
-router.patch("/modules/calculaties/:id/eenheden/:eenheidId", schrijvenCalc, async (req, res) => {
+router.patch("/modules/calculaties/:id/eenheden/:eenheidId", schrijvenCalc, async (req, res): Promise<void> => {
   try {
     const eenheidId = parseId(req.params["eenheidId"]);
     const body = req.body as Record<string, unknown>;
@@ -867,7 +867,7 @@ router.patch("/modules/calculaties/:id/eenheden/:eenheidId", schrijvenCalc, asyn
     if (body.type !== undefined) update.type = String(body.type);
     if (body.volgorde !== undefined) update.volgorde = Number(body.volgorde);
     const [row] = await db.update(modCalcEenhedenTable).set(update).where(eq(modCalcEenhedenTable.id, eenheidId)).returning();
-    if (!row) return res.status(404).json({ error: "Niet gevonden" });
+    if (!row) return void res.status(404).json({ error: "Niet gevonden" });
     res.json({
       id: row.id,
       calculatie_id: row.calculatieId,
@@ -883,7 +883,7 @@ router.patch("/modules/calculaties/:id/eenheden/:eenheidId", schrijvenCalc, asyn
   }
 });
 
-router.delete("/modules/calculaties/:id/eenheden/:eenheidId", schrijvenCalc, async (req, res) => {
+router.delete("/modules/calculaties/:id/eenheden/:eenheidId", schrijvenCalc, async (req, res): Promise<void> => {
   try {
     const eenheidId = parseId(req.params["eenheidId"]);
     await db.delete(modCalcEenhedenTable).where(eq(modCalcEenhedenTable.id, eenheidId));
@@ -894,7 +894,7 @@ router.delete("/modules/calculaties/:id/eenheden/:eenheidId", schrijvenCalc, asy
   }
 });
 
-router.get("/modules/calculaties/:id/regels", lezenCalc, async (req, res) => {
+router.get("/modules/calculaties/:id/regels", lezenCalc, async (req, res): Promise<void> => {
   try {
     const id = parseId(req.params["id"]);
     const rows = await db
@@ -910,18 +910,18 @@ router.get("/modules/calculaties/:id/regels", lezenCalc, async (req, res) => {
   }
 });
 
-router.post("/modules/calculaties/:id/regels", schrijvenCalc, async (req, res) => {
+router.post("/modules/calculaties/:id/regels", schrijvenCalc, async (req, res): Promise<void> => {
   try {
     const id = parseId(req.params["id"]);
     const [header] = await db.select().from(modCalcHeadersTable).where(eq(modCalcHeadersTable.id, id));
-    if (!header) return res.status(404).json({ error: "Calculatie niet gevonden" });
+    if (!header) return void res.status(404).json({ error: "Calculatie niet gevonden" });
 
     const body = req.body as Record<string, unknown>;
     const { categorie = "arbeid", omschrijving, normtijd_id, eenheid = "st", volgorde = 0, opmerkingen,
       regelnummer, is_staartkosten = false, is_bouwplaatskosten = false,
       hoofdstuk = "Overige werkzaamheden", klanttekst, btw_tarief = "21",
       wand_plafond, toepassing_tekst, eenheid_id } = body;
-    if (!omschrijving) return res.status(400).json({ error: "omschrijving is verplicht" });
+    if (!omschrijving) return void res.status(400).json({ error: "omschrijving is verplicht" });
 
     const { hv, t, mu, at, ob, totaal } = berekenRegelTotaal(body);
 
@@ -957,13 +957,13 @@ router.post("/modules/calculaties/:id/regels", schrijvenCalc, async (req, res) =
   }
 });
 
-router.patch("/modules/calculaties/:id/regels/:regelId", schrijvenCalc, async (req, res) => {
+router.patch("/modules/calculaties/:id/regels/:regelId", schrijvenCalc, async (req, res): Promise<void> => {
   try {
     const regelId = parseId(req.params["regelId"]);
     const body = req.body as Record<string, unknown>;
 
     const [existing] = await db.select().from(modCalcRegelsTable).where(eq(modCalcRegelsTable.id, regelId));
-    if (!existing) return res.status(404).json({ error: "Niet gevonden" });
+    if (!existing) return void res.status(404).json({ error: "Niet gevonden" });
 
     const { hv, t, mu, at, ob, totaal } = berekenRegelTotaal(body, existing as any);
 
@@ -998,7 +998,7 @@ router.patch("/modules/calculaties/:id/regels/:regelId", schrijvenCalc, async (r
   }
 });
 
-router.delete("/modules/calculaties/:id/regels/:regelId", schrijvenCalc, async (req, res) => {
+router.delete("/modules/calculaties/:id/regels/:regelId", schrijvenCalc, async (req, res): Promise<void> => {
   try {
     const regelId = parseId(req.params["regelId"]);
     await db.delete(modCalcRegelsTable).where(eq(modCalcRegelsTable.id, regelId));
@@ -1010,11 +1010,11 @@ router.delete("/modules/calculaties/:id/regels/:regelId", schrijvenCalc, async (
 });
 
 // ── AI-voorstel calculatieregels ───────────────────────────────────────────
-router.post("/modules/calculaties/:id/ai-regels", lezenCalc, async (req, res) => {
+router.post("/modules/calculaties/:id/ai-regels", lezenCalc, async (req, res): Promise<void> => {
   try {
     const id = parseId(req.params["id"]);
     const [header] = await db.select().from(modCalcHeadersTable).where(eq(modCalcHeadersTable.id, id));
-    if (!header) return res.status(404).json({ error: "Calculatie niet gevonden" });
+    if (!header) return void res.status(404).json({ error: "Calculatie niet gevonden" });
 
     const [bestaandeRegels, normtijden, tarieven] = await Promise.all([
       db.select().from(modCalcRegelsTable).where(eq(modCalcRegelsTable.calculatieId, id)).orderBy(asc(modCalcRegelsTable.volgorde)),
@@ -1168,7 +1168,7 @@ Toegestane hoofdstukken: ${HOOFDSTUKKEN.join(", ")}
 Toegestane categorieën: ${CATEGORIEEN.join(", ")}`;
 
     if (!heeftGateway()) {
-      return res.json({ regels: [], waarschuwingen: ["AI is niet beschikbaar in deze omgeving."] });
+      return void res.json({ regels: [], waarschuwingen: ["AI is niet beschikbaar in deze omgeving."] });
     }
 
     const calcRegelResultaat = await aiGateway.chat("default", {
@@ -1195,12 +1195,12 @@ Toegestane categorieën: ${CATEGORIEEN.join(", ")}`;
 });
 
 // ── Maak offerte vanuit calculatie ─────────────────────────────────────────
-router.post("/modules/calculaties/:id/maak-offerte", schrijvenCalc, async (req, res) => {
+router.post("/modules/calculaties/:id/maak-offerte", schrijvenCalc, async (req, res): Promise<void> => {
   try {
     const id = parseId(req.params["id"]);
 
     const [header] = await db.select().from(modCalcHeadersTable).where(eq(modCalcHeadersTable.id, id));
-    if (!header) return res.status(404).json({ error: "Calculatie niet gevonden" });
+    if (!header) return void res.status(404).json({ error: "Calculatie niet gevonden" });
 
     const regels = await db.select().from(modCalcRegelsTable)
       .where(eq(modCalcRegelsTable.calculatieId, id))
@@ -1287,11 +1287,11 @@ router.post("/modules/calculaties/:id/maak-offerte", schrijvenCalc, async (req, 
 });
 
 // ── Versie opslaan ────────────────────────────────────────────────────────
-router.post("/modules/calculaties/:id/versie-opslaan", schrijvenCalc, async (req, res) => {
+router.post("/modules/calculaties/:id/versie-opslaan", schrijvenCalc, async (req, res): Promise<void> => {
   try {
     const id = parseId(req.params["id"]);
     const [header] = await db.select().from(modCalcHeadersTable).where(eq(modCalcHeadersTable.id, id));
-    if (!header) return res.status(404).json({ error: "Calculatie niet gevonden" });
+    if (!header) return void res.status(404).json({ error: "Calculatie niet gevonden" });
 
     const regels = await db.select().from(modCalcRegelsTable)
       .where(eq(modCalcRegelsTable.calculatieId, id))
@@ -1339,7 +1339,7 @@ router.post("/modules/calculaties/:id/versie-opslaan", schrijvenCalc, async (req
   }
 });
 
-router.get("/modules/calculaties/:id/versies", lezenCalc, async (req, res) => {
+router.get("/modules/calculaties/:id/versies", lezenCalc, async (req, res): Promise<void> => {
   try {
     const id = parseId(req.params["id"]);
     const rows = await db.select({
@@ -1364,11 +1364,11 @@ router.get("/modules/calculaties/:id/versies", lezenCalc, async (req, res) => {
   }
 });
 
-router.get("/modules/calculaties/:id/versies/:versieId", lezenCalc, async (req, res) => {
+router.get("/modules/calculaties/:id/versies/:versieId", lezenCalc, async (req, res): Promise<void> => {
   try {
     const versieId = parseId(req.params["versieId"]);
     const [v] = await db.select().from(modCalcVersiesTable).where(eq(modCalcVersiesTable.id, versieId));
-    if (!v) return res.status(404).json({ error: "Versie niet gevonden" });
+    if (!v) return void res.status(404).json({ error: "Versie niet gevonden" });
     res.json({
       id: v.id,
       versienummer: v.versienummer,
@@ -1383,11 +1383,11 @@ router.get("/modules/calculaties/:id/versies/:versieId", lezenCalc, async (req, 
 });
 
 // ── Print-data endpoint ────────────────────────────────────────────────────
-router.get("/modules/calculaties/:id/print-data", lezenCalc, async (req, res) => {
+router.get("/modules/calculaties/:id/print-data", lezenCalc, async (req, res): Promise<void> => {
   try {
     const id = parseId(req.params["id"]);
     const [header] = await db.select().from(modCalcHeadersTable).where(eq(modCalcHeadersTable.id, id));
-    if (!header) return res.status(404).json({ error: "Calculatie niet gevonden" });
+    if (!header) return void res.status(404).json({ error: "Calculatie niet gevonden" });
 
     const regels = await db.select().from(modCalcRegelsTable)
       .where(eq(modCalcRegelsTable.calculatieId, id))
@@ -1476,7 +1476,7 @@ function mapInkoopItem(i: typeof modCalcInkoopItemsTable.$inferSelect) {
   };
 }
 
-router.get("/modules/calculaties/:id/inkoop-items", lezenCalc, async (req, res) => {
+router.get("/modules/calculaties/:id/inkoop-items", lezenCalc, async (req, res): Promise<void> => {
   try {
     const id = parseId(req.params["id"]);
     const items = await db
@@ -1491,13 +1491,13 @@ router.get("/modules/calculaties/:id/inkoop-items", lezenCalc, async (req, res) 
   }
 });
 
-router.post("/modules/calculaties/:id/inkoop-items", schrijvenCalc, async (req, res) => {
+router.post("/modules/calculaties/:id/inkoop-items", schrijvenCalc, async (req, res): Promise<void> => {
   try {
     const id = parseId(req.params["id"]);
     const [calc] = await db.select({ id: modCalcHeadersTable.id }).from(modCalcHeadersTable).where(eq(modCalcHeadersTable.id, id));
-    if (!calc) return res.status(404).json({ error: "Calculatie niet gevonden" });
+    if (!calc) return void res.status(404).json({ error: "Calculatie niet gevonden" });
     const body = req.body as Record<string, unknown>;
-    if (!String(body.omschrijving ?? "").trim()) return res.status(422).json({ error: "Omschrijving is verplicht" });
+    if (!String(body.omschrijving ?? "").trim()) return void res.status(422).json({ error: "Omschrijving is verplicht" });
     const [item] = await db.insert(modCalcInkoopItemsTable).values({
       calculatieId: id,
       regelId: body.regel_id != null ? Number(body.regel_id) : null,
@@ -1530,7 +1530,7 @@ router.post("/modules/calculaties/:id/inkoop-items", schrijvenCalc, async (req, 
   }
 });
 
-router.patch("/modules/calculaties/:id/inkoop-items/:itemId", schrijvenCalc, async (req, res) => {
+router.patch("/modules/calculaties/:id/inkoop-items/:itemId", schrijvenCalc, async (req, res): Promise<void> => {
   try {
     const itemId = parseId(req.params["itemId"]);
     const body = req.body as Record<string, unknown>;
@@ -1563,7 +1563,7 @@ router.patch("/modules/calculaties/:id/inkoop-items/:itemId", schrijvenCalc, asy
       .set(upd)
       .where(eq(modCalcInkoopItemsTable.id, itemId))
       .returning();
-    if (!item) return res.status(404).json({ error: "Item niet gevonden" });
+    if (!item) return void res.status(404).json({ error: "Item niet gevonden" });
     res.json(mapInkoopItem(item));
   } catch (e) {
     req.log.error(e);
@@ -1571,7 +1571,7 @@ router.patch("/modules/calculaties/:id/inkoop-items/:itemId", schrijvenCalc, asy
   }
 });
 
-router.delete("/modules/calculaties/:id/inkoop-items/:itemId", schrijvenCalc, async (req, res) => {
+router.delete("/modules/calculaties/:id/inkoop-items/:itemId", schrijvenCalc, async (req, res): Promise<void> => {
   try {
     const itemId = parseId(req.params["itemId"]);
     await db.delete(modCalcInkoopItemsTable).where(eq(modCalcInkoopItemsTable.id, itemId));
@@ -1584,7 +1584,7 @@ router.delete("/modules/calculaties/:id/inkoop-items/:itemId", schrijvenCalc, as
 
 // ── POST /modules/calculaties/:id/inkoop-items/:itemId/concept-mail ─────────
 
-router.post("/modules/calculaties/:id/inkoop-items/:itemId/concept-mail", schrijvenCalc, async (req, res) => {
+router.post("/modules/calculaties/:id/inkoop-items/:itemId/concept-mail", schrijvenCalc, async (req, res): Promise<void> => {
   try {
     const id = parseId(req.params["id"]);
     const itemId = parseId(req.params["itemId"]);
@@ -1635,7 +1635,7 @@ Schrijf de mail in formeel Nederlands. Gebruik "FPS Brandpreventie" als afzender
 });
 
 // ── POST /modules/calculaties/:id/ai-chat ─────────────────────────────────
-router.post("/modules/calculaties/:id/ai-chat", lezenCalc, async (req, res) => {
+router.post("/modules/calculaties/:id/ai-chat", lezenCalc, async (req, res): Promise<void> => {
   try {
     const id = parseId(req.params["id"]);
     const { berichten, afbeelding_base64 } = req.body as {
@@ -1805,7 +1805,7 @@ Antwoord altijd in het Nederlands. Geef concrete, praktische adviezen. Wees krit
 });
 
 // ── POST /modules/calculaties/:id/ai-senior-analyse ───────────────────────
-router.post("/modules/calculaties/:id/ai-senior-analyse", lezenCalc, async (req, res) => {
+router.post("/modules/calculaties/:id/ai-senior-analyse", lezenCalc, async (req, res): Promise<void> => {
   try {
     const id = parseId(req.params["id"]);
     const [header] = await db.select().from(modCalcHeadersTable).where(eq(modCalcHeadersTable.id, id));
@@ -2005,7 +2005,7 @@ Retourneer maximaal 15 adviezen. Geef alleen zinvolle, concrete adviezen. Begin 
 });
 
 // ── GET /modules/calculaties/:id/adviezen ─────────────────────────────────
-router.get("/modules/calculaties/:id/adviezen", lezenCalc, async (req, res) => {
+router.get("/modules/calculaties/:id/adviezen", lezenCalc, async (req, res): Promise<void> => {
   try {
     const id = parseId(req.params["id"]);
     const result = await db.select().from(modCalcAdviezenTable)
@@ -2034,7 +2034,7 @@ router.get("/modules/calculaties/:id/adviezen", lezenCalc, async (req, res) => {
 });
 
 // ── PATCH /modules/calculaties/:id/adviezen/:adviesId ─────────────────────
-router.patch("/modules/calculaties/:id/adviezen/:adviesId", lezenCalc, async (req, res) => {
+router.patch("/modules/calculaties/:id/adviezen/:adviesId", lezenCalc, async (req, res): Promise<void> => {
   try {
     const id = parseId(req.params["id"]);
     const adviesId = parseId(req.params["adviesId"]);

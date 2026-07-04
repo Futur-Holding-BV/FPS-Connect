@@ -56,7 +56,7 @@ router.get("/werk-inbox/oauth/start", requireAuth, (req, res) => {
 });
 
 // ─── OAuth callback ───────────────────────────────────────────────────────────
-router.get("/werk-inbox/oauth/callback", async (req, res) => {
+router.get("/werk-inbox/oauth/callback", async (req, res): Promise<void> => {
   const { code, state, error: msError } = req.query as Record<string, string>;
 
   if (msError) {
@@ -116,7 +116,7 @@ router.get("/werk-inbox/oauth/callback", async (req, res) => {
 });
 
 // ─── Status ───────────────────────────────────────────────────────────────────
-router.get("/werk-inbox/oauth/status", requireAuth, async (req, res) => {
+router.get("/werk-inbox/oauth/status", requireAuth, async (req, res): Promise<void> => {
   const uid = gebruikerId(req);
   const [token] = await db.select({
     microsoftEmail: werkInboxTokensTable.microsoftEmail,
@@ -134,13 +134,13 @@ router.get("/werk-inbox/oauth/status", requireAuth, async (req, res) => {
 });
 
 // ─── Ontkoppelen ──────────────────────────────────────────────────────────────
-router.delete("/werk-inbox/oauth/ontkoppel", requireAuth, async (req, res) => {
+router.delete("/werk-inbox/oauth/ontkoppel", requireAuth, async (req, res): Promise<void> => {
   await verwijderToken(gebruikerId(req));
   res.json({ ok: true });
 });
 
 // ─── Mailboxen ────────────────────────────────────────────────────────────────
-router.get("/werk-inbox/mailboxen", requireAuth, async (req, res) => {
+router.get("/werk-inbox/mailboxen", requireAuth, async (req, res): Promise<void> => {
   const rijen = await db.select()
     .from(werkInboxMailboxenTable)
     .where(eq(werkInboxMailboxenTable.gebruikerId, gebruikerId(req)))
@@ -148,7 +148,7 @@ router.get("/werk-inbox/mailboxen", requireAuth, async (req, res) => {
   res.json(rijen);
 });
 
-router.post("/werk-inbox/mailboxen", requireAuth, async (req, res) => {
+router.post("/werk-inbox/mailboxen", requireAuth, async (req, res): Promise<void> => {
   const uid = gebruikerId(req);
   const { emailAdres, label } = req.body as { emailAdres?: string; label?: string };
   if (!emailAdres || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailAdres)) {
@@ -165,7 +165,7 @@ router.post("/werk-inbox/mailboxen", requireAuth, async (req, res) => {
   }
 });
 
-router.patch("/werk-inbox/mailboxen/:id", requireAuth, async (req, res) => {
+router.patch("/werk-inbox/mailboxen/:id", requireAuth, async (req, res): Promise<void> => {
   const uid = gebruikerId(req);
   const id = Number(req.params["id"]);
   const { label, actief, volgorde } = req.body as { label?: string; actief?: boolean; volgorde?: number };
@@ -181,7 +181,7 @@ router.patch("/werk-inbox/mailboxen/:id", requireAuth, async (req, res) => {
   res.json(rij);
 });
 
-router.delete("/werk-inbox/mailboxen/:id", requireAuth, async (req, res) => {
+router.delete("/werk-inbox/mailboxen/:id", requireAuth, async (req, res): Promise<void> => {
   const uid = gebruikerId(req);
   const id = Number(req.params["id"]);
   await db.delete(werkInboxMailboxenTable)
@@ -190,7 +190,7 @@ router.delete("/werk-inbox/mailboxen/:id", requireAuth, async (req, res) => {
 });
 
 // ─── Sync ─────────────────────────────────────────────────────────────────────
-router.post("/werk-inbox/sync", requireAuth, async (req, res) => {
+router.post("/werk-inbox/sync", requireAuth, async (req, res): Promise<void> => {
   const uid = gebruikerId(req);
   try {
     const resultaat = await syncMailboxen(uid);
@@ -206,7 +206,7 @@ router.post("/werk-inbox/sync", requireAuth, async (req, res) => {
 });
 
 // ─── Mails ophalen ────────────────────────────────────────────────────────────
-router.get("/werk-inbox/mails", requireAuth, async (req, res) => {
+router.get("/werk-inbox/mails", requireAuth, async (req, res): Promise<void> => {
   const uid = gebruikerId(req);
   const { mailbox, ongelezen, vandaag, bijlage } = req.query as Record<string, string>;
 
@@ -268,7 +268,7 @@ router.get("/werk-inbox/mails", requireAuth, async (req, res) => {
 });
 
 // ─── Volledige mail inhoud (on-demand van Graph) ──────────────────────────────
-router.get("/werk-inbox/mails/:messageId", requireAuth, async (req, res) => {
+router.get("/werk-inbox/mails/:messageId", requireAuth, async (req, res): Promise<void> => {
   const uid       = gebruikerId(req);
   const messageId = String(req.params.messageId);
 
@@ -312,7 +312,7 @@ router.get("/werk-inbox/mails/:messageId", requireAuth, async (req, res) => {
 });
 
 // ─── Gelezen markeren ─────────────────────────────────────────────────────────
-router.patch("/werk-inbox/mails/:messageId/gelezen", requireAuth, async (req, res) => {
+router.patch("/werk-inbox/mails/:messageId/gelezen", requireAuth, async (req, res): Promise<void> => {
   const uid       = gebruikerId(req);
   const messageId = String(req.params.messageId);
   const { isGelezen } = req.body as { isGelezen: boolean };
@@ -345,7 +345,7 @@ router.patch("/werk-inbox/mails/:messageId/gelezen", requireAuth, async (req, re
 });
 
 // ─── Verwerkt markeren ────────────────────────────────────────────────────────
-router.patch("/werk-inbox/mails/:messageId/verwerkt", requireAuth, async (req, res) => {
+router.patch("/werk-inbox/mails/:messageId/verwerkt", requireAuth, async (req, res): Promise<void> => {
   const uid       = gebruikerId(req);
   const messageId = String(req.params.messageId);
   const { verwerkt } = req.body as { verwerkt: boolean };
@@ -363,7 +363,7 @@ router.patch("/werk-inbox/mails/:messageId/verwerkt", requireAuth, async (req, r
 });
 
 // ─── Notities ────────────────────────────────────────────────────────────────
-router.post("/werk-inbox/mails/:messageId/notities", requireAuth, async (req, res) => {
+router.post("/werk-inbox/mails/:messageId/notities", requireAuth, async (req, res): Promise<void> => {
   const uid       = gebruikerId(req);
   const messageId = String(req.params.messageId);
   const { tekst } = req.body as { tekst?: string };
@@ -380,7 +380,7 @@ router.post("/werk-inbox/mails/:messageId/notities", requireAuth, async (req, re
   res.status(201).json(rij);
 });
 
-router.patch("/werk-inbox/notities/:id", requireAuth, async (req, res) => {
+router.patch("/werk-inbox/notities/:id", requireAuth, async (req, res): Promise<void> => {
   const uid = gebruikerId(req);
   const id  = parseInt(String(req.params.id), 10);
   const { tekst } = req.body as { tekst?: string };
@@ -396,7 +396,7 @@ router.patch("/werk-inbox/notities/:id", requireAuth, async (req, res) => {
   res.json(rij);
 });
 
-router.delete("/werk-inbox/notities/:id", requireAuth, async (req, res) => {
+router.delete("/werk-inbox/notities/:id", requireAuth, async (req, res): Promise<void> => {
   const uid = gebruikerId(req);
   const id  = parseInt(String(req.params.id), 10);
   await db.delete(werkInboxNotitiesTable)
@@ -405,7 +405,7 @@ router.delete("/werk-inbox/notities/:id", requireAuth, async (req, res) => {
 });
 
 // ─── Koppelingen ──────────────────────────────────────────────────────────────
-router.post("/werk-inbox/mails/:messageId/koppelingen", requireAuth, async (req, res) => {
+router.post("/werk-inbox/mails/:messageId/koppelingen", requireAuth, async (req, res): Promise<void> => {
   const uid       = gebruikerId(req);
   const messageId = String(req.params.messageId);
   const { entityType, entityId, entityLabel } = req.body as {
@@ -433,7 +433,7 @@ router.post("/werk-inbox/mails/:messageId/koppelingen", requireAuth, async (req,
   }
 });
 
-router.delete("/werk-inbox/koppelingen/:id", requireAuth, async (req, res) => {
+router.delete("/werk-inbox/koppelingen/:id", requireAuth, async (req, res): Promise<void> => {
   const uid = gebruikerId(req);
   const id  = parseInt(String(req.params.id), 10);
   await db.delete(werkInboxKoppelingenTable)
@@ -442,7 +442,7 @@ router.delete("/werk-inbox/koppelingen/:id", requireAuth, async (req, res) => {
 });
 
 // ─── Afgehandeld markeren ─────────────────────────────────────────────────────
-router.patch("/werk-inbox/mails/:messageId/afgehandeld", requireAuth, async (req, res) => {
+router.patch("/werk-inbox/mails/:messageId/afgehandeld", requireAuth, async (req, res): Promise<void> => {
   const uid       = gebruikerId(req);
   const messageId = String(req.params.messageId);
   const { afgehandeld } = req.body as { afgehandeld: boolean };
@@ -460,7 +460,7 @@ router.patch("/werk-inbox/mails/:messageId/afgehandeld", requireAuth, async (req
 });
 
 // ─── Actie vereist markeren ───────────────────────────────────────────────────
-router.patch("/werk-inbox/mails/:messageId/actie-vereist", requireAuth, async (req, res) => {
+router.patch("/werk-inbox/mails/:messageId/actie-vereist", requireAuth, async (req, res): Promise<void> => {
   const uid       = gebruikerId(req);
   const messageId = String(req.params.messageId);
   const { actieVereist, reden } = req.body as { actieVereist: boolean; reden?: string };
@@ -479,7 +479,7 @@ router.patch("/werk-inbox/mails/:messageId/actie-vereist", requireAuth, async (r
 });
 
 // ─── Relatie opzoeken via e-mailadres (CRM) ──────────────────────────────────
-router.get("/werk-inbox/relatie/:emailAdres", requireAuth, async (req, res) => {
+router.get("/werk-inbox/relatie/:emailAdres", requireAuth, async (req, res): Promise<void> => {
   const emailAdres = String(req.params.emailAdres).toLowerCase().trim();
   if (!emailAdres || !emailAdres.includes("@")) {
     res.json({ gevonden: false });
@@ -548,7 +548,7 @@ router.get("/werk-inbox/relatie/:emailAdres", requireAuth, async (req, res) => {
 });
 
 // ─── AI-analyse per mail ──────────────────────────────────────────────────────
-router.post("/werk-inbox/mails/:messageId/analyseer", requireAuth, async (req, res) => {
+router.post("/werk-inbox/mails/:messageId/analyseer", requireAuth, async (req, res): Promise<void> => {
   if (!heeftGateway()) {
     res.status(503).json({ error: "AI niet beschikbaar." });
     return;

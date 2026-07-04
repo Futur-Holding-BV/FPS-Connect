@@ -39,13 +39,13 @@ router.get("/mail/status", requireBevoegdheid("systeem", 1), (_req, res) => {
 });
 
 // POST /mail/verbindingstest — token ophalen + postbus bereikbaarheid
-router.post("/mail/verbindingstest", requireBevoegdheid("systeem", 2), async (req, res) => {
+router.post("/mail/verbindingstest", requireBevoegdheid("systeem", 2), async (req, res): Promise<void> => {
   try {
     await testVerbinding();
     res.json({ ok: true, melding: "Verbinding met Microsoft 365 is in orde." });
   } catch (err) {
     if (err instanceof MailFout) {
-      return res.json({
+      return void res.json({
         ok: false,
         fout_categorie: err.categorie,
         melding: err.message,
@@ -58,17 +58,17 @@ router.post("/mail/verbindingstest", requireBevoegdheid("systeem", 2), async (re
 });
 
 // POST /mail/testmail — testbericht versturen
-router.post("/mail/testmail", requireBevoegdheid("systeem", 2), async (req, res) => {
+router.post("/mail/testmail", requireBevoegdheid("systeem", 2), async (req, res): Promise<void> => {
   try {
     const naar = String(req.body?.naar_email ?? "").trim();
     if (!naar || !naar.includes("@")) {
-      return res.status(400).json({ error: "Een geldig e-mailadres is verplicht" });
+      return void res.status(400).json({ error: "Een geldig e-mailadres is verplicht" });
     }
     await stuurTestmail({ naarEmail: naar, verstuurdDoorId: req.session.userId ?? null });
     res.json({ ok: true, melding: `Testbericht verstuurd naar ${naar}.` });
   } catch (err) {
     if (err instanceof MailFout) {
-      return res.json({
+      return void res.json({
         ok: false,
         fout_categorie: err.categorie,
         melding: err.message,
@@ -81,15 +81,15 @@ router.post("/mail/testmail", requireBevoegdheid("systeem", 2), async (req, res)
 });
 
 // POST /mail/opdrachtbevestiging/demo — stuur een demo-opdrachtbevestiging
-router.post("/mail/opdrachtbevestiging/demo", requireBevoegdheid("systeem", 2), async (req, res) => {
+router.post("/mail/opdrachtbevestiging/demo", requireBevoegdheid("systeem", 2), async (req, res): Promise<void> => {
   try {
     const naar = String(req.body?.naar_email ?? "").trim();
     const offerteId = Number(req.body?.offerte_id ?? 0);
     if (!naar || !naar.includes("@")) {
-      return res.status(400).json({ error: "Een geldig e-mailadres is verplicht" });
+      return void res.status(400).json({ error: "Een geldig e-mailadres is verplicht" });
     }
     if (!offerteId || offerteId < 1) {
-      return res.status(400).json({ error: "Een geldig offerte-ID is verplicht" });
+      return void res.status(400).json({ error: "Een geldig offerte-ID is verplicht" });
     }
 
     // Offerte ophalen + eventuele klantgegevens
@@ -98,7 +98,7 @@ router.post("/mail/opdrachtbevestiging/demo", requireBevoegdheid("systeem", 2), 
       .from(offertesTable)
       .where(eq(offertesTable.id, offerteId));
     if (!offerte) {
-      return res.status(404).json({ error: "Offerte niet gevonden" });
+      return void res.status(404).json({ error: "Offerte niet gevonden" });
     }
 
     let klantNaam: string | null = null;
@@ -139,7 +139,7 @@ router.post("/mail/opdrachtbevestiging/demo", requireBevoegdheid("systeem", 2), 
     res.json({ ok: true, melding: `Demo-opdrachtbevestiging verstuurd naar ${naar}.` });
   } catch (err) {
     if (err instanceof MailFout) {
-      return res.json({ ok: false, fout_categorie: err.categorie, melding: err.message, detail: err.detail });
+      return void res.json({ ok: false, fout_categorie: err.categorie, melding: err.message, detail: err.detail });
     }
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });
@@ -147,7 +147,7 @@ router.post("/mail/opdrachtbevestiging/demo", requireBevoegdheid("systeem", 2), 
 });
 
 // GET /mail/logboek — laatste 100 verzendpogingen
-router.get("/mail/logboek", requireBevoegdheid("systeem", 1), async (req, res) => {
+router.get("/mail/logboek", requireBevoegdheid("systeem", 1), async (req, res): Promise<void> => {
   try {
     const rijen = await db
       .select()

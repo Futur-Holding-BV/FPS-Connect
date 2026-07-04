@@ -6,7 +6,7 @@ import { requireRol } from "../middlewares/auth";
 const router = Router();
 
 // GET /info/instellingen
-router.get("/info/instellingen", async (req, res) => {
+router.get("/info/instellingen", async (req, res): Promise<void> => {
   try {
     const [instelling] = await db
       .select()
@@ -15,7 +15,7 @@ router.get("/info/instellingen", async (req, res) => {
       .limit(1);
 
     if (!instelling) {
-      return res.json({
+      return void res.json({
         id: 0,
         support_email: null,
         support_telefoon: null,
@@ -49,7 +49,7 @@ router.get("/info/instellingen", async (req, res) => {
 router.put(
   "/info/instellingen",
   requireRol("hoofdbeheerder"),
-  async (req, res) => {
+  async (req, res): Promise<void> => {
     try {
       const { support_email, support_telefoon, support_website, extra_disclaimer, opdrachtbevestiging_auto_verzenden, ai_kostendrempel_eur } =
         req.body as {

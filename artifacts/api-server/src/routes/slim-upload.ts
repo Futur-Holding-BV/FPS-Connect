@@ -386,7 +386,7 @@ router.post(
   "/slim-upload/analyseer",
   requireAuth,
   upload.any(),
-  async (req, res) => {
+  async (req, res): Promise<void> => {
     const bestanden = (req.files as Express.Multer.File[] | undefined) ?? [];
 
     if (bestanden.length === 0) {

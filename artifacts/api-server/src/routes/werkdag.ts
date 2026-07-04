@@ -63,7 +63,7 @@ function mapWerkdagItem(
 
 // ── GET /modules/werkdag/vandaag ──────────────────────────────────────────────
 // Alle werkorders van vandaag voor de ingelogde medewerker, gesorteerd op starttijd.
-router.get("/modules/werkdag/vandaag", async (req, res) => {
+router.get("/modules/werkdag/vandaag", async (req, res): Promise<void> => {
   const userId = req.session.userId!;
   const medewerkerId = await getMedewerkerId(userId);
   if (!medewerkerId) {
@@ -95,7 +95,7 @@ router.get("/modules/werkdag/vandaag", async (req, res) => {
 
 // ── GET /modules/werkdag/items/:id ────────────────────────────────────────────
 // Volledig detail van één werkorder inclusief gekoppeld meerwerk.
-router.get("/modules/werkdag/items/:id", async (req, res) => {
+router.get("/modules/werkdag/items/:id", async (req, res): Promise<void> => {
   const id = parseInt(req.params.id, 10);
   const userId = req.session.userId!;
   const medewerkerId = await getMedewerkerId(userId);
@@ -144,7 +144,7 @@ router.get("/modules/werkdag/items/:id", async (req, res) => {
 // ── PATCH /modules/werkdag/items/:id/status ───────────────────────────────────
 // Wijzig de uitvoeringsstatus van een werkorder.
 // Toegestane waarden: gepland | bezig | pauze | gereed
-router.patch("/modules/werkdag/items/:id/status", async (req, res) => {
+router.patch("/modules/werkdag/items/:id/status", async (req, res): Promise<void> => {
   const id = parseInt(req.params.id, 10);
   const { uitvoering_status } = req.body as { uitvoering_status?: string };
   const GELDIG: string[] = ["gepland", "bezig", "pauze", "gereed"];

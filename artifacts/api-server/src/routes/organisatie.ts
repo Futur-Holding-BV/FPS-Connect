@@ -82,7 +82,7 @@ const mapBedrijfsdocument = (r: typeof orgBedrijfsdocumentenTable.$inferSelect) 
 
 // ── Verzekeringen ────────────────────────────────────────────────────────────
 
-router.get("/organisatie/verzekeringen", lezen, async (req, res) => {
+router.get("/organisatie/verzekeringen", lezen, async (req, res): Promise<void> => {
   try {
     const rijen = await db
       .select()
@@ -95,14 +95,14 @@ router.get("/organisatie/verzekeringen", lezen, async (req, res) => {
   }
 });
 
-router.post("/organisatie/verzekeringen", schrijven, async (req, res) => {
+router.post("/organisatie/verzekeringen", schrijven, async (req, res): Promise<void> => {
   try {
     const {
       type, omschrijving, maatschappij, polisnummer, premie, premie_frequentie,
       ingangsdatum, vervaldatum, eigen_risico, status, opmerkingen,
     } = req.body;
     if (!type || typeof type !== "string" || !type.trim()) {
-      return res.status(400).json({ error: "type is verplicht" });
+      return void res.status(400).json({ error: "type is verplicht" });
     }
     const [rij] = await db
       .insert(orgVerzekeringenTable)
@@ -127,7 +127,7 @@ router.post("/organisatie/verzekeringen", schrijven, async (req, res) => {
   }
 });
 
-router.patch("/organisatie/verzekeringen/:id", schrijven, async (req, res) => {
+router.patch("/organisatie/verzekeringen/:id", schrijven, async (req, res): Promise<void> => {
   try {
     const id = parseId(req.params.id);
     const {
@@ -152,7 +152,7 @@ router.patch("/organisatie/verzekeringen/:id", schrijven, async (req, res) => {
       })
       .where(eq(orgVerzekeringenTable.id, id))
       .returning();
-    if (!rij) return res.status(404).json({ error: "Polis niet gevonden" });
+    if (!rij) return void res.status(404).json({ error: "Polis niet gevonden" });
     res.json(mapVerzekering(rij));
   } catch (err) {
     req.log.error(err);
@@ -160,7 +160,7 @@ router.patch("/organisatie/verzekeringen/:id", schrijven, async (req, res) => {
   }
 });
 
-router.delete("/organisatie/verzekeringen/:id", schrijven, async (req, res) => {
+router.delete("/organisatie/verzekeringen/:id", schrijven, async (req, res): Promise<void> => {
   try {
     const id = parseId(req.params.id);
     await db.delete(orgVerzekeringenTable).where(eq(orgVerzekeringenTable.id, id));
@@ -173,7 +173,7 @@ router.delete("/organisatie/verzekeringen/:id", schrijven, async (req, res) => {
 
 // ── Jaarverslagen ────────────────────────────────────────────────────────────
 
-router.get("/organisatie/jaarverslagen", lezen, async (req, res) => {
+router.get("/organisatie/jaarverslagen", lezen, async (req, res): Promise<void> => {
   try {
     const rijen = await db
       .select()
@@ -186,11 +186,11 @@ router.get("/organisatie/jaarverslagen", lezen, async (req, res) => {
   }
 });
 
-router.post("/organisatie/jaarverslagen", schrijven, async (req, res) => {
+router.post("/organisatie/jaarverslagen", schrijven, async (req, res): Promise<void> => {
   try {
     const { boekjaar, type, omschrijving, accountant, definitief, vastgesteld_op, document_id } = req.body;
     if (!boekjaar || !type) {
-      return res.status(400).json({ error: "boekjaar en type zijn verplicht" });
+      return void res.status(400).json({ error: "boekjaar en type zijn verplicht" });
     }
     const [rij] = await db
       .insert(orgJaarverslagenTable)
@@ -211,7 +211,7 @@ router.post("/organisatie/jaarverslagen", schrijven, async (req, res) => {
   }
 });
 
-router.patch("/organisatie/jaarverslagen/:id", schrijven, async (req, res) => {
+router.patch("/organisatie/jaarverslagen/:id", schrijven, async (req, res): Promise<void> => {
   try {
     const id = parseId(req.params.id);
     const { boekjaar, type, omschrijving, accountant, definitief, vastgesteld_op, document_id } = req.body;
@@ -229,7 +229,7 @@ router.patch("/organisatie/jaarverslagen/:id", schrijven, async (req, res) => {
       })
       .where(eq(orgJaarverslagenTable.id, id))
       .returning();
-    if (!rij) return res.status(404).json({ error: "Jaarverslag niet gevonden" });
+    if (!rij) return void res.status(404).json({ error: "Jaarverslag niet gevonden" });
     res.json(mapJaarverslag(rij));
   } catch (err) {
     req.log.error(err);
@@ -237,7 +237,7 @@ router.patch("/organisatie/jaarverslagen/:id", schrijven, async (req, res) => {
   }
 });
 
-router.delete("/organisatie/jaarverslagen/:id", schrijven, async (req, res) => {
+router.delete("/organisatie/jaarverslagen/:id", schrijven, async (req, res): Promise<void> => {
   try {
     const id = parseId(req.params.id);
     await db.delete(orgJaarverslagenTable).where(eq(orgJaarverslagenTable.id, id));
@@ -250,7 +250,7 @@ router.delete("/organisatie/jaarverslagen/:id", schrijven, async (req, res) => {
 
 // ── Bedrijfsdocumenten ───────────────────────────────────────────────────────
 
-router.get("/organisatie/bedrijfsdocumenten", lezen, async (req, res) => {
+router.get("/organisatie/bedrijfsdocumenten", lezen, async (req, res): Promise<void> => {
   try {
     const rijen = await db
       .select()
@@ -263,11 +263,11 @@ router.get("/organisatie/bedrijfsdocumenten", lezen, async (req, res) => {
   }
 });
 
-router.post("/organisatie/bedrijfsdocumenten", schrijven, async (req, res) => {
+router.post("/organisatie/bedrijfsdocumenten", schrijven, async (req, res): Promise<void> => {
   try {
     const { naam, categorie, omschrijving, uitgever, referentie, ingangsdatum, vervaldatum, status, document_id, opmerkingen, bestand_hash, bestand_pad } = req.body;
     if (!naam || !categorie) {
-      return res.status(400).json({ error: "naam en categorie zijn verplicht" });
+      return void res.status(400).json({ error: "naam en categorie zijn verplicht" });
     }
     const [rij] = await db
       .insert(orgBedrijfsdocumentenTable)
@@ -293,7 +293,7 @@ router.post("/organisatie/bedrijfsdocumenten", schrijven, async (req, res) => {
   }
 });
 
-router.patch("/organisatie/bedrijfsdocumenten/:id", schrijven, async (req, res) => {
+router.patch("/organisatie/bedrijfsdocumenten/:id", schrijven, async (req, res): Promise<void> => {
   try {
     const id = parseId(req.params.id);
     const { naam, categorie, omschrijving, uitgever, referentie, ingangsdatum, vervaldatum, status, document_id, opmerkingen, bestand_hash, bestand_pad } = req.body;
@@ -316,7 +316,7 @@ router.patch("/organisatie/bedrijfsdocumenten/:id", schrijven, async (req, res) 
       })
       .where(eq(orgBedrijfsdocumentenTable.id, id))
       .returning();
-    if (!rij) return res.status(404).json({ error: "Document niet gevonden" });
+    if (!rij) return void res.status(404).json({ error: "Document niet gevonden" });
     res.json(mapBedrijfsdocument(rij));
   } catch (err) {
     req.log.error(err);
@@ -340,12 +340,12 @@ router.post(
   "/organisatie/bedrijfsdocumenten/analyseer",
   schrijven,
   upload.single("bestand"),
-  async (req, res) => {
+  async (req, res): Promise<void> => {
     if (!req.file) {
-      return res.status(400).json({ error: "Bestand ontbreekt" });
+      return void res.status(400).json({ error: "Bestand ontbreekt" });
     }
     if (!heeftGateway()) {
-      return res.status(503).json({ error: "AI niet geconfigureerd" });
+      return void res.status(503).json({ error: "AI niet geconfigureerd" });
     }
 
     try {
@@ -481,7 +481,7 @@ router.post(
 
 // ── Bedrijfsdocumenten — AI categorie-correcties overzicht ───────────────────
 
-router.get("/organisatie/bedrijfsdocumenten/correcties", lezen, async (req, res) => {
+router.get("/organisatie/bedrijfsdocumenten/correcties", lezen, async (req, res): Promise<void> => {
   try {
     const rijen = await db
       .select()
@@ -502,7 +502,7 @@ router.get("/organisatie/bedrijfsdocumenten/correcties", lezen, async (req, res)
   }
 });
 
-router.delete("/organisatie/bedrijfsdocumenten/correcties/:id", schrijven, async (req, res) => {
+router.delete("/organisatie/bedrijfsdocumenten/correcties/:id", schrijven, async (req, res): Promise<void> => {
   try {
     const id = parseId(req.params.id);
     await db.delete(aiCategorieCorrectiesTable).where(eq(aiCategorieCorrectiesTable.id, id));
@@ -515,14 +515,14 @@ router.delete("/organisatie/bedrijfsdocumenten/correcties/:id", schrijven, async
 
 // ── Bedrijfsdocumenten — AI categorie-correctie opslaan ──────────────────────
 
-router.post("/organisatie/bedrijfsdocumenten/correctie", schrijven, async (req, res) => {
+router.post("/organisatie/bedrijfsdocumenten/correctie", schrijven, async (req, res): Promise<void> => {
   try {
     const { ai_voorstel, gekozen, hash, tekst_fragment } = req.body;
     if (!ai_voorstel || !gekozen) {
-      return res.status(400).json({ error: "ai_voorstel en gekozen zijn verplicht" });
+      return void res.status(400).json({ error: "ai_voorstel en gekozen zijn verplicht" });
     }
     if (!GELDIGE_CATEGORIEEN.includes(String(gekozen))) {
-      return res.status(400).json({ error: "Ongeldige categorie" });
+      return void res.status(400).json({ error: "Ongeldige categorie" });
     }
     await db.insert(aiCategorieCorrectiesTable).values({
       hash: hash ?? null,
@@ -541,14 +541,14 @@ router.post("/organisatie/bedrijfsdocumenten/correctie", schrijven, async (req, 
 
 const GELDIGE_VELDEN = ["naam", "uitgever", "referentie", "ingangsdatum", "vervaldatum", "omschrijving"] as const;
 
-router.post("/organisatie/bedrijfsdocumenten/veld-correctie", schrijven, async (req, res) => {
+router.post("/organisatie/bedrijfsdocumenten/veld-correctie", schrijven, async (req, res): Promise<void> => {
   try {
     const { veld_naam, ai_voorstel, gekozen, hash, tekst_fragment } = req.body;
     if (!veld_naam || !ai_voorstel || gekozen === undefined || gekozen === null) {
-      return res.status(400).json({ error: "veld_naam, ai_voorstel en gekozen zijn verplicht" });
+      return void res.status(400).json({ error: "veld_naam, ai_voorstel en gekozen zijn verplicht" });
     }
     if (!(GELDIGE_VELDEN as readonly string[]).includes(String(veld_naam))) {
-      return res.status(400).json({ error: "Ongeldig veld" });
+      return void res.status(400).json({ error: "Ongeldig veld" });
     }
     await db.insert(aiVeldCorrectiesTable).values({
       hash: hash ?? null,
@@ -564,7 +564,7 @@ router.post("/organisatie/bedrijfsdocumenten/veld-correctie", schrijven, async (
   }
 });
 
-router.delete("/organisatie/bedrijfsdocumenten/:id", schrijven, async (req, res) => {
+router.delete("/organisatie/bedrijfsdocumenten/:id", schrijven, async (req, res): Promise<void> => {
   try {
     const id = parseId(req.params.id);
     const [doc] = await db
@@ -589,7 +589,7 @@ router.delete("/organisatie/bedrijfsdocumenten/:id", schrijven, async (req, res)
 
 // ── Bedrijfsdocumenten — bestand downloaden ───────────────────────────────────
 
-router.get("/organisatie/bedrijfsdocumenten/:id/download", lezen, async (req, res) => {
+router.get("/organisatie/bedrijfsdocumenten/:id/download", lezen, async (req, res): Promise<void> => {
   try {
     const id = parseId(req.params.id);
     const [doc] = await db
@@ -597,11 +597,11 @@ router.get("/organisatie/bedrijfsdocumenten/:id/download", lezen, async (req, re
       .from(orgBedrijfsdocumentenTable)
       .where(eq(orgBedrijfsdocumentenTable.id, id))
       .limit(1);
-    if (!doc) return res.status(404).json({ error: "Document niet gevonden" });
-    if (!doc.bestandPad) return res.status(404).json({ error: "Geen bestand beschikbaar voor dit document" });
+    if (!doc) return void res.status(404).json({ error: "Document niet gevonden" });
+    if (!doc.bestandPad) return void res.status(404).json({ error: "Geen bestand beschikbaar voor dit document" });
     if (!isGeldigBestandPad(doc.bestandPad)) {
       req.log.error({ bestandPad: doc.bestandPad }, "Ongeldig bestand_pad in DB — download geweigerd");
-      return res.status(403).json({ error: "Bestandstoegang geweigerd" });
+      return void res.status(403).json({ error: "Bestandstoegang geweigerd" });
     }
 
     const objectFile = await oss.getObjectEntityFile(doc.bestandPad);
@@ -623,7 +623,7 @@ router.get("/organisatie/bedrijfsdocumenten/:id/download", lezen, async (req, re
     }
   } catch (err) {
     if (err instanceof ObjectNotFoundError) {
-      return res.status(404).json({ error: "Bestand niet gevonden in opslag" });
+      return void res.status(404).json({ error: "Bestand niet gevonden in opslag" });
     }
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });
@@ -632,9 +632,9 @@ router.get("/organisatie/bedrijfsdocumenten/:id/download", lezen, async (req, re
 
 // ── AI — Bedrijfsgegevens invullen ────────────────────────────────────────────
 
-router.post("/organisatie/ai-invullen", schrijven, async (req, res) => {
+router.post("/organisatie/ai-invullen", schrijven, async (req, res): Promise<void> => {
   if (!heeftGateway()) {
-    return res.status(503).json({ error: "AI niet geconfigureerd" });
+    return void res.status(503).json({ error: "AI niet geconfigureerd" });
   }
   const { bedrijfsnaam, sector } = req.body;
   const naam = (bedrijfsnaam ?? "FPS Brandpreventie").trim();
@@ -657,7 +657,7 @@ router.post("/organisatie/ai-invullen", schrijven, async (req, res) => {
   if (webResultaatOrgInvullen.ok) {
     let data: Record<string, string | null> = {};
     try { data = JSON.parse(webResultaatOrgInvullen.inhoud) as Record<string, string | null>; } catch { data = {}; }
-    return res.json({ velden: data });
+    return void res.json({ velden: data });
   }
   req.log.warn({ fout: webResultaatOrgInvullen.fout }, "Web search niet beschikbaar voor ai-invullen, fallback naar kennismodel");
 
@@ -683,9 +683,9 @@ router.post("/organisatie/ai-invullen", schrijven, async (req, res) => {
 
 // ── AI — Verzekeringen suggesties ──────────────────────────────────────────────
 
-router.post("/organisatie/verzekeringen/ai-suggesties", schrijven, async (req, res) => {
+router.post("/organisatie/verzekeringen/ai-suggesties", schrijven, async (req, res): Promise<void> => {
   if (!heeftGateway()) {
-    return res.status(503).json({ error: "AI niet geconfigureerd" });
+    return void res.status(503).json({ error: "AI niet geconfigureerd" });
   }
   try {
     const { bedrijfsnaam, sector } = req.body;
@@ -735,9 +735,9 @@ router.post("/organisatie/verzekeringen/ai-suggesties", schrijven, async (req, r
 
 // ── AI — Bedrijfsscan ──────────────────────────────────────────────────────────
 
-router.post("/organisatie/ai-bedrijfsscan", schrijven, async (req, res) => {
+router.post("/organisatie/ai-bedrijfsscan", schrijven, async (req, res): Promise<void> => {
   if (!heeftGateway()) {
-    return res.status(503).json({ error: "AI niet geconfigureerd" });
+    return void res.status(503).json({ error: "AI niet geconfigureerd" });
   }
   try {
     const polissen = await db.select().from(orgVerzekeringenTable);

@@ -9,7 +9,7 @@ const router = Router();
 router.get(
   "/api/beheer/ai-aanroepen",
   requireRol("hoofdbeheerder"),
-  async (req, res) => {
+  async (req, res): Promise<void> => {
     const pagina = Math.max(1, parseInt(String(req.query.pagina ?? "1"), 10) || 1);
     const perPagina = Math.min(200, Math.max(1, parseInt(String(req.query.per_pagina ?? "50"), 10) || 50));
     const moduleFilter = typeof req.query.module === "string" ? req.query.module.trim() : null;
@@ -136,7 +136,7 @@ router.get(
 router.get(
   "/api/beheer/ai-aanroepen/export",
   requireRol("hoofdbeheerder"),
-  async (req, res) => {
+  async (req, res): Promise<void> => {
     const moduleFilter = typeof req.query.module === "string" ? req.query.module.trim() : null;
     const statusFilter = typeof req.query.status === "string" ? req.query.status.trim() : null;
     const gebouwIdFilter = req.query.gebouw_id ? parseInt(String(req.query.gebouw_id), 10) : null;
@@ -233,7 +233,7 @@ router.get(
 router.get(
   "/api/beheer/ai-aanroepen/aggregaat",
   requireRol("hoofdbeheerder"),
-  async (req, res) => {
+  async (req, res): Promise<void> => {
     const moduleFilter = typeof req.query.module === "string" ? req.query.module.trim() : null;
     const datumVan = typeof req.query.datum_van === "string" ? req.query.datum_van.trim() : null;
     const datumTot = typeof req.query.datum_tot === "string" ? req.query.datum_tot.trim() : null;
@@ -284,7 +284,7 @@ router.get(
 router.get(
   "/api/beheer/ai-drempel-status",
   requireRol("hoofdbeheerder"),
-  async (req, res) => {
+  async (req, res): Promise<void> => {
     const [instelling] = await db
       .select()
       .from(appInstellingenTable)

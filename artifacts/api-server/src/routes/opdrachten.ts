@@ -105,7 +105,7 @@ function mapBegroting(
 
 // ── POST /offertes/:id/maak-opdracht ──────────────────────────────────────
 
-router.post("/offertes/:id/maak-opdracht", schrijven, async (req, res) => {
+router.post("/offertes/:id/maak-opdracht", schrijven, async (req, res): Promise<void> => {
   const offerteId = parseInt(String(req.params.id), 10);
   if (isNaN(offerteId)) { res.status(400).json({ error: "Ongeldig offerte-id" }); return; }
 
@@ -236,7 +236,7 @@ router.post("/offertes/:id/maak-opdracht", schrijven, async (req, res) => {
 
 // ── GET /opdrachten ───────────────────────────────────────────────────────
 
-router.get("/opdrachten", lezen, async (req, res) => {
+router.get("/opdrachten", lezen, async (req, res): Promise<void> => {
   try {
     const gebouwFilter = req.query.gebouw_id ? parseInt(String(req.query.gebouw_id), 10) : null;
     const offerteFilter = req.query.offerte_id ? parseInt(String(req.query.offerte_id), 10) : null;
@@ -277,7 +277,7 @@ router.get("/opdrachten", lezen, async (req, res) => {
 
 // ── GET /opdrachten/:id ───────────────────────────────────────────────────
 
-router.get("/opdrachten/:id", lezen, async (req, res) => {
+router.get("/opdrachten/:id", lezen, async (req, res): Promise<void> => {
   const id = parseInt(String(req.params.id), 10);
   if (isNaN(id)) { res.status(400).json({ error: "Ongeldig id" }); return; }
 
@@ -311,7 +311,7 @@ router.get("/opdrachten/:id", lezen, async (req, res) => {
 
 // ── PATCH /opdrachten/:id ─────────────────────────────────────────────────
 
-router.patch("/opdrachten/:id", schrijven, async (req, res) => {
+router.patch("/opdrachten/:id", schrijven, async (req, res): Promise<void> => {
   const id = parseInt(String(req.params.id), 10);
   if (isNaN(id)) { res.status(400).json({ error: "Ongeldig id" }); return; }
 
@@ -353,7 +353,7 @@ router.patch("/opdrachten/:id", schrijven, async (req, res) => {
 
 // ── GET /opdrachten/:id/werkbegroting ─────────────────────────────────────
 
-router.get("/opdrachten/:id/werkbegroting", lezen, async (req, res) => {
+router.get("/opdrachten/:id/werkbegroting", lezen, async (req, res): Promise<void> => {
   const id = parseInt(String(req.params.id), 10);
   if (isNaN(id)) { res.status(400).json({ error: "Ongeldig id" }); return; }
 
@@ -375,7 +375,7 @@ router.get("/opdrachten/:id/werkbegroting", lezen, async (req, res) => {
 
 // ── POST /opdrachten/:id/werkbegroting/vaststellen ────────────────────────
 
-router.post("/opdrachten/:id/werkbegroting/vaststellen", schrijven, async (req, res) => {
+router.post("/opdrachten/:id/werkbegroting/vaststellen", schrijven, async (req, res): Promise<void> => {
   const id = parseInt(String(req.params.id), 10);
   if (isNaN(id)) { res.status(400).json({ error: "Ongeldig id" }); return; }
 
@@ -410,7 +410,7 @@ router.post("/opdrachten/:id/werkbegroting/vaststellen", schrijven, async (req, 
 
 // ── POST /opdrachten/:id/werkbegroting/ai-analyse ─────────────────────────
 
-router.post("/opdrachten/:id/werkbegroting/ai-analyse", schrijven, async (req, res) => {
+router.post("/opdrachten/:id/werkbegroting/ai-analyse", schrijven, async (req, res): Promise<void> => {
   const id = parseInt(String(req.params.id), 10);
   if (isNaN(id)) { res.status(400).json({ error: "Ongeldig id" }); return; }
 
@@ -484,7 +484,7 @@ Geef je analyse als JSON met deze structuur:
 
 // ── GET /opdrachten/:id/nacalculatie ─────────────────────────────────────
 
-router.get("/opdrachten/:id/nacalculatie", lezen, async (req, res) => {
+router.get("/opdrachten/:id/nacalculatie", lezen, async (req, res): Promise<void> => {
   const id = parseInt(String(req.params.id), 10);
   if (isNaN(id)) { res.status(400).json({ error: "Ongeldig id" }); return; }
 
@@ -561,7 +561,7 @@ router.get("/opdrachten/:id/nacalculatie", lezen, async (req, res) => {
 
 // ── GET /opdrachten/:id/planning-uren ─────────────────────────────────────
 
-router.get("/opdrachten/:id/planning-uren", lezen, async (req, res) => {
+router.get("/opdrachten/:id/planning-uren", lezen, async (req, res): Promise<void> => {
   const id = parseInt(String(req.params.id), 10);
   if (isNaN(id)) { res.status(400).json({ error: "Ongeldig id" }); return; }
 
@@ -594,7 +594,7 @@ router.get("/opdrachten/:id/planning-uren", lezen, async (req, res) => {
 });
 
 // ── Materiaallijst per opdracht ─────────────────────────────────────────────
-router.get("/opdrachten/:id/materiaal", lezen, async (req, res) => {
+router.get("/opdrachten/:id/materiaal", lezen, async (req, res): Promise<void> => {
   const id = parseInt(String(req.params.id), 10);
   if (isNaN(id)) { res.status(400).json({ error: "Ongeldig id" }); return; }
 
@@ -695,7 +695,7 @@ router.get("/opdrachten/:id/materiaal", lezen, async (req, res) => {
 });
 
 // ── POST /opdrachten/:id/werkbegroting/ai-chat ─────────────────────────────
-router.post("/opdrachten/:id/werkbegroting/ai-chat", schrijven, async (req, res) => {
+router.post("/opdrachten/:id/werkbegroting/ai-chat", schrijven, async (req, res): Promise<void> => {
   const id = parseInt(String(req.params.id), 10);
   if (isNaN(id)) { res.status(400).json({ error: "Ongeldig id" }); return; }
 
@@ -844,7 +844,7 @@ function mapWbAdvies(r: typeof werkbegrotingAdviezenTable.$inferSelect) {
   };
 }
 
-router.post("/opdrachten/:id/werkbegroting/senior-adviezen", schrijven, async (req, res) => {
+router.post("/opdrachten/:id/werkbegroting/senior-adviezen", schrijven, async (req, res): Promise<void> => {
   const id = parseInt(String(req.params.id), 10);
   if (isNaN(id)) { res.status(400).json({ error: "Ongeldig id" }); return; }
 
@@ -961,7 +961,7 @@ Geef 3–10 adviezen. Geen JSON buiten de array.`;
   }
 });
 
-router.get("/opdrachten/:id/werkbegroting/senior-adviezen", lezen, async (req, res) => {
+router.get("/opdrachten/:id/werkbegroting/senior-adviezen", lezen, async (req, res): Promise<void> => {
   const id = parseInt(String(req.params.id), 10);
   if (isNaN(id)) { res.status(400).json({ error: "Ongeldig id" }); return; }
 
@@ -984,7 +984,7 @@ router.get("/opdrachten/:id/werkbegroting/senior-adviezen", lezen, async (req, r
   }
 });
 
-router.patch("/opdrachten/:id/werkbegroting/senior-adviezen/:adviesId", schrijven, async (req, res) => {
+router.patch("/opdrachten/:id/werkbegroting/senior-adviezen/:adviesId", schrijven, async (req, res): Promise<void> => {
   const id       = parseInt(String(req.params.id), 10);
   const adviesId = parseInt(String(req.params.adviesId), 10);
   if (isNaN(id) || isNaN(adviesId)) { res.status(400).json({ error: "Ongeldig id" }); return; }

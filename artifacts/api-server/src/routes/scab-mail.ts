@@ -58,7 +58,7 @@ function mapBijlage(b: typeof scabMailBijlagenTable.$inferSelect) {
   };
 }
 
-router.get("/scab-mails", lezen, async (req: Request, res: Response) => {
+router.get("/scab-mails", lezen, async (req: Request, res: Response): Promise<void> => {
   const { jaar, maand, werkmaatschappij, status } = req.query;
   const filters = [];
   if (jaar) filters.push(eq(scabMailsTable.periodeJaar, Number(jaar)));
@@ -72,13 +72,13 @@ router.get("/scab-mails", lezen, async (req: Request, res: Response) => {
     .where(filters.length ? and(...filters) : undefined)
     .orderBy(desc(scabMailsTable.aangemaaktOp));
 
-  return res.json(rows.map(mapMail));
+  return void res.json(rows.map(mapMail));
 });
 
-router.post("/scab-mails/genereer", schrijven, async (req: Request, res: Response) => {
+router.post("/scab-mails/genereer", schrijven, async (req: Request, res: Response): Promise<void> => {
   const { werkmaatschappij, werkgever_id, periode_jaar, periode_maand } = req.body;
   if (!werkmaatschappij || !periode_jaar || !periode_maand) {
-    return res.status(400).json({ message: "werkmaatschappij, periode_jaar en periode_maand zijn verplicht" });
+    return void res.status(400).json({ message: "werkmaatschappij, periode_jaar en periode_maand zijn verplicht" });
   }
 
   const sess = req.session as { userId?: number; gebruikerNaam?: string };
@@ -169,24 +169,24 @@ router.post("/scab-mails/genereer", schrijven, async (req: Request, res: Respons
     aangemaaktDoorNaam: sess.gebruikerNaam ?? null,
   }).returning();
 
-  return res.status(201).json(mapMail(mail));
+  return void res.status(201).json(mapMail(mail));
 });
 
-router.get("/scab-mails/:id", lezen, async (req: Request, res: Response) => {
+router.get("/scab-mails/:id", lezen, async (req: Request, res: Response): Promise<void> => {
   const id = Number(req.params.id);
   const [mail] = await db.select().from(scabMailsTable).where(eq(scabMailsTable.id, id));
-  if (!mail) return res.status(404).json({ message: "Niet gevonden" });
-  return res.json(mapMail(mail));
+  if (!mail) return void res.status(404).json({ message: "Niet gevonden" });
+  return void res.json(mapMail(mail));
 });
 
-router.patch("/scab-mails/:id", schrijven, async (req: Request, res: Response) => {
+router.patch("/scab-mails/:id", schrijven, async (req: Request, res: Response): Promise<void> => {
   const id = Number(req.params.id);
   const { onderwerp, inhoud, scab_email_adres, contactpersoon } = req.body;
 
   const [bestaand] = await db.select({ status: scabMailsTable.status })
     .from(scabMailsTable).where(eq(scabMailsTable.id, id));
-  if (!bestaand) return res.status(404).json({ message: "Niet gevonden" });
-  if (bestaand.status === "verzonden") return res.status(409).json({ message: "Verzonden mails kunnen niet meer worden bewerkt" });
+  if (!bestaand) return void res.status(404).json({ message: "Niet gevonden" });
+  if (bestaand.status === "verzonden") return void res.status(409).json({ message: "Verzonden mails kunnen niet meer worden bewerkt" });
 
   const update: Partial<typeof scabMailsTable.$inferInsert> = { bijgewerktOp: new Date() };
   if (onderwerp !== undefined) update.onderwerp = onderwerp;
@@ -197,17 +197,17 @@ router.patch("/scab-mails/:id", schrijven, async (req: Request, res: Response) =
   const [updated] = await db.update(scabMailsTable).set(update)
     .where(eq(scabMailsTable.id, id)).returning();
 
-  return res.json(mapMail(updated));
+  return void res.json(mapMail(updated));
 });
 
-router.post("/scab-mails/:id/verzend", verzenden, async (req: Request, res: Response) => {
+router.post("/scab-mails/:id/verzend", verzenden, async (req: Request, res: Response): Promise<void> => {
   const id = Number(req.params.id);
   const sess = req.session as { userId?: number; gebruikerNaam?: string };
 
   const [mail] = await db.select().from(scabMailsTable).where(eq(scabMailsTable.id, id));
-  if (!mail) return res.status(404).json({ message: "Niet gevonden" });
-  if (mail.status === "verzonden") return res.status(409).json({ message: "Al verzonden" });
-  if (!mail.scabEmailAdres) return res.status(422).json({ message: "Geen SCAB-e-mailadres geconfigureerd" });
+  if (!mail) return void res.status(404).json({ message: "Niet gevonden" });
+  if (mail.status === "verzonden") return void res.status(409).json({ message: "Al verzonden" });
+  if (!mail.scabEmailAdres) return void res.status(422).json({ message: "Geen SCAB-e-mailadres geconfigureerd" });
 
   const [updated] = await db.update(scabMailsTable).set({
     status: "verzonden",
@@ -218,24 +218,24 @@ router.post("/scab-mails/:id/verzend", verzenden, async (req: Request, res: Resp
   }).where(eq(scabMailsTable.id, id)).returning();
 
   req.log.info({ scabMailId: id, naar: mail.scabEmailAdres }, "SCAB-mail als verzonden gemarkeerd");
-  return res.json(mapMail(updated));
+  return void res.json(mapMail(updated));
 });
 
-router.get("/scab-mails/:id/bijlagen", lezen, async (req: Request, res: Response) => {
+router.get("/scab-mails/:id/bijlagen", lezen, async (req: Request, res: Response): Promise<void> => {
   const id = Number(req.params.id);
   const bijlagen = await db.select().from(scabMailBijlagenTable)
     .where(eq(scabMailBijlagenTable.scabMailId, id));
-  return res.json(bijlagen.map(mapBijlage));
+  return void res.json(bijlagen.map(mapBijlage));
 });
 
 router.post(
   "/scab-mails/:id/bijlagen",
   schrijven,
   upload.single("bestand"),
-  async (req: Request, res: Response) => {
+  async (req: Request, res: Response): Promise<void> => {
     const scabMailId = Number(req.params.id);
     const bestand = req.file;
-    if (!bestand) return res.status(400).json({ message: "Bestand ontbreekt" });
+    if (!bestand) return void res.status(400).json({ message: "Bestand ontbreekt" });
 
     const sess = req.session as { userId?: number };
     const { type, omschrijving, is_gevoelig, medewerker_id } = req.body;
@@ -247,7 +247,7 @@ router.post(
       objectPath = await storage.uploadBestand(subPath, bestand.buffer, mimeType);
     } catch (err) {
       req.log.error({ err }, "Upload SCAB-bijlage mislukt");
-      return res.status(500).json({ message: "Upload mislukt" });
+      return void res.status(500).json({ message: "Upload mislukt" });
     }
 
     let medewerkerNaam: string | null = null;
@@ -270,14 +270,14 @@ router.post(
       aangemaaktDoorId: sess.userId ?? null,
     }).returning();
 
-    return res.status(201).json(mapBijlage(bijlage));
+    return void res.status(201).json(mapBijlage(bijlage));
   }
 );
 
-router.delete("/scab-mails/:id/bijlagen/:bijlage_id", schrijven, async (req: Request, res: Response) => {
+router.delete("/scab-mails/:id/bijlagen/:bijlage_id", schrijven, async (req: Request, res: Response): Promise<void> => {
   const bijlageId = Number(req.params.bijlage_id);
   await db.delete(scabMailBijlagenTable).where(eq(scabMailBijlagenTable.id, bijlageId));
-  return res.status(204).send();
+  return void res.status(204).send();
 });
 
 export default router;

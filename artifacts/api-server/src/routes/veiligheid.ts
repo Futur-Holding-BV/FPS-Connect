@@ -127,7 +127,7 @@ function mapAfronding(a: Record<string, unknown>) {
 
 // ── LIST ──────────────────────────────────────────────────────────────────────
 
-veiligheidRouter.get("/veiligheid/toolboxen", lezenVeiligheid, async (req, res) => {
+veiligheidRouter.get("/veiligheid/toolboxen", lezenVeiligheid, async (req, res): Promise<void> => {
   try {
     const userId = req.session.userId!;
     const { categorie, gepubliceerd } = req.query;
@@ -194,13 +194,13 @@ veiligheidRouter.get("/veiligheid/toolboxen", lezenVeiligheid, async (req, res) 
 
 // ── CREATE ────────────────────────────────────────────────────────────────────
 
-veiligheidRouter.post("/veiligheid/toolboxen", schrijvenVeiligheid, async (req, res) => {
+veiligheidRouter.post("/veiligheid/toolboxen", schrijvenVeiligheid, async (req, res): Promise<void> => {
   try {
     const userId = req.session.userId!;
     const { vragen: vragenInput, ...rest } = req.body;
 
     if (!rest.titel?.trim()) {
-      return res.status(400).json({ error: "Titel verplicht" });
+      return void res.status(400).json({ error: "Titel verplicht" });
     }
 
     const [toolbox] = await db
@@ -244,7 +244,7 @@ veiligheidRouter.post("/veiligheid/toolboxen", schrijvenVeiligheid, async (req, 
 
 // ── DETAIL ────────────────────────────────────────────────────────────────────
 
-veiligheidRouter.get("/veiligheid/toolboxen/:id", lezenVeiligheid, async (req, res) => {
+veiligheidRouter.get("/veiligheid/toolboxen/:id", lezenVeiligheid, async (req, res): Promise<void> => {
   try {
     const id = parseInt(String(req.params.id));
     const userId = req.session.userId!;
@@ -258,7 +258,7 @@ veiligheidRouter.get("/veiligheid/toolboxen/:id", lezenVeiligheid, async (req, r
       .leftJoin(gebruikersTable, eq(veiligheidToolboxenTable.aangemaaktDoorId, gebruikersTable.id))
       .where(eq(veiligheidToolboxenTable.id, id));
 
-    if (!row) return res.status(404).json({ error: "Niet gevonden" });
+    if (!row) return void res.status(404).json({ error: "Niet gevonden" });
 
     const vragen = await db
       .select()
@@ -299,7 +299,7 @@ veiligheidRouter.get("/veiligheid/toolboxen/:id", lezenVeiligheid, async (req, r
 
 // ── UPDATE ────────────────────────────────────────────────────────────────────
 
-veiligheidRouter.patch("/veiligheid/toolboxen/:id", schrijvenVeiligheid, async (req, res) => {
+veiligheidRouter.patch("/veiligheid/toolboxen/:id", schrijvenVeiligheid, async (req, res): Promise<void> => {
   try {
     const id = parseInt(String(req.params.id));
     const { vragen: vragenInput, ...rest } = req.body;
@@ -325,7 +325,7 @@ veiligheidRouter.patch("/veiligheid/toolboxen/:id", schrijvenVeiligheid, async (
       .where(eq(veiligheidToolboxenTable.id, id))
       .returning();
 
-    if (!updated) return res.status(404).json({ error: "Niet gevonden" });
+    if (!updated) return void res.status(404).json({ error: "Niet gevonden" });
 
     if (Array.isArray(vragenInput)) {
       await db.delete(veiligheidToolboxVragenTable).where(eq(veiligheidToolboxVragenTable.toolboxId, id));
@@ -361,7 +361,7 @@ veiligheidRouter.patch("/veiligheid/toolboxen/:id", schrijvenVeiligheid, async (
 
 // ── DELETE ────────────────────────────────────────────────────────────────────
 
-veiligheidRouter.delete("/veiligheid/toolboxen/:id", verwijderenVeiligheid, async (req, res) => {
+veiligheidRouter.delete("/veiligheid/toolboxen/:id", verwijderenVeiligheid, async (req, res): Promise<void> => {
   try {
     const id = parseInt(String(req.params.id));
     await db.delete(veiligheidToolboxenTable).where(eq(veiligheidToolboxenTable.id, id));
@@ -374,7 +374,7 @@ veiligheidRouter.delete("/veiligheid/toolboxen/:id", verwijderenVeiligheid, asyn
 
 // ── PUBLICEREN ────────────────────────────────────────────────────────────────
 
-veiligheidRouter.post("/veiligheid/toolboxen/:id/publiceren", schrijvenVeiligheid, async (req, res) => {
+veiligheidRouter.post("/veiligheid/toolboxen/:id/publiceren", schrijvenVeiligheid, async (req, res): Promise<void> => {
   try {
     const id = parseInt(String(req.params.id));
     const [updated] = await db
@@ -383,7 +383,7 @@ veiligheidRouter.post("/veiligheid/toolboxen/:id/publiceren", schrijvenVeilighei
       .where(eq(veiligheidToolboxenTable.id, id))
       .returning();
 
-    if (!updated) return res.status(404).json({ error: "Niet gevonden" });
+    if (!updated) return void res.status(404).json({ error: "Niet gevonden" });
     res.json(mapToolbox(updated as unknown as Record<string, unknown>));
   } catch (err) {
     req.log.error(err, "POST /veiligheid/toolboxen/:id/publiceren");
@@ -393,10 +393,10 @@ veiligheidRouter.post("/veiligheid/toolboxen/:id/publiceren", schrijvenVeilighei
 
 // ── AI ANALYSE ────────────────────────────────────────────────────────────────
 
-veiligheidRouter.post("/veiligheid/toolboxen/:id/ai-analyse", schrijvenVeiligheid, async (req, res) => {
+veiligheidRouter.post("/veiligheid/toolboxen/:id/ai-analyse", schrijvenVeiligheid, async (req, res): Promise<void> => {
   try {
     if (!heeftGateway()) {
-      return res.status(503).json({ error: "AI niet beschikbaar" });
+      return void res.status(503).json({ error: "AI niet beschikbaar" });
     }
     const id = parseInt(String(req.params.id));
     const [toolbox] = await db
@@ -404,7 +404,7 @@ veiligheidRouter.post("/veiligheid/toolboxen/:id/ai-analyse", schrijvenVeilighei
       .from(veiligheidToolboxenTable)
       .where(eq(veiligheidToolboxenTable.id, id));
 
-    if (!toolbox) return res.status(404).json({ error: "Niet gevonden" });
+    if (!toolbox) return void res.status(404).json({ error: "Niet gevonden" });
 
     let pdfTekst = "";
     if (toolbox.pdfPad) {
@@ -495,14 +495,14 @@ veiligheidRouter.post("/veiligheid/toolboxen/:id/ai-analyse", schrijvenVeilighei
 
 // ── AFRONDEN ──────────────────────────────────────────────────────────────────
 
-veiligheidRouter.post("/veiligheid/toolboxen/:id/afronden", lezenVeiligheid, async (req, res) => {
+veiligheidRouter.post("/veiligheid/toolboxen/:id/afronden", lezenVeiligheid, async (req, res): Promise<void> => {
   try {
     const toolboxId = parseInt(String(req.params.id));
     const userId = req.session.userId!;
     const { antwoorden, handtekening } = req.body;
 
     if (!handtekening?.trim()) {
-      return res.status(400).json({ error: "Handtekening verplicht" });
+      return void res.status(400).json({ error: "Handtekening verplicht" });
     }
 
     const [toolbox] = await db
@@ -510,7 +510,7 @@ veiligheidRouter.post("/veiligheid/toolboxen/:id/afronden", lezenVeiligheid, asy
       .from(veiligheidToolboxenTable)
       .where(eq(veiligheidToolboxenTable.id, toolboxId));
 
-    if (!toolbox) return res.status(404).json({ error: "Niet gevonden" });
+    if (!toolbox) return void res.status(404).json({ error: "Niet gevonden" });
 
     const vragen = await db
       .select()
@@ -561,7 +561,7 @@ veiligheidRouter.post("/veiligheid/toolboxen/:id/afronden", lezenVeiligheid, asy
 
 // ── AFRONDINGEN (beheerder) ───────────────────────────────────────────────────
 
-veiligheidRouter.get("/veiligheid/toolboxen/:id/afrondingen", schrijvenVeiligheid, async (req, res) => {
+veiligheidRouter.get("/veiligheid/toolboxen/:id/afrondingen", schrijvenVeiligheid, async (req, res): Promise<void> => {
   try {
     const toolboxId = parseInt(String(req.params.id));
 
@@ -599,7 +599,7 @@ veiligheidRouter.get("/veiligheid/toolboxen/:id/afrondingen", schrijvenVeilighei
 
 // ── MIJN AFRONDING ────────────────────────────────────────────────────────────
 
-veiligheidRouter.get("/veiligheid/toolboxen/:id/mijn-afronding", lezenVeiligheid, async (req, res) => {
+veiligheidRouter.get("/veiligheid/toolboxen/:id/mijn-afronding", lezenVeiligheid, async (req, res): Promise<void> => {
   try {
     const toolboxId = parseInt(String(req.params.id));
     const userId = req.session.userId!;
@@ -616,7 +616,7 @@ veiligheidRouter.get("/veiligheid/toolboxen/:id/mijn-afronding", lezenVeiligheid
       .orderBy(desc(veiligheidToolboxAfrondingTable.bevestigdOp))
       .limit(1);
 
-    if (!afronding) return res.json(null);
+    if (!afronding) return void res.json(null);
 
     const [toolbox] = await db
       .select({ minScore: veiligheidToolboxenTable.minScore })
@@ -637,14 +637,14 @@ veiligheidRouter.get("/veiligheid/toolboxen/:id/mijn-afronding", lezenVeiligheid
 
 // ── AI KOPPELING SUGGESTIE ────────────────────────────────────────────────────
 
-veiligheidRouter.post("/veiligheid/toolboxen/koppeling-suggestie", lezenVeiligheid, async (req, res) => {
+veiligheidRouter.post("/veiligheid/toolboxen/koppeling-suggestie", lezenVeiligheid, async (req, res): Promise<void> => {
   try {
     if (!heeftGateway()) {
-      return res.status(503).json({ error: "AI niet beschikbaar" });
+      return void res.status(503).json({ error: "AI niet beschikbaar" });
     }
     const { werkzaamheid } = req.body ?? {};
     if (!werkzaamheid || typeof werkzaamheid !== "string") {
-      return res.status(400).json({ error: "werkzaamheid verplicht" });
+      return void res.status(400).json({ error: "werkzaamheid verplicht" });
     }
 
     const alleToolboxen = await db
@@ -659,7 +659,7 @@ veiligheidRouter.post("/veiligheid/toolboxen/koppeling-suggestie", lezenVeilighe
       .orderBy(veiligheidToolboxenTable.categorie, veiligheidToolboxenTable.titel);
 
     if (alleToolboxen.length === 0) {
-      return res.json({ suggesties: [] });
+      return void res.json({ suggesties: [] });
     }
 
     const catalogusTekst = alleToolboxen
@@ -704,7 +704,7 @@ veiligheidRouter.post("/veiligheid/toolboxen/koppeling-suggestie", lezenVeilighe
 
 // ── UPLOAD URL ────────────────────────────────────────────────────────────────
 
-veiligheidRouter.get("/veiligheid/toolboxen/upload-url", schrijvenVeiligheid, async (req, res) => {
+veiligheidRouter.get("/veiligheid/toolboxen/upload-url", schrijvenVeiligheid, async (req, res): Promise<void> => {
   try {
     const { uploadURL, objectPath } = await objectStorage.getObjectEntityUploadURL();
     res.json({ upload_url: uploadURL, object_path: objectPath });
@@ -718,7 +718,7 @@ veiligheidRouter.get("/veiligheid/toolboxen/upload-url", schrijvenVeiligheid, as
 // LMRA
 // ═══════════════════════════════════════════════════════════════════════════════
 
-veiligheidRouter.get("/veiligheid/lmras", lezenVeiligheid, async (req, res) => {
+veiligheidRouter.get("/veiligheid/lmras", lezenVeiligheid, async (req, res): Promise<void> => {
   try {
     const rijen = await db
       .select({
@@ -779,7 +779,7 @@ veiligheidRouter.get("/veiligheid/lmras", lezenVeiligheid, async (req, res) => {
   }
 });
 
-veiligheidRouter.post("/veiligheid/lmras", lezenVeiligheid, async (req, res) => {
+veiligheidRouter.post("/veiligheid/lmras", lezenVeiligheid, async (req, res): Promise<void> => {
   try {
     const gebruiker = (req as any).session?.gebruiker;
     const {
@@ -790,7 +790,7 @@ veiligheidRouter.post("/veiligheid/lmras", lezenVeiligheid, async (req, res) => 
     } = req.body;
 
     if (!locatie_omschrijving || !werkzaamheden) {
-      return res.status(400).json({ error: "locatie_omschrijving en werkzaamheden zijn verplicht" });
+      return void res.status(400).json({ error: "locatie_omschrijving en werkzaamheden zijn verplicht" });
     }
 
     const medewerkerNaam = gebruiker
@@ -869,7 +869,7 @@ veiligheidRouter.post("/veiligheid/lmras", lezenVeiligheid, async (req, res) => 
   }
 });
 
-veiligheidRouter.get("/veiligheid/lmras/upload-url", schrijvenVeiligheid, async (req, res) => {
+veiligheidRouter.get("/veiligheid/lmras/upload-url", schrijvenVeiligheid, async (req, res): Promise<void> => {
   try {
     const { uploadURL, objectPath } = await objectStorage.getObjectEntityUploadURL();
     res.json({ upload_url: uploadURL, object_path: objectPath });
@@ -879,12 +879,12 @@ veiligheidRouter.get("/veiligheid/lmras/upload-url", schrijvenVeiligheid, async 
   }
 });
 
-veiligheidRouter.post("/veiligheid/lmras/ai-voorstel", lezenVeiligheid, async (req, res) => {
+veiligheidRouter.post("/veiligheid/lmras/ai-voorstel", lezenVeiligheid, async (req, res): Promise<void> => {
   try {
-    if (!heeftGateway()) return res.status(503).json({ error: "AI niet beschikbaar" });
+    if (!heeftGateway()) return void res.status(503).json({ error: "AI niet beschikbaar" });
 
     const { gebouw_id, werkzaamheden_omschrijving } = req.body;
-    if (!gebouw_id) return res.status(400).json({ error: "gebouw_id is verplicht" });
+    if (!gebouw_id) return void res.status(400).json({ error: "gebouw_id is verplicht" });
 
     const [gebouw] = await db
       .select({
@@ -898,7 +898,7 @@ veiligheidRouter.post("/veiligheid/lmras/ai-voorstel", lezenVeiligheid, async (r
       .where(eq(gebouwenTable.id, Number(gebouw_id)))
       .limit(1);
 
-    if (!gebouw) return res.status(404).json({ error: "Gebouw niet gevonden" });
+    if (!gebouw) return void res.status(404).json({ error: "Gebouw niet gevonden" });
 
     const context = [
       `Gebouwnaam: ${gebouw.naam}`,
@@ -934,7 +934,7 @@ Zorg voor 3-5 relevante risico's en bijbehorende maatregelen voor brandpreventie
     try {
       voorstel = JSON.parse(cleanJson);
     } catch {
-      return res.status(500).json({ error: "AI-antwoord kon niet worden verwerkt" });
+      return void res.status(500).json({ error: "AI-antwoord kon niet worden verwerkt" });
     }
 
     res.json({
@@ -949,16 +949,16 @@ Zorg voor 3-5 relevante risico's en bijbehorende maatregelen voor brandpreventie
   }
 });
 
-veiligheidRouter.get("/mijn/lmra-status", requireAuth, async (req, res) => {
+veiligheidRouter.get("/mijn/lmra-status", requireAuth, async (req, res): Promise<void> => {
   try {
     const gebruiker = (req as any).session?.gebruiker;
-    if (!gebruiker?.id) return res.status(401).json({ error: "Niet ingelogd" });
+    if (!gebruiker?.id) return void res.status(401).json({ error: "Niet ingelogd" });
 
     const gebouwIdParam = req.query.gebouw_id ? Number(req.query.gebouw_id) : null;
     const opdrachtIdParam = req.query.opdracht_id ? Number(req.query.opdracht_id) : null;
 
     if (!gebouwIdParam && !opdrachtIdParam) {
-      return res.status(400).json({ error: "gebouw_id of opdracht_id is verplicht" });
+      return void res.status(400).json({ error: "gebouw_id of opdracht_id is verplicht" });
     }
 
     // Medewerker opzoeken op basis van gebruiker
@@ -1017,7 +1017,7 @@ veiligheidRouter.get("/mijn/lmra-status", requireAuth, async (req, res) => {
     }
 
     if (totaalUren !== null && totaalUren < 16) {
-      return res.json({
+      return void res.json({
         vereist: false,
         voltooid: false,
         dwingend: false,
@@ -1089,10 +1089,10 @@ veiligheidRouter.get("/mijn/lmra-status", requireAuth, async (req, res) => {
   }
 });
 
-veiligheidRouter.get("/mijn/lmra-openstaand", requireAuth, async (req, res) => {
+veiligheidRouter.get("/mijn/lmra-openstaand", requireAuth, async (req, res): Promise<void> => {
   try {
     const gebruiker = (req as any).session?.gebruiker;
-    if (!gebruiker?.id) return res.status(401).json({ error: "Niet ingelogd" });
+    if (!gebruiker?.id) return void res.status(401).json({ error: "Niet ingelogd" });
 
     const [med] = await db
       .select({ id: medewerkersTable.id })
@@ -1100,7 +1100,7 @@ veiligheidRouter.get("/mijn/lmra-openstaand", requireAuth, async (req, res) => {
       .where(eq(medewerkersTable.gebruikerId, gebruiker.id))
       .limit(1);
 
-    if (!med) return res.json([]);
+    if (!med) return void res.json([]);
     const medewerkerId = med.id;
 
     // Planning items van de afgelopen 90 dagen met een opdracht
@@ -1132,7 +1132,7 @@ veiligheidRouter.get("/mijn/lmra-openstaand", requireAuth, async (req, res) => {
       }
     }
 
-    if (opdrachtMap.size === 0) return res.json([]);
+    if (opdrachtMap.size === 0) return void res.json([]);
 
     const opdrachtIds = Array.from(opdrachtMap.keys());
 
@@ -1209,7 +1209,7 @@ veiligheidRouter.get("/mijn/lmra-openstaand", requireAuth, async (req, res) => {
   }
 });
 
-veiligheidRouter.get("/veiligheid/lmras/:id", lezenVeiligheid, async (req, res) => {
+veiligheidRouter.get("/veiligheid/lmras/:id", lezenVeiligheid, async (req, res): Promise<void> => {
   try {
     const id = parseInt(String(req.params.id));
     const [rij] = await db
@@ -1220,7 +1220,7 @@ veiligheidRouter.get("/veiligheid/lmras/:id", lezenVeiligheid, async (req, res) 
       .from(veiligheidLmrasTable)
       .leftJoin(gebouwenTable, eq(veiligheidLmrasTable.gebouwId, gebouwenTable.id))
       .where(eq(veiligheidLmrasTable.id, id));
-    if (!rij) return res.status(404).json({ error: "Niet gevonden" });
+    if (!rij) return void res.status(404).json({ error: "Niet gevonden" });
     const r = rij.lmra;
     res.json({
       id: r.id,
@@ -1247,7 +1247,7 @@ veiligheidRouter.get("/veiligheid/lmras/:id", lezenVeiligheid, async (req, res) 
   }
 });
 
-veiligheidRouter.patch("/veiligheid/lmras/:id", schrijvenVeiligheid, async (req, res) => {
+veiligheidRouter.patch("/veiligheid/lmras/:id", schrijvenVeiligheid, async (req, res): Promise<void> => {
   try {
     const id = parseInt(String(req.params.id));
     const {
@@ -1273,7 +1273,7 @@ veiligheidRouter.patch("/veiligheid/lmras/:id", schrijvenVeiligheid, async (req,
       })
       .where(eq(veiligheidLmrasTable.id, id))
       .returning();
-    if (!rij) return res.status(404).json({ error: "Niet gevonden" });
+    if (!rij) return void res.status(404).json({ error: "Niet gevonden" });
     res.json({
       id: rij.id,
       gebouw_id: rij.gebouwId ?? null,
@@ -1298,7 +1298,7 @@ veiligheidRouter.patch("/veiligheid/lmras/:id", schrijvenVeiligheid, async (req,
   }
 });
 
-veiligheidRouter.delete("/veiligheid/lmras/:id", verwijderenVeiligheid, async (req, res) => {
+veiligheidRouter.delete("/veiligheid/lmras/:id", verwijderenVeiligheid, async (req, res): Promise<void> => {
   try {
     const id = parseInt(String(req.params.id));
     await db.delete(veiligheidLmrasTable).where(eq(veiligheidLmrasTable.id, id));
@@ -1333,7 +1333,7 @@ function mapMelding(r: typeof veiligheidMeldingenTable.$inferSelect & { toegewez
   };
 }
 
-veiligheidRouter.get("/veiligheid/meldingen", lezenVeiligheid, async (req, res) => {
+veiligheidRouter.get("/veiligheid/meldingen", lezenVeiligheid, async (req, res): Promise<void> => {
   try {
     const toegewezenAlias = db
       .$with("toegewezen")
@@ -1366,7 +1366,7 @@ veiligheidRouter.get("/veiligheid/meldingen", lezenVeiligheid, async (req, res) 
   }
 });
 
-veiligheidRouter.post("/veiligheid/meldingen", lezenVeiligheid, async (req, res) => {
+veiligheidRouter.post("/veiligheid/meldingen", lezenVeiligheid, async (req, res): Promise<void> => {
   try {
     const gebruiker = (req as any).session?.gebruiker;
     const {
@@ -1374,7 +1374,7 @@ veiligheidRouter.post("/veiligheid/meldingen", lezenVeiligheid, async (req, res)
       foto_paden, prioriteit, toegewezen_aan_id,
     } = req.body;
     if (!type || !omschrijving) {
-      return res.status(400).json({ error: "type en omschrijving zijn verplicht" });
+      return void res.status(400).json({ error: "type en omschrijving zijn verplicht" });
     }
     const melderNaam = gebruiker
       ? `${gebruiker.naam ?? ""} ${gebruiker.achternaam ?? ""}`.trim() || gebruiker.email
@@ -1403,7 +1403,7 @@ veiligheidRouter.post("/veiligheid/meldingen", lezenVeiligheid, async (req, res)
   }
 });
 
-veiligheidRouter.get("/veiligheid/meldingen/upload-url", schrijvenVeiligheid, async (req, res) => {
+veiligheidRouter.get("/veiligheid/meldingen/upload-url", schrijvenVeiligheid, async (req, res): Promise<void> => {
   try {
     const { uploadURL, objectPath } = await objectStorage.getObjectEntityUploadURL();
     res.json({ upload_url: uploadURL, object_path: objectPath });
@@ -1413,7 +1413,7 @@ veiligheidRouter.get("/veiligheid/meldingen/upload-url", schrijvenVeiligheid, as
   }
 });
 
-veiligheidRouter.get("/veiligheid/meldingen/:id", lezenVeiligheid, async (req, res) => {
+veiligheidRouter.get("/veiligheid/meldingen/:id", lezenVeiligheid, async (req, res): Promise<void> => {
   try {
     const id = parseInt(String(req.params.id));
     const [rij] = await db
@@ -1437,7 +1437,7 @@ veiligheidRouter.get("/veiligheid/meldingen/:id", lezenVeiligheid, async (req, r
       .from(veiligheidMeldingenTable)
       .leftJoin(gebruikersTable, eq(gebruikersTable.id, veiligheidMeldingenTable.toegewezenAanId))
       .where(eq(veiligheidMeldingenTable.id, id));
-    if (!rij) return res.status(404).json({ error: "Niet gevonden" });
+    if (!rij) return void res.status(404).json({ error: "Niet gevonden" });
     res.json(mapMelding(rij as any));
   } catch (err) {
     req.log.error(err, "GET /veiligheid/meldingen/:id");
@@ -1445,7 +1445,7 @@ veiligheidRouter.get("/veiligheid/meldingen/:id", lezenVeiligheid, async (req, r
   }
 });
 
-veiligheidRouter.patch("/veiligheid/meldingen/:id", schrijvenVeiligheid, async (req, res) => {
+veiligheidRouter.patch("/veiligheid/meldingen/:id", schrijvenVeiligheid, async (req, res): Promise<void> => {
   try {
     const id = parseInt(String(req.params.id));
     const {
@@ -1468,7 +1468,7 @@ veiligheidRouter.patch("/veiligheid/meldingen/:id", schrijvenVeiligheid, async (
       })
       .where(eq(veiligheidMeldingenTable.id, id))
       .returning();
-    if (!rij) return res.status(404).json({ error: "Niet gevonden" });
+    if (!rij) return void res.status(404).json({ error: "Niet gevonden" });
     res.json(mapMelding(rij as any));
   } catch (err) {
     req.log.error(err, "PATCH /veiligheid/meldingen/:id");
@@ -1476,7 +1476,7 @@ veiligheidRouter.patch("/veiligheid/meldingen/:id", schrijvenVeiligheid, async (
   }
 });
 
-veiligheidRouter.delete("/veiligheid/meldingen/:id", verwijderenVeiligheid, async (req, res) => {
+veiligheidRouter.delete("/veiligheid/meldingen/:id", verwijderenVeiligheid, async (req, res): Promise<void> => {
   try {
     const id = parseInt(String(req.params.id));
     await db.delete(veiligheidMeldingenTable).where(eq(veiligheidMeldingenTable.id, id));
@@ -1489,7 +1489,7 @@ veiligheidRouter.delete("/veiligheid/meldingen/:id", verwijderenVeiligheid, asyn
 
 // ── Acties ────────────────────────────────────────────────────────────────────
 
-veiligheidRouter.get("/veiligheid/meldingen/:id/acties", lezenVeiligheid, async (req, res) => {
+veiligheidRouter.get("/veiligheid/meldingen/:id/acties", lezenVeiligheid, async (req, res): Promise<void> => {
   try {
     const meldingId = parseInt(String(req.params.id));
     const rijen = await db
@@ -1516,11 +1516,11 @@ veiligheidRouter.get("/veiligheid/meldingen/:id/acties", lezenVeiligheid, async 
   }
 });
 
-veiligheidRouter.post("/veiligheid/meldingen/:id/acties", schrijvenVeiligheid, async (req, res) => {
+veiligheidRouter.post("/veiligheid/meldingen/:id/acties", schrijvenVeiligheid, async (req, res): Promise<void> => {
   try {
     const meldingId = parseInt(String(req.params.id));
     const { omschrijving, eigenaar_id, eigenaar_naam, deadline } = req.body;
-    if (!omschrijving) return res.status(400).json({ error: "omschrijving is verplicht" });
+    if (!omschrijving) return void res.status(400).json({ error: "omschrijving is verplicht" });
     const [rij] = await db
       .insert(veiligheidMeldingenActiesTable)
       .values({
@@ -1550,7 +1550,7 @@ veiligheidRouter.post("/veiligheid/meldingen/:id/acties", schrijvenVeiligheid, a
   }
 });
 
-veiligheidRouter.patch("/veiligheid/meldingen/:id/acties/:actieId", schrijvenVeiligheid, async (req, res) => {
+veiligheidRouter.patch("/veiligheid/meldingen/:id/acties/:actieId", schrijvenVeiligheid, async (req, res): Promise<void> => {
   try {
     const actieId = parseInt(String(req.params.actieId));
     const { omschrijving, eigenaar_id, eigenaar_naam, deadline, status } = req.body;
@@ -1566,7 +1566,7 @@ veiligheidRouter.patch("/veiligheid/meldingen/:id/acties/:actieId", schrijvenVei
       })
       .where(eq(veiligheidMeldingenActiesTable.id, actieId))
       .returning();
-    if (!rij) return res.status(404).json({ error: "Niet gevonden" });
+    if (!rij) return void res.status(404).json({ error: "Niet gevonden" });
     res.json({
       id: rij.id,
       melding_id: rij.meldingId,
@@ -1584,7 +1584,7 @@ veiligheidRouter.patch("/veiligheid/meldingen/:id/acties/:actieId", schrijvenVei
   }
 });
 
-veiligheidRouter.delete("/veiligheid/meldingen/:id/acties/:actieId", verwijderenVeiligheid, async (req, res) => {
+veiligheidRouter.delete("/veiligheid/meldingen/:id/acties/:actieId", verwijderenVeiligheid, async (req, res): Promise<void> => {
   try {
     const actieId = parseInt(String(req.params.actieId));
     await db.delete(veiligheidMeldingenActiesTable).where(eq(veiligheidMeldingenActiesTable.id, actieId));
@@ -1599,7 +1599,7 @@ veiligheidRouter.delete("/veiligheid/meldingen/:id/acties/:actieId", verwijderen
 // VEILIGHEID DASHBOARD
 // ═══════════════════════════════════════════════════════════════════════════════
 
-veiligheidRouter.get("/veiligheid/dashboard", lezenVeiligheid, async (req, res) => {
+veiligheidRouter.get("/veiligheid/dashboard", lezenVeiligheid, async (req, res): Promise<void> => {
   try {
     const nu = new Date();
     const vandaagStart = new Date(nu.getFullYear(), nu.getMonth(), nu.getDate());
@@ -1676,7 +1676,7 @@ function mapMaandStatus(
   };
 }
 
-veiligheidRouter.get("/veiligheid/toolbox-maandopdrachten", schrijvenVeiligheid, async (req, res) => {
+veiligheidRouter.get("/veiligheid/toolbox-maandopdrachten", schrijvenVeiligheid, async (req, res): Promise<void> => {
   try {
     const opdrachten = await db
       .select({
@@ -1716,16 +1716,16 @@ veiligheidRouter.get("/veiligheid/toolbox-maandopdrachten", schrijvenVeiligheid,
   }
 });
 
-veiligheidRouter.post("/veiligheid/toolbox-maandopdrachten", schrijvenVeiligheid, async (req, res) => {
+veiligheidRouter.post("/veiligheid/toolbox-maandopdrachten", schrijvenVeiligheid, async (req, res): Promise<void> => {
   try {
     const { toolbox_id, jaar, maand } = req.body as { toolbox_id: number; jaar: number; maand: number };
-    if (!toolbox_id || !jaar || !maand) return res.status(400).json({ error: "toolbox_id, jaar en maand zijn verplicht" });
+    if (!toolbox_id || !jaar || !maand) return void res.status(400).json({ error: "toolbox_id, jaar en maand zijn verplicht" });
 
     const [bestaand] = await db.select({ id: toolboxMaandOpdrachtenTable.id })
       .from(toolboxMaandOpdrachtenTable)
       .where(and(eq(toolboxMaandOpdrachtenTable.jaar, jaar), eq(toolboxMaandOpdrachtenTable.maand, maand)))
       .limit(1);
-    if (bestaand) return res.status(409).json({ error: "Er is al een toolbox-opdracht voor deze maand" });
+    if (bestaand) return void res.status(409).json({ error: "Er is al een toolbox-opdracht voor deze maand" });
 
     const [nieuw] = await db.insert(toolboxMaandOpdrachtenTable)
       .values({ toolboxId: toolbox_id, jaar, maand, aangemaaktDoorId: req.session.userId ?? null })
@@ -1746,12 +1746,12 @@ veiligheidRouter.post("/veiligheid/toolbox-maandopdrachten", schrijvenVeiligheid
   }
 });
 
-veiligheidRouter.delete("/veiligheid/toolbox-maandopdrachten/:id", schrijvenVeiligheid, async (req, res) => {
+veiligheidRouter.delete("/veiligheid/toolbox-maandopdrachten/:id", schrijvenVeiligheid, async (req, res): Promise<void> => {
   try {
     const id = Number(req.params.id);
     const [v] = await db.delete(toolboxMaandOpdrachtenTable)
       .where(eq(toolboxMaandOpdrachtenTable.id, id)).returning({ id: toolboxMaandOpdrachtenTable.id });
-    if (!v) return res.status(404).json({ error: "Niet gevonden" });
+    if (!v) return void res.status(404).json({ error: "Niet gevonden" });
     res.status(204).end();
   } catch (err) {
     req.log.error(err, "DELETE /veiligheid/toolbox-maandopdrachten/:id");
@@ -1759,7 +1759,7 @@ veiligheidRouter.delete("/veiligheid/toolbox-maandopdrachten/:id", schrijvenVeil
   }
 });
 
-veiligheidRouter.get("/veiligheid/toolbox-maandopdrachten/:id/voortgang", schrijvenVeiligheid, async (req, res) => {
+veiligheidRouter.get("/veiligheid/toolbox-maandopdrachten/:id/voortgang", schrijvenVeiligheid, async (req, res): Promise<void> => {
   try {
     const id = Number(req.params.id);
     const rijen = await db
@@ -1804,15 +1804,15 @@ async function haalToolboxOp(toolboxId: number) {
   return tb ?? null;
 }
 
-veiligheidRouter.get("/mijn/toolbox-maandopdracht", requireAuth, async (req, res) => {
+veiligheidRouter.get("/mijn/toolbox-maandopdracht", requireAuth, async (req, res): Promise<void> => {
   try {
     const userId = req.session.userId;
-    if (!userId) return res.status(401).json({ error: "Niet ingelogd" });
+    if (!userId) return void res.status(401).json({ error: "Niet ingelogd" });
     const nu = new Date();
     const [opdracht] = await db.select().from(toolboxMaandOpdrachtenTable)
       .where(and(eq(toolboxMaandOpdrachtenTable.jaar, nu.getFullYear()), eq(toolboxMaandOpdrachtenTable.maand, nu.getMonth() + 1)))
       .limit(1);
-    if (!opdracht) return res.json(null);
+    if (!opdracht) return void res.json(null);
 
     let [status] = await db.select().from(toolboxMaandStatusTable)
       .where(and(eq(toolboxMaandStatusTable.opdrachtId, opdracht.id), eq(toolboxMaandStatusTable.gebruikerId, userId)))
@@ -1823,7 +1823,7 @@ veiligheidRouter.get("/mijn/toolbox-maandopdracht", requireAuth, async (req, res
     }
 
     const tb = await haalToolboxOp(opdracht.toolboxId);
-    if (!tb) return res.json(null);
+    if (!tb) return void res.json(null);
     res.json(mapMaandStatus(status, opdracht, tb));
   } catch (err) {
     req.log.error(err, "GET /mijn/toolbox-maandopdracht");
@@ -1831,20 +1831,20 @@ veiligheidRouter.get("/mijn/toolbox-maandopdracht", requireAuth, async (req, res
   }
 });
 
-veiligheidRouter.post("/mijn/toolbox-maandopdracht/:id/uitstellen", requireAuth, async (req, res) => {
+veiligheidRouter.post("/mijn/toolbox-maandopdracht/:id/uitstellen", requireAuth, async (req, res): Promise<void> => {
   try {
     const userId = req.session.userId;
-    if (!userId) return res.status(401).json({ error: "Niet ingelogd" });
+    if (!userId) return void res.status(401).json({ error: "Niet ingelogd" });
     const statusId = Number(req.params.id);
     const [status] = await db.select().from(toolboxMaandStatusTable)
       .where(and(eq(toolboxMaandStatusTable.id, statusId), eq(toolboxMaandStatusTable.gebruikerId, userId))).limit(1);
-    if (!status) return res.status(404).json({ error: "Niet gevonden" });
-    if (status.voltooIdOp) return res.status(400).json({ error: "Al voltooid" });
+    if (!status) return void res.status(404).json({ error: "Niet gevonden" });
+    if (status.voltooIdOp) return void res.status(400).json({ error: "Al voltooid" });
 
     const nu = new Date();
     const dagenVerstreken = Math.floor((nu.getTime() - (status.eersteAanbieding as Date).getTime()) / 86_400_000);
     if (dagenVerstreken >= 3 || status.aantalUitgesteld >= 3) {
-      return res.status(403).json({ error: "Kan niet meer uitstellen: deadline verstreken" });
+      return void res.status(403).json({ error: "Kan niet meer uitstellen: deadline verstreken" });
     }
 
     const [bijgewerkt] = await db.update(toolboxMaandStatusTable)
@@ -1860,22 +1860,22 @@ veiligheidRouter.post("/mijn/toolbox-maandopdracht/:id/uitstellen", requireAuth,
   }
 });
 
-veiligheidRouter.post("/mijn/toolbox-maandopdracht/:id/voltooien", requireAuth, async (req, res) => {
+veiligheidRouter.post("/mijn/toolbox-maandopdracht/:id/voltooien", requireAuth, async (req, res): Promise<void> => {
   try {
     const userId = req.session.userId;
-    if (!userId) return res.status(401).json({ error: "Niet ingelogd" });
+    if (!userId) return void res.status(401).json({ error: "Niet ingelogd" });
     const statusId = Number(req.params.id);
     const { vraag } = (req.body ?? {}) as { vraag?: string };
 
     const [status] = await db.select().from(toolboxMaandStatusTable)
       .where(and(eq(toolboxMaandStatusTable.id, statusId), eq(toolboxMaandStatusTable.gebruikerId, userId))).limit(1);
-    if (!status) return res.status(404).json({ error: "Niet gevonden" });
+    if (!status) return void res.status(404).json({ error: "Niet gevonden" });
 
     if (status.voltooIdOp) {
       const [existOpdracht] = await db.select().from(toolboxMaandOpdrachtenTable)
         .where(eq(toolboxMaandOpdrachtenTable.id, status.opdrachtId)).limit(1);
       const existTb = await haalToolboxOp(existOpdracht.toolboxId);
-      return res.json(mapMaandStatus(status, existOpdracht, existTb!));
+      return void res.json(mapMaandStatus(status, existOpdracht, existTb!));
     }
 
     const nu = new Date();
@@ -1894,7 +1894,7 @@ veiligheidRouter.post("/mijn/toolbox-maandopdracht/:id/voltooien", requireAuth, 
 
 // ── Incidenten (bijna-ongevallen & ongevallen) ────────────────────────────────
 
-veiligheidRouter.get("/veiligheid/incidenten", lezenVeiligheid, async (req, res) => {
+veiligheidRouter.get("/veiligheid/incidenten", lezenVeiligheid, async (req, res): Promise<void> => {
   try {
     const rijen = await db
       .select({
@@ -1941,7 +1941,7 @@ veiligheidRouter.get("/veiligheid/incidenten", lezenVeiligheid, async (req, res)
   }
 });
 
-veiligheidRouter.post("/veiligheid/incidenten", lezenVeiligheid, async (req, res) => {
+veiligheidRouter.post("/veiligheid/incidenten", lezenVeiligheid, async (req, res): Promise<void> => {
   try {
     const gebruiker = (req as any).session?.gebruiker;
     const {
@@ -1953,7 +1953,7 @@ veiligheidRouter.post("/veiligheid/incidenten", lezenVeiligheid, async (req, res
     } = req.body;
 
     if (!locatie_omschrijving || !omschrijving) {
-      return res.status(400).json({ error: "locatie_omschrijving en omschrijving zijn verplicht" });
+      return void res.status(400).json({ error: "locatie_omschrijving en omschrijving zijn verplicht" });
     }
 
     const medewerkerNaam = gebruiker
@@ -2094,12 +2094,12 @@ veiligheidRouter.post("/veiligheid/incidenten", lezenVeiligheid, async (req, res
   }
 });
 
-veiligheidRouter.post("/veiligheid/incidenten/ai-voorstel", lezenVeiligheid, async (req, res) => {
+veiligheidRouter.post("/veiligheid/incidenten/ai-voorstel", lezenVeiligheid, async (req, res): Promise<void> => {
   try {
-    if (!heeftGateway()) return res.status(503).json({ error: "AI niet beschikbaar" });
+    if (!heeftGateway()) return void res.status(503).json({ error: "AI niet beschikbaar" });
 
     const { type, locatie_omschrijving, werkzaamheden_omschrijving, opdracht_naam } = req.body;
-    if (!locatie_omschrijving) return res.status(400).json({ error: "locatie_omschrijving is verplicht" });
+    if (!locatie_omschrijving) return void res.status(400).json({ error: "locatie_omschrijving is verplicht" });
 
     const typeLabel = type === "bijna_ongeval" ? "bijna-ongeval" : "arbeidsongeval";
     const context = [
@@ -2137,7 +2137,7 @@ Genereer 3-5 realistische maatregelen die direct genomen zijn bij brandpreventie
     try {
       voorstel = JSON.parse(cleanJson);
     } catch {
-      return res.status(500).json({ error: "AI-antwoord kon niet worden verwerkt" });
+      return void res.status(500).json({ error: "AI-antwoord kon niet worden verwerkt" });
     }
 
     res.json({
@@ -2152,7 +2152,7 @@ Genereer 3-5 realistische maatregelen die direct genomen zijn bij brandpreventie
   }
 });
 
-veiligheidRouter.get("/veiligheid/incidenten/upload-url", lezenVeiligheid, async (req, res) => {
+veiligheidRouter.get("/veiligheid/incidenten/upload-url", lezenVeiligheid, async (req, res): Promise<void> => {
   try {
     const { uploadURL, objectPath } = await objectStorage.getObjectEntityUploadURL();
     res.json({ upload_url: uploadURL, object_path: objectPath });
@@ -2162,7 +2162,7 @@ veiligheidRouter.get("/veiligheid/incidenten/upload-url", lezenVeiligheid, async
   }
 });
 
-veiligheidRouter.get("/veiligheid/incidenten/:id", lezenVeiligheid, async (req, res) => {
+veiligheidRouter.get("/veiligheid/incidenten/:id", lezenVeiligheid, async (req, res): Promise<void> => {
   try {
     const id = Number(req.params.id);
     const [rij] = await db
@@ -2177,7 +2177,7 @@ veiligheidRouter.get("/veiligheid/incidenten/:id", lezenVeiligheid, async (req, 
       .where(eq(veiligheidIncidentenTable.id, id))
       .limit(1);
 
-    if (!rij) return res.status(404).json({ error: "Niet gevonden" });
+    if (!rij) return void res.status(404).json({ error: "Niet gevonden" });
     const r = rij.i;
     res.json({
       id: r.id, type: r.type, datum: r.datum ?? null, tijdstip: r.tijdstip ?? null,
@@ -2205,7 +2205,7 @@ veiligheidRouter.get("/veiligheid/incidenten/:id", lezenVeiligheid, async (req, 
   }
 });
 
-veiligheidRouter.patch("/veiligheid/incidenten/:id", schrijvenVeiligheid, async (req, res) => {
+veiligheidRouter.patch("/veiligheid/incidenten/:id", schrijvenVeiligheid, async (req, res): Promise<void> => {
   try {
     const id = Number(req.params.id);
     const {
@@ -2228,7 +2228,7 @@ veiligheidRouter.patch("/veiligheid/incidenten/:id", schrijvenVeiligheid, async 
       .where(eq(veiligheidIncidentenTable.id, id))
       .returning();
 
-    if (!rij) return res.status(404).json({ error: "Niet gevonden" });
+    if (!rij) return void res.status(404).json({ error: "Niet gevonden" });
     res.json({ id: rij.id, status: rij.status, bijgewerkt_op: rij.bijgewerktOp?.toISOString() ?? null });
   } catch (err) {
     req.log.error(err, "PATCH /veiligheid/incidenten/:id");
@@ -2236,7 +2236,7 @@ veiligheidRouter.patch("/veiligheid/incidenten/:id", schrijvenVeiligheid, async 
   }
 });
 
-veiligheidRouter.delete("/veiligheid/incidenten/:id", verwijderenVeiligheid, async (req, res) => {
+veiligheidRouter.delete("/veiligheid/incidenten/:id", verwijderenVeiligheid, async (req, res): Promise<void> => {
   try {
     const id = Number(req.params.id);
     await db.delete(veiligheidIncidentenTable).where(eq(veiligheidIncidentenTable.id, id));
@@ -2249,7 +2249,7 @@ veiligheidRouter.delete("/veiligheid/incidenten/:id", verwijderenVeiligheid, asy
 
 // ── AI BATCH GENERATIE ────────────────────────────────────────────────────────
 
-veiligheidRouter.post("/veiligheid/toolboxen/ai-batch-genereer", schrijvenVeiligheid, async (req, res) => {
+veiligheidRouter.post("/veiligheid/toolboxen/ai-batch-genereer", schrijvenVeiligheid, async (req, res): Promise<void> => {
   try {
     const { categorieen, aantal, toelichting } = req.body as {
       categorieen: string[];
@@ -2257,7 +2257,7 @@ veiligheidRouter.post("/veiligheid/toolboxen/ai-batch-genereer", schrijvenVeilig
       toelichting?: string;
     };
     if (!categorieen || !Array.isArray(categorieen) || categorieen.length === 0) {
-      return res.status(400).json({ error: "categorieen verplicht" });
+      return void res.status(400).json({ error: "categorieen verplicht" });
     }
     const aantalGeldig = Math.min(Math.max(1, Number(aantal) || 10), 50);
     const sess = req.session as { gebruikerId?: number };
@@ -2376,19 +2376,19 @@ Verspreid de onderwerpen evenredig over de categorieën. Geef output als JSON-ar
 
 // ── TOOLBOX REVIEW ────────────────────────────────────────────────────────────
 
-veiligheidRouter.patch("/veiligheid/toolboxen/:id/review", schrijvenVeiligheid, async (req, res) => {
+veiligheidRouter.patch("/veiligheid/toolboxen/:id/review", schrijvenVeiligheid, async (req, res): Promise<void> => {
   try {
     const id = Number(req.params.id);
-    if (isNaN(id)) return res.status(400).json({ error: "Ongeldig id" });
+    if (isNaN(id)) return void res.status(400).json({ error: "Ongeldig id" });
     const { besluit } = req.body as { besluit: string };
     if (!besluit || !["goedkeuren", "afwijzen"].includes(besluit)) {
-      return res.status(400).json({ error: "besluit moet 'goedkeuren' of 'afwijzen' zijn" });
+      return void res.status(400).json({ error: "besluit moet 'goedkeuren' of 'afwijzen' zijn" });
     }
     const [toolbox] = await db
       .select({ id: veiligheidToolboxenTable.id, aiGegenereerd: veiligheidToolboxenTable.aiGegenereerd })
       .from(veiligheidToolboxenTable).where(eq(veiligheidToolboxenTable.id, id)).limit(1);
-    if (!toolbox) return res.status(404).json({ error: "Toolbox niet gevonden" });
-    if (!toolbox.aiGegenereerd) return res.status(400).json({ error: "Alleen AI-gegenereerde toolboxen kunnen worden gereviewd" });
+    if (!toolbox) return void res.status(404).json({ error: "Toolbox niet gevonden" });
+    if (!toolbox.aiGegenereerd) return void res.status(400).json({ error: "Alleen AI-gegenereerde toolboxen kunnen worden gereviewd" });
 
     if (besluit === "goedkeuren") {
       await db.update(veiligheidToolboxenTable)
@@ -2406,7 +2406,7 @@ veiligheidRouter.patch("/veiligheid/toolboxen/:id/review", schrijvenVeiligheid, 
 
 // ── TOOLBOX COMPLIANCE DASHBOARD ──────────────────────────────────────────────
 
-veiligheidRouter.get("/veiligheid/toolbox-compliance", lezenVeiligheid, async (req, res) => {
+veiligheidRouter.get("/veiligheid/toolbox-compliance", lezenVeiligheid, async (req, res): Promise<void> => {
   try {
     const nu = new Date();
     const jaar = req.query.jaar ? Number(req.query.jaar) : nu.getFullYear();

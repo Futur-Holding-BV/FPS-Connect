@@ -160,7 +160,7 @@ function domein(): string {
 }
 
 // GET /gebruikers
-router.get("/gebruikers", lezenGebruikers, async (req, res) => {
+router.get("/gebruikers", lezenGebruikers, async (req, res): Promise<void> => {
   try {
     const gebruikers = await db.select().from(gebruikersTable);
     const volledig = await isBeheerder(req.session.userId);
@@ -177,7 +177,7 @@ router.get("/gebruikers", lezenGebruikers, async (req, res) => {
 // gebouwteam, spot-uitvoering of onderhoudstaak toegewezen kunnen worden.
 // Klanten worden uitgesloten. Geen e-mail/telefoon/bevoegdheden: alleen het
 // minimum dat de toewijs-keuzelijsten nodig hebben.
-router.get("/toewijsbare-gebruikers", lezenToewijsbaar, async (req, res) => {
+router.get("/toewijsbare-gebruikers", lezenToewijsbaar, async (req, res): Promise<void> => {
   try {
     const rijen = await db
       .select({
@@ -206,7 +206,7 @@ router.get("/toewijsbare-gebruikers", lezenToewijsbaar, async (req, res) => {
 });
 
 // POST /gebruikers
-router.post("/gebruikers", alleenBeheerder, async (req, res) => {
+router.post("/gebruikers", alleenBeheerder, async (req, res): Promise<void> => {
   try {
     const {
       naam, email, rol, functietitels, telefoon, bedrijf, wachtwoord,
@@ -214,7 +214,7 @@ router.post("/gebruikers", alleenBeheerder, async (req, res) => {
       herkomst_profiel_id, dienstverband, bedrijf_uitzendbureau,
     } = req.body;
     if (!naam || !email || !rol) {
-      return res.status(400).json({ error: "naam, email en rol zijn verplicht" });
+      return void res.status(400).json({ error: "naam, email en rol zijn verplicht" });
     }
     const functies = isBeheerderRol(rol)
       ? schoonFunctietitels(functietitels)
@@ -225,7 +225,7 @@ router.post("/gebruikers", alleenBeheerder, async (req, res) => {
       if (!req.permissies!.isHoofdbeheerder) {
         for (const [mod, lvl] of Object.entries(bevoegdheden as Record<string, number>)) {
           if (typeof lvl === "number" && !req.permissies!.heeftModuleRecht(mod, lvl)) {
-            return res.status(403).json({
+            return void res.status(403).json({
               error: "Geen toegang: bevoegdheid kan niet hoger zijn dan uw eigen niveau",
             });
           }
@@ -272,7 +272,7 @@ router.post("/gebruikers", alleenBeheerder, async (req, res) => {
     res.status(201).json(mapGebruiker(g));
   } catch (err: any) {
     if (err?.cause?.code === "23505" || err?.message?.includes("gebruikers_email_unique")) {
-      return res.status(409).json({ error: "Dit e-mailadres is al in gebruik bij een andere gebruiker." });
+      return void res.status(409).json({ error: "Dit e-mailadres is al in gebruik bij een andere gebruiker." });
     }
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });
@@ -280,11 +280,11 @@ router.post("/gebruikers", alleenBeheerder, async (req, res) => {
 });
 
 // GET /gebruikers/:id
-router.get("/gebruikers/:id", async (req, res) => {
+router.get("/gebruikers/:id", async (req, res): Promise<void> => {
   try {
     const id = parseInt(String(req.params.id), 10);
     const [g] = await db.select().from(gebruikersTable).where(eq(gebruikersTable.id, id));
-    if (!g) return res.status(404).json({ error: "Gebruiker niet gevonden" });
+    if (!g) return void res.status(404).json({ error: "Gebruiker niet gevonden" });
     // Beheerders en het eigen account zien volledige gegevens; anderen alleen veilig.
     const volledig = id === req.session.userId || (await isBeheerder(req.session.userId));
     res.json(volledig ? mapGebruiker(g) : mapGebruikerPubliek(g));
@@ -295,7 +295,7 @@ router.get("/gebruikers/:id", async (req, res) => {
 });
 
 // PATCH /gebruikers/:id
-router.patch("/gebruikers/:id", alleenBeheerder, async (req, res) => {
+router.patch("/gebruikers/:id", alleenBeheerder, async (req, res): Promise<void> => {
   try {
     const id = parseInt(String(req.params.id), 10);
     const {
@@ -313,7 +313,7 @@ router.patch("/gebruikers/:id", alleenBeheerder, async (req, res) => {
       })
       .from(gebruikersTable)
       .where(eq(gebruikersTable.id, id));
-    if (!bestaand) return res.status(404).json({ error: "Gebruiker niet gevonden" });
+    if (!bestaand) return void res.status(404).json({ error: "Gebruiker niet gevonden" });
     const effectieveRol: unknown = rol !== undefined ? rol : bestaand.rol;
     const rolGewijzigd = rol !== undefined && rol !== bestaand.rol;
     const bestaandeFuncties = bestaand.functietitels ?? [];
@@ -354,7 +354,7 @@ router.patch("/gebruikers/:id", alleenBeheerder, async (req, res) => {
           bevoegdheden as Record<string, number>,
         )) {
           if (typeof lvl === "number" && !req.permissies!.heeftModuleRecht(mod, lvl)) {
-            return res.status(403).json({
+            return void res.status(403).json({
               error: "Geen toegang: bevoegdheid kan niet hoger zijn dan uw eigen niveau",
             });
           }
@@ -396,11 +396,11 @@ router.patch("/gebruikers/:id", alleenBeheerder, async (req, res) => {
       .set(wijziging)
       .where(eq(gebruikersTable.id, id))
       .returning();
-    if (!g) return res.status(404).json({ error: "Gebruiker niet gevonden" });
+    if (!g) return void res.status(404).json({ error: "Gebruiker niet gevonden" });
     res.json(mapGebruiker(g));
   } catch (err: any) {
     if (err?.cause?.code === "23505" || err?.message?.includes("gebruikers_email_unique")) {
-      return res.status(409).json({ error: "Dit e-mailadres is al in gebruik bij een andere gebruiker." });
+      return void res.status(409).json({ error: "Dit e-mailadres is al in gebruik bij een andere gebruiker." });
     }
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });
@@ -408,14 +408,14 @@ router.patch("/gebruikers/:id", alleenBeheerder, async (req, res) => {
 });
 
 // POST /gebruikers/:id/uitnodigen — eerste uitnodiging sturen
-router.post("/gebruikers/:id/uitnodigen", alleenBeheerder, async (req, res) => {
+router.post("/gebruikers/:id/uitnodigen", alleenBeheerder, async (req, res): Promise<void> => {
   try {
     const id = parseInt(String(req.params.id), 10);
     const [bestaande] = await db
       .select()
       .from(gebruikersTable)
       .where(eq(gebruikersTable.id, id));
-    if (!bestaande) return res.status(404).json({ error: "Gebruiker niet gevonden" });
+    if (!bestaande) return void res.status(404).json({ error: "Gebruiker niet gevonden" });
 
     const token = crypto.randomBytes(32).toString("hex");
     const verlooptOp = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
@@ -432,7 +432,7 @@ router.post("/gebruikers/:id/uitnodigen", alleenBeheerder, async (req, res) => {
       });
     } catch (mailErr) {
       req.log.error(mailErr, "Uitnodigingsmail mislukt");
-      return res.status(502).json({
+      return void res.status(502).json({
         error: "De uitnodiging kon niet worden verzonden. Probeer het later opnieuw.",
       });
     }
@@ -458,16 +458,16 @@ router.post("/gebruikers/:id/uitnodigen", alleenBeheerder, async (req, res) => {
 });
 
 // POST /gebruikers/:id/uitnodigen/opnieuw — herinnering sturen
-router.post("/gebruikers/:id/uitnodigen/opnieuw", alleenBeheerder, async (req, res) => {
+router.post("/gebruikers/:id/uitnodigen/opnieuw", alleenBeheerder, async (req, res): Promise<void> => {
   try {
     const id = parseInt(String(req.params.id), 10);
     const [bestaande] = await db
       .select()
       .from(gebruikersTable)
       .where(eq(gebruikersTable.id, id));
-    if (!bestaande) return res.status(404).json({ error: "Gebruiker niet gevonden" });
+    if (!bestaande) return void res.status(404).json({ error: "Gebruiker niet gevonden" });
     if (bestaande.uitnodigingStatus === "geaccepteerd") {
-      return res.status(400).json({ error: "Gebruiker heeft de uitnodiging al geaccepteerd" });
+      return void res.status(400).json({ error: "Gebruiker heeft de uitnodiging al geaccepteerd" });
     }
 
     const token = crypto.randomBytes(32).toString("hex");
@@ -484,7 +484,7 @@ router.post("/gebruikers/:id/uitnodigen/opnieuw", alleenBeheerder, async (req, r
       });
     } catch (mailErr) {
       req.log.error(mailErr, "Uitnodigingsmail (opnieuw) mislukt");
-      return res.status(502).json({
+      return void res.status(502).json({
         error: "De herinnering kon niet worden verzonden. Probeer het later opnieuw.",
       });
     }
@@ -512,21 +512,21 @@ router.post("/gebruikers/:id/uitnodigen/opnieuw", alleenBeheerder, async (req, r
 router.post(
   "/gebruikers/:id/herkomst-toepassen",
   requireRol("hoofdbeheerder"),
-  async (req, res) => {
+  async (req, res): Promise<void> => {
     try {
       const id = parseInt(String(req.params.id), 10);
       if (!Number.isInteger(id)) {
-        return res.status(400).json({ error: "Ongeldig id" });
+        return void res.status(400).json({ error: "Ongeldig id" });
       }
       const [bestaande] = await db
         .select()
         .from(gebruikersTable)
         .where(eq(gebruikersTable.id, id));
       if (!bestaande) {
-        return res.status(404).json({ error: "Gebruiker niet gevonden" });
+        return void res.status(404).json({ error: "Gebruiker niet gevonden" });
       }
       if (bestaande.herkomstProfielId == null) {
-        return res
+        return void res
           .status(400)
           .json({ error: "Gebruiker heeft geen herkomst-profiel" });
       }
@@ -535,7 +535,7 @@ router.post(
         .from(profielenTable)
         .where(eq(profielenTable.id, bestaande.herkomstProfielId));
       if (!profiel) {
-        return res
+        return void res
           .status(400)
           .json({ error: "Herkomst-profiel bestaat niet meer" });
       }
@@ -559,21 +559,21 @@ router.post(
 router.post(
   "/gebruikers/:id/herkomst-bevestigen",
   requireRol("hoofdbeheerder"),
-  async (req, res) => {
+  async (req, res): Promise<void> => {
     try {
       const id = parseInt(String(req.params.id), 10);
       if (!Number.isInteger(id)) {
-        return res.status(400).json({ error: "Ongeldig id" });
+        return void res.status(400).json({ error: "Ongeldig id" });
       }
       const [bestaande] = await db
         .select()
         .from(gebruikersTable)
         .where(eq(gebruikersTable.id, id));
       if (!bestaande) {
-        return res.status(404).json({ error: "Gebruiker niet gevonden" });
+        return void res.status(404).json({ error: "Gebruiker niet gevonden" });
       }
       if (bestaande.herkomstProfielId == null) {
-        return res
+        return void res
           .status(400)
           .json({ error: "Gebruiker heeft geen herkomst-profiel" });
       }
@@ -582,10 +582,10 @@ router.post(
         .set({ herkomstAutomatisch: false })
         .where(eq(gebruikersTable.id, id))
         .returning();
-      return res.json(mapGebruiker(g));
+      return void res.json(mapGebruiker(g));
     } catch (err) {
       req.log.error(err);
-      return res.status(500).json({ error: "Interne serverfout" });
+      return void res.status(500).json({ error: "Interne serverfout" });
     }
   },
 );
@@ -596,28 +596,28 @@ router.post(
 router.post(
   "/gebruikers/:id/herkomst-verwijderen",
   requireRol("hoofdbeheerder"),
-  async (req, res) => {
+  async (req, res): Promise<void> => {
     try {
       const id = parseInt(String(req.params.id), 10);
       if (!Number.isInteger(id)) {
-        return res.status(400).json({ error: "Ongeldig id" });
+        return void res.status(400).json({ error: "Ongeldig id" });
       }
       const [bestaande] = await db
         .select()
         .from(gebruikersTable)
         .where(eq(gebruikersTable.id, id));
       if (!bestaande) {
-        return res.status(404).json({ error: "Gebruiker niet gevonden" });
+        return void res.status(404).json({ error: "Gebruiker niet gevonden" });
       }
       const [g] = await db
         .update(gebruikersTable)
         .set({ herkomstProfielId: null, herkomstAutomatisch: false })
         .where(eq(gebruikersTable.id, id))
         .returning();
-      return res.json(mapGebruiker(g));
+      return void res.json(mapGebruiker(g));
     } catch (err) {
       req.log.error(err);
-      return res.status(500).json({ error: "Interne serverfout" });
+      return void res.status(500).json({ error: "Interne serverfout" });
     }
   },
 );
@@ -630,19 +630,19 @@ router.post(
 router.post(
   "/gebruikers/herkomst-bevestigen-bulk",
   requireRol("hoofdbeheerder"),
-  async (req, res) => {
+  async (req, res): Promise<void> => {
     try {
       const ruweIds = (req.body as { ids?: unknown })?.ids;
       let ids: number[] | null = null;
       if (ruweIds !== undefined) {
         if (!Array.isArray(ruweIds)) {
-          return res.status(400).json({ error: "ids moet een lijst zijn" });
+          return void res.status(400).json({ error: "ids moet een lijst zijn" });
         }
         ids = ruweIds
           .map((v) => parseInt(String(v), 10))
           .filter((n) => Number.isInteger(n));
         if (ids.length === 0) {
-          return res.json({ bevestigd: 0 });
+          return void res.json({ bevestigd: 0 });
         }
       }
 
@@ -658,10 +658,10 @@ router.post(
         .where(voorwaarde)
         .returning({ id: gebruikersTable.id });
 
-      return res.json({ bevestigd: bijgewerkt.length });
+      return void res.json({ bevestigd: bijgewerkt.length });
     } catch (err) {
       req.log.error(err);
-      return res.status(500).json({ error: "Interne serverfout" });
+      return void res.status(500).json({ error: "Interne serverfout" });
     }
   },
 );
@@ -674,7 +674,7 @@ router.post(
 router.post(
   "/gebruikers/aanvullen",
   requireRol("hoofdbeheerder"),
-  async (req, res) => {
+  async (req, res): Promise<void> => {
     try {
       const gebruikers = await db.select().from(gebruikersTable);
       let gebruikersAangevuld = 0;
@@ -710,18 +710,18 @@ router.post(
 );
 
 // DELETE /gebruikers/:id — soft archivering (geen harde verwijdering)
-router.delete("/gebruikers/:id", alleenBeheerder, async (req, res) => {
+router.delete("/gebruikers/:id", alleenBeheerder, async (req, res): Promise<void> => {
   try {
     const id = parseInt(String(req.params.id), 10);
     if (req.session.userId === id) {
-      return res.status(400).json({ error: "U kunt uw eigen account niet archiveren" });
+      return void res.status(400).json({ error: "U kunt uw eigen account niet archiveren" });
     }
     const [bijgewerkt] = await db
       .update(gebruikersTable)
       .set({ gearchiveerd: true, actief: false })
       .where(eq(gebruikersTable.id, id))
       .returning();
-    if (!bijgewerkt) return res.status(404).json({ error: "Gebruiker niet gevonden" });
+    if (!bijgewerkt) return void res.status(404).json({ error: "Gebruiker niet gevonden" });
     res.status(204).send();
   } catch (err) {
     req.log.error(err);
@@ -730,7 +730,7 @@ router.delete("/gebruikers/:id", alleenBeheerder, async (req, res) => {
 });
 
 // POST /gebruikers/:id/herstellen
-router.post("/gebruikers/:id/herstellen", alleenBeheerder, async (req, res) => {
+router.post("/gebruikers/:id/herstellen", alleenBeheerder, async (req, res): Promise<void> => {
   try {
     const id = parseInt(String(req.params.id), 10);
     const [bijgewerkt] = await db
@@ -738,7 +738,7 @@ router.post("/gebruikers/:id/herstellen", alleenBeheerder, async (req, res) => {
       .set({ gearchiveerd: false, actief: true })
       .where(eq(gebruikersTable.id, id))
       .returning();
-    if (!bijgewerkt) return res.status(404).json({ error: "Gebruiker niet gevonden" });
+    if (!bijgewerkt) return void res.status(404).json({ error: "Gebruiker niet gevonden" });
     res.json(mapGebruiker(bijgewerkt));
   } catch (err) {
     req.log.error(err);

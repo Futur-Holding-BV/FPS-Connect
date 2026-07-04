@@ -37,13 +37,13 @@ function mapInstellingen(r: typeof accountviewInstellingenTable.$inferSelect) {
 }
 
 // GET /instellingen/accountview
-router.get("/instellingen/accountview", requireBevoegdheid("systeem", 1), async (req: Request, res: Response) => {
+router.get("/instellingen/accountview", requireBevoegdheid("systeem", 1), async (req: Request, res: Response): Promise<void> => {
   const inst = await getOrCreateInstellingen();
   res.json(mapInstellingen(inst));
 });
 
 // PATCH /instellingen/accountview
-router.patch("/instellingen/accountview", requireBevoegdheid("systeem", 2), async (req: Request, res: Response) => {
+router.patch("/instellingen/accountview", requireBevoegdheid("systeem", 2), async (req: Request, res: Response): Promise<void> => {
   const body = req.body as Record<string, unknown>;
 
   const updateData: Partial<typeof accountviewInstellingenTable.$inferInsert> = {
@@ -75,7 +75,7 @@ router.patch("/instellingen/accountview", requireBevoegdheid("systeem", 2), asyn
 });
 
 // POST /instellingen/accountview/test-verbinding
-router.post("/instellingen/accountview/test-verbinding", requireBevoegdheid("systeem", 1), async (req: Request, res: Response) => {
+router.post("/instellingen/accountview/test-verbinding", requireBevoegdheid("systeem", 1), async (req: Request, res: Response): Promise<void> => {
   const inst = await getOrCreateInstellingen();
   const client = maakAccountViewClient(inst);
   const resultaat = await client.pingVerbinding();

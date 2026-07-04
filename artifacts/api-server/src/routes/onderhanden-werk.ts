@@ -246,7 +246,7 @@ async function berekenItems(peildatum: string, statusFilter?: string) {
 // Routes
 // ─────────────────────────────────────────────────────────────────────────────
 
-router.get("/financieel/onderhanden-werk", requireBevoegdheid("financieel", 1), async (req: Request, res: Response) => {
+router.get("/financieel/onderhanden-werk", requireBevoegdheid("financieel", 1), async (req: Request, res: Response): Promise<void> => {
   const peildatum = typeof req.query["peildatum"] === "string"
     ? req.query["peildatum"]
     : new Date().toISOString().slice(0, 10);
@@ -256,7 +256,7 @@ router.get("/financieel/onderhanden-werk", requireBevoegdheid("financieel", 1), 
   res.json(items);
 });
 
-router.patch("/financieel/onderhanden-werk/:opdracht_id", requireBevoegdheid("financieel", 2), async (req: Request, res: Response) => {
+router.patch("/financieel/onderhanden-werk/:opdracht_id", requireBevoegdheid("financieel", 2), async (req: Request, res: Response): Promise<void> => {
   const opdrachtId = paramInt(req.params["opdracht_id"]);
   const { waarderingsmethode, percentage_gereed, handmatig_bedrag, opmerkingen } = req.body as {
     waarderingsmethode?: string | null;
@@ -293,7 +293,7 @@ router.patch("/financieel/onderhanden-werk/:opdracht_id", requireBevoegdheid("fi
   res.json(item);
 });
 
-router.get("/financieel/jaarrekening/onderhanden-werk", requireBevoegdheid("financieel", 1), async (req: Request, res: Response) => {
+router.get("/financieel/jaarrekening/onderhanden-werk", requireBevoegdheid("financieel", 1), async (req: Request, res: Response): Promise<void> => {
   const peildatum = typeof req.query["peildatum"] === "string"
     ? req.query["peildatum"]
     : `${new Date().getFullYear() - 1}-12-31`;

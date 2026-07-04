@@ -36,19 +36,19 @@ function cacheBestand(id: string, data: typeof bestandCache extends Map<string, 
 router.post(
   "/import/preview",
   upload.single("bestand"),
-  async (req, res) => {
+  async (req, res): Promise<void> => {
     try {
-      if (!req.file) return res.status(400).json({ error: "Geen bestand ontvangen" });
+      if (!req.file) return void res.status(400).json({ error: "Geen bestand ontvangen" });
 
       const type = String(req.body.type ?? "").trim();
       const geldige = ["leveranciers", "klanten", "artikelen", "projecten", "medewerkers", "gebouwen", "contactpersonen", "magazijn_artikelen", "eenheidsprijzen"];
       if (!geldige.includes(type)) {
-        return res.status(400).json({ error: "Ongeldig importtype" });
+        return void res.status(400).json({ error: "Ongeldig importtype" });
       }
 
       const rijen = parseBestand(req.file);
       if (rijen.length === 0) {
-        return res.status(400).json({ error: "Bestand bevat geen data-rijen" });
+        return void res.status(400).json({ error: "Bestand bevat geen data-rijen" });
       }
 
       const kolommen = Object.keys(rijen[0] ?? {});
@@ -75,7 +75,7 @@ router.post(
 );
 
 // ── POST /import/uitvoeren ────────────────────────────────────────────────────
-router.post("/import/uitvoeren", async (req, res) => {
+router.post("/import/uitvoeren", async (req, res): Promise<void> => {
   try {
     const { bestand_id, type, kolomkoppeling, overslaan_lege_naam } = req.body as {
       bestand_id: string;
@@ -86,7 +86,7 @@ router.post("/import/uitvoeren", async (req, res) => {
 
     const gecached = bestandCache.get(bestand_id);
     if (!gecached) {
-      return res.status(400).json({ error: "Bestand niet meer beschikbaar — upload opnieuw" });
+      return void res.status(400).json({ error: "Bestand niet meer beschikbaar — upload opnieuw" });
     }
 
     const { rijen, bestandsnaam } = gecached;
@@ -254,7 +254,7 @@ router.post("/import/uitvoeren", async (req, res) => {
 });
 
 // ── GET /import/logs ──────────────────────────────────────────────────────────
-router.get("/import/logs", async (req, res) => {
+router.get("/import/logs", async (req, res): Promise<void> => {
   try {
     const logs = await db
       .select()
@@ -474,7 +474,7 @@ router.get("/import/template/:type", (req, res) => {
 
   const kolommen = TEMPLATE_KOLOMMEN[type];
   if (!kolommen) {
-    return res.status(400).json({ error: "Ongeldig importtype voor template" });
+    return void res.status(400).json({ error: "Ongeldig importtype voor template" });
   }
 
   const wb = XLSX.utils.book_new();

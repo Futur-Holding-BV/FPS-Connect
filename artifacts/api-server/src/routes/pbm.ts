@@ -143,7 +143,7 @@ const SLIJTAGE_AANDACHTSPUNTEN: Record<string, string> = {
 };
 
 // ── GET /pbm/items ─────────────────────────────────────────────────────────
-router.get("/pbm/items", lezenPbm, async (req, res) => {
+router.get("/pbm/items", lezenPbm, async (req, res): Promise<void> => {
   const sess = req.session as { gebruikerId?: number; rol?: string };
   const { medewerker_id, status } = req.query;
 
@@ -162,9 +162,9 @@ router.get("/pbm/items", lezenPbm, async (req, res) => {
 });
 
 // ── GET /pbm/items/eigen ────────────────────────────────────────────────────
-router.get("/pbm/items/eigen", async (req, res) => {
+router.get("/pbm/items/eigen", async (req, res): Promise<void> => {
   const sess = req.session as { gebruikerId?: number };
-  if (!sess.gebruikerId) return res.status(401).json({ error: "Niet ingelogd" });
+  if (!sess.gebruikerId) return void res.status(401).json({ error: "Niet ingelogd" });
 
   const medewerker = await db
     .select({ id: medewerkersTable.id })
@@ -172,7 +172,7 @@ router.get("/pbm/items/eigen", async (req, res) => {
     .where(eq(medewerkersTable.gebruikerId, sess.gebruikerId))
     .limit(1);
 
-  if (!medewerker[0]) return res.json([]);
+  if (!medewerker[0]) return void res.json([]);
 
   const rows = await db
     .select()
@@ -184,7 +184,7 @@ router.get("/pbm/items/eigen", async (req, res) => {
 });
 
 // ── POST /pbm/items ─────────────────────────────────────────────────────────
-router.post("/pbm/items", schrijvenPbm, async (req, res) => {
+router.post("/pbm/items", schrijvenPbm, async (req, res): Promise<void> => {
   const sess = req.session as { gebruikerId?: number };
   const body = req.body as {
     medewerkerId?: number;
@@ -203,7 +203,7 @@ router.post("/pbm/items", schrijvenPbm, async (req, res) => {
     opmerkingen?: string;
   };
 
-  if (!body.type) return res.status(400).json({ error: "type is verplicht" });
+  if (!body.type) return void res.status(400).json({ error: "type is verplicht" });
 
   const qrCode = randomUUID();
   const [row] = await db
@@ -233,12 +233,12 @@ router.post("/pbm/items", schrijvenPbm, async (req, res) => {
 });
 
 // ── GET /pbm/items/:id ──────────────────────────────────────────────────────
-router.get("/pbm/items/:id", lezenPbm, async (req, res) => {
+router.get("/pbm/items/:id", lezenPbm, async (req, res): Promise<void> => {
   const id = parseInt(String(req.params.id), 10);
-  if (isNaN(id)) return res.status(400).json({ error: "Ongeldig id" });
+  if (isNaN(id)) return void res.status(400).json({ error: "Ongeldig id" });
 
   const rows = await db.select().from(pbmItemsTable).where(eq(pbmItemsTable.id, id)).limit(1);
-  if (!rows[0]) return res.status(404).json({ error: "Niet gevonden" });
+  if (!rows[0]) return void res.status(404).json({ error: "Niet gevonden" });
 
   const inspecties = await db
     .select()
@@ -253,9 +253,9 @@ router.get("/pbm/items/:id", lezenPbm, async (req, res) => {
 });
 
 // ── PATCH /pbm/items/:id ────────────────────────────────────────────────────
-router.patch("/pbm/items/:id", schrijvenPbm, async (req, res) => {
+router.patch("/pbm/items/:id", schrijvenPbm, async (req, res): Promise<void> => {
   const id = parseInt(String(req.params.id), 10);
-  if (isNaN(id)) return res.status(400).json({ error: "Ongeldig id" });
+  if (isNaN(id)) return void res.status(400).json({ error: "Ongeldig id" });
 
   const body = req.body as Partial<{
     merk: string; model: string; maat: string; serienummer: string;
@@ -270,22 +270,22 @@ router.patch("/pbm/items/:id", schrijvenPbm, async (req, res) => {
     .where(eq(pbmItemsTable.id, id))
     .returning();
 
-  if (!row) return res.status(404).json({ error: "Niet gevonden" });
+  if (!row) return void res.status(404).json({ error: "Niet gevonden" });
   res.json(mapItem(row as unknown as Record<string, unknown>));
 });
 
 // ── DELETE /pbm/items/:id ───────────────────────────────────────────────────
-router.delete("/pbm/items/:id", schrijvenPbm, async (req, res) => {
+router.delete("/pbm/items/:id", schrijvenPbm, async (req, res): Promise<void> => {
   const id = parseInt(String(req.params.id), 10);
-  if (isNaN(id)) return res.status(400).json({ error: "Ongeldig id" });
+  if (isNaN(id)) return void res.status(400).json({ error: "Ongeldig id" });
   await db.delete(pbmItemsTable).where(eq(pbmItemsTable.id, id));
   res.status(204).end();
 });
 
 // ── POST /pbm/items/:id/inspecties ──────────────────────────────────────────
-router.post("/pbm/items/:id/inspecties", schrijvenPbm, async (req, res) => {
+router.post("/pbm/items/:id/inspecties", schrijvenPbm, async (req, res): Promise<void> => {
   const pbmItemId = parseInt(String(req.params.id), 10);
-  if (isNaN(pbmItemId)) return res.status(400).json({ error: "Ongeldig id" });
+  if (isNaN(pbmItemId)) return void res.status(400).json({ error: "Ongeldig id" });
 
   const sess = req.session as { gebruikerId?: number };
   const body = req.body as {
@@ -322,14 +322,14 @@ router.post("/pbm/items/:id/inspecties", schrijvenPbm, async (req, res) => {
 
 // ── POST /pbm/items/:id/foto-inspectie ──────────────────────────────────────
 // AI beoordeelt foto's op slijtage — geeft NOOIT een formele goed-/afkeuring
-router.post("/pbm/items/:id/foto-inspectie", async (req, res) => {
+router.post("/pbm/items/:id/foto-inspectie", async (req, res): Promise<void> => {
   const pbmItemId = parseInt(String(req.params.id), 10);
-  if (isNaN(pbmItemId)) return res.status(400).json({ error: "Ongeldig id" });
+  if (isNaN(pbmItemId)) return void res.status(400).json({ error: "Ongeldig id" });
 
-  if (!heeftGateway()) return res.status(503).json({ error: "AI niet beschikbaar" });
+  if (!heeftGateway()) return void res.status(503).json({ error: "AI niet beschikbaar" });
 
   const body = req.body as { fotoPaden?: string[]; pbmType?: string };
-  if (!body.fotoPaden?.length) return res.status(400).json({ error: "Minimaal één foto vereist" });
+  if (!body.fotoPaden?.length) return void res.status(400).json({ error: "Minimaal één foto vereist" });
 
   const items = await db
     .select()
@@ -353,7 +353,7 @@ router.post("/pbm/items/:id/foto-inspectie", async (req, res) => {
   }
 
   if (!content.length) {
-    return res.status(422).json({ error: "Foto's konden niet worden opgehaald" });
+    return void res.status(422).json({ error: "Foto's konden niet worden opgehaald" });
   }
 
   content.push({
@@ -389,7 +389,7 @@ Antwoord ALLEEN met het JSON-object, geen extra tekst.`,
       const jsonMatch = raw.match(/\{[\s\S]*\}/);
       parsed = JSON.parse(jsonMatch?.[0] ?? raw);
     } catch {
-      return res.status(422).json({ error: "AI gaf geen geldig antwoord", raw });
+      return void res.status(422).json({ error: "AI gaf geen geldig antwoord", raw });
     }
 
     const datum = new Date().toISOString().slice(0, 10);
@@ -430,7 +430,7 @@ Antwoord ALLEEN met het JSON-object, geen extra tekst.`,
 });
 
 // ── GET /pbm/middelen ───────────────────────────────────────────────────────
-router.get("/pbm/middelen", lezenPbm, async (req, res) => {
+router.get("/pbm/middelen", lezenPbm, async (req, res): Promise<void> => {
   const { type, status } = req.query;
   const rows = await db
     .select()
@@ -447,7 +447,7 @@ router.get("/pbm/middelen", lezenPbm, async (req, res) => {
 });
 
 // ── POST /pbm/middelen ──────────────────────────────────────────────────────
-router.post("/pbm/middelen", schrijvenPbm, async (req, res) => {
+router.post("/pbm/middelen", schrijvenPbm, async (req, res): Promise<void> => {
   const sess = req.session as { gebruikerId?: number };
   const body = req.body as {
     type: string; naam: string; merk?: string; model?: string;
@@ -456,7 +456,7 @@ router.post("/pbm/middelen", schrijvenPbm, async (req, res) => {
     vervangingsDatum?: string; opmerkingen?: string;
   };
 
-  if (!body.type || !body.naam) return res.status(400).json({ error: "type en naam zijn verplicht" });
+  if (!body.type || !body.naam) return void res.status(400).json({ error: "type en naam zijn verplicht" });
 
   const qrCode = randomUUID();
   const [row] = await db
@@ -474,12 +474,12 @@ router.post("/pbm/middelen", schrijvenPbm, async (req, res) => {
 });
 
 // ── GET /pbm/middelen/:id ───────────────────────────────────────────────────
-router.get("/pbm/middelen/:id", lezenPbm, async (req, res) => {
+router.get("/pbm/middelen/:id", lezenPbm, async (req, res): Promise<void> => {
   const id = parseInt(String(req.params.id), 10);
-  if (isNaN(id)) return res.status(400).json({ error: "Ongeldig id" });
+  if (isNaN(id)) return void res.status(400).json({ error: "Ongeldig id" });
 
   const rows = await db.select().from(veiligheidsmiddelenTable).where(eq(veiligheidsmiddelenTable.id, id)).limit(1);
-  if (!rows[0]) return res.status(404).json({ error: "Niet gevonden" });
+  if (!rows[0]) return void res.status(404).json({ error: "Niet gevonden" });
 
   const inspecties = await db
     .select()
@@ -504,9 +504,9 @@ router.get("/pbm/middelen/:id", lezenPbm, async (req, res) => {
 });
 
 // ── PATCH /pbm/middelen/:id ─────────────────────────────────────────────────
-router.patch("/pbm/middelen/:id", schrijvenPbm, async (req, res) => {
+router.patch("/pbm/middelen/:id", schrijvenPbm, async (req, res): Promise<void> => {
   const id = parseInt(String(req.params.id), 10);
-  if (isNaN(id)) return res.status(400).json({ error: "Ongeldig id" });
+  if (isNaN(id)) return void res.status(400).json({ error: "Ongeldig id" });
 
   const body = req.body as Partial<{
     naam: string; merk: string; model: string; serienummer: string;
@@ -521,14 +521,14 @@ router.patch("/pbm/middelen/:id", schrijvenPbm, async (req, res) => {
     .where(eq(veiligheidsmiddelenTable.id, id))
     .returning();
 
-  if (!row) return res.status(404).json({ error: "Niet gevonden" });
+  if (!row) return void res.status(404).json({ error: "Niet gevonden" });
   res.json(mapMiddel(row as unknown as Record<string, unknown>));
 });
 
 // ── POST /pbm/middelen/:id/inspecties ───────────────────────────────────────
-router.post("/pbm/middelen/:id/inspecties", schrijvenPbm, async (req, res) => {
+router.post("/pbm/middelen/:id/inspecties", schrijvenPbm, async (req, res): Promise<void> => {
   const middelId = parseInt(String(req.params.id), 10);
-  if (isNaN(middelId)) return res.status(400).json({ error: "Ongeldig id" });
+  if (isNaN(middelId)) return void res.status(400).json({ error: "Ongeldig id" });
 
   const sess = req.session as { gebruikerId?: number };
   const body = req.body as {
@@ -554,7 +554,7 @@ router.post("/pbm/middelen/:id/inspecties", schrijvenPbm, async (req, res) => {
 });
 
 // ── GET /pbm/dashboard ──────────────────────────────────────────────────────
-router.get("/pbm/dashboard", lezenPbm, async (req, res) => {
+router.get("/pbm/dashboard", lezenPbm, async (req, res): Promise<void> => {
   const vandaag = new Date().toISOString().slice(0, 10);
   const over30 = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
 

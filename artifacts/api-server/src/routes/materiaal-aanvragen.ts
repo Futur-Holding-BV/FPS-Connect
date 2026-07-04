@@ -228,7 +228,7 @@ Retourneer uitsluitend geldige JSON:
 // ── GET /materiaal-aanvragen ────────────────────────────────────────────────
 // Alle aanvragen zichtbaar voor werkvoorbereider (status-filter optioneel)
 
-router.get("/materiaal-aanvragen", lezen, async (req, res) => {
+router.get("/materiaal-aanvragen", lezen, async (req, res): Promise<void> => {
   const { status, opdracht_id } = req.query as { status?: string; opdracht_id?: string };
 
   const aanvragen = await db
@@ -243,7 +243,7 @@ router.get("/materiaal-aanvragen", lezen, async (req, res) => {
     )
     .orderBy(desc(materiaalAanvragenTable.aangemaaktOp));
 
-  if (aanvragen.length === 0) return res.json([]);
+  if (aanvragen.length === 0) return void res.json([]);
 
   // Gebruikersnamen en opdrachttitels los ophalen
   const gebruikerIds = [
@@ -275,15 +275,15 @@ router.get("/materiaal-aanvragen", lezen, async (req, res) => {
     opdracht_werknummer: a.opdrachtId != null ? (opdrachtMap.get(a.opdrachtId)?.werknummer ?? null) : null,
   }));
 
-  return res.json(rijen.map(mapAanvraag));
+  return void res.json(rijen.map(mapAanvraag));
 });
 
 // ── POST /materiaal-aanvragen ───────────────────────────────────────────────
 // Monteur dient aanvraag in; foto als base64 in body
 
-router.post("/materiaal-aanvragen", async (req, res) => {
+router.post("/materiaal-aanvragen", async (req, res): Promise<void> => {
   const gebruikerId = (req.session as { gebruikerId?: number }).gebruikerId;
-  if (!gebruikerId) return res.status(401).json({ error: "Niet ingelogd" });
+  if (!gebruikerId) return void res.status(401).json({ error: "Niet ingelogd" });
 
   const { opdracht_id, werkdag_id, reden, omschrijving, foto_pad } = req.body as {
     opdracht_id?: number;
@@ -294,10 +294,10 @@ router.post("/materiaal-aanvragen", async (req, res) => {
   };
 
   if (!reden) {
-    return res.status(400).json({ error: "reden is verplicht" });
+    return void res.status(400).json({ error: "reden is verplicht" });
   }
   if (!["op", "beschadigd", "nodig"].includes(reden)) {
-    return res.status(400).json({ error: "reden moet op, beschadigd of nodig zijn" });
+    return void res.status(400).json({ error: "reden moet op, beschadigd of nodig zijn" });
   }
 
   // Resolve opdracht_id: rechtstreeks of via werkdag (planning item)
@@ -310,14 +310,14 @@ router.post("/materiaal-aanvragen", async (req, res) => {
     opdrachtId = planningItem?.opdrachtId ?? null;
   }
   if (!opdrachtId) {
-    return res.status(400).json({ error: "Geen geldige opdracht of werkdag opgegeven" });
+    return void res.status(400).json({ error: "Geen geldige opdracht of werkdag opgegeven" });
   }
 
   const [opdracht] = await db
     .select({ id: opdrachtenTable.id })
     .from(opdrachtenTable)
     .where(eq(opdrachtenTable.id, opdrachtId));
-  if (!opdracht) return res.status(404).json({ error: "Opdracht niet gevonden" });
+  if (!opdracht) return void res.status(404).json({ error: "Opdracht niet gevonden" });
   opdrachtId = opdracht.id;
 
   const [nieuw] = await db
@@ -332,20 +332,20 @@ router.post("/materiaal-aanvragen", async (req, res) => {
     })
     .returning();
 
-  if (!nieuw) return res.status(500).json({ error: "Aanvraag aanmaken mislukt" });
+  if (!nieuw) return void res.status(500).json({ error: "Aanvraag aanmaken mislukt" });
 
   // AI analyse asynchroon starten (fire-and-forget)
   if (heeftGateway()) {
     void voerAiAnalyseUit(nieuw.id);
   }
 
-  return res.status(201).json({ id: nieuw.id, foto_pad: foto_pad ?? null });
+  return void res.status(201).json({ id: nieuw.id, foto_pad: foto_pad ?? null });
 });
 
 // ── PATCH /materiaal-aanvragen/:id ─────────────────────────────────────────
 // Werkvoorbereider behandelt aanvraag (status + notitie)
 
-router.patch("/materiaal-aanvragen/:id", lezen, async (req, res) => {
+router.patch("/materiaal-aanvragen/:id", lezen, async (req, res): Promise<void> => {
   const id = parseInt(String(req.params["id"] ?? "0"), 10);
   const gebruikerId = (req.session as { gebruikerId?: number }).gebruikerId;
 
@@ -353,7 +353,7 @@ router.patch("/materiaal-aanvragen/:id", lezen, async (req, res) => {
     .select()
     .from(materiaalAanvragenTable)
     .where(eq(materiaalAanvragenTable.id, id));
-  if (!bestaand) return res.status(404).json({ error: "Aanvraag niet gevonden" });
+  if (!bestaand) return void res.status(404).json({ error: "Aanvraag niet gevonden" });
 
   const { status, behandel_notitie } = req.body as {
     status?: string;
@@ -362,7 +362,7 @@ router.patch("/materiaal-aanvragen/:id", lezen, async (req, res) => {
 
   const geldigeStatussen = ["nieuw", "in_behandeling", "goedgekeurd", "afgewezen"];
   if (status && !geldigeStatussen.includes(status)) {
-    return res.status(400).json({ error: "Ongeldige status" });
+    return void res.status(400).json({ error: "Ongeldige status" });
   }
 
   await db
@@ -380,24 +380,24 @@ router.patch("/materiaal-aanvragen/:id", lezen, async (req, res) => {
     .from(materiaalAanvragenTable)
     .where(eq(materiaalAanvragenTable.id, id));
 
-  return res.json(mapAanvraag(updated as Parameters<typeof mapAanvraag>[0]));
+  return void res.json(mapAanvraag(updated as Parameters<typeof mapAanvraag>[0]));
 });
 
 // ── POST /materiaal-aanvragen/:id/heranalyseer ─────────────────────────────
 // Handmatig AI heranalyse triggeren
 
-router.post("/materiaal-aanvragen/:id/heranalyseer", schrijven, async (req, res) => {
+router.post("/materiaal-aanvragen/:id/heranalyseer", schrijven, async (req, res): Promise<void> => {
   const id = parseInt(String(req.params["id"] ?? "0"), 10);
-  if (!heeftGateway()) return res.status(503).json({ error: "AI niet beschikbaar" });
+  if (!heeftGateway()) return void res.status(503).json({ error: "AI niet beschikbaar" });
 
   const [bestaand] = await db
     .select()
     .from(materiaalAanvragenTable)
     .where(eq(materiaalAanvragenTable.id, id));
-  if (!bestaand) return res.status(404).json({ error: "Aanvraag niet gevonden" });
+  if (!bestaand) return void res.status(404).json({ error: "Aanvraag niet gevonden" });
 
   void voerAiAnalyseUit(id);
-  return res.json({ gestart: true });
+  return void res.json({ gestart: true });
 });
 
 export default router;

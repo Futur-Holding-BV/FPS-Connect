@@ -154,7 +154,7 @@ async function medewerkerId(gebruikerId: number): Promise<number | null> {
 
 
 // ── GET /uren ─────────────────────────────────────────────────────────────────
-router.get("/uren", requireAuth, async (req, res) => {
+router.get("/uren", requireAuth, async (req, res): Promise<void> => {
   const {
     medewerker_id,
     datum_van,
@@ -172,7 +172,7 @@ router.get("/uren", requireAuth, async (req, res) => {
   let eigenMedewerkerId: number | null = null;
   if (!isManager) {
     eigenMedewerkerId = await medewerkerId(userId);
-    if (!eigenMedewerkerId) return res.json([]);
+    if (!eigenMedewerkerId) return void res.json([]);
   }
 
   const filters = [];
@@ -211,13 +211,13 @@ router.get("/uren", requireAuth, async (req, res) => {
 });
 
 // ── GET /uren/mijn-week ───────────────────────────────────────────────────────
-router.get("/uren/mijn-week", requireAuth, async (req, res) => {
+router.get("/uren/mijn-week", requireAuth, async (req, res): Promise<void> => {
   const { jaar, week } = req.query as Record<string, string | undefined>;
   const userId = req.session.userId!;
 
   const mid = await medewerkerId(userId);
   if (!mid) {
-    return res.json({
+    return void res.json({
       medewerker_id: null, jaar: 0, week_nummer: 0,
       datum_van: "", datum_tot: "", uren: [], planning_items: [],
       totaal_uren: 0, adv_uren: 0,
@@ -292,7 +292,7 @@ router.get("/uren/mijn-week", requireAuth, async (req, res) => {
 });
 
 // ── POST /uren ────────────────────────────────────────────────────────────────
-router.post("/uren", requireAuth, async (req, res) => {
+router.post("/uren", requireAuth, async (req, res): Promise<void> => {
   const userId = req.session.userId!;
 
   const {
@@ -313,7 +313,7 @@ router.post("/uren", requireAuth, async (req, res) => {
   } = req.body;
 
   if (!datum || !begin_tijd || !eind_tijd) {
-    return res.status(400).json({ error: "datum, begin_tijd en eind_tijd zijn verplicht" });
+    return void res.status(400).json({ error: "datum, begin_tijd en eind_tijd zijn verplicht" });
   }
 
   const isManager = req.permissies!.heeftModuleRecht("personeel", 2);
@@ -323,14 +323,14 @@ router.post("/uren", requireAuth, async (req, res) => {
     mid = Number(inputMedId);
   } else {
     const eigenId = await medewerkerId(userId);
-    if (!eigenId) return res.status(400).json({ error: "Geen medewerkersprofiel gekoppeld aan dit account" });
+    if (!eigenId) return void res.status(400).json({ error: "Geen medewerkersprofiel gekoppeld aan dit account" });
     mid = eigenId;
   }
 
   const nettoUren = berekenNettoUren(begin_tijd, eind_tijd, Number(pauze_minuten));
 
   if (!isManager && await isWeekVergrendeld(mid, datum)) {
-    return res.status(409).json({ error: "Deze week is vergrendeld door HRM en kan niet worden gewijzigd" });
+    return void res.status(409).json({ error: "Deze week is vergrendeld door HRM en kan niet worden gewijzigd" });
   }
 
   const [rij] = await db
@@ -360,7 +360,7 @@ router.post("/uren", requireAuth, async (req, res) => {
 });
 
 // ── GET /uren/:id ─────────────────────────────────────────────────────────────
-router.get("/uren/:id", requireAuth, async (req, res) => {
+router.get("/uren/:id", requireAuth, async (req, res): Promise<void> => {
   const id = Number(req.params.id);
   const userId = req.session.userId!;
 
@@ -377,19 +377,19 @@ router.get("/uren/:id", requireAuth, async (req, res) => {
     .where(eq(urenRegistratiesTable.id, id))
     .limit(1);
 
-  if (!row) return res.status(404).json({ error: "Niet gevonden" });
+  if (!row) return void res.status(404).json({ error: "Niet gevonden" });
 
   const eigenId = await medewerkerId(userId);
   const isManager = req.permissies!.heeftModuleRecht("personeel", 1);
   if (!isManager && row.uren.medewerkerId !== eigenId) {
-    return res.status(403).json({ error: "Geen toegang" });
+    return void res.status(403).json({ error: "Geen toegang" });
   }
 
   res.json(mapUren(row.uren, { medewerkerNaam: row.medewerkerNaam, gebouwNaam: row.gebouwNaam }));
 });
 
 // ── PATCH /uren/:id ───────────────────────────────────────────────────────────
-router.patch("/uren/:id", requireAuth, async (req, res) => {
+router.patch("/uren/:id", requireAuth, async (req, res): Promise<void> => {
   const id = Number(req.params.id);
   const userId = req.session.userId!;
 
@@ -400,20 +400,20 @@ router.patch("/uren/:id", requireAuth, async (req, res) => {
     .where(eq(urenRegistratiesTable.id, id))
     .limit(1);
 
-  if (!bestaand) return res.status(404).json({ error: "Niet gevonden" });
+  if (!bestaand) return void res.status(404).json({ error: "Niet gevonden" });
 
   const eigenId = await medewerkerId(userId);
   const isManager = req.permissies!.heeftModuleRecht("personeel", 2);
   if (!isManager && bestaand.medewerkerId !== eigenId) {
-    return res.status(403).json({ error: "Geen toegang" });
+    return void res.status(403).json({ error: "Geen toegang" });
   }
 
   if (bestaand.status === "goedgekeurd" && !isManager) {
-    return res.status(409).json({ error: "Goedgekeurde uren kunnen niet worden gewijzigd" });
+    return void res.status(409).json({ error: "Goedgekeurde uren kunnen niet worden gewijzigd" });
   }
 
   if (!isManager && await isWeekVergrendeld(bestaand.medewerkerId, bestaand.datum)) {
-    return res.status(409).json({ error: "Deze week is vergrendeld door HRM en kan niet worden gewijzigd" });
+    return void res.status(409).json({ error: "Deze week is vergrendeld door HRM en kan niet worden gewijzigd" });
   }
 
   const {
@@ -461,7 +461,7 @@ router.patch("/uren/:id", requireAuth, async (req, res) => {
 });
 
 // ── DELETE /uren/:id ──────────────────────────────────────────────────────────
-router.delete("/uren/:id", requireAuth, async (req, res) => {
+router.delete("/uren/:id", requireAuth, async (req, res): Promise<void> => {
   const id = Number(req.params.id);
   const userId = req.session.userId!;
 
@@ -472,20 +472,20 @@ router.delete("/uren/:id", requireAuth, async (req, res) => {
     .where(eq(urenRegistratiesTable.id, id))
     .limit(1);
 
-  if (!bestaand) return res.status(404).json({ error: "Niet gevonden" });
+  if (!bestaand) return void res.status(404).json({ error: "Niet gevonden" });
 
   const eigenId = await medewerkerId(userId);
   const isManager = req.permissies!.heeftModuleRecht("personeel", 2);
   if (!isManager && bestaand.medewerkerId !== eigenId) {
-    return res.status(403).json({ error: "Geen toegang" });
+    return void res.status(403).json({ error: "Geen toegang" });
   }
 
   if (bestaand.status === "goedgekeurd" && !isManager) {
-    return res.status(409).json({ error: "Goedgekeurde uren kunnen niet worden verwijderd" });
+    return void res.status(409).json({ error: "Goedgekeurde uren kunnen niet worden verwijderd" });
   }
 
   if (!isManager && await isWeekVergrendeld(bestaand.medewerkerId, bestaand.datum)) {
-    return res.status(409).json({ error: "Deze week is vergrendeld door HRM en kan niet worden gewijzigd" });
+    return void res.status(409).json({ error: "Deze week is vergrendeld door HRM en kan niet worden gewijzigd" });
   }
 
   await db.delete(urenRegistratiesTable).where(eq(urenRegistratiesTable.id, id));
@@ -493,7 +493,7 @@ router.delete("/uren/:id", requireAuth, async (req, res) => {
 });
 
 // ── GET /weekstaten ───────────────────────────────────────────────────────────
-router.get("/weekstaten", requireAuth, async (req, res) => {
+router.get("/weekstaten", requireAuth, async (req, res): Promise<void> => {
   const { medewerker_id, jaar, week, status } = req.query as Record<string, string | undefined>;
   const userId = req.session.userId!;
 
@@ -502,7 +502,7 @@ router.get("/weekstaten", requireAuth, async (req, res) => {
   let eigenId: number | null = null;
   if (!isManager) {
     eigenId = await medewerkerId(userId);
-    if (!eigenId) return res.json([]);
+    if (!eigenId) return void res.json([]);
   }
 
   const filters = [];
@@ -526,13 +526,13 @@ router.get("/weekstaten", requireAuth, async (req, res) => {
 });
 
 // ── POST /weekstaten ──────────────────────────────────────────────────────────
-router.post("/weekstaten", requireAuth, async (req, res) => {
+router.post("/weekstaten", requireAuth, async (req, res): Promise<void> => {
   const userId = req.session.userId!;
 
   const { medewerker_id: inputMedId, jaar, week_nummer, notities } = req.body;
 
   if (!jaar || !week_nummer) {
-    return res.status(400).json({ error: "jaar en week_nummer zijn verplicht" });
+    return void res.status(400).json({ error: "jaar en week_nummer zijn verplicht" });
   }
 
   const isManager = req.permissies!.heeftModuleRecht("personeel", 2);
@@ -541,7 +541,7 @@ router.post("/weekstaten", requireAuth, async (req, res) => {
     mid = Number(inputMedId);
   } else {
     const eigenId = await medewerkerId(userId);
-    if (!eigenId) return res.status(400).json({ error: "Geen medewerkersprofiel gekoppeld" });
+    if (!eigenId) return void res.status(400).json({ error: "Geen medewerkersprofiel gekoppeld" });
     mid = eigenId;
   }
 
@@ -557,7 +557,7 @@ router.post("/weekstaten", requireAuth, async (req, res) => {
     )
     .limit(1);
 
-  if (bestaand) return res.status(409).json({ error: "Weekstaat bestaat al voor deze week" });
+  if (bestaand) return void res.status(409).json({ error: "Weekstaat bestaat al voor deze week" });
 
   const { van, tot } = weekGrenzen(Number(jaar), Number(week_nummer));
   const urenRows = await db
@@ -598,7 +598,7 @@ router.post("/weekstaten", requireAuth, async (req, res) => {
 });
 
 // ── GET /weekstaten/:id ───────────────────────────────────────────────────────
-router.get("/weekstaten/:id", requireAuth, async (req, res) => {
+router.get("/weekstaten/:id", requireAuth, async (req, res): Promise<void> => {
   const id = Number(req.params.id);
   const userId = req.session.userId!;
 
@@ -617,12 +617,12 @@ router.get("/weekstaten/:id", requireAuth, async (req, res) => {
     .where(eq(weekStatenTable.id, id))
     .limit(1);
 
-  if (!row) return res.status(404).json({ error: "Niet gevonden" });
+  if (!row) return void res.status(404).json({ error: "Niet gevonden" });
 
   const eigenId = await medewerkerId(userId);
   const isManager = req.permissies!.heeftModuleRecht("personeel", 1);
   if (!isManager && row.ws.medewerkerId !== eigenId) {
-    return res.status(403).json({ error: "Geen toegang" });
+    return void res.status(403).json({ error: "Geen toegang" });
   }
 
   const { van, tot } = weekGrenzen(row.ws.jaar, row.ws.weekNummer);
@@ -656,7 +656,7 @@ router.get("/weekstaten/:id", requireAuth, async (req, res) => {
 });
 
 // ── PATCH /weekstaten/:id ─────────────────────────────────────────────────────
-router.patch("/weekstaten/:id", requireAuth, async (req, res) => {
+router.patch("/weekstaten/:id", requireAuth, async (req, res): Promise<void> => {
   const id = Number(req.params.id);
   const { notities } = req.body;
 
@@ -666,27 +666,27 @@ router.patch("/weekstaten/:id", requireAuth, async (req, res) => {
     .where(eq(weekStatenTable.id, id))
     .returning();
 
-  if (!rij) return res.status(404).json({ error: "Niet gevonden" });
+  if (!rij) return void res.status(404).json({ error: "Niet gevonden" });
   res.json(mapWeekStaat(rij));
 });
 
 // ── POST /weekstaten/:id/indienen ─────────────────────────────────────────────
-router.post("/weekstaten/:id/indienen", requireAuth, async (req, res) => {
+router.post("/weekstaten/:id/indienen", requireAuth, async (req, res): Promise<void> => {
   const id = Number(req.params.id);
   const userId = req.session.userId!;
 
 
   const [bestaand] = await db.select().from(weekStatenTable).where(eq(weekStatenTable.id, id)).limit(1);
-  if (!bestaand) return res.status(404).json({ error: "Niet gevonden" });
+  if (!bestaand) return void res.status(404).json({ error: "Niet gevonden" });
 
   const eigenId = await medewerkerId(userId);
   const isManager = req.permissies!.heeftModuleRecht("personeel", 2);
   if (!isManager && bestaand.medewerkerId !== eigenId) {
-    return res.status(403).json({ error: "Geen toegang" });
+    return void res.status(403).json({ error: "Geen toegang" });
   }
 
   if (bestaand.status !== "concept" && bestaand.status !== "afgewezen") {
-    return res.status(409).json({ error: "Weekstaat is al ingediend of goedgekeurd" });
+    return void res.status(409).json({ error: "Weekstaat is al ingediend of goedgekeurd" });
   }
 
   const { van, tot } = weekGrenzen(bestaand.jaar, bestaand.weekNummer);
@@ -739,19 +739,19 @@ router.post("/weekstaten/:id/indienen", requireAuth, async (req, res) => {
 });
 
 // ── POST /weekstaten/:id/goedkeuren ───────────────────────────────────────────
-router.post("/weekstaten/:id/goedkeuren", requireAuth, async (req, res) => {
+router.post("/weekstaten/:id/goedkeuren", requireAuth, async (req, res): Promise<void> => {
   const id = Number(req.params.id);
   const userId = req.session.userId!;
 
 
   const isManager = req.permissies!.heeftModuleRecht("personeel", 2);
-  if (!isManager) return res.status(403).json({ error: "Geen bevoegdheid" });
+  if (!isManager) return void res.status(403).json({ error: "Geen bevoegdheid" });
 
   const [bestaand] = await db.select().from(weekStatenTable).where(eq(weekStatenTable.id, id)).limit(1);
-  if (!bestaand) return res.status(404).json({ error: "Niet gevonden" });
+  if (!bestaand) return void res.status(404).json({ error: "Niet gevonden" });
 
   if (bestaand.status !== "ingediend") {
-    return res.status(409).json({ error: "Weekstaat is niet ingediend" });
+    return void res.status(409).json({ error: "Weekstaat is niet ingediend" });
   }
 
   const { van, tot } = weekGrenzen(bestaand.jaar, bestaand.weekNummer);
@@ -783,22 +783,22 @@ router.post("/weekstaten/:id/goedkeuren", requireAuth, async (req, res) => {
 });
 
 // ── POST /weekstaten/:id/afwijzen ─────────────────────────────────────────────
-router.post("/weekstaten/:id/afwijzen", requireAuth, async (req, res) => {
+router.post("/weekstaten/:id/afwijzen", requireAuth, async (req, res): Promise<void> => {
   const id = Number(req.params.id);
   const userId = req.session.userId!;
 
   const { reden } = req.body;
 
   const isManager = req.permissies!.heeftModuleRecht("personeel", 2);
-  if (!isManager) return res.status(403).json({ error: "Geen bevoegdheid" });
+  if (!isManager) return void res.status(403).json({ error: "Geen bevoegdheid" });
 
-  if (!reden) return res.status(400).json({ error: "reden is verplicht" });
+  if (!reden) return void res.status(400).json({ error: "reden is verplicht" });
 
   const [bestaand] = await db.select().from(weekStatenTable).where(eq(weekStatenTable.id, id)).limit(1);
-  if (!bestaand) return res.status(404).json({ error: "Niet gevonden" });
+  if (!bestaand) return void res.status(404).json({ error: "Niet gevonden" });
 
   if (bestaand.status !== "ingediend") {
-    return res.status(409).json({ error: "Weekstaat is niet ingediend" });
+    return void res.status(409).json({ error: "Weekstaat is niet ingediend" });
   }
 
   const { van, tot } = weekGrenzen(bestaand.jaar, bestaand.weekNummer);
@@ -829,16 +829,16 @@ router.post("/weekstaten/:id/afwijzen", requireAuth, async (req, res) => {
 });
 
 // ── POST /weekstaten/:id/vergrendelen ─────────────────────────────────────────
-router.post("/weekstaten/:id/vergrendelen", requireAuth, async (req, res) => {
+router.post("/weekstaten/:id/vergrendelen", requireAuth, async (req, res): Promise<void> => {
   const id = Number(req.params.id);
   const userId = req.session.userId!;
 
 
   const isManager = req.permissies!.heeftModuleRecht("personeel", 2);
-  if (!isManager) return res.status(403).json({ error: "Geen bevoegdheid" });
+  if (!isManager) return void res.status(403).json({ error: "Geen bevoegdheid" });
 
   const [bestaand] = await db.select().from(weekStatenTable).where(eq(weekStatenTable.id, id)).limit(1);
-  if (!bestaand) return res.status(404).json({ error: "Niet gevonden" });
+  if (!bestaand) return void res.status(404).json({ error: "Niet gevonden" });
 
   const vergrendeldDoor = await db
     .select({ naam: gebruikersTable.naam })
@@ -856,16 +856,16 @@ router.post("/weekstaten/:id/vergrendelen", requireAuth, async (req, res) => {
 });
 
 // ── POST /weekstaten/:id/ontgrendelen ─────────────────────────────────────────
-router.post("/weekstaten/:id/ontgrendelen", requireAuth, async (req, res) => {
+router.post("/weekstaten/:id/ontgrendelen", requireAuth, async (req, res): Promise<void> => {
   const id = Number(req.params.id);
   const userId = req.session.userId!;
 
 
   const isManager = req.permissies!.heeftModuleRecht("personeel", 2);
-  if (!isManager) return res.status(403).json({ error: "Geen bevoegdheid" });
+  if (!isManager) return void res.status(403).json({ error: "Geen bevoegdheid" });
 
   const [bestaand] = await db.select().from(weekStatenTable).where(eq(weekStatenTable.id, id)).limit(1);
-  if (!bestaand) return res.status(404).json({ error: "Niet gevonden" });
+  if (!bestaand) return void res.status(404).json({ error: "Niet gevonden" });
 
   const [rij] = await db
     .update(weekStatenTable)

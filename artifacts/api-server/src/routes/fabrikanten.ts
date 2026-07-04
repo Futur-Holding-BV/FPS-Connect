@@ -22,7 +22,7 @@ function normaliseerUrl(url: unknown): string | null {
 }
 
 // GET /fabrikanten
-router.get("/fabrikanten", async (req, res) => {
+router.get("/fabrikanten", async (req, res): Promise<void> => {
   try {
     const inclusiefGearchiveerd = req.query.inclusief_gearchiveerd === "true";
     let rows = await db
@@ -38,34 +38,34 @@ router.get("/fabrikanten", async (req, res) => {
 });
 
 // POST /fabrikanten (beheerder)
-router.post("/fabrikanten", requireBevoegdheid("bibliotheek", 3), async (req, res) => {
+router.post("/fabrikanten", requireBevoegdheid("bibliotheek", 3), async (req, res): Promise<void> => {
   try {
     const { naam, url } = req.body;
     if (!naam || !String(naam).trim()) {
-      return res.status(400).json({ error: "naam is verplicht" });
+      return void res.status(400).json({ error: "naam is verplicht" });
     }
     const [f] = await db
       .insert(fabrikantenTable)
       .values({ naam: String(naam).trim(), url: normaliseerUrl(url) })
       .returning();
-    return res.status(201).json(mapFabrikant(f));
+    return void res.status(201).json(mapFabrikant(f));
   } catch (err) {
     if ((err as { code?: string })?.code === "23505") {
-      return res.status(409).json({ error: "Er bestaat al een fabrikant met deze naam" });
+      return void res.status(409).json({ error: "Er bestaat al een fabrikant met deze naam" });
     }
     req.log.error(err);
-    return res.status(500).json({ error: "Interne serverfout" });
+    return void res.status(500).json({ error: "Interne serverfout" });
   }
 });
 
 // PATCH /fabrikanten/:id (beheerder)
-router.patch("/fabrikanten/:id", requireBevoegdheid("bibliotheek", 2), async (req, res) => {
+router.patch("/fabrikanten/:id", requireBevoegdheid("bibliotheek", 2), async (req, res): Promise<void> => {
   try {
     const id = parseInt(String(req.params.id));
     const { naam, url, gearchiveerd } = req.body;
     const set: Record<string, unknown> = { bijgewerktOp: new Date() };
     if (naam !== undefined) {
-      if (!String(naam).trim()) return res.status(400).json({ error: "naam mag niet leeg zijn" });
+      if (!String(naam).trim()) return void res.status(400).json({ error: "naam mag niet leeg zijn" });
       set.naam = String(naam).trim();
     }
     if (url !== undefined) set.url = normaliseerUrl(url);
@@ -76,19 +76,19 @@ router.patch("/fabrikanten/:id", requireBevoegdheid("bibliotheek", 2), async (re
       .set(set)
       .where(eq(fabrikantenTable.id, id))
       .returning();
-    if (!f) return res.status(404).json({ error: "Fabrikant niet gevonden" });
+    if (!f) return void res.status(404).json({ error: "Fabrikant niet gevonden" });
     // Hernoemen werkt door naar gekoppelde toepassingen: de gedenormaliseerde
     // fabrikant-naam op de labels wordt bijgewerkt.
     if (set.naam !== undefined) {
       await herbenoemFabrikantOpToepassingen(f.id, f.naam);
     }
-    return res.json(mapFabrikant(f));
+    return void res.json(mapFabrikant(f));
   } catch (err) {
     if ((err as { code?: string })?.code === "23505") {
-      return res.status(409).json({ error: "Er bestaat al een fabrikant met deze naam" });
+      return void res.status(409).json({ error: "Er bestaat al een fabrikant met deze naam" });
     }
     req.log.error(err);
-    return res.status(500).json({ error: "Interne serverfout" });
+    return void res.status(500).json({ error: "Interne serverfout" });
   }
 });
 

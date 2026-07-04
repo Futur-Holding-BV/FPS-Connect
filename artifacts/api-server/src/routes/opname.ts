@@ -140,7 +140,7 @@ async function opnameMetItems(id: number) {
 
 // ─── GET /opname ──────────────────────────────────────────────────────────────
 
-router.get("/opname", requireAuth, async (req, res) => {
+router.get("/opname", requireAuth, async (req, res): Promise<void> => {
   const gebouwId = req.query.gebouw_id ? Number(req.query.gebouw_id) : undefined;
   const status = req.query.status as string | undefined;
 
@@ -176,7 +176,7 @@ router.get("/opname", requireAuth, async (req, res) => {
 
 // ─── POST /opname ─────────────────────────────────────────────────────────────
 
-router.post("/opname", requireAuth, async (req, res) => {
+router.post("/opname", requireAuth, async (req, res): Promise<void> => {
   const { gebouw_id, naam, datum, notities } = req.body as {
     gebouw_id?: number | null;
     naam: string;
@@ -206,7 +206,7 @@ router.post("/opname", requireAuth, async (req, res) => {
 
 // ─── GET /opname/:id ──────────────────────────────────────────────────────────
 
-router.get("/opname/:id", requireAuth, async (req, res) => {
+router.get("/opname/:id", requireAuth, async (req, res): Promise<void> => {
   const id = Number(req.params.id);
   const opname = await opnameMetItems(id);
   if (!opname) { res.status(404).json({ fout: "Niet gevonden" }); return; }
@@ -215,7 +215,7 @@ router.get("/opname/:id", requireAuth, async (req, res) => {
 
 // ─── PATCH /opname/:id ────────────────────────────────────────────────────────
 
-router.patch("/opname/:id", requireAuth, async (req, res) => {
+router.patch("/opname/:id", requireAuth, async (req, res): Promise<void> => {
   const id = Number(req.params.id);
   const { naam, datum, notities, status } = req.body as {
     naam?: string;
@@ -243,7 +243,7 @@ router.patch("/opname/:id", requireAuth, async (req, res) => {
 
 // ─── DELETE /opname/:id ───────────────────────────────────────────────────────
 
-router.delete("/opname/:id", requireAuth, async (req, res) => {
+router.delete("/opname/:id", requireAuth, async (req, res): Promise<void> => {
   const id = Number(req.params.id);
   const [deleted] = await db
     .delete(opnamesTable)
@@ -255,7 +255,7 @@ router.delete("/opname/:id", requireAuth, async (req, res) => {
 
 // ─── POST /opname/:id/definitief ──────────────────────────────────────────────
 
-router.post("/opname/:id/definitief", requireAuth, async (req, res) => {
+router.post("/opname/:id/definitief", requireAuth, async (req, res): Promise<void> => {
   const id = Number(req.params.id);
   const [bestaand] = await db
     .select({ status: opnamesTable.status })
@@ -277,7 +277,7 @@ router.post("/opname/:id/definitief", requireAuth, async (req, res) => {
 
 // ─── POST /opname/:id/spots-aanmaken ──────────────────────────────────────────
 
-router.post("/opname/:id/spots-aanmaken", requireAuth, async (req, res) => {
+router.post("/opname/:id/spots-aanmaken", requireAuth, async (req, res): Promise<void> => {
   const id = Number(req.params.id);
   const opname = await opnameMetItems(id);
   if (!opname) { res.status(404).json({ fout: "Niet gevonden" }); return; }
@@ -332,7 +332,7 @@ router.post("/opname/:id/spots-aanmaken", requireAuth, async (req, res) => {
 
 // ─── GET /opname/:id/items ────────────────────────────────────────────────────
 
-router.get("/opname/:id/items", requireAuth, async (req, res) => {
+router.get("/opname/:id/items", requireAuth, async (req, res): Promise<void> => {
   const opnameId = Number(req.params.id);
   const opname = await opnameMetItems(opnameId);
   if (!opname) { res.status(404).json({ fout: "Niet gevonden" }); return; }
@@ -341,7 +341,7 @@ router.get("/opname/:id/items", requireAuth, async (req, res) => {
 
 // ─── POST /opname/:id/items ───────────────────────────────────────────────────
 
-router.post("/opname/:id/items", requireAuth, async (req, res) => {
+router.post("/opname/:id/items", requireAuth, async (req, res): Promise<void> => {
   const opnameId = Number(req.params.id);
   const {
     spot_type, ruimte, verdieping_id, beschrijving,
@@ -404,7 +404,7 @@ router.post("/opname/:id/items", requireAuth, async (req, res) => {
 
 // ─── GET /opname/items/:itemId ────────────────────────────────────────────────
 
-router.get("/opname/items/:itemId", requireAuth, async (req, res) => {
+router.get("/opname/items/:itemId", requireAuth, async (req, res): Promise<void> => {
   const itemId = Number(req.params.itemId);
   const [item] = await db
     .select({
@@ -453,7 +453,7 @@ router.get("/opname/items/:itemId", requireAuth, async (req, res) => {
 
 // ─── PATCH /opname/items/:itemId ──────────────────────────────────────────────
 
-router.patch("/opname/items/:itemId", requireAuth, async (req, res) => {
+router.patch("/opname/items/:itemId", requireAuth, async (req, res): Promise<void> => {
   const itemId = Number(req.params.itemId);
   const velden = req.body as Record<string, unknown>;
 
@@ -541,7 +541,7 @@ router.patch("/opname/items/:itemId", requireAuth, async (req, res) => {
 // Geeft alle opname-items terug die een tekening-positie hebben op een verdieping.
 // Gebruikt door de plattegrond-laag in de uitvoeringstekening.
 
-router.get("/opname/plattegrond-items", requireAuth, async (req, res) => {
+router.get("/opname/plattegrond-items", requireAuth, async (req, res): Promise<void> => {
   const verdiepingId = Number(req.query.verdieping_id);
   if (!verdiepingId || isNaN(verdiepingId)) {
     res.status(400).json({ fout: "verdieping_id is verplicht" });
@@ -605,7 +605,7 @@ router.get("/opname/plattegrond-items", requireAuth, async (req, res) => {
 
 // ─── DELETE /opname/items/:itemId ─────────────────────────────────────────────
 
-router.delete("/opname/items/:itemId", requireAuth, async (req, res) => {
+router.delete("/opname/items/:itemId", requireAuth, async (req, res): Promise<void> => {
   const itemId = Number(req.params.itemId);
   const [deleted] = await db
     .delete(opnameItemsTable)
@@ -617,7 +617,7 @@ router.delete("/opname/items/:itemId", requireAuth, async (req, res) => {
 
 // ─── POST /opname/items/:itemId/fotos ─────────────────────────────────────────
 
-router.post("/opname/items/:itemId/fotos", requireAuth, async (req, res) => {
+router.post("/opname/items/:itemId/fotos", requireAuth, async (req, res): Promise<void> => {
   const itemId = Number(req.params.itemId);
   const { bestandsnaam, content_type, bijschrift } = req.body as {
     bestandsnaam: string;
@@ -665,7 +665,7 @@ router.post("/opname/items/:itemId/fotos", requireAuth, async (req, res) => {
 
 // ─── DELETE /opname/fotos/:fotoId ─────────────────────────────────────────────
 
-router.delete("/opname/fotos/:fotoId", requireAuth, async (req, res) => {
+router.delete("/opname/fotos/:fotoId", requireAuth, async (req, res): Promise<void> => {
   const fotoId = Number(req.params.fotoId);
   const [deleted] = await db
     .delete(opnameFotosTable)

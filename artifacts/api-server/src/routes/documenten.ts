@@ -31,7 +31,7 @@ import { analyseerDocumentTekst, stelToepassingenVoor } from "../services/docume
 const router = Router();
 
 // POST /documenten/ai-analyse — AI-voorstel voor documentmetadata o.b.v. tekst (beheerder)
-router.post("/documenten/ai-analyse", requireBevoegdheid("bibliotheek", 3), async (req, res) => {
+router.post("/documenten/ai-analyse", requireBevoegdheid("bibliotheek", 3), async (req, res): Promise<void> => {
   try {
     const tekst = typeof req.body?.tekst === "string" ? req.body.tekst : "";
     const bestandsnaam =
@@ -50,10 +50,10 @@ router.post("/documenten/ai-analyse", requireBevoegdheid("bibliotheek", 3), asyn
       .where(eq(labelsTable.gearchiveerd, false));
     const toepassing_suggesties = stelToepassingenVoor(resultaat, labels);
 
-    return res.json({ ...resultaat, toepassing_suggesties });
+    return void res.json({ ...resultaat, toepassing_suggesties });
   } catch (err) {
     req.log.error(err);
-    return res.status(500).json({ error: "AI-analyse mislukte" });
+    return void res.status(500).json({ error: "AI-analyse mislukte" });
   }
 });
 
@@ -64,7 +64,7 @@ router.post("/documenten/ai-analyse", requireBevoegdheid("bibliotheek", 3), asyn
 router.post(
   "/documenten/ai-koppelvoorstellen",
   requireBevoegdheid("bibliotheek", 3),
-  async (req, res) => {
+  async (req, res): Promise<void> => {
     try {
       const documenten = await db
         .select()
@@ -108,17 +108,17 @@ router.post(
         }
       }
 
-      return res.json(voorstellen);
+      return void res.json(voorstellen);
     } catch (err) {
       req.log.error(err);
-      return res.status(500).json({ error: "AI-koppelvoorstellen mislukten" });
+      return void res.status(500).json({ error: "AI-koppelvoorstellen mislukten" });
     }
   },
 );
 
 // ── CENTRALE DOCUMENTBIBLIOTHEEK ────────────────────────────────────────────
 // GET /documenten — lijst met filters
-router.get("/documenten", requireBevoegdheid("bibliotheek", 1), async (req, res) => {
+router.get("/documenten", requireBevoegdheid("bibliotheek", 1), async (req, res): Promise<void> => {
   try {
     const {
       zoek,
@@ -184,7 +184,7 @@ router.get("/documenten", requireBevoegdheid("bibliotheek", 1), async (req, res)
 router.post(
   "/documenten/controleer-duplicaat",
   requireBevoegdheid("bibliotheek", 3),
-  async (req, res) => {
+  async (req, res): Promise<void> => {
     try {
       const b = req.body ?? {};
       const hash = typeof b.bestands_hash === "string" ? b.bestands_hash.trim() : "";
@@ -216,16 +216,16 @@ router.post(
         document: docs[i],
         reden: t.reden,
       }));
-      return res.json({ mogelijke_duplicaten });
+      return void res.json({ mogelijke_duplicaten });
     } catch (err) {
       req.log.error(err);
-      return res.status(500).json({ error: "Interne serverfout" });
+      return void res.status(500).json({ error: "Interne serverfout" });
     }
   },
 );
 
 // GET /documenten/signaleringen — documenten die aandacht nodig hebben
-router.get("/documenten/signaleringen", requireBevoegdheid("bibliotheek", 1), async (req, res) => {
+router.get("/documenten/signaleringen", requireBevoegdheid("bibliotheek", 1), async (req, res): Promise<void> => {
   try {
     const rows = await db
       .select()
@@ -251,7 +251,7 @@ router.get("/documenten/signaleringen", requireBevoegdheid("bibliotheek", 1), as
     );
     const ter_goedkeuring = rows.filter((d) => d.goedkeuringStatus === "ter_goedkeuring");
 
-    return res.json({
+    return void res.json({
       verlopen: await mapDocumenten(verlopen),
       binnenkort: await mapDocumenten(binnenkort),
       controle_nodig: await mapDocumenten(controle_nodig),
@@ -259,12 +259,12 @@ router.get("/documenten/signaleringen", requireBevoegdheid("bibliotheek", 1), as
     });
   } catch (err) {
     req.log.error(err);
-    return res.status(500).json({ error: "Interne serverfout" });
+    return void res.status(500).json({ error: "Interne serverfout" });
   }
 });
 
 // GET /documenten/logboek — globaal audittrail (beheerder)
-router.get("/documenten/logboek", requireBevoegdheid("bibliotheek", 4), async (req, res) => {
+router.get("/documenten/logboek", requireBevoegdheid("bibliotheek", 4), async (req, res): Promise<void> => {
   try {
     const ruw = parseInt(String(req.query.limiet ?? "100"));
     const limiet = Math.min(Math.max(Number.isFinite(ruw) ? ruw : 100, 1), 500);
@@ -273,20 +273,20 @@ router.get("/documenten/logboek", requireBevoegdheid("bibliotheek", 4), async (r
       .from(documentLogboekTable)
       .orderBy(desc(documentLogboekTable.tijdstip))
       .limit(limiet);
-    return res.json(rows.map(mapLogboekRegel));
+    return void res.json(rows.map(mapLogboekRegel));
   } catch (err) {
     req.log.error(err);
-    return res.status(500).json({ error: "Interne serverfout" });
+    return void res.status(500).json({ error: "Interne serverfout" });
   }
 });
 
 // GET /documenten/gekoppeld — documenten gekoppeld aan een entiteit
-router.get("/documenten/gekoppeld", requireBevoegdheid("bibliotheek", 1), async (req, res) => {
+router.get("/documenten/gekoppeld", requireBevoegdheid("bibliotheek", 1), async (req, res): Promise<void> => {
   try {
     const doelType = String(req.query.doel_type ?? "");
     const doelId = parseInt(String(req.query.doel_id ?? ""));
     if (!isKoppelingDoelType(doelType) || !Number.isInteger(doelId)) {
-      return res.status(400).json({ error: "doel_type en doel_id zijn verplicht" });
+      return void res.status(400).json({ error: "doel_type en doel_id zijn verplicht" });
     }
     const koppel = await db
       .select({ documentId: documentKoppelingenTable.documentId })
@@ -298,55 +298,55 @@ router.get("/documenten/gekoppeld", requireBevoegdheid("bibliotheek", 1), async 
         ),
       );
     const ids = koppel.map((k) => k.documentId);
-    if (ids.length === 0) return res.json([]);
+    if (ids.length === 0) return void res.json([]);
     const rows = await db.select().from(documentenTable).where(inArray(documentenTable.id, ids));
-    return res.json(await mapDocumenten(rows));
+    return void res.json(await mapDocumenten(rows));
   } catch (err) {
     req.log.error(err);
-    return res.status(500).json({ error: "Interne serverfout" });
+    return void res.status(500).json({ error: "Interne serverfout" });
   }
 });
 
 // GET /documenten/:id — detail
-router.get("/documenten/:id", requireBevoegdheid("bibliotheek", 1), async (req, res) => {
+router.get("/documenten/:id", requireBevoegdheid("bibliotheek", 1), async (req, res): Promise<void> => {
   try {
     const id = parseInt(String(req.params.id));
     const [d] = await db.select().from(documentenTable).where(eq(documentenTable.id, id));
-    if (!d) return res.status(404).json({ error: "Document niet gevonden" });
-    return res.json(await mapDocument(d));
+    if (!d) return void res.status(404).json({ error: "Document niet gevonden" });
+    return void res.json(await mapDocument(d));
   } catch (err) {
     req.log.error(err);
-    return res.status(500).json({ error: "Interne serverfout" });
+    return void res.status(500).json({ error: "Interne serverfout" });
   }
 });
 
 // GET /documenten/:id/revisies — revisiehistorie van de documentgroep
-router.get("/documenten/:id/revisies", requireBevoegdheid("bibliotheek", 1), async (req, res) => {
+router.get("/documenten/:id/revisies", requireBevoegdheid("bibliotheek", 1), async (req, res): Promise<void> => {
   try {
     const id = parseInt(String(req.params.id));
     const [d] = await db.select().from(documentenTable).where(eq(documentenTable.id, id));
-    if (!d) return res.status(404).json({ error: "Document niet gevonden" });
+    if (!d) return void res.status(404).json({ error: "Document niet gevonden" });
     const rows = await db
       .select()
       .from(documentenTable)
       .where(eq(documentenTable.groepId, d.groepId))
       .orderBy(asc(documentenTable.revisieNummer));
-    return res.json(await mapDocumenten(rows));
+    return void res.json(await mapDocumenten(rows));
   } catch (err) {
     req.log.error(err);
-    return res.status(500).json({ error: "Interne serverfout" });
+    return void res.status(500).json({ error: "Interne serverfout" });
   }
 });
 
 // POST /documenten — nieuw document (beheerder)
-router.post("/documenten", requireBevoegdheid("bibliotheek", 3), async (req, res) => {
+router.post("/documenten", requireBevoegdheid("bibliotheek", 3), async (req, res): Promise<void> => {
   try {
     const b = req.body ?? {};
     if (!b.naam || !String(b.naam).trim()) {
-      return res.status(400).json({ error: "naam is verplicht" });
+      return void res.status(400).json({ error: "naam is verplicht" });
     }
     if (b.documenttype !== undefined && !isDocumentType(b.documenttype)) {
-      return res.status(400).json({ error: "Ongeldig documenttype" });
+      return void res.status(400).json({ error: "Ongeldig documenttype" });
     }
     const [d] = await db
       .insert(documentenTable)
@@ -381,26 +381,26 @@ router.post("/documenten", requireBevoegdheid("bibliotheek", 3), async (req, res
       actie: "geupload",
     });
 
-    return res.status(201).json(await mapDocument(d));
+    return void res.status(201).json(await mapDocument(d));
   } catch (err) {
     req.log.error(err);
-    return res.status(500).json({ error: "Interne serverfout" });
+    return void res.status(500).json({ error: "Interne serverfout" });
   }
 });
 
 // PATCH /documenten/:id — alleen status/gearchiveerd (inhoud is onveranderlijk) (beheerder)
-router.patch("/documenten/:id", requireBevoegdheid("bibliotheek", 2), async (req, res) => {
+router.patch("/documenten/:id", requireBevoegdheid("bibliotheek", 2), async (req, res): Promise<void> => {
   try {
     const id = parseInt(String(req.params.id));
     const { status, gearchiveerd, geldig_tot } = req.body ?? {};
     if (status !== undefined && !isDocumentStatus(status)) {
-      return res.status(400).json({ error: "Ongeldige status" });
+      return void res.status(400).json({ error: "Ongeldige status" });
     }
     const [bestaand] = await db
       .select()
       .from(documentenTable)
       .where(eq(documentenTable.id, id));
-    if (!bestaand) return res.status(404).json({ error: "Document niet gevonden" });
+    if (!bestaand) return void res.status(404).json({ error: "Document niet gevonden" });
 
     // Onveranderlijkheid: slechts één 'actueel' revisie per groep. Een oudere
     // (vervangen) revisie mag niet opnieuw als actueel worden ingesteld.
@@ -410,7 +410,7 @@ router.patch("/documenten/:id", requireBevoegdheid("bibliotheek", 2), async (req
         .from(documentenTable)
         .where(eq(documentenTable.groepId, bestaand.groepId));
       if ((maxNum ?? bestaand.revisieNummer) !== bestaand.revisieNummer) {
-        return res.status(400).json({
+        return void res.status(400).json({
           error: "Alleen de nieuwste revisie kan op 'actueel' worden gezet.",
         });
       }
@@ -427,23 +427,23 @@ router.patch("/documenten/:id", requireBevoegdheid("bibliotheek", 2), async (req
       .set(set)
       .where(eq(documentenTable.id, id))
       .returning();
-    if (!d) return res.status(404).json({ error: "Document niet gevonden" });
-    return res.json(await mapDocument(d));
+    if (!d) return void res.status(404).json({ error: "Document niet gevonden" });
+    return void res.json(await mapDocument(d));
   } catch (err) {
     req.log.error(err);
-    return res.status(500).json({ error: "Interne serverfout" });
+    return void res.status(500).json({ error: "Interne serverfout" });
   }
 });
 
 // POST /documenten/:id/revisies — nieuwe revisie (copy-on-revision) (beheerder)
-router.post("/documenten/:id/revisies", requireBevoegdheid("bibliotheek", 3), async (req, res) => {
+router.post("/documenten/:id/revisies", requireBevoegdheid("bibliotheek", 3), async (req, res): Promise<void> => {
   try {
     const id = parseInt(String(req.params.id));
     const b = req.body ?? {};
     const [bron] = await db.select().from(documentenTable).where(eq(documentenTable.id, id));
-    if (!bron) return res.status(404).json({ error: "Document niet gevonden" });
+    if (!bron) return void res.status(404).json({ error: "Document niet gevonden" });
     if (b.documenttype !== undefined && !isDocumentType(b.documenttype)) {
-      return res.status(400).json({ error: "Ongeldig documenttype" });
+      return void res.status(400).json({ error: "Ongeldig documenttype" });
     }
 
     const nieuw = await db.transaction(async (tx) => {
@@ -534,31 +534,31 @@ router.post("/documenten/:id/revisies", requireBevoegdheid("bibliotheek", 3), as
       detail: `revisie ${nieuw.revisieNummer}`,
     });
 
-    return res.status(201).json(await mapDocument(nieuw));
+    return void res.status(201).json(await mapDocument(nieuw));
   } catch (err) {
     req.log.error(err);
-    return res.status(500).json({ error: "Interne serverfout" });
+    return void res.status(500).json({ error: "Interne serverfout" });
   }
 });
 
 // PUT /documenten/:id/toepassingen — gekoppelde toepassingen instellen (beheerder)
-router.put("/documenten/:id/toepassingen", requireBevoegdheid("bibliotheek", 2), async (req, res) => {
+router.put("/documenten/:id/toepassingen", requireBevoegdheid("bibliotheek", 2), async (req, res): Promise<void> => {
   try {
     const id = parseInt(String(req.params.id));
     const [d] = await db.select().from(documentenTable).where(eq(documentenTable.id, id));
-    if (!d) return res.status(404).json({ error: "Document niet gevonden" });
+    if (!d) return void res.status(404).json({ error: "Document niet gevonden" });
     const ids = Array.isArray(req.body?.label_ids) ? req.body.label_ids : [];
     await syncDocumentToepassingen(id, ids);
-    return res.json(await mapDocument(d));
+    return void res.json(await mapDocument(d));
   } catch (err) {
     req.log.error(err);
-    return res.status(500).json({ error: "Interne serverfout" });
+    return void res.status(500).json({ error: "Interne serverfout" });
   }
 });
 
 // ── KOPPELINGEN (document ↔ entiteit) ───────────────────────────────────────
 // GET /documenten/:id/koppelingen
-router.get("/documenten/:id/koppelingen", requireBevoegdheid("bibliotheek", 1), async (req, res) => {
+router.get("/documenten/:id/koppelingen", requireBevoegdheid("bibliotheek", 1), async (req, res): Promise<void> => {
   try {
     const id = parseInt(String(req.params.id));
     const rows = await db
@@ -566,10 +566,10 @@ router.get("/documenten/:id/koppelingen", requireBevoegdheid("bibliotheek", 1), 
       .from(documentKoppelingenTable)
       .where(eq(documentKoppelingenTable.documentId, id))
       .orderBy(asc(documentKoppelingenTable.doelType));
-    return res.json(await mapKoppelingen(rows));
+    return void res.json(await mapKoppelingen(rows));
   } catch (err) {
     req.log.error(err);
-    return res.status(500).json({ error: "Interne serverfout" });
+    return void res.status(500).json({ error: "Interne serverfout" });
   }
 });
 
@@ -577,15 +577,15 @@ router.get("/documenten/:id/koppelingen", requireBevoegdheid("bibliotheek", 1), 
 router.post(
   "/documenten/:id/koppelingen",
   requireBevoegdheid("bibliotheek", 2),
-  async (req, res) => {
+  async (req, res): Promise<void> => {
     try {
       const id = parseInt(String(req.params.id));
       const [d] = await db.select().from(documentenTable).where(eq(documentenTable.id, id));
-      if (!d) return res.status(404).json({ error: "Document niet gevonden" });
+      if (!d) return void res.status(404).json({ error: "Document niet gevonden" });
       const doelType = String(req.body?.doel_type ?? "");
       const doelId = parseInt(String(req.body?.doel_id ?? ""));
       if (!isKoppelingDoelType(doelType) || !Number.isInteger(doelId)) {
-        return res.status(400).json({ error: "doel_type en doel_id zijn verplicht" });
+        return void res.status(400).json({ error: "doel_type en doel_id zijn verplicht" });
       }
       await db
         .insert(documentKoppelingenTable)
@@ -614,10 +614,10 @@ router.post(
         detail: `${doelType} #${doelId}`,
       });
       const [mapped] = await mapKoppelingen([rij]);
-      return res.status(201).json(mapped);
+      return void res.status(201).json(mapped);
     } catch (err) {
       req.log.error(err);
-      return res.status(500).json({ error: "Interne serverfout" });
+      return void res.status(500).json({ error: "Interne serverfout" });
     }
   },
 );
@@ -626,7 +626,7 @@ router.post(
 router.delete(
   "/documenten/:id/koppelingen/:koppelingId",
   requireBevoegdheid("bibliotheek", 2),
-  async (req, res) => {
+  async (req, res): Promise<void> => {
     try {
       const id = parseInt(String(req.params.id));
       const koppelingId = parseInt(String(req.params.koppelingId));
@@ -639,7 +639,7 @@ router.delete(
             eq(documentKoppelingenTable.documentId, id),
           ),
         );
-      if (!bestaand) return res.status(404).json({ error: "Koppeling niet gevonden" });
+      if (!bestaand) return void res.status(404).json({ error: "Koppeling niet gevonden" });
       await db
         .delete(documentKoppelingenTable)
         .where(eq(documentKoppelingenTable.id, koppelingId));
@@ -649,10 +649,10 @@ router.delete(
         actie: "ontkoppeld",
         detail: `${bestaand.doelType} #${bestaand.doelId}`,
       });
-      return res.status(204).send();
+      return void res.status(204).send();
     } catch (err) {
       req.log.error(err);
-      return res.status(500).json({ error: "Interne serverfout" });
+      return void res.status(500).json({ error: "Interne serverfout" });
     }
   },
 );
@@ -666,13 +666,13 @@ async function zetGoedkeuring(
 ) {
   const id = parseInt(String(req.params.id));
   const [d] = await db.select().from(documentenTable).where(eq(documentenTable.id, id));
-  if (!d) return res.status(404).json({ error: "Document niet gevonden" });
+  if (!d) return void res.status(404).json({ error: "Document niet gevonden" });
   // Statusmachine: goedkeuren/afkeuren kan alleen vanuit "ter_goedkeuring".
   if (
     (nieuweStatus === "goedgekeurd" || nieuweStatus === "afgekeurd") &&
     d.goedkeuringStatus !== "ter_goedkeuring"
   ) {
-    return res
+    return void res
       .status(409)
       .json({ error: "Alleen een ingediend document (ter goedkeuring) kan worden goed- of afgekeurd." });
   }
@@ -694,16 +694,16 @@ async function zetGoedkeuring(
     actie,
     detail: opmerking,
   });
-  return res.json(await mapDocument(bij));
+  return void res.json(await mapDocument(bij));
 }
 
 // POST /documenten/:id/indienen — ter goedkeuring aanbieden
-router.post("/documenten/:id/indienen", requireBevoegdheid("bibliotheek", 3), async (req, res) => {
+router.post("/documenten/:id/indienen", requireBevoegdheid("bibliotheek", 3), async (req, res): Promise<void> => {
   try {
-    return await zetGoedkeuring(req, res, "ter_goedkeuring", "ingediend");
+    await zetGoedkeuring(req, res, "ter_goedkeuring", "ingediend");
   } catch (err) {
     req.log.error(err);
-    return res.status(500).json({ error: "Interne serverfout" });
+    return void res.status(500).json({ error: "Interne serverfout" });
   }
 });
 
@@ -711,12 +711,12 @@ router.post("/documenten/:id/indienen", requireBevoegdheid("bibliotheek", 3), as
 router.post(
   "/documenten/:id/goedkeuren",
   requireBevoegdheid("bibliotheek", 4),
-  async (req, res) => {
+  async (req, res): Promise<void> => {
     try {
-      return await zetGoedkeuring(req, res, "goedgekeurd", "goedgekeurd");
+      await zetGoedkeuring(req, res, "goedgekeurd", "goedgekeurd");
     } catch (err) {
       req.log.error(err);
-      return res.status(500).json({ error: "Interne serverfout" });
+      return void res.status(500).json({ error: "Interne serverfout" });
     }
   },
 );
@@ -725,18 +725,18 @@ router.post(
 router.post(
   "/documenten/:id/afkeuren",
   requireBevoegdheid("bibliotheek", 4),
-  async (req, res) => {
+  async (req, res): Promise<void> => {
     try {
-      return await zetGoedkeuring(req, res, "afgekeurd", "afgekeurd");
+      await zetGoedkeuring(req, res, "afgekeurd", "afgekeurd");
     } catch (err) {
       req.log.error(err);
-      return res.status(500).json({ error: "Interne serverfout" });
+      return void res.status(500).json({ error: "Interne serverfout" });
     }
   },
 );
 
 // GET /documenten/:id/goedkeuringen — goedkeuringshistorie
-router.get("/documenten/:id/goedkeuringen", requireBevoegdheid("bibliotheek", 1), async (req, res) => {
+router.get("/documenten/:id/goedkeuringen", requireBevoegdheid("bibliotheek", 1), async (req, res): Promise<void> => {
   try {
     const id = parseInt(String(req.params.id));
     const rows = await db
@@ -744,15 +744,15 @@ router.get("/documenten/:id/goedkeuringen", requireBevoegdheid("bibliotheek", 1)
       .from(documentGoedkeuringenTable)
       .where(eq(documentGoedkeuringenTable.documentId, id))
       .orderBy(desc(documentGoedkeuringenTable.tijdstip));
-    return res.json(await mapGoedkeuringen(rows));
+    return void res.json(await mapGoedkeuringen(rows));
   } catch (err) {
     req.log.error(err);
-    return res.status(500).json({ error: "Interne serverfout" });
+    return void res.status(500).json({ error: "Interne serverfout" });
   }
 });
 
 // GET /documenten/:id/logboek — audittrail van één document
-router.get("/documenten/:id/logboek", requireBevoegdheid("bibliotheek", 1), async (req, res) => {
+router.get("/documenten/:id/logboek", requireBevoegdheid("bibliotheek", 1), async (req, res): Promise<void> => {
   try {
     const id = parseInt(String(req.params.id));
     const rows = await db
@@ -760,20 +760,20 @@ router.get("/documenten/:id/logboek", requireBevoegdheid("bibliotheek", 1), asyn
       .from(documentLogboekTable)
       .where(eq(documentLogboekTable.documentId, id))
       .orderBy(desc(documentLogboekTable.tijdstip));
-    return res.json(rows.map(mapLogboekRegel));
+    return void res.json(rows.map(mapLogboekRegel));
   } catch (err) {
     req.log.error(err);
-    return res.status(500).json({ error: "Interne serverfout" });
+    return void res.status(500).json({ error: "Interne serverfout" });
   }
 });
 
 // GET /documenten/:id/download — log de download en stuur door naar het bestand
-router.get("/documenten/:id/download", requireBevoegdheid("bibliotheek", 1), async (req, res) => {
+router.get("/documenten/:id/download", requireBevoegdheid("bibliotheek", 1), async (req, res): Promise<void> => {
   try {
     const id = parseInt(String(req.params.id));
     const [d] = await db.select().from(documentenTable).where(eq(documentenTable.id, id));
-    if (!d) return res.status(404).json({ error: "Document niet gevonden" });
-    if (!d.pdfUrl) return res.status(404).json({ error: "Geen bestand gekoppeld" });
+    if (!d) return void res.status(404).json({ error: "Document niet gevonden" });
+    if (!d.pdfUrl) return void res.status(404).json({ error: "Geen bestand gekoppeld" });
     await logDocumentActie({
       documentId: id,
       documentNaam: d.naam,
@@ -783,10 +783,10 @@ router.get("/documenten/:id/download", requireBevoegdheid("bibliotheek", 1), asy
     // pdfUrl is een objectPath (bv. /objects/<id>) die via /api/storage wordt
     // geserveerd; absolute URL's worden ongewijzigd doorgestuurd.
     const doel = /^https?:\/\//i.test(d.pdfUrl) ? d.pdfUrl : `/api/storage${d.pdfUrl}`;
-    return res.redirect(302, doel);
+    return void res.redirect(302, doel);
   } catch (err) {
     req.log.error(err);
-    return res.status(500).json({ error: "Interne serverfout" });
+    return void res.status(500).json({ error: "Interne serverfout" });
   }
 });
 

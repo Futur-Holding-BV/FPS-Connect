@@ -50,7 +50,7 @@ async function projectMetNamen(id: number) {
 
 // ── GET /projecten ────────────────────────────────────────────────────────────
 
-router.get("/projecten", requireAuth, async (req, res) => {
+router.get("/projecten", requireAuth, async (req, res): Promise<void> => {
   const crmKlantId = req.query.crm_klant_id ? Number(req.query.crm_klant_id) : undefined;
   const gebouwId   = req.query.gebouw_id    ? Number(req.query.gebouw_id)    : undefined;
   const status     = req.query.status as string | undefined;
@@ -81,7 +81,7 @@ router.get("/projecten", requireAuth, async (req, res) => {
 
 // ── POST /projecten ───────────────────────────────────────────────────────────
 
-router.post("/projecten", requireAuth, async (req, res) => {
+router.post("/projecten", requireAuth, async (req, res): Promise<void> => {
   const {
     naam, werknummer, status, werkmaatschappij, omschrijving,
     crm_klant_id, gebouw_id, start_datum, eind_datum,
@@ -126,7 +126,7 @@ router.post("/projecten", requireAuth, async (req, res) => {
 
 // ── GET /projecten/:id ────────────────────────────────────────────────────────
 
-router.get("/projecten/:id", requireAuth, async (req, res) => {
+router.get("/projecten/:id", requireAuth, async (req, res): Promise<void> => {
   const id = Number(req.params.id);
   const project = await projectMetNamen(id);
   if (!project) { res.status(404).json({ fout: "Niet gevonden" }); return; }
@@ -135,7 +135,7 @@ router.get("/projecten/:id", requireAuth, async (req, res) => {
 
 // ── PATCH /projecten/:id ──────────────────────────────────────────────────────
 
-router.patch("/projecten/:id", requireAuth, async (req, res) => {
+router.patch("/projecten/:id", requireAuth, async (req, res): Promise<void> => {
   const id   = Number(req.params.id);
   const body = req.body as Record<string, unknown>;
 
@@ -163,7 +163,7 @@ router.patch("/projecten/:id", requireAuth, async (req, res) => {
 
 // ── DELETE /projecten/:id ─────────────────────────────────────────────────────
 
-router.delete("/projecten/:id", requireAuth, async (req, res) => {
+router.delete("/projecten/:id", requireAuth, async (req, res): Promise<void> => {
   const id = Number(req.params.id);
   const [deleted] = await db
     .delete(projectenTable)

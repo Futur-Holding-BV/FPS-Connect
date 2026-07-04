@@ -163,7 +163,7 @@ async function voerBewakingUit(): Promise<number> {
 // ── Routes ───────────────────────────────────────────────────────────────────
 
 // GET /contract-bewaking/dashboard
-router.get("/contract-bewaking/dashboard", lezen, async (req, res) => {
+router.get("/contract-bewaking/dashboard", lezen, async (req, res): Promise<void> => {
   // Bewaking bijwerken
   await voerBewakingUit();
 
@@ -282,9 +282,9 @@ function mapContract(r: { c: typeof arbeidsovereenkomstenTable.$inferSelect; naa
 }
 
 // GET /contract-bewaking/medewerkers/:medewerkerId
-router.get("/contract-bewaking/medewerkers/:medewerkerId", lezen, async (req, res) => {
+router.get("/contract-bewaking/medewerkers/:medewerkerId", lezen, async (req, res): Promise<void> => {
   const medewerkerId = parseInt(String(req.params.medewerkerId));
-  if (isNaN(medewerkerId)) return res.status(400).json({ error: "Ongeldig medewerker-id" });
+  if (isNaN(medewerkerId)) return void res.status(400).json({ error: "Ongeldig medewerker-id" });
 
   const contracten = await db
     .select({
@@ -325,13 +325,13 @@ router.get("/contract-bewaking/medewerkers/:medewerkerId", lezen, async (req, re
 });
 
 // POST /contract-bewaking/medewerkers/:medewerkerId
-router.post("/contract-bewaking/medewerkers/:medewerkerId", schrijven, async (req, res) => {
+router.post("/contract-bewaking/medewerkers/:medewerkerId", schrijven, async (req, res): Promise<void> => {
   const medewerkerId = parseInt(String(req.params.medewerkerId));
-  if (isNaN(medewerkerId)) return res.status(400).json({ error: "Ongeldig medewerker-id" });
+  if (isNaN(medewerkerId)) return void res.status(400).json({ error: "Ongeldig medewerker-id" });
 
   const { contracttype, start_datum, eind_datum, proeftijd_dagen, functie_id, werkgever_id, functie_omschrijving, cao, salaris_bruto, arbeidsduur_per_week, voorgaand_contract_id, ondertekening_vereist, notities } = req.body;
 
-  if (!contracttype || !start_datum) return res.status(400).json({ error: "contracttype en start_datum zijn verplicht" });
+  if (!contracttype || !start_datum) return void res.status(400).json({ error: "contracttype en start_datum zijn verplicht" });
 
   const [rij] = await db.insert(arbeidsovereenkomstenTable).values({
     medewerkerId,
@@ -359,9 +359,9 @@ router.post("/contract-bewaking/medewerkers/:medewerkerId", schrijven, async (re
 });
 
 // PATCH /contract-bewaking/:id
-router.patch("/contract-bewaking/:id", schrijven, async (req, res) => {
+router.patch("/contract-bewaking/:id", schrijven, async (req, res): Promise<void> => {
   const id = parseInt(String(req.params.id));
-  if (isNaN(id)) return res.status(400).json({ error: "Ongeldig contract-id" });
+  if (isNaN(id)) return void res.status(400).json({ error: "Ongeldig contract-id" });
 
   const { contracttype, start_datum, eind_datum, proeftijd_dagen, functie_id, werkgever_id, functie_omschrijving, cao, salaris_bruto, arbeidsduur_per_week, status, ondertekening_vereist, ondertekend_door_medewerker_op, ondertekend_door_hr_op, notities } = req.body;
 
@@ -388,17 +388,17 @@ router.patch("/contract-bewaking/:id", schrijven, async (req, res) => {
 });
 
 // DELETE /contract-bewaking/:id
-router.delete("/contract-bewaking/:id", schrijven, async (req, res) => {
+router.delete("/contract-bewaking/:id", schrijven, async (req, res): Promise<void> => {
   const id = parseInt(String(req.params.id));
-  if (isNaN(id)) return res.status(400).json({ error: "Ongeldig contract-id" });
+  if (isNaN(id)) return void res.status(400).json({ error: "Ongeldig contract-id" });
   await db.delete(arbeidsovereenkomstenTable).where(eq(arbeidsovereenkomstenTable.id, id));
   res.status(204).send();
 });
 
 // GET /contract-bewaking/:id/signaleringen
-router.get("/contract-bewaking/:id/signaleringen", lezen, async (req, res) => {
+router.get("/contract-bewaking/:id/signaleringen", lezen, async (req, res): Promise<void> => {
   const id = parseInt(String(req.params.id));
-  if (isNaN(id)) return res.status(400).json({ error: "Ongeldig contract-id" });
+  if (isNaN(id)) return void res.status(400).json({ error: "Ongeldig contract-id" });
 
   const rijen = await db
     .select()
@@ -419,9 +419,9 @@ router.get("/contract-bewaking/:id/signaleringen", lezen, async (req, res) => {
 });
 
 // PATCH /contract-bewaking/signaleringen/:id/gezien
-router.patch("/contract-bewaking/signaleringen/:id/gezien", lezen, async (req, res) => {
+router.patch("/contract-bewaking/signaleringen/:id/gezien", lezen, async (req, res): Promise<void> => {
   const id = parseInt(String(req.params.id));
-  if (isNaN(id)) return res.status(400).json({ error: "Ongeldig id" });
+  if (isNaN(id)) return void res.status(400).json({ error: "Ongeldig id" });
   const gebruikerId = req.session.userId ?? null;
   await db.update(contractSignaleringenTable).set({
     status: "gezien",
@@ -432,9 +432,9 @@ router.patch("/contract-bewaking/signaleringen/:id/gezien", lezen, async (req, r
 });
 
 // GET /contract-bewaking/:id/besluit
-router.get("/contract-bewaking/:id/besluit", lezen, async (req, res) => {
+router.get("/contract-bewaking/:id/besluit", lezen, async (req, res): Promise<void> => {
   const id = parseInt(String(req.params.id));
-  if (isNaN(id)) return res.status(400).json({ error: "Ongeldig contract-id" });
+  if (isNaN(id)) return void res.status(400).json({ error: "Ongeldig contract-id" });
 
   const [besluit] = await db
     .select()
@@ -443,7 +443,7 @@ router.get("/contract-bewaking/:id/besluit", lezen, async (req, res) => {
     .orderBy(desc(contractBesluitenTable.aangemaaktOp))
     .limit(1);
 
-  if (!besluit) return res.json(null);
+  if (!besluit) return void res.json(null);
 
   res.json({
     id: besluit.id,
@@ -466,15 +466,15 @@ router.get("/contract-bewaking/:id/besluit", lezen, async (req, res) => {
 });
 
 // POST /contract-bewaking/:id/besluit
-router.post("/contract-bewaking/:id/besluit", schrijven, async (req, res) => {
+router.post("/contract-bewaking/:id/besluit", schrijven, async (req, res): Promise<void> => {
   const contractId = parseInt(String(req.params.id));
-  if (isNaN(contractId)) return res.status(400).json({ error: "Ongeldig contract-id" });
+  if (isNaN(contractId)) return void res.status(400).json({ error: "Ongeldig contract-id" });
 
   const contract = await db.select().from(arbeidsovereenkomstenTable).where(eq(arbeidsovereenkomstenTable.id, contractId)).limit(1);
-  if (!contract.length) return res.status(404).json({ error: "Contract niet gevonden" });
+  if (!contract.length) return void res.status(404).json({ error: "Contract niet gevonden" });
 
   const { besluit, nieuw_eind_datum, nieuw_salaris, nieuw_arbeidsduur, toelichting } = req.body;
-  if (!besluit) return res.status(400).json({ error: "besluit is verplicht" });
+  if (!besluit) return void res.status(400).json({ error: "besluit is verplicht" });
 
   const gebruikerId = req.session.userId ?? null;
   const medewerkerId = contract[0].medewerkerId;
@@ -499,7 +499,7 @@ router.post("/contract-bewaking/:id/besluit", schrijven, async (req, res) => {
       audittrail: [...trail, auditEntry],
       bijgewerktOp: new Date(),
     }).where(eq(contractBesluitenTable.id, bestaand[0].id));
-    return res.json({ id: bestaand[0].id, bijgewerkt_op: new Date() });
+    return void res.json({ id: bestaand[0].id, bijgewerkt_op: new Date() });
   }
 
   const [rij] = await db.insert(contractBesluitenTable).values({
@@ -522,9 +522,9 @@ router.post("/contract-bewaking/:id/besluit", schrijven, async (req, res) => {
 
 // POST /contract-bewaking/:id/ai-voorbereiding
 // Genereert een HR-dossier samenvatting (AI-advies, nooit juridisch bindend).
-router.post("/contract-bewaking/:id/ai-voorbereiding", schrijven, async (req, res) => {
+router.post("/contract-bewaking/:id/ai-voorbereiding", schrijven, async (req, res): Promise<void> => {
   const contractId = parseInt(String(req.params.id));
-  if (isNaN(contractId)) return res.status(400).json({ error: "Ongeldig contract-id" });
+  if (isNaN(contractId)) return void res.status(400).json({ error: "Ongeldig contract-id" });
 
   const [contract] = await db
     .select({ c: arbeidsovereenkomstenTable, naam: medewerkersTable.naam, functieNaam: functiesTable.naam })
@@ -534,7 +534,7 @@ router.post("/contract-bewaking/:id/ai-voorbereiding", schrijven, async (req, re
     .where(eq(arbeidsovereenkomstenTable.id, contractId))
     .limit(1);
 
-  if (!contract) return res.status(404).json({ error: "Contract niet gevonden" });
+  if (!contract) return void res.status(404).json({ error: "Contract niet gevonden" });
 
   const medewerkerId = contract.c.medewerkerId;
 
@@ -597,7 +597,7 @@ Aandachtspunten: ${risicos.length > 0 ? risicos.join(" | ") : "geen wettelijke r
       await db.insert(contractBesluitenTable).values({ contractId, medewerkerId, besluit: "geen_besluit", aiSamenvatting: samenvatting, aiAandachtspunten: aandachtspunten, aiWettelijkeRisicos: risicos, aangemaaktDoorId: gebruikerId });
     }
 
-    return res.json({ samenvatting, aandachtspunten, wettelijke_risicos: risicos, ai_beschikbaar: false });
+    return void res.json({ samenvatting, aandachtspunten, wettelijke_risicos: risicos, ai_beschikbaar: false });
   }
 
   // AI samenvatting

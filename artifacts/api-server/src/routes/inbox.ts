@@ -239,7 +239,7 @@ const mapItem = (item: typeof inboxItemsTable.$inferSelect) => ({
 });
 
 // ── STATS ─────────────────────────────────────────────────────────────────────
-router.get("/inbox/stats", lezen, async (req, res) => {
+router.get("/inbox/stats", lezen, async (req, res): Promise<void> => {
   try {
     const items = await db.select().from(inboxItemsTable);
     const totaal = items.length;
@@ -259,7 +259,7 @@ router.get("/inbox/stats", lezen, async (req, res) => {
 });
 
 // ── ITEMS LIST ────────────────────────────────────────────────────────────────
-router.get("/inbox/items", lezen, async (req, res) => {
+router.get("/inbox/items", lezen, async (req, res): Promise<void> => {
   try {
     const status = req.query.status ? String(req.query.status) : undefined;
     const bestemming = req.query.bestemming ? String(req.query.bestemming) : undefined;
@@ -279,11 +279,11 @@ router.get("/inbox/items", lezen, async (req, res) => {
 // ── REGISTREER DOCUMENT (multipart: bestand verplicht of metadata-only fallback) ──
 const uploadEnkel = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 } });
 
-router.post("/inbox/items", schrijven, uploadEnkel.single("bestand"), async (req, res) => {
+router.post("/inbox/items", schrijven, uploadEnkel.single("bestand"), async (req, res): Promise<void> => {
   try {
     const bestand = req.file ?? null;
     const bestandsnaam: string = bestand?.originalname ?? (req.body.bestandsnaam as string | undefined) ?? "";
-    if (!bestandsnaam) return res.status(400).json({ error: "bestandsnaam is verplicht" });
+    if (!bestandsnaam) return void res.status(400).json({ error: "bestandsnaam is verplicht" });
 
     const mimetype: string = bestand?.mimetype ?? (req.body.mimetype as string | undefined) ?? "application/octet-stream";
     const bestandsgrootte: number | null = bestand?.size ?? (req.body.bestandsgrootte ? parseInt(req.body.bestandsgrootte as string, 10) : null);
@@ -349,14 +349,14 @@ router.post("/inbox/items", schrijven, uploadEnkel.single("bestand"), async (req
 });
 
 // ── ITEM DETAIL ───────────────────────────────────────────────────────────────
-router.get("/inbox/items/:id", lezen, async (req, res) => {
+router.get("/inbox/items/:id", lezen, async (req, res): Promise<void> => {
   try {
     const id = parseId(req.params.id);
     const [[item], auditlog] = await Promise.all([
       db.select().from(inboxItemsTable).where(eq(inboxItemsTable.id, id)),
       db.select().from(inboxAuditLogTable).where(eq(inboxAuditLogTable.inboxItemId, id)).orderBy(desc(inboxAuditLogTable.aangemaaktOp)),
     ]);
-    if (!item) return res.status(404).json({ error: "Item niet gevonden" });
+    if (!item) return void res.status(404).json({ error: "Item niet gevonden" });
     res.json({
       ...mapItem(item),
       auditlog: auditlog.map((a) => ({ id: a.id, actie: a.actie, gebruiker_id: a.gebruikerId, details: a.details, aangemaakt_op: iso(a.aangemaaktOp) })),
@@ -368,7 +368,7 @@ router.get("/inbox/items/:id", lezen, async (req, res) => {
 });
 
 // ── ITEM BIJWERKEN ────────────────────────────────────────────────────────────
-router.patch("/inbox/items/:id", schrijven, async (req, res) => {
+router.patch("/inbox/items/:id", schrijven, async (req, res): Promise<void> => {
   try {
     const id = parseId(req.params.id);
     const {
@@ -398,7 +398,7 @@ router.patch("/inbox/items/:id", schrijven, async (req, res) => {
       .where(eq(inboxItemsTable.id, id))
       .returning();
 
-    if (!item) return res.status(404).json({ error: "Item niet gevonden" });
+    if (!item) return void res.status(404).json({ error: "Item niet gevonden" });
 
     const gebruikerId = req.session.userId ?? null;
     await db.insert(inboxAuditLogTable).values({ inboxItemId: id, actie: "bijgewerkt", gebruikerId, details: "Metagegevens bijgewerkt" });
@@ -411,7 +411,7 @@ router.patch("/inbox/items/:id", schrijven, async (req, res) => {
 });
 
 // ── GOEDKEUREN ────────────────────────────────────────────────────────────────
-router.post("/inbox/items/:id/goedkeuren", schrijven, async (req, res) => {
+router.post("/inbox/items/:id/goedkeuren", schrijven, async (req, res): Promise<void> => {
   try {
     const id = parseId(req.params.id);
     const gebruikerId = req.session.userId ?? null;
@@ -420,7 +420,7 @@ router.post("/inbox/items/:id/goedkeuren", schrijven, async (req, res) => {
       .set({ status: "goedgekeurd", goedgekeurdDoor: gebruikerId, goedgekeurdOp: new Date(), bijgewerktOp: new Date() })
       .where(eq(inboxItemsTable.id, id))
       .returning();
-    if (!item) return res.status(404).json({ error: "Item niet gevonden" });
+    if (!item) return void res.status(404).json({ error: "Item niet gevonden" });
     await db.insert(inboxAuditLogTable).values({ inboxItemId: id, actie: "goedgekeurd", gebruikerId, details: req.body.opmerkingen ?? null });
     res.json(mapItem(item));
   } catch (err) {
@@ -430,18 +430,18 @@ router.post("/inbox/items/:id/goedkeuren", schrijven, async (req, res) => {
 });
 
 // ── AFWIJZEN ──────────────────────────────────────────────────────────────────
-router.post("/inbox/items/:id/afwijzen", schrijven, async (req, res) => {
+router.post("/inbox/items/:id/afwijzen", schrijven, async (req, res): Promise<void> => {
   try {
     const id = parseId(req.params.id);
     const { reden } = req.body;
-    if (!reden) return res.status(400).json({ error: "reden is verplicht" });
+    if (!reden) return void res.status(400).json({ error: "reden is verplicht" });
     const gebruikerId = req.session.userId ?? null;
     const [item] = await db
       .update(inboxItemsTable)
       .set({ status: "afgewezen", afgewezenReden: reden, bijgewerktOp: new Date() })
       .where(eq(inboxItemsTable.id, id))
       .returning();
-    if (!item) return res.status(404).json({ error: "Item niet gevonden" });
+    if (!item) return void res.status(404).json({ error: "Item niet gevonden" });
     await db.insert(inboxAuditLogTable).values({ inboxItemId: id, actie: "afgewezen", gebruikerId, details: reden });
     res.json(mapItem(item));
   } catch (err) {
@@ -451,11 +451,11 @@ router.post("/inbox/items/:id/afwijzen", schrijven, async (req, res) => {
 });
 
 // ── VERPLAATSEN ───────────────────────────────────────────────────────────────
-router.post("/inbox/items/:id/verplaatsen", schrijven, async (req, res) => {
+router.post("/inbox/items/:id/verplaatsen", schrijven, async (req, res): Promise<void> => {
   try {
     const id = parseId(req.params.id);
     const { bestemming, gekoppelde_entiteit_type, gekoppelde_entiteit_id, gekoppelde_entiteit_naam } = req.body;
-    if (!bestemming) return res.status(400).json({ error: "bestemming is verplicht" });
+    if (!bestemming) return void res.status(400).json({ error: "bestemming is verplicht" });
     const gebruikerId = req.session.userId ?? null;
     const [item] = await db
       .update(inboxItemsTable)
@@ -470,7 +470,7 @@ router.post("/inbox/items/:id/verplaatsen", schrijven, async (req, res) => {
       })
       .where(eq(inboxItemsTable.id, id))
       .returning();
-    if (!item) return res.status(404).json({ error: "Item niet gevonden" });
+    if (!item) return void res.status(404).json({ error: "Item niet gevonden" });
     await db.insert(inboxAuditLogTable).values({ inboxItemId: id, actie: "verplaatst", gebruikerId, details: `Verplaatst naar: ${bestemming}` });
     res.json(mapItem(item));
   } catch (err) {
@@ -480,7 +480,7 @@ router.post("/inbox/items/:id/verplaatsen", schrijven, async (req, res) => {
 });
 
 // ── TER BEOORDELING STELLEN ───────────────────────────────────────────────────
-router.post("/inbox/items/:id/ter-beoordeling", schrijven, async (req, res) => {
+router.post("/inbox/items/:id/ter-beoordeling", schrijven, async (req, res): Promise<void> => {
   try {
     const id = parseId(req.params.id);
     const gebruikerId = req.session.userId ?? null;
@@ -489,7 +489,7 @@ router.post("/inbox/items/:id/ter-beoordeling", schrijven, async (req, res) => {
       .set({ status: "ter_beoordeling", bijgewerktOp: new Date() })
       .where(eq(inboxItemsTable.id, id))
       .returning();
-    if (!item) return res.status(404).json({ error: "Item niet gevonden" });
+    if (!item) return void res.status(404).json({ error: "Item niet gevonden" });
     await db.insert(inboxAuditLogTable).values({ inboxItemId: id, actie: "ter_beoordeling_gesteld", gebruikerId, details: null });
     res.json(mapItem(item));
   } catch (err) {
@@ -603,14 +603,14 @@ router.post(
     { name: "email", maxCount: 1 },
     { name: "bijlagen", maxCount: 10 },
   ]),
-  async (req, res) => {
+  async (req, res): Promise<void> => {
     try {
       const werkmaatschappijId = req.body?.werkmaatschappij_id
         ? parseInt(String(req.body.werkmaatschappij_id), 10)
         : null;
 
       if (!werkmaatschappijId || isNaN(werkmaatschappijId)) {
-        return res.status(400).json({ error: "werkmaatschappij_id is verplicht" });
+        return void res.status(400).json({ error: "werkmaatschappij_id is verplicht" });
       }
 
       const files = req.files as Record<string, Express.Multer.File[]> | undefined;
@@ -624,7 +624,7 @@ router.post(
         .where(eq(werkgeversTable.id, werkmaatschappijId));
 
       if (!werkgever) {
-        return res.status(400).json({ error: "Werkmaatschappij niet gevonden" });
+        return void res.status(400).json({ error: "Werkmaatschappij niet gevonden" });
       }
 
       let ai: AiAanvraagExtractie = {
@@ -821,7 +821,7 @@ function onderwerp(bestandsnaam: string): string {
 }
 
 // ── VERWIJDEREN ───────────────────────────────────────────────────────────────
-router.delete("/inbox/items/:id", schrijven, async (req, res) => {
+router.delete("/inbox/items/:id", schrijven, async (req, res): Promise<void> => {
   try {
     await db.delete(inboxItemsTable).where(eq(inboxItemsTable.id, parseId(req.params.id)));
     res.status(204).end();
@@ -833,14 +833,14 @@ router.delete("/inbox/items/:id", schrijven, async (req, res) => {
 
 // ── AANVRAAG-PLANNING (PL) ───────────────────────────────────────────────────
 
-router.get("/inbox/items/:id/planning", lezen, async (req, res) => {
+router.get("/inbox/items/:id/planning", lezen, async (req, res): Promise<void> => {
   try {
     const itemId = parseId(req.params.id);
     const [planning] = await db
       .select()
       .from(aanvraagPlanningenTable)
       .where(eq(aanvraagPlanningenTable.inboxItemId, itemId));
-    if (!planning) return res.status(404).json({ error: "Geen planning gevonden" });
+    if (!planning) return void res.status(404).json({ error: "Geen planning gevonden" });
     res.json(planning);
   } catch (err) {
     req.log.error(err);
@@ -848,7 +848,7 @@ router.get("/inbox/items/:id/planning", lezen, async (req, res) => {
   }
 });
 
-router.patch("/inbox/items/:id/planning", schrijven, async (req, res) => {
+router.patch("/inbox/items/:id/planning", schrijven, async (req, res): Promise<void> => {
   try {
     const itemId = parseId(req.params.id);
     const { pl_planning_datum, pl_notitie } = req.body as { pl_planning_datum?: string | null; pl_notitie?: string | null };
@@ -862,7 +862,7 @@ router.patch("/inbox/items/:id/planning", schrijven, async (req, res) => {
       })
       .where(eq(aanvraagPlanningenTable.inboxItemId, itemId))
       .returning();
-    if (!bijgewerkt) return res.status(404).json({ error: "Geen planning gevonden" });
+    if (!bijgewerkt) return void res.status(404).json({ error: "Geen planning gevonden" });
     res.json(bijgewerkt);
   } catch (err) {
     req.log.error(err);
@@ -899,7 +899,7 @@ function htmlPagina(inhoud: string): string {
   return `<!DOCTYPE html><html lang="nl"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/><title>Aanvraag aanvullen</title><style>${ANTWOORD_CSS}</style></head><body><div class="wrap">${inhoud}<div class="ftr">FPS Brandpreventie &bull; Dit formulier is gekoppeld aan uw offerte-aanvraag.</div></div></body></html>`;
 }
 
-router.get("/inbox/aanvraag-antwoord/:token", async (req, res) => {
+router.get("/inbox/aanvraag-antwoord/:token", async (req, res): Promise<void> => {
   try {
     const { token } = req.params;
     const [planning] = await db
@@ -971,7 +971,7 @@ router.get("/inbox/aanvraag-antwoord/:token", async (req, res) => {
   }
 });
 
-router.post("/inbox/aanvraag-antwoord/:token", async (req, res) => {
+router.post("/inbox/aanvraag-antwoord/:token", async (req, res): Promise<void> => {
   try {
     const { token } = req.params;
     const [planning] = await db

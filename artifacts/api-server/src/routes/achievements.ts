@@ -95,7 +95,7 @@ function mapAchievement(a: typeof monteurAchievementsTable.$inferSelect) {
 }
 
 // POST /achievements/controleer — check en ken toe voor ingelogde gebruiker
-achievementsRouter.post("/achievements/controleer", requireAuth, async (req, res) => {
+achievementsRouter.post("/achievements/controleer", requireAuth, async (req, res): Promise<void> => {
   try {
     const gebruikerId = req.session.userId!;
     const { nieuw, totaalSpots } = await controleerEnKenToe(gebruikerId);
@@ -107,7 +107,7 @@ achievementsRouter.post("/achievements/controleer", requireAuth, async (req, res
 });
 
 // GET /medewerkers/:id/achievements — profiel-view van een medewerker
-achievementsRouter.get("/medewerkers/:id/achievements", requireAuth, async (req, res) => {
+achievementsRouter.get("/medewerkers/:id/achievements", requireAuth, async (req, res): Promise<void> => {
   try {
     const medewerkerId = Number(req.params.id);
 
@@ -117,7 +117,7 @@ achievementsRouter.get("/medewerkers/:id/achievements", requireAuth, async (req,
       .where(eq(medewerkersTable.id, medewerkerId))
       .limit(1);
 
-    if (!medewerkerRij[0]) return res.status(404).json({ error: "Medewerker niet gevonden" });
+    if (!medewerkerRij[0]) return void res.status(404).json({ error: "Medewerker niet gevonden" });
     const gebruikerId = medewerkerRij[0].gebruikerId;
 
     let totaalSpots = 0;
@@ -155,7 +155,7 @@ achievementsRouter.get("/medewerkers/:id/achievements", requireAuth, async (req,
 });
 
 // GET /hall-of-fame — ranglijst alle monteurs op geplaatste spots
-achievementsRouter.get("/hall-of-fame", requireAuth, async (req, res) => {
+achievementsRouter.get("/hall-of-fame", requireAuth, async (req, res): Promise<void> => {
   try {
     const rijen = await db
       .select({

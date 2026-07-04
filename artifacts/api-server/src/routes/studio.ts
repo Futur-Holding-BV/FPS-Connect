@@ -88,7 +88,7 @@ function mapModel(
 
 // ── Werkgevers — selector voor Document Studio (gated op organisatie:1) ───────
 
-router.get("/studio/werkgevers", lezen, async (req, res) => {
+router.get("/studio/werkgevers", lezen, async (req, res): Promise<void> => {
   try {
     const werkgevers = await db
       .select({
@@ -118,7 +118,7 @@ router.get("/studio/werkgevers", lezen, async (req, res) => {
 
 // ── List — optioneel gefilterd op werkgever_id ────────────────────────────────
 
-router.get("/studio/modellen", lezen, async (req, res) => {
+router.get("/studio/modellen", lezen, async (req, res): Promise<void> => {
   try {
     const werkgeverId = req.query.werkgever_id
       ? parseInt(String(req.query.werkgever_id), 10)
@@ -147,7 +147,7 @@ router.get("/studio/modellen", lezen, async (req, res) => {
 
 // ── Actief model — haal het goedgekeurde model op voor een werkgever + type ──
 
-router.get("/studio/modellen/actief", lezen, async (req, res) => {
+router.get("/studio/modellen/actief", lezen, async (req, res): Promise<void> => {
   try {
     const werkgeverId = req.query.werkgever_id
       ? parseInt(String(req.query.werkgever_id), 10)
@@ -157,10 +157,10 @@ router.get("/studio/modellen/actief", lezen, async (req, res) => {
       : null;
 
     if (!werkgeverId || isNaN(werkgeverId)) {
-      return res.status(400).json({ error: "werkgever_id is verplicht" });
+      return void res.status(400).json({ error: "werkgever_id is verplicht" });
     }
     if (!documentType) {
-      return res.status(400).json({ error: "document_type is verplicht" });
+      return void res.status(400).json({ error: "document_type is verplicht" });
     }
 
     const [rij] = await db
@@ -175,7 +175,7 @@ router.get("/studio/modellen/actief", lezen, async (req, res) => {
         ),
       );
 
-    if (!rij) return res.json(null);
+    if (!rij) return void res.json(null);
     res.json(mapModel(rij.model, rij.naam));
   } catch (err) {
     req.log.error(err);
@@ -185,10 +185,10 @@ router.get("/studio/modellen/actief", lezen, async (req, res) => {
 
 // ── Actieve modellen bulk — alle goedgekeurde templates voor een werkgever ────
 
-router.get("/studio/werkgevers/:werkgever_id/modellen/actief", lezen, async (req, res) => {
+router.get("/studio/werkgevers/:werkgever_id/modellen/actief", lezen, async (req, res): Promise<void> => {
   try {
     const werkgeverId = parseId(req.params.werkgever_id);
-    if (!werkgeverId) return res.status(400).json({ error: "werkgever_id ongeldig" });
+    if (!werkgeverId) return void res.status(400).json({ error: "werkgever_id ongeldig" });
 
     const rijen = await db
       .select({ model: documentStudioModellenTable, naam: werkgeversTable.naam })
@@ -214,7 +214,7 @@ router.get("/studio/werkgevers/:werkgever_id/modellen/actief", lezen, async (req
 
 // ── Get by id ─────────────────────────────────────────────────────────────────
 
-router.get("/studio/modellen/:id", lezen, async (req, res) => {
+router.get("/studio/modellen/:id", lezen, async (req, res): Promise<void> => {
   try {
     const id = parseId(req.params.id);
     const [rij] = await db
@@ -222,7 +222,7 @@ router.get("/studio/modellen/:id", lezen, async (req, res) => {
       .from(documentStudioModellenTable)
       .leftJoin(werkgeversTable, eq(documentStudioModellenTable.werkgeverId, werkgeversTable.id))
       .where(eq(documentStudioModellenTable.id, id));
-    if (!rij) return res.status(404).json({ error: "Model niet gevonden" });
+    if (!rij) return void res.status(404).json({ error: "Model niet gevonden" });
     res.json(mapModel(rij.model, rij.naam));
   } catch (err) {
     req.log.error(err);
@@ -232,7 +232,7 @@ router.get("/studio/modellen/:id", lezen, async (req, res) => {
 
 // ── Upsert — aanmaken of bijwerken op (werkgever_id, document_type) ───────────
 
-router.post("/studio/modellen", schrijven, async (req, res) => {
+router.post("/studio/modellen", schrijven, async (req, res): Promise<void> => {
   try {
     const { werkgever_id, document_type, naam, status } = req.body as {
       werkgever_id: number;
@@ -242,10 +242,10 @@ router.post("/studio/modellen", schrijven, async (req, res) => {
     };
 
     if (!werkgever_id || typeof werkgever_id !== "number") {
-      return res.status(400).json({ error: "werkgever_id is verplicht" });
+      return void res.status(400).json({ error: "werkgever_id is verplicht" });
     }
     if (!document_type || !GELDIGE_TYPES.includes(document_type as never)) {
-      return res.status(400).json({ error: `document_type moet een van de volgende zijn: ${GELDIGE_TYPES.join(", ")}` });
+      return void res.status(400).json({ error: `document_type moet een van de volgende zijn: ${GELDIGE_TYPES.join(", ")}` });
     }
 
     // Zoek bestaand model voor deze werkgever + type
@@ -300,7 +300,7 @@ router.post("/studio/modellen", schrijven, async (req, res) => {
 
 // ── Patch ─────────────────────────────────────────────────────────────────────
 
-router.patch("/studio/modellen/:id", schrijven, async (req, res) => {
+router.patch("/studio/modellen/:id", schrijven, async (req, res): Promise<void> => {
   try {
     const id = parseId(req.params.id);
     const { naam, status, connect_template_json, goedgekeurd_door } = req.body as {
@@ -323,7 +323,7 @@ router.patch("/studio/modellen/:id", schrijven, async (req, res) => {
       .set(setObj)
       .where(eq(documentStudioModellenTable.id, id))
       .returning();
-    if (!rij) return res.status(404).json({ error: "Model niet gevonden" });
+    if (!rij) return void res.status(404).json({ error: "Model niet gevonden" });
 
     const [wg] = await db
       .select({ naam: werkgeversTable.naam })
@@ -343,12 +343,12 @@ router.post(
   "/studio/modellen/:id/referentie-upload",
   schrijven,
   upload.single("bestand"),
-  async (req, res) => {
+  async (req, res): Promise<void> => {
     try {
       const id = parseId(req.params.id);
 
       if (!req.file) {
-        return res.status(400).json({ error: "Geen bestand ontvangen" });
+        return void res.status(400).json({ error: "Geen bestand ontvangen" });
       }
 
       const bestand = req.file;
@@ -359,14 +359,14 @@ router.post(
         "image/webp",
       ];
       if (!toegestaan.includes(bestand.mimetype)) {
-        return res.status(400).json({ error: "Bestandstype niet ondersteund — upload een PDF of afbeelding" });
+        return void res.status(400).json({ error: "Bestandstype niet ondersteund — upload een PDF of afbeelding" });
       }
 
       const [bestaand] = await db
         .select()
         .from(documentStudioModellenTable)
         .where(eq(documentStudioModellenTable.id, id));
-      if (!bestaand) return res.status(404).json({ error: "Model niet gevonden" });
+      if (!bestaand) return void res.status(404).json({ error: "Model niet gevonden" });
 
       // Upload naar object storage
       const ext = bestand.originalname.includes(".")
@@ -510,10 +510,10 @@ Gebruik maximaal 6 secties. Sectie-inhoud is placeholder-tekst (gebruiker vult l
 
 // ── AI genereer — genereert concept-template via GPT-4o ───────────────────────
 
-router.post("/studio/modellen/:id/genereer", schrijven, async (req, res) => {
+router.post("/studio/modellen/:id/genereer", schrijven, async (req, res): Promise<void> => {
   try {
     if (!heeftGateway()) {
-      return res.status(503).json({ error: "AI niet beschikbaar — configureer een OpenAI-sleutel" });
+      return void res.status(503).json({ error: "AI niet beschikbaar — configureer een OpenAI-sleutel" });
     }
 
     const id = parseId(req.params.id);
@@ -525,9 +525,9 @@ router.post("/studio/modellen/:id/genereer", schrijven, async (req, res) => {
       .leftJoin(werkgeversTable, eq(documentStudioModellenTable.werkgeverId, werkgeversTable.id))
       .where(eq(documentStudioModellenTable.id, id));
 
-    if (!rij) return res.status(404).json({ error: "Model niet gevonden" });
+    if (!rij) return void res.status(404).json({ error: "Model niet gevonden" });
     if (!rij.model.referentieBestandPad) {
-      return res.status(400).json({ error: "Upload eerst een referentiebestand voor dit documenttype" });
+      return void res.status(400).json({ error: "Upload eerst een referentiebestand voor dit documenttype" });
     }
 
     // Referentie ophalen en tekst extraheren
@@ -580,7 +580,7 @@ router.post("/studio/modellen/:id/genereer", schrijven, async (req, res) => {
   } catch (err) {
     req.log.error(err);
     if (err instanceof SyntaxError || (err instanceof z.ZodError)) {
-      return res.status(503).json({ error: "AI retourneerde geen geldig template — probeer opnieuw" });
+      return void res.status(503).json({ error: "AI retourneerde geen geldig template — probeer opnieuw" });
     }
     res.status(500).json({ error: "Interne serverfout" });
   }
@@ -588,17 +588,17 @@ router.post("/studio/modellen/:id/genereer", schrijven, async (req, res) => {
 
 // ── AI bijstuur — verfijn bestaand concept via GPT-4o ────────────────────────
 
-router.post("/studio/modellen/:id/bijstuur", schrijven, async (req, res) => {
+router.post("/studio/modellen/:id/bijstuur", schrijven, async (req, res): Promise<void> => {
   try {
     if (!heeftGateway()) {
-      return res.status(503).json({ error: "AI niet beschikbaar — configureer een OpenAI-sleutel" });
+      return void res.status(503).json({ error: "AI niet beschikbaar — configureer een OpenAI-sleutel" });
     }
 
     const id = parseId(req.params.id);
     const { instructie } = req.body as { instructie: string };
 
     if (!instructie || typeof instructie !== "string" || !instructie.trim()) {
-      return res.status(400).json({ error: "instructie is verplicht" });
+      return void res.status(400).json({ error: "instructie is verplicht" });
     }
 
     const [rij] = await db
@@ -607,9 +607,9 @@ router.post("/studio/modellen/:id/bijstuur", schrijven, async (req, res) => {
       .leftJoin(werkgeversTable, eq(documentStudioModellenTable.werkgeverId, werkgeversTable.id))
       .where(eq(documentStudioModellenTable.id, id));
 
-    if (!rij) return res.status(404).json({ error: "Model niet gevonden" });
+    if (!rij) return void res.status(404).json({ error: "Model niet gevonden" });
     if (!rij.model.connectTemplateJson) {
-      return res.status(400).json({ error: "Genereer eerst een concept-template via de genereer-actie" });
+      return void res.status(400).json({ error: "Genereer eerst een concept-template via de genereer-actie" });
     }
 
     const bijstuurResultaat = await aiGateway.chat("default", {
@@ -640,7 +640,7 @@ router.post("/studio/modellen/:id/bijstuur", schrijven, async (req, res) => {
   } catch (err) {
     req.log.error(err);
     if (err instanceof SyntaxError || err instanceof z.ZodError) {
-      return res.status(503).json({ error: "AI retourneerde geen geldig template — probeer opnieuw" });
+      return void res.status(503).json({ error: "AI retourneerde geen geldig template — probeer opnieuw" });
     }
     res.status(500).json({ error: "Interne serverfout" });
   }
@@ -648,7 +648,7 @@ router.post("/studio/modellen/:id/bijstuur", schrijven, async (req, res) => {
 
 // ── Goedkeuren als Model 0 ────────────────────────────────────────────────────
 
-router.post("/studio/modellen/:id/goedkeuren", schrijven, async (req, res) => {
+router.post("/studio/modellen/:id/goedkeuren", schrijven, async (req, res): Promise<void> => {
   try {
     const id = parseId(req.params.id);
     const userId = req.session.userId as number | undefined;
@@ -659,9 +659,9 @@ router.post("/studio/modellen/:id/goedkeuren", schrijven, async (req, res) => {
       .leftJoin(werkgeversTable, eq(documentStudioModellenTable.werkgeverId, werkgeversTable.id))
       .where(eq(documentStudioModellenTable.id, id));
 
-    if (!rij) return res.status(404).json({ error: "Model niet gevonden" });
+    if (!rij) return void res.status(404).json({ error: "Model niet gevonden" });
     if (!rij.model.connectTemplateJson) {
-      return res.status(400).json({ error: "Er is geen concept-template om goed te keuren" });
+      return void res.status(400).json({ error: "Er is geen concept-template om goed te keuren" });
     }
 
     const nu = new Date();

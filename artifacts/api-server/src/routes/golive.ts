@@ -390,7 +390,7 @@ function mijnActiesVoorRol(rol: string, bevoegdheden: Record<string, number>) {
 
 // ── Routes ────────────────────────────────────────────────────────────────────
 
-router.get("/beheer/go-live/dashboard", requireAuth, async (req, res) => {
+router.get("/beheer/go-live/dashboard", requireAuth, async (req, res): Promise<void> => {
   await zaaieFasen();
   const fasen = await db.select().from(goLiveFasenTable).orderBy(goLiveFasenTable.volgorde);
   const fasenGereed = fasen.filter((f) => f.status === "gereed").length;
@@ -423,7 +423,7 @@ router.get("/beheer/go-live/dashboard", requireAuth, async (req, res) => {
   });
 });
 
-router.get("/beheer/go-live/fasen", requireAuth, async (req, res) => {
+router.get("/beheer/go-live/fasen", requireAuth, async (req, res): Promise<void> => {
   await zaaieFasen();
   const fasen = await db.select().from(goLiveFasenTable).orderBy(goLiveFasenTable.volgorde);
   res.json(fasen.map((f) => ({
@@ -435,7 +435,7 @@ router.get("/beheer/go-live/fasen", requireAuth, async (req, res) => {
   })));
 });
 
-router.patch("/beheer/go-live/fasen/:id", requireAuth, async (req, res) => {
+router.patch("/beheer/go-live/fasen/:id", requireAuth, async (req, res): Promise<void> => {
   const id = Number(req.params.id);
   const { status, voortgang_pct, opmerkingen, risico, verantwoordelijke } = req.body as {
     status?: string; voortgang_pct?: number; opmerkingen?: string; risico?: string; verantwoordelijke?: string;
@@ -448,7 +448,7 @@ router.patch("/beheer/go-live/fasen/:id", requireAuth, async (req, res) => {
   if (verantwoordelijke !== undefined) updates.verantwoordelijke = verantwoordelijke;
 
   const [updated] = await db.update(goLiveFasenTable).set(updates).where(eq(goLiveFasenTable.id, id)).returning();
-  if (!updated) return res.status(404).json({ error: "Fase niet gevonden" });
+  if (!updated) return void res.status(404).json({ error: "Fase niet gevonden" });
   res.json({
     id: updated.id, sleutel: updated.sleutel, naam: updated.naam, beschrijving: updated.beschrijving,
     doel: updated.doel, afhankelijkheden: updated.afhankelijkheden, verantwoordelijke: updated.verantwoordelijke,
@@ -458,12 +458,12 @@ router.patch("/beheer/go-live/fasen/:id", requireAuth, async (req, res) => {
   });
 });
 
-router.get("/beheer/go-live/readiness", requireAuth, async (req, res) => {
+router.get("/beheer/go-live/readiness", requireAuth, async (req, res): Promise<void> => {
   const items = await voerReadinessChecksUit();
   res.json(items);
 });
 
-router.get("/beheer/go-live/adviezen", requireAuth, async (req, res) => {
+router.get("/beheer/go-live/adviezen", requireAuth, async (req, res): Promise<void> => {
   const adviezen = await db.select().from(goLiveAdviezenTable).orderBy(desc(goLiveAdviezenTable.aangemaaktOp));
   res.json(adviezen.map((a) => ({
     id: a.id, titel: a.titel, inhoud: a.inhoud, reden: a.reden,
@@ -473,9 +473,9 @@ router.get("/beheer/go-live/adviezen", requireAuth, async (req, res) => {
   })));
 });
 
-router.post("/beheer/go-live/adviezen/genereer", requireAuth, async (req, res) => {
+router.post("/beheer/go-live/adviezen/genereer", requireAuth, async (req, res): Promise<void> => {
   if (!heeftGateway()) {
-    return res.status(503).json({ error: "AI-services niet geconfigureerd" });
+    return void res.status(503).json({ error: "AI-services niet geconfigureerd" });
   }
   const readiness = await voerReadinessChecksUit();
   const fasen = await db.select().from(goLiveFasenTable).orderBy(goLiveFasenTable.volgorde);
@@ -522,7 +522,7 @@ Antwoord ALLEEN met geldige JSON.`;
   try {
     parsed = JSON.parse(goLiveAdviesResultaat.ok ? goLiveAdviesResultaat.inhoud : "{}") as Record<string, unknown>;
   } catch {
-    return res.status(500).json({ error: "AI-antwoord kon niet worden verwerkt" });
+    return void res.status(500).json({ error: "AI-antwoord kon niet worden verwerkt" });
   }
 
   const [nieuw] = await db.insert(goLiveAdviezenTable).values({
@@ -544,7 +544,7 @@ Antwoord ALLEEN met geldige JSON.`;
   });
 });
 
-router.patch("/beheer/go-live/adviezen/:id", requireAuth, async (req, res) => {
+router.patch("/beheer/go-live/adviezen/:id", requireAuth, async (req, res): Promise<void> => {
   const id = Number(req.params.id);
   const { status } = req.body as { status: string };
   const [updated] = await db
@@ -552,7 +552,7 @@ router.patch("/beheer/go-live/adviezen/:id", requireAuth, async (req, res) => {
     .set({ status, bijgewerktOp: new Date() })
     .where(eq(goLiveAdviezenTable.id, id))
     .returning();
-  if (!updated) return res.status(404).json({ error: "Advies niet gevonden" });
+  if (!updated) return void res.status(404).json({ error: "Advies niet gevonden" });
   res.json({
     id: updated.id, titel: updated.titel, inhoud: updated.inhoud, reden: updated.reden,
     impact: updated.impact, risico: updated.risico, tijdwinst_uur: updated.tijdwinst_uur,
@@ -561,7 +561,7 @@ router.patch("/beheer/go-live/adviezen/:id", requireAuth, async (req, res) => {
   });
 });
 
-router.get("/beheer/go-live/mijn-acties", requireAuth, async (req, res) => {
+router.get("/beheer/go-live/mijn-acties", requireAuth, async (req, res): Promise<void> => {
   const userId = req.session.userId;
   if (!userId) { res.status(401).json({ error: "Niet ingelogd" }); return; }
   const [gebruiker] = await db
@@ -573,7 +573,7 @@ router.get("/beheer/go-live/mijn-acties", requireAuth, async (req, res) => {
   res.json(mijnActiesVoorRol(gebruiker.rol, bevoegdheden));
 });
 
-router.get("/beheer/go-live/testdata", requireAuth, async (req, res) => {
+router.get("/beheer/go-live/testdata", requireAuth, async (req, res): Promise<void> => {
   const [[{ waarde: gebouwen }], [{ waarde: spots }], [{ waarde: medewerkers }], [{ waarde: gebruikers }]] = await Promise.all([
     db.select({ waarde: count() }).from(gebouwenTable),
     db.select({ waarde: count() }).from(voorzieningenTable),
@@ -587,7 +587,7 @@ router.get("/beheer/go-live/testdata", requireAuth, async (req, res) => {
   });
 });
 
-router.post("/beheer/go-live/lessen", requireAuth, async (req, res) => {
+router.post("/beheer/go-live/lessen", requireAuth, async (req, res): Promise<void> => {
   const { fase_sleutel, omschrijving, tijd_koste_uur } = req.body as {
     fase_sleutel: string; omschrijving: string; tijd_koste_uur?: number;
   };

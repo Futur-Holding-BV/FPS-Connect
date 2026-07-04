@@ -42,7 +42,7 @@ function mapRij(r: typeof eenheidsprijzenTable.$inferSelect) {
   };
 }
 
-router.get("/eenheidsprijzen", lezen, async (req, res) => {
+router.get("/eenheidsprijzen", lezen, async (req, res): Promise<void> => {
   try {
     const { zoek, categorie, actief } = req.query as Record<string, string>;
 
@@ -81,7 +81,7 @@ router.get("/eenheidsprijzen", lezen, async (req, res) => {
   }
 });
 
-router.post("/eenheidsprijzen", schrijven, async (req, res) => {
+router.post("/eenheidsprijzen", schrijven, async (req, res): Promise<void> => {
   try {
     const body = req.body as {
       code: string;
@@ -148,7 +148,7 @@ router.get("/eenheidsprijzen/template", lezen, (_req, res) => {
   res.json({ redirect: "/api/import/template/eenheidsprijzen" });
 });
 
-router.get("/eenheidsprijzen/:id", lezen, async (req, res) => {
+router.get("/eenheidsprijzen/:id", lezen, async (req, res): Promise<void> => {
   try {
     const id = parseId(req.params.id);
     const [rij] = await db.select().from(eenheidsprijzenTable).where(eq(eenheidsprijzenTable.id, id));
@@ -160,7 +160,7 @@ router.get("/eenheidsprijzen/:id", lezen, async (req, res) => {
   }
 });
 
-router.patch("/eenheidsprijzen/:id", schrijven, async (req, res) => {
+router.patch("/eenheidsprijzen/:id", schrijven, async (req, res): Promise<void> => {
   try {
     const id = parseId(req.params.id);
     const body = req.body as Partial<{
@@ -221,7 +221,7 @@ router.patch("/eenheidsprijzen/:id", schrijven, async (req, res) => {
   }
 });
 
-router.delete("/eenheidsprijzen/:id", verwijderen, async (req, res) => {
+router.delete("/eenheidsprijzen/:id", verwijderen, async (req, res): Promise<void> => {
   try {
     const id = parseId(req.params.id);
     const [rij] = await db
