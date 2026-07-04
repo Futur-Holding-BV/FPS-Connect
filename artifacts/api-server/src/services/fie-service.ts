@@ -1115,7 +1115,58 @@ export async function herberekeenLeermomenten(): Promise<number> {
 }
 
 /**
+ * Herbereken nacalculaties die verouderd zijn: werktype is "algemeen" maar het gebouw
+ * heeft inmiddels spots waardoor een specifieker werktype bepaald kan worden.
+ * Retourneert het aantal herberekende nacalculaties.
+ */
+export async function herberekeenVerouderdeNacalculaties(): Promise<number> {
+  // Haal alle nacalculaties op met werktype "algemeen", inclusief het gebouwId van de opdracht
+  const kandidaten = await db
+    .select({
+      opdrachtId: fieNacalculatiesTable.opdrachtId,
+      gebouwId:   opdrachtenTable.gebouwId,
+    })
+    .from(fieNacalculatiesTable)
+    .innerJoin(opdrachtenTable, eq(opdrachtenTable.id, fieNacalculatiesTable.opdrachtId))
+    .where(eq(fieNacalculatiesTable.werktype, "algemeen"));
+
+  if (kandidaten.length === 0) return 0;
+
+  // Bepaal welke gebouwen inmiddels spots hebben (niet-gearchiveerd)
+  const gebouwIds = [...new Set(kandidaten.map((k) => k.gebouwId).filter((id): id is number => id != null))];
+  if (gebouwIds.length === 0) return 0;
+
+  const metSpots = await db
+    .selectDistinct({ gebouwId: voorzieningenTable.gebouwId })
+    .from(voorzieningenTable)
+    .where(and(
+      inArray(voorzieningenTable.gebouwId, gebouwIds),
+      eq(voorzieningenTable.gearchiveerd, false),
+    ));
+
+  const gebouwenMetSpots = new Set(metSpots.map((r) => r.gebouwId));
+
+  // Herbereken alleen opdrachten waarvan het gebouw nu spots heeft
+  const teHerberekenen = kandidaten.filter(
+    (k) => k.gebouwId != null && gebouwenMetSpots.has(k.gebouwId),
+  );
+
+  let herberekend = 0;
+  for (const k of teHerberekenen) {
+    const geslaagd = await berekenEnSlaOpNacalculatie(k.opdrachtId)
+      .then(() => true)
+      .catch((err: unknown) => {
+        logger.warn({ opdrachtId: k.opdrachtId, err }, "fie: herbereken verouderde nacalculatie mislukt");
+        return false;
+      });
+    if (geslaagd) herberekend++;
+  }
+  return herberekend;
+}
+
+/**
  * Dagelijkse achtergrondtaak: verwerk alle afgesloten opdrachten zonder nacalculatie-record,
+ * herbereken verouderde "algemeen"-nacalculaties waar spots beschikbaar zijn,
  * bereken daarna leermomenten opnieuw.
  * Draait om 04:00 (na de backup).
  */
@@ -1139,11 +1190,18 @@ export function planDagelijkseLeermomenten(): void {
           logger.warn({ opdrachtId: o.id, err }, "fie: nacalculatie mislukt voor opdracht");
         });
       }
+
+      // Herbereken verouderde nacalculaties (werktype was "algemeen" maar spots zijn er nu)
+      const verouderd = await herberekeenVerouderdeNacalculaties().catch((err: unknown) => {
+        logger.warn({ err }, "fie: herbereken verouderde nacalculaties mislukt");
+        return 0;
+      });
+
       const n = await herberekeenLeermomenten().catch((err: unknown) => {
         logger.warn({ err }, "fie: herbereken leermomenten mislukt");
         return 0;
       });
-      logger.info({ verwerkt: afgesloten.length, leermomenten: n }, "fie: dagelijkse leermomenten bijgewerkt");
+      logger.info({ verwerkt: afgesloten.length, verouderdHerberekend: verouderd, leermomenten: n }, "fie: dagelijkse leermomenten bijgewerkt");
     } catch (err) {
       logger.warn({ err }, "fie: planDagelijkseLeermomenten achtergrondtaak crashte");
     }

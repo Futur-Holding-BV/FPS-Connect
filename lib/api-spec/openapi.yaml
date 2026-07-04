@@ -18981,6 +18981,48 @@ paths:
                     items:
                       $ref: "#/components/schemas/FieLeermoment"
 
+  /fie/nacalculaties/herbereken-verouderd:
+    post:
+      operationId: herberekeenVerouderdeNacalculaties
+      tags: [financieel]
+      summary: Herbereken alle nacalculaties met werktype algemeen waarbij het gebouw inmiddels spots heeft
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [herberekend]
+                properties:
+                  herberekend:
+                    type: integer
+
+  /fie/nacalculaties/{opdrachtId}/herbereken:
+    post:
+      operationId: herberekeenNacalculatieVoorOpdracht
+      tags: [financieel]
+      summary: Herbereken de nacalculatie voor een specifieke opdracht
+      parameters:
+        - in: path
+          name: opdrachtId
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [opdrachtId, herberekend]
+                properties:
+                  opdrachtId:
+                    type: integer
+                  herberekend:
+                    type: boolean
+
   /fie/leermomenten/{id}:
     patch:
       operationId: updateFieLeermoment

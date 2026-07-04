@@ -14,6 +14,7 @@ import {
   getGetFieBegrotingQueryKey,
   useListFieLeermomenten,
   useHerberekeenFieLeermomenten,
+  useHerberekeenVerouderdeNacalculaties,
   useUpdateFieLeermoment,
   useDeleteFieLeermoment,
   type FieJaarbegroting,
@@ -1271,9 +1272,21 @@ function LeermomentRij({ lm, onSaved }: { lm: FieLeermoment; onSaved: () => void
 function LeereffectenBeheerTab() {
   const { data: leermomenten, isLoading, refetch } = useListFieLeermomenten();
   const herbereken = useHerberekeenFieLeermomenten();
+  const herberekeenVerouderd = useHerberekeenVerouderdeNacalculaties();
+  const [verouderdResultaat, setVerouderdResultaat] = useState<number | null>(null);
 
   function startHerbereken() {
     herbereken.mutate(undefined, { onSuccess: () => { void refetch(); } });
+  }
+
+  function startHerberekeenVerouderd() {
+    setVerouderdResultaat(null);
+    herberekeenVerouderd.mutate(undefined, {
+      onSuccess: (data) => {
+        setVerouderdResultaat(data.herberekend);
+        void refetch();
+      },
+    });
   }
 
   return (
@@ -1286,14 +1299,34 @@ function LeereffectenBeheerTab() {
             minimaal 2 projecten) worden meegewogen in nieuwe calculatieadviezen via de correctiefactor.
           </p>
         </div>
-        <Button
-          size="sm" variant="outline" className="gap-1.5 shrink-0"
-          onClick={startHerbereken}
-          disabled={herbereken.isPending}
-        >
-          <RefreshCw className={cn("h-3.5 w-3.5", herbereken.isPending && "animate-spin")} />
-          Herbereken
-        </Button>
+        <div className="flex flex-col items-end gap-1.5 shrink-0">
+          <Button
+            size="sm" variant="outline" className="gap-1.5"
+            onClick={startHerbereken}
+            disabled={herbereken.isPending}
+          >
+            <RefreshCw className={cn("h-3.5 w-3.5", herbereken.isPending && "animate-spin")} />
+            Herbereken
+          </Button>
+          <div className="flex items-center gap-1.5">
+            <Button
+              size="sm" variant="outline" className="gap-1.5"
+              onClick={startHerberekeenVerouderd}
+              disabled={herberekeenVerouderd.isPending}
+              title="Herbereken nacalculaties met werktype 'algemeen' waarbij het gebouw inmiddels spots heeft"
+            >
+              <RefreshCw className={cn("h-3.5 w-3.5", herberekeenVerouderd.isPending && "animate-spin")} />
+              Werktype bijwerken
+            </Button>
+          </div>
+          {verouderdResultaat !== null && (
+            <p className="text-xs text-muted-foreground">
+              {verouderdResultaat === 0
+                ? "Geen verouderde nacalculaties gevonden"
+                : `${verouderdResultaat} nacalculatie${verouderdResultaat !== 1 ? "s" : ""} bijgewerkt`}
+            </p>
+          )}
+        </div>
       </div>
 
       {isLoading ? (

@@ -351,6 +351,8 @@ export * from './helpdeskTicket';
 export * from './helpdeskTicketInput';
 export * from './helpdeskTicketUpdate';
 export * from './herberekeenFieLeermomenten200';
+export * from './herberekeenNacalculatieVoorOpdracht200';
+export * from './herberekeenVerouderdeNacalculaties200';
 export * from './herinspectieInput';
 export * from './herkomstBevestigenBulkInput';
 export * from './hrmStats';

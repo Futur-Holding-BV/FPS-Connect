@@ -11107,3 +11107,12 @@ export type HerberekeenFieLeermomenten200 = {
   leermomenten: FieLeermoment[];
 };
 
+export type HerberekeenVerouderdeNacalculaties200 = {
+  herberekend: number;
+};
+
+export type HerberekeenNacalculatieVoorOpdracht200 = {
+  opdrachtId: number;
+  herberekend: boolean;
+};
+

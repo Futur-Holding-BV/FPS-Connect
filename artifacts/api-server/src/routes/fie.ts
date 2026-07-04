@@ -5,7 +5,7 @@ import { Router, Request, Response } from "express";
 import { db, fieJaarbegrotingenTable, fieAkPostenTable, fieCapaciteitSnapshotsTable, fieLeerMomentenTable, werkgeversTable } from "@workspace/db";
 import { eq, desc } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
-import { berekenFieContext, berekenCapaciteit, berekenDoelmarge, berekenJaarprognose, leesPrognoseObservaties, rnd2, herberekeenLeermomenten, berekenEnSlaOpNacalculatie } from "../services/fie-service";
+import { berekenFieContext, berekenCapaciteit, berekenDoelmarge, berekenJaarprognose, leesPrognoseObservaties, rnd2, herberekeenLeermomenten, berekenEnSlaOpNacalculatie, herberekeenVerouderdeNacalculaties } from "../services/fie-service";
 
 const router = Router();
 
@@ -538,6 +538,28 @@ router.get("/fie/observaties/:boekjaar", lezen, async (req: Request, res: Respon
 
   const observaties = await leesPrognoseObservaties(boekjaar);
   return void res.json({ boekjaar, observaties });
+});
+
+// ─── Nacalculaties ────────────────────────────────────────────────────────────
+
+// POST /fie/nacalculaties/herbereken-verouderd
+// Herbereken alle nacalculaties met werktype "algemeen" waarbij het gebouw inmiddels spots heeft.
+// Handig voor situaties waarbij spots pas ná de eerste nacalculatie zijn toegevoegd.
+router.post("/fie/nacalculaties/herbereken-verouderd", schrijven, async (_req: Request, res: Response): Promise<void> => {
+  const herberekend = await herberekeenVerouderdeNacalculaties();
+  res.json({ herberekend });
+});
+
+// POST /fie/nacalculaties/:opdrachtId/herbereken
+// Herbereken de nacalculatie voor één specifieke opdracht.
+router.post("/fie/nacalculaties/:opdrachtId/herbereken", schrijven, async (req: Request, res: Response): Promise<void> => {
+  const opdrachtId = parseId(req.params["opdrachtId"]);
+  if (opdrachtId === null) {
+    res.status(400).json({ error: "Ongeldig opdrachtId" });
+    return;
+  }
+  await berekenEnSlaOpNacalculatie(opdrachtId);
+  res.json({ opdrachtId, herberekend: true });
 });
 
 // ─── Leereffecten (Fase 5) ────────────────────────────────────────────────────

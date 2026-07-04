@@ -23758,6 +23758,27 @@ export const HerberekeenFieLeermomentenResponse = zod.object({
 
 
 /**
+ * @summary Herbereken alle nacalculaties met werktype algemeen waarbij het gebouw inmiddels spots heeft
+ */
+export const HerberekeenVerouderdeNacalculatiesResponse = zod.object({
+  "herberekend": zod.number()
+})
+
+
+/**
+ * @summary Herbereken de nacalculatie voor een specifieke opdracht
+ */
+export const HerberekeenNacalculatieVoorOpdrachtParams = zod.object({
+  "opdrachtId": zod.coerce.number()
+})
+
+export const HerberekeenNacalculatieVoorOpdrachtResponse = zod.object({
+  "opdrachtId": zod.number(),
+  "herberekend": zod.boolean()
+})
+
+
+/**
  * @summary Leermoment handmatig aanpassen (correctiefactor, opmerkingen)
  */
 export const UpdateFieLeermomentParams = zod.object({

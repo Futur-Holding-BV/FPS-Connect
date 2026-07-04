@@ -288,6 +288,8 @@ import type {
   HelpdeskTicketInput,
   HelpdeskTicketUpdate,
   HerberekeenFieLeermomenten200,
+  HerberekeenNacalculatieVoorOpdracht200,
+  HerberekeenVerouderdeNacalculaties200,
   HerinspectieInput,
   HerkomstBevestigenBulkInput,
   HrmStats,
@@ -67237,6 +67239,146 @@ export const useHerberekeenFieLeermomenten = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getHerberekeenFieLeermomentenMutationOptions(options));
+    }
+
+export const getHerberekeenVerouderdeNacalculatiesUrl = () => {
+
+
+
+
+  return `/api/fie/nacalculaties/herbereken-verouderd`
+}
+
+/**
+ * @summary Herbereken alle nacalculaties met werktype algemeen waarbij het gebouw inmiddels spots heeft
+ */
+export const herberekeenVerouderdeNacalculaties = async ( options?: RequestInit): Promise<HerberekeenVerouderdeNacalculaties200> => {
+
+  return customFetch<HerberekeenVerouderdeNacalculaties200>(getHerberekeenVerouderdeNacalculatiesUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getHerberekeenVerouderdeNacalculatiesMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof herberekeenVerouderdeNacalculaties>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof herberekeenVerouderdeNacalculaties>>, TError,void, TContext> => {
+
+const mutationKey = ['herberekeenVerouderdeNacalculaties'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof herberekeenVerouderdeNacalculaties>>, void> = () => {
+
+
+          return  herberekeenVerouderdeNacalculaties(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type HerberekeenVerouderdeNacalculatiesMutationResult = NonNullable<Awaited<ReturnType<typeof herberekeenVerouderdeNacalculaties>>>
+
+    export type HerberekeenVerouderdeNacalculatiesMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Herbereken alle nacalculaties met werktype algemeen waarbij het gebouw inmiddels spots heeft
+ */
+export const useHerberekeenVerouderdeNacalculaties = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof herberekeenVerouderdeNacalculaties>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof herberekeenVerouderdeNacalculaties>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getHerberekeenVerouderdeNacalculatiesMutationOptions(options));
+    }
+
+export const getHerberekeenNacalculatieVoorOpdrachtUrl = (opdrachtId: number,) => {
+
+
+
+
+  return `/api/fie/nacalculaties/${opdrachtId}/herbereken`
+}
+
+/**
+ * @summary Herbereken de nacalculatie voor een specifieke opdracht
+ */
+export const herberekeenNacalculatieVoorOpdracht = async (opdrachtId: number, options?: RequestInit): Promise<HerberekeenNacalculatieVoorOpdracht200> => {
+
+  return customFetch<HerberekeenNacalculatieVoorOpdracht200>(getHerberekeenNacalculatieVoorOpdrachtUrl(opdrachtId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getHerberekeenNacalculatieVoorOpdrachtMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof herberekeenNacalculatieVoorOpdracht>>, TError,{opdrachtId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof herberekeenNacalculatieVoorOpdracht>>, TError,{opdrachtId: number}, TContext> => {
+
+const mutationKey = ['herberekeenNacalculatieVoorOpdracht'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof herberekeenNacalculatieVoorOpdracht>>, {opdrachtId: number}> = (props) => {
+          const {opdrachtId} = props ?? {};
+
+          return  herberekeenNacalculatieVoorOpdracht(opdrachtId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type HerberekeenNacalculatieVoorOpdrachtMutationResult = NonNullable<Awaited<ReturnType<typeof herberekeenNacalculatieVoorOpdracht>>>
+
+    export type HerberekeenNacalculatieVoorOpdrachtMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Herbereken de nacalculatie voor een specifieke opdracht
+ */
+export const useHerberekeenNacalculatieVoorOpdracht = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof herberekeenNacalculatieVoorOpdracht>>, TError,{opdrachtId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof herberekeenNacalculatieVoorOpdracht>>,
+        TError,
+        {opdrachtId: number},
+        TContext
+      > => {
+      return useMutation(getHerberekeenNacalculatieVoorOpdrachtMutationOptions(options));
     }
 
 export const getUpdateFieLeermomentUrl = (id: number,) => {
