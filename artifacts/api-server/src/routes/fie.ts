@@ -482,7 +482,7 @@ router.get("/fie/context/calculatie/:id", calcLezen, async (req: Request, res: R
 // ── GET /fie/prognose/:boekjaar ───────────────────────────────────────────────
 // Continue jaarbedrijfsprognose: bevestigde omzet + gewogen pipeline + OHW restwaarde.
 // Berekening + persistentie observaties bij elke aanroep.
-router.get("/prognose/:boekjaar", lezen, async (req: Request, res: Response): Promise<void> => {
+router.get("/fie/prognose/:boekjaar", lezen, async (req: Request, res: Response): Promise<void> => {
   const boekjaar = parseId(req.params.boekjaar);
   if (!boekjaar || boekjaar < 2000 || boekjaar > 2100) {
     return void res.status(400).json({ error: "Ongeldig boekjaar" });
@@ -527,7 +527,7 @@ router.get("/prognose/:boekjaar", lezen, async (req: Request, res: Response): Pr
 // ── GET /fie/observaties/:boekjaar ────────────────────────────────────────────
 // Geeft de meest recent gepersisteerde prognose-observaties terug voor een boekjaar.
 // Wordt gevuld bij elke aanroep van GET /fie/prognose/:boekjaar.
-router.get("/observaties/:boekjaar", lezen, async (req: Request, res: Response): Promise<void> => {
+router.get("/fie/observaties/:boekjaar", lezen, async (req: Request, res: Response): Promise<void> => {
   const boekjaar = parseId(req.params.boekjaar);
   if (!boekjaar || boekjaar < 2000 || boekjaar > 2100) {
     return void res.status(400).json({ error: "Ongeldig boekjaar" });

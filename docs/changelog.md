@@ -6,7 +6,7 @@ Voor elke taak drie scores:
 
 ## 2026-07-04 — FIE Fase 3: Continue jaarbedrijfsprognose — Fase 3b aanvulling (volledig)
 
-**Uitvoering:** volledig | **Getest:** typecheck clean (api-server + firevault, alleen pre-existing TS7030 in offertes.ts)
+**Uitvoering:** volledig | **Getest:** typecheck clean (api-server + firevault, alleen pre-existing TS7030 in offertes.ts); routes /fie/prognose/:boekjaar en /fie/observaties/:boekjaar geven correct 401 zonder auth
 
 Vier aanvullende prognose-KPI's toegevoegd + begroting-kwartaalvergelijking in chart:
 
