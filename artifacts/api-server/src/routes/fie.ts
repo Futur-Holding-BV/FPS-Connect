@@ -5,7 +5,7 @@ import { Router, Request, Response } from "express";
 import { db, fieJaarbegrotingenTable, fieAkPostenTable, fieCapaciteitSnapshotsTable, werkgeversTable } from "@workspace/db";
 import { eq, desc } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
-import { berekenFieContext, berekenCapaciteit, berekenDoelmarge, berekenJaarprognose, rnd2 } from "../services/fie-service";
+import { berekenFieContext, berekenCapaciteit, berekenDoelmarge, berekenJaarprognose, leesPrognoseObservaties, rnd2 } from "../services/fie-service";
 
 const router = Router();
 
@@ -481,37 +481,56 @@ router.get("/fie/context/calculatie/:id", calcLezen, async (req: Request, res: R
 
 // ── GET /fie/prognose/:boekjaar ───────────────────────────────────────────────
 // Continue jaarbedrijfsprognose: bevestigde omzet + gewogen pipeline + OHW restwaarde.
+// Berekening + persistentie observaties bij elke aanroep.
 router.get("/prognose/:boekjaar", lezen, async (req: Request, res: Response): Promise<void> => {
   const boekjaar = parseId(req.params.boekjaar);
   if (!boekjaar || boekjaar < 2000 || boekjaar > 2100) {
     return void res.status(400).json({ error: "Ongeldig boekjaar" });
   }
 
-  const prognose = await berekenJaarprognose(boekjaar);
+  const p = await berekenJaarprognose(boekjaar);
   return void res.json({
-    boekjaar:                   prognose.boekjaar,
-    heeft_begroting:            prognose.heeft_begroting,
-    omzet_doel:                 prognose.omzet_doel,
-    bevestigde_omzet:           prognose.bevestigde_omzet,
-    aantal_bevestigde_offertes: prognose.aantal_bevestigde_offertes,
-    gewogen_pipeline:           prognose.gewogen_pipeline,
-    pijplijn_bruto:             prognose.pijplijn_bruto,
-    aantal_pipeline_offertes:   prognose.aantal_pipeline_offertes,
-    ohw_restwaarde:             prognose.ohw_restwaarde,
-    aantal_ohw_opdrachten:      prognose.aantal_ohw_opdrachten,
-    prognose_omzet:             prognose.prognose_omzet,
-    prognose_inclusief_ohw:     prognose.prognose_inclusief_ohw,
-    coverage_pct:               prognose.coverage_pct,
-    gap_tot_doel:               prognose.gap_tot_doel,
-    observaties:                prognose.observaties.map(o => ({
-      type:           o.type,
-      ernst:          o.ernst,
-      omschrijving:   o.omschrijving,
-      waarde:         o.waarde,
-      drempelwaarde:  o.drempelwaarde,
-      afwijking_pct:  o.afwijking_pct,
+    boekjaar:                   p.boekjaar,
+    heeft_begroting:            p.heeft_begroting,
+    omzet_doel:                 p.omzet_doel,
+    doel_marge_pct:             p.doel_marge_pct,
+    totaal_ak:                  p.totaal_ak,
+    bevestigde_omzet:           p.bevestigde_omzet,
+    aantal_bevestigde_offertes: p.aantal_bevestigde_offertes,
+    gewogen_pipeline:           p.gewogen_pipeline,
+    pijplijn_bruto:             p.pijplijn_bruto,
+    aantal_pipeline_offertes:   p.aantal_pipeline_offertes,
+    ohw_restwaarde:             p.ohw_restwaarde,
+    aantal_ohw_opdrachten:      p.aantal_ohw_opdrachten,
+    prognose_omzet:             p.prognose_omzet,
+    prognose_inclusief_ohw:     p.prognose_inclusief_ohw,
+    coverage_pct:               p.coverage_pct,
+    gap_tot_doel:               p.gap_tot_doel,
+    ak_dekkingsgraad_pct:       p.ak_dekkingsgraad_pct,
+    break_even_omzet:           p.break_even_omzet,
+    kwartaal_verdeling:         p.kwartaal_verdeling,
+    observaties:                p.observaties.map(o => ({
+      type:          o.type,
+      ernst:         o.ernst,
+      omschrijving:  o.omschrijving,
+      waarde:        o.waarde,
+      drempelwaarde: o.drempelwaarde,
+      afwijking_pct: o.afwijking_pct,
     })),
   });
+});
+
+// ── GET /fie/observaties/:boekjaar ────────────────────────────────────────────
+// Geeft de meest recent gepersisteerde prognose-observaties terug voor een boekjaar.
+// Wordt gevuld bij elke aanroep van GET /fie/prognose/:boekjaar.
+router.get("/observaties/:boekjaar", lezen, async (req: Request, res: Response): Promise<void> => {
+  const boekjaar = parseId(req.params.boekjaar);
+  if (!boekjaar || boekjaar < 2000 || boekjaar > 2100) {
+    return void res.status(400).json({ error: "Ongeldig boekjaar" });
+  }
+
+  const observaties = await leesPrognoseObservaties(boekjaar);
+  return void res.json({ boekjaar, observaties });
 });
 
 export default router;

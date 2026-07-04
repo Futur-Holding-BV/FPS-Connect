@@ -10190,11 +10190,26 @@ export interface FiePrognoseObservatie {
   afwijking_pct?: number | null;
 }
 
+export interface FieKwartaalPrognose {
+  kwartaal: number;
+  bevestigd: number;
+  pipeline_gewogen: number;
+  prognose: number;
+}
+
+export interface FieObservatiesResponse {
+  boekjaar: number;
+  observaties: FiePrognoseObservatie[];
+}
+
 export interface FieJaarprognose {
   boekjaar: number;
   heeft_begroting: boolean;
   /** @nullable */
   omzet_doel?: number | null;
+  /** @nullable */
+  doel_marge_pct?: number | null;
+  totaal_ak: number;
   bevestigde_omzet: number;
   aantal_bevestigde_offertes: number;
   gewogen_pipeline: number;
@@ -10208,6 +10223,11 @@ export interface FieJaarprognose {
   coverage_pct?: number | null;
   /** @nullable */
   gap_tot_doel?: number | null;
+  /** @nullable */
+  ak_dekkingsgraad_pct?: number | null;
+  /** @nullable */
+  break_even_omzet?: number | null;
+  kwartaal_verdeling: FieKwartaalPrognose[];
   observaties: FiePrognoseObservatie[];
 }
 

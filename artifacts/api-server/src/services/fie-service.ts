@@ -2,7 +2,7 @@
 // Alle margeberekeningen, AK-normderivaties en context-analyses lopen via dit service-module.
 // KRITISCH: berekenFieContext gebruikt DEZELFDE berekeningsvolgorde als detail.tsx (frontend),
 // zodat projectomzet, kostprijs en margeadvies identiek zijn aan de getoonde calculatietotalen.
-import { db, fieJaarbegrotingenTable, fieAkPostenTable, fieCapaciteitSnapshotsTable, modCalcHeadersTable, modCalcRegelsTable, offertesTable, opdrachtenTable, onderhandenWerkOverridesTable } from "@workspace/db";
+import { db, fieJaarbegrotingenTable, fieAkPostenTable, fieCapaciteitSnapshotsTable, fieObservatiesTable, modCalcHeadersTable, modCalcRegelsTable, offertesTable, opdrachtenTable, onderhandenWerkOverridesTable } from "@workspace/db";
 import { medewerkersTable } from "@workspace/db/schema";
 import { eq, and, desc, gte, lt, inArray } from "drizzle-orm";
 
@@ -398,6 +398,17 @@ const WINKANS_PER_STATUS: Record<string, number> = {
 const BEVESTIGDE_STATUSSEN = new Set(["akkoord", "ondertekend"]);
 const PIPELINE_STATUSSEN   = new Set(["concept", "verzonden", "bekeken"]);
 
+function kwartaalVanDatum(d: Date): 1 | 2 | 3 | 4 {
+  return Math.ceil((d.getUTCMonth() + 1) / 3) as 1 | 2 | 3 | 4;
+}
+
+export interface FieKwartaalPrognose {
+  kwartaal: 1 | 2 | 3 | 4;
+  bevestigd: number;
+  pipeline_gewogen: number;
+  prognose: number;
+}
+
 export interface FiePrognoseObservatie {
   type: string;
   ernst: "info" | "waarschuwing" | "kritiek";
@@ -411,6 +422,8 @@ export interface FieJaarprognoseResultaat {
   boekjaar: number;
   heeft_begroting: boolean;
   omzet_doel: number | null;
+  doel_marge_pct: number | null;
+  totaal_ak: number;
   bevestigde_omzet: number;
   aantal_bevestigde_offertes: number;
   gewogen_pipeline: number;
@@ -422,6 +435,9 @@ export interface FieJaarprognoseResultaat {
   prognose_inclusief_ohw: number;
   coverage_pct: number | null;
   gap_tot_doel: number | null;
+  ak_dekkingsgraad_pct: number | null;
+  break_even_omzet: number | null;
+  kwartaal_verdeling: FieKwartaalPrognose[];
   observaties: FiePrognoseObservatie[];
 }
 
@@ -429,7 +445,7 @@ export async function berekenJaarprognose(boekjaar: number): Promise<FieJaarprog
   const jaarStart = new Date(`${boekjaar}-01-01T00:00:00.000Z`);
   const jaarEind  = new Date(`${boekjaar + 1}-01-01T00:00:00.000Z`);
 
-  // 1. Actieve begroting voor dit boekjaar
+  // 1. Actieve begroting + doelmarge + AK-totaal
   const [activeBegroting] = await db
     .select()
     .from(fieJaarbegrotingenTable)
@@ -440,15 +456,29 @@ export async function berekenJaarprognose(boekjaar: number): Promise<FieJaarprog
     .orderBy(desc(fieJaarbegrotingenTable.id))
     .limit(1);
 
-  const begroting = activeBegroting ?? null;
-  const omzetDoel = begroting?.omzetDoel ?? null;
+  const begroting    = activeBegroting ?? null;
+  const omzetDoel    = begroting?.omzetDoel ?? null;
+  const doelMargePct = begroting?.doelMargePct ?? null;
 
-  // 2. Offertes aangemaakt in dit boekjaar
+  let totaalAk = 0;
+  if (begroting) {
+    const akPosten = await db
+      .select({ bedrag: fieAkPostenTable.bedragJaarbasis })
+      .from(fieAkPostenTable)
+      .where(and(
+        eq(fieAkPostenTable.begrotingId, begroting.id),
+        eq(fieAkPostenTable.actief, true),
+      ));
+    totaalAk = rnd2(akPosten.reduce((s, p) => s + p.bedrag, 0));
+  }
+
+  // 2. Offertes aangemaakt in dit boekjaar (inclusief datum voor kwartaalindeling)
   const alleOffertes = await db
     .select({
-      id: offertesTable.id,
-      status: offertesTable.status,
+      id:            offertesTable.id,
+      status:        offertesTable.status,
       bedragExclBtw: offertesTable.bedragExclBtw,
+      aangemaaktOp:  offertesTable.aangemaaktOp,
     })
     .from(offertesTable)
     .where(and(
@@ -464,7 +494,29 @@ export async function berekenJaarprognose(boekjaar: number): Promise<FieJaarprog
   const gewogenPipeline = rnd2(pipelineOffertes.reduce((s, o) =>
     s + o.bedragExclBtw * (WINKANS_PER_STATUS[o.status] ?? 0), 0));
 
-  // 3. OHW restwaarde — actieve opdrachten aangemaakt in dit boekjaar met een OHW-override
+  // Kwartaalverdeling
+  const kd: Record<number, { bevestigd: number; pipeline: number }> = {
+    1: { bevestigd: 0, pipeline: 0 },
+    2: { bevestigd: 0, pipeline: 0 },
+    3: { bevestigd: 0, pipeline: 0 },
+    4: { bevestigd: 0, pipeline: 0 },
+  };
+  for (const o of alleOffertes) {
+    const kw = kwartaalVanDatum(new Date(o.aangemaaktOp));
+    if (BEVESTIGDE_STATUSSEN.has(o.status)) {
+      kd[kw].bevestigd += o.bedragExclBtw;
+    } else if (PIPELINE_STATUSSEN.has(o.status)) {
+      kd[kw].pipeline += o.bedragExclBtw * (WINKANS_PER_STATUS[o.status] ?? 0);
+    }
+  }
+  const kwartaalVerdeling: FieKwartaalPrognose[] = ([1, 2, 3, 4] as const).map(kw => ({
+    kwartaal: kw,
+    bevestigd:        rnd2(kd[kw].bevestigd),
+    pipeline_gewogen: rnd2(kd[kw].pipeline),
+    prognose:         rnd2(kd[kw].bevestigd + kd[kw].pipeline),
+  }));
+
+  // 3. OHW restwaarde — actieve opdrachten in dit boekjaar met OHW-override
   const actieveOpdrachten = await db
     .select({ id: opdrachtenTable.id, offerteId: opdrachtenTable.offerteId })
     .from(opdrachtenTable)
@@ -474,7 +526,7 @@ export async function berekenJaarprognose(boekjaar: number): Promise<FieJaarprog
       lt(opdrachtenTable.aangemaaktOp, jaarEind),
     ));
 
-  let ohwRestwaarde      = 0;
+  let ohwRestwaarde       = 0;
   let aantalOhwOpdrachten = 0;
 
   if (actieveOpdrachten.length > 0) {
@@ -502,14 +554,13 @@ export async function berekenJaarprognose(boekjaar: number): Promise<FieJaarprog
       if (!opdracht?.offerteId) continue;
       const bedrag = bedragMap.get(opdracht.offerteId) ?? 0;
       if (bedrag <= 0) continue;
-      const pctGereed = ov.percentageGereed ?? 0;
-      ohwRestwaarde += bedrag * Math.max(0, 1 - pctGereed / 100);
+      ohwRestwaarde += bedrag * Math.max(0, 1 - (ov.percentageGereed ?? 0) / 100);
       aantalOhwOpdrachten++;
     }
     ohwRestwaarde = rnd2(ohwRestwaarde);
   }
 
-  // 4. Prognose totaal
+  // 4. Prognose totaal + financiële KPI's
   const prognoseOmzet        = rnd2(bevestigdeOmzet + gewogenPipeline);
   const prognoseInclusiefOhw = rnd2(prognoseOmzet + ohwRestwaarde);
   const coveragePct = omzetDoel != null && omzetDoel > 0
@@ -519,68 +570,133 @@ export async function berekenJaarprognose(boekjaar: number): Promise<FieJaarprog
     ? rnd2(omzetDoel - prognoseOmzet)
     : null;
 
+  // AK-dekkingsgraad: hoe groot is de prognose t.o.v. totale AK-last
+  const akDekkingsgraadPct = totaalAk > 0
+    ? rnd2((prognoseOmzet / totaalAk) * 100)
+    : null;
+
+  // Break-even: minimale omzet om AK te dekken bij de gewenste nettomarge
+  const breakEvenOmzet =
+    doelMargePct != null && doelMargePct > 0 && doelMargePct < 100 && totaalAk > 0
+      ? rnd2(totaalAk / (1 - doelMargePct / 100))
+      : null;
+
   // 5. Observaties genereren
   const observaties: FiePrognoseObservatie[] = [];
 
   if (!begroting) {
     observaties.push({
-      type: "geen_begroting",
-      ernst: "info",
+      type: "geen_begroting", ernst: "info",
       omschrijving: `Geen actieve jaarbegroting gevonden voor ${boekjaar}. Stel een begroting in via Bedrijfskompas.`,
       waarde: null, drempelwaarde: null, afwijking_pct: null,
     });
-  } else if (omzetDoel != null && omzetDoel > 0 && coveragePct !== null) {
-    if (coveragePct < 80) {
+  } else {
+    if (omzetDoel != null && omzetDoel > 0 && coveragePct !== null) {
+      if (coveragePct < 80) {
+        observaties.push({
+          type: "omzet_risico", ernst: "kritiek",
+          omschrijving: `Prognose dekt slechts ${coveragePct.toFixed(1)}% van het omzetdoel. Significante achterstand — pipeline versterken.`,
+          waarde: prognoseOmzet, drempelwaarde: omzetDoel,
+          afwijking_pct: rnd2(coveragePct - 100),
+        });
+      } else if (coveragePct < 95) {
+        observaties.push({
+          type: "omzet_achterstand", ernst: "waarschuwing",
+          omschrijving: `Prognose is ${(100 - coveragePct).toFixed(1)}% onder het omzetdoel. Pipeline versterken of verwachtingen bijstellen.`,
+          waarde: prognoseOmzet, drempelwaarde: omzetDoel,
+          afwijking_pct: rnd2(coveragePct - 100),
+        });
+      } else if (coveragePct > 110) {
+        observaties.push({
+          type: "omzet_voorsprong", ernst: "info",
+          omschrijving: `Prognose overtreft het omzetdoel met ${(coveragePct - 100).toFixed(1)}%. Controleer de beschikbare capaciteit.`,
+          waarde: prognoseOmzet, drempelwaarde: omzetDoel,
+          afwijking_pct: rnd2(coveragePct - 100),
+        });
+      }
+    }
+
+    if (breakEvenOmzet != null && prognoseOmzet < breakEvenOmzet) {
       observaties.push({
-        type: "omzet_risico",
-        ernst: "kritiek",
-        omschrijving: `Prognose dekt slechts ${coveragePct.toFixed(1)}% van het omzetdoel. Significante achterstand — pipeline versterken.`,
-        waarde: prognoseOmzet, drempelwaarde: omzetDoel,
-        afwijking_pct: rnd2(coveragePct - 100),
+        type: "break_even_risico",
+        ernst: prognoseOmzet < breakEvenOmzet * 0.8 ? "kritiek" : "waarschuwing",
+        omschrijving: `Prognose ligt onder break-even (€ ${breakEvenOmzet.toLocaleString("nl-NL", { maximumFractionDigits: 0 })}). AK wordt niet volledig gedekt bij doelmarge ${doelMargePct?.toFixed(1)}%.`,
+        waarde: prognoseOmzet, drempelwaarde: breakEvenOmzet,
+        afwijking_pct: rnd2(((prognoseOmzet / breakEvenOmzet) - 1) * 100),
       });
-    } else if (coveragePct < 95) {
+    }
+
+    if (akDekkingsgraadPct !== null && akDekkingsgraadPct < 100) {
       observaties.push({
-        type: "omzet_achterstand",
-        ernst: "waarschuwing",
-        omschrijving: `Prognose is ${(100 - coveragePct).toFixed(1)}% onder het omzetdoel. Pipeline versterken of verwachtingen bijstellen.`,
-        waarde: prognoseOmzet, drempelwaarde: omzetDoel,
-        afwijking_pct: rnd2(coveragePct - 100),
-      });
-    } else if (coveragePct > 110) {
-      observaties.push({
-        type: "omzet_voorsprong",
-        ernst: "info",
-        omschrijving: `Prognose overtreft het omzetdoel met ${(coveragePct - 100).toFixed(1)}%. Controleer de beschikbare capaciteit.`,
-        waarde: prognoseOmzet, drempelwaarde: omzetDoel,
-        afwijking_pct: rnd2(coveragePct - 100),
+        type: "ak_onderdekking", ernst: "waarschuwing",
+        omschrijving: `Prognose dekt slechts ${akDekkingsgraadPct.toFixed(1)}% van de totale AK (€ ${totaalAk.toLocaleString("nl-NL", { maximumFractionDigits: 0 })}). Kosten worden niet volledig gedekt.`,
+        waarde: prognoseOmzet, drempelwaarde: totaalAk,
+        afwijking_pct: rnd2(akDekkingsgraadPct - 100),
       });
     }
   }
 
   if (bevestigdeOffertes.length === 0 && pipelineOffertes.length === 0) {
     observaties.push({
-      type: "lege_pipeline",
-      ernst: "waarschuwing",
+      type: "lege_pipeline", ernst: "waarschuwing",
       omschrijving: `Geen offertes aangetroffen in ${boekjaar}. Controleer of offertes in dit boekjaar zijn aangemaakt.`,
       waarde: 0, drempelwaarde: null, afwijking_pct: null,
     });
   }
 
+  // 6. Observaties persisteren (vervang alle observaties voor dit boekjaar)
+  await db.delete(fieObservatiesTable).where(eq(fieObservatiesTable.boekjaar, boekjaar));
+  if (observaties.length > 0) {
+    await db.insert(fieObservatiesTable).values(
+      observaties.map(o => ({
+        boekjaar,
+        type:         o.type,
+        ernst:        o.ernst,
+        omschrijving: o.omschrijving,
+        waarde:       o.waarde ?? undefined,
+        drempelwaarde: o.drempelwaarde ?? undefined,
+        afwijkingPct: o.afwijking_pct ?? undefined,
+      }))
+    );
+  }
+
   return {
     boekjaar,
-    heeft_begroting: !!begroting,
-    omzet_doel: omzetDoel,
-    bevestigde_omzet: bevestigdeOmzet,
+    heeft_begroting:            !!begroting,
+    omzet_doel:                 omzetDoel,
+    doel_marge_pct:             doelMargePct,
+    totaal_ak:                  totaalAk,
+    bevestigde_omzet:           bevestigdeOmzet,
     aantal_bevestigde_offertes: bevestigdeOffertes.length,
-    gewogen_pipeline: gewogenPipeline,
-    pijplijn_bruto: pijplijnBruto,
-    aantal_pipeline_offertes: pipelineOffertes.length,
-    ohw_restwaarde: ohwRestwaarde,
-    aantal_ohw_opdrachten: aantalOhwOpdrachten,
-    prognose_omzet: prognoseOmzet,
-    prognose_inclusief_ohw: prognoseInclusiefOhw,
-    coverage_pct: coveragePct,
-    gap_tot_doel: gapTotDoel,
+    gewogen_pipeline:           gewogenPipeline,
+    pijplijn_bruto:             pijplijnBruto,
+    aantal_pipeline_offertes:   pipelineOffertes.length,
+    ohw_restwaarde:             ohwRestwaarde,
+    aantal_ohw_opdrachten:      aantalOhwOpdrachten,
+    prognose_omzet:             prognoseOmzet,
+    prognose_inclusief_ohw:     prognoseInclusiefOhw,
+    coverage_pct:               coveragePct,
+    gap_tot_doel:               gapTotDoel,
+    ak_dekkingsgraad_pct:       akDekkingsgraadPct,
+    break_even_omzet:           breakEvenOmzet,
+    kwartaal_verdeling:         kwartaalVerdeling,
     observaties,
   };
+}
+
+// ─── Opgeslagen prognose-observaties lezen ───────────────────────────────────
+export async function leesPrognoseObservaties(boekjaar: number): Promise<FiePrognoseObservatie[]> {
+  const rows = await db
+    .select()
+    .from(fieObservatiesTable)
+    .where(eq(fieObservatiesTable.boekjaar, boekjaar))
+    .orderBy(fieObservatiesTable.id);
+  return rows.map(r => ({
+    type:          r.type,
+    ernst:         r.ernst as "info" | "waarschuwing" | "kritiek",
+    omschrijving:  r.omschrijving,
+    waarde:        r.waarde ?? null,
+    drempelwaarde: r.drempelwaarde ?? null,
+    afwijking_pct: r.afwijkingPct ?? null,
+  }));
 }

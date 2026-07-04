@@ -1,6 +1,7 @@
 // Financial Intelligence Engine (FIE) — centrale financiële rekenmotor FPS Connect.
 // Alle marges, AK-normen en prognoses lopen via deze engine.
 // Fase 1+2: jaarbegroting, AK-posten, capaciteitssnapsots.
+// Fase 3: jaarbedrijfsprognose met persistente observaties.
 import { pgTable, serial, text, integer, real, boolean, timestamp } from "drizzle-orm/pg-core";
 import { werkgeversTable } from "./hrm";
 
@@ -50,3 +51,23 @@ export const fieCapaciteitSnapshotsTable = pgTable("fie_capaciteit_snapshots", {
   bron: text("bron").notNull().default("handmatig"), // handmatig | hrm_berekend
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
 });
+
+// ─── Prognose observaties (Fase 3) ───────────────────────────────────────────
+// Auto-gegenereerd bij GET /fie/prognose/:boekjaar; vervangen bij elke aanroep.
+// type: omzet_risico | omzet_achterstand | omzet_voorsprong | lege_pipeline |
+//        geen_begroting | break_even_risico | ak_onderdekking
+// ernst: info | waarschuwing | kritiek
+export const fieObservatiesTable = pgTable("fie_observaties", {
+  id: serial("id").primaryKey(),
+  boekjaar: integer("boekjaar").notNull(),
+  type: text("type").notNull(),
+  ernst: text("ernst").notNull().default("info"),
+  omschrijving: text("omschrijving").notNull(),
+  waarde: real("waarde"),
+  drempelwaarde: real("drempelwaarde"),
+  afwijkingPct: real("afwijking_pct"),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+  bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+});
+
+export type FieObservatie = typeof fieObservatiesTable.$inferSelect;

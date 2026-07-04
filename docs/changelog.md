@@ -4,25 +4,37 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
-## 2026-07-04 — FIE Fase 3: Continue jaarbedrijfsprognose
+## 2026-07-04 — FIE Fase 3: Continue jaarbedrijfsprognose (volledig)
 
-**Uitvoering:** volledig | **Getest:** typecheck clean (api-server + firevault); healthz HTTP 200; route bereikbaar
+**Uitvoering:** volledig | **Getest:** typecheck clean (api-server + firevault); beide routes bereikbaar (401 zonder auth — correct)
 
-Nieuwe prognoselaag toegevoegd aan de Financial Intelligence Engine (FIE):
+Volledige prognoselaag toegevoegd aan de Financial Intelligence Engine (FIE):
 
-**Backend**
-- `berekenJaarprognose(boekjaar)` in `fie-service.ts`: aggregeert bevestigde offertes (100%), gewogen pipeline (concept 20% / verzonden 40% / bekeken 60%) en OHW-restwaarde van actieve opdrachten
-- Observaties automatisch gegenereerd op basis van coverage-drempelwaarden: < 80% = kritiek, 80–95% = waarschuwing, > 110% = info (voorsprong), lege pipeline = waarschuwing
-- `GET /fie/prognose/:boekjaar` — nieuwe route, bevoegdheid financieel:2
+**DB-schema**
+- `fieObservatiesTable` toegevoegd aan `lib/db/src/schema/fie.ts` (type/ernst/omschrijving/waarde/drempelwaarde/afwijkingPct/boekjaar)
+- Tabel aangemaakt via direct SQL: `fie_observaties` + index op boekjaar
+
+**Backend (fie-service.ts)**
+- `berekenJaarprognose(boekjaar)`: bevestigde offertes (100%) + gewogen pipeline (concept 20% / verzonden 40% / bekeken 60%) + OHW-restwaarde
+- Nieuw: AK-totaal ophalen uit `fieAkPostenTable` → `ak_dekkingsgraad_pct` en `break_even_omzet` berekend
+- Kwartaalverdeling: offertes per Q1–Q4 gesplitst (bevestigd + pipeline_gewogen + prognose per kwartaal)
+- Observaties: omzet_risico / omzet_achterstand / omzet_voorsprong / break_even_risico / ak_onderdekking / lege_pipeline / geen_begroting
+- Persistentie: DELETE + INSERT in `fieObservatiesTable` bij elke prognoseberekening
+- `leesPrognoseObservaties(boekjaar)` — lees gepersisteerde observaties
+- `GET /fie/prognose/:boekjaar` — uitgebreid met nieuwe velden (doel_marge_pct, totaal_ak, ak_dekkingsgraad_pct, break_even_omzet, kwartaal_verdeling)
+- `GET /fie/observaties/:boekjaar` — nieuw endpoint voor gepersisteerde observaties
 
 **OpenAPI + codegen**
-- Nieuwe path `/fie/prognose/{boekjaar}` en schemas `FieJaarprognose` + `FiePrognoseObservatie` toegevoegd
-- Codegen gedraaid; `useGetFiePrognose` + types gegenereerd
+- Schemas `FieJaarprognose` (uitgebreid), `FieKwartaalPrognose`, `FieObservatiesResponse` + `FiePrognoseObservatie`
+- Pad `/fie/observaties/{boekjaar}` toegevoegd
+- Codegen: `useGetFieObservaties`, `FieKwartaalPrognose`, `FieObservatiesResponse` gegenereerd
 
-**Frontend**
-- `PrognoseTab` component toegevoegd aan Bedrijfskompas
-- Vijfde tab "Prognose" naast Overzicht / AK-posten / Capaciteit / Doelmarge
-- Coverage-balk (kleurgecodeerd per drempel), 4 KPI-tiles, observaties-sectie en toelichting winstkansen-weging
+**Frontend (bedrijfskompas.tsx)**
+- `useGetFieObservaties` + `FieKwartaalPrognose` geïmporteerd
+- `KwartaalBalk` component: gestapelde bevestigd/pipeline balk per Q1–Q4 met legenda
+- KPI-tiles uitgebreid van 4 naar 6: + AK-dekkingsgraad + Break-even omzet
+- Gepersisteerde observaties als fallback-sectie bij geen live signalen
+- Toelichting bijgewerkt met AK-dekkingsgraad en break-even uitleg
 
 ---
 

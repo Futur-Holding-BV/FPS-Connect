@@ -199,6 +199,7 @@ import type {
   FieJaarbegrotingInput,
   FieJaarbegrotingUpdate,
   FieJaarprognose,
+  FieObservatiesResponse,
   FinancieelDashboard,
   Foto,
   FotoInput,
@@ -66321,7 +66322,7 @@ export const getGetFiePrognoseUrl = (boekjaar: number,) => {
 }
 
 /**
- * Berekent de live jaarbedrijfsprognose op basis van bevestigde offertes (100%), gewogen pipeline (status-gewogen winkans) en OHW restwaarde van actieve opdrachten. Vergelijkt de prognose met het omzetdoel van de actieve FIE-begroting en geeft observaties terug als de afwijking buiten de drempelwaarden valt.
+ * Berekent de live jaarbedrijfsprognose op basis van bevestigde offertes (100%), gewogen pipeline (status-gewogen winkans) en OHW restwaarde van actieve opdrachten. Vergelijkt de prognose met het omzetdoel en de AK-last van de actieve FIE-begroting en geeft observaties terug als de afwijking buiten de drempelwaarden valt. Observaties worden gepersisteerd in fie_observaties (toegankelijk via /fie/observaties).
  * @summary Continue jaarbedrijfsprognose ophalen voor een boekjaar
  */
 export const getFiePrognose = async (boekjaar: number, options?: RequestInit): Promise<FieJaarprognose> => {
@@ -66378,6 +66379,84 @@ export function useGetFiePrognose<TData = Awaited<ReturnType<typeof getFieProgno
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetFiePrognoseQueryOptions(boekjaar,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetFieObservatiesUrl = (boekjaar: number,) => {
+
+
+
+
+  return `/api/fie/observaties/${boekjaar}`
+}
+
+/**
+ * Geeft de meest recent gepersisteerde prognose-observaties terug. Observaties worden aangemaakt bij elke aanroep van GET /fie/prognose/{boekjaar}.
+ * @summary Gepersisteerde prognose-observaties ophalen voor een boekjaar
+ */
+export const getFieObservaties = async (boekjaar: number, options?: RequestInit): Promise<FieObservatiesResponse> => {
+
+  return customFetch<FieObservatiesResponse>(getGetFieObservatiesUrl(boekjaar),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetFieObservatiesQueryKey = (boekjaar: number,) => {
+    return [
+    `/api/fie/observaties/${boekjaar}`
+    ] as const;
+    }
+
+
+export const getGetFieObservatiesQueryOptions = <TData = Awaited<ReturnType<typeof getFieObservaties>>, TError = ErrorType<void>>(boekjaar: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getFieObservaties>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetFieObservatiesQueryKey(boekjaar);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getFieObservaties>>> = ({ signal }) => getFieObservaties(boekjaar, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: boekjaar !== null && boekjaar !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getFieObservaties>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetFieObservatiesQueryResult = NonNullable<Awaited<ReturnType<typeof getFieObservaties>>>
+export type GetFieObservatiesQueryError = ErrorType<void>
+
+
+/**
+ * @summary Gepersisteerde prognose-observaties ophalen voor een boekjaar
+ */
+
+export function useGetFieObservaties<TData = Awaited<ReturnType<typeof getFieObservaties>>, TError = ErrorType<void>>(
+ boekjaar: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getFieObservaties>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetFieObservatiesQueryOptions(boekjaar,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

@@ -23477,7 +23477,7 @@ export const GetFieContextCalculatieResponse = zod.object({
 
 
 /**
- * Berekent de live jaarbedrijfsprognose op basis van bevestigde offertes (100%), gewogen pipeline (status-gewogen winkans) en OHW restwaarde van actieve opdrachten. Vergelijkt de prognose met het omzetdoel van de actieve FIE-begroting en geeft observaties terug als de afwijking buiten de drempelwaarden valt.
+ * Berekent de live jaarbedrijfsprognose op basis van bevestigde offertes (100%), gewogen pipeline (status-gewogen winkans) en OHW restwaarde van actieve opdrachten. Vergelijkt de prognose met het omzetdoel en de AK-last van de actieve FIE-begroting en geeft observaties terug als de afwijking buiten de drempelwaarden valt. Observaties worden gepersisteerd in fie_observaties (toegankelijk via /fie/observaties).
  * @summary Continue jaarbedrijfsprognose ophalen voor een boekjaar
  */
 export const GetFiePrognoseParams = zod.object({
@@ -23488,6 +23488,8 @@ export const GetFiePrognoseResponse = zod.object({
   "boekjaar": zod.number(),
   "heeft_begroting": zod.boolean(),
   "omzet_doel": zod.number().nullish(),
+  "doel_marge_pct": zod.number().nullish(),
+  "totaal_ak": zod.number(),
   "bevestigde_omzet": zod.number(),
   "aantal_bevestigde_offertes": zod.number(),
   "gewogen_pipeline": zod.number(),
@@ -23499,6 +23501,35 @@ export const GetFiePrognoseResponse = zod.object({
   "prognose_inclusief_ohw": zod.number(),
   "coverage_pct": zod.number().nullish(),
   "gap_tot_doel": zod.number().nullish(),
+  "ak_dekkingsgraad_pct": zod.number().nullish(),
+  "break_even_omzet": zod.number().nullish(),
+  "kwartaal_verdeling": zod.array(zod.object({
+  "kwartaal": zod.number(),
+  "bevestigd": zod.number(),
+  "pipeline_gewogen": zod.number(),
+  "prognose": zod.number()
+})),
+  "observaties": zod.array(zod.object({
+  "type": zod.string(),
+  "ernst": zod.string(),
+  "omschrijving": zod.string(),
+  "waarde": zod.number().nullish(),
+  "drempelwaarde": zod.number().nullish(),
+  "afwijking_pct": zod.number().nullish()
+}))
+})
+
+
+/**
+ * Geeft de meest recent gepersisteerde prognose-observaties terug. Observaties worden aangemaakt bij elke aanroep van GET /fie/prognose/{boekjaar}.
+ * @summary Gepersisteerde prognose-observaties ophalen voor een boekjaar
+ */
+export const GetFieObservatiesParams = zod.object({
+  "boekjaar": zod.coerce.number()
+})
+
+export const GetFieObservatiesResponse = zod.object({
+  "boekjaar": zod.number(),
   "observaties": zod.array(zod.object({
   "type": zod.string(),
   "ernst": zod.string(),

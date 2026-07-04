@@ -18698,8 +18698,9 @@ paths:
       description: >
         Berekent de live jaarbedrijfsprognose op basis van bevestigde offertes (100%),
         gewogen pipeline (status-gewogen winkans) en OHW restwaarde van actieve opdrachten.
-        Vergelijkt de prognose met het omzetdoel van de actieve FIE-begroting en geeft
-        observaties terug als de afwijking buiten de drempelwaarden valt.
+        Vergelijkt de prognose met het omzetdoel en de AK-last van de actieve FIE-begroting
+        en geeft observaties terug als de afwijking buiten de drempelwaarden valt.
+        Observaties worden gepersisteerd in fie_observaties (toegankelijk via /fie/observaties).
       parameters:
         - in: path
           name: boekjaar
@@ -18713,6 +18714,30 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/FieJaarprognose"
+        "400":
+          description: Ongeldig boekjaar
+
+  /fie/observaties/{boekjaar}:
+    get:
+      operationId: getFieObservaties
+      tags: [fie]
+      summary: Gepersisteerde prognose-observaties ophalen voor een boekjaar
+      description: >
+        Geeft de meest recent gepersisteerde prognose-observaties terug.
+        Observaties worden aangemaakt bij elke aanroep van GET /fie/prognose/{boekjaar}.
+      parameters:
+        - in: path
+          name: boekjaar
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FieObservatiesResponse"
         "400":
           description: Ongeldig boekjaar
 
@@ -34107,13 +34132,34 @@ components:
         drempelwaarde:  { type: ["number", "null"] }
         afwijking_pct:  { type: ["number", "null"] }
 
+    FieKwartaalPrognose:
+      type: object
+      required: [kwartaal, bevestigd, pipeline_gewogen, prognose]
+      properties:
+        kwartaal:         { type: integer }
+        bevestigd:        { type: number }
+        pipeline_gewogen: { type: number }
+        prognose:         { type: number }
+
+    FieObservatiesResponse:
+      type: object
+      required: [boekjaar, observaties]
+      properties:
+        boekjaar: { type: integer }
+        observaties:
+          type: array
+          items:
+            $ref: "#/components/schemas/FiePrognoseObservatie"
+
     FieJaarprognose:
       type: object
-      required: [boekjaar, heeft_begroting, bevestigde_omzet, aantal_bevestigde_offertes, gewogen_pipeline, pijplijn_bruto, aantal_pipeline_offertes, ohw_restwaarde, aantal_ohw_opdrachten, prognose_omzet, prognose_inclusief_ohw, observaties]
+      required: [boekjaar, heeft_begroting, totaal_ak, bevestigde_omzet, aantal_bevestigde_offertes, gewogen_pipeline, pijplijn_bruto, aantal_pipeline_offertes, ohw_restwaarde, aantal_ohw_opdrachten, prognose_omzet, prognose_inclusief_ohw, kwartaal_verdeling, observaties]
       properties:
         boekjaar:                   { type: integer }
         heeft_begroting:            { type: boolean }
         omzet_doel:                 { type: ["number", "null"] }
+        doel_marge_pct:             { type: ["number", "null"] }
+        totaal_ak:                  { type: number }
         bevestigde_omzet:           { type: number }
         aantal_bevestigde_offertes: { type: integer }
         gewogen_pipeline:           { type: number }
@@ -34125,6 +34171,12 @@ components:
         prognose_inclusief_ohw:     { type: number }
         coverage_pct:               { type: ["number", "null"] }
         gap_tot_doel:               { type: ["number", "null"] }
+        ak_dekkingsgraad_pct:       { type: ["number", "null"] }
+        break_even_omzet:           { type: ["number", "null"] }
+        kwartaal_verdeling:
+          type: array
+          items:
+            $ref: "#/components/schemas/FieKwartaalPrognose"
         observaties:
           type: array
           items:

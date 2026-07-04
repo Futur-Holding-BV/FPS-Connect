@@ -9,11 +9,13 @@ import {
   useUpdateFieAkPost,
   useDeleteFieAkPost,
   useGetFiePrognose,
+  useGetFieObservaties,
   getListFieBegrotingenQueryKey,
   getGetFieBegrotingQueryKey,
   type FieJaarbegroting,
   type FieAkPost,
   type FieJaarprognose,
+  type FieKwartaalPrognose,
 } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -533,8 +535,26 @@ const OBSERVATIE_KLEUR: Record<string, string> = {
   kritiek:      "border-red-200 bg-red-50 text-red-800",
 };
 
+const KW_LABEL: Record<number, string> = { 1: "Q1 Jan–Mrt", 2: "Q2 Apr–Jun", 3: "Q3 Jul–Sep", 4: "Q4 Okt–Dec" };
+
+function KwartaalBalk({ kw, max }: { kw: FieKwartaalPrognose; max: number }) {
+  const pctB = max > 0 ? Math.min(100, (kw.bevestigd / max) * 100) : 0;
+  const pctP = max > 0 ? Math.min(100, (kw.pipeline_gewogen / max) * 100) : 0;
+  return (
+    <div className="space-y-1">
+      <p className="text-[10px] font-medium text-muted-foreground">{KW_LABEL[kw.kwartaal]}</p>
+      <div className="h-4 rounded bg-muted overflow-hidden flex">
+        <div className="bg-green-500 h-full" style={{ width: `${pctB}%` }} title={`Bevestigd: ${fmt(kw.bevestigd)}`} />
+        <div className="bg-amber-400 h-full" style={{ width: `${pctP}%` }} title={`Pipeline: ${fmt(kw.pipeline_gewogen)}`} />
+      </div>
+      <p className="text-[10px] text-muted-foreground">{fmt(kw.prognose)}</p>
+    </div>
+  );
+}
+
 function PrognoseTab({ boekjaar }: { boekjaar: number }) {
   const { data: p, isLoading } = useGetFiePrognose(boekjaar) as { data: FieJaarprognose | undefined; isLoading: boolean };
+  const { data: obsResp } = useGetFieObservaties(boekjaar) as { data: { boekjaar: number; observaties: FieJaarprognose["observaties"] } | undefined };
 
   if (isLoading) {
     return (
@@ -542,8 +562,8 @@ function PrognoseTab({ boekjaar }: { boekjaar: number }) {
         <CardContent className="p-4 space-y-3">
           <Skeleton className="h-6 w-48" />
           <Skeleton className="h-2 w-full" />
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-2">
-            {[0, 1, 2, 3].map(i => <Skeleton key={i} className="h-20 w-full" />)}
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mt-2">
+            {[0, 1, 2, 3, 4, 5].map(i => <Skeleton key={i} className="h-20 w-full" />)}
           </div>
         </CardContent>
       </Card>
@@ -568,9 +588,14 @@ function PrognoseTab({ boekjaar }: { boekjaar: number }) {
     : coverageNum > 110 ? "bg-blue-500"
     : "bg-green-500";
 
+  const kwVerdeling: FieKwartaalPrognose[] = p.kwartaal_verdeling ?? [];
+  const kwMax = Math.max(...kwVerdeling.map(k => k.prognose), 1);
+
+  const persistenteObservaties = obsResp?.observaties ?? [];
+
   return (
     <div className="space-y-4">
-      {/* Observaties */}
+      {/* Signalen (live, uit prognoseberekening) */}
       {p.observaties.length > 0 && (
         <div className="space-y-2">
           {p.observaties.map((obs, i) => (
@@ -590,7 +615,7 @@ function PrognoseTab({ boekjaar }: { boekjaar: number }) {
         </div>
       )}
 
-      {/* Coverage balk */}
+      {/* Coverage balk (prognose vs. omzetdoel) */}
       {p.heeft_begroting && p.omzet_doel != null && (
         <Card>
           <CardContent className="p-4 space-y-2">
@@ -621,36 +646,99 @@ function PrognoseTab({ boekjaar }: { boekjaar: number }) {
         </Card>
       )}
 
-      {/* KPI-tiles */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      {/* KPI-tiles — 6 stuks in 2×3 grid */}
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
         <div className="rounded-md border p-3">
           <p className="text-[10px] text-muted-foreground">Bevestigd (100%)</p>
-          <p className="text-lg font-semibold mt-0.5">{fmt(p.bevestigde_omzet)}</p>
+          <p className="text-base font-semibold mt-0.5">{fmt(p.bevestigde_omzet)}</p>
           <p className="text-[10px] text-muted-foreground">
             {p.aantal_bevestigde_offertes} offerte{p.aantal_bevestigde_offertes !== 1 ? "s" : ""}
           </p>
         </div>
         <div className="rounded-md border p-3">
           <p className="text-[10px] text-muted-foreground">Pipeline (gewogen)</p>
-          <p className="text-lg font-semibold mt-0.5">{fmt(p.gewogen_pipeline)}</p>
+          <p className="text-base font-semibold mt-0.5">{fmt(p.gewogen_pipeline)}</p>
           <p className="text-[10px] text-muted-foreground">
             {p.aantal_pipeline_offertes} offerte{p.aantal_pipeline_offertes !== 1 ? "s" : ""}
-            {p.pijplijn_bruto > 0 ? ` — bruto ${fmt(p.pijplijn_bruto)}` : ""}
-          </p>
-        </div>
-        <div className="rounded-md border p-3">
-          <p className="text-[10px] text-muted-foreground">OHW restwaarde</p>
-          <p className="text-lg font-semibold mt-0.5">{fmt(p.ohw_restwaarde)}</p>
-          <p className="text-[10px] text-muted-foreground">
-            {p.aantal_ohw_opdrachten} opdracht{p.aantal_ohw_opdrachten !== 1 ? "en" : ""} met voortgang
+            {p.pijplijn_bruto > 0 ? ` · bruto ${fmt(p.pijplijn_bruto)}` : ""}
           </p>
         </div>
         <div className="rounded-md border p-3 bg-primary/5 border-primary/20">
           <p className="text-[10px] text-muted-foreground">Prognose totaal</p>
-          <p className="text-lg font-semibold mt-0.5 text-primary">{fmt(p.prognose_omzet)}</p>
+          <p className="text-base font-semibold mt-0.5 text-primary">{fmt(p.prognose_omzet)}</p>
           <p className="text-[10px] text-muted-foreground">bevestigd + gewogen pipeline</p>
         </div>
+        <div className="rounded-md border p-3">
+          <p className="text-[10px] text-muted-foreground">OHW restwaarde</p>
+          <p className="text-base font-semibold mt-0.5">{fmt(p.ohw_restwaarde)}</p>
+          <p className="text-[10px] text-muted-foreground">
+            {p.aantal_ohw_opdrachten} opdracht{p.aantal_ohw_opdrachten !== 1 ? "en" : ""}
+          </p>
+        </div>
+        <div className="rounded-md border p-3">
+          <p className="text-[10px] text-muted-foreground">AK-dekkingsgraad</p>
+          <p className="text-base font-semibold mt-0.5">
+            {p.ak_dekkingsgraad_pct != null ? `${p.ak_dekkingsgraad_pct.toFixed(1)}%` : "—"}
+          </p>
+          <p className="text-[10px] text-muted-foreground">
+            {p.totaal_ak > 0 ? `AK: ${fmt(p.totaal_ak)}` : "Geen AK-posten"}
+          </p>
+        </div>
+        <div className="rounded-md border p-3">
+          <p className="text-[10px] text-muted-foreground">Break-even omzet</p>
+          <p className="text-base font-semibold mt-0.5">
+            {p.break_even_omzet != null ? fmt(p.break_even_omzet) : "—"}
+          </p>
+          <p className="text-[10px] text-muted-foreground">
+            {p.doel_marge_pct != null ? `Bij doelmarge ${p.doel_marge_pct.toFixed(1)}%` : "Geen doelmarge"}
+          </p>
+        </div>
       </div>
+
+      {/* Kwartaalverdeling */}
+      {kwVerdeling.length === 4 && (
+        <Card>
+          <CardContent className="p-4 space-y-3">
+            <p className="text-xs font-medium">Kwartaalverdeling prognose {boekjaar}</p>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {kwVerdeling.map(kw => (
+                <KwartaalBalk key={kw.kwartaal} kw={kw} max={kwMax} />
+              ))}
+            </div>
+            <div className="flex items-center gap-4 text-[10px] text-muted-foreground pt-1">
+              <span className="flex items-center gap-1">
+                <span className="inline-block w-3 h-2 rounded-sm bg-green-500" />
+                Bevestigd
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="inline-block w-3 h-2 rounded-sm bg-amber-400" />
+                Pipeline (gewogen)
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Historische observaties (gepersisteerd) */}
+      {persistenteObservaties.length > 0 && p.observaties.length === 0 && (
+        <div className="space-y-1">
+          <p className="text-[10px] font-medium text-muted-foreground px-1">Laatste signalen (vorige berekening)</p>
+          {persistenteObservaties.map((obs, i) => (
+            <div
+              key={i}
+              className={cn(
+                "flex items-start gap-2 rounded-md border px-3 py-2.5 text-xs",
+                OBSERVATIE_KLEUR[obs.ernst] ?? "border-border bg-muted/20 text-muted-foreground"
+              )}
+            >
+              {obs.ernst === "kritiek" || obs.ernst === "waarschuwing"
+                ? <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                : <Info className="w-3.5 h-3.5 shrink-0 mt-0.5" />}
+              <p>{obs.omschrijving}</p>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Toelichting */}
       <div className="rounded-md border border-dashed p-3 bg-muted/20">
@@ -661,7 +749,9 @@ function PrognoseTab({ boekjaar }: { boekjaar: number }) {
             <p>
               Bevestigd: offertes <em>akkoord</em>/<em>ondertekend</em> tellen voor 100%.
               Pipeline: <em>concept</em> = 20%, <em>verzonden</em> = 40%, <em>bekeken</em> = 60%.
-              OHW is de restwaarde van actieve opdrachten met een voortgangsindicatie (onderhanden werk).
+              OHW is de restwaarde van actieve opdrachten met een voortgangsindicatie.
+              AK-dekkingsgraad toont of de prognose de totale AK-last dekt.
+              Break-even is de minimale omzet om AK te dekken bij de ingestelde doelmarge.
             </p>
             {p.prognose_inclusief_ohw !== p.prognose_omzet && (
               <p>Prognose inclusief OHW: <strong>{fmt(p.prognose_inclusief_ohw)}</strong></p>
