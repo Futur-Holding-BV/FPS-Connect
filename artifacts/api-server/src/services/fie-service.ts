@@ -890,7 +890,18 @@ export async function berekenEnSlaOpNacalculatie(opdrachtId: number): Promise<vo
 
   // Werktype afleiden uit het dominante spottype van het gekoppelde gebouw.
   // Telt de voorkomens van elk spottype (voorzieningenTable.type) en kiest de meest voorkomende.
-  // Terugval op "algemeen" als het gebouw onbekend is of geen spots heeft.
+  //
+  // Terugval op "algemeen" in drie gevallen:
+  //   1. Opdracht heeft geen gebouwId (onbekend of niet-gekoppeld gebouw).
+  //   2. Het gebouw heeft geen niet-gearchiveerde spots (spotRows.length === 0).
+  //      Dit geldt ook als eerder WÉL spots aanwezig waren maar de laatste spot
+  //      verwijderd of gearchiveerd is — de functie zet het werktype dan altijd
+  //      terug op "algemeen", ongeacht de vorige waarde in fie_nacalculaties.
+  //   3. Geen enkel spottype heeft count > 0 (alle type-velden zijn null).
+  //
+  // Gevolg: na het verwijderen van de laatste spot van een gebouw zal de
+  // spot-DELETE-trigger (triggerNacalculatieHerberekeningVoorGebouw) deze
+  // functie aanroepen, waarna werktype netjes terugvalt op "algemeen".
   let werktype = "algemeen";
   if (opdracht?.gebouwId) {
     const spotRows = await db
