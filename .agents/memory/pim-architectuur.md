@@ -47,6 +47,18 @@ Naast het PIM bestaat een centrale KB voor bedrijfskennis (cross-project, herbru
 
 Afhankelijkheid: #303 loopt parallel aan Fase A (#296). Fase B (#297) en C (#298) moeten #303 klaar hebben — systeem-dependency kon niet worden toegevoegd (PENDING-restrictie); staat als noot in hun beschrijving.
 
+## AI Visual Guidance Framework (#304)
+
+Architectuurontwerp-taak (geen bouw) voor visuele begeleiding van monteurs:
+- Visual Library (`fps_visuals`) met bron-type verplichting (AI mag nooit zonder controleerbare bron)
+- Annotaties altijd aparte laag — originele monteur-foto NOOIT overschreven
+- Animaties = Lottie uit gecontroleerde SVG/productdata, géén AI-generated video
+- Leerlaag (`vge_effectiveness_log`) verbetert visual-keuze, nooit technische eisen
+- Guidance JSON per pim_uitvoering_stap (wat_zie_je_nu, eindresultaat, hoe, aandachtspunten)
+- Extensibiliteitshaken voor BIM/IFC/AR/Revit (interfaces, geen implementatie)
+- Implementatie pas na productie-stabiliteit (na Fase G #302)
+- Oplevering: uitsluitend `docs/ai-visual-guidance-framework.md`
+
 ## Sleutelbestanden
 
 - `docs/ai-opdrachtregisseur-plan.md` — volledig plan met correcties
