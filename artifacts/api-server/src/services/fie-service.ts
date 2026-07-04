@@ -1,6 +1,7 @@
 // Financial Intelligence Engine (FIE) — centrale rekenmotor.
 // Alle margeberekeningen, AK-normderivaties en context-analyses lopen via dit service-module.
-// Routes roepen uitsluitend deze functies aan; geen business-logica in route-handlers.
+// KRITISCH: berekenFieContext gebruikt DEZELFDE berekeningsvolgorde als detail.tsx (frontend),
+// zodat projectomzet, kostprijs en margeadvies identiek zijn aan de getoonde calculatietotalen.
 import { db, fieJaarbegrotingenTable, fieAkPostenTable, modCalcHeadersTable, modCalcRegelsTable } from "@workspace/db";
 import { eq, and, desc } from "drizzle-orm";
 
@@ -14,12 +15,16 @@ export interface FieCalculatieContext {
   boekjaar: number | null;
   doelMargePct: number | null;
   akPerUur: number | null;
+  // Directe kosten (spiegelt rawKosten in detail.tsx)
   totaalArbeid: number;
   totaalMateriaal: number;
   totaalOnderaanneming: number;
   totaalMu: number;
+  // Kostprijs = directe kosten zonder opslagen (= rawKosten in detail.tsx)
   totaalExclOpslag: number;
+  // Projectomzet = aanneemsom na korting (= totaal in detail.tsx)
   totaalInclOpslag: number;
+  // FIE margeadvies
   akBijdrage: number | null;
   verwachteMargeAbs: number | null;
   verwachteMargePct: number | null;
@@ -71,11 +76,13 @@ export async function berekenAkPerUur(boekjaar: number): Promise<number | null> 
 // ─── Live calculatie-context ──────────────────────────────────────────────────
 
 /**
- * Berekent de volledige FIE-context voor een calculatie:
- * - Totalen uit regels (arbeid, materiaal, OA, MU)
- * - Oplagen op basis van header-velden (zelfde logica als berekenTotalen in frontend)
- * - AK-bijdrage via akPerUur × totaalMu (uit actieve begroting of handmatige norm)
- * - Verwachte marge vs. doelmarge → adviesStatus
+ * Berekent de volledige FIE-context voor een calculatie.
+ *
+ * Berekeningsvolgorde (identiek aan detail.tsx):
+ *   matSubtotaal + matOpslag + arbSubtotaal + arbOpslag + OA + bouwplaats + staart = subtotaal
+ *   subtotaal → AK/ABK/risico opslagen → basisWinst → winstOpslag → aanneemsom → korting → totaal
+ *   rawKosten = mat + arb + OA + bouwplaats + staart (GEEN opslagen)
+ *   marge = (totaal - rawKosten - fiNormAk) / totaal
  */
 export async function berekenFieContext(calculatieId: number): Promise<FieCalculatieContext | null> {
   const [header] = await db
@@ -86,55 +93,75 @@ export async function berekenFieContext(calculatieId: number): Promise<FieCalcul
 
   if (!header) return null;
 
-  const regels = await db
+  const alleRegels = await db
     .select()
     .from(modCalcRegelsTable)
     .where(eq(modCalcRegelsTable.calculatieId, calculatieId));
 
-  // ── Totalen uit regels ──────────────────────────────────────────────────────
-  let totaalArbeid = 0;
-  let totaalMateriaal = 0;
-  let totaalOnderaanneming = 0;
-  let totaalMu = 0;
+  // ── Splits regels (zelfde als detail.tsx) ────────────────────────────────────
+  const directeRegels    = alleRegels.filter((r) => !r.isStaartkosten && !r.isBouwplaatskosten);
+  const bouwplaatsRegels = alleRegels.filter((r) => r.isBouwplaatskosten);
+  const staartRegels     = alleRegels.filter((r) => r.isStaartkosten);
 
-  for (const r of regels) {
-    totaalArbeid        += (r.hoeveelheid ?? 0) * (r.muPerEenheid ?? 0) * (r.arbeidsTarief ?? 0);
-    totaalMateriaal     += (r.hoeveelheid ?? 0) * (r.tarief ?? 0);
-    totaalOnderaanneming += (r.onderaannemingBedrag ?? 0);
-    totaalMu            += (r.hoeveelheid ?? 0) * (r.muPerEenheid ?? 0);
+  // Bereken per-regel velden
+  function regelMateriaal(r: typeof alleRegels[0]) {
+    return (r.hoeveelheid ?? 0) * (r.tarief ?? 0);
+  }
+  function regelArbeid(r: typeof alleRegels[0]) {
+    return (r.hoeveelheid ?? 0) * (r.muPerEenheid ?? 0) * (r.arbeidsTarief ?? 0);
+  }
+  function regelTotaal(r: typeof alleRegels[0]) {
+    return regelMateriaal(r) + regelArbeid(r) + (r.onderaannemingBedrag ?? 0);
   }
 
-  totaalArbeid         = rnd2(totaalArbeid);
-  totaalMateriaal      = rnd2(totaalMateriaal);
-  totaalOnderaanneming = rnd2(totaalOnderaanneming);
-  totaalMu             = rnd2(totaalMu);
+  // ── Subtotalen (identiek aan detail.tsx regels 2263-2267) ────────────────────
+  const matSubtotaal        = rnd2(directeRegels.reduce((s, r) => s + regelMateriaal(r), 0));
+  const arbSubtotaal        = rnd2(directeRegels.reduce((s, r) => s + regelArbeid(r), 0));
+  const oaSubtotaal         = rnd2(directeRegels.reduce((s, r) => s + (r.onderaannemingBedrag ?? 0), 0));
+  const bouwplaatsSubtotaal = rnd2(bouwplaatsRegels.reduce((s, r) => s + regelTotaal(r), 0));
+  const staartSubtotaal     = rnd2(staartRegels.reduce((s, r) => s + regelTotaal(r), 0));
 
-  const totaalExclOpslag = rnd2(totaalArbeid + totaalMateriaal + totaalOnderaanneming);
+  // Directe kosten (rawKosten in detail.tsx regel 2290 — GEEN opslagen)
+  const rawKosten = rnd2(matSubtotaal + arbSubtotaal + oaSubtotaal + bouwplaatsSubtotaal + staartSubtotaal);
 
-  // ── Oplagen (spiegelt berekenTotalen in frontend) ───────────────────────────
+  // Totaal MU (alle regels incl. bouwplaats/staart)
+  const totaalMu = rnd2(alleRegels.reduce((s, r) => s + (r.hoeveelheid ?? 0) * (r.muPerEenheid ?? 0), 0));
+
+  // ── Materiaal- en arbeidopslag ────────────────────────────────────────────────
+  const opslagMateriaal = header.opslagMateriaal ?? 0;
+  const opslagArbeid    = header.opslagArbeid ?? 0;
+  const matOpslagBedrag = rnd2(matSubtotaal * opslagMateriaal / 100);
+  const arbOpslagBedrag = rnd2(arbSubtotaal * opslagArbeid / 100);
+
+  // ── Subtotaal (basis voor AK/ABK/risico — identiek aan detail.tsx regel 2280) ─
+  const subtotaal = rnd2(
+    matSubtotaal + matOpslagBedrag +
+    arbSubtotaal + arbOpslagBedrag +
+    oaSubtotaal + bouwplaatsSubtotaal + staartSubtotaal
+  );
+
   const opslagAk     = header.opslagAk ?? 0;
   const opslagAbk    = header.opslagAbk ?? 0;
   const opslagRisico = header.opslagRisico ?? 0;
   const opslagWinst  = header.opslagWinst ?? 0;
-  const opslagMat    = header.opslagMateriaal ?? 0;
-  const opslagArb    = header.opslagArbeid ?? 0;
   const korting      = header.korting ?? 0;
 
-  const matOpslag = rnd2(totaalMateriaal * opslagMat / 100);
-  const arbOpslag = rnd2(totaalArbeid * opslagArb / 100);
-  const naToeslag = rnd2(totaalExclOpslag + matOpslag + arbOpslag);
+  // ── AK/ABK/risico opslagen op subtotaal (identiek aan detail.tsx regels 2281-2283) ─
+  const akBedrag     = header.akIsVast     ? rnd2(opslagAk)     : rnd2(subtotaal * opslagAk / 100);
+  const abkBedrag    = header.abkIsVast    ? rnd2(opslagAbk)    : rnd2(subtotaal * opslagAbk / 100);
+  const risicoBedrag = header.risicoIsVast ? rnd2(opslagRisico) : rnd2(subtotaal * opslagRisico / 100);
 
-  const akBijdrageOpslag  = header.akIsVast  ? (header.opslagAk ?? 0) : rnd2(naToeslag * opslagAk / 100);
-  const abkBijdrage       = header.abkIsVast ? (header.opslagAbk ?? 0) : rnd2(naToeslag * opslagAbk / 100);
-  const risicoBijdrage    = header.risicoIsVast ? (header.opslagRisico ?? 0) : rnd2(naToeslag * opslagRisico / 100);
-  const winstBijdrage     = header.winstIsVast  ? (header.opslagWinst ?? 0) : rnd2(naToeslag * opslagWinst / 100);
+  // ── Winstopslag op basisWinst (identiek aan detail.tsx regels 2284-2285) ─────
+  const basisWinst  = rnd2(subtotaal + akBedrag + abkBedrag + risicoBedrag);
+  const winstBedrag = header.winstIsVast ? rnd2(opslagWinst) : rnd2(basisWinst * opslagWinst / 100);
 
-  const subtotaalMetOpslagen = rnd2(naToeslag + akBijdrageOpslag + abkBijdrage + risicoBijdrage + winstBijdrage);
-  const totaalInclOpslag = rnd2(subtotaalMetOpslagen * (1 - korting / 100));
+  // ── Aanneemsom en korting (identiek aan detail.tsx regels 2286-2288) ─────────
+  const aanneemsom    = rnd2(basisWinst + winstBedrag);
+  const kortingBedrag = rnd2(aanneemsom * korting / 100);
+  const totaal        = rnd2(aanneemsom - kortingBedrag);  // = projectomzet
 
-  // ── Actieve jaarbegroting (huidig jaar, fallback meest recent) ──────────────
+  // ── Actieve jaarbegroting ─────────────────────────────────────────────────────
   const huidigJaar = new Date().getFullYear();
-
   const [activeBegroting] = await db
     .select()
     .from(fieJaarbegrotingenTable)
@@ -153,7 +180,13 @@ export async function berekenFieContext(calculatieId: number): Promise<FieCalcul
   const begroting = activeBegroting ?? fallbackBegroting ?? null;
   const heeftBegroting = !!begroting;
 
-  // ── AK-bijdrage via MU × normtarief ────────────────────────────────────────
+  // ── Effectief AK/uur (handmatig norm || berekend uit AK-posten) ───────────────
+  let effectiefAkPerUur: number | null = begroting?.akPerProductiefUur ?? null;
+  if (!effectiefAkPerUur && begroting) {
+    effectiefAkPerUur = await berekenAkPerUur(begroting.boekjaar);
+  }
+
+  // ── FIE margeadvies ──────────────────────────────────────────────────────────
   let akBijdrageFie: number | null = null;
   let verwachteMargeAbs: number | null = null;
   let verwachteMargePct: number | null = null;
@@ -161,23 +194,18 @@ export async function berekenFieContext(calculatieId: number): Promise<FieCalcul
   let adviesTekst = "Geen actieve jaarbegroting gevonden. Stel een begroting in via Beheer > Bedrijfskompas.";
 
   if (begroting) {
-    // AK per uur: handmatige norm op begroting krijgt prioriteit; daarna berekend uit posten
-    let akPerUur = begroting.akPerProductiefUur ?? null;
-    if (!akPerUur) {
-      akPerUur = await berekenAkPerUur(begroting.boekjaar);
-    }
-
-    if (akPerUur !== null && totaalMu > 0) {
-      akBijdrageFie = rnd2(akPerUur * totaalMu);
+    if (effectiefAkPerUur !== null && totaalMu > 0) {
+      akBijdrageFie = rnd2(effectiefAkPerUur * totaalMu);
     }
 
     const doelMargePct = begroting.doelMargePct;
 
-    if (totaalInclOpslag > 0) {
-      const directeKosten = totaalArbeid + totaalMateriaal + totaalOnderaanneming;
-      const akKosten = akBijdrageFie ?? (totaalInclOpslag * opslagAk / 100);
-      verwachteMargeAbs = rnd2(totaalInclOpslag - directeKosten - akKosten);
-      verwachteMargePct = rnd2((verwachteMargeAbs / totaalInclOpslag) * 100);
+    if (totaal > 0) {
+      // Brutowinst = projectomzet - directe kosten - FIE AK-bijdrage
+      // Gebruik FIE-normatieve AK, niet de calculatie-opslag-AK
+      const akKosten = akBijdrageFie ?? akBedrag;
+      verwachteMargeAbs = rnd2(totaal - rawKosten - akKosten);
+      verwachteMargePct = rnd2((verwachteMargeAbs / totaal) * 100);
 
       const afwijking = verwachteMargePct - doelMargePct;
       if (afwijking >= 2) {
@@ -196,24 +224,18 @@ export async function berekenFieContext(calculatieId: number): Promise<FieCalcul
     }
   }
 
-  // Effectief AK/uur: gebruik de berekende waarde als de handmatige norm niet is ingesteld.
-  let effectiefAkPerUur: number | null = begroting?.akPerProductiefUur ?? null;
-  if (!effectiefAkPerUur && begroting) {
-    effectiefAkPerUur = await berekenAkPerUur(begroting.boekjaar);
-  }
-
   return {
     calculatieId,
     heeftBegroting,
     boekjaar: begroting?.boekjaar ?? null,
     doelMargePct: begroting?.doelMargePct ?? null,
     akPerUur: effectiefAkPerUur,
-    totaalArbeid,
-    totaalMateriaal,
-    totaalOnderaanneming,
+    totaalArbeid: arbSubtotaal,
+    totaalMateriaal: matSubtotaal,
+    totaalOnderaanneming: oaSubtotaal,
     totaalMu,
-    totaalExclOpslag,
-    totaalInclOpslag,
+    totaalExclOpslag: rawKosten,       // = directe kostprijs (geen opslagen)
+    totaalInclOpslag: totaal,          // = projectomzet (aanneemsom na korting)
     akBijdrage: akBijdrageFie,
     verwachteMargeAbs,
     verwachteMargePct,
