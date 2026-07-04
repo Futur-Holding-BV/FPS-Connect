@@ -683,6 +683,7 @@ export * from './orgVerzekering';
 export * from './orgVerzekeringAiSuggestie';
 export * from './orgVerzekeringInput';
 export * from './overnemenSnagstreamSnag201';
+export * from './pimAfwijzenInput';
 export * from './pimAnalyseerInput';
 export * from './pimAnalyseerResultaat';
 export * from './pimFaseInput';

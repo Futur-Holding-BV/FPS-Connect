@@ -3,7 +3,9 @@
 //         PATCH /opdrachten/:id/pim/fase,
 //         POST /opdrachten/:id/pim/analyseer,
 //         POST /opdrachten/:id/pim/advies/bevestig,
-//         POST /opdrachten/:id/pim/advies/rapport
+//         POST /opdrachten/:id/pim/advies/afwijzen,
+//         POST /opdrachten/:id/pim/advies/rapport,
+//         POST /opdrachten/:id/pim/werkvoorbereiding/analyseer
 import { Router } from "express";
 import type { OpenAI } from "openai";
 import {
@@ -20,8 +22,63 @@ import { eq, and } from "drizzle-orm";
 import { requireBevoegdheid, requireBevoegdheidOfKlant } from "../middlewares/auth";
 import { logger } from "../lib/logger";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
+import { execSync } from "child_process";
 import { PIM_AANVRAAG_ANALYSE_PROMPT, PIM_WERKVOORBEREIDING_PROMPT } from "../lib/aiPrompts";
+import { kbService, KB_BESLISSTRUCTUUR } from "../lib/kbService";
 import { ObjectStorageService } from "../lib/objectStorage";
+
+// Chromium voor PDF-generatie (zelfde aanpak als offertes.ts)
+let CHROMIUM_PAD: string | null = null;
+try {
+  const pad = execSync("which chromium 2>/dev/null").toString().trim();
+  if (pad) CHROMIUM_PAD = pad;
+} catch { /* niet gevonden */ }
+
+/** Bouw een eenvoudige maar volledige HTML-representatie van de advies_context. */
+function bouwAdviesRapportHtml(ctx: Record<string, unknown>, opdrachttitel: string, datum: string): string {
+  const sectie = (titel: string, inhoud: string) =>
+    inhoud ? `<section><h3>${titel}</h3>${inhoud}</section>` : "";
+  const lijst = (items: unknown) =>
+    Array.isArray(items) && items.length > 0
+      ? `<ul>${(items as string[]).map((i) => `<li>${i}</li>`).join("")}</ul>`
+      : "";
+  const aanbeveling = String(ctx.aanbeveling ?? "").replace(/_/g, " ");
+  const toelichting = String(ctx.aanbeveling_toelichting ?? "");
+  return `<!DOCTYPE html>
+<html lang="nl"><head><meta charset="utf-8">
+<title>PIM Adviesrapport</title>
+<style>
+  body{font-family:Arial,sans-serif;font-size:11pt;margin:40px;color:#1a1a1a}
+  h1{font-size:16pt;margin-bottom:4px}
+  h2{font-size:13pt;border-bottom:1px solid #ccc;padding-bottom:4px;margin-top:24px}
+  h3{font-size:11pt;margin-bottom:4px;color:#333}
+  section{margin-bottom:16px}
+  ul{margin:4px 0;padding-left:20px}
+  li{margin:2px 0}
+  .meta{color:#666;font-size:9pt;margin-bottom:20px}
+  .aanbeveling{background:#f0f7ff;border:1px solid #b3d4f0;border-radius:4px;padding:10px 14px;margin-bottom:16px}
+  .badge{display:inline-block;background:#e2e8f0;border-radius:3px;padding:2px 8px;font-size:9pt;font-weight:bold;margin-right:8px}
+  .vop{background:#fff3cd;border:1px solid #ffc107;border-radius:4px;padding:8px 12px;margin-top:8px;font-weight:bold}
+</style></head><body>
+<h1>PIM Adviesrapport</h1>
+<div class="meta">Opdracht: <strong>${opdrachttitel}</strong> &nbsp;|&nbsp; Datum: ${datum} &nbsp;|&nbsp; Gegenereerd door FPS Connect AI Regisseur</div>
+<h2>Advies</h2>
+<div class="aanbeveling">
+  <span class="badge">${aanbeveling || "—"}</span>
+  <span class="badge">betrouwbaarheid: ${String(ctx.betrouwbaarheid ?? "—")}</span>
+  ${toelichting ? `<p style="margin:8px 0 0">${toelichting}</p>` : ""}
+</div>
+${ctx.vop_aandachtspunt === true ? '<div class="vop">VOP-aandachtspunt: ja — inzet VOP-gecertificeerd monteur vereist</div>' : ""}
+${sectie("Aangevraagde werkzaamheden", lijst(ctx.werkzaamheden))}
+${sectie("Herkende locaties", lijst(ctx.locaties))}
+${sectie("Risico&#39;s &amp; aandachtspunten", lijst(ctx.risicos))}
+${sectie("Aannames", lijst(ctx.aannames))}
+${sectie("Ontbrekende informatie", lijst(ctx.ontbrekende_info))}
+${sectie("Open vragen voor opdrachtgever", lijst(ctx.vragen))}
+${sectie("Benodigde competenties", lijst(ctx.competenties))}
+${sectie("Relevante normen &amp; regelgeving", lijst(ctx.normen))}
+</body></html>`;
+}
 
 const router = Router();
 const lezen = requireBevoegdheidOfKlant("offertes", 1);
@@ -340,8 +397,19 @@ router.post("/opdrachten/:id/pim/analyseer", schrijven, async (req, res): Promis
       userContent.push({ type: "image_url", image_url: { url } });
     }
 
-    // 6. AI-aanroep (vision-slot = gpt-5)
-    // TODO #303: kbService.assembleKbContext(opdrachtId) hier toevoegen als KB-module beschikbaar is.
+    // 6. KB-context (Task #303 stub — retourneert null totdat KB-module beschikbaar is)
+    // contextTekst en userContent zijn al opgebouwd; kbContext wordt als extra tekststuk toegevoegd.
+    const kbContext = await kbService.assembleKbContext(opdrachtId);
+    const kbExtras = [
+      kbContext ? `=== KENNISBANK CONTEXT ===\n${kbContext}` : "",
+      KB_BESLISSTRUCTUUR ? `=== BESLISSTRUCTUUR ===\n${KB_BESLISSTRUCTUUR}` : "",
+    ].filter(Boolean).join("\n\n");
+    if (kbExtras) {
+      const eersteTextPart = userContent[0] as { type: "text"; text: string };
+      userContent[0] = { type: "text", text: `${eersteTextPart.text}\n\n${kbExtras}` };
+    }
+
+    // 7. AI-aanroep (vision-slot = gpt-5)
     const resultaat = await aiGateway.chat(
       "vision",
       {
@@ -480,8 +548,8 @@ router.post("/opdrachten/:id/pim/advies/bevestig", schrijven, async (req, res): 
 });
 
 // ── POST /opdrachten/:id/pim/advies/rapport ───────────────────────────────────
-// Maakt een DMS-document aan met de adviescontext en koppelt het aan de opdracht.
-// PDF-rendering via DDS (puppeteer) volgt zodra de PIM-printpagina gebouwd is.
+// Genereert een PDF via DDS-engine (puppeteer + page.setContent) en koppelt
+// het als DMS-document aan de opdracht.
 router.post("/opdrachten/:id/pim/advies/rapport", schrijven, async (req, res): Promise<void> => {
   const opdrachtId = parseInt(String(req.params.id), 10);
   if (isNaN(opdrachtId)) { res.status(400).json({ error: "Ongeldig id" }); return; }
@@ -500,7 +568,6 @@ router.post("/opdrachten/:id/pim/advies/rapport", schrijven, async (req, res): P
       .where(eq(pimModellenTable.opdrachtId, opdrachtId));
 
     // Minimaal fase "advies" vereist (AI-analyse moet hebben gedraaid).
-    // Klanten zijn al volledig geblokkeerd via de "schrijven" middleware.
     const rapportFaseIdx = FASE_INDEX[opdracht.aiFase ?? ""] ?? -1;
     const adviesIdx = FASE_INDEX["advies"]!;
     if (rapportFaseIdx < adviesIdx) {
@@ -518,22 +585,51 @@ router.post("/opdrachten/:id/pim/advies/rapport", schrijven, async (req, res): P
     const gebruikerId = req.session.userId!;
     const rapportNaam = `PIM Adviesrapport — ${opdracht.titel}`;
     const vandaag = new Date().toISOString().slice(0, 10);
+    const adviesCtx = pim.adviesContext as Record<string, unknown>;
 
+    // ── PDF genereren via DDS (puppeteer + page.setContent) ──────────────────
+    let pdfObjectPad: string | null = null;
+    if (CHROMIUM_PAD) {
+      try {
+        const puppeteer = await import("puppeteer-core");
+        const browser = await puppeteer.launch({
+          executablePath: CHROMIUM_PAD,
+          args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-gpu"],
+        });
+        try {
+          const page = await browser.newPage();
+          const htmlContent = bouwAdviesRapportHtml(adviesCtx, opdracht.titel, vandaag);
+          await page.setContent(htmlContent, { waitUntil: "load", timeout: 30000 });
+          const pdfBuffer = await page.pdf({ format: "A4", printBackground: true, margin: { top: "20mm", bottom: "20mm", left: "15mm", right: "15mm" } });
+          await browser.close();
+
+          const svc = new ObjectStorageService();
+          const sleutelnaam = `pim/adviesrapporten/${opdrachtId}_${Date.now()}.pdf`;
+          pdfObjectPad = await svc.uploadBestand(sleutelnaam, Buffer.from(pdfBuffer), "application/pdf");
+        } catch (pdfErr) {
+          await browser.close().catch(() => undefined);
+          logger.warn({ err: pdfErr }, "PIM PDF generatie mislukt, doorgaan zonder PDF");
+        }
+      } catch (puppeteerErr) {
+        logger.warn({ err: puppeteerErr }, "Puppeteer niet beschikbaar, doorgaan zonder PDF");
+      }
+    }
+
+    // ── DMS-document aanmaken en koppelen ────────────────────────────────────
     const { document: doc } = await db.transaction(async (tx) => {
-      // Maak DMS-document aan
       const [document] = await tx
         .insert(documentenTable)
         .values({
           naam: rapportNaam,
           documenttype: "adviesrapport",
           datum: vandaag,
+          ...(pdfObjectPad ? { pdfUrl: pdfObjectPad } : {}),
           aiGeanalyseerd: true,
-          aiMetadata: pim.adviesContext as Record<string, unknown>,
+          aiMetadata: adviesCtx,
           bijgewerktOp: new Date(),
         })
         .returning();
 
-      // Koppel aan opdracht via polymorf koppelmodel
       await tx
         .insert(documentKoppelingenTable)
         .values({
@@ -554,16 +650,69 @@ router.post("/opdrachten/:id/pim/advies/rapport", schrijven, async (req, res): P
         gebruikerId,
         gebruikerNaam: gebruiker?.naam ?? null,
         actie: "geupload",
-        detail: `PIM Adviesrapport aangemaakt voor opdracht: ${opdracht.titel}`,
+        detail: `PIM Adviesrapport aangemaakt voor opdracht: ${opdracht.titel}${pdfObjectPad ? " (incl. PDF)" : " (zonder PDF — chromium niet beschikbaar)"}`,
       });
 
       return { document };
     });
 
-    res.status(201).json({ opdracht_id: opdrachtId, document_id: doc.id });
+    res.status(201).json({ opdracht_id: opdrachtId, document_id: doc.id, pdf_gegenereerd: pdfObjectPad !== null });
   } catch (err) {
     logger.error({ err }, "pimAdviesRapport fout");
     res.status(500).json({ error: "Serverfout bij aanmaken rapport" });
+  }
+});
+
+// ── POST /opdrachten/:id/pim/advies/afwijzen ──────────────────────────────────
+// Beheerder wijst de AI-adviesanalyse af; reset ai_fase → "nieuw" zodat de
+// analyse opnieuw kan worden gestart na aanvulling.
+router.post("/opdrachten/:id/pim/advies/afwijzen", schrijven, async (req, res): Promise<void> => {
+  const opdrachtId = parseInt(String(req.params.id), 10);
+  if (isNaN(opdrachtId)) { res.status(400).json({ error: "Ongeldig id" }); return; }
+
+  try {
+    const reden: string = typeof req.body?.reden === "string" ? req.body.reden.slice(0, 1000) : "";
+
+    const [opdracht] = await db
+      .select({ id: opdrachtenTable.id, titel: opdrachtenTable.titel, aiFase: opdrachtenTable.aiFase })
+      .from(opdrachtenTable)
+      .where(eq(opdrachtenTable.id, opdrachtId));
+
+    if (!opdracht) { res.status(404).json({ error: "Opdracht niet gevonden" }); return; }
+
+    // Afwijzen is alleen zinvol in fase "advies"
+    if (opdracht.aiFase !== "advies") {
+      res.status(409).json({
+        error: `Afwijzen is alleen mogelijk in fase 'advies' (huidige fase: '${opdracht.aiFase ?? "nieuw"}').`,
+      });
+      return;
+    }
+
+    const gebruikerId = req.session.userId!;
+
+    await db.transaction(async (tx) => {
+      await tx
+        .update(opdrachtenTable)
+        .set({ aiFase: "nieuw", bijgewerktOp: new Date() })
+        .where(eq(opdrachtenTable.id, opdrachtId));
+
+      const [gebruiker] = await tx
+        .select({ naam: gebruikersTable.naam })
+        .from(gebruikersTable)
+        .where(eq(gebruikersTable.id, gebruikerId));
+
+      await tx.insert(documentLogboekTable).values({
+        gebruikerId,
+        gebruikerNaam: gebruiker?.naam ?? null,
+        actie: "pim_advies_afgewezen",
+        detail: `Beheerder heeft AI-adviesanalyse afgewezen voor opdracht: ${opdracht.titel}${reden ? ` — reden: ${reden}` : ""}`,
+      });
+    });
+
+    res.json({ opdracht_id: opdrachtId, ai_fase: "nieuw" });
+  } catch (err) {
+    logger.error({ err }, "pimAdviesAfwijzen fout");
+    res.status(500).json({ error: "Serverfout" });
   }
 });
 

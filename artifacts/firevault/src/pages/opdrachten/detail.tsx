@@ -21,6 +21,7 @@ import {
   useAnalyseerPim,
   useAnalyseerPimWerkvoorbereiding,
   useBevestigPimAdvies,
+  useAfwijzenPimAdvies,
   useMaakPimAdviesRapport,
   getGetPimQueryKey,
 } from "@workspace/api-client-react";
@@ -412,6 +413,17 @@ export default function OpdrachtDetailPagina() {
         toast({ title: "Advies goedgekeurd — fase: advies_gereed" });
       },
       onError: () => toast({ title: "Goedkeuren mislukt", variant: "destructive" }),
+    },
+  });
+
+  const pimAfwijzenMut = useAfwijzenPimAdvies({
+    mutation: {
+      onSuccess: () => {
+        qc.invalidateQueries({ queryKey: getGetPimQueryKey(opdrachtId) });
+        qc.invalidateQueries({ queryKey: getGetOpdrachtQueryKey(opdrachtId) });
+        toast({ title: "Advies afgewezen — fase terug naar nieuw" });
+      },
+      onError: () => toast({ title: "Afwijzen mislukt", variant: "destructive" }),
     },
   });
 
@@ -1095,16 +1107,28 @@ export default function OpdrachtDetailPagina() {
                       </Button>
 
                       {((opdracht as unknown as Record<string, unknown>)?.ai_fase as string) === "advies" && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="border-emerald-300 text-emerald-700 hover:bg-emerald-50"
-                          disabled={pimBevestigMut.isPending}
-                          onClick={() => pimBevestigMut.mutate({ id: opdrachtId })}
-                        >
-                          <FileCheck2 className="h-3.5 w-3.5 mr-1.5" />
-                          {pimBevestigMut.isPending ? "Bezig..." : "Advies goedkeuren"}
-                        </Button>
+                        <>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+                            disabled={pimBevestigMut.isPending || pimAfwijzenMut.isPending}
+                            onClick={() => pimBevestigMut.mutate({ id: opdrachtId })}
+                          >
+                            <FileCheck2 className="h-3.5 w-3.5 mr-1.5" />
+                            {pimBevestigMut.isPending ? "Bezig..." : "Advies goedkeuren"}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="border-destructive text-destructive hover:bg-destructive/10"
+                            disabled={pimAfwijzenMut.isPending || pimBevestigMut.isPending}
+                            onClick={() => pimAfwijzenMut.mutate({ id: opdrachtId })}
+                          >
+                            <FileCheck2 className="h-3.5 w-3.5 mr-1.5" />
+                            {pimAfwijzenMut.isPending ? "Bezig..." : "Advies afwijzen"}
+                          </Button>
+                        </>
                       )}
 
                       {((opdracht as unknown as Record<string, unknown>)?.ai_fase as string) === "advies_gereed" && (

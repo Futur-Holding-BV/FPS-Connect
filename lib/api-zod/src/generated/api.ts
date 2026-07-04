@@ -12512,6 +12512,27 @@ export const MaakPimAdviesRapportResponse = zod.void()
 
 
 /**
+ * @summary Wijst de AI-adviesanalyse af en reset de fase naar 'nieuw'
+ */
+export const AfwijzenPimAdviesParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const afwijzenPimAdviesBodyRedenMax = 1000;
+
+
+
+export const AfwijzenPimAdviesBody = zod.object({
+  "reden": zod.string().max(afwijzenPimAdviesBodyRedenMax).optional().describe('Optionele toelichting bij de afwijzing (max 1000 tekens)')
+})
+
+export const AfwijzenPimAdviesResponse = zod.object({
+  "opdracht_id": zod.number(),
+  "ai_fase": zod.string()
+})
+
+
+/**
  * @summary AI-werkvoorbereiding op basis van advies_context en bestaande spots in het gebouw
  */
 export const AnalyseerPimWerkvoorbereidingParams = zod.object({

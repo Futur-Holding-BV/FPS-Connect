@@ -693,3 +693,33 @@ Gateway bevroren als stabiele infrastructuur na bovenstaande correcties. Alle dr
   - Opmerking over documenten bijvoegen per e-mail (upload-koppeling volgt)
 - `pages/one/dashboard.tsx`: "Adviescentrum"-module-kaart toegevoegd (Sparkles-icoon)
 - `App.tsx`: route `/one/adviescentrum` geregistreerd
+
+## Task #297 — PIM Fase B code review fixes (2026-07-04)
+
+Vijf kritieke code-review-bevindingen opgelost:
+
+**1. kbService stub** (`artifacts/api-server/src/lib/kbService.ts`)
+- Aangemaakt met `assembleKbContext()` (retourneert `null` totdat Task #303 KB-module gemerged is) en `KB_BESLISSTRUCTUUR` constante
+- Import-contract is nu geldig; PIM-AI-aanroepen benoemen het kennisbank-slot al correct
+
+**2. kbContext integratie in analyseer-endpoint**
+- `kbService.assembleKbContext(opdrachtId)` en `KB_BESLISSTRUCTUUR` worden opgehaald ná opbouw van `userContent`
+- Context wordt als extra tekstdeel toegevoegd aan `userContent[0]` (niet aan reeds gejoinde `contextDelen`)
+
+**3. PDF-generatie in rapport-endpoint** (`POST /opdrachten/:id/pim/advies/rapport`)
+- Puppeteer `page.setContent()` met HTML-template (`bouwAdviesRapportHtml`) — geen aparte printpagina nodig
+- PDF opgeslagen in object storage via `uploadBestand()` (`pim/adviesrapporten/<id>_<ts>.pdf`)
+- DMS-document bevat `pdf_url` voor de opgeslagen PDF
+- Graceful fallback: als chromium niet beschikbaar is, wordt DMS-document toch aangemaakt (zonder PDF)
+
+**4. Afwijzen** (`POST /opdrachten/:id/pim/advies/afwijzen`)
+- Nieuw endpoint: reset `ai_fase → "nieuw"`, logt in `document_logboek`
+- OpenAPI schema `PimAfwijzenInput` (optionele `reden`) + pad toegevoegd
+- Codegen uitgevoerd: `useAfwijzenPimAdvies` hook gegenereerd
+- Connect AI Regisseur-tab: "Advies afwijzen" knop naast "Advies goedkeuren" (alleen zichtbaar in fase `advies`)
+
+**5. FPS One adviescentrum** (`artifacts/firevault/src/pages/one/adviescentrum.tsx`)
+- Uitgebreid van 2-stap naar 4-stap flow: formulier → documenten → analyseren → resultaat
+- Stap "Documenten": bestandspicker (PDF/afbeelding), presigned upload-URL (`useRequestUploadUrl`), DMS-registratie (`useCreateDocument`)
+- "Analyse starten" knop roept `useAnalyseerPim` aan
+- AI-resultaatweergave: aanbeveling, werkzaamheden, locaties, risico's, ontbrekende info, vragen, VOP-aandachtspunt

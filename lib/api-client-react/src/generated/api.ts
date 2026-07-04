@@ -551,6 +551,7 @@ import type {
   OrgVerzekering,
   OrgVerzekeringInput,
   OvernemenSnagstreamSnag201,
+  PimAfwijzenInput,
   PimAnalyseerInput,
   PimAnalyseerResultaat,
   PimFaseInput,
@@ -36118,6 +36119,77 @@ export const useMaakPimAdviesRapport = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getMaakPimAdviesRapportMutationOptions(options));
+    }
+
+export const getAfwijzenPimAdviesUrl = (id: number,) => {
+
+
+
+
+  return `/api/opdrachten/${id}/pim/advies/afwijzen`
+}
+
+/**
+ * @summary Wijst de AI-adviesanalyse af en reset de fase naar 'nieuw'
+ */
+export const afwijzenPimAdvies = async (id: number,
+    pimAfwijzenInput?: PimAfwijzenInput, options?: RequestInit): Promise<PimFaseResultaat> => {
+
+  return customFetch<PimFaseResultaat>(getAfwijzenPimAdviesUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(pimAfwijzenInput)
+  }
+);}
+
+
+
+
+export const getAfwijzenPimAdviesMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof afwijzenPimAdvies>>, TError,{id: number;data?: BodyType<PimAfwijzenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof afwijzenPimAdvies>>, TError,{id: number;data?: BodyType<PimAfwijzenInput>}, TContext> => {
+
+const mutationKey = ['afwijzenPimAdvies'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof afwijzenPimAdvies>>, {id: number;data?: BodyType<PimAfwijzenInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  afwijzenPimAdvies(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AfwijzenPimAdviesMutationResult = NonNullable<Awaited<ReturnType<typeof afwijzenPimAdvies>>>
+    export type AfwijzenPimAdviesMutationBody = BodyType<PimAfwijzenInput> | undefined
+    export type AfwijzenPimAdviesMutationError = ErrorType<void>
+
+    /**
+ * @summary Wijst de AI-adviesanalyse af en reset de fase naar 'nieuw'
+ */
+export const useAfwijzenPimAdvies = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof afwijzenPimAdvies>>, TError,{id: number;data?: BodyType<PimAfwijzenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof afwijzenPimAdvies>>,
+        TError,
+        {id: number;data?: BodyType<PimAfwijzenInput>},
+        TContext
+      > => {
+      return useMutation(getAfwijzenPimAdviesMutationOptions(options));
     }
 
 export const getAnalyseerPimWerkvoorbereidingUrl = (id: number,) => {

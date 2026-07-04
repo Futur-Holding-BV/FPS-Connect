@@ -5098,6 +5098,14 @@ export interface PimFaseResultaat {
   ai_fase: string;
 }
 
+export interface PimAfwijzenInput {
+  /**
+     * Optionele toelichting bij de afwijzing (max 1000 tekens)
+     * @maxLength 1000
+     */
+  reden?: string;
+}
+
 export interface PimWerkvoorbereidingInput {
   /** Aanvullende instructies of context voor de werkvoorbereiding (max 4000 tekens) */
   vrije_tekst?: string;
