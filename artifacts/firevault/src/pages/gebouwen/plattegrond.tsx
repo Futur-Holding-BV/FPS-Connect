@@ -963,6 +963,14 @@ export default function Plattegrond() {
     };
   }, [gebruiker, id, verdiepingId]);
 
+  function invalideerNacalculatie() {
+    void queryClient.invalidateQueries({
+      predicate: (query) =>
+        typeof query.queryKey[0] === "string" &&
+        (query.queryKey[0] as string).endsWith("/nacalculatie"),
+    });
+  }
+
   const plaatsSerieSpot = useCallback(async (x: number, y: number) => {
     const sjabloon = serieFormRef.current;
     if (!sjabloon.type) return;
@@ -974,6 +982,7 @@ export default function Plattegrond() {
       setSerieTeller((n) => n + 1);
       refetch();
       refetchClusters();
+      invalideerNacalculatie();
     } catch {
       /* fout wordt door de mutatie-status getoond; modus blijft actief */
     }
@@ -1016,6 +1025,7 @@ export default function Plattegrond() {
     if (geplaatst > 0) {
       refetch();
       refetchClusters();
+      invalideerNacalculatie();
     }
   }, [maakVoorziening, bouwSerieSpotData, refetch, refetchClusters, W, H]);
 
@@ -1076,6 +1086,7 @@ export default function Plattegrond() {
     if (geplaatst > 0) {
       refetch();
       refetchClusters();
+      invalideerNacalculatie();
     }
   }, [maakVoorziening, bouwSerieSpotData, rasterPosities, refetch, refetchClusters]);
 
@@ -1351,6 +1362,7 @@ export default function Plattegrond() {
     wandPlafondHandmatigRef.current = false;
     refetch();
     refetchSpotnummer();
+    invalideerNacalculatie();
   }
 
   function sluitDialoog(open: boolean) {
@@ -2899,6 +2911,7 @@ function GearchiveerdSectie({
   onWijziging: () => void;
 }) {
   const [open, setOpen] = useState(false);
+  const queryClient = useQueryClient();
   const { data, refetch } = useListVoorzieningen({
     gebouw_id: gebouwId,
     verdieping_id: verdiepingId,
@@ -2912,6 +2925,11 @@ function GearchiveerdSectie({
     await archiveer.mutateAsync({ id: spotId, data: { gearchiveerd: false } });
     refetch();
     onWijziging();
+    void queryClient.invalidateQueries({
+      predicate: (query) =>
+        typeof query.queryKey[0] === "string" &&
+        (query.queryKey[0] as string).endsWith("/nacalculatie"),
+    });
   }
 
   return (
