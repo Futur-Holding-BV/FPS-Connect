@@ -18,6 +18,14 @@ Werktype in nacalculaties wordt nu direct bijgewerkt wanneer een spot wordt aang
 
 Gewijzigd: `artifacts/api-server/src/services/fie-service.ts`, `artifacts/api-server/src/routes/voorzieningen.ts`
 
+## 2026-07-04 — Bedrijfskompas: verouderd-badge op Leereffecten-tabblad (volledig)
+
+**Uitvoering:** volledig | **Getest:** typecheck firevault clean op bedrijfskompas.tsx
+
+`BegrotingDetail` roept nu `useGetFieNacalculatiesVerouderdAantal` aan zodat het aantal verouderde nacalculaties beschikbaar is op tabbladniveau. Als het aantal > 0 is, verschijnt er een rode badge naast de tekst "Leereffecten" in de tabstrip — zichtbaar ongeacht welk tabblad actief is. De badge verdwijnt vanzelf zodra de gebruiker "Werktype bijwerken" klikt (refetch via de bestaande hook in `LeereffectenBeheerTab`).
+
+Gewijzigd: `artifacts/firevault/src/pages/beheer/bedrijfskompas.tsx`
+
 ## 2026-07-04 — Nacalculatie: werktype zichtbaar op detailpagina (volledig)
 
 **Uitvoering:** volledig | **Getest:** typecheck firevault clean; codegen clean

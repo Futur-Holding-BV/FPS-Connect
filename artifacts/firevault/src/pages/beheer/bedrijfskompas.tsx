@@ -831,6 +831,8 @@ function BegrotingDetail({ begrotingId, onTerug }: { begrotingId: number; onTeru
   const [verwijderenPost, setVerwijderenPost] = useState<FieAkPost | undefined>();
   const { heeftNiveau } = useBevoegdheid();
   const heeftFinancieelSchrijven = heeftNiveau("financieel", 2);
+  const { data: verouderdAantalData } = useGetFieNacalculatiesVerouderdAantal();
+  const aantalVerouderdNacalculaties = verouderdAantalData?.aantal ?? 0;
 
   const { data: detail, isLoading } = useGetFieBegroting(begrotingId);
 
@@ -918,7 +920,14 @@ function BegrotingDetail({ begrotingId, onTerug }: { begrotingId: number; onTeru
           <TabsTrigger value="capaciteit">Capaciteit</TabsTrigger>
           <TabsTrigger value="doelmarge">Doelmarge</TabsTrigger>
           <TabsTrigger value="prognose">Prognose</TabsTrigger>
-          <TabsTrigger value="leereffecten">Leereffecten</TabsTrigger>
+          <TabsTrigger value="leereffecten" className="gap-1.5">
+            Leereffecten
+            {aantalVerouderdNacalculaties > 0 && (
+              <span className="inline-flex items-center justify-center rounded-full bg-red-600 text-white text-[10px] font-semibold leading-none min-w-[16px] h-4 px-1">
+                {aantalVerouderdNacalculaties}
+              </span>
+            )}
+          </TabsTrigger>
         </TabsList>
 
         {/* Tab: Overzicht (doelmarge-toelichting + verdeelsleutel) */}
