@@ -34475,6 +34475,9 @@ components:
         advies_status:             { type: string }
         advies_tekst:              { type: string }
         opslag_ak_pct:             { type: number }
+        correctie_factor:          { type: ["number", "null"], description: "Toegepaste leereffect-correctiefactor (null als geen leermoment of factor = 1.0)" }
+        gecorrigeerde_arbeid:      { type: ["number", "null"], description: "Gecorrigeerde arbeidsindicator na toepassing van de correctiefactor" }
+        gecorrigeerde_materiaal:   { type: ["number", "null"], description: "Gecorrigeerde materiaalindicator na toepassing van de correctiefactor" }
 
     FiePrognoseObservatie:
       type: object

@@ -476,6 +476,9 @@ router.get("/fie/context/calculatie/:id", calcLezen, async (req: Request, res: R
     advies_status: context.adviesStatus,
     advies_tekst: context.adviesTekst,
     opslag_ak_pct: context.opslagAkPct,
+    correctie_factor: context.correctieFactor,
+    gecorrigeerde_arbeid: context.gecorrigeerdeArbeid,
+    gecorrigeerde_materiaal: context.gecorrigeerdeMateriaal,
   });
 });
 

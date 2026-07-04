@@ -46,6 +46,10 @@ export interface FieCalculatieContext {
   adviesStatus: AdviesStatus;
   adviesTekst: string;
   opslagAkPct: number;
+  // Leereffect-correctie (null als geen leermoment of factor = 1.0)
+  correctieFactor: number | null;
+  gecorrigeerdeArbeid: number | null;
+  gecorrigeerdeMateriaal: number | null;
 }
 
 // ─── Hulpfuncties ─────────────────────────────────────────────────────────────
@@ -249,6 +253,10 @@ export async function berekenFieContext(calculatieId: number): Promise<FieCalcul
 
   // Leermoment-hint: voeg historische terugkoppeling toe aan de adviesTekst
   // Werktype afgeleid van de gekoppelde opdracht (vast/regie/overig); fallback op "algemeen"
+  let toegepasteCorrectieFactor: number | null = null;
+  let gecorrigeerdeArbeid: number | null = null;
+  let gecorrigeerdeMateriaal: number | null = null;
+
   if (adviesStatus !== "leeg" && adviesStatus !== "geen_begroting") {
     const [gekoppeldeOpdracht] = await db.select({ type: opdrachtenTable.type })
       .from(opdrachtenTable)
@@ -260,22 +268,39 @@ export async function berekenFieContext(calculatieId: number): Promise<FieCalcul
       afwijkingPctArbeid:    fieLeerMomentenTable.afwijkingPctArbeid,
       afwijkingPctMateriaal: fieLeerMomentenTable.afwijkingPctMateriaal,
       gebaseerdOpNProjecten: fieLeerMomentenTable.gebaseerdOpNProjecten,
+      correctieFactor:       fieLeerMomentenTable.correctieFactor,
     }).from(fieLeerMomentenTable)
       .where(eq(fieLeerMomentenTable.werktype, hintWerktype))
       .limit(1);
 
-    if (leermoment && leermoment.gebaseerdOpNProjecten >= 2) {
-      const hints: string[] = [];
-      if (Math.abs(leermoment.afwijkingPctArbeid) > 5) {
-        const richting = leermoment.afwijkingPctArbeid > 0 ? "meer" : "minder";
-        hints.push(`Historisch wordt gemiddeld ${Math.abs(leermoment.afwijkingPctArbeid).toFixed(0)}% ${richting} arbeid gerealiseerd dan begroot`);
+    if (leermoment) {
+      // Historische hints: alleen bij voldoende projecten (>= 2) voor statistische betrouwbaarheid
+      if (leermoment.gebaseerdOpNProjecten >= 2) {
+        const hints: string[] = [];
+        if (Math.abs(leermoment.afwijkingPctArbeid) > 5) {
+          const richting = leermoment.afwijkingPctArbeid > 0 ? "meer" : "minder";
+          hints.push(`Historisch wordt gemiddeld ${Math.abs(leermoment.afwijkingPctArbeid).toFixed(0)}% ${richting} arbeid gerealiseerd dan begroot`);
+        }
+        if (Math.abs(leermoment.afwijkingPctMateriaal) > 5) {
+          const richting = leermoment.afwijkingPctMateriaal > 0 ? "hogere" : "lagere";
+          hints.push(`${richting} materiaalkosten (gem. ${Math.abs(leermoment.afwijkingPctMateriaal).toFixed(0)}% afwijking) op basis van ${leermoment.gebaseerdOpNProjecten} projecten`);
+        }
+        if (hints.length > 0) {
+          adviesTekst = `${adviesTekst} Let op: ${hints.join("; ")}.`;
+        }
       }
-      if (Math.abs(leermoment.afwijkingPctMateriaal) > 5) {
-        const richting = leermoment.afwijkingPctMateriaal > 0 ? "hogere" : "lagere";
-        hints.push(`${richting} materiaalkosten (gem. ${Math.abs(leermoment.afwijkingPctMateriaal).toFixed(0)}% afwijking) op basis van ${leermoment.gebaseerdOpNProjecten} projecten`);
-      }
-      if (hints.length > 0) {
-        adviesTekst = `${adviesTekst} Let op: ${hints.join("; ")}.`;
+
+      // Correctiefactor: altijd toepassen als er een leermoment bestaat en de factor afwijkt van 1.0
+      // (ongeacht het aantal projecten — de factor is handmatig instelbaar en bewust ingesteld)
+      const factor = leermoment.correctieFactor ?? 1.0;
+      if (Math.abs(factor - 1.0) >= 0.01) {
+        toegepasteCorrectieFactor = factor;
+        gecorrigeerdeArbeid    = rnd2(arbSubtotaal * factor);
+        gecorrigeerdeMateriaal = rnd2(matSubtotaal * factor);
+
+        const factorPct = rnd2((factor - 1) * 100);
+        const richting  = factor > 1 ? "hogere" : "lagere";
+        adviesTekst = `${adviesTekst} Correctiefactor ${factor.toFixed(2)} (leereffect op basis van ${leermoment.gebaseerdOpNProjecten} project(en)) toegepast: ${richting} indicatoren — gecorrigeerde arbeid \u20ac${gecorrigeerdeArbeid.toLocaleString("nl-NL", { maximumFractionDigits: 0 })}, materiaal \u20ac${gecorrigeerdeMateriaal.toLocaleString("nl-NL", { maximumFractionDigits: 0 })} (${factorPct > 0 ? "+" : ""}${factorPct.toFixed(0)}% t.o.v. calculatie).`;
       }
     }
   }
@@ -298,6 +323,9 @@ export async function berekenFieContext(calculatieId: number): Promise<FieCalcul
     adviesStatus,
     adviesTekst,
     opslagAkPct: opslagAk,
+    correctieFactor: toegepasteCorrectieFactor,
+    gecorrigeerdeArbeid,
+    gecorrigeerdeMateriaal,
   };
 }
 

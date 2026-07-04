@@ -23629,7 +23629,10 @@ export const GetFieContextCalculatieResponse = zod.object({
   "verwachte_marge_pct": zod.number().nullish(),
   "advies_status": zod.string().optional(),
   "advies_tekst": zod.string().optional(),
-  "opslag_ak_pct": zod.number().optional()
+  "opslag_ak_pct": zod.number().optional(),
+  "correctie_factor": zod.number().nullish().describe('Toegepaste leereffect-correctiefactor (null als geen leermoment of factor = 1.0)'),
+  "gecorrigeerde_arbeid": zod.number().nullish().describe('Gecorrigeerde arbeidsindicator na toepassing van de correctiefactor'),
+  "gecorrigeerde_materiaal": zod.number().nullish().describe('Gecorrigeerde materiaalindicator na toepassing van de correctiefactor')
 })
 
 

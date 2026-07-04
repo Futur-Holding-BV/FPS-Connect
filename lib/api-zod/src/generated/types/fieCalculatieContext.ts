@@ -30,4 +30,19 @@ export interface FieCalculatieContext {
   advies_status?: string;
   advies_tekst?: string;
   opslag_ak_pct?: number;
+  /**
+     * Toegepaste leereffect-correctiefactor (null als geen leermoment of factor = 1.0)
+     * @nullable
+     */
+  correctie_factor?: number | null;
+  /**
+     * Gecorrigeerde arbeidsindicator na toepassing van de correctiefactor
+     * @nullable
+     */
+  gecorrigeerde_arbeid?: number | null;
+  /**
+     * Gecorrigeerde materiaalindicator na toepassing van de correctiefactor
+     * @nullable
+     */
+  gecorrigeerde_materiaal?: number | null;
 }
