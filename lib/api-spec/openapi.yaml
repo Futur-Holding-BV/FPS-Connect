@@ -10200,9 +10200,11 @@ paths:
               schema:
                 $ref: "#/components/schemas/PimFaseResultaat"
         "400":
-          description: Ongeldige fase
+          description: Ongeldige fase (niet in de lijst met geldige waarden)
         "404":
           description: Opdracht niet gevonden
+        "409":
+          description: Ongeldige fase-overgang (alleen sequentieel +1 stap voorwaarts toegestaan)
 
   /opdrachten/{id}/onderaanneming:
     get:

@@ -5,17 +5,19 @@ import {
   db,
   pimModellenTable,
   opdrachtenTable,
+  documentLogboekTable,
+  gebruikersTable,
 } from "@workspace/db";
 import { eq } from "drizzle-orm";
-import { requireBevoegdheid } from "../middlewares/auth";
+import { requireBevoegdheid, requireBevoegdheidOfKlant } from "../middlewares/auth";
 import { logger } from "../lib/logger";
-import { logDocumentActie } from "../lib/document-logboek";
 
 const router = Router();
-const lezen = requireBevoegdheid("offertes", 1);
+const lezen = requireBevoegdheidOfKlant("offertes", 1);
 const schrijven = requireBevoegdheid("offertes", 2);
 
-const GELDIGE_FASEN = [
+// Geldige AI-fasen (volgorde is bepalend voor transitiematrix)
+const FASEN = [
   "nieuw",
   "advies",
   "werkvoorbereiding",
@@ -24,7 +26,32 @@ const GELDIGE_FASEN = [
   "oplevering",
   "gereed",
 ] as const;
-type AiFase = (typeof GELDIGE_FASEN)[number];
+type AiFase = (typeof FASEN)[number];
+
+const FASE_INDEX: Record<string, number> = Object.fromEntries(
+  FASEN.map((f, i) => [f, i]),
+);
+
+/**
+ * Bepaalt of een transitie van oudeFase naar nieuweFase geldig is.
+ * - Van null/undefined mag je altijd naar "nieuw" gaan.
+ * - Anders is alleen +1 stap voorwaarts toegestaan (strikte volgorde).
+ * Returns { ok: true } of { ok: false, van, naar } voor de 409-response.
+ */
+function valideerTransitie(
+  oudeFase: string | null | undefined,
+  nieuweFase: AiFase,
+): { ok: true } | { ok: false; van: string; naar: string } {
+  if (!oudeFase) {
+    if (nieuweFase === "nieuw") return { ok: true };
+    return { ok: false, van: "—", naar: nieuweFase };
+  }
+  const oud = FASE_INDEX[oudeFase];
+  const nieuw = FASE_INDEX[nieuweFase];
+  if (oud === undefined) return { ok: true };
+  if (nieuw === oud + 1) return { ok: true };
+  return { ok: false, van: oudeFase, naar: nieuweFase };
+}
 
 function mapPim(m: typeof pimModellenTable.$inferSelect, isKlant: boolean) {
   const base = {
@@ -47,7 +74,7 @@ function mapPim(m: typeof pimModellenTable.$inferSelect, isKlant: boolean) {
 }
 
 // ── POST /aanvragen ──────────────────────────────────────────────────────────
-// FPS One aanvraagstroom: maakt opdracht + PIM in één transactie aan.
+// FPS One aanvraagstroom: maakt concept-opdracht + PIM in één transactie.
 router.post("/aanvragen", schrijven, async (req, res): Promise<void> => {
   try {
     const {
@@ -76,7 +103,8 @@ router.post("/aanvragen", schrijven, async (req, res): Promise<void> => {
           titel,
           gebouwId: gebouw_id ?? null,
           omschrijving: omschrijving ?? null,
-          status: "actief",
+          // concept: aanvraag is nog niet bevestigd/actief
+          status: "concept",
           aiFase: "nieuw",
           aangemaaktDoorId: req.session.userId!,
           bijgewerktOp: new Date(),
@@ -107,6 +135,7 @@ router.post("/aanvragen", schrijven, async (req, res): Promise<void> => {
 });
 
 // ── GET /opdrachten/:id/pim ──────────────────────────────────────────────────
+// Klantperspectief: werkvoorbereiding/inkoop/uitvoerings_log worden gemaskeerd.
 router.get("/opdrachten/:id/pim", lezen, async (req, res): Promise<void> => {
   const opdrachtId = parseInt(String(req.params.id), 10);
   if (isNaN(opdrachtId)) {
@@ -134,6 +163,8 @@ router.get("/opdrachten/:id/pim", lezen, async (req, res): Promise<void> => {
 });
 
 // ── PATCH /opdrachten/:id/pim/fase ───────────────────────────────────────────
+// Strikte transitiematrix: alleen +1 stap voorwaarts (409 bij ongeldige overgang).
+// Update en auditlogboek-insert lopen in één transactie.
 router.patch(
   "/opdrachten/:id/pim/fase",
   schrijven,
@@ -146,14 +177,13 @@ router.patch(
 
     try {
       const { fase } = req.body as { fase?: string };
-      if (!fase || !GELDIGE_FASEN.includes(fase as AiFase)) {
-        res
-          .status(400)
-          .json({
-            error: `Ongeldige fase. Geldige waarden: ${GELDIGE_FASEN.join(", ")}`,
-          });
+      if (!fase || !FASE_INDEX.hasOwnProperty(fase)) {
+        res.status(400).json({
+          error: `Ongeldige fase. Geldige waarden: ${FASEN.join(", ")}`,
+        });
         return;
       }
+      const nieuweFase = fase as AiFase;
 
       const [opdracht] = await db
         .select({
@@ -169,18 +199,41 @@ router.patch(
         return;
       }
 
+      const transitie = valideerTransitie(opdracht.aiFase, nieuweFase);
+      if (!transitie.ok) {
+        res.status(409).json({
+          error: `Ongeldige fase-overgang: ${transitie.van} → ${transitie.naar}. Alleen de eerstvolgende stap is toegestaan.`,
+          van: transitie.van,
+          naar: transitie.naar,
+        });
+        return;
+      }
+
       const oudeFase = opdracht.aiFase;
+      const gebruikerId = req.session.userId!;
 
-      const [updated] = await db
-        .update(opdrachtenTable)
-        .set({ aiFase: fase, bijgewerktOp: new Date() })
-        .where(eq(opdrachtenTable.id, opdrachtId))
-        .returning();
+      // Update + auditlogboek in één transactie (atomair)
+      const [updated] = await db.transaction(async (tx) => {
+        const [upd] = await tx
+          .update(opdrachtenTable)
+          .set({ aiFase: nieuweFase, bijgewerktOp: new Date() })
+          .where(eq(opdrachtenTable.id, opdrachtId))
+          .returning();
 
-      await logDocumentActie({
-        gebruikerId: req.session.userId!,
-        actie: "pim_fase_overgang",
-        detail: `PIM fase: ${oudeFase ?? "—"} → ${fase} (opdracht: ${opdracht.titel})`,
+        // Gebruikersnaam ophalen voor gedenormaliseerd logboek
+        const [gebruiker] = await tx
+          .select({ naam: gebruikersTable.naam })
+          .from(gebruikersTable)
+          .where(eq(gebruikersTable.id, gebruikerId));
+
+        await tx.insert(documentLogboekTable).values({
+          gebruikerId,
+          gebruikerNaam: gebruiker?.naam ?? null,
+          actie: "pim_fase_overgang",
+          detail: `PIM fase: ${oudeFase ?? "—"} → ${nieuweFase} (opdracht: ${opdracht.titel})`,
+        });
+
+        return [upd];
       });
 
       res.json({ opdracht_id: opdrachtId, ai_fase: updated.aiFase });
