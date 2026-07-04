@@ -21,6 +21,7 @@ import {
   useHerberekeenFieLeermomenten,
   useUpdateFieLeermoment,
   useDeleteFieLeermoment,
+  useGetFieNacalculatiesVerouderdAantal,
   type FieJaarprognose,
   type FieWerkmaatschappijPrognose,
   type FieLeermoment,
@@ -635,6 +636,9 @@ function KompasInhoud() {
     isLoading: boolean;
   };
 
+  const { data: verouderdAantalData } = useGetFieNacalculatiesVerouderdAantal();
+  const aantalVerouderd = verouderdAantalData?.aantal ?? 0;
+
   return (
     <div className="space-y-5 p-1">
       {/* Paginakop */}
@@ -669,7 +673,14 @@ function KompasInhoud() {
       <Tabs value={actieveTab} onValueChange={setActieveTab}>
         <TabsList className="h-8">
           <TabsTrigger value="prognose" className="text-xs">Prognose</TabsTrigger>
-          <TabsTrigger value="leereffecten" className="text-xs">Leereffecten</TabsTrigger>
+          <TabsTrigger value="leereffecten" className="text-xs gap-1.5">
+            Leereffecten
+            {aantalVerouderd > 0 && (
+              <span className="inline-flex items-center justify-center rounded-full bg-red-600 text-white text-[10px] font-semibold leading-none min-w-[16px] h-4 px-1">
+                {aantalVerouderd}
+              </span>
+            )}
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="leereffecten" className="mt-4">
