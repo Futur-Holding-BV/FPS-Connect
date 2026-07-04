@@ -4,6 +4,17 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-04 — FIE Fase 5: Code-review herstel ronde 2 (volledig)
+
+**Uitvoering:** volledig | **Getest:** typecheck clean libs + api-server + firevault; api-server herstart
+
+Code-review ronde 2 bevindingen opgelost:
+
+1. **Leereffecten ook in /beheer/bedrijfskompas**: `LeermomentRij` + `LeereffectenBeheerTab` componenten toegevoegd aan `bedrijfskompas.tsx`; 6e tab "Leereffecten" toegevoegd (was 5 tabs); hooks + icons + `FieLeermoment`-type geïmporteerd
+2. **Leermoment-drempel aangescherpt**: `herberekeenLeermomenten()` persisteert nu alleen als minstens één kostensoort ≥ 2 kwalificerende projecten heeft (`g.arbeid.length >= 2` of `g.materiaal.length >= 2`) én een niet-nul gemiddelde afwijking — vervangt eerdere `n >= 2` totaalteldrempel
+3. **Error-logging achtergrondtaak**: `planDagelijkseLeermomenten()` gebruikt nu `logger.warn/info` (pino) i.p.v. lege `catch` — fouten worden zichtbaar in de workflow-logs
+4. **logger-import** toegevoegd aan `fie-service.ts` (patroon conform andere services)
+
 ## 2026-07-04 — FIE Fase 5: Code-review herstel (volledig)
 
 **Uitvoering:** volledig | **Getest:** typecheck clean libs + api-server + firevault; api-server herstart succesvol; DB ALTER geslaagd

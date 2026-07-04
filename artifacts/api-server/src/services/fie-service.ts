@@ -14,6 +14,7 @@ import {
   voorraadMutatiesTable, artikelenTable,
   onderaannemeOrdersTable,
 } from "@workspace/db";
+import { logger } from "../lib/logger";
 import { medewerkersTable } from "@workspace/db/schema";
 import { eq, and, desc, gte, lt, inArray, isNull } from "drizzle-orm";
 
@@ -964,7 +965,7 @@ export async function herberekeenLeermomenten(): Promise<number> {
     }
   }
 
-  const MIN_PROJECTEN = 2; // minimaal 2 projecten voor een betrouwbaar leermoment
+  const MIN_KWALIFICERENDE = 2; // minimaal 2 projecten mét structurele afwijking per kostensoort
 
   let aantalBijgewerkt = 0;
   for (const [werktype, g] of groepen.entries()) {
@@ -972,9 +973,11 @@ export async function herberekeenLeermomenten(): Promise<number> {
     const gemArbeid = g.arbeid.length > 0 ? rnd2(g.arbeid.reduce((s, v) => s + v, 0) / g.arbeid.length) : 0;
     const gemMateriaal = g.materiaal.length > 0 ? rnd2(g.materiaal.reduce((s, v) => s + v, 0) / g.materiaal.length) : 0;
 
-    // Alleen persisteren als er minimaal 2 projecten zijn én minstens één structurele afwijking
-    const heeftStructureleAfwijking = gemArbeid !== 0 || gemMateriaal !== 0;
-    if (n < MIN_PROJECTEN || !heeftStructureleAfwijking) continue;
+    // Alleen persisteren als minstens één kostensoort ≥ 2 kwalificerende projecten heeft
+    // én een gemiddelde afwijking buiten de neutrale zone (≠ 0)
+    const voldoetArbeid   = g.arbeid.length   >= MIN_KWALIFICERENDE && gemArbeid   !== 0;
+    const voldoetMateriaal = g.materiaal.length >= MIN_KWALIFICERENDE && gemMateriaal !== 0;
+    if (!voldoetArbeid && !voldoetMateriaal) continue;
 
     const [bestaande] = await db.select({ id: fieLeerMomentenTable.id })
       .from(fieLeerMomentenTable).where(eq(fieLeerMomentenTable.werktype, werktype)).limit(1);
@@ -1017,10 +1020,18 @@ export function planDagelijkseLeermomenten(): void {
         .leftJoin(fieNacalculatiesTable, eq(fieNacalculatiesTable.opdrachtId, opdrachtenTable.id));
 
       for (const o of afgesloten) {
-        await berekenEnSlaOpNacalculatie(o.id).catch(() => {});
+        await berekenEnSlaOpNacalculatie(o.id).catch((err: unknown) => {
+          logger.warn({ opdrachtId: o.id, err }, "fie: nacalculatie mislukt voor opdracht");
+        });
       }
-      await herberekeenLeermomenten().catch(() => {});
-    } catch {}
+      const n = await herberekeenLeermomenten().catch((err: unknown) => {
+        logger.warn({ err }, "fie: herbereken leermomenten mislukt");
+        return 0;
+      });
+      logger.info({ verwerkt: afgesloten.length, leermomenten: n }, "fie: dagelijkse leermomenten bijgewerkt");
+    } catch (err) {
+      logger.warn({ err }, "fie: planDagelijkseLeermomenten achtergrondtaak crashte");
+    }
     planDagelijkseLeermomenten();
   }, ms);
 }
