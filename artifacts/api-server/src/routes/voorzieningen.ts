@@ -23,6 +23,7 @@ import { effectieveContext, toegewezenGebouwIds } from "../utils/rol";
 import { getLabelsVoorVoorziening, syncVoorzieningLabels } from "../lib/classificatie";
 import { logActiviteit } from "../lib/activiteit";
 import { analyseerSpot } from "../services/spot-ai";
+import { triggerNacalculatieHerberekeningVoorGebouw } from "../services/fie-service";
 
 const router = Router();
 const lezenVoorzieningen = requireBevoegdheid("voorzieningen", 1);
@@ -333,6 +334,10 @@ router.post("/voorzieningen", requireBevoegdheid("voorzieningen", 3), async (req
     });
 
     res.status(201).json(await mapVoorziening(v));
+
+    // Na succesvol aanmaken: herbereken direct nacalculaties met werktype "algemeen"
+    // voor opdrachten van dit gebouw (fire-and-forget, geen impact op responsetijd).
+    triggerNacalculatieHerberekeningVoorGebouw(Number(gebouw_id), req.log);
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });
@@ -484,8 +489,20 @@ router.patch("/voorzieningen/:id", requireBevoegdheid("voorzieningen", 2), async
 router.delete("/voorzieningen/:id", requireBevoegdheid("voorzieningen", 4), async (req, res): Promise<void> => {
   try {
     const id = parseInt(String(req.params.id));
+
+    // Haal gebouwId op vóórdat de record verwijderd wordt, zodat de trigger na
+    // verwijdering het juiste gebouw kan herberekenen.
+    const gebouwId = await gebouwIdVanVoorziening(id);
+
     await db.delete(voorzieningenTable).where(eq(voorzieningenTable.id, id));
     res.status(204).send();
+
+    // Na succesvol verwijderen: herbereken direct nacalculaties met werktype "algemeen"
+    // voor opdrachten van dit gebouw — het werktype kan terugvallen op "algemeen" als
+    // de verwijderde spot het dominante type was (fire-and-forget).
+    if (gebouwId != null) {
+      triggerNacalculatieHerberekeningVoorGebouw(gebouwId, req.log);
+    }
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });

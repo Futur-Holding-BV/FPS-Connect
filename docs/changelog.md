@@ -4,6 +4,20 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-04 — Spot-trigger nacalculatie herberekening (volledig)
+
+**Uitvoering:** volledig | **Getest:** typecheck clean (pre-existing TS7030 in offertes.ts ongewijzigd)
+
+Werktype in nacalculaties wordt nu direct bijgewerkt wanneer een spot wordt aangemaakt of verwijderd:
+- `POST /voorzieningen`: triggert na succesvol aanmaken een fire-and-forget herberekening van alle
+  nacalculaties met werktype "algemeen" die gekoppeld zijn aan het gebouw van de nieuwe spot.
+- `DELETE /voorzieningen/:id`: haalt gebouwId op vóór verwijdering, triggert daarna dezelfde
+  herberekening — zodat werktype terugvalt naar "algemeen" als de verwijderde spot het dominante type was.
+- Nieuwe export `triggerNacalculatieHerberekeningVoorGebouw(gebouwId, log)` in `fie-service.ts`
+  (fire-and-forget via `setImmediate`, geen impact op responsetijd van de spot-endpoints).
+
+Gewijzigd: `artifacts/api-server/src/services/fie-service.ts`, `artifacts/api-server/src/routes/voorzieningen.ts`
+
 ## 2026-07-04 — Nacalculatie: werktype zichtbaar op detailpagina (volledig)
 
 **Uitvoering:** volledig | **Getest:** typecheck firevault clean; codegen clean

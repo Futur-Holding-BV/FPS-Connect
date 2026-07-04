@@ -1196,6 +1196,38 @@ export async function herberekeenVerouderdeNacalculaties(): Promise<number> {
 }
 
 /**
+ * Fire-and-forget helper: herbereken nacalculaties met werktype "algemeen" voor opdrachten
+ * die gekoppeld zijn aan het opgegeven gebouw. Bedoeld om aan te roepen na het aanmaken of
+ * verwijderen van een spot, zodat het werktype direct bijgewerkt wordt zonder de responsetijd
+ * van het spot-endpoint te beïnvloeden.
+ */
+export function triggerNacalculatieHerberekeningVoorGebouw(
+  gebouwId: number,
+  log: { warn: (obj: Record<string, unknown>, msg: string) => void },
+): void {
+  setImmediate(async () => {
+    try {
+      const kandidaten = await db
+        .select({ opdrachtId: fieNacalculatiesTable.opdrachtId })
+        .from(fieNacalculatiesTable)
+        .innerJoin(opdrachtenTable, eq(opdrachtenTable.id, fieNacalculatiesTable.opdrachtId))
+        .where(and(
+          eq(opdrachtenTable.gebouwId, gebouwId),
+          eq(fieNacalculatiesTable.werktype, "algemeen"),
+        ));
+
+      for (const k of kandidaten) {
+        await berekenEnSlaOpNacalculatie(k.opdrachtId).catch((err: unknown) => {
+          log.warn({ opdrachtId: k.opdrachtId, gebouwId, err }, "fie: spot-trigger nacalculatie herberekening mislukt");
+        });
+      }
+    } catch (err) {
+      log.warn({ gebouwId, err }, "fie: spot-trigger nacalculatie query mislukt");
+    }
+  });
+}
+
+/**
  * Dagelijkse achtergrondtaak: verwerk alle afgesloten opdrachten zonder nacalculatie-record,
  * herbereken verouderde "algemeen"-nacalculaties waar spots beschikbaar zijn,
  * bereken daarna leermomenten opnieuw.
