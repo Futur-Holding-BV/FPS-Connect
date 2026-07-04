@@ -23,7 +23,7 @@ function parseId(v: unknown): number | null {
 
 // ── Input-validatie helpers ───────────────────────────────────────────────────
 
-const GELDIGE_STATUSSEN = ["concept", "vastgesteld", "gearchiveerd"] as const;
+const GELDIGE_STATUSSEN = ["concept", "actief", "gesloten"] as const;
 const GELDIGE_VERDEELSLEUTELS = ["uren", "omzet", "ftes"] as const;
 
 function valideerFinancieelGetal(
