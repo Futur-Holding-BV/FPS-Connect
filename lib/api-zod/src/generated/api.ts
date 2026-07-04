@@ -12570,6 +12570,39 @@ export const AnalyseerPimWerkvoorbereidingResponse = zod.object({
 
 
 /**
+ * @summary Handmatige aanpassingen aan de AI-werkvoorbereiding opslaan
+ */
+export const PatchPimWerkvoorbereidingParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const PatchPimWerkvoorbereidingBody = zod.object({
+  "werkvoorbereiding_context": zod.object({
+
+}).passthrough().optional().describe('De bijgewerkte werkvoorbereiding context (volledig object)')
+}).describe('Handmatige aanpassingen aan de werkvoorbereiding context')
+
+export const PatchPimWerkvoorbereidingResponse = zod.object({
+  "opdracht_id": zod.number(),
+  "ai_fase": zod.string().describe('Nieuwe AI-fase na de analyse (werkvoorbereiding)'),
+  "voorbereiding_volledigheid": zod.string().optional().describe('onvolledig | voldoende | volledig')
+})
+
+
+/**
+ * @summary Werkvoorbereiding vaststellen en ai_fase naar inkoop zetten
+ */
+export const VaststellenPimWerkvoorbereidingParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const VaststellenPimWerkvoorbereidingResponse = zod.object({
+  "opdracht_id": zod.number(),
+  "ai_fase": zod.string().describe('Nieuwe AI-fase na vaststelling (inkoop)')
+})
+
+
+/**
  * @summary AI-fase van een opdracht bijwerken (logt overgang in audittrail)
  */
 export const UpdatePimFaseParams = zod.object({

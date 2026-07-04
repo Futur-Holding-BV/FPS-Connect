@@ -10349,6 +10349,60 @@ paths:
         "503":
           description: AI-gateway niet geconfigureerd
 
+  /opdrachten/{id}/pim/werkvoorbereiding:
+    patch:
+      summary: Handmatige aanpassingen aan de AI-werkvoorbereiding opslaan
+      operationId: patchPimWerkvoorbereiding
+      tags: [pim]
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PimWerkvoorbereidingPatchInput"
+      responses:
+        "200":
+          description: Werkvoorbereiding bijgewerkt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PimWerkvoorbereidingResultaat"
+        "404":
+          description: Opdracht of PIM niet gevonden
+
+  /opdrachten/{id}/pim/werkvoorbereiding/vaststellen:
+    post:
+      summary: Werkvoorbereiding vaststellen en ai_fase naar inkoop zetten
+      operationId: vaststellenPimWerkvoorbereiding
+      tags: [pim]
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Werkvoorbereiding vastgesteld
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PimVaststellenResultaat"
+        "404":
+          description: Opdracht of PIM niet gevonden
+        "409":
+          description: Vaststellen vereist fase werkvoorbereiding
+
   /opdrachten/{id}/pim/fase:
     patch:
       operationId: updatePimFase
@@ -26354,6 +26408,24 @@ components:
         vrije_tekst:
           type: string
           description: Aanvullende instructies of context voor de werkvoorbereiding (max 4000 tekens)
+
+    PimWerkvoorbereidingPatchInput:
+      type: object
+      description: Handmatige aanpassingen aan de werkvoorbereiding context
+      properties:
+        werkvoorbereiding_context:
+          type: object
+          description: De bijgewerkte werkvoorbereiding context (volledig object)
+
+    PimVaststellenResultaat:
+      type: object
+      required: [opdracht_id, ai_fase]
+      properties:
+        opdracht_id:
+          type: integer
+        ai_fase:
+          type: string
+          description: Nieuwe AI-fase na vaststelling (inkoop)
 
     PimWerkvoorbereidingResultaat:
       type: object

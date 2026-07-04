@@ -817,6 +817,91 @@ router.post("/opdrachten/:id/pim/documenten/koppel", schrijven, async (req, res)
   }
 });
 
+// ── PATCH /opdrachten/:id/pim/werkvoorbereiding ───────────────────────────────
+// Handmatige aanpassingen aan werkvoorbereiding_context opslaan.
+router.patch("/opdrachten/:id/pim/werkvoorbereiding", schrijven, async (req, res): Promise<void> => {
+  const opdrachtId = parseInt(String(req.params.id), 10);
+  if (isNaN(opdrachtId)) { res.status(400).json({ error: "Ongeldig id" }); return; }
+
+  const { werkvoorbereiding_context } = req.body as { werkvoorbereiding_context?: unknown };
+  if (!werkvoorbereiding_context || typeof werkvoorbereiding_context !== "object") {
+    res.status(400).json({ error: "werkvoorbereiding_context ontbreekt of is geen object" });
+    return;
+  }
+
+  try {
+    const [opdracht] = await db.select().from(opdrachtenTable).where(eq(opdrachtenTable.id, opdrachtId));
+    if (!opdracht) { res.status(404).json({ error: "Opdracht niet gevonden" }); return; }
+
+    const [pim] = await db.select().from(pimModellenTable).where(eq(pimModellenTable.opdrachtId, opdrachtId));
+    if (!pim) { res.status(404).json({ error: "PIM niet gevonden voor deze opdracht" }); return; }
+
+    await db
+      .update(pimModellenTable)
+      .set({ werkvoorbereidingContext: werkvoorbereiding_context as Record<string, unknown>, bijgewerktOp: new Date() })
+      .where(eq(pimModellenTable.id, pim.id));
+
+    res.json({
+      opdracht_id: opdrachtId,
+      ai_fase: opdracht.aiFase ?? "werkvoorbereiding",
+      voorbereiding_volledigheid: (werkvoorbereiding_context as Record<string, unknown>).voorbereiding_volledigheid
+        ? String((werkvoorbereiding_context as Record<string, unknown>).voorbereiding_volledigheid)
+        : "voldoende",
+    });
+  } catch (err) {
+    logger.error({ err }, "patchPimWerkvoorbereiding fout");
+    res.status(500).json({ error: "Serverfout" });
+  }
+});
+
+// ── POST /opdrachten/:id/pim/werkvoorbereiding/vaststellen ────────────────────
+// Menselijke goedkeuring: zet ai_fase → inkoop; logt in audittrail.
+router.post("/opdrachten/:id/pim/werkvoorbereiding/vaststellen", schrijven, async (req, res): Promise<void> => {
+  const opdrachtId = parseInt(String(req.params.id), 10);
+  if (isNaN(opdrachtId)) { res.status(400).json({ error: "Ongeldig id" }); return; }
+
+  try {
+    const [opdracht] = await db.select().from(opdrachtenTable).where(eq(opdrachtenTable.id, opdrachtId));
+    if (!opdracht) { res.status(404).json({ error: "Opdracht niet gevonden" }); return; }
+
+    const [pim] = await db.select().from(pimModellenTable).where(eq(pimModellenTable.opdrachtId, opdrachtId));
+    if (!pim) { res.status(404).json({ error: "PIM niet gevonden voor deze opdracht" }); return; }
+
+    if (opdracht.aiFase !== "werkvoorbereiding") {
+      res.status(409).json({
+        error: `Vaststellen vereist fase 'werkvoorbereiding' (huidige fase: '${opdracht.aiFase ?? "nieuw"}').`,
+      });
+      return;
+    }
+
+    const gebruikerId = req.session.userId!;
+
+    await db.transaction(async (tx) => {
+      await tx
+        .update(opdrachtenTable)
+        .set({ aiFase: "inkoop", bijgewerktOp: new Date() })
+        .where(eq(opdrachtenTable.id, opdrachtId));
+
+      const [gebruiker] = await tx
+        .select({ naam: gebruikersTable.naam })
+        .from(gebruikersTable)
+        .where(eq(gebruikersTable.id, gebruikerId));
+
+      await tx.insert(documentLogboekTable).values({
+        gebruikerId,
+        gebruikerNaam: gebruiker?.naam ?? null,
+        actie: "pim_werkvoorbereiding_vaststellen",
+        detail: `Werkvoorbereiding vastgesteld voor opdracht: ${opdracht.titel} — fase naar inkoop`,
+      });
+    });
+
+    res.json({ opdracht_id: opdrachtId, ai_fase: "inkoop" });
+  } catch (err) {
+    logger.error({ err }, "vaststellenPimWerkvoorbereiding fout");
+    res.status(500).json({ error: "Serverfout" });
+  }
+});
+
 // ── POST /opdrachten/:id/pim/werkvoorbereiding/analyseer ──────────────────────
 // Laadt advies_context + spots voor het gebouw, roept AI aan, slaat op in
 // werkvoorbereiding_context en zet ai_fase → "werkvoorbereiding".

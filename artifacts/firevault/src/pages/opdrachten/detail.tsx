@@ -20,6 +20,8 @@ import {
   useGetPim,
   useAnalyseerPim,
   useAnalyseerPimWerkvoorbereiding,
+  usePatchPimWerkvoorbereiding,
+  useVaststellenPimWerkvoorbereiding,
   useBevestigPimAdvies,
   useAfwijzenPimAdvies,
   useMaakPimAdviesRapport,
@@ -42,6 +44,7 @@ import {
 import {
   ArrowLeft, Sparkles, Check, Clock, AlertTriangle, CalendarCheck,
   TrendingUp, TrendingDown, Edit2, Package, ShoppingCart, Building2, ShoppingBag, MessageSquare, CheckCircle2, HardHat, Printer, Brain, FileCheck2, ShieldAlert,
+  ChevronDown, ChevronUp,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
@@ -382,6 +385,7 @@ export default function OpdrachtDetailPagina() {
   const [activeTab, setActiveTab] = useState("werkbegroting");
   const [chatOpen, setChatOpen] = useState(false);
   const [seniorOpen, setSeniorOpen] = useState(false);
+  const [pimKaartIngeklapt, setPimKaartIngeklapt] = useState(false);
 
   const { data: opdracht, isLoading: opdrachtLoading } = useGetOpdracht(opdrachtId);
   const { data: werkbegroting, isLoading: wbLoading } = useGetWerkbegroting(opdrachtId);
@@ -449,6 +453,20 @@ export default function OpdrachtDetailPagina() {
       },
     },
   });
+
+  const pimVaststellenMut = useVaststellenPimWerkvoorbereiding({
+    mutation: {
+      onSuccess: () => {
+        qc.invalidateQueries({ queryKey: getGetPimQueryKey(opdrachtId) });
+        qc.invalidateQueries({ queryKey: getGetOpdrachtQueryKey(opdrachtId) });
+        toast({ title: "Werkvoorbereiding vastgesteld — fase: inkoop" });
+      },
+      onError: () => toast({ title: "Vaststellen mislukt", variant: "destructive" }),
+    },
+  });
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _pimPatchMut = usePatchPimWerkvoorbereiding();
 
   const vaststellenMutatie = useVaststellenWerkbegroting({
     mutation: {
@@ -585,6 +603,134 @@ export default function OpdrachtDetailPagina() {
 
         {/* ── Werkbegroting ── */}
         <TabsContent value="werkbegroting" className="space-y-4 mt-4">
+          {/* ── Inklapbare PIM-analysekaart (fase B + C context) ─────────────────── */}
+          {pim?.advies_context && (() => {
+            const ctx = pim.advies_context as Record<string, unknown>;
+            const wv = pim.werkvoorbereiding_context as Record<string, unknown> | null | undefined;
+            const aiFase = (opdracht as unknown as Record<string, unknown>)?.ai_fase as string | undefined;
+            const fasenMetPim = ["werkvoorbereiding", "inkoop", "uitvoering", "oplevering", "gereed"];
+            if (!aiFase || !fasenMetPim.includes(aiFase)) return null;
+            const volledigheid = wv ? String(wv.voorbereiding_volledigheid ?? "onvolledig") : null;
+            const risicos = Array.isArray(ctx.risicos) ? (ctx.risicos as string[]) : [];
+            const vragen = Array.isArray(ctx.vragen) ? (ctx.vragen as string[]) : [];
+            const aandachtspunten = wv && Array.isArray(wv.aandachtspunten) ? (wv.aandachtspunten as string[]) : [];
+            return (
+              <Card className="border-indigo-200 bg-indigo-50/40">
+                <CardHeader className="pb-2 pt-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <Brain className="h-4 w-4 text-indigo-600 shrink-0" />
+                      <CardTitle className="text-sm font-medium text-indigo-900">
+                        PIM-analyse
+                        {wv && (
+                          <span className="ml-2 font-normal text-xs text-indigo-700">
+                            (werkvoorbereiding
+                            {volledigheid && (
+                              <span className={
+                                volledigheid === "volledig"
+                                  ? " text-emerald-700"
+                                  : volledigheid === "voldoende"
+                                  ? " text-blue-700"
+                                  : " text-amber-700"
+                              }>
+                                {" "}— {volledigheid}
+                              </span>
+                            )}
+                            )
+                          </span>
+                        )}
+                      </CardTitle>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {aiFase === "werkvoorbereiding" && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-xs border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+                          disabled={pimVaststellenMut.isPending}
+                          onClick={() => pimVaststellenMut.mutate({ id: opdrachtId })}
+                        >
+                          <CheckCircle2 className="h-3 w-3 mr-1" />
+                          {pimVaststellenMut.isPending ? "Bezig..." : "Vaststellen"}
+                        </Button>
+                      )}
+                      {aiFase === "inkoop" && (
+                        <Badge variant="outline" className="text-xs border-emerald-300 text-emerald-700 bg-emerald-50">
+                          Vastgesteld
+                        </Badge>
+                      )}
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 w-7 p-0 text-indigo-600"
+                        onClick={() => setPimKaartIngeklapt(v => !v)}
+                        title={pimKaartIngeklapt ? "Uitklappen" : "Inklappen"}
+                      >
+                        {pimKaartIngeklapt ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
+                      </Button>
+                    </div>
+                  </div>
+                </CardHeader>
+                {!pimKaartIngeklapt && (
+                  <CardContent className="pb-4 space-y-3">
+                    {/* Risico's */}
+                    {risicos.length > 0 && (
+                      <div>
+                        <p className="text-xs font-medium text-indigo-800 mb-1">Risico&apos;s</p>
+                        <ul className="space-y-0.5">
+                          {risicos.map((r, i) => (
+                            <li key={i} className="flex items-start gap-1.5 text-xs text-indigo-900">
+                              <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0 text-amber-500" />
+                              {r}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {/* Aandachtspunten werkvoorbereiding */}
+                    {aandachtspunten.length > 0 && (
+                      <div>
+                        <p className="text-xs font-medium text-indigo-800 mb-1">Aandachtspunten werkvoorbereiding</p>
+                        <ul className="space-y-0.5">
+                          {aandachtspunten.map((a, i) => (
+                            <li key={i} className="flex items-start gap-1.5 text-xs text-indigo-900">
+                              <HardHat className="h-3 w-3 mt-0.5 shrink-0 text-indigo-500" />
+                              {a}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {/* Open vragen */}
+                    {vragen.length > 0 && (
+                      <div>
+                        <p className="text-xs font-medium text-indigo-800 mb-1">Open vragen voor opdrachtgever</p>
+                        <ul className="space-y-0.5">
+                          {vragen.map((v, i) => (
+                            <li key={i} className="text-xs text-blue-800">
+                              {i + 1}. {v}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {risicos.length === 0 && aandachtspunten.length === 0 && vragen.length === 0 && (
+                      <p className="text-xs text-muted-foreground">Geen risico&apos;s of aandachtspunten geregistreerd.</p>
+                    )}
+                    <Button
+                      variant="link"
+                      size="sm"
+                      className="h-auto p-0 text-xs text-indigo-600"
+                      onClick={() => setActiveTab("ai-regisseur")}
+                    >
+                      Volledige PIM-analyse bekijken
+                    </Button>
+                  </CardContent>
+                )}
+              </Card>
+            );
+          })()}
+
           <div className="flex items-center justify-between flex-wrap gap-2">
             <div className="flex gap-2 text-sm text-muted-foreground">
               <span>Arbeid: <strong>{euro(totaalArbeid)}</strong></span>
@@ -1154,6 +1300,31 @@ export default function OpdrachtDetailPagina() {
                           <Sparkles className="h-3.5 w-3.5 mr-1.5" />
                           {pimWerkvoorbereidingMut.isPending ? "Analyseren..." : "Werkvoorbereiding analyseren"}
                         </Button>
+                      )}
+
+                      {((opdracht as unknown as Record<string, unknown>)?.ai_fase as string) === "werkvoorbereiding" && (
+                        <>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="border-indigo-300 text-indigo-700 hover:bg-indigo-50"
+                            disabled={pimWerkvoorbereidingMut.isPending}
+                            onClick={() => pimWerkvoorbereidingMut.mutate({ id: opdrachtId })}
+                          >
+                            <Sparkles className="h-3.5 w-3.5 mr-1.5" />
+                            {pimWerkvoorbereidingMut.isPending ? "Analyseren..." : "Opnieuw analyseren"}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+                            disabled={pimVaststellenMut.isPending}
+                            onClick={() => pimVaststellenMut.mutate({ id: opdrachtId })}
+                          >
+                            <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />
+                            {pimVaststellenMut.isPending ? "Bezig..." : "Werkvoorbereiding vaststellen"}
+                          </Button>
+                        </>
                       )}
                     </div>
                   )}

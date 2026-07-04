@@ -5120,6 +5120,25 @@ export interface PimWerkvoorbereidingInput {
   vrije_tekst?: string;
 }
 
+/**
+ * De bijgewerkte werkvoorbereiding context (volledig object)
+ */
+export type PimWerkvoorbereidingPatchInputWerkvoorbereidingContext = { [key: string]: unknown };
+
+/**
+ * Handmatige aanpassingen aan de werkvoorbereiding context
+ */
+export interface PimWerkvoorbereidingPatchInput {
+  /** De bijgewerkte werkvoorbereiding context (volledig object) */
+  werkvoorbereiding_context?: PimWerkvoorbereidingPatchInputWerkvoorbereidingContext;
+}
+
+export interface PimVaststellenResultaat {
+  opdracht_id: number;
+  /** Nieuwe AI-fase na vaststelling (inkoop) */
+  ai_fase: string;
+}
+
 export interface PimWerkvoorbereidingResultaat {
   opdracht_id: number;
   /** Nieuwe AI-fase na de analyse (werkvoorbereiding) */

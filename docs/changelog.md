@@ -8,15 +8,18 @@ Voor elke taak drie scores:
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risco:** laag
 
-**Wat is gebouwd:**
-- `PIM_WERKVOORBEREIDING_PROMPT` in `aiPrompts.ts` — AI werkvoorbereider-persona met output-schema (materiaallijst, werkvolgorde, competenties_benodigd, geschatte_doorlooptijd_dagen, aandachtspunten, inkoopacties, planningadvies, voorbereiding_volledigheid)
-- `POST /opdrachten/:id/pim/werkvoorbereiding/analyseer` in `pim.ts` — achter `schrijven` middleware; vereist fase ≥ `advies_gereed`; laadt `advies_context` + bestaande spots (voorzieningenTable, max 50, niet gearchiveerd); AI-aanroep met `default`-gateway; slaat op in `pim.werkvoorbereiding_context`; fase-transitie `advies_gereed → werkvoorbereiding`; logt in documentLogboek
-- OpenAPI: pad `/opdrachten/{id}/pim/werkvoorbereiding/analyseer` + schemas `PimWerkvoorbereidingInput` / `PimWerkvoorbereidingResultaat`
-- Codegen: `useAnalyseerPimWerkvoorbereiding` hook gegenereerd
-- `detail.tsx` AI Regisseur tab: `pimWerkvoorbereidingMut` hook; knop "Werkvoorbereiding analyseren" (zichtbaar bij fase `advies_gereed`); werkvoorbereiding_context weergavesectie (divisielabel + volledigheid-badge; doorlooptijd/planningadvies-kaart; materiaallijst-tabel; uitvoeringsvolgorde-genummerd; competenties-badges; inkoopacties-lijst; aandachtspunten-kaart)
+**Wat is gebouwd (Fase C — vaststellen & analysekaart):**
+- `PATCH /opdrachten/:id/pim/werkvoorbereiding` — handmatige correcties op `werkvoorbereiding_context` opslaan
+- `POST /opdrachten/:id/pim/werkvoorbereiding/vaststellen` — menselijke goedkeuring; vereist fase `werkvoorbereiding`; fase-transitie `werkvoorbereiding → inkoop`; logt in `document_logboek`
+- OpenAPI: twee nieuwe paden + schemas `PimWerkvoorbereidingPatchInput` / `PimVaststellenResultaat`; codegen uitgewerkt
+- Hooks: `usePatchPimWerkvoorbereiding` + `useVaststellenPimWerkvoorbereiding` gegenereerd
+- `detail.tsx` AI Regisseur tab: vaststellen-knop (groen, zichtbaar bij fase `werkvoorbereiding`); "Opnieuw analyseren"-knop behouden voor correctie; fase `inkoop` toont geen actieknoppen meer
+- `detail.tsx` Werkbegroting tab: inklapbare PIM-analysekaart bovenaan (zichtbaar vanaf fase `werkvoorbereiding`) — risico's, aandachtspunten werkvoorbereiding, open vragen, "Volledige PIM-analyse bekijken"-link; vaststellen-knop ook vanuit werkbegroting tab; badge "Vastgesteld" bij fase `inkoop`
 
-**Tevens in deze sessie afgerond (Fase B fix):**
-- Rapport-endpoint fase-check van `=== "advies_gereed"` naar `FASE_INDEX ≥ advies` (minimaal fase advies, klanten geblokkeerd via middleware)
+**Eerder in deze sessie (Fase C AI-generatie, onderdeel vorige bouwstap):**
+- `PIM_WERKVOORBEREIDING_PROMPT` in `aiPrompts.ts` — AI werkvoorbereider-persona met output-schema (materiaallijst, werkvolgorde, competenties_benodigd, geschatte_doorlooptijd_dagen, aandachtspunten, inkoopacties, planningadvies, voorbereiding_volledigheid)
+- `POST /opdrachten/:id/pim/werkvoorbereiding/analyseer` in `pim.ts` — achter `schrijven` middleware; vereist fase ≥ `advies_gereed`; laadt `advies_context` + spots (max 50); slaat op in `pim.werkvoorbereiding_context`; fase-transitie `advies_gereed → werkvoorbereiding`
+- `detail.tsx` AI Regisseur tab: werkvoorbereiding_context weergavesectie (volledigheid-badge; doorlooptijd/planningadvies-kaart; materiaallijst-tabel; uitvoeringsvolgorde; competenties-badges; inkoopacties-lijst; aandachtspunten-kaart)
 
 **Typecheck:** clean (api-server: alleen pre-existing TS7030 in offertes.ts:692; firevault: geen errors)
 

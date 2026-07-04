@@ -560,7 +560,9 @@ import type {
   PimFaseResultaat,
   PimModel,
   PimRapportResultaat,
+  PimVaststellenResultaat,
   PimWerkvoorbereidingInput,
+  PimWerkvoorbereidingPatchInput,
   PimWerkvoorbereidingResultaat,
   PlanningAfwezigheid,
   PlanningAfwezigheidInput,
@@ -36334,6 +36336,147 @@ export const useAnalyseerPimWerkvoorbereiding = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getAnalyseerPimWerkvoorbereidingMutationOptions(options));
+    }
+
+export const getPatchPimWerkvoorbereidingUrl = (id: number,) => {
+
+
+
+
+  return `/api/opdrachten/${id}/pim/werkvoorbereiding`
+}
+
+/**
+ * @summary Handmatige aanpassingen aan de AI-werkvoorbereiding opslaan
+ */
+export const patchPimWerkvoorbereiding = async (id: number,
+    pimWerkvoorbereidingPatchInput: PimWerkvoorbereidingPatchInput, options?: RequestInit): Promise<PimWerkvoorbereidingResultaat> => {
+
+  return customFetch<PimWerkvoorbereidingResultaat>(getPatchPimWerkvoorbereidingUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(pimWerkvoorbereidingPatchInput)
+  }
+);}
+
+
+
+
+export const getPatchPimWerkvoorbereidingMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchPimWerkvoorbereiding>>, TError,{id: number;data: BodyType<PimWerkvoorbereidingPatchInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof patchPimWerkvoorbereiding>>, TError,{id: number;data: BodyType<PimWerkvoorbereidingPatchInput>}, TContext> => {
+
+const mutationKey = ['patchPimWerkvoorbereiding'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof patchPimWerkvoorbereiding>>, {id: number;data: BodyType<PimWerkvoorbereidingPatchInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  patchPimWerkvoorbereiding(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PatchPimWerkvoorbereidingMutationResult = NonNullable<Awaited<ReturnType<typeof patchPimWerkvoorbereiding>>>
+    export type PatchPimWerkvoorbereidingMutationBody = BodyType<PimWerkvoorbereidingPatchInput>
+    export type PatchPimWerkvoorbereidingMutationError = ErrorType<void>
+
+    /**
+ * @summary Handmatige aanpassingen aan de AI-werkvoorbereiding opslaan
+ */
+export const usePatchPimWerkvoorbereiding = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchPimWerkvoorbereiding>>, TError,{id: number;data: BodyType<PimWerkvoorbereidingPatchInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof patchPimWerkvoorbereiding>>,
+        TError,
+        {id: number;data: BodyType<PimWerkvoorbereidingPatchInput>},
+        TContext
+      > => {
+      return useMutation(getPatchPimWerkvoorbereidingMutationOptions(options));
+    }
+
+export const getVaststellenPimWerkvoorbereidingUrl = (id: number,) => {
+
+
+
+
+  return `/api/opdrachten/${id}/pim/werkvoorbereiding/vaststellen`
+}
+
+/**
+ * @summary Werkvoorbereiding vaststellen en ai_fase naar inkoop zetten
+ */
+export const vaststellenPimWerkvoorbereiding = async (id: number, options?: RequestInit): Promise<PimVaststellenResultaat> => {
+
+  return customFetch<PimVaststellenResultaat>(getVaststellenPimWerkvoorbereidingUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getVaststellenPimWerkvoorbereidingMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof vaststellenPimWerkvoorbereiding>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof vaststellenPimWerkvoorbereiding>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['vaststellenPimWerkvoorbereiding'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof vaststellenPimWerkvoorbereiding>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  vaststellenPimWerkvoorbereiding(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type VaststellenPimWerkvoorbereidingMutationResult = NonNullable<Awaited<ReturnType<typeof vaststellenPimWerkvoorbereiding>>>
+
+    export type VaststellenPimWerkvoorbereidingMutationError = ErrorType<void>
+
+    /**
+ * @summary Werkvoorbereiding vaststellen en ai_fase naar inkoop zetten
+ */
+export const useVaststellenPimWerkvoorbereiding = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof vaststellenPimWerkvoorbereiding>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof vaststellenPimWerkvoorbereiding>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getVaststellenPimWerkvoorbereidingMutationOptions(options));
     }
 
 export const getUpdatePimFaseUrl = (id: number,) => {
