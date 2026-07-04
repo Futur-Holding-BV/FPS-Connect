@@ -4,6 +4,54 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-04 — Autorisatie-audit FPS Connect
+
+**Uitvoering:** volledig | **Diepere lagen:** volledig | **Getest:** api-server start clean (HTTP 200); typecheck geen nieuwe fouten
+
+Volledige autorisatie-audit uitgevoerd: rollen, permissies, API-endpoints, pagina's en acties geïnventariseerd. Vijf afwijkingen gevonden en hersteld.
+
+**Inventarisatie**
+- Rollen: `hoofdbeheerder` (superuser, bypast alle matrix-checks), `gebruiker` (intern personeel, volledig matrix-gestuurd), `klant` (extern portaal, alleen eigen gebouwen)
+- Permissies: ~24 modules in `lib/permissies`, niveaus 0–4 per gebruiker in `bevoegdheden` JSONB-kolom
+- API-routes: globale `requireAuth` + `laadPermissies` op alle niet-publieke routes; per route `requireBevoegdheid(module, niveau)` of `requireRol`
+- Publieke routes correct: `/healthz`, `/auth/*`, `/uitnodiging/:token`, `/portaal/:token`, `/storage/public-objects/*`
+- Frontend: portal-gating in `App.tsx` + per-pagina `useBevoegdheid`/`useRol` hooks
+
+**Fix 1 — `leveranciers.ts`: ontbrekende module-gating (kritiek)**
+- Alle 6 routes hadden uitsluitend de globale `requireAuth`, geen module-check
+- Elke ingelogde gebruiker (ook klant, monteur zonder magazijnrecht) kon leveranciers lezen, aanmaken, wijzigen en verwijderen
+- Opgelost: `requireBevoegdheid("magazijn", ...)` toegevoegd per route:
+  - GET: niveau 1 (lezen)
+  - POST: niveau 3 (aanmaken)
+  - GET /:id: niveau 1
+  - PATCH /:id: niveau 2 (wijzigen)
+  - DELETE /:id: niveau 4 (beheer)
+  - GET /:id/artikelen: niveau 1
+
+**Fix 2 — `artikelen.ts`: ontbrekende module-gating (kritiek)**
+- Identiek probleem: alle 5 routes zonder `requireBevoegdheid`
+- Opgelost: zelfde `magazijn`-module guards als leveranciers (lezen/aanmaken/schrijven/beheer)
+
+**Fix 3 — `gebouwen.ts` L1104: dode rolcheck in projectteam-koppeling**
+- `gebruiker.rol === "beheerder"` refereerde aan een verouderde rol die niet meer bestaat (validrollen = hoofdbeheerder/gebruiker/klant)
+- Was altijd `false`, waardoor logica alleen nog voor `hoofdbeheerder` werkte
+- Opgelost: `gebruiker.rol === "beheerder" || gebruiker.rol === "hoofdbeheerder"` → `gebruiker.rol === "hoofdbeheerder"`
+
+**Fix 4 — `gebouwen.ts` L1348: dode rolcheck in tekeningsfilter**
+- `rol === "beheerder"` zelfde probleem: documenten die niet als `zichtbaar_monteur` zijn aangevinkt waren onterecht zichtbaar voor niemand buiten `hoofdbeheerder` (in plaats van alleen voor `gebruiker`)
+- Opgelost: dode check verwijderd; check is nu `rol === "hoofdbeheerder"` (bestaand effectief gedrag, zonder verwarrende dode code)
+
+**Fix 5 — `voorzieningen.ts`: handmatige DB-fetch in archief-handler**
+- De-archivering controleerde niveau-4 via directe DB-query (`gebruikersTable`) en handmatige `heeftNiveau()`-aanroep buiten het centrale systeem
+- Dubbele logica t.o.v. `req.permissies` die door `laadPermissies` al geladen is
+- Opgelost: volledige DB-fetch + handmatige rolcheck vervangen door `req.permissies!.heeftModuleRecht("voorzieningen", 4)` — één centraal aanroeppunt
+
+**Bevindingen zonder fix (geen onjuiste autorisatie)**
+- `uitvoerder.ts` sessie-routes: only global `requireAuth` is intentioneel — toegankelijk voor alle ingelogde monteurs
+- `online-gebruikers.ts` klant-filter: `rol === "klant"` beperkt informatielekken, geen incorrect access
+- Frontend `useBevoegdheid` hoofdbeheerder-bypass: spiegelt de backend-architectuur, geen zelfstandig risico
+- Pages `berichten`, `info`, `dossiers` zonder page-level guard: bewust altijd zichtbaar in ConnectPortal
+
 ## 2026-07-04 — Beveiligingsaudit herstelacties
 
 **Uitvoering:** volledig | **Diepere lagen:** volledig | **Getest:** api-server start clean (HTTP 200 /healthz); security headers bevestigd in respons; typecheck geen nieuwe fouten

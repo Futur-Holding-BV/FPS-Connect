@@ -611,21 +611,8 @@ router.patch("/voorzieningen/:id/archief", requireBevoegdheid("voorzieningen", 3
     const gearchiveerd = req.body?.gearchiveerd === true;
 
     // Terug plaatsen (de-archiveren) vereist volledig beheer (niveau 4).
-    if (!gearchiveerd) {
-      const userId = req.session.userId;
-      const [g] = await db
-        .select({ rol: gebruikersTable.rol, bevoegdheden: gebruikersTable.bevoegdheden })
-        .from(gebruikersTable)
-        .where(eq(gebruikersTable.id, userId!));
-      if (!g) {
-        return res.status(403).json({ error: "Geen toegang" });
-      }
-      if (g.rol !== "hoofdbeheerder") {
-        const bev = (g.bevoegdheden as Record<string, number> | null) ?? {};
-        if (!heeftNiveau(bev, "voorzieningen", 4)) {
-          return res.status(403).json({ error: "Geen toegang" });
-        }
-      }
+    if (!gearchiveerd && !req.permissies!.heeftModuleRecht("voorzieningen", 4)) {
+      return res.status(403).json({ error: "Geen toegang" });
     }
 
     const [v] = await db

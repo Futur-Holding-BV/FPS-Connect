@@ -2,14 +2,20 @@ import { Router } from "express";
 import { db, artikelenTable, leveranciersTable } from "@workspace/db";
 import { eq, ilike, and } from "drizzle-orm";
 import { logger } from "../lib/logger";
+import { requireBevoegdheid } from "../middlewares/auth";
 import type { SQL } from "drizzle-orm";
 
 type ArtikelRij = typeof artikelenTable.$inferSelect;
 
 const router = Router();
 
+const lezen    = requireBevoegdheid("magazijn", 1);
+const schrijven = requireBevoegdheid("magazijn", 2);
+const aanmaken = requireBevoegdheid("magazijn", 3);
+const beheer   = requireBevoegdheid("magazijn", 4);
+
 // ── GET /artikelen ─────────────────────────────────────────────────────────────
-router.get("/artikelen", async (req, res) => {
+router.get("/artikelen", lezen, async (req, res) => {
   try {
     const { zoek, leverancier_id, categorie, actief, barcode } = req.query as Record<string, string | undefined>;
 
@@ -40,7 +46,7 @@ router.get("/artikelen", async (req, res) => {
 });
 
 // ── POST /artikelen ────────────────────────────────────────────────────────────
-router.post("/artikelen", async (req, res) => {
+router.post("/artikelen", aanmaken, async (req, res) => {
   try {
     const body = req.body as Record<string, unknown>;
     const naam = String(body.naam ?? "").trim();
@@ -59,7 +65,7 @@ router.post("/artikelen", async (req, res) => {
 });
 
 // ── GET /artikelen/:id ─────────────────────────────────────────────────────────
-router.get("/artikelen/:id", async (req, res) => {
+router.get("/artikelen/:id", lezen, async (req, res) => {
   try {
     const id = Number(req.params.id);
     const [rij] = await db
@@ -78,7 +84,7 @@ router.get("/artikelen/:id", async (req, res) => {
 });
 
 // ── PATCH /artikelen/:id ───────────────────────────────────────────────────────
-router.patch("/artikelen/:id", async (req, res) => {
+router.patch("/artikelen/:id", schrijven, async (req, res) => {
   try {
     const id = Number(req.params.id);
     const body = req.body as Record<string, unknown>;
@@ -98,7 +104,7 @@ router.patch("/artikelen/:id", async (req, res) => {
 });
 
 // ── DELETE /artikelen/:id ──────────────────────────────────────────────────────
-router.delete("/artikelen/:id", async (req, res) => {
+router.delete("/artikelen/:id", beheer, async (req, res) => {
   try {
     const id = Number(req.params.id);
     await db.delete(artikelenTable).where(eq(artikelenTable.id, id));

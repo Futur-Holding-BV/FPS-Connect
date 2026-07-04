@@ -2,11 +2,17 @@ import { Router } from "express";
 import { db, leveranciersTable, artikelenTable } from "@workspace/db";
 import { eq, ilike, and } from "drizzle-orm";
 import { logger } from "../lib/logger";
+import { requireBevoegdheid } from "../middlewares/auth";
 
 const router = Router();
 
+const lezen    = requireBevoegdheid("magazijn", 1);
+const schrijven = requireBevoegdheid("magazijn", 2);
+const aanmaken = requireBevoegdheid("magazijn", 3);
+const beheer   = requireBevoegdheid("magazijn", 4);
+
 // ── GET /leveranciers ──────────────────────────────────────────────────────────
-router.get("/leveranciers", async (req, res) => {
+router.get("/leveranciers", lezen, async (req, res) => {
   try {
     const { zoek, actief, categorie } = req.query as Record<string, string | undefined>;
 
@@ -29,7 +35,7 @@ router.get("/leveranciers", async (req, res) => {
 });
 
 // ── POST /leveranciers ─────────────────────────────────────────────────────────
-router.post("/leveranciers", async (req, res) => {
+router.post("/leveranciers", aanmaken, async (req, res) => {
   try {
     const body = req.body as Record<string, unknown>;
     const naam = String(body.naam ?? "").trim();
@@ -48,7 +54,7 @@ router.post("/leveranciers", async (req, res) => {
 });
 
 // ── GET /leveranciers/:id ──────────────────────────────────────────────────────
-router.get("/leveranciers/:id", async (req, res) => {
+router.get("/leveranciers/:id", lezen, async (req, res) => {
   try {
     const id = Number(req.params.id);
     const [rij] = await db.select().from(leveranciersTable).where(eq(leveranciersTable.id, id)).limit(1);
@@ -61,7 +67,7 @@ router.get("/leveranciers/:id", async (req, res) => {
 });
 
 // ── PATCH /leveranciers/:id ────────────────────────────────────────────────────
-router.patch("/leveranciers/:id", async (req, res) => {
+router.patch("/leveranciers/:id", schrijven, async (req, res) => {
   try {
     const id = Number(req.params.id);
     const body = req.body as Record<string, unknown>;
@@ -81,7 +87,7 @@ router.patch("/leveranciers/:id", async (req, res) => {
 });
 
 // ── DELETE /leveranciers/:id ───────────────────────────────────────────────────
-router.delete("/leveranciers/:id", async (req, res) => {
+router.delete("/leveranciers/:id", beheer, async (req, res) => {
   try {
     const id = Number(req.params.id);
     await db.delete(leveranciersTable).where(eq(leveranciersTable.id, id));
@@ -93,7 +99,7 @@ router.delete("/leveranciers/:id", async (req, res) => {
 });
 
 // ── GET /leveranciers/:id/artikelen ───────────────────────────────────────────
-router.get("/leveranciers/:id/artikelen", async (req, res) => {
+router.get("/leveranciers/:id/artikelen", lezen, async (req, res) => {
   try {
     const id = Number(req.params.id);
     const rijen = await db

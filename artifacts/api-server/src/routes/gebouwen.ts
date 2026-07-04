@@ -1098,8 +1098,7 @@ router.post(
 
       // Projectteam-regels: een beheerder wordt gekoppeld mét een projectfunctie
       // uit zijn eigen profiel; monteurs/controleurs uitsluitend op naam (null).
-      const isBeheerder =
-        gebruiker.rol === "beheerder" || gebruiker.rol === "hoofdbeheerder";
+      const isBeheerder = gebruiker.rol === "hoofdbeheerder";
       let projectRol: string | null = null;
       if (isBeheerder) {
         const gekozen = project_rol ? String(project_rol) : "";
@@ -1343,7 +1342,7 @@ router.get("/gebouwen/:id/tekeningen", lezenGebouwen, async (req, res) => {
     // rollen zijn documenten enkel zichtbaar als ze expliciet zijn aangevinkt
     // (zichtbaar_monteur). Overige tekeningtypen blijven gewoon zichtbaar.
     const { rol } = await effectieveContext(req);
-    const isBeheerder = rol === "beheerder" || rol === "hoofdbeheerder";
+    const isBeheerder = rol === "hoofdbeheerder";
     const zichtbaar = isBeheerder
       ? rows
       : rows.filter((t) => t.type !== "document" || t.zichtbaarMonteur);
