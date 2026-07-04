@@ -21,6 +21,7 @@ import {
   werkbegrotingAdviezenTable,
   inkoopplannenTable,
   inkoopplanRegelsTable,
+  fieNacalculatiesTable,
 } from "@workspace/db";
 import { eq, and, sql, sum, asc, isNull, desc, or, inArray, isNotNull } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
@@ -642,8 +643,15 @@ router.get("/opdrachten/:id/nacalculatie", lezen, async (req, res): Promise<void
       verschil_begroting_vs_verbruikt: data.begroting_uren - (categorie === "arbeid" ? verbruikteUren : 0),
     }));
 
+    // Werktype afgeleid via berekenEnSlaOpNacalculatie (dominant spottype gebouw)
+    const [fieRij] = await db.select({ werktype: fieNacalculatiesTable.werktype })
+      .from(fieNacalculatiesTable)
+      .where(eq(fieNacalculatiesTable.opdrachtId, id))
+      .limit(1);
+
     res.json({
       opdracht_id: id,
+      werktype: fieRij?.werktype ?? null,
       calculatie_arbeid_uren: calcArbeidUren,
       begroting_arbeid_uren: begrotingUren,
       planning_uren: planningUren,

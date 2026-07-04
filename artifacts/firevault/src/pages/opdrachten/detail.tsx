@@ -682,7 +682,15 @@ export default function OpdrachtDetailPagina() {
             <Card><CardContent className="py-8 text-center text-muted-foreground">Nog geen nacalculatiegegevens beschikbaar.</CardContent></Card>
           ) : (
             <div className="space-y-4">
-              <div className="flex justify-end">
+              <div className="flex items-center justify-between">
+                {nacalculatie.werktype ? (
+                  <div className="flex items-center gap-2">
+                    <p className="text-xs text-muted-foreground">Werktype (afgeleid uit dominante spotsoort):</p>
+                    <Badge variant="secondary" className="capitalize text-xs">{nacalculatie.werktype}</Badge>
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground">Werktype nog niet bepaald — beschikbaar na eerste FIE-berekening.</p>
+                )}
                 <Button
                   size="sm"
                   variant="outline"

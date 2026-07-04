@@ -286,7 +286,7 @@ export async function berekenFieContext(calculatieId: number): Promise<FieCalcul
           hints.push(`${richting} materiaalkosten (gem. ${Math.abs(leermoment.afwijkingPctMateriaal).toFixed(0)}% afwijking) op basis van ${leermoment.gebaseerdOpNProjecten} projecten`);
         }
         if (hints.length > 0) {
-          adviesTekst = `${adviesTekst} Let op: ${hints.join("; ")}.`;
+          adviesTekst = `${adviesTekst} Let op (werktype ${hintWerktype}): ${hints.join("; ")}.`;
         }
       }
 

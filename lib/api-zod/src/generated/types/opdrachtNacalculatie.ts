@@ -9,6 +9,8 @@ import type { OpdrachtNacalculatieRegel } from './opdrachtNacalculatieRegel';
 
 export interface OpdrachtNacalculatie {
   opdracht_id: number;
+  /** Afgeleid werktype op basis van het dominante spottype van het gebouw (branddeur, doorvoering, brandklep…). Null als er nog geen FIE-nacalculatie is berekend. */
+  werktype?: string | null;
   calculatie_arbeid_uren: number;
   begroting_arbeid_uren: number;
   planning_uren: number;

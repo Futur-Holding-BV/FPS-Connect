@@ -4,6 +4,19 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-04 — Nacalculatie: werktype zichtbaar op detailpagina (volledig)
+
+**Uitvoering:** volledig | **Getest:** typecheck firevault clean; codegen clean
+
+Werktype (afgeleid dominant spottype) is nu zichtbaar voor de gebruiker:
+- `GET /opdrachten/:id/nacalculatie` geeft nu `werktype` terug (null indien nog geen FIE-berekening)
+- OpenAPI `OpdrachtNacalculatie` schema uitgebreid met optioneel nullable `werktype` veld
+- Nacalculatie-tab toont een badge met het werktype onder de tabkop; bij null een toelichting
+- Leermoment-hint in `berekenFieContext` vermeldt nu expliciet het werktype: "Let op (werktype branddeur): …"
+
+Gewijzigd: `lib/api-spec/openapi.yaml`, `artifacts/api-server/src/routes/opdrachten.ts`,
+`artifacts/api-server/src/services/fie-service.ts`, `artifacts/firevault/src/pages/opdrachten/detail.tsx`
+
 ## 2026-07-04 — FIE nacalculatie: werktype verfijnd met dominant spottype (volledig)
 
 **Uitvoering:** volledig | **Getest:** typecheck api-server clean (pre-existing TS7030 in offertes.ts ongewijzigd)

@@ -11928,6 +11928,7 @@ export const GetNacalculatieParams = zod.object({
 
 export const GetNacalculatieResponse = zod.object({
   "opdracht_id": zod.number(),
+  "werktype": zod.string().nullish().describe('Afgeleid werktype op basis van het dominante spottype van het gebouw (branddeur, doorvoering, brandklep…). Null als er nog geen FIE-nacalculatie is berekend.'),
   "calculatie_arbeid_uren": zod.number(),
   "begroting_arbeid_uren": zod.number(),
   "planning_uren": zod.number(),
