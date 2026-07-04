@@ -59,6 +59,17 @@ Architectuurontwerp-taak (geen bouw) voor visuele begeleiding van monteurs:
 - Implementatie pas na productie-stabiliteit (na Fase G #302)
 - Oplevering: uitsluitend `docs/ai-visual-guidance-framework.md`
 
+## Adaptieve Monteur Interface (#305)
+
+Eén codebase, twee modi — bouwt op bestaande useResponsive hook (≥768=tablet):
+- Telefoon: alleen actieve stap + 4 grote knoppen; rest in bottom sheet
+- Tablet: drie-kolommen (Links=stap, Midden=VGF visual, Rechts=AI+docs) + vaste actie-balk
+- Uitvoeringsmodus: expo-keep-awake + hoog-contrast theme + nav verborgen (Context-gebaseerd, geen aparte route)
+- Foto-analyse: origineel onaangetast, annotatie aparte laag, status groen/oranje/rood
+- Offline: foto's in SyncQueue type='foto_analyse'
+- Toekomstige VisualPanelProvider interface (AR/IFC/3D) als lege hook
+- Geblokkeerd op #300 (Fase E) + #304 (VGF)
+
 ## Sleutelbestanden
 
 - `docs/ai-opdrachtregisseur-plan.md` — volledig plan met correcties
