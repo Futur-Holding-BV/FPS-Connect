@@ -45,6 +45,7 @@ import { requireBevoegdheid } from "../middlewares/auth";
 import { stelOpleidingenVoor } from "../services/opleiding-ai";
 import { workflowService, maakTransitieContext } from "../services/workflow-engine";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
+import { ZZP_JURIDISCH_PROMPT, HRM_CAPACITEIT_SIGNALEN_PROMPT } from "../lib/aiPrompts";
 import { logger } from "../lib/logger";
 
 const uploadGeheugem = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 } });
@@ -2382,7 +2383,7 @@ router.post("/hrm/capaciteit-analyse", alleenBeheerder, async (req, res): Promis
       return pseudoMap.get(naam)!;
     };
 
-    const systeemPrompt = `Je bent een capaciteitsplanner voor een installatiebedrijf. Analyseer de verlof-, ziekte- en saldogegevens en geef korte, praktische signalen terug als JSON object met veld "signalen" (array). Elk signaal heeft: type (capaciteit_laag|verlof_ophoping|saldo_verloopt|ziektetrend), prioriteit (hoog|midden|laag), onderwerp (string, max 60 tekens), toelichting (string, max 200 tekens), en aanbeveling (string, max 150 tekens). Maximaal 6 signalen. Namen zijn geanonimiseerd (M-1 e.d.). Reageer ALLEEN in JSON.`;
+    const systeemPrompt = HRM_CAPACITEIT_SIGNALEN_PROMPT.tekst;
     const gebruikersTekst = JSON.stringify({
       periode: { start: startStr, eind: eindStr },
       medewerkers: medewerkers.length,
@@ -3998,15 +3999,7 @@ router.post("/zzp-overeenkomsten/ai-vullen", schrijven, async (req, res): Promis
       messages: [
         {
           role: "system",
-          content: `Je bent een juridisch assistent gespecialiseerd in Nederlandse ZZP-overeenkomsten (overeenkomst van opdracht, art. 7:400 BW).
-Schrijf beknopte, wettelijk correcte teksten die:
-- Eigen verantwoordelijkheid van de opdrachtnemer voor het resultaat benadrukken
-- Geen gezagsverhouding impliceren (opdrachtnemer bepaalt zelf HOE en WANNEER)
-- Mogelijkheid tot vrije vervanging door een andere opdrachtnemer vermelden
-- Voldoen aan de Wet DBA / WBBA-criteria voor zelfstandigheid
-- In het Nederlands zijn en zakelijk van toon
-
-Geef ALLEEN geldige JSON terug, geen uitleg.`,
+          content: ZZP_JURIDISCH_PROMPT.tekst,
         },
         {
           role: "user",

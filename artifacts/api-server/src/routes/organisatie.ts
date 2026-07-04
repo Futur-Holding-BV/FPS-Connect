@@ -11,6 +11,12 @@ import { db, orgVerzekeringenTable, orgJaarverslagenTable, orgBedrijfsdocumenten
 import { eq, desc } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
+import {
+  ORGANISATIE_DOCUMENT_ANALYSE_PROMPT,
+  ORGANISATIE_INVULLEN_PROMPT,
+  ORGANISATIE_VERZEKERING_SUGGESTIES_PROMPT,
+  ORGANISATIE_BEDRIJFSSCAN_PROMPT,
+} from "../lib/aiPrompts";
 import { ObjectStorageService, ObjectNotFoundError } from "../lib/objectStorage";
 
 const _require = createRequire(import.meta.url);
@@ -410,16 +416,7 @@ router.post(
       }
 
       const systeemPrompt =
-        "Je bent een assistent die Nederlandse bedrijfsdocumenten analyseert. " +
-        "Extraheer uit de documenttekst de volgende velden en geef een JSON-object terug: " +
-        "naam (korte herkenbare naam van het document), " +
-        `categorie (exact één van: ${GELDIGE_CATEGORIEEN.join(", ")}), ` +
-        "omschrijving (een zin), " +
-        "uitgever (de organisatie of instantie die het document heeft uitgegeven, of null), " +
-        "referentie (referentienummer of kenmerk, of null), " +
-        "ingangsdatum (JJJJ-MM-DD of null), " +
-        "vervaldatum (JJJJ-MM-DD of null). " +
-        "Als een waarde niet in de tekst staat, gebruik dan null. Geef altijd valide JSON terug." +
+        ORGANISATIE_DOCUMENT_ANALYSE_PROMPT.tekst.replace("{categorieen}", GELDIGE_CATEGORIEEN.join(", ")) +
         fewShotSectie;
 
       const gebruikerTekst = tekstBlok.trim()
@@ -639,13 +636,7 @@ router.post("/organisatie/ai-invullen", schrijven, async (req, res): Promise<voi
   const { bedrijfsnaam, sector } = req.body;
   const naam = (bedrijfsnaam ?? "FPS Brandpreventie").trim();
 
-  const systeemPrompt =
-    "Je bent een Nederlandse bedrijfsassistent gespecialiseerd in bouw en brandpreventie. " +
-    "Zoek op internet naar de contactgegevens van het opgegeven bedrijf. " +
-    "Geef een JSON-object terug met de volgende velden (null als werkelijk niet te vinden): " +
-    "kvk (KVK-nummer 8 cijfers), btw (BTW-nummer formaat NL999999999B01), " +
-    "adres (straat + huisnummer), postcode (formaat 1234 AB), plaats, telefoon, email, website (volledige URL), iban (IBAN-nummer). " +
-    "Gebruik de meest recente informatie die je kunt vinden. Zet een veld op null alleen als het echt nergens te vinden is.";
+  const systeemPrompt = ORGANISATIE_INVULLEN_PROMPT.tekst;
   const gebruikerPrompt = `Zoek en vul de bedrijfsgegevens in voor: ${naam}${sector ? ` (sector: ${sector})` : ""} — dit is een bedrijf in Nederland.`;
 
   // Probeer Responses API met web zoeken voor actuele bedrijfsinfo
@@ -695,14 +686,7 @@ router.post("/organisatie/verzekeringen/ai-suggesties", schrijven, async (req, r
       messages: [
         {
           role: "system",
-          content:
-            "Je bent een verzekeringsadviseur gespecialiseerd in de bouw en brandpreventiesector in Nederland. " +
-            "Geef een JSON-array terug met standaard aanbevolen bedrijfsverzekeringen. " +
-            "Elk object in de array heeft deze velden: " +
-            "type (korte code, bv 'AVB'), omschrijving (volledige naam), toelichting (waarom nodig), " +
-            "typische_premie_min (getal, euro per jaar), typische_premie_max (getal, euro per jaar), " +
-            "prioriteit ('verplicht', 'sterk aanbevolen', 'aanbevolen'). " +
-            "Geef minstens 8 relevante verzekeringen voor een middelgroot brandpreventiebedrijf.",
+          content: ORGANISATIE_VERZEKERING_SUGGESTIES_PROMPT.tekst,
         },
         {
           role: "user",
@@ -755,15 +739,7 @@ router.post("/organisatie/ai-bedrijfsscan", schrijven, async (req, res): Promise
       messages: [
         {
           role: "system",
-          content:
-            "Je bent een onafhankelijke verzekeringsadviseur gespecialiseerd in de bouw en brandpreventiesector in Nederland. " +
-            "Analyseer het opgegeven verzekeringspakket en geef een JSON-object terug met: " +
-            "samenvatting (string, beknopte beoordeling), " +
-            "score (getal 1-10, algehele dekking), " +
-            "adviezen (array van objecten met: titel, beschrijving, prioriteit ('hoog'/'middel'/'laag'), type ('besparing'/'dekking'/'risico')), " +
-            "ontbrekend (array van strings, verzekeringstypes die ontbreken maar wel aanbevolen zijn), " +
-            "besparing_indicatie (string, schatting mogelijk besparing per jaar of null). " +
-            "Wees concreet en toepasbaar. Focus op risico's specifiek voor brandpreventie- en bouwbedrijven.",
+          content: ORGANISATIE_BEDRIJFSSCAN_PROMPT.tekst,
         },
         {
           role: "user",

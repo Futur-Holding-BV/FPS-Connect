@@ -18,6 +18,7 @@ import {
 import { eq, and, gte, lte, desc, asc, inArray, sql, isNull, or, type SQL } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
+import { PLANNING_REISTIJD_PROMPT } from "../lib/aiPrompts";
 
 const router = Router();
 const iso = (d: Date) => d.toISOString();
@@ -908,7 +909,7 @@ router.post("/modules/planning/reistijd-schatting", lezenPlanning, async (req, r
       messages: [
         {
           role: "system",
-          content: "Je bent een Nederlandse reistijdassistent. Schat de reistijd per auto tussen twee locaties in Nederland. Geef een realistisch getal in minuten en een korte beschrijving in het Nederlands. Antwoord altijd als JSON: { \"minuten\": number, \"beschrijving\": string, \"onzeker\": boolean }. Zet onzeker op true als de locaties vaag zijn.",
+          content: PLANNING_REISTIJD_PROMPT.tekst,
         },
         {
           role: "user",

@@ -13,6 +13,7 @@ import { eq, desc, and, inArray } from "drizzle-orm";
 import { requireBevoegdheid, requireBevoegdheidOfKlant } from "../middlewares/auth";
 import { ObjectStorageService } from "../lib/objectStorage";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
+import { RAPPORT_SAMENVATTING_PROMPT } from "../lib/aiPrompts";
 
 const router = Router();
 
@@ -448,7 +449,7 @@ router.get("/gebouwen/:id/rapporten/:rapportId/bijlagenbundel", lezenRapporten, 
                 messages: [
                   {
                     role: "system",
-                    content: "Je bent een assistent die technische brandpreventiedocumenten samenvat. Geef een beknopte samenvatting in het Nederlands (maximaal 3 alinea's).",
+                    content: RAPPORT_SAMENVATTING_PROMPT.tekst,
                   },
                   {
                     role: "user",

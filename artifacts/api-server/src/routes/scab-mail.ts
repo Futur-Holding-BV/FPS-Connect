@@ -12,6 +12,7 @@ import { eq, and, desc, inArray } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { ObjectStorageService } from "../lib/objectStorage";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
+import { SCAB_MAIL_GENERATIE_PROMPT } from "../lib/aiPrompts";
 
 const router = Router();
 const storage = new ObjectStorageService();
@@ -129,7 +130,7 @@ router.post("/scab-mails/genereer", schrijven, async (req: Request, res: Respons
         messages: [
           {
             role: "system",
-            content: "Je bent een Nederlandse HRM-medewerker die professionele e-mails schrijft aan salarisverwerker SCAB over salarismutaties. Schrijf altijd formeel Nederlands. De e-mail bevat een duidelijke opsomming van de mutaties per medewerker. Sluit af met een gebruikelijke ondertekening.",
+            content: SCAB_MAIL_GENERATIE_PROMPT.tekst,
           },
           {
             role: "user",

@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
+import { GEREEDSCHAP_FOTO_ANALYSE_PROMPT } from "../lib/aiPrompts";
 import {
   gereedschappenTable,
   bruikleenOvereenkomstenTable,
@@ -541,25 +542,7 @@ router.post("/gereedschappen/:id/ai-analyse", schrijven, async (req, res): Promi
       messages: [
         {
           role: "system",
-          content: `Je bent een ervaren magazijnbeheerder bij FPS Brandpreventie, een brandpreventie-installatiebedrijf.
-Je analyseert een foto van een stuk gereedschap of machine en vult de registratiegegevens zo nauwkeurig mogelijk in.
-
-Geef uitsluitend geldige JSON in dit formaat:
-{
-  "omschrijving": "<bondige Nederlandse naam, bijv. 'Klopboormachine'>",
-  "merk": "<merknaam of null>",
-  "type": "<type/modelnummer of null>",
-  "categorie": "<categorie in het Nederlands, bijv. 'boormachine', 'slijptol', 'zaag', 'meting', 'hand' etc.>",
-  "aandrijving": "<een van: handgereedschap | elektrisch | accu | machine | overig>",
-  "met_snoer": <true of false>,
-  "accu_inbegrepen": <true als accu zichtbaar is, anders false>,
-  "lader_inbegrepen": <true als lader zichtbaar is, anders false>,
-  "koffer_inbegrepen": <true als koffer/tas zichtbaar is, anders false>,
-  "keuringsplichtig": <true voor zware machines/heftruck/elektrisch gereedschap boven 1kW, anders false>,
-  "staat_indicatie": "<korte beoordeling van de zichtbare staat: nieuw, goed, lichte slijtage, zware slijtage, beschadigd — of null>"
-}
-
-Wees conservatief: als je iets niet zeker weet, gebruik null of false.`,
+          content: GEREEDSCHAP_FOTO_ANALYSE_PROMPT.tekst,
         },
         {
           role: "user",

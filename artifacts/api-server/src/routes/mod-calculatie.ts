@@ -26,6 +26,7 @@ import {
 import { eq, desc, asc, ilike, or, count, sql, and } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
+import { CALCULATIE_CHAT_BASE_PROMPT, CALCULATIE_ANALYSE_BASE_PROMPT, CALCULATIE_VULLEN_BASE_PROMPT, CALCULATIE_INKOOP_MAIL_PROMPT } from "../lib/aiPrompts";
 
 const router = Router();
 const iso = (d: Date) => d.toISOString();
@@ -1124,55 +1125,29 @@ router.post("/modules/calculaties/:id/ai-regels", lezenCalc, async (req, res): P
         ? "Gebruik de geregistreerde spotaantallen als basis voor hoeveelheden."
         : "Er zijn geen spots of opname-bevindingen beschikbaar — schat realistisch op basis van de projectomschrijving.";
 
-    const prompt = `Je bent een calculatie-expert brandpreventie voor het Nederlandse bedrijf FPS Brandpreventie.
-${gebouwInfo}
-Project: ${header.naam}${header.projectNaam ? ` (${header.projectNaam})` : ""}${header.omschrijving ? `\nOmschrijving: ${header.omschrijving}` : ""}
-${spotenInfo ? `\n${spotenInfo}` : ""}${opnameInfo ? `\n\n${opnameInfo}` : ""}
-
-Beschikbare normtijden (gebruik de exacte code als normtijd_code, max 3 selecteren):
-${normtijdLijst || "(geen normtijden beschikbaar)"}
-
-Beschikbare tarieven uit de database (gebruik deze prijzen in de calculatie):
-${tarievenLijst}
-
-Al aanwezige regels (voeg geen duplicaten toe):
-${bestaandeLijst}
-
-${databronInstructie}
-Gebruik de beschikbare tarieven voor materiaal (tarief) en arbeid (arbeids_tarief).
-Geef 6-14 concrete calculatieregels als JSON. Markeer steigers, bereikbaarheidsmaatregelen en bouwplaatslogistiek als is_bouwplaatskosten: true.
-Geef ook max 3 korte waarschuwingen bij ontbrekende posten, lage hoeveelheden of risico's.
-
-JSON formaat (ALLEEN dit object teruggeven, geen uitleg):
-{
-  "regels": [
-    {
-      "hoofdstuk": "${HOOFDSTUKKEN[0]}",
-      "categorie": "arbeid",
-      "omschrijving": "Omschrijving van de werkzaamheid",
-      "eenheid": "st",
-      "hoeveelheid": 10,
-      "tarief": 0,
-      "mu_per_eenheid": 0.5,
-      "arbeids_tarief": ${standaardArbeidstarief},
-      "onderaanneming_bedrag": 0,
-      "is_staartkosten": false,
-      "is_bouwplaatskosten": false,
-      "klanttekst": "Tekst voor in de offerte"
-    }
-  ],
-  "waarschuwingen": ["Controleer hoeveelheid doorvoeringen op tekening"]
-}
-
-Toegestane hoofdstukken: ${HOOFDSTUKKEN.join(", ")}
-Toegestane categorieën: ${CATEGORIEEN.join(", ")}`;
+    const vullenContext = [
+      gebouwInfo || null,
+      `Project: ${header.naam}${header.projectNaam ? ` (${header.projectNaam})` : ""}${header.omschrijving ? `\nOmschrijving: ${header.omschrijving}` : ""}`,
+      spotenInfo ? spotenInfo : null,
+      opnameInfo ? opnameInfo : null,
+      `Beschikbare normtijden (gebruik de exacte code als normtijd_code, max 3 selecteren):\n${normtijdLijst || "(geen normtijden beschikbaar)"}`,
+      `Beschikbare tarieven uit de database (gebruik deze prijzen in de calculatie):\n${tarievenLijst}`,
+      `Al aanwezige regels (voeg geen duplicaten toe):\n${bestaandeLijst}`,
+      databronInstructie,
+      `JSON formaat (ALLEEN dit object teruggeven, geen uitleg):\n{\n  "regels": [\n    {\n      "hoofdstuk": "${HOOFDSTUKKEN[0]}",\n      "categorie": "arbeid",\n      "omschrijving": "Omschrijving van de werkzaamheid",\n      "eenheid": "st",\n      "hoeveelheid": 10,\n      "tarief": 0,\n      "mu_per_eenheid": 0.5,\n      "arbeids_tarief": ${standaardArbeidstarief},\n      "onderaanneming_bedrag": 0,\n      "is_staartkosten": false,\n      "is_bouwplaatskosten": false,\n      "klanttekst": "Tekst voor in de offerte"\n    }\n  ],\n  "waarschuwingen": ["Controleer hoeveelheid doorvoeringen op tekening"]\n}`,
+      `Toegestane hoofdstukken: ${HOOFDSTUKKEN.join(", ")}`,
+      `Toegestane categorieën: ${CATEGORIEEN.join(", ")}`,
+    ].filter(Boolean).join("\n\n");
 
     if (!heeftGateway()) {
       return void res.json({ regels: [], waarschuwingen: ["AI is niet beschikbaar in deze omgeving."] });
     }
 
     const calcRegelResultaat = await aiGateway.chat("default", {
-      messages: [{ role: "user", content: prompt }],
+      messages: [
+        { role: "system", content: CALCULATIE_VULLEN_BASE_PROMPT.tekst },
+        { role: "user", content: vullenContext },
+      ],
       max_completion_tokens: 2000,
     });
 
@@ -1598,26 +1573,27 @@ router.post("/modules/calculaties/:id/inkoop-items/:itemId/concept-mail", schrij
 
     if (!heeftGateway()) { res.status(503).json({ error: "AI niet beschikbaar" }); return; }
 
-    const prompt = `Je bent een professionele inkoper bij een brandpreventie-installatiebedrijf. Schrijf een beknopte, zakelijke offerteaanvraag-e-mail aan een leverancier.
-
-Projectgegevens:
-- Project: ${header.projectNaam ?? header.naam}
-- Werknummer: ${header.werknummer ?? "—"}
-- Klant: ${header.klantNaam ?? "—"}
-
-Gevraagd materiaal/dienst:
-- Omschrijving: ${item.omschrijving}
-- Type: ${item.type === "onderaanneming" ? "Onderaanneming" : "Materiaal"}
-- Hoeveelheid: ${item.aantal ?? "—"} ${item.eenheid ?? ""}
-- Artikel: ${item.artikel ?? "—"}
-- Gewenste leverdatum: ${item.leverdatum ?? "nog te bepalen"}
-- Uiterste reactiedatum: ${item.reactiedatum ?? "zo spoedig mogelijk"}
-${item.toelichting ? `- Toelichting: ${item.toelichting}` : ""}
-
-Schrijf de mail in formeel Nederlands. Gebruik "FPS Brandpreventie" als afzender. Vraag om prijs (inclusief BTW-tarief), levertijd en geldigheidsdatum van de offerte. Sluit professioneel af. Geen aanhef met naam (leverancier onbekend), gebruik "Geachte heer/mevrouw,". Geen markdown-opmaak, gewone tekst.`;
+    const inkoopMailContext = [
+      "Projectgegevens:",
+      `- Project: ${header.projectNaam ?? header.naam}`,
+      `- Werknummer: ${header.werknummer ?? "—"}`,
+      `- Klant: ${header.klantNaam ?? "—"}`,
+      "",
+      "Gevraagd materiaal/dienst:",
+      `- Omschrijving: ${item.omschrijving}`,
+      `- Type: ${item.type === "onderaanneming" ? "Onderaanneming" : "Materiaal"}`,
+      `- Hoeveelheid: ${item.aantal ?? "—"} ${item.eenheid ?? ""}`,
+      `- Artikel: ${item.artikel ?? "—"}`,
+      `- Gewenste leverdatum: ${item.leverdatum ?? "nog te bepalen"}`,
+      `- Uiterste reactiedatum: ${item.reactiedatum ?? "zo spoedig mogelijk"}`,
+      item.toelichting ? `- Toelichting: ${item.toelichting}` : null,
+    ].filter((l) => l !== null).join("\n");
 
     const antwoord = await aiGateway.chat("default", {
-      messages: [{ role: "user", content: prompt }],
+      messages: [
+        { role: "system", content: CALCULATIE_INKOOP_MAIL_PROMPT.tekst },
+        { role: "user", content: inkoopMailContext },
+      ],
       max_completion_tokens: 600,
     });
 
@@ -1721,34 +1697,17 @@ router.post("/modules/calculaties/:id/ai-chat", lezenCalc, async (req, res): Pro
       ? tarieven.map((t) => `[${t.categorie}] ${t.naam}: €${t.tarief}/${t.eenheid}`).join("\n")
       : "(geen tarieven geconfigureerd — gebruik marktprijzen)";
 
-    const systeemPrompt = `Je bent een ervaren calculatie-expert brandpreventie voor FPS Brandpreventie (Nederland).
-Je helpt de calculateur bij het opstellen, beoordelen en verbeteren van calculaties voor brandwerende werkzaamheden.
-
-CALCULATIE: ${header.naam}${header.projectNaam ? ` — Project: ${header.projectNaam}` : ""}${header.omschrijving ? `\nOmschrijving: ${header.omschrijving}` : ""}
-Status: ${header.status ?? "concept"}
-${gebouwInfo ? `\n${gebouwInfo}` : ""}
-${spotenInfo ? `\n${spotenInfo}` : ""}
-${opnameInfo ? `\n${opnameInfo}` : ""}
-
-HUIDIGE CALCULATIEREGELS (${bestaandeRegels.length} regels):
-${regelenLijst}
-
-BESCHIKBARE NORMTIJDEN:
-${normtijdLijst}
-
-TARIEVEN UIT HET SYSTEEM:
-${tarievenLijst}
-
-Jouw taken als calculatie-assistent:
-- Beoordeel technische uitvoering van werkzaamheden (doorvoeringen, brandwerende deuren, wanden, bekleding, manchetten, coatings)
-- Signaleer ontbrekende posten (sloop, reinigen, herstel, steigers, bouwplaatskosten, risico-opslagen)
-- Controleer eenheden: st = stuks, m² = oppervlakte, m¹ of lm = lijnmeter, uur = arbeidstijd
-- Beoordeel realisme van hoeveelheden en tarieven voor brandpreventie-projecten in Nederland
-- Adviseer over technische uitvoeringsmethoden conform WBDBO, NEN-EN 1634, EN 13501, BRL 0703 e.d.
-- Vergelijk met eerder ingevoerde regels op volledigheid en consistentie
-- Analyseer schetsen of tekeningen als die worden gedeeld (benoem spots, aansluitdetails, etc.)
-
-Antwoord altijd in het Nederlands. Geef concrete, praktische adviezen. Wees kritisch maar constructief.`;
+    const calcContext = [
+      `CALCULATIE: ${header.naam}${header.projectNaam ? ` — Project: ${header.projectNaam}` : ""}${header.omschrijving ? `\nOmschrijving: ${header.omschrijving}` : ""}`,
+      `Status: ${header.status ?? "concept"}`,
+      gebouwInfo || null,
+      spotenInfo || null,
+      opnameInfo || null,
+      `HUIDIGE CALCULATIEREGELS (${bestaandeRegels.length} regels):\n${regelenLijst}`,
+      `BESCHIKBARE NORMTIJDEN:\n${normtijdLijst}`,
+      `TARIEVEN UIT HET SYSTEEM:\n${tarievenLijst}`,
+    ].filter(Boolean).join("\n");
+    const systeemPrompt = calcContext + "\n\n" + CALCULATIE_CHAT_BASE_PROMPT.tekst;
 
     if (!heeftGateway()) {
       res.json({ antwoord: "AI-chat is niet beschikbaar. Controleer de OpenAI-configuratie.", signalen: [] });
@@ -1884,46 +1843,20 @@ router.post("/modules/calculaties/:id/ai-senior-analyse", lezenCalc, async (req,
       `Korting: ${header.korting ?? 0}%`,
     ].join(" | ");
 
-    const systeemPrompt = `Je bent een ervaren senior calculator brandpreventie met 20+ jaar ervaring in Nederland. Je analyseert calculaties voor brandwerende werkzaamheden (doorvoeringen, deuren, wanden, manchetten, coatings, EPS-systemen) en geeft concrete, kritische adviezen.
-
-CALCULATIE: ${header.naam}
-Project: ${header.projectNaam ?? "(niet ingevuld)"}
-Klant: ${header.klantNaam ?? "(niet ingevuld)"}
-Status: ${header.status ?? "concept"}
-${header.omschrijving ? "Omschrijving: " + header.omschrijving : ""}
-${gebouwInfo ? "\n" + gebouwInfo : ""}
-${spotenInfo ? "Geregistreerde spots: " + spotenInfo : ""}
-${opnameInfo ? "\nVeldopname:\n" + opnameInfo : ""}
-
-OPSLAGEN: ${opslagenTekst}
-
-CALCULATIEREGELS (${regels.length}):
-${regelsTekst}
-
-INKOOPADMINISTRATIE:
-${inkoopTekst}
-
-Geef een grondige analyse als senior calculator. Retourneer UITSLUITEND een geldig JSON-array (geen markdown, geen uitleg buiten de JSON). Elk element heeft deze velden:
-- "type": één van "waarschuwing" | "aandachtspunt" | "kans_op_besparing" | "ontbrekende_info" | "vraag"
-- "prioriteit": "hoog" | "middel" | "laag"
-- "titel": korte samenvatting (max 80 tekens)
-- "uitleg": concrete toelichting met reden en voorstel (max 400 tekens)
-
-Analyseer minimaal:
-1. Ontbrekende hoofdstukken (staartkosten, bouwplaatskosten, sloopwerk)
-2. Opvallend lage of hoge tarieven voor brandpreventie in Nederland
-3. Ontbrekende arbeid bij materiaalregels
-4. Ontbrekende materiaalregels bij arbeidsregels
-5. Ontbrekende onderaanneming bij specialistisch werk (glas, kozijnen, stucwerk)
-6. Afwijkende marge (normale AK+risico+winst voor dit type werk: 30-45%)
-7. Ontbrekende staartkosten of bouwplaatskosten
-8. BTW-instelling (standaard 21% of verlegd?)
-9. Onlogische hoeveelheden voor het omschreven werk
-10. Regels zonder eenheid of zonder kostprijs
-11. Inkoopregels zonder offerte terwijl bedrag significant is
-12. Posten die waarschijnlijk offerte bij leverancier vereisen
-
-Retourneer maximaal 15 adviezen. Geef alleen zinvolle, concrete adviezen. Begin direct met "[":`;
+    const analyseContext = [
+      `CALCULATIE: ${header.naam}`,
+      `Project: ${header.projectNaam ?? "(niet ingevuld)"}`,
+      `Klant: ${header.klantNaam ?? "(niet ingevuld)"}`,
+      `Status: ${header.status ?? "concept"}`,
+      header.omschrijving ? `Omschrijving: ${header.omschrijving}` : null,
+      gebouwInfo ? gebouwInfo : null,
+      spotenInfo ? `Geregistreerde spots: ${spotenInfo}` : null,
+      opnameInfo ? `Veldopname:\n${opnameInfo}` : null,
+      `OPSLAGEN: ${opslagenTekst}`,
+      `CALCULATIEREGELS (${regels.length}):\n${regelsTekst}`,
+      `INKOOPADMINISTRATIE:\n${inkoopTekst}`,
+    ].filter(Boolean).join("\n");
+    const systeemPrompt = analyseContext + "\n\n" + CALCULATIE_ANALYSE_BASE_PROMPT.tekst;
 
     const aiResultaat = await aiGateway.chat("reasoning", {
       messages: [

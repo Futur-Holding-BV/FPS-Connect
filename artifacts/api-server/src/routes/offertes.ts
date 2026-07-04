@@ -35,6 +35,7 @@ import { eq, desc, count, sql, and, not, inArray } from "drizzle-orm";
 import { randomBytes } from "crypto";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
+import { OFFERTE_SECTIE_SCHRIJVEN_PROMPT, OFFERTE_MAIL_PROMPT, CONTRACT_ADVIES_PROMPT } from "../lib/aiPrompts";
 import { verstuurMail } from "../services/email";
 
 const router = Router();
@@ -1222,7 +1223,7 @@ router.post("/offerte-secties/:id/ai-schrijven", schrijven, async (req, res): Pr
 
     const contextExtra = (req.body as { context_extra?: string }).context_extra ?? "";
 
-    const systeemPrompt = `Je bent een professionele offerte-schrijver voor FPS Brandpreventie, een Nederlands bedrijf gespecialiseerd in brandwerende voorzieningen en brandpreventie-inspectie. Je schrijft helder, zakelijk en professioneel Nederlands. Gebruik geen emojis. Schrijf in de eerste persoon meervoud (wij/onze). Houd de tekst bondig maar volledig. Verwijs concreet naar de maatregelen en objecten in de offerte.`;
+    const systeemPrompt = OFFERTE_SECTIE_SCHRIJVEN_PROMPT.tekst;
 
     const gebruikersPrompt = `Schrijf de sectie "${sectie.titel}" (type: ${sectie.sectieType}) voor de offerte.
 
@@ -1712,17 +1713,7 @@ router.post("/offertes/:id/ai-email", schrijven, async (req, res): Promise<void>
       messages: [
         {
           role: "system",
-          content: `Je schrijft zakelijke e-mails namens FPS Brandpreventie, een specialist in brand- en rookcompartimentering.
-
-Communicatiestijl FPS:
-- Direct en zelfverzekerd — wij zijn de vakpartij, geen excuses of onnodige omhaal
-- Warm maar zakelijk — persoonlijk aanspreken, niet formeel-stijf ("Geachte heer/mevrouw X,")
-- Concreet — noem het gebouw, de werkzaamheden, het bedrag en de geldigheidsdatum
-- Geen wollige zinnen, geen clichés zoals "in the picture" of "naar aanleiding van"
-- Portaallink wordt uitnodigend gepresenteerd als snelle, digitale manier van ondertekenen
-- Altijd afsluiten met: Met vriendelijke groet, Team FPS Brandpreventie
-- Schrijf in vloeiend Nederlands, taal B2-niveau, leesbaar voor een niet-technische opdrachtgever
-- Houd de tekst beknopt: één alinea introductie, één alinea inhoud/werkzaamheden, één alinea call-to-action`,
+          content: OFFERTE_MAIL_PROMPT.tekst,
         },
         {
           role: "user",
@@ -2065,33 +2056,7 @@ router.post("/offertes/:id/klant-contracten/:contractId/ai-advies", schrijven, a
     if (!c.extractedText?.trim()) return void res.status(422).json({ error: "Contracttekst ontbreekt — geen AI-analyse mogelijk. Zorg dat de PDF volledig geupload is met tekst." });
     if (!heeftGateway()) return void res.status(503).json({ error: "AI niet beschikbaar" });
 
-    const systeemprompt = `Je bent een commercieel-juridisch adviseur bij FPS Brandpreventie.
-Analyseer het onderstaande klantcontract en stel een intern adviesrapport op voor de directie.
-
-Geef je analyse uitsluitend als geldig JSON-object met deze exacte structuur:
-{
-  "risico_niveau": "laag" of "middel" of "hoog",
-  "aandachtspunten": [
-    {
-      "titel": "korte titel",
-      "beschrijving": "uitleg wat het betekent voor FPS",
-      "prioriteit": "laag" of "middel" of "hoog",
-      "clausule": "artikel- of clausulereferentie uit het contract (optioneel)"
-    }
-  ],
-  "advies_samenvatting": "2-3 zinnen samenvatting voor de directie",
-  "volledig_advies": "volledig intern adviesrapport — formeel memo aan de FPS-directie"
-}
-
-Aandachtspunten om op te letten:
-- Afwijkende betalingsvoorwaarden (onze standaard: 30 dagen netto)
-- Garantieverplichtingen, onderhoudsvereisten en servicelevels
-- Aansprakelijkheidsbepalingen, boeteclausules en vrijwaringen
-- Eigendomsvoorbehoud en intellectuele eigendomsrechten
-- Geschillenbeslechting, forumkeuze en toepasselijk recht
-- Opzeg- en ontbindingsgronden
-- Prijsindexering en kostenstijgingclausules
-Geef per aandachtspunt aan of het voor FPS gunstig, neutraal of ongunstig is.`;
+    const systeemprompt = CONTRACT_ADVIES_PROMPT.tekst;
 
     const contractAdviesResultaat = await aiGateway.chat("default", {
       max_completion_tokens: 4000,

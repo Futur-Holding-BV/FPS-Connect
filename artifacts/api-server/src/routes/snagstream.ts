@@ -1,5 +1,6 @@
 import { Router } from "express";
 import type { Request, Response } from "express";
+import { SNAGSTREAM_RAPPORT_ANALYSE_PROMPT } from "../lib/aiPrompts";
 import {
   db,
   snagstreamRapportenTable,
@@ -159,39 +160,7 @@ router.post("/snagstream/rapporten/:id/ai-uitlezen", requireBevoegdheid("gebouwe
       messages: [
         {
           role: "system",
-          content: `Je bent een expert in brandpreventie-inspectierapporten van het systeem Snagstream.
-Analyseer het rapport en extraheer alle beschikbare gegevens.
-Geef je antwoord als geldig JSON met de volgende structuur:
-{
-  "rapport_info": {
-    "gebouwnaam": string|null,
-    "adres": string|null,
-    "opdrachtgever": string|null,
-    "projectnaam": string|null,
-    "rapportdatum": string|null,
-    "confidence": number
-  },
-  "snags": [
-    {
-      "snagnummer": string|null,
-      "verdieping": string|null,
-      "ruimte": string|null,
-      "omschrijving": string|null,
-      "type_naam": string|null,
-      "applicatie_naam": string|null,
-      "label_naam": string|null,
-      "classificatie": string|null,
-      "status_origineel": string|null,
-      "opmerkingen": string|null,
-      "confidence_scores": {
-        "type_naam": number,
-        "locatie": number,
-        "omschrijving": number
-      }
-    }
-  ]
-}
-Zet per veld een confidence-score (0.0-1.0). Onzekere velden krijgen lage score (<0.6).`,
+          content: SNAGSTREAM_RAPPORT_ANALYSE_PROMPT.tekst,
         },
         {
           role: "user",

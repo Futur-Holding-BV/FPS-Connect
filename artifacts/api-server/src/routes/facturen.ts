@@ -1,5 +1,6 @@
 import { Router } from "express";
 import type { Request, Response } from "express";
+import { FACTUUR_UITLEZEN_PROMPT } from "../lib/aiPrompts";
 import {
   db,
   facturenTable,
@@ -253,47 +254,7 @@ router.post("/facturen/:id/ai-uitlezen", requireBevoegdheid("financieel", 1), as
       messages: [
         {
           role: "system",
-          content: `Je bent een expert in het uitlezen van Nederlandse inkoopfacturen voor een brandpreventie-bedrijf.
-Analyseer de factuur en extraheer ALLE gegevens nauwkeurig — zowel de header als alle regellijnen.
-Geef je antwoord als geldig JSON (geen tekst buiten het JSON-object):
-{
-  "factuurnummer": string|null,
-  "factuurdatum": string|null,
-  "vervaldatum": string|null,
-  "relatienaam": string|null,
-  "relatie_adres": string|null,
-  "relatie_iban": string|null,
-  "relatie_btwnummer": string|null,
-  "omschrijving": string|null,
-  "bedrag_excl_btw": string|null,
-  "btw_bedrag": string|null,
-  "bedrag_incl_btw": string|null,
-  "btw_code": string|null,
-  "type": "inkoop"|"verkoop",
-  "regels": [
-    {
-      "regelnummer": number,
-      "omschrijving": string,
-      "hoeveelheid": number|null,
-      "eenheid": string|null,
-      "stukprijs": string|null,
-      "bedrag_excl_btw": string|null,
-      "btw_code": string|null,
-      "btw_percentage": number|null,
-      "btw_bedrag": string|null,
-      "grootboekrekening": string|null
-    }
-  ],
-  "controle_nodig": boolean,
-  "controle_reden": string|null,
-  "confidence": number
-}
-Regels: extraheer elke factuurregel als apart object. Als er geen regelspecificatie is, geef dan een lege array.
-Bedragen: altijd als decimale string ("1234.56"), datums als "YYYY-MM-DD".
-BTW-codes: H=21%, L=9%, V=verlegd, 0=vrijgesteld.
-IBAN: exact overnemen zoals op factuur (met of zonder spaties).
-Werknummer/projectnummer: zoek naar een werknummer, projectnummer, opdrachtnummer of werkopdrachtnummer op de factuur (bijv. "Werk 2024-001", "Proj. 045", "W.O. 123"). Geef dit terug als werknummer.
-Zet controle_nodig=true als bedragen onduidelijk zijn, IBAN ontbreekt, of regelsom afwijkt van totaal.`,
+          content: FACTUUR_UITLEZEN_PROMPT.tekst,
         },
         {
           role: "user",

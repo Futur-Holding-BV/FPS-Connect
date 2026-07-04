@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { gebruikersMeldingenTable } from "@workspace/db";
+import { MELDINGEN_EERSTE_REACTIE_PROMPT } from "../lib/aiPrompts";
 import { eq, desc, and, ilike } from "drizzle-orm";
 import { requireBevoegdheid, requireAuth } from "../middlewares/auth";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
@@ -59,12 +60,7 @@ router.post("/meldingen", requireAuth, async (req, res): Promise<void> => {
   if (heeftGateway()) {
     setImmediate(async () => {
       try {
-        const systeemPrompt = `Je bent een supportassistent van FPS Connect (brandpreventieplatform voor brandpreventie-installaties).
-Geef een korte, voorzichtige eerste reactie op een gebruikersmelding. Regels:
-- Bij een BUG: bevestig ontvangst, geef een korte classificatie (UI-bug / dataprobleem / workflow-bug / onbekend) en stel een tijdelijke workaround voor ALS je die kunt bedenken. Beloof nooit een oplossingstermijn.
-- Bij een VRAAG: geef een kort antwoord of verwijs naar de juiste workflow. Zeg eerlijk als je het niet weet.
-- Bij een VERBETERSUGGESTIE: bedank de gebruiker, bevestig dat de suggestie genoteerd is. Geen beloften.
-Maximaal 3-4 zinnen. Geen markdown. Claim NOOIT een oplossing als die niet zeker is.`;
+        const systeemPrompt = MELDINGEN_EERSTE_REACTIE_PROMPT.tekst;
 
         const resultaat = await aiGateway.chat("fast", {
           messages: [

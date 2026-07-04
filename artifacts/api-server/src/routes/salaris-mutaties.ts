@@ -7,6 +7,7 @@ import {
 import { eq, and, desc } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
+import { SALARIS_MUTATIES_CONTROLE_PROMPT } from "../lib/aiPrompts";
 
 const router = Router();
 
@@ -174,12 +175,7 @@ router.post("/salaris-mutaties/ai-controle", lezen, async (req: Request, res: Re
       messages: [
         {
           role: "system",
-          content:
-            "Je bent een Nederlandse HRM-controleur die salarismutaties controleert vóór verzending naar salarisverwerker SCAB. " +
-            "Geef ALLEEN een JSON-object terug (geen markdown, geen uitleg buiten de JSON). " +
-            "Schema: { bevindingen: [{ ernst: 'waarschuwing'|'aandacht'|'ok', mutatie_naam: string, bericht: string }], compleet: boolean, aanbeveling: string }. " +
-            "Ernst 'waarschuwing' = blokkerend (concept-status, BSN ontbreekt enz.), 'aandacht' = wenselijk maar niet blokkerend, 'ok' = alles in orde. " +
-            "Controleer: ontbrekende ingangsdatum bij loonswijzigingen, concept-status, ontbrekende omschrijving bij vergoedingen, afwijkende of verdachte bedragen.",
+          content: SALARIS_MUTATIES_CONTROLE_PROMPT.tekst,
         },
         {
           role: "user",

@@ -22,6 +22,7 @@ import { requireBevoegdheid } from "../middlewares/auth";
 import { logger } from "../lib/logger";
 import { verstuurMail, isGeconfigureerd } from "../services/email";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
+import { INKOOP_PROMPT, UITVOERINGSPLAN_PROMPT } from "../lib/aiPrompts";
 
 const router = Router();
 const iso = (d: Date | null | undefined) => d?.toISOString() ?? null;
@@ -373,7 +374,7 @@ Geef je analyse als JSON:
       try {
         const inkoopResultaat = await aiGateway.chat("default", {
           messages: [
-            { role: "system", content: "Je bent een ervaren inkoper brandpreventie. Geef altijd valide JSON terug." },
+            { role: "system", content: INKOOP_PROMPT.tekst },
             { role: "user", content: prompt },
           ],
           response_format: { type: "json_object" },
@@ -712,7 +713,7 @@ Geef je suggestie als JSON:
       try {
         const bonResultaat = await aiGateway.chat("default", {
           messages: [
-            { role: "system", content: "Je bent een ervaren inkoper brandpreventie. Geef altijd valide JSON terug." },
+            { role: "system", content: INKOOP_PROMPT.tekst },
             { role: "user", content: prompt },
           ],
           response_format: { type: "json_object" },
@@ -1104,7 +1105,7 @@ Geef je planning als JSON:
       try {
         const uitvoerResultaat = await aiGateway.chat("default", {
           messages: [
-            { role: "system", content: "Je bent een werkvoorbereider brandpreventie. Geef altijd valide JSON terug." },
+            { role: "system", content: UITVOERINGSPLAN_PROMPT.tekst },
             { role: "user", content: prompt },
           ],
           response_format: { type: "json_object" },

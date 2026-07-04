@@ -1,4 +1,3 @@
-import type OpenAI from "openai";
 import { logger } from "../lib/logger";
 import { aiGateway, heeftGateway, type LogContext } from "../lib/aiGateway";
 import {
@@ -423,7 +422,11 @@ async function analyseerBeeld(
     userTekst = `Adres: ${adres}. Het beeld is een Street View-foto (zijaanzicht/straatniveau) van het gebouw op dit adres. Bepaal het gebouwtype en tel het aantal bouwlagen aan de hand van de rijen ramen. Er is geen satellietbeeld beschikbaar, dus geef de footprint-afmetingen (breedte, diepte, oppervlakte) als ruwe schatting en houd de betrouwbaarheid daarvoor laag.`;
   }
 
-  const content: OpenAI.Chat.Completions.ChatCompletionContentPart[] = [
+  type ContentPart =
+    | { type: "text"; text: string }
+    | { type: "image_url"; image_url: { url: string } };
+
+  const content: ContentPart[] = [
     { type: "text", text: userTekst },
   ];
   if (satellietUrl) {

@@ -10,6 +10,7 @@ import { DocumentStudioModelInputDocumentType } from "@workspace/api-zod";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { ObjectStorageService } from "../lib/objectStorage";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
+import { STUDIO_GENEREER_JSON_PROMPT, STUDIO_BIJSTUUR_JSON_PROMPT } from "../lib/aiPrompts";
 import { logActiviteit } from "../lib/activiteit";
 
 import { z } from "zod";
@@ -554,7 +555,7 @@ router.post("/studio/modellen/:id/genereer", schrijven, async (req, res): Promis
     const genereerResultaat = await aiGateway.chat("default", {
       max_tokens: 1200,
       messages: [
-        { role: "system", content: "Je genereert altijd pure JSON zonder markdown. Retourneer alleen de JSON-structuur." },
+        { role: "system", content: STUDIO_GENEREER_JSON_PROMPT.tekst },
         { role: "user",   content: prompt },
       ],
     });
@@ -615,7 +616,7 @@ router.post("/studio/modellen/:id/bijstuur", schrijven, async (req, res): Promis
     const bijstuurResultaat = await aiGateway.chat("default", {
       max_tokens: 1200,
       messages: [
-        { role: "system", content: "Je past een bestaande Connect-template JSON aan op basis van een bijstuur-instructie. Retourneer ALLEEN de aangepaste JSON-structuur, geen markdown, geen uitleg." },
+        { role: "system", content: STUDIO_BIJSTUUR_JSON_PROMPT.tekst },
         { role: "user",   content: `Huidig template:\n${rij.model.connectTemplateJson}\n\nBijstuur-instructie: ${instructie.trim()}\n\nRetourneer de volledige verbeterde JSON.` },
       ],
     });

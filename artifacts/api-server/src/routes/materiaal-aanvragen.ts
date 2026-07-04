@@ -1,6 +1,7 @@
 // Materiaal Aanvragen — monteur meldt artikel (op/beschadigd/nodig) via foto
 // AI herkent artikel, prijs, leverancier en toetst aan werkbegroting scope
 import { Router } from "express";
+import { MATERIAAL_AANVRAAG_ANALYSE_PROMPT } from "../lib/aiPrompts";
 import {
   db,
   materiaalAanvragenTable,
@@ -156,30 +157,7 @@ async function voerAiAnalyseUit(aanvraagId: number): Promise<void> {
       messages: [
         {
           role: "system",
-          content: `Je bent werkvoorbereider bij FPS Brandpreventie, een brandpreventie-installatiebedrijf.
-Een monteur meldt via een foto en/of omschrijving dat hij een artikel nodig heeft.
-
-Jouw taak:
-1. Identificeer het artikel zo precies mogelijk (juiste vakterm/benaming).
-2. Geef een concrete leverancier (Technische Unie, Bouwmaat, Toolstation, Festool, Hilti, enzovoort).
-3. Geef een realistische prijsindicatie (bijv. "€ 12 – € 18 bij Technische Unie").
-4. Controleer of dit artikel past binnen de werkbegroting (scope check).
-5. Geef een kort advies aan de werkvoorbereider.
-
-Scope check regels:
-- "binnen_scope": het artikel staat expliciet (of sterk gelijkend) op de werkbegroting
-- "buiten_scope": het artikel staat niet op de werkbegroting en past niet bij het projecttype
-- "onduidelijk": niet genoeg informatie om een uitspraak te doen
-
-Retourneer uitsluitend geldige JSON:
-{
-  "artikel_naam": "<juiste vakterm, bijv. 'Brandwerende manchet DN75 EPDM'>",
-  "leverancier": "<voorkeursleverancier>",
-  "prijs_indicatie": "<prijsrange + leverancier>",
-  "scope_check": "<binnen_scope | buiten_scope | onduidelijk>",
-  "scope_toelichting": "<1-2 zinnen waarom binnen/buiten scope>",
-  "advies": "<concreet advies voor de werkvoorbereider, max 3 zinnen>"
-}`,
+          content: MATERIAAL_AANVRAAG_ANALYSE_PROMPT.tekst,
         },
         {
           role: "user",

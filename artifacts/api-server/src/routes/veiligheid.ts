@@ -21,6 +21,7 @@ import { verstuurMail, isGeconfigureerd as isMailGeconfigureerd } from "../servi
 import { eq, and, desc, sql, count, gte, lt, isNotNull, min } from "drizzle-orm";
 import { requireAuth, requireBevoegdheid } from "../middlewares/auth.js";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
+import { TOOLBOX_ANALYSE_PROMPT, TOOLBOX_KOPPELING_PROMPT, TOOLBOX_GENEREER_PROMPT, LMRA_VOORSTEL_PROMPT, INCIDENT_REGISTRATIE_PROMPT } from "../lib/aiPrompts";
 import { logActiviteit } from "../lib/activiteit.js";
 import { createRequire } from "module";
 import { ObjectStorageService } from "../lib/objectStorage.js";
@@ -428,8 +429,7 @@ veiligheidRouter.post("/veiligheid/toolboxen/:id/ai-analyse", schrijvenVeilighei
       messages: [
         {
           role: "system",
-          content:
-            "Je bent een VCA-veiligheidsexpert. Analyseer het gegeven toolbox-document en geef een gestructureerde samenvatting in het Nederlands. Geef altijd geldig JSON terug (geen markdown, geen uitleg buiten JSON).",
+          content: TOOLBOX_ANALYSE_PROMPT.tekst,
         },
         {
           role: "user",
@@ -671,8 +671,7 @@ veiligheidRouter.post("/veiligheid/toolboxen/koppeling-suggestie", lezenVeilighe
       messages: [
         {
           role: "system",
-          content:
-            "Je bent een VCA-veiligheidsadviseur voor een brandpreventiebedrijf. Selecteer uit de toolboxcatalogus de meest relevante toolboxen voor de beschreven werkzaamheid. Geef altijd geldig JSON terug zonder markdown.",
+          content: TOOLBOX_KOPPELING_PROMPT.tekst,
         },
         {
           role: "user",
@@ -913,16 +912,7 @@ veiligheidRouter.post("/veiligheid/lmras/ai-voorstel", lezenVeiligheid, async (r
       messages: [
         {
           role: "system",
-          content: `Je bent een veiligheidsadviseur voor brandpreventiewerk. 
-Genereer een pre-ingevulde LMRA (Laatste Minuut Risico Analyse) op basis van de gebouwinformatie.
-Retourneer uitsluitend JSON (geen extra tekst) in het formaat:
-{
-  "locatie_omschrijving": "string",
-  "werkzaamheden": "string",
-  "risicos": ["string", ...],
-  "maatregelen": ["string", ...]
-}
-Zorg voor 3-5 relevante risico's en bijbehorende maatregelen voor brandpreventiewerk.`,
+          content: LMRA_VOORSTEL_PROMPT.tekst,
         },
         { role: "user", content: `Gebouwinformatie:\n${context}` },
       ],
@@ -2114,18 +2104,7 @@ veiligheidRouter.post("/veiligheid/incidenten/ai-voorstel", lezenVeiligheid, asy
       messages: [
         {
           role: "system",
-          content: `Je bent een Arbo-adviseur voor een brandpreventie-bedrijf in Nederland.
-Genereer een pre-ingevulde incidentregistratie op basis van het type incident en de locatie.
-Gebruik de Nederlandse Arbeidsinspectie richtlijnen als basis.
-Retourneer uitsluitend JSON (geen extra tekst) in het formaat:
-{
-  "omschrijving": "string (wat er is gebeurd, feitelijk en volledig)",
-  "oorzaak": "string (directe en achterliggende oorzaak)",
-  "genomen_maatregelen": ["string", ...],
-  "meldplichtig_indicatie": boolean
-}
-meldplichtig_indicatie = true alleen bij: ziekenhuisopname, blijvend letsel of dodelijk.
-Genereer 3-5 realistische maatregelen die direct genomen zijn bij brandpreventiewerk.`,
+          content: INCIDENT_REGISTRATIE_PROMPT.tekst,
         },
         { role: "user", content: `Incidentinformatie:\n${context}` },
       ],
@@ -2291,7 +2270,7 @@ veiligheidRouter.post("/veiligheid/toolboxen/ai-batch-genereer", schrijvenVeilig
       const batchResultaat = await aiGateway.chat("default", {
         max_tokens: 16000,
         messages: [
-          { role: "system", content: "Je bent een VCA-veiligheidscoördinator. Geef altijd geldig JSON terug zonder markdown-opmaak." },
+          { role: "system", content: TOOLBOX_GENEREER_PROMPT.tekst },
           {
             role: "user",
             content: `Genereer ${aantalGeldig} unieke toolbox-onderwerpen voor brandpreventie- en bouwplaatsmonteurs.

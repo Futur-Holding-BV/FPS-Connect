@@ -14,6 +14,7 @@ import { requireBevoegdheid } from "../middlewares/auth";
 import { logger } from "../lib/logger";
 import { ObjectStorageService } from "../lib/objectStorage";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
+import { UITVOERDER_CHAT_BASE_PROMPT } from "../lib/aiPrompts";
 
 const router = Router();
 
@@ -230,17 +231,7 @@ router.post("/uitvoerder/sessies/:id/berichten", async (req, res): Promise<void>
     | { role: "user"; content: string | ContentPart[] }
     | { role: "assistant"; content: string };
 
-  const systemPrompt = `Je bent de Digitale Uitvoerder van FPS Brandpreventie — een ervaren brandpreventie-uitvoerder die monteurs op locatie begeleidt.${opdrachtContext ? `\n\n${opdrachtContext}` : ""}
-
-Jouw rol:
-- Geef concrete, praktische uitvoeringsadviezen voor brandpreventieve maatregelen
-- Stel gerichte vragen als je meer context nodig hebt (bijv. type constructie, materiaal, dikte)
-- Controleer of de beschreven aanpak voldoet aan de norm en toepassing
-- Waarschuw bij afwijkingen, risico's of ontbrekende informatie
-- Houd antwoorden kort en praktisch — de monteur staat op de bouwplaats
-- Verwijs bij twijfel over certificering of norm naar de werkvoorbereider
-
-Kennisgebied: brandwerende deuren, doorvoeringen, brandkleppen, manchetten (EPDM/intumescent), coatings, scheidingen (EW/EI), SnagStream-documentatie, Reac-normen.`;
+  const systemPrompt = UITVOERDER_CHAT_BASE_PROMPT.tekst + (opdrachtContext ? `\n\n${opdrachtContext}` : "");
 
   const gptMessages: GptMessage[] = [{ role: "system", content: systemPrompt }];
 

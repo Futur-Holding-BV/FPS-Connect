@@ -4,6 +4,7 @@ import { crmKlantenTable, gebouwenTable, leveranciersTable } from "@workspace/db
 import { eq } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
+import { AI_INVULLEN_PROMPT } from "../lib/aiPrompts";
 
 const router = Router();
 
@@ -200,10 +201,7 @@ router.post("/ai/invullen", requireAuth, async (req, res): Promise<void> => {
     .map(([k, v]) => `${k}="${v}"`)
     .join(", ");
 
-  const systeemPrompt =
-    "Je bent een Nederlandse data-assistent die bedrijfs- en contactgegevens opzoekt op internet. " +
-    "Zoek naar de meest actuele informatie. " +
-    `Geef een JSON-object terug met exact de volgende velden (stel een veld in op null als het nergens te vinden is — verzin niets):\n${veldenLijst}`;
+  const systeemPrompt = AI_INVULLEN_PROMPT.tekst.replace("{velden}", veldenLijst);
 
   const gebruikerPrompt = [
     `Zoek gegevens voor: ${zoektekst}`,

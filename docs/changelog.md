@@ -149,6 +149,107 @@ Zes beveiligingsproblemen hersteld na inventarisatie (auth, CORS, headers, CSV, 
 - `context_id`: positief integer of null (was ongevalideerd)
 - `huidige_velden`: verplicht plain object; niet-string waarden overgeslagen; maximaal 50 velden; waarden afgekapt op 500 tekens; alleen bekende velddefinitie-sleutels doorgelaten
 
+## 2026-07-04 — AI Gateway — Eindcontrole en bevriezing
+
+**Uitvoering:** volledig | **Diepere lagen:** volledig | **Getest:** typecheck schoon (geen nieuwe fouten); esbuild build clean
+
+Volledige 7-checkpoint code-audit van de AI Gateway-laag. Drie categorieën overtredingen gevonden en gecorrigeerd; gateway is daarna bevroren als stabiele infrastructuur.
+
+### Checkpoint 1 — Provider-isolatie (gebouw-ai.ts)
+
+**Bevinding:** `services/gebouw-ai.ts` importeerde `import type OpenAI from "openai"` uitsluitend voor de annotatie van `OpenAI.Chat.Completions.ChatCompletionContentPart[]` in `analyseerBeeld()`. Elke `from "openai"`-verwijzing buiten `lib/aiGateway.ts` en `lib/openai.ts` is een overtreding van de provider-isolatieregel.
+
+**Correctie:** `import type OpenAI from "openai"` verwijderd. Lokaal type `ContentPart` gedefinieerd met alleen de twee varianten die daadwerkelijk gebruikt worden (`text` en `image_url`).
+
+### Checkpoint 2 — Directe provider-aanroepen
+
+**Bevinding:** Geen overtredingen. Geen `client.chat.completions.create`, `responses.create` of `embeddings.create` buiten `lib/aiGateway.ts` en `lib/openai.ts` aangetroffen.
+
+### Checkpoint 3 — Promptregistry (aiPrompts.ts)
+
+**Bevinding:** 17 inline systeemprompts verspreid over 11 routebestanden, niet geregistreerd in `lib/aiPrompts.ts`.
+
+**Betrokken bestanden en prompts:**
+- `routes/ai.ts` — AI-invullen (data-assistent formulierprefill)
+- `routes/crm.ts` — Concurrent profiel (marktintelligentie)
+- `routes/organisatie.ts` — Document analyse, Bedrijfsgegevens invullen, Verzekering suggesties, Bedrijfsscan (4 prompts)
+- `routes/rapporten.ts` — Bijlage samenvatting
+- `routes/salaris-mutaties.ts` — Salarismutaties controle
+- `routes/scab-mail.ts` — SCAB e-mail generatie
+- `routes/veiligheid.ts` — Toolbox analyse, Toolbox koppeling, Toolbox genereer (3 prompts)
+- `routes/planning-module.ts` — Reistijd schatting
+- `routes/werkvoorbereiding.ts` — Inkoop (gedeeld door inkoopplanning + inkoopbon), Uitvoeringsplan (2 prompts)
+- `routes/opdrachten.ts` — Begroting analyse, Werkvoorbereiding advies (2 prompts)
+
+**Correctie:** 17 nieuwe `AiPrompt`-exports toegevoegd aan `lib/aiPrompts.ts` (elk met `naam`, `versie: "1.0.0"` en `tekst`). Dynamische placeholders (`{velden}`, `{categorieen}`) gedocumenteerd in commentaar; de route vult ze bij aanroep in via `.replace()`. Alle 11 routebestanden bijgewerkt met named import uit de registry; de inline strings verwijderd.
+
+### Checkpoint 4 — Logging volledigheid
+
+**Bevinding:** Geen overtredingen. Alle `logAanroep()`-aanroepen in `chat()` en `responses()` (zowel success- als error-pad) bevatten alle verplichte velden.
+
+### Checkpoint 5 — Kostenregistratie bij fouten
+
+**Bevinding:** `lib/aiGateway.ts` had `geschatteKostenEur: null` in 3 logpaden waarbij een aanroep wél afgerond was (met of zonder output):
+1. `chat()` error-pad (na maximale retry)
+2. `responses()` success-pad (Responses API levert geen tokendata)
+3. `responses()` error-pad
+
+Regel: bij nul of onbekende tokens is de geschatte kosten €0.000000, nooit `null` bij een afgeronde aanroep.
+
+**Correctie:** Alle 3 plaatsen vervangen door `berekenKosten(model, null, null) ?? "0.000000"`. `berekenKosten` met `null` tokens rekent 0 × prijs = `"0.000000"` voor bekende modellen; de `?? "0.000000"` fallback dekt onbekende modellen.
+
+### Checkpoint 6 — Context-contracten (LogContext / AiContextBron)
+
+**Bevinding:** Geen overtredingen. `LogContext` en `AiContextBron` worden correct geëxporteerd vanuit `lib/aiGateway.ts` en als `import type` geïmporteerd in alle services en orchestrators.
+
+### Checkpoint 7 — Gateway-bevriezing
+
+Gateway bevroren als stabiele infrastructuur na bovenstaande correcties. Alle drie overtredingscategorieën zijn gecorrigeerd; typecheck introduceert geen nieuwe fouten (pre-existing TS7030 in routehandlers ongewijzigd aanwezig).
+
+**Gewijzigde bestanden (eerste golf — 17 prompts, 11 bestanden):**
+- `artifacts/api-server/src/lib/aiPrompts.ts` — 17 nieuwe promptexports toegevoegd
+- `artifacts/api-server/src/lib/aiGateway.ts` — 3× `geschatteKostenEur: null` → `berekenKosten(model, null, null) ?? "0.000000"`
+- `artifacts/api-server/src/services/gebouw-ai.ts` — `import type OpenAI` verwijderd; lokaal `ContentPart`-type gedefinieerd
+- `artifacts/api-server/src/routes/ai.ts` — promptregistry import; inline prompt vervangen
+- `artifacts/api-server/src/routes/crm.ts` — promptregistry import; inline prompt vervangen
+- `artifacts/api-server/src/routes/organisatie.ts` — promptregistry imports (4); inline prompts vervangen
+- `artifacts/api-server/src/routes/rapporten.ts` — promptregistry import; inline prompt vervangen
+- `artifacts/api-server/src/routes/salaris-mutaties.ts` — promptregistry import; inline prompt vervangen
+- `artifacts/api-server/src/routes/scab-mail.ts` — promptregistry import; inline prompt vervangen
+- `artifacts/api-server/src/routes/veiligheid.ts` — promptregistry imports (3); inline prompts vervangen
+- `artifacts/api-server/src/routes/planning-module.ts` — promptregistry import; inline prompt vervangen
+- `artifacts/api-server/src/routes/werkvoorbereiding.ts` — promptregistry imports (2); inline prompts vervangen
+- `artifacts/api-server/src/routes/opdrachten.ts` — promptregistry imports (2); inline prompts vervangen>>>>>>> 3a582bc (AI Gateway — Eindcontrole en bevriezing (7-checkpoint audit))
+
+### Tweede golf — overige 14 routebestanden (23 prompts)
+
+Bij nader onderzoek bleken nog 14 routebestanden die buiten de eerste auditgolf vielen eveneens inline systeemprompts te bevatten. Alle overtredingen gecorrigeerd; totaal nu **40 promptexports** in de centrale registry.
+
+**Nieuwe exports toegevoegd aan `lib/aiPrompts.ts` (+23):**
+`GEREEDSCHAP_FOTO_ANALYSE`, `MATERIAAL_AANVRAAG_ANALYSE`, `SNAGSTREAM_RAPPORT_ANALYSE`, `FACTUUR_UITLEZEN`, `ZZP_JURIDISCH`, `LMRA_VOORSTEL`, `INCIDENT_REGISTRATIE`, `STUDIO_GENEREER_JSON`, `STUDIO_BIJSTUUR_JSON`, `TOOLBOX_BEOORDEEL`, `MELDINGEN_EERSTE_REACTIE`, `OFFERTE_SECTIE_SCHRIJVEN`, `OFFERTE_MAIL`, `CONTRACT_ADVIES`, `HRM_CAPACITEIT_SIGNALEN`, `UITVOERDER_CHAT_BASE`, `MAGAZIJN_RETOUR_SCAN_BASE`, `MAGAZIJN_STELLING_SCAN_BASE`, `CALCULATIE_CHAT_BASE`, `CALCULATIE_ANALYSE_BASE`, `WERKBEGROTING_CHAT_BASE`, `CALCULATIE_VULLEN_BASE`, `CALCULATIE_INKOOP_MAIL`
+
+**Gewijzigde routebestanden (+14):**
+- `routes/gereedschappen.ts` — GEREEDSCHAP_FOTO_ANALYSE
+- `routes/materiaal-aanvragen.ts` — MATERIAAL_AANVRAAG_ANALYSE
+- `routes/snagstream.ts` — SNAGSTREAM_RAPPORT_ANALYSE
+- `routes/facturen.ts` — FACTUUR_UITLEZEN
+- `routes/hrm.ts` — ZZP_JURIDISCH, HRM_CAPACITEIT_SIGNALEN
+- `routes/veiligheid.ts` — LMRA_VOORSTEL, INCIDENT_REGISTRATIE (aanvullend op eerste golf)
+- `routes/studio.ts` — STUDIO_GENEREER_JSON, STUDIO_BIJSTUUR_JSON
+- `routes/toolbox.ts` — TOOLBOX_BEOORDEEL
+- `routes/meldingen.ts` — MELDINGEN_EERSTE_REACTIE
+- `routes/offertes.ts` — OFFERTE_SECTIE_SCHRIJVEN, OFFERTE_MAIL, CONTRACT_ADVIES
+- `routes/uitvoerder.ts` — UITVOERDER_CHAT_BASE (dynamische opdrachtcontext wordt erna geplakt)
+- `routes/magazijn.ts` — MAGAZIJN_RETOUR_SCAN_BASE, MAGAZIJN_STELLING_SCAN_BASE (placeholders via `.replace()`)
+- `routes/mod-calculatie.ts` — CALCULATIE_CHAT_BASE, CALCULATIE_ANALYSE_BASE, CALCULATIE_VULLEN_BASE, CALCULATIE_INKOOP_MAIL; laatste twee omgezet naar system+user splitsing
+- `routes/opdrachten.ts` — WERKBEGROTING_CHAT_BASE (aanvullend op eerste golf)
+
+**Patroon voor dynamische prompts:** grote routehandlers die veel contextdata samenvoegen (calculatie, werkbegroting, uitvoerder-chat) gebruiken het context-first patroon: een `context`-block met alle dynamische velden wordt gebouwd via `Array.filter(Boolean).join("\n")`, gevolgd door `"\n\n" + PROMPT.tekst`. Zo blijft de statische rolbeschrijving/instructies in de registry en de projectdata in de route.
+
+**Uitzonderingen (bewust niet naar registry):**
+- `routes/studio.ts:buildConnectTemplatePrompt()` — prompt-bouwerfunctie die een volledig runtime-afhankelijke template construeert op basis van werkgeversbranding (primaireKleur, voettekst, documentType); de gehele prompt is dynamisch, er is geen extraheerbare statische kern.
+- `routes/opdrachten.ts` — twee `prompt`-variabelen die uitsluitend als `role: "user"`-bericht dienen (systeem-bericht komt al uit de registry via BEGROTING_ANALYSE_PROMPT / WERKVOORBEREIDING_ADVIES_PROMPT); de "Je bent"-opening in het user-bericht is een reasoning-model-conventie, geen systeem-prompt.
+
 ## 2026-07-04 — Financial Intelligence Engine (FIE) — Bedrijfskompas
 
 **Uitvoering:** volledig | **Diepere lagen:** volledig | **Getest:** typecheck schoon (geen nieuwe fouten); api-server bouwt + start clean; e2e-web groen

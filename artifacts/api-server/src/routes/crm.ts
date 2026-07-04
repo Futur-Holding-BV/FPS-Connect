@@ -16,6 +16,7 @@ import {
 import { eq, desc, ilike, or, and, count } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
+import { CRM_CONCURRENT_PROFIEL_PROMPT } from "../lib/aiPrompts";
 
 const router = Router();
 
@@ -477,16 +478,7 @@ router.post("/crm/concurrenten/ai-profiel", lezen, async (req, res): Promise<voi
   const { naam } = req.body;
   if (!naam?.trim()) return void res.status(400).json({ error: "naam is verplicht" });
 
-  const systeemPrompt =
-    "Je bent een marktintelligentie-assistent voor een Nederlands brandpreventiebedrijf. " +
-    "Zoek op internet naar actuele informatie over de opgegeven concurrent. " +
-    "Geef een JSON-object terug met de volgende velden (null als echt niet te vinden): " +
-    "website (URL), regio (Nederlandse regio of stad), " +
-    "bekende_klanten (kommalijst van bekende klanten), " +
-    "bekende_projecttypes (soorten projecten bijv. branddeuren doorvoeringen), " +
-    "sterke_punten (korte tekst), zwakke_punten (korte tekst), " +
-    "where_we_encounter (aanbestedingen/beurzen/projecten waar je ze tegenkomt). " +
-    "Gebruik de meest recente informatie die je kunt vinden.";
+  const systeemPrompt = CRM_CONCURRENT_PROFIEL_PROMPT.tekst;
   const gebruikerPrompt = `Maak een concurrentprofiel voor: ${String(naam).trim()} (brandpreventie en bouw sector Nederland)`;
 
   // Probeer Responses API met web zoeken voor actuele concurrentinfo

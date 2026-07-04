@@ -23,6 +23,7 @@ import {
 import { eq, and, sql, sum, asc, isNull, desc, or } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
+import { BEGROTING_ANALYSE_PROMPT, WERKVOORBEREIDING_ADVIES_PROMPT, WERKBEGROTING_CHAT_BASE_PROMPT } from "../lib/aiPrompts";
 import { logger } from "../lib/logger";
 
 const router = Router();
@@ -453,7 +454,7 @@ Geef je analyse als JSON met deze structuur:
         response_format: { type: "json_object" },
         max_tokens: 1500,
         messages: [
-          { role: "system", content: "Je bent een kritische werkvoorbereider. Geef altijd valide JSON terug." },
+          { role: "system", content: BEGROTING_ANALYSE_PROMPT.tekst },
           { role: "user", content: prompt },
         ],
       });
@@ -747,30 +748,15 @@ router.post("/opdrachten/:id/werkbegroting/ai-chat", schrijven, async (req, res)
         : null,
     ].filter(Boolean).join("\n\n") || "(geen regels)";
 
-    const systeemPrompt = `Je bent een ervaren werkvoorbereider brandpreventie voor FPS Brandpreventie (Nederland).
-Je helpt de projectleider bij het beoordelen, plannen en uitvoeren van werkbegrotingen voor brandwerende projecten.
-
-OPDRACHT: ${opdracht?.titel ?? "onbekend"}${opdracht?.werknummer ? ` (werknummer: ${opdracht.werknummer})` : ""}
-Status begroting: ${begroting.status ?? "concept"}
-Totaal arbeid: ${begroting.totaalArbeidUren ?? 0} uur
-Totaal materiaal: €${begroting.totaalMateriaalBedrag ?? 0}
-${gebouwInfo ? `\n${gebouwInfo}` : ""}
-
-WERKBEGROTINGSREGELS:
-${regelenSamenvatting}
-
-Jouw taken als werkbegroting-assistent:
-- Beoordeel de technische haalbaarheid van de werkzaamheden (brandwerende doorvoeringen, deuren, wanden, etc.)
-- Signaleer ontbrekende werkzaamheden (hulpconstructies, afstellingen, inspecties, oplevering, reinigen)
-- Controleer eenheden: st = stuks, m² = oppervlakte, m¹ of lm = lijnmeter, uur = arbeidstijd
-- Beoordeel of urennormen realistisch zijn voor brandpreventie-monteurs in Nederland
-- Adviseer over risico op meerwerk (complexe details, bereikbaarheid, oud gebouw, asbest etc.)
-- Beoordeel inkoopmogelijkheden voor materiaalposten
-- Vergelijk de begroting op volledigheid en consistentie
-- Analyseer schetsen of tekeningen als die worden gedeeld
-- Geef advies over planning en uitvoervolgorde
-
-Antwoord altijd in het Nederlands. Geef concrete, praktische adviezen. Wees kritisch maar constructief.`;
+    const werkbegrotingContext = [
+      `OPDRACHT: ${opdracht?.titel ?? "onbekend"}${opdracht?.werknummer ? ` (werknummer: ${opdracht.werknummer})` : ""}`,
+      `Status begroting: ${begroting.status ?? "concept"}`,
+      `Totaal arbeid: ${begroting.totaalArbeidUren ?? 0} uur`,
+      `Totaal materiaal: EUR ${begroting.totaalMateriaalBedrag ?? 0}`,
+      gebouwInfo || null,
+      `WERKBEGROTINGSREGELS:\n${regelenSamenvatting}`,
+    ].filter(Boolean).join("\n");
+    const systeemPrompt = werkbegrotingContext + "\n\n" + WERKBEGROTING_CHAT_BASE_PROMPT.tekst;
 
     if (!heeftGateway()) {
       res.json({ antwoord: "AI-chat is niet beschikbaar. Controleer de OpenAI-configuratie.", signalen: [] });
@@ -906,7 +892,7 @@ Geef 3–10 adviezen. Geen JSON buiten de array.`;
       const resultaat = await aiGateway.chat("reasoning", {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         messages: [
-          { role: "system", content: "Je bent een kritische senior werkvoorbereider brandpreventie. Geef altijd een valide JSON array terug." },
+          { role: "system", content: WERKVOORBEREIDING_ADVIES_PROMPT.tekst },
           { role: "user", content: prompt },
         ] as any,
         max_completion_tokens: 3000,

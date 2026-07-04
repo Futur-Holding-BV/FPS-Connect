@@ -18,6 +18,7 @@ import { logger } from "../lib/logger";
 import { verstuurMail, MailFout } from "../services/email";
 import { ObjectStorageService } from "../lib/objectStorage";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
+import { MAGAZIJN_RETOUR_SCAN_BASE_PROMPT, MAGAZIJN_STELLING_SCAN_BASE_PROMPT } from "../lib/aiPrompts";
 
 const router = Router();
 
@@ -1272,75 +1273,13 @@ router.post("/magazijn/stellingscans", schrijven, async (req, res): Promise<void
             .map((l) => `${l.id} | ${l.naam} | ${l.type}`)
             .join("\n");
 
-          systemPrompt = `Je bent een ervaren magazijnbeheerder bij FPS Brandpreventie, een brandpreventie-installatiebedrijf.
-Je analyseert een foto van geretourneerde artikelen vanuit een project en adviseert waar ze opgeborgen moeten worden.
-
-Beschikbare artikelen in het systeem (CODE | NAAM | EENHEID | HUIDIGE VOORRAAD):
-${artikelContext}
-
-Beschikbare magazijnlocaties (ID | NAAM | TYPE):
-${locatieContext}
-
-INSTRUCTIES:
-1. Identificeer de zichtbare geretourneerde artikelen op de foto (verpakking, label, kleur, code).
-2. Koppel elk artikel aan de juiste artikel_id uit de lijst.
-3. Schat de hoeveelheid van elk artikel op de foto.
-4. Stel de meest logische magazijnlocatie voor op basis van het type artikel en de beschikbare locaties.
-5. Geef een korte toelichting waarom die locatie het meest geschikt is.
-6. Als een artikel niet herkend wordt, sla het over.
-
-Geef uitsluitend geldige JSON in dit formaat:
-{
-  "suggesties": [
-    {
-      "artikel_id": <integer uit de artikelenlijst>,
-      "code": "<artikelcode of null>",
-      "naam": "<artikelnaam>",
-      "eenheid": "<eenheid>",
-      "huidige_voorraad": <huidige voorraad in systeem of null>,
-      "minimum_voorraad": null,
-      "advies_hoeveelheid": <geschatte retourhoeveelheid>,
-      "reden": "<waarom deze locatie>",
-      "prioriteit": "middel",
-      "aanbevolen_locatie_id": <integer uit de locatielijst of null>,
-      "aanbevolen_locatie_naam": "<locatienaam of null>"
-    }
-  ]
-}`;
+          systemPrompt = MAGAZIJN_RETOUR_SCAN_BASE_PROMPT.tekst
+            .replace("{ARTIKEL_CONTEXT}", artikelContext)
+            .replace("{LOCATIE_CONTEXT}", locatieContext);
           userText = "Analyseer deze foto van geretourneerde artikelen en stel per artikel een opberglocatie voor in het magazijn.";
         } else {
-          systemPrompt = `Je bent een ervaren magazijnbeheerder bij FPS Brandpreventie, een brandpreventie-installatiebedrijf.
-Je analyseert een foto van een magazijnstelling en bepaalt welke artikelen bijbesteld moeten worden.
-
-Beschikbare artikelen (CODE | NAAM | EENHEID | HUIDIG | MINIMUM):
-${artikelContext}
-
-INSTRUCTIES:
-1. Identificeer zichtbare artikelen op de foto aan de hand van verpakking, label, kleur of code.
-2. Vergelijk zichtbare hoeveelheid met de minimumvoorraad uit de lijst.
-3. Geef alleen besteladviezen voor artikelen die (bijna) leeg zijn of onder minimum dreigen te komen.
-4. Bereken advies_hoeveelheid als minimaal (minimum_voorraad * 2) of inschatting bij onbekend minimum.
-5. Als geen artikelen herkend worden, geef een lege suggesties-array.
-
-Geef uitsluitend geldige JSON in dit formaat:
-{
-  "suggesties": [
-    {
-      "artikel_id": <integer uit de lijst>,
-      "code": "<artikelcode of null>",
-      "naam": "<artikelnaam>",
-      "eenheid": "<eenheid>",
-      "huidige_voorraad": <geschatte zichtbare hoeveelheid of null>,
-      "minimum_voorraad": <minimum uit de lijst of null>,
-      "advies_hoeveelheid": <aanbevolen bestelquantum>,
-      "reden": "<korte Nederlandse toelichting>",
-      "prioriteit": "hoog",
-      "aanbevolen_locatie_id": null,
-      "aanbevolen_locatie_naam": null
-    }
-  ]
-}
-Prioriteit: "hoog" = leeg of <50% minimum, "middel" = 50-100% minimum, "laag" = licht onder minimum.`;
+          systemPrompt = MAGAZIJN_STELLING_SCAN_BASE_PROMPT.tekst
+            .replace("{ARTIKEL_CONTEXT}", artikelContext);
           userText = "Analyseer deze stellingfoto en geef besteladviezen voor artikelen die bijbesteld moeten worden.";
         }
 

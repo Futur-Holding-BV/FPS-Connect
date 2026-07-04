@@ -8,6 +8,7 @@ import {
 import { eq, and, or, desc, isNotNull, lte } from "drizzle-orm";
 import { requireAuth, requireBevoegdheid } from "../middlewares/auth.js";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
+import { TOOLBOX_BEOORDEEL_PROMPT } from "../lib/aiPrompts";
 import { logger } from "../lib/logger.js";
 
 const toolboxRouter = Router();
@@ -362,12 +363,7 @@ async function voerAiAnalyseUit(): Promise<number> {
         messages: [
           {
             role: "system",
-            content:
-              "Je beoordeelt interne berichten van een brandpreventiebedrijf. " +
-              "Geef uitsluitend 'ja' of 'nee' als antwoord. " +
-              "'ja' betekent: dit bericht heeft blijvende waarde (veiligheidsregels, werkinstructies, procedures, " +
-              "informatie die ook voor nieuwe medewerkers later relevant is). " +
-              "'nee' betekent: routinebericht, tijdgebonden of eenmalig (datum-specifiek, al verwerkt, administratief).",
+            content: TOOLBOX_BEOORDEEL_PROMPT.tekst,
           },
           {
             role: "user",
