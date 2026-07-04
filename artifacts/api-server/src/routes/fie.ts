@@ -56,6 +56,18 @@ export function verwerkOpmerkingen(v: unknown): string | null {
   return String(v).slice(0, 1000);
 }
 
+/**
+ * Verwerkt een opmerkingen-waarde voor FIE-jaarbegrotingen (POST en PATCH).
+ * - null  → wordt als null opgeslagen
+ * - tekst → wordt afgekapt op 2000 tekens (stille truncatie, geen fout)
+ * Gebruik deze functie alleen wanneer `opmerkingen` aanwezig is in de body;
+ * wanneer het veld ontbreekt (undefined), slaat de caller de update over.
+ */
+export function verwerkOpmerkingenBegroting(v: unknown): string | null {
+  if (v === null || v === undefined) return null;
+  return String(v).slice(0, 2000);
+}
+
 /** Velden die de PATCH /fie/leermomenten/:id handler kan bijwerken. */
 export type LeermomentUpdateVelden = {
   correctieFactor?: number;
@@ -206,7 +218,7 @@ router.post("/fie/begrotingen", schrijven, async (req: Request, res: Response): 
   if (!urenR.ok) { res.status(400).json({ error: urenR.fout }); return; }
 
   // opmerkingen: tekst, max 2000 tekens
-  const opmerkingenStr = opmerkingen != null ? String(opmerkingen).slice(0, 2000) : null;
+  const opmerkingenStr = verwerkOpmerkingenBegroting(opmerkingen);
 
   const [rij] = await db.insert(fieJaarbegrotingenTable).values({
     boekjaar: boekjaarN,
@@ -317,7 +329,7 @@ router.patch("/fie/begrotingen/:id", schrijven, async (req: Request, res: Respon
     updateData.verdeelsleutel = vsl;
   }
   if (opmerkingen !== undefined) {
-    updateData.opmerkingen = opmerkingen != null ? String(opmerkingen).slice(0, 2000) : null;
+    updateData.opmerkingen = verwerkOpmerkingenBegroting(opmerkingen);
   }
 
   const [updated] = await db

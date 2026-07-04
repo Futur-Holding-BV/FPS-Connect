@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { valideerCorrectieFactor, verwerkOpmerkingen, bouwLeermomentUpdateVelden } from "../routes/fie";
+import { valideerCorrectieFactor, verwerkOpmerkingen, verwerkOpmerkingenBegroting, bouwLeermomentUpdateVelden } from "../routes/fie";
 
 // ── valideerCorrectieFactor — grenswaarden en randgevallen ────────────────────
 //
@@ -165,5 +165,49 @@ describe("bouwLeermomentUpdateVelden", () => {
     const result = bouwLeermomentUpdateVelden({ correctie_factor: 0.1 });
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.fout).toMatch(/0,5.*3,0|tussen/);
+  });
+});
+
+// ── verwerkOpmerkingenBegroting — begroting-truncatie en null-verwerking ──────
+//
+// Legt het bewuste gedrag vast: opmerkingen worden stilzwijgend afgekapt op
+// 2000 tekens (geen 400-fout). Dit is gedocumenteerd zodat een toekomstige
+// refactor dit gedrag niet onopgemerkt kan wijzigen.
+//
+// Wanneer het veld ontbreekt (undefined), roept de PATCH-handler deze functie
+// niet aan — het veld blijft ongewijzigd. Dat gedrag zit in de route-handler
+// en wordt hier niet getest.
+
+describe("verwerkOpmerkingenBegroting", () => {
+  it("kapt tekst van meer dan 2000 tekens stilzwijgend af op precies 2000 (geen fout)", () => {
+    const lang = "x".repeat(2500);
+    const resultaat = verwerkOpmerkingenBegroting(lang);
+    expect(resultaat).toHaveLength(2000);
+    expect(resultaat).toBe("x".repeat(2000));
+  });
+
+  it("bewaart tekst van precies 2000 tekens ongewijzigd", () => {
+    const precies = "a".repeat(2000);
+    expect(verwerkOpmerkingenBegroting(precies)).toBe(precies);
+  });
+
+  it("bewaart tekst korter dan 2000 tekens ongewijzigd", () => {
+    expect(verwerkOpmerkingenBegroting("Korte begroting-opmerking")).toBe("Korte begroting-opmerking");
+  });
+
+  it("slaat null op als null", () => {
+    expect(verwerkOpmerkingenBegroting(null)).toBeNull();
+  });
+
+  it("knipt NIET op 1000 tekens — begroting heeft hogere limiet (2000)", () => {
+    const duizend = "y".repeat(1000);
+    const resultaat = verwerkOpmerkingenBegroting(duizend);
+    expect(resultaat).toHaveLength(1000);
+  });
+
+  it("knipt tekst van exact 2001 tekens af op 2000", () => {
+    const inp = "z".repeat(2001);
+    const resultaat = verwerkOpmerkingenBegroting(inp);
+    expect(resultaat).toHaveLength(2000);
   });
 });
