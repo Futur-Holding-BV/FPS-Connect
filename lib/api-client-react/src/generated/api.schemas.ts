@@ -9312,6 +9312,19 @@ export interface UitgifteInput {
   regels: UitgifteRegelInput[];
 }
 
+export type OnvoldoendeVoorraadFoutCode = typeof OnvoldoendeVoorraadFoutCode[keyof typeof OnvoldoendeVoorraadFoutCode];
+
+
+export const OnvoldoendeVoorraadFoutCode = {
+  ONVOLDOENDE_VOORRAAD: 'ONVOLDOENDE_VOORRAAD',
+} as const;
+
+export interface OnvoldoendeVoorraadFout {
+  code: OnvoldoendeVoorraadFoutCode;
+  beschikbaar: number;
+  error: string;
+}
+
 export type RetourRegelInputConditie = typeof RetourRegelInputConditie[keyof typeof RetourRegelInputConditie];
 
 

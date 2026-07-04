@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db, artikelenTable, leveranciersTable } from "@workspace/db";
-import { eq, ilike, and } from "drizzle-orm";
+import { eq, ilike, and, or } from "drizzle-orm";
 import { logger } from "../lib/logger";
 import { requireBevoegdheid } from "../middlewares/auth";
 import type { SQL } from "drizzle-orm";
@@ -19,7 +19,13 @@ router.get("/artikelen", lezen, async (req, res): Promise<void> => {
   try {
     const { zoek, leverancier_id, categorie, actief, barcode } = req.query as Record<string, string | undefined>;
 
-    const zoekCond = zoek ? ilike(artikelenTable.naam, `%${zoek}%`) : undefined;
+    const zoekCond = zoek
+      ? or(
+          ilike(artikelenTable.naam, `%${zoek}%`),
+          ilike(artikelenTable.code, `%${zoek}%`),
+          ilike(artikelenTable.omschrijving, `%${zoek}%`),
+        )
+      : undefined;
     const leverancierCond = leverancier_id ? eq(artikelenTable.leverancierId, Number(leverancier_id)) : undefined;
     const categorieCond = categorie ? eq(artikelenTable.categorie, categorie) : undefined;
     const actiefCond = actief !== undefined ? eq(artikelenTable.actief, actief === "true") : undefined;

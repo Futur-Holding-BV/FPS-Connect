@@ -770,7 +770,9 @@ router.post("/magazijn/uitgiftes", aanmaken, async (req, res): Promise<void> => 
         // Uitgifte via reservering: totale hoeveelheid (incl. gereserveerd) moet volstaan
         const totaal = voorraadRijen.reduce((s, v) => s + (v.hoeveelheid ?? 0), 0);
         if (totaal < hoeveelheid) {
-          res.status(409).json({
+          res.status(422).json({
+            code: "ONVOLDOENDE_VOORRAAD",
+            beschikbaar: totaal,
             error: `Onvoldoende voorraad voor artikel ${artikelId}: ${totaal} aanwezig, ${hoeveelheid} gevraagd`,
           }); return;
         }
@@ -780,7 +782,9 @@ router.post("/magazijn/uitgiftes", aanmaken, async (req, res): Promise<void> => 
           ? voorraadRijen.filter(v => v.locatieId === locatieId).reduce((s, v) => s + Math.max(0, v.hoeveelheid - v.gereserveerd), 0)
           : voorraadRijen.reduce((s, v) => s + Math.max(0, v.hoeveelheid - v.gereserveerd), 0);
         if (beschikbaar < hoeveelheid) {
-          res.status(409).json({
+          res.status(422).json({
+            code: "ONVOLDOENDE_VOORRAAD",
+            beschikbaar,
             error: `Onvoldoende vrije voorraad voor artikel ${artikelId}: ${beschikbaar} vrij, ${hoeveelheid} gevraagd`,
           }); return;
         }

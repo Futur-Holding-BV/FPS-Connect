@@ -18009,6 +18009,12 @@ paths:
       responses:
         "201":
           description: Aangemaakt
+        "422":
+          description: Onvoldoende voorraad
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OnvoldoendeVoorraadFout"
 
   /magazijn/retouren:
     post:
@@ -33224,6 +33230,18 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/UitgifteRegelInput"
+
+    OnvoldoendeVoorraadFout:
+      type: object
+      required: [code, beschikbaar, error]
+      properties:
+        code:
+          type: string
+          enum: [ONVOLDOENDE_VOORRAAD]
+        beschikbaar:
+          type: number
+        error:
+          type: string
 
     RetourRegelInput:
       type: object

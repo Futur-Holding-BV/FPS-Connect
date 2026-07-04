@@ -611,6 +611,8 @@ export * from './onderhoudUpdate';
 export * from './onderhoudVoltooien';
 export * from './ondertekenenPortaal201';
 export * from './onlineGebruiker';
+export * from './onvoldoendeVoorraadFout';
+export * from './onvoldoendeVoorraadFoutCode';
 export * from './opdracht';
 export * from './opdrachtMateriaal';
 export * from './opdrachtMateriaalRegel';

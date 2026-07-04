@@ -498,6 +498,7 @@ import type {
   Onderhoudstaak,
   OndertekenenPortaal201,
   OnlineGebruiker,
+  OnvoldoendeVoorraadFout,
   Opdracht,
   OpdrachtMateriaal,
   OpdrachtNacalculatie,
@@ -63836,7 +63837,7 @@ export const createUitgifte = async (uitgifteInput: UitgifteInput, options?: Req
 
 
 
-export const getCreateUitgifteMutationOptions = <TError = ErrorType<unknown>,
+export const getCreateUitgifteMutationOptions = <TError = ErrorType<OnvoldoendeVoorraadFout>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createUitgifte>>, TError,{data: BodyType<UitgifteInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof createUitgifte>>, TError,{data: BodyType<UitgifteInput>}, TContext> => {
 
@@ -63865,12 +63866,12 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type CreateUitgifteMutationResult = NonNullable<Awaited<ReturnType<typeof createUitgifte>>>
     export type CreateUitgifteMutationBody = BodyType<UitgifteInput>
-    export type CreateUitgifteMutationError = ErrorType<unknown>
+    export type CreateUitgifteMutationError = ErrorType<OnvoldoendeVoorraadFout>
 
     /**
  * @summary Uitgifte van materiaal aan een opdracht
  */
-export const useCreateUitgifte = <TError = ErrorType<unknown>,
+export const useCreateUitgifte = <TError = ErrorType<OnvoldoendeVoorraadFout>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createUitgifte>>, TError,{data: BodyType<UitgifteInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof createUitgifte>>,
