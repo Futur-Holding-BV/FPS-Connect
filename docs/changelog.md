@@ -4,6 +4,17 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-04 — FIE Fase 5: Code-review herstel ronde 3 (volledig)
+
+**Uitvoering:** volledig | **Getest:** typecheck clean alle packages; api-server herstart; DB ALTER geslaagd
+
+Code-review ronde 3 — twee resterende bevindingen opgelost:
+
+1. **Werktype niet meer hardcoded**: `berekenEnSlaOpNacalculatie()` leidt `werktype` nu af uit `opdrachtenTable.type` (vast | regie | overig) in plaats van altijd "algemeen"; fallback "algemeen" alleen als er geen gekoppelde opdracht is
+2. **Monetaire arbeidsbasis**: `calcArbeidBedrag` berekend als som(hoeveelheid × muPerEenheid × arbeidsTarief) uit de gekoppelde calculatieregels; `werkelijkArbeidBedrag` berekend via goedgekeurde uren × uurtarief per functiegroep (regieTarievenTable, laatste tarief per groep); drie nieuwe DB-kolommen (calc_arbeid_bedrag, werkelijk_arbeid_bedrag, afwijking_pct_arbeid_bedrag)
+3. **Leermoment-aggregatie op monetaire basis**: `herberekeenLeermomenten()` gebruikt `afwijkingPctArbeidBedrag` als primaire bron (met uren-basis als fallback); leereffecten weerspiegelen nu werkelijke loonkostenafwijking
+4. **Werktype-specifieke hint**: `berekenFieContext()` zoekt leermoment op via reverse-lookup van de gekoppelde opdracht (calculatieId → opdracht.type) in plaats van hardcoded "algemeen"
+
 ## 2026-07-04 — FIE Fase 5: Code-review herstel ronde 2 (volledig)
 
 **Uitvoering:** volledig | **Getest:** typecheck clean libs + api-server + firevault; api-server herstart

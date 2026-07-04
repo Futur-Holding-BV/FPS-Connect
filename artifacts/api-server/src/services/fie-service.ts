@@ -13,6 +13,7 @@ import {
   urenRegistratiesTable,
   voorraadMutatiesTable, artikelenTable,
   onderaannemeOrdersTable,
+  regieTarievenTable,
 } from "@workspace/db";
 import { logger } from "../lib/logger";
 import { medewerkersTable } from "@workspace/db/schema";
@@ -246,13 +247,20 @@ export async function berekenFieContext(calculatieId: number): Promise<FieCalcul
   }
 
   // Leermoment-hint: voeg historische terugkoppeling toe aan de adviesTekst
+  // Werktype afgeleid van de gekoppelde opdracht (vast/regie/overig); fallback op "algemeen"
   if (adviesStatus !== "leeg" && adviesStatus !== "geen_begroting") {
+    const [gekoppeldeOpdracht] = await db.select({ type: opdrachtenTable.type })
+      .from(opdrachtenTable)
+      .where(eq(opdrachtenTable.calculatieId, calculatieId))
+      .limit(1);
+    const hintWerktype = gekoppeldeOpdracht?.type ?? "algemeen";
+
     const [leermoment] = await db.select({
       afwijkingPctArbeid:    fieLeerMomentenTable.afwijkingPctArbeid,
       afwijkingPctMateriaal: fieLeerMomentenTable.afwijkingPctMateriaal,
       gebaseerdOpNProjecten: fieLeerMomentenTable.gebaseerdOpNProjecten,
     }).from(fieLeerMomentenTable)
-      .where(eq(fieLeerMomentenTable.werktype, "algemeen"))
+      .where(eq(fieLeerMomentenTable.werktype, hintWerktype))
       .limit(1);
 
     if (leermoment && leermoment.gebaseerdOpNProjecten >= 2) {
@@ -845,7 +853,16 @@ const AFWIJKING_DREMPEL = 10; // procent — structurele afwijking drempel voor 
  * Wordt aangeroepen door de dagelijkse achtergrondtaak na projectafsluiting.
  */
 export async function berekenEnSlaOpNacalculatie(opdrachtId: number): Promise<void> {
-  // Werkbegroting als calculatiebasis (totaalArbeidUren + totaalMateriaalBedrag)
+  // Opdracht-metadata: type (vast/regie/overig) + calculatieId
+  const [opdracht] = await db.select({
+    calculatieId: opdrachtenTable.calculatieId,
+    type:         opdrachtenTable.type,
+  }).from(opdrachtenTable).where(eq(opdrachtenTable.id, opdrachtId)).limit(1);
+
+  // Werktype afgeleid van opdracht.type (vast | regie | overig)
+  const werktype = opdracht?.type ?? "algemeen";
+
+  // Werkbegroting als calculatiebasis voor uren
   const [begroting] = await db.select({
     totaalArbeidUren:      projectBegrotingenTable.totaalArbeidUren,
     totaalMateriaalBedrag: projectBegrotingenTable.totaalMateriaalBedrag,
@@ -854,26 +871,57 @@ export async function berekenEnSlaOpNacalculatie(opdrachtId: number): Promise<vo
   const calcArbeidUren      = begroting?.totaalArbeidUren ?? 0;
   const calcMateriaalBedrag = begroting?.totaalMateriaalBedrag ?? 0;
 
-  // Calculatie-onderaanneming: som van onderaannemingBedrag uit gekoppelde calculatieregels
-  const [opdracht] = await db.select({ calculatieId: opdrachtenTable.calculatieId })
-    .from(opdrachtenTable).where(eq(opdrachtenTable.id, opdrachtId)).limit(1);
-
+  // Calculatie-monetaire arbeid: som(hoeveelheid × muPerEenheid × arbeidsTarief) uit gekoppelde calculatieregels
+  let calcArbeidBedrag = 0;
   let calcOnderaannemingBedrag = 0;
   if (opdracht?.calculatieId) {
-    const oaRegels = await db.select({ bedrag: modCalcRegelsTable.onderaannemingBedrag })
-      .from(modCalcRegelsTable)
+    const regels = await db.select({
+      hoeveelheid:          modCalcRegelsTable.hoeveelheid,
+      muPerEenheid:         modCalcRegelsTable.muPerEenheid,
+      arbeidsTarief:        modCalcRegelsTable.arbeidsTarief,
+      onderaannemingBedrag: modCalcRegelsTable.onderaannemingBedrag,
+    }).from(modCalcRegelsTable)
       .where(eq(modCalcRegelsTable.calculatieId, opdracht.calculatieId));
-    calcOnderaannemingBedrag = rnd2(oaRegels.reduce((s, r) => s + (r.bedrag ?? 0), 0));
+
+    for (const r of regels) {
+      calcArbeidBedrag      += (r.hoeveelheid ?? 0) * (r.muPerEenheid ?? 0) * (r.arbeidsTarief ?? 0);
+      calcOnderaannemingBedrag += r.onderaannemingBedrag ?? 0;
+    }
+    calcArbeidBedrag      = rnd2(calcArbeidBedrag);
+    calcOnderaannemingBedrag = rnd2(calcOnderaannemingBedrag);
   }
 
-  // Werkelijke uren (goedgekeurde uren-registraties)
-  const urenRows = await db.select({ nettoUren: urenRegistratiesTable.nettoUren })
-    .from(urenRegistratiesTable)
+  // Werkelijke uren (goedgekeurde uren-registraties) met tariefgroep voor monetaire waarde
+  const urenRows = await db.select({
+    nettoUren:    urenRegistratiesTable.nettoUren,
+    tariefgroep:  urenRegistratiesTable.tariefgroep,
+  }).from(urenRegistratiesTable)
     .where(and(
       eq(urenRegistratiesTable.opdrachtId, opdrachtId),
       eq(urenRegistratiesTable.status, "goedgekeurd"),
     ));
   const werkelijkArbeidUren = rnd2(urenRows.reduce((s, r) => s + r.nettoUren, 0));
+
+  // Regie-tarieven per functiegroep: gebruik laatste beschikbare tarief per groep
+  // regieTarievenTable.functiegroep bevat dezelfde waarden als urenRegistraties.tariefgroep
+  const tariefRows = await db.select({
+    functiegroep: regieTarievenTable.functiegroep,
+    uurtarief:    regieTarievenTable.uurtarief,
+  }).from(regieTarievenTable)
+    .orderBy(desc(regieTarievenTable.id));
+
+  const tariefMap = new Map<string, number>();
+  for (const t of tariefRows) {
+    if (!tariefMap.has(t.functiegroep)) tariefMap.set(t.functiegroep, t.uurtarief);
+  }
+
+  // Werkelijke monetaire arbeidkosten: uren × uurtarief per tariefgroep
+  let werkelijkArbeidBedrag = 0;
+  for (const u of urenRows) {
+    const tarief = u.tariefgroep != null ? (tariefMap.get(u.tariefgroep) ?? 0) : 0;
+    werkelijkArbeidBedrag += u.nettoUren * tarief;
+  }
+  werkelijkArbeidBedrag = rnd2(werkelijkArbeidBedrag);
 
   // Werkelijke materiaalkosten (uitgifte − retour uit het magazijn)
   const mutatieRows = await db.select({
@@ -904,10 +952,16 @@ export async function berekenEnSlaOpNacalculatie(opdrachtId: number): Promise<vo
     ));
   const werkelijkOnderaannemingBedrag = rnd2(oaOrders.reduce((s, r) => s + (r.bedrag ?? 0), 0));
 
-  // Afwijkingspercentages (null als er geen calculatiebasis is)
+  // Afwijkingspercentages — uren-basis (null als er geen calculatiebasis is)
   const afwijkingPctArbeid = calcArbeidUren > 0
     ? rnd2(((werkelijkArbeidUren - calcArbeidUren) / calcArbeidUren) * 100)
     : null;
+
+  // Afwijkingspercentages — monetaire basis (null als er geen calculatiebasis is)
+  const afwijkingPctArbeidBedrag = calcArbeidBedrag > 0
+    ? rnd2(((werkelijkArbeidBedrag - calcArbeidBedrag) / calcArbeidBedrag) * 100)
+    : null;
+
   const afwijkingPctMateriaal = calcMateriaalBedrag > 0
     ? rnd2(((werkelijkMateriaalBedrag - calcMateriaalBedrag) / calcMateriaalBedrag) * 100)
     : null;
@@ -921,19 +975,22 @@ export async function berekenEnSlaOpNacalculatie(opdrachtId: number): Promise<vo
 
   const values = {
     opdrachtId,
-    werktype:                     "algemeen",
+    werktype,
     calcArbeidUren,
     werkelijkArbeidUren,
     afwijkingPctArbeid,
+    calcArbeidBedrag,
+    werkelijkArbeidBedrag,
+    afwijkingPctArbeidBedrag,
     calcMateriaalBedrag,
     werkelijkMateriaalBedrag,
     afwijkingPctMateriaal,
     calcOnderaannemingBedrag,
     werkelijkOnderaannemingBedrag,
     afwijkingPctOnderaanneming,
-    afgesloten:                   true,
-    berekendOp:                   new Date(),
-    bijgewerktOp:                 new Date(),
+    afgesloten:  true,
+    berekendOp:  new Date(),
+    bijgewerktOp: new Date(),
   };
 
   if (bestaande) {
@@ -957,8 +1014,10 @@ export async function herberekeenLeermomenten(): Promise<number> {
   for (const n of alle) {
     if (!groepen.has(n.werktype)) groepen.set(n.werktype, { arbeid: [], materiaal: [] });
     const g = groepen.get(n.werktype)!;
-    if (n.afwijkingPctArbeid !== null && Math.abs(n.afwijkingPctArbeid) > AFWIJKING_DREMPEL) {
-      g.arbeid.push(n.afwijkingPctArbeid);
+    // Gebruik monetaire afwijking (bedrag-basis) als die beschikbaar is; anders uren-basis als fallback
+    const arbeidAfwijking = n.afwijkingPctArbeidBedrag ?? n.afwijkingPctArbeid;
+    if (arbeidAfwijking !== null && Math.abs(arbeidAfwijking) > AFWIJKING_DREMPEL) {
+      g.arbeid.push(arbeidAfwijking);
     }
     if (n.afwijkingPctMateriaal !== null && Math.abs(n.afwijkingPctMateriaal) > AFWIJKING_DREMPEL) {
       g.materiaal.push(n.afwijkingPctMateriaal);
