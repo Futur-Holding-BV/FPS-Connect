@@ -59,7 +59,6 @@ export async function berekenAkPerUur(boekjaar: number): Promise<number | null> 
 
   if (!begroting) return null;
   if (begroting.akPerProductiefUur) return begroting.akPerProductiefUur;
-  if (!begroting.productieveUrenDoel || begroting.productieveUrenDoel <= 0) return null;
 
   const posten = await db
     .select()
@@ -71,7 +70,16 @@ export async function berekenAkPerUur(boekjaar: number): Promise<number | null> 
 
   const totaalAk = posten.reduce((s, p) => s + p.bedragJaarbasis, 0);
   if (totaalAk <= 0) return null;
-  return rnd2(totaalAk / begroting.productieveUrenDoel);
+
+  // Prioriteit: handmatig ingesteld uren-doel → HRM-afleiding (berekenCapaciteit)
+  let productieveUren: number | null = begroting.productieveUrenDoel ?? null;
+  if (!productieveUren || productieveUren <= 0) {
+    const cap = await berekenCapaciteit(boekjaar);
+    productieveUren = cap.effectieveProductieveUren > 0 ? cap.effectieveProductieveUren : null;
+  }
+
+  if (!productieveUren || productieveUren <= 0) return null;
+  return rnd2(totaalAk / productieveUren);
 }
 
 // ─── Live calculatie-context ──────────────────────────────────────────────────
@@ -181,7 +189,7 @@ export async function berekenFieContext(calculatieId: number): Promise<FieCalcul
   const begroting = activeBegroting ?? fallbackBegroting ?? null;
   const heeftBegroting = !!begroting;
 
-  // ── Effectief AK/uur (handmatig norm || berekend uit AK-posten) ───────────────
+  // ── Effectief AK/uur (handmatig norm || berekend uit AK-posten || HRM-afgeleid) ──
   let effectiefAkPerUur: number | null = begroting?.akPerProductiefUur ?? null;
   if (!effectiefAkPerUur && begroting) {
     effectiefAkPerUur = await berekenAkPerUur(begroting.boekjaar);

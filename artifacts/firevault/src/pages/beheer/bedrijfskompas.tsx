@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   useListFieBegrotingen,
   useCreateFieBegroting,
@@ -12,7 +12,6 @@ import {
   getGetFieBegrotingQueryKey,
   type FieJaarbegroting,
   type FieAkPost,
-  useListMedewerkers,
 } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -411,115 +410,112 @@ function AkPostDialoog({
   );
 }
 
+// ─── Capaciteit-response type (spiegelt berekenCapaciteit uit de service) ──────
+
+interface CapaciteitResultaat {
+  aantalMedewerkers: number;
+  geschatteProductieveUren: number;
+  effectieveProductieveUren: number;
+  bron: "snapshot" | "hrm" | "geen";
+}
+
 // ─── CapaciteitSectie ─────────────────────────────────────────────────────────
-// Toont HRM-afgeleid capaciteitsoverzicht en de doelmarge-rekenexercitie.
+// Toont HRM-afgeleid capaciteitsoverzicht via de backend-endpoint.
 
 function CapaciteitSectie({
   boekjaar,
   productieveUrenDoel,
-  doelMargePct,
   totaalAk,
   akPerUurBerekend,
 }: {
   boekjaar: number;
   productieveUrenDoel: number | null | undefined;
-  doelMargePct: number;
   totaalAk: number;
   akPerUurBerekend: number | null;
 }) {
-  const { data: medewerkers = [], isLoading } = useListMedewerkers();
-
-  // Schatting productieve uren: actieve medewerkers × 1400 uur/jaar (norm monteur)
-  const aantalMedewerkers = medewerkers.length;
-  const geschatteUrenPerMedewerker = 1400;
-  const geschatteUren = aantalMedewerkers > 0 ? aantalMedewerkers * geschatteUrenPerMedewerker : null;
+  const { data: cap, isLoading } = useQuery<CapaciteitResultaat>({
+    queryKey: ["fie", "capaciteit", boekjaar, "hrm"],
+    queryFn: async () => {
+      const res = await fetch(`/api/fie/capaciteit/${boekjaar}/hrm`, { credentials: "include" });
+      if (!res.ok) throw new Error("capaciteit ophalen mislukt");
+      return res.json() as Promise<CapaciteitResultaat>;
+    },
+  });
 
   const ingesteldUren = productieveUrenDoel ?? null;
-  const gebuikteUren  = ingesteldUren ?? geschatteUren;
+  const hrmUren = cap?.effectieveProductieveUren ?? null;
+  const gebruikteUren = ingesteldUren ?? hrmUren;
 
-  const akPerUurBerekendHier =
-    akPerUurBerekend != null
-      ? akPerUurBerekend
-      : gebuikteUren && gebuikteUren > 0 && totaalAk > 0
-        ? Math.round((totaalAk / gebuikteUren) * 100) / 100
-        : null;
+  const bronLabel =
+    cap?.bron === "snapshot" ? "eigen capaciteitsplanning" :
+    cap?.bron === "hrm"      ? "HRM-register (contracturen)" :
+                               "geen data beschikbaar";
+
+  const akNormLabel =
+    ingesteldUren != null ? "op basis van begroting" :
+    hrmUren != null       ? "afgeleid uit HRM" :
+                            "voeg AK-posten en medewerkers toe";
 
   return (
     <Card>
       <CardHeader className="pb-3">
         <div className="flex items-center gap-2">
           <Users className="w-4 h-4 text-muted-foreground" />
-          <CardTitle className="text-sm">Capaciteit & doelmarge</CardTitle>
+          <CardTitle className="text-sm">Capaciteit</CardTitle>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* HRM-afleiding */}
-        <div>
-          <p className="text-xs font-medium text-muted-foreground mb-2">Productieve uren — afgeleid uit HRM</p>
-          {isLoading ? (
-            <Skeleton className="h-10 w-full" />
-          ) : (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <div className="rounded-md border p-3">
-                <p className="text-[10px] text-muted-foreground">Actieve medewerkers</p>
-                <p className="text-lg font-semibold mt-0.5">{aantalMedewerkers}</p>
-                <p className="text-[10px] text-muted-foreground">in HRM</p>
-              </div>
-              <div className="rounded-md border p-3">
-                <p className="text-[10px] text-muted-foreground">Geschat (norm 1.400 u/j)</p>
-                <p className="text-lg font-semibold mt-0.5">
-                  {geschatteUren != null
-                    ? new Intl.NumberFormat("nl-NL").format(geschatteUren)
-                    : "—"}
-                </p>
-                <p className="text-[10px] text-muted-foreground">productieve uren/jaar</p>
-              </div>
-              <div className="rounded-md border p-3">
-                <p className="text-[10px] text-muted-foreground">Ingesteld in begroting</p>
-                <p className="text-lg font-semibold mt-0.5">
-                  {ingesteldUren != null
-                    ? new Intl.NumberFormat("nl-NL").format(ingesteldUren)
-                    : <span className="text-muted-foreground text-sm">niet ingesteld</span>}
-                </p>
-                <p className="text-[10px] text-muted-foreground">productieve uren/jaar</p>
-              </div>
-              <div className="rounded-md border p-3 bg-primary/5 border-primary/20">
-                <p className="text-[10px] text-muted-foreground">AK-norm per uur</p>
-                <p className="text-lg font-semibold mt-0.5 text-primary">
-                  {akPerUurBerekendHier != null
-                    ? new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR", minimumFractionDigits: 2 }).format(akPerUurBerekendHier)
-                    : "—"}
-                </p>
-                <p className="text-[10px] text-muted-foreground">
-                  {ingesteldUren ? "op basis van begroting" : geschatteUren ? "op basis van schatting" : "voeg AK-posten toe"}
-                </p>
-              </div>
+        {isLoading ? (
+          <Skeleton className="h-24 w-full" />
+        ) : (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="rounded-md border p-3">
+              <p className="text-[10px] text-muted-foreground">Actieve medewerkers</p>
+              <p className="text-lg font-semibold mt-0.5">{cap?.aantalMedewerkers ?? "—"}</p>
+              <p className="text-[10px] text-muted-foreground">in HRM</p>
             </div>
-          )}
-        </div>
+            <div className="rounded-md border p-3">
+              <p className="text-[10px] text-muted-foreground">Productieve uren (HRM)</p>
+              <p className="text-lg font-semibold mt-0.5">
+                {hrmUren != null
+                  ? new Intl.NumberFormat("nl-NL").format(hrmUren)
+                  : "—"}
+              </p>
+              <p className="text-[10px] text-muted-foreground">{bronLabel}</p>
+            </div>
+            <div className="rounded-md border p-3">
+              <p className="text-[10px] text-muted-foreground">Ingesteld in begroting</p>
+              <p className="text-lg font-semibold mt-0.5">
+                {ingesteldUren != null
+                  ? new Intl.NumberFormat("nl-NL").format(ingesteldUren)
+                  : <span className="text-muted-foreground text-sm">niet ingesteld</span>}
+              </p>
+              <p className="text-[10px] text-muted-foreground">productieve uren/jaar</p>
+            </div>
+            <div className="rounded-md border p-3 bg-primary/5 border-primary/20">
+              <p className="text-[10px] text-muted-foreground">AK-norm per uur</p>
+              <p className="text-lg font-semibold mt-0.5 text-primary">
+                {akPerUurBerekend != null
+                  ? new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR", minimumFractionDigits: 2 }).format(akPerUurBerekend)
+                  : gebruikteUren && gebruikteUren > 0 && totaalAk > 0
+                    ? new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR", minimumFractionDigits: 2 }).format(
+                        Math.round((totaalAk / gebruikteUren) * 100) / 100
+                      )
+                    : "—"}
+              </p>
+              <p className="text-[10px] text-muted-foreground">{akNormLabel}</p>
+            </div>
+          </div>
+        )}
 
-        {/* Doelmarge-workflow */}
         <div className="rounded-md border border-dashed p-3 bg-muted/20">
           <div className="flex items-start gap-2">
             <Info className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
-            <div className="text-xs text-muted-foreground space-y-1.5">
-              <p className="font-medium text-foreground">Doelmarge-rekenexercitie</p>
-              <p>
-                Doelmarge is ingesteld op <strong>{fmtPct(doelMargePct)}</strong>. 
-                Dit betekent dat van elke euro omzet minimaal {fmtPct(doelMargePct)} overblijft na directe kosten en AK.
-              </p>
-              {gebuikteUren && totaalAk > 0 && (
-                <p>
-                  Met {new Intl.NumberFormat("nl-NL").format(gebuikteUren)} productieve uren en {fmt(totaalAk)} totale AK 
-                  {" "}is de AK-norm <strong>{akPerUurBerekendHier != null ? fmtUur(akPerUurBerekendHier) : "—"}/uur</strong>.
-                  Bij een doelmarge van {fmtPct(doelMargePct)} moet de verkoopprijs de directe kosten + AK + {fmtPct(doelMargePct)} marge dekken.
-                </p>
-              )}
-              <p className="text-[10px]">
-                Stel de productieve uren in via "Nieuwe begroting" (veld "Productieve uren/jaar") om de AK-norm automatisch te berekenen.
-                Het werkelijke aantal medewerkers is afgeleid uit het HRM-register.
-              </p>
-            </div>
+            <p className="text-xs text-muted-foreground">
+              Productieve uren worden berekend uit de contracturen van actieve medewerkers (HRM).
+              Als er een capaciteitsplanning beschikbaar is, heeft die voorrang.
+              Stel de uren handmatig in via de begrotingsinstellingen om de HRM-afleiding te overschrijven.
+            </p>
           </div>
         </div>
       </CardContent>
@@ -617,12 +613,13 @@ function BegrotingDetail({ begrotingId, onTerug }: { begrotingId: number; onTeru
         </Card>
       </div>
 
-      {/* Tabs: Overzicht / AK-posten / Capaciteit */}
+      {/* Tabs: Overzicht / AK-posten / Capaciteit / Doelmarge */}
       <Tabs value={actieveTab} onValueChange={setActieveTab}>
-        <TabsList className="grid w-full grid-cols-3 max-w-sm">
+        <TabsList className="grid w-full grid-cols-4 max-w-lg">
           <TabsTrigger value="overzicht">Overzicht</TabsTrigger>
           <TabsTrigger value="ak-posten">AK-posten</TabsTrigger>
           <TabsTrigger value="capaciteit">Capaciteit</TabsTrigger>
+          <TabsTrigger value="doelmarge">Doelmarge</TabsTrigger>
         </TabsList>
 
         {/* Tab: Overzicht (doelmarge-toelichting + verdeelsleutel) */}
@@ -758,15 +755,90 @@ function BegrotingDetail({ begrotingId, onTerug }: { begrotingId: number; onTeru
           </Card>
         </TabsContent>
 
-        {/* Tab: Capaciteit (HRM-afgeleid) */}
+        {/* Tab: Capaciteit (HRM-afgeleid via backend) */}
         <TabsContent value="capaciteit" className="mt-4">
           <CapaciteitSectie
             boekjaar={detail.boekjaar}
             productieveUrenDoel={detail.productieve_uren_doel}
-            doelMargePct={detail.doel_marge_pct}
             totaalAk={totaalAk}
             akPerUurBerekend={akPerUur}
           />
+        </TabsContent>
+
+        {/* Tab: Doelmarge (rekenexercitie op basis van begroting + AK-posten) */}
+        <TabsContent value="doelmarge" className="mt-4">
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex items-center gap-2">
+                <TrendingUp className="w-4 h-4 text-muted-foreground" />
+                <CardTitle className="text-sm">Doelmarge-rekenexercitie</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* KPI-rij */}
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                <div className="rounded-md border p-3 bg-primary/5 border-primary/20">
+                  <p className="text-[10px] text-muted-foreground">Doelmarge</p>
+                  <p className="text-lg font-semibold mt-0.5 text-primary">{fmtPct(detail.doel_marge_pct)}</p>
+                  <p className="text-[10px] text-muted-foreground">van de aanneemsom</p>
+                </div>
+                <div className="rounded-md border p-3">
+                  <p className="text-[10px] text-muted-foreground">Omzetdoel</p>
+                  <p className="text-lg font-semibold mt-0.5">{fmt(detail.omzet_doel)}</p>
+                  <p className="text-[10px] text-muted-foreground">per jaar</p>
+                </div>
+                <div className="rounded-md border p-3">
+                  <p className="text-[10px] text-muted-foreground">AK / productief uur</p>
+                  <p className="text-lg font-semibold mt-0.5">
+                    {akPerUur != null
+                      ? fmtUur(akPerUur)
+                      : detail.ak_per_productief_uur != null
+                        ? fmtUur(detail.ak_per_productief_uur)
+                        : "—"}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground">
+                    {akPerUur != null ? "berekend uit AK-posten" : detail.ak_per_productief_uur != null ? "handmatig ingesteld" : "nog niet bepaald"}
+                  </p>
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Rekenexercitie uitleg */}
+              <div className="space-y-2 text-sm">
+                <p className="font-medium text-foreground">Hoe werkt het?</p>
+                <div className="space-y-1.5 text-muted-foreground text-xs">
+                  <p>
+                    De doelmarge geeft aan welk deel van de projectomzet netto overblijft na aftrek van alle directe kosten en AK (algemene kosten).
+                  </p>
+                  {(detail.omzet_doel ?? 0) > 0 && (() => {
+                    const omzetDoel = detail.omzet_doel!;
+                    return (
+                      <div className="rounded-md bg-muted/30 p-3 space-y-1 font-mono text-[11px]">
+                        <p>Omzetdoel: <span className="font-semibold text-foreground">{fmt(omzetDoel)}</span></p>
+                        <p>Totale AK: <span className="font-semibold text-foreground">{fmt(totaalAk)}</span></p>
+                        <p>
+                          AK als % van omzet:{" "}
+                          <span className="font-semibold text-foreground">
+                            {fmtPct((totaalAk / omzetDoel) * 100)}
+                          </span>
+                        </p>
+                        <p className="border-t border-border/40 pt-1">
+                          Maximale directe kosten bij doelmarge {fmtPct(detail.doel_marge_pct)}:{" "}
+                          <span className="font-semibold text-foreground">
+                            {fmt(omzetDoel * (1 - detail.doel_marge_pct / 100) - totaalAk)}
+                          </span>
+                        </p>
+                      </div>
+                    );
+                  })()}
+                  <p>
+                    Pas de doelmarge aan via de begrotingsinstellingen. De AK-norm per uur wordt automatisch herberekend zodra AK-posten en capaciteit bekend zijn.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
 
