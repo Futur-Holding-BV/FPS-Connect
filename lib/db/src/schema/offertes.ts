@@ -209,7 +209,11 @@ export const offerteHandtekeningenTable = pgTable("offerte_handtekeningen", {
   versienummer:   integer("versienummer").notNull().default(1),
   portaalToken:   text("portaal_token"),
   aangemaaktOp:   timestamp("aangemaakt_op").notNull().defaultNow(),
-});
+}, (t) => [
+  // Voorkomt dubbele handtekeningen per portaallink: één token kan slechts éénmalig ondertekenen.
+  // NULL != NULL in PostgreSQL, dus rijen zonder portaal_token raken de constraint nooit.
+  uniqueIndex("uq_handtekeningen_offerte_token").on(t.offerteId, t.portaalToken),
+]);
 
 // Vragen van bezoekers via de portaalpagina.
 export const offerteVragenTable = pgTable("offerte_vragen", {

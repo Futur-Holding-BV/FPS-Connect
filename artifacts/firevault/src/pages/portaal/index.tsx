@@ -95,6 +95,9 @@ export default function PortaalPagina({ token }: PortaalPaginaProps) {
   // Afwijzen
   const [afwijsReden, setAfwijsReden] = useState("");
 
+  // Ondertekening foutmelding (bijv. al ondertekend — 409)
+  const [ondertekenfout, setOndertekenfout] = useState<string | null>(null);
+
   // Optioneel werk
   const [optioneelSelectie, setOptioneelSelectie] = useState<Record<number, boolean>>({});
   const [optioneelBewaard,  setOptioneelBewaard]  = useState(false);
@@ -170,6 +173,7 @@ export default function PortaalPagina({ token }: PortaalPaginaProps) {
     if (!canvas) return;
     const dataUrl = canvas.toDataURL("image/png");
     setBezig(true);
+    setOndertekenfout(null);
     try {
       await onderteken.mutateAsync({
         token,
@@ -182,8 +186,13 @@ export default function PortaalPagina({ token }: PortaalPaginaProps) {
       });
       await qc.invalidateQueries({ queryKey: getGetPortaalQueryKey(token) });
       setActieFase("voltooid");
-    } catch {
-      setActieFase("tekenen");
+    } catch (err: unknown) {
+      const status = (err as { response?: { status?: number } })?.response?.status;
+      if (status === 409) {
+        setOndertekenfout("Deze offerte is al ondertekend. Vernieuw de pagina om de actuele status te zien.");
+      } else {
+        setActieFase("tekenen");
+      }
     } finally {
       setBezig(false);
     }
@@ -971,9 +980,16 @@ export default function PortaalPagina({ token }: PortaalPaginaProps) {
                     Door te bevestigen gaat u akkoord met de offerte en geeft u FPS Brandpreventie opdracht de beschreven werkzaamheden uit te voeren.
                   </p>
 
+                  {ondertekenfout && (
+                    <div className="flex items-start gap-2 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+                      <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                      <span>{ondertekenfout}</span>
+                    </div>
+                  )}
+
                   <Button
                     onClick={bevestigHandtekening}
-                    disabled={!sigNaam.trim() || bezig}
+                    disabled={!sigNaam.trim() || bezig || !!ondertekenfout}
                     className="w-full sm:w-auto"
                     style={{ backgroundColor: "#F23B0D" }}
                   >

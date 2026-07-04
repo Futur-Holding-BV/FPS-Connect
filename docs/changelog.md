@@ -84,6 +84,24 @@ Vier samenhangende verbeteringen aan de offerte-portaalflow:
 - OpenAPI codegen opnieuw uitgedraaid na spec-wijziging
 - Geen nieuwe TS-fouten in api-server of firevault buiten de pre-existente TS7030's
 
+## 2026-07-04 — Dubbele handtekeningen geblokkeerd (idempotentie-guard)
+
+**Uitvoering:** volledig | **Diepere lagen:** volledig | **Getest:** typecheck clean; DB-constraint bevestigd via \d
+
+Voorkomen dat twee gelijktijdige ondertekeningsverzoeken twee handtekening-records aanmaken.
+
+**DB-migratie**
+- `ALTER TABLE offerte_handtekeningen ADD CONSTRAINT uq_handtekeningen_offerte_token UNIQUE (offerte_id, portaal_token)` — additieve constraint, geen dataverlies; NULL != NULL in PostgreSQL dus rijen zonder portaal_token raken de constraint nooit
+- Drizzle-schema bijgewerkt met `uniqueIndex("uq_handtekeningen_offerte_token").on(t.offerteId, t.portaalToken)` in `lib/db/src/schema/offertes.ts`
+
+**Server-side idempotentie** (`artifacts/api-server/src/routes/portaal.ts`)
+- Bestaande transactie-guard vult nu ook PostgreSQL-foutcode 23505 op als extra veiligheidsnet: tweede gelijktijdig verzoek dat de status-UPDATE wint maar vastloopt op de INSERT, retourneert HTTP 409 met "Deze offerte is al ondertekend."
+
+**Frontend** (`artifacts/firevault/src/pages/portaal/index.tsx`)
+- `bevestigHandtekening` detecteert HTTP 409; toont niet-blokkerende inline foutbanner met AlertTriangle-icoon ("Deze offerte is al ondertekend. Vernieuw de pagina om de actuele status te zien.")
+- Submit-knop wordt uitgeschakeld na 409 om herhaalde pogingen te voorkomen
+- Andere fouten (netwerk, 5xx) vallen terug op bestaand gedrag (terug naar tekenfase)
+
 ---
 
 

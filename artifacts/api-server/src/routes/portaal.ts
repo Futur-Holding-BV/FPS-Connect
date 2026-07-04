@@ -544,7 +544,17 @@ router.post("/portaal/:token/ondertekenen", async (req, res): Promise<void> => {
       });
     } catch (txErr: unknown) {
       if (reeds_ondertekend) {
-        return void res.status(409).json({ error: "Offerte is al ondertekend." });
+        return void res.status(409).json({ error: "Deze offerte is al ondertekend." });
+      }
+      // Vang de UNIQUE-constraint overtreding op als extra veiligheidsnet:
+      // als twee gelijktijdige verzoeken de status-UPDATE allebei winnen (race),
+      // zal de tweede INSERT op offerte_handtekeningen falen met code 23505.
+      // Check op de specifieke constraintnaam voorkomt misleidende 409-responses
+      // bij ongerelateerde unique-schendingen elders in de transactie.
+      const pgCode = (txErr as { code?: string; constraint?: string })?.code;
+      const pgConstraint = (txErr as { constraint?: string })?.constraint;
+      if (pgCode === "23505" && pgConstraint === "uq_handtekeningen_offerte_token") {
+        return void res.status(409).json({ error: "Deze offerte is al ondertekend." });
       }
       throw txErr;
     }
