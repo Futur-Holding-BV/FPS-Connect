@@ -1,8 +1,8 @@
 import { useGetMijnWerk } from "@workspace/api-client-react";
 import type { MijnWerkGebouw, MijnWerkSpot } from "@workspace/api-client-react";
 import { Ionicons } from "@expo/vector-icons";
-import { Redirect, useRouter } from "expo-router";
-import React from "react";
+import { Redirect, useFocusEffect, useRouter } from "expo-router";
+import React, { useCallback } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -62,6 +62,8 @@ export default function MijnWerkScherm() {
   const { inhoudMaxBreedte } = useResponsive();
 
   const { data, isLoading, isError, refetch } = useGetMijnWerk();
+
+  useFocusEffect(useCallback(() => { refetch(); }, [refetch]));
 
   if (!token) return <Redirect href="/login" />;
 

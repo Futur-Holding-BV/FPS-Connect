@@ -1,8 +1,8 @@
 import { useGetMijnWerk } from "@workspace/api-client-react";
 import type { MijnWerkGebouw } from "@workspace/api-client-react";
 import { Ionicons } from "@expo/vector-icons";
-import { Redirect, useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
+import { Redirect, useFocusEffect, useRouter } from "expo-router";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -46,6 +46,8 @@ export default function PlanningScherm() {
 
   const { data, isLoading, isError, refetch } = useGetMijnWerk();
   const [cachedPlanning, setCachedPlanning] = useState<MijnWerkGebouw[] | null>(null);
+
+  useFocusEffect(useCallback(() => { refetch(); }, [refetch]));
 
   useEffect(() => {
     if (!isOnline || isError) {
