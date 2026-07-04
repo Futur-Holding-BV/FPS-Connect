@@ -201,9 +201,19 @@ async function objectPathNaarPdfTekst(objectPath: string): Promise<string | null
       stream.on("error", reject);
     });
     const buf = Buffer.concat(chunks);
-    const pdfParse = (await import("pdf-parse")).default;
-    const data = await pdfParse(buf);
-    const tekst = data.text?.trim();
+    // pdf-parse@2.x exports a named class (PDFParse) — bypass the v1.x @types declaration
+    // via a typed dynamic import cast so TypeScript passes and runtime works correctly.
+    type PdfParseV2 = {
+      PDFParse: new (opts: { data: Uint8Array }) => {
+        load(): Promise<void>;
+        getText(params?: Record<string, unknown>): Promise<{ text: string }>;
+      };
+    };
+    const { PDFParse } = (await import("pdf-parse")) as unknown as PdfParseV2;
+    const parser = new PDFParse({ data: new Uint8Array(buf) });
+    await parser.load();
+    const result = await parser.getText();
+    const tekst = result.text?.trim();
     return tekst ? tekst.slice(0, 6000) : null;
   } catch {
     return null;
