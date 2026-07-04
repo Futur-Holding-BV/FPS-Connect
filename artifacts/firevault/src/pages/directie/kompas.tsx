@@ -1,11 +1,11 @@
 import { useState } from "react";
 import {
   TrendingUp, TrendingDown, AlertTriangle, Info, ChevronLeft, ChevronRight,
-  Target, Euro, BarChart3, Activity,
+  Target, Euro, BarChart3, Activity, Building2,
 } from "lucide-react";
 import {
   ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip,
-  Legend, ResponsiveContainer,
+  Legend, ResponsiveContainer, BarChart,
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -15,7 +15,6 @@ import { cn } from "@/lib/utils";
 import {
   useGetFiePrognose,
   useGetFieObservaties,
-  useListFieBegrotingen,
   type FieJaarprognose,
 } from "@workspace/api-client-react";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
@@ -52,18 +51,10 @@ const ERNST_BADGE: Record<string, string> = {
 // ─── KPI Kaart ───────────────────────────────────────────────────────────────
 
 function KpiKaart({
-  label,
-  waarde,
-  sub,
-  trend,
-  highlighted,
-  icon: Icon,
+  label, waarde, sub, trend, highlighted, icon: Icon,
 }: {
-  label: string;
-  waarde: string;
-  sub?: string;
-  trend?: "pos" | "neg" | "neutraal";
-  highlighted?: boolean;
+  label: string; waarde: string; sub?: string;
+  trend?: "pos" | "neg" | "neutraal"; highlighted?: boolean;
   icon?: React.ElementType;
 }) {
   return (
@@ -95,45 +86,69 @@ function KpiKaart({
   );
 }
 
-// ─── Coverage Balk ───────────────────────────────────────────────────────────
+// ─── Bezettingsgraad-meter (SVG boogmeter) ────────────────────────────────────
 
-function CoverageBalk({ p }: { p: FieJaarprognose }) {
-  const coverageNum = p.coverage_pct ?? 0;
-  const coverageBar = Math.min(100, Math.max(0, coverageNum));
+function BezettingsgraadMeter({ p }: { p: FieJaarprognose }) {
+  const raw = p.coverage_pct ?? 0;
+  const capped = Math.min(120, Math.max(0, raw));
+  const angle = (capped / 120) * 180;
+
+  const cx = 80;
+  const cy = 80;
+  const r = 60;
+
+  function polarToXY(deg: number): [number, number] {
+    const rad = ((deg - 180) * Math.PI) / 180;
+    return [cx + r * Math.cos(rad), cy + r * Math.sin(rad)];
+  }
+
+  function arcPath(startDeg: number, endDeg: number): string {
+    const [x1, y1] = polarToXY(startDeg);
+    const [x2, y2] = polarToXY(endDeg);
+    const large = endDeg - startDeg > 180 ? 1 : 0;
+    return `M ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2}`;
+  }
+
   const kleur =
-    coverageNum < 80  ? "bg-red-500"
-    : coverageNum < 95 ? "bg-amber-500"
-    : coverageNum > 110 ? "bg-blue-500"
-    : "bg-green-500";
+    raw < 80  ? "#ef4444"
+    : raw < 95 ? "#f59e0b"
+    : raw > 110 ? "#3b82f6"
+    : "#22c55e";
 
   return (
     <Card>
-      <CardHeader className="pb-2 pt-4 px-4">
-        <CardTitle className="text-sm font-medium">Prognose vs. omzetdoel</CardTitle>
+      <CardHeader className="pb-0 pt-4 px-4">
+        <CardTitle className="text-sm font-medium">Bezettingsgraad</CardTitle>
       </CardHeader>
-      <CardContent className="px-4 pb-4 space-y-2">
-        <div className="flex justify-between items-center text-xs">
-          <span className="text-muted-foreground">
+      <CardContent className="p-4 flex flex-col items-center">
+        <svg width="160" height="96" viewBox="0 0 160 96" className="overflow-visible">
+          <path d={arcPath(0, 180)} fill="none" stroke="hsl(var(--muted))" strokeWidth="10" strokeLinecap="round" />
+          {angle > 0 && (
+            <path d={arcPath(0, angle)} fill="none" stroke={kleur} strokeWidth="10" strokeLinecap="round" />
+          )}
+          <text x={cx} y={cy + 4} textAnchor="middle" fontSize="18" fontWeight="700" fill={kleur}>
+            {raw.toFixed(0)}%
+          </text>
+          <text x={cx} y={cy + 18} textAnchor="middle" fontSize="9" fill="hsl(var(--muted-foreground))">
+            van omzetdoel
+          </text>
+          <text x="8" y="90" fontSize="8" fill="hsl(var(--muted-foreground))">0%</text>
+          <text x="134" y="90" fontSize="8" fill="hsl(var(--muted-foreground))">120%+</text>
+        </svg>
+        <div className="text-center -mt-1">
+          <p className="text-[10px] text-muted-foreground">
             {fmt(p.prognose_omzet)} van {fmt(p.omzet_doel)}
-          </span>
-          <span className="font-semibold">{pct(p.coverage_pct)}</span>
-        </div>
-        <div className="h-3 rounded-full bg-muted overflow-hidden">
-          <div
-            className={cn("h-full rounded-full transition-all", kleur)}
-            style={{ width: `${coverageBar}%` }}
-          />
-        </div>
-        <div className="flex justify-between text-[10px] text-muted-foreground">
-          <span>0</span>
+          </p>
           {p.gap_tot_doel != null && (
-            <span className={p.gap_tot_doel < 0 ? "text-green-600 font-medium" : "text-red-600 font-medium"}>
+            <p className={cn(
+              "text-[10px] font-medium mt-0.5",
+              p.gap_tot_doel < 0 ? "text-green-600" : "text-red-600",
+            )}>
               {p.gap_tot_doel < 0
                 ? `+${fmt(Math.abs(p.gap_tot_doel))} voorsprong`
                 : `${fmt(p.gap_tot_doel)} tekort`}
-            </span>
+            </p>
           )}
-          <span>Doel: {fmt(p.omzet_doel)}</span>
         </div>
       </CardContent>
     </Card>
@@ -150,7 +165,6 @@ function BreakEvenIndicator({ p }: { p: FieJaarprognose }) {
       "border",
       bereikt === true  && "border-green-200 bg-green-50",
       bereikt === false && "border-red-200 bg-red-50",
-      bereikt == null   && "border-muted",
     )}>
       <CardContent className="p-4 flex items-center gap-3">
         <Target className={cn(
@@ -167,26 +181,21 @@ function BreakEvenIndicator({ p }: { p: FieJaarprognose }) {
           </p>
         </div>
         <div className="ml-auto">
-          {bereikt === true && (
-            <Badge className="bg-green-100 text-green-700 border-0 text-xs">Bereikt</Badge>
-          )}
-          {bereikt === false && (
-            <Badge className="bg-red-100 text-red-700 border-0 text-xs">Niet bereikt</Badge>
-          )}
+          {bereikt === true  && <Badge className="bg-green-100 text-green-700 border-0 text-xs">Bereikt</Badge>}
+          {bereikt === false && <Badge className="bg-red-100 text-red-700 border-0 text-xs">Niet bereikt</Badge>}
         </div>
       </CardContent>
     </Card>
   );
 }
 
-// ─── Kwartaal chart ───────────────────────────────────────────────────────────
+// ─── Kwartaalchart (prognose vs. begroting) ───────────────────────────────────
 
 const KW_LABEL: Record<number, string> = { 1: "Q1", 2: "Q2", 3: "Q3", 4: "Q4" };
 
 function KwartaalChart({ p }: { p: FieJaarprognose }) {
   const kwVerdeling = p.kwartaal_verdeling ?? [];
   const begrotingPerKw = p.begroting_per_kwartaal ?? [];
-
   if (kwVerdeling.length === 0) return null;
 
   const chartData = kwVerdeling.map(kw => {
@@ -235,13 +244,64 @@ function KwartaalChart({ p }: { p: FieJaarprognose }) {
   );
 }
 
+// ─── Werkmaatschappij / Orderportefeuille vergelijking ────────────────────────
+// Toont de samenstelling van de orderportefeuille als gestapeld staafdiagram.
+// Per-werkmaatschappij uitsplitsing volgt zodra de FIE-engine per-entiteit
+// begrotingen ondersteunt; voor nu: aggregaat per omzetcategorie.
+
+function WerkmaatschappijChart({ p }: { p: FieJaarprognose }) {
+  const data = [
+    {
+      label: "Orderportefeuille",
+      bevestigd:  Math.round(p.bevestigde_omzet / 1000),
+      pipeline:   Math.round(p.gewogen_pipeline / 1000),
+      ohw:        Math.round(p.ohw_restwaarde / 1000),
+    },
+  ];
+
+  const totaal = p.bevestigde_omzet + p.gewogen_pipeline + p.ohw_restwaarde;
+
+  return (
+    <Card>
+      <CardHeader className="pb-2 pt-4 px-4">
+        <div className="flex items-center justify-between gap-2">
+          <CardTitle className="text-sm font-medium">Orderportefeuille-samenstelling (× €1.000)</CardTitle>
+          <Badge variant="outline" className="text-[10px] gap-1">
+            <Building2 className="w-3 h-3" />
+            Totaal {fmt(totaal)}
+          </Badge>
+        </div>
+      </CardHeader>
+      <CardContent className="px-2 pb-4">
+        <ResponsiveContainer width="100%" height={120}>
+          <BarChart data={data} layout="vertical" margin={{ top: 4, right: 16, left: 0, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" horizontal={false} className="stroke-border/50" />
+            <XAxis type="number" tick={{ fontSize: 10 }} />
+            <YAxis type="category" dataKey="label" tick={false} width={0} />
+            <Tooltip
+              formatter={(value: number) => [`€ ${(value * 1000).toLocaleString("nl-NL")}`, undefined]}
+              contentStyle={{ fontSize: 11 }}
+            />
+            <Legend wrapperStyle={{ fontSize: 10, paddingTop: 8 }} />
+            <Bar dataKey="bevestigd" name="Bevestigd" stackId="a" fill="#22c55e" />
+            <Bar dataKey="pipeline"  name="Pipeline (gewogen)" stackId="a" fill="#fbbf24" />
+            <Bar dataKey="ohw"       name="OHW restwaarde" stackId="a" fill="#60a5fa" radius={[0, 2, 2, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
+        <p className="text-[10px] text-muted-foreground px-2 mt-1">
+          Per werkmaatschappij beschikbaar zodra entiteit-specifieke begrotingen zijn geconfigureerd.
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
+
 // ─── Observaties paneel ───────────────────────────────────────────────────────
 
 function ObservatiesPaneel({ p, boekjaar }: { p: FieJaarprognose; boekjaar: number }) {
   const { data: obsResp } = useGetFieObservaties(boekjaar) as {
     data: { boekjaar: number; observaties: FieJaarprognose["observaties"] } | undefined;
   };
-
   const live = p.observaties ?? [];
   const persisteer = obsResp?.observaties ?? [];
   const lijst = live.length > 0 ? live : persisteer;
@@ -276,8 +336,12 @@ function ObservatiesPaneel({ p, boekjaar }: { p: FieJaarprognose; boekjaar: numb
                 : <Info className="w-3.5 h-3.5 shrink-0 mt-0.5" />}
               <div className="flex-1 min-w-0">
                 <p className="leading-snug">{obs.omschrijving}</p>
-                {obs.afwijking_pct != null && (
-                  <p className="text-[10px] opacity-70 mt-0.5">Afwijking: {obs.afwijking_pct.toFixed(1)}%</p>
+                {obs.waarde != null && (
+                  <p className="text-[10px] opacity-70 mt-0.5">
+                    Waarde: {fmt(obs.waarde)}
+                    {obs.drempelwaarde != null && ` · drempel: ${fmt(obs.drempelwaarde)}`}
+                    {obs.afwijking_pct != null && ` · afwijking: ${obs.afwijking_pct.toFixed(1)}%`}
+                  </p>
                 )}
               </div>
               <span className={cn(
@@ -294,7 +358,7 @@ function ObservatiesPaneel({ p, boekjaar }: { p: FieJaarprognose; boekjaar: numb
   );
 }
 
-// ─── Orderportefeuille samenvatting ──────────────────────────────────────────
+// ─── Orderportefeuille rij ────────────────────────────────────────────────────
 
 function PortefeuilleRij({ p }: { p: FieJaarprognose }) {
   return (
@@ -339,7 +403,7 @@ function PortefeuilleRij({ p }: { p: FieJaarprognose }) {
   );
 }
 
-// ─── Toegang geblokkeerd ──────────────────────────────────────────────────────
+// ─── Geen toegang ─────────────────────────────────────────────────────────────
 
 function GeenToegang() {
   return (
@@ -348,7 +412,7 @@ function GeenToegang() {
       <div>
         <p className="font-semibold">Geen toegang</p>
         <p className="text-sm text-muted-foreground mt-1">
-          Het directiedashboard is voorbehouden aan gebruikers met financieel niveau 2 of hoger.
+          Het Bedrijfskompas is voorbehouden aan gebruikers met financieel niveau 2 of hoger.
         </p>
       </div>
     </div>
@@ -365,9 +429,6 @@ export default function DirectieKompasPagina() {
 
   const [boekjaar, setBoekjaar] = useState(() => new Date().getFullYear());
 
-  const { data: begrotingen = [] } = useListFieBegrotingen();
-  const activeBegroting = begrotingen.find(b => b.status === "actief" && b.boekjaar === boekjaar);
-
   const { data: p, isLoading } = useGetFiePrognose(boekjaar) as {
     data: FieJaarprognose | undefined;
     isLoading: boolean;
@@ -380,18 +441,14 @@ export default function DirectieKompasPagina() {
       {/* Paginakop */}
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold">Directiedashboard</h1>
+          <h1 className="text-xl font-bold">Bedrijfskompas</h1>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Realtime financieel overzicht op basis van de FIE-prognose-engine
-            {activeBegroting ? ` · actieve begroting ${activeBegroting.boekjaar}` : ""}
+            Realtime financieel directie-overzicht — prognose, bezettingsgraad en orderportefeuille
           </p>
         </div>
-        {/* Boekjaarselector */}
         <div className="flex items-center gap-1 border rounded-md px-2 py-1">
           <Button
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6"
+            variant="ghost" size="icon" className="h-6 w-6"
             onClick={() => setBoekjaar(y => y - 1)}
             disabled={boekjaar <= 2020}
           >
@@ -399,9 +456,7 @@ export default function DirectieKompasPagina() {
           </Button>
           <span className="text-sm font-semibold w-12 text-center">{boekjaar}</span>
           <Button
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6"
+            variant="ghost" size="icon" className="h-6 w-6"
             onClick={() => setBoekjaar(y => y + 1)}
             disabled={boekjaar >= new Date().getFullYear() + 1}
           >
@@ -415,14 +470,16 @@ export default function DirectieKompasPagina() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {[0, 1, 2, 3].map(i => <Skeleton key={i} className="h-24 w-full" />)}
           </div>
-          <Skeleton className="h-48 w-full" />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {[0, 1, 2].map(i => <Skeleton key={i} className="h-48 w-full" />)}
+          </div>
           <Skeleton className="h-60 w-full" />
         </div>
       ) : !p ? (
         <Card>
           <CardContent className="p-6 text-center text-sm text-muted-foreground">
             <BarChart3 className="w-8 h-8 mx-auto mb-2 opacity-20" />
-            Geen prognosedata beschikbaar voor {boekjaar}. Maak eerst een jaarbegroting aan.
+            Geen prognosedata beschikbaar voor {boekjaar}. Maak eerst een jaarbegroting aan in het FIE-beheer.
           </CardContent>
         </Card>
       ) : (
@@ -432,14 +489,14 @@ export default function DirectieKompasPagina() {
             <KpiKaart
               label="Prognose omzet"
               waarde={fmt(p.prognose_omzet)}
-              sub={`Inclusief OHW: ${fmt(p.prognose_inclusief_ohw)}`}
+              sub={`Incl. OHW: ${fmt(p.prognose_inclusief_ohw)}`}
               highlighted
               icon={Euro}
             />
             <KpiKaart
               label="Prognose brutowinst"
               waarde={fmt(p.prognose_brutowinst)}
-              sub={p.doel_marge_pct != null ? `Doelmarge ${p.doel_marge_pct.toFixed(1)}%` : "Doelmarge onbekend"}
+              sub={p.doel_marge_pct != null ? `${p.doel_marge_pct.toFixed(1)}% doelmarge` : "Doelmarge onbekend"}
               trend={p.prognose_brutowinst != null ? (p.prognose_brutowinst >= 0 ? "pos" : "neg") : undefined}
               icon={TrendingUp}
             />
@@ -459,21 +516,20 @@ export default function DirectieKompasPagina() {
             />
           </div>
 
-          {/* Coverage balk + Break-even */}
-          {p.heeft_begroting && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <CoverageBalk p={p} />
-              <BreakEvenIndicator p={p} />
-            </div>
-          )}
-
-          {/* Kwartaalchart + Observaties */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Bezettingsgraad + Break-even + Kwartaalchart */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {p.heeft_begroting && <BezettingsgraadMeter p={p} />}
+            {p.heeft_begroting && <BreakEvenIndicator p={p} />}
             <KwartaalChart p={p} />
+          </div>
+
+          {/* Werkmaatschappij-vergelijking + Observaties */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <WerkmaatschappijChart p={p} />
             <ObservatiesPaneel p={p} boekjaar={boekjaar} />
           </div>
 
-          {/* Orderportefeuille */}
+          {/* Orderportefeuille detail */}
           <div>
             <p className="text-xs font-medium text-muted-foreground mb-2">Orderportefeuille</p>
             <PortefeuilleRij p={p} />
@@ -486,6 +542,7 @@ export default function DirectieKompasPagina() {
               <p className="text-xs text-muted-foreground">
                 Prognose = bevestigde offertes (100%) + gewogen pipeline (concept 20% / verzonden 40% / bekeken 60%) + OHW-restwaarde.
                 Brutowinst = prognose × doelmarge. Nettoresultaat = brutowinst − totale AK.
+                Bezettingsgraad = prognose-omzet als percentage van omzetdoel.
                 Data wordt live herberekend bij elke opvraag.
               </p>
             </div>

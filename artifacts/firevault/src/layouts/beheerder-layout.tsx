@@ -870,7 +870,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                           <SidebarMenuButton asChild isActive={location === "/directie/kompas"}>
                             <Link href="/directie/kompas">
                               <LayoutDashboard />
-                              <span>Directiedashboard</span>
+                              <span>Bedrijfskompas</span>
                             </Link>
                           </SidebarMenuButton>
                         </SidebarMenuItem>
@@ -880,7 +880,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                           <SidebarMenuButton asChild isActive={location === "/beheer/bedrijfskompas"}>
                             <Link href="/beheer/bedrijfskompas">
                               <TrendingUp />
-                              <span>Bedrijfskompas</span>
+                              <span>FIE Begroting</span>
                             </Link>
                           </SidebarMenuButton>
                         </SidebarMenuItem>

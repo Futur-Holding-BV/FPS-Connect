@@ -11,22 +11,23 @@ Voor elke taak drie scores:
 Nieuw directiedashboard op `/directie/kompas`, gated op `heeftNiveau("financieel", 2)` of hoofdbeheerder:
 
 **Nieuwe pagina** `artifacts/firevault/src/pages/directie/kompas.tsx`
-- Boekjaarselector (huidige jaar ± 1, met chevron-knoppen)
-- 4 KPI-kaarten: Prognose omzet / Prognose brutowinst / Prognose nettoresultaat / AK-dekkingsgraad — rood/groen kleurcodering op teken/waarde
-- Coverage-balk: prognose vs. omzetdoel met gap-indicator
+- Boekjaarselector (huidige jaar ± 1)
+- 4 KPI-kaarten: Prognose omzet / Prognose brutowinst / Prognose nettoresultaat / AK-dekkingsgraad — rood/groen kleurcodering op positief/negatief
+- SVG halve-cirkel bezettingsgraadmeter: coverage_pct visueel als boogmeter (0–120%), kleurschaal rood/amber/groen/blauw, gap-indicator onder de boog
 - Break-even indicator: kaart met groen/rood status ("Bereikt" / "Niet bereikt")
-- Kwartaalchart: ComposedChart (Recharts) met gestapelde bars bevestigd+pipeline en stippellijn begroting per kwartaal
-- Observaties-paneel: live + gepersisteerde signalen, kleurcodering op ernst (info/waarschuwing/kritiek), afwijking %-toelichting
-- Orderportefeuille-rij: bevestigd, pipeline, OHW, AK-dekkingsgraad als 4-koloms grid
-- Lege state + geen-toegang state + loading skeleton
+- Kwartaalchart (ComposedChart): gestapelde bars bevestigd+pipeline, stippellijn begroting per kwartaal
+- Werkmaatschappij/orderportefeuille-vergelijking: horizontaal gestapeld staafdiagram (bevestigd, pipeline gewogen, OHW restwaarde) met totaalbadge; noot dat per-entiteit uitsplitsing volgt zodra FIE per-werkmaatschappij begrotingen ondersteunt
+- Observaties-paneel: live + gepersisteerde signalen, kleurcodering op ernst (info/waarschuwing/kritiek), waarde/drempelwaarde/afwijking_pct-toelichting
+- Orderportefeuille detail-rij: bevestigd, pipeline, OHW, AK-dekkingsgraad
+- Data uitsluitend via `useGetFiePrognose` + `useGetFieObservaties` (geen extra endpoints)
+- Toelichting-blok (prognose-methodiek)
 
 **Route** `artifacts/firevault/src/App.tsx`
-- `import DirectieKompasPagina` toegevoegd
 - Route `/directie/kompas` geregistreerd
 
 **Navigatie** `artifacts/firevault/src/layouts/beheerder-layout.tsx`
-- Nieuw nav-item "Directiedashboard" (LayoutDashboard icoon) toegevoegd vóór bestaand "Bedrijfskompas"
-- Zelfde gating: `heeftNiveau("financieel", 2)` — Directie-preset en hoger
+- Nieuw nav-item "Bedrijfskompas" (LayoutDashboard icoon, gating financieel:2)
+- Bestaand FIE-beheerscherm hernoemd naar "FIE Begroting" (TrendingUp icoon)
 
 ## 2026-07-04 — FIE Fase 3: Continue jaarbedrijfsprognose — Fase 3b aanvulling (volledig)
 
