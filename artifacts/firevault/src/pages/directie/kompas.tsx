@@ -27,6 +27,7 @@ import {
 } from "@workspace/api-client-react";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
 import { useRol } from "@/context/rol-context";
+import { useToast } from "@/hooks/use-toast";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -430,6 +431,7 @@ function LeermomentRij({ lm, onSaved }: { lm: FieLeermoment; onSaved: () => void
 
   const patch = useUpdateFieLeermoment();
   const verwijder = useDeleteFieLeermoment();
+  const { toast } = useToast();
 
   const factorGeldig = (() => {
     const f = Number(factorInput);
@@ -441,7 +443,10 @@ function LeermomentRij({ lm, onSaved }: { lm: FieLeermoment; onSaved: () => void
     const factor = Number(factorInput);
     patch.mutate(
       { id: lm.id, data: { correctie_factor: factor, opmerkingen: opmerkingenInput || null } },
-      { onSuccess: () => { setBewerkModus(false); onSaved(); } },
+      {
+        onSuccess: () => { setBewerkModus(false); onSaved(); },
+        onError: () => toast({ title: "Opslaan mislukt", description: "Controleer de correctiefactor en probeer opnieuw.", variant: "destructive" }),
+      },
     );
   }
 
