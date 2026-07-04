@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { valideerCorrectieFactor } from "../routes/fie";
+import { valideerCorrectieFactor, verwerkOpmerkingen, bouwLeermomentUpdateVelden } from "../routes/fie";
 
 // ── valideerCorrectieFactor — grenswaarden en randgevallen ────────────────────
 //
@@ -90,5 +90,80 @@ describe("valideerCorrectieFactor", () => {
       const result = valideerCorrectieFactor("0.49");
       expect(result.ok).toBe(false);
     });
+  });
+});
+
+// ── verwerkOpmerkingen — opmerkingen-truncatie en null-verwerking ─────────────
+//
+// Legt het bewuste gedrag vast: opmerkingen worden stilzwijgend afgekapt op
+// 1000 tekens (geen 400-fout). Dit is gedocumenteerd zodat een toekomstige
+// refactor dit gedrag niet onopgemerkt kan wijzigen.
+//
+// Wanneer het veld ontbreekt (undefined), roept de PATCH-handler deze functie
+// niet aan — het veld blijft ongewijzigd. Dat gedrag zit in de route-handler
+// en wordt hier niet getest.
+
+describe("verwerkOpmerkingen", () => {
+  it("kapt tekst van meer dan 1000 tekens stilzwijgend af op precies 1000 (geen fout)", () => {
+    const lang = "x".repeat(1500);
+    const resultaat = verwerkOpmerkingen(lang);
+    expect(resultaat).toHaveLength(1000);
+    expect(resultaat).toBe("x".repeat(1000));
+  });
+
+  it("bewaart tekst van precies 1000 tekens ongewijzigd", () => {
+    const precies = "a".repeat(1000);
+    expect(verwerkOpmerkingen(precies)).toBe(precies);
+  });
+
+  it("bewaart tekst korter dan 1000 tekens ongewijzigd", () => {
+    expect(verwerkOpmerkingen("Korte opmerking")).toBe("Korte opmerking");
+  });
+
+  it("slaat null op als null", () => {
+    expect(verwerkOpmerkingen(null)).toBeNull();
+  });
+});
+
+// ── bouwLeermomentUpdateVelden — PATCH body verwerking (route-niveau) ─────────
+//
+// Test de drie vereiste gedragingen van de PATCH /fie/leermomenten/:id handler
+// zonder dat een databaseverbinding nodig is:
+//
+//   1. opmerkingen ontbreekt → het veld zit NIET in het update-object
+//      (de bestaande DB-waarde blijft ongewijzigd)
+//   2. opmerkingen >1000 tekens → geen fout (geen 400), waarde afgekapt op 1000
+//   3. opmerkingen=null → null opgeslagen
+
+describe("bouwLeermomentUpdateVelden", () => {
+  it("opmerkingen ontbreekt in body → update-object bevat geen opmerkingen-sleutel (geen wijziging)", () => {
+    const result = bouwLeermomentUpdateVelden({ correctie_factor: 1.5 });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect("opmerkingen" in result.velden).toBe(false);
+    }
+  });
+
+  it("opmerkingen >1000 tekens → geen fout, velden.opmerkingen afgekapt op precies 1000", () => {
+    const result = bouwLeermomentUpdateVelden({ opmerkingen: "x".repeat(1500) });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.velden.opmerkingen).toHaveLength(1000);
+      expect(result.velden.opmerkingen).toBe("x".repeat(1000));
+    }
+  });
+
+  it("opmerkingen=null → velden.opmerkingen is null", () => {
+    const result = bouwLeermomentUpdateVelden({ opmerkingen: null });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.velden.opmerkingen).toBeNull();
+    }
+  });
+
+  it("ongeldige correctie_factor → fout teruggegeven, geen update", () => {
+    const result = bouwLeermomentUpdateVelden({ correctie_factor: 0.1 });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.fout).toMatch(/0,5.*3,0|tussen/);
   });
 });

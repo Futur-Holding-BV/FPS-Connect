@@ -44,6 +44,53 @@ export function valideerCorrectieFactor(v: unknown): CorrectieFactorValidatie {
   return { ok: true, waarde: Math.round(n * 100) / 100 };
 }
 
+/**
+ * Verwerkt een opmerkingen-waarde voor FIE-leermomenten (PATCH).
+ * - null  → wordt als null opgeslagen
+ * - tekst → wordt afgekapt op 1000 tekens (stille truncatie, geen fout)
+ * Gebruik deze functie alleen wanneer `opmerkingen` aanwezig is in de body;
+ * wanneer het veld ontbreekt (undefined), slaat de caller de update over.
+ */
+export function verwerkOpmerkingen(v: unknown): string | null {
+  if (v === null || v === undefined) return null;
+  return String(v).slice(0, 1000);
+}
+
+/** Velden die de PATCH /fie/leermomenten/:id handler kan bijwerken. */
+export type LeermomentUpdateVelden = {
+  correctieFactor?: number;
+  opmerkingen?: string | null;
+};
+
+export type LeermomentUpdateResultaat =
+  | { ok: true; velden: LeermomentUpdateVelden }
+  | { ok: false; fout: string };
+
+/**
+ * Verwerkt de door de client aangeleverde body voor een leermoment-PATCH.
+ * Ontbrekende velden worden weggelaten (geen schrijfactie); aanwezige velden
+ * worden gevalideerd/getransformeerd. Geeft { ok: false } terug bij een
+ * validatiefout (correctie_factor buiten bereik).
+ *
+ * Tests: zie fie-correctie-factor.test.ts › bouwLeermomentUpdateVelden
+ */
+export function bouwLeermomentUpdateVelden(
+  body: Record<string, unknown>,
+): LeermomentUpdateResultaat {
+  const { correctie_factor, opmerkingen } = body;
+  const velden: LeermomentUpdateVelden = {};
+
+  if (correctie_factor !== undefined) {
+    const validatie = valideerCorrectieFactor(correctie_factor);
+    if (!validatie.ok) return { ok: false, fout: validatie.fout };
+    velden.correctieFactor = validatie.waarde;
+  }
+  if (opmerkingen !== undefined) {
+    velden.opmerkingen = verwerkOpmerkingen(opmerkingen);
+  }
+  return { ok: true, velden };
+}
+
 function valideerFinancieelGetal(
   v: unknown,
   naam: string,
@@ -624,14 +671,13 @@ router.patch("/fie/leermomenten/:id", schrijven, async (req: Request, res: Respo
   const [existing] = await db.select().from(fieLeerMomentenTable).where(eq(fieLeerMomentenTable.id, id)).limit(1);
   if (!existing) { res.status(404).json({ error: "Leermoment niet gevonden" }); return; }
 
-  const { correctie_factor, opmerkingen } = req.body as Record<string, unknown>;
-  const update: Partial<typeof fieLeerMomentenTable.$inferInsert> = { laatsteUpdate: new Date() };
-  if (correctie_factor !== undefined) {
-    const validatie = valideerCorrectieFactor(correctie_factor);
-    if (!validatie.ok) { res.status(400).json({ error: validatie.fout }); return; }
-    update.correctieFactor = validatie.waarde;
-  }
-  if (opmerkingen !== undefined) update.opmerkingen = opmerkingen != null ? String(opmerkingen).slice(0, 1000) : null;
+  const bodyResult = bouwLeermomentUpdateVelden(req.body as Record<string, unknown>);
+  if (!bodyResult.ok) { res.status(400).json({ error: bodyResult.fout }); return; }
+
+  const update: Partial<typeof fieLeerMomentenTable.$inferInsert> = {
+    ...bodyResult.velden,
+    laatsteUpdate: new Date(),
+  };
 
   const [updated] = await db.update(fieLeerMomentenTable).set(update).where(eq(fieLeerMomentenTable.id, id)).returning();
   res.json(mapLeermoment(updated));
