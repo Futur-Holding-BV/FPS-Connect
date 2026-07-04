@@ -64,6 +64,8 @@ export default function OffertePrintPagina() {
 
   useEffect(() => {
     if (klaar && offerte) {
+      // Signaal voor server-side PDF-rendering (puppeteer wacht hierop)
+      document.documentElement.setAttribute("data-fps-print-ready", "1");
       const timer = setTimeout(() => window.print(), 800);
       return () => clearTimeout(timer);
     }

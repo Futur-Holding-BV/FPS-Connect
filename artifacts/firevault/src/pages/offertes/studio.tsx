@@ -29,6 +29,7 @@ import {
   useListOpdrachten,
   getListOpdrachtenQueryKey,
   useGetAiPresentatieNiveau,
+  getListOffertesQueryKey,
 } from "@workspace/api-client-react";
 import type { OfferteSectie } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
@@ -49,7 +50,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import {
   ArrowLeft, Sparkles, ChevronUp, ChevronDown, Eye, Printer, Plus,
   Trash2, BookOpen, Clock, Paperclip, Check, X, GripVertical, ToggleLeft, ToggleRight, Send,
-  FolderOpen, CreditCard, FileText, Hammer, Layers,
+  FolderOpen, CreditCard, FileText, Hammer, Layers, FileDown,
 } from "lucide-react";
 import { VerzendTab } from "./verzend-tab";
 import { useToast } from "@/hooks/use-toast";
@@ -58,9 +59,31 @@ import { PaginaHulp } from "@/components/pagina-hulp";
 const STATUS_KLEUR: Record<string, string> = {
   concept: "bg-amber-100 text-amber-800 border-amber-200",
   verzonden: "bg-blue-100 text-blue-800 border-blue-200",
+  bekeken: "bg-indigo-100 text-indigo-800 border-indigo-200",
+  ondertekend: "bg-emerald-100 text-emerald-800 border-emerald-200",
   geaccepteerd: "bg-emerald-100 text-emerald-800 border-emerald-200",
   afgewezen: "bg-rose-100 text-rose-800 border-rose-200",
   vervallen: "bg-muted text-muted-foreground border-border",
+};
+
+const STATUS_LABEL: Record<string, string> = {
+  concept: "Concept",
+  verzonden: "Verzonden",
+  bekeken: "In behandeling",
+  ondertekend: "Geaccepteerd",
+  geaccepteerd: "Geaccepteerd",
+  afgewezen: "Afgewezen",
+  vervallen: "Vervallen",
+};
+
+const VOLGENDE_STATUSSEN: Record<string, string[]> = {
+  concept: ["verzonden", "afgewezen"],
+  verzonden: ["bekeken", "ondertekend", "afgewezen"],
+  bekeken: ["ondertekend", "afgewezen"],
+  afgewezen: ["concept"],
+  ondertekend: [],
+  geaccepteerd: [],
+  vervallen: [],
 };
 
 const SECTIE_TYPEN = [
@@ -189,6 +212,7 @@ export default function ProposalStudio() {
     vrije_voorwaarden: "",
   });
   const [conditiesOpgeslagen, setConditiesOpgeslagen] = useState(false);
+  const [statusWijzigenBusy, setStatusWijzigenBusy] = useState(false);
 
   const VERVOLG_OPTIES_LABELS: Record<string, string> = {
     periodiek_onderhoud: "Periodiek onderhoud aanbieden",
@@ -276,6 +300,25 @@ export default function ProposalStudio() {
       await queryClient.invalidateQueries({ queryKey: getListOfferteRegelsQueryKey(offerteId) });
     } catch {
       toast({ title: "Opslaan mislukt", variant: "destructive" });
+    }
+  }
+
+  async function wijzigStatus(nieuweStatus: string) {
+    setStatusWijzigenBusy(true);
+    try {
+      await werkOfferte.mutateAsync({ id: offerteId, data: { status: nieuweStatus } as any });
+      await queryClient.invalidateQueries({ queryKey: getGetOfferteQueryKey(offerteId) });
+      await queryClient.invalidateQueries({ queryKey: getListOffertesQueryKey() });
+      toast({ title: `Status gewijzigd naar "${STATUS_LABEL[nieuweStatus] ?? nieuweStatus}"` });
+    } catch (err: unknown) {
+      const status = (err as { response?: { status?: number } })?.response?.status;
+      if (status === 409) {
+        toast({ title: "Statuswijziging niet toegestaan", description: "Deze overgang is niet mogelijk vanuit de huidige status.", variant: "destructive" });
+      } else {
+        toast({ title: "Status wijzigen mislukt", variant: "destructive" });
+      }
+    } finally {
+      setStatusWijzigenBusy(false);
     }
   }
 
@@ -614,9 +657,27 @@ export default function ProposalStudio() {
               <Button variant="outline" size="icon"><ArrowLeft className="h-4 w-4" /></Button>
             </Link>
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <h1 className="text-xl font-bold tracking-tight">{offerte.titel}</h1>
-                <Badge variant="outline" className={STATUS_KLEUR[offerte.status] ?? ""}>{offerte.status}</Badge>
+                <Badge variant="outline" className={STATUS_KLEUR[offerte.status] ?? ""}>
+                  {STATUS_LABEL[offerte.status] ?? offerte.status}
+                </Badge>
+                {(VOLGENDE_STATUSSEN[offerte.status] ?? []).length > 0 && (
+                  <Select
+                    value=""
+                    onValueChange={(v) => { if (v) void wijzigStatus(v); }}
+                    disabled={statusWijzigenBusy}
+                  >
+                    <SelectTrigger className="h-7 text-xs px-2.5 w-auto gap-1">
+                      <SelectValue placeholder={statusWijzigenBusy ? "Bezig…" : "Status wijzigen"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(VOLGENDE_STATUSSEN[offerte.status] ?? []).map((s) => (
+                        <SelectItem key={s} value={s}>{STATUS_LABEL[s] ?? s}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
               {offerte.offertenummer && (
                 <p className="text-xs text-muted-foreground">{offerte.offertenummer}</p>
@@ -627,9 +688,13 @@ export default function ProposalStudio() {
             <Button variant="outline" size="sm" onClick={() => setVersieDialoogOpen(true)}>
               <Clock className="h-3.5 w-3.5" /> Versie opslaan
             </Button>
-            <Button variant="outline" size="sm" onClick={() => window.print()}>
-              <Printer className="h-3.5 w-3.5" /> PDF exporteren
-            </Button>
+            <a
+              href={`/api/offertes/${offerteId}/pdf`}
+              download
+              className="inline-flex items-center gap-1.5 rounded-md border bg-background px-3 py-1.5 text-sm font-medium shadow-sm hover:bg-accent hover:text-accent-foreground transition-colors"
+            >
+              <FileDown className="h-3.5 w-3.5" /> PDF downloaden
+            </a>
           </div>
         </div>
 

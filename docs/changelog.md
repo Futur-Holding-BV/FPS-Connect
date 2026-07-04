@@ -23,6 +23,34 @@ Voor elke taak drie scores:
 
 ---
 
+## 2026-07-04 — Offerte Studio: PDF downloaden + status wijzigen
+
+**Uitvoering:** volledig | **Diepere lagen:** volledig | **Getest:** typecheck schoon, geen nieuwe fouten
+
+Twee functies toegevoegd aan de Offerte Studio (`/offertes/:id`):
+
+**PDF downloaden**
+- "PDF exporteren" (window.print op studio-pagina) vervangen door "PDF downloaden" — link die `/offertes/:id/print` in een nieuw tabblad opent
+- De DDS-printpagina triggert automatisch het opsla-als-PDF-dialoogvenster van de browser
+- Icoon gewijzigd van Printer naar FileDown
+
+**Status wijzigen**
+- Inline statuswidget naast de statusindicator in de studiokoptekst
+- Toont alleen toegestane volgende statussen (conform workflow-engine transitieregels):
+  - concept → Verzonden, Afgewezen
+  - verzonden → In behandeling, Geaccepteerd, Afgewezen
+  - bekeken → In behandeling, Geaccepteerd, Afgewezen
+  - afgewezen → Concept (heropenen)
+  - ondertekend/vervallen → geen opties (widget verborgen)
+- Status wijzigen roept bestaand `PATCH /offertes/:id` + workflow engine aan; audittrail wordt automatisch geschreven naar `werkstroom_transitie_log`
+- Na statuswijziging worden zowel de offertedetail- als de offerteoverzichtquery geïnvalideerd
+- Foutafhandeling: 409 = duidelijke Nederlandse melding, overig = generieke foutmelding
+- Statuslabels uitgebreid: `bekeken`→"In behandeling", `ondertekend`→"Geaccepteerd", `STATUS_KLEUR` toegevoegd voor `bekeken`/`ondertekend`
+
+**PDF-endpoint herzien** — pdfkit-aanpak vervangen door puppeteer-core rendering van de bestaande DDS-printpagina (`/offertes/:id/print`). De headless browser rendert exact de actieve Document Studio-opmaak inclusief branding en secties; `window.print()` wordt gesuppressed zodat `page.pdf()` de output produceert. Gereed-signaal via `data-fps-print-ready`-attribuut in `print.tsx`.
+
+**Status-domein**: workflow engine gebruikt `bekeken`/`ondertekend` als canonieke waarden (bestaand); `STATUS_LABEL` biedt de vertaallaag naar gebruikerslabels ("In behandeling"/"Geaccepteerd").
+
 ## 2026-07-04 — Autorisatie-audit FPS Connect
 
 **Uitvoering:** volledig | **Diepere lagen:** volledig | **Getest:** api-server start clean (HTTP 200); typecheck geen nieuwe fouten

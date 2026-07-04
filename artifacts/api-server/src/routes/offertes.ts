@@ -4,6 +4,7 @@
 // FPS-offerteformat. Fase 1 bevat BEWUST GEEN AI-logica en GEEN automatische
 // offerteverzending. /offertes/:id/uit-spots leest de spots van het gekoppelde
 // gebouw en zet die om naar concept-begrotingsregels (mens beslist, AI niet).
+import { execSync } from "child_process";
 import { Router } from "express";
 import { workflowService, maakTransitieContext } from "../services/workflow-engine";
 import PDFDocument from "pdfkit";
@@ -37,6 +38,13 @@ import { aiGateway, heeftGateway } from "../lib/aiGateway";
 import { verstuurMail } from "../services/email";
 
 const router = Router();
+
+// Chromium-pad voor server-side PDF-rendering — eenmalig bij opstarten.
+let CHROMIUM_PAD: string | null = null;
+try {
+  const pad = execSync("which chromium 2>/dev/null").toString().trim();
+  if (pad) CHROMIUM_PAD = pad;
+} catch { /* chromium niet gevonden */ }
 
 function escapeHtml(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#x27;");
@@ -655,6 +663,107 @@ router.delete("/offertes/:id", schrijven, async (req, res): Promise<void> => {
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// ── PDF-download ─────────────────────────────────────────────────────────────
+// Rendert de bestaande DDS-printpagina (/offertes/:id/print) via een headless
+// browser en retourneert de uitvoer als binary PDF. Hierdoor worden de actieve
+// Document Studio-instellingen en de volledige DDS-layout exact nagebouwd.
+router.get("/offertes/:id/pdf", lezen, async (req, res) => {
+  try {
+    const offerteId = parseId(req.params.id);
+    const [offerte] = await db
+      .select({ id: offertesTable.id, offertenummer: offertesTable.offertenummer })
+      .from(offertesTable)
+      .where(eq(offertesTable.id, offerteId));
+    if (!offerte) return res.status(404).json({ error: "Offerte niet gevonden" });
+
+    if (!CHROMIUM_PAD) {
+      return res.status(503).json({ error: "PDF-generatie niet beschikbaar in deze omgeving (chromium niet gevonden)" });
+    }
+
+    const puppeteer = await import("puppeteer-core");
+    const browser = await puppeteer.launch({
+      executablePath: CHROMIUM_PAD,
+      args: [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
+        "--disable-gpu",
+        "--font-render-hinting=none",
+      ],
+      headless: true,
+    });
+
+    try {
+      const page = await browser.newPage();
+
+      // Voorkom dat window.print() het systeemdialoogvenster opent —
+      // wij gebruiken page.pdf() voor de feitelijke PDF-generatie.
+      // Gebruik string-vorm om TypeScript's ontbrekende dom-lib te omzeilen.
+      await page.evaluateOnNewDocument("window.print = function() {}");
+
+      // Vertrouwde origin: uitsluitend platformvariabelen — nooit request-headers
+      // (Host / X-Forwarded-Host zijn aanvallercontroleerbaar en mogen de
+      // bestemming van de headless browser NIET bepalen).
+      const vertrouwdDomain =
+        process.env.REPLIT_DEV_DOMAIN ??
+        (process.env.REPLIT_DOMAINS ?? "").split(",")[0]?.trim() ??
+        null;
+      if (!vertrouwdDomain) {
+        await browser.close();
+        return res.status(503).json({ error: "PDF-generatie niet geconfigureerd (REPLIT_DEV_DOMAIN niet ingesteld)" });
+      }
+      const protocol = vertrouwdDomain.includes("localhost") ? "http" : "https";
+      const printUrl = `${protocol}://${vertrouwdDomain}/offertes/${offerteId}/print`;
+
+      // Sessiecookie doorgeven via setCookie zodat de cookie uitsluitend
+      // voor het bekende vertrouwde domein wordt ingesteld — nooit als
+      // raw Cookie-header die bij elke URL (inclusief redirects) meegestuurd wordt.
+      const fpsSidRaw = (req.headers.cookie ?? "")
+        .split(";")
+        .map((c) => c.trim())
+        .find((c) => c.startsWith("fps.sid="));
+      if (fpsSidRaw) {
+        const cookieWaarde = fpsSidRaw.slice("fps.sid=".length);
+        await page.setCookie({
+          name: "fps.sid",
+          value: cookieWaarde,
+          domain: vertrouwdDomain,
+          path: "/",
+          secure: protocol === "https",
+          sameSite: "None",
+        });
+      }
+
+      await page.goto(printUrl, { waitUntil: "networkidle0", timeout: 30000 });
+
+      // Wacht tot de printpagina het gereed-signaal heeft gezet
+      // (data-fps-print-ready="1" wordt in print.tsx gezet wanneer alle
+      // React Query-data is geladen en de inhoud gerenderd is).
+      await page.waitForFunction(
+        'document.documentElement.getAttribute("data-fps-print-ready") === "1"',
+        { timeout: 15000 },
+      ).catch(() => { /* timeout — genereer PDF van huidige staat */ });
+
+      const pdfBuffer = await page.pdf({
+        format: "A4",
+        printBackground: true,
+        margin: { top: "0", right: "0", bottom: "0", left: "0" },
+      });
+
+      const bestandsnaam = `offerte-${offerte.offertenummer ?? offerteId}.pdf`;
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", `attachment; filename="${bestandsnaam}"`);
+      res.setHeader("Content-Length", String(pdfBuffer.length));
+      res.send(Buffer.from(pdfBuffer));
+    } finally {
+      await browser.close();
+    }
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "PDF-generatie mislukt" });
   }
 });
 

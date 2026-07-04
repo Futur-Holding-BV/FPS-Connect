@@ -182,7 +182,7 @@ test("Web: gebouw-detail en voorziening-detail regressie", async ({ page }) => {
     const leegStaat = zichtbaar(page, "Geen spots gevonden.");
 
     // Wacht tot de lijst geladen is.
-    await expect(detailKnop.or(leegStaat.first())).toBeVisible({
+    await expect(detailKnop.or(leegStaat.first()).first()).toBeVisible({
       timeout: INHOUD_TIMEOUT,
     });
 
