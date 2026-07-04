@@ -4,6 +4,35 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-04 — FIE Fase 5: Nacalculatie-terugkoppeling en leereffect (volledig)
+
+**Uitvoering:** volledig | **Getest:** typecheck clean (firevault + api-server); codegen OK; api-server herstart zonder fouten; DB-tabellen aangemaakt; alleen pre-existing TS7030 in offertes.ts
+
+**Database:**
+- `fie_nacalculaties` — per afgesloten opdracht: calculatie (werkbegroting) vs. werkelijke uren + materiaalkosten, afwijkingspercentages, berekend_op
+- `fie_leermomenten` — geaggregeerd per werktype: gemiddelde afwijkingen over n projecten, correctiefactor (handmatig aanpasbaar), opmerkingen
+
+**Backend — fie-service.ts:**
+- `berekenEnSlaOpNacalculatie(opdrachtId)` — haalt werkbegroting totalen (totaalArbeidUren + totaalMateriaalBedrag), goedgekeurde uren en magazijn-uitgifte/retour op; berekent afwijkingspct arbeid + materiaal; upsert per opdracht_id
+- `herberekeenLeermomenten()` — aggregeert fie_nacalculaties per werktype (drempel >10%), berekent gewogen gemiddelde afwijkingen; upsert fieLeerMomentenTable
+- `planDagelijkseLeermomenten()` — dagelijkse achtergrondtaak 04:00: verwerkt afgesloten opdrachten zonder nacalculatie-record, herberekent daarna leermomenten; recursief ingepland
+
+**API — fie.ts + openapi.yaml + codegen:**
+- `GET /fie/leermomenten` — alle leermomenten gesorteerd op n projecten
+- `POST /fie/leermomenten/herbereken` — handmatige herberekening (teruggave: verwerkt + leermomenten)
+- `PATCH /fie/leermomenten/:id` — correctiefactor + opmerkingen aanpassen (validatie: correctiefactor > 0)
+- `DELETE /fie/leermomenten/:id` — leermoment verwijderen
+- Codegen uitgevoerd; hooks `useListFieLeermomenten`, `useHerberekeenFieLeermomenten`, `useUpdateFieLeermoment`, `useDeleteFieLeermoment` beschikbaar
+
+**Frontend — kompas.tsx:**
+- Tabs toegevoegd: "Prognose" (bestaand, ongewijzigd) en "Leereffecten" (nieuw)
+- Boekjaar-kiezer zichtbaar alleen op Prognose-tab
+- `LeereffectenPaneel` — tabel met kleurcodering (rood >20%, amber >10%, neutraal ≤10%), herbereken-knop, lege-state met uitleg
+- `LeermomentRij` — inline bewerkmodus: correctiefactor + opmerkingen; delete met bevestiging; afwijking-kleur reflecteert ernst
+
+**Achtergrondtaak:**
+- Ingepland in index.ts naast andere plan* achtergrondtaken (04:00 dagelijks)
+
 ## 2026-07-04 — AVG code-review herstel: veldnamen, anonimisering, verlofexport, notificatie (volledig)
 
 **Uitvoering:** volledig | **Getest:** typecheck clean firevault + api-server; codegen OK; api-server herstart zonder fouten; alleen pre-existing TS7030 in offertes.ts

@@ -71,3 +71,39 @@ export const fieObservatiesTable = pgTable("fie_observaties", {
 });
 
 export type FieObservatie = typeof fieObservatiesTable.$inferSelect;
+
+// ─── Nacalculatie-records (Fase 5) ───────────────────────────────────────────
+// Per afgesloten opdracht: calculatie vs. werkelijk per kostensoort.
+// Wordt gevuld door de dagelijkse achtergrondtaak na projectafsluiting.
+export const fieNacalculatiesTable = pgTable("fie_nacalculaties", {
+  id: serial("id").primaryKey(),
+  opdrachtId: integer("opdracht_id").notNull(),
+  werktype: text("werktype").notNull().default("algemeen"),
+  calcArbeidUren: real("calc_arbeid_uren").default(0),
+  werkelijkArbeidUren: real("werkelijk_arbeid_uren").default(0),
+  afwijkingPctArbeid: real("afwijking_pct_arbeid"),
+  calcMateriaalBedrag: real("calc_materiaal_bedrag").default(0),
+  werkelijkMateriaalBedrag: real("werkelijk_materiaal_bedrag").default(0),
+  afwijkingPctMateriaal: real("afwijking_pct_materiaal"),
+  afgesloten: boolean("afgesloten").notNull().default(false),
+  berekendOp: timestamp("berekend_op").notNull().defaultNow(),
+  bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+});
+
+// ─── Leermomenten (Fase 5) ────────────────────────────────────────────────────
+// Geaggregeerde afwijkingen per werktype over meerdere projecten.
+// Dagelijks herberekend uit fie_nacalculaties; handmatig aanpasbaar (correctie_factor).
+export const fieLeerMomentenTable = pgTable("fie_leermomenten", {
+  id: serial("id").primaryKey(),
+  werktype: text("werktype").notNull().unique(),
+  afwijkingPctArbeid: real("afwijking_pct_arbeid").notNull().default(0),
+  afwijkingPctMateriaal: real("afwijking_pct_materiaal").notNull().default(0),
+  gebaseerdOpNProjecten: integer("gebaseerd_op_n_projecten").notNull().default(0),
+  correctieFactor: real("correctie_factor").notNull().default(1.0),
+  opmerkingen: text("opmerkingen"),
+  laatsteUpdate: timestamp("laatste_update").notNull().defaultNow(),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+});
+
+export type FieNacalculatie = typeof fieNacalculatiesTable.$inferSelect;
+export type FieLeermoment = typeof fieLeerMomentenTable.$inferSelect;

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import {
   TrendingUp, TrendingDown, AlertTriangle, Info, ChevronLeft, ChevronRight,
-  Target, Euro, BarChart3, Activity, Building2,
+  Target, Euro, BarChart3, Activity, Building2, RefreshCw, BookOpen, Pencil, Check, X,
 } from "lucide-react";
 import {
   ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -11,12 +11,19 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import {
   useGetFiePrognose,
   useGetFieObservaties,
+  useListFieLeermomenten,
+  useHerberekeenFieLeermomenten,
+  useUpdateFieLeermoment,
+  useDeleteFieLeermoment,
   type FieJaarprognose,
   type FieWerkmaatschappijPrognose,
+  type FieLeermoment,
 } from "@workspace/api-client-react";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
 import { useRol } from "@/context/rol-context";
@@ -414,6 +421,178 @@ function PortefeuilleRij({ p }: { p: FieJaarprognose }) {
   );
 }
 
+// ─── Leereffecten paneel ──────────────────────────────────────────────────────
+
+function LeermomentRij({ lm, onSaved }: { lm: FieLeermoment; onSaved: () => void }) {
+  const [bewerkModus, setBewerkModus] = useState(false);
+  const [factorInput, setFactorInput] = useState(String(lm.correctie_factor));
+  const [opmerkingenInput, setOpmerkingenInput] = useState(lm.opmerkingen ?? "");
+
+  const patch = useUpdateFieLeermoment();
+  const verwijder = useDeleteFieLeermoment();
+
+  function opslaan() {
+    const factor = Number(factorInput);
+    if (!isFinite(factor) || factor <= 0) return;
+    patch.mutate(
+      { id: lm.id, data: { correctie_factor: factor, opmerkingen: opmerkingenInput || null } },
+      { onSuccess: () => { setBewerkModus(false); onSaved(); } },
+    );
+  }
+
+  function afwijkingKleur(v: number | null | undefined) {
+    if (v == null) return "text-muted-foreground";
+    if (Math.abs(v) > 20) return v > 0 ? "text-red-600 font-semibold" : "text-green-700 font-semibold";
+    if (Math.abs(v) > 10) return v > 0 ? "text-amber-600" : "text-green-600";
+    return "text-foreground";
+  }
+
+  return (
+    <tr className="border-b last:border-0 text-sm">
+      <td className="py-2 pr-3 font-medium capitalize">{lm.werktype}</td>
+      <td className={cn("py-2 pr-3 text-right tabular-nums", afwijkingKleur(lm.afwijking_pct_arbeid))}>
+        {lm.afwijking_pct_arbeid != null ? `${lm.afwijking_pct_arbeid > 0 ? "+" : ""}${lm.afwijking_pct_arbeid.toFixed(1)}%` : "—"}
+      </td>
+      <td className={cn("py-2 pr-3 text-right tabular-nums", afwijkingKleur(lm.afwijking_pct_materiaal))}>
+        {lm.afwijking_pct_materiaal != null ? `${lm.afwijking_pct_materiaal > 0 ? "+" : ""}${lm.afwijking_pct_materiaal.toFixed(1)}%` : "—"}
+      </td>
+      <td className="py-2 pr-3 text-right tabular-nums text-muted-foreground">{lm.gebaseerd_op_n_projecten}</td>
+      <td className="py-2 pr-3 text-right tabular-nums">
+        {bewerkModus ? (
+          <Input
+            className="h-7 w-20 text-xs text-right"
+            value={factorInput}
+            onChange={e => setFactorInput(e.target.value)}
+            type="number" step="0.01" min="0.01"
+          />
+        ) : (
+          <span>{lm.correctie_factor.toFixed(2)}×</span>
+        )}
+      </td>
+      <td className="py-2 pr-3 text-muted-foreground text-xs max-w-[160px] truncate">
+        {bewerkModus ? (
+          <Input
+            className="h-7 text-xs"
+            value={opmerkingenInput}
+            onChange={e => setOpmerkingenInput(e.target.value)}
+            placeholder="Toelichting..."
+          />
+        ) : (
+          lm.opmerkingen ?? <span className="italic opacity-50">Geen toelichting</span>
+        )}
+      </td>
+      <td className="py-2 text-right">
+        {bewerkModus ? (
+          <span className="flex justify-end gap-1">
+            <Button size="icon" variant="ghost" className="h-6 w-6" onClick={opslaan} disabled={patch.isPending}>
+              <Check className="h-3.5 w-3.5" />
+            </Button>
+            <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => setBewerkModus(false)}>
+              <X className="h-3.5 w-3.5" />
+            </Button>
+          </span>
+        ) : (
+          <span className="flex justify-end gap-1">
+            <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => setBewerkModus(true)}>
+              <Pencil className="h-3.5 w-3.5" />
+            </Button>
+            <Button
+              size="icon" variant="ghost"
+              className="h-6 w-6 text-destructive hover:text-destructive"
+              onClick={() => { if (confirm(`Leermoment "${lm.werktype}" verwijderen?`)) verwijder.mutate({ id: lm.id }, { onSuccess: onSaved }); }}
+              disabled={verwijder.isPending}
+            >
+              <X className="h-3.5 w-3.5" />
+            </Button>
+          </span>
+        )}
+      </td>
+    </tr>
+  );
+}
+
+function LeereffectenPaneel() {
+  const { data: leermomenten, isLoading, refetch } = useListFieLeermomenten();
+  const herbereken = useHerberekeenFieLeermomenten();
+
+  function startHerbereken() {
+    herbereken.mutate(undefined, { onSuccess: () => { void refetch(); } });
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-sm font-semibold">Leereffecten — nacalculatie-terugkoppeling</h2>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Gemiddelde afwijkingen per werktype over afgesloten projecten. Structurele afwijkingen worden meegewogen
+            in nieuwe calculatieadviezen via de correctiefactor.
+          </p>
+        </div>
+        <Button
+          size="sm" variant="outline" className="gap-1.5 shrink-0"
+          onClick={startHerbereken}
+          disabled={herbereken.isPending}
+        >
+          <RefreshCw className={cn("h-3.5 w-3.5", herbereken.isPending && "animate-spin")} />
+          Herbereken
+        </Button>
+      </div>
+
+      {isLoading ? (
+        <div className="space-y-2">
+          {[0, 1, 2].map(i => <Skeleton key={i} className="h-10 w-full" />)}
+        </div>
+      ) : !leermomenten || leermomenten.length === 0 ? (
+        <Card>
+          <CardContent className="p-8 text-center">
+            <BookOpen className="w-8 h-8 mx-auto mb-2 opacity-20" />
+            <p className="text-sm text-muted-foreground mb-1">Nog geen leereffecten beschikbaar</p>
+            <p className="text-xs text-muted-foreground">
+              Leermomenten worden dagelijks aangemaakt vanuit afgesloten projecten met een vastgestelde werkbegroting.
+              Klik op "Herbereken" om direct te berekenen.
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card>
+          <CardContent className="p-0 overflow-x-auto">
+            <table className="w-full min-w-[640px]">
+              <thead>
+                <tr className="border-b text-[11px] text-muted-foreground uppercase tracking-wide">
+                  <th className="py-2 pr-3 text-left font-medium pl-4">Werktype</th>
+                  <th className="py-2 pr-3 text-right font-medium">Afwijking arbeid</th>
+                  <th className="py-2 pr-3 text-right font-medium">Afwijking materiaal</th>
+                  <th className="py-2 pr-3 text-right font-medium">Projecten</th>
+                  <th className="py-2 pr-3 text-right font-medium">Correctiefactor</th>
+                  <th className="py-2 pr-3 font-medium">Toelichting</th>
+                  <th className="py-2 text-right font-medium pr-2"></th>
+                </tr>
+              </thead>
+              <tbody className="pl-4">
+                {leermomenten.map(lm => (
+                  <LeermomentRij key={lm.id} lm={lm} onSaved={() => void refetch()} />
+                ))}
+              </tbody>
+            </table>
+          </CardContent>
+        </Card>
+      )}
+
+      <div className="rounded-md border border-dashed p-3 bg-muted/20">
+        <div className="flex items-start gap-2">
+          <Info className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
+          <p className="text-xs text-muted-foreground">
+            Afwijking arbeid = (werkelijk − begroot) / begroot × 100. Positief = meer uren dan begroot.
+            Een correctiefactor van 1.10 voegt automatisch 10% toe aan het arbeidsadvies bij een nieuwe calculatie.
+            Leermomenten worden dagelijks bijgewerkt (04:00).
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Geen toegang ─────────────────────────────────────────────────────────────
 
 function GeenToegang() {
@@ -434,6 +613,7 @@ function GeenToegang() {
 
 function KompasInhoud() {
   const [boekjaar, setBoekjaar] = useState(() => new Date().getFullYear());
+  const [actieveTab, setActieveTab] = useState("prognose");
 
   const { data: p, isLoading } = useGetFiePrognose(boekjaar) as {
     data: FieJaarprognose | undefined;
@@ -450,24 +630,38 @@ function KompasInhoud() {
             Realtime financieel directie-overzicht — prognose, bezettingsgraad en orderportefeuille
           </p>
         </div>
-        <div className="flex items-center gap-1 border rounded-md px-2 py-1">
-          <Button
-            variant="ghost" size="icon" className="h-6 w-6"
-            onClick={() => setBoekjaar(y => y - 1)}
-            disabled={boekjaar <= 2020}
-          >
-            <ChevronLeft className="h-3.5 w-3.5" />
-          </Button>
-          <span className="text-sm font-semibold w-12 text-center">{boekjaar}</span>
-          <Button
-            variant="ghost" size="icon" className="h-6 w-6"
-            onClick={() => setBoekjaar(y => y + 1)}
-            disabled={boekjaar >= new Date().getFullYear() + 1}
-          >
-            <ChevronRight className="h-3.5 w-3.5" />
-          </Button>
-        </div>
+        {actieveTab === "prognose" && (
+          <div className="flex items-center gap-1 border rounded-md px-2 py-1">
+            <Button
+              variant="ghost" size="icon" className="h-6 w-6"
+              onClick={() => setBoekjaar(y => y - 1)}
+              disabled={boekjaar <= 2020}
+            >
+              <ChevronLeft className="h-3.5 w-3.5" />
+            </Button>
+            <span className="text-sm font-semibold w-12 text-center">{boekjaar}</span>
+            <Button
+              variant="ghost" size="icon" className="h-6 w-6"
+              onClick={() => setBoekjaar(y => y + 1)}
+              disabled={boekjaar >= new Date().getFullYear() + 1}
+            >
+              <ChevronRight className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        )}
       </div>
+
+      <Tabs value={actieveTab} onValueChange={setActieveTab}>
+        <TabsList className="h-8">
+          <TabsTrigger value="prognose" className="text-xs">Prognose</TabsTrigger>
+          <TabsTrigger value="leereffecten" className="text-xs">Leereffecten</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="leereffecten" className="mt-4">
+          <LeereffectenPaneel />
+        </TabsContent>
+
+        <TabsContent value="prognose" className="mt-4">
 
       {isLoading ? (
         <div className="space-y-4">
@@ -553,6 +747,8 @@ function KompasInhoud() {
           </div>
         </div>
       )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

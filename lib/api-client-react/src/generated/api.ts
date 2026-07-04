@@ -204,6 +204,8 @@ import type {
   FieJaarbegrotingInput,
   FieJaarbegrotingUpdate,
   FieJaarprognose,
+  FieLeermoment,
+  FieLeermomentPatch,
   FieObservatiesResponse,
   FinancieelDashboard,
   Foto,
@@ -285,6 +287,7 @@ import type {
   HelpdeskTicket,
   HelpdeskTicketInput,
   HelpdeskTicketUpdate,
+  HerberekeenFieLeermomenten200,
   HerinspectieInput,
   HerkomstBevestigenBulkInput,
   HrmStats,
@@ -67088,4 +67091,292 @@ export function useGetFieObservaties<TData = Awaited<ReturnType<typeof getFieObs
 
 
 
+
+export const getListFieLeermomentenUrl = () => {
+
+
+
+
+  return `/api/fie/leermomenten`
+}
+
+/**
+ * @summary Alle leermomenten ophalen (historische afwijkingen per werktype)
+ */
+export const listFieLeermomenten = async ( options?: RequestInit): Promise<FieLeermoment[]> => {
+
+  return customFetch<FieLeermoment[]>(getListFieLeermomentenUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListFieLeermomentenQueryKey = () => {
+    return [
+    `/api/fie/leermomenten`
+    ] as const;
+    }
+
+
+export const getListFieLeermomentenQueryOptions = <TData = Awaited<ReturnType<typeof listFieLeermomenten>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listFieLeermomenten>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListFieLeermomentenQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listFieLeermomenten>>> = ({ signal }) => listFieLeermomenten({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listFieLeermomenten>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListFieLeermomentenQueryResult = NonNullable<Awaited<ReturnType<typeof listFieLeermomenten>>>
+export type ListFieLeermomentenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Alle leermomenten ophalen (historische afwijkingen per werktype)
+ */
+
+export function useListFieLeermomenten<TData = Awaited<ReturnType<typeof listFieLeermomenten>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listFieLeermomenten>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListFieLeermomentenQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getHerberekeenFieLeermomentenUrl = () => {
+
+
+
+
+  return `/api/fie/leermomenten/herbereken`
+}
+
+/**
+ * @summary Leermomenten handmatig herberekenen vanuit alle afgesloten opdrachten
+ */
+export const herberekeenFieLeermomenten = async ( options?: RequestInit): Promise<HerberekeenFieLeermomenten200> => {
+
+  return customFetch<HerberekeenFieLeermomenten200>(getHerberekeenFieLeermomentenUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getHerberekeenFieLeermomentenMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof herberekeenFieLeermomenten>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof herberekeenFieLeermomenten>>, TError,void, TContext> => {
+
+const mutationKey = ['herberekeenFieLeermomenten'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof herberekeenFieLeermomenten>>, void> = () => {
+
+
+          return  herberekeenFieLeermomenten(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type HerberekeenFieLeermomentenMutationResult = NonNullable<Awaited<ReturnType<typeof herberekeenFieLeermomenten>>>
+
+    export type HerberekeenFieLeermomentenMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Leermomenten handmatig herberekenen vanuit alle afgesloten opdrachten
+ */
+export const useHerberekeenFieLeermomenten = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof herberekeenFieLeermomenten>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof herberekeenFieLeermomenten>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getHerberekeenFieLeermomentenMutationOptions(options));
+    }
+
+export const getUpdateFieLeermomentUrl = (id: number,) => {
+
+
+
+
+  return `/api/fie/leermomenten/${id}`
+}
+
+/**
+ * @summary Leermoment handmatig aanpassen (correctiefactor, opmerkingen)
+ */
+export const updateFieLeermoment = async (id: number,
+    fieLeermomentPatch: FieLeermomentPatch, options?: RequestInit): Promise<FieLeermoment> => {
+
+  return customFetch<FieLeermoment>(getUpdateFieLeermomentUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(fieLeermomentPatch)
+  }
+);}
+
+
+
+
+export const getUpdateFieLeermomentMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateFieLeermoment>>, TError,{id: number;data: BodyType<FieLeermomentPatch>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateFieLeermoment>>, TError,{id: number;data: BodyType<FieLeermomentPatch>}, TContext> => {
+
+const mutationKey = ['updateFieLeermoment'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateFieLeermoment>>, {id: number;data: BodyType<FieLeermomentPatch>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateFieLeermoment(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateFieLeermomentMutationResult = NonNullable<Awaited<ReturnType<typeof updateFieLeermoment>>>
+    export type UpdateFieLeermomentMutationBody = BodyType<FieLeermomentPatch>
+    export type UpdateFieLeermomentMutationError = ErrorType<void>
+
+    /**
+ * @summary Leermoment handmatig aanpassen (correctiefactor, opmerkingen)
+ */
+export const useUpdateFieLeermoment = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateFieLeermoment>>, TError,{id: number;data: BodyType<FieLeermomentPatch>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateFieLeermoment>>,
+        TError,
+        {id: number;data: BodyType<FieLeermomentPatch>},
+        TContext
+      > => {
+      return useMutation(getUpdateFieLeermomentMutationOptions(options));
+    }
+
+export const getDeleteFieLeermomentUrl = (id: number,) => {
+
+
+
+
+  return `/api/fie/leermomenten/${id}`
+}
+
+/**
+ * @summary Leermoment verwijderen
+ */
+export const deleteFieLeermoment = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteFieLeermomentUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteFieLeermomentMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteFieLeermoment>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteFieLeermoment>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteFieLeermoment'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteFieLeermoment>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteFieLeermoment(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteFieLeermomentMutationResult = NonNullable<Awaited<ReturnType<typeof deleteFieLeermoment>>>
+
+    export type DeleteFieLeermomentMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Leermoment verwijderen
+ */
+export const useDeleteFieLeermoment = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteFieLeermoment>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteFieLeermoment>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteFieLeermomentMutationOptions(options));
+    }
 

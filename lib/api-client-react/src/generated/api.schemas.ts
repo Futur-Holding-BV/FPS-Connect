@@ -10330,6 +10330,25 @@ export interface FieJaarprognose {
   werkmaatschappij_verdeling?: FieWerkmaatschappijPrognose[];
 }
 
+export interface FieLeermoment {
+  id: number;
+  werktype: string;
+  afwijking_pct_arbeid: number;
+  afwijking_pct_materiaal: number;
+  gebaseerd_op_n_projecten: number;
+  correctie_factor: number;
+  /** @nullable */
+  opmerkingen?: string | null;
+  laatste_update: string;
+  aangemaakt_op: string;
+}
+
+export interface FieLeermomentPatch {
+  correctie_factor?: number;
+  /** @nullable */
+  opmerkingen?: string | null;
+}
+
 export type GetRecenteActiviteitParams = {
 limit?: number;
 };
@@ -11061,4 +11080,9 @@ document_type: string;
 };
 
 export type ListActieveDocumentStudioModellen200 = {[key: string]: DocumentStudioModel};
+
+export type HerberekeenFieLeermomenten200 = {
+  verwerkt: number;
+  leermomenten: FieLeermoment[];
+};
 

@@ -23717,3 +23717,74 @@ export const GetFieObservatiesResponse = zod.object({
 })
 
 
+/**
+ * @summary Alle leermomenten ophalen (historische afwijkingen per werktype)
+ */
+export const ListFieLeermomentenResponseItem = zod.object({
+  "id": zod.number(),
+  "werktype": zod.string(),
+  "afwijking_pct_arbeid": zod.number(),
+  "afwijking_pct_materiaal": zod.number(),
+  "gebaseerd_op_n_projecten": zod.number(),
+  "correctie_factor": zod.number(),
+  "opmerkingen": zod.string().nullish(),
+  "laatste_update": zod.string(),
+  "aangemaakt_op": zod.string()
+})
+export const ListFieLeermomentenResponse = zod.array(ListFieLeermomentenResponseItem)
+
+
+/**
+ * @summary Leermomenten handmatig herberekenen vanuit alle afgesloten opdrachten
+ */
+export const HerberekeenFieLeermomentenResponse = zod.object({
+  "verwerkt": zod.number(),
+  "leermomenten": zod.array(zod.object({
+  "id": zod.number(),
+  "werktype": zod.string(),
+  "afwijking_pct_arbeid": zod.number(),
+  "afwijking_pct_materiaal": zod.number(),
+  "gebaseerd_op_n_projecten": zod.number(),
+  "correctie_factor": zod.number(),
+  "opmerkingen": zod.string().nullish(),
+  "laatste_update": zod.string(),
+  "aangemaakt_op": zod.string()
+}))
+})
+
+
+/**
+ * @summary Leermoment handmatig aanpassen (correctiefactor, opmerkingen)
+ */
+export const UpdateFieLeermomentParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateFieLeermomentBody = zod.object({
+  "correctie_factor": zod.number().optional(),
+  "opmerkingen": zod.string().nullish()
+})
+
+export const UpdateFieLeermomentResponse = zod.object({
+  "id": zod.number(),
+  "werktype": zod.string(),
+  "afwijking_pct_arbeid": zod.number(),
+  "afwijking_pct_materiaal": zod.number(),
+  "gebaseerd_op_n_projecten": zod.number(),
+  "correctie_factor": zod.number(),
+  "opmerkingen": zod.string().nullish(),
+  "laatste_update": zod.string(),
+  "aangemaakt_op": zod.string()
+})
+
+
+/**
+ * @summary Leermoment verwijderen
+ */
+export const DeleteFieLeermomentParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteFieLeermomentResponse = zod.void()
+
+

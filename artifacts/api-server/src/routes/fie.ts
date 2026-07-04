@@ -2,10 +2,10 @@
 // Alle financiële berekeningen lopen via fie-service.ts; hier alleen routing + validatie.
 // Fase 1+2: jaarbegrotingen, AK-posten, capaciteitssnapsots en live calculatieblok.
 import { Router, Request, Response } from "express";
-import { db, fieJaarbegrotingenTable, fieAkPostenTable, fieCapaciteitSnapshotsTable, werkgeversTable } from "@workspace/db";
+import { db, fieJaarbegrotingenTable, fieAkPostenTable, fieCapaciteitSnapshotsTable, fieLeerMomentenTable, werkgeversTable } from "@workspace/db";
 import { eq, desc } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
-import { berekenFieContext, berekenCapaciteit, berekenDoelmarge, berekenJaarprognose, leesPrognoseObservaties, rnd2 } from "../services/fie-service";
+import { berekenFieContext, berekenCapaciteit, berekenDoelmarge, berekenJaarprognose, leesPrognoseObservaties, rnd2, herberekeenLeermomenten, berekenEnSlaOpNacalculatie } from "../services/fie-service";
 
 const router = Router();
 
@@ -535,6 +535,64 @@ router.get("/fie/observaties/:boekjaar", lezen, async (req: Request, res: Respon
 
   const observaties = await leesPrognoseObservaties(boekjaar);
   return void res.json({ boekjaar, observaties });
+});
+
+// ─── Leereffecten (Fase 5) ────────────────────────────────────────────────────
+
+function mapLeermoment(r: typeof fieLeerMomentenTable.$inferSelect) {
+  return {
+    id:                       r.id,
+    werktype:                 r.werktype,
+    afwijking_pct_arbeid:     r.afwijkingPctArbeid,
+    afwijking_pct_materiaal:  r.afwijkingPctMateriaal,
+    gebaseerd_op_n_projecten: r.gebaseerdOpNProjecten,
+    correctie_factor:         r.correctieFactor,
+    opmerkingen:              r.opmerkingen ?? null,
+    laatste_update:           r.laatsteUpdate.toISOString(),
+    aangemaakt_op:            r.aangemaaktOp.toISOString(),
+  };
+}
+
+// GET /fie/leermomenten
+router.get("/fie/leermomenten", lezen, async (_req: Request, res: Response): Promise<void> => {
+  const rows = await db.select().from(fieLeerMomentenTable).orderBy(desc(fieLeerMomentenTable.gebaseerdOpNProjecten));
+  res.json(rows.map(mapLeermoment));
+});
+
+// POST /fie/leermomenten/herbereken
+router.post("/fie/leermomenten/herbereken", schrijven, async (_req: Request, res: Response): Promise<void> => {
+  const verwerkt = await herberekeenLeermomenten();
+  const rows = await db.select().from(fieLeerMomentenTable).orderBy(desc(fieLeerMomentenTable.gebaseerdOpNProjecten));
+  res.json({ verwerkt, leermomenten: rows.map(mapLeermoment) });
+});
+
+// PATCH /fie/leermomenten/:id
+router.patch("/fie/leermomenten/:id", schrijven, async (req: Request, res: Response): Promise<void> => {
+  const id = validId(res, req.params["id"]);
+  if (id === null) return;
+
+  const [existing] = await db.select().from(fieLeerMomentenTable).where(eq(fieLeerMomentenTable.id, id)).limit(1);
+  if (!existing) { res.status(404).json({ error: "Leermoment niet gevonden" }); return; }
+
+  const { correctie_factor, opmerkingen } = req.body as Record<string, unknown>;
+  const update: Partial<typeof fieLeerMomentenTable.$inferInsert> = { laatsteUpdate: new Date() };
+  if (correctie_factor !== undefined) {
+    const v = Number(correctie_factor);
+    if (!isFinite(v) || v <= 0) { res.status(400).json({ error: "correctie_factor moet een positief getal zijn" }); return; }
+    update.correctieFactor = Math.round(v * 100) / 100;
+  }
+  if (opmerkingen !== undefined) update.opmerkingen = opmerkingen != null ? String(opmerkingen).slice(0, 1000) : null;
+
+  const [updated] = await db.update(fieLeerMomentenTable).set(update).where(eq(fieLeerMomentenTable.id, id)).returning();
+  res.json(mapLeermoment(updated));
+});
+
+// DELETE /fie/leermomenten/:id
+router.delete("/fie/leermomenten/:id", schrijven, async (req: Request, res: Response): Promise<void> => {
+  const id = validId(res, req.params["id"]);
+  if (id === null) return;
+  await db.delete(fieLeerMomentenTable).where(eq(fieLeerMomentenTable.id, id));
+  res.status(204).send();
 });
 
 export default router;

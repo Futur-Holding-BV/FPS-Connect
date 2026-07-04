@@ -18945,6 +18945,82 @@ paths:
         "400":
           description: Ongeldig boekjaar
 
+  /fie/leermomenten:
+    get:
+      operationId: listFieLeermomenten
+      tags: [financieel]
+      summary: Alle leermomenten ophalen (historische afwijkingen per werktype)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FieLeermoment"
+
+  /fie/leermomenten/herbereken:
+    post:
+      operationId: herberekeenFieLeermomenten
+      tags: [financieel]
+      summary: Leermomenten handmatig herberekenen vanuit alle afgesloten opdrachten
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [verwerkt, leermomenten]
+                properties:
+                  verwerkt:
+                    type: integer
+                  leermomenten:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/FieLeermoment"
+
+  /fie/leermomenten/{id}:
+    patch:
+      operationId: updateFieLeermoment
+      tags: [financieel]
+      summary: Leermoment handmatig aanpassen (correctiefactor, opmerkingen)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FieLeermomentPatch"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FieLeermoment"
+        "404":
+          description: Niet gevonden
+    delete:
+      operationId: deleteFieLeermoment
+      tags: [financieel]
+      summary: Leermoment verwijderen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Verwijderd
+
 components:
   schemas:
     AvgVerzoekInput:
@@ -34490,3 +34566,23 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/FieWerkmaatschappijPrognose"
+
+    FieLeermoment:
+      type: object
+      required: [id, werktype, afwijking_pct_arbeid, afwijking_pct_materiaal, gebaseerd_op_n_projecten, correctie_factor, laatste_update, aangemaakt_op]
+      properties:
+        id:                       { type: integer }
+        werktype:                 { type: string }
+        afwijking_pct_arbeid:     { type: number }
+        afwijking_pct_materiaal:  { type: number }
+        gebaseerd_op_n_projecten: { type: integer }
+        correctie_factor:         { type: number }
+        opmerkingen:              { type: ["string", "null"] }
+        laatste_update:           { type: string }
+        aangemaakt_op:            { type: string }
+
+    FieLeermomentPatch:
+      type: object
+      properties:
+        correctie_factor: { type: number }
+        opmerkingen:      { type: ["string", "null"] }

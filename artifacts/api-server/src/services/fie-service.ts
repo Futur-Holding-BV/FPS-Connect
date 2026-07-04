@@ -2,9 +2,19 @@
 // Alle margeberekeningen, AK-normderivaties en context-analyses lopen via dit service-module.
 // KRITISCH: berekenFieContext gebruikt DEZELFDE berekeningsvolgorde als detail.tsx (frontend),
 // zodat projectomzet, kostprijs en margeadvies identiek zijn aan de getoonde calculatietotalen.
-import { db, fieJaarbegrotingenTable, fieAkPostenTable, fieCapaciteitSnapshotsTable, fieObservatiesTable, modCalcHeadersTable, modCalcRegelsTable, offertesTable, offerteSjablonenTable, opdrachtenTable, onderhandenWerkOverridesTable } from "@workspace/db";
+import {
+  db,
+  fieJaarbegrotingenTable, fieAkPostenTable, fieCapaciteitSnapshotsTable, fieObservatiesTable,
+  fieNacalculatiesTable, fieLeerMomentenTable,
+  modCalcHeadersTable, modCalcRegelsTable,
+  offertesTable, offerteSjablonenTable,
+  opdrachtenTable, onderhandenWerkOverridesTable,
+  projectBegrotingenTable,
+  urenRegistratiesTable,
+  voorraadMutatiesTable, artikelenTable,
+} from "@workspace/db";
 import { medewerkersTable } from "@workspace/db/schema";
-import { eq, and, desc, gte, lt, inArray } from "drizzle-orm";
+import { eq, and, desc, gte, lt, inArray, isNull } from "drizzle-orm";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -795,4 +805,162 @@ export async function leesPrognoseObservaties(boekjaar: number): Promise<FieProg
     afwijking_pct: r.afwijkingPct ?? null,
     ...observatieMetadata(r.type),
   }));
+}
+
+// ─── Fase 5: Nacalculatie & Leereffecten ─────────────────────────────────────
+
+const AFWIJKING_DREMPEL = 10; // procent — structurele afwijking drempel voor leermoment-impact
+
+/**
+ * Berekent de nacalculatie voor één opdracht en slaat het op in fie_nacalculaties.
+ * Gebruikt de vastgestelde werkbegroting als calculatiebasis.
+ * Wordt aangeroepen door de dagelijkse achtergrondtaak na projectafsluiting.
+ */
+export async function berekenEnSlaOpNacalculatie(opdrachtId: number): Promise<void> {
+  // Werkbegroting als calculatiebasis (totaalArbeidUren + totaalMateriaalBedrag)
+  const [begroting] = await db.select({
+    totaalArbeidUren:     projectBegrotingenTable.totaalArbeidUren,
+    totaalMateriaalBedrag: projectBegrotingenTable.totaalMateriaalBedrag,
+  }).from(projectBegrotingenTable).where(eq(projectBegrotingenTable.opdrachtId, opdrachtId)).limit(1);
+
+  const calcArbeidUren     = begroting?.totaalArbeidUren ?? 0;
+  const calcMateriaalBedrag = begroting?.totaalMateriaalBedrag ?? 0;
+
+  // Werkelijke uren (goedgekeurde uren-registraties)
+  const urenRows = await db.select({ nettoUren: urenRegistratiesTable.nettoUren })
+    .from(urenRegistratiesTable)
+    .where(and(
+      eq(urenRegistratiesTable.opdrachtId, opdrachtId),
+      eq(urenRegistratiesTable.status, "goedgekeurd"),
+    ));
+  const werkelijkArbeidUren = rnd2(urenRows.reduce((s, r) => s + r.nettoUren, 0));
+
+  // Werkelijke materiaalkosten (uitgifte − retour uit het magazijn)
+  const mutatieRows = await db.select({
+    hoeveelheid: voorraadMutatiesTable.hoeveelheid,
+    type:        voorraadMutatiesTable.type,
+    prijs:       artikelenTable.inkoopprijs,
+  }).from(voorraadMutatiesTable)
+    .leftJoin(artikelenTable, eq(voorraadMutatiesTable.artikelId, artikelenTable.id))
+    .where(and(
+      eq(voorraadMutatiesTable.referentieType, "opdracht"),
+      eq(voorraadMutatiesTable.referentieId, opdrachtId),
+    ));
+
+  let werkelijkMateriaalBedrag = 0;
+  for (const m of mutatieRows) {
+    if (m.type !== "uitgifte" && m.type !== "retour") continue;
+    const bedrag = (m.prijs ?? 0) * (m.hoeveelheid ?? 0);
+    werkelijkMateriaalBedrag += m.type === "retour" ? -bedrag : bedrag;
+  }
+  werkelijkMateriaalBedrag = rnd2(Math.max(0, werkelijkMateriaalBedrag));
+
+  // Afwijkingspercentages (null als er geen calculatiebasis is)
+  const afwijkingPctArbeid = calcArbeidUren > 0
+    ? rnd2(((werkelijkArbeidUren - calcArbeidUren) / calcArbeidUren) * 100)
+    : null;
+  const afwijkingPctMateriaal = calcMateriaalBedrag > 0
+    ? rnd2(((werkelijkMateriaalBedrag - calcMateriaalBedrag) / calcMateriaalBedrag) * 100)
+    : null;
+
+  // Upsert: één rij per opdracht_id
+  const [bestaande] = await db.select({ id: fieNacalculatiesTable.id })
+    .from(fieNacalculatiesTable).where(eq(fieNacalculatiesTable.opdrachtId, opdrachtId)).limit(1);
+
+  const values = {
+    opdrachtId,
+    werktype:               "algemeen",
+    calcArbeidUren,
+    werkelijkArbeidUren,
+    afwijkingPctArbeid,
+    calcMateriaalBedrag,
+    werkelijkMateriaalBedrag,
+    afwijkingPctMateriaal,
+    afgesloten:             true,
+    berekendOp:             new Date(),
+    bijgewerktOp:           new Date(),
+  };
+
+  if (bestaande) {
+    await db.update(fieNacalculatiesTable).set(values).where(eq(fieNacalculatiesTable.id, bestaande.id));
+  } else {
+    await db.insert(fieNacalculatiesTable).values(values);
+  }
+}
+
+/**
+ * Aggregeert alle fie_nacalculaties per werktype en berekent gemiddelde afwijkingen.
+ * Alleen nacalculaties met abs(afwijking) > AFWIJKING_DREMPEL tellen mee.
+ * Slaat de leermomenten op in fie_leermomenten (upsert per werktype).
+ */
+export async function herberekeenLeermomenten(): Promise<number> {
+  const alle = await db.select().from(fieNacalculatiesTable);
+  if (alle.length === 0) return 0;
+
+  // Groepeer per werktype
+  const groepen = new Map<string, { arbeid: number[]; materiaal: number[] }>();
+  for (const n of alle) {
+    if (!groepen.has(n.werktype)) groepen.set(n.werktype, { arbeid: [], materiaal: [] });
+    const g = groepen.get(n.werktype)!;
+    if (n.afwijkingPctArbeid !== null && Math.abs(n.afwijkingPctArbeid) > AFWIJKING_DREMPEL) {
+      g.arbeid.push(n.afwijkingPctArbeid);
+    }
+    if (n.afwijkingPctMateriaal !== null && Math.abs(n.afwijkingPctMateriaal) > AFWIJKING_DREMPEL) {
+      g.materiaal.push(n.afwijkingPctMateriaal);
+    }
+  }
+
+  let aantalBijgewerkt = 0;
+  for (const [werktype, g] of groepen.entries()) {
+    const n = alle.filter(a => a.werktype === werktype).length;
+    const gemArbeid = g.arbeid.length > 0 ? rnd2(g.arbeid.reduce((s, v) => s + v, 0) / g.arbeid.length) : 0;
+    const gemMateriaal = g.materiaal.length > 0 ? rnd2(g.materiaal.reduce((s, v) => s + v, 0) / g.materiaal.length) : 0;
+
+    const [bestaande] = await db.select({ id: fieLeerMomentenTable.id })
+      .from(fieLeerMomentenTable).where(eq(fieLeerMomentenTable.werktype, werktype)).limit(1);
+
+    const updateVals = {
+      afwijkingPctArbeid: gemArbeid,
+      afwijkingPctMateriaal: gemMateriaal,
+      gebaseerdOpNProjecten: n,
+      laatsteUpdate: new Date(),
+    };
+
+    if (bestaande) {
+      await db.update(fieLeerMomentenTable).set(updateVals).where(eq(fieLeerMomentenTable.id, bestaande.id));
+    } else {
+      await db.insert(fieLeerMomentenTable).values({ werktype, ...updateVals });
+    }
+    aantalBijgewerkt++;
+  }
+  return aantalBijgewerkt;
+}
+
+/**
+ * Dagelijkse achtergrondtaak: verwerk alle afgesloten opdrachten zonder nacalculatie-record,
+ * bereken daarna leermomenten opnieuw.
+ * Draait om 04:00 (na de backup).
+ */
+export function planDagelijkseLeermomenten(): void {
+  const nu = new Date();
+  const volgende = new Date(nu);
+  volgende.setHours(4, 0, 0, 0);
+  if (volgende <= nu) volgende.setDate(volgende.getDate() + 1);
+  const ms = volgende.getTime() - nu.getTime();
+
+  setTimeout(async () => {
+    try {
+      // Verwerk afgesloten opdrachten die nog geen nacalculatie hebben
+      const afgesloten = await db.select({ id: opdrachtenTable.id })
+        .from(opdrachtenTable)
+        .where(and(eq(opdrachtenTable.status, "afgerond"), isNull(fieNacalculatiesTable.id)))
+        .leftJoin(fieNacalculatiesTable, eq(fieNacalculatiesTable.opdrachtId, opdrachtenTable.id));
+
+      for (const o of afgesloten) {
+        await berekenEnSlaOpNacalculatie(o.id).catch(() => {});
+      }
+      await herberekeenLeermomenten().catch(() => {});
+    } catch {}
+    planDagelijkseLeermomenten();
+  }, ms);
 }
