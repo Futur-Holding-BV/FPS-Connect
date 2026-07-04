@@ -88,3 +88,4 @@
 - [E2E getByText nav-kaart val](e2e-getbytext-navkaart.md) — getByText("Verlof").first() matcht ancestor-containers (View/ScrollView) als meer dan één DOM-element de substring bevat; gebruik testID op de Pressable en getByTestId voor betrouwbaar klikken.
 - [AccountView factuurmodule](accountview-facturen.md) — financieel module-id in permissies; BestandType uitgebreid met "factuur"; api_key nooit teruggegeven (gebruik api_gebruiker als proxy voor "geconfigureerd").
 - [Uren isManager module-mapping](uren-module-mapping.md) — "uren" bestaat niet als module-id; isManager in uren.ts mapt op heeftModuleRecht("personeel", 1|2).
+- [PIM Architectuur](pim-architectuur.md) — PIM=AI-context only (geen operationele data); 4 correcties: geen org_id, document_koppelingen CHECK uitbreiden, geen FK stap→inkoop, concurrency-index; Fase A (#296) eerst, B-G geblokkeerd.
