@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { valideerCorrectieFactor, verwerkOpmerkingen, verwerkOpmerkingenBegroting, bouwLeermomentUpdateVelden } from "../routes/fie";
+import { valideerCorrectieFactor, verwerkOpmerkingen, verwerkOpmerkingenBegroting, bouwLeermomentUpdateVelden, verwerkOmschrijvingAkPost } from "../routes/fie";
 
 // ── valideerCorrectieFactor — grenswaarden en randgevallen ────────────────────
 //
@@ -209,5 +209,53 @@ describe("verwerkOpmerkingenBegroting", () => {
     const inp = "z".repeat(2001);
     const resultaat = verwerkOpmerkingenBegroting(inp);
     expect(resultaat).toHaveLength(2000);
+  });
+});
+
+// ── verwerkOmschrijvingAkPost — omschrijving-truncatie en null-verwerking ─────
+//
+// Legt het bewuste gedrag vast: omschrijving wordt stilzwijgend afgekapt op
+// 500 tekens (geen 400-fout). Dit is gedocumenteerd zodat een toekomstige
+// refactor dit gedrag niet onopgemerkt kan wijzigen.
+//
+// null/undefined → null (de POST-handler valideert verplichtheid zelf).
+
+describe("verwerkOmschrijvingAkPost", () => {
+  it("kapt tekst van meer dan 500 tekens stilzwijgend af op precies 500 (geen fout)", () => {
+    const lang = "x".repeat(750);
+    const resultaat = verwerkOmschrijvingAkPost(lang);
+    expect(resultaat).toHaveLength(500);
+    expect(resultaat).toBe("x".repeat(500));
+  });
+
+  it("bewaart tekst van precies 500 tekens ongewijzigd", () => {
+    const precies = "a".repeat(500);
+    expect(verwerkOmschrijvingAkPost(precies)).toBe(precies);
+  });
+
+  it("bewaart tekst korter dan 500 tekens ongewijzigd", () => {
+    expect(verwerkOmschrijvingAkPost("Dakdoorvoering brandklasse A1")).toBe(
+      "Dakdoorvoering brandklasse A1",
+    );
+  });
+
+  it("geeft null terug bij null-invoer", () => {
+    expect(verwerkOmschrijvingAkPost(null)).toBeNull();
+  });
+
+  it("geeft null terug bij undefined-invoer", () => {
+    expect(verwerkOmschrijvingAkPost(undefined)).toBeNull();
+  });
+
+  it("knipt tekst van exact 501 tekens af op 500", () => {
+    const inp = "b".repeat(501);
+    const resultaat = verwerkOmschrijvingAkPost(inp);
+    expect(resultaat).toHaveLength(500);
+  });
+
+  it("knipt NIET op 1000 of 2000 tekens — AK-post heeft lagere limiet (500)", () => {
+    const zeshonderd = "c".repeat(600);
+    const resultaat = verwerkOmschrijvingAkPost(zeshonderd);
+    expect(resultaat).toHaveLength(500);
   });
 });

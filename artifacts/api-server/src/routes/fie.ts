@@ -68,6 +68,20 @@ export function verwerkOpmerkingenBegroting(v: unknown): string | null {
   return String(v).slice(0, 2000);
 }
 
+/**
+ * Verwerkt een omschrijving-waarde voor FIE AK-posten (POST en PATCH).
+ * - null / undefined → wordt als null opgeslagen
+ * - tekst            → wordt afgekapt op 500 tekens (stille truncatie, geen fout)
+ * Gebruik deze functie altijd voor het omschrijving-veld in de ak-posten
+ * handlers, zodat een refactor dit gedrag niet onopgemerkt kan wijzigen.
+ * Bij POST is het veld verplicht (de caller valideert dat eerst); hier
+ * zorgt de helper uitsluitend voor de maximale lengte.
+ */
+export function verwerkOmschrijvingAkPost(v: unknown): string | null {
+  if (v === null || v === undefined) return null;
+  return String(v).slice(0, 500);
+}
+
 /** Velden die de PATCH /fie/leermomenten/:id handler kan bijwerken. */
 export type LeermomentUpdateVelden = {
   correctieFactor?: number;
@@ -376,7 +390,7 @@ router.post("/fie/begrotingen/:id/ak-posten", schrijven, async (req: Request, re
     begrotingId,
     werkgeverId: (werkgever_id as number | undefined) ?? null,
     categorie: (categorie as string | undefined) ?? "overig",
-    omschrijving: omschrijving as string,
+    omschrijving: verwerkOmschrijvingAkPost(omschrijving) ?? "",
     bedragJaarbasis: bedrag_jaarbasis as number,
     actief: (actief as boolean | undefined) ?? true,
   }).returning();
@@ -405,7 +419,7 @@ router.patch("/fie/ak-posten/:id", schrijven, async (req: Request, res: Response
   };
   if (werkgever_id !== undefined)    updateData.werkgeverId = werkgever_id as number | null;
   if (categorie !== undefined)       updateData.categorie = categorie as string;
-  if (omschrijving !== undefined)    updateData.omschrijving = omschrijving as string;
+  if (omschrijving !== undefined)    updateData.omschrijving = verwerkOmschrijvingAkPost(omschrijving) ?? "";
   if (bedrag_jaarbasis !== undefined) updateData.bedragJaarbasis = bedrag_jaarbasis as number;
   if (actief !== undefined)          updateData.actief = actief as boolean;
 
