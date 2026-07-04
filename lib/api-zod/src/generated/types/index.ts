@@ -241,6 +241,7 @@ export * from './fieJaarprognose';
 export * from './fieKwartaalPrognose';
 export * from './fieObservatiesResponse';
 export * from './fiePrognoseObservatie';
+export * from './fieWerkmaatschappijPrognose';
 export * from './financieelDashboard';
 export * from './foto';
 export * from './fotoFase';

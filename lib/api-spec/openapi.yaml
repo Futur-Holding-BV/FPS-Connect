@@ -34125,12 +34125,24 @@ components:
       type: object
       required: [type, ernst, omschrijving]
       properties:
-        type:           { type: string }
-        ernst:          { type: string }
-        omschrijving:   { type: string }
-        waarde:         { type: ["number", "null"] }
-        drempelwaarde:  { type: ["number", "null"] }
-        afwijking_pct:  { type: ["number", "null"] }
+        type:                { type: string }
+        ernst:               { type: string }
+        omschrijving:        { type: string }
+        waarde:              { type: ["number", "null"] }
+        drempelwaarde:       { type: ["number", "null"] }
+        afwijking_pct:       { type: ["number", "null"] }
+        impact:              { type: ["string", "null"] }
+        advies:              { type: ["string", "null"] }
+        betrouwbaarheidsscore: { type: ["number", "null"] }
+
+    FieWerkmaatschappijPrognose:
+      type: object
+      required: [werkmaatschappij, bevestigd, pipeline_gewogen, prognose]
+      properties:
+        werkmaatschappij: { type: string }
+        bevestigd:        { type: number }
+        pipeline_gewogen: { type: number }
+        prognose:         { type: number }
 
     FieKwartaalPrognose:
       type: object
@@ -34195,3 +34207,7 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/FiePrognoseObservatie"
+        werkmaatschappij_verdeling:
+          type: array
+          items:
+            $ref: "#/components/schemas/FieWerkmaatschappijPrognose"

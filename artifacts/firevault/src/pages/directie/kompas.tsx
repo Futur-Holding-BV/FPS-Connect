@@ -16,6 +16,7 @@ import {
   useGetFiePrognose,
   useGetFieObservaties,
   type FieJaarprognose,
+  type FieWerkmaatschappijPrognose,
 } from "@workspace/api-client-react";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
 import { useRol } from "@/context/rol-context";
@@ -244,28 +245,36 @@ function KwartaalChart({ p }: { p: FieJaarprognose }) {
   );
 }
 
-// ─── Werkmaatschappij / Orderportefeuille vergelijking ────────────────────────
-// Toont de samenstelling van de orderportefeuille als gestapeld staafdiagram.
-// Per-werkmaatschappij uitsplitsing volgt zodra de FIE-engine per-entiteit
-// begrotingen ondersteunt; voor nu: aggregaat per omzetcategorie.
+// ─── Werkmaatschappij-vergelijking (staafdiagram per entiteit) ────────────────
 
-function WerkmaatschappijChart({ p }: { p: FieJaarprognose }) {
-  const data = [
-    {
-      label: "Orderportefeuille",
-      bevestigd:  Math.round(p.bevestigde_omzet / 1000),
-      pipeline:   Math.round(p.gewogen_pipeline / 1000),
-      ohw:        Math.round(p.ohw_restwaarde / 1000),
-    },
-  ];
+function WerkmaatschappijChart({ verdeling }: { verdeling: FieWerkmaatschappijPrognose[] }) {
+  const data = verdeling.map(v => ({
+    werkmaatschappij: v.werkmaatschappij,
+    bevestigd:        Math.round(v.bevestigd / 1000),
+    pipeline:         Math.round(v.pipeline_gewogen / 1000),
+    prognose:         Math.round(v.prognose / 1000),
+  }));
 
-  const totaal = p.bevestigde_omzet + p.gewogen_pipeline + p.ohw_restwaarde;
+  const totaal = verdeling.reduce((s, v) => s + v.prognose, 0);
+
+  if (data.length === 0) {
+    return (
+      <Card>
+        <CardContent className="p-6 text-center text-sm text-muted-foreground">
+          <Building2 className="w-7 h-7 mx-auto mb-2 opacity-20" />
+          Geen offertedata per werkmaatschappij beschikbaar voor dit boekjaar.
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const chartHeight = Math.max(120, data.length * 44);
 
   return (
     <Card>
       <CardHeader className="pb-2 pt-4 px-4">
         <div className="flex items-center justify-between gap-2">
-          <CardTitle className="text-sm font-medium">Orderportefeuille-samenstelling (× €1.000)</CardTitle>
+          <CardTitle className="text-sm font-medium">Werkmaatschappij-vergelijking (× €1.000)</CardTitle>
           <Badge variant="outline" className="text-[10px] gap-1">
             <Building2 className="w-3 h-3" />
             Totaal {fmt(totaal)}
@@ -273,24 +282,20 @@ function WerkmaatschappijChart({ p }: { p: FieJaarprognose }) {
         </div>
       </CardHeader>
       <CardContent className="px-2 pb-4">
-        <ResponsiveContainer width="100%" height={120}>
-          <BarChart data={data} layout="vertical" margin={{ top: 4, right: 16, left: 0, bottom: 0 }}>
+        <ResponsiveContainer width="100%" height={chartHeight}>
+          <BarChart data={data} layout="vertical" margin={{ top: 4, right: 16, left: 4, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" horizontal={false} className="stroke-border/50" />
             <XAxis type="number" tick={{ fontSize: 10 }} />
-            <YAxis type="category" dataKey="label" tick={false} width={0} />
+            <YAxis type="category" dataKey="werkmaatschappij" tick={{ fontSize: 10 }} width={88} />
             <Tooltip
               formatter={(value: number) => [`€ ${(value * 1000).toLocaleString("nl-NL")}`, undefined]}
               contentStyle={{ fontSize: 11 }}
             />
             <Legend wrapperStyle={{ fontSize: 10, paddingTop: 8 }} />
             <Bar dataKey="bevestigd" name="Bevestigd" stackId="a" fill="#22c55e" />
-            <Bar dataKey="pipeline"  name="Pipeline (gewogen)" stackId="a" fill="#fbbf24" />
-            <Bar dataKey="ohw"       name="OHW restwaarde" stackId="a" fill="#60a5fa" radius={[0, 2, 2, 0]} />
+            <Bar dataKey="pipeline"  name="Pipeline (gewogen)" stackId="a" fill="#fbbf24" radius={[0, 2, 2, 0]} />
           </BarChart>
         </ResponsiveContainer>
-        <p className="text-[10px] text-muted-foreground px-2 mt-1">
-          Per werkmaatschappij beschikbaar zodra entiteit-specifieke begrotingen zijn geconfigureerd.
-        </p>
       </CardContent>
     </Card>
   );
@@ -336,12 +341,18 @@ function ObservatiesPaneel({ p, boekjaar }: { p: FieJaarprognose; boekjaar: numb
                 : <Info className="w-3.5 h-3.5 shrink-0 mt-0.5" />}
               <div className="flex-1 min-w-0">
                 <p className="leading-snug">{obs.omschrijving}</p>
+                {obs.impact && (
+                  <p className="text-[10px] font-medium mt-0.5 opacity-90">{obs.impact}</p>
+                )}
                 {obs.waarde != null && (
                   <p className="text-[10px] opacity-70 mt-0.5">
                     Waarde: {fmt(obs.waarde)}
                     {obs.drempelwaarde != null && ` · drempel: ${fmt(obs.drempelwaarde)}`}
                     {obs.afwijking_pct != null && ` · afwijking: ${obs.afwijking_pct.toFixed(1)}%`}
                   </p>
+                )}
+                {obs.advies && (
+                  <p className="text-[10px] italic opacity-75 mt-0.5">Advies: {obs.advies}</p>
                 )}
               </div>
               <span className={cn(
@@ -419,22 +430,15 @@ function GeenToegang() {
   );
 }
 
-// ─── Hoofd component ──────────────────────────────────────────────────────────
+// ─── Dashboard inhoud (hooks alleen renderen bij toegang) ─────────────────────
 
-export default function DirectieKompasPagina() {
-  const { heeftNiveau } = useBevoegdheid();
-  const { rol } = useRol();
-  const isHoofdbeheerder = rol === "hoofdbeheerder";
-  const heeftToegang = isHoofdbeheerder || heeftNiveau("financieel", 2);
-
+function KompasInhoud() {
   const [boekjaar, setBoekjaar] = useState(() => new Date().getFullYear());
 
   const { data: p, isLoading } = useGetFiePrognose(boekjaar) as {
     data: FieJaarprognose | undefined;
     isLoading: boolean;
   };
-
-  if (!heeftToegang) return <GeenToegang />;
 
   return (
     <div className="space-y-5 p-1">
@@ -525,7 +529,7 @@ export default function DirectieKompasPagina() {
 
           {/* Werkmaatschappij-vergelijking + Observaties */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <WerkmaatschappijChart p={p} />
+            <WerkmaatschappijChart verdeling={p.werkmaatschappij_verdeling ?? []} />
             <ObservatiesPaneel p={p} boekjaar={boekjaar} />
           </div>
 
@@ -551,4 +555,14 @@ export default function DirectieKompasPagina() {
       )}
     </div>
   );
+}
+
+// ─── Hoofd component (access gate) ───────────────────────────────────────────
+
+export default function DirectieKompasPagina() {
+  const { heeftNiveau } = useBevoegdheid();
+  const { rol } = useRol();
+  const heeftToegang = rol === "hoofdbeheerder" || heeftNiveau("financieel", 2);
+  if (!heeftToegang) return <GeenToegang />;
+  return <KompasInhoud />;
 }

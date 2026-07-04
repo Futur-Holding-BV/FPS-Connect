@@ -8,6 +8,7 @@
 import type { FieBegrotingKwartaal } from './fieBegrotingKwartaal';
 import type { FieKwartaalPrognose } from './fieKwartaalPrognose';
 import type { FiePrognoseObservatie } from './fiePrognoseObservatie';
+import type { FieWerkmaatschappijPrognose } from './fieWerkmaatschappijPrognose';
 
 export interface FieJaarprognose {
   boekjaar: number;
@@ -43,4 +44,5 @@ export interface FieJaarprognose {
   kwartaal_verdeling: FieKwartaalPrognose[];
   begroting_per_kwartaal?: FieBegrotingKwartaal[];
   observaties: FiePrognoseObservatie[];
+  werkmaatschappij_verdeling?: FieWerkmaatschappijPrognose[];
 }

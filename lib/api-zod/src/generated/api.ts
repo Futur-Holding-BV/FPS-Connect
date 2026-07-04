@@ -23522,8 +23522,17 @@ export const GetFiePrognoseResponse = zod.object({
   "omschrijving": zod.string(),
   "waarde": zod.number().nullish(),
   "drempelwaarde": zod.number().nullish(),
-  "afwijking_pct": zod.number().nullish()
-}))
+  "afwijking_pct": zod.number().nullish(),
+  "impact": zod.string().nullish(),
+  "advies": zod.string().nullish(),
+  "betrouwbaarheidsscore": zod.number().nullish()
+})),
+  "werkmaatschappij_verdeling": zod.array(zod.object({
+  "werkmaatschappij": zod.string(),
+  "bevestigd": zod.number(),
+  "pipeline_gewogen": zod.number(),
+  "prognose": zod.number()
+})).optional()
 })
 
 
@@ -23543,7 +23552,10 @@ export const GetFieObservatiesResponse = zod.object({
   "omschrijving": zod.string(),
   "waarde": zod.number().nullish(),
   "drempelwaarde": zod.number().nullish(),
-  "afwijking_pct": zod.number().nullish()
+  "afwijking_pct": zod.number().nullish(),
+  "impact": zod.string().nullish(),
+  "advies": zod.string().nullish(),
+  "betrouwbaarheidsscore": zod.number().nullish()
 }))
 })
 

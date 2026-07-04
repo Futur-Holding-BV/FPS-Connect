@@ -16,4 +16,10 @@ export interface FiePrognoseObservatie {
   drempelwaarde?: number | null;
   /** @nullable */
   afwijking_pct?: number | null;
+  /** @nullable */
+  impact?: string | null;
+  /** @nullable */
+  advies?: string | null;
+  /** @nullable */
+  betrouwbaarheidsscore?: number | null;
 }

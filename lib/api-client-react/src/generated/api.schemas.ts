@@ -10188,6 +10188,19 @@ export interface FiePrognoseObservatie {
   drempelwaarde?: number | null;
   /** @nullable */
   afwijking_pct?: number | null;
+  /** @nullable */
+  impact?: string | null;
+  /** @nullable */
+  advies?: string | null;
+  /** @nullable */
+  betrouwbaarheidsscore?: number | null;
+}
+
+export interface FieWerkmaatschappijPrognose {
+  werkmaatschappij: string;
+  bevestigd: number;
+  pipeline_gewogen: number;
+  prognose: number;
 }
 
 export interface FieKwartaalPrognose {
@@ -10241,6 +10254,7 @@ export interface FieJaarprognose {
   kwartaal_verdeling: FieKwartaalPrognose[];
   begroting_per_kwartaal?: FieBegrotingKwartaal[];
   observaties: FiePrognoseObservatie[];
+  werkmaatschappij_verdeling?: FieWerkmaatschappijPrognose[];
 }
 
 export type GetRecenteActiviteitParams = {
