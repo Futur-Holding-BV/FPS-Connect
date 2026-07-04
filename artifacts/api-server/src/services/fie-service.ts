@@ -14,6 +14,7 @@ import {
   voorraadMutatiesTable, artikelenTable,
   onderaannemeOrdersTable,
   regieTarievenTable,
+  voorzieningenTable,
 } from "@workspace/db";
 import { logger } from "../lib/logger";
 import { medewerkersTable } from "@workspace/db/schema";
@@ -853,14 +854,41 @@ const AFWIJKING_DREMPEL = 10; // procent — structurele afwijking drempel voor 
  * Wordt aangeroepen door de dagelijkse achtergrondtaak na projectafsluiting.
  */
 export async function berekenEnSlaOpNacalculatie(opdrachtId: number): Promise<void> {
-  // Opdracht-metadata: type (vast/regie/overig) + calculatieId
+  // Opdracht-metadata: calculatieId + gebouwId (voor spottype-afleiding)
   const [opdracht] = await db.select({
     calculatieId: opdrachtenTable.calculatieId,
-    type:         opdrachtenTable.type,
+    gebouwId:     opdrachtenTable.gebouwId,
   }).from(opdrachtenTable).where(eq(opdrachtenTable.id, opdrachtId)).limit(1);
 
-  // Werktype afgeleid van opdracht.type (vast | regie | overig)
-  const werktype = opdracht?.type ?? "algemeen";
+  // Werktype afleiden uit het dominante spottype van het gekoppelde gebouw.
+  // Telt de voorkomens van elk spottype (voorzieningenTable.type) en kiest de meest voorkomende.
+  // Terugval op "algemeen" als het gebouw onbekend is of geen spots heeft.
+  let werktype = "algemeen";
+  if (opdracht?.gebouwId) {
+    const spotRows = await db
+      .select({ type: voorzieningenTable.type })
+      .from(voorzieningenTable)
+      .where(and(
+        eq(voorzieningenTable.gebouwId, opdracht.gebouwId),
+        eq(voorzieningenTable.gearchiveerd, false),
+      ));
+
+    if (spotRows.length > 0) {
+      const tellingen = new Map<string, number>();
+      for (const r of spotRows) {
+        if (r.type) tellingen.set(r.type, (tellingen.get(r.type) ?? 0) + 1);
+      }
+      let maxAantal = 0;
+      let dominantType = "algemeen";
+      for (const [type, aantal] of tellingen.entries()) {
+        if (aantal > maxAantal) {
+          maxAantal = aantal;
+          dominantType = type;
+        }
+      }
+      werktype = dominantType;
+    }
+  }
 
   // Werkbegroting als calculatiebasis voor uren
   const [begroting] = await db.select({

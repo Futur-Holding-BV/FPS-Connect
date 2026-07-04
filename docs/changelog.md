@@ -4,6 +4,18 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-04 — FIE nacalculatie: werktype verfijnd met dominant spottype (volledig)
+
+**Uitvoering:** volledig | **Getest:** typecheck api-server clean (pre-existing TS7030 in offertes.ts ongewijzigd)
+
+`berekenEnSlaOpNacalculatie()` leidt het werktype nu af uit de spots van het gekoppelde gebouw:
+- Haalt alle niet-gearchiveerde voorzieningen (spots) op voor het gebouw van de opdracht
+- Telt de voorkomens per `voorzieningen.type` (branddeur, doorvoering, brandklep, manchet, coating…)
+- Kiest het meest voorkomende type als werktype → leermomenten groeperenvoortaan op werkelijk brandpreventie-type
+- Terugval op "algemeen" als het gebouw onbekend is of het gebouw geen spots bevat
+
+Gewijzigd: `artifacts/api-server/src/services/fie-service.ts` — import `voorzieningenTable` toegevoegd, werktype-afleiding herschreven
+
 ## 2026-07-04 — FIE Fase 5: Code-review herstel ronde 3 (volledig)
 
 **Uitvoering:** volledig | **Getest:** typecheck clean alle packages; api-server herstart; DB ALTER geslaagd
