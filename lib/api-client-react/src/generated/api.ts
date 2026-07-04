@@ -334,7 +334,6 @@ import type {
   JaarAfsluitingResultaat,
   JarrekeningOnderhandenWerk,
   KaartEmbed,
-  KoppelPimDocument201,
   LaadBrandstofImport200,
   Label,
   LabelDocumentenInput,
@@ -556,6 +555,7 @@ import type {
   PimAnalyseerInput,
   PimAnalyseerResultaat,
   PimDocumentKoppelingInput,
+  PimDocumentKoppelingResultaat,
   PimFaseInput,
   PimFaseResultaat,
   PimModel,
@@ -36206,9 +36206,9 @@ export const getKoppelPimDocumentUrl = (id: number,) => {
  * @summary Koppelt een bestaand DMS-document aan de opdracht (ten behoeve van PIM-analyse)
  */
 export const koppelPimDocument = async (id: number,
-    pimDocumentKoppelingInput: PimDocumentKoppelingInput, options?: RequestInit): Promise<KoppelPimDocument201> => {
+    pimDocumentKoppelingInput: PimDocumentKoppelingInput, options?: RequestInit): Promise<PimDocumentKoppelingResultaat> => {
 
-  return customFetch<KoppelPimDocument201>(getKoppelPimDocumentUrl(id),
+  return customFetch<PimDocumentKoppelingResultaat>(getKoppelPimDocumentUrl(id),
   {
     ...options,
     method: 'POST',

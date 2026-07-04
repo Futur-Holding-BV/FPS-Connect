@@ -221,7 +221,7 @@ async function objectPathNaarPdfTekst(objectPath: string): Promise<string | null
 }
 
 // ── POST /aanvragen ──────────────────────────────────────────────────────────
-router.post("/aanvragen", lezen, async (req, res): Promise<void> => {
+router.post("/aanvragen", schrijven, async (req, res): Promise<void> => {
   try {
     const { titel, gebouw_id, omschrijving, aanvraag_via_one, aanvraag_context } =
       req.body as {
@@ -721,7 +721,7 @@ router.post("/opdrachten/:id/pim/advies/rapport", schrijven, async (req, res): P
       return { document };
     });
 
-    res.status(201).json({ opdracht_id: opdrachtId, document_id: doc.id, pdf_gegenereerd: pdfObjectPad !== null });
+    res.status(200).json({ opdracht_id: opdrachtId, document_id: doc.id, pdf_gegenereerd: pdfObjectPad !== null });
   } catch (err) {
     logger.error({ err }, "pimAdviesRapport fout");
     res.status(500).json({ error: "Serverfout bij aanmaken rapport" });
@@ -810,7 +810,7 @@ router.post("/opdrachten/:id/pim/documenten/koppel", schrijven, async (req, res)
       aangemaaktDoorId: req.session.userId!,
     }).onConflictDoNothing();
 
-    res.status(201).json({ ok: true });
+    res.status(200).json({ ok: true });
   } catch (err) {
     logger.error({ err }, "pimDocumentKoppel fout");
     res.status(500).json({ error: "Serverfout" });

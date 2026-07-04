@@ -6,6 +6,6 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type KoppelPimDocument201 = {
-  ok?: boolean;
-};
+export interface PimDocumentKoppelingResultaat {
+  ok: boolean;
+}

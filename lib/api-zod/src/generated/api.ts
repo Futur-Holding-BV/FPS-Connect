@@ -12508,7 +12508,10 @@ export const MaakPimAdviesRapportParams = zod.object({
   "id": zod.coerce.number()
 })
 
-export const MaakPimAdviesRapportResponse = zod.void()
+export const MaakPimAdviesRapportResponse = zod.object({
+  "opdracht_id": zod.number(),
+  "document_id": zod.number()
+})
 
 
 /**
@@ -12543,7 +12546,9 @@ export const KoppelPimDocumentBody = zod.object({
   "document_id": zod.number().describe('ID van het DMS-document dat aan de opdracht gekoppeld moet worden')
 })
 
-export const KoppelPimDocumentResponse = zod.void()
+export const KoppelPimDocumentResponse = zod.object({
+  "ok": zod.boolean()
+})
 
 
 /**
