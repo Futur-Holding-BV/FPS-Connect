@@ -17,6 +17,11 @@ import {
   useListWbAdviezen,
   useUpdateWbAdvies,
   getListWbAdviezenQueryKey,
+  useGetPim,
+  useAnalyseerPim,
+  useBevestigPimAdvies,
+  useMaakPimAdviesRapport,
+  getGetPimQueryKey,
 } from "@workspace/api-client-react";
 import type { Werkbegroting, OpdrachtNacalculatie } from "@workspace/api-client-react";
 import AiChatPanel from "@/components/ai-chat-panel";
@@ -34,7 +39,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import {
   ArrowLeft, Sparkles, Check, Clock, AlertTriangle, CalendarCheck,
-  TrendingUp, TrendingDown, Edit2, Package, ShoppingCart, Building2, ShoppingBag, MessageSquare, CheckCircle2, HardHat, Printer,
+  TrendingUp, TrendingDown, Edit2, Package, ShoppingCart, Building2, ShoppingBag, MessageSquare, CheckCircle2, HardHat, Printer, Brain, FileCheck2, ShieldAlert,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
@@ -381,6 +386,43 @@ export default function OpdrachtDetailPagina() {
   const { data: nacalculatie } = useGetNacalculatie(opdrachtId);
   const { data: planningUren } = useListOpdrachtPlanningUren(opdrachtId);
 
+  // ── PIM — AI Regisseur ────────────────────────────────────────────────────────
+  const { data: pim, isLoading: pimLoading } = useGetPim(opdrachtId);
+
+  const pimAnalyseerMut = useAnalyseerPim({
+    mutation: {
+      onSuccess: () => {
+        qc.invalidateQueries({ queryKey: getGetPimQueryKey(opdrachtId) });
+        qc.invalidateQueries({ queryKey: getGetOpdrachtQueryKey(opdrachtId) });
+        toast({ title: "AI-adviesanalyse voltooid" });
+      },
+      onError: (err: unknown) => {
+        const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error ?? "Onbekende fout";
+        toast({ title: "Analyse mislukt", description: msg, variant: "destructive" });
+      },
+    },
+  });
+
+  const pimBevestigMut = useBevestigPimAdvies({
+    mutation: {
+      onSuccess: () => {
+        qc.invalidateQueries({ queryKey: getGetPimQueryKey(opdrachtId) });
+        qc.invalidateQueries({ queryKey: getGetOpdrachtQueryKey(opdrachtId) });
+        toast({ title: "Advies goedgekeurd — fase: advies_gereed" });
+      },
+      onError: () => toast({ title: "Goedkeuren mislukt", variant: "destructive" }),
+    },
+  });
+
+  const pimRapportMut = useMaakPimAdviesRapport({
+    mutation: {
+      onSuccess: () => {
+        toast({ title: "Adviesrapport aangemaakt in DMS" });
+      },
+      onError: () => toast({ title: "Rapport aanmaken mislukt", variant: "destructive" }),
+    },
+  });
+
   const vaststellenMutatie = useVaststellenWerkbegroting({
     mutation: {
       onSuccess: () => {
@@ -508,6 +550,10 @@ export default function OpdrachtDetailPagina() {
           <TabsTrigger value="nacalculatie">Nacalculatie</TabsTrigger>
           <TabsTrigger value="planning">Planning-uren</TabsTrigger>
           {aiAnalyse && <TabsTrigger value="ai">AI-analyse</TabsTrigger>}
+          <TabsTrigger value="ai-regisseur">
+            <Brain className="h-3.5 w-3.5 mr-1.5" />
+            AI Regisseur
+          </TabsTrigger>
         </TabsList>
 
         {/* ── Werkbegroting ── */}
@@ -978,6 +1024,249 @@ export default function OpdrachtDetailPagina() {
             )}
           </TabsContent>
         )}
+
+        {/* ── AI Regisseur ── */}
+        <TabsContent value="ai-regisseur" className="mt-4 space-y-4">
+          {pimLoading && (
+            <Card>
+              <CardContent className="pt-6 space-y-3">
+                <Skeleton className="h-5 w-48" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-3/4" />
+              </CardContent>
+            </Card>
+          )}
+
+          {!pimLoading && (
+            <>
+              {/* Status + acties */}
+              <Card>
+                <CardHeader className="pb-2 pt-4">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <Brain className="h-4 w-4 text-primary" />
+                      AI Regisseur — PIM status
+                    </CardTitle>
+                    <div className="flex items-center gap-2">
+                      {pim ? (
+                        <Badge variant="outline" className="font-mono text-xs">
+                          {(opdracht as unknown as Record<string, unknown>)?.ai_fase as string ?? "nieuw"}
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-xs text-muted-foreground">
+                          Geen PIM
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="pb-4 space-y-3">
+                  {!pim && (
+                    <p className="text-sm text-muted-foreground">
+                      Er is nog geen PIM-model voor deze opdracht. Het wordt aangemaakt zodra een aanvraag via FPS One binnenkomt.
+                    </p>
+                  )}
+
+                  {pim && (
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={pimAnalyseerMut.isPending}
+                        onClick={() => pimAnalyseerMut.mutate({ id: opdrachtId })}
+                      >
+                        <Sparkles className="h-3.5 w-3.5 mr-1.5" />
+                        {pimAnalyseerMut.isPending ? "Analyseren..." : "AI-analyse uitvoeren"}
+                      </Button>
+
+                      {((opdracht as unknown as Record<string, unknown>)?.ai_fase as string) === "advies" && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+                          disabled={pimBevestigMut.isPending}
+                          onClick={() => pimBevestigMut.mutate({ id: opdrachtId })}
+                        >
+                          <FileCheck2 className="h-3.5 w-3.5 mr-1.5" />
+                          {pimBevestigMut.isPending ? "Bezig..." : "Advies goedkeuren"}
+                        </Button>
+                      )}
+
+                      {((opdracht as unknown as Record<string, unknown>)?.ai_fase as string) === "advies_gereed" && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={pimRapportMut.isPending}
+                          onClick={() => pimRapportMut.mutate({ id: opdrachtId })}
+                        >
+                          <Printer className="h-3.5 w-3.5 mr-1.5" />
+                          {pimRapportMut.isPending ? "Aanmaken..." : "Rapport in DMS opslaan"}
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Adviescontext */}
+              {pim?.advies_context && (() => {
+                const ctx = pim.advies_context as Record<string, unknown>;
+                return (
+                  <div className="space-y-3">
+                    {/* Aanbeveling */}
+                    {Boolean(ctx.aanbeveling) && (
+                      <Card className={
+                        ctx.aanbeveling === "direct_uitvoeren"
+                          ? "border-emerald-200 bg-emerald-50/40"
+                          : ctx.aanbeveling === "meer_info_nodig"
+                          ? "border-amber-200 bg-amber-50/40"
+                          : "border-blue-200 bg-blue-50/40"
+                      }>
+                        <CardHeader className="pb-1 pt-4">
+                          <CardTitle className="text-sm">Aanbeveling</CardTitle>
+                        </CardHeader>
+                        <CardContent className="pb-4 space-y-1">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="font-mono text-xs">
+                              {String(ctx.aanbeveling).replace(/_/g, " ")}
+                            </Badge>
+                            <Badge variant="outline" className="text-xs text-muted-foreground">
+                              betrouwbaarheid: {String(ctx.betrouwbaarheid ?? "—")}
+                            </Badge>
+                          </div>
+                          {Boolean(ctx.aanbeveling_toelichting) && (
+                            <p className="text-sm text-muted-foreground mt-2">{String(ctx.aanbeveling_toelichting)}</p>
+                          )}
+                        </CardContent>
+                      </Card>
+                    )}
+
+                    {/* Werkzaamheden */}
+                    {Array.isArray(ctx.werkzaamheden) && ctx.werkzaamheden.length > 0 && (
+                      <Card>
+                        <CardHeader className="pb-1 pt-4">
+                          <CardTitle className="text-sm">Verwachte werkzaamheden</CardTitle>
+                        </CardHeader>
+                        <CardContent className="pb-4">
+                          <ul className="space-y-1">
+                            {(ctx.werkzaamheden as string[]).map((w, i) => (
+                              <li key={i} className="flex items-start gap-2 text-sm">
+                                <Check className="h-3.5 w-3.5 text-emerald-600 mt-0.5 shrink-0" />
+                                {w}
+                              </li>
+                            ))}
+                          </ul>
+                        </CardContent>
+                      </Card>
+                    )}
+
+                    {/* Locaties */}
+                    {Array.isArray(ctx.locaties) && ctx.locaties.length > 0 && (
+                      <Card>
+                        <CardHeader className="pb-1 pt-4">
+                          <CardTitle className="text-sm">Herkende locaties</CardTitle>
+                        </CardHeader>
+                        <CardContent className="pb-4">
+                          <div className="flex flex-wrap gap-2">
+                            {(ctx.locaties as string[]).map((l, i) => (
+                              <Badge key={i} variant="secondary" className="text-xs font-normal">{l}</Badge>
+                            ))}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
+
+                    {/* Risico's */}
+                    {Array.isArray(ctx.risicos) && ctx.risicos.length > 0 && (
+                      <Card className="border-amber-200">
+                        <CardHeader className="pb-1 pt-4">
+                          <CardTitle className="text-sm flex items-center gap-2">
+                            <ShieldAlert className="h-4 w-4 text-amber-500" />
+                            Risico's &amp; aandachtspunten
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="pb-4">
+                          <ul className="space-y-1">
+                            {(ctx.risicos as string[]).map((r, i) => (
+                              <li key={i} className="flex items-start gap-2 text-sm text-amber-800">
+                                <AlertTriangle className="h-3.5 w-3.5 text-amber-500 mt-0.5 shrink-0" />
+                                {r}
+                              </li>
+                            ))}
+                          </ul>
+                        </CardContent>
+                      </Card>
+                    )}
+
+                    {/* Normen */}
+                    {Array.isArray(ctx.normen) && ctx.normen.length > 0 && (
+                      <Card>
+                        <CardHeader className="pb-1 pt-4">
+                          <CardTitle className="text-sm">Relevante normen</CardTitle>
+                        </CardHeader>
+                        <CardContent className="pb-4">
+                          <div className="flex flex-wrap gap-2">
+                            {(ctx.normen as string[]).map((n, i) => (
+                              <Badge key={i} variant="outline" className="text-xs font-mono">{n}</Badge>
+                            ))}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
+
+                    {/* Vragen */}
+                    {Array.isArray(ctx.vragen) && ctx.vragen.length > 0 && (
+                      <Card className="border-blue-200">
+                        <CardHeader className="pb-1 pt-4">
+                          <CardTitle className="text-sm flex items-center gap-2">
+                            <MessageSquare className="h-4 w-4 text-blue-500" />
+                            Open vragen voor opdrachtgever
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="pb-4">
+                          <ul className="space-y-1">
+                            {(ctx.vragen as string[]).map((v, i) => (
+                              <li key={i} className="text-sm text-blue-900">{i + 1}. {v}</li>
+                            ))}
+                          </ul>
+                        </CardContent>
+                      </Card>
+                    )}
+
+                    {/* Ontbrekende info */}
+                    {Array.isArray(ctx.ontbrekende_info) && ctx.ontbrekende_info.length > 0 && (
+                      <Card>
+                        <CardHeader className="pb-1 pt-4">
+                          <CardTitle className="text-sm">Ontbrekende informatie</CardTitle>
+                        </CardHeader>
+                        <CardContent className="pb-4">
+                          <ul className="space-y-1">
+                            {(ctx.ontbrekende_info as string[]).map((o, i) => (
+                              <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
+                                <Clock className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                                {o}
+                              </li>
+                            ))}
+                          </ul>
+                        </CardContent>
+                      </Card>
+                    )}
+
+                    {/* VOP vlag */}
+                    {ctx.vop_aandachtspunt === true && (
+                      <div className="rounded-lg border border-orange-200 bg-orange-50 px-4 py-3 flex items-center gap-3">
+                        <HardHat className="h-4 w-4 text-orange-600 shrink-0" />
+                        <p className="text-sm text-orange-800 font-medium">
+                          VOP-certificatieplichtige situatie te verwachten — controleer inzet VOP-gecertificeerd monteur.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+            </>
+          )}
+        </TabsContent>
       </Tabs>
 
       {/* Vaststellen bevestigingsdialoog */}

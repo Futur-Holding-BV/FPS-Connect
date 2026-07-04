@@ -6,7 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface PimFaseInput {
-  /** Geldige waarden: nieuw | advies | advies_gereed | werkvoorbereiding | inkoop | uitvoering | oplevering | gereed */
-  fase: string;
+export interface PimRapportResultaat {
+  opdracht_id: number;
+  document_id: number;
 }

@@ -6,7 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface PimFaseInput {
-  /** Geldige waarden: nieuw | advies | advies_gereed | werkvoorbereiding | inkoop | uitvoering | oplevering | gereed */
-  fase: string;
+export interface PimAnalyseerInput {
+  /** Aanvullende vrije tekst vanuit de aanvrager (max 8000 tekens) */
+  vrije_tekst?: string;
 }

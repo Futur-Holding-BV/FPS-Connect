@@ -551,9 +551,12 @@ import type {
   OrgVerzekering,
   OrgVerzekeringInput,
   OvernemenSnagstreamSnag201,
+  PimAnalyseerInput,
+  PimAnalyseerResultaat,
   PimFaseInput,
   PimFaseResultaat,
   PimModel,
+  PimRapportResultaat,
   PlanningAfwezigheid,
   PlanningAfwezigheidInput,
   PlanningDiagnose,
@@ -35903,6 +35906,217 @@ export function useGetPim<TData = Awaited<ReturnType<typeof getPim>>, TError = E
 
 
 
+
+export const getAnalyseerPimUrl = (id: number,) => {
+
+
+
+
+  return `/api/opdrachten/${id}/pim/analyseer`
+}
+
+/**
+ * @summary AI analyseert aanvraagcontext + gekoppelde documenten en slaat op in advies_context
+ */
+export const analyseerPim = async (id: number,
+    pimAnalyseerInput?: PimAnalyseerInput, options?: RequestInit): Promise<PimAnalyseerResultaat> => {
+
+  return customFetch<PimAnalyseerResultaat>(getAnalyseerPimUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(pimAnalyseerInput)
+  }
+);}
+
+
+
+
+export const getAnalyseerPimMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof analyseerPim>>, TError,{id: number;data?: BodyType<PimAnalyseerInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof analyseerPim>>, TError,{id: number;data?: BodyType<PimAnalyseerInput>}, TContext> => {
+
+const mutationKey = ['analyseerPim'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof analyseerPim>>, {id: number;data?: BodyType<PimAnalyseerInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  analyseerPim(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AnalyseerPimMutationResult = NonNullable<Awaited<ReturnType<typeof analyseerPim>>>
+    export type AnalyseerPimMutationBody = BodyType<PimAnalyseerInput> | undefined
+    export type AnalyseerPimMutationError = ErrorType<void>
+
+    /**
+ * @summary AI analyseert aanvraagcontext + gekoppelde documenten en slaat op in advies_context
+ */
+export const useAnalyseerPim = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof analyseerPim>>, TError,{id: number;data?: BodyType<PimAnalyseerInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof analyseerPim>>,
+        TError,
+        {id: number;data?: BodyType<PimAnalyseerInput>},
+        TContext
+      > => {
+      return useMutation(getAnalyseerPimMutationOptions(options));
+    }
+
+export const getBevestigPimAdviesUrl = (id: number,) => {
+
+
+
+
+  return `/api/opdrachten/${id}/pim/advies/bevestig`
+}
+
+/**
+ * @summary Beheerder keurt AI-adviesanalyse goed; zet ai_fase = advies_gereed
+ */
+export const bevestigPimAdvies = async (id: number, options?: RequestInit): Promise<PimFaseResultaat> => {
+
+  return customFetch<PimFaseResultaat>(getBevestigPimAdviesUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getBevestigPimAdviesMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bevestigPimAdvies>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof bevestigPimAdvies>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['bevestigPimAdvies'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof bevestigPimAdvies>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  bevestigPimAdvies(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type BevestigPimAdviesMutationResult = NonNullable<Awaited<ReturnType<typeof bevestigPimAdvies>>>
+
+    export type BevestigPimAdviesMutationError = ErrorType<void>
+
+    /**
+ * @summary Beheerder keurt AI-adviesanalyse goed; zet ai_fase = advies_gereed
+ */
+export const useBevestigPimAdvies = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bevestigPimAdvies>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof bevestigPimAdvies>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getBevestigPimAdviesMutationOptions(options));
+    }
+
+export const getMaakPimAdviesRapportUrl = (id: number,) => {
+
+
+
+
+  return `/api/opdrachten/${id}/pim/advies/rapport`
+}
+
+/**
+ * @summary Maakt DMS-document aan met de adviescontext en koppelt het aan de opdracht
+ */
+export const maakPimAdviesRapport = async (id: number, options?: RequestInit): Promise<PimRapportResultaat> => {
+
+  return customFetch<PimRapportResultaat>(getMaakPimAdviesRapportUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getMaakPimAdviesRapportMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof maakPimAdviesRapport>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof maakPimAdviesRapport>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['maakPimAdviesRapport'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof maakPimAdviesRapport>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  maakPimAdviesRapport(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type MaakPimAdviesRapportMutationResult = NonNullable<Awaited<ReturnType<typeof maakPimAdviesRapport>>>
+
+    export type MaakPimAdviesRapportMutationError = ErrorType<void>
+
+    /**
+ * @summary Maakt DMS-document aan met de adviescontext en koppelt het aan de opdracht
+ */
+export const useMaakPimAdviesRapport = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof maakPimAdviesRapport>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof maakPimAdviesRapport>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getMaakPimAdviesRapportMutationOptions(options));
+    }
 
 export const getUpdatePimFaseUrl = (id: number,) => {
 

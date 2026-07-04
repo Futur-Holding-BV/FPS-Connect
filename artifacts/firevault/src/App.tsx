@@ -185,6 +185,7 @@ import OneGebouwDetail from "@/pages/one/gebouw-detail";
 import OneDocumenten from "@/pages/one/documenten";
 import OneRapporten from "@/pages/one/rapporten";
 import OneAbonnementen from "@/pages/one/abonnementen";
+import OneAdviescentrum from "@/pages/one/adviescentrum";
 import { HeatmapTracker } from "@/components/heatmap-tracker";
 
 const queryClient = new QueryClient({
@@ -512,6 +513,7 @@ function ConnectPortal() {
         <Route path="/one/documenten" component={OneDocumenten} />
         <Route path="/one/rapporten" component={OneRapporten} />
         <Route path="/one/abonnementen" component={OneAbonnementen} />
+        <Route path="/one/adviescentrum" component={OneAdviescentrum} />
 
         {/* ── Overig ── */}
         <Route path="/info" component={InfoPagina} />

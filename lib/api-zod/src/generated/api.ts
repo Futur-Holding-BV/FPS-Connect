@@ -12470,6 +12470,48 @@ export const GetPimResponse = zod.object({
 
 
 /**
+ * @summary AI analyseert aanvraagcontext + gekoppelde documenten en slaat op in advies_context
+ */
+export const AnalyseerPimParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AnalyseerPimBody = zod.object({
+  "vrije_tekst": zod.string().optional().describe('Aanvullende vrije tekst vanuit de aanvrager (max 8000 tekens)')
+})
+
+export const AnalyseerPimResponse = zod.object({
+  "opdracht_id": zod.number(),
+  "ai_fase": zod.string(),
+  "aanbeveling": zod.string().optional().describe('opname_nodig | direct_uitvoeren | offerte_aanvragen | meer_info_nodig'),
+  "betrouwbaarheid": zod.string().optional().describe('laag | midden | hoog')
+})
+
+
+/**
+ * @summary Beheerder keurt AI-adviesanalyse goed; zet ai_fase = advies_gereed
+ */
+export const BevestigPimAdviesParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const BevestigPimAdviesResponse = zod.object({
+  "opdracht_id": zod.number(),
+  "ai_fase": zod.string()
+})
+
+
+/**
+ * @summary Maakt DMS-document aan met de adviescontext en koppelt het aan de opdracht
+ */
+export const MaakPimAdviesRapportParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const MaakPimAdviesRapportResponse = zod.void()
+
+
+/**
  * @summary AI-fase van een opdracht bijwerken (logt overgang in audittrail)
  */
 export const UpdatePimFaseParams = zod.object({
@@ -12477,7 +12519,7 @@ export const UpdatePimFaseParams = zod.object({
 })
 
 export const UpdatePimFaseBody = zod.object({
-  "fase": zod.string().describe('Geldige waarden: nieuw | advies | werkvoorbereiding | inkoop | uitvoering | oplevering | gereed')
+  "fase": zod.string().describe('Geldige waarden: nieuw | advies | advies_gereed | werkvoorbereiding | inkoop | uitvoering | oplevering | gereed')
 })
 
 export const UpdatePimFaseResponse = zod.object({

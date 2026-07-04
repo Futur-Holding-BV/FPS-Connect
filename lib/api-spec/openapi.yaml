@@ -10175,6 +10175,87 @@ paths:
         "404":
           description: PIM niet gevonden voor deze opdracht
 
+  /opdrachten/{id}/pim/analyseer:
+    post:
+      summary: AI analyseert aanvraagcontext + gekoppelde documenten en slaat op in advies_context
+      operationId: analyseerPim
+      tags: [pim]
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PimAnalyseerInput"
+      responses:
+        "200":
+          description: Analyse geslaagd
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PimAnalyseerResultaat"
+        "404":
+          description: Opdracht of PIM niet gevonden
+        "503":
+          description: AI-gateway niet geconfigureerd
+
+  /opdrachten/{id}/pim/advies/bevestig:
+    post:
+      summary: Beheerder keurt AI-adviesanalyse goed; zet ai_fase = advies_gereed
+      operationId: bevestigPimAdvies
+      tags: [pim]
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Goedkeuring vastgelegd
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PimFaseResultaat"
+        "404":
+          description: Opdracht niet gevonden
+        "409":
+          description: Verkeerde fase of geen adviescontext aanwezig
+
+  /opdrachten/{id}/pim/advies/rapport:
+    post:
+      summary: Maakt DMS-document aan met de adviescontext en koppelt het aan de opdracht
+      operationId: maakPimAdviesRapport
+      tags: [pim]
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "201":
+          description: Rapport aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PimRapportResultaat"
+        "404":
+          description: Opdracht niet gevonden
+        "409":
+          description: Geen adviescontext beschikbaar
+
   /opdrachten/{id}/pim/fase:
     patch:
       operationId: updatePimFase
@@ -26102,13 +26183,44 @@ components:
         bijgewerkt_op:
           type: string
 
+    PimAnalyseerInput:
+      type: object
+      properties:
+        vrije_tekst:
+          type: string
+          description: Aanvullende vrije tekst vanuit de aanvrager (max 8000 tekens)
+
+    PimAnalyseerResultaat:
+      type: object
+      required: [opdracht_id, ai_fase]
+      properties:
+        opdracht_id:
+          type: integer
+        ai_fase:
+          type: string
+        aanbeveling:
+          type: string
+          description: "opname_nodig | direct_uitvoeren | offerte_aanvragen | meer_info_nodig"
+        betrouwbaarheid:
+          type: string
+          description: "laag | midden | hoog"
+
+    PimRapportResultaat:
+      type: object
+      required: [opdracht_id, document_id]
+      properties:
+        opdracht_id:
+          type: integer
+        document_id:
+          type: integer
+
     PimFaseInput:
       type: object
       required: [fase]
       properties:
         fase:
           type: string
-          description: "Geldige waarden: nieuw | advies | werkvoorbereiding | inkoop | uitvoering | oplevering | gereed"
+          description: "Geldige waarden: nieuw | advies | advies_gereed | werkvoorbereiding | inkoop | uitvoering | oplevering | gereed"
 
     PimFaseResultaat:
       type: object

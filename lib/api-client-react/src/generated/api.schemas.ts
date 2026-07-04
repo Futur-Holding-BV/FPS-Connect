@@ -5069,8 +5069,27 @@ export interface PimModel {
   bijgewerkt_op: string;
 }
 
+export interface PimAnalyseerInput {
+  /** Aanvullende vrije tekst vanuit de aanvrager (max 8000 tekens) */
+  vrije_tekst?: string;
+}
+
+export interface PimAnalyseerResultaat {
+  opdracht_id: number;
+  ai_fase: string;
+  /** opname_nodig | direct_uitvoeren | offerte_aanvragen | meer_info_nodig */
+  aanbeveling?: string;
+  /** laag | midden | hoog */
+  betrouwbaarheid?: string;
+}
+
+export interface PimRapportResultaat {
+  opdracht_id: number;
+  document_id: number;
+}
+
 export interface PimFaseInput {
-  /** Geldige waarden: nieuw | advies | werkvoorbereiding | inkoop | uitvoering | oplevering | gereed */
+  /** Geldige waarden: nieuw | advies | advies_gereed | werkvoorbereiding | inkoop | uitvoering | oplevering | gereed */
   fase: string;
 }
 

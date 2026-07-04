@@ -1,7 +1,7 @@
 import { Link } from "wouter";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Building2, FileText, BarChart3, CreditCard } from "lucide-react";
+import { Building2, FileText, BarChart3, CreditCard, Sparkles } from "lucide-react";
 
 const MODULE_ITEMS = [
   {
@@ -30,6 +30,13 @@ const MODULE_ITEMS = [
     titel: "Abonnementen",
     omschrijving: "Uw abonnementspakket, facturen en contactgegevens.",
     href: "/one/abonnementen",
+    beschikbaar: true,
+  },
+  {
+    icoon: Sparkles,
+    titel: "Adviescentrum",
+    omschrijving: "Dien een projectaanvraag in — FPS analyseert uw brandpreventiebehoefte.",
+    href: "/one/adviescentrum",
     beschikbaar: true,
   },
 ];

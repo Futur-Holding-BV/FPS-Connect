@@ -645,3 +645,35 @@ Gateway bevroren als stabiele infrastructuur na bovenstaande correcties. Alle dr
   - Laadskelet tijdens fetch; verbergt zichzelf als geen data
 - `artifacts/firevault/src/App.tsx`: route `/beheer/bedrijfskompas` geregistreerd
 - `artifacts/firevault/src/layouts/beheerder-layout.tsx`: nav-item "Bedrijfskompas" (TrendingUp-icoon) toegevoegd in Financieel-sectie, gated op `financieel:1`
+
+## [2026-07-04] PIM Fase B — Adviescentrum AI (Task #297)
+
+### Backend
+- `aiPrompts.ts`: `PIM_AANVRAAG_ANALYSE_PROMPT` toegevoegd (vision-slot, gpt-5) — analyseert aanvraagcontext, documenten en afbeeldingen; output-schema: werkzaamheden/locaties/risicos/aannames/ontbrekende_info/vragen/competenties/normen/aanbeveling/vop_aandachtspunt/betrouwbaarheid; NOOIT adviseren dat FPS iets niet kan
+- `routes/pim.ts` — 3 nieuwe endpoints + FASEN uitgebreid met "advies_gereed":
+  - `POST /aanvragen` gewijzigd naar `lezen` (klanten mogen aanvragen indienen via FPS One)
+  - `POST /opdrachten/:id/pim/analyseer` — laadt DMS-documenten + vrije tekst, roept AI (vision) aan, slaat op in `pim.advies_context`, zet `ai_fase = advies`; placeholder voor KB-context (#303)
+  - `POST /opdrachten/:id/pim/advies/bevestig` — beheerder keurt analyse goed; `ai_fase = advies_gereed`; logt in `document_logboek`
+  - `POST /opdrachten/:id/pim/advies/rapport` — maakt DMS-document `adviesrapport` aan met `advies_context` als `aiMetadata`; koppelt via `document_koppelingen` (doel_type=opdracht)
+- FASEN-array: nieuw → advies → **advies_gereed** → werkvoorbereiding → inkoop → uitvoering → oplevering → gereed
+
+### OpenAPI + codegen
+- 3 nieuwe PIM-paden gedocumenteerd (`analyseer`, `advies/bevestig`, `advies/rapport`)
+- Nieuwe schemas: `PimAnalyseerInput`, `PimAnalyseerResultaat`, `PimRapportResultaat`
+- `PimFaseInput.fase` beschrijving bijgewerkt met "advies_gereed"
+- Codegen uitgevoerd → gegenereerde hooks: `useAnalyseerPim`, `useBevestigPimAdvies`, `useMaakPimAdviesRapport`
+
+### Frontend (FPS Connect)
+- `opdrachten/detail.tsx`: tabblad "AI Regisseur" toegevoegd (altijd zichtbaar)
+  - Toont PIM-status badge (`ai_fase`)
+  - Actieknoppen: Analyseer / Goedkeuren (bij fase=advies) / Rapport in DMS (bij fase=advies_gereed)
+  - Adviescontext-secties: aanbeveling, werkzaamheden, locaties, risico's, normen, vragen, ontbrekende info, VOP-vlag
+- Nieuwe imports: `useGetPim`, `useAnalyseerPim`, `useBevestigPimAdvies`, `useMaakPimAdviesRapport`, `getGetPimQueryKey`
+
+### Frontend (FPS One)
+- `pages/one/adviescentrum.tsx`: nieuw (klantpagina)
+  - Formulier: gebouw selecteren, omschrijving, vrije tekst (max 4000 tekens)
+  - Submit → `POST /api/aanvragen` → bevestigingsstap met referentienummer
+  - Opmerking over documenten bijvoegen per e-mail (upload-koppeling volgt)
+- `pages/one/dashboard.tsx`: "Adviescentrum"-module-kaart toegevoegd (Sparkles-icoon)
+- `App.tsx`: route `/one/adviescentrum` geregistreerd
