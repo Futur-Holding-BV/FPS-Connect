@@ -12512,6 +12512,24 @@ export const MaakPimAdviesRapportResponse = zod.void()
 
 
 /**
+ * @summary AI-werkvoorbereiding op basis van advies_context en bestaande spots in het gebouw
+ */
+export const AnalyseerPimWerkvoorbereidingParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AnalyseerPimWerkvoorbereidingBody = zod.object({
+  "vrije_tekst": zod.string().optional().describe('Aanvullende instructies of context voor de werkvoorbereiding (max 4000 tekens)')
+})
+
+export const AnalyseerPimWerkvoorbereidingResponse = zod.object({
+  "opdracht_id": zod.number(),
+  "ai_fase": zod.string().describe('Nieuwe AI-fase na de analyse (werkvoorbereiding)'),
+  "voorbereiding_volledigheid": zod.string().optional().describe('onvolledig | voldoende | volledig')
+})
+
+
+/**
  * @summary AI-fase van een opdracht bijwerken (logt overgang in audittrail)
  */
 export const UpdatePimFaseParams = zod.object({

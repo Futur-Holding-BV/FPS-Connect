@@ -5098,6 +5098,19 @@ export interface PimFaseResultaat {
   ai_fase: string;
 }
 
+export interface PimWerkvoorbereidingInput {
+  /** Aanvullende instructies of context voor de werkvoorbereiding (max 4000 tekens) */
+  vrije_tekst?: string;
+}
+
+export interface PimWerkvoorbereidingResultaat {
+  opdracht_id: number;
+  /** Nieuwe AI-fase na de analyse (werkvoorbereiding) */
+  ai_fase: string;
+  /** onvolledig | voldoende | volledig */
+  voorbereiding_volledigheid?: string;
+}
+
 export interface WerkbegrotingRegel {
   id: number;
   begroting_id: number;

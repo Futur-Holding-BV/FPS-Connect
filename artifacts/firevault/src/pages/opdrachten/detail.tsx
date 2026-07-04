@@ -19,6 +19,7 @@ import {
   getListWbAdviezenQueryKey,
   useGetPim,
   useAnalyseerPim,
+  useAnalyseerPimWerkvoorbereiding,
   useBevestigPimAdvies,
   useMaakPimAdviesRapport,
   getGetPimQueryKey,
@@ -420,6 +421,20 @@ export default function OpdrachtDetailPagina() {
         toast({ title: "Adviesrapport aangemaakt in DMS" });
       },
       onError: () => toast({ title: "Rapport aanmaken mislukt", variant: "destructive" }),
+    },
+  });
+
+  const pimWerkvoorbereidingMut = useAnalyseerPimWerkvoorbereiding({
+    mutation: {
+      onSuccess: () => {
+        qc.invalidateQueries({ queryKey: getGetPimQueryKey(opdrachtId) });
+        qc.invalidateQueries({ queryKey: getGetOpdrachtQueryKey(opdrachtId) });
+        toast({ title: "AI-werkvoorbereiding gegenereerd" });
+      },
+      onError: (err: unknown) => {
+        const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error ?? "Onbekende fout";
+        toast({ title: "Werkvoorbereiding mislukt", description: msg, variant: "destructive" });
+      },
     },
   });
 
@@ -1103,6 +1118,19 @@ export default function OpdrachtDetailPagina() {
                           {pimRapportMut.isPending ? "Aanmaken..." : "Rapport in DMS opslaan"}
                         </Button>
                       )}
+
+                      {((opdracht as unknown as Record<string, unknown>)?.ai_fase as string) === "advies_gereed" && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="border-indigo-300 text-indigo-700 hover:bg-indigo-50"
+                          disabled={pimWerkvoorbereidingMut.isPending}
+                          onClick={() => pimWerkvoorbereidingMut.mutate({ id: opdrachtId })}
+                        >
+                          <Sparkles className="h-3.5 w-3.5 mr-1.5" />
+                          {pimWerkvoorbereidingMut.isPending ? "Analyseren..." : "Werkvoorbereiding analyseren"}
+                        </Button>
+                      )}
                     </div>
                   )}
                 </CardContent>
@@ -1260,6 +1288,165 @@ export default function OpdrachtDetailPagina() {
                           VOP-certificatieplichtige situatie te verwachten — controleer inzet VOP-gecertificeerd monteur.
                         </p>
                       </div>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {/* ── Werkvoorbereiding context ── */}
+              {pim?.werkvoorbereiding_context && (() => {
+                const wv = pim.werkvoorbereiding_context as Record<string, unknown>;
+                const volledigheid = String(wv.voorbereiding_volledigheid ?? "onvolledig");
+                return (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 pt-2 pb-1">
+                      <div className="h-px flex-1 bg-border" />
+                      <span className="text-xs text-muted-foreground font-medium uppercase tracking-wide px-2">
+                        AI Werkvoorbereiding
+                      </span>
+                      <Badge
+                        variant="outline"
+                        className={
+                          volledigheid === "volledig"
+                            ? "border-emerald-300 text-emerald-700 bg-emerald-50 text-xs"
+                            : volledigheid === "voldoende"
+                            ? "border-blue-300 text-blue-700 bg-blue-50 text-xs"
+                            : "border-amber-300 text-amber-700 bg-amber-50 text-xs"
+                        }
+                      >
+                        {volledigheid}
+                      </Badge>
+                      <div className="h-px flex-1 bg-border" />
+                    </div>
+
+                    {/* Doorlooptijd + planningadvies */}
+                    {(Boolean(wv.geschatte_doorlooptijd_dagen) || Boolean(wv.planningadvies)) && (
+                      <Card className="border-indigo-100 bg-indigo-50/30">
+                        <CardContent className="pt-4 pb-4 space-y-2">
+                          {typeof wv.geschatte_doorlooptijd_dagen === "number" && (
+                            <div className="flex items-center gap-2">
+                              <Clock className="h-4 w-4 text-indigo-500 shrink-0" />
+                              <span className="text-sm font-medium text-indigo-900">
+                                Geschatte doorlooptijd: {wv.geschatte_doorlooptijd_dagen} werkdag{wv.geschatte_doorlooptijd_dagen === 1 ? "" : "en"}
+                              </span>
+                            </div>
+                          )}
+                          {Boolean(wv.planningadvies) && (
+                            <p className="text-sm text-indigo-800 ml-6">{String(wv.planningadvies)}</p>
+                          )}
+                        </CardContent>
+                      </Card>
+                    )}
+
+                    {/* Materiaallijst */}
+                    {Array.isArray(wv.materiaallijst) && wv.materiaallijst.length > 0 && (
+                      <Card>
+                        <CardHeader className="pb-1 pt-4">
+                          <CardTitle className="text-sm">Materiaallijst</CardTitle>
+                        </CardHeader>
+                        <CardContent className="pb-4">
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-sm">
+                              <thead>
+                                <tr className="border-b text-muted-foreground text-xs">
+                                  <th className="text-left pb-2 font-medium">Artikel</th>
+                                  <th className="text-right pb-2 font-medium w-20">Aantal</th>
+                                  <th className="text-left pb-2 font-medium w-20 pl-2">Eenheid</th>
+                                  <th className="text-left pb-2 font-medium pl-2 hidden sm:table-cell">Opmerkingen</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {(wv.materiaallijst as Array<{ artikel: string; hoeveelheid: number; eenheid: string; opmerkingen?: string }>).map((m, i) => (
+                                  <tr key={i} className="border-b last:border-0">
+                                    <td className="py-1.5 pr-2">{m.artikel}</td>
+                                    <td className="py-1.5 text-right font-mono text-xs">{m.hoeveelheid}</td>
+                                    <td className="py-1.5 pl-2 text-muted-foreground text-xs">{m.eenheid}</td>
+                                    <td className="py-1.5 pl-2 text-muted-foreground hidden sm:table-cell">{m.opmerkingen ?? "—"}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
+
+                    {/* Werkvolgorde */}
+                    {Array.isArray(wv.werkvolgorde) && wv.werkvolgorde.length > 0 && (
+                      <Card>
+                        <CardHeader className="pb-1 pt-4">
+                          <CardTitle className="text-sm">Uitvoeringsvolgorde</CardTitle>
+                        </CardHeader>
+                        <CardContent className="pb-4">
+                          <ol className="space-y-1.5">
+                            {(wv.werkvolgorde as string[]).map((stap, i) => (
+                              <li key={i} className="flex items-start gap-2.5 text-sm">
+                                <span className="shrink-0 h-5 w-5 rounded-full bg-primary/10 text-primary text-xs flex items-center justify-center font-semibold mt-0.5">
+                                  {i + 1}
+                                </span>
+                                {stap.replace(/^\d+\.\s*/, "")}
+                              </li>
+                            ))}
+                          </ol>
+                        </CardContent>
+                      </Card>
+                    )}
+
+                    {/* Competenties */}
+                    {Array.isArray(wv.competenties_benodigd) && wv.competenties_benodigd.length > 0 && (
+                      <Card>
+                        <CardHeader className="pb-1 pt-4">
+                          <CardTitle className="text-sm">Vereiste competenties &amp; certificaten</CardTitle>
+                        </CardHeader>
+                        <CardContent className="pb-4">
+                          <div className="flex flex-wrap gap-2">
+                            {(wv.competenties_benodigd as string[]).map((c, i) => (
+                              <Badge key={i} variant="secondary" className="text-xs font-normal">{c}</Badge>
+                            ))}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
+
+                    {/* Inkoopacties */}
+                    {Array.isArray(wv.inkoopacties) && wv.inkoopacties.length > 0 && (
+                      <Card>
+                        <CardHeader className="pb-1 pt-4">
+                          <CardTitle className="text-sm">Inkoopacties</CardTitle>
+                        </CardHeader>
+                        <CardContent className="pb-4">
+                          <ul className="space-y-1">
+                            {(wv.inkoopacties as string[]).map((a, i) => (
+                              <li key={i} className="flex items-start gap-2 text-sm">
+                                <Check className="h-3.5 w-3.5 text-primary mt-0.5 shrink-0" />
+                                {a}
+                              </li>
+                            ))}
+                          </ul>
+                        </CardContent>
+                      </Card>
+                    )}
+
+                    {/* Aandachtspunten werkvoorbereiding */}
+                    {Array.isArray(wv.aandachtspunten) && wv.aandachtspunten.length > 0 && (
+                      <Card className="border-amber-200">
+                        <CardHeader className="pb-1 pt-4">
+                          <CardTitle className="text-sm flex items-center gap-2">
+                            <ShieldAlert className="h-4 w-4 text-amber-500" />
+                            Aandachtspunten uitvoering
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="pb-4">
+                          <ul className="space-y-1">
+                            {(wv.aandachtspunten as string[]).map((a, i) => (
+                              <li key={i} className="flex items-start gap-2 text-sm text-amber-800">
+                                <AlertTriangle className="h-3.5 w-3.5 text-amber-500 mt-0.5 shrink-0" />
+                                {a}
+                              </li>
+                            ))}
+                          </ul>
+                        </CardContent>
+                      </Card>
                     )}
                   </div>
                 );

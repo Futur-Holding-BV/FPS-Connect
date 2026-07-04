@@ -10256,6 +10256,38 @@ paths:
         "409":
           description: Geen adviescontext beschikbaar
 
+  /opdrachten/{id}/pim/werkvoorbereiding/analyseer:
+    post:
+      summary: AI-werkvoorbereiding op basis van advies_context en bestaande spots in het gebouw
+      operationId: analyseerPimWerkvoorbereiding
+      tags: [pim]
+      security:
+        - cookieAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PimWerkvoorbereidingInput"
+      responses:
+        "200":
+          description: Werkvoorbereiding gegenereerd en opgeslagen
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PimWerkvoorbereidingResultaat"
+        "404":
+          description: Opdracht niet gevonden
+        "409":
+          description: Verkeerde fase of geen adviescontext beschikbaar
+        "503":
+          description: AI-gateway niet geconfigureerd
+
   /opdrachten/{id}/pim/fase:
     patch:
       operationId: updatePimFase
@@ -26230,6 +26262,26 @@ components:
           type: integer
         ai_fase:
           type: string
+
+    PimWerkvoorbereidingInput:
+      type: object
+      properties:
+        vrije_tekst:
+          type: string
+          description: Aanvullende instructies of context voor de werkvoorbereiding (max 4000 tekens)
+
+    PimWerkvoorbereidingResultaat:
+      type: object
+      required: [opdracht_id, ai_fase]
+      properties:
+        opdracht_id:
+          type: integer
+        ai_fase:
+          type: string
+          description: Nieuwe AI-fase na de analyse (werkvoorbereiding)
+        voorbereiding_volledigheid:
+          type: string
+          description: "onvolledig | voldoende | volledig"
 
     WerkbegrotingRegel:
       type: object

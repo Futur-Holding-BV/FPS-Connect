@@ -695,6 +695,8 @@ export * from './pimModelOpleveringContext';
 export * from './pimModelUitvoeringsLog';
 export * from './pimModelWerkvoorbereidingContext';
 export * from './pimRapportResultaat';
+export * from './pimWerkvoorbereidingInput';
+export * from './pimWerkvoorbereidingResultaat';
 export * from './planningAfwezigheid';
 export * from './planningAfwezigheidInput';
 export * from './planningDiagnose';

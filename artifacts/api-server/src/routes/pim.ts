@@ -14,12 +14,13 @@ import {
   documentenTable,
   documentKoppelingenTable,
   gebruikersTable,
+  voorzieningenTable,
 } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 import { requireBevoegdheid, requireBevoegdheidOfKlant } from "../middlewares/auth";
 import { logger } from "../lib/logger";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
-import { PIM_AANVRAAG_ANALYSE_PROMPT } from "../lib/aiPrompts";
+import { PIM_AANVRAAG_ANALYSE_PROMPT, PIM_WERKVOORBEREIDING_PROMPT } from "../lib/aiPrompts";
 import { ObjectStorageService } from "../lib/objectStorage";
 
 const router = Router();
@@ -498,8 +499,19 @@ router.post("/opdrachten/:id/pim/advies/rapport", schrijven, async (req, res): P
       .from(pimModellenTable)
       .where(eq(pimModellenTable.opdrachtId, opdrachtId));
 
+    // Minimaal fase "advies" vereist (AI-analyse moet hebben gedraaid).
+    // Klanten zijn al volledig geblokkeerd via de "schrijven" middleware.
+    const rapportFaseIdx = FASE_INDEX[opdracht.aiFase ?? ""] ?? -1;
+    const adviesIdx = FASE_INDEX["advies"]!;
+    if (rapportFaseIdx < adviesIdx) {
+      res.status(409).json({
+        error: `Rapport aanmaken vereist dat de AI-analyse is uitgevoerd (minimaal fase 'advies', huidige fase: '${opdracht.aiFase ?? "nieuw"}').`,
+      });
+      return;
+    }
+
     if (!pim?.adviesContext) {
-      res.status(409).json({ error: "Er is geen adviescontext beschikbaar. Voer eerst een AI-analyse uit en bevestig deze." });
+      res.status(409).json({ error: "Er is geen adviescontext beschikbaar. Voer eerst een AI-analyse uit." });
       return;
     }
 
@@ -552,6 +564,177 @@ router.post("/opdrachten/:id/pim/advies/rapport", schrijven, async (req, res): P
   } catch (err) {
     logger.error({ err }, "pimAdviesRapport fout");
     res.status(500).json({ error: "Serverfout bij aanmaken rapport" });
+  }
+});
+
+// ── POST /opdrachten/:id/pim/werkvoorbereiding/analyseer ──────────────────────
+// Laadt advies_context + spots voor het gebouw, roept AI aan, slaat op in
+// werkvoorbereiding_context en zet ai_fase → "werkvoorbereiding".
+router.post("/opdrachten/:id/pim/werkvoorbereiding/analyseer", schrijven, async (req, res): Promise<void> => {
+  const opdrachtId = parseInt(String(req.params.id), 10);
+  if (isNaN(opdrachtId)) { res.status(400).json({ error: "Ongeldig id" }); return; }
+
+  if (!heeftGateway()) {
+    res.status(503).json({ error: "AI-gateway niet geconfigureerd" });
+    return;
+  }
+
+  try {
+    const vriejeTekst: string = typeof req.body?.vrije_tekst === "string"
+      ? req.body.vrije_tekst.slice(0, 4000)
+      : "";
+
+    const [opdracht] = await db.select().from(opdrachtenTable).where(eq(opdrachtenTable.id, opdrachtId));
+    if (!opdracht) { res.status(404).json({ error: "Opdracht niet gevonden" }); return; }
+
+    const [pim] = await db.select().from(pimModellenTable).where(eq(pimModellenTable.opdrachtId, opdrachtId));
+    if (!pim) { res.status(404).json({ error: "PIM niet gevonden voor deze opdracht" }); return; }
+
+    // Vereist minimaal fase advies_gereed (AI-advies bevestigd)
+    const wvFaseIdx = FASE_INDEX[opdracht.aiFase ?? ""] ?? -1;
+    const adviesGereedIdx = FASE_INDEX["advies_gereed"]!;
+    if (wvFaseIdx < adviesGereedIdx) {
+      res.status(409).json({
+        error: `Werkvoorbereiding analyseren vereist minimaal fase 'advies_gereed' (huidige fase: '${opdracht.aiFase ?? "nieuw"}').`,
+      });
+      return;
+    }
+
+    if (!pim.adviesContext) {
+      res.status(409).json({ error: "Geen adviescontext beschikbaar. Voer eerst de adviesanalyse uit en bevestig deze." });
+      return;
+    }
+
+    // Bestaande spots voor het gebouw (max 50, niet gearchiveerd)
+    const spots = opdracht.gebouwId
+      ? await db
+          .select({
+            objectnummer: voorzieningenTable.objectnummer,
+            type: voorzieningenTable.type,
+            status: voorzieningenTable.status,
+            ruimte: voorzieningenTable.ruimte,
+            locatieOmschrijving: voorzieningenTable.locatieOmschrijving,
+          })
+          .from(voorzieningenTable)
+          .where(
+            and(
+              eq(voorzieningenTable.gebouwId, opdracht.gebouwId),
+              eq(voorzieningenTable.gearchiveerd, false),
+            ),
+          )
+          .limit(50)
+      : [];
+
+    const adviesCtx = (pim.adviesContext as Record<string, unknown>) ?? {};
+    const spotsamenvatting = spots.length > 0
+      ? `Bestaande spots in het gebouw (${spots.length}):\n` +
+        spots.map((s) =>
+          `- [${s.objectnummer}] ${s.type} | status: ${s.status}` +
+          (s.ruimte ? ` | ruimte: ${s.ruimte}` : "") +
+          (s.locatieOmschrijving ? ` | locatie: ${s.locatieOmschrijving}` : "")
+        ).join("\n")
+      : "Nog geen spots geregistreerd voor dit gebouw.";
+
+    const contextTekst = [
+      `Opdrachttitel: ${opdracht.titel}`,
+      opdracht.omschrijving ? `Omschrijving: ${opdracht.omschrijving}` : "",
+      `\n=== ADVIESCONTEXT (AI-fase B) ===`,
+      `Aanbeveling: ${String(adviesCtx.aanbeveling ?? "—")}`,
+      adviesCtx.aanbeveling_toelichting ? `Toelichting: ${String(adviesCtx.aanbeveling_toelichting)}` : "",
+      Array.isArray(adviesCtx.werkzaamheden) && adviesCtx.werkzaamheden.length > 0
+        ? `Aangevraagde werkzaamheden:\n${(adviesCtx.werkzaamheden as string[]).map((w) => `- ${w}`).join("\n")}`
+        : "",
+      Array.isArray(adviesCtx.locaties) && adviesCtx.locaties.length > 0
+        ? `Locaties:\n${(adviesCtx.locaties as string[]).map((l) => `- ${l}`).join("\n")}`
+        : "",
+      Array.isArray(adviesCtx.risicos) && adviesCtx.risicos.length > 0
+        ? `Risico's:\n${(adviesCtx.risicos as string[]).map((r) => `- ${r}`).join("\n")}`
+        : "",
+      Array.isArray(adviesCtx.normen) && adviesCtx.normen.length > 0
+        ? `Normen: ${(adviesCtx.normen as string[]).join(", ")}`
+        : "",
+      adviesCtx.vop_aandachtspunt === true ? "VOP-aandachtspunt: ja" : "",
+      Array.isArray(adviesCtx.competenties) && adviesCtx.competenties.length > 0
+        ? `Competenties uit advies:\n${(adviesCtx.competenties as string[]).map((c) => `- ${c}`).join("\n")}`
+        : "",
+      `\n=== BESTAANDE SPOTS IN HET GEBOUW ===`,
+      spotsamenvatting,
+      vriejeTekst ? `\n=== AANVULLENDE INSTRUCTIES ===\n${vriejeTekst}` : "",
+    ].filter(Boolean).join("\n");
+
+    const resultaat = await aiGateway.chat(
+      "default",
+      {
+        messages: [
+          { role: "system", content: PIM_WERKVOORBEREIDING_PROMPT.tekst },
+          { role: "user", content: contextTekst },
+        ],
+        response_format: { type: "json_object" },
+        max_completion_tokens: 3000,
+      },
+      60_000,
+      {
+        module: "pim_werkvoorbereiding",
+        functie: "analyseer",
+        gebruikerId: req.session.userId ?? null,
+        entiteitstype: "pim",
+        entiteitId: pim.id,
+        promptNaam: PIM_WERKVOORBEREIDING_PROMPT.naam,
+        promptVersie: PIM_WERKVOORBEREIDING_PROMPT.versie,
+        project_id: opdrachtId,
+      },
+    );
+
+    if (!resultaat.ok) {
+      res.status(502).json({ error: `AI-werkvoorbereiding mislukt: ${resultaat.fout}` });
+      return;
+    }
+
+    let wvJson: Record<string, unknown>;
+    try {
+      wvJson = JSON.parse(resultaat.inhoud);
+    } catch {
+      res.status(502).json({ error: "AI leverde geen geldige JSON terug" });
+      return;
+    }
+
+    const gebruikerId = req.session.userId!;
+
+    await db.transaction(async (tx) => {
+      await tx
+        .update(pimModellenTable)
+        .set({ werkvoorbereidingContext: wvJson, bijgewerktOp: new Date() })
+        .where(eq(pimModellenTable.id, pim.id));
+
+      // Fase-overgang: advies_gereed → werkvoorbereiding (alleen als nog niet verder)
+      if (opdracht.aiFase === "advies_gereed") {
+        await tx
+          .update(opdrachtenTable)
+          .set({ aiFase: "werkvoorbereiding", bijgewerktOp: new Date() })
+          .where(eq(opdrachtenTable.id, opdrachtId));
+      }
+
+      const [gebruiker] = await tx
+        .select({ naam: gebruikersTable.naam })
+        .from(gebruikersTable)
+        .where(eq(gebruikersTable.id, gebruikerId));
+
+      await tx.insert(documentLogboekTable).values({
+        gebruikerId,
+        gebruikerNaam: gebruiker?.naam ?? null,
+        actie: "pim_werkvoorbereiding_analyse",
+        detail: `AI-werkvoorbereiding gegenereerd voor opdracht: ${opdracht.titel} (${spots.length} spot(s) meegenomen)`,
+      });
+    });
+
+    res.json({
+      opdracht_id: opdrachtId,
+      ai_fase: opdracht.aiFase === "advies_gereed" ? "werkvoorbereiding" : (opdracht.aiFase ?? "werkvoorbereiding"),
+      voorbereiding_volledigheid: String(wvJson.voorbereiding_volledigheid ?? "onvolledig"),
+    });
+  } catch (err) {
+    logger.error({ err }, "pimWerkvoorbereidingAnalyseer fout");
+    res.status(500).json({ error: "Serverfout bij AI-werkvoorbereiding" });
   }
 });
 

@@ -557,6 +557,8 @@ import type {
   PimFaseResultaat,
   PimModel,
   PimRapportResultaat,
+  PimWerkvoorbereidingInput,
+  PimWerkvoorbereidingResultaat,
   PlanningAfwezigheid,
   PlanningAfwezigheidInput,
   PlanningDiagnose,
@@ -36116,6 +36118,77 @@ export const useMaakPimAdviesRapport = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getMaakPimAdviesRapportMutationOptions(options));
+    }
+
+export const getAnalyseerPimWerkvoorbereidingUrl = (id: number,) => {
+
+
+
+
+  return `/api/opdrachten/${id}/pim/werkvoorbereiding/analyseer`
+}
+
+/**
+ * @summary AI-werkvoorbereiding op basis van advies_context en bestaande spots in het gebouw
+ */
+export const analyseerPimWerkvoorbereiding = async (id: number,
+    pimWerkvoorbereidingInput?: PimWerkvoorbereidingInput, options?: RequestInit): Promise<PimWerkvoorbereidingResultaat> => {
+
+  return customFetch<PimWerkvoorbereidingResultaat>(getAnalyseerPimWerkvoorbereidingUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(pimWerkvoorbereidingInput)
+  }
+);}
+
+
+
+
+export const getAnalyseerPimWerkvoorbereidingMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof analyseerPimWerkvoorbereiding>>, TError,{id: number;data?: BodyType<PimWerkvoorbereidingInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof analyseerPimWerkvoorbereiding>>, TError,{id: number;data?: BodyType<PimWerkvoorbereidingInput>}, TContext> => {
+
+const mutationKey = ['analyseerPimWerkvoorbereiding'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof analyseerPimWerkvoorbereiding>>, {id: number;data?: BodyType<PimWerkvoorbereidingInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  analyseerPimWerkvoorbereiding(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AnalyseerPimWerkvoorbereidingMutationResult = NonNullable<Awaited<ReturnType<typeof analyseerPimWerkvoorbereiding>>>
+    export type AnalyseerPimWerkvoorbereidingMutationBody = BodyType<PimWerkvoorbereidingInput> | undefined
+    export type AnalyseerPimWerkvoorbereidingMutationError = ErrorType<void>
+
+    /**
+ * @summary AI-werkvoorbereiding op basis van advies_context en bestaande spots in het gebouw
+ */
+export const useAnalyseerPimWerkvoorbereiding = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof analyseerPimWerkvoorbereiding>>, TError,{id: number;data?: BodyType<PimWerkvoorbereidingInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof analyseerPimWerkvoorbereiding>>,
+        TError,
+        {id: number;data?: BodyType<PimWerkvoorbereidingInput>},
+        TContext
+      > => {
+      return useMutation(getAnalyseerPimWerkvoorbereidingMutationOptions(options));
     }
 
 export const getUpdatePimFaseUrl = (id: number,) => {
