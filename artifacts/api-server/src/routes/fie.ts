@@ -26,6 +26,24 @@ function parseId(v: unknown): number | null {
 const GELDIGE_STATUSSEN = ["concept", "actief", "gesloten"] as const;
 const GELDIGE_VERDEELSLEUTELS = ["uren", "omzet", "ftes"] as const;
 
+export type CorrectieFactorValidatie =
+  | { ok: true; waarde: number }
+  | { ok: false; fout: string };
+
+/**
+ * Valideert een correctie_factor-waarde voor FIE-leermomenten.
+ * Geaccepteerd bereik: 0,5–3,0 (inclusief grenzen).
+ * Geeft { ok: false } wanneer de waarde buiten bereik of niet-eindig is.
+ * Wanneer `v` undefined is, hoeft er geen update te plaatsvinden (sla de caller-kant af).
+ */
+export function valideerCorrectieFactor(v: unknown): CorrectieFactorValidatie {
+  const n = Number(v);
+  if (!isFinite(n) || n < 0.5 || n > 3.0) {
+    return { ok: false, fout: "correctie_factor moet tussen 0,5 en 3,0 liggen" };
+  }
+  return { ok: true, waarde: Math.round(n * 100) / 100 };
+}
+
 function valideerFinancieelGetal(
   v: unknown,
   naam: string,
@@ -609,9 +627,9 @@ router.patch("/fie/leermomenten/:id", schrijven, async (req: Request, res: Respo
   const { correctie_factor, opmerkingen } = req.body as Record<string, unknown>;
   const update: Partial<typeof fieLeerMomentenTable.$inferInsert> = { laatsteUpdate: new Date() };
   if (correctie_factor !== undefined) {
-    const v = Number(correctie_factor);
-    if (!isFinite(v) || v < 0.5 || v > 3.0) { res.status(400).json({ error: "correctie_factor moet tussen 0,5 en 3,0 liggen" }); return; }
-    update.correctieFactor = Math.round(v * 100) / 100;
+    const validatie = valideerCorrectieFactor(correctie_factor);
+    if (!validatie.ok) { res.status(400).json({ error: validatie.fout }); return; }
+    update.correctieFactor = validatie.waarde;
   }
   if (opmerkingen !== undefined) update.opmerkingen = opmerkingen != null ? String(opmerkingen).slice(0, 1000) : null;
 
