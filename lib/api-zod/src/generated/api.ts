@@ -11792,7 +11792,12 @@ export const GetNacalculatieResponse = zod.object({
   "begroting_uren": zod.number(),
   "verbruikte_uren": zod.number(),
   "verschil_begroting_vs_verbruikt": zod.number().optional()
-}))
+})),
+  "begroting_materiaal_bedrag": zod.number().describe('Begrote materiaalkosten uit werkbegroting'),
+  "werkelijke_materiaal_bedrag": zod.number().describe('Werkelijke materiaalkosten (magazijn-uitgiftes + goedgekeurde inkoopregels)'),
+  "verschil_materiaal": zod.number().describe('Begroting minus werkelijk materiaal (positief = onder begroting)'),
+  "materiaal_uitgifte_kosten": zod.number().describe('Werkelijke kosten uit magazijn-uitgiftes gekoppeld aan de opdracht'),
+  "materiaal_inkoop_kosten": zod.number().describe('Kosten uit inkoopregels met status besteld of geleverd')
 })
 
 

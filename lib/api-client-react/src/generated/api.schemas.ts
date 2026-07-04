@@ -4978,6 +4978,16 @@ export interface OpdrachtNacalculatie {
   verbruikte_uren: number;
   verschil?: number;
   regels: OpdrachtNacalculatieRegel[];
+  /** Begrote materiaalkosten uit werkbegroting */
+  begroting_materiaal_bedrag: number;
+  /** Werkelijke materiaalkosten (magazijn-uitgiftes + goedgekeurde inkoopregels) */
+  werkelijke_materiaal_bedrag: number;
+  /** Begroting minus werkelijk materiaal (positief = onder begroting) */
+  verschil_materiaal: number;
+  /** Werkelijke kosten uit magazijn-uitgiftes gekoppeld aan de opdracht */
+  materiaal_uitgifte_kosten: number;
+  /** Kosten uit inkoopregels met status besteld of geleverd */
+  materiaal_inkoop_kosten: number;
 }
 
 export interface PlanningUrenRegel {

@@ -34,7 +34,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import {
   ArrowLeft, Sparkles, Check, Clock, AlertTriangle, CalendarCheck,
-  TrendingUp, TrendingDown, Edit2, Package, ShoppingCart, Building2, ShoppingBag, MessageSquare, CheckCircle2, HardHat,
+  TrendingUp, TrendingDown, Edit2, Package, ShoppingCart, Building2, ShoppingBag, MessageSquare, CheckCircle2, HardHat, Printer,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
@@ -173,6 +173,81 @@ function ProjectControllerSignalen({ nacalculatie }: { nacalculatie: OpdrachtNac
             </div>
           ))}
         </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── Nacalculatie gecombineerd totaal ──────────────────────────────────────────
+
+function NacalculatieTotaal({
+  nacalculatie,
+  begrotingArbeidTotaal,
+  begrotingArbeidUren,
+}: {
+  nacalculatie: OpdrachtNacalculatie;
+  begrotingArbeidTotaal: number;
+  begrotingArbeidUren: number;
+}) {
+  const gemiddeldTarief = begrotingArbeidTotaal > 0 && begrotingArbeidUren > 0
+    ? begrotingArbeidTotaal / begrotingArbeidUren
+    : 0;
+  const werkelijkeArbeidTotaal = Math.round((nacalculatie.verbruikte_uren ?? 0) * gemiddeldTarief * 100) / 100;
+  const verschilArbeid = Math.round((begrotingArbeidTotaal - werkelijkeArbeidTotaal) * 100) / 100;
+
+  const begrotingMateriaal = nacalculatie.begroting_materiaal_bedrag ?? 0;
+  const werkelijkMateriaal = nacalculatie.werkelijke_materiaal_bedrag ?? 0;
+  const verschilMateriaal = nacalculatie.verschil_materiaal ?? 0;
+
+  const begrotingTotaal = begrotingArbeidTotaal + begrotingMateriaal;
+  const werkelijkTotaal = werkelijkeArbeidTotaal + werkelijkMateriaal;
+  const verschilTotaal = Math.round((begrotingTotaal - werkelijkTotaal) * 100) / 100;
+
+  return (
+    <Card className="border-slate-300 bg-slate-50">
+      <CardHeader className="pb-2 pt-4">
+        <CardTitle className="text-sm font-semibold">Totaaloverzicht arbeid + materiaal</CardTitle>
+      </CardHeader>
+      <CardContent className="pb-3">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="text-xs text-muted-foreground border-b">
+              <th className="text-left pb-1 font-normal">Post</th>
+              <th className="text-right pb-1 font-normal">Begroot</th>
+              <th className="text-right pb-1 font-normal">Werkelijk</th>
+              <th className="text-right pb-1 font-normal">Verschil</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr className="border-b border-dashed">
+              <td className="py-1.5">Arbeid</td>
+              <td className="text-right py-1.5 tabular-nums">{euro(begrotingArbeidTotaal)}</td>
+              <td className="text-right py-1.5 tabular-nums">{euro(werkelijkeArbeidTotaal)}</td>
+              <td className={`text-right py-1.5 tabular-nums ${verschilArbeid >= 0 ? "text-emerald-700" : "text-rose-700"}`}>
+                {euro(verschilArbeid)}
+              </td>
+            </tr>
+            <tr className="border-b border-dashed">
+              <td className="py-1.5">Materiaal</td>
+              <td className="text-right py-1.5 tabular-nums">{euro(begrotingMateriaal)}</td>
+              <td className="text-right py-1.5 tabular-nums">{euro(werkelijkMateriaal)}</td>
+              <td className={`text-right py-1.5 tabular-nums ${verschilMateriaal >= 0 ? "text-emerald-700" : "text-rose-700"}`}>
+                {euro(verschilMateriaal)}
+              </td>
+            </tr>
+            <tr className="font-semibold border-t-2 border-slate-300">
+              <td className="py-2">Totaal</td>
+              <td className="text-right py-2 tabular-nums">{euro(begrotingTotaal)}</td>
+              <td className="text-right py-2 tabular-nums">{euro(werkelijkTotaal)}</td>
+              <td className={`text-right py-2 tabular-nums ${verschilTotaal >= 0 ? "text-emerald-700" : "text-rose-700"}`}>
+                {euro(verschilTotaal)}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <p className="text-xs text-muted-foreground mt-2">
+          Arbeid werkelijk = verbruikte uren &times; gemiddeld uurtarief uit werkbegroting. Verschil positief = onder begroting.
+        </p>
       </CardContent>
     </Card>
   );
@@ -607,36 +682,43 @@ export default function OpdrachtDetailPagina() {
             <Card><CardContent className="py-8 text-center text-muted-foreground">Nog geen nacalculatiegegevens beschikbaar.</CardContent></Card>
           ) : (
             <div className="space-y-4">
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                <Card>
-                  <CardContent className="pt-4 pb-3">
-                    <p className="text-xs text-muted-foreground">Calculatie uren</p>
-                    <p className="text-xl font-semibold">{uren(nacalculatie.calculatie_arbeid_uren)}</p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="pt-4 pb-3">
-                    <p className="text-xs text-muted-foreground">Begroting uren</p>
-                    <p className="text-xl font-semibold">{uren(nacalculatie.begroting_arbeid_uren)}</p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="pt-4 pb-3">
-                    <p className="text-xs text-muted-foreground">Verschil (begr. - verbr.)</p>
-                    <p className={`text-xl font-semibold ${(nacalculatie.verschil ?? 0) >= 0 ? "text-emerald-700" : "text-rose-700"}`}>
-                      {(nacalculatie.verschil ?? 0) >= 0 ? <TrendingUp className="inline h-4 w-4 mr-1" /> : <TrendingDown className="inline h-4 w-4 mr-1" />}
-                      {uren(nacalculatie.verschil)}
-                    </p>
-                  </CardContent>
-                </Card>
+              <div className="flex justify-end">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => window.print()}
+                >
+                  <Printer className="h-3.5 w-3.5" />
+                  Afdrukken / PDF
+                </Button>
               </div>
+              {/* ── Arbeid ── */}
+              <Card>
+                <CardHeader className="pb-2 pt-4">
+                  <CardTitle className="text-sm font-semibold">Arbeidskosten</CardTitle>
+                </CardHeader>
+                <CardContent className="pb-3">
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-3">
+                    <div>
+                      <p className="text-xs text-muted-foreground">Begroting uren</p>
+                      <p className="text-lg font-semibold">{uren(nacalculatie.begroting_arbeid_uren)}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Verbruikt</p>
+                      <p className="text-lg font-semibold">{uren(nacalculatie.verbruikte_uren)}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Verschil</p>
+                      <p className={`text-lg font-semibold ${(nacalculatie.verschil ?? 0) >= 0 ? "text-emerald-700" : "text-rose-700"}`}>
+                        {(nacalculatie.verschil ?? 0) >= 0
+                          ? <TrendingUp className="inline h-4 w-4 mr-1" />
+                          : <TrendingDown className="inline h-4 w-4 mr-1" />}
+                        {uren(nacalculatie.verschil)}
+                      </p>
+                    </div>
+                  </div>
 
-              {nacalculatie.regels && nacalculatie.regels.length > 0 && (
-                <Card>
-                  <CardHeader className="pb-2 pt-4">
-                    <CardTitle className="text-sm">Per categorie</CardTitle>
-                  </CardHeader>
-                  <CardContent className="pb-3">
+                  {nacalculatie.regels && nacalculatie.regels.length > 0 && (
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="text-xs text-muted-foreground border-b">
@@ -661,9 +743,98 @@ export default function OpdrachtDetailPagina() {
                         ))}
                       </tbody>
                     </table>
-                  </CardContent>
-                </Card>
-              )}
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* ── Materiaalkosten ── */}
+              <Card>
+                <CardHeader className="pb-2 pt-4">
+                  <div className="flex items-center gap-2">
+                    <Package className="h-4 w-4 text-muted-foreground" />
+                    <CardTitle className="text-sm font-semibold">Materiaalkosten</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent className="pb-3 space-y-3">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div>
+                      <p className="text-xs text-muted-foreground">Begroot</p>
+                      <p className="text-lg font-semibold">{euro(nacalculatie.begroting_materiaal_bedrag)}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Werkelijk</p>
+                      <p className="text-lg font-semibold">{euro(nacalculatie.werkelijke_materiaal_bedrag)}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Verschil</p>
+                      <p className={`text-lg font-semibold ${(nacalculatie.verschil_materiaal ?? 0) >= 0 ? "text-emerald-700" : "text-rose-700"}`}>
+                        {(nacalculatie.verschil_materiaal ?? 0) >= 0
+                          ? <TrendingUp className="inline h-4 w-4 mr-1" />
+                          : <TrendingDown className="inline h-4 w-4 mr-1" />}
+                        {euro(nacalculatie.verschil_materiaal)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">% van begroting</p>
+                      {(() => {
+                        const begroot = nacalculatie.begroting_materiaal_bedrag ?? 0;
+                        const werkelijk = nacalculatie.werkelijke_materiaal_bedrag ?? 0;
+                        if (begroot <= 0) return <p className="text-lg font-semibold text-muted-foreground">—</p>;
+                        const pct = Math.round((werkelijk / begroot) * 100);
+                        return (
+                          <p className={`text-lg font-semibold ${pct > 100 ? "text-rose-700" : pct > 75 ? "text-amber-700" : "text-emerald-700"}`}>
+                            {pct}%
+                          </p>
+                        );
+                      })()}
+                    </div>
+                  </div>
+
+                  {/* Uitsplitsing bronnen */}
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="text-xs text-muted-foreground border-b">
+                        <th className="text-left pb-1 font-normal">Bron</th>
+                        <th className="text-right pb-1 font-normal">Werkelijk</th>
+                        <th className="text-right pb-1 font-normal">% van begroting</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr className="border-b border-dashed">
+                        <td className="py-1.5">Magazijn-uitgiftes</td>
+                        <td className="text-right py-1.5 tabular-nums">{euro(nacalculatie.materiaal_uitgifte_kosten)}</td>
+                        <td className="text-right py-1.5 tabular-nums text-muted-foreground">
+                          {(nacalculatie.begroting_materiaal_bedrag ?? 0) > 0
+                            ? `${Math.round(((nacalculatie.materiaal_uitgifte_kosten ?? 0) / (nacalculatie.begroting_materiaal_bedrag ?? 1)) * 100)}%`
+                            : "—"}
+                        </td>
+                      </tr>
+                      <tr className="border-b border-dashed last:border-0">
+                        <td className="py-1.5">Inkoopregels (besteld/geleverd)</td>
+                        <td className="text-right py-1.5 tabular-nums">{euro(nacalculatie.materiaal_inkoop_kosten)}</td>
+                        <td className="text-right py-1.5 tabular-nums text-muted-foreground">
+                          {(nacalculatie.begroting_materiaal_bedrag ?? 0) > 0
+                            ? `${Math.round(((nacalculatie.materiaal_inkoop_kosten ?? 0) / (nacalculatie.begroting_materiaal_bedrag ?? 1)) * 100)}%`
+                            : "—"}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+
+                  {nacalculatie.werkelijke_materiaal_bedrag === 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      Nog geen werkelijke materiaalkosten geregistreerd. Kosten verschijnen zodra er magazijn-uitgiftes zijn gedaan of inkoopregels de status &ldquo;besteld&rdquo; of &ldquo;geleverd&rdquo; hebben.
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* ── Gecombineerd totaal ── */}
+              <NacalculatieTotaal
+                nacalculatie={nacalculatie}
+                begrotingArbeidTotaal={totaalArbeid}
+                begrotingArbeidUren={nacalculatie.begroting_arbeid_uren ?? 0}
+              />
             </div>
           )}
         </TabsContent>

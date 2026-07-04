@@ -19,6 +19,8 @@ import {
   voorraadMutatiesTable,
   artikelenTable,
   werkbegrotingAdviezenTable,
+  inkoopplannenTable,
+  inkoopplanRegelsTable,
 } from "@workspace/db";
 import { eq, and, sql, sum, asc, isNull, desc, or, inArray, isNotNull } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
@@ -551,7 +553,79 @@ router.get("/opdrachten/:id/nacalculatie", lezen, async (req, res): Promise<void
 
     const begrotingUren = begroting?.totaalArbeidUren ?? 0;
 
-    // Per-categorie regels
+    // ── Werkelijke materiaalkosten: magazijn-uitgiftes ────────────────────
+    const uitgifteMutaties = await db.select({
+      hoeveelheid: voorraadMutatiesTable.hoeveelheid,
+      delta: voorraadMutatiesTable.delta,
+      type: voorraadMutatiesTable.type,
+      inkoopprijs: artikelenTable.inkoopprijs,
+    })
+      .from(voorraadMutatiesTable)
+      .leftJoin(artikelenTable, eq(voorraadMutatiesTable.artikelId, artikelenTable.id))
+      .where(
+        and(
+          eq(voorraadMutatiesTable.referentieType, "opdracht"),
+          eq(voorraadMutatiesTable.referentieId, id),
+          or(
+            eq(voorraadMutatiesTable.type, "uitgifte"),
+            eq(voorraadMutatiesTable.type, "retour"),
+          ),
+        ),
+      );
+
+    // Netto uitgifte-kosten: uitgifte telt positief, retour telt negatief
+    let uitgifte_kosten = 0;
+    for (const m of uitgifteMutaties) {
+      const prijs = m.inkoopprijs ?? 0;
+      const hoeveelheid = Math.abs(m.hoeveelheid ?? 0);
+      if (m.type === "uitgifte") {
+        uitgifte_kosten += prijs * hoeveelheid;
+      } else if (m.type === "retour") {
+        uitgifte_kosten -= prijs * hoeveelheid;
+      }
+    }
+    uitgifte_kosten = Math.max(0, Math.round(uitgifte_kosten * 100) / 100);
+
+    // ── Werkelijke materiaalkosten: goedgekeurde inkoopregels ─────────────
+    // Alle inkoopplannen voor deze opdracht; regels met status "besteld" of "geleverd"
+    let inkoop_kosten = 0;
+    const inkoopplannen = await db.select({ id: inkoopplannenTable.id })
+      .from(inkoopplannenTable)
+      .where(eq(inkoopplannenTable.opdrachtId, id));
+
+    if (inkoopplannen.length > 0) {
+      const planIds = inkoopplannen.map(p => p.id);
+      const goedgekeurdeRegels = await db.select({
+        hoeveelheid: inkoopplanRegelsTable.hoeveelheid,
+        inkoopprijs: inkoopplanRegelsTable.inkoopprijs,
+        inkoopprijsVerwacht: inkoopplanRegelsTable.inkoopprijsVerwacht,
+        calcPrijs: inkoopplanRegelsTable.calcPrijs,
+        status: inkoopplanRegelsTable.status,
+      })
+        .from(inkoopplanRegelsTable)
+        .where(
+          and(
+            inArray(inkoopplanRegelsTable.inkoopplanId, planIds),
+            or(
+              eq(inkoopplanRegelsTable.status, "besteld"),
+              eq(inkoopplanRegelsTable.status, "geleverd"),
+            ),
+          ),
+        );
+
+      for (const r of goedgekeurdeRegels) {
+        // Gebruik definitieve inkoopprijs; valt terug op verwachte prijs of calcPrijs
+        const prijs = r.inkoopprijs ?? r.inkoopprijsVerwacht ?? r.calcPrijs ?? 0;
+        inkoop_kosten += (r.hoeveelheid ?? 0) * prijs;
+      }
+      inkoop_kosten = Math.round(inkoop_kosten * 100) / 100;
+    }
+
+    const werkelijke_materiaal_bedrag = Math.round((uitgifte_kosten + inkoop_kosten) * 100) / 100;
+    const begroting_materiaal_bedrag = begroting?.totaalMateriaalBedrag ?? 0;
+    const verschil_materiaal = Math.round((begroting_materiaal_bedrag - werkelijke_materiaal_bedrag) * 100) / 100;
+
+    // ── Per-categorie regels (arbeidsoverzicht) ───────────────────────────
     const categorieRegels = regels.reduce<Record<string, { begroting_uren: number; totaal: number }>>((acc, r) => {
       if (!acc[r.categorie]) acc[r.categorie] = { begroting_uren: 0, totaal: 0 };
       acc[r.categorie].begroting_uren += r.categorie === "arbeid" ? r.hoeveelheid : 0;
@@ -576,6 +650,11 @@ router.get("/opdrachten/:id/nacalculatie", lezen, async (req, res): Promise<void
       verbruikte_uren: verbruikteUren,
       verschil: begrotingUren - verbruikteUren,
       regels: nacalculatieRegels,
+      begroting_materiaal_bedrag,
+      werkelijke_materiaal_bedrag,
+      verschil_materiaal,
+      materiaal_uitgifte_kosten: uitgifte_kosten,
+      materiaal_inkoop_kosten: inkoop_kosten,
     });
   } catch (err) {
     logger.error({ err }, "getNacalculatie fout");

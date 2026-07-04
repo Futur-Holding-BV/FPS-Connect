@@ -25663,7 +25663,7 @@ components:
 
     OpdrachtNacalculatie:
       type: object
-      required: [opdracht_id, calculatie_arbeid_uren, begroting_arbeid_uren, verbruikte_uren, planning_uren, regels]
+      required: [opdracht_id, calculatie_arbeid_uren, begroting_arbeid_uren, verbruikte_uren, planning_uren, regels, begroting_materiaal_bedrag, werkelijke_materiaal_bedrag, verschil_materiaal, materiaal_uitgifte_kosten, materiaal_inkoop_kosten]
       properties:
         opdracht_id:
           type: integer
@@ -25681,6 +25681,21 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/OpdrachtNacalculatieRegel"
+        begroting_materiaal_bedrag:
+          type: number
+          description: Begrote materiaalkosten uit werkbegroting
+        werkelijke_materiaal_bedrag:
+          type: number
+          description: Werkelijke materiaalkosten (magazijn-uitgiftes + goedgekeurde inkoopregels)
+        verschil_materiaal:
+          type: number
+          description: Begroting minus werkelijk materiaal (positief = onder begroting)
+        materiaal_uitgifte_kosten:
+          type: number
+          description: Werkelijke kosten uit magazijn-uitgiftes gekoppeld aan de opdracht
+        materiaal_inkoop_kosten:
+          type: number
+          description: Kosten uit inkoopregels met status besteld of geleverd
 
     PlanningUrenRegel:
       type: object
