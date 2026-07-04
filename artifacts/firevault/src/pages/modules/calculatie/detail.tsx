@@ -1859,6 +1859,7 @@ function FieContextBlok({ calculatieId }: { calculatieId: number }) {
     heeft_begroting, advies_status, advies_tekst,
     doel_marge_pct, verwachte_marge_pct, verwachte_marge_abs,
     ak_bijdrage, ak_per_uur, totaal_mu,
+    totaal_incl_opslag, totaal_excl_opslag,
   } = data;
 
   const adviesKleur: Record<string, string> = {
@@ -1885,6 +1886,8 @@ function FieContextBlok({ calculatieId }: { calculatieId: number }) {
     return new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR", minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
   }
 
+  const heeftRegels = totaal_incl_opslag > 0;
+
   return (
     <div className="p-4 border-t space-y-3">
       <h3 className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5 uppercase tracking-wide">
@@ -1898,31 +1901,47 @@ function FieContextBlok({ calculatieId }: { calculatieId: number }) {
         <span className="leading-snug">{advies_tekst}</span>
       </div>
 
-      {/* Margedetail */}
-      {heeft_begroting && verwachte_marge_pct != null && (
-        <div className="space-y-1 text-xs">
+      {/* Projectomzet / kostprijs / brutowinst */}
+      {heeftRegels && (
+        <div className="space-y-1 text-xs border-t pt-2">
           <div className="flex justify-between text-muted-foreground">
-            <span>Doelmarge</span>
-            <span className="tabular-nums font-medium">{fmtPct(doel_marge_pct)}</span>
+            <span>Projectomzet</span>
+            <span className="tabular-nums font-semibold text-foreground">{fmtEur(totaal_incl_opslag)}</span>
           </div>
           <div className="flex justify-between text-muted-foreground">
-            <span>Verwachte marge</span>
-            <span className={cn("tabular-nums font-semibold", advies_status === "goed" ? "text-green-700" : advies_status === "laag" ? "text-amber-700" : "text-foreground")}>
-              {fmtPct(verwachte_marge_pct)}
-            </span>
+            <span>Kostprijs (dir. kosten)</span>
+            <span className="tabular-nums">{fmtEur(totaal_excl_opslag)}</span>
           </div>
-          {verwachte_marge_abs != null && (
-            <div className="flex justify-between text-muted-foreground">
-              <span>Marge (abs)</span>
-              <span className="tabular-nums">{fmtEur(verwachte_marge_abs)}</span>
-            </div>
-          )}
           {ak_bijdrage != null && (
-            <div className="flex justify-between text-muted-foreground border-t pt-1">
+            <div className="flex justify-between text-muted-foreground">
               <span>AK-bijdrage ({totaal_mu != null ? `${Math.round(totaal_mu)} MU` : "—"})</span>
               <span className="tabular-nums">{fmtEur(ak_bijdrage)}</span>
             </div>
           )}
+          {verwachte_marge_abs != null && (
+            <div className="flex justify-between font-medium border-t pt-1 mt-1">
+              <span>Brutowinst</span>
+              <span className={cn("tabular-nums", advies_status === "goed" ? "text-green-700" : advies_status === "laag" ? "text-amber-700" : "text-foreground")}>
+                {fmtEur(verwachte_marge_abs)}
+              </span>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Margepercentages + doelmarge */}
+      {heeft_begroting && verwachte_marge_pct != null && (
+        <div className="space-y-1 text-xs border-t pt-2">
+          <div className="flex justify-between text-muted-foreground">
+            <span>Brutomarge</span>
+            <span className={cn("tabular-nums font-semibold", advies_status === "goed" ? "text-green-700" : advies_status === "laag" ? "text-amber-700" : "text-foreground")}>
+              {fmtPct(verwachte_marge_pct)}
+            </span>
+          </div>
+          <div className="flex justify-between text-muted-foreground">
+            <span>Doelmarge</span>
+            <span className="tabular-nums font-medium">{fmtPct(doel_marge_pct)}</span>
+          </div>
           {ak_per_uur != null && (
             <div className="flex justify-between text-muted-foreground">
               <span>Norm AK/uur</span>

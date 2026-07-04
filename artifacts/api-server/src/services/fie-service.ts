@@ -196,12 +196,18 @@ export async function berekenFieContext(calculatieId: number): Promise<FieCalcul
     }
   }
 
+  // Effectief AK/uur: gebruik de berekende waarde als de handmatige norm niet is ingesteld.
+  let effectiefAkPerUur: number | null = begroting?.akPerProductiefUur ?? null;
+  if (!effectiefAkPerUur && begroting) {
+    effectiefAkPerUur = await berekenAkPerUur(begroting.boekjaar);
+  }
+
   return {
     calculatieId,
     heeftBegroting,
     boekjaar: begroting?.boekjaar ?? null,
     doelMargePct: begroting?.doelMargePct ?? null,
-    akPerUur: begroting?.akPerProductiefUur ?? null,
+    akPerUur: effectiefAkPerUur,
     totaalArbeid,
     totaalMateriaal,
     totaalOnderaanneming,

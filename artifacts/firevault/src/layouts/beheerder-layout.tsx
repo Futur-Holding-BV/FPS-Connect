@@ -865,7 +865,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                   <SidebarGroupLabel>Financieel</SidebarGroupLabel>
                   <SidebarGroupContent>
                     <SidebarMenu>
-                      {heeftNiveau("financieel", 1) && (
+                      {heeftNiveau("financieel", 2) && (
                         <SidebarMenuItem className="pl-5">
                           <SidebarMenuButton asChild isActive={location === "/beheer/bedrijfskompas"}>
                             <Link href="/beheer/bedrijfskompas">

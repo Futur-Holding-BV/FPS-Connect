@@ -9,8 +9,9 @@ import { berekenFieContext, rnd2 } from "../services/fie-service";
 
 const router = Router();
 
-// Beheer-endpoints: vereist financieel bevoegdheid (schrijven = niveau 2 = directeur/hoofdbeheerder).
-const lezen    = requireBevoegdheid("financieel", 1);
+// Bedrijfskompas is strategische financiële informatie — alleen directeur/hoofdbeheerder
+// (niveau 2 = schrijven in de financieel-module = hoogste bevoegdheidsdrempel).
+const lezen    = requireBevoegdheid("financieel", 2);
 const schrijven = requireBevoegdheid("financieel", 2);
 // Calculatiecontext is ook beschikbaar voor calculateurs (calculaties:1).
 const calcLezen = requireBevoegdheid("calculaties", 1);
