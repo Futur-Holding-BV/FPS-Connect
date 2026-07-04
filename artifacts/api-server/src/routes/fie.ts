@@ -581,7 +581,7 @@ router.patch("/fie/leermomenten/:id", schrijven, async (req: Request, res: Respo
   const update: Partial<typeof fieLeerMomentenTable.$inferInsert> = { laatsteUpdate: new Date() };
   if (correctie_factor !== undefined) {
     const v = Number(correctie_factor);
-    if (!isFinite(v) || v <= 0) { res.status(400).json({ error: "correctie_factor moet een positief getal zijn" }); return; }
+    if (!isFinite(v) || v < 0.5 || v > 3.0) { res.status(400).json({ error: "correctie_factor moet tussen 0,5 en 3,0 liggen" }); return; }
     update.correctieFactor = Math.round(v * 100) / 100;
   }
   if (opmerkingen !== undefined) update.opmerkingen = opmerkingen != null ? String(opmerkingen).slice(0, 1000) : null;

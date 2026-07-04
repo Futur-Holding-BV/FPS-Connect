@@ -23763,8 +23763,13 @@ export const UpdateFieLeermomentParams = zod.object({
   "id": zod.coerce.number()
 })
 
+export const updateFieLeermomentBodyCorrectieFactorMin = 0.5;
+export const updateFieLeermomentBodyCorrectieFactorMax = 3;
+
+
+
 export const UpdateFieLeermomentBody = zod.object({
-  "correctie_factor": zod.number().optional(),
+  "correctie_factor": zod.number().min(updateFieLeermomentBodyCorrectieFactorMin).max(updateFieLeermomentBodyCorrectieFactorMax).optional(),
   "opmerkingen": zod.string().nullish()
 })
 

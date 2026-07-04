@@ -7,6 +7,10 @@
  */
 
 export interface FieLeermomentPatch {
+  /**
+     * @minimum 0.5
+     * @maximum 3
+     */
   correctie_factor?: number;
   /** @nullable */
   opmerkingen?: string | null;

@@ -34587,5 +34587,5 @@ components:
     FieLeermomentPatch:
       type: object
       properties:
-        correctie_factor: { type: number }
+        correctie_factor: { type: number, minimum: 0.5, maximum: 3.0 }
         opmerkingen:      { type: ["string", "null"] }
