@@ -1,4 +1,4 @@
-import express, { type Express } from "express";
+import express, { type Express, type Request, type Response, type NextFunction } from "express";
 import cors from "cors";
 import pinoHttp from "pino-http";
 import router from "./routes";
@@ -8,6 +8,56 @@ import { sessionMiddleware, maakStatelozeSessie } from "./lib/session";
 const app: Express = express();
 
 app.set("trust proxy", 1);
+
+// ── CORS origin-whitelist ─────────────────────────────────────────────────────
+// Sta alleen Replit-domeinen toe. REPLIT_DOMAINS is kommagescheiden (productie),
+// REPLIT_DEV_DOMAIN is de dev-tunnel. Lokale localhost-varianten voor CI.
+const TOEGESTANE_ORIGINS: Set<string> = (() => {
+  const origins = new Set<string>();
+  // Productiedomeinen vanuit Replit
+  const replitDomains = process.env.REPLIT_DOMAINS ?? "";
+  for (const d of replitDomains.split(",").map((s) => s.trim()).filter(Boolean)) {
+    origins.add(`https://${d}`);
+  }
+  // Dev-tunnel
+  const devDomain = process.env.REPLIT_DEV_DOMAIN ?? "";
+  if (devDomain) origins.add(`https://${devDomain}`);
+  // Lokale ontwikkeling — alleen als NODE_ENV niet production is
+  if (process.env.NODE_ENV !== "production") {
+    origins.add("http://localhost:25392");
+    origins.add("http://localhost:80");
+    origins.add("http://localhost:3000");
+  }
+  return origins;
+})();
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Geen origin = zelfde-origin-verzoek (server-to-server of curl) — toegestaan
+      if (!origin) return callback(null, true);
+      if (TOEGESTANE_ORIGINS.has(origin)) return callback(null, true);
+      // In dev: ook subdomein-varianten van REPLIT_DEV_DOMAIN toestaan
+      const dev = process.env.REPLIT_DEV_DOMAIN ?? "";
+      if (dev && origin.endsWith(`.${dev}`)) return callback(null, true);
+      callback(new Error(`CORS: origin '${origin}' niet toegestaan`));
+    },
+    credentials: true,
+    methods: ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    maxAge: 600,
+  }),
+);
+
+// ── HTTP-beveiligingsheaders ──────────────────────────────────────────────────
+app.use((_req: Request, res: Response, next: NextFunction) => {
+  res.setHeader("X-Frame-Options", "DENY");
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+  res.setHeader("X-XSS-Protection", "0");
+  res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+  next();
+});
 
 app.use(
   pinoHttp({
@@ -28,9 +78,8 @@ app.use(
     },
   }),
 );
-app.use(cors());
-app.use(express.json({ limit: "10mb" }));
-app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+app.use(express.json({ limit: "2mb" }));
+app.use(express.urlencoded({ extended: true, limit: "2mb" }));
 
 // Bearer-token verzoeken komen uitsluitend van de mobiele monteur-app. Die auth
 // is stateless, dus we slaan twee vliegen in een klap voor dat pad:

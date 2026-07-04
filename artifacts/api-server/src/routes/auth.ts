@@ -11,6 +11,46 @@ import { verstuurWachtwoordResetMail } from "../services/email.js";
 
 const router = Router();
 
+// ── In-memory rate-limiter voor login-endpoints ───────────────────────────────
+// Beschermt /auth/login, /auth/2fa/verify en /auth/mobile/login tegen
+// brute-force aanvallen. Per IP maximaal 10 pogingen per 15 minuten.
+// Bij overschrijding: 429 + Retry-After header.
+
+interface RateLimitEntry {
+  count: number;
+  resetAt: number;
+}
+
+const loginRateMap = new Map<string, RateLimitEntry>();
+const RL_MAX = 10;
+const RL_VENSTER_MS = 15 * 60 * 1000;
+
+function checkLoginRateLimit(req: import("express").Request, res: import("express").Response): boolean {
+  const ip = req.ip ?? "onbekend";
+  const nu = Date.now();
+  const entry = loginRateMap.get(ip);
+  if (!entry || nu > entry.resetAt) {
+    loginRateMap.set(ip, { count: 1, resetAt: nu + RL_VENSTER_MS });
+    return true;
+  }
+  entry.count++;
+  if (entry.count > RL_MAX) {
+    const wachtSec = Math.ceil((entry.resetAt - nu) / 1000);
+    res.setHeader("Retry-After", String(wachtSec));
+    res.status(429).json({ error: "Te veel pogingen, probeer het later opnieuw" });
+    return false;
+  }
+  return true;
+}
+
+// Ruim verlopen entries op elke 30 minuten om geheugenlek te voorkomen
+setInterval(() => {
+  const nu = Date.now();
+  for (const [ip, entry] of loginRateMap.entries()) {
+    if (nu > entry.resetAt) loginRateMap.delete(ip);
+  }
+}, 30 * 60 * 1000).unref();
+
 function domein(): string {
   return (process.env.REPLIT_DOMAINS ?? "").split(",")[0]?.trim() || "localhost";
 }
@@ -49,6 +89,7 @@ function verzoekUserAgent(req: { headers: Record<string, unknown> }): string | n
 
 // POST /auth/login — stap 1: e-mail + wachtwoord
 router.post("/auth/login", async (req, res) => {
+  if (!checkLoginRateLimit(req, res)) return;
   try {
     const { email, wachtwoord } = req.body ?? {};
     if (!email || !wachtwoord) {
@@ -162,6 +203,7 @@ router.post("/auth/2fa/activeren", async (req, res) => {
 
 // POST /auth/2fa/verify — stap 2 bij bestaande 2FA
 router.post("/auth/2fa/verify", async (req, res) => {
+  if (!checkLoginRateLimit(req, res)) return;
   try {
     const pendingId = req.session.pendingUserId;
     const code = schoonCode(req.body?.code);
@@ -218,6 +260,7 @@ router.post("/auth/2fa/verify", async (req, res) => {
 // POST /auth/mobile/login — login in één stap voor de mobiele monteur-app
 // (e-mail + wachtwoord + bestaande TOTP-code). Retourneert een bearer-token.
 router.post("/auth/mobile/login", async (req, res) => {
+  if (!checkLoginRateLimit(req, res)) return;
   try {
     const { email, wachtwoord, code } = req.body ?? {};
     if (!email || !wachtwoord) {

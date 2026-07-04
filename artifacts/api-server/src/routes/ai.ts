@@ -152,19 +152,40 @@ function bouwZoektekst(formulierType: string, huidigVelden: Record<string, strin
 router.post("/ai/invullen", requireAuth, async (req, res) => {
   if (!heeftGateway()) return res.status(503).json({ error: "AI niet geconfigureerd" });
 
-  const {
-    formulier_type,
-    context_id = null,
-    huidige_velden = {},
-  } = req.body as {
-    formulier_type: string;
-    context_id?: number | null;
-    huidige_velden?: Record<string, string>;
-  };
+  const body = req.body as Record<string, unknown>;
+  const formulier_type = typeof body.formulier_type === "string" ? body.formulier_type.trim() : null;
+  const raw_context_id = body.context_id;
+  const raw_velden = body.huidige_velden;
 
   if (!formulier_type || !FORMULIER_VELDBESCHRIJVINGEN[formulier_type]) {
     return res.status(400).json({ error: "Ongeldig formulier_type" });
   }
+
+  // context_id moet een positief integer zijn of null
+  const context_id: number | null = (() => {
+    if (raw_context_id == null) return null;
+    const n = Number(raw_context_id);
+    if (!Number.isInteger(n) || n <= 0) return null;
+    return n;
+  })();
+
+  // huidige_velden: alleen plain object met string-sleutels en string-waarden;
+  // maximaal 50 velden, elke waarde maximaal 500 tekens
+  const huidige_velden: Record<string, string> = (() => {
+    if (!raw_velden || typeof raw_velden !== "object" || Array.isArray(raw_velden)) return {};
+    const result: Record<string, string> = {};
+    let teller = 0;
+    for (const [k, v] of Object.entries(raw_velden as Record<string, unknown>)) {
+      if (teller >= 50) break;
+      if (typeof k !== "string" || typeof v !== "string") continue;
+      // Alleen velden die voorkomen in de velddefinitie van dit formuliertype
+      const veldenDef = FORMULIER_VELDBESCHRIJVINGEN[formulier_type];
+      if (veldenDef && !(k in veldenDef) && k !== "naam" && k !== "organisatie_naam") continue;
+      result[k] = v.slice(0, 500);
+      teller++;
+    }
+    return result;
+  })();
 
   const veldenDef = FORMULIER_VELDBESCHRIJVINGEN[formulier_type];
   const veldenLijst = Object.entries(veldenDef)

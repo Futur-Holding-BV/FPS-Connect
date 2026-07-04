@@ -176,7 +176,11 @@ router.get(
 
     const escapeCell = (val: string | number | null | undefined): string => {
       if (val == null) return "";
-      const s = String(val);
+      let s = String(val);
+      // Voorkom CSV-formule-injectie: prefix gevaarlijke starters met een apostrof
+      if (s.length > 0 && "=+-@\t\r".includes(s[0]!)) {
+        s = `'${s}`;
+      }
       if (s.includes(",") || s.includes('"') || s.includes("\n")) {
         return `"${s.replace(/"/g, '""')}"`;
       }

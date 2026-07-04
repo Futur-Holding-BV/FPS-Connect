@@ -5,6 +5,25 @@ import { logger } from "./logger";
 import { db } from "@workspace/db";
 import { aiAanroepenTable } from "@workspace/db";
 
+// ── Foutmelding-sanitisatie ───────────────────────────────────────────────────
+// Scrubt patronen die op API-sleutels of tokens lijken vóór opslag in de DB.
+// Voorkomt dat een provider-fout die de key reflecteert (bijv. "Invalid key: sk-...")
+// onbedoeld wordt opgeslagen in ai_aanroepen.foutmelding.
+const KEY_PATRONEN = [
+  /sk-[A-Za-z0-9_-]{20,}/g,           // OpenAI keys: sk-...
+  /sk-proj-[A-Za-z0-9_-]{20,}/g,      // OpenAI project keys
+  /Bearer\s+[A-Za-z0-9._-]{20,}/gi,   // Bearer tokens
+  /key[=:\s]+[A-Za-z0-9._-]{20,}/gi,  // "key=..." / "key: ..."
+];
+
+function sanitiseerFoutmelding(bericht: string): string {
+  let s = bericht;
+  for (const patroon of KEY_PATRONEN) {
+    s = s.replace(patroon, "[GEREDACTEERD]");
+  }
+  return s.slice(0, 500);
+}
+
 // ── Model registry ────────────────────────────────────────────────────────────
 
 export type ModelSlot = "default" | "fast" | "reasoning" | "vision" | "embedding";
@@ -339,11 +358,11 @@ class AiGatewayService {
             geschatteKostenEur: null,
             duurMs,
             status: statusCode,
-            foutmelding: bericht.slice(0, 500),
+            foutmelding: sanitiseerFoutmelding(bericht),
             contextJson,
             uitvoerTekst: null,
           });
-          return { ok: false, fout: `AI-aanroep mislukt: ${bericht}` };
+          return { ok: false, fout: "AI-aanroep mislukt" };
         }
         logger.warn({ err, slot, model, poging: pogingen }, "AI-gateway retry na tijdelijke fout");
       }
@@ -430,11 +449,11 @@ class AiGatewayService {
             geschatteKostenEur: null,
             duurMs,
             status: statusCode,
-            foutmelding: bericht.slice(0, 500),
+            foutmelding: sanitiseerFoutmelding(bericht),
             contextJson,
             uitvoerTekst: null,
           });
-          return { ok: false, fout: `AI responses-aanroep mislukt: ${bericht}` };
+          return { ok: false, fout: "AI responses-aanroep mislukt" };
         }
         logger.warn({ err, slot, model, poging: pogingen }, "AI-gateway retry na tijdelijke fout");
       }

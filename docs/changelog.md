@@ -4,6 +4,56 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-04 — Beveiligingsaudit herstelacties
+
+**Uitvoering:** volledig | **Diepere lagen:** volledig | **Getest:** api-server start clean (HTTP 200 /healthz); security headers bevestigd in respons; typecheck geen nieuwe fouten
+
+Zes beveiligingsproblemen hersteld na inventarisatie (auth, CORS, headers, CSV, AI-gateway, input-validatie):
+
+**1. CORS-hardening (`app.ts`)**
+- `cors()` zonder origin-restrictie vervangen door een whitelist op basis van `REPLIT_DOMAINS` + `REPLIT_DEV_DOMAIN`
+- `credentials: true`, `allowedHeaders` beperkt tot `Content-Type` en `Authorization`, `maxAge: 600`
+- In productie (`NODE_ENV=production`) worden geen localhost-varianten toegestaan
+
+**2. HTTP-beveiligingsheaders (`app.ts`)**
+- Middleware toegevoegd die op elk antwoord de volgende headers plaatst:
+  - `X-Frame-Options: DENY`
+  - `X-Content-Type-Options: nosniff`
+  - `Referrer-Policy: strict-origin-when-cross-origin`
+  - `X-XSS-Protection: 0` (moderne browsers)
+  - `Permissions-Policy: camera=(), microphone=(), geolocation=()`
+- JSON body-limiet verlaagd van 10 MB naar 2 MB
+
+**3. In-memory rate-limiter login (`auth.ts`)**
+- `checkLoginRateLimit()` toegevoegd: maximaal 10 pogingen per IP per 15 minuten
+- Van toepassing op `/auth/login`, `/auth/2fa/verify`, `/auth/mobile/login`
+- 429-response met `Retry-After`-header bij overschrijding
+- Periodieke cleanup (elke 30 min) via `.unref()` interval
+
+**4. CSV formula-injectie fix (`ai-log.ts`)**
+- `escapeCell()` prefixeert waarden die starten met `=`, `+`, `-`, `@`, `\t`, `\r` met een apostrof
+- Voorkomt dat spreadsheet-applicaties de celinhoud als formule interpreteren
+
+**5. AI-foutmelding sanitisatie (`aiGateway.ts`)**
+- `sanitiseerFoutmelding()` toegevoegd: scrubt patronen die op API-sleutels lijken vóór DB-opslag
+  - `sk-...`, `sk-proj-...`, Bearer-tokens, `key=...`-patronen worden vervangen door `[GEREDACTEERD]`
+- `bericht.slice(0, 500)` vervangen door `sanitiseerFoutmelding(bericht)` op beide foutpaden
+- Gebruikersfacing foutmelding is nu generiek ("AI-aanroep mislukt"), geen provider-details
+
+**6. FIE input-validatie (`fie.ts`)**
+- Hulpfuncties `valideerFinancieelGetal()` en `valideerProcent()` + enum-sets toegevoegd
+- `POST /fie/begrotingen`:
+  - `boekjaar`: integer-check + bereik 2000–2100
+  - `status`: enum-check (concept/vastgesteld/gearchiveerd)
+  - `verdeelsleutel`: enum-check (uren/omzet/ftes)
+  - Alle financiële velden: `isFinite`, niet-negatief, maxima (€1 mrd / €10k / 1 mln uren)
+  - `opmerkingen`: afgekapt op 2000 tekens
+- `PATCH /fie/begrotingen/:id`: zelfde validatie per aanwezig veld
+
+**7. `/ai/invullen` body-validatie (`ai.ts`)**
+- `context_id`: positief integer of null (was ongevalideerd)
+- `huidige_velden`: verplicht plain object; niet-string waarden overgeslagen; maximaal 50 velden; waarden afgekapt op 500 tekens; alleen bekende velddefinitie-sleutels doorgelaten
+
 ## 2026-07-04 — Financial Intelligence Engine (FIE) — Bedrijfskompas
 
 **Uitvoering:** volledig | **Diepere lagen:** volledig | **Getest:** typecheck schoon (geen nieuwe fouten); api-server bouwt + start clean; e2e-web groen

@@ -21,6 +21,32 @@ function parseId(v: unknown): number | null {
   return isNaN(n) ? null : n;
 }
 
+// ── Input-validatie helpers ───────────────────────────────────────────────────
+
+const GELDIGE_STATUSSEN = ["concept", "vastgesteld", "gearchiveerd"] as const;
+const GELDIGE_VERDEELSLEUTELS = ["uren", "omzet", "ftes"] as const;
+
+function valideerFinancieelGetal(
+  v: unknown,
+  naam: string,
+  max = 1_000_000_000,
+): { ok: true; waarde: number | null } | { ok: false; fout: string } {
+  if (v === null || v === undefined) return { ok: true, waarde: null };
+  const n = Number(v);
+  if (!isFinite(n)) return { ok: false, fout: `${naam} moet een geldig getal zijn` };
+  if (n < 0) return { ok: false, fout: `${naam} mag niet negatief zijn` };
+  if (n > max) return { ok: false, fout: `${naam} overschrijdt het maximum (${max})` };
+  return { ok: true, waarde: Math.round(n * 100) / 100 };
+}
+
+function valideerProcent(v: unknown, naam: string): { ok: true; waarde: number } | { ok: false; fout: string } {
+  const n = Number(v);
+  if (!isFinite(n) || n < 0 || n > 100) {
+    return { ok: false, fout: `${naam} moet een percentage zijn tussen 0 en 100` };
+  }
+  return { ok: true, waarde: Math.round(n * 100) / 100 };
+}
+
 function validId(res: import("express").Response, v: unknown): number | null {
   const id = parseId(v);
   if (id === null) {
@@ -75,26 +101,58 @@ router.get("/fie/begrotingen", lezen, async (_req: Request, res: Response) => {
 
 // POST /fie/begrotingen
 router.post("/fie/begrotingen", schrijven, async (req: Request, res: Response) => {
+  const body = req.body as Record<string, unknown>;
   const {
     boekjaar, status, omzet_doel, directe_kosten_doel,
     doel_marge_pct, ak_per_productief_uur, productieve_uren_doel,
     verdeelsleutel, opmerkingen,
-  } = req.body as Record<string, unknown>;
+  } = body;
 
-  if (!boekjaar || typeof boekjaar !== "number") {
-    res.status(400).json({ error: "boekjaar is verplicht" }); return;
+  // boekjaar: integer tussen 2000 en 2100
+  const boekjaarN = Number(boekjaar);
+  if (!boekjaar || !Number.isInteger(boekjaarN) || boekjaarN < 2000 || boekjaarN > 2100) {
+    res.status(400).json({ error: "boekjaar is verplicht en moet een geldig jaar zijn" }); return;
   }
 
+  // status-enum
+  const statusStr = (status as string | undefined) ?? "concept";
+  if (!GELDIGE_STATUSSEN.includes(statusStr as typeof GELDIGE_STATUSSEN[number])) {
+    res.status(400).json({ error: `status moet een van ${GELDIGE_STATUSSEN.join(", ")} zijn` }); return;
+  }
+
+  // verdeelsleutel-enum
+  const vslStr = (verdeelsleutel as string | undefined) ?? "uren";
+  if (!GELDIGE_VERDEELSLEUTELS.includes(vslStr as typeof GELDIGE_VERDEELSLEUTELS[number])) {
+    res.status(400).json({ error: `verdeelsleutel moet een van ${GELDIGE_VERDEELSLEUTELS.join(", ")} zijn` }); return;
+  }
+
+  // Financiële getallen
+  const omzetR = valideerFinancieelGetal(omzet_doel, "omzet_doel");
+  if (!omzetR.ok) { res.status(400).json({ error: omzetR.fout }); return; }
+  const dkR = valideerFinancieelGetal(directe_kosten_doel, "directe_kosten_doel");
+  if (!dkR.ok) { res.status(400).json({ error: dkR.fout }); return; }
+  const margePctR = doel_marge_pct !== undefined
+    ? valideerProcent(doel_marge_pct, "doel_marge_pct")
+    : { ok: true as const, waarde: 15 };
+  if (!margePctR.ok) { res.status(400).json({ error: margePctR.fout }); return; }
+  const akUurR = valideerFinancieelGetal(ak_per_productief_uur, "ak_per_productief_uur", 10_000);
+  if (!akUurR.ok) { res.status(400).json({ error: akUurR.fout }); return; }
+  const urenR = valideerFinancieelGetal(productieve_uren_doel, "productieve_uren_doel", 1_000_000);
+  if (!urenR.ok) { res.status(400).json({ error: urenR.fout }); return; }
+
+  // opmerkingen: tekst, max 2000 tekens
+  const opmerkingenStr = opmerkingen != null ? String(opmerkingen).slice(0, 2000) : null;
+
   const [rij] = await db.insert(fieJaarbegrotingenTable).values({
-    boekjaar: boekjaar as number,
-    status: (status as string | undefined) ?? "concept",
-    omzetDoel: (omzet_doel as number | undefined) ?? null,
-    directeKostenDoel: (directe_kosten_doel as number | undefined) ?? null,
-    doelMargePct: (doel_marge_pct as number | undefined) ?? 15,
-    akPerProductiefUur: (ak_per_productief_uur as number | undefined) ?? null,
-    productieveUrenDoel: (productieve_uren_doel as number | undefined) ?? null,
-    verdeelsleutel: (verdeelsleutel as string | undefined) ?? "uren",
-    opmerkingen: (opmerkingen as string | undefined) ?? null,
+    boekjaar: boekjaarN,
+    status: statusStr,
+    omzetDoel: omzetR.waarde,
+    directeKostenDoel: dkR.waarde,
+    doelMargePct: margePctR.waarde,
+    akPerProductiefUur: akUurR.waarde,
+    productieveUrenDoel: urenR.waarde,
+    verdeelsleutel: vslStr,
+    opmerkingen: opmerkingenStr,
   }).returning();
   res.status(201).json(mapBegroting(rij));
 });
@@ -137,10 +195,11 @@ router.get("/fie/begrotingen/:id", lezen, async (req: Request, res: Response) =>
 router.patch("/fie/begrotingen/:id", schrijven, async (req: Request, res: Response) => {
   const id = validId(res, req.params["id"]);
   if (id === null) return;
+  const body = req.body as Record<string, unknown>;
   const {
     status, omzet_doel, directe_kosten_doel, doel_marge_pct,
     ak_per_productief_uur, productieve_uren_doel, verdeelsleutel, opmerkingen,
-  } = req.body as Record<string, unknown>;
+  } = body;
 
   const [existing] = await db
     .select()
@@ -152,14 +211,49 @@ router.patch("/fie/begrotingen/:id", schrijven, async (req: Request, res: Respon
   const updateData: Partial<typeof fieJaarbegrotingenTable.$inferInsert> = {
     bijgewerktOp: new Date(),
   };
-  if (status !== undefined)                 updateData.status = status as string;
-  if (omzet_doel !== undefined)             updateData.omzetDoel = omzet_doel as number | null;
-  if (directe_kosten_doel !== undefined)    updateData.directeKostenDoel = directe_kosten_doel as number | null;
-  if (doel_marge_pct !== undefined)         updateData.doelMargePct = doel_marge_pct as number;
-  if (ak_per_productief_uur !== undefined)  updateData.akPerProductiefUur = ak_per_productief_uur as number | null;
-  if (productieve_uren_doel !== undefined)  updateData.productieveUrenDoel = productieve_uren_doel as number | null;
-  if (verdeelsleutel !== undefined)         updateData.verdeelsleutel = verdeelsleutel as string;
-  if (opmerkingen !== undefined)            updateData.opmerkingen = opmerkingen as string | null;
+
+  if (status !== undefined) {
+    const s = String(status);
+    if (!GELDIGE_STATUSSEN.includes(s as typeof GELDIGE_STATUSSEN[number])) {
+      res.status(400).json({ error: `status moet een van ${GELDIGE_STATUSSEN.join(", ")} zijn` }); return;
+    }
+    updateData.status = s;
+  }
+  if (omzet_doel !== undefined) {
+    const r = valideerFinancieelGetal(omzet_doel, "omzet_doel");
+    if (!r.ok) { res.status(400).json({ error: r.fout }); return; }
+    updateData.omzetDoel = r.waarde;
+  }
+  if (directe_kosten_doel !== undefined) {
+    const r = valideerFinancieelGetal(directe_kosten_doel, "directe_kosten_doel");
+    if (!r.ok) { res.status(400).json({ error: r.fout }); return; }
+    updateData.directeKostenDoel = r.waarde;
+  }
+  if (doel_marge_pct !== undefined) {
+    const r = valideerProcent(doel_marge_pct, "doel_marge_pct");
+    if (!r.ok) { res.status(400).json({ error: r.fout }); return; }
+    updateData.doelMargePct = r.waarde;
+  }
+  if (ak_per_productief_uur !== undefined) {
+    const r = valideerFinancieelGetal(ak_per_productief_uur, "ak_per_productief_uur", 10_000);
+    if (!r.ok) { res.status(400).json({ error: r.fout }); return; }
+    updateData.akPerProductiefUur = r.waarde;
+  }
+  if (productieve_uren_doel !== undefined) {
+    const r = valideerFinancieelGetal(productieve_uren_doel, "productieve_uren_doel", 1_000_000);
+    if (!r.ok) { res.status(400).json({ error: r.fout }); return; }
+    updateData.productieveUrenDoel = r.waarde;
+  }
+  if (verdeelsleutel !== undefined) {
+    const vsl = String(verdeelsleutel);
+    if (!GELDIGE_VERDEELSLEUTELS.includes(vsl as typeof GELDIGE_VERDEELSLEUTELS[number])) {
+      res.status(400).json({ error: `verdeelsleutel moet een van ${GELDIGE_VERDEELSLEUTELS.join(", ")} zijn` }); return;
+    }
+    updateData.verdeelsleutel = vsl;
+  }
+  if (opmerkingen !== undefined) {
+    updateData.opmerkingen = opmerkingen != null ? String(opmerkingen).slice(0, 2000) : null;
+  }
 
   const [updated] = await db
     .update(fieJaarbegrotingenTable)
