@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, Package, AlertTriangle, ArrowUp, ArrowDown, Minus, Tag } from "lucide-react";
+import { ArrowLeft, Package, AlertTriangle, ArrowUp, ArrowDown, Minus, Tag, Barcode } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -106,12 +106,20 @@ export default function MagazijnArtikelDetailPagina() {
           </h1>
           {artikel.leverancier_naam && <p className="text-sm text-muted-foreground">{artikel.leverancier_naam}</p>}
         </div>
-        <Link href={`/magazijn/artikelen/${artikelId}/label`}>
-          <Button variant="outline" size="sm">
-            <Tag className="h-4 w-4 mr-1.5" />
-            QR-label afdrukken
-          </Button>
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link href={`/magazijn/artikelen/${artikelId}/label`}>
+            <Button variant="outline" size="sm">
+              <Tag className="h-4 w-4 mr-1.5" />
+              QR-label
+            </Button>
+          </Link>
+          <Link href={`/magazijn/artikelen/${artikelId}/label?type=barcode`} target="_blank">
+            <Button variant="outline" size="sm">
+              <Barcode className="h-4 w-4 mr-1.5" />
+              Barcode afdrukken
+            </Button>
+          </Link>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

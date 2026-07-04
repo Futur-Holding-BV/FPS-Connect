@@ -46,6 +46,7 @@
     "@tanstack/react-query": "catalog:",
     "@types/node": "catalog:",
     "@types/react": "catalog:",
+    "@types/jsbarcode": "^3.11.4",
     "@types/react-dom": "catalog:",
     "@uppy/aws-s3": "^5.0.0",
     "@uppy/core": "^5.0.0",
@@ -84,6 +85,7 @@
   },
   "dependencies": {
     "i18next": "^26.3.1",
+    "jsbarcode": "^3.12.3",
     "pdfjs-dist": "^6.0.227",
     "qrcode.react": "^4.2.0",
     "react-i18next": "^17.0.8",

@@ -1,9 +1,10 @@
 import { useRoute, Link } from "wouter";
-import { useGetMagazijnArtikel } from "@workspace/api-client-react";
+import { useGetMagazijnArtikel, useListMagazijnLocaties } from "@workspace/api-client-react";
 import { QRCodeSVG } from "qrcode.react";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Printer, Tag, Info } from "lucide-react";
-import { useState } from "react";
+import { ArrowLeft, Printer, Tag, Barcode, Info } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import JsBarcode from "jsbarcode";
 
 // ── Dymo LabelWriter 450 — ondersteunde labelformaten ─────────────────────────
 // De afmetingen komen overeen met gangbare Dymo-labelrollen. Kies het formaat
@@ -47,9 +48,49 @@ const LABEL_FORMATEN: LabelFormaat[] = [
   },
 ];
 
+// ── Barcode-labelformaten ───────────────────────────────────────────────────
+// Barcodes (Code 128) zijn breder dan hoog; kies bij voorkeur een breed formaat.
+type BarcodeLabelFormaat = {
+  id: string;
+  label: string;
+  breedte: number;
+  hoogte: number;
+  barcodeHoogte: number;
+  fontNaam: number;
+  fontSub: number;
+};
+
+const BARCODE_FORMATEN: BarcodeLabelFormaat[] = [
+  {
+    id: "100x50",
+    label: "100 × 50 mm — Standaard productlabel",
+    breedte: 100, hoogte: 50,
+    barcodeHoogte: 22, fontNaam: 11, fontSub: 9,
+  },
+  {
+    id: "89x36",
+    label: "89 × 36 mm — Planksticker (Dymo LW)",
+    breedte: 89, hoogte: 36,
+    barcodeHoogte: 14, fontNaam: 9, fontSub: 7.5,
+  },
+  {
+    id: "148x105",
+    label: "148 × 105 mm — A6 (standaard printer)",
+    breedte: 148, hoogte: 105,
+    barcodeHoogte: 40, fontNaam: 16, fontSub: 12,
+  },
+  {
+    id: "57x32",
+    label: "57 × 32 mm — Compact productetiket",
+    breedte: 57, hoogte: 32,
+    barcodeHoogte: 11, fontNaam: 8, fontSub: 7,
+  },
+];
+
 // 1 mm ≈ 3.78px bij 96 dpi — schaalfactor voor de schermpreview
 const MM_TO_PX = 3.78;
 
+// ── QR-label inhoud ────────────────────────────────────────────────────────
 function ArtikelLabelInhoud({
   artikel,
   fmt,
@@ -192,16 +233,160 @@ function ArtikelLabelInhoud({
   );
 }
 
+// ── Barcode-component (Code 128) ───────────────────────────────────────────
+function BarcodeSVG({ waarde, hoogte, fontGrootte }: { waarde: string; hoogte: number; fontGrootte: number }) {
+  const ref = useRef<SVGSVGElement>(null);
+  useEffect(() => {
+    if (ref.current && waarde) {
+      try {
+        JsBarcode(ref.current, waarde, {
+          format: "CODE128",
+          width: 1.6,
+          height: hoogte,
+          displayValue: true,
+          fontSize: fontGrootte,
+          margin: 4,
+          fontOptions: "",
+          font: "Arial",
+          textAlign: "center",
+          textPosition: "bottom",
+          background: "#ffffff",
+          lineColor: "#000000",
+        });
+      } catch {
+        // Ongeldige barcodewaarde — toon niets
+      }
+    }
+  }, [waarde, hoogte, fontGrootte]);
+  return <svg ref={ref} style={{ display: "block" }} />;
+}
+
+// ── Barcode-label inhoud ───────────────────────────────────────────────────
+function BarcodeLabelInhoud({
+  artikel,
+  fmt,
+  locatieNaam,
+}: {
+  artikel: {
+    id: number;
+    naam: string;
+    code?: string | null;
+    barcode?: string | null;
+    eenheid: string;
+    merk?: string | null;
+    locatie_id?: number | null;
+  };
+  fmt: BarcodeLabelFormaat;
+  locatieNaam?: string | null;
+}) {
+  const barcodeWaarde = artikel.barcode || artikel.code || "";
+  const breedte = fmt.breedte * MM_TO_PX;
+  const hoogte = fmt.hoogte * MM_TO_PX;
+  const pad = Math.max(4, Math.round(hoogte * 0.05));
+
+  return (
+    <div
+      className="artikel-label"
+      style={{
+        width: breedte,
+        height: hoogte,
+        border: "1.5px solid #cbd5e1",
+        borderRadius: 3,
+        backgroundColor: "#ffffff",
+        fontFamily: "Arial, sans-serif",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        overflow: "hidden",
+        boxSizing: "border-box",
+        padding: pad,
+        gap: 2,
+      }}
+    >
+      {/* Naam */}
+      <div
+        style={{
+          fontSize: fmt.fontNaam,
+          fontWeight: 700,
+          color: "#0f172a",
+          lineHeight: 1.2,
+          textAlign: "center",
+          width: "100%",
+          overflow: "hidden",
+          display: "-webkit-box",
+          WebkitLineClamp: 2,
+          WebkitBoxOrient: "vertical",
+        }}
+      >
+        {artikel.naam}
+      </div>
+
+      {/* Barcode */}
+      {barcodeWaarde ? (
+        <div style={{ lineHeight: 0, marginTop: 2 }}>
+          <BarcodeSVG
+            waarde={barcodeWaarde}
+            hoogte={fmt.barcodeHoogte * MM_TO_PX}
+            fontGrootte={fmt.fontSub}
+          />
+        </div>
+      ) : (
+        <div
+          style={{
+            fontSize: fmt.fontSub,
+            color: "#94a3b8",
+            textAlign: "center",
+            padding: "4px 0",
+          }}
+        >
+          Geen artikelcode beschikbaar
+        </div>
+      )}
+
+      {/* Locatie (optioneel) */}
+      {locatieNaam && (
+        <div
+          style={{
+            fontSize: fmt.fontSub - 1,
+            color: "#475569",
+            textAlign: "center",
+            marginTop: 1,
+          }}
+        >
+          Locatie: {locatieNaam}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Hoofdpagina ────────────────────────────────────────────────────────────
+type Modus = "qr" | "barcode";
+
 export default function MagazijnArtikelLabelPagina() {
   const [, params] = useRoute("/magazijn/artikelen/:id/label");
   const artikelId = Number(params?.id ?? 0);
 
-  const [geselecteerdFormaat, setGeselecteerdFormaat] = useState("89x36");
+  const initModus: Modus = new URLSearchParams(window.location.search).get("type") === "barcode" ? "barcode" : "qr";
+  const [modus, setModus] = useState<Modus>(initModus);
+
+  const [geselecteerdQrFormaat, setGeselecteerdQrFormaat] = useState("89x36");
+  const [geselecteerdBarcodeFormaat, setGeselecteerdBarcodeFormaat] = useState("100x50");
   const [aantalLabels, setAantalLabels] = useState(1);
 
   const { data: artikel, isLoading } = useGetMagazijnArtikel(artikelId);
-  const fmt = LABEL_FORMATEN.find((f) => f.id === geselecteerdFormaat) ?? LABEL_FORMATEN[0]!;
+  const { data: locaties = [] } = useListMagazijnLocaties();
+
+  const qrFmt = LABEL_FORMATEN.find((f) => f.id === geselecteerdQrFormaat) ?? LABEL_FORMATEN[0]!;
+  const barcodeFmt = BARCODE_FORMATEN.find((f) => f.id === geselecteerdBarcodeFormaat) ?? BARCODE_FORMATEN[0]!;
+  const activeFmt = modus === "qr" ? qrFmt : barcodeFmt;
+
   const labels = Array.from({ length: Math.max(1, Math.min(aantalLabels, 20)) });
+
+  const locatieNaam = artikel?.locatie_id
+    ? (locaties.find((l) => l.id === artikel.locatie_id)?.naam ?? null)
+    : null;
 
   if (isLoading) {
     return (
@@ -226,13 +411,15 @@ export default function MagazijnArtikelLabelPagina() {
     );
   }
 
+  const barcodeWaarde = artikel.barcode || artikel.code || "";
+
   return (
     <div className="min-h-screen bg-slate-50">
-      {/* ── @page CSS voor Dymo-afmetingen ──────────────────────────────── */}
+      {/* ── @page CSS voor labelafmetingen ──────────────────────────────── */}
       <style>{`
         @media print {
           @page {
-            size: ${fmt.breedte}mm ${fmt.hoogte}mm;
+            size: ${activeFmt.breedte}mm ${activeFmt.hoogte}mm;
             margin: 0;
           }
           body {
@@ -246,8 +433,8 @@ export default function MagazijnArtikelLabelPagina() {
             border-radius: 0 !important;
             page-break-after: always;
             page-break-inside: avoid;
-            width: ${fmt.breedte}mm !important;
-            height: ${fmt.hoogte}mm !important;
+            width: ${activeFmt.breedte}mm !important;
+            height: ${activeFmt.hoogte}mm !important;
             padding: 2mm !important;
             gap: 2mm !important;
           }
@@ -274,19 +461,47 @@ export default function MagazijnArtikelLabelPagina() {
           </div>
         </div>
 
-        <div className="flex items-center gap-3 shrink-0">
+        <div className="flex items-center gap-3 shrink-0 flex-wrap justify-end">
+          {/* Modus-schakelaar */}
+          <div className="flex items-center border rounded overflow-hidden text-xs">
+            <button
+              className={`flex items-center gap-1 px-3 py-1.5 transition-colors ${modus === "qr" ? "bg-primary text-primary-foreground" : "bg-white text-muted-foreground hover:bg-muted/50"}`}
+              onClick={() => setModus("qr")}
+            >
+              <Tag className="h-3.5 w-3.5" />
+              QR-label
+            </button>
+            <button
+              className={`flex items-center gap-1 px-3 py-1.5 transition-colors ${modus === "barcode" ? "bg-primary text-primary-foreground" : "bg-white text-muted-foreground hover:bg-muted/50"}`}
+              onClick={() => setModus("barcode")}
+            >
+              <Barcode className="h-3.5 w-3.5" />
+              Barcode
+            </button>
+          </div>
+
           {/* Formaat-keuze */}
-          <select
-            className="text-xs border rounded px-2 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-ring"
-            value={geselecteerdFormaat}
-            onChange={(e) => setGeselecteerdFormaat(e.target.value)}
-          >
-            {LABEL_FORMATEN.map((f) => (
-              <option key={f.id} value={f.id}>
-                {f.label}
-              </option>
-            ))}
-          </select>
+          {modus === "qr" ? (
+            <select
+              className="text-xs border rounded px-2 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-ring"
+              value={geselecteerdQrFormaat}
+              onChange={(e) => setGeselecteerdQrFormaat(e.target.value)}
+            >
+              {LABEL_FORMATEN.map((f) => (
+                <option key={f.id} value={f.id}>{f.label}</option>
+              ))}
+            </select>
+          ) : (
+            <select
+              className="text-xs border rounded px-2 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-ring"
+              value={geselecteerdBarcodeFormaat}
+              onChange={(e) => setGeselecteerdBarcodeFormaat(e.target.value)}
+            >
+              {BARCODE_FORMATEN.map((f) => (
+                <option key={f.id} value={f.id}>{f.label}</option>
+              ))}
+            </select>
+          )}
 
           {/* Aantal */}
           <div className="flex items-center gap-1.5">
@@ -303,7 +518,7 @@ export default function MagazijnArtikelLabelPagina() {
 
           <Button size="sm" onClick={() => window.print()}>
             <Printer className="h-4 w-4 mr-1.5" />
-            Afdrukken (Dymo)
+            Afdrukken
           </Button>
         </div>
       </div>
@@ -311,32 +526,51 @@ export default function MagazijnArtikelLabelPagina() {
       {/* ── Instructiebalk ───────────────────────────────────────────────── */}
       <div className="no-print bg-amber-50 border-b border-amber-200 px-6 py-2.5 flex items-start gap-2.5 text-xs text-amber-800">
         <Info className="h-3.5 w-3.5 shrink-0 mt-0.5" />
-        <span>
-          Klik op <strong>Afdrukken</strong>, selecteer uw <strong>Dymo LabelWriter 450</strong> als printer en
-          stel het papierformaat in op <strong>{fmt.breedte} × {fmt.hoogte} mm</strong>.
-          Zet marges op <strong>0 mm</strong> voor een exacte pasvorm.
-          De QR-code leidt direct naar de artikelpagina in FPS Connect.
-        </span>
+        {modus === "qr" ? (
+          <span>
+            Klik op <strong>Afdrukken</strong>, selecteer uw <strong>Dymo LabelWriter 450</strong> als printer en
+            stel het papierformaat in op <strong>{qrFmt.breedte} × {qrFmt.hoogte} mm</strong>.
+            Zet marges op <strong>0 mm</strong>. De QR-code leidt direct naar de artikelpagina in FPS Connect.
+          </span>
+        ) : (
+          <span>
+            {barcodeWaarde
+              ? <>
+                  Barcode (Code 128) op basis van{" "}
+                  <strong>{artikel.barcode ? "het barcodesveld" : "de artikelcode"}</strong> ({barcodeWaarde}).
+                  Klik op <strong>Afdrukken</strong> en stel het papierformaat in op{" "}
+                  <strong>{barcodeFmt.breedte} × {barcodeFmt.hoogte} mm</strong>.
+                  Zet marges op <strong>0 mm</strong>.
+                </>
+              : <span className="text-red-700 font-medium">
+                  Dit artikel heeft geen artikelcode of barcode. Vul eerst een artikelcode of barcode in via de detailpagina.
+                </span>
+            }
+          </span>
+        )}
       </div>
 
       {/* ── Labelpreview ─────────────────────────────────────────────────── */}
       <div className="print-container p-8 flex flex-col items-center gap-5">
-        {labels.map((_, i) => (
-          <ArtikelLabelInhoud key={i} artikel={artikel} fmt={fmt} />
-        ))}
+        {modus === "qr"
+          ? labels.map((_, i) => (
+              <ArtikelLabelInhoud key={i} artikel={artikel} fmt={qrFmt} />
+            ))
+          : labels.map((_, i) => (
+              <BarcodeLabelInhoud key={i} artikel={artikel} fmt={barcodeFmt} locatieNaam={locatieNaam} />
+            ))
+        }
 
         {/* Toelichting onder preview — alleen op scherm */}
         <div className="no-print mt-2 text-xs text-muted-foreground text-center space-y-1">
           <div className="flex items-center justify-center gap-1.5">
-            <Tag className="h-3.5 w-3.5" />
+            {modus === "qr" ? <Tag className="h-3.5 w-3.5" /> : <Barcode className="h-3.5 w-3.5" />}
             <span>
-              Preview op schermschaal — afdruk past op {fmt.breedte} × {fmt.hoogte} mm Dymo-label
+              Preview op schermschaal — afdruk past op {activeFmt.breedte} × {activeFmt.hoogte} mm label
             </span>
           </div>
           {aantalLabels > 1 && (
-            <p>
-              {aantalLabels} identieke labels worden afgedrukt (elk op een apart etiket)
-            </p>
+            <p>{aantalLabels} identieke labels worden afgedrukt (elk op een apart etiket)</p>
           )}
         </div>
       </div>
