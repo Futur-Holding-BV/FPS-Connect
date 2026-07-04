@@ -65,6 +65,8 @@ tags:
     description: Centrale AI-laag — formulierinvullen, patroonherkenning en intelligente aanvulling
   - name: avg
     description: AVG / GDPR — inzageverzoeken, verwijderverzoeken, anonimisering en inactieve accounts
+  - name: pim
+    description: Project Intelligence Model — AI-context en fasebeheer per opdracht; aanvraagstroom (FPS One)
 
 paths:
   /healthz:
@@ -10128,6 +10130,79 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Inkoopbon"
+
+  # ── PIM — Project Intelligence Model ────────────────────────────────────────
+
+  /aanvragen:
+    post:
+      operationId: maakAanvraag
+      tags: [pim]
+      summary: FPS One aanvraagstroom — maakt opdracht en PIM in één stap aan
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AanvraagInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AanvraagResultaat"
+        "400":
+          description: Ongeldige invoer
+
+  /opdrachten/{id}/pim:
+    get:
+      operationId: getPim
+      tags: [pim]
+      summary: PIM ophalen voor een opdracht (klantperspectief gemaskeerd)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PimModel"
+        "404":
+          description: PIM niet gevonden voor deze opdracht
+
+  /opdrachten/{id}/pim/fase:
+    patch:
+      operationId: updatePimFase
+      tags: [pim]
+      summary: AI-fase van een opdracht bijwerken (logt overgang in audittrail)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PimFaseInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PimFaseResultaat"
+        "400":
+          description: Ongeldige fase
+        "404":
+          description: Opdracht niet gevonden
 
   /opdrachten/{id}/onderaanneming:
     get:
@@ -25940,6 +26015,9 @@ components:
           type: ["string", "null"]
         begroting_totaal_arbeid_uren:
           type: ["number", "null"]
+        ai_fase:
+          type: ["string", "null"]
+          description: "AI-fasering: nieuw | advies | werkvoorbereiding | inkoop | uitvoering | oplevering | gereed"
 
     MaakOpdrachtInput:
       type: object
@@ -25961,6 +26039,82 @@ components:
         omschrijving:
           type: string
         werknummer:
+          type: string
+
+    AanvraagInput:
+      type: object
+      required: [titel]
+      properties:
+        titel:
+          type: string
+        gebouw_id:
+          type: integer
+        omschrijving:
+          type: string
+        aanvraag_via_one:
+          type: boolean
+          description: true als aanvraag via FPS One (klantportaal) binnenkomt
+        aanvraag_context:
+          type: object
+          description: AI-context van de aanvraag (vrije JSONB)
+
+    AanvraagResultaat:
+      type: object
+      required: [opdracht_id, pim_id]
+      properties:
+        opdracht_id:
+          type: integer
+        pim_id:
+          type: integer
+
+    PimModel:
+      type: object
+      required: [id, opdracht_id, aanvraag_via_one, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id:
+          type: integer
+        opdracht_id:
+          type: integer
+        aanvraag_via_one:
+          type: boolean
+        aanvraag_context:
+          type: ["object", "null"]
+          description: AI-context van de aanvraag
+        advies_context:
+          type: ["object", "null"]
+          description: AI-advies resultaat
+        oplevering_context:
+          type: ["object", "null"]
+          description: AI-context van de oplevering
+        werkvoorbereiding_context:
+          type: ["object", "null"]
+          description: AI-context werkvoorbereiding (verborgen voor klantrol)
+        inkoop_context:
+          type: ["object", "null"]
+          description: "Inkoop AI-context: { werkpakket_sleutel: [inkoopplan_regel_ids] } (verborgen voor klantrol)"
+        uitvoerings_log:
+          type: ["object", "null"]
+          description: Uitvoering observaties en AI-analyse (verborgen voor klantrol)
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+
+    PimFaseInput:
+      type: object
+      required: [fase]
+      properties:
+        fase:
+          type: string
+          description: "Geldige waarden: nieuw | advies | werkvoorbereiding | inkoop | uitvoering | oplevering | gereed"
+
+    PimFaseResultaat:
+      type: object
+      required: [opdracht_id, ai_fase]
+      properties:
+        opdracht_id:
+          type: integer
+        ai_fase:
           type: string
 
     WerkbegrotingRegel:

@@ -4955,6 +4955,11 @@ export interface Opdracht {
   begroting_status?: string | null;
   /** @nullable */
   begroting_totaal_arbeid_uren?: number | null;
+  /**
+     * AI-fasering: nieuw | advies | werkvoorbereiding | inkoop | uitvoering | oplevering | gereed
+     * @nullable
+     */
+  ai_fase?: string | null;
 }
 
 export interface MaakOpdrachtInput {
@@ -4968,6 +4973,110 @@ export interface OpdrachtPatch {
   status?: string;
   omschrijving?: string;
   werknummer?: string;
+}
+
+/**
+ * AI-context van de aanvraag (vrije JSONB)
+ */
+export type AanvraagInputAanvraagContext = { [key: string]: unknown };
+
+export interface AanvraagInput {
+  titel: string;
+  gebouw_id?: number;
+  omschrijving?: string;
+  /** true als aanvraag via FPS One (klantportaal) binnenkomt */
+  aanvraag_via_one?: boolean;
+  /** AI-context van de aanvraag (vrije JSONB) */
+  aanvraag_context?: AanvraagInputAanvraagContext;
+}
+
+export interface AanvraagResultaat {
+  opdracht_id: number;
+  pim_id: number;
+}
+
+/**
+ * AI-context van de aanvraag
+ * @nullable
+ */
+export type PimModelAanvraagContext = { [key: string]: unknown } | null;
+
+/**
+ * AI-advies resultaat
+ * @nullable
+ */
+export type PimModelAdviesContext = { [key: string]: unknown } | null;
+
+/**
+ * AI-context van de oplevering
+ * @nullable
+ */
+export type PimModelOpleveringContext = { [key: string]: unknown } | null;
+
+/**
+ * AI-context werkvoorbereiding (verborgen voor klantrol)
+ * @nullable
+ */
+export type PimModelWerkvoorbereidingContext = { [key: string]: unknown } | null;
+
+/**
+ * Inkoop AI-context: { werkpakket_sleutel: [inkoopplan_regel_ids] } (verborgen voor klantrol)
+ * @nullable
+ */
+export type PimModelInkoopContext = { [key: string]: unknown } | null;
+
+/**
+ * Uitvoering observaties en AI-analyse (verborgen voor klantrol)
+ * @nullable
+ */
+export type PimModelUitvoeringsLog = { [key: string]: unknown } | null;
+
+export interface PimModel {
+  id: number;
+  opdracht_id: number;
+  aanvraag_via_one: boolean;
+  /**
+     * AI-context van de aanvraag
+     * @nullable
+     */
+  aanvraag_context?: PimModelAanvraagContext;
+  /**
+     * AI-advies resultaat
+     * @nullable
+     */
+  advies_context?: PimModelAdviesContext;
+  /**
+     * AI-context van de oplevering
+     * @nullable
+     */
+  oplevering_context?: PimModelOpleveringContext;
+  /**
+     * AI-context werkvoorbereiding (verborgen voor klantrol)
+     * @nullable
+     */
+  werkvoorbereiding_context?: PimModelWerkvoorbereidingContext;
+  /**
+     * Inkoop AI-context: { werkpakket_sleutel: [inkoopplan_regel_ids] } (verborgen voor klantrol)
+     * @nullable
+     */
+  inkoop_context?: PimModelInkoopContext;
+  /**
+     * Uitvoering observaties en AI-analyse (verborgen voor klantrol)
+     * @nullable
+     */
+  uitvoerings_log?: PimModelUitvoeringsLog;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export interface PimFaseInput {
+  /** Geldige waarden: nieuw | advies | werkvoorbereiding | inkoop | uitvoering | oplevering | gereed */
+  fase: string;
+}
+
+export interface PimFaseResultaat {
+  opdracht_id: number;
+  ai_fase: string;
 }
 
 export interface WerkbegrotingRegel {

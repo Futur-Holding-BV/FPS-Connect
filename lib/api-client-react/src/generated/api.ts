@@ -20,8 +20,10 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  AanvraagInput,
   AanvraagPlanning,
   AanvraagPlanningPatch,
+  AanvraagResultaat,
   Abonnement,
   AbonnementInput,
   AbonnementUpdate,
@@ -549,6 +551,9 @@ import type {
   OrgVerzekering,
   OrgVerzekeringInput,
   OvernemenSnagstreamSnag201,
+  PimFaseInput,
+  PimFaseResultaat,
+  PimModel,
   PlanningAfwezigheid,
   PlanningAfwezigheidInput,
   PlanningDiagnose,
@@ -35750,6 +35755,224 @@ export const useVerzendInkoopbon = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getVerzendInkoopbonMutationOptions(options));
+    }
+
+export const getMaakAanvraagUrl = () => {
+
+
+
+
+  return `/api/aanvragen`
+}
+
+/**
+ * @summary FPS One aanvraagstroom — maakt opdracht en PIM in één stap aan
+ */
+export const maakAanvraag = async (aanvraagInput: AanvraagInput, options?: RequestInit): Promise<AanvraagResultaat> => {
+
+  return customFetch<AanvraagResultaat>(getMaakAanvraagUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(aanvraagInput)
+  }
+);}
+
+
+
+
+export const getMaakAanvraagMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof maakAanvraag>>, TError,{data: BodyType<AanvraagInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof maakAanvraag>>, TError,{data: BodyType<AanvraagInput>}, TContext> => {
+
+const mutationKey = ['maakAanvraag'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof maakAanvraag>>, {data: BodyType<AanvraagInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  maakAanvraag(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type MaakAanvraagMutationResult = NonNullable<Awaited<ReturnType<typeof maakAanvraag>>>
+    export type MaakAanvraagMutationBody = BodyType<AanvraagInput>
+    export type MaakAanvraagMutationError = ErrorType<void>
+
+    /**
+ * @summary FPS One aanvraagstroom — maakt opdracht en PIM in één stap aan
+ */
+export const useMaakAanvraag = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof maakAanvraag>>, TError,{data: BodyType<AanvraagInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof maakAanvraag>>,
+        TError,
+        {data: BodyType<AanvraagInput>},
+        TContext
+      > => {
+      return useMutation(getMaakAanvraagMutationOptions(options));
+    }
+
+export const getGetPimUrl = (id: number,) => {
+
+
+
+
+  return `/api/opdrachten/${id}/pim`
+}
+
+/**
+ * @summary PIM ophalen voor een opdracht (klantperspectief gemaskeerd)
+ */
+export const getPim = async (id: number, options?: RequestInit): Promise<PimModel> => {
+
+  return customFetch<PimModel>(getGetPimUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPimQueryKey = (id: number,) => {
+    return [
+    `/api/opdrachten/${id}/pim`
+    ] as const;
+    }
+
+
+export const getGetPimQueryOptions = <TData = Awaited<ReturnType<typeof getPim>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPim>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPimQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPim>>> = ({ signal }) => getPim(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPim>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetPimQueryResult = NonNullable<Awaited<ReturnType<typeof getPim>>>
+export type GetPimQueryError = ErrorType<void>
+
+
+/**
+ * @summary PIM ophalen voor een opdracht (klantperspectief gemaskeerd)
+ */
+
+export function useGetPim<TData = Awaited<ReturnType<typeof getPim>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPim>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetPimQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUpdatePimFaseUrl = (id: number,) => {
+
+
+
+
+  return `/api/opdrachten/${id}/pim/fase`
+}
+
+/**
+ * @summary AI-fase van een opdracht bijwerken (logt overgang in audittrail)
+ */
+export const updatePimFase = async (id: number,
+    pimFaseInput: PimFaseInput, options?: RequestInit): Promise<PimFaseResultaat> => {
+
+  return customFetch<PimFaseResultaat>(getUpdatePimFaseUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(pimFaseInput)
+  }
+);}
+
+
+
+
+export const getUpdatePimFaseMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updatePimFase>>, TError,{id: number;data: BodyType<PimFaseInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updatePimFase>>, TError,{id: number;data: BodyType<PimFaseInput>}, TContext> => {
+
+const mutationKey = ['updatePimFase'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updatePimFase>>, {id: number;data: BodyType<PimFaseInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updatePimFase(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdatePimFaseMutationResult = NonNullable<Awaited<ReturnType<typeof updatePimFase>>>
+    export type UpdatePimFaseMutationBody = BodyType<PimFaseInput>
+    export type UpdatePimFaseMutationError = ErrorType<void>
+
+    /**
+ * @summary AI-fase van een opdracht bijwerken (logt overgang in audittrail)
+ */
+export const useUpdatePimFase = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updatePimFase>>, TError,{id: number;data: BodyType<PimFaseInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updatePimFase>>,
+        TError,
+        {id: number;data: BodyType<PimFaseInput>},
+        TContext
+      > => {
+      return useMutation(getUpdatePimFaseMutationOptions(options));
     }
 
 export const getListOnderaannemeOrdersUrl = (id: number,) => {

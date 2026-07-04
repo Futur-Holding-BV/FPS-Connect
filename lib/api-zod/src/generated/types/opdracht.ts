@@ -42,4 +42,9 @@ export interface Opdracht {
   begroting_status?: string | null;
   /** @nullable */
   begroting_totaal_arbeid_uren?: number | null;
+  /**
+     * AI-fasering: nieuw | advies | werkvoorbereiding | inkoop | uitvoering | oplevering | gereed
+     * @nullable
+     */
+  ai_fase?: string | null;
 }

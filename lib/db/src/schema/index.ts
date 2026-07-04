@@ -54,3 +54,4 @@ export * from "./meldingen";
 export * from "./eenheidsprijzen";
 export * from "./fie";
 export * from "./avg";
+export * from "./pim";

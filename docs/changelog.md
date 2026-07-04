@@ -4,6 +4,29 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-04 — PIM Fase A — Foundation (datamodel & bare API)
+
+**Uitvoering:** volledig | **Getest:** DB-tabellen geverifieerd, alle 3 routes geven 401 (niet 404), typecheck clean (alleen pre-existing TS7030 in offertes.ts)
+
+Project Intelligence Model Fase A gebouwd — de datafundamenten voor de AI Opdrachtregisseur:
+
+**Datamodel (lib/db/src/schema/pim.ts):**
+- `pim_modellen` tabel: 1:1 aan opdracht, `aanvraag_via_one` vlag, 6 JSONB context-velden (aanvraag/advies/werkvoorbereiding/inkoop/uitvoering/oplevering). Strikte scheiding: ALLEEN AI-context, nooit operationele data.
+- `pim_uitvoering_stappen` tabel: volgorde, status (open/actief/voltooid/afgeweken/overgeslagen), instructie/antwoorden/foto-urls/analyse/afwijking als JSONB/array.
+- Partial unique index `pim_stap_actief_uniq`: één actief/afgeweken stap per PIM tegelijk (integriteitsgarantie).
+
+**Additieve DB-wijzigingen (directe SQL, geen drizzle push):**
+- `opdrachten.ai_fase` (nullable text) — AI-fasering zichtbaar op de opdracht.
+- `document_koppelingen_doel_type_check` constraint uitgebreid: `'opdracht'` toegevoegd aan de toegestane doel_types.
+
+**API-routes (artifacts/api-server/src/routes/pim.ts):**
+- `POST /aanvragen` — FPS One aanvraagstroom: maakt opdracht + PIM in één transactie aan; `aanvraag_via_one=true` voor klantportalinstroom.
+- `GET /opdrachten/:id/pim` — klantperspectief-filter: klantrol ziet alleen aanvraag/advies/oplevering context; werkvoorbereiding/inkoop/uitvoerings_log verborgen.
+- `PATCH /opdrachten/:id/pim/fase` — fase-overgang met auditlogboek (actie `pim_fase_overgang` in document_logboek); geldige fasen: nieuw→advies→werkvoorbereiding→inkoop→uitvoering→oplevering→gereed.
+- `mapOpdracht` bijgewerkt met `ai_fase` veld.
+
+**OpenAPI + codegen:** tag `pim`, 3 paden, 5 schema's (AanvraagInput, AanvraagResultaat, PimModel, PimFaseInput, PimFaseResultaat), `ai_fase` aan Opdracht schema toegevoegd. Codegen succesvol gedraaid.
+
 ## 2026-07-04 — Fix: GET /api geeft 200 i.p.v. 500 (deployment healthcheck blocker)
 
 **Uitvoering:** volledig | **Getest:** curl GET /api → 200 {"status":"ok"}, curl GET /api/healthz → 200 {"status":"ok"}

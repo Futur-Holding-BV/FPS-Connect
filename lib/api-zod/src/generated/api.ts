@@ -11625,7 +11625,8 @@ export const ListOpdrachtenResponseItem = zod.object({
   "bijgewerkt_op": zod.string(),
   "begroting_id": zod.number().nullish(),
   "begroting_status": zod.string().nullish(),
-  "begroting_totaal_arbeid_uren": zod.number().nullish()
+  "begroting_totaal_arbeid_uren": zod.number().nullish(),
+  "ai_fase": zod.string().nullish().describe('AI-fasering: nieuw | advies | werkvoorbereiding | inkoop | uitvoering | oplevering | gereed')
 })
 export const ListOpdrachtenResponse = zod.array(ListOpdrachtenResponseItem)
 
@@ -11657,7 +11658,8 @@ export const GetOpdrachtResponse = zod.object({
   "bijgewerkt_op": zod.string(),
   "begroting_id": zod.number().nullish(),
   "begroting_status": zod.string().nullish(),
-  "begroting_totaal_arbeid_uren": zod.number().nullish()
+  "begroting_totaal_arbeid_uren": zod.number().nullish(),
+  "ai_fase": zod.string().nullish().describe('AI-fasering: nieuw | advies | werkvoorbereiding | inkoop | uitvoering | oplevering | gereed')
 })
 
 
@@ -11694,7 +11696,8 @@ export const UpdateOpdrachtResponse = zod.object({
   "bijgewerkt_op": zod.string(),
   "begroting_id": zod.number().nullish(),
   "begroting_status": zod.string().nullish(),
-  "begroting_totaal_arbeid_uren": zod.number().nullish()
+  "begroting_totaal_arbeid_uren": zod.number().nullish(),
+  "ai_fase": zod.string().nullish().describe('AI-fasering: nieuw | advies | werkvoorbereiding | inkoop | uitvoering | oplevering | gereed')
 })
 
 
@@ -12413,6 +12416,73 @@ export const VerzendInkoopbonResponse = zod.object({
   "totaal": zod.number().nullish(),
   "volgorde": zod.number()
 })).optional()
+})
+
+
+/**
+ * @summary FPS One aanvraagstroom — maakt opdracht en PIM in één stap aan
+ */
+export const MaakAanvraagBody = zod.object({
+  "titel": zod.string(),
+  "gebouw_id": zod.number().optional(),
+  "omschrijving": zod.string().optional(),
+  "aanvraag_via_one": zod.boolean().optional().describe('true als aanvraag via FPS One (klantportaal) binnenkomt'),
+  "aanvraag_context": zod.object({
+
+}).passthrough().optional().describe('AI-context van de aanvraag (vrije JSONB)')
+})
+
+export const MaakAanvraagResponse = zod.void()
+
+
+/**
+ * @summary PIM ophalen voor een opdracht (klantperspectief gemaskeerd)
+ */
+export const GetPimParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetPimResponse = zod.object({
+  "id": zod.number(),
+  "opdracht_id": zod.number(),
+  "aanvraag_via_one": zod.boolean(),
+  "aanvraag_context": zod.object({
+
+}).passthrough().nullish().describe('AI-context van de aanvraag'),
+  "advies_context": zod.object({
+
+}).passthrough().nullish().describe('AI-advies resultaat'),
+  "oplevering_context": zod.object({
+
+}).passthrough().nullish().describe('AI-context van de oplevering'),
+  "werkvoorbereiding_context": zod.object({
+
+}).passthrough().nullish().describe('AI-context werkvoorbereiding (verborgen voor klantrol)'),
+  "inkoop_context": zod.object({
+
+}).passthrough().nullish().describe('Inkoop AI-context: { werkpakket_sleutel: [inkoopplan_regel_ids] } (verborgen voor klantrol)'),
+  "uitvoerings_log": zod.object({
+
+}).passthrough().nullish().describe('Uitvoering observaties en AI-analyse (verborgen voor klantrol)'),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary AI-fase van een opdracht bijwerken (logt overgang in audittrail)
+ */
+export const UpdatePimFaseParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdatePimFaseBody = zod.object({
+  "fase": zod.string().describe('Geldige waarden: nieuw | advies | werkvoorbereiding | inkoop | uitvoering | oplevering | gereed')
+})
+
+export const UpdatePimFaseResponse = zod.object({
+  "opdracht_id": zod.number(),
+  "ai_fase": zod.string()
 })
 
 

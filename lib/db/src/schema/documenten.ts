@@ -73,7 +73,7 @@ export const documentKoppelingenTable = pgTable("document_koppelingen", {
   doelIdx: index("document_koppelingen_doel_idx").on(t.doelType, t.doelId),
   doelTypeCheck: check(
     "document_koppelingen_doel_type_check",
-    sql`${t.doelType} in ('gebouw','klant','offerte','dossier','voorziening')`,
+    sql`${t.doelType} in ('gebouw','klant','offerte','dossier','voorziening','opdracht')`,
   ),
 }));
 export type DocumentKoppeling = typeof documentKoppelingenTable.$inferSelect;

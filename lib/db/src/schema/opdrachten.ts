@@ -23,6 +23,9 @@ export const opdrachtenTable = pgTable("opdrachten", {
   budgetUren: real("budget_uren"),
   // actief | afgerond | gepauzeerd | geannuleerd
   status: text("status").notNull().default("actief"),
+  // AI-fasering voor het Project Intelligence Model (PIM).
+  // nieuw | advies | werkvoorbereiding | inkoop | uitvoering | oplevering | gereed
+  aiFase: text("ai_fase"),
   aangemaaktDoorId: integer("aangemaakt_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),

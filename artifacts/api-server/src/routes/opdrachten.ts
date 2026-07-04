@@ -63,6 +63,7 @@ function mapOpdracht(
     begroting_id: begrotingId,
     begroting_status: begrotingStatus,
     begroting_totaal_arbeid_uren: begrotingUren,
+    ai_fase: o.aiFase ?? null,
   };
 }
 
