@@ -95,7 +95,13 @@ function BevindingKaart({
   const qc = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const { uploadFile, isUploading } = useUpload({
+  const {
+    uploadFile,
+    retryUpload,
+    isUploading,
+    error: uploadError,
+    uploadFoutType,
+  } = useUpload({
     gebouw_id: gebouwId ?? 0,
     bestand_type: "inspectie",
   });
@@ -127,13 +133,16 @@ function BevindingKaart({
   });
 
   async function verwerkFoto(file: File) {
-    try {
-      const res = await uploadFile(file);
-      if (res?.objectPath) {
-        addFotoMutatie.mutate({ id: inspectieId, bevId: bev.id, data: { url: res.objectPath } });
-      }
-    } catch {
-      toast({ title: "Uploaden mislukt", variant: "destructive" });
+    const res = await uploadFile(file);
+    if (res?.objectPath) {
+      addFotoMutatie.mutate({ id: inspectieId, bevId: bev.id, data: { url: res.objectPath } });
+    }
+  }
+
+  async function probeerFotoOpnieuw() {
+    const res = await retryUpload();
+    if (res?.objectPath) {
+      addFotoMutatie.mutate({ id: inspectieId, bevId: bev.id, data: { url: res.objectPath } });
     }
   }
 
@@ -229,7 +238,7 @@ function BevindingKaart({
               className="hidden"
               onChange={(e) => {
                 const file = e.target.files?.[0];
-                if (file) verwerkFoto(file);
+                if (file) void verwerkFoto(file);
                 e.target.value = "";
               }}
             />
@@ -271,6 +280,41 @@ function BevindingKaart({
             </Button>
           </div>
         </div>
+        {uploadError && (
+          <div className="mt-2 rounded-md border border-destructive/40 bg-destructive/5 p-2 space-y-1.5">
+            <p className="text-xs text-destructive flex items-center gap-1.5">
+              <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+              {uploadFoutType === "netwerk"
+                ? "Verbinding tijdelijk weggevallen"
+                : uploadFoutType === "bestandstype"
+                  ? "Bestandstype geweigerd"
+                  : "Foto-upload mislukt"}
+            </p>
+            <p className="text-xs text-muted-foreground">{uploadError.message}</p>
+            <div className="flex gap-2">
+              {uploadFoutType !== "bestandstype" && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 text-xs"
+                  disabled={isUploading}
+                  onClick={() => void probeerFotoOpnieuw()}
+                >
+                  Opnieuw proberen
+                </Button>
+              )}
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 text-xs"
+                disabled={isUploading}
+                onClick={() => fileRef.current?.click()}
+              >
+                Ander bestand kiezen
+              </Button>
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

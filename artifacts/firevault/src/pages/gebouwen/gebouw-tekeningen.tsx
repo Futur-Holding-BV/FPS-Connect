@@ -28,13 +28,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  AlertTriangle,
   FileText,
   Loader2,
   Plus,
-  TriangleAlert,
-  X,
-  Upload,
   Sparkles,
+  Upload,
+  X,
 } from "lucide-react";
 import { TekeningViewer } from "./tekening-viewer";
 
@@ -85,9 +85,15 @@ export default function GebouwTekeningen({
   const verwijderTekening = useDeleteGebouwTekening();
   const maakVerdieping = useCreateVerdieping();
   const analyseTekening = useAiAnalyseTekening();
-  const { uploadFile, isUploading } = useUpload({ gebouw_id: gebouwId, bestand_type: "tekening" });
+  const {
+    uploadFile,
+    isUploading,
+    error: uploadError,
+    uploadFoutType,
+  } = useUpload({ gebouw_id: gebouwId, bestand_type: "tekening" });
 
   const inputRef = useRef<HTMLInputElement>(null);
+  const lastBestandRef = useRef<File | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [naam, setNaam] = useState("");
   const [type, setType] = useState("gevelaanzicht");
@@ -117,19 +123,18 @@ export default function GebouwTekeningen({
   async function kiesBestand(file: File) {
     setFout("");
     setBestandGrootte(file.size);
-    try {
-      const res = await uploadFile(file);
-      if (!res) {
-        setFout("Uploaden mislukt. Probeer het opnieuw.");
-        return;
-      }
-      setObjectPath(res.objectPath);
-      setBestandsnaam(file.name);
-      if (!naam) setNaam(file.name.replace(/\.[^.]+$/, ""));
-      await analyseerBestand(file.name);
-    } catch {
-      setFout("Uploaden mislukt. Probeer het opnieuw.");
-    }
+    lastBestandRef.current = file;
+    const res = await uploadFile(file);
+    if (!res) return;
+    setObjectPath(res.objectPath);
+    setBestandsnaam(file.name);
+    if (!naam) setNaam(file.name.replace(/\.[^.]+$/, ""));
+    await analyseerBestand(file.name);
+  }
+
+  async function probeerOpnieuw() {
+    if (!lastBestandRef.current) return;
+    await kiesBestand(lastBestandRef.current);
   }
 
   async function analyseerBestand(naamVanBestand: string) {
@@ -169,6 +174,7 @@ export default function GebouwTekeningen({
     setAiVoorstel(null);
     setFout("");
     setFormOpen(false);
+    lastBestandRef.current = null;
   }
 
   async function opslaan() {
@@ -437,28 +443,66 @@ export default function GebouwTekeningen({
               </div>
               <div className="space-y-1">
                 <Label>Bestand</Label>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full justify-start font-normal"
-                  disabled={isUploading}
-                  onClick={() => inputRef.current?.click()}
-                >
-                  {isUploading ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  ) : (
-                    <Upload className="h-4 w-4 mr-2" />
-                  )}
-                  <span className="truncate">
-                    {bestandsnaam || "Kies PDF of afbeelding"}
-                  </span>
-                </Button>
+                {uploadError && !objectPath ? (
+                  <div className="rounded-md border border-destructive/40 bg-destructive/5 p-2 space-y-1.5">
+                    <p className="text-xs text-destructive flex items-center gap-1.5">
+                      <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                      {uploadFoutType === "netwerk"
+                        ? "Verbinding tijdelijk weggevallen"
+                        : uploadFoutType === "bestandstype"
+                          ? "Bestandstype geweigerd"
+                          : "Upload mislukt"}
+                    </p>
+                    <p className="text-xs text-muted-foreground">{uploadError.message}</p>
+                    <div className="flex gap-2">
+                      {uploadFoutType !== "bestandstype" && (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-xs"
+                          disabled={isUploading}
+                          onClick={probeerOpnieuw}
+                        >
+                          Opnieuw proberen
+                        </Button>
+                      )}
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="h-7 text-xs"
+                        disabled={isUploading}
+                        onClick={() => inputRef.current?.click()}
+                      >
+                        Ander bestand kiezen
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full justify-start font-normal"
+                    disabled={isUploading}
+                    onClick={() => inputRef.current?.click()}
+                  >
+                    {isUploading ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Upload className="h-4 w-4 mr-2" />
+                    )}
+                    <span className="truncate">
+                      {bestandsnaam || "Kies PDF of afbeelding"}
+                    </span>
+                  </Button>
+                )}
                 {bestandGrootte !== null && (
                   <p className="text-xs text-muted-foreground">{formateerGrootte(bestandGrootte)}</p>
                 )}
                 {bestandGrootte !== null && bestandGrootte > GROOT_BESTAND_GRENS && (
                   <div className="flex items-start gap-2 rounded-md bg-amber-50 border border-amber-200 px-3 py-2 text-sm text-amber-800">
-                    <TriangleAlert className="h-4 w-4 shrink-0 mt-0.5 text-amber-500" />
+                    <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5 text-amber-500" />
                     <span>Groot bestand ({formateerGrootte(bestandGrootte)}) — overweeg een geoptimaliseerde versie</span>
                   </div>
                 )}

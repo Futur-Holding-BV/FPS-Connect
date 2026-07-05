@@ -32,7 +32,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { ExternalLink, FileText, Plus, X, Sparkles, Check, Trash2, Upload } from "lucide-react";
+import { ExternalLink, FileText, Plus, X, Sparkles, Check, Trash2, Upload, AlertTriangle } from "lucide-react";
 import { useUpload } from "@workspace/object-storage-web";
 import { TYPE_LABELS, foutmelding, statusBadge } from "./documenten-tab";
 
@@ -132,7 +132,13 @@ function ToepassingDetailInhoud({
   // Productfoto: lokale spiegel van de serverwaarden zodat upload/bevestigen/verwijderen
   // direct zichtbaar zijn (eigen mutaties, los van de Opslaan-knop voor de basisvelden).
   const fotoInputRef = useRef<HTMLInputElement>(null);
-  const { uploadFile, isUploading } = useUpload();
+  const {
+    uploadFile,
+    retryUpload,
+    isUploading,
+    error: uploadError,
+    uploadFoutType,
+  } = useUpload();
   const [fotoUrl, setFotoUrl] = useState<string | null>(toepassing.product_foto_url ?? null);
   const [fotoBron, setFotoBron] = useState<string | null>(toepassing.product_foto_bron ?? null);
   const [fotoGeverifieerd, setFotoGeverifieerd] = useState<boolean>(
@@ -161,9 +167,9 @@ function ToepassingDetailInhoud({
   // Handmatige upload door een beheerder telt als bevestigd (mens kiest de foto zelf).
   async function uploadFoto(file: File) {
     setFout("");
+    const res = await uploadFile(file);
+    if (!res) return;
     try {
-      const res = await uploadFile(file);
-      if (!res) throw new Error("Upload mislukt");
       const l = await wijzigLabel.mutateAsync({
         id: toepassing.id,
         data: {
@@ -176,9 +182,32 @@ function ToepassingDetailInhoud({
       await vernieuwLijst();
       toast({ title: "Productfoto bijgewerkt" });
     } catch (err) {
-      const m = foutmelding(err, "Uploaden van de productfoto is mislukt.");
+      const m = foutmelding(err, "Opslaan van de productfoto is mislukt.");
       setFout(m);
-      toast({ title: "Upload mislukt", description: m, variant: "destructive" });
+      toast({ title: "Opslaan mislukt", description: m, variant: "destructive" });
+    }
+  }
+
+  async function probeerFotoOpnieuw() {
+    setFout("");
+    const res = await retryUpload();
+    if (!res) return;
+    try {
+      const l = await wijzigLabel.mutateAsync({
+        id: toepassing.id,
+        data: {
+          product_foto_url: res.objectPath,
+          product_foto_bron: "handmatig",
+          product_foto_geverifieerd: true,
+        },
+      });
+      pasFotoToe(l);
+      await vernieuwLijst();
+      toast({ title: "Productfoto bijgewerkt" });
+    } catch (err) {
+      const m = foutmelding(err, "Opslaan van de productfoto is mislukt.");
+      setFout(m);
+      toast({ title: "Opslaan mislukt", description: m, variant: "destructive" });
     }
   }
 
@@ -417,6 +446,41 @@ function ToepassingDetailInhoud({
             <p className="text-xs text-muted-foreground rounded-md border border-dashed p-3 text-center">
               Nog geen productfoto.
             </p>
+          )}
+          {uploadError && (
+            <div className="rounded-md border border-destructive/40 bg-destructive/5 p-2 space-y-1.5">
+              <p className="text-xs text-destructive flex items-center gap-1.5">
+                <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                {uploadFoutType === "netwerk"
+                  ? "Verbinding tijdelijk weggevallen"
+                  : uploadFoutType === "bestandstype"
+                    ? "Bestandstype geweigerd"
+                    : "Upload mislukt"}
+              </p>
+              <p className="text-xs text-muted-foreground">{uploadError.message}</p>
+              <div className="flex gap-2">
+                {uploadFoutType !== "bestandstype" && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-7 text-xs"
+                    disabled={fotoBezig}
+                    onClick={() => void probeerFotoOpnieuw()}
+                  >
+                    Opnieuw proberen
+                  </Button>
+                )}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 text-xs"
+                  disabled={fotoBezig}
+                  onClick={() => fotoInputRef.current?.click()}
+                >
+                  Ander bestand kiezen
+                </Button>
+              </div>
+            </div>
           )}
           <input
             ref={fotoInputRef}

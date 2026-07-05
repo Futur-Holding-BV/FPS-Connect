@@ -15,7 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Map, Loader2, Upload, ExternalLink, Plus, TriangleAlert } from "lucide-react";
+import { Map, Loader2, Upload, ExternalLink, Plus, AlertTriangle } from "lucide-react";
 
 const GROOT_BESTAND_GRENS = 10 * 1024 * 1024;
 
@@ -36,11 +36,17 @@ export default function GebouwPlattegronden({
 }) {
   const queryClient = useQueryClient();
   const updateVerdieping = useUpdateVerdieping();
-  const { uploadFile } = useUpload({ gebouw_id: gebouwId, bestand_type: "tekening" });
+  const {
+    uploadFile,
+    retryUpload,
+    error: uploadError,
+    uploadFoutType,
+  } = useUpload({ gebouw_id: gebouwId, bestand_type: "tekening" });
 
   const inputRef = useRef<HTMLInputElement>(null);
   const doelId = useRef<number | null>(null);
   const [bezigId, setBezigId] = useState<number | null>(null);
+  const [fouteId, setFouteId] = useState<number | null>(null);
   const [fout, setFout] = useState("");
   const [formOpen, setFormOpen] = useState(false);
   const [keuzeId, setKeuzeId] = useState<string>("");
@@ -63,11 +69,12 @@ export default function GebouwPlattegronden({
     if (vId == null) return;
     setFout("");
     setBestandGrootte(file.size);
+    setFouteId(null);
     setBezigId(vId);
     try {
       const upload = await uploadFile(file);
       if (!upload) {
-        setFout("Uploaden mislukt. Probeer het opnieuw.");
+        setFouteId(vId);
         return;
       }
       await updateVerdieping.mutateAsync({
@@ -80,11 +87,47 @@ export default function GebouwPlattegronden({
       setKeuzeId("");
       setBestandGrootte(null);
     } catch {
-      setFout("Uploaden mislukt. Probeer het opnieuw.");
+      setFout("Opslaan mislukt. Probeer het opnieuw.");
     } finally {
       setBezigId(null);
       doelId.current = null;
     }
+  }
+
+  async function probeerOpnieuw() {
+    if (fouteId == null) return;
+    const vId = fouteId;
+    setFout("");
+    setFouteId(null);
+    setBezigId(vId);
+    try {
+      const upload = await retryUpload();
+      if (!upload) {
+        setFouteId(vId);
+        return;
+      }
+      await updateVerdieping.mutateAsync({
+        id: vId,
+        data: { plattegrond_url: upload.objectPath },
+      });
+      queryClient.invalidateQueries();
+      setFormOpen(false);
+      setBevestigVervangen(false);
+      setKeuzeId("");
+    } catch {
+      setFout("Opslaan mislukt. Probeer het opnieuw.");
+      setFouteId(vId);
+    } finally {
+      setBezigId(null);
+    }
+  }
+
+  function kiesOpnieuw() {
+    if (fouteId == null) return;
+    setFout("");
+    setFouteId(null);
+    doelId.current = fouteId;
+    inputRef.current?.click();
   }
 
   return (
@@ -267,8 +310,42 @@ export default function GebouwPlattegronden({
 
         {bestandGrootte !== null && bestandGrootte > GROOT_BESTAND_GRENS && (
           <div className="flex items-start gap-2 rounded-md bg-amber-50 border border-amber-200 px-3 py-2 text-sm text-amber-800">
-            <TriangleAlert className="h-4 w-4 shrink-0 mt-0.5 text-amber-500" />
+            <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5 text-amber-500" />
             <span>Groot bestand ({formateerGrootte(bestandGrootte)}) — overweeg een geoptimaliseerde versie</span>
+          </div>
+        )}
+
+        {uploadError && fouteId != null && (
+          <div className="rounded-md border border-destructive/40 bg-destructive/5 p-3 space-y-2">
+            <p className="text-sm text-destructive flex items-center gap-1.5">
+              <AlertTriangle className="h-4 w-4 shrink-0" />
+              {uploadFoutType === "netwerk"
+                ? "Verbinding tijdelijk weggevallen"
+                : uploadFoutType === "bestandstype"
+                  ? "Bestandstype geweigerd"
+                  : "Upload mislukt"}
+            </p>
+            <p className="text-xs text-muted-foreground">{uploadError.message}</p>
+            <div className="flex gap-2">
+              {uploadFoutType !== "bestandstype" && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={bezigId !== null}
+                  onClick={probeerOpnieuw}
+                >
+                  Opnieuw proberen
+                </Button>
+              )}
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={bezigId !== null}
+                onClick={kiesOpnieuw}
+              >
+                Ander bestand kiezen
+              </Button>
+            </div>
           </div>
         )}
         {fout && <p className="text-sm text-destructive">{fout}</p>}
