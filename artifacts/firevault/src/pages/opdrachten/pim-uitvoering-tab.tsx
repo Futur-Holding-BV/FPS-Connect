@@ -43,6 +43,7 @@ import {
   Link2Off,
   ChevronDown,
   ChevronUp,
+  XCircle,
 } from "lucide-react";
 
 // ── Status labels & kleuren ───────────────────────────────────────────────────
@@ -344,6 +345,26 @@ function StappenOverzicht({ opdrachtId, actieveStapId }: StappenOverzichtProps) 
                     {instructie?.doel ?? `Stap ${stap.volgorde}`}
                   </span>
                   {statusBadge(weergaveStatus)}
+                  {(() => {
+                    const aiAnalyse = stap.ai_analyse_json as Record<string, unknown> | null;
+                    if (!aiAnalyse?.oordeel) return null;
+                    const oordeel = aiAnalyse.oordeel as string;
+                    if (oordeel === "akkoord") return (
+                      <span className="inline-flex items-center gap-1 text-xs text-green-700">
+                        <CheckCircle2 className="h-3 w-3" />AI akkoord
+                      </span>
+                    );
+                    if (oordeel === "twijfel") return (
+                      <span className="inline-flex items-center gap-1 text-xs text-amber-700 font-medium">
+                        <AlertTriangle className="h-3 w-3" />Aandachtspunt
+                      </span>
+                    );
+                    return (
+                      <span className="inline-flex items-center gap-1 text-xs text-red-700 font-medium">
+                        <XCircle className="h-3 w-3" />Niet akkoord
+                      </span>
+                    );
+                  })()}
                   {fotoAantal > 0 && (
                     <span className="inline-flex items-center gap-0.5 text-xs text-slate-500">
                       <Camera className="h-3 w-3" />
@@ -374,6 +395,94 @@ function StappenOverzicht({ opdrachtId, actieveStapId }: StappenOverzichtProps) 
         })}
       </CardContent>
     </Card>
+  );
+}
+
+// ── AI analyse panel (projectleider view) ────────────────────────────────────
+
+interface PimAiAnalysePanelProps {
+  analyse: Record<string, unknown>;
+}
+
+function PimAiAnalysePanel({ analyse }: PimAiAnalysePanelProps) {
+  const oordeel = typeof analyse.oordeel === "string" ? analyse.oordeel : null;
+  const isAkkoord = oordeel === "akkoord";
+  const isTwijfel = oordeel === "twijfel";
+  const risicos = Array.isArray(analyse.waargenomen_risicos) ? analyse.waargenomen_risicos as string[] : [];
+  const ontbrekend = Array.isArray(analyse.ontbrekende_bewijsstukken) ? analyse.ontbrekende_bewijsstukken as string[] : [];
+  const confidence = typeof analyse.confidence === "number" ? analyse.confidence as number : null;
+
+  return (
+    <div className={`rounded-md border p-3 space-y-2 text-sm ${
+      isAkkoord ? "border-green-200 bg-green-50" : isTwijfel ? "border-amber-200 bg-amber-50" : "border-red-200 bg-red-50"
+    }`}>
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-semibold ${
+          isAkkoord ? "bg-green-100 text-green-800" : isTwijfel ? "bg-amber-100 text-amber-800" : "bg-red-100 text-red-800"
+        }`}>
+          {isAkkoord
+            ? <CheckCircle2 className="h-3.5 w-3.5" />
+            : isTwijfel
+            ? <AlertTriangle className="h-3.5 w-3.5" />
+            : <XCircle className="h-3.5 w-3.5" />}
+          {isAkkoord ? "AI akkoord" : isTwijfel ? "AI aandachtspunt" : "AI niet akkoord"}
+        </span>
+        {confidence !== null && (
+          <span className="text-xs text-muted-foreground">{Math.round(confidence * 100)}% zekerheid</span>
+        )}
+        {typeof analyse.vision_gebruikt === "boolean" && (
+          <span className="text-xs text-muted-foreground">{analyse.vision_gebruikt ? "Foto's geanalyseerd" : "Tekstanalyse"}</span>
+        )}
+      </div>
+
+      {typeof analyse.samenvatting === "string" && (
+        <p className={`text-sm ${isAkkoord ? "text-green-900" : isTwijfel ? "text-amber-900" : "text-red-900"}`}>
+          {analyse.samenvatting}
+        </p>
+      )}
+
+      {typeof analyse.bevindingen === "string" && (
+        <div>
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-0.5">Technische bevindingen</p>
+          <p className="text-xs text-muted-foreground">{analyse.bevindingen}</p>
+        </div>
+      )}
+
+      {risicos.length > 0 && (
+        <div>
+          <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide mb-1">Waargenomen risico&#x27;s</p>
+          <ul className="space-y-0.5">
+            {risicos.map((r, i) => (
+              <li key={i} className="flex items-start gap-1.5 text-xs text-amber-900">
+                <AlertTriangle className="h-3 w-3 text-amber-500 mt-0.5 shrink-0" />
+                {r}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {ontbrekend.length > 0 && (
+        <div>
+          <p className="text-xs font-semibold text-sky-700 uppercase tracking-wide mb-1">Ontbrekende bewijsstukken</p>
+          <ul className="space-y-0.5">
+            {ontbrekend.map((b, i) => (
+              <li key={i} className="text-xs text-sky-900 flex items-start gap-1.5">
+                <ChevronRight className="h-3 w-3 mt-0.5 shrink-0 text-sky-500" />
+                {b}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {typeof analyse.herstelactie_voorstel === "string" && (
+        <div className="bg-orange-50 border border-orange-200 rounded px-2.5 py-2">
+          <p className="text-xs font-semibold text-orange-700 uppercase tracking-wide mb-0.5">Aanbevolen herstelactie</p>
+          <p className="text-xs text-orange-900">{analyse.herstelactie_voorstel}</p>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -641,6 +750,17 @@ function AfwijkingBeslisForm({ stap, opdrachtId, onGereed }: AfwijkingBeslisForm
           )}
         </div>
       )}
+
+      {(() => {
+        const aiAnalyse = stap.ai_analyse_json as Record<string, unknown> | null;
+        if (!aiAnalyse?.oordeel) return null;
+        return (
+          <div>
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">AI-kwaliteitsanalyse</p>
+            <PimAiAnalysePanel analyse={aiAnalyse} />
+          </div>
+        );
+      })()}
 
       <div className="space-y-1">
         <Label htmlFor="toelichting-beslissing">Toelichting beslissing (optioneel)</Label>

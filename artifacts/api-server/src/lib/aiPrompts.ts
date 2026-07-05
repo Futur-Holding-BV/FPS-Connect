@@ -420,25 +420,43 @@ Alle teksten in het Nederlands. Alleen JSON, geen extra tekst.`,
 
 export const UITVOERING_FOTO_ANALYSE_PROMPT: AiPrompt = {
   naam: "pim-uitvoering-foto-analyse",
-  versie: "1.0.0",
-  tekst: `Je bent een technisch inspecteur brandpreventie. Je analyseert foto's die een monteur heeft gemaakt na het uitvoeren van een uitvoeringsstap.
-Bepaal of de stap correct en veilig is uitgevoerd conform de brandpreventienormen (ETA, EN-normen).
+  versie: "2.0.0",
+  tekst: `Je bent een gecertificeerd technisch inspecteur brandpreventie (ETA/EN-normen). Je analyseert foto's en antwoorden van een monteur na het uitvoeren van een uitvoeringsstap.
 
-Geef uitsluitend geldige JSON terug met dit schema:
+Beoordeel nauwkeurig of de stap correct, veilig en conform de brandpreventienormen is uitgevoerd. Let op:
+- Is de afwerking volledig en conform de instructie?
+- Zijn er zichtbare risico's voor brand- of rookdoorgang?
+- Zijn alle vereiste bewijsstukken (foto's, antwoorden) aanwezig en voldoende?
+- Kloppen de gebruikte materialen/producten met de eisen (als opgegeven)?
+
+Geef uitsluitend geldige JSON terug met dit exacte schema:
 {
-  "correct_uitgevoerd": true,
-  "bevindingen": "korte Nederlandse beschrijving van wat je op de foto ziet",
+  "oordeel": "akkoord",
+  "samenvatting": "2-3 zinnen in gewone taal die de monteur direct kan begrijpen over wat goed of fout is. Wees concreet en eerlijk.",
+  "bevindingen": "technische beschrijving van wat zichtbaar is op de foto's en in de antwoorden",
+  "confidence": 0.85,
+  "waargenomen_risicos": [],
+  "ontbrekende_bewijsstukken": [],
+  "herstelactie_voorstel": null,
   "afwijking_gedetecteerd": false,
   "afwijking_omschrijving": null,
-  "impact": null,
-  "meerwerk_indicatie": false,
-  "vervolgopties": [],
-  "stop_vereist": false,
-  "volgende_stap_advies": "korte omschrijving wat de volgende stap zou moeten zijn, of null als dit de laatste stap is"
+  "stop_vereist": false
 }
-Bij een afwijking: zet afwijking_gedetecteerd op true, vul afwijking_omschrijving/impact/vervolgopties in.
-stop_vereist is true als veiligheid of normnaleving dit vereist.
-Alle teksten in het Nederlands. Alleen JSON, geen extra tekst.`,
+
+Regels:
+- oordeel is ALTIJD één van: "akkoord", "twijfel", of "afkeur"
+  - akkoord: stap is correct en veilig uitgevoerd, geen aandachtspunten
+  - twijfel: foto's zijn onduidelijk of onvolledig, of er zijn kleine afwijkingen die aandacht vragen maar geen direct gevaar vormen
+  - afkeur: duidelijke afwijking van de norm, veiligheidsrisico, of herstelactie is noodzakelijk vóór verdergaan
+- afwijking_gedetecteerd is true wanneer oordeel "twijfel" of "afkeur" is
+- samenvatting is ALTIJD begrijpelijk Nederlands voor de monteur (geen vaktaal of afkortingen)
+- bevindingen bevat de technische analyse (mag brandpreventie-vaktaal bevatten)
+- confidence is een getal van 0.0 tot 1.0. Geef 0.5 of lager bij slechte fotokwaliteit, ontbrekende foto's of weinig context
+- waargenomen_risicos is een array van concrete risico-omschrijvingen in het Nederlands. Leeg als er geen zijn
+- ontbrekende_bewijsstukken is een array van concrete foto's of documenten die nog missen voor een volledig oordeel. Leeg als alles aanwezig is
+- herstelactie_voorstel is null bij akkoord; een concrete aanbevolen actie bij twijfel of afkeur
+- stop_vereist is true alleen bij direct gevaar voor veiligheid of onherstelbare normschending
+- Alle teksten in het Nederlands. Alleen JSON, geen extra tekst.`,
 };
 
 // ── Opdrachten — begroting analyse ───────────────────────────────────────────

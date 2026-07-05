@@ -58,7 +58,7 @@ function leeg(toelichting: string): SpotAiVoorstel {
 
 // Een geüploade spot-foto (objectPath of storage-URL) omzetten naar een data-URL
 // zodat het visionmodel de afbeelding inline kan meekrijgen.
-async function objectPathNaarDataUrl(objectPath: string): Promise<string | null> {
+export async function objectPathNaarDataUrl(objectPath: string): Promise<string | null> {
   try {
     const svc = new ObjectStorageService();
     const genormaliseerd = svc.normalizeObjectEntityPath(objectPath);

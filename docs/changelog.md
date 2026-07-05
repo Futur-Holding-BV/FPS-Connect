@@ -4,6 +4,36 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-05 — Vervolgopdracht 4: AI-fotoanalyse per uitvoeringstap
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+**Wat is gebouwd:**
+
+- **AI-prompt v2.0.0 (`UITVOERING_FOTO_ANALYSE_PROMPT`):** volledig herschreven met rijker schema — oordeel (akkoord / twijfel / afkeur), samenvatting (gewone taal voor monteur), technische bevindingen, confidence (0-1), waargenomen_risicos (array), ontbrekende_bewijsstukken (array), herstelactie_voorstel, stop_vereist. Expliciete drempel-definities per oordeel.
+- **Backend voltooien-route (`POST /opdrachten/:id/pim/uitvoering/stap/:stapId/voltooien`):**
+  - Produceisen-context: haalt type + toepassing (naam/fabrikant/testnorm) op van alle gekoppelde spots (via `voorziening_ids`) en voegt ze als context toe aan de AI-prompt.
+  - Vision-analyse: laadt maximaal 4 foto's als data-URLs en stuurt ze via het `vision`-slot naar het model. Tekstanalyse als fallback bij geen foto's.
+  - Parset alle nieuwe velden (oordeel, samenvatting, confidence, waargenomen_risicos, ontbrekende_bewijsstukken, herstelactie_voorstel).
+  - Trigger op `oordeel === "twijfel" || "afkeur"` i.p.v. het oude `afwijking_gedetecteerd`-veld — stap wordt pas "afgeweken" als AI een probleem ziet; bij "akkoord" gewoon "voltooid".
+  - `afwijkingJson` uitgebreid met de nieuwe velden (waargenomen_risicos, ontbrekende_bewijsstukken, herstelactie_voorstel, ai_oordeel) zodat de projectleider ze direct in het beslisformulier ziet.
+- **Backend afwijking-route (`POST /opdrachten/:id/pim/uitvoering/stap/:stapId/afwijking`):** ook bijgewerkt met vision-ondersteuning (max 4 foto's) + nieuw veld-parsing. Geeft meer informatieve impact-tekst op basis van het oordeel (twijfel vs. afkeur).
+- **`objectPathNaarDataUrl`** geëxporteerd uit `spot-ai.ts` voor hergebruik in andere services (in pim.ts al een lokale kopie aanwezig — import onnodig).
+- **Monteur-app (`uitvoering/[opdrachtId].tsx` — ReadOnlyStapKaart):** AI-analyse display volledig herschreven: kleurgecodeerde oordeel-badge (groen/amber/rood), confidence-percentage, samenvatting in begrijpelijke taal, risico-lijst met waarschuwingsicoontjes, ontbrekende bewijsstukken, oranje herstelactie-kaart.
+- **Kantoor-web (`pim-uitvoering-tab.tsx`):**
+  - `XCircle` toegevoegd aan icoon-imports.
+  - StappenOverzicht-rijen: kleine AI-oordeel indicator naast de statusbadge (groen "AI akkoord" / amber "Aandachtspunt" / rood "Niet akkoord"), alleen zichtbaar als `ai_analyse_json.oordeel` aanwezig is.
+  - Nieuw component `PimAiAnalysePanel`: rijke analyse-weergave met oordeel-badge, zekerheidspercentage, samenvatting, technische bevindingen, risico-lijst, ontbrekende bewijsstukken, herstelactie-kaart.
+  - `AfwijkingBeslisForm`: toont `PimAiAnalysePanel` boven het beslisformulier op basis van `stap.ai_analyse_json` — projectleider krijgt volledig AI-beeld vóór de beslissing.
+
+**Ontwerpkeuzes:**
+- Geen harde blokkade: AI-mislukking → stap gewoon "voltooid", geen foutmelding voor de monteur.
+- Geen automatische eindoplevering: `afwijking_gedetecteerd` triggert altijd menselijke beslissing.
+- Vision-slot alleen bij ≥1 bruikbare foto; anders tekstslot (sneller, goedkoper).
+- Max 4 foto's per analyse om tokenkosten te beheersen.
+
+---
+
 ## 2026-07-05 — Vervolgopdracht 3: Voorbereide spots koppelen aan PIM uitvoering
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag

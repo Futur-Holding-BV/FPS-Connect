@@ -1434,7 +1434,42 @@ router.post("/opdrachten/:id/pim/uitvoering/stap/:stapId/voltooien", schrijven, 
 
     const stapInstructie = stap.instructieJson as Record<string, unknown> | null;
 
-    // AI antwoord-analyse: check correctheid + detecteer eventuele afwijking
+    // Producteisen context ophalen van gekoppelde spots (voorziening_ids op de stap)
+    let voorzieningenContext: string | null = null;
+    const voorzieningIdsLijst = Array.isArray(stap.voorzieningIds) ? (stap.voorzieningIds as number[]) : [];
+    if (voorzieningIdsLijst.length > 0) {
+      try {
+        const spotRijen = await db
+          .select({
+            type: voorzieningenTable.type,
+            labelNaam: labelsTable.naam,
+            fabrikant: labelsTable.fabrikant,
+            testnorm: labelsTable.testnorm,
+          })
+          .from(voorzieningenTable)
+          .leftJoin(voorzieningLabelsTable, eq(voorzieningLabelsTable.voorzieningId, voorzieningenTable.id))
+          .leftJoin(labelsTable, eq(labelsTable.id, voorzieningLabelsTable.labelId))
+          .where(inArray(voorzieningenTable.id, voorzieningIdsLijst));
+
+        const types = [...new Set(spotRijen.map((r) => r.type).filter(Boolean))];
+        const labels = [
+          ...new Set(
+            spotRijen
+              .filter((r) => r.labelNaam)
+              .map((r) => [r.labelNaam, r.fabrikant, r.testnorm].filter(Boolean).join(" / ")),
+          ),
+        ];
+        const delen = [
+          types.length > 0 ? `Spottypen: ${types.join(", ")}` : null,
+          labels.length > 0 ? `Toepassingen: ${labels.join("; ")}` : null,
+        ].filter(Boolean);
+        if (delen.length > 0) voorzieningenContext = delen.join(". ");
+      } catch (ctxErr) {
+        logger.warn({ ctxErr }, "Voorzieningen context ophalen mislukt bij stap analyse");
+      }
+    }
+
+    // AI foto-analyse: vision bij foto's aanwezig, anders tekstanalyse
     let aiAnalyse: Record<string, unknown> | null = null;
     let aiAfwijkingGedetecteerd = false;
     if (heeftGateway()) {
@@ -1447,33 +1482,61 @@ router.post("/opdrachten/:id/pim/uitvoering/stap/:stapId/voltooien", schrijven, 
           controlevraag: stapInstructie?.controlevraag ?? null,
           antwoord_controle,
           opmerkingen: opmerkingen ?? null,
-          foto_urls_aangeleverd: (foto_urls ?? []).length,
+          producteisen: voorzieningenContext ?? null,
         };
+
+        // Foto's laden voor vision-analyse (max 4 om tokenkosten te beheersen)
+        const fotoDataUrls: string[] = [];
+        const fotoPaden = (foto_urls ?? []).slice(0, 4);
+        for (const pad of fotoPaden) {
+          try {
+            const dataUrl = await objectPathNaarDataUrl(pad);
+            if (dataUrl) fotoDataUrls.push(dataUrl);
+          } catch { /* onbeschikbare foto overslaan */ }
+        }
+        const gebruiktVision = fotoDataUrls.length > 0;
+
+        const tekstOpdracht = `Beoordeel de voltooiing van uitvoeringsstap ${stap.volgorde}:\n${JSON.stringify(analyseCtx, null, 2)}\n\nGeef JSON terug met alle velden: oordeel, samenvatting, bevindingen, confidence, waargenomen_risicos, ontbrekende_bewijsstukken, herstelactie_voorstel, afwijking_gedetecteerd, afwijking_omschrijving, stop_vereist.`;
+
+        type ContentDeel = { type: "text"; text: string } | { type: "image_url"; image_url: { url: string } };
+        const gebruikerContent: string | ContentDeel[] = gebruiktVision
+          ? [
+              { type: "text" as const, text: tekstOpdracht },
+              ...fotoDataUrls.map((url): ContentDeel => ({ type: "image_url", image_url: { url } })),
+            ]
+          : tekstOpdracht;
+
         const resultaat = await aiGateway.chat(
-          "default",
+          gebruiktVision ? "vision" : "default",
           {
             messages: [
               { role: "system", content: UITVOERING_FOTO_ANALYSE_PROMPT.tekst },
-              {
-                role: "user",
-                content: `Beoordeel de voltooiing van uitvoeringsstap ${stap.volgorde}:\n${JSON.stringify(analyseCtx, null, 2)}\n\nGeef JSON terug met velden: controle_correct (boolean), bevindingen (string), afwijking_gedetecteerd (boolean), afwijking_omschrijving (string|null).`,
-              },
+              { role: "user", content: gebruikerContent },
             ],
-            max_tokens: 512,
+            max_tokens: 1024,
           },
-          30_000,
+          45_000,
           { module: "pim_uitvoering", functie: "stap_voltooien_analyse", gebruikerId, promptNaam: UITVOERING_FOTO_ANALYSE_PROMPT.naam, promptVersie: UITVOERING_FOTO_ANALYSE_PROMPT.versie },
         );
         if (resultaat.ok && resultaat.inhoud) {
           const cleaned = resultaat.inhoud.replace(/^```json\s*/i, "").replace(/```\s*$/i, "").trim();
           const parsed = JSON.parse(cleaned) as Record<string, unknown>;
           aiAnalyse = {
-            controle_correct: parsed.controle_correct ?? true,
+            oordeel: parsed.oordeel ?? "akkoord",
+            samenvatting: parsed.samenvatting ?? null,
             bevindingen: parsed.bevindingen ?? null,
+            confidence: typeof parsed.confidence === "number" ? parsed.confidence : null,
+            waargenomen_risicos: Array.isArray(parsed.waargenomen_risicos) ? parsed.waargenomen_risicos : [],
+            ontbrekende_bewijsstukken: Array.isArray(parsed.ontbrekende_bewijsstukken) ? parsed.ontbrekende_bewijsstukken : [],
+            herstelactie_voorstel: parsed.herstelactie_voorstel ?? null,
             afwijking_gedetecteerd: parsed.afwijking_gedetecteerd ?? false,
             afwijking_omschrijving: parsed.afwijking_omschrijving ?? null,
+            stop_vereist: parsed.stop_vereist ?? false,
+            vision_gebruikt: gebruiktVision,
+            fotos_geanalyseerd: fotoDataUrls.length,
           };
-          aiAfwijkingGedetecteerd = parsed.afwijking_gedetecteerd === true;
+          // Bij twijfel of afkeur: stap niet automatisch als voltooid markeren
+          aiAfwijkingGedetecteerd = parsed.oordeel === "twijfel" || parsed.oordeel === "afkeur";
         }
       } catch (aiErr) {
         logger.warn({ aiErr }, "AI voltooien-analyse mislukt, stap toch voltooid");
@@ -1482,12 +1545,22 @@ router.post("/opdrachten/:id/pim/uitvoering/stap/:stapId/voltooien", schrijven, 
 
     // Als AI een afwijking detecteert: stap naar 'afgeweken' i.p.v. 'voltooid'
     if (aiAfwijkingGedetecteerd) {
+      const aiOordeel = (aiAnalyse?.oordeel as string | null) ?? "afkeur";
       const afwijkingJson = {
-        afwijking_omschrijving: (aiAnalyse?.afwijking_omschrijving as string | null) ?? "AI heeft een afwijking gedetecteerd",
-        impact: "Onbekend — projectleider beslist over vervolgstappen",
+        afwijking_omschrijving:
+          (aiAnalyse?.afwijking_omschrijving as string | null) ??
+          (aiOordeel === "twijfel" ? "AI heeft een aandachtspunt gedetecteerd" : "AI heeft een afwijking gedetecteerd"),
+        impact:
+          aiOordeel === "twijfel"
+            ? "Aandachtspunt — projectleider beoordeelt of doorgang verantwoord is"
+            : "Afwijking — herstelactie vereist voor verdergaan",
         vervolgopties: ["Doorgaan met aanpassing", "Stoppen en overleggen met projectleider"],
         meerwerk_indicatie: false,
-        stop_vereist: false,
+        stop_vereist: (aiAnalyse?.stop_vereist as boolean | null) ?? false,
+        waargenomen_risicos: (aiAnalyse?.waargenomen_risicos as string[]) ?? [],
+        ontbrekende_bewijsstukken: (aiAnalyse?.ontbrekende_bewijsstukken as string[]) ?? [],
+        herstelactie_voorstel: (aiAnalyse?.herstelactie_voorstel as string | null) ?? null,
+        ai_oordeel: aiOordeel,
         ai_gedetecteerd: true,
         gemeld_op: new Date().toISOString(),
         beslissing: null,
@@ -1627,19 +1700,37 @@ router.post("/opdrachten/:id/pim/uitvoering/stap/:stapId/afwijking", schrijven, 
     if (heeftGateway()) {
       try {
         const stapInstructie = stap.instructieJson as Record<string, unknown> | null;
+
+        // Foto's laden voor vision-analyse bij gemelde afwijking
+        const fotoDataUrls: string[] = [];
+        for (const pad of (foto_urls ?? []).slice(0, 4)) {
+          try {
+            const dataUrl = await objectPathNaarDataUrl(pad);
+            if (dataUrl) fotoDataUrls.push(dataUrl);
+          } catch { /* overslaan */ }
+        }
+        const gebruiktVision = fotoDataUrls.length > 0;
+
+        const tekstOpdracht = `Er is een afwijking gemeld bij uitvoeringsstap ${stap.volgorde}.\nStap doel: ${stapInstructie?.doel ?? "onbekend"}\nAfwijking omschrijving: ${omschrijving}\n\nBeoordeel de ernst en geef JSON terug met alle velden: oordeel, samenvatting, bevindingen, confidence, waargenomen_risicos, ontbrekende_bewijsstukken, herstelactie_voorstel, afwijking_gedetecteerd, afwijking_omschrijving, stop_vereist.`;
+
+        type ContentDeel = { type: "text"; text: string } | { type: "image_url"; image_url: { url: string } };
+        const gebruikerContent: string | ContentDeel[] = gebruiktVision
+          ? [
+              { type: "text" as const, text: tekstOpdracht },
+              ...fotoDataUrls.map((url): ContentDeel => ({ type: "image_url", image_url: { url } })),
+            ]
+          : tekstOpdracht;
+
         const resultaat = await aiGateway.chat(
-          "default",
+          gebruiktVision ? "vision" : "default",
           {
             messages: [
               { role: "system", content: UITVOERING_FOTO_ANALYSE_PROMPT.tekst },
-              {
-                role: "user",
-                content: `Er is een afwijking gemeld bij uitvoeringsstap ${stap.volgorde}.\nStap doel: ${stapInstructie?.doel ?? "onbekend"}\nAfwijking: ${omschrijving}\nAnalyseer de impact en geef vervolgopties. Geef JSON terug.`,
-              },
+              { role: "user", content: gebruikerContent },
             ],
-            max_tokens: 512,
+            max_tokens: 1024,
           },
-          30_000,
+          45_000,
           { module: "pim_uitvoering", functie: "afwijking_analyse", gebruikerId, promptNaam: UITVOERING_FOTO_ANALYSE_PROMPT.naam, promptVersie: UITVOERING_FOTO_ANALYSE_PROMPT.versie },
         );
         if (resultaat.ok && resultaat.inhoud) {
@@ -1647,11 +1738,17 @@ router.post("/opdrachten/:id/pim/uitvoering/stap/:stapId/afwijking", schrijven, 
           const parsed = JSON.parse(cleaned) as Record<string, unknown>;
           afwijkingAi = {
             afwijking_omschrijving: omschrijving,
-            impact: parsed.impact ?? "Onbekend",
-            vervolgopties: parsed.vervolgopties ?? ["Doorgaan", "Stoppen"],
+            impact: parsed.oordeel === "afkeur"
+              ? "Afwijking — herstelactie vereist voor verdergaan"
+              : "Aandachtspunt — projectleider beoordeelt of doorgang verantwoord is",
+            vervolgopties: ["Doorgaan met aanpassing", "Stoppen en overleggen met projectleider"],
             meerwerk_indicatie: parsed.meerwerk_indicatie ?? false,
             stop_vereist: parsed.stop_vereist ?? false,
+            waargenomen_risicos: Array.isArray(parsed.waargenomen_risicos) ? parsed.waargenomen_risicos : [],
+            ontbrekende_bewijsstukken: Array.isArray(parsed.ontbrekende_bewijsstukken) ? parsed.ontbrekende_bewijsstukken : [],
+            herstelactie_voorstel: parsed.herstelactie_voorstel ?? null,
             bevindingen: parsed.bevindingen ?? null,
+            ai_oordeel: parsed.oordeel ?? "afkeur",
           };
         }
       } catch (aiErr) {

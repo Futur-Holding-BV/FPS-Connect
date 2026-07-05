@@ -1507,53 +1507,69 @@ function ReadOnlyStapKaart({
           </View>
         ) : null}
 
-        {aiAnalyse && Object.keys(aiAnalyse).length > 0 ? (
-          <View
-            style={{
-              backgroundColor: "#f0f9ff",
-              borderRadius: 8,
-              padding: 10,
-              borderLeftWidth: 3,
-              borderLeftColor: "#0284c7",
-            }}
-          >
-            <Text
-              style={{
-                color: "#0369a1",
-                fontSize: 11,
-                fontFamily: "Inter_600SemiBold",
-                textTransform: "uppercase",
-                letterSpacing: 0.5,
-                marginBottom: 4,
-              }}
-            >
-              AI-analyse
-            </Text>
-            {typeof aiAnalyse.samenvatting === "string" ? (
-              <Text style={{ color: "#0c4a6e", fontSize: 13, fontFamily: "Inter_400Regular", lineHeight: 19 }}>
-                {aiAnalyse.samenvatting}
-              </Text>
-            ) : null}
-            {typeof aiAnalyse.bevindingen === "string" ? (
-              <Text
-                style={{
-                  color: "#0c4a6e",
-                  fontSize: 13,
-                  fontFamily: "Inter_400Regular",
-                  lineHeight: 19,
-                  marginTop: 4,
-                }}
-              >
-                {aiAnalyse.bevindingen}
-              </Text>
-            ) : null}
-            {typeof aiAnalyse.oordeel === "string" ? (
-              <Text style={{ color: "#0c4a6e", fontSize: 13, fontFamily: "Inter_600SemiBold", marginTop: 4 }}>
-                Oordeel: {aiAnalyse.oordeel}
-              </Text>
-            ) : null}
-          </View>
-        ) : null}
+        {aiAnalyse && Object.keys(aiAnalyse).length > 0 ? (() => {
+          const oordeel = typeof aiAnalyse.oordeel === "string" ? aiAnalyse.oordeel : null;
+          const isAkkoord = oordeel === "akkoord";
+          const isTwijfel = oordeel === "twijfel";
+          const borderKleur = isAkkoord ? "#16a34a" : isTwijfel ? "#d97706" : "#dc2626";
+          const bgKleur = isAkkoord ? "#f0fdf4" : isTwijfel ? "#fffbeb" : "#fef2f2";
+          const tekstKleur = isAkkoord ? "#14532d" : isTwijfel ? "#78350f" : "#7f1d1d";
+          const badgeBgKleur = isAkkoord ? "#dcfce7" : isTwijfel ? "#fef9c3" : "#fee2e2";
+          const badgeTekstKleur = isAkkoord ? "#15803d" : isTwijfel ? "#854d0e" : "#b91c1c";
+          const oordeelLabel = isAkkoord ? "Akkoord" : isTwijfel ? "Aandachtspunt" : "Niet akkoord";
+          const oordeelIcoon = isAkkoord ? "checkmark-circle" : isTwijfel ? "warning" : "close-circle";
+          const risicos = Array.isArray(aiAnalyse.waargenomen_risicos) ? aiAnalyse.waargenomen_risicos as string[] : [];
+          const ontbrekend = Array.isArray(aiAnalyse.ontbrekende_bewijsstukken) ? aiAnalyse.ontbrekende_bewijsstukken as string[] : [];
+          const confidence = typeof aiAnalyse.confidence === "number" ? aiAnalyse.confidence as number : null;
+          return (
+            <View style={{ backgroundColor: bgKleur, borderRadius: 8, padding: 10, borderLeftWidth: 3, borderLeftColor: borderKleur, gap: 8 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                <View style={{ backgroundColor: badgeBgKleur, borderRadius: 12, paddingHorizontal: 8, paddingVertical: 3, flexDirection: "row", alignItems: "center", gap: 4 }}>
+                  <Ionicons name={oordeelIcoon as "checkmark-circle" | "warning" | "close-circle"} size={13} color={badgeTekstKleur} />
+                  <Text style={{ color: badgeTekstKleur, fontSize: 12, fontFamily: "Inter_600SemiBold" }}>{oordeelLabel}</Text>
+                </View>
+                {confidence !== null ? (
+                  <Text style={{ color: tekstKleur, fontSize: 11, fontFamily: "Inter_400Regular", opacity: 0.7 }}>
+                    {Math.round(confidence * 100)}% zekerheid
+                  </Text>
+                ) : null}
+              </View>
+              {typeof aiAnalyse.samenvatting === "string" ? (
+                <Text style={{ color: tekstKleur, fontSize: 13, fontFamily: "Inter_400Regular", lineHeight: 19 }}>
+                  {aiAnalyse.samenvatting}
+                </Text>
+              ) : null}
+              {risicos.length > 0 ? (
+                <View style={{ gap: 3 }}>
+                  <Text style={{ color: tekstKleur, fontSize: 11, fontFamily: "Inter_600SemiBold", textTransform: "uppercase", letterSpacing: 0.5 }}>Risico&apos;s</Text>
+                  {risicos.map((r, i) => (
+                    <View key={i} style={{ flexDirection: "row", alignItems: "flex-start", gap: 5 }}>
+                      <Ionicons name="warning-outline" size={13} color="#d97706" style={{ marginTop: 2 }} />
+                      <Text style={{ color: tekstKleur, fontSize: 12, fontFamily: "Inter_400Regular", lineHeight: 18, flex: 1 }}>{r}</Text>
+                    </View>
+                  ))}
+                </View>
+              ) : null}
+              {ontbrekend.length > 0 ? (
+                <View style={{ gap: 3 }}>
+                  <Text style={{ color: tekstKleur, fontSize: 11, fontFamily: "Inter_600SemiBold", textTransform: "uppercase", letterSpacing: 0.5 }}>Nog aanleveren</Text>
+                  {ontbrekend.map((b, i) => (
+                    <View key={i} style={{ flexDirection: "row", alignItems: "flex-start", gap: 5 }}>
+                      <Ionicons name="alert-circle-outline" size={13} color="#0891b2" style={{ marginTop: 2 }} />
+                      <Text style={{ color: tekstKleur, fontSize: 12, fontFamily: "Inter_400Regular", lineHeight: 18, flex: 1 }}>{b}</Text>
+                    </View>
+                  ))}
+                </View>
+              ) : null}
+              {typeof aiAnalyse.herstelactie_voorstel === "string" ? (
+                <View style={{ backgroundColor: "#fff7ed", borderRadius: 6, padding: 8 }}>
+                  <Text style={{ color: "#92400e", fontSize: 11, fontFamily: "Inter_600SemiBold", marginBottom: 2 }}>Aanbevolen actie</Text>
+                  <Text style={{ color: "#78350f", fontSize: 13, fontFamily: "Inter_400Regular", lineHeight: 19 }}>{aiAnalyse.herstelactie_voorstel}</Text>
+                </View>
+              ) : null}
+            </View>
+          );
+        })() : null}
 
         {afwijking?.omschrijving ? (
           <View
