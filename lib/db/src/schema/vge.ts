@@ -18,6 +18,9 @@ import { fpsVisualsTable } from "./visuals";
 //  - Originele monteur-foto's worden NOOIT overschreven (annotatie is aparte laag)
 //  - Een visual zonder geldig bron_type wordt nooit getoond
 //  - vge_effectiviteitslog schrijft NOOIT naar productspecificatietabellen
+//
+// fpsVisualsTable en fpsVisualAnnotatiesTable leven in ./visuals (de
+// enkelvoudige bron van waarheid, inclusief BRON_TYPES en CHECK-constraint).
 
 // ── vge_effectiviteitslog ─────────────────────────────────────────────────────
 // Leerlaag voor visual-selectie. Schrijft NOOIT naar productspecificatietabellen.

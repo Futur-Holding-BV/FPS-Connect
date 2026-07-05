@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { and, asc, desc, eq, sql } from "drizzle-orm";
-import { fpsVisualsTable } from "@workspace/db/schema";
+import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
+import { fpsVisualsTable, BRON_TYPES } from "@workspace/db/schema";
 import { requireAuth, requireBevoegdheid } from "../middlewares/auth";
 import { logger } from "../lib/logger";
 import { selectVisuals, serializeVisualSet, type StapType } from "../lib/vgeService";
@@ -12,6 +12,73 @@ const systeemLezen     = requireBevoegdheid("systeem", 1);
 const systeemSchrijven = requireBevoegdheid("systeem", 2);
 
 const GELDIGE_STAP_TYPES: StapType[] = ["voorbereiding", "montage", "controle", "foto"];
+
+// ── VGE-constanten ─────────────────────────────────────────────────────────────
+// VGF-grondbeginsel 2.3 (Bron is verplicht): een visual zonder controleerbare
+// bron_type wordt NOOIT getoond. GELDIGE_BRON_TYPES is de enkele bron van
+// waarheid voor alle VGE-queries in dit bestand.
+// Ref: docs/ai-visual-guidance-framework.md §2.3, §6.1
+export const GELDIGE_BRON_TYPES: readonly string[] = BRON_TYPES;
+
+// Stap-type → toegestane visual-types (VGF §6.1 selectiepijplijn stap 2)
+export const STAP_TYPE_VISUAL_TYPES: Record<string, string[]> = {
+  voorbereiding: ["projecttekening_uitsnede", "productblad", "exploded_view", "3d_weergave"],
+  montage:       ["detailtekening", "animatie", "montagevoorschrift", "schema", "referentiefoto"],
+  controle:      ["checklist", "referentiefoto", "detailtekening"],
+  foto:          ["referentiefoto"],
+};
+
+export type VgeVisual = {
+  id: number;
+  naam: string;
+  visual_type: string;
+  bron_type: string;
+  bron_referentie: string | null;
+  object_path: string;
+  thumbnail_path: string | null;
+  spot_type: string[];
+  artikel_id: number | null;
+  bedrijfsstandaard_id: number | null;
+  taal: string;
+  actief: boolean;
+  aangemaakt_op: string;
+  bijgewerkt_op: string | null;
+};
+
+/**
+ * Filtert een kandidatenlijst voor de VGE volgens VGF §2.3 en §6.1.
+ *
+ * Harde regels (altijd toegepast — ongeacht queryparameters):
+ *   1. actief === true
+ *   2. bron_type IN (GELDIGE_BRON_TYPES)
+ *
+ * Optionele regels (alleen als de parameter meegegeven is):
+ *   3. stap_type → visual_type moet in de toegestane set zitten
+ *
+ * Maximaal 3 visuals worden teruggegeven (VGF §6.1 stap 4).
+ *
+ * Export ten behoeve van unit-tests.
+ */
+export function filterVgeKandidaten(
+  kandidaten: VgeVisual[],
+  stapType?: string,
+): VgeVisual[] {
+  // Harde filter: actief + geldige bron (VGF §2.3)
+  let resultaat = kandidaten.filter(
+    (v) => v.actief && GELDIGE_BRON_TYPES.includes(v.bron_type),
+  );
+
+  // Optionele filter: stap-type → visual-type whitelist (VGF §6.1 stap 2)
+  if (stapType) {
+    const toegestaan = STAP_TYPE_VISUAL_TYPES[stapType];
+    if (toegestaan) {
+      resultaat = resultaat.filter((v) => toegestaan.includes(v.visual_type));
+    }
+  }
+
+  // Max 3 (VGF §6.1 stap 4)
+  return resultaat.slice(0, 3);
+}
 
 function mapRij(r: typeof fpsVisualsTable.$inferSelect) {
   return {
@@ -32,35 +99,67 @@ function mapRij(r: typeof fpsVisualsTable.$inferSelect) {
   };
 }
 
-/** GET /visuals/guidance — VGE selectiepijplijn voor monteurs
+/**
+ * GET /visuals/guidance
  *
- * Query params:
- *   spot_type  (verplicht) — spot-type waarvoor guidance gezocht wordt
- *   stap_type  (optioneel, default 'montage') — voorbereiding | montage | controle | foto
+ * VGE-selectie-endpoint — selecteert maximaal 3 actieve, goedgekeurde visuals
+ * voor een uitvoeringsstap op basis van spot_type en optioneel stap_type.
  *
- * Toegankelijk voor alle ingelogde gebruikers (requireAuth), niet alleen beheerders.
+ * VGF-grondbeginsel 2.3 (Bron is verplicht):
+ *   Een visual zonder controleerbare bron_type wordt NOOIT getoond, ongeacht
+ *   of de AI hem aanbeveelt. Dit endpoint filtert altijd expliciet op:
+ *     actief = true AND bron_type IN (geldigeBronTypes)
+ *   zodat ook eventuele toekomstige DB-inconsistencies aan de API-grens worden
+ *   tegengehouden. De DB-CHECK-constraint is de eerste verdedigingslinie;
+ *   deze API-filter is de tweede.
+ *
+ * Ref: docs/ai-visual-guidance-framework.md §2.3, §6.1
+ *
+ * Query parameters:
+ *   spot_type  (verplicht) — spot-type waarvoor guidance gewenst is
+ *   stap_type  (optioneel) — voorbereiding | montage | controle | foto
+ *   taal       (optioneel) — default 'nl'
  */
-router.get("/visuals/guidance", requireAuth, async (req, res): Promise<void> => {
-  const { spot_type, stap_type } = req.query as Record<string, string | undefined>;
+router.get("/visuals/guidance", systeemLezen, async (req, res): Promise<void> => {
+  const { spot_type, stap_type, taal } = req.query as Record<string, string | undefined>;
 
   if (!spot_type || !spot_type.trim()) {
     res.status(400).json({ error: "spot_type is verplicht" });
     return;
   }
 
-  const stapType: StapType = (GELDIGE_STAP_TYPES as string[]).includes(stap_type ?? "")
-    ? (stap_type as StapType)
-    : "montage";
-
   try {
-    const set = await selectVisuals({
-      stapId: 0,
-      spotType: spot_type.trim(),
-      stapType,
-    });
-    res.json(serializeVisualSet(set));
+    // Stap 1: kandidaten ophalen — altijd gefilterd op actief=true én geldig bron_type
+    // (VGF §2.3 + §6.1 stap 1). De inArray-filter is de API-grens-veiligheid bovenop
+    // de DB-CHECK-constraint.
+    const filters = [
+      eq(fpsVisualsTable.actief, true),
+      inArray(fpsVisualsTable.bronType, [...GELDIGE_BRON_TYPES] as string[]),
+      sql`${fpsVisualsTable.spotType} && ARRAY[${sql.raw(`'${spot_type.trim().replace(/'/g, "''")}'`)}]::text[]`,
+    ];
+
+    if (taal) {
+      filters.push(eq(fpsVisualsTable.taal, taal.trim()));
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const kandidaten = await db
+      .select()
+      .from(fpsVisualsTable)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .where(and(...(filters as any[])))
+      .orderBy(
+        desc(fpsVisualsTable.bedrijfsstandaardId),
+        desc(fpsVisualsTable.artikelId),
+        desc(fpsVisualsTable.aangemaaktOp),
+      );
+
+    // Stap 2 + 4: stap-type-filter en max-3 beperking via pure filterfunctie
+    const geselecteerd = filterVgeKandidaten(kandidaten.map(mapRij), stap_type);
+
+    res.json(geselecteerd);
   } catch (err) {
-    logger.error({ err }, "visuals/guidance: VGE selectie mislukt");
+    logger.error({ err }, "visuals/guidance: selectie mislukt");
     res.status(500).json({ error: "Serverfout" });
   }
 });

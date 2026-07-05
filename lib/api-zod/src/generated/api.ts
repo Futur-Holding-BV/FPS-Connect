@@ -24687,6 +24687,41 @@ export const UpsertKbOpdrachtgeverVoorkeurResponse = zod.object({
 
 
 /**
+ * Selecteert maximaal 3 actieve, goedgekeurde visuals voor de gegeven
+ * spot_type/stap_type combinatie.
+ *
+ * VGF-grondbeginsel 2.3 (Bron is verplicht): filtert altijd op
+ * actief=true EN bron_type IN (projecttekening, ETA, DoP,
+ * montagevoorschrift, fps_standaard, praktijkfoto, productblad).
+ * Ref: docs/ai-visual-guidance-framework.md §2.3, §6.1
+ * @summary VGE-selectie — actieve visuals voor een uitvoeringsstap
+ */
+export const GetVisualsGuidanceQueryParams = zod.object({
+  "spot_type": zod.coerce.string().describe('Spot-type waarvoor guidance gewenst is (bijv. \'branddeur\')'),
+  "stap_type": zod.enum(['voorbereiding', 'montage', 'controle', 'foto']).optional().describe('Beperkt resultaat tot visual-types die passen bij de stap'),
+  "taal": zod.coerce.string().optional().describe('Taalfilter (default \'nl\')')
+})
+
+export const GetVisualsGuidanceResponseItem = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "visual_type": zod.string(),
+  "bron_type": zod.string(),
+  "bron_referentie": zod.string().nullish(),
+  "object_path": zod.string(),
+  "thumbnail_path": zod.string().nullish(),
+  "spot_type": zod.array(zod.string()),
+  "artikel_id": zod.number().nullish(),
+  "bedrijfsstandaard_id": zod.number().nullish(),
+  "taal": zod.string(),
+  "actief": zod.boolean(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().nullish()
+})
+export const GetVisualsGuidanceResponse = zod.array(GetVisualsGuidanceResponseItem).max(3)
+
+
+/**
  * @summary Lijst van visuals
  */
 export const ListVisualsQueryParams = zod.object({

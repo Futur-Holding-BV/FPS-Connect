@@ -19984,6 +19984,50 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/KbOpdrachtgeverVoorkeur' }
 
+  /visuals/guidance:
+    get:
+      operationId: getVisualsGuidance
+      tags: [visuals]
+      summary: VGE-selectie — actieve visuals voor een uitvoeringsstap
+      description: |
+        Selecteert maximaal 3 actieve, goedgekeurde visuals voor de gegeven
+        spot_type/stap_type combinatie.
+
+        VGF-grondbeginsel 2.3 (Bron is verplicht): filtert altijd op
+        actief=true EN bron_type IN (projecttekening, ETA, DoP,
+        montagevoorschrift, fps_standaard, praktijkfoto, productblad).
+        Ref: docs/ai-visual-guidance-framework.md §2.3, §6.1
+      parameters:
+        - name: spot_type
+          in: query
+          required: true
+          schema: { type: string }
+          description: Spot-type waarvoor guidance gewenst is (bijv. 'branddeur')
+        - name: stap_type
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [voorbereiding, montage, controle, foto]
+          description: Beperkt resultaat tot visual-types die passen bij de stap
+        - name: taal
+          in: query
+          required: false
+          schema: { type: string }
+          description: Taalfilter (default 'nl')
+      responses:
+        '200':
+          description: Maximaal 3 actieve, goedgekeurde visuals
+          content:
+            application/json:
+              schema:
+                type: array
+                maxItems: 3
+                items:
+                  $ref: '#/components/schemas/Visual'
+        '400':
+          description: spot_type ontbreekt
+
   /visuals:
     get:
       operationId: listVisuals

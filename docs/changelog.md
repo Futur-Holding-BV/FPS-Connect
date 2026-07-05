@@ -4,6 +4,29 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-05 — VGE-query hardening: actieve visuals filter + unit-tests (Task #332)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+**Wat is gebouwd:**
+
+**`artifacts/api-server/src/routes/visuals.ts`:**
+- Nieuw endpoint `GET /visuals/guidance` — VGE-selectie-endpoint (maximaal 3 actieve, goedgekeurde visuals per uitvoeringsstap op basis van `spot_type` + optioneel `stap_type` / `taal`)
+- Query filtert altijd op `actief = true AND bron_type IN (geldigeBronTypes)` — de DB-CHECK-constraint is linie 1, deze API-filter is linie 2 (VGF §2.3)
+- Geëxporteerde pure functie `filterVgeKandidaten()` toepasbaar in unit-tests
+- Documentatiecommentaar in de route-handler verwijst expliciet naar VGF-grondbeginsel 2.3 + §6.1
+- `GELDIGE_BRON_TYPES`, `STAP_TYPE_VISUAL_TYPES` en `VgeVisual` geëxporteerd voor hergebruik
+
+**Bugfix `lib/db/src/schema/vge.ts`:**
+- Conflicterende duplicaat-exports (`fpsVisualsTable`, `FpsVisual`, `fpsVisualAnnotatiesTable`) verwijderd uit `vge.ts`; deze leven nu alleen in `visuals.ts` (enkelvoudige bron van waarheid)
+- `vge.ts` importeert nu `fpsVisualsTable` vanuit `./visuals`
+
+**OpenAPI `lib/api-spec/openapi.yaml`:**
+- Nieuw pad `/visuals/guidance` (`getVisualsGuidance`) met parameters `spot_type` (verplicht), `stap_type` en `taal`
+
+**Unit-tests `artifacts/api-server/src/__tests__/vge-guidance-hardening.test.ts`:**
+- 18 tests, 9 scenario's: inactieve visuals, ongeldig bron_type, combinaties, geldige doorgang, max-3 beperking, stap-type filter, onbekend stap_type, lege invoer en GELDIGE_BRON_TYPES volledigheid
+
 ## 2026-07-05 — Visual Library beheer-UI (Task #321)
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag

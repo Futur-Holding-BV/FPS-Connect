@@ -11813,6 +11813,31 @@ categorie?: string;
 actief?: string;
 };
 
+export type GetVisualsGuidanceParams = {
+/**
+ * Spot-type waarvoor guidance gewenst is (bijv. 'branddeur')
+ */
+spot_type: string;
+/**
+ * Beperkt resultaat tot visual-types die passen bij de stap
+ */
+stap_type?: GetVisualsGuidanceStapType;
+/**
+ * Taalfilter (default 'nl')
+ */
+taal?: string;
+};
+
+export type GetVisualsGuidanceStapType = typeof GetVisualsGuidanceStapType[keyof typeof GetVisualsGuidanceStapType];
+
+
+export const GetVisualsGuidanceStapType = {
+  voorbereiding: 'voorbereiding',
+  montage: 'montage',
+  controle: 'controle',
+  foto: 'foto',
+} as const;
+
 export type ListVisualsParams = {
 actief?: ListVisualsActief;
 visual_type?: string;

@@ -70222,6 +70222,97 @@ export const useUpsertKbOpdrachtgeverVoorkeur = <TError = ErrorType<unknown>,
       return useMutation(getUpsertKbOpdrachtgeverVoorkeurMutationOptions(options));
     }
 
+export const getGetVisualsGuidanceUrl = (params: GetVisualsGuidanceParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/visuals/guidance?${stringifiedParams}` : `/api/visuals/guidance`
+}
+
+/**
+ * Selecteert maximaal 3 actieve, goedgekeurde visuals voor de gegeven
+ * spot_type/stap_type combinatie.
+ *
+ * VGF-grondbeginsel 2.3 (Bron is verplicht): filtert altijd op
+ * actief=true EN bron_type IN (projecttekening, ETA, DoP,
+ * montagevoorschrift, fps_standaard, praktijkfoto, productblad).
+ * Ref: docs/ai-visual-guidance-framework.md §2.3, §6.1
+ * @summary VGE-selectie — actieve visuals voor een uitvoeringsstap
+ */
+export const getVisualsGuidance = async (params: GetVisualsGuidanceParams, options?: RequestInit): Promise<Visual[]> => {
+
+  return customFetch<Visual[]>(getGetVisualsGuidanceUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetVisualsGuidanceQueryKey = (params?: GetVisualsGuidanceParams,) => {
+    return [
+    `/api/visuals/guidance`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetVisualsGuidanceQueryOptions = <TData = Awaited<ReturnType<typeof getVisualsGuidance>>, TError = ErrorType<void>>(params: GetVisualsGuidanceParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getVisualsGuidance>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetVisualsGuidanceQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getVisualsGuidance>>> = ({ signal }) => getVisualsGuidance(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getVisualsGuidance>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetVisualsGuidanceQueryResult = NonNullable<Awaited<ReturnType<typeof getVisualsGuidance>>>
+export type GetVisualsGuidanceQueryError = ErrorType<void>
+
+
+/**
+ * @summary VGE-selectie — actieve visuals voor een uitvoeringsstap
+ */
+
+export function useGetVisualsGuidance<TData = Awaited<ReturnType<typeof getVisualsGuidance>>, TError = ErrorType<void>>(
+ params: GetVisualsGuidanceParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getVisualsGuidance>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetVisualsGuidanceQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
 export const getListVisualsUrl = (params?: ListVisualsParams,) => {
   const normalizedParams = new URLSearchParams();
 
