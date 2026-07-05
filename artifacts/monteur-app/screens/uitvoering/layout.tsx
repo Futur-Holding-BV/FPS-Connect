@@ -20,6 +20,7 @@ import { useResponsive } from "@/hooks/useResponsive";
 import { UitvoeringActieBalk } from "@/screens/uitvoering/actie-balk";
 import { TabletDrieKolommen } from "@/screens/uitvoering/tablet/drie-kolommen";
 import { FotoAnalyseOverlay, normaliseerFotoAnalyseStatus } from "@/components/foto-analyse-overlay";
+import type { Guidance } from "@/screens/uitvoering/visual-paneel";
 import { voegToeAanWachtrij, laadWachtrij } from "@/lib/syncQueue";
 import { useSync } from "@/context/sync";
 import {
@@ -58,6 +59,17 @@ function complexiteitUitInstructie(instructie: Instructie | null): 1 | 2 | 3 | 4
   if (score >= 3) return 3;
   if (score >= 1) return 2;
   return 1;
+}
+
+function parseGuidance(json: unknown): Guidance | null {
+  if (!json || typeof json !== "object") return null;
+  const g = json as Guidance;
+  const heeftVisuals = g.wat_zie_je_nu ?? g.wat_is_eindresultaat ?? g.hoe_doe_je_dit;
+  const heeftPunten =
+    (g.aandachtspunten?.length ?? 0) > 0 ||
+    (g.veiligheidsrisicos?.length ?? 0) > 0;
+  if (!heeftVisuals && !heeftPunten) return null;
+  return g;
 }
 
 type BottomSheetInhoud = "details" | "documenten" | "ai" | null;
@@ -568,6 +580,7 @@ export function UitvoeringLayout({
 
   const instructie = parseInstructie(stap.instructie_json);
   const complexiteit = complexiteitUitInstructie(instructie);
+  const guidance = parseGuidance(stap.guidance_context);
 
   const { data: relevanteDocs, isLoading: docsLaden } = useGetPimUitvoeringRelevanteDocs(
     opdrachtId,
@@ -791,6 +804,7 @@ export function UitvoeringLayout({
           instructie={instructie}
           fotoAnalyse={fotoAnalyse}
           complexiteitScore={complexiteit}
+          guidance={guidance}
           relevanteDocs={relevanteDocs}
           docsLaden={docsLaden && isOnline}
           aiAntwoord={aiAntwoord}

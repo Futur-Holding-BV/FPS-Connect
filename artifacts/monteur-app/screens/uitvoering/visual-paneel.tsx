@@ -1,7 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
-import React from "react";
-import { Image, ScrollView, Text, View } from "react-native";
+import React, { useState } from "react";
+import { Image, Modal, Pressable, ScrollView, StatusBar, Text, View } from "react-native";
 
+import { useAuth } from "@/context/auth";
 import { useUitvoeringTheme } from "@/context/UitvoeringThemeContext";
 import { FotoAnalyseOverlay, normaliseerFotoAnalyseStatus } from "@/components/foto-analyse-overlay";
 import type { PimFotoAnalyse } from "@workspace/api-client-react";
@@ -26,6 +27,41 @@ export interface VisualPanelProvider {
 }
 // ──────────────────────────────────────────────────────────────────────────────
 
+// ─── VGE Guidance types ───────────────────────────────────────────────────────
+
+export interface GuidanceVisual {
+  visual_id: number;
+  naam: string;
+  type: string;
+  object_path: string;
+}
+
+export interface Guidance {
+  wat_zie_je_nu?: GuidanceVisual | null;
+  wat_is_eindresultaat?: GuidanceVisual | null;
+  hoe_doe_je_dit?: GuidanceVisual | null;
+  aandachtspunten?: string[];
+  veiligheidsrisicos?: string[];
+  max_visuals_getoond?: number;
+}
+
+const DOMEIN = process.env.EXPO_PUBLIC_DOMAIN ?? "";
+
+const VISUAL_LABELS: Record<string, string> = {
+  detailtekening: "Tekening",
+  projecttekening_uitsnede: "Plattegrond",
+  referentiefoto: "Referentie",
+  exploded_view: "Onderdelen",
+  animatie: "Animatie",
+  checklist: "Checklist",
+  productblad: "Productblad",
+  montagevoorschrift: "Instructie",
+  schema: "Schema",
+  "3d_weergave": "3D-weergave",
+};
+
+// ──────────────────────────────────────────────────────────────────────────────
+
 type ComplexiteitScore = 1 | 2 | 3 | 4 | 5;
 
 type VisualPaneelProps = {
@@ -35,6 +71,7 @@ type VisualPaneelProps = {
   fotoAnalyse?: PimFotoAnalyse | null;
   complexiteitScore?: ComplexiteitScore;
   provider?: VisualPanelProvider;
+  guidance?: Guidance | null;
 };
 
 function LeegPaneel() {
@@ -120,29 +157,295 @@ function FotoBadge({ status }: { status: string }) {
   );
 }
 
+function VergrootModal({
+  visual,
+  zichtbaar,
+  onSluiten,
+}: {
+  visual: GuidanceVisual;
+  zichtbaar: boolean;
+  onSluiten: () => void;
+}) {
+  const { token } = useAuth();
+  const imageUri = `https://${DOMEIN}/api/storage${visual.object_path}`;
+  const authHeaders = token ? { Authorization: `Bearer ${token}` } : undefined;
+
+  return (
+    <Modal
+      visible={zichtbaar}
+      transparent
+      animationType="fade"
+      onRequestClose={onSluiten}
+      statusBarTranslucent
+    >
+      <StatusBar backgroundColor="rgba(0,0,0,0.92)" barStyle="light-content" />
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: "rgba(0,0,0,0.92)",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <Pressable
+          onPress={onSluiten}
+          style={{
+            position: "absolute",
+            top: 44,
+            right: 20,
+            zIndex: 10,
+            backgroundColor: "rgba(255,255,255,0.15)",
+            borderRadius: 20,
+            padding: 8,
+          }}
+        >
+          <Ionicons name="close" size={22} color="#fff" />
+        </Pressable>
+        <View style={{ paddingHorizontal: 20, width: "100%", gap: 8 }}>
+          <Text
+            style={{
+              color: "rgba(255,255,255,0.6)",
+              fontSize: 11,
+              fontFamily: "Inter_600SemiBold",
+              textTransform: "uppercase",
+              letterSpacing: 0.4,
+              textAlign: "center",
+            }}
+          >
+            {VISUAL_LABELS[visual.type] ?? visual.type}
+          </Text>
+          <Image
+            source={{ uri: imageUri, headers: authHeaders }}
+            style={{ width: "100%", aspectRatio: 4 / 3, borderRadius: 10, backgroundColor: "#666" }}
+            resizeMode="contain"
+          />
+          <Text
+            style={{ color: "#fff", fontSize: 14, fontFamily: "Inter_600SemiBold", textAlign: "center" }}
+            numberOfLines={2}
+          >
+            {visual.naam}
+          </Text>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+function GuidanceThumbnail({ visual, label }: { visual: GuidanceVisual; label: string }) {
+  const { theme } = useUitvoeringTheme();
+  const { token } = useAuth();
+  const [vergroot, setVergroot] = useState(false);
+  const imageUri = `https://${DOMEIN}/api/storage${visual.object_path}`;
+  const authHeaders = token ? { Authorization: `Bearer ${token}` } : undefined;
+
+  return (
+    <View style={{ flex: 1, gap: 4 }}>
+      <Text
+        style={{
+          color: theme.gedemptTekst,
+          fontSize: 10,
+          fontFamily: "Inter_600SemiBold",
+          textTransform: "uppercase",
+          letterSpacing: 0.4,
+          textAlign: "center",
+        }}
+      >
+        {label}
+      </Text>
+      <Pressable
+        onPress={() => setVergroot(true)}
+        style={{
+          aspectRatio: 4 / 3,
+          backgroundColor: theme.rand,
+          borderRadius: 8,
+          borderWidth: 1,
+          borderColor: theme.rand,
+          overflow: "hidden",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <Image
+          source={{ uri: imageUri, headers: authHeaders }}
+          style={{ width: "100%", height: "100%" }}
+          resizeMode="cover"
+        />
+        <View
+          style={{
+            position: "absolute",
+            bottom: 0,
+            left: 0,
+            right: 0,
+            backgroundColor: "rgba(0,0,0,0.45)",
+            paddingHorizontal: 4,
+            paddingVertical: 2,
+            flexDirection: "row",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <Text
+            style={{ color: "#fff", fontSize: 10, fontFamily: "Inter_400Regular", flex: 1 }}
+            numberOfLines={1}
+          >
+            {VISUAL_LABELS[visual.type] ?? visual.type}
+          </Text>
+          <Ionicons name="expand-outline" size={11} color="rgba(255,255,255,0.8)" />
+        </View>
+      </Pressable>
+      <Text
+        style={{
+          color: theme.tekst,
+          fontSize: 11,
+          fontFamily: "Inter_400Regular",
+          textAlign: "center",
+          lineHeight: 15,
+        }}
+        numberOfLines={2}
+      >
+        {visual.naam}
+      </Text>
+      {vergroot && (
+        <VergrootModal visual={visual} zichtbaar={vergroot} onSluiten={() => setVergroot(false)} />
+      )}
+    </View>
+  );
+}
+
+function GuidanceSectieTablet({ guidance }: { guidance: Guidance }) {
+  const { theme } = useUitvoeringTheme();
+
+  const visuals: Array<{ slot: GuidanceVisual; label: string }> = [];
+  if (guidance.wat_zie_je_nu) visuals.push({ slot: guidance.wat_zie_je_nu, label: "Huidige situatie" });
+  if (guidance.wat_is_eindresultaat) visuals.push({ slot: guidance.wat_is_eindresultaat, label: "Eindresultaat" });
+  if (guidance.hoe_doe_je_dit) visuals.push({ slot: guidance.hoe_doe_je_dit, label: "Hoe doe je dit" });
+
+  const aandachtspunten = guidance.aandachtspunten ?? [];
+  const veiligheidsrisicos = guidance.veiligheidsrisicos ?? [];
+
+  if (visuals.length === 0 && aandachtspunten.length === 0 && veiligheidsrisicos.length === 0) {
+    return null;
+  }
+
+  return (
+    <View style={{ gap: 12 }}>
+      {visuals.length > 0 && (
+        <View style={{ flexDirection: "row", gap: 8 }}>
+          {visuals.map(({ slot, label }) => (
+            <GuidanceThumbnail key={slot.visual_id} visual={slot} label={label} />
+          ))}
+        </View>
+      )}
+
+      {aandachtspunten.length > 0 && (
+        <View style={{ gap: 4 }}>
+          <Text
+            style={{
+              color: theme.gedemptTekst,
+              fontSize: 11,
+              fontFamily: "Inter_600SemiBold",
+              textTransform: "uppercase",
+              letterSpacing: 0.4,
+              marginBottom: 2,
+            }}
+          >
+            Aandachtspunten
+          </Text>
+          {aandachtspunten.map((punt, i) => (
+            <View key={i} style={{ flexDirection: "row", gap: 6, alignItems: "flex-start" }}>
+              <Ionicons
+                name="information-circle-outline"
+                size={14}
+                color="#d97706"
+                style={{ marginTop: 2 }}
+              />
+              <Text
+                style={{
+                  color: theme.tekst,
+                  fontSize: 13,
+                  fontFamily: "Inter_400Regular",
+                  lineHeight: 18,
+                  flex: 1,
+                }}
+              >
+                {punt}
+              </Text>
+            </View>
+          ))}
+        </View>
+      )}
+
+      {veiligheidsrisicos.length > 0 && (
+        <View style={{ gap: 4 }}>
+          <Text
+            style={{
+              color: "#92400e",
+              fontSize: 11,
+              fontFamily: "Inter_600SemiBold",
+              textTransform: "uppercase",
+              letterSpacing: 0.4,
+              marginBottom: 2,
+            }}
+          >
+            Veiligheidsrisicos
+          </Text>
+          {veiligheidsrisicos.map((risico, i) => (
+            <View key={i} style={{ flexDirection: "row", gap: 6, alignItems: "flex-start" }}>
+              <Ionicons
+                name="warning-outline"
+                size={14}
+                color="#dc2626"
+                style={{ marginTop: 2 }}
+              />
+              <Text
+                style={{
+                  color: "#92400e",
+                  fontSize: 13,
+                  fontFamily: "Inter_400Regular",
+                  lineHeight: 18,
+                  flex: 1,
+                }}
+              >
+                {risico}
+              </Text>
+            </View>
+          ))}
+        </View>
+      )}
+    </View>
+  );
+}
+
 /**
  * Midden-paneel in de tablet drie-kolommen layout.
- * Toont referentiefoto, detailtekening, plattegrond-uitsnede of een
- * toekomstige VisualPanelProvider. Alleen dit paneel is scrollbaar.
+ * Toont VGE guidance visuals (thumbnails + tap-to-enlarge), referentiefoto,
+ * detailtekening, fotoanalyse, of een toekomstige VisualPanelProvider.
+ * Alleen dit paneel is scrollbaar.
  *
- * Complexiteitsscore bepaalt welke visuals getoond worden:
- * - Laag (1-2): referentiefoto
- * - Middel (3-4): detailtekening + controlepunten
- * - Hoog (5): detailtekening + animatie + exploded view (placeholder)
+ * Volgorde: guidance_context (VGE) heeft voorrang boven de oude referentieFotoUrl/
+ * detailtekeningUrl velden. Beide kunnen naast elkaar worden getoond.
  */
 export function VisualPaneel({
   referentieFotoUrl,
   detailtekeningUrl,
   fotoAnalyse,
   complexiteitScore = 1,
+  guidance,
 }: VisualPaneelProps) {
   const { theme } = useUitvoeringTheme();
 
+  const heeftGuidance = !!guidance && (
+    !!guidance.wat_zie_je_nu ||
+    !!guidance.wat_is_eindresultaat ||
+    !!guidance.hoe_doe_je_dit ||
+    (guidance.aandachtspunten?.length ?? 0) > 0 ||
+    (guidance.veiligheidsrisicos?.length ?? 0) > 0
+  );
   const heeftFoto = !!referentieFotoUrl;
   const heeftTekening = !!detailtekeningUrl && complexiteitScore >= 3;
   const heeftAnalyse = !!fotoAnalyse;
 
-  if (!heeftFoto && !heeftTekening && !heeftAnalyse) {
+  if (!heeftGuidance && !heeftFoto && !heeftTekening && !heeftAnalyse) {
     return (
       <View
         style={{
@@ -156,6 +459,12 @@ export function VisualPaneel({
       </View>
     );
   }
+
+  const koptitel = heeftGuidance
+    ? "Visuele begeleiding"
+    : complexiteitScore >= 3
+      ? "Detailtekening"
+      : "Referentiefoto";
 
   return (
     <View
@@ -194,7 +503,7 @@ export function VisualPaneel({
             marginTop: 2,
           }}
         >
-          {complexiteitScore >= 3 ? "Detailtekening" : "Referentiefoto"}
+          {koptitel}
         </Text>
       </View>
 
@@ -214,6 +523,10 @@ export function VisualPaneel({
               status={normaliseerFotoAnalyseStatus(fotoAnalyse.afwijkingsstatus)}
             />
           </View>
+        )}
+
+        {heeftGuidance && guidance && (
+          <GuidanceSectieTablet guidance={guidance} />
         )}
 
         {heeftFoto && !heeftAnalyse && (

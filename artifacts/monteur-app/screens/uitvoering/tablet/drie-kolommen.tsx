@@ -3,7 +3,7 @@ import { View } from "react-native";
 
 import { useUitvoeringTheme } from "@/context/UitvoeringThemeContext";
 import { StapAssistent } from "@/screens/uitvoering/stap-assistent";
-import { VisualPaneel, type VisualPanelProvider } from "@/screens/uitvoering/visual-paneel";
+import { VisualPaneel, type VisualPanelProvider, type Guidance } from "@/screens/uitvoering/visual-paneel";
 import { AiAssistentPaneel } from "@/screens/uitvoering/ai-assistent-paneel";
 import { UitvoeringActieBalk } from "@/screens/uitvoering/actie-balk";
 import type { PimFotoAnalyse, PimStapRelevantDocument } from "@workspace/api-client-react";
@@ -46,6 +46,7 @@ type TabletDrieKolommenProps = {
   afgerondActief?: boolean;
   stapBezig?: boolean;
   visualProvider?: VisualPanelProvider;
+  guidance?: Guidance | null;
 };
 
 /**
@@ -83,6 +84,7 @@ export function TabletDrieKolommen({
   afgerondActief = true,
   stapBezig = false,
   visualProvider,
+  guidance,
 }: TabletDrieKolommenProps) {
   const { theme } = useUitvoeringTheme();
 
@@ -108,6 +110,7 @@ export function TabletDrieKolommen({
             fotoAnalyse={fotoAnalyse}
             complexiteitScore={complexiteitScore}
             provider={visualProvider}
+            guidance={guidance}
           />
         </View>
 
