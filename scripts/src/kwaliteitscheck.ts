@@ -190,6 +190,37 @@ async function main() {
       } else {
         ok("Gegenereerde api.ts is actueel");
       }
+
+      // Controleer of lib/api-client-react/dist/ ook herbouwd is na de laatste codegen-run.
+      // Na een codegen-run zonder aansluitende typecheck:libs zijn de dist/-declaraties
+      // verouderd en kan de frontend stale types importeren.
+      const distDeclaratiePad = path.join(repoRoot, "lib/api-client-react/dist/generated/api.d.ts");
+      if (fs.existsSync(distDeclaratiePad)) {
+        const distStat = fs.statSync(distDeclaratiePad);
+        if (distStat.mtimeMs < genStat.mtimeMs) {
+          waarschuwing(
+            "lib/api-client-react/dist/ is ouder dan src/generated/api.ts — " +
+            "voer pnpm run typecheck:libs uit na codegen"
+          );
+          registreer(
+            "OpenAPI / Codegen",
+            "middel",
+            "dist/generated/api.d.ts is ouder dan src/generated/api.ts — typecheck:libs niet uitgevoerd na codegen"
+          );
+        } else {
+          ok("lib/api-client-react/dist/ is up-to-date na de laatste codegen-run");
+        }
+      } else {
+        waarschuwing(
+          "lib/api-client-react/dist/generated/api.d.ts niet gevonden — " +
+          "voer pnpm run typecheck:libs uit"
+        );
+        registreer(
+          "OpenAPI / Codegen",
+          "middel",
+          "lib/api-client-react/dist/ ontbreekt — typecheck:libs nog niet uitgevoerd"
+        );
+      }
     }
   } else {
     fout("openapi.yaml niet gevonden op verwachte locatie");
