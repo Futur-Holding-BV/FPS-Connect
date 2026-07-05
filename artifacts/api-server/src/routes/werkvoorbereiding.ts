@@ -1155,6 +1155,50 @@ router.post("/opdrachten/:id/uitvoeringsplanning/genereer", schrijven, async (re
       const arbeidRegels = regels.filter(r => r.categorie === "arbeid");
       const materiaalRegels = regels.filter(r => r.categorie === "materiaal");
 
+      // PIM inkoop_context ophalen: { werkpakket_sleutel: [inkoopplan_regel_id, ...] }
+      let pimInkoopSectie = "";
+      try {
+        const [pim] = await db
+          .select({ id: pimModellenTable.id, inkoopContext: pimModellenTable.inkoopContext })
+          .from(pimModellenTable)
+          .where(eq(pimModellenTable.opdrachtId, id));
+
+        if (pim?.inkoopContext && typeof pim.inkoopContext === "object") {
+          const inkoopCtx = pim.inkoopContext as Record<string, number[]>;
+          const alleRegelIds = Object.values(inkoopCtx).flat();
+          if (alleRegelIds.length > 0) {
+            const inkoopRegels = await db
+              .select({
+                id: inkoopplanRegelsTable.id,
+                omschrijving: inkoopplanRegelsTable.omschrijving,
+                hoeveelheid: inkoopplanRegelsTable.hoeveelheid,
+                eenheid: inkoopplanRegelsTable.eenheid,
+                levertijdWeken: inkoopplanRegelsTable.levertijdWeken,
+                werkbegrotingRegelId: inkoopplanRegelsTable.werkbegrotingRegelId,
+              })
+              .from(inkoopplanRegelsTable)
+              .where(inArray(inkoopplanRegelsTable.id, alleRegelIds));
+
+            const regelById = new Map(inkoopRegels.map(r => [r.id, r]));
+
+            const secties: string[] = [];
+            for (const [werkpakket, ids] of Object.entries(inkoopCtx)) {
+              const artikelen = ids.map(rid => regelById.get(rid)).filter(Boolean);
+              if (artikelen.length === 0) continue;
+              const regelsText = artikelen.map(a =>
+                `  - ${a!.omschrijving}: ${a!.hoeveelheid} ${a!.eenheid}${a!.levertijdWeken != null ? `, levertijd ${a!.levertijdWeken} wkn` : ""}`
+              ).join('\n');
+              secties.push(`Werkpakket "${werkpakket}":\n${regelsText}`);
+            }
+            if (secties.length > 0) {
+              pimInkoopSectie = `\nVASTGESTELD INKOOPPLAN — artikelen per werkpakket (gebruik voor materiaal_moment per taak):\n${secties.join('\n\n')}\n`;
+            }
+          }
+        }
+      } catch (pimErr) {
+        logger.warn({ pimErr }, "PIM inkoop_context ophalen voor uitvoeringsplan mislukt — niet-blokkerend");
+      }
+
       const prompt = `Je bent een werkvoorbereider bij een brandpreventie-installatiebedrijf in Nederland.
 Maak een concept uitvoeringsplanning voor de volgende opdracht.
 
@@ -1166,7 +1210,7 @@ ${arbeidRegels.map(r => `- ${r.omschrijving}: ${r.hoeveelheid} ${r.eenheid} @ ${
 
 MATERIAAL (${materiaalRegels.length} artikelen, totaal €${begroting.totaalMateriaalBedrag}):
 ${materiaalRegels.slice(0, 15).map(r => `- ${r.omschrijving}: ${r.hoeveelheid} ${r.eenheid}`).join('\n')}
-
+${pimInkoopSectie}
 Brandpreventie disciplines: Brandweerring, Doorvoering, Brandklep, Manchet, Coating, Branddeur, Overige.
 
 Maak een logische gefaseerde uitvoeringsplanning. Typische fasen:
