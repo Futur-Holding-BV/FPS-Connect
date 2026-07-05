@@ -23,6 +23,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { HandtekeningPad } from "@/components/HandtekeningPad";
 import { OfflineBanner } from "@/components/OfflineBanner";
+import { SyncStatusBadge } from "@/components/SyncStatusBadge";
 import { bovenInset } from "@/components/ui";
 import { useAuth } from "@/context/auth";
 import { useOffline } from "@/context/offline";
@@ -120,7 +121,7 @@ export default function WerkdagDetailScherm() {
   const { id: idParam } = useLocalSearchParams<{ id: string }>();
   const { token } = useAuth();
   const { isOnline } = useOffline();
-  const { herlaadAantal } = useSync();
+  const { herlaadAantal, syncStatus, aantalWachtend, aantalMislukt, mislukteItems, wisMislukte, forceerSync, verwijderEnkelMislukt, herprobeeerEnkel, herprobeeerAlle } = useSync();
 
   const [statusBezig, setStatusBezig] = useState(false);
   const [lokaleStatus, setLokaleStatus] = useState<string | null>(null);
@@ -360,6 +361,19 @@ export default function WerkdagDetailScherm() {
       </View>
 
       <OfflineBanner stijl="compact" />
+      <View style={{ paddingHorizontal: 16, paddingVertical: 8 }}>
+        <SyncStatusBadge
+          status={syncStatus}
+          aantalWachtend={aantalWachtend}
+          aantalMislukt={aantalMislukt}
+          mislukteItems={mislukteItems}
+          onWisMislukte={wisMislukte}
+          onForceerSync={forceerSync}
+          onVerwijderItem={verwijderEnkelMislukt}
+          onHerprobeeerItem={herprobeeerEnkel}
+          onHerprobeeerAlle={herprobeeerAlle}
+        />
+      </View>
       {isOfflineCache ? (
         <View
           style={{

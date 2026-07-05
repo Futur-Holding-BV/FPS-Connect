@@ -14,7 +14,9 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { LijstFout, bovenInset } from "@/components/ui";
+import { SyncStatusBadge } from "@/components/SyncStatusBadge";
 import { useAuth } from "@/context/auth";
+import { useSync } from "@/context/sync";
 import { useColors } from "@/hooks/useColors";
 import { useResponsive } from "@/hooks/useResponsive";
 
@@ -61,6 +63,9 @@ export default function MijnWerkScherm() {
   const { token } = useAuth();
   const { inhoudMaxBreedte } = useResponsive();
 
+  const { syncStatus, aantalWachtend, aantalMislukt, mislukteItems, wisMislukte, forceerSync, verwijderEnkelMislukt, herprobeeerEnkel, herprobeeerAlle } =
+    useSync();
+
   const { data, isLoading, isError, refetch } = useGetMijnWerk();
 
   useFocusEffect(useCallback(() => { refetch(); }, [refetch]));
@@ -106,6 +111,19 @@ export default function MijnWerkScherm() {
                 : `${totaalSpots} spot${totaalSpots !== 1 ? "s" : ""} in ${(data ?? []).length} gebouw${(data ?? []).length !== 1 ? "en" : ""}`}
             </Text>
           )}
+          <View style={{ marginTop: 10 }}>
+            <SyncStatusBadge
+              status={syncStatus}
+              aantalWachtend={aantalWachtend}
+              aantalMislukt={aantalMislukt}
+              mislukteItems={mislukteItems}
+              onWisMislukte={wisMislukte}
+              onForceerSync={forceerSync}
+              onVerwijderItem={verwijderEnkelMislukt}
+              onHerprobeeerItem={herprobeeerEnkel}
+              onHerprobeeerAlle={herprobeeerAlle}
+            />
+          </View>
         </View>
       </View>
 
