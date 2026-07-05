@@ -45,7 +45,7 @@ export default function GebouwPlattegronden({
   const [keuzeId, setKeuzeId] = useState<string>("");
   const [bevestigVervangen, setBevestigVervangen] = useState(false);
   const [bestandGrootte, setBestandGrootte] = useState<number | null>(null);
-  const [rijSelectie, setRijSelectie] = useState<{ vId: number; grootte: number } | null>(null);
+  const [rijSelectie, setRijSelectie] = useState<{ vId: number; grootte: number; bestand: File } | null>(null);
 
   const gesorteerd = [...verdiepingen].sort((a, b) => a.niveau - b.niveau);
   const gekozen = gesorteerd.find((v) => String(v.id) === keuzeId);
@@ -58,21 +58,19 @@ export default function GebouwPlattegronden({
     inputRef.current?.click();
   }
 
-  async function opBestand(file: File) {
-    const vId = doelId.current;
-    if (vId == null) return;
+  async function opBestand(file: File, verdiepingId: number) {
     setFout("");
     setBestandGrootte(file.size);
     setFouteId(null);
-    setBezigId(vId);
+    setBezigId(verdiepingId);
     try {
       const upload = await uploadFile(file);
       if (!upload) {
-        setFouteId(vId);
+        setFouteId(verdiepingId);
         return;
       }
       await updateVerdieping.mutateAsync({
-        id: vId,
+        id: verdiepingId,
         data: { plattegrond_url: upload.objectPath },
       });
       queryClient.invalidateQueries();
@@ -145,10 +143,17 @@ export default function GebouwPlattegronden({
           onChange={async (e) => {
             const file = e.target.files?.[0];
             if (file) {
-              if (!formOpen && doelId.current != null) {
-                setRijSelectie({ vId: doelId.current, grootte: file.size });
+              const vId = doelId.current;
+              if (!formOpen && vId != null) {
+                if (file.size > GROOT_BESTAND_GRENS) {
+                  setRijSelectie({ vId, grootte: file.size, bestand: file });
+                } else {
+                  setRijSelectie({ vId, grootte: file.size, bestand: file });
+                  await opBestand(file, vId);
+                }
+              } else if (vId != null) {
+                await opBestand(file, vId);
               }
-              await opBestand(file);
             }
             e.target.value = "";
           }}
@@ -202,12 +207,12 @@ export default function GebouwPlattegronden({
                           <ExternalLink className="h-4 w-4 mr-1" /> Openen
                         </Link>
                       </Button>
-                    ) : isBeheerder ? (
+                    ) : isBeheerder && !(rijSelectie?.vId === v.id && rijSelectie.grootte > GROOT_BESTAND_GRENS) ? (
                       <Button
                         variant="outline"
                         size="sm"
                         className="h-7"
-                        disabled={bezig}
+                        disabled={bezig || (rijSelectie != null && rijSelectie.grootte > GROOT_BESTAND_GRENS)}
                         onClick={() => kiesVoor(v.id)}
                       >
                         {bezig ? (
@@ -219,13 +224,41 @@ export default function GebouwPlattegronden({
                       </Button>
                     ) : null}
                     {rijSelectie?.vId === v.id && (
-                      <div className={`flex items-center gap-1.5 rounded px-2 py-1 text-xs ${rijSelectie.grootte > GROOT_BESTAND_GRENS ? "bg-amber-50 border border-amber-200 text-amber-800" : "bg-muted/50 text-muted-foreground"}`}>
-                        {rijSelectie.grootte > GROOT_BESTAND_GRENS && (
-                          <AlertTriangle className="h-3 w-3 shrink-0 text-amber-500" />
-                        )}
-                        {formateerGrootte(rijSelectie.grootte)}
-                        {rijSelectie.grootte > GROOT_BESTAND_GRENS && " — groot bestand"}
-                      </div>
+                      rijSelectie.grootte > GROOT_BESTAND_GRENS ? (
+                        <div className="flex flex-col items-end gap-1.5 rounded border border-amber-200 bg-amber-50 px-2 py-1.5 text-xs text-amber-800">
+                          <div className="flex items-center gap-1.5">
+                            <AlertTriangle className="h-3 w-3 shrink-0 text-amber-500" />
+                            {formateerGrootte(rijSelectie.grootte)} — groot bestand
+                          </div>
+                          <div className="flex gap-1">
+                            <Button
+                              size="sm"
+                              className="h-6 px-2 text-xs"
+                              disabled={bezig}
+                              onClick={() => { void opBestand(rijSelectie.bestand, rijSelectie.vId); }}
+                            >
+                              {bezig ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
+                              Uploaden
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-6 px-2 text-xs"
+                              disabled={bezig}
+                              onClick={() => {
+                                setRijSelectie(null);
+                                doelId.current = null;
+                              }}
+                            >
+                              Annuleren
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1.5 rounded px-2 py-1 text-xs bg-muted/50 text-muted-foreground">
+                          {formateerGrootte(rijSelectie.grootte)}
+                        </div>
+                      )
                     )}
                   </div>
                 </li>
