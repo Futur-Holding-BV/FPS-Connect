@@ -367,6 +367,7 @@ export default function UitvoeringScherm() {
     }
 
     const geuploadeFotos = fotos.filter((f) => f.objectPath).map((f) => f.objectPath!);
+    const offlineFotos = fotos.filter((f) => !f.objectPath).map((f) => f.lokaal);
 
     if (!isOnline) {
       await voegToeAanWachtrij({
@@ -378,6 +379,8 @@ export default function UitvoeringScherm() {
           opmerkingen: opmerkingen.trim() || undefined,
           foto_urls: geuploadeFotos.length > 0 ? geuploadeFotos : undefined,
         },
+        // Lokale foto's (nog niet geüpload) worden bij sync geüpload
+        lokale_foto_paden: offlineFotos.length > 0 ? offlineFotos : undefined,
       });
       await herlaadAantal();
       setOfflineOpgeslagen(true);

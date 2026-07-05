@@ -77,11 +77,14 @@ export type SyncActie =
       type: "voltooi_pim_stap";
       opdrachtId: number;
       stapId: number;
+      /** Al geüploade objectPaths (online genomen, pad begint met /objects/...) */
       payload: {
         antwoord_controle: boolean;
         opmerkingen?: string;
         foto_urls?: string[];
       };
+      /** Lokale file:// URI's van offline genomen foto's — worden bij sync geüpload */
+      lokale_foto_paden?: string[];
     };
 
 export type WachtrijItem = SyncActie & {

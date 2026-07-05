@@ -33,6 +33,13 @@ Voor elke taak drie scores:
 - "Start adaptieve gids"-knop in `werkdag/[id].tsx`, zichtbaar wanneer `huidigWerkorder.opdracht_id` aanwezig is
 - Routepatroon: `/uitvoering/:opdrachtId` (Expo typed-routes workaround: `as any`)
 
+**Offline foto-buffering (blocking fix na code review):**
+- `voltooi_pim_stap` SyncQueue type uitgebreid met `lokale_foto_paden?: string[]` voor foto's zonder objectPath
+- Uitvoering screen: bij offline queuing worden lokale URI's (niet-geüploade foto's) als `lokale_foto_paden` meegestuurd
+- Sync handler: foto's in `lokale_foto_paden` worden bij reconnect geüpload via `/api/storage/uploads/request-url` + `FileSystem.uploadAsync`, resulterende objectPaths worden samengevoegd met reeds-geüploade `foto_urls`
+- Na success of 409: `pim_stap_{id}_v1` AsyncStorage cache verwijderd zodat monteur geen verouderde stap ziet
+- `AsyncStorage` nu statisch geïmporteerd bovenin `sync.tsx`
+
 ## 2026-07-05 — PIM Fase E — Adaptieve Uitvoering (Task #300)
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag

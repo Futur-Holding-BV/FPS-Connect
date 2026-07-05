@@ -1,4 +1,5 @@
 import * as FileSystem from "expo-file-system";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useQueryClient } from "@tanstack/react-query";
 import React, {
   createContext,
@@ -268,12 +269,63 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
 
         // ── PIM uitvoeringsstap voltooien ─────────────────────────────────────
         case "voltooi_pim_stap": {
+          // 1. Upload offline genomen foto's (lokale file:// URI's)
+          const extraFotoUrls: string[] = [];
+          for (const lokaalPad of item.lokale_foto_paden ?? []) {
+            const fileInfo = await FileSystem.getInfoAsync(lokaalPad);
+            if (!fileInfo.exists) continue; // bestand gewist — overslaan
+
+            const naam = lokaalPad.split("/").pop() ?? `pim_foto_${Date.now()}.jpg`;
+
+            // Vraag presigned upload-URL aan
+            const urlResp = await fetch(`${basis}/api/storage/uploads/request-url`, {
+              method: "POST",
+              headers,
+              body: JSON.stringify({
+                name: naam,
+                size: fileInfo.size ?? 1,
+                contentType: "image/jpeg",
+                bestand_type: "foto",
+              }),
+            });
+            if (!urlResp.ok) throw new Error(`Upload-URL HTTP ${urlResp.status}`);
+            const { uploadURL, objectPath } = (await urlResp.json()) as {
+              uploadURL: string;
+              objectPath: string;
+            };
+
+            // Upload bestand via presigned URL
+            const uploadResult = await FileSystem.uploadAsync(lokaalPad, uploadURL, {
+              httpMethod: "PUT",
+              headers: { "Content-Type": "image/jpeg" },
+            });
+            if (uploadResult.status >= 300) {
+              throw new Error(`Foto-upload HTTP ${uploadResult.status}`);
+            }
+            extraFotoUrls.push(objectPath);
+          }
+
+          // 2. Samenstellen definitieve payload (inclusief offline geüploade foto's)
+          const definitiefPayload = {
+            ...item.payload,
+            foto_urls: [
+              ...(item.payload.foto_urls ?? []),
+              ...extraFotoUrls,
+            ],
+          };
+
+          // 3. Stap voltooien
           const r = await fetch(
             `${basis}/api/opdrachten/${item.opdrachtId}/pim/uitvoering/stap/${item.stapId}/voltooien`,
-            { method: "POST", headers, body: JSON.stringify(item.payload) },
+            { method: "POST", headers, body: JSON.stringify(definitiefPayload) },
           );
           // 409 = stap al voltooid door een ander (conflict) — stil doorgaan
           if (!r.ok && r.status !== 409) throw new Error(`HTTP ${r.status}`);
+
+          // 4. Cache invalideren zodat de monteur niet een verouderde stap ziet
+          await AsyncStorage.removeItem(
+            `pim_stap_${item.opdrachtId}_v1`,
+          ).catch(() => undefined);
           break;
         }
 
