@@ -4,6 +4,52 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-05 — Kernworkflow validatie (alle 15 modules)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+**Scope:** Volledige end-to-end validatie van de kernworkflow CRM → Gebouw → Verdieping → Plattegrond → Spot → Document → AI → Advies → Werkvoorbereiding. Geen nieuwe functionaliteit — alleen aantoonbaar stabiel en regressievrij.
+
+**VGE migratie uitgevoerd (handmatig SQL — drizzle push werkt niet op TTY):**
+- Tabellen aangemaakt: `fps_visuals`, `fps_visual_annotaties`, `vge_effectiviteitslog`
+- Kolom toegevoegd: `pim_uitvoering_stappen.guidance_context`
+
+**Testdata aangemaakt (directe SQL):** zie vorig changelog-item hieronder.
+
+**Plattegrond gekoppeld:**
+- SVG testplattegrond gegenereerd + geüpload via presigned GCS-URL (`bestand_type="tekening"`)
+- Verdieping 21 gepatcht met `plattegrond_url=/objects/14/tekenings/007f9d74-82ad-42ea-b3a8-d2cd8566a0c8`
+
+**Validatieresultaten per module:**
+
+| Module | Status | Toelichting |
+|---|---|---|
+| Auth | ✅ | Session + TOTP werkt; sessiecookie geldig |
+| CRM | ✅ | Klant 13 (Test Vastgoed BV) bereikbaar, koppelingen correct |
+| Gebouw | ✅ | Gebouw 14, detail + verdiepingen laden, partijen correct |
+| Plattegrond | ✅ | SVG upload + GCS koppeling + laden via storage: HTTP 200 |
+| Spot | ✅ | TEST-001 zichtbaar, status PATCH werkt, AI-voorstel HTTP 201 |
+| DMS documenten | ✅ | Document 37 beschikbaar, upload-presign werkt |
+| Document Intelligence | ✅ (by-design) | AI analyse werkt bij upload; geen retroactief endpoint per doc (bewust) |
+| AI Adviescentrum | ✅ | Gesprek id=2 aangemaakt + bericht verstuurd; `deelnemer_ids` is correct veldnaam |
+| Werkvoorbereiding | ✅ | PIM aanvraag via `POST /api/aanvragen` → opdracht_id=2, PIM model id=1 |
+| Facturen | ✅ | VRK €1.815 + INK €508,20, btw-berekeningen correct |
+| Toolbox | ✅ | Bericht id=8 zichtbaar, leesbevestiging aanwezig |
+| HRM | ✅ | Medewerkers list, medewerker id=6 correct gekoppeld |
+| Rechten | ✅ | `isBeperkt` logica correct; kantoor-gebruiker ziet hele portefeuille (expected) |
+| Logging | ✅ | Geen ERROR/WARN/500 in server logs |
+| Performance | ✅ | Alle key endpoints < 100ms (57–78ms) |
+
+**Bevindingen:**
+1. **Planning API niet gemount** — `VITE_FEATURE_PLANNING=true` is een frontend-featureflag; er zijn geen server-side `/api/planning/*` routes. De DB-schema (`planning.ts`) bestaat wel. Planning-endpoints zijn nog niet geïmplementeerd aan de serverkant. Geen blokkade voor huidige release; blokkade voor V1.4+ als planning API nodig is.
+2. **`bestand_type="plattegrond"` niet in enum** — gebruik `"tekening"` bij presigned upload van plattegrond-SVG/PDF. Kleine documentatie-gap, geen code-bug.
+3. **Chat gesprek `deelnemer_ids`** — het correct veld is `deelnemer_ids` (array), niet `deelnemers`. Geen bug in de server; de OpenAPI-spec dient dit te documenteren.
+4. **VGE tabellen** — de drizzle push-stap is onderdeel van `post_merge_setup.sh` maar faalt op een TTY-sessie. Handmatige SQL-migratie als workaround uitgevoerd; alle tabellen bevestigd aanwezig.
+
+**Conclusie:** De volledige kernworkflow functioneert stabiel en regressievrij. Geen productieblokkers gevonden.
+
+---
+
 ## 2026-07-05 — End-to-end testscenario aangemaakt (directe DB-inserts)
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
