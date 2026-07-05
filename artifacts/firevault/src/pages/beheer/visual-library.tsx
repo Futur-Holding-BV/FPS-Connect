@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useRef, useState, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Upload,
@@ -110,6 +110,37 @@ const VISUAL_TYPE_LABELS: Record<string, string> = {
   schema: "Schema",
   "3d_weergave": "3D-weergave",
 };
+
+// ─── localStorage-state hook ───────────────────────────────────────────────────
+
+function useLocalStorage<T>(sleutel: string, standaard: T): [T, (v: T | ((prev: T) => T)) => void] {
+  const [waarde, setWaarde] = useState<T>(() => {
+    try {
+      const opgeslagen = localStorage.getItem(sleutel);
+      if (opgeslagen !== null) return JSON.parse(opgeslagen) as T;
+    } catch {
+      // kapotte waarde negeren
+    }
+    return standaard;
+  });
+
+  const stelIn = useCallback(
+    (v: T | ((prev: T) => T)) => {
+      setWaarde((prev) => {
+        const nieuw = typeof v === "function" ? (v as (prev: T) => T)(prev) : v;
+        try {
+          localStorage.setItem(sleutel, JSON.stringify(nieuw));
+        } catch {
+          // quota-overschrijding negeren
+        }
+        return nieuw;
+      });
+    },
+    [sleutel],
+  );
+
+  return [waarde, stelIn];
+}
 
 // ─── Hulpfuncties ─────────────────────────────────────────────────────────────
 
@@ -391,11 +422,11 @@ export default function VisualLibraryBeheer() {
   });
 
   // ── Filters: hoofdraster (beheer) ────────────────────────────────────────────
-  const [zoekBeheer, setZoekBeheer]                       = useState("");
-  const [filterVisualTypeBeheer, setFilterVisualTypeBeheer] = useState("alle");
-  const [filterBronTypeBeheer, setFilterBronTypeBeheer]   = useState("alle");
-  const [filterSpotTypesBeheer, setFilterSpotTypesBeheer] = useState<string[]>([]);
-  const [filterActiefBeheer, setFilterActiefBeheer]       = useState("alle");
+  const [zoekBeheer, setZoekBeheer]                         = useLocalStorage<string>("fps_vl_zoek_beheer", "");
+  const [filterVisualTypeBeheer, setFilterVisualTypeBeheer] = useLocalStorage<string>("fps_vl_filter_visual_type_beheer", "alle");
+  const [filterBronTypeBeheer, setFilterBronTypeBeheer]     = useLocalStorage<string>("fps_vl_filter_bron_type_beheer", "alle");
+  const [filterSpotTypesBeheer, setFilterSpotTypesBeheer]   = useLocalStorage<string[]>("fps_vl_filter_spot_types_beheer", []);
+  const [filterActiefBeheer, setFilterActiefBeheer]         = useLocalStorage<string>("fps_vl_filter_actief_beheer", "alle");
 
   function toggleSpotTypeBeheer(type: string) {
     setFilterSpotTypesBeheer((prev) =>
@@ -429,12 +460,12 @@ export default function VisualLibraryBeheer() {
   }
 
   // ── Filters: statistiekentabel ────────────────────────────────────────────────
-  const [zoek, setZoek] = useState("");
-  const [filterType, setFilterType] = useState("alle");
-  const [filterBronType, setFilterBronType] = useState("alle");
-  const [filterSpotTypes, setFilterSpotTypes] = useState<string[]>([]);
-  const [filterActief, setFilterActief] = useState("alle");
-  const [sortering, setSortering] = useState("naam");
+  const [zoek, setZoek]                       = useLocalStorage<string>("fps_vl_zoek_stats", "");
+  const [filterType, setFilterType]           = useLocalStorage<string>("fps_vl_filter_type_stats", "alle");
+  const [filterBronType, setFilterBronType]   = useLocalStorage<string>("fps_vl_filter_bron_type_stats", "alle");
+  const [filterSpotTypes, setFilterSpotTypes] = useLocalStorage<string[]>("fps_vl_filter_spot_types_stats", []);
+  const [filterActief, setFilterActief]       = useLocalStorage<string>("fps_vl_filter_actief_stats", "alle");
+  const [sortering, setSortering]             = useLocalStorage<string>("fps_vl_sortering_stats", "naam");
 
   function toggleSpotTypeStats(type: string) {
     setFilterSpotTypes((prev) =>
@@ -468,14 +499,14 @@ export default function VisualLibraryBeheer() {
       return 0;
     });
 
-  const totaalGetoond = (statsVisuals ?? []).reduce((s, v) => s + v.n_getoond, 0);
-  const metData = (statsVisuals ?? []).filter((v) => v.n_getoond > 0);
+  const totaalGetoond = (statsVisuals ?? []).reduce((s: number, v: FpsVisualItem) => s + v.n_getoond, 0);
+  const metData = (statsVisuals ?? []).filter((v: FpsVisualItem) => v.n_getoond > 0);
   const gemScore =
     metData.length > 0
-      ? Math.round(metData.reduce((s, v) => s + (v.pct_zonder_herstelwerk ?? 0), 0) / metData.length)
+      ? Math.round(metData.reduce((s: number, v: FpsVisualItem) => s + (v.pct_zonder_herstelwerk ?? 0), 0) / metData.length)
       : null;
 
-  const uniqueTypes: string[] = [...new Set((statsVisuals ?? []).map((v: FpsVisualItem) => v.visual_type))].sort();
+  const uniqueTypes: string[] = Array.from(new Set((statsVisuals ?? []).map((v: FpsVisualItem) => v.visual_type))).sort();
 
   const vernieuw = () => {
     qc.invalidateQueries({ queryKey: getListBeheerVisualsQueryKey() });
@@ -1213,7 +1244,7 @@ export default function VisualLibraryBeheer() {
                 <CardContent>
                   <div className="text-2xl font-bold">{statsVisuals.length}</div>
                   <div className="text-xs text-muted-foreground mt-1">
-                    {statsVisuals.filter((v) => v.actief).length} actief
+                    {statsVisuals.filter((v: FpsVisualItem) => v.actief).length} actief
                   </div>
                 </CardContent>
               </Card>
