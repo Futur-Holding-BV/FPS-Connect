@@ -94,6 +94,8 @@ export default function OpnameItemDetail() {
   const [heeftWijzigingen, setHeeftWijzigingen] = useState(false);
   const [lokaleFotos, setLokaleFotos] = useState<string[]>([]);
   const [gecachedItem, setGecachedItem] = useState<Record<string, unknown> | null>(null);
+  const [uploadFout, setUploadFout] = useState<{ type: "netwerk" | "bestandstype" | "overig"; bericht: string } | null>(null);
+  const laatstUriRef = useRef<string | null>(null);
 
   const fotoDir = `${FileSystem.documentDirectory ?? ""}opname-fotos/${id}/`;
 
@@ -233,6 +235,9 @@ export default function OpnameItemDetail() {
   }
 
   async function uploadFoto(uri: string) {
+    setUploadFout(null);
+    laatstUriRef.current = uri;
+
     if (!isOnline) {
       // Offline: sla foto lokaal op en zet in wachtrij
       setIsUploading(true);
@@ -270,17 +275,45 @@ export default function OpnameItemDetail() {
 
       const response = await fetch(uri);
       const blob = await response.blob();
-      await fetch(upload_url, {
+      const putResponse = await fetch(upload_url, {
         method: "PUT",
         body: blob,
         headers: { "Content-Type": contentType },
       });
 
+      if (!putResponse.ok) {
+        if (putResponse.status >= 400 && putResponse.status < 500) {
+          setUploadFout({
+            type: "bestandstype",
+            bericht: `Bestand geweigerd door de opslag (HTTP ${putResponse.status}). Kies een ander bestand.`,
+          });
+          return;
+        }
+        throw new Error(`HTTP ${putResponse.status}`);
+      }
+
       await refetch();
-    } catch {
-      Alert.alert("Fout", "Foto kon niet worden geupload. Probeer het opnieuw.");
+    } catch (err) {
+      const e = err instanceof Error ? err : new Error("Onbekende fout");
+      const isNetwerkFout =
+        e instanceof TypeError ||
+        e.message === "Failed to fetch" ||
+        e.message === "Network request failed" ||
+        e.message === "NetworkError when attempting to fetch resource.";
+      setUploadFout({
+        type: isNetwerkFout ? "netwerk" : "overig",
+        bericht: isNetwerkFout
+          ? "Verbinding weggevallen. Controleer uw netwerk en probeer opnieuw."
+          : `Upload mislukt: ${e.message}. Probeer het opnieuw.`,
+      });
     } finally {
       setIsUploading(false);
+    }
+  }
+
+  async function opnieuwProberen() {
+    if (laatstUriRef.current) {
+      await uploadFoto(laatstUriRef.current);
     }
   }
 
@@ -585,6 +618,88 @@ export default function OpnameItemDetail() {
                 </Text>
               </Pressable>
             </View>
+
+            {/* Upload-foutmelding */}
+            {uploadFout ? (
+              <View
+                style={{
+                  backgroundColor: "rgba(239,68,68,0.1)",
+                  borderWidth: 1,
+                  borderColor: "#ef4444",
+                  borderRadius: 10,
+                  padding: 12,
+                  marginBottom: 12,
+                  flexDirection: "row",
+                  alignItems: "flex-start",
+                  gap: 10,
+                }}
+              >
+                <Ionicons name="alert-circle-outline" size={18} color="#ef4444" style={{ marginTop: 1 }} />
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: "#ef4444", fontSize: 13, fontFamily: "Inter_600SemiBold", marginBottom: 6 }}>
+                    Foto uploaden mislukt
+                  </Text>
+                  <Text style={{ color: "#ef4444", fontSize: 12, fontFamily: "Inter_400Regular", marginBottom: 10 }}>
+                    {uploadFout.bericht}
+                  </Text>
+                  {uploadFout.type === "bestandstype" ? (
+                    <Pressable
+                      onPress={() => void voegFotoToe()}
+                      style={{
+                        alignSelf: "flex-start",
+                        backgroundColor: "#ef4444",
+                        paddingHorizontal: 12,
+                        paddingVertical: 7,
+                        borderRadius: 8,
+                      }}
+                    >
+                      <Text style={{ color: "#fff", fontSize: 12, fontFamily: "Inter_600SemiBold" }}>
+                        Ander bestand kiezen
+                      </Text>
+                    </Pressable>
+                  ) : (
+                    <View style={{ flexDirection: "row", gap: 8 }}>
+                      <Pressable
+                        onPress={() => void opnieuwProberen()}
+                        disabled={isUploading}
+                        style={{
+                          backgroundColor: "#ef4444",
+                          paddingHorizontal: 12,
+                          paddingVertical: 7,
+                          borderRadius: 8,
+                          flexDirection: "row",
+                          alignItems: "center",
+                          gap: 5,
+                        }}
+                      >
+                        {isUploading ? (
+                          <ActivityIndicator size="small" color="#fff" />
+                        ) : (
+                          <Ionicons name="refresh-outline" size={13} color="#fff" />
+                        )}
+                        <Text style={{ color: "#fff", fontSize: 12, fontFamily: "Inter_600SemiBold" }}>
+                          Opnieuw proberen
+                        </Text>
+                      </Pressable>
+                      <Pressable
+                        onPress={() => setUploadFout(null)}
+                        style={{
+                          paddingHorizontal: 12,
+                          paddingVertical: 7,
+                          borderRadius: 8,
+                          borderWidth: 1,
+                          borderColor: "#ef4444",
+                        }}
+                      >
+                        <Text style={{ color: "#ef4444", fontSize: 12, fontFamily: "Inter_600SemiBold" }}>
+                          Sluiten
+                        </Text>
+                      </Pressable>
+                    </View>
+                  )}
+                </View>
+              </View>
+            ) : null}
 
             {(fotos.length === 0 && lokaleFotos.length === 0) ? (
               <View
