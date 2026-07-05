@@ -64,7 +64,7 @@ import VisualLibraryBeheer from "@/pages/beheer/visual-library";
 import ProfielenBeheer from "@/pages/beheer/profielen";
 import ToepassingenBeheer from "@/pages/beheer/toepassingen";
 import Bibliotheek from "@/pages/beheer/bibliotheek";
-import VisualLibraryBeheer from "@/pages/beheer/visuals";
+import VisualsBeheer from "@/pages/beheer/visuals";
 import Ontwikkelstatus from "@/pages/beheer/ontwikkelstatus";
 import DocumentopmaakBeheer from "@/pages/organisatie/documentopmaak";
 import WerkmaatschappijPagina from "@/pages/organisatie/werkmaatschappijen";
@@ -161,7 +161,6 @@ import SalarisarchiefBatchDetailPagina from "@/pages/salarisarchief/batch-detail
 import SepaBestandenPagina from "@/pages/sepa-bestanden/index";
 import MijnSalarisdocumentenPagina from "@/pages/mijn/salarisdocumenten";
 import AiLogBeheer from "@/pages/beheer/ai-log";
-import VisualLibraryBeheer from "@/pages/beheer/visual-library";
 import BoekhoudingBeheer from "@/pages/beheer/boekhouding";
 import GoLivePagina from "@/pages/beheer/go-live";
 import BedrijfskompasPage from "@/pages/beheer/bedrijfskompas";
@@ -492,7 +491,7 @@ function ConnectPortal() {
         <Route path="/organisatie/documentopmaak" component={DocumentopmaakBeheer} />
         <Route path="/organisatie/werkmaatschappijen" component={WerkmaatschappijPagina} />
         <Route path="/beheer/spotconfiguratie" component={SpotconfiguratieBeheer} />
-        <Route path="/beheer/visuals" component={VisualLibraryBeheer} />
+        <Route path="/beheer/visuals" component={VisualsBeheer} />
         <Route path="/beheer/mail" component={MailBeheer} />
         <Route path="/beheer/backup" component={BackupBeheer} />
         <Route path="/beheer/herstel" component={HerstelDashboard} />

@@ -16,6 +16,7 @@ import {
   CheckCircle2,
   AlertTriangle,
   Circle,
+  Pencil,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -183,14 +184,18 @@ function VisualTegel({
   visual,
   onToggle,
   onVerwijder,
+  onBewerk,
   isToggling,
   isVerwijdering,
+  kanSchrijven,
 }: {
   visual: BeheerVisual;
   onToggle: (v: BeheerVisual) => void;
   onVerwijder: (v: BeheerVisual) => void;
+  onBewerk: (v: BeheerVisual) => void;
   isToggling: boolean;
   isVerwijdering: boolean;
+  kanSchrijven: boolean;
 }) {
   const previewUrl = visual.thumbnail_path
     ? storageUrl(visual.thumbnail_path)
@@ -266,6 +271,18 @@ function VisualTegel({
               </>
             )}
           </Button>
+          {kanSchrijven && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-7 w-7 p-0"
+              onClick={() => onBewerk(visual)}
+              disabled={isToggling || isVerwijdering}
+              title="Bewerken"
+            >
+              <Pencil className="h-3 w-3" />
+            </Button>
+          )}
           <Button
             size="sm"
             variant="ghost"
@@ -358,6 +375,8 @@ export default function VisualLibraryBeheer() {
   const [thumbnail, setThumbnail]             = useState<File | null>(null);
   const [togglingId, setTogglingId]           = useState<number | null>(null);
   const [verwijderingId, setVerwijderingId]   = useState<number | null>(null);
+  const [bewerkVisual, setBewerkVisual]       = useState<BeheerVisual | null>(null);
+  const [bewerkForm, setBewerkForm]           = useState<FormulierData>(LEEG_FORMULIER);
 
   const bestandRef   = useRef<HTMLInputElement>(null);
   const thumbnailRef = useRef<HTMLInputElement>(null);
@@ -439,6 +458,19 @@ export default function VisualLibraryBeheer() {
       onError: () => {
         setTogglingId(null);
         toast({ title: "Bijwerken mislukt", variant: "destructive" });
+      },
+    },
+  });
+
+  const bewerkOpslaan = useUpdateBeheerVisual({
+    mutation: {
+      onSuccess: () => {
+        vernieuw();
+        setBewerkVisual(null);
+        toast({ title: "Visual bijgewerkt" });
+      },
+      onError: () => {
+        toast({ title: "Opslaan mislukt", variant: "destructive" });
       },
     },
   });
@@ -526,6 +558,44 @@ export default function VisualLibraryBeheer() {
     verwijderen.mutate({ id: visual.id });
   }
 
+  function handleBewerk(visual: BeheerVisual) {
+    setBewerkForm({
+      naam:            visual.naam,
+      visual_type:     visual.visual_type,
+      bron_type:       visual.bron_type,
+      bron_referentie: visual.bron_referentie ?? "",
+      spot_type:       visual.spot_type ?? [],
+    });
+    setBewerkVisual(visual);
+  }
+
+  function handleBewerkOpslaan() {
+    if (!bewerkVisual) return;
+    if (!bewerkForm.naam || !bewerkForm.visual_type || !bewerkForm.bron_type) {
+      toast({ title: "Vul alle verplichte velden in", variant: "destructive" });
+      return;
+    }
+    bewerkOpslaan.mutate({
+      id: bewerkVisual.id,
+      data: {
+        naam:            bewerkForm.naam,
+        visual_type:     bewerkForm.visual_type,
+        bron_type:       bewerkForm.bron_type,
+        bron_referentie: bewerkForm.bron_referentie || undefined,
+        spot_type:       bewerkForm.spot_type,
+      },
+    });
+  }
+
+  function toggleBewerkSpotType(type: string) {
+    setBewerkForm((prev) => ({
+      ...prev,
+      spot_type: prev.spot_type.includes(type)
+        ? prev.spot_type.filter((s) => s !== type)
+        : [...prev.spot_type, type],
+    }));
+  }
+
   const bezig = uploadt || uploadtThumb || aanmaken.isPending;
 
   return (
@@ -580,8 +650,10 @@ export default function VisualLibraryBeheer() {
                 visual={visual}
                 onToggle={handleToggle}
                 onVerwijder={(v) => setVerwijderVisual(v)}
+                onBewerk={handleBewerk}
                 isToggling={togglingId === visual.id}
                 isVerwijdering={verwijderingId === visual.id}
+                kanSchrijven={kanSchrijven}
               />
             ))}
           </div>
@@ -794,6 +866,138 @@ export default function VisualLibraryBeheer() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Bewerk-dialoog */}
+      {bewerkVisual && (
+        <Dialog open={!!bewerkVisual} onOpenChange={(open) => { if (!open) setBewerkVisual(null); }}>
+          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Visual bewerken</DialogTitle>
+            </DialogHeader>
+
+            <div className="space-y-4 py-2">
+              {/* Naam */}
+              <div className="space-y-1.5">
+                <Label>
+                  Naam <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  value={bewerkForm.naam}
+                  onChange={(e) => setBewerkForm((p) => ({ ...p, naam: e.target.value }))}
+                  placeholder="Bijv. Branddeur detail afdichting"
+                  disabled={bewerkOpslaan.isPending}
+                />
+              </div>
+
+              {/* Visual type */}
+              <div className="space-y-1.5">
+                <Label>
+                  Visualtype <span className="text-destructive">*</span>
+                </Label>
+                <Select
+                  value={bewerkForm.visual_type}
+                  onValueChange={(v) => setBewerkForm((p) => ({ ...p, visual_type: v }))}
+                  disabled={bewerkOpslaan.isPending}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Kies visualtype" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {VISUAL_TYPES.map((t) => (
+                      <SelectItem key={t.waarde} value={t.waarde}>
+                        {t.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Bron type */}
+              <div className="space-y-1.5">
+                <Label>
+                  Brontype <span className="text-destructive">*</span>
+                </Label>
+                <Select
+                  value={bewerkForm.bron_type}
+                  onValueChange={(v) => setBewerkForm((p) => ({ ...p, bron_type: v }))}
+                  disabled={bewerkOpslaan.isPending}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Kies brontype" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {BRON_TYPES.map((t) => (
+                      <SelectItem key={t.waarde} value={t.waarde}>
+                        {t.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Bron referentie */}
+              <div className="space-y-1.5">
+                <Label>Bronreferentie</Label>
+                <Input
+                  value={bewerkForm.bron_referentie}
+                  onChange={(e) => setBewerkForm((p) => ({ ...p, bron_referentie: e.target.value }))}
+                  placeholder="Bijv. ETA-2024-001 of tekening REV3"
+                  disabled={bewerkOpslaan.isPending}
+                />
+              </div>
+
+              {/* Spot types */}
+              <div className="space-y-1.5">
+                <Label>Toepasselijke spot-types</Label>
+                <div className="flex flex-wrap gap-2">
+                  {SPOT_TYPES.map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => toggleBewerkSpotType(s)}
+                      disabled={bewerkOpslaan.isPending}
+                      className={`px-2.5 py-1 rounded-full text-xs border transition-colors ${
+                        bewerkForm.spot_type.includes(s)
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "bg-background border-border hover:bg-muted"
+                      }`}
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Geen selectie = zichtbaar voor alle spot-types
+                </p>
+              </div>
+
+              <p className="text-xs text-muted-foreground bg-muted/50 rounded p-2">
+                Het bestand zelf is niet vervangbaar via dit formulier.
+              </p>
+            </div>
+
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setBewerkVisual(null)}
+                disabled={bewerkOpslaan.isPending}
+              >
+                Annuleren
+              </Button>
+              <Button onClick={handleBewerkOpslaan} disabled={bewerkOpslaan.isPending}>
+                {bewerkOpslaan.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Opslaan...
+                  </>
+                ) : (
+                  "Opslaan"
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* Verwijder-bevestiging */}
       <AlertDialog
