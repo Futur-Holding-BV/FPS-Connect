@@ -27,7 +27,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Search, AlertCircle, Boxes, Pencil, Trash2, Calendar, X } from "lucide-react";
+import { Plus, Search, AlertCircle, Boxes, Pencil, Trash2, Calendar, X, Filter } from "lucide-react";
 import { Link } from "wouter";
 import { Badge } from "@/components/ui/badge";
 import { useVoorkeur } from "@/hooks/use-voorkeur";
@@ -47,8 +47,6 @@ const STATUSLABEL: Record<string, string> = {
   vervallen: "Vervallen",
 };
 
-// Standaard palet voor clusters; identiek aan de plattegrond-editor zodat de
-// kleuren consistent zijn tussen lijst en plattegrond.
 const CLUSTER_TYPEN: Record<string, string> = {
   schacht: "Schacht",
   strook: "Strook",
@@ -66,23 +64,29 @@ type SpotVoorBeheer = {
   cluster_id: number | null;
 };
 
+const GEEN_FILTER = "__alle__";
+
 export default function Voorzieningen() {
   const { t } = useTranslation();
   const { data: voorzieningenLijst, isLoading, refetch } = useListVoorzieningen({});
   const { heeftNiveau } = useBevoegdheid();
   const magClustersBeheren = heeftNiveau("voorzieningen", 2);
-  const [zoek, setZoek] = useVoorkeur("voorzieningen_zoek", "");
   const [beheerSpot, setBeheerSpot] = useState<SpotVoorBeheer | null>(null);
-  const [alleenTeControleren, setAlleenTeControleren] = useVoorkeur(
+
+  const [zoek, setZoek, wisZoek] = useVoorkeur("voorzieningen_zoek", "");
+  const [typeFilter, setTypeFilter, wisType] = useVoorkeur("voorzieningen_type", GEEN_FILTER);
+  const [statusFilter, setStatusFilter, wisStatus] = useVoorkeur("voorzieningen_status", GEEN_FILTER);
+  const [gebouwFilter, setGebouwFilter, wisGebouw] = useVoorkeur("voorzieningen_gebouw", GEEN_FILTER);
+  const [alleenTeControleren, setAlleenTeControleren, wisTeControleren] = useVoorkeur(
     "voorzieningen_alleen_te_controleren",
     false,
   );
-  const [alleenVoorbereid, setAlleenVoorbereid] = useVoorkeur(
+  const [alleenVoorbereid, setAlleenVoorbereid, wisVoorbereid] = useVoorkeur(
     "voorzieningen_alleen_voorbereid",
     false,
   );
-  const [aanmaakVan, setAanmaakVan] = useVoorkeur("voorzieningen_aanmaak_van", "");
-  const [aanmaakTot, setAanmaakTot] = useVoorkeur("voorzieningen_aanmaak_tot", "");
+  const [aanmaakVan, setAanmaakVan, wisVan] = useVoorkeur("voorzieningen_aanmaak_van", "");
+  const [aanmaakTot, setAanmaakTot, wisTot] = useVoorkeur("voorzieningen_aanmaak_tot", "");
 
   const teControlerenAantal = useMemo(
     () => (voorzieningenLijst?.items ?? []).filter((v) => (v as any).ai_te_controleren).length,
@@ -94,13 +98,51 @@ export default function Voorzieningen() {
     [voorzieningenLijst],
   );
 
+  const alleTypes = useMemo(() => {
+    const set = new Set<string>();
+    (voorzieningenLijst?.items ?? []).forEach((v) => { if (v.type) set.add(v.type); });
+    return Array.from(set).sort();
+  }, [voorzieningenLijst]);
+
+  const alleGebouwen = useMemo(() => {
+    const map = new Map<string, string>();
+    (voorzieningenLijst?.items ?? []).forEach((v) => {
+      if (v.gebouw_naam) map.set(v.gebouw_naam, v.gebouw_naam);
+    });
+    return Array.from(map.keys()).sort();
+  }, [voorzieningenLijst]);
+
   const datumFilterActief = aanmaakVan !== "" || aanmaakTot !== "";
+
+  const actieveFilterAantal = [
+    zoek.trim() !== "",
+    typeFilter !== GEEN_FILTER,
+    statusFilter !== GEEN_FILTER,
+    gebouwFilter !== GEEN_FILTER,
+    alleenTeControleren,
+    alleenVoorbereid,
+    datumFilterActief,
+  ].filter(Boolean).length;
+
+  function wisAllesWissen() {
+    wisZoek();
+    wisType();
+    wisStatus();
+    wisGebouw();
+    wisTeControleren();
+    wisVoorbereid();
+    wisVan();
+    wisTot();
+  }
 
   const gefilterd = useMemo(() => {
     const term = zoek.trim().toLowerCase();
     let items = voorzieningenLijst?.items ?? [];
     if (alleenTeControleren) items = items.filter((v) => (v as any).ai_te_controleren);
     if (alleenVoorbereid) items = items.filter((v) => v.status === "voorbereid");
+    if (typeFilter !== GEEN_FILTER) items = items.filter((v) => v.type === typeFilter);
+    if (statusFilter !== GEEN_FILTER) items = items.filter((v) => (v.status ?? "concept") === statusFilter);
+    if (gebouwFilter !== GEEN_FILTER) items = items.filter((v) => v.gebouw_naam === gebouwFilter);
     if (aanmaakVan) {
       const van = new Date(`${aanmaakVan}T00:00:00`);
       items = items.filter((v) => {
@@ -120,7 +162,7 @@ export default function Voorzieningen() {
       [v.objectnummer, v.type, v.gebouw_naam, v.status]
         .some((veld) => (veld ?? "").toLowerCase().includes(term)),
     );
-  }, [voorzieningenLijst, zoek, alleenTeControleren, alleenVoorbereid, aanmaakVan, aanmaakTot]);
+  }, [voorzieningenLijst, zoek, typeFilter, statusFilter, gebouwFilter, alleenTeControleren, alleenVoorbereid, aanmaakVan, aanmaakTot]);
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
@@ -130,7 +172,7 @@ export default function Voorzieningen() {
           <h1 className="text-3xl font-bold tracking-tight">{t("voorzieningen.titel")}</h1>
           <p className="text-muted-foreground mt-1">{t("voorzieningen.ondertitel")}</p>
         </div>
-        <div className="flex gap-2 w-full sm:w-auto">
+        <div className="flex gap-2 w-full sm:w-auto flex-wrap">
           <div className="relative flex-1 sm:w-64">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
@@ -168,13 +210,55 @@ export default function Voorzieningen() {
         </div>
       </div>
 
-      {/* Datum-filter balk */}
+      {/* Filter-balk: type, status, gebouw, datums */}
       <div className="flex flex-wrap items-center gap-3">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Calendar className="h-4 w-4" />
-          <span className="font-medium text-foreground">Aanmaakdatum</span>
+        <div className="flex items-center gap-2 text-sm text-muted-foreground shrink-0">
+          <Filter className="h-4 w-4" />
+          <span className="font-medium text-foreground">Filters</span>
         </div>
+
+        {/* Type-filter */}
+        <Select value={typeFilter} onValueChange={setTypeFilter}>
+          <SelectTrigger className="h-8 w-44 text-xs">
+            <SelectValue placeholder="Alle types" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={GEEN_FILTER}>Alle types</SelectItem>
+            {alleTypes.map((type) => (
+              <SelectItem key={type} value={type}>{type}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {/* Status-filter */}
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="h-8 w-52 text-xs">
+            <SelectValue placeholder="Alle statussen" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={GEEN_FILTER}>Alle statussen</SelectItem>
+            {Object.entries(STATUSLABEL).map(([val, label]) => (
+              <SelectItem key={val} value={val}>{label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {/* Gebouw-filter */}
+        <Select value={gebouwFilter} onValueChange={setGebouwFilter}>
+          <SelectTrigger className="h-8 w-48 text-xs">
+            <SelectValue placeholder="Alle gebouwen" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={GEEN_FILTER}>Alle gebouwen</SelectItem>
+            {alleGebouwen.map((naam) => (
+              <SelectItem key={naam} value={naam}>{naam}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {/* Datum-filter */}
         <div className="flex items-center gap-1.5">
+          <Calendar className="h-4 w-4 text-muted-foreground" />
           <span className="text-xs text-muted-foreground">van</span>
           <DatePicker
             value={aanmaakVan}
@@ -194,21 +278,23 @@ export default function Voorzieningen() {
             placeholder="Tot"
           />
         </div>
-        {datumFilterActief && (
+
+        {actieveFilterAantal > 0 && (
           <Button
             variant="ghost"
             size="sm"
             className="h-8 text-xs text-muted-foreground hover:text-foreground"
-            onClick={() => { setAanmaakVan(""); setAanmaakTot(""); }}
+            onClick={wisAllesWissen}
           >
-            <X className="h-3.5 w-3.5 mr-1" />Wissen
+            <X className="h-3.5 w-3.5 mr-1" />
+            Alles wissen
+            <Badge variant="secondary" className="ml-1.5 text-xs px-1.5 py-0">{actieveFilterAantal}</Badge>
           </Button>
         )}
-        {datumFilterActief && (
-          <span className="text-xs text-muted-foreground">
-            {gefilterd.length} spot{gefilterd.length !== 1 ? "s" : ""} in periode
-          </span>
-        )}
+
+        <span className="text-xs text-muted-foreground">
+          {gefilterd.length} spot{gefilterd.length !== 1 ? "s" : ""}
+        </span>
       </div>
 
       <Card>
@@ -312,9 +398,6 @@ export default function Voorzieningen() {
   );
 }
 
-// Clusters van het gebouw van een spot beheren (aanmaken, hernoemen, herkleuren,
-// verwijderen) en deze spot in/uit een cluster zetten. Vereist voorzieningen
-// niveau 2; de server dwingt dit ook af.
 function SpotClusterDialog({
   spot,
   open,
@@ -398,7 +481,6 @@ function SpotClusterDialog({
         </DialogHeader>
 
         <div className="space-y-3">
-          {/* Cluster van deze spot */}
           <div className="space-y-1.5">
             <Label className="text-xs uppercase tracking-wide text-muted-foreground">
               Cluster van spot {spot.objectnummer}
@@ -426,7 +508,6 @@ function SpotClusterDialog({
             </p>
           </div>
 
-          {/* Bestaande clusters */}
           <div className="space-y-2 max-h-64 overflow-y-auto">
             {lijst.length === 0 && (
               <p className="text-sm text-muted-foreground italic">Nog geen clusters in dit gebouw.</p>
@@ -473,7 +554,6 @@ function SpotClusterDialog({
             ))}
           </div>
 
-          {/* Nieuw cluster */}
           <div className="border-t pt-3 space-y-2">
             <Label className="text-xs uppercase tracking-wide text-muted-foreground">Nieuw cluster</Label>
             <div className="flex items-center gap-2">
