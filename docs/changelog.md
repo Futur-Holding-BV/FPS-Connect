@@ -4,6 +4,39 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-05 — PIM Uitvoering: stappenoverzicht, foto-upload en KB-context
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+**Wat is gebouwd (drie onderdelen):**
+
+**Onderdeel 1 — Kantoor-stappenoverzicht:**
+- Nieuwe API-route `GET /opdrachten/:id/pim/uitvoering/stappen` — geeft alle uitvoeringsstappen gesorteerd op volgorde; afzonderlijk van de `huidige-stap` route zodat de bestaande monteur-flow intact blijft
+- OpenAPI spec uitgebreid + codegen gedraaid (`useListPimUitvoeringStappen` hook gegenereerd)
+- Nieuw `StappenOverzicht` component in `pim-uitvoering-tab.tsx`: toont alle stappen met stapnummer, status (incl. afgeleid "wacht op beslissing"), doel, aangemaakt-datum, voltooide-datum, fotoaantal en afwijkingsindicator
+- Actieve stap is visueel gemarkeerd (blauwe rand); overzicht verschijnt boven de actieve stap en blijft na afronding staan
+
+**Onderdeel 2 — Web foto-upload:**
+- Nieuw `FotoUploadKnop` component: file-input → `POST /api/storage/uploads/request-url` (presigned URL) → `PUT` bestand → `objectPath` toegevoegd aan `fotoUrls[]`
+- Vervangt de handmatige URL-textarea in zowel het voltooien-formulier als het afwijking-formulier
+- Toont thumbnailbadges met bestandsnaam + verwijderknop per geüploade foto
+- Geüploade foto-URLs zijn compatibel met de bestaande `foto_urls` kolom (zelfde objectPath-formaat)
+- Mobiele upload-flow ongewijzigd
+
+**Onderdeel 3 — KB-context in uitvoering-AI:**
+- `genereerStapViaAi()` uitgebreid met optionele `kbContext` parameter; bij aanwezigheid wordt de KB als extra sectie aan het systeem-prompt toegevoegd
+- Beide aanroeplocaties bijgewerkt: `POST .../uitvoering/start` (stap 1) en `POST .../stap/:id/voltooien` (volgende stap)
+- KB-context haalt categorieën `uitvoering`, `veiligheid`, `kwaliteit` op via `kbService.assembleKbContext()`
+- Fallback: bij lege of ontbrekende KB wordt de stap normaal gegenereerd; geen harde fout
+- Logging: `logger.info` of `logger.warn` per aanroep zodat zichtbaar is of KB meegestuurd is
+
+**Bestanden gewijzigd:**
+- `lib/api-spec/openapi.yaml` — nieuwe route toegevoegd
+- `lib/api-client-react/src/generated/api.ts` — codegen output
+- `lib/api-zod/src/generated/` — codegen output
+- `artifacts/api-server/src/routes/pim.ts` — nieuwe GET route, KB-context in start+voltooien
+- `artifacts/firevault/src/pages/opdrachten/pim-uitvoering-tab.tsx` — volledig herschreven met StappenOverzicht + FotoUploadKnop
+
 ## 2026-07-05 — FPS Knowledge Base — Foundation (Task #303)
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag

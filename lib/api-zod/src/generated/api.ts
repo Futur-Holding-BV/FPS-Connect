@@ -12642,6 +12642,40 @@ export const UpdatePimFaseResponse = zod.object({
 
 
 /**
+ * @summary Alle uitvoeringsstappen ophalen voor een opdracht, gesorteerd op volgorde
+ */
+export const ListPimUitvoeringStappenParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListPimUitvoeringStappenResponseItem = zod.object({
+  "id": zod.number(),
+  "pim_id": zod.number(),
+  "volgorde": zod.number(),
+  "status": zod.string().describe('open | actief | voltooid | afgeweken | overgeslagen'),
+  "werkpakket_sleutel": zod.string().nullish(),
+  "instructie_json": zod.object({
+
+}).passthrough().nullish().describe('AI-gegenereerde stapinstructie'),
+  "antwoorden_json": zod.object({
+
+}).passthrough().nullish().describe('Antwoorden van de monteur'),
+  "foto_urls": zod.array(zod.string()).optional().describe('Object-storage paden van de stapfoto\'s'),
+  "ai_analyse_json": zod.object({
+
+}).passthrough().nullish().describe('AI-analyse van foto\'s en antwoorden'),
+  "afwijking_json": zod.object({
+
+}).passthrough().nullish().describe('Afwijkingdetails inclusief beslissing projectleider'),
+  "voltooid_door_id": zod.number().nullish(),
+  "voltooid_op": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+export const ListPimUitvoeringStappenResponse = zod.array(ListPimUitvoeringStappenResponseItem)
+
+
+/**
  * @summary Start adaptieve uitvoering — genereert stap 1 via AI, zet ai_fase naar uitvoering
  */
 export const StartPimUitvoeringParams = zod.object({

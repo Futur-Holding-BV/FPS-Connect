@@ -36637,6 +36637,83 @@ export const useUpdatePimFase = <TError = ErrorType<void>,
       return useMutation(getUpdatePimFaseMutationOptions(options));
     }
 
+export const getListPimUitvoeringStappenUrl = (id: number,) => {
+
+
+
+
+  return `/api/opdrachten/${id}/pim/uitvoering/stappen`
+}
+
+/**
+ * @summary Alle uitvoeringsstappen ophalen voor een opdracht, gesorteerd op volgorde
+ */
+export const listPimUitvoeringStappen = async (id: number, options?: RequestInit): Promise<PimUitvoeringStap[]> => {
+
+  return customFetch<PimUitvoeringStap[]>(getListPimUitvoeringStappenUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListPimUitvoeringStappenQueryKey = (id: number,) => {
+    return [
+    `/api/opdrachten/${id}/pim/uitvoering/stappen`
+    ] as const;
+    }
+
+
+export const getListPimUitvoeringStappenQueryOptions = <TData = Awaited<ReturnType<typeof listPimUitvoeringStappen>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPimUitvoeringStappen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListPimUitvoeringStappenQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listPimUitvoeringStappen>>> = ({ signal }) => listPimUitvoeringStappen(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listPimUitvoeringStappen>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListPimUitvoeringStappenQueryResult = NonNullable<Awaited<ReturnType<typeof listPimUitvoeringStappen>>>
+export type ListPimUitvoeringStappenQueryError = ErrorType<void>
+
+
+/**
+ * @summary Alle uitvoeringsstappen ophalen voor een opdracht, gesorteerd op volgorde
+ */
+
+export function useListPimUitvoeringStappen<TData = Awaited<ReturnType<typeof listPimUitvoeringStappen>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPimUitvoeringStappen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListPimUitvoeringStappenQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
 export const getStartPimUitvoeringUrl = (id: number,) => {
 
 

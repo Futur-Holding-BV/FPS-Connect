@@ -1140,6 +1140,7 @@ async function genereerStapViaAi(
   wvCtx: Record<string, unknown>,
   aiAnalyseVorigeStap: Record<string, unknown> | null,
   gebruikerId: number | null,
+  kbContext?: string,
 ): Promise<Record<string, unknown> | null> {
   const vorigeStappen = await db
     .select({
@@ -1164,11 +1165,15 @@ async function genereerStapViaAi(
     ai_analyse_vorige_stap: aiAnalyseVorigeStap,
   };
 
+  const systeemInhoud = kbContext
+    ? `${UITVOERING_STAP_PROMPT.tekst}\n\n---\n\n${kbContext}`
+    : UITVOERING_STAP_PROMPT.tekst;
+
   const resultaat = await aiGateway.chat(
     "default",
     {
       messages: [
-        { role: "system", content: UITVOERING_STAP_PROMPT.tekst },
+        { role: "system", content: systeemInhoud },
         {
           role: "user",
           content: `Genereer stap ${volgorde} voor deze opdracht:\n${JSON.stringify(stapContext, null, 2)}`,
@@ -1190,6 +1195,31 @@ async function genereerStapViaAi(
   const cleaned = resultaat.inhoud.replace(/^```json\s*/i, "").replace(/```\s*$/i, "").trim();
   return JSON.parse(cleaned) as Record<string, unknown>;
 }
+
+/** GET /opdrachten/:id/pim/uitvoering/stappen */
+router.get("/opdrachten/:id/pim/uitvoering/stappen", lezen, async (req, res) => {
+  const opdrachtId = parseInt(String(req.params.id), 10);
+  if (isNaN(opdrachtId)) { res.status(400).json({ error: "Ongeldig opdracht-ID" }); return; }
+
+  try {
+    const [pim] = await db
+      .select({ id: pimModellenTable.id })
+      .from(pimModellenTable)
+      .where(eq(pimModellenTable.opdrachtId, opdrachtId));
+    if (!pim) { res.status(404).json({ error: "PIM niet gevonden voor deze opdracht" }); return; }
+
+    const stappen = await db
+      .select()
+      .from(pimUitvoeringStappenTable)
+      .where(eq(pimUitvoeringStappenTable.pimId, pim.id))
+      .orderBy(asc(pimUitvoeringStappenTable.volgorde));
+
+    res.json(stappen.map(serializeStap));
+  } catch (err) {
+    logger.error({ err }, "listPimUitvoeringStappen fout");
+    res.status(500).json({ error: "Serverfout bij ophalen uitvoeringsstappen" });
+  }
+});
 
 /** POST /opdrachten/:id/pim/uitvoering/start */
 router.post("/opdrachten/:id/pim/uitvoering/start", schrijven, async (req, res) => {
@@ -1226,9 +1256,21 @@ router.post("/opdrachten/:id/pim/uitvoering/start", schrijven, async (req, res) 
     let stapJson: Record<string, unknown> = fallbackStapJson(1, werkpakketSleutels[0] ?? null);
 
     if (heeftGateway()) {
+      let kbContext: string | undefined;
+      try {
+        const kb = await kbService.assembleKbContext({ categorieen: ["uitvoering", "veiligheid", "kwaliteit"] });
+        if (kb && kb.trim().length > 0) {
+          kbContext = kb;
+          logger.info({ opdrachtId }, "KB-context meegegeven aan uitvoering stap 1");
+        } else {
+          logger.info({ opdrachtId }, "KB-context leeg, stap 1 zonder KB gegenereerd");
+        }
+      } catch (kbErr) {
+        logger.warn({ kbErr }, "KB-context ophalen mislukt, stap 1 zonder KB gegenereerd");
+      }
       try {
         const result = await genereerStapViaAi(
-          pim.id, 1, opdracht.titel ?? "", inkoopCtx, wvCtx, null, gebruikerId,
+          pim.id, 1, opdracht.titel ?? "", inkoopCtx, wvCtx, null, gebruikerId, kbContext,
         );
         if (result) stapJson = result;
       } catch (aiErr) {
@@ -1506,8 +1548,21 @@ router.post("/opdrachten/:id/pim/uitvoering/stap/:stapId/voltooien", schrijven, 
         const wvCtx = (pim.werkvoorbereidingContext as Record<string, unknown> | null) ?? {};
         const volgendeVolgorde = stap.volgorde + 1;
 
+        let kbContext: string | undefined;
+        try {
+          const kb = await kbService.assembleKbContext({ categorieen: ["uitvoering", "veiligheid", "kwaliteit"] });
+          if (kb && kb.trim().length > 0) {
+            kbContext = kb;
+            logger.info({ opdrachtId, stap: volgendeVolgorde }, "KB-context meegegeven aan volgende uitvoeringstap");
+          } else {
+            logger.info({ opdrachtId, stap: volgendeVolgorde }, "KB-context leeg, stap zonder KB gegenereerd");
+          }
+        } catch (kbErr) {
+          logger.warn({ kbErr }, "KB-context ophalen mislukt bij voltooien, stap zonder KB gegenereerd");
+        }
+
         const volgendeInstructie = await genereerStapViaAi(
-          pim.id, volgendeVolgorde, opdracht.titel ?? "", inkoopCtx, wvCtx, aiAnalyse, gebruikerId,
+          pim.id, volgendeVolgorde, opdracht.titel ?? "", inkoopCtx, wvCtx, aiAnalyse, gebruikerId, kbContext,
         );
 
         if (volgendeInstructie?.is_laatste_stap === true && !volgendeInstructie?.doel) {

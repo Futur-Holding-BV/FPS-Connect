@@ -10467,6 +10467,29 @@ paths:
         "409":
           description: Ongeldige fase-overgang (alleen sequentieel +1 stap voorwaarts toegestaan)
 
+  /opdrachten/{id}/pim/uitvoering/stappen:
+    get:
+      operationId: listPimUitvoeringStappen
+      tags: [pim]
+      summary: Alle uitvoeringsstappen ophalen voor een opdracht, gesorteerd op volgorde
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PimUitvoeringStap"
+        "404":
+          description: PIM niet gevonden voor deze opdracht
+
   /opdrachten/{id}/pim/uitvoering/start:
     post:
       operationId: startPimUitvoering

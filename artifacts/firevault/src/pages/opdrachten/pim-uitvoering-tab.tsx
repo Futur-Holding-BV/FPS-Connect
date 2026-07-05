@@ -1,12 +1,15 @@
 // PIM Uitvoering Tab — AI-gestuurde stap-voor-stap uitvoering
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   useStartPimUitvoering,
   useGetHuidigePimUitvoeringStap,
   useVoltooiPimUitvoeringStap,
   useMeldPimUitvoeringAfwijking,
   useBeslisPimUitvoeringAfwijking,
+  useListPimUitvoeringStappen,
+  useRequestUploadUrl,
   getGetHuidigePimUitvoeringStapQueryKey,
+  getListPimUitvoeringStappenQueryKey,
 } from "@workspace/api-client-react";
 import type { PimUitvoeringStap } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
@@ -31,6 +34,8 @@ import {
   ClipboardCheck,
   SkipForward,
   ArrowRight,
+  Clock,
+  X,
 } from "lucide-react";
 
 // ── Status labels & kleuren ───────────────────────────────────────────────────
@@ -41,6 +46,7 @@ const STATUS_LABEL: Record<string, string> = {
   voltooid: "Voltooid",
   afgeweken: "Afwijking",
   overgeslagen: "Overgeslagen",
+  wacht_op_beslissing: "Wacht op beslissing",
 };
 
 const STATUS_KLEUR: Record<string, string> = {
@@ -49,6 +55,7 @@ const STATUS_KLEUR: Record<string, string> = {
   voltooid: "bg-green-100 text-green-800",
   afgeweken: "bg-amber-100 text-amber-800",
   overgeslagen: "bg-red-100 text-red-700",
+  wacht_op_beslissing: "bg-orange-100 text-orange-800",
 };
 
 function statusBadge(status: string) {
@@ -163,11 +170,203 @@ function InstructieWeergave({ instructie, volgorde }: { instructie: Instructie; 
           <div>
             <p className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-0.5">Foto-opdracht</p>
             <p className="text-sm">{instructie.foto_opdracht}</p>
-            <p className="text-xs text-muted-foreground mt-1">Upload foto via de mobiele app of voeg de opslag-URL hieronder in.</p>
           </div>
         </div>
       )}
     </div>
+  );
+}
+
+// ── Foto upload component ─────────────────────────────────────────────────────
+
+interface FotoUploadKnopProps {
+  fotoUrls: string[];
+  onToevoegen: (url: string) => void;
+  onVerwijderen: (index: number) => void;
+}
+
+function FotoUploadKnop({ fotoUrls, onToevoegen, onVerwijderen }: FotoUploadKnopProps) {
+  const [uploading, setUploading] = useState(false);
+  const [fout, setFout] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
+
+  const uploadUrlMutatie = useRequestUploadUrl();
+
+  async function handleSelectie(e: React.ChangeEvent<HTMLInputElement>) {
+    const bestand = e.target.files?.[0];
+    if (!bestand) return;
+    setFout(null);
+    setUploading(true);
+    try {
+      const data = await uploadUrlMutatie.mutateAsync({
+        data: {
+          name: bestand.name,
+          size: bestand.size,
+          contentType: bestand.type || "image/jpeg",
+          bestand_type: "foto",
+        },
+      });
+      const uploadResp = await fetch(data.uploadURL, {
+        method: "PUT",
+        headers: { "Content-Type": bestand.type || "image/jpeg" },
+        body: bestand,
+      });
+      if (!uploadResp.ok) throw new Error("Upload mislukt");
+      onToevoegen(data.objectPath);
+    } catch (err) {
+      const bericht = err instanceof Error ? err.message : "Upload mislukt";
+      setFout(bericht);
+      toast({ title: "Upload mislukt", description: bericht, variant: "destructive" });
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center gap-2">
+        <input
+          type="file"
+          ref={fileInputRef}
+          accept="image/*"
+          onChange={handleSelectie}
+          className="hidden"
+        />
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={uploading}
+        >
+          <Camera className="h-3.5 w-3.5 mr-1.5" />
+          {uploading ? "Uploaden..." : "Foto toevoegen"}
+        </Button>
+        {fotoUrls.length > 0 && (
+          <span className="text-xs text-muted-foreground">{fotoUrls.length} foto{fotoUrls.length !== 1 ? "'s" : ""} geselecteerd</span>
+        )}
+      </div>
+      {fout && <p className="text-xs text-destructive">{fout}</p>}
+      {fotoUrls.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {fotoUrls.map((url, i) => (
+            <div key={i} className="flex items-center gap-1 bg-slate-100 rounded px-2 py-0.5 text-xs font-mono">
+              <Camera className="h-3 w-3 text-slate-500 shrink-0" />
+              <span className="max-w-[140px] truncate text-slate-700">{url.split("/").pop() ?? url}</span>
+              <button
+                type="button"
+                onClick={() => onVerwijderen(i)}
+                className="ml-0.5 text-slate-400 hover:text-destructive"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Stappen overzicht ─────────────────────────────────────────────────────────
+
+interface StappenOverzichtProps {
+  opdrachtId: number;
+  actieveStapId?: number;
+}
+
+function StappenOverzicht({ opdrachtId, actieveStapId }: StappenOverzichtProps) {
+  const stappenQuery = useListPimUitvoeringStappen(opdrachtId);
+  const stappen = (stappenQuery.data as PimUitvoeringStap[] | undefined) ?? [];
+
+  if (stappenQuery.isLoading) {
+    return <Skeleton className="h-24 w-full" />;
+  }
+  if (stappen.length === 0) return null;
+
+  const aantalVoltooid = stappen.filter((s) => s.status === "voltooid").length;
+
+  return (
+    <Card>
+      <CardHeader className="pb-2 pt-4">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-sm font-semibold">Voortgang uitvoering</CardTitle>
+          <span className="text-xs text-muted-foreground">
+            {aantalVoltooid} van {stappen.length} stappen voltooid
+          </span>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-1.5">
+        {stappen.map((stap) => {
+          const instructie = parseInstructie(stap.instructie_json);
+          const isActief = stap.id === actieveStapId;
+          const afwijking = stap.afwijking_json as Record<string, unknown> | null;
+          const wachtOpBeslissing =
+            stap.status === "afgeweken" && afwijking != null && !afwijking.beslissing;
+          const weergaveStatus = wachtOpBeslissing ? "wacht_op_beslissing" : stap.status;
+          const fotoAantal = (stap.foto_urls as string[] | null)?.length ?? 0;
+
+          return (
+            <div
+              key={stap.id}
+              className={`flex items-start gap-3 rounded-md px-2.5 py-2 transition-colors ${
+                isActief ? "bg-blue-50 border border-blue-200" : "border border-transparent"
+              }`}
+            >
+              <div
+                className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold mt-0.5 ${
+                  stap.status === "voltooid"
+                    ? "bg-green-500 text-white"
+                    : stap.status === "actief"
+                    ? "bg-blue-500 text-white"
+                    : stap.status === "afgeweken"
+                    ? "bg-amber-500 text-white"
+                    : stap.status === "overgeslagen"
+                    ? "bg-red-400 text-white"
+                    : "bg-slate-200 text-slate-600"
+                }`}
+              >
+                {stap.volgorde}
+              </div>
+
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-sm font-medium truncate">
+                    {instructie?.doel ?? `Stap ${stap.volgorde}`}
+                  </span>
+                  {statusBadge(weergaveStatus)}
+                  {fotoAantal > 0 && (
+                    <span className="inline-flex items-center gap-0.5 text-xs text-slate-500">
+                      <Camera className="h-3 w-3" />
+                      {fotoAantal}
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-3 mt-0.5">
+                  <span className="text-xs text-muted-foreground flex items-center gap-0.5">
+                    <Clock className="h-3 w-3" />
+                    {new Date(stap.aangemaakt_op as string).toLocaleDateString("nl-NL")}
+                  </span>
+                  {stap.voltooid_op && (
+                    <span className="text-xs text-green-700">
+                      Voltooid {new Date(stap.voltooid_op as string).toLocaleDateString("nl-NL")}
+                    </span>
+                  )}
+                  {wachtOpBeslissing && (
+                    <span className="text-xs text-orange-700 font-medium flex items-center gap-1">
+                      <AlertTriangle className="h-3 w-3" />
+                      Beslissing vereist
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </CardContent>
+    </Card>
   );
 }
 
@@ -182,16 +381,22 @@ interface VoltooienFormProps {
 function VoltooienForm({ stap, opdrachtId, onGereed }: VoltooienFormProps) {
   const [antwoord, setAntwoord] = useState(false);
   const [opmerkingen, setOpmerkingen] = useState("");
-  const [fotoUrls, setFotoUrls] = useState("");
+  const [fotoUrls, setFotoUrls] = useState<string[]>([]);
   const [afwijkingModus, setAfwijkingModus] = useState(false);
   const [afwijkingOmschrijving, setAfwijkingOmschrijving] = useState("");
+  const [afwijkingFotoUrls, setAfwijkingFotoUrls] = useState<string[]>([]);
   const { toast } = useToast();
   const qc = useQueryClient();
+
+  function invaliderenAlles() {
+    qc.invalidateQueries({ queryKey: getGetHuidigePimUitvoeringStapQueryKey(opdrachtId) });
+    qc.invalidateQueries({ queryKey: getListPimUitvoeringStappenQueryKey(opdrachtId) });
+  }
 
   const voltooienMutatie = useVoltooiPimUitvoeringStap({
     mutation: {
       onSuccess: (data) => {
-        qc.invalidateQueries({ queryKey: getGetHuidigePimUitvoeringStapQueryKey(opdrachtId) });
+        invaliderenAlles();
         if (data.uitvoering_gereed) {
           toast({ title: "Uitvoering gereed", description: "Alle stappen zijn doorlopen." });
         } else {
@@ -211,7 +416,7 @@ function VoltooienForm({ stap, opdrachtId, onGereed }: VoltooienFormProps) {
   const afwijkingMutatie = useMeldPimUitvoeringAfwijking({
     mutation: {
       onSuccess: (data) => {
-        qc.invalidateQueries({ queryKey: getGetHuidigePimUitvoeringStapQueryKey(opdrachtId) });
+        invaliderenAlles();
         toast({ title: "Afwijking gemeld", description: "De projectleider kan nu een beslissing nemen." });
         onGereed(data as PimUitvoeringStap, false);
       },
@@ -240,18 +445,15 @@ function VoltooienForm({ stap, opdrachtId, onGereed }: VoltooienFormProps) {
             rows={4}
           />
         </div>
-        <div className="space-y-1">
-          <Label htmlFor="afwijking-foto-urls" className="flex items-center gap-1.5">
+        <div className="space-y-1.5">
+          <Label className="flex items-center gap-1.5">
             <Camera className="h-3.5 w-3.5 text-slate-500" />
-            Foto-URL&#x27;s afwijking (optioneel, per regel)
+            Foto&#x27;s afwijking (optioneel)
           </Label>
-          <Textarea
-            id="afwijking-foto-urls"
-            placeholder={"uploads/afwijking-1.jpg"}
-            value={fotoUrls}
-            onChange={(e) => setFotoUrls(e.target.value)}
-            rows={2}
-            className="font-mono text-xs"
+          <FotoUploadKnop
+            fotoUrls={afwijkingFotoUrls}
+            onToevoegen={(url) => setAfwijkingFotoUrls((prev) => [...prev, url])}
+            onVerwijderen={(i) => setAfwijkingFotoUrls((prev) => prev.filter((_, idx) => idx !== i))}
           />
         </div>
         <div className="flex gap-2">
@@ -265,13 +467,12 @@ function VoltooienForm({ stap, opdrachtId, onGereed }: VoltooienFormProps) {
             className="bg-amber-600 hover:bg-amber-700"
             disabled={!afwijkingOmschrijving.trim() || afwijkingMutatie.isPending}
             onClick={() => {
-              const parsedUrls = fotoUrls.split("\n").map((u) => u.trim()).filter(Boolean);
               afwijkingMutatie.mutate({
                 id: opdrachtId,
                 stapId: stap.id,
                 data: {
                   omschrijving: afwijkingOmschrijving.trim(),
-                  foto_urls: parsedUrls.length > 0 ? parsedUrls : undefined,
+                  foto_urls: afwijkingFotoUrls.length > 0 ? afwijkingFotoUrls : undefined,
                 },
               });
             }}
@@ -309,34 +510,29 @@ function VoltooienForm({ stap, opdrachtId, onGereed }: VoltooienFormProps) {
         />
       </div>
 
-      <div className="space-y-1">
-        <Label htmlFor="foto-urls" className="flex items-center gap-1.5">
+      <div className="space-y-1.5">
+        <Label className="flex items-center gap-1.5">
           <Camera className="h-3.5 w-3.5 text-slate-500" />
-          Foto-URL&#x27;s (optioneel, per regel)
+          Foto&#x27;s (optioneel)
         </Label>
-        <Textarea
-          id="foto-urls"
-          placeholder={"uploads/foto-1.jpg\nuploads/foto-2.jpg"}
-          value={fotoUrls}
-          onChange={(e) => setFotoUrls(e.target.value)}
-          rows={2}
-          className="font-mono text-xs"
+        <FotoUploadKnop
+          fotoUrls={fotoUrls}
+          onToevoegen={(url) => setFotoUrls((prev) => [...prev, url])}
+          onVerwijderen={(i) => setFotoUrls((prev) => prev.filter((_, idx) => idx !== i))}
         />
-        <p className="text-xs text-muted-foreground">Opslagpaden van de gemaakte foto&#x27;s, uno per regel.</p>
       </div>
 
       <div className="flex flex-wrap gap-2">
         <Button
           disabled={!antwoord || voltooienMutatie.isPending}
           onClick={() => {
-            const parsedUrls = fotoUrls.split("\n").map((u) => u.trim()).filter(Boolean);
             voltooienMutatie.mutate({
               id: opdrachtId,
               stapId: stap.id,
               data: {
                 antwoord_controle: antwoord,
                 opmerkingen: opmerkingen || undefined,
-                foto_urls: parsedUrls.length > 0 ? parsedUrls : undefined,
+                foto_urls: fotoUrls.length > 0 ? fotoUrls : undefined,
               },
             });
           }}
@@ -375,6 +571,7 @@ function AfwijkingBeslisForm({ stap, opdrachtId, onGereed }: AfwijkingBeslisForm
     mutation: {
       onSuccess: (data, vars) => {
         qc.invalidateQueries({ queryKey: getGetHuidigePimUitvoeringStapQueryKey(opdrachtId) });
+        qc.invalidateQueries({ queryKey: getListPimUitvoeringStappenQueryKey(opdrachtId) });
         const beslissing = vars.data.beslissing;
         if (beslissing === "stoppen") {
           toast({ title: "Uitvoering gestopt", description: "De uitvoering is gestopt door de projectleider." });
@@ -500,6 +697,7 @@ export default function PimUitvoeringTab({ opdrachtId }: PimUitvoeringTabProps) 
     mutation: {
       onSuccess: () => {
         qc.invalidateQueries({ queryKey: getGetHuidigePimUitvoeringStapQueryKey(opdrachtId) });
+        qc.invalidateQueries({ queryKey: getListPimUitvoeringStappenQueryKey(opdrachtId) });
         toast({ title: "Uitvoering gestart", description: "Stap 1 is klaargezet door de AI." });
       },
       onError: (err: unknown) => {
@@ -520,16 +718,20 @@ export default function PimUitvoeringTab({ opdrachtId }: PimUitvoeringTabProps) 
       setUitvoeringGereed(true);
     }
     qc.invalidateQueries({ queryKey: getGetHuidigePimUitvoeringStapQueryKey(opdrachtId) });
+    qc.invalidateQueries({ queryKey: getListPimUitvoeringStappenQueryKey(opdrachtId) });
   };
 
   if (uitvoeringGereed) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 gap-4 text-center">
-        <CheckCircle2 className="h-12 w-12 text-green-500" />
-        <h2 className="text-xl font-semibold">Uitvoering afgerond</h2>
-        <p className="text-muted-foreground text-sm max-w-md">
-          Alle uitvoeringsstappen zijn doorlopen. Ga verder met de oplevering.
-        </p>
+      <div className="mt-4 space-y-6">
+        <div className="flex flex-col items-center justify-center py-12 gap-4 text-center">
+          <CheckCircle2 className="h-12 w-12 text-green-500" />
+          <h2 className="text-xl font-semibold">Uitvoering afgerond</h2>
+          <p className="text-muted-foreground text-sm max-w-md">
+            Alle uitvoeringsstappen zijn doorlopen. Ga verder met de oplevering.
+          </p>
+        </div>
+        <StappenOverzicht opdrachtId={opdrachtId} />
       </div>
     );
   }
@@ -546,22 +748,24 @@ export default function PimUitvoeringTab({ opdrachtId }: PimUitvoeringTabProps) 
 
   if (!stap && geenActieveStap) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 gap-5">
-        <PlayCircle className="h-12 w-12 text-muted-foreground" />
-        <div className="text-center">
-          <h2 className="text-lg font-semibold mb-1">Uitvoering nog niet gestart</h2>
-          <p className="text-sm text-muted-foreground max-w-sm">
-            Start de adaptieve uitvoering. De AI genereert de eerste uitvoeringsstap op basis van de werkvoorbereiding en het inkoopplan.
-          </p>
+      <div className="mt-4 space-y-6">
+        <div className="flex flex-col items-center justify-center py-12 gap-5">
+          <PlayCircle className="h-12 w-12 text-muted-foreground" />
+          <div className="text-center">
+            <h2 className="text-lg font-semibold mb-1">Uitvoering nog niet gestart</h2>
+            <p className="text-sm text-muted-foreground max-w-sm">
+              Start de adaptieve uitvoering. De AI genereert de eerste uitvoeringsstap op basis van de werkvoorbereiding en het inkoopplan.
+            </p>
+          </div>
+          <Button
+            onClick={() => startMutatie.mutate({ id: opdrachtId })}
+            disabled={startMutatie.isPending}
+            size="lg"
+          >
+            <PlayCircle className="h-5 w-5 mr-2" />
+            {startMutatie.isPending ? "Stap 1 genereren..." : "Uitvoering starten"}
+          </Button>
         </div>
-        <Button
-          onClick={() => startMutatie.mutate({ id: opdrachtId })}
-          disabled={startMutatie.isPending}
-          size="lg"
-        >
-          <PlayCircle className="h-5 w-5 mr-2" />
-          {startMutatie.isPending ? "Stap 1 genereren..." : "Uitvoering starten"}
-        </Button>
       </div>
     );
   }
@@ -573,6 +777,11 @@ export default function PimUitvoeringTab({ opdrachtId }: PimUitvoeringTabProps) 
 
   return (
     <div className="mt-4 space-y-6">
+      {/* Stappenoverzicht — projectleiderperspectief */}
+      <StappenOverzicht opdrachtId={opdrachtId} actieveStapId={stap.id} />
+
+      <Separator />
+
       {/* Stap header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -617,7 +826,7 @@ export default function PimUitvoeringTab({ opdrachtId }: PimUitvoeringTabProps) 
             />
           ) : (
             <p className="text-sm text-muted-foreground">
-              Stap heeft status &quot;{stap.status}&quot; — geen actie vereist.
+              Stap is {STATUS_LABEL[stap.status] ?? stap.status.toLowerCase()} en kan niet meer worden aangepast.
             </p>
           )}
         </CardContent>
