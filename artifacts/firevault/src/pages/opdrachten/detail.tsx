@@ -44,7 +44,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import {
   ArrowLeft, Sparkles, Check, Clock, AlertTriangle, CalendarCheck,
-  TrendingUp, TrendingDown, Edit2, Package, ShoppingCart, Building2, ShoppingBag, MessageSquare, CheckCircle2, HardHat, Printer, Brain, FileCheck2, ShieldAlert,
+  TrendingUp, TrendingDown, Edit2, Package, ShoppingCart, Building2, ShoppingBag, MessageSquare, CheckCircle2, HardHat, Printer, Brain, FileCheck2, ShieldAlert, ShieldCheck,
   ChevronDown, ChevronUp,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -54,6 +54,7 @@ import UitvoeringsplanningTab from "./uitvoeringsplanning-tab";
 import OnderaannemeringTab from "./onderaanneming-tab";
 import MateriaaltabTab from "./materiaal-tab";
 import PimUitvoeringTab from "./pim-uitvoering-tab";
+import PimOpleveringTab from "./pim-oplevering-tab";
 
 function euro(n: number | null | undefined) {
   return new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(n ?? 0);
@@ -615,6 +616,10 @@ export default function OpdrachtDetailPagina() {
           <TabsTrigger value="uitvoering">
             <HardHat className="h-3.5 w-3.5 mr-1.5" />
             Uitvoering
+          </TabsTrigger>
+          <TabsTrigger value="oplevering">
+            <ShieldCheck className="h-3.5 w-3.5 mr-1.5" />
+            Oplevering
           </TabsTrigger>
         </TabsList>
 
@@ -1771,6 +1776,11 @@ export default function OpdrachtDetailPagina() {
         {/* ── Uitvoering ── */}
         <TabsContent value="uitvoering">
           <PimUitvoeringTab opdrachtId={opdrachtId} />
+        </TabsContent>
+
+        {/* ── Oplevering ── */}
+        <TabsContent value="oplevering">
+          <PimOpleveringTab opdrachtId={opdrachtId} />
         </TabsContent>
       </Tabs>
 

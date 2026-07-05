@@ -4,6 +4,27 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-05 — PIM Fase G — Oplevering AI (Task #302)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+**Wat is gebouwd:**
+
+**Backend — 3 nieuwe endpoints (`artifacts/api-server/src/routes/pim.ts`):**
+- `POST /opdrachten/:id/pim/oplevering/controleer` — AI volledigheidscheck: controleert open stappen, afwijkingen zonder beslissing, stappen zonder foto; roept AI aan voor extra aandachtspunten + onderhoudsadvies; slaat resultaat op in `pim.opleveringContext`; zet `ai_fase → oplevering` bij volledigheid
+- `POST /opdrachten/:id/pim/oplevering/genereer` — AI genereert opleverdossier JSON + overdrachtsnotitie onderhoud JSON; bouwt beide als PDF (puppeteer + `bouwOpleverDossierHtml` / `bouwOnderhoudNotitieHtml`); slaat 2 DMS-documenten op (documenttype `opleverdossier` + `overdrachtsnotitie`) gekoppeld als `doelType=opdracht`
+- `POST /opdrachten/:id/pim/oplevering/definitief` — menselijke bevestiging; zet `ai_fase → gereed`; schrijft auditlogboekregel + `definitief_op` timestamp in `opleveringContext`
+- 3 AI-prompts toegevoegd aan `aiPrompts.ts`: `PIM_OPLEVERING_CONTROLEER_PROMPT`, `PIM_OPLEVERING_GENEREER_PROMPT`, `PIM_ONDERHOUD_NOTITIE_PROMPT`
+
+**OpenAPI + codegen:**
+- 3 paden toegevoegd (`/opdrachten/{id}/pim/oplevering/controleer|genereer|definitief`)
+- 5 nieuwe schemas: `PimOpleveringControlepunt`, `PimOpleveringControlerapport`, `PimOpleveringDocument`, `PimOpleveringGenereerResultaat`, `PimOpleveringDefinitiefResultaat`
+- Codegen uitgevoerd; gegenereerde hooks: `useControleerPimOplevering`, `useGenereerPimOplevering`, `useDefinieerPimOplevering`
+
+**Frontend FPS Connect:**
+- Nieuw tabblad "Oplevering" toegevoegd aan `opdrachten/detail.tsx` (na "Uitvoering"-tab; `ShieldCheck`-icoon)
+- Nieuw component `pim-oplevering-tab.tsx` — 3-staps flow: Stap 1 volledigheidscheck (controlerapport met per-punt status), Stap 2 dossier genereren (documentenlijst), Stap 3 definitief opleveren (bevestigingsdialoog + AI-fase badge); toont eerder opgeslagen context uit `opleveringContext` na herlaad
+
 ## 2026-07-05 — PIM Fase F — Adaptieve Uitvoering mobiel (Task #301)
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag

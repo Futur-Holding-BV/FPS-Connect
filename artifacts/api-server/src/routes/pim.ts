@@ -31,6 +31,9 @@ import {
   PIM_WERKVOORBEREIDING_PROMPT,
   UITVOERING_STAP_PROMPT,
   UITVOERING_FOTO_ANALYSE_PROMPT,
+  PIM_OPLEVERING_CONTROLEER_PROMPT,
+  PIM_OPLEVERING_GENEREER_PROMPT,
+  PIM_ONDERHOUD_NOTITIE_PROMPT,
 } from "../lib/aiPrompts";
 import { kbService, KB_BESLISSTRUCTUUR } from "../lib/kbService";
 import { ObjectStorageService } from "../lib/objectStorage";
@@ -1680,6 +1683,680 @@ router.post("/opdrachten/:id/pim/uitvoering/stap/:stapId/afwijking/beslis", schr
   } catch (err) {
     logger.error({ err }, "beslisPimUitvoeringAfwijking fout");
     res.status(500).json({ error: "Serverfout bij beslissing afwijking" });
+  }
+});
+
+// ── PIM Oplevering ────────────────────────────────────────────────────────────
+
+function bouwOpleverDossierHtml(
+  data: Record<string, unknown>,
+  opdrachttitel: string,
+  datum: string,
+): string {
+  const esc = (s: unknown) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const lijst = (items: unknown) =>
+    Array.isArray(items) && items.length > 0
+      ? `<ul>${(items as unknown[]).map((i) => `<li>${esc(i)}</li>`).join("")}</ul>`
+      : "<p><em>Geen gegevens</em></p>";
+  const materiaalTabel = (items: unknown) => {
+    if (!Array.isArray(items) || items.length === 0) return "<p><em>Geen materialen</em></p>";
+    return `<table><thead><tr><th>Artikel</th><th>Hoeveelheid</th><th>Werkpakket</th></tr></thead><tbody>${
+      (items as Record<string, unknown>[]).map((r) => `<tr><td>${esc(r.artikel)}</td><td>${esc(r.hoeveelheid)}</td><td>${esc(r.werkpakket)}</td></tr>`).join("")
+    }</tbody></table>`;
+  };
+  const afwijkingTabel = (items: unknown) => {
+    if (!Array.isArray(items) || items.length === 0) return "<p><em>Geen afwijkingen</em></p>";
+    return `<table><thead><tr><th>Stap</th><th>Omschrijving</th><th>Beslissing</th><th>Impact</th></tr></thead><tbody>${
+      (items as Record<string, unknown>[]).map((r) => `<tr><td>${esc(r.stap)}</td><td>${esc(r.omschrijving)}</td><td>${esc(r.beslissing)}</td><td>${esc(r.impact)}</td></tr>`).join("")
+    }</tbody></table>`;
+  };
+  return `<!DOCTYPE html>
+<html lang="nl"><head><meta charset="utf-8">
+<title>Opleverdossier</title>
+<style>
+  body{font-family:Arial,sans-serif;font-size:11pt;margin:40px;color:#1a1a1a}
+  h1{font-size:17pt;margin-bottom:4px;color:#c0320b}
+  h2{font-size:13pt;border-bottom:2px solid #c0320b;padding-bottom:4px;margin-top:24px;color:#c0320b}
+  .meta{color:#666;font-size:9pt;margin-bottom:20px}
+  .verklaring{background:#f0fdf4;border:1px solid #86efac;border-radius:4px;padding:10px 14px;margin-bottom:16px;font-style:italic}
+  table{width:100%;border-collapse:collapse;margin:8px 0}
+  th{background:#f4f4f4;text-align:left;padding:4px 8px;font-size:9pt;border:1px solid #ddd}
+  td{padding:4px 8px;font-size:10pt;border:1px solid #ddd;vertical-align:top}
+  ul{margin:4px 0;padding-left:20px} li{margin:2px 0}
+  .footer{color:#888;font-size:8pt;margin-top:30px;border-top:1px solid #ddd;padding-top:8px}
+</style></head><body>
+<h1>Opleverdossier — FPS Brandpreventie</h1>
+<div class="meta">Opdracht: <strong>${esc(opdrachttitel)}</strong> &nbsp;|&nbsp; Datum: ${esc(datum)} &nbsp;|&nbsp; Gegenereerd door FPS Connect AI</div>
+<h2>Projectsamenvatting</h2>
+<p>${esc(data.opdracht_samenvatting)}</p>
+<h2>Kwaliteitsverklaring</h2>
+<div class="verklaring">${esc(data.kwaliteitsverklaring)}</div>
+<h2>Uitgevoerde werkzaamheden</h2>${lijst(data.uitgevoerde_werkzaamheden)}
+<h2>Gebruikte materialen</h2>${materiaalTabel(data.gebruikte_materialen)}
+<h2>Afwijkingen &amp; beslissingen</h2>${afwijkingTabel(data.afwijkingen)}
+<h2>Restpunten</h2>${lijst(data.restpunten)}
+<h2>Aanbevelingen aan gebouweigenaar</h2>${lijst(data.aanbevelingen_eigenaar)}
+<div class="footer">Dit document is automatisch gegenereerd door FPS Connect. Bewaar dit dossier als onderdeel van het brandveiligheidsdossier van het gebouw.</div>
+</body></html>`;
+}
+
+function bouwOnderhoudNotitieHtml(
+  data: Record<string, unknown>,
+  opdrachttitel: string,
+  datum: string,
+): string {
+  const esc = (s: unknown) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const lijst = (items: unknown) =>
+    Array.isArray(items) && items.length > 0
+      ? `<ul>${(items as unknown[]).map((i) => `<li>${esc(i)}</li>`).join("")}</ul>`
+      : "<p><em>Geen gegevens</em></p>";
+  const intervalTabel = (items: unknown) => {
+    if (!Array.isArray(items) || items.length === 0) return "<p><em>Geen intervallen</em></p>";
+    return `<table><thead><tr><th>Voorziening</th><th>Interval</th><th>Toelichting</th></tr></thead><tbody>${
+      (items as Record<string, unknown>[]).map((r) => `<tr><td>${esc(r.voorziening_type)}</td><td>${esc(r.interval_maanden)} maanden</td><td>${esc(r.toelichting)}</td></tr>`).join("")
+    }</tbody></table>`;
+  };
+  return `<!DOCTYPE html>
+<html lang="nl"><head><meta charset="utf-8">
+<title>Overdrachtsnotitie Onderhoud</title>
+<style>
+  body{font-family:Arial,sans-serif;font-size:11pt;margin:40px;color:#1a1a1a}
+  h1{font-size:17pt;margin-bottom:4px;color:#c0320b}
+  h2{font-size:13pt;border-bottom:2px solid #c0320b;padding-bottom:4px;margin-top:24px;color:#c0320b}
+  .meta{color:#666;font-size:9pt;margin-bottom:20px}
+  .verbod{background:#fff7ed;border:1px solid #fdba74;border-radius:4px;padding:10px 14px;margin-bottom:16px}
+  .contact{background:#f0f9ff;border:1px solid #7dd3fc;border-radius:4px;padding:8px 14px;margin-top:20px}
+  table{width:100%;border-collapse:collapse;margin:8px 0}
+  th{background:#f4f4f4;text-align:left;padding:4px 8px;font-size:9pt;border:1px solid #ddd}
+  td{padding:4px 8px;font-size:10pt;border:1px solid #ddd;vertical-align:top}
+  ul{margin:4px 0;padding-left:20px} li{margin:2px 0}
+</style></head><body>
+<h1>${esc(data.titel)}</h1>
+<div class="meta">Opdracht: <strong>${esc(opdrachttitel)}</strong> &nbsp;|&nbsp; Datum: ${esc(datum)}</div>
+<h2>Samenvatting</h2>
+<p>${esc(data.samenvatting)}</p>
+<h2>Inspectie-intervallen</h2>${intervalTabel(data.inspectie_intervallen)}
+<h2>Onderhoudspunten</h2>${lijst(data.aandachtspunten_onderhoud)}
+<h2>Verboden acties zonder FPS-overleg</h2>
+<div class="verbod">${lijst(data.verboden_acties)}</div>
+<div class="contact"><strong>Contact FPS Brandpreventie:</strong> ${esc(data.contactgegevens_fps)}</div>
+</body></html>`;
+}
+
+/** POST /opdrachten/:id/pim/oplevering/controleer */
+router.post("/opdrachten/:id/pim/oplevering/controleer", schrijven, async (req, res): Promise<void> => {
+  const opdrachtId = parseInt(String(req.params.id), 10);
+  if (isNaN(opdrachtId)) { res.status(400).json({ error: "Ongeldig id" }); return; }
+  const gebruikerId = req.session.userId ?? null;
+
+  try {
+    const [opdracht] = await db
+      .select({ id: opdrachtenTable.id, titel: opdrachtenTable.titel, aiFase: opdrachtenTable.aiFase })
+      .from(opdrachtenTable)
+      .where(eq(opdrachtenTable.id, opdrachtId));
+    if (!opdracht) { res.status(404).json({ error: "Opdracht niet gevonden" }); return; }
+
+    const uitvoeringIdx = FASE_INDEX["uitvoering"]!;
+    const huidigIdx = FASE_INDEX[opdracht.aiFase ?? ""] ?? -1;
+    if (huidigIdx < uitvoeringIdx) {
+      res.status(409).json({ error: `Volledigheidscheck vereist minimaal fase 'uitvoering' (huidig: '${opdracht.aiFase ?? "nieuw"}')` });
+      return;
+    }
+
+    const [pim] = await db
+      .select()
+      .from(pimModellenTable)
+      .where(eq(pimModellenTable.opdrachtId, opdrachtId));
+    if (!pim) { res.status(404).json({ error: "PIM niet gevonden voor deze opdracht" }); return; }
+
+    // Haal alle uitvoeringsstappen op
+    const stappen = await db
+      .select()
+      .from(pimUitvoeringStappenTable)
+      .where(eq(pimUitvoeringStappenTable.pimId, pim.id))
+      .orderBy(asc(pimUitvoeringStappenTable.volgorde));
+
+    // ── Lokale checks ─────────────────────────────────────────────────────────
+    const controlePunten: { label: string; ok: boolean; detail: string | null }[] = [];
+    const ontbrekenPunten: string[] = [];
+
+    // Check 1: zijn er überhaupt stappen?
+    const heeftStappen = stappen.length > 0;
+    controlePunten.push({
+      label: "Uitvoeringsstappen aangemaakt",
+      ok: heeftStappen,
+      detail: heeftStappen ? `${stappen.length} stap(pen) gevonden` : "Geen stappen gevonden — start de uitvoering eerst",
+    });
+    if (!heeftStappen) ontbrekenPunten.push("Geen uitvoeringsstappen aanwezig");
+
+    // Check 2: alle stappen voltooid of overgeslagen
+    const openStappen = stappen.filter((s) => s.status === "open" || s.status === "actief");
+    controlePunten.push({
+      label: "Alle stappen afgesloten",
+      ok: openStappen.length === 0,
+      detail: openStappen.length > 0
+        ? `${openStappen.length} stap(pen) nog open of actief (volgnrs: ${openStappen.map((s) => s.volgorde).join(", ")})`
+        : null,
+    });
+    if (openStappen.length > 0) ontbrekenPunten.push(`${openStappen.length} stap(pen) nog niet afgesloten`);
+
+    // Check 3: afwijkingen met beslissing
+    const afwijkingenZonderBeslissing = stappen.filter((s) => {
+      if (s.status !== "afgeweken") return false;
+      const afwijking = s.afwijkingJson as Record<string, unknown> | null;
+      return !afwijking?.beslissing;
+    });
+    controlePunten.push({
+      label: "Alle afwijkingen besloten",
+      ok: afwijkingenZonderBeslissing.length === 0,
+      detail: afwijkingenZonderBeslissing.length > 0
+        ? `${afwijkingenZonderBeslissing.length} afwijking(en) zonder beslissing`
+        : null,
+    });
+    if (afwijkingenZonderBeslissing.length > 0) ontbrekenPunten.push(`${afwijkingenZonderBeslissing.length} afwijking(en) vereisen nog een beslissing`);
+
+    // Check 4: foto-aanwezigheid (elke voltooide stap moet minimaal 1 foto hebben)
+    const stappenZonderFoto = stappen.filter((s) =>
+      s.status === "voltooid" && (!Array.isArray(s.fotoUrls) || (s.fotoUrls as string[]).length === 0),
+    );
+    controlePunten.push({
+      label: "Fotodocumentatie per stap",
+      ok: stappenZonderFoto.length === 0,
+      detail: stappenZonderFoto.length > 0
+        ? `${stappenZonderFoto.length} voltooide stap(pen) zonder foto (volgnrs: ${stappenZonderFoto.map((s) => s.volgorde).join(", ")})`
+        : null,
+    });
+    if (stappenZonderFoto.length > 0) ontbrekenPunten.push(`${stappenZonderFoto.length} stap(pen) missen verplichte foto`);
+
+    // ── AI volledigheidscheck ─────────────────────────────────────────────────
+    const stappenSamenvatting = stappen.map((s) => ({
+      volgorde: s.volgorde,
+      status: s.status,
+      werkpakket: s.werkpakketSleutel ?? null,
+      foto_count: Array.isArray(s.fotoUrls) ? (s.fotoUrls as string[]).length : 0,
+      afwijking: s.afwijkingJson ? {
+        omschrijving: (s.afwijkingJson as Record<string, unknown>).afwijking_omschrijving ?? null,
+        beslissing: (s.afwijkingJson as Record<string, unknown>).beslissing ?? null,
+      } : null,
+    }));
+
+    const wvCtx = (pim.werkvoorbereidingContext as Record<string, unknown> | null) ?? {};
+    const inkoopCtx = (pim.inkoopContext as Record<string, unknown> | null) ?? {};
+
+    let aiCheck: Record<string, unknown> = {
+      volledig: ontbrekenPunten.length === 0,
+      controle_punten: controlePunten,
+      ontbrekende_punten: ontbrekenPunten,
+      aandachtspunten_oplevering: [],
+      onderhoudsadvies: [],
+      samenvatting: ontbrekenPunten.length === 0
+        ? `Alle ${stappen.length} uitvoeringsstappen zijn afgesloten en gedocumenteerd.`
+        : `Er zijn nog ${ontbrekenPunten.length} ontbrekende punt(en) voor oplevering.`,
+      betrouwbaarheid: "midden",
+    };
+
+    if (heeftGateway()) {
+      try {
+        const resultaat = await aiGateway.chat(
+          "default",
+          {
+            messages: [
+              { role: "system", content: PIM_OPLEVERING_CONTROLEER_PROMPT.tekst },
+              {
+                role: "user",
+                content: JSON.stringify({
+                  opdracht_titel: opdracht.titel,
+                  stappen: stappenSamenvatting,
+                  werkvoorbereiding_samenvatting: wvCtx,
+                  werkpakketten: Object.keys(inkoopCtx),
+                  lokale_controles: { open_stappen: openStappen.length, afwijkingen_zonder_beslissing: afwijkingenZonderBeslissing.length, stappen_zonder_foto: stappenZonderFoto.length },
+                }),
+              },
+            ],
+            max_tokens: 1024,
+          },
+          60_000,
+          {
+            module: "pim_oplevering",
+            functie: "controleer",
+            gebruikerId,
+            entiteitstype: "pim",
+            entiteitId: pim.id,
+            promptNaam: PIM_OPLEVERING_CONTROLEER_PROMPT.naam,
+            promptVersie: PIM_OPLEVERING_CONTROLEER_PROMPT.versie,
+            project_id: opdrachtId,
+          },
+        );
+        if (resultaat.ok && resultaat.inhoud) {
+          const cleaned = resultaat.inhoud.replace(/^```json\s*/i, "").replace(/```\s*$/i, "").trim();
+          const parsed = JSON.parse(cleaned) as Record<string, unknown>;
+          aiCheck = {
+            ...aiCheck,
+            aandachtspunten_oplevering: parsed.aandachtspunten_oplevering ?? [],
+            onderhoudsadvies: parsed.onderhoudsadvies ?? [],
+            samenvatting: parsed.samenvatting ?? aiCheck.samenvatting,
+            betrouwbaarheid: parsed.betrouwbaarheid ?? "midden",
+          };
+          if (typeof parsed.volledig === "boolean" && !parsed.volledig) {
+            if (Array.isArray(parsed.ontbrekende_punten)) {
+              for (const p of parsed.ontbrekende_punten as string[]) {
+                if (!ontbrekenPunten.includes(p)) ontbrekenPunten.push(p);
+              }
+            }
+            aiCheck.volledig = false;
+            aiCheck.ontbrekende_punten = ontbrekenPunten;
+          }
+          if (Array.isArray(parsed.controle_punten)) {
+            const aiPunten = parsed.controle_punten as { label: string; ok: boolean; detail: string | null }[];
+            for (const ap of aiPunten) {
+              if (!controlePunten.find((p) => p.label === ap.label)) {
+                controlePunten.push(ap);
+              }
+            }
+          }
+          aiCheck.controle_punten = controlePunten;
+        }
+      } catch (aiErr) {
+        logger.warn({ aiErr }, "AI volledigheidscheck mislukt, doorgaan met lokale check");
+      }
+    }
+
+    const isVolledig = Boolean(aiCheck.volledig);
+
+    // Sla resultaat op in pim.opleveringContext
+    const opleveringCtx = {
+      ...(pim.opleveringContext as Record<string, unknown> | null ?? {}),
+      controlerapport: aiCheck,
+      gecontroleerd_op: new Date().toISOString(),
+      gecontroleerd_door: gebruikerId,
+    };
+
+    await db.transaction(async (tx) => {
+      await tx
+        .update(pimModellenTable)
+        .set({ opleveringContext: opleveringCtx, bijgewerktOp: new Date() })
+        .where(eq(pimModellenTable.id, pim.id));
+
+      // Zet ai_fase naar 'oplevering' als volledig en nog niet voorbij uitvoering
+      if (isVolledig && (FASE_INDEX[opdracht.aiFase ?? ""] ?? -1) <= FASE_INDEX["uitvoering"]!) {
+        await tx
+          .update(opdrachtenTable)
+          .set({ aiFase: "oplevering", bijgewerktOp: new Date() })
+          .where(eq(opdrachtenTable.id, opdrachtId));
+      }
+    });
+
+    res.json({
+      opdracht_id: opdrachtId,
+      volledig: isVolledig,
+      controle_punten: controlePunten,
+      ontbrekende_punten: ontbrekenPunten,
+      aandachtspunten_oplevering: (aiCheck.aandachtspunten_oplevering as string[]) ?? [],
+      ai_samenvatting: String(aiCheck.samenvatting ?? ""),
+      ai_fase: isVolledig ? "oplevering" : (opdracht.aiFase ?? "uitvoering"),
+    });
+  } catch (err) {
+    logger.error({ err }, "controleerPimOplevering fout");
+    res.status(500).json({ error: "Serverfout bij volledigheidscheck" });
+  }
+});
+
+/** POST /opdrachten/:id/pim/oplevering/genereer */
+router.post("/opdrachten/:id/pim/oplevering/genereer", schrijven, async (req, res): Promise<void> => {
+  const opdrachtId = parseInt(String(req.params.id), 10);
+  if (isNaN(opdrachtId)) { res.status(400).json({ error: "Ongeldig id" }); return; }
+  const gebruikerId = req.session.userId!;
+
+  try {
+    const [opdracht] = await db
+      .select({ id: opdrachtenTable.id, titel: opdrachtenTable.titel, aiFase: opdrachtenTable.aiFase })
+      .from(opdrachtenTable)
+      .where(eq(opdrachtenTable.id, opdrachtId));
+    if (!opdracht) { res.status(404).json({ error: "Opdracht niet gevonden" }); return; }
+
+    const opleveringIdx = FASE_INDEX["oplevering"]!;
+    if ((FASE_INDEX[opdracht.aiFase ?? ""] ?? -1) < opleveringIdx) {
+      res.status(409).json({ error: "Voer eerst de volledigheidscheck uit en zorg dat alle punten gereed zijn (fase 'oplevering' vereist)" });
+      return;
+    }
+
+    const [pim] = await db
+      .select()
+      .from(pimModellenTable)
+      .where(eq(pimModellenTable.opdrachtId, opdrachtId));
+    if (!pim) { res.status(404).json({ error: "PIM niet gevonden voor deze opdracht" }); return; }
+
+    const stappen = await db
+      .select()
+      .from(pimUitvoeringStappenTable)
+      .where(eq(pimUitvoeringStappenTable.pimId, pim.id))
+      .orderBy(asc(pimUitvoeringStappenTable.volgorde));
+
+    const opleveringCtx = (pim.opleveringContext as Record<string, unknown> | null) ?? {};
+    const wvCtx = (pim.werkvoorbereidingContext as Record<string, unknown> | null) ?? {};
+    const inkoopCtx = (pim.inkoopContext as Record<string, unknown> | null) ?? {};
+    const vandaag = new Date().toISOString().slice(0, 10);
+
+    const stappenDetail = stappen.map((s) => ({
+      volgorde: s.volgorde,
+      status: s.status,
+      werkpakket: s.werkpakketSleutel ?? null,
+      doel: (s.instructieJson as Record<string, unknown> | null)?.doel ?? null,
+      antwoorden: s.antwoordenJson ?? null,
+      foto_count: Array.isArray(s.fotoUrls) ? (s.fotoUrls as string[]).length : 0,
+      afwijking: s.afwijkingJson ?? null,
+    }));
+
+    // ── AI Opleverdossier generatie ───────────────────────────────────────────
+    let opleverData: Record<string, unknown> = {
+      opdracht_samenvatting: `Opleverdossier voor opdracht: ${opdracht.titel}. Werkzaamheden uitgevoerd conform het Project Intelligence Model.`,
+      uitgevoerde_werkzaamheden: stappen.filter((s) => s.status !== "open").map((s) => (s.instructieJson as Record<string, unknown> | null)?.doel ?? `Stap ${s.volgorde}`),
+      gebruikte_materialen: Array.isArray(wvCtx.materiaallijst) ? (wvCtx.materiaallijst as Record<string, unknown>[]).map((m) => ({ artikel: m.artikel, hoeveelheid: `${m.hoeveelheid} ${m.eenheid}`, werkpakket: m.opmerkingen ?? "—" })) : [],
+      afwijkingen: stappen.filter((s) => s.status === "afgeweken" || s.afwijkingJson).map((s) => {
+        const afw = s.afwijkingJson as Record<string, unknown> | null;
+        return { stap: s.volgorde, omschrijving: afw?.afwijking_omschrijving ?? "Onbekend", beslissing: afw?.beslissing ?? "Niet besloten", impact: afw?.impact ?? "Onbekend" };
+      }),
+      restpunten: (opleveringCtx.controlerapport as Record<string, unknown> | null)?.ontbrekende_punten ?? [],
+      kwaliteitsverklaring: `De werkzaamheden voor opdracht "${opdracht.titel}" zijn uitgevoerd conform de van toepassing zijnde normen en voorschriften op het gebied van passieve brandpreventie.`,
+      aanbevelingen_eigenaar: [],
+      datum: vandaag,
+    };
+
+    if (heeftGateway()) {
+      try {
+        const resultaat = await aiGateway.chat(
+          "default",
+          {
+            messages: [
+              { role: "system", content: PIM_OPLEVERING_GENEREER_PROMPT.tekst },
+              {
+                role: "user",
+                content: JSON.stringify({
+                  opdracht_titel: opdracht.titel,
+                  stappen: stappenDetail,
+                  werkvoorbereiding: wvCtx,
+                  werkpakketten: Object.keys(inkoopCtx),
+                  controlerapport: opleveringCtx.controlerapport ?? null,
+                }),
+              },
+            ],
+            max_tokens: 2048,
+          },
+          90_000,
+          {
+            module: "pim_oplevering",
+            functie: "genereer_dossier",
+            gebruikerId,
+            entiteitstype: "pim",
+            entiteitId: pim.id,
+            promptNaam: PIM_OPLEVERING_GENEREER_PROMPT.naam,
+            promptVersie: PIM_OPLEVERING_GENEREER_PROMPT.versie,
+            project_id: opdrachtId,
+          },
+        );
+        if (resultaat.ok && resultaat.inhoud) {
+          const cleaned = resultaat.inhoud.replace(/^```json\s*/i, "").replace(/```\s*$/i, "").trim();
+          const parsed = JSON.parse(cleaned) as Record<string, unknown>;
+          opleverData = { ...opleverData, ...parsed, datum: vandaag };
+        }
+      } catch (aiErr) {
+        logger.warn({ aiErr }, "AI opleverdossier generatie mislukt, standaard data gebruikt");
+      }
+    }
+
+    // ── AI Onderhoud notitie ──────────────────────────────────────────────────
+    let onderhoudData: Record<string, unknown> = {
+      titel: `Overdrachtsnotitie onderhoud — ${opdracht.titel}`,
+      samenvatting: `Passieve brandpreventievoorzieningen aangebracht voor ${opdracht.titel}.`,
+      inspectie_intervallen: [
+        { voorziening_type: "Brandstoppers / doorvoeringen", interval_maanden: 12, toelichting: "Jaarlijkse visuele inspectie conform NEN-EN 16034" },
+        { voorziening_type: "Brandkleppen / brandwerende beglazing", interval_maanden: 12, toelichting: "Jaarlijkse functietest" },
+      ],
+      aandachtspunten_onderhoud: (opleveringCtx.controlerapport as Record<string, unknown> | null)?.aandachtspunten_oplevering ?? [],
+      verboden_acties: ["Zelf wijzigingen aanbrengen aan brandwerende afdichtingen", "Doorvoeringen openen zonder overleg met FPS", "Brandwerende afwerkingen overschilderen of verwijderen"],
+      contactgegevens_fps: "FPS Brandpreventie — info@fps.nl — 0800-0000000",
+      datum: vandaag,
+    };
+
+    if (heeftGateway()) {
+      try {
+        const resultaat = await aiGateway.chat(
+          "default",
+          {
+            messages: [
+              { role: "system", content: PIM_ONDERHOUD_NOTITIE_PROMPT.tekst },
+              {
+                role: "user",
+                content: JSON.stringify({
+                  opdracht_titel: opdracht.titel,
+                  gebruikte_materialen: opleverData.gebruikte_materialen,
+                  afwijkingen: opleverData.afwijkingen,
+                  onderhoudsadvies: (opleveringCtx.controlerapport as Record<string, unknown> | null)?.onderhoudsadvies ?? [],
+                }),
+              },
+            ],
+            max_tokens: 1024,
+          },
+          60_000,
+          {
+            module: "pim_oplevering",
+            functie: "genereer_onderhoud_notitie",
+            gebruikerId,
+            entiteitstype: "pim",
+            entiteitId: pim.id,
+            promptNaam: PIM_ONDERHOUD_NOTITIE_PROMPT.naam,
+            promptVersie: PIM_ONDERHOUD_NOTITIE_PROMPT.versie,
+            project_id: opdrachtId,
+          },
+        );
+        if (resultaat.ok && resultaat.inhoud) {
+          const cleaned = resultaat.inhoud.replace(/^```json\s*/i, "").replace(/```\s*$/i, "").trim();
+          const parsed = JSON.parse(cleaned) as Record<string, unknown>;
+          onderhoudData = { ...onderhoudData, ...parsed, datum: vandaag };
+        }
+      } catch (aiErr) {
+        logger.warn({ aiErr }, "AI onderhoud notitie generatie mislukt, standaard data gebruikt");
+      }
+    }
+
+    // ── PDF genereren ─────────────────────────────────────────────────────────
+    async function genereerPdf(htmlContent: string, sleutel: string): Promise<string | null> {
+      if (!CHROMIUM_PAD) return null;
+      try {
+        const puppeteer = await import("puppeteer-core");
+        const browser = await puppeteer.launch({
+          executablePath: CHROMIUM_PAD,
+          args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-gpu"],
+        });
+        try {
+          const page = await browser.newPage();
+          await page.setContent(htmlContent, { waitUntil: "load", timeout: 30000 });
+          const pdfBuffer = await page.pdf({ format: "A4", printBackground: true, margin: { top: "20mm", bottom: "20mm", left: "15mm", right: "15mm" } });
+          await browser.close();
+          const svc = new ObjectStorageService();
+          return await svc.uploadBestand(sleutel, Buffer.from(pdfBuffer), "application/pdf");
+        } catch (pdfErr) {
+          await browser.close().catch(() => undefined);
+          logger.warn({ err: pdfErr }, "PDF generatie mislukt voor " + sleutel);
+          return null;
+        }
+      } catch {
+        return null;
+      }
+    }
+
+    const [opleverPdfPad, onderhoudPdfPad] = await Promise.all([
+      genereerPdf(
+        bouwOpleverDossierHtml(opleverData, opdracht.titel, vandaag),
+        `pim/opleverdossiers/${opdrachtId}_oplevering_${Date.now()}.pdf`,
+      ),
+      genereerPdf(
+        bouwOnderhoudNotitieHtml(onderhoudData, opdracht.titel, vandaag),
+        `pim/onderhoudnotities/${opdrachtId}_onderhoud_${Date.now()}.pdf`,
+      ),
+    ]);
+
+    // ── DMS-documenten aanmaken en koppelen ───────────────────────────────────
+    const [gebruiker] = await db
+      .select({ naam: gebruikersTable.naam })
+      .from(gebruikersTable)
+      .where(eq(gebruikersTable.id, gebruikerId));
+
+    const gemaakteDocumenten: { document_id: number; type: string; naam: string }[] = [];
+
+    await db.transaction(async (tx) => {
+      // 1. Opleverdossier
+      const opleverNaam = `Opleverdossier — ${opdracht.titel}`;
+      const [opleverDoc] = await tx
+        .insert(documentenTable)
+        .values({
+          naam: opleverNaam,
+          documenttype: "opleverdossier",
+          datum: vandaag,
+          ...(opleverPdfPad ? { pdfUrl: opleverPdfPad } : {}),
+          aiGeanalyseerd: true,
+          aiMetadata: opleverData,
+          bijgewerktOp: new Date(),
+        })
+        .returning({ id: documentenTable.id });
+
+      await tx.insert(documentKoppelingenTable).values({
+        documentId: opleverDoc.id,
+        doelType: "opdracht",
+        doelId: opdrachtId,
+        aangemaaktDoorId: gebruikerId,
+      });
+      await tx.insert(documentLogboekTable).values({
+        documentId: opleverDoc.id,
+        documentNaam: opleverNaam,
+        gebruikerId,
+        gebruikerNaam: gebruiker?.naam ?? null,
+        actie: "geupload",
+        detail: `PIM Opleverdossier aangemaakt voor opdracht: ${opdracht.titel}${opleverPdfPad ? " (incl. PDF)" : " (zonder PDF)"}`,
+      });
+      gemaakteDocumenten.push({ document_id: opleverDoc.id, type: "opleverdossier", naam: opleverNaam });
+
+      // 2. Overdrachtsnotitie onderhoud
+      const onderhoudNaam = `Overdrachtsnotitie onderhoud — ${opdracht.titel}`;
+      const [onderhoudDoc] = await tx
+        .insert(documentenTable)
+        .values({
+          naam: onderhoudNaam,
+          documenttype: "overdrachtsnotitie",
+          datum: vandaag,
+          ...(onderhoudPdfPad ? { pdfUrl: onderhoudPdfPad } : {}),
+          aiGeanalyseerd: true,
+          aiMetadata: onderhoudData,
+          bijgewerktOp: new Date(),
+        })
+        .returning({ id: documentenTable.id });
+
+      await tx.insert(documentKoppelingenTable).values({
+        documentId: onderhoudDoc.id,
+        doelType: "opdracht",
+        doelId: opdrachtId,
+        aangemaaktDoorId: gebruikerId,
+      });
+      await tx.insert(documentLogboekTable).values({
+        documentId: onderhoudDoc.id,
+        documentNaam: onderhoudNaam,
+        gebruikerId,
+        gebruikerNaam: gebruiker?.naam ?? null,
+        actie: "geupload",
+        detail: `PIM Overdrachtsnotitie onderhoud aangemaakt voor opdracht: ${opdracht.titel}`,
+      });
+      gemaakteDocumenten.push({ document_id: onderhoudDoc.id, type: "overdrachtsnotitie", naam: onderhoudNaam });
+
+      // Opslaan in opleveringContext
+      const bijgewerktCtx = {
+        ...(pim.opleveringContext as Record<string, unknown> | null ?? {}),
+        gegenereerd_op: new Date().toISOString(),
+        gegenereerd_door: gebruikerId,
+        document_ids: gemaakteDocumenten.map((d) => d.document_id),
+        opleverdossier_data: opleverData,
+        onderhoud_data: onderhoudData,
+      };
+      await tx
+        .update(pimModellenTable)
+        .set({ opleveringContext: bijgewerktCtx, bijgewerktOp: new Date() })
+        .where(eq(pimModellenTable.id, pim.id));
+    });
+
+    res.json({
+      opdracht_id: opdrachtId,
+      documenten: gemaakteDocumenten,
+    });
+  } catch (err) {
+    logger.error({ err }, "genereerPimOplevering fout");
+    res.status(500).json({ error: "Serverfout bij genereren opleverdossier" });
+  }
+});
+
+/** POST /opdrachten/:id/pim/oplevering/definitief */
+router.post("/opdrachten/:id/pim/oplevering/definitief", schrijven, async (req, res): Promise<void> => {
+  const opdrachtId = parseInt(String(req.params.id), 10);
+  if (isNaN(opdrachtId)) { res.status(400).json({ error: "Ongeldig id" }); return; }
+  const gebruikerId = req.session.userId ?? null;
+
+  try {
+    const [opdracht] = await db
+      .select({ id: opdrachtenTable.id, titel: opdrachtenTable.titel, aiFase: opdrachtenTable.aiFase })
+      .from(opdrachtenTable)
+      .where(eq(opdrachtenTable.id, opdrachtId));
+    if (!opdracht) { res.status(404).json({ error: "Opdracht niet gevonden" }); return; }
+
+    const opleveringIdx = FASE_INDEX["oplevering"]!;
+    const huidigIdx = FASE_INDEX[opdracht.aiFase ?? ""] ?? -1;
+    if (huidigIdx < opleveringIdx) {
+      res.status(409).json({ error: `Definitief maken vereist fase 'oplevering' (huidig: '${opdracht.aiFase ?? "nieuw"}')` });
+      return;
+    }
+    if (opdracht.aiFase === "gereed" || opdracht.aiFase === "afgerond") {
+      res.status(409).json({ error: "Opdracht is al definitief afgerond" });
+      return;
+    }
+
+    const [pim] = await db
+      .select({ id: pimModellenTable.id, opleveringContext: pimModellenTable.opleveringContext })
+      .from(pimModellenTable)
+      .where(eq(pimModellenTable.opdrachtId, opdrachtId));
+    if (!pim) { res.status(404).json({ error: "PIM niet gevonden voor deze opdracht" }); return; }
+
+    const nu = new Date();
+    const bijgewerktCtx = {
+      ...(pim.opleveringContext as Record<string, unknown> | null ?? {}),
+      definitief_op: nu.toISOString(),
+      definitief_door: gebruikerId,
+    };
+
+    await db.transaction(async (tx) => {
+      await tx
+        .update(opdrachtenTable)
+        .set({ aiFase: "gereed", bijgewerktOp: nu })
+        .where(eq(opdrachtenTable.id, opdrachtId));
+
+      await tx
+        .update(pimModellenTable)
+        .set({ opleveringContext: bijgewerktCtx, bijgewerktOp: nu })
+        .where(eq(pimModellenTable.id, pim.id));
+
+      const [gebruiker] = await tx
+        .select({ naam: gebruikersTable.naam })
+        .from(gebruikersTable)
+        .where(eq(gebruikersTable.id, gebruikerId!));
+
+      await tx.insert(documentLogboekTable).values({
+        gebruikerId,
+        gebruikerNaam: gebruiker?.naam ?? null,
+        actie: "pim_definitief",
+        detail: `Opdracht definitief opgeleverd: ${opdracht.titel}`,
+      });
+    });
+
+    res.json({ opdracht_id: opdrachtId, ai_fase: "gereed" });
+  } catch (err) {
+    logger.error({ err }, "definieerPimOplevering fout");
+    res.status(500).json({ error: "Serverfout bij definitief maken" });
   }
 });
 

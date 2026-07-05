@@ -12811,6 +12811,58 @@ export const BeslisPimUitvoeringAfwijkingResponse = zod.object({
 
 
 /**
+ * @summary AI volledigheidscheck oplevering — controleert of alle stappen en fotos aanwezig zijn
+ */
+export const ControleerPimOpleveringParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ControleerPimOpleveringResponse = zod.object({
+  "opdracht_id": zod.number(),
+  "volledig": zod.boolean(),
+  "controle_punten": zod.array(zod.object({
+  "label": zod.string(),
+  "ok": zod.boolean(),
+  "detail": zod.string().nullish()
+})),
+  "ontbrekende_punten": zod.array(zod.string()),
+  "aandachtspunten_oplevering": zod.array(zod.string()),
+  "ai_samenvatting": zod.string().nullable(),
+  "ai_fase": zod.string().nullable()
+})
+
+
+/**
+ * @summary AI genereert opleverdossier en overdrachtsnotitie als DMS-documenten
+ */
+export const GenereerPimOpleveringParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GenereerPimOpleveringResponse = zod.object({
+  "opdracht_id": zod.number(),
+  "documenten": zod.array(zod.object({
+  "document_id": zod.number(),
+  "type": zod.string(),
+  "naam": zod.string()
+}))
+})
+
+
+/**
+ * @summary Menselijke bevestiging — zet ai_fase naar gereed
+ */
+export const DefinieerPimOpleveringParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DefinieerPimOpleveringResponse = zod.object({
+  "opdracht_id": zod.number(),
+  "ai_fase": zod.string()
+})
+
+
+/**
  * @summary Onderaannemer-orders van opdracht ophalen
  */
 export const ListOnderaannemeOrdersParams = zod.object({

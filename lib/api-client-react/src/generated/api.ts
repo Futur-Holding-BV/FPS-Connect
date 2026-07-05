@@ -559,6 +559,9 @@ import type {
   PimFaseInput,
   PimFaseResultaat,
   PimModel,
+  PimOpleveringControlerapport,
+  PimOpleveringDefinitiefResultaat,
+  PimOpleveringGenereerResultaat,
   PimRapportResultaat,
   PimUitvoeringAfwijkingInput,
   PimUitvoeringBeslisInput,
@@ -36990,6 +36993,216 @@ export const useBeslisPimUitvoeringAfwijking = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getBeslisPimUitvoeringAfwijkingMutationOptions(options));
+    }
+
+export const getControleerPimOpleveringUrl = (id: number,) => {
+
+
+
+
+  return `/api/opdrachten/${id}/pim/oplevering/controleer`
+}
+
+/**
+ * @summary AI volledigheidscheck oplevering — controleert of alle stappen en fotos aanwezig zijn
+ */
+export const controleerPimOplevering = async (id: number, options?: RequestInit): Promise<PimOpleveringControlerapport> => {
+
+  return customFetch<PimOpleveringControlerapport>(getControleerPimOpleveringUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getControleerPimOpleveringMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof controleerPimOplevering>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof controleerPimOplevering>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['controleerPimOplevering'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof controleerPimOplevering>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  controleerPimOplevering(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ControleerPimOpleveringMutationResult = NonNullable<Awaited<ReturnType<typeof controleerPimOplevering>>>
+
+    export type ControleerPimOpleveringMutationError = ErrorType<void>
+
+    /**
+ * @summary AI volledigheidscheck oplevering — controleert of alle stappen en fotos aanwezig zijn
+ */
+export const useControleerPimOplevering = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof controleerPimOplevering>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof controleerPimOplevering>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getControleerPimOpleveringMutationOptions(options));
+    }
+
+export const getGenereerPimOpleveringUrl = (id: number,) => {
+
+
+
+
+  return `/api/opdrachten/${id}/pim/oplevering/genereer`
+}
+
+/**
+ * @summary AI genereert opleverdossier en overdrachtsnotitie als DMS-documenten
+ */
+export const genereerPimOplevering = async (id: number, options?: RequestInit): Promise<PimOpleveringGenereerResultaat> => {
+
+  return customFetch<PimOpleveringGenereerResultaat>(getGenereerPimOpleveringUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getGenereerPimOpleveringMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof genereerPimOplevering>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof genereerPimOplevering>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['genereerPimOplevering'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof genereerPimOplevering>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  genereerPimOplevering(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type GenereerPimOpleveringMutationResult = NonNullable<Awaited<ReturnType<typeof genereerPimOplevering>>>
+
+    export type GenereerPimOpleveringMutationError = ErrorType<void>
+
+    /**
+ * @summary AI genereert opleverdossier en overdrachtsnotitie als DMS-documenten
+ */
+export const useGenereerPimOplevering = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof genereerPimOplevering>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof genereerPimOplevering>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getGenereerPimOpleveringMutationOptions(options));
+    }
+
+export const getDefinieerPimOpleveringUrl = (id: number,) => {
+
+
+
+
+  return `/api/opdrachten/${id}/pim/oplevering/definitief`
+}
+
+/**
+ * @summary Menselijke bevestiging — zet ai_fase naar gereed
+ */
+export const definieerPimOplevering = async (id: number, options?: RequestInit): Promise<PimOpleveringDefinitiefResultaat> => {
+
+  return customFetch<PimOpleveringDefinitiefResultaat>(getDefinieerPimOpleveringUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getDefinieerPimOpleveringMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof definieerPimOplevering>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof definieerPimOplevering>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['definieerPimOplevering'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof definieerPimOplevering>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  definieerPimOplevering(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DefinieerPimOpleveringMutationResult = NonNullable<Awaited<ReturnType<typeof definieerPimOplevering>>>
+
+    export type DefinieerPimOpleveringMutationError = ErrorType<void>
+
+    /**
+ * @summary Menselijke bevestiging — zet ai_fase naar gereed
+ */
+export const useDefinieerPimOplevering = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof definieerPimOplevering>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof definieerPimOplevering>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDefinieerPimOpleveringMutationOptions(options));
     }
 
 export const getListOnderaannemeOrdersUrl = (id: number,) => {

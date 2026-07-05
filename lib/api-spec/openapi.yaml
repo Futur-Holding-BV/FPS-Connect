@@ -10611,6 +10611,75 @@ paths:
         "409":
           description: Stap heeft geen afwijking
 
+  /opdrachten/{id}/pim/oplevering/controleer:
+    post:
+      operationId: controleerPimOplevering
+      tags: [pim]
+      summary: AI volledigheidscheck oplevering — controleert of alle stappen en fotos aanwezig zijn
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Volledigheidscheck resultaat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PimOpleveringControlerapport"
+        "404":
+          description: Opdracht of PIM niet gevonden
+        "409":
+          description: Fase onvoldoende voor volledigheidscheck
+
+  /opdrachten/{id}/pim/oplevering/genereer:
+    post:
+      operationId: genereerPimOplevering
+      tags: [pim]
+      summary: AI genereert opleverdossier en overdrachtsnotitie als DMS-documenten
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Gegenereerde documenten
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PimOpleveringGenereerResultaat"
+        "404":
+          description: Opdracht of PIM niet gevonden
+        "409":
+          description: Fase 'oplevering' vereist
+
+  /opdrachten/{id}/pim/oplevering/definitief:
+    post:
+      operationId: definieerPimOplevering
+      tags: [pim]
+      summary: Menselijke bevestiging — zet ai_fase naar gereed
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Opdracht definitief opgeleverd
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PimOpleveringDefinitiefResultaat"
+        "404":
+          description: Opdracht of PIM niet gevonden
+        "409":
+          description: Fase 'oplevering' vereist of al afgerond
+
   /opdrachten/{id}/onderaanneming:
     get:
       operationId: listOnderaannemeOrders
@@ -26707,6 +26776,76 @@ components:
         voorbereiding_volledigheid:
           type: string
           description: "onvolledig | voldoende | volledig"
+
+    PimOpleveringControlepunt:
+      type: object
+      required: [label, ok]
+      properties:
+        label:
+          type: string
+        ok:
+          type: boolean
+        detail:
+          type: string
+          nullable: true
+
+    PimOpleveringControlerapport:
+      type: object
+      required: [opdracht_id, volledig, controle_punten, ontbrekende_punten, aandachtspunten_oplevering, ai_samenvatting, ai_fase]
+      properties:
+        opdracht_id:
+          type: integer
+        volledig:
+          type: boolean
+        controle_punten:
+          type: array
+          items:
+            $ref: "#/components/schemas/PimOpleveringControlepunt"
+        ontbrekende_punten:
+          type: array
+          items:
+            type: string
+        aandachtspunten_oplevering:
+          type: array
+          items:
+            type: string
+        ai_samenvatting:
+          type: string
+          nullable: true
+        ai_fase:
+          type: string
+          nullable: true
+
+    PimOpleveringDocument:
+      type: object
+      required: [document_id, type, naam]
+      properties:
+        document_id:
+          type: integer
+        type:
+          type: string
+        naam:
+          type: string
+
+    PimOpleveringGenereerResultaat:
+      type: object
+      required: [opdracht_id, documenten]
+      properties:
+        opdracht_id:
+          type: integer
+        documenten:
+          type: array
+          items:
+            $ref: "#/components/schemas/PimOpleveringDocument"
+
+    PimOpleveringDefinitiefResultaat:
+      type: object
+      required: [opdracht_id, ai_fase]
+      properties:
+        opdracht_id:
+          type: integer
+        ai_fase:
+          type: string
 
     WerkbegrotingRegel:
       type: object

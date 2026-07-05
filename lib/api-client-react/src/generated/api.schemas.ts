@@ -5237,6 +5237,38 @@ export interface PimWerkvoorbereidingResultaat {
   voorbereiding_volledigheid?: string;
 }
 
+export interface PimOpleveringControlepunt {
+  label: string;
+  ok: boolean;
+  detail?: string | null;
+}
+
+export interface PimOpleveringControlerapport {
+  opdracht_id: number;
+  volledig: boolean;
+  controle_punten: PimOpleveringControlepunt[];
+  ontbrekende_punten: string[];
+  aandachtspunten_oplevering: string[];
+  ai_samenvatting: string | null;
+  ai_fase: string | null;
+}
+
+export interface PimOpleveringDocument {
+  document_id: number;
+  type: string;
+  naam: string;
+}
+
+export interface PimOpleveringGenereerResultaat {
+  opdracht_id: number;
+  documenten: PimOpleveringDocument[];
+}
+
+export interface PimOpleveringDefinitiefResultaat {
+  opdracht_id: number;
+  ai_fase: string;
+}
+
 export interface WerkbegrotingRegel {
   id: number;
   begroting_id: number;
