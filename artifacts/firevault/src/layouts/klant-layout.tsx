@@ -6,10 +6,11 @@ import {
   SidebarGroup, SidebarGroupContent,
   SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { Home, FileText, Building, Info, LayoutDashboard } from "lucide-react";
+import { Home, FileText, Building, Info, LayoutDashboard, ArrowLeft } from "lucide-react";
 import { GebruikerMenu } from "@/components/gebruiker-menu";
 import { PauzeKnop } from "@/components/pauze/pauze-modal";
 import { OnlineGebruikers } from "@/components/online-gebruikers/online-gebruikers";
+import { useRol } from "@/context/rol-context";
 
 const ROUTES = [
   { href: "/", labelKey: "nav.mijnPortaal", icoon: LayoutDashboard },
@@ -21,6 +22,7 @@ const ROUTES = [
 export default function KlantLayout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const { t } = useTranslation();
+  const { kanWisselen, zetPersoon } = useRol();
 
   const defaultSidebarOpen =
     typeof window !== "undefined" ? window.innerWidth >= 1200 : true;
@@ -71,6 +73,16 @@ export default function KlantLayout({ children }: { children: React.ReactNode })
         <SidebarFooter className="p-4 pb-6 space-y-4">
           <OnlineGebruikers />
           <div className="hidden group-data-[collapsible=icon]:block"><PauzeKnop /></div>
+          {kanWisselen && (
+            <button
+              onClick={() => { zetPersoon(null); }}
+              className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-[13px] font-medium text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100 transition-colors group-data-[collapsible=icon]:justify-center"
+              title="Terug naar FPS Connect"
+            >
+              <ArrowLeft className="w-4 h-4 flex-shrink-0" />
+              <span className="group-data-[collapsible=icon]:hidden">Terug naar Connect</span>
+            </button>
+          )}
           <div className="bg-white rounded-xl p-2 shadow-[0_2px_8px_rgba(0,0,0,0.02)]">
             <GebruikerMenu />
           </div>
