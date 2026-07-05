@@ -1,12 +1,14 @@
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   useListVisuals,
   useCreateVisual,
   useUpdateVisual,
   useDeleteVisual,
+  useRequestUploadUrl,
   getListVisualsQueryKey,
   ListVisualsActief,
+  UploadUrlRequestBestandType,
 } from "@workspace/api-client-react";
 import type { Visual } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -42,7 +44,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Separator } from "@/components/ui/separator";
-import { Plus, Pencil, Trash2, ImageIcon, CheckCircle2, XCircle } from "lucide-react";
+import { Plus, Pencil, Trash2, ImageIcon, CheckCircle2, XCircle, Upload, FileJson, FileImage, Loader2 } from "lucide-react";
 
 const VISUAL_TYPES = [
   { waarde: "detailtekening",           label: "Detailtekening" },
@@ -80,6 +82,20 @@ const SPOT_TYPES = [
   "branddamper",
 ] as const;
 
+const TOEGESTANE_TYPEN: Record<string, string> = {
+  "image/jpeg":       "afbeelding (.jpg)",
+  "image/png":        "afbeelding (.png)",
+  "image/webp":       "afbeelding (.webp)",
+  "image/gif":        "afbeelding (.gif)",
+  "image/svg+xml":    "afbeelding (.svg)",
+  "application/json": "Lottie animatie (.json)",
+  "application/pdf":  "PDF-document (.pdf)",
+};
+
+function isAfbeelding(contentType: string) {
+  return contentType.startsWith("image/");
+}
+
 function visualTypeLabel(waarde: string) {
   return VISUAL_TYPES.find((v) => v.waarde === waarde)?.label ?? waarde;
 }
@@ -111,6 +127,14 @@ export default function VisualLibraryBeheer() {
   const [bewaarFout, setBewaarFout] = useState("");
   const [bewaarBezig, setBewaarBezig] = useState(false);
 
+  const [uploadBezig, setUploadBezig] = useState(false);
+  const [uploadFout, setUploadFout] = useState("");
+  const [geuploadBestand, setGeuploadBestand] = useState<string>("");
+  const [sleepActief, setSleepActief] = useState(false);
+
+  const bestandInputRef = useRef<HTMLInputElement>(null);
+  const requestUploadUrl = useRequestUploadUrl();
+
   const queryParams = {
     actief: filterActief === "actief"
       ? ListVisualsActief.true
@@ -128,6 +152,8 @@ export default function VisualLibraryBeheer() {
   function openNieuw() {
     setFormulier({ ...LEEG_FORMULIER });
     setBewaarFout("");
+    setUploadFout("");
+    setGeuploadBestand("");
     setNieuwOpen(true);
   }
 
@@ -143,6 +169,8 @@ export default function VisualLibraryBeheer() {
       taal: v.taal,
     });
     setBewaarFout("");
+    setUploadFout("");
+    setGeuploadBestand(v.object_path ? `Huidig: ${v.object_path.split("/").pop() ?? v.object_path}` : "");
     setBewerkItem(v);
   }
 
@@ -151,6 +179,9 @@ export default function VisualLibraryBeheer() {
     setBewerkItem(null);
     setBewaarFout("");
     setBewaarBezig(false);
+    setUploadFout("");
+    setGeuploadBestand("");
+    setSleepActief(false);
   }
 
   function toggleSpotType(type: string) {
@@ -162,11 +193,84 @@ export default function VisualLibraryBeheer() {
     }));
   }
 
+  async function uploadBestand(bestand: File) {
+    setUploadFout("");
+    setUploadBezig(true);
+    setGeuploadBestand("");
+
+    const contentType = bestand.type || "application/octet-stream";
+
+    if (!TOEGESTANE_TYPEN[contentType]) {
+      setUploadFout(`Bestandstype niet ondersteund. Gebruik: ${Object.values(TOEGESTANE_TYPEN).join(", ")}.`);
+      setUploadBezig(false);
+      return;
+    }
+
+    const bestandType = isAfbeelding(contentType)
+      ? UploadUrlRequestBestandType.foto
+      : UploadUrlRequestBestandType.algemeen;
+
+    try {
+      const { uploadURL, objectPath } = await requestUploadUrl.mutateAsync({
+        data: {
+          name: bestand.name,
+          size: bestand.size,
+          contentType,
+          bestand_type: bestandType,
+        },
+      });
+
+      const uploadResp = await fetch(uploadURL, {
+        method: "PUT",
+        body: bestand,
+        headers: { "Content-Type": contentType },
+      });
+
+      if (!uploadResp.ok) {
+        throw new Error(`Upload mislukt (HTTP ${uploadResp.status})`);
+      }
+
+      setFormulier((f) => ({
+        ...f,
+        object_path: objectPath,
+        thumbnail_path: isAfbeelding(contentType) ? objectPath : f.thumbnail_path,
+      }));
+      setGeuploadBestand(bestand.name);
+    } catch (err) {
+      const bericht = err instanceof Error ? err.message : "Onbekende fout";
+      setUploadFout(`Upload mislukt: ${bericht}`);
+    } finally {
+      setUploadBezig(false);
+    }
+  }
+
+  const handleBestandKiezen = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const bestand = e.target.files?.[0];
+    if (bestand) void uploadBestand(bestand);
+    if (bestandInputRef.current) bestandInputRef.current.value = "";
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setSleepActief(false);
+    const bestand = e.dataTransfer.files?.[0];
+    if (bestand) void uploadBestand(bestand);
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setSleepActief(true);
+  }, []);
+
+  const handleDragLeave = useCallback(() => {
+    setSleepActief(false);
+  }, []);
+
   async function bewaar() {
     if (!formulier.naam.trim()) { setBewaarFout("Naam is verplicht"); return; }
     if (!formulier.visual_type) { setBewaarFout("Visual type is verplicht"); return; }
     if (!formulier.bron_type)   { setBewaarFout("Bron type is verplicht"); return; }
-    if (!formulier.object_path.trim()) { setBewaarFout("Object pad is verplicht"); return; }
+    if (!formulier.object_path.trim()) { setBewaarFout("Upload een bestand of voer een object pad in"); return; }
 
     setBewaarBezig(true);
     setBewaarFout("");
@@ -440,30 +544,98 @@ export default function VisualLibraryBeheer() {
               />
             </div>
 
+            {/* Upload zone */}
             <div className="space-y-1.5">
-              <Label htmlFor="vl-object-path">Object pad (storage) <span className="text-destructive">*</span></Label>
-              <Input
-                id="vl-object-path"
-                placeholder="Bijv. visuals/brandklep/montageschema-a.pdf"
-                value={formulier.object_path}
-                onChange={(e) => setFormulier((f) => ({ ...f, object_path: e.target.value }))}
-              />
-              <p className="text-[11px] text-muted-foreground">
-                Pad in object storage (GCS/S3). Upload het bestand eerst via de opslagbeheer-tool.
-              </p>
-            </div>
+              <Label>
+                Bestand <span className="text-destructive">*</span>
+              </Label>
+              <div
+                role="button"
+                tabIndex={0}
+                className={`relative border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors
+                  ${sleepActief
+                    ? "border-primary bg-primary/5"
+                    : geuploadBestand && !uploadFout
+                      ? "border-green-400 bg-green-50"
+                      : "border-muted-foreground/25 hover:border-muted-foreground/50 bg-muted/30"
+                  }
+                  ${uploadBezig ? "pointer-events-none" : ""}
+                `}
+                onClick={() => !uploadBezig && bestandInputRef.current?.click()}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") bestandInputRef.current?.click(); }}
+                onDrop={handleDrop}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+              >
+                <input
+                  ref={bestandInputRef}
+                  type="file"
+                  accept=".jpg,.jpeg,.png,.webp,.gif,.svg,.json,.pdf,image/*,application/json,application/pdf"
+                  className="hidden"
+                  onChange={handleBestandKiezen}
+                />
 
-            <div className="space-y-1.5">
-              <Label htmlFor="vl-thumb">Thumbnail pad</Label>
-              <Input
-                id="vl-thumb"
-                placeholder="Bijv. visuals/brandklep/montageschema-a-thumb.jpg"
-                value={formulier.thumbnail_path}
-                onChange={(e) => setFormulier((f) => ({ ...f, thumbnail_path: e.target.value }))}
-              />
-              <p className="text-[11px] text-muted-foreground">
-                Optioneel: verkleinde versie voor mobiel (max 400px breed).
-              </p>
+                {uploadBezig ? (
+                  <div className="flex flex-col items-center gap-2 py-2 text-muted-foreground">
+                    <Loader2 className="h-6 w-6 animate-spin" />
+                    <span className="text-sm">Uploaden...</span>
+                  </div>
+                ) : geuploadBestand && !uploadFout ? (
+                  <div className="flex flex-col items-center gap-1.5 py-1">
+                    {formulier.object_path.endsWith(".json")
+                      ? <FileJson className="h-6 w-6 text-green-600" />
+                      : <FileImage className="h-6 w-6 text-green-600" />
+                    }
+                    <span className="text-sm font-medium text-green-700 truncate max-w-full px-2">
+                      {geuploadBestand}
+                    </span>
+                    <span className="text-[11px] text-muted-foreground">
+                      Klik of sleep een nieuw bestand om te vervangen
+                    </span>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center gap-2 py-2 text-muted-foreground">
+                    <Upload className="h-6 w-6" />
+                    <div className="space-y-0.5">
+                      <p className="text-sm font-medium">Klik om te uploaden of sleep hier een bestand</p>
+                      <p className="text-[11px]">Afbeeldingen (JPG, PNG, WebP, SVG), Lottie JSON, PDF</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {uploadFout && (
+                <p className="text-sm text-destructive">{uploadFout}</p>
+              )}
+
+              {/* Handmatig pad — altijd beschikbaar als fallback */}
+              <details className="mt-1">
+                <summary className="text-[11px] text-muted-foreground cursor-pointer select-none hover:text-foreground transition-colors">
+                  Handmatig pad invoeren
+                </summary>
+                <div className="mt-2 space-y-2">
+                  <div className="space-y-1">
+                    <Label htmlFor="vl-object-path" className="text-xs">Object pad (storage)</Label>
+                    <Input
+                      id="vl-object-path"
+                      placeholder="visuals/brandklep/montageschema-a.pdf"
+                      value={formulier.object_path}
+                      onChange={(e) => setFormulier((f) => ({ ...f, object_path: e.target.value }))}
+                      className="h-8 text-xs font-mono"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="vl-thumb" className="text-xs">Thumbnail pad</Label>
+                    <Input
+                      id="vl-thumb"
+                      placeholder="visuals/brandklep/montageschema-a-thumb.jpg"
+                      value={formulier.thumbnail_path}
+                      onChange={(e) => setFormulier((f) => ({ ...f, thumbnail_path: e.target.value }))}
+                      className="h-8 text-xs font-mono"
+                    />
+                  </div>
+                </div>
+              </details>
             </div>
 
             <Separator />
@@ -502,10 +674,10 @@ export default function VisualLibraryBeheer() {
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={sluitDialogen} disabled={bewaarBezig}>
+            <Button variant="outline" onClick={sluitDialogen} disabled={bewaarBezig || uploadBezig}>
               Annuleren
             </Button>
-            <Button onClick={() => void bewaar()} disabled={bewaarBezig}>
+            <Button onClick={() => void bewaar()} disabled={bewaarBezig || uploadBezig}>
               {bewaarBezig ? "Opslaan..." : bewerkItem ? "Wijzigingen opslaan" : "Visual aanmaken"}
             </Button>
           </DialogFooter>
