@@ -12670,6 +12670,9 @@ export const ListPimUitvoeringStappenResponseItem = zod.object({
   "voltooid_door_id": zod.number().nullish(),
   "voorziening_ids": zod.array(zod.number()).nullish().describe('Gekoppelde spot-IDs (informatieve koppeling, geen FK)'),
   "voltooid_op": zod.string().nullish(),
+  "guidance_context": zod.object({
+
+}).passthrough().nullish().describe('VGE: geselecteerde visuele begeleiding per stap. JSONB-schema: { wat_zie_je_nu, wat_is_eindresultaat, hoe_doe_je_dit, aandachtspunten, veiligheidsrisicos, max_visuals_getoond }'),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })
@@ -12931,6 +12934,9 @@ export const KoppelPimStapVoorzieningenResponse = zod.object({
   "voltooid_door_id": zod.number().nullish(),
   "voorziening_ids": zod.array(zod.number()).nullish().describe('Gekoppelde spot-IDs (informatieve koppeling, geen FK)'),
   "voltooid_op": zod.string().nullish(),
+  "guidance_context": zod.object({
+
+}).passthrough().nullish().describe('VGE: geselecteerde visuele begeleiding per stap. JSONB-schema: { wat_zie_je_nu, wat_is_eindresultaat, hoe_doe_je_dit, aandachtspunten, veiligheidsrisicos, max_visuals_getoond }'),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })
@@ -22656,6 +22662,41 @@ export const AiBedrijfsscanOrganisatieResponse = zod.object({
 })).optional(),
   "ontbrekend": zod.array(zod.string()).optional(),
   "besparing_indicatie": zod.string().nullish()
+})
+
+
+/**
+ * @summary Lijst van alle fps_visuals met effectiviteitsscores (beheerder)
+ */
+export const ListVisualLibraryResponseItem = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "visual_type": zod.string(),
+  "bron_type": zod.string(),
+  "object_path": zod.string(),
+  "thumbnail_path": zod.string().nullish(),
+  "spot_type": zod.array(zod.string()),
+  "actief": zod.boolean(),
+  "aangemaakt_op": zod.string(),
+  "n_getoond": zod.number(),
+  "pct_zonder_herstelwerk": zod.number().nullable(),
+  "gem_stap_duur": zod.number().nullish()
+})
+export const ListVisualLibraryResponse = zod.array(ListVisualLibraryResponseItem)
+
+
+/**
+ * @summary Effectiviteitsscore voor een specifieke visual (beheerder)
+ */
+export const GetVisualEffectiviteitParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetVisualEffectiviteitResponse = zod.object({
+  "visual_id": zod.number(),
+  "n_getoond": zod.number(),
+  "pct_zonder_herstelwerk": zod.number().nullish(),
+  "gem_stap_duur": zod.number().nullish()
 })
 
 

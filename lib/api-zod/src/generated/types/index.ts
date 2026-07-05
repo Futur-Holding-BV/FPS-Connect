@@ -259,6 +259,8 @@ export * from './foto';
 export * from './fotoFase';
 export * from './fotoInput';
 export * from './fotoInputFase';
+export * from './fpsVisualEffectiviteit';
+export * from './fpsVisualItem';
 export * from './functie';
 export * from './functieInput';
 export * from './gebouw';

@@ -25,6 +25,8 @@ import {
   labelsTable,
   fotosTable,
   verdiepingenTable,
+  fpsVisualsTable,
+  vgeEffectiviteitslogTable,
 } from "@workspace/db";
 import type { PimUitvoeringStap } from "@workspace/db";
 import { eq, and, asc, desc, inArray, sql } from "drizzle-orm";
@@ -1216,6 +1218,53 @@ async function vulGuidanceContextIn(
   }
 }
 
+/**
+ * Schrijft effectiviteitslog-rijen voor alle visuals die in guidance_context stonden.
+ * Mislukt stil — leerlaag is ondersteunend, nooit blokkerend.
+ */
+async function schrijfVgeEffectiviteitslog(
+  stap: PimUitvoeringStap,
+  aiAnalyse: Record<string, unknown> | null,
+): Promise<void> {
+  try {
+    const gc = stap.guidanceContext as Record<string, unknown> | null;
+    if (!gc) return;
+
+    const slots = ["wat_zie_je_nu", "wat_is_eindresultaat", "hoe_doe_je_dit"] as const;
+    const visualIds: number[] = [];
+    for (const slot of slots) {
+      const entry = gc[slot] as Record<string, unknown> | null;
+      if (entry && typeof entry.visual_id === "number") {
+        if (!visualIds.includes(entry.visual_id)) visualIds.push(entry.visual_id);
+      }
+    }
+    if (visualIds.length === 0) return;
+
+    const instructie = stap.instructieJson as Record<string, unknown> | null;
+    const stapType = afleidenStapType(instructie, stap.volgorde);
+    const spotType = typeof instructie?.spot_type === "string" ? instructie.spot_type : "onbekend";
+    const herstelwerkNodig = Boolean(aiAnalyse?.afwijking_gedetecteerd) || aiAnalyse?.oordeel === "afkeur";
+    const kwaliteitResultaat =
+      aiAnalyse?.oordeel === "afkeur" ? "herstel"
+      : aiAnalyse?.oordeel === "twijfel" ? "aandacht"
+      : "akkoord";
+
+    for (const visualId of visualIds) {
+      await db.insert(vgeEffectiviteitslogTable).values({
+        visualId,
+        pimStapId: stap.id,
+        stapType,
+        spotType,
+        herstelwerkNodig: Boolean(herstelwerkNodig),
+        kwaliteitResultaat,
+      });
+    }
+    logger.info({ stapId: stap.id, aantalVisuals: visualIds.length }, "vgeEffectiviteitslog geschreven");
+  } catch (err) {
+    logger.warn({ err, stapId: stap.id }, "vgeEffectiviteitslog schrijven mislukt");
+  }
+}
+
 function fallbackStapJson(volgorde: number, werkpakket: string | null): Record<string, unknown> {
   return {
     volgorde,
@@ -1690,6 +1739,8 @@ router.post("/opdrachten/:id/pim/uitvoering/stap/:stapId/voltooien", schrijven, 
         afwijking_omschrijving: afwijkingJson.afwijking_omschrijving,
       });
 
+      await schrijfVgeEffectiviteitslog(stap, aiAnalyse);
+
       res.json({ voltooid_stap_id: stapId, uitvoering_gereed: false, volgende_stap: serializeStap(afgewekenStap) });
       return;
     }
@@ -1715,6 +1766,8 @@ router.post("/opdrachten/:id/pim/uitvoering/stap/:stapId/voltooien", schrijven, 
       gebruiker_id: gebruikerId,
       antwoord_controle,
     });
+
+    await schrijfVgeEffectiviteitslog(stap, aiAnalyse);
 
     const isLaatsteStap = stapInstructie?.is_laatste_stap === true;
     if (isLaatsteStap) {
@@ -3066,6 +3119,93 @@ router.patch("/opdrachten/:id/pim/uitvoering/stap/:stapId/voorzieningen", requir
   } catch (err) {
     logger.error({ err }, "koppelPimStapVoorzieningen fout");
     res.status(500).json({ error: "Serverfout bij koppelen spots aan stap" });
+  }
+});
+
+// ── VGE Beheer ───────────────────────────────────────────────────────────────
+
+const alleenBeheerder = requireBevoegdheid("systeem", 2);
+
+/** GET /beheer/visual-library — lijst van alle visuals met geaggregeerde scores */
+router.get("/beheer/visual-library", alleenBeheerder, async (_req, res) => {
+  try {
+    const visuals = await db.select().from(fpsVisualsTable).orderBy(fpsVisualsTable.naam);
+
+    if (visuals.length === 0) {
+      res.json([]);
+      return;
+    }
+
+    const visualIds = visuals.map((v) => v.id);
+
+    const scores = await db
+      .select({
+        visualId: vgeEffectiviteitslogTable.visualId,
+        nGetoond: sql<number>`count(*)::int`,
+        pctZonderHerstelwerk: sql<number>`round(100.0 * sum(case when not ${vgeEffectiviteitslogTable.herstelwerkNodig} then 1 else 0 end)::numeric / nullif(count(*), 0), 1)`,
+        gemStapDuur: sql<number>`round(avg(${vgeEffectiviteitslogTable.stapDuurSeconden}))`,
+      })
+      .from(vgeEffectiviteitslogTable)
+      .where(inArray(vgeEffectiviteitslogTable.visualId, visualIds))
+      .groupBy(vgeEffectiviteitslogTable.visualId);
+
+    const scoreMap = new Map(scores.map((s) => [s.visualId, s]));
+
+    const resultaat = visuals.map((v) => {
+      const s = scoreMap.get(v.id);
+      return {
+        id: v.id,
+        naam: v.naam,
+        visual_type: v.visualType,
+        bron_type: v.bronType,
+        object_path: v.objectPath,
+        thumbnail_path: v.thumbnailPath ?? null,
+        spot_type: v.spotType,
+        actief: v.actief,
+        aangemaakt_op: v.aangemaaktOp.toISOString(),
+        n_getoond: s?.nGetoond ?? 0,
+        pct_zonder_herstelwerk: s ? Number(s.pctZonderHerstelwerk) : null,
+        gem_stap_duur: s ? Number(s.gemStapDuur) : null,
+      };
+    });
+
+    res.json(resultaat);
+  } catch (err) {
+    logger.error({ err }, "listVisualLibrary fout");
+    res.status(500).json({ error: "Serverfout bij ophalen visual library" });
+  }
+});
+
+/** GET /beheer/visual-library/:id/effectiviteit — score-samenvatting voor één visual */
+router.get("/beheer/visual-library/:id/effectiviteit", alleenBeheerder, async (req, res) => {
+  const visualId = parseInt(String(req.params.id), 10);
+  if (isNaN(visualId)) { res.status(400).json({ error: "Ongeldig ID" }); return; }
+
+  try {
+    const [visual] = await db
+      .select({ id: fpsVisualsTable.id })
+      .from(fpsVisualsTable)
+      .where(eq(fpsVisualsTable.id, visualId));
+    if (!visual) { res.status(404).json({ error: "Visual niet gevonden" }); return; }
+
+    const [score] = await db
+      .select({
+        nGetoond: sql<number>`count(*)::int`,
+        pctZonderHerstelwerk: sql<number>`round(100.0 * sum(case when not ${vgeEffectiviteitslogTable.herstelwerkNodig} then 1 else 0 end)::numeric / nullif(count(*), 0), 1)`,
+        gemStapDuur: sql<number>`round(avg(${vgeEffectiviteitslogTable.stapDuurSeconden}))`,
+      })
+      .from(vgeEffectiviteitslogTable)
+      .where(eq(vgeEffectiviteitslogTable.visualId, visualId));
+
+    res.json({
+      visual_id: visualId,
+      n_getoond: score?.nGetoond ?? 0,
+      pct_zonder_herstelwerk: score?.pctZonderHerstelwerk != null ? Number(score.pctZonderHerstelwerk) : null,
+      gem_stap_duur: score?.gemStapDuur != null ? Number(score.gemStapDuur) : null,
+    });
+  } catch (err) {
+    logger.error({ err }, "getVisualEffectiviteit fout");
+    res.status(500).json({ error: "Serverfout bij ophalen visual effectiviteit" });
   }
 });
 

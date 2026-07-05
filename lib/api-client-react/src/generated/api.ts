@@ -212,6 +212,8 @@ import type {
   FinancieelDashboard,
   Foto,
   FotoInput,
+  FpsVisualEffectiviteit,
+  FpsVisualItem,
   Functie,
   FunctieInput,
   Gebouw,
@@ -63985,6 +63987,160 @@ export const useAiBedrijfsscanOrganisatie = <TError = ErrorType<unknown>,
       > => {
       return useMutation(getAiBedrijfsscanOrganisatieMutationOptions(options));
     }
+
+export const getListVisualLibraryUrl = () => {
+
+
+
+
+  return `/api/beheer/visual-library`
+}
+
+/**
+ * @summary Lijst van alle fps_visuals met effectiviteitsscores (beheerder)
+ */
+export const listVisualLibrary = async ( options?: RequestInit): Promise<FpsVisualItem[]> => {
+
+  return customFetch<FpsVisualItem[]>(getListVisualLibraryUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListVisualLibraryQueryKey = () => {
+    return [
+    `/api/beheer/visual-library`
+    ] as const;
+    }
+
+
+export const getListVisualLibraryQueryOptions = <TData = Awaited<ReturnType<typeof listVisualLibrary>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listVisualLibrary>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListVisualLibraryQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listVisualLibrary>>> = ({ signal }) => listVisualLibrary({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listVisualLibrary>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListVisualLibraryQueryResult = NonNullable<Awaited<ReturnType<typeof listVisualLibrary>>>
+export type ListVisualLibraryQueryError = ErrorType<void>
+
+
+/**
+ * @summary Lijst van alle fps_visuals met effectiviteitsscores (beheerder)
+ */
+
+export function useListVisualLibrary<TData = Awaited<ReturnType<typeof listVisualLibrary>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listVisualLibrary>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListVisualLibraryQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetVisualEffectiviteitUrl = (id: number,) => {
+
+
+
+
+  return `/api/beheer/visual-library/${id}/effectiviteit`
+}
+
+/**
+ * @summary Effectiviteitsscore voor een specifieke visual (beheerder)
+ */
+export const getVisualEffectiviteit = async (id: number, options?: RequestInit): Promise<FpsVisualEffectiviteit> => {
+
+  return customFetch<FpsVisualEffectiviteit>(getGetVisualEffectiviteitUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetVisualEffectiviteitQueryKey = (id: number,) => {
+    return [
+    `/api/beheer/visual-library/${id}/effectiviteit`
+    ] as const;
+    }
+
+
+export const getGetVisualEffectiviteitQueryOptions = <TData = Awaited<ReturnType<typeof getVisualEffectiviteit>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getVisualEffectiviteit>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetVisualEffectiviteitQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getVisualEffectiviteit>>> = ({ signal }) => getVisualEffectiviteit(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getVisualEffectiviteit>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetVisualEffectiviteitQueryResult = NonNullable<Awaited<ReturnType<typeof getVisualEffectiviteit>>>
+export type GetVisualEffectiviteitQueryError = ErrorType<void>
+
+
+/**
+ * @summary Effectiviteitsscore voor een specifieke visual (beheerder)
+ */
+
+export function useGetVisualEffectiviteit<TData = Awaited<ReturnType<typeof getVisualEffectiviteit>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getVisualEffectiviteit>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetVisualEffectiviteitQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
 export const getListAiAanroepenUrl = (params?: ListAiAanroepenParams,) => {
   const normalizedParams = new URLSearchParams();

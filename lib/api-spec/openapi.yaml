@@ -18224,6 +18224,48 @@ paths:
               schema:
                 $ref: "#/components/schemas/OrgAiBedrijfsscanResultaat"
 
+  # ── BEHEER — Visual Library (VGE) ────────────────────────────────────────────
+
+  /beheer/visual-library:
+    get:
+      operationId: listVisualLibrary
+      tags: [vge]
+      summary: Lijst van alle fps_visuals met effectiviteitsscores (beheerder)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FpsVisualItem"
+        "403":
+          description: Geen toegang
+
+  /beheer/visual-library/{id}/effectiviteit:
+    get:
+      operationId: getVisualEffectiviteit
+      tags: [vge]
+      summary: Effectiviteitsscore voor een specifieke visual (beheerder)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FpsVisualEffectiviteit"
+        "403":
+          description: Geen toegang
+        "404":
+          description: Niet gevonden
+
   # ── BEHEER — AI-log ──────────────────────────────────────────────────────────
 
   /beheer/ai-aanroepen:
@@ -36221,6 +36263,34 @@ components:
         bedrijfsstandaard_id: { type: ["integer", "null"] }
         taal:                 { type: string }
         actief:               { type: boolean }
+
+    FpsVisualItem:
+      type: object
+      required: [id, naam, visual_type, bron_type, object_path, spot_type, actief, aangemaakt_op, n_getoond, pct_zonder_herstelwerk]
+      properties:
+        id:                    { type: integer }
+        naam:                  { type: string }
+        visual_type:           { type: string }
+        bron_type:             { type: string }
+        object_path:           { type: string }
+        thumbnail_path:        { type: ["string", "null"] }
+        spot_type:
+          type: array
+          items: { type: string }
+        actief:                { type: boolean }
+        aangemaakt_op:         { type: string }
+        n_getoond:             { type: integer }
+        pct_zonder_herstelwerk: { type: ["number", "null"] }
+        gem_stap_duur:         { type: ["number", "null"] }
+
+    FpsVisualEffectiviteit:
+      type: object
+      required: [visual_id, n_getoond]
+      properties:
+        visual_id:             { type: integer }
+        n_getoond:             { type: integer }
+        pct_zonder_herstelwerk: { type: ["number", "null"] }
+        gem_stap_duur:         { type: ["number", "null"] }
 
     FieLeermoment:
       type: object

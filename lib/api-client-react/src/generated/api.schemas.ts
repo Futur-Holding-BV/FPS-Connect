@@ -10930,6 +10930,33 @@ export interface VisualPatch {
   actief?: boolean;
 }
 
+export interface FpsVisualItem {
+  id: number;
+  naam: string;
+  visual_type: string;
+  bron_type: string;
+  object_path: string;
+  /** @nullable */
+  thumbnail_path?: string | null;
+  spot_type: string[];
+  actief: boolean;
+  aangemaakt_op: string;
+  n_getoond: number;
+  /** @nullable */
+  pct_zonder_herstelwerk: number | null;
+  /** @nullable */
+  gem_stap_duur?: number | null;
+}
+
+export interface FpsVisualEffectiviteit {
+  visual_id: number;
+  n_getoond: number;
+  /** @nullable */
+  pct_zonder_herstelwerk?: number | null;
+  /** @nullable */
+  gem_stap_duur?: number | null;
+}
+
 export interface FieLeermoment {
   id: number;
   werktype: string;

@@ -60,6 +60,7 @@ import AiAanroepenBeheer from "@/pages/beheer/ai-aanroepen";
 import HelpdeskBeheer from "@/pages/beheer/helpdesk";
 import FeedbackBeheer from "@/pages/beheer/feedback";
 import Heatmaps from "@/pages/beheer/heatmaps";
+import VisualLibraryBeheer from "@/pages/beheer/visual-library";
 import ProfielenBeheer from "@/pages/beheer/profielen";
 import ToepassingenBeheer from "@/pages/beheer/toepassingen";
 import Bibliotheek from "@/pages/beheer/bibliotheek";
@@ -482,6 +483,7 @@ function ConnectPortal() {
         <Route path="/beheer/helpdesk" component={HelpdeskBeheer} />
         <Route path="/beheer/feedback" component={FeedbackBeheer} />
         <Route path="/beheer/heatmaps" component={Heatmaps} />
+        <Route path="/beheer/visual-library" component={VisualLibraryBeheer} />
         <Route path="/beheer/profielen" component={ProfielenBeheer} />
         <Route path="/beheer/rollen-rechten" component={RollenRechtenBeheer} />
         <Route path="/beheer/object-rechten" component={ObjectRechtenBeheer} />
