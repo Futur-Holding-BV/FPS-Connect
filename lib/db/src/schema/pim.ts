@@ -61,3 +61,22 @@ export const pimUitvoeringStappenTable = pgTable("pim_uitvoering_stappen", {
 });
 
 export type PimUitvoeringStap = typeof pimUitvoeringStappenTable.$inferSelect;
+
+// ── PIM FOTO-ANALYSES ─────────────────────────────────────────────────────────
+// AI-beoordeling van een uitvoeringsfoto t.o.v. de referentiefoto uit het VGF.
+// status: wachtend | bezig | akkoord | aandacht | herstel
+// afwijkingsstatus: akkoord | aandacht | herstel (null zolang analyse loopt)
+export const pimFotoAnalysesTable = pgTable("pim_foto_analyses", {
+  id: serial("id").primaryKey(),
+  stapId: integer("stap_id").notNull().references(() => pimUitvoeringStappenTable.id, { onDelete: "cascade" }),
+  fotoObjectPath: text("foto_object_path"),
+  status: text("status").notNull().default("wachtend"),
+  afwijkingsstatus: text("afwijkingsstatus"),
+  annotatieObjectPath: text("annotatie_object_path"),
+  aiBeoordeling: text("ai_beoordeling"),
+  aiAandachtspunten: text("ai_aandachtspunten").array(),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+  bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+});
+
+export type PimFotoAnalyse = typeof pimFotoAnalysesTable.$inferSelect;

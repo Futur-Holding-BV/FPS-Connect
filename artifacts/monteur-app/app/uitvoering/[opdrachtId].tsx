@@ -35,8 +35,11 @@ import { useAuth } from "@/context/auth";
 import { useOffline } from "@/context/offline";
 import { useSync } from "@/context/sync";
 import { useColors } from "@/hooks/useColors";
+import { useResponsive } from "@/hooks/useResponsive";
 import { voegToeAanWachtrij } from "@/lib/syncQueue";
 import { uploadFoto } from "@/lib/upload";
+import { UitvoeringThemeProvider } from "@/context/UitvoeringThemeContext";
+import { UitvoeringLayout } from "@/screens/uitvoering/layout";
 
 const CACHE_VERSIE = "v1";
 const DOMEIN = process.env.EXPO_PUBLIC_DOMAIN ?? "";
@@ -404,6 +407,7 @@ export default function UitvoeringScherm() {
   const { token } = useAuth();
   const { isOnline } = useOffline();
   const { forceerSync, herlaadAantal } = useSync();
+  const { isTablet } = useResponsive();
 
   const opdrachtId = parseInt(param ?? "0", 10);
 
@@ -703,13 +707,76 @@ export default function UitvoeringScherm() {
 
   if (uitvoeringGereed) {
     return (
+      <UitvoeringThemeProvider>
+        <View style={{ flex: 1, backgroundColor: c.background }}>
+          <View
+            style={{
+              backgroundColor: c.dark,
+              paddingTop: bovenInset(insets) + 12,
+              paddingHorizontal: 20,
+              paddingBottom: 18,
+            }}
+          >
+            <Pressable onPress={() => router.back()} style={{ marginBottom: 10 }}>
+              <Text style={{ color: c.primary, fontSize: 16, fontFamily: "Inter_600SemiBold" }}>
+                ‹ Terug
+              </Text>
+            </Pressable>
+            <Text style={{ color: c.darkForeground, fontSize: 20, fontFamily: "Inter_700Bold" }}>
+              Adaptieve gids
+            </Text>
+          </View>
+          <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 32, gap: 16 }}>
+            <View
+              style={{
+                width: 80,
+                height: 80,
+                borderRadius: 40,
+                backgroundColor: "#dcfce7",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Ionicons name="checkmark-circle" size={44} color="#16a34a" />
+            </View>
+            <Text style={{ color: c.foreground, fontSize: 20, fontFamily: "Inter_700Bold", textAlign: "center" }}>
+              Uitvoering gereed
+            </Text>
+            <Text style={{ color: c.mutedForeground, fontSize: 14, fontFamily: "Inter_400Regular", textAlign: "center", lineHeight: 22 }}>
+              Alle stappen zijn doorlopen. De uitvoering is voltooid.
+            </Text>
+            <Pressable
+              onPress={() => {
+                void forceerSync();
+                router.back();
+              }}
+              style={{
+                backgroundColor: c.primary,
+                borderRadius: 10,
+                paddingHorizontal: 24,
+                paddingVertical: 14,
+                marginTop: 8,
+              }}
+            >
+              <Text style={{ color: "#fff", fontSize: 15, fontFamily: "Inter_700Bold" }}>
+                Terug naar werk
+              </Text>
+            </Pressable>
+          </View>
+        </View>
+      </UitvoeringThemeProvider>
+    );
+  }
+
+  return (
+    <UitvoeringThemeProvider>
       <View style={{ flex: 1, backgroundColor: c.background }}>
         <View
           style={{
             backgroundColor: c.dark,
             paddingTop: bovenInset(insets) + 12,
             paddingHorizontal: 20,
-            paddingBottom: 18,
+            paddingBottom: 12,
           }}
         >
           <Pressable onPress={() => router.back()} style={{ marginBottom: 10 }}>
@@ -720,235 +787,122 @@ export default function UitvoeringScherm() {
           <Text style={{ color: c.darkForeground, fontSize: 20, fontFamily: "Inter_700Bold" }}>
             Adaptieve gids
           </Text>
-        </View>
-        <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 32, gap: 16 }}>
-          <View
-            style={{
-              width: 80,
-              height: 80,
-              borderRadius: 40,
-              backgroundColor: "#dcfce7",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <Ionicons name="checkmark-circle" size={44} color="#16a34a" />
-          </View>
-          <Text style={{ color: c.foreground, fontSize: 20, fontFamily: "Inter_700Bold", textAlign: "center" }}>
-            Uitvoering gereed
-          </Text>
-          <Text style={{ color: c.mutedForeground, fontSize: 14, fontFamily: "Inter_400Regular", textAlign: "center", lineHeight: 22 }}>
-            Alle stappen zijn doorlopen. De uitvoering is voltooid.
-          </Text>
-          <Pressable
-            onPress={() => {
-              void forceerSync();
-              router.back();
-            }}
-            style={{
-              backgroundColor: c.primary,
-              borderRadius: 10,
-              paddingHorizontal: 24,
-              paddingVertical: 14,
-              marginTop: 8,
-            }}
-          >
-            <Text style={{ color: "#fff", fontSize: 15, fontFamily: "Inter_700Bold" }}>
-              Terug naar werk
-            </Text>
-          </Pressable>
-        </View>
-      </View>
-    );
-  }
-
-  return (
-    <View style={{ flex: 1, backgroundColor: c.background }}>
-      <View
-        style={{
-          backgroundColor: c.dark,
-          paddingTop: bovenInset(insets) + 12,
-          paddingHorizontal: 20,
-          paddingBottom: 12,
-        }}
-      >
-        <Pressable onPress={() => router.back()} style={{ marginBottom: 10 }}>
-          <Text style={{ color: c.primary, fontSize: 16, fontFamily: "Inter_600SemiBold" }}>
-            ‹ Terug
-          </Text>
-        </Pressable>
-        <Text style={{ color: c.darkForeground, fontSize: 20, fontFamily: "Inter_700Bold" }}>
-          Adaptieve gids
-        </Text>
-        {actieveStap && (
-          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 2 }}>
-            <Text style={{ color: c.darkMuted, fontSize: 13, fontFamily: "Inter_400Regular" }}>
+          {actieveStap && (
+            <Text style={{ color: c.darkMuted, fontSize: 13, fontFamily: "Inter_400Regular", marginTop: 2 }}>
               Stap {actieveStap.volgorde}
               {actieveStap.werkpakket_sleutel ? ` · ${actieveStap.werkpakket_sleutel}` : ""}
             </Text>
-            <View style={{ flexDirection: "row", gap: 6 }}>
-              {voltooideStappen.length > 0 && (
-                <Pressable
-                  onPress={() => { setToonVorigeStappen((v) => !v); setToonVoorbereideSpots(false); }}
-                  style={{
-                    backgroundColor: toonVorigeStappen ? c.primary + "22" : c.darkMuted + "33",
-                    borderRadius: 8,
-                    paddingHorizontal: 10,
-                    paddingVertical: 4,
-                    flexDirection: "row",
-                    alignItems: "center",
-                    gap: 4,
-                  }}
-                >
-                  <Ionicons name="time-outline" size={13} color={toonVorigeStappen ? c.primary : c.darkMuted} />
-                  <Text style={{ color: toonVorigeStappen ? c.primary : c.darkMuted, fontSize: 12, fontFamily: "Inter_600SemiBold" }}>
-                    Stappen ({voltooideStappen.length})
-                  </Text>
-                </Pressable>
-              )}
-              {alleSpots.length > 0 && (
-                <Pressable
-                  onPress={() => { setToonVoorbereideSpots((v) => !v); setToonVorigeStappen(false); }}
-                  style={{
-                    backgroundColor: toonVoorbereideSpots ? c.primary + "22" : c.darkMuted + "33",
-                    borderRadius: 8,
-                    paddingHorizontal: 10,
-                    paddingVertical: 4,
-                    flexDirection: "row",
-                    alignItems: "center",
-                    gap: 4,
-                  }}
-                >
-                  <Ionicons name="location-outline" size={13} color={toonVoorbereideSpots ? c.primary : c.darkMuted} />
-                  <Text style={{ color: toonVoorbereideSpots ? c.primary : c.darkMuted, fontSize: 12, fontFamily: "Inter_600SemiBold" }}>
-                    Spots ({alleSpots.length})
-                  </Text>
-                </Pressable>
-              )}
-            </View>
+          )}
+        </View>
+
+        {actieveStap && <VoortgangsBalk volgorde={actieveStap.volgorde} />}
+        <OfflineBanner />
+
+        {isLoading && !gecachteStap ? (
+          <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+            <ActivityIndicator size="large" color={c.primary} />
+            <Text style={{ color: c.mutedForeground, marginTop: 12, fontFamily: "Inter_400Regular" }}>
+              Stap laden...
+            </Text>
           </View>
-        )}
-      </View>
-
-      {actieveStap && !toonVorigeStappen && <VoortgangsBalk volgorde={actieveStap.volgorde} />}
-      <OfflineBanner />
-
-      {isLoading && !gecachteStap ? (
-        <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-          <ActivityIndicator size="large" color={c.primary} />
-          <Text style={{ color: c.mutedForeground, marginTop: 12, fontFamily: "Inter_400Regular" }}>
-            Stap laden...
-          </Text>
-        </View>
-      ) : isError && !gecachteStap ? (
-        <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 32, gap: 16 }}>
-          <Ionicons name="cloud-offline-outline" size={48} color={c.mutedForeground} />
-          <Text style={{ color: c.foreground, fontSize: 16, fontFamily: "Inter_700Bold", textAlign: "center" }}>
-            Geen actieve stap gevonden
-          </Text>
-          <Text style={{ color: c.mutedForeground, fontSize: 14, fontFamily: "Inter_400Regular", textAlign: "center", lineHeight: 20 }}>
-            Start de adaptieve gids om de eerste AI-stap te genereren. Hiervoor is een internetverbinding vereist.
-          </Text>
-          <Pressable
-            onPress={handleStart}
-            disabled={!isOnline || startMutatie.isPending}
-            style={{
-              backgroundColor: !isOnline ? c.accent : c.primary,
-              borderRadius: 10,
-              paddingHorizontal: 24,
-              paddingVertical: 14,
-              opacity: startMutatie.isPending ? 0.7 : 1,
-            }}
-          >
-            {startMutatie.isPending ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={{ color: !isOnline ? c.mutedForeground : "#fff", fontSize: 15, fontFamily: "Inter_700Bold" }}>
-                {isOnline ? "Start adaptieve gids" : "Geen verbinding"}
-              </Text>
-            )}
-          </Pressable>
-        </View>
-      ) : actieveStap && toonVorigeStappen ? (
-        <VorigeStappenPanel
-          stappen={voltooideStappen}
-          onSluit={() => setToonVorigeStappen(false)}
-          c={c}
-          insets={insets}
-        />
-      ) : actieveStap && toonVoorbereideSpots ? (
-        <VoorbereideSpotsPanel
-          spots={alleSpots}
-          opdrachtId={opdrachtId}
-          actieveStap={actieveStap}
-          onSluit={() => setToonVoorbereideSpots(false)}
-          c={c}
-          insets={insets}
-        />
-      ) : actieveStap ? (
-        <ScrollView
-          contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 32 }}
-          keyboardShouldPersistTaps="handled"
-        >
-          {offlineOpgeslagen && (
-            <View
+        ) : isError && !gecachteStap ? (
+          <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 32, gap: 16 }}>
+            <Ionicons name="cloud-offline-outline" size={48} color={c.mutedForeground} />
+            <Text style={{ color: c.foreground, fontSize: 16, fontFamily: "Inter_700Bold", textAlign: "center" }}>
+              Geen actieve stap gevonden
+            </Text>
+            <Text style={{ color: c.mutedForeground, fontSize: 14, fontFamily: "Inter_400Regular", textAlign: "center", lineHeight: 20 }}>
+              Start de adaptieve gids om de eerste AI-stap te genereren. Hiervoor is een internetverbinding vereist.
+            </Text>
+            <Pressable
+              onPress={handleStart}
+              disabled={!isOnline || startMutatie.isPending}
               style={{
-                backgroundColor: "#fef3c7",
+                backgroundColor: !isOnline ? c.accent : c.primary,
                 borderRadius: 10,
-                padding: 12,
-                marginBottom: 12,
-                flexDirection: "row",
-                gap: 8,
-                alignItems: "center",
+                paddingHorizontal: 24,
+                paddingVertical: 14,
+                opacity: startMutatie.isPending ? 0.7 : 1,
               }}
             >
-              <Ionicons name="save-outline" size={16} color="#92400e" />
-              <Text style={{ color: "#92400e", fontSize: 13, fontFamily: "Inter_600SemiBold", flex: 1 }}>
-                Opgeslagen voor later — wordt gesynchroniseerd zodra verbinding is hersteld.
-              </Text>
-            </View>
-          )}
-
-          {actieveStap.status === "afgeweken" ? (
-            <AfwijkingWachtScherm
-              stap={actieveStap}
-              onBeslissing={handleBeslissing}
-              isBezig={beslisMutatie.isPending}
-              c={c}
-            />
+              {startMutatie.isPending ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={{ color: !isOnline ? c.mutedForeground : "#fff", fontSize: 15, fontFamily: "Inter_700Bold" }}>
+                  {isOnline ? "Start adaptieve gids" : "Geen verbinding"}
+                </Text>
+              )}
+            </Pressable>
+          </View>
+        ) : actieveStap ? (
+          actieveStap.status === "afgeweken" ? (
+            <ScrollView
+              contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 32 }}
+              keyboardShouldPersistTaps="handled"
+            >
+              <AfwijkingWachtScherm
+                stap={actieveStap}
+                onBeslissing={handleBeslissing}
+                isBezig={beslisMutatie.isPending}
+                c={c}
+              />
+            </ScrollView>
           ) : afwijkingModus ? (
-            <AfwijkingFormulier
-              tekst={afwijkingTekst}
-              onTekst={setAfwijkingTekst}
-              onAnnuleer={() => setAfwijkingModus(false)}
-              onIndien={handleAfwijking}
-              isBezig={afwijkingBezig}
-              isOnline={isOnline}
-              c={c}
-            />
+            <ScrollView
+              contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 32 }}
+              keyboardShouldPersistTaps="handled"
+            >
+              <AfwijkingFormulier
+                tekst={afwijkingTekst}
+                onTekst={setAfwijkingTekst}
+                onAnnuleer={() => setAfwijkingModus(false)}
+                onIndien={handleAfwijking}
+                isBezig={afwijkingBezig}
+                isOnline={isOnline}
+                c={c}
+              />
+            </ScrollView>
           ) : (
-            <StapKaart
-              stap={actieveStap}
-              fotos={fotos}
-              antwoord={antwoord}
-              opmerkingen={opmerkingen}
-              uploading={uploading}
-              isBezig={voltooiMutatie.isPending}
-              onAntwoord={setAntwoord}
-              onOpmerkingen={setOpmerkingen}
-              onFotoToevoegen={voegFotoToe}
-              onFotoVerwijder={(idx) =>
-                setFotos((prev) => prev.filter((_, i) => i !== idx))
-              }
-              onVoltooi={handleVoltooi}
-              onAfwijking={() => setAfwijkingModus(true)}
-              isOnline={isOnline}
-              c={c}
-            />
-          )}
-        </ScrollView>
-      ) : null}
-    </View>
+            <View style={{ flex: 1 }}>
+              {offlineOpgeslagen && (
+                <View
+                  style={{
+                    backgroundColor: "#fef3c7",
+                    paddingHorizontal: 16,
+                    paddingVertical: 10,
+                    flexDirection: "row",
+                    gap: 8,
+                    alignItems: "center",
+                    borderBottomWidth: 1,
+                    borderBottomColor: "#fcd34d",
+                  }}
+                >
+                  <Ionicons name="save-outline" size={14} color="#92400e" />
+                  <Text style={{ color: "#92400e", fontSize: 13, fontFamily: "Inter_600SemiBold", flex: 1 }}>
+                    Opgeslagen voor later — wordt gesynchroniseerd zodra verbinding is hersteld.
+                  </Text>
+                </View>
+              )}
+              <UitvoeringLayout
+                stap={actieveStap}
+                opdrachtId={opdrachtId}
+                fotos={fotos}
+                uploading={uploading}
+                antwoord={antwoord}
+                isBezig={voltooiMutatie.isPending}
+                isOnline={isOnline}
+                toonEigenStapHeader={false}
+                onFoto={voegFotoToe}
+                onAfgerond={handleVoltooi}
+                onAfwijking={() => setAfwijkingModus(true)}
+                onAntwoordChange={setAntwoord}
+                onTerugNaarNormaal={() => router.back()}
+              />
+            </View>
+          )
+        ) : null}
+      </View>
+    </UitvoeringThemeProvider>
   );
 }
 

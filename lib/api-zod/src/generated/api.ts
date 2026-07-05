@@ -12937,6 +12937,73 @@ export const KoppelPimStapVoorzieningenResponse = zod.object({
 
 
 /**
+ * @summary Max 5 contextrelevante documenten voor de huidige uitvoeringsstap (bepaald door AI)
+ */
+export const GetPimUitvoeringRelevanteDocsParams = zod.object({
+  "id": zod.coerce.number(),
+  "stapId": zod.coerce.number()
+})
+
+export const GetPimUitvoeringRelevanteDocsResponseItem = zod.object({
+  "id": zod.number(),
+  "titel": zod.string(),
+  "document_type": zod.string().nullish().describe('ETA | DoP | montagevoorschrift | tekening | overig'),
+  "download_url": zod.string(),
+  "relevantie_reden": zod.string().nullish().describe('Korte AI-uitleg waarom dit document relevant is voor de huidige stap')
+})
+export const GetPimUitvoeringRelevanteDocsResponse = zod.array(GetPimUitvoeringRelevanteDocsResponseItem)
+
+
+/**
+ * @summary Foto uploaden en AI-analyse starten — vergelijkt met referentiefoto uit VGF
+ */
+export const StartPimStapFotoAnalyseParams = zod.object({
+  "id": zod.coerce.number(),
+  "stapId": zod.coerce.number()
+})
+
+export const StartPimStapFotoAnalyseBody = zod.object({
+  "foto_object_path": zod.string().describe('Object-storage pad van de geüploade foto (origineel, ongewijzigd)')
+})
+
+export const StartPimStapFotoAnalyseResponse = zod.object({
+  "id": zod.number(),
+  "stap_id": zod.number(),
+  "foto_object_path": zod.string().optional(),
+  "status": zod.string().describe('wachtend | bezig | akkoord | aandacht | herstel'),
+  "afwijkingsstatus": zod.string().nullish().describe('akkoord | aandacht | herstel'),
+  "annotatie_object_path": zod.string().nullish().describe('Object-storage pad van de annotatie-laag (apart van origineel)'),
+  "ai_beoordeling": zod.string().nullish().describe('Korte AI-omschrijving van de beoordeling'),
+  "ai_aandachtspunten": zod.array(zod.string()).optional().describe('Lijst van aandachtspunten gevonden door AI'),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().nullish()
+})
+
+
+/**
+ * @summary Analyse-resultaat ophalen voor een eerder gestarte foto-analyse
+ */
+export const GetPimStapFotoAnalyseParams = zod.object({
+  "id": zod.coerce.number(),
+  "stapId": zod.coerce.number(),
+  "analyseId": zod.coerce.number()
+})
+
+export const GetPimStapFotoAnalyseResponse = zod.object({
+  "id": zod.number(),
+  "stap_id": zod.number(),
+  "foto_object_path": zod.string().optional(),
+  "status": zod.string().describe('wachtend | bezig | akkoord | aandacht | herstel'),
+  "afwijkingsstatus": zod.string().nullish().describe('akkoord | aandacht | herstel'),
+  "annotatie_object_path": zod.string().nullish().describe('Object-storage pad van de annotatie-laag (apart van origineel)'),
+  "ai_beoordeling": zod.string().nullish().describe('Korte AI-omschrijving van de beoordeling'),
+  "ai_aandachtspunten": zod.array(zod.string()).optional().describe('Lijst van aandachtspunten gevonden door AI'),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().nullish()
+})
+
+
+/**
  * @summary AI volledigheidscheck oplevering — controleert of alle stappen en fotos aanwezig zijn
  */
 export const ControleerPimOpleveringParams = zod.object({

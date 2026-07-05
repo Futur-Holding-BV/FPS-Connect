@@ -13,6 +13,7 @@ import {
   db,
   pimModellenTable,
   pimUitvoeringStappenTable,
+  pimFotoAnalysesTable,
   opdrachtenTable,
   documentLogboekTable,
   documentenTable,
@@ -1891,6 +1892,150 @@ router.post("/opdrachten/:id/pim/uitvoering/stap/:stapId/afwijking/beslis", schr
   } catch (err) {
     logger.error({ err }, "beslisPimUitvoeringAfwijking fout");
     res.status(500).json({ error: "Serverfout bij beslissing afwijking" });
+  }
+});
+
+// ── PIM Foto-analyse ──────────────────────────────────────────────────────────
+
+/** POST /opdrachten/:id/pim/uitvoering/stap/:stapId/foto-analyse */
+router.post("/opdrachten/:id/pim/uitvoering/stap/:stapId/foto-analyse", schrijven, async (req, res): Promise<void> => {
+  const opdrachtId = parseInt(String(req.params.id), 10);
+  const stapId = parseInt(String(req.params.stapId), 10);
+  if (isNaN(opdrachtId) || isNaN(stapId)) { res.status(400).json({ error: "Ongeldig ID" }); return; }
+
+  const { foto_object_path } = req.body as { foto_object_path?: string };
+
+  try {
+    const resolved = await resolvePimVoorOpdracht(opdrachtId, stapId);
+    if (!resolved) { res.status(404).json({ error: "Stap niet gevonden of behoort niet tot deze opdracht" }); return; }
+
+    const [analyse] = await db
+      .insert(pimFotoAnalysesTable)
+      .values({
+        stapId,
+        fotoObjectPath: foto_object_path ?? null,
+        status: "wachtend",
+      })
+      .returning();
+
+    // Start AI-analyse asynchroon — resultaat via polling
+    if (analyse && heeftGateway()) {
+      setImmediate(() => {
+        void (async () => {
+          try {
+            await db
+              .update(pimFotoAnalysesTable)
+              .set({ status: "bezig", bijgewerktOp: new Date() })
+              .where(eq(pimFotoAnalysesTable.id, analyse.id));
+
+            const { stap } = resolved;
+            const instructie = stap.instructieJson as Record<string, unknown> | null;
+            const instructieTekst = instructie
+              ? [instructie.doel, instructie.handeling].filter(Boolean).join(" — ")
+              : "Uitvoeringsstap";
+
+            const prompt = foto_object_path
+              ? `Beoordeel de uitvoeringsfoto voor stap: "${instructieTekst}". Geef aan: akkoord (correct uitgevoerd), aandacht (kleine onvolkomenheid) of herstel (actie vereist). Antwoord in JSON: { "status": "akkoord|aandacht|herstel", "beoordeling": "<korte omschrijving>", "aandachtspunten": ["..."] }`
+              : `Beoordeel uitvoeringsstap: "${instructieTekst}". Geen foto beschikbaar. Antwoord JSON: { "status": "aandacht", "beoordeling": "Geen foto aangeleverd — handmatige controle vereist.", "aandachtspunten": [] }`;
+
+            const chatResultaat = await aiGateway.chat(
+              "default",
+              { messages: [{ role: "user", content: prompt }], max_completion_tokens: 400 },
+              30_000,
+              {
+                module: "pim_uitvoering",
+                functie: "foto_analyse",
+                gebruikerId: null,
+                entiteitstype: "pim_stap",
+                entiteitId: stapId,
+                promptNaam: "pim-uitvoering-foto-analyse",
+                promptVersie: "1",
+                project_id: opdrachtId,
+              },
+            );
+
+            const tekst = chatResultaat.ok ? chatResultaat.inhoud : "";
+            const match = tekst.match(/\{[\s\S]*\}/);
+            let resultaat: { status?: string; beoordeling?: string; aandachtspunten?: string[] } = {};
+            try { if (match) resultaat = JSON.parse(match[0]) as typeof resultaat; } catch { /* gebruik lege fallback */ }
+
+            const afwijkingsstatus =
+              resultaat.status === "akkoord" ? "akkoord" :
+              resultaat.status === "herstel" ? "herstel" : "aandacht";
+
+            await db
+              .update(pimFotoAnalysesTable)
+              .set({
+                status: afwijkingsstatus,
+                afwijkingsstatus,
+                aiBeoordeling: resultaat.beoordeling ?? null,
+                aiAandachtspunten: resultaat.aandachtspunten ?? [],
+                bijgewerktOp: new Date(),
+              })
+              .where(eq(pimFotoAnalysesTable.id, analyse.id));
+          } catch (aiErr) {
+            logger.error({ aiErr }, "pimFotoAnalyse AI-fout");
+            await db
+              .update(pimFotoAnalysesTable)
+              .set({ status: "aandacht", afwijkingsstatus: "aandacht", aiBeoordeling: "AI-analyse mislukt — handmatige controle vereist.", bijgewerktOp: new Date() })
+              .where(eq(pimFotoAnalysesTable.id, analyse.id))
+              .catch(() => undefined);
+          }
+        })();
+      });
+    }
+
+    res.json({
+      id: analyse!.id,
+      stap_id: analyse!.stapId,
+      foto_object_path: analyse!.fotoObjectPath ?? null,
+      status: analyse!.status,
+      afwijkingsstatus: analyse!.afwijkingsstatus ?? null,
+      annotatie_object_path: analyse!.annotatieObjectPath ?? null,
+      ai_beoordeling: analyse!.aiBeoordeling ?? null,
+      ai_aandachtspunten: analyse!.aiAandachtspunten ?? [],
+      aangemaakt_op: analyse!.aangemaaktOp.toISOString(),
+      bijgewerkt_op: null,
+    });
+  } catch (err) {
+    logger.error({ err }, "startPimFotoAnalyse fout");
+    res.status(500).json({ error: "Serverfout bij starten foto-analyse" });
+  }
+});
+
+/** GET /opdrachten/:id/pim/uitvoering/stap/:stapId/foto-analyse/:analyseId */
+router.get("/opdrachten/:id/pim/uitvoering/stap/:stapId/foto-analyse/:analyseId", lezen, async (req, res): Promise<void> => {
+  const opdrachtId = parseInt(String(req.params.id), 10);
+  const stapId = parseInt(String(req.params.stapId), 10);
+  const analyseId = parseInt(String(req.params.analyseId), 10);
+  if (isNaN(opdrachtId) || isNaN(stapId) || isNaN(analyseId)) { res.status(400).json({ error: "Ongeldig ID" }); return; }
+
+  try {
+    const resolved = await resolvePimVoorOpdracht(opdrachtId, stapId);
+    if (!resolved) { res.status(404).json({ error: "Stap niet gevonden of behoort niet tot deze opdracht" }); return; }
+
+    const [analyse] = await db
+      .select()
+      .from(pimFotoAnalysesTable)
+      .where(and(eq(pimFotoAnalysesTable.id, analyseId), eq(pimFotoAnalysesTable.stapId, stapId)));
+
+    if (!analyse) { res.status(404).json({ error: "Analyse niet gevonden" }); return; }
+
+    res.json({
+      id: analyse.id,
+      stap_id: analyse.stapId,
+      foto_object_path: analyse.fotoObjectPath ?? null,
+      status: analyse.status,
+      afwijkingsstatus: analyse.afwijkingsstatus ?? null,
+      annotatie_object_path: analyse.annotatieObjectPath ?? null,
+      ai_beoordeling: analyse.aiBeoordeling ?? null,
+      ai_aandachtspunten: analyse.aiAandachtspunten ?? [],
+      aangemaakt_op: analyse.aangemaaktOp.toISOString(),
+      bijgewerkt_op: analyse.bijgewerktOp?.toISOString() ?? null,
+    });
+  } catch (err) {
+    logger.error({ err }, "getPimFotoAnalyse fout");
+    res.status(500).json({ error: "Serverfout bij ophalen foto-analyse" });
   }
 });
 

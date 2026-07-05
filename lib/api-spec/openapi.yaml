@@ -10689,6 +10689,97 @@ paths:
         "404":
           description: Stap niet gevonden
 
+  /opdrachten/{id}/pim/uitvoering/stap/{stapId}/relevante-documenten:
+    get:
+      operationId: getPimUitvoeringRelevanteDocs
+      tags: [pim]
+      summary: Max 5 contextrelevante documenten voor de huidige uitvoeringsstap (bepaald door AI)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: stapId
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Lijst van relevante documenten
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PimStapRelevantDocument"
+        "404":
+          description: Stap niet gevonden
+
+  /opdrachten/{id}/pim/uitvoering/stap/{stapId}/foto-analyse:
+    post:
+      operationId: startPimStapFotoAnalyse
+      tags: [pim]
+      summary: Foto uploaden en AI-analyse starten — vergelijkt met referentiefoto uit VGF
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: stapId
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PimFotoAnalyseInput"
+      responses:
+        "200":
+          description: Analyse gestart
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PimFotoAnalyse"
+        "404":
+          description: Stap niet gevonden
+
+  /opdrachten/{id}/pim/uitvoering/stap/{stapId}/foto-analyse/{analyseId}:
+    get:
+      operationId: getPimStapFotoAnalyse
+      tags: [pim]
+      summary: Analyse-resultaat ophalen voor een eerder gestarte foto-analyse
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: stapId
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: analyseId
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Analyse-resultaat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PimFotoAnalyse"
+        "404":
+          description: Analyse niet gevonden
+
   /opdrachten/{id}/pim/oplevering/controleer:
     post:
       operationId: controleerPimOplevering
@@ -27155,6 +27246,63 @@ components:
           items:
             type: integer
           description: Spot-IDs om aan deze stap te koppelen (vervangt de huidige koppeling volledig)
+
+    PimStapRelevantDocument:
+      type: object
+      required: [id, titel, download_url]
+      properties:
+        id:
+          type: integer
+        titel:
+          type: string
+        document_type:
+          type: ["string", "null"]
+          description: "ETA | DoP | montagevoorschrift | tekening | overig"
+        download_url:
+          type: string
+        relevantie_reden:
+          type: ["string", "null"]
+          description: Korte AI-uitleg waarom dit document relevant is voor de huidige stap
+
+    PimFotoAnalyseInput:
+      type: object
+      required: [foto_object_path]
+      properties:
+        foto_object_path:
+          type: string
+          description: Object-storage pad van de geüploade foto (origineel, ongewijzigd)
+
+    PimFotoAnalyse:
+      type: object
+      required: [id, stap_id, status, aangemaakt_op]
+      properties:
+        id:
+          type: integer
+        stap_id:
+          type: integer
+        foto_object_path:
+          type: string
+        status:
+          type: string
+          description: "wachtend | bezig | akkoord | aandacht | herstel"
+        afwijkingsstatus:
+          type: ["string", "null"]
+          description: "akkoord | aandacht | herstel"
+        annotatie_object_path:
+          type: ["string", "null"]
+          description: Object-storage pad van de annotatie-laag (apart van origineel)
+        ai_beoordeling:
+          type: ["string", "null"]
+          description: Korte AI-omschrijving van de beoordeling
+        ai_aandachtspunten:
+          type: array
+          items:
+            type: string
+          description: Lijst van aandachtspunten gevonden door AI
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: ["string", "null"]
 
     PimWerkvoorbereidingResultaat:
       type: object

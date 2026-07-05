@@ -5402,6 +5402,55 @@ export interface PimStapVoorzieningenInput {
   voorziening_ids: number[];
 }
 
+export interface PimStapRelevantDocument {
+  id: number;
+  titel: string;
+  /**
+     * ETA | DoP | montagevoorschrift | tekening | overig
+     * @nullable
+     */
+  document_type?: string | null;
+  download_url: string;
+  /**
+     * Korte AI-uitleg waarom dit document relevant is voor de huidige stap
+     * @nullable
+     */
+  relevantie_reden?: string | null;
+}
+
+export interface PimFotoAnalyseInput {
+  /** Object-storage pad van de geüploade foto (origineel, ongewijzigd) */
+  foto_object_path: string;
+}
+
+export interface PimFotoAnalyse {
+  id: number;
+  stap_id: number;
+  foto_object_path?: string;
+  /** wachtend | bezig | akkoord | aandacht | herstel */
+  status: string;
+  /**
+     * akkoord | aandacht | herstel
+     * @nullable
+     */
+  afwijkingsstatus?: string | null;
+  /**
+     * Object-storage pad van de annotatie-laag (apart van origineel)
+     * @nullable
+     */
+  annotatie_object_path?: string | null;
+  /**
+     * Korte AI-omschrijving van de beoordeling
+     * @nullable
+     */
+  ai_beoordeling?: string | null;
+  /** Lijst van aandachtspunten gevonden door AI */
+  ai_aandachtspunten?: string[];
+  aangemaakt_op: string;
+  /** @nullable */
+  bijgewerkt_op?: string | null;
+}
+
 export interface PimWerkvoorbereidingResultaat {
   opdracht_id: number;
   /** Nieuwe AI-fase na de analyse (werkvoorbereiding) */

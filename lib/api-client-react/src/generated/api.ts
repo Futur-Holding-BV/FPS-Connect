@@ -566,12 +566,15 @@ import type {
   PimDocumentKoppelingResultaat,
   PimFaseInput,
   PimFaseResultaat,
+  PimFotoAnalyse,
+  PimFotoAnalyseInput,
   PimModel,
   PimOpleveringControlerapport,
   PimOpleveringDefinitiefResultaat,
   PimOpleveringGenereerResultaat,
   PimRapportResultaat,
   PimStapVoorzieningenInput,
+  PimStapRelevantDocument,
   PimUitvoeringAfwijkingInput,
   PimUitvoeringBeslisInput,
   PimUitvoeringStap,
@@ -37082,11 +37085,17 @@ export const useBeslisPimUitvoeringAfwijking = <TError = ErrorType<void>,
       return useMutation(getBeslisPimUitvoeringAfwijkingMutationOptions(options));
     }
 
+<<<<<<< HEAD
 export const getListPimSpotsUrl = (id: number,) => {
+=======
+export const getGetPimUitvoeringRelevanteDocsUrl = (id: number,
+    stapId: number,) => {
+>>>>>>> f6d415c (Task #305: Adaptieve Telefoon- en Tabletinterface — Monteur App)
 
 
 
 
+<<<<<<< HEAD
   return `/api/opdrachten/${id}/pim/spots`
 }
 
@@ -37096,6 +37105,18 @@ export const getListPimSpotsUrl = (id: number,) => {
 export const listPimSpots = async (id: number, options?: RequestInit): Promise<VoorzieningPimDetail[]> => {
 
   return customFetch<VoorzieningPimDetail[]>(getListPimSpotsUrl(id),
+=======
+  return `/api/opdrachten/${id}/pim/uitvoering/stap/${stapId}/relevante-documenten`
+}
+
+/**
+ * @summary Max 5 contextrelevante documenten voor de huidige uitvoeringsstap (bepaald door AI)
+ */
+export const getPimUitvoeringRelevanteDocs = async (id: number,
+    stapId: number, options?: RequestInit): Promise<PimStapRelevantDocument[]> => {
+
+  return customFetch<PimStapRelevantDocument[]>(getGetPimUitvoeringRelevanteDocsUrl(id,stapId),
+>>>>>>> f6d415c (Task #305: Adaptieve Telefoon- en Tabletinterface — Monteur App)
   {
     ...options,
     method: 'GET'
@@ -37108,28 +37129,49 @@ export const listPimSpots = async (id: number, options?: RequestInit): Promise<V
 
 
 
+<<<<<<< HEAD
 export const getListPimSpotsQueryKey = (id: number,) => {
     return [
     `/api/opdrachten/${id}/pim/spots`
+=======
+export const getGetPimUitvoeringRelevanteDocsQueryKey = (id: number,
+    stapId: number,) => {
+    return [
+    `/api/opdrachten/${id}/pim/uitvoering/stap/${stapId}/relevante-documenten`
+>>>>>>> f6d415c (Task #305: Adaptieve Telefoon- en Tabletinterface — Monteur App)
     ] as const;
     }
 
 
+<<<<<<< HEAD
 export const getListPimSpotsQueryOptions = <TData = Awaited<ReturnType<typeof listPimSpots>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPimSpots>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+=======
+export const getGetPimUitvoeringRelevanteDocsQueryOptions = <TData = Awaited<ReturnType<typeof getPimUitvoeringRelevanteDocs>>, TError = ErrorType<void>>(id: number,
+    stapId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPimUitvoeringRelevanteDocs>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+>>>>>>> f6d415c (Task #305: Adaptieve Telefoon- en Tabletinterface — Monteur App)
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
+<<<<<<< HEAD
   const queryKey =  queryOptions?.queryKey ?? getListPimSpotsQueryKey(id);
 
 
 
     const queryFn: QueryFunction<Awaited<ReturnType<typeof listPimSpots>>> = ({ signal }) => listPimSpots(id, { signal, ...requestOptions });
+=======
+  const queryKey =  queryOptions?.queryKey ?? getGetPimUitvoeringRelevanteDocsQueryKey(id,stapId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPimUitvoeringRelevanteDocs>>> = ({ signal }) => getPimUitvoeringRelevanteDocs(id,stapId, { signal, ...requestOptions });
+>>>>>>> f6d415c (Task #305: Adaptieve Telefoon- en Tabletinterface — Monteur App)
 
 
 
 
 
+<<<<<<< HEAD
    return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listPimSpots>>, TError, TData> & { queryKey: QueryKey }
 }
 
@@ -37147,6 +37189,26 @@ export function useListPimSpots<TData = Awaited<ReturnType<typeof listPimSpots>>
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getListPimSpotsQueryOptions(id,options)
+=======
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined && stapId !== null && stapId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPimUitvoeringRelevanteDocs>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetPimUitvoeringRelevanteDocsQueryResult = NonNullable<Awaited<ReturnType<typeof getPimUitvoeringRelevanteDocs>>>
+export type GetPimUitvoeringRelevanteDocsQueryError = ErrorType<void>
+
+
+/**
+ * @summary Max 5 contextrelevante documenten voor de huidige uitvoeringsstap (bepaald door AI)
+ */
+
+export function useGetPimUitvoeringRelevanteDocs<TData = Awaited<ReturnType<typeof getPimUitvoeringRelevanteDocs>>, TError = ErrorType<void>>(
+ id: number,
+    stapId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPimUitvoeringRelevanteDocs>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetPimUitvoeringRelevanteDocsQueryOptions(id,stapId,options)
+>>>>>>> f6d415c (Task #305: Adaptieve Telefoon- en Tabletinterface — Monteur App)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
@@ -37159,12 +37221,17 @@ export function useListPimSpots<TData = Awaited<ReturnType<typeof listPimSpots>>
 
 
 
+<<<<<<< HEAD
 export const getKoppelPimStapVoorzieningenUrl = (id: number,
+=======
+export const getStartPimStapFotoAnalyseUrl = (id: number,
+>>>>>>> f6d415c (Task #305: Adaptieve Telefoon- en Tabletinterface — Monteur App)
     stapId: number,) => {
 
 
 
 
+<<<<<<< HEAD
   return `/api/opdrachten/${id}/pim/uitvoering/stap/${stapId}/voorzieningen`
 }
 
@@ -37181,17 +37248,43 @@ export const koppelPimStapVoorzieningen = async (id: number,
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
     body: JSON.stringify(pimStapVoorzieningenInput)
+=======
+  return `/api/opdrachten/${id}/pim/uitvoering/stap/${stapId}/foto-analyse`
+}
+
+/**
+ * @summary Foto uploaden en AI-analyse starten — vergelijkt met referentiefoto uit VGF
+ */
+export const startPimStapFotoAnalyse = async (id: number,
+    stapId: number,
+    pimFotoAnalyseInput: PimFotoAnalyseInput, options?: RequestInit): Promise<PimFotoAnalyse> => {
+
+  return customFetch<PimFotoAnalyse>(getStartPimStapFotoAnalyseUrl(id,stapId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(pimFotoAnalyseInput)
+>>>>>>> f6d415c (Task #305: Adaptieve Telefoon- en Tabletinterface — Monteur App)
   }
 );}
 
 
 
 
+<<<<<<< HEAD
 export const getKoppelPimStapVoorzieningenMutationOptions = <TError = ErrorType<void>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof koppelPimStapVoorzieningen>>, TError,{id: number;stapId: number;data: BodyType<PimStapVoorzieningenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof koppelPimStapVoorzieningen>>, TError,{id: number;stapId: number;data: BodyType<PimStapVoorzieningenInput>}, TContext> => {
 
 const mutationKey = ['koppelPimStapVoorzieningen'];
+=======
+export const getStartPimStapFotoAnalyseMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof startPimStapFotoAnalyse>>, TError,{id: number;stapId: number;data: BodyType<PimFotoAnalyseInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof startPimStapFotoAnalyse>>, TError,{id: number;stapId: number;data: BodyType<PimFotoAnalyseInput>}, TContext> => {
+
+const mutationKey = ['startPimStapFotoAnalyse'];
+>>>>>>> f6d415c (Task #305: Adaptieve Telefoon- en Tabletinterface — Monteur App)
 const {mutation: mutationOptions, request: requestOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
@@ -37201,10 +37294,17 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
 
+<<<<<<< HEAD
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof koppelPimStapVoorzieningen>>, {id: number;stapId: number;data: BodyType<PimStapVoorzieningenInput>}> = (props) => {
           const {id,stapId,data} = props ?? {};
 
           return  koppelPimStapVoorzieningen(id,stapId,data,requestOptions)
+=======
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof startPimStapFotoAnalyse>>, {id: number;stapId: number;data: BodyType<PimFotoAnalyseInput>}> = (props) => {
+          const {id,stapId,data} = props ?? {};
+
+          return  startPimStapFotoAnalyse(id,stapId,data,requestOptions)
+>>>>>>> f6d415c (Task #305: Adaptieve Telefoon- en Tabletinterface — Monteur App)
         }
 
 
@@ -37214,6 +37314,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
   return  { mutationFn, ...mutationOptions }}
 
+<<<<<<< HEAD
     export type KoppelPimStapVoorzieningenMutationResult = NonNullable<Awaited<ReturnType<typeof koppelPimStapVoorzieningen>>>
     export type KoppelPimStapVoorzieningenMutationBody = BodyType<PimStapVoorzieningenInput>
     export type KoppelPimStapVoorzieningenMutationError = ErrorType<void>
@@ -37232,6 +37333,113 @@ export const useKoppelPimStapVoorzieningen = <TError = ErrorType<void>,
       return useMutation(getKoppelPimStapVoorzieningenMutationOptions(options));
     }
 
+=======
+    export type StartPimStapFotoAnalyseMutationResult = NonNullable<Awaited<ReturnType<typeof startPimStapFotoAnalyse>>>
+    export type StartPimStapFotoAnalyseMutationBody = BodyType<PimFotoAnalyseInput>
+    export type StartPimStapFotoAnalyseMutationError = ErrorType<void>
+
+    /**
+ * @summary Foto uploaden en AI-analyse starten — vergelijkt met referentiefoto uit VGF
+ */
+export const useStartPimStapFotoAnalyse = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof startPimStapFotoAnalyse>>, TError,{id: number;stapId: number;data: BodyType<PimFotoAnalyseInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof startPimStapFotoAnalyse>>,
+        TError,
+        {id: number;stapId: number;data: BodyType<PimFotoAnalyseInput>},
+        TContext
+      > => {
+      return useMutation(getStartPimStapFotoAnalyseMutationOptions(options));
+    }
+
+export const getGetPimStapFotoAnalyseUrl = (id: number,
+    stapId: number,
+    analyseId: number,) => {
+
+
+
+
+  return `/api/opdrachten/${id}/pim/uitvoering/stap/${stapId}/foto-analyse/${analyseId}`
+}
+
+/**
+ * @summary Analyse-resultaat ophalen voor een eerder gestarte foto-analyse
+ */
+export const getPimStapFotoAnalyse = async (id: number,
+    stapId: number,
+    analyseId: number, options?: RequestInit): Promise<PimFotoAnalyse> => {
+
+  return customFetch<PimFotoAnalyse>(getGetPimStapFotoAnalyseUrl(id,stapId,analyseId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPimStapFotoAnalyseQueryKey = (id: number,
+    stapId: number,
+    analyseId: number,) => {
+    return [
+    `/api/opdrachten/${id}/pim/uitvoering/stap/${stapId}/foto-analyse/${analyseId}`
+    ] as const;
+    }
+
+
+export const getGetPimStapFotoAnalyseQueryOptions = <TData = Awaited<ReturnType<typeof getPimStapFotoAnalyse>>, TError = ErrorType<void>>(id: number,
+    stapId: number,
+    analyseId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPimStapFotoAnalyse>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPimStapFotoAnalyseQueryKey(id,stapId,analyseId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPimStapFotoAnalyse>>> = ({ signal }) => getPimStapFotoAnalyse(id,stapId,analyseId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined && stapId !== null && stapId !== undefined && analyseId !== null && analyseId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPimStapFotoAnalyse>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetPimStapFotoAnalyseQueryResult = NonNullable<Awaited<ReturnType<typeof getPimStapFotoAnalyse>>>
+export type GetPimStapFotoAnalyseQueryError = ErrorType<void>
+
+
+/**
+ * @summary Analyse-resultaat ophalen voor een eerder gestarte foto-analyse
+ */
+
+export function useGetPimStapFotoAnalyse<TData = Awaited<ReturnType<typeof getPimStapFotoAnalyse>>, TError = ErrorType<void>>(
+ id: number,
+    stapId: number,
+    analyseId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPimStapFotoAnalyse>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetPimStapFotoAnalyseQueryOptions(id,stapId,analyseId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+>>>>>>> f6d415c (Task #305: Adaptieve Telefoon- en Tabletinterface — Monteur App)
 export const getControleerPimOpleveringUrl = (id: number,) => {
 
 

@@ -85,6 +85,16 @@ export type SyncActie =
       };
       /** Lokale file:// URI's van offline genomen foto's — worden bij sync geüpload */
       lokale_foto_paden?: string[];
+    }
+  // PIM foto-analyse offline bufferen — analyse volgt zodra verbinding hersteld
+  | {
+      type: "foto_analyse";
+      opdrachtId: number;
+      stapId: number;
+      /** Lokaal opgeslagen foto-URI (file://) — wordt bij sync naar object storage geüpload */
+      lokaalPad: string;
+      /** Tijdelijk lokale status: "wachtend_op_ai" */
+      lokaleStatus: "wachtend_op_ai";
     };
 
 export type WachtrijItem = SyncActie & {

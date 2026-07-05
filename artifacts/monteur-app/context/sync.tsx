@@ -267,6 +267,60 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
           break;
         }
 
+        // ── PIM foto-analyse — offline gebufferd, upload + analyse bij hersync ──
+        case "foto_analyse": {
+          // 1. Upload lokale foto naar object storage
+          const fileInfo = await FileSystem.getInfoAsync(item.lokaalPad);
+          if (!fileInfo.exists) {
+            // Bestand gewist — stil doorgaan (item verwijderen uit wachtrij)
+            break;
+          }
+
+          const naam =
+            item.lokaalPad.split("/").pop() ?? `pim_analyse_${Date.now()}.jpg`;
+
+          const urlResp = await fetch(
+            `${basis}/api/storage/uploads/request-url`,
+            {
+              method: "POST",
+              headers,
+              body: JSON.stringify({
+                name: naam,
+                size: fileInfo.size ?? 1,
+                contentType: "image/jpeg",
+                bestand_type: "foto",
+              }),
+            },
+          );
+          if (!urlResp.ok) throw new Error(`Upload-URL HTTP ${urlResp.status}`);
+          const { uploadURL, objectPath } = (await urlResp.json()) as {
+            uploadURL: string;
+            objectPath: string;
+          };
+
+          const uploadResult = await FileSystem.uploadAsync(
+            item.lokaalPad,
+            uploadURL,
+            { httpMethod: "PUT", headers: { "Content-Type": "image/jpeg" } },
+          );
+          if (uploadResult.status >= 300) {
+            throw new Error(`Foto-upload HTTP ${uploadResult.status}`);
+          }
+
+          // 2. Foto-analyse starten via API
+          const analyseResp = await fetch(
+            `${basis}/api/opdrachten/${item.opdrachtId}/pim/uitvoering/stap/${item.stapId}/foto-analyse`,
+            {
+              method: "POST",
+              headers,
+              body: JSON.stringify({ foto_object_path: objectPath }),
+            },
+          );
+          if (!analyseResp.ok)
+            throw new Error(`Foto-analyse HTTP ${analyseResp.status}`);
+          break;
+        }
+
         // ── PIM uitvoeringsstap voltooien ─────────────────────────────────────
         case "voltooi_pim_stap": {
           // 1. Upload offline genomen foto's (lokale file:// URI's)
