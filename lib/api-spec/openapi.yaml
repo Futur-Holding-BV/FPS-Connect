@@ -26826,6 +26826,10 @@ components:
           type: string
         naam:
           type: string
+        pdf_url:
+          type: string
+          nullable: true
+          description: Object storage pad voor PDF-download via /api/storage{pdf_url}
 
     PimOpleveringGenereerResultaat:
       type: object

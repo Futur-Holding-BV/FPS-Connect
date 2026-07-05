@@ -12844,7 +12844,8 @@ export const GenereerPimOpleveringResponse = zod.object({
   "documenten": zod.array(zod.object({
   "document_id": zod.number(),
   "type": zod.string(),
-  "naam": zod.string()
+  "naam": zod.string(),
+  "pdf_url": zod.string().nullish().describe('Object storage pad voor PDF-download via \/api\/storage{pdf_url}')
 }))
 })
 

@@ -5257,6 +5257,8 @@ export interface PimOpleveringDocument {
   document_id: number;
   type: string;
   naam: string;
+  /** Object storage pad voor PDF-download via /api/storage{pdf_url} */
+  pdf_url?: string | null;
 }
 
 export interface PimOpleveringGenereerResultaat {

@@ -370,10 +370,11 @@ function ControlerapportWeergave({ rapport }: { rapport: ControlerapportType }) 
   );
 }
 
-function DocumentenLijst({ documenten }: { documenten: { document_id: number; type: string; naam: string }[] }) {
+function DocumentenLijst({ documenten }: { documenten: { document_id: number; type: string; naam: string; pdf_url?: string | null }[] }) {
   const TYPE_LABEL: Record<string, string> = {
     opleverdossier: "Opleverdossier",
     overdrachtsnotitie: "Overdrachtsnotitie onderhoud",
+    fotorapport: "Fotorapport uitvoering",
   };
   return (
     <div className="space-y-2">
@@ -385,7 +386,19 @@ function DocumentenLijst({ documenten }: { documenten: { document_id: number; ty
             <p className="text-sm font-medium truncate">{doc.naam}</p>
             <p className="text-xs text-muted-foreground">{TYPE_LABEL[doc.type] ?? doc.type} — #{doc.document_id}</p>
           </div>
-          <Download className="h-3.5 w-3.5 text-muted-foreground" />
+          {doc.pdf_url ? (
+            <a
+              href={`/api/storage${doc.pdf_url}`}
+              target="_blank"
+              rel="noreferrer"
+              className="flex items-center gap-1 text-xs text-primary hover:underline shrink-0"
+            >
+              <Download className="h-3.5 w-3.5" />
+              PDF
+            </a>
+          ) : (
+            <span className="text-xs text-muted-foreground shrink-0">Geen PDF</span>
+          )}
         </div>
       ))}
     </div>

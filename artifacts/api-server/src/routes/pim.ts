@@ -1783,6 +1783,60 @@ function bouwOnderhoudNotitieHtml(
 </body></html>`;
 }
 
+function bouwFotoRapportHtml(
+  stappen: Array<{ volgorde: number; doel: unknown; fotoUrls: unknown; status: string; afwijking: unknown }>,
+  opdrachttitel: string,
+  datum: string,
+): string {
+  const esc = (s: unknown) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const stappenHtml = stappen
+    .filter((s) => s.status !== "open")
+    .map((s) => {
+      const fotos = Array.isArray(s.fotoUrls) ? (s.fotoUrls as string[]) : [];
+      const afwJson = s.afwijking as Record<string, unknown> | null;
+      const statusKleur: Record<string, string> = { voltooid: "#16a34a", overgeslagen: "#64748b", afgeweken: "#dc2626" };
+      return `
+<div class="stap">
+  <div class="stap-kop" style="border-left:4px solid ${statusKleur[s.status] ?? "#888"}">
+    <span class="nr">Stap ${esc(s.volgorde)}</span>
+    <span class="status" style="color:${statusKleur[s.status] ?? "#888"}">${esc(s.status)}</span>
+    <p class="doel">${esc(s.doel ?? "—")}</p>
+    ${afwJson ? `<p class="afwijking"><strong>Afwijking:</strong> ${esc(afwJson.afwijking_omschrijving)} — beslissing: <em>${esc(afwJson.beslissing ?? "nog niet besloten")}</em></p>` : ""}
+  </div>
+  ${fotos.length > 0
+    ? `<div class="fotos-rij">
+        ${fotos.map((url) => `<div class="foto-item"><a href="/api/storage${esc(url)}" target="_blank">[Foto: ${esc(url.split("/").pop())}]</a></div>`).join("")}
+       </div>`
+    : `<p class="geen-foto"><em>Geen foto's</em></p>`}
+</div>`;
+    })
+    .join("\n");
+  return `<!DOCTYPE html>
+<html lang="nl"><head><meta charset="utf-8">
+<title>Fotorapport</title>
+<style>
+  body{font-family:Arial,sans-serif;font-size:10pt;margin:36px;color:#1a1a1a}
+  h1{font-size:16pt;color:#c0320b;margin-bottom:4px}
+  h2{font-size:12pt;border-bottom:2px solid #c0320b;padding-bottom:4px;margin-top:20px;color:#c0320b}
+  .meta{color:#666;font-size:9pt;margin-bottom:16px}
+  .stap{margin:12px 0;padding:8px 12px;border:1px solid #e2e8f0;border-radius:4px;background:#fafafa}
+  .stap-kop{padding-left:8px}
+  .nr{font-weight:bold;font-size:10pt}
+  .status{font-size:9pt;margin-left:12px;text-transform:capitalize}
+  .doel{margin:4px 0 0;font-size:10pt}
+  .afwijking{font-size:9pt;color:#dc2626;margin:4px 0 0}
+  .fotos-rij{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+  .foto-item{font-size:9pt;background:#f0f0f0;padding:4px 8px;border-radius:3px}
+  .foto-item a{color:#2563eb;text-decoration:none}
+  .geen-foto{color:#94a3b8;font-size:9pt;font-style:italic;margin:4px 0 0}
+</style></head><body>
+<h1>Fotorapport uitvoering — FPS Brandpreventie</h1>
+<div class="meta">Opdracht: <strong>${esc(opdrachttitel)}</strong> &nbsp;|&nbsp; Datum: ${esc(datum)} &nbsp;|&nbsp; Gegenereerd door FPS Connect AI</div>
+<h2>Foto's per uitvoeringsstap</h2>
+${stappenHtml || "<p><em>Geen stappen gevonden</em></p>"}
+</body></html>`;
+}
+
 /** POST /opdrachten/:id/pim/oplevering/controleer */
 router.post("/opdrachten/:id/pim/oplevering/controleer", schrijven, async (req, res): Promise<void> => {
   const opdrachtId = parseInt(String(req.params.id), 10);
@@ -1855,16 +1909,23 @@ router.post("/opdrachten/:id/pim/oplevering/controleer", schrijven, async (req, 
     });
     if (afwijkingenZonderBeslissing.length > 0) ontbrekenPunten.push(`${afwijkingenZonderBeslissing.length} afwijking(en) vereisen nog een beslissing`);
 
-    // Check 4: foto-aanwezigheid (elke voltooide stap moet minimaal 1 foto hebben)
-    const stappenZonderFoto = stappen.filter((s) =>
+    // Check 4: foto-aanwezigheid — alleen stappen met een verplichte foto-opdracht (foto_opdracht in instructieJson)
+    const stappenMetFotoVerplichting = stappen.filter((s) => {
+      const instructie = s.instructieJson as Record<string, unknown> | null;
+      return Boolean(instructie?.foto_opdracht);
+    });
+    const stappenZonderFoto = stappenMetFotoVerplichting.filter((s) =>
       s.status === "voltooid" && (!Array.isArray(s.fotoUrls) || (s.fotoUrls as string[]).length === 0),
     );
+    const fotoPuntLabel = stappenMetFotoVerplichting.length > 0
+      ? "Fotodocumentatie per verplichte stap"
+      : "Fotodocumentatie (geen verplichte foto-opdrachten)";
     controlePunten.push({
-      label: "Fotodocumentatie per stap",
+      label: fotoPuntLabel,
       ok: stappenZonderFoto.length === 0,
       detail: stappenZonderFoto.length > 0
-        ? `${stappenZonderFoto.length} voltooide stap(pen) zonder foto (volgnrs: ${stappenZonderFoto.map((s) => s.volgorde).join(", ")})`
-        : null,
+        ? `${stappenZonderFoto.length} stap(pen) met verplichte foto-opdracht missen nog een foto (volgnrs: ${stappenZonderFoto.map((s) => s.volgorde).join(", ")})`
+        : stappenMetFotoVerplichting.length > 0 ? `${stappenMetFotoVerplichting.length} verplichte foto-opdracht(en) gedocumenteerd` : null,
     });
     if (stappenZonderFoto.length > 0) ontbrekenPunten.push(`${stappenZonderFoto.length} stap(pen) missen verplichte foto`);
 
@@ -2185,14 +2246,27 @@ router.post("/opdrachten/:id/pim/oplevering/genereer", schrijven, async (req, re
       }
     }
 
-    const [opleverPdfPad, onderhoudPdfPad] = await Promise.all([
+    // Fotorapport-data voorbereiden (per stap: doel, fotos, status, afwijking)
+    const fotoRapportStappen = stappen.map((s) => ({
+      volgorde: s.volgorde,
+      doel: (s.instructieJson as Record<string, unknown> | null)?.doel ?? null,
+      fotoUrls: s.fotoUrls,
+      status: s.status ?? "open",
+      afwijking: s.afwijkingJson ?? null,
+    }));
+    const ts = Date.now();
+    const [opleverPdfPad, onderhoudPdfPad, fotoPdfPad] = await Promise.all([
       genereerPdf(
         bouwOpleverDossierHtml(opleverData, opdracht.titel, vandaag),
-        `pim/opleverdossiers/${opdrachtId}_oplevering_${Date.now()}.pdf`,
+        `pim/opleverdossiers/${opdrachtId}_oplevering_${ts}.pdf`,
       ),
       genereerPdf(
         bouwOnderhoudNotitieHtml(onderhoudData, opdracht.titel, vandaag),
-        `pim/onderhoudnotities/${opdrachtId}_onderhoud_${Date.now()}.pdf`,
+        `pim/onderhoudnotities/${opdrachtId}_onderhoud_${ts}.pdf`,
+      ),
+      genereerPdf(
+        bouwFotoRapportHtml(fotoRapportStappen, opdracht.titel, vandaag),
+        `pim/fotorapporten/${opdrachtId}_fotos_${ts}.pdf`,
       ),
     ]);
 
@@ -2202,7 +2276,7 @@ router.post("/opdrachten/:id/pim/oplevering/genereer", schrijven, async (req, re
       .from(gebruikersTable)
       .where(eq(gebruikersTable.id, gebruikerId));
 
-    const gemaakteDocumenten: { document_id: number; type: string; naam: string }[] = [];
+    const gemaakteDocumenten: { document_id: number; type: string; naam: string; pdf_url: string | null }[] = [];
 
     await db.transaction(async (tx) => {
       // 1. Opleverdossier
@@ -2234,7 +2308,7 @@ router.post("/opdrachten/:id/pim/oplevering/genereer", schrijven, async (req, re
         actie: "geupload",
         detail: `PIM Opleverdossier aangemaakt voor opdracht: ${opdracht.titel}${opleverPdfPad ? " (incl. PDF)" : " (zonder PDF)"}`,
       });
-      gemaakteDocumenten.push({ document_id: opleverDoc.id, type: "opleverdossier", naam: opleverNaam });
+      gemaakteDocumenten.push({ document_id: opleverDoc.id, type: "opleverdossier", naam: opleverNaam, pdf_url: opleverPdfPad });
 
       // 2. Overdrachtsnotitie onderhoud
       const onderhoudNaam = `Overdrachtsnotitie onderhoud — ${opdracht.titel}`;
@@ -2265,7 +2339,38 @@ router.post("/opdrachten/:id/pim/oplevering/genereer", schrijven, async (req, re
         actie: "geupload",
         detail: `PIM Overdrachtsnotitie onderhoud aangemaakt voor opdracht: ${opdracht.titel}`,
       });
-      gemaakteDocumenten.push({ document_id: onderhoudDoc.id, type: "overdrachtsnotitie", naam: onderhoudNaam });
+      gemaakteDocumenten.push({ document_id: onderhoudDoc.id, type: "overdrachtsnotitie", naam: onderhoudNaam, pdf_url: onderhoudPdfPad });
+
+      // 3. Fotorapport
+      const fotoNaam = `Fotorapport uitvoering — ${opdracht.titel}`;
+      const [fotoDoc] = await tx
+        .insert(documentenTable)
+        .values({
+          naam: fotoNaam,
+          documenttype: "fotorapport",
+          datum: vandaag,
+          ...(fotoPdfPad ? { pdfUrl: fotoPdfPad } : {}),
+          aiGeanalyseerd: true,
+          aiMetadata: { stap_count: fotoRapportStappen.length, foto_count: fotoRapportStappen.reduce((acc, s) => acc + (Array.isArray(s.fotoUrls) ? (s.fotoUrls as string[]).length : 0), 0) },
+          bijgewerktOp: new Date(),
+        })
+        .returning({ id: documentenTable.id });
+
+      await tx.insert(documentKoppelingenTable).values({
+        documentId: fotoDoc.id,
+        doelType: "opdracht",
+        doelId: opdrachtId,
+        aangemaaktDoorId: gebruikerId,
+      });
+      await tx.insert(documentLogboekTable).values({
+        documentId: fotoDoc.id,
+        documentNaam: fotoNaam,
+        gebruikerId,
+        gebruikerNaam: gebruiker?.naam ?? null,
+        actie: "geupload",
+        detail: `PIM Fotorapport aangemaakt voor opdracht: ${opdracht.titel}${fotoPdfPad ? " (incl. PDF)" : " (zonder PDF)"}`,
+      });
+      gemaakteDocumenten.push({ document_id: fotoDoc.id, type: "fotorapport", naam: fotoNaam, pdf_url: fotoPdfPad });
 
       // Opslaan in opleveringContext
       const bijgewerktCtx = {

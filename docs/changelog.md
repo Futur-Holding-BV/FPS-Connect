@@ -23,7 +23,9 @@ Voor elke taak drie scores:
 
 **Frontend FPS Connect:**
 - Nieuw tabblad "Oplevering" toegevoegd aan `opdrachten/detail.tsx` (na "Uitvoering"-tab; `ShieldCheck`-icoon)
-- Nieuw component `pim-oplevering-tab.tsx` — 3-staps flow: Stap 1 volledigheidscheck (controlerapport met per-punt status), Stap 2 dossier genereren (documentenlijst), Stap 3 definitief opleveren (bevestigingsdialoog + AI-fase badge); toont eerder opgeslagen context uit `opleveringContext` na herlaad
+- Nieuw component `pim-oplevering-tab.tsx` — 3-staps flow: Stap 1 volledigheidscheck (controlerapport met per-punt status), Stap 2 dossier genereren (documentenlijst met PDF-download per document), Stap 3 definitief opleveren (bevestigingsdialoog + AI-fase badge); toont eerder opgeslagen context uit `opleveringContext` na herlaad
+- Fotorapport toegevoegd als derde DMS-document bij genereer (naast opleverdossier + overdrachtsnotitie); `DocumentenLijst` toont `/api/storage{pdf_url}` download-link per document
+- Foto-verplicht check verfijnd: gebruikt `instructieJson.foto_opdracht` per stap in plaats van generieke check op alle voltooide stappen
 
 ## 2026-07-05 — PIM Fase F — Adaptieve Uitvoering mobiel (Task #301)
 
