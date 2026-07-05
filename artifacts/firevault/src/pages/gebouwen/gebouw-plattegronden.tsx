@@ -16,16 +16,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Map, Loader2, Upload, ExternalLink, Plus, AlertTriangle } from "lucide-react";
-import { BestandsGrootteInfo } from "@/components/bestandsgrootte-info";
+import { BestandsGrootteInfo, GROOT_BESTAND_GRENS, formateerGrootte } from "@/components/bestandsgrootte-info";
 import { useToast } from "@/hooks/use-toast";
-
-const GROOT_BESTAND_GRENS = 10 * 1024 * 1024;
-
-function formateerGrootte(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1).replace(".", ",")} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1).replace(".", ",")} MB`;
-}
 
 export default function GebouwPlattegronden({
   gebouwId,
