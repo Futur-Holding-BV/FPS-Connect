@@ -4,6 +4,27 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-05 — Vervolgopdracht 5: Formele opleverrapportage V1.4
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+**Wat is gebouwd (alles in `print.tsx`):**
+
+- **4 nieuwe rapporttype-presets:** `klant_beknopt`, `klant_uitgebreid`, `intern_controle`, `beheeradvies` — elk met eigen label, omschrijving en sectieprofiel. Config panel toont 3 subgroepen (Intern / Klantgericht / Controle & beheer).
+- **3 nieuwe sectiesleutels:** `foto_tijdens` (foto's tijdens uitvoering), `maatregelen` (volledige spotlijst per bouwlaag/cluster), `conclusies` (vrije conclusietekst), `open_punten` (niet-afgeronde spots per bouwlaag/cluster).
+- **`foto_tijdens` ondersteuning in `SpotDetailBlok`:** `toonFotoPeriode` prop + `tijdensFotos` filter (`fase === "tijdens"`) + aparte fotogroep "Foto's tijdens uitvoering" in de fotosectie. `heeftFotos` en `fotosPassenSamen` incl. tijdensFotos.
+- **Cluster/status snelfilter voor spotselectie:** `VerdiepingSpotSelector` heeft `externalFilter` prop (`clusterIds + statussen`); `useEffect` auto-selecteert matching spots bij filter-change. Config panel toont clusterknopjes (uit bestaande clustersdata) en statusknopjes — onderling exclusief, Alles-reset wist ook de filters.
+- **`MaatregelenSectie` + `OpenPuntenSectie` componenten:** elk met een hulpcomponent per verdieping die de React Query cache van `useListVoorzieningenOpVerdieping` hergebruikt. `OpenPuntenSectie` filtert op `!AFGERONDE_STATUSSEN` (goedgekeurd uitgesloten).
+- **Conclusie teksteditor in config panel:** zichtbaar wanneer `secties.conclusies` aan staat; vrije textarea, opgeslagen in auto-save als `_conclusie_tekst`.
+- **Auto-save uitgebreid:** slaat `_conclusie_tekst`, `_clusterFilterIds`, `_statusFilterStatussen` op in het secties-JSONB; loading-useEffect leest ze terug.
+- **Backward compat:** backward-compat lijst bijgewerkt met alle 8 rapporttype-waarden.
+
+**Ontwerpkeuzes:**
+- Maatregelen/open punten hergebruiken de React Query cache — geen extra API-aanroep.
+- Cluster- en statusfilter zijn onderling exclusief (één tegelijk actief) voor duidelijkheid.
+- Conclusies verschijnen in het rapport alleen als de tekst niet leeg is.
+- `foto_tijdens` is identiek aan `foto_voor`/`foto_na` qua prop-keten (geen aparte sectie buiten SpotDetailBlok).
+
 ## 2026-07-05 — Vervolgopdracht 4: AI-fotoanalyse per uitvoeringstap
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag

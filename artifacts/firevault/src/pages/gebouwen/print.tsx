@@ -164,13 +164,19 @@ const DOCUMENTTYPE_LABEL: Record<string, string> = {
 
 // ─── Rapporttype-presets ─────────────────────────────────────────────────────
 
-type RapportType = "werkpakket_monteur" | "voortgang" | "opleverrapport" | "opleverdossier";
+type RapportType =
+  | "werkpakket_monteur" | "voortgang" | "opleverrapport" | "opleverdossier"
+  | "klant_beknopt" | "klant_uitgebreid" | "intern_controle" | "beheeradvies";
 
 const RAPPORT_TYPE_LABEL: Record<RapportType, string> = {
   werkpakket_monteur: "Werkpakket monteur",
   voortgang:          "Voortgangsrapportage",
   opleverrapport:     "Opleverrapport brandveiligheid",
   opleverdossier:     "Opleverdossier compleet",
+  klant_beknopt:      "Klantrapport — Beknopt",
+  klant_uitgebreid:   "Klantrapport — Uitgebreid",
+  intern_controle:    "Intern controlemodel",
+  beheeradvies:       "Onderhouds- en beheeradvies",
 };
 
 const RAPPORT_TYPE_OMSCHRIJVING: Record<RapportType, string> = {
@@ -178,6 +184,10 @@ const RAPPORT_TYPE_OMSCHRIJVING: Record<RapportType, string> = {
   voortgang:          "Voortgang, aantallen en openstaande punten",
   opleverrapport:     "Volledig opleverrapport met juridische basis",
   opleverdossier:     "Opleverrapport inclusief ETA's, certificaten en correspondentie",
+  klant_beknopt:      "Beknopt klantrapport — plattegronden, nafoto's, conclusies en open punten",
+  klant_uitgebreid:   "Volledig klantrapport — juridisch, ETA's, voor/na, maatregelen en conclusies",
+  intern_controle:    "Intern model — voor/tijdens/na, maatregelen, open punten en inspecties",
+  beheeradvies:       "Onderhouds- en beheeradvies — maatregelen, nafoto's, onderhoud en conclusies",
 };
 
 type Sectiesleutels = {
@@ -187,6 +197,7 @@ type Sectiesleutels = {
   plattegronden:       boolean;
   spotdetails:         boolean;
   foto_voor:           boolean;
+  foto_tijdens:        boolean;
   foto_na:             boolean;
   eta_certificaten:    boolean;
   tekeningen:          boolean;
@@ -195,32 +206,67 @@ type Sectiesleutels = {
   onderhoud:           boolean;
   inspecties:          boolean;
   certificaat:         boolean;
+  maatregelen:         boolean;
+  conclusies:          boolean;
+  open_punten:         boolean;
 };
 
 const PRESET_SECTIES: Record<RapportType, Sectiesleutels> = {
   werkpakket_monteur: {
     voorblad: true, projectomschrijving: true, juridisch: false,
-    plattegronden: true, spotdetails: true, foto_voor: true, foto_na: true,
+    plattegronden: true, spotdetails: true, foto_voor: true, foto_tijdens: false, foto_na: true,
     eta_certificaten: false, tekeningen: false, bijlagen: false,
     relevante_emails: true, onderhoud: true, inspecties: false, certificaat: false,
+    maatregelen: false, conclusies: false, open_punten: false,
   },
   voortgang: {
     voorblad: true, projectomschrijving: true, juridisch: false,
-    plattegronden: true, spotdetails: false, foto_voor: false, foto_na: false,
+    plattegronden: true, spotdetails: false, foto_voor: false, foto_tijdens: false, foto_na: false,
     eta_certificaten: false, tekeningen: false, bijlagen: false,
     relevante_emails: false, onderhoud: true, inspecties: true, certificaat: false,
+    maatregelen: false, conclusies: false, open_punten: true,
   },
   opleverrapport: {
     voorblad: true, projectomschrijving: true, juridisch: true,
-    plattegronden: true, spotdetails: true, foto_voor: true, foto_na: true,
+    plattegronden: true, spotdetails: true, foto_voor: true, foto_tijdens: false, foto_na: true,
     eta_certificaten: true, tekeningen: true, bijlagen: true,
     relevante_emails: true, onderhoud: false, inspecties: false, certificaat: true,
+    maatregelen: true, conclusies: true, open_punten: true,
   },
   opleverdossier: {
     voorblad: true, projectomschrijving: true, juridisch: true,
-    plattegronden: true, spotdetails: true, foto_voor: true, foto_na: true,
+    plattegronden: true, spotdetails: true, foto_voor: true, foto_tijdens: false, foto_na: true,
     eta_certificaten: true, tekeningen: true, bijlagen: true,
     relevante_emails: true, onderhoud: true, inspecties: true, certificaat: true,
+    maatregelen: true, conclusies: true, open_punten: true,
+  },
+  klant_beknopt: {
+    voorblad: true, projectomschrijving: true, juridisch: false,
+    plattegronden: true, spotdetails: true, foto_voor: false, foto_tijdens: false, foto_na: true,
+    eta_certificaten: false, tekeningen: false, bijlagen: false,
+    relevante_emails: false, onderhoud: false, inspecties: false, certificaat: false,
+    maatregelen: false, conclusies: true, open_punten: true,
+  },
+  klant_uitgebreid: {
+    voorblad: true, projectomschrijving: true, juridisch: true,
+    plattegronden: true, spotdetails: true, foto_voor: true, foto_tijdens: false, foto_na: true,
+    eta_certificaten: true, tekeningen: true, bijlagen: true,
+    relevante_emails: true, onderhoud: false, inspecties: false, certificaat: true,
+    maatregelen: true, conclusies: true, open_punten: true,
+  },
+  intern_controle: {
+    voorblad: true, projectomschrijving: true, juridisch: false,
+    plattegronden: true, spotdetails: true, foto_voor: true, foto_tijdens: true, foto_na: true,
+    eta_certificaten: true, tekeningen: true, bijlagen: false,
+    relevante_emails: false, onderhoud: false, inspecties: true, certificaat: false,
+    maatregelen: true, conclusies: true, open_punten: true,
+  },
+  beheeradvies: {
+    voorblad: true, projectomschrijving: true, juridisch: false,
+    plattegronden: true, spotdetails: true, foto_voor: false, foto_tijdens: false, foto_na: true,
+    eta_certificaten: false, tekeningen: false, bijlagen: false,
+    relevante_emails: false, onderhoud: true, inspecties: false, certificaat: false,
+    maatregelen: true, conclusies: true, open_punten: true,
   },
 };
 
@@ -232,9 +278,10 @@ const RAPPORT_MODELLEN: RapportModel[] = [
     label: "Volledig rapport",
     secties: {
       voorblad: true, projectomschrijving: true, juridisch: true,
-      plattegronden: true, spotdetails: true, foto_voor: true, foto_na: true,
+      plattegronden: true, spotdetails: true, foto_voor: true, foto_tijdens: false, foto_na: true,
       eta_certificaten: true, tekeningen: true, bijlagen: true,
       relevante_emails: true, onderhoud: false, inspecties: false, certificaat: true,
+      maatregelen: true, conclusies: true, open_punten: true,
     },
   },
   {
@@ -242,9 +289,10 @@ const RAPPORT_MODELLEN: RapportModel[] = [
     label: "Enkel foto's",
     secties: {
       voorblad: true, projectomschrijving: false, juridisch: false,
-      plattegronden: false, spotdetails: true, foto_voor: true, foto_na: true,
+      plattegronden: false, spotdetails: true, foto_voor: true, foto_tijdens: true, foto_na: true,
       eta_certificaten: false, tekeningen: false, bijlagen: false,
       relevante_emails: false, onderhoud: false, inspecties: false, certificaat: false,
+      maatregelen: false, conclusies: false, open_punten: false,
     },
   },
   {
@@ -252,9 +300,10 @@ const RAPPORT_MODELLEN: RapportModel[] = [
     label: "Enkel tekeningen",
     secties: {
       voorblad: true, projectomschrijving: false, juridisch: false,
-      plattegronden: false, spotdetails: false, foto_voor: false, foto_na: false,
+      plattegronden: false, spotdetails: false, foto_voor: false, foto_tijdens: false, foto_na: false,
       eta_certificaten: false, tekeningen: true, bijlagen: false,
       relevante_emails: false, onderhoud: false, inspecties: false, certificaat: false,
+      maatregelen: false, conclusies: false, open_punten: false,
     },
   },
   {
@@ -262,9 +311,10 @@ const RAPPORT_MODELLEN: RapportModel[] = [
     label: "Compleet zonder voorfoto",
     secties: {
       voorblad: true, projectomschrijving: true, juridisch: true,
-      plattegronden: true, spotdetails: true, foto_voor: false, foto_na: true,
+      plattegronden: true, spotdetails: true, foto_voor: false, foto_tijdens: false, foto_na: true,
       eta_certificaten: true, tekeningen: true, bijlagen: true,
       relevante_emails: true, onderhoud: false, inspecties: false, certificaat: true,
+      maatregelen: true, conclusies: true, open_punten: true,
     },
   },
   {
@@ -272,9 +322,10 @@ const RAPPORT_MODELLEN: RapportModel[] = [
     label: "Enkel nafoto's",
     secties: {
       voorblad: true, projectomschrijving: false, juridisch: false,
-      plattegronden: false, spotdetails: true, foto_voor: false, foto_na: true,
+      plattegronden: false, spotdetails: true, foto_voor: false, foto_tijdens: false, foto_na: true,
       eta_certificaten: false, tekeningen: false, bijlagen: false,
       relevante_emails: false, onderhoud: false, inspecties: false, certificaat: false,
+      maatregelen: false, conclusies: false, open_punten: false,
     },
   },
 ];
@@ -286,6 +337,7 @@ const SECTIES_LABELS: Record<keyof Sectiesleutels, string> = {
   plattegronden:       "Plattegronden",
   spotdetails:         "Spot-detailpagina's",
   foto_voor:           "Foto's voor",
+  foto_tijdens:        "Foto's tijdens uitvoering",
   foto_na:             "Foto's na",
   eta_certificaten:    "ETA's / certificaten",
   tekeningen:          "Tekeningen",
@@ -294,12 +346,16 @@ const SECTIES_LABELS: Record<keyof Sectiesleutels, string> = {
   onderhoud:           "Onderhoud",
   inspecties:          "Inspecties",
   certificaat:         "FPS Certificaat",
+  maatregelen:         "Maatregelen",
+  conclusies:          "Conclusies",
+  open_punten:         "Open punten",
 };
 
 const SECTIES_VOLGORDE: (keyof Sectiesleutels)[] = [
   "voorblad", "projectomschrijving", "juridisch", "certificaat",
-  "plattegronden", "spotdetails", "foto_voor", "foto_na", "eta_certificaten",
+  "plattegronden", "spotdetails", "foto_voor", "foto_tijdens", "foto_na", "eta_certificaten",
   "tekeningen", "bijlagen", "relevante_emails", "onderhoud", "inspecties",
+  "maatregelen", "conclusies", "open_punten",
 ];
 
 const CANVAS_W = 1200;
@@ -467,6 +523,7 @@ function SpotDetailBlok({
   documenten,
   typeNaam,
   toonFotoVoor,
+  toonFotoPeriode,
   toonFotoNa,
   toonEtaCertificaten,
   onGereed,
@@ -484,6 +541,7 @@ function SpotDetailBlok({
   documenten: any[] | undefined;
   typeNaam: Record<string, string>;
   toonFotoVoor: boolean;
+  toonFotoPeriode: boolean;
   toonFotoNa: boolean;
   toonEtaCertificaten: boolean;
   onGereed: () => void;
@@ -507,8 +565,9 @@ function SpotDetailBlok({
 
   const fotos    = (detail as any)?.fotos  as any[] | undefined ?? [];
   const labels   = (detail as any)?.labels as any[] | undefined ?? [];
-  const voorFotos = toonFotoVoor ? fotos.filter((f: any) => f.fase === "voor") : [];
-  const naFotos   = toonFotoNa  ? fotos.filter((f: any) => f.fase === "na")  : [];
+  const voorFotos    = toonFotoVoor    ? fotos.filter((f: any) => f.fase === "voor")    : [];
+  const tijdensFotos = toonFotoPeriode ? fotos.filter((f: any) => f.fase === "tijdens") : [];
+  const naFotos      = toonFotoNa      ? fotos.filter((f: any) => f.fase === "na")      : [];
 
   const d = detail as any;
   const catalogNaam = typeNaam[spot.type];
@@ -529,8 +588,8 @@ function SpotDetailBlok({
   );
 
   const heeftTestinfo = labels.some((l: any) => l.testnorm || l.fabrikant);
-  const heeftFotos = voorFotos.length > 0 || naFotos.length > 0;
-  const fotosPassenSamen = voorFotos.length <= 2 && naFotos.length <= 2;
+  const heeftFotos = voorFotos.length > 0 || tijdensFotos.length > 0 || naFotos.length > 0;
+  const fotosPassenSamen = voorFotos.length <= 2 && tijdensFotos.length <= 2 && naFotos.length <= 2;
 
   const fotosInhoud = (
     <div className="prt-spot-fotos">
@@ -540,6 +599,16 @@ function SpotDetailBlok({
           <div className="prt-spot-foto-rij">
             {voorFotos.map((f: any) => (
               <img key={f.id} src={storageBeeldUrl(f.url)} alt="Foto voor" className="prt-spot-foto" />
+            ))}
+          </div>
+        </div>
+      )}
+      {tijdensFotos.length > 0 && (
+        <div>
+          <div className="prt-spot-foto-label">Foto's tijdens uitvoering</div>
+          <div className="prt-spot-foto-rij">
+            {tijdensFotos.map((f: any) => (
+              <img key={f.id} src={storageBeeldUrl(f.url)} alt="Foto tijdens" className="prt-spot-foto" />
             ))}
           </div>
         </div>
@@ -724,10 +793,10 @@ function SpotDetailBlok({
           ))}
         </div>
       )}
-      {(toonFotoVoor || toonFotoNa) && fotosPassenSamen && heeftFotos && fotosInhoud}
+      {(toonFotoVoor || toonFotoPeriode || toonFotoNa) && fotosPassenSamen && heeftFotos && fotosInhoud}
     </div>
 
-    {(toonFotoVoor || toonFotoNa) && !fotosPassenSamen && heeftFotos && (
+    {(toonFotoVoor || toonFotoPeriode || toonFotoNa) && !fotosPassenSamen && heeftFotos && (
       <div className="prt-spot-fotopagina">
         <div className="prt-spot-kop">
           <div className="prt-spot-kop-links">
@@ -944,16 +1013,40 @@ function VerdiepingSpotSelector({
   verdieping,
   geselecteerdeSpotIds,
   onChange,
+  externalFilter,
 }: {
   verdieping: Verdieping;
   geselecteerdeSpotIds: Set<number> | undefined;
   onChange: (verdiepingId: number, selectie: Set<number> | undefined) => void;
+  externalFilter?: { clusterIds: Set<number>; statussen: Set<string> };
 }) {
   const { data: voorzieningen } = useListVoorzieningenOpVerdieping(verdieping.id);
   const [open, setOpen] = useState(false);
 
   const spots = (voorzieningen ?? []) as any[];
   const alleIds = useMemo(() => new Set<number>(spots.map((v: any) => v.id as number)), [spots]);
+
+  const filterSleutel = externalFilter
+    ? `${[...externalFilter.clusterIds].sort().join(",")}|${[...externalFilter.statussen].sort().join(",")}`
+    : "";
+  const heeftExternFilter = externalFilter
+    ? externalFilter.clusterIds.size > 0 || externalFilter.statussen.size > 0
+    : false;
+
+  useEffect(() => {
+    if (!heeftExternFilter || spots.length === 0) return;
+    const { clusterIds, statussen } = externalFilter!;
+    const gefilterd = spots
+      .filter((v: any) => {
+        const clusterOk = clusterIds.size === 0 || clusterIds.has(v.cluster_id as number);
+        const statusOk = statussen.size === 0 || statussen.has(v.status as string);
+        return clusterOk && statusOk;
+      })
+      .map((v: any) => v.id as number);
+    const nieuw = gefilterd.length === spots.length ? undefined : new Set<number>(gefilterd);
+    onChange(verdieping.id, nieuw);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filterSleutel, spots.length]);
 
   const allesGeselecteerd = geselecteerdeSpotIds === undefined;
   const aantalGeselecteerd = allesGeselecteerd ? spots.length : geselecteerdeSpotIds!.size;
@@ -1018,6 +1111,7 @@ function PrintVerdieping({
   clusters,
   geselecteerdeSpotIds,
   toonFotoVoor,
+  toonFotoPeriode,
   toonFotoNa,
   toonEtaCertificaten,
 }: {
@@ -1034,6 +1128,7 @@ function PrintVerdieping({
   clusters: Cluster[] | undefined;
   geselecteerdeSpotIds: Set<number> | undefined;
   toonFotoVoor: boolean;
+  toonFotoPeriode: boolean;
   toonFotoNa: boolean;
   toonEtaCertificaten: boolean;
 }) {
@@ -1166,6 +1261,7 @@ function PrintVerdieping({
       documenten={documenten}
       typeNaam={typeNaam}
       toonFotoVoor={toonFotoVoor}
+      toonFotoPeriode={toonFotoPeriode}
       toonFotoNa={toonFotoNa}
       toonEtaCertificaten={toonEtaCertificaten}
       onGereed={() => setSpotsGereed(n => n + 1)}
@@ -1290,6 +1386,146 @@ function PrintVerdieping({
         </table>
       )}
     </div>
+  );
+}
+
+// ─── MaatregelenSectie ───────────────────────────────────────────────────────
+
+function MaatregelenVerdiepingRijen({
+  verdieping,
+  geselecteerdeSpotIds,
+}: {
+  verdieping: Verdieping;
+  geselecteerdeSpotIds: Set<number> | undefined;
+}) {
+  const { data: voorzieningen } = useListVoorzieningenOpVerdieping(verdieping.id);
+  const spots = (voorzieningen ?? []) as any[];
+  const gefilterd = geselecteerdeSpotIds === undefined
+    ? spots
+    : spots.filter((v: any) => geselecteerdeSpotIds.has(v.id as number));
+  if (gefilterd.length === 0) return null;
+  return (
+    <>
+      {gefilterd.map((v: any) => (
+        <tr key={v.id}>
+          <td>{v.objectnummer}</td>
+          <td>{TYPEN[v.type]?.label ?? v.type}</td>
+          <td>
+            <span className="prt-stip" style={{ backgroundColor: STATUSKLEUREN[v.status] ?? "#94a3b8" }} />
+            {STATUSLABEL[v.status] ?? v.status}
+          </td>
+          <td>{verdieping.naam}</td>
+          <td>{v.cluster_naam || "—"}</td>
+        </tr>
+      ))}
+    </>
+  );
+}
+
+function MaatregelenSectie({
+  verdiepingen,
+  spotSelectie,
+}: {
+  verdiepingen: Verdieping[];
+  spotSelectie: Record<number, Set<number> | undefined>;
+}) {
+  return (
+    <section className="prt-sectie">
+      <h2 className="prt-sectie-titel">Maatregelen</h2>
+      <table className="prt-tabel">
+        <thead>
+          <tr>
+            <th>Objectnummer</th>
+            <th>Type</th>
+            <th>Status</th>
+            <th>Bouwlaag</th>
+            <th>Cluster</th>
+          </tr>
+        </thead>
+        <tbody>
+          {verdiepingen.map(v => (
+            <MaatregelenVerdiepingRijen
+              key={v.id}
+              verdieping={v}
+              geselecteerdeSpotIds={spotSelectie[v.id]}
+            />
+          ))}
+        </tbody>
+      </table>
+    </section>
+  );
+}
+
+// ─── OpenPuntenSectie ─────────────────────────────────────────────────────────
+
+const AFGERONDE_STATUSSEN = new Set(["goedgekeurd"]);
+
+function OpenPuntenVerdiepingRijen({
+  verdieping,
+  geselecteerdeSpotIds,
+}: {
+  verdieping: Verdieping;
+  geselecteerdeSpotIds: Set<number> | undefined;
+}) {
+  const { data: voorzieningen } = useListVoorzieningenOpVerdieping(verdieping.id);
+  const spots = (voorzieningen ?? []) as any[];
+  const gefilterd = (geselecteerdeSpotIds === undefined
+    ? spots
+    : spots.filter((v: any) => geselecteerdeSpotIds.has(v.id as number))
+  ).filter((v: any) => !AFGERONDE_STATUSSEN.has(v.status as string));
+  if (gefilterd.length === 0) return null;
+  return (
+    <>
+      {gefilterd.map((v: any) => (
+        <tr key={v.id}>
+          <td>{v.objectnummer}</td>
+          <td>{TYPEN[v.type]?.label ?? v.type}</td>
+          <td>
+            <span className="prt-stip" style={{ backgroundColor: STATUSKLEUREN[v.status] ?? "#94a3b8" }} />
+            {STATUSLABEL[v.status] ?? v.status}
+          </td>
+          <td>{verdieping.naam}</td>
+          <td>{v.cluster_naam || "—"}</td>
+        </tr>
+      ))}
+    </>
+  );
+}
+
+function OpenPuntenSectie({
+  verdiepingen,
+  spotSelectie,
+}: {
+  verdiepingen: Verdieping[];
+  spotSelectie: Record<number, Set<number> | undefined>;
+}) {
+  return (
+    <section className="prt-sectie">
+      <h2 className="prt-sectie-titel">Open punten</h2>
+      <p style={{ fontSize: 11, color: "#64748b", marginBottom: 8 }}>
+        Onderstaande spots zijn nog niet afgerond (status niet gelijk aan Goedgekeurd).
+      </p>
+      <table className="prt-tabel">
+        <thead>
+          <tr>
+            <th>Objectnummer</th>
+            <th>Type</th>
+            <th>Status</th>
+            <th>Bouwlaag</th>
+            <th>Cluster</th>
+          </tr>
+        </thead>
+        <tbody>
+          {verdiepingen.map(v => (
+            <OpenPuntenVerdiepingRijen
+              key={v.id}
+              verdieping={v}
+              geselecteerdeSpotIds={spotSelectie[v.id]}
+            />
+          ))}
+        </tbody>
+      </table>
+    </section>
   );
 }
 
@@ -1420,6 +1656,9 @@ export default function GebouwPrint() {
   const [spotSelectie, setSpotSelectie] = useState<Record<number, Set<number> | undefined>>({});
   const [emailModus, setEmailModus] = useState<"ai" | "handmatig">("ai");
   const [handmatigeEmailSelectie, setHandmatigeEmailSelectie] = useState<Set<number>>(new Set());
+  const [clusterFilterIds, setClusterFilterIds] = useState<Set<number>>(new Set());
+  const [statusFilterStatussen, setStatusFilterStatussen] = useState<Set<string>>(new Set());
+  const [conclusieTekst, setConclusietekst] = useState("");
   const [geselecteerdeTekeningen, setGeselecteerdeTekeningen] = useState<Set<number>>(new Set());
   const [geselecteerdeBijlagen, setGeselecteerdeBijlagen] = useState<Set<number>>(new Set());
   const tekeningenInitRef = useRef(false);
@@ -1486,7 +1725,8 @@ export default function GebouwPrint() {
     }
     setSecties(geladen);
     const type = huidigRapport.rapport_type as RapportType;
-    if ((["werkpakket_monteur","voortgang","opleverrapport","opleverdossier"] as string[]).includes(type)) {
+    const alleTypes: string[] = ["werkpakket_monteur","voortgang","opleverrapport","opleverdossier","klant_beknopt","klant_uitgebreid","intern_controle","beheeradvies"];
+    if (alleTypes.includes(type)) {
       setRapportType(type);
     }
 
@@ -1514,6 +1754,14 @@ export default function GebouwPrint() {
       setEmailModus("ai");
     }
 
+    // Conclusie + spot-snelfilter
+    const conclusieTekstOp = typeof raw["_conclusie_tekst"] === "string" ? raw["_conclusie_tekst"] : "";
+    setConclusietekst(conclusieTekstOp);
+    const clusterIdsOp = Array.isArray(raw["_clusterFilterIds"]) ? (raw["_clusterFilterIds"] as number[]) : [];
+    const statussenOp = Array.isArray(raw["_statusFilterStatussen"]) ? (raw["_statusFilterStatussen"] as string[]) : [];
+    setClusterFilterIds(new Set(clusterIdsOp));
+    setStatusFilterStatussen(new Set(statussenOp));
+
     setTimeout(() => { rapportIsLadenRef.current = false; }, 300);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [huidigRapport?.id, rapportId]);
@@ -1528,6 +1776,9 @@ export default function GebouwPrint() {
         ...secties,
         _emailModus: emailModus,
         _emailIds: Array.from(handmatigeEmailSelectie),
+        _conclusie_tekst: conclusieTekst,
+        _clusterFilterIds: Array.from(clusterFilterIds),
+        _statusFilterStatussen: Array.from(statusFilterStatussen),
       };
       const spotSel: Record<string, number[]> = {};
       for (const [vid, set] of Object.entries(spotSelectie)) {
@@ -1546,7 +1797,7 @@ export default function GebouwPrint() {
     }, 1500);
     return () => { if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [secties, spotSelectie, geselecteerdeTekeningen, geselecteerdeBijlagen, emailModus, handmatigeEmailSelectie, rapportId, huidigRapport?.status]);
+  }, [secties, spotSelectie, geselecteerdeTekeningen, geselecteerdeBijlagen, emailModus, handmatigeEmailSelectie, conclusieTekst, clusterFilterIds, statusFilterStatussen, rapportId, huidigRapport?.status]);
 
   if (isLoading) {
     return (
@@ -2202,7 +2453,28 @@ export default function GebouwPrint() {
               {/* Rapporttype */}
               <div className="cmpr-sectie">
                 <div className="cmpr-sectie-kop">Rapporttype</div>
+                <div style={{ fontSize: 10, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>Intern</div>
                 {(["werkpakket_monteur", "voortgang", "opleverrapport", "opleverdossier"] as RapportType[]).map(type => (
+                  <label key={type} className={`cmpr-type-optie ${rapportType === type ? "cmpr-type-aktief" : ""}`}>
+                    <input type="radio" name="rapporttype" value={type} checked={rapportType === type} onChange={() => kiesRapportType(type)} className="cmpr-check" style={{ marginTop: 2 }} />
+                    <div>
+                      <div className="cmpr-type-naam">{RAPPORT_TYPE_LABEL[type]}</div>
+                      <div className="cmpr-type-sub">{RAPPORT_TYPE_OMSCHRIJVING[type]}</div>
+                    </div>
+                  </label>
+                ))}
+                <div style={{ fontSize: 10, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.06em", marginTop: 8, marginBottom: 4 }}>Klantgericht</div>
+                {(["klant_beknopt", "klant_uitgebreid"] as RapportType[]).map(type => (
+                  <label key={type} className={`cmpr-type-optie ${rapportType === type ? "cmpr-type-aktief" : ""}`}>
+                    <input type="radio" name="rapporttype" value={type} checked={rapportType === type} onChange={() => kiesRapportType(type)} className="cmpr-check" style={{ marginTop: 2 }} />
+                    <div>
+                      <div className="cmpr-type-naam">{RAPPORT_TYPE_LABEL[type]}</div>
+                      <div className="cmpr-type-sub">{RAPPORT_TYPE_OMSCHRIJVING[type]}</div>
+                    </div>
+                  </label>
+                ))}
+                <div style={{ fontSize: 10, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.06em", marginTop: 8, marginBottom: 4 }}>Controle &amp; beheer</div>
+                {(["intern_controle", "beheeradvies"] as RapportType[]).map(type => (
                   <label key={type} className={`cmpr-type-optie ${rapportType === type ? "cmpr-type-aktief" : ""}`}>
                     <input type="radio" name="rapporttype" value={type} checked={rapportType === type} onChange={() => kiesRapportType(type)} className="cmpr-check" style={{ marginTop: 2 }} />
                     <div>
@@ -2259,16 +2531,110 @@ export default function GebouwPrint() {
                 <div className="cmpr-sectie">
                   <div className="cmpr-sectie-kop">
                     Spots
-                    <button type="button" className="cmpr-sectie-kop-actie" onClick={() => setSpotSelectie({})}>Alles</button>
+                    <button type="button" className="cmpr-sectie-kop-actie" onClick={() => { setSpotSelectie({}); setClusterFilterIds(new Set()); setStatusFilterStatussen(new Set()); }}>Alles</button>
                   </div>
+
+                  {/* Snelfilter per cluster */}
+                  {(clusters ?? []).length > 0 && (
+                    <div style={{ marginBottom: 6 }}>
+                      <div style={{ fontSize: 10, color: "#64748b", marginBottom: 3 }}>Snelfilter per cluster:</div>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 3 }}>
+                        {(clusters ?? []).map(c => {
+                          const actief = clusterFilterIds.has(c.id);
+                          return (
+                            <button
+                              key={c.id}
+                              type="button"
+                              onClick={() => {
+                                setClusterFilterIds(prev => {
+                                  const nieuw = new Set(prev);
+                                  if (actief) nieuw.delete(c.id); else nieuw.add(c.id);
+                                  return nieuw;
+                                });
+                                setStatusFilterStatussen(new Set());
+                              }}
+                              style={{
+                                fontSize: 10, padding: "2px 6px", borderRadius: 4, border: "1px solid",
+                                borderColor: actief ? "#f23b0d" : "#e2e8f0",
+                                background: actief ? "#fff1ee" : "#f8fafc",
+                                color: actief ? "#c2200a" : "#475569",
+                                cursor: "pointer",
+                              }}
+                            >
+                              {c.naam}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Snelfilter per status */}
+                  <div style={{ marginBottom: 6 }}>
+                    <div style={{ fontSize: 10, color: "#64748b", marginBottom: 3 }}>Snelfilter per status:</div>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 3 }}>
+                      {Object.entries(STATUSLABEL).map(([status, label]) => {
+                        const actief = statusFilterStatussen.has(status);
+                        return (
+                          <button
+                            key={status}
+                            type="button"
+                            onClick={() => {
+                              setStatusFilterStatussen(prev => {
+                                const nieuw = new Set(prev);
+                                if (actief) nieuw.delete(status); else nieuw.add(status);
+                                return nieuw;
+                              });
+                              setClusterFilterIds(new Set());
+                            }}
+                            style={{
+                              fontSize: 10, padding: "2px 6px", borderRadius: 4, border: "1px solid",
+                              borderColor: actief ? (STATUSKLEUREN[status] ?? "#94a3b8") : "#e2e8f0",
+                              background: actief ? "#f8fafc" : "#f8fafc",
+                              color: actief ? (STATUSKLEUREN[status] ?? "#475569") : "#475569",
+                              fontWeight: actief ? 600 : 400,
+                              cursor: "pointer",
+                            }}
+                          >
+                            {label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Per verdieping handmatig */}
                   {verdiepingen.map(v => (
                     <VerdiepingSpotSelector
                       key={v.id}
                       verdieping={v}
                       geselecteerdeSpotIds={spotSelectie[v.id]}
                       onChange={updateSpotSelectie}
+                      externalFilter={
+                        clusterFilterIds.size > 0 || statusFilterStatussen.size > 0
+                          ? { clusterIds: clusterFilterIds, statussen: statusFilterStatussen }
+                          : undefined
+                      }
                     />
                   ))}
+                </div>
+              )}
+
+              {/* Conclusies — vrije tekst */}
+              {secties.conclusies && (
+                <div className="cmpr-sectie">
+                  <div className="cmpr-sectie-kop">Conclusies</div>
+                  <textarea
+                    value={conclusieTekst}
+                    onChange={e => setConclusietekst(e.target.value)}
+                    rows={5}
+                    placeholder="Vul hier de conclusies in voor dit rapport..."
+                    style={{
+                      width: "100%", fontSize: 11, lineHeight: 1.55, border: "1px solid #e2e8f0",
+                      borderRadius: 4, padding: "6px 8px", resize: "vertical", color: "#0f172a",
+                      background: "#f8fafc", boxSizing: "border-box",
+                    }}
+                  />
                 </div>
               )}
 
@@ -2912,6 +3278,7 @@ export default function GebouwPrint() {
                 clusters={clusters}
                 geselecteerdeSpotIds={spotSelectie[v.id]}
                 toonFotoVoor={secties.foto_voor}
+                toonFotoPeriode={secties.foto_tijdens}
                 toonFotoNa={secties.foto_na}
                 toonEtaCertificaten={secties.eta_certificaten}
               />
@@ -2961,6 +3328,29 @@ export default function GebouwPrint() {
               </tbody>
             </table>
           </section>
+        )}
+
+        {secties.maatregelen && (
+          <MaatregelenSectie
+            verdiepingen={verdiepingen}
+            spotSelectie={spotSelectie}
+          />
+        )}
+
+        {secties.conclusies && conclusieTekst.trim() !== "" && (
+          <section className="prt-sectie">
+            <h2 className="prt-sectie-titel">Conclusies</h2>
+            <div style={{ fontSize: 11.5, lineHeight: 1.7, whiteSpace: "pre-wrap", color: "#1e293b" }}>
+              {conclusieTekst}
+            </div>
+          </section>
+        )}
+
+        {secties.open_punten && (
+          <OpenPuntenSectie
+            verdiepingen={verdiepingen}
+            spotSelectie={spotSelectie}
+          />
         )}
 
         <div className="prt-voet">
