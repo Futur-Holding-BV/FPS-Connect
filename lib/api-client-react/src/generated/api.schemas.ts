@@ -5139,6 +5139,96 @@ export interface PimVaststellenResultaat {
   ai_fase: string;
 }
 
+/**
+ * AI-gegenereerde stapinstructie
+ * @nullable
+ */
+export type PimUitvoeringStapInstructieJson = { [key: string]: unknown } | null;
+
+/**
+ * Antwoorden van de monteur
+ * @nullable
+ */
+export type PimUitvoeringStapAntwoordenJson = { [key: string]: unknown } | null;
+
+/**
+ * AI-analyse van foto's en antwoorden
+ * @nullable
+ */
+export type PimUitvoeringStapAiAnalyseJson = { [key: string]: unknown } | null;
+
+/**
+ * Afwijkingdetails inclusief beslissing projectleider
+ * @nullable
+ */
+export type PimUitvoeringStapAfwijkingJson = { [key: string]: unknown } | null;
+
+export interface PimUitvoeringStap {
+  id: number;
+  pim_id: number;
+  volgorde: number;
+  /** open | actief | voltooid | afgeweken | overgeslagen */
+  status: string;
+  /** @nullable */
+  werkpakket_sleutel?: string | null;
+  /**
+     * AI-gegenereerde stapinstructie
+     * @nullable
+     */
+  instructie_json?: PimUitvoeringStapInstructieJson;
+  /**
+     * Antwoorden van de monteur
+     * @nullable
+     */
+  antwoorden_json?: PimUitvoeringStapAntwoordenJson;
+  /** Object-storage paden van de stapfoto's */
+  foto_urls?: string[];
+  /**
+     * AI-analyse van foto's en antwoorden
+     * @nullable
+     */
+  ai_analyse_json?: PimUitvoeringStapAiAnalyseJson;
+  /**
+     * Afwijkingdetails inclusief beslissing projectleider
+     * @nullable
+     */
+  afwijking_json?: PimUitvoeringStapAfwijkingJson;
+  /** @nullable */
+  voltooid_door_id?: number | null;
+  /** @nullable */
+  voltooid_op?: string | null;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export interface PimUitvoeringVoltooienInput {
+  /** Monteur bevestigt dat de controlevraag met "ja" is beantwoord */
+  antwoord_controle: boolean;
+  /** Optionele opmerkingen van de monteur */
+  opmerkingen?: string;
+  /** Object-storage paden van gemaakte foto's */
+  foto_urls?: string[];
+}
+
+export interface PimUitvoeringVoltooiResultaat {
+  voltooid_stap_id: number;
+  uitvoering_gereed: boolean;
+  volgende_stap?: PimUitvoeringStap;
+}
+
+export interface PimUitvoeringAfwijkingInput {
+  /** Omschrijving van de afwijking door de monteur */
+  omschrijving: string;
+  foto_urls?: string[];
+}
+
+export interface PimUitvoeringBeslisInput {
+  /** doorgaan | stoppen */
+  beslissing: string;
+  /** Toelichting bij de beslissing van de projectleider */
+  toelichting?: string;
+}
+
 export interface PimWerkvoorbereidingResultaat {
   opdracht_id: number;
   /** Nieuwe AI-fase na de analyse (werkvoorbereiding) */

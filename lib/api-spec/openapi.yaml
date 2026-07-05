@@ -10467,6 +10467,150 @@ paths:
         "409":
           description: Ongeldige fase-overgang (alleen sequentieel +1 stap voorwaarts toegestaan)
 
+  /opdrachten/{id}/pim/uitvoering/start:
+    post:
+      operationId: startPimUitvoering
+      tags: [pim]
+      summary: Start adaptieve uitvoering — genereert stap 1 via AI, zet ai_fase naar uitvoering
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "201":
+          description: Stap 1 aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PimUitvoeringStap"
+        "404":
+          description: Opdracht of PIM niet gevonden
+        "409":
+          description: Uitvoering al gestart
+
+  /opdrachten/{id}/pim/uitvoering/huidige-stap:
+    get:
+      operationId: getHuidigePimUitvoeringStap
+      tags: [pim]
+      summary: Actieve uitvoeringsstap ophalen (status actief of afgeweken)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PimUitvoeringStap"
+        "404":
+          description: Geen actieve stap gevonden
+
+  /opdrachten/{id}/pim/uitvoering/stap/{stapId}/voltooien:
+    post:
+      operationId: voltooiPimUitvoeringStap
+      tags: [pim]
+      summary: Stap voltooien — monteur stuurt antwoorden + foto-urls; AI analyseert en maakt volgende stap
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: stapId
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PimUitvoeringVoltooienInput"
+      responses:
+        "200":
+          description: Stap voltooid; volgende stap of null als dit de laatste stap was
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PimUitvoeringVoltooiResultaat"
+        "404":
+          description: Stap niet gevonden
+        "409":
+          description: Stap is niet actief of al voltooid
+
+  /opdrachten/{id}/pim/uitvoering/stap/{stapId}/afwijking:
+    post:
+      operationId: meldPimUitvoeringAfwijking
+      tags: [pim]
+      summary: Afwijking melden — AI benoemt impact en vervolgopties; verdere stappen geblokkeerd
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: stapId
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PimUitvoeringAfwijkingInput"
+      responses:
+        "200":
+          description: Afwijking geregistreerd
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PimUitvoeringStap"
+        "404":
+          description: Stap niet gevonden
+
+  /opdrachten/{id}/pim/uitvoering/stap/{stapId}/afwijking/beslis:
+    post:
+      operationId: beslisPimUitvoeringAfwijking
+      tags: [pim]
+      summary: Projectleider beslist over afwijking — doorgaan of stoppen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: stapId
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PimUitvoeringBeslisInput"
+      responses:
+        "200":
+          description: Beslissing gelogd; volgende stap of null als gestopt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PimUitvoeringVoltooiResultaat"
+        "404":
+          description: Stap niet gevonden
+        "409":
+          description: Stap heeft geen afwijking
+
   /opdrachten/{id}/onderaanneming:
     get:
       operationId: listOnderaannemeOrders
@@ -26459,6 +26603,97 @@ components:
         ai_fase:
           type: string
           description: Nieuwe AI-fase na vaststelling (inkoop)
+
+    PimUitvoeringStap:
+      type: object
+      required: [id, pim_id, volgorde, status, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id:
+          type: integer
+        pim_id:
+          type: integer
+        volgorde:
+          type: integer
+        status:
+          type: string
+          description: "open | actief | voltooid | afgeweken | overgeslagen"
+        werkpakket_sleutel:
+          type: ["string", "null"]
+        instructie_json:
+          type: ["object", "null"]
+          description: AI-gegenereerde stapinstructie
+        antwoorden_json:
+          type: ["object", "null"]
+          description: Antwoorden van de monteur
+        foto_urls:
+          type: array
+          items:
+            type: string
+          description: Object-storage paden van de stapfoto's
+        ai_analyse_json:
+          type: ["object", "null"]
+          description: AI-analyse van foto's en antwoorden
+        afwijking_json:
+          type: ["object", "null"]
+          description: Afwijkingdetails inclusief beslissing projectleider
+        voltooid_door_id:
+          type: ["integer", "null"]
+        voltooid_op:
+          type: ["string", "null"]
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+
+    PimUitvoeringVoltooienInput:
+      type: object
+      required: [antwoord_controle]
+      properties:
+        antwoord_controle:
+          type: boolean
+          description: Monteur bevestigt dat de controlevraag met "ja" is beantwoord
+        opmerkingen:
+          type: string
+          description: Optionele opmerkingen van de monteur
+        foto_urls:
+          type: array
+          items:
+            type: string
+          description: Object-storage paden van gemaakte foto's
+
+    PimUitvoeringVoltooiResultaat:
+      type: object
+      required: [voltooid_stap_id, uitvoering_gereed]
+      properties:
+        voltooid_stap_id:
+          type: integer
+        uitvoering_gereed:
+          type: boolean
+        volgende_stap:
+          $ref: "#/components/schemas/PimUitvoeringStap"
+
+    PimUitvoeringAfwijkingInput:
+      type: object
+      required: [omschrijving]
+      properties:
+        omschrijving:
+          type: string
+          description: Omschrijving van de afwijking door de monteur
+        foto_urls:
+          type: array
+          items:
+            type: string
+
+    PimUitvoeringBeslisInput:
+      type: object
+      required: [beslissing]
+      properties:
+        beslissing:
+          type: string
+          description: "doorgaan | stoppen"
+        toelichting:
+          type: string
+          description: Toelichting bij de beslissing van de projectleider
 
     PimWerkvoorbereidingResultaat:
       type: object

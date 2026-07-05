@@ -12,6 +12,7 @@ import type { OpenAI } from "openai";
 import {
   db,
   pimModellenTable,
+  pimUitvoeringStappenTable,
   opdrachtenTable,
   documentLogboekTable,
   documentenTable,
@@ -19,12 +20,18 @@ import {
   gebruikersTable,
   voorzieningenTable,
 } from "@workspace/db";
-import { eq, and } from "drizzle-orm";
+import type { PimUitvoeringStap } from "@workspace/db";
+import { eq, and, asc, inArray } from "drizzle-orm";
 import { requireBevoegdheid, requireBevoegdheidOfKlant } from "../middlewares/auth";
 import { logger } from "../lib/logger";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
 import { execSync } from "child_process";
-import { PIM_AANVRAAG_ANALYSE_PROMPT, PIM_WERKVOORBEREIDING_PROMPT } from "../lib/aiPrompts";
+import {
+  PIM_AANVRAAG_ANALYSE_PROMPT,
+  PIM_WERKVOORBEREIDING_PROMPT,
+  UITVOERING_STAP_PROMPT,
+  UITVOERING_FOTO_ANALYSE_PROMPT,
+} from "../lib/aiPrompts";
 import { kbService, KB_BESLISSTRUCTUUR } from "../lib/kbService";
 import { ObjectStorageService } from "../lib/objectStorage";
 
@@ -1083,5 +1090,436 @@ async function werkvoorbereidingAnalyseer(req: import("express").Request, res: i
 
 router.post("/opdrachten/:id/pim/werkvoorbereiding/genereer", schrijven, werkvoorbereidingAnalyseer);
 router.post("/opdrachten/:id/pim/werkvoorbereiding/analyseer", schrijven, werkvoorbereidingAnalyseer);
+
+// ── PIM Uitvoering ────────────────────────────────────────────────────────────
+
+function serializeStap(stap: PimUitvoeringStap): Record<string, unknown> {
+  return {
+    id: stap.id,
+    pim_id: stap.pimId,
+    volgorde: stap.volgorde,
+    status: stap.status,
+    werkpakket_sleutel: stap.werkpakketSleutel ?? null,
+    instructie_json: stap.instructieJson ?? null,
+    antwoorden_json: stap.antwoordenJson ?? null,
+    foto_urls: stap.fotoUrls ?? [],
+    ai_analyse_json: stap.aiAnalyseJson ?? null,
+    afwijking_json: stap.afwijkingJson ?? null,
+    voltooid_door_id: stap.voltooidDoorId ?? null,
+    voltooid_op: stap.voltooidOp?.toISOString() ?? null,
+    aangemaakt_op: stap.aangemaaktOp.toISOString(),
+    bijgewerkt_op: stap.bijgewerktOp.toISOString(),
+  };
+}
+
+function fallbackStapJson(volgorde: number, werkpakket: string | null): Record<string, unknown> {
+  return {
+    volgorde,
+    werkpakket,
+    doel: "Uitvoering voorbereiden",
+    handeling: "Controleer de werkplek en de benodigde materialen.",
+    benodigde_artikelen: [],
+    benodigde_gereedschappen: [],
+    veiligheidscontrole: "Voer een LMRA uit voor aanvang van de werkzaamheden.",
+    productinstructie: null,
+    foto_opdracht: "Maak een overzichtsfoto van de werkplek voor aanvang.",
+    controlevraag: "Is de werkplek veilig en zijn alle benodigde materialen aanwezig?",
+    is_laatste_stap: false,
+  };
+}
+
+async function genereerStapViaAi(
+  pimId: number,
+  volgorde: number,
+  opdrachtTitel: string,
+  inkoopCtx: Record<string, unknown>,
+  wvCtx: Record<string, unknown>,
+  aiAnalyseVorigeStap: Record<string, unknown> | null,
+  gebruikerId: number | null,
+): Promise<Record<string, unknown> | null> {
+  const vorigeStappen = await db
+    .select({
+      volgorde: pimUitvoeringStappenTable.volgorde,
+      instructieJson: pimUitvoeringStappenTable.instructieJson,
+      status: pimUitvoeringStappenTable.status,
+    })
+    .from(pimUitvoeringStappenTable)
+    .where(eq(pimUitvoeringStappenTable.pimId, pimId))
+    .orderBy(asc(pimUitvoeringStappenTable.volgorde));
+
+  const stapContext = {
+    opdracht_titel: opdrachtTitel,
+    werkpakketten: Object.keys(inkoopCtx),
+    werkvoorbereiding_samenvatting: wvCtx,
+    vorige_stappen: vorigeStappen.map((s) => ({
+      volgorde: s.volgorde,
+      status: s.status,
+      doel: (s.instructieJson as Record<string, unknown> | null)?.doel ?? null,
+    })),
+    stap_nummer: volgorde,
+    ai_analyse_vorige_stap: aiAnalyseVorigeStap,
+  };
+
+  const resultaat = await aiGateway.chat(
+    "default",
+    {
+      messages: [
+        { role: "system", content: UITVOERING_STAP_PROMPT.tekst },
+        {
+          role: "user",
+          content: `Genereer stap ${volgorde} voor deze opdracht:\n${JSON.stringify(stapContext, null, 2)}`,
+        },
+      ],
+      max_tokens: 1024,
+    },
+    60_000,
+    {
+      module: "pim_uitvoering",
+      functie: "genereer_stap",
+      gebruikerId,
+      promptNaam: UITVOERING_STAP_PROMPT.naam,
+      promptVersie: UITVOERING_STAP_PROMPT.versie,
+    },
+  );
+
+  if (!resultaat.ok || !resultaat.inhoud) return null;
+  const cleaned = resultaat.inhoud.replace(/^```json\s*/i, "").replace(/```\s*$/i, "").trim();
+  return JSON.parse(cleaned) as Record<string, unknown>;
+}
+
+/** POST /opdrachten/:id/pim/uitvoering/start */
+router.post("/opdrachten/:id/pim/uitvoering/start", schrijven, async (req, res) => {
+  const opdrachtId = parseInt(String(req.params.id), 10);
+  if (isNaN(opdrachtId)) { res.status(400).json({ error: "Ongeldig opdracht-ID" }); return; }
+  const gebruikerId = req.session.userId ?? null;
+
+  try {
+    const [pim] = await db
+      .select()
+      .from(pimModellenTable)
+      .where(eq(pimModellenTable.opdrachtId, opdrachtId));
+    if (!pim) { res.status(404).json({ error: "PIM niet gevonden voor deze opdracht" }); return; }
+
+    const bestaandeStappen = await db
+      .select({ id: pimUitvoeringStappenTable.id })
+      .from(pimUitvoeringStappenTable)
+      .where(eq(pimUitvoeringStappenTable.pimId, pim.id));
+    if (bestaandeStappen.length > 0) {
+      res.status(409).json({ error: "Uitvoering is al gestart" });
+      return;
+    }
+
+    const [opdracht] = await db
+      .select()
+      .from(opdrachtenTable)
+      .where(eq(opdrachtenTable.id, opdrachtId));
+    if (!opdracht) { res.status(404).json({ error: "Opdracht niet gevonden" }); return; }
+
+    const inkoopCtx = (pim.inkoopContext as Record<string, unknown> | null) ?? {};
+    const wvCtx = (pim.werkvoorbereidingContext as Record<string, unknown> | null) ?? {};
+    const werkpakketSleutels = Object.keys(inkoopCtx);
+
+    let stapJson: Record<string, unknown> = fallbackStapJson(1, werkpakketSleutels[0] ?? null);
+
+    if (heeftGateway()) {
+      try {
+        const result = await genereerStapViaAi(
+          pim.id, 1, opdracht.titel ?? "", inkoopCtx, wvCtx, null, gebruikerId,
+        );
+        if (result) stapJson = result;
+      } catch (aiErr) {
+        logger.warn({ aiErr }, "AI stapgeneratie mislukt, fallback stap aangemaakt");
+      }
+    }
+
+    const [nieuweStap] = await db.transaction(async (tx) => {
+      const [stap] = await tx
+        .insert(pimUitvoeringStappenTable)
+        .values({
+          pimId: pim.id,
+          volgorde: 1,
+          status: "actief",
+          werkpakketSleutel: (stapJson.werkpakket as string | null) ?? (werkpakketSleutels[0] ?? null),
+          instructieJson: stapJson,
+          bijgewerktOp: new Date(),
+        })
+        .returning();
+
+      const huidigeAiFase = opdracht.aiFase ?? "inkoop";
+      if (!["uitvoering", "oplevering", "gereed"].includes(huidigeAiFase)) {
+        await tx
+          .update(opdrachtenTable)
+          .set({ aiFase: "uitvoering", bijgewerktOp: new Date() })
+          .where(eq(opdrachtenTable.id, opdrachtId));
+      }
+
+      return [stap];
+    });
+
+    res.status(201).json(serializeStap(nieuweStap));
+  } catch (err) {
+    logger.error({ err }, "startPimUitvoering fout");
+    res.status(500).json({ error: "Serverfout bij starten uitvoering" });
+  }
+});
+
+/** GET /opdrachten/:id/pim/uitvoering/huidige-stap */
+router.get("/opdrachten/:id/pim/uitvoering/huidige-stap", lezen, async (req, res) => {
+  const opdrachtId = parseInt(String(req.params.id), 10);
+  if (isNaN(opdrachtId)) { res.status(400).json({ error: "Ongeldig opdracht-ID" }); return; }
+
+  try {
+    const [pim] = await db
+      .select({ id: pimModellenTable.id })
+      .from(pimModellenTable)
+      .where(eq(pimModellenTable.opdrachtId, opdrachtId));
+    if (!pim) { res.status(404).json({ error: "PIM niet gevonden" }); return; }
+
+    const stappen = await db
+      .select()
+      .from(pimUitvoeringStappenTable)
+      .where(
+        and(
+          eq(pimUitvoeringStappenTable.pimId, pim.id),
+          inArray(pimUitvoeringStappenTable.status, ["actief", "afgeweken"]),
+        ),
+      )
+      .orderBy(asc(pimUitvoeringStappenTable.volgorde))
+      .limit(1);
+
+    if (stappen.length === 0) {
+      res.status(404).json({ error: "Geen actieve stap gevonden" });
+      return;
+    }
+
+    res.json(serializeStap(stappen[0]));
+  } catch (err) {
+    logger.error({ err }, "getHuidigePimUitvoeringStap fout");
+    res.status(500).json({ error: "Serverfout bij ophalen huidige stap" });
+  }
+});
+
+/** POST /opdrachten/:id/pim/uitvoering/stap/:stapId/voltooien */
+router.post("/opdrachten/:id/pim/uitvoering/stap/:stapId/voltooien", schrijven, async (req, res) => {
+  const opdrachtId = parseInt(String(req.params.id), 10);
+  const stapId = parseInt(String(req.params.stapId), 10);
+  if (isNaN(opdrachtId) || isNaN(stapId)) { res.status(400).json({ error: "Ongeldig ID" }); return; }
+  const gebruikerId = req.session.userId ?? null;
+  const { antwoord_controle, opmerkingen, foto_urls } = req.body as {
+    antwoord_controle: boolean;
+    opmerkingen?: string;
+    foto_urls?: string[];
+  };
+
+  try {
+    const [stap] = await db
+      .select()
+      .from(pimUitvoeringStappenTable)
+      .where(eq(pimUitvoeringStappenTable.id, stapId));
+    if (!stap) { res.status(404).json({ error: "Stap niet gevonden" }); return; }
+    if (stap.status !== "actief") { res.status(409).json({ error: "Stap is niet actief" }); return; }
+
+    const [pim] = await db
+      .select()
+      .from(pimModellenTable)
+      .where(eq(pimModellenTable.id, stap.pimId));
+    if (!pim) { res.status(404).json({ error: "PIM niet gevonden" }); return; }
+
+    const [opdracht] = await db
+      .select({ titel: opdrachtenTable.titel })
+      .from(opdrachtenTable)
+      .where(eq(opdrachtenTable.id, opdrachtId));
+    if (!opdracht) { res.status(404).json({ error: "Opdracht niet gevonden" }); return; }
+
+    await db
+      .update(pimUitvoeringStappenTable)
+      .set({
+        status: "voltooid",
+        antwoordenJson: { antwoord_controle, opmerkingen: opmerkingen ?? null, voltooid_op: new Date().toISOString() },
+        fotoUrls: foto_urls ?? [],
+        voltooidDoorId: gebruikerId,
+        voltooidOp: new Date(),
+        bijgewerktOp: new Date(),
+      })
+      .where(eq(pimUitvoeringStappenTable.id, stapId));
+
+    const instructie = stap.instructieJson as Record<string, unknown> | null;
+    const isLaatsteStap = instructie?.is_laatste_stap === true;
+
+    if (isLaatsteStap) {
+      res.json({ voltooid_stap_id: stapId, uitvoering_gereed: true, volgende_stap: null });
+      return;
+    }
+
+    // Volgende stap genereren
+    let volgendeStapSerialized = null;
+    if (heeftGateway()) {
+      try {
+        const inkoopCtx = (pim.inkoopContext as Record<string, unknown> | null) ?? {};
+        const wvCtx = (pim.werkvoorbereidingContext as Record<string, unknown> | null) ?? {};
+        const volgendeVolgorde = stap.volgorde + 1;
+
+        const volgendeInstructie = await genereerStapViaAi(
+          pim.id, volgendeVolgorde, opdracht.titel ?? "", inkoopCtx, wvCtx, null, gebruikerId,
+        );
+
+        if (volgendeInstructie?.is_laatste_stap === true && !volgendeInstructie?.doel) {
+          res.json({ voltooid_stap_id: stapId, uitvoering_gereed: true, volgende_stap: null });
+          return;
+        }
+
+        if (volgendeInstructie) {
+          const [nieuwStap] = await db
+            .insert(pimUitvoeringStappenTable)
+            .values({
+              pimId: pim.id,
+              volgorde: volgendeVolgorde,
+              status: "actief",
+              werkpakketSleutel: (volgendeInstructie.werkpakket as string | null) ?? null,
+              instructieJson: volgendeInstructie,
+              bijgewerktOp: new Date(),
+            })
+            .returning();
+          volgendeStapSerialized = serializeStap(nieuwStap);
+        }
+      } catch (nextErr) {
+        logger.warn({ nextErr }, "Volgende stap generatie mislukt");
+      }
+    }
+
+    res.json({ voltooid_stap_id: stapId, uitvoering_gereed: false, volgende_stap: volgendeStapSerialized });
+  } catch (err) {
+    logger.error({ err }, "voltooiPimUitvoeringStap fout");
+    res.status(500).json({ error: "Serverfout bij voltooien stap" });
+  }
+});
+
+/** POST /opdrachten/:id/pim/uitvoering/stap/:stapId/afwijking */
+router.post("/opdrachten/:id/pim/uitvoering/stap/:stapId/afwijking", schrijven, async (req, res) => {
+  const stapId = parseInt(String(req.params.stapId), 10);
+  if (isNaN(stapId)) { res.status(400).json({ error: "Ongeldig stap-ID" }); return; }
+  const gebruikerId = req.session.userId ?? null;
+  const { omschrijving, foto_urls } = req.body as { omschrijving: string; foto_urls?: string[] };
+
+  try {
+    const [stap] = await db
+      .select()
+      .from(pimUitvoeringStappenTable)
+      .where(eq(pimUitvoeringStappenTable.id, stapId));
+    if (!stap) { res.status(404).json({ error: "Stap niet gevonden" }); return; }
+
+    let afwijkingAi: Record<string, unknown> = {
+      afwijking_omschrijving: omschrijving,
+      impact: "Onbekend — projectleider beslist over vervolgstappen",
+      vervolgopties: ["Doorgaan met aanpassing", "Stoppen en overleggen met projectleider"],
+      meerwerk_indicatie: false,
+      stop_vereist: false,
+    };
+
+    if (heeftGateway()) {
+      try {
+        const stapInstructie = stap.instructieJson as Record<string, unknown> | null;
+        const resultaat = await aiGateway.chat(
+          "default",
+          {
+            messages: [
+              { role: "system", content: UITVOERING_FOTO_ANALYSE_PROMPT.tekst },
+              {
+                role: "user",
+                content: `Er is een afwijking gemeld bij uitvoeringsstap ${stap.volgorde}.\nStap doel: ${stapInstructie?.doel ?? "onbekend"}\nAfwijking: ${omschrijving}\nAnalyseer de impact en geef vervolgopties. Geef JSON terug.`,
+              },
+            ],
+            max_tokens: 512,
+          },
+          30_000,
+          { module: "pim_uitvoering", functie: "afwijking_analyse", gebruikerId, promptNaam: UITVOERING_FOTO_ANALYSE_PROMPT.naam, promptVersie: UITVOERING_FOTO_ANALYSE_PROMPT.versie },
+        );
+        if (resultaat.ok && resultaat.inhoud) {
+          const cleaned = resultaat.inhoud.replace(/^```json\s*/i, "").replace(/```\s*$/i, "").trim();
+          const parsed = JSON.parse(cleaned) as Record<string, unknown>;
+          afwijkingAi = {
+            afwijking_omschrijving: omschrijving,
+            impact: parsed.impact ?? "Onbekend",
+            vervolgopties: parsed.vervolgopties ?? ["Doorgaan", "Stoppen"],
+            meerwerk_indicatie: parsed.meerwerk_indicatie ?? false,
+            stop_vereist: parsed.stop_vereist ?? false,
+            bevindingen: parsed.bevindingen ?? null,
+          };
+        }
+      } catch (aiErr) {
+        logger.warn({ aiErr }, "AI afwijkingsanalyse mislukt, basis afwijking opgeslagen");
+      }
+    }
+
+    const [bijgewerktStap] = await db
+      .update(pimUitvoeringStappenTable)
+      .set({
+        status: "afgeweken",
+        fotoUrls: foto_urls ?? [],
+        afwijkingJson: { ...afwijkingAi, gemeld_op: new Date().toISOString(), beslissing: null },
+        bijgewerktOp: new Date(),
+      })
+      .where(eq(pimUitvoeringStappenTable.id, stapId))
+      .returning();
+
+    res.json(serializeStap(bijgewerktStap));
+  } catch (err) {
+    logger.error({ err }, "meldPimUitvoeringAfwijking fout");
+    res.status(500).json({ error: "Serverfout bij melden afwijking" });
+  }
+});
+
+/** POST /opdrachten/:id/pim/uitvoering/stap/:stapId/afwijking/beslis */
+router.post("/opdrachten/:id/pim/uitvoering/stap/:stapId/afwijking/beslis", schrijven, async (req, res) => {
+  const opdrachtId = parseInt(String(req.params.id), 10);
+  const stapId = parseInt(String(req.params.stapId), 10);
+  if (isNaN(opdrachtId) || isNaN(stapId)) { res.status(400).json({ error: "Ongeldig ID" }); return; }
+  const { beslissing, toelichting } = req.body as { beslissing: "doorgaan" | "stoppen"; toelichting?: string };
+
+  try {
+    const [stap] = await db
+      .select()
+      .from(pimUitvoeringStappenTable)
+      .where(eq(pimUitvoeringStappenTable.id, stapId));
+    if (!stap) { res.status(404).json({ error: "Stap niet gevonden" }); return; }
+    if (stap.status !== "afgeweken") {
+      res.status(409).json({ error: "Stap heeft geen actieve afwijking" }); return;
+    }
+
+    const bestaandeAfwijking = (stap.afwijkingJson as Record<string, unknown> | null) ?? {};
+    const bijgewerktAfwijking = {
+      ...bestaandeAfwijking,
+      beslissing,
+      toelichting: toelichting ?? null,
+      beslist_op: new Date().toISOString(),
+    };
+
+    if (beslissing === "stoppen") {
+      await db
+        .update(pimUitvoeringStappenTable)
+        .set({ status: "overgeslagen", afwijkingJson: bijgewerktAfwijking, bijgewerktOp: new Date() })
+        .where(eq(pimUitvoeringStappenTable.id, stapId));
+
+      res.json({ voltooid_stap_id: stapId, uitvoering_gereed: true, volgende_stap: null });
+      return;
+    }
+
+    // Doorgaan: stap terug op actief, afwijking blijft gelogd
+    const [bijgewerktStap] = await db
+      .update(pimUitvoeringStappenTable)
+      .set({ status: "actief", afwijkingJson: bijgewerktAfwijking, bijgewerktOp: new Date() })
+      .where(eq(pimUitvoeringStappenTable.id, stapId))
+      .returning();
+
+    res.json({
+      voltooid_stap_id: stapId,
+      uitvoering_gereed: false,
+      volgende_stap: bijgewerktStap ? serializeStap(bijgewerktStap) : null,
+    });
+  } catch (err) {
+    logger.error({ err }, "beslisPimUitvoeringAfwijking fout");
+    res.status(500).json({ error: "Serverfout bij beslissing afwijking" });
+  }
+});
 
 export default router;

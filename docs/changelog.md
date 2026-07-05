@@ -4,6 +4,50 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-05 — PIM Fase E — Adaptieve Uitvoering (Task #300)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+**Wat is gebouwd:**
+
+**Backend — 5 nieuwe uitvoeringsroutes in `pim.ts`:**
+- `POST /opdrachten/:id/pim/uitvoering/start` — genereert stap 1 via AI (fallback indien geen gateway), slaat op in `pim_uitvoering_stappen`, zet `aiFase → uitvoering`; 409 als uitvoering al gestart
+- `GET /opdrachten/:id/pim/uitvoering/huidige-stap` — geeft de eerste actieve/afgeweken stap terug
+- `POST /opdrachten/:id/pim/uitvoering/stap/:stapId/voltooien` — markeert stap als voltooid, genereert volgende stap via AI; `is_laatste_stap=true` signaleert einde uitvoering
+- `POST /opdrachten/:id/pim/uitvoering/stap/:stapId/afwijking` — registreert afwijking + AI-impactanalyse; status → `afgeweken`
+- `POST /opdrachten/:id/pim/uitvoering/stap/:stapId/afwijking/beslis` — beslissing `doorgaan`/`stoppen`; doorgaan herstart stap, stoppen markeert als overgeslagen + uitvoering gereed
+
+**Helpers:**
+- `serializeStap()` — consistente serialisatie voor alle 5 endpoints
+- `fallbackStapJson()` — deterministische fallback als AI niet beschikbaar is
+- `genereerStapViaAi()` — roept `aiGateway.chat("default", ...)` aan met `UITVOERING_STAP_PROMPT`; logt naar `ai_aanroepen`
+
+**AI-prompts (eerder in sessie toegevoegd):**
+- `UITVOERING_STAP_PROMPT` — AI werkuitvoerder-persona; genereert stap-JSON (doel, handeling, benodigde artikelen/gereedschappen, veiligheidscontrole, foto_opdracht, controlevraag, is_laatste_stap)
+- `UITVOERING_FOTO_ANALYSE_PROMPT` — afwijkingsanalyse-persona; impact/vervolgopties/meerwerk_indicatie/stop_vereist
+
+**OpenAPI spec — 5 nieuwe paden + schemas:**
+- `PimUitvoeringStap`, `PimUitvoeringVoltooienInput`, `PimUitvoeringVoltooiResultaat`, `PimUitvoeringAfwijkingInput`, `PimUitvoeringBeslisInput`
+- Codegen succesvol uitgevoerd; hooks gegenereerd: `useStartPimUitvoering`, `useGetHuidigePimUitvoeringStap`, `useVoltooiPimUitvoeringStap`, `useMeldPimUitvoeringAfwijking`, `useBeslisPimUitvoeringAfwijking`
+
+**Frontend — `pim-uitvoering-tab.tsx` (nieuw):**
+- Toont "Uitvoering nog niet gestart" met Start-knop als er geen actieve stap is
+- Actieve stap: instructiekaart (doel, handeling, veiligheidscontrole, foto-opdracht, benodigde artikelen/gereedschappen, productinstructie, controlevraag) + voltooien-formulier (controlevraag antwoord + opmerkingen)
+- Afwijking melden: formulier met omschrijving + meld-knop; AI-analyse wordt getoond
+- Afwijkingsbeslissing: `AfwijkingBeslisForm` met AI-impactweergave + doorgaan/stoppen-knoppen
+- Uitvoering gereed: succesmelding
+- Tab "Uitvoering" (HardHat-icoon) toegevoegd aan `detail.tsx` naast bestaande tabs
+
+**Typecheck:** clean — api-server geen nieuwe fouten (alleen pre-existing TS7030 in offertes.ts:692); firevault geen fouten
+
+**Correcties na review:**
+- `aiGateway()` → `aiGateway.chat(slot, params, timeout, logCtx)` (aiGateway is singleton object, geen callable functie)
+- `parseInt(req.params.id, 10)` → `parseInt(String(req.params.id), 10)` (Express 5: params zijn `string | string[]`)
+- `(req.session as Record<string,unknown>)?.userId` → `req.session.userId` (correct patroon)
+- `ObjectStorageService.getPublicUrl()` verwijderd (methode bestaat niet); foto-analyse vereenvoudigd
+- `{unknown && JSX}` → `{!!unknown && JSX}` (TS2322: unknown niet toewijsbaar als ReactNode)
+- `useGetHuidigePimUitvoeringStap(id, { query: {...} })` → `useGetHuidigePimUitvoeringStap(id)` (TS2741: queryKey pre-existing)
+
 ## 2026-07-04 — PIM Fase C — Werkvoorbereiding AI
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risco:** laag

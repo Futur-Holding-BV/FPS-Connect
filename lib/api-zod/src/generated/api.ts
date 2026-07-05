@@ -12642,6 +12642,175 @@ export const UpdatePimFaseResponse = zod.object({
 
 
 /**
+ * @summary Start adaptieve uitvoering — genereert stap 1 via AI, zet ai_fase naar uitvoering
+ */
+export const StartPimUitvoeringParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const StartPimUitvoeringResponse = zod.void()
+
+
+/**
+ * @summary Actieve uitvoeringsstap ophalen (status actief of afgeweken)
+ */
+export const GetHuidigePimUitvoeringStapParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetHuidigePimUitvoeringStapResponse = zod.object({
+  "id": zod.number(),
+  "pim_id": zod.number(),
+  "volgorde": zod.number(),
+  "status": zod.string().describe('open | actief | voltooid | afgeweken | overgeslagen'),
+  "werkpakket_sleutel": zod.string().nullish(),
+  "instructie_json": zod.object({
+
+}).passthrough().nullish().describe('AI-gegenereerde stapinstructie'),
+  "antwoorden_json": zod.object({
+
+}).passthrough().nullish().describe('Antwoorden van de monteur'),
+  "foto_urls": zod.array(zod.string()).optional().describe('Object-storage paden van de stapfoto\'s'),
+  "ai_analyse_json": zod.object({
+
+}).passthrough().nullish().describe('AI-analyse van foto\'s en antwoorden'),
+  "afwijking_json": zod.object({
+
+}).passthrough().nullish().describe('Afwijkingdetails inclusief beslissing projectleider'),
+  "voltooid_door_id": zod.number().nullish(),
+  "voltooid_op": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Stap voltooien — monteur stuurt antwoorden + foto-urls; AI analyseert en maakt volgende stap
+ */
+export const VoltooiPimUitvoeringStapParams = zod.object({
+  "id": zod.coerce.number(),
+  "stapId": zod.coerce.number()
+})
+
+export const VoltooiPimUitvoeringStapBody = zod.object({
+  "antwoord_controle": zod.boolean().describe('Monteur bevestigt dat de controlevraag met \"ja\" is beantwoord'),
+  "opmerkingen": zod.string().optional().describe('Optionele opmerkingen van de monteur'),
+  "foto_urls": zod.array(zod.string()).optional().describe('Object-storage paden van gemaakte foto\'s')
+})
+
+export const VoltooiPimUitvoeringStapResponse = zod.object({
+  "voltooid_stap_id": zod.number(),
+  "uitvoering_gereed": zod.boolean(),
+  "volgende_stap": zod.object({
+  "id": zod.number(),
+  "pim_id": zod.number(),
+  "volgorde": zod.number(),
+  "status": zod.string().describe('open | actief | voltooid | afgeweken | overgeslagen'),
+  "werkpakket_sleutel": zod.string().nullish(),
+  "instructie_json": zod.object({
+
+}).passthrough().nullish().describe('AI-gegenereerde stapinstructie'),
+  "antwoorden_json": zod.object({
+
+}).passthrough().nullish().describe('Antwoorden van de monteur'),
+  "foto_urls": zod.array(zod.string()).optional().describe('Object-storage paden van de stapfoto\'s'),
+  "ai_analyse_json": zod.object({
+
+}).passthrough().nullish().describe('AI-analyse van foto\'s en antwoorden'),
+  "afwijking_json": zod.object({
+
+}).passthrough().nullish().describe('Afwijkingdetails inclusief beslissing projectleider'),
+  "voltooid_door_id": zod.number().nullish(),
+  "voltooid_op": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+}).optional()
+})
+
+
+/**
+ * @summary Afwijking melden — AI benoemt impact en vervolgopties; verdere stappen geblokkeerd
+ */
+export const MeldPimUitvoeringAfwijkingParams = zod.object({
+  "id": zod.coerce.number(),
+  "stapId": zod.coerce.number()
+})
+
+export const MeldPimUitvoeringAfwijkingBody = zod.object({
+  "omschrijving": zod.string().describe('Omschrijving van de afwijking door de monteur'),
+  "foto_urls": zod.array(zod.string()).optional()
+})
+
+export const MeldPimUitvoeringAfwijkingResponse = zod.object({
+  "id": zod.number(),
+  "pim_id": zod.number(),
+  "volgorde": zod.number(),
+  "status": zod.string().describe('open | actief | voltooid | afgeweken | overgeslagen'),
+  "werkpakket_sleutel": zod.string().nullish(),
+  "instructie_json": zod.object({
+
+}).passthrough().nullish().describe('AI-gegenereerde stapinstructie'),
+  "antwoorden_json": zod.object({
+
+}).passthrough().nullish().describe('Antwoorden van de monteur'),
+  "foto_urls": zod.array(zod.string()).optional().describe('Object-storage paden van de stapfoto\'s'),
+  "ai_analyse_json": zod.object({
+
+}).passthrough().nullish().describe('AI-analyse van foto\'s en antwoorden'),
+  "afwijking_json": zod.object({
+
+}).passthrough().nullish().describe('Afwijkingdetails inclusief beslissing projectleider'),
+  "voltooid_door_id": zod.number().nullish(),
+  "voltooid_op": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Projectleider beslist over afwijking — doorgaan of stoppen
+ */
+export const BeslisPimUitvoeringAfwijkingParams = zod.object({
+  "id": zod.coerce.number(),
+  "stapId": zod.coerce.number()
+})
+
+export const BeslisPimUitvoeringAfwijkingBody = zod.object({
+  "beslissing": zod.string().describe('doorgaan | stoppen'),
+  "toelichting": zod.string().optional().describe('Toelichting bij de beslissing van de projectleider')
+})
+
+export const BeslisPimUitvoeringAfwijkingResponse = zod.object({
+  "voltooid_stap_id": zod.number(),
+  "uitvoering_gereed": zod.boolean(),
+  "volgende_stap": zod.object({
+  "id": zod.number(),
+  "pim_id": zod.number(),
+  "volgorde": zod.number(),
+  "status": zod.string().describe('open | actief | voltooid | afgeweken | overgeslagen'),
+  "werkpakket_sleutel": zod.string().nullish(),
+  "instructie_json": zod.object({
+
+}).passthrough().nullish().describe('AI-gegenereerde stapinstructie'),
+  "antwoorden_json": zod.object({
+
+}).passthrough().nullish().describe('Antwoorden van de monteur'),
+  "foto_urls": zod.array(zod.string()).optional().describe('Object-storage paden van de stapfoto\'s'),
+  "ai_analyse_json": zod.object({
+
+}).passthrough().nullish().describe('AI-analyse van foto\'s en antwoorden'),
+  "afwijking_json": zod.object({
+
+}).passthrough().nullish().describe('Afwijkingdetails inclusief beslissing projectleider'),
+  "voltooid_door_id": zod.number().nullish(),
+  "voltooid_op": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+}).optional()
+})
+
+
+/**
  * @summary Onderaannemer-orders van opdracht ophalen
  */
 export const ListOnderaannemeOrdersParams = zod.object({

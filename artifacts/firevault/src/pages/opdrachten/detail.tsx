@@ -53,6 +53,7 @@ import InkoopplanningTab from "./inkoopplanning-tab";
 import UitvoeringsplanningTab from "./uitvoeringsplanning-tab";
 import OnderaannemeringTab from "./onderaanneming-tab";
 import MateriaaltabTab from "./materiaal-tab";
+import PimUitvoeringTab from "./pim-uitvoering-tab";
 
 function euro(n: number | null | undefined) {
   return new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(n ?? 0);
@@ -610,6 +611,10 @@ export default function OpdrachtDetailPagina() {
           <TabsTrigger value="ai-regisseur">
             <Brain className="h-3.5 w-3.5 mr-1.5" />
             AI Regisseur
+          </TabsTrigger>
+          <TabsTrigger value="uitvoering">
+            <HardHat className="h-3.5 w-3.5 mr-1.5" />
+            Uitvoering
           </TabsTrigger>
         </TabsList>
 
@@ -1761,6 +1766,11 @@ export default function OpdrachtDetailPagina() {
               })()}
             </>
           )}
+        </TabsContent>
+
+        {/* ── Uitvoering ── */}
+        <TabsContent value="uitvoering">
+          <PimUitvoeringTab opdrachtId={opdrachtId} />
         </TabsContent>
       </Tabs>
 

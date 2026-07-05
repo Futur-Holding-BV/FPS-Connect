@@ -560,6 +560,11 @@ import type {
   PimFaseResultaat,
   PimModel,
   PimRapportResultaat,
+  PimUitvoeringAfwijkingInput,
+  PimUitvoeringBeslisInput,
+  PimUitvoeringStap,
+  PimUitvoeringVoltooiResultaat,
+  PimUitvoeringVoltooienInput,
   PimVaststellenResultaat,
   PimWerkvoorbereidingInput,
   PimWerkvoorbereidingPatchInput,
@@ -36619,6 +36624,372 @@ export const useUpdatePimFase = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getUpdatePimFaseMutationOptions(options));
+    }
+
+export const getStartPimUitvoeringUrl = (id: number,) => {
+
+
+
+
+  return `/api/opdrachten/${id}/pim/uitvoering/start`
+}
+
+/**
+ * @summary Start adaptieve uitvoering — genereert stap 1 via AI, zet ai_fase naar uitvoering
+ */
+export const startPimUitvoering = async (id: number, options?: RequestInit): Promise<PimUitvoeringStap> => {
+
+  return customFetch<PimUitvoeringStap>(getStartPimUitvoeringUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getStartPimUitvoeringMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof startPimUitvoering>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof startPimUitvoering>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['startPimUitvoering'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof startPimUitvoering>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  startPimUitvoering(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type StartPimUitvoeringMutationResult = NonNullable<Awaited<ReturnType<typeof startPimUitvoering>>>
+
+    export type StartPimUitvoeringMutationError = ErrorType<void>
+
+    /**
+ * @summary Start adaptieve uitvoering — genereert stap 1 via AI, zet ai_fase naar uitvoering
+ */
+export const useStartPimUitvoering = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof startPimUitvoering>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof startPimUitvoering>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getStartPimUitvoeringMutationOptions(options));
+    }
+
+export const getGetHuidigePimUitvoeringStapUrl = (id: number,) => {
+
+
+
+
+  return `/api/opdrachten/${id}/pim/uitvoering/huidige-stap`
+}
+
+/**
+ * @summary Actieve uitvoeringsstap ophalen (status actief of afgeweken)
+ */
+export const getHuidigePimUitvoeringStap = async (id: number, options?: RequestInit): Promise<PimUitvoeringStap> => {
+
+  return customFetch<PimUitvoeringStap>(getGetHuidigePimUitvoeringStapUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetHuidigePimUitvoeringStapQueryKey = (id: number,) => {
+    return [
+    `/api/opdrachten/${id}/pim/uitvoering/huidige-stap`
+    ] as const;
+    }
+
+
+export const getGetHuidigePimUitvoeringStapQueryOptions = <TData = Awaited<ReturnType<typeof getHuidigePimUitvoeringStap>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getHuidigePimUitvoeringStap>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetHuidigePimUitvoeringStapQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getHuidigePimUitvoeringStap>>> = ({ signal }) => getHuidigePimUitvoeringStap(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getHuidigePimUitvoeringStap>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetHuidigePimUitvoeringStapQueryResult = NonNullable<Awaited<ReturnType<typeof getHuidigePimUitvoeringStap>>>
+export type GetHuidigePimUitvoeringStapQueryError = ErrorType<void>
+
+
+/**
+ * @summary Actieve uitvoeringsstap ophalen (status actief of afgeweken)
+ */
+
+export function useGetHuidigePimUitvoeringStap<TData = Awaited<ReturnType<typeof getHuidigePimUitvoeringStap>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getHuidigePimUitvoeringStap>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetHuidigePimUitvoeringStapQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getVoltooiPimUitvoeringStapUrl = (id: number,
+    stapId: number,) => {
+
+
+
+
+  return `/api/opdrachten/${id}/pim/uitvoering/stap/${stapId}/voltooien`
+}
+
+/**
+ * @summary Stap voltooien — monteur stuurt antwoorden + foto-urls; AI analyseert en maakt volgende stap
+ */
+export const voltooiPimUitvoeringStap = async (id: number,
+    stapId: number,
+    pimUitvoeringVoltooienInput: PimUitvoeringVoltooienInput, options?: RequestInit): Promise<PimUitvoeringVoltooiResultaat> => {
+
+  return customFetch<PimUitvoeringVoltooiResultaat>(getVoltooiPimUitvoeringStapUrl(id,stapId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(pimUitvoeringVoltooienInput)
+  }
+);}
+
+
+
+
+export const getVoltooiPimUitvoeringStapMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof voltooiPimUitvoeringStap>>, TError,{id: number;stapId: number;data: BodyType<PimUitvoeringVoltooienInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof voltooiPimUitvoeringStap>>, TError,{id: number;stapId: number;data: BodyType<PimUitvoeringVoltooienInput>}, TContext> => {
+
+const mutationKey = ['voltooiPimUitvoeringStap'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof voltooiPimUitvoeringStap>>, {id: number;stapId: number;data: BodyType<PimUitvoeringVoltooienInput>}> = (props) => {
+          const {id,stapId,data} = props ?? {};
+
+          return  voltooiPimUitvoeringStap(id,stapId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type VoltooiPimUitvoeringStapMutationResult = NonNullable<Awaited<ReturnType<typeof voltooiPimUitvoeringStap>>>
+    export type VoltooiPimUitvoeringStapMutationBody = BodyType<PimUitvoeringVoltooienInput>
+    export type VoltooiPimUitvoeringStapMutationError = ErrorType<void>
+
+    /**
+ * @summary Stap voltooien — monteur stuurt antwoorden + foto-urls; AI analyseert en maakt volgende stap
+ */
+export const useVoltooiPimUitvoeringStap = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof voltooiPimUitvoeringStap>>, TError,{id: number;stapId: number;data: BodyType<PimUitvoeringVoltooienInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof voltooiPimUitvoeringStap>>,
+        TError,
+        {id: number;stapId: number;data: BodyType<PimUitvoeringVoltooienInput>},
+        TContext
+      > => {
+      return useMutation(getVoltooiPimUitvoeringStapMutationOptions(options));
+    }
+
+export const getMeldPimUitvoeringAfwijkingUrl = (id: number,
+    stapId: number,) => {
+
+
+
+
+  return `/api/opdrachten/${id}/pim/uitvoering/stap/${stapId}/afwijking`
+}
+
+/**
+ * @summary Afwijking melden — AI benoemt impact en vervolgopties; verdere stappen geblokkeerd
+ */
+export const meldPimUitvoeringAfwijking = async (id: number,
+    stapId: number,
+    pimUitvoeringAfwijkingInput: PimUitvoeringAfwijkingInput, options?: RequestInit): Promise<PimUitvoeringStap> => {
+
+  return customFetch<PimUitvoeringStap>(getMeldPimUitvoeringAfwijkingUrl(id,stapId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(pimUitvoeringAfwijkingInput)
+  }
+);}
+
+
+
+
+export const getMeldPimUitvoeringAfwijkingMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof meldPimUitvoeringAfwijking>>, TError,{id: number;stapId: number;data: BodyType<PimUitvoeringAfwijkingInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof meldPimUitvoeringAfwijking>>, TError,{id: number;stapId: number;data: BodyType<PimUitvoeringAfwijkingInput>}, TContext> => {
+
+const mutationKey = ['meldPimUitvoeringAfwijking'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof meldPimUitvoeringAfwijking>>, {id: number;stapId: number;data: BodyType<PimUitvoeringAfwijkingInput>}> = (props) => {
+          const {id,stapId,data} = props ?? {};
+
+          return  meldPimUitvoeringAfwijking(id,stapId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type MeldPimUitvoeringAfwijkingMutationResult = NonNullable<Awaited<ReturnType<typeof meldPimUitvoeringAfwijking>>>
+    export type MeldPimUitvoeringAfwijkingMutationBody = BodyType<PimUitvoeringAfwijkingInput>
+    export type MeldPimUitvoeringAfwijkingMutationError = ErrorType<void>
+
+    /**
+ * @summary Afwijking melden — AI benoemt impact en vervolgopties; verdere stappen geblokkeerd
+ */
+export const useMeldPimUitvoeringAfwijking = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof meldPimUitvoeringAfwijking>>, TError,{id: number;stapId: number;data: BodyType<PimUitvoeringAfwijkingInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof meldPimUitvoeringAfwijking>>,
+        TError,
+        {id: number;stapId: number;data: BodyType<PimUitvoeringAfwijkingInput>},
+        TContext
+      > => {
+      return useMutation(getMeldPimUitvoeringAfwijkingMutationOptions(options));
+    }
+
+export const getBeslisPimUitvoeringAfwijkingUrl = (id: number,
+    stapId: number,) => {
+
+
+
+
+  return `/api/opdrachten/${id}/pim/uitvoering/stap/${stapId}/afwijking/beslis`
+}
+
+/**
+ * @summary Projectleider beslist over afwijking — doorgaan of stoppen
+ */
+export const beslisPimUitvoeringAfwijking = async (id: number,
+    stapId: number,
+    pimUitvoeringBeslisInput: PimUitvoeringBeslisInput, options?: RequestInit): Promise<PimUitvoeringVoltooiResultaat> => {
+
+  return customFetch<PimUitvoeringVoltooiResultaat>(getBeslisPimUitvoeringAfwijkingUrl(id,stapId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(pimUitvoeringBeslisInput)
+  }
+);}
+
+
+
+
+export const getBeslisPimUitvoeringAfwijkingMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof beslisPimUitvoeringAfwijking>>, TError,{id: number;stapId: number;data: BodyType<PimUitvoeringBeslisInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof beslisPimUitvoeringAfwijking>>, TError,{id: number;stapId: number;data: BodyType<PimUitvoeringBeslisInput>}, TContext> => {
+
+const mutationKey = ['beslisPimUitvoeringAfwijking'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof beslisPimUitvoeringAfwijking>>, {id: number;stapId: number;data: BodyType<PimUitvoeringBeslisInput>}> = (props) => {
+          const {id,stapId,data} = props ?? {};
+
+          return  beslisPimUitvoeringAfwijking(id,stapId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type BeslisPimUitvoeringAfwijkingMutationResult = NonNullable<Awaited<ReturnType<typeof beslisPimUitvoeringAfwijking>>>
+    export type BeslisPimUitvoeringAfwijkingMutationBody = BodyType<PimUitvoeringBeslisInput>
+    export type BeslisPimUitvoeringAfwijkingMutationError = ErrorType<void>
+
+    /**
+ * @summary Projectleider beslist over afwijking — doorgaan of stoppen
+ */
+export const useBeslisPimUitvoeringAfwijking = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof beslisPimUitvoeringAfwijking>>, TError,{id: number;stapId: number;data: BodyType<PimUitvoeringBeslisInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof beslisPimUitvoeringAfwijking>>,
+        TError,
+        {id: number;stapId: number;data: BodyType<PimUitvoeringBeslisInput>},
+        TContext
+      > => {
+      return useMutation(getBeslisPimUitvoeringAfwijkingMutationOptions(options));
     }
 
 export const getListOnderaannemeOrdersUrl = (id: number,) => {
