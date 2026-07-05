@@ -318,9 +318,89 @@ async function main() {
     }
   }
 
-  // ─── 8. Git changelog ─────────────────────────────────────────────────────
+  // ─── 8. Stale lib-declaraties ─────────────────────────────────────────────
 
-  sectie("11. Recente wijzigingen (changelog)");
+  sectie("11. Lib dist/ — stale declaraties en git-tracking");
+
+  // Stap A: controleer of er dist/-bestanden getrackt zijn in git.
+  // Tracked dist/-bestanden betekent dat stale declaraties ooit gecommit zijn
+  // en bij een volgende checkout kapotte types kunnen veroorzaken.
+  const trackedDist = run("git --no-optional-locks ls-files lib/*/dist/");
+  const trackedDistBestanden = trackedDist.output.split("\n").filter((l) => l.trim().length > 0);
+  if (trackedDistBestanden.length > 0) {
+    trackedDistBestanden.forEach((f) => {
+      fout(`Git-tracked dist-declaratie: ${f}`);
+      registreer("Lib dist/", "hoog", `Stale declaratie getrackt in git: ${f} — verwijder met git rm --cached`);
+    });
+  } else {
+    ok("Geen lib dist/-bestanden getrackt in git");
+  }
+
+  // Stap B: controleer of de lokale dist/-map up-to-date is met de broncode.
+  // Daarvoor voeren we tsc --build uit en kijken we of er daarna wijzigingen
+  // zijn in lib/*/dist/ ten opzichte van de working tree (git diff + untracked).
+  const tscBuildResult = run("pnpm run typecheck:libs");
+  const tscBuildErrors = tscBuildResult.output.split("\n").filter((l) => l.includes("error TS"));
+  if (tscBuildErrors.length > 0) {
+    // Typecheck zelf rapporteert de fouten al in sectie 1 — hier alleen
+    // een samenvatting toevoegen als context voor de dist/-check.
+    waarschuwing("tsc --build faalde; dist/-sync kon niet worden geverifieerd");
+    registreer("Lib dist/", "middel", "tsc --build faalde — dist/-sync onbekend");
+  } else {
+    // Na een geslaagde build: kijk of de dist/-mappen na het builden gewijzigde
+    // of onverwachte bestanden bevatten (indicator: git ziet ze als untracked
+    // terwijl ze juist NIET getrackt mogen zijn).
+    // We controleren of er .d.ts-bestanden zijn die NIET kunnen worden
+    // gebuild (d.w.z. de dist/ bevat meer bestanden dan de build zou
+    // produceren, wat duidt op verouderde declaraties van verwijderde exports).
+    const compositeLibs = ["lib/api-client-react", "lib/api-zod", "lib/db",
+      "lib/object-storage-web", "lib/permissies"];
+    let staleBestanden = 0;
+    for (const lib of compositeLibs) {
+      const distPad = path.join(repoRoot, lib, "dist");
+      if (!fs.existsSync(distPad)) continue;
+
+      // Verzamel alle .d.ts-bestanden in dist/
+      const distDeclaraties = new Set<string>();
+      const leesDistDir = (dir: string) => {
+        for (const item of fs.readdirSync(dir)) {
+          const volledigPad = path.join(dir, item);
+          if (fs.statSync(volledigPad).isDirectory()) {
+            leesDistDir(volledigPad);
+          } else if (item.endsWith(".d.ts")) {
+            distDeclaraties.add(volledigPad.replace(distPad + "/", ""));
+          }
+        }
+      };
+      leesDistDir(distPad);
+
+      // Controleer voor elke dist-declaratie of er een bijbehorend
+      // bronbestand bestaat (.ts, .tsx, .mts of .cts). Ontbreekt het
+      // voor alle geldige extensies → stale declaratie van een
+      // verwijderde export.
+      const srcPadLib = path.join(repoRoot, lib, "src");
+      const bronExtensies = [".ts", ".tsx", ".mts", ".cts"];
+      for (const decl of distDeclaraties) {
+        const basisZonderExt = decl.replace(/\.d\.ts$/, "");
+        const bestaatBron = bronExtensies.some((ext) =>
+          fs.existsSync(path.join(srcPadLib, basisZonderExt + ext))
+        );
+        if (!bestaatBron) {
+          fout(`Stale declaratie zonder bronbestand: ${lib}/dist/${decl}`);
+          registreer("Lib dist/", "hoog",
+            `Stale declaratie: ${lib}/dist/${decl} — geen overeenkomend bronbestand in ${lib}/src/`);
+          staleBestanden++;
+        }
+      }
+    }
+    if (staleBestanden === 0) {
+      ok("Alle dist/-declaraties hebben een overeenkomend bronbestand");
+    }
+  }
+
+  // ─── 9. Git changelog ─────────────────────────────────────────────────────
+
+  sectie("12. Recente wijzigingen (changelog)");
   const gitLog = run("git --no-optional-locks log --oneline -10 --no-decorate");
   if (gitLog.ok && gitLog.output) {
     gitLog.output.split("\n").forEach((l) => info(l));

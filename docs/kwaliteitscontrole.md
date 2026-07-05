@@ -50,6 +50,7 @@ Rapporteert alleen — wijzigt niets. Bevindingen worden geclassificeerd als:
 - Dode code en ongebruikte componenten
 - Dubbele functies
 - Performance-regressies
+- **Stale lib dist/-declaraties** — controle of `lib/*/dist/` niet git-tracked is én geen verouderde `.d.ts`-bestanden bevat zonder bijbehorend bronbestand (sectie 11)
 
 ### Database
 - Migraties en dataconsistentie

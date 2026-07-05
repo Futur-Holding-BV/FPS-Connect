@@ -68,6 +68,20 @@ Centrale publicatielaag die bepaalt welke gebouwen zichtbaar zijn in FPS One (kl
 
 ---
 
+## 2026-07-05 — Stale lib dist/-declaraties voorkomen
+
+Twee preventielagen tegen verouderde TypeScript-declaraties in composite lib `dist/`-mappen die stilzwijgend TS2339-fouten veroorzaken:
+
+1. **Expliciete per-package `.gitignore`** toegevoegd aan alle 5 composite libs (`lib/api-client-react`, `lib/api-zod`, `lib/db`, `lib/object-storage-web`, `lib/permissies`). Elke `.gitignore` bevat `/dist` zodat builduitvoer nooit per oudeluk git-tracked kan worden, ook als de root-regel ooit wegvalt.
+
+2. **Nieuwe kwaliteitscheck-sectie 11** (`scripts/src/kwaliteitscheck.ts`): twee controles:
+   - **Stap A**: `git ls-files lib/*/dist/` — rapporteert als "hoog" wanneer dist-bestanden toch getrackt zijn; geeft instructie om ze met `git rm --cached` te verwijderen.
+   - **Stap B**: na `tsc --build` controleert het script of elk `.d.ts`-bestand in `dist/` een overeenkomend `.ts`-bronbestand heeft in `src/`. Ontbrekend bronbestand = stale declaratie van een verwijderde export → "hoog".
+
+3. **`docs/kwaliteitscontrole.md`** bijgewerkt met de nieuwe controle-categorie.
+
+---
+
 ## 2026-07-05 — Dashboard-kiezer hoofdbeheerder: 9 selecteerbare views
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
