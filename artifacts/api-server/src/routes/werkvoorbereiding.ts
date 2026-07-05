@@ -16,8 +16,9 @@ import {
   gebruikersTable,
   leveranciersTable,
   onderaannemeOrdersTable,
+  pimModellenTable,
 } from "@workspace/db";
-import { eq, and, asc } from "drizzle-orm";
+import { eq, and, asc, inArray } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { logger } from "../lib/logger";
 import { verstuurMail, isGeconfigureerd } from "../services/email";
@@ -49,11 +50,15 @@ function mapRegel(r: typeof werkbegrotingRegelsTable.$inferSelect) {
   };
 }
 
-function mapInkoopRegel(r: typeof inkoopplanRegelsTable.$inferSelect) {
+function mapInkoopRegel(
+  r: typeof inkoopplanRegelsTable.$inferSelect,
+  werkpakketSleutel?: string | null,
+) {
   return {
     id: r.id,
     inkoopplan_id: r.inkoopplanId,
     werkbegroting_regel_id: r.werkbegrotingRegelId ?? null,
+    werkpakket_sleutel: werkpakketSleutel ?? null,
     omschrijving: r.omschrijving,
     hoeveelheid: r.hoeveelheid,
     eenheid: r.eenheid,
@@ -78,6 +83,22 @@ function mapInkoopRegel(r: typeof inkoopplanRegelsTable.$inferSelect) {
   };
 }
 
+async function buildHoofdstukMap(
+  regels: typeof inkoopplanRegelsTable.$inferSelect[],
+): Promise<Map<number, string | null>> {
+  const regelIds = regels
+    .map(r => r.werkbegrotingRegelId)
+    .filter((x): x is number => x != null);
+  const map = new Map<number, string | null>();
+  if (regelIds.length === 0) return map;
+  const wbRegels = await db
+    .select({ id: werkbegrotingRegelsTable.id, hoofdstuk: werkbegrotingRegelsTable.hoofdstuk })
+    .from(werkbegrotingRegelsTable)
+    .where(inArray(werkbegrotingRegelsTable.id, regelIds));
+  for (const wb of wbRegels) map.set(wb.id, wb.hoofdstuk ?? null);
+  return map;
+}
+
 function mapOnderaannemer(r: typeof onderaannemeOrdersTable.$inferSelect) {
   return {
     id: r.id,
@@ -100,6 +121,7 @@ function mapOnderaannemer(r: typeof onderaannemeOrdersTable.$inferSelect) {
 function mapInkoopplan(
   plan: typeof inkoopplannenTable.$inferSelect,
   regels: typeof inkoopplanRegelsTable.$inferSelect[],
+  hoofdstukMap?: Map<number, string | null>,
 ) {
   return {
     id: plan.id,
@@ -113,7 +135,14 @@ function mapInkoopplan(
     opmerkingen: plan.opmerkingen ?? null,
     aangemaakt_op: iso(plan.aangemaaktOp)!,
     bijgewerkt_op: iso(plan.bijgewerktOp)!,
-    regels: regels.map(mapInkoopRegel),
+    regels: regels.map(r =>
+      mapInkoopRegel(
+        r,
+        r.werkbegrotingRegelId && hoofdstukMap
+          ? (hoofdstukMap.get(r.werkbegrotingRegelId) ?? null)
+          : null,
+      )
+    ),
   };
 }
 
@@ -281,7 +310,8 @@ router.get("/opdrachten/:id/inkoopplanning", lezen, async (req, res): Promise<vo
       .where(eq(inkoopplanRegelsTable.inkoopplanId, plan.id))
       .orderBy(asc(inkoopplanRegelsTable.volgorde), asc(inkoopplanRegelsTable.id));
 
-    res.json(mapInkoopplan(plan, regels));
+    const hoofdstukMap = await buildHoofdstukMap(regels);
+    res.json(mapInkoopplan(plan, regels, hoofdstukMap));
   } catch (err) {
     logger.error({ err }, "getInkoopplanning fout");
     res.status(500).json({ error: "Serverfout" });
@@ -318,12 +348,16 @@ router.post("/opdrachten/:id/inkoopplanning/genereer", schrijven, async (req, re
 
     interface AiInkoopRegel {
       omschrijving: string;
+      werkpakket?: string | null;
       type: string;
       aanbevolen_leverancier: string | null;
       inkoopprijs_verwacht: number;
       besparing_per_eenheid: number;
       besparing: number;
       levertijd_weken: number;
+      reden_keuze?: string | null;
+      alternatief?: string | null;
+      montage_aandachtspunten?: string | null;
       motivatie: string;
     }
 
@@ -333,17 +367,40 @@ router.post("/opdrachten/:id/inkoopplanning/genereer", schrijven, async (req, re
       regels: AiInkoopRegel[];
     }
 
+    // PIM-context ophalen voor verrijking (optioneel — geen blokkade als afwezig)
+    const [pim] = await db.select().from(pimModellenTable)
+      .where(eq(pimModellenTable.opdrachtId, id));
+    const wvCtx = pim?.werkvoorbereidingContext as Record<string, unknown> | null | undefined;
+
     let aiResultaat: AiInkoopResult | null = null;
     let aiGegenereerd = false;
 
     if (heeftGateway() && materiaalRegels.length > 0) {
+      // PIM werkvoorbereiding_context toevoegen als aanwezig
+      const pimSectie = wvCtx
+        ? [
+          "\n=== PIM WERKVOORBEREIDING CONTEXT ===",
+          wvCtx.planningadvies ? `Planningadvies: ${String(wvCtx.planningadvies)}` : "",
+          Array.isArray(wvCtx.aandachtspunten) && wvCtx.aandachtspunten.length > 0
+            ? `Uitvoeringsrisico's:\n${(wvCtx.aandachtspunten as string[]).map(a => `- ${a}`).join("\n")}`
+            : "",
+          Array.isArray(wvCtx.risicos) && wvCtx.risicos.length > 0
+            ? `Risico's:\n${(wvCtx.risicos as string[]).map(r => `- ${r}`).join("\n")}`
+            : "",
+          Array.isArray(wvCtx.open_vragen) && wvCtx.open_vragen.length > 0
+            ? `Open vragen:\n${(wvCtx.open_vragen as string[]).map(v => `- ${v}`).join("\n")}`
+            : "",
+        ].filter(Boolean).join("\n")
+        : "";
+
       const prompt = `Je bent een inkoper bij een brandpreventie-installatiebedrijf in Nederland.
 Analyseer de onderstaande materiaalregels uit een werkbegroting en maak een inkoopplanning.
 
-MATERIAALREGELS:
-${materiaalRegels.map((r, i) => `${i + 1}. ${r.omschrijving}: ${r.hoeveelheid} ${r.eenheid} @ €${r.tarief} = €${r.totaal}`).join('\n')}
+MATERIAALREGELS (met werkpakket/hoofdstuk):
+${materiaalRegels.map((r, i) => `${i + 1}. ${r.omschrijving} [werkpakket: ${r.hoofdstuk ?? "Algemeen"}]: ${r.hoeveelheid} ${r.eenheid} @ €${r.tarief} = €${r.totaal}`).join('\n')}
 
 Opdracht: ${opdracht.titel}
+${pimSectie}
 
 Classificeer elk materiaal als:
 - "voorraad": gangbaar materiaal, altijd op voorraad (bijv. schroeven, kabelgoot, kleine onderdelen)
@@ -353,6 +410,8 @@ Classificeer elk materiaal als:
 
 Geef realistische inkoopprijzen (iets lager dan de calculatieprijs) en aanbevolen leveranciers voor de Nederlandse markt (bijv. Soudal, Hilti, Rockwool, Enraf, Beele, Pyroplex, etc.).
 
+Let op risico's en aandachtspunten uit de PIM werkvoorbereiding bij het bepalen van levertijden en alternatieven.
+
 Geef je analyse als JSON:
 {
   "samenvatting": "korte samenvatting van de inkoopplanning",
@@ -360,13 +419,17 @@ Geef je analyse als JSON:
   "regels": [
     {
       "omschrijving": "naam van het materiaal (exact overnemen)",
+      "werkpakket": "werkpakket/hoofdstuk naam (exact overnemen uit de MATERIAALREGELS)",
       "type": "voorraad|standaard|project|maatwerk",
       "aanbevolen_leverancier": "naam of null",
       "inkoopprijs_verwacht": 0.00,
       "besparing_per_eenheid": 0.00,
       "besparing": 0.00,
       "levertijd_weken": 0,
-      "motivatie": "korte uitleg type-keuze en leverancier"
+      "reden_keuze": "waarom dit type/leverancier passend is voor dit werkpakket",
+      "alternatief": "alternatief product of leverancier als eerste keuze niet beschikbaar is, of null",
+      "montage_aandachtspunten": "relevante montage- of plaatsingsaandachtspunten vanuit PIM context, of null",
+      "motivatie": "Werkpakket: <naam> | Reden: <reden_keuze> | Alternatief: <alternatief of geen> | Montage: <montage_aandachtspunten of geen>"
     }
   ]
 }`;
@@ -444,7 +507,8 @@ Geef je analyse als JSON:
       .where(eq(inkoopplanRegelsTable.inkoopplanId, plan.id))
       .orderBy(asc(inkoopplanRegelsTable.volgorde));
 
-    res.json(mapInkoopplan(plan, alleRegels));
+    const hoofdstukMap = await buildHoofdstukMap(alleRegels);
+    res.json(mapInkoopplan(plan, alleRegels, hoofdstukMap));
   } catch (err) {
     logger.error({ err }, "genereerInkoopplanning fout");
     res.status(500).json({ error: "Serverfout" });
@@ -477,7 +541,34 @@ router.post("/opdrachten/:id/inkoopplanning/vaststellen", schrijven, async (req,
       .where(eq(inkoopplanRegelsTable.inkoopplanId, plan.id))
       .orderBy(asc(inkoopplanRegelsTable.volgorde));
 
-    res.json(mapInkoopplan(updated, regels));
+    // PIM inkoop_context bijwerken: { werkpakket_sleutel: [inkoopplan_regel_id, ...] }
+    // Mapping afgeleid via werkbegroting_regel.hoofdstuk (geen FK op regels nodig)
+    try {
+      const hoofdstukMap = await buildHoofdstukMap(regels);
+      const inkoopContext: Record<string, number[]> = {};
+      for (const regel of regels) {
+        const sleutel = (regel.werkbegrotingRegelId
+          ? (hoofdstukMap.get(regel.werkbegrotingRegelId) ?? null)
+          : null) ?? "overig";
+        if (!inkoopContext[sleutel]) inkoopContext[sleutel] = [];
+        inkoopContext[sleutel].push(regel.id);
+      }
+      const [pim] = await db
+        .select({ id: pimModellenTable.id })
+        .from(pimModellenTable)
+        .where(eq(pimModellenTable.opdrachtId, id));
+      if (pim) {
+        await db.update(pimModellenTable)
+          .set({ inkoopContext, bijgewerktOp: new Date() })
+          .where(eq(pimModellenTable.id, pim.id));
+      }
+    } catch (pimErr) {
+      // Niet-blokkerend: PIM update mislukt mag vaststellen niet blokkeren
+      logger.warn({ pimErr }, "PIM inkoop_context bijwerken mislukt — niet-blokkerend");
+    }
+
+    const hoofdstukMapVoorResponse = await buildHoofdstukMap(regels);
+    res.json(mapInkoopplan(updated, regels, hoofdstukMapVoorResponse));
   } catch (err) {
     logger.error({ err }, "vaststellenInkoopplanning fout");
     res.status(500).json({ error: "Serverfout" });
@@ -1285,7 +1376,8 @@ router.post("/opdrachten/:id/inkoopplanning/regels", schrijven, async (req, res)
       .where(eq(inkoopplanRegelsTable.inkoopplanId, plan.id))
       .orderBy(asc(inkoopplanRegelsTable.volgorde), asc(inkoopplanRegelsTable.id));
 
-    res.status(201).json(mapInkoopplan(plan, regels));
+    const hoofdstukMap = await buildHoofdstukMap(regels);
+    res.status(201).json(mapInkoopplan(plan, regels, hoofdstukMap));
   } catch (err) {
     logger.error({ err }, "createInkoopplanRegel fout");
     res.status(500).json({ error: "Serverfout" });

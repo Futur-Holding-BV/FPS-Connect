@@ -26639,6 +26639,9 @@ components:
           type: integer
         werkbegroting_regel_id:
           type: ["integer", "null"]
+        werkpakket_sleutel:
+          type: ["string", "null"]
+          description: "Werkpakket (hoofdstuk uit werkbegroting) waaronder dit artikel valt, afgeleid via PIM"
         omschrijving:
           type: string
         hoeveelheid:

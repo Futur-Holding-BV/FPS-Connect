@@ -14,6 +14,11 @@ export interface InkoopplanRegel {
   inkoopplan_id: number;
   /** @nullable */
   werkbegroting_regel_id?: number | null;
+  /**
+     * Werkpakket (hoofdstuk uit werkbegroting) waaronder dit artikel valt, afgeleid via PIM
+     * @nullable
+     */
+  werkpakket_sleutel?: string | null;
   omschrijving: string;
   hoeveelheid: number;
   eenheid: string;
