@@ -129,10 +129,12 @@ export default function VisualLibraryBeheer() {
 
   const [uploadBezig, setUploadBezig] = useState(false);
   const [uploadFout, setUploadFout] = useState("");
+  const [uploadPoging, setUploadPoging] = useState(0);
   const [geuploadBestand, setGeuploadBestand] = useState<string>("");
   const [sleepActief, setSleepActief] = useState(false);
 
   const bestandInputRef = useRef<HTMLInputElement>(null);
+  const huidigBestandRef = useRef<File | null>(null);
   const requestUploadUrl = useRequestUploadUrl();
 
   const queryParams = {
@@ -180,8 +182,10 @@ export default function VisualLibraryBeheer() {
     setBewaarFout("");
     setBewaarBezig(false);
     setUploadFout("");
+    setUploadPoging(0);
     setGeuploadBestand("");
     setSleepActief(false);
+    huidigBestandRef.current = null;
   }
 
   function toggleSpotType(type: string) {
@@ -196,13 +200,16 @@ export default function VisualLibraryBeheer() {
   async function uploadBestand(bestand: File) {
     setUploadFout("");
     setUploadBezig(true);
+    setUploadPoging(0);
     setGeuploadBestand("");
+    huidigBestandRef.current = bestand;
 
     const contentType = bestand.type || "application/octet-stream";
 
     if (!TOEGESTANE_TYPEN[contentType]) {
       setUploadFout(`Bestandstype niet ondersteund. Gebruik: ${Object.values(TOEGESTANE_TYPEN).join(", ")}.`);
       setUploadBezig(false);
+      huidigBestandRef.current = null;
       return;
     }
 
@@ -210,8 +217,11 @@ export default function VisualLibraryBeheer() {
       ? UploadUrlRequestBestandType.foto
       : UploadUrlRequestBestandType.algemeen;
 
+    let uploadURL: string;
+    let objectPath: string;
+
     try {
-      const { uploadURL, objectPath } = await requestUploadUrl.mutateAsync({
+      const result = await requestUploadUrl.mutateAsync({
         data: {
           name: bestand.name,
           size: bestand.size,
@@ -219,29 +229,73 @@ export default function VisualLibraryBeheer() {
           bestand_type: bestandType,
         },
       });
-
-      const uploadResp = await fetch(uploadURL, {
-        method: "PUT",
-        body: bestand,
-        headers: { "Content-Type": contentType },
-      });
-
-      if (!uploadResp.ok) {
-        throw new Error(`Upload mislukt (HTTP ${uploadResp.status})`);
-      }
-
-      setFormulier((f) => ({
-        ...f,
-        object_path: objectPath,
-        thumbnail_path: isAfbeelding(contentType) ? objectPath : f.thumbnail_path,
-      }));
-      setGeuploadBestand(bestand.name);
+      uploadURL = result.uploadURL;
+      objectPath = result.objectPath;
     } catch (err) {
       const bericht = err instanceof Error ? err.message : "Onbekende fout";
-      setUploadFout(`Upload mislukt: ${bericht}`);
-    } finally {
+      setUploadFout(`Upload voorbereiden mislukt: ${bericht}`);
       setUploadBezig(false);
+      return;
     }
+
+    const MAX_POGINGEN = 3;
+    const BACKOFF_MS = [500, 1000];
+    let lastErr: Error | null = null;
+
+    for (let poging = 1; poging <= MAX_POGINGEN; poging++) {
+      setUploadPoging(poging);
+      try {
+        const uploadResp = await fetch(uploadURL, {
+          method: "PUT",
+          body: bestand,
+          headers: { "Content-Type": contentType },
+        });
+
+        if (!uploadResp.ok) {
+          if (uploadResp.status >= 400 && uploadResp.status < 500) {
+            setUploadFout(
+              `Bestand geweigerd door de opslag (HTTP ${uploadResp.status}). Controleer het bestandstype of de bestandsinhoud.`
+            );
+            setUploadBezig(false);
+            setUploadPoging(0);
+            return;
+          }
+          throw new Error(`HTTP ${uploadResp.status}`);
+        }
+
+        setFormulier((f) => ({
+          ...f,
+          object_path: objectPath,
+          thumbnail_path: isAfbeelding(contentType) ? objectPath : f.thumbnail_path,
+        }));
+        setGeuploadBestand(bestand.name);
+        setUploadBezig(false);
+        setUploadPoging(0);
+        return;
+      } catch (err) {
+        lastErr = err instanceof Error ? err : new Error("Onbekende fout");
+        if (poging < MAX_POGINGEN) {
+          await new Promise<void>((resolve) => setTimeout(resolve, BACKOFF_MS[poging - 1]));
+        }
+      }
+    }
+
+    const isNetwerkFout =
+      lastErr instanceof TypeError ||
+      lastErr?.message === "Failed to fetch" ||
+      lastErr?.message === "NetworkError when attempting to fetch resource.";
+
+    if (isNetwerkFout) {
+      setUploadFout(
+        `Verbinding tijdelijk weggevallen na ${MAX_POGINGEN} pogingen. Controleer uw netwerk en klik op "Opnieuw proberen".`
+      );
+    } else {
+      setUploadFout(
+        `Upload definitief mislukt na ${MAX_POGINGEN} pogingen (${lastErr?.message ?? "onbekende fout"}). Klik op "Opnieuw proberen".`
+      );
+    }
+    setUploadBezig(false);
+    setUploadPoging(0);
   }
 
   const handleBestandKiezen = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -578,7 +632,11 @@ export default function VisualLibraryBeheer() {
                 {uploadBezig ? (
                   <div className="flex flex-col items-center gap-2 py-2 text-muted-foreground">
                     <Loader2 className="h-6 w-6 animate-spin" />
-                    <span className="text-sm">Uploaden...</span>
+                    <span className="text-sm">
+                      {uploadPoging > 1
+                        ? `Opnieuw proberen (poging ${uploadPoging} van 3)...`
+                        : "Uploaden..."}
+                    </span>
                   </div>
                 ) : geuploadBestand && !uploadFout ? (
                   <div className="flex flex-col items-center gap-1.5 py-1">
@@ -605,7 +663,27 @@ export default function VisualLibraryBeheer() {
               </div>
 
               {uploadFout && (
-                <p className="text-sm text-destructive">{uploadFout}</p>
+                <div className="space-y-1.5">
+                  <p className="text-sm text-destructive">{uploadFout}</p>
+                  {huidigBestandRef.current && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-[11px] text-muted-foreground truncate max-w-xs">
+                        {huidigBestandRef.current.name}
+                      </span>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-xs shrink-0"
+                        onClick={() => {
+                          if (huidigBestandRef.current) void uploadBestand(huidigBestandRef.current);
+                        }}
+                      >
+                        Opnieuw proberen
+                      </Button>
+                    </div>
+                  )}
+                </div>
               )}
 
               {/* Handmatig pad — altijd beschikbaar als fallback */}
