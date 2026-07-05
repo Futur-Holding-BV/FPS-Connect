@@ -4,6 +4,37 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-05 — Dashboard-kiezer hoofdbeheerder: 9 selecteerbare views
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+**Wat is gebouwd:**
+
+Nieuwe dashboard-kiezer bovenaan het beheerder-dashboard (alleen zichtbaar voor `hoofdbeheerder`). De keuze wordt opgeslagen in `localStorage` en hersteld bij terugkeer.
+
+**9 dashboard-views (`artifacts/firevault/src/pages/dashboard/beheerder.tsx`):**
+
+| View | Inhoud | Gecombineerd |
+|------|--------|--------------|
+| Operationeel | Bestaande inhoud ongewijzigd | — |
+| Spots | Statusverdeling, spots per type (staafdiagram), vervaldagen met urgentiebadges | — |
+| Projecten & Offertes | OfferteAnalytics (conversie, waarde, pie-chart), CRM pijplijn, recente offertes | Projecten + Offerte-pipeline |
+| Facturen & Verkoop | Facturen per type (totaal/bedrag), onderhoudscontracten, recente facturen | Facturen + Onderhoud |
+| Bedrijfsgezondheid | CRM-gezondheidsmetrices, winratio, offerte-financieel, AI-kosten | Pijplijn + Contracten |
+| HRM | HRM-stats, ziekte-trendgrafiek, verlofaanvragen, capaciteitsbezetting | Personeel + Verlof + Ziekte |
+| Bugreports | Feedback-lijst per type, inbox-statistieken, veiligheidsmelding-overzicht | Feedback + Inbox + Veiligheid |
+| Kwartaaloverzicht | Offertes + Facturen + HRM samengebracht in Q-view | Offertes + Facturen + HRM |
+| Maandoverzicht | AI-kosten, recente activiteit, open verlof, actieve medewerkers | AI-kosten + Activiteit + Verlof |
+
+**Technische aanpak:**
+- Elke view is een eigen component met eigen hooks → geen onnodige API-calls voor niet-actieve views
+- `DashboardKiezer`: scrollbare rij pill-knoppen met actieve stijl; gecombineerde views tonen hun combinatie als tooltip + subtitel
+- Bestaande operationele dashboard volledig behouden als eigen sub-component `OperationeelDashboard`
+- Herbruikbare `KpiKaart` helper voor alle views
+- TypeScript-fouten in beheerder.tsx: nul (pre-existing `retryUpload`-errors in andere bestanden onaangeroerd)
+
+---
+
 ## 2026-07-05 — Fix: RadiaalMenu FPS-knop boven systeemtaakbalk
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
