@@ -390,15 +390,64 @@ export default function VisualLibraryBeheer() {
     query: { queryKey: getListVisualLibraryQueryKey() },
   });
 
+  // ── Filters: hoofdraster (beheer) ────────────────────────────────────────────
+  const [zoekBeheer, setZoekBeheer]                       = useState("");
+  const [filterVisualTypeBeheer, setFilterVisualTypeBeheer] = useState("alle");
+  const [filterBronTypeBeheer, setFilterBronTypeBeheer]   = useState("alle");
+  const [filterSpotTypesBeheer, setFilterSpotTypesBeheer] = useState<string[]>([]);
+  const [filterActiefBeheer, setFilterActiefBeheer]       = useState("alle");
+
+  function toggleSpotTypeBeheer(type: string) {
+    setFilterSpotTypesBeheer((prev) =>
+      prev.includes(type) ? prev.filter((s) => s !== type) : [...prev, type]
+    );
+  }
+
+  const gefilterdVisuals: BeheerVisual[] = (beheerVisuals).filter((v: BeheerVisual) => {
+    if (zoekBeheer && !v.naam.toLowerCase().includes(zoekBeheer.toLowerCase())) return false;
+    if (filterVisualTypeBeheer !== "alle" && v.visual_type !== filterVisualTypeBeheer) return false;
+    if (filterBronTypeBeheer !== "alle" && v.bron_type !== filterBronTypeBeheer) return false;
+    if (filterSpotTypesBeheer.length > 0 && !filterSpotTypesBeheer.some((s) => v.spot_type.includes(s))) return false;
+    if (filterActiefBeheer === "actief" && !v.actief) return false;
+    if (filterActiefBeheer === "inactief" && v.actief) return false;
+    return true;
+  });
+
+  const heeftBeheerFilter =
+    zoekBeheer !== "" ||
+    filterVisualTypeBeheer !== "alle" ||
+    filterBronTypeBeheer !== "alle" ||
+    filterSpotTypesBeheer.length > 0 ||
+    filterActiefBeheer !== "alle";
+
+  function resetBeheerFilters() {
+    setZoekBeheer("");
+    setFilterVisualTypeBeheer("alle");
+    setFilterBronTypeBeheer("alle");
+    setFilterSpotTypesBeheer([]);
+    setFilterActiefBeheer("alle");
+  }
+
+  // ── Filters: statistiekentabel ────────────────────────────────────────────────
   const [zoek, setZoek] = useState("");
   const [filterType, setFilterType] = useState("alle");
+  const [filterBronType, setFilterBronType] = useState("alle");
+  const [filterSpotTypes, setFilterSpotTypes] = useState<string[]>([]);
   const [filterActief, setFilterActief] = useState("alle");
   const [sortering, setSortering] = useState("naam");
 
-  const gefilterdStats = (statsVisuals ?? [])
-    .filter((v) => {
+  function toggleSpotTypeStats(type: string) {
+    setFilterSpotTypes((prev) =>
+      prev.includes(type) ? prev.filter((s) => s !== type) : [...prev, type]
+    );
+  }
+
+  const gefilterdStats: FpsVisualItem[] = (statsVisuals ?? [])
+    .filter((v: FpsVisualItem) => {
       if (zoek && !v.naam.toLowerCase().includes(zoek.toLowerCase()) && !v.visual_type.toLowerCase().includes(zoek.toLowerCase())) return false;
       if (filterType !== "alle" && v.visual_type !== filterType) return false;
+      if (filterBronType !== "alle" && v.bron_type !== filterBronType) return false;
+      if (filterSpotTypes.length > 0 && !filterSpotTypes.some((s) => v.spot_type.includes(s))) return false;
       if (filterActief === "actief" && !v.actief) return false;
       if (filterActief === "inactief" && v.actief) return false;
       return true;
@@ -426,7 +475,7 @@ export default function VisualLibraryBeheer() {
       ? Math.round(metData.reduce((s, v) => s + (v.pct_zonder_herstelwerk ?? 0), 0) / metData.length)
       : null;
 
-  const uniqueTypes = [...new Set((statsVisuals ?? []).map((v) => v.visual_type))].sort();
+  const uniqueTypes: string[] = [...new Set((statsVisuals ?? []).map((v: FpsVisualItem) => v.visual_type))].sort();
 
   const vernieuw = () => {
     qc.invalidateQueries({ queryKey: getListBeheerVisualsQueryKey() });
@@ -639,24 +688,127 @@ export default function VisualLibraryBeheer() {
         </div>
       ) : (
         <>
-          <div className="text-sm text-muted-foreground">
-            {visuals.length} visual{visuals.length !== 1 ? "s" : ""} &mdash;{" "}
-            {visuals.filter((v) => v.actief).length} actief
+          {/* Filterbalk boven het raster */}
+          <div className="space-y-3 bg-muted/30 border rounded-lg p-4">
+            <div className="flex flex-wrap gap-3">
+              <div className="relative flex-1 min-w-48">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Zoek op naam..."
+                  value={zoekBeheer}
+                  onChange={(e) => setZoekBeheer(e.target.value)}
+                  className="pl-9 bg-background"
+                />
+              </div>
+              <Select value={filterVisualTypeBeheer} onValueChange={setFilterVisualTypeBeheer}>
+                <SelectTrigger className="w-52 bg-background">
+                  <SelectValue placeholder="Alle visualtypes" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="alle">Alle visualtypes</SelectItem>
+                  {VISUAL_TYPES.map((t) => (
+                    <SelectItem key={t.waarde} value={t.waarde}>
+                      {t.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={filterBronTypeBeheer} onValueChange={setFilterBronTypeBeheer}>
+                <SelectTrigger className="w-48 bg-background">
+                  <SelectValue placeholder="Alle brontypes" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="alle">Alle brontypes</SelectItem>
+                  {BRON_TYPES.map((t) => (
+                    <SelectItem key={t.waarde} value={t.waarde}>
+                      {t.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={filterActiefBeheer} onValueChange={setFilterActiefBeheer}>
+                <SelectTrigger className="w-40 bg-background">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="alle">Alle statussen</SelectItem>
+                  <SelectItem value="actief">Alleen actief</SelectItem>
+                  <SelectItem value="inactief">Alleen inactief</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Spot-type chips */}
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs text-muted-foreground">Spot-type:</span>
+              {SPOT_TYPES.map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => toggleSpotTypeBeheer(s)}
+                  className={`px-2.5 py-0.5 rounded-full text-xs border transition-colors ${
+                    filterSpotTypesBeheer.includes(s)
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "bg-background border-border hover:bg-muted"
+                  }`}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+
+            {/* Resultaatteller + wis-knop */}
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-muted-foreground">
+                {gefilterdVisuals.length} van {visuals.length} visual{visuals.length !== 1 ? "s" : ""}
+                {gefilterdVisuals.filter((v) => v.actief).length !== gefilterdVisuals.length && (
+                  <> &mdash; {gefilterdVisuals.filter((v) => v.actief).length} actief</>
+                )}
+              </span>
+              {heeftBeheerFilter && (
+                <button
+                  type="button"
+                  onClick={resetBeheerFilters}
+                  className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
+                >
+                  <X className="h-3 w-3" />
+                  Filters wissen
+                </button>
+              )}
+            </div>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-            {visuals.map((visual) => (
-              <VisualTegel
-                key={visual.id}
-                visual={visual}
-                onToggle={handleToggle}
-                onVerwijder={(v) => setVerwijderVisual(v)}
-                onBewerk={handleBewerk}
-                isToggling={togglingId === visual.id}
-                isVerwijdering={verwijderingId === visual.id}
-                kanSchrijven={kanSchrijven}
-              />
-            ))}
-          </div>
+
+          {gefilterdVisuals.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <ScanSearch className="h-10 w-10 text-muted-foreground mb-3" />
+              <p className="text-sm font-medium">Geen visuals gevonden</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Pas de zoekterm of filters aan.
+              </p>
+              <button
+                type="button"
+                onClick={resetBeheerFilters}
+                className="mt-3 text-xs text-primary hover:underline"
+              >
+                Filters wissen
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+              {gefilterdVisuals.map((visual) => (
+                <VisualTegel
+                  key={visual.id}
+                  visual={visual}
+                  onToggle={handleToggle}
+                  onVerwijder={(v) => setVerwijderVisual(v)}
+                  onBewerk={handleBewerk}
+                  isToggling={togglingId === visual.id}
+                  isVerwijdering={verwijderingId === visual.id}
+                  kanSchrijven={kanSchrijven}
+                />
+              ))}
+            </div>
+          )}
         </>
       )}
 
@@ -1098,50 +1250,93 @@ export default function VisualLibraryBeheer() {
 
             <Card>
               <CardContent className="pt-5 pb-3">
-                <div className="flex flex-wrap gap-3 mb-4">
-                  <div className="relative flex-1 min-w-48">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Zoek op naam of type..."
-                      value={zoek}
-                      onChange={(e) => setZoek(e.target.value)}
-                      className="pl-9"
-                    />
+                <div className="space-y-3 mb-4">
+                  <div className="flex flex-wrap gap-3">
+                    <div className="relative flex-1 min-w-48">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Zoek op naam of type..."
+                        value={zoek}
+                        onChange={(e) => setZoek(e.target.value)}
+                        className="pl-9"
+                      />
+                    </div>
+                    <Select value={filterType} onValueChange={setFilterType}>
+                      <SelectTrigger className="w-52">
+                        <SelectValue placeholder="Alle visualtypes" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="alle">Alle visualtypes</SelectItem>
+                        {uniqueTypes.map((t) => (
+                          <SelectItem key={t} value={t}>
+                            {VISUAL_TYPE_LABELS[t] ?? t}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Select value={filterBronType} onValueChange={setFilterBronType}>
+                      <SelectTrigger className="w-48">
+                        <SelectValue placeholder="Alle brontypes" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="alle">Alle brontypes</SelectItem>
+                        {BRON_TYPES.map((t) => (
+                          <SelectItem key={t.waarde} value={t.waarde}>
+                            {t.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Select value={filterActief} onValueChange={setFilterActief}>
+                      <SelectTrigger className="w-36">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="alle">Alle statussen</SelectItem>
+                        <SelectItem value="actief">Alleen actief</SelectItem>
+                        <SelectItem value="inactief">Alleen inactief</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Select value={sortering} onValueChange={setSortering}>
+                      <SelectTrigger className="w-44">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="naam">Sorteren: naam</SelectItem>
+                        <SelectItem value="score_desc">Score: hoog naar laag</SelectItem>
+                        <SelectItem value="score_asc">Score: laag naar hoog</SelectItem>
+                        <SelectItem value="getoond_desc">Meest getoond</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
-                  <Select value={filterType} onValueChange={setFilterType}>
-                    <SelectTrigger className="w-48">
-                      <SelectValue placeholder="Alle types" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="alle">Alle types</SelectItem>
-                      {uniqueTypes.map((t) => (
-                        <SelectItem key={t} value={t}>
-                          {VISUAL_TYPE_LABELS[t] ?? t}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Select value={filterActief} onValueChange={setFilterActief}>
-                    <SelectTrigger className="w-36">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="alle">Alle statussen</SelectItem>
-                      <SelectItem value="actief">Alleen actief</SelectItem>
-                      <SelectItem value="inactief">Alleen inactief</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Select value={sortering} onValueChange={setSortering}>
-                    <SelectTrigger className="w-44">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="naam">Sorteren: naam</SelectItem>
-                      <SelectItem value="score_desc">Score: hoog naar laag</SelectItem>
-                      <SelectItem value="score_asc">Score: laag naar hoog</SelectItem>
-                      <SelectItem value="getoond_desc">Meest getoond</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  {/* Spot-type chips voor statistieken */}
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-xs text-muted-foreground">Spot-type:</span>
+                    {SPOT_TYPES.map((s) => (
+                      <button
+                        key={s}
+                        type="button"
+                        onClick={() => toggleSpotTypeStats(s)}
+                        className={`px-2.5 py-0.5 rounded-full text-xs border transition-colors ${
+                          filterSpotTypes.includes(s)
+                            ? "bg-primary text-primary-foreground border-primary"
+                            : "bg-background border-border hover:bg-muted"
+                        }`}
+                      >
+                        {s}
+                      </button>
+                    ))}
+                    {filterSpotTypes.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setFilterSpotTypes([])}
+                        className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-0.5"
+                      >
+                        <X className="h-3 w-3" />
+                        Wissen
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 {gefilterdStats.length === 0 ? (

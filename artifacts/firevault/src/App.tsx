@@ -64,7 +64,7 @@ import VisualLibraryBeheer from "@/pages/beheer/visual-library";
 import ProfielenBeheer from "@/pages/beheer/profielen";
 import ToepassingenBeheer from "@/pages/beheer/toepassingen";
 import Bibliotheek from "@/pages/beheer/bibliotheek";
-import VisualsLijstBeheer from "@/pages/beheer/visuals";
+import VisualsLegacyBeheer from "@/pages/beheer/visuals";
 import Ontwikkelstatus from "@/pages/beheer/ontwikkelstatus";
 import DocumentopmaakBeheer from "@/pages/organisatie/documentopmaak";
 import WerkmaatschappijPagina from "@/pages/organisatie/werkmaatschappijen";
@@ -491,7 +491,7 @@ function ConnectPortal() {
         <Route path="/organisatie/documentopmaak" component={DocumentopmaakBeheer} />
         <Route path="/organisatie/werkmaatschappijen" component={WerkmaatschappijPagina} />
         <Route path="/beheer/spotconfiguratie" component={SpotconfiguratieBeheer} />
-        <Route path="/beheer/visuals" component={VisualsLijstBeheer} />
+        <Route path="/beheer/visuals" component={VisualsLegacyBeheer} />
         <Route path="/beheer/mail" component={MailBeheer} />
         <Route path="/beheer/backup" component={BackupBeheer} />
         <Route path="/beheer/herstel" component={HerstelDashboard} />
@@ -507,7 +507,6 @@ function ConnectPortal() {
         <Route path="/beheer/privacy" component={BeheerPrivacy} />
         <Route path="/beheer/avg" component={AvgBeheer} />
         <Route path="/beheer/gebouwen-archief" component={GebouwenArchiefBeheer} />
-        <Route path="/beheer/visual-library" component={VisualLibraryBeheer} />
         <Route path="/mijn/privacy" component={PrivacyCentrum} />
         <Route path="/mijn/salarisdocumenten" component={MijnSalarisdocumentenPagina} />
 
