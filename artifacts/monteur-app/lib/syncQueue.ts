@@ -158,11 +158,11 @@ export async function aantalMislukt(): Promise<number> {
   return (await laadWachtrij()).filter((i) => i.pogingen >= MAX_POGINGEN).length;
 }
 
-export async function wisMislukteItems(): Promise<number> {
+export async function wisMislukteItems(): Promise<WachtrijItem[]> {
   const items = await laadWachtrij();
   const overgebleven = items.filter((i) => i.pogingen < MAX_POGINGEN);
   await slaWachtrijOp(overgebleven);
-  return items.length - overgebleven.length;
+  return items.filter((i) => i.pogingen >= MAX_POGINGEN);
 }
 
 export async function herstelMisluktItem(id: string): Promise<void> {

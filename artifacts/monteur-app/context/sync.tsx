@@ -103,12 +103,22 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const wisMislukte = useCallback(async () => {
-    await wisMislukteItems();
+    const verwijderd = await wisMislukteItems();
+    for (const item of verwijderd) {
+      if (item.type === "upload_foto_lokaal") {
+        await FileSystem.deleteAsync(item.lokaalPad, { idempotent: true });
+      }
+    }
     await herlaadAantal();
   }, [herlaadAantal]);
 
   const verwijderEnkelMislukt = useCallback(async (id: string) => {
+    const wachtrij = await laadWachtrij();
+    const item = wachtrij.find((i) => i.id === id);
     await verwijderUitWachtrij(id);
+    if (item?.type === "upload_foto_lokaal") {
+      await FileSystem.deleteAsync(item.lokaalPad, { idempotent: true });
+    }
     await herlaadAantal();
   }, [herlaadAantal]);
 
