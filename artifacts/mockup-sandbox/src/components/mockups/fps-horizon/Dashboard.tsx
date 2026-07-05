@@ -1,165 +1,294 @@
-import React from 'react';
-import { 
-  Search, 
-  Bell, 
-  Plus, 
-  ChevronRight,
-  ArrowUpRight,
-  AlertTriangle,
-  Clock,
-  CheckCircle2
-} from 'lucide-react';
+import React, { useState } from "react";
+import { Search, Bell, ArrowUpRight, AlertTriangle, Shield, ChevronRight } from "lucide-react";
+
+const nav = [
+  { code: "01", label: "Ontvangsthal", active: true },
+  { code: "02", label: "Gebouwbeheer" },
+  { code: "03", label: "Documenten" },
+  { code: "04", label: "Taken" },
+  { code: "05", label: "AI Adviseur" },
+  { code: "06", label: "Planning" },
+  { code: "07", label: "Rapportages" },
+  { code: "08", label: "Instellingen" },
+];
+
+const projects = [
+  { name: "Orionfiat", city: "Enschede", spots: 147, status: 98 },
+  { name: "Gemeentehuis Hengelo", city: "Hengelo", spots: 84, status: 91 },
+  { name: "ROC Twente", city: "Enschede", spots: 212, status: 76 },
+  { name: "Brandweer Rotterdam Noord", city: "Rotterdam", spots: 63, status: 100 },
+];
+
+const BLUE = "#3B82F6";
+const BLUE_DIM = "rgba(59,130,246,0.10)";
 
 export function Dashboard() {
+  const [hovered, setHovered] = useState<number | null>(null);
+
   return (
-    <div className="min-h-screen bg-white font-sans text-gray-900 selection:bg-[#4B9EFF] selection:text-white">
-      {/* Top Navigation */}
-      <nav className="h-[48px] bg-[#0A0F1E] text-white flex items-center justify-between px-6 sticky top-0 z-50">
-        <div className="flex items-center gap-8 h-full">
-          {/* Logo area */}
-          <div className="flex items-center gap-2 font-semibold tracking-wide text-sm">
-            <div className="w-5 h-5 bg-[#4B9EFF] rounded-[2px] flex items-center justify-center">
-              <div className="w-2 h-2 bg-white rounded-full"></div>
-            </div>
-            FPS CONNECT
-          </div>
+    <div style={{
+      display: "flex", height: "100vh", width: "100%", overflow: "hidden",
+      fontFamily: "'SF Pro Display','Inter','Helvetica Neue',sans-serif",
+      background: "#F2F5F9",
+      color: "#0C1526",
+    }}>
 
-          {/* Nav links */}
-          <div className="flex items-center gap-6 h-full text-xs font-medium tracking-wide text-gray-300">
-            <button className="h-full flex items-center border-b-2 border-[#4B9EFF] text-white">Dashboard</button>
-            <button className="h-full flex items-center hover:text-white transition-colors">Projecten</button>
-            <button className="h-full flex items-center hover:text-white transition-colors">Spots</button>
-            <button className="h-full flex items-center hover:text-white transition-colors">Inspecties</button>
-            <button className="h-full flex items-center hover:text-white transition-colors">Rapporten</button>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-5">
-          <button className="text-gray-400 hover:text-white transition-colors">
-            <Search className="w-4 h-4" strokeWidth={2} />
-          </button>
-          <button className="text-gray-400 hover:text-white transition-colors relative">
-            <Bell className="w-4 h-4" strokeWidth={2} />
-            <span className="absolute top-0 right-0 w-1.5 h-1.5 bg-[#4B9EFF] rounded-full transform translate-x-1/2 -translate-y-1/2"></span>
-          </button>
-          <div className="flex items-center gap-2 pl-4 border-l border-white/10">
-            <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center text-[10px] font-bold">
-              JS
-            </div>
-            <span className="text-xs font-medium text-gray-300">J. Smit</span>
+      {/* Sidebar — engineered, precision */}
+      <aside style={{
+        width: 200,
+        background: "#FFFFFF",
+        borderRight: "1px solid rgba(12,21,38,0.07)",
+        display: "flex",
+        flexDirection: "column",
+        flexShrink: 0,
+      }}>
+        {/* Logo */}
+        <div style={{ padding: "26px 24px", borderBottom: "1px solid rgba(12,21,38,0.06)" }}>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 5 }}>
+            <span style={{ fontSize: 14, fontWeight: 700, letterSpacing: "0.08em", color: "#0C1526" }}>FPS</span>
+            <span style={{ fontSize: 11, fontWeight: 400, letterSpacing: "0.12em", color: BLUE }}>CONNECT</span>
           </div>
         </div>
-      </nav>
 
-      {/* Main Content Canvas */}
-      <main className="max-w-[1440px] mx-auto px-8 py-10">
-        
-        {/* Page Header */}
-        <div className="flex items-end justify-between mb-12">
-          <div>
-            <h1 className="text-[42px] font-normal leading-none tracking-tight text-gray-900 mb-2">
-              Overzicht
-            </h1>
-            <p className="text-sm text-gray-500 font-medium tracking-wide">
-              Laatste update: <span className="font-mono text-gray-900">Vandaag, 08:42</span>
-            </p>
-          </div>
-          <button className="h-8 px-4 bg-[#4B9EFF] hover:bg-[#3A8BEB] text-white text-xs font-semibold tracking-wider uppercase flex items-center gap-2 rounded-[4px] transition-colors">
-            <Plus className="w-4 h-4" />
-            Nieuw Project
-          </button>
-        </div>
-
-        {/* Metrics Grid */}
-        <div className="grid grid-cols-4 gap-6 mb-12">
-          {[
-            { label: 'Actieve Spots', value: '127', trend: '+12', color: 'text-[#4B9EFF]' },
-            { label: 'Gemiddeld Compliant', value: '94%', trend: '+2%', color: 'text-gray-900' },
-            { label: 'Inspecties (Week)', value: '3', trend: 'Gepland', color: 'text-gray-900' },
-            { label: 'Herstelacties Open', value: '1', trend: '-2', color: 'text-[#E53E3E]' },
-          ].map((metric, i) => (
-            <div key={i} className="p-5 border border-[#EAEEF2] bg-white shadow-[0_1px_3px_rgba(0,0,0,0.08)] rounded-[4px]">
-              <div className="text-[10px] uppercase tracking-widest text-gray-500 font-bold mb-3">{metric.label}</div>
-              <div className="flex items-baseline justify-between">
-                <div className={`font-mono text-3xl font-medium ${metric.color}`}>{metric.value}</div>
-                <div className="font-mono text-xs text-gray-400">{metric.trend}</div>
-              </div>
+        {/* Nav with codes */}
+        <nav style={{ flex: 1, padding: "14px 0" }}>
+          {nav.map((item, i) => (
+            <div key={i} style={{
+              display: "flex", alignItems: "center", gap: 10,
+              padding: "9px 20px",
+              cursor: "pointer",
+              borderLeft: item.active ? `2px solid ${BLUE}` : "2px solid transparent",
+              background: item.active ? BLUE_DIM : "transparent",
+            }}>
+              <span style={{
+                fontSize: 9, fontWeight: 600, letterSpacing: "0.08em",
+                color: item.active ? BLUE : "rgba(12,21,38,0.25)",
+                fontVariantNumeric: "tabular-nums",
+                fontFamily: "monospace",
+              }}>{item.code}</span>
+              <span style={{
+                fontSize: 12.5,
+                fontWeight: item.active ? 600 : 400,
+                color: item.active ? "#0C1526" : "rgba(12,21,38,0.45)",
+              }}>{item.label}</span>
             </div>
           ))}
+        </nav>
+
+        {/* User */}
+        <div style={{ padding: "16px 20px", borderTop: "1px solid rgba(12,21,38,0.06)" }}>
+          <div style={{
+            display: "flex", alignItems: "center", gap: 10,
+          }}>
+            <div style={{
+              width: 28, height: 28, borderRadius: 4,
+              background: `linear-gradient(135deg, ${BLUE} 0%, #1D4ED8 100%)`,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: 10, fontWeight: 700, color: "white", flexShrink: 0,
+            }}>RV</div>
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 600, color: "#0C1526" }}>René Vink</div>
+              <div style={{ fontSize: 9.5, color: "rgba(12,21,38,0.35)", letterSpacing: "0.05em" }}>HOOFDBEHEERDER</div>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      {/* Main */}
+      <main style={{ flex: 1, overflow: "auto" }}>
+
+        {/* Top bar — HMI style */}
+        <div style={{
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          padding: "0 44px",
+          height: 52,
+          background: "#FFFFFF",
+          borderBottom: "1px solid rgba(12,21,38,0.07)",
+          position: "sticky", top: 0, zIndex: 10,
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
+            <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: "0.15em", color: "rgba(12,21,38,0.35)", textTransform: "uppercase" }}>
+              Goedemorgen, René
+            </div>
+            {/* Status pill */}
+            <div style={{
+              display: "flex", alignItems: "center", gap: 5,
+              background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.2)",
+              borderRadius: 20, padding: "3px 10px",
+            }}>
+              <div style={{ width: 5, height: 5, borderRadius: "50%", background: "#22C55E" }} />
+              <span style={{ fontSize: 10, fontWeight: 600, color: "#16A34A", letterSpacing: "0.06em" }}>ALLE SYSTEMEN OPERATIONEEL</span>
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <div style={{
+              display: "flex", alignItems: "center", gap: 7,
+              background: "#F2F5F9", borderRadius: 6,
+              padding: "6px 12px", border: "1px solid rgba(12,21,38,0.07)",
+            }}>
+              <Search size={12} color="rgba(12,21,38,0.35)" />
+              <span style={{ fontSize: 11.5, color: "rgba(12,21,38,0.3)" }}>Zoeken...</span>
+            </div>
+            <div style={{
+              width: 32, height: 32, borderRadius: 6,
+              background: "#F2F5F9", border: "1px solid rgba(12,21,38,0.07)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}>
+              <Bell size={13} color="rgba(12,21,38,0.4)" />
+            </div>
+          </div>
         </div>
 
-        {/* Two Column Layout */}
-        <div className="grid grid-cols-3 gap-8">
-          
-          {/* Active Projects (2 columns wide) */}
-          <div className="col-span-2">
-            <div className="flex items-center justify-between mb-6 border-b border-[#EAEEF2] pb-3">
-              <h2 className="text-[10px] uppercase tracking-widest text-gray-900 font-bold">Actieve Projecten</h2>
-              <button className="text-[10px] uppercase tracking-widest text-[#4B9EFF] font-bold hover:underline">Toon alles</button>
-            </div>
-            
-            <div className="flex flex-col gap-3">
-              {[
-                { name: 'Brandweer Rotterdam Noord', spots: 14, comp: 89, status: 'warning' },
-                { name: 'Ziekenhuis AMC - Toren B', spots: 52, comp: 67, status: 'critical' },
-                { name: 'ProRail Utrecht Station', spots: 8, comp: 100, status: 'good' },
-              ].map((proj, i) => (
-                <div key={i} className="group relative flex items-center justify-between p-4 border border-[#EAEEF2] bg-white shadow-[0_1px_2px_rgba(0,0,0,0.04)] rounded-[4px] hover:border-[#4B9EFF] transition-colors cursor-pointer">
-                  <div className="flex items-center gap-4">
-                    <div className={`w-[5px] h-[5px] rounded-full flex-shrink-0 ${
-                      proj.status === 'good' ? 'bg-[#38A169]' : 
-                      proj.status === 'warning' ? 'bg-[#DD6B20]' : 'bg-[#E53E3E]'
-                    }`}></div>
-                    <div>
-                      <div className="text-sm font-semibold text-gray-900 mb-1 group-hover:text-[#4B9EFF] transition-colors">{proj.name}</div>
-                      <div className="flex gap-4">
-                        <span className="text-xs text-gray-500"><span className="font-mono">{proj.spots}</span> spots</span>
-                        <span className="text-xs text-gray-500"><span className="font-mono">{proj.comp}%</span> compliant</span>
-                      </div>
+        <div style={{ padding: "40px 44px 60px" }}>
+
+          {/* Metric panels — automotive instrument cluster */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12, marginBottom: 48 }}>
+            {[
+              { n: "25", label: "Gebouwen", unit: "actief" },
+              { n: "842", label: "Documenten", unit: "totaal" },
+              { n: "3", label: "Acties", unit: "vandaag" },
+              { n: "98%", label: "Compliance", unit: "gemiddeld" },
+            ].map((m, i) => (
+              <div key={i} style={{
+                background: "#FFFFFF",
+                border: "1px solid rgba(12,21,38,0.07)",
+                borderRadius: 10,
+                padding: "24px 22px",
+                position: "relative",
+                overflow: "hidden",
+              }}>
+                {/* Blue top accent */}
+                <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: BLUE, opacity: i === 0 ? 1 : 0.25 }} />
+                <div style={{
+                  fontSize: 10, fontWeight: 700, letterSpacing: "0.14em",
+                  color: "rgba(12,21,38,0.3)", textTransform: "uppercase",
+                  fontFamily: "monospace",
+                  marginBottom: 10,
+                }}>{m.unit}</div>
+                <div style={{
+                  fontSize: 44, fontWeight: 300, letterSpacing: "-2.5px",
+                  lineHeight: 1, color: "#0C1526", marginBottom: 8,
+                }}>{m.n}</div>
+                <div style={{ fontSize: 11, fontWeight: 600, color: BLUE, letterSpacing: "0.06em" }}>{m.label}</div>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 296px", gap: 40 }}>
+
+            {/* Project table — precision engineered */}
+            <div>
+              <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.15em", color: "rgba(12,21,38,0.3)", textTransform: "uppercase", marginBottom: 16 }}>
+                Actieve Projecten
+              </div>
+
+              {/* Table header */}
+              <div style={{
+                display: "grid", gridTemplateColumns: "1fr 80px 90px 28px",
+                padding: "8px 0",
+                borderBottom: "2px solid rgba(12,21,38,0.08)",
+                marginBottom: 0,
+              }}>
+                {["Project", "Spots", "Status", ""].map((h, i) => (
+                  <div key={i} style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: "0.12em", color: "rgba(12,21,38,0.3)", textTransform: "uppercase", fontFamily: "monospace" }}>{h}</div>
+                ))}
+              </div>
+
+              {projects.map((p, i) => (
+                <div
+                  key={i}
+                  onMouseEnter={() => setHovered(i)}
+                  onMouseLeave={() => setHovered(null)}
+                  style={{
+                    display: "grid", gridTemplateColumns: "1fr 80px 90px 28px",
+                    padding: "18px 0",
+                    borderBottom: "1px solid rgba(12,21,38,0.06)",
+                    alignItems: "center",
+                    cursor: "pointer",
+                    opacity: hovered !== null && hovered !== i ? 0.3 : 1,
+                    transition: "opacity 0.15s",
+                    background: hovered === i ? "rgba(59,130,246,0.03)" : "transparent",
+                    borderRadius: 4,
+                  }}
+                >
+                  <div>
+                    <div style={{ fontSize: 15, fontWeight: 500, color: "#0C1526", letterSpacing: "-0.3px", marginBottom: 3 }}>{p.name}</div>
+                    <div style={{ fontSize: 10.5, color: "rgba(12,21,38,0.35)", letterSpacing: "0.03em" }}>{p.city}</div>
+                  </div>
+                  <div style={{
+                    fontSize: 13, fontWeight: 500, color: "rgba(12,21,38,0.6)",
+                    fontFamily: "monospace", letterSpacing: "-0.5px",
+                  }}>{p.spots}</div>
+                  <div>
+                    <div style={{
+                      display: "inline-flex", alignItems: "center", gap: 5,
+                      background: p.status >= 95 ? BLUE_DIM : p.status >= 85 ? "rgba(12,21,38,0.04)" : "rgba(239,68,68,0.06)",
+                      border: `1px solid ${p.status >= 95 ? "rgba(59,130,246,0.25)" : p.status >= 85 ? "rgba(12,21,38,0.08)" : "rgba(239,68,68,0.2)"}`,
+                      borderRadius: 4, padding: "4px 8px",
+                    }}>
+                      {p.status >= 95 ? <Shield size={10} color={BLUE} /> : <AlertTriangle size={10} color={p.status >= 85 ? "rgba(12,21,38,0.4)" : "#EF4444"} />}
+                      <span style={{
+                        fontSize: 12, fontWeight: 600, fontFamily: "monospace",
+                        color: p.status >= 95 ? BLUE : p.status >= 85 ? "rgba(12,21,38,0.6)" : "#EF4444",
+                      }}>{p.status}%</span>
                     </div>
                   </div>
-                  
-                  <div className="flex items-center gap-6">
-                    {/* Visual Progress Bar */}
-                    <div className="w-32 h-1 bg-gray-100 rounded-full overflow-hidden">
-                      <div 
-                        className={`h-full ${
-                          proj.status === 'good' ? 'bg-[#38A169]' : 
-                          proj.status === 'warning' ? 'bg-[#DD6B20]' : 'bg-[#E53E3E]'
-                        }`} 
-                        style={{ width: `${proj.comp}%` }}
-                      ></div>
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-[#4B9EFF] transition-colors" />
-                  </div>
+                  <ArrowUpRight size={14} color={hovered === i ? BLUE : "rgba(12,21,38,0.15)"} />
                 </div>
               ))}
             </div>
-          </div>
 
-          {/* Recent Activity (1 column wide) */}
-          <div>
-            <div className="flex items-center justify-between mb-6 border-b border-[#EAEEF2] pb-3">
-              <h2 className="text-[10px] uppercase tracking-widest text-gray-900 font-bold">Recente Activiteit</h2>
-            </div>
-            
-            <div className="relative before:absolute before:inset-0 before:ml-[9px] before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-px before:bg-gradient-to-b before:from-transparent before:via-[#EAEEF2] before:to-transparent">
-              <div className="relative pl-8 space-y-6 before:absolute before:inset-0 before:ml-[9px] before:-translate-x-px before:h-full before:w-px before:bg-[#EAEEF2] before:z-0">
+            {/* Right panel */}
+            <div>
+              <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.15em", color: "rgba(12,21,38,0.3)", textTransform: "uppercase", marginBottom: 16 }}>
+                Signaleringen
+              </div>
+
+              {[
+                { label: "Branddeurcertificaat verloopt", sub: "Orionfiat — 3e verdieping", lvl: "warn" as const },
+                { label: "Onderhoud lift installatie", sub: "Gemeentehuis Hengelo", lvl: "warn" as const },
+                { label: "Document verouderd", sub: "ROC Twente", lvl: "alert" as const },
+              ].map((a, i) => (
+                <div key={i} style={{
+                  background: "#FFFFFF",
+                  border: "1px solid rgba(12,21,38,0.07)",
+                  borderRadius: 8,
+                  padding: "12px 14px",
+                  marginBottom: 8,
+                  display: "flex", gap: 10, alignItems: "flex-start",
+                  cursor: "pointer",
+                }}>
+                  <div style={{
+                    width: 28, height: 28, borderRadius: 6,
+                    background: a.lvl === "warn" ? "rgba(245,158,11,0.1)" : "rgba(239,68,68,0.1)",
+                    display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                  }}>
+                    <AlertTriangle size={13} color={a.lvl === "warn" ? "#F59E0B" : "#EF4444"} />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 11.5, fontWeight: 600, color: "#0C1526", marginBottom: 2 }}>{a.label}</div>
+                    <div style={{ fontSize: 10.5, color: "rgba(12,21,38,0.4)" }}>{a.sub}</div>
+                  </div>
+                  <ChevronRight size={13} color="rgba(12,21,38,0.2)" style={{ flexShrink: 0, marginTop: 2 }} />
+                </div>
+              ))}
+
+              <div style={{ marginTop: 32 }}>
+                <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.15em", color: "rgba(12,21,38,0.3)", textTransform: "uppercase", marginBottom: 16 }}>
+                  Recente Activiteit
+                </div>
                 {[
-                  { title: 'Spot BD-042 goedgekeurd', sub: 'J. de Vries', time: '10:42', icon: <CheckCircle2 className="w-3 h-3 text-[#38A169]" /> },
-                  { title: 'Inspectie afgerond Toren B', sub: 'Automatisch rapport gegenereerd', time: '09:15', icon: <AlertTriangle className="w-3 h-3 text-[#DD6B20]" /> },
-                  { title: 'Nieuw project aangemaakt', sub: 'Brandweer Rotterdam Noord', time: 'Gisteren', icon: <Plus className="w-3 h-3 text-[#4B9EFF]" /> },
-                  { title: 'Onderhoudsschema geüpdatet', sub: 'System', time: 'Gisteren', icon: <Clock className="w-3 h-3 text-gray-400" /> },
-                ].map((act, i) => (
-                  <div key={i} className="relative z-10">
-                    <div className="absolute -left-8 w-5 h-5 bg-white border border-[#EAEEF2] rounded-full flex items-center justify-center mt-0.5 shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
-                      {act.icon}
-                    </div>
-                    <div>
-                      <div className="text-sm font-semibold text-gray-900">{act.title}</div>
-                      <div className="text-xs text-gray-500 mt-0.5">{act.sub}</div>
-                      <div className="font-mono text-[10px] text-gray-400 mt-1 uppercase tracking-wider">{act.time}</div>
-                    </div>
+                  { label: "Inspectie afgerond", sub: "Orionfiat · 09:15" },
+                  { label: "Document toegevoegd", sub: "ROC Twente · 08:42" },
+                  { label: "Werkorder aangemaakt", sub: "Gisteren · 16:30" },
+                ].map((a, i) => (
+                  <div key={i} style={{
+                    display: "flex", justifyContent: "space-between", alignItems: "flex-start",
+                    padding: "11px 0",
+                    borderBottom: "1px solid rgba(12,21,38,0.05)",
+                  }}>
+                    <div style={{ fontSize: 12, color: "#0C1526" }}>{a.label}</div>
+                    <div style={{ fontSize: 10, color: "rgba(12,21,38,0.3)", whiteSpace: "nowrap", marginLeft: 12, fontFamily: "monospace" }}>{a.sub}</div>
                   </div>
                 ))}
               </div>
