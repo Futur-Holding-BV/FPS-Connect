@@ -499,14 +499,15 @@ export default function VisualLibraryBeheer() {
       return 0;
     });
 
-  const totaalGetoond = (statsVisuals ?? []).reduce((s: number, v: FpsVisualItem) => s + v.n_getoond, 0);
-  const metData = (statsVisuals ?? []).filter((v: FpsVisualItem) => v.n_getoond > 0);
+  const statsLijst: FpsVisualItem[] = statsVisuals ?? [];
+  const totaalGetoond = statsLijst.reduce((s: number, v: FpsVisualItem) => s + v.n_getoond, 0);
+  const metData = statsLijst.filter((v: FpsVisualItem) => v.n_getoond > 0);
   const gemScore =
     metData.length > 0
       ? Math.round(metData.reduce((s: number, v: FpsVisualItem) => s + (v.pct_zonder_herstelwerk ?? 0), 0) / metData.length)
       : null;
 
-  const uniqueTypes: string[] = Array.from(new Set((statsVisuals ?? []).map((v: FpsVisualItem) => v.visual_type))).sort();
+  const uniqueTypes: string[] = Array.from(new Set(statsLijst.map((v: FpsVisualItem) => v.visual_type))).sort();
 
   const vernieuw = () => {
     qc.invalidateQueries({ queryKey: getListBeheerVisualsQueryKey() });
@@ -1244,7 +1245,7 @@ export default function VisualLibraryBeheer() {
                 <CardContent>
                   <div className="text-2xl font-bold">{statsVisuals.length}</div>
                   <div className="text-xs text-muted-foreground mt-1">
-                    {statsVisuals.filter((v: FpsVisualItem) => v.actief).length} actief
+                    {statsLijst.filter((v: FpsVisualItem) => v.actief).length} actief
                   </div>
                 </CardContent>
               </Card>

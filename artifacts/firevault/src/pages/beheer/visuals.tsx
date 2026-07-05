@@ -2,13 +2,12 @@ import { useState, useRef, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   useListVisuals,
-  useCreateVisual,
+  useCreateBeheerVisual,
   useUpdateVisual,
   useDeleteVisual,
   useRequestUploadUrl,
   getListVisualsQueryKey,
   ListVisualsActief,
-  UploadUrlRequestBestandType,
 } from "@workspace/api-client-react";
 import type { Visual } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -156,7 +155,7 @@ export default function VisualLibraryBeheer() {
   };
 
   const { data: visuals = [], isLoading } = useListVisuals(queryParams);
-  const maakVisual = useCreateVisual();
+  const maakVisual = useCreateBeheerVisual();
   const wijzigVisual = useUpdateVisual();
   const verwijderVisual = useDeleteVisual();
 
@@ -225,9 +224,7 @@ export default function VisualLibraryBeheer() {
       return;
     }
 
-    const bestandType = isAfbeelding(contentType)
-      ? UploadUrlRequestBestandType.foto
-      : UploadUrlRequestBestandType.algemeen;
+    const bestandType = isAfbeelding(contentType) ? "foto" : "algemeen";
 
     let uploadURL: string;
     let objectPath: string;

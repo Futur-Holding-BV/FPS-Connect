@@ -16,8 +16,4 @@ spot_type: string;
  * Type uitvoeringsstap; standaard 'montage' als niet opgegeven
  */
 stap_type?: GetVisualsGuidanceStapType;
-/**
- * Taalfilter (default 'nl')
- */
-taal?: string;
 };
