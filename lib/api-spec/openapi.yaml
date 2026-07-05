@@ -36511,6 +36511,7 @@ components:
         visual_type:          { type: string }
         bron_type:            { type: string }
         bron_referentie:      { type: ["string", "null"] }
+        object_path:          { type: string }
         thumbnail_path:       { type: ["string", "null"] }
         spot_type:
           type: array

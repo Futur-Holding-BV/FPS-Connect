@@ -24893,6 +24893,7 @@ export const UpdateBeheerVisualBody = zod.object({
   "visual_type": zod.string().optional(),
   "bron_type": zod.string().optional(),
   "bron_referentie": zod.string().nullish(),
+  "object_path": zod.string().optional(),
   "thumbnail_path": zod.string().nullish(),
   "spot_type": zod.array(zod.string()).optional(),
   "artikel_id": zod.number().nullish(),

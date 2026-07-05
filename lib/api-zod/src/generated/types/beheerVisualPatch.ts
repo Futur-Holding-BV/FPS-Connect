@@ -12,6 +12,7 @@ export interface BeheerVisualPatch {
   bron_type?: string;
   /** @nullable */
   bron_referentie?: string | null;
+  object_path?: string;
   /** @nullable */
   thumbnail_path?: string | null;
   spot_type?: string[];

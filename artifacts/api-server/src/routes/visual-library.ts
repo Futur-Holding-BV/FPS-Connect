@@ -114,6 +114,7 @@ router.patch("/beheer/visuals/:id", schrijven, async (req: Request, res: Respons
     visual_type,
     bron_type,
     bron_referentie,
+    object_path,
     thumbnail_path,
     spot_type,
     artikel_id,
@@ -125,6 +126,7 @@ router.patch("/beheer/visuals/:id", schrijven, async (req: Request, res: Respons
     visual_type?: string;
     bron_type?: string;
     bron_referentie?: string | null;
+    object_path?: string;
     thumbnail_path?: string | null;
     spot_type?: string[];
     artikel_id?: number | null;
@@ -141,6 +143,7 @@ router.patch("/beheer/visuals/:id", schrijven, async (req: Request, res: Respons
   if (visual_type !== undefined)          update.visualType = visual_type;
   if (bron_type !== undefined)            update.bronType = bron_type;
   if (bron_referentie !== undefined)      update.bronReferentie = bron_referentie;
+  if (object_path !== undefined)          update.objectPath = object_path;
   if (thumbnail_path !== undefined)       update.thumbnailPath = thumbnail_path;
   if (spot_type !== undefined)            update.spotType = spot_type;
   if (artikel_id !== undefined)           update.artikelId = artikel_id;

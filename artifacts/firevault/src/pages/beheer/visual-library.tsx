@@ -17,6 +17,8 @@ import {
   AlertTriangle,
   Circle,
   Pencil,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -406,14 +408,21 @@ export default function VisualLibraryBeheer() {
   const [thumbnail, setThumbnail]             = useState<File | null>(null);
   const [togglingId, setTogglingId]           = useState<number | null>(null);
   const [verwijderingId, setVerwijderingId]   = useState<number | null>(null);
-  const [bewerkVisual, setBewerkVisual]       = useState<BeheerVisual | null>(null);
-  const [bewerkForm, setBewerkForm]           = useState<FormulierData>(LEEG_FORMULIER);
+  const [bewerkVisual, setBewerkVisual]               = useState<BeheerVisual | null>(null);
+  const [bewerkForm, setBewerkForm]                   = useState<FormulierData>(LEEG_FORMULIER);
+  const [bewerkBestand, setBewerkBestand]             = useState<File | null>(null);
+  const [bewerkThumbnail, setBewerkThumbnail]         = useState<File | null>(null);
+  const [bewerkBestandOpen, setBewerkBestandOpen]     = useState(false);
 
-  const bestandRef   = useRef<HTMLInputElement>(null);
-  const thumbnailRef = useRef<HTMLInputElement>(null);
+  const bestandRef          = useRef<HTMLInputElement>(null);
+  const thumbnailRef        = useRef<HTMLInputElement>(null);
+  const bewerkBestandRef    = useRef<HTMLInputElement>(null);
+  const bewerkThumbnailRef  = useRef<HTMLInputElement>(null);
 
-  const { uploadFile: uploadBestand, isUploading: uploadt }      = useUpload({ bestand_type: "algemeen" });
-  const { uploadFile: uploadThumb, isUploading: uploadtThumb }   = useUpload({ bestand_type: "algemeen" });
+  const { uploadFile: uploadBestand, isUploading: uploadt }            = useUpload({ bestand_type: "algemeen" });
+  const { uploadFile: uploadThumb, isUploading: uploadtThumb }         = useUpload({ bestand_type: "algemeen" });
+  const { uploadFile: uploadBewerkBestand, isUploading: uploadtBewerk }     = useUpload({ bestand_type: "algemeen" });
+  const { uploadFile: uploadBewerkThumb, isUploading: uploadtBewerkThumb }  = useUpload({ bestand_type: "algemeen" });
 
   const { data: beheerVisuals = [], isLoading: beheerLoading } = useListBeheerVisuals();
   
@@ -647,15 +656,40 @@ export default function VisualLibraryBeheer() {
       bron_referentie: visual.bron_referentie ?? "",
       spot_type:       visual.spot_type ?? [],
     });
+    setBewerkBestand(null);
+    setBewerkThumbnail(null);
+    setBewerkBestandOpen(false);
     setBewerkVisual(visual);
   }
 
-  function handleBewerkOpslaan() {
+  async function handleBewerkOpslaan() {
     if (!bewerkVisual) return;
     if (!bewerkForm.naam || !bewerkForm.visual_type || !bewerkForm.bron_type) {
       toast({ title: "Vul alle verplichte velden in", variant: "destructive" });
       return;
     }
+
+    let nieuweObjectPath: string | undefined;
+    let nieuweThumbnailPath: string | undefined;
+
+    if (bewerkBestand) {
+      const res = await uploadBewerkBestand(bewerkBestand);
+      if (!res) {
+        toast({ title: "Uploadfout (bestand) — probeer opnieuw", variant: "destructive" });
+        return;
+      }
+      nieuweObjectPath = res.objectPath;
+    }
+
+    if (bewerkThumbnail) {
+      const res = await uploadBewerkThumb(bewerkThumbnail);
+      if (!res) {
+        toast({ title: "Uploadfout (thumbnail) — probeer opnieuw", variant: "destructive" });
+        return;
+      }
+      nieuweThumbnailPath = res.objectPath;
+    }
+
     bewerkOpslaan.mutate({
       id: bewerkVisual.id,
       data: {
@@ -664,6 +698,8 @@ export default function VisualLibraryBeheer() {
         bron_type:       bewerkForm.bron_type,
         bron_referentie: bewerkForm.bron_referentie || undefined,
         spot_type:       bewerkForm.spot_type,
+        ...(nieuweObjectPath   !== undefined && { object_path:    nieuweObjectPath }),
+        ...(nieuweThumbnailPath !== undefined && { thumbnail_path: nieuweThumbnailPath }),
       },
     });
   }
@@ -1155,24 +1191,132 @@ export default function VisualLibraryBeheer() {
                 </p>
               </div>
 
-              <p className="text-xs text-muted-foreground bg-muted/50 rounded p-2">
-                Het bestand zelf is niet vervangbaar via dit formulier.
-              </p>
+              {/* Bestand vervangen (inklapbaar) */}
+              <div className="border rounded-md">
+                <button
+                  type="button"
+                  className="flex items-center gap-2 w-full px-3 py-2.5 text-sm font-medium hover:bg-muted/50 transition-colors"
+                  onClick={() => setBewerkBestandOpen((v) => !v)}
+                  disabled={bewerkOpslaan.isPending || uploadtBewerk || uploadtBewerkThumb}
+                >
+                  {bewerkBestandOpen ? (
+                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                  )}
+                  Bestand vervangen
+                  {(bewerkBestand || bewerkThumbnail) && (
+                    <span className="ml-auto text-xs text-primary font-normal">
+                      {[bewerkBestand && "bestand", bewerkThumbnail && "thumbnail"]
+                        .filter(Boolean)
+                        .join(" + ")}{" "}
+                      geselecteerd
+                    </span>
+                  )}
+                </button>
+
+                {bewerkBestandOpen && (
+                  <div className="px-3 pb-3 space-y-3 border-t pt-3">
+                    <p className="text-xs text-muted-foreground">
+                      Selecteer een nieuw bestand om het huidige te vervangen. Laat leeg om het bestaande bestand te behouden.
+                    </p>
+
+                    {/* Huidig bestand preview */}
+                    {bewerkVisual?.object_path && (
+                      <div className="text-xs text-muted-foreground truncate">
+                        Huidig: <span className="font-mono">{bewerkVisual.object_path.split("/").pop()}</span>
+                      </div>
+                    )}
+
+                    {/* Nieuw hoofdbestand */}
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Nieuw hoofdbestand</Label>
+                      <div
+                        className="border-2 border-dashed rounded-md p-3 cursor-pointer hover:bg-muted/30 transition-colors"
+                        onClick={() => bewerkBestandRef.current?.click()}
+                      >
+                        {bewerkBestand ? (
+                          <div className="flex items-center gap-2">
+                            <Upload className="h-4 w-4 text-primary" />
+                            <span className="text-sm truncate flex-1">{bewerkBestand.name}</span>
+                            <button
+                              type="button"
+                              className="text-muted-foreground hover:text-foreground"
+                              onClick={(e) => { e.stopPropagation(); setBewerkBestand(null); }}
+                            >
+                              <X className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2 text-muted-foreground">
+                            <Upload className="h-4 w-4" />
+                            <span className="text-sm">Kies een vervangend bestand</span>
+                          </div>
+                        )}
+                      </div>
+                      <input
+                        ref={bewerkBestandRef}
+                        type="file"
+                        className="hidden"
+                        onChange={(e) => setBewerkBestand(e.target.files?.[0] ?? null)}
+                      />
+                    </div>
+
+                    {/* Nieuwe thumbnail */}
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Nieuwe thumbnail (optioneel)</Label>
+                      <div
+                        className="border-2 border-dashed rounded-md p-3 cursor-pointer hover:bg-muted/30 transition-colors"
+                        onClick={() => bewerkThumbnailRef.current?.click()}
+                      >
+                        {bewerkThumbnail ? (
+                          <div className="flex items-center gap-2">
+                            <Image className="h-4 w-4 text-primary" />
+                            <span className="text-sm truncate flex-1">{bewerkThumbnail.name}</span>
+                            <button
+                              type="button"
+                              className="text-muted-foreground hover:text-foreground"
+                              onClick={(e) => { e.stopPropagation(); setBewerkThumbnail(null); }}
+                            >
+                              <X className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2 text-muted-foreground">
+                            <Image className="h-4 w-4" />
+                            <span className="text-sm">Kies een vervangende thumbnail</span>
+                          </div>
+                        )}
+                      </div>
+                      <input
+                        ref={bewerkThumbnailRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => setBewerkThumbnail(e.target.files?.[0] ?? null)}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
 
             <DialogFooter>
               <Button
                 variant="outline"
                 onClick={() => setBewerkVisual(null)}
-                disabled={bewerkOpslaan.isPending}
+                disabled={bewerkOpslaan.isPending || uploadtBewerk || uploadtBewerkThumb}
               >
                 Annuleren
               </Button>
-              <Button onClick={handleBewerkOpslaan} disabled={bewerkOpslaan.isPending}>
-                {bewerkOpslaan.isPending ? (
+              <Button
+                onClick={handleBewerkOpslaan}
+                disabled={bewerkOpslaan.isPending || uploadtBewerk || uploadtBewerkThumb}
+              >
+                {(bewerkOpslaan.isPending || uploadtBewerk || uploadtBewerkThumb) ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Opslaan...
+                    {(uploadtBewerk || uploadtBewerkThumb) ? "Uploaden..." : "Opslaan..."}
                   </>
                 ) : (
                   "Opslaan"
