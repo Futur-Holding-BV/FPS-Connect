@@ -737,17 +737,27 @@ export function GebouwDashboard({
                     : "Nog te weinig data om een oordeel te geven."}
                 </p>
               ) : (
-                <ul className="space-y-2">
+                <ul className="space-y-1">
                   {gezondheidSignalen.map((s, i) => (
-                    <li key={i} className="flex items-start gap-2 text-sm">
-                      {s.ernst === "hoog" ? (
-                        <AlertCircle className="h-4 w-4 text-red-500 shrink-0 mt-0.5" />
-                      ) : s.ernst === "middel" ? (
-                        <AlertCircle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
-                      ) : (
-                        <Circle className="h-4 w-4 text-slate-400 shrink-0 mt-0.5" />
-                      )}
-                      <span className="text-slate-700">{s.tekst}</span>
+                    <li key={i}>
+                      <button
+                        type="button"
+                        onClick={() => s.tab && onNavigeer(s.tab)}
+                        disabled={!s.tab}
+                        className="w-full text-left flex items-start gap-2 rounded-md px-2 py-1.5 hover:bg-slate-50 transition-colors text-sm group disabled:cursor-default"
+                      >
+                        {s.ernst === "hoog" ? (
+                          <AlertCircle className="h-3.5 w-3.5 text-red-500 shrink-0 mt-0.5" />
+                        ) : s.ernst === "middel" ? (
+                          <AlertCircle className="h-3.5 w-3.5 text-amber-500 shrink-0 mt-0.5" />
+                        ) : (
+                          <Circle className="h-3.5 w-3.5 text-slate-400 shrink-0 mt-0.5" />
+                        )}
+                        <span className="flex-1 text-slate-700">{s.tekst}</span>
+                        {s.tab && (
+                          <ArrowRight className="h-3.5 w-3.5 text-slate-300 group-hover:text-primary shrink-0 mt-0.5 transition-colors" />
+                        )}
+                      </button>
                     </li>
                   ))}
                 </ul>

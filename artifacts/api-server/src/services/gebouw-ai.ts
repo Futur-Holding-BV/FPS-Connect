@@ -295,7 +295,7 @@ export async function haalStreetViewBeeld(lat: number, lng: number): Promise<str
   metaUrl.searchParams.set("source", "outdoor");
   metaUrl.searchParams.set("key", GOOGLE_KEY!);
   try {
-    const metaRes = await fetch(metaUrl.toString(), { signal: AbortSignal.timeout(8000) });
+    const metaRes = await fetch(metaUrl.toString(), { signal: AbortSignal.timeout(5000) });
     if (!metaRes.ok) return null;
     const meta = (await metaRes.json()) as {
       status: string;
@@ -330,7 +330,7 @@ export async function haalStreetViewBeeld(lat: number, lng: number): Promise<str
   }
 
   try {
-    const res = await fetch(url.toString(), { signal: AbortSignal.timeout(10000) });
+    const res = await fetch(url.toString(), { signal: AbortSignal.timeout(7000) });
     if (!res.ok) {
       logger.warn({ status: res.status }, "Street View Static HTTP-fout");
       return null;
@@ -438,7 +438,7 @@ async function analyseerBeeld(
 
   const aiResultaat = await aiGateway.chat("vision", {
     response_format: { type: "json_object" },
-    max_completion_tokens: 4000,
+    max_completion_tokens: 800,
     messages: [
       { role: "system", content: GEBOUW_VISION_PROMPT.tekst },
       { role: "user", content },
@@ -490,7 +490,7 @@ interface ExtractieVelden {
 async function extraheerUitTekst(beschrijving: string): Promise<ExtractieVelden | null> {
   const aiResultaat = await aiGateway.chat("fast", {
     response_format: { type: "json_object" },
-    max_completion_tokens: 4000,
+    max_completion_tokens: 800,
     messages: [
       { role: "system", content: GEBOUW_EXTRACTIE_PROMPT.tekst },
       { role: "user", content: beschrijving },
@@ -777,16 +777,23 @@ export async function analyseerGebouwVrijeTekst(beschrijving: string, logCtx?: P
     );
   }
 
-  // Stap 1: probeer via OpenAI gestructureerde velden te extraheren uit de vrije tekst.
-  // Bij een fout (ongeldige sleutel, quota, time-out) vallen we terug op geocoding van de ruwe invoer.
-  let extract: ExtractieVelden | null = null;
-  if (HEEFT_OPENAI) {
-    try {
-      extract = await extraheerUitTekst(beschrijving);
-    } catch (err) {
-      logger.warn({ err }, "extraheerUitTekst mislukte; val terug op directe geocoding");
-    }
-  }
+  const ruwZoek = beschrijving.slice(0, 200).trim();
+
+  // Stap 1+2 parallel: extractie en geocoding van de ruwe invoer gelijktijdig starten.
+  // In de meeste gevallen is de zoekterm uit extractie gelijk aan of vergelijkbaar met de
+  // ruwe invoer, zodat het parallelle geocoding-resultaat direct hergebruikt kan worden
+  // en er geen tweede geocoding-ronde nodig is.
+  const [extract, ruwGeoUitkomst] = await Promise.all([
+    HEEFT_OPENAI
+      ? extraheerUitTekst(beschrijving).catch((err) => {
+          logger.warn({ err }, "extraheerUitTekst mislukte; val terug op directe geocoding");
+          return null as ExtractieVelden | null;
+        })
+      : Promise.resolve(null as ExtractieVelden | null),
+    GOOGLE_KEY
+      ? geocodeAlle(ruwZoek)
+      : Promise.resolve(null as GeocodeUitkomst | null),
+  ]);
 
   // Bouw het resultaatobject op met wat de extractie opleverde (kan allemaal null zijn).
   const result: GebouwAnalyse = {
@@ -812,12 +819,12 @@ export async function analyseerGebouwVrijeTekst(beschrijving: string, logCtx?: P
     betrouwbaarheid: null,
   };
 
-  // Stap 2: bepaal de zoekterm voor geocoding.
+  // Bepaal de verfijnde zoekterm op basis van extractieresultaat.
   // Voorkeursvolgorde: zoekopdracht uit extractie → opgebouwde adresstring → ruwe invoer.
   const zoek =
     extract?.zoekopdracht ||
     [extract?.adres, extract?.postcode, extract?.stad].filter(Boolean).join(", ") ||
-    beschrijving.slice(0, 200).trim();
+    ruwZoek;
 
   if (!GOOGLE_KEY) {
     // Geen kaart-API: tevreden met alleen de OpenAI-extractie.
@@ -834,7 +841,12 @@ export async function analyseerGebouwVrijeTekst(beschrijving: string, logCtx?: P
   }
 
   // Stap 3: geocoding.
-  const geoUitkomst = await geocodeAlle(zoek);
+  // Hergebruik het parallelle resultaat als de verfijnde zoekterm niet afwijkt van de ruwe invoer.
+  // Anders een nieuwe geocode-aanvraag met de betere zoekterm.
+  const zoekWijktAf = zoek.trim().toLowerCase() !== ruwZoek.toLowerCase();
+  const geoUitkomst: GeocodeUitkomst = zoekWijktAf || !ruwGeoUitkomst
+    ? await geocodeAlle(zoek)
+    : ruwGeoUitkomst;
   if (!geoUitkomst.ok) {
     // Geocoding mislukt. Als we via OpenAI al iets hebben gevonden, retourneer dat gedeeltelijk.
     result.toelichting = geoUitkomst.reden;
