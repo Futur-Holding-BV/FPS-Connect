@@ -4,6 +4,20 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-05 — Monteur-app: Vorige stappen read-only terugkijken (PIM uitvoering)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+**Wat is gebouwd:**
+
+- In het uitvoering-scherm (`app/uitvoering/[opdrachtId].tsx`) verschijnt een **"Vorige stappen (N)"** knop in de header zodra er voltooide stappen zijn. De knop toont het exacte aantal en togglet de weergave.
+- Bij activeren vervangt het **VorigeStappenPanel** de actieve-stap-weergave (inclusief de voortgangsbalk). De VoortgangsBalk verdwijnt alleen wanneer het paneel open is.
+- **ReadOnlyStapKaart** component toont per voltooide stap: stapnummer (badge), doel, werkpakket-sleutel, handeling, controlevraag + antwoord, opmerkingen, fotoaantal (badge met camera-icoon), AI-analyse (blauw blok met samenvatting/bevindingen/oordeel) en afwijkingdetails inclusief besluit (oranje blok). Stappen gesorteerd van nieuw naar oud.
+- **Offline cache**: voltooide stappen worden gecached in AsyncStorage (`pim_stappen_{opdrachtId}_v1`, apart van de actieve-stap-cache `pim_stap_{opdrachtId}_v1`). Bij offline gebruik worden de gecachte stappen getoond.
+- Puur read-only: geen mutations, geen syncQueue-aanrakingen. De actieve stap-flow is ongewijzigd.
+
+---
+
 ## 2026-07-05 — Bugfix: gebroken link "Beheren" bij inkomende facturen in gebouwdetail
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag

@@ -1,5 +1,6 @@
 import {
   useGetHuidigePimUitvoeringStap,
+  useListPimUitvoeringStappen,
   useStartPimUitvoering,
   useVoltooiPimUitvoeringStap,
   useMeldPimUitvoeringAfwijking,
@@ -75,6 +76,29 @@ async function verwijderCache(opdrachtId: number) {
     await AsyncStorage.removeItem(cacheSleutel(opdrachtId));
   } catch {
     // stil falen
+  }
+}
+
+const STAPPEN_CACHE_VERSIE = "v1";
+function stappenCacheSleutel(opdrachtId: number) {
+  return `pim_stappen_${opdrachtId}_${STAPPEN_CACHE_VERSIE}`;
+}
+
+async function cacheStappen(opdrachtId: number, stappen: PimUitvoeringStap[]) {
+  try {
+    await AsyncStorage.setItem(stappenCacheSleutel(opdrachtId), JSON.stringify(stappen));
+  } catch {
+    // stil falen
+  }
+}
+
+async function laadGecachteStappen(opdrachtId: number): Promise<PimUitvoeringStap[]> {
+  try {
+    const raw = await AsyncStorage.getItem(stappenCacheSleutel(opdrachtId));
+    if (!raw) return [];
+    return JSON.parse(raw) as PimUitvoeringStap[];
+  } catch {
+    return [];
   }
 }
 
@@ -224,6 +248,8 @@ export default function UitvoeringScherm() {
   const [afwijkingBezig, setAfwijkingBezig] = useState(false);
   const [uitvoeringGereed, setUitvoeringGereed] = useState(false);
   const [offlineOpgeslagen, setOfflineOpgeslagen] = useState(false);
+  const [toonVorigeStappen, setToonVorigeStappen] = useState(false);
+  const [gecachteStappen, setGecachteStappen] = useState<PimUitvoeringStap[]>([]);
 
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -259,6 +285,30 @@ export default function UitvoeringScherm() {
   }, [stapData, opdrachtId]);
 
   const actieveStap = stapData ?? gecachteStap;
+
+  const { data: stappenData } = useListPimUitvoeringStappen(opdrachtId, {
+    query: { queryKey: ["pim-stappen", opdrachtId], enabled: opdrachtId > 0 },
+  });
+
+  useEffect(() => {
+    if (stappenData && stappenData.length > 0) {
+      void cacheStappen(opdrachtId, stappenData);
+      setGecachteStappen(stappenData);
+    }
+  }, [stappenData, opdrachtId]);
+
+  useEffect(() => {
+    if (opdrachtId > 0) {
+      laadGecachteStappen(opdrachtId).then((stappen) => {
+        if (stappen.length > 0) setGecachteStappen(stappen);
+      });
+    }
+  }, [opdrachtId]);
+
+  const alleStappen = stappenData ?? gecachteStappen;
+  const voltooideStappen = alleStappen.filter(
+    (s) => s.status === "voltooid" || s.status === "overgeslagen",
+  );
 
   const startPolling = useCallback(() => {
     if (pollingRef.current) return;
@@ -556,14 +606,45 @@ export default function UitvoeringScherm() {
           Adaptieve gids
         </Text>
         {actieveStap && (
-          <Text style={{ color: c.darkMuted, fontSize: 13, fontFamily: "Inter_400Regular", marginTop: 2 }}>
-            Stap {actieveStap.volgorde}
-            {actieveStap.werkpakket_sleutel ? ` · ${actieveStap.werkpakket_sleutel}` : ""}
-          </Text>
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 2 }}>
+            <Text style={{ color: c.darkMuted, fontSize: 13, fontFamily: "Inter_400Regular" }}>
+              Stap {actieveStap.volgorde}
+              {actieveStap.werkpakket_sleutel ? ` · ${actieveStap.werkpakket_sleutel}` : ""}
+            </Text>
+            {voltooideStappen.length > 0 && (
+              <Pressable
+                onPress={() => setToonVorigeStappen((v) => !v)}
+                style={{
+                  backgroundColor: toonVorigeStappen ? c.primary + "22" : c.darkMuted + "33",
+                  borderRadius: 8,
+                  paddingHorizontal: 10,
+                  paddingVertical: 4,
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 4,
+                }}
+              >
+                <Ionicons
+                  name="time-outline"
+                  size={13}
+                  color={toonVorigeStappen ? c.primary : c.darkMuted}
+                />
+                <Text
+                  style={{
+                    color: toonVorigeStappen ? c.primary : c.darkMuted,
+                    fontSize: 12,
+                    fontFamily: "Inter_600SemiBold",
+                  }}
+                >
+                  Vorige stappen ({voltooideStappen.length})
+                </Text>
+              </Pressable>
+            )}
+          </View>
         )}
       </View>
 
-      {actieveStap && <VoortgangsBalk volgorde={actieveStap.volgorde} />}
+      {actieveStap && !toonVorigeStappen && <VoortgangsBalk volgorde={actieveStap.volgorde} />}
       <OfflineBanner />
 
       {isLoading && !gecachteStap ? (
@@ -602,6 +683,13 @@ export default function UitvoeringScherm() {
             )}
           </Pressable>
         </View>
+      ) : actieveStap && toonVorigeStappen ? (
+        <VorigeStappenPanel
+          stappen={voltooideStappen}
+          onSluit={() => setToonVorigeStappen(false)}
+          c={c}
+          insets={insets}
+        />
       ) : actieveStap ? (
         <ScrollView
           contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 32 }}
@@ -1105,6 +1193,411 @@ function AfwijkingWachtScherm({
           )}
         </Pressable>
       )}
+    </View>
+  );
+}
+
+function VorigeStappenPanel({
+  stappen,
+  onSluit,
+  c,
+  insets,
+}: {
+  stappen: PimUitvoeringStap[];
+  onSluit: () => void;
+  c: ReturnType<typeof useColors>;
+  insets: { bottom: number };
+}) {
+  return (
+    <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 32 }}>
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+          marginBottom: 20,
+        }}
+      >
+        <Text style={{ color: c.foreground, fontSize: 16, fontFamily: "Inter_700Bold" }}>
+          Vorige stappen
+        </Text>
+        <Pressable
+          onPress={onSluit}
+          style={{
+            backgroundColor: c.accent,
+            borderRadius: 8,
+            paddingHorizontal: 12,
+            paddingVertical: 6,
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 6,
+          }}
+        >
+          <Ionicons name="arrow-forward-outline" size={14} color={c.foreground} />
+          <Text style={{ color: c.foreground, fontSize: 13, fontFamily: "Inter_600SemiBold" }}>
+            Actieve stap
+          </Text>
+        </Pressable>
+      </View>
+
+      {stappen.length === 0 ? (
+        <View style={{ alignItems: "center", paddingVertical: 48 }}>
+          <Ionicons name="time-outline" size={40} color={c.mutedForeground} />
+          <Text
+            style={{
+              color: c.mutedForeground,
+              marginTop: 12,
+              fontSize: 14,
+              fontFamily: "Inter_400Regular",
+              textAlign: "center",
+            }}
+          >
+            Nog geen voltooide stappen.
+          </Text>
+        </View>
+      ) : (
+        stappen
+          .slice()
+          .sort((a, b) => b.volgorde - a.volgorde)
+          .map((stap) => <ReadOnlyStapKaart key={stap.id} stap={stap} c={c} />)
+      )}
+    </ScrollView>
+  );
+}
+
+function ReadOnlyStapKaart({
+  stap,
+  c,
+}: {
+  stap: PimUitvoeringStap;
+  c: ReturnType<typeof useColors>;
+}) {
+  const instructie = parseInstructie(stap.instructie_json);
+  const antwoorden = stap.antwoorden_json as {
+    antwoord_controle?: boolean;
+    opmerkingen?: string;
+  } | null;
+  const aiAnalyse = stap.ai_analyse_json as Record<string, unknown> | null;
+  const afwijking = stap.afwijking_json as {
+    omschrijving?: string;
+    beslissing?: string;
+    toelichting?: string;
+  } | null;
+
+  const statusKleur =
+    stap.status === "voltooid"
+      ? "#16a34a"
+      : stap.status === "overgeslagen"
+        ? "#6b7280"
+        : "#d97706";
+  const statusLabel =
+    stap.status === "voltooid"
+      ? "Voltooid"
+      : stap.status === "overgeslagen"
+        ? "Overgeslagen"
+        : stap.status;
+  const statusIcoon: keyof typeof Ionicons.glyphMap =
+    stap.status === "voltooid"
+      ? "checkmark-circle"
+      : stap.status === "overgeslagen"
+        ? "remove-circle-outline"
+        : "alert-circle-outline";
+
+  return (
+    <View
+      style={{
+        backgroundColor: c.card,
+        borderRadius: 12,
+        marginBottom: 16,
+        overflow: "hidden",
+        borderWidth: 1,
+        borderColor: c.border,
+      }}
+    >
+      <View
+        style={{
+          backgroundColor: c.accent,
+          padding: 12,
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+        }}
+      >
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 10, flex: 1 }}>
+          <View
+            style={{
+              backgroundColor: c.primary + "22",
+              borderRadius: 20,
+              width: 32,
+              height: 32,
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0,
+            }}
+          >
+            <Text style={{ color: c.primary, fontSize: 14, fontFamily: "Inter_700Bold" }}>
+              {stap.volgorde}
+            </Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            {instructie?.doel ? (
+              <Text
+                style={{
+                  color: c.foreground,
+                  fontSize: 13,
+                  fontFamily: "Inter_600SemiBold",
+                }}
+                numberOfLines={2}
+              >
+                {instructie.doel}
+              </Text>
+            ) : (
+              <Text style={{ color: c.foreground, fontSize: 13, fontFamily: "Inter_600SemiBold" }}>
+                Stap {stap.volgorde}
+              </Text>
+            )}
+            {stap.werkpakket_sleutel ? (
+              <Text style={{ color: c.mutedForeground, fontSize: 11, fontFamily: "Inter_400Regular" }}>
+                {stap.werkpakket_sleutel}
+              </Text>
+            ) : null}
+          </View>
+        </View>
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 4,
+            backgroundColor: statusKleur + "18",
+            borderRadius: 20,
+            paddingHorizontal: 8,
+            paddingVertical: 3,
+            flexShrink: 0,
+          }}
+        >
+          <Ionicons name={statusIcoon} size={12} color={statusKleur} />
+          <Text style={{ color: statusKleur, fontSize: 11, fontFamily: "Inter_600SemiBold" }}>
+            {statusLabel}
+          </Text>
+        </View>
+      </View>
+
+      <View style={{ padding: 14, gap: 12 }}>
+        {instructie?.handeling ? (
+          <View>
+            <Text
+              style={{
+                color: c.mutedForeground,
+                fontSize: 11,
+                fontFamily: "Inter_600SemiBold",
+                textTransform: "uppercase",
+                letterSpacing: 0.5,
+                marginBottom: 4,
+              }}
+            >
+              Handeling
+            </Text>
+            <Text style={{ color: c.foreground, fontSize: 13, fontFamily: "Inter_400Regular", lineHeight: 19 }}>
+              {instructie.handeling}
+            </Text>
+          </View>
+        ) : null}
+
+        {instructie?.controlevraag ? (
+          <View>
+            <Text
+              style={{
+                color: c.mutedForeground,
+                fontSize: 11,
+                fontFamily: "Inter_600SemiBold",
+                textTransform: "uppercase",
+                letterSpacing: 0.5,
+                marginBottom: 4,
+              }}
+            >
+              Controlevraag
+            </Text>
+            <Text
+              style={{
+                color: c.foreground,
+                fontSize: 13,
+                fontFamily: "Inter_400Regular",
+                lineHeight: 19,
+                marginBottom: 6,
+              }}
+            >
+              {instructie.controlevraag}
+            </Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              <Ionicons
+                name={antwoorden?.antwoord_controle ? "checkmark-circle" : "close-circle"}
+                size={16}
+                color={antwoorden?.antwoord_controle ? "#16a34a" : "#9ca3af"}
+              />
+              <Text
+                style={{
+                  color: antwoorden?.antwoord_controle ? "#15803d" : c.mutedForeground,
+                  fontSize: 13,
+                  fontFamily: "Inter_600SemiBold",
+                }}
+              >
+                {antwoorden?.antwoord_controle ? "Ja, bevestigd" : "Niet bevestigd"}
+              </Text>
+            </View>
+          </View>
+        ) : null}
+
+        {antwoorden?.opmerkingen ? (
+          <View>
+            <Text
+              style={{
+                color: c.mutedForeground,
+                fontSize: 11,
+                fontFamily: "Inter_600SemiBold",
+                textTransform: "uppercase",
+                letterSpacing: 0.5,
+                marginBottom: 4,
+              }}
+            >
+              Opmerkingen
+            </Text>
+            <Text style={{ color: c.foreground, fontSize: 13, fontFamily: "Inter_400Regular", lineHeight: 19 }}>
+              {antwoorden.opmerkingen}
+            </Text>
+          </View>
+        ) : null}
+
+        {stap.foto_urls && stap.foto_urls.length > 0 ? (
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+            <Ionicons name="camera-outline" size={15} color={c.mutedForeground} />
+            <Text style={{ color: c.mutedForeground, fontSize: 13, fontFamily: "Inter_400Regular" }}>
+              {stap.foto_urls.length} foto{stap.foto_urls.length !== 1 ? "'s" : ""} bijgevoegd
+            </Text>
+          </View>
+        ) : null}
+
+        {aiAnalyse && Object.keys(aiAnalyse).length > 0 ? (
+          <View
+            style={{
+              backgroundColor: "#f0f9ff",
+              borderRadius: 8,
+              padding: 10,
+              borderLeftWidth: 3,
+              borderLeftColor: "#0284c7",
+            }}
+          >
+            <Text
+              style={{
+                color: "#0369a1",
+                fontSize: 11,
+                fontFamily: "Inter_600SemiBold",
+                textTransform: "uppercase",
+                letterSpacing: 0.5,
+                marginBottom: 4,
+              }}
+            >
+              AI-analyse
+            </Text>
+            {typeof aiAnalyse.samenvatting === "string" ? (
+              <Text style={{ color: "#0c4a6e", fontSize: 13, fontFamily: "Inter_400Regular", lineHeight: 19 }}>
+                {aiAnalyse.samenvatting}
+              </Text>
+            ) : null}
+            {typeof aiAnalyse.bevindingen === "string" ? (
+              <Text
+                style={{
+                  color: "#0c4a6e",
+                  fontSize: 13,
+                  fontFamily: "Inter_400Regular",
+                  lineHeight: 19,
+                  marginTop: 4,
+                }}
+              >
+                {aiAnalyse.bevindingen}
+              </Text>
+            ) : null}
+            {typeof aiAnalyse.oordeel === "string" ? (
+              <Text style={{ color: "#0c4a6e", fontSize: 13, fontFamily: "Inter_600SemiBold", marginTop: 4 }}>
+                Oordeel: {aiAnalyse.oordeel}
+              </Text>
+            ) : null}
+          </View>
+        ) : null}
+
+        {afwijking?.omschrijving ? (
+          <View
+            style={{
+              backgroundColor: "#fff7ed",
+              borderRadius: 8,
+              padding: 10,
+              borderLeftWidth: 3,
+              borderLeftColor: "#d97706",
+            }}
+          >
+            <Text
+              style={{
+                color: "#92400e",
+                fontSize: 11,
+                fontFamily: "Inter_600SemiBold",
+                textTransform: "uppercase",
+                letterSpacing: 0.5,
+                marginBottom: 4,
+              }}
+            >
+              Afwijking
+            </Text>
+            <Text style={{ color: "#78350f", fontSize: 13, fontFamily: "Inter_400Regular", lineHeight: 19 }}>
+              {afwijking.omschrijving}
+            </Text>
+            {afwijking.beslissing ? (
+              <View style={{ marginTop: 8, flexDirection: "row", alignItems: "flex-start", gap: 6 }}>
+                <Ionicons
+                  name={afwijking.beslissing === "doorgaan" ? "checkmark-circle" : "close-circle"}
+                  size={15}
+                  color={afwijking.beslissing === "doorgaan" ? "#16a34a" : "#dc2626"}
+                  style={{ marginTop: 1 }}
+                />
+                <View style={{ flex: 1 }}>
+                  <Text
+                    style={{
+                      color: afwijking.beslissing === "doorgaan" ? "#15803d" : "#dc2626",
+                      fontSize: 12,
+                      fontFamily: "Inter_600SemiBold",
+                    }}
+                  >
+                    Besluit: {afwijking.beslissing === "doorgaan" ? "Doorgaan" : "Gestopt"}
+                  </Text>
+                  {afwijking.toelichting ? (
+                    <Text
+                      style={{
+                        color: "#78350f",
+                        fontSize: 12,
+                        fontFamily: "Inter_400Regular",
+                        marginTop: 2,
+                      }}
+                    >
+                      {afwijking.toelichting}
+                    </Text>
+                  ) : null}
+                </View>
+              </View>
+            ) : null}
+          </View>
+        ) : null}
+
+        {stap.voltooid_op ? (
+          <Text style={{ color: c.mutedForeground, fontSize: 11, fontFamily: "Inter_400Regular" }}>
+            Voltooid op{" "}
+            {new Date(stap.voltooid_op).toLocaleString("nl-NL", {
+              day: "2-digit",
+              month: "2-digit",
+              year: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
+          </Text>
+        ) : null}
+      </View>
     </View>
   );
 }
