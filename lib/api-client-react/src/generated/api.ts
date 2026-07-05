@@ -747,7 +747,6 @@ import type {
   VerzendOfferte200,
   Visual,
   VisualGuidanceResult,
-  VisualInput,
   VisualPatch,
   Voertuig,
   VoertuigInput,
@@ -70397,76 +70396,6 @@ export function useListVisuals<TData = Awaited<ReturnType<typeof listVisuals>>, 
 
 
 
-export const getCreateVisualUrl = () => {
-
-
-
-
-  return `/api/visuals`
-}
-
-/**
- * @summary Nieuwe visual aanmaken
- */
-export const createVisual = async (visualInput: VisualInput, options?: RequestInit): Promise<Visual> => {
-
-  return customFetch<Visual>(getCreateVisualUrl(),
-  {
-    ...options,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(visualInput)
-  }
-);}
-
-
-
-
-export const getCreateVisualMutationOptions = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createVisual>>, TError,{data: BodyType<VisualInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof createVisual>>, TError,{data: BodyType<VisualInput>}, TContext> => {
-
-const mutationKey = ['createVisual'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createVisual>>, {data: BodyType<VisualInput>}> = (props) => {
-          const {data} = props ?? {};
-
-          return  createVisual(data,requestOptions)
-        }
-
-
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type CreateVisualMutationResult = NonNullable<Awaited<ReturnType<typeof createVisual>>>
-    export type CreateVisualMutationBody = BodyType<VisualInput>
-    export type CreateVisualMutationError = ErrorType<void>
-
-    /**
- * @summary Nieuwe visual aanmaken
- */
-export const useCreateVisual = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createVisual>>, TError,{data: BodyType<VisualInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
- ): UseMutationResult<
-        Awaited<ReturnType<typeof createVisual>>,
-        TError,
-        {data: BodyType<VisualInput>},
-        TContext
-      > => {
-      return useMutation(getCreateVisualMutationOptions(options));
-    }
-
 export const getGetVisualsGuidanceUrl = (params: GetVisualsGuidanceParams,) => {
   const normalizedParams = new URLSearchParams();
 
@@ -70545,6 +70474,8 @@ export function useGetVisualsGuidance<TData = Awaited<ReturnType<typeof getVisua
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+
 
 
 

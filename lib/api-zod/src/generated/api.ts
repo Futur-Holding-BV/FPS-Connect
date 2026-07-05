@@ -12737,7 +12737,8 @@ export const VoltooiPimUitvoeringStapParams = zod.object({
 export const VoltooiPimUitvoeringStapBody = zod.object({
   "antwoord_controle": zod.boolean().describe('Monteur bevestigt dat de controlevraag met \"ja\" is beantwoord'),
   "opmerkingen": zod.string().optional().describe('Optionele opmerkingen van de monteur'),
-  "foto_urls": zod.array(zod.string()).optional().describe('Object-storage paden van gemaakte foto\'s')
+  "foto_urls": zod.array(zod.string()).optional().describe('Object-storage paden van gemaakte foto\'s'),
+  "stap_duur_seconden": zod.number().nullish().describe('Aantal seconden dat de monteur aan deze stap heeft besteed (optioneel; gebruikt door VGE-leerlaag)')
 })
 
 export const VoltooiPimUitvoeringStapResponse = zod.object({
@@ -24747,25 +24748,6 @@ export const ListVisualsResponseItem = zod.object({
   "bijgewerkt_op": zod.string().nullish()
 })
 export const ListVisualsResponse = zod.array(ListVisualsResponseItem)
-
-
-/**
- * @summary Nieuwe visual aanmaken
- */
-export const CreateVisualBody = zod.object({
-  "naam": zod.string(),
-  "visual_type": zod.string(),
-  "bron_type": zod.string(),
-  "bron_referentie": zod.string().optional(),
-  "object_path": zod.string(),
-  "thumbnail_path": zod.string().optional(),
-  "spot_type": zod.array(zod.string()),
-  "artikel_id": zod.number().optional(),
-  "bedrijfsstandaard_id": zod.number().optional(),
-  "taal": zod.string().optional()
-})
-
-export const CreateVisualResponse = zod.void()
 
 
 /**

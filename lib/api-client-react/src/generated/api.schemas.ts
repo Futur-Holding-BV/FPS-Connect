@@ -5322,6 +5322,8 @@ export interface PimUitvoeringVoltooienInput {
   opmerkingen?: string;
   /** Object-storage paden van gemaakte foto's */
   foto_urls?: string[];
+  /** Aantal seconden dat de monteur aan deze stap heeft besteed (optioneel; gebruikt door VGE-leerlaag) */
+  stap_duur_seconden?: number | null;
 }
 
 export interface PimUitvoeringVoltooiResultaat {

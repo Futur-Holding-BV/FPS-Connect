@@ -5,6 +5,7 @@ Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
 ## 2026-07-05 — VGE-query hardening: actieve visuals filter + unit-tests (Task #332)
+## 2026-07-05 — VGE effectiviteitslog: stap_duur_seconden + betere spot_type afleiding (Task #345)
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
 
@@ -26,6 +27,19 @@ Voor elke taak drie scores:
 
 **Unit-tests `artifacts/api-server/src/__tests__/vge-guidance-hardening.test.ts`:**
 - 18 tests, 9 scenario's: inactieve visuals, ongeldig bron_type, combinaties, geldige doorgang, max-3 beperking, stap-type filter, onbekend stap_type, lege invoer en GELDIGE_BRON_TYPES volledigheid
+
+De VGE-leerlaag (`vge_effectiviteitslog`) was al grotendeels aanwezig maar had twee gaps:
+
+1. **`stap_duur_seconden` toegevoegd** aan `PimUitvoeringVoltooienInput` (OpenAPI + codegen). De monteur-app kan nu het aantal seconden meesturen bij het voltooien van een stap; de waarde wordt rechtstreeks opgeslagen in de effectiviteitslog. Gebruikt door de VGE om trage/snelle uitvoeringen te correleren aan visual-effectiviteit.
+
+2. **Betere `spot_type`-afleiding** in `schrijfVgeEffectiviteitslog`: voorheen gebruikte de functie alleen `instructie?.spot_type` (wat vaak `null`/`"onbekend"` opleverde). Nu roept het eerst de instructie-waarde op en valt anders terug op `afleidenSpotTypeVoorVge()` — dezelfde strategie als `vulGuidanceContextIn`. Dit zorgt dat de leerlaag bruikbare spot_type-waarden opslaat zodat de prioriteitsvolgorde daadwerkelijk verbetert.
+
+**Gewijzigde bestanden:**
+- `lib/api-spec/openapi.yaml` — `stap_duur_seconden` (integer, nullable) toegevoegd aan `PimUitvoeringVoltooienInput`
+- `artifacts/api-server/src/routes/pim.ts` — request body, `schrijfVgeEffectiviteitslog` signatuur, beide aanroepplaatsen
+- Codegen opnieuw uitgevoerd (gegenereerde bestanden bijgewerkt)
+
+---
 
 ## 2026-07-05 — Visual Library beheer-UI (Task #321)
 

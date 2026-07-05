@@ -1225,6 +1225,7 @@ async function vulGuidanceContextIn(
 async function schrijfVgeEffectiviteitslog(
   stap: PimUitvoeringStap,
   aiAnalyse: Record<string, unknown> | null,
+  stapDuurSeconden?: number | null,
 ): Promise<void> {
   try {
     const gc = stap.guidanceContext as Record<string, unknown> | null;
@@ -1242,7 +1243,12 @@ async function schrijfVgeEffectiviteitslog(
 
     const instructie = stap.instructieJson as Record<string, unknown> | null;
     const stapType = afleidenStapType(instructie, stap.volgorde);
-    const spotType = typeof instructie?.spot_type === "string" ? instructie.spot_type : "onbekend";
+
+    // Leid spot_type af via dezelfde strategie als vulGuidanceContextIn:
+    // gebruik instructie.spot_type als beschikbaar, anders de VGE-afleider.
+    const spotTypeUitInstructie = typeof instructie?.spot_type === "string" ? instructie.spot_type : null;
+    const spotType = spotTypeUitInstructie ?? await afleidenSpotTypeVoorVge(stap) ?? "onbekend";
+
     const herstelwerkNodig = Boolean(aiAnalyse?.afwijking_gedetecteerd) || aiAnalyse?.oordeel === "afkeur";
     const kwaliteitResultaat =
       aiAnalyse?.oordeel === "afkeur" ? "herstel"
@@ -1257,9 +1263,10 @@ async function schrijfVgeEffectiviteitslog(
         spotType,
         herstelwerkNodig: Boolean(herstelwerkNodig),
         kwaliteitResultaat,
+        ...(stapDuurSeconden != null ? { stapDuurSeconden } : {}),
       });
     }
-    logger.info({ stapId: stap.id, aantalVisuals: visualIds.length }, "vgeEffectiviteitslog geschreven");
+    logger.info({ stapId: stap.id, aantalVisuals: visualIds.length, spotType }, "vgeEffectiviteitslog geschreven");
   } catch (err) {
     logger.warn({ err, stapId: stap.id }, "vgeEffectiviteitslog schrijven mislukt");
   }
@@ -1564,10 +1571,11 @@ router.post("/opdrachten/:id/pim/uitvoering/stap/:stapId/voltooien", schrijven, 
   const stapId = parseInt(String(req.params.stapId), 10);
   if (isNaN(opdrachtId) || isNaN(stapId)) { res.status(400).json({ error: "Ongeldig ID" }); return; }
   const gebruikerId = req.session.userId ?? null;
-  const { antwoord_controle, opmerkingen, foto_urls } = req.body as {
+  const { antwoord_controle, opmerkingen, foto_urls, stap_duur_seconden } = req.body as {
     antwoord_controle: boolean;
     opmerkingen?: string;
     foto_urls?: string[];
+    stap_duur_seconden?: number | null;
   };
 
   try {
@@ -1739,7 +1747,7 @@ router.post("/opdrachten/:id/pim/uitvoering/stap/:stapId/voltooien", schrijven, 
         afwijking_omschrijving: afwijkingJson.afwijking_omschrijving,
       });
 
-      await schrijfVgeEffectiviteitslog(stap, aiAnalyse);
+      await schrijfVgeEffectiviteitslog(stap, aiAnalyse, stap_duur_seconden ?? null);
 
       res.json({ voltooid_stap_id: stapId, uitvoering_gereed: false, volgende_stap: serializeStap(afgewekenStap) });
       return;
@@ -1767,7 +1775,7 @@ router.post("/opdrachten/:id/pim/uitvoering/stap/:stapId/voltooien", schrijven, 
       antwoord_controle,
     });
 
-    await schrijfVgeEffectiviteitslog(stap, aiAnalyse);
+    await schrijfVgeEffectiviteitslog(stap, aiAnalyse, stap_duur_seconden ?? null);
 
     const isLaatsteStap = stapInstructie?.is_laatste_stap === true;
     if (isLaatsteStap) {
