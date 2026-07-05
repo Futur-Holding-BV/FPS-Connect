@@ -251,7 +251,7 @@ export default function VisualLibraryBeheer() {
     }
 
     const MAX_POGINGEN = 3;
-    const BACKOFF_MS = [500, 1000];
+    const BACKOFF_MS = [500, 1000, 1500];
     let lastErr: Error | null = null;
 
     for (let poging = 1; poging <= MAX_POGINGEN; poging++) {
@@ -264,6 +264,33 @@ export default function VisualLibraryBeheer() {
         });
 
         if (!uploadResp.ok) {
+          if (uploadResp.status === 403) {
+            // Presigned URL is mogelijk verlopen — haal een verse op en probeer opnieuw.
+            if (poging < MAX_POGINGEN) {
+              try {
+                const verversResult = await requestUploadUrl.mutateAsync({
+                  data: {
+                    name: bestand.name,
+                    size: bestand.size,
+                    contentType,
+                    bestand_type: bestandType,
+                  },
+                });
+                uploadURL = verversResult.uploadURL;
+                objectPath = verversResult.objectPath;
+              } catch {
+                // Nieuwe URL ophalen mislukt — backoff en probeer met oude URL.
+              }
+              await new Promise<void>((resolve) => setTimeout(resolve, BACKOFF_MS[poging - 1]));
+              continue;
+            }
+            setUploadFout(
+              `Upload geweigerd na ${MAX_POGINGEN} pogingen (toegang geweigerd). Sluit het dialoog en probeer opnieuw.`
+            );
+            setUploadBezig(false);
+            setUploadPoging(0);
+            return;
+          }
           if (uploadResp.status >= 400 && uploadResp.status < 500) {
             setUploadFout(
               `Bestand geweigerd door de opslag (HTTP ${uploadResp.status}). Controleer het bestandstype of de bestandsinhoud.`
