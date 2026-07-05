@@ -12715,6 +12715,9 @@ export const GetHuidigePimUitvoeringStapResponse = zod.object({
   "voltooid_door_id": zod.number().nullish(),
   "voorziening_ids": zod.array(zod.number()).nullish().describe('Gekoppelde spot-IDs (informatieve koppeling, geen FK)'),
   "voltooid_op": zod.string().nullish(),
+  "guidance_context": zod.object({
+
+}).passthrough().nullish().describe('VGE: geselecteerde visuele begeleiding per stap. JSONB-schema: { wat_zie_je_nu, wat_is_eindresultaat, hoe_doe_je_dit, aandachtspunten, veiligheidsrisicos, max_visuals_getoond }'),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })
@@ -12759,6 +12762,9 @@ export const VoltooiPimUitvoeringStapResponse = zod.object({
   "voltooid_door_id": zod.number().nullish(),
   "voorziening_ids": zod.array(zod.number()).nullish().describe('Gekoppelde spot-IDs (informatieve koppeling, geen FK)'),
   "voltooid_op": zod.string().nullish(),
+  "guidance_context": zod.object({
+
+}).passthrough().nullish().describe('VGE: geselecteerde visuele begeleiding per stap. JSONB-schema: { wat_zie_je_nu, wat_is_eindresultaat, hoe_doe_je_dit, aandachtspunten, veiligheidsrisicos, max_visuals_getoond }'),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 }).optional()
@@ -12800,6 +12806,9 @@ export const MeldPimUitvoeringAfwijkingResponse = zod.object({
   "voltooid_door_id": zod.number().nullish(),
   "voorziening_ids": zod.array(zod.number()).nullish().describe('Gekoppelde spot-IDs (informatieve koppeling, geen FK)'),
   "voltooid_op": zod.string().nullish(),
+  "guidance_context": zod.object({
+
+}).passthrough().nullish().describe('VGE: geselecteerde visuele begeleiding per stap. JSONB-schema: { wat_zie_je_nu, wat_is_eindresultaat, hoe_doe_je_dit, aandachtspunten, veiligheidsrisicos, max_visuals_getoond }'),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })
@@ -12843,6 +12852,9 @@ export const BeslisPimUitvoeringAfwijkingResponse = zod.object({
   "voltooid_door_id": zod.number().nullish(),
   "voorziening_ids": zod.array(zod.number()).nullish().describe('Gekoppelde spot-IDs (informatieve koppeling, geen FK)'),
   "voltooid_op": zod.string().nullish(),
+  "guidance_context": zod.object({
+
+}).passthrough().nullish().describe('VGE: geselecteerde visuele begeleiding per stap. JSONB-schema: { wat_zie_je_nu, wat_is_eindresultaat, hoe_doe_je_dit, aandachtspunten, veiligheidsrisicos, max_visuals_getoond }'),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 }).optional()

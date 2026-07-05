@@ -54,6 +54,8 @@ export const pimUitvoeringStappenTable = pgTable("pim_uitvoering_stappen", {
   voorzieningIds: integer("voorziening_ids").array(),
   voltooidDoorId: integer("voltooid_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
   voltooidOp: timestamp("voltooid_op"),
+  // VGE: geselecteerde visuele begeleiding per stap (JSONB-schema in docs/ai-visual-guidance-framework.md §4.4)
+  guidanceContext: jsonb("guidance_context"),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
 });

@@ -718,6 +718,7 @@ export * from './pimUitvoeringStap';
 export * from './pimUitvoeringStapAfwijkingJson';
 export * from './pimUitvoeringStapAiAnalyseJson';
 export * from './pimUitvoeringStapAntwoordenJson';
+export * from './pimUitvoeringStapGuidanceContext';
 export * from './pimUitvoeringStapInstructieJson';
 export * from './pimUitvoeringVoltooienInput';
 export * from './pimUitvoeringVoltooiResultaat';

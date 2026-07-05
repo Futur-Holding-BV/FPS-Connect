@@ -43,6 +43,11 @@ import {
 } from "../lib/aiPrompts";
 import { kbService } from "../lib/kbService";
 import { ObjectStorageService } from "../lib/objectStorage";
+import {
+  selectVisuals,
+  afleidenStapType,
+  serializeVisualSet,
+} from "../lib/vgeService";
 
 // Chromium voor PDF-generatie (zelfde aanpak als offertes.ts)
 let CHROMIUM_PAD: string | null = null;
@@ -1117,9 +1122,36 @@ function serializeStap(stap: PimUitvoeringStap): Record<string, unknown> {
     voorziening_ids: stap.voorzieningIds ?? [],
     voltooid_door_id: stap.voltooidDoorId ?? null,
     voltooid_op: stap.voltooidOp?.toISOString() ?? null,
+    guidance_context: stap.guidanceContext ?? null,
     aangemaakt_op: stap.aangemaaktOp.toISOString(),
     bijgewerkt_op: stap.bijgewerktOp.toISOString(),
   };
+}
+
+/**
+ * Roept de VGE aan voor een nieuw aangemaakte stap en persisteert guidance_context.
+ * Mislukt stil — guidance is ondersteunend, niet blokkerend.
+ */
+async function vulGuidanceContextIn(
+  stap: PimUitvoeringStap,
+  spotType: string | null,
+): Promise<void> {
+  try {
+    const instructie = stap.instructieJson as Record<string, unknown> | null;
+    const stapType = afleidenStapType(instructie, stap.volgorde);
+    const visualSet = await selectVisuals({
+      stapId: stap.id,
+      spotType,
+      stapType,
+    });
+    const context = serializeVisualSet(visualSet);
+    await db
+      .update(pimUitvoeringStappenTable)
+      .set({ guidanceContext: context, bijgewerktOp: new Date() })
+      .where(eq(pimUitvoeringStappenTable.id, stap.id));
+  } catch (err) {
+    logger.warn({ err, stapId: stap.id }, "VGE guidance_context invullen mislukt");
+  }
 }
 
 function fallbackStapJson(volgorde: number, werkpakket: string | null): Record<string, unknown> {
@@ -1315,7 +1347,16 @@ router.post("/opdrachten/:id/pim/uitvoering/start", schrijven, async (req, res) 
       gebruiker_id: gebruikerId,
     });
 
-    res.status(201).json(serializeStap(nieuweStap));
+    // VGE: bepaal visuele begeleiding voor stap 1 — awaited zodat guidance_context
+    // al aanwezig is in de response (stil: errors worden enkel gelogged).
+    const spotTypeVoorVge = (stapJson.spot_type as string | null) ?? null;
+    await vulGuidanceContextIn(nieuweStap, spotTypeVoorVge);
+    const [stapMetGuidance] = await db
+      .select()
+      .from(pimUitvoeringStappenTable)
+      .where(eq(pimUitvoeringStappenTable.id, nieuweStap.id));
+
+    res.status(201).json(serializeStap(stapMetGuidance ?? nieuweStap));
   } catch (err) {
     logger.error({ err }, "startPimUitvoering fout");
     res.status(500).json({ error: "Serverfout bij starten uitvoering" });
@@ -1661,7 +1702,15 @@ router.post("/opdrachten/:id/pim/uitvoering/stap/:stapId/voltooien", schrijven, 
               bijgewerktOp: new Date(),
             })
             .returning();
-          volgendeStapSerialized = serializeStap(nieuwStap);
+          // VGE: bepaal visuele begeleiding voor de nieuwe stap — awaited zodat
+          // guidance_context al aanwezig is in de response (stil: errors gelogged).
+          const vgeSpotType = (volgendeInstructie.spot_type as string | null) ?? null;
+          await vulGuidanceContextIn(nieuwStap, vgeSpotType);
+          const [nieuwStapMetGuidance] = await db
+            .select()
+            .from(pimUitvoeringStappenTable)
+            .where(eq(pimUitvoeringStappenTable.id, nieuwStap.id));
+          volgendeStapSerialized = serializeStap(nieuwStapMetGuidance ?? nieuwStap);
         }
       } catch (nextErr) {
         logger.warn({ nextErr }, "Volgende stap generatie mislukt");

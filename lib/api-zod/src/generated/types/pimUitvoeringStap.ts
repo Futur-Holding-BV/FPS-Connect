@@ -8,6 +8,7 @@
 import type { PimUitvoeringStapAfwijkingJson } from './pimUitvoeringStapAfwijkingJson';
 import type { PimUitvoeringStapAiAnalyseJson } from './pimUitvoeringStapAiAnalyseJson';
 import type { PimUitvoeringStapAntwoordenJson } from './pimUitvoeringStapAntwoordenJson';
+import type { PimUitvoeringStapGuidanceContext } from './pimUitvoeringStapGuidanceContext';
 import type { PimUitvoeringStapInstructieJson } from './pimUitvoeringStapInstructieJson';
 
 export interface PimUitvoeringStap {
@@ -46,6 +47,11 @@ export interface PimUitvoeringStap {
   voorziening_ids?: number[] | null;
   /** @nullable */
   voltooid_op?: string | null;
+  /**
+     * VGE: geselecteerde visuele begeleiding per stap. JSONB-schema: { wat_zie_je_nu, wat_is_eindresultaat, hoe_doe_je_dit, aandachtspunten, veiligheidsrisicos, max_visuals_getoond }
+     * @nullable
+     */
+  guidance_context?: PimUitvoeringStapGuidanceContext;
   aangemaakt_op: string;
   bijgewerkt_op: string;
 }

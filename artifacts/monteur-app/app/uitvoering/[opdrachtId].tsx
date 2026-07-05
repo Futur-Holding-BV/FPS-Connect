@@ -39,6 +39,7 @@ import { voegToeAanWachtrij } from "@/lib/syncQueue";
 import { uploadFoto } from "@/lib/upload";
 
 const CACHE_VERSIE = "v1";
+const DOMEIN = process.env.EXPO_PUBLIC_DOMAIN ?? "";
 function cacheSleutel(opdrachtId: number) {
   return `pim_stap_${opdrachtId}_${CACHE_VERSIE}`;
 }
@@ -56,6 +57,169 @@ interface Instructie {
 function parseInstructie(json: unknown): Instructie | null {
   if (!json || typeof json !== "object") return null;
   return json as Instructie;
+}
+
+// ── VGE guidance types ────────────────────────────────────────────────────────
+
+interface GuidanceVisual {
+  visual_id: number;
+  naam: string;
+  type: string;
+  object_path: string;
+}
+
+interface Guidance {
+  wat_zie_je_nu?: GuidanceVisual | null;
+  wat_is_eindresultaat?: GuidanceVisual | null;
+  hoe_doe_je_dit?: GuidanceVisual | null;
+  aandachtspunten?: string[];
+  veiligheidsrisicos?: string[];
+  max_visuals_getoond?: number;
+}
+
+function parseGuidance(json: unknown): Guidance | null {
+  if (!json || typeof json !== "object") return null;
+  const g = json as Guidance;
+  const heeftVisuals = g.wat_zie_je_nu ?? g.wat_is_eindresultaat ?? g.hoe_doe_je_dit;
+  const heeftPunten =
+    (g.aandachtspunten?.length ?? 0) > 0 ||
+    (g.veiligheidsrisicos?.length ?? 0) > 0;
+  if (!heeftVisuals && !heeftPunten) return null;
+  return g;
+}
+
+// ── GuidanceSectie component ──────────────────────────────────────────────────
+
+const VISUAL_LABELS: Record<string, string> = {
+  detailtekening: "Tekening",
+  projecttekening_uitsnede: "Plattegrond",
+  referentiefoto: "Referentie",
+  exploded_view: "Onderdelen",
+  animatie: "Animatie",
+  checklist: "Checklist",
+  productblad: "Productblad",
+  montagevoorschrift: "Instructie",
+  schema: "Schema",
+  "3d_weergave": "3D-weergave",
+};
+
+function GuidanceThumbnail({
+  visual,
+  label,
+  c,
+}: {
+  visual: GuidanceVisual;
+  label: string;
+  c: ReturnType<typeof useColors>;
+}) {
+  const { token } = useAuth();
+  const imageUri = `https://${DOMEIN}/api/storage${visual.object_path}`;
+  const authHeaders = token ? { Authorization: `Bearer ${token}` } : undefined;
+
+  return (
+    <View style={{ flex: 1, gap: 4 }}>
+      <Text style={{ color: c.mutedForeground, fontSize: 10, fontFamily: "Inter_600SemiBold", textTransform: "uppercase", letterSpacing: 0.4, textAlign: "center" }}>
+        {label}
+      </Text>
+      <View
+        style={{
+          aspectRatio: 4 / 3,
+          backgroundColor: c.accent,
+          borderRadius: 8,
+          borderWidth: 1,
+          borderColor: c.border,
+          overflow: "hidden",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <Image
+          source={{ uri: imageUri, headers: authHeaders }}
+          style={{ width: "100%", height: "100%" }}
+          resizeMode="cover"
+        />
+        <View
+          style={{
+            position: "absolute",
+            bottom: 0,
+            left: 0,
+            right: 0,
+            backgroundColor: "rgba(0,0,0,0.45)",
+            paddingHorizontal: 4,
+            paddingVertical: 2,
+          }}
+        >
+          <Text style={{ color: "#fff", fontSize: 10, fontFamily: "Inter_400Regular" }} numberOfLines={1}>
+            {VISUAL_LABELS[visual.type] ?? visual.type}
+          </Text>
+        </View>
+      </View>
+      <Text style={{ color: c.foreground, fontSize: 11, fontFamily: "Inter_400Regular", textAlign: "center", lineHeight: 15 }} numberOfLines={2}>
+        {visual.naam}
+      </Text>
+    </View>
+  );
+}
+
+function GuidanceSectie({
+  guidance,
+  c,
+}: {
+  guidance: Guidance;
+  c: ReturnType<typeof useColors>;
+}) {
+  const visuals: Array<{ slot: GuidanceVisual; label: string }> = [];
+  if (guidance.wat_zie_je_nu) visuals.push({ slot: guidance.wat_zie_je_nu, label: "Huidige situatie" });
+  if (guidance.wat_is_eindresultaat) visuals.push({ slot: guidance.wat_is_eindresultaat, label: "Eindresultaat" });
+  if (guidance.hoe_doe_je_dit) visuals.push({ slot: guidance.hoe_doe_je_dit, label: "Hoe doe je dit" });
+
+  const aandachtspunten = guidance.aandachtspunten ?? [];
+  const veiligheidsrisicos = guidance.veiligheidsrisicos ?? [];
+  const heeftTekst = aandachtspunten.length > 0 || veiligheidsrisicos.length > 0;
+
+  if (visuals.length === 0 && !heeftTekst) return null;
+
+  return (
+    <Sectie titel="Visuele begeleiding">
+      {visuals.length > 0 && (
+        <View style={{ flexDirection: "row", gap: 8, marginBottom: heeftTekst ? 12 : 0 }}>
+          {visuals.map(({ slot, label }) => (
+            <GuidanceThumbnail key={slot.visual_id} visual={slot} label={label} c={c} />
+          ))}
+        </View>
+      )}
+      {aandachtspunten.length > 0 && (
+        <View style={{ gap: 4, marginBottom: veiligheidsrisicos.length > 0 ? 8 : 0 }}>
+          <Text style={{ color: c.mutedForeground, fontSize: 11, fontFamily: "Inter_600SemiBold", textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 2 }}>
+            Aandachtspunten
+          </Text>
+          {aandachtspunten.map((punt, i) => (
+            <View key={i} style={{ flexDirection: "row", gap: 6, alignItems: "flex-start" }}>
+              <Ionicons name="information-circle-outline" size={14} color="#d97706" style={{ marginTop: 2 }} />
+              <Text style={{ color: c.foreground, fontSize: 13, fontFamily: "Inter_400Regular", lineHeight: 18, flex: 1 }}>
+                {punt}
+              </Text>
+            </View>
+          ))}
+        </View>
+      )}
+      {veiligheidsrisicos.length > 0 && (
+        <View style={{ gap: 4 }}>
+          <Text style={{ color: "#92400e", fontSize: 11, fontFamily: "Inter_600SemiBold", textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 2 }}>
+            Veiligheidsrisicos
+          </Text>
+          {veiligheidsrisicos.map((risico, i) => (
+            <View key={i} style={{ flexDirection: "row", gap: 6, alignItems: "flex-start" }}>
+              <Ionicons name="warning-outline" size={14} color="#dc2626" style={{ marginTop: 2 }} />
+              <Text style={{ color: "#92400e", fontSize: 13, fontFamily: "Inter_400Regular", lineHeight: 18, flex: 1 }}>
+                {risico}
+              </Text>
+            </View>
+          ))}
+        </View>
+      )}
+    </Sectie>
+  );
 }
 
 async function cacheStap(opdrachtId: number, stap: PimUitvoeringStap) {
@@ -820,9 +984,14 @@ function StapKaart({
   c: ReturnType<typeof useColors>;
 }) {
   const instructie = parseInstructie(stap.instructie_json);
+  const guidance = parseGuidance(stap.guidance_context);
 
   return (
     <>
+      {guidance && (
+        <GuidanceSectie guidance={guidance} c={c} />
+      )}
+
       {instructie?.doel && (
         <Sectie titel="Doel">
           <Text style={{ color: c.foreground, fontSize: 14, fontFamily: "Inter_400Regular", lineHeight: 20 }}>

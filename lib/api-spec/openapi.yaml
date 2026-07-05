@@ -27025,6 +27025,9 @@ components:
           description: Gekoppelde spot-IDs (informatieve koppeling, geen FK)
         voltooid_op:
           type: ["string", "null"]
+        guidance_context:
+          type: ["object", "null"]
+          description: "VGE: geselecteerde visuele begeleiding per stap. JSONB-schema: { wat_zie_je_nu, wat_is_eindresultaat, hoe_doe_je_dit, aandachtspunten, veiligheidsrisicos, max_visuals_getoond }"
         aangemaakt_op:
           type: string
         bijgewerkt_op:

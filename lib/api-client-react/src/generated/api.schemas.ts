@@ -5264,6 +5264,12 @@ export type PimUitvoeringStapAiAnalyseJson = { [key: string]: unknown } | null;
  */
 export type PimUitvoeringStapAfwijkingJson = { [key: string]: unknown } | null;
 
+/**
+ * VGE: geselecteerde visuele begeleiding per stap. JSONB-schema: { wat_zie_je_nu, wat_is_eindresultaat, hoe_doe_je_dit, aandachtspunten, veiligheidsrisicos, max_visuals_getoond }
+ * @nullable
+ */
+export type PimUitvoeringStapGuidanceContext = { [key: string]: unknown } | null;
+
 export interface PimUitvoeringStap {
   id: number;
   pim_id: number;
@@ -5300,6 +5306,11 @@ export interface PimUitvoeringStap {
   voorziening_ids?: number[] | null;
   /** @nullable */
   voltooid_op?: string | null;
+  /**
+     * VGE: geselecteerde visuele begeleiding per stap. JSONB-schema: { wat_zie_je_nu, wat_is_eindresultaat, hoe_doe_je_dit, aandachtspunten, veiligheidsrisicos, max_visuals_getoond }
+     * @nullable
+     */
+  guidance_context?: PimUitvoeringStapGuidanceContext;
   aangemaakt_op: string;
   bijgewerkt_op: string;
 }
