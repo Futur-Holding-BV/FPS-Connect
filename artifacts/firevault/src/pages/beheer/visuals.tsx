@@ -44,7 +44,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Separator } from "@/components/ui/separator";
-import { Plus, Pencil, Trash2, ImageIcon, CheckCircle2, XCircle, Upload, FileJson, FileImage, Loader2, TriangleAlert } from "lucide-react";
+import { Plus, Pencil, Trash2, ImageIcon, CheckCircle2, XCircle, Upload, FileJson, FileImage, Loader2 } from "lucide-react";
+import { BestandsGrootteInfo, formateerGrootte } from "@/components/bestandsgrootte-info";
 
 const VISUAL_TYPES = [
   { waarde: "detailtekening",           label: "Detailtekening" },
@@ -94,14 +95,6 @@ const TOEGESTANE_TYPEN: Record<string, string> = {
 
 function isAfbeelding(contentType: string) {
   return contentType.startsWith("image/");
-}
-
-const GROOT_BESTAND_GRENS = 10 * 1024 * 1024;
-
-function formateerGrootte(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1).replace(".", ",")} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1).replace(".", ",")} MB`;
 }
 
 function visualTypeLabel(waarde: string) {
@@ -709,12 +702,7 @@ export default function VisualLibraryBeheer() {
                 )}
               </div>
 
-              {bestandGrootte !== null && bestandGrootte > GROOT_BESTAND_GRENS && !uploadFout && (
-                <div className="flex items-start gap-2 rounded-md bg-amber-50 border border-amber-200 px-3 py-2 text-sm text-amber-800">
-                  <TriangleAlert className="h-4 w-4 shrink-0 mt-0.5 text-amber-500" />
-                  <span>Groot bestand ({formateerGrootte(bestandGrootte)}) — overweeg een geoptimaliseerde versie</span>
-                </div>
-              )}
+              {!uploadFout && <BestandsGrootteInfo bytes={bestandGrootte} toonGrootte={false} />}
 
               {uploadFout && (
                 <div className="space-y-1.5">

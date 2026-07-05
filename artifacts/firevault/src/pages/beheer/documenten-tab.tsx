@@ -98,22 +98,14 @@ import {
   ShieldX,
   Sparkles,
   Trash2,
-  TriangleAlert,
   Upload,
 } from "lucide-react";
 import { TYPE_LABELS, STATUS_LABELS } from "@/lib/documenten-labels";
+import { BestandsGrootteInfo } from "@/components/bestandsgrootte-info";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
 const GEEN = "__alle__";
-
-const GROOT_BESTAND_GRENS = 10 * 1024 * 1024;
-
-function formateerGrootte(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1).replace(".", ",")} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1).replace(".", ",")} MB`;
-}
 
 export { TYPE_LABELS, STATUS_LABELS };
 
@@ -693,16 +685,8 @@ function DocumentFormulier({
                 </Button>
               )}
             </div>
-            {form.bestandsgrootte !== null && (
-              <p className="text-xs text-muted-foreground mt-1">{formateerGrootte(form.bestandsgrootte)}</p>
-            )}
+            <BestandsGrootteInfo bytes={form.bestandsgrootte} grootteClassName="text-xs text-muted-foreground mt-1" />
           </div>
-          {form.bestandsgrootte !== null && form.bestandsgrootte > GROOT_BESTAND_GRENS && (
-            <div className="flex items-start gap-2 rounded-md bg-amber-50 border border-amber-200 px-3 py-2 text-sm text-amber-800">
-              <TriangleAlert className="h-4 w-4 shrink-0 mt-0.5 text-amber-500" />
-              <span>Groot bestand ({formateerGrootte(form.bestandsgrootte)}) — overweeg een geoptimaliseerde versie</span>
-            </div>
-          )}
 
           {aiBezig && (
             <div className="flex items-center gap-2 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">

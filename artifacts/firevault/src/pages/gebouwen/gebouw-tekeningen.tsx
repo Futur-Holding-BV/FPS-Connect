@@ -37,14 +37,7 @@ import {
   X,
 } from "lucide-react";
 import { TekeningViewer } from "./tekening-viewer";
-
-const GROOT_BESTAND_GRENS = 10 * 1024 * 1024;
-
-function formateerGrootte(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1).replace(".", ",")} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1).replace(".", ",")} MB`;
-}
+import { BestandsGrootteInfo } from "@/components/bestandsgrootte-info";
 
 const TEKENING_TYPES = [
   { waarde: "gevelaanzicht", label: "Gevelaanzicht" },
@@ -497,15 +490,7 @@ export default function GebouwTekeningen({
                     </span>
                   </Button>
                 )}
-                {bestandGrootte !== null && (
-                  <p className="text-xs text-muted-foreground">{formateerGrootte(bestandGrootte)}</p>
-                )}
-                {bestandGrootte !== null && bestandGrootte > GROOT_BESTAND_GRENS && (
-                  <div className="flex items-start gap-2 rounded-md bg-amber-50 border border-amber-200 px-3 py-2 text-sm text-amber-800">
-                    <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5 text-amber-500" />
-                    <span>Groot bestand ({formateerGrootte(bestandGrootte)}) — overweeg een geoptimaliseerde versie</span>
-                  </div>
-                )}
+                <BestandsGrootteInfo bytes={bestandGrootte} />
               </div>
             </div>
             <label className="flex items-center gap-2 text-sm cursor-pointer">

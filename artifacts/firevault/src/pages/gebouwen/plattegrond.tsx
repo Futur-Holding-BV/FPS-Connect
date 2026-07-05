@@ -44,6 +44,7 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, Plus, X, ZoomIn, ZoomOut, RotateCcw, Map, FileText, Trash2, Image as ImageIcon, Loader2, Spline, Check, Move, Archive, ArchiveRestore, Boxes, Pencil, Layers, UserCheck, Sparkles, TriangleAlert, ClipboardList } from "lucide-react";
+import { BestandsGrootteInfo } from "@/components/bestandsgrootte-info";
 import { Textarea } from "@/components/ui/textarea";
 import { ApplicatiePicker } from "@/components/applicatie-picker";
 import { ToepassingMultiSelect } from "@/components/toepassing-multi-select";
@@ -412,14 +413,6 @@ function GridAchtergrond({ w, h }: { w: number; h: number }) {
   );
 }
 
-const GROOT_BESTAND_GRENS = 10 * 1024 * 1024;
-
-function formateerGrootte(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1).replace(".", ",")} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1).replace(".", ",")} MB`;
-}
-
 // Herbruikbare foto-upload knop (presigned URL flow)
 function FotoUploader({
   label,
@@ -465,15 +458,7 @@ function FotoUploader({
         {isUploading ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <ImageIcon className="h-4 w-4 mr-1" />}
         {label}
       </Button>
-      {bestandGrootte !== null && (
-        <p className="text-xs text-muted-foreground">{formateerGrootte(bestandGrootte)}</p>
-      )}
-      {bestandGrootte !== null && bestandGrootte > GROOT_BESTAND_GRENS && (
-        <div className="flex items-start gap-2 rounded-md bg-amber-50 border border-amber-200 px-3 py-2 text-sm text-amber-800">
-          <TriangleAlert className="h-4 w-4 shrink-0 mt-0.5 text-amber-500" />
-          <span>Groot bestand ({formateerGrootte(bestandGrootte)}) — overweeg een geoptimaliseerde versie</span>
-        </div>
-      )}
+      <BestandsGrootteInfo bytes={bestandGrootte} />
     </div>
   );
 }

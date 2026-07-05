@@ -16,14 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Map, Loader2, Upload, ExternalLink, Plus, AlertTriangle } from "lucide-react";
-
-const GROOT_BESTAND_GRENS = 10 * 1024 * 1024;
-
-function formateerGrootte(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1).replace(".", ",")} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1).replace(".", ",")} MB`;
-}
+import { BestandsGrootteInfo } from "@/components/bestandsgrootte-info";
 
 export default function GebouwPlattegronden({
   gebouwId,
@@ -326,12 +319,7 @@ export default function GebouwPlattegronden({
           </div>
         )}
 
-        {bestandGrootte !== null && bestandGrootte > GROOT_BESTAND_GRENS && (
-          <div className="flex items-start gap-2 rounded-md bg-amber-50 border border-amber-200 px-3 py-2 text-sm text-amber-800">
-            <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5 text-amber-500" />
-            <span>Groot bestand ({formateerGrootte(bestandGrootte)}) — overweeg een geoptimaliseerde versie</span>
-          </div>
-        )}
+        <BestandsGrootteInfo bytes={bestandGrootte} toonGrootte={false} />
 
         {uploadError && fouteId != null && (
           <div className="rounded-md border border-destructive/40 bg-destructive/5 p-3 space-y-2">
