@@ -20,6 +20,13 @@ import { isBeperktTotToegewezen } from "../utils/rol";
 const router: IRouter = Router();
 const objectStorageService = new ObjectStorageService();
 
+// Maximale uploadgrootte in bytes. Standaard 100 MB; overschrijfbaar via
+// MAX_UPLOAD_SIZE_MB (geheel getal, in megabytes).
+const MAX_UPLOAD_BYTES = (() => {
+  const mb = parseInt(process.env["MAX_UPLOAD_SIZE_MB"] ?? "", 10);
+  return Number.isFinite(mb) && mb > 0 ? mb * 1024 * 1024 : 100 * 1024 * 1024;
+})();
+
 // ---- Gebouw-ACL helper ----
 // Controleer of de ingelogde gebruiker toegang heeft tot het gebouw dat bij
 // dit bestand hoort. Gebruikers met volledige bevoegdheden zijn niet beperkt.
@@ -59,9 +66,16 @@ router.post("/storage/uploads/request-url", requireAuth, async (req: Request, re
     return;
   }
 
-  try {
-    const { name, size, contentType, gebouw_id, bestand_type } = parsed.data;
+  const { name, size, contentType, gebouw_id, bestand_type } = parsed.data;
 
+  // Weiger bestanden die de harde server-limiet overschrijden.
+  if (size > MAX_UPLOAD_BYTES) {
+    const limietMB = Math.round(MAX_UPLOAD_BYTES / (1024 * 1024));
+    res.status(422).json({ error: `Bestand te groot: maximaal ${limietMB} MB toegestaan.` });
+    return;
+  }
+
+  try {
     // Verifieer toegang tot het gebouw vóór het genereren van de upload-URL.
     if (gebouw_id != null) {
       const userId = req.session.userId!;

@@ -3720,6 +3720,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
+        "422":
+          description: Bestand te groot — overschrijdt de server-side limiet.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
         "500":
           description: Genereren van upload URL mislukt.
           content:

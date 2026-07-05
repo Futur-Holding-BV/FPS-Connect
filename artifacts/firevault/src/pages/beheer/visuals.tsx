@@ -10,6 +10,7 @@ import {
   ListVisualsActief,
 } from "@workspace/api-client-react";
 import type { Visual } from "@workspace/api-client-react";
+import { ApiError } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -241,8 +242,13 @@ export default function VisualLibraryBeheer() {
       uploadURL = result.uploadURL;
       objectPath = result.objectPath;
     } catch (err) {
-      const bericht = err instanceof Error ? err.message : "Onbekende fout";
-      setUploadFout(`Upload voorbereiden mislukt: ${bericht}`);
+      const bericht =
+        err instanceof ApiError && err.data != null && typeof (err.data as Record<string, unknown>)["error"] === "string"
+          ? String((err.data as Record<string, unknown>)["error"])
+          : err instanceof Error
+            ? err.message
+            : "Onbekende fout";
+      setUploadFout(bericht);
       setUploadBezig(false);
       return;
     }
