@@ -12,6 +12,7 @@ import {
   documentKoppelingenTable,
   werkgeversTable,
   facturenTable,
+  gebouwPublicatiesTable,
 } from "@workspace/db";
 import { eq, inArray, count, and, sql, max, ne, desc } from "drizzle-orm";
 import { requireBevoegdheid, requireBevoegdheidOfKlant } from "../middlewares/auth";
@@ -139,6 +140,16 @@ router.get("/gebouwen", lezenGebouwenOfKlant, async (req, res): Promise<void> =>
         return void res.json([]);
       }
       gebouwen = gebouwen.filter((g) => ids.includes(g.id));
+
+      // Klantgebruikers zien uitsluitend gepubliceerde gebouwen
+      if (req.session.rol === "klant") {
+        const gepubliceerd = await db
+          .select({ gebouwId: gebouwPublicatiesTable.gebouwId })
+          .from(gebouwPublicatiesTable)
+          .where(eq(gebouwPublicatiesTable.status, "gepubliceerd"));
+        const gepubliceerdeSet = new Set(gepubliceerd.map((r) => r.gebouwId));
+        gebouwen = gebouwen.filter((g) => gepubliceerdeSet.has(g.id));
+      }
     }
 
     if (zoek) {
@@ -544,6 +555,16 @@ router.get("/gebouwen/:id", lezenGebouwenOfKlant, async (req, res): Promise<void
       const ids = await toegewezenGebouwIds(userId);
       if (!ids.includes(id)) {
         return void res.status(403).json({ error: "Geen toegang tot dit gebouw" });
+      }
+
+      // Klantgebruikers zien uitsluitend gepubliceerde gebouwen
+      if (req.session.rol === "klant") {
+        const [pub] = await db
+          .select({ id: gebouwPublicatiesTable.id })
+          .from(gebouwPublicatiesTable)
+          .where(and(eq(gebouwPublicatiesTable.gebouwId, id), eq(gebouwPublicatiesTable.status, "gepubliceerd")))
+          .limit(1);
+        if (!pub) return void res.status(403).json({ error: "Dit gebouw is nog niet gepubliceerd" });
       }
     }
 
@@ -1511,6 +1532,142 @@ router.patch("/gebouwen/:id/archief", requireBevoegdheid("gebouwen", 4), async (
         totaal_voorzieningen: 0,
       })),
       stats,
+    });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// GET /gebouwen/:id/publicatiestatus
+router.get("/gebouwen/:id/publicatiestatus", lezenGebouwenOfKlant, async (req, res): Promise<void> => {
+  try {
+    const id = parseInt(String(req.params.id));
+    const [gebouw] = await db.select({ id: gebouwenTable.id }).from(gebouwenTable).where(eq(gebouwenTable.id, id));
+    if (!gebouw) return void res.status(404).json({ error: "Gebouw niet gevonden" });
+
+    const [record] = await db
+      .select()
+      .from(gebouwPublicatiesTable)
+      .where(eq(gebouwPublicatiesTable.gebouwId, id))
+      .orderBy(desc(gebouwPublicatiesTable.gepubliceerdOp))
+      .limit(1);
+
+    if (!record || record.status === "ingetrokken") {
+      return void res.json({
+        gepubliceerd: false,
+        gepubliceerd_op: null,
+        gepubliceerd_door_naam: null,
+        ingetrokken_op: record?.ingetrokkenOp?.toISOString() ?? null,
+        notitie: record?.notitie ?? null,
+      });
+    }
+
+    let gepubliceerdDoorNaam: string | null = null;
+    if (record.gepubliceerdDoor) {
+      const [u] = await db.select({ naam: gebruikersTable.naam }).from(gebruikersTable).where(eq(gebruikersTable.id, record.gepubliceerdDoor));
+      gepubliceerdDoorNaam = u?.naam ?? null;
+    }
+
+    res.json({
+      gepubliceerd: true,
+      gepubliceerd_op: record.gepubliceerdOp.toISOString(),
+      gepubliceerd_door_naam: gepubliceerdDoorNaam,
+      ingetrokken_op: null,
+      notitie: record.notitie,
+    });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// POST /gebouwen/:id/publiceer — gebouw publiceren naar FPS One
+router.post("/gebouwen/:id/publiceer", requireBevoegdheid("gebouwen", 2), async (req, res): Promise<void> => {
+  try {
+    const id = parseInt(String(req.params.id));
+    const notitie: string | null = req.body?.notitie ?? null;
+
+    const [gebouw] = await db.select({ id: gebouwenTable.id, naam: gebouwenTable.naam }).from(gebouwenTable).where(eq(gebouwenTable.id, id));
+    if (!gebouw) return void res.status(404).json({ error: "Gebouw niet gevonden" });
+
+    const nu = new Date();
+    await db.insert(gebouwPublicatiesTable).values({
+      gebouwId: id,
+      status: "gepubliceerd",
+      gepubliceerdDoor: req.session.userId,
+      gepubliceerdOp: nu,
+      notitie,
+    });
+
+    await logActiviteit({
+      type: "gebouw_gepubliceerd",
+      omschrijving: `Gebouw "${gebouw.naam}" gepubliceerd naar FPS One`,
+      gebouwId: id,
+      gebruikerId: req.session.userId,
+    });
+
+    let gepubliceerdDoorNaam: string | null = null;
+    if (req.session.userId) {
+      const [u] = await db.select({ naam: gebruikersTable.naam }).from(gebruikersTable).where(eq(gebruikersTable.id, req.session.userId));
+      gepubliceerdDoorNaam = u?.naam ?? null;
+    }
+
+    res.json({
+      gepubliceerd: true,
+      gepubliceerd_op: nu.toISOString(),
+      gepubliceerd_door_naam: gepubliceerdDoorNaam,
+      ingetrokken_op: null,
+      notitie,
+    });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// POST /gebouwen/:id/publicatie/intrekken — publicatie intrekken
+router.post("/gebouwen/:id/publicatie/intrekken", requireBevoegdheid("gebouwen", 2), async (req, res): Promise<void> => {
+  try {
+    const id = parseInt(String(req.params.id));
+    const notitie: string | null = req.body?.notitie ?? null;
+
+    const [gebouw] = await db.select({ id: gebouwenTable.id, naam: gebouwenTable.naam }).from(gebouwenTable).where(eq(gebouwenTable.id, id));
+    if (!gebouw) return void res.status(404).json({ error: "Gebouw niet gevonden" });
+
+    const [huidig] = await db
+      .select()
+      .from(gebouwPublicatiesTable)
+      .where(and(eq(gebouwPublicatiesTable.gebouwId, id), eq(gebouwPublicatiesTable.status, "gepubliceerd")))
+      .orderBy(desc(gebouwPublicatiesTable.gepubliceerdOp))
+      .limit(1);
+
+    if (!huidig) return void res.status(409).json({ error: "Gebouw is niet gepubliceerd" });
+
+    const nu = new Date();
+    await db
+      .update(gebouwPublicatiesTable)
+      .set({
+        status: "ingetrokken",
+        ingetrokkenDoor: req.session.userId,
+        ingetrokkenOp: nu,
+        notitie: notitie ?? huidig.notitie,
+      })
+      .where(eq(gebouwPublicatiesTable.id, huidig.id));
+
+    await logActiviteit({
+      type: "gebouw_publicatie_ingetrokken",
+      omschrijving: `Publicatie van gebouw "${gebouw.naam}" ingetrokken uit FPS One`,
+      gebouwId: id,
+      gebruikerId: req.session.userId,
+    });
+
+    res.json({
+      gepubliceerd: false,
+      gepubliceerd_op: null,
+      gepubliceerd_door_naam: null,
+      ingetrokken_op: nu.toISOString(),
+      notitie: notitie ?? huidig.notitie,
     });
   } catch (err) {
     req.log.error(err);

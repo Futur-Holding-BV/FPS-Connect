@@ -117,3 +117,17 @@ export const scheidingenTable = pgTable("scheidingen", {
 export const insertScheidingSchema = createInsertSchema(scheidingenTable).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });
 export type InsertScheiding = z.infer<typeof insertScheidingSchema>;
 export type Scheiding = typeof scheidingenTable.$inferSelect;
+
+export const gebouwPublicatiesTable = pgTable("gebouw_publicaties", {
+  id: serial("id").primaryKey(),
+  gebouwId: integer("gebouw_id").notNull().references(() => gebouwenTable.id, { onDelete: "cascade" }),
+  status: text("status").notNull().default("gepubliceerd"),
+  gepubliceerdDoor: integer("gepubliceerd_door").references(() => gebruikersTable.id, { onDelete: "set null" }),
+  gepubliceerdOp: timestamp("gepubliceerd_op").notNull().defaultNow(),
+  ingetrokkenDoor: integer("ingetrokken_door").references(() => gebruikersTable.id, { onDelete: "set null" }),
+  ingetrokkenOp: timestamp("ingetrokken_op"),
+  notitie: text("notitie"),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+});
+
+export type GebouwPublicatie = typeof gebouwPublicatiesTable.$inferSelect;

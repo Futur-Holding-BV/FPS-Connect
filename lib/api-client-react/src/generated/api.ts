@@ -234,6 +234,7 @@ import type {
   GebouwPartijInput,
   GebouwPartijOptie,
   GebouwPartijUpdate,
+  GebouwPublicatieStatus,
   GebouwUpdate,
   Gebruiker,
   GebruikerHerkomstBevestigenBulk200,
@@ -620,6 +621,7 @@ import type {
   ProjectBegrotingInput,
   ProjectInput,
   ProjectPatchInput,
+  PubliceerInput,
   Rapport,
   RapportDefinitief,
   RapportInput,
@@ -2324,6 +2326,225 @@ export const useArchiveerGebouw = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getArchiveerGebouwMutationOptions(options));
+    }
+
+export const getGetGebouwPublicatieStatusUrl = (id: number,) => {
+
+
+
+
+  return `/api/gebouwen/${id}/publicatiestatus`
+}
+
+/**
+ * @summary Publicatiestatus van een gebouw naar FPS One ophalen
+ */
+export const getGebouwPublicatieStatus = async (id: number, options?: RequestInit): Promise<GebouwPublicatieStatus> => {
+
+  return customFetch<GebouwPublicatieStatus>(getGetGebouwPublicatieStatusUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetGebouwPublicatieStatusQueryKey = (id: number,) => {
+    return [
+    `/api/gebouwen/${id}/publicatiestatus`
+    ] as const;
+    }
+
+
+export const getGetGebouwPublicatieStatusQueryOptions = <TData = Awaited<ReturnType<typeof getGebouwPublicatieStatus>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getGebouwPublicatieStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetGebouwPublicatieStatusQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getGebouwPublicatieStatus>>> = ({ signal }) => getGebouwPublicatieStatus(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getGebouwPublicatieStatus>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetGebouwPublicatieStatusQueryResult = NonNullable<Awaited<ReturnType<typeof getGebouwPublicatieStatus>>>
+export type GetGebouwPublicatieStatusQueryError = ErrorType<void>
+
+
+/**
+ * @summary Publicatiestatus van een gebouw naar FPS One ophalen
+ */
+
+export function useGetGebouwPublicatieStatus<TData = Awaited<ReturnType<typeof getGebouwPublicatieStatus>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getGebouwPublicatieStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetGebouwPublicatieStatusQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getPubliceerGebouwUrl = (id: number,) => {
+
+
+
+
+  return `/api/gebouwen/${id}/publiceer`
+}
+
+/**
+ * @summary Gebouw publiceren naar FPS One
+ */
+export const publiceerGebouw = async (id: number,
+    publiceerInput?: PubliceerInput, options?: RequestInit): Promise<GebouwPublicatieStatus> => {
+
+  return customFetch<GebouwPublicatieStatus>(getPubliceerGebouwUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(publiceerInput)
+  }
+);}
+
+
+
+
+export const getPubliceerGebouwMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof publiceerGebouw>>, TError,{id: number;data?: BodyType<PubliceerInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof publiceerGebouw>>, TError,{id: number;data?: BodyType<PubliceerInput>}, TContext> => {
+
+const mutationKey = ['publiceerGebouw'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof publiceerGebouw>>, {id: number;data?: BodyType<PubliceerInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  publiceerGebouw(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PubliceerGebouwMutationResult = NonNullable<Awaited<ReturnType<typeof publiceerGebouw>>>
+    export type PubliceerGebouwMutationBody = BodyType<PubliceerInput> | undefined
+    export type PubliceerGebouwMutationError = ErrorType<void>
+
+    /**
+ * @summary Gebouw publiceren naar FPS One
+ */
+export const usePubliceerGebouw = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof publiceerGebouw>>, TError,{id: number;data?: BodyType<PubliceerInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof publiceerGebouw>>,
+        TError,
+        {id: number;data?: BodyType<PubliceerInput>},
+        TContext
+      > => {
+      return useMutation(getPubliceerGebouwMutationOptions(options));
+    }
+
+export const getIntrekkenGebouwPublicatieUrl = (id: number,) => {
+
+
+
+
+  return `/api/gebouwen/${id}/publicatie/intrekken`
+}
+
+/**
+ * @summary Publicatie van een gebouw intrekken
+ */
+export const intrekkenGebouwPublicatie = async (id: number,
+    publiceerInput?: PubliceerInput, options?: RequestInit): Promise<GebouwPublicatieStatus> => {
+
+  return customFetch<GebouwPublicatieStatus>(getIntrekkenGebouwPublicatieUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(publiceerInput)
+  }
+);}
+
+
+
+
+export const getIntrekkenGebouwPublicatieMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof intrekkenGebouwPublicatie>>, TError,{id: number;data?: BodyType<PubliceerInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof intrekkenGebouwPublicatie>>, TError,{id: number;data?: BodyType<PubliceerInput>}, TContext> => {
+
+const mutationKey = ['intrekkenGebouwPublicatie'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof intrekkenGebouwPublicatie>>, {id: number;data?: BodyType<PubliceerInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  intrekkenGebouwPublicatie(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type IntrekkenGebouwPublicatieMutationResult = NonNullable<Awaited<ReturnType<typeof intrekkenGebouwPublicatie>>>
+    export type IntrekkenGebouwPublicatieMutationBody = BodyType<PubliceerInput> | undefined
+    export type IntrekkenGebouwPublicatieMutationError = ErrorType<void>
+
+    /**
+ * @summary Publicatie van een gebouw intrekken
+ */
+export const useIntrekkenGebouwPublicatie = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof intrekkenGebouwPublicatie>>, TError,{id: number;data?: BodyType<PubliceerInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof intrekkenGebouwPublicatie>>,
+        TError,
+        {id: number;data?: BodyType<PubliceerInput>},
+        TContext
+      > => {
+      return useMutation(getIntrekkenGebouwPublicatieMutationOptions(options));
     }
 
 export const getListVerdiepingenUrl = (id: number,) => {

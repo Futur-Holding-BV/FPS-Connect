@@ -1,4 +1,5 @@
 import { Link } from "wouter";
+import { GebouwPublicatieKaart } from "@/components/gebouw-publicatie-kaart";
 import {
   Card,
   CardContent,
@@ -850,6 +851,11 @@ export function GebouwDashboard({
               </button>
             </CardContent>
           </Card>
+
+          {/* FPS One publicatiestatus */}
+          {isBeheerder && (
+            <GebouwPublicatieKaart gebouwId={gebouw.id} />
+          )}
         </div>
       </div>
     </div>

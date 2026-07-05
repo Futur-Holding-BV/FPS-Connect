@@ -4,6 +4,39 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-05 — Publicatielaag Connect → FPS One
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+**Wat is gebouwd:**
+
+Centrale publicatielaag die bepaalt welke gebouwen zichtbaar zijn in FPS One (klantomgeving). Klantinhoud is pas zichtbaar na expliciete goedkeuring door een bevoegd medewerker. Connect en One delen dezelfde database — geen sync of dubbele opslag.
+
+**DB:**
+- Tabel `gebouw_publicaties` (lib/db/src/schema/gebouwen.ts): gebouw_id, status (gepubliceerd/ingetrokken), gepubliceerd_door/op, ingetrokken_door/op, notitie
+- Directe SQL-migratie uitgevoerd; tabel aangemaakt in dev
+
+**API (artifacts/api-server/src/routes/gebouwen.ts):**
+- `GET /gebouwen/:id/publicatiestatus` — huidige status opvragen (toegankelijk voor interne gebruikers en klanten met toegang)
+- `POST /gebouwen/:id/publiceer` — gebouw publiceren naar FPS One (bevoegdheid gebouwen niveau 2)
+- `POST /gebouwen/:id/publicatie/intrekken` — publicatie intrekken (bevoegdheid gebouwen niveau 2)
+- Klantfilter uitgebreid: klantgebruikers (`rol === "klant"`) zien in `GET /gebouwen` en `GET /gebouwen/:id` uitsluitend gepubliceerde gebouwen; ongepubliceerde gebouwen geven 403
+- Auditlog via `logActiviteit` met types `gebouw_gepubliceerd` en `gebouw_publicatie_ingetrokken`
+- Import `gebouwPublicatiesTable` toegevoegd
+
+**OpenAPI + codegen:**
+- 3 nieuwe paden + 2 nieuwe schema's (`GebouwPublicatieStatus`, `PubliceerInput`) in openapi.yaml
+- Codegen gedraaid: hooks `useGetGebouwPublicatieStatus`, `usePubliceerGebouw`, `useIntrekkenGebouwPublicatie` beschikbaar
+
+**Frontend:**
+- Nieuw component `artifacts/firevault/src/components/gebouw-publicatie-kaart.tsx`:
+  - Toont publicatiestatus (gepubliceerd/niet gepubliceerd) met datum en naam van publiceerder
+  - Publiceer/intrekken-knop met bevestigingsstap en optionele notitie
+  - Acties alleen zichtbaar voor gebruikers met bevoegdheid gebouwen ≥ 2
+- Geïntegreerd in `gebouw-dashboard.tsx`: kaart verschijnt in de rechterzijbalk voor beheerders
+
+---
+
 ## 2026-07-05 — Dashboard-kiezer hoofdbeheerder: 9 selecteerbare views
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag

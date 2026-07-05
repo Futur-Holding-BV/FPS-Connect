@@ -597,6 +597,62 @@ export const ArchiveerGebouwResponse = zod.object({
 
 
 /**
+ * @summary Publicatiestatus van een gebouw naar FPS One ophalen
+ */
+export const GetGebouwPublicatieStatusParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetGebouwPublicatieStatusResponse = zod.object({
+  "gepubliceerd": zod.boolean(),
+  "gepubliceerd_op": zod.string().nullable(),
+  "gepubliceerd_door_naam": zod.string().nullable(),
+  "ingetrokken_op": zod.string().nullable(),
+  "notitie": zod.string().nullable()
+})
+
+
+/**
+ * @summary Gebouw publiceren naar FPS One
+ */
+export const PubliceerGebouwParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const PubliceerGebouwBody = zod.object({
+  "notitie": zod.string().nullish()
+})
+
+export const PubliceerGebouwResponse = zod.object({
+  "gepubliceerd": zod.boolean(),
+  "gepubliceerd_op": zod.string().nullable(),
+  "gepubliceerd_door_naam": zod.string().nullable(),
+  "ingetrokken_op": zod.string().nullable(),
+  "notitie": zod.string().nullable()
+})
+
+
+/**
+ * @summary Publicatie van een gebouw intrekken
+ */
+export const IntrekkenGebouwPublicatieParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const IntrekkenGebouwPublicatieBody = zod.object({
+  "notitie": zod.string().nullish()
+})
+
+export const IntrekkenGebouwPublicatieResponse = zod.object({
+  "gepubliceerd": zod.boolean(),
+  "gepubliceerd_op": zod.string().nullable(),
+  "gepubliceerd_door_naam": zod.string().nullable(),
+  "ingetrokken_op": zod.string().nullable(),
+  "notitie": zod.string().nullable()
+})
+
+
+/**
  * @summary Verdiepingen van een gebouw
  */
 export const ListVerdiepingenParams = zod.object({

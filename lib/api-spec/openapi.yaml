@@ -525,6 +525,85 @@ paths:
         "404":
           description: Niet gevonden
 
+  /gebouwen/{id}/publicatiestatus:
+    get:
+      operationId: getGebouwPublicatieStatus
+      tags: [gebouwen]
+      summary: Publicatiestatus van een gebouw naar FPS One ophalen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GebouwPublicatieStatus"
+        "404":
+          description: Niet gevonden
+
+  /gebouwen/{id}/publiceer:
+    post:
+      operationId: publiceerGebouw
+      tags: [gebouwen]
+      summary: Gebouw publiceren naar FPS One
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PubliceerInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GebouwPublicatieStatus"
+        "403":
+          description: Geen toegang
+        "404":
+          description: Niet gevonden
+
+  /gebouwen/{id}/publicatie/intrekken:
+    post:
+      operationId: intrekkenGebouwPublicatie
+      tags: [gebouwen]
+      summary: Publicatie van een gebouw intrekken
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PubliceerInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GebouwPublicatieStatus"
+        "403":
+          description: Geen toegang
+        "404":
+          description: Niet gevonden
+
   /gebouwen/{id}/verdiepingen:
     get:
       operationId: listVerdiepingen
@@ -22219,6 +22298,37 @@ components:
           type: integer
         project_status:
           type: string
+
+    GebouwPublicatieStatus:
+      type: object
+      required:
+        - gepubliceerd
+        - gepubliceerd_op
+        - gepubliceerd_door_naam
+        - ingetrokken_op
+        - notitie
+      properties:
+        gepubliceerd:
+          type: boolean
+        gepubliceerd_op:
+          type: string
+          nullable: true
+        gepubliceerd_door_naam:
+          type: string
+          nullable: true
+        ingetrokken_op:
+          type: string
+          nullable: true
+        notitie:
+          type: string
+          nullable: true
+
+    PubliceerInput:
+      type: object
+      properties:
+        notitie:
+          type: string
+          nullable: true
 
     GebouwUpdate:
       type: object

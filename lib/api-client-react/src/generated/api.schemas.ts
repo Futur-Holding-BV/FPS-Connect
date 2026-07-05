@@ -1499,6 +1499,18 @@ export interface GebouwInput {
   project_status?: string;
 }
 
+export interface GebouwPublicatieStatus {
+  gepubliceerd: boolean;
+  gepubliceerd_op: string | null;
+  gepubliceerd_door_naam: string | null;
+  ingetrokken_op: string | null;
+  notitie: string | null;
+}
+
+export interface PubliceerInput {
+  notitie?: string | null;
+}
+
 export interface GebouwUpdate {
   werknummer?: string | null;
   projectnummer?: string | null;
