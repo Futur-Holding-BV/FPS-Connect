@@ -291,7 +291,7 @@ export function RadiaalMenu({ acties, meerActies = [] }: RadiaalMenuProps) {
 
       <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
         <View
-          style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingBottom: onderInset(insets) + 16 }}
+          style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingBottom: onderInset(insets) + straal + ITEM_GROOTTE / 2 + 16 }}
           pointerEvents="box-none"
         >
           <GestureDetector gesture={pan}>

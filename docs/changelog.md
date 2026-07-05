@@ -4,6 +4,21 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-05 — Fix: RadiaalMenu FPS-knop boven systeemtaakbalk
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+**Probleem:** De rode FPS-knop in de monteur-app overlapte de systeemtaakbalk. Een eerdere poging met `paddingBottom: onderInset(insets) + 16` had vrijwel geen effect, omdat `paddingBottom` op een centrerende View de inhoud slechts met `padding/2` verschuift (max ~16px — onzichtbaar).
+
+**Oorzaak:** De vereiste padding moet ervoor zorgen dat het *laagste item* van de radiale ring (op `straal` afstand van het centrum, plus halve itemhoogte) boven de systeemtaakbalk valt.
+
+**Fix (`artifacts/monteur-app/components/RadiaalMenu.tsx`):**
+- `paddingBottom: onderInset(insets) + 16` → `paddingBottom: onderInset(insets) + straal + ITEM_GROOTTE / 2 + 16`
+- Op iPhone (insets.bottom=34, straal≈140): paddingBottom = 227px → dial verschuift ~113px omhoog, onderste items altijd boven taskbar.
+- Expo workflow herstart zodat de app de nieuwe code laadt.
+
+---
+
 ## 2026-07-05 — VGE-query hardening: actieve visuals filter + unit-tests (Task #332)
 ## 2026-07-05 — VGE effectiviteitslog: stap_duur_seconden + betere spot_type afleiding (Task #345)
 
