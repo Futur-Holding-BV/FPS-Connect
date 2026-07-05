@@ -9,7 +9,7 @@
 
 import { db, fpsVisualsTable, vgeEffectiviteitslogTable } from "@workspace/db";
 import type { FpsVisual } from "@workspace/db";
-import { eq, and, sql, avg } from "drizzle-orm";
+import { eq, and, sql, avg, inArray } from "drizzle-orm";
 import { logger } from "./logger";
 
 // ── Typen ─────────────────────────────────────────────────────────────────────
@@ -149,16 +149,18 @@ async function haalKandidaten(
   const toegestaneTypes = VISUAL_TYPES_PER_STAPTYPE[stapType];
 
   if (spotType) {
-    // Gebruik SQL array-overlap operator && voor GIN-index
+    // Gebruik SQL array-overlap operator && voor GIN-index.
+    // spotType als parameterized waarde ($1) — geen sql.raw zodat SQL-injectie
+    // structureel onmogelijk is, ongeacht de waarde in de database.
     const rows = await db
       .select()
       .from(fpsVisualsTable)
       .where(
         and(
           eq(fpsVisualsTable.actief, true),
-          sql`${fpsVisualsTable.bronType} = ANY(${GELDIGE_BRON_TYPES})`,
-          sql`${fpsVisualsTable.spotType} && ARRAY[${sql.raw(`'${spotType.replace(/'/g, "''")}'`)}]::text[]`,
-          sql`${fpsVisualsTable.visualType} = ANY(ARRAY[${sql.raw(toegestaneTypes.map((t) => `'${t}'`).join(","))}]::text[])`,
+          inArray(fpsVisualsTable.bronType, GELDIGE_BRON_TYPES),
+          sql`${fpsVisualsTable.spotType} && ARRAY[${spotType}]::text[]`,
+          inArray(fpsVisualsTable.visualType, toegestaneTypes),
         ),
       );
     return rows;
@@ -170,8 +172,8 @@ async function haalKandidaten(
       .where(
         and(
           eq(fpsVisualsTable.actief, true),
-          sql`${fpsVisualsTable.bronType} = ANY(${GELDIGE_BRON_TYPES})`,
-          sql`${fpsVisualsTable.visualType} = ANY(ARRAY[${sql.raw(toegestaneTypes.map((t) => `'${t}'`).join(","))}]::text[])`,
+          inArray(fpsVisualsTable.bronType, GELDIGE_BRON_TYPES),
+          inArray(fpsVisualsTable.visualType, toegestaneTypes),
         ),
       );
     return rows;

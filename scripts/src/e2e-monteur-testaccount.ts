@@ -70,7 +70,9 @@ export async function setupE2eAccount(): Promise<number> {
 
 // Wacht tot het huidige TOTP-venster voldoende resttijd heeft en geeft dan een
 // verse code terug. Voorkomt dat een code verloopt tijdens een trage koude load.
-export async function genereerVersTotp(minResterendeSec = 8): Promise<string> {
+// minResterendeSec=20: bij een cold-start Expo-load is 8 sec te krap; met 20 sec
+// buffer is de code zeker nog geldig als het inlogverzoek de server bereikt.
+export async function genereerVersTotp(minResterendeSec = 20): Promise<string> {
   const resterend = authenticator.timeRemaining();
   if (resterend < minResterendeSec) {
     await new Promise((r) => setTimeout(r, (resterend + 1) * 1000));

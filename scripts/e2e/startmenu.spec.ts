@@ -112,7 +112,8 @@ async function logIn(page: Page): Promise<void> {
     await page.getByText("Inloggen", { exact: true }).click();
 
     try {
-      await expect(fps).toBeVisible({ timeout: 25_000 });
+      // 45s timeout: cold-start Expo kan lang laden na submit
+      await expect(fps).toBeVisible({ timeout: 45_000 });
       return;
     } catch {
       if (poging === 3) {
