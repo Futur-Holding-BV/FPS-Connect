@@ -44,7 +44,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Separator } from "@/components/ui/separator";
-import { Plus, Pencil, Trash2, ImageIcon, CheckCircle2, XCircle, Upload, FileJson, FileImage, Loader2 } from "lucide-react";
+import { Plus, Pencil, Trash2, ImageIcon, CheckCircle2, XCircle, Upload, FileJson, FileImage, Loader2, TriangleAlert } from "lucide-react";
 
 const VISUAL_TYPES = [
   { waarde: "detailtekening",           label: "Detailtekening" },
@@ -96,6 +96,14 @@ function isAfbeelding(contentType: string) {
   return contentType.startsWith("image/");
 }
 
+const GROOT_BESTAND_GRENS = 10 * 1024 * 1024;
+
+function formateerGrootte(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1).replace(".", ",")} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1).replace(".", ",")} MB`;
+}
+
 function visualTypeLabel(waarde: string) {
   return VISUAL_TYPES.find((v) => v.waarde === waarde)?.label ?? waarde;
 }
@@ -131,6 +139,7 @@ export default function VisualLibraryBeheer() {
   const [uploadFout, setUploadFout] = useState("");
   const [uploadPoging, setUploadPoging] = useState(0);
   const [geuploadBestand, setGeuploadBestand] = useState<string>("");
+  const [bestandGrootte, setBestandGrootte] = useState<number | null>(null);
   const [sleepActief, setSleepActief] = useState(false);
 
   const bestandInputRef = useRef<HTMLInputElement>(null);
@@ -156,6 +165,7 @@ export default function VisualLibraryBeheer() {
     setBewaarFout("");
     setUploadFout("");
     setGeuploadBestand("");
+    setBestandGrootte(null);
     setNieuwOpen(true);
   }
 
@@ -184,6 +194,7 @@ export default function VisualLibraryBeheer() {
     setUploadFout("");
     setUploadPoging(0);
     setGeuploadBestand("");
+    setBestandGrootte(null);
     setSleepActief(false);
     huidigBestandRef.current = null;
   }
@@ -203,6 +214,7 @@ export default function VisualLibraryBeheer() {
     setUploadPoging(0);
     setGeuploadBestand("");
     huidigBestandRef.current = bestand;
+    setBestandGrootte(bestand.size);
 
     const contentType = bestand.type || "application/octet-stream";
 
@@ -647,6 +659,11 @@ export default function VisualLibraryBeheer() {
                     <span className="text-sm font-medium text-green-700 truncate max-w-full px-2">
                       {geuploadBestand}
                     </span>
+                    {bestandGrootte !== null && (
+                      <span className="text-[11px] text-muted-foreground">
+                        {formateerGrootte(bestandGrootte)}
+                      </span>
+                    )}
                     <span className="text-[11px] text-muted-foreground">
                       Klik of sleep een nieuw bestand om te vervangen
                     </span>
@@ -661,6 +678,13 @@ export default function VisualLibraryBeheer() {
                   </div>
                 )}
               </div>
+
+              {bestandGrootte !== null && bestandGrootte > GROOT_BESTAND_GRENS && !uploadFout && (
+                <div className="flex items-start gap-2 rounded-md bg-amber-50 border border-amber-200 px-3 py-2 text-sm text-amber-800">
+                  <TriangleAlert className="h-4 w-4 shrink-0 mt-0.5 text-amber-500" />
+                  <span>Groot bestand ({formateerGrootte(bestandGrootte)}) — overweeg een geoptimaliseerde versie</span>
+                </div>
+              )}
 
               {uploadFout && (
                 <div className="space-y-1.5">
