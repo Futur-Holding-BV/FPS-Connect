@@ -15,7 +15,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Map, Loader2, Upload, ExternalLink, Plus } from "lucide-react";
+import { Map, Loader2, Upload, ExternalLink, Plus, TriangleAlert } from "lucide-react";
+
+const GROOT_BESTAND_GRENS = 10 * 1024 * 1024;
+
+function formateerGrootte(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1).replace(".", ",")} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1).replace(".", ",")} MB`;
+}
 
 export default function GebouwPlattegronden({
   gebouwId,
@@ -37,6 +45,7 @@ export default function GebouwPlattegronden({
   const [formOpen, setFormOpen] = useState(false);
   const [keuzeId, setKeuzeId] = useState<string>("");
   const [bevestigVervangen, setBevestigVervangen] = useState(false);
+  const [bestandGrootte, setBestandGrootte] = useState<number | null>(null);
 
   const gesorteerd = [...verdiepingen].sort((a, b) => a.niveau - b.niveau);
   const gekozen = gesorteerd.find((v) => String(v.id) === keuzeId);
@@ -53,6 +62,7 @@ export default function GebouwPlattegronden({
     const vId = doelId.current;
     if (vId == null) return;
     setFout("");
+    setBestandGrootte(file.size);
     setBezigId(vId);
     try {
       const upload = await uploadFile(file);
@@ -68,6 +78,7 @@ export default function GebouwPlattegronden({
       setFormOpen(false);
       setBevestigVervangen(false);
       setKeuzeId("");
+      setBestandGrootte(null);
     } catch {
       setFout("Uploaden mislukt. Probeer het opnieuw.");
     } finally {
@@ -254,6 +265,12 @@ export default function GebouwPlattegronden({
           </div>
         )}
 
+        {bestandGrootte !== null && bestandGrootte > GROOT_BESTAND_GRENS && (
+          <div className="flex items-start gap-2 rounded-md bg-amber-50 border border-amber-200 px-3 py-2 text-sm text-amber-800">
+            <TriangleAlert className="h-4 w-4 shrink-0 mt-0.5 text-amber-500" />
+            <span>Groot bestand ({formateerGrootte(bestandGrootte)}) — overweeg een geoptimaliseerde versie</span>
+          </div>
+        )}
         {fout && <p className="text-sm text-destructive">{fout}</p>}
       </CardContent>
     </Card>

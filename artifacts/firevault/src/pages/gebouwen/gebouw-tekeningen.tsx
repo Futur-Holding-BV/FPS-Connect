@@ -31,11 +31,20 @@ import {
   FileText,
   Loader2,
   Plus,
+  TriangleAlert,
   X,
   Upload,
   Sparkles,
 } from "lucide-react";
 import { TekeningViewer } from "./tekening-viewer";
+
+const GROOT_BESTAND_GRENS = 10 * 1024 * 1024;
+
+function formateerGrootte(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1).replace(".", ",")} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1).replace(".", ",")} MB`;
+}
 
 const TEKENING_TYPES = [
   { waarde: "gevelaanzicht", label: "Gevelaanzicht" },
@@ -88,6 +97,7 @@ export default function GebouwTekeningen({
   const [nieuweBouwlaagNiveau, setNieuweBouwlaagNiveau] = useState("0");
   const [bestandsnaam, setBestandsnaam] = useState("");
   const [objectPath, setObjectPath] = useState("");
+  const [bestandGrootte, setBestandGrootte] = useState<number | null>(null);
   const [zichtbaarMonteur, setZichtbaarMonteur] = useState(false);
   const [aiVoorstel, setAiVoorstel] = useState<TekeningAiAnalyseResultaat | null>(
     null,
@@ -106,6 +116,7 @@ export default function GebouwTekeningen({
 
   async function kiesBestand(file: File) {
     setFout("");
+    setBestandGrootte(file.size);
     try {
       const res = await uploadFile(file);
       if (!res) {
@@ -153,6 +164,7 @@ export default function GebouwTekeningen({
     setNieuweBouwlaagNiveau("0");
     setBestandsnaam("");
     setObjectPath("");
+    setBestandGrootte(null);
     setZichtbaarMonteur(false);
     setAiVoorstel(null);
     setFout("");
@@ -441,6 +453,15 @@ export default function GebouwTekeningen({
                     {bestandsnaam || "Kies PDF of afbeelding"}
                   </span>
                 </Button>
+                {bestandGrootte !== null && (
+                  <p className="text-xs text-muted-foreground">{formateerGrootte(bestandGrootte)}</p>
+                )}
+                {bestandGrootte !== null && bestandGrootte > GROOT_BESTAND_GRENS && (
+                  <div className="flex items-start gap-2 rounded-md bg-amber-50 border border-amber-200 px-3 py-2 text-sm text-amber-800">
+                    <TriangleAlert className="h-4 w-4 shrink-0 mt-0.5 text-amber-500" />
+                    <span>Groot bestand ({formateerGrootte(bestandGrootte)}) — overweeg een geoptimaliseerde versie</span>
+                  </div>
+                )}
               </div>
             </div>
             <label className="flex items-center gap-2 text-sm cursor-pointer">

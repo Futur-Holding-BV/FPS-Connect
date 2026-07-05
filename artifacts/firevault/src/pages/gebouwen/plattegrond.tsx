@@ -412,6 +412,14 @@ function GridAchtergrond({ w, h }: { w: number; h: number }) {
   );
 }
 
+const GROOT_BESTAND_GRENS = 10 * 1024 * 1024;
+
+function formateerGrootte(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1).replace(".", ",")} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1).replace(".", ",")} MB`;
+}
+
 // Herbruikbare foto-upload knop (presigned URL flow)
 function FotoUploader({
   label,
@@ -423,14 +431,15 @@ function FotoUploader({
   gebouwId?: number;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const [bestandGrootte, setBestandGrootte] = useState<number | null>(null);
   const { uploadFile, isUploading } = useUpload({
     gebouw_id: gebouwId,
     bestand_type: "foto",
-    onSuccess: (res) => onUploaded(res.objectPath),
+    onSuccess: (res) => { onUploaded(res.objectPath); setBestandGrootte(null); },
   });
 
   return (
-    <>
+    <div className="flex flex-col gap-1">
       <input
         ref={inputRef}
         type="file"
@@ -439,7 +448,10 @@ function FotoUploader({
         className="hidden"
         onChange={async (e) => {
           const file = e.target.files?.[0];
-          if (file) await uploadFile(file);
+          if (file) {
+            setBestandGrootte(file.size);
+            await uploadFile(file);
+          }
           e.target.value = "";
         }}
       />
@@ -453,7 +465,16 @@ function FotoUploader({
         {isUploading ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <ImageIcon className="h-4 w-4 mr-1" />}
         {label}
       </Button>
-    </>
+      {bestandGrootte !== null && (
+        <p className="text-xs text-muted-foreground">{formateerGrootte(bestandGrootte)}</p>
+      )}
+      {bestandGrootte !== null && bestandGrootte > GROOT_BESTAND_GRENS && (
+        <div className="flex items-start gap-2 rounded-md bg-amber-50 border border-amber-200 px-3 py-2 text-sm text-amber-800">
+          <TriangleAlert className="h-4 w-4 shrink-0 mt-0.5 text-amber-500" />
+          <span>Groot bestand ({formateerGrootte(bestandGrootte)}) — overweeg een geoptimaliseerde versie</span>
+        </div>
+      )}
+    </div>
   );
 }
 
