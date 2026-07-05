@@ -15,6 +15,7 @@
     "e2e-web": "playwright test --config=playwright.web.config.ts",
     "e2e-web-ci": "tsx ./src/e2e-web-run.ts",
     "clean-stale-dist": "tsx ./src/clean-stale-dist.ts",
+    "check-codegen-stale": "tsx ./src/check-codegen-stale.ts",
     "kwaliteitscheck": "tsx ./src/kwaliteitscheck.ts",
     "broncode-export": "tsx ./src/broncode-export.ts",
     "valideer-installatie": "tsx ./src/valideer-installatie.ts",

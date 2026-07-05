@@ -1,0 +1,11 @@
+#!/bin/sh
+# FPS Connect — git pre-commit hook
+#
+# Activeer deze hook via:
+#   git config core.hooksPath .githooks
+#
+# Controleert of lib/api-client-react/dist/ verouderd is t.o.v. de gegenereerde
+# api.ts. Als dat zo is, wordt typecheck:libs automatisch uitgevoerd zodat
+# stale declaraties nooit in een commit terechtkomen.
+
+pnpm --filter @workspace/scripts run check-codegen-stale

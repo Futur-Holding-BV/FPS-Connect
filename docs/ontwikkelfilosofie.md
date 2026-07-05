@@ -90,6 +90,30 @@ De belangrijkste KPI van FPS Connect is niet "Hoeveel functionaliteit heeft Conn
 
 Alle toekomstige beslissingen worden aan deze KPI getoetst.
 
+## Codegen-workflow (verplicht)
+
+Codegen **moet altijd** worden uitgevoerd via het npm-script:
+
+```sh
+pnpm --filter @workspace/api-spec run codegen
+```
+
+Dit script voert achtereenvolgens uit:
+1. `orval --config ./orval.config.ts` — genereert `lib/api-client-react/src/generated/api.ts`
+2. `pnpm run typecheck:libs` — herbouwt `lib/api-client-react/dist/` zodat de declaraties actueel zijn
+
+**Nooit rechtstreeks `npx orval` aanroepen.** Als orval buiten het script wordt aangeroepen (bijv. via een editor-integratie of `npx orval`), wordt stap 2 overgeslagen. De `dist/`-declaraties raken dan verouderd zonder waarschuwing in de editor, en de frontend kan stale types importeren.
+
+**Technische vangnetten:**
+
+- De kwaliteitscheck (`pnpm --filter @workspace/scripts run kwaliteitscheck`) detecteert automatisch of `dist/generated/api.d.ts` ouder is dan `src/generated/api.ts` en rapporteert dit als bevinding.
+- `lib/api-client-react/package.json` bevat een `prepare`-script (`tsc --build`) zodat `dist/` na elke `pnpm install` up-to-date is.
+- De git pre-commit hook in `.githooks/pre-commit` herbouwt `dist/` automatisch als hij verouderd is. Activeer via:
+  ```sh
+  git config core.hooksPath .githooks
+  ```
+- Het script `pnpm --filter @workspace/scripts run check-codegen-stale` kan ook los worden uitgevoerd.
+
 ## Verplicht bij elke opdracht
 
 Bij iedere implementatie moet worden aangegeven:

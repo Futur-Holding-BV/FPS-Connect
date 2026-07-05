@@ -4,6 +4,23 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-05 — Borging stale codegen-declaraties
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** geen
+
+**Wat is gebouwd:**
+
+Technische vangnetten om te voorkomen dat een vergeten `typecheck:libs`-stap verouderde `dist/`-declaraties naar productie brengt.
+
+**Gewijzigde bestanden:**
+- `lib/api-client-react/package.json` — `prepare`-script toegevoegd (`tsc --build`); dist/ wordt nu automatisch herbouwd bij elke `pnpm install`
+- `scripts/src/check-codegen-stale.ts` — nieuw script: controleert of `dist/generated/api.d.ts` ouder is dan `src/generated/api.ts` en voert automatisch `typecheck:libs` uit als dat zo is; exit 1 als rebuild mislukt
+- `scripts/package.json` — script `check-codegen-stale` geregistreerd
+- `.githooks/pre-commit` — git pre-commit hook die `check-codegen-stale` aanroept; activeer via `git config core.hooksPath .githooks`
+- `docs/ontwikkelfilosofie.md` — nieuw verplicht hoofdstuk "Codegen-workflow" toegevoegd: expliciet verbod op `npx orval` rechtstreeks, documentatie van alle vangnetten
+
+---
+
 ## 2026-07-05 — FPS One Design System 2.0 — Premium Spatial UI
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
