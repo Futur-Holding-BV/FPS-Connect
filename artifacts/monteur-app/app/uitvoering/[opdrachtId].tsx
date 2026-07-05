@@ -433,9 +433,11 @@ function BulletLijst({ items }: { items: string[] }) {
 function FotoRij({
   uris,
   onVerwijder,
+  onHerprobeer,
 }: {
-  uris: { lokaal: string; objectPath?: string }[];
+  uris: { lokaal: string; objectPath?: string; fout?: boolean }[];
   onVerwijder: (idx: number) => void;
+  onHerprobeer?: (idx: number) => void;
 }) {
   const c = useColors();
   if (uris.length === 0) return null;
@@ -445,9 +447,16 @@ function FotoRij({
         <View key={i} style={{ position: "relative" }}>
           <Image
             source={{ uri: f.lokaal }}
-            style={{ width: 80, height: 80, borderRadius: 8, backgroundColor: c.accent }}
+            style={{
+              width: 80,
+              height: 80,
+              borderRadius: 8,
+              backgroundColor: c.accent,
+              borderWidth: f.fout ? 2 : 0,
+              borderColor: f.fout ? "#dc2626" : "transparent",
+            }}
           />
-          {f.objectPath && (
+          {f.objectPath && !f.fout && (
             <View
               style={{
                 position: "absolute",
@@ -460,6 +469,25 @@ function FotoRij({
             >
               <Ionicons name="checkmark" size={10} color="#fff" />
             </View>
+          )}
+          {f.fout && onHerprobeer && (
+            <Pressable
+              onPress={() => onHerprobeer(i)}
+              style={{
+                position: "absolute",
+                bottom: 4,
+                left: 4,
+                right: 4,
+                backgroundColor: "rgba(220,38,38,0.88)",
+                borderRadius: 5,
+                paddingVertical: 3,
+                alignItems: "center",
+              }}
+            >
+              <Text style={{ color: "#fff", fontSize: 9, fontFamily: "Inter_600SemiBold" }}>
+                Opnieuw
+              </Text>
+            </Pressable>
           )}
           <Pressable
             onPress={() => onVerwijder(i)}
@@ -497,7 +525,7 @@ export default function UitvoeringScherm() {
 
   const [gecachteStap, setGecachteStap] = useState<PimUitvoeringStap | null>(null);
   const [uploading, setUploading] = useState(false);
-  const [fotos, setFotos] = useState<{ lokaal: string; objectPath?: string }[]>([]);
+  const [fotos, setFotos] = useState<{ lokaal: string; objectPath?: string; fout?: boolean }[]>([]);
   const [antwoord, setAntwoord] = useState(false);
   const [opmerkingen, setOpmerkingen] = useState("");
   const [afwijkingModus, setAfwijkingModus] = useState(false);
@@ -645,12 +673,88 @@ export default function UitvoeringScherm() {
         setFotos((prev) =>
           prev.map((f) => (f.lokaal === lokaal ? { ...f, objectPath } : f)),
         );
-      } catch {
-        Alert.alert("Upload mislukt", "De foto kon niet worden geupload. Probeer opnieuw.");
-        setFotos((prev) => prev.filter((f) => f.lokaal !== lokaal));
+      } catch (err) {
+        const isBestandstype =
+          err instanceof Error &&
+          /415|bestandstype|unsupported|ongeldig.*(type|formaat)/i.test(err.message);
+        if (isBestandstype) {
+          setFotos((prev) => prev.filter((f) => f.lokaal !== lokaal));
+          Alert.alert(
+            "Bestandstype niet toegestaan",
+            "Dit bestandstype wordt niet ondersteund. Kies een ander bestand.",
+            [
+              { text: "Annuleren", style: "cancel" },
+              { text: "Ander bestand kiezen", onPress: () => void voegFotoToe() },
+            ],
+          );
+        } else {
+          setFotos((prev) =>
+            prev.map((f) => (f.lokaal === lokaal ? { ...f, fout: true } : f)),
+          );
+          Alert.alert(
+            "Upload mislukt",
+            "De foto kon niet worden geüpload.",
+            [
+              {
+                text: "Verwijderen",
+                style: "cancel",
+                onPress: () =>
+                  setFotos((prev) => prev.filter((f) => f.lokaal !== lokaal)),
+              },
+              { text: "Opnieuw proberen", onPress: () => void herprobeerFoto(lokaal) },
+            ],
+          );
+        }
       } finally {
         setUploading(false);
       }
+    }
+  }
+
+  async function herprobeerFoto(lokaal: string) {
+    setFotos((prev) =>
+      prev.map((f) => (f.lokaal === lokaal ? { ...f, fout: false } : f)),
+    );
+    setUploading(true);
+    try {
+      const objectPath = await uploadFoto(lokaal, undefined, "foto");
+      setFotos((prev) =>
+        prev.map((f) => (f.lokaal === lokaal ? { ...f, objectPath } : f)),
+      );
+    } catch (err) {
+      const isBestandstype =
+        err instanceof Error &&
+        /415|bestandstype|unsupported|ongeldig.*(type|formaat)/i.test(err.message);
+      if (isBestandstype) {
+        setFotos((prev) => prev.filter((f) => f.lokaal !== lokaal));
+        Alert.alert(
+          "Bestandstype niet toegestaan",
+          "Dit bestandstype wordt niet ondersteund. Kies een ander bestand.",
+          [
+            { text: "Annuleren", style: "cancel" },
+            { text: "Ander bestand kiezen", onPress: () => void voegFotoToe() },
+          ],
+        );
+      } else {
+        setFotos((prev) =>
+          prev.map((f) => (f.lokaal === lokaal ? { ...f, fout: true } : f)),
+        );
+        Alert.alert(
+          "Upload mislukt",
+          "De foto kon niet worden geüpload.",
+          [
+            {
+              text: "Verwijderen",
+              style: "cancel",
+              onPress: () =>
+                setFotos((prev) => prev.filter((f) => f.lokaal !== lokaal)),
+            },
+            { text: "Opnieuw proberen", onPress: () => void herprobeerFoto(lokaal) },
+          ],
+        );
+      }
+    } finally {
+      setUploading(false);
     }
   }
 

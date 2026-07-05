@@ -21,7 +21,7 @@ Nieuwe dashboard-kiezer bovenaan het beheerder-dashboard (alleen zichtbaar voor 
 | Projecten & Offertes | OfferteAnalytics (conversie, waarde, pie-chart), CRM pijplijn, recente offertes | Projecten + Offerte-pipeline |
 | Facturen & Verkoop | Facturen per type (totaal/bedrag), onderhoudscontracten, recente facturen | Facturen + Onderhoud |
 | Bedrijfsgezondheid | CRM-gezondheidsmetrices, winratio, offerte-financieel, AI-kosten | Pijplijn + Contracten |
-| HRM | HRM-stats, ziekte-trendgrafiek, verlofaanvragen, capaciteitsbezetting | Personeel + Verlof + Ziekte |
+| HRM | HRM-stats, ziekte-trendgrafiek, verlofaanvragen, capacititeitsbezetting | Personeel + Verlof + Ziekte |
 | Bugreports | Feedback-lijst per type, inbox-statistieken, veiligheidsmelding-overzicht | Feedback + Inbox + Veiligheid |
 | Kwartaaloverzicht | Offertes + Facturen + HRM samengebracht in Q-view | Offertes + Facturen + HRM |
 | Maandoverzicht | AI-kosten, recente activiteit, open verlof, actieve medewerkers | AI-kosten + Activiteit + Verlof |
@@ -32,6 +32,27 @@ Nieuwe dashboard-kiezer bovenaan het beheerder-dashboard (alleen zichtbaar voor 
 - Bestaande operationele dashboard volledig behouden als eigen sub-component `OperationeelDashboard`
 - Herbruikbare `KpiKaart` helper voor alle views
 - TypeScript-fouten in beheerder.tsx: nul (pre-existing `retryUpload`-errors in andere bestanden onaangeroerd)
+
+---
+
+## 2026-07-05 — Fix: Uploadfouten bij spot-foto's zichtbaar op uitvoeringspagina
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+**Probleem:** Spot-foto uploads in de uitvoeringsflow (`uitvoering/[opdrachtId].tsx`) en de digitale-uitvoerder-chat (`uitvoerder/[sessie_id].tsx`) mislukten stil — de gebruiker kreeg geen foutmelding en kon niet opnieuw proberen.
+
+**Fix:**
+- `artifacts/monteur-app/app/uitvoering/[opdrachtId].tsx`:
+  - `voegFotoToe` catch onderscheidt nu bestandstype-fouten (415/unsupported) van herstaartbare fouten (netwerk/server).
+  - Bij bestandstype-fout: foto verwijderd + Alert met "Ander bestand kiezen" knop.
+  - Bij herstaartbare fout: foto blijft in state als `fout: true`, Alert met "Opnieuw proberen" → `herprobeerFoto(lokaal)`.
+  - Nieuwe `herprobeerFoto(lokaal)` functie herprobeert de upload for hetzelfde lokale pad met dezelfde foutclassificatie.
+  - `FotoRij` component bijgewerkt: rode rand + inline "Opnieuw"-knop bij `fout: true`, optionele `onHerprobeer` prop.
+- `artifacts/monteur-app/app/uitvoerder/[sessie_id].tsx`:
+  - Extractie van `probeerFotoUpload(uri, opOpnieuw)` helper die foutclassificatie centraliseert.
+  - `kiesFoto` en `maakFoto` gebruiken beide de helper; "Ander bestand kiezen" roept `kiesFoto()` opnieuw aan, "Opnieuw proberen" herprobeert dezelfde URI.
+  - Pre-existing typefout hersteld: `uploadFoto(uri, token ?? "")` → `uploadFoto(uri)` (tweede argument is `gebouwId?: number`, niet een token-string).
+
 
 ---
 

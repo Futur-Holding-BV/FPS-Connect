@@ -97,6 +97,40 @@ export default function UitvoerderScherm() {
     }
   }
 
+  async function probeerFotoUpload(uri: string, opOpnieuw: () => void) {
+    setFotoUploaden(true);
+    try {
+      const pad = await uploadFoto(uri);
+      setFoto({ uri, pad });
+    } catch (err) {
+      const isBestandstype =
+        err instanceof Error &&
+        /415|bestandstype|unsupported|ongeldig.*(type|formaat)/i.test(err.message);
+      if (isBestandstype) {
+        setFoto(null);
+        Alert.alert(
+          "Bestandstype niet toegestaan",
+          "Dit bestandstype wordt niet ondersteund. Kies een ander bestand.",
+          [
+            { text: "Annuleren", style: "cancel" },
+            { text: "Ander bestand kiezen", onPress: () => void kiesFoto() },
+          ],
+        );
+      } else {
+        Alert.alert(
+          "Upload mislukt",
+          "De foto kon niet worden geüpload.",
+          [
+            { text: "Annuleren", style: "cancel", onPress: () => setFoto(null) },
+            { text: "Opnieuw proberen", onPress: opOpnieuw },
+          ],
+        );
+      }
+    } finally {
+      setFotoUploaden(false);
+    }
+  }
+
   async function kiesFoto() {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
@@ -110,16 +144,7 @@ export default function UitvoerderScherm() {
     if (result.canceled || !result.assets[0]) return;
     const uri = result.assets[0].uri;
     setFoto({ uri, pad: null });
-    setFotoUploaden(true);
-    try {
-      const pad = await uploadFoto(uri, token ?? "");
-      setFoto({ uri, pad });
-    } catch {
-      Alert.alert("Uploadfout", "Foto kon niet worden geüpload.");
-      setFoto(null);
-    } finally {
-      setFotoUploaden(false);
-    }
+    await probeerFotoUpload(uri, () => void probeerFotoUpload(uri, () => setFoto(null)));
   }
 
   async function maakFoto() {
@@ -132,16 +157,7 @@ export default function UitvoerderScherm() {
     if (result.canceled || !result.assets[0]) return;
     const uri = result.assets[0].uri;
     setFoto({ uri, pad: null });
-    setFotoUploaden(true);
-    try {
-      const pad = await uploadFoto(uri, token ?? "");
-      setFoto({ uri, pad });
-    } catch {
-      Alert.alert("Uploadfout", "Foto kon niet worden geüpload.");
-      setFoto(null);
-    } finally {
-      setFotoUploaden(false);
-    }
+    await probeerFotoUpload(uri, () => void probeerFotoUpload(uri, () => setFoto(null)));
   }
 
   async function verstuur() {
