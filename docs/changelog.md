@@ -4,6 +4,49 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-05 — Visual Library beheer-UI (Task #321)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+**Wat is gebouwd:**
+
+**Database — 2 nieuwe tabellen:**
+- `fps_visuals`: centrale opslag van goedgekeurde visuals. Kolommen: `id`, `naam`, `visual_type`, `bron_type` (met CHECK-constraint), `bron_referentie`, `object_path`, `thumbnail_path`, `spot_type text[]` (GIN-index), `artikel_id` FK, `bedrijfsstandaard_id` FK, `taal`, `actief` (default `false`), `aangemaakt_op`, `bijgewerkt_op`.
+- `fps_visual_annotaties`: AI-annotaties altijd gescheiden van origineel. CHECK-constraint `originele_foto_path <> annotatie_path` dwingt het af op DB-niveau.
+- Indexes: GIN-index op `spot_type`, composite index op `(visual_type, actief)` voor VGE-selectie.
+
+**Drizzle-schema — `lib/db/src/schema/`:**
+- Nieuw `visuals.ts` met beide tabeldefinities + `VISUAL_TYPES` en `BRON_TYPES` constanten
+- `index.ts` uitgebreid met `export * from "./visuals"`
+
+**API — `artifacts/api-server/src/routes/visuals.ts`:**
+- `GET /visuals` — lijst met optionele filters (actief, visual_type, spot_type)
+- `GET /visuals/:id` — detail
+- `POST /visuals` — aanmaken (actief=false by default, bron_type gevalideerd)
+- `PATCH /visuals/:id` — bijwerken (actief toggle, alle velden)
+- `DELETE /visuals/:id` — verwijderen
+- Autorisatie: lezen = `systeem:1`, schrijven = `systeem:2` (beheerder-only)
+- Geregistreerd in `routes/index.ts`
+
+**OpenAPI spec — `lib/api-spec/openapi.yaml`:**
+- Tag `visuals` toegevoegd
+- Paden `/visuals` en `/visuals/{id}` met GET/POST/PATCH/DELETE
+- Schemas `Visual`, `VisualInput`, `VisualPatch`
+- Codegen uitgevoerd: hooks `useListVisuals`, `useCreateVisual`, `useUpdateVisual`, `useDeleteVisual`, `getListVisualsQueryKey` gegenereerd
+
+**Beheer-UI — `artifacts/firevault/src/pages/beheer/visuals.tsx`:**
+- Thumbnail-galerij (grid 1/2/3 kolommen) met actief/concept badges
+- Actief/inactief toggle per visual (Switch direct in de kaart)
+- Filterbar: actief/concept/alle + visual-type dropdown
+- Upload-dialoog: naam, visual_type, bron_type, bron_referentie, object_path, thumbnail_path, spot_type checkboxes (ScrollArea)
+- Bewerk-dialoog: zelfde formulier, pre-gevuld
+- Verwijder-bevestiging via AlertDialog
+- Route: `/beheer/visuals` (toegankelijk voor hoofdbeheerder)
+
+**Navigatie:**
+- `beheerder-layout.tsx`: "Visual Library" nav-item toegevoegd in Instellingen-sectie (isHoofdbeheerder), met `ImageIcon`
+- `App.tsx`: route `/beheer/visuals` geregistreerd
+
 ## 2026-07-05 — Kernworkflow validatie (alle 15 modules)
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag

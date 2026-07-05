@@ -403,6 +403,7 @@ import type {
   ListToolboxBerichtenParams,
   ListUrenParams,
   ListVerlofInstellingenParams,
+  ListVisualsParams,
   ListVoertuigenParams,
   ListVoorraadMutatiesParams,
   ListVoorraadParams,
@@ -737,6 +738,9 @@ import type {
   VerlofsoortInput,
   Vervaldag,
   VerzendOfferte200,
+  Visual,
+  VisualInput,
+  VisualPatch,
   Voertuig,
   VoertuigInput,
   VoertuigSamenvatting,
@@ -70017,5 +70021,377 @@ export const useUpsertKbOpdrachtgeverVoorkeur = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getUpsertKbOpdrachtgeverVoorkeurMutationOptions(options));
+    }
+
+export const getListVisualsUrl = (params?: ListVisualsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/visuals?${stringifiedParams}` : `/api/visuals`
+}
+
+/**
+ * @summary Lijst van visuals
+ */
+export const listVisuals = async (params?: ListVisualsParams, options?: RequestInit): Promise<Visual[]> => {
+
+  return customFetch<Visual[]>(getListVisualsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListVisualsQueryKey = (params?: ListVisualsParams,) => {
+    return [
+    `/api/visuals`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListVisualsQueryOptions = <TData = Awaited<ReturnType<typeof listVisuals>>, TError = ErrorType<unknown>>(params?: ListVisualsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listVisuals>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListVisualsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listVisuals>>> = ({ signal }) => listVisuals(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listVisuals>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListVisualsQueryResult = NonNullable<Awaited<ReturnType<typeof listVisuals>>>
+export type ListVisualsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Lijst van visuals
+ */
+
+export function useListVisuals<TData = Awaited<ReturnType<typeof listVisuals>>, TError = ErrorType<unknown>>(
+ params?: ListVisualsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listVisuals>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListVisualsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateVisualUrl = () => {
+
+
+
+
+  return `/api/visuals`
+}
+
+/**
+ * @summary Nieuwe visual aanmaken
+ */
+export const createVisual = async (visualInput: VisualInput, options?: RequestInit): Promise<Visual> => {
+
+  return customFetch<Visual>(getCreateVisualUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(visualInput)
+  }
+);}
+
+
+
+
+export const getCreateVisualMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createVisual>>, TError,{data: BodyType<VisualInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createVisual>>, TError,{data: BodyType<VisualInput>}, TContext> => {
+
+const mutationKey = ['createVisual'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createVisual>>, {data: BodyType<VisualInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createVisual(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateVisualMutationResult = NonNullable<Awaited<ReturnType<typeof createVisual>>>
+    export type CreateVisualMutationBody = BodyType<VisualInput>
+    export type CreateVisualMutationError = ErrorType<void>
+
+    /**
+ * @summary Nieuwe visual aanmaken
+ */
+export const useCreateVisual = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createVisual>>, TError,{data: BodyType<VisualInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createVisual>>,
+        TError,
+        {data: BodyType<VisualInput>},
+        TContext
+      > => {
+      return useMutation(getCreateVisualMutationOptions(options));
+    }
+
+export const getGetVisualUrl = (id: number,) => {
+
+
+
+
+  return `/api/visuals/${id}`
+}
+
+/**
+ * @summary Detail van een visual
+ */
+export const getVisual = async (id: number, options?: RequestInit): Promise<Visual> => {
+
+  return customFetch<Visual>(getGetVisualUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetVisualQueryKey = (id: number,) => {
+    return [
+    `/api/visuals/${id}`
+    ] as const;
+    }
+
+
+export const getGetVisualQueryOptions = <TData = Awaited<ReturnType<typeof getVisual>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getVisual>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetVisualQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getVisual>>> = ({ signal }) => getVisual(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getVisual>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetVisualQueryResult = NonNullable<Awaited<ReturnType<typeof getVisual>>>
+export type GetVisualQueryError = ErrorType<void>
+
+
+/**
+ * @summary Detail van een visual
+ */
+
+export function useGetVisual<TData = Awaited<ReturnType<typeof getVisual>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getVisual>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetVisualQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUpdateVisualUrl = (id: number,) => {
+
+
+
+
+  return `/api/visuals/${id}`
+}
+
+/**
+ * @summary Visual bijwerken
+ */
+export const updateVisual = async (id: number,
+    visualPatch: VisualPatch, options?: RequestInit): Promise<Visual> => {
+
+  return customFetch<Visual>(getUpdateVisualUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(visualPatch)
+  }
+);}
+
+
+
+
+export const getUpdateVisualMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateVisual>>, TError,{id: number;data: BodyType<VisualPatch>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateVisual>>, TError,{id: number;data: BodyType<VisualPatch>}, TContext> => {
+
+const mutationKey = ['updateVisual'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateVisual>>, {id: number;data: BodyType<VisualPatch>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateVisual(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateVisualMutationResult = NonNullable<Awaited<ReturnType<typeof updateVisual>>>
+    export type UpdateVisualMutationBody = BodyType<VisualPatch>
+    export type UpdateVisualMutationError = ErrorType<void>
+
+    /**
+ * @summary Visual bijwerken
+ */
+export const useUpdateVisual = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateVisual>>, TError,{id: number;data: BodyType<VisualPatch>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateVisual>>,
+        TError,
+        {id: number;data: BodyType<VisualPatch>},
+        TContext
+      > => {
+      return useMutation(getUpdateVisualMutationOptions(options));
+    }
+
+export const getDeleteVisualUrl = (id: number,) => {
+
+
+
+
+  return `/api/visuals/${id}`
+}
+
+/**
+ * @summary Visual verwijderen
+ */
+export const deleteVisual = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteVisualUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteVisualMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteVisual>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteVisual>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteVisual'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteVisual>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteVisual(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteVisualMutationResult = NonNullable<Awaited<ReturnType<typeof deleteVisual>>>
+
+    export type DeleteVisualMutationError = ErrorType<void>
+
+    /**
+ * @summary Visual verwijderen
+ */
+export const useDeleteVisual = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteVisual>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteVisual>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteVisualMutationOptions(options));
     }
 

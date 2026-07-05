@@ -57,3 +57,4 @@ export * from "./avg";
 export * from "./pim";
 export * from "./kb";
 export * from "./vge";
+export * from "./visuals";

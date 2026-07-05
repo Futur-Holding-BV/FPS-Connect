@@ -67,6 +67,8 @@ tags:
     description: AVG / GDPR — inzageverzoeken, verwijderverzoeken, anonimisering en inactieve accounts
   - name: pim
     description: Project Intelligence Model — AI-context en fasebeheer per opdracht; aanvraagstroom (FPS One)
+  - name: visuals
+    description: Visual Library — goedgekeurde visuals voor de AI Visual Guidance Engine (tekeningen, referentiefoto's, animaties)
 
 paths:
   /healthz:
@@ -19940,6 +19942,103 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/KbOpdrachtgeverVoorkeur' }
 
+  /visuals:
+    get:
+      operationId: listVisuals
+      tags: [visuals]
+      summary: Lijst van visuals
+      parameters:
+        - name: actief
+          in: query
+          schema: { type: string, enum: [true, false] }
+        - name: visual_type
+          in: query
+          schema: { type: string }
+        - name: spot_type
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: Lijst van visuals
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Visual'
+    post:
+      operationId: createVisual
+      tags: [visuals]
+      summary: Nieuwe visual aanmaken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/VisualInput' }
+      responses:
+        '201':
+          description: Aangemaakt
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Visual' }
+        '400':
+          description: Validatiefout
+
+  /visuals/{id}:
+    get:
+      operationId: getVisual
+      tags: [visuals]
+      summary: Detail van een visual
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Visual gevonden
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Visual' }
+        '404':
+          description: Niet gevonden
+    patch:
+      operationId: updateVisual
+      tags: [visuals]
+      summary: Visual bijwerken
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/VisualPatch' }
+      responses:
+        '200':
+          description: Bijgewerkt
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Visual' }
+        '404':
+          description: Niet gevonden
+    delete:
+      operationId: deleteVisual
+      tags: [visuals]
+      summary: Visual verwijderen
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '204':
+          description: Verwijderd
+        '404':
+          description: Niet gevonden
+
 components:
   schemas:
     KbBedrijfsstandaard:
@@ -36067,6 +36166,61 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/FieWerkmaatschappijPrognose"
+
+    Visual:
+      type: object
+      required: [id, naam, visual_type, bron_type, object_path, spot_type, taal, actief, aangemaakt_op]
+      properties:
+        id:                   { type: integer }
+        naam:                 { type: string }
+        visual_type:          { type: string }
+        bron_type:            { type: string }
+        bron_referentie:      { type: ["string", "null"] }
+        object_path:          { type: string }
+        thumbnail_path:       { type: ["string", "null"] }
+        spot_type:
+          type: array
+          items: { type: string }
+        artikel_id:           { type: ["integer", "null"] }
+        bedrijfsstandaard_id: { type: ["integer", "null"] }
+        taal:                 { type: string }
+        actief:               { type: boolean }
+        aangemaakt_op:        { type: string }
+        bijgewerkt_op:        { type: ["string", "null"] }
+
+    VisualInput:
+      type: object
+      required: [naam, visual_type, bron_type, object_path, spot_type]
+      properties:
+        naam:                 { type: string }
+        visual_type:          { type: string }
+        bron_type:            { type: string }
+        bron_referentie:      { type: string }
+        object_path:          { type: string }
+        thumbnail_path:       { type: string }
+        spot_type:
+          type: array
+          items: { type: string }
+        artikel_id:           { type: integer }
+        bedrijfsstandaard_id: { type: integer }
+        taal:                 { type: string }
+
+    VisualPatch:
+      type: object
+      properties:
+        naam:                 { type: string }
+        visual_type:          { type: string }
+        bron_type:            { type: string }
+        bron_referentie:      { type: ["string", "null"] }
+        object_path:          { type: string }
+        thumbnail_path:       { type: ["string", "null"] }
+        spot_type:
+          type: array
+          items: { type: string }
+        artikel_id:           { type: ["integer", "null"] }
+        bedrijfsstandaard_id: { type: ["integer", "null"] }
+        taal:                 { type: string }
+        actief:               { type: boolean }
 
     FieLeermoment:
       type: object

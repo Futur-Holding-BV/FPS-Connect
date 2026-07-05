@@ -10877,6 +10877,59 @@ export interface FieJaarprognose {
   werkmaatschappij_verdeling?: FieWerkmaatschappijPrognose[];
 }
 
+export interface Visual {
+  id: number;
+  naam: string;
+  visual_type: string;
+  bron_type: string;
+  /** @nullable */
+  bron_referentie?: string | null;
+  object_path: string;
+  /** @nullable */
+  thumbnail_path?: string | null;
+  spot_type: string[];
+  /** @nullable */
+  artikel_id?: number | null;
+  /** @nullable */
+  bedrijfsstandaard_id?: number | null;
+  taal: string;
+  actief: boolean;
+  aangemaakt_op: string;
+  /** @nullable */
+  bijgewerkt_op?: string | null;
+}
+
+export interface VisualInput {
+  naam: string;
+  visual_type: string;
+  bron_type: string;
+  bron_referentie?: string;
+  object_path: string;
+  thumbnail_path?: string;
+  spot_type: string[];
+  artikel_id?: number;
+  bedrijfsstandaard_id?: number;
+  taal?: string;
+}
+
+export interface VisualPatch {
+  naam?: string;
+  visual_type?: string;
+  bron_type?: string;
+  /** @nullable */
+  bron_referentie?: string | null;
+  object_path?: string;
+  /** @nullable */
+  thumbnail_path?: string | null;
+  spot_type?: string[];
+  /** @nullable */
+  artikel_id?: number | null;
+  /** @nullable */
+  bedrijfsstandaard_id?: number | null;
+  taal?: string;
+  actief?: boolean;
+}
+
 export interface FieLeermoment {
   id: number;
   werktype: string;
@@ -11654,4 +11707,18 @@ export type ListKbBedrijfsstandaardenParams = {
 categorie?: string;
 actief?: string;
 };
+
+export type ListVisualsParams = {
+actief?: ListVisualsActief;
+visual_type?: string;
+spot_type?: string;
+};
+
+export type ListVisualsActief = typeof ListVisualsActief[keyof typeof ListVisualsActief];
+
+
+export const ListVisualsActief = {
+  true: true,
+  false: false,
+} as const;
 

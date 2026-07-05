@@ -21,7 +21,7 @@ import {
   ClipboardCheck, AlertTriangle, TriangleAlert, FileArchive, Receipt, ArrowUpRight, ScrollText,
   UserPlus, UserMinus, UserX, Car, GitBranch, ArrowLeft, ChevronDown, Palette, Monitor,
   Package, Upload, MapPin, Archive, ArrowLeftRight, BookmarkCheck, ScanSearch, Bot, ShoppingCart,
-  TrendingUp,
+  TrendingUp, ImageIcon,
 } from "lucide-react";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { Badge } from "@/components/ui/badge";
@@ -1448,6 +1448,19 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                             <Link href="/beheer/bibliotheek">
                               <BookOpen />
                               <span>Bibliotheek</span>
+                            </Link>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      )}
+                      {isHoofdbeheerder && (
+                        <SidebarMenuItem className="pl-5">
+                          <SidebarMenuButton
+                            asChild
+                            isActive={location === "/beheer/visuals" || location.startsWith("/beheer/visuals/")}
+                          >
+                            <Link href="/beheer/visuals">
+                              <ImageIcon />
+                              <span>Visual Library</span>
                             </Link>
                           </SidebarMenuButton>
                         </SidebarMenuItem>
