@@ -24,8 +24,7 @@ export default function KlantLayout({ children }: { children: React.ReactNode })
   const { t } = useTranslation();
   const { kanWisselen, zetPersoon } = useRol();
 
-  const defaultSidebarOpen =
-    typeof window !== "undefined" ? window.innerWidth >= 1200 : true;
+  const defaultSidebarOpen = false;
 
   return (
     <SidebarProvider defaultOpen={defaultSidebarOpen}>
