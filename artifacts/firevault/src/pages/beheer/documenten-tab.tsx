@@ -539,7 +539,8 @@ function DocumentFormulier({
     });
   }
 
-  const geldig = form.naam.trim() !== "" && form.documenttype !== "";
+  const uploadMislukt = !!uploadError && !form.pdf_url;
+  const geldig = form.naam.trim() !== "" && form.documenttype !== "" && !uploadMislukt;
   const bezig = maakDocument.isPending || maakRevisie.isPending || isUploading;
 
   async function bewaar() {
@@ -871,13 +872,20 @@ function DocumentFormulier({
           </div>
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Annuleren
-          </Button>
-          <Button onClick={bewaar} disabled={!geldig || bezig}>
-            {bezig ? "Opslaan..." : mode === "revisie" ? "Revisie opslaan" : "Document opslaan"}
-          </Button>
+        <DialogFooter className="flex-col items-end gap-2 sm:flex-col">
+          {uploadMislukt && (
+            <p className="text-xs text-destructive w-full text-right">
+              Upload mislukt — kies een ander bestand of probeer opnieuw voordat u opslaat.
+            </p>
+          )}
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Annuleren
+            </Button>
+            <Button onClick={bewaar} disabled={!geldig || bezig}>
+              {bezig ? "Opslaan..." : mode === "revisie" ? "Revisie opslaan" : "Document opslaan"}
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
