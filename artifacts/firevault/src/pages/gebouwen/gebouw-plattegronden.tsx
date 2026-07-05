@@ -52,6 +52,7 @@ export default function GebouwPlattegronden({
   const [keuzeId, setKeuzeId] = useState<string>("");
   const [bevestigVervangen, setBevestigVervangen] = useState(false);
   const [bestandGrootte, setBestandGrootte] = useState<number | null>(null);
+  const [rijSelectie, setRijSelectie] = useState<{ vId: number; grootte: number } | null>(null);
 
   const gesorteerd = [...verdiepingen].sort((a, b) => a.niveau - b.niveau);
   const gekozen = gesorteerd.find((v) => String(v.id) === keuzeId);
@@ -86,6 +87,7 @@ export default function GebouwPlattegronden({
       setBevestigVervangen(false);
       setKeuzeId("");
       setBestandGrootte(null);
+      setRijSelectie(null);
     } catch {
       setFout("Opslaan mislukt. Probeer het opnieuw.");
     } finally {
@@ -149,7 +151,12 @@ export default function GebouwPlattegronden({
           className="hidden"
           onChange={async (e) => {
             const file = e.target.files?.[0];
-            if (file) await opBestand(file);
+            if (file) {
+              if (!formOpen && doelId.current != null) {
+                setRijSelectie({ vId: doelId.current, grootte: file.size });
+              }
+              await opBestand(file);
+            }
             e.target.value = "";
           }}
         />
@@ -190,33 +197,44 @@ export default function GebouwPlattegronden({
                       </Badge>
                     )}
                   </div>
-                  {heeft ? (
-                    <Button
-                      asChild
-                      variant="ghost"
-                      size="sm"
-                      className="shrink-0 h-7"
-                    >
-                      <Link href={`/gebouwen/${gebouwId}/plattegrond/${v.id}`}>
-                        <ExternalLink className="h-4 w-4 mr-1" /> Openen
-                      </Link>
-                    </Button>
-                  ) : isBeheerder ? (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="shrink-0 h-7"
-                      disabled={bezig}
-                      onClick={() => kiesVoor(v.id)}
-                    >
-                      {bezig ? (
-                        <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                      ) : (
-                        <Upload className="h-4 w-4 mr-1" />
-                      )}
-                      Upload plattegrond
-                    </Button>
-                  ) : null}
+                  <div className="flex flex-col items-end gap-1 shrink-0">
+                    {heeft ? (
+                      <Button
+                        asChild
+                        variant="ghost"
+                        size="sm"
+                        className="h-7"
+                      >
+                        <Link href={`/gebouwen/${gebouwId}/plattegrond/${v.id}`}>
+                          <ExternalLink className="h-4 w-4 mr-1" /> Openen
+                        </Link>
+                      </Button>
+                    ) : isBeheerder ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7"
+                        disabled={bezig}
+                        onClick={() => kiesVoor(v.id)}
+                      >
+                        {bezig ? (
+                          <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                        ) : (
+                          <Upload className="h-4 w-4 mr-1" />
+                        )}
+                        Upload plattegrond
+                      </Button>
+                    ) : null}
+                    {rijSelectie?.vId === v.id && (
+                      <div className={`flex items-center gap-1.5 rounded px-2 py-1 text-xs ${rijSelectie.grootte > GROOT_BESTAND_GRENS ? "bg-amber-50 border border-amber-200 text-amber-800" : "bg-muted/50 text-muted-foreground"}`}>
+                        {rijSelectie.grootte > GROOT_BESTAND_GRENS && (
+                          <AlertTriangle className="h-3 w-3 shrink-0 text-amber-500" />
+                        )}
+                        {formateerGrootte(rijSelectie.grootte)}
+                        {rijSelectie.grootte > GROOT_BESTAND_GRENS && " — groot bestand"}
+                      </div>
+                    )}
+                  </div>
                 </li>
               );
             })}

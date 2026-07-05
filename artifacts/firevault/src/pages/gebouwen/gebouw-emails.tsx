@@ -34,8 +34,16 @@ import {
   Mail, Upload, Loader2, Trash2, Paperclip, Sparkles, User, MapPin,
   Phone, FileText, ChevronRight, ListChecks, RefreshCw, Building2,
   ClipboardList, AlertTriangle, CheckSquare, Handshake, Users, UserPlus, Check,
-  ArrowDownUp, Search,
+  ArrowDownUp, Search, TriangleAlert,
 } from "lucide-react";
+
+const GROOT_BESTAND_GRENS = 10 * 1024 * 1024;
+
+function formateerGrootte(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1).replace(".", ",")} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1).replace(".", ",")} MB`;
+}
 
 const ROL_LABELS: Record<string, string> = {
   opdrachtgever: "Opdrachtgever",
@@ -293,6 +301,7 @@ export default function GebouwEmails({
   const [sortering, setSortering] = useState("datum_nieuw");
   const [zoek, setZoek] = useState("");
   const [toonAlles, setToonAlles] = useState(false);
+  const [emailBestandGrootte, setEmailBestandGrootte] = useState<number | null>(null);
 
   const gesorteerd = useMemo(() => {
     const tekst = (s: string | null | undefined) => (s ?? "").toLowerCase();
@@ -343,6 +352,7 @@ export default function GebouwEmails({
         description: "Upload een .eml- of .msg-bestand. Andere bestandstypen worden niet geaccepteerd.",
         variant: "destructive",
       });
+      setEmailBestandGrootte(null);
       if (fileRef.current) fileRef.current.value = "";
       return;
     }
@@ -364,6 +374,7 @@ export default function GebouwEmails({
       toast({ title: "Verwerken mislukt", description: "Er is een fout opgetreden. Controleer of het bestand een geldig .eml- of .msg-bestand is.", variant: "destructive" });
     } finally {
       setBezig(false);
+      setEmailBestandGrootte(null);
       if (fileRef.current) fileRef.current.value = "";
     }
   }
@@ -385,7 +396,10 @@ export default function GebouwEmails({
               className="hidden"
               onChange={(e) => {
                 const f = e.target.files?.[0];
-                if (f) kiesBestand(f);
+                if (f) {
+                  setEmailBestandGrootte(f.size);
+                  kiesBestand(f);
+                }
               }}
             />
             <Button size="sm" onClick={() => fileRef.current?.click()} disabled={drukBezig}>
@@ -400,6 +414,17 @@ export default function GebouwEmails({
           <p className="text-xs text-muted-foreground -mt-2">
             Ondersteunde bestandstypen: <code className="bg-muted px-1 rounded">.eml</code> en <code className="bg-muted px-1 rounded">.msg</code>. Bijlagen worden automatisch uitgelezen. Andere bestandstypen worden geweigerd.
           </p>
+        )}
+        {emailBestandGrootte !== null && (
+          <div className={`flex items-start gap-2 rounded-md px-3 py-2 text-sm border ${emailBestandGrootte > GROOT_BESTAND_GRENS ? "bg-amber-50 border-amber-200 text-amber-800" : "bg-muted/40 border-border text-muted-foreground"}`}>
+            {emailBestandGrootte > GROOT_BESTAND_GRENS ? (
+              <TriangleAlert className="h-4 w-4 shrink-0 mt-0.5 text-amber-500" />
+            ) : null}
+            <span>
+              Bestandsgrootte: {formateerGrootte(emailBestandGrootte)}
+              {emailBestandGrootte > GROOT_BESTAND_GRENS && " — groot bestand, verwerken kan even duren"}
+            </span>
+          </div>
         )}
 
         {/* E-maillijst */}
