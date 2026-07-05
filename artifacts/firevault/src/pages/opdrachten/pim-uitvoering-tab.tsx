@@ -7,11 +7,13 @@ import {
   useMeldPimUitvoeringAfwijking,
   useBeslisPimUitvoeringAfwijking,
   useListPimUitvoeringStappen,
+  useListPimSpots,
+  useKoppelPimStapVoorzieningen,
   useRequestUploadUrl,
   getGetHuidigePimUitvoeringStapQueryKey,
   getListPimUitvoeringStappenQueryKey,
 } from "@workspace/api-client-react";
-import type { PimUitvoeringStap } from "@workspace/api-client-react";
+import type { PimUitvoeringStap, VoorzieningPimDetail } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -36,6 +38,11 @@ import {
   ArrowRight,
   Clock,
   X,
+  MapPin,
+  Link2,
+  Link2Off,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 
 // ── Status labels & kleuren ───────────────────────────────────────────────────
@@ -831,6 +838,198 @@ export default function PimUitvoeringTab({ opdrachtId }: PimUitvoeringTabProps) 
           )}
         </CardContent>
       </Card>
+
+      <Separator />
+
+      {/* Voorbereide spots — koppeling aan uitvoeringsstappen */}
+      <PimSpotsLijst opdrachtId={opdrachtId} actieveStap={stap} />
     </div>
+  );
+}
+
+// ── Spot status helpers (kantoor) ─────────────────────────────────────────────
+const SPOT_STATUS_LABEL_WEB: Record<string, string> = {
+  concept: "Concept",
+  voorbereid: "Voorbereid",
+  in_uitvoering: "In uitvoering",
+  opgeleverd: "Opgeleverd",
+  goedgekeurd: "Goedgekeurd",
+  afgekeurd: "Afgekeurd",
+  in_onderhoud: "In onderhoud",
+  vervallen: "Vervallen",
+  opdracht: "Opdracht",
+  werkbegroting: "Werkbegroting",
+  inkoop: "Inkoop",
+};
+
+const SPOT_STATUS_KLEUR_WEB: Record<string, string> = {
+  concept: "bg-slate-100 text-slate-600",
+  voorbereid: "bg-blue-100 text-blue-800",
+  in_uitvoering: "bg-amber-100 text-amber-800",
+  opgeleverd: "bg-green-100 text-green-800",
+  goedgekeurd: "bg-green-200 text-green-900",
+  afgekeurd: "bg-red-100 text-red-700",
+  in_onderhoud: "bg-purple-100 text-purple-800",
+  vervallen: "bg-slate-100 text-slate-500",
+  opdracht: "bg-sky-100 text-sky-800",
+  werkbegroting: "bg-indigo-100 text-indigo-800",
+  inkoop: "bg-teal-100 text-teal-800",
+};
+
+function spotBadge(status: string) {
+  return (
+    <Badge className={`${SPOT_STATUS_KLEUR_WEB[status] ?? "bg-slate-100 text-slate-600"} font-medium text-xs`}>
+      {SPOT_STATUS_LABEL_WEB[status] ?? status}
+    </Badge>
+  );
+}
+
+// ── PimSpotsLijst component ───────────────────────────────────────────────────
+function PimSpotsLijst({
+  opdrachtId,
+  actieveStap,
+}: {
+  opdrachtId: number;
+  actieveStap: PimUitvoeringStap | null;
+}) {
+  const [uitgevouwen, setUitgevouwen] = useState(true);
+  const queryClient = useQueryClient();
+  const koppelMutatie = useKoppelPimStapVoorzieningen();
+
+  const { data: spots = [], isLoading } = useListPimSpots(opdrachtId, {
+    query: { queryKey: ["pim-spots", opdrachtId], enabled: opdrachtId > 0 },
+  });
+
+  const actieveVoorzieningIds: number[] = Array.isArray(actieveStap?.voorziening_ids)
+    ? (actieveStap!.voorziening_ids as number[])
+    : [];
+  const kanKoppelen =
+    actieveStap !== null &&
+    (actieveStap.status === "actief" || actieveStap.status === "afgeweken");
+
+  async function handleToggle(spot: VoorzieningPimDetail) {
+    if (!actieveStap || !kanKoppelen) return;
+    const isGekoppeld = actieveVoorzieningIds.includes(spot.id);
+    const nieuweIds = isGekoppeld
+      ? actieveVoorzieningIds.filter((id) => id !== spot.id)
+      : [...actieveVoorzieningIds, spot.id];
+    await koppelMutatie.mutateAsync({
+      id: opdrachtId,
+      stapId: actieveStap.id,
+      data: { voorziening_ids: nieuweIds },
+    });
+    void queryClient.invalidateQueries({
+      queryKey: getGetHuidigePimUitvoeringStapQueryKey(opdrachtId),
+    });
+  }
+
+  return (
+    <Card>
+      <CardHeader className="pb-2 pt-4">
+        <button
+          type="button"
+          className="flex items-center justify-between w-full text-left"
+          onClick={() => setUitgevouwen((v) => !v)}
+        >
+          <div className="flex items-center gap-2">
+            <MapPin className="h-4 w-4 text-primary" />
+            <CardTitle className="text-base">Voorbereide spots</CardTitle>
+            {spots.length > 0 && (
+              <span className="text-xs text-muted-foreground">
+                {spots.length} spot{spots.length !== 1 ? "s" : ""}
+                {actieveVoorzieningIds.length > 0
+                  ? ` · ${actieveVoorzieningIds.length} gekoppeld aan stap ${actieveStap?.volgorde}`
+                  : ""}
+              </span>
+            )}
+          </div>
+          {uitgevouwen ? (
+            <ChevronUp className="h-4 w-4 text-muted-foreground" />
+          ) : (
+            <ChevronDown className="h-4 w-4 text-muted-foreground" />
+          )}
+        </button>
+      </CardHeader>
+
+      {uitgevouwen && (
+        <CardContent className="pt-0">
+          {isLoading ? (
+            <div className="space-y-2">
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-3/4" />
+            </div>
+          ) : spots.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-8 gap-2 text-muted-foreground">
+              <MapPin className="h-8 w-8" />
+              <p className="text-sm">Geen spots voor dit gebouw.</p>
+            </div>
+          ) : (
+            <div className="divide-y">
+              {spots.map((spot) => {
+                const isGekoppeld = actieveVoorzieningIds.includes(spot.id);
+                return (
+                  <div
+                    key={spot.id}
+                    className={`flex items-center gap-3 py-2.5 ${isGekoppeld ? "bg-primary/5 -mx-6 px-6 rounded" : ""}`}
+                  >
+                    {/* Objectnummer */}
+                    <span className="font-mono text-sm font-semibold w-24 shrink-0 text-foreground">
+                      {spot.objectnummer}
+                    </span>
+
+                    {/* Type + locatie */}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">
+                        {spot.type_naam ?? spot.type}
+                      </p>
+                      {(spot.verdieping_naam ?? spot.ruimte) && (
+                        <p className="text-xs text-muted-foreground truncate">
+                          {[spot.verdieping_naam, spot.ruimte].filter(Boolean).join(" · ")}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Status badge */}
+                    <div className="shrink-0">{spotBadge(spot.status)}</div>
+
+                    {/* Gekoppelde stap (niet-actieve stap) */}
+                    {spot.gekoppelde_stap_id && !isGekoppeld && (
+                      <span className="text-xs text-muted-foreground shrink-0">
+                        Stap {spot.gekoppelde_stap_id}
+                      </span>
+                    )}
+
+                    {/* Koppelen / ontkoppelen knop */}
+                    {kanKoppelen && (
+                      <button
+                        type="button"
+                        title={isGekoppeld ? "Ontkoppelen van actieve stap" : "Koppelen aan actieve stap"}
+                        disabled={koppelMutatie.isPending}
+                        onClick={() => void handleToggle(spot)}
+                        className={`shrink-0 p-1.5 rounded transition-colors ${
+                          isGekoppeld
+                            ? "text-destructive hover:bg-destructive/10"
+                            : "text-muted-foreground hover:text-primary hover:bg-primary/10"
+                        }`}
+                      >
+                        {isGekoppeld ? (
+                          <Link2Off className="h-4 w-4" />
+                        ) : (
+                          <Link2 className="h-4 w-4" />
+                        )}
+                      </button>
+                    )}
+                    {!kanKoppelen && isGekoppeld && (
+                      <Link2 className="h-4 w-4 text-primary shrink-0" />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      )}
+    </Card>
   );
 }

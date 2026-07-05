@@ -12668,6 +12668,7 @@ export const ListPimUitvoeringStappenResponseItem = zod.object({
 
 }).passthrough().nullish().describe('Afwijkingdetails inclusief beslissing projectleider'),
   "voltooid_door_id": zod.number().nullish(),
+  "voorziening_ids": zod.array(zod.number()).nullish().describe('Gekoppelde spot-IDs (informatieve koppeling, geen FK)'),
   "voltooid_op": zod.string().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
@@ -12712,6 +12713,7 @@ export const GetHuidigePimUitvoeringStapResponse = zod.object({
 
 }).passthrough().nullish().describe('Afwijkingdetails inclusief beslissing projectleider'),
   "voltooid_door_id": zod.number().nullish(),
+  "voorziening_ids": zod.array(zod.number()).nullish().describe('Gekoppelde spot-IDs (informatieve koppeling, geen FK)'),
   "voltooid_op": zod.string().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
@@ -12755,6 +12757,7 @@ export const VoltooiPimUitvoeringStapResponse = zod.object({
 
 }).passthrough().nullish().describe('Afwijkingdetails inclusief beslissing projectleider'),
   "voltooid_door_id": zod.number().nullish(),
+  "voorziening_ids": zod.array(zod.number()).nullish().describe('Gekoppelde spot-IDs (informatieve koppeling, geen FK)'),
   "voltooid_op": zod.string().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
@@ -12795,6 +12798,7 @@ export const MeldPimUitvoeringAfwijkingResponse = zod.object({
 
 }).passthrough().nullish().describe('Afwijkingdetails inclusief beslissing projectleider'),
   "voltooid_door_id": zod.number().nullish(),
+  "voorziening_ids": zod.array(zod.number()).nullish().describe('Gekoppelde spot-IDs (informatieve koppeling, geen FK)'),
   "voltooid_op": zod.string().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
@@ -12837,10 +12841,86 @@ export const BeslisPimUitvoeringAfwijkingResponse = zod.object({
 
 }).passthrough().nullish().describe('Afwijkingdetails inclusief beslissing projectleider'),
   "voltooid_door_id": zod.number().nullish(),
+  "voorziening_ids": zod.array(zod.number()).nullish().describe('Gekoppelde spot-IDs (informatieve koppeling, geen FK)'),
   "voltooid_op": zod.string().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 }).optional()
+})
+
+
+/**
+ * @summary Spots ophalen die aan de opdracht zijn gekoppeld (via gebouw), inclusief foto's en toepassingen
+ */
+export const ListPimSpotsParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListPimSpotsResponseItem = zod.object({
+  "id": zod.number(),
+  "objectnummer": zod.string(),
+  "type": zod.string().describe('Applicatie-code (bv. \"1.20\")'),
+  "type_naam": zod.string().nullish().describe('Leesbare naam van het applicatietype'),
+  "status": zod.string(),
+  "classificatie": zod.string(),
+  "verdieping_id": zod.number().nullish(),
+  "verdieping_naam": zod.string().nullish(),
+  "ruimte": zod.string().nullish(),
+  "huisnummer": zod.string().nullish(),
+  "locatie_omschrijving": zod.string().nullish(),
+  "materialen": zod.string().nullish(),
+  "opmerkingen": zod.string().nullish(),
+  "maatregel": zod.string().nullish().describe('Eerste gekoppelde toepassing (label) naam'),
+  "maatregel_fabrikant": zod.string().nullish().describe('Fabrikant van de eerste gekoppelde toepassing'),
+  "fotos": zod.array(zod.object({
+  "id": zod.number(),
+  "url": zod.string(),
+  "fase": zod.string(),
+  "beschrijving": zod.string().nullish()
+})).optional(),
+  "gekoppelde_stap_id": zod.number().nullish().describe('ID van de uitvoeringsstap waaraan deze spot is gekoppeld (null = nog niet gekoppeld)'),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+export const ListPimSpotsResponse = zod.array(ListPimSpotsResponseItem)
+
+
+/**
+ * @summary Spots koppelen aan een uitvoeringsstap (informatieve koppeling, geen statuswijziging)
+ */
+export const KoppelPimStapVoorzieningenParams = zod.object({
+  "id": zod.coerce.number(),
+  "stapId": zod.coerce.number()
+})
+
+export const KoppelPimStapVoorzieningenBody = zod.object({
+  "voorziening_ids": zod.array(zod.number()).describe('Spot-IDs om aan deze stap te koppelen (vervangt de huidige koppeling volledig)')
+})
+
+export const KoppelPimStapVoorzieningenResponse = zod.object({
+  "id": zod.number(),
+  "pim_id": zod.number(),
+  "volgorde": zod.number(),
+  "status": zod.string().describe('open | actief | voltooid | afgeweken | overgeslagen'),
+  "werkpakket_sleutel": zod.string().nullish(),
+  "instructie_json": zod.object({
+
+}).passthrough().nullish().describe('AI-gegenereerde stapinstructie'),
+  "antwoorden_json": zod.object({
+
+}).passthrough().nullish().describe('Antwoorden van de monteur'),
+  "foto_urls": zod.array(zod.string()).optional().describe('Object-storage paden van de stapfoto\'s'),
+  "ai_analyse_json": zod.object({
+
+}).passthrough().nullish().describe('AI-analyse van foto\'s en antwoorden'),
+  "afwijking_json": zod.object({
+
+}).passthrough().nullish().describe('Afwijkingdetails inclusief beslissing projectleider'),
+  "voltooid_door_id": zod.number().nullish(),
+  "voorziening_ids": zod.array(zod.number()).nullish().describe('Gekoppelde spot-IDs (informatieve koppeling, geen FK)'),
+  "voltooid_op": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
 })
 
 

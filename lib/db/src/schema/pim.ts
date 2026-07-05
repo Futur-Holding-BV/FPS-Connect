@@ -49,6 +49,9 @@ export const pimUitvoeringStappenTable = pgTable("pim_uitvoering_stappen", {
   fotoUrls: text("foto_urls").array(),
   aiAnalyseJson: jsonb("ai_analyse_json"),
   afwijkingJson: jsonb("afwijking_json"),
+  // Gekoppelde spots (voorziening-IDs). Informatieve koppeling — geen FK,
+  // spotstatussen worden NOOIT automatisch gewijzigd door deze koppeling.
+  voorzieningIds: integer("voorziening_ids").array(),
   voltooidDoorId: integer("voltooid_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
   voltooidOp: timestamp("voltooid_op"),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),

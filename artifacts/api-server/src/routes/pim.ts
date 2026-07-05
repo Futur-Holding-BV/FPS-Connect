@@ -19,9 +19,14 @@ import {
   documentKoppelingenTable,
   gebruikersTable,
   voorzieningenTable,
+  voorzieningTypesTable,
+  voorzieningLabelsTable,
+  labelsTable,
+  fotosTable,
+  verdiepingenTable,
 } from "@workspace/db";
 import type { PimUitvoeringStap } from "@workspace/db";
-import { eq, and, asc, inArray } from "drizzle-orm";
+import { eq, and, asc, inArray, sql } from "drizzle-orm";
 import { requireBevoegdheid, requireBevoegdheidOfKlant } from "../middlewares/auth";
 import { logger } from "../lib/logger";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
@@ -1109,6 +1114,7 @@ function serializeStap(stap: PimUitvoeringStap): Record<string, unknown> {
     foto_urls: stap.fotoUrls ?? [],
     ai_analyse_json: stap.aiAnalyseJson ?? null,
     afwijking_json: stap.afwijkingJson ?? null,
+    voorziening_ids: stap.voorzieningIds ?? [],
     voltooid_door_id: stap.voltooidDoorId ?? null,
     voltooid_op: stap.voltooidOp?.toISOString() ?? null,
     aangemaakt_op: stap.aangemaaktOp.toISOString(),
@@ -2546,6 +2552,168 @@ router.post("/opdrachten/:id/pim/oplevering/definitief", schrijven, async (req, 
   } catch (err) {
     logger.error({ err }, "definieerPimOplevering fout");
     res.status(500).json({ error: "Serverfout bij definitief maken" });
+  }
+});
+
+// ── GET /opdrachten/:id/pim/spots ────────────────────────────────────────────
+// Haalt alle niet-gearchiveerde spots op voor het gebouw van de opdracht,
+// inclusief foto's (fase=opname), eerste toepassing en welke stap ze aan
+// zijn gekoppeld. Spotstatus wordt NOOIT gewijzigd door deze koppeling.
+router.get("/opdrachten/:id/pim/spots", requireBevoegdheid("voorzieningen", 1), async (req, res) => {
+  const opdrachtId = parseInt(String(req.params.id), 10);
+  if (isNaN(opdrachtId)) { res.status(400).json({ error: "Ongeldig opdracht-ID" }); return; }
+
+  try {
+    const [opdracht] = await db
+      .select({ gebouwId: opdrachtenTable.gebouwId })
+      .from(opdrachtenTable)
+      .where(eq(opdrachtenTable.id, opdrachtId));
+    if (!opdracht?.gebouwId) { res.status(404).json({ error: "Opdracht niet gevonden of geen gekoppeld gebouw" }); return; }
+
+    const [pim] = await db
+      .select({ id: pimModellenTable.id })
+      .from(pimModellenTable)
+      .where(eq(pimModellenTable.opdrachtId, opdrachtId));
+    if (!pim) { res.status(404).json({ error: "PIM niet gevonden voor deze opdracht" }); return; }
+
+    // Spots voor het gebouw (excl. gearchiveerd)
+    const spots = await db
+      .select({
+        id: voorzieningenTable.id,
+        objectnummer: voorzieningenTable.objectnummer,
+        type: voorzieningenTable.type,
+        status: voorzieningenTable.status,
+        classificatie: voorzieningenTable.classificatie,
+        verdiepingId: voorzieningenTable.verdiepingId,
+        ruimte: voorzieningenTable.ruimte,
+        huisnummer: voorzieningenTable.huisnummer,
+        locatieOmschrijving: voorzieningenTable.locatieOmschrijving,
+        materialen: voorzieningenTable.materialen,
+        opmerkingen: voorzieningenTable.opmerkingen,
+        aangemaaktOp: voorzieningenTable.aangemaaktOp,
+        bijgewerktOp: voorzieningenTable.bijgewerktOp,
+        typeNaam: voorzieningTypesTable.naam,
+        verdiepingNaam: verdiepingenTable.naam,
+      })
+      .from(voorzieningenTable)
+      .leftJoin(voorzieningTypesTable, eq(voorzieningenTable.type, voorzieningTypesTable.code))
+      .leftJoin(verdiepingenTable, eq(voorzieningenTable.verdiepingId, verdiepingenTable.id))
+      .where(and(
+        eq(voorzieningenTable.gebouwId, opdracht.gebouwId),
+        eq(voorzieningenTable.gearchiveerd, false),
+      ))
+      .orderBy(asc(voorzieningenTable.objectnummer));
+
+    const spotIds = spots.map((s) => s.id);
+
+    // Foto's (alle fases) per spot
+    const fotos = spotIds.length > 0
+      ? await db.select().from(fotosTable).where(inArray(fotosTable.voorzieningId, spotIds))
+      : [];
+
+    // Eerste toepassing per spot (alfabetisch op naam)
+    const toepassingen = spotIds.length > 0
+      ? await db
+          .select({
+            voorzieningId: voorzieningLabelsTable.voorzieningId,
+            naam: labelsTable.naam,
+            fabrikant: labelsTable.fabrikant,
+          })
+          .from(voorzieningLabelsTable)
+          .innerJoin(labelsTable, eq(voorzieningLabelsTable.labelId, labelsTable.id))
+          .where(inArray(voorzieningLabelsTable.voorzieningId, spotIds))
+          .orderBy(asc(labelsTable.naam))
+      : [];
+
+    // Welke stap is elke spot aan gekoppeld?
+    const pimStappen = await db
+      .select({ id: pimUitvoeringStappenTable.id, voorzieningIds: pimUitvoeringStappenTable.voorzieningIds })
+      .from(pimUitvoeringStappenTable)
+      .where(eq(pimUitvoeringStappenTable.pimId, pim.id));
+
+    const spotToStapId: Record<number, number> = {};
+    for (const stap of pimStappen) {
+      if (Array.isArray(stap.voorzieningIds)) {
+        for (const vId of stap.voorzieningIds) {
+          spotToStapId[vId] = stap.id;
+        }
+      }
+    }
+
+    const result = spots.map((spot) => {
+      const spotFotos = fotos.filter((f) => f.voorzieningId === spot.id);
+      const eersteToepassing = toepassingen.find((t) => t.voorzieningId === spot.id);
+      return {
+        id: spot.id,
+        objectnummer: spot.objectnummer,
+        type: spot.type,
+        type_naam: spot.typeNaam ?? null,
+        status: spot.status,
+        classificatie: spot.classificatie,
+        verdieping_id: spot.verdiepingId ?? null,
+        verdieping_naam: spot.verdiepingNaam ?? null,
+        ruimte: spot.ruimte ?? null,
+        huisnummer: spot.huisnummer ?? null,
+        locatie_omschrijving: spot.locatieOmschrijving ?? null,
+        materialen: spot.materialen ?? null,
+        opmerkingen: spot.opmerkingen ?? null,
+        maatregel: eersteToepassing?.naam ?? null,
+        maatregel_fabrikant: eersteToepassing?.fabrikant ?? null,
+        fotos: spotFotos.map((f) => ({
+          id: f.id,
+          url: f.url,
+          fase: f.fase,
+          beschrijving: f.beschrijving ?? null,
+        })),
+        gekoppelde_stap_id: spotToStapId[spot.id] ?? null,
+        aangemaakt_op: spot.aangemaaktOp.toISOString(),
+        bijgewerkt_op: spot.bijgewerktOp.toISOString(),
+      };
+    });
+
+    res.json(result);
+  } catch (err) {
+    logger.error({ err }, "listPimSpots fout");
+    res.status(500).json({ error: "Serverfout bij ophalen spots" });
+  }
+});
+
+// ── PATCH /opdrachten/:id/pim/uitvoering/stap/:stapId/voorzieningen ──────────
+// Koppelt een set spot-IDs aan een uitvoeringsstap (vervangt vorige koppeling).
+// Spotstatussen worden NOOIT gewijzigd. Koppeling is puur informatief.
+router.patch("/opdrachten/:id/pim/uitvoering/stap/:stapId/voorzieningen", requireBevoegdheid("voorzieningen", 1), async (req, res) => {
+  const opdrachtId = parseInt(String(req.params.id), 10);
+  const stapId = parseInt(String(req.params.stapId), 10);
+  if (isNaN(opdrachtId) || isNaN(stapId)) { res.status(400).json({ error: "Ongeldig ID" }); return; }
+
+  const { voorziening_ids } = req.body as { voorziening_ids?: unknown };
+  if (!Array.isArray(voorziening_ids) || voorziening_ids.some((v) => typeof v !== "number")) {
+    res.status(400).json({ error: "voorziening_ids moet een array van integers zijn" });
+    return;
+  }
+
+  try {
+    const [pim] = await db
+      .select({ id: pimModellenTable.id })
+      .from(pimModellenTable)
+      .where(eq(pimModellenTable.opdrachtId, opdrachtId));
+    if (!pim) { res.status(404).json({ error: "PIM niet gevonden voor deze opdracht" }); return; }
+
+    const [bijgewerktStap] = await db
+      .update(pimUitvoeringStappenTable)
+      .set({ voorzieningIds: voorziening_ids as number[], bijgewerktOp: new Date() })
+      .where(and(
+        eq(pimUitvoeringStappenTable.id, stapId),
+        eq(pimUitvoeringStappenTable.pimId, pim.id),
+      ))
+      .returning();
+
+    if (!bijgewerktStap) { res.status(404).json({ error: "Stap niet gevonden" }); return; }
+
+    res.json(serializeStap(bijgewerktStap));
+  } catch (err) {
+    logger.error({ err }, "koppelPimStapVoorzieningen fout");
+    res.status(500).json({ error: "Serverfout bij koppelen spots aan stap" });
   }
 });
 

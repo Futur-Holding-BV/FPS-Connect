@@ -42,6 +42,8 @@ export interface PimUitvoeringStap {
   afwijking_json?: PimUitvoeringStapAfwijkingJson;
   /** @nullable */
   voltooid_door_id?: number | null;
+  /** Gekoppelde spot-IDs (informatieve koppeling, geen FK) */
+  voorziening_ids?: number[] | null;
   /** @nullable */
   voltooid_op?: string | null;
   aangemaakt_op: string;

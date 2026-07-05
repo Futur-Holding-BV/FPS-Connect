@@ -4,6 +4,22 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-05 — Vervolgopdracht 3: Voorbereide spots koppelen aan PIM uitvoering
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+**Wat is gebouwd:**
+
+- **DB:** `pim_uitvoering_stappen.voorziening_ids integer[]` kolom toegevoegd via directe SQL (drizzle-schema gesynchroniseerd).
+- **OpenAPI:** twee nieuwe endpoints — `GET /opdrachten/{id}/pim/spots` (haalt alle spots van het gekoppelde gebouw op inclusief verdieping, ruimte, type, fotos, maatregel en gekoppelde_stap_id) en `PATCH /opdrachten/{id}/pim/uitvoering/stap/{stapId}/voorzieningen` (vervangt de volledige spot-koppeling per stap). Nieuwe schemas: `VoorzieningPimDetail`, `VoorzieningPimFoto`, `PimStapVoorzieningenInput`. `voorziening_ids` array toegevoegd aan `PimUitvoeringStap`.
+- **Backend:** beide routes geïmplementeerd in `pim.ts` met bevoegdheidscheck (`voorzieningen` lezen/schrijven), join op verdiepingen, foto's (fase opname) en labels; `serializeStap` uitgebreid met `voorziening_ids`.
+- **Codegen:** hooks `useListPimSpots` en `useKoppelPimStapVoorzieningen` + types `VoorzieningPimDetail`, `PimStapVoorzieningenInput` gegenereerd.
+- **Monteur app (`uitvoering/[opdrachtId].tsx`):** "Spots (N)" toggle-knop in de header naast "Stappen (N)" — mutueel exclusief. `VoorbereideSpotsPanel` toont alle spots met objectnummer, type, status, verdieping/ruimte, locatie, maatregel/materialen, opmerkingen en opname-foto's. `SpotKaartMonteur` biedt link/ontkoppel-knop voor de actieve stap (alleen bij status actief/afgeweken); gekoppelde spots worden visueel gemarkeerd (blauwe rand + aparte sectie "Gekoppeld aan stap N").
+- **Kantoor web (`pim-uitvoering-tab.tsx`):** `PimSpotsLijst` component toegevoegd onderaan de PIM-uitvoering tab — uitvouwbaar kaartje met alle spots in een compacte tabellijst. Toont objectnummer, type, verdieping/ruimte, statusbadge en koppelknop (Link2/Link2Off) per spot. Projectleider kan direct spots aan de actieve stap koppelen/ontkoppelen zonder het tabblad te verlaten.
+- **Spotstatussen wijzigen nooit automatisch** — koppeling is puur informatief.
+
+---
+
 ## 2026-07-05 — Monteur-app: Vorige stappen read-only terugkijken (PIM uitvoering)
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag

@@ -1,12 +1,17 @@
 import {
   useGetHuidigePimUitvoeringStap,
   useListPimUitvoeringStappen,
+  useListPimSpots,
+  useKoppelPimStapVoorzieningen,
   useStartPimUitvoering,
   useVoltooiPimUitvoeringStap,
   useMeldPimUitvoeringAfwijking,
   useBeslisPimUitvoeringAfwijking,
+  getGetHuidigePimUitvoeringStapQueryKey,
   type PimUitvoeringStap,
+  type VoorzieningPimDetail,
 } from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { Redirect, useLocalSearchParams, useRouter } from "expo-router";
@@ -249,6 +254,7 @@ export default function UitvoeringScherm() {
   const [uitvoeringGereed, setUitvoeringGereed] = useState(false);
   const [offlineOpgeslagen, setOfflineOpgeslagen] = useState(false);
   const [toonVorigeStappen, setToonVorigeStappen] = useState(false);
+  const [toonVoorbereideSpots, setToonVoorbereideSpots] = useState(false);
   const [gecachteStappen, setGecachteStappen] = useState<PimUitvoeringStap[]>([]);
 
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -304,6 +310,11 @@ export default function UitvoeringScherm() {
       });
     }
   }, [opdrachtId]);
+
+  const { data: spotsData } = useListPimSpots(opdrachtId, {
+    query: { queryKey: ["pim-spots", opdrachtId], enabled: opdrachtId > 0 },
+  });
+  const alleSpots = spotsData ?? [];
 
   const alleStappen = stappenData ?? gecachteStappen;
   const voltooideStappen = alleStappen.filter(
@@ -611,35 +622,46 @@ export default function UitvoeringScherm() {
               Stap {actieveStap.volgorde}
               {actieveStap.werkpakket_sleutel ? ` · ${actieveStap.werkpakket_sleutel}` : ""}
             </Text>
-            {voltooideStappen.length > 0 && (
-              <Pressable
-                onPress={() => setToonVorigeStappen((v) => !v)}
-                style={{
-                  backgroundColor: toonVorigeStappen ? c.primary + "22" : c.darkMuted + "33",
-                  borderRadius: 8,
-                  paddingHorizontal: 10,
-                  paddingVertical: 4,
-                  flexDirection: "row",
-                  alignItems: "center",
-                  gap: 4,
-                }}
-              >
-                <Ionicons
-                  name="time-outline"
-                  size={13}
-                  color={toonVorigeStappen ? c.primary : c.darkMuted}
-                />
-                <Text
+            <View style={{ flexDirection: "row", gap: 6 }}>
+              {voltooideStappen.length > 0 && (
+                <Pressable
+                  onPress={() => { setToonVorigeStappen((v) => !v); setToonVoorbereideSpots(false); }}
                   style={{
-                    color: toonVorigeStappen ? c.primary : c.darkMuted,
-                    fontSize: 12,
-                    fontFamily: "Inter_600SemiBold",
+                    backgroundColor: toonVorigeStappen ? c.primary + "22" : c.darkMuted + "33",
+                    borderRadius: 8,
+                    paddingHorizontal: 10,
+                    paddingVertical: 4,
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 4,
                   }}
                 >
-                  Vorige stappen ({voltooideStappen.length})
-                </Text>
-              </Pressable>
-            )}
+                  <Ionicons name="time-outline" size={13} color={toonVorigeStappen ? c.primary : c.darkMuted} />
+                  <Text style={{ color: toonVorigeStappen ? c.primary : c.darkMuted, fontSize: 12, fontFamily: "Inter_600SemiBold" }}>
+                    Stappen ({voltooideStappen.length})
+                  </Text>
+                </Pressable>
+              )}
+              {alleSpots.length > 0 && (
+                <Pressable
+                  onPress={() => { setToonVoorbereideSpots((v) => !v); setToonVorigeStappen(false); }}
+                  style={{
+                    backgroundColor: toonVoorbereideSpots ? c.primary + "22" : c.darkMuted + "33",
+                    borderRadius: 8,
+                    paddingHorizontal: 10,
+                    paddingVertical: 4,
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 4,
+                  }}
+                >
+                  <Ionicons name="location-outline" size={13} color={toonVoorbereideSpots ? c.primary : c.darkMuted} />
+                  <Text style={{ color: toonVoorbereideSpots ? c.primary : c.darkMuted, fontSize: 12, fontFamily: "Inter_600SemiBold" }}>
+                    Spots ({alleSpots.length})
+                  </Text>
+                </Pressable>
+              )}
+            </View>
           </View>
         )}
       </View>
@@ -687,6 +709,15 @@ export default function UitvoeringScherm() {
         <VorigeStappenPanel
           stappen={voltooideStappen}
           onSluit={() => setToonVorigeStappen(false)}
+          c={c}
+          insets={insets}
+        />
+      ) : actieveStap && toonVoorbereideSpots ? (
+        <VoorbereideSpotsPanel
+          spots={alleSpots}
+          opdrachtId={opdrachtId}
+          actieveStap={actieveStap}
+          onSluit={() => setToonVoorbereideSpots(false)}
           c={c}
           insets={insets}
         />
@@ -1599,5 +1630,296 @@ function ReadOnlyStapKaart({
         ) : null}
       </View>
     </View>
+  );
+}
+
+// ── Spot status helpers ───────────────────────────────────────────────────────
+const SPOT_STATUS_LABEL: Record<string, string> = {
+  concept: "Concept",
+  voorbereid: "Voorbereid",
+  in_uitvoering: "In uitvoering",
+  opgeleverd: "Opgeleverd",
+  goedgekeurd: "Goedgekeurd",
+  afgekeurd: "Afgekeurd",
+  in_onderhoud: "In onderhoud",
+  vervallen: "Vervallen",
+  opdracht: "Opdracht",
+  werkbegroting: "Werkbegroting",
+  inkoop: "Inkoop",
+};
+
+const SPOT_STATUS_KLEUR: Record<string, string> = {
+  concept: "#6b7280",
+  voorbereid: "#0284c7",
+  in_uitvoering: "#d97706",
+  opgeleverd: "#16a34a",
+  goedgekeurd: "#15803d",
+  afgekeurd: "#dc2626",
+  in_onderhoud: "#7c3aed",
+  vervallen: "#6b7280",
+  opdracht: "#0369a1",
+  werkbegroting: "#1d4ed8",
+  inkoop: "#0f766e",
+};
+
+// ── SpotKaartMonteur ─────────────────────────────────────────────────────────
+function SpotKaartMonteur({
+  spot,
+  actieveStap,
+  opdrachtId,
+  c,
+}: {
+  spot: VoorzieningPimDetail;
+  actieveStap: PimUitvoeringStap | null;
+  opdrachtId: number;
+  c: ReturnType<typeof useColors>;
+}) {
+  const queryClient = useQueryClient();
+  const koppelMutatie = useKoppelPimStapVoorzieningen();
+
+  const actieveVoorzieningIds: number[] = Array.isArray(actieveStap?.voorziening_ids)
+    ? (actieveStap!.voorziening_ids as number[])
+    : [];
+  const isGekoppeld = actieveVoorzieningIds.includes(spot.id);
+  const kanKoppelen =
+    actieveStap !== null &&
+    (actieveStap.status === "actief" || actieveStap.status === "afgeweken");
+
+  async function handleToggle() {
+    if (!actieveStap || !kanKoppelen) return;
+    const nieuweIds = isGekoppeld
+      ? actieveVoorzieningIds.filter((id) => id !== spot.id)
+      : [...actieveVoorzieningIds, spot.id];
+    try {
+      await koppelMutatie.mutateAsync({
+        id: opdrachtId,
+        stapId: actieveStap.id,
+        data: { voorziening_ids: nieuweIds },
+      });
+      void queryClient.invalidateQueries({
+        queryKey: getGetHuidigePimUitvoeringStapQueryKey(opdrachtId),
+      });
+    } catch {
+      // stil falen
+    }
+  }
+
+  const opnameFotos = (spot.fotos ?? []).filter((f) => f.fase === "opname");
+  const statusKleur = SPOT_STATUS_KLEUR[spot.status] ?? "#6b7280";
+  const statusLabel = SPOT_STATUS_LABEL[spot.status] ?? spot.status;
+
+  return (
+    <View
+      style={{
+        backgroundColor: c.card,
+        borderRadius: 12,
+        padding: 14,
+        marginBottom: 10,
+        borderWidth: isGekoppeld ? 2 : 1,
+        borderColor: isGekoppeld ? c.primary : c.accent,
+      }}
+    >
+      {/* Objectnummer + status badge */}
+      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+        <Text style={{ color: c.foreground, fontSize: 15, fontFamily: "Inter_700Bold" }}>
+          {spot.objectnummer}
+        </Text>
+        <View
+          style={{
+            backgroundColor: statusKleur + "22",
+            borderRadius: 6,
+            paddingHorizontal: 8,
+            paddingVertical: 3,
+          }}
+        >
+          <Text style={{ color: statusKleur, fontSize: 11, fontFamily: "Inter_600SemiBold" }}>
+            {statusLabel}
+          </Text>
+        </View>
+      </View>
+
+      {/* Type + locatie */}
+      <Text style={{ color: c.mutedForeground, fontSize: 12, fontFamily: "Inter_400Regular", marginBottom: 2 }}>
+        {spot.type_naam ?? spot.type}
+        {spot.verdieping_naam ? ` · ${spot.verdieping_naam}` : ""}
+        {spot.ruimte ? ` · ${spot.ruimte}` : ""}
+      </Text>
+
+      {spot.locatie_omschrijving ? (
+        <Text style={{ color: c.mutedForeground, fontSize: 12, fontFamily: "Inter_400Regular", marginBottom: 2 }}>
+          {spot.locatie_omschrijving}
+        </Text>
+      ) : null}
+
+      {/* Maatregel (toepassing) of materialen */}
+      {(spot.maatregel ?? spot.materialen) ? (
+        <View style={{ marginTop: 6, backgroundColor: c.accent, borderRadius: 6, padding: 8 }}>
+          <Text style={{ color: c.foreground, fontSize: 11, fontFamily: "Inter_600SemiBold", opacity: 0.6, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2 }}>
+            {spot.maatregel ? "Maatregel" : "Materialen"}
+          </Text>
+          <Text style={{ color: c.foreground, fontSize: 13, fontFamily: "Inter_400Regular" }}>
+            {spot.maatregel
+              ? `${spot.maatregel}${spot.maatregel_fabrikant ? ` — ${spot.maatregel_fabrikant}` : ""}`
+              : spot.materialen}
+          </Text>
+        </View>
+      ) : null}
+
+      {/* Opmerkingen */}
+      {spot.opmerkingen ? (
+        <Text style={{ color: c.mutedForeground, fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 6, lineHeight: 17 }}>
+          {spot.opmerkingen}
+        </Text>
+      ) : null}
+
+      {/* Opname foto's */}
+      {opnameFotos.length > 0 ? (
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
+          {opnameFotos.slice(0, 4).map((foto) => (
+            <Image
+              key={foto.id}
+              source={{ uri: foto.url }}
+              style={{ width: 64, height: 64, borderRadius: 8, backgroundColor: c.accent }}
+            />
+          ))}
+          {opnameFotos.length > 4 ? (
+            <View style={{ width: 64, height: 64, borderRadius: 8, backgroundColor: c.accent, alignItems: "center", justifyContent: "center" }}>
+              <Text style={{ color: c.mutedForeground, fontSize: 11, fontFamily: "Inter_600SemiBold" }}>
+                +{opnameFotos.length - 4}
+              </Text>
+            </View>
+          ) : null}
+        </View>
+      ) : null}
+
+      {/* Koppelen / ontkoppelen */}
+      {kanKoppelen ? (
+        <Pressable
+          onPress={() => void handleToggle()}
+          disabled={koppelMutatie.isPending}
+          style={{
+            marginTop: 10,
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 6,
+            alignSelf: "flex-start",
+            backgroundColor: isGekoppeld ? "#fef2f2" : c.primary + "15",
+            borderRadius: 8,
+            paddingHorizontal: 12,
+            paddingVertical: 6,
+            opacity: koppelMutatie.isPending ? 0.6 : 1,
+          }}
+        >
+          <Ionicons
+            name={isGekoppeld ? "unlink-outline" : "link-outline"}
+            size={14}
+            color={isGekoppeld ? "#dc2626" : c.primary}
+          />
+          <Text style={{ color: isGekoppeld ? "#dc2626" : c.primary, fontSize: 12, fontFamily: "Inter_600SemiBold" }}>
+            {isGekoppeld ? "Ontkoppelen" : "Koppelen aan stap"}
+          </Text>
+        </Pressable>
+      ) : isGekoppeld ? (
+        <View style={{ marginTop: 10, flexDirection: "row", alignItems: "center", gap: 6 }}>
+          <Ionicons name="link" size={14} color={c.primary} />
+          <Text style={{ color: c.primary, fontSize: 12, fontFamily: "Inter_600SemiBold" }}>
+            Gekoppeld aan stap {actieveStap?.volgorde}
+          </Text>
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
+// ── VoorbereideSpotsPanel ─────────────────────────────────────────────────────
+function VoorbereideSpotsPanel({
+  spots,
+  opdrachtId,
+  actieveStap,
+  onSluit,
+  c,
+  insets,
+}: {
+  spots: VoorzieningPimDetail[];
+  opdrachtId: number;
+  actieveStap: PimUitvoeringStap | null;
+  onSluit: () => void;
+  c: ReturnType<typeof useColors>;
+  insets: { bottom: number };
+}) {
+  const actieveVoorzieningIds: number[] = Array.isArray(actieveStap?.voorziening_ids)
+    ? (actieveStap!.voorziening_ids as number[])
+    : [];
+  const gekoppeldeSpots = spots.filter((s) => actieveVoorzieningIds.includes(s.id));
+  const overigeSpots = spots.filter((s) => !actieveVoorzieningIds.includes(s.id));
+
+  return (
+    <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 32 }}>
+      {/* Koptekst */}
+      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+        <View>
+          <Text style={{ color: c.foreground, fontSize: 16, fontFamily: "Inter_700Bold" }}>
+            Voorbereide spots
+          </Text>
+          <Text style={{ color: c.mutedForeground, fontSize: 12, fontFamily: "Inter_400Regular" }}>
+            {spots.length} spot{spots.length !== 1 ? "s" : ""} voor dit gebouw
+          </Text>
+        </View>
+        <Pressable
+          onPress={onSluit}
+          style={{
+            backgroundColor: c.accent,
+            borderRadius: 8,
+            paddingHorizontal: 12,
+            paddingVertical: 6,
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 6,
+          }}
+        >
+          <Ionicons name="arrow-forward-outline" size={14} color={c.foreground} />
+          <Text style={{ color: c.foreground, fontSize: 13, fontFamily: "Inter_600SemiBold" }}>
+            Actieve stap
+          </Text>
+        </Pressable>
+      </View>
+
+      {spots.length === 0 ? (
+        <View style={{ alignItems: "center", paddingVertical: 48 }}>
+          <Ionicons name="location-outline" size={40} color={c.mutedForeground} />
+          <Text style={{ color: c.mutedForeground, marginTop: 12, fontSize: 14, fontFamily: "Inter_400Regular", textAlign: "center" }}>
+            Geen spots gevonden voor dit gebouw.
+          </Text>
+        </View>
+      ) : (
+        <>
+          {gekoppeldeSpots.length > 0 && (
+            <>
+              <Text style={{ color: c.primary, fontSize: 11, fontFamily: "Inter_700Bold", textTransform: "uppercase", letterSpacing: 0.7, marginBottom: 8 }}>
+                Gekoppeld aan stap {actieveStap?.volgorde} ({gekoppeldeSpots.length})
+              </Text>
+              {gekoppeldeSpots.map((spot) => (
+                <SpotKaartMonteur key={spot.id} spot={spot} actieveStap={actieveStap} opdrachtId={opdrachtId} c={c} />
+              ))}
+              {overigeSpots.length > 0 && (
+                <View style={{ height: 1, backgroundColor: c.accent, marginVertical: 16 }} />
+              )}
+            </>
+          )}
+          {overigeSpots.length > 0 && (
+            <>
+              {gekoppeldeSpots.length > 0 && (
+                <Text style={{ color: c.mutedForeground, fontSize: 11, fontFamily: "Inter_700Bold", textTransform: "uppercase", letterSpacing: 0.7, marginBottom: 8 }}>
+                  Overige spots ({overigeSpots.length})
+                </Text>
+              )}
+              {overigeSpots.map((spot) => (
+                <SpotKaartMonteur key={spot.id} spot={spot} actieveStap={actieveStap} opdrachtId={opdrachtId} c={c} />
+              ))}
+            </>
+          )}
+        </>
+      )}
+    </ScrollView>
   );
 }

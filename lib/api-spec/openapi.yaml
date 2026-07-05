@@ -10634,6 +10634,61 @@ paths:
         "409":
           description: Stap heeft geen afwijking
 
+  /opdrachten/{id}/pim/spots:
+    get:
+      operationId: listPimSpots
+      tags: [pim]
+      summary: Spots ophalen die aan de opdracht zijn gekoppeld (via gebouw), inclusief foto's en toepassingen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/VoorzieningPimDetail"
+        "404":
+          description: Opdracht of PIM niet gevonden
+
+  /opdrachten/{id}/pim/uitvoering/stap/{stapId}/voorzieningen:
+    patch:
+      operationId: koppelPimStapVoorzieningen
+      tags: [pim]
+      summary: Spots koppelen aan een uitvoeringsstap (informatieve koppeling, geen statuswijziging)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: stapId
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PimStapVoorzieningenInput"
+      responses:
+        "200":
+          description: Bijgewerkte uitvoeringsstap
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PimUitvoeringStap"
+        "404":
+          description: Stap niet gevonden
+
   /opdrachten/{id}/pim/oplevering/controleer:
     post:
       operationId: controleerPimOplevering
@@ -26962,6 +27017,12 @@ components:
           description: Afwijkingdetails inclusief beslissing projectleider
         voltooid_door_id:
           type: ["integer", "null"]
+        voorziening_ids:
+          type: array
+          items:
+            type: integer
+          nullable: true
+          description: Gekoppelde spot-IDs (informatieve koppeling, geen FK)
         voltooid_op:
           type: ["string", "null"]
         aangemaakt_op:
@@ -27018,6 +27079,79 @@ components:
         toelichting:
           type: string
           description: Toelichting bij de beslissing van de projectleider
+
+    VoorzieningPimFoto:
+      type: object
+      required: [id, url, fase]
+      properties:
+        id:
+          type: integer
+        url:
+          type: string
+        fase:
+          type: string
+        beschrijving:
+          type: ["string", "null"]
+
+    VoorzieningPimDetail:
+      type: object
+      required: [id, objectnummer, type, status, classificatie, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id:
+          type: integer
+        objectnummer:
+          type: string
+        type:
+          type: string
+          description: Applicatie-code (bv. "1.20")
+        type_naam:
+          type: ["string", "null"]
+          description: Leesbare naam van het applicatietype
+        status:
+          type: string
+        classificatie:
+          type: string
+        verdieping_id:
+          type: ["integer", "null"]
+        verdieping_naam:
+          type: ["string", "null"]
+        ruimte:
+          type: ["string", "null"]
+        huisnummer:
+          type: ["string", "null"]
+        locatie_omschrijving:
+          type: ["string", "null"]
+        materialen:
+          type: ["string", "null"]
+        opmerkingen:
+          type: ["string", "null"]
+        maatregel:
+          type: ["string", "null"]
+          description: Eerste gekoppelde toepassing (label) naam
+        maatregel_fabrikant:
+          type: ["string", "null"]
+          description: Fabrikant van de eerste gekoppelde toepassing
+        fotos:
+          type: array
+          items:
+            $ref: "#/components/schemas/VoorzieningPimFoto"
+        gekoppelde_stap_id:
+          type: ["integer", "null"]
+          description: ID van de uitvoeringsstap waaraan deze spot is gekoppeld (null = nog niet gekoppeld)
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+
+    PimStapVoorzieningenInput:
+      type: object
+      required: [voorziening_ids]
+      properties:
+        voorziening_ids:
+          type: array
+          items:
+            type: integer
+          description: Spot-IDs om aan deze stap te koppelen (vervangt de huidige koppeling volledig)
 
     PimWerkvoorbereidingResultaat:
       type: object

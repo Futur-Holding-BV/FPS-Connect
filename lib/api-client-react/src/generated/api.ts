@@ -571,6 +571,7 @@ import type {
   PimOpleveringDefinitiefResultaat,
   PimOpleveringGenereerResultaat,
   PimRapportResultaat,
+  PimStapVoorzieningenInput,
   PimUitvoeringAfwijkingInput,
   PimUitvoeringBeslisInput,
   PimUitvoeringStap,
@@ -748,6 +749,7 @@ import type {
   VoorzieningInput,
   VoorzieningLijst,
   VoorzieningLocatie,
+  VoorzieningPimDetail,
   VoorzieningType,
   VoorzieningTypeInput,
   VoorzieningTypeUpdate,
@@ -37078,6 +37080,156 @@ export const useBeslisPimUitvoeringAfwijking = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getBeslisPimUitvoeringAfwijkingMutationOptions(options));
+    }
+
+export const getListPimSpotsUrl = (id: number,) => {
+
+
+
+
+  return `/api/opdrachten/${id}/pim/spots`
+}
+
+/**
+ * @summary Spots ophalen die aan de opdracht zijn gekoppeld (via gebouw), inclusief foto's en toepassingen
+ */
+export const listPimSpots = async (id: number, options?: RequestInit): Promise<VoorzieningPimDetail[]> => {
+
+  return customFetch<VoorzieningPimDetail[]>(getListPimSpotsUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListPimSpotsQueryKey = (id: number,) => {
+    return [
+    `/api/opdrachten/${id}/pim/spots`
+    ] as const;
+    }
+
+
+export const getListPimSpotsQueryOptions = <TData = Awaited<ReturnType<typeof listPimSpots>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPimSpots>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListPimSpotsQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listPimSpots>>> = ({ signal }) => listPimSpots(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listPimSpots>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListPimSpotsQueryResult = NonNullable<Awaited<ReturnType<typeof listPimSpots>>>
+export type ListPimSpotsQueryError = ErrorType<void>
+
+
+/**
+ * @summary Spots ophalen die aan de opdracht zijn gekoppeld (via gebouw), inclusief foto's en toepassingen
+ */
+
+export function useListPimSpots<TData = Awaited<ReturnType<typeof listPimSpots>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPimSpots>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListPimSpotsQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getKoppelPimStapVoorzieningenUrl = (id: number,
+    stapId: number,) => {
+
+
+
+
+  return `/api/opdrachten/${id}/pim/uitvoering/stap/${stapId}/voorzieningen`
+}
+
+/**
+ * @summary Spots koppelen aan een uitvoeringsstap (informatieve koppeling, geen statuswijziging)
+ */
+export const koppelPimStapVoorzieningen = async (id: number,
+    stapId: number,
+    pimStapVoorzieningenInput: PimStapVoorzieningenInput, options?: RequestInit): Promise<PimUitvoeringStap> => {
+
+  return customFetch<PimUitvoeringStap>(getKoppelPimStapVoorzieningenUrl(id,stapId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(pimStapVoorzieningenInput)
+  }
+);}
+
+
+
+
+export const getKoppelPimStapVoorzieningenMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof koppelPimStapVoorzieningen>>, TError,{id: number;stapId: number;data: BodyType<PimStapVoorzieningenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof koppelPimStapVoorzieningen>>, TError,{id: number;stapId: number;data: BodyType<PimStapVoorzieningenInput>}, TContext> => {
+
+const mutationKey = ['koppelPimStapVoorzieningen'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof koppelPimStapVoorzieningen>>, {id: number;stapId: number;data: BodyType<PimStapVoorzieningenInput>}> = (props) => {
+          const {id,stapId,data} = props ?? {};
+
+          return  koppelPimStapVoorzieningen(id,stapId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type KoppelPimStapVoorzieningenMutationResult = NonNullable<Awaited<ReturnType<typeof koppelPimStapVoorzieningen>>>
+    export type KoppelPimStapVoorzieningenMutationBody = BodyType<PimStapVoorzieningenInput>
+    export type KoppelPimStapVoorzieningenMutationError = ErrorType<void>
+
+    /**
+ * @summary Spots koppelen aan een uitvoeringsstap (informatieve koppeling, geen statuswijziging)
+ */
+export const useKoppelPimStapVoorzieningen = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof koppelPimStapVoorzieningen>>, TError,{id: number;stapId: number;data: BodyType<PimStapVoorzieningenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof koppelPimStapVoorzieningen>>,
+        TError,
+        {id: number;stapId: number;data: BodyType<PimStapVoorzieningenInput>},
+        TContext
+      > => {
+      return useMutation(getKoppelPimStapVoorzieningenMutationOptions(options));
     }
 
 export const getControleerPimOpleveringUrl = (id: number,) => {

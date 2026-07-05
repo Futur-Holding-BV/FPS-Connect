@@ -5296,6 +5296,8 @@ export interface PimUitvoeringStap {
   afwijking_json?: PimUitvoeringStapAfwijkingJson;
   /** @nullable */
   voltooid_door_id?: number | null;
+  /** Gekoppelde spot-IDs (informatieve koppeling, geen FK) */
+  voorziening_ids?: number[] | null;
   /** @nullable */
   voltooid_op?: string | null;
   aangemaakt_op: string;
@@ -5328,6 +5330,65 @@ export interface PimUitvoeringBeslisInput {
   beslissing: string;
   /** Toelichting bij de beslissing van de projectleider */
   toelichting?: string;
+}
+
+export interface VoorzieningPimFoto {
+  id: number;
+  url: string;
+  fase: string;
+  /** @nullable */
+  beschrijving?: string | null;
+}
+
+export interface VoorzieningPimDetail {
+  id: number;
+  objectnummer: string;
+  /** Applicatie-code (bv. "1.20") */
+  type: string;
+  /**
+     * Leesbare naam van het applicatietype
+     * @nullable
+     */
+  type_naam?: string | null;
+  status: string;
+  classificatie: string;
+  /** @nullable */
+  verdieping_id?: number | null;
+  /** @nullable */
+  verdieping_naam?: string | null;
+  /** @nullable */
+  ruimte?: string | null;
+  /** @nullable */
+  huisnummer?: string | null;
+  /** @nullable */
+  locatie_omschrijving?: string | null;
+  /** @nullable */
+  materialen?: string | null;
+  /** @nullable */
+  opmerkingen?: string | null;
+  /**
+     * Eerste gekoppelde toepassing (label) naam
+     * @nullable
+     */
+  maatregel?: string | null;
+  /**
+     * Fabrikant van de eerste gekoppelde toepassing
+     * @nullable
+     */
+  maatregel_fabrikant?: string | null;
+  fotos?: VoorzieningPimFoto[];
+  /**
+     * ID van de uitvoeringsstap waaraan deze spot is gekoppeld (null = nog niet gekoppeld)
+     * @nullable
+     */
+  gekoppelde_stap_id?: number | null;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export interface PimStapVoorzieningenInput {
+  /** Spot-IDs om aan deze stap te koppelen (vervangt de huidige koppeling volledig) */
+  voorziening_ids: number[];
 }
 
 export interface PimWerkvoorbereidingResultaat {
