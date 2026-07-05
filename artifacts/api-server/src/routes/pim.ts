@@ -27,7 +27,7 @@ import {
   verdiepingenTable,
 } from "@workspace/db";
 import type { PimUitvoeringStap } from "@workspace/db";
-import { eq, and, asc, inArray, sql } from "drizzle-orm";
+import { eq, and, asc, desc, inArray, sql } from "drizzle-orm";
 import { requireBevoegdheid, requireBevoegdheidOfKlant } from "../middlewares/auth";
 import { logger } from "../lib/logger";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
@@ -1130,6 +1130,65 @@ function serializeStap(stap: PimUitvoeringStap): Record<string, unknown> {
 }
 
 /**
+ * Bekende spot-types voor patroonherkenning in werkpakketSleutel.
+ * Volgorde is relevant: langere/specifiekere namen staan vóór kortere.
+ */
+const BEKENDE_SPOT_TYPES = [
+  "brandwerende_beglazing",
+  "brandwerende_coating",
+  "kabeldoorvoering",
+  "rookscherm",
+  "branddeur",
+  "doorvoering",
+  "brandklep",
+  "manchet",
+  "coating",
+];
+
+/**
+ * Leidt het spot-type af als de AI dit niet heeft meegegeven.
+ * Strategie 1: herken het type in de werkpakketSleutel (bv. "branddeur_montage" → "branddeur").
+ * Strategie 2: haal het type op van de meest recent bijgewerkte voorziening in het gebouw
+ *              dat aan de opdracht is gekoppeld (via stap → pim → opdracht → gebouw).
+ */
+async function afleidenSpotTypeVoorVge(stap: PimUitvoeringStap): Promise<string | null> {
+  // Strategie 1: werkpakketSleutel bevat herkenbaar spot-type
+  if (stap.werkpakketSleutel) {
+    const sleutel = stap.werkpakketSleutel.toLowerCase();
+    for (const type of BEKENDE_SPOT_TYPES) {
+      if (sleutel === type || sleutel.startsWith(`${type}_`) || sleutel.endsWith(`_${type}`) || sleutel.includes(`_${type}_`)) {
+        return type;
+      }
+    }
+  }
+
+  // Strategie 2: meest recente voorziening via pim → opdracht → gebouw
+  const [pim] = await db
+    .select({ opdrachtId: pimModellenTable.opdrachtId })
+    .from(pimModellenTable)
+    .where(eq(pimModellenTable.id, stap.pimId));
+  if (!pim) return null;
+
+  const [opdracht] = await db
+    .select({ gebouwId: opdrachtenTable.gebouwId })
+    .from(opdrachtenTable)
+    .where(eq(opdrachtenTable.id, pim.opdrachtId));
+  if (!opdracht?.gebouwId) return null;
+
+  const [voorziening] = await db
+    .select({ type: voorzieningenTable.type })
+    .from(voorzieningenTable)
+    .where(and(
+      eq(voorzieningenTable.gebouwId, opdracht.gebouwId),
+      eq(voorzieningenTable.gearchiveerd, false),
+    ))
+    .orderBy(desc(voorzieningenTable.bijgewerktOp))
+    .limit(1);
+
+  return voorziening?.type ?? null;
+}
+
+/**
  * Roept de VGE aan voor een nieuw aangemaakte stap en persisteert guidance_context.
  * Mislukt stil — guidance is ondersteunend, niet blokkerend.
  */
@@ -1140,9 +1199,11 @@ async function vulGuidanceContextIn(
   try {
     const instructie = stap.instructieJson as Record<string, unknown> | null;
     const stapType = afleidenStapType(instructie, stap.volgorde);
+    // Leid spot_type af als de AI dit niet heeft meegegeven
+    const effectiefSpotType = spotType ?? await afleidenSpotTypeVoorVge(stap);
     const visualSet = await selectVisuals({
       stapId: stap.id,
-      spotType,
+      spotType: effectiefSpotType,
       stapType,
     });
     const context = serializeVisualSet(visualSet);
