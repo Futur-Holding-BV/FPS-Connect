@@ -21,7 +21,7 @@ import {
   ClipboardCheck, AlertTriangle, TriangleAlert, FileArchive, Receipt, ArrowUpRight, ScrollText,
   UserPlus, UserMinus, UserX, Car, GitBranch, ArrowLeft, ChevronDown, Palette, Monitor,
   Package, Upload, MapPin, Archive, ArrowLeftRight, BookmarkCheck, ScanSearch, Bot, ShoppingCart,
-  TrendingUp, ImageIcon, LineChart,
+  TrendingUp, ImageIcon, LineChart, GalleryHorizontal,
 } from "lucide-react";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { Badge } from "@/components/ui/badge";
@@ -1572,6 +1572,14 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                             </SidebarMenuButton>
                           </SidebarMenuItem>
                           <SidebarMenuItem className="pl-5">
+                            <SidebarMenuButton asChild isActive={location === "/beheer/visual-library"}>
+                              <Link href="/beheer/visual-library">
+                                <GalleryHorizontal />
+                                <span>Visual Library</span>
+                              </Link>
+                            </SidebarMenuButton>
+                          </SidebarMenuItem>
+                          <SidebarMenuItem className="pl-5">
                             <SidebarMenuButton asChild isActive={location === "/beheer/mail"}>
                               <Link href="/beheer/mail">
                                 <Mail />
@@ -1600,14 +1608,6 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                               <Link href="/beheer/heatmaps">
                                 <Activity />
                                 <span>Heatmaps</span>
-                              </Link>
-                            </SidebarMenuButton>
-                          </SidebarMenuItem>
-                          <SidebarMenuItem className="pl-5">
-                            <SidebarMenuButton asChild isActive={location === "/beheer/visual-library"}>
-                              <Link href="/beheer/visual-library">
-                                <LineChart />
-                                <span>Visual Library</span>
                               </Link>
                             </SidebarMenuButton>
                           </SidebarMenuItem>

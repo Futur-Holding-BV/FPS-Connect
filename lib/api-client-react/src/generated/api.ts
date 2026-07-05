@@ -68,6 +68,10 @@ import type {
   BatchExportResultaat,
   BedrijfsSluiting,
   BedrijfsSluitingInput,
+  BeheerVisual,
+  BeheerVisualInput,
+  BeheerVisualPatch,
+  BeheerVisualUploadUrlResponse,
   Bekwaamheid,
   BekwaamheidInput,
   BeoordelenInput,
@@ -576,8 +580,8 @@ import type {
   PimOpleveringDefinitiefResultaat,
   PimOpleveringGenereerResultaat,
   PimRapportResultaat,
-  PimStapVoorzieningenInput,
   PimStapRelevantDocument,
+  PimStapVoorzieningenInput,
   PimUitvoeringAfwijkingInput,
   PimUitvoeringBeslisInput,
   PimUitvoeringStap,
@@ -741,7 +745,6 @@ import type {
   Vervaldag,
   VerzendOfferte200,
   Visual,
-  VisualInput,
   VisualPatch,
   Voertuig,
   VoertuigInput,
@@ -37091,17 +37094,11 @@ export const useBeslisPimUitvoeringAfwijking = <TError = ErrorType<void>,
       return useMutation(getBeslisPimUitvoeringAfwijkingMutationOptions(options));
     }
 
-<<<<<<< HEAD
 export const getListPimSpotsUrl = (id: number,) => {
-=======
-export const getGetPimUitvoeringRelevanteDocsUrl = (id: number,
-    stapId: number,) => {
->>>>>>> f6d415c (Task #305: Adaptieve Telefoon- en Tabletinterface — Monteur App)
 
 
 
 
-<<<<<<< HEAD
   return `/api/opdrachten/${id}/pim/spots`
 }
 
@@ -37111,18 +37108,6 @@ export const getGetPimUitvoeringRelevanteDocsUrl = (id: number,
 export const listPimSpots = async (id: number, options?: RequestInit): Promise<VoorzieningPimDetail[]> => {
 
   return customFetch<VoorzieningPimDetail[]>(getListPimSpotsUrl(id),
-=======
-  return `/api/opdrachten/${id}/pim/uitvoering/stap/${stapId}/relevante-documenten`
-}
-
-/**
- * @summary Max 5 contextrelevante documenten voor de huidige uitvoeringsstap (bepaald door AI)
- */
-export const getPimUitvoeringRelevanteDocs = async (id: number,
-    stapId: number, options?: RequestInit): Promise<PimStapRelevantDocument[]> => {
-
-  return customFetch<PimStapRelevantDocument[]>(getGetPimUitvoeringRelevanteDocsUrl(id,stapId),
->>>>>>> f6d415c (Task #305: Adaptieve Telefoon- en Tabletinterface — Monteur App)
   {
     ...options,
     method: 'GET'
@@ -37135,49 +37120,28 @@ export const getPimUitvoeringRelevanteDocs = async (id: number,
 
 
 
-<<<<<<< HEAD
 export const getListPimSpotsQueryKey = (id: number,) => {
     return [
     `/api/opdrachten/${id}/pim/spots`
-=======
-export const getGetPimUitvoeringRelevanteDocsQueryKey = (id: number,
-    stapId: number,) => {
-    return [
-    `/api/opdrachten/${id}/pim/uitvoering/stap/${stapId}/relevante-documenten`
->>>>>>> f6d415c (Task #305: Adaptieve Telefoon- en Tabletinterface — Monteur App)
     ] as const;
     }
 
 
-<<<<<<< HEAD
 export const getListPimSpotsQueryOptions = <TData = Awaited<ReturnType<typeof listPimSpots>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPimSpots>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
-=======
-export const getGetPimUitvoeringRelevanteDocsQueryOptions = <TData = Awaited<ReturnType<typeof getPimUitvoeringRelevanteDocs>>, TError = ErrorType<void>>(id: number,
-    stapId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPimUitvoeringRelevanteDocs>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
->>>>>>> f6d415c (Task #305: Adaptieve Telefoon- en Tabletinterface — Monteur App)
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-<<<<<<< HEAD
   const queryKey =  queryOptions?.queryKey ?? getListPimSpotsQueryKey(id);
 
 
 
     const queryFn: QueryFunction<Awaited<ReturnType<typeof listPimSpots>>> = ({ signal }) => listPimSpots(id, { signal, ...requestOptions });
-=======
-  const queryKey =  queryOptions?.queryKey ?? getGetPimUitvoeringRelevanteDocsQueryKey(id,stapId);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPimUitvoeringRelevanteDocs>>> = ({ signal }) => getPimUitvoeringRelevanteDocs(id,stapId, { signal, ...requestOptions });
->>>>>>> f6d415c (Task #305: Adaptieve Telefoon- en Tabletinterface — Monteur App)
 
 
 
 
 
-<<<<<<< HEAD
    return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listPimSpots>>, TError, TData> & { queryKey: QueryKey }
 }
 
@@ -37195,26 +37159,6 @@ export function useListPimSpots<TData = Awaited<ReturnType<typeof listPimSpots>>
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getListPimSpotsQueryOptions(id,options)
-=======
-   return  { queryKey, queryFn, enabled: id !== null && id !== undefined && stapId !== null && stapId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPimUitvoeringRelevanteDocs>>, TError, TData> & { queryKey: QueryKey }
-}
-
-export type GetPimUitvoeringRelevanteDocsQueryResult = NonNullable<Awaited<ReturnType<typeof getPimUitvoeringRelevanteDocs>>>
-export type GetPimUitvoeringRelevanteDocsQueryError = ErrorType<void>
-
-
-/**
- * @summary Max 5 contextrelevante documenten voor de huidige uitvoeringsstap (bepaald door AI)
- */
-
-export function useGetPimUitvoeringRelevanteDocs<TData = Awaited<ReturnType<typeof getPimUitvoeringRelevanteDocs>>, TError = ErrorType<void>>(
- id: number,
-    stapId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPimUitvoeringRelevanteDocs>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
-
- ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
-
-  const queryOptions = getGetPimUitvoeringRelevanteDocsQueryOptions(id,stapId,options)
->>>>>>> f6d415c (Task #305: Adaptieve Telefoon- en Tabletinterface — Monteur App)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
@@ -37227,17 +37171,12 @@ export function useGetPimUitvoeringRelevanteDocs<TData = Awaited<ReturnType<type
 
 
 
-<<<<<<< HEAD
 export const getKoppelPimStapVoorzieningenUrl = (id: number,
-=======
-export const getStartPimStapFotoAnalyseUrl = (id: number,
->>>>>>> f6d415c (Task #305: Adaptieve Telefoon- en Tabletinterface — Monteur App)
     stapId: number,) => {
 
 
 
 
-<<<<<<< HEAD
   return `/api/opdrachten/${id}/pim/uitvoering/stap/${stapId}/voorzieningen`
 }
 
@@ -37254,43 +37193,17 @@ export const koppelPimStapVoorzieningen = async (id: number,
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
     body: JSON.stringify(pimStapVoorzieningenInput)
-=======
-  return `/api/opdrachten/${id}/pim/uitvoering/stap/${stapId}/foto-analyse`
-}
-
-/**
- * @summary Foto uploaden en AI-analyse starten — vergelijkt met referentiefoto uit VGF
- */
-export const startPimStapFotoAnalyse = async (id: number,
-    stapId: number,
-    pimFotoAnalyseInput: PimFotoAnalyseInput, options?: RequestInit): Promise<PimFotoAnalyse> => {
-
-  return customFetch<PimFotoAnalyse>(getStartPimStapFotoAnalyseUrl(id,stapId),
-  {
-    ...options,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(pimFotoAnalyseInput)
->>>>>>> f6d415c (Task #305: Adaptieve Telefoon- en Tabletinterface — Monteur App)
   }
 );}
 
 
 
 
-<<<<<<< HEAD
 export const getKoppelPimStapVoorzieningenMutationOptions = <TError = ErrorType<void>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof koppelPimStapVoorzieningen>>, TError,{id: number;stapId: number;data: BodyType<PimStapVoorzieningenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof koppelPimStapVoorzieningen>>, TError,{id: number;stapId: number;data: BodyType<PimStapVoorzieningenInput>}, TContext> => {
 
 const mutationKey = ['koppelPimStapVoorzieningen'];
-=======
-export const getStartPimStapFotoAnalyseMutationOptions = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof startPimStapFotoAnalyse>>, TError,{id: number;stapId: number;data: BodyType<PimFotoAnalyseInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof startPimStapFotoAnalyse>>, TError,{id: number;stapId: number;data: BodyType<PimFotoAnalyseInput>}, TContext> => {
-
-const mutationKey = ['startPimStapFotoAnalyse'];
->>>>>>> f6d415c (Task #305: Adaptieve Telefoon- en Tabletinterface — Monteur App)
 const {mutation: mutationOptions, request: requestOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
@@ -37300,17 +37213,10 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
 
-<<<<<<< HEAD
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof koppelPimStapVoorzieningen>>, {id: number;stapId: number;data: BodyType<PimStapVoorzieningenInput>}> = (props) => {
           const {id,stapId,data} = props ?? {};
 
           return  koppelPimStapVoorzieningen(id,stapId,data,requestOptions)
-=======
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof startPimStapFotoAnalyse>>, {id: number;stapId: number;data: BodyType<PimFotoAnalyseInput>}> = (props) => {
-          const {id,stapId,data} = props ?? {};
-
-          return  startPimStapFotoAnalyse(id,stapId,data,requestOptions)
->>>>>>> f6d415c (Task #305: Adaptieve Telefoon- en Tabletinterface — Monteur App)
         }
 
 
@@ -37320,7 +37226,6 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
   return  { mutationFn, ...mutationOptions }}
 
-<<<<<<< HEAD
     export type KoppelPimStapVoorzieningenMutationResult = NonNullable<Awaited<ReturnType<typeof koppelPimStapVoorzieningen>>>
     export type KoppelPimStapVoorzieningenMutationBody = BodyType<PimStapVoorzieningenInput>
     export type KoppelPimStapVoorzieningenMutationError = ErrorType<void>
@@ -37339,7 +37244,143 @@ export const useKoppelPimStapVoorzieningen = <TError = ErrorType<void>,
       return useMutation(getKoppelPimStapVoorzieningenMutationOptions(options));
     }
 
-=======
+export const getGetPimUitvoeringRelevanteDocsUrl = (id: number,
+    stapId: number,) => {
+
+
+
+
+  return `/api/opdrachten/${id}/pim/uitvoering/stap/${stapId}/relevante-documenten`
+}
+
+/**
+ * @summary Max 5 contextrelevante documenten voor de huidige uitvoeringsstap (bepaald door AI)
+ */
+export const getPimUitvoeringRelevanteDocs = async (id: number,
+    stapId: number, options?: RequestInit): Promise<PimStapRelevantDocument[]> => {
+
+  return customFetch<PimStapRelevantDocument[]>(getGetPimUitvoeringRelevanteDocsUrl(id,stapId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPimUitvoeringRelevanteDocsQueryKey = (id: number,
+    stapId: number,) => {
+    return [
+    `/api/opdrachten/${id}/pim/uitvoering/stap/${stapId}/relevante-documenten`
+    ] as const;
+    }
+
+
+export const getGetPimUitvoeringRelevanteDocsQueryOptions = <TData = Awaited<ReturnType<typeof getPimUitvoeringRelevanteDocs>>, TError = ErrorType<void>>(id: number,
+    stapId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPimUitvoeringRelevanteDocs>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPimUitvoeringRelevanteDocsQueryKey(id,stapId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPimUitvoeringRelevanteDocs>>> = ({ signal }) => getPimUitvoeringRelevanteDocs(id,stapId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined && stapId !== null && stapId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPimUitvoeringRelevanteDocs>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetPimUitvoeringRelevanteDocsQueryResult = NonNullable<Awaited<ReturnType<typeof getPimUitvoeringRelevanteDocs>>>
+export type GetPimUitvoeringRelevanteDocsQueryError = ErrorType<void>
+
+
+/**
+ * @summary Max 5 contextrelevante documenten voor de huidige uitvoeringsstap (bepaald door AI)
+ */
+
+export function useGetPimUitvoeringRelevanteDocs<TData = Awaited<ReturnType<typeof getPimUitvoeringRelevanteDocs>>, TError = ErrorType<void>>(
+ id: number,
+    stapId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPimUitvoeringRelevanteDocs>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetPimUitvoeringRelevanteDocsQueryOptions(id,stapId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getStartPimStapFotoAnalyseUrl = (id: number,
+    stapId: number,) => {
+
+
+
+
+  return `/api/opdrachten/${id}/pim/uitvoering/stap/${stapId}/foto-analyse`
+}
+
+/**
+ * @summary Foto uploaden en AI-analyse starten — vergelijkt met referentiefoto uit VGF
+ */
+export const startPimStapFotoAnalyse = async (id: number,
+    stapId: number,
+    pimFotoAnalyseInput: PimFotoAnalyseInput, options?: RequestInit): Promise<PimFotoAnalyse> => {
+
+  return customFetch<PimFotoAnalyse>(getStartPimStapFotoAnalyseUrl(id,stapId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(pimFotoAnalyseInput)
+  }
+);}
+
+
+
+
+export const getStartPimStapFotoAnalyseMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof startPimStapFotoAnalyse>>, TError,{id: number;stapId: number;data: BodyType<PimFotoAnalyseInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof startPimStapFotoAnalyse>>, TError,{id: number;stapId: number;data: BodyType<PimFotoAnalyseInput>}, TContext> => {
+
+const mutationKey = ['startPimStapFotoAnalyse'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof startPimStapFotoAnalyse>>, {id: number;stapId: number;data: BodyType<PimFotoAnalyseInput>}> = (props) => {
+          const {id,stapId,data} = props ?? {};
+
+          return  startPimStapFotoAnalyse(id,stapId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
     export type StartPimStapFotoAnalyseMutationResult = NonNullable<Awaited<ReturnType<typeof startPimStapFotoAnalyse>>>
     export type StartPimStapFotoAnalyseMutationBody = BodyType<PimFotoAnalyseInput>
     export type StartPimStapFotoAnalyseMutationError = ErrorType<void>
@@ -37445,7 +37486,6 @@ export function useGetPimStapFotoAnalyse<TData = Awaited<ReturnType<typeof getPi
 
 
 
->>>>>>> f6d415c (Task #305: Adaptieve Telefoon- en Tabletinterface — Monteur App)
 export const getControleerPimOpleveringUrl = (id: number,) => {
 
 
@@ -70263,76 +70303,6 @@ export function useListVisuals<TData = Awaited<ReturnType<typeof listVisuals>>, 
 
 
 
-export const getCreateVisualUrl = () => {
-
-
-
-
-  return `/api/visuals`
-}
-
-/**
- * @summary Nieuwe visual aanmaken
- */
-export const createVisual = async (visualInput: VisualInput, options?: RequestInit): Promise<Visual> => {
-
-  return customFetch<Visual>(getCreateVisualUrl(),
-  {
-    ...options,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(visualInput)
-  }
-);}
-
-
-
-
-export const getCreateVisualMutationOptions = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createVisual>>, TError,{data: BodyType<VisualInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof createVisual>>, TError,{data: BodyType<VisualInput>}, TContext> => {
-
-const mutationKey = ['createVisual'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createVisual>>, {data: BodyType<VisualInput>}> = (props) => {
-          const {data} = props ?? {};
-
-          return  createVisual(data,requestOptions)
-        }
-
-
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type CreateVisualMutationResult = NonNullable<Awaited<ReturnType<typeof createVisual>>>
-    export type CreateVisualMutationBody = BodyType<VisualInput>
-    export type CreateVisualMutationError = ErrorType<void>
-
-    /**
- * @summary Nieuwe visual aanmaken
- */
-export const useCreateVisual = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createVisual>>, TError,{data: BodyType<VisualInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
- ): UseMutationResult<
-        Awaited<ReturnType<typeof createVisual>>,
-        TError,
-        {data: BodyType<VisualInput>},
-        TContext
-      > => {
-      return useMutation(getCreateVisualMutationOptions(options));
-    }
-
 export const getGetVisualUrl = (id: number,) => {
 
 
@@ -70549,5 +70519,363 @@ export const useDeleteVisual = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getDeleteVisualMutationOptions(options));
+    }
+
+export const getListBeheerVisualsUrl = () => {
+
+
+
+
+  return `/api/beheer/visuals`
+}
+
+/**
+ * @summary Alle visuals ophalen (Visual Library)
+ */
+export const listBeheerVisuals = async ( options?: RequestInit): Promise<BeheerVisual[]> => {
+
+  return customFetch<BeheerVisual[]>(getListBeheerVisualsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListBeheerVisualsQueryKey = () => {
+    return [
+    `/api/beheer/visuals`
+    ] as const;
+    }
+
+
+export const getListBeheerVisualsQueryOptions = <TData = Awaited<ReturnType<typeof listBeheerVisuals>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listBeheerVisuals>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListBeheerVisualsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listBeheerVisuals>>> = ({ signal }) => listBeheerVisuals({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listBeheerVisuals>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListBeheerVisualsQueryResult = NonNullable<Awaited<ReturnType<typeof listBeheerVisuals>>>
+export type ListBeheerVisualsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Alle visuals ophalen (Visual Library)
+ */
+
+export function useListBeheerVisuals<TData = Awaited<ReturnType<typeof listBeheerVisuals>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listBeheerVisuals>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListBeheerVisualsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateBeheerVisualUrl = () => {
+
+
+
+
+  return `/api/beheer/visuals`
+}
+
+/**
+ * @summary Nieuwe visual aanmaken
+ */
+export const createBeheerVisual = async (beheerVisualInput: BeheerVisualInput, options?: RequestInit): Promise<BeheerVisual> => {
+
+  return customFetch<BeheerVisual>(getCreateBeheerVisualUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(beheerVisualInput)
+  }
+);}
+
+
+
+
+export const getCreateBeheerVisualMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createBeheerVisual>>, TError,{data: BodyType<BeheerVisualInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createBeheerVisual>>, TError,{data: BodyType<BeheerVisualInput>}, TContext> => {
+
+const mutationKey = ['createBeheerVisual'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createBeheerVisual>>, {data: BodyType<BeheerVisualInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createBeheerVisual(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateBeheerVisualMutationResult = NonNullable<Awaited<ReturnType<typeof createBeheerVisual>>>
+    export type CreateBeheerVisualMutationBody = BodyType<BeheerVisualInput>
+    export type CreateBeheerVisualMutationError = ErrorType<void>
+
+    /**
+ * @summary Nieuwe visual aanmaken
+ */
+export const useCreateBeheerVisual = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createBeheerVisual>>, TError,{data: BodyType<BeheerVisualInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createBeheerVisual>>,
+        TError,
+        {data: BodyType<BeheerVisualInput>},
+        TContext
+      > => {
+      return useMutation(getCreateBeheerVisualMutationOptions(options));
+    }
+
+export const getGetBeheerVisualUploadUrlUrl = () => {
+
+
+
+
+  return `/api/beheer/visuals/upload-url`
+}
+
+/**
+ * @summary Upload-URL genereren voor een visual of thumbnail
+ */
+export const getBeheerVisualUploadUrl = async ( options?: RequestInit): Promise<BeheerVisualUploadUrlResponse> => {
+
+  return customFetch<BeheerVisualUploadUrlResponse>(getGetBeheerVisualUploadUrlUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getGetBeheerVisualUploadUrlMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof getBeheerVisualUploadUrl>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof getBeheerVisualUploadUrl>>, TError,void, TContext> => {
+
+const mutationKey = ['getBeheerVisualUploadUrl'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof getBeheerVisualUploadUrl>>, void> = () => {
+
+
+          return  getBeheerVisualUploadUrl(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type GetBeheerVisualUploadUrlMutationResult = NonNullable<Awaited<ReturnType<typeof getBeheerVisualUploadUrl>>>
+
+    export type GetBeheerVisualUploadUrlMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Upload-URL genereren voor een visual of thumbnail
+ */
+export const useGetBeheerVisualUploadUrl = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof getBeheerVisualUploadUrl>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof getBeheerVisualUploadUrl>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getGetBeheerVisualUploadUrlMutationOptions(options));
+    }
+
+export const getUpdateBeheerVisualUrl = (id: number,) => {
+
+
+
+
+  return `/api/beheer/visuals/${id}`
+}
+
+/**
+ * @summary Visual bijwerken (naam, actief, spot_type, etc.)
+ */
+export const updateBeheerVisual = async (id: number,
+    beheerVisualPatch: BeheerVisualPatch, options?: RequestInit): Promise<BeheerVisual> => {
+
+  return customFetch<BeheerVisual>(getUpdateBeheerVisualUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(beheerVisualPatch)
+  }
+);}
+
+
+
+
+export const getUpdateBeheerVisualMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateBeheerVisual>>, TError,{id: number;data: BodyType<BeheerVisualPatch>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateBeheerVisual>>, TError,{id: number;data: BodyType<BeheerVisualPatch>}, TContext> => {
+
+const mutationKey = ['updateBeheerVisual'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateBeheerVisual>>, {id: number;data: BodyType<BeheerVisualPatch>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateBeheerVisual(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateBeheerVisualMutationResult = NonNullable<Awaited<ReturnType<typeof updateBeheerVisual>>>
+    export type UpdateBeheerVisualMutationBody = BodyType<BeheerVisualPatch>
+    export type UpdateBeheerVisualMutationError = ErrorType<void>
+
+    /**
+ * @summary Visual bijwerken (naam, actief, spot_type, etc.)
+ */
+export const useUpdateBeheerVisual = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateBeheerVisual>>, TError,{id: number;data: BodyType<BeheerVisualPatch>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateBeheerVisual>>,
+        TError,
+        {id: number;data: BodyType<BeheerVisualPatch>},
+        TContext
+      > => {
+      return useMutation(getUpdateBeheerVisualMutationOptions(options));
+    }
+
+export const getDeleteBeheerVisualUrl = (id: number,) => {
+
+
+
+
+  return `/api/beheer/visuals/${id}`
+}
+
+/**
+ * @summary Visual verwijderen
+ */
+export const deleteBeheerVisual = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteBeheerVisualUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteBeheerVisualMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteBeheerVisual>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteBeheerVisual>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteBeheerVisual'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteBeheerVisual>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteBeheerVisual(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteBeheerVisualMutationResult = NonNullable<Awaited<ReturnType<typeof deleteBeheerVisual>>>
+
+    export type DeleteBeheerVisualMutationError = ErrorType<void>
+
+    /**
+ * @summary Visual verwijderen
+ */
+export const useDeleteBeheerVisual = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteBeheerVisual>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteBeheerVisual>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteBeheerVisualMutationOptions(options));
     }
 

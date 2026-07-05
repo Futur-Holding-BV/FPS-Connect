@@ -89,7 +89,20 @@ Voor elke taak drie scores:
 3. **Chat gesprek `deelnemer_ids`** — het correct veld is `deelnemer_ids` (array), niet `deelnemers`. Geen bug in de server; de OpenAPI-spec dient dit te documenteren.
 4. **VGE tabellen** — de drizzle push-stap is onderdeel van `post_merge_setup.sh` maar faalt op een TTY-sessie. Handmatige SQL-migratie als workaround uitgevoerd; alle tabellen bevestigd aanwezig.
 
-**Conclusie:** De volledige kernworkflow functioneert stabiel en regressievrij. Geen productieblokkers gevonden.
+**Conclusie:** De volledige kernworkflow functioneert stabiel en regressievrij. Geen productie blokkers gevonden.
+
+## 2026-07-05 — Visual Library beheerpagina (VGE)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+**Wat is gebouwd:**
+
+- OpenAPI-spec uitgebreid met 5 nieuwe endpoints: `GET/POST /beheer/visuals`, `POST /beheer/visuals/upload-url`, `PATCH/DELETE /beheer/visuals/{id}`
+- Nieuwe API-route `visual-library.ts` met CRUD voor `fps_visuals` tabel; gated op `systeem` bevoegdheid (lezen 1, schrijven 2)
+- Codegen opnieuw uitgevoerd; hooks `useListBeheerVisuals`, `useCreateBeheerVisual`, `useUpdateBeheerVisual`, `useDeleteBeheerVisual` gegenereerd
+- Beheerpagina `/beheer/visual-library` met: rastergrid van visual-tegels, upload-dialoog (naam, visualtype, brontype, bronreferentie, spot-types multiselect, bestandsupload + optionele thumbnail), activeer/deactiveer-toggle per visual, verwijder-bevestigingsdialoog, lege state met uitleg, schrijfbevoegdheidscontrole
+- Sidebar-navigatie-item toegevoegd (icoon: GalleryHorizontal) in de systeemgroep
+- Route `/beheer/visual-library` geregistreerd in App.tsx
 
 ---
 

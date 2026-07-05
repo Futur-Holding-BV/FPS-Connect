@@ -10980,6 +10980,63 @@ export interface FieLeermomentPatch {
   opmerkingen?: string | null;
 }
 
+export interface BeheerVisual {
+  id: number;
+  naam: string;
+  visual_type: string;
+  bron_type: string;
+  /** @nullable */
+  bron_referentie?: string | null;
+  object_path: string;
+  /** @nullable */
+  thumbnail_path?: string | null;
+  spot_type: string[];
+  /** @nullable */
+  artikel_id?: number | null;
+  /** @nullable */
+  bedrijfsstandaard_id?: number | null;
+  taal: string;
+  actief: boolean;
+  aangemaakt_op: string;
+  /** @nullable */
+  bijgewerkt_op?: string | null;
+}
+
+export interface BeheerVisualInput {
+  naam: string;
+  visual_type: string;
+  bron_type: string;
+  bron_referentie?: string;
+  object_path: string;
+  thumbnail_path?: string;
+  spot_type?: string[];
+  artikel_id?: number;
+  bedrijfsstandaard_id?: number;
+  taal?: string;
+}
+
+export interface BeheerVisualPatch {
+  naam?: string;
+  visual_type?: string;
+  bron_type?: string;
+  /** @nullable */
+  bron_referentie?: string | null;
+  /** @nullable */
+  thumbnail_path?: string | null;
+  spot_type?: string[];
+  /** @nullable */
+  artikel_id?: number | null;
+  /** @nullable */
+  bedrijfsstandaard_id?: number | null;
+  taal?: string;
+  actief?: boolean;
+}
+
+export interface BeheerVisualUploadUrlResponse {
+  upload_url: string;
+  object_path: string;
+}
+
 export type GetRecenteActiviteitParams = {
 limit?: number;
 };

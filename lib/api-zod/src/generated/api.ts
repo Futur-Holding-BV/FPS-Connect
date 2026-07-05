@@ -24715,25 +24715,6 @@ export const ListVisualsResponse = zod.array(ListVisualsResponseItem)
 
 
 /**
- * @summary Nieuwe visual aanmaken
- */
-export const CreateVisualBody = zod.object({
-  "naam": zod.string(),
-  "visual_type": zod.string(),
-  "bron_type": zod.string(),
-  "bron_referentie": zod.string().optional(),
-  "object_path": zod.string(),
-  "thumbnail_path": zod.string().optional(),
-  "spot_type": zod.array(zod.string()),
-  "artikel_id": zod.number().optional(),
-  "bedrijfsstandaard_id": zod.number().optional(),
-  "taal": zod.string().optional()
-})
-
-export const CreateVisualResponse = zod.void()
-
-
-/**
  * @summary Detail van een visual
  */
 export const GetVisualParams = zod.object({
@@ -24805,5 +24786,103 @@ export const DeleteVisualParams = zod.object({
 })
 
 export const DeleteVisualResponse = zod.void()
+
+
+/**
+ * @summary Alle visuals ophalen (Visual Library)
+ */
+export const ListBeheerVisualsResponseItem = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "visual_type": zod.string(),
+  "bron_type": zod.string(),
+  "bron_referentie": zod.string().nullish(),
+  "object_path": zod.string(),
+  "thumbnail_path": zod.string().nullish(),
+  "spot_type": zod.array(zod.string()),
+  "artikel_id": zod.number().nullish(),
+  "bedrijfsstandaard_id": zod.number().nullish(),
+  "taal": zod.string(),
+  "actief": zod.boolean(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().nullish()
+})
+export const ListBeheerVisualsResponse = zod.array(ListBeheerVisualsResponseItem)
+
+
+/**
+ * @summary Nieuwe visual aanmaken
+ */
+export const CreateBeheerVisualBody = zod.object({
+  "naam": zod.string(),
+  "visual_type": zod.string(),
+  "bron_type": zod.string(),
+  "bron_referentie": zod.string().optional(),
+  "object_path": zod.string(),
+  "thumbnail_path": zod.string().optional(),
+  "spot_type": zod.array(zod.string()).optional(),
+  "artikel_id": zod.number().optional(),
+  "bedrijfsstandaard_id": zod.number().optional(),
+  "taal": zod.string().optional()
+})
+
+export const CreateBeheerVisualResponse = zod.void()
+
+
+/**
+ * @summary Upload-URL genereren voor een visual of thumbnail
+ */
+export const GetBeheerVisualUploadUrlResponse = zod.object({
+  "upload_url": zod.string(),
+  "object_path": zod.string()
+})
+
+
+/**
+ * @summary Visual bijwerken (naam, actief, spot_type, etc.)
+ */
+export const UpdateBeheerVisualParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateBeheerVisualBody = zod.object({
+  "naam": zod.string().optional(),
+  "visual_type": zod.string().optional(),
+  "bron_type": zod.string().optional(),
+  "bron_referentie": zod.string().nullish(),
+  "thumbnail_path": zod.string().nullish(),
+  "spot_type": zod.array(zod.string()).optional(),
+  "artikel_id": zod.number().nullish(),
+  "bedrijfsstandaard_id": zod.number().nullish(),
+  "taal": zod.string().optional(),
+  "actief": zod.boolean().optional()
+})
+
+export const UpdateBeheerVisualResponse = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "visual_type": zod.string(),
+  "bron_type": zod.string(),
+  "bron_referentie": zod.string().nullish(),
+  "object_path": zod.string(),
+  "thumbnail_path": zod.string().nullish(),
+  "spot_type": zod.array(zod.string()),
+  "artikel_id": zod.number().nullish(),
+  "bedrijfsstandaard_id": zod.number().nullish(),
+  "taal": zod.string(),
+  "actief": zod.boolean(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().nullish()
+})
+
+
+/**
+ * @summary Visual verwijderen
+ */
+export const DeleteBeheerVisualParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteBeheerVisualResponse = zod.void()
 
 

@@ -20008,23 +20008,6 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Visual'
-    post:
-      operationId: createVisual
-      tags: [visuals]
-      summary: Nieuwe visual aanmaken
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/VisualInput' }
-      responses:
-        '201':
-          description: Aangemaakt
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Visual' }
-        '400':
-          description: Validatiefout
 
   /visuals/{id}:
     get:
@@ -20073,6 +20056,98 @@ paths:
       parameters:
         - name: id
           in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '204':
+          description: Verwijderd
+        '404':
+          description: Niet gevonden
+
+  /beheer/visuals:
+    get:
+      operationId: listBeheerVisuals
+      summary: Alle visuals ophalen (Visual Library)
+      tags: [beheer-visuals]
+      security: [{ cookieAuth: [] }]
+      responses:
+        '200':
+          description: Lijst van visuals
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BeheerVisual'
+    post:
+      operationId: createBeheerVisual
+      summary: Nieuwe visual aanmaken
+      tags: [beheer-visuals]
+      security: [{ cookieAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BeheerVisualInput'
+      responses:
+        '201':
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BeheerVisual'
+        '400':
+          description: Validatiefout
+
+  /beheer/visuals/upload-url:
+    post:
+      operationId: getBeheerVisualUploadUrl
+      summary: Upload-URL genereren voor een visual of thumbnail
+      tags: [beheer-visuals]
+      security: [{ cookieAuth: [] }]
+      responses:
+        '200':
+          description: Upload-URL en objectpad
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BeheerVisualUploadUrlResponse'
+
+  /beheer/visuals/{id}:
+    patch:
+      operationId: updateBeheerVisual
+      summary: Visual bijwerken (naam, actief, spot_type, etc.)
+      tags: [beheer-visuals]
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BeheerVisualPatch'
+      responses:
+        '200':
+          description: Bijgewerkt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BeheerVisual'
+        '404':
+          description: Niet gevonden
+    delete:
+      operationId: deleteBeheerVisual
+      summary: Visual verwijderen
+      tags: [beheer-visuals]
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - in: path
+          name: id
           required: true
           schema: { type: integer }
       responses:
@@ -36312,3 +36387,64 @@ components:
         correctie_factor: { type: number, minimum: 0.5, maximum: 3.0 }
         opmerkingen:      { type: ["string", "null"] }
 
+
+    BeheerVisual:
+      type: object
+      required: [id, naam, visual_type, bron_type, object_path, spot_type, taal, actief, aangemaakt_op]
+      properties:
+        id:                   { type: integer }
+        naam:                 { type: string }
+        visual_type:          { type: string }
+        bron_type:            { type: string }
+        bron_referentie:      { type: ["string", "null"] }
+        object_path:          { type: string }
+        thumbnail_path:       { type: ["string", "null"] }
+        spot_type:
+          type: array
+          items: { type: string }
+        artikel_id:           { type: ["integer", "null"] }
+        bedrijfsstandaard_id: { type: ["integer", "null"] }
+        taal:                 { type: string }
+        actief:               { type: boolean }
+        aangemaakt_op:        { type: string }
+        bijgewerkt_op:        { type: ["string", "null"] }
+
+    BeheerVisualInput:
+      type: object
+      required: [naam, visual_type, bron_type, object_path]
+      properties:
+        naam:                 { type: string }
+        visual_type:          { type: string }
+        bron_type:            { type: string }
+        bron_referentie:      { type: string }
+        object_path:          { type: string }
+        thumbnail_path:       { type: string }
+        spot_type:
+          type: array
+          items: { type: string }
+        artikel_id:           { type: integer }
+        bedrijfsstandaard_id: { type: integer }
+        taal:                 { type: string }
+
+    BeheerVisualPatch:
+      type: object
+      properties:
+        naam:                 { type: string }
+        visual_type:          { type: string }
+        bron_type:            { type: string }
+        bron_referentie:      { type: ["string", "null"] }
+        thumbnail_path:       { type: ["string", "null"] }
+        spot_type:
+          type: array
+          items: { type: string }
+        artikel_id:           { type: ["integer", "null"] }
+        bedrijfsstandaard_id: { type: ["integer", "null"] }
+        taal:                 { type: string }
+        actief:               { type: boolean }
+
+    BeheerVisualUploadUrlResponse:
+      type: object
+      required: [upload_url, object_path]
+      properties:
+        upload_url:  { type: string }
+        object_path: { type: string }

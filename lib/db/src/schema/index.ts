@@ -56,5 +56,5 @@ export * from "./fie";
 export * from "./avg";
 export * from "./pim";
 export * from "./kb";
-export * from "./vge";
+export { vgeEffectiviteitslogTable, type VgeEffectiviteitslogEntry } from "./vge";
 export * from "./visuals";

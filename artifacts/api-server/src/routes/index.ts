@@ -91,6 +91,7 @@ import auditRouter from "./audit";
 import objectRechtenRouter from "./object-rechten";
 import aiLogRouter from "./ai-log";
 import avgRouter from "./avg";
+import visualLibraryRouter from "./visual-library";
 import "../services/workflow-configs";
 
 const router: IRouter = Router();
@@ -198,5 +199,6 @@ router.use(auditRouter);
 router.use(objectRechtenRouter);
 router.use(aiLogRouter);
 router.use(avgRouter);
+router.use(visualLibraryRouter);
 
 export default router;
