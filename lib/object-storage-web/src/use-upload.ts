@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useRef, useCallback } from "react";
 import type { UppyFile } from "@uppy/core";
 
 interface UploadMetadata {
@@ -24,8 +24,13 @@ interface UseUploadOptions {
   onError?: (error: Error) => void;
 }
 
+export type UploadFoutType = "netwerk" | "bestandstype" | "overig" | null;
+
 const MAX_DIM = 1920;
 const JPEG_QUALITY = 0.85;
+
+const MAX_POGINGEN = 3;
+const BACKOFF_MS: [number, number] = [500, 1000];
 
 /** Comprimeer een afbeelding client-side via Canvas (max 1920×1920, JPEG 0.85). */
 async function compressImage(file: File): Promise<File> {
@@ -69,6 +74,16 @@ async function compressImage(file: File): Promise<File> {
   });
 }
 
+interface UploadFout extends Error {
+  foutType: UploadFoutType;
+}
+
+function maakUploadFout(bericht: string, type: UploadFoutType): UploadFout {
+  const fout = new Error(bericht) as UploadFout;
+  fout.foutType = type;
+  return fout;
+}
+
 /**
  * React hook voor bestandsuploads via presigned URLs.
  *
@@ -77,6 +92,9 @@ async function compressImage(file: File): Promise<File> {
  * 2. Upload het bestand rechtstreeks naar de presigned URL.
  *
  * Afbeeldingen worden automatisch gecomprimeerd (max 1920×1920, JPEG 0.85).
+ * Bij netwerkverlies tijdens de PUT wordt automatisch tot 3 pogingen gedaan
+ * (exponentiële backoff 500 ms / 1000 ms). Na definitief falen blijft het
+ * laatste bestand beschikbaar via retryUpload().
  */
 export function useUpload(options: UseUploadOptions = {}) {
   const basePath = options.basePath ?? "/api/storage";
@@ -85,7 +103,10 @@ export function useUpload(options: UseUploadOptions = {}) {
 
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
+  const [uploadFoutType, setUploadFoutType] = useState<UploadFoutType>(null);
   const [progress, setProgress] = useState(0);
+
+  const lastFileRef = useRef<File | null>(null);
 
   const requestUploadUrl = useCallback(
     async (file: File): Promise<UploadResponse> => {
@@ -115,17 +136,50 @@ export function useUpload(options: UseUploadOptions = {}) {
 
   const uploadToPresignedUrl = useCallback(
     async (file: File, uploadURL: string): Promise<void> => {
-      const response = await fetch(uploadURL, {
-        method: "PUT",
-        body: file,
-        headers: {
-          "Content-Type": file.type || "application/octet-stream",
-        },
-      });
+      const contentType = file.type || "application/octet-stream";
+      let lastErr: Error | null = null;
 
-      if (!response.ok) {
-        throw new Error("Uploaden naar opslag mislukt");
+      for (let poging = 1; poging <= MAX_POGINGEN; poging++) {
+        try {
+          const response = await fetch(uploadURL, {
+            method: "PUT",
+            body: file,
+            headers: { "Content-Type": contentType },
+          });
+
+          if (!response.ok) {
+            if (response.status >= 400 && response.status < 500) {
+              throw maakUploadFout(
+                `Bestand geweigerd door de opslag (HTTP ${response.status}). Controleer het bestandstype of de bestandsinhoud.`,
+                "bestandstype",
+              );
+            }
+            throw new Error(`HTTP ${response.status}`);
+          }
+          return;
+        } catch (err) {
+          const e = err instanceof Error ? err : new Error("Onbekende fout");
+          if ((e as UploadFout).foutType === "bestandstype") throw e;
+          lastErr = e;
+          if (poging < MAX_POGINGEN) {
+            await new Promise<void>((resolve) =>
+              setTimeout(resolve, BACKOFF_MS[poging - 1]),
+            );
+          }
+        }
       }
+
+      const isNetwerkFout =
+        lastErr instanceof TypeError ||
+        lastErr?.message === "Failed to fetch" ||
+        lastErr?.message === "NetworkError when attempting to fetch resource.";
+
+      throw maakUploadFout(
+        isNetwerkFout
+          ? `Verbinding tijdelijk weggevallen na ${MAX_POGINGEN} pogingen. Controleer uw netwerk en klik op "Opnieuw proberen".`
+          : `Upload definitief mislukt na ${MAX_POGINGEN} pogingen (${lastErr?.message ?? "onbekende fout"}). Klik op "Opnieuw proberen".`,
+        isNetwerkFout ? "netwerk" : "overig",
+      );
     },
     [],
   );
@@ -134,7 +188,9 @@ export function useUpload(options: UseUploadOptions = {}) {
     async (file: File): Promise<UploadResponse | null> => {
       setIsUploading(true);
       setError(null);
+      setUploadFoutType(null);
       setProgress(0);
+      lastFileRef.current = file;
 
       try {
         setProgress(5);
@@ -152,7 +208,10 @@ export function useUpload(options: UseUploadOptions = {}) {
       } catch (err) {
         const uploadError =
           err instanceof Error ? err : new Error("Upload mislukt");
+        const type =
+          (uploadError as UploadFout).foutType ?? "overig";
         setError(uploadError);
+        setUploadFoutType(type);
         options.onError?.(uploadError);
         return null;
       } finally {
@@ -161,6 +220,11 @@ export function useUpload(options: UseUploadOptions = {}) {
     },
     [requestUploadUrl, uploadToPresignedUrl, options],
   );
+
+  const retryUpload = useCallback(async (): Promise<UploadResponse | null> => {
+    if (!lastFileRef.current) return null;
+    return uploadFile(lastFileRef.current);
+  }, [uploadFile]);
 
   const getUploadParameters = useCallback(
     async (
@@ -200,9 +264,11 @@ export function useUpload(options: UseUploadOptions = {}) {
 
   return {
     uploadFile,
+    retryUpload,
     getUploadParameters,
     isUploading,
     error,
+    uploadFoutType,
     progress,
   };
 }

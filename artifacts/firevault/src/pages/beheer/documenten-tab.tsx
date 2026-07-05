@@ -406,7 +406,13 @@ function DocumentFormulier({
   const aiAnalyse = useAiAnalyseDocument();
   const duplicaatCheck = useControleerDocumentDuplicaat();
   const [duplicaten, setDuplicaten] = useState<DocumentDuplicaatMatch[]>([]);
-  const { uploadFile, isUploading } = useUpload({
+  const {
+    uploadFile,
+    retryUpload,
+    isUploading,
+    error: uploadError,
+    uploadFoutType,
+  } = useUpload({
     bestand_type: "rapport",
     onSuccess: (res) => setForm((f) => ({ ...f, pdf_url: res.objectPath })),
   });
@@ -599,7 +605,11 @@ function DocumentFormulier({
 
         <div className="space-y-4">
           {/* Upload */}
-          <div className="border-2 border-dashed border-muted rounded-lg p-4 text-center">
+          <div className={`border-2 border-dashed rounded-lg p-4 text-center ${
+            uploadError && !form.pdf_url
+              ? "border-destructive/50 bg-destructive/5"
+              : "border-muted"
+          }`}>
             <input
               ref={fileRef}
               type="file"
@@ -625,6 +635,20 @@ function DocumentFormulier({
                   Bekijken
                 </a>
               </div>
+            ) : uploadError ? (
+              <>
+                <AlertTriangle className="h-7 w-7 mx-auto text-destructive mb-2" />
+                <p className="text-sm text-destructive mb-1">
+                  {uploadFoutType === "netwerk"
+                    ? "Verbinding tijdelijk weggevallen"
+                    : uploadFoutType === "bestandstype"
+                      ? "Bestandstype geweigerd"
+                      : "Upload mislukt"}
+                </p>
+                <p className="text-xs text-muted-foreground mb-2">
+                  {uploadError.message}
+                </p>
+              </>
             ) : (
               <>
                 <Upload className="h-7 w-7 mx-auto text-muted-foreground mb-2" />
@@ -633,19 +657,32 @@ function DocumentFormulier({
                 </p>
               </>
             )}
-            <Button
-              variant="outline"
-              size="sm"
-              className="mt-2"
-              onClick={() => fileRef.current?.click()}
-              disabled={isUploading || aiBezig}
-            >
-              {isUploading
-                ? "Uploaden..."
-                : form.pdf_url
-                  ? "Ander bestand kiezen"
-                  : "Bestand kiezen"}
-            </Button>
+            <div className="flex items-center justify-center gap-2 mt-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => fileRef.current?.click()}
+                disabled={isUploading || aiBezig}
+              >
+                {isUploading
+                  ? "Uploaden..."
+                  : form.pdf_url
+                    ? "Ander bestand kiezen"
+                    : uploadError
+                      ? "Ander bestand kiezen"
+                      : "Bestand kiezen"}
+              </Button>
+              {uploadError && !form.pdf_url && uploadFoutType !== "bestandstype" && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => void retryUpload()}
+                  disabled={isUploading}
+                >
+                  Opnieuw proberen
+                </Button>
+              )}
+            </div>
           </div>
 
           {aiBezig && (
