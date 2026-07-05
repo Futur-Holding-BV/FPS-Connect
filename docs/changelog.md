@@ -4,6 +4,20 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-05 — Bugfix: gebroken link "Beheren" bij inkomende facturen in gebouwdetail
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+**Bevinding:** Onderzoek van "Kon dashboard niet laden." op `/facturen/dashboard`.
+
+- De dashboard-component, backend-route (`GET /facturen/financieel-dashboard`) en gegenereerde hook zijn allemaal correct.
+- "Kon dashboard niet laden." was een eenmalige transiente fout door een API-server restart — de pagina werkt na vernieuwen.
+- Wél een echte bug gevonden: de knop "Beheren" bij "Inkomende facturen" in gebouw-detail (`detail.tsx` regel 1474) wees naar `/financieel/facturen` — een route die niet bestaat in de frontend router. Klikken leidde de gebruiker naar een lege/niet-bestaande pagina.
+
+**Fix:** URL gecorrigeerd naar `/facturen?gebouw_id=${gebouwId}` (de bestaande facturenlijst-route, gefilterd op gebouw).
+
+---
+
 ## 2026-07-05 — PIM Uitvoering: stappenoverzicht, foto-upload en KB-context
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag

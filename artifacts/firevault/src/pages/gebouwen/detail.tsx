@@ -1471,7 +1471,7 @@ function GebouwFacturenTab({
           </CardTitle>
           {magBeheren && (
             <Button size="sm" variant="outline" asChild>
-              <a href={`/financieel/facturen?gebouw_id=${gebouwId}`}>
+              <a href={`/facturen?gebouw_id=${gebouwId}`}>
                 <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
                 Beheren
               </a>
