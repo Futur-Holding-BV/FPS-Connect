@@ -1,50 +1,45 @@
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { FileText, Search, FolderOpen, Download, Lock, Construction } from "lucide-react";
+import { FileText, Search, FolderOpen, Download, Lock } from "lucide-react";
 
-const GEPLANDE_FUNCTIES = [
-  { icoon: FolderOpen, titel: "Documentenbibliotheek", omschrijving: "Alle brandpreventierapportages op één plek, geordend per gebouw en datum." },
-  { icoon: Search, titel: "Zoeken en filteren", omschrijving: "Snel zoeken op gebouw, type document, datum en status." },
-  { icoon: Download, titel: "Downloaden", omschrijving: "Documenten direct downloaden als PDF." },
-  { icoon: Lock, titel: "Beveiligd toegang", omschrijving: "Alleen uw eigen documenten zijn zichtbaar — volledig afgeschermd per klant." },
+const FEATURES = [
+  { icoon: FolderOpen, titel: "Geordende bibliotheek", omschrijving: "Alle brandpreventierapportages op één plek, logisch gegroepeerd per object." },
+  { icoon: Search, titel: "Snel zoeken", omschrijving: "Direct filteren op gebouw, type document, certificering en datum." },
+  { icoon: Download, titel: "Direct beschikbaar", omschrijving: "Altijd uw actuele certificaten en logboeken downloaden als PDF." },
+  { icoon: Lock, titel: "Beveiligd per klant", omschrijving: "Volledig afgeschermd — alleen geautoriseerde personen hebben toegang." },
 ];
 
 export default function OneDocumenten() {
   return (
-    <div className="space-y-6">
-      <div className="rounded-xl border bg-gradient-to-br from-slate-900 to-slate-800 text-white p-6 md:p-8">
-        <Badge className="mb-4 bg-white/10 text-white border-white/20 hover:bg-white/20">
-          FPS One — Klantomgeving
-        </Badge>
-        <h1 className="text-3xl font-bold tracking-tight">Documenten</h1>
-        <p className="text-slate-300 mt-2 max-w-xl">
-          Uw brandpreventierapportages, certificaten en inspectiepapieren op een veilige, centrale plek.
-        </p>
-        <div className="mt-5 flex items-center gap-2 text-sm text-amber-400">
-          <Construction className="h-4 w-4 shrink-0" />
-          <span>Deze module is in voorbereiding en wordt binnenkort beschikbaar gesteld.</span>
+    <div className="max-w-4xl mx-auto py-12">
+      <div className="text-center mb-16">
+        <div className="inline-flex items-center justify-center w-20 h-20 rounded-[28px] bg-[#0EA5E9]/10 mb-8">
+          <FileText className="w-10 h-10 text-[#0EA5E9]" />
         </div>
+        <h1 className="text-4xl md:text-5xl font-semibold tracking-tight text-zinc-900 mb-6">
+          Uw digitaal archief
+        </h1>
+        <p className="text-xl text-zinc-500 font-light leading-relaxed max-w-2xl mx-auto">
+          We ontwikkelen een premium documentenkluis. Binnenkort beheert u hier al uw certificaten en rapportages met ongekende eenvoud.
+        </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {GEPLANDE_FUNCTIES.map((f) => (
-          <Card key={f.titel} className="border-dashed opacity-70">
-            <CardContent className="pt-5 flex items-start gap-4">
-              <div className="h-10 w-10 rounded-lg bg-slate-100 flex items-center justify-center shrink-0">
-                <f.icoon className="h-5 w-5 text-slate-500" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <p className="font-medium text-sm">{f.titel}</p>
-                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-muted-foreground">
-                    In voorbereiding
-                  </Badge>
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">{f.omschrijving}</p>
-              </div>
-            </CardContent>
-          </Card>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {FEATURES.map((f, i) => (
+          <div key={i} className="bg-white rounded-[24px] p-8 border border-zinc-100 shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
+            <div className="w-12 h-12 rounded-full bg-zinc-50 flex items-center justify-center mb-6">
+              <f.icoon className="w-5 h-5 text-zinc-400" />
+            </div>
+            <h3 className="text-lg font-medium text-zinc-900 mb-2">{f.titel}</h3>
+            <p className="text-zinc-500 leading-relaxed">{f.omschrijving}</p>
+          </div>
         ))}
+      </div>
+      
+      <div className="mt-16 text-center">
+        <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-zinc-100 text-zinc-600 text-sm font-medium">
+          <span className="w-2 h-2 rounded-full bg-[#0EA5E9] animate-pulse"></span>
+          In ontwikkeling — beschikbaar in de volgende update
+        </span>
       </div>
     </div>
   );

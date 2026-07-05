@@ -4,6 +4,37 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-05 — FPS One Design System 2.0 — Premium Spatial UI
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+**Wat is gebouwd:**
+
+Volledig herontwerp van de FPS One klantomgeving. Het platform voelt niet langer als standaard bedrijfssoftware — het heeft de uitstraling van een premium digitaal product (Apple/Arc/Linear/Stripe/Tesla-niveau).
+
+**Ontwerpfilosofie:** "Software moet niet voelen als software. Het moet voelen als een modern gebouw."
+
+**Gewijzigde bestanden:**
+- `artifacts/firevault/src/layouts/klant-layout.tsx` — navigatieredesign: strakke sidebar, max 5 items, FPS-cyaan accentkleur (#0EA5E9), transparante hover-states
+- `artifacts/firevault/src/pages/one/dashboard.tsx` — "Goedemorgen" hero, grote gebouwkaarten live via useListGebouwen(), recente activiteit via useGetRecenteActiviteit(), veel witruimte
+- `artifacts/firevault/src/pages/one/gebouwen.tsx` — grote premium gebouwkaarten met subtiele schaduwen, card-lift animaties on hover, ruime composities
+- `artifacts/firevault/src/pages/one/gebouw-detail.tsx` — hero-sectie met gebouwfoto (useGetGebouwGevelbeeld), veiligheidsstatus-kaarten, rapporten-sectie, premium typografie
+- `artifacts/firevault/src/pages/one/documenten.tsx` — elegante "In voorbereiding" premium staat
+- `artifacts/firevault/src/pages/one/rapporten.tsx` — elegante "In voorbereiding" premium staat
+- `artifacts/firevault/src/pages/one/abonnementen.tsx` — 3 pakketten (Basis/Beheer/Volledig) in premium card-layout
+- `artifacts/firevault/src/pages/one/adviescentrum.tsx` — ruimtelijk adviesformulier
+
+**Designprincipes doorgevoerd:**
+- FPS-cyaan (#0EA5E9) als accentkleur exclusief voor FPS One (gescheiden van Connect oranje #F23B0D)
+- Royale marges en witruimte — geen enkel scherm voelt "vol"
+- Grote afgeronde kaarten (rounded-[24px]/rounded-[32px]) met subtiele schaduwen
+- Sterke typografische hiërarchie — grotere koppen, minder tekst
+- Subtiele card-lift on hover via Tailwind transitions
+- Tablet-first bedieningsvlakken
+- Gebouwen als ingang voor alles
+
+---
+
 ## 2026-07-05 — Publicatielaag Connect → FPS One
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
