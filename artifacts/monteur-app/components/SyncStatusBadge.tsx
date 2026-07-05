@@ -45,6 +45,9 @@ type Props = {
   mislukteItems?: WachtrijItem[];
   onWisMislukte?: () => void;
   onForceerSync?: () => void;
+  onVerwijderItem?: (id: string) => void;
+  onHerprobeeerItem?: (id: string) => void;
+  onHerprobeeerAlle?: () => Promise<void>;
 };
 
 export function SyncStatusBadge({
@@ -54,6 +57,9 @@ export function SyncStatusBadge({
   mislukteItems = [],
   onWisMislukte,
   onForceerSync,
+  onVerwijderItem,
+  onHerprobeeerItem,
+  onHerprobeeerAlle,
 }: Props) {
   const [conflictZichtbaar, setConflictZichtbaar] = useState(false);
   const cfg = CONFIG[status];
@@ -106,10 +112,15 @@ export function SyncStatusBadge({
             onWisMislukte?.();
             setConflictZichtbaar(false);
           }}
-          onHerprobeer={() => {
+          onHerprobeer={async () => {
             setConflictZichtbaar(false);
+            if (onHerprobeeerAlle) {
+              await onHerprobeeerAlle();
+            }
             onForceerSync?.();
           }}
+          onVerwijderItem={onVerwijderItem}
+          onHerprobeeerItem={onHerprobeeerItem}
         />
       </>
     );

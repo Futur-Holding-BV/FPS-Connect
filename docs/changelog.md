@@ -53,6 +53,27 @@ Nieuwe dashboard-kiezer bovenaan het beheerder-dashboard (alleen zichtbaar voor 
   - `kiesFoto` en `maakFoto` gebruiken beide de helper; "Ander bestand kiezen" roept `kiesFoto()` opnieuw aan, "Opnieuw proberen" herprobeert dezelfde URI.
   - Pre-existing typefout hersteld: `uploadFoto(uri, token ?? "")` → `uploadFoto(uri)` (tweede argument is `gebouwId?: number`, niet een token-string).
 
+---
+
+## 2026-07-05 — Offline foto-upload fouten zichtbaar gemeld in monteur-app
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+**Probleem:** Als een foto offline lokaal werd opgeslagen en later via de sync-wachtrij werd geüpload, mislukten fouten stil — de monteur zag geen melding. De ConflictModal kon ook geen items tonen omdat `mislukteItems` niet werd doorgegeven aan de badge.
+
+**Aanpak:**
+
+1. **`lib/syncQueue.ts`** — `herstelMisluktItem(id)` toegevoegd: reset `pogingen` en `fout` van één specifiek wachtrij-item naar 0 zonder de rest van de wachtrij te beïnvloeden.
+
+2. **`context/sync.tsx`** — Twee nieuwe context-functies: `verwijderEnkelMislukt(id)` (verwijdert één mislukt item uit de wachtrij) en `herprobeeerEnkel(id)` (reset dat item voor opnieuw proberen). Beide roepen `herlaadAantal()` aan na de mutatie.
+
+3. **`components/ConflictModal.tsx`** — Per-item "Opnieuw"-knop en "Verwijderen"-knop toegevoegd onder elk mislukt item. Bulkknop hernoemd naar "Alles opnieuw proberen" / "Alle mislukte items verwijderen" voor duidelijkheid.
+
+4. **`components/SyncStatusBadge.tsx`** — Props `onVerwijderItem` en `onHerprobeeerItem` toegevoegd en doorgegeven aan ConflictModal.
+
+5. **`app/gebouwen.tsx` + `app/plattegrond/[verdiepingId].tsx`** — Beide schermen gaven `mislukteItems` niet door aan de badge; hierdoor was de ConflictModal altijd leeg. Nu worden `mislukteItems`, `onForceerSync`, `onVerwijderItem` en `onHerprobeeerItem` correct doorgegeven.
+
+6. **`app/opname/item/[itemId].tsx`** — Inline wachtrij-waarschuwing toegevoegd in de foto-sectie: toont per foto een geel "wacht op synchronisatie"-bericht (pending) of rood "mislukt (N× geprobeerd)"-bericht (definitief mislukt), met per-item "Opnieuw proberen"- en "Verwijderen"-knoppen direct in het scherm.
 
 ---
 

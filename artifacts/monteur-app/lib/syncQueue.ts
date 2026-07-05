@@ -165,6 +165,24 @@ export async function wisMislukteItems(): Promise<number> {
   return items.length - overgebleven.length;
 }
 
+export async function herstelMisluktItem(id: string): Promise<void> {
+  const items = await laadWachtrij();
+  await slaWachtrijOp(
+    items.map((i) =>
+      i.id === id ? { ...i, pogingen: 0, fout: undefined } : i,
+    ),
+  );
+}
+
+export async function herstelAlleMislukteItems(): Promise<number> {
+  const items = await laadWachtrij();
+  const gereset = items.map((i) =>
+    i.pogingen >= MAX_POGINGEN ? { ...i, pogingen: 0, fout: undefined } : i,
+  );
+  await slaWachtrijOp(gereset);
+  return items.filter((i) => i.pogingen >= MAX_POGINGEN).length;
+}
+
 // Verwerk de wachtrij via de opgegeven handler (de SyncContext levert deze).
 export async function verwerkWachtrij(
   handler: (item: WachtrijItem) => Promise<void>,

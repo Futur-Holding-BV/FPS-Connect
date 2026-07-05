@@ -54,6 +54,8 @@ type Props = {
   onSluit: () => void;
   onWisMislukte: () => void;
   onHerprobeer: () => void;
+  onVerwijderItem?: (id: string) => void;
+  onHerprobeeerItem?: (id: string) => void;
 };
 
 export function ConflictModal({
@@ -62,6 +64,8 @@ export function ConflictModal({
   onSluit,
   onWisMislukte,
   onHerprobeer,
+  onVerwijderItem,
+  onHerprobeeerItem,
 }: Props) {
   const c = useColors();
 
@@ -190,7 +194,7 @@ export function ConflictModal({
                       fontFamily: "Inter_400Regular",
                     }}
                   >
-                    {item.pogingen}× geprobeerd
+                    {item.pogingen}&times; geprobeerd
                   </Text>
                 </View>
 
@@ -229,6 +233,63 @@ export function ConflictModal({
                   Aangemaakt:{" "}
                   {new Date(item.aangemaaktOp).toLocaleString("nl-NL")}
                 </Text>
+
+                {(onHerprobeeerItem || onVerwijderItem) ? (
+                  <View style={{ flexDirection: "row", gap: 8, marginTop: 10 }}>
+                    {onHerprobeeerItem ? (
+                      <Pressable
+                        onPress={() => onHerprobeeerItem(item.id)}
+                        style={({ pressed }) => ({
+                          flex: 1,
+                          backgroundColor: pressed
+                            ? "rgba(242,59,13,0.2)"
+                            : "rgba(242,59,13,0.1)",
+                          borderRadius: 7,
+                          paddingVertical: 7,
+                          alignItems: "center",
+                          borderWidth: 1,
+                          borderColor: "rgba(242,59,13,0.3)",
+                        })}
+                      >
+                        <Text
+                          style={{
+                            color: "#F23B0D",
+                            fontSize: 12,
+                            fontFamily: "Inter_600SemiBold",
+                          }}
+                        >
+                          Opnieuw
+                        </Text>
+                      </Pressable>
+                    ) : null}
+                    {onVerwijderItem ? (
+                      <Pressable
+                        onPress={() => onVerwijderItem(item.id)}
+                        style={({ pressed }) => ({
+                          flex: 1,
+                          backgroundColor: pressed
+                            ? "rgba(239,68,68,0.15)"
+                            : "transparent",
+                          borderRadius: 7,
+                          paddingVertical: 7,
+                          alignItems: "center",
+                          borderWidth: 1,
+                          borderColor: "rgba(239,68,68,0.3)",
+                        })}
+                      >
+                        <Text
+                          style={{
+                            color: "#f87171",
+                            fontSize: 12,
+                            fontFamily: "Inter_600SemiBold",
+                          }}
+                        >
+                          Verwijderen
+                        </Text>
+                      </Pressable>
+                    ) : null}
+                  </View>
+                ) : null}
               </View>
             ))}
           </ScrollView>
@@ -254,7 +315,7 @@ export function ConflictModal({
               <Text
                 style={{ color: "#fff", fontFamily: "Inter_600SemiBold", fontSize: 14 }}
               >
-                Opnieuw proberen
+                Alles opnieuw proberen
               </Text>
             </Pressable>
             <Pressable
@@ -275,7 +336,7 @@ export function ConflictModal({
                   fontSize: 14,
                 }}
               >
-                Mislukte items verwijderen
+                Alle mislukte items verwijderen
               </Text>
             </Pressable>
             <Pressable onPress={onSluit} style={{ alignItems: "center", paddingVertical: 8 }}>

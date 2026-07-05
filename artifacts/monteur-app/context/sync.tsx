@@ -16,7 +16,10 @@ import {
   WachtrijItem,
   aantalActief,
   aantalMislukt,
+  herstelAlleMislukteItems,
+  herstelMisluktItem,
   laadWachtrij,
+  verwijderUitWachtrij,
   verwerkWachtrij,
   wisMislukteItems,
 } from "@/lib/syncQueue";
@@ -40,6 +43,9 @@ type SyncContextType = {
   forceerSync: () => Promise<void>;
   herlaadAantal: () => Promise<void>;
   wisMislukte: () => Promise<void>;
+  verwijderEnkelMislukt: (id: string) => Promise<void>;
+  herprobeeerEnkel: (id: string) => Promise<void>;
+  herprobeeerAlle: () => Promise<void>;
 };
 
 const SyncContext = createContext<SyncContextType>({
@@ -51,6 +57,9 @@ const SyncContext = createContext<SyncContextType>({
   forceerSync: async () => {},
   herlaadAantal: async () => {},
   wisMislukte: async () => {},
+  verwijderEnkelMislukt: async () => {},
+  herprobeeerEnkel: async () => {},
+  herprobeeerAlle: async () => {},
 });
 
 async function controleerVerbinding(basis: string): Promise<boolean> {
@@ -95,6 +104,21 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
 
   const wisMislukte = useCallback(async () => {
     await wisMislukteItems();
+    await herlaadAantal();
+  }, [herlaadAantal]);
+
+  const verwijderEnkelMislukt = useCallback(async (id: string) => {
+    await verwijderUitWachtrij(id);
+    await herlaadAantal();
+  }, [herlaadAantal]);
+
+  const herprobeeerEnkel = useCallback(async (id: string) => {
+    await herstelMisluktItem(id);
+    await herlaadAantal();
+  }, [herlaadAantal]);
+
+  const herprobeeerAlle = useCallback(async () => {
+    await herstelAlleMislukteItems();
     await herlaadAantal();
   }, [herlaadAantal]);
 
@@ -453,6 +477,9 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
         forceerSync,
         herlaadAantal,
         wisMislukte,
+        verwijderEnkelMislukt,
+        herprobeeerEnkel,
+        herprobeeerAlle,
       }}
     >
       {children}

@@ -123,7 +123,7 @@ export default function Plattegrond() {
   const aiSpotvoorstel = useAiSpotvoorstel();
   const bewaarAiVoorstel = useBewaarSpotAiVoorstel();
 
-  const { syncStatus, aantalWachtend, aantalMislukt, wisMislukte, forceerSync } = useSync();
+  const { syncStatus, aantalWachtend, aantalMislukt, mislukteItems, wisMislukte, forceerSync, verwijderEnkelMislukt, herprobeeerEnkel, herprobeeerAlle } = useSync();
   const { checkAchievements } = useAchievement();
 
   const [plaatsModus, setPlaatsModus] = useState(false);
@@ -448,7 +448,12 @@ export default function Plattegrond() {
           status={syncStatus}
           aantalWachtend={aantalWachtend}
           aantalMislukt={aantalMislukt}
+          mislukteItems={mislukteItems}
           onWisMislukte={wisMislukte}
+          onForceerSync={forceerSync}
+          onVerwijderItem={verwijderEnkelMislukt}
+          onHerprobeeerItem={herprobeeerEnkel}
+          onHerprobeeerAlle={herprobeeerAlle}
         />
       </View>
 

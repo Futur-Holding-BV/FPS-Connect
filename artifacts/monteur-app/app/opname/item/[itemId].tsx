@@ -8,7 +8,7 @@ import {
 import * as FileSystem from "expo-file-system/legacy";
 import * as ImagePicker from "expo-image-picker";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -31,7 +31,7 @@ import {
   patchOpnameItemLokaal,
   slaOpnameItemOp,
 } from "@/lib/offlineCache";
-import { voegToeAanWachtrij } from "@/lib/syncQueue";
+import { MAX_POGINGEN, WachtrijItem, laadWachtrij, voegToeAanWachtrij } from "@/lib/syncQueue";
 
 const SPOT_TYPEN = [
   { waarde: "branddeur", label: "Branddeur", kleur: "#ef4444" },
@@ -72,7 +72,7 @@ export default function OpnameItemDetail() {
   const { itemId } = useLocalSearchParams<{ itemId: string }>();
   const id = Number(itemId);
   const { isOnline } = useOffline();
-  const { herlaadAantal } = useSync();
+  const { herlaadAantal, verwijderEnkelMislukt, herprobeeerEnkel, aantalWachtend, aantalMislukt } = useSync();
   const fotoMapGemaakt = useRef(false);
 
   const { data: item, isLoading, refetch } = useGetOpnameItem(id);
@@ -95,9 +95,24 @@ export default function OpnameItemDetail() {
   const [lokaleFotos, setLokaleFotos] = useState<string[]>([]);
   const [gecachedItem, setGecachedItem] = useState<Record<string, unknown> | null>(null);
   const [uploadFout, setUploadFout] = useState<{ type: "netwerk" | "bestandstype" | "overig"; bericht: string } | null>(null);
+  const [wachtrijFotos, setWachtrijFotos] = useState<WachtrijItem[]>([]);
   const laatstUriRef = useRef<string | null>(null);
 
+  const herlaadWachtrijFotos = useCallback(async () => {
+    const alle = await laadWachtrij();
+    setWachtrijFotos(
+      alle.filter(
+        (i): i is WachtrijItem & { type: "upload_foto_lokaal" } =>
+          i.type === "upload_foto_lokaal" && (i as { itemId?: number }).itemId === id,
+      ),
+    );
+  }, [id]);
+
   const fotoDir = `${FileSystem.documentDirectory ?? ""}opname-fotos/${id}/`;
+
+  useEffect(() => {
+    void herlaadWachtrijFotos();
+  }, [herlaadWachtrijFotos, aantalWachtend, aantalMislukt]);
 
   useEffect(() => {
     if (!item) return;
@@ -254,6 +269,7 @@ export default function OpnameItemDetail() {
           fase: "uitvoering",
         });
         await herlaadAantal();
+        await herlaadWachtrijFotos();
       } catch {
         Alert.alert("Fout", "Foto kon niet lokaal worden opgeslagen.");
       } finally {
@@ -591,7 +607,7 @@ export default function OpnameItemDetail() {
             )}
 
             {/* Foto's sectie */}
-            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: wachtrijFotos.length > 0 ? 8 : 12 }}>
               <Text style={{ fontSize: 15, fontFamily: "Inter_700Bold", color: c.foreground }}>
                 Foto's {(fotos.length + lokaleFotos.length) > 0 ? `(${fotos.length + lokaleFotos.length})` : ""}
               </Text>
@@ -618,6 +634,126 @@ export default function OpnameItemDetail() {
                 </Text>
               </Pressable>
             </View>
+
+            {/* Wachtrij foto-meldingen (pending en mislukt) */}
+            {wachtrijFotos.length > 0 ? (
+              <View style={{ gap: 6, marginBottom: 12 }}>
+                {wachtrijFotos.map((item) => {
+                  const isMislukt = item.pogingen >= MAX_POGINGEN;
+                  return (
+                    <View
+                      key={item.id}
+                      style={{
+                        backgroundColor: isMislukt
+                          ? "rgba(239,68,68,0.08)"
+                          : "rgba(234,179,8,0.08)",
+                        borderWidth: 1,
+                        borderColor: isMislukt
+                          ? "rgba(239,68,68,0.3)"
+                          : "rgba(234,179,8,0.3)",
+                        borderRadius: 10,
+                        padding: 10,
+                        flexDirection: "row",
+                        alignItems: "flex-start",
+                        gap: 8,
+                      }}
+                    >
+                      <Ionicons
+                        name={isMislukt ? "warning-outline" : "time-outline"}
+                        size={15}
+                        color={isMislukt ? "#ef4444" : "#facc15"}
+                        style={{ marginTop: 1 }}
+                      />
+                      <View style={{ flex: 1 }}>
+                        <Text
+                          style={{
+                            color: isMislukt ? "#ef4444" : "#facc15",
+                            fontSize: 12,
+                            fontFamily: "Inter_600SemiBold",
+                            marginBottom: 2,
+                          }}
+                        >
+                          {isMislukt
+                            ? `Foto uploaden mislukt (${item.pogingen}\u00d7 geprobeerd)`
+                            : "Foto wacht op synchronisatie"}
+                        </Text>
+                        {item.fout ? (
+                          <Text
+                            style={{
+                              color: "#ef4444",
+                              fontSize: 11,
+                              fontFamily: "Inter_400Regular",
+                              marginBottom: 6,
+                            }}
+                            numberOfLines={2}
+                          >
+                            {item.fout}
+                          </Text>
+                        ) : null}
+                        {isMislukt ? (
+                          <View style={{ flexDirection: "row", gap: 8, marginTop: 4 }}>
+                            <Pressable
+                              onPress={async () => {
+                                await herprobeeerEnkel(item.id);
+                                await herlaadWachtrijFotos();
+                              }}
+                              style={({ pressed }) => ({
+                                flex: 1,
+                                backgroundColor: pressed
+                                  ? "rgba(242,59,13,0.2)"
+                                  : "rgba(242,59,13,0.1)",
+                                borderRadius: 7,
+                                paddingVertical: 6,
+                                alignItems: "center",
+                                borderWidth: 1,
+                                borderColor: "rgba(242,59,13,0.3)",
+                              })}
+                            >
+                              <Text
+                                style={{
+                                  color: "#F23B0D",
+                                  fontSize: 12,
+                                  fontFamily: "Inter_600SemiBold",
+                                }}
+                              >
+                                Opnieuw proberen
+                              </Text>
+                            </Pressable>
+                            <Pressable
+                              onPress={async () => {
+                                await verwijderEnkelMislukt(item.id);
+                                await herlaadWachtrijFotos();
+                              }}
+                              style={({ pressed }) => ({
+                                flex: 1,
+                                backgroundColor: pressed
+                                  ? "rgba(239,68,68,0.15)"
+                                  : "transparent",
+                                borderRadius: 7,
+                                paddingVertical: 6,
+                                alignItems: "center",
+                                borderWidth: 1,
+                                borderColor: "rgba(239,68,68,0.3)",
+                              })}
+                            >
+                              <Text
+                                style={{
+                                  color: "#f87171",
+                                  fontSize: 12,
+                                  fontFamily: "Inter_600SemiBold",
+                                }}
+                              >
+                                Verwijderen
+                              </Text>
+                            </Pressable>
+                          </View>
+                        ) : null}
+                      </View>
+                    </View>
+                  );
+                })}
+              </View>
+            ) : null}
 
             {/* Upload-foutmelding */}
             {uploadFout ? (

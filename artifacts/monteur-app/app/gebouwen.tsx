@@ -29,7 +29,7 @@ export default function Gebouwen() {
   const itemBreedte =
     kolommen > 1 ? (beschikbareBreedte - RASTER_GAP * (kolommen - 1)) / kolommen : undefined;
   const { gebruiker, token, uitloggen } = useAuth();
-  const { syncStatus, aantalWachtend, aantalMislukt, wisMislukte, forceerSync, isSyncing } =
+  const { syncStatus, aantalWachtend, aantalMislukt, mislukteItems, wisMislukte, forceerSync, isSyncing, verwijderEnkelMislukt, herprobeeerEnkel, herprobeeerAlle } =
     useSync();
   const [zoek, setZoek] = useState("");
 
@@ -162,7 +162,12 @@ export default function Gebouwen() {
             status={syncStatus}
             aantalWachtend={aantalWachtend}
             aantalMislukt={aantalMislukt}
+            mislukteItems={mislukteItems}
             onWisMislukte={wisMislukte}
+            onForceerSync={forceerSync}
+            onVerwijderItem={verwijderEnkelMislukt}
+            onHerprobeeerItem={herprobeeerEnkel}
+            onHerprobeeerAlle={herprobeeerAlle}
           />
           {aantalWachtend > 0 && !isSyncing && (
             <Pressable
