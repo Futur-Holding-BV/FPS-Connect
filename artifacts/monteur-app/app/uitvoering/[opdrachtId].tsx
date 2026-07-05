@@ -20,8 +20,10 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  Modal,
   Pressable,
   ScrollView,
+  StatusBar,
   Text,
   TextInput,
   View,
@@ -106,6 +108,55 @@ const VISUAL_LABELS: Record<string, string> = {
   "3d_weergave": "3D-weergave",
 };
 
+function VergrootModal({
+  visual,
+  zichtbaar,
+  onSluiten,
+  c,
+}: {
+  visual: GuidanceVisual;
+  zichtbaar: boolean;
+  onSluiten: () => void;
+  c: ReturnType<typeof useColors>;
+}) {
+  const { token } = useAuth();
+  const imageUri = `https://${DOMEIN}/api/storage${visual.object_path}`;
+  const authHeaders = token ? { Authorization: `Bearer ${token}` } : undefined;
+
+  return (
+    <Modal
+      visible={zichtbaar}
+      transparent
+      animationType="fade"
+      onRequestClose={onSluiten}
+      statusBarTranslucent
+    >
+      <StatusBar backgroundColor="rgba(0,0,0,0.92)" barStyle="light-content" />
+      <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.92)", alignItems: "center", justifyContent: "center" }}>
+        <Pressable
+          onPress={onSluiten}
+          style={{ position: "absolute", top: 44, right: 20, zIndex: 10, backgroundColor: "rgba(255,255,255,0.15)", borderRadius: 20, padding: 8 }}
+        >
+          <Ionicons name="close" size={22} color="#fff" />
+        </Pressable>
+        <View style={{ paddingHorizontal: 20, width: "100%", gap: 8 }}>
+          <Text style={{ color: "rgba(255,255,255,0.6)", fontSize: 11, fontFamily: "Inter_600SemiBold", textTransform: "uppercase", letterSpacing: 0.4, textAlign: "center" }}>
+            {VISUAL_LABELS[visual.type] ?? visual.type}
+          </Text>
+          <Image
+            source={{ uri: imageUri, headers: authHeaders }}
+            style={{ width: "100%", aspectRatio: 4 / 3, borderRadius: 10, backgroundColor: c.accent }}
+            resizeMode="contain"
+          />
+          <Text style={{ color: "#fff", fontSize: 14, fontFamily: "Inter_600SemiBold", textAlign: "center" }} numberOfLines={2}>
+            {visual.naam}
+          </Text>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
 function GuidanceThumbnail({
   visual,
   label,
@@ -116,6 +167,7 @@ function GuidanceThumbnail({
   c: ReturnType<typeof useColors>;
 }) {
   const { token } = useAuth();
+  const [vergroot, setVergroot] = useState(false);
   const imageUri = `https://${DOMEIN}/api/storage${visual.object_path}`;
   const authHeaders = token ? { Authorization: `Bearer ${token}` } : undefined;
 
@@ -124,7 +176,8 @@ function GuidanceThumbnail({
       <Text style={{ color: c.mutedForeground, fontSize: 10, fontFamily: "Inter_600SemiBold", textTransform: "uppercase", letterSpacing: 0.4, textAlign: "center" }}>
         {label}
       </Text>
-      <View
+      <Pressable
+        onPress={() => setVergroot(true)}
         style={{
           aspectRatio: 4 / 3,
           backgroundColor: c.accent,
@@ -150,16 +203,23 @@ function GuidanceThumbnail({
             backgroundColor: "rgba(0,0,0,0.45)",
             paddingHorizontal: 4,
             paddingVertical: 2,
+            flexDirection: "row",
+            justifyContent: "space-between",
+            alignItems: "center",
           }}
         >
-          <Text style={{ color: "#fff", fontSize: 10, fontFamily: "Inter_400Regular" }} numberOfLines={1}>
+          <Text style={{ color: "#fff", fontSize: 10, fontFamily: "Inter_400Regular", flex: 1 }} numberOfLines={1}>
             {VISUAL_LABELS[visual.type] ?? visual.type}
           </Text>
+          <Ionicons name="expand-outline" size={11} color="rgba(255,255,255,0.8)" />
         </View>
-      </View>
+      </Pressable>
       <Text style={{ color: c.foreground, fontSize: 11, fontFamily: "Inter_400Regular", textAlign: "center", lineHeight: 15 }} numberOfLines={2}>
         {visual.naam}
       </Text>
+      {vergroot && (
+        <VergrootModal visual={visual} zichtbaar={vergroot} onSluiten={() => setVergroot(false)} c={c} />
+      )}
     </View>
   );
 }
@@ -939,11 +999,27 @@ function StapKaart({
 }) {
   const instructie = parseInstructie(stap.instructie_json);
   const guidance = parseGuidance(stap.guidance_context);
+  const vgeRanMaarLeeg =
+    stap.guidance_context !== null &&
+    stap.guidance_context !== undefined &&
+    typeof stap.guidance_context === "object" &&
+    "vge_versie" in (stap.guidance_context as object) &&
+    !guidance;
 
   return (
     <>
       {guidance && (
         <GuidanceSectie guidance={guidance} c={c} />
+      )}
+      {vgeRanMaarLeeg && (
+        <Sectie titel="Visuele begeleiding">
+          <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
+            <Ionicons name="image-outline" size={18} color={c.mutedForeground} />
+            <Text style={{ color: c.mutedForeground, fontSize: 13, fontFamily: "Inter_400Regular", flex: 1, lineHeight: 18 }}>
+              Geen visuele instructie beschikbaar voor dit spot-type.
+            </Text>
+          </View>
+        </Sectie>
       )}
 
       {instructie?.doel && (

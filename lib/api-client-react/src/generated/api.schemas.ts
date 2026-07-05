@@ -10877,6 +10877,27 @@ export interface FieJaarprognose {
   werkmaatschappij_verdeling?: FieWerkmaatschappijPrognose[];
 }
 
+export interface VisualGuidanceSlot {
+  visual_id: number;
+  naam: string;
+  type: string;
+  bron_type: string;
+  object_path: string;
+  /** @nullable */
+  effectiviteits_score?: number | null;
+}
+
+export interface VisualGuidanceResult {
+  wat_zie_je_nu?: VisualGuidanceSlot | null;
+  wat_is_eindresultaat?: VisualGuidanceSlot | null;
+  hoe_doe_je_dit?: VisualGuidanceSlot | null;
+  aandachtspunten: string[];
+  veiligheidsrisicos: string[];
+  max_visuals_getoond: number;
+  gegenereerd_op: string;
+  vge_versie: string;
+}
+
 export interface Visual {
   id: number;
   naam: string;
@@ -11804,5 +11825,26 @@ export type ListVisualsActief = typeof ListVisualsActief[keyof typeof ListVisual
 export const ListVisualsActief = {
   true: true,
   false: false,
+} as const;
+
+export type GetVisualsGuidanceParams = {
+/**
+ * Spot-type waarvoor guidance wordt gezocht (bijv. branddeur, doorvoering)
+ */
+spot_type: string;
+/**
+ * Type uitvoeringsstap; standaard 'montage' als niet opgegeven
+ */
+stap_type?: GetVisualsGuidanceStapType;
+};
+
+export type GetVisualsGuidanceStapType = typeof GetVisualsGuidanceStapType[keyof typeof GetVisualsGuidanceStapType];
+
+
+export const GetVisualsGuidanceStapType = {
+  voorbereiding: 'voorbereiding',
+  montage: 'montage',
+  controle: 'controle',
+  foto: 'foto',
 } as const;
 

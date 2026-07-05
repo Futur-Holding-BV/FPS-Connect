@@ -24715,6 +24715,67 @@ export const ListVisualsResponse = zod.array(ListVisualsResponseItem)
 
 
 /**
+ * @summary Nieuwe visual aanmaken
+ */
+export const CreateVisualBody = zod.object({
+  "naam": zod.string(),
+  "visual_type": zod.string(),
+  "bron_type": zod.string(),
+  "bron_referentie": zod.string().optional(),
+  "object_path": zod.string(),
+  "thumbnail_path": zod.string().optional(),
+  "spot_type": zod.array(zod.string()),
+  "artikel_id": zod.number().optional(),
+  "bedrijfsstandaard_id": zod.number().optional(),
+  "taal": zod.string().optional()
+})
+
+export const CreateVisualResponse = zod.void()
+
+
+/**
+ * Voert de Visual Guidance Engine (VGE) selectiepijplijn uit op basis van spot_type en stap_type. Geeft maximaal 3 visuals terug als VisualGuidanceResult. Bij een lege Visual Library geeft max_visuals_getoond=0 terug zonder fout. Toegankelijk voor alle ingelogde gebruikers (ook monteurs).
+ * @summary VGE visuele begeleiding ophalen voor een uitvoeringsstap
+ */
+export const GetVisualsGuidanceQueryParams = zod.object({
+  "spot_type": zod.coerce.string().describe('Spot-type waarvoor guidance wordt gezocht (bijv. branddeur, doorvoering)'),
+  "stap_type": zod.enum(['voorbereiding', 'montage', 'controle', 'foto']).optional().describe('Type uitvoeringsstap; standaard \'montage\' als niet opgegeven')
+})
+
+export const GetVisualsGuidanceResponse = zod.object({
+  "wat_zie_je_nu": zod.object({
+  "visual_id": zod.number(),
+  "naam": zod.string(),
+  "type": zod.string(),
+  "bron_type": zod.string(),
+  "object_path": zod.string(),
+  "effectiviteits_score": zod.number().nullish()
+}).nullish(),
+  "wat_is_eindresultaat": zod.object({
+  "visual_id": zod.number(),
+  "naam": zod.string(),
+  "type": zod.string(),
+  "bron_type": zod.string(),
+  "object_path": zod.string(),
+  "effectiviteits_score": zod.number().nullish()
+}).nullish(),
+  "hoe_doe_je_dit": zod.object({
+  "visual_id": zod.number(),
+  "naam": zod.string(),
+  "type": zod.string(),
+  "bron_type": zod.string(),
+  "object_path": zod.string(),
+  "effectiviteits_score": zod.number().nullish()
+}).nullish(),
+  "aandachtspunten": zod.array(zod.string()),
+  "veiligheidsrisicos": zod.array(zod.string()),
+  "max_visuals_getoond": zod.number(),
+  "gegenereerd_op": zod.string(),
+  "vge_versie": zod.string()
+})
+
+
+/**
  * @summary Detail van een visual
  */
 export const GetVisualParams = zod.object({

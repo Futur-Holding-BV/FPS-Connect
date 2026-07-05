@@ -2,13 +2,16 @@ import { Router } from "express";
 import { db } from "@workspace/db";
 import { and, asc, desc, eq, sql } from "drizzle-orm";
 import { fpsVisualsTable } from "@workspace/db/schema";
-import { requireBevoegdheid } from "../middlewares/auth";
+import { requireAuth, requireBevoegdheid } from "../middlewares/auth";
 import { logger } from "../lib/logger";
+import { selectVisuals, serializeVisualSet, type StapType } from "../lib/vgeService";
 
 const router = Router();
 
 const systeemLezen     = requireBevoegdheid("systeem", 1);
 const systeemSchrijven = requireBevoegdheid("systeem", 2);
+
+const GELDIGE_STAP_TYPES: StapType[] = ["voorbereiding", "montage", "controle", "foto"];
 
 function mapRij(r: typeof fpsVisualsTable.$inferSelect) {
   return {
@@ -28,6 +31,39 @@ function mapRij(r: typeof fpsVisualsTable.$inferSelect) {
     bijgewerkt_op: r.bijgewerktOp?.toISOString() ?? null,
   };
 }
+
+/** GET /visuals/guidance — VGE selectiepijplijn voor monteurs
+ *
+ * Query params:
+ *   spot_type  (verplicht) — spot-type waarvoor guidance gezocht wordt
+ *   stap_type  (optioneel, default 'montage') — voorbereiding | montage | controle | foto
+ *
+ * Toegankelijk voor alle ingelogde gebruikers (requireAuth), niet alleen beheerders.
+ */
+router.get("/visuals/guidance", requireAuth, async (req, res): Promise<void> => {
+  const { spot_type, stap_type } = req.query as Record<string, string | undefined>;
+
+  if (!spot_type || !spot_type.trim()) {
+    res.status(400).json({ error: "spot_type is verplicht" });
+    return;
+  }
+
+  const stapType: StapType = (GELDIGE_STAP_TYPES as string[]).includes(stap_type ?? "")
+    ? (stap_type as StapType)
+    : "montage";
+
+  try {
+    const set = await selectVisuals({
+      stapId: 0,
+      spotType: spot_type.trim(),
+      stapType,
+    });
+    res.json(serializeVisualSet(set));
+  } catch (err) {
+    logger.error({ err }, "visuals/guidance: VGE selectie mislukt");
+    res.status(500).json({ error: "Serverfout" });
+  }
+});
 
 /** GET /visuals — lijst van alle visuals (actief-filter optioneel) */
 router.get("/visuals", systeemLezen, async (req, res): Promise<void> => {

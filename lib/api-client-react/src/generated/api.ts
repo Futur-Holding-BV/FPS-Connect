@@ -280,6 +280,7 @@ import type {
   GetVeiligheidToolboxenParams,
   GetVerlofOverzichtParams,
   GetVervaldagenParams,
+  GetVisualsGuidanceParams,
   GetZiekmeldingenStatistiekenParams,
   GoLiveAdvies,
   GoLiveAdviesActie,
@@ -745,6 +746,8 @@ import type {
   Vervaldag,
   VerzendOfferte200,
   Visual,
+  VisualGuidanceResult,
+  VisualInput,
   VisualPatch,
   Voertuig,
   VoertuigInput,
@@ -70298,6 +70301,159 @@ export function useListVisuals<TData = Awaited<ReturnType<typeof listVisuals>>, 
 }
 
 
+
+
+
+
+
+export const getCreateVisualUrl = () => {
+
+
+
+
+  return `/api/visuals`
+}
+
+/**
+ * @summary Nieuwe visual aanmaken
+ */
+export const createVisual = async (visualInput: VisualInput, options?: RequestInit): Promise<Visual> => {
+
+  return customFetch<Visual>(getCreateVisualUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(visualInput)
+  }
+);}
+
+
+
+
+export const getCreateVisualMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createVisual>>, TError,{data: BodyType<VisualInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createVisual>>, TError,{data: BodyType<VisualInput>}, TContext> => {
+
+const mutationKey = ['createVisual'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createVisual>>, {data: BodyType<VisualInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createVisual(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateVisualMutationResult = NonNullable<Awaited<ReturnType<typeof createVisual>>>
+    export type CreateVisualMutationBody = BodyType<VisualInput>
+    export type CreateVisualMutationError = ErrorType<void>
+
+    /**
+ * @summary Nieuwe visual aanmaken
+ */
+export const useCreateVisual = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createVisual>>, TError,{data: BodyType<VisualInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createVisual>>,
+        TError,
+        {data: BodyType<VisualInput>},
+        TContext
+      > => {
+      return useMutation(getCreateVisualMutationOptions(options));
+    }
+
+export const getGetVisualsGuidanceUrl = (params: GetVisualsGuidanceParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/visuals/guidance?${stringifiedParams}` : `/api/visuals/guidance`
+}
+
+/**
+ * Voert de Visual Guidance Engine (VGE) selectiepijplijn uit op basis van spot_type en stap_type. Geeft maximaal 3 visuals terug als VisualGuidanceResult. Bij een lege Visual Library geeft max_visuals_getoond=0 terug zonder fout. Toegankelijk voor alle ingelogde gebruikers (ook monteurs).
+ * @summary VGE visuele begeleiding ophalen voor een uitvoeringsstap
+ */
+export const getVisualsGuidance = async (params: GetVisualsGuidanceParams, options?: RequestInit): Promise<VisualGuidanceResult> => {
+
+  return customFetch<VisualGuidanceResult>(getGetVisualsGuidanceUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetVisualsGuidanceQueryKey = (params?: GetVisualsGuidanceParams,) => {
+    return [
+    `/api/visuals/guidance`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetVisualsGuidanceQueryOptions = <TData = Awaited<ReturnType<typeof getVisualsGuidance>>, TError = ErrorType<void>>(params: GetVisualsGuidanceParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getVisualsGuidance>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetVisualsGuidanceQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getVisualsGuidance>>> = ({ signal }) => getVisualsGuidance(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getVisualsGuidance>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetVisualsGuidanceQueryResult = NonNullable<Awaited<ReturnType<typeof getVisualsGuidance>>>
+export type GetVisualsGuidanceQueryError = ErrorType<void>
+
+
+/**
+ * @summary VGE visuele begeleiding ophalen voor een uitvoeringsstap
+ */
+
+export function useGetVisualsGuidance<TData = Awaited<ReturnType<typeof getVisualsGuidance>>, TError = ErrorType<void>>(
+ params: GetVisualsGuidanceParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getVisualsGuidance>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetVisualsGuidanceQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
 
 
 

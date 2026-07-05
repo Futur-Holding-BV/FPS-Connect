@@ -20009,6 +20009,37 @@ paths:
                 items:
                   $ref: '#/components/schemas/Visual'
 
+  /visuals/guidance:
+    get:
+      operationId: getVisualsGuidance
+      tags: [visuals]
+      summary: VGE visuele begeleiding ophalen voor een uitvoeringsstap
+      description: >
+        Voert de Visual Guidance Engine (VGE) selectiepijplijn uit op basis van
+        spot_type en stap_type. Geeft maximaal 3 visuals terug als VisualGuidanceResult.
+        Bij een lege Visual Library geeft max_visuals_getoond=0 terug zonder fout.
+        Toegankelijk voor alle ingelogde gebruikers (ook monteurs).
+      parameters:
+        - name: spot_type
+          in: query
+          required: true
+          schema: { type: string }
+          description: Spot-type waarvoor guidance wordt gezocht (bijv. branddeur, doorvoering)
+        - name: stap_type
+          in: query
+          schema:
+            type: string
+            enum: [voorbereiding, montage, controle, foto]
+          description: Type uitvoeringsstap; standaard 'montage' als niet opgegeven
+      responses:
+        '200':
+          description: VGE guidance resultaat
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/VisualGuidanceResult' }
+        '400':
+          description: Validatiefout (spot_type ontbreekt of stap_type ongeldig)
+
   /visuals/{id}:
     get:
       operationId: getVisual
@@ -36283,6 +36314,43 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/FieWerkmaatschappijPrognose"
+
+    VisualGuidanceSlot:
+      type: object
+      required: [visual_id, naam, type, bron_type, object_path]
+      properties:
+        visual_id:            { type: integer }
+        naam:                 { type: string }
+        type:                 { type: string }
+        bron_type:            { type: string }
+        object_path:          { type: string }
+        effectiviteits_score: { type: ["number", "null"] }
+
+    VisualGuidanceResult:
+      type: object
+      required: [aandachtspunten, veiligheidsrisicos, max_visuals_getoond, gegenereerd_op, vge_versie]
+      properties:
+        wat_zie_je_nu:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/VisualGuidanceSlot'
+        wat_is_eindresultaat:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/VisualGuidanceSlot'
+        hoe_doe_je_dit:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/VisualGuidanceSlot'
+        aandachtspunten:
+          type: array
+          items: { type: string }
+        veiligheidsrisicos:
+          type: array
+          items: { type: string }
+        max_visuals_getoond: { type: integer }
+        gegenereerd_op:      { type: string }
+        vge_versie:          { type: string }
 
     Visual:
       type: object
