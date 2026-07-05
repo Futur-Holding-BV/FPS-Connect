@@ -120,6 +120,7 @@ function VergrootModal({
   c: ReturnType<typeof useColors>;
 }) {
   const { token } = useAuth();
+  const [laadFout, setLaadFout] = useState(false);
   const imageUri = `https://${DOMEIN}/api/storage${visual.object_path}`;
   const authHeaders = token ? { Authorization: `Bearer ${token}` } : undefined;
 
@@ -143,11 +144,21 @@ function VergrootModal({
           <Text style={{ color: "rgba(255,255,255,0.6)", fontSize: 11, fontFamily: "Inter_600SemiBold", textTransform: "uppercase", letterSpacing: 0.4, textAlign: "center" }}>
             {VISUAL_LABELS[visual.type] ?? visual.type}
           </Text>
-          <Image
-            source={{ uri: imageUri, headers: authHeaders }}
-            style={{ width: "100%", aspectRatio: 4 / 3, borderRadius: 10, backgroundColor: c.accent }}
-            resizeMode="contain"
-          />
+          {laadFout ? (
+            <View style={{ width: "100%", aspectRatio: 4 / 3, borderRadius: 10, backgroundColor: "rgba(255,255,255,0.08)", alignItems: "center", justifyContent: "center", gap: 8 }}>
+              <Ionicons name="image-outline" size={40} color="rgba(255,255,255,0.35)" />
+              <Text style={{ color: "rgba(255,255,255,0.5)", fontSize: 13, fontFamily: "Inter_400Regular", textAlign: "center" }}>
+                Visual niet beschikbaar
+              </Text>
+            </View>
+          ) : (
+            <Image
+              source={{ uri: imageUri, headers: authHeaders }}
+              style={{ width: "100%", aspectRatio: 4 / 3, borderRadius: 10, backgroundColor: c.accent }}
+              resizeMode="contain"
+              onError={() => setLaadFout(true)}
+            />
+          )}
           <Text style={{ color: "#fff", fontSize: 14, fontFamily: "Inter_600SemiBold", textAlign: "center" }} numberOfLines={2}>
             {visual.naam}
           </Text>
@@ -168,6 +179,7 @@ function GuidanceThumbnail({
 }) {
   const { token } = useAuth();
   const [vergroot, setVergroot] = useState(false);
+  const [laadFout, setLaadFout] = useState(false);
   const imageUri = `https://${DOMEIN}/api/storage${visual.object_path}`;
   const authHeaders = token ? { Authorization: `Bearer ${token}` } : undefined;
 
@@ -177,7 +189,7 @@ function GuidanceThumbnail({
         {label}
       </Text>
       <Pressable
-        onPress={() => setVergroot(true)}
+        onPress={() => !laadFout && setVergroot(true)}
         style={{
           aspectRatio: 4 / 3,
           backgroundColor: c.accent,
@@ -189,30 +201,42 @@ function GuidanceThumbnail({
           justifyContent: "center",
         }}
       >
-        <Image
-          source={{ uri: imageUri, headers: authHeaders }}
-          style={{ width: "100%", height: "100%" }}
-          resizeMode="cover"
-        />
-        <View
-          style={{
-            position: "absolute",
-            bottom: 0,
-            left: 0,
-            right: 0,
-            backgroundColor: "rgba(0,0,0,0.45)",
-            paddingHorizontal: 4,
-            paddingVertical: 2,
-            flexDirection: "row",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <Text style={{ color: "#fff", fontSize: 10, fontFamily: "Inter_400Regular", flex: 1 }} numberOfLines={1}>
-            {VISUAL_LABELS[visual.type] ?? visual.type}
-          </Text>
-          <Ionicons name="expand-outline" size={11} color="rgba(255,255,255,0.8)" />
-        </View>
+        {laadFout ? (
+          <View style={{ flex: 1, width: "100%", alignItems: "center", justifyContent: "center", gap: 6 }}>
+            <Ionicons name="image-outline" size={28} color={c.mutedForeground} />
+            <Text style={{ color: c.mutedForeground, fontSize: 11, fontFamily: "Inter_400Regular", textAlign: "center", paddingHorizontal: 8 }}>
+              Visual niet beschikbaar
+            </Text>
+          </View>
+        ) : (
+          <>
+            <Image
+              source={{ uri: imageUri, headers: authHeaders }}
+              style={{ width: "100%", height: "100%" }}
+              resizeMode="cover"
+              onError={() => setLaadFout(true)}
+            />
+            <View
+              style={{
+                position: "absolute",
+                bottom: 0,
+                left: 0,
+                right: 0,
+                backgroundColor: "rgba(0,0,0,0.45)",
+                paddingHorizontal: 4,
+                paddingVertical: 2,
+                flexDirection: "row",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <Text style={{ color: "#fff", fontSize: 10, fontFamily: "Inter_400Regular", flex: 1 }} numberOfLines={1}>
+                {VISUAL_LABELS[visual.type] ?? visual.type}
+              </Text>
+              <Ionicons name="expand-outline" size={11} color="rgba(255,255,255,0.8)" />
+            </View>
+          </>
+        )}
       </Pressable>
       <Text style={{ color: c.foreground, fontSize: 11, fontFamily: "Inter_400Regular", textAlign: "center", lineHeight: 15 }} numberOfLines={2}>
         {visual.naam}
