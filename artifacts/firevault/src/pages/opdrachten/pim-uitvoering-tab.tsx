@@ -182,6 +182,7 @@ interface VoltooienFormProps {
 function VoltooienForm({ stap, opdrachtId, onGereed }: VoltooienFormProps) {
   const [antwoord, setAntwoord] = useState(false);
   const [opmerkingen, setOpmerkingen] = useState("");
+  const [fotoUrls, setFotoUrls] = useState("");
   const [afwijkingModus, setAfwijkingModus] = useState(false);
   const [afwijkingOmschrijving, setAfwijkingOmschrijving] = useState("");
   const { toast } = useToast();
@@ -239,6 +240,20 @@ function VoltooienForm({ stap, opdrachtId, onGereed }: VoltooienFormProps) {
             rows={4}
           />
         </div>
+        <div className="space-y-1">
+          <Label htmlFor="afwijking-foto-urls" className="flex items-center gap-1.5">
+            <Camera className="h-3.5 w-3.5 text-slate-500" />
+            Foto-URL&#x27;s afwijking (optioneel, per regel)
+          </Label>
+          <Textarea
+            id="afwijking-foto-urls"
+            placeholder={"uploads/afwijking-1.jpg"}
+            value={fotoUrls}
+            onChange={(e) => setFotoUrls(e.target.value)}
+            rows={2}
+            className="font-mono text-xs"
+          />
+        </div>
         <div className="flex gap-2">
           <Button
             variant="outline"
@@ -249,7 +264,17 @@ function VoltooienForm({ stap, opdrachtId, onGereed }: VoltooienFormProps) {
           <Button
             className="bg-amber-600 hover:bg-amber-700"
             disabled={!afwijkingOmschrijving.trim() || afwijkingMutatie.isPending}
-            onClick={() => afwijkingMutatie.mutate({ id: opdrachtId, stapId: stap.id, data: { omschrijving: afwijkingOmschrijving.trim() } })}
+            onClick={() => {
+              const parsedUrls = fotoUrls.split("\n").map((u) => u.trim()).filter(Boolean);
+              afwijkingMutatie.mutate({
+                id: opdrachtId,
+                stapId: stap.id,
+                data: {
+                  omschrijving: afwijkingOmschrijving.trim(),
+                  foto_urls: parsedUrls.length > 0 ? parsedUrls : undefined,
+                },
+              });
+            }}
           >
             {afwijkingMutatie.isPending ? "Bezig..." : "Afwijking melden"}
           </Button>
@@ -284,19 +309,37 @@ function VoltooienForm({ stap, opdrachtId, onGereed }: VoltooienFormProps) {
         />
       </div>
 
+      <div className="space-y-1">
+        <Label htmlFor="foto-urls" className="flex items-center gap-1.5">
+          <Camera className="h-3.5 w-3.5 text-slate-500" />
+          Foto-URL&#x27;s (optioneel, per regel)
+        </Label>
+        <Textarea
+          id="foto-urls"
+          placeholder={"uploads/foto-1.jpg\nuploads/foto-2.jpg"}
+          value={fotoUrls}
+          onChange={(e) => setFotoUrls(e.target.value)}
+          rows={2}
+          className="font-mono text-xs"
+        />
+        <p className="text-xs text-muted-foreground">Opslagpaden van de gemaakte foto&#x27;s, uno per regel.</p>
+      </div>
+
       <div className="flex flex-wrap gap-2">
         <Button
           disabled={!antwoord || voltooienMutatie.isPending}
-          onClick={() =>
+          onClick={() => {
+            const parsedUrls = fotoUrls.split("\n").map((u) => u.trim()).filter(Boolean);
             voltooienMutatie.mutate({
               id: opdrachtId,
               stapId: stap.id,
               data: {
                 antwoord_controle: antwoord,
                 opmerkingen: opmerkingen || undefined,
+                foto_urls: parsedUrls.length > 0 ? parsedUrls : undefined,
               },
-            })
-          }
+            });
+          }}
         >
           <CheckCircle2 className="h-4 w-4 mr-2" />
           {voltooienMutatie.isPending ? "Bezig..." : "Stap voltooien"}
