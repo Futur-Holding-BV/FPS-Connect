@@ -4,6 +4,32 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-05 — End-to-end testscenario aangemaakt (directe DB-inserts)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+**Wat is aangemaakt (via directe SQL-inserts — geen code gewijzigd):**
+
+| Object | ID | Detail |
+|---|---|---|
+| Testgebruiker | 39 | testgebruiker@fps.local / Welkom123! — bevoegdheden: lezen+schrijven alle hoofdmodules |
+| CRM-klant | 13 | Test Vastgoed BV (vastgoedbeheerder, Hengelo) |
+| Testgebouw | 14 | Testgebouw Brandveiligheid — Teststraat 1, 7550 AA Hengelo |
+| Gebouw-partij | 6 | Test Vastgoed BV als opdrachtgever op testgebouw |
+| Gebouw-toewijzing | — | Testgebruiker toegewezen aan testgebouw (rol: Beheerder) |
+| Verdieping | 21 | Begane grond (1754×1240) op testgebouw |
+| Spot (voorziening) | 60 | TEST-001 — kabelgoot (type 1.7), status: nieuw, Technische ruimte |
+| Verkoopfactuur | 1 | VRK-2026-TEST-001, €1.815 incl. btw, status: concept |
+| Inkoopfactuur | 2 | INK-2026-TEST-001, €508,20 incl. btw, status: ontvangen |
+| Toolbox bericht | 8 | "TEST Toolbox: Brandveilig werken bij doorvoeringen" — gepubliceerd, leesbevestiging aangemaakt voor testgebruiker |
+| HRM Medewerker | 6 | Testgebruiker ongeboardd als medewerker (FPS Brandpreventie, 40u/w) |
+
+**Aantekeninen:**
+- Wachtwoord is voor testdoeleinden plaintext hierboven; bcrypt-hash staat in de DB.
+- Onboarding bestaat als moduleconcept alleen binnen HRM (medewerkers.in_dienst_sinds); geen aparte klant-onboarding module.
+- Tekening/plattegrond op de verdieping: de `verdiepingen` rij staat klaar (id 21); een SVG/PDF kan via de editor in de preview-pane worden geüpload.
+- Inkoopfactuur is aan het testgebouw gekoppeld via `gebouw_id`; verdere regels en termijnen zijn leeg (realistisch voor een ontvangen factuur).
+
 ## 2026-07-05 — Vervolgopdracht 5: Formele opleverrapportage V1.4
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
