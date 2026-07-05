@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   useListGebouwEmails,
   useCreateGebouwEmail,
@@ -302,6 +302,36 @@ export default function GebouwEmails({
   const [zoek, setZoek] = useState("");
   const [toonAlles, setToonAlles] = useState(false);
   const [wachtendBestand, setWachtendBestand] = useState<File | null>(null);
+
+  // Ref-kopieën zodat de cleanup-functies altijd de actuele waarden zien.
+  const wachtendBestandRef = useRef<File | null>(null);
+  useEffect(() => { wachtendBestandRef.current = wachtendBestand; }, [wachtendBestand]);
+  const toastRef = useRef(toast);
+  useEffect(() => { toastRef.current = toast; }, [toast]);
+
+  // Browser sluiten / harde navigatie: native dialoog.
+  useEffect(() => {
+    if (!wachtendBestand) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [wachtendBestand]);
+
+  // In-app navigatie: component unmount → toon melding zodat de gebruiker weet
+  // dat de wachtende upload niet gestart is.
+  useEffect(() => {
+    return () => {
+      if (wachtendBestandRef.current) {
+        toastRef.current({
+          title: "Upload niet gestart",
+          description: "U heeft de pagina verlaten terwijl een groot bestand wachtte op bevestiging. De upload is niet gestart.",
+        });
+      }
+    };
+  }, []);
 
   const gesorteerd = useMemo(() => {
     const tekst = (s: string | null | undefined) => (s ?? "").toLowerCase();

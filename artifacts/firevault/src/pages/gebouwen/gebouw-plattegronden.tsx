@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "wouter";
 import { useUpdateVerdieping } from "@workspace/api-client-react";
 import type { Verdieping } from "@workspace/api-client-react";
@@ -17,6 +17,15 @@ import {
 } from "@/components/ui/select";
 import { Map, Loader2, Upload, ExternalLink, Plus, AlertTriangle } from "lucide-react";
 import { BestandsGrootteInfo } from "@/components/bestandsgrootte-info";
+import { useToast } from "@/hooks/use-toast";
+
+const GROOT_BESTAND_GRENS = 10 * 1024 * 1024;
+
+function formateerGrootte(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1).replace(".", ",")} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1).replace(".", ",")} MB`;
+}
 
 export default function GebouwPlattegronden({
   gebouwId,
@@ -28,6 +37,7 @@ export default function GebouwPlattegronden({
   isBeheerder: boolean;
 }) {
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const updateVerdieping = useUpdateVerdieping();
   const {
     uploadFile,
@@ -46,6 +56,38 @@ export default function GebouwPlattegronden({
   const [bevestigVervangen, setBevestigVervangen] = useState(false);
   const [bestandGrootte, setBestandGrootte] = useState<number | null>(null);
   const [rijSelectie, setRijSelectie] = useState<{ vId: number; grootte: number; bestand: File } | null>(null);
+
+  // Ref-kopieën zodat de cleanup-functies altijd de actuele waarden zien.
+  const rijSelectieRef = useRef<{ vId: number; grootte: number; bestand: File } | null>(null);
+  useEffect(() => { rijSelectieRef.current = rijSelectie; }, [rijSelectie]);
+  const toastRef = useRef(toast);
+  useEffect(() => { toastRef.current = toast; }, [toast]);
+
+  // Browser sluiten / harde navigatie: native dialoog.
+  useEffect(() => {
+    const sel = rijSelectie;
+    if (!sel || sel.grootte <= GROOT_BESTAND_GRENS) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [rijSelectie]);
+
+  // In-app navigatie: component unmount → toon melding zodat de gebruiker weet
+  // dat de wachtende upload niet gestart is.
+  useEffect(() => {
+    return () => {
+      const sel = rijSelectieRef.current;
+      if (sel && sel.grootte > GROOT_BESTAND_GRENS) {
+        toastRef.current({
+          title: "Upload niet gestart",
+          description: "U heeft de pagina verlaten terwijl een groot bestand wachtte op bevestiging. De upload is niet gestart.",
+        });
+      }
+    };
+  }, []);
 
   const gesorteerd = [...verdiepingen].sort((a, b) => a.niveau - b.niveau);
   const gekozen = gesorteerd.find((v) => String(v.id) === keuzeId);
