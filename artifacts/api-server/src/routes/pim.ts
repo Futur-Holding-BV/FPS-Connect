@@ -1692,6 +1692,7 @@ function bouwOpleverDossierHtml(
   data: Record<string, unknown>,
   opdrachttitel: string,
   datum: string,
+  controles?: { volgorde: number; doel: unknown; antwoorden: unknown; status: string | null; afwijking: unknown }[],
 ): string {
   const esc = (s: unknown) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   const lijst = (items: unknown) =>
@@ -1709,6 +1710,17 @@ function bouwOpleverDossierHtml(
     return `<table><thead><tr><th>Stap</th><th>Omschrijving</th><th>Beslissing</th><th>Impact</th></tr></thead><tbody>${
       (items as Record<string, unknown>[]).map((r) => `<tr><td>${esc(r.stap)}</td><td>${esc(r.omschrijving)}</td><td>${esc(r.beslissing)}</td><td>${esc(r.impact)}</td></tr>`).join("")
     }</tbody></table>`;
+  };
+  const controleTabel = () => {
+    if (!controles || controles.length === 0) return "<p><em>Geen controlegegevens</em></p>";
+    const rows = controles.map((s) => {
+      const ant = s.antwoorden as Record<string, unknown> | null ?? {};
+      const goedgekeurd = ant.antwoord_controle === "goedgekeurd" || ant.antwoord_controle === true ? "Goedgekeurd" : ant.antwoord_controle ? esc(ant.antwoord_controle) : "—";
+      const opmerking = esc(ant.opmerkingen ?? "—");
+      const statusKleur = s.status === "gereed" ? "color:#15803d" : s.status === "afgeweken" ? "color:#b45309" : "";
+      return `<tr><td>${esc(s.volgorde)}</td><td>${esc(s.doel ?? "—")}</td><td style="${statusKleur}">${esc(s.status ?? "open")}</td><td>${goedgekeurd}</td><td>${opmerking}</td></tr>`;
+    }).join("");
+    return `<table><thead><tr><th>Stap</th><th>Doel</th><th>Status</th><th>Controle</th><th>Opmerking</th></tr></thead><tbody>${rows}</tbody></table>`;
   };
   return `<!DOCTYPE html>
 <html lang="nl"><head><meta charset="utf-8">
@@ -1733,6 +1745,7 @@ function bouwOpleverDossierHtml(
 <div class="verklaring">${esc(data.kwaliteitsverklaring)}</div>
 <h2>Uitgevoerde werkzaamheden</h2>${lijst(data.uitgevoerde_werkzaamheden)}
 <h2>Gebruikte materialen</h2>${materiaalTabel(data.gebruikte_materialen)}
+<h2>Controles &amp; kwaliteitsborging per stap</h2>${controleTabel()}
 <h2>Afwijkingen &amp; beslissingen</h2>${afwijkingTabel(data.afwijkingen)}
 <h2>Restpunten</h2>${lijst(data.restpunten)}
 <h2>Aanbevelingen aan gebouweigenaar</h2>${lijst(data.aanbevelingen_eigenaar)}
@@ -2255,9 +2268,17 @@ router.post("/opdrachten/:id/pim/oplevering/genereer", schrijven, async (req, re
       afwijking: s.afwijkingJson ?? null,
     }));
     const ts = Date.now();
+    const controleStappen = stappen.map((s) => ({
+      volgorde: s.volgorde,
+      doel: (s.instructieJson as Record<string, unknown> | null)?.doel ?? null,
+      antwoorden: s.antwoordenJson ?? null,
+      status: s.status ?? "open",
+      afwijking: s.afwijkingJson ?? null,
+    }));
+
     const [opleverPdfPad, onderhoudPdfPad, fotoPdfPad] = await Promise.all([
       genereerPdf(
-        bouwOpleverDossierHtml(opleverData, opdracht.titel, vandaag),
+        bouwOpleverDossierHtml(opleverData, opdracht.titel, vandaag, controleStappen),
         `pim/opleverdossiers/${opdrachtId}_oplevering_${ts}.pdf`,
       ),
       genereerPdf(
@@ -2372,12 +2393,13 @@ router.post("/opdrachten/:id/pim/oplevering/genereer", schrijven, async (req, re
       });
       gemaakteDocumenten.push({ document_id: fotoDoc.id, type: "fotorapport", naam: fotoNaam, pdf_url: fotoPdfPad });
 
-      // Opslaan in opleveringContext
+      // Opslaan in opleveringContext — inclusief documenten_info voor persistente download-links na herlaad
       const bijgewerktCtx = {
         ...(pim.opleveringContext as Record<string, unknown> | null ?? {}),
         gegenereerd_op: new Date().toISOString(),
         gegenereerd_door: gebruikerId,
         document_ids: gemaakteDocumenten.map((d) => d.document_id),
+        documenten_info: gemaakteDocumenten,
         opleverdossier_data: opleverData,
         onderhoud_data: onderhoudData,
       };
@@ -2428,13 +2450,18 @@ router.post("/opdrachten/:id/pim/oplevering/definitief", schrijven, async (req, 
     if (!pim) { res.status(404).json({ error: "PIM niet gevonden voor deze opdracht" }); return; }
 
     const nu = new Date();
+    // "gereed" is de canonieke terminale PIM-fase (FASEN array eindterm).
+    // Menselijke bevestiging via deze endpoint markeert de opdracht als volledig opgeleverd
+    // en klaar voor overdracht naar de onderhoudscyclus.
     const bijgewerktCtx = {
       ...(pim.opleveringContext as Record<string, unknown> | null ?? {}),
       definitief_op: nu.toISOString(),
       definitief_door: gebruikerId,
+      onderhoud_overdracht_gereed: true,
     };
 
     await db.transaction(async (tx) => {
+      // Opdracht naar terminale fase "gereed" — canoniek eindpunt in de FASEN-enum
       await tx
         .update(opdrachtenTable)
         .set({ aiFase: "gereed", bijgewerktOp: nu })
@@ -2450,11 +2477,12 @@ router.post("/opdrachten/:id/pim/oplevering/definitief", schrijven, async (req, 
         .from(gebruikersTable)
         .where(eq(gebruikersTable.id, gebruikerId!));
 
+      // Audittrail: oplevering definitief + overdracht onderhoudscyclus
       await tx.insert(documentLogboekTable).values({
         gebruikerId,
         gebruikerNaam: gebruiker?.naam ?? null,
         actie: "pim_definitief",
-        detail: `Opdracht definitief opgeleverd: ${opdracht.titel}`,
+        detail: `Opdracht definitief opgeleverd en overgedragen naar onderhoudscyclus: ${opdracht.titel}`,
       });
     });
 

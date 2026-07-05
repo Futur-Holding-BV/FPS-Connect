@@ -105,6 +105,9 @@ export default function PimOpleveringTab({ opdrachtId }: Props) {
   const opleverCtx = (pim?.oplevering_context as Record<string, unknown> | null | undefined) ?? null;
   const opgeslagenControlerapport = (opleverCtx?.controlerapport as Record<string, unknown> | null) ?? null;
   const opgeslagenDocIds = Array.isArray(opleverCtx?.document_ids) ? (opleverCtx.document_ids as number[]) : [];
+  const opgeslagenDocumenten = Array.isArray(opleverCtx?.documenten_info)
+    ? (opleverCtx.documenten_info as { document_id: number; type: string; naam: string; pdf_url?: string | null }[])
+    : [];
   const isGereed = aiFase === "gereed";
 
   const toonControlerapport = controlerapport ?? (opgeslagenControlerapport ? mapOpgeslagenControlerapport(opgeslagenControlerapport) : null);
@@ -194,6 +197,8 @@ export default function PimOpleveringTab({ opdrachtId }: Props) {
           <CardContent className="pb-4">
             {(gegenereerd?.documenten ?? []).length > 0 ? (
               <DocumentenLijst documenten={gegenereerd!.documenten} />
+            ) : opgeslagenDocumenten.length > 0 ? (
+              <DocumentenLijst documenten={opgeslagenDocumenten} />
             ) : opgeslagenDocIds.length > 0 ? (
               <div className="space-y-2">
                 <p className="text-sm text-muted-foreground">Eerder gegenereerde documenten ({opgeslagenDocIds.length}):</p>
