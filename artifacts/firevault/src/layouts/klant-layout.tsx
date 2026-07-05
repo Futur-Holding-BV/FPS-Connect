@@ -4,7 +4,7 @@ import { BerichtNotificatieToast } from "@/components/bericht-notificatie-toast"
 import {
   SidebarProvider, Sidebar, SidebarHeader, SidebarContent, SidebarFooter,
   SidebarGroup, SidebarGroupContent,
-  SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarTrigger,
+  SidebarMenu, SidebarMenuItem, SidebarMenuButton,
 } from "@/components/ui/sidebar";
 import { Home, FileText, Building, Info, LayoutDashboard, ArrowLeft } from "lucide-react";
 import { GebruikerMenu } from "@/components/gebruiker-menu";
@@ -90,7 +90,6 @@ export default function KlantLayout({ children }: { children: React.ReactNode })
 
       <main className="flex-1 min-h-screen bg-zinc-50/50">
         <div className="sticky top-0 z-10 flex items-center gap-3 px-4 py-3 bg-zinc-50/80 backdrop-blur-xl md:hidden border-b border-zinc-200/50">
-          <SidebarTrigger title="Menu openen" className="text-zinc-600" />
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 rounded bg-[#0EA5E9] flex items-center justify-center">
               <span className="text-white font-bold text-[9px] tracking-wider">FPS</span>
