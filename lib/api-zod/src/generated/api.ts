@@ -13797,6 +13797,7 @@ export const GetWerkdagVandaagResponseItem = zod.object({
   "werknummer": zod.string().nullish(),
   "notities": zod.string().nullish(),
   "dag_notities": zod.string().nullish(),
+  "opdracht_id": zod.number().nullish().describe('Gekoppelde opdracht (voor PIM-uitvoering)'),
   "aangemaakt_op": zod.string().optional()
 })
 export const GetWerkdagVandaagResponse = zod.array(GetWerkdagVandaagResponseItem)
@@ -13831,6 +13832,7 @@ export const GetWerkdagItemResponse = zod.object({
   "werknummer": zod.string().nullish(),
   "notities": zod.string().nullish(),
   "dag_notities": zod.string().nullish(),
+  "opdracht_id": zod.number().nullish().describe('Gekoppelde opdracht (voor PIM-uitvoering)'),
   "aangemaakt_op": zod.string().optional()
 })
 
@@ -13868,6 +13870,7 @@ export const UpdateWerkdagItemStatusResponse = zod.object({
   "werknummer": zod.string().nullish(),
   "notities": zod.string().nullish(),
   "dag_notities": zod.string().nullish(),
+  "opdracht_id": zod.number().nullish().describe('Gekoppelde opdracht (voor PIM-uitvoering)'),
   "aangemaakt_op": zod.string().optional()
 })
 

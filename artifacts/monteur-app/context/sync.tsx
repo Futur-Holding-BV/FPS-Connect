@@ -266,6 +266,17 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
           break;
         }
 
+        // ── PIM uitvoeringsstap voltooien ─────────────────────────────────────
+        case "voltooi_pim_stap": {
+          const r = await fetch(
+            `${basis}/api/opdrachten/${item.opdrachtId}/pim/uitvoering/stap/${item.stapId}/voltooien`,
+            { method: "POST", headers, body: JSON.stringify(item.payload) },
+          );
+          // 409 = stap al voltooid door een ander (conflict) — stil doorgaan
+          if (!r.ok && r.status !== 409) throw new Error(`HTTP ${r.status}`);
+          break;
+        }
+
         default:
           // Onbekend type — verwijder uit queue zodat het niet eindeloos retried
           break;

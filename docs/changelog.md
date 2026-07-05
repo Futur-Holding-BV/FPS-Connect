@@ -4,6 +4,35 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-05 — PIM Fase F — Adaptieve Uitvoering mobiel (Task #301)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+**Wat is gebouwd:**
+
+**OpenAPI + backend:**
+- `opdracht_id` (nullable integer) toegevoegd aan `WerkdagItem` schema
+- `mapWerkdagItem` in `werkdag.ts` retourneert nu `opdracht_id: item.opdrachtId ?? null`
+
+**SyncQueue + Sync context:**
+- Nieuw action type `voltooi_pim_stap` in `syncQueue.ts` (opdrachtId, stapId, payload)
+- Handler in `sync.tsx`: POST `/api/opdrachten/:id/pim/uitvoering/stap/:stapId/voltooien`, behandelt 409 als stille success (offline deduplicatie)
+
+**Nieuw scherm `uitvoering/[opdrachtId].tsx`:**
+- AsyncStorage cache (`pim_stap_{opdrachtId}_v1`) voor offline beschikbaarheid van de huidige stap
+- `VoortgangsBalk` — voortgangsindicator op basis van stapvolgorde
+- `StapKaart` — toont doel, veiligheidscontrole, handeling, gereedschappen, artikelen, foto-opdracht + `FotoRij`, controlevraag + checkbox, opmerkingen-veld
+- Foto-upload via `ImagePicker` (camera + bibliotheek) met upload naar object storage; visuele check-mark zodra upload klaar
+- Offline modus: stap voltooien buffert naar SyncQueue; daarna herlaadAantal()
+- `AfwijkingFormulier` — meldt afwijking via `useMeldPimUitvoeringAfwijking`; vereist internetverbinding
+- `AfwijkingWachtScherm` — polling elke 30 seconden; toont beslissing + toelichting projectleider; `beslisPimUitvoeringAfwijking` verwerkt resultaat correct als `PimUitvoeringVoltooiResultaat`
+- "Uitvoering gereed"-scherm na laatste stap met forceerSync + terugnavigatie
+- Stack registered in `_layout.tsx`
+
+**Navigatie vanuit werkdag:**
+- "Start adaptieve gids"-knop in `werkdag/[id].tsx`, zichtbaar wanneer `huidigWerkorder.opdracht_id` aanwezig is
+- Routepatroon: `/uitvoering/:opdrachtId` (Expo typed-routes workaround: `as any`)
+
 ## 2026-07-05 — PIM Fase E — Adaptieve Uitvoering (Task #300)
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag

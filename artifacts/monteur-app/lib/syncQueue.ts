@@ -71,6 +71,17 @@ export type SyncActie =
       lokaalPad: string;
       werkdagId: number;
       positie: "medewerker" | "klant";
+    }
+  // PIM uitvoeringsstap voltooien terwijl offline
+  | {
+      type: "voltooi_pim_stap";
+      opdrachtId: number;
+      stapId: number;
+      payload: {
+        antwoord_controle: boolean;
+        opmerkingen?: string;
+        foto_urls?: string[];
+      };
     };
 
 export type WachtrijItem = SyncActie & {

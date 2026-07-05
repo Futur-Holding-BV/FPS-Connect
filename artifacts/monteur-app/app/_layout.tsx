@@ -412,6 +412,7 @@ function RootLayoutNav() {
         <Stack.Screen name="veiligheid/index" />
         <Stack.Screen name="pbm" />
         <Stack.Screen name="onboarding" options={{ gestureEnabled: false }} />
+        <Stack.Screen name="uitvoering/[opdrachtId]" />
       </Stack>
     </>
   );

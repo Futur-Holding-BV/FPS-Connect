@@ -56,6 +56,7 @@ function mapWerkdagItem(
     werknummer: item.werknummer ?? null,
     notities: item.notities ?? null,
     dag_notities: item.dagNotities ?? null,
+    opdracht_id: item.opdrachtId ?? null,
     aangemaakt_op: item.aangemaaktOp.toISOString(),
     meerwerk: meerwerk ?? [],
   };

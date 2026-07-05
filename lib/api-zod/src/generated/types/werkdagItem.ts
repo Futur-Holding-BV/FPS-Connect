@@ -30,5 +30,7 @@ export interface WerkdagItem {
   werknummer?: string | null;
   notities?: string | null;
   dag_notities?: string | null;
+  /** Gekoppelde opdracht (voor PIM-uitvoering) */
+  opdracht_id?: number | null;
   aangemaakt_op?: string;
 }
