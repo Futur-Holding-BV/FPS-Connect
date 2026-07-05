@@ -70221,8 +70221,6 @@ export const useUpsertKbOpdrachtgeverVoorkeur = <TError = ErrorType<unknown>,
       return useMutation(getUpsertKbOpdrachtgeverVoorkeurMutationOptions(options));
     }
 
-
-
 export const getListVisualsUrl = (params?: ListVisualsParams,) => {
   const normalizedParams = new URLSearchParams();
 
