@@ -19631,8 +19631,240 @@ paths:
         "204":
           description: Verwijderd
 
+  # ── KB: Bedrijfsstandaarden ────────────────────────────────────────────────
+
+  /kb/bedrijfsstandaarden:
+    get:
+      summary: Lijst actieve bedrijfsstandaarden
+      operationId: listKbBedrijfsstandaarden
+      tags: [kb]
+      parameters:
+        - in: query
+          name: categorie
+          schema: { type: string }
+        - in: query
+          name: actief
+          schema: { type: string }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/KbBedrijfsstandaard' }
+    post:
+      summary: Nieuwe bedrijfsstandaard aanmaken
+      operationId: createKbBedrijfsstandaard
+      tags: [kb]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/KbBedrijfsstandaardInput' }
+      responses:
+        '201':
+          description: Aangemaakt
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/KbBedrijfsstandaard' }
+
+  /kb/bedrijfsstandaarden/{id}:
+    patch:
+      summary: Bedrijfsstandaard bijwerken
+      operationId: updateKbBedrijfsstandaard
+      tags: [kb]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/KbBedrijfsstandaardPatch' }
+      responses:
+        '200':
+          description: Bijgewerkt
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/KbBedrijfsstandaard' }
+
+  # ── KB: Leverancier prestaties ─────────────────────────────────────────────
+
+  /leveranciers/{id}/prestaties:
+    get:
+      summary: Prestaties per leverancier
+      operationId: getLeverancierPrestaties
+      tags: [kb]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/LeverancierPrestatie' }
+    post:
+      summary: Prestatiemeting registreren
+      operationId: createLeverancierPrestatie
+      tags: [kb]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LeverancierPrestatieInput' }
+      responses:
+        '201':
+          description: Geregistreerd
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LeverancierPrestatie' }
+
+  # ── KB: Opdrachtgever-voorkeuren ───────────────────────────────────────────
+
+  /kb/opdrachtgever-voorkeuren/{klantId}:
+    get:
+      summary: Voorkeuren per klant ophalen
+      operationId: getKbOpdrachtgeverVoorkeur
+      tags: [kb]
+      parameters:
+        - in: path
+          name: klantId
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/KbOpdrachtgeverVoorkeur' }
+    put:
+      summary: Voorkeuren upsert
+      operationId: upsertKbOpdrachtgeverVoorkeur
+      tags: [kb]
+      parameters:
+        - in: path
+          name: klantId
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/KbOpdrachtgeverVoorkeurInput' }
+      responses:
+        '200':
+          description: Opgeslagen
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/KbOpdrachtgeverVoorkeur' }
+
 components:
   schemas:
+    KbBedrijfsstandaard:
+      type: object
+      required: [id, sleutel, categorie, titel, inhoud, actief]
+      properties:
+        id:           { type: integer }
+        sleutel:      { type: string }
+        categorie:    { type: string }
+        titel:        { type: string }
+        inhoud:       { type: string }
+        actief:       { type: boolean }
+        bijgewerkt_op: { type: string, nullable: true }
+
+    KbBedrijfsstandaardInput:
+      type: object
+      required: [sleutel, categorie, titel, inhoud]
+      properties:
+        sleutel:   { type: string }
+        categorie: { type: string }
+        titel:     { type: string }
+        inhoud:    { type: string }
+
+    KbBedrijfsstandaardPatch:
+      type: object
+      properties:
+        titel:     { type: string }
+        inhoud:    { type: string }
+        categorie: { type: string }
+        actief:    { type: boolean }
+
+    LeverancierPrestatie:
+      type: object
+      required: [id, leverancier_id, aangemaakt_op]
+      properties:
+        id:                    { type: integer }
+        leverancier_id:        { type: integer }
+        project_ref:           { type: string, nullable: true }
+        periode:               { type: string, nullable: true }
+        leverbetrouwbaarheid:  { type: integer, nullable: true }
+        levertijd_score:       { type: integer, nullable: true }
+        kwaliteit_score:       { type: integer, nullable: true }
+        garantieclaims:        { type: integer, nullable: true }
+        retourpercentage:      { type: number, nullable: true }
+        beschikbaarheid_score: { type: integer, nullable: true }
+        communicatie_score:    { type: integer, nullable: true }
+        geschikt_spoed:        { type: boolean, nullable: true }
+        notities:              { type: string, nullable: true }
+        geregistreerd_door:    { type: integer, nullable: true }
+        aangemaakt_op:         { type: string }
+
+    LeverancierPrestatieInput:
+      type: object
+      properties:
+        project_ref:           { type: string }
+        periode:               { type: string }
+        leverbetrouwbaarheid:  { type: integer, minimum: 1, maximum: 5 }
+        levertijd_score:       { type: integer, minimum: 1, maximum: 5 }
+        kwaliteit_score:       { type: integer, minimum: 1, maximum: 5 }
+        garantieclaims:        { type: integer }
+        retourpercentage:      { type: number }
+        beschikbaarheid_score: { type: integer, minimum: 1, maximum: 5 }
+        communicatie_score:    { type: integer, minimum: 1, maximum: 5 }
+        geschikt_spoed:        { type: boolean }
+        notities:              { type: string }
+
+    KbOpdrachtgeverVoorkeur:
+      type: object
+      required: [klant_id]
+      properties:
+        id:                     { type: integer }
+        klant_id:               { type: integer }
+        verplichte_artikel_ids: { type: array, items: { type: integer } }
+        verboden_artikel_ids:   { type: array, items: { type: integer } }
+        rapportage_eisen:       { type: string, nullable: true }
+        documentvereisten:      { type: string, nullable: true }
+        uitvoeringsdetails:     { type: string, nullable: true }
+        keuringsvoorschriften:  { type: string, nullable: true }
+        onderhoudsafspraken:    { type: string, nullable: true }
+        kb_notities:            { type: string, nullable: true }
+        bijgewerkt_op:          { type: string, nullable: true }
+
+    KbOpdrachtgeverVoorkeurInput:
+      type: object
+      properties:
+        verplichte_artikel_ids: { type: array, items: { type: integer } }
+        verboden_artikel_ids:   { type: array, items: { type: integer } }
+        rapportage_eisen:       { type: string }
+        documentvereisten:      { type: string }
+        uitvoeringsdetails:     { type: string }
+        keuringsvoorschriften:  { type: string }
+        onderhoudsafspraken:    { type: string }
+        kb_notities:            { type: string }
+
     AvgVerzoekInput:
       type: object
       required: [type]
@@ -35547,3 +35779,4 @@ components:
       properties:
         correctie_factor: { type: number, minimum: 0.5, maximum: 3.0 }
         opmerkingen:      { type: ["string", "null"] }
+

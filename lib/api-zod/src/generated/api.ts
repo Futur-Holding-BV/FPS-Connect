@@ -24276,3 +24276,179 @@ export const DeleteFieLeermomentParams = zod.object({
 export const DeleteFieLeermomentResponse = zod.void()
 
 
+/**
+ * @summary Lijst actieve bedrijfsstandaarden
+ */
+export const ListKbBedrijfsstandaardenQueryParams = zod.object({
+  "categorie": zod.coerce.string().optional(),
+  "actief": zod.coerce.string().optional()
+})
+
+export const ListKbBedrijfsstandaardenResponseItem = zod.object({
+  "id": zod.number(),
+  "sleutel": zod.string(),
+  "categorie": zod.string(),
+  "titel": zod.string(),
+  "inhoud": zod.string(),
+  "actief": zod.boolean(),
+  "bijgewerkt_op": zod.string().nullish()
+})
+export const ListKbBedrijfsstandaardenResponse = zod.array(ListKbBedrijfsstandaardenResponseItem)
+
+
+/**
+ * @summary Nieuwe bedrijfsstandaard aanmaken
+ */
+export const CreateKbBedrijfsstandaardBody = zod.object({
+  "sleutel": zod.string(),
+  "categorie": zod.string(),
+  "titel": zod.string(),
+  "inhoud": zod.string()
+})
+
+export const CreateKbBedrijfsstandaardResponse = zod.void()
+
+
+/**
+ * @summary Bedrijfsstandaard bijwerken
+ */
+export const UpdateKbBedrijfsstandaardParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateKbBedrijfsstandaardBody = zod.object({
+  "titel": zod.string().optional(),
+  "inhoud": zod.string().optional(),
+  "categorie": zod.string().optional(),
+  "actief": zod.boolean().optional()
+})
+
+export const UpdateKbBedrijfsstandaardResponse = zod.object({
+  "id": zod.number(),
+  "sleutel": zod.string(),
+  "categorie": zod.string(),
+  "titel": zod.string(),
+  "inhoud": zod.string(),
+  "actief": zod.boolean(),
+  "bijgewerkt_op": zod.string().nullish()
+})
+
+
+/**
+ * @summary Prestaties per leverancier
+ */
+export const GetLeverancierPrestatiesParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetLeverancierPrestatiesResponseItem = zod.object({
+  "id": zod.number(),
+  "leverancier_id": zod.number(),
+  "project_ref": zod.string().nullish(),
+  "periode": zod.string().nullish(),
+  "leverbetrouwbaarheid": zod.number().nullish(),
+  "levertijd_score": zod.number().nullish(),
+  "kwaliteit_score": zod.number().nullish(),
+  "garantieclaims": zod.number().nullish(),
+  "retourpercentage": zod.number().nullish(),
+  "beschikbaarheid_score": zod.number().nullish(),
+  "communicatie_score": zod.number().nullish(),
+  "geschikt_spoed": zod.boolean().nullish(),
+  "notities": zod.string().nullish(),
+  "geregistreerd_door": zod.number().nullish(),
+  "aangemaakt_op": zod.string()
+})
+export const GetLeverancierPrestatiesResponse = zod.array(GetLeverancierPrestatiesResponseItem)
+
+
+/**
+ * @summary Prestatiemeting registreren
+ */
+export const CreateLeverancierPrestatieParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const createLeverancierPrestatieBodyLeverbetrouwbaarheidMax = 5;
+
+export const createLeverancierPrestatieBodyLevertijdScoreMax = 5;
+
+export const createLeverancierPrestatieBodyKwaliteitScoreMax = 5;
+
+export const createLeverancierPrestatieBodyBeschikbaarheidScoreMax = 5;
+
+export const createLeverancierPrestatieBodyCommunicatieScoreMax = 5;
+
+
+
+export const CreateLeverancierPrestatieBody = zod.object({
+  "project_ref": zod.string().optional(),
+  "periode": zod.string().optional(),
+  "leverbetrouwbaarheid": zod.number().min(1).max(createLeverancierPrestatieBodyLeverbetrouwbaarheidMax).optional(),
+  "levertijd_score": zod.number().min(1).max(createLeverancierPrestatieBodyLevertijdScoreMax).optional(),
+  "kwaliteit_score": zod.number().min(1).max(createLeverancierPrestatieBodyKwaliteitScoreMax).optional(),
+  "garantieclaims": zod.number().optional(),
+  "retourpercentage": zod.number().optional(),
+  "beschikbaarheid_score": zod.number().min(1).max(createLeverancierPrestatieBodyBeschikbaarheidScoreMax).optional(),
+  "communicatie_score": zod.number().min(1).max(createLeverancierPrestatieBodyCommunicatieScoreMax).optional(),
+  "geschikt_spoed": zod.boolean().optional(),
+  "notities": zod.string().optional()
+})
+
+export const CreateLeverancierPrestatieResponse = zod.void()
+
+
+/**
+ * @summary Voorkeuren per klant ophalen
+ */
+export const GetKbOpdrachtgeverVoorkeurParams = zod.object({
+  "klantId": zod.coerce.number()
+})
+
+export const GetKbOpdrachtgeverVoorkeurResponse = zod.object({
+  "id": zod.number().optional(),
+  "klant_id": zod.number(),
+  "verplichte_artikel_ids": zod.array(zod.number()).optional(),
+  "verboden_artikel_ids": zod.array(zod.number()).optional(),
+  "rapportage_eisen": zod.string().nullish(),
+  "documentvereisten": zod.string().nullish(),
+  "uitvoeringsdetails": zod.string().nullish(),
+  "keuringsvoorschriften": zod.string().nullish(),
+  "onderhoudsafspraken": zod.string().nullish(),
+  "kb_notities": zod.string().nullish(),
+  "bijgewerkt_op": zod.string().nullish()
+})
+
+
+/**
+ * @summary Voorkeuren upsert
+ */
+export const UpsertKbOpdrachtgeverVoorkeurParams = zod.object({
+  "klantId": zod.coerce.number()
+})
+
+export const UpsertKbOpdrachtgeverVoorkeurBody = zod.object({
+  "verplichte_artikel_ids": zod.array(zod.number()).optional(),
+  "verboden_artikel_ids": zod.array(zod.number()).optional(),
+  "rapportage_eisen": zod.string().optional(),
+  "documentvereisten": zod.string().optional(),
+  "uitvoeringsdetails": zod.string().optional(),
+  "keuringsvoorschriften": zod.string().optional(),
+  "onderhoudsafspraken": zod.string().optional(),
+  "kb_notities": zod.string().optional()
+})
+
+export const UpsertKbOpdrachtgeverVoorkeurResponse = zod.object({
+  "id": zod.number().optional(),
+  "klant_id": zod.number(),
+  "verplichte_artikel_ids": zod.array(zod.number()).optional(),
+  "verboden_artikel_ids": zod.array(zod.number()).optional(),
+  "rapportage_eisen": zod.string().nullish(),
+  "documentvereisten": zod.string().nullish(),
+  "uitvoeringsdetails": zod.string().nullish(),
+  "keuringsvoorschriften": zod.string().nullish(),
+  "onderhoudsafspraken": zod.string().nullish(),
+  "kb_notities": zod.string().nullish(),
+  "bijgewerkt_op": zod.string().nullish()
+})
+
+

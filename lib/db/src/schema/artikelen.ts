@@ -38,4 +38,13 @@ export const artikelenTable = pgTable("artikelen", {
 
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+
+  // KB-velden (additief — kennislaag voor AI-modules)
+  goedgekeurdDoorFps: boolean("goedgekeurd_door_fps").notNull().default(false),
+  toepassingsgebied: text("toepassingsgebied"),
+  montagevoorschriften: text("montagevoorschriften"),
+  compatibeleArtikelIds: integer("compatibele_artikel_ids").array(),
+  alternatievelArtikelIds: integer("alternatieve_artikel_ids").array(),
+  certificeringen: text("certificeringen").array(),
+  kbNotities: text("kb_notities"),
 });

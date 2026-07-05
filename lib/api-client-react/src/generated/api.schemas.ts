@@ -5,6 +5,107 @@
  * FPS Brandpreventie - Platform voor brandpreventieve gebouwvoorzieningen
  * OpenAPI spec version: 0.1.0
  */
+export interface KbBedrijfsstandaard {
+  id: number;
+  sleutel: string;
+  categorie: string;
+  titel: string;
+  inhoud: string;
+  actief: boolean;
+  bijgewerkt_op?: string | null;
+}
+
+export interface KbBedrijfsstandaardInput {
+  sleutel: string;
+  categorie: string;
+  titel: string;
+  inhoud: string;
+}
+
+export interface KbBedrijfsstandaardPatch {
+  titel?: string;
+  inhoud?: string;
+  categorie?: string;
+  actief?: boolean;
+}
+
+export interface LeverancierPrestatie {
+  id: number;
+  leverancier_id: number;
+  project_ref?: string | null;
+  periode?: string | null;
+  leverbetrouwbaarheid?: number | null;
+  levertijd_score?: number | null;
+  kwaliteit_score?: number | null;
+  garantieclaims?: number | null;
+  retourpercentage?: number | null;
+  beschikbaarheid_score?: number | null;
+  communicatie_score?: number | null;
+  geschikt_spoed?: boolean | null;
+  notities?: string | null;
+  geregistreerd_door?: number | null;
+  aangemaakt_op: string;
+}
+
+export interface LeverancierPrestatieInput {
+  project_ref?: string;
+  periode?: string;
+  /**
+     * @minimum 1
+     * @maximum 5
+     */
+  leverbetrouwbaarheid?: number;
+  /**
+     * @minimum 1
+     * @maximum 5
+     */
+  levertijd_score?: number;
+  /**
+     * @minimum 1
+     * @maximum 5
+     */
+  kwaliteit_score?: number;
+  garantieclaims?: number;
+  retourpercentage?: number;
+  /**
+     * @minimum 1
+     * @maximum 5
+     */
+  beschikbaarheid_score?: number;
+  /**
+     * @minimum 1
+     * @maximum 5
+     */
+  communicatie_score?: number;
+  geschikt_spoed?: boolean;
+  notities?: string;
+}
+
+export interface KbOpdrachtgeverVoorkeur {
+  id?: number;
+  klant_id: number;
+  verplichte_artikel_ids?: number[];
+  verboden_artikel_ids?: number[];
+  rapportage_eisen?: string | null;
+  documentvereisten?: string | null;
+  uitvoeringsdetails?: string | null;
+  keuringsvoorschriften?: string | null;
+  onderhoudsafspraken?: string | null;
+  kb_notities?: string | null;
+  bijgewerkt_op?: string | null;
+}
+
+export interface KbOpdrachtgeverVoorkeurInput {
+  verplichte_artikel_ids?: number[];
+  verboden_artikel_ids?: number[];
+  rapportage_eisen?: string;
+  documentvereisten?: string;
+  uitvoeringsdetails?: string;
+  keuringsvoorschriften?: string;
+  onderhoudsafspraken?: string;
+  kb_notities?: string;
+}
+
 export type AvgVerzoekInputType = typeof AvgVerzoekInputType[keyof typeof AvgVerzoekInputType];
 
 
@@ -11426,5 +11527,10 @@ export type HerberekeenVerouderdeNacalculaties200 = {
 export type HerberekeenNacalculatieVoorOpdracht200 = {
   opdrachtId: number;
   herberekend: boolean;
+};
+
+export type ListKbBedrijfsstandaardenParams = {
+categorie?: string;
+actief?: string;
 };
 

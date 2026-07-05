@@ -34,8 +34,9 @@ import {
   PIM_OPLEVERING_CONTROLEER_PROMPT,
   PIM_OPLEVERING_GENEREER_PROMPT,
   PIM_ONDERHOUD_NOTITIE_PROMPT,
+  KB_BESLISSTRUCTUUR,
 } from "../lib/aiPrompts";
-import { kbService, KB_BESLISSTRUCTUUR } from "../lib/kbService";
+import { kbService } from "../lib/kbService";
 import { ObjectStorageService } from "../lib/objectStorage";
 
 // Chromium voor PDF-generatie (zelfde aanpak als offertes.ts)
@@ -474,7 +475,7 @@ router.post("/opdrachten/:id/pim/analyseer", schrijven, async (req, res): Promis
 
     // 6. KB-context (Task #303 stub — retourneert null totdat KB-module beschikbaar is)
     // contextTekst en userContent zijn al opgebouwd; kbContext wordt als extra tekststuk toegevoegd.
-    const kbContext = await kbService.assembleKbContext(opdrachtId);
+    const kbContext = await kbService.assembleKbContext();
     const kbExtras = [
       kbContext ? `=== KENNISBANK CONTEXT ===\n${kbContext}` : "",
       KB_BESLISSTRUCTUUR ? `=== BESLISSTRUCTUUR ===\n${KB_BESLISSTRUCTUUR}` : "",

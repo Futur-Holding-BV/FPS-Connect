@@ -65,4 +65,14 @@ export const leveranciersTable = pgTable("leveranciers", {
 
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+
+  // KB-velden (additief — kennislaag voor AI-modules)
+  levertijdDagen: integer("levertijd_dagen"),
+  leveringsgebied: text("leveringsgebied"),
+  minOrdergrootte: text("min_ordergrootte"),
+  heeftRaamovereenkomst: boolean("heeft_raamovereenkomst").notNull().default(false),
+  geschiktVoorSpoed: boolean("geschikt_voor_spoed").notNull().default(false),
+  prijsniveau: text("prijsniveau"),                      // 'laag' | 'midden' | 'hoog'
+  certificeringen: text("certificeringen").array(),
+  kbNotities: text("kb_notities"),                       // interne KB-context voor AI
 });

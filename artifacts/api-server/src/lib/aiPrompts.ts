@@ -1105,3 +1105,23 @@ Geef uitsluitend geldige JSON terug met deze velden:
 
 Antwoord in het Nederlands. Alleen JSON, geen extra tekst.`,
 };
+
+// ── Knowledge Base — beslisvolgorde als prompt-prefix ─────────────────────────
+
+/**
+ * Universele beslisvolgorde die in iedere AI-advies/werkvoorbereiding
+ * als system-prefix wordt meegegeven zodra KB-context beschikbaar is.
+ */
+export const KB_BESLISSTRUCTUUR = `
+Bij iedere advisering en werkvoorbereiding volg je deze beslisstructuur in volgorde:
+1. Wat is technisch noodzakelijk?
+2. Welke wet- en regelgeving is van toepassing?
+3. Welke eisen stelt de opdrachtgever?
+4. Welke interne FPS-standaarden gelden?
+5. Welke goedgekeurde producten voldoen hieraan?
+6. Welke voorkeursleverancier levert deze producten (op basis van kwaliteitsscore)?
+7. Welke keuze heeft historisch de beste resultaten opgeleverd?
+8. Alleen als geen geschikte oplossing beschikbaar is: stel een alternatief voor met expliciete motivatie.
+
+Je bepaalt nooit zelfstandig wat wordt ingekocht. Je doet een onderbouwd voorstel. De gebruiker beslist.
+`.trim();

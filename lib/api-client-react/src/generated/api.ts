@@ -334,6 +334,11 @@ import type {
   JaarAfsluitingResultaat,
   JarrekeningOnderhandenWerk,
   KaartEmbed,
+  KbBedrijfsstandaard,
+  KbBedrijfsstandaardInput,
+  KbBedrijfsstandaardPatch,
+  KbOpdrachtgeverVoorkeur,
+  KbOpdrachtgeverVoorkeurInput,
   LaadBrandstofImport200,
   Label,
   LabelDocumentenInput,
@@ -342,6 +347,8 @@ import type {
   LeesBevestiging,
   Leverancier,
   LeverancierInput,
+  LeverancierPrestatie,
+  LeverancierPrestatieInput,
   ListActieveDocumentStudioModellen200,
   ListAiAanroepenParams,
   ListAlleVerlofAanvragenParams,
@@ -369,6 +376,7 @@ import type {
   ListInkoopoverzichtParams,
   ListInspectiesParams,
   ListJaarAfsluitingRegelsParams,
+  ListKbBedrijfsstandaardenParams,
   ListLabelsParams,
   ListLeveranciersParams,
   ListMeldingenParams,
@@ -69051,5 +69059,526 @@ export const useDeleteFieLeermoment = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getDeleteFieLeermomentMutationOptions(options));
+    }
+
+export const getListKbBedrijfsstandaardenUrl = (params?: ListKbBedrijfsstandaardenParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/kb/bedrijfsstandaarden?${stringifiedParams}` : `/api/kb/bedrijfsstandaarden`
+}
+
+/**
+ * @summary Lijst actieve bedrijfsstandaarden
+ */
+export const listKbBedrijfsstandaarden = async (params?: ListKbBedrijfsstandaardenParams, options?: RequestInit): Promise<KbBedrijfsstandaard[]> => {
+
+  return customFetch<KbBedrijfsstandaard[]>(getListKbBedrijfsstandaardenUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListKbBedrijfsstandaardenQueryKey = (params?: ListKbBedrijfsstandaardenParams,) => {
+    return [
+    `/api/kb/bedrijfsstandaarden`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListKbBedrijfsstandaardenQueryOptions = <TData = Awaited<ReturnType<typeof listKbBedrijfsstandaarden>>, TError = ErrorType<unknown>>(params?: ListKbBedrijfsstandaardenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listKbBedrijfsstandaarden>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListKbBedrijfsstandaardenQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listKbBedrijfsstandaarden>>> = ({ signal }) => listKbBedrijfsstandaarden(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listKbBedrijfsstandaarden>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListKbBedrijfsstandaardenQueryResult = NonNullable<Awaited<ReturnType<typeof listKbBedrijfsstandaarden>>>
+export type ListKbBedrijfsstandaardenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Lijst actieve bedrijfsstandaarden
+ */
+
+export function useListKbBedrijfsstandaarden<TData = Awaited<ReturnType<typeof listKbBedrijfsstandaarden>>, TError = ErrorType<unknown>>(
+ params?: ListKbBedrijfsstandaardenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listKbBedrijfsstandaarden>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListKbBedrijfsstandaardenQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateKbBedrijfsstandaardUrl = () => {
+
+
+
+
+  return `/api/kb/bedrijfsstandaarden`
+}
+
+/**
+ * @summary Nieuwe bedrijfsstandaard aanmaken
+ */
+export const createKbBedrijfsstandaard = async (kbBedrijfsstandaardInput: KbBedrijfsstandaardInput, options?: RequestInit): Promise<KbBedrijfsstandaard> => {
+
+  return customFetch<KbBedrijfsstandaard>(getCreateKbBedrijfsstandaardUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(kbBedrijfsstandaardInput)
+  }
+);}
+
+
+
+
+export const getCreateKbBedrijfsstandaardMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createKbBedrijfsstandaard>>, TError,{data: BodyType<KbBedrijfsstandaardInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createKbBedrijfsstandaard>>, TError,{data: BodyType<KbBedrijfsstandaardInput>}, TContext> => {
+
+const mutationKey = ['createKbBedrijfsstandaard'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createKbBedrijfsstandaard>>, {data: BodyType<KbBedrijfsstandaardInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createKbBedrijfsstandaard(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateKbBedrijfsstandaardMutationResult = NonNullable<Awaited<ReturnType<typeof createKbBedrijfsstandaard>>>
+    export type CreateKbBedrijfsstandaardMutationBody = BodyType<KbBedrijfsstandaardInput>
+    export type CreateKbBedrijfsstandaardMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Nieuwe bedrijfsstandaard aanmaken
+ */
+export const useCreateKbBedrijfsstandaard = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createKbBedrijfsstandaard>>, TError,{data: BodyType<KbBedrijfsstandaardInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createKbBedrijfsstandaard>>,
+        TError,
+        {data: BodyType<KbBedrijfsstandaardInput>},
+        TContext
+      > => {
+      return useMutation(getCreateKbBedrijfsstandaardMutationOptions(options));
+    }
+
+export const getUpdateKbBedrijfsstandaardUrl = (id: number,) => {
+
+
+
+
+  return `/api/kb/bedrijfsstandaarden/${id}`
+}
+
+/**
+ * @summary Bedrijfsstandaard bijwerken
+ */
+export const updateKbBedrijfsstandaard = async (id: number,
+    kbBedrijfsstandaardPatch: KbBedrijfsstandaardPatch, options?: RequestInit): Promise<KbBedrijfsstandaard> => {
+
+  return customFetch<KbBedrijfsstandaard>(getUpdateKbBedrijfsstandaardUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(kbBedrijfsstandaardPatch)
+  }
+);}
+
+
+
+
+export const getUpdateKbBedrijfsstandaardMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateKbBedrijfsstandaard>>, TError,{id: number;data: BodyType<KbBedrijfsstandaardPatch>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateKbBedrijfsstandaard>>, TError,{id: number;data: BodyType<KbBedrijfsstandaardPatch>}, TContext> => {
+
+const mutationKey = ['updateKbBedrijfsstandaard'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateKbBedrijfsstandaard>>, {id: number;data: BodyType<KbBedrijfsstandaardPatch>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateKbBedrijfsstandaard(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateKbBedrijfsstandaardMutationResult = NonNullable<Awaited<ReturnType<typeof updateKbBedrijfsstandaard>>>
+    export type UpdateKbBedrijfsstandaardMutationBody = BodyType<KbBedrijfsstandaardPatch>
+    export type UpdateKbBedrijfsstandaardMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Bedrijfsstandaard bijwerken
+ */
+export const useUpdateKbBedrijfsstandaard = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateKbBedrijfsstandaard>>, TError,{id: number;data: BodyType<KbBedrijfsstandaardPatch>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateKbBedrijfsstandaard>>,
+        TError,
+        {id: number;data: BodyType<KbBedrijfsstandaardPatch>},
+        TContext
+      > => {
+      return useMutation(getUpdateKbBedrijfsstandaardMutationOptions(options));
+    }
+
+export const getGetLeverancierPrestatiesUrl = (id: number,) => {
+
+
+
+
+  return `/api/leveranciers/${id}/prestaties`
+}
+
+/**
+ * @summary Prestaties per leverancier
+ */
+export const getLeverancierPrestaties = async (id: number, options?: RequestInit): Promise<LeverancierPrestatie[]> => {
+
+  return customFetch<LeverancierPrestatie[]>(getGetLeverancierPrestatiesUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetLeverancierPrestatiesQueryKey = (id: number,) => {
+    return [
+    `/api/leveranciers/${id}/prestaties`
+    ] as const;
+    }
+
+
+export const getGetLeverancierPrestatiesQueryOptions = <TData = Awaited<ReturnType<typeof getLeverancierPrestaties>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getLeverancierPrestaties>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetLeverancierPrestatiesQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getLeverancierPrestaties>>> = ({ signal }) => getLeverancierPrestaties(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getLeverancierPrestaties>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetLeverancierPrestatiesQueryResult = NonNullable<Awaited<ReturnType<typeof getLeverancierPrestaties>>>
+export type GetLeverancierPrestatiesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Prestaties per leverancier
+ */
+
+export function useGetLeverancierPrestaties<TData = Awaited<ReturnType<typeof getLeverancierPrestaties>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getLeverancierPrestaties>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetLeverancierPrestatiesQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateLeverancierPrestatieUrl = (id: number,) => {
+
+
+
+
+  return `/api/leveranciers/${id}/prestaties`
+}
+
+/**
+ * @summary Prestatiemeting registreren
+ */
+export const createLeverancierPrestatie = async (id: number,
+    leverancierPrestatieInput: LeverancierPrestatieInput, options?: RequestInit): Promise<LeverancierPrestatie> => {
+
+  return customFetch<LeverancierPrestatie>(getCreateLeverancierPrestatieUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(leverancierPrestatieInput)
+  }
+);}
+
+
+
+
+export const getCreateLeverancierPrestatieMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createLeverancierPrestatie>>, TError,{id: number;data: BodyType<LeverancierPrestatieInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createLeverancierPrestatie>>, TError,{id: number;data: BodyType<LeverancierPrestatieInput>}, TContext> => {
+
+const mutationKey = ['createLeverancierPrestatie'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createLeverancierPrestatie>>, {id: number;data: BodyType<LeverancierPrestatieInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  createLeverancierPrestatie(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateLeverancierPrestatieMutationResult = NonNullable<Awaited<ReturnType<typeof createLeverancierPrestatie>>>
+    export type CreateLeverancierPrestatieMutationBody = BodyType<LeverancierPrestatieInput>
+    export type CreateLeverancierPrestatieMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Prestatiemeting registreren
+ */
+export const useCreateLeverancierPrestatie = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createLeverancierPrestatie>>, TError,{id: number;data: BodyType<LeverancierPrestatieInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createLeverancierPrestatie>>,
+        TError,
+        {id: number;data: BodyType<LeverancierPrestatieInput>},
+        TContext
+      > => {
+      return useMutation(getCreateLeverancierPrestatieMutationOptions(options));
+    }
+
+export const getGetKbOpdrachtgeverVoorkeurUrl = (klantId: number,) => {
+
+
+
+
+  return `/api/kb/opdrachtgever-voorkeuren/${klantId}`
+}
+
+/**
+ * @summary Voorkeuren per klant ophalen
+ */
+export const getKbOpdrachtgeverVoorkeur = async (klantId: number, options?: RequestInit): Promise<KbOpdrachtgeverVoorkeur> => {
+
+  return customFetch<KbOpdrachtgeverVoorkeur>(getGetKbOpdrachtgeverVoorkeurUrl(klantId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetKbOpdrachtgeverVoorkeurQueryKey = (klantId: number,) => {
+    return [
+    `/api/kb/opdrachtgever-voorkeuren/${klantId}`
+    ] as const;
+    }
+
+
+export const getGetKbOpdrachtgeverVoorkeurQueryOptions = <TData = Awaited<ReturnType<typeof getKbOpdrachtgeverVoorkeur>>, TError = ErrorType<unknown>>(klantId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getKbOpdrachtgeverVoorkeur>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetKbOpdrachtgeverVoorkeurQueryKey(klantId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getKbOpdrachtgeverVoorkeur>>> = ({ signal }) => getKbOpdrachtgeverVoorkeur(klantId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: klantId !== null && klantId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getKbOpdrachtgeverVoorkeur>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetKbOpdrachtgeverVoorkeurQueryResult = NonNullable<Awaited<ReturnType<typeof getKbOpdrachtgeverVoorkeur>>>
+export type GetKbOpdrachtgeverVoorkeurQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Voorkeuren per klant ophalen
+ */
+
+export function useGetKbOpdrachtgeverVoorkeur<TData = Awaited<ReturnType<typeof getKbOpdrachtgeverVoorkeur>>, TError = ErrorType<unknown>>(
+ klantId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getKbOpdrachtgeverVoorkeur>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetKbOpdrachtgeverVoorkeurQueryOptions(klantId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUpsertKbOpdrachtgeverVoorkeurUrl = (klantId: number,) => {
+
+
+
+
+  return `/api/kb/opdrachtgever-voorkeuren/${klantId}`
+}
+
+/**
+ * @summary Voorkeuren upsert
+ */
+export const upsertKbOpdrachtgeverVoorkeur = async (klantId: number,
+    kbOpdrachtgeverVoorkeurInput: KbOpdrachtgeverVoorkeurInput, options?: RequestInit): Promise<KbOpdrachtgeverVoorkeur> => {
+
+  return customFetch<KbOpdrachtgeverVoorkeur>(getUpsertKbOpdrachtgeverVoorkeurUrl(klantId),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(kbOpdrachtgeverVoorkeurInput)
+  }
+);}
+
+
+
+
+export const getUpsertKbOpdrachtgeverVoorkeurMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof upsertKbOpdrachtgeverVoorkeur>>, TError,{klantId: number;data: BodyType<KbOpdrachtgeverVoorkeurInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof upsertKbOpdrachtgeverVoorkeur>>, TError,{klantId: number;data: BodyType<KbOpdrachtgeverVoorkeurInput>}, TContext> => {
+
+const mutationKey = ['upsertKbOpdrachtgeverVoorkeur'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof upsertKbOpdrachtgeverVoorkeur>>, {klantId: number;data: BodyType<KbOpdrachtgeverVoorkeurInput>}> = (props) => {
+          const {klantId,data} = props ?? {};
+
+          return  upsertKbOpdrachtgeverVoorkeur(klantId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpsertKbOpdrachtgeverVoorkeurMutationResult = NonNullable<Awaited<ReturnType<typeof upsertKbOpdrachtgeverVoorkeur>>>
+    export type UpsertKbOpdrachtgeverVoorkeurMutationBody = BodyType<KbOpdrachtgeverVoorkeurInput>
+    export type UpsertKbOpdrachtgeverVoorkeurMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Voorkeuren upsert
+ */
+export const useUpsertKbOpdrachtgeverVoorkeur = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof upsertKbOpdrachtgeverVoorkeur>>, TError,{klantId: number;data: BodyType<KbOpdrachtgeverVoorkeurInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof upsertKbOpdrachtgeverVoorkeur>>,
+        TError,
+        {klantId: number;data: BodyType<KbOpdrachtgeverVoorkeurInput>},
+        TContext
+      > => {
+      return useMutation(getUpsertKbOpdrachtgeverVoorkeurMutationOptions(options));
     }
 

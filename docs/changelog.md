@@ -4,6 +4,45 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-05 — FPS Knowledge Base — Foundation (Task #303)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+**Wat is gebouwd:**
+
+**Database — 3 nieuwe tabellen + uitbreiding 2 bestaande:**
+- `leveranciers`: 8 KB-velden toegevoegd (`kb_levertijd_dagen`, `kb_betrouwbaarheidsscore`, `kb_min_bestelbedrag`, `kb_voorkeursleverancier`, `kb_kwaliteitscertificering`, `kb_retourbeleid`, `kb_notities`, `kb_bijgewerkt_op`)
+- `artikelen`: 7 KB-velden toegevoegd (`kb_vervangers`, `kb_gerelateerde_artikelen`, `kb_alternatieven`, `kb_goedgekeurd`, `kb_notities`, `kb_bijgewerkt_op`, `kb_geldig_tot`)
+- `leverancier_prestaties`: nieuw (prestatieregistratie per leverancier per project/periode)
+- `fps_bedrijfsstandaarden`: nieuw (centrale kennisbank FPS-bedrijfsstandaarden; 3 seed-rijen)
+- `opdrachtgever_voorkeuren`: nieuw (per-klant voorkeuren: verplichte/verboden artikelen, rapportage-eisen, etc.)
+
+**Drizzle-schema — `lib/db/src/schema/`:**
+- `leveranciers.ts` en `artikelen.ts` uitgebreid met KB-velden
+- Nieuw `kb.ts` met alle drie tabeldefinities
+- `index.ts` uitgebreid met `export * from "./kb"`
+
+**kbService — `artifacts/api-server/src/lib/kbService.ts`:**
+- Volledige implementatie van `assembleKbContext(opties?)` — assembleert KB-context als Markdown-blok voor prompt-injection (bedrijfsstandaarden, leveranciersprofiel + prestaties, opdrachtgever-voorkeuren)
+- Legacy `kbService`-object behouden voor achterwaartse compatibiliteit
+
+**KB_BESLISSTRUCTUUR — `artifacts/api-server/src/lib/aiPrompts.ts`:**
+- Beslisboom-prompt toegevoegd als exporteerbare constante; geïntegreerd in PIM AI-context
+
+**API-routes — `artifacts/api-server/src/routes/kb.ts`:**
+- `GET /kb/bedrijfsstandaarden` — gefilterd op categorie/actief
+- `POST /kb/bedrijfsstandaarden` — nieuw aanmaken (systeem-schrijven)
+- `PATCH /kb/bedrijfsstandaarden/:id` — bijwerken (systeem-schrijven)
+- `GET /leveranciers/:id/prestaties` — prestatiemetingen per leverancier
+- `POST /leveranciers/:id/prestaties` — nieuwe meting registreren
+- `GET /kb/opdrachtgever-voorkeuren/:klantId` — voorkeuren per klant
+- `PUT /kb/opdrachtgever-voorkeuren/:klantId` — upsert voorkeuren
+
+**OpenAPI + codegen:**
+- 7 paden toegevoegd aan `lib/api-spec/openapi.yaml`
+- 6 nieuwe schemas: `KbBedrijfsstandaard`, `KbBedrijfsstandaardInput`, `KbBedrijfsstandaardPatch`, `LeverancierPrestatie`, `LeverancierPrestatieInput`, `KbOpdrachtgeverVoorkeur`, `KbOpdrachtgeverVoorkeurInput`
+- Codegen uitgevoerd (orval); gegenereerde hooks beschikbaar in `lib/api-client-react`
+
 ## 2026-07-05 — PIM Fase G — Oplevering AI (Task #302)
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
