@@ -8,7 +8,6 @@ connect.fps-one.nl {
         Referrer-Policy strict-origin-when-cross-origin
     }
 
-    # API-verzoeken doorsluizen naar de backend
     handle /api/* {
         reverse_proxy api:8080 {
             header_up X-Real-IP {remote_host}
@@ -19,21 +18,38 @@ connect.fps-one.nl {
         }
     }
 
-    root * /srv/public
-
-    # SPA-fallback: alleen herschrijven naar /index.html als het pad
-    # geen bestaand bestand is. Expliciete root zodat Caddy niet gist.
-    @spa {
-        not {
-            file {
-                root /srv/public
-                try_files {path}
-            }
+    handle /assets/* {
+        root * /srv/public
+        file_server {
+            precompressed gzip br
         }
     }
-    rewrite @spa /index.html
 
-    file_server {
-        precompressed gzip br
+    handle /icons/* {
+        root * /srv/public
+        file_server {
+            precompressed gzip br
+        }
+    }
+
+    handle /favicon* {
+        root * /srv/public
+        file_server
+    }
+
+    handle /manifest* {
+        root * /srv/public
+        file_server
+    }
+
+    handle /sw.js {
+        root * /srv/public
+        file_server
+    }
+
+    handle {
+        root * /srv/public
+        try_files {path} /index.html
+        file_server
     }
 }
