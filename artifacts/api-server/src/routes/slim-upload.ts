@@ -27,6 +27,7 @@ export const SLIM_UPLOAD_CATEGORIEEN = [
   "eta",
   "dop",
   "personeelsdocument",
+  "verzekering",
   "snagstream",
   "bibliotheek",
   "document_sjabloon",
@@ -109,6 +110,28 @@ function heuristischClassificeer(
     categorie = "factuur";
   } else if (["aanvraag", "rfq", "tender", "bestek"].some((k) => naam.includes(k))) {
     categorie = "aanvraag";
+  } else if (["cv", "curriculum vitae", "curriculum_vitae", "resume", "sollicitatie"].some((k) => naam.includes(k))) {
+    return {
+      categorie: "personeelsdocument",
+      voorstel_naam: bestandsnaam.replace(/\.[^.]+$/, "").replace(/[-_]/g, " ").trim(),
+      redenering: "CV of sollicitatiedocument herkend op bestandsnaam — onboarding starten of klaarzetten?",
+      vertrouwen: "hoog",
+      ai_beschikbaar: false,
+      vision_gebruikt: false,
+      gevonden_gegevens: { document_subtype: "cv" },
+      alternatieven: ["personeelsdocument", "algemeen"],
+    };
+  } else if (["polis", "verzekering", "assurantie", "aansprakelijkheid", "wettelijkeaansprakelijkheid"].some((k) => naam.includes(k))) {
+    return {
+      categorie: "verzekering",
+      voorstel_naam: bestandsnaam.replace(/\.[^.]+$/, "").replace(/[-_]/g, " ").trim(),
+      redenering: "Verzekeringsdocument herkend op bestandsnaam — jaar bepaalt archief of actueel.",
+      vertrouwen: "midden",
+      ai_beschikbaar: false,
+      vision_gebruikt: false,
+      gevonden_gegevens: {},
+      alternatieven: ["personeelsdocument", "bibliotheek", "algemeen"],
+    };
   } else if (["arbeidscontract", "arbeidsovereenkomst", "diploma", "vca", "vog", "personeelsdossier"].some((k) => naam.includes(k))) {
     categorie = "personeelsdocument";
   } else if (["tekening", "plattegrond", "situatie", "autocad"].some((k) => naam.includes(k)) || ext === "dwg") {
@@ -201,9 +224,11 @@ VISUELE SIGNALEN (gebruik dit wanneer je een afbeelding ziet):
 - Pagina met tabel van regelposten, IBAN, BTW-bedragen, betalingstermijn → "factuur"
 - Pagina met projectnaam, locatiebeschrijving en werkzaamheden → "aanvraag"
 - Pagina met brandweerstand EI/EW, testnormen, fabrikantlogo → "testrapport" of "certificaat"
+- Pagina met persoonsnaam, werkervaring, opleiding, vaardigheden → "personeelsdocument" met document_subtype "cv"
 - Pagina met persoonsnaam, dienstverband, salarisgegevens → "personeelsdocument"
+- Pagina met polisnummer, verzekeraar, dekking, premie, ingangsdatum → "verzekering"
 - Pagina met prijstabel, "geldig tot", excl. BTW → "offerte"
-- Pagina met bevindingen, herstelacties, inspectiedatum → "snagstream"
+- Pagina met bevindingen, herstelacties, inspectiedatum, punchlijst → "snagstream"
 
 CATEGORIEËN:
 "aanvraag"          — Aanvraag, offerteaanvraag of opdrachtverzoek.
@@ -215,8 +240,9 @@ CATEGORIEËN:
 "certificaat"       — KOMO, KIWA, BRL, CE-markering, kwaliteitscertificaat.
 "eta"               — European Technical Assessment / ETB / EOTA.
 "dop"               — Declaration of Performance / Prestatieverklaring.
-"personeelsdocument"— Arbeidscontract, diploma, VCA, loonstrook, VOG.
-"snagstream"        — Opleverrapport, inspectieverslag, punchlijst.
+"personeelsdocument"— Arbeidscontract, diploma, VCA, loonstrook, VOG, of CV/sollicitatie.
+"verzekering"       — Verzekeringspolis, assurantiepolis, aansprakelijkheids- of bedrijfsverzekering. Altijd "jaar" extracten.
+"snagstream"        — Opleverrapport, inspectieverslag, punchlijst, Snagstream-export.
 "bibliotheek"       — Overige technische brandveiligheidsdocumenten.
 "document_sjabloon" — Lege/visuele PDF met bedrijfslogo of huisstijl, bedoeld als briefpapier of Studio-onderlegger.
 "algemeen"          — Correspondentie, notulen, presentaties, interne memo's.
@@ -230,16 +256,21 @@ REGELS:
    - factuur: leverancier, bedrag, factuurnummer, datum, betalingstermijn
    - aanvraag: klant, locatie, contactpersoon, projectnaam, omschrijving
    - testrapport/eta/dop/certificaat: fabrikant, productnaam, normen, geldig_tot, classificatie
-   - personeelsdocument: naam_medewerker, type_document (GEEN BSN/salaris)
+   - personeelsdocument (CV/sollicitatie): document_subtype="cv", naam_medewerker, gewenste_functie, opleiding_niveau, jaren_ervaring (GEEN BSN/salaris)
+   - personeelsdocument (overig): naam_medewerker, type_document (GEEN BSN/salaris)
+   - verzekering: soort_verzekering, polisnummer, verzekeraar, geldig_van, geldig_tot, jaar (verplicht — haal jaar uit geldig_tot of geldig_van)
+   - snagstream: projectnaam, locatie, inspectiedatum, rapporttype, opdrachtgever
    - offerte: klant, bedrag, referentie, datum
    - tekening: project, schaal, revisie
    - document_sjabloon: bedrijf, documenttype_sjabloon
    - overig: alleen wat duidelijk zichtbaar is
 5. Bij "onbekend": geef 3 zinvolle alternatieven.
+6. CV-herkenning: als het document een werkervaring-/opleidingsoverzicht is (curriculum vitae, resume, sollicitatie), gebruik categorie "personeelsdocument" EN zet document_subtype="cv" in gevonden_gegevens.
+7. Verzekering-jaar: extraheer altijd het jaar (viercijerig getal) uit de geldigheidsdatum. Gebruik sleutel "jaar".
 
 Geef uitsluitend geldige JSON:
 {
-  "categorie": "<één van de 15>",
+  "categorie": "<één van de 16>",
   "voorstel_naam": "<max 80 tekens>",
   "redenering": "<max 200 tekens, beschrijf visuele én tekstuele aanwijzingen>",
   "vertrouwen": "laag|midden|hoog",

@@ -4,6 +4,35 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-06 — Slim uploaden uitgebreid: CV-onboarding, verzekeringen, Snagstream
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** geen
+
+**Wat is gebouwd:**
+
+De universele SlimUploadBalk herkent nu drie aanvullende documentpatronen met directe actiestromen — zonder binding aan een specifiek uploadscherm of opslaglocatie.
+
+**CV / sollicitatie:**
+- AI en heuristiek herkennen CV's specifiek (bestandsnaam, visuele lay-out, tekst "werkervaring / opleiding / vaardigheden")
+- `document_subtype: "cv"` in `gevonden_gegevens` signaleert de frontend
+- Actiekeuze: "Onboarding starten" (navigeert direct naar `/personeel/onboarden` + CV in inbox) of "Klaarzetten voor later" (inbox)
+- Geëxtraheerde velden: naam, gewenste functie, opleidingsniveau, jaren ervaring
+
+**Verzekeringspolis:**
+- Nieuw categorie `verzekering` (backend + frontend)
+- Heuristiek: "polis / verzekering / assurantie / aansprakelijkheid" in bestandsnaam
+- AI extraheert: soort verzekering, polisnummer, verzekeraar, geldig van/tot, jaar
+- Jaar-bewuste routing: polis met jaar ≥ huidig jaar → "Opslaan als actuele polis"; ouder jaar → "Archiveren (polis JJJJ)"
+
+**Snagstream-rapport:**
+- Explicieter actieblok vervangt de generieke navigatieknop
+- Twee knoppen: "Opslaan in Snagstream-archief" of "Opslaan en naar Snagstream gaan"
+- AI extraheert: projectnaam, locatie, inspectiedatum, rapporttype, opdrachtgever
+
+**Gewijzigde bestanden:**
+- `artifacts/api-server/src/routes/slim-upload.ts` — `verzekering` in SLIM_UPLOAD_CATEGORIEEN; heuristiek voor CV + polis; AI-prompt uitgebreid met visuele signalen, categorie-definitie, extractieregels
+- `artifacts/firevault/src/components/slim-upload-balk.tsx` — `verzekering` in type + CATEGORIE_INFO + GEVONDEN_LABELS; BeslisScherm: CV-panel, verzekering jaar-routing, snagstream-archief; WachtrijKaart + SlimUploadBalk: `onNavigeer` callback doorgegeven
+
 ## 2026-07-06 — Import historische facturen en projecten (ERP-archief)
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** geen

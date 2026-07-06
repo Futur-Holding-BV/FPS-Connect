@@ -5,7 +5,7 @@ import {
   FileText, BookOpen, Receipt, Users, PenLine, Archive, FolderOpen,
   Zap, ZapOff, Settings, AlertTriangle, ShieldAlert, HelpCircle,
   ClipboardList, BadgeCheck, FileCheck, Ruler, Package, LayoutTemplate,
-  RotateCcw, Clock, History,
+  RotateCcw, Clock, History, Shield, UserPlus, CalendarClock, Inbox,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -24,7 +24,7 @@ import { useListMedewerkers } from "@workspace/api-client-react";
 type CategorieUitgebreid =
   | "aanvraag" | "tekening" | "offerte" | "factuur"
   | "productdocument" | "testrapport" | "certificaat" | "eta" | "dop"
-  | "personeelsdocument" | "snagstream" | "bibliotheek" | "document_sjabloon" | "algemeen" | "onbekend";
+  | "personeelsdocument" | "verzekering" | "snagstream" | "bibliotheek" | "document_sjabloon" | "algemeen" | "onbekend";
 
 type Vertrouwen = "laag" | "midden" | "hoog";
 
@@ -213,6 +213,7 @@ const CATEGORIE_INFO: Record<CategorieUitgebreid, {
   eta:               { label: "ETA — Technische beoordeling",  icoon: <BadgeCheck className="h-4 w-4" />,   pad: "/documenten",  kleur: "bg-indigo-50 text-indigo-700 border-indigo-200",  omschrijving: "European Technical Assessment / ETB / EOTA" },
   dop:               { label: "Prestatieverklaring (DoP)",     icoon: <BadgeCheck className="h-4 w-4" />,   pad: "/documenten",  kleur: "bg-cyan-50 text-cyan-700 border-cyan-200",        omschrijving: "Declaration of Performance, Reg. 305/2011" },
   personeelsdocument:{ label: "Personeel / HRM",               icoon: <Users className="h-4 w-4" />,        pad: "/personeel",   kleur: "bg-purple-50 text-purple-700 border-purple-200",  omschrijving: "Arbeidscontract, diploma, VOG, VCA" },
+  verzekering:       { label: "Verzekeringen",                 icoon: <Shield className="h-4 w-4" />,       pad: "/documenten",  kleur: "bg-blue-50 text-blue-700 border-blue-200",        omschrijving: "Verzekeringspolis, aansprakelijkheid, assurantie" },
   snagstream:        { label: "Snagstream archief",            icoon: <Archive className="h-4 w-4" />,      pad: "/snagstream",  kleur: "bg-rose-50 text-rose-700 border-rose-200",        omschrijving: "Opleverrapport, inspectieverslag, punchlijst" },
   bibliotheek:       { label: "Documentenbibliotheek",         icoon: <BookOpen className="h-4 w-4" />,        pad: "/documenten",           kleur: "bg-blue-50 text-blue-700 border-blue-200",        omschrijving: "Technisch brandveiligheidsdocument" },
   document_sjabloon: { label: "Document Studio — sjabloon",    icoon: <LayoutTemplate className="h-4 w-4" />, pad: "/organisatie/studio", kleur: "bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200", omschrijving: "Briefpapier, onderlegger of huisstijl-sjabloon" },
@@ -237,8 +238,11 @@ const GEVONDEN_LABELS: Record<string, string> = {
   factuurnummer: "Factuurnummer", datum: "Datum", betalingstermijn: "Betalingstermijn",
   locatie: "Locatie", contactpersoon: "Contactpersoon", projectnaam: "Projectnaam",
   omschrijving: "Omschrijving", fabrikant: "Fabrikant", productnaam: "Productnaam",
-  normen: "Normen", geldig_tot: "Geldig tot", classificatie: "Classificatie",
+  normen: "Normen", geldig_tot: "Geldig tot", geldig_van: "Geldig van", classificatie: "Classificatie",
   naam_medewerker: "Medewerker", type_document: "Documenttype",
+  gewenste_functie: "Gewenste functie", opleiding_niveau: "Opleidingsniveau", jaren_ervaring: "Jaren ervaring",
+  soort_verzekering: "Soort verzekering", polisnummer: "Polisnummer", verzekeraar: "Verzekeraar", jaar: "Jaar",
+  inspectiedatum: "Inspectiedatum", rapporttype: "Rapporttype", opdrachtgever: "Opdrachtgever",
   project: "Project", schaal: "Schaal", revisie: "Revisie", referentie: "Referentie",
 };
 
@@ -362,11 +366,13 @@ function BeslisScherm({
   onBevestigen,
   onWijzigCategorie,
   onBevestigenPersoneel,
+  onNavigeer,
 }: {
   item: UploadItem;
   onBevestigen: (cat: CategorieUitgebreid) => void;
   onWijzigCategorie: (cat: CategorieUitgebreid) => void;
   onBevestigenPersoneel?: (medewerkerId: number, docType: string) => void;
+  onNavigeer?: (pad: string) => void;
 }) {
   const [gekozenMedewerker, setGekozenMedewerker] = useState("");
   const [gekozenDocType, setGekozenDocType] = useState("");
@@ -375,6 +381,27 @@ function BeslisScherm({
   const { suggestie, fout, status } = item;
   const effectiefeCat = item.gekozenCategorie ?? suggestie?.categorie ?? "algemeen";
   const catInfo = CATEGORIE_INFO[effectiefeCat];
+
+  const isCV =
+    effectiefeCat === "personeelsdocument" && (
+      suggestie?.gevonden_gegevens?.document_subtype === "cv" ||
+      ["cv", "curriculum", "vitae", "resume", "sollicitatie"].some((k) =>
+        item.bestand.name.toLowerCase().includes(k)
+      )
+    );
+
+  const verzekeringJaar = (() => {
+    if (effectiefeCat !== "verzekering") return null;
+    const raw =
+      suggestie?.gevonden_gegevens?.jaar ??
+      suggestie?.gevonden_gegevens?.geldig_tot ??
+      suggestie?.gevonden_gegevens?.geldig_van;
+    if (!raw) return null;
+    const match = raw.match(/\d{4}/);
+    return match ? parseInt(match[0]) : null;
+  })();
+  const isActueelePolis =
+    verzekeringJaar !== null && verzekeringJaar >= new Date().getFullYear();
 
   // Technische fout → handmatig kiezen
   if (status === "fout" || fout) {
@@ -560,16 +587,61 @@ function BeslisScherm({
         </details>
       )}
 
-      {/* Actieknop */}
-      {effectiefeCat !== "aanvraag" && effectiefeCat !== "personeelsdocument" && (
+      {/* Actieknop — niet tonen voor categorieën met een eigen actieblok */}
+      {effectiefeCat !== "aanvraag" &&
+        effectiefeCat !== "document_sjabloon" &&
+        effectiefeCat !== "personeelsdocument" &&
+        effectiefeCat !== "verzekering" &&
+        effectiefeCat !== "snagstream" && (
         <Button size="sm" className="w-full gap-1.5" onClick={() => onBevestigen(effectiefeCat)}>
           <ChevronRight className="h-4 w-4" />
           Ga naar {CATEGORIE_INFO[effectiefeCat].label}
         </Button>
       )}
 
-      {/* Personeelsdocument → direct naar medewerker-dossier */}
-      {effectiefeCat === "personeelsdocument" && (
+      {/* CV herkend → onboarding starten of klaarzetten */}
+      {isCV && (
+        <div className="rounded-md border border-purple-200 bg-purple-50 p-3 space-y-2">
+          <div className="flex items-center gap-2">
+            <UserPlus className="h-4 w-4 text-purple-600 shrink-0" />
+            <p className="text-xs font-semibold text-purple-700">CV herkend — wat wilt u doen?</p>
+          </div>
+          {suggestie?.gevonden_gegevens?.naam_medewerker && (
+            <p className="text-xs text-purple-600">
+              Naam: <span className="font-medium">{suggestie.gevonden_gegevens.naam_medewerker}</span>
+              {suggestie.gevonden_gegevens.gewenste_functie && (
+                <> &middot; Functie: <span className="font-medium">{suggestie.gevonden_gegevens.gewenste_functie}</span></>
+              )}
+            </p>
+          )}
+          <div className="flex flex-col gap-1.5 mt-1">
+            <Button
+              size="sm"
+              variant="default"
+              className="justify-start gap-2 text-xs"
+              onClick={() => {
+                void uploadNaarInbox(item.bestand, item.toelichting);
+                onNavigeer?.("/personeel/onboarden");
+              }}
+            >
+              <UserPlus className="h-3.5 w-3.5" />
+              Onboarding starten
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="justify-start gap-2 text-xs"
+              onClick={() => onBevestigen("personeelsdocument")}
+            >
+              <Inbox className="h-3.5 w-3.5" />
+              Klaarzetten voor later (inbox)
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Personeelsdocument (geen CV) → direct naar medewerker-dossier */}
+      {effectiefeCat === "personeelsdocument" && !isCV && (
         <div className="space-y-3 rounded-lg border border-purple-200 bg-purple-50/40 p-3">
           <p className="text-xs font-semibold text-purple-700">Direct opslaan in personeelsdossier</p>
           <div className="space-y-2">
@@ -615,6 +687,114 @@ function BeslisScherm({
           >
             Liever via inbox opslaan
           </button>
+        </div>
+      )}
+
+      {/* Verzekeringspolis → jaar-bewuste routing */}
+      {effectiefeCat === "verzekering" && (
+        <div className="rounded-md border border-blue-200 bg-blue-50 p-3 space-y-2">
+          <div className="flex items-center gap-2">
+            <Shield className="h-4 w-4 text-blue-600 shrink-0" />
+            <p className="text-xs font-semibold text-blue-700">Verzekeringspolis herkend</p>
+          </div>
+          {verzekeringJaar !== null && (
+            <p className="text-xs text-blue-600 flex items-center gap-1">
+              <CalendarClock className="h-3 w-3 shrink-0" />
+              Jaar {verzekeringJaar} &mdash;{" "}
+              <span className="font-semibold">
+                {isActueelePolis ? "actuele polis" : "oudere versie (archief)"}
+              </span>
+            </p>
+          )}
+          {verzekeringJaar === null && (
+            <p className="text-xs text-blue-500 italic">
+              Jaar niet herkend — kies zelf hoe op te slaan.
+            </p>
+          )}
+          <div className="flex flex-col gap-1.5 mt-1">
+            {isActueelePolis && (
+              <Button
+                size="sm"
+                variant="default"
+                className="justify-start gap-2 text-xs"
+                onClick={() => onBevestigen("verzekering")}
+              >
+                <Shield className="h-3.5 w-3.5" />
+                Opslaan als actuele polis
+              </Button>
+            )}
+            {!isActueelePolis && verzekeringJaar !== null && (
+              <Button
+                size="sm"
+                variant="default"
+                className="justify-start gap-2 text-xs"
+                onClick={() => onBevestigen("verzekering")}
+              >
+                <Archive className="h-3.5 w-3.5" />
+                Archiveren (polis {verzekeringJaar})
+              </Button>
+            )}
+            {verzekeringJaar === null && (
+              <>
+                <Button
+                  size="sm"
+                  variant="default"
+                  className="justify-start gap-2 text-xs"
+                  onClick={() => onBevestigen("verzekering")}
+                >
+                  <Shield className="h-3.5 w-3.5" />
+                  Opslaan als actuele polis
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="justify-start gap-2 text-xs"
+                  onClick={() => onBevestigen("verzekering")}
+                >
+                  <Archive className="h-3.5 w-3.5" />
+                  Archiveren (oudere versie)
+                </Button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Snagstream → direct naar archief uploaden */}
+      {effectiefeCat === "snagstream" && (
+        <div className="rounded-md border border-rose-200 bg-rose-50 p-3 space-y-2">
+          <div className="flex items-center gap-2">
+            <Archive className="h-4 w-4 text-rose-600 shrink-0" />
+            <p className="text-xs font-semibold text-rose-700">Snagstream-rapport herkend</p>
+          </div>
+          {suggestie?.gevonden_gegevens?.projectnaam && (
+            <p className="text-xs text-rose-600">
+              Project: <span className="font-medium">{suggestie.gevonden_gegevens.projectnaam}</span>
+              {suggestie.gevonden_gegevens.inspectiedatum && (
+                <> &middot; Datum: <span className="font-medium">{suggestie.gevonden_gegevens.inspectiedatum}</span></>
+              )}
+            </p>
+          )}
+          <div className="flex flex-col gap-1.5 mt-1">
+            <Button
+              size="sm"
+              variant="default"
+              className="justify-start gap-2 text-xs"
+              onClick={() => onBevestigen("snagstream")}
+            >
+              <Archive className="h-3.5 w-3.5" />
+              Opslaan in Snagstream-archief
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="justify-start gap-2 text-xs"
+              onClick={() => { onBevestigen("snagstream"); onNavigeer?.("/snagstream"); }}
+            >
+              <ChevronRight className="h-3.5 w-3.5" />
+              Opslaan en naar Snagstream gaan
+            </Button>
+          </div>
         </div>
       )}
     </div>
@@ -670,6 +850,7 @@ function WachtrijKaart({
   onBevestigen,
   onWijzigCategorie,
   onBevestigenPersoneel,
+  onNavigeer,
 }: {
   item: UploadItem;
   onToelichting: (tekst: string) => void;
@@ -677,6 +858,7 @@ function WachtrijKaart({
   onBevestigen: (cat: CategorieUitgebreid) => void;
   onWijzigCategorie: (cat: CategorieUitgebreid) => void;
   onBevestigenPersoneel?: (medewerkerId: number, docType: string) => void;
+  onNavigeer?: (pad: string) => void;
 }) {
   return (
     <div className="px-4 py-4 space-y-3">
@@ -741,6 +923,7 @@ function WachtrijKaart({
                 onBevestigen={onBevestigen}
                 onWijzigCategorie={onWijzigCategorie}
                 onBevestigenPersoneel={onBevestigenPersoneel}
+                onNavigeer={onNavigeer}
               />
             </>
           )}
@@ -1235,6 +1418,7 @@ export function SlimUploadBalk() {
                 onBevestigen={(cat) => opBevestigen(item.id, cat)}
                 onWijzigCategorie={(cat) => opWijzigCategorie(item.id, cat)}
                 onBevestigenPersoneel={(mid, dt) => void opBevestigenPersoneelFn(item.id, mid, dt)}
+                onNavigeer={(pad) => { navigate(pad); opSluiten(); }}
               />
             ))}
 
