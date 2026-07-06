@@ -1,4 +1,4 @@
-FROM node:24-slim AS builder
+FROM node:24-slim AS frontend-builder
 
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
@@ -21,12 +21,9 @@ COPY artifacts/firevault/ artifacts/firevault/
 
 RUN pnpm --filter @workspace/firevault run build
 
-FROM nginx:1.27-alpine AS runtime
+FROM caddy:2-alpine AS runtime
 
-COPY deploy/nginx.conf /etc/nginx/nginx.conf
-COPY --from=builder /app/artifacts/firevault/dist/public /usr/share/nginx/html
+COPY deploy/Caddyfile /etc/caddy/Caddyfile
+COPY --from=frontend-builder /app/artifacts/firevault/dist/public /srv/public
 
-HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
-  CMD wget -qO- http://localhost:80/index.html || exit 1
-
-EXPOSE 80
+EXPOSE 80 443

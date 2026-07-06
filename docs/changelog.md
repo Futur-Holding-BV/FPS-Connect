@@ -4,6 +4,26 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-06 — Productie-hardening en infrastructuurverificatie (aanvulling op migratiepakket)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** geen
+
+**Wat is toegevoegd:**
+
+- `deploy/SERVER_HARDENING.md` — volledig hardeningdocument: Ubuntu-basisconfiguratie, SSH-hardening, UFW-firewall, Docker security, logging, monitoring, maandelijks onderhoud, afvinkbare hardening-checklist (secties A t/m J)
+- `deploy/Dockerfile.caddy` — gecombineerde Caddy-image: Vite-frontend ingebakken in de Caddy-container (multi-stage), nginx volledig verwijderd
+- `deploy/INSTALL_PRODUCTION.md` bijgewerkt met: architectuurdiagram, storage-advies 3 fasen (MinIO lokaal → aparte server → externe S3), secrets-hoofdstuk (nooit in Git/code/backup, rechtenbeheer, rotatie, herstel), livegang-scenario 5 fasen (IP-test → HTTPS → smoke → DNS → eindcontrole), productie-acceptatiechecklist
+
+**Stack vereenvoudigd:**
+
+Eerder: nginx (statische files) + Caddy (HTTPS proxy) — twee lagen.
+Nu: Caddy (HTTPS + statische files via `file_server` + /api/* proxy) — één laag.
+Verwijderd: `deploy/Dockerfile.frontend`, `deploy/nginx.conf`.
+
+**Geen nieuwe functionaliteit aan FPS Connect.**
+
+---
+
 ## 2026-07-06 — Productie-migratiepakket voor eigen hosting
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** geen
