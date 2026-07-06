@@ -1,0 +1,43 @@
+FROM node:24-slim AS builder
+
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
+WORKDIR /app
+
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY tsconfig.base.json tsconfig.json ./
+
+COPY lib/api-spec/package.json lib/api-spec/
+COPY lib/api-client-react/package.json lib/api-client-react/
+COPY lib/db/package.json lib/db/
+COPY artifacts/api-server/package.json artifacts/api-server/
+
+RUN pnpm install --frozen-lockfile
+
+COPY lib/ lib/
+COPY artifacts/api-server/ artifacts/api-server/
+
+RUN pnpm run typecheck:libs
+RUN pnpm --filter @workspace/api-server run build
+
+FROM node:24-slim AS runtime
+
+RUN addgroup --system fps && adduser --system --ingroup fps fps
+WORKDIR /app
+
+COPY --from=builder /app/artifacts/api-server/dist ./dist
+COPY --from=builder /app/node_modules ./node_modules
+
+USER fps
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD node -e "require('http').get('http://localhost:' + (process.env.PORT||8080) + '/api/healthz', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"
+
+ENV NODE_ENV=production
+ENV PORT=8080
+
+EXPOSE 8080
+
+CMD ["node", "--enable-source-maps", "dist/index.mjs"]

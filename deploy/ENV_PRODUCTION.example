@@ -1,0 +1,59 @@
+# FPS Connect — Productie omgevingsvariabelen
+# Kopieer naar .env.production en vul alle waarden in.
+# Sla dit bestand NOOIT op met echte waarden in versiebeheer.
+
+# ── Database ──────────────────────────────────────────────────────────────────
+DATABASE_URL=postgres://fps_app:CHANGEME@db:5432/fps_production
+
+# ── Sessie ────────────────────────────────────────────────────────────────────
+# Genereer met: openssl rand -base64 48
+SESSION_SECRET=CHANGEME_min64tekens
+
+# ── Node ──────────────────────────────────────────────────────────────────────
+NODE_ENV=production
+PORT=8080
+LOG_LEVEL=warn
+
+# ── AI (kies één van de twee opties) ─────────────────────────────────────────
+# Optie A — eigen OpenAI API-sleutel:
+OPENAI_API_KEY=sk-...
+
+# Optie B — via Replit AI Integrations proxy (alleen als Replit build-omgeving):
+# AI_INTEGRATIONS_OPENAI_BASE_URL=https://...
+# AI_INTEGRATIONS_OPENAI_API_KEY=...
+
+# AI-features in/uitschakelen (true/false)
+CONNECT_AI_ENABLED=true
+
+# ── Google Maps ───────────────────────────────────────────────────────────────
+GOOGLE_MAPS_API_KEY=AIza...
+
+# ── Mail via Microsoft 365 Graph API ─────────────────────────────────────────
+MAIL_VIA_GRAPH=true
+MAIL_FROM=noreply@fpsbrandpreventie.nl
+MAIL_MAILBOX=app@fpsbrandpreventie.nl
+AZURE_CLIENT_ID_NEW=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+AZURE_CLIENT_SECRET=CHANGEME
+AZURE_TENANT_ID=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+
+# ── Object Storage (kies één optie) ──────────────────────────────────────────
+# Optie A — S3-compatible (AWS S3, MinIO, Cloudflare R2, etc.):
+S3_BUCKET=fps-production
+AWS_REGION=eu-west-1
+AWS_ACCESS_KEY_ID=CHANGEME
+AWS_SECRET_ACCESS_KEY=CHANGEME
+# Voor MinIO of andere endpoints:
+# S3_ENDPOINT=https://minio.yourdomain.com
+
+# Optie B — Google Cloud Storage:
+# GCS_BUCKET=fps-production
+# GOOGLE_CLOUD_BUCKET=fps-production
+# GOOGLE_APPLICATION_CREDENTIALS=/run/secrets/gcs-keyfile.json
+
+# Storage-paden (relatief aan bucket root)
+PRIVATE_OBJECT_DIR=private
+PUBLIC_OBJECT_SEARCH_PATHS=public
+
+# ── AVG / dataretentie ────────────────────────────────────────────────────────
+# Bewaarperiode activiteitslog in dagen (standaard 365)
+AVG_ACTIVITEIT_BEWAARDAGEN=365

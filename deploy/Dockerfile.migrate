@@ -1,0 +1,20 @@
+FROM node:24-slim
+
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
+WORKDIR /app
+
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY tsconfig.base.json tsconfig.json ./
+
+COPY lib/db/package.json lib/db/
+COPY lib/api-spec/package.json lib/api-spec/
+COPY lib/api-client-react/package.json lib/api-client-react/
+
+RUN pnpm install --frozen-lockfile
+
+COPY lib/db/ lib/db/
+
+CMD ["pnpm", "--filter", "@workspace/db", "run", "push"]

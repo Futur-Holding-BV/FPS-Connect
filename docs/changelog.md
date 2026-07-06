@@ -4,6 +4,42 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-06 — Productie-migratiepakket voor eigen hosting
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** geen
+
+**Wat is gebouwd:**
+
+Volledig migratiepakket om FPS Connect los te maken van Replit als productieomgeving. Geen nieuwe functionaliteit — uitsluitend portabiliteit, Dockerisering en productiehostingdocumentatie.
+
+**Bestanden toegevoegd in `deploy/`:**
+- `INSTALL_PRODUCTION.md` — stap-voor-stap installatie op Ubuntu LTS + Docker
+- `MIGRATION_FROM_REPLIT.md` — migratieprocedure: database-export, storage-export, DNS-overgang, verificatie
+- `BACKUP_RESTORE_PRODUCTION.md` — dagelijks backupbeleid, volledige restore, droge restore-drill, backup-monitoring
+- `RELEASE_PRODUCTION_CHECKLIST.md` — releaseproces op eigen server (pre/deploy/smoke test/post)
+- `ROLLBACK_PRODUCTION.md` — drie rollback-niveaus (code / code+db / kantoor-release administratief), beslissingsboom
+- `ENV_PRODUCTION.example` — alle vereiste omgevingsvariabelen gedocumenteerd met uitleg
+- `docker-compose.production.yml` — volledig productie-stack: PostgreSQL 16, migrate, api, frontend (nginx), Caddy (HTTPS), backup-profiel, logrotatie
+- `Dockerfile.api` — multi-stage Node 24 build voor api-server
+- `Dockerfile.frontend` — multi-stage Vite build → nginx static serving
+- `Dockerfile.migrate` — Drizzle push als losse container (runt vóór api)
+- `nginx.conf` — reverse proxy naar api + SPA-fallback + caching-headers
+- `Caddyfile` — automatisch HTTPS via Let's Encrypt, security-headers
+- `check-backup.sh` — backup-bewakingsscript (leeftijds- + integriteitcontrole)
+
+**Infrastructuur (gedocumenteerd, niet aangemaakt):**
+- Ubuntu 22.04/24.04 LTS + Docker 24+
+- PostgreSQL 16 in eigen container (nooit gedeeld met development)
+- S3-compatible object storage (AWS/MinIO/R2) of GCS — eigen bucket per omgeving
+- Caddy als reverse proxy + automatisch TLS
+- Dagelijkse pg_dump + gzip naar `/deploy/db-backups/`, 30 dagen bewaard
+
+**Bekende beperkingen:**
+- Replit-secrets zijn global (niet env-scoped) → dev en prod delen dezelfde DB zolang de app op Replit draait; migratiepakket lost dit op door alles naar eigen server te verplaatsen
+- Object Storage bucket-scheiding vereist handmatige actie bij nieuwe Replit-bucket aanmaken
+
+---
+
 ## 2026-07-06 — Kantoor Release v1.0.0 — Volledig releaseproces
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** geen
