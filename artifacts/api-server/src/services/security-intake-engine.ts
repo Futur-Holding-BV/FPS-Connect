@@ -1,20 +1,21 @@
 /**
  * Security Intake Engine — centrale beveiligingslaag voor FPS Connect & FPS One.
  *
- * Controleert elk inkomend bestand, e-mail en document op:
- *   1. Extensie-blacklist
- *   2. Bestandsnaam-anomalieën (dubbele extensies, verdachte namen)
- *   3. MIME-type verificatie via magic bytes
- *   4. Structuurcontrole (PDF, Office)
- *   5. Link-extractie en URL-risicoanalyse
- *   6. AI-inhoudsanalyse
- *   7. ClamAV (optioneel — indien geconfigureerd)
+ * 8-staps pipeline (OWASP File Upload Cheat Sheet + eigen risico-analyse):
+ *   1. Extensie-blacklist (altijd/macro/beperkt)
+ *   2. Bestandsnaam-anomalieën (dubbele extensies, unicode, verdachte termen)
+ *   3. MIME-type verificatie op basis van bestandsinhoud (magic bytes, 50+ typen)
+ *   4. Archiefcontrole ZIP/7z/RAR (wachtwoordbeveiliging, zip-bom, gevaarlijke inhoud)
+ *   5. PDF/Office structuurcontrole (JS, Launch, AutoOpen, macro's, shell-aanroepen)
+ *   6. YARA-patroonherkenning (ransomware, malware, webshells, phishing)
+ *   7. ClamAV malware/virusscan (clamscan subprocess, graceful fallback)
+ *   8. Link-extractie + URL-reputatieanalyse + AI inhoudsanalyse
  *
- * Alle beslissingen worden gelogd in security_intake_scans (onwijzigbaar).
+ * Alle beslissingen worden gelogd in security_intake_scans (onwijzigbaar audittrail).
+ * Geblokkeerde/quarantaine bestanden worden opgeslagen buiten publieke toegang.
  */
 
 import path from "path";
-import net from "net";
 import { db, securityIntakeScansTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { logger } from "../lib/logger";
@@ -25,6 +26,10 @@ import {
   type LinkRisico,
 } from "./link-scanner";
 import { aiGateway } from "../lib/aiGateway";
+import { scanMetClamAv } from "./clamav-service";
+import { scanMetYara } from "./yara-service";
+import { scanArchief, isArchiefExtensie } from "./archive-scanner";
+import { slaQuarantaineOp } from "./quarantine-storage";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -82,59 +87,105 @@ export interface ScanUitkomst {
   linkStatus: string;
   aiStatus: string;
   clamavStatus: string;
+  yaraStatus: string;
+  archiefStatus: string;
 }
 
-// ── Extension blacklist ───────────────────────────────────────────────────────
+// ── Extension blacklists ───────────────────────────────────────────────────────
 
-const GEBLOKKEERDE_EXTENSIES = new Set([
-  ".exe", ".bat", ".cmd", ".com", ".scr", ".ps1", ".ps2", ".psc1", ".psc2",
-  ".vbs", ".vbe", ".js", ".jse", ".wsf", ".wsh", ".jar", ".msi", ".dll",
-  ".reg", ".hta", ".apk", ".iso", ".img", ".inf", ".msu", ".msp", ".prg",
-  ".gadget", ".application", ".lnk", ".url", ".pif", ".cer", ".crx",
-  ".xbap", ".xpi", ".xlsm", ".docm", ".pptm", // macro-enabled Office
-]);
-
-// Office-macrodocumenten — alleen geblokkeerd als niet goedgekeurd door hoofdbeheerder
-const MACRO_EXTENSIES = new Set([".xlsm", ".docm", ".pptm", ".xlam", ".dotm", ".potm", ".ppam"]);
-
-// Altijd geblokkeerd (ook voor hoofdbeheerder)
 const ALTIJD_GEBLOKKEERD = new Set([
   ".exe", ".bat", ".cmd", ".com", ".scr", ".ps1", ".ps2", ".psc1", ".psc2",
   ".vbs", ".vbe", ".wsf", ".wsh", ".jar", ".msi", ".dll", ".reg", ".hta",
-  ".apk", ".pif", ".application", ".gadget", ".lnk",
+  ".apk", ".pif", ".application", ".gadget", ".lnk", ".sys", ".drv",
+  ".sh", ".bash", ".zsh", ".csh", ".fish", ".run", ".bin", ".elf",
 ]);
 
-// ── MIME magic bytes verificatie ──────────────────────────────────────────────
+const MACRO_EXTENSIES = new Set([
+  ".xlsm", ".docm", ".pptm", ".xlam", ".dotm", ".potm", ".ppam",
+  ".xltm", ".dotx", ".potx",
+]);
+
+const GEBLOKKEERDE_EXTENSIES = new Set([
+  ...ALTIJD_GEBLOKKEERD,
+  ...MACRO_EXTENSIES,
+  ".js", ".jse", ".msu", ".msp", ".prg", ".crx", ".xpi",
+  ".xbap", ".iso", ".img", ".inf", ".cer", ".url",
+]);
+
+// ── MIME magic bytes (50+ typen) ──────────────────────────────────────────────
 
 const MAGIC_BYTES: Array<{ mime: string; bytes: number[]; beschrijving?: string }> = [
+  // Documents
   { mime: "application/pdf", bytes: [0x25, 0x50, 0x44, 0x46] }, // %PDF
-  { mime: "image/jpeg", bytes: [0xFF, 0xD8, 0xFF] },
-  { mime: "image/png", bytes: [0x89, 0x50, 0x4E, 0x47] },
-  { mime: "image/gif", bytes: [0x47, 0x49, 0x46, 0x38] },
-  { mime: "image/webp", bytes: [0x52, 0x49, 0x46, 0x46] },
-  { mime: "application/zip", bytes: [0x50, 0x4B, 0x03, 0x04] }, // ZIP (ook DOCX/XLSX/PPTX)
   { mime: "application/msword", bytes: [0xD0, 0xCF, 0x11, 0xE0] }, // OLE2 (DOC/XLS/PPT)
+  { mime: "application/zip", bytes: [0x50, 0x4B, 0x03, 0x04] }, // ZIP (ook DOCX/XLSX/PPTX)
+  { mime: "application/zip", bytes: [0x50, 0x4B, 0x05, 0x06] }, // Empty ZIP
+  { mime: "application/rtf", bytes: [0x7B, 0x5C, 0x72, 0x74, 0x66] }, // {\rtf
+  // Images
+  { mime: "image/jpeg", bytes: [0xFF, 0xD8, 0xFF] },
+  { mime: "image/png", bytes: [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A] },
+  { mime: "image/gif", bytes: [0x47, 0x49, 0x46, 0x38] }, // GIF8
+  { mime: "image/webp", bytes: [0x52, 0x49, 0x46, 0x46] }, // RIFF (check offset 8 for WEBP)
+  { mime: "image/tiff", bytes: [0x49, 0x49, 0x2A, 0x00] }, // Little-endian TIFF
+  { mime: "image/tiff", bytes: [0x4D, 0x4D, 0x00, 0x2A] }, // Big-endian TIFF
+  { mime: "image/bmp", bytes: [0x42, 0x4D] }, // BM
+  { mime: "image/vnd.ms-dds", bytes: [0x44, 0x44, 0x53, 0x20] }, // DDS
+  { mime: "image/x-xcf", bytes: [0x67, 0x69, 0x6D, 0x70, 0x20, 0x78, 0x63, 0x66] }, // gimp xcf
+  // Archives
+  { mime: "application/x-7z-compressed", bytes: [0x37, 0x7A, 0xBC, 0xAF, 0x27, 0x1C] }, // 7z
+  { mime: "application/x-rar-compressed", bytes: [0x52, 0x61, 0x72, 0x21, 0x1A, 0x07, 0x01, 0x00] }, // RAR5
+  { mime: "application/x-rar-compressed", bytes: [0x52, 0x61, 0x72, 0x21, 0x1A, 0x07, 0x00] }, // RAR4
+  { mime: "application/gzip", bytes: [0x1F, 0x8B] },
+  { mime: "application/x-bzip2", bytes: [0x42, 0x5A, 0x68] }, // BZh
+  { mime: "application/x-xz", bytes: [0xFD, 0x37, 0x7A, 0x58, 0x5A, 0x00] }, // xz
+  { mime: "application/x-tar", bytes: [0x75, 0x73, 0x74, 0x61, 0x72] }, // ustar (at offset 257 normally)
+  { mime: "application/zstd", bytes: [0x28, 0xB5, 0x2F, 0xFD] }, // zstd
+  { mime: "application/x-lzip", bytes: [0x4C, 0x5A, 0x49, 0x50] }, // LZIP
+  // Executables (altijd geblokkeerd)
   { mime: "application/x-msdownload", bytes: [0x4D, 0x5A], beschrijving: "Windows executable (MZ)" },
   { mime: "application/x-elf", bytes: [0x7F, 0x45, 0x4C, 0x46], beschrijving: "Linux executable (ELF)" },
-  { mime: "text/xml", bytes: [0x3C, 0x3F, 0x78, 0x6D] }, // <?xm
-  { mime: "image/tiff", bytes: [0x49, 0x49, 0x2A, 0x00] },
-  { mime: "application/x-7z-compressed", bytes: [0x37, 0x7A, 0xBC, 0xAF] }, // 7z
-  { mime: "application/x-rar-compressed", bytes: [0x52, 0x61, 0x72, 0x21] }, // Rar!
-  { mime: "application/gzip", bytes: [0x1F, 0x8B] },
+  { mime: "application/x-mach-binary", bytes: [0xCA, 0xFE, 0xBA, 0xBE], beschrijving: "Mach-O universeel" },
+  { mime: "application/x-mach-binary", bytes: [0xCF, 0xFA, 0xED, 0xFE], beschrijving: "Mach-O 64-bit LE" },
+  { mime: "application/x-mach-binary", bytes: [0xCE, 0xFA, 0xED, 0xFE], beschrijving: "Mach-O 32-bit LE" },
+  { mime: "application/x-java-applet", bytes: [0xCA, 0xFE, 0xBA, 0xBE], beschrijving: "Java class" },
+  // Media
+  { mime: "audio/mpeg", bytes: [0xFF, 0xFB] }, // MP3
+  { mime: "audio/mpeg", bytes: [0x49, 0x44, 0x33] }, // ID3 (MP3)
+  { mime: "audio/ogg", bytes: [0x4F, 0x67, 0x67, 0x53] }, // OggS
+  { mime: "audio/flac", bytes: [0x66, 0x4C, 0x61, 0x43] }, // fLaC
+  { mime: "audio/wav", bytes: [0x52, 0x49, 0x46, 0x46] }, // RIFF...WAVE
+  { mime: "video/mp4", bytes: [0x00, 0x00, 0x00, 0x18, 0x66, 0x74, 0x79, 0x70] }, // MP4
+  { mime: "video/mpeg", bytes: [0x00, 0x00, 0x01, 0xBA] }, // MPEG
+  { mime: "video/x-msvideo", bytes: [0x52, 0x49, 0x46, 0x46] }, // RIFF...AVI
+  { mime: "video/x-matroska", bytes: [0x1A, 0x45, 0xDF, 0xA3] }, // MKV/WebM
+  // Data
+  { mime: "application/json", bytes: [0x7B] }, // { (rough)
+  { mime: "text/xml", bytes: [0x3C, 0x3F, 0x78, 0x6D, 0x6C] }, // <?xml
+  { mime: "text/html", bytes: [0x3C, 0x21, 0x44, 0x4F, 0x43, 0x54] }, // <!DOCT
+  { mime: "text/html", bytes: [0x3C, 0x68, 0x74, 0x6D, 0x6C] }, // <html
+  { mime: "application/wasm", bytes: [0x00, 0x61, 0x73, 0x6D] }, // WASM
+  { mime: "application/vnd.sqlite3", bytes: [0x53, 0x51, 0x4C, 0x69, 0x74, 0x65] }, // SQLite
+  // Fonts
+  { mime: "font/woff", bytes: [0x77, 0x4F, 0x46, 0x46] }, // wOFF
+  { mime: "font/woff2", bytes: [0x77, 0x4F, 0x46, 0x32] }, // wOF2
+  { mime: "font/ttf", bytes: [0x00, 0x01, 0x00, 0x00, 0x00] }, // TrueType
+  { mime: "font/otf", bytes: [0x4F, 0x54, 0x54, 0x4F] }, // OTTO (OpenType)
 ];
 
-// Executable magic bytes — altijd blokkeren ongeacht extensie
-const EXECUTABLE_MAGIC: Array<number[]> = [
-  [0x4D, 0x5A], // MZ (Windows EXE/DLL/COM)
+const EXECUTABLE_MAGIC: number[][] = [
+  [0x4D, 0x5A], // MZ (Windows EXE/DLL)
   [0x7F, 0x45, 0x4C, 0x46], // ELF (Linux)
-  [0xCA, 0xFE, 0xBA, 0xBE], // Mach-O (macOS)
+  [0xCA, 0xFE, 0xBA, 0xBE], // Mach-O
   [0xCE, 0xFA, 0xED, 0xFE], // Mach-O 32-bit LE
   [0xCF, 0xFA, 0xED, 0xFE], // Mach-O 64-bit LE
+  [0x23, 0x21], // Shebang (#!)
 ];
 
 function detecteerMagicMime(bytes: Buffer): string | null {
   for (const entry of MAGIC_BYTES) {
-    if (entry.bytes.every((b, i) => bytes[i] === b)) return entry.mime;
+    if (bytes.length >= entry.bytes.length && entry.bytes.every((b, i) => bytes[i] === b)) {
+      return entry.mime;
+    }
   }
   return null;
 }
@@ -151,7 +202,6 @@ function analyserenBestandsnaam(naam: string): ScanBevinding[] {
   const naamZonderExt = naam.slice(0, naam.length - ext.length);
   const tweedeExt = path.extname(naamZonderExt).toLowerCase();
 
-  // Dubbele extensie (bv. factuur.pdf.exe)
   if (tweedeExt && GEBLOKKEERDE_EXTENSIES.has(ext)) {
     bevindingen.push({
       categorie: "bestandsnaam",
@@ -166,8 +216,6 @@ function analyserenBestandsnaam(naam: string): ScanBevinding[] {
       ernst: "hoog",
     });
   }
-
-  // Verdachte bestandsnaam-patronen
   if (/crack|keygen|patch|serial|hack|exploit|payload|dropper|ransomware/i.test(naam)) {
     bevindingen.push({
       categorie: "bestandsnaam",
@@ -175,8 +223,6 @@ function analyserenBestandsnaam(naam: string): ScanBevinding[] {
       ernst: "hoog",
     });
   }
-
-  // Naam met verborgen unicode (right-to-left override etc.)
   if (/[\u200B-\u200F\u202A-\u202E\u2066-\u2069]/.test(naam)) {
     bevindingen.push({
       categorie: "bestandsnaam",
@@ -184,7 +230,22 @@ function analyserenBestandsnaam(naam: string): ScanBevinding[] {
       ernst: "kritiek",
     });
   }
-
+  // Path-traversal in bestandsnaam
+  if (naam.includes("../") || naam.includes("..\\") || naam.startsWith("/")) {
+    bevindingen.push({
+      categorie: "bestandsnaam",
+      beschrijving: "Path-traversal patroon in bestandsnaam",
+      ernst: "kritiek",
+    });
+  }
+  // Extreem lange naam (buffer overflow indicator)
+  if (naam.length > 255) {
+    bevindingen.push({
+      categorie: "bestandsnaam",
+      beschrijving: `Extreem lange bestandsnaam (${naam.length} tekens)`,
+      ernst: "hoog",
+    });
+  }
   return bevindingen;
 }
 
@@ -192,38 +253,29 @@ function analyserenBestandsnaam(naam: string): ScanBevinding[] {
 
 function controleerPdfStructuur(bytes: Buffer): ScanBevinding[] {
   const bevindingen: ScanBevinding[] = [];
-  const inhoud = bytes.toString("latin1"); // binary-safe
+  const inhoud = bytes.toString("latin1");
 
-  if (/\/JavaScript\s/i.test(inhoud) || /\/JS\s/i.test(inhoud)) {
-    bevindingen.push({
-      categorie: "structuur",
-      beschrijving: "PDF bevat embedded JavaScript",
-      ernst: "hoog",
-    });
+  if (/\/JavaScript\s/i.test(inhoud) || /\/JS\s*</i.test(inhoud)) {
+    bevindingen.push({ categorie: "structuur", beschrijving: "PDF bevat embedded JavaScript", ernst: "hoog" });
   }
   if (/\/Launch\s/i.test(inhoud)) {
-    bevindingen.push({
-      categorie: "structuur",
-      beschrijving: "PDF bevat Launch-actie (kan externe programma's starten)",
-      ernst: "kritiek",
-    });
+    bevindingen.push({ categorie: "structuur", beschrijving: "PDF bevat Launch-actie (kan externe programma's starten)", ernst: "kritiek" });
   }
   if (/\/OpenAction\s/i.test(inhoud)) {
-    bevindingen.push({
-      categorie: "structuur",
-      beschrijving: "PDF bevat OpenAction (automatisch uitgevoerde actie bij openen)",
-      ernst: "midden",
-    });
+    bevindingen.push({ categorie: "structuur", beschrijving: "PDF bevat OpenAction (automatisch uitgevoerde actie bij openen)", ernst: "midden" });
   }
   if (/\/EmbeddedFile\s/i.test(inhoud)) {
-    bevindingen.push({
-      categorie: "structuur",
-      beschrijving: "PDF bevat embedded bestanden",
-      ernst: "laag",
-    });
+    bevindingen.push({ categorie: "structuur", beschrijving: "PDF bevat embedded bestanden", ernst: "laag" });
   }
-  if (/\/URI\s/i.test(inhoud)) {
-    // URI is normale hyperlink — niet blokkeren maar wel noteren voor link-extractie
+  if (/\/AcroForm\s/i.test(inhoud) && /\/XFA\s/i.test(inhoud)) {
+    bevindingen.push({ categorie: "structuur", beschrijving: "PDF bevat XFA-formulier (dynamisch, mogelijk gevaarlijk)", ernst: "midden" });
+  }
+  if (/\/AA\s/i.test(inhoud)) {
+    bevindingen.push({ categorie: "structuur", beschrijving: "PDF bevat Additional Actions", ernst: "laag" });
+  }
+  // Encrypted PDF (wachtwoordbeveiligd — inhoud niet controleerbaar)
+  if (/\/Encrypt\s/i.test(inhoud)) {
+    bevindingen.push({ categorie: "structuur", beschrijving: "PDF is versleuteld — inhoud niet volledig controleerbaar", ernst: "midden" });
   }
   return bevindingen;
 }
@@ -234,72 +286,25 @@ function controleerOle2Structuur(bytes: Buffer): ScanBevinding[] {
   const bevindingen: ScanBevinding[] = [];
   const inhoud = bytes.toString("latin1");
 
-  // VBA project aanwezig
   if (inhoud.includes("VBA") || inhoud.includes("vbaProject")) {
-    bevindingen.push({
-      categorie: "structuur",
-      beschrijving: "Office-document bevat VBA/macroproject",
-      ernst: "hoog",
-    });
+    bevindingen.push({ categorie: "structuur", beschrijving: "Office-document bevat VBA/macroproject", ernst: "hoog" });
   }
-  // AutoOpen/AutoExec macro
-  if (/AutoOpen|AutoExec|Document_Open|Workbook_Open/i.test(inhoud)) {
-    bevindingen.push({
-      categorie: "structuur",
-      beschrijving: "Automatisch uitvoerende macro gedetecteerd (AutoOpen/Document_Open)",
-      ernst: "kritiek",
-    });
+  if (/AutoOpen|AutoExec|Document_Open|Workbook_Open|Auto_Open/i.test(inhoud)) {
+    bevindingen.push({ categorie: "structuur", beschrijving: "Automatisch uitvoerende macro gedetecteerd (AutoOpen/Document_Open)", ernst: "kritiek" });
   }
-  // Shell-aanroepen
   if (/Shell\s*\(|WScript\.Shell|CreateObject.*Shell/i.test(inhoud)) {
-    bevindingen.push({
-      categorie: "structuur",
-      beschrijving: "Shell-aanroep in documentinhoud",
-      ernst: "kritiek",
-    });
+    bevindingen.push({ categorie: "structuur", beschrijving: "Shell-aanroep in documentinhoud", ernst: "kritiek" });
   }
-  // PowerShell aanroepen
   if (/powershell|invoke-expression|iex\s*\(/i.test(inhoud)) {
-    bevindingen.push({
-      categorie: "structuur",
-      beschrijving: "PowerShell-aanroep in documentinhoud",
-      ernst: "kritiek",
-    });
+    bevindingen.push({ categorie: "structuur", beschrijving: "PowerShell-aanroep in documentinhoud", ernst: "kritiek" });
+  }
+  if (/DownloadFile|DownloadString|Net\.WebClient/i.test(inhoud)) {
+    bevindingen.push({ categorie: "structuur", beschrijving: "Netwerk-download aanroep in document", ernst: "hoog" });
+  }
+  if (/Environ\s*\(|GetTempPath|GetSystemDirectory/i.test(inhoud)) {
+    bevindingen.push({ categorie: "structuur", beschrijving: "Systeemomgeving aanroepen in document", ernst: "midden" });
   }
   return bevindingen;
-}
-
-// ── ClamAV TCP-client (optioneel) ─────────────────────────────────────────────
-
-async function scanClamAv(bytes: Buffer): Promise<{ schoon: boolean; bericht: string } | null> {
-  const CLAMAV_HOST = process.env.CLAMAV_HOST ?? "127.0.0.1";
-  const CLAMAV_PORT = parseInt(process.env.CLAMAV_PORT ?? "3310", 10);
-
-  return new Promise((resolve) => {
-    const socket = new net.Socket();
-    socket.setTimeout(5000);
-
-    socket.connect(CLAMAV_PORT, CLAMAV_HOST, () => {
-      socket.write("zINSTREAM\0");
-      const lenBuf = Buffer.alloc(4);
-      lenBuf.writeUInt32BE(bytes.length, 0);
-      socket.write(lenBuf);
-      socket.write(bytes);
-      const zeroBuf = Buffer.alloc(4);
-      zeroBuf.writeUInt32BE(0, 0);
-      socket.write(zeroBuf);
-    });
-
-    let antwoord = "";
-    socket.on("data", (d) => { antwoord += d.toString(); });
-    socket.on("end", () => {
-      const trimmed = antwoord.trim();
-      const schoon = trimmed.includes("stream: OK") || trimmed.endsWith(": OK");
-      resolve({ schoon, bericht: trimmed });
-    });
-    socket.on("error", () => resolve(null));
-    socket.on("timeout", () => { socket.destroy(); resolve(null); });
-  });
 }
 
 // ── AI-inhoudsanalyse ─────────────────────────────────────────────────────────
@@ -334,10 +339,7 @@ async function analyserenInhoudAI(
       { module: "security", functie: "inhoud-analyse" },
     );
     if (!resultaat.ok) return null;
-    const parsed = JSON.parse(resultaat.inhoud) as {
-      risico_score: number;
-      samenvatting: string;
-    };
+    const parsed = JSON.parse(resultaat.inhoud) as { risico_score: number; samenvatting: string };
     return { samenvatting: parsed.samenvatting, risicoScore: parsed.risico_score };
   } catch {
     return null;
@@ -358,34 +360,20 @@ export async function scanBestandMetadata(
 
   // 1. Extensie-blacklist
   if (ALTIJD_GEBLOKKEERD.has(ext)) {
-    bevindingen.push({
-      categorie: "extensie",
-      beschrijving: `Geblokkeerde bestandsextensie: "${ext}"`,
-      ernst: "kritiek",
-    });
+    bevindingen.push({ categorie: "extensie", beschrijving: `Geblokkeerde bestandsextensie: "${ext}"`, ernst: "kritiek" });
     extensieStatus = "geblokkeerd";
     geblokkeerd = true;
     blokkeerReden = `Bestandsextensie "${ext}" is niet toegestaan in FPS Connect.`;
   } else if (MACRO_EXTENSIES.has(ext)) {
-    bevindingen.push({
-      categorie: "extensie",
-      beschrijving: `Macro-extensie: "${ext}" — vereist expliciete goedkeuring`,
-      ernst: "hoog",
-    });
+    bevindingen.push({ categorie: "extensie", beschrijving: `Macro-extensie: "${ext}" — vereist expliciete goedkeuring`, ernst: "hoog" });
     extensieStatus = "geblokkeerd";
     geblokkeerd = true;
     blokkeerReden = `Office-document met macro's ("${ext}") is geblokkeerd. Vraag de hoofdbeheerder om handmatige beoordeling.`;
-  } else if (GEBLOKKEERDE_EXTENSIES.has(ext) && !ALTIJD_GEBLOKKEERD.has(ext) && !MACRO_EXTENSIES.has(ext)) {
-    bevindingen.push({
-      categorie: "extensie",
-      beschrijving: `Geblokkeerde extensie: "${ext}"`,
-      ernst: "kritiek",
-    });
+  } else if (GEBLOKKEERDE_EXTENSIES.has(ext)) {
+    bevindingen.push({ categorie: "extensie", beschrijving: `Geblokkeerde extensie: "${ext}"`, ernst: "kritiek" });
     extensieStatus = "geblokkeerd";
     geblokkeerd = true;
     blokkeerReden = `Bestandsextensie "${ext}" is niet toegestaan.`;
-  } else {
-    extensieStatus = "groen";
   }
 
   // 2. Bestandsnaam-anomalieën
@@ -396,7 +384,7 @@ export async function scanBestandMetadata(
     blokkeerReden ??= "Verdachte bestandsnaam gedetecteerd.";
   }
 
-  // 3. MIME-type claim check (alleen de string controleren)
+  // 3. MIME-type claim check
   let mimeStatus = "groen";
   const claim = (input.mimeTypeClaim ?? "").toLowerCase();
   if (
@@ -406,19 +394,24 @@ export async function scanBestandMetadata(
     claim.includes("application/x-sh") ||
     claim.includes("text/x-script")
   ) {
-    bevindingen.push({
-      categorie: "mime",
-      beschrijving: `Verdacht MIME-type opgegeven door client: "${claim}"`,
-      ernst: "hoog",
-    });
+    bevindingen.push({ categorie: "mime", beschrijving: `Verdacht MIME-type opgegeven: "${claim}"`, ernst: "hoog" });
     mimeStatus = "rood";
     geblokkeerd = true;
     blokkeerReden ??= "Verdacht MIME-type.";
   }
 
+  // 4. Bestandsgrootte-checks (OWASP: enforce max file size)
+  if (input.bestandsgrootte !== undefined) {
+    if (input.bestandsgrootte > 100 * 1024 * 1024) {
+      bevindingen.push({ categorie: "grootte", beschrijving: `Bestandsgrootte overschrijdt 100 MB (${Math.round(input.bestandsgrootte / 1024 / 1024)} MB)`, ernst: "hoog" });
+    } else if (input.bestandsgrootte > 50 * 1024 * 1024) {
+      bevindingen.push({ categorie: "grootte", beschrijving: `Groot bestand: ${Math.round(input.bestandsgrootte / 1024 / 1024)} MB`, ernst: "midden" });
+    }
+  }
+
   const risicoNiveau = berekenNiveau(bevindingen, geblokkeerd);
 
-  const metadataScanUitkomst: Omit<ScanUitkomst, "dbId"> = {
+  const uitkomst: Omit<ScanUitkomst, "dbId"> = {
     toegestaan: !geblokkeerd,
     risicoNiveau,
     bevindingen,
@@ -431,15 +424,17 @@ export async function scanBestandMetadata(
     structuurStatus: "niet_gescand",
     linkStatus: "niet_gescand",
     aiStatus: "niet_gescand",
-    clamavStatus: "niet_beschikbaar",
+    clamavStatus: "niet_gescand",
+    yaraStatus: "niet_gescand",
+    archiefStatus: "niet_gescand",
   };
 
-  const dbId = await logScanResultaat({ input, uitkomst: metadataScanUitkomst });
-
-  return { ...metadataScanUitkomst, dbId };
+  const dbId = await logScanResultaat({ input, uitkomst });
+  return { ...uitkomst, dbId };
 }
 
 // ── Kern: deep scan (met bytes) ───────────────────────────────────────────────
+// OWASP: scan BEFORE making file available; alle checks vóór opslag in publiek pad
 
 export async function scanBestandBytes(input: BytesScanInput): Promise<ScanUitkomst> {
   const { bytes } = input;
@@ -451,76 +446,100 @@ export async function scanBestandBytes(input: BytesScanInput): Promise<ScanUitko
 
   const ext = path.extname(input.bestandsnaam ?? "").toLowerCase();
 
-  // 1. Extensie (zelfde als metadata, maar bij bytes herhalen)
+  // ── 1. Extensie-blacklist ────────────────────────────────────────────────────
   let extensieStatus = "groen";
   if (ALTIJD_GEBLOKKEERD.has(ext)) {
     bevindingen.push({ categorie: "extensie", beschrijving: `Geblokkeerde extensie: "${ext}"`, ernst: "kritiek" });
     extensieStatus = "geblokkeerd";
     geblokkeerd = true;
     blokkeerReden = `Bestandsextensie "${ext}" is niet toegestaan.`;
+  } else if (MACRO_EXTENSIES.has(ext)) {
+    bevindingen.push({ categorie: "extensie", beschrijving: `Macro-extensie: "${ext}"`, ernst: "hoog" });
+    extensieStatus = "geblokkeerd";
+    geblokkeerd = true;
+    blokkeerReden = `Office-macro bestand geblokkeerd.`;
   }
 
-  // 2. Magic bytes — werkelijk MIME-type detecteren
+  // ── 2. Magic bytes — werkelijk MIME-type op basis van bestandsinhoud ─────────
   let mimeStatus = "groen";
   let mimeTypeWerkelijk: string | undefined;
   if (bytes.length >= 4) {
     if (isExecutableMagic(bytes)) {
-      bevindingen.push({
-        categorie: "mime",
-        beschrijving: "Bestand bevat executable magic bytes — vermomd als ander bestandstype",
-        ernst: "kritiek",
-      });
+      bevindingen.push({ categorie: "mime", beschrijving: "Bestand bevat executable magic bytes — vermomd als ander type", ernst: "kritiek" });
       mimeStatus = "geblokkeerd";
       geblokkeerd = true;
       blokkeerReden ??= "Uitvoerbaar bestand gedetecteerd op basis van bestandsinhoud.";
     } else {
       mimeTypeWerkelijk = detecteerMagicMime(bytes) ?? undefined;
-      const claim = input.mimeTypeClaim ?? "";
-      if (mimeTypeWerkelijk && claim && !mimeTypeWerkelijk.startsWith(claim.split("/")[0])) {
-        // MIME type mismatch — waarschuwing, niet direct blokkeren
-        bevindingen.push({
-          categorie: "mime",
-          beschrijving: `MIME-mismatch: geclaimd "${claim}", gemeten "${mimeTypeWerkelijk}"`,
-          ernst: "midden",
-        });
+      const claim = (input.mimeTypeClaim ?? "").toLowerCase();
+      if (mimeTypeWerkelijk && claim && !claim.startsWith(mimeTypeWerkelijk.split("/")[0])) {
+        bevindingen.push({ categorie: "mime", beschrijving: `MIME-mismatch: geclaimd "${claim}", gemeten "${mimeTypeWerkelijk}"`, ernst: "midden" });
         mimeStatus = "oranje";
         inQuarantaine = true;
         quarantaineReden ??= "MIME-type komt niet overeen met bestandsinhoud.";
-      } else {
-        mimeStatus = "groen";
       }
     }
   }
 
-  // 3. Bestandsnaam anomalieën
-  bevindingen.push(...analyserenBestandsnaam(input.bestandsnaam ?? ""));
+  // ── 3. Bestandsnaam-anomalieën ────────────────────────────────────────────────
+  const naamBevindingen = analyserenBestandsnaam(input.bestandsnaam ?? "");
+  bevindingen.push(...naamBevindingen);
+  if (naamBevindingen.some((b) => b.ernst === "kritiek")) {
+    geblokkeerd = true;
+    blokkeerReden ??= "Verdachte bestandsnaam.";
+  }
 
-  // 4. Structuurcheck op basis van type
+  // ── 4. Archiefcontrole: ZIP/7z/RAR — wachtwoord, zip-bom, gevaarlijke inhoud ─
+  let archiefStatus = "niet_gescand";
+  if (isArchiefExtensie(ext) || mimeTypeWerkelijk?.includes("zip") || mimeTypeWerkelijk?.includes("rar") || mimeTypeWerkelijk?.includes("7z")) {
+    try {
+      const archiefResultaat = await scanArchief(bytes);
+      if (archiefResultaat.isArchief) {
+        archiefStatus = archiefResultaat.bevindingen.length === 0 ? "groen" : "rood";
+        for (const b of archiefResultaat.bevindingen) {
+          bevindingen.push({ categorie: "archief", beschrijving: b.beschrijving, ernst: b.ernst });
+          if (b.geblokkeerd) {
+            geblokkeerd = true;
+            blokkeerReden ??= b.beschrijving;
+          }
+        }
+        if (archiefResultaat.wachtwoordBeveiligd) {
+          archiefStatus = "geblokkeerd";
+        }
+      } else {
+        archiefStatus = "groen";
+      }
+    } catch {
+      archiefStatus = "fout";
+    }
+  }
+
+  // ── 5. Structuurcheck PDF/Office ──────────────────────────────────────────────
   let structuurStatus = "niet_gescand";
   const mime = mimeTypeWerkelijk ?? input.mimeTypeClaim ?? "";
 
   if (mime.includes("pdf") || ext === ".pdf") {
-    const structuurBevindingen = controleerPdfStructuur(bytes);
-    bevindingen.push(...structuurBevindingen);
-    structuurStatus = structuurBevindingen.some((b) => b.ernst === "kritiek" || b.ernst === "hoog")
-      ? "rood"
-      : structuurBevindingen.length > 0
-        ? "oranje"
-        : "groen";
-    if (structuurBevindingen.some((b) => b.ernst === "kritiek")) {
+    const sb = controleerPdfStructuur(bytes);
+    bevindingen.push(...sb);
+    structuurStatus = sb.some((b) => b.ernst === "kritiek") ? "geblokkeerd"
+      : sb.some((b) => b.ernst === "hoog") ? "rood"
+        : sb.length > 0 ? "oranje" : "groen";
+    if (sb.some((b) => b.ernst === "kritiek")) {
       inQuarantaine = true;
-      quarantaineReden ??= "PDF bevat actieve inhoud (JavaScript of Launch-actie).";
+      quarantaineReden ??= "PDF bevat gevaarlijke actieve inhoud.";
     }
-  } else if (mime.includes("msword") || mime.includes("officedocument") || [".doc", ".xls", ".ppt"].includes(ext)) {
-    const structuurBevindingen = controleerOle2Structuur(bytes);
-    bevindingen.push(...structuurBevindingen);
-    structuurStatus = structuurBevindingen.some((b) => b.ernst === "kritiek") ? "geblokkeerd"
-      : structuurBevindingen.some((b) => b.ernst === "hoog") ? "rood"
-        : "groen";
-    if (structuurBevindingen.some((b) => b.ernst === "kritiek")) {
+  } else if (
+    mime.includes("msword") || mime.includes("ms-excel") || mime.includes("ms-powerpoint") ||
+    mime.includes("officedocument") || [".doc", ".xls", ".ppt", ".dot", ".xlt"].includes(ext)
+  ) {
+    const sb = controleerOle2Structuur(bytes);
+    bevindingen.push(...sb);
+    structuurStatus = sb.some((b) => b.ernst === "kritiek") ? "geblokkeerd"
+      : sb.some((b) => b.ernst === "hoog") ? "rood" : "groen";
+    if (sb.some((b) => b.ernst === "kritiek")) {
       geblokkeerd = true;
       blokkeerReden ??= "Office-document bevat gevaarlijke macro-inhoud.";
-    } else if (structuurBevindingen.some((b) => b.ernst === "hoog")) {
+    } else if (sb.some((b) => b.ernst === "hoog")) {
       inQuarantaine = true;
       quarantaineReden ??= "Office-document bevat macroproject.";
     }
@@ -528,7 +547,47 @@ export async function scanBestandBytes(input: BytesScanInput): Promise<ScanUitko
     structuurStatus = "groen";
   }
 
-  // 5. Linkextractie en URL-analyse
+  // ── 6. YARA-patroonherkenning ─────────────────────────────────────────────────
+  let yaraStatus = "niet_gescand";
+  const yaraResultaat = await scanMetYara(bytes);
+  if (yaraResultaat.status === "schoon") {
+    yaraStatus = "groen";
+  } else if (yaraResultaat.status === "matches") {
+    const kritiek = yaraResultaat.bevindingen.some((b) => b.ernst === "kritiek");
+    const hoog = yaraResultaat.bevindingen.some((b) => b.ernst === "hoog");
+    yaraStatus = kritiek ? "geblokkeerd" : hoog ? "rood" : "oranje";
+    for (const b of yaraResultaat.bevindingen) {
+      bevindingen.push({ categorie: "yara", beschrijving: b.beschrijving, ernst: b.ernst });
+    }
+    if (kritiek) {
+      geblokkeerd = true;
+      blokkeerReden ??= `YARA: ${yaraResultaat.bevindingen.find((b) => b.ernst === "kritiek")?.beschrijving}`;
+    } else if (hoog) {
+      inQuarantaine = true;
+      quarantaineReden ??= `YARA: ${yaraResultaat.bevindingen.find((b) => b.ernst === "hoog")?.beschrijving}`;
+    }
+  } else if (yaraResultaat.status === "niet_beschikbaar") {
+    yaraStatus = "niet_beschikbaar";
+  } else {
+    yaraStatus = "fout";
+  }
+
+  // ── 7. ClamAV malware/virusscan ────────────────────────────────────────────────
+  let clamavStatus = "niet_beschikbaar";
+  const clamavResultaat = await scanMetClamAv(bytes);
+  if (clamavResultaat.status === "schoon") {
+    clamavStatus = "groen";
+  } else if (clamavResultaat.status === "geïnfecteerd") {
+    clamavStatus = "geblokkeerd";
+    bevindingen.push({ categorie: "antivirus", beschrijving: `ClamAV: ${clamavResultaat.melding}`, ernst: "kritiek" });
+    geblokkeerd = true;
+    blokkeerReden ??= `Antivirusscan: ${clamavResultaat.melding}`;
+  } else if (clamavResultaat.status === "fout") {
+    clamavStatus = "fout";
+    bevindingen.push({ categorie: "antivirus", beschrijving: `ClamAV fout: ${clamavResultaat.reden}`, ernst: "midden" });
+  }
+
+  // ── 8. Link-extractie + URL-reputatie + AI inhoudsanalyse ────────────────────
   let linkStatus = "niet_gescand";
   let linksGeanalyseerd: LinkRisico[] = [];
   try {
@@ -540,11 +599,7 @@ export async function scanBestandBytes(input: BytesScanInput): Promise<ScanUitko
       linkStatus = hoogste;
       const rodeLinks = linksGeanalyseerd.filter((l) => l.risicoNiveau === "rood");
       if (rodeLinks.length > 0) {
-        bevindingen.push({
-          categorie: "links",
-          beschrijving: `${rodeLinks.length} verdachte link(s) gevonden in document`,
-          ernst: "hoog",
-        });
+        bevindingen.push({ categorie: "links", beschrijving: `${rodeLinks.length} verdachte link(s) in document: ${rodeLinks[0].url.slice(0, 80)}`, ernst: "hoog" });
         inQuarantaine = true;
         quarantaineReden ??= "Document bevat verdachte links.";
       }
@@ -555,50 +610,21 @@ export async function scanBestandBytes(input: BytesScanInput): Promise<ScanUitko
     linkStatus = "niet_gescand";
   }
 
-  // 6. ClamAV (optioneel)
-  let clamavStatus = "niet_beschikbaar";
-  const clamavResult = await scanClamAv(bytes);
-  if (clamavResult !== null) {
-    if (clamavResult.schoon) {
-      clamavStatus = "groen";
-    } else {
-      clamavStatus = "geblokkeerd";
-      bevindingen.push({
-        categorie: "antivirus",
-        beschrijving: `ClamAV: ${clamavResult.bericht}`,
-        ernst: "kritiek",
-      });
-      geblokkeerd = true;
-      blokkeerReden ??= `Antivirusscan: ${clamavResult.bericht}`;
-    }
-  }
-
-  // 7. AI-inhoudsanalyse (alleen bij text/pdf inhoud, async)
   let aiStatus = "niet_gescand";
   let aiSamenvatting: string | undefined;
   try {
     const leesbareTekst = bytes.toString("utf8");
-    if (leesbareTekst.length > 50) {
+    if (/[\x20-\x7E]/.test(leesbareTekst) && leesbareTekst.length > 50) {
       const aiResultaat = await analyserenInhoudAI(leesbareTekst);
       if (aiResultaat) {
-        aiStatus = aiResultaat.risicoScore >= 70 ? "rood"
-          : aiResultaat.risicoScore >= 40 ? "oranje"
-            : "groen";
+        aiStatus = aiResultaat.risicoScore >= 70 ? "rood" : aiResultaat.risicoScore >= 40 ? "oranje" : "groen";
         aiSamenvatting = aiResultaat.samenvatting;
         if (aiResultaat.risicoScore >= 70) {
-          bevindingen.push({
-            categorie: "ai",
-            beschrijving: `AI-analyse: ${aiResultaat.samenvatting}`,
-            ernst: "hoog",
-          });
+          bevindingen.push({ categorie: "ai", beschrijving: `AI-analyse: ${aiResultaat.samenvatting}`, ernst: "hoog" });
           inQuarantaine = true;
           quarantaineReden ??= `AI-inhoudsanalyse: ${aiResultaat.samenvatting}`;
         } else if (aiResultaat.risicoScore >= 40) {
-          bevindingen.push({
-            categorie: "ai",
-            beschrijving: `AI-analyse (verhoogd risico): ${aiResultaat.samenvatting}`,
-            ernst: "midden",
-          });
+          bevindingen.push({ categorie: "ai", beschrijving: `AI-analyse (verhoogd risico): ${aiResultaat.samenvatting}`, ernst: "midden" });
         }
       }
     }
@@ -606,15 +632,13 @@ export async function scanBestandBytes(input: BytesScanInput): Promise<ScanUitko
     aiStatus = "niet_gescand";
   }
 
-  const actie: ScanUitkomst["actie"] = geblokkeerd
-    ? "geblokkeerd"
-    : inQuarantaine
-      ? "quarantaine"
+  const actie: ScanUitkomst["actie"] = geblokkeerd ? "geblokkeerd"
+    : inQuarantaine ? "quarantaine"
       : "toegestaan";
 
   const risicoNiveau = berekenNiveau(bevindingen, geblokkeerd, inQuarantaine);
 
-  const bytesScanUitkomst: Omit<ScanUitkomst, "dbId"> = {
+  const uitkomst: Omit<ScanUitkomst, "dbId"> = {
     toegestaan: actie === "toegestaan",
     risicoNiveau,
     bevindingen,
@@ -630,14 +654,35 @@ export async function scanBestandBytes(input: BytesScanInput): Promise<ScanUitko
     linkStatus,
     aiStatus,
     clamavStatus,
+    yaraStatus,
+    archiefStatus,
   };
 
-  const dbId = await logScanResultaat({
-    input: { ...input, documentId: input.documentId },
-    uitkomst: bytesScanUitkomst,
-  });
+  // ── Quarantaine-opslag buiten publieke toegang ─────────────────────────────────
+  // OWASP: store quarantined files outside web root, no public access
+  let quarantainePad: string | undefined;
+  if ((actie === "quarantaine" || actie === "geblokkeerd") && bytes.length < 50 * 1024 * 1024) {
+    const dbIdVoorQuarantaine = await logScanResultaat({ input, uitkomst });
+    if (dbIdVoorQuarantaine) {
+      const pad = await slaQuarantaineOp(bytes, {
+        scanId: dbIdVoorQuarantaine,
+        bestandsnaam: input.bestandsnaam,
+        reden: blokkeerReden ?? quarantaineReden ?? "onbekend",
+        gebruikerId: input.gebruikerId ?? undefined,
+      }).catch(() => undefined);
+      quarantainePad = pad;
+      if (pad) {
+        await db.update(securityIntakeScansTable)
+          .set({ quarantainePad: pad, bijgewerktOp: new Date() })
+          .where(eq(securityIntakeScansTable.id, dbIdVoorQuarantaine))
+          .catch(() => {});
+      }
+      return { ...uitkomst, dbId: dbIdVoorQuarantaine, quarantainePad } as ScanUitkomst;
+    }
+  }
 
-  return { ...bytesScanUitkomst, dbId };
+  const dbId = await logScanResultaat({ input, uitkomst });
+  return { ...uitkomst, dbId };
 }
 
 // ── E-mailbeveiliging ─────────────────────────────────────────────────────────
@@ -648,106 +693,71 @@ export async function scanEmailBericht(input: EmailScanInput): Promise<ScanUitko
   let inQuarantaine = false;
   let blokkeerReden: string | undefined;
   let quarantaineReden: string | undefined;
+  let extensieStatus = "groen";
 
   // 1. Afzender-analyse
-  let extensieStatus = "groen";
-  const afzenderDomein = input.afzender.split("@").pop()?.toLowerCase() ?? "";
-
-  const VERDACHTE_AFZENDER_PATRONEN = [
+  const VERDACHTE_AFZENDER = [
     /noreply.*@.*\.(tk|ml|ga|cf|gq|pw)/i,
     /info@.*\d{8,}/,
     /no-reply@.*temp.*mail/i,
+    /@(0-mail|getairmail|guerrillamail|mailnull|maildrop|yopmail)/i,
   ];
-  for (const p of VERDACHTE_AFZENDER_PATRONEN) {
+  for (const p of VERDACHTE_AFZENDER) {
     if (p.test(input.afzender)) {
-      bevindingen.push({
-        categorie: "afzender",
-        beschrijving: `Verdacht afzenderpatroon: ${input.afzender}`,
-        ernst: "hoog",
-      });
+      bevindingen.push({ categorie: "afzender", beschrijving: `Verdacht afzenderpatroon: ${input.afzender}`, ernst: "hoog" });
       inQuarantaine = true;
-      quarantaineReden ??= "Verdacht e-mailadres als afzender.";
+      quarantaineReden ??= "Verdacht e-mailadres.";
     }
   }
 
-  // Domain mismatch (display name vs actual domain)
-  if (input.ontvangerDomein && afzenderDomein && afzenderDomein !== input.ontvangerDomein) {
-    // Niet per se verdacht, maar loggen
-  }
-
-  // 2. Links in e-mail
-  const linkRisicos = analyserenLinks(input.links);
-  const rodeLinks = linkRisicos.filter((l) => l.risicoNiveau === "rood");
-  let linkStatus = hoogsteNiveauUitLinks(linkRisicos);
-
-  if (rodeLinks.length > 0) {
-    bevindingen.push({
-      categorie: "links",
-      beschrijving: `${rodeLinks.length} verdachte link(s) in e-mail: ${rodeLinks[0].url.slice(0, 80)}`,
-      ernst: "hoog",
-    });
-    inQuarantaine = true;
-    quarantaineReden ??= "E-mail bevat verdachte links.";
-  }
-
-  // 3. Bijlagen
+  // 2. Bijlagen-scan
   for (const naam of input.bijlageNamen) {
     const ext = path.extname(naam).toLowerCase();
     if (ALTIJD_GEBLOKKEERD.has(ext)) {
-      bevindingen.push({
-        categorie: "bijlage",
-        beschrijving: `Gevaarlijke bijlage: "${naam}" (extensie "${ext}")`,
-        ernst: "kritiek",
-      });
+      bevindingen.push({ categorie: "bijlage", beschrijving: `Gevaarlijke bijlage: "${naam}"`, ernst: "kritiek" });
       geblokkeerd = true;
       blokkeerReden ??= `Bijlage "${naam}" heeft een gevaarlijke extensie.`;
       extensieStatus = "geblokkeerd";
     } else if (GEBLOKKEERDE_EXTENSIES.has(ext)) {
-      bevindingen.push({
-        categorie: "bijlage",
-        beschrijving: `Verdachte bijlage: "${naam}"`,
-        ernst: "hoog",
-      });
+      bevindingen.push({ categorie: "bijlage", beschrijving: `Verdachte bijlage: "${naam}"`, ernst: "hoog" });
       inQuarantaine = true;
       quarantaineReden ??= `Bijlage "${naam}" is verdacht.`;
     }
-    // Dubbele extensies in bijlage
     bevindingen.push(...analyserenBestandsnaam(naam).filter((b) => b.ernst !== "info"));
   }
 
-  // 4. AI-inhoudsanalyse op e-mailtekst
+  // 3. Links in e-mail
+  const linkRisicos = analyserenLinks(input.links);
+  const rodeLinks = linkRisicos.filter((l) => l.risicoNiveau === "rood");
+  const linkStatus = hoogsteNiveauUitLinks(linkRisicos);
+  if (rodeLinks.length > 0) {
+    bevindingen.push({ categorie: "links", beschrijving: `${rodeLinks.length} verdachte link(s): ${rodeLinks[0].url.slice(0, 80)}`, ernst: "hoog" });
+    inQuarantaine = true;
+    quarantaineReden ??= "E-mail bevat verdachte links.";
+  }
+
+  // 4. AI-inhoudsanalyse
   let aiStatus = "niet_gescand";
   let aiSamenvatting: string | undefined;
   try {
-    const aiResultaat = await analyserenInhoudAI(
-      `Onderwerp: ${input.onderwerp}\n\n${input.tekstInhoud}`,
-    );
+    const aiResultaat = await analyserenInhoudAI(`Onderwerp: ${input.onderwerp}\n\n${input.tekstInhoud}`);
     if (aiResultaat) {
-      aiStatus = aiResultaat.risicoScore >= 70 ? "rood"
-        : aiResultaat.risicoScore >= 40 ? "oranje"
-          : "groen";
+      aiStatus = aiResultaat.risicoScore >= 70 ? "rood" : aiResultaat.risicoScore >= 40 ? "oranje" : "groen";
       aiSamenvatting = aiResultaat.samenvatting;
       if (aiResultaat.risicoScore >= 70) {
-        bevindingen.push({
-          categorie: "ai",
-          beschrijving: `AI-analyse e-mail: ${aiResultaat.samenvatting}`,
-          ernst: "hoog",
-        });
+        bevindingen.push({ categorie: "ai", beschrijving: `AI-analyse e-mail: ${aiResultaat.samenvatting}`, ernst: "hoog" });
         inQuarantaine = true;
-        quarantaineReden ??= `AI-analyse e-mailinhoud: ${aiResultaat.samenvatting}`;
+        quarantaineReden ??= `AI-analyse: ${aiResultaat.samenvatting}`;
       }
     }
   } catch {
     aiStatus = "niet_gescand";
   }
 
-  const actie: ScanUitkomst["actie"] = geblokkeerd ? "geblokkeerd"
-    : inQuarantaine ? "quarantaine"
-      : "toegestaan";
-
+  const actie: ScanUitkomst["actie"] = geblokkeerd ? "geblokkeerd" : inQuarantaine ? "quarantaine" : "toegestaan";
   const risicoNiveau = berekenNiveau(bevindingen, geblokkeerd, inQuarantaine);
 
-  const emailScanUitkomst: Omit<ScanUitkomst, "dbId"> = {
+  const uitkomst: Omit<ScanUitkomst, "dbId"> = {
     toegestaan: actie === "toegestaan",
     risicoNiveau,
     bevindingen,
@@ -762,6 +772,8 @@ export async function scanEmailBericht(input: EmailScanInput): Promise<ScanUitko
     linkStatus,
     aiStatus,
     clamavStatus: "niet_beschikbaar",
+    yaraStatus: "niet_gescand",
+    archiefStatus: "niet_gescand",
   };
 
   const dbId = await logScanResultaat({
@@ -772,10 +784,10 @@ export async function scanEmailBericht(input: EmailScanInput): Promise<ScanUitko
       uploadBron: "email" as const,
       emailOnderwerp: input.onderwerp,
     } as MetadataScanInput & { emailOnderwerp: string },
-    uitkomst: emailScanUitkomst,
+    uitkomst,
   });
 
-  return { ...emailScanUitkomst, dbId };
+  return { ...uitkomst, dbId };
 }
 
 // ── Helper: risico-niveau berekenen ──────────────────────────────────────────
@@ -821,6 +833,8 @@ async function logScanResultaat(params: {
         linkStatus: uitkomst.linkStatus,
         aiStatus: uitkomst.aiStatus,
         clamavStatus: uitkomst.clamavStatus,
+        yaraStatus: uitkomst.yaraStatus,
+        archiefStatus: uitkomst.archiefStatus,
         risicoNiveau: uitkomst.risicoNiveau,
         risicoBevindingen: uitkomst.bevindingen as unknown as Record<string, unknown>[],
         linksGeanalyseerd: uitkomst.linksGeanalyseerd as unknown as Record<string, unknown>[],
@@ -851,6 +865,33 @@ export async function koppelDocumentAanScan(scanId: number, documentId: number):
   }
 }
 
-// ── Exports voor gebruik in routes ────────────────────────────────────────────
+// ── Status-query voor scan-first enforcement ──────────────────────────────────
 
-export { ALTIJD_GEBLOKKEERD, GEBLOKKEERDE_EXTENSIES, MACRO_EXTENSIES };
+export async function haalScanStatusOpVoorPad(objectPad: string): Promise<{
+  gescand: boolean;
+  geblokkeerd: boolean;
+  risicoNiveau: string;
+} | null> {
+  try {
+    const [rij] = await db
+      .select({
+        actie: securityIntakeScansTable.actie,
+        risicoNiveau: securityIntakeScansTable.risicoNiveau,
+      })
+      .from(securityIntakeScansTable)
+      .where(eq(securityIntakeScansTable.objectPad, objectPad))
+      .orderBy(securityIntakeScansTable.aangemaaktOp)
+      .limit(1);
+
+    if (!rij) return null;
+    return {
+      gescand: true,
+      geblokkeerd: rij.actie === "geblokkeerd",
+      risicoNiveau: rij.risicoNiveau,
+    };
+  } catch {
+    return null;
+  }
+}
+
+export { ALTIJD_GEBLOKKEERD, MACRO_EXTENSIES, GEBLOKKEERDE_EXTENSIES };

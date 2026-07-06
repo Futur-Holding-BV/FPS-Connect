@@ -17,6 +17,7 @@ import { db } from "@workspace/db";
 import { gebouwToewijzingenTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { isBeperktTotToegewezen } from "../utils/rol";
+import { haalScanStatusOpVoorPad } from "../services/security-intake-engine";
 
 const router: IRouter = Router();
 const objectStorageService = new ObjectStorageService();
@@ -189,6 +190,19 @@ router.get("/storage/objects/*path", requireAuth, async (req: Request, res: Resp
     const userId = req.session.userId!;
     if (!(await magBestandInGebouw(userId, objectPath))) {
       res.status(403).json({ error: "Geen toegang tot dit bestand" });
+      return;
+    }
+
+    // ── Scan-first gate (OWASP File Upload — automatische blokkade ongescande bestanden) ────
+    // Bestanden die na beveiligingsscan geblokkeerd zijn, worden NOOIT geserveerd.
+    // Bestanden zonder scanrecord (geüpload vóór de security intake) worden doorgelaten.
+    const scanStatus = await haalScanStatusOpVoorPad(objectPath).catch(() => null);
+    if (scanStatus?.geblokkeerd) {
+      req.log.warn({ objectPath }, "Scan-first gate: geblokkeerd bestand geweigerd");
+      res.status(403).json({
+        error: "Dit bestand is geblokkeerd door de beveiligingsscan en kan niet worden gedownload.",
+        code: "SECURITY_BESTAND_GEBLOKKEERD",
+      });
       return;
     }
 

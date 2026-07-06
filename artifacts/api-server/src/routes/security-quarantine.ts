@@ -321,4 +321,32 @@ router.get("/security/statistieken", alleenHoofdbeheerder, async (_req, res) => 
   }
 });
 
+// ── Quarantaine-opslag statistieken ──────────────────────────────────────────
+
+router.get("/security/quarantaine-opslag", alleenHoofdbeheerder, async (_req, res) => {
+  try {
+    const { geefQuarantaineStats, haalQuarantaineLijstOp } = await import("../services/quarantine-storage");
+    const [stats, lijst] = await Promise.all([geefQuarantaineStats(), haalQuarantaineLijstOp()]);
+    res.json({ ...stats, recenteBestanden: lijst.slice(0, 10) });
+  } catch {
+    res.status(500).json({ error: "Fout bij ophalen quarantaine-opslag" });
+  }
+});
+
+router.delete("/security/quarantaine-opslag/:bestandsnaam", alleenHoofdbeheerder, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const naam = decodeURIComponent(String(req.params.bestandsnaam));
+    if (naam.includes("/") || naam.includes("..") || naam.startsWith(".")) {
+      res.status(400).json({ error: "Ongeldige bestandsnaam" });
+      return;
+    }
+    const { verwijderUitQuarantaine } = await import("../services/quarantine-storage");
+    const ok = await verwijderUitQuarantaine(naam);
+    if (!ok) { res.status(404).json({ error: "Bestand niet gevonden" }); return; }
+    res.json({ verwijderd: true });
+  } catch {
+    res.status(500).json({ error: "Fout bij verwijderen" });
+  }
+});
+
 export default router;

@@ -56,9 +56,11 @@ interface ScanRecord {
   extensieStatus: string;
   mimeStatus: string;
   structuurStatus: string;
+  archiefStatus: string;
   linkStatus: string;
   aiStatus: string;
   clamavStatus: string;
+  yaraStatus: string;
   risicoNiveau: string;
   risicoBevindingen: Array<{ categorie: string; beschrijving: string; ernst: string }> | null;
   linksGeanalyseerd: Array<{ url: string; risicoScore: number; risicoNiveau: string; bevindingen: string[] }> | null;
@@ -269,11 +271,13 @@ function ScanDetailDialoog({ scan, open, onClose }: {
 
   const statusItems = [
     { label: "Extensie", status: scan.extensieStatus, icoon: <FileX className="h-4 w-4" /> },
-    { label: "MIME-type", status: scan.mimeStatus, icoon: <Shield className="h-4 w-4" /> },
+    { label: "MIME-inhoud", status: scan.mimeStatus, icoon: <Shield className="h-4 w-4" /> },
+    { label: "Archief", status: scan.archiefStatus ?? "niet_gescand", icoon: <ShieldAlert className="h-4 w-4" /> },
     { label: "Structuur", status: scan.structuurStatus, icoon: <ShieldAlert className="h-4 w-4" /> },
+    { label: "YARA-patronen", status: scan.yaraStatus ?? "niet_gescand", icoon: <ShieldCheck className="h-4 w-4" /> },
+    { label: "Antivirus (ClamAV)", status: scan.clamavStatus, icoon: <ShieldCheck className="h-4 w-4" /> },
     { label: "Links", status: scan.linkStatus, icoon: <Link className="h-4 w-4" /> },
     { label: "AI-analyse", status: scan.aiStatus, icoon: <Bot className="h-4 w-4" /> },
-    { label: "Antivirus", status: scan.clamavStatus, icoon: <ShieldCheck className="h-4 w-4" /> },
   ];
 
   return (
@@ -318,7 +322,7 @@ function ScanDetailDialoog({ scan, open, onClose }: {
 
           <div>
             <div className="text-sm font-medium mb-2">Scanresultaten per categorie</div>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {statusItems.map((item) => (
                 <div key={item.label} className={`rounded-md p-2 text-xs flex items-center gap-2 border ${niveauKleur(item.status)}`}>
                   {item.icoon}

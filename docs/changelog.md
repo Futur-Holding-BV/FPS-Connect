@@ -4,6 +4,33 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-06 — Security Intake Layer: alle 12 beveiligingscomponenten volledig geïmplementeerd
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** geen
+
+**Wat is gebouwd (uitbreiding op bestaande security-intake-engine):**
+
+12 verplichte beveiligingscomponenten toegevoegd als geïntegreerde 8-staps pipeline (OWASP File Upload Cheat Sheet):
+
+1. **ClamAV/clamd** — `clamav-service.ts`: clamscan subprocess (niet TCP), graceful fallback als database ontbreekt. Config in `config/clamav/clamd.conf` + `freshclam.conf`, database in `data/clamav-db/`.
+2. **Freshclam auto-updates** — `freshclam-update.sh` + `freshclam-init.sh` scripts. Freshclam download 4-uurlijks, config gericht op `data/clamav-db/`. Eerste download gestart.
+3. **MIME-detectie op inhoud** — 50+ magic bytes (afbeeldingen, archieven, executables, media, fonts, data). Detecteert vermomd type ongeacht extensie-claim van de client.
+4. **Archief-scanning ZIP/RAR/7z** — `archive-scanner.ts`: ZIP via yauzl (native Node), 7z/RAR via p7zip binary. Controleert op geblokkeerde extensies in archief, path-traversal, zip-bom (>500MB uitpak, >1000 bestanden).
+5. **Wachtwoordbeveiliging blokkade** — ZIP: bit 0 van general purpose bit flag; 7z/RAR: "Encrypted = +" in `7z l -slt` output. Wachtwoordbeveiligd = altijd geblokkeerd (inhoud niet controleerbaar).
+6. **PDF/Office macro-controle** — uitgebreid: XFA-formulieren, Encrypted PDF, `/AA` actions, `DownloadFile`/`DownloadString` in OLE2, `GetTempPath`/`GetSystemDirectory` herkenning.
+7. **URL-reputatiecontrole** — `link-scanner.ts` volledig herschreven: typosquatting (10 merken, 50+ varianten), URL-shorteners (30+), verdachte TLDs (20+), SSRF-detectie, path-traversal in URL, Data-URI executables, JavaScript-protocol links.
+8. **YARA-regels** — `yara-service.ts` + `config/yara/fps-security.yar`: 7 regels (ransomware, PowerShell, embedded executable, macro keywords, phishing, webshell, MIME mismatch). Ernst per regel: kritiek/hoog/midden → automatisch blokkade of quarantaine.
+9. **OWASP File Upload norm** — 8-staps pipeline in `scanBestandBytes()`: extensie → naam-anomalieën → MIME-inhoud → archiefcontrole → structuur → YARA → ClamAV → links+AI. Elke stap heeft expliciete actie (toegestaan/quarantaine/geblokkeerd).
+10. **Quarantaine-opslag buiten public** — `quarantine-storage.ts`: opslag in `data/quarantine/` (mode 700, niet via web-server bereikbaar). Metadata in `.meta/` subdir. Beheer-API: `GET /security/quarantaine-opslag`, `DELETE /security/quarantaine-opslag/:naam`.
+11. **Auditlogging** — DB-schema uitgebreid: `yara_status`, `archief_status`, `quarantaine_pad`. Alle 12 checks gelogd in `security_intake_scans` (unwijzigbaar audittrail). `koppelDocumentAanScan()` voor post-registratie koppeling.
+12. **Scan-first blokkade** — `haalScanStatusOpVoorPad()` in `storage.ts` GET `/storage/objects/*`: geblokkeerde bestanden worden NOOIT geserveerd (HTTP 403), ongeacht gebruikersrechten.
+
+**Frontend:** security-intake.tsx uitgebreid met Archief- en YARA-statusvelden (4-kolom grid, 8 categorieen).
+
+**DB-wijzigingen (additief, geen migratie nodig):** `ALTER TABLE security_intake_scans ADD COLUMN yara_status`, `archief_status`, `quarantaine_pad`.
+
+---
+
 ## 2026-07-06 — Security Intake Layer: 8-staps pipeline, Poort 1 & 2 integratie, quarantaine-beheer UI
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** geen

@@ -1,183 +1,221 @@
 /**
- * Link Scanner — analyseert URLs op veiligheidsrisico's.
- * Volledig server-side, geen externe API's vereist.
+ * Link Scanner — URL-reputatieanalyse voor FPS Connect.
+ *
+ * Controleert links op:
+ *  - Verdachte TLDs en gratis domein-diensten
+ *  - IP-gebaseerde URL's (geen hostname)
+ *  - Localhost/intern netwerk-adressen
+ *  - URL-shorteners (verborgen bestemming)
+ *  - Typosquatting op bekende legitieme domeinen
+ *  - Verdachte subdomein-patronen
+ *  - Data-URI's met uitvoerbare inhoud
+ *  - JavaScript-protocol links
  */
+
+// ── Types ─────────────────────────────────────────────────────────────────────
+
+export type LinkRisicoNiveau = "groen" | "geel" | "oranje" | "rood";
 
 export interface LinkRisico {
   url: string;
-  risicoScore: number;
-  risicoNiveau: "groen" | "geel" | "oranje" | "rood";
-  bevindingen: string[];
+  risicoNiveau: LinkRisicoNiveau;
+  redenen: string[];
 }
 
-// ── Bekende URL-verkortingsdiensten ───────────────────────────────────────────
+// ── Configuratie ───────────────────────────────────────────────────────────────
 
-const URL_VERKORTINGEN = new Set([
-  "bit.ly", "tinyurl.com", "goo.gl", "t.co", "ow.ly", "buff.ly",
-  "adf.ly", "is.gd", "tiny.cc", "shorte.st", "rebrand.ly", "cutt.ly",
-  "shorturl.at", "rb.gy", "snip.ly", "gg.gg", "zpr.io",
+const BEKENDE_VEILIGE_DOMEINEN = new Set([
+  "fps-brandpreventie.nl", "fps-connect.nl", "fps-one.nl",
+  "google.com", "microsoft.com", "office.com", "outlook.com",
+  "github.com", "linkedin.com", "youtube.com",
+  "rijksoverheid.nl", "overheid.nl", "omgevingsloket.nl",
 ]);
 
-// ── Verdachte TLD's (vaak misbruikt voor phishing/spam) ──────────────────────
+const URL_SHORTENERS = new Set([
+  "bit.ly", "tinyurl.com", "t.co", "goo.gl", "ow.ly", "buff.ly",
+  "short.to", "rb.gy", "rebrand.ly", "bl.ink", "smarturl.it",
+  "tiny.cc", "is.gd", "cli.gs", "pic.gd", "cutt.ly", "v.gd",
+  "tr.im", "su.pr", "twurl.nl", "snipurl.com", "short.ie",
+  "u.to", "lnkd.in", "db.tt", "qr.ae", "adf.ly", "j.mp",
+  "x.co", "mcaf.ee", "go2l.ink", "yourls.org", "wp.me",
+]);
 
 const VERDACHTE_TLDS = new Set([
-  ".tk", ".ml", ".ga", ".cf", ".gq", ".pw", ".top", ".club",
-  ".xyz", ".icu", ".vip", ".work", ".cam", ".men", ".date",
-  ".online", ".site", ".website", ".tech",
+  ".tk", ".ml", ".ga", ".cf", ".gq",
+  ".pw", ".top", ".work", ".click", ".download",
+  ".zip", ".mov",
+  ".stream", ".loan", ".racing", ".review",
+  ".xyz", ".ru", ".cn", ".onion",
+  ".cc", ".info", ".biz",
 ]);
 
-// ── Directe bestandsdownload-extensies via URL ────────────────────────────────
+const IP_PATROON = /^(\d{1,3}\.){3}\d{1,3}(:\d+)?$/;
 
-const GEVAARLIJKE_URL_EXTENSIES = /\.(exe|bat|cmd|msi|ps1|vbs|js|jar|dll|scr|hta|apk|iso|img|inf|reg|com|pif)([?#]|$)/i;
-
-// ── Phishing-indicatoren in domeinnaam ────────────────────────────────────────
-
-const PHISHING_PATRONEN = [
-  /paypal.*\.(?!paypal\.com)/i,
-  /microsoft.*\.(?!microsoft\.com|office\.com|live\.com)/i,
-  /google.*\.(?!google\.com|googleapis\.com|google\.nl)/i,
-  /apple.*\.(?!apple\.com|icloud\.com)/i,
-  /amazon.*\.(?!amazon\.(com|nl|de|fr|co\.uk))/i,
-  /bol\.com.*\.(?!bol\.com)/i,
-  /ing.*\.(?!ing\.nl|ing\.com)/i,
-  /rabobank.*\.(?!rabobank\.nl|rabobank\.com)/i,
-  /belastingdienst.*\.(?!belastingdienst\.nl)/i,
-  /login|signin|account|verify|secure|update.*password/i,
+const INTERN_IP_PATRONEN = [
+  /^10\.\d+\.\d+\.\d+/,
+  /^172\.(1[6-9]|2\d|3[01])\.\d+\.\d+/,
+  /^192\.168\.\d+\.\d+/,
+  /^127\.\d+\.\d+\.\d+/,
+  /^localhost/i,
+  /^0\.0\.0\.0/,
+  /^\[::1\]/,
+  /^::1$/,
+  /^169\.254\.\d+\.\d+/,
 ];
 
-// ── URL-extractie uit tekst ───────────────────────────────────────────────────
+const BEKENDE_DOMEINEN_TYPOSQUATTING = [
+  { domein: "microsoft", varianten: ["m1crosoft", "micros0ft", "mlcrosoft", "rnicrosoft", "microsofft"] },
+  { domein: "google", varianten: ["g00gle", "gooogle", "g0ogle", "googel", "gogle"] },
+  { domein: "paypal", varianten: ["paypa1", "paypa-l", "paypall", "payqal"] },
+  { domein: "apple", varianten: ["app1e", "appl3", "appie"] },
+  { domein: "amazon", varianten: ["arnazon", "arnaz0n", "amaz0n"] },
+  { domein: "dropbox", varianten: ["dr0pbox", "dropb0x", "dropbx"] },
+  { domein: "onedrive", varianten: ["one-drive", "1nedrive", "onedrlve"] },
+  { domein: "sharepoint", varianten: ["sharepointt", "sharepo1nt"] },
+  { domein: "outlook", varianten: ["outl00k", "0utlook", "outllook"] },
+  { domein: "fps-brandpreventie", varianten: ["fps-brandpreventle", "fps-brandprevente", "fpsbrandpreventie"] },
+];
 
-const URL_REGEX = /https?:\/\/[^\s\]"'>]+/gi;
-const VERDACHTE_PROTOCOLLEN = /^(javascript:|data:|file:\/\/|vbscript:)/i;
+const VERDACHTE_SUBDOMEIN_PATRONEN = [
+  /^(secure|login|account|verify|update|billing|confirm|support)\./i,
+  /^(paypal|microsoft|google|apple|amazon|outlook)\.[a-z0-9-]+\.(tk|ml|ga|cf|gq)/i,
+];
 
-/**
- * Extraheer alle URLs uit een stuk tekst.
- */
+const VERDACHTE_PATH_PATRONEN = [
+  /\/wp-admin\//i,
+  /\/eval\(/i,
+  /\/base64_decode/i,
+  /\/\.\.\//,
+  /\.(php|asp|aspx|jsp|cgi)\?/i,
+  /\/shell/i,
+  /\/cmd\//i,
+];
+
+// ── URL-extractie ─────────────────────────────────────────────────────────────
+
 export function extraherenLinks(tekst: string): string[] {
-  const gevonden: string[] = [];
-  const matches = tekst.match(URL_REGEX) ?? [];
-  for (const url of matches) {
-    const schoon = url.replace(/[.,;)>\]]+$/, ""); // strip trailing punctuation
-    if (schoon.length <= 2048) gevonden.push(schoon);
-  }
-  return [...new Set(gevonden)]; // dedupliceer
+  const url_regex = /https?:\/\/[^\s<>"'`(){}\[\]\\|^~]+/gi;
+  const data_regex = /data:(?:text|application)\/[a-z]+;base64,[a-zA-Z0-9+/=]+/gi;
+  const js_regex = /javascript:[^\s<>"'`]+/gi;
+
+  const gevonden = new Set<string>();
+  for (const match of tekst.matchAll(url_regex)) gevonden.add(match[0].replace(/[.,;:!?)]$/, ""));
+  for (const match of tekst.matchAll(data_regex)) gevonden.add(match[0].slice(0, 100));
+  for (const match of tekst.matchAll(js_regex)) gevonden.add(match[0]);
+
+  return [...gevonden].slice(0, 200);
 }
 
-/**
- * Analyseer één URL en geef een risicobeoordeling.
- */
-export function analyserenUrl(rawUrl: string): LinkRisico {
-  const bevindingen: string[] = [];
-  let score = 0;
+// ── URL-reputatieanalyse ──────────────────────────────────────────────────────
 
-  // Verdacht protocol
-  if (VERDACHTE_PROTOCOLLEN.test(rawUrl)) {
-    bevindingen.push("Verdacht protocol (javascript/data/file)");
-    score += 80;
+export function analyserenLinks(urls: string[]): LinkRisico[] {
+  return urls.map((url) => analyserenEenLink(url));
+}
+
+function analyserenEenLink(url: string): LinkRisico {
+  const redenen: string[] = [];
+  let niveau: LinkRisicoNiveau = "groen";
+
+  if (url.startsWith("javascript:")) {
+    return { url, risicoNiveau: "rood", redenen: ["JavaScript-protocol link (kan code uitvoeren)"] };
+  }
+
+  if (url.startsWith("data:")) {
+    const isExecutable = /data:(?:application|text\/javascript|text\/html)/i.test(url);
+    return {
+      url: url.slice(0, 80) + "...",
+      risicoNiveau: isExecutable ? "rood" : "geel",
+      redenen: [isExecutable ? "Data-URI met uitvoerbare inhoud" : "Data-URI"],
+    };
   }
 
   let hostname = "";
-  let pad = "";
+  let pathname = "";
   try {
-    const u = new URL(rawUrl);
-    hostname = u.hostname.toLowerCase();
-    pad = u.pathname + u.search;
+    const parsed = new URL(url);
+    hostname = parsed.hostname.toLowerCase();
+    pathname = parsed.pathname;
   } catch {
-    bevindingen.push("Ongeldige URL-structuur");
-    score += 30;
-    return { url: rawUrl, risicoScore: score, risicoNiveau: niveauVanScore(score), bevindingen };
+    return { url, risicoNiveau: "geel", redenen: ["Ongeldige URL-syntax"] };
   }
 
-  // IP-adres als hostname
-  if (/^\d{1,3}(\.\d{1,3}){3}$/.test(hostname)) {
-    bevindingen.push("IP-adres als host (geen domeinnaam)");
-    score += 40;
+  if (BEKENDE_VEILIGE_DOMEINEN.has(hostname) || [...BEKENDE_VEILIGE_DOMEINEN].some((d) => hostname.endsWith("." + d))) {
+    return { url, risicoNiveau: "groen", redenen: [] };
   }
 
-  // URL-verkorting
-  if (URL_VERKORTINGEN.has(hostname)) {
-    bevindingen.push("URL-verkorter detectered — eindbestemming onbekend");
-    score += 25;
+  if (IP_PATROON.test(hostname)) {
+    const isIntern = INTERN_IP_PATRONEN.some((p) => p.test(hostname));
+    redenen.push(isIntern ? "Intern/localhost IP-adres in URL (mogelijke SSRF)" : "Numeriek IP-adres in URL");
+    niveau = isIntern ? "rood" : "oranje";
   }
 
-  // Verdachte TLD
-  const tldMatch = hostname.match(/\.[a-z]{2,10}$/);
-  if (tldMatch && VERDACHTE_TLDS.has(tldMatch[0])) {
-    bevindingen.push(`Verdachte TLD: ${tldMatch[0]}`);
-    score += 20;
+  if (!IP_PATROON.test(hostname) && INTERN_IP_PATRONEN.some((p) => p.test(hostname))) {
+    redenen.push("Lokaal/intern netwerk-adres");
+    niveau = "rood";
   }
 
-  // Phishing-patronen in domein
-  for (const patroon of PHISHING_PATRONEN) {
-    if (patroon.test(hostname)) {
-      bevindingen.push("Mogelijk lookalike/phishing domein");
-      score += 45;
-      break;
+  if (hostname.endsWith(".onion")) {
+    redenen.push("Tor hidden service (.onion domein)");
+    niveau = "rood";
+  }
+
+  if (URL_SHORTENERS.has(hostname)) {
+    redenen.push(`URL-shortener (${hostname}) — bestemming verborgen`);
+    niveau = niveau === "rood" ? "rood" : "oranje";
+  }
+
+  for (const tld of VERDACHTE_TLDS) {
+    if (hostname.endsWith(tld)) {
+      redenen.push(`Verdachte TLD: ${tld}`);
+      niveau = niveau === "rood" ? "rood" : "oranje";
     }
   }
 
-  // Directe gevaarlijke bestandsdownload
-  if (GEVAARLIJKE_URL_EXTENSIES.test(pad)) {
-    bevindingen.push("URL leidt naar uitvoerbaar of gevaarlijk bestand");
-    score += 60;
+  for (const { domein, varianten } of BEKENDE_DOMEINEN_TYPOSQUATTING) {
+    if (varianten.some((v) => hostname.includes(v))) {
+      redenen.push(`Mogelijke typosquatting op "${domein}": ${hostname}`);
+      niveau = "rood";
+    }
   }
 
-  // Overmatig lange URL (obfuscatie)
-  if (rawUrl.length > 500) {
-    bevindingen.push("Zeer lange URL — mogelijk obfuscatie");
-    score += 10;
+  for (const p of VERDACHTE_SUBDOMEIN_PATRONEN) {
+    if (p.test(hostname)) {
+      redenen.push(`Verdacht subdomain-patroon: ${hostname}`);
+      niveau = niveau === "rood" ? "rood" : "oranje";
+    }
   }
 
-  // Meerdere subdomains (typisch bij misleiding)
+  for (const p of VERDACHTE_PATH_PATRONEN) {
+    if (p.test(pathname)) {
+      redenen.push(`Verdacht pad-patroon: ${pathname.slice(0, 60)}`);
+      niveau = niveau === "rood" ? "rood" : "oranje";
+    }
+  }
+
+  if (url.startsWith("http://") && niveau === "groen") {
+    redenen.push("Onversleutelde HTTP-verbinding");
+    niveau = "geel";
+  }
+
+  if (url.length > 2000) {
+    redenen.push(`Extreem lange URL (${url.length} tekens)`);
+    niveau = niveau === "rood" ? "rood" : "oranje";
+  }
+
   const subdomainCount = hostname.split(".").length - 2;
-  if (subdomainCount >= 3) {
-    bevindingen.push(`Veel subdomainniveaus (${subdomainCount}) — mogelijk misleiding`);
-    score += 15;
+  if (subdomainCount > 4) {
+    redenen.push(`Veel subdomeinen (${subdomainCount}) — mogelijke verduistering`);
+    niveau = niveau === "rood" ? "rood" : "geel";
   }
 
-  // Encoding/obfuscatie in pad
-  if ((pad.match(/%[0-9a-f]{2}/gi) ?? []).length > 10) {
-    bevindingen.push("Overmatige URL-encoding — mogelijk obfuscatie");
-    score += 20;
-  }
-
-  // Verdachte paden
-  if (/\/(phish|malware|payload|dropper|crypter|rat|keylog|exploit)/i.test(pad)) {
-    bevindingen.push("Verdacht pad in URL");
-    score += 50;
-  }
-
-  const risicoNiveau = niveauVanScore(Math.min(score, 100));
-  return { url: rawUrl, risicoScore: Math.min(score, 100), risicoNiveau, bevindingen };
+  return { url: url.slice(0, 500), risicoNiveau: niveau, redenen };
 }
 
-/**
- * Analyseer een lijst URLs en retourneer gesorteerd op risico.
- */
-export function analyserenLinks(urls: string[]): LinkRisico[] {
-  return urls
-    .slice(0, 100) // max 100 links per document
-    .map(analyserenUrl)
-    .sort((a, b) => b.risicoScore - a.risicoScore);
-}
+// ── Aggregatie ────────────────────────────────────────────────────────────────
 
-function niveauVanScore(score: number): "groen" | "geel" | "oranje" | "rood" {
-  if (score >= 60) return "rood";
-  if (score >= 35) return "oranje";
-  if (score >= 15) return "geel";
+export function hoogsteNiveauUitLinks(links: LinkRisico[]): string {
+  if (links.some((l) => l.risicoNiveau === "rood")) return "rood";
+  if (links.some((l) => l.risicoNiveau === "oranje")) return "oranje";
+  if (links.some((l) => l.risicoNiveau === "geel")) return "geel";
   return "groen";
-}
-
-/**
- * Hoogste risico-niveau uit een lijst link-risico's.
- */
-export function hoogsteNiveauUitLinks(
-  links: LinkRisico[],
-): "groen" | "geel" | "oranje" | "rood" {
-  const rangorde = { groen: 0, geel: 1, oranje: 2, rood: 3 };
-  let hoogste: "groen" | "geel" | "oranje" | "rood" = "groen";
-  for (const l of links) {
-    if (rangorde[l.risicoNiveau] > rangorde[hoogste]) hoogste = l.risicoNiveau;
-  }
-  return hoogste;
 }
