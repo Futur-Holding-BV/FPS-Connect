@@ -19,17 +19,22 @@ connect.fps-one.nl {
         }
     }
 
-    # Statische bestanden serveren vanuit /srv/public.
-    # file_server levert het bestand als het bestaat, of geeft 404.
-    # Geen file-existence check nodig: handle_errors vangt de 404 op
-    # en serveert index.html voor SPA client-side routing.
-    root * /srv/public
-
-    file_server {
-        precompressed gzip br
+    # Statische bestanden: deterministisch op pad en extensie gematcht,
+    # geen file-existence check, geen try_files, geen not file.
+    @static {
+        path /assets/* /icons/* /favicon* /manifest* /sw.js
+        path_regexp ext \.(js|css|png|jpg|jpeg|gif|svg|ico|webp|avif|woff|woff2|ttf|eot|map|webmanifest|json|txt|xml)$
     }
 
-    handle_errors 404 {
+    handle @static {
+        root * /srv/public
+        file_server {
+            precompressed gzip br
+        }
+    }
+
+    # SPA-fallback: alles wat niet matcht wordt index.html
+    handle {
         root * /srv/public
         rewrite * /index.html
         file_server
