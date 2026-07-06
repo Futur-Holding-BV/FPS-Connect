@@ -4,6 +4,43 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-06 — AI Change Governance & Prompt Security Layer
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** geen
+
+**Wat is gebouwd:**
+
+Centrale AI Change Governance Engine die alle AI-aanroepen in FPS Connect en FPS One onderschept, classificeert en beveiligt. AI mag gebruikers ondersteunen, maar nooit zelfstandig de applicatie, database, autorisaties of architectuur wijzigen.
+
+**Kern-engine (`ai-prompt-governance.ts`):**
+- `classifeerPrompt()` — Groen/Geel/Oranje/Rood classificatie via keyword-scoring (geen AI-model nodig, geen circular dependency). 20+ patroon-sets.
+- Injectie-detectie: 25+ aanvalspatronen (jailbreak, privilege escalation, rolmisbruik, systeemprompt-extractie, DAN-mode, LLM control tokens, HTML/Markdown/JavaScript-protocol injectie, path-traversal, Base64 obfuscatie, SSRF)
+- `scanDocumentOpInjectie()` — aparte scanner voor DMS/security-intake: detecteert verborgen AI-instructies in documenttekst
+- `logPromptScanAsync()` / `logPromptScanEnHaalId()` — auditlogging naar `ai_prompt_scans` (fire-and-forget voor groen/geel, await voor oranje/rood)
+- `slaWijzigingsvoorstelOp()` — oranje-niveau verzoeken opgeslagen als wijzigingsvoorstel inclusief impactanalyse en procesbeschrijving
+
+**Gateway-integratie (`aiGateway.ts`):**
+- Governance check aan het begin van `chat()` (voor elke AI-aanroep)
+- Rood/injectie → direct geblokkeerd (`{ ok: false, fout: "Geweigerd door AI Change Governance Engine" }`)
+- Oranje → wijzigingsvoorstel aangemaakt + geblokkeerd (`{ ok: false, fout: "Wijzigingsvoorstel aangemaakt. Wacht op goedkeuring." }`)
+- Groen/Geel → fire-and-forget log, aanroep wordt doorgezet
+
+**Interne modules** (document-analyse, spot-ai, gebouw-ai, scout, etc.) worden automatisch als groen geclassificeerd (INTERNE_MODULES-set).
+
+**API-routes (governance.ts uitgebreid):**
+- `GET /governance/ai-prompt-scans` — paginated prompt-log (filter op classificatie/beslissing/datum)
+- `GET /governance/ai-prompt-scans/statistieken` — telling per classificatie + injectie-aanvallen vandaag
+- `GET /governance/ai-wijzigingsvoorstellen` — wachtrij met oranje-voorstellen (filter op status)
+- `POST /governance/ai-wijzigingsvoorstellen/:id/beoordelen` — goedkeuren of afwijzen (alleen hoofdbeheerder)
+
+**DB (additief):** `ai_prompt_scans`, `ai_wijzigingsvoorstellen` via CREATE TABLE IF NOT EXISTS + Drizzle-schema `lib/db/src/schema/ai-governance.ts`
+
+**Frontend (`beheer/ai-prompt-governance.tsx`):**
+- Toegankelijk via Beheer > AI-governance (alleen hoofdbeheerder)
+- 3 tabs: Dashboard (statistieken + uitleg classificaties), Prompt-log (kleurgecodeerde tabel per classificatie), Wijzigingsvoorstellen (beoordeel-dialoog met goedkeuren/afwijzen + opmerking)
+
+---
+
 ## 2026-07-06 — Security Intake Layer: alle 12 beveiligingscomponenten volledig geïmplementeerd
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** geen

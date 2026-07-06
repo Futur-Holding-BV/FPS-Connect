@@ -4,6 +4,13 @@ import { heeftOpenAi, maakOpenAiClient } from "./openai";
 import { logger } from "./logger";
 import { db } from "@workspace/db";
 import { aiAanroepenTable } from "@workspace/db";
+import {
+  classifeerPrompt,
+  logPromptScanEnHaalId,
+  logPromptScanAsync,
+  slaWijzigingsvoorstelOp,
+  extraheerGebruikersPrompt,
+} from "../services/ai-prompt-governance";
 
 // ── Foutmelding-sanitisatie ───────────────────────────────────────────────────
 // Scrubt patronen die op API-sleutels of tokens lijken vóór opslag in de DB.
@@ -287,6 +294,41 @@ class AiGatewayService {
     timeoutMs: number = STANDAARD_TIMEOUT_MS,
     logCtx?: LogContext,
   ): Promise<ChatResultaat> {
+    // ── AI Change Governance check ────────────────────────────────────────────
+    const governanceInvoer = {
+      promptTekst: extraheerGebruikersPrompt(
+        (params.messages ?? []) as Array<{ role: string; content: unknown }>,
+      ),
+      module: logCtx?.module ?? "onbekend",
+      functie: logCtx?.functie ?? null,
+      gebruikerId: logCtx?.gebruikerId ?? null,
+      gebruikerNaam: null as string | null,
+      rol: null as string | null,
+    };
+    const governanceResultaat = classifeerPrompt(governanceInvoer);
+
+    if (governanceResultaat.beslissing === "geblokkeerd") {
+      logPromptScanAsync(governanceInvoer, governanceResultaat);
+      logger.warn(
+        { module: governanceInvoer.module, classificatie: governanceResultaat.classificatie, motivatie: governanceResultaat.motivatie },
+        "AI-aanroep geblokkeerd door Prompt Governance Engine",
+      );
+      return { ok: false, fout: `Geweigerd door AI Change Governance Engine: ${governanceResultaat.motivatie}` };
+    }
+
+    if (governanceResultaat.beslissing === "voorstel") {
+      const scanId = await logPromptScanEnHaalId(governanceInvoer, governanceResultaat);
+      await slaWijzigingsvoorstelOp(scanId, governanceInvoer, governanceResultaat);
+      logger.info(
+        { module: governanceInvoer.module, scanId },
+        "AI-aanroep omgezet naar wijzigingsvoorstel (oranje classificatie)",
+      );
+      return { ok: false, fout: "Uw verzoek is opgeslagen als wijzigingsvoorstel. De hoofdbeheerder beoordeelt dit via Beheer > AI-governance." };
+    }
+
+    logPromptScanAsync(governanceInvoer, governanceResultaat);
+    // ─────────────────────────────────────────────────────────────────────────
+
     const model = MODEL_REGISTRY[slot];
     const promptHash = extractSystemPromptHash(params);
     const contextJson = bouwContextJson(logCtx);
