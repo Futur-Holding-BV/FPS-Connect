@@ -1,4 +1,4 @@
-fpsbrandpreventie.nl {
+connect.fps-one.nl {
     encode gzip
 
     header {
