@@ -6,11 +6,11 @@ RUN corepack enable && corepack prepare pnpm@latest --activate
 
 WORKDIR /app
 
-# Stap 1: alleen manifesten kopiëren voor dependency-installatie
+# Stap 1: alleen manifesten kopiëren voor gecachte dependency-installatie.
+# scripts/package.json meenemen zodat pnpm de volledige workspace herkent.
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY tsconfig.base.json tsconfig.json ./
 
-# lib-packages (alle, want pnpm-workspace.yaml includeert lib/*)
 COPY lib/api-spec/package.json            lib/api-spec/
 COPY lib/api-client-react/package.json    lib/api-client-react/
 COPY lib/api-client-react/tsconfig.json   lib/api-client-react/
@@ -22,21 +22,35 @@ COPY lib/object-storage-web/package.json  lib/object-storage-web/
 COPY lib/object-storage-web/tsconfig.json lib/object-storage-web/
 COPY lib/permissies/package.json          lib/permissies/
 COPY lib/permissies/tsconfig.json         lib/permissies/
+COPY scripts/package.json                 scripts/
 
-# artifact
 COPY artifacts/firevault/package.json    artifacts/firevault/
 COPY artifacts/firevault/tsconfig.json   artifacts/firevault/
 
 # --ignore-scripts voorkomt dat pnpm 'prepare: tsc --build' uitvoert
-# voor lib/api-client-react terwijl de bronbestanden er nog niet zijn
+# voor lib/api-client-react terwijl de bronbestanden er nog niet zijn.
 RUN pnpm install --frozen-lockfile --ignore-scripts
 
 # Stap 2: bronbestanden kopiëren
 COPY lib/ lib/
 COPY artifacts/firevault/ artifacts/firevault/
 
-# Stap 3: Vite bouwt de frontend (transpileert TS zelf via esbuild intern)
+# Stap 3: Vite bouwt de frontend
 RUN pnpm --filter @workspace/firevault run build
+
+# Stap 4: verificeer dat de builduitvoer compleet en consistent is.
+# Faalt hard als index.html, CSS of JS ontbreekt — voorkomt dat een
+# incomplete build gecached en uitgerold wordt.
+RUN set -e; \
+    test -f artifacts/firevault/dist/public/index.html || (echo "FOUT: index.html ontbreekt" && exit 1); \
+    CSS=$(ls artifacts/firevault/dist/public/assets/*.css 2>/dev/null | head -1); \
+    test -n "$CSS" || (echo "FOUT: geen CSS-bestand in dist/public/assets/" && exit 1); \
+    JS=$(ls artifacts/firevault/dist/public/assets/*.js 2>/dev/null | head -1); \
+    test -n "$JS" || (echo "FOUT: geen JS-bestand in dist/public/assets/" && exit 1); \
+    HASH_CSS=$(basename "$CSS"); \
+    grep -q "$HASH_CSS" artifacts/firevault/dist/public/index.html || \
+        (echo "FOUT: index.html verwijst niet naar $HASH_CSS — build inconsistent" && exit 1); \
+    echo "Buildverificatie geslaagd: $CSS en $JS aanwezig en consistent met index.html"
 
 FROM caddy:2-alpine AS runtime
 
