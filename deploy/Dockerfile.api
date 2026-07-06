@@ -9,10 +9,21 @@ WORKDIR /app
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY tsconfig.base.json tsconfig.json ./
 
+# Kopieer package.json + tsconfig.json van alle lib-packages vóór pnpm install
+# zodat pnpm workspace-resolutie volledig slaagt
 COPY lib/api-spec/package.json lib/api-spec/
 COPY lib/api-client-react/package.json lib/api-client-react/
+COPY lib/api-client-react/tsconfig.json lib/api-client-react/
+COPY lib/api-zod/package.json lib/api-zod/
+COPY lib/api-zod/tsconfig.json lib/api-zod/
 COPY lib/db/package.json lib/db/
+COPY lib/db/tsconfig.json lib/db/
+COPY lib/object-storage-web/package.json lib/object-storage-web/
+COPY lib/object-storage-web/tsconfig.json lib/object-storage-web/
+COPY lib/permissies/package.json lib/permissies/
+COPY lib/permissies/tsconfig.json lib/permissies/
 COPY artifacts/api-server/package.json artifacts/api-server/
+COPY artifacts/api-server/tsconfig.json artifacts/api-server/
 
 RUN pnpm install --frozen-lockfile
 
