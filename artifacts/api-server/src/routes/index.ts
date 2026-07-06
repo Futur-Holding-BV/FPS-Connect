@@ -96,6 +96,7 @@ import aiLogRouter from "./ai-log";
 import avgRouter from "./avg";
 import visualLibraryRouter from "./visual-library";
 import securityValidationRouter from "./security-validation";
+import { cqoRouter } from "./cqo";
 import "../services/workflow-configs";
 
 const router: IRouter = Router();
@@ -209,5 +210,6 @@ router.use(aiLogRouter);
 router.use(avgRouter);
 router.use(visualLibraryRouter);
 router.use(securityValidationRouter);
+router.use(cqoRouter);
 
 export default router;

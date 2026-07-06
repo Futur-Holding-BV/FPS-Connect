@@ -4,6 +4,56 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-06 — Release Readiness & AI Chief Quality Officer (CQO)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** geen
+
+**Wat is gebouwd:**
+
+Centraal kwaliteitscentrum van FPS Connect: de AI Chief Quality Officer (CQO) beoordeelt het volledige platform permanent vanuit 15 expertperspectieven en geeft een release-go/no-go advies.
+
+**DB-schema (3 nieuwe tabellen):**
+- `cqo_runs` — beoordelingsruns met categoryscores, totaalscore en release-beslissing
+- `cqo_bevindingen` — individuele bevindingen per specialist (positief + negatief, ernst, impact, oplossing)
+- `cqo_verbeterpunten` — geprioriteerde verbeterpunten met urgentie en verwachte verbetering
+
+**AI Chief Quality Officer — 15 specialisten:**
+Softwarearchitect, ERP-consultant, Procesanalist, Kwaliteitsmanager, Technisch schrijver, UX-specialist, UI-designer, Commercieel adviseur, Security-auditor, Privacy officer, AI-auditor, Performance engineer, Beheerder, Tester, Eindgebruiker — elk beoordeelt een specifieke categorie vanuit hun vakgebied.
+
+**15 beoordelingscategorieën (gewogen):**
+Veiligheid (15%), Privacy (12%), Functionaliteit (12%), Compleetheid (10%), Gebruiksvriendelijkheid (9%), Performance (8%), Leesbaarheid (6%), Esthetiek (6%), Commercieel (6%), Logica (5%), Werkbaarheid (4%), Integraties (3%), Mobiel (2%), Rapportages (1%), Automatisering (1%)
+
+**Scoringlogica & release-beslissing:**
+- Automatisch geblokkeerd bij: kritieke bevinding, veiligheid < 75 of privacy < 75
+- Score < 65 → "Niet gereed"
+- Score 65-79 → "Gereed na kleine verbeteringen"
+- Score 80-89 → "Gereed voor acceptatie"
+- Score ≥ 90 → "Gereed voor productie"
+
+**Azure-abstractielaag (azure-status.ts):**
+6 Azure-features getracked (Graph e-mail, Azure AD SSO, Teams, SharePoint, Azure Storage, Azure Monitor) met status actief/fallback/niet_actief en graceful degradation
+
+**API-routes (8 endpoints, requireAuth + alleenHoofdbeheerder):**
+- `POST /cqo/beoordeling` — scan starten (202, asynchroon, batch 3 specialists gelijktijdig)
+- `GET /cqo/beoordelingen` — history lijst
+- `GET /cqo/beoordelingen/:id` — run-detail
+- `GET /cqo/beoordelingen/:id/bevindingen` — bevindingen (filter op ernst/categorie/positief)
+- `GET /cqo/beoordelingen/:id/verbeterpunten` — verbeterpunten van run
+- `GET /cqo/dashboard` — meest recente voltooide beoordeling
+- `GET /cqo/azure-status` — Azure-afhankelijkheden overzicht
+- `GET /cqo/score` — huidige score voor CI-integratie
+
+**Frontend (`/beheer/release-readiness`, 5 tabs):**
+- Overzicht: score-ring visualisatie, categoryscores raster (15 score-kaarten), bevindingen-tellers, release-status badge, top-3 kritieke verbeterpunten
+- Bevindingen: gefilterde lijst (ernst/categorie/type), uitklapbare aanbevelingen
+- Verbeterpunten: prioriteitenkaarten met urgentie-markering
+- Azure-status: feature-dependency overzicht
+- Geschiedenis: run-history met klikbare detail-navigatie, 5-seconden polling bij lopende scan
+
+**Navigatie:** sidebar Beheer › Release Readiness (Award-icoon, isHoofdbeheerder-gated)
+
+**FPS-platformbeschrijving (`fps-context.ts`):** uitgebreide platformcontext (~1100 tokens) als vaste input voor alle 15 AI-beoordelingen — zorgt voor specifieke, concrete bevindingen in plaats van generieke AI-output.
+
 ## 2026-07-06 — Security Validation & Continuous Security Testing Platform
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** geen

@@ -63,3 +63,4 @@ export * from "./governance";
 export * from "./security-intake";
 export * from "./ai-governance";
 export * from "./security-validation";
+export * from "./cqo";

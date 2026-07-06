@@ -11,7 +11,7 @@ import {
   SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarTrigger,
 } from "@/components/ui/sidebar";
 import {
-  ShieldCheck, Building, Wrench, Users, Home, Truck,
+  ShieldCheck, Building, Wrench, Users, Home, Truck, Award,
   ShieldAlert, LifeBuoy, MessageSquarePlus, Activity, Contact, Info, Clock,
   FolderOpen, FileText, ListChecks, Files, LayoutTemplate, Mail,
   Calculator, CalendarDays, LayoutDashboard, BarChart3, CreditCard, MessageSquare, HardHat,
@@ -1607,6 +1607,16 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                                 <Link href="/beheer/security-validation">
                                   <ShieldCheck />
                                   <span>Security Validation</span>
+                                </Link>
+                              </SidebarMenuButton>
+                            </SidebarMenuItem>
+                          )}
+                          {isHoofdbeheerder && (
+                            <SidebarMenuItem className="pl-5">
+                              <SidebarMenuButton asChild isActive={location === "/beheer/release-readiness"}>
+                                <Link href="/beheer/release-readiness">
+                                  <Award />
+                                  <span>Release Readiness</span>
                                 </Link>
                               </SidebarMenuButton>
                             </SidebarMenuItem>

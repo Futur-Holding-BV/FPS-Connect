@@ -1,0 +1,56 @@
+import { pgTable, serial, text, integer, timestamp, boolean, jsonb, numeric } from "drizzle-orm/pg-core";
+
+export const cqoRunsTable = pgTable("cqo_runs", {
+  id: serial("id").primaryKey(),
+  gestarttOp: timestamp("gestart_op").defaultNow().notNull(),
+  voltooidOp: timestamp("voltooid_op"),
+  status: text("status").notNull().default("lopend"),
+  versieLabel: text("versie_label"),
+  gestarttDoor: integer("gestart_door").notNull(),
+  gestarttDoorNaam: text("gestart_door_naam").notNull(),
+  totaalScore: numeric("totaal_score", { precision: 5, scale: 2 }),
+  releaseStatus: text("release_status"),
+  releaseGeblokkeerd: boolean("release_geblokkeerd").notNull().default(false),
+  blokkeringReden: text("blokkering_reden"),
+  categorieScores: jsonb("categorie_scores"),
+  aantalBevindingen: integer("aantal_bevindingen"),
+  aantalKritiek: integer("aantal_kritiek"),
+  aantalHoog: integer("aantal_hoog"),
+  aantalVerbeterpunten: integer("aantal_verbeterpunten"),
+  aangemaaktOp: timestamp("aangemaakt_op").defaultNow().notNull(),
+  bijgewerktOp: timestamp("bijgewerkt_op").defaultNow().notNull(),
+});
+
+export const cqoBevindingTable = pgTable("cqo_bevindingen", {
+  id: serial("id").primaryKey(),
+  runId: integer("run_id").notNull().references(() => cqoRunsTable.id, { onDelete: "cascade" }),
+  specialist: text("specialist").notNull(),
+  categorie: text("categorie").notNull(),
+  ernst: text("ernst").notNull(),
+  titel: text("titel").notNull(),
+  bevinding: text("bevinding").notNull(),
+  impact: text("impact"),
+  urgentie: text("urgentie"),
+  betrokkenModules: text("betrokken_modules").array(),
+  risico: text("risico"),
+  oplossing: text("oplossing"),
+  verwachteVerbetering: text("verwachte_verbetering"),
+  positief: boolean("positief").notNull().default(false),
+  aangemaaktOp: timestamp("aangemaakt_op").defaultNow().notNull(),
+});
+
+export const cqoVerbeterpuntTable = pgTable("cqo_verbeterpunten", {
+  id: serial("id").primaryKey(),
+  runId: integer("run_id").notNull().references(() => cqoRunsTable.id, { onDelete: "cascade" }),
+  specialist: text("specialist").notNull(),
+  categorie: text("categorie").notNull(),
+  urgentie: text("urgentie").notNull(),
+  titel: text("titel").notNull(),
+  probleem: text("probleem").notNull(),
+  impact: text("impact"),
+  betrokkenModules: text("betrokken_modules").array(),
+  risico: text("risico"),
+  oplossing: text("oplossing").notNull(),
+  verwachteVerbetering: text("verwachte_verbetering"),
+  aangemaaktOp: timestamp("aangemaakt_op").defaultNow().notNull(),
+});
