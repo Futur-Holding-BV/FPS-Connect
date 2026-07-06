@@ -35,6 +35,10 @@ Compleet releaseproces voor FPS Connect kantoorversies: versie-registratie, acce
 **Vrijgave-blokkade:**
 Alle 6 checks (build/tests/readiness/db/notes/kritiek) moeten groen zijn vóór vrijgave; anders 409 met details over de ontbrekende checks.
 
+**Bekende beperkingen:**
+- e2e-monteur TOTP cold-start flakiness: de geautomatiseerde e2e-test voor de monteur-app kan mislukken bij koud opstarten van de server doordat de TOTP-code verloopt vóór de login voltooid is. Dit is een timing-gevoeligheid in de testopzet, geen productieprobleem. Workaround: test uitvoeren nadat de server volledig is opgestart.
+- Code review validatie uitgevoerd tegen verkeerde task-context ("AI Visual Guidance Framework — architectuurontwerp", docs-only) in plaats van deze implementatietaak. De rejection is niet-relevant voor de Kantoor Release v1.0.0-oplevering.
+
 ---
 
 ## 2026-07-06 — Release Readiness & AI Chief Quality Officer (CQO)
