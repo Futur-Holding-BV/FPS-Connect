@@ -21,12 +21,15 @@ connect.fps-one.nl {
 
     root * /srv/public
 
-    # SPA-fallback: alleen toepassen als het gevraagde pad GEEN bestand is.
-    # Statische assets (/assets/*, /icons/*, /favicon*, enz.) bestaan als bestand
-    # en worden direct geserveerd. Client-side routes bestaan niet als bestand
-    # en worden herschreven naar /index.html.
+    # SPA-fallback: alleen herschrijven naar /index.html als het pad
+    # geen bestaand bestand is. Expliciete root zodat Caddy niet gist.
     @spa {
-        not file
+        not {
+            file {
+                root /srv/public
+                try_files {path}
+            }
+        }
     }
     rewrite @spa /index.html
 
