@@ -6,24 +6,28 @@ RUN corepack enable && corepack prepare pnpm@latest --activate
 
 WORKDIR /app
 
+# Stap 1: alleen manifesten kopiëren voor dependency-installatie
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY tsconfig.base.json tsconfig.json ./
 
-# Kopieer package.json + tsconfig.json van alle lib-packages vóór pnpm install
-COPY lib/api-spec/package.json lib/api-spec/
-COPY lib/api-client-react/package.json lib/api-client-react/
-COPY lib/api-client-react/tsconfig.json lib/api-client-react/
-COPY lib/api-zod/package.json lib/api-zod/
-COPY lib/api-zod/tsconfig.json lib/api-zod/
-COPY lib/db/package.json lib/db/
-COPY lib/db/tsconfig.json lib/db/
-COPY lib/object-storage-web/package.json lib/object-storage-web/
+# lib-packages (alle, want pnpm-workspace.yaml includeert lib/*)
+COPY lib/api-spec/package.json            lib/api-spec/
+COPY lib/api-client-react/package.json    lib/api-client-react/
+COPY lib/api-client-react/tsconfig.json   lib/api-client-react/
+COPY lib/api-zod/package.json             lib/api-zod/
+COPY lib/api-zod/tsconfig.json            lib/api-zod/
+COPY lib/db/package.json                  lib/db/
+COPY lib/db/tsconfig.json                 lib/db/
+COPY lib/object-storage-web/package.json  lib/object-storage-web/
 COPY lib/object-storage-web/tsconfig.json lib/object-storage-web/
-COPY lib/permissies/package.json lib/permissies/
-COPY lib/permissies/tsconfig.json lib/permissies/
+COPY lib/permissies/package.json          lib/permissies/
+COPY lib/permissies/tsconfig.json         lib/permissies/
 
-RUN pnpm install --frozen-lockfile
+# --ignore-scripts voorkomt dat pnpm 'prepare: tsc --build' uitvoert
+# voor lib/api-client-react terwijl de bronbestanden er nog niet zijn
+RUN pnpm install --frozen-lockfile --ignore-scripts
 
+# Stap 2: alleen de db-bronbestanden kopiëren (drizzle-kit werkt direct op TS)
 COPY lib/db/ lib/db/
 
 CMD ["pnpm", "--filter", "@workspace/db", "run", "push"]
