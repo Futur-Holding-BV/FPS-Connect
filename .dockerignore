@@ -1,0 +1,45 @@
+# Node modules — nooit meenemen (pnpm install in Docker)
+**/node_modules
+
+# Lokale build-output — niet meenemen; Docker bouwt zelf
+**/dist
+**/.next
+**/.expo
+
+# Ontwikkelomgeving
+.env
+.env.*
+!deploy/.env.production.example
+
+# Git- en editorbestanden
+.git
+.gitignore
+.gitattributes
+.vscode
+.idea
+*.swp
+*.swo
+
+# Tijdelijke bestanden
+**/.tsbuildinfo
+**/coverage
+**/.cache
+**/.turbo
+
+# Lokale hulpmiddelen en logs
+.local
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Testuitvoer
+**/__tests__
+**/test-results
+**/playwright-report
+
+# Niet-relevante artifacts voor de Caddy-image
+artifacts/monteur-app
+artifacts/mockup-sandbox
+attached_assets
+scripts
+docs
