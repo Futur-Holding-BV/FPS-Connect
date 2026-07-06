@@ -8,7 +8,7 @@
  * Routes en de ACL-laag werken uitsluitend via dit service-object en de
  * StorageFile-interface; ze hoeven de onderliggende backend niet te kennen.
  */
-import { Storage } from "@google-cloud/storage";
+import type { Storage } from "@google-cloud/storage";
 import { Readable } from "stream";
 import { randomUUID } from "crypto";
 import {
@@ -45,11 +45,16 @@ function getS3Bucket(): string {
 }
 
 // GCS-client voor de Replit-backend (lazy init)
+// @google-cloud/storage wordt pas geladen als GCS-mode actief is (nooit in productie/S3).
+// Lazy require via globalThis.require (geïnjecteerd door esbuild-banner) voorkomt dat
+// Node.js het pakket zoekt bij opstarten terwijl het external+niet-gebundeld is.
 let _gcsStorage: Storage | null = null;
 function getGcsStorage(): Storage {
   if (!_gcsStorage) {
+    const { Storage: GcsStorage } = (globalThis as typeof globalThis & { require: NodeRequire })
+      .require("@google-cloud/storage") as typeof import("@google-cloud/storage");
     const REPLIT_SIDECAR_ENDPOINT = "http://127.0.0.1:1106";
-    _gcsStorage = new Storage({
+    _gcsStorage = new GcsStorage({
       credentials: {
         audience: "replit",
         subject_token_type: "access_token",
