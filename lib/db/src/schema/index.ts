@@ -60,3 +60,4 @@ export { vgeEffectiviteitslogTable, type VgeEffectiviteitslogEntry } from "./vge
 export * from "./visuals";
 export * from "./slim-upload-log";
 export * from "./governance";
+export * from "./security-intake";

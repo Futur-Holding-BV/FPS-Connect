@@ -4,6 +4,46 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-06 — Security Intake Layer: 8-staps pipeline, Poort 1 & 2 integratie, quarantaine-beheer UI
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** geen
+
+**Wat is gebouwd:**
+
+Centrale Security Intake Layer die FPS Connect beschermt tegen schadelijke bestanden, e-mails en documentuploads. Pipeline: extensie-blacklist → MIME-analyse → structuurvalidatie (PDF/OLE2 magic bytes) → ClamAV optioneel (TCP poort 3310, graceful fallback) → linkanalyse → AI inhoudsanalyse → quarantaine/blokkade → DB-logging.
+
+**Kern-engine (`security-intake-engine.ts`):**
+- `scanBestandMetadata()` — extensie-blacklist + dubbele-extensie-detectie + unicode-detectie + MIME-claim (geen bytes nodig); retourneert `ScanUitkomst` inclusief `dbId`
+- `scanBestandBytes()` — uitgebreid: magic-byte MIME-detectie + PDF-structuuranalyse + OLE2 macro-detectie + ClamAV
+- `scanEmailBericht()` — afzender-analyse + bijlagenamen + link-extractie + AI inhoudsscreening
+- Alle beslissingen worden gelogd naar `security_intake_scans` (onwijzigbaar audittrail)
+
+**Link-scanner (`link-scanner.ts`):**
+- URL-normalisatie + TLD-extractie + IP/localhost-detectie + URL-shortener-detectie + typosquatting vs. bekende domeinen
+
+**Poort 1 — Upload URL-aanvraag (`storage.ts`):**
+- Extensie-blacklist + dubbele-extensie-check bij `POST /storage/uploads/request-url`; directe 400 met uitleg
+
+**Poort 2 — Documentregistratie (`documenten.ts`):**
+- Fire-and-forget scan bij `POST /documenten` en `POST /documenten/:id/revisies`; koppelt scan-id terug aan document_id
+
+**DB-tabel (`security_intake_scans`):**
+- Volledig schema: extensie/MIME/structuur/link/AI/ClamAV-status, risicobevindingen (jsonb), quarantaine-vlag, beoordelingsvelden
+
+**Quarantaine-beheer API (`security-quarantine.ts`):**
+- `GET /security/dashboard` — statistieken per risiconiveau + 24u-trend
+- `GET /security/quarantaine` — filter op pending/vrijgegeven/geweigerd
+- `GET /security/scans` — scanlog met filter/zoek/paginering
+- `POST /security/quarantaine/:id/vrijgeven` — beheerder geeft vrij met opmerking
+- `POST /security/quarantaine/:id/weigeren` — hoofdbeheerder weigert definitief
+
+**Beheer-UI (`security-intake.tsx`):**
+- Dashboard met statistieken-kaarten + 3 tabbladen: Quarantaine / Scanlog / Instellingen
+- Risiconiveau-badges, reden-tooltips, vrijgeven/weigeren-acties met bevestigingsdialoog
+- Route `/beheer/security-intake` (alleen hoofdbeheerder), nav-item "Beveiliging & Intake" in beheerder-sidebar
+
+---
+
 ## 2026-07-06 — AI Governance & Risk Engine: risicoscoring, goedkeuringswachtrij, audittrail, beheer-UI
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** geen

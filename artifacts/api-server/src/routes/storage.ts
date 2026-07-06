@@ -1,4 +1,5 @@
 import { Router, type IRouter, type Request, type Response } from "express";
+import path from "path";
 import { Readable } from "stream";
 import sharp from "sharp";
 import {
@@ -67,6 +68,39 @@ router.post("/storage/uploads/request-url", requireAuth, async (req: Request, re
   }
 
   const { name, size, contentType, gebouw_id, bestand_type } = parsed.data;
+
+  // ── Security Intake — Poort 1: metadata screening ────────────────────────
+  // Blokkeert gevaarlijke extensies direct bij URL-aanvraag,
+  // vóórdat het bestand ook maar naar storage wordt gestuurd.
+  const ALTIJD_GEBLOKKEERD_UPLOAD = new Set([
+    ".exe", ".bat", ".cmd", ".com", ".scr", ".ps1", ".ps2", ".psc1", ".psc2",
+    ".vbs", ".vbe", ".wsf", ".wsh", ".jar", ".msi", ".dll", ".reg", ".hta",
+    ".apk", ".pif", ".application", ".gadget", ".lnk",
+  ]);
+  const GEBLOKKEERDE_UPLOAD = new Set([
+    ...ALTIJD_GEBLOKKEERD_UPLOAD,
+    ".js", ".jse", ".xlsm", ".docm", ".pptm", ".xlam", ".dotm", ".potm", ".ppam",
+    ".iso", ".img", ".inf", ".msu", ".msp", ".prg",
+  ]);
+  const uploadExt = path.extname(name ?? "").toLowerCase();
+  if (GEBLOKKEERDE_UPLOAD.has(uploadExt)) {
+    res.status(422).json({
+      error: `Bestandstype "${uploadExt}" is niet toegestaan in FPS Connect. Neem contact op met de beheerder als dit onterecht is.`,
+      code: "SECURITY_EXTENSIE_GEBLOKKEERD",
+    });
+    return;
+  }
+  // Dubbele extensie detectie (bv. factuur.pdf.exe)
+  const naamZonderExt = (name ?? "").slice(0, (name ?? "").length - uploadExt.length);
+  const tweedeExt = path.extname(naamZonderExt).toLowerCase();
+  if (ALTIJD_GEBLOKKEERD_UPLOAD.has(tweedeExt)) {
+    res.status(422).json({
+      error: `Verdachte bestandsnaam gedetecteerd (dubbele extensie "${tweedeExt}${uploadExt}"). Upload geweigerd.`,
+      code: "SECURITY_DUBBELE_EXTENSIE",
+    });
+    return;
+  }
+  // ─────────────────────────────────────────────────────────────────────────
 
   // Weiger bestanden die de harde server-limiet overschrijden.
   if (size > MAX_UPLOAD_BYTES) {

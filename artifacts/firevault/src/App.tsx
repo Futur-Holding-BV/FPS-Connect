@@ -162,6 +162,7 @@ import SepaBestandenPagina from "@/pages/sepa-bestanden/index";
 import MijnSalarisdocumentenPagina from "@/pages/mijn/salarisdocumenten";
 import AiLogBeheer from "@/pages/beheer/ai-log";
 import GovernancePagina from "@/pages/beheer/governance";
+import SecurityIntakePagina from "@/pages/beheer/security-intake";
 import BoekhoudingBeheer from "@/pages/beheer/boekhouding";
 import GoLivePagina from "@/pages/beheer/go-live";
 import BedrijfskompasPage from "@/pages/beheer/bedrijfskompas";
@@ -506,6 +507,7 @@ function ConnectPortal() {
         <Route path="/beheer/pwa-test" component={PwaTest} />
         <Route path="/beheer/ai-log" component={AiLogBeheer} />
         <Route path="/beheer/governance-risico" component={GovernancePagina} />
+        <Route path="/beheer/security-intake" component={SecurityIntakePagina} />
         <Route path="/beheer/privacy" component={BeheerPrivacy} />
         <Route path="/beheer/avg" component={AvgBeheer} />
         <Route path="/beheer/gebouwen-archief" component={GebouwenArchiefBeheer} />

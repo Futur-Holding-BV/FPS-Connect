@@ -27,6 +27,7 @@ import {
 } from "../lib/documenten";
 import { logDocumentActie } from "../lib/document-logboek";
 import { analyseerDocumentTekst, stelToepassingenVoor } from "../services/document-ai";
+import { scanBestandMetadata, koppelDocumentAanScan } from "../services/security-intake-engine";
 
 const router = Router();
 
@@ -381,6 +382,19 @@ router.post("/documenten", requireBevoegdheid("bibliotheek", 3), async (req, res
       actie: "geupload",
     });
 
+    // Poort 2 — security scan (fire-and-forget, blokkeert de upload niet)
+    if (d.pdfUrl || d.naam) {
+      scanBestandMetadata({
+        bestandsnaam: d.naam,
+        bestandsgrootte: d.bestandsgrootte ?? undefined,
+        gebruikerId: req.session.userId ?? null,
+        gebruikerNaam: null,
+        uploadBron: "document",
+      })
+        .then((scan) => { if (scan.dbId != null) return koppelDocumentAanScan(scan.dbId, d.id); })
+        .catch(() => {});
+    }
+
     return void res.status(201).json(await mapDocument(d));
   } catch (err) {
     req.log.error(err);
@@ -533,6 +547,19 @@ router.post("/documenten/:id/revisies", requireBevoegdheid("bibliotheek", 3), as
       actie: "revisie",
       detail: `revisie ${nieuw.revisieNummer}`,
     });
+
+    // Poort 2 — security scan op nieuwe revisie (fire-and-forget)
+    if (nieuw.naam) {
+      scanBestandMetadata({
+        bestandsnaam: nieuw.naam,
+        bestandsgrootte: nieuw.bestandsgrootte ?? undefined,
+        gebruikerId: req.session.userId ?? null,
+        gebruikerNaam: null,
+        uploadBron: "document",
+      })
+        .then((scan) => { if (scan.dbId != null) return koppelDocumentAanScan(scan.dbId, nieuw.id); })
+        .catch(() => {});
+    }
 
     return void res.status(201).json(await mapDocument(nieuw));
   } catch (err) {
