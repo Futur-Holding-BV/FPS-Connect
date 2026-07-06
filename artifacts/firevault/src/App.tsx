@@ -164,6 +164,7 @@ import AiLogBeheer from "@/pages/beheer/ai-log";
 import GovernancePagina from "@/pages/beheer/governance";
 import SecurityIntakePagina from "@/pages/beheer/security-intake";
 import AiPromptGovernance from "@/pages/beheer/ai-prompt-governance";
+import SecurityValidation from "@/pages/beheer/security-validation";
 import BoekhoudingBeheer from "@/pages/beheer/boekhouding";
 import GoLivePagina from "@/pages/beheer/go-live";
 import BedrijfskompasPage from "@/pages/beheer/bedrijfskompas";
@@ -510,6 +511,7 @@ function ConnectPortal() {
         <Route path="/beheer/governance-risico" component={GovernancePagina} />
         <Route path="/beheer/security-intake" component={SecurityIntakePagina} />
         <Route path="/beheer/ai-governance" component={AiPromptGovernance} />
+        <Route path="/beheer/security-validation" component={SecurityValidation} />
         <Route path="/beheer/privacy" component={BeheerPrivacy} />
         <Route path="/beheer/avg" component={AvgBeheer} />
         <Route path="/beheer/gebouwen-archief" component={GebouwenArchiefBeheer} />

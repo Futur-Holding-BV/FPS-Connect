@@ -4,6 +4,50 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-06 — Security Validation & Continuous Security Testing Platform
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** geen
+
+**Wat is gebouwd:**
+
+Volledig geïntegreerd Security Validation Platform als vast onderdeel van de FPS Connect-ontwikkelstraat. Geautomatiseerde beveiligingstests voor 12 categorieën, release-gate en beveiligingsdashboard.
+
+**DB-schema (4 nieuwe tabellen):**
+- `security_scan_runs` — metadata, categoryscores, release-beslissing
+- `security_test_resultaten` — individuele testuitkomsten per scan-run
+- `security_releases` — release-gate records (goedkeuren/afwijzen)
+- `security_instellingen` — configuratie (min. score, etc.)
+
+**Testbibliotheek (1.250+ scenario's):**
+- `ai-aanvallen.ts` — 250 AI-aanvallen (jailbreak 50, privilege-esc. 40, systeemprompt 30, data-exfiltratie 30, code-uitvoering 30, indirecte injectie 20, rol-verwarring 25, verboden operaties 25)
+- `upload-aanvallen.ts` — 202 upload-aanvallen (corrupte bestanden, dubbele extensies, MIME-spoofing, archiefbomben, grootteaanvallen)
+- `autorisatie.ts` — 130 ongeauthenticeerde routes + IDOR + privilege-escalatie
+- `api-beveiliging.ts` — 130 API-beveiligingstests (SQL-injectie, path-traversal, command-injectie, headers, rate-limiting, SSRF)
+- `overige-categorieen.ts` — 600+ tests voor authenticatie, governance, business-logica, malware, logging, e-mail, mobiel, infrastructuur, permissies (elk 100 scenario's)
+
+**Engine & scoring:**
+- `engine.ts` — async scan-orchestrator, batch-uitvoering (15 gelijktijdig), gewogen totaalscore over 12 categorieën
+- Scoring: gewichten per categorie (AI: 15%, autorisatie: 14%, authenticatie: 13%, ...), ERNST_SCORE_AFTREK per bevinding
+- Release automatisch geblokkeerd bij kritiekMislukt > 0 of score < 95%
+
+**API-routes (7 endpoints, requireAuth + alleenHoofdbeheerder):**
+- `POST /api/security-validation/scan` — scan starten (202, asynchroon)
+- `GET /api/security-validation/scans` — run-lijst
+- `GET /api/security-validation/scans/:id` — run-detail
+- `GET /api/security-validation/scans/:id/resultaten` — testresultaten (filter op categorie/uitkomst/ernst)
+- `GET /api/security-validation/dashboard` — statistieken
+- `GET /api/security-validation/releases` — release-gate overzicht
+- `POST /api/security-validation/releases/:id/beoordelen` — goedkeuren/afwijzen (geblokkeerde releases kunnen niet worden goedgekeurd)
+- `GET /api/security-validation/score` — huidige score voor CI-integratie
+
+**Frontend (`/beheer/security-validation`):**
+- Dashboard-tab: categoryscores (12 score-kaarten), geslaagd/mislukt/waarschuwing/kritiek tellers, release-status
+- Scans-tab: nieuwe scan starten met versielabel, run-selectie, testresultaten met filteren, paginering
+- Release-gate tab: goedkeuren/afwijzen met opmerking, automatisch geblokkeerde releases (kritiek of score < 95%)
+- Testbibliotheek-tab: overzicht per categorie met subcategorieën en aantallen
+
+**Navigatie:** sidebar Beheer › Security Validation (isHoofdbeheerder-gated, ShieldCheck-icoon)
+
 ## 2026-07-06 — AI Change Governance & Prompt Security Layer
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** geen
