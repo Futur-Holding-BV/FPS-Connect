@@ -8,17 +8,52 @@ connect.fps-one.nl {
         Referrer-Policy strict-origin-when-cross-origin
     }
 
-    reverse_proxy /api/* api:8080 {
-        header_up X-Real-IP {remote_host}
-        header_up X-Forwarded-Proto {scheme}
-        transport http {
-            read_timeout 120s
+    # API-verzoeken doorsluizen naar de backend
+    handle /api/* {
+        reverse_proxy api:8080 {
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+            transport http {
+                read_timeout 120s
+            }
         }
     }
 
     root * /srv/public
-    try_files {path} /index.html
-    file_server {
-        precompressed gzip br
+
+    # Statische bestanden rechtstreeks serveren — GEEN SPA-fallback.
+    # Als een bestand niet bestaat geeft Caddy 404 (correct); nooit index.html.
+    handle /assets/* {
+        file_server {
+            precompressed gzip br
+        }
+    }
+    handle /icons/* {
+        file_server {
+            precompressed gzip br
+        }
+    }
+    handle /favicon* {
+        file_server {
+            precompressed gzip br
+        }
+    }
+    handle /manifest* {
+        file_server {
+            precompressed gzip br
+        }
+    }
+    handle /sw.js {
+        file_server {
+            precompressed gzip br
+        }
+    }
+
+    # SPA-fallback voor alle overige routes (client-side routing)
+    handle {
+        try_files {path} /index.html
+        file_server {
+            precompressed gzip br
+        }
     }
 }
