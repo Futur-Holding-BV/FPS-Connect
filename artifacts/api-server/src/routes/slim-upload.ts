@@ -7,6 +7,8 @@ import path from "node:path";
 import { requireAuth } from "../middlewares/auth";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
 import { logger } from "../lib/logger";
+import { db, gebruikersTable, slimUploadLogTable } from "@workspace/db";
+import { eq, desc } from "drizzle-orm";
 
 const router = Router();
 const upload = multer({
@@ -50,6 +52,14 @@ export interface SlimUploadSuggestie {
   vision_gebruikt: boolean;
   gevonden_gegevens: Record<string, string>;
   alternatieven: SlimUploadCategorie[];
+  // Impact & bevestiging (AI + backend gegenereerd)
+  impact_niveau: "geen" | "laag" | "midden" | "hoog";
+  impact_omschrijving: string;
+  vereist_bevestiging: boolean;
+  directe_actie_beschrijving: string;
+  // Toegangscontrole (toegevoegd door route handler op basis van sessie)
+  mag_uploaden: boolean;
+  beperkingen: string[];
 }
 
 // ── Heuristische fallback ─────────────────────────────────────────────────────
@@ -66,19 +76,24 @@ function heuristischClassificeer(
 
   let categorie: SlimUploadCategorie = "algemeen";
 
-  // Lege PDF: waarschijnlijk visueel document (logo, briefpapier, tekening, scan)
   const sjabloonSleutelwoorden = ["model", "briefpapier", "briefhoofd", "sjabloon", "template",
     "huisstijl", "logo", "onderlegger", "letterhead", "header", "footer", "opmaak"];
   if (isPdf && tekstLeeg && sjabloonSleutelwoorden.some((k) => naam.includes(k))) {
     return {
       categorie: "document_sjabloon",
       voorstel_naam: bestandsnaam.replace(/\.[^.]+$/, "").replace(/[-_]/g, " ").trim(),
-      redenering: "Lege PDF met huisstijl-sleutelwoord in naam — waarschijnlijk briefpapier of sjabloon voor de Document Studio.",
+      redenering: "Lege PDF met huisstijl-sleutelwoord in naam — waarschijnlijk briefpapier of sjabloon.",
       vertrouwen: "hoog",
       ai_beschikbaar: false,
       vision_gebruikt: false,
       gevonden_gegevens: {},
       alternatieven: ["algemeen", "bibliotheek"],
+      impact_niveau: "laag",
+      impact_omschrijving: "",
+      vereist_bevestiging: false,
+      directe_actie_beschrijving: "Sjabloon opslaan in Document Studio.",
+      mag_uploaden: true,
+      beperkingen: [],
     };
   }
   if (isPdf && tekstLeeg) {
@@ -91,6 +106,12 @@ function heuristischClassificeer(
       vision_gebruikt: false,
       gevonden_gegevens: {},
       alternatieven: ["tekening", "algemeen"],
+      impact_niveau: "laag",
+      impact_omschrijving: "",
+      vereist_bevestiging: false,
+      directe_actie_beschrijving: "",
+      mag_uploaden: true,
+      beperkingen: [],
     };
   }
 
@@ -120,6 +141,12 @@ function heuristischClassificeer(
       vision_gebruikt: false,
       gevonden_gegevens: { document_subtype: "cv" },
       alternatieven: ["personeelsdocument", "algemeen"],
+      impact_niveau: "midden",
+      impact_omschrijving: "Uploaden van een CV kan leiden tot onboarding van een nieuwe medewerker. Controleer de gegevens zorgvuldig.",
+      vereist_bevestiging: true,
+      directe_actie_beschrijving: "CV opslaan en onboarding starten.",
+      mag_uploaden: true,
+      beperkingen: [],
     };
   } else if (["polis", "verzekering", "assurantie", "aansprakelijkheid", "wettelijkeaansprakelijkheid"].some((k) => naam.includes(k))) {
     return {
@@ -131,6 +158,12 @@ function heuristischClassificeer(
       vision_gebruikt: false,
       gevonden_gegevens: {},
       alternatieven: ["personeelsdocument", "bibliotheek", "algemeen"],
+      impact_niveau: "midden",
+      impact_omschrijving: "Het opslaan van een verzekeringspolis als actuele versie vervangt de vorige registratie.",
+      vereist_bevestiging: true,
+      directe_actie_beschrijving: "Verzekeringspolis registreren.",
+      mag_uploaden: true,
+      beperkingen: [],
     };
   } else if (["arbeidscontract", "arbeidsovereenkomst", "diploma", "vca", "vog", "personeelsdossier"].some((k) => naam.includes(k))) {
     categorie = "personeelsdocument";
@@ -151,12 +184,17 @@ function heuristischClassificeer(
     vision_gebruikt: false,
     gevonden_gegevens: {},
     alternatieven: ["bibliotheek", "algemeen"],
+    impact_niveau: "laag",
+    impact_omschrijving: "",
+    vereist_bevestiging: false,
+    directe_actie_beschrijving: "",
+    mag_uploaden: true,
+    beperkingen: [],
   };
 }
 
 // ── Vision helpers ────────────────────────────────────────────────────────────
 
-// Eerste PDF-pagina naar JPEG via pdftoppm (poppler, beschikbaar op dit systeem)
 async function renderPdfPagina(buffer: Buffer): Promise<string | null> {
   const id = `${Date.now()}_${Math.random().toString(36).slice(2)}`;
   const tmpIn     = path.join(tmpdir(), `fps_in_${id}.pdf`);
@@ -174,7 +212,6 @@ async function renderPdfPagina(buffer: Buffer): Promise<string | null> {
       );
     });
 
-    // pdftoppm legt af als prefix-01.jpg of prefix-1.jpg
     let imgBuffer: Buffer | null = null;
     for (const candidate of [`${tmpPrefix}-01.jpg`, `${tmpPrefix}-1.jpg`]) {
       try {
@@ -198,7 +235,6 @@ async function renderPdfPagina(buffer: Buffer): Promise<string | null> {
   }
 }
 
-// Afbeelding schalen + naar base64 voor vision
 async function resizeAfbeelding(buffer: Buffer): Promise<string | null> {
   try {
     const sharp = (await import("sharp")).default;
@@ -268,6 +304,16 @@ REGELS:
 6. CV-herkenning: als het document een werkervaring-/opleidingsoverzicht is (curriculum vitae, resume, sollicitatie), gebruik categorie "personeelsdocument" EN zet document_subtype="cv" in gevonden_gegevens.
 7. Verzekering-jaar: extraheer altijd het jaar (viercijerig getal) uit de geldigheidsdatum. Gebruik sleutel "jaar".
 
+IMPACT BEOORDELING — verplicht meegeven:
+- "impact_niveau": beoordeel de risico/onomkeerbaarheid van de aanbevolen actie:
+  - "geen": opslaan in algemeen archief, geen bestaande data geraakt
+  - "laag": opslaan in specifieke module, vervangt niets
+  - "midden": opslaan in personeelsdossier, starten van een workflow, vervangen van een document
+  - "hoog": document bevat salarisgegevens, overschrijft bestaande actuele verzekeringspolis, start onomkeerbaar proces
+- "impact_omschrijving": korte toelichting voor de gebruiker wat er kan gebeuren (max 200 tekens; leeg als impact_niveau "geen" of "laag" is)
+- "vereist_bevestiging": true als impact_niveau "midden" of "hoog" is, anders false
+- "directe_actie_beschrijving": aanbevolen actie in klare taal (max 150 tekens, bijv. "CV van Jan de Vries opslaan en onboarding starten" of "Verzekeringspolis 2026 registreren als actuele versie")
+
 Geef uitsluitend geldige JSON:
 {
   "categorie": "<één van de 16>",
@@ -275,7 +321,11 @@ Geef uitsluitend geldige JSON:
   "redenering": "<max 200 tekens, beschrijf visuele én tekstuele aanwijzingen>",
   "vertrouwen": "laag|midden|hoog",
   "gevonden_gegevens": { "<sleutel>": "<waarde>" },
-  "alternatieven": ["<cat1>", "<cat2>"]
+  "alternatieven": ["<cat1>", "<cat2>"],
+  "impact_niveau": "geen|laag|midden|hoog",
+  "impact_omschrijving": "<max 200 tekens>",
+  "vereist_bevestiging": true,
+  "directe_actie_beschrijving": "<max 150 tekens>"
 }
 Alleen JSON, geen extra tekst.`;
 
@@ -301,7 +351,6 @@ async function aiClassificeer(
     toelichtingInfo,
   ].filter(Boolean).join("\n");
 
-  // Bouw het user-bericht op: tekst altijd, afbeelding indien beschikbaar
   type ContentBlock =
     | { type: "text"; text: string }
     | { type: "image_url"; image_url: { url: string; detail: "low" } };
@@ -316,7 +365,7 @@ async function aiClassificeer(
 
   const slimChatResultaat = await aiGateway.chat("fast", {
     response_format: { type: "json_object" },
-    max_tokens: 600,
+    max_tokens: 800,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     messages: [{ role: "system", content: SYSTEEM_PROMPT }, { role: "user", content } as any],
   });
@@ -348,6 +397,21 @@ async function aiClassificeer(
       )
     : {};
 
+  // Impact-velden parsen
+  const impactRaw = typeof parsed.impact_niveau === "string" ? parsed.impact_niveau.toLowerCase() : "laag";
+  const impactNiveau = (["geen", "laag", "midden", "hoog"].includes(impactRaw)
+    ? impactRaw
+    : "laag") as "geen" | "laag" | "midden" | "hoog";
+  const vereistBevestiging = typeof parsed.vereist_bevestiging === "boolean"
+    ? parsed.vereist_bevestiging
+    : impactNiveau === "midden" || impactNiveau === "hoog";
+  const impactOmschrijving = typeof parsed.impact_omschrijving === "string"
+    ? parsed.impact_omschrijving.trim().slice(0, 300)
+    : "";
+  const directeActieBeschrijving = typeof parsed.directe_actie_beschrijving === "string"
+    ? parsed.directe_actie_beschrijving.trim().slice(0, 200)
+    : "";
+
   return {
     categorie: isCategorie(cat) ? cat : "algemeen",
     voorstel_naam:
@@ -361,6 +425,12 @@ async function aiClassificeer(
     vision_gebruikt: afbeeldingBase64 !== null,
     gevonden_gegevens: gevonden,
     alternatieven: alt,
+    impact_niveau: impactNiveau,
+    impact_omschrijving: impactOmschrijving,
+    vereist_bevestiging: vereistBevestiging,
+    directe_actie_beschrijving: directeActieBeschrijving,
+    mag_uploaden: true,
+    beperkingen: [],
   };
 }
 
@@ -383,7 +453,6 @@ async function classificeerBestand(
   const bestandsnaam = bestand.originalname ?? "onbekend";
   const mime = bestand.mimetype ?? "application/octet-stream";
 
-  // 1. Tekst extraheren
   let tekstFragment: string | null = null;
   if (mime === "application/pdf") {
     tekstFragment = await haalPdfTekst(bestand.buffer);
@@ -391,7 +460,6 @@ async function classificeerBestand(
     tekstFragment = bestand.buffer.toString("utf8").slice(0, 6000);
   }
 
-  // 2. Vision-afbeelding voorbereiden (parallel aan tekst, indien AI beschikbaar)
   let afbeeldingBase64: string | null = null;
   if (heeftGateway()) {
     if (mime === "application/pdf") {
@@ -404,11 +472,90 @@ async function classificeerBestand(
     }
   }
 
-  // 3. Classificeren
   if (heeftGateway()) {
     return aiClassificeer(bestandsnaam, mime, tekstFragment, afbeeldingBase64, toelichting);
   }
   return heuristischClassificeer(bestandsnaam, mime, tekstFragment);
+}
+
+// ── Permissiecheck helper ─────────────────────────────────────────────────────
+
+async function haalGebruikerBevoegdheden(userId: number): Promise<{
+  bevoegdheden: Record<string, number>;
+  rol: string;
+}> {
+  try {
+    const [g] = await db
+      .select({ bevoegdheden: gebruikersTable.bevoegdheden, rol: gebruikersTable.rol })
+      .from(gebruikersTable)
+      .where(eq(gebruikersTable.id, userId));
+    if (!g) return { bevoegdheden: {}, rol: "gebruiker" };
+    return {
+      bevoegdheden: (g.bevoegdheden as Record<string, number> | null) ?? {},
+      rol: g.rol ?? "gebruiker",
+    };
+  } catch {
+    return { bevoegdheden: {}, rol: "gebruiker" };
+  }
+}
+
+function verrijkMetBevoegdheden(
+  suggestie: SlimUploadSuggestie,
+  bevoegdheden: Record<string, number>,
+  isHoofdBeheerder: boolean,
+): SlimUploadSuggestie {
+  const beperkingen: string[] = [];
+
+  const heeftniveau = (mod: string, min: number) =>
+    isHoofdBeheerder || (bevoegdheden[mod] ?? 0) >= min;
+
+  if (suggestie.categorie === "personeelsdocument") {
+    if (!heeftniveau("personeel", 1)) {
+      beperkingen.push(
+        "U heeft geen toegang tot de Personeelsmodule. Alleen klaarzetten in de inbox is mogelijk.",
+      );
+    } else if (!heeftniveau("personeel", 2)) {
+      beperkingen.push(
+        "U heeft leestoegang tot Personeel. Opslaan in een personeelsdossier vereist schrijftoegang (niveau 2).",
+      );
+    }
+    // Detecteer salarisgegevens in gevonden_gegevens
+    const gev = suggestie.gevonden_gegevens ?? {};
+    const salarisSloetels = ["salaris", "loon", "bruto", "netto", "jaarsalaris", "uurloon"];
+    const bevatSalaris =
+      Object.keys(gev).some((k) => salarisSloetels.some((s) => k.toLowerCase().includes(s))) ||
+      Object.values(gev).some((v) => /\b(salaris|bruto|netto|loon)\b/i.test(v));
+    if (bevatSalaris && !isHoofdBeheerder) {
+      const verrijkt: SlimUploadSuggestie = {
+        ...suggestie,
+        impact_niveau: "hoog",
+        vereist_bevestiging: true,
+        impact_omschrijving:
+          suggestie.impact_omschrijving ||
+          "Dit document bevat mogelijke salarisgegevens. Uploaden kan bestaande personeelsinformatie overschrijven.",
+      };
+      if (!heeftniveau("personeel", 2)) {
+        beperkingen.push(
+          "Salarisgegevens gedetecteerd — direct opslaan in een personeelsdossier is niet toegestaan zonder schrijftoegang.",
+        );
+      }
+      return { ...verrijkt, beperkingen, mag_uploaden: true };
+    }
+  } else if (suggestie.categorie === "factuur") {
+    if (!heeftniveau("financieel", 1)) {
+      beperkingen.push(
+        "Geen toegang tot Financieel. Factuur kan alleen via de inbox worden doorgezet.",
+      );
+    }
+  } else if (suggestie.categorie === "offerte") {
+    if (!heeftniveau("offertes", 1)) {
+      beperkingen.push(
+        "Geen toegang tot Offertes. Bestand kan alleen via de inbox worden doorgezet.",
+      );
+    }
+  }
+
+  return { ...suggestie, beperkingen, mag_uploaden: true };
 }
 
 // ── Route: POST /slim-upload/analyseer ───────────────────────────────────────
@@ -432,23 +579,120 @@ router.post(
     try {
       const resultaten = await Promise.all(bestanden.map((b) => classificeerBestand(b, toelichting)));
 
-      for (const [i, s] of resultaten.entries()) {
+      // Permissiecheck op basis van sessie
+      const userId = req.session.userId;
+      let bevoegdheden: Record<string, number> = {};
+      let isHoofdBeheerder = false;
+      if (userId) {
+        const info = await haalGebruikerBevoegdheden(userId);
+        bevoegdheden = info.bevoegdheden;
+        isHoofdBeheerder = info.rol === "hoofdbeheerder";
+      }
+
+      const verrijkteResultaten = resultaten.map((s) =>
+        verrijkMetBevoegdheden(s, bevoegdheden, isHoofdBeheerder),
+      );
+
+      for (const [i, s] of verrijkteResultaten.entries()) {
         req.log.info(
           {
             bestandsnaam: bestanden[i]?.originalname,
             categorie: s.categorie,
             vertrouwen: s.vertrouwen,
             vision: s.vision_gebruikt,
+            impact: s.impact_niveau,
           },
           "slim-upload: analyse gereed",
         );
       }
 
-      // Stuur één object terug als er één bestand is (frontend verwacht geen array)
-      res.json(resultaten.length === 1 ? resultaten[0] : resultaten);
+      res.json(verrijkteResultaten.length === 1 ? verrijkteResultaten[0] : verrijkteResultaten);
     } catch (err) {
       req.log.error(err, "slim-upload: interne fout");
       res.status(500).json({ error: "Analyse mislukt door interne fout." });
+    }
+  },
+);
+
+// ── Route: POST /slim-upload/log ──────────────────────────────────────────────
+
+router.post(
+  "/slim-upload/log",
+  requireAuth,
+  async (req, res): Promise<void> => {
+    const { bestandsnaam, categorie, actie, impactNiveau, bevestigd, geweigerd, opmerking } =
+      (req.body as Record<string, unknown>) ?? {};
+
+    if (!bestandsnaam || !categorie || !actie) {
+      res.status(400).json({ error: "Ontbrekende velden: bestandsnaam, categorie, actie." });
+      return;
+    }
+
+    const geldigImpact = ["geen", "laag", "midden", "hoog"].includes(String(impactNiveau ?? ""))
+      ? String(impactNiveau)
+      : "laag";
+
+    try {
+      await db.insert(slimUploadLogTable).values({
+        gebruikerId: req.session.userId ?? null,
+        bestandsnaam: String(bestandsnaam).slice(0, 500),
+        categorie: String(categorie).slice(0, 100),
+        actie: String(actie).slice(0, 100),
+        impactNiveau: geldigImpact,
+        bevestigd: Boolean(bevestigd),
+        geweigerd: Boolean(geweigerd),
+        opmerking: opmerking ? String(opmerking).slice(0, 500) : null,
+        ipAdres: req.ip ?? null,
+      });
+      res.json({ ok: true });
+    } catch (err) {
+      req.log.error(err, "slim-upload: log opslaan mislukt");
+      res.status(500).json({ error: "Log opslaan mislukt." });
+    }
+  },
+);
+
+// ── Route: GET /slim-upload/log (alleen hoofdbeheerder) ───────────────────────
+
+router.get(
+  "/slim-upload/log",
+  requireAuth,
+  async (req, res): Promise<void> => {
+    const userId = req.session.userId;
+    if (!userId) {
+      res.status(401).json({ error: "Niet ingelogd." });
+      return;
+    }
+
+    const info = await haalGebruikerBevoegdheden(userId);
+    if (info.rol !== "hoofdbeheerder") {
+      res.status(403).json({ error: "Alleen de hoofdbeheerder kan het upload-log inzien." });
+      return;
+    }
+
+    try {
+      const logs = await db
+        .select({
+          id: slimUploadLogTable.id,
+          gebruikerNaam: gebruikersTable.naam,
+          bestandsnaam: slimUploadLogTable.bestandsnaam,
+          categorie: slimUploadLogTable.categorie,
+          actie: slimUploadLogTable.actie,
+          impactNiveau: slimUploadLogTable.impactNiveau,
+          bevestigd: slimUploadLogTable.bevestigd,
+          geweigerd: slimUploadLogTable.geweigerd,
+          opmerking: slimUploadLogTable.opmerking,
+          aangemaaktOp: slimUploadLogTable.aangemaaktOp,
+        })
+        .from(slimUploadLogTable)
+        .leftJoin(gebruikersTable, eq(slimUploadLogTable.gebruikerId, gebruikersTable.id))
+        .orderBy(desc(slimUploadLogTable.aangemaaktOp))
+        .limit(500);
+
+      res.json(logs);
+    } catch (err) {
+      req.log.error(err, "slim-upload: log ophalen mislukt");
+      res.status(500).json({ error: "Log ophalen mislukt." });
     }
   },
 );

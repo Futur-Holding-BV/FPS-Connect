@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useLocation } from "wouter";
 import {
-  Upload, Sparkles, X, ChevronRight, Trash2, CheckCircle2, AlertCircle,
-  FileText, BookOpen, Receipt, Users, PenLine, Archive, FolderOpen,
+  Upload, Sparkles, X, ChevronRight, ChevronLeft, Trash2, CheckCircle2, AlertCircle,
+  FileText, BookOpen, Receipt, Users, Archive, FolderOpen,
   Zap, ZapOff, Settings, AlertTriangle, ShieldAlert, HelpCircle,
   ClipboardList, BadgeCheck, FileCheck, Ruler, Package, LayoutTemplate,
   RotateCcw, Clock, History, Shield, UserPlus, CalendarClock, Inbox,
@@ -37,6 +37,39 @@ interface SlimUploadSuggestie {
   vision_gebruikt: boolean;
   gevonden_gegevens: Record<string, string>;
   alternatieven: CategorieUitgebreid[];
+  impact_niveau: "geen" | "laag" | "midden" | "hoog";
+  impact_omschrijving: string;
+  vereist_bevestiging: boolean;
+  directe_actie_beschrijving: string;
+  mag_uploaden: boolean;
+  beperkingen: string[];
+}
+
+interface LogActieData {
+  bestandsnaam: string;
+  categorie: string;
+  actie: string;
+  impactNiveau: string;
+  bevestigd: boolean;
+  geweigerd: boolean;
+  opmerking?: string;
+}
+
+async function logUploadActie(data: LogActieData): Promise<void> {
+  await fetch("/api/slim-upload/log", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      bestandsnaam: data.bestandsnaam,
+      categorie: data.categorie,
+      actie: data.actie,
+      impactNiveau: data.impactNiveau,
+      bevestigd: data.bevestigd,
+      geweigerd: data.geweigerd,
+      opmerking: data.opmerking,
+    }),
+    credentials: "include",
+  }).catch(() => {});
 }
 
 interface UploadItem {
@@ -361,19 +394,38 @@ const PERSONEEL_DOC_TYPEN: { value: string; label: string }[] = [
   { value: "overig", label: "Overig personeelsdocument" },
 ];
 
+const IMPACT_KLEUR: Record<string, string> = {
+  geen:   "",
+  laag:   "bg-slate-50 border-slate-200 text-slate-700",
+  midden: "bg-amber-50 border-amber-200 text-amber-800",
+  hoog:   "bg-red-50 border-red-200 text-red-800",
+};
+
+const IMPACT_LABEL: Record<string, string> = {
+  geen:   "",
+  laag:   "Laag",
+  midden: "Middelmatig — bevestiging vereist",
+  hoog:   "Hoog — bevestiging vereist",
+};
+
 function BeslisScherm({
   item,
   onBevestigen,
   onWijzigCategorie,
   onBevestigenPersoneel,
   onNavigeer,
+  onLogActie,
 }: {
   item: UploadItem;
   onBevestigen: (cat: CategorieUitgebreid) => void;
   onWijzigCategorie: (cat: CategorieUitgebreid) => void;
   onBevestigenPersoneel?: (medewerkerId: number, docType: string) => void;
   onNavigeer?: (pad: string) => void;
+  onLogActie?: (data: LogActieData) => void;
 }) {
+  const [stap, setStap] = useState<0 | 1 | 2>(0);
+  const [actieModus, setActieModus] = useState<"direct" | "later">("direct");
+  const [bevestigdAkkoord, setBevestigdAkkoord] = useState(false);
   const [gekozenMedewerker, setGekozenMedewerker] = useState("");
   const [gekozenDocType, setGekozenDocType] = useState("");
   const { data: medewerkerLijst } = useListMedewerkers();
@@ -400,10 +452,54 @@ function BeslisScherm({
     const match = raw.match(/\d{4}/);
     return match ? parseInt(match[0]) : null;
   })();
-  const isActueelePolis =
-    verzekeringJaar !== null && verzekeringJaar >= new Date().getFullYear();
+  const isActueelePolis = verzekeringJaar !== null && verzekeringJaar >= new Date().getFullYear();
 
-  // Technische fout → handmatig kiezen
+  const impactNiveau = (suggestie?.impact_niveau ?? "laag") as "geen" | "laag" | "midden" | "hoog";
+  const vereistBevestiging = suggestie?.vereist_bevestiging ?? (impactNiveau === "midden" || impactNiveau === "hoog");
+  const magUploaden = suggestie?.mag_uploaden !== false;
+  const beperkingen = suggestie?.beperkingen ?? [];
+
+  const kanDirectNavigeren = Boolean(catInfo.pad) || isCV || effectiefeCat === "snagstream";
+
+  function voerActieUit() {
+    onLogActie?.({
+      bestandsnaam: item.bestand.name,
+      categorie: effectiefeCat,
+      actie: actieModus === "direct" ? "direct_gestart" : "later_klaargezet",
+      impactNiveau,
+      bevestigd: vereistBevestiging ? bevestigdAkkoord : true,
+      geweigerd: false,
+    });
+
+    if (effectiefeCat === "personeelsdocument" && !isCV && actieModus === "direct" && gekozenMedewerker && gekozenDocType) {
+      onBevestigenPersoneel?.(Number(gekozenMedewerker), gekozenDocType);
+      return;
+    }
+    if (isCV && actieModus === "direct") {
+      onBevestigen(effectiefeCat);
+      setTimeout(() => onNavigeer?.("/personeel/onboarden"), 300);
+      return;
+    }
+    if (effectiefeCat === "snagstream" && actieModus === "direct") {
+      onBevestigen(effectiefeCat);
+      setTimeout(() => onNavigeer?.("/snagstream"), 300);
+      return;
+    }
+    if (effectiefeCat === "document_sjabloon" && actieModus === "direct") {
+      onBevestigen(effectiefeCat);
+      setTimeout(() => onNavigeer?.("/organisatie/studio"), 300);
+      return;
+    }
+    if (actieModus === "direct" && catInfo.pad) {
+      onBevestigen(effectiefeCat);
+      setTimeout(() => onNavigeer?.(catInfo.pad), 300);
+      return;
+    }
+    onBevestigen(effectiefeCat);
+  }
+
+  // ── Technische fout ───────────────────────────────────────────────────────
+
   if (status === "fout" || fout) {
     return (
       <div className="space-y-4">
@@ -411,7 +507,7 @@ function BeslisScherm({
           <AlertCircle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
           <div>
             <p className="text-sm font-medium text-destructive">Analyse tijdelijk niet beschikbaar</p>
-            <p className="text-xs text-muted-foreground mt-0.5">Kies handmatig waar dit bestand thuishoort. Het bestand wordt niet verloren.</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Kies handmatig waar dit bestand thuishoort.</p>
           </div>
         </div>
         <HandmatigKiezen huidig={effectiefeCat} onKiezen={onWijzigCategorie} />
@@ -425,226 +521,194 @@ function BeslisScherm({
 
   if (!suggestie) return null;
 
-  const isOnzeker = suggestie.categorie === "onbekend" || suggestie.vertrouwen === "laag";
+  // ── Stap 0: Analyseresultaat ──────────────────────────────────────────────
 
-  const isAutoGerouteerd = !suggestie.ai_beschikbaar &&
-    suggestie.redenering.startsWith("Automatisch herkend op basis van eerder bevestigde regelinstelling");
-
-  return (
-    <div className="space-y-4">
-      {/* Banner: automatisch herkend via regel */}
-      {isAutoGerouteerd && (
-        <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-3">
-          <Zap className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
-          <div>
-            <p className="text-xs font-semibold text-amber-700">Automatisch herkend</p>
-            <p className="text-xs text-amber-600 mt-0.5">
-              Dit bestandstype is eerder bevestigd als {CATEGORIE_INFO[effectiefeCat].label}.
-              Controleer de bestemming en voeg eventueel een toelichting toe voor u opslaat.
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* AVG-waarschuwing voor personeelsdocumenten */}
-      {(effectiefeCat === "personeelsdocument" || suggestie.categorie === "personeelsdocument") && (
-        <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-3">
-          <ShieldAlert className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
-          <div>
-            <p className="text-xs font-semibold text-amber-700">AVG — Privacygevoelig document</p>
-            <p className="text-xs text-amber-600 mt-0.5">
-              Dit lijkt een personeelsdocument. Sla het op bij Personeel / HRM en maak het niet breed zichtbaar.
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* Hoofdvoorstel */}
-      <div className={cn("rounded-lg border p-4 space-y-3", catInfo.kleur)}>
-        <div className="flex items-center gap-2">
-          {catInfo.icoon}
-          <div className="flex-1 min-w-0">
-            <p className="font-semibold text-sm leading-tight">{catInfo.label}</p>
-            <p className="text-[11px] opacity-70">{catInfo.omschrijving}</p>
-          </div>
-          <span className={cn("text-xs font-medium shrink-0", VERTROUWEN_KLEUR[suggestie.vertrouwen])}>
-            {VERTROUWEN_LABEL[suggestie.vertrouwen]}
-          </span>
-        </div>
-        {suggestie.voorstel_naam && (
-          <div>
-            <p className="text-[10px] uppercase tracking-wide font-semibold opacity-60 mb-0.5">Voorgestelde naam</p>
-            <p className="text-sm font-medium">{suggestie.voorstel_naam}</p>
+  if (stap === 0) {
+    return (
+      <div className="space-y-4">
+        {!suggestie.ai_beschikbaar && suggestie.redenering.startsWith("Automatisch herkend") && (
+          <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-3">
+            <Zap className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+            <p className="text-xs text-amber-700">Automatisch herkend op basis van een eerder ingestelde regel.</p>
           </div>
         )}
-        {suggestie.redenering && (
-          <p className="text-xs opacity-75 leading-relaxed">{suggestie.redenering}</p>
-        )}
-        {suggestie.ai_beschikbaar && suggestie.vision_gebruikt && (
-          <p className="text-[10px] opacity-60 flex items-center gap-1">
-            <Sparkles className="h-3 w-3" />
-            AI heeft de visuele lay-out geanalyseerd
-          </p>
-        )}
-        {!suggestie.ai_beschikbaar && (
-          <p className="text-[10px] opacity-50 italic">Geclassificeerd op bestandsnaam (AI niet actief)</p>
-        )}
-      </div>
 
-      {/* Gevonden gegevens */}
-      {Object.keys(suggestie.gevonden_gegevens ?? {}).length > 0 && (
-        <div>
-          <p className="text-xs font-semibold text-muted-foreground mb-1.5">Herkende gegevens</p>
-          <GevondenGegevens gegevens={suggestie.gevonden_gegevens ?? {}} />
-        </div>
-      )}
-
-      {/* Bij document_sjabloon: Studio-actie tonen */}
-      {effectiefeCat === "document_sjabloon" && (
-        <div className="rounded-md border bg-fuchsia-50 border-fuchsia-200 p-3 space-y-2">
-          <p className="text-xs font-semibold text-fuchsia-700">Dit lijkt een huisstijl-sjabloon of briefpapier</p>
-          <p className="text-xs text-fuchsia-600">
-            Klik op "Naar Document Studio" om naar de Studio te navigeren. Upload het bestand daar vervolgens handmatig bij het gewenste documenttype (bijv. Offerte of Brief) via de knop "Referentie uploaden".
-          </p>
-          <div className="flex flex-col gap-1.5 mt-1">
-            <Button size="sm" variant="default" className="justify-start gap-2 text-xs"
-              onClick={() => onBevestigen("document_sjabloon")}>
-              <LayoutTemplate className="h-3.5 w-3.5" />
-              Naar Document Studio
-            </Button>
-            <Button size="sm" variant="outline" className="justify-start gap-2 text-xs"
-              onClick={() => onWijzigCategorie("bibliotheek")}>
-              <BookOpen className="h-3.5 w-3.5" />
-              Opslaan in documentenbibliotheek
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {/* Bij aanvraag: vervolgacties tonen */}
-      {(effectiefeCat === "aanvraag") && (
-        <div className="rounded-md border bg-violet-50 border-violet-200 p-3 space-y-2">
-          <p className="text-xs font-semibold text-violet-700">Dit lijkt een nieuwe aanvraag</p>
-          <div className="flex flex-col gap-1.5">
-            <Button size="sm" variant="default" className="justify-start gap-2 text-xs"
-              onClick={() => onBevestigen("aanvraag")}>
-              <ChevronRight className="h-3.5 w-3.5" />
-              Nieuw werk / project aanmaken
-            </Button>
-            <Button size="sm" variant="outline" className="justify-start gap-2 text-xs"
-              onClick={() => onWijzigCategorie("bibliotheek")}>
-              <BookOpen className="h-3.5 w-3.5" />
-              Alleen opslaan in documentenbibliotheek
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {/* Onzeker / onbekend: top alternatieven */}
-      {isOnzeker && (suggestie.alternatieven ?? []).length > 0 && (
-        <div>
-          <p className="text-xs font-semibold text-muted-foreground mb-1.5">
-            {suggestie.categorie === "onbekend"
-              ? "Kies de beste bestemming:"
-              : "Niet wat u verwacht? Andere opties:"}
-          </p>
-          <div className="space-y-1.5">
-            {suggestie.alternatieven.slice(0, 3).map((cat) => {
-              const info = CATEGORIE_INFO[cat];
-              return (
-                <button
-                  key={cat}
-                  onClick={() => onWijzigCategorie(cat)}
-                  className={cn(
-                    "w-full flex items-center gap-2 rounded-md border px-3 py-2 text-xs text-left transition-colors",
-                    item.gekozenCategorie === cat
-                      ? info.kleur + " font-semibold"
-                      : "border-border bg-background hover:bg-muted/50",
-                  )}
-                >
-                  {info.icoon}
-                  <div className="flex-1">
-                    <p className="font-medium">{info.label}</p>
-                    <p className="text-muted-foreground text-[10px]">{info.omschrijving}</p>
-                  </div>
-                  {item.gekozenCategorie === cat && <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Overige alternatieven / handmatig kiezen */}
-      {effectiefeCat !== "aanvraag" && (
-        <details className="group">
-          <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors select-none">
-            Handmatig een andere bestemming kiezen
-          </summary>
-          <div className="mt-2">
-            <HandmatigKiezen huidig={effectiefeCat} onKiezen={onWijzigCategorie} />
-          </div>
-        </details>
-      )}
-
-      {/* Actieknop — niet tonen voor categorieën met een eigen actieblok */}
-      {effectiefeCat !== "aanvraag" &&
-        effectiefeCat !== "document_sjabloon" &&
-        effectiefeCat !== "personeelsdocument" &&
-        effectiefeCat !== "verzekering" &&
-        effectiefeCat !== "snagstream" && (
-        <Button size="sm" className="w-full gap-1.5" onClick={() => onBevestigen(effectiefeCat)}>
-          <ChevronRight className="h-4 w-4" />
-          Ga naar {CATEGORIE_INFO[effectiefeCat].label}
-        </Button>
-      )}
-
-      {/* CV herkend → onboarding starten of klaarzetten */}
-      {isCV && (
-        <div className="rounded-md border border-purple-200 bg-purple-50 p-3 space-y-2">
-          <div className="flex items-center gap-2">
-            <UserPlus className="h-4 w-4 text-purple-600 shrink-0" />
-            <p className="text-xs font-semibold text-purple-700">CV herkend — wat wilt u doen?</p>
-          </div>
-          {suggestie?.gevonden_gegevens?.naam_medewerker && (
-            <p className="text-xs text-purple-600">
-              Naam: <span className="font-medium">{suggestie.gevonden_gegevens.naam_medewerker}</span>
-              {suggestie.gevonden_gegevens.gewenste_functie && (
-                <> &middot; Functie: <span className="font-medium">{suggestie.gevonden_gegevens.gewenste_functie}</span></>
+        <div className={cn("rounded-lg border p-4 space-y-3", catInfo.kleur)}>
+          <div className="flex items-start gap-2">
+            <div className="mt-0.5">{catInfo.icoon}</div>
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-sm leading-tight">{catInfo.label}</p>
+              <p className="text-[11px] opacity-70">{catInfo.omschrijving}</p>
+            </div>
+            <div className="flex flex-col items-end gap-1 shrink-0">
+              <span className={cn("text-xs font-medium", VERTROUWEN_KLEUR[suggestie.vertrouwen])}>
+                {VERTROUWEN_LABEL[suggestie.vertrouwen]}
+              </span>
+              {(impactNiveau === "midden" || impactNiveau === "hoog") && (
+                <span className={cn("text-[10px] font-semibold px-1.5 py-0.5 rounded border", IMPACT_KLEUR[impactNiveau])}>
+                  {IMPACT_LABEL[impactNiveau]}
+                </span>
               )}
+            </div>
+          </div>
+          {suggestie.voorstel_naam && (
+            <div>
+              <p className="text-[10px] uppercase tracking-wide font-semibold opacity-60 mb-0.5">AI benoemt als</p>
+              <p className="text-sm font-medium">{suggestie.voorstel_naam}</p>
+            </div>
+          )}
+          {suggestie.redenering && (
+            <p className="text-xs opacity-75 leading-relaxed">{suggestie.redenering}</p>
+          )}
+          {suggestie.ai_beschikbaar && suggestie.vision_gebruikt && (
+            <p className="text-[10px] opacity-60 flex items-center gap-1">
+              <Sparkles className="h-3 w-3" />
+              Visuele lay-out geanalyseerd
             </p>
           )}
-          <div className="flex flex-col gap-1.5 mt-1">
-            <Button
-              size="sm"
-              variant="default"
-              className="justify-start gap-2 text-xs"
-              onClick={() => {
-                void uploadNaarInbox(item.bestand, item.toelichting);
-                onNavigeer?.("/personeel/onboarden");
-              }}
-            >
-              <UserPlus className="h-3.5 w-3.5" />
-              Onboarding starten
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              className="justify-start gap-2 text-xs"
-              onClick={() => onBevestigen("personeelsdocument")}
-            >
-              <Inbox className="h-3.5 w-3.5" />
-              Klaarzetten voor later (inbox)
-            </Button>
-          </div>
+          {!suggestie.ai_beschikbaar && (
+            <p className="text-[10px] opacity-50 italic">Geclassificeerd op bestandsnaam (AI niet actief)</p>
+          )}
         </div>
-      )}
 
-      {/* Personeelsdocument (geen CV) → direct naar medewerker-dossier */}
-      {effectiefeCat === "personeelsdocument" && !isCV && (
-        <div className="space-y-3 rounded-lg border border-purple-200 bg-purple-50/40 p-3">
-          <p className="text-xs font-semibold text-purple-700">Direct opslaan in personeelsdossier</p>
-          <div className="space-y-2">
+        {Object.entries(suggestie.gevonden_gegevens ?? {}).filter(([k]) => k !== "document_subtype").length > 0 && (
+          <div>
+            <p className="text-xs font-semibold text-muted-foreground mb-1.5">Herkende gegevens</p>
+            <GevondenGegevens gegevens={Object.fromEntries(
+              Object.entries(suggestie.gevonden_gegevens).filter(([k]) => k !== "document_subtype")
+            )} />
+          </div>
+        )}
+
+        {effectiefeCat === "personeelsdocument" && (
+          <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-3">
+            <ShieldAlert className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-xs font-semibold text-amber-700">AVG — Privacygevoelig document</p>
+              <p className="text-xs text-amber-600 mt-0.5">Sla dit op bij Personeel / HRM en maak het niet breed zichtbaar.</p>
+            </div>
+          </div>
+        )}
+
+        {beperkingen.length > 0 && (
+          <div className="rounded-md border border-amber-200 bg-amber-50 p-3 space-y-1">
+            <p className="text-xs font-semibold text-amber-700 flex items-center gap-1">
+              <ShieldAlert className="h-3.5 w-3.5" />
+              Toegangsbeperking
+            </p>
+            {beperkingen.map((b, i) => (
+              <p key={i} className="text-xs text-amber-600">{b}</p>
+            ))}
+          </div>
+        )}
+
+        {!magUploaden ? (
+          <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3">
+            <p className="text-xs font-semibold text-destructive">Geen toestemming om dit bestand te uploaden</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Neem contact op met de hoofdbeheerder.</p>
+          </div>
+        ) : (
+          <Button size="sm" className="w-full gap-1.5" onClick={() => setStap(1)}>
+            Kies wat u wilt doen
+            <ChevronRight className="h-3.5 w-3.5" />
+          </Button>
+        )}
+      </div>
+    );
+  }
+
+  // ── Stap 1: Actie kiezen ──────────────────────────────────────────────────
+
+  if (stap === 1) {
+    return (
+      <div className="space-y-4">
+        {suggestie.directe_actie_beschrijving && (
+          <div className="rounded-md border bg-muted/30 p-3">
+            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-1">Aanbevolen actie</p>
+            <p className="text-sm font-medium leading-snug">{suggestie.directe_actie_beschrijving}</p>
+          </div>
+        )}
+
+        {kanDirectNavigeren && (
+          <div>
+            <p className="text-xs font-semibold mb-2">Wanneer oppakken?</p>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                className={cn(
+                  "flex flex-col items-center gap-1.5 rounded-lg border p-3 text-xs transition-colors",
+                  actieModus === "direct"
+                    ? "border-primary bg-primary/5 text-primary font-semibold"
+                    : "border-border bg-background text-muted-foreground hover:bg-muted/50",
+                )}
+                onClick={() => setActieModus("direct")}
+              >
+                <Zap className="h-4 w-4" />
+                Direct starten
+              </button>
+              <button
+                className={cn(
+                  "flex flex-col items-center gap-1.5 rounded-lg border p-3 text-xs transition-colors",
+                  actieModus === "later"
+                    ? "border-primary bg-primary/5 text-primary font-semibold"
+                    : "border-border bg-background text-muted-foreground hover:bg-muted/50",
+                )}
+                onClick={() => setActieModus("later")}
+              >
+                <Clock className="h-4 w-4" />
+                Klaarzetten voor later
+              </button>
+            </div>
+            <p className="text-[10px] text-muted-foreground mt-2">
+              {actieModus === "direct"
+                ? `Direct navigeren naar ${catInfo.label}.`
+                : "Bestand in inbox plaatsen — later opgepakt."}
+            </p>
+          </div>
+        )}
+
+        {isCV && (
+          <div className="rounded-md border border-purple-200 bg-purple-50 p-3">
+            <div className="flex items-center gap-2 mb-1.5">
+              <UserPlus className="h-3.5 w-3.5 text-purple-600 shrink-0" />
+              <p className="text-xs font-semibold text-purple-700">CV herkend</p>
+            </div>
+            {suggestie.gevonden_gegevens?.naam_medewerker && (
+              <p className="text-xs text-purple-600">
+                <span className="font-medium">{suggestie.gevonden_gegevens.naam_medewerker}</span>
+                {suggestie.gevonden_gegevens.gewenste_functie && (
+                  <> &middot; {suggestie.gevonden_gegevens.gewenste_functie}</>
+                )}
+              </p>
+            )}
+            {actieModus === "direct" && (
+              <p className="text-[10px] text-purple-500 mt-1">U wordt naar het onboarding-formulier geleid.</p>
+            )}
+          </div>
+        )}
+
+        {effectiefeCat === "verzekering" && (
+          <div className="rounded-md border border-blue-200 bg-blue-50 p-3">
+            <div className="flex items-center gap-2 mb-1">
+              <Shield className="h-3.5 w-3.5 text-blue-600 shrink-0" />
+              <p className="text-xs font-semibold text-blue-700">
+                {verzekeringJaar !== null
+                  ? `Jaar ${verzekeringJaar} — ${isActueelePolis ? "actuele polis" : "archiefversie"}`
+                  : "Polis — jaar niet herkend"}
+              </p>
+            </div>
+            <p className="text-[10px] text-blue-500">
+              {isActueelePolis
+                ? "Wordt opgeslagen als actuele verzekeringspolis."
+                : verzekeringJaar
+                  ? `Wordt gearchiveerd als polis ${verzekeringJaar}.`
+                  : "Kies zelf hoe op te slaan."}
+            </p>
+          </div>
+        )}
+
+        {effectiefeCat === "personeelsdocument" && !isCV && actieModus === "direct" && (
+          <div className="space-y-2 rounded-lg border border-purple-200 bg-purple-50/40 p-3">
+            <p className="text-xs font-semibold text-purple-700">Direct opslaan in personeelsdossier</p>
             <div>
               <Label className="text-xs">Medewerker <span className="text-destructive">*</span></Label>
               <Select value={gekozenMedewerker} onValueChange={setGekozenMedewerker}>
@@ -672,131 +736,114 @@ function BeslisScherm({
               </Select>
             </div>
           </div>
+        )}
+
+        <details className="group">
+          <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors select-none">
+            Andere bestemming kiezen
+          </summary>
+          <div className="mt-2 space-y-1.5">
+            {(suggestie.alternatieven ?? []).slice(0, 3).map((cat) => {
+              const info = CATEGORIE_INFO[cat];
+              return (
+                <button
+                  key={cat}
+                  onClick={() => onWijzigCategorie(cat)}
+                  className={cn(
+                    "w-full flex items-center gap-2 rounded-md border px-3 py-2 text-xs text-left transition-colors",
+                    item.gekozenCategorie === cat
+                      ? info.kleur + " font-semibold"
+                      : "border-border bg-background hover:bg-muted/50",
+                  )}
+                >
+                  {info.icoon}
+                  <div className="flex-1">
+                    <p className="font-medium">{info.label}</p>
+                    <p className="text-muted-foreground text-[10px]">{info.omschrijving}</p>
+                  </div>
+                  {item.gekozenCategorie === cat && <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />}
+                </button>
+              );
+            })}
+            <details className="group">
+              <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground mt-1 select-none">
+                Alle opties tonen
+              </summary>
+              <div className="mt-2">
+                <HandmatigKiezen huidig={effectiefeCat} onKiezen={onWijzigCategorie} />
+              </div>
+            </details>
+          </div>
+        </details>
+
+        <div className="flex gap-2">
+          <Button size="sm" variant="outline" onClick={() => setStap(0)} className="gap-1 shrink-0">
+            <ChevronLeft className="h-3.5 w-3.5" />
+            Terug
+          </Button>
           <Button
             size="sm"
-            className="w-full gap-1.5"
-            disabled={!gekozenMedewerker || !gekozenDocType}
-            onClick={() => onBevestigenPersoneel?.(Number(gekozenMedewerker), gekozenDocType)}
+            className="flex-1 gap-1.5"
+            disabled={
+              effectiefeCat === "personeelsdocument" && !isCV && actieModus === "direct"
+                ? !gekozenMedewerker || !gekozenDocType
+                : false
+            }
+            onClick={() => vereistBevestiging ? setStap(2) : voerActieUit()}
           >
-            <Users className="h-3.5 w-3.5" />
-            Opslaan in dossier
+            {vereistBevestiging ? "Volgende" : actieModus === "direct" ? "Starten" : "Klaarzetten"}
+            <ChevronRight className="h-3.5 w-3.5" />
           </Button>
-          <button
-            className="w-full text-xs text-muted-foreground hover:text-foreground text-center transition-colors"
-            onClick={() => onBevestigen("personeelsdocument")}
-          >
-            Liever via inbox opslaan
-          </button>
         </div>
-      )}
+      </div>
+    );
+  }
 
-      {/* Verzekeringspolis → jaar-bewuste routing */}
-      {effectiefeCat === "verzekering" && (
-        <div className="rounded-md border border-blue-200 bg-blue-50 p-3 space-y-2">
-          <div className="flex items-center gap-2">
-            <Shield className="h-4 w-4 text-blue-600 shrink-0" />
-            <p className="text-xs font-semibold text-blue-700">Verzekeringspolis herkend</p>
-          </div>
-          {verzekeringJaar !== null && (
-            <p className="text-xs text-blue-600 flex items-center gap-1">
-              <CalendarClock className="h-3 w-3 shrink-0" />
-              Jaar {verzekeringJaar} &mdash;{" "}
-              <span className="font-semibold">
-                {isActueelePolis ? "actuele polis" : "oudere versie (archief)"}
-              </span>
-            </p>
-          )}
-          {verzekeringJaar === null && (
-            <p className="text-xs text-blue-500 italic">
-              Jaar niet herkend — kies zelf hoe op te slaan.
-            </p>
-          )}
-          <div className="flex flex-col gap-1.5 mt-1">
-            {isActueelePolis && (
-              <Button
-                size="sm"
-                variant="default"
-                className="justify-start gap-2 text-xs"
-                onClick={() => onBevestigen("verzekering")}
-              >
-                <Shield className="h-3.5 w-3.5" />
-                Opslaan als actuele polis
-              </Button>
-            )}
-            {!isActueelePolis && verzekeringJaar !== null && (
-              <Button
-                size="sm"
-                variant="default"
-                className="justify-start gap-2 text-xs"
-                onClick={() => onBevestigen("verzekering")}
-              >
-                <Archive className="h-3.5 w-3.5" />
-                Archiveren (polis {verzekeringJaar})
-              </Button>
-            )}
-            {verzekeringJaar === null && (
-              <>
-                <Button
-                  size="sm"
-                  variant="default"
-                  className="justify-start gap-2 text-xs"
-                  onClick={() => onBevestigen("verzekering")}
-                >
-                  <Shield className="h-3.5 w-3.5" />
-                  Opslaan als actuele polis
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="justify-start gap-2 text-xs"
-                  onClick={() => onBevestigen("verzekering")}
-                >
-                  <Archive className="h-3.5 w-3.5" />
-                  Archiveren (oudere versie)
-                </Button>
-              </>
-            )}
-          </div>
-        </div>
-      )}
+  // ── Stap 2: Bevestigen ────────────────────────────────────────────────────
 
-      {/* Snagstream → direct naar archief uploaden */}
-      {effectiefeCat === "snagstream" && (
-        <div className="rounded-md border border-rose-200 bg-rose-50 p-3 space-y-2">
-          <div className="flex items-center gap-2">
-            <Archive className="h-4 w-4 text-rose-600 shrink-0" />
-            <p className="text-xs font-semibold text-rose-700">Snagstream-rapport herkend</p>
-          </div>
-          {suggestie?.gevonden_gegevens?.projectnaam && (
-            <p className="text-xs text-rose-600">
-              Project: <span className="font-medium">{suggestie.gevonden_gegevens.projectnaam}</span>
-              {suggestie.gevonden_gegevens.inspectiedatum && (
-                <> &middot; Datum: <span className="font-medium">{suggestie.gevonden_gegevens.inspectiedatum}</span></>
-              )}
-            </p>
-          )}
-          <div className="flex flex-col gap-1.5 mt-1">
-            <Button
-              size="sm"
-              variant="default"
-              className="justify-start gap-2 text-xs"
-              onClick={() => onBevestigen("snagstream")}
-            >
-              <Archive className="h-3.5 w-3.5" />
-              Opslaan in Snagstream-archief
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              className="justify-start gap-2 text-xs"
-              onClick={() => { onBevestigen("snagstream"); onNavigeer?.("/snagstream"); }}
-            >
-              <ChevronRight className="h-3.5 w-3.5" />
-              Opslaan en naar Snagstream gaan
-            </Button>
-          </div>
+  return (
+    <div className="space-y-4">
+      <div className={cn("rounded-md border p-3 space-y-2", IMPACT_KLEUR[impactNiveau])}>
+        <div className="flex items-center gap-2">
+          <AlertTriangle className="h-4 w-4 shrink-0" />
+          <p className="text-sm font-semibold">Impact: {IMPACT_LABEL[impactNiveau]}</p>
         </div>
-      )}
+        {suggestie.impact_omschrijving && (
+          <p className="text-xs leading-relaxed">{suggestie.impact_omschrijving}</p>
+        )}
+      </div>
+
+      <label className="flex items-start gap-2.5 cursor-pointer select-none">
+        <input
+          type="checkbox"
+          checked={bevestigdAkkoord}
+          onChange={(e) => setBevestigdAkkoord(e.target.checked)}
+          className="mt-0.5 shrink-0"
+        />
+        <span className="text-xs text-muted-foreground leading-relaxed">
+          Ik begrijp de gevolgen en wil doorgaan met{" "}
+          <span className="font-medium text-foreground">
+            {actieModus === "direct" ? `direct starten → ${catInfo.label}` : "klaarzetten voor later"}
+          </span>
+          .
+        </span>
+      </label>
+
+      <div className="flex gap-2">
+        <Button size="sm" variant="outline" onClick={() => setStap(1)} className="gap-1 shrink-0">
+          <ChevronLeft className="h-3.5 w-3.5" />
+          Terug
+        </Button>
+        <Button
+          size="sm"
+          className="flex-1 gap-1.5"
+          disabled={!bevestigdAkkoord}
+          onClick={voerActieUit}
+        >
+          <CheckCircle2 className="h-3.5 w-3.5" />
+          Bevestigen
+        </Button>
+      </div>
     </div>
   );
 }
@@ -851,6 +898,7 @@ function WachtrijKaart({
   onWijzigCategorie,
   onBevestigenPersoneel,
   onNavigeer,
+  onLogActie,
 }: {
   item: UploadItem;
   onToelichting: (tekst: string) => void;
@@ -859,7 +907,19 @@ function WachtrijKaart({
   onWijzigCategorie: (cat: CategorieUitgebreid) => void;
   onBevestigenPersoneel?: (medewerkerId: number, docType: string) => void;
   onNavigeer?: (pad: string) => void;
+  onLogActie?: (data: LogActieData) => void;
 }) {
+  const onAnalyseerRef = useRef(onAnalyseer);
+  useEffect(() => { onAnalyseerRef.current = onAnalyseer; }, [onAnalyseer]);
+
+  useEffect(() => {
+    if (item.status === "wacht" && !item.actieGenomen) {
+      onAnalyseerRef.current();
+    }
+    // Bewust geen deps — eénmalig uitvoeren bij mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
     <div className="px-4 py-4 space-y-3">
       <div className="flex items-start gap-2">
@@ -877,29 +937,7 @@ function WachtrijKaart({
 
       {!item.actieGenomen ? (
         <>
-          {item.status === "wacht" && (
-            <div className="space-y-2">
-              <div className="space-y-1">
-                <Label className="text-xs font-medium">
-                  Toelichting <span className="text-destructive">*</span>
-                </Label>
-                <Textarea
-                  placeholder="Beschrijf het document (bijv. arbeidscontract Jan de Vries, VCA-certificaat 2025, offerte project X)…"
-                  value={item.toelichting}
-                  onChange={(e) => onToelichting(e.target.value)}
-                  rows={2}
-                  className="text-xs resize-none"
-                />
-                <p className="text-[10px] text-muted-foreground">Verplicht — helpt de AI het document correct te routeren.</p>
-              </div>
-              <Button size="sm" className="w-full gap-1.5" onClick={onAnalyseer} disabled={!item.toelichting.trim()}>
-                <Sparkles className="h-3.5 w-3.5" />
-                Analyseren
-              </Button>
-            </div>
-          )}
-
-          {item.status === "analyseert" && (
+          {(item.status === "wacht" || item.status === "analyseert") && (
             <div className="flex items-center gap-2 py-1 text-muted-foreground">
               <div className="h-4 w-4 rounded-full border-2 border-primary border-t-transparent animate-spin shrink-0" />
               <p className="text-xs">AI analyseert…</p>
@@ -909,9 +947,9 @@ function WachtrijKaart({
           {(item.status === "klaar" || item.status === "fout") && (
             <>
               <div className="space-y-1">
-                <Label className="text-xs font-medium">Toelichting</Label>
+                <Label className="text-xs font-medium">Toelichting (optioneel)</Label>
                 <Textarea
-                  placeholder="Optioneel — voeg een opmerking of context toe bij dit document…"
+                  placeholder="Voeg een opmerking of extra context toe…"
                   value={item.toelichting}
                   onChange={(e) => onToelichting(e.target.value)}
                   rows={2}
@@ -924,6 +962,7 @@ function WachtrijKaart({
                 onWijzigCategorie={onWijzigCategorie}
                 onBevestigenPersoneel={onBevestigenPersoneel}
                 onNavigeer={onNavigeer}
+                onLogActie={onLogActie}
               />
             </>
           )}
@@ -1081,6 +1120,12 @@ export function SlimUploadBalk() {
           vision_gebruikt: false,
           gevonden_gegevens: {},
           alternatieven: [],
+          impact_niveau: "laag",
+          impact_omschrijving: "",
+          vereist_bevestiging: false,
+          directe_actie_beschrijving: "",
+          mag_uploaden: true,
+          beperkingen: [],
         };
         queueItems.push({
           ...item,
@@ -1145,7 +1190,7 @@ export function SlimUploadBalk() {
   }
 
   function analyseerAlle() {
-    queue.filter((i) => i.status === "wacht" && i.toelichting.trim()).forEach((item) => void startAnalyseVoorItem(item.id));
+    queue.filter((i) => i.status === "wacht").forEach((item) => void startAnalyseVoorItem(item.id));
   }
 
   // ── Bevestigen ────────────────────────────────────────────────────────────
@@ -1419,6 +1464,7 @@ export function SlimUploadBalk() {
                 onWijzigCategorie={(cat) => opWijzigCategorie(item.id, cat)}
                 onBevestigenPersoneel={(mid, dt) => void opBevestigenPersoneelFn(item.id, mid, dt)}
                 onNavigeer={(pad) => { navigate(pad); opSluiten(); }}
+                onLogActie={logUploadActie}
               />
             ))}
 

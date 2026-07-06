@@ -58,3 +58,4 @@ export * from "./pim";
 export * from "./kb";
 export { vgeEffectiviteitslogTable, type VgeEffectiviteitslogEntry } from "./vge";
 export * from "./visuals";
+export * from "./slim-upload-log";

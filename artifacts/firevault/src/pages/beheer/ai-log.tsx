@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Bot, TrendingUp, AlertCircle, Clock, Loader2, Filter, RefreshCw, Download, TriangleAlert, Settings2, Check } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -282,6 +282,125 @@ function DrempelBanner() {
         Sluiten
       </button>
     </div>
+  );
+}
+
+interface UploadLogRegel {
+  id: number;
+  gebruikerNaam: string | null;
+  bestandsnaam: string;
+  categorie: string;
+  actie: string;
+  impactNiveau: string;
+  bevestigd: boolean;
+  geweigerd: boolean;
+  opmerking: string | null;
+  aangemaaktOp: string;
+}
+
+function impactKleur(niveau: string): string {
+  switch (niveau) {
+    case "hoog":   return "bg-red-100 text-red-800 border-red-200";
+    case "midden": return "bg-orange-100 text-orange-800 border-orange-200";
+    case "laag":   return "bg-slate-100 text-slate-700 border-slate-200";
+    default:       return "bg-gray-100 text-gray-600 border-gray-200";
+  }
+}
+
+function UploadLogSectie() {
+  const [logRegels, setLogRegels] = useState<UploadLogRegel[]>([]);
+  const [laden, setLaden] = useState(false);
+  const [fout, setFout] = useState<string | null>(null);
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    setLaden(true);
+    setFout(null);
+    fetch("/api/slim-upload/log", { credentials: "include" })
+      .then((r) => r.ok ? r.json() : Promise.reject(r.status))
+      .then((data: UploadLogRegel[]) => setLogRegels(data))
+      .catch(() => setFout("Laden mislukt."))
+      .finally(() => setLaden(false));
+  }, [open]);
+
+  return (
+    <Card>
+      <CardHeader className="py-3 px-4">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-sm font-semibold flex items-center gap-2">
+            Upload acties-log
+          </CardTitle>
+          <Button size="sm" variant="outline" onClick={() => setOpen((o) => !o)}>
+            {open ? "Verbergen" : "Tonen"}
+          </Button>
+        </div>
+        <p className="text-xs text-muted-foreground mt-0.5">
+          Alle upload-acties via Slim uploaden — inclusief categorie, impact en of bevestiging vereist was.
+        </p>
+      </CardHeader>
+      {open && (
+        <CardContent className="p-0">
+          {laden && (
+            <div className="flex items-center gap-2 px-4 py-6 text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span className="text-xs">Laden…</span>
+            </div>
+          )}
+          {fout && <p className="px-4 py-4 text-xs text-destructive">{fout}</p>}
+          {!laden && !fout && logRegels.length === 0 && (
+            <p className="px-4 py-6 text-xs text-muted-foreground text-center">Nog geen upload-acties geregistreerd.</p>
+          )}
+          {!laden && logRegels.length > 0 && (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-xs py-2">Tijdstip</TableHead>
+                    <TableHead className="text-xs py-2">Gebruiker</TableHead>
+                    <TableHead className="text-xs py-2">Bestand</TableHead>
+                    <TableHead className="text-xs py-2">Categorie</TableHead>
+                    <TableHead className="text-xs py-2">Actie</TableHead>
+                    <TableHead className="text-xs py-2">Impact</TableHead>
+                    <TableHead className="text-xs py-2">Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {logRegels.slice(0, 100).map((r) => (
+                    <TableRow key={r.id}>
+                      <TableCell className="text-xs py-2 whitespace-nowrap">
+                        {new Date(r.aangemaaktOp).toLocaleString("nl-NL", {
+                          day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit",
+                        })}
+                      </TableCell>
+                      <TableCell className="text-xs py-2">{r.gebruikerNaam ?? "—"}</TableCell>
+                      <TableCell className="text-xs py-2 max-w-[160px] truncate" title={r.bestandsnaam}>
+                        {r.bestandsnaam}
+                      </TableCell>
+                      <TableCell className="text-xs py-2">{r.categorie}</TableCell>
+                      <TableCell className="text-xs py-2">{r.actie.replace(/_/g, " ")}</TableCell>
+                      <TableCell className="text-xs py-2">
+                        <Badge className={`text-[10px] border ${impactKleur(r.impactNiveau)}`} variant="outline">
+                          {r.impactNiveau}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-xs py-2">
+                        {r.geweigerd
+                          ? <Badge variant="destructive" className="text-[10px]">Geweigerd</Badge>
+                          : r.bevestigd
+                            ? <Badge className="text-[10px] bg-green-100 text-green-800 border-green-200" variant="outline">Bevestigd</Badge>
+                            : <Badge variant="secondary" className="text-[10px]">Klaargezet</Badge>
+                        }
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      )}
+    </Card>
   );
 }
 
@@ -714,6 +833,8 @@ export default function AiLogPagina() {
           </div>
         </div>
       )}
+
+      <UploadLogSectie />
     </div>
   );
 }

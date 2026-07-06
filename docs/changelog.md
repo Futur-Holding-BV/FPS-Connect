@@ -4,6 +4,47 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-06 — SlimUploadBalk herontwerp: meerstappenflow, impactbeoordeling, toegangscontrole, audit-log
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** geen
+
+**Wat is gebouwd:**
+
+SlimUploadBalk volledig herontworpen met vier nieuwe lagen:
+
+**Auto-analyse (geen toelichting meer verplicht):**
+- WachtrijKaart start analyse automatisch via `useEffect` bij mount — geen knop meer nodig
+- Toelichting is teruggebracht naar optioneel veld (na analyse, als context)
+- `analyseerAlle()` vereist geen niet-lege toelichting meer
+
+**3-stappenflow (stap 0 → 1 → 2):**
+- Stap 0 — Analyseresultaat: categorie-kaart, impact-badge (amber/rood bij midden/hoog), gevonden gegevens, beperkingen, AVG-waarschuwing
+- Stap 1 — Actie kiezen: Direct/Later toggle, categorie-specifieke context (CV/verzekering/personeelsdossier), alternatieven altijd bereikbaar via `<details>`
+- Stap 2 — Bevestigen: impact-box + checkbox akkoord; alleen getoond bij `vereist_bevestiging: true` (midden/hoog impact)
+- Terug-knop op elke stap; `ChevronLeft` toegevoegd aan imports
+
+**AI-impactbeoordeling (vier niveaus):**
+- Backend-prompt uitgebreid: AI geeft `impact_niveau` (geen/laag/midden/hoog), `impact_omschrijving`, `vereist_bevestiging`, `directe_actie_beschrijving` terug
+- Heuristische fallback: CV → midden (onboarding), verzekering → midden (vervangt polis), overig → laag
+- Frontend: IMPACT_KLEUR + IMPACT_LABEL constanten; badge op stap 0 kaart; bevestigingsbox op stap 2
+
+**Toegangscontrole per gebruikersniveau:**
+- Backend route `/slim-upload/analyseer` haalt na classificatie bevoegdheden op uit DB (sessie → `gebruikersTable`)
+- `verrijkMetBevoegdheden()`: personeelsdocument zonder `personeel:1` → beperking; factuur zonder `financieel:1` → beperking; salarisgegevens gedetecteerd → impact hoog; hoofdbeheerder altijd vrijgesteld
+- `beperkingen[]` en `mag_uploaden` teruggegeven aan frontend; getoond in stap 0; bij `mag_uploaden: false` geen actieknop
+
+**Audit-log:**
+- DB-tabel `slim_upload_log` (id, gebruikerId, bestandsnaam, categorie, actie, impactNiveau, bevestigd, geweigerd, opmerking, ipAdres, aangemaaktOp)
+- `POST /api/slim-upload/log` — schrijft per actie (direct_gestart / later_klaargezet / geweigerd), async fire-and-forget vanuit `voerActieUit()`
+- `GET /api/slim-upload/log` — alleen hoofdbeheerder, joinT met gebruikersTable voor naam
+- Beheer › AI-log: nieuwe "Upload acties-log" kaart (lazy load via "Tonen"-knop), tabel met tijdstip/gebruiker/bestand/categorie/actie/impact/status
+
+**Technisch:**
+- `lib/db/src/schema/slim-upload-log.ts` aangemaakt, geëxporteerd via `index.ts`
+- `pnpm run typecheck:libs` uitgevoerd na schema-toevoeging
+- Tabel aangemaakt via directe `CREATE TABLE IF NOT EXISTS` SQL (drizzle push TTY-beperkt)
+- Pre-existing TS7030 in api-server onaangetast
+
 ## 2026-07-06 — Slim uploaden uitgebreid: CV-onboarding, verzekeringen, Snagstream
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** geen
