@@ -6,7 +6,7 @@ RUN corepack enable && corepack prepare pnpm@latest --activate
 
 WORKDIR /app
 
-# Stap 1: alleen manifesten kopiëren voor dependency-installatie
+# Stap 1: manifesten kopiëren vóór pnpm install (cache-laag)
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY tsconfig.base.json tsconfig.json ./
 
@@ -22,10 +22,8 @@ COPY lib/object-storage-web/package.json  lib/object-storage-web/
 COPY lib/object-storage-web/tsconfig.json lib/object-storage-web/
 COPY lib/permissies/package.json          lib/permissies/
 COPY lib/permissies/tsconfig.json         lib/permissies/
-
-# artifacts die nodig zijn voor de build
-COPY artifacts/api-server/package.json   artifacts/api-server/
-COPY artifacts/api-server/tsconfig.json  artifacts/api-server/
+COPY artifacts/api-server/package.json    artifacts/api-server/
+COPY artifacts/api-server/tsconfig.json   artifacts/api-server/
 
 # --ignore-scripts voorkomt dat pnpm 'prepare: tsc --build' uitvoert
 # voor lib/api-client-react terwijl de bronbestanden er nog niet zijn
@@ -35,11 +33,17 @@ RUN pnpm install --frozen-lockfile --ignore-scripts
 COPY lib/ lib/
 COPY artifacts/api-server/ artifacts/api-server/
 
-# Stap 3: libs compileren (bouwt o.a. lib/api-client-react)
+# Stap 3: libs compileren (bouwt o.a. lib/api-client-react declaraties)
 RUN pnpm run typecheck:libs
 
-# Stap 4: api-server bundelen
+# Stap 4: api-server bundelen via esbuild
 RUN pnpm --filter @workspace/api-server run build
+
+# Stap 5: pnpm deploy maakt een schone, symlink-vrije productie-node_modules.
+# Dit is de aanbevolen aanpak voor pnpm-workspaces in Docker: alle runtime-
+# dependencies worden correct opgelost zonder afhankelijkheid van de
+# virtuele store-symlinks die bij COPY --from=builder kapot kunnen gaan.
+RUN pnpm deploy --filter @workspace/api-server --prod /app/deploy
 
 FROM node:24-slim AS runtime
 
@@ -47,7 +51,7 @@ RUN addgroup --system fps && adduser --system --ingroup fps fps
 WORKDIR /app
 
 COPY --from=builder /app/artifacts/api-server/dist ./dist
-COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/deploy/node_modules ./node_modules
 
 USER fps
 
