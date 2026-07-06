@@ -11,6 +11,7 @@ import {
   medewerkersTable,
   gebouwenTable,
   eenheidsprijzenTable,
+  facturenTable,
 } from "@workspace/db";
 import { logger } from "../lib/logger";
 import { randomUUID } from "crypto";
@@ -41,7 +42,7 @@ router.post(
       if (!req.file) return void res.status(400).json({ error: "Geen bestand ontvangen" });
 
       const type = String(req.body.type ?? "").trim();
-      const geldige = ["leveranciers", "klanten", "artikelen", "projecten", "medewerkers", "gebouwen", "contactpersonen", "magazijn_artikelen", "eenheidsprijzen"];
+      const geldige = ["leveranciers", "klanten", "artikelen", "projecten", "medewerkers", "gebouwen", "contactpersonen", "magazijn_artikelen", "eenheidsprijzen", "historische_facturen", "historische_projecten"];
       if (!geldige.includes(type)) {
         return void res.status(400).json({ error: "Ongeldig importtype" });
       }
@@ -217,8 +218,33 @@ router.post("/import/uitvoeren", async (req, res): Promise<void> => {
           overgeslagen++;
         }
       }
+    } else if (type === "historische_facturen") {
+      for (let i = 0; i < rijen.length; i++) {
+        const rij = rijen[i]!;
+        try {
+          const values = koppelHistorischeFactuur(rij, kolomkoppeling);
+          if (!values.relatienaam && !values.factuurnummer) { overgeslagen++; continue; }
+          await db.insert(facturenTable).values(values);
+          verwerkt++;
+        } catch (err) {
+          fouten.push({ rij: i + 2, fout: err instanceof Error ? err.message : "Onbekende fout" });
+          overgeslagen++;
+        }
+      }
+    } else if (type === "historische_projecten") {
+      for (let i = 0; i < rijen.length; i++) {
+        const rij = rijen[i]!;
+        try {
+          const values = koppelHistorischProject(rij, kolomkoppeling);
+          if (!values.naam) { overgeslagen++; continue; }
+          await db.insert(gebouwenTable).values(values);
+          verwerkt++;
+        } catch (err) {
+          fouten.push({ rij: i + 2, fout: err instanceof Error ? err.message : "Onbekende fout" });
+          overgeslagen++;
+        }
+      }
     } else {
-      // projecten: toekomstige implementatie
       overgeslagen = rijen.length;
       fouten.push({ rij: 0, fout: `Import van '${type}' is nog niet beschikbaar in deze versie` });
     }
@@ -457,6 +483,50 @@ function koppelContactpersoon(rij: Record<string, string>, kop: Record<string, s
   };
 }
 
+function koppelHistorischeFactuur(rij: Record<string, string>, kop: Record<string, string>) {
+  const parseNum = (v: string) => {
+    const n = parseFloat(v.replace(/\./g, "").replace(",", "."));
+    return isNaN(n) ? null : String(n.toFixed(2));
+  };
+  const type = haal(rij, kop, "type") || "inkoop";
+  return {
+    type: (type === "verkoop" ? "verkoop" : "inkoop") as "inkoop" | "verkoop",
+    factuurnummer: haal(rij, kop, "factuurnummer") || null,
+    factuurdatum: haal(rij, kop, "factuurdatum") || null,
+    vervaldatum: haal(rij, kop, "vervaldatum") || null,
+    omschrijving: haal(rij, kop, "omschrijving") || null,
+    relatienaam: haal(rij, kop, "relatienaam") || haal(rij, kop, "leverancier") || haal(rij, kop, "klant") || null,
+    relatieCode: haal(rij, kop, "relatie_code") || haal(rij, kop, "debiteur_nr") || haal(rij, kop, "crediteur_nr") || null,
+    bedragExclBtw: parseNum(haal(rij, kop, "bedrag_excl_btw") || haal(rij, kop, "nettobedrag")),
+    btwBedrag: parseNum(haal(rij, kop, "btw_bedrag") || haal(rij, kop, "btw")),
+    bedragInclBtw: parseNum(haal(rij, kop, "bedrag_incl_btw") || haal(rij, kop, "brutobedrag") || haal(rij, kop, "totaal")),
+    btwCode: haal(rij, kop, "btw_code") || null,
+    grootboekrekening: haal(rij, kop, "grootboekrekening") || haal(rij, kop, "gbl") || null,
+    kostenplaats: haal(rij, kop, "kostenplaats") || null,
+    dagboek: haal(rij, kop, "dagboek") || null,
+    bestandsnaam: haal(rij, kop, "bestandsnaam") || null,
+    betaalstatus: haal(rij, kop, "betaalstatus") || "betaald",
+    status: "historisch",
+  };
+}
+
+function koppelHistorischProject(rij: Record<string, string>, kop: Record<string, string>) {
+  const aantVerdiepingen = parseInt(haal(rij, kop, "aantal_verdiepingen") || "0") || null;
+  return {
+    naam: haal(rij, kop, "naam") || haal(rij, kop, "projectnaam") || "Onbekend",
+    adres: haal(rij, kop, "adres") || haal(rij, kop, "straat") || "",
+    postcode: haal(rij, kop, "postcode") || null,
+    stad: haal(rij, kop, "stad") || haal(rij, kop, "plaats") || null,
+    werknummer: haal(rij, kop, "werknummer") || null,
+    projectnummer: haal(rij, kop, "projectnummer") || null,
+    omschrijving: haal(rij, kop, "omschrijving") || haal(rij, kop, "toelichting") || null,
+    gebouwType: haal(rij, kop, "gebouw_type") || haal(rij, kop, "type") || null,
+    aantalVerdiepingen: aantVerdiepingen,
+    projectStatus: "historisch",
+    gearchiveerd: false,
+  };
+}
+
 // ── GET /import/template/:type ─────────────────────────────────────────────────
 router.get("/import/template/:type", (req, res) => {
   const type = req.params.type;
@@ -470,6 +540,8 @@ router.get("/import/template/:type", (req, res) => {
     contactpersonen: ["naam", "functie", "email", "telefoon", "mobiel", "beslisrol", "opmerkingen"],
     magazijn_artikelen: ["naam", "code", "omschrijving", "eenheid", "inkoopprijs", "categorie"],
     eenheidsprijzen: ["code", "omschrijving", "categorie", "eenheid", "materiaalcomponent", "arbeidscomponent", "normtijd", "kostprijs", "verkoopprijs", "marge", "btw_code", "inclusies", "exclusies", "opmerkingen"],
+    historische_facturen: ["factuurnummer", "type", "factuurdatum", "vervaldatum", "relatienaam", "relatie_code", "bedrag_excl_btw", "btw_bedrag", "bedrag_incl_btw", "btw_code", "grootboekrekening", "kostenplaats", "dagboek", "betaalstatus", "omschrijving", "bestandsnaam"],
+    historische_projecten: ["naam", "werknummer", "projectnummer", "adres", "postcode", "stad", "gebouw_type", "aantal_verdiepingen", "omschrijving"],
   };
 
   const kolommen = TEMPLATE_KOLOMMEN[type];

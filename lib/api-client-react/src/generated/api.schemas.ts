@@ -11581,6 +11581,7 @@ export type ListFacturenParams = {
 status?: string;
 type?: string;
 klaar_voor_export?: boolean;
+bron?: string;
 };
 
 export type GetFactuurUploadUrl200 = {

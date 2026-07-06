@@ -18,7 +18,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Receipt, Upload, Sparkles, Eye, Trash2, Loader2, Plus, AlertCircle,
-  CheckCircle2, Clock, ArrowUpRight, XCircle, Ban, ChevronRight,
+  CheckCircle2, Clock, ArrowUpRight, XCircle, Ban, ChevronRight, FileDown, Archive,
 } from "lucide-react";
 import type { Factuur } from "@workspace/api-client-react";
 
@@ -70,6 +70,7 @@ export default function FacturenPagina() {
   const [uploadBezig, setUploadBezig] = useState(false);
   const [aiBezig, setAiBezig] = useState<number | null>(null);
 
+  const isHistorischTab = tab === "historisch";
   const statusFilter = tab === "alle" ? undefined : tab;
   const { data: facturen = [], isLoading } = useListFacturen(
     { ...(statusFilter ? { status: statusFilter } : {}) },
@@ -134,17 +135,31 @@ export default function FacturenPagina() {
       </div>
 
       {/* Status-tabs */}
-      <Tabs value={tab} onValueChange={setTab}>
-        <TabsList className="flex-wrap h-auto gap-1">
-          <TabsTrigger value="alle">Alle</TabsTrigger>
-          <TabsTrigger value="ontvangen">Ontvangen</TabsTrigger>
-          <TabsTrigger value="controle_nodig">Controle nodig</TabsTrigger>
-          <TabsTrigger value="klaar_voor_boeking">Klaar voor boeking</TabsTrigger>
-          <TabsTrigger value="klaar_voor_accountview">Exportklaar</TabsTrigger>
-          <TabsTrigger value="verwerkt">Verwerkt</TabsTrigger>
-          <TabsTrigger value="fout_bij_verzending">Fouten</TabsTrigger>
-        </TabsList>
-      </Tabs>
+      <div className="flex items-center justify-between gap-4">
+        <Tabs value={tab} onValueChange={setTab}>
+          <TabsList className="flex-wrap h-auto gap-1">
+            <TabsTrigger value="alle">Alle</TabsTrigger>
+            <TabsTrigger value="ontvangen">Ontvangen</TabsTrigger>
+            <TabsTrigger value="controle_nodig">Controle nodig</TabsTrigger>
+            <TabsTrigger value="klaar_voor_boeking">Klaar voor boeking</TabsTrigger>
+            <TabsTrigger value="klaar_voor_accountview">Exportklaar</TabsTrigger>
+            <TabsTrigger value="verwerkt">Verwerkt</TabsTrigger>
+            <TabsTrigger value="fout_bij_verzending">Fouten</TabsTrigger>
+            <TabsTrigger value="historisch" className="gap-1.5">
+              <Archive className="h-3.5 w-3.5" />
+              Historisch archief
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+        {isHistorischTab && (
+          <a href="/api/facturen/historisch-archief/excel" download>
+            <Button size="sm" variant="outline">
+              <FileDown className="h-3.5 w-3.5 mr-1.5" />
+              Exporteren als Excel
+            </Button>
+          </a>
+        )}
+      </div>
 
       {/* Tabel */}
       {isLoading ? (

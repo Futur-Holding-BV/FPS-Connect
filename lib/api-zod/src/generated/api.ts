@@ -18700,12 +18700,19 @@ export const UpdateAccountviewInstellingenResponse = zod.object({
 
 
 /**
+ * @summary Historisch factuurarchief downloaden als Excel
+ */
+export const DownloadHistorischeFacturenExcelResponse = zod.unknown()
+
+
+/**
  * @summary Facturen ophalen
  */
 export const ListFacturenQueryParams = zod.object({
   "status": zod.coerce.string().optional(),
   "type": zod.coerce.string().optional(),
-  "klaar_voor_export": zod.coerce.boolean().optional()
+  "klaar_voor_export": zod.coerce.boolean().optional(),
+  "bron": zod.coerce.string().optional()
 })
 
 export const ListFacturenResponseItem = zod.object({

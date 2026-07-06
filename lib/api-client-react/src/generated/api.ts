@@ -53381,6 +53381,83 @@ export const useUpdateAccountviewInstellingen = <TError = ErrorType<unknown>,
       return useMutation(getUpdateAccountviewInstellingenMutationOptions(options));
     }
 
+export const getDownloadHistorischeFacturenExcelUrl = () => {
+
+
+
+
+  return `/api/facturen/historisch-archief/excel`
+}
+
+/**
+ * @summary Historisch factuurarchief downloaden als Excel
+ */
+export const downloadHistorischeFacturenExcel = async ( options?: RequestInit): Promise<Blob> => {
+
+  return customFetch<Blob>(getDownloadHistorischeFacturenExcelUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getDownloadHistorischeFacturenExcelQueryKey = () => {
+    return [
+    `/api/facturen/historisch-archief/excel`
+    ] as const;
+    }
+
+
+export const getDownloadHistorischeFacturenExcelQueryOptions = <TData = Awaited<ReturnType<typeof downloadHistorischeFacturenExcel>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof downloadHistorischeFacturenExcel>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getDownloadHistorischeFacturenExcelQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof downloadHistorischeFacturenExcel>>> = ({ signal }) => downloadHistorischeFacturenExcel({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof downloadHistorischeFacturenExcel>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type DownloadHistorischeFacturenExcelQueryResult = NonNullable<Awaited<ReturnType<typeof downloadHistorischeFacturenExcel>>>
+export type DownloadHistorischeFacturenExcelQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Historisch factuurarchief downloaden als Excel
+ */
+
+export function useDownloadHistorischeFacturenExcel<TData = Awaited<ReturnType<typeof downloadHistorischeFacturenExcel>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof downloadHistorischeFacturenExcel>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getDownloadHistorischeFacturenExcelQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
 export const getListFacturenUrl = (params?: ListFacturenParams,) => {
   const normalizedParams = new URLSearchParams();
 

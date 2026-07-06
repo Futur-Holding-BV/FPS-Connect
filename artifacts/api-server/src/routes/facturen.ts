@@ -1,5 +1,6 @@
 import { Router } from "express";
 import type { Request, Response } from "express";
+import * as XLSX from "xlsx";
 import { FACTUUR_UITLEZEN_PROMPT } from "../lib/aiPrompts";
 import {
   db,
@@ -141,7 +142,6 @@ router.get("/facturen", requireBevoegdheid("financieel", 1), async (req: Request
   const statusFilter = req.query["status"] ? String(req.query["status"]) : null;
   const typeFilter = req.query["type"] ? String(req.query["type"]) : null;
   const klaarFilter = req.query["klaar_voor_export"] === "true";
-
   const conditions = [];
   if (statusFilter) conditions.push(eq(facturenTable.status, statusFilter));
   if (typeFilter) conditions.push(eq(facturenTable.type, typeFilter));
@@ -186,6 +186,41 @@ router.post("/facturen", requireBevoegdheid("financieel", 1), async (req: Reques
     status: "ontvangen",
   }).returning();
   res.status(201).json(await mapFactuur(rij));
+});
+
+// ── GET /facturen/historisch-archief/excel ─────────────────────────────────────
+router.get("/facturen/historisch-archief/excel", requireBevoegdheid("financieel", 1), async (_req: Request, res: Response): Promise<void> => {
+  const rijen = await db.select().from(facturenTable)
+    .where(eq(facturenTable.status, "historisch"))
+    .orderBy(desc(facturenTable.factuurdatum));
+
+  const data = rijen.map((r) => ({
+    Factuurnummer: r.factuurnummer ?? "",
+    Type: r.type,
+    Factuurdatum: r.factuurdatum ?? "",
+    Vervaldatum: r.vervaldatum ?? "",
+    Relatienaam: r.relatienaam ?? "",
+    RelatieCode: r.relatieCode ?? "",
+    "Bedrag excl. btw": r.bedragExclBtw ?? "",
+    "Btw-bedrag": r.btwBedrag ?? "",
+    "Bedrag incl. btw": r.bedragInclBtw ?? "",
+    "Btw-code": r.btwCode ?? "",
+    Grootboekrekening: r.grootboekrekening ?? "",
+    Kostenplaats: r.kostenplaats ?? "",
+    Dagboek: r.dagboek ?? "",
+    Betaalstatus: r.betaalstatus ?? "",
+    Omschrijving: r.omschrijving ?? "",
+    Bestandsnaam: r.bestandsnaam ?? "",
+  }));
+
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.json_to_sheet(data);
+  XLSX.utils.book_append_sheet(wb, ws, "Historische facturen");
+  const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+
+  res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+  res.setHeader("Content-Disposition", "attachment; filename=\"historische_facturen_archief.xlsx\"");
+  res.send(buf);
 });
 
 // ── GET /facturen/:id ──────────────────────────────────────────────────────────

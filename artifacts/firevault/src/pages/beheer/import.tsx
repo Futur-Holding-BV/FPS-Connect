@@ -9,7 +9,7 @@ import { PaginaHulp } from "@/components/pagina-hulp";
 import { formatDistanceToNow } from "date-fns";
 import { nl } from "date-fns/locale";
 
-type ImportType = "leveranciers" | "klanten" | "artikelen" | "medewerkers" | "gebouwen" | "contactpersonen" | "magazijn_artikelen";
+type ImportType = "leveranciers" | "klanten" | "artikelen" | "medewerkers" | "gebouwen" | "contactpersonen" | "magazijn_artikelen" | "historische_facturen" | "historische_projecten";
 
 const IMPORT_TYPE_LABELS: Record<ImportType, string> = {
   leveranciers: "Leveranciers",
@@ -19,6 +19,8 @@ const IMPORT_TYPE_LABELS: Record<ImportType, string> = {
   gebouwen: "Gebouwen",
   contactpersonen: "Contactpersonen",
   magazijn_artikelen: "Magazijnartikelen",
+  historische_facturen: "Historische facturen (archief)",
+  historische_projecten: "Historische projecten (archief)",
 };
 
 // Beschikbare velden per importtype
@@ -111,6 +113,35 @@ const VELD_DEFINITIES: Record<ImportType, { veld: string; label: string; verplic
     { veld: "eenheid", label: "Eenheid (st/m/m2/rol)" },
     { veld: "inkoopprijs", label: "Inkoopprijs" },
     { veld: "categorie", label: "Categorie" },
+  ],
+  historische_facturen: [
+    { veld: "factuurnummer", label: "Factuurnummer", verplicht: true },
+    { veld: "type", label: "Type (inkoop / verkoop)" },
+    { veld: "factuurdatum", label: "Factuurdatum (JJJJ-MM-DD)" },
+    { veld: "vervaldatum", label: "Vervaldatum (JJJJ-MM-DD)" },
+    { veld: "relatienaam", label: "Leverancier / klant naam" },
+    { veld: "relatie_code", label: "Relatienummer / debiteur- of crediteurcode" },
+    { veld: "bedrag_excl_btw", label: "Bedrag excl. btw" },
+    { veld: "btw_bedrag", label: "Btw-bedrag" },
+    { veld: "bedrag_incl_btw", label: "Bedrag incl. btw" },
+    { veld: "btw_code", label: "Btw-code (H/L/0)" },
+    { veld: "grootboekrekening", label: "Grootboekrekening (GBL)" },
+    { veld: "kostenplaats", label: "Kostenplaats" },
+    { veld: "dagboek", label: "Dagboek" },
+    { veld: "betaalstatus", label: "Betaalstatus (betaald / openstaand / deels_betaald)" },
+    { veld: "omschrijving", label: "Omschrijving / referentie" },
+    { veld: "bestandsnaam", label: "Bestandsnaam PDF (optioneel)" },
+  ],
+  historische_projecten: [
+    { veld: "naam", label: "Projectnaam", verplicht: true },
+    { veld: "werknummer", label: "Werknummer" },
+    { veld: "projectnummer", label: "Projectnummer" },
+    { veld: "adres", label: "Adres" },
+    { veld: "postcode", label: "Postcode" },
+    { veld: "stad", label: "Stad / Plaats" },
+    { veld: "gebouw_type", label: "Gebouwtype" },
+    { veld: "aantal_verdiepingen", label: "Aantal verdiepingen" },
+    { veld: "omschrijving", label: "Omschrijving / toelichting" },
   ],
 };
 

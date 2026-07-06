@@ -4,6 +4,34 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-06 — Import historische facturen en projecten (ERP-archief)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** geen
+
+**Wat is gebouwd:**
+
+Twee nieuwe importtypes voor het inladen van historische ERP-exportdata, plus een doorzoekbaar en downloadbaar archief in de factuurmodule.
+
+**Import (Beheer → Importeren):**
+- Nieuw type `Historische facturen (archief)` — importeert inkoop- en verkoopfacturen uit ERP-exportbestanden (Excel/CSV); velden: factuurnummer, type, factuurdatum, vervaldatum, relatienaam, relatienummer, bedragen, btw-code, grootboekrekening, kostenplaats, dagboek, betaalstatus, omschrijving. Status wordt automatisch `historisch` zodat ze apart filteren.
+- Nieuw type `Historische projecten (archief)` — importeert project-/gebouwgegevens: naam, werknummer, projectnummer, adres, postcode, stad, gebouwtype, verdiepingen, omschrijving. Worden opgeslagen in de gebouwentabel met `projectStatus = historisch`.
+- Slimme kolomherkenning: meerdere ERP-kolomnamen worden herkend (bijv. `leverancier` / `klant` → `relatienaam`, `gbl` → `grootboekrekening`, `crediteur_nr` / `debiteur_nr` → `relatie_code`).
+- Downloadbare lege sjablonen voor beide types (via "Sjabloon downloaden"-knop in de wizard).
+
+**Archief raadplegen (Factuurverwerking → Historisch archief):**
+- Nieuw tabblad "Historisch archief" in `Factuurverwerking` — toont alleen de geïmporteerde historische facturen, gefilterd op `status = historisch`.
+- Knop "Exporteren als Excel" verschijnt automatisch op het historisch-archieftabblad en genereert een compleet Excel-overzicht van alle historische facturen (`GET /facturen/historisch-archief/excel`).
+
+**Historische projecten raadplegen:**
+- Verschijnen in de reguliere gebouwenlijst (filter op projectstatus "historisch" mogelijk).
+
+**Gewijzigde bestanden:**
+- `artifacts/api-server/src/routes/import.ts` — twee nieuwe handlers + mapper-functies + sjabloonkolommen + `facturenTable` import
+- `artifacts/api-server/src/routes/facturen.ts` — XLSX import + nieuw `GET /facturen/historisch-archief/excel` endpoint
+- `artifacts/firevault/src/pages/beheer/import.tsx` — twee nieuwe importtypes met volledige veldkoppelingen in de wizard
+- `artifacts/firevault/src/pages/facturen/index.tsx` — "Historisch archief" tab + Excel-downloadknop
+- `lib/api-spec/openapi.yaml` — nieuw `GET /facturen/historisch-archief/excel` endpoint toegevoegd
+
 ## 2026-07-05 — Borging stale codegen-declaraties
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** geen
