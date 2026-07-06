@@ -8,6 +8,7 @@ connect.fps-one.nl {
         Referrer-Policy strict-origin-when-cross-origin
     }
 
+    # API-verzoeken doorsluizen naar de backend
     handle /api/* {
         reverse_proxy api:8080 {
             header_up X-Real-IP {remote_host}
@@ -18,38 +19,19 @@ connect.fps-one.nl {
         }
     }
 
-    handle /assets/* {
-        root * /srv/public
-        file_server {
-            precompressed gzip br
-        }
+    # Statische bestanden serveren vanuit /srv/public.
+    # file_server levert het bestand als het bestaat, of geeft 404.
+    # Geen file-existence check nodig: handle_errors vangt de 404 op
+    # en serveert index.html voor SPA client-side routing.
+    root * /srv/public
+
+    file_server {
+        precompressed gzip br
     }
 
-    handle /icons/* {
+    handle_errors 404 {
         root * /srv/public
-        file_server {
-            precompressed gzip br
-        }
-    }
-
-    handle /favicon* {
-        root * /srv/public
-        file_server
-    }
-
-    handle /manifest* {
-        root * /srv/public
-        file_server
-    }
-
-    handle /sw.js {
-        root * /srv/public
-        file_server
-    }
-
-    handle {
-        root * /srv/public
-        try_files {path} /index.html
+        rewrite * /index.html
         file_server
     }
 }
