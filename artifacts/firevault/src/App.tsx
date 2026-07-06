@@ -166,6 +166,8 @@ import SecurityIntakePagina from "@/pages/beheer/security-intake";
 import AiPromptGovernance from "@/pages/beheer/ai-prompt-governance";
 import SecurityValidation from "@/pages/beheer/security-validation";
 import ReleaseReadiness from "@/pages/beheer/release-readiness";
+import KantoorReleaseDashboard from "@/pages/beheer/kantoor-release";
+import ReleaseNotesPagina from "@/pages/release-notes";
 import BoekhoudingBeheer from "@/pages/beheer/boekhouding";
 import GoLivePagina from "@/pages/beheer/go-live";
 import BedrijfskompasPage from "@/pages/beheer/bedrijfskompas";
@@ -514,6 +516,8 @@ function ConnectPortal() {
         <Route path="/beheer/ai-governance" component={AiPromptGovernance} />
         <Route path="/beheer/security-validation" component={SecurityValidation} />
         <Route path="/beheer/release-readiness" component={ReleaseReadiness} />
+        <Route path="/beheer/kantoor-release" component={KantoorReleaseDashboard} />
+        <Route path="/release-notes" component={ReleaseNotesPagina} />
         <Route path="/beheer/privacy" component={BeheerPrivacy} />
         <Route path="/beheer/avg" component={AvgBeheer} />
         <Route path="/beheer/gebouwen-archief" component={GebouwenArchiefBeheer} />

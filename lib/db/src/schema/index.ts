@@ -64,3 +64,4 @@ export * from "./security-intake";
 export * from "./ai-governance";
 export * from "./security-validation";
 export * from "./cqo";
+export * from "./kantoor-release";

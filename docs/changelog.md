@@ -4,6 +4,39 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-06 — Kantoor Release v1.0.0 — Volledig releaseproces
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** geen
+
+**Wat is gebouwd:**
+
+Compleet releaseproces voor FPS Connect kantoorversies: versie-registratie, acceptatiechecklist, releasenotes, rollback en een kantoor release dashboard. Geen nieuwe functionaliteit — uitsluitend het releaseproces zelf.
+
+**DB-schema (2 nieuwe tabellen):**
+- `kantoor_releases` — versie-registratie met 6 acceptatiechecks (build, tests, readiness, db, notes, kritiek), status (concept/vrijgegeven/teruggedraaid/vervangen), vrijgave-metadata en rollback-keten (`vorige_versie_id`)
+- `release_update_notes` — releasenotes per versie (toegevoegd, verbeterd, opgelost, beveiliging, bekende problemen, instructies)
+- Geseed met v1.0.0 als actieve release: alle 6 acceptatiechecks groen, status vrijgegeven
+
+**API (7 endpoints — `/api/kantoor-release/*`):**
+- `GET /actief` — geeft actieve versie + notes terug (alle ingelogde gebruikers)
+- `GET /releases` — lijst alle versies (alleen hoofdbeheerder)
+- `GET /releases/:id` — detail + notes per versie (alleen hoofdbeheerder)
+- `POST /releases` — nieuwe release aanmaken (concept-status)
+- `PATCH /releases/:id` — checks bijwerken + notes opslaan
+- `POST /releases/:id/vrijgeven` — gecontroleerde vrijgave; blokkeert als een check niet groen is (409)
+- `POST /releases/:id/rollback` — herstelt een eerdere versie als actief
+
+**Frontend:**
+- `/beheer/kantoor-release` — admin release dashboard (alleen hoofdbeheerder): actieve versie-banner, acceptatiechecklist, releasenotes-sectie, versiegeschiedenis met rollback-knop
+- `/release-notes` — gebruikersscherm "Wat is nieuw?" (alle ingelogde gebruikers): actieve versie met gestructureerde releasenotes
+- "Wat is nieuw?"-knop in de sidebar-footer van elke kantoorgebruiker (beheerder-layout)
+- "Kantoor Release"-nav-item in het Beheer-gedeelte (Package-icoon, na Release Readiness)
+
+**Vrijgave-blokkade:**
+Alle 6 checks (build/tests/readiness/db/notes/kritiek) moeten groen zijn vóór vrijgave; anders 409 met details over de ontbrekende checks.
+
+---
+
 ## 2026-07-06 — Release Readiness & AI Chief Quality Officer (CQO)
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** geen

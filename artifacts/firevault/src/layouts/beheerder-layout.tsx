@@ -1621,6 +1621,16 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                               </SidebarMenuButton>
                             </SidebarMenuItem>
                           )}
+                          {isHoofdbeheerder && (
+                            <SidebarMenuItem className="pl-5">
+                              <SidebarMenuButton asChild isActive={location === "/beheer/kantoor-release"}>
+                                <Link href="/beheer/kantoor-release">
+                                  <Package />
+                                  <span>Kantoor Release</span>
+                                </Link>
+                              </SidebarMenuButton>
+                            </SidebarMenuItem>
+                          )}
                           <SidebarMenuItem className="pl-5">
                             <SidebarMenuButton asChild isActive={location === "/beheer/visual-library"}>
                               <Link href="/beheer/visual-library">
@@ -1816,6 +1826,16 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
 
         <SidebarFooter>
           <PwaInstalleerKnop />
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild isActive={location === "/release-notes"}>
+                <Link href="/release-notes">
+                  <Package />
+                  <span>Wat is nieuw?</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
           <GebruikerMenu />
         </SidebarFooter>
       </Sidebar>
