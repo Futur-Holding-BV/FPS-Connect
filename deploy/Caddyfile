@@ -21,39 +21,16 @@ connect.fps-one.nl {
 
     root * /srv/public
 
-    # Statische bestanden rechtstreeks serveren — GEEN SPA-fallback.
-    # Als een bestand niet bestaat geeft Caddy 404 (correct); nooit index.html.
-    handle /assets/* {
-        file_server {
-            precompressed gzip br
-        }
+    # SPA-fallback: alleen toepassen als het gevraagde pad GEEN bestand is.
+    # Statische assets (/assets/*, /icons/*, /favicon*, enz.) bestaan als bestand
+    # en worden direct geserveerd. Client-side routes bestaan niet als bestand
+    # en worden herschreven naar /index.html.
+    @spa {
+        not file
     }
-    handle /icons/* {
-        file_server {
-            precompressed gzip br
-        }
-    }
-    handle /favicon* {
-        file_server {
-            precompressed gzip br
-        }
-    }
-    handle /manifest* {
-        file_server {
-            precompressed gzip br
-        }
-    }
-    handle /sw.js {
-        file_server {
-            precompressed gzip br
-        }
-    }
+    rewrite @spa /index.html
 
-    # SPA-fallback voor alle overige routes (client-side routing)
-    handle {
-        try_files {path} /index.html
-        file_server {
-            precompressed gzip br
-        }
+    file_server {
+        precompressed gzip br
     }
 }
