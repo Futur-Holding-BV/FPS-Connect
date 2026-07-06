@@ -4,6 +4,56 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-06 — AI Governance & Risk Engine: risicoscoring, goedkeuringswachtrij, audittrail, beheer-UI
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** geen
+
+**Wat is gebouwd:**
+
+Centrale Governance & Risk Engine die automatisch iedere schrijfactie (POST/PATCH/PUT/DELETE) in het platform beoordeelt via een regels-gebaseerde risicoscore.
+
+**Risicoscoring (synchroon, per request):**
+- Methodescore: DELETE +30, PATCH/PUT +8, POST +4
+- Domeinbonussen: salarisgegevens +45, HRM +38, contracten/offertes/projecten/dossiers +34–36, definitief/archief +42, bulk/import +40, facturen +28, etc.
+- Kritieke routes (hardcoded 90+): DELETE /gebouwen/:id, DELETE /gebruikers/:id, POST /backups/:id/herstel
+- Niveaus: groen (0–25), geel (26–45), oranje (46–65), rood (66–84), kritiek (85+)
+
+**Blokkeergedrag:**
+- Groen/geel/oranje/rood: request gaat door, wordt gelogd (rood + wachtrij-entry)
+- Kritiek + niet-hoofdbeheerder: HTTP 403 met `code: GOVERNANCE_GEBLOKKEERD` en motivatietekst
+- Hoofdbeheerder is nooit geblokkeerd
+
+**Middleware (universeel, nul codewijzigingen aan routes):**
+- `governanceMiddleware` toegevoegd in routes/index.ts na `maakAuditMiddleware()` — dekt alle 722+ schrijfoperaties automatisch
+- Uitgesloten: auth-routes, governance-eigen routes, slim-upload-log
+
+**DB (twee nieuwe tabellen, directe SQL):**
+- `governance_checks` — immutable audit trail: gebruiker, methode, route, niveau, score, motivatie, factoren, afhandeling, geblokkeerd
+- `governance_wachtrij` — goedkeuringswachtrij: status wacht/ter_beoordeling/goedgekeurd/afgewezen, vereist_rol, goedgekeurd_door
+
+**Backend-routes (/api/governance/*):**
+- `GET /governance/dashboard` — vandaag-statistieken per niveau + wachtrij-teller
+- `GET /governance/checks` — pagineerde audit-log met filters (niveau, zoek, datum)
+- `GET /governance/wachtrij` — wachtrij-items (gefilterd op status)
+- `POST /governance/wachtrij/:id/goedkeuren` — goedkeuren met opmerking
+- `POST /governance/wachtrij/:id/afwijzen` — afwijzen met opmerking
+- `GET /governance/statistieken` — module-rapportage (30 dagen)
+- Alles achter `alleenHoofdbeheerder` guard
+
+**Beheer-UI (/beheer/governance-risico):**
+- Dashboard-tab: risico-niveau kaarten (groen t/m kritiek, vandaag-tel), geblokkeerde acties, wachtrij-teller, recente activiteitentabel
+- Wachtrij-tab: status-filter, tabel met aanvrager/methode/route/niveau/motivatie, Akkoord/Afwijzen knoppen met bevestigingsdialoog + opmerkingsveld
+- Audit-tab: zoek op route, filter op niveau, paginering
+- Alleen zichtbaar voor hoofdbeheerder (nav + route)
+
+**Bestanden:**
+- nieuw: `lib/db/src/schema/governance.ts`
+- nieuw: `artifacts/api-server/src/services/governance-engine.ts`
+- nieuw: `artifacts/api-server/src/middlewares/governance.ts`
+- nieuw: `artifacts/api-server/src/routes/governance.ts`
+- nieuw: `artifacts/firevault/src/pages/beheer/governance.tsx`
+- gewijzigd: `lib/db/src/schema/index.ts`, `artifacts/api-server/src/routes/index.ts`, `artifacts/firevault/src/App.tsx`, `artifacts/firevault/src/layouts/beheerder-layout.tsx`
+
 ## 2026-07-06 — SlimUploadBalk herontwerp: meerstappenflow, impactbeoordeling, toegangscontrole, audit-log
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** geen

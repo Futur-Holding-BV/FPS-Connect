@@ -87,6 +87,8 @@ import visualsRouter from "./visuals";
 import { requireAuth, laadPermissies } from "../middlewares/auth";
 import { meldActief } from "../lib/online-tracker";
 import { maakAuditMiddleware } from "../lib/audit";
+import { governanceMiddleware } from "../middlewares/governance";
+import governanceRouter from "./governance";
 import auditRouter from "./audit";
 import objectRechtenRouter from "./object-rechten";
 import aiLogRouter from "./ai-log";
@@ -107,6 +109,8 @@ router.use(requireAuth);
 router.use(laadPermissies);
 // Universele audit trail — onderschept alle muterende requests
 router.use(maakAuditMiddleware());
+// AI Governance & Risk Engine — beoordeelt iedere schrijfactie, blokkeert kritieke operaties
+router.use(governanceMiddleware);
 // Online-aanwezigheid bijhouden (debounced, fire-and-forget)
 router.use((req, _res, next) => {
   const uid = req.session?.userId;
@@ -197,6 +201,7 @@ router.use(kbRouter);
 router.use(visualsRouter);
 router.use(auditRouter);
 router.use(objectRechtenRouter);
+router.use(governanceRouter);
 router.use(aiLogRouter);
 router.use(avgRouter);
 router.use(visualLibraryRouter);
