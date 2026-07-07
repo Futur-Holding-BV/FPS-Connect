@@ -284,3 +284,20 @@
   0%, 100% { transform: scaleY(0.4); }
   50%       { transform: scaleY(1); }
 }
+
+/* ── Login-pagina animaties ──────────────────────────────────────────────── */
+@keyframes fps-fadeup {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fps-pulse {
+  0%, 100% { opacity: 0.10; transform: scale(1); }
+  50%       { opacity: 0.16; transform: scale(1.08); }
+}
