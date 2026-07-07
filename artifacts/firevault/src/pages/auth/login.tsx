@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { Loader2, KeyRound, ArrowLeft, Eye, EyeOff } from "lucide-react";
+import { Loader2, KeyRound, ArrowLeft, Eye, EyeOff, Globe, ChevronDown } from "lucide-react";
 import {
   login,
   tweeFactorSetup,
@@ -9,16 +9,8 @@ import {
   taalWijzigen,
   type TweeFactorSetup,
 } from "@workspace/api-client-react";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import {
   InputOTP,
   InputOTPGroup,
@@ -30,6 +22,141 @@ import { useToast } from "@/hooks/use-toast";
 import { TALEN } from "@/i18n/talen";
 
 type Stap = "inloggen" | "setup" | "verify";
+
+function TaalSelector({
+  taal,
+  zetTaal,
+  onKeuze,
+}: {
+  taal: string;
+  zetTaal: (code: string, persist?: boolean) => void;
+  onKeuze: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const huidig = TALEN.find((t) => t.code === taal) ?? TALEN[0];
+
+  useEffect(() => {
+    function klik(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", klik);
+    return () => document.removeEventListener("mousedown", klik);
+  }, []);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-white/70 transition-all hover:border-white/20 hover:bg-white/8 hover:text-white focus:outline-none focus:ring-2 focus:ring-[#F23B0D]/50"
+        aria-label="Taal selecteren"
+        aria-expanded={open}
+        aria-haspopup="listbox"
+      >
+        <Globe className="h-3.5 w-3.5" />
+        <span className="text-base leading-none">{huidig.vlag}</span>
+        <span className="hidden sm:inline">{huidig.naam}</span>
+        <ChevronDown
+          className={`h-3 w-3 transition-transform ${open ? "rotate-180" : ""}`}
+        />
+      </button>
+
+      {open && (
+        <div
+          role="listbox"
+          aria-label="Taal kiezen"
+          className="absolute right-0 z-50 mt-1.5 min-w-[160px] rounded-xl border border-white/10 bg-[#111827]/95 py-1 shadow-xl backdrop-blur-xl"
+        >
+          {TALEN.map((item) => (
+            <button
+              key={item.code}
+              role="option"
+              aria-selected={taal === item.code}
+              type="button"
+              onClick={() => {
+                zetTaal(item.code, true);
+                onKeuze();
+                setOpen(false);
+              }}
+              className={`flex w-full items-center gap-2.5 px-3 py-2 text-sm transition-colors hover:bg-white/8 ${
+                taal === item.code
+                  ? "text-white bg-[#F23B0D]/15"
+                  : "text-white/70"
+              }`}
+            >
+              <span className="text-base leading-none">{item.vlag}</span>
+              <span>{item.naam}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AchtergrondCanvas() {
+  return (
+    <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden="true">
+      {/* Basis gradient */}
+      <div className="absolute inset-0 bg-[#080d1a]" />
+
+      {/* Subtiel grid */}
+      <div
+        className="absolute inset-0 opacity-[0.035]"
+        style={{
+          backgroundImage:
+            "linear-gradient(rgba(255,255,255,1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,1) 1px, transparent 1px)",
+          backgroundSize: "64px 64px",
+        }}
+      />
+
+      {/* Lichtaccent boven-rechts — primaire tint */}
+      <div
+        className="absolute -right-32 -top-32 h-[600px] w-[600px] animate-[fps-pulse_8s_ease-in-out_infinite] rounded-full opacity-[0.10]"
+        style={{
+          background:
+            "radial-gradient(circle at center, #F23B0D 0%, #ff6b35 30%, transparent 70%)",
+        }}
+      />
+
+      {/* Lichtaccent midden-links — koelblauw */}
+      <div
+        className="absolute -left-24 top-1/3 h-[480px] w-[480px] animate-[fps-pulse_11s_ease-in-out_infinite_2s] rounded-full opacity-[0.07]"
+        style={{
+          background:
+            "radial-gradient(circle at center, #3b7bf5 0%, #1e40af 40%, transparent 70%)",
+        }}
+      />
+
+      {/* Lichtaccent onder */}
+      <div
+        className="absolute bottom-0 left-1/2 h-[320px] w-[640px] -translate-x-1/2 opacity-[0.06]"
+        style={{
+          background:
+            "radial-gradient(ellipse at top, #3b7bf5 0%, transparent 70%)",
+        }}
+      />
+
+      {/* Architectuurlijnen — diagonale streep */}
+      <svg
+        className="absolute inset-0 h-full w-full opacity-[0.04]"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <defs>
+          <pattern id="fps-lines" x="0" y="0" width="200" height="200" patternUnits="userSpaceOnUse">
+            <line x1="0" y1="200" x2="200" y2="0" stroke="white" strokeWidth="0.5" />
+            <line x1="-100" y1="200" x2="100" y2="0" stroke="white" strokeWidth="0.5" />
+            <line x1="100" y1="200" x2="300" y2="0" stroke="white" strokeWidth="0.5" />
+          </pattern>
+        </defs>
+        <rect width="100%" height="100%" fill="url(#fps-lines)" />
+      </svg>
+    </div>
+  );
+}
 
 export default function LoginPagina() {
   const { herlaad } = useAuth();
@@ -98,9 +225,6 @@ export default function LoginPagina() {
       setFout(t("auth.foutCode"));
       setCode("");
     } finally {
-      // Reset zodat het scherm niet bevroren achterblijft als de auth-refresh
-      // mislukt of vertraagd is. Bij succes is de component al unmount door
-      // herlaad() → isAuthenticated=true; de state-update is dan een no-op.
       setBezig(false);
     }
   }
@@ -122,190 +246,285 @@ export default function LoginPagina() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-900 to-slate-800 p-4">
-      <div className="w-full max-w-md">
-        <div className="flex flex-col items-center mb-6 text-center">
-          <div className="bg-white rounded-2xl shadow-lg px-6 py-3 mb-4">
-            <img src="/logo-fps-one.png" alt="FPS One" className="h-16 w-auto object-contain" />
-          </div>
-          <p className="text-sm text-slate-400">{t("auth.ondertitel")}</p>
+    <div className="relative min-h-screen flex items-center justify-center p-4">
+      <AchtergrondCanvas />
+
+      {/* Taalkeuzebalk — rechtsbovenin */}
+      {stap === "inloggen" && (
+        <div className="fixed right-4 top-4 z-20 sm:right-6 sm:top-6">
+          <TaalSelector
+            taal={taal}
+            zetTaal={zetTaal}
+            onKeuze={() => setTaalGekozen(true)}
+          />
+        </div>
+      )}
+
+      {/* Content */}
+      <div
+        className="relative z-10 w-full max-w-md animate-[fps-fadeup_0.5s_ease-out_both]"
+      >
+        {/* Logo + introductie */}
+        <div className="mb-8 flex flex-col items-center text-center">
+          <img
+            src="/logo-fps-one.png"
+            alt="FPS One"
+            className="mb-5 h-14 w-auto drop-shadow-[0_0_24px_rgba(242,59,13,0.4)] object-contain"
+          />
+          <p className="text-sm font-medium tracking-wide text-white/40 uppercase">
+            {t("auth.ondertitel")}
+          </p>
         </div>
 
-        {stap === "inloggen" && (
-          <div className="mb-4">
-            <p className="text-xs text-slate-400 text-center mb-2">{t("auth.taalKiezen")}</p>
-            <div className="flex flex-wrap justify-center gap-2">
-              {TALEN.map((item) => (
-                <button
-                  key={item.code}
-                  type="button"
-                  onClick={() => {
-                    zetTaal(item.code, true);
-                    setTaalGekozen(true);
-                  }}
-                  className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm transition-colors ${
-                    taal === item.code
-                      ? "border-primary bg-primary/15 text-white"
-                      : "border-slate-700 bg-slate-800/50 text-slate-300 hover:border-slate-500"
-                  }`}
-                >
-                  <span className="text-base leading-none">{item.vlag}</span>
-                  <span>{item.naam}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        <Card className="shadow-xl border-slate-200">
+        {/* Glassmorphism kaart */}
+        <div
+          className="rounded-2xl border border-white/[0.09] bg-white/[0.05] shadow-[0_8px_40px_rgba(0,0,0,0.5)] backdrop-blur-2xl"
+          style={{ WebkitBackdropFilter: "blur(24px)" }}
+        >
           {stap === "inloggen" && (
-            <>
-              <CardHeader>
-                <CardTitle>{t("auth.inloggenTitel")}</CardTitle>
-                <CardDescription>{t("auth.inloggenUitleg")}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={verstuurInloggen} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="email">{t("auth.email")}</Label>
+            <div className="p-7 sm:p-8">
+              <div className="mb-6">
+                <h1 className="text-xl font-semibold text-white">
+                  {t("auth.inloggenTitel")}
+                </h1>
+                <p className="mt-1 text-sm text-white/50">
+                  {t("auth.inloggenUitleg")}
+                </p>
+              </div>
+
+              <form onSubmit={verstuurInloggen} className="space-y-5">
+                <div className="space-y-1.5">
+                  <Label
+                    htmlFor="email"
+                    className="text-sm font-medium text-white/70"
+                  >
+                    {t("auth.email")}
+                  </Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    autoComplete="username"
+                    placeholder="naam@bedrijf.nl"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    className="border-white/10 bg-white/[0.07] text-white placeholder:text-white/25 focus-visible:border-[#F23B0D]/60 focus-visible:ring-[#F23B0D]/20 focus-visible:ring-2 transition-all"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label
+                    htmlFor="wachtwoord"
+                    className="text-sm font-medium text-white/70"
+                  >
+                    {t("auth.wachtwoord")}
+                  </Label>
+                  <div className="relative">
                     <Input
-                      id="email"
-                      type="email"
-                      autoComplete="username"
-                      placeholder="naam@bedrijf.nl"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
+                      id="wachtwoord"
+                      type={toonWachtwoord ? "text" : "password"}
+                      autoComplete="current-password"
+                      value={wachtwoord}
+                      onChange={(e) => setWachtwoord(e.target.value)}
+                      className="border-white/10 bg-white/[0.07] pr-10 text-white placeholder:text-white/25 focus-visible:border-[#F23B0D]/60 focus-visible:ring-[#F23B0D]/20 focus-visible:ring-2 transition-all"
                       required
                     />
+                    <button
+                      type="button"
+                      tabIndex={-1}
+                      onClick={() => setToonWachtwoord((v) => !v)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 transition-colors hover:text-white/60 focus:outline-none"
+                      title={toonWachtwoord ? "Wachtwoord verbergen" : "Wachtwoord tonen"}
+                      aria-label={toonWachtwoord ? "Wachtwoord verbergen" : "Wachtwoord tonen"}
+                    >
+                      {toonWachtwoord ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                    </button>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="wachtwoord">{t("auth.wachtwoord")}</Label>
-                    <div className="relative">
-                      <Input
-                        id="wachtwoord"
-                        type={toonWachtwoord ? "text" : "password"}
-                        autoComplete="current-password"
-                        value={wachtwoord}
-                        onChange={(e) => setWachtwoord(e.target.value)}
-                        className="pr-10"
-                        required
-                      />
-                      <button
-                        type="button"
-                        tabIndex={-1}
-                        onClick={() => setToonWachtwoord((v) => !v)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                        title={toonWachtwoord ? "Wachtwoord verbergen" : "Wachtwoord tonen"}
-                      >
-                        {toonWachtwoord ? (
-                          <EyeOff className="h-4 w-4" />
-                        ) : (
-                          <Eye className="h-4 w-4" />
-                        )}
-                      </button>
-                    </div>
-                  </div>
-                  {fout && <p className="text-sm text-destructive">{fout}</p>}
-                  <Button type="submit" className="w-full" disabled={bezig}>
+                </div>
+
+                {fout && (
+                  <p
+                    role="alert"
+                    className="rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-sm text-red-300"
+                  >
+                    {fout}
+                  </p>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={bezig}
+                  className="group relative w-full overflow-hidden rounded-xl bg-[#F23B0D] px-4 py-2.5 text-sm font-semibold text-white shadow-[0_4px_16px_rgba(242,59,13,0.35)] transition-all duration-150 hover:bg-[#d4330b] hover:shadow-[0_4px_20px_rgba(242,59,13,0.5)] active:translate-y-px active:shadow-[0_2px_8px_rgba(242,59,13,0.3)] disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
+                >
+                  <span className="flex items-center justify-center gap-2">
                     {bezig && <Loader2 className="h-4 w-4 animate-spin" />}
                     {t("auth.inloggenKnop")}
-                  </Button>
-                  <div className="text-center">
-                    <a
-                      href="/wachtwoord-vergeten"
-                      className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      {t("auth.wachtwoordVergeten")}
-                    </a>
-                  </div>
-                </form>
-              </CardContent>
-            </>
+                  </span>
+                </button>
+
+                <div className="text-center">
+                  <a
+                    href="/wachtwoord-vergeten"
+                    className="text-sm text-white/35 transition-colors hover:text-white/60"
+                  >
+                    {t("auth.wachtwoordVergeten")}
+                  </a>
+                </div>
+              </form>
+            </div>
           )}
 
           {stap === "setup" && setupData && (
-            <>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <KeyRound className="h-5 w-5 text-primary" />
-                  {t("auth.setupTitel")}
-                </CardTitle>
-                <CardDescription>{t("auth.setupUitleg")}</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex justify-center">
+            <div className="p-7 sm:p-8 space-y-5">
+              <div>
+                <div className="mb-1 flex items-center gap-2">
+                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#F23B0D]/20">
+                    <KeyRound className="h-4 w-4 text-[#F23B0D]" />
+                  </div>
+                  <h1 className="text-xl font-semibold text-white">
+                    {t("auth.setupTitel")}
+                  </h1>
+                </div>
+                <p className="mt-1 text-sm text-white/50">
+                  {t("auth.setupUitleg")}
+                </p>
+              </div>
+
+              <div className="flex justify-center">
+                <div className="rounded-xl border border-white/10 bg-white p-2.5 shadow-lg">
                   <img
                     src={setupData.qr_code}
-                    alt="QR"
-                    className="h-44 w-44 rounded-lg border bg-white p-2"
+                    alt="QR-code voor authenticator"
+                    className="h-44 w-44 rounded"
                   />
                 </div>
-                <div className="rounded-lg bg-muted p-3 text-center">
-                  <code className="text-sm font-mono break-all">{setupData.secret}</code>
+              </div>
+
+              <div className="rounded-xl border border-white/10 bg-white/[0.06] px-4 py-3 text-center">
+                <p className="mb-1 text-xs text-white/40">Handmatige sleutel</p>
+                <code className="break-all font-mono text-sm text-white/80">
+                  {setupData.secret}
+                </code>
+              </div>
+
+              <div className="flex flex-col items-center gap-2">
+                <Label className="text-sm font-medium text-white/70">
+                  {t("auth.verifyTitel")}
+                </Label>
+                <InputOTP
+                  maxLength={6}
+                  value={code}
+                  onChange={wijzigCode}
+                  disabled={bezig}
+                  autoFocus
+                >
+                  <InputOTPGroup>
+                    <InputOTPSlot index={0} />
+                    <InputOTPSlot index={1} />
+                    <InputOTPSlot index={2} />
+                    <InputOTPSlot index={3} />
+                    <InputOTPSlot index={4} />
+                    <InputOTPSlot index={5} />
+                  </InputOTPGroup>
+                </InputOTP>
+              </div>
+
+              {fout && (
+                <p
+                  role="alert"
+                  className="rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-center text-sm text-red-300"
+                >
+                  {fout}
+                </p>
+              )}
+
+              {bezig && (
+                <div className="flex justify-center">
+                  <Loader2 className="h-5 w-5 animate-spin text-[#F23B0D]" />
                 </div>
-                <div className="flex flex-col items-center gap-2">
-                  <Label>{t("auth.verifyTitel")}</Label>
-                  <InputOTP maxLength={6} value={code} onChange={wijzigCode} disabled={bezig} autoFocus>
-                    <InputOTPGroup>
-                      <InputOTPSlot index={0} />
-                      <InputOTPSlot index={1} />
-                      <InputOTPSlot index={2} />
-                      <InputOTPSlot index={3} />
-                      <InputOTPSlot index={4} />
-                      <InputOTPSlot index={5} />
-                    </InputOTPGroup>
-                  </InputOTP>
-                </div>
-                {fout && <p className="text-sm text-destructive text-center">{fout}</p>}
-                {bezig && (
-                  <div className="flex justify-center">
-                    <Loader2 className="h-5 w-5 animate-spin text-primary" />
-                  </div>
-                )}
-                <Button variant="ghost" size="sm" className="w-full gap-2" onClick={naarInloggen}>
-                  <ArrowLeft className="h-4 w-4" />
-                  {t("auth.terug")}
-                </Button>
-              </CardContent>
-            </>
+              )}
+
+              <button
+                type="button"
+                onClick={naarInloggen}
+                className="flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-sm text-white/50 transition-all hover:border-white/20 hover:bg-white/[0.08] hover:text-white/80"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                {t("auth.terug")}
+              </button>
+            </div>
           )}
 
           {stap === "verify" && (
-            <>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <KeyRound className="h-5 w-5 text-primary" />
-                  {t("auth.verifyTitel")}
-                </CardTitle>
-                <CardDescription>{t("auth.verifyUitleg")}</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex flex-col items-center gap-2">
-                  <InputOTP maxLength={6} value={code} onChange={wijzigCode} disabled={bezig} autoFocus>
-                    <InputOTPGroup>
-                      <InputOTPSlot index={0} />
-                      <InputOTPSlot index={1} />
-                      <InputOTPSlot index={2} />
-                      <InputOTPSlot index={3} />
-                      <InputOTPSlot index={4} />
-                      <InputOTPSlot index={5} />
-                    </InputOTPGroup>
-                  </InputOTP>
-                </div>
-                {fout && <p className="text-sm text-destructive text-center">{fout}</p>}
-                {bezig && (
-                  <div className="flex justify-center">
-                    <Loader2 className="h-5 w-5 animate-spin text-primary" />
+            <div className="p-7 sm:p-8 space-y-5">
+              <div>
+                <div className="mb-1 flex items-center gap-2">
+                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#F23B0D]/20">
+                    <KeyRound className="h-4 w-4 text-[#F23B0D]" />
                   </div>
-                )}
-                <Button variant="ghost" size="sm" className="w-full gap-2" onClick={naarInloggen}>
-                  <ArrowLeft className="h-4 w-4" />
-                  {t("auth.terug")}
-                </Button>
-              </CardContent>
-            </>
+                  <h1 className="text-xl font-semibold text-white">
+                    {t("auth.verifyTitel")}
+                  </h1>
+                </div>
+                <p className="mt-1 text-sm text-white/50">
+                  {t("auth.verifyUitleg")}
+                </p>
+              </div>
+
+              <div className="flex flex-col items-center gap-2">
+                <InputOTP
+                  maxLength={6}
+                  value={code}
+                  onChange={wijzigCode}
+                  disabled={bezig}
+                  autoFocus
+                >
+                  <InputOTPGroup>
+                    <InputOTPSlot index={0} />
+                    <InputOTPSlot index={1} />
+                    <InputOTPSlot index={2} />
+                    <InputOTPSlot index={3} />
+                    <InputOTPSlot index={4} />
+                    <InputOTPSlot index={5} />
+                  </InputOTPGroup>
+                </InputOTP>
+              </div>
+
+              {fout && (
+                <p
+                  role="alert"
+                  className="rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-center text-sm text-red-300"
+                >
+                  {fout}
+                </p>
+              )}
+
+              {bezig && (
+                <div className="flex justify-center">
+                  <Loader2 className="h-5 w-5 animate-spin text-[#F23B0D]" />
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={naarInloggen}
+                className="flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-sm text-white/50 transition-all hover:border-white/20 hover:bg-white/[0.08] hover:text-white/80"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                {t("auth.terug")}
+              </button>
+            </div>
           )}
-        </Card>
+        </div>
+
+        {/* Footer */}
+        <p className="mt-6 text-center text-xs text-white/20">
+          FPS Brandpreventie &copy; {new Date().getFullYear()}
+        </p>
       </div>
     </div>
   );
