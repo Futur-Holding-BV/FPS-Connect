@@ -29,6 +29,7 @@ import {
   Download,
   Eye,
   X,
+  RefreshCw,
 } from "lucide-react";
 
 const RAPPORT_TYPE_LABEL: Record<string, string> = {
@@ -48,28 +49,37 @@ function reactietermijnDagen(datum: string | null | undefined): number | null {
 }
 
 function StatusBadge({ rapport }: { rapport: Rapport }) {
-  if (rapport.status === "concept") {
+  const status = rapport.weergave_status ?? rapport.status;
+  if (status === "concept") {
     return (
       <Badge className="bg-amber-100 text-amber-700 border-amber-200">Concept</Badge>
     );
   }
-  if (rapport.status === "definitief") {
+  if (status === "definitief_verzonden") {
+    return <Badge className="bg-green-100 text-green-700 border-green-200">Definitief verzonden</Badge>;
+  }
+  if (status === "reactietermijn_loopt") {
     const dagen = reactietermijnDagen(rapport.reactietermijn_datum);
-    if (dagen === null) {
-      return <Badge className="bg-green-100 text-green-700 border-green-200">Definitief</Badge>;
-    }
-    if (dagen >= 0) {
-      return (
-        <Badge className="bg-green-100 text-green-700 border-green-200">
-          <Clock className="h-3 w-3 mr-1" />
-          Definitief — {dagen}d resterend
-        </Badge>
-      );
-    }
+    return (
+      <Badge className="bg-green-100 text-green-700 border-green-200">
+        <Clock className="h-3 w-3 mr-1" />
+        Reactietermijn loopt{dagen !== null ? ` — ${dagen}d resterend` : ""}
+      </Badge>
+    );
+  }
+  if (status === "termijn_verstreken") {
     return (
       <Badge className="bg-red-100 text-red-700 border-red-200">
         <AlertCircle className="h-3 w-3 mr-1" />
-        Definitief — verlopen
+        Termijn verstreken
+      </Badge>
+    );
+  }
+  if (status === "vervangen") {
+    return (
+      <Badge variant="secondary" className="text-muted-foreground">
+        <RefreshCw className="h-3 w-3 mr-1" />
+        Vervangen door nieuwe versie
       </Badge>
     );
   }
@@ -78,7 +88,9 @@ function StatusBadge({ rapport }: { rapport: Rapport }) {
 
 function StatusIcoon({ status }: { status: string }) {
   if (status === "concept") return <FileText className="h-4 w-4 text-amber-500" />;
-  if (status === "definitief") return <CheckCircle2 className="h-4 w-4 text-green-600" />;
+  if (status === "definitief_verzonden" || status === "reactietermijn_loopt") return <CheckCircle2 className="h-4 w-4 text-green-600" />;
+  if (status === "termijn_verstreken") return <AlertCircle className="h-4 w-4 text-red-600" />;
+  if (status === "vervangen") return <RefreshCw className="h-4 w-4 text-muted-foreground" />;
   return <Archive className="h-4 w-4 text-muted-foreground" />;
 }
 
@@ -170,7 +182,7 @@ export default function RapportenPagina() {
   const [totDatum, setTotDatum] = useState("");
 
   const { data: rapporten = [], isLoading } = useListRapporten(
-    statusFilter !== "alle" ? { status: statusFilter as "concept" | "definitief" | "gearchiveerd" } : {},
+    statusFilter !== "alle" ? { status: statusFilter as "concept" | "definitief" | "vervangen" | "gearchiveerd" } : {},
   );
 
   const gebouwOpties = useMemo(() => {
@@ -216,9 +228,7 @@ export default function RapportenPagina() {
 
   const conceptAantal = rapporten.filter((r) => r.status === "concept").length;
   const definitiefAantal = rapporten.filter((r) => r.status === "definitief").length;
-  const verlopenAantal = rapporten.filter(
-    (r) => r.status === "definitief" && (reactietermijnDagen(r.reactietermijn_datum) ?? 1) < 0,
-  ).length;
+  const verlopenAantal = rapporten.filter((r) => r.weergave_status === "termijn_verstreken").length;
 
   const filtersActief =
     zoekterm.trim() !== "" ||
@@ -345,6 +355,7 @@ export default function RapportenPagina() {
                   <SelectItem value="alle">Alle statussen</SelectItem>
                   <SelectItem value="concept">Concept</SelectItem>
                   <SelectItem value="definitief">Definitief</SelectItem>
+                  <SelectItem value="vervangen">Vervangen</SelectItem>
                   <SelectItem value="gearchiveerd">Gearchiveerd</SelectItem>
                 </SelectContent>
               </Select>
@@ -398,7 +409,7 @@ export default function RapportenPagina() {
                   >
                     <div className="flex items-start gap-3 min-w-0">
                       <div className="mt-0.5 shrink-0">
-                        <StatusIcoon status={r.status} />
+                        <StatusIcoon status={r.weergave_status ?? r.status} />
                       </div>
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">

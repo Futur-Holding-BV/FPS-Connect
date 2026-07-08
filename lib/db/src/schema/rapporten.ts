@@ -17,6 +17,8 @@ export const opleverrapportenTable = pgTable("opleverrapporten", {
   bevrorenDocumentRevisies: jsonb("bevroren_document_revisies"),
   reactietermijnDatum: timestamp("reactietermijn_datum"),
   reactietermijnGestarteOp: timestamp("reactietermijn_gestart_op"),
+  vervangenDoorRapportId: integer("vervangen_door_rapport_id"),
+  vervangenOp: timestamp("vervangen_op"),
   certificaatGeaccordeerd: boolean("certificaat_geaccordeerd").notNull().default(false),
   certificaatGeaccordeerdOp: timestamp("certificaat_geaccordeerd_op"),
   certificaatGarantieMaanden: integer("certificaat_garantie_maanden").notNull().default(12),

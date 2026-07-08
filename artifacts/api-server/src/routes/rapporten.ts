@@ -9,7 +9,7 @@ import {
   gebruikersTable,
   documentenTable,
 } from "@workspace/db";
-import { eq, desc, and, inArray } from "drizzle-orm";
+import { eq, desc, and, inArray, ne } from "drizzle-orm";
 import { requireBevoegdheid, requireBevoegdheidOfKlant } from "../middlewares/auth";
 import { ObjectStorageService } from "../lib/objectStorage";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
@@ -29,6 +29,17 @@ function parseId(v: unknown): number {
   return parseInt(String(v), 10);
 }
 
+// Reactietermijn-statusmachine: leidt de zichtbare status af uit de opgeslagen
+// status + reactietermijn_datum. "vervangen" en "gearchiveerd" zijn al expliciet.
+function bepaalWeergaveStatus(r: typeof opleverrapportenTable.$inferSelect): string {
+  if (r.status === "vervangen") return "vervangen";
+  if (r.status === "gearchiveerd") return "gearchiveerd";
+  if (r.status === "concept") return "concept";
+  // status === "definitief"
+  if (!r.reactietermijnDatum) return "definitief_verzonden";
+  return r.reactietermijnDatum.getTime() >= Date.now() ? "reactietermijn_loopt" : "termijn_verstreken";
+}
+
 function mapRapport(
   r: typeof opleverrapportenTable.$inferSelect,
   extra?: { aangemaaktDoorNaam?: string | null; gebouwNaam?: string | null },
@@ -39,6 +50,7 @@ function mapRapport(
     rapport_type: r.rapportType,
     versie: r.versie,
     status: r.status,
+    weergave_status: bepaalWeergaveStatus(r),
     titel: r.titel,
     secties: r.secties ?? {},
     spot_selectie: r.spotSelectie ?? {},
@@ -48,6 +60,8 @@ function mapRapport(
     bevroren_document_revisies: r.bevrorenDocumentRevisies ?? null,
     reactietermijn_datum: iso(r.reactietermijnDatum),
     reactietermijn_gestart_op: iso(r.reactietermijnGestarteOp),
+    vervangen_door_rapport_id: r.vervangenDoorRapportId ?? null,
+    vervangen_op: iso(r.vervangenOp),
     certificaat_geaccordeerd: r.certificaatGeaccordeerd,
     certificaat_geaccordeerd_op: iso(r.certificaatGeaccordeerdOp),
     certificaat_garantie_maanden: r.certificaatGarantieMaanden,
@@ -315,6 +329,25 @@ router.post("/gebouwen/:id/rapporten/:rapportId/definitief", aanmakenRapporten, 
       })
       .where(eq(opleverrapportenTable.id, rapportId))
       .returning();
+
+    // Eerdere definitieve rapporten van hetzelfde type in dit gebouw sluiten
+    // automatisch af als "vervangen" zodra een nieuwe versie definitief wordt.
+    await db
+      .update(opleverrapportenTable)
+      .set({
+        status: "vervangen",
+        vervangenDoorRapportId: definitief.id,
+        vervangenOp: nu,
+        bijgewerktOp: nu,
+      })
+      .where(
+        and(
+          eq(opleverrapportenTable.gebouwId, gebouwId),
+          eq(opleverrapportenTable.rapportType, definitief.rapportType),
+          eq(opleverrapportenTable.status, "definitief"),
+          ne(opleverrapportenTable.id, definitief.id),
+        ),
+      );
 
     res.json(mapRapport(definitief));
   } catch (err) {

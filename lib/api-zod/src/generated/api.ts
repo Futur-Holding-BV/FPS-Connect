@@ -1080,7 +1080,7 @@ export const DeleteGebouwTekeningResponse = zod.void()
  * @summary Alle opleverrapporten (cross-gebouw, optioneel gefilterd op status)
  */
 export const ListRapportenQueryParams = zod.object({
-  "status": zod.enum(['concept', 'definitief', 'gearchiveerd']).optional()
+  "status": zod.enum(['concept', 'definitief', 'vervangen', 'gearchiveerd']).optional()
 })
 
 export const ListRapportenResponseItem = zod.object({
@@ -1088,7 +1088,8 @@ export const ListRapportenResponseItem = zod.object({
   "gebouw_id": zod.number(),
   "rapport_type": zod.string(),
   "versie": zod.number(),
-  "status": zod.enum(['concept', 'definitief', 'gearchiveerd']),
+  "status": zod.enum(['concept', 'definitief', 'vervangen', 'gearchiveerd']),
+  "weergave_status": zod.enum(['concept', 'definitief_verzonden', 'reactietermijn_loopt', 'termijn_verstreken', 'vervangen', 'gearchiveerd']).optional().describe('Afgeleide statusweergave voor de reactietermijn-statusmachine (server-side berekend).'),
   "titel": zod.string().nullish(),
   "secties": zod.object({
 
@@ -1104,6 +1105,8 @@ export const ListRapportenResponseItem = zod.object({
 }).passthrough().nullish(),
   "reactietermijn_datum": zod.string().nullish(),
   "reactietermijn_gestart_op": zod.string().nullish(),
+  "vervangen_door_rapport_id": zod.number().nullish().describe('Verwijst naar de nieuwere rapportversie die dit rapport heeft vervangen.'),
+  "vervangen_op": zod.string().nullish(),
   "certificaat_geaccordeerd": zod.boolean().optional(),
   "certificaat_geaccordeerd_op": zod.coerce.date().nullish(),
   "certificaat_garantie_maanden": zod.number().optional().describe('Garantieduur in maanden (standaard 12).'),
@@ -1128,7 +1131,8 @@ export const ListGebouwRapportenResponseItem = zod.object({
   "gebouw_id": zod.number(),
   "rapport_type": zod.string(),
   "versie": zod.number(),
-  "status": zod.enum(['concept', 'definitief', 'gearchiveerd']),
+  "status": zod.enum(['concept', 'definitief', 'vervangen', 'gearchiveerd']),
+  "weergave_status": zod.enum(['concept', 'definitief_verzonden', 'reactietermijn_loopt', 'termijn_verstreken', 'vervangen', 'gearchiveerd']).optional().describe('Afgeleide statusweergave voor de reactietermijn-statusmachine (server-side berekend).'),
   "titel": zod.string().nullish(),
   "secties": zod.object({
 
@@ -1144,6 +1148,8 @@ export const ListGebouwRapportenResponseItem = zod.object({
 }).passthrough().nullish(),
   "reactietermijn_datum": zod.string().nullish(),
   "reactietermijn_gestart_op": zod.string().nullish(),
+  "vervangen_door_rapport_id": zod.number().nullish().describe('Verwijst naar de nieuwere rapportversie die dit rapport heeft vervangen.'),
+  "vervangen_op": zod.string().nullish(),
   "certificaat_geaccordeerd": zod.boolean().optional(),
   "certificaat_geaccordeerd_op": zod.coerce.date().nullish(),
   "certificaat_garantie_maanden": zod.number().optional().describe('Garantieduur in maanden (standaard 12).'),
@@ -1193,7 +1199,8 @@ export const GetRapportResponse = zod.object({
   "gebouw_id": zod.number(),
   "rapport_type": zod.string(),
   "versie": zod.number(),
-  "status": zod.enum(['concept', 'definitief', 'gearchiveerd']),
+  "status": zod.enum(['concept', 'definitief', 'vervangen', 'gearchiveerd']),
+  "weergave_status": zod.enum(['concept', 'definitief_verzonden', 'reactietermijn_loopt', 'termijn_verstreken', 'vervangen', 'gearchiveerd']).optional().describe('Afgeleide statusweergave voor de reactietermijn-statusmachine (server-side berekend).'),
   "titel": zod.string().nullish(),
   "secties": zod.object({
 
@@ -1209,6 +1216,8 @@ export const GetRapportResponse = zod.object({
 }).passthrough().nullish(),
   "reactietermijn_datum": zod.string().nullish(),
   "reactietermijn_gestart_op": zod.string().nullish(),
+  "vervangen_door_rapport_id": zod.number().nullish().describe('Verwijst naar de nieuwere rapportversie die dit rapport heeft vervangen.'),
+  "vervangen_op": zod.string().nullish(),
   "certificaat_geaccordeerd": zod.boolean().optional(),
   "certificaat_geaccordeerd_op": zod.coerce.date().nullish(),
   "certificaat_garantie_maanden": zod.number().optional().describe('Garantieduur in maanden (standaard 12).'),
@@ -1246,7 +1255,8 @@ export const UpdateRapportResponse = zod.object({
   "gebouw_id": zod.number(),
   "rapport_type": zod.string(),
   "versie": zod.number(),
-  "status": zod.enum(['concept', 'definitief', 'gearchiveerd']),
+  "status": zod.enum(['concept', 'definitief', 'vervangen', 'gearchiveerd']),
+  "weergave_status": zod.enum(['concept', 'definitief_verzonden', 'reactietermijn_loopt', 'termijn_verstreken', 'vervangen', 'gearchiveerd']).optional().describe('Afgeleide statusweergave voor de reactietermijn-statusmachine (server-side berekend).'),
   "titel": zod.string().nullish(),
   "secties": zod.object({
 
@@ -1262,6 +1272,8 @@ export const UpdateRapportResponse = zod.object({
 }).passthrough().nullish(),
   "reactietermijn_datum": zod.string().nullish(),
   "reactietermijn_gestart_op": zod.string().nullish(),
+  "vervangen_door_rapport_id": zod.number().nullish().describe('Verwijst naar de nieuwere rapportversie die dit rapport heeft vervangen.'),
+  "vervangen_op": zod.string().nullish(),
   "certificaat_geaccordeerd": zod.boolean().optional(),
   "certificaat_geaccordeerd_op": zod.coerce.date().nullish(),
   "certificaat_garantie_maanden": zod.number().optional().describe('Garantieduur in maanden (standaard 12).'),
@@ -1305,7 +1317,8 @@ export const MaakRapportDefinitiefResponse = zod.object({
   "gebouw_id": zod.number(),
   "rapport_type": zod.string(),
   "versie": zod.number(),
-  "status": zod.enum(['concept', 'definitief', 'gearchiveerd']),
+  "status": zod.enum(['concept', 'definitief', 'vervangen', 'gearchiveerd']),
+  "weergave_status": zod.enum(['concept', 'definitief_verzonden', 'reactietermijn_loopt', 'termijn_verstreken', 'vervangen', 'gearchiveerd']).optional().describe('Afgeleide statusweergave voor de reactietermijn-statusmachine (server-side berekend).'),
   "titel": zod.string().nullish(),
   "secties": zod.object({
 
@@ -1321,6 +1334,8 @@ export const MaakRapportDefinitiefResponse = zod.object({
 }).passthrough().nullish(),
   "reactietermijn_datum": zod.string().nullish(),
   "reactietermijn_gestart_op": zod.string().nullish(),
+  "vervangen_door_rapport_id": zod.number().nullish().describe('Verwijst naar de nieuwere rapportversie die dit rapport heeft vervangen.'),
+  "vervangen_op": zod.string().nullish(),
   "certificaat_geaccordeerd": zod.boolean().optional(),
   "certificaat_geaccordeerd_op": zod.coerce.date().nullish(),
   "certificaat_garantie_maanden": zod.number().optional().describe('Garantieduur in maanden (standaard 12).'),
@@ -1349,7 +1364,8 @@ export const AccordeerCertificaatResponse = zod.object({
   "gebouw_id": zod.number(),
   "rapport_type": zod.string(),
   "versie": zod.number(),
-  "status": zod.enum(['concept', 'definitief', 'gearchiveerd']),
+  "status": zod.enum(['concept', 'definitief', 'vervangen', 'gearchiveerd']),
+  "weergave_status": zod.enum(['concept', 'definitief_verzonden', 'reactietermijn_loopt', 'termijn_verstreken', 'vervangen', 'gearchiveerd']).optional().describe('Afgeleide statusweergave voor de reactietermijn-statusmachine (server-side berekend).'),
   "titel": zod.string().nullish(),
   "secties": zod.object({
 
@@ -1365,6 +1381,8 @@ export const AccordeerCertificaatResponse = zod.object({
 }).passthrough().nullish(),
   "reactietermijn_datum": zod.string().nullish(),
   "reactietermijn_gestart_op": zod.string().nullish(),
+  "vervangen_door_rapport_id": zod.number().nullish().describe('Verwijst naar de nieuwere rapportversie die dit rapport heeft vervangen.'),
+  "vervangen_op": zod.string().nullish(),
   "certificaat_geaccordeerd": zod.boolean().optional(),
   "certificaat_geaccordeerd_op": zod.coerce.date().nullish(),
   "certificaat_garantie_maanden": zod.number().optional().describe('Garantieduur in maanden (standaard 12).'),

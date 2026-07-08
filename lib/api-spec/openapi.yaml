@@ -1037,7 +1037,7 @@ paths:
           required: false
           schema:
             type: string
-            enum: [concept, definitief, gearchiveerd]
+            enum: [concept, definitief, vervangen, gearchiveerd]
       responses:
         "200":
           description: Lijst van rapporten
@@ -29122,7 +29122,11 @@ components:
           type: integer
         status:
           type: string
-          enum: [concept, definitief, gearchiveerd]
+          enum: [concept, definitief, vervangen, gearchiveerd]
+        weergave_status:
+          type: string
+          enum: [concept, definitief_verzonden, reactietermijn_loopt, termijn_verstreken, vervangen, gearchiveerd]
+          description: Afgeleide statusweergave voor de reactietermijn-statusmachine (server-side berekend).
         titel:
           type: ["string", "null"]
         secties:
@@ -29144,6 +29148,11 @@ components:
         reactietermijn_datum:
           type: ["string", "null"]
         reactietermijn_gestart_op:
+          type: ["string", "null"]
+        vervangen_door_rapport_id:
+          type: ["integer", "null"]
+          description: Verwijst naar de nieuwere rapportversie die dit rapport heeft vervangen.
+        vervangen_op:
           type: ["string", "null"]
         certificaat_geaccordeerd:
           type: boolean

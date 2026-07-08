@@ -6362,6 +6362,22 @@ export type RapportStatus = typeof RapportStatus[keyof typeof RapportStatus];
 export const RapportStatus = {
   concept: 'concept',
   definitief: 'definitief',
+  vervangen: 'vervangen',
+  gearchiveerd: 'gearchiveerd',
+} as const;
+
+/**
+ * Afgeleide statusweergave voor de reactietermijn-statusmachine (server-side berekend).
+ */
+export type RapportWeergaveStatus = typeof RapportWeergaveStatus[keyof typeof RapportWeergaveStatus];
+
+
+export const RapportWeergaveStatus = {
+  concept: 'concept',
+  definitief_verzonden: 'definitief_verzonden',
+  reactietermijn_loopt: 'reactietermijn_loopt',
+  termijn_verstreken: 'termijn_verstreken',
+  vervangen: 'vervangen',
   gearchiveerd: 'gearchiveerd',
 } as const;
 
@@ -6380,6 +6396,8 @@ export interface Rapport {
   rapport_type: string;
   versie: number;
   status: RapportStatus;
+  /** Afgeleide statusweergave voor de reactietermijn-statusmachine (server-side berekend). */
+  weergave_status?: RapportWeergaveStatus;
   /** @nullable */
   titel?: string | null;
   secties: RapportSecties;
@@ -6394,6 +6412,13 @@ export interface Rapport {
   reactietermijn_datum?: string | null;
   /** @nullable */
   reactietermijn_gestart_op?: string | null;
+  /**
+     * Verwijst naar de nieuwere rapportversie die dit rapport heeft vervangen.
+     * @nullable
+     */
+  vervangen_door_rapport_id?: number | null;
+  /** @nullable */
+  vervangen_op?: string | null;
   certificaat_geaccordeerd?: boolean;
   /** @nullable */
   certificaat_geaccordeerd_op?: string | null;
@@ -11445,6 +11470,7 @@ export type ListRapportenStatus = typeof ListRapportenStatus[keyof typeof ListRa
 export const ListRapportenStatus = {
   concept: 'concept',
   definitief: 'definitief',
+  vervangen: 'vervangen',
   gearchiveerd: 'gearchiveerd',
 } as const;
 

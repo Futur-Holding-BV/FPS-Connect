@@ -12,5 +12,6 @@ export type ListRapportenStatus = typeof ListRapportenStatus[keyof typeof ListRa
 export const ListRapportenStatus = {
   concept: 'concept',
   definitief: 'definitief',
+  vervangen: 'vervangen',
   gearchiveerd: 'gearchiveerd',
 } as const;

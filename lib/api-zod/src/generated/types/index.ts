@@ -800,6 +800,7 @@ export * from './rapportPatchSpotSelectie';
 export * from './rapportSecties';
 export * from './rapportSpotSelectie';
 export * from './rapportStatus';
+export * from './rapportWeergaveStatus';
 export * from './reistijdSchatting';
 export * from './reistijdSchattingInput';
 export * from './reservering';

@@ -49,6 +49,7 @@ import {
   Printer,
   AlertCircle,
   PenLine,
+  RefreshCw,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getListGebouwRapportenQueryKey } from "@workspace/api-client-react";
@@ -76,34 +77,43 @@ function reactietermijnDagen(datum: string | null | undefined): number | null {
 }
 
 function StatusBadge({ rapport }: { rapport: Rapport }) {
-  if (rapport.status === "concept") {
+  const status = rapport.weergave_status ?? rapport.status;
+  if (status === "concept") {
     return (
       <Badge className="bg-amber-100 text-amber-700 border-amber-200">
         Concept
       </Badge>
     );
   }
-  if (rapport.status === "definitief") {
+  if (status === "definitief_verzonden") {
+    return (
+      <Badge className="bg-green-100 text-green-700 border-green-200">
+        Definitief verzonden
+      </Badge>
+    );
+  }
+  if (status === "reactietermijn_loopt") {
     const dagen = reactietermijnDagen(rapport.reactietermijn_datum);
-    if (dagen === null) {
-      return (
-        <Badge className="bg-green-100 text-green-700 border-green-200">
-          Definitief
-        </Badge>
-      );
-    }
-    if (dagen >= 0) {
-      return (
-        <Badge className="bg-green-100 text-green-700 border-green-200">
-          <Clock className="h-3 w-3 mr-1" />
-          Definitief — nog {dagen} dag{dagen !== 1 ? "en" : ""}
-        </Badge>
-      );
-    }
+    return (
+      <Badge className="bg-green-100 text-green-700 border-green-200">
+        <Clock className="h-3 w-3 mr-1" />
+        Reactietermijn loopt{dagen !== null ? ` — nog ${dagen} dag${dagen !== 1 ? "en" : ""}` : ""}
+      </Badge>
+    );
+  }
+  if (status === "termijn_verstreken") {
     return (
       <Badge className="bg-red-100 text-red-700 border-red-200">
         <AlertCircle className="h-3 w-3 mr-1" />
-        Definitief — termijn verlopen
+        Termijn verstreken
+      </Badge>
+    );
+  }
+  if (status === "vervangen") {
+    return (
+      <Badge variant="secondary" className="text-muted-foreground">
+        <RefreshCw className="h-3 w-3 mr-1" />
+        Vervangen door nieuwe versie
       </Badge>
     );
   }
@@ -116,7 +126,9 @@ function StatusBadge({ rapport }: { rapport: Rapport }) {
 
 function StatusIcoon({ status }: { status: string }) {
   if (status === "concept") return <FileText className="h-4 w-4 text-amber-500" />;
-  if (status === "definitief") return <CheckCircle2 className="h-4 w-4 text-green-600" />;
+  if (status === "definitief_verzonden" || status === "reactietermijn_loopt") return <CheckCircle2 className="h-4 w-4 text-green-600" />;
+  if (status === "termijn_verstreken") return <AlertCircle className="h-4 w-4 text-red-600" />;
+  if (status === "vervangen") return <RefreshCw className="h-4 w-4 text-muted-foreground" />;
   return <Archive className="h-4 w-4 text-muted-foreground" />;
 }
 
@@ -249,7 +261,7 @@ export default function GebouwRapporten({ gebouwId, isBeheerder }: { gebouwId: n
                 <div key={r.id} className="flex items-start justify-between gap-4 py-3 first:pt-0 last:pb-0">
                   <div className="flex items-start gap-3 min-w-0">
                     <div className="mt-0.5 shrink-0">
-                      <StatusIcoon status={r.status} />
+                      <StatusIcoon status={r.weergave_status ?? r.status} />
                     </div>
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
@@ -270,13 +282,30 @@ export default function GebouwRapporten({ gebouwId, isBeheerder }: { gebouwId: n
                           })}
                           {r.aangemaakt_door_naam && ` door ${r.aangemaakt_door_naam}`}
                         </div>
-                        {r.status === "definitief" && r.reactietermijn_datum && (
+                        {(r.status === "definitief" || r.status === "vervangen") && r.reactietermijn_datum && (
                           <div>Reactietermijn tot: {dagToString(r.reactietermijn_datum)}</div>
                         )}
-                        {r.status === "definitief" && r.bevroren_op && (
+                        {(r.status === "definitief" || r.status === "vervangen") && r.bevroren_op && (
                           <div className="flex items-center gap-1 text-green-700">
                             <Lock className="h-3 w-3" />
-                            Bevrozen op {dagToString(r.bevroren_op)}
+                            Bevroren op {dagToString(r.bevroren_op)}
+                          </div>
+                        )}
+                        {r.status === "vervangen" && r.vervangen_op && (
+                          <div className="flex items-center gap-1 text-muted-foreground">
+                            <RefreshCw className="h-3 w-3" />
+                            Vervangen op {dagToString(r.vervangen_op)}
+                            {r.vervangen_door_rapport_id != null && (
+                              <>
+                                {" — "}
+                                <Link
+                                  href={`/gebouwen/${gebouwId}/print?rapport_id=${r.vervangen_door_rapport_id}`}
+                                  className="underline hover:text-foreground"
+                                >
+                                  bekijk nieuwe versie
+                                </Link>
+                              </>
+                            )}
                           </div>
                         )}
                       </div>
@@ -292,7 +321,7 @@ export default function GebouwRapporten({ gebouwId, isBeheerder }: { gebouwId: n
                         </Button>
                       </Link>
                     )}
-                    {r.status === "definitief" && (
+                    {(r.status === "definitief" || r.status === "vervangen") && (
                       <Link href={`/gebouwen/${gebouwId}/print?rapport_id=${r.id}`}>
                         <Button size="sm" variant="outline" className="gap-1.5 text-xs">
                           <Printer className="h-3.5 w-3.5" />

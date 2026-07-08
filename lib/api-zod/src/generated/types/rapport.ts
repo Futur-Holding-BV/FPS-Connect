@@ -9,6 +9,7 @@ import type { RapportBevrorenDocumentRevisies } from './rapportBevrorenDocumentR
 import type { RapportSecties } from './rapportSecties';
 import type { RapportSpotSelectie } from './rapportSpotSelectie';
 import type { RapportStatus } from './rapportStatus';
+import type { RapportWeergaveStatus } from './rapportWeergaveStatus';
 
 export interface Rapport {
   id: number;
@@ -16,6 +17,8 @@ export interface Rapport {
   rapport_type: string;
   versie: number;
   status: RapportStatus;
+  /** Afgeleide statusweergave voor de reactietermijn-statusmachine (server-side berekend). */
+  weergave_status?: RapportWeergaveStatus;
   /** @nullable */
   titel?: string | null;
   secties: RapportSecties;
@@ -30,6 +33,13 @@ export interface Rapport {
   reactietermijn_datum?: string | null;
   /** @nullable */
   reactietermijn_gestart_op?: string | null;
+  /**
+     * Verwijst naar de nieuwere rapportversie die dit rapport heeft vervangen.
+     * @nullable
+     */
+  vervangen_door_rapport_id?: number | null;
+  /** @nullable */
+  vervangen_op?: string | null;
   certificaat_geaccordeerd?: boolean;
   /** @nullable */
   certificaat_geaccordeerd_op?: Date | null;
