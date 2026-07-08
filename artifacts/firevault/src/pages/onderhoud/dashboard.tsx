@@ -10,8 +10,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  FileText, AlertTriangle, CheckCircle, Clock,
-  CalendarDays, Wrench, Euro, ArrowRight, Building, CheckCircle2, Lock,
+  FileText, AlertTriangle, CheckCircle, Clock, TrendingUp,
+  CalendarDays, Wrench, Euro, ArrowRight, Building, AlertCircle, Building2,
+  CheckCircle2, Lock,
 } from "lucide-react";
 
 function formatEuro(bedrag: number | null | undefined): string {
@@ -42,7 +43,12 @@ export default function OnderhoudDashboard() {
   const { data: stats, isLoading: statsLoading } = useGetOnderhoudscontractenStatistieken();
   const { data: contracten } = useListOnderhoudscontracten();
   const { data: werkbonnen } = useListWerkbonnen();
-  const { data: definitieveRapporten = [] } = useListRapporten({ status: "definitief" });
+  const { data: alleRapporten } = useListRapporten({ status: "definitief" });
+  const definitieveRapporten = alleRapporten ?? [];
+
+  const verlopen = (alleRapporten ?? []).filter(
+    (r) => (r.weergave_status ?? r.status) === "termijn_verstreken",
+  );
 
   const aflopend = contracten?.filter((c) => {
     if (!c.einddatum) return false;
@@ -181,6 +187,86 @@ export default function OnderhoudDashboard() {
             </div>
           ) : null}
         </>
+      )}
+
+      {verlopen.length > 0 && (
+        <Card className="border-red-200 bg-red-50">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2 text-red-800">
+              <AlertCircle className="h-5 w-5 text-red-600" />
+              {verlopen.length} rapport{verlopen.length !== 1 ? "en" : ""} met verlopen reactietermijn
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <p className="text-sm text-red-700 mb-3">
+              De reactietermijn van onderstaande rapporten is verstreken. Overweeg een werkbon aan te maken of contact op te nemen met de klant.
+            </p>
+            <div className="space-y-2">
+              {verlopen.slice(0, 5).map((r) => (
+                <div
+                  key={r.id}
+                  className="flex items-center gap-3 p-2.5 rounded-md bg-white border border-red-100"
+                >
+                  <AlertCircle className="h-4 w-4 text-red-500 shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-sm text-red-900 truncate">
+                      {r.titel || r.rapport_type}
+                    </div>
+                    <div className="text-xs text-red-700 flex items-center gap-1 mt-0.5">
+                      {r.gebouw_naam && (
+                        <span className="flex items-center gap-0.5">
+                          <Building2 className="h-3 w-3" />
+                          {r.gebouw_naam}
+                        </span>
+                      )}
+                      {r.reactietermijn_datum && (
+                        <span>
+                          {r.gebouw_naam ? " — " : ""}
+                          Verlopen op{" "}
+                          {new Date(r.reactietermijn_datum).toLocaleDateString("nl-NL", {
+                            day: "numeric",
+                            month: "short",
+                            year: "numeric",
+                          })}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  {r.gebouw_id && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-xs h-7 border-red-200 text-red-700 hover:bg-red-50 shrink-0"
+                      onClick={() => navigate(`/gebouwen/${r.gebouw_id}?tab=rapporten`)}
+                    >
+                      Rapport <ArrowRight className="h-3 w-3 ml-1" />
+                    </Button>
+                  )}
+                </div>
+              ))}
+            </div>
+            {verlopen.length > 5 && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-2 border-red-300 text-red-700 hover:bg-red-100 w-full"
+                onClick={() => navigate("/rapporten")}
+              >
+                Alle {verlopen.length} rapporten bekijken <ArrowRight className="h-3 w-3 ml-1" />
+              </Button>
+            )}
+            {verlopen.length <= 5 && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-1 border-red-300 text-red-700 hover:bg-red-100"
+                onClick={() => navigate("/rapporten")}
+              >
+                Naar rapportenbibliotheek <ArrowRight className="h-3 w-3 ml-1" />
+              </Button>
+            )}
+          </CardContent>
+        </Card>
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

@@ -26,20 +26,24 @@ Dagelijkse achtergrondservice die detecteert wanneer een reactietermijn op een d
 
 **Verificatie:** typecheck libs en api-server geslaagd (pre-existing TS7030 in documenten.ts/offertes.ts ongewijzigd); kolom aangemaakt via SQL; API server herstart en operationeel.
 
-## 2026-07-08 — Vrije-tekst zoekfunctie rapportenbibliotheek bevestigd + gegenereerde typen bijgewerkt
+## 2026-07-08 — V1.5 restscope: koppel rapportstatus aan klantportaal en onderhoud + gegenereerde typen bijgewerkt
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
 
 **Wat is gebouwd / hersteld:**
 
-De vrije-tekst zoekfunctie in de rapportenbibliotheek (`artifacts/firevault/src/pages/rapporten/index.tsx`) was al aanwezig in de codebase: een zoekveld met live filtering op titel, gebouwnaam, rapporttype en opsteller, gecombineerd met de bestaande statusfilter, gebouwfilter, typefilter en datumbereikfilter. De V1.5-restscope was daarmee al afgevinkt.
+1. **Klantportaal (`/klant/rapportages`)** — volledige revisie: de pagina toont nu opleverrapporten (in plaats van alleen legacy inspecties) met de volledige reactietermijn-statusmachine. Per gebouw worden via `useListGebouwRapporten` de definitieve rapporten opgehaald (concept-rapporten zijn verborgen voor de klant). Status wordt getoond als badge: Definitief verzonden, Reactietermijn loopt (met resterende dagen), Termijn verstreken (rood + contactadvies), Vervangen. Verstreken termijn-rapporten krijgen een lichte rode achtergrond. Inleidend uitlegblok legt de statusbetekenis in klantentaal uit. Filterbaar op gebouw en status.
 
-Tijdens de verificatie bleken de gegenereerde API-types (`lib/api-client-react/src/generated/api.schemas.ts`) verouderd te zijn: `weergave_status`, `vervangen_op`, `vervangen_door_rapport_id` en `ListRapportenStatus` (incl. `vervangen`) ontbraken in de gegenereerde `Rapport`-typen, waardoor de firevault-typecheck 14 fouten rapporteerde. Codegen uitvoeren (`pnpm --filter @workspace/api-spec run codegen`) heeft de typen gesynchroniseerd met de OpenAPI-spec; de typecheck slaagt nu schoon.
+2. **Onderhoud dashboard (`/onderhoud`)** — nieuwe signaalkaart "Rapporten met verlopen reactietermijn": wanneer er `termijn_verstreken`-rapporten zijn (opgehaald via `useListRapporten` met status-filter `definitief`), verschijnt een rode kaart met gebouwnaam, verloopdatum en een directe knop naar het rapport. Linkknop naar de rapportenbibliotheek voor het volledige overzicht. Card is niet zichtbaar als er geen verlopen rapporten zijn.
+
+3. **Vrije-tekst zoekfunctie rapportenbibliotheek bevestigd** — De vrije-tekst zoekfunctie in de rapportenbibliotheek (`artifacts/firevault/src/pages/rapporten/index.tsx`) was al aanwezig in de codebase: een zoekveld met live filtering op titel, gebouwnaam, rapporttype en opsteller, gecombineerd met de bestaande statusfilter, gebouwfilter, typefilter en datumbereikfilter.
 
 **Technische details:**
-- Geen codewijziging in rapporten/index.tsx — zoekfunctie was al volledig geïmplementeerd
-- `lib/api-client-react/src/generated/api.schemas.ts` en `api.ts` — bijgewerkt via codegen (niet handmatig)
-- Restscope V1.5 "vrije-tekst zoekfunctie in de bibliotheek" afgevinkt in replit.md
+- De gegenereerde API-types (`lib/api-client-react/src/generated/api.schemas.ts`) bleken verouderd te zijn: `weergave_status`, `vervangen_op`, `vervangen_door_rapport_id` en `ListRapportenStatus` (incl. `vervangen`) ontbraken in de gegenereerde `Rapport`-typen, waardoor de firevault-typecheck 14 fouten rapporteerde. Codegen uitvoeren (`pnpm --filter @workspace/api-spec run codegen`) heeft de typen gesynchroniseerd met de OpenAPI-spec; de typecheck slaagt nu schoon.
+- Klantportaal: sub-component `GebouwRapportenBlok` per gebouw (vermijdt hooks in loops), client-side filtering op `weergave_status`. Hergebruikt exact dezelfde `StatusBadge`/`StatusIcoon` semantiek als de interne rapportenbibliotheek.
+- Onderhoud: `useListRapporten({ status: "definitief" })` client-side gefilterd op `weergave_status === "termijn_verstreken"`. Faal-zacht bij ontbrekende bevoegdheid (query wordt genegeerd bij 403).
+- Lib-rebuild (`@workspace/api-client-react`) was nodig: stale declarations misten `weergave_status`, `vervangen_op`, `vervangen_door_rapport_id`.
+- Restscope V1.5 "vrije-tekst zoekfunctie in de bibliotheek" afgevinkt in replit.md.
 
 ## 2026-07-08 — Handmatige correctie jaarrekening-subtype (geconsolideerd)
 
