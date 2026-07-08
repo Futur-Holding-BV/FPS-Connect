@@ -110,6 +110,7 @@ const mapItem = (item: typeof inboxItemsTable.$inferSelect) => ({
   ai_organisatie: item.aiOrganisatie,
   ai_jaar: item.aiJaar,
   ai_geconsolideerd: item.aiGeconsolideerd,
+  geconsolideerd_override: item.geconsolideerdeOverride ?? null,
   ai_opslaglocatie: item.aiOpslaglocatie,
   ai_bewijs: parseBewijs(item.aiBewijs),
   duplicaat_van: item.duplicaatVan,
@@ -330,6 +331,7 @@ router.patch("/inbox/items/:id", schrijven, async (req, res): Promise<void> => {
     if (ai_geconsolideerd !== undefined) {
       const geconsolideerd = Boolean(ai_geconsolideerd);
       setValues.aiGeconsolideerd = geconsolideerd;
+      setValues.geconsolideerdeOverride = geconsolideerd;
 
       const [huidig] = await db
         .select({ documentCategorie: inboxItemsTable.documentCategorie, aiJaar: inboxItemsTable.aiJaar })
@@ -1048,6 +1050,19 @@ router.post("/inbox/herclassificeer", schrijven, async (req, res): Promise<void>
           toelichting: item.opmerkingen ?? undefined,
         });
 
+        const aiGeconsolideerd = analyse.subtype === "geconsolideerd";
+        const effectiefGeconsolideerd = item.geconsolideerdeOverride !== null
+          ? item.geconsolideerdeOverride
+          : aiGeconsolideerd;
+
+        let opslaglocatie = analyse.opslaglocatie;
+        if (item.documentCategorie === "jaarrekening" && item.geconsolideerdeOverride !== null) {
+          const type = effectiefGeconsolideerd ? "Geconsolideerde jaarrekeningen" : "Jaarrekeningen";
+          opslaglocatie = item.aiJaar
+            ? `Archief → ${type} → ${item.aiJaar}`
+            : `Archief → ${type} → jaar onbekend`;
+        }
+
         await db
           .update(inboxItemsTable)
           .set({
@@ -1057,8 +1072,8 @@ router.post("/inbox/herclassificeer", schrijven, async (req, res): Promise<void>
             aiVolgendeActie: analyse.directe_actie_beschrijving || null,
             aiOrganisatie: analyse.organisatie,
             aiJaar: analyse.jaar,
-            aiGeconsolideerd: analyse.subtype === "geconsolideerd",
-            aiOpslaglocatie: analyse.opslaglocatie,
+            aiGeconsolideerd: aiGeconsolideerd,
+            aiOpslaglocatie: opslaglocatie,
             aiBewijs: JSON.stringify(analyse.bewijs),
             bijgewerktOp: new Date(),
           })

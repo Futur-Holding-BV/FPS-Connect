@@ -44,6 +44,11 @@ export interface InboxItem {
   /** @nullable */
   ai_jaar?: number | null;
   ai_geconsolideerd?: boolean;
+  /**
+     * Handmatige correctie door gebruiker; overrulet ai_geconsolideerd bij weergave en opslaglocatie. Null betekent geen override.
+     * @nullable
+     */
+  geconsolideerd_override?: boolean | null;
   /** @nullable */
   ai_opslaglocatie?: string | null;
   ai_bewijs?: InboxBewijsStap[];

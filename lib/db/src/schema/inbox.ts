@@ -41,6 +41,7 @@ export const inboxItemsTable = pgTable("inbox_items", {
   aiOrganisatie: text("ai_organisatie"),
   aiJaar: integer("ai_jaar"),
   aiGeconsolideerd: boolean("ai_geconsolideerd").notNull().default(false),
+  geconsolideerdeOverride: boolean("geconsolideerd_override"),
   aiOpslaglocatie: text("ai_opslaglocatie"),
   aiBewijs: text("ai_bewijs"),
   duplicaatVan: integer("duplicaat_van"),

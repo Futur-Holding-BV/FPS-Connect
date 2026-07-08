@@ -7617,6 +7617,7 @@ export const ListInboxItemsResponseItem = zod.object({
   "ai_organisatie": zod.string().nullish(),
   "ai_jaar": zod.number().nullish(),
   "ai_geconsolideerd": zod.boolean().optional(),
+  "geconsolideerd_override": zod.boolean().nullish().describe('Handmatige correctie door gebruiker; overrulet ai_geconsolideerd bij weergave en opslaglocatie. Null betekent geen override.'),
   "ai_opslaglocatie": zod.string().nullish(),
   "ai_bewijs": zod.array(zod.object({
   "stap": zod.string(),
@@ -7685,6 +7686,7 @@ export const GetInboxItemResponse = zod.object({
   "ai_organisatie": zod.string().nullish(),
   "ai_jaar": zod.number().nullish(),
   "ai_geconsolideerd": zod.boolean().optional(),
+  "geconsolideerd_override": zod.boolean().nullish().describe('Handmatige correctie door gebruiker; overrulet ai_geconsolideerd bij weergave en opslaglocatie. Null betekent geen override.'),
   "ai_opslaglocatie": zod.string().nullish(),
   "ai_bewijs": zod.array(zod.object({
   "stap": zod.string(),
@@ -7754,6 +7756,7 @@ export const UpdateInboxItemResponse = zod.object({
   "ai_organisatie": zod.string().nullish(),
   "ai_jaar": zod.number().nullish(),
   "ai_geconsolideerd": zod.boolean().optional(),
+  "geconsolideerd_override": zod.boolean().nullish().describe('Handmatige correctie door gebruiker; overrulet ai_geconsolideerd bij weergave en opslaglocatie. Null betekent geen override.'),
   "ai_opslaglocatie": zod.string().nullish(),
   "ai_bewijs": zod.array(zod.object({
   "stap": zod.string(),
@@ -7821,6 +7824,7 @@ export const GoedkeurenInboxItemResponse = zod.object({
   "ai_organisatie": zod.string().nullish(),
   "ai_jaar": zod.number().nullish(),
   "ai_geconsolideerd": zod.boolean().optional(),
+  "geconsolideerd_override": zod.boolean().nullish().describe('Handmatige correctie door gebruiker; overrulet ai_geconsolideerd bij weergave en opslaglocatie. Null betekent geen override.'),
   "ai_opslaglocatie": zod.string().nullish(),
   "ai_bewijs": zod.array(zod.object({
   "stap": zod.string(),
@@ -7878,6 +7882,7 @@ export const AfwijzenInboxItemResponse = zod.object({
   "ai_organisatie": zod.string().nullish(),
   "ai_jaar": zod.number().nullish(),
   "ai_geconsolideerd": zod.boolean().optional(),
+  "geconsolideerd_override": zod.boolean().nullish().describe('Handmatige correctie door gebruiker; overrulet ai_geconsolideerd bij weergave en opslaglocatie. Null betekent geen override.'),
   "ai_opslaglocatie": zod.string().nullish(),
   "ai_bewijs": zod.array(zod.object({
   "stap": zod.string(),
@@ -7938,6 +7943,7 @@ export const VerplaatsenInboxItemResponse = zod.object({
   "ai_organisatie": zod.string().nullish(),
   "ai_jaar": zod.number().nullish(),
   "ai_geconsolideerd": zod.boolean().optional(),
+  "geconsolideerd_override": zod.boolean().nullish().describe('Handmatige correctie door gebruiker; overrulet ai_geconsolideerd bij weergave en opslaglocatie. Null betekent geen override.'),
   "ai_opslaglocatie": zod.string().nullish(),
   "ai_bewijs": zod.array(zod.object({
   "stap": zod.string(),
@@ -7991,6 +7997,7 @@ export const TerBeoordelingInboxItemResponse = zod.object({
   "ai_organisatie": zod.string().nullish(),
   "ai_jaar": zod.number().nullish(),
   "ai_geconsolideerd": zod.boolean().optional(),
+  "geconsolideerd_override": zod.boolean().nullish().describe('Handmatige correctie door gebruiker; overrulet ai_geconsolideerd bij weergave en opslaglocatie. Null betekent geen override.'),
   "ai_opslaglocatie": zod.string().nullish(),
   "ai_bewijs": zod.array(zod.object({
   "stap": zod.string(),

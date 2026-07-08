@@ -18,6 +18,23 @@ Wanneer een rapport definitief wordt gemaakt (`POST /gebouwen/:id/rapporten/:rap
 - Klant-lookup via `gebouwenTable.klantId` → `gebruikersTable`; alleen actieve, niet-gearchiveerde klantaccounts ontvangen de mail
 - Portaallink geconstrueerd via `REPLIT_DOMAINS` (zelfde patroon als andere routes)
 
+## 2026-07-08 — Geconsolideerd-override overleeft heranalyse
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (additieve DB kolom, geen breekwijziging)
+
+**Wat is gebouwd:**
+
+Handmatige correctie van de `ai_geconsolideerd`-toggle (enkelvoudig/geconsolideerd jaarrekening) overleeft een AI-heranalyse nu zonder verlies. Een nieuwe nullable boolean `geconsolideerd_override` wordt opgeslagen zodra een gebruiker de toggle aanpast. Bij herclassificatie schrijft de AI alleen nog naar `ai_geconsolideerd`; de override wordt niet aangeraakt. De effectieve waarde (`override ?? ai_geconsolideerd`) wordt gebruikt voor weergave en opslaglocatie-berekening.
+
+- Nieuw DB kolom `geconsolideerd_override boolean` (nullable) op `inbox_items` via `ALTER TABLE`
+- Drizzle schema bijgewerkt (`lib/db/src/schema/inbox.ts`)
+- `mapItem` retourneert het nieuwe veld als `geconsolideerd_override`
+- PATCH handler zet `geconsolideerdeOverride` gelijktijdig met `aiGeconsolideerd` bij een gebruikerswijziging
+- Herclassificeer-endpoint (`POST /inbox/herclassificeer`) respecteert de override: schrijft alleen `ai_geconsolideerd`, herberekent `aiOpslaglocatie` op basis van de effectieve waarde wanneer een override aanwezig is
+- OpenAPI `InboxItem` schema uitgebreid met `geconsolideerd_override` (nullable boolean)
+- Codegen opnieuw gedraaid; gegenereerde type `api.schemas.ts` bevat het veld
+- Frontend (`inbox/detail.tsx`) gebruikt `geconsolideerd_override ?? ai_geconsolideerd` als effectieve waarde voor toggle en jaar-label
+
 ## 2026-07-08 — Reactietermijn-signalering voor hoofdbeheerders
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (alleen additive: nieuwe kolom, nieuwe achtergrondjob)

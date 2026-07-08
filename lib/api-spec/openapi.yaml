@@ -21561,6 +21561,9 @@ components:
           type: ["integer", "null"]
         ai_geconsolideerd:
           type: boolean
+        geconsolideerd_override:
+          type: ["boolean", "null"]
+          description: Handmatige correctie door gebruiker; overrulet ai_geconsolideerd bij weergave en opslaglocatie. Null betekent geen override.
         ai_opslaglocatie:
           type: ["string", "null"]
         ai_bewijs:

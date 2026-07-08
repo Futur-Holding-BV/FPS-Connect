@@ -335,7 +335,7 @@ export default function InboxDetailPagina() {
               {typedItem.ai_jaar && (
                 <div>
                   <p className="text-xs text-muted-foreground font-medium">Jaar</p>
-                  <p className="text-sm mt-0.5">{typedItem.ai_jaar}{typedItem.ai_geconsolideerd ? " (geconsolideerd)" : ""}</p>
+                  <p className="text-sm mt-0.5">{typedItem.ai_jaar}{(typedItem.geconsolideerd_override ?? typedItem.ai_geconsolideerd) ? " (geconsolideerd)" : ""}</p>
                 </div>
               )}
             </div>
@@ -343,7 +343,7 @@ export default function InboxDetailPagina() {
 
           {typedItem.document_categorie === "jaarrekening" && (
             <GeconsolideerdToggle
-              geconsolideerd={typedItem.ai_geconsolideerd ?? false}
+              geconsolideerd={typedItem.geconsolideerd_override ?? typedItem.ai_geconsolideerd ?? false}
               opslaglocatie={typedItem.ai_opslaglocatie ?? null}
               bewerkbaar={kanActeren ?? false}
               onWijzig={async (nieuw) => {
