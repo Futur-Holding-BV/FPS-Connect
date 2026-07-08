@@ -19,10 +19,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
+import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
 import {
   Inbox, Plus, FileText, Clock, CheckCircle2, XCircle, ArrowRight,
   AlertTriangle, Sparkles, ChevronRight, Upload, Building2, Mail,
-  Paperclip, X, CheckCircle, ExternalLink,
+  Paperclip, X, CheckCircle, ExternalLink, RefreshCw,
 } from "lucide-react";
 
 const STATUS_KLEUR: Record<string, string> = {
@@ -69,12 +70,33 @@ interface AanvraagState {
 const ACCEPTEER_EMAIL = ".eml,.msg,.pdf,.docx,.doc,.txt";
 const ACCEPTEER_BIJLAGEN = ".pdf,.docx,.doc,.xlsx,.xls,.jpg,.jpeg,.png,.eml,.msg";
 
+type HerclassificeerItemResultaat = {
+  id: number;
+  bestandsnaam: string;
+  status: "geslaagd" | "mislukt";
+  fout?: string;
+};
+
+type HerclassificeerResultaat = {
+  verwerkt: number;
+  geslaagd: number;
+  mislukt: number;
+  items: HerclassificeerItemResultaat[];
+};
+
 export default function InboxPagina() {
   const qc = useQueryClient();
   const { toast } = useToast();
+  const { heeftNiveau } = useBevoegdheid();
+  const kanSchrijven = heeftNiveau("crm", 2);
+
   const [statusFilter, setStatusFilter] = useState<string>("open");
   const [registrerenOpen, setRegistrerenOpen] = useState(false);
   const [velden, setVelden] = useState({ bestandsnaam: "", mimetype: "application/pdf", bestandsgrootte: "", opmerkingen: "" });
+
+  const [herclassificeerOpen, setHerclassificeerOpen] = useState(false);
+  const [herclassificeerBezig, setHerclassificeerBezig] = useState(false);
+  const [herclassificeerResultaat, setHerclassificeerResultaat] = useState<HerclassificeerResultaat | null>(null);
 
   const [aanvraagOpen, setAanvraagOpen] = useState(false);
   const [aanvraag, setAanvraag] = useState<AanvraagState>({
@@ -102,6 +124,30 @@ export default function InboxPagina() {
   const gefilterd = statusFilter === "open"
     ? (items as InboxItem[]).filter((i) => openStatussen.includes(i.status))
     : statusFilter === "alle" ? (items as InboxItem[]) : (items as InboxItem[]).filter((i) => i.status === statusFilter);
+
+  async function startHerclassificeren() {
+    setHerclassificeerBezig(true);
+    setHerclassificeerResultaat(null);
+    try {
+      const resp = await fetch("/api/inbox/herclassificeer", {
+        method: "POST",
+        credentials: "include",
+      });
+      if (!resp.ok) {
+        const fout = await resp.json().catch(() => ({ error: "Onbekende fout" }));
+        throw new Error((fout as { error?: string }).error ?? "Herclassificatie mislukt");
+      }
+      const resultaat = await resp.json() as HerclassificeerResultaat;
+      setHerclassificeerResultaat(resultaat);
+      await qc.invalidateQueries({ queryKey: getListInboxItemsQueryKey() });
+      await qc.invalidateQueries({ queryKey: getGetInboxStatsQueryKey() });
+    } catch (err) {
+      toast({ title: err instanceof Error ? err.message : "Herclassificatie mislukt", variant: "destructive" });
+      setHerclassificeerOpen(false);
+    } finally {
+      setHerclassificeerBezig(false);
+    }
+  }
 
   async function handleRegistreren() {
     if (!registreerBestand && !velden.bestandsnaam.trim()) {
@@ -295,6 +341,11 @@ export default function InboxPagina() {
           <p className="text-sm text-muted-foreground mt-0.5">Centraal documentinstroompunt met AI-classificatie</p>
         </div>
         <div className="flex gap-2">
+          {kanSchrijven && (
+            <Button variant="outline" onClick={() => { setHerclassificeerResultaat(null); setHerclassificeerOpen(true); }} className="gap-2">
+              <RefreshCw className="w-4 h-4" /> Herclassificeer lege items
+            </Button>
+          )}
           <Button variant="outline" onClick={() => { resetAanvraag(); setAanvraagOpen(true); }} className="gap-2">
             <Mail className="w-4 h-4" /> Offerte-aanvraag
           </Button>
@@ -788,6 +839,90 @@ export default function InboxPagina() {
               {isRegistreerBezig ? "Uploaden..." : <><Upload className="w-3.5 h-3.5" /> Registreren</>}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── HERCLASSIFICEER DIALOG ───────────────────────────────────────────── */}
+      <Dialog open={herclassificeerOpen} onOpenChange={(open) => { if (!open && !herclassificeerBezig) setHerclassificeerOpen(false); }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <RefreshCw className="w-4 h-4 text-primary" /> Herclassificeer lege items
+            </DialogTitle>
+          </DialogHeader>
+
+          {!herclassificeerBezig && !herclassificeerResultaat && (
+            <div className="space-y-4">
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-800">
+                <p className="font-medium">Wat doet dit?</p>
+                <p className="mt-1">
+                  Alle inbox-items zonder AI-analyse worden opnieuw door de classificatie-motor gestuurd.
+                  Status, bestemming en categorie van al afgehandelde items blijven ongewijzigd.
+                </p>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setHerclassificeerOpen(false)}>Annuleren</Button>
+                <Button onClick={startHerclassificeren} className="gap-1.5">
+                  <RefreshCw className="w-3.5 h-3.5" /> Starten
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
+
+          {herclassificeerBezig && (
+            <div className="flex flex-col items-center gap-4 py-6">
+              <RefreshCw className="w-8 h-8 text-primary animate-spin" />
+              <p className="text-sm text-muted-foreground">AI-classificatie bezig, een moment geduld...</p>
+            </div>
+          )}
+
+          {!herclassificeerBezig && herclassificeerResultaat && (
+            <div className="space-y-4">
+              {herclassificeerResultaat.verwerkt === 0 ? (
+                <div className="flex items-center gap-2 p-3 rounded-lg bg-muted text-sm text-muted-foreground">
+                  <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+                  Geen items gevonden zonder AI-analyse. Alles is al geclassificeerd.
+                </div>
+              ) : (
+                <>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="rounded-lg border p-3 text-center">
+                      <p className="text-2xl font-bold">{herclassificeerResultaat.verwerkt}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">Verwerkt</p>
+                    </div>
+                    <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-center">
+                      <p className="text-2xl font-bold text-emerald-700">{herclassificeerResultaat.geslaagd}</p>
+                      <p className="text-xs text-emerald-600 mt-0.5">Geslaagd</p>
+                    </div>
+                    <div className={`rounded-lg border p-3 text-center ${herclassificeerResultaat.mislukt > 0 ? "border-red-200 bg-red-50" : "border-gray-200"}`}>
+                      <p className={`text-2xl font-bold ${herclassificeerResultaat.mislukt > 0 ? "text-red-700" : "text-muted-foreground"}`}>{herclassificeerResultaat.mislukt}</p>
+                      <p className={`text-xs mt-0.5 ${herclassificeerResultaat.mislukt > 0 ? "text-red-600" : "text-muted-foreground"}`}>Mislukt</p>
+                    </div>
+                  </div>
+
+                  {herclassificeerResultaat.items.length > 0 && (
+                    <div className="max-h-56 overflow-y-auto space-y-1.5 rounded-lg border p-2">
+                      {herclassificeerResultaat.items.map((item) => (
+                        <div key={item.id} className="flex items-start gap-2 text-xs py-1 px-1">
+                          {item.status === "geslaagd"
+                            ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
+                            : <XCircle className="w-3.5 h-3.5 text-red-500 shrink-0 mt-0.5" />}
+                          <div className="flex-1 min-w-0">
+                            <span className="font-medium truncate block">{item.bestandsnaam}</span>
+                            {item.fout && <span className="text-red-600 block truncate">{item.fout}</span>}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
+
+              <DialogFooter>
+                <Button onClick={() => setHerclassificeerOpen(false)}>Sluiten</Button>
+              </DialogFooter>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
