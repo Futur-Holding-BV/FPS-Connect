@@ -11,7 +11,7 @@ import {
   opnamesTable,
   werkgeversTable,
 } from "@workspace/db";
-import { eq, desc, and, isNull } from "drizzle-orm";
+import { eq, desc, and, isNull, or, sql } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { parseEmailBestand } from "../services/email-ai";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
@@ -1002,7 +1002,13 @@ router.post("/inbox/herclassificeer", schrijven, async (req, res): Promise<void>
     const items = await db
       .select()
       .from(inboxItemsTable)
-      .where(isNull(inboxItemsTable.aiBewijs));
+      .where(
+        or(
+          isNull(inboxItemsTable.aiBewijs),
+          sql`${inboxItemsTable.aiBewijs} = '[]'`,
+          sql`${inboxItemsTable.aiBewijs} = ''`
+        )
+      );
 
     if (items.length === 0) {
       res.json({ verwerkt: 0, geslaagd: 0, mislukt: 0, items: [] });
