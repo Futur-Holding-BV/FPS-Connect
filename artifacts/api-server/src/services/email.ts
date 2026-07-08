@@ -53,7 +53,7 @@ export class MailFout extends Error {
   }
 }
 
-export type MailSoort = "test" | "uitnodiging" | "wachtwoord_reset" | "offerte" | "klantvraag" | "ondertekening" | "inkoopbon" | "opdrachtbevestiging" | "magazijn_signalering" | "magazijn_bestelbon" | "aanvraag_bevestiging" | "planning_melding" | "incident_melding" | "ai_drempel" | "reactietermijn_melding";
+export type MailSoort = "test" | "uitnodiging" | "wachtwoord_reset" | "offerte" | "klantvraag" | "ondertekening" | "inkoopbon" | "opdrachtbevestiging" | "magazijn_signalering" | "magazijn_bestelbon" | "aanvraag_bevestiging" | "planning_melding" | "incident_melding" | "ai_drempel" | "reactietermijn_melding" | "rapport_melding";
 
 // ── Configuratie-helpers ─────────────────────────────────────────────────────
 export function isGeconfigureerd(): boolean {
@@ -1218,6 +1218,64 @@ export async function stuurReactietermijnMelding(opties: {
     });
   } catch (err) {
     logger.error({ err }, "Reactietermijn-melding verzenden mislukt");
+  }
+}
+
+/**
+ * Stuurt een notificatiemail naar de klant die aan een gebouw is gekoppeld,
+ * zodra een rapport definitief is gemaakt. Gooit nooit — mislukkingen worden
+ * gelogd en stilzwijgend genegeerd (niet-kritieke notificatie).
+ */
+export async function stuurRapportBeschikbaarMelding(opties: {
+  naarEmail: string;
+  naarNaam: string | null;
+  rapportTitel: string | null;
+  gebouwNaam: string;
+  reactietermijnDatum: Date;
+  portaalUrl: string;
+  rapportId: number;
+}): Promise<void> {
+  const { naarEmail, naarNaam, rapportTitel, gebouwNaam, reactietermijnDatum, portaalUrl } = opties;
+
+  if (!isGeconfigureerd()) {
+    logger.warn({ rapportId: opties.rapportId }, "E-mailservice niet geconfigureerd — rapport-beschikbaar melding niet verstuurd");
+    return;
+  }
+
+  const aanhef = naarNaam ? `Geachte ${escapeHtml(naarNaam)},` : "Geachte relatie,";
+  const titelLabel = rapportTitel ? escapeHtml(rapportTitel) : "Rapport";
+  const datumGeformateerd = reactietermijnDatum.toLocaleDateString("nl-NL", {
+    timeZone: "Europe/Amsterdam",
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  });
+
+  const onderwerp = `Nieuw rapport beschikbaar — ${escapeHtml(gebouwNaam)}`;
+
+  const html = mailShell({
+    titel: onderwerp,
+    kopje: "Er staat een nieuw rapport voor u klaar",
+    paragrafen: [
+      aanhef,
+      `Voor het object <strong>${escapeHtml(gebouwNaam)}</strong> is het rapport <strong>${titelLabel}</strong> definitief gemaakt en voor u beschikbaar in FPS One.`,
+      `De reactietermijn loopt tot <strong>${datumGeformateerd}</strong>. Bekijk het rapport zo snel mogelijk en neem contact op als u vragen heeft.`,
+    ],
+    knop: { label: "Bekijk rapport in FPS One", link: portaalUrl },
+    voettekst:
+      "Dit bericht is automatisch verstuurd door FPS One &bull; U ontvangt dit omdat u als contactpersoon aan dit object bent gekoppeld.",
+  });
+
+  try {
+    await verstuurMail({
+      naarEmail,
+      naarNaam: naarNaam ?? undefined,
+      onderwerp,
+      html,
+      soort: "rapport_melding",
+    });
+  } catch (err) {
+    logger.warn({ err, rapportId: opties.rapportId }, "Rapport-beschikbaar melding mislukt (niet-kritiek)");
   }
 }
 

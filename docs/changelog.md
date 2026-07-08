@@ -4,6 +4,20 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-08 — Klant-notificatie bij definitief rapport
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+**Wat is gebouwd / hersteld:**
+
+Wanneer een rapport definitief wordt gemaakt (`POST /gebouwen/:id/rapporten/:rapportId/definitief`), wordt de klant die aan het gebouw is gekoppeld nu automatisch per e-mail genotificeerd. De e-mail bevat de rapporttitel, gebouwnaam, reactietermijndatum en een directe link naar `/klant/rapportages`. Als het gebouw geen gekoppelde klant heeft, of de klant is inactief/gearchiveerd, wordt er geen e-mail verstuurd. Mislukte notificaties worden gelogd als waarschuwing maar blokkeren de definitief-actie nooit.
+
+**Technische details:**
+- `artifacts/api-server/src/services/email.ts` — nieuw `MailSoort` `"rapport_melding"` + `stuurRapportBeschikbaarMelding()` functie met branded HTML-mail (FPS One, oranje primaire kleur)
+- `artifacts/api-server/src/routes/rapporten.ts` — definitief-endpoint stuurt na succesvolle DB-update een best-effort klant-notificatie (catch voorkomt dat een mail-fout de HTTP-respons verbreekt)
+- Klant-lookup via `gebouwenTable.klantId` → `gebruikersTable`; alleen actieve, niet-gearchiveerde klantaccounts ontvangen de mail
+- Portaallink geconstrueerd via `REPLIT_DOMAINS` (zelfde patroon als andere routes)
+
 ## 2026-07-08 — Reactietermijn-signalering voor hoofdbeheerders
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (alleen additive: nieuwe kolom, nieuwe achtergrondjob)

@@ -10,6 +10,7 @@ import {
   documentenTable,
 } from "@workspace/db";
 import { eq, desc, and, inArray, ne } from "drizzle-orm";
+import { stuurRapportBeschikbaarMelding } from "../services/email";
 import { requireBevoegdheid, requireBevoegdheidOfKlant } from "../middlewares/auth";
 import { ObjectStorageService } from "../lib/objectStorage";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
@@ -348,6 +349,37 @@ router.post("/gebouwen/:id/rapporten/:rapportId/definitief", aanmakenRapporten, 
           ne(opleverrapportenTable.id, definitief.id),
         ),
       );
+
+    // Klant-notificatie: stuur een e-mail naar de gekoppelde klant (best-effort).
+    try {
+      const [gebouw] = await db
+        .select({ naam: gebouwenTable.naam, klantId: gebouwenTable.klantId })
+        .from(gebouwenTable)
+        .where(eq(gebouwenTable.id, gebouwId));
+
+      if (gebouw?.klantId) {
+        const [klant] = await db
+          .select({ naam: gebruikersTable.naam, email: gebruikersTable.email, actief: gebruikersTable.actief, gearchiveerd: gebruikersTable.gearchiveerd })
+          .from(gebruikersTable)
+          .where(eq(gebruikersTable.id, gebouw.klantId));
+
+        if (klant && klant.actief && !klant.gearchiveerd) {
+          const domein = (process.env.REPLIT_DOMAINS ?? "").split(",")[0]?.trim() || "localhost";
+          const portaalUrl = `https://${domein}/klant/rapportages`;
+          await stuurRapportBeschikbaarMelding({
+            naarEmail: klant.email,
+            naarNaam: klant.naam,
+            rapportTitel: definitief.titel,
+            gebouwNaam: gebouw.naam,
+            reactietermijnDatum: reactietermijnDatum,
+            portaalUrl,
+            rapportId: definitief.id,
+          });
+        }
+      }
+    } catch (notificatieFout) {
+      req.log.warn({ err: notificatieFout, rapportId: definitief.id }, "Klant-notificatie rapport definitief mislukt (niet-kritiek)");
+    }
 
     res.json(mapRapport(definitief));
   } catch (err) {
