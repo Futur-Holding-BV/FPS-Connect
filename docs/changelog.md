@@ -4,6 +4,21 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-08 — Vrije-tekst zoekfunctie rapportenbibliotheek bevestigd + gegenereerde typen bijgewerkt
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+**Wat is gebouwd / hersteld:**
+
+De vrije-tekst zoekfunctie in de rapportenbibliotheek (`artifacts/firevault/src/pages/rapporten/index.tsx`) was al aanwezig in de codebase: een zoekveld met live filtering op titel, gebouwnaam, rapporttype en opsteller, gecombineerd met de bestaande statusfilter, gebouwfilter, typefilter en datumbereikfilter. De V1.5-restscope was daarmee al afgevinkt.
+
+Tijdens de verificatie bleken de gegenereerde API-types (`lib/api-client-react/src/generated/api.schemas.ts`) verouderd te zijn: `weergave_status`, `vervangen_op`, `vervangen_door_rapport_id` en `ListRapportenStatus` (incl. `vervangen`) ontbraken in de gegenereerde `Rapport`-typen, waardoor de firevault-typecheck 14 fouten rapporteerde. Codegen uitvoeren (`pnpm --filter @workspace/api-spec run codegen`) heeft de typen gesynchroniseerd met de OpenAPI-spec; de typecheck slaagt nu schoon.
+
+**Technische details:**
+- Geen codewijziging in rapporten/index.tsx — zoekfunctie was al volledig geïmplementeerd
+- `lib/api-client-react/src/generated/api.schemas.ts` en `api.ts` — bijgewerkt via codegen (niet handmatig)
+- Restscope V1.5 "vrije-tekst zoekfunctie in de bibliotheek" afgevinkt in replit.md
+
 ## 2026-07-08 — Herstel AI-documentclassificatiepipeline (Document Intelligence)
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** midden (raakt zowel Inbox-upload als Slim Upload; DB-schema-uitbreiding)
