@@ -4703,6 +4703,84 @@ paths:
         "404":
           description: Gebruiker niet gevonden
 
+  /gebruikers/{id}/wachtwoord-resetten:
+    post:
+      operationId: gebruikerWachtwoordResetten
+      tags: [gebruikers]
+      summary: >-
+        Wachtwoord van een gebruiker resetten (alleen hoofdbeheerder): resetlink
+        of tijdelijk wachtwoord, forceert wijzigen bij volgende login, trekt
+        sessies/mobiele tokens in en heft een vergrendeling op
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WachtwoordResettenInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WachtwoordResettenOutput"
+        "400":
+          description: Ongeldige aanvraag
+        "404":
+          description: Gebruiker niet gevonden
+        "502":
+          description: Resetmail kon niet worden verzonden
+
+  /gebruikers/{id}/sessies-beeindigen:
+    post:
+      operationId: gebruikerSessiesBeeindigen
+      tags: [gebruikers]
+      summary: >-
+        Alle actieve sessies en mobiele tokens van een gebruiker intrekken
+        (alleen hoofdbeheerder), zonder het wachtwoord te wijzigen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessiesBeeindigenOutput"
+        "404":
+          description: Gebruiker niet gevonden
+
+  /gebruikers/{id}/ontgrendelen:
+    post:
+      operationId: gebruikerOntgrendelen
+      tags: [gebruikers]
+      summary: Accountvergrendeling van een gebruiker direct opheffen (alleen hoofdbeheerder)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Gebruiker"
+        "404":
+          description: Gebruiker niet gevonden
+
   /gebruikers/{id}/uitnodigen:
     post:
       operationId: uitnodigingVersturen
@@ -23568,6 +23646,12 @@ components:
           type: ["string", "null"]
         bedrijf_uitzendbureau:
           type: ["string", "null"]
+        moet_wachtwoord_wijzigen:
+          type: boolean
+        mislukte_pogingen:
+          type: integer
+        vergrendeld_tot:
+          type: ["string", "null"]
 
     ToewijsbareGebruiker:
       type: object
@@ -23860,6 +23944,39 @@ components:
           type: string
         bedrijf_uitzendbureau:
           type: string
+
+    WachtwoordResettenInput:
+      type: object
+      required: [methode]
+      properties:
+        methode:
+          type: string
+          enum: [link, tijdelijk]
+          description: >-
+            "link" verstuurt een resetlink per e-mail; "tijdelijk" genereert
+            direct een eenmalig tijdelijk wachtwoord.
+        mfa_resetten:
+          type: boolean
+          description: >-
+            Wist ook de TOTP-registratie zodat de gebruiker MFA opnieuw moet
+            instellen bij de volgende login.
+
+    WachtwoordResettenOutput:
+      type: object
+      properties:
+        tijdelijk_wachtwoord:
+          type: string
+          description: Alleen aanwezig bij methode "tijdelijk"; wordt eenmalig getoond.
+        resetlink_verstuurd:
+          type: boolean
+          description: Alleen aanwezig bij methode "link".
+
+    SessiesBeeindigenOutput:
+      type: object
+      required: [sessies_beeindigd]
+      properties:
+        sessies_beeindigd:
+          type: integer
 
     HerkomstBevestigenBulkInput:
       type: object

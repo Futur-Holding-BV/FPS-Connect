@@ -85,7 +85,7 @@ import fieRouter from "./fie";
 import pimRouter from "./pim";
 import kbRouter from "./kb";
 import visualsRouter from "./visuals";
-import { requireAuth, laadPermissies } from "../middlewares/auth";
+import { requireAuth, laadPermissies, blokkeerBijWachtwoordWijzigenVereist } from "../middlewares/auth";
 import { meldActief } from "../lib/online-tracker";
 import { maakAuditMiddleware } from "../lib/audit";
 import { governanceMiddleware } from "../middlewares/governance";
@@ -111,6 +111,10 @@ router.use(installatieRouter);
 router.use(portaalRouter);
 // Vanaf hier vereist alles een geldige sessie
 router.use(requireAuth);
+// Fail-closed: een verplichte wachtwoordwijziging (na admin-reset) blokkeert
+// alle overige routes hier onder /api, ongeacht wat de client stuurt.
+// /auth/* blijft bereikbaar omdat die router hierboven al is afgehandeld.
+router.use(blokkeerBijWachtwoordWijzigenVereist);
 // Laad permissies één keer per request — req.permissies beschikbaar op alle routes
 router.use(laadPermissies);
 // Universele audit trail — onderschept alle muterende requests

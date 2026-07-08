@@ -50,6 +50,17 @@ export const gebruikersTable = pgTable("gebruikers", {
   bedrijfUitzendbureau: text("bedrijf_uitzendbureau"),
   // AVG: geanonimiseerd via een inzageverzoek-afhandelingsflow.
   geanonimiseerd: text("geanonimiseerd"),
+  // Beheer wachtwoorden (alleen hoofdbeheerder): token-epoch voor het
+  // intrekken van mobiele bearer-tokens. Wordt opgehoogd bij wachtwoord-reset
+  // of "sessies beëindigen"; oudere tokens (embedden hun eigen tv) worden dan
+  // afgewezen in requireAuth zonder extra DB-round-trip.
+  tokenVersie: integer("token_versie").notNull().default(0),
+  // Geforceerde wachtwoordwijziging: gezet bij een tijdelijk wachtwoord
+  // (admin-reset), gewist zodra de gebruiker zelf een nieuw wachtwoord kiest.
+  moetWachtwoordWijzigen: boolean("moet_wachtwoord_wijzigen").notNull().default(false),
+  // Account-lockout na herhaalde mislukte inlogpogingen (wachtwoord of TOTP).
+  misluktePogingen: integer("mislukte_pogingen").notNull().default(0),
+  vergrendeldTot: timestamp("vergrendeld_tot"),
 });
 
 // Standaardprofielen (presets) die de bevoegdheden-matrix als startpunt vullen.

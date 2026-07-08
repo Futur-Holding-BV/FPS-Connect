@@ -658,6 +658,7 @@ import type {
   SepaBestand,
   SepaBestandPatch,
   SepaUploadInput,
+  SessiesBeeindigenOutput,
   SnagstreamOvernemenInput,
   SnagstreamRapport,
   SnagstreamRapportInput,
@@ -775,6 +776,8 @@ import type {
   VoorzieningTypeUpdate,
   VoorzieningUpdate,
   WachtwoordResetInput,
+  WachtwoordResettenInput,
+  WachtwoordResettenOutput,
   WachtwoordVergetenInput,
   WachtwoordWijzigen,
   WagenparkAiAdvies,
@@ -16145,6 +16148,217 @@ export const useHerstellenGebruiker = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getHerstellenGebruikerMutationOptions(options));
+    }
+
+export const getGebruikerWachtwoordResettenUrl = (id: number,) => {
+
+
+
+
+  return `/api/gebruikers/${id}/wachtwoord-resetten`
+}
+
+/**
+ * @summary Wachtwoord van een gebruiker resetten (alleen hoofdbeheerder): resetlink of tijdelijk wachtwoord, forceert wijzigen bij volgende login, trekt sessies/mobiele tokens in en heft een vergrendeling op
+ */
+export const gebruikerWachtwoordResetten = async (id: number,
+    wachtwoordResettenInput: WachtwoordResettenInput, options?: RequestInit): Promise<WachtwoordResettenOutput> => {
+
+  return customFetch<WachtwoordResettenOutput>(getGebruikerWachtwoordResettenUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(wachtwoordResettenInput)
+  }
+);}
+
+
+
+
+export const getGebruikerWachtwoordResettenMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof gebruikerWachtwoordResetten>>, TError,{id: number;data: BodyType<WachtwoordResettenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof gebruikerWachtwoordResetten>>, TError,{id: number;data: BodyType<WachtwoordResettenInput>}, TContext> => {
+
+const mutationKey = ['gebruikerWachtwoordResetten'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof gebruikerWachtwoordResetten>>, {id: number;data: BodyType<WachtwoordResettenInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  gebruikerWachtwoordResetten(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type GebruikerWachtwoordResettenMutationResult = NonNullable<Awaited<ReturnType<typeof gebruikerWachtwoordResetten>>>
+    export type GebruikerWachtwoordResettenMutationBody = BodyType<WachtwoordResettenInput>
+    export type GebruikerWachtwoordResettenMutationError = ErrorType<void>
+
+    /**
+ * @summary Wachtwoord van een gebruiker resetten (alleen hoofdbeheerder): resetlink of tijdelijk wachtwoord, forceert wijzigen bij volgende login, trekt sessies/mobiele tokens in en heft een vergrendeling op
+ */
+export const useGebruikerWachtwoordResetten = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof gebruikerWachtwoordResetten>>, TError,{id: number;data: BodyType<WachtwoordResettenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof gebruikerWachtwoordResetten>>,
+        TError,
+        {id: number;data: BodyType<WachtwoordResettenInput>},
+        TContext
+      > => {
+      return useMutation(getGebruikerWachtwoordResettenMutationOptions(options));
+    }
+
+export const getGebruikerSessiesBeeindigenUrl = (id: number,) => {
+
+
+
+
+  return `/api/gebruikers/${id}/sessies-beeindigen`
+}
+
+/**
+ * @summary Alle actieve sessies en mobiele tokens van een gebruiker intrekken (alleen hoofdbeheerder), zonder het wachtwoord te wijzigen
+ */
+export const gebruikerSessiesBeeindigen = async (id: number, options?: RequestInit): Promise<SessiesBeeindigenOutput> => {
+
+  return customFetch<SessiesBeeindigenOutput>(getGebruikerSessiesBeeindigenUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getGebruikerSessiesBeeindigenMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof gebruikerSessiesBeeindigen>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof gebruikerSessiesBeeindigen>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['gebruikerSessiesBeeindigen'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof gebruikerSessiesBeeindigen>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  gebruikerSessiesBeeindigen(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type GebruikerSessiesBeeindigenMutationResult = NonNullable<Awaited<ReturnType<typeof gebruikerSessiesBeeindigen>>>
+
+    export type GebruikerSessiesBeeindigenMutationError = ErrorType<void>
+
+    /**
+ * @summary Alle actieve sessies en mobiele tokens van een gebruiker intrekken (alleen hoofdbeheerder), zonder het wachtwoord te wijzigen
+ */
+export const useGebruikerSessiesBeeindigen = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof gebruikerSessiesBeeindigen>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof gebruikerSessiesBeeindigen>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getGebruikerSessiesBeeindigenMutationOptions(options));
+    }
+
+export const getGebruikerOntgrendelenUrl = (id: number,) => {
+
+
+
+
+  return `/api/gebruikers/${id}/ontgrendelen`
+}
+
+/**
+ * @summary Accountvergrendeling van een gebruiker direct opheffen (alleen hoofdbeheerder)
+ */
+export const gebruikerOntgrendelen = async (id: number, options?: RequestInit): Promise<Gebruiker> => {
+
+  return customFetch<Gebruiker>(getGebruikerOntgrendelenUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getGebruikerOntgrendelenMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof gebruikerOntgrendelen>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof gebruikerOntgrendelen>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['gebruikerOntgrendelen'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof gebruikerOntgrendelen>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  gebruikerOntgrendelen(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type GebruikerOntgrendelenMutationResult = NonNullable<Awaited<ReturnType<typeof gebruikerOntgrendelen>>>
+
+    export type GebruikerOntgrendelenMutationError = ErrorType<void>
+
+    /**
+ * @summary Accountvergrendeling van een gebruiker direct opheffen (alleen hoofdbeheerder)
+ */
+export const useGebruikerOntgrendelen = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof gebruikerOntgrendelen>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof gebruikerOntgrendelen>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getGebruikerOntgrendelenMutationOptions(options));
     }
 
 export const getUitnodigingVersturenUrl = (id: number,) => {

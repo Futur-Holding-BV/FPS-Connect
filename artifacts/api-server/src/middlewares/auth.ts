@@ -35,15 +35,22 @@ export async function requireAuth(
   // Mobiele app: bearer-token in plaats van sessie-cookie.
   const header = req.headers.authorization;
   if (header && header.startsWith("Bearer ")) {
-    const uid = leesToken(header.slice(7));
-    if (uid) {
+    const payload = leesToken(header.slice(7));
+    if (payload) {
       try {
         const [g] = await db
-          .select({ actief: gebruikersTable.actief, rol: gebruikersTable.rol })
+          .select({
+            actief: gebruikersTable.actief,
+            rol: gebruikersTable.rol,
+            tokenVersie: gebruikersTable.tokenVersie,
+          })
           .from(gebruikersTable)
-          .where(eq(gebruikersTable.id, uid));
-        if (g && g.actief) {
-          req.session.userId = uid;
+          .where(eq(gebruikersTable.id, payload.uid));
+        // tokenVersie moet exact overeenkomen — een admin-wachtwoordreset of
+        // "sessies beëindigen" hoogt de kolom op en trekt zo alle eerder
+        // uitgegeven tokens in, zonder blocklist.
+        if (g && g.actief && g.tokenVersie === payload.tv) {
+          req.session.userId = payload.uid;
           req.session.rol = g.rol;
           next();
           return;
@@ -56,6 +63,45 @@ export async function requireAuth(
     }
   }
   res.status(401).json({ error: "Niet ingelogd" });
+}
+
+/**
+ * Blokkeert alle data-routes zolang de gebruiker een verplichte
+ * wachtwoordwijziging openstaand heeft (na een admin-reset of tijdelijk
+ * wachtwoord). Fail-closed op de server — de frontend toont een blokkerende
+ * modal, maar de daadwerkelijke afdwinging gebeurt hier, ongeacht wat de
+ * client stuurt. `/auth/*` routes staan hier bewust buiten: die router is
+ * vóór requireAuth geregistreerd en blijft dus altijd bereikbaar, zodat de
+ * gebruiker zelf via POST /auth/wachtwoord-wijzigen (of de resetlink) weer
+ * verder kan. Werkt op de ECHTE sessie-gebruiker, nooit op een impersonatie.
+ */
+export async function blokkeerBijWachtwoordWijzigenVereist(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  const id = req.session.userId;
+  if (!id) {
+    next();
+    return;
+  }
+  try {
+    const [g] = await db
+      .select({ moetWachtwoordWijzigen: gebruikersTable.moetWachtwoordWijzigen })
+      .from(gebruikersTable)
+      .where(eq(gebruikersTable.id, id));
+    if (g?.moetWachtwoordWijzigen) {
+      res.status(403).json({
+        error: "Wachtwoord wijzigen is verplicht voordat u verdergaat",
+        code: "WACHTWOORD_WIJZIGEN_VEREIST",
+      });
+      return;
+    }
+    next();
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
 }
 
 export function requireRol(...toegestaneRollen: string[]): RequestHandler {

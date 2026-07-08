@@ -3,6 +3,7 @@
 - [RN Web Modal conditioneel renderen](rn-modal-conditional-render.md) — `visible={false}` verwijdert content NIET uit DOM in RNW; gebruik `{open && <Modal visible>}` zodat Playwright tekst niet vindt na sluiten.
 - [Offline-first monteur app patroon](offline-first-monteur.md) — AsyncStorage cache + SyncQueue; expo-file-system/legacy; WachtrijItem id-conflict (gebruik urenId/etc nooit id:number); create_uren payload-based.
 - [FPS Brandpreventie quirks](firevault-quirks.md) — query hooks need queryKey; pre-existing TS7030 in api-server; React 19 (no Uppy overrides); pdfjs v6 getDocument; storage paths; PDF spot coords stored at pdf.js scale:2 (web+mobile must match); mobile auth = HMAC bearer token, not cookies.
+- [Playwright div-filter .first() vs .last()](playwright-filter-first-vs-last.md) — nested divs matching same filter: .first()=outer wrapper (all descendants), .last()=innermost (may miss sibling content like a badge row).
 - [Wagenparkmodule architectuur](wagenpark-module.md) — router.use("/wagenpark", wagenparkRouter) prefix; hook=useBevoegdheid (enkelvoud); mutation sig={id,data} niet {params:{id},data}; WagenparkOnderhoudInput vereist type+omschrijving ook bij PATCH.
 - [Opdracht/Werkbegroting flow](opdracht-werkbegroting.md) — offerte→opdracht→werkbegroting (zonder opslagen); vaststellen→planning→uurstaten→nacalculatie; bevoegdheid=offertes niet aparte module.
 - [Sync context patroon](sync-context.md) — SyncProvider + AbortSignal.timeout voor connectiviteitscheck; forceerSync direct aanroepen na bewaar().

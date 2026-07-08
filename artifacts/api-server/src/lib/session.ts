@@ -70,6 +70,25 @@ export function maakStatelozeSessie(): session.Session & Partial<session.Session
   return zelf;
 }
 
+/**
+ * Beëindigt alle actieve web-sessies van een gebruiker (bv. na een
+ * admin-wachtwoordreset of de expliciete "sessies beëindigen"-actie).
+ * `sess` is een json-kolom die o.a. `userId` bevat — geen aparte index nodig
+ * gezien de beperkte tabelgrootte (12u maxAge, mobiel gebruikt geen sessierij).
+ * `behalveSid` voorkomt dat de hoofdbeheerder zichzelf uitlogt wanneer die
+ * zijn eigen wachtwoord reset.
+ */
+export async function beeindigSessiesVanGebruiker(
+  gebruikerId: number,
+  behalveSid?: string,
+): Promise<number> {
+  const result = await pool.query(
+    `DELETE FROM "session" WHERE (sess->>'userId')::int = $1 AND sid IS DISTINCT FROM $2`,
+    [gebruikerId, behalveSid ?? null],
+  );
+  return result.rowCount ?? 0;
+}
+
 export async function ensureSessionTable(): Promise<void> {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS "session" (

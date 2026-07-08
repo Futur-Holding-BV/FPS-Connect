@@ -13,6 +13,9 @@ import {
   useGebruikerHerkomstBevestigenBulk,
   useGebruikerHerkomstVerwijderen,
   useGebruikersAanvullen,
+  useGebruikerWachtwoordResetten,
+  useGebruikerSessiesBeeindigen,
+  useGebruikerOntgrendelen,
   useListProfielen,
   useGetMailStatus,
   getGetMailStatusQueryKey,
@@ -30,6 +33,11 @@ import {
   AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
   AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem,
+  DropdownMenuSeparator, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -40,7 +48,7 @@ import {
   Mail, Phone, Building, Clock, Plus, UserPlus, Pencil, Trash2, Archive,
   RefreshCw, ShieldCheck, Eye, User, Crown, Upload, Palette, SendHorizonal, X,
   Layers, Search, RotateCcw, Check, CheckCheck, Briefcase, Hammer, Wrench, TrendingUp,
-  ListChecks, Loader2, AlertTriangle,
+  ListChecks, Loader2, AlertTriangle, MoreVertical, KeyRound, LogOut, Lock, Unlock, Copy,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -260,6 +268,9 @@ type Gebruiker = {
   uitnodiging_geopend_op?: string | null;
   uitnodiging_opnieuw_verstuurd_op?: string | null;
   uitnodiging_geaccepteerd_op?: string | null;
+  moet_wachtwoord_wijzigen?: boolean | null;
+  mislukte_pogingen?: number | null;
+  vergrendeld_tot?: string | null;
 };
 
 function haalPrimairKleur(bedrijfskleuren: string | null | undefined): string {
@@ -300,6 +311,9 @@ export default function Gebruikers() {
   const herkomstBevestigenBulk = useGebruikerHerkomstBevestigenBulk();
   const herkomstVerwijderen = useGebruikerHerkomstVerwijderen();
   const vulModulesAan        = useGebruikersAanvullen();
+  const wachtwoordResetten   = useGebruikerWachtwoordResetten();
+  const sessiesBeeindigen    = useGebruikerSessiesBeeindigen();
+  const ontgrendelenMutatie  = useGebruikerOntgrendelen();
 
   const [toevoegenOpen, setToevoegenOpen] = useState(false);
   const [toevoegenStap, setToevoegenStap] = useState<1 | 2>(1);
@@ -315,6 +329,12 @@ export default function Gebruikers() {
 
   const [uitnodigingBezig, setUitnodigingBezig] = useState<number | null>(null);
   const [herkomstBezig, setHerkomstBezig]       = useState<number | null>(null);
+
+  const [wwResetTarget, setWwResetTarget]     = useState<Gebruiker | null>(null);
+  const [wwResetMethode, setWwResetMethode]   = useState<"link" | "tijdelijk">("link");
+  const [wwResetMfa, setWwResetMfa]           = useState(false);
+  const [wwResetResultaat, setWwResetResultaat] = useState<{ tijdelijk_wachtwoord?: string; resetlink_verstuurd?: boolean } | null>(null);
+  const [sessiesTarget, setSessiesTarget]     = useState<Gebruiker | null>(null);
 
   const [zoek, setZoek]               = useVoorkeur<string>("gebruikers_zoek", "");
   const [filterGroep, setFilterGroep] = useVoorkeur<string | null>("gebruikers_filter_groep", null);
@@ -517,6 +537,68 @@ export default function Gebruikers() {
     } finally { setUitnodigingBezig(null); }
   }
 
+  function openWachtwoordReset(g: Gebruiker) {
+    setWwResetTarget(g);
+    setWwResetMethode("link");
+    setWwResetMfa(false);
+    setWwResetResultaat(null);
+  }
+
+  async function verstuurWachtwoordReset() {
+    if (!wwResetTarget) return;
+    try {
+      const res: any = await wachtwoordResetten.mutateAsync({
+        id: wwResetTarget.id,
+        data: { methode: wwResetMethode, mfa_resetten: wwResetMfa },
+      });
+      await invalideer();
+      if (wwResetMethode === "tijdelijk") {
+        setWwResetResultaat({ tijdelijk_wachtwoord: res?.tijdelijk_wachtwoord ?? undefined });
+      } else {
+        setWwResetResultaat({ resetlink_verstuurd: res?.resetlink_verstuurd ?? true });
+        toast({
+          title: "Resetlink verstuurd",
+          description: `Een resetlink is verzonden naar ${wwResetTarget.email ?? wwResetTarget.naam ?? "de gebruiker"}.`,
+        });
+        setWwResetTarget(null);
+      }
+    } catch (err: unknown) {
+      const bericht =
+        err && typeof err === "object" && "message" in err
+          ? String((err as { message: unknown }).message)
+          : "Probeer het later opnieuw.";
+      toast({ title: "Wachtwoord resetten mislukt", description: bericht, variant: "destructive" });
+    }
+  }
+
+  async function bevestigSessiesBeeindigen() {
+    if (!sessiesTarget) return;
+    try {
+      const res: any = await sessiesBeeindigen.mutateAsync({ id: sessiesTarget.id });
+      const aantal = typeof res?.sessies_beeindigd === "number" ? res.sessies_beeindigd : 0;
+      toast({
+        title: "Sessies beëindigd",
+        description: aantal === 0
+          ? `${sessiesTarget.naam ?? "De gebruiker"} had geen actieve sessies.`
+          : `${aantal} actieve sessie${aantal === 1 ? "" : "s"} van ${sessiesTarget.naam ?? "de gebruiker"} beëindigd.`,
+      });
+    } catch {
+      toast({ title: "Sessies beëindigen mislukt", description: "Probeer het later opnieuw.", variant: "destructive" });
+    } finally {
+      setSessiesTarget(null);
+    }
+  }
+
+  async function ontgrendelGebruiker(g: Gebruiker) {
+    try {
+      await ontgrendelenMutatie.mutateAsync({ id: g.id });
+      await invalideer();
+      toast({ title: "Account ontgrendeld", description: `${g.naam ?? "De gebruiker"} kan weer inloggen.` });
+    } catch {
+      toast({ title: "Ontgrendelen mislukt", description: "Probeer het later opnieuw.", variant: "destructive" });
+    }
+  }
+
   // Interne FPS-gebruikers (staf) vs. klantaccounts. Klanten horen bij de
   // klantomgeving (FPS One) en worden bewust apart getoond, niet tussen het
   // interne gebruikersoverzicht.
@@ -625,6 +707,7 @@ export default function Gebruikers() {
     const profiel = g.herkomst_profiel_id != null ? profielMap.get(g.herkomst_profiel_id) : undefined;
     const afwijkend = profiel ? !bevoegdhedenGelijk(g.bevoegdheden, profiel.bevoegdheden) : false;
     const automatisch = (g as any).herkomst_automatisch === true;
+    const vergrendeld = !!g.vergrendeld_tot && new Date(g.vergrendeld_tot).getTime() > Date.now();
 
     return (
       <Card
@@ -661,6 +744,31 @@ export default function Gebruikers() {
                         <Archive className="h-3 w-3" />
                       </Button>
                     )
+                  )}
+                  {isHoofd && !g.gearchiveerd && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-foreground" title="Acties">
+                          <MoreVertical className="h-3 w-3" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => openWachtwoordReset(g)}>
+                          <KeyRound className="h-3.5 w-3.5 mr-2" /> Wachtwoord resetten
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setSessiesTarget(g)}>
+                          <LogOut className="h-3.5 w-3.5 mr-2" /> Sessies beëindigen
+                        </DropdownMenuItem>
+                        {vergrendeld && (
+                          <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => ontgrendelGebruiker(g)}>
+                              <Unlock className="h-3.5 w-3.5 mr-2" /> Account ontgrendelen
+                            </DropdownMenuItem>
+                          </>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   )}
                 </div>
               </div>
@@ -718,6 +826,16 @@ export default function Gebruikers() {
                 {status === "uitgenodigd" && g.uitnodiging_verloopt_op &&
                   new Date(g.uitnodiging_verloopt_op).getTime() < Date.now() && (
                     <Badge variant="outline" className="text-xs h-5 px-1.5 bg-red-100 text-red-800 border-red-200">Verlopen</Badge>
+                )}
+                {vergrendeld && (
+                  <Badge variant="outline" className="text-xs h-5 px-1.5 bg-red-100 text-red-800 border-red-200">
+                    <Lock className="h-3 w-3 mr-1" /> Vergrendeld
+                  </Badge>
+                )}
+                {!vergrendeld && g.moet_wachtwoord_wijzigen && (
+                  <Badge variant="outline" className="text-xs h-5 px-1.5 bg-amber-50 text-amber-700 border-amber-200">
+                    Wachtwoord wijzigen vereist
+                  </Badge>
                 )}
               </div>
 
@@ -1219,6 +1337,109 @@ export default function Gebruikers() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* AlertDialog: sessies beëindigen */}
+      <AlertDialog open={!!sessiesTarget} onOpenChange={(o) => { if (!o) setSessiesTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Sessies beëindigen?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Alle actieve sessies (web) en mobiele apparaten van <strong>{sessiesTarget?.naam}</strong> worden
+              direct uitgelogd. Het wachtwoord blijft ongewijzigd; de gebruiker moet opnieuw inloggen.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuleren</AlertDialogCancel>
+            <AlertDialogAction onClick={(e) => { e.preventDefault(); bevestigSessiesBeeindigen(); }} disabled={sessiesBeeindigen.isPending}>
+              {sessiesBeeindigen.isPending ? "Bezig..." : "Sessies beëindigen"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Dialoog: wachtwoord resetten */}
+      <Dialog open={!!wwResetTarget} onOpenChange={(o) => { if (!o) setWwResetTarget(null); }}>
+        <DialogContent className="max-w-md" aria-describedby="ww-reset-beschr">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <KeyRound className="h-5 w-5" /> Wachtwoord resetten
+            </DialogTitle>
+          </DialogHeader>
+          <p id="ww-reset-beschr" className="sr-only">
+            Reset het wachtwoord van {wwResetTarget?.naam} via een resetlink of een tijdelijk wachtwoord.
+          </p>
+
+          {wwResetResultaat?.tijdelijk_wachtwoord ? (
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Geef dit eenmalige tijdelijke wachtwoord door aan <strong>{wwResetTarget?.naam}</strong>.
+                Het wordt niet nogmaals getoond en moet bij de eerstvolgende login gewijzigd worden.
+              </p>
+              <div className="flex items-center gap-2 rounded-md border bg-muted/40 p-3">
+                <code className="flex-1 font-mono text-sm break-all">{wwResetResultaat.tijdelijk_wachtwoord}</code>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 flex-shrink-0"
+                  title="Kopiëren"
+                  onClick={() => {
+                    navigator.clipboard?.writeText(wwResetResultaat.tijdelijk_wachtwoord ?? "");
+                    toast({ title: "Gekopieerd naar klembord" });
+                  }}
+                >
+                  <Copy className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+              <DialogFooter>
+                <Button type="button" onClick={() => setWwResetTarget(null)}>Sluiten</Button>
+              </DialogFooter>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Kies hoe <strong>{wwResetTarget?.naam}</strong> een nieuw wachtwoord instelt. Bestaande sessies
+                en mobiele apparaten worden hierbij automatisch uitgelogd en de gebruiker moet bij de
+                eerstvolgende login direct een nieuw wachtwoord kiezen.
+              </p>
+              <RadioGroup value={wwResetMethode} onValueChange={(v) => setWwResetMethode(v as "link" | "tijdelijk")}>
+                <div className="flex items-start gap-2">
+                  <RadioGroupItem value="link" id="ww-methode-link" className="mt-0.5" />
+                  <Label htmlFor="ww-methode-link" className="font-normal">
+                    <div className="font-medium">Resetlink versturen</div>
+                    <div className="text-xs text-muted-foreground">Verstuurt een e-mail met een resetlink naar {wwResetTarget?.email}.</div>
+                  </Label>
+                </div>
+                <div className="flex items-start gap-2">
+                  <RadioGroupItem value="tijdelijk" id="ww-methode-tijdelijk" className="mt-0.5" />
+                  <Label htmlFor="ww-methode-tijdelijk" className="font-normal">
+                    <div className="font-medium">Tijdelijk wachtwoord genereren</div>
+                    <div className="text-xs text-muted-foreground">Toont eenmalig een tijdelijk wachtwoord dat u zelf doorgeeft.</div>
+                  </Label>
+                </div>
+              </RadioGroup>
+              <div className="flex items-start gap-2 pt-1">
+                <Checkbox
+                  id="ww-mfa-resetten"
+                  checked={wwResetMfa}
+                  onCheckedChange={(c) => setWwResetMfa(c === true)}
+                  className="mt-0.5"
+                />
+                <Label htmlFor="ww-mfa-resetten" className="font-normal">
+                  <div className="font-medium">Ook tweestapsverificatie opnieuw laten instellen</div>
+                  <div className="text-xs text-muted-foreground">Nuttig bij verlies van de authenticator-app.</div>
+                </Label>
+              </div>
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setWwResetTarget(null)}>Annuleren</Button>
+                <Button type="button" onClick={verstuurWachtwoordReset} disabled={wachtwoordResetten.isPending}>
+                  {wachtwoordResetten.isPending ? "Bezig..." : "Resetten"}
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Dialoog: bekijken */}
       <Dialog open={!!bekijkGebruiker} onOpenChange={(o) => { if (!o) setBekijkGebruiker(null); }}>

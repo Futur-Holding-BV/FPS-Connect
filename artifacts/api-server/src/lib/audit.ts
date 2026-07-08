@@ -44,6 +44,10 @@ const GEVOELIGE_VELDEN = new Set([
   "api_key",
   "privateKey",
   "private_key",
+  "tijdelijk_wachtwoord",
+  "tijdelijkWachtwoord",
+  "reset_link",
+  "resetLink",
 ]);
 
 // ── Whitelist per entiteit ──────────────────────────────────────────────────────
@@ -262,7 +266,17 @@ const SLA_OVER_EXACT = new Set([
   "/api/mijn/online",
 ]);
 
-function isAuditUitgesloten(path: string): boolean {
+// Routes die zelf een gerichte logAudit()-aanroep doen met een specifieke
+// actie/meta (bv. wachtwoordbeheer): de generieke auto-audit zou hier alleen
+// een ruisig, ongenuanceerd tweede regel toevoegen. Matcht op het Express
+// route-patroon (met :param), niet op het opgeloste pad met echte id's.
+const SLA_OVER_ROUTE_PATROON = new Set([
+  "/gebruikers/:id/wachtwoord-resetten",
+  "/gebruikers/:id/sessies-beeindigen",
+  "/gebruikers/:id/ontgrendelen",
+]);
+
+function isAuditUitgesloten(path: string, routePatroon?: string): boolean {
   // Alle /auth/* routes volledig uitsluiten — wachtwoorden, TOTP-secrets,
   // bearer-tokens en reset-tokens mogen nooit in de audit-log belanden.
   // Zowel /auth/ als /api/auth/ worden geblokkeerd (defensief voor eventuele
@@ -270,6 +284,7 @@ function isAuditUitgesloten(path: string): boolean {
   if (path.startsWith("/auth/") || path === "/auth") return true;
   if (path.startsWith("/api/auth/") || path === "/api/auth") return true;
   if (SLA_OVER_EXACT.has(path)) return true;
+  if (routePatroon && SLA_OVER_ROUTE_PATROON.has(routePatroon)) return true;
   return false;
 }
 
@@ -280,7 +295,8 @@ function routeNaarInfo(req: Request): {
 } | null {
   const actie = METHODE_NAAR_ACTIE[req.method];
   if (!actie) return null;
-  if (isAuditUitgesloten(req.path)) return null;
+  const routePatroon = req.route?.path as string | undefined;
+  if (isAuditUitgesloten(req.path, routePatroon)) return null;
 
   const routePath: string =
     (req.route?.path as string | undefined) ?? req.path ?? "";

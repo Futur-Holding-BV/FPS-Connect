@@ -4,10 +4,16 @@ import crypto from "crypto";
 import { authenticator } from "otplib";
 import QRCode from "qrcode";
 import { db, gebruikersTable, wachtwoordResetTokensTable } from "@workspace/db";
-import { eq, and, gt, isNull } from "drizzle-orm";
+import { eq, and, gt, isNull, sql } from "drizzle-orm";
 import { maakToken } from "../lib/token";
 import { legLoginPogingVast } from "./systeem";
 import { verstuurWachtwoordResetMail } from "../services/email.js";
+import {
+  isVergrendeld,
+  verwerkMislukteInlogpoging,
+  resetMislukteInlogpogingen,
+} from "../lib/lockout";
+import { beeindigSessiesVanGebruiker } from "../lib/session";
 
 const router = Router();
 
@@ -72,7 +78,16 @@ const mapAuthGebruiker = (g: typeof gebruikersTable.$inferSelect) => ({
   functietitels: g.functietitels ?? [],
   bevoegdheden: (g.bevoegdheden as Record<string, number>) ?? {},
   is_hoofdtester: g.isHoofdtester ?? false,
+  moet_wachtwoord_wijzigen: g.moetWachtwoordWijzigen ?? false,
 });
+
+function vergrendeldRespons(vergrendeldTot: Date) {
+  return {
+    error: "Account tijdelijk vergrendeld wegens te veel mislukte inlogpogingen. Probeer het later opnieuw of neem contact op met de hoofdbeheerder.",
+    code: "ACCOUNT_VERGRENDELD",
+    vergrendeld_tot: vergrendeldTot.toISOString(),
+  };
+}
 
 const schoonCode = (code: unknown) => String(code ?? "").replace(/\s+/g, "");
 
@@ -109,8 +124,12 @@ router.post("/auth/login", async (req, res): Promise<void> => {
       });
       return void res.status(401).json({ error: "Onjuiste inloggegevens" });
     }
+    if (isVergrendeld(g.vergrendeldTot)) {
+      return void res.status(423).json(vergrendeldRespons(g.vergrendeldTot!));
+    }
     const ok = await bcrypt.compare(String(wachtwoord), g.wachtwoord);
     if (!ok) {
+      await verwerkMislukteInlogpoging(g.id, g.misluktePogingen);
       await legLoginPogingVast({
         gebruikerId: g.id,
         email: g.email,
@@ -187,6 +206,7 @@ router.post("/auth/2fa/activeren", async (req, res): Promise<void> => {
     req.session.userId = pendingId;
     delete req.session.pendingUserId;
     delete req.session.pendingSecret;
+    await resetMislukteInlogpogingen(g!.id);
     const risico = await legLoginPogingVast({
       gebruikerId: g!.id,
       email: g!.email,
@@ -220,7 +240,11 @@ router.post("/auth/2fa/verify", async (req, res): Promise<void> => {
     if (!g || !g.totpSecret) {
       return void res.status(401).json({ error: "Tweestapsverificatie niet ingericht" });
     }
+    if (isVergrendeld(g.vergrendeldTot)) {
+      return void res.status(423).json(vergrendeldRespons(g.vergrendeldTot!));
+    }
     if (!authenticator.check(code, g.totpSecret)) {
+      await verwerkMislukteInlogpoging(g.id, g.misluktePogingen);
       await legLoginPogingVast({
         gebruikerId: g.id,
         email: g.email,
@@ -241,6 +265,7 @@ router.post("/auth/2fa/verify", async (req, res): Promise<void> => {
     req.session.userId = g.id;
     delete req.session.pendingUserId;
     delete req.session.pendingSecret;
+    await resetMislukteInlogpogingen(g.id);
     const risico = await legLoginPogingVast({
       gebruikerId: g.id,
       email: g.email,
@@ -273,8 +298,12 @@ router.post("/auth/mobile/login", async (req, res): Promise<void> => {
     if (!g || !g.actief || !g.wachtwoord) {
       return void res.status(401).json({ error: "Onjuiste inloggegevens" });
     }
+    if (isVergrendeld(g.vergrendeldTot)) {
+      return void res.status(423).json(vergrendeldRespons(g.vergrendeldTot!));
+    }
     const ok = await bcrypt.compare(String(wachtwoord), g.wachtwoord);
     if (!ok) {
+      await verwerkMislukteInlogpoging(g.id, g.misluktePogingen);
       return void res.status(401).json({ error: "Onjuiste inloggegevens" });
     }
     if (!g.tweeFactorIngeschakeld || !g.totpSecret) {
@@ -290,16 +319,21 @@ router.post("/auth/mobile/login", async (req, res): Promise<void> => {
         .json({ error: "Authenticatiecode is verplicht", status: "verify_2fa" });
     }
     if (!authenticator.check(ingevoerdeCode, g.totpSecret)) {
+      await verwerkMislukteInlogpoging(g.id, g.misluktePogingen);
       return void res
         .status(401)
         .json({ error: "Onjuiste code, probeer opnieuw", status: "verify_2fa" });
     }
+    await resetMislukteInlogpogingen(g.id);
     await db
       .update(gebruikersTable)
       .set({ laatstOnline: new Date() })
       .where(eq(gebruikersTable.id, g.id));
-    const token = maakToken(g.id);
-    return void res.json({ token, gebruiker: mapAuthGebruiker(g) });
+    const token = maakToken(g.id, g.tokenVersie);
+    return void res.json({
+      token,
+      gebruiker: mapAuthGebruiker(g),
+    });
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });
@@ -390,13 +424,23 @@ router.post("/auth/wachtwoord-reset", async (req, res): Promise<void> => {
 
     await db
       .update(gebruikersTable)
-      .set({ wachtwoord: gehasht })
+      .set({
+        wachtwoord: gehasht,
+        moetWachtwoordWijzigen: false,
+        misluktePogingen: 0,
+        vergrendeldTot: null,
+        tokenVersie: sql`${gebruikersTable.tokenVersie} + 1`,
+      })
       .where(eq(gebruikersTable.id, resetToken.gebruikerId));
 
     await db
       .update(wachtwoordResetTokensTable)
       .set({ gebruiktOp: now })
       .where(eq(wachtwoordResetTokensTable.id, resetToken.id));
+
+    // Een nieuw wachtwoord maakt alle bestaande sessies en mobiele tokens
+    // ongeldig — de gebruiker moet opnieuw inloggen met het nieuwe wachtwoord.
+    await beeindigSessiesVanGebruiker(resetToken.gebruikerId);
 
     return void res.status(204).send();
   } catch (err) {
@@ -430,8 +474,15 @@ router.post("/auth/wachtwoord-wijzigen", async (req, res): Promise<void> => {
     const gehasht = await bcrypt.hash(String(nieuw_wachtwoord), 10);
     await db
       .update(gebruikersTable)
-      .set({ wachtwoord: gehasht })
+      .set({
+        wachtwoord: gehasht,
+        moetWachtwoordWijzigen: false,
+        tokenVersie: sql`${gebruikersTable.tokenVersie} + 1`,
+      })
       .where(eq(gebruikersTable.id, id));
+    // Overige sessies/mobiele tokens intrekken, behalve de sessie die net het
+    // wachtwoord wijzigde — anders logt de gebruiker zichzelf meteen uit.
+    await beeindigSessiesVanGebruiker(id, req.sessionID);
     res.status(204).send();
   } catch (err) {
     req.log.error(err);

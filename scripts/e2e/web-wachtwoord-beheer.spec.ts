@@ -1,0 +1,141 @@
+// E2E: firevault web-app — "Beheer wachtwoorden" (Gebruikers → Acties, alleen
+// hoofdbeheerder). Test het admin-geïnitieerde wachtwoord-resetten (tijdelijk
+// wachtwoord) en sessies beëindigen tegen een toegewijd doelaccount, zodat
+// nooit een echt account van de gebruiker wordt geraakt.
+//
+// Draaien: pnpm --filter @workspace/scripts run e2e-web
+// Vereist: lopende workflows api-server + firevault web, env DATABASE_URL en
+// REPLIT_DEV_DOMAIN.
+import { expect, test, type Page } from "@playwright/test";
+
+import {
+  E2E_WW_ADMIN_EMAIL,
+  E2E_WW_ADMIN_WACHTWOORD,
+  E2E_WW_TARGET_NAAM,
+  genereerVersAdminTotp,
+  setupE2eWachtwoordAccounts,
+  wachtOpNieuwTotpVenster,
+} from "../src/e2e-wachtwoord-testaccounts";
+
+const INHOUD_TIMEOUT = 20_000;
+
+// ── Login (zelfde patroon als web-gebouw-detail.spec.ts) ────────────────────
+async function logIn(page: Page): Promise<void> {
+  await page.goto("/");
+
+  await expect(page.locator("#email")).toBeVisible({ timeout: 60_000 });
+  await page.locator("#email").fill(E2E_WW_ADMIN_EMAIL);
+  await page.locator("#wachtwoord").fill(E2E_WW_ADMIN_WACHTWOORD);
+
+  for (let poging = 1; poging <= 3; poging++) {
+    if (poging > 1) {
+      await wachtOpNieuwTotpVenster();
+      if (await page.locator("#email").isVisible().catch(() => false)) {
+        await page.locator("#email").fill(E2E_WW_ADMIN_EMAIL);
+        await page.locator("#wachtwoord").fill(E2E_WW_ADMIN_WACHTWOORD);
+      }
+    }
+
+    if (await page.getByRole("button", { name: "Inloggen" }).isVisible()) {
+      await page.getByRole("button", { name: "Inloggen" }).click();
+    }
+
+    try {
+      await expect(page.locator("[data-input-otp]")).toBeVisible({ timeout: 15_000 });
+    } catch {
+      if (poging === 3) throw new Error("TOTP-invoer niet verschenen na 3 pogingen.");
+      continue;
+    }
+
+    const code = await genereerVersAdminTotp();
+    await page.locator("[data-input-otp]").focus();
+    await page.keyboard.type(code);
+
+    try {
+      await expect(page.locator("[data-input-otp]")).not.toBeVisible({ timeout: 15_000 });
+      return;
+    } catch {
+      if (poging === 3) throw new Error("Inloggen mislukt na 3 pogingen (TOTP/login).");
+    }
+  }
+}
+
+// Zoekt het doelaccount op via de zoekbalk zodat precies één kaart overblijft,
+// en geeft de kaart + de "Acties"-knop daarbinnen terug.
+async function vindDoelKaart(page: Page) {
+  await page.goto("/gebruikers");
+  await expect(page.getByPlaceholder("Naam, e-mail of functie...")).toBeVisible({
+    timeout: INHOUD_TIMEOUT,
+  });
+  await page.getByPlaceholder("Naam, e-mail of functie...").fill(E2E_WW_TARGET_NAAM);
+
+  // .first() pakt de buitenste (Card-)div die aan beide filters voldoet, zodat
+  // zowel de Acties-knop als de badge-rij (die elders in de kaart zit) er
+  // binnen vallen. .last() pakt juist de diepst-geneste div en mist zo vaak
+  // zustercontainers zoals de badge-rij.
+  const kaart = page
+    .locator("div")
+    .filter({ hasText: E2E_WW_TARGET_NAAM })
+    .filter({ has: page.getByTitle("Acties") })
+    .first();
+  await expect(kaart).toBeVisible({ timeout: INHOUD_TIMEOUT });
+  return kaart;
+}
+
+// ── Setup ─────────────────────────────────────────────────────────────────────
+test.beforeAll(async () => {
+  await setupE2eWachtwoordAccounts();
+});
+
+// ── Spec ──────────────────────────────────────────────────────────────────────
+test("Web: Beheer wachtwoorden — sessies beëindigen en wachtwoord resetten (tijdelijk)", async ({ page }) => {
+  await test.step("login als hoofdbeheerder met verplichte TOTP", async () => {
+    await logIn(page);
+  });
+
+  await test.step("sessies beëindigen voor het doelaccount", async () => {
+    const kaart = await vindDoelKaart(page);
+    await kaart.getByTitle("Acties").click();
+    await page.getByRole("menuitem", { name: /Sessies beëindigen/i }).click();
+
+    await expect(page.getByRole("alertdialog")).toBeVisible({ timeout: INHOUD_TIMEOUT });
+    await page.getByRole("button", { name: /^Sessies beëindigen$/ }).click();
+
+    // Dialoog sluit weer zodra de actie is afgerond.
+    await expect(page.getByRole("alertdialog")).not.toBeVisible({ timeout: INHOUD_TIMEOUT });
+  });
+
+  await test.step("wachtwoord resetten via tijdelijk wachtwoord", async () => {
+    const kaart = await vindDoelKaart(page);
+    await kaart.getByTitle("Acties").click();
+    await page.getByRole("menuitem", { name: /Wachtwoord resetten/i }).click();
+
+    await expect(page.getByRole("dialog")).toBeVisible({ timeout: INHOUD_TIMEOUT });
+    await page.getByText("Tijdelijk wachtwoord genereren").click();
+    await page.getByRole("button", { name: "Resetten" }).click();
+
+    // Resultaatweergave: eenmalig tijdelijk wachtwoord + kopieerknop.
+    await expect(page.locator("code")).toBeVisible({ timeout: INHOUD_TIMEOUT });
+    const tijdelijkWachtwoord = (await page.locator("code").textContent())?.trim();
+    expect(tijdelijkWachtwoord?.length ?? 0).toBeGreaterThan(0);
+    await expect(page.getByTitle("Kopiëren")).toBeVisible();
+
+    await page.getByRole("button", { name: "Sluiten" }).click();
+    await expect(page.getByRole("dialog")).not.toBeVisible({ timeout: INHOUD_TIMEOUT });
+  });
+
+  await test.step("badge 'Wachtwoord wijzigen vereist' verschijnt na reset", async () => {
+    const kaart = await vindDoelKaart(page);
+    await expect(kaart.getByText("Wachtwoord wijzigen vereist")).toBeVisible({
+      timeout: INHOUD_TIMEOUT,
+    });
+  });
+
+  await test.step("Account ontgrendelen is niet zichtbaar (doelaccount niet vergrendeld)", async () => {
+    const kaart = await vindDoelKaart(page);
+    await kaart.getByTitle("Acties").click();
+    await expect(page.getByRole("menuitem", { name: /Wachtwoord resetten/i })).toBeVisible();
+    await expect(page.getByRole("menuitem", { name: /Account ontgrendelen/i })).toHaveCount(0);
+    await page.keyboard.press("Escape");
+  });
+});

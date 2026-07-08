@@ -2,9 +2,15 @@ import crypto from "node:crypto";
 import { Router } from "express";
 import bcrypt from "bcryptjs";
 import { db } from "@workspace/db";
-import { gebruikersTable, profielenTable } from "@workspace/db";
-import { eq, and, isNotNull, inArray } from "drizzle-orm";
-import { stuurUitnodigingsmail, MailFout, MAIL_FOUT_OMSCHRIJVING } from "../services/email";
+import { gebruikersTable, profielenTable, wachtwoordResetTokensTable } from "@workspace/db";
+import { eq, and, isNotNull, inArray, sql } from "drizzle-orm";
+import type { PgUpdateSetSource } from "drizzle-orm/pg-core";
+import {
+  stuurUitnodigingsmail,
+  verstuurWachtwoordResetMail,
+  MailFout,
+  MAIL_FOUT_OMSCHRIJVING,
+} from "../services/email";
 import { requireBevoegdheid, requireRol, requireEnigeBevoegdheid } from "../middlewares/auth";
 import { heeftNiveau, MODULE_IDS } from "@workspace/permissies";
 import {
@@ -12,6 +18,9 @@ import {
   magAutomatischKoppelen,
 } from "../lib/herkomst";
 import { maakGebruikerAan, isEmailConflictFout } from "../lib/gebruiker-aanmaken";
+import { beeindigSessiesVanGebruiker } from "../lib/session";
+import { genereerTijdelijkWachtwoord } from "../lib/wachtwoord";
+import { logAudit } from "../lib/audit";
 
 const router = Router();
 
@@ -92,6 +101,9 @@ const mapGebruiker = (g: typeof gebruikersTable.$inferSelect) => ({
   dienstverband: g.dienstverband ?? "intern",
   bedrijf_uitzendbureau: g.bedrijfUitzendbureau ?? null,
   gearchiveerd: g.gearchiveerd,
+  moet_wachtwoord_wijzigen: g.moetWachtwoordWijzigen ?? false,
+  mislukte_pogingen: g.misluktePogingen ?? 0,
+  vergrendeld_tot: g.vergrendeldTot ? g.vergrendeldTot.toISOString() : null,
 });
 
 // Veilige projectie zonder PII voor niet-beheerders: namen/rol blijven zichtbaar
@@ -403,6 +415,209 @@ router.patch("/gebruikers/:id", alleenBeheerder, async (req, res): Promise<void>
     res.status(500).json({ error: "Interne serverfout" });
   }
 });
+
+// POST /gebruikers/:id/wachtwoord-resetten — hoofdbeheerder-only. Reset het
+// wachtwoord van een gebruiker via een resetlink (e-mail) of een eenmalig
+// tijdelijk wachtwoord. Dwingt in beide gevallen een wachtwoordwijziging af bij
+// de eerstvolgende login, trekt bestaande sessies en mobiele tokens in en heft
+// een eventuele accountvergrendeling op. Optioneel wordt ook de
+// TOTP-registratie gewist zodat de gebruiker MFA opnieuw moet instellen.
+router.post(
+  "/gebruikers/:id/wachtwoord-resetten",
+  requireRol("hoofdbeheerder"),
+  async (req, res): Promise<void> => {
+    try {
+      const id = parseInt(String(req.params.id), 10);
+      if (!Number.isInteger(id)) {
+        return void res.status(400).json({ error: "Ongeldig id" });
+      }
+      const { methode, mfa_resetten } = req.body ?? {};
+      if (methode !== "link" && methode !== "tijdelijk") {
+        return void res
+          .status(400)
+          .json({ error: "methode moet 'link' of 'tijdelijk' zijn" });
+      }
+      const [bestaande] = await db
+        .select()
+        .from(gebruikersTable)
+        .where(eq(gebruikersTable.id, id));
+      if (!bestaande) return void res.status(404).json({ error: "Gebruiker niet gevonden" });
+
+      const mfaResetten = mfa_resetten === true;
+      const wijziging: PgUpdateSetSource<typeof gebruikersTable> = {
+        moetWachtwoordWijzigen: true,
+        misluktePogingen: 0,
+        vergrendeldTot: null,
+        tokenVersie: sql`${gebruikersTable.tokenVersie} + 1`,
+      };
+      if (mfaResetten) {
+        wijziging.totpSecret = null;
+        wijziging.tweeFactorIngeschakeld = false;
+      }
+
+      let tijdelijkWachtwoord: string | null = null;
+      if (methode === "tijdelijk") {
+        tijdelijkWachtwoord = genereerTijdelijkWachtwoord();
+        wijziging.wachtwoord = await bcrypt.hash(tijdelijkWachtwoord, 10);
+      }
+
+      let resetlinkVerstuurd = false;
+      if (methode === "link") {
+        const token = crypto.randomBytes(32).toString("hex");
+        const verlooptOp = new Date(Date.now() + 60 * 60 * 1000);
+        try {
+          await verstuurWachtwoordResetMail({
+            naarEmail: bestaande.email,
+            naarNaam: bestaande.naam,
+            resetLink: `https://${domein()}/wachtwoord-reset?token=${token}`,
+          });
+        } catch (mailErr) {
+          req.log.error(mailErr, "Admin-wachtwoordreset: resetmail mislukt");
+          const melding =
+            mailErr instanceof MailFout
+              ? MAIL_FOUT_OMSCHRIJVING[mailErr.categorie]
+              : "De resetlink kon niet worden verzonden. Probeer het later opnieuw.";
+          return void res.status(502).json({ error: melding });
+        }
+        await db.insert(wachtwoordResetTokensTable).values({
+          gebruikerId: id,
+          token,
+          verlooptOp,
+        });
+        resetlinkVerstuurd = true;
+      }
+
+      await db.update(gebruikersTable).set(wijziging).where(eq(gebruikersTable.id, id));
+
+      // Alle bestaande sessies en mobiele tokens intrekken — de gebruiker moet
+      // opnieuw inloggen (met het nieuwe wachtwoord of via de resetlink).
+      await beeindigSessiesVanGebruiker(id);
+
+      logAudit({
+        gebruikerId: req.session.userId ?? null,
+        gebruikerNaam: null,
+        ipAdres: req.ip ?? null,
+        sessieId: null,
+        module: "gebruikers",
+        actie: "wachtwoord_resetten",
+        entiteit: "gebruiker",
+        entiteitId: id,
+        entiteitNaam: bestaande.naam,
+        oudeWaarde: null,
+        nieuweWaarde: null,
+        workflowStatus: null,
+        gebouwId: null,
+        medewerkerId: null,
+        documentId: null,
+        meta: { methode, mfa_resetten: mfaResetten },
+      });
+
+      if (methode === "tijdelijk") {
+        return void res.json({ tijdelijk_wachtwoord: tijdelijkWachtwoord });
+      }
+      return void res.json({ resetlink_verstuurd: resetlinkVerstuurd });
+    } catch (err) {
+      req.log.error(err);
+      return void res.status(500).json({ error: "Interne serverfout" });
+    }
+  },
+);
+
+// POST /gebruikers/:id/sessies-beeindigen — hoofdbeheerder-only. Trekt alle
+// actieve web-sessies en mobiele tokens van de gebruiker in (zonder het
+// wachtwoord te wijzigen), bv. bij verlies van een apparaat.
+router.post(
+  "/gebruikers/:id/sessies-beeindigen",
+  requireRol("hoofdbeheerder"),
+  async (req, res): Promise<void> => {
+    try {
+      const id = parseInt(String(req.params.id), 10);
+      if (!Number.isInteger(id)) {
+        return void res.status(400).json({ error: "Ongeldig id" });
+      }
+      const [bestaande] = await db
+        .select()
+        .from(gebruikersTable)
+        .where(eq(gebruikersTable.id, id));
+      if (!bestaande) return void res.status(404).json({ error: "Gebruiker niet gevonden" });
+
+      await db
+        .update(gebruikersTable)
+        .set({ tokenVersie: sql`${gebruikersTable.tokenVersie} + 1` })
+        .where(eq(gebruikersTable.id, id));
+      const aantal = await beeindigSessiesVanGebruiker(id);
+
+      logAudit({
+        gebruikerId: req.session.userId ?? null,
+        gebruikerNaam: null,
+        ipAdres: req.ip ?? null,
+        sessieId: null,
+        module: "gebruikers",
+        actie: "sessies_beeindigen",
+        entiteit: "gebruiker",
+        entiteitId: id,
+        entiteitNaam: bestaande.naam,
+        oudeWaarde: null,
+        nieuweWaarde: null,
+        workflowStatus: null,
+        gebouwId: null,
+        medewerkerId: null,
+        documentId: null,
+        meta: { sessies_beeindigd: aantal },
+      });
+
+      return void res.json({ sessies_beeindigd: aantal });
+    } catch (err) {
+      req.log.error(err);
+      return void res.status(500).json({ error: "Interne serverfout" });
+    }
+  },
+);
+
+// POST /gebruikers/:id/ontgrendelen — hoofdbeheerder-only. Heft een
+// accountvergrendeling (na herhaalde mislukte inlogpogingen) direct op.
+router.post(
+  "/gebruikers/:id/ontgrendelen",
+  requireRol("hoofdbeheerder"),
+  async (req, res): Promise<void> => {
+    try {
+      const id = parseInt(String(req.params.id), 10);
+      if (!Number.isInteger(id)) {
+        return void res.status(400).json({ error: "Ongeldig id" });
+      }
+      const [g] = await db
+        .update(gebruikersTable)
+        .set({ misluktePogingen: 0, vergrendeldTot: null })
+        .where(eq(gebruikersTable.id, id))
+        .returning();
+      if (!g) return void res.status(404).json({ error: "Gebruiker niet gevonden" });
+
+      logAudit({
+        gebruikerId: req.session.userId ?? null,
+        gebruikerNaam: null,
+        ipAdres: req.ip ?? null,
+        sessieId: null,
+        module: "gebruikers",
+        actie: "ontgrendelen",
+        entiteit: "gebruiker",
+        entiteitId: id,
+        entiteitNaam: g.naam,
+        oudeWaarde: null,
+        nieuweWaarde: null,
+        workflowStatus: null,
+        gebouwId: null,
+        medewerkerId: null,
+        documentId: null,
+        meta: null,
+      });
+
+      return void res.json(mapGebruiker(g));
+    } catch (err) {
+      req.log.error(err);
+      return void res.status(500).json({ error: "Interne serverfout" });
+    }
+  },
+);
 
 // POST /gebruikers/:id/uitnodigen — eerste uitnodiging sturen
 router.post("/gebruikers/:id/uitnodigen", alleenBeheerder, async (req, res): Promise<void> => {

@@ -5428,7 +5428,10 @@ export const ListGebruikersResponseItem = zod.object({
   "herkomst_profiel_id": zod.number().nullish(),
   "herkomst_automatisch": zod.boolean().optional(),
   "dienstverband": zod.string().nullish(),
-  "bedrijf_uitzendbureau": zod.string().nullish()
+  "bedrijf_uitzendbureau": zod.string().nullish(),
+  "moet_wachtwoord_wijzigen": zod.boolean().optional(),
+  "mislukte_pogingen": zod.number().optional(),
+  "vergrendeld_tot": zod.string().nullish()
 })
 export const ListGebruikersResponse = zod.array(ListGebruikersResponseItem)
 
@@ -5491,7 +5494,10 @@ export const GetGebruikerResponse = zod.object({
   "herkomst_profiel_id": zod.number().nullish(),
   "herkomst_automatisch": zod.boolean().optional(),
   "dienstverband": zod.string().nullish(),
-  "bedrijf_uitzendbureau": zod.string().nullish()
+  "bedrijf_uitzendbureau": zod.string().nullish(),
+  "moet_wachtwoord_wijzigen": zod.boolean().optional(),
+  "mislukte_pogingen": zod.number().optional(),
+  "vergrendeld_tot": zod.string().nullish()
 })
 
 
@@ -5548,7 +5554,10 @@ export const UpdateGebruikerResponse = zod.object({
   "herkomst_profiel_id": zod.number().nullish(),
   "herkomst_automatisch": zod.boolean().optional(),
   "dienstverband": zod.string().nullish(),
-  "bedrijf_uitzendbureau": zod.string().nullish()
+  "bedrijf_uitzendbureau": zod.string().nullish(),
+  "moet_wachtwoord_wijzigen": zod.boolean().optional(),
+  "mislukte_pogingen": zod.number().optional(),
+  "vergrendeld_tot": zod.string().nullish()
 })
 
 
@@ -5595,7 +5604,80 @@ export const HerstellenGebruikerResponse = zod.object({
   "herkomst_profiel_id": zod.number().nullish(),
   "herkomst_automatisch": zod.boolean().optional(),
   "dienstverband": zod.string().nullish(),
-  "bedrijf_uitzendbureau": zod.string().nullish()
+  "bedrijf_uitzendbureau": zod.string().nullish(),
+  "moet_wachtwoord_wijzigen": zod.boolean().optional(),
+  "mislukte_pogingen": zod.number().optional(),
+  "vergrendeld_tot": zod.string().nullish()
+})
+
+
+/**
+ * @summary Wachtwoord van een gebruiker resetten (alleen hoofdbeheerder): resetlink of tijdelijk wachtwoord, forceert wijzigen bij volgende login, trekt sessies/mobiele tokens in en heft een vergrendeling op
+ */
+export const GebruikerWachtwoordResettenParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GebruikerWachtwoordResettenBody = zod.object({
+  "methode": zod.enum(['link', 'tijdelijk']).describe('\"link\" verstuurt een resetlink per e-mail; \"tijdelijk\" genereert direct een eenmalig tijdelijk wachtwoord.'),
+  "mfa_resetten": zod.boolean().optional().describe('Wist ook de TOTP-registratie zodat de gebruiker MFA opnieuw moet instellen bij de volgende login.')
+})
+
+export const GebruikerWachtwoordResettenResponse = zod.object({
+  "tijdelijk_wachtwoord": zod.string().optional().describe('Alleen aanwezig bij methode \"tijdelijk\"; wordt eenmalig getoond.'),
+  "resetlink_verstuurd": zod.boolean().optional().describe('Alleen aanwezig bij methode \"link\".')
+})
+
+
+/**
+ * @summary Alle actieve sessies en mobiele tokens van een gebruiker intrekken (alleen hoofdbeheerder), zonder het wachtwoord te wijzigen
+ */
+export const GebruikerSessiesBeeindigenParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GebruikerSessiesBeeindigenResponse = zod.object({
+  "sessies_beeindigd": zod.number()
+})
+
+
+/**
+ * @summary Accountvergrendeling van een gebruiker direct opheffen (alleen hoofdbeheerder)
+ */
+export const GebruikerOntgrendelenParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GebruikerOntgrendelenResponse = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "email": zod.string(),
+  "rol": zod.enum(['hoofdbeheerder', 'gebruiker', 'klant']),
+  "functietitels": zod.array(zod.string()).optional(),
+  "telefoon": zod.string().nullish(),
+  "bedrijf": zod.string().nullish(),
+  "actief": zod.boolean(),
+  "gearchiveerd": zod.boolean(),
+  "aangemaakt_op": zod.string(),
+  "laatste_online": zod.string().nullish(),
+  "avatar_url": zod.string().nullish(),
+  "bedrijfslogo_url": zod.string().nullish(),
+  "bedrijfskleuren": zod.string().nullish(),
+  "uitnodiging_status": zod.enum(['niet_uitgenodigd', 'uitgenodigd', 'geaccepteerd']),
+  "uitnodiging_verstuurd_op": zod.string().nullish(),
+  "uitnodiging_verloopt_op": zod.string().nullish(),
+  "uitnodiging_geopend_op": zod.string().nullish(),
+  "uitnodiging_opnieuw_verstuurd_op": zod.string().nullish(),
+  "uitnodiging_geaccepteerd_op": zod.string().nullish(),
+  "taal": zod.enum(['nl', 'en', 'de', 'fr', 'ar', 'tr']).optional(),
+  "bevoegdheden": zod.record(zod.string(), zod.number()),
+  "herkomst_profiel_id": zod.number().nullish(),
+  "herkomst_automatisch": zod.boolean().optional(),
+  "dienstverband": zod.string().nullish(),
+  "bedrijf_uitzendbureau": zod.string().nullish(),
+  "moet_wachtwoord_wijzigen": zod.boolean().optional(),
+  "mislukte_pogingen": zod.number().optional(),
+  "vergrendeld_tot": zod.string().nullish()
 })
 
 
@@ -5632,7 +5714,10 @@ export const UitnodigingVersturenResponse = zod.object({
   "herkomst_profiel_id": zod.number().nullish(),
   "herkomst_automatisch": zod.boolean().optional(),
   "dienstverband": zod.string().nullish(),
-  "bedrijf_uitzendbureau": zod.string().nullish()
+  "bedrijf_uitzendbureau": zod.string().nullish(),
+  "moet_wachtwoord_wijzigen": zod.boolean().optional(),
+  "mislukte_pogingen": zod.number().optional(),
+  "vergrendeld_tot": zod.string().nullish()
 })
 
 
@@ -5669,7 +5754,10 @@ export const UitnodigingOpnieuwVersturenResponse = zod.object({
   "herkomst_profiel_id": zod.number().nullish(),
   "herkomst_automatisch": zod.boolean().optional(),
   "dienstverband": zod.string().nullish(),
-  "bedrijf_uitzendbureau": zod.string().nullish()
+  "bedrijf_uitzendbureau": zod.string().nullish(),
+  "moet_wachtwoord_wijzigen": zod.boolean().optional(),
+  "mislukte_pogingen": zod.number().optional(),
+  "vergrendeld_tot": zod.string().nullish()
 })
 
 
@@ -5706,7 +5794,10 @@ export const GebruikerHerkomstToepassenResponse = zod.object({
   "herkomst_profiel_id": zod.number().nullish(),
   "herkomst_automatisch": zod.boolean().optional(),
   "dienstverband": zod.string().nullish(),
-  "bedrijf_uitzendbureau": zod.string().nullish()
+  "bedrijf_uitzendbureau": zod.string().nullish(),
+  "moet_wachtwoord_wijzigen": zod.boolean().optional(),
+  "mislukte_pogingen": zod.number().optional(),
+  "vergrendeld_tot": zod.string().nullish()
 })
 
 
@@ -5743,7 +5834,10 @@ export const GebruikerHerkomstBevestigenResponse = zod.object({
   "herkomst_profiel_id": zod.number().nullish(),
   "herkomst_automatisch": zod.boolean().optional(),
   "dienstverband": zod.string().nullish(),
-  "bedrijf_uitzendbureau": zod.string().nullish()
+  "bedrijf_uitzendbureau": zod.string().nullish(),
+  "moet_wachtwoord_wijzigen": zod.boolean().optional(),
+  "mislukte_pogingen": zod.number().optional(),
+  "vergrendeld_tot": zod.string().nullish()
 })
 
 
@@ -5801,7 +5895,10 @@ export const GebruikerHerkomstVerwijderenResponse = zod.object({
   "herkomst_profiel_id": zod.number().nullish(),
   "herkomst_automatisch": zod.boolean().optional(),
   "dienstverband": zod.string().nullish(),
-  "bedrijf_uitzendbureau": zod.string().nullish()
+  "bedrijf_uitzendbureau": zod.string().nullish(),
+  "moet_wachtwoord_wijzigen": zod.boolean().optional(),
+  "mislukte_pogingen": zod.number().optional(),
+  "vergrendeld_tot": zod.string().nullish()
 })
 
 

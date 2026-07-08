@@ -51,4 +51,8 @@ export interface Gebruiker {
   dienstverband?: string | null;
   /** @nullable */
   bedrijf_uitzendbureau?: string | null;
+  moet_wachtwoord_wijzigen?: boolean;
+  mislukte_pogingen?: number;
+  /** @nullable */
+  vergrendeld_tot?: string | null;
 }

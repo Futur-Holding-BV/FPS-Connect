@@ -4,6 +4,42 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-08 — Beheer wachtwoorden (alleen hoofdbeheerder)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (auth/security-gevoelig, daarom breed getest)
+
+**Wat is gebouwd:**
+
+Een hoofdbeheerder kan nu vanuit Gebruikers › Acties het wachtwoord van elk account beheren, zonder dat de gebruiker zelf iets hoeft te doen:
+
+- **Wachtwoord resetten** — twee methodes: een resetlink (gebruiker kiest zelf een nieuw wachtwoord via een eenmalige, verlopende link) of een tijdelijk wachtwoord (direct getoond in de UI met kopieerknop). Beide methodes zetten `moet_wachtwoord_wijzigen` op de gebruiker, zodat bij de eerstvolgende login een verplichte wachtwoordwijziging afdwingt vóórdat de rest van de app toegankelijk is.
+- **Sessies beëindigen** — logt het account per direct overal uit: webkoekje-sessie wordt vernietigd én de mobiele bearer-tokens worden ongeldig via een opgehoogde `token_versie` (token-epoch), zodat oudere tokens zonder extra database-lookup worden geweigerd in `requireAuth`.
+- **Account vergrendelen/ontgrendelen** — na herhaalde mislukte inlogpogingen (wachtwoord of TOTP) vergrendelt het account zichzelf tijdelijk (`mislukte_pogingen` + `vergrendeld_tot`); een hoofdbeheerder kan dit ook direct handmatig ontgrendelen.
+- **Optionele MFA-heraanmelding** bij reset, zodat een gebruiker bij verlies van hun authenticator-app niet definitief buitengesloten raakt.
+- **Audit-logging**: elke actie (reset, sessies beëindigen, ontgrendelen) krijgt een gerichte, specifieke audit-regel in plaats van de generieke auto-audit; gevoelige velden (tijdelijk wachtwoord, resetlink) worden nooit gelogd.
+- Alles is **hoofdbeheerder-only**, server-side afgedwongen (niet alleen UI-gating).
+
+**Technische aanpak:**
+
+- `lib/db/src/schema/gebruikers.ts`: vier nieuwe additieve kolommen — `token_versie` (int, default 0), `moet_wachtwoord_wijzigen` (bool, default false), `mislukte_pogingen` (int, default 0), `vergrendeld_tot` (timestamp, nullable)
+- `artifacts/api-server/src/lib/token.ts` en `middlewares/auth.ts`: bearer-tokens dragen nu hun `token_versie` mee; `requireAuth` vergelijkt tegen de actuele DB-waarde en weigert bij mismatch
+- `artifacts/api-server/src/lib/session.ts`: sessies-beëindigen vernietigt de express-session serverside (niet alleen de cookie wissen)
+- `artifacts/api-server/src/lib/lockout.ts` (nieuw) en `wachtwoord.ts` (nieuw): lockout-drempel/-duur en tijdelijk-wachtwoord-/resetlink-generatie geïsoleerd van de routehandler
+- `artifacts/api-server/src/routes/gebruikers.ts`: nieuwe routes `POST /gebruikers/:id/wachtwoord-resetten`, `POST /gebruikers/:id/sessies-beeindigen`, `POST /gebruikers/:id/ontgrendelen`, allemaal achter `requireRol("hoofdbeheerder")`
+- `artifacts/api-server/src/routes/auth.ts`: login-flow controleert lockout vóór wachtwoordcontrole, telt mislukte pogingen op, en blokkeert de rest van de app zolang `moet_wachtwoord_wijzigen` openstaat
+- `artifacts/api-server/src/lib/audit.ts`: nieuwe gevoelige-veldenfilters (`tijdelijk_wachtwoord`, `reset_link`) en een routepatroon-uitsluitingslijst zodat de gerichte audit-log niet dubbel wordt gelogd door de generieke auto-audit
+- `artifacts/firevault/src/pages/gebruikers/index.tsx`: nieuwe acties in het Acties-menu per gebruiker, badges "Vergrendeld" en "Wachtwoord wijzigen vereist" op de gebruikerskaart, dialoog met kopieerbare tijdelijk-wachtwoord/resetlink-weergave
+- OpenAPI (`lib/api-spec/openapi.yaml`) + codegen voor de drie nieuwe endpoints en hun request/response-types
+
+**Verificatie:**
+
+- Volledige workspace-typecheck schoon voor alle gewijzigde bestanden (de resterende TS7030-fouten in `documenten.ts`/`offertes.ts` zijn bestaand en ongerelateerd)
+- Nieuwe end-to-end Playwright-test (`scripts/e2e/web-wachtwoord-beheer.spec.ts`) met een idempotent geseed hoofdbeheerder- en doelaccount (`scripts/src/e2e-wachtwoord-testaccounts.ts`): login → sessies beëindigen → wachtwoord resetten (tijdelijk) → badge "Wachtwoord wijzigen vereist" verschijnt — alle vier stappen slagen
+
+**Bewust niet gedaan:** geen wijziging aan de bestaande verplichte-TOTP-loginflow zelf (alleen uitgebreid met lockout-check); geen nieuwe rol/bevoegdheid toegevoegd — de acties zijn hard aan de rol `hoofdbeheerder` gekoppeld, niet aan de bevoegdheden-matrix.
+
+---
+
 ## 2026-07-08 — Bugfix: uitnodiging "verstuurd" zonder werkende mail (Jacqueline-incident)
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag

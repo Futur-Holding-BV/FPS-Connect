@@ -2434,6 +2434,10 @@ export interface Gebruiker {
   dienstverband?: string | null;
   /** @nullable */
   bedrijf_uitzendbureau?: string | null;
+  moet_wachtwoord_wijzigen?: boolean;
+  mislukte_pogingen?: number;
+  /** @nullable */
+  vergrendeld_tot?: string | null;
 }
 
 export interface ToewijsbareGebruiker {
@@ -2611,6 +2615,35 @@ export interface GebruikerUpdate {
   herkomst_profiel_id?: number | null;
   dienstverband?: string;
   bedrijf_uitzendbureau?: string;
+}
+
+/**
+ * "link" verstuurt een resetlink per e-mail; "tijdelijk" genereert direct een eenmalig tijdelijk wachtwoord.
+ */
+export type WachtwoordResettenInputMethode = typeof WachtwoordResettenInputMethode[keyof typeof WachtwoordResettenInputMethode];
+
+
+export const WachtwoordResettenInputMethode = {
+  link: 'link',
+  tijdelijk: 'tijdelijk',
+} as const;
+
+export interface WachtwoordResettenInput {
+  /** "link" verstuurt een resetlink per e-mail; "tijdelijk" genereert direct een eenmalig tijdelijk wachtwoord. */
+  methode: WachtwoordResettenInputMethode;
+  /** Wist ook de TOTP-registratie zodat de gebruiker MFA opnieuw moet instellen bij de volgende login. */
+  mfa_resetten?: boolean;
+}
+
+export interface WachtwoordResettenOutput {
+  /** Alleen aanwezig bij methode "tijdelijk"; wordt eenmalig getoond. */
+  tijdelijk_wachtwoord?: string;
+  /** Alleen aanwezig bij methode "link". */
+  resetlink_verstuurd?: boolean;
+}
+
+export interface SessiesBeeindigenOutput {
+  sessies_beeindigd: number;
 }
 
 export interface HerkomstBevestigenBulkInput {
