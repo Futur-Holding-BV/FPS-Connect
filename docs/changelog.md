@@ -4,6 +4,53 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-08 — Eerste-installatie bootstrap (first install)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+**Wat is gebouwd:**
+
+Nieuwe eigen-hosting-omgevingen (leeg gebruikersbestand, bijv. na de Docker-migratie) hadden geen manier om de allereerste hoofdbeheerder aan te maken zonder rechtstreeks in de database te werken. Daarvoor is een eenmalige, fail-closed bootstrap-flow toegevoegd:
+
+- `GET /api/installatie/status` — publiek, geeft alleen `{bootstrap_beschikbaar: boolean}` terug (telt de `gebruikers`-tabel)
+- `POST /api/installatie` — publiek, maakt de eerste hoofdbeheerder aan (naam, bedrijfsnaam, e-mail, wachtwoord), maar **alleen** zolang de gebruikerstabel leeg is
+- Frontend-pagina `/first-install`: onbevoegde bezoekers worden er automatisch naartoe geleid zolang de bootstrap nog open staat; is die al voltooid, dan toont de pagina "Installatie al voltooid" met een link naar inloggen
+- Na installatie volgt hetzelfde verplichte TOTP-instelscherm als bij een normale eerste login — geen aparte auth-logica
+
+**Fail-closed & race-conditie:**
+
+- Zodra er één gebruiker bestaat (ook gearchiveerd/inactief), geeft het endpoint permanent 403 — er is geen enkel pad meer waarlangs het opnieuw kan slagen
+- Gelijktijdige installatiepogingen worden veilig afgehandeld via `pg_advisory_xact_lock` binnen een databasetransactie, met een hertelling van de gebruikerstabel ná het verkrijgen van de lock: bij twee gelijktijdige verzoeken slaagt er precies één (201), de ander krijgt 403
+- Rate-limit van 5 pogingen per 15 minuten per IP-adres, zoals bij `/auth/login`
+- Loggegeven bij succes is uitsluitend de tekst "First installation completed" — geen wachtwoorden, tokens of andere gevoelige gegevens
+
+**Hergebruik, geen nieuwe logica:**
+
+- Wachtwoord-hashing en gebruiker-aanmaken zijn verplaatst naar een gedeelde helper (`lib/gebruiker-aanmaken.ts`) die zowel `POST /gebruikers` (bestaand, beheerder) als `POST /installatie` (nieuw) gebruikt — bcrypt-hashing en e-mailnormalisatie staan nu op één plek
+- Geen nieuwe sessie-, TOTP- of tokenlogica: de bootstrap zet dezelfde `pendingUserId` als een normale eerste login en loopt daarna door het bestaande 2FA-instelscherm
+
+**Verificatie:**
+
+- Op de bestaande (gevulde) ontwikkeldatabase: `GET /installatie/status` → `bootstrap_beschikbaar: false`, `POST /installatie` → 403, `/first-install`-pagina toont zelf ook "Installatie al voltooid"
+- Positief pad en race-conditie getest op een tijdelijke, losse smoke-testdatabase (aangemaakt en na afloop weer verwijderd — de gedeelde pilotdatabase is niet aangeraakt): eerste `POST /installatie` → 201 + `setup_2fa`, tweede poging → 403; twee gelijktijdige verzoeken tegen een lege database resulteerden in precies één 201 en één 403, met exact één gebruiker in de database
+- Frontend- en backend-typecheck schoon
+
+**Niet aangeraakt:** bestaande login-, uitnodigings- en 2FA-flows; geen wijziging aan het `gebruikers`-schema.
+
+---
+
+## 2026-07-08 — Docker-buildblokkade opgelost (.dockerignore)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** geen
+
+**Probleem:** de root-`.dockerignore` sloot `scripts/package.json` uit, waardoor de Docker-productiebuild (zie migratiepakket van 2026-07-06) faalde omdat pnpm het workspace-lidmaatschap van `@workspace/scripts` niet kon herkennen.
+
+**Fix:** `.dockerignore` aangepast zodat `scripts/package.json` wél wordt meegenomen in de build-context, terwijl overige onnodige bestanden (node_modules, build-output, etc.) uitgesloten blijven.
+
+**Geen functionele wijziging aan FPS Connect zelf — uitsluitend een buildconfiguratiefix voor eigen hosting.**
+
+---
+
 ## 2026-07-06 — Productie-hardening en infrastructuurverificatie (aanvulling op migratiepakket)
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** geen

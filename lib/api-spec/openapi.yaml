@@ -5042,6 +5042,47 @@ paths:
         "410":
           description: Uitnodiging verlopen
 
+  /installatie/status:
+    get:
+      operationId: installatieStatus
+      tags: [auth]
+      summary: Controleer of de eerste-installatie (bootstrap) nog beschikbaar is (publiek)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InstallatieStatus"
+
+  /installatie:
+    post:
+      operationId: installatieUitvoeren
+      tags: [auth]
+      summary: Eerste hoofdbeheerder aanmaken bij lege installatie (publiek, eenmalig)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InstallatieInput"
+      responses:
+        "201":
+          description: Hoofdbeheerder aangemaakt — 2FA-setup volgt
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+        "400":
+          description: Ongeldig verzoek
+        "403":
+          description: Bootstrap uitgeschakeld — er bestaat al een gebruiker
+        "409":
+          description: Dit e-mailadres is al in gebruik
+
   /auth/wachtwoord-vergeten:
     post:
       operationId: wachtwoordVergeten
@@ -23860,6 +23901,27 @@ components:
         taal:
           type: string
           enum: [nl, en, de, fr, ar, tr]
+
+    InstallatieStatus:
+      type: object
+      required: [bootstrap_beschikbaar]
+      properties:
+        bootstrap_beschikbaar:
+          type: boolean
+
+    InstallatieInput:
+      type: object
+      required: [naam, bedrijfsnaam, email, wachtwoord]
+      properties:
+        naam:
+          type: string
+        bedrijfsnaam:
+          type: string
+        email:
+          type: string
+          format: email
+        wachtwoord:
+          type: string
 
     # ── AUTHENTICATIE ─────────────────────────────────────────────────────
     LoginInput:

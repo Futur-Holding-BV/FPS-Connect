@@ -6,8 +6,9 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type ListFacturenParams = {
-status?: string;
-type?: string;
-klaar_voor_export?: boolean;
-};
+export interface InstallatieInput {
+  naam: string;
+  bedrijfsnaam: string;
+  email: string;
+  wachtwoord: string;
+}

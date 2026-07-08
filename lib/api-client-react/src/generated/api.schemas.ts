@@ -2671,6 +2671,17 @@ export interface UitnodigingActiveren {
   taal: UitnodigingActiverenTaal;
 }
 
+export interface InstallatieStatus {
+  bootstrap_beschikbaar: boolean;
+}
+
+export interface InstallatieInput {
+  naam: string;
+  bedrijfsnaam: string;
+  email: string;
+  wachtwoord: string;
+}
+
 export interface LoginInput {
   email: string;
   wachtwoord: string;
@@ -11307,6 +11318,10 @@ export type UitnodigingActiveren200 = {
   status?: string;
 };
 
+export type InstallatieUitvoeren201 = {
+  status?: string;
+};
+
 export type ListCrmContactpersonenAllParams = {
 q?: string;
 };
@@ -11581,7 +11596,6 @@ export type ListFacturenParams = {
 status?: string;
 type?: string;
 klaar_voor_export?: boolean;
-bron?: string;
 };
 
 export type GetFactuurUploadUrl200 = {

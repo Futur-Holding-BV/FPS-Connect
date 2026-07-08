@@ -336,6 +336,9 @@ import type {
   InspectieDetail,
   InspectieInput,
   InspectieUpdate,
+  InstallatieInput,
+  InstallatieStatus,
+  InstallatieUitvoeren201,
   JaarAfsluitingInput,
   JaarAfsluitingRegel,
   JaarAfsluitingRegelInput,
@@ -17207,6 +17210,153 @@ export const useUitnodigingActiveren = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getUitnodigingActiverenMutationOptions(options));
+    }
+
+export const getInstallatieStatusUrl = () => {
+
+
+
+
+  return `/api/installatie/status`
+}
+
+/**
+ * @summary Controleer of de eerste-installatie (bootstrap) nog beschikbaar is (publiek)
+ */
+export const installatieStatus = async ( options?: RequestInit): Promise<InstallatieStatus> => {
+
+  return customFetch<InstallatieStatus>(getInstallatieStatusUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getInstallatieStatusQueryKey = () => {
+    return [
+    `/api/installatie/status`
+    ] as const;
+    }
+
+
+export const getInstallatieStatusQueryOptions = <TData = Awaited<ReturnType<typeof installatieStatus>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof installatieStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getInstallatieStatusQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof installatieStatus>>> = ({ signal }) => installatieStatus({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof installatieStatus>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type InstallatieStatusQueryResult = NonNullable<Awaited<ReturnType<typeof installatieStatus>>>
+export type InstallatieStatusQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Controleer of de eerste-installatie (bootstrap) nog beschikbaar is (publiek)
+ */
+
+export function useInstallatieStatus<TData = Awaited<ReturnType<typeof installatieStatus>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof installatieStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getInstallatieStatusQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getInstallatieUitvoerenUrl = () => {
+
+
+
+
+  return `/api/installatie`
+}
+
+/**
+ * @summary Eerste hoofdbeheerder aanmaken bij lege installatie (publiek, eenmalig)
+ */
+export const installatieUitvoeren = async (installatieInput: InstallatieInput, options?: RequestInit): Promise<InstallatieUitvoeren201> => {
+
+  return customFetch<InstallatieUitvoeren201>(getInstallatieUitvoerenUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(installatieInput)
+  }
+);}
+
+
+
+
+export const getInstallatieUitvoerenMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof installatieUitvoeren>>, TError,{data: BodyType<InstallatieInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof installatieUitvoeren>>, TError,{data: BodyType<InstallatieInput>}, TContext> => {
+
+const mutationKey = ['installatieUitvoeren'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof installatieUitvoeren>>, {data: BodyType<InstallatieInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  installatieUitvoeren(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type InstallatieUitvoerenMutationResult = NonNullable<Awaited<ReturnType<typeof installatieUitvoeren>>>
+    export type InstallatieUitvoerenMutationBody = BodyType<InstallatieInput>
+    export type InstallatieUitvoerenMutationError = ErrorType<void>
+
+    /**
+ * @summary Eerste hoofdbeheerder aanmaken bij lege installatie (publiek, eenmalig)
+ */
+export const useInstallatieUitvoeren = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof installatieUitvoeren>>, TError,{data: BodyType<InstallatieInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof installatieUitvoeren>>,
+        TError,
+        {data: BodyType<InstallatieInput>},
+        TContext
+      > => {
+      return useMutation(getInstallatieUitvoerenMutationOptions(options));
     }
 
 export const getWachtwoordVergetenUrl = () => {

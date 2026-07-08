@@ -6,8 +6,6 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type ListFacturenParams = {
-status?: string;
-type?: string;
-klaar_voor_export?: boolean;
-};
+export interface InstallatieStatus {
+  bootstrap_beschikbaar: boolean;
+}

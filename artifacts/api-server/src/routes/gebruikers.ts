@@ -11,6 +11,7 @@ import {
   kiesUniekeHerkomstPreset,
   magAutomatischKoppelen,
 } from "../lib/herkomst";
+import { maakGebruikerAan, isEmailConflictFout } from "../lib/gebruiker-aanmaken";
 
 const router = Router();
 
@@ -246,32 +247,28 @@ router.post("/gebruikers", alleenBeheerder, async (req, res): Promise<void> => {
       herkomstId = await vindUniekeHerkomstPreset(toegestaanBevoegdheden);
       herkomstAutomatisch = herkomstId != null;
     }
-    const gehasht = wachtwoord ? await bcrypt.hash(String(wachtwoord), 10) : null;
-    const [g] = await db
-      .insert(gebruikersTable)
-      .values({
-        naam,
-        email: String(email).trim().toLowerCase(),
-        rol,
-        functietitels: functies,
-        telefoon,
-        bedrijf,
-        wachtwoord: gehasht,
-        avatarUrl: avatar_url,
-        bedrijfslogoUrl: bedrijfslogo_url,
-        bedrijfskleuren,
-        taal: taal || "nl",
-        bevoegdheden: toegestaanBevoegdheden,
-        herkomstProfielId: herkomstId,
-        herkomstAutomatisch,
-        uitnodigingStatus: "niet_uitgenodigd",
-        dienstverband: dienstverband || "intern",
-        bedrijfUitzendbureau: bedrijf_uitzendbureau || null,
-      })
-      .returning();
+    const g = await maakGebruikerAan(db, {
+      naam,
+      email,
+      rol,
+      wachtwoord,
+      functietitels: functies,
+      telefoon,
+      bedrijf,
+      avatarUrl: avatar_url,
+      bedrijfslogoUrl: bedrijfslogo_url,
+      bedrijfskleuren,
+      taal,
+      bevoegdheden: toegestaanBevoegdheden,
+      herkomstProfielId: herkomstId,
+      herkomstAutomatisch,
+      uitnodigingStatus: "niet_uitgenodigd",
+      dienstverband,
+      bedrijfUitzendbureau: bedrijf_uitzendbureau || null,
+    });
     res.status(201).json(mapGebruiker(g));
   } catch (err: any) {
-    if (err?.cause?.code === "23505" || err?.message?.includes("gebruikers_email_unique")) {
+    if (isEmailConflictFout(err)) {
       return void res.status(409).json({ error: "Dit e-mailadres is al in gebruik bij een andere gebruiker." });
     }
     req.log.error(err);

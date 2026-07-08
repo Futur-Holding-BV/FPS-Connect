@@ -14,9 +14,11 @@ import { AchievementProvider } from "@/context/achievement-context";
 import { WeergaveProvider } from "@/context/weergave-context";
 import LoginPagina from "@/pages/auth/login";
 import ActivatiePagina from "@/pages/uitnodiging/index";
+import InstallatiePagina from "@/pages/installatie/index";
 import WachtwoordVergetenPagina from "@/pages/auth/wachtwoord-vergeten";
 import WachtwoordResetPagina from "@/pages/auth/wachtwoord-reset";
 import PortaalPagina from "@/pages/portaal/index";
+import { useBootstrapBeschikbaar } from "@/hooks/use-bootstrap-status";
 
 import BeheerderLayout from "@/layouts/beheerder-layout";
 import MonteurLayout from "@/layouts/monteur-layout";
@@ -633,6 +635,21 @@ function Gate() {
 
   const base = import.meta.env.BASE_URL.replace(/\/$/, "");
   const pad = window.location.pathname.slice(base.length) || "/";
+
+  // Publieke paden die nooit naar /first-install omgeleid mogen worden —
+  // ook niet zolang de installatie nog niet voltooid is.
+  const isSpeciaalPad =
+    pad.startsWith("/uitnodiging/") ||
+    pad.startsWith("/portaal/") ||
+    pad === "/first-install" ||
+    pad === "/wachtwoord-vergeten" ||
+    pad === "/wachtwoord-reset";
+
+  // Alleen controleren of de bootstrap nog open staat wanneer dat relevant
+  // kan zijn: niet ingelogd, nog niet aan het laden, en geen speciaal pad.
+  const bootstrapCheckActief = !isLoading && !isAuthenticated && !isSpeciaalPad;
+  const bootstrapBeschikbaar = useBootstrapBeschikbaar(bootstrapCheckActief);
+
   if (pad.startsWith("/uitnodiging/")) {
     const token = pad.replace("/uitnodiging/", "");
     return <ActivatiePagina token={token} />;
@@ -640,6 +657,9 @@ function Gate() {
   if (pad.startsWith("/portaal/")) {
     const token = pad.replace("/portaal/", "");
     return <PortaalPagina token={token} />;
+  }
+  if (pad === "/first-install") {
+    return <InstallatiePagina />;
   }
   if (pad === "/wachtwoord-vergeten") {
     return <WachtwoordVergetenPagina />;
@@ -659,6 +679,21 @@ function Gate() {
   }
 
   if (!isAuthenticated) {
+    if (bootstrapCheckActief && bootstrapBeschikbaar === "laden") {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-background">
+          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+        </div>
+      );
+    }
+    if (bootstrapBeschikbaar === true) {
+      window.location.href = base + "/first-install";
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-background">
+          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+        </div>
+      );
+    }
     return <LoginPagina />;
   }
 

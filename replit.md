@@ -69,7 +69,8 @@ Modules worden per omgeving aan/uit gezet via `VITE_FEATURE_*` variabelen in `ar
 - Eigen sessie-auth (express-session + connect-pg-simple), `bcryptjs` voor wachtwoorden, `otplib` voor TOTP, `qrcode` voor de QR-code. Reden: Replit-managed Clerk en Replit Auth ondersteunen geen verplichte authenticator-app MFA.
 - `otplib` blijft op v12 (v13 heeft een andere API zonder `authenticator`-export en breekt de esbuild-bundle).
 - Sessiecookie is `SameSite=None; Secure` + `trust proxy` omdat de app in de Replit-iframe draait. Backend testen via `https://$REPLIT_DEV_DOMAIN` met een cookie jar — niet via `http://localhost:80` (Secure cookie blijft dan niet bewaard).
-- Alleen `/auth/*` en `/healthz` zijn publiek; alle dataroutes staan achter `requireAuth`.
+- Alleen `/auth/*`, `/healthz` en `/installatie*` zijn publiek; alle dataroutes staan achter `requireAuth`.
+- **Eerste-installatie bootstrap** (`/first-install`, `GET`/`POST /installatie`): zolang de `gebruikers`-tabel leeg is (bijv. een verse eigen-hosting-installatie), kan hierlangs eenmalig de eerste hoofdbeheerder aangemaakt worden. Zodra er één gebruiker bestaat, is dit pad permanent en fail-closed dicht (403), ook bij gelijktijdige verzoeken (advisory lock + hertelling in transactie). Hergebruikt dezelfde aanmaak-/hash-logica als `POST /gebruikers` via `lib/gebruiker-aanmaken.ts`.
 
 ## Product
 

@@ -5933,6 +5933,27 @@ export const UitnodigingActiverenResponse = zod.object({
 
 
 /**
+ * @summary Controleer of de eerste-installatie (bootstrap) nog beschikbaar is (publiek)
+ */
+export const InstallatieStatusResponse = zod.object({
+  "bootstrap_beschikbaar": zod.boolean()
+})
+
+
+/**
+ * @summary Eerste hoofdbeheerder aanmaken bij lege installatie (publiek, eenmalig)
+ */
+export const InstallatieUitvoerenBody = zod.object({
+  "naam": zod.string(),
+  "bedrijfsnaam": zod.string(),
+  "email": zod.string().email(),
+  "wachtwoord": zod.string()
+})
+
+export const InstallatieUitvoerenResponse = zod.void()
+
+
+/**
  * @summary Wachtwoord-reset e-mail aanvragen (publiek)
  */
 export const WachtwoordVergetenBody = zod.object({
@@ -18711,8 +18732,7 @@ export const DownloadHistorischeFacturenExcelResponse = zod.unknown()
 export const ListFacturenQueryParams = zod.object({
   "status": zod.coerce.string().optional(),
   "type": zod.coerce.string().optional(),
-  "klaar_voor_export": zod.coerce.boolean().optional(),
-  "bron": zod.coerce.string().optional()
+  "klaar_voor_export": zod.coerce.boolean().optional()
 })
 
 export const ListFacturenResponseItem = zod.object({

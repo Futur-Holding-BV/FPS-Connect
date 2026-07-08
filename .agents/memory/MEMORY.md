@@ -89,3 +89,4 @@
 - [AccountView factuurmodule](accountview-facturen.md) — financieel module-id in permissies; BestandType uitgebreid met "factuur"; api_key nooit teruggegeven (gebruik api_gebruiker als proxy voor "geconfigureerd").
 - [Uren isManager module-mapping](uren-module-mapping.md) — "uren" bestaat niet als module-id; isManager in uren.ts mapt op heeftModuleRecht("personeel", 1|2).
 - [PIM Architectuur](pim-architectuur.md) — PIM=AI-context only (geen operationele data); 4 correcties: geen org_id, document_koppelingen CHECK uitbreiden, geen FK stap→inkoop, concurrency-index; Fase A (#296) eerst, B-G geblokkeerd.
+- [First-install bootstrap](first-install-bootstrap.md) — fail-closed eerste-admin flow via advisory-lock+recount in tx; test race-pad op wegwerp-DB, nooit op gedeelde dev-DB; achtergrondserver moet in één bash-call starten+testen+stoppen.
