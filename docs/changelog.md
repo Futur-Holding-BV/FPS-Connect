@@ -4,6 +4,23 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-08 — V1.4 Opleverrapportage: status geverifieerd + "Alles selecteren"
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (bestaande, al werkende functionaliteit; kleine UI-aanvulling + documentatie-update)
+
+**Wat is gedaan:**
+
+Bij het oppakken van de opdracht V1.4 Opleverrapportage bleek het merendeel al in eerdere sessies gebouwd (acht rapporttypes met sectie-presets, verfijnde spot-/cluster-/verdiepingselectie, handmatige e-mailselectie naast AI-filter, bijlagenbundel-PDF, en de gepersisteerde `opleverrapporten`-entiteit met "definitief maken" + documentbevriezing). Tegen de opdrachtspecificatie was één gat gevonden en gedicht:
+
+- **"Alles selecteren"-hoofdcheckbox** toegevoegd aan het Secties-paneel in `print.tsx` (`zetAlleSecties()`), zodat een gebruiker in één klik alle secties van een rapport kan aan-/uitvinken, naast per-sectie afvinken.
+- Roadmapstatus in `replit.md` en `docs/roadmap/` bijgewerkt: V1.4 verplaatst van "in aanbouw" naar "gebouwd"; V1.5-restscope herzien omdat de rapport-entiteit + bevriezing al meegebouwd bleken.
+
+**Technische aanpak:**
+
+- `artifacts/firevault/src/pages/gebouwen/print.tsx`: master-checkbox in het Secties-paneel.
+- `docs/roadmap/gebouwd.md`, `docs/roadmap/actief.md`, `docs/roadmap/README.md`, `replit.md`: statusupdate V1.4 → gebouwd, V1.5 restscope herschreven.
+- Typecheck (`pnpm --filter @workspace/firevault run typecheck`) groen; geen backend-wijzigingen.
+
 ## 2026-07-08 — Beheer wachtwoorden (alleen hoofdbeheerder)
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (auth/security-gevoelig, daarom breed getest)

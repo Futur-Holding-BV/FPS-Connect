@@ -86,6 +86,24 @@ Workflow:
 
 Sluit aan op de bestaande AI-conventie in de app: AI-voorstellen zijn GEEL/bewerkbaar tot een mens bevestigt; geaccepteerd/bevestigd is NEUTRAAL (zie "AI-state kleurconventie").
 
+## V1.4 — Opleverrapportage (gebouwd — met formeel akkoord, 8 juli 2026)
+
+Bouwt voort op het bestaande live-rapport `artifacts/firevault/src/pages/gebouwen/print.tsx` (route `/gebouwen/:id/print`); niet opnieuw vanaf nul gebouwd. Geen nieuwe rechten-/rollogica: alle nieuwe/gewijzigde routes lopen via de bestaande `requireBevoegdheid`-laag, module `rapportages` (lezen niveau 1, schrijven niveau 2, aanmaken/definitief-maken/verwijderen niveau 3/4), dezelfde conventie als het bestaande `POST /gebouwen/:id/opleverrapport`.
+
+**Rapporttypes als sectie-presets:** acht rapporttypes (ruimer dan de vier uit de opdracht) met elk een eigen standaard-sectieselectie: Werkpakket monteur, Voortgangsrapportage, Opleverrapport brandveiligheid, Opleverdossier compleet, Klantrapport beknopt/uitgebreid, Intern controlemodel, Onderhouds- en beheeradvies. Kiezen van een type vult de standaardselectie; de gebruiker vinkt daarna per rapport individuele secties af (of alles in één keer via "Alles selecteren").
+
+**Sectie-checkboxen:** naast de gevraagde secties (Voorblad, Projectomschrijving, Relevante e-mails, Plattegronden, Spotdetails, Foto's, ETA's/certificaten, Tekeningen, Juridische bijlagen) ook fijnmaziger foto-secties (voor/tijdens/na), FPS Certificaat, Onderhoud, Inspecties, Maatregelen, Conclusies en Open punten — bewust ruimer dan de opdracht omdat de acht rapporttypes dat vereisen.
+
+**Verfijnde spotselectie:** per verdieping, per cluster (snelfilter) en individueel per spot; ook een snelfilter op status. Combinaties van filters zijn mogelijk.
+
+**Handmatige e-mailselectie:** naast het bestaande AI-relevantiefilter kan de gebruiker per e-mail handmatig aan-/afvinken (radiotoggle AI-modus vs. handmatige modus).
+
+**Bijlagenpakket:** ETA's/classificatierapporten/productcertificaten/tekeningen zijn selecteerbaar per rapport en worden gebundeld tot één PDF (`GET /gebouwen/:id/rapporten/:rapportId/bijlagenbundel`, `pdf-lib`); langere documenten krijgen een AI-samenvattingspagina in plaats van de volledige inhoud.
+
+**"Definitief maken" — verder dan het V1.4-afgebakende deel.** In plaats van alleen een statusmarkering is de gepersisteerde rapport-entiteit uit V1.5 in dezelfde increment meegebouwd: tabel `opleverrapporten` (`lib/db/src/schema`) met CRUD-routes (`artifacts/api-server/src/routes/rapporten.ts`, `GET/POST/PATCH/DELETE /gebouwen/:id/rapporten[/:rapportId]`). `POST .../definitief` bevriest de documentrevisies van de gekoppelde bijlagen (`bevroren_document_revisies`) en start de reactietermijn (configureerbaar 1–365 dagen, standaard 30). Een concept-rapport is te bewerken/verwijderen; een definitief rapport is vergrendeld (alleen bijlagenbundel downloaden blijft mogelijk, leest de bevroren snapshot). Zie ook V1.5 hieronder voor het overige deel van die fase (centrale rapportenbibliotheek, reactietermijn-statusmachine-weergave) dat nog niet is gebouwd.
+
+**Niet gebouwd (bewust buiten scope):** de centrale rapportenbibliotheek met zoek-/filterfuncties, CRM/onderhoud/klantportaal-koppeling en de volledige reactietermijn-statusmachine-weergave (verzonden → loopt → verstreken/vervangen) blijven open voor een volgend increment op V1.5.
+
 ## DMS / Documentenbibliotheek (gebouwd — uitbreiding op V1.2 + dossiers; incl. V1.5-bevriezingsdeel)
 
 Formeel akkoord van de gebruiker, inclusief het V1.5-deel (opleverdossier-bevriezing). Gebouwd als uitbreiding op de V1.2-documentbibliotheek en de dossiermodule (parallel spoor). Geen nieuwe of geparkeerde AI: de bestaande document-AI (analyse + koppelvoorstellen uit V1.2) is hergebruikt; er is geen confidence-drempel en geen periodieke documentcontrole bijgebouwd. NL-only, geen emoji, primair #F23B0D. De V1.3-bestanden (`plattegrond.tsx`, `voorzieningen.ts`-route, clusters, `gebouwen/print.tsx`) zijn bewust niet aangeraakt.

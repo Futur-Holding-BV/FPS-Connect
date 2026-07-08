@@ -1693,6 +1693,15 @@ export default function GebouwPrint() {
   function updateSpotSelectie(verdiepingId: number, selectie: Set<number> | undefined) {
     setSpotSelectie(prev => ({ ...prev, [verdiepingId]: selectie }));
   }
+  function zetAlleSecties(aan: boolean) {
+    const nieuw = { ...secties };
+    for (const sleutel of SECTIES_VOLGORDE) nieuw[sleutel] = aan;
+    setSecties(nieuw);
+    if (aan && tekeningen) {
+      setGeselecteerdeTekeningen(new Set(tekeningen.filter(t => t.type !== "document").map(t => t.id)));
+      setGeselecteerdeBijlagen(new Set(tekeningen.filter(t => t.type === "document").map(t => t.id)));
+    }
+  }
 
   const verdiepingen = [...((gebouw?.verdiepingen ?? []) as Verdieping[])].sort(
     (a, b) => (a.niveau ?? 0) - (b.niveau ?? 0),
@@ -2512,6 +2521,15 @@ export default function GebouwPrint() {
                   Secties
                   <button type="button" className="cmpr-sectie-kop-actie" onClick={() => setSecties(PRESET_SECTIES[rapportType])}>Reset</button>
                 </div>
+                <label className="cmpr-checkregel" style={{ fontWeight: 600 }}>
+                  <input
+                    type="checkbox"
+                    checked={SECTIES_VOLGORDE.every(s => secties[s])}
+                    onChange={e => zetAlleSecties(e.target.checked)}
+                    className="cmpr-check"
+                  />
+                  Alles selecteren
+                </label>
                 {SECTIES_VOLGORDE.map(sleutel => (
                   <label key={sleutel} className="cmpr-checkregel">
                     <input type="checkbox" checked={secties[sleutel]} onChange={e => updateSecties(sleutel, e.target.checked)} className="cmpr-check" />

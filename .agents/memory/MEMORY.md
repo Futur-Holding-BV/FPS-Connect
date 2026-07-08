@@ -92,3 +92,4 @@
 - [PIM Architectuur](pim-architectuur.md) — PIM=AI-context only (geen operationele data); 4 correcties: geen org_id, document_koppelingen CHECK uitbreiden, geen FK stap→inkoop, concurrency-index; Fase A (#296) eerst, B-G geblokkeerd.
 - [Silent-failure invite flow](silent-failure-invite-flow.md) — mail-send helper returning bool instead of throwing let a try/catch-only caller mark a user "invited" with no email sent; side effects gating state transitions must throw.
 - [First-install bootstrap](first-install-bootstrap.md) — fail-closed eerste-admin flow via advisory-lock+recount in tx; test race-pad op wegwerp-DB, nooit op gedeelde dev-DB; achtergrondserver moet in één bash-call starten+testen+stoppen.
+- [Roadmap docs staleness](roadmap-docs-staleness.md) — replit.md/roadmap status labels can lag actual build state; verify against git log/code before "building" a phase, fix status in all doc files together.
