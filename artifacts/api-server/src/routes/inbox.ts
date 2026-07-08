@@ -11,7 +11,7 @@ import {
   opnamesTable,
   werkgeversTable,
 } from "@workspace/db";
-import { eq, desc, and } from "drizzle-orm";
+import { eq, desc, and, isNull } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { parseEmailBestand } from "../services/email-ai";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
@@ -935,6 +935,102 @@ router.post("/inbox/aanvraag-antwoord/:token", async (req, res): Promise<void> =
   } catch (err) {
     req.log.error(err);
     res.status(500).send(htmlPagina('<div class="body"><h1>Er is een fout opgetreden</h1><p>Probeer het later opnieuw.</p></div>'));
+  }
+});
+
+// ── HERCLASSIFICEER BESTAANDE ITEMS (beheer-actie) ────────────────────────────
+// Haalt alle inbox_items met een lege bewijsketen (ai_bewijs IS NULL) opnieuw
+// door classificeerDocument() en vult de ontbrekende AI-velden in.
+// Status, bestemming en document_categorie van al afgehandelde items blijven ongewijzigd.
+router.post("/inbox/herclassificeer", schrijven, async (req, res): Promise<void> => {
+  const gebruikerId = req.session.userId ?? null;
+
+  try {
+    const items = await db
+      .select()
+      .from(inboxItemsTable)
+      .where(isNull(inboxItemsTable.aiBewijs));
+
+    if (items.length === 0) {
+      res.json({ verwerkt: 0, geslaagd: 0, mislukt: 0, items: [] });
+      return;
+    }
+
+    type ItemResultaat = {
+      id: number;
+      bestandsnaam: string;
+      status: "geslaagd" | "mislukt";
+      fout?: string;
+    };
+
+    const resultaten: ItemResultaat[] = [];
+    let geslaagd = 0;
+    let mislukt = 0;
+
+    for (const item of items) {
+      try {
+        // Probeer bestandsbuffer te laden uit object storage
+        let buffer: Buffer | null = null;
+        if (item.bestandspad && item.bestandspad.startsWith("/objects/")) {
+          try {
+            const storageFile = await objectStorage.getObjectEntityFile(item.bestandspad);
+            const downloadResponse = await objectStorage.downloadObject(storageFile);
+            const arrayBuf = await downloadResponse.arrayBuffer();
+            buffer = Buffer.from(arrayBuf);
+          } catch {
+            req.log.warn({ id: item.id, pad: item.bestandspad }, "herclassificeer: bestand niet beschikbaar in storage — metadata-only classificatie");
+          }
+        }
+
+        const analyse = await classificeerDocument({
+          buffer,
+          bestandsnaam: item.bestandsnaam,
+          mime: item.mimetype ?? "application/octet-stream",
+          toelichting: item.opmerkingen ?? undefined,
+        });
+
+        await db
+          .update(inboxItemsTable)
+          .set({
+            aiBetrouwbaarheid: analyse.vertrouwen,
+            aiSamenvatting: analyse.redenering,
+            aiRedenering: analyse.redenering,
+            aiVolgendeActie: analyse.directe_actie_beschrijving || null,
+            aiOrganisatie: analyse.organisatie,
+            aiJaar: analyse.jaar,
+            aiGeconsolideerd: analyse.subtype === "geconsolideerd",
+            aiOpslaglocatie: analyse.opslaglocatie,
+            aiBewijs: JSON.stringify(analyse.bewijs),
+            bijgewerktOp: new Date(),
+          })
+          .where(eq(inboxItemsTable.id, item.id));
+
+        await db.insert(inboxAuditLogTable).values({
+          inboxItemId: item.id,
+          actie: "herclassificeerd",
+          gebruikerId,
+          details: `Herclassificatie uitgevoerd. AI-bewijs aangevuld (${analyse.bewijs.length} stappen, betrouwbaarheid: ${analyse.vertrouwen}). Buffer: ${buffer ? `${buffer.length} bytes` : "niet beschikbaar"}.`,
+        });
+
+        geslaagd++;
+        resultaten.push({ id: item.id, bestandsnaam: item.bestandsnaam, status: "geslaagd" });
+      } catch (itemErr) {
+        const foutTekst = itemErr instanceof Error ? itemErr.message : String(itemErr);
+        req.log.error({ id: item.id, err: itemErr }, "herclassificeer: item mislukt");
+        mislukt++;
+        resultaten.push({ id: item.id, bestandsnaam: item.bestandsnaam, status: "mislukt", fout: foutTekst });
+      }
+    }
+
+    res.json({
+      verwerkt: items.length,
+      geslaagd,
+      mislukt,
+      items: resultaten,
+    });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
   }
 });
 
