@@ -72,6 +72,20 @@ export default defineConfig(async ({ command }) => {
       fs: {
         strict: true,
       },
+      // Lokale ontwikkeling (bv. Windows) heeft geen gedeelde reverse proxy
+      // die /api naar de API-server doorstuurt zoals in Replit. Zonder deze
+      // proxy valt Vite's dev-server terug op de SPA-fallback (200 + HTML)
+      // voor /api-verzoeken, wat stroomafwaarts tot rare runtime-fouten leidt.
+      ...(process.env.REPL_ID === undefined
+        ? {
+            proxy: {
+              "/api": {
+                target: "http://localhost:8080",
+                changeOrigin: true,
+              },
+            },
+          }
+        : {}),
     },
     preview: {
       port,

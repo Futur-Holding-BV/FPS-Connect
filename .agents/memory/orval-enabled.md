@@ -1,6 +1,6 @@
 ---
-name: Orval enabled-opties
-description: Pre-existing TypeScript fout bij { query: { enabled } } pattern in gegenereerde Orval hooks.
+name: Orval enabled/select-opties
+description: Pre-existing TypeScript fout bij { query: { enabled } } of { query: { select } } pattern in gegenereerde Orval hooks.
 ---
 
 ## Probleem
@@ -18,6 +18,9 @@ useGetVolgendSpotnummer(Number(gebouwId), {
 });
 ```
 Elke operation heeft een `getGet<OperationId>QueryKey(...)` export. Zo voeg je `enabled` toe zonder een nieuwe TS2741 te introduceren. **Why:** taakeis "geen nieuwe typecheck-fouten" terwijl je conditioneel moet fetchen.
+
+## Zelfde fix geldt voor `select`
+`{ query: { select: (data) => ... } }` geeft dezelfde `TS2741`. Fix identiek: `queryKey: getList<Naam>QueryKey(...)` meegeven. Toegepast om API-hook-data defensief naar een array te normaliseren (`Array.isArray(data) ? data : []`) in app-brede contexts/shell-componenten die anders bij een onverwachte non-JSON respons (bv. lokale dev zonder Vite-proxy naar /api) een `TypeError` op `.find()`/`.map()` geven.
 
 ## Element-type afleiden van een list-hook
 Gebruik NIET `NonNullable<ReturnType<typeof useListXxx>["data"]>[number]` om het element-type te krijgen — dat lost op naar `{}` en geeft `TS2537: Type '{}' has no matching index signature for type 'number'`. Importeer in plaats daarvan het gegenereerde model-type rechtstreeks (bv. `import type { GebouwPartij } from "@workspace/api-client-react"`). De list-functies retourneren `Promise<Model[]>`, dus het model-type is altijd beschikbaar. **Why:** kostte 2 pogingen; de hook-returntype is te generiek om te indexeren op module-niveau.

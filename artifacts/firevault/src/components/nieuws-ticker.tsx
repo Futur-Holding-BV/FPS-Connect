@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect } from "react";
-import { useListNieuws } from "@workspace/api-client-react";
+import { useListNieuws, getListNieuwsQueryKey } from "@workspace/api-client-react";
 import { Newspaper, Pause, Play, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { RadioSpeler } from "@/components/radio-speler";
@@ -8,7 +8,12 @@ import { WeergaveKnopTaakbalk } from "@/components/weergave/weergave-modal";
 import { OnlineGebruikersTaakbalk } from "@/components/online-gebruikers/online-gebruikers";
 
 export function NieuwsTicker() {
-  const { data: nieuws = [], isLoading, refetch } = useListNieuws();
+  const { data: nieuws = [], isLoading, refetch } = useListNieuws({
+    query: {
+      queryKey: getListNieuwsQueryKey(),
+      select: (data) => (Array.isArray(data) ? data : []),
+    },
+  });
 
   useEffect(() => {
     const id = setInterval(() => void refetch(), 30 * 60 * 1000);

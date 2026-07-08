@@ -1,5 +1,9 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
-import { useListWerkgevers, type Werkgever } from "@workspace/api-client-react";
+import {
+  useListWerkgevers,
+  getListWerkgeversQueryKey,
+  type Werkgever,
+} from "@workspace/api-client-react";
 
 const SLEUTEL = "fps.actieve_werkgever";
 
@@ -20,7 +24,12 @@ const Ctx = createContext<WerkmaatschappijContext>({
 });
 
 export function WerkmaatschappijProvider({ children }: { children: ReactNode }) {
-  const { data: werkgevers = [], isLoading } = useListWerkgevers();
+  const { data: werkgevers = [], isLoading } = useListWerkgevers({
+    query: {
+      queryKey: getListWerkgeversQueryKey(),
+      select: (data) => (Array.isArray(data) ? data : []),
+    },
+  });
 
   const [actieveId, setActieveId] = useState<number | null>(() => {
     if (typeof localStorage === "undefined") return null;

@@ -7,7 +7,7 @@
 - [Opdracht/Werkbegroting flow](opdracht-werkbegroting.md) — offerte→opdracht→werkbegroting (zonder opslagen); vaststellen→planning→uurstaten→nacalculatie; bevoegdheid=offertes niet aparte module.
 - [Sync context patroon](sync-context.md) — SyncProvider + AbortSignal.timeout voor connectiviteitscheck; forceerSync direct aanroepen na bewaar().
 - [Toewijzingen API velden](toewijzingen-velden.md) — Toewijzing type heeft naam/rol, NIET gebruiker_naam/gebruiker_rol; ToewijzingInput heeft alleen gebruiker_id.
-- [Orval enabled-opties](orval-enabled.md) — { query: { enabled } } geeft TS2741 (queryKey ontbreekt) in hele codebase; pre-existing; Vite werkt gewoon; gate op UI-niveau ipv hook-niveau.
+- [Orval enabled/select-opties](orval-enabled.md) — { query: { enabled|select } } geeft TS2741 (queryKey ontbreekt); fix = getList<Naam>QueryKey() meegeven, of gate op UI-niveau.
 - [Stale lib declarations na merge](stale-lib-declarations.md) — TS2305 "no exported member" op bestaande API-hook = stale composite lib-build; fix met codegen/typecheck:libs, niet code "repareren".
 - [Rol-filter backend](rol-filter.md) — gebouw-scoping matrix-driven (effectieveContext.beperkt), NIET rolnaam; beperkt≠gebouwen<2: klant+gebouwen<1 altijd beperkt, gebouwen>=2 nooit, gebouwen==1 alleen veldgebruiker; kantoor-leesrol ziet hele portefeuille.
 - [Controleur/monteur gedecommissioneerd](controleur-rol.md) — rol-enum=hoofdbeheerder/gebruiker/klant; server-controleurlogica + TOEGEWEZEN_ROLLEN verwijderd; alleen bevoegdhedenVoorLegacyRol (migratie) houdt monteur/controleur; frontend mogelijk nog legacy.
