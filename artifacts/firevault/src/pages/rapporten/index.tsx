@@ -204,7 +204,7 @@ export default function RapportenPagina() {
     const van = vanafDatum ? new Date(vanafDatum).getTime() : null;
     const tot = totDatum ? new Date(totDatum).getTime() + 24 * 60 * 60 * 1000 - 1 : null;
 
-    return rapporten.filter((r) => {
+    const gefilterd = rapporten.filter((r) => {
       if (gebouwFilter !== ALLE_GEBOUWEN && String(r.gebouw_id) !== gebouwFilter) return false;
       if (typeFilter !== ALLE_TYPES && r.rapport_type !== typeFilter) return false;
 
@@ -224,6 +224,24 @@ export default function RapportenPagina() {
 
       return true;
     });
+
+    if (!term) return gefilterd;
+
+    function relevantiScore(r: Rapport): number {
+      const titel = (r.titel ?? "").toLowerCase();
+      const label = (RAPPORT_TYPE_LABEL[r.rapport_type] ?? r.rapport_type).toLowerCase();
+      const gebouw = (r.gebouw_naam ?? "").toLowerCase();
+      if (titel === term) return 0;
+      if (titel.startsWith(term)) return 1;
+      if (titel.includes(term)) return 2;
+      if (gebouw === term) return 3;
+      if (gebouw.startsWith(term)) return 4;
+      if (gebouw.includes(term)) return 5;
+      if (label.includes(term)) return 6;
+      return 7;
+    }
+
+    return [...gefilterd].sort((a, b) => relevantiScore(a) - relevantiScore(b));
   }, [rapporten, gebouwFilter, typeFilter, zoekterm, vanafDatum, totDatum]);
 
   const conceptAantal = rapporten.filter((r) => r.status === "concept").length;
