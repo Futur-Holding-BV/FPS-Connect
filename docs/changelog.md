@@ -40,6 +40,33 @@ Een hoofdbeheerder kan nu vanuit Gebruikers › Acties het wachtwoord van elk ac
 
 ---
 
+## 2026-07-08 — Hoofdstukken sidebar verslepen (herschikbare volgorde)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+**Wat is gebouwd:**
+
+De hoofdstukken (collapsible groepen zoals "Projectaanpak", "Inkoop", "Magazijn") in de admin-sidebar (`beheerder-layout.tsx`) zijn nu handmatig te herschikken via slepen met de muis (desktop):
+
+- Nieuwe herbruikbare bouwsteen `components/ui/herschikbaar-hoofdstuk.tsx` — native HTML5 drag-and-drop (geen nieuwe library), met een grijpstrip aan de linkerrand die verschijnt bij hover; verdwijnt automatisch als de sidebar is ingeklapt tot iconen
+- Nieuwe hook `hooks/use-sidebar-hoofdstukken.ts` — stabiele hoofdstuk-sleutels (bijv. `"inkoop"`, `"magazijn"`) losgekoppeld van de weergavevolgorde, zodat toekomstige toevoeging/verwijdering van hoofdstukken de opgeslagen volgorde niet corrumpeert
+- Volgorde én open/dicht-status per hoofdstuk worden per browser onthouden via `localStorage`, volgens hetzelfde patroon als de bestaande `use-voorkeur`-hook (geen serverkant, geen database)
+- Zichtbare knop "Standaardvolgorde herstellen" verschijnt alleen zodra de opgeslagen volgorde of open-status afwijkt van standaard; wist beide opgeslagen waarden in één klik
+- Subitems (links binnen een hoofdstuk) verplaatsen automatisch mee met hun hoofdstuk — er wordt alleen op hoofdstukniveau herschikt, niet op los item-niveau
+- Rechtenfiltering (`heeftNiveau`) blijft volledig ongewijzigd en onafhankelijk van de opgeslagen volgorde: een hoofdstuk dat niet getoond mag worden, blijft verborgen ongeacht wat er in `localStorage` staat
+- Alleen toegepast op de hoofd-adminsidebar; de klant- en monteur-omgevingen zijn niet aangeraakt
+
+**Bewust niet gedaan:**
+
+Geen touch/mobiele drag-ondersteuning (expliciet uit scope — alleen desktop-muissleep); geen herschikking van losse menu-items binnen een hoofdstuk; geen externe drag-and-drop-library toegevoegd (native HTML5 DnD volstaat voor dit desktop-only geval).
+
+**Verificatie:**
+
+- Volledige workspace-typecheck schoon na alle wijzigingen
+- End-to-end browsertest (login → sidebar toont standaardvolgorde, geen herstelknop → volgorde/open-status via localStorage aangepast → herschikte volgorde zichtbaar + herstelknop verschijnt → klik op "Standaardvolgorde herstellen" → volgorde en knop weer op standaard): geslaagd
+
+---
+
 ## 2026-07-08 — Bugfix: uitnodiging "verstuurd" zonder werkende mail (Jacqueline-incident)
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag

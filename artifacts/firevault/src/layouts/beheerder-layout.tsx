@@ -21,13 +21,15 @@ import {
   ClipboardCheck, AlertTriangle, TriangleAlert, FileArchive, Receipt, ArrowUpRight, ScrollText,
   UserPlus, UserMinus, UserX, Car, GitBranch, ArrowLeft, ChevronDown, Palette, Monitor,
   Package, Upload, MapPin, Archive, ArrowLeftRight, BookmarkCheck, ScanSearch, Bot, ShoppingCart,
-  TrendingUp, ImageIcon, LineChart, GalleryHorizontal,
+  TrendingUp, ImageIcon, LineChart, GalleryHorizontal, RotateCcw,
 } from "lucide-react";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { Badge } from "@/components/ui/badge";
 import { GebruikerMenu } from "@/components/gebruiker-menu";
+import { HerschikbaarHoofdstuk } from "@/components/ui/herschikbaar-hoofdstuk";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
 import { useRol } from "@/context/rol-context";
+import { useSidebarHoofdstukken } from "@/hooks/use-sidebar-hoofdstukken";
 import { featureFlags } from "@/lib/feature-flags";
 import { cn } from "@/lib/utils";
 import { NavigatieBewakingProvider, useNavigatieBewaking } from "@/context/navigatie-bewaking";
@@ -195,6 +197,27 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
     );
   }
 
+  const {
+    hoofdstukPositie,
+    verplaatsHoofdstuk,
+    hoofdstukOpen,
+    setHoofdstukOpen,
+    herstelStandaard,
+    isAangepast,
+  } = useSidebarHoofdstukken("sidebar_hoofdstukken", [
+    "projectaanpak",
+    "inkoop",
+    "magazijn",
+    "commercie",
+    "communicatie",
+    "veiligheid",
+    "financieel",
+    "organisatie",
+    "personeel",
+    "loon",
+    "instellingen",
+  ]);
+
   return (
     <SidebarProvider defaultOpen={true}>
       <Sidebar variant="inset" collapsible="icon">
@@ -263,7 +286,24 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                 </SidebarGroupContent>
               </SidebarGroup>
 
+              {isAangepast && (
+                <button
+                  type="button"
+                  onClick={herstelStandaard}
+                  title="Zet de volgorde en in-/uitgeklapte hoofdstukken terug naar de standaardinstelling"
+                  className="mx-2 mb-1 flex items-center gap-1.5 rounded-md px-2 py-1 text-[11px] text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors group-data-[collapsible=icon]:hidden"
+                >
+                  <RotateCcw className="h-3 w-3 shrink-0" />
+                  <span>Standaardvolgorde herstellen</span>
+                </button>
+              )}
+
               {/* Projectaanpak — workflow in volgorde */}
+              <HerschikbaarHoofdstuk
+                sleutel="projectaanpak"
+                positie={hoofdstukPositie("projectaanpak")}
+                onVerplaats={verplaatsHoofdstuk}
+              >
               <SidebarGroup>
                 <SidebarGroupLabel>Projectaanpak</SidebarGroupLabel>
                 <SidebarGroupContent>
@@ -458,10 +498,20 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                   </SidebarMenu>
                 </SidebarGroupContent>
               </SidebarGroup>
+              </HerschikbaarHoofdstuk>
 
               {/* Inkoop */}
               {toonOffertes && (
-                <Collapsible defaultOpen className="group/collapsible">
+              <HerschikbaarHoofdstuk
+                sleutel="inkoop"
+                positie={hoofdstukPositie("inkoop")}
+                onVerplaats={verplaatsHoofdstuk}
+              >
+                <Collapsible
+                  open={hoofdstukOpen("inkoop")}
+                  onOpenChange={(open) => setHoofdstukOpen("inkoop", open)}
+                  className="group/collapsible"
+                >
                   <SidebarGroup>
                     <SidebarGroupLabel asChild>
                       <CollapsibleTrigger className="flex w-full items-center">
@@ -510,11 +560,21 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                     </CollapsibleContent>
                   </SidebarGroup>
                 </Collapsible>
+              </HerschikbaarHoofdstuk>
               )}
 
               {/* Magazijn */}
               {toonMagazijn && (
-                <Collapsible defaultOpen className="group/collapsible">
+              <HerschikbaarHoofdstuk
+                sleutel="magazijn"
+                positie={hoofdstukPositie("magazijn")}
+                onVerplaats={verplaatsHoofdstuk}
+              >
+                <Collapsible
+                  open={hoofdstukOpen("magazijn")}
+                  onOpenChange={(open) => setHoofdstukOpen("magazijn", open)}
+                  className="group/collapsible"
+                >
                   <SidebarGroup>
                     <SidebarGroupLabel asChild>
                       <CollapsibleTrigger className="flex w-full items-center">
@@ -630,11 +690,21 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                     </CollapsibleContent>
                   </SidebarGroup>
                 </Collapsible>
+              </HerschikbaarHoofdstuk>
               )}
 
               {/* Commercie */}
               {toonCrm && (
-                <Collapsible defaultOpen className="group/collapsible">
+              <HerschikbaarHoofdstuk
+                sleutel="commercie"
+                positie={hoofdstukPositie("commercie")}
+                onVerplaats={verplaatsHoofdstuk}
+              >
+                <Collapsible
+                  open={hoofdstukOpen("commercie")}
+                  onOpenChange={(open) => setHoofdstukOpen("commercie", open)}
+                  className="group/collapsible"
+                >
                   <SidebarGroup>
                     <SidebarGroupLabel asChild>
                       <CollapsibleTrigger className="flex w-full items-center">
@@ -716,10 +786,20 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                     </CollapsibleContent>
                   </SidebarGroup>
                 </Collapsible>
+              </HerschikbaarHoofdstuk>
               )}
 
               {/* Communicatie */}
-              <Collapsible defaultOpen className="group/collapsible">
+              <HerschikbaarHoofdstuk
+                sleutel="communicatie"
+                positie={hoofdstukPositie("communicatie")}
+                onVerplaats={verplaatsHoofdstuk}
+              >
+              <Collapsible
+                open={hoofdstukOpen("communicatie")}
+                onOpenChange={(open) => setHoofdstukOpen("communicatie", open)}
+                className="group/collapsible"
+              >
                 <SidebarGroup>
                   <SidebarGroupLabel asChild>
                     <CollapsibleTrigger className="flex w-full items-center">
@@ -771,10 +851,20 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                   </CollapsibleContent>
                 </SidebarGroup>
               </Collapsible>
+              </HerschikbaarHoofdstuk>
 
               {/* Veiligheid */}
               {toonToolboxen && (
-                <Collapsible defaultOpen className="group/collapsible">
+              <HerschikbaarHoofdstuk
+                sleutel="veiligheid"
+                positie={hoofdstukPositie("veiligheid")}
+                onVerplaats={verplaatsHoofdstuk}
+              >
+                <Collapsible
+                  open={hoofdstukOpen("veiligheid")}
+                  onOpenChange={(open) => setHoofdstukOpen("veiligheid", open)}
+                  className="group/collapsible"
+                >
                   <SidebarGroup>
                     <SidebarGroupLabel asChild>
                       <CollapsibleTrigger className="flex w-full items-center">
@@ -857,10 +947,16 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                     </CollapsibleContent>
                   </SidebarGroup>
                 </Collapsible>
+              </HerschikbaarHoofdstuk>
               )}
 
               {/* Financieel */}
               {toonFinancieel && (
+              <HerschikbaarHoofdstuk
+                sleutel="financieel"
+                positie={hoofdstukPositie("financieel")}
+                onVerplaats={verplaatsHoofdstuk}
+              >
                 <SidebarGroup>
                   <SidebarGroupLabel>Financieel</SidebarGroupLabel>
                   <SidebarGroupContent>
@@ -1008,9 +1104,15 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                     </SidebarMenu>
                   </SidebarGroupContent>
                 </SidebarGroup>
+              </HerschikbaarHoofdstuk>
               )}
 
               {/* Organisatie */}
+              <HerschikbaarHoofdstuk
+                sleutel="organisatie"
+                positie={hoofdstukPositie("organisatie")}
+                onVerplaats={verplaatsHoofdstuk}
+              >
               <SidebarGroup>
                 <SidebarGroupLabel>Organisatie</SidebarGroupLabel>
                 <SidebarGroupContent>
@@ -1134,9 +1236,15 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                   </SidebarMenu>
                 </SidebarGroupContent>
               </SidebarGroup>
+              </HerschikbaarHoofdstuk>
 
               {/* Personeel */}
               {(toonPersoneel || isHoofdbeheerder) && (
+              <HerschikbaarHoofdstuk
+                sleutel="personeel"
+                positie={hoofdstukPositie("personeel")}
+                onVerplaats={verplaatsHoofdstuk}
+              >
                 <SidebarGroup>
                   <SidebarGroupLabel>Personeel</SidebarGroupLabel>
                   <SidebarGroupContent>
@@ -1290,10 +1398,16 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                     </SidebarMenu>
                   </SidebarGroupContent>
                 </SidebarGroup>
+              </HerschikbaarHoofdstuk>
               )}
 
               {/* Loon — scheiding vóór salarismodules */}
               {(toonSalarisMutaties || toonScabMail || toonLoonOutput || toonBoekhouderPortaal || toonSalarisarchief) && (
+              <HerschikbaarHoofdstuk
+                sleutel="loon"
+                positie={hoofdstukPositie("loon")}
+                onVerplaats={verplaatsHoofdstuk}
+              >
                 <>
                   <div className="mx-4 my-1 h-px bg-border group-data-[collapsible=icon]:hidden" />
                   <SidebarGroup>
@@ -1382,15 +1496,17 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                     </SidebarGroupContent>
                   </SidebarGroup>
                 </>
+              </HerschikbaarHoofdstuk>
               )}
 
               {/* Instellingen — scheiding vóór beheersectie */}
               {(toonGebruikers || toonSysteem || toonBibliotheek) && (
-                <>
-                  <div className="mx-4 my-1 h-px bg-border group-data-[collapsible=icon]:hidden" />
-                </>
-              )}
-              {(toonGebruikers || toonSysteem || toonBibliotheek) && (
+              <HerschikbaarHoofdstuk
+                sleutel="instellingen"
+                positie={hoofdstukPositie("instellingen")}
+                onVerplaats={verplaatsHoofdstuk}
+              >
+                <div className="mx-4 my-1 h-px bg-border group-data-[collapsible=icon]:hidden" />
                 <SidebarGroup>
                   <SidebarGroupLabel>Instellingen</SidebarGroupLabel>
                   <SidebarGroupContent>
@@ -1756,6 +1872,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                     </SidebarMenu>
                   </SidebarGroupContent>
                 </SidebarGroup>
+              </HerschikbaarHoofdstuk>
               )}
             </>
           )}
