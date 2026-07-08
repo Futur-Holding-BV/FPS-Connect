@@ -2856,6 +2856,8 @@ export interface AppInstellingen {
   extra_disclaimer?: string | null;
   /** Als true wordt de opdrachtbevestigingsmail automatisch naar de klant verstuurd na ondertekening. Als false wordt de mail niet verstuurd. */
   opdrachtbevestiging_auto_verzenden: boolean;
+  /** Organisatiebrede schakelaar voor FPS Moments — verjaardag. Uit = geen enkele verjaardag wordt getoond, ook niet aan de jarige zelf. Standaard aan. */
+  moments_verjaardag_ingeschakeld?: boolean;
   /**
      * Maandelijks kostenplafond voor AI-gebruik in euro. Null betekent geen drempel.
      * @nullable
@@ -2872,6 +2874,8 @@ export interface AppInstellingenInput {
   support_website?: string;
   extra_disclaimer?: string;
   opdrachtbevestiging_auto_verzenden?: boolean;
+  /** Organisatiebrede schakelaar voor FPS Moments — verjaardag (alleen hoofdbeheerder). */
+  moments_verjaardag_ingeschakeld?: boolean;
   /**
      * Maandelijks kostenplafond voor AI-gebruik in euro. Null of weglaten om drempel te verwijderen.
      * @nullable
@@ -7579,6 +7583,8 @@ export interface MijnMedewerkerProfiel {
   mobiel?: string | null;
   verlofsaldi: MijnVerlofsaldo[];
   opleidingen: MijnOpleiding[];
+  /** FPS Moments — opt-in, standaard uit. Als true zien collega's naam+foto op de "Vandaag jarig"-widget (nooit leeftijd/geboortejaar). */
+  verjaardag_zichtbaar: boolean;
 }
 
 export interface MijnPrivacyGegevens {
@@ -7588,6 +7594,31 @@ export interface MijnPrivacyGegevens {
   rol: string;
   aangemaaktOp: string;
   medewerker?: MijnMedewerkerProfiel | null;
+}
+
+export interface MijnPrivacyInstellingenInput {
+  verjaardag_zichtbaar: boolean;
+}
+
+export interface MijnPrivacyInstellingen {
+  verjaardag_zichtbaar: boolean;
+}
+
+export type MomentType = typeof MomentType[keyof typeof MomentType];
+
+
+export const MomentType = {
+  verjaardag: 'verjaardag',
+} as const;
+
+export interface Moment {
+  type: MomentType;
+  medewerker_id: number;
+  naam: string;
+  /** @nullable */
+  foto_url: string | null;
+  /** True als dit Moment over de ingelogde gebruiker zelf gaat (bepaalt confetti/felicitatiekaart voor deze gebruiker). */
+  geldt_voor_jou: boolean;
 }
 
 export interface VeiligheidAfronding {

@@ -12,6 +12,8 @@ export interface AppInstellingenInput {
   support_website?: string;
   extra_disclaimer?: string;
   opdrachtbevestiging_auto_verzenden?: boolean;
+  /** Organisatiebrede schakelaar voor FPS Moments — verjaardag (alleen hoofdbeheerder). */
+  moments_verjaardag_ingeschakeld?: boolean;
   /**
      * Maandelijks kostenplafond voor AI-gebruik in euro. Null of weglaten om drempel te verwijderen.
      * @nullable

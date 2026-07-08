@@ -32,6 +32,7 @@ import { useRol } from "@/context/rol-context";
 import { useAuth } from "@/context/auth-context";
 import { Link } from "wouter";
 import { PaginaHulp } from "@/components/pagina-hulp";
+import { MomentsFelicitatie, VandaagJarigWidget } from "@/components/moments-widget";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell,
@@ -1366,6 +1367,8 @@ export default function BeheerderDashboard() {
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
       <PaginaHulp pagina="dashboard-beheerder" />
+      <MomentsFelicitatie gebruikerId={gebruiker?.id} />
+      <VandaagJarigWidget />
 
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <div>

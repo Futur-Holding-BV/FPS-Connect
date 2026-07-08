@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Wrench, ClipboardCheck, AlertTriangle, CheckCircle, Clock, ChevronRight, Calendar } from "lucide-react";
 import { useRol } from "@/context/rol-context";
 import { useAuth } from "@/context/auth-context";
+import { MomentsFelicitatie, VandaagJarigWidget } from "@/components/moments-widget";
 
 const PRIORITEITKLEUR: Record<string, string> = {
   hoog:   "bg-red-100 text-red-800 border-red-200",
@@ -45,6 +46,8 @@ export default function MonteurDashboard() {
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
+      <MomentsFelicitatie gebruikerId={gebruiker?.id} />
+      <VandaagJarigWidget />
       <div>
         <h1 className="text-2xl font-bold tracking-tight">
           {functietitel

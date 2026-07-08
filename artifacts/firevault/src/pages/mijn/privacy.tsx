@@ -5,11 +5,14 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   useGetMijnPrivacyGegevens,
   useListMijnActiviteiten,
   useListAvgMijnVerzoeken,
   useCreateAvgInzageverzoek,
+  useUpdateMijnPrivacyInstellingen,
   type AvgVerzoek,
 } from "@workspace/api-client-react";
 import { useRol } from "@/context/rol-context";
@@ -32,6 +35,7 @@ import {
   Trash2,
   CheckCircle2,
   Loader2,
+  Cake,
 } from "lucide-react";
 
 const DIENSTVERBAND_LABELS: Record<string, string> = {
@@ -105,6 +109,15 @@ function VerzoekStatusBadge({ status }: { status: string }) {
 
 function GegevensTab() {
   const { data, isLoading, isError } = useGetMijnPrivacyGegevens();
+  const queryClient = useQueryClient();
+  const updateMomentsInstellingen = useUpdateMijnPrivacyInstellingen();
+
+  async function toggleVerjaardag(checked: boolean) {
+    await updateMomentsInstellingen.mutateAsync({
+      data: { verjaardag_zichtbaar: checked },
+    });
+    queryClient.invalidateQueries();
+  }
 
   if (isLoading) {
     return (
@@ -217,6 +230,32 @@ function GegevensTab() {
               <p className="text-xs text-muted-foreground border-t pt-3">
                 BSN en noodcontactgegevens worden hier niet getoond — die zijn alleen inzichtelijk voor de HR-beheerder.
               </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Cake className="h-4 w-4 text-muted-foreground" />
+                FPS Moments
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-sm font-medium">Verjaardag zichtbaar voor collega's</p>
+                  <p className="text-xs text-muted-foreground max-w-md">
+                    Uit staat standaard uit. Als u dit aanzet, ziet u op de dag zelf een felicitatie en
+                    verschijnt uw naam en profielfoto (geen leeftijd of geboortejaar) in het
+                    "Vandaag jarig"-overzicht van collega's. Klanten zien dit nooit.
+                  </p>
+                </div>
+                <Switch
+                  checked={data.medewerker.verjaardag_zichtbaar}
+                  onCheckedChange={toggleVerjaardag}
+                  disabled={updateMomentsInstellingen.isPending}
+                />
+              </div>
             </CardContent>
           </Card>
 

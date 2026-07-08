@@ -18,6 +18,8 @@ export interface AppInstellingen {
   extra_disclaimer?: string | null;
   /** Als true wordt de opdrachtbevestigingsmail automatisch naar de klant verstuurd na ondertekening. Als false wordt de mail niet verstuurd. */
   opdrachtbevestiging_auto_verzenden: boolean;
+  /** Organisatiebrede schakelaar voor FPS Moments — verjaardag. Uit = geen enkele verjaardag wordt getoond, ook niet aan de jarige zelf. Standaard aan. */
+  moments_verjaardag_ingeschakeld?: boolean;
   /**
      * Maandelijks kostenplafond voor AI-gebruik in euro. Null betekent geen drempel.
      * @nullable

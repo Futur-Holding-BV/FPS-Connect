@@ -43,6 +43,7 @@ mijnPrivacyRouter.get("/mijn/privacy-gegevens", requireAuth, async (req, res): P
       telefoon: medewerkersTable.telefoon,
       mobiel: medewerkersTable.mobiel,
       functie_naam: functiesTable.naam,
+      verjaardag_zichtbaar: medewerkersTable.verjaardagZichtbaar,
     })
     .from(medewerkersTable)
     .leftJoin(functiesTable, eq(medewerkersTable.functieId, functiesTable.id))
@@ -106,9 +107,37 @@ mijnPrivacyRouter.get("/mijn/privacy-gegevens", requireAuth, async (req, res): P
           functie_naam: medewerkerRij.functie_naam ?? null,
           verlofsaldi,
           opleidingen,
+          verjaardag_zichtbaar: medewerkerRij.verjaardag_zichtbaar,
         }
       : null,
   });
+});
+
+// PATCH /mijn/privacy-instellingen — medewerker zet zelf de zichtbaarheid van zijn/haar
+// verjaardag voor collega's aan/uit (FPS Moments). Standaard uit; alleen de medewerker zelf mag dit wijzigen.
+mijnPrivacyRouter.patch("/mijn/privacy-instellingen", requireAuth, async (req, res): Promise<void> => {
+  const userId = req.session?.userId;
+  if (!userId) return void res.status(401).json({ fout: "Niet ingelogd" });
+
+  const { verjaardag_zichtbaar } = req.body as { verjaardag_zichtbaar?: boolean };
+  if (typeof verjaardag_zichtbaar !== "boolean") {
+    return void res.status(400).json({ fout: "verjaardag_zichtbaar moet een boolean zijn" });
+  }
+
+  const [medewerkerRij] = await db
+    .select({ id: medewerkersTable.id })
+    .from(medewerkersTable)
+    .where(eq(medewerkersTable.gebruikerId, userId));
+
+  if (!medewerkerRij) return void res.status(404).json({ fout: "Geen medewerkerprofiel gevonden" });
+
+  const [bijgewerkt] = await db
+    .update(medewerkersTable)
+    .set({ verjaardagZichtbaar: verjaardag_zichtbaar, bijgewerktOp: new Date() })
+    .where(eq(medewerkersTable.id, medewerkerRij.id))
+    .returning({ verjaardagZichtbaar: medewerkersTable.verjaardagZichtbaar });
+
+  return void res.json({ verjaardag_zichtbaar: bijgewerkt.verjaardagZichtbaar });
 });
 
 mijnPrivacyRouter.get("/mijn/activiteiten", requireAuth, async (req, res): Promise<void> => {

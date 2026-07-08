@@ -20,11 +20,14 @@ import { RadiaalMenu, type RadiaalActie } from "@/components/RadiaalMenu";
 import { bovenInset } from "@/components/ui";
 import { useAuth } from "@/context/auth";
 import { useColors } from "@/hooks/useColors";
+import { BirthdayCelebration } from "@/components/BirthdayCelebration";
 import {
   useGetMijnToolboxMaandopdracht,
   useUitstellenToolboxMaandopdracht,
   useVoltooienToolboxMaandopdracht,
+  useListMomentenVandaag,
   type MijnToolboxMaandopdracht,
+  type Moment,
 } from "@workspace/api-client-react";
 
 declare global {
@@ -43,10 +46,31 @@ export default function MenuScherm() {
   const [modalZichtbaar, setModalZichtbaar] = useState(false);
   const [vraag, setVraag] = useState("");
   const [opdracht, setOpdracht] = useState<MijnToolboxMaandopdracht | null>(null);
+  const [jarigCelebratie, setJarigCelebratie] = useState<string | null>(null);
 
   const { data: maandOpdracht, isLoading: maandLaden } = useGetMijnToolboxMaandopdracht({
     query: { enabled: !!token },
   } as any);
+
+  const { data: momentenVandaag } = useListMomentenVandaag({
+    query: { enabled: !!token },
+  } as any);
+
+  useEffect(() => {
+    if (!token || !gebruiker?.id || !momentenVandaag) return;
+    const eigenMoment = (momentenVandaag as Moment[]).find((m) => m.geldt_voor_jou);
+    if (!eigenMoment) return;
+
+    const vandaag = new Date().toISOString().slice(0, 10);
+    const sleutel = `fps_moments_gezien_${gebruiker.id}_${vandaag}`;
+    AsyncStorage.getItem(sleutel).then((gezien) => {
+      if (gezien === "1") return;
+      setJarigCelebratie(eigenMoment.naam);
+      AsyncStorage.setItem(sleutel, "1");
+    });
+  }, [token, gebruiker?.id, momentenVandaag]);
+
+  const jarigeCollegas = ((momentenVandaag as Moment[]) ?? []).filter((m) => !m.geldt_voor_jou);
 
   const uitstellenMut = useUitstellenToolboxMaandopdracht();
   const voltooienMut = useVoltooienToolboxMaandopdracht();
@@ -163,6 +187,10 @@ export default function MenuScherm() {
 
   return (
     <View style={{ flex: 1, backgroundColor: c.dark }}>
+      {jarigCelebratie && (
+        <BirthdayCelebration naam={jarigCelebratie} onDismiss={() => setJarigCelebratie(null)} />
+      )}
+
       {/* Maandopdracht modal */}
       <Modal
         visible={modalZichtbaar}
@@ -410,6 +438,56 @@ export default function MenuScherm() {
           </Pressable>
         </View>
       </View>
+
+      {jarigeCollegas.length > 0 && (
+        <View
+          style={{
+            marginHorizontal: 20,
+            marginTop: 14,
+            backgroundColor: "rgba(255,255,255,0.08)",
+            borderRadius: 14,
+            paddingVertical: 12,
+            paddingHorizontal: 14,
+          }}
+        >
+          <Text style={{ fontSize: 12, fontFamily: "Inter_600SemiBold", color: c.darkMuted, marginBottom: 8 }}>
+            🎂 Vandaag jarig
+          </Text>
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
+            {jarigeCollegas.map((m) => (
+              <View key={m.medewerker_id} style={{ alignItems: "center", width: 64 }}>
+                {m.foto_url ? (
+                  <Image
+                    source={{ uri: m.foto_url }}
+                    style={{ width: 44, height: 44, borderRadius: 22 }}
+                  />
+                ) : (
+                  <View
+                    style={{
+                      width: 44,
+                      height: 44,
+                      borderRadius: 22,
+                      backgroundColor: "#F23B0D",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <Text style={{ color: "#fff", fontSize: 16, fontFamily: "Inter_700Bold" }}>
+                      {m.naam.charAt(0).toUpperCase()}
+                    </Text>
+                  </View>
+                )}
+                <Text
+                  numberOfLines={1}
+                  style={{ color: c.darkForeground, fontSize: 11, fontFamily: "Inter_400Regular", marginTop: 4, textAlign: "center" }}
+                >
+                  {m.naam.split(" ")[0]}
+                </Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      )}
 
       <RadiaalMenu acties={acties} meerActies={meerActies} />
     </View>

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import {
   Info,
   Scale,
@@ -18,6 +19,7 @@ import {
   Save,
   X,
   AlertTriangle,
+  PartyPopper,
 } from "lucide-react";
 import {
   APP_VERSIE,
@@ -74,6 +76,13 @@ export default function InfoPagina() {
     });
     queryClient.invalidateQueries();
     setBewerken(false);
+  }
+
+  async function toggleMomentsVerjaardag(checked: boolean) {
+    await updateInstellingen.mutateAsync({
+      data: { moments_verjaardag_ingeschakeld: checked },
+    });
+    queryClient.invalidateQueries();
   }
 
   const heeftSupportInfo =
@@ -375,6 +384,35 @@ export default function InfoPagina() {
           )}
         </CardContent>
       </Card>
+
+      {/* FPS Moments */}
+      {isHoofdBeheerder && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <PartyPopper className="h-5 w-5 text-primary" />
+              FPS Moments
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="text-sm font-medium">Verjaardagen tonen</p>
+                <p className="text-xs text-muted-foreground max-w-md">
+                  Organisatiebrede schakelaar. Uit betekent dat er nergens een verjaardag
+                  wordt getoond, ook niet aan de jarige zelf. Medewerkers bepalen zelf
+                  (via hun privacy-instellingen) of collega's hun verjaardag mogen zien.
+                </p>
+              </div>
+              <Switch
+                checked={instellingen?.moments_verjaardag_ingeschakeld ?? true}
+                onCheckedChange={toggleMomentsVerjaardag}
+                disabled={updateInstellingen.isPending}
+              />
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Versiebeheer */}
       <Card>

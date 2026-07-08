@@ -117,6 +117,9 @@ export const medewerkersTable = pgTable("medewerkers", {
   cvTekst: text("cv_tekst"),
   // BSN — verplicht voor loonadministratie; strikt vertrouwelijk
   bsn: text("bsn"),
+  // FPS Moments — opt-in: medewerker toont zijn/haar verjaardag aan collega's
+  // (naam + foto, geen leeftijd/geboortejaar). Standaard uit; medewerker zet dit zelf aan.
+  verjaardagZichtbaar: boolean("verjaardag_zichtbaar").notNull().default(false),
   actief: boolean("actief").notNull().default(true),
   opmerkingen: text("opmerkingen"),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),

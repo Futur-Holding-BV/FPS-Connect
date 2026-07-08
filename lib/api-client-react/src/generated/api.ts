@@ -472,6 +472,8 @@ import type {
   MeldingUpdate,
   MijnCertificaten,
   MijnPrivacyGegevens,
+  MijnPrivacyInstellingen,
+  MijnPrivacyInstellingenInput,
   MijnToolboxMaandopdracht,
   MijnWerkGebouw,
   ModCalcHeader,
@@ -487,6 +489,7 @@ import type {
   ModCalcTariefInput,
   ModuleBeoordeling,
   ModuleBeoordelingInput,
+  Moment,
   MuisGebeurtenis,
   MuisGebeurtenisBatch,
   NacalculatieRegel,
@@ -7671,6 +7674,153 @@ export function useGetMijnPrivacyGegevens<TData = Awaited<ReturnType<typeof getM
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetMijnPrivacyGegevensQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUpdateMijnPrivacyInstellingenUrl = () => {
+
+
+
+
+  return `/api/mijn/privacy-instellingen`
+}
+
+/**
+ * @summary Eigen FPS Moments-zichtbaarheid bijwerken (bijv. verjaardag tonen aan collega's)
+ */
+export const updateMijnPrivacyInstellingen = async (mijnPrivacyInstellingenInput: MijnPrivacyInstellingenInput, options?: RequestInit): Promise<MijnPrivacyInstellingen> => {
+
+  return customFetch<MijnPrivacyInstellingen>(getUpdateMijnPrivacyInstellingenUrl(),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(mijnPrivacyInstellingenInput)
+  }
+);}
+
+
+
+
+export const getUpdateMijnPrivacyInstellingenMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateMijnPrivacyInstellingen>>, TError,{data: BodyType<MijnPrivacyInstellingenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateMijnPrivacyInstellingen>>, TError,{data: BodyType<MijnPrivacyInstellingenInput>}, TContext> => {
+
+const mutationKey = ['updateMijnPrivacyInstellingen'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateMijnPrivacyInstellingen>>, {data: BodyType<MijnPrivacyInstellingenInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  updateMijnPrivacyInstellingen(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateMijnPrivacyInstellingenMutationResult = NonNullable<Awaited<ReturnType<typeof updateMijnPrivacyInstellingen>>>
+    export type UpdateMijnPrivacyInstellingenMutationBody = BodyType<MijnPrivacyInstellingenInput>
+    export type UpdateMijnPrivacyInstellingenMutationError = ErrorType<void>
+
+    /**
+ * @summary Eigen FPS Moments-zichtbaarheid bijwerken (bijv. verjaardag tonen aan collega's)
+ */
+export const useUpdateMijnPrivacyInstellingen = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateMijnPrivacyInstellingen>>, TError,{data: BodyType<MijnPrivacyInstellingenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateMijnPrivacyInstellingen>>,
+        TError,
+        {data: BodyType<MijnPrivacyInstellingenInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateMijnPrivacyInstellingenMutationOptions(options));
+    }
+
+export const getListMomentenVandaagUrl = () => {
+
+
+
+
+  return `/api/moments/vandaag`
+}
+
+/**
+ * @summary FPS Moments — vandaag relevante persoonlijke gebeurtenissen (bijv. verjaardagen) voor de ingelogde gebruiker. Eén gedeeld endpoint voor web + mobiel; nooit gevuld voor klant/FPS One.
+ */
+export const listMomentenVandaag = async ( options?: RequestInit): Promise<Moment[]> => {
+
+  return customFetch<Moment[]>(getListMomentenVandaagUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListMomentenVandaagQueryKey = () => {
+    return [
+    `/api/moments/vandaag`
+    ] as const;
+    }
+
+
+export const getListMomentenVandaagQueryOptions = <TData = Awaited<ReturnType<typeof listMomentenVandaag>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMomentenVandaag>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListMomentenVandaagQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listMomentenVandaag>>> = ({ signal }) => listMomentenVandaag({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listMomentenVandaag>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListMomentenVandaagQueryResult = NonNullable<Awaited<ReturnType<typeof listMomentenVandaag>>>
+export type ListMomentenVandaagQueryError = ErrorType<void>
+
+
+/**
+ * @summary FPS Moments — vandaag relevante persoonlijke gebeurtenissen (bijv. verjaardagen) voor de ingelogde gebruiker. Eén gedeeld endpoint voor web + mobiel; nooit gevuld voor klant/FPS One.
+ */
+
+export function useListMomentenVandaag<TData = Awaited<ReturnType<typeof listMomentenVandaag>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMomentenVandaag>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListMomentenVandaagQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

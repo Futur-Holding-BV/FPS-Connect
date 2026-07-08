@@ -9,6 +9,8 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: moments
+    description: FPS Moments — dagelijks-relevante persoonlijke gebeurtenissen (bijv. verjaardag)
   - name: onderhoudscontracten
     description: Onderhoudscontracten en contractbeheer
   - name: werkbonnen
@@ -2187,6 +2189,46 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/MijnPrivacyGegevens"
+        "401":
+          description: Niet ingelogd
+
+  /mijn/privacy-instellingen:
+    patch:
+      operationId: updateMijnPrivacyInstellingen
+      tags: [mijn]
+      summary: Eigen FPS Moments-zichtbaarheid bijwerken (bijv. verjaardag tonen aan collega's)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MijnPrivacyInstellingenInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MijnPrivacyInstellingen"
+        "401":
+          description: Niet ingelogd
+        "404":
+          description: Geen medewerkerprofiel gevonden
+
+  /moments/vandaag:
+    get:
+      operationId: listMomentenVandaag
+      tags: [moments]
+      summary: FPS Moments — vandaag relevante persoonlijke gebeurtenissen (bijv. verjaardagen) voor de ingelogde gebruiker. Eén gedeeld endpoint voor web + mobiel; nooit gevuld voor klant/FPS One.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Moment"
         "401":
           description: Niet ingelogd
 
@@ -24250,6 +24292,9 @@ components:
         opdrachtbevestiging_auto_verzenden:
           type: boolean
           description: Als true wordt de opdrachtbevestigingsmail automatisch naar de klant verstuurd na ondertekening. Als false wordt de mail niet verstuurd.
+        moments_verjaardag_ingeschakeld:
+          type: boolean
+          description: Organisatiebrede schakelaar voor FPS Moments — verjaardag. Uit = geen enkele verjaardag wordt getoond, ook niet aan de jarige zelf. Standaard aan.
         ai_kostendrempel_eur:
           type: ["number", "null"]
           description: Maandelijks kostenplafond voor AI-gebruik in euro. Null betekent geen drempel.
@@ -24271,6 +24316,9 @@ components:
           type: string
         opdrachtbevestiging_auto_verzenden:
           type: boolean
+        moments_verjaardag_ingeschakeld:
+          type: boolean
+          description: Organisatiebrede schakelaar voor FPS Moments — verjaardag (alleen hoofdbeheerder).
         ai_kostendrempel_eur:
           type: ["number", "null"]
           description: Maandelijks kostenplafond voor AI-gebruik in euro. Null of weglaten om drempel te verwijderen.
@@ -31654,7 +31702,7 @@ components:
 
     MijnMedewerkerProfiel:
       type: object
-      required: [id, naam, werkmaatschappij, dienstverband, verlofsaldi, opleidingen]
+      required: [id, naam, werkmaatschappij, dienstverband, verlofsaldi, opleidingen, verjaardag_zichtbaar]
       properties:
         id:
           type: integer
@@ -31687,6 +31735,40 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/MijnOpleiding"
+        verjaardag_zichtbaar:
+          type: boolean
+          description: FPS Moments — opt-in, standaard uit. Als true zien collega's naam+foto op de "Vandaag jarig"-widget (nooit leeftijd/geboortejaar).
+
+    MijnPrivacyInstellingenInput:
+      type: object
+      required: [verjaardag_zichtbaar]
+      properties:
+        verjaardag_zichtbaar:
+          type: boolean
+
+    MijnPrivacyInstellingen:
+      type: object
+      required: [verjaardag_zichtbaar]
+      properties:
+        verjaardag_zichtbaar:
+          type: boolean
+
+    Moment:
+      type: object
+      required: [type, medewerker_id, naam, foto_url, geldt_voor_jou]
+      properties:
+        type:
+          type: string
+          enum: [verjaardag]
+        medewerker_id:
+          type: integer
+        naam:
+          type: string
+        foto_url:
+          type: ["string", "null"]
+        geldt_voor_jou:
+          type: boolean
+          description: True als dit Moment over de ingelogde gebruiker zelf gaat (bepaalt confetti/felicitatiekaart voor deze gebruiker).
 
     MijnVerlofsaldo:
       type: object

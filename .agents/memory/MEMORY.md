@@ -93,3 +93,4 @@
 - [Silent-failure invite flow](silent-failure-invite-flow.md) — mail-send helper returning bool instead of throwing let a try/catch-only caller mark a user "invited" with no email sent; side effects gating state transitions must throw.
 - [First-install bootstrap](first-install-bootstrap.md) — fail-closed eerste-admin flow via advisory-lock+recount in tx; test race-pad op wegwerp-DB, nooit op gedeelde dev-DB; achtergrondserver moet in één bash-call starten+testen+stoppen.
 - [Roadmap docs staleness](roadmap-docs-staleness.md) — replit.md/roadmap status labels can lag actual build state; verify against git log/code before "building" a phase, fix status in all doc files together.
+- [e2e-menu "Failed to fetch" login](e2e-monteur-login-failed-to-fetch.md) — browser-level fetch failure op inlogstap = Expo-domein/CORS-tunnelflakiness, geen appbug; bevestig via directe curl naar login-endpoints vóór je code verdenkt.

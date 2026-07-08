@@ -58,6 +58,7 @@ Een hoofdbeheerder kan nu vanuit Gebruikers › Acties het wachtwoord van elk ac
 ---
 
 ## 2026-07-08 — Hoofdstukken sidebar verslepen (herschikbare volgorde)
+## 2026-07-08 — FPS Moments — Verjaardag (uitbreidbare momenten-service)
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
 
@@ -81,6 +82,25 @@ Geen touch/mobiele drag-ondersteuning (expliciet uit scope — alleen desktop-mu
 
 - Volledige workspace-typecheck schoon na alle wijzigingen
 - End-to-end browsertest (login → sidebar toont standaardvolgorde, geen herstelknop → volgorde/open-status via localStorage aangepast → herschikte volgorde zichtbaar + herstelknop verschijnt → klik op "Standaardvolgorde herstellen" → volgorde en knop weer op standaard): geslaagd
+
+Een uitbreidbare "Moments"-service die dagelijks relevante persoonlijke gebeurtenissen voor ingelogde gebruikers bepaalt, met als eerste type "verjaardag". Eén gedeeld endpoint (`GET /moments/vandaag`) bedient zowel web als mobiel.
+
+- **Privacy (opt-in per medewerker, standaard UIT):** `PATCH /mijn/privacy-instellingen` — self-service toggle in `mijn/privacy.tsx` (web) en het bestaande privacyscherm (mobiel)
+- **Organisatiebrede schakelaar (standaard AAN, alleen hoofdbeheerder):** toegevoegd aan `systeeminstellingen` via `GET`/`PUT /info/instellingen`, UI-toggle in `info/index.tsx` (web, gated op rol)
+- **Backend:** nieuwe Moments-service (`artifacts/api-server/src/services/moments/`) en route (`artifacts/api-server/src/routes/moments.ts`) — bepaalt per ingelogde gebruiker wie er vandaag jarig is, met `geldt_voor_jou` voor de eigen verjaardag en alleen naam+foto (nooit leeftijd/geboortejaar) voor opted-in collega's
+- **Web:** `moments-widget.tsx` — confetti-dialoog met felicitatiekaart (max. één keer per dag, `localStorage`-gate) + "Vandaag jarig"-widget, ingebouwd in de beheerder- en monteur-dashboards. **Bewust niet** op het klantdashboard (`klant.tsx`) — nooit zichtbaar in het FPS One-klantportaal
+- **Mobiel:** `BirthdayCelebration.tsx` — animatie/confetti-viering op het startscherm (`app/menu.tsx`), zelfde eenmaal-per-dag-gate via `AsyncStorage`, plus een "Vandaag jarig"-avatarrij voor opted-in collega's
+
+**Bewust niet gedaan:** geen leeftijd/geboortejaar tonen (alleen naam+foto); geen weergave in het klantportaal; geen andere Moment-types dan verjaardag (architectuur is uitbreidbaar voor toekomstige types).
+
+**Verificatie:**
+
+- `pnpm run typecheck:libs` en `pnpm --filter @workspace/firevault run typecheck` / `pnpm --filter @workspace/monteur-app run typecheck` schoon (monteur-app toont alleen bestaande, ongerelateerde fouten in `voertuig-melding.tsx`/`pbm.tsx`)
+- `pnpm --filter @workspace/api-server run typecheck` toont alleen de bestaande TS7030-fouten in `documenten.ts`/`offertes.ts` (ongerelateerd, reeds bekend)
+- `e2e-web` (Playwright): geslaagd
+- `e2e-menu` (Playwright, mobiele startmenu-test): meerdere keren gefaald op de inlogstap zelf (`Failed to fetch` in de browser, vóórdat `menu.tsx` of enige Moments-code wordt bereikt). Root-cause-onderzoek: directe `curl`-aanroepen naar `/api/auth/login` en `/api/auth/mobile/login` slagen probleemloos; `git status` bevestigt dat geen van de gewijzigde/nieuwe bestanden in deze taak de login-/CORS-/sessielaag raakt. Dit wijst op een reeds bestaande omgevingsflakiness in de e2e-testinfrastructuur (vergelijkbaar met de eerder gedocumenteerde TOTP-timingsgevoeligheid), niet op een regressie door deze functionaliteit.
+
+**Niet aangeraakt:** klantportaal/FPS One, authenticatie-/CORS-laag, bestaande dashboards buiten de widget-toevoeging.
 
 ---
 

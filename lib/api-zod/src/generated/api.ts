@@ -2595,9 +2595,35 @@ export const GetMijnPrivacyGegevensResponse = zod.object({
   "behaald_op": zod.string().nullish(),
   "verloopt_op": zod.string().nullish(),
   "status": zod.string()
-}))
+})),
+  "verjaardag_zichtbaar": zod.boolean().describe('FPS Moments — opt-in, standaard uit. Als true zien collega\'s naam+foto op de \"Vandaag jarig\"-widget (nooit leeftijd\/geboortejaar).')
 }).nullish()
 })
+
+
+/**
+ * @summary Eigen FPS Moments-zichtbaarheid bijwerken (bijv. verjaardag tonen aan collega's)
+ */
+export const UpdateMijnPrivacyInstellingenBody = zod.object({
+  "verjaardag_zichtbaar": zod.boolean()
+})
+
+export const UpdateMijnPrivacyInstellingenResponse = zod.object({
+  "verjaardag_zichtbaar": zod.boolean()
+})
+
+
+/**
+ * @summary FPS Moments — vandaag relevante persoonlijke gebeurtenissen (bijv. verjaardagen) voor de ingelogde gebruiker. Eén gedeeld endpoint voor web + mobiel; nooit gevuld voor klant/FPS One.
+ */
+export const ListMomentenVandaagResponseItem = zod.object({
+  "type": zod.enum(['verjaardag']),
+  "medewerker_id": zod.number(),
+  "naam": zod.string(),
+  "foto_url": zod.string().nullable(),
+  "geldt_voor_jou": zod.boolean().describe('True als dit Moment over de ingelogde gebruiker zelf gaat (bepaalt confetti\/felicitatiekaart voor deze gebruiker).')
+})
+export const ListMomentenVandaagResponse = zod.array(ListMomentenVandaagResponseItem)
 
 
 /**
@@ -6311,6 +6337,7 @@ export const GetInfoInstellingenResponse = zod.object({
   "support_website": zod.string().nullish(),
   "extra_disclaimer": zod.string().nullish(),
   "opdrachtbevestiging_auto_verzenden": zod.boolean().describe('Als true wordt de opdrachtbevestigingsmail automatisch naar de klant verstuurd na ondertekening. Als false wordt de mail niet verstuurd.'),
+  "moments_verjaardag_ingeschakeld": zod.boolean().optional().describe('Organisatiebrede schakelaar voor FPS Moments — verjaardag. Uit = geen enkele verjaardag wordt getoond, ook niet aan de jarige zelf. Standaard aan.'),
   "ai_kostendrempel_eur": zod.number().nullish().describe('Maandelijks kostenplafond voor AI-gebruik in euro. Null betekent geen drempel.'),
   "bijgewerkt_op": zod.string(),
   "bijgewerkt_door_id": zod.number().nullish()
@@ -6326,6 +6353,7 @@ export const UpdateInfoInstellingenBody = zod.object({
   "support_website": zod.string().optional(),
   "extra_disclaimer": zod.string().optional(),
   "opdrachtbevestiging_auto_verzenden": zod.boolean().optional(),
+  "moments_verjaardag_ingeschakeld": zod.boolean().optional().describe('Organisatiebrede schakelaar voor FPS Moments — verjaardag (alleen hoofdbeheerder).'),
   "ai_kostendrempel_eur": zod.number().nullish().describe('Maandelijks kostenplafond voor AI-gebruik in euro. Null of weglaten om drempel te verwijderen.')
 })
 
@@ -6336,6 +6364,7 @@ export const UpdateInfoInstellingenResponse = zod.object({
   "support_website": zod.string().nullish(),
   "extra_disclaimer": zod.string().nullish(),
   "opdrachtbevestiging_auto_verzenden": zod.boolean().describe('Als true wordt de opdrachtbevestigingsmail automatisch naar de klant verstuurd na ondertekening. Als false wordt de mail niet verstuurd.'),
+  "moments_verjaardag_ingeschakeld": zod.boolean().optional().describe('Organisatiebrede schakelaar voor FPS Moments — verjaardag. Uit = geen enkele verjaardag wordt getoond, ook niet aan de jarige zelf. Standaard aan.'),
   "ai_kostendrempel_eur": zod.number().nullish().describe('Maandelijks kostenplafond voor AI-gebruik in euro. Null betekent geen drempel.'),
   "bijgewerkt_op": zod.string(),
   "bijgewerkt_door_id": zod.number().nullish()

@@ -20,4 +20,6 @@ export interface MijnMedewerkerProfiel {
   mobiel?: string | null;
   verlofsaldi: MijnVerlofsaldo[];
   opleidingen: MijnOpleiding[];
+  /** FPS Moments — opt-in, standaard uit. Als true zien collega's naam+foto op de "Vandaag jarig"-widget (nooit leeftijd/geboortejaar). */
+  verjaardag_zichtbaar: boolean;
 }

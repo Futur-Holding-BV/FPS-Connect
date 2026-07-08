@@ -76,6 +76,9 @@ export const appInstellingenTable = pgTable("app_instellingen", {
   supportWebsite: text("support_website"),
   extraDisclaimer: text("extra_disclaimer"),
   opdrachtbevestigingAutoVerzenden: boolean("opdrachtbevestiging_auto_verzenden").notNull().default(false),
+  // FPS Moments — organisatiebrede schakelaar (standaard aan); alleen de hoofdbeheerder mag dit wijzigen.
+  // Uit = geen enkel Moment (verjaardag, later evt. andere types) wordt getoond, ook niet aan de jarige zelf.
+  momentsVerjaardagIngeschakeld: boolean("moments_verjaardag_ingeschakeld").notNull().default(true),
   aiKostendrempelEur: numeric("ai_kostendrempel_eur", { precision: 10, scale: 4 }),
   aiDrempelMeldingGestuurdMaand: text("ai_drempel_melding_gestuurd_maand"),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
