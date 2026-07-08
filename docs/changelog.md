@@ -35,6 +35,26 @@ Nieuw documenttype **"jaarrekening"** (met subtype "geconsolideerd" voor groep/h
 
 **Bewust niet gedaan:** geen wijziging aan de bestaande AI-gateway/prompt-structuur voor andere modules; geen migratie van historische Inbox-/Slim Upload-items naar de nieuwe velden (die blijven leeg tot een nieuwe classificatie plaatsvindt).
 
+## 2026-07-08 — V1.5 restscope: centrale Rapportenbibliotheek (zoeken/filteren/openen)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (uitbreiding van bestaand scherm + bestaande endpoints, geen schema-/API-wijziging)
+
+**Wat is gedaan:**
+
+Teams misten een centrale plek om alle opgeleverde rapporten terug te vinden — daarvoor moest je al op de specifieke gebouwpagina zitten. `GET /rapporten` (cross-gebouw) en het scherm `/rapporten` bestonden al, maar boden alleen een statusfilter. Uitgebreid met:
+
+- Zoekveld (titel, gebouw, opsteller), filter op gebouw, filter op rapporttype en een datumrange-filter (vanaf/tot en met, op bevriezingsdatum of anders aanmaakdatum), naast de bestaande statusfilter (concept/definitief/gearchiveerd).
+- "Bekijken"-knop per rapport: opent de gebouw-printpagina met het rapport geladen (`?rapport_id=`), zodat het bevroren rapport direct in te zien is zonder eerst naar het gebouw be navigeren.
+- "Downloaden"-knop bij definitieve rapporten: hergebruikt de bestaande bijlagenbundel-PDF-generatie (`GET /gebouwen/:id/rapporten/:rapportId/bijlagenbundel`), geen nieuwe backend-logica.
+- Toegang blijft gelden via de bestaande `rapportages`-bevoegdheid (geen wijziging aan de gating).
+
+**Technische aanpak:**
+
+- `artifacts/firevault/src/pages/rapporten/index.tsx`: client-side filtering (zoekterm/gebouw/type/datumrange) bovenop de al opgehaalde lijst; gebouw- en type-opties afgeleid uit de aanwezige rapporten (geen extra endpoint nodig).
+- Geen wijziging aan `artifacts/api-server/src/routes/rapporten.ts` of de OpenAPI-spec — de cross-gebouw listing en de bijlagenbundel-download bestonden al en zijn hergebruikt.
+- Nieuwe e2e-test `scripts/e2e/web-rapportenbibliotheek.spec.ts` (onderdeel van `pnpm --filter @workspace/scripts run e2e-web`): logt in als e2e-testadmin, opent `/rapporten`, controleert zoeken op een niet-bestaande term (lege staat) en het terugzetten daarvan.
+- Restscope V1.5 bijgewerkt in `docs/roadmap/actief.md`: koppelingen (CRM/onderhoud/klantportaal) en de volledige statusmachine blijven open.
+
 ## 2026-07-08 — V1.4 Opleverrapportage: status geverifieerd + "Alles selecteren"
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (bestaande, al werkende functionaliteit; kleine UI-aanvulling + documentatie-update)

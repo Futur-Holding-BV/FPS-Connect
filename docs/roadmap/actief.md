@@ -13,8 +13,11 @@ Doel: een centrale rapportenbibliotheek met definitieve, juridisch correcte ople
 - Bevriezing documenten: `POST .../definitief` legt de documentrevisies van de gekoppelde bijlagen vast (`bevroren_document_revisies`); latere documentrevisies wijzigen een definitief rapport niet met terugwerkende kracht.
 - Basaal versiebeheer van de rapport-status (concept → definitief, vergrendeld) en een reactietermijn-datum (configureerbaar 1–365 dagen) die bij definitief-maken wordt vastgelegd.
 
+**Al gebouwd (8 juli 2026 — centrale bibliotheek):**
+- Rapportenbibliotheek-scherm (`/rapporten`) toont alle rapporten cross-gebouw (bestond al), nu aangevuld met zoekveld (titel/gebouw/opsteller), filter op gebouw, filter op rapporttype en een datumrange-filter, naast de bestaande statusfilter.
+- Vanuit de lijst is een rapport direct te bekijken ("Bekijken" → gebouw-printpagina met het bevroren rapport via `rapport_id`) of te downloaden ("Downloaden" bij definitieve rapporten, hergebruikt de bestaande bijlagenbundel-PDF-generatie).
+
 **Nog te bouwen (restscope V1.5):**
-- Centrale rapportenbibliotheek-UI met zoek- en filterfuncties over alle gebouwen heen (de data bestaat al via `GET /rapporten`, maar er is nog geen overzichtsscherm).
 - Koppelingen naar CRM, onderhoud en klantportaal.
 - Volledige formele-opleverstatus-statusmachine met weergave: **Definitief verzonden → Reactietermijn loopt → Juridisch gereedgemeld/verstreken → Vervangen door nieuwe versie** (met automatische herstart van de termijn bij een nieuwe versie en logging bij gebouw/rapport). Nu is alleen de reactietermijn-datum + concept/definitief-status aanwezig; de tussenliggende statussen en de "vervangen door versie x"-weergave in de gebouwkaart → rapporten-tab ontbreken nog.
 
