@@ -1,15 +1,17 @@
 import { useLocation } from "wouter";
+import { Link } from "wouter";
 import {
   useGetOnderhoudscontractenStatistieken,
   useListOnderhoudscontracten,
   useListWerkbonnen,
+  useListRapporten,
 } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  FileText, AlertTriangle, CheckCircle, Clock, TrendingUp,
-  CalendarDays, Wrench, Euro, ArrowRight, Building,
+  FileText, AlertTriangle, CheckCircle, Clock,
+  CalendarDays, Wrench, Euro, ArrowRight, Building, CheckCircle2, Lock,
 } from "lucide-react";
 
 function formatEuro(bedrag: number | null | undefined): string {
@@ -24,11 +26,23 @@ const statusBadge: Record<string, { label: string; className: string }> = {
   geannuleerd: { label: "Geannuleerd", className: "bg-gray-100 text-gray-700 border-gray-200" },
 };
 
+const RAPPORT_TYPE_LABEL: Record<string, string> = {
+  werkpakket_monteur: "Werkpakket monteur",
+  voortgang:          "Voortgangsrapportage",
+  opleverrapport:     "Opleverrapport brandveiligheid",
+  opleverdossier:     "Opleverdossier",
+  klant_beknopt:      "Klantrapport — Beknopt",
+  klant_uitgebreid:   "Klantrapport — Uitgebreid",
+  intern_controle:    "Interne controle",
+  beheeradvies:       "Beheeradvies",
+};
+
 export default function OnderhoudDashboard() {
   const [, navigate] = useLocation();
   const { data: stats, isLoading: statsLoading } = useGetOnderhoudscontractenStatistieken();
   const { data: contracten } = useListOnderhoudscontracten();
   const { data: werkbonnen } = useListWerkbonnen();
+  const { data: definitieveRapporten = [] } = useListRapporten({ status: "definitief" });
 
   const aflopend = contracten?.filter((c) => {
     if (!c.einddatum) return false;
@@ -304,6 +318,63 @@ export default function OnderhoudDashboard() {
           </CardContent>
         </Card>
       )}
+
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center justify-between">
+            <span className="flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-green-600" />
+              Recente definitieve rapporten
+            </span>
+            <Link href="/rapporten">
+              <Button variant="ghost" size="sm">
+                Alle <ArrowRight className="h-3 w-3 ml-1" />
+              </Button>
+            </Link>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {definitieveRapporten.length === 0 ? (
+            <div className="text-center py-6 text-muted-foreground text-sm">
+              <FileText className="h-8 w-8 mx-auto mb-2 opacity-50" />
+              Nog geen definitieve rapporten
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {definitieveRapporten.slice(0, 6).map((r) => {
+                const titel = r.titel || RAPPORT_TYPE_LABEL[r.rapport_type] || r.rapport_type;
+                return (
+                  <div
+                    key={r.id}
+                    className="flex items-center gap-3 p-2 rounded-md hover:bg-muted cursor-pointer"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => r.gebouw_id && navigate(`/gebouwen/${r.gebouw_id}/print?rapport_id=${r.id}`)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && r.gebouw_id)
+                        navigate(`/gebouwen/${r.gebouw_id}/print?rapport_id=${r.id}`);
+                    }}
+                  >
+                    <Lock className="h-4 w-4 text-green-600 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-sm truncate">{titel}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {r.gebouw_naam ?? "Onbekend gebouw"}
+                        {r.bevroren_op
+                          ? ` · ${new Date(r.bevroren_op).toLocaleDateString("nl-NL")}`
+                          : ""}
+                      </div>
+                    </div>
+                    <Badge variant="outline" className="bg-green-100 text-green-800 border-green-200 text-xs shrink-0">
+                      Definitief
+                    </Badge>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
