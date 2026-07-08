@@ -107,6 +107,10 @@ Strategische ontwerpopdracht, vastgelegd als toekomstige richting. Valt onder de
 
 **Latere aanvulling (vastgelegd):** een bonus- & prestatiemodule (kwartaalbonussen, productiviteit, doorgroei van monteurs) sluit naadloos op deze HRM-module aan en maakt het systeem aantrekkelijker voor medewerkers.
 
+## Adaptive Workspace Engine — centrale, lerende UI-personalisatie (vastgelegd, geparkeerd — NIET bouwen vóór V1.5/DDS klaar)
+
+Los, nieuw initiatief náást de bestaande roadmap: één centrale engine die de UI-presentatie (widgetvolgorde, hoofdstukvolgorde, snelkoppelingen, standaardfilters, AI-uitlegniveau) maandelijks licht bijstelt op basis van daadwerkelijk gebruik — geen persoonlijkheids-/DISC-analyse, geen HR-beoordeling. Expliciete volgorde-afspraak van de gebruiker: pas oppakken nadat V1.5 (Rapportenmodule) en het Document Design System zijn afgerond; op 8 juli 2026 opnieuw bevestigd omdat beide toen nog open restscope hadden. Hard vereist: mag nooit routes, rechten, workflowstatussen, documentkoppelingen, DMS-structuur of opslaglocaties wijzigen; alleen nieuwe, aparte tabellen. Volledige uitwerking (done-criteria, stappenplan, relevante bestanden) in [`adaptive-workspace-engine.md`](./adaptive-workspace-engine.md).
+
 ## AI Brandveiligheidsmanager / AI Calculator / Klantmodule (strategische lijn, vastgelegd — toekomstige richting, NIET bouwen)
 
 Strategische roadmaplijn, vastgelegd als toekomstige richting; nog niet bouwen (Ontwikkelstop). Conform de bestaande AI-conventie: AI stelt voor en een mens controleert/bevestigt; de AI verstuurt nooit zelfstandig definitieve offertes.
