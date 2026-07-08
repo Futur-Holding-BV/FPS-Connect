@@ -17,8 +17,35 @@ import { parseEmailBestand } from "../services/email-ai";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
 import { ObjectStorageService } from "../lib/objectStorage";
 import { stuurAanvraagBevestiging } from "../services/email";
+import { classificeerDocument, type DocCategorie, type BewijsStap } from "../lib/documentIntelligence";
 
 const objectStorage = new ObjectStorageService();
+
+/** Canonieke Document Intelligence-categorie → bestaand Inbox document_categorie-veld
+ * (vrij tekstveld, geen DB-enum; namen worden zoveel mogelijk hergebruikt zodat
+ * bestaande frontend-weergaven — o.a. de speciale "snagstream_rapport"-sectie —
+ * blijven werken).
+ */
+const DOC_CATEGORIE_NAAR_INBOX: Record<DocCategorie, string> = {
+  aanvraag: "project_document",
+  tekening: "gebouw_document",
+  offerte: "offerte_document",
+  factuur: "factuur",
+  productdocument: "product_certificaat",
+  testrapport: "eta_dop_brandclassificatie",
+  certificaat: "product_certificaat",
+  eta: "eta_dop_brandclassificatie",
+  dop: "eta_dop_brandclassificatie",
+  personeelsdocument: "hr_document",
+  verzekering: "financieel_document",
+  snagstream: "snagstream_rapport",
+  jaarrekening: "jaarrekening",
+  contract: "contract",
+  bibliotheek: "product_certificaat",
+  document_sjabloon: "onbekend",
+  algemeen: "onbekend",
+  onbekend: "onbekend",
+};
 
 /** Pad in object storage op basis van AI-categorie.
  * snagstream → algemeen/snagstream/
@@ -33,6 +60,7 @@ function opslagSubPath(categorie: string, bestandsnaam: string): string {
     factuur:            "algemeen/inbox/facturen",
     oplevering_rapport: "algemeen/inbox/opleveringen",
     contract:           "algemeen/inbox/contracten",
+    jaarrekening:       "algemeen/inbox/jaarrekeningen",
     email:              "algemeen/inbox/emails",
   };
   const dir = map[categorie] ?? "algemeen/inbox/overig";
@@ -50,157 +78,14 @@ function parseId(v: unknown): number {
   return parseInt(String(v), 10);
 }
 
-// ── MOCK AI CLASSIFIER ────────────────────────────────────────────────────────
-type AiResultaat = {
-  document_categorie: string;
-  bestemming: string;
-  ai_betrouwbaarheid: "hoog" | "midden" | "laag";
-  ai_samenvatting: string;
-  ai_redenering: string;
-  ai_volgende_actie: string;
-  snagstream_opdrachtgever: string | null;
-  snagstream_gebouw: string | null;
-  snagstream_project: string | null;
-  snagstream_rapportdatum: string | null;
-  snagstream_rapporttype: string | null;
-  snagstream_status: string | null;
-};
-
-function classificeerMockAI(bestandsnaam: string, mimetype?: string): AiResultaat {
-  const naam = bestandsnaam.toLowerCase();
-  const ext = naam.split(".").pop() ?? "";
-
-  if (naam.includes("snagstream") || naam.includes("snag_stream")) {
-    return {
-      document_categorie: "snagstream_rapport",
-      bestemming: "Snagstream",
-      ai_betrouwbaarheid: "hoog",
-      ai_samenvatting: "Snagstream inspectierapport gedetecteerd.",
-      ai_redenering: "Bestandsnaam bevat 'snagstream'. PDF-rapport van inspectiepartij.",
-      ai_volgende_actie: "Controleer opdrachtgever en koppel aan juist gebouw.",
-      snagstream_opdrachtgever: "Onbekend (uit PDF te lezen)",
-      snagstream_gebouw: "Onbekend",
-      snagstream_project: null,
-      snagstream_rapportdatum: null,
-      snagstream_rapporttype: "inspectie",
-      snagstream_status: "nieuw",
-    };
+function parseBewijs(raw: string | null): BewijsStap[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? (parsed as BewijsStap[]) : [];
+  } catch {
+    return [];
   }
-
-  if (naam.includes("offert") || naam.includes("prijsopgave")) {
-    return {
-      document_categorie: "offerte_document",
-      bestemming: "Offertes",
-      ai_betrouwbaarheid: "hoog",
-      ai_samenvatting: "Offertedocument herkend op basis van bestandsnaam.",
-      ai_redenering: "Bestandsnaam bevat 'offert' of 'prijsopgave'.",
-      ai_volgende_actie: "Koppelen aan klant en projectkans in CRM.",
-      snagstream_opdrachtgever: null, snagstream_gebouw: null, snagstream_project: null,
-      snagstream_rapportdatum: null, snagstream_rapporttype: null, snagstream_status: null,
-    };
-  }
-
-  if (naam.includes("factuur") || naam.includes("invoice") || naam.includes("rekening")) {
-    return {
-      document_categorie: "factuur",
-      bestemming: "Financieel",
-      ai_betrouwbaarheid: "hoog",
-      ai_samenvatting: "Factuur of inkoopbon gedetecteerd.",
-      ai_redenering: "Bestandsnaam bevat 'factuur', 'invoice' of 'rekening'.",
-      ai_volgende_actie: "Controleren en verwerken in financieel beheer.",
-      snagstream_opdrachtgever: null, snagstream_gebouw: null, snagstream_project: null,
-      snagstream_rapportdatum: null, snagstream_rapporttype: null, snagstream_status: null,
-    };
-  }
-
-  if (naam.includes("oplevering") || naam.includes("opleverapport")) {
-    return {
-      document_categorie: "oplevering_rapport",
-      bestemming: "Oplevering",
-      ai_betrouwbaarheid: "hoog",
-      ai_samenvatting: "Opleverrapport gedetecteerd.",
-      ai_redenering: "Bestandsnaam bevat 'oplevering' of 'opleverapport'.",
-      ai_volgende_actie: "Koppelen aan gebouw en dossier.",
-      snagstream_opdrachtgever: null, snagstream_gebouw: null, snagstream_project: null,
-      snagstream_rapportdatum: null, snagstream_rapporttype: null, snagstream_status: null,
-    };
-  }
-
-  if (naam.includes("contract") || naam.includes("overeenkomst") || naam.includes("sla")) {
-    return {
-      document_categorie: "contract",
-      bestemming: "CRM",
-      ai_betrouwbaarheid: "midden",
-      ai_samenvatting: "Contract of overeenkomst herkend.",
-      ai_redenering: "Bestandsnaam bevat 'contract', 'overeenkomst' of 'sla'.",
-      ai_volgende_actie: "Koppelen aan organisatie in CRM.",
-      snagstream_opdrachtgever: null, snagstream_gebouw: null, snagstream_project: null,
-      snagstream_rapportdatum: null, snagstream_rapporttype: null, snagstream_status: null,
-    };
-  }
-
-  if (naam.includes("certificaat") || naam.includes("certif") || naam.includes("keurmerk")) {
-    return {
-      document_categorie: "product_certificaat",
-      bestemming: "Productbibliotheek",
-      ai_betrouwbaarheid: "midden",
-      ai_samenvatting: "Productcertificaat of keurmerk gedetecteerd.",
-      ai_redenering: "Bestandsnaam bevat 'certificaat' of 'certif'.",
-      ai_volgende_actie: "Opslaan in productbibliotheek bij het juiste label.",
-      snagstream_opdrachtgever: null, snagstream_gebouw: null, snagstream_project: null,
-      snagstream_rapportdatum: null, snagstream_rapporttype: null, snagstream_status: null,
-    };
-  }
-
-  if (naam.includes("inspectie") || naam.includes("keur") || naam.includes("rapport")) {
-    return {
-      document_categorie: "uitvoering_document",
-      bestemming: "Uitvoering",
-      ai_betrouwbaarheid: "midden",
-      ai_samenvatting: "Inspectie- of keuringsrapport herkend.",
-      ai_redenering: "Bestandsnaam bevat 'inspectie', 'keur' of 'rapport'.",
-      ai_volgende_actie: "Koppelen aan gebouw en inspectieregel.",
-      snagstream_opdrachtgever: null, snagstream_gebouw: null, snagstream_project: null,
-      snagstream_rapportdatum: null, snagstream_rapporttype: null, snagstream_status: null,
-    };
-  }
-
-  if (naam.includes("hrm") || naam.includes("personeel") || naam.includes("medewerker") || naam.includes("loonstrook") || naam.includes("arbeidscontract")) {
-    return {
-      document_categorie: "hr_document",
-      bestemming: "HRM",
-      ai_betrouwbaarheid: "midden",
-      ai_samenvatting: "HR-document of personeelsdocument herkend.",
-      ai_redenering: "Bestandsnaam bevat HRM-gerelateerde termen.",
-      ai_volgende_actie: "Verwerken in HRM-module bij betreffende medewerker.",
-      snagstream_opdrachtgever: null, snagstream_gebouw: null, snagstream_project: null,
-      snagstream_rapportdatum: null, snagstream_rapporttype: null, snagstream_status: null,
-    };
-  }
-
-  if (ext === "pdf") {
-    return {
-      document_categorie: "onbekend",
-      bestemming: "DMS",
-      ai_betrouwbaarheid: "laag",
-      ai_samenvatting: "PDF-document. Inhoud niet te bepalen op basis van bestandsnaam.",
-      ai_redenering: "Geen herkenbare sleutelwoorden in de bestandsnaam gevonden.",
-      ai_volgende_actie: "Handmatig categoriseren en koppelen aan de juiste module.",
-      snagstream_opdrachtgever: null, snagstream_gebouw: null, snagstream_project: null,
-      snagstream_rapportdatum: null, snagstream_rapporttype: null, snagstream_status: null,
-    };
-  }
-
-  return {
-    document_categorie: "onbekend",
-    bestemming: "Onbekend",
-    ai_betrouwbaarheid: "laag",
-    ai_samenvatting: "Document type niet herkend.",
-    ai_redenering: "Geen herkenbare patronen gevonden in bestandsnaam of type.",
-    ai_volgende_actie: "Handmatig beoordelen en toewijzen.",
-    snagstream_opdrachtgever: null, snagstream_gebouw: null, snagstream_project: null,
-    snagstream_rapportdatum: null, snagstream_rapporttype: null, snagstream_status: null,
-  };
 }
 
 const mapItem = (item: typeof inboxItemsTable.$inferSelect) => ({
@@ -222,6 +107,11 @@ const mapItem = (item: typeof inboxItemsTable.$inferSelect) => ({
   ai_redenering: item.aiRedenering,
   ai_metadata: item.aiMetadata,
   ai_volgende_actie: item.aiVolgendeActie,
+  ai_organisatie: item.aiOrganisatie,
+  ai_jaar: item.aiJaar,
+  ai_geconsolideerd: item.aiGeconsolideerd,
+  ai_opslaglocatie: item.aiOpslaglocatie,
+  ai_bewijs: parseBewijs(item.aiBewijs),
   duplicaat_van: item.duplicaatVan,
   mogelijk_duplicaat: item.mogelijkDuplicaat,
   goedgekeurd_door: item.goedgekeurdDoor,
@@ -290,12 +180,20 @@ router.post("/inbox/items", schrijven, uploadEnkel.single("bestand"), async (req
     const opmerkingen: string | null = (req.body.opmerkingen as string | undefined) ?? null;
     const gebruikerId = req.session.userId ?? null;
 
-    const ai = classificeerMockAI(bestandsnaam, mimetype);
+    const analyse = await classificeerDocument({
+      buffer: bestand?.buffer ?? null,
+      bestandsnaam,
+      mime: mimetype,
+      toelichting: opmerkingen,
+    });
+    const documentCategorie = DOC_CATEGORIE_NAAR_INBOX[analyse.categorie];
+    const bestemming = analyse.module_bestemming;
+    const isSnagstream = analyse.categorie === "snagstream";
 
     // Upload het bestand naar object storage als bytes aanwezig zijn
     let bestandspad: string;
     if (bestand) {
-      const subPath = opslagSubPath(ai.document_categorie, bestandsnaam);
+      const subPath = opslagSubPath(documentCategorie, bestandsnaam);
       try {
         bestandspad = await objectStorage.uploadBestand(subPath, bestand.buffer, mimetype);
       } catch {
@@ -316,18 +214,23 @@ router.post("/inbox/items", schrijven, uploadEnkel.single("bestand"), async (req
         mimetype,
         geuploadDoor: gebruikerId,
         status: "geanalyseerd",
-        documentCategorie: ai.document_categorie,
-        bestemming: ai.bestemming,
-        aiBetrouwbaarheid: ai.ai_betrouwbaarheid,
-        aiSamenvatting: ai.ai_samenvatting,
-        aiRedenering: ai.ai_redenering,
-        aiVolgendeActie: ai.ai_volgende_actie,
-        snagstreamOpdrachtgever: ai.snagstream_opdrachtgever,
-        snagstreamGebouw: ai.snagstream_gebouw,
-        snagstreamProject: ai.snagstream_project,
-        snagstreamRapportdatum: ai.snagstream_rapportdatum,
-        snagstreamRapporttype: ai.snagstream_rapporttype,
-        snagstreamStatus: ai.snagstream_status,
+        documentCategorie,
+        bestemming,
+        aiBetrouwbaarheid: analyse.vertrouwen,
+        aiSamenvatting: analyse.redenering,
+        aiRedenering: analyse.redenering,
+        aiVolgendeActie: analyse.directe_actie_beschrijving || null,
+        aiOrganisatie: analyse.organisatie,
+        aiJaar: analyse.jaar,
+        aiGeconsolideerd: analyse.subtype === "geconsolideerd",
+        aiOpslaglocatie: analyse.opslaglocatie,
+        aiBewijs: JSON.stringify(analyse.bewijs),
+        snagstreamOpdrachtgever: isSnagstream ? (analyse.organisatie ?? analyse.gevonden_gegevens.opdrachtgever ?? null) : null,
+        snagstreamGebouw: isSnagstream ? (analyse.gevonden_gegevens.locatie ?? analyse.gevonden_gegevens.gebouw ?? null) : null,
+        snagstreamProject: isSnagstream ? (analyse.gevonden_gegevens.project ?? null) : null,
+        snagstreamRapportdatum: isSnagstream ? (analyse.gevonden_gegevens.datum ?? null) : null,
+        snagstreamRapporttype: isSnagstream ? "inspectie" : null,
+        snagstreamStatus: isSnagstream ? "nieuw" : null,
         opmerkingen,
       })
       .returning();
@@ -337,8 +240,8 @@ router.post("/inbox/items", schrijven, uploadEnkel.single("bestand"), async (req
       actie: "geregistreerd",
       gebruikerId,
       details: bestand
-        ? `Bestand "${bestandsnaam}" geüpload naar ${bestandspad}. AI-categorie: ${ai.document_categorie} (${ai.ai_betrouwbaarheid})`
-        : `Bestand "${bestandsnaam}" geregistreerd (metadata). AI-categorie: ${ai.document_categorie} (${ai.ai_betrouwbaarheid})`,
+        ? `Bestand "${bestandsnaam}" geüpload naar ${bestandspad}. AI-categorie: ${documentCategorie} (${analyse.vertrouwen}). Bewijs: ${analyse.bewijs.map((b) => b.stap).join(" → ")}`
+        : `Bestand "${bestandsnaam}" geregistreerd (metadata). AI-categorie: ${documentCategorie} (${analyse.vertrouwen})`,
     });
 
     res.status(201).json(mapItem(item));

@@ -4,6 +4,37 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-08 — Herstel AI-documentclassificatiepipeline (Document Intelligence)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** midden (raakt zowel Inbox-upload als Slim Upload; DB-schema-uitbreiding)
+
+**Wat is gebouwd:**
+
+Eén gedeelde Document Intelligence-engine vervangt de losse, uiteengelopen classificatielogica van Inbox (`classificeerMockAI`) en Slim Upload (eigen heuristiek + eigen AI-aanroep). Beide uploadpaden gebruiken nu exact dezelfde staged pipeline, inclusief een traceerbare bewijsketen per stap:
+
+1. bestandstype herkennen → 2. tekstextractie (PDF/DOCX/platte tekst) → 3. AI-vision fallback bij weinig leesbare tekst → 4. AI content-analyse (of heuristische fallback zonder AI) → 5. organisatie herkennen → 6. jaar herkennen (tekst → bestandsnaam als laatste redmiddel) → 7. module/bestemming bepalen → 8. opslaglocatie voorstellen → 9. betrouwbaarheid berekenen op basis van de echte verzamelde signalen.
+
+Nieuw documenttype **"jaarrekening"** (met subtype "geconsolideerd" voor groep/holding-jaarrekeningen) stuurt automatisch naar de module **Archief**, met opslaglocatie `Archief → Jaarrekeningen → <jaar>` resp. `Archief → Geconsolideerde jaarrekeningen → <jaar>`.
+
+**Technische aanpak:**
+
+- `artifacts/api-server/src/lib/documentIntelligence.ts` (nieuw) — gedeelde engine: `classificeerDocument()`, `DOC_CATEGORIEEN` (incl. jaarrekening/contract), `CATEGORIE_MODULE`, `BewijsStap`/`DocumentIntelligenceResultaat`-types, en `_test`-exports voor unit tests zonder AI/DB-netwerkcall
+- `artifacts/api-server/src/routes/inbox.ts` — `classificeerMockAI` volledig verwijderd, herbedraad naar de gedeelde engine; nieuwe kolommen gemapt naar de API-response (`ai_organisatie`, `ai_jaar`, `ai_geconsolideerd`, `ai_opslaglocatie`, `ai_bewijs`)
+- `artifacts/api-server/src/routes/slim-upload.ts` — eigen `heuristischClassificeer`/`aiClassificeer`/`SYSTEEM_PROMPT` verwijderd; `classificeerBestand()` wrapt nu `classificeerDocument()` en mapt naar `SlimUploadSuggestie` (uitgebreid met `subtype`, `organisatie`, `jaar`, `opslaglocatie`, `bewijs`)
+- `lib/db/src/schema/inbox.ts` — vijf additieve kolommen op `inbox_items`: `ai_organisatie`, `ai_jaar`, `ai_geconsolideerd` (default false), `ai_opslaglocatie`, `ai_bewijs`; toegepast via directe `ALTER TABLE` (drizzle-push liep vast op een ongerelateerde, pre-existing interactieve TTY-prompt over een unique constraint in `kb.ts`; geverifieerd dat die tabel geen duplicaten bevat)
+- `lib/api-spec/openapi.yaml` + codegen — nieuwe velden en `InboxBewijsStap`-schema
+- Frontend: `slim-upload-balk.tsx` (nieuwe categorie "jaarrekening"/"contract" incl. iconen/kleuren/labels, bewijsketen-sectie in de bevestigingsstap) en `inbox/detail.tsx` (organisatie/jaar/geconsolideerd-badges + bewijsketen-lijst in de AI-classificatiekaart)
+- Nieuwe regressietests: `artifacts/api-server/src/lib/documentIntelligence.test.ts` — 26 tests dekken de heuristische classificatie van 8+ documenttypes (jaarrekening incl. geconsolideerd, factuur, offerte, testrapport, certificaat, eta, dop, personeelsdocument, verzekering, snagstream, contract), opslaglocatie-logica (incl. Archief-routering) en jaar-/betrouwbaarheidsberekening
+
+**Verificatie:**
+
+- `pnpm run typecheck` schoon voor alle gewijzigde bestanden (de 3 bestaande TS7030-fouten in `documenten.ts`/`offertes.ts` zijn pre-existing en ongerelateerd)
+- Volledige testsuite: 164/164 tests groen (incl. de 26 nieuwe Document Intelligence-tests)
+- `pnpm --filter @workspace/scripts run kwaliteitscheck`: geen kritieke/hoge bevindingen, platform stabiel
+- Grep bevestigt: `classificeerMockAI` volledig verwijderd uit de codebase
+
+**Bewust niet gedaan:** geen wijziging aan de bestaande AI-gateway/prompt-structuur voor andere modules; geen migratie van historische Inbox-/Slim Upload-items naar de nieuwe velden (die blijven leeg tot een nieuwe classificatie plaatsvindt).
+
 ## 2026-07-08 — V1.4 Opleverrapportage: status geverifieerd + "Alles selecteren"
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (bestaande, al werkende functionaliteit; kleine UI-aanvulling + documentatie-update)

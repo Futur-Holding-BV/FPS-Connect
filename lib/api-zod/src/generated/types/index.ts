@@ -382,6 +382,7 @@ export * from './importUploadBestand';
 export * from './importUploadBestandType';
 export * from './inactiefAccount';
 export * from './inboxAfwijzenBody';
+export * from './inboxBewijsStap';
 export * from './inboxGoedkeurenBody';
 export * from './inboxItem';
 export * from './inboxItemAuditlogItem';

@@ -95,3 +95,4 @@
 - [Roadmap docs staleness](roadmap-docs-staleness.md) — replit.md/roadmap status labels can lag actual build state; verify against git log/code before "building" a phase, fix status in all doc files together.
 - [e2e-menu "Failed to fetch" login](e2e-monteur-login-failed-to-fetch.md) — browser-level fetch failure op inlogstap = Expo-domein/CORS-tunnelflakiness, geen appbug; bevestig via directe curl naar login-endpoints vóór je code verdenkt.
 - [Verlof/uren-integratie](verlof-uren-integratie.md) — leidinggevende-routing (admin=fallback), bezetting-drempel alleen bij goedkeuren + negeer_bezetting-override, tijd-voor-tijd-vanuit-uren; handmatig gemapte API-responses missen makkelijk een required schemaveld zonder dat typecheck het vangt.
+- [Document Intelligence engine](document-intelligence-engine.md) — één staged classificatiemotor (bewijsketen per stap) voor Inbox+Slim Upload; nieuwe documenttypes altijd in documentIntelligence.ts, nooit per-route.

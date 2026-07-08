@@ -767,6 +767,13 @@ export interface InboxStats {
 
 export type InboxItemAuditlogItem = { [key: string]: unknown };
 
+export interface InboxBewijsStap {
+  stap: string;
+  resultaat: string;
+  /** @nullable */
+  detail?: string | null;
+}
+
 export interface InboxItem {
   id: number;
   bestandsnaam: string;
@@ -798,6 +805,14 @@ export interface InboxItem {
   ai_redenering?: string | null;
   /** @nullable */
   ai_volgende_actie?: string | null;
+  /** @nullable */
+  ai_organisatie?: string | null;
+  /** @nullable */
+  ai_jaar?: number | null;
+  ai_geconsolideerd?: boolean;
+  /** @nullable */
+  ai_opslaglocatie?: string | null;
+  ai_bewijs?: InboxBewijsStap[];
   mogelijk_duplicaat?: boolean;
   /** @nullable */
   goedgekeurd_door?: number | null;

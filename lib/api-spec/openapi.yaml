@@ -21520,6 +21520,18 @@ components:
           type: ["string", "null"]
         ai_volgende_actie:
           type: ["string", "null"]
+        ai_organisatie:
+          type: ["string", "null"]
+        ai_jaar:
+          type: ["integer", "null"]
+        ai_geconsolideerd:
+          type: boolean
+        ai_opslaglocatie:
+          type: ["string", "null"]
+        ai_bewijs:
+          type: array
+          items:
+            $ref: "#/components/schemas/InboxBewijsStap"
         mogelijk_duplicaat:
           type: boolean
         goedgekeurd_door:
@@ -21550,6 +21562,17 @@ components:
           type: array
           items:
             type: object
+
+    InboxBewijsStap:
+      type: object
+      required: [stap, resultaat]
+      properties:
+        stap:
+          type: string
+        resultaat:
+          type: string
+        detail:
+          type: ["string", "null"]
 
     InboxOfferteavanvraagInput:
       type: object

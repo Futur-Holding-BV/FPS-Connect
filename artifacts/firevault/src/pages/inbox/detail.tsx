@@ -276,6 +276,40 @@ export default function InboxDetailPagina() {
               <p className="text-xs text-amber-700 mt-0.5">{typedItem.ai_volgende_actie}</p>
             </div>
           )}
+
+          {(typedItem.ai_organisatie || typedItem.ai_jaar) && (
+            <div className="grid grid-cols-2 gap-4">
+              {typedItem.ai_organisatie && (
+                <div>
+                  <p className="text-xs text-muted-foreground font-medium">Organisatie</p>
+                  <p className="text-sm mt-0.5">{typedItem.ai_organisatie}</p>
+                </div>
+              )}
+              {typedItem.ai_jaar && (
+                <div>
+                  <p className="text-xs text-muted-foreground font-medium">Jaar</p>
+                  <p className="text-sm mt-0.5">{typedItem.ai_jaar}{typedItem.ai_geconsolideerd ? " (geconsolideerd)" : ""}</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {typedItem.ai_bewijs && typedItem.ai_bewijs.length > 0 && (
+            <div>
+              <p className="text-xs text-muted-foreground font-medium mb-1">Bewijsketen (hoe de AI tot dit resultaat kwam)</p>
+              <ol className="space-y-1.5">
+                {typedItem.ai_bewijs.map((stap, i) => (
+                  <li key={i} className="text-xs bg-white/60 border border-amber-100 rounded p-1.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-medium text-amber-900">{stap.stap}</span>
+                      <span className="text-muted-foreground">{stap.resultaat}</span>
+                    </div>
+                    {stap.detail && <p className="text-muted-foreground mt-0.5">{stap.detail}</p>}
+                  </li>
+                ))}
+              </ol>
+            </div>
+          )}
         </CardContent>
       </Card>
 

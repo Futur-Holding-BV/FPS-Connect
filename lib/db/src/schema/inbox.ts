@@ -7,7 +7,7 @@ export const INBOX_STATUSSEN = ["nieuw", "geanalyseerd", "ter_beoordeling", "goe
 export const INBOX_BESTEMMINGEN = [
   "Gebouwen", "Projecten", "Opnames", "Calculaties", "Offertes", "Uitvoering",
   "Oplevering", "Onderhoud", "Productbibliotheek", "Certificaten", "Financieel",
-  "HRM", "Wagenpark", "CRM", "DMS", "Snagstream", "Onbekend",
+  "HRM", "Wagenpark", "CRM", "DMS", "Snagstream", "Archief", "Onbekend",
 ] as const;
 export const INBOX_CATEGORIEEN = [
   "gebouw_document", "project_document", "opname_document", "calculatie_document",
@@ -15,7 +15,7 @@ export const INBOX_CATEGORIEEN = [
   "onderhoud_document", "product_certificaat", "eta_dop_brandclassificatie", "factuur",
   "inkoopbon", "leverancier_offerte", "hr_document", "medewerker_certificaat",
   "voertuig_document", "wagenpark_factuur", "crm_document", "contract",
-  "snagstream_rapport", "onbekend",
+  "snagstream_rapport", "jaarrekening", "onbekend",
 ] as const;
 export const AI_BETROUWBAARHEDEN = ["hoog", "midden", "laag"] as const;
 
@@ -38,6 +38,11 @@ export const inboxItemsTable = pgTable("inbox_items", {
   aiRedenering: text("ai_redenering"),
   aiMetadata: text("ai_metadata"),
   aiVolgendeActie: text("ai_volgende_actie"),
+  aiOrganisatie: text("ai_organisatie"),
+  aiJaar: integer("ai_jaar"),
+  aiGeconsolideerd: boolean("ai_geconsolideerd").notNull().default(false),
+  aiOpslaglocatie: text("ai_opslaglocatie"),
+  aiBewijs: text("ai_bewijs"),
   duplicaatVan: integer("duplicaat_van"),
   mogelijkDuplicaat: boolean("mogelijk_duplicaat").notNull().default(false),
   goedgekeurdDoor: integer("goedgekeurd_door").references(() => gebruikersTable.id, { onDelete: "set null" }),

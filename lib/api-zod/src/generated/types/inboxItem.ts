@@ -5,6 +5,7 @@
  * FPS Brandpreventie - Platform voor brandpreventieve gebouwvoorzieningen
  * OpenAPI spec version: 0.1.0
  */
+import type { InboxBewijsStap } from './inboxBewijsStap';
 import type { InboxItemAuditlogItem } from './inboxItemAuditlogItem';
 
 export interface InboxItem {
@@ -38,6 +39,14 @@ export interface InboxItem {
   ai_redenering?: string | null;
   /** @nullable */
   ai_volgende_actie?: string | null;
+  /** @nullable */
+  ai_organisatie?: string | null;
+  /** @nullable */
+  ai_jaar?: number | null;
+  ai_geconsolideerd?: boolean;
+  /** @nullable */
+  ai_opslaglocatie?: string | null;
+  ai_bewijs?: InboxBewijsStap[];
   mogelijk_duplicaat?: boolean;
   /** @nullable */
   goedgekeurd_door?: number | null;

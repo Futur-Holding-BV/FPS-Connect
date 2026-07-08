@@ -24,12 +24,20 @@ import { useListMedewerkers } from "@workspace/api-client-react";
 type CategorieUitgebreid =
   | "aanvraag" | "tekening" | "offerte" | "factuur"
   | "productdocument" | "testrapport" | "certificaat" | "eta" | "dop"
-  | "personeelsdocument" | "verzekering" | "snagstream" | "bibliotheek" | "document_sjabloon" | "algemeen" | "onbekend";
+  | "personeelsdocument" | "verzekering" | "snagstream" | "jaarrekening" | "contract"
+  | "bibliotheek" | "document_sjabloon" | "algemeen" | "onbekend";
 
 type Vertrouwen = "laag" | "midden" | "hoog";
 
+interface BewijsStap {
+  stap: string;
+  resultaat: string;
+  detail?: string;
+}
+
 interface SlimUploadSuggestie {
   categorie: CategorieUitgebreid;
+  subtype?: string | null;
   voorstel_naam: string;
   redenering: string;
   vertrouwen: Vertrouwen;
@@ -37,6 +45,10 @@ interface SlimUploadSuggestie {
   vision_gebruikt: boolean;
   gevonden_gegevens: Record<string, string>;
   alternatieven: CategorieUitgebreid[];
+  organisatie?: string | null;
+  jaar?: number | null;
+  opslaglocatie?: string;
+  bewijs?: BewijsStap[];
   impact_niveau: "geen" | "laag" | "midden" | "hoog";
   impact_omschrijving: string;
   vereist_bevestiging: boolean;
@@ -248,6 +260,8 @@ const CATEGORIE_INFO: Record<CategorieUitgebreid, {
   personeelsdocument:{ label: "Personeel / HRM",               icoon: <Users className="h-4 w-4" />,        pad: "/personeel",   kleur: "bg-purple-50 text-purple-700 border-purple-200",  omschrijving: "Arbeidscontract, diploma, VOG, VCA" },
   verzekering:       { label: "Verzekeringen",                 icoon: <Shield className="h-4 w-4" />,       pad: "/documenten",  kleur: "bg-blue-50 text-blue-700 border-blue-200",        omschrijving: "Verzekeringspolis, aansprakelijkheid, assurantie" },
   snagstream:        { label: "Snagstream archief",            icoon: <Archive className="h-4 w-4" />,      pad: "/snagstream",  kleur: "bg-rose-50 text-rose-700 border-rose-200",        omschrijving: "Opleverrapport, inspectieverslag, punchlijst" },
+  jaarrekening:      { label: "Jaarrekeningen (archief)",      icoon: <Archive className="h-4 w-4" />,      pad: "/documenten",  kleur: "bg-slate-50 text-slate-700 border-slate-200",     omschrijving: "Jaarrekening, jaarverslag of accountantsverklaring" },
+  contract:          { label: "Contracten",                    icoon: <FileText className="h-4 w-4" />,     pad: "/documenten",  kleur: "bg-lime-50 text-lime-700 border-lime-200",        omschrijving: "Commerciële overeenkomst met klant of leverancier" },
   bibliotheek:       { label: "Documentenbibliotheek",         icoon: <BookOpen className="h-4 w-4" />,        pad: "/documenten",           kleur: "bg-blue-50 text-blue-700 border-blue-200",        omschrijving: "Technisch brandveiligheidsdocument" },
   document_sjabloon: { label: "Document Studio — sjabloon",    icoon: <LayoutTemplate className="h-4 w-4" />, pad: "/organisatie/studio", kleur: "bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200", omschrijving: "Briefpapier, onderlegger of huisstijl-sjabloon" },
   algemeen:          { label: "Documenten (algemeen)",         icoon: <FolderOpen className="h-4 w-4" />,    pad: "/documenten",           kleur: "bg-gray-50 text-gray-700 border-gray-200",        omschrijving: "Overige bedrijfsdocumenten" },
@@ -277,6 +291,7 @@ const GEVONDEN_LABELS: Record<string, string> = {
   soort_verzekering: "Soort verzekering", polisnummer: "Polisnummer", verzekeraar: "Verzekeraar", jaar: "Jaar",
   inspectiedatum: "Inspectiedatum", rapporttype: "Rapporttype", opdrachtgever: "Opdrachtgever",
   project: "Project", schaal: "Schaal", revisie: "Revisie", referentie: "Referentie",
+  organisatie: "Organisatie", accountant: "Accountant", bedrijf: "Bedrijf",
 };
 
 // ── LocalStorage helpers ──────────────────────────────────────────────────────
@@ -577,6 +592,23 @@ function BeslisScherm({
             <GevondenGegevens gegevens={Object.fromEntries(
               Object.entries(suggestie.gevonden_gegevens).filter(([k]) => k !== "document_subtype")
             )} />
+          </div>
+        )}
+
+        {suggestie.bewijs && suggestie.bewijs.length > 0 && (
+          <div>
+            <p className="text-xs font-semibold text-muted-foreground mb-1.5">Bewijsketen</p>
+            <ol className="space-y-1">
+              {suggestie.bewijs.map((stap, i) => (
+                <li key={i} className="text-[11px] rounded border bg-muted/30 p-1.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-medium">{stap.stap}</span>
+                    <span className="opacity-70">{stap.resultaat}</span>
+                  </div>
+                  {stap.detail && <p className="opacity-60 mt-0.5">{stap.detail}</p>}
+                </li>
+              ))}
+            </ol>
           </div>
         )}
 

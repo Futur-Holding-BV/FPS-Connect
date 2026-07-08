@@ -1,0 +1,226 @@
+import { describe, it, expect } from "vitest";
+import { _test, CATEGORIE_MODULE } from "./documentIntelligence";
+
+const { heuristischClassificeerInhoud, herkenJaarUitTekst, herkenJaarUitBestandsnaam, bepaalOpslaglocatie, berekenVertrouwen } = _test;
+
+// Regressietests voor de gedeelde Document Intelligence-engine (heuristisch pad,
+// geen AI/DB-netwerkcall nodig). Dekt de 8 kern-documenttypes die zowel Inbox
+// als Slim Upload via classificeerDocument() moeten kunnen herkennen.
+
+describe("heuristischClassificeerInhoud — 8 documenttypes", () => {
+  it("herkent een jaarrekening op inhoud", () => {
+    const r = heuristischClassificeerInhoud(
+      "bijlage.pdf",
+      "application/pdf",
+      "Dit document betreft de jaarrekening over boekjaar 2025, inclusief balans per 31 december 2025 en de winst-en-verliesrekening.",
+    );
+    expect(r.categorie).toBe("jaarrekening");
+  });
+
+  it("herkent een geconsolideerde jaarrekening als jaarrekening (subtype wordt elders bepaald)", () => {
+    const r = heuristischClassificeerInhoud(
+      "groep.pdf",
+      "application/pdf",
+      "De geconsolideerde jaarrekening van de groepsmaatschappijen over 2024, opgesteld door de accountant.",
+    );
+    expect(r.categorie).toBe("jaarrekening");
+  });
+
+  it("herkent een factuur op inhoud", () => {
+    const r = heuristischClassificeerInhoud(
+      "doc.pdf",
+      "application/pdf",
+      "Factuur nummer 2026-0456. Betalingstermijn 30 dagen. Het btw-bedrag is apart gespecificeerd op deze rekening.",
+    );
+    expect(r.categorie).toBe("factuur");
+  });
+
+  it("herkent een offerte op inhoud", () => {
+    const r = heuristischClassificeerInhoud(
+      "doc.pdf",
+      "application/pdf",
+      "Hierbij ontvangt u onze offerte voor de brandwerende doorvoeringen. Deze aanbieding is geldig tot 1 augustus 2026.",
+    );
+    expect(r.categorie).toBe("offerte");
+  });
+
+  it("herkent een testrapport op inhoud", () => {
+    const r = heuristischClassificeerInhoud(
+      "doc.pdf",
+      "application/pdf",
+      "Dit testrapport beschrijft de resultaten van de brandproef conform de geldende testnorm.",
+    );
+    expect(r.categorie).toBe("testrapport");
+  });
+
+  it("herkent een certificaat op inhoud", () => {
+    const r = heuristischClassificeerInhoud(
+      "doc.pdf",
+      "application/pdf",
+      "Dit KOMO-certificaat is afgegeven op basis van BRL 5000 en bevestigt de kwaliteit van het product.",
+    );
+    expect(r.categorie).toBe("certificaat");
+  });
+
+  it("herkent een ETA op inhoud", () => {
+    const r = heuristischClassificeerInhoud(
+      "doc.pdf",
+      "application/pdf",
+      "Deze European Technical Assessment (ETA) is opgesteld conform de EOTA-richtlijnen voor het product.",
+    );
+    expect(r.categorie).toBe("eta");
+  });
+
+  it("herkent een DOP op inhoud", () => {
+    const r = heuristischClassificeerInhoud(
+      "doc.pdf",
+      "application/pdf",
+      "Deze prestatieverklaring (declaration of performance) hoort bij het brandwerende product.",
+    );
+    expect(r.categorie).toBe("dop");
+  });
+
+  it("herkent een personeelsdocument op inhoud", () => {
+    const r = heuristischClassificeerInhoud(
+      "doc.pdf",
+      "application/pdf",
+      "Bijgevoegd de arbeidsovereenkomst behorend bij het loonstrook-dossier van de nieuwe medewerker.",
+    );
+    expect(r.categorie).toBe("personeelsdocument");
+  });
+
+  it("herkent een verzekeringspolis op inhoud", () => {
+    const r = heuristischClassificeerInhoud(
+      "doc.pdf",
+      "application/pdf",
+      "Deze verzekeringspolis met polisnummer 123456 beschrijft de dekking en premie voor het lopende jaar.",
+    );
+    expect(r.categorie).toBe("verzekering");
+  });
+
+  it("herkent een snagstream/opleverrapport op inhoud", () => {
+    const r = heuristischClassificeerInhoud(
+      "doc.pdf",
+      "application/pdf",
+      "Dit opleverrapport bevat de bevindingen van de inspectie en is gegenereerd door Snagstream.",
+    );
+    expect(r.categorie).toBe("snagstream");
+  });
+
+  it("herkent een contract op inhoud", () => {
+    const r = heuristischClassificeerInhoud(
+      "doc.pdf",
+      "application/pdf",
+      "Deze overeenkomst / contract regelt de onderhoudsafspraken en het bijbehorende SLA tussen partijen.",
+    );
+    expect(r.categorie).toBe("contract");
+  });
+
+  it("valt terug op bestandsnaam-heuristiek bij te korte tekst", () => {
+    const r = heuristischClassificeerInhoud("mijn-factuur-2026.pdf", "application/pdf", "kort");
+    expect(r.categorie).toBe("factuur");
+    expect(r.vertrouwen).toBe("laag");
+  });
+
+  it("valt terug op algemeen zonder signalen", () => {
+    const r = heuristischClassificeerInhoud("bestand123.pdf", "application/pdf", null);
+    expect(r.categorie).toBe("algemeen");
+  });
+
+  it("classificeert een onherkenbare afbeelding als tekening", () => {
+    const r = heuristischClassificeerInhoud("foto.jpg", "image/jpeg", null);
+    expect(r.categorie).toBe("tekening");
+  });
+});
+
+describe("bepaalOpslaglocatie — jaarrekening naar Archief", () => {
+  it("stuurt een gewone jaarrekening naar Archief → Jaarrekeningen → jaar", () => {
+    const loc = bepaalOpslaglocatie("jaarrekening", CATEGORIE_MODULE.jaarrekening, 2025, null, "FPS Brandpreventie BV");
+    expect(CATEGORIE_MODULE.jaarrekening).toBe("Archief");
+    expect(loc).toBe("Archief → Jaarrekeningen → 2025");
+  });
+
+  it("stuurt een geconsolideerde jaarrekening naar het geconsolideerde subpad", () => {
+    const loc = bepaalOpslaglocatie("jaarrekening", CATEGORIE_MODULE.jaarrekening, 2024, "geconsolideerd", "FPS Groep");
+    expect(loc).toBe("Archief → Geconsolideerde jaarrekeningen → 2024");
+  });
+
+  it("valt terug op 'jaar onbekend' als er geen jaar herkend is", () => {
+    const loc = bepaalOpslaglocatie("jaarrekening", CATEGORIE_MODULE.jaarrekening, null, null, null);
+    expect(loc).toBe("Archief → Jaarrekeningen → jaar onbekend");
+  });
+
+  it("plaatst verzekeringen bij Financieel per jaar", () => {
+    const loc = bepaalOpslaglocatie("verzekering", CATEGORIE_MODULE.verzekering, 2026, null, "Achmea");
+    expect(loc).toBe("Financieel → Verzekeringen → 2026");
+  });
+
+  it("groepeert overige categorieën op organisatie indien bekend", () => {
+    const loc = bepaalOpslaglocatie("factuur", CATEGORIE_MODULE.factuur, 2026, null, "Leverancier BV");
+    expect(loc).toBe("Financieel → Leverancier BV");
+  });
+});
+
+describe("herkenJaarUitTekst / herkenJaarUitBestandsnaam", () => {
+  it("herkent een viercijferig jaar in de tekst", () => {
+    expect(herkenJaarUitTekst("Boekjaar 2025 afgesloten op 31 december 2025.")).toBe(2025);
+  });
+
+  it("geeft null als er geen plausibel jaar in de tekst staat", () => {
+    expect(herkenJaarUitTekst("Geen jaartal hier, alleen tekst.")).toBeNull();
+  });
+
+  it("herkent een jaar in de bestandsnaam als laatste redmiddel", () => {
+    expect(herkenJaarUitBestandsnaam("jaarrekening-2023-definitief.pdf")).toBe(2023);
+  });
+});
+
+describe("berekenVertrouwen", () => {
+  it("geeft 'laag' zonder enig signaal", () => {
+    const r = berekenVertrouwen({
+      aiBeschikbaar: false,
+      aiVertrouwen: null,
+      tekstGevonden: false,
+      visionGebruikt: false,
+      organisatieGevonden: false,
+      jaarGevonden: false,
+      jaarUitBestandsnaam: false,
+    });
+    expect(r.label).toBe("laag");
+  });
+
+  it("geeft 'hoog' met tekst, AI hoog vertrouwen, organisatie en jaar", () => {
+    const r = berekenVertrouwen({
+      aiBeschikbaar: true,
+      aiVertrouwen: "hoog",
+      tekstGevonden: true,
+      visionGebruikt: false,
+      organisatieGevonden: true,
+      jaarGevonden: true,
+      jaarUitBestandsnaam: false,
+    });
+    expect(r.label).toBe("hoog");
+  });
+
+  it("telt een jaar uit de bestandsnaam niet mee als extra signaal", () => {
+    const zonder = berekenVertrouwen({
+      aiBeschikbaar: false,
+      aiVertrouwen: null,
+      tekstGevonden: true,
+      visionGebruikt: false,
+      organisatieGevonden: false,
+      jaarGevonden: true,
+      jaarUitBestandsnaam: true,
+    });
+    const met = berekenVertrouwen({
+      aiBeschikbaar: false,
+      aiVertrouwen: null,
+      tekstGevonden: true,
+      visionGebruikt: false,
+      organisatieGevonden: false,
+      jaarGevonden: true,
+      jaarUitBestandsnaam: false,
+    });
+    expect(met.score).toBeGreaterThan(zonder.score);
+  });
+});
