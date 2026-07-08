@@ -14,6 +14,8 @@ import {
   useGebruikerHerkomstVerwijderen,
   useGebruikersAanvullen,
   useListProfielen,
+  useGetMailStatus,
+  getGetMailStatusQueryKey,
   getListGebruikersQueryKey,
 } from "@workspace/api-client-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -38,7 +40,7 @@ import {
   Mail, Phone, Building, Clock, Plus, UserPlus, Pencil, Trash2, Archive,
   RefreshCw, ShieldCheck, Eye, User, Crown, Upload, Palette, SendHorizonal, X,
   Layers, Search, RotateCcw, Check, CheckCheck, Briefcase, Hammer, Wrench, TrendingUp,
-  ListChecks, Loader2,
+  ListChecks, Loader2, AlertTriangle,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -281,6 +283,11 @@ export default function Gebruikers() {
   const { toast } = useToast();
   const { data: gebruikers, isLoading, refetch, isFetching } = useListGebruikers();
   const { data: profielen } = useListProfielen();
+  // Alleen hoofdbeheerders mogen mailconfiguratie inzien (systeem-bevoegdheid);
+  // proactieve waarschuwing zodat een uitnodiging niet voor een verrassing zorgt.
+  const { data: mailStatus } = useGetMailStatus({
+    query: { enabled: isHoofd, queryKey: getGetMailStatusQueryKey() },
+  });
   const profielMap = new Map((profielen ?? []).map((p) => [p.id, p]));
   const maakGebruiker       = useCreateGebruiker();
   const werkBijGebruiker    = useUpdateGebruiker();
@@ -747,6 +754,19 @@ export default function Gebruikers() {
   return (
     <div className="space-y-5 max-w-[1400px] mx-auto">
       <PaginaHulp pagina="gebruikers" />
+      {isHoofd && mailStatus && !mailStatus.geconfigureerd && (
+        <div className="flex items-start gap-2.5 rounded-md border border-red-200 bg-red-50 px-3.5 py-2.5 text-sm text-red-800">
+          <AlertTriangle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+          <div>
+            <span className="font-medium">E-mailservice niet geconfigureerd.</span>{" "}
+            Uitnodigingen kunnen niet worden verstuurd totdat dit is opgelost.
+            {mailStatus.ontbrekende_secrets.length > 0 && (
+              <> Ontbreekt: {mailStatus.ontbrekende_secrets.join(", ")}.</>
+            )}{" "}
+            Zie <Link href="/beheer/mail" className="underline font-medium">Beheer &rsaquo; Mail</Link>.
+          </div>
+        </div>
+      )}
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

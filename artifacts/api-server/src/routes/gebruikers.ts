@@ -4,7 +4,7 @@ import bcrypt from "bcryptjs";
 import { db } from "@workspace/db";
 import { gebruikersTable, profielenTable } from "@workspace/db";
 import { eq, and, isNotNull, inArray } from "drizzle-orm";
-import { stuurUitnodigingsmail } from "../services/email";
+import { stuurUitnodigingsmail, MailFout, MAIL_FOUT_OMSCHRIJVING } from "../services/email";
 import { requireBevoegdheid, requireRol, requireEnigeBevoegdheid } from "../middlewares/auth";
 import { heeftNiveau, MODULE_IDS } from "@workspace/permissies";
 import {
@@ -429,9 +429,11 @@ router.post("/gebruikers/:id/uitnodigen", alleenBeheerder, async (req, res): Pro
       });
     } catch (mailErr) {
       req.log.error(mailErr, "Uitnodigingsmail mislukt");
-      return void res.status(502).json({
-        error: "De uitnodiging kon niet worden verzonden. Probeer het later opnieuw.",
-      });
+      const melding =
+        mailErr instanceof MailFout
+          ? MAIL_FOUT_OMSCHRIJVING[mailErr.categorie]
+          : "De uitnodiging kon niet worden verzonden. Probeer het later opnieuw.";
+      return void res.status(502).json({ error: melding });
     }
 
     const [g] = await db
@@ -481,9 +483,11 @@ router.post("/gebruikers/:id/uitnodigen/opnieuw", alleenBeheerder, async (req, r
       });
     } catch (mailErr) {
       req.log.error(mailErr, "Uitnodigingsmail (opnieuw) mislukt");
-      return void res.status(502).json({
-        error: "De herinnering kon niet worden verzonden. Probeer het later opnieuw.",
-      });
+      const melding =
+        mailErr instanceof MailFout
+          ? MAIL_FOUT_OMSCHRIJVING[mailErr.categorie]
+          : "De herinnering kon niet worden verzonden. Probeer het later opnieuw.";
+      return void res.status(502).json({ error: melding });
     }
 
     const [g] = await db

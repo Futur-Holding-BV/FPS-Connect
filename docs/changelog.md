@@ -4,6 +4,38 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-08 — Bugfix: uitnodiging "verstuurd" zonder werkende mail (Jacqueline-incident)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+**Het probleem:**
+
+Jacqueline kon niet inloggen: er was nooit een uitnodigingsmail verstuurd, terwijl het scherm de status "uitgenodigd" toonde alsof het wél gelukt was. Productielogs meldden ontbrekende `AZURE_TENANT_ID`/`AZURE_CLIENT_ID`/`AZURE_CLIENT_SECRET`.
+
+**Grondoorzaak:**
+
+`stuurUitnodigingsmail` gaf bij een niet-geconfigureerde mailkoppeling stilzwijgend `false` terug in plaats van een fout te gooien. De aanroepende routes (`POST /gebruikers/:id/uitnodigen` en `/opnieuw`) vingen alleen exceptions af en controleerden de returnwaarde niet — het resultaat was een 200 OK met `uitnodigingStatus: "uitgenodigd"` terwijl er nooit een e-mail is verzonden. Daarnaast las de configuratiecontrole `AZURE_CLIENT_ID_NEW` terwijl de foutmelding "AZURE_CLIENT_ID" noemde, wat misleidend is bij het instellen van de secrets.
+
+**Fix:**
+
+- `artifacts/api-server/src/services/email.ts`: `stuurUitnodigingsmail` gooit nu altijd door naar dezelfde geünificeerde fout-afhandeling als `verstuurMail` (geen stil `return false` meer) — retourtype gewijzigd naar `Promise<void>`; `CLIENT_ID` valt terug op `AZURE_CLIENT_ID_NEW || AZURE_CLIENT_ID`; de foutmelding noemt nu beide variabelenamen
+- `artifacts/api-server/src/routes/gebruikers.ts`: beide uitnodigingsroutes geven nu de specifieke Nederlandse `MAIL_FOUT_OMSCHRIJVING`-tekst terug in de 502-respons in plaats van een generieke melding; door de fix hierboven blokkeert een mailfout nu ook daadwerkelijk de statusupdate (geen "half aangemaakte" gebruiker meer die volgens het scherm wél is uitgenodigd)
+- `artifacts/firevault/src/pages/gebruikers/index.tsx`: proactieve waarschuwingsbanner (alleen zichtbaar voor hoofdbeheerder) op basis van de bestaande `GET /mail/status` — toont vóóraf dat de mailservice niet geconfigureerd is en welke secrets ontbreken, met link naar Beheer › Mail
+
+**Bewust niet gedaan:**
+
+Geen nieuwe `uitnodigingStatus`-waarde (bijv. "verzendfout") toegevoegd — de bestaande statussen (`niet_uitgenodigd`/`uitgenodigd`/`geaccepteerd`) volstaan nu de statusupdate correct geblokkeerd wordt bij een mailfout, en het bestaande mail-verzendlogboek (Beheer › Mail) geeft al audittrail-zichtbaarheid op mislukte verzendpogingen. Geen DB-migratie nodig (tekstkolom, geen enum-constraint).
+
+**Verificatie:**
+
+- Code-niveau bewijs: geverifieerd dat er geen andere aanroeper van `stuurUitnodigingsmail` was die op de (nu verwijderde) returnwaarde vertrouwde
+- Volledige workspace-typecheck schoon voor de gewijzigde bestanden (de resterende TS7030-fouten in `documenten.ts`/`offertes.ts` zijn bestaand en ongerelateerd)
+- Directe reproductie op de live-productie-incident kon niet via logs/DB (aparte self-hosted omgeving, geen toegang) — root-cause-analyse berust op codeniveau-bewijs, dat sluitend is
+
+**Niet aangeraakt:** `uitnodigingStatus`-enum/schema, bestaande login-/2FA-flows, mail-verzendlogboek-infrastructuur (hergebruikt, niet gewijzigd).
+
+---
+
 ## 2026-07-08 — Eerste-installatie bootstrap (first install)
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag

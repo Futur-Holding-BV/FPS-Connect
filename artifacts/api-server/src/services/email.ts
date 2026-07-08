@@ -6,9 +6,11 @@ import { db, mailLogboekTable } from "@workspace/db";
 // sendMail). Geen gebruikerswachtwoorden. De Azure-gegevens staan uitsluitend
 // in Replit Secrets en worden nooit gelogd of teruggegeven.
 const TENANT_ID = process.env.AZURE_TENANT_ID;
-// Tijdelijk: clientId uit AZURE_CLIENT_ID_NEW (de juiste Application/client ID),
-// omdat AZURE_CLIENT_ID nog de tenant-waarde bevatte.
-const CLIENT_ID = process.env.AZURE_CLIENT_ID_NEW;
+// AZURE_CLIENT_ID_NEW is de juiste Application/client ID (AZURE_CLIENT_ID bevatte
+// historisch de tenant-waarde). We geven AZURE_CLIENT_ID_NEW voorrang, maar vallen
+// terug op AZURE_CLIENT_ID zodat een beheerder die de "voor de hand liggende" naam
+// configureert de app niet alsnog als "niet geconfigureerd" ziet.
+const CLIENT_ID = process.env.AZURE_CLIENT_ID_NEW || process.env.AZURE_CLIENT_ID;
 const CLIENT_SECRET = process.env.AZURE_CLIENT_SECRET;
 
 // Zichtbare afzender — alle uitgaande mail komt hiervandaan.
@@ -61,7 +63,7 @@ export function isGeconfigureerd(): boolean {
 export function ontbrekendeConfiguratie(): string[] {
   const ontbreekt: string[] = [];
   if (!TENANT_ID) ontbreekt.push("AZURE_TENANT_ID");
-  if (!CLIENT_ID) ontbreekt.push("AZURE_CLIENT_ID");
+  if (!CLIENT_ID) ontbreekt.push("AZURE_CLIENT_ID_NEW (of AZURE_CLIENT_ID)");
   if (!CLIENT_SECRET) ontbreekt.push("AZURE_CLIENT_SECRET");
   return ontbreekt;
 }
@@ -426,33 +428,17 @@ export async function stuurUitnodigingsmail(opties: {
   activatieLink: string;
   isOpnieuw?: boolean;
   verstuurdDoorId?: number | null;
-}): Promise<boolean> {
+}): Promise<void> {
   const { naarEmail, naarNaam, activatieLink, isOpnieuw = false, verstuurdDoorId } = opties;
 
   const onderwerp = isOpnieuw
     ? "Uw uitnodiging voor FPS Connect (herinnering)"
     : "U bent uitgenodigd voor FPS Connect";
 
-  // Behoud bestaand gedrag: zonder configuratie wordt er niet verstuurd, maar
-  // de uitnodiging kan in de ontwikkelomgeving wel worden aangemaakt.
-  if (!isGeconfigureerd()) {
-    logger.warn(
-      { email: naarEmail },
-      "E-mailservice niet geconfigureerd — uitnodiging niet verstuurd " +
-        "(stel AZURE_TENANT_ID, AZURE_CLIENT_ID en AZURE_CLIENT_SECRET in)",
-    );
-    await logMail({
-      naarEmail,
-      naarNaam,
-      onderwerp,
-      soort: "uitnodiging",
-      status: "mislukt",
-      foutCategorie: "niet_geconfigureerd",
-      verstuurdDoorId,
-    });
-    return false;
-  }
-
+  // Geen speciale "stil doorgaan zonder mail"-uitzondering meer: als de
+  // mailkoppeling niet geconfigureerd is, moet dit als een echte verzendfout
+  // gelden (via verstuurMail hieronder), zodat de aanroeper de uitnodiging
+  // NOOIT als "uitgenodigd" markeert terwijl er niets is verstuurd.
   const html = mailShell({
     titel: onderwerp,
     kopje: `${isOpnieuw ? "Herinnering:" : "Welkom,"} ${naarNaam}`,
@@ -475,7 +461,6 @@ export async function stuurUitnodigingsmail(opties: {
     soort: "uitnodiging",
     verstuurdDoorId,
   });
-  return true;
 }
 
 /**
