@@ -12,6 +12,5 @@ export type RapportStatus = typeof RapportStatus[keyof typeof RapportStatus];
 export const RapportStatus = {
   concept: 'concept',
   definitief: 'definitief',
-  vervangen: 'vervangen',
   gearchiveerd: 'gearchiveerd',
 } as const;

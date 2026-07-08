@@ -1227,6 +1227,36 @@ paths:
         "409":
           description: Rapport is al definitief of gearchiveerd
 
+  /gebouwen/{id}/rapporten/{rapportId}/nieuwe-versie:
+    post:
+      operationId: maakNieuweVersieRapport
+      tags: [gebouwen]
+      summary: Nieuwe versie aanmaken van een definitief rapport (markeert vorige als vervangen)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: rapportId
+          required: true
+          schema:
+            type: integer
+      responses:
+        "201":
+          description: Nieuwe conceptversie aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Rapport"
+        "403":
+          description: Geen toegang
+        "404":
+          description: Rapport niet gevonden
+        "409":
+          description: Rapport is geen definitief rapport of is al vervangen
+
   /gebouwen/{id}/rapporten/{rapportId}/certificaat-akkoord:
     post:
       operationId: accordeerCertificaat
@@ -29117,7 +29147,7 @@ components:
 
     Rapport:
       type: object
-      required: [id, gebouw_id, rapport_type, versie, status, secties, spot_selectie, bijlagen_ids, tekening_ids, aangemaakt_op, bijgewerkt_op]
+      required: [id, gebouw_id, rapport_type, versie, status, opleverstatus, secties, spot_selectie, bijlagen_ids, tekening_ids, aangemaakt_op, bijgewerkt_op]
       properties:
         id:
           type: integer
@@ -29135,11 +29165,14 @@ components:
           type: integer
         status:
           type: string
-          enum: [concept, definitief, vervangen, gearchiveerd]
-        weergave_status:
+          enum: [concept, definitief, gearchiveerd]
+        opleverstatus:
           type: string
-          enum: [concept, definitief_verzonden, reactietermijn_loopt, termijn_verstreken, vervangen, gearchiveerd]
-          description: Afgeleide statusweergave voor de reactietermijn-statusmachine (server-side berekend).
+          enum: [concept, verzonden, reactietermijn_loopt, verstreken, vervangen, gearchiveerd]
+          description: Afgeleid leveringsstatus — concept/verzonden/reactietermijn_loopt/verstreken/vervangen/gearchiveerd
+        vervangen_door_id:
+          type: ["integer", "null"]
+          description: ID van het rapport dat dit rapport vervangt (nieuwe versie)
         titel:
           type: ["string", "null"]
         secties:

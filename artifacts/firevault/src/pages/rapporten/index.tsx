@@ -29,7 +29,8 @@ import {
   Download,
   Eye,
   X,
-  RefreshCw,
+  Send,
+  XCircle,
 } from "lucide-react";
 
 const RAPPORT_TYPE_LABEL: Record<string, string> = {
@@ -49,16 +50,24 @@ function reactietermijnDagen(datum: string | null | undefined): number | null {
 }
 
 function StatusBadge({ rapport }: { rapport: Rapport }) {
-  const status = rapport.weergave_status ?? rapport.status;
-  if (status === "concept") {
+  const os = rapport.opleverstatus;
+
+  if (os === "concept") {
     return (
       <Badge className="bg-amber-100 text-amber-700 border-amber-200">Concept</Badge>
     );
   }
-  if (status === "definitief_verzonden") {
-    return <Badge className="bg-green-100 text-green-700 border-green-200">Definitief verzonden</Badge>;
+
+  if (os === "verzonden") {
+    return (
+      <Badge className="bg-blue-100 text-blue-700 border-blue-200">
+        <Send className="h-3 w-3 mr-1" />
+        Verzonden
+      </Badge>
+    );
   }
-  if (status === "reactietermijn_loopt") {
+
+  if (os === "reactietermijn_loopt") {
     const dagen = reactietermijnDagen(rapport.reactietermijn_datum);
     return (
       <Badge className="bg-green-100 text-green-700 border-green-200">
@@ -67,7 +76,8 @@ function StatusBadge({ rapport }: { rapport: Rapport }) {
       </Badge>
     );
   }
-  if (status === "termijn_verstreken") {
+
+  if (os === "verstreken") {
     return (
       <Badge className="bg-red-100 text-red-700 border-red-200">
         <AlertCircle className="h-3 w-3 mr-1" />
@@ -75,22 +85,26 @@ function StatusBadge({ rapport }: { rapport: Rapport }) {
       </Badge>
     );
   }
-  if (status === "vervangen") {
+
+  if (os === "vervangen") {
     return (
-      <Badge variant="secondary" className="text-muted-foreground">
-        <RefreshCw className="h-3 w-3 mr-1" />
-        Vervangen door nieuwe versie
+      <Badge className="bg-neutral-100 text-neutral-500 border-neutral-200">
+        <XCircle className="h-3 w-3 mr-1" />
+        Vervangen
       </Badge>
     );
   }
+
   return <Badge variant="secondary">Gearchiveerd</Badge>;
 }
 
-function StatusIcoon({ status }: { status: string }) {
-  if (status === "concept") return <FileText className="h-4 w-4 text-amber-500" />;
-  if (status === "definitief_verzonden" || status === "reactietermijn_loopt") return <CheckCircle2 className="h-4 w-4 text-green-600" />;
-  if (status === "termijn_verstreken") return <AlertCircle className="h-4 w-4 text-red-600" />;
-  if (status === "vervangen") return <RefreshCw className="h-4 w-4 text-muted-foreground" />;
+function StatusIcoon({ rapport }: { rapport: Rapport }) {
+  const os = rapport.opleverstatus;
+  if (os === "concept") return <FileText className="h-4 w-4 text-amber-500" />;
+  if (os === "verzonden") return <Send className="h-4 w-4 text-blue-500" />;
+  if (os === "reactietermijn_loopt") return <CheckCircle2 className="h-4 w-4 text-green-600" />;
+  if (os === "verstreken") return <AlertCircle className="h-4 w-4 text-red-500" />;
+  if (os === "vervangen") return <XCircle className="h-4 w-4 text-neutral-400" />;
   return <Archive className="h-4 w-4 text-muted-foreground" />;
 }
 
@@ -172,10 +186,15 @@ function DownloadKnop({ gebouwId, rapportId, titel }: { gebouwId: number; rappor
 
 const ALLE_GEBOUWEN = "alle_gebouwen";
 const ALLE_TYPES = "alle_types";
+const ALLE_STATUSSEN = "alle";
 const FILTER_STORAGE_KEY = "fps_rapporten_filters";
 
+const GELDIGE_OPLEVERSTATUS_WAARDEN = new Set([
+  "alle", "concept", "verzonden", "reactietermijn_loopt", "verstreken", "vervangen", "gearchiveerd",
+]);
+
 interface RapportenFilterState {
-  statusFilter: string;
+  opleverstatusFilter: string;
   zoekterm: string;
   gebouwFilter: string;
   typeFilter: string;
@@ -183,19 +202,17 @@ interface RapportenFilterState {
   totDatum: string;
 }
 
-const GELDIGE_STATUS_WAARDEN = new Set(["alle", "concept", "definitief", "vervangen", "gearchiveerd"]);
-
 function leesFilterState(): RapportenFilterState {
   try {
     const raw = sessionStorage.getItem(FILTER_STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw) as Partial<RapportenFilterState>;
-      const statusFilter =
-        typeof parsed.statusFilter === "string" && GELDIGE_STATUS_WAARDEN.has(parsed.statusFilter)
-          ? parsed.statusFilter
-          : "alle";
+      const opleverstatusFilter =
+        typeof parsed.opleverstatusFilter === "string" && GELDIGE_OPLEVERSTATUS_WAARDEN.has(parsed.opleverstatusFilter)
+          ? parsed.opleverstatusFilter
+          : ALLE_STATUSSEN;
       return {
-        statusFilter,
+        opleverstatusFilter,
         zoekterm: typeof parsed.zoekterm === "string" ? parsed.zoekterm : "",
         gebouwFilter: typeof parsed.gebouwFilter === "string" ? parsed.gebouwFilter : ALLE_GEBOUWEN,
         typeFilter: typeof parsed.typeFilter === "string" ? parsed.typeFilter : ALLE_TYPES,
@@ -206,7 +223,7 @@ function leesFilterState(): RapportenFilterState {
   } catch {
   }
   return {
-    statusFilter: "alle",
+    opleverstatusFilter: ALLE_STATUSSEN,
     zoekterm: "",
     gebouwFilter: ALLE_GEBOUWEN,
     typeFilter: ALLE_TYPES,
@@ -216,7 +233,7 @@ function leesFilterState(): RapportenFilterState {
 }
 
 export default function RapportenPagina() {
-  const [statusFilter, setStatusFilter] = useState<string>(() => leesFilterState().statusFilter);
+  const [opleverstatusFilter, setOpleverstatusFilter] = useState<string>(() => leesFilterState().opleverstatusFilter);
   const [zoekterm, setZoekterm] = useState(() => leesFilterState().zoekterm);
   const [gebouwFilter, setGebouwFilter] = useState<string>(() => leesFilterState().gebouwFilter);
   const [typeFilter, setTypeFilter] = useState<string>(() => leesFilterState().typeFilter);
@@ -227,15 +244,23 @@ export default function RapportenPagina() {
     try {
       sessionStorage.setItem(
         FILTER_STORAGE_KEY,
-        JSON.stringify({ statusFilter, zoekterm, gebouwFilter, typeFilter, vanafDatum, totDatum }),
+        JSON.stringify({ opleverstatusFilter, zoekterm, gebouwFilter, typeFilter, vanafDatum, totDatum }),
       );
     } catch {
     }
-  }, [statusFilter, zoekterm, gebouwFilter, typeFilter, vanafDatum, totDatum]);
+  }, [opleverstatusFilter, zoekterm, gebouwFilter, typeFilter, vanafDatum, totDatum]);
 
-  const { data: rapporten = [], isLoading } = useListRapporten(
-    statusFilter !== "alle" ? { status: statusFilter as "concept" | "definitief" | "vervangen" | "gearchiveerd" } : {},
-  );
+  // Map opleverstatus to underlying DB status for API-side pre-filtering
+  const apiStatusFilter = useMemo((): { status?: "concept" | "definitief" | "gearchiveerd" } => {
+    if (opleverstatusFilter === "concept") return { status: "concept" };
+    if (opleverstatusFilter === "gearchiveerd") return { status: "gearchiveerd" };
+    if (["verzonden", "reactietermijn_loopt", "verstreken", "vervangen"].includes(opleverstatusFilter)) {
+      return { status: "definitief" };
+    }
+    return {};
+  }, [opleverstatusFilter]);
+
+  const { data: rapporten = [], isLoading } = useListRapporten(apiStatusFilter);
 
   const gebouwOpties = useMemo(() => {
     const map = new Map<number, string>();
@@ -259,6 +284,9 @@ export default function RapportenPagina() {
     const gefilterd = rapporten.filter((r) => {
       if (gebouwFilter !== ALLE_GEBOUWEN && String(r.gebouw_id) !== gebouwFilter) return false;
       if (typeFilter !== ALLE_TYPES && r.rapport_type !== typeFilter) return false;
+
+      // Client-side opleverstatus sub-filter (for detailed definitief sub-states)
+      if (opleverstatusFilter !== ALLE_STATUSSEN && r.opleverstatus !== opleverstatusFilter) return false;
 
       if (term) {
         const label = (RAPPORT_TYPE_LABEL[r.rapport_type] ?? r.rapport_type).toLowerCase();
@@ -294,11 +322,13 @@ export default function RapportenPagina() {
     }
 
     return [...gefilterd].sort((a, b) => relevantiScore(a) - relevantiScore(b));
-  }, [rapporten, gebouwFilter, typeFilter, zoekterm, vanafDatum, totDatum]);
+  }, [rapporten, gebouwFilter, typeFilter, zoekterm, vanafDatum, totDatum, opleverstatusFilter]);
 
-  const conceptAantal = rapporten.filter((r) => r.status === "concept").length;
-  const definitiefAantal = rapporten.filter((r) => r.status === "definitief").length;
-  const verlopenAantal = rapporten.filter((r) => r.weergave_status === "termijn_verstreken").length;
+  const conceptAantal = rapporten.filter((r) => r.opleverstatus === "concept").length;
+  const lopendAantal = rapporten.filter(
+    (r) => r.opleverstatus === "reactietermijn_loopt" || r.opleverstatus === "verzonden",
+  ).length;
+  const verstrokenAantal = rapporten.filter((r) => r.opleverstatus === "verstreken").length;
 
   const filtersActief =
     zoekterm.trim() !== "" ||
@@ -342,14 +372,14 @@ export default function RapportenPagina() {
           </Card>
           <Card>
             <CardContent className="pt-4 pb-3">
-              <div className="text-2xl font-bold text-green-600">{definitiefAantal}</div>
-              <div className="text-xs text-muted-foreground mt-0.5">Definitief</div>
+              <div className="text-2xl font-bold text-green-600">{lopendAantal}</div>
+              <div className="text-xs text-muted-foreground mt-0.5">Reactietermijn loopt</div>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-4 pb-3">
-              <div className="text-2xl font-bold text-red-600">{verlopenAantal}</div>
-              <div className="text-xs text-muted-foreground mt-0.5">Termijn verlopen</div>
+              <div className="text-2xl font-bold text-red-600">{verstrokenAantal}</div>
+              <div className="text-xs text-muted-foreground mt-0.5">Termijn verstreken</div>
             </CardContent>
           </Card>
         </div>
@@ -417,14 +447,16 @@ export default function RapportenPagina() {
 
             <div>
               <Label className="text-xs text-muted-foreground mb-1 block">Status</Label>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <Select value={opleverstatusFilter} onValueChange={setOpleverstatusFilter}>
                 <SelectTrigger className="h-9">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="alle">Alle statussen</SelectItem>
+                  <SelectItem value={ALLE_STATUSSEN}>Alle statussen</SelectItem>
                   <SelectItem value="concept">Concept</SelectItem>
-                  <SelectItem value="definitief">Definitief</SelectItem>
+                  <SelectItem value="verzonden">Verzonden</SelectItem>
+                  <SelectItem value="reactietermijn_loopt">Reactietermijn loopt</SelectItem>
+                  <SelectItem value="verstreken">Termijn verstreken</SelectItem>
                   <SelectItem value="vervangen">Vervangen</SelectItem>
                   <SelectItem value="gearchiveerd">Gearchiveerd</SelectItem>
                 </SelectContent>
@@ -463,7 +495,7 @@ export default function RapportenPagina() {
             <div className="rounded-lg border border-dashed p-8 text-center text-muted-foreground">
               <FileText className="h-8 w-8 mx-auto mb-2 opacity-30" />
               <p className="font-medium">Geen rapporten gevonden</p>
-              {(filtersActief || statusFilter !== "alle") && (
+              {(filtersActief || opleverstatusFilter !== ALLE_STATUSSEN) && (
                 <p className="text-xs mt-1">Probeer andere zoek- of filtercriteria.</p>
               )}
             </div>
@@ -472,14 +504,15 @@ export default function RapportenPagina() {
               {gefilterdeRapporten.map((r) => {
                 const titel = r.titel || RAPPORT_TYPE_LABEL[r.rapport_type] || r.rapport_type;
                 const veiligeTitel = titel.replace(/[^a-z0-9]+/gi, "-").toLowerCase();
+                const isVervangen = r.opleverstatus === "vervangen";
                 return (
                   <div
                     key={r.id}
-                    className="flex items-start justify-between gap-4 py-3 first:pt-0 last:pb-0 flex-wrap"
+                    className={`flex items-start justify-between gap-4 py-3 first:pt-0 last:pb-0 flex-wrap${isVervangen ? " opacity-60" : ""}`}
                   >
                     <div className="flex items-start gap-3 min-w-0">
                       <div className="mt-0.5 shrink-0">
-                        <StatusIcoon status={r.weergave_status ?? r.status} />
+                        <StatusIcoon rapport={r} />
                       </div>
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
@@ -506,6 +539,25 @@ export default function RapportenPagina() {
                             <span className="flex items-center gap-1 text-green-700">
                               <Lock className="h-3 w-3" />
                               Bevroren
+                            </span>
+                          )}
+                          {r.opleverstatus === "reactietermijn_loopt" && r.reactietermijn_datum && (
+                            <span className="flex items-center gap-1 text-green-700">
+                              <Clock className="h-3 w-3" />
+                              Tot {new Date(r.reactietermijn_datum).toLocaleDateString("nl-NL", { day: "numeric", month: "short", year: "numeric" })}
+                            </span>
+                          )}
+                          {r.opleverstatus === "verstreken" && r.reactietermijn_datum && (
+                            <span className="flex items-center gap-1 text-red-600">
+                              <AlertCircle className="h-3 w-3" />
+                              Verstreken {new Date(r.reactietermijn_datum).toLocaleDateString("nl-NL", { day: "numeric", month: "short", year: "numeric" })}
+                            </span>
+                          )}
+                          {isVervangen && r.vervangen_door_id && (
+                            <span className="text-neutral-500">
+                              Vervangen door v{
+                                rapporten.find(x => x.id === r.vervangen_door_id)?.versie ?? "nieuwer"
+                              }
                             </span>
                           )}
                         </div>

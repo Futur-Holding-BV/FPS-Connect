@@ -4485,6 +4485,78 @@ export const useMaakRapportDefinitief = <TError = ErrorType<void>,
       return useMutation(getMaakRapportDefinitiefMutationOptions(options));
     }
 
+export const getMaakNieuweVersieRapportUrl = (id: number,
+    rapportId: number,) => {
+
+
+
+
+  return `/api/gebouwen/${id}/rapporten/${rapportId}/nieuwe-versie`
+}
+
+/**
+ * @summary Nieuwe versie aanmaken van een definitief rapport (markeert vorige als vervangen)
+ */
+export const maakNieuweVersieRapport = async (id: number,
+    rapportId: number, options?: RequestInit): Promise<Rapport> => {
+
+  return customFetch<Rapport>(getMaakNieuweVersieRapportUrl(id,rapportId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getMaakNieuweVersieRapportMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof maakNieuweVersieRapport>>, TError,{id: number;rapportId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof maakNieuweVersieRapport>>, TError,{id: number;rapportId: number}, TContext> => {
+
+const mutationKey = ['maakNieuweVersieRapport'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof maakNieuweVersieRapport>>, {id: number;rapportId: number}> = (props) => {
+          const {id,rapportId} = props ?? {};
+
+          return  maakNieuweVersieRapport(id,rapportId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type MaakNieuweVersieRapportMutationResult = NonNullable<Awaited<ReturnType<typeof maakNieuweVersieRapport>>>
+
+    export type MaakNieuweVersieRapportMutationError = ErrorType<void>
+
+    /**
+ * @summary Nieuwe versie aanmaken van een definitief rapport (markeert vorige als vervangen)
+ */
+export const useMaakNieuweVersieRapport = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof maakNieuweVersieRapport>>, TError,{id: number;rapportId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof maakNieuweVersieRapport>>,
+        TError,
+        {id: number;rapportId: number},
+        TContext
+      > => {
+      return useMutation(getMaakNieuweVersieRapportMutationOptions(options));
+    }
+
 export const getAccordeerCertificaatUrl = (id: number,
     rapportId: number,) => {
 

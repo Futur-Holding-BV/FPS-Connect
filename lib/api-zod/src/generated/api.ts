@@ -1091,8 +1091,9 @@ export const ListRapportenResponseItem = zod.object({
   "werkbon_nummer": zod.string().nullish().describe('Werkbonnummer van de gekoppelde werkbon (server-side opgelost).'),
   "rapport_type": zod.string(),
   "versie": zod.number(),
-  "status": zod.enum(['concept', 'definitief', 'vervangen', 'gearchiveerd']),
-  "weergave_status": zod.enum(['concept', 'definitief_verzonden', 'reactietermijn_loopt', 'termijn_verstreken', 'vervangen', 'gearchiveerd']).optional().describe('Afgeleide statusweergave voor de reactietermijn-statusmachine (server-side berekend).'),
+  "status": zod.enum(['concept', 'definitief', 'gearchiveerd']),
+  "opleverstatus": zod.enum(['concept', 'verzonden', 'reactietermijn_loopt', 'verstreken', 'vervangen', 'gearchiveerd']).describe('Afgeleid leveringsstatus — concept\/verzonden\/reactietermijn_loopt\/verstreken\/vervangen\/gearchiveerd'),
+  "vervangen_door_id": zod.number().nullish().describe('ID van het rapport dat dit rapport vervangt (nieuwe versie)'),
   "titel": zod.string().nullish(),
   "secties": zod.object({
 
@@ -1136,8 +1137,9 @@ export const ListGebouwRapportenResponseItem = zod.object({
   "werkbon_nummer": zod.string().nullish().describe('Werkbonnummer van de gekoppelde werkbon (server-side opgelost).'),
   "rapport_type": zod.string(),
   "versie": zod.number(),
-  "status": zod.enum(['concept', 'definitief', 'vervangen', 'gearchiveerd']),
-  "weergave_status": zod.enum(['concept', 'definitief_verzonden', 'reactietermijn_loopt', 'termijn_verstreken', 'vervangen', 'gearchiveerd']).optional().describe('Afgeleide statusweergave voor de reactietermijn-statusmachine (server-side berekend).'),
+  "status": zod.enum(['concept', 'definitief', 'gearchiveerd']),
+  "opleverstatus": zod.enum(['concept', 'verzonden', 'reactietermijn_loopt', 'verstreken', 'vervangen', 'gearchiveerd']).describe('Afgeleid leveringsstatus — concept\/verzonden\/reactietermijn_loopt\/verstreken\/vervangen\/gearchiveerd'),
+  "vervangen_door_id": zod.number().nullish().describe('ID van het rapport dat dit rapport vervangt (nieuwe versie)'),
   "titel": zod.string().nullish(),
   "secties": zod.object({
 
@@ -1207,8 +1209,9 @@ export const GetRapportResponse = zod.object({
   "werkbon_nummer": zod.string().nullish().describe('Werkbonnummer van de gekoppelde werkbon (server-side opgelost).'),
   "rapport_type": zod.string(),
   "versie": zod.number(),
-  "status": zod.enum(['concept', 'definitief', 'vervangen', 'gearchiveerd']),
-  "weergave_status": zod.enum(['concept', 'definitief_verzonden', 'reactietermijn_loopt', 'termijn_verstreken', 'vervangen', 'gearchiveerd']).optional().describe('Afgeleide statusweergave voor de reactietermijn-statusmachine (server-side berekend).'),
+  "status": zod.enum(['concept', 'definitief', 'gearchiveerd']),
+  "opleverstatus": zod.enum(['concept', 'verzonden', 'reactietermijn_loopt', 'verstreken', 'vervangen', 'gearchiveerd']).describe('Afgeleid leveringsstatus — concept\/verzonden\/reactietermijn_loopt\/verstreken\/vervangen\/gearchiveerd'),
+  "vervangen_door_id": zod.number().nullish().describe('ID van het rapport dat dit rapport vervangt (nieuwe versie)'),
   "titel": zod.string().nullish(),
   "secties": zod.object({
 
@@ -1266,8 +1269,9 @@ export const UpdateRapportResponse = zod.object({
   "werkbon_nummer": zod.string().nullish().describe('Werkbonnummer van de gekoppelde werkbon (server-side opgelost).'),
   "rapport_type": zod.string(),
   "versie": zod.number(),
-  "status": zod.enum(['concept', 'definitief', 'vervangen', 'gearchiveerd']),
-  "weergave_status": zod.enum(['concept', 'definitief_verzonden', 'reactietermijn_loopt', 'termijn_verstreken', 'vervangen', 'gearchiveerd']).optional().describe('Afgeleide statusweergave voor de reactietermijn-statusmachine (server-side berekend).'),
+  "status": zod.enum(['concept', 'definitief', 'gearchiveerd']),
+  "opleverstatus": zod.enum(['concept', 'verzonden', 'reactietermijn_loopt', 'verstreken', 'vervangen', 'gearchiveerd']).describe('Afgeleid leveringsstatus — concept\/verzonden\/reactietermijn_loopt\/verstreken\/vervangen\/gearchiveerd'),
+  "vervangen_door_id": zod.number().nullish().describe('ID van het rapport dat dit rapport vervangt (nieuwe versie)'),
   "titel": zod.string().nullish(),
   "secties": zod.object({
 
@@ -1330,8 +1334,9 @@ export const MaakRapportDefinitiefResponse = zod.object({
   "werkbon_nummer": zod.string().nullish().describe('Werkbonnummer van de gekoppelde werkbon (server-side opgelost).'),
   "rapport_type": zod.string(),
   "versie": zod.number(),
-  "status": zod.enum(['concept', 'definitief', 'vervangen', 'gearchiveerd']),
-  "weergave_status": zod.enum(['concept', 'definitief_verzonden', 'reactietermijn_loopt', 'termijn_verstreken', 'vervangen', 'gearchiveerd']).optional().describe('Afgeleide statusweergave voor de reactietermijn-statusmachine (server-side berekend).'),
+  "status": zod.enum(['concept', 'definitief', 'gearchiveerd']),
+  "opleverstatus": zod.enum(['concept', 'verzonden', 'reactietermijn_loopt', 'verstreken', 'vervangen', 'gearchiveerd']).describe('Afgeleid leveringsstatus — concept\/verzonden\/reactietermijn_loopt\/verstreken\/vervangen\/gearchiveerd'),
+  "vervangen_door_id": zod.number().nullish().describe('ID van het rapport dat dit rapport vervangt (nieuwe versie)'),
   "titel": zod.string().nullish(),
   "secties": zod.object({
 
@@ -1361,6 +1366,17 @@ export const MaakRapportDefinitiefResponse = zod.object({
 
 
 /**
+ * @summary Nieuwe versie aanmaken van een definitief rapport (markeert vorige als vervangen)
+ */
+export const MaakNieuweVersieRapportParams = zod.object({
+  "id": zod.coerce.number(),
+  "rapportId": zod.coerce.number()
+})
+
+export const MaakNieuweVersieRapportResponse = zod.void()
+
+
+/**
  * @summary Certificaat accorderen en ondertekenen (alleen hoofdbeheerder)
  */
 export const AccordeerCertificaatParams = zod.object({
@@ -1379,8 +1395,9 @@ export const AccordeerCertificaatResponse = zod.object({
   "werkbon_nummer": zod.string().nullish().describe('Werkbonnummer van de gekoppelde werkbon (server-side opgelost).'),
   "rapport_type": zod.string(),
   "versie": zod.number(),
-  "status": zod.enum(['concept', 'definitief', 'vervangen', 'gearchiveerd']),
-  "weergave_status": zod.enum(['concept', 'definitief_verzonden', 'reactietermijn_loopt', 'termijn_verstreken', 'vervangen', 'gearchiveerd']).optional().describe('Afgeleide statusweergave voor de reactietermijn-statusmachine (server-side berekend).'),
+  "status": zod.enum(['concept', 'definitief', 'gearchiveerd']),
+  "opleverstatus": zod.enum(['concept', 'verzonden', 'reactietermijn_loopt', 'verstreken', 'vervangen', 'gearchiveerd']).describe('Afgeleid leveringsstatus — concept\/verzonden\/reactietermijn_loopt\/verstreken\/vervangen\/gearchiveerd'),
+  "vervangen_door_id": zod.number().nullish().describe('ID van het rapport dat dit rapport vervangt (nieuwe versie)'),
   "titel": zod.string().nullish(),
   "secties": zod.object({
 

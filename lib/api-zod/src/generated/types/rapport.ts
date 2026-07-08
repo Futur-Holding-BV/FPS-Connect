@@ -6,10 +6,10 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { RapportBevrorenDocumentRevisies } from './rapportBevrorenDocumentRevisies';
+import type { RapportOpleverstatus } from './rapportOpleverstatus';
 import type { RapportSecties } from './rapportSecties';
 import type { RapportSpotSelectie } from './rapportSpotSelectie';
 import type { RapportStatus } from './rapportStatus';
-import type { RapportWeergaveStatus } from './rapportWeergaveStatus';
 
 export interface Rapport {
   id: number;
@@ -27,8 +27,13 @@ export interface Rapport {
   rapport_type: string;
   versie: number;
   status: RapportStatus;
-  /** Afgeleide statusweergave voor de reactietermijn-statusmachine (server-side berekend). */
-  weergave_status?: RapportWeergaveStatus;
+  /** Afgeleid leveringsstatus — concept/verzonden/reactietermijn_loopt/verstreken/vervangen/gearchiveerd */
+  opleverstatus: RapportOpleverstatus;
+  /**
+     * ID van het rapport dat dit rapport vervangt (nieuwe versie)
+     * @nullable
+     */
+  vervangen_door_id?: number | null;
   /** @nullable */
   titel?: string | null;
   secties: RapportSecties;

@@ -31,15 +31,17 @@ function parseId(v: unknown): number {
   return parseInt(String(v), 10);
 }
 
-// Reactietermijn-statusmachine: leidt de zichtbare status af uit de opgeslagen
-// status + reactietermijn_datum. "vervangen" en "gearchiveerd" zijn al expliciet.
-function bepaalWeergaveStatus(r: typeof opleverrapportenTable.$inferSelect): string {
-  if (r.status === "vervangen") return "vervangen";
-  if (r.status === "gearchiveerd") return "gearchiveerd";
+function berekenOpleverstatus(
+  r: typeof opleverrapportenTable.$inferSelect,
+): string {
+  if (r.vervangenDoorId != null) return "vervangen";
   if (r.status === "concept") return "concept";
+  if (r.status === "gearchiveerd") return "gearchiveerd";
   // status === "definitief"
-  if (!r.reactietermijnDatum) return "definitief_verzonden";
-  return r.reactietermijnDatum.getTime() >= Date.now() ? "reactietermijn_loopt" : "termijn_verstreken";
+  if (!r.reactietermijnDatum) return "verzonden";
+  const nu = Date.now();
+  if (new Date(r.reactietermijnDatum).getTime() > nu) return "reactietermijn_loopt";
+  return "verstreken";
 }
 
 function mapRapport(
@@ -54,7 +56,8 @@ function mapRapport(
     rapport_type: r.rapportType,
     versie: r.versie,
     status: r.status,
-    weergave_status: bepaalWeergaveStatus(r),
+    opleverstatus: berekenOpleverstatus(r),
+    vervangen_door_id: r.vervangenDoorId ?? null,
     titel: r.titel,
     secties: r.secties ?? {},
     spot_selectie: r.spotSelectie ?? {},
@@ -409,6 +412,67 @@ router.post("/gebouwen/:id/rapporten/:rapportId/definitief", aanmakenRapporten, 
     }
 
     res.json(mapRapport(definitief));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Serverfout" });
+  }
+});
+
+// ── POST /gebouwen/:id/rapporten/:rapportId/nieuwe-versie ─────────────────────
+// Maakt een nieuwe conceptversie van een definitief rapport.
+// Markeert het vorige rapport als vervangen (vervangen_door_id) en kopieert
+// inhoud zodat de gebruiker verder kan bouwen op de bestaande selectie.
+router.post("/gebouwen/:id/rapporten/:rapportId/nieuwe-versie", aanmakenRapporten, async (req, res): Promise<void> => {
+  try {
+    const gebouwId = parseId(req.params.id);
+    const rapportId = parseId(req.params.rapportId);
+
+    const [huidig] = await db
+      .select()
+      .from(opleverrapportenTable)
+      .where(
+        and(
+          eq(opleverrapportenTable.id, rapportId),
+          eq(opleverrapportenTable.gebouwId, gebouwId),
+        ),
+      );
+    if (!huidig) { res.status(404).json({ error: "Rapport niet gevonden" }); return; }
+    if (huidig.status !== "definitief") {
+      res.status(409).json({ error: "Alleen definitieve rapporten kunnen worden vervangen door een nieuwe versie" });
+      return;
+    }
+    if (huidig.vervangenDoorId != null) {
+      res.status(409).json({ error: "Rapport is al vervangen door een nieuwe versie" });
+      return;
+    }
+
+    const nu = new Date();
+
+    // Nieuwe conceptversie aanmaken als kopie van het huidige rapport
+    const [nieuw] = await db
+      .insert(opleverrapportenTable)
+      .values({
+        gebouwId,
+        rapportType: huidig.rapportType,
+        versie: huidig.versie + 1,
+        status: "concept",
+        titel: huidig.titel,
+        secties: (huidig.secties ?? {}) as Record<string, unknown>,
+        spotSelectie: (huidig.spotSelectie ?? {}) as Record<string, unknown>,
+        bijlagenIds: huidig.bijlagenIds ?? [],
+        tekeningIds: huidig.tekeningIds ?? [],
+        aangemaaktDoor: userId(req),
+        bijgewerktOp: nu,
+      })
+      .returning();
+
+    // Oud rapport markeren als vervangen
+    await db
+      .update(opleverrapportenTable)
+      .set({ vervangenDoorId: nieuw.id, bijgewerktOp: nu })
+      .where(eq(opleverrapportenTable.id, rapportId));
+
+    res.status(201).json(mapRapport(nieuw));
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Serverfout" });

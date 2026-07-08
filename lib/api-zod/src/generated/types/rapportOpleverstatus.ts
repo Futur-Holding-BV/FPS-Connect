@@ -7,16 +7,16 @@
  */
 
 /**
- * Afgeleide statusweergave voor de reactietermijn-statusmachine (server-side berekend).
+ * Afgeleid leveringsstatus — concept/verzonden/reactietermijn_loopt/verstreken/vervangen/gearchiveerd
  */
-export type RapportWeergaveStatus = typeof RapportWeergaveStatus[keyof typeof RapportWeergaveStatus];
+export type RapportOpleverstatus = typeof RapportOpleverstatus[keyof typeof RapportOpleverstatus];
 
 
-export const RapportWeergaveStatus = {
+export const RapportOpleverstatus = {
   concept: 'concept',
-  definitief_verzonden: 'definitief_verzonden',
+  verzonden: 'verzonden',
   reactietermijn_loopt: 'reactietermijn_loopt',
-  termijn_verstreken: 'termijn_verstreken',
+  verstreken: 'verstreken',
   vervangen: 'vervangen',
   gearchiveerd: 'gearchiveerd',
 } as const;

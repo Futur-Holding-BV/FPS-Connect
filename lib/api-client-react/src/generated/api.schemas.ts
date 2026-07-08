@@ -6363,21 +6363,20 @@ export type RapportStatus = typeof RapportStatus[keyof typeof RapportStatus];
 export const RapportStatus = {
   concept: 'concept',
   definitief: 'definitief',
-  vervangen: 'vervangen',
   gearchiveerd: 'gearchiveerd',
 } as const;
 
 /**
- * Afgeleide statusweergave voor de reactietermijn-statusmachine (server-side berekend).
+ * Afgeleid leveringsstatus — concept/verzonden/reactietermijn_loopt/verstreken/vervangen/gearchiveerd
  */
-export type RapportWeergaveStatus = typeof RapportWeergaveStatus[keyof typeof RapportWeergaveStatus];
+export type RapportOpleverstatus = typeof RapportOpleverstatus[keyof typeof RapportOpleverstatus];
 
 
-export const RapportWeergaveStatus = {
+export const RapportOpleverstatus = {
   concept: 'concept',
-  definitief_verzonden: 'definitief_verzonden',
+  verzonden: 'verzonden',
   reactietermijn_loopt: 'reactietermijn_loopt',
-  termijn_verstreken: 'termijn_verstreken',
+  verstreken: 'verstreken',
   vervangen: 'vervangen',
   gearchiveerd: 'gearchiveerd',
 } as const;
@@ -6407,8 +6406,13 @@ export interface Rapport {
   rapport_type: string;
   versie: number;
   status: RapportStatus;
-  /** Afgeleide statusweergave voor de reactietermijn-statusmachine (server-side berekend). */
-  weergave_status?: RapportWeergaveStatus;
+  /** Afgeleid leveringsstatus — concept/verzonden/reactietermijn_loopt/verstreken/vervangen/gearchiveerd */
+  opleverstatus: RapportOpleverstatus;
+  /**
+     * ID van het rapport dat dit rapport vervangt (nieuwe versie)
+     * @nullable
+     */
+  vervangen_door_id?: number | null;
   /** @nullable */
   titel?: string | null;
   secties: RapportSecties;

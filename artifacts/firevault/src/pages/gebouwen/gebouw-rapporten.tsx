@@ -5,6 +5,7 @@ import {
   useCreateRapport,
   useDeleteRapport,
   useMaakRapportDefinitief,
+  useMaakNieuweVersieRapport,
   type Rapport,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -50,6 +51,8 @@ import {
   AlertCircle,
   PenLine,
   RefreshCw,
+  Send,
+  XCircle,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getListGebouwRapportenQueryKey } from "@workspace/api-client-react";
@@ -77,22 +80,26 @@ function reactietermijnDagen(datum: string | null | undefined): number | null {
 }
 
 function StatusBadge({ rapport }: { rapport: Rapport }) {
-  const status = rapport.weergave_status ?? rapport.status;
-  if (status === "concept") {
+  const os = rapport.opleverstatus;
+
+  if (os === "concept") {
     return (
       <Badge className="bg-amber-100 text-amber-700 border-amber-200">
         Concept
       </Badge>
     );
   }
-  if (status === "definitief_verzonden") {
+
+  if (os === "verzonden") {
     return (
-      <Badge className="bg-green-100 text-green-700 border-green-200">
-        Definitief verzonden
+      <Badge className="bg-blue-100 text-blue-700 border-blue-200">
+        <Send className="h-3 w-3 mr-1" />
+        Verzonden
       </Badge>
     );
   }
-  if (status === "reactietermijn_loopt") {
+
+  if (os === "reactietermijn_loopt") {
     const dagen = reactietermijnDagen(rapport.reactietermijn_datum);
     return (
       <Badge className="bg-green-100 text-green-700 border-green-200">
@@ -101,7 +108,8 @@ function StatusBadge({ rapport }: { rapport: Rapport }) {
       </Badge>
     );
   }
-  if (status === "termijn_verstreken") {
+
+  if (os === "verstreken") {
     return (
       <Badge className="bg-red-100 text-red-700 border-red-200">
         <AlertCircle className="h-3 w-3 mr-1" />
@@ -109,26 +117,31 @@ function StatusBadge({ rapport }: { rapport: Rapport }) {
       </Badge>
     );
   }
-  if (status === "vervangen") {
+
+  if (os === "vervangen") {
     return (
-      <Badge variant="secondary" className="text-muted-foreground">
-        <RefreshCw className="h-3 w-3 mr-1" />
-        Vervangen door nieuwe versie
+      <Badge className="bg-neutral-100 text-neutral-500 border-neutral-200">
+        <XCircle className="h-3 w-3 mr-1" />
+        Vervangen
       </Badge>
     );
   }
+
   return (
     <Badge variant="secondary" className="text-muted-foreground">
+      <Archive className="h-3 w-3 mr-1" />
       Gearchiveerd
     </Badge>
   );
 }
 
-function StatusIcoon({ status }: { status: string }) {
-  if (status === "concept") return <FileText className="h-4 w-4 text-amber-500" />;
-  if (status === "definitief_verzonden" || status === "reactietermijn_loopt") return <CheckCircle2 className="h-4 w-4 text-green-600" />;
-  if (status === "termijn_verstreken") return <AlertCircle className="h-4 w-4 text-red-600" />;
-  if (status === "vervangen") return <RefreshCw className="h-4 w-4 text-muted-foreground" />;
+function StatusIcoon({ rapport }: { rapport: Rapport }) {
+  const os = rapport.opleverstatus;
+  if (os === "concept") return <FileText className="h-4 w-4 text-amber-500" />;
+  if (os === "verzonden") return <Send className="h-4 w-4 text-blue-500" />;
+  if (os === "reactietermijn_loopt") return <CheckCircle2 className="h-4 w-4 text-green-600" />;
+  if (os === "verstreken") return <AlertCircle className="h-4 w-4 text-red-500" />;
+  if (os === "vervangen") return <XCircle className="h-4 w-4 text-neutral-400" />;
   return <Archive className="h-4 w-4 text-muted-foreground" />;
 }
 
@@ -141,6 +154,7 @@ export default function GebouwRapporten({ gebouwId, isBeheerder }: { gebouwId: n
 
   const maakNieuw = useCreateRapport();
   const definitiefMaken = useMaakRapportDefinitief();
+  const nieuweVersie = useMaakNieuweVersieRapport();
   const verwijder = useDeleteRapport();
 
   const [nieuwOpen, setNieuwOpen] = useState(false);
@@ -149,7 +163,7 @@ export default function GebouwRapporten({ gebouwId, isBeheerder }: { gebouwId: n
 
   const [definitiefOpen, setDefinitiefOpen] = useState(false);
   const [definitiefRapport, setDefinitiefRapport] = useState<Rapport | null>(null);
-  const [reactietermijnDagen, setReactietermijnDagen] = useState("30");
+  const [reactietermijnDagenInput, setReactietermijnDagenInput] = useState("30");
 
   const [verwijderOpen, setVerwijderOpen] = useState(false);
   const [verwijderRapportId, setVerwijderRapportId] = useState<number | null>(null);
@@ -180,7 +194,7 @@ export default function GebouwRapporten({ gebouwId, isBeheerder }: { gebouwId: n
 
   async function handleDefinitief() {
     if (!definitiefRapport) return;
-    const dagen = Number(reactietermijnDagen);
+    const dagen = Number(reactietermijnDagenInput);
     if (isNaN(dagen) || dagen < 1 || dagen > 365) {
       toast({ title: "Voer een geldig aantal dagen in (1–365)", variant: "destructive" });
       return;
@@ -197,6 +211,23 @@ export default function GebouwRapporten({ gebouwId, isBeheerder }: { gebouwId: n
       invalideer();
     } catch {
       toast({ title: "Definitief maken mislukt", variant: "destructive" });
+    }
+  }
+
+  async function handleNieuweVersie(rapport: Rapport) {
+    try {
+      const nieuwRapport = await nieuweVersie.mutateAsync({
+        id: gebouwId,
+        rapportId: rapport.id,
+      });
+      toast({
+        title: "Nieuwe versie aangemaakt",
+        description: `v${nieuwRapport.versie} staat klaar als concept. Het vorige rapport is gemarkeerd als vervangen.`,
+      });
+      invalideer();
+      setLocation(`/gebouwen/${gebouwId}/print?rapport_id=${nieuwRapport.id}`);
+    } catch {
+      toast({ title: "Nieuwe versie aanmaken mislukt", variant: "destructive" });
     }
   }
 
@@ -257,113 +288,121 @@ export default function GebouwRapporten({ gebouwId, isBeheerder }: { gebouwId: n
             </div>
           ) : (
             <div className="divide-y">
-              {rapporten.map((r) => (
-                <div key={r.id} className="flex items-start justify-between gap-4 py-3 first:pt-0 last:pb-0">
-                  <div className="flex items-start gap-3 min-w-0">
-                    <div className="mt-0.5 shrink-0">
-                      <StatusIcoon status={r.weergave_status ?? r.status} />
-                    </div>
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-medium text-sm truncate">
-                          {r.titel || RAPPORT_TYPE_LABEL[r.rapport_type] || r.rapport_type}
-                        </span>
-                        <span className="text-xs text-muted-foreground shrink-0">v{r.versie}</span>
-                        <StatusBadge rapport={r} />
+              {rapporten.map((r) => {
+                const os = r.opleverstatus;
+                const isVervangen = os === "vervangen";
+                return (
+                  <div key={r.id} className={`flex items-start justify-between gap-4 py-3 first:pt-0 last:pb-0${isVervangen ? " opacity-60" : ""}`}>
+                    <div className="flex items-start gap-3 min-w-0">
+                      <div className="mt-0.5 shrink-0">
+                        <StatusIcoon rapport={r} />
                       </div>
-                      <div className="text-xs text-muted-foreground mt-0.5 space-y-0.5">
-                        <div>{RAPPORT_TYPE_LABEL[r.rapport_type] || r.rapport_type}</div>
-                        <div>
-                          Aangemaakt:{" "}
-                          {new Date(r.aangemaakt_op).toLocaleDateString("nl-NL", {
-                            day: "numeric",
-                            month: "short",
-                            year: "numeric",
-                          })}
-                          {r.aangemaakt_door_naam && ` door ${r.aangemaakt_door_naam}`}
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-medium text-sm truncate">
+                            {r.titel || RAPPORT_TYPE_LABEL[r.rapport_type] || r.rapport_type}
+                          </span>
+                          <span className="text-xs text-muted-foreground shrink-0">v{r.versie}</span>
+                          <StatusBadge rapport={r} />
                         </div>
-                        {(r.status === "definitief" || r.status === "vervangen") && r.reactietermijn_datum && (
-                          <div>Reactietermijn tot: {dagToString(r.reactietermijn_datum)}</div>
-                        )}
-                        {(r.status === "definitief" || r.status === "vervangen") && r.bevroren_op && (
-                          <div className="flex items-center gap-1 text-green-700">
-                            <Lock className="h-3 w-3" />
-                            Bevroren op {dagToString(r.bevroren_op)}
+                        <div className="text-xs text-muted-foreground mt-0.5 space-y-0.5">
+                          <div>{RAPPORT_TYPE_LABEL[r.rapport_type] || r.rapport_type}</div>
+                          <div>
+                            Aangemaakt:{" "}
+                            {new Date(r.aangemaakt_op).toLocaleDateString("nl-NL", {
+                              day: "numeric",
+                              month: "short",
+                              year: "numeric",
+                            })}
+                            {r.aangemaakt_door_naam && ` door ${r.aangemaakt_door_naam}`}
                           </div>
-                        )}
-                        {r.status === "vervangen" && r.vervangen_op && (
-                          <div className="flex items-center gap-1 text-muted-foreground">
-                            <RefreshCw className="h-3 w-3" />
-                            Vervangen op {dagToString(r.vervangen_op)}
-                            {r.vervangen_door_rapport_id != null && (
-                              <>
-                                {" — "}
-                                <Link
-                                  href={`/gebouwen/${gebouwId}/print?rapport_id=${r.vervangen_door_rapport_id}`}
-                                  className="underline hover:text-foreground"
-                                >
-                                  bekijk nieuwe versie
-                                </Link>
-                              </>
-                            )}
-                          </div>
-                        )}
+                          {r.status === "definitief" && r.reactietermijn_datum && (
+                            <div>Reactietermijn tot: {dagToString(r.reactietermijn_datum)}</div>
+                          )}
+                          {r.status === "definitief" && r.bevroren_op && (
+                            <div className="flex items-center gap-1 text-green-700">
+                              <Lock className="h-3 w-3" />
+                              Bevrozen op {dagToString(r.bevroren_op)}
+                            </div>
+                          )}
+                          {isVervangen && r.vervangen_door_id && (
+                            <div className="text-neutral-500">
+                              Vervangen door versie{" "}
+                              {rapporten.find(x => x.id === r.vervangen_door_id)?.versie ?? "nieuwer"}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  <div className="flex items-center gap-1 shrink-0">
-                    {r.status === "concept" && (
-                      <Link href={`/gebouwen/${gebouwId}/print?rapport_id=${r.id}`}>
-                        <Button size="sm" variant="outline" className="gap-1.5 text-xs">
-                          <PenLine className="h-3.5 w-3.5" />
-                          Samenstellen
-                        </Button>
-                      </Link>
-                    )}
-                    {(r.status === "definitief" || r.status === "vervangen") && (
-                      <Link href={`/gebouwen/${gebouwId}/print?rapport_id=${r.id}`}>
-                        <Button size="sm" variant="outline" className="gap-1.5 text-xs">
-                          <Printer className="h-3.5 w-3.5" />
-                          Bekijken
-                        </Button>
-                      </Link>
-                    )}
-                    {isBeheerder && (
-                      <>
-                        {r.status === "concept" && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="gap-1.5 text-xs"
-                            onClick={() => {
-                              setDefinitiefRapport(r);
-                              setReactietermijnDagen("30");
-                              setDefinitiefOpen(true);
-                            }}
-                          >
-                            <Lock className="h-3.5 w-3.5" />
-                            Definitief
+                    <div className="flex items-center gap-1 shrink-0">
+                      {r.status === "concept" && (
+                        <Link href={`/gebouwen/${gebouwId}/print?rapport_id=${r.id}`}>
+                          <Button size="sm" variant="outline" className="gap-1.5 text-xs">
+                            <PenLine className="h-3.5 w-3.5" />
+                            Samenstellen
                           </Button>
-                        )}
-                        {r.status === "concept" && (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="text-muted-foreground hover:text-destructive h-8 w-8 p-0"
-                            onClick={() => {
-                              setVerwijderRapportId(r.id);
-                              setVerwijderOpen(true);
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4" />
+                        </Link>
+                      )}
+                      {r.status === "definitief" && (
+                        <Link href={`/gebouwen/${gebouwId}/print?rapport_id=${r.id}`}>
+                          <Button size="sm" variant="outline" className="gap-1.5 text-xs">
+                            <Printer className="h-3.5 w-3.5" />
+                            Bekijken
                           </Button>
-                        )}
-                      </>
-                    )}
+                        </Link>
+                      )}
+                      {isBeheerder && (
+                        <>
+                          {r.status === "concept" && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="gap-1.5 text-xs"
+                              onClick={() => {
+                                setDefinitiefRapport(r);
+                                setReactietermijnDagenInput("30");
+                                setDefinitiefOpen(true);
+                              }}
+                            >
+                              <Lock className="h-3.5 w-3.5" />
+                              Definitief
+                            </Button>
+                          )}
+                          {r.status === "definitief" && !isVervangen && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="gap-1.5 text-xs"
+                              onClick={() => handleNieuweVersie(r)}
+                              disabled={nieuweVersie.isPending}
+                            >
+                              {nieuweVersie.isPending
+                                ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                : <RefreshCw className="h-3.5 w-3.5" />
+                              }
+                              Nieuwe versie
+                            </Button>
+                          )}
+                          {r.status === "concept" && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="text-muted-foreground hover:text-destructive h-8 w-8 p-0"
+                              onClick={() => {
+                                setVerwijderRapportId(r.id);
+                                setVerwijderOpen(true);
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </CardContent>
@@ -435,8 +474,8 @@ export default function GebouwRapporten({ gebouwId, isBeheerder }: { gebouwId: n
                 type="number"
                 min={1}
                 max={365}
-                value={reactietermijnDagen}
-                onChange={(e) => setReactietermijnDagen(e.target.value)}
+                value={reactietermijnDagenInput}
+                onChange={(e) => setReactietermijnDagenInput(e.target.value)}
               />
               <p className="text-xs text-muted-foreground">
                 Standaard 30 dagen. Wettelijk minimum varieert per type inspectie.
