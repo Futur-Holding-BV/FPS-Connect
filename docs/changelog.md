@@ -4,6 +4,14 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-08 — Pre-push typecheck fix: opleverstatus status-strings
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+**Wat is hersteld:**
+
+Task #424 hernoemde het veld `weergave_status` → `opleverstatus` en de status-strings `definitief_verzonden` → `verzonden` / `termijn_verstreken` → `verstreken`. Twee bestanden waren nog niet meegenomen in die rename: `klant/rapportages.tsx` (5 plaatsen) en `onderhoud/dashboard.tsx` (1 plaats). Gevonden tijdens de pre-push typecheck controle (TS2339 / TS2367). Alle firevault typecheck-fouten zijn nu opgelost.
+
 ## 2026-07-08 — Klant-notificatie bij definitief rapport
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag

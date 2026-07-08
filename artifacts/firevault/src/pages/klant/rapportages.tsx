@@ -49,11 +49,11 @@ function reactietermijnDagen(datum: string | null | undefined): number | null {
 }
 
 function StatusBadge({ rapport }: { rapport: Rapport }) {
-  const status = rapport.weergave_status ?? rapport.status;
+  const status = rapport.opleverstatus ?? rapport.status;
   if (status === "concept") {
     return <Badge className="bg-amber-100 text-amber-700 border-amber-200">Concept</Badge>;
   }
-  if (status === "definitief_verzonden") {
+  if (status === "verzonden") {
     return <Badge className="bg-green-100 text-green-700 border-green-200">Definitief verzonden</Badge>;
   }
   if (status === "reactietermijn_loopt") {
@@ -65,7 +65,7 @@ function StatusBadge({ rapport }: { rapport: Rapport }) {
       </Badge>
     );
   }
-  if (status === "termijn_verstreken") {
+  if (status === "verstreken") {
     return (
       <Badge className="bg-red-100 text-red-700 border-red-200">
         <AlertCircle className="h-3 w-3 mr-1" />
@@ -86,8 +86,8 @@ function StatusBadge({ rapport }: { rapport: Rapport }) {
 
 function StatusIcoon({ status }: { status: string }) {
   if (status === "concept") return <FileText className="h-4 w-4 text-amber-500" />;
-  if (status === "definitief_verzonden" || status === "reactietermijn_loopt") return <CheckCircle2 className="h-4 w-4 text-green-600" />;
-  if (status === "termijn_verstreken") return <AlertCircle className="h-4 w-4 text-red-600" />;
+  if (status === "verzonden" || status === "reactietermijn_loopt") return <CheckCircle2 className="h-4 w-4 text-green-600" />;
+  if (status === "verstreken") return <AlertCircle className="h-4 w-4 text-red-600" />;
   if (status === "vervangen") return <RefreshCw className="h-4 w-4 text-muted-foreground" />;
   return <Archive className="h-4 w-4 text-muted-foreground" />;
 }
@@ -173,7 +173,7 @@ function GebouwRapportenBlok({
     return rapporten.filter((r) => {
       if (r.status === "concept") return false;
       if (filterStatus === "alle") return true;
-      return (r.weergave_status ?? r.status) === filterStatus;
+      return (r.opleverstatus ?? r.status) === filterStatus;
     });
   }, [rapporten, filterStatus]);
 
@@ -196,8 +196,8 @@ function GebouwRapportenBlok({
       </div>
       <div className="divide-y">
         {zichtbaar.map((r) => {
-          const weergave = r.weergave_status ?? r.status;
-          const isVerlopen = weergave === "termijn_verstreken";
+          const weergave = r.opleverstatus ?? r.status;
+          const isVerlopen = weergave === "verstreken";
           const veiligeTitel = (r.titel || RAPPORT_TYPE_LABEL[r.rapport_type] || r.rapport_type)
             .replace(/[^a-z0-9]+/gi, "-")
             .toLowerCase();
@@ -231,7 +231,7 @@ function GebouwRapportenBlok({
                       Reageer voor: {datumKort(r.reactietermijn_datum)}
                     </div>
                   )}
-                  {r.reactietermijn_datum && weergave === "termijn_verstreken" && (
+                  {r.reactietermijn_datum && weergave === "verstreken" && (
                     <div className="text-red-600 font-medium mt-0.5">
                       Reactietermijn verstreken op {datumKort(r.reactietermijn_datum)} — neem contact op met FPS Brandpreventie.
                     </div>
@@ -320,9 +320,9 @@ export default function KlantRapportages() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="alle">Alle statussen</SelectItem>
-            <SelectItem value="definitief_verzonden">Definitief verzonden</SelectItem>
+            <SelectItem value="verzonden">Definitief verzonden</SelectItem>
             <SelectItem value="reactietermijn_loopt">Reactietermijn loopt</SelectItem>
-            <SelectItem value="termijn_verstreken">Termijn verstreken</SelectItem>
+            <SelectItem value="verstreken">Termijn verstreken</SelectItem>
             <SelectItem value="vervangen">Vervangen</SelectItem>
           </SelectContent>
         </Select>

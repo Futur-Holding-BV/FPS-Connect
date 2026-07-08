@@ -47,7 +47,7 @@ export default function OnderhoudDashboard() {
   const definitieveRapporten = alleRapporten ?? [];
 
   const verlopen = (alleRapporten ?? []).filter(
-    (r) => (r.weergave_status ?? r.status) === "termijn_verstreken",
+    (r) => (r.opleverstatus ?? r.status) === "verstreken",
   );
 
   const aflopend = contracten?.filter((c) => {
