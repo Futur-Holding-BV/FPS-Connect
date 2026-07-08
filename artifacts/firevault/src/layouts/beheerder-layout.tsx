@@ -434,7 +434,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                         asChild
                         isActive={location === "/rapporten" || location.startsWith("/rapporten/")}
                       >
-                        <Link href="/rapporten">
+                        <Link href="/rapporten" onClick={() => { try { sessionStorage.removeItem("fps_rapporten_filters"); } catch { } }}>
                           <PackageCheck />
                           <span>Opleverrapportage</span>
                           <InUitvoering />

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "wouter";
 import { useListRapporten, type Rapport } from "@workspace/api-client-react";
 import { useAuth } from "@/context/auth-context";
@@ -172,14 +172,66 @@ function DownloadKnop({ gebouwId, rapportId, titel }: { gebouwId: number; rappor
 
 const ALLE_GEBOUWEN = "alle_gebouwen";
 const ALLE_TYPES = "alle_types";
+const FILTER_STORAGE_KEY = "fps_rapporten_filters";
+
+interface RapportenFilterState {
+  statusFilter: string;
+  zoekterm: string;
+  gebouwFilter: string;
+  typeFilter: string;
+  vanafDatum: string;
+  totDatum: string;
+}
+
+const GELDIGE_STATUS_WAARDEN = new Set(["alle", "concept", "definitief", "vervangen", "gearchiveerd"]);
+
+function leesFilterState(): RapportenFilterState {
+  try {
+    const raw = sessionStorage.getItem(FILTER_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw) as Partial<RapportenFilterState>;
+      const statusFilter =
+        typeof parsed.statusFilter === "string" && GELDIGE_STATUS_WAARDEN.has(parsed.statusFilter)
+          ? parsed.statusFilter
+          : "alle";
+      return {
+        statusFilter,
+        zoekterm: typeof parsed.zoekterm === "string" ? parsed.zoekterm : "",
+        gebouwFilter: typeof parsed.gebouwFilter === "string" ? parsed.gebouwFilter : ALLE_GEBOUWEN,
+        typeFilter: typeof parsed.typeFilter === "string" ? parsed.typeFilter : ALLE_TYPES,
+        vanafDatum: typeof parsed.vanafDatum === "string" ? parsed.vanafDatum : "",
+        totDatum: typeof parsed.totDatum === "string" ? parsed.totDatum : "",
+      };
+    }
+  } catch {
+  }
+  return {
+    statusFilter: "alle",
+    zoekterm: "",
+    gebouwFilter: ALLE_GEBOUWEN,
+    typeFilter: ALLE_TYPES,
+    vanafDatum: "",
+    totDatum: "",
+  };
+}
 
 export default function RapportenPagina() {
-  const [statusFilter, setStatusFilter] = useState<string>("alle");
-  const [zoekterm, setZoekterm] = useState("");
-  const [gebouwFilter, setGebouwFilter] = useState<string>(ALLE_GEBOUWEN);
-  const [typeFilter, setTypeFilter] = useState<string>(ALLE_TYPES);
-  const [vanafDatum, setVanafDatum] = useState("");
-  const [totDatum, setTotDatum] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>(() => leesFilterState().statusFilter);
+  const [zoekterm, setZoekterm] = useState(() => leesFilterState().zoekterm);
+  const [gebouwFilter, setGebouwFilter] = useState<string>(() => leesFilterState().gebouwFilter);
+  const [typeFilter, setTypeFilter] = useState<string>(() => leesFilterState().typeFilter);
+  const [vanafDatum, setVanafDatum] = useState(() => leesFilterState().vanafDatum);
+  const [totDatum, setTotDatum] = useState(() => leesFilterState().totDatum);
+
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(
+        FILTER_STORAGE_KEY,
+        JSON.stringify({ statusFilter, zoekterm, gebouwFilter, typeFilter, vanafDatum, totDatum }),
+      );
+    } catch {
+    }
+  }, [statusFilter, zoekterm, gebouwFilter, typeFilter, vanafDatum, totDatum]);
 
   const { data: rapporten = [], isLoading } = useListRapporten(
     statusFilter !== "alle" ? { status: statusFilter as "concept" | "definitief" | "vervangen" | "gearchiveerd" } : {},
