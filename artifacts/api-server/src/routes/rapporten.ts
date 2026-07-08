@@ -116,11 +116,16 @@ router.get("/rapporten", lezenRapporten, async (req, res): Promise<void> => {
 router.get("/gebouwen/:id/rapporten", lezenRapportenOfKlant, async (req, res): Promise<void> => {
   try {
     const gebouwId = parseId(req.params.id);
+    const isKlant = (req.session as { rol?: string }).rol === "klant";
+    const basisFilter = eq(opleverrapportenTable.gebouwId, gebouwId);
+    const waarFilter = isKlant
+      ? and(basisFilter, inArray(opleverrapportenTable.status, ["definitief", "gearchiveerd"]))
+      : basisFilter;
     const rijen = await db
       .select({ r: opleverrapportenTable, naam: gebruikersTable.naam })
       .from(opleverrapportenTable)
       .leftJoin(gebruikersTable, eq(opleverrapportenTable.aangemaaktDoor, gebruikersTable.id))
-      .where(eq(opleverrapportenTable.gebouwId, gebouwId))
+      .where(waarFilter)
       .orderBy(desc(opleverrapportenTable.bijgewerktOp));
     res.json(rijen.map(r => mapRapport(r.r, { aangemaaktDoorNaam: r.naam })));
   } catch (err) {
@@ -182,6 +187,7 @@ router.get("/gebouwen/:id/rapporten/:rapportId", lezenRapportenOfKlant, async (r
   try {
     const gebouwId = parseId(req.params.id);
     const rapportId = parseId(req.params.rapportId);
+    const isKlant = (req.session as { rol?: string }).rol === "klant";
 
     const [rij] = await db
       .select({ r: opleverrapportenTable, naam: gebruikersTable.naam })
@@ -194,6 +200,10 @@ router.get("/gebouwen/:id/rapporten/:rapportId", lezenRapportenOfKlant, async (r
         ),
       );
     if (!rij) { res.status(404).json({ error: "Rapport niet gevonden" }); return; }
+    if (isKlant && rij.r.status !== "definitief" && rij.r.status !== "gearchiveerd") {
+      res.status(404).json({ error: "Rapport niet gevonden" });
+      return;
+    }
     res.json(mapRapport(rij.r, { aangemaaktDoorNaam: rij.naam }));
   } catch (err) {
     req.log.error(err);
