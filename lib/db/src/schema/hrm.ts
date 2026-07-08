@@ -5,7 +5,7 @@
 // werknemerstoelichting) voor de volledige FPS Groep (FPS Bouw, FPS
 // Brandpreventie, FPS Onderhoud, Fuegro). Fase 1 bevat BEWUST GEEN
 // salarisadministratie.
-import { pgTable, serial, text, integer, real, boolean, timestamp, date, numeric } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, real, boolean, timestamp, date, numeric, type AnyPgColumn } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { gebruikersTable } from "./gebruikers";
@@ -71,6 +71,10 @@ export const functiesTable = pgTable("functies", {
   // uitvoerend = veldmedewerker (monteur, timmerman, voorman, leerling, ingehuurd uitvoerend).
   // true → medewerker verschijnt automatisch in de planning; kantoor-functies blijven verborgen.
   uitvoerend: boolean("uitvoerend").notNull().default(false),
+  // Minimale bezetting — hoeveel medewerkers met deze functie (bij deze werkgever)
+  // minimaal beschikbaar (niet met goedgekeurd verlof/ziek) moeten blijven op elke
+  // dag. null = geen drempel ingesteld (geen bezettingscontrole bij goedkeuren verlof).
+  minimaleBezetting: integer("minimale_bezetting"),
   actief: boolean("actief").notNull().default(true),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
@@ -88,6 +92,11 @@ export const medewerkersTable = pgTable("medewerkers", {
   werkmaatschappij: text("werkmaatschappij").notNull().default("FPS Brandpreventie"),
   werkgeverId: integer("werkgever_id").references(() => werkgeversTable.id, { onDelete: "set null" }),
   functieId: integer("functie_id").references(() => functiesTable.id, { onDelete: "set null" }),
+  // Leidinggevende — zelfreferentie naar medewerkers.id. Stuurt de goedkeuringsroute
+  // voor verlofaanvragen: de leidinggevende mag het verlof van zijn/haar directe
+  // teamleden beoordelen. Een hoofdbeheerder of iemand met personeel-schrijfrecht
+  // kan altijd beoordelen als fallback/override, ook zonder leidinggevende-koppeling.
+  leidinggevendeId: integer("leidinggevende_id").references((): AnyPgColumn => medewerkersTable.id, { onDelete: "set null" }),
   cao: text("cao"),
   dienstverband: text("dienstverband").notNull().default("vast"),
   // Naam uitzendbureau of onderaannemingsbedrijf (alleen relevant bij inhuur/onderaannemer).
@@ -204,6 +213,16 @@ export const verlofsoortenTable = pgTable("verlofsoorten", {
   id: serial("id").primaryKey(),
   naam: text("naam").notNull(),
   categorie: text("categorie").notNull().default("wettelijk"),
+  // Hoofdcategorie — vaste, herkenbare categorieën i.p.v. vrije tekst (server-side
+  // afgedwongen, zie VERLOF_HOOFDCATEGORIEEN in routes/hrm.ts):
+  // vakantie | adv_atv | tijd_voor_tijd | ziekte | bijzonder | onbetaald | overig.
+  // Losstaand van het legacy `categorie`-veld (wettelijk/bovenwettelijk/adv/collectief/
+  // bijzonder), dat blijft bestaan voor bestaande koppelingen/weergave.
+  hoofdcategorie: text("hoofdcategorie").notNull().default("overig"),
+  // true = deze verlofsoort representeert tijd-voor-tijd/compensatie-uren. Stuurt de
+  // uren-module: hierlangs kan direct vanuit de weekstaat compensatieverlof worden
+  // aangevraagd zonder losse (dubbele) urenregistratie.
+  isTijdVoorTijd: boolean("is_tijd_voor_tijd").notNull().default(false),
   cao: text("cao"),
   werkmaatschappij: text("werkmaatschappij"),
   werkgeverId: integer("werkgever_id").references(() => werkgeversTable.id, { onDelete: "set null" }),
@@ -247,6 +266,9 @@ export const verlofAanvragenTable = pgTable("verlofaanvragen", {
   opmerking: text("opmerking"),
   beoordeeldDoorId: integer("beoordeeld_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
   beoordeeldOp: timestamp("beoordeeld_op"),
+  // true = bij goedkeuren was de minimale bezetting (functie.minimaleBezetting) op één of
+  // meer dagen onderschreden; een hoofdbeheerder/HRM heeft dit expliciet overruled.
+  bezettingOverschreden: boolean("bezetting_overschreden").notNull().default(false),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
 });

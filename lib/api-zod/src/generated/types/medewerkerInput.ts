@@ -16,6 +16,8 @@ export interface MedewerkerInput {
   werkmaatschappij?: string;
   /** @nullable */
   functie_id?: number | null;
+  /** @nullable */
+  leidinggevende_id?: number | null;
   cao?: string;
   dienstverband?: string;
   /** @nullable */

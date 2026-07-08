@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   useListWeekStaten,
   useWeekStaatGoedkeuren,
@@ -7,6 +8,8 @@ import {
   useOntgrendelWeekStaat,
   useListMedewerkers,
   useGetWeekStaat,
+  useCreateTijdVoorTijdAanvraag,
+  getGetWeekStaatQueryKey,
 } from "@workspace/api-client-react";
 import type { WeekStaat } from "@workspace/api-client-react";
 import {
@@ -24,8 +27,11 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { CheckCircle2, XCircle, Eye, ChevronLeft, ChevronRight, CalendarDays, Lock, Unlock } from "lucide-react";
+import { CheckCircle2, XCircle, Eye, ChevronLeft, ChevronRight, CalendarDays, Lock, Unlock, Clock } from "lucide-react";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
+import { DatePicker } from "@/components/ui/date-picker";
+import { Label } from "@/components/ui/label";
+import { toast } from "@/hooks/use-toast";
 
 function isoWeek(datum: Date): number {
   const d = new Date(Date.UTC(datum.getFullYear(), datum.getMonth(), datum.getDate()));
@@ -58,6 +64,90 @@ function formatUren(u: number | null | undefined): string {
 
 // ── Weekstaat detail-dialog ────────────────────────────────────────────────────
 
+export function TijdVoorTijdAanvraagDialog({
+  open,
+  onClose,
+  onAangevraagd,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onAangevraagd: () => void;
+}) {
+  const [startDatum, setStartDatum] = useState("");
+  const [eindDatum, setEindDatum] = useState("");
+  const [aantalUren, setAantalUren] = useState("8");
+  const [reden, setReden] = useState("");
+  const aanvragen = useCreateTijdVoorTijdAanvraag();
+
+  async function bewaar() {
+    if (!startDatum || !eindDatum || !aantalUren) {
+      toast({ title: "Vul startdatum, einddatum en aantal uren in", variant: "destructive" });
+      return;
+    }
+    try {
+      await aanvragen.mutateAsync({
+        data: {
+          start_datum: startDatum,
+          eind_datum: eindDatum,
+          aantal_uren: Number(aantalUren),
+          reden: reden || undefined,
+        },
+      });
+      toast({ title: "Tijd-voor-tijd aangevraagd" });
+      setStartDatum("");
+      setEindDatum("");
+      setAantalUren("8");
+      setReden("");
+      onAangevraagd();
+      onClose();
+    } catch {
+      toast({ title: "Aanvragen mislukt", description: "Controleer of er een tijd-voor-tijd verlofsoort is ingesteld.", variant: "destructive" });
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-md">
+        <DialogHeader><DialogTitle>Tijd-voor-tijd aanvragen</DialogTitle></DialogHeader>
+        <div className="space-y-3">
+          <p className="text-xs text-muted-foreground">
+            Dit legt rechtstreeks een verlofaanvraag vast (geen dubbele invoer in uren) — deze verschijnt daarna in uw weekstaat.
+          </p>
+          <div className="space-y-1.5">
+            <Label>Startdatum</Label>
+            <DatePicker value={startDatum} onChange={setStartDatum} />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Einddatum</Label>
+            <DatePicker value={eindDatum} onChange={setEindDatum} />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Aantal uren</Label>
+            <input
+              type="number"
+              min={0}
+              step="0.25"
+              value={aantalUren}
+              onChange={(e) => setAantalUren(e.target.value)}
+              className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Toelichting</Label>
+            <Textarea value={reden} onChange={(e) => setReden(e.target.value)} rows={2} />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Annuleren</Button>
+          <Button onClick={bewaar} disabled={aanvragen.isPending}>
+            {aanvragen.isPending ? "Bezig…" : "Aanvragen"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function WeekStaatDetailDialog({
   id,
   open,
@@ -70,6 +160,7 @@ function WeekStaatDetailDialog({
   const { data: ws } = useGetWeekStaat(id);
   const { heeftNiveau } = useBevoegdheid();
   const isManager = heeftNiveau("uren", 2);
+  const queryClient = useQueryClient();
 
   const goedkeuren = useWeekStaatGoedkeuren();
   const afwijzen = useWeekStaatAfwijzen();
@@ -77,6 +168,7 @@ function WeekStaatDetailDialog({
   const ontgrendelen = useOntgrendelWeekStaat();
   const [afwijzingReden, setAfwijzingReden] = useState("");
   const [toontAfwijzingForm, setToontAfwijzingForm] = useState(false);
+  const [toontTijdVoorTijdForm, setToontTijdVoorTijdForm] = useState(false);
 
   if (!ws) return null;
 
@@ -91,6 +183,7 @@ function WeekStaatDetailDialog({
     ((ws as any).uren ?? []).filter((u: any) => u.datum === datum);
 
   return (
+    <>
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
@@ -166,6 +259,47 @@ function WeekStaatDetailDialog({
               </TableRow>
             </TableBody>
           </Table>
+
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold flex items-center gap-1.5">
+                <Clock className="h-3.5 w-3.5" /> Verlof in deze week
+              </h3>
+              {!isManager && (
+                <Button variant="outline" size="sm" onClick={() => setToontTijdVoorTijdForm(true)}>
+                  <Clock className="h-3.5 w-3.5 mr-1" /> Tijd-voor-tijd aanvragen
+                </Button>
+              )}
+            </div>
+            {(ws.verlof ?? []).length === 0 ? (
+              <p className="text-sm text-muted-foreground">Geen verlof in deze week.</p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Soort</TableHead>
+                    <TableHead>Periode</TableHead>
+                    <TableHead className="text-right">Uren</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {(ws.verlof ?? []).map((v) => (
+                    <TableRow key={v.id}>
+                      <TableCell className="text-sm">{v.verlofsoort_naam}</TableCell>
+                      <TableCell className="text-sm whitespace-nowrap">
+                        {new Date(v.start_datum + "T00:00:00").toLocaleDateString("nl-NL", { day: "numeric", month: "short" })}
+                        {" – "}
+                        {new Date(v.eind_datum + "T00:00:00").toLocaleDateString("nl-NL", { day: "numeric", month: "short" })}
+                      </TableCell>
+                      <TableCell className="text-right font-mono text-sm">{formatUren(v.aantal_uren)}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{v.status}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </div>
 
           {isManager && ws.status === "ingediend" && (
             <div className="space-y-2">
@@ -267,6 +401,13 @@ function WeekStaatDetailDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+    <TijdVoorTijdAanvraagDialog
+      open={toontTijdVoorTijdForm}
+      onClose={() => setToontTijdVoorTijdForm(false)}
+      onAangevraagd={() => queryClient.invalidateQueries({ queryKey: getGetWeekStaatQueryKey(id) })}
+    />
+    </>
   );
 }
 

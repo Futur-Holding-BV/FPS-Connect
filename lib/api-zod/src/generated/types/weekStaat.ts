@@ -5,6 +5,7 @@
  * FPS Brandpreventie - Platform voor brandpreventieve gebouwvoorzieningen
  * OpenAPI spec version: 0.1.0
  */
+import type { VerlofInWeek } from './verlofInWeek';
 
 export interface WeekStaat {
   id: number;
@@ -25,6 +26,7 @@ export interface WeekStaat {
   vergrendeld?: boolean;
   vergrendeld_op?: string | null;
   vergrendeld_door_naam?: string | null;
+  verlof?: VerlofInWeek[];
   aangemaakt_op: string;
   bijgewerkt_op: string;
 }

@@ -5,10 +5,14 @@
  * FPS Brandpreventie - Platform voor brandpreventieve gebouwvoorzieningen
  * OpenAPI spec version: 0.1.0
  */
+import type { VerlofsoortInputHoofdcategorie } from './verlofsoortInputHoofdcategorie';
 
 export interface VerlofsoortInput {
   naam: string;
   categorie?: string;
+  /** @nullable */
+  hoofdcategorie?: VerlofsoortInputHoofdcategorie;
+  is_tijd_voor_tijd?: boolean;
   /** @nullable */
   cao?: string | null;
   /** @nullable */

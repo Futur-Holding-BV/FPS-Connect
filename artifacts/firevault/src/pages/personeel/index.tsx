@@ -453,7 +453,7 @@ export default function PersoneelPagina() {
 
   function startFunctieNieuw() {
     setFunctieBewerkenId(null);
-    setFunctieForm({ naam: "", werkmaatschappij: WERKMAATSCHAPPIJ_STD, uitvoerend: false });
+    setFunctieForm({ naam: "", werkmaatschappij: WERKMAATSCHAPPIJ_STD, uitvoerend: false, minimale_bezetting: undefined });
     setFunctieOpen(true);
   }
 
@@ -464,6 +464,7 @@ export default function PersoneelPagina() {
       werkmaatschappij: f.werkmaatschappij,
       omschrijving: f.omschrijving ?? undefined,
       uitvoerend: f.uitvoerend ?? false,
+      minimale_bezetting: f.minimale_bezetting ?? undefined,
     });
     setFunctieOpen(true);
   }
@@ -1415,6 +1416,24 @@ export default function PersoneelPagina() {
               )}
             </div>
             <div className="space-y-1.5">
+              <Label>Leidinggevende</Label>
+              <Select
+                value={medewerkerForm.leidinggevende_id ? String(medewerkerForm.leidinggevende_id) : "geen"}
+                onValueChange={(v) => setMedewerkerForm({ ...medewerkerForm, leidinggevende_id: v === "geen" ? undefined : Number(v) })}
+              >
+                <SelectTrigger><SelectValue placeholder="Geen (hoofdbeheerder behandelt verlof)" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="geen">Geen — hoofdbeheerder behandelt verlof</SelectItem>
+                  {(medewerkers ?? []).map((m) => (
+                    <SelectItem key={m.id} value={String(m.id)}>{m.naam}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                De leidinggevende beoordeelt verlofaanvragen van deze medewerker; de hoofdbeheerder kan altijd behandelen.
+              </p>
+            </div>
+            <div className="space-y-1.5">
               <Label>Dienstverband</Label>
               <Select value={medewerkerForm.dienstverband} onValueChange={(v) => setMedewerkerForm({ ...medewerkerForm, dienstverband: v, bedrijf_uitzendbureau: (v === "uitzend" || v === "inhuur" || v === "zzp") ? (medewerkerForm.bedrijf_uitzendbureau ?? "") : undefined })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
@@ -1770,6 +1789,19 @@ export default function PersoneelPagina() {
             <p className="text-xs text-muted-foreground -mt-1">
               Medewerkers met een uitvoerende functie verschijnen automatisch in de planning.
             </p>
+            <div className="space-y-1.5">
+              <Label>Minimale bezetting</Label>
+              <Input
+                type="number"
+                min={0}
+                value={functieForm.minimale_bezetting ?? ""}
+                onChange={(e) => setFunctieForm({ ...functieForm, minimale_bezetting: e.target.value === "" ? undefined : Number(e.target.value) })}
+                placeholder="Geen minimum"
+              />
+              <p className="text-xs text-muted-foreground">
+                Minimaal aantal medewerkers met deze functie dat gelijktijdig aanwezig moet blijven. Verlof dat hieronder komt, wordt bij goedkeuring geblokkeerd (tenzij expliciet overschreven).
+              </p>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setFunctieOpen(false)}>Annuleren</Button>

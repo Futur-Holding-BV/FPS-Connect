@@ -21,6 +21,29 @@ Bij het oppakken van de opdracht V1.4 Opleverrapportage bleek het merendeel al i
 - `docs/roadmap/gebouwd.md`, `docs/roadmap/actief.md`, `docs/roadmap/README.md`, `replit.md`: statusupdate V1.4 → gebouwd, V1.5 restscope herschreven.
 - Typecheck (`pnpm --filter @workspace/firevault run typecheck`) groen; geen backend-wijzigingen.
 
+## 2026-07-08 — Verlofmodule: leidinggevende-routing, bezetting, uren-integratie
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** middel (raakt goedkeuringslogica en urenregistratie; server-side afgedwongen, breed getypecheckt)
+
+**Wat is gebouwd:**
+
+- **Leidinggevende-koppeling op medewerkers** (`leidinggevende_id` op `medewerkers`) stuurt de verlof-goedkeuringsroute: verlofaanvragen gaan primair naar de eigen leidinggevende, met de hoofdbeheerder altijd als fallback/override. Zelf-koppeling (medewerker als eigen leidinggevende) is uitgesloten in de UI-selectie.
+- **Minimale bezetting per functie** (`minimale_bezetting` op functies, per werkgever) wordt bij het goedkeuren van verlof gecontroleerd: dreigt de bezetting onder de drempel te zakken in de aangevraagde periode, dan blokkeert de goedkeuring met een expliciete waarschuwing; alleen een gebruiker met `personeel`-schrijfrecht (2) kan dit bewust overrulen via `negeer_bezetting`.
+- **Volledige verlofsoort-categoriedekking**: hoofdcategorieën uitgebreid zodat alle courante verlofsoorten (incl. tijd-voor-tijd) een passende categorie hebben; geen niet-gecategoriseerde soorten meer.
+- **Uren/weekstaat-integratie**: de weekstaat toont nu een aparte "Verlof in deze week"-sectie (soort, periode, uren, status) naast de gewerkte uren, zodat verlof zichtbaar is zonder dubbele invoer.
+- **Tijd-voor-tijd rechtstreeks vanuit de urenmodule**: nieuwe aanvraagflow (`POST /uren/tijd-voor-tijd-aanvraag`) beschikbaar als knop op zowel de hoofdpagina Urenregistratie als in de weekstaat-detailweergave; legt direct een verlofaanvraag vast op de daarvoor bestemde tijd-voor-tijd-verlofsoort, geen aparte handmatige invoer nodig.
+- **Centrale verlofprofiel-aanmaak**: automatische aanmaak van een verlofprofiel voor een medewerker is gecentraliseerd (was eerder op meerdere plekken losstaand geïmplementeerd).
+- **Centrale medewerker/gebruiker-lookup-helpers**: opzoekingen tussen `medewerkers` en `gebruikers` lopen nu via gedeelde helperfuncties in plaats van losse ad-hoc joins — bewust géén nieuwe Persoon-entiteit.
+
+**Technische aanpak:**
+
+- `lib/db/src/schema`: additieve kolommen `medewerkers.leidinggevende_id` (FK, nullable) en `functies.minimale_bezetting` (int, nullable)
+- `lib/api-spec/openapi.yaml`: `leidinggevende_id`/`leidinggevende_naam` op medewerker-schema's, `minimale_bezetting` on functie-schema's, `negeer_bezetting` op verlofaanvraag-goedkeuring, `VerlofInWeek`/`verlof[]` op `WeekStaat`, nieuw pad `POST /uren/tijd-voor-tijd-aanvraag` met named schema `TijdVoorTijdAanvraagInput` (inline body gaf TS2308-dubbele-export-conflict — altijd `$ref` gebruiken)
+- `artifacts/api-server/src/routes/hrm.ts`: `medewerkerNaarJson` self-join voor leidinggevende-naam; GET/POST/PATCH medewerkers dragen `leidinggevende_id` door; bezetting-precheck + `negeer_bezetting`-override bij verlofgoedkeuring (override alleen bij `personeel`-schrijfrecht)
+- `artifacts/api-server/src/routes/uren.ts`: `GET /weekstaten/:id` retourneert gekoppelde verlofregels; nieuwe route voor tijd-voor-tijd-aanvraag
+- Codegen (`pnpm --filter @workspace/api-spec run codegen`) uitgevoerd; volledige `pnpm run typecheck` schoon op alle geraakte packages (twee pre-existing, ongerelateerde TS7030-fouten in `documenten.ts`/`offertes.ts` blijven onaangeroerd)
+- Frontend (desktop-only, `artifacts/firevault`): "Leidinggevende"-select op medewerker-aanmaak (`personeel/index.tsx`) en medewerker-profiel (`personeel/detail.tsx`, incl. read-only weergave op de medewerker-detailpagina); "Minimale bezetting"-veld op het functie-formulier; `uren/weekstaten.tsx` toont verlof per week en bevat de nieuwe `TijdVoorTijdAanvraagDialog` (herbruikbaar, ook gebruikt op `uren/index.tsx`)
+
 ## 2026-07-08 — Beheer wachtwoorden (alleen hoofdbeheerder)
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (auth/security-gevoelig, daarom breed getest)

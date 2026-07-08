@@ -26,6 +26,11 @@ export interface VerlofAanvraag {
   beoordeeld_door_id?: number | null;
   /** @nullable */
   beoordeeld_op?: string | null;
+  /**
+     * True als bij goedkeuring bleek dat de minimale bezetting voor de functie werd onderschreden (met expliciete override goedgekeurd).
+     * @nullable
+     */
+  bezetting_overschreden?: boolean | null;
   aangemaakt_op: string;
   bijgewerkt_op: string;
 }

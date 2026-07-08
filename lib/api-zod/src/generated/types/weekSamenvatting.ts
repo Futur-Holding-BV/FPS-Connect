@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { UrenRegistratie } from './urenRegistratie';
+import type { VerlofInWeek } from './verlofInWeek';
 import type { WeekSamenvattingPlanningItemsItem } from './weekSamenvattingPlanningItemsItem';
 
 export interface WeekSamenvatting {
@@ -15,6 +16,7 @@ export interface WeekSamenvatting {
   datum_van: string;
   datum_tot: string;
   uren: UrenRegistratie[];
+  verlof?: VerlofInWeek[];
   planning_items: WeekSamenvattingPlanningItemsItem[];
   totaal_uren: number;
   adv_uren: number;

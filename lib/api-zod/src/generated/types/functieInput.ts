@@ -17,4 +17,6 @@ export interface FunctieInput {
   doorgroeipad?: string;
   uitvoerend?: boolean;
   actief?: boolean;
+  /** @nullable */
+  minimale_bezetting?: number | null;
 }

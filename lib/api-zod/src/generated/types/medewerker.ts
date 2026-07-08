@@ -24,6 +24,13 @@ export interface Medewerker {
   functie_id?: number | null;
   /** @nullable */
   functie_naam?: string | null;
+  /**
+     * Medewerker-id van de leidinggevende; bepaalt de primaire goedkeuringsroute voor verlof (hoofdbeheerder/HRM blijven altijd fallback/override).
+     * @nullable
+     */
+  leidinggevende_id?: number | null;
+  /** @nullable */
+  leidinggevende_naam?: string | null;
   /** @nullable */
   cao?: string | null;
   dienstverband: string;

@@ -14,4 +14,6 @@ export interface VerlofAanvraagInput {
   status?: string;
   reden?: string;
   opmerking?: string;
+  /** Expliciete override om goed te keuren ondanks een onderschreden minimale bezetting; alleen toegestaan voor hoofdbeheerder/HRM-schrijfrecht. */
+  negeer_bezetting?: boolean;
 }

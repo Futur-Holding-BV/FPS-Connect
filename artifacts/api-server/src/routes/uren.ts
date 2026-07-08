@@ -7,9 +7,12 @@ import {
   gebouwenTable,
   gebruikersTable,
   planningItemsTable,
+  verlofAanvragenTable,
+  verlofsoortenTable,
 } from "@workspace/db/schema";
 import { eq, and, gte, lte, desc, sql, inArray } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth";
+import { medewerkerIdVoorGebruiker, medewerkerVoorId } from "../services/medewerker-lookup";
 
 const router = Router();
 
@@ -144,14 +147,44 @@ async function isWeekVergrendeld(medId: number, datum: string): Promise<boolean>
 }
 
 async function medewerkerId(gebruikerId: number): Promise<number | null> {
-  const [m] = await db
-    .select({ id: medewerkersTable.id })
-    .from(medewerkersTable)
-    .where(eq(medewerkersTable.gebruikerId, gebruikerId))
-    .limit(1);
-  return m?.id ?? null;
+  return medewerkerIdVoorGebruiker(gebruikerId, db);
 }
 
+// Goedgekeurd verlof (incl. tijd-voor-tijd) dat overlapt met een weekbereik —
+// zodat opgenomen verlof in de weekstaat zichtbaar is zonder dubbele uren-invoer.
+async function verlofVoorWeek(medId: number, van: string, tot: string) {
+  const rows = await db
+    .select({
+      a: verlofAanvragenTable,
+      verlofsoortNaam: verlofsoortenTable.naam,
+      hoofdcategorie: verlofsoortenTable.hoofdcategorie,
+      isTijdVoorTijd: verlofsoortenTable.isTijdVoorTijd,
+    })
+    .from(verlofAanvragenTable)
+    .leftJoin(verlofsoortenTable, eq(verlofAanvragenTable.verlofsoortId, verlofsoortenTable.id))
+    .where(
+      and(
+        eq(verlofAanvragenTable.medewerkerId, medId),
+        eq(verlofAanvragenTable.status, "goedgekeurd"),
+        lte(verlofAanvragenTable.startDatum, tot),
+        gte(verlofAanvragenTable.eindDatum, van),
+      ),
+    )
+    .orderBy(verlofAanvragenTable.startDatum);
+
+  return rows.map((r) => ({
+    id: r.a.id,
+    verlofsoort_id: r.a.verlofsoortId,
+    verlofsoort_naam: r.verlofsoortNaam ?? null,
+    hoofdcategorie: r.hoofdcategorie ?? null,
+    is_tijd_voor_tijd: r.isTijdVoorTijd ?? false,
+    start_datum: r.a.startDatum,
+    eind_datum: r.a.eindDatum,
+    aantal_uren: r.a.aantalUren,
+    reden: r.a.reden ?? null,
+    status: r.a.status,
+  }));
+}
 
 // ── GET /uren ─────────────────────────────────────────────────────────────────
 router.get("/uren", requireAuth, async (req, res): Promise<void> => {
@@ -269,6 +302,7 @@ router.get("/uren/mijn-week", requireAuth, async (req, res): Promise<void> => {
 
   const totaalUren = rows.reduce((acc, r) => acc + r.uren.nettoUren, 0);
   const advUren = medewerker ? berekenAdv(medewerker, totaalUren) : 0;
+  const verlof = await verlofVoorWeek(mid, van, tot);
 
   res.json({
     medewerker_id: mid,
@@ -286,8 +320,71 @@ router.get("/uren/mijn-week", requireAuth, async (req, res): Promise<void> => {
       begin_tijd: p.item.tijdStart ?? null,
       eind_tijd: p.item.tijdEind ?? null,
     })),
+    verlof,
     totaal_uren: Math.round(totaalUren * 100) / 100,
     adv_uren: advUren,
+  });
+});
+
+// ── POST /uren/tijd-voor-tijd-aanvraag ─────────────────────────────────────────
+// Tijd-voor-tijd rechtstreeks vanuit de uren-module aanvragen, zonder dubbele
+// invoer: dit maakt een verlofaanvraag tegen de isTijdVoorTijd-verlofsoort van
+// de werkgever (fallback: eerste actieve isTijdVoorTijd-verlofsoort zonder
+// werkgeverkoppeling). Geen aparte urenregel — de aanvraag verschijnt via
+// verlofVoorWeek() in de weekstaat zodra deze is goedgekeurd.
+router.post("/uren/tijd-voor-tijd-aanvraag", requireAuth, async (req, res): Promise<void> => {
+  const userId = req.session.userId!;
+  const { start_datum, eind_datum, aantal_uren, reden } = req.body;
+
+  if (!start_datum || !eind_datum || aantal_uren == null) {
+    return void res.status(400).json({ error: "start_datum, eind_datum en aantal_uren zijn verplicht" });
+  }
+
+  const mid = await medewerkerId(userId);
+  if (!mid) return void res.status(400).json({ error: "Geen medewerkersprofiel gekoppeld aan dit account" });
+
+  const medewerker = await medewerkerVoorId(mid, db);
+  const werkgeverId = medewerker?.werkgeverId ?? null;
+
+  const kandidaten = await db
+    .select()
+    .from(verlofsoortenTable)
+    .where(and(eq(verlofsoortenTable.isTijdVoorTijd, true), eq(verlofsoortenTable.actief, true)));
+
+  const verlofsoort =
+    (werkgeverId != null ? kandidaten.find((v) => v.werkgeverId === werkgeverId) : undefined) ??
+    kandidaten.find((v) => v.werkgeverId == null) ??
+    kandidaten[0];
+
+  if (!verlofsoort) {
+    return void res.status(409).json({
+      error: "Geen tijd-voor-tijd verlofsoort geconfigureerd. Vraag een beheerder deze aan te maken bij Verlofsoorten.",
+    });
+  }
+
+  const [a] = await db
+    .insert(verlofAanvragenTable)
+    .values({
+      medewerkerId: mid,
+      verlofsoortId: verlofsoort.id,
+      startDatum: start_datum,
+      eindDatum: eind_datum,
+      aantalUren: aantal_uren,
+      status: "aangevraagd",
+      reden: reden ?? null,
+    })
+    .returning();
+
+  res.status(201).json({
+    id: a.id,
+    medewerker_id: a.medewerkerId,
+    verlofsoort_id: a.verlofsoortId,
+    verlofsoort_naam: verlofsoort.naam,
+    start_datum: a.startDatum,
+    eind_datum: a.eindDatum,
+    aantal_uren: a.aantalUren,
+    status: a.status,
+    reden: a.reden,
   });
 });
 
@@ -642,6 +739,8 @@ router.get("/weekstaten/:id", requireAuth, async (req, res): Promise<void> => {
     )
     .orderBy(urenRegistratiesTable.datum, urenRegistratiesTable.beginTijd);
 
+  const verlof = await verlofVoorWeek(row.ws.medewerkerId, van, tot);
+
   res.json({
     ...mapWeekStaat(row.ws, {
       medewerkerNaam: row.medewerkerNaam,
@@ -652,6 +751,7 @@ router.get("/weekstaten/:id", requireAuth, async (req, res): Promise<void> => {
     datum_van: van,
     datum_tot: tot,
     uren: urenRows.map((r) => mapUren(r.uren, { gebouwNaam: r.gebouwNaam })),
+    verlof,
   });
 });
 

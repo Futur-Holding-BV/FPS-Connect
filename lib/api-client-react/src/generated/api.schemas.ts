@@ -3560,6 +3560,11 @@ export interface Functie {
   doorgroeipad?: string | null;
   actief: boolean;
   uitvoerend?: boolean;
+  /**
+     * Minimum aantal gelijktijdig beschikbare medewerkers met deze functie; wordt bij verlofgoedkeuring gecontroleerd.
+     * @nullable
+     */
+  minimale_bezetting?: number | null;
   aangemaakt_op: string;
   bijgewerkt_op: string;
 }
@@ -3575,6 +3580,8 @@ export interface FunctieInput {
   doorgroeipad?: string;
   uitvoerend?: boolean;
   actief?: boolean;
+  /** @nullable */
+  minimale_bezetting?: number | null;
 }
 
 /**
@@ -3725,6 +3732,13 @@ export interface Medewerker {
   functie_id?: number | null;
   /** @nullable */
   functie_naam?: string | null;
+  /**
+     * Medewerker-id van de leidinggevende; bepaalt de primaire goedkeuringsroute voor verlof (hoofdbeheerder/HRM blijven altijd fallback/override).
+     * @nullable
+     */
+  leidinggevende_id?: number | null;
+  /** @nullable */
+  leidinggevende_naam?: string | null;
   /** @nullable */
   cao?: string | null;
   dienstverband: string;
@@ -3793,6 +3807,8 @@ export interface MedewerkerInput {
   werkmaatschappij?: string;
   /** @nullable */
   functie_id?: number | null;
+  /** @nullable */
+  leidinggevende_id?: number | null;
   cao?: string;
   dienstverband?: string;
   /** @nullable */
@@ -4146,10 +4162,34 @@ export interface BekwaamheidInput {
   opmerking?: string;
 }
 
+/**
+ * Genormaliseerde categorie voor rapportage/koppelingen: vakantie, adv_atv, tijd_voor_tijd, ziekte, bijzonder, onbetaald of overig.
+ * @nullable
+ */
+export type VerlofsoortHoofdcategorie = typeof VerlofsoortHoofdcategorie[keyof typeof VerlofsoortHoofdcategorie] | null;
+
+
+export const VerlofsoortHoofdcategorie = {
+  vakantie: 'vakantie',
+  adv_atv: 'adv_atv',
+  tijd_voor_tijd: 'tijd_voor_tijd',
+  ziekte: 'ziekte',
+  bijzonder: 'bijzonder',
+  onbetaald: 'onbetaald',
+  overig: 'overig',
+} as const;
+
 export interface Verlofsoort {
   id: number;
   naam: string;
   categorie: string;
+  /**
+     * Genormaliseerde categorie voor rapportage/koppelingen: vakantie, adv_atv, tijd_voor_tijd, ziekte, bijzonder, onbetaald of overig.
+     * @nullable
+     */
+  hoofdcategorie?: VerlofsoortHoofdcategorie;
+  /** Markeert deze verlofsoort als de tijd-voor-tijd-soort, zodat de uren-module er direct een aanvraag tegen kan aanmaken. */
+  is_tijd_voor_tijd?: boolean;
   /** @nullable */
   cao?: string | null;
   /** @nullable */
@@ -4171,9 +4211,28 @@ export interface Verlofsoort {
   bijgewerkt_op: string;
 }
 
+/**
+ * @nullable
+ */
+export type VerlofsoortInputHoofdcategorie = typeof VerlofsoortInputHoofdcategorie[keyof typeof VerlofsoortInputHoofdcategorie] | null;
+
+
+export const VerlofsoortInputHoofdcategorie = {
+  vakantie: 'vakantie',
+  adv_atv: 'adv_atv',
+  tijd_voor_tijd: 'tijd_voor_tijd',
+  ziekte: 'ziekte',
+  bijzonder: 'bijzonder',
+  onbetaald: 'onbetaald',
+  overig: 'overig',
+} as const;
+
 export interface VerlofsoortInput {
   naam: string;
   categorie?: string;
+  /** @nullable */
+  hoofdcategorie?: VerlofsoortInputHoofdcategorie;
+  is_tijd_voor_tijd?: boolean;
   /** @nullable */
   cao?: string | null;
   /** @nullable */
@@ -4237,6 +4296,11 @@ export interface VerlofAanvraag {
   beoordeeld_door_id?: number | null;
   /** @nullable */
   beoordeeld_op?: string | null;
+  /**
+     * True als bij goedkeuring bleek dat de minimale bezetting voor de functie werd onderschreden (met expliciete override goedgekeurd).
+     * @nullable
+     */
+  bezetting_overschreden?: boolean | null;
   aangemaakt_op: string;
   bijgewerkt_op: string;
 }
@@ -4249,6 +4313,15 @@ export interface VerlofAanvraagInput {
   status?: string;
   reden?: string;
   opmerking?: string;
+  /** Expliciete override om goed te keuren ondanks een onderschreden minimale bezetting; alleen toegestaan voor hoofdbeheerder/HRM-schrijfrecht. */
+  negeer_bezetting?: boolean;
+}
+
+export interface TijdVoorTijdAanvraagInput {
+  start_datum: string;
+  eind_datum: string;
+  aantal_uren: number;
+  reden?: string;
 }
 
 export interface Ziekmelding {
@@ -7000,6 +7073,19 @@ export interface UrenRegistratieInput {
   planning_item_id?: number | null;
 }
 
+export interface VerlofInWeek {
+  id: number;
+  verlofsoort_id: number;
+  verlofsoort_naam: string;
+  /** @nullable */
+  hoofdcategorie?: string | null;
+  is_tijd_voor_tijd?: boolean;
+  start_datum: string;
+  eind_datum: string;
+  aantal_uren: number;
+  status: string;
+}
+
 export interface WeekStaat {
   id: number;
   medewerker_id: number;
@@ -7019,6 +7105,7 @@ export interface WeekStaat {
   vergrendeld?: boolean;
   vergrendeld_op?: string | null;
   vergrendeld_door_naam?: string | null;
+  verlof?: VerlofInWeek[];
   aangemaakt_op: string;
   bijgewerkt_op: string;
 }
@@ -7055,6 +7142,7 @@ export interface WeekSamenvatting {
   datum_van: string;
   datum_tot: string;
   uren: UrenRegistratie[];
+  verlof?: VerlofInWeek[];
   planning_items: WeekSamenvattingPlanningItemsItem[];
   totaal_uren: number;
   adv_uren: number;

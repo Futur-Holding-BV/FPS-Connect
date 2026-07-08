@@ -693,6 +693,7 @@ import type {
   Testrapport,
   TestrapportInput,
   TestrapportUpdate,
+  TijdVoorTijdAanvraagInput,
   TijdlijnItem,
   ToewijsbareGebruiker,
   Toewijzing,
@@ -45733,6 +45734,76 @@ export function useGetMijnWeekUren<TData = Awaited<ReturnType<typeof getMijnWeek
 
 
 
+
+export const getCreateTijdVoorTijdAanvraagUrl = () => {
+
+
+
+
+  return `/api/uren/tijd-voor-tijd-aanvraag`
+}
+
+/**
+ * @summary Tijd-voor-tijd rechtstreeks vanuit de urenmodule aanvragen (zonder dubbele invoer)
+ */
+export const createTijdVoorTijdAanvraag = async (tijdVoorTijdAanvraagInput: TijdVoorTijdAanvraagInput, options?: RequestInit): Promise<VerlofAanvraag> => {
+
+  return customFetch<VerlofAanvraag>(getCreateTijdVoorTijdAanvraagUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(tijdVoorTijdAanvraagInput)
+  }
+);}
+
+
+
+
+export const getCreateTijdVoorTijdAanvraagMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createTijdVoorTijdAanvraag>>, TError,{data: BodyType<TijdVoorTijdAanvraagInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createTijdVoorTijdAanvraag>>, TError,{data: BodyType<TijdVoorTijdAanvraagInput>}, TContext> => {
+
+const mutationKey = ['createTijdVoorTijdAanvraag'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createTijdVoorTijdAanvraag>>, {data: BodyType<TijdVoorTijdAanvraagInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createTijdVoorTijdAanvraag(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateTijdVoorTijdAanvraagMutationResult = NonNullable<Awaited<ReturnType<typeof createTijdVoorTijdAanvraag>>>
+    export type CreateTijdVoorTijdAanvraagMutationBody = BodyType<TijdVoorTijdAanvraagInput>
+    export type CreateTijdVoorTijdAanvraagMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Tijd-voor-tijd rechtstreeks vanuit de urenmodule aanvragen (zonder dubbele invoer)
+ */
+export const useCreateTijdVoorTijdAanvraag = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createTijdVoorTijdAanvraag>>, TError,{data: BodyType<TijdVoorTijdAanvraagInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createTijdVoorTijdAanvraag>>,
+        TError,
+        {data: BodyType<TijdVoorTijdAanvraagInput>},
+        TContext
+      > => {
+      return useMutation(getCreateTijdVoorTijdAanvraagMutationOptions(options));
+    }
 
 export const getGetUrenRegistratieUrl = (id: number,) => {
 

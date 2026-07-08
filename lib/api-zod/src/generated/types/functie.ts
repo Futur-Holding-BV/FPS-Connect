@@ -24,6 +24,11 @@ export interface Functie {
   doorgroeipad?: string | null;
   actief: boolean;
   uitvoerend?: boolean;
+  /**
+     * Minimum aantal gelijktijdig beschikbare medewerkers met deze functie; wordt bij verlofgoedkeuring gecontroleerd.
+     * @nullable
+     */
+  minimale_bezetting?: number | null;
   aangemaakt_op: string;
   bijgewerkt_op: string;
 }

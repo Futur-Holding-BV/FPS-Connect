@@ -2,7 +2,7 @@
 // Alle modules die statuswijzigingen kennen zijn hier geregistreerd.
 // Nieuwe modules: voeg een config toe en registreer onderaan.
 
-import { eq } from "drizzle-orm";
+import { eq, and, ne, inArray, gte, lte } from "drizzle-orm";
 import {
   offertesTable,
   opdrachtenTable,
@@ -16,9 +16,12 @@ import {
   calculatiesTable,
   planningItemsTable,
   arbeidsovereenkomstenTable,
+  medewerkersTable,
+  functiesTable,
 } from "@workspace/db";
 import { logActiviteit } from "../lib/activiteit";
 import { logger } from "../lib/logger";
+import { medewerkerVoorId, isLeidinggevendeVan } from "./medewerker-lookup";
 import {
   workflowService,
   voorwaardeFout,
@@ -55,6 +58,74 @@ async function pasVerlofSaldoAan(
     .update(verlofSaldiTable)
     .set({ opgenomenUren: opgenomen, saldoUren: saldo, bijgewerktOp: new Date() })
     .where(eq(verlofSaldiTable.id, s.id));
+}
+
+type BezettingResultaat = {
+  onderschreden: boolean;
+  functieNaam?: string;
+  datum?: string;
+  beschikbaar?: number;
+  minimum?: number;
+};
+
+// Controleert of het goedkeuren van deze verlofaanvraag de minimale bezetting
+// (functie.minimaleBezetting) van de functie van de aanvrager op enige dag binnen
+// de aanvraagperiode zou onderschrijden. Telt alleen collega's met dezelfde
+// functie mee (bezetting is functie-gebonden, niet werkgever-breed); een
+// medewerker zonder functie of een functie zonder ingestelde drempel wordt nooit
+// geblokkeerd (null = geen bezettingscontrole).
+async function controleerBezetting(
+  db: TransitieContext["db"],
+  aanvraag: { id: number; medewerkerId: number; startDatum: string; eindDatum: string },
+): Promise<BezettingResultaat> {
+  const medewerker = await medewerkerVoorId(aanvraag.medewerkerId, db);
+  if (!medewerker?.functieId) return { onderschreden: false };
+
+  const [functie] = await (db as any)
+    .select()
+    .from(functiesTable)
+    .where(eq(functiesTable.id, medewerker.functieId));
+  if (!functie?.minimaleBezetting) return { onderschreden: false };
+
+  const collegas = await (db as any)
+    .select({ id: medewerkersTable.id })
+    .from(medewerkersTable)
+    .where(and(eq(medewerkersTable.functieId, medewerker.functieId), eq(medewerkersTable.actief, true)));
+  const totaal = collegas.length;
+  if (totaal === 0) return { onderschreden: false };
+  const collegaIds: number[] = collegas.map((c: { id: number }) => c.id);
+
+  const overlappend = await (db as any)
+    .select({
+      medewerkerId: verlofAanvragenTable.medewerkerId,
+      startDatum: verlofAanvragenTable.startDatum,
+      eindDatum: verlofAanvragenTable.eindDatum,
+    })
+    .from(verlofAanvragenTable)
+    .where(
+      and(
+        inArray(verlofAanvragenTable.medewerkerId, collegaIds),
+        eq(verlofAanvragenTable.status, "goedgekeurd"),
+        ne(verlofAanvragenTable.id, aanvraag.id),
+        lte(verlofAanvragenTable.startDatum, aanvraag.eindDatum),
+        gte(verlofAanvragenTable.eindDatum, aanvraag.startDatum),
+      ),
+    );
+
+  const start = new Date(aanvraag.startDatum);
+  const eind = new Date(aanvraag.eindDatum);
+  for (let d = new Date(start); d.getTime() <= eind.getTime(); d.setDate(d.getDate() + 1)) {
+    const dagStr = d.toISOString().slice(0, 10);
+    const afwezig = new Set<number>([medewerker.id]);
+    for (const o of overlappend as { medewerkerId: number; startDatum: string; eindDatum: string }[]) {
+      if (o.startDatum <= dagStr && o.eindDatum >= dagStr) afwezig.add(o.medewerkerId);
+    }
+    const beschikbaar = totaal - afwezig.size;
+    if (beschikbaar < functie.minimaleBezetting) {
+      return { onderschreden: true, functieNaam: functie.naam, datum: dagStr, beschikbaar, minimum: functie.minimaleBezetting };
+    }
+  }
+  return { onderschreden: false };
 }
 
 async function logVerlofMutatie(
@@ -256,6 +327,14 @@ const verlofConfig: WorkflowConfig<VerlofAanvraag> = {
 
     if (!vorige) throw new Error("Verlofaanvraag niet gevonden (row lock)");
 
+    // Bezetting: bij goedkeuren wordt het (mogelijk overruled) resultaat vastgelegd
+    // als audit-vlag, zodat achteraf zichtbaar blijft dat er bewust is overschreven.
+    let bezettingOverschreden = vorige.bezettingOverschreden;
+    if (nieuweStatus === "goedgekeurd") {
+      const bezetting = await controleerBezetting(ctx.db, vorige);
+      bezettingOverschreden = bezetting.onderschreden;
+    }
+
     const [bijgewerkt] = await ctx.db.update(verlofAanvragenTable)
       .set({
         status: nieuweStatus,
@@ -265,6 +344,7 @@ const verlofConfig: WorkflowConfig<VerlofAanvraag> = {
           typeof ctx.params?.reden === "string" ? ctx.params.reden : vorige.reden,
         opmerking:
           typeof ctx.params?.opmerking === "string" ? ctx.params.opmerking : vorige.opmerking,
+        bezettingOverschreden,
         bijgewerktOp: new Date(),
       })
       .where(eq(verlofAanvragenTable.id, id))
@@ -306,13 +386,46 @@ const verlofConfig: WorkflowConfig<VerlofAanvraag> = {
       van: "aangevraagd",
       naar: "goedgekeurd",
       label: "Goedkeuren",
-      bevoegdheid: ["personeel", 2],
+      // Autorisatie: hoofdbeheerder en HRM (personeel:2) zijn altijd de fallback/
+      // override; daarnaast mag de leidinggevende van de aanvrager beoordelen —
+      // dit is de primaire goedkeuringsroute in de praktijk.
+      magUitvoeren: async (entity, ctx) => {
+        if (ctx.isHoofdbeheerder) return true;
+        if ((ctx.bevoegdheden["personeel"] ?? 0) >= 2) return true;
+        return isLeidinggevendeVan(ctx.gebruikerId, entity.medewerkerId, ctx.db);
+      },
+      precheck: async (entity, ctx) => {
+        const bezetting = await controleerBezetting(ctx.db, entity);
+        if (!bezetting.onderschreden) return null;
+
+        // Alleen hoofdbeheerder/HRM mag de bezettingsdrempel overschrijven — een
+        // leidinggevende die geen personeel-schrijfrecht heeft mag dat nooit.
+        const magOverschrijven = ctx.isHoofdbeheerder || (ctx.bevoegdheden["personeel"] ?? 0) >= 2;
+        const detail = `Minimale bezetting voor functie "${bezetting.functieNaam}" wordt op ${bezetting.datum} onderschreden (${bezetting.beschikbaar}/${bezetting.minimum} beschikbaar).`;
+        if (!magOverschrijven) {
+          return voorwaardeFout(
+            `${detail} Alleen een hoofdbeheerder of HRM-beheerder kan dit overschrijven.`,
+            ["bezetting"],
+          );
+        }
+        if (ctx.params?.negeer_bezetting !== true) {
+          return voorwaardeFout(
+            `${detail} Bevestig expliciet (negeer_bezetting) om toch goed te keuren.`,
+            ["bezetting"],
+          );
+        }
+        return null;
+      },
     },
     {
       van: "aangevraagd",
       naar: "afgewezen",
       label: "Afwijzen",
-      bevoegdheid: ["personeel", 2],
+      magUitvoeren: async (entity, ctx) => {
+        if (ctx.isHoofdbeheerder) return true;
+        if ((ctx.bevoegdheden["personeel"] ?? 0) >= 2) return true;
+        return isLeidinggevendeVan(ctx.gebruikerId, entity.medewerkerId, ctx.db);
+      },
       precheck: async (_entity, ctx) => {
         if (!ctx.params?.reden || String(ctx.params.reden).trim() === "") {
           return voorwaardeFout("Reden is verplicht bij het afwijzen van een verlofaanvraag.", ["reden"]);

@@ -5,11 +5,19 @@
  * FPS Brandpreventie - Platform voor brandpreventieve gebouwvoorzieningen
  * OpenAPI spec version: 0.1.0
  */
+import type { VerlofsoortHoofdcategorie } from './verlofsoortHoofdcategorie';
 
 export interface Verlofsoort {
   id: number;
   naam: string;
   categorie: string;
+  /**
+     * Genormaliseerde categorie voor rapportage/koppelingen: vakantie, adv_atv, tijd_voor_tijd, ziekte, bijzonder, onbetaald of overig.
+     * @nullable
+     */
+  hoofdcategorie?: VerlofsoortHoofdcategorie;
+  /** Markeert deze verlofsoort als de tijd-voor-tijd-soort, zodat de uren-module er direct een aanvraag tegen kan aanmaken. */
+  is_tijd_voor_tijd?: boolean;
   /** @nullable */
   cao?: string | null;
   /** @nullable */

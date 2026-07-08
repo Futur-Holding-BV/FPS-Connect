@@ -2471,6 +2471,8 @@ export const ListMijnVerlofsoortenResponseItem = zod.object({
   "id": zod.number(),
   "naam": zod.string(),
   "categorie": zod.string(),
+  "hoofdcategorie": zod.union([zod.literal('vakantie'),zod.literal('adv_atv'),zod.literal('tijd_voor_tijd'),zod.literal('ziekte'),zod.literal('bijzonder'),zod.literal('onbetaald'),zod.literal('overig'),zod.literal(null)]).nullish().describe('Genormaliseerde categorie voor rapportage\/koppelingen: vakantie, adv_atv, tijd_voor_tijd, ziekte, bijzonder, onbetaald of overig.'),
+  "is_tijd_voor_tijd": zod.boolean().optional().describe('Markeert deze verlofsoort als de tijd-voor-tijd-soort, zodat de uren-module er direct een aanvraag tegen kan aanmaken.'),
   "cao": zod.string().nullish(),
   "werkmaatschappij": zod.string().nullish(),
   "betaald": zod.boolean(),
@@ -2524,6 +2526,7 @@ export const ListMijnVerlofaanvragenResponseItem = zod.object({
   "opmerking": zod.string().nullish(),
   "beoordeeld_door_id": zod.number().nullish(),
   "beoordeeld_op": zod.string().nullish(),
+  "bezetting_overschreden": zod.boolean().nullish().describe('True als bij goedkeuring bleek dat de minimale bezetting voor de functie werd onderschreden (met expliciete override goedgekeurd).'),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })
@@ -2540,7 +2543,8 @@ export const CreateMijnVerlofaanvraagBody = zod.object({
   "aantal_uren": zod.number().optional(),
   "status": zod.string().optional(),
   "reden": zod.string().optional(),
-  "opmerking": zod.string().optional()
+  "opmerking": zod.string().optional(),
+  "negeer_bezetting": zod.boolean().optional().describe('Expliciete override om goed te keuren ondanks een onderschreden minimale bezetting; alleen toegestaan voor hoofdbeheerder\/HRM-schrijfrecht.')
 })
 
 export const CreateMijnVerlofaanvraagResponse = zod.void()
@@ -8428,6 +8432,7 @@ export const ListFunctiesResponseItem = zod.object({
   "doorgroeipad": zod.string().nullish(),
   "actief": zod.boolean(),
   "uitvoerend": zod.boolean().optional(),
+  "minimale_bezetting": zod.number().nullish().describe('Minimum aantal gelijktijdig beschikbare medewerkers met deze functie; wordt bij verlofgoedkeuring gecontroleerd.'),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })
@@ -8447,7 +8452,8 @@ export const CreateFunctieBody = zod.object({
   "opleidingsvereisten": zod.string().optional(),
   "doorgroeipad": zod.string().optional(),
   "uitvoerend": zod.boolean().optional(),
-  "actief": zod.boolean().optional()
+  "actief": zod.boolean().optional(),
+  "minimale_bezetting": zod.number().nullish()
 })
 
 export const CreateFunctieResponse = zod.void()
@@ -8472,6 +8478,7 @@ export const GetFunctieResponse = zod.object({
   "doorgroeipad": zod.string().nullish(),
   "actief": zod.boolean(),
   "uitvoerend": zod.boolean().optional(),
+  "minimale_bezetting": zod.number().nullish().describe('Minimum aantal gelijktijdig beschikbare medewerkers met deze functie; wordt bij verlofgoedkeuring gecontroleerd.'),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })
@@ -8494,7 +8501,8 @@ export const UpdateFunctieBody = zod.object({
   "opleidingsvereisten": zod.string().optional(),
   "doorgroeipad": zod.string().optional(),
   "uitvoerend": zod.boolean().optional(),
-  "actief": zod.boolean().optional()
+  "actief": zod.boolean().optional(),
+  "minimale_bezetting": zod.number().nullish()
 })
 
 export const UpdateFunctieResponse = zod.object({
@@ -8509,6 +8517,7 @@ export const UpdateFunctieResponse = zod.object({
   "doorgroeipad": zod.string().nullish(),
   "actief": zod.boolean(),
   "uitvoerend": zod.boolean().optional(),
+  "minimale_bezetting": zod.number().nullish().describe('Minimum aantal gelijktijdig beschikbare medewerkers met deze functie; wordt bij verlofgoedkeuring gecontroleerd.'),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })
@@ -8677,6 +8686,8 @@ export const ListMedewerkersResponseItem = zod.object({
   "werkmaatschappij": zod.string(),
   "functie_id": zod.number().nullish(),
   "functie_naam": zod.string().nullish(),
+  "leidinggevende_id": zod.number().nullish().describe('Medewerker-id van de leidinggevende; bepaalt de primaire goedkeuringsroute voor verlof (hoofdbeheerder\/HRM blijven altijd fallback\/override).'),
+  "leidinggevende_naam": zod.string().nullish(),
   "cao": zod.string().nullish(),
   "dienstverband": zod.string(),
   "contracturen_per_week": zod.number().nullish(),
@@ -8716,6 +8727,7 @@ export const CreateMedewerkerBody = zod.object({
   "mobiel": zod.string().optional(),
   "werkmaatschappij": zod.string().optional(),
   "functie_id": zod.number().nullish(),
+  "leidinggevende_id": zod.number().nullish(),
   "cao": zod.string().optional(),
   "dienstverband": zod.string().optional(),
   "contracturen_per_week": zod.number().nullish(),
@@ -8786,6 +8798,8 @@ export const GetMedewerkerResponse = zod.object({
   "werkmaatschappij": zod.string(),
   "functie_id": zod.number().nullish(),
   "functie_naam": zod.string().nullish(),
+  "leidinggevende_id": zod.number().nullish().describe('Medewerker-id van de leidinggevende; bepaalt de primaire goedkeuringsroute voor verlof (hoofdbeheerder\/HRM blijven altijd fallback\/override).'),
+  "leidinggevende_naam": zod.string().nullish(),
   "cao": zod.string().nullish(),
   "dienstverband": zod.string(),
   "contracturen_per_week": zod.number().nullish(),
@@ -8828,6 +8842,7 @@ export const UpdateMedewerkerBody = zod.object({
   "mobiel": zod.string().optional(),
   "werkmaatschappij": zod.string().optional(),
   "functie_id": zod.number().nullish(),
+  "leidinggevende_id": zod.number().nullish(),
   "cao": zod.string().optional(),
   "dienstverband": zod.string().optional(),
   "contracturen_per_week": zod.number().nullish(),
@@ -8863,6 +8878,8 @@ export const UpdateMedewerkerResponse = zod.object({
   "werkmaatschappij": zod.string(),
   "functie_id": zod.number().nullish(),
   "functie_naam": zod.string().nullish(),
+  "leidinggevende_id": zod.number().nullish().describe('Medewerker-id van de leidinggevende; bepaalt de primaire goedkeuringsroute voor verlof (hoofdbeheerder\/HRM blijven altijd fallback\/override).'),
+  "leidinggevende_naam": zod.string().nullish(),
   "cao": zod.string().nullish(),
   "dienstverband": zod.string(),
   "contracturen_per_week": zod.number().nullish(),
@@ -9193,6 +9210,8 @@ export const ListVerlofsoortenResponseItem = zod.object({
   "id": zod.number(),
   "naam": zod.string(),
   "categorie": zod.string(),
+  "hoofdcategorie": zod.union([zod.literal('vakantie'),zod.literal('adv_atv'),zod.literal('tijd_voor_tijd'),zod.literal('ziekte'),zod.literal('bijzonder'),zod.literal('onbetaald'),zod.literal('overig'),zod.literal(null)]).nullish().describe('Genormaliseerde categorie voor rapportage\/koppelingen: vakantie, adv_atv, tijd_voor_tijd, ziekte, bijzonder, onbetaald of overig.'),
+  "is_tijd_voor_tijd": zod.boolean().optional().describe('Markeert deze verlofsoort als de tijd-voor-tijd-soort, zodat de uren-module er direct een aanvraag tegen kan aanmaken.'),
   "cao": zod.string().nullish(),
   "werkmaatschappij": zod.string().nullish(),
   "betaald": zod.boolean(),
@@ -9215,6 +9234,8 @@ export const ListVerlofsoortenResponse = zod.array(ListVerlofsoortenResponseItem
 export const CreateVerlofsoortBody = zod.object({
   "naam": zod.string(),
   "categorie": zod.string().optional(),
+  "hoofdcategorie": zod.union([zod.literal('vakantie'),zod.literal('adv_atv'),zod.literal('tijd_voor_tijd'),zod.literal('ziekte'),zod.literal('bijzonder'),zod.literal('onbetaald'),zod.literal('overig'),zod.literal(null)]).nullish(),
+  "is_tijd_voor_tijd": zod.boolean().optional(),
   "cao": zod.string().nullish(),
   "werkmaatschappij": zod.string().nullish(),
   "betaald": zod.boolean().optional(),
@@ -9240,6 +9261,8 @@ export const UpdateVerlofsoortParams = zod.object({
 export const UpdateVerlofsoortBody = zod.object({
   "naam": zod.string(),
   "categorie": zod.string().optional(),
+  "hoofdcategorie": zod.union([zod.literal('vakantie'),zod.literal('adv_atv'),zod.literal('tijd_voor_tijd'),zod.literal('ziekte'),zod.literal('bijzonder'),zod.literal('onbetaald'),zod.literal('overig'),zod.literal(null)]).nullish(),
+  "is_tijd_voor_tijd": zod.boolean().optional(),
   "cao": zod.string().nullish(),
   "werkmaatschappij": zod.string().nullish(),
   "betaald": zod.boolean().optional(),
@@ -9256,6 +9279,8 @@ export const UpdateVerlofsoortResponse = zod.object({
   "id": zod.number(),
   "naam": zod.string(),
   "categorie": zod.string(),
+  "hoofdcategorie": zod.union([zod.literal('vakantie'),zod.literal('adv_atv'),zod.literal('tijd_voor_tijd'),zod.literal('ziekte'),zod.literal('bijzonder'),zod.literal('onbetaald'),zod.literal('overig'),zod.literal(null)]).nullish().describe('Genormaliseerde categorie voor rapportage\/koppelingen: vakantie, adv_atv, tijd_voor_tijd, ziekte, bijzonder, onbetaald of overig.'),
+  "is_tijd_voor_tijd": zod.boolean().optional().describe('Markeert deze verlofsoort als de tijd-voor-tijd-soort, zodat de uren-module er direct een aanvraag tegen kan aanmaken.'),
   "cao": zod.string().nullish(),
   "werkmaatschappij": zod.string().nullish(),
   "betaald": zod.boolean(),
@@ -9389,6 +9414,7 @@ export const ListVerlofAanvragenResponseItem = zod.object({
   "opmerking": zod.string().nullish(),
   "beoordeeld_door_id": zod.number().nullish(),
   "beoordeeld_op": zod.string().nullish(),
+  "bezetting_overschreden": zod.boolean().nullish().describe('True als bij goedkeuring bleek dat de minimale bezetting voor de functie werd onderschreden (met expliciete override goedgekeurd).'),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })
@@ -9409,7 +9435,8 @@ export const CreateVerlofAanvraagBody = zod.object({
   "aantal_uren": zod.number().optional(),
   "status": zod.string().optional(),
   "reden": zod.string().optional(),
-  "opmerking": zod.string().optional()
+  "opmerking": zod.string().optional(),
+  "negeer_bezetting": zod.boolean().optional().describe('Expliciete override om goed te keuren ondanks een onderschreden minimale bezetting; alleen toegestaan voor hoofdbeheerder\/HRM-schrijfrecht.')
 })
 
 export const CreateVerlofAanvraagResponse = zod.void()
@@ -9487,6 +9514,8 @@ export const OffboardMedewerkerResponse = zod.object({
   "werkmaatschappij": zod.string(),
   "functie_id": zod.number().nullish(),
   "functie_naam": zod.string().nullish(),
+  "leidinggevende_id": zod.number().nullish().describe('Medewerker-id van de leidinggevende; bepaalt de primaire goedkeuringsroute voor verlof (hoofdbeheerder\/HRM blijven altijd fallback\/override).'),
+  "leidinggevende_naam": zod.string().nullish(),
   "cao": zod.string().nullish(),
   "dienstverband": zod.string(),
   "contracturen_per_week": zod.number().nullish(),
@@ -9765,6 +9794,7 @@ export const ListAlleVerlofAanvragenResponseItem = zod.object({
   "opmerking": zod.string().nullish(),
   "beoordeeld_door_id": zod.number().nullish(),
   "beoordeeld_op": zod.string().nullish(),
+  "bezetting_overschreden": zod.boolean().nullish().describe('True als bij goedkeuring bleek dat de minimale bezetting voor de functie werd onderschreden (met expliciete override goedgekeurd).'),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })
@@ -9785,7 +9815,8 @@ export const UpdateVerlofAanvraagBody = zod.object({
   "aantal_uren": zod.number().optional(),
   "status": zod.string().optional(),
   "reden": zod.string().optional(),
-  "opmerking": zod.string().optional()
+  "opmerking": zod.string().optional(),
+  "negeer_bezetting": zod.boolean().optional().describe('Expliciete override om goed te keuren ondanks een onderschreden minimale bezetting; alleen toegestaan voor hoofdbeheerder\/HRM-schrijfrecht.')
 })
 
 export const UpdateVerlofAanvraagResponse = zod.object({
@@ -9802,6 +9833,7 @@ export const UpdateVerlofAanvraagResponse = zod.object({
   "opmerking": zod.string().nullish(),
   "beoordeeld_door_id": zod.number().nullish(),
   "beoordeeld_op": zod.string().nullish(),
+  "bezetting_overschreden": zod.boolean().nullish().describe('True als bij goedkeuring bleek dat de minimale bezetting voor de functie werd onderschreden (met expliciete override goedgekeurd).'),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })
@@ -9878,6 +9910,7 @@ export const GetVerlofOverzichtResponse = zod.object({
   "opmerking": zod.string().nullish(),
   "beoordeeld_door_id": zod.number().nullish(),
   "beoordeeld_op": zod.string().nullish(),
+  "bezetting_overschreden": zod.boolean().nullish().describe('True als bij goedkeuring bleek dat de minimale bezetting voor de functie werd onderschreden (met expliciete override goedgekeurd).'),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 }))
@@ -15846,6 +15879,17 @@ export const GetMijnWeekUrenResponse = zod.object({
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })),
+  "verlof": zod.array(zod.object({
+  "id": zod.number(),
+  "verlofsoort_id": zod.number(),
+  "verlofsoort_naam": zod.string(),
+  "hoofdcategorie": zod.string().nullish(),
+  "is_tijd_voor_tijd": zod.boolean().optional(),
+  "start_datum": zod.string(),
+  "eind_datum": zod.string(),
+  "aantal_uren": zod.number(),
+  "status": zod.string()
+})).optional(),
   "planning_items": zod.array(zod.object({
   "id": zod.number(),
   "datum": zod.string().nullish(),
@@ -15858,6 +15902,19 @@ export const GetMijnWeekUrenResponse = zod.object({
   "totaal_uren": zod.number(),
   "adv_uren": zod.number()
 })
+
+
+/**
+ * @summary Tijd-voor-tijd rechtstreeks vanuit de urenmodule aanvragen (zonder dubbele invoer)
+ */
+export const CreateTijdVoorTijdAanvraagBody = zod.object({
+  "start_datum": zod.string(),
+  "eind_datum": zod.string(),
+  "aantal_uren": zod.number(),
+  "reden": zod.string().optional()
+})
+
+export const CreateTijdVoorTijdAanvraagResponse = zod.void()
 
 
 /**
@@ -15992,6 +16049,17 @@ export const ListWeekStatenResponseItem = zod.object({
   "vergrendeld": zod.boolean().optional(),
   "vergrendeld_op": zod.string().nullish(),
   "vergrendeld_door_naam": zod.string().nullish(),
+  "verlof": zod.array(zod.object({
+  "id": zod.number(),
+  "verlofsoort_id": zod.number(),
+  "verlofsoort_naam": zod.string(),
+  "hoofdcategorie": zod.string().nullish(),
+  "is_tijd_voor_tijd": zod.boolean().optional(),
+  "start_datum": zod.string(),
+  "eind_datum": zod.string(),
+  "aantal_uren": zod.number(),
+  "status": zod.string()
+})).optional(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })
@@ -16037,6 +16105,17 @@ export const GetWeekStaatResponse = zod.object({
   "vergrendeld": zod.boolean().optional(),
   "vergrendeld_op": zod.string().nullish(),
   "vergrendeld_door_naam": zod.string().nullish(),
+  "verlof": zod.array(zod.object({
+  "id": zod.number(),
+  "verlofsoort_id": zod.number(),
+  "verlofsoort_naam": zod.string(),
+  "hoofdcategorie": zod.string().nullish(),
+  "is_tijd_voor_tijd": zod.boolean().optional(),
+  "start_datum": zod.string(),
+  "eind_datum": zod.string(),
+  "aantal_uren": zod.number(),
+  "status": zod.string()
+})).optional(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })
@@ -16072,6 +16151,17 @@ export const UpdateWeekStaatResponse = zod.object({
   "vergrendeld": zod.boolean().optional(),
   "vergrendeld_op": zod.string().nullish(),
   "vergrendeld_door_naam": zod.string().nullish(),
+  "verlof": zod.array(zod.object({
+  "id": zod.number(),
+  "verlofsoort_id": zod.number(),
+  "verlofsoort_naam": zod.string(),
+  "hoofdcategorie": zod.string().nullish(),
+  "is_tijd_voor_tijd": zod.boolean().optional(),
+  "start_datum": zod.string(),
+  "eind_datum": zod.string(),
+  "aantal_uren": zod.number(),
+  "status": zod.string()
+})).optional(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })
@@ -16103,6 +16193,17 @@ export const WeekStaatIndienenResponse = zod.object({
   "vergrendeld": zod.boolean().optional(),
   "vergrendeld_op": zod.string().nullish(),
   "vergrendeld_door_naam": zod.string().nullish(),
+  "verlof": zod.array(zod.object({
+  "id": zod.number(),
+  "verlofsoort_id": zod.number(),
+  "verlofsoort_naam": zod.string(),
+  "hoofdcategorie": zod.string().nullish(),
+  "is_tijd_voor_tijd": zod.boolean().optional(),
+  "start_datum": zod.string(),
+  "eind_datum": zod.string(),
+  "aantal_uren": zod.number(),
+  "status": zod.string()
+})).optional(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })
@@ -16134,6 +16235,17 @@ export const WeekStaatGoedkeurenResponse = zod.object({
   "vergrendeld": zod.boolean().optional(),
   "vergrendeld_op": zod.string().nullish(),
   "vergrendeld_door_naam": zod.string().nullish(),
+  "verlof": zod.array(zod.object({
+  "id": zod.number(),
+  "verlofsoort_id": zod.number(),
+  "verlofsoort_naam": zod.string(),
+  "hoofdcategorie": zod.string().nullish(),
+  "is_tijd_voor_tijd": zod.boolean().optional(),
+  "start_datum": zod.string(),
+  "eind_datum": zod.string(),
+  "aantal_uren": zod.number(),
+  "status": zod.string()
+})).optional(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })
@@ -16169,6 +16281,17 @@ export const WeekStaatAfwijzenResponse = zod.object({
   "vergrendeld": zod.boolean().optional(),
   "vergrendeld_op": zod.string().nullish(),
   "vergrendeld_door_naam": zod.string().nullish(),
+  "verlof": zod.array(zod.object({
+  "id": zod.number(),
+  "verlofsoort_id": zod.number(),
+  "verlofsoort_naam": zod.string(),
+  "hoofdcategorie": zod.string().nullish(),
+  "is_tijd_voor_tijd": zod.boolean().optional(),
+  "start_datum": zod.string(),
+  "eind_datum": zod.string(),
+  "aantal_uren": zod.number(),
+  "status": zod.string()
+})).optional(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })
@@ -16200,6 +16323,17 @@ export const VergrendelWeekStaatResponse = zod.object({
   "vergrendeld": zod.boolean().optional(),
   "vergrendeld_op": zod.string().nullish(),
   "vergrendeld_door_naam": zod.string().nullish(),
+  "verlof": zod.array(zod.object({
+  "id": zod.number(),
+  "verlofsoort_id": zod.number(),
+  "verlofsoort_naam": zod.string(),
+  "hoofdcategorie": zod.string().nullish(),
+  "is_tijd_voor_tijd": zod.boolean().optional(),
+  "start_datum": zod.string(),
+  "eind_datum": zod.string(),
+  "aantal_uren": zod.number(),
+  "status": zod.string()
+})).optional(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })
@@ -16231,6 +16365,17 @@ export const OntgrendelWeekStaatResponse = zod.object({
   "vergrendeld": zod.boolean().optional(),
   "vergrendeld_op": zod.string().nullish(),
   "vergrendeld_door_naam": zod.string().nullish(),
+  "verlof": zod.array(zod.object({
+  "id": zod.number(),
+  "verlofsoort_id": zod.number(),
+  "verlofsoort_naam": zod.string(),
+  "hoofdcategorie": zod.string().nullish(),
+  "is_tijd_voor_tijd": zod.boolean().optional(),
+  "start_datum": zod.string(),
+  "eind_datum": zod.string(),
+  "aantal_uren": zod.number(),
+  "status": zod.string()
+})).optional(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })

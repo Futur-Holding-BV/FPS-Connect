@@ -36,7 +36,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
-import WeekstatenPagina from "./weekstaten";
+import WeekstatenPagina, { TijdVoorTijdAanvraagDialog } from "./weekstaten";
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -597,6 +597,7 @@ export default function UrenPagina() {
   const { heeftNiveau } = useBevoegdheid();
   const isManager = heeftNiveau("uren", 1);
   const [invoerOpen, setInvoerOpen] = useState(false);
+  const [tijdVoorTijdOpen, setTijdVoorTijdOpen] = useState(false);
   const [refreshTeller, setRefreshTeller] = useState(0);
 
   function handleOpgeslagen() {
@@ -612,16 +613,28 @@ export default function UrenPagina() {
             Overzicht van geregistreerde uren en weekstaten
           </p>
         </div>
-        <Button onClick={() => setInvoerOpen(true)}>
-          <Plus className="h-4 w-4 mr-1" />
-          Uren registreren
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => setTijdVoorTijdOpen(true)}>
+            <Clock className="h-4 w-4 mr-1" />
+            Tijd-voor-tijd aanvragen
+          </Button>
+          <Button onClick={() => setInvoerOpen(true)}>
+            <Plus className="h-4 w-4 mr-1" />
+            Uren registreren
+          </Button>
+        </div>
       </div>
 
       <UrenInvoerDialog
         open={invoerOpen}
         onClose={() => setInvoerOpen(false)}
         onOpgeslagen={handleOpgeslagen}
+      />
+
+      <TijdVoorTijdAanvraagDialog
+        open={tijdVoorTijdOpen}
+        onClose={() => setTijdVoorTijdOpen(false)}
+        onAangevraagd={handleOpgeslagen}
       />
 
       {isManager ? (

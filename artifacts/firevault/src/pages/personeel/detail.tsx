@@ -6,6 +6,7 @@ import {
   useUpdateMedewerker,
   useDeleteMedewerker,
   useListFuncties,
+  useListMedewerkers,
   useListCaoOpties,
   useListToewijsbareGebruikers,
   useListOpleidingen,
@@ -665,6 +666,7 @@ export default function MedewerkerDetailPagina() {
 
   const { data: medewerker, isLoading, isError } = useGetMedewerker(id);
   const { data: functies } = useListFuncties();
+  const { data: alleMedewerkers } = useListMedewerkers();
   const { data: caoOpties } = useListCaoOpties();
   const { data: gebruikers } = useListToewijsbareGebruikers();
   const { data: opleidingCatalogus } = useListOpleidingen();
@@ -734,6 +736,7 @@ export default function MedewerkerDetailPagina() {
       mobiel: medewerker.mobiel ?? undefined,
       werkmaatschappij: medewerker.werkmaatschappij,
       functie_id: medewerker.functie_id ?? null,
+      leidinggevende_id: medewerker.leidinggevende_id ?? undefined,
       cao: medewerker.cao ?? undefined,
       dienstverband: medewerker.dienstverband,
       bedrijf_uitzendbureau: medewerker.bedrijf_uitzendbureau ?? undefined,
@@ -1063,6 +1066,9 @@ export default function MedewerkerDetailPagina() {
             <h1 className="text-2xl font-bold text-foreground truncate">{medewerker.naam}</h1>
             <p className="text-sm text-muted-foreground">
               {medewerker.functie_naam ?? "Geen functie"} — {medewerker.werkmaatschappij}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Leidinggevende: {medewerker.leidinggevende_naam ?? "geen (hoofdbeheerder)"}
             </p>
           </div>
         </div>
@@ -1731,6 +1737,24 @@ export default function MedewerkerDetailPagina() {
                     in het functiehuis.
                   </p>
                 )}
+              </div>
+              <div className="space-y-1.5">
+                <Label>Leidinggevende</Label>
+                <Select
+                  value={profielForm.leidinggevende_id ? String(profielForm.leidinggevende_id) : "geen"}
+                  onValueChange={(v) => setProfielForm({ ...profielForm, leidinggevende_id: v === "geen" ? undefined : Number(v) })}
+                >
+                  <SelectTrigger><SelectValue placeholder="Geen (hoofdbeheerder behandelt verlof)" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="geen">Geen — hoofdbeheerder behandelt verlof</SelectItem>
+                    {(alleMedewerkers ?? []).filter((m) => m.id !== medewerker?.id).map((m) => (
+                      <SelectItem key={m.id} value={String(m.id)}>{m.naam}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Beoordeelt verlofaanvragen van deze medewerker; de hoofdbeheerder kan altijd behandelen.
+                </p>
               </div>
               <div className="space-y-1.5">
                 <Label>Dienstverband</Label>

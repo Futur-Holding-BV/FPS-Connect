@@ -41,9 +41,12 @@ import {
 } from "@workspace/db";
 import { ObjectStorageService } from "../lib/objectStorage";
 import { eq, desc, and, ne, inArray, or, isNull, gte, lte, sql, getTableColumns } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { stelOpleidingenVoor } from "../services/opleiding-ai";
 import { workflowService, maakTransitieContext } from "../services/workflow-engine";
+import { medewerkerIdVoorGebruiker } from "../services/medewerker-lookup";
+import { maakVerlofprofielAan } from "../services/verlofprofiel";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
 import { ZZP_JURIDISCH_PROMPT, HRM_CAPACITEIT_SIGNALEN_PROMPT } from "../lib/aiPrompts";
 import { logger } from "../lib/logger";
@@ -285,6 +288,7 @@ const mapFunctie = (f: typeof functiesTable.$inferSelect) => ({
   doorgroeipad: f.doorgroeipad,
   uitvoerend: f.uitvoerend,
   actief: f.actief,
+  minimale_bezetting: f.minimaleBezetting,
   aangemaakt_op: iso(f.aangemaaktOp),
   bijgewerkt_op: iso(f.bijgewerktOp),
 });
@@ -301,7 +305,7 @@ router.get("/functies", lezen, async (req, res): Promise<void> => {
 
 router.post("/functies", schrijven, async (req, res): Promise<void> => {
   try {
-    const { naam, werkmaatschappij, omschrijving, taken, verantwoordelijkheden, competenties, opleidingsvereisten, doorgroeipad, uitvoerend, actief } = req.body;
+    const { naam, werkmaatschappij, omschrijving, taken, verantwoordelijkheden, competenties, opleidingsvereisten, doorgroeipad, uitvoerend, actief, minimale_bezetting } = req.body;
     if (!naam) return void res.status(400).json({ error: "naam is verplicht" });
     const wm = werkmaatschappij || "FPS Brandpreventie";
     const [f] = await db
@@ -318,6 +322,7 @@ router.post("/functies", schrijven, async (req, res): Promise<void> => {
         doorgroeipad,
         uitvoerend: uitvoerend ?? false,
         actief: actief ?? true,
+        minimaleBezetting: minimale_bezetting ?? null,
       })
       .returning();
     res.status(201).json(mapFunctie(f));
@@ -340,11 +345,25 @@ router.get("/functies/:id", lezen, async (req, res): Promise<void> => {
 
 router.patch("/functies/:id", schrijven, async (req, res): Promise<void> => {
   try {
-    const { naam, werkmaatschappij, omschrijving, taken, verantwoordelijkheden, competenties, opleidingsvereisten, doorgroeipad, uitvoerend, actief } = req.body;
+    const { naam, werkmaatschappij, omschrijving, taken, verantwoordelijkheden, competenties, opleidingsvereisten, doorgroeipad, uitvoerend, actief, minimale_bezetting } = req.body;
     const werkgeverId = werkmaatschappij !== undefined ? await werkgeverIdVoor(werkmaatschappij) : undefined;
     const [f] = await db
       .update(functiesTable)
-      .set({ naam, werkmaatschappij, werkgeverId, omschrijving, taken, verantwoordelijkheden, competenties, opleidingsvereisten, doorgroeipad, uitvoerend, actief, bijgewerktOp: new Date() })
+      .set({
+        naam,
+        werkmaatschappij,
+        werkgeverId,
+        omschrijving,
+        taken,
+        verantwoordelijkheden,
+        competenties,
+        opleidingsvereisten,
+        doorgroeipad,
+        uitvoerend,
+        actief,
+        ...(minimale_bezetting !== undefined ? { minimaleBezetting: minimale_bezetting } : {}),
+        bijgewerktOp: new Date(),
+      })
       .where(eq(functiesTable.id, parseId(req.params.id)))
       .returning();
     if (!f) return void res.status(404).json({ error: "Functie niet gevonden" });
@@ -569,6 +588,11 @@ async function medewerkerNaarJson(m: typeof medewerkersTable.$inferSelect) {
     const [g] = await db.select({ rol: gebruikersTable.rol }).from(gebruikersTable).where(eq(gebruikersTable.id, m.gebruikerId));
     gebruikerRol = g?.rol ?? null;
   }
+  let leidinggevendeNaam: string | null = null;
+  if (m.leidinggevendeId != null) {
+    const [lg] = await db.select({ naam: medewerkersTable.naam }).from(medewerkersTable).where(eq(medewerkersTable.id, m.leidinggevendeId));
+    leidinggevendeNaam = lg?.naam ?? null;
+  }
   return {
     id: m.id,
     gebruiker_id: m.gebruikerId,
@@ -580,6 +604,8 @@ async function medewerkerNaarJson(m: typeof medewerkersTable.$inferSelect) {
     werkmaatschappij: m.werkmaatschappij,
     functie_id: m.functieId,
     functie_naam: functieNaam,
+    leidinggevende_id: m.leidinggevendeId ?? null,
+    leidinggevende_naam: leidinggevendeNaam,
     cao: m.cao,
     dienstverband: m.dienstverband,
     bedrijf_uitzendbureau: m.bedrijfUitzendbureau ?? null,
@@ -609,11 +635,13 @@ async function medewerkerNaarJson(m: typeof medewerkersTable.$inferSelect) {
 
 router.get("/medewerkers", lezen, async (req, res): Promise<void> => {
   try {
+    const leidinggevenden = alias(medewerkersTable, "leidinggevenden");
     const rijen = await db
-      .select({ m: medewerkersTable, functieNaam: functiesTable.naam, gebruikerRol: gebruikersTable.rol })
+      .select({ m: medewerkersTable, functieNaam: functiesTable.naam, gebruikerRol: gebruikersTable.rol, leidinggevendeNaam: leidinggevenden.naam })
       .from(medewerkersTable)
       .leftJoin(functiesTable, eq(medewerkersTable.functieId, functiesTable.id))
       .leftJoin(gebruikersTable, eq(medewerkersTable.gebruikerId, gebruikersTable.id))
+      .leftJoin(leidinggevenden, eq(medewerkersTable.leidinggevendeId, leidinggevenden.id))
       .orderBy(medewerkersTable.naam);
     res.json(
       rijen.map((r) => ({
@@ -627,6 +655,8 @@ router.get("/medewerkers", lezen, async (req, res): Promise<void> => {
         werkmaatschappij: r.m.werkmaatschappij,
         functie_id: r.m.functieId,
         functie_naam: r.functieNaam ?? null,
+        leidinggevende_id: r.m.leidinggevendeId ?? null,
+        leidinggevende_naam: r.leidinggevendeNaam ?? null,
         cao: r.m.cao,
         dienstverband: r.m.dienstverband,
         contracturen_per_week: r.m.contracturenPerWeek,
@@ -659,7 +689,7 @@ router.get("/medewerkers", lezen, async (req, res): Promise<void> => {
 
 router.post("/medewerkers", schrijven, async (req, res): Promise<void> => {
   try {
-    const { naam, gebruiker_id, email, telefoon, mobiel, werkmaatschappij, functie_id, cao, dienstverband, bedrijf_uitzendbureau, contracturen_per_week, in_dienst_sinds, uit_dienst_per, noodcontact_naam, noodcontact_telefoon, geboortedatum, geboorteplaats, adres, postcode, woonplaats, rijbewijs, rijbewijs_vervaldatum, vca_vervaldatum, ehbo_vervaldatum, bhv_vervaldatum, cv_tekst, actief, opmerkingen } = req.body;
+    const { naam, gebruiker_id, email, telefoon, mobiel, werkmaatschappij, functie_id, leidinggevende_id, cao, dienstverband, bedrijf_uitzendbureau, contracturen_per_week, in_dienst_sinds, uit_dienst_per, noodcontact_naam, noodcontact_telefoon, geboortedatum, geboorteplaats, adres, postcode, woonplaats, rijbewijs, rijbewijs_vervaldatum, vca_vervaldatum, ehbo_vervaldatum, bhv_vervaldatum, cv_tekst, actief, opmerkingen } = req.body;
     if (!naam) return void res.status(400).json({ error: "naam is verplicht" });
     const wm = werkmaatschappij || "FPS Brandpreventie";
     const [m] = await db
@@ -673,6 +703,7 @@ router.post("/medewerkers", schrijven, async (req, res): Promise<void> => {
         werkmaatschappij: wm,
         werkgeverId: await werkgeverIdVoor(wm),
         functieId: functie_id ?? null,
+        leidinggevendeId: leidinggevende_id ?? null,
         cao,
         dienstverband: dienstverband || "vast",
         bedrijfUitzendbureau: bedrijf_uitzendbureau || null,
@@ -811,26 +842,20 @@ router.post("/medewerkers/onboarding", schrijven, async (req, res): Promise<void
       })
       .returning();
 
-    // Verlofsaldo opbouwen (pro-rata op basis van contracturen t.o.v. CAO-norm).
+    // Verlofsaldo opbouwen (pro-rata op basis van contracturen t.o.v. CAO-norm) —
+    // gecentraliseerd zodat onboarding en latere medewerker-aanmaak dezelfde regels volgen.
     const saldoJaar = Number.isFinite(Number(jaar)) ? Number(jaar) : new Date().getFullYear();
-    const standaardUren = caoOptie!.standaard_uren_per_week || 40;
-    const factor = Math.min(uren / standaardUren, 1);
     const ids: number[] = Array.isArray(verlofsoort_ids) ? verlofsoort_ids.map((v: unknown) => parseId(v)).filter((n) => Number.isFinite(n)) : [];
-    for (const vsId of ids) {
-      const [vs] = await db.select().from(verlofsoortenTable).where(eq(verlofsoortenTable.id, vsId));
-      if (!vs) continue;
-      const basis = vs.opbouwUrenPerJaar ?? 0;
-      const opgebouwd = Math.round(basis * factor * 10) / 10;
-      await db.insert(verlofSaldiTable).values({
+    await maakVerlofprofielAan(
+      {
         medewerkerId: m.id,
-        verlofsoortId: vsId,
+        caoOptie: caoOptie!,
+        contracturenPerWeek: uren,
+        verlofsoortIds: ids,
         jaar: saldoJaar,
-        beginsaldoUren: 0,
-        opgebouwdUren: opgebouwd,
-        opgenomenUren: 0,
-        saldoUren: opgebouwd,
-      });
-    }
+      },
+      db,
+    );
 
     res.status(201).json(await medewerkerNaarJson(m));
   } catch (err) {
@@ -852,7 +877,7 @@ router.get("/medewerkers/:id", lezen, async (req, res): Promise<void> => {
 
 router.patch("/medewerkers/:id", schrijven, async (req, res): Promise<void> => {
   try {
-    const { naam, gebruiker_id, email, telefoon, mobiel, werkmaatschappij, functie_id, cao, dienstverband, bedrijf_uitzendbureau, contracturen_per_week, deeltijd_percentage, in_dienst_sinds, uit_dienst_per, noodcontact_naam, noodcontact_telefoon, geboortedatum, geboorteplaats, adres, postcode, woonplaats, rijbewijs, rijbewijs_vervaldatum, vca_vervaldatum, ehbo_vervaldatum, bhv_vervaldatum, cv_tekst, actief, opmerkingen } = req.body;
+    const { naam, gebruiker_id, email, telefoon, mobiel, werkmaatschappij, functie_id, leidinggevende_id, cao, dienstverband, bedrijf_uitzendbureau, contracturen_per_week, deeltijd_percentage, in_dienst_sinds, uit_dienst_per, noodcontact_naam, noodcontact_telefoon, geboortedatum, geboorteplaats, adres, postcode, woonplaats, rijbewijs, rijbewijs_vervaldatum, vca_vervaldatum, ehbo_vervaldatum, bhv_vervaldatum, cv_tekst, actief, opmerkingen } = req.body;
     // Voorkom dat één account aan twee medewerkers gekoppeld raakt (onboarding blokkeert
     // dit al; hier ook bij profielwijziging, want er is geen unieke DB-constraint).
     if (gebruiker_id != null) {
@@ -876,6 +901,7 @@ router.patch("/medewerkers/:id", schrijven, async (req, res): Promise<void> => {
         werkmaatschappij,
         werkgeverId,
         functieId: functie_id !== undefined ? functie_id : undefined,
+        leidinggevendeId: leidinggevende_id !== undefined ? leidinggevende_id : undefined,
         cao,
         dienstverband,
         bedrijfUitzendbureau: bedrijf_uitzendbureau !== undefined ? (bedrijf_uitzendbureau || null) : undefined,
@@ -1144,10 +1170,27 @@ router.delete("/bekwaamheden/:id", schrijven, async (req, res): Promise<void> =>
 });
 
 // ── Verlofsoorten (catalogus) ───────────────────────────────────────────────
+// Vaste, herkenbare hoofdcategorieën — geen vrije tekst. Dit dekt de volledige
+// verlofsoort-categoriedekking die vereist is (vakantie, ADV/ATV, tijd-voor-tijd,
+// ziekte-koppeling, bijzonder verlof, onbetaald verlof) bovenop de bestaande
+// vrije "categorie"-tekst (wettelijk/bovenwettelijk/cao/bijzonder).
+export const VERLOF_HOOFDCATEGORIEEN = [
+  "vakantie",
+  "adv_atv",
+  "tijd_voor_tijd",
+  "ziekte",
+  "bijzonder",
+  "onbetaald",
+  "overig",
+] as const;
+export type VerlofHoofdcategorie = (typeof VERLOF_HOOFDCATEGORIEEN)[number];
+
 const mapVerlofsoort = (v: typeof verlofsoortenTable.$inferSelect) => ({
   id: v.id,
   naam: v.naam,
   categorie: v.categorie,
+  hoofdcategorie: v.hoofdcategorie,
+  is_tijd_voor_tijd: v.isTijdVoorTijd,
   cao: v.cao,
   werkmaatschappij: v.werkmaatschappij,
   betaald: v.betaald,
@@ -1174,13 +1217,18 @@ router.get("/verlofsoorten", lezen, async (req, res): Promise<void> => {
 
 router.post("/verlofsoorten", schrijven, async (req, res): Promise<void> => {
   try {
-    const { naam, categorie, cao, werkmaatschappij, betaald, collectief, opbouw_uren_per_jaar, opbouw_regel, verval_regel, juridisch_kader, toelichting, actief } = req.body;
+    const { naam, categorie, hoofdcategorie, is_tijd_voor_tijd, cao, werkmaatschappij, betaald, collectief, opbouw_uren_per_jaar, opbouw_regel, verval_regel, juridisch_kader, toelichting, actief } = req.body;
     if (!naam) return void res.status(400).json({ error: "naam is verplicht" });
+    if (hoofdcategorie !== undefined && !VERLOF_HOOFDCATEGORIEEN.includes(hoofdcategorie)) {
+      return void res.status(400).json({ error: `hoofdcategorie moet één van: ${VERLOF_HOOFDCATEGORIEEN.join(", ")} zijn` });
+    }
     const [v] = await db
       .insert(verlofsoortenTable)
       .values({
         naam,
         categorie: categorie || "wettelijk",
+        hoofdcategorie: hoofdcategorie ?? "overig",
+        isTijdVoorTijd: is_tijd_voor_tijd ?? false,
         cao: cao ?? null,
         werkmaatschappij: werkmaatschappij ?? null,
         werkgeverId: await werkgeverIdVoor(werkmaatschappij),
@@ -1203,12 +1251,17 @@ router.post("/verlofsoorten", schrijven, async (req, res): Promise<void> => {
 
 router.patch("/verlofsoorten/:id", schrijven, async (req, res): Promise<void> => {
   try {
-    const { naam, categorie, cao, werkmaatschappij, betaald, collectief, opbouw_uren_per_jaar, opbouw_regel, verval_regel, juridisch_kader, toelichting, actief } = req.body;
+    const { naam, categorie, hoofdcategorie, is_tijd_voor_tijd, cao, werkmaatschappij, betaald, collectief, opbouw_uren_per_jaar, opbouw_regel, verval_regel, juridisch_kader, toelichting, actief } = req.body;
+    if (hoofdcategorie !== undefined && !VERLOF_HOOFDCATEGORIEEN.includes(hoofdcategorie)) {
+      return void res.status(400).json({ error: `hoofdcategorie moet één van: ${VERLOF_HOOFDCATEGORIEEN.join(", ")} zijn` });
+    }
     const [v] = await db
       .update(verlofsoortenTable)
       .set({
         naam,
         categorie,
+        hoofdcategorie,
+        isTijdVoorTijd: is_tijd_voor_tijd,
         cao: cao ?? null,
         werkmaatschappij: werkmaatschappij ?? null,
         werkgeverId: werkmaatschappij !== undefined ? await werkgeverIdVoor(werkmaatschappij) : undefined,
@@ -1535,16 +1588,29 @@ router.get("/verlofaanvragen", lezen, async (req, res): Promise<void> => {
   }
 });
 
-router.patch("/verlofaanvragen/:id", schrijven, async (req, res): Promise<void> => {
+router.patch("/verlofaanvragen/:id", async (req, res): Promise<void> => {
   try {
-    const { verlofsoort_id, start_datum, eind_datum, aantal_uren, status, reden, opmerking } = req.body;
+    const { verlofsoort_id, start_datum, eind_datum, aantal_uren, status, reden, opmerking, negeer_bezetting } = req.body;
     const aanvraagId = parseId(req.params.id);
+
+    // Veldwijzigingen ANDERS dan status/reden/opmerking (verlofsoort, datums, uren)
+    // blijven personeel-schrijfrecht vereisen — dit is administratieve correctie,
+    // geen beoordeling. De statuswijziging zelf loopt via de WorkflowEngine, die de
+    // leidinggevende-autorisatie (magUitvoeren) toepast; zo kan een leidinggevende
+    // zonder personeel:2 wél goedkeuren/afwijzen, maar geen andere velden wijzigen.
+    const wijzigtOverigeVelden = verlofsoort_id != null || start_datum !== undefined || eind_datum !== undefined || aantal_uren !== undefined;
+    if (wijzigtOverigeVelden) {
+      const magSchrijven = !!req.permissies && (req.permissies.isHoofdbeheerder || req.permissies.heeftModuleRecht("personeel", 2));
+      if (!magSchrijven) {
+        return void res.status(403).json({ error: "Onvoldoende bevoegdheid om deze velden te wijzigen" });
+      }
+    }
 
     // Status via de WorkflowEngine — valideert de transitie, past saldo aan en schrijft
     // de auditlog. reden en opmerking worden doorgegeven als params zodat de engine
     // ze kan gebruiken voor de precheck (verplichte reden bij afwijzen) en de log.
     if (status !== undefined) {
-      const ctx = await maakTransitieContext(req, db, { reden, opmerking });
+      const ctx = await maakTransitieContext(req, db, { reden, opmerking, negeer_bezetting: negeer_bezetting === true });
       const result = await workflowService.transiteer("verlofaanvraag", aanvraagId, status, ctx);
       if (!result.ok) {
         return void res.status(result.error!.httpStatus).json({
@@ -1552,6 +1618,8 @@ router.patch("/verlofaanvragen/:id", schrijven, async (req, res): Promise<void> 
           ...(result.error!.velden ? { velden: result.error!.velden } : {}),
         });
       }
+    } else if (!wijzigtOverigeVelden && reden === undefined && opmerking === undefined) {
+      return void res.status(400).json({ error: "Geen wijzigingen opgegeven" });
     }
 
     // Overige veldwijzigingen (verlofsoort, datums, uren, notities) los bijwerken
@@ -1583,6 +1651,7 @@ router.patch("/verlofaanvragen/:id", schrijven, async (req, res): Promise<void> 
       opmerking: a.opmerking,
       beoordeeld_door_id: a.beoordeeldDoorId,
       beoordeeld_op: isoOf(a.beoordeeldOp),
+      bezetting_overschreden: a.bezettingOverschreden ?? null,
       aangemaakt_op: iso(a.aangemaaktOp),
       bijgewerkt_op: iso(a.bijgewerktOp),
     });
@@ -2606,13 +2675,7 @@ router.get("/mijn/certificaten", async (req, res): Promise<void> => {
 // uitsluitend zijn eigen verlofdata. requireAuth is al globaal toegepast.
 
 async function getMijnMedewerkerId(req: import("express").Request): Promise<number | null> {
-  const userId = req.session.userId;
-  if (!userId) return null;
-  const [m] = await db
-    .select({ id: medewerkersTable.id })
-    .from(medewerkersTable)
-    .where(eq(medewerkersTable.gebruikerId, userId));
-  return m?.id ?? null;
+  return medewerkerIdVoorGebruiker(req.session.userId ?? null, db);
 }
 
 router.get("/mijn/verlofsoorten", async (req, res): Promise<void> => {

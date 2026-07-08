@@ -13222,6 +13222,26 @@ paths:
               schema:
                 $ref: '#/components/schemas/WeekSamenvatting'
 
+  /uren/tijd-voor-tijd-aanvraag:
+    post:
+      operationId: createTijdVoorTijdAanvraag
+      summary: Tijd-voor-tijd rechtstreeks vanuit de urenmodule aanvragen (zonder dubbele invoer)
+      tags: [uren]
+      security: [{ cookieAuth: [] }, { bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TijdVoorTijdAanvraagInput'
+      responses:
+        '201':
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VerlofAanvraag'
+
   /uren/{id}:
     get:
       operationId: getUrenRegistratie
@@ -25269,6 +25289,9 @@ components:
           type: boolean
         uitvoerend:
           type: boolean
+        minimale_bezetting:
+          type: ["integer", "null"]
+          description: Minimum aantal gelijktijdig beschikbare medewerkers met deze functie; wordt bij verlofgoedkeuring gecontroleerd.
         aangemaakt_op:
           type: string
         bijgewerkt_op:
@@ -25298,6 +25321,8 @@ components:
           type: boolean
         actief:
           type: boolean
+        minimale_bezetting:
+          type: ["integer", "null"]
 
     Opleiding:
       type: object
@@ -25459,6 +25484,11 @@ components:
           type: ["integer", "null"]
         functie_naam:
           type: ["string", "null"]
+        leidinggevende_id:
+          type: ["integer", "null"]
+          description: Medewerker-id van de leidinggevende; bepaalt de primaire goedkeuringsroute voor verlof (hoofdbeheerder/HRM blijven altijd fallback/override).
+        leidinggevende_naam:
+          type: ["string", "null"]
         cao:
           type: ["string", "null"]
         dienstverband:
@@ -25529,6 +25559,8 @@ components:
         werkmaatschappij:
           type: string
         functie_id:
+          type: ["integer", "null"]
+        leidinggevende_id:
           type: ["integer", "null"]
         cao:
           type: string
@@ -26088,6 +26120,13 @@ components:
           type: string
         categorie:
           type: string
+        hoofdcategorie:
+          type: ["string", "null"]
+          description: "Genormaliseerde categorie voor rapportage/koppelingen: vakantie, adv_atv, tijd_voor_tijd, ziekte, bijzonder, onbetaald of overig."
+          enum: [vakantie, adv_atv, tijd_voor_tijd, ziekte, bijzonder, onbetaald, overig, null]
+        is_tijd_voor_tijd:
+          type: boolean
+          description: Markeert deze verlofsoort als de tijd-voor-tijd-soort, zodat de uren-module er direct een aanvraag tegen kan aanmaken.
         cao:
           type: ["string", "null"]
         werkmaatschappij:
@@ -26121,6 +26160,11 @@ components:
           type: string
         categorie:
           type: string
+        hoofdcategorie:
+          type: ["string", "null"]
+          enum: [vakantie, adv_atv, tijd_voor_tijd, ziekte, bijzonder, onbetaald, overig, null]
+        is_tijd_voor_tijd:
+          type: boolean
         cao:
           type: ["string", "null"]
         werkmaatschappij:
@@ -26220,6 +26264,9 @@ components:
           type: ["integer", "null"]
         beoordeeld_op:
           type: ["string", "null"]
+        bezetting_overschreden:
+          type: ["boolean", "null"]
+          description: True als bij goedkeuring bleek dat de minimale bezetting voor de functie werd onderschreden (met expliciete override goedgekeurd).
         aangemaakt_op:
           type: string
         bijgewerkt_op:
@@ -26242,6 +26289,22 @@ components:
         reden:
           type: string
         opmerking:
+          type: string
+        negeer_bezetting:
+          type: boolean
+          description: Expliciete override om goed te keuren ondanks een onderschreden minimale bezetting; alleen toegestaan voor hoofdbeheerder/HRM-schrijfrecht.
+
+    TijdVoorTijdAanvraagInput:
+      type: object
+      required: [start_datum, eind_datum, aantal_uren]
+      properties:
+        start_datum:
+          type: string
+        eind_datum:
+          type: string
+        aantal_uren:
+          type: number
+        reden:
           type: string
 
     Ziekmelding:
@@ -30571,9 +30634,36 @@ components:
         vergrendeld_door_naam:
           type: string
           nullable: true
+        verlof:
+          type: array
+          items:
+            $ref: '#/components/schemas/VerlofInWeek'
         aangemaakt_op:
           type: string
         bijgewerkt_op:
+          type: string
+
+    VerlofInWeek:
+      type: object
+      required: [id, verlofsoort_id, verlofsoort_naam, start_datum, eind_datum, aantal_uren, status]
+      properties:
+        id:
+          type: integer
+        verlofsoort_id:
+          type: integer
+        verlofsoort_naam:
+          type: string
+        hoofdcategorie:
+          type: ["string", "null"]
+        is_tijd_voor_tijd:
+          type: boolean
+        start_datum:
+          type: string
+        eind_datum:
+          type: string
+        aantal_uren:
+          type: number
+        status:
           type: string
 
     WeekStaatInput:
@@ -30623,6 +30713,10 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/UrenRegistratie'
+        verlof:
+          type: array
+          items:
+            $ref: '#/components/schemas/VerlofInWeek'
         planning_items:
           type: array
           items:

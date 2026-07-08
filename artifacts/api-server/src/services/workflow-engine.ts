@@ -39,6 +39,12 @@ export interface TransitieDefinitie<T> {
   naar: string;
   label: string;
   bevoegdheid?: [string, number];
+  // Aangepaste autorisatiecheck — vervangt (indien aanwezig) de vlakke
+  // bevoegdheid-check hierboven. Nodig voor rollen die niet via een vaste
+  // module-bevoegdheid lopen, bijv. "de leidinggevende van deze medewerker mag
+  // dit beoordelen". ctx.isHoofdbeheerder is hierin GEEN automatische bypass —
+  // de functie moet dat zelf meenemen als gewenst.
+  magUitvoeren?: (entity: T, ctx: TransitieContext) => Promise<boolean>;
   precheck?: (entity: T, ctx: TransitieContext) => Promise<TransitieError | null>;
   postTransitie?: (vanEntity: T, ctx: TransitieContext) => Promise<void>;
 }
@@ -102,7 +108,16 @@ export class WorkflowService {
       );
     }
 
-    if (transitie.bevoegdheid) {
+    if (transitie.magUitvoeren) {
+      const toegestaan = await transitie.magUitvoeren(entity, ctx);
+      if (!toegestaan) {
+        return fout(
+          "BEVOEGDHEID",
+          "Onvoldoende bevoegdheid voor deze statuswijziging",
+          403,
+        );
+      }
+    } else if (transitie.bevoegdheid) {
       const [moduleId, minNiveau] = transitie.bevoegdheid;
       const niveau = ctx.bevoegdheden[moduleId] ?? 0;
       if (!ctx.isHoofdbeheerder && niveau < minNiveau) {
