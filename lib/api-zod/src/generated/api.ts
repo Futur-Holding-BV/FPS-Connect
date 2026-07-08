@@ -1077,15 +1077,18 @@ export const DeleteGebouwTekeningResponse = zod.void()
 
 
 /**
- * @summary Alle opleverrapporten (cross-gebouw, optioneel gefilterd op status)
+ * @summary Alle opleverrapporten (cross-gebouw, optioneel gefilterd op status of werkbon)
  */
 export const ListRapportenQueryParams = zod.object({
-  "status": zod.enum(['concept', 'definitief', 'vervangen', 'gearchiveerd']).optional()
+  "status": zod.enum(['concept', 'definitief', 'vervangen', 'gearchiveerd']).optional(),
+  "werkbon_id": zod.coerce.number().optional()
 })
 
 export const ListRapportenResponseItem = zod.object({
   "id": zod.number(),
   "gebouw_id": zod.number(),
+  "werkbon_id": zod.number().nullish().describe('Optionele koppeling met een onderhoudswerkbon.'),
+  "werkbon_nummer": zod.string().nullish().describe('Werkbonnummer van de gekoppelde werkbon (server-side opgelost).'),
   "rapport_type": zod.string(),
   "versie": zod.number(),
   "status": zod.enum(['concept', 'definitief', 'vervangen', 'gearchiveerd']),
@@ -1129,6 +1132,8 @@ export const ListGebouwRapportenParams = zod.object({
 export const ListGebouwRapportenResponseItem = zod.object({
   "id": zod.number(),
   "gebouw_id": zod.number(),
+  "werkbon_id": zod.number().nullish().describe('Optionele koppeling met een onderhoudswerkbon.'),
+  "werkbon_nummer": zod.string().nullish().describe('Werkbonnummer van de gekoppelde werkbon (server-side opgelost).'),
   "rapport_type": zod.string(),
   "versie": zod.number(),
   "status": zod.enum(['concept', 'definitief', 'vervangen', 'gearchiveerd']),
@@ -1172,6 +1177,7 @@ export const CreateRapportParams = zod.object({
 export const CreateRapportBody = zod.object({
   "rapport_type": zod.string(),
   "titel": zod.string().nullish(),
+  "werkbon_id": zod.number().nullish(),
   "secties": zod.object({
 
 }).passthrough().optional(),
@@ -1197,6 +1203,8 @@ export const GetRapportParams = zod.object({
 export const GetRapportResponse = zod.object({
   "id": zod.number(),
   "gebouw_id": zod.number(),
+  "werkbon_id": zod.number().nullish().describe('Optionele koppeling met een onderhoudswerkbon.'),
+  "werkbon_nummer": zod.string().nullish().describe('Werkbonnummer van de gekoppelde werkbon (server-side opgelost).'),
   "rapport_type": zod.string(),
   "versie": zod.number(),
   "status": zod.enum(['concept', 'definitief', 'vervangen', 'gearchiveerd']),
@@ -1239,6 +1247,7 @@ export const UpdateRapportParams = zod.object({
 
 export const UpdateRapportBody = zod.object({
   "titel": zod.string().nullish(),
+  "werkbon_id": zod.number().nullish(),
   "secties": zod.object({
 
 }).passthrough().optional(),
@@ -1253,6 +1262,8 @@ export const UpdateRapportBody = zod.object({
 export const UpdateRapportResponse = zod.object({
   "id": zod.number(),
   "gebouw_id": zod.number(),
+  "werkbon_id": zod.number().nullish().describe('Optionele koppeling met een onderhoudswerkbon.'),
+  "werkbon_nummer": zod.string().nullish().describe('Werkbonnummer van de gekoppelde werkbon (server-side opgelost).'),
   "rapport_type": zod.string(),
   "versie": zod.number(),
   "status": zod.enum(['concept', 'definitief', 'vervangen', 'gearchiveerd']),
@@ -1315,6 +1326,8 @@ export const MaakRapportDefinitiefBody = zod.object({
 export const MaakRapportDefinitiefResponse = zod.object({
   "id": zod.number(),
   "gebouw_id": zod.number(),
+  "werkbon_id": zod.number().nullish().describe('Optionele koppeling met een onderhoudswerkbon.'),
+  "werkbon_nummer": zod.string().nullish().describe('Werkbonnummer van de gekoppelde werkbon (server-side opgelost).'),
   "rapport_type": zod.string(),
   "versie": zod.number(),
   "status": zod.enum(['concept', 'definitief', 'vervangen', 'gearchiveerd']),
@@ -1362,6 +1375,8 @@ export const AccordeerCertificaatBody = zod.object({
 export const AccordeerCertificaatResponse = zod.object({
   "id": zod.number(),
   "gebouw_id": zod.number(),
+  "werkbon_id": zod.number().nullish().describe('Optionele koppeling met een onderhoudswerkbon.'),
+  "werkbon_nummer": zod.string().nullish().describe('Werkbonnummer van de gekoppelde werkbon (server-side opgelost).'),
   "rapport_type": zod.string(),
   "versie": zod.number(),
   "status": zod.enum(['concept', 'definitief', 'vervangen', 'gearchiveerd']),

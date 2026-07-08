@@ -7,6 +7,8 @@ import {
   useListToewijsbareGebruikers,
   useListOnderhoudscontracten,
   useListGebouwen,
+  useListRapporten,
+  getListRapportenQueryKey,
 } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -18,11 +20,22 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import {
-  ArrowLeft, Building, Calendar, Check, Edit, FileText,
-  Trash2, User, Wrench, X, CheckCircle2,
+  ArrowLeft, Building, Check, Edit, FileText,
+  Lock, Trash2, User, Wrench, X, CheckCircle2,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { getGetWerkbonQueryKey } from "@workspace/api-client-react";
+
+const RAPPORT_TYPE_LABEL: Record<string, string> = {
+  werkpakket_monteur: "Werkpakket monteur",
+  voortgang:          "Voortgangsrapportage",
+  opleverrapport:     "Opleverrapport brandveiligheid",
+  opleverdossier:     "Opleverdossier",
+  klant_beknopt:      "Klantrapport — Beknopt",
+  klant_uitgebreid:   "Klantrapport — Uitgebreid",
+  intern_controle:    "Interne controle",
+  beheeradvies:       "Beheeradvies",
+};
 
 const statusKleur: Record<string, string> = {
   gepland: "bg-blue-100 text-blue-800 border-blue-200",
@@ -65,6 +78,10 @@ export default function WerkbonDetail() {
   const { data: monteurs } = useListToewijsbareGebruikers();
   const { data: contracten } = useListOnderhoudscontracten();
   const { data: gebouwen } = useListGebouwen();
+  const { data: gekoppeldeRapporten = [] } = useListRapporten(
+    { werkbon_id: id, status: "definitief" },
+    { query: { queryKey: getListRapportenQueryKey({ werkbon_id: id, status: "definitief" }), enabled: id > 0 } },
+  );
   const update = useUpdateWerkbon();
   const remove = useDeleteWerkbon();
 
@@ -382,6 +399,52 @@ export default function WerkbonDetail() {
         </div>
 
         <div className="space-y-4">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-2">
+                <FileText className="h-4 w-4" />
+                Gekoppelde rapporten
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              {gekoppeldeRapporten.length === 0 ? (
+                <p className="text-xs text-muted-foreground">Geen rapporten gekoppeld aan deze werkbon.</p>
+              ) : (
+                <div className="space-y-2">
+                  {gekoppeldeRapporten.map((r) => {
+                    const titel = r.titel || RAPPORT_TYPE_LABEL[r.rapport_type] || r.rapport_type;
+                    return (
+                      <div
+                        key={r.id}
+                        className="flex items-start gap-2 p-2 rounded-md hover:bg-muted cursor-pointer"
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => r.gebouw_id && navigate(`/gebouwen/${r.gebouw_id}/print?rapport_id=${r.id}`)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && r.gebouw_id)
+                            navigate(`/gebouwen/${r.gebouw_id}/print?rapport_id=${r.id}`);
+                        }}
+                      >
+                        <Lock className="h-3.5 w-3.5 mt-0.5 shrink-0 text-green-600" />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-medium truncate">{titel}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {r.bevroren_op
+                              ? new Date(r.bevroren_op).toLocaleDateString("nl-NL")
+                              : "—"}
+                          </div>
+                        </div>
+                        <Badge variant="outline" className="bg-green-100 text-green-800 border-green-200 text-xs">
+                          Definitief
+                        </Badge>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           <Card>
             <CardContent className="pt-4 pb-3 space-y-3">
               <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Statuswijziging</div>

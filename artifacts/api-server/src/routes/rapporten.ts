@@ -8,6 +8,7 @@ import {
   gebouwenTable,
   gebruikersTable,
   documentenTable,
+  werkbonnenTable,
 } from "@workspace/db";
 import { eq, desc, and, inArray, ne } from "drizzle-orm";
 import { stuurRapportBeschikbaarMelding } from "../services/email";
@@ -43,11 +44,13 @@ function bepaalWeergaveStatus(r: typeof opleverrapportenTable.$inferSelect): str
 
 function mapRapport(
   r: typeof opleverrapportenTable.$inferSelect,
-  extra?: { aangemaaktDoorNaam?: string | null; gebouwNaam?: string | null },
+  extra?: { aangemaaktDoorNaam?: string | null; gebouwNaam?: string | null; werkbonNummer?: string | null },
 ) {
   return {
     id: r.id,
     gebouw_id: r.gebouwId,
+    werkbon_id: r.werkbonId ?? null,
+    werkbon_nummer: extra?.werkbonNummer ?? null,
     rapport_type: r.rapportType,
     versie: r.versie,
     status: r.status,
@@ -82,17 +85,27 @@ function userId(req: Request): number | null {
 router.get("/rapporten", lezenRapporten, async (req, res): Promise<void> => {
   try {
     const statusFilter = req.query.status as string | undefined;
+    const werkbonIdFilter = req.query.werkbon_id ? parseInt(String(req.query.werkbon_id), 10) : undefined;
+
     const q = db
-      .select({ r: opleverrapportenTable, naam: gebruikersTable.naam, gebouwNaam: gebouwenTable.naam })
+      .select({
+        r: opleverrapportenTable,
+        naam: gebruikersTable.naam,
+        gebouwNaam: gebouwenTable.naam,
+        werkbonNummer: werkbonnenTable.werkbonnummer,
+      })
       .from(opleverrapportenTable)
       .leftJoin(gebruikersTable, eq(opleverrapportenTable.aangemaaktDoor, gebruikersTable.id))
       .leftJoin(gebouwenTable, eq(opleverrapportenTable.gebouwId, gebouwenTable.id))
+      .leftJoin(werkbonnenTable, eq(opleverrapportenTable.werkbonId, werkbonnenTable.id))
       .orderBy(desc(opleverrapportenTable.bijgewerktOp));
 
-    const rijen = statusFilter
-      ? await q.where(eq(opleverrapportenTable.status, statusFilter))
-      : await q;
-    res.json(rijen.map(r => mapRapport(r.r, { aangemaaktDoorNaam: r.naam, gebouwNaam: r.gebouwNaam })));
+    const filters = [];
+    if (statusFilter) filters.push(eq(opleverrapportenTable.status, statusFilter));
+    if (werkbonIdFilter) filters.push(eq(opleverrapportenTable.werkbonId, werkbonIdFilter));
+
+    const rijen = filters.length > 0 ? await q.where(and(...filters as [ReturnType<typeof eq>])) : await q;
+    res.json(rijen.map(r => mapRapport(r.r, { aangemaaktDoorNaam: r.naam, gebouwNaam: r.gebouwNaam, werkbonNummer: r.werkbonNummer })));
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Serverfout" });
@@ -127,10 +140,11 @@ router.post("/gebouwen/:id/rapporten", aanmakenRapporten, async (req, res): Prom
       .where(eq(gebouwenTable.id, gebouwId));
     if (!gebouw) { res.status(404).json({ error: "Gebouw niet gevonden" }); return; }
 
-    const { rapport_type, titel, secties, spot_selectie, bijlagen_ids, tekening_ids, reactietermijn_datum } =
+    const { rapport_type, titel, werkbon_id, secties, spot_selectie, bijlagen_ids, tekening_ids, reactietermijn_datum } =
       req.body as {
         rapport_type?: string;
         titel?: string | null;
+        werkbon_id?: number | null;
         secties?: Record<string, boolean>;
         spot_selectie?: Record<string, number[]>;
         bijlagen_ids?: number[];
@@ -145,6 +159,7 @@ router.post("/gebouwen/:id/rapporten", aanmakenRapporten, async (req, res): Prom
         rapportType: rapport_type ?? "opleverrapport",
         status: "concept",
         titel: titel ?? null,
+        werkbonId: werkbon_id ?? null,
         secties: secties ?? {},
         spotSelectie: spot_selectie ?? {},
         bijlagenIds: bijlagen_ids ?? [],
@@ -207,9 +222,10 @@ router.patch("/gebouwen/:id/rapporten/:rapportId", schrijvenRapporten, async (re
       return;
     }
 
-    const { titel, secties, spot_selectie, bijlagen_ids, tekening_ids, reactietermijn_datum } =
+    const { titel, werkbon_id, secties, spot_selectie, bijlagen_ids, tekening_ids, reactietermijn_datum } =
       req.body as {
         titel?: string | null;
+        werkbon_id?: number | null;
         secties?: Record<string, boolean>;
         spot_selectie?: Record<string, number[]>;
         bijlagen_ids?: number[];
@@ -221,6 +237,7 @@ router.patch("/gebouwen/:id/rapporten/:rapportId", schrijvenRapporten, async (re
       .update(opleverrapportenTable)
       .set({
         ...(titel !== undefined ? { titel } : {}),
+        ...(werkbon_id !== undefined ? { werkbonId: werkbon_id } : {}),
         ...(secties !== undefined ? { secties } : {}),
         ...(spot_selectie !== undefined ? { spotSelectie: spot_selectie } : {}),
         ...(bijlagen_ids !== undefined ? { bijlagenIds: bijlagen_ids } : {}),

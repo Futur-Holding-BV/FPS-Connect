@@ -11,6 +11,8 @@ import type { RapportPatchSpotSelectie } from './rapportPatchSpotSelectie';
 export interface RapportPatch {
   /** @nullable */
   titel?: string | null;
+  /** @nullable */
+  werkbon_id?: number | null;
   secties?: RapportPatchSecties;
   spot_selectie?: RapportPatchSpotSelectie;
   bijlagen_ids?: number[];

@@ -1,10 +1,12 @@
 import { pgTable, serial, text, integer, boolean, timestamp, jsonb } from "drizzle-orm/pg-core";
 import { gebouwenTable } from "./gebouwen";
 import { gebruikersTable } from "./gebruikers";
+import { werkbonnenTable } from "./onderhoud";
 
 export const opleverrapportenTable = pgTable("opleverrapporten", {
   id: serial("id").primaryKey(),
   gebouwId: integer("gebouw_id").notNull().references(() => gebouwenTable.id, { onDelete: "cascade" }),
+  werkbonId: integer("werkbon_id").references(() => werkbonnenTable.id, { onDelete: "set null" }),
   rapportType: text("rapport_type").notNull().default("opleverrapport"),
   versie: integer("versie").notNull().default(1),
   status: text("status").notNull().default("concept"),

@@ -14,6 +14,16 @@ import type { RapportWeergaveStatus } from './rapportWeergaveStatus';
 export interface Rapport {
   id: number;
   gebouw_id: number;
+  /**
+     * Optionele koppeling met een onderhoudswerkbon.
+     * @nullable
+     */
+  werkbon_id?: number | null;
+  /**
+     * Werkbonnummer van de gekoppelde werkbon (server-side opgelost).
+     * @nullable
+     */
+  werkbon_nummer?: string | null;
   rapport_type: string;
   versie: number;
   status: RapportStatus;

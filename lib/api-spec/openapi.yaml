@@ -1030,7 +1030,7 @@ paths:
     get:
       operationId: listRapporten
       tags: [gebouwen]
-      summary: Alle opleverrapporten (cross-gebouw, optioneel gefilterd op status)
+      summary: Alle opleverrapporten (cross-gebouw, optioneel gefilterd op status of werkbon)
       parameters:
         - in: query
           name: status
@@ -1038,6 +1038,11 @@ paths:
           schema:
             type: string
             enum: [concept, definitief, vervangen, gearchiveerd]
+        - in: query
+          name: werkbon_id
+          required: false
+          schema:
+            type: integer
       responses:
         "200":
           description: Lijst van rapporten
@@ -29118,6 +29123,12 @@ components:
           type: integer
         gebouw_id:
           type: integer
+        werkbon_id:
+          type: ["integer", "null"]
+          description: Optionele koppeling met een onderhoudswerkbon.
+        werkbon_nummer:
+          type: ["string", "null"]
+          description: Werkbonnummer van de gekoppelde werkbon (server-side opgelost).
         rapport_type:
           type: string
         versie:
@@ -29185,6 +29196,8 @@ components:
           type: string
         titel:
           type: ["string", "null"]
+        werkbon_id:
+          type: ["integer", "null"]
         secties:
           type: object
         spot_selectie:
@@ -29205,6 +29218,8 @@ components:
       properties:
         titel:
           type: ["string", "null"]
+        werkbon_id:
+          type: ["integer", "null"]
         secties:
           type: object
         spot_selectie:

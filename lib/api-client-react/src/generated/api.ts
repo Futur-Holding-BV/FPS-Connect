@@ -3969,7 +3969,7 @@ export const getListRapportenUrl = (params?: ListRapportenParams,) => {
 }
 
 /**
- * @summary Alle opleverrapporten (cross-gebouw, optioneel gefilterd op status)
+ * @summary Alle opleverrapporten (cross-gebouw, optioneel gefilterd op status of werkbon)
  */
 export const listRapporten = async (params?: ListRapportenParams, options?: RequestInit): Promise<Rapport[]> => {
 
@@ -4016,7 +4016,7 @@ export type ListRapportenQueryError = ErrorType<unknown>
 
 
 /**
- * @summary Alle opleverrapporten (cross-gebouw, optioneel gefilterd op status)
+ * @summary Alle opleverrapporten (cross-gebouw, optioneel gefilterd op status of werkbon)
  */
 
 export function useListRapporten<TData = Awaited<ReturnType<typeof listRapporten>>, TError = ErrorType<unknown>>(

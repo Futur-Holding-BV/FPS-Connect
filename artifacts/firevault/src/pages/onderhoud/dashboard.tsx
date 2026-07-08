@@ -449,6 +449,7 @@ export default function OnderhoudDashboard() {
                         {r.bevroren_op
                           ? ` · ${new Date(r.bevroren_op).toLocaleDateString("nl-NL")}`
                           : ""}
+                        {r.werkbon_nummer ? ` · ${r.werkbon_nummer}` : ""}
                       </div>
                     </div>
                     <Badge variant="outline" className="bg-green-100 text-green-800 border-green-200 text-xs shrink-0">

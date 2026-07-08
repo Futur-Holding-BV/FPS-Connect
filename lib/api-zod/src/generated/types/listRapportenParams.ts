@@ -9,4 +9,5 @@ import type { ListRapportenStatus } from './listRapportenStatus';
 
 export type ListRapportenParams = {
 status?: ListRapportenStatus;
+werkbon_id?: number;
 };

@@ -12,6 +12,8 @@ export interface RapportInput {
   rapport_type: string;
   /** @nullable */
   titel?: string | null;
+  /** @nullable */
+  werkbon_id?: number | null;
   secties?: RapportInputSecties;
   spot_selectie?: RapportInputSpotSelectie;
   bijlagen_ids?: number[];

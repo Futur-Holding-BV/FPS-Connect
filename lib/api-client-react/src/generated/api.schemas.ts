@@ -6394,6 +6394,16 @@ export type RapportBevrorenDocumentRevisies = { [key: string]: unknown } | null;
 export interface Rapport {
   id: number;
   gebouw_id: number;
+  /**
+     * Optionele koppeling met een onderhoudswerkbon.
+     * @nullable
+     */
+  werkbon_id?: number | null;
+  /**
+     * Werkbonnummer van de gekoppelde werkbon (server-side opgelost).
+     * @nullable
+     */
+  werkbon_nummer?: string | null;
   rapport_type: string;
   versie: number;
   status: RapportStatus;
@@ -6443,6 +6453,8 @@ export interface RapportInput {
   rapport_type: string;
   /** @nullable */
   titel?: string | null;
+  /** @nullable */
+  werkbon_id?: number | null;
   secties?: RapportInputSecties;
   spot_selectie?: RapportInputSpotSelectie;
   bijlagen_ids?: number[];
@@ -6458,6 +6470,8 @@ export type RapportPatchSpotSelectie = { [key: string]: unknown };
 export interface RapportPatch {
   /** @nullable */
   titel?: string | null;
+  /** @nullable */
+  werkbon_id?: number | null;
   secties?: RapportPatchSecties;
   spot_selectie?: RapportPatchSpotSelectie;
   bijlagen_ids?: number[];
@@ -11463,6 +11477,7 @@ export type GetGebouwGevelbeeld200 = {
 
 export type ListRapportenParams = {
 status?: ListRapportenStatus;
+werkbon_id?: number;
 };
 
 export type ListRapportenStatus = typeof ListRapportenStatus[keyof typeof ListRapportenStatus];
