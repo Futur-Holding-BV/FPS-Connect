@@ -4,6 +4,28 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-08 — Reactietermijn-signalering voor hoofdbeheerders
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (alleen additive: nieuwe kolom, nieuwe achtergrondjob)
+
+**Wat is gebouwd:**
+
+Dagelijkse achtergrondservice die detecteert wanneer een reactietermijn op een definitief opleverrapport is verstreken zonder klantreactie, en hier een e-mail-notificatie voor verstuurt naar alle beheerders met rapportage-schrijfbevoegdheid (rapportages:2+).
+
+- De signalering draait elke dag om 07:30 via de bestaande `setTimeout`/`unref()`-schedulerstructuur.
+- Elk rapport wordt maximaal één keer gemeld: kolom `reactietermijn_melding_verzond_op` (nullable timestamp) op de `opleverrapporten`-tabel houdt bij wanneer de melding is verstuurd. Rapporten waarop deze kolom al is ingevuld, worden overgeslagen.
+- De e-mail bevat een tabel met gebouwnaam, rapporttype, termijndatum en het aantal verstreken dagen, opgemaakt in de standaard FPS Connect mailstijl.
+- Nieuwe mailsoort `"reactietermijn_melding"` toegevoegd aan het `MailSoort`-type in `email.ts`.
+
+**Technische aanpak:**
+
+- `lib/db/src/schema/rapporten.ts` — additieve kolom `reactietermijnMeldingVerzondOp` (nullable timestamp); toegepast via directe `ALTER TABLE IF NOT EXISTS`
+- `artifacts/api-server/src/lib/reactietermijnSignalering.ts` (nieuw) — `planDagelijkseReactietermijnSignalering()` + `voerCheckUit()` met dezelfde structuur als `planningMeldingenService.ts`
+- `artifacts/api-server/src/services/email.ts` — nieuw `stuurReactietermijnMelding()` met HTML-tabel (gebouw / type / datum / overschrijding in dagen)
+- `artifacts/api-server/src/index.ts` — registratie van de nieuwe job naast de overige dagelijkse jobs
+
+**Verificatie:** typecheck libs en api-server geslaagd (pre-existing TS7030 in documenten.ts/offertes.ts ongewijzigd); kolom aangemaakt via SQL; API server herstart en operationeel.
+
 ## 2026-07-08 — Vrije-tekst zoekfunctie rapportenbibliotheek bevestigd + gegenereerde typen bijgewerkt
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag

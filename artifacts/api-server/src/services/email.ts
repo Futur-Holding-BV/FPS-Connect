@@ -53,7 +53,7 @@ export class MailFout extends Error {
   }
 }
 
-export type MailSoort = "test" | "uitnodiging" | "wachtwoord_reset" | "offerte" | "klantvraag" | "ondertekening" | "inkoopbon" | "opdrachtbevestiging" | "magazijn_signalering" | "magazijn_bestelbon" | "aanvraag_bevestiging" | "planning_melding" | "incident_melding" | "ai_drempel";
+export type MailSoort = "test" | "uitnodiging" | "wachtwoord_reset" | "offerte" | "klantvraag" | "ondertekening" | "inkoopbon" | "opdrachtbevestiging" | "magazijn_signalering" | "magazijn_bestelbon" | "aanvraag_bevestiging" | "planning_melding" | "incident_melding" | "ai_drempel" | "reactietermijn_melding";
 
 // ── Configuratie-helpers ─────────────────────────────────────────────────────
 export function isGeconfigureerd(): boolean {
@@ -1153,6 +1153,71 @@ export async function stuurPlanningMelding(opties: {
     await verstuurMail({ naarEmail: opties.naarEmail, naarNaam: opties.naarNaam, onderwerp, html, soort: "planning_melding" });
   } catch (err) {
     logger.error({ err }, "Planning-melding verzenden mislukt");
+  }
+}
+
+/**
+ * Verstuurt een melding naar beheerders wanneer een reactietermijn is verstreken
+ * zonder dat de klant heeft gereageerd.
+ */
+export async function stuurReactietermijnMelding(opties: {
+  naarEmail: string;
+  naarNaam: string | null;
+  rapporten: Array<{
+    rapport_id: number;
+    gebouw_naam: string | null;
+    rapport_type: string;
+    reactietermijn_datum: string;
+    dagen_verstreken: number;
+  }>;
+}): Promise<void> {
+  if (!isGeconfigureerd()) return;
+  const regels = opties.rapporten
+    .map(
+      (r) => `<tr>
+      <td style="padding:8px 12px;border-bottom:1px solid #f4f4f5;font-size:14px;color:#3f3f46;">${escapeHtml(r.gebouw_naam ?? "Onbekend gebouw")}</td>
+      <td style="padding:8px 12px;border-bottom:1px solid #f4f4f5;font-size:14px;color:#3f3f46;">${escapeHtml(r.rapport_type.replace(/_/g, " "))}</td>
+      <td style="padding:8px 12px;border-bottom:1px solid #f4f4f5;font-size:14px;color:#3f3f46;">${escapeHtml(r.reactietermijn_datum)}</td>
+      <td style="padding:8px 12px;border-bottom:1px solid #f4f4f5;font-size:14px;">
+        <span style="color:#dc2626;font-weight:600;">${r.dagen_verstreken} dag${r.dagen_verstreken !== 1 ? "en" : ""} verstreken</span>
+      </td>
+    </tr>`,
+    )
+    .join("\n");
+  const tabelHtml = `<table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e4e4e7;border-radius:6px;overflow:hidden;margin:0 0 16px;">
+    <thead><tr style="background:#f4f4f5;">
+      <th style="padding:8px 12px;text-align:left;font-size:13px;color:#71717a;font-weight:600;">Gebouw</th>
+      <th style="padding:8px 12px;text-align:left;font-size:13px;color:#71717a;font-weight:600;">Rapporttype</th>
+      <th style="padding:8px 12px;text-align:left;font-size:13px;color:#71717a;font-weight:600;">Termijndatum</th>
+      <th style="padding:8px 12px;text-align:left;font-size:13px;color:#71717a;font-weight:600;">Overschrijding</th>
+    </tr></thead>
+    <tbody>${regels}</tbody>
+  </table>`;
+  const aantal = opties.rapporten.length;
+  const html = mailShell({
+    titel: "Reactietermijn verstreken",
+    kopje: `Reactietermijn${aantal !== 1 ? "en" : ""} verstreken zonder klantreactie`,
+    paragrafen: [
+      `Geachte ${escapeHtml(opties.naarNaam ?? "beheerder")},`,
+      `Voor onderstaand${aantal !== 1 ? "e" : ""} <strong>${aantal}</strong> definitief${aantal !== 1 ? "e" : ""} rapport${aantal !== 1 ? "en" : ""} is de reactietermijn verstreken zonder dat er een klantreactie is ontvangen. Dit kan juridisch relevant zijn voor de opleverstatus.`,
+      tabelHtml,
+      "Log in op FPS Connect om de rapporten te bekijken en eventuele vervolgstappen te zetten.",
+    ],
+    voettekst:
+      "Automatische dagelijkse signalering van FPS Connect &bull; U ontvangt dit omdat u rapportage-bevoegdheden heeft.",
+  });
+  const onderwerp =
+    `Reactietermijn verstreken: ${aantal} rapport${aantal !== 1 ? "en" : ""} zonder klantreactie`;
+  try {
+    await verstuurMail({
+      naarEmail: opties.naarEmail,
+      naarNaam: opties.naarNaam,
+      onderwerp,
+      html,
+      soort: "reactietermijn_melding",
+    });
+  } catch (err) {
+    logger.error({ err }, "Reactietermijn-melding verzenden mislukt");
   }
 }
 

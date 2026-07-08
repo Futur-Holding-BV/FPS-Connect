@@ -6,6 +6,7 @@ import { planDagelijksePortaalOpruiming } from "./lib/portaalOpruimen";
 import { planDagelijkseAvgOpruiming } from "./lib/avgOpruiming";
 import { planDagelijkseMagazijnSignalering } from "./lib/magazijnSignalering";
 import { planDagelijksePlanningMeldingen } from "./lib/planningMeldingenService";
+import { planDagelijkseReactietermijnSignalering } from "./lib/reactietermijnSignalering";
 import { planDagelijkseScout } from "./lib/scoutService";
 import { planDagelijkseLeermomenten } from "./services/fie-service";
 import { planUurlijkseAiDrempelCheck } from "./lib/aiDrempelCheck";
@@ -50,6 +51,7 @@ ensureSessionTable()
       planDagelijkseAvgOpruiming();
       planDagelijkseMagazijnSignalering();
       planDagelijksePlanningMeldingen();
+      planDagelijkseReactietermijnSignalering();
       planDagelijkseScout();
       planDagelijkseLeermomenten();
       planUurlijkseAiDrempelCheck();
