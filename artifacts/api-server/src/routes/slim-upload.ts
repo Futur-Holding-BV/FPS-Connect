@@ -1,12 +1,9 @@
 import { Router } from "express";
 import multer from "multer";
-import { execFile } from "node:child_process";
-import { writeFile, readFile, unlink } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import path from "node:path";
 import { requireAuth } from "../middlewares/auth";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
 import { logger } from "../lib/logger";
+import { renderPdfPagina, haalPdfTekst, resizeAfbeelding } from "../lib/pdfVisie";
 import { db, gebruikersTable, slimUploadLogTable } from "@workspace/db";
 import { eq, desc } from "drizzle-orm";
 
@@ -194,59 +191,8 @@ function heuristischClassificeer(
 }
 
 // ── Vision helpers ────────────────────────────────────────────────────────────
-
-async function renderPdfPagina(buffer: Buffer): Promise<string | null> {
-  const id = `${Date.now()}_${Math.random().toString(36).slice(2)}`;
-  const tmpIn     = path.join(tmpdir(), `fps_in_${id}.pdf`);
-  const tmpPrefix = path.join(tmpdir(), `fps_out_${id}`);
-
-  try {
-    await writeFile(tmpIn, buffer);
-
-    await new Promise<void>((resolve, reject) => {
-      execFile(
-        "pdftoppm",
-        ["-jpeg", "-f", "1", "-l", "1", "-r", "120", tmpIn, tmpPrefix],
-        { timeout: 15_000 },
-        (err) => { if (err) reject(err); else resolve(); },
-      );
-    });
-
-    let imgBuffer: Buffer | null = null;
-    for (const candidate of [`${tmpPrefix}-01.jpg`, `${tmpPrefix}-1.jpg`]) {
-      try {
-        imgBuffer = await readFile(candidate);
-        await unlink(candidate).catch(() => {});
-        break;
-      } catch { /* probeer volgende */ }
-    }
-    if (!imgBuffer) return null;
-
-    const sharp = (await import("sharp")).default;
-    return (await sharp(imgBuffer)
-      .resize({ width: 800, withoutEnlargement: true })
-      .jpeg({ quality: 75 })
-      .toBuffer()).toString("base64");
-  } catch (err) {
-    logger.warn({ err }, "slim-upload: PDF→afbeelding mislukt, doorgaan zonder vision");
-    return null;
-  } finally {
-    await unlink(tmpIn).catch(() => {});
-  }
-}
-
-async function resizeAfbeelding(buffer: Buffer): Promise<string | null> {
-  try {
-    const sharp = (await import("sharp")).default;
-    return (await sharp(buffer)
-      .resize({ width: 800, withoutEnlargement: true })
-      .jpeg({ quality: 75 })
-      .toBuffer()).toString("base64");
-  } catch (err) {
-    logger.warn({ err }, "slim-upload: afbeelding resize mislukt");
-    return null;
-  }
-}
+// renderPdfPagina(), haalPdfTekst() en resizeAfbeelding() zijn gedeeld via
+// ../lib/pdfVisie (ook gebruikt door studio.ts voor huisstijl-analyse).
 
 // ── AI-classificatie met vision ───────────────────────────────────────────────
 
@@ -432,16 +378,6 @@ async function aiClassificeer(
     mag_uploaden: true,
     beperkingen: [],
   };
-}
-
-// ── Tekst uit PDF halen ───────────────────────────────────────────────────────
-
-async function haalPdfTekst(buffer: Buffer): Promise<string | null> {
-  try {
-    const pdfParse = ((await import("pdf-parse")) as unknown as { default: (b: Buffer) => Promise<{ text: string }> }).default;
-    const result = await pdfParse(buffer);
-    return result.text?.trim() || null;
-  } catch { return null; }
 }
 
 // ── Bestand classificeren (tekst + vision) ────────────────────────────────────

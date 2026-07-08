@@ -1,7 +1,9 @@
-import { pgTable, serial, text, integer, boolean, timestamp, numeric } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, boolean, timestamp, numeric, uniqueIndex } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
+import { sql } from "drizzle-orm";
 import { z } from "zod/v4";
 import { werkgeversTable } from "./hrm";
+import { gebruikersTable } from "./gebruikers";
 
 // Bedrijfsverzekeringen — polissen per FPS-onderneming
 export const orgVerzekeringenTable = pgTable("org_verzekeringen", {
@@ -75,9 +77,13 @@ export const aiVeldCorrectiesTable = pgTable("ai_veld_correcties", {
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
 });
 
-// Document Studio — referentiemodellen en goedgekeurde Connect-templates per werkmaatschappij.
-// Elke rij vertegenwoordigt één documenttype (offerte, brief, factuur…) voor één werkgever.
-// Uniciteit (werkgever_id, document_type) wordt afdwongen via upsert in de API-route.
+// Document Studio — versiebeheerde modellen per (werkgever, documenttype).
+// Meerdere rijen per (werkgever_id, document_type) zijn toegestaan (volledige
+// versiehistorie: concept/goedgekeurd/gearchiveerd); een nieuwe upload maakt altijd
+// een nieuwe concept-rij aan, het oude actieve model blijft ongewijzigd actief tot
+// expliciete goedkeuring. Uniciteit van het ACTIEVE (status='goedgekeurd') model per
+// (werkgever_id, document_type) wordt afgedwongen via een partial unique index
+// (zie hieronder) — niet in de kolomdefinitie zelf, want die geldt voor alle rijen.
 export const documentStudioModellenTable = pgTable("document_studio_modellen", {
   id: serial("id").primaryKey(),
   werkgeverId: integer("werkgever_id").notNull().references(() => werkgeversTable.id, { onDelete: "cascade" }),
@@ -89,12 +95,15 @@ export const documentStudioModellenTable = pgTable("document_studio_modellen", {
   versie: integer("versie").notNull().default(1),
   goedgekeurdOp: timestamp("goedgekeurd_op"),
   goedgekeurdDoor: integer("goedgekeurd_door"),
+  gearchiveerdOp: timestamp("gearchiveerd_op"),
+  aangemaaktDoor: integer("aangemaakt_door").references(() => gebruikersTable.id, { onDelete: "set null" }),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
-});
-// Unieke constraint (werkgever_id, document_type) is aanwezig in de DB via directe ALTER TABLE.
-// Bewust NIET in het Drizzle-schema: drizzle-kit genereert anders ongeldige migratiesql
-// voor additieve UNIQUE-indexen, wat de deployment-validatiestap laat falen.
+}, (t) => [
+  uniqueIndex("document_studio_modellen_actief_uniek")
+    .on(t.werkgeverId, t.documentType)
+    .where(sql`status = 'goedgekeurd'`),
+]);
 
 export const insertOrgVerzekeringSchema = createInsertSchema(orgVerzekeringenTable).omit({
   id: true,

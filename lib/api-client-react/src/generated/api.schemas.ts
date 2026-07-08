@@ -3412,6 +3412,26 @@ export interface Werkgever {
      * @nullable
      */
   primaire_kleur?: string | null;
+  /** @nullable */
+  iban?: string | null;
+  /**
+     * Positie van de koptekst in documentsjablonen (bijv. links/midden/rechts).
+     * @nullable
+     */
+  koptekst_positie?: string | null;
+  /**
+     * Positie van de voettekst in documentsjablonen (bijv. links/midden/rechts).
+     * @nullable
+     */
+  voettekst_positie?: string | null;
+  /** @nullable */
+  marge_boven?: number | null;
+  /** @nullable */
+  marge_onder?: number | null;
+  /** @nullable */
+  marge_links?: number | null;
+  /** @nullable */
+  marge_rechts?: number | null;
   actief: boolean;
   /** @nullable */
   boekhouder_naam?: string | null;
@@ -3464,6 +3484,20 @@ export interface WerkgeverInput {
      * @nullable
      */
   primaire_kleur?: string | null;
+  /** @nullable */
+  iban?: string | null;
+  /** @nullable */
+  koptekst_positie?: string | null;
+  /** @nullable */
+  voettekst_positie?: string | null;
+  /** @nullable */
+  marge_boven?: number | null;
+  /** @nullable */
+  marge_onder?: number | null;
+  /** @nullable */
+  marge_links?: number | null;
+  /** @nullable */
+  marge_rechts?: number | null;
   actief?: boolean;
   boekhouder_naam?: string;
   boekhouder_email?: string;
@@ -4708,6 +4742,11 @@ export interface Offerte {
   verzend_type?: string;
   /** Aantal klantvragen zonder antwoord voor deze offerte */
   onbeantwoorde_vragen?: number;
+  /**
+     * Vastgepind Document Studio-model (offerte-type) op moment van verzenden — server-side gezet, niet client-instelbaar
+     * @nullable
+     */
+  studio_model_id?: number | null;
   aangemaakt_op: string;
   bijgewerkt_op: string;
 }
@@ -10416,6 +10455,10 @@ export interface DocumentStudioModel {
   goedgekeurd_op?: string | null;
   /** @nullable */
   goedgekeurd_door?: number | null;
+  /** @nullable */
+  gearchiveerd_op?: string | null;
+  /** @nullable */
+  aangemaakt_door?: number | null;
   aangemaakt_op: string;
   /** @nullable */
   bijgewerkt_op?: string | null;
@@ -10533,6 +10576,113 @@ export interface StudioTemplateJson {
   secties: StudioTemplateJsonSectiesItem[];
   /** @nullable */
   voettekst?: string | null;
+}
+
+/**
+ * @nullable
+ */
+export type StudioHuisstijlVoorstelKoptekstPositie = typeof StudioHuisstijlVoorstelKoptekstPositie[keyof typeof StudioHuisstijlVoorstelKoptekstPositie] | null;
+
+
+export const StudioHuisstijlVoorstelKoptekstPositie = {
+  links: 'links',
+  midden: 'midden',
+  rechts: 'rechts',
+} as const;
+
+/**
+ * @nullable
+ */
+export type StudioHuisstijlVoorstelVoettekstPositie = typeof StudioHuisstijlVoorstelVoettekstPositie[keyof typeof StudioHuisstijlVoorstelVoettekstPositie] | null;
+
+
+export const StudioHuisstijlVoorstelVoettekstPositie = {
+  links: 'links',
+  midden: 'midden',
+  rechts: 'rechts',
+} as const;
+
+export interface StudioHuisstijlVoorstel {
+  /** @nullable */
+  adres: string | null;
+  /** @nullable */
+  postcode: string | null;
+  /** @nullable */
+  plaats: string | null;
+  /** @nullable */
+  kvk: string | null;
+  /** @nullable */
+  btw: string | null;
+  /** @nullable */
+  iban: string | null;
+  /** @nullable */
+  email: string | null;
+  /** @nullable */
+  telefoon: string | null;
+  /** @nullable */
+  website: string | null;
+  /** @nullable */
+  voettekst: string | null;
+  /** @nullable */
+  primaire_kleur: string | null;
+  /** @nullable */
+  koptekst_positie: StudioHuisstijlVoorstelKoptekstPositie;
+  /** @nullable */
+  voettekst_positie: StudioHuisstijlVoorstelVoettekstPositie;
+  /** @nullable */
+  marge_boven: number | null;
+  /** @nullable */
+  marge_onder: number | null;
+  /** @nullable */
+  marge_links: number | null;
+  /** @nullable */
+  marge_rechts: number | null;
+  /** @nullable */
+  redenering: string | null;
+}
+
+export interface StudioHuisstijlHuidig {
+  /** @nullable */
+  adres: string | null;
+  /** @nullable */
+  postcode: string | null;
+  /** @nullable */
+  plaats: string | null;
+  /** @nullable */
+  kvk: string | null;
+  /** @nullable */
+  btw: string | null;
+  /** @nullable */
+  iban: string | null;
+  /** @nullable */
+  email: string | null;
+  /** @nullable */
+  telefoon: string | null;
+  /** @nullable */
+  website: string | null;
+  /** @nullable */
+  voettekst: string | null;
+  /** @nullable */
+  primaire_kleur: string | null;
+  /** @nullable */
+  koptekst_positie: string | null;
+  /** @nullable */
+  voettekst_positie: string | null;
+  /** @nullable */
+  marge_boven: number | null;
+  /** @nullable */
+  marge_onder: number | null;
+  /** @nullable */
+  marge_links: number | null;
+  /** @nullable */
+  marge_rechts: number | null;
+}
+
+export interface StudioHuisstijlAnalyseResponse {
+  model_id: number;
+  vision_gebruikt: boolean;
+  voorstel: StudioHuisstijlVoorstel;
+  huidig: StudioHuisstijlHuidig;
 }
 
 export type AiChatBerichtRol = typeof AiChatBerichtRol[keyof typeof AiChatBerichtRol];

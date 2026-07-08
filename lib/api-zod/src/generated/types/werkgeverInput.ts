@@ -45,6 +45,20 @@ export interface WerkgeverInput {
      * @nullable
      */
   primaire_kleur?: string | null;
+  /** @nullable */
+  iban?: string | null;
+  /** @nullable */
+  koptekst_positie?: string | null;
+  /** @nullable */
+  voettekst_positie?: string | null;
+  /** @nullable */
+  marge_boven?: number | null;
+  /** @nullable */
+  marge_onder?: number | null;
+  /** @nullable */
+  marge_links?: number | null;
+  /** @nullable */
+  marge_rechts?: number | null;
   actief?: boolean;
   boekhouder_naam?: string;
   boekhouder_email?: string;

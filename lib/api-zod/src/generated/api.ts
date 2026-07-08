@@ -8113,6 +8113,13 @@ export const ListWerkgeversResponseItem = zod.object({
   "handtekening_url": zod.string().nullish().describe('URL van de geüploade handtekeningafbeelding (PNG\/JPG) voor het certificaat.'),
   "logo_url": zod.string().nullish().describe('Object-storage pad van het huisstijllogo (PNG\/SVG) voor documenten.'),
   "primaire_kleur": zod.string().nullish().describe('Primaire merkkleur als hex-waarde (bijv.'),
+  "iban": zod.string().nullish(),
+  "koptekst_positie": zod.string().nullish().describe('Positie van de koptekst in documentsjablonen (bijv. links\/midden\/rechts).'),
+  "voettekst_positie": zod.string().nullish().describe('Positie van de voettekst in documentsjablonen (bijv. links\/midden\/rechts).'),
+  "marge_boven": zod.number().nullish(),
+  "marge_onder": zod.number().nullish(),
+  "marge_links": zod.number().nullish(),
+  "marge_rechts": zod.number().nullish(),
   "actief": zod.boolean(),
   "boekhouder_naam": zod.string().nullish(),
   "boekhouder_email": zod.string().nullish(),
@@ -8145,6 +8152,13 @@ export const CreateWerkgeverBody = zod.object({
   "handtekening_url": zod.string().nullish(),
   "logo_url": zod.string().nullish().describe('Object-storage pad van het huisstijllogo voor documenten.'),
   "primaire_kleur": zod.string().nullish().describe('Primaire merkkleur als hex-waarde (bijv.'),
+  "iban": zod.string().nullish(),
+  "koptekst_positie": zod.string().nullish(),
+  "voettekst_positie": zod.string().nullish(),
+  "marge_boven": zod.number().nullish(),
+  "marge_onder": zod.number().nullish(),
+  "marge_links": zod.number().nullish(),
+  "marge_rechts": zod.number().nullish(),
   "actief": zod.boolean().optional(),
   "boekhouder_naam": zod.string().optional(),
   "boekhouder_email": zod.string().optional(),
@@ -8181,6 +8195,13 @@ export const GetWerkgeverResponse = zod.object({
   "handtekening_url": zod.string().nullish().describe('URL van de geüploade handtekeningafbeelding (PNG\/JPG) voor het certificaat.'),
   "logo_url": zod.string().nullish().describe('Object-storage pad van het huisstijllogo (PNG\/SVG) voor documenten.'),
   "primaire_kleur": zod.string().nullish().describe('Primaire merkkleur als hex-waarde (bijv.'),
+  "iban": zod.string().nullish(),
+  "koptekst_positie": zod.string().nullish().describe('Positie van de koptekst in documentsjablonen (bijv. links\/midden\/rechts).'),
+  "voettekst_positie": zod.string().nullish().describe('Positie van de voettekst in documentsjablonen (bijv. links\/midden\/rechts).'),
+  "marge_boven": zod.number().nullish(),
+  "marge_onder": zod.number().nullish(),
+  "marge_links": zod.number().nullish(),
+  "marge_rechts": zod.number().nullish(),
   "actief": zod.boolean(),
   "boekhouder_naam": zod.string().nullish(),
   "boekhouder_email": zod.string().nullish(),
@@ -8216,6 +8237,13 @@ export const UpdateWerkgeverBody = zod.object({
   "handtekening_url": zod.string().nullish(),
   "logo_url": zod.string().nullish().describe('Object-storage pad van het huisstijllogo voor documenten.'),
   "primaire_kleur": zod.string().nullish().describe('Primaire merkkleur als hex-waarde (bijv.'),
+  "iban": zod.string().nullish(),
+  "koptekst_positie": zod.string().nullish(),
+  "voettekst_positie": zod.string().nullish(),
+  "marge_boven": zod.number().nullish(),
+  "marge_onder": zod.number().nullish(),
+  "marge_links": zod.number().nullish(),
+  "marge_rechts": zod.number().nullish(),
   "actief": zod.boolean().optional(),
   "boekhouder_naam": zod.string().optional(),
   "boekhouder_email": zod.string().optional(),
@@ -8242,6 +8270,13 @@ export const UpdateWerkgeverResponse = zod.object({
   "handtekening_url": zod.string().nullish().describe('URL van de geüploade handtekeningafbeelding (PNG\/JPG) voor het certificaat.'),
   "logo_url": zod.string().nullish().describe('Object-storage pad van het huisstijllogo (PNG\/SVG) voor documenten.'),
   "primaire_kleur": zod.string().nullish().describe('Primaire merkkleur als hex-waarde (bijv.'),
+  "iban": zod.string().nullish(),
+  "koptekst_positie": zod.string().nullish().describe('Positie van de koptekst in documentsjablonen (bijv. links\/midden\/rechts).'),
+  "voettekst_positie": zod.string().nullish().describe('Positie van de voettekst in documentsjablonen (bijv. links\/midden\/rechts).'),
+  "marge_boven": zod.number().nullish(),
+  "marge_onder": zod.number().nullish(),
+  "marge_links": zod.number().nullish(),
+  "marge_rechts": zod.number().nullish(),
   "actief": zod.boolean(),
   "boekhouder_naam": zod.string().nullish(),
   "boekhouder_email": zod.string().nullish(),
@@ -10716,6 +10751,7 @@ export const ListOffertesResponseItem = zod.object({
   "vervolg_tekst": zod.string().nullish().describe('Bewerkbare tekst voor het vervolgadvies in de offerte'),
   "verzend_type": zod.string().optional().describe('Verzendmodus: ondertekening (portaal + digitaal tekenen) of contract_klant (klant stuurt eigen contract terug)'),
   "onbeantwoorde_vragen": zod.number().optional().describe('Aantal klantvragen zonder antwoord voor deze offerte'),
+  "studio_model_id": zod.number().nullish().describe('Vastgepind Document Studio-model (offerte-type) op moment van verzenden — server-side gezet, niet client-instelbaar'),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })
@@ -10836,6 +10872,7 @@ export const GetOfferteResponse = zod.object({
   "vervolg_tekst": zod.string().nullish().describe('Bewerkbare tekst voor het vervolgadvies in de offerte'),
   "verzend_type": zod.string().optional().describe('Verzendmodus: ondertekening (portaal + digitaal tekenen) of contract_klant (klant stuurt eigen contract terug)'),
   "onbeantwoorde_vragen": zod.number().optional().describe('Aantal klantvragen zonder antwoord voor deze offerte'),
+  "studio_model_id": zod.number().nullish().describe('Vastgepind Document Studio-model (offerte-type) op moment van verzenden — server-side gezet, niet client-instelbaar'),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })
@@ -10949,6 +10986,7 @@ export const UpdateOfferteResponse = zod.object({
   "vervolg_tekst": zod.string().nullish().describe('Bewerkbare tekst voor het vervolgadvies in de offerte'),
   "verzend_type": zod.string().optional().describe('Verzendmodus: ondertekening (portaal + digitaal tekenen) of contract_klant (klant stuurt eigen contract terug)'),
   "onbeantwoorde_vragen": zod.number().optional().describe('Aantal klantvragen zonder antwoord voor deze offerte'),
+  "studio_model_id": zod.number().nullish().describe('Vastgepind Document Studio-model (offerte-type) op moment van verzenden — server-side gezet, niet client-instelbaar'),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })
@@ -23884,6 +23922,8 @@ export const ListDocumentStudioModellenResponseItem = zod.object({
   "versie": zod.number(),
   "goedgekeurd_op": zod.string().nullish(),
   "goedgekeurd_door": zod.number().nullish(),
+  "gearchiveerd_op": zod.string().nullish(),
+  "aangemaakt_door": zod.number().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string().nullish()
 })
@@ -23912,6 +23952,8 @@ export const UpsertDocumentStudioModelResponse = zod.object({
   "versie": zod.number(),
   "goedgekeurd_op": zod.string().nullish(),
   "goedgekeurd_door": zod.number().nullish(),
+  "gearchiveerd_op": zod.string().nullish(),
+  "aangemaakt_door": zod.number().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string().nullish()
 })
@@ -23936,6 +23978,8 @@ export const GetDocumentStudioModelResponse = zod.object({
   "versie": zod.number(),
   "goedgekeurd_op": zod.string().nullish(),
   "goedgekeurd_door": zod.number().nullish(),
+  "gearchiveerd_op": zod.string().nullish(),
+  "aangemaakt_door": zod.number().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string().nullish()
 })
@@ -23967,6 +24011,8 @@ export const UpdateDocumentStudioModelResponse = zod.object({
   "versie": zod.number(),
   "goedgekeurd_op": zod.string().nullish(),
   "goedgekeurd_door": zod.number().nullish(),
+  "gearchiveerd_op": zod.string().nullish(),
+  "aangemaakt_door": zod.number().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string().nullish()
 })
@@ -23995,6 +24041,8 @@ export const UploadDocumentStudioReferentieResponse = zod.object({
   "versie": zod.number(),
   "goedgekeurd_op": zod.string().nullish(),
   "goedgekeurd_door": zod.number().nullish(),
+  "gearchiveerd_op": zod.string().nullish(),
+  "aangemaakt_door": zod.number().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string().nullish()
 })
@@ -24023,6 +24071,8 @@ export const GenereerStudioTemplateResponse = zod.object({
   "versie": zod.number(),
   "goedgekeurd_op": zod.string().nullish(),
   "goedgekeurd_door": zod.number().nullish(),
+  "gearchiveerd_op": zod.string().nullish(),
+  "aangemaakt_door": zod.number().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string().nullish()
 })
@@ -24051,8 +24101,62 @@ export const BijstuurStudioTemplateResponse = zod.object({
   "versie": zod.number(),
   "goedgekeurd_op": zod.string().nullish(),
   "goedgekeurd_door": zod.number().nullish(),
+  "gearchiveerd_op": zod.string().nullish(),
+  "aangemaakt_door": zod.number().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string().nullish()
+})
+
+
+/**
+ * @summary AI leidt een huisstijl-voorstel af uit het referentiebestand — nooit direct opgeslagen, altijd een voorstel ter accordering
+ */
+export const AnalyseerStudioHuisstijlParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AnalyseerStudioHuisstijlResponse = zod.object({
+  "model_id": zod.number(),
+  "vision_gebruikt": zod.boolean(),
+  "voorstel": zod.object({
+  "adres": zod.string().nullable(),
+  "postcode": zod.string().nullable(),
+  "plaats": zod.string().nullable(),
+  "kvk": zod.string().nullable(),
+  "btw": zod.string().nullable(),
+  "iban": zod.string().nullable(),
+  "email": zod.string().nullable(),
+  "telefoon": zod.string().nullable(),
+  "website": zod.string().nullable(),
+  "voettekst": zod.string().nullable(),
+  "primaire_kleur": zod.string().nullable(),
+  "koptekst_positie": zod.union([zod.literal('links'),zod.literal('midden'),zod.literal('rechts'),zod.literal(null)]).nullable(),
+  "voettekst_positie": zod.union([zod.literal('links'),zod.literal('midden'),zod.literal('rechts'),zod.literal(null)]).nullable(),
+  "marge_boven": zod.number().nullable(),
+  "marge_onder": zod.number().nullable(),
+  "marge_links": zod.number().nullable(),
+  "marge_rechts": zod.number().nullable(),
+  "redenering": zod.string().nullable()
+}),
+  "huidig": zod.object({
+  "adres": zod.string().nullable(),
+  "postcode": zod.string().nullable(),
+  "plaats": zod.string().nullable(),
+  "kvk": zod.string().nullable(),
+  "btw": zod.string().nullable(),
+  "iban": zod.string().nullable(),
+  "email": zod.string().nullable(),
+  "telefoon": zod.string().nullable(),
+  "website": zod.string().nullable(),
+  "voettekst": zod.string().nullable(),
+  "primaire_kleur": zod.string().nullable(),
+  "koptekst_positie": zod.string().nullable(),
+  "voettekst_positie": zod.string().nullable(),
+  "marge_boven": zod.number().nullable(),
+  "marge_onder": zod.number().nullable(),
+  "marge_links": zod.number().nullable(),
+  "marge_rechts": zod.number().nullable()
+})
 })
 
 
@@ -24075,6 +24179,8 @@ export const GoedkeurenStudioTemplateResponse = zod.object({
   "versie": zod.number(),
   "goedgekeurd_op": zod.string().nullish(),
   "goedgekeurd_door": zod.number().nullish(),
+  "gearchiveerd_op": zod.string().nullish(),
+  "aangemaakt_door": zod.number().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string().nullish()
 })
@@ -24100,6 +24206,8 @@ export const GetActiefDocumentStudioModelResponse = zod.union([zod.object({
   "versie": zod.number(),
   "goedgekeurd_op": zod.string().nullish(),
   "goedgekeurd_door": zod.number().nullish(),
+  "gearchiveerd_op": zod.string().nullish(),
+  "aangemaakt_door": zod.number().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string().nullish()
 }),zod.null()])
@@ -24124,6 +24232,8 @@ export const ListActieveDocumentStudioModellenResponse = zod.record(zod.string()
   "versie": zod.number(),
   "goedgekeurd_op": zod.string().nullish(),
   "goedgekeurd_door": zod.number().nullish(),
+  "gearchiveerd_op": zod.string().nullish(),
+  "aangemaakt_door": zod.number().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string().nullish()
 }))

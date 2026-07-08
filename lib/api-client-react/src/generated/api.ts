@@ -679,6 +679,7 @@ import type {
   StatusVerdeling,
   StudioBijstuurInput,
   StudioGenereerInput,
+  StudioHuisstijlAnalyseResponse,
   TaalWijzigen,
   Tekening,
   TekeningAiAnalyseInput,
@@ -68368,6 +68369,76 @@ export const useBijstuurStudioTemplate = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getBijstuurStudioTemplateMutationOptions(options));
+    }
+
+export const getAnalyseerStudioHuisstijlUrl = (id: number,) => {
+
+
+
+
+  return `/api/studio/modellen/${id}/huisstijl-analyse`
+}
+
+/**
+ * @summary AI leidt een huisstijl-voorstel af uit het referentiebestand — nooit direct opgeslagen, altijd een voorstel ter accordering
+ */
+export const analyseerStudioHuisstijl = async (id: number, options?: RequestInit): Promise<StudioHuisstijlAnalyseResponse> => {
+
+  return customFetch<StudioHuisstijlAnalyseResponse>(getAnalyseerStudioHuisstijlUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getAnalyseerStudioHuisstijlMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof analyseerStudioHuisstijl>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof analyseerStudioHuisstijl>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['analyseerStudioHuisstijl'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof analyseerStudioHuisstijl>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  analyseerStudioHuisstijl(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AnalyseerStudioHuisstijlMutationResult = NonNullable<Awaited<ReturnType<typeof analyseerStudioHuisstijl>>>
+
+    export type AnalyseerStudioHuisstijlMutationError = ErrorType<void>
+
+    /**
+ * @summary AI leidt een huisstijl-voorstel af uit het referentiebestand — nooit direct opgeslagen, altijd een voorstel ter accordering
+ */
+export const useAnalyseerStudioHuisstijl = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof analyseerStudioHuisstijl>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof analyseerStudioHuisstijl>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getAnalyseerStudioHuisstijlMutationOptions(options));
     }
 
 export const getGoedkeurenStudioTemplateUrl = (id: number,) => {

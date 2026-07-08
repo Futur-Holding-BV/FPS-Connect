@@ -50,6 +50,26 @@ export interface Werkgever {
      * @nullable
      */
   primaire_kleur?: string | null;
+  /** @nullable */
+  iban?: string | null;
+  /**
+     * Positie van de koptekst in documentsjablonen (bijv. links/midden/rechts).
+     * @nullable
+     */
+  koptekst_positie?: string | null;
+  /**
+     * Positie van de voettekst in documentsjablonen (bijv. links/midden/rechts).
+     * @nullable
+     */
+  voettekst_positie?: string | null;
+  /** @nullable */
+  marge_boven?: number | null;
+  /** @nullable */
+  marge_onder?: number | null;
+  /** @nullable */
+  marge_links?: number | null;
+  /** @nullable */
+  marge_rechts?: number | null;
   actief: boolean;
   /** @nullable */
   boekhouder_naam?: string | null;

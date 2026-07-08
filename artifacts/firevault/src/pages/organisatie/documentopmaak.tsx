@@ -39,6 +39,15 @@ function werkgeverNaarMij(w: Werkgever): WerkmaatschappijInfo {
     email: w.email ?? "",
     website: w.website ?? "",
     kvk: w.kvk ?? "",
+    voettekst: w.voettekst ?? undefined,
+    iban: w.iban ?? undefined,
+    voettekstPositie:
+      w.voettekst_positie === "midden" || w.voettekst_positie === "rechts" || w.voettekst_positie === "links"
+        ? w.voettekst_positie
+        : undefined,
+    margeOnder: w.marge_onder ?? undefined,
+    margeLinks: w.marge_links ?? undefined,
+    margeRechts: w.marge_rechts ?? undefined,
   };
 }
 

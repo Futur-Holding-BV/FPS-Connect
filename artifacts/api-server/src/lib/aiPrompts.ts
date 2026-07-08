@@ -688,6 +688,46 @@ export const STUDIO_BIJSTUUR_JSON_PROMPT: AiPrompt = {
   tekst: "Je past een bestaande Connect-template JSON aan op basis van een bijstuur-instructie. Retourneer ALLEEN de aangepaste JSON-structuur, geen markdown, geen uitleg.",
 };
 
+// ── Studio — huisstijl-analyse uit referentiedocument ────────────────────────
+
+export const STUDIO_HUISSTIJL_ANALYSE_PROMPT: AiPrompt = {
+  naam: "studio-huisstijl-analyse",
+  versie: "1.0.0",
+  tekst: `Je bent een expert in huisstijlherkenning voor het Nederlandse brandpreventie-platform FPS Connect.
+Je analyseert een referentiedocument (briefpapier, offerte, factuur of soortgelijk bedrijfsdocument) van een werkmaatschappij
+en haalt de huisstijl- en bedrijfsgegevens eruit, zodat een gebruiker ze kan overnemen in de bedrijfsinstellingen.
+
+Gebruik ALLE beschikbare informatie: geëxtraheerde tekst ÉN — indien beschikbaar — een visuele weergave van de pagina
+(kleuren, koptekst-/voettekst-positie en witruimte zijn alleen uit de afbeelding af te leiden, niet uit tekst).
+
+Haal ALLEEN gegevens op die je daadwerkelijk kunt afleiden uit het document. Verzin NOOIT waarden. Laat een veld op null
+als het niet zichtbaar of niet af te leiden is — een leeg voorstel is beter dan een verzonnen waarde.
+
+Geef uitsluitend geldige JSON terug met exact deze velden:
+{
+  "adres": "<straat + huisnummer, of null>",
+  "postcode": "<postcode, of null>",
+  "plaats": "<plaatsnaam, of null>",
+  "kvk": "<KvK-nummer, of null>",
+  "btw": "<BTW-nummer, of null>",
+  "iban": "<IBAN-rekeningnummer, of null>",
+  "email": "<e-mailadres, of null>",
+  "telefoon": "<telefoonnummer, of null>",
+  "website": "<websiteadres, of null>",
+  "voettekst": "<letterlijke voettekst-regel onderaan het document, of null>",
+  "primaire_kleur": "<meest prominente merkkleur als hex-code bv. #F23B0D, alleen als je een afbeelding zag, anders null>",
+  "koptekst_positie": "<links|midden|rechts — positie van het logo/de koptekst bovenaan, alleen als je een afbeelding zag, anders null>",
+  "voettekst_positie": "<links|midden|rechts — uitlijning van de voettekst onderaan, alleen als je een afbeelding zag, anders null>",
+  "marge_boven": "<geschatte bovenmarge in mm als getal, alleen als je een afbeelding zag, anders null>",
+  "marge_onder": "<geschatte ondermarge in mm als getal, alleen als je een afbeelding zag, anders null>",
+  "marge_links": "<geschatte linkermarge in mm als getal, alleen als je een afbeelding zag, anders null>",
+  "marge_rechts": "<geschatte rechtermarge in mm als getal, alleen als je een afbeelding zag, anders null>",
+  "redenering": "<max 200 tekens, korte Nederlandse toelichting welke signalen je gebruikte>"
+}
+Marges zijn een grove schatting op basis van de zichtbare witruimte (typisch tussen 15 en 30 mm) — geef nooit een exacte
+waarde met schijnzekerheid, rond af op hele mm's. Alleen JSON, geen extra tekst of markdown-omhulsel.`,
+};
+
 // ── Toolbox — bericht beoordelen ──────────────────────────────────────────────
 
 export const TOOLBOX_BEOORDEEL_PROMPT: AiPrompt = {

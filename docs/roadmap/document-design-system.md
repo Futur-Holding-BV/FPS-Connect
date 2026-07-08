@@ -68,6 +68,19 @@ Eerst alleen de **visuele basis en voorbeeldtemplates** met dummy-inhoud, om de 
 - **HRM / Personeel (parallel spoor)** — familie B levert de juridische/HRM-documenten; bouwt op de Werkgever-entiteit.
 - **Digitale ondertekening** — bewust als latere uitbreiding belegd (familie B is daar qua opmaak op voorbereid), niet in de eerste oplevering.
 
+## Bekend openstaand punt — koptekst_positie / marge_boven
+
+De huisstijl-voorstel-flow op Documentopmaak (accepteren/wijzigen/verwerpen van velden uit een geüpload referentiedocument) slaat `koptekst_positie` en `marge_boven` wél op in de Werkgever-entiteit, maar `DocumentFrame`/`WerkmaatschappijInfo` passen ze nog niet visueel toe: er is nog geen gedeelde kopregel-component om de positie op toe te passen, en `marge_boven` raakt de bleed-paginakoppen (voorblad/hoofdstukpagina) die bewust ongemoeid zijn gelaten om de bestaande opmaak niet te regressen. De overige huisstijlvelden (adres, voettekst, IBAN, marge onder/links/rechts, kleur, enz.) worden wél opgeslagen én direct zichtbaar in de A4-preview. De dialoog toont hierbij expliciet "Wordt opgeslagen, nog niet zichtbaar in preview" op deze twee velden. Verdieping (gedeelde kopregel-component + bleed-veilige marge-toepassing) volgt in een later increment.
+
 ## Ontwikkelstop — opgeheven (13 juni 2026)
 
-De Ontwikkelstop is opgeheven; per-fase formeel akkoord vooraf is niet meer vereist (zie [`replit.md`](../../replit.md)). De eerste oplevering (visuele basis + vijf voorbeeldtemplates met dummy-content) is als eerste increment **gebouwd** en is beoordeelbaar in de preview. Als tweede increment is de **integratie-light in `print.tsx`** gebouwd (gedeelde `resolveAssetUrl`; zie het raakvlak V1.4/V1.5 hierboven). De verdieping — versiebeheer, PDF-generatie, latere digitale ondertekening en per-werkmaatschappij centraal beheer bovenop de Werkgever-entiteit — volgt in latere increments.
+De Ontwikkelstop is opgeheven; per-fase formeel akkoord vooraf is niet meer vereist (zie [`replit.md`](../../replit.md)). De eerste oplevering (visuele basis + vijf voorbeeldtemplates met dummy-content) is als eerste increment **gebouwd** en is beoordeelbaar in de preview. Als tweede increment is de **integratie-light in `print.tsx`** gebouwd (gedeelde `resolveAssetUrl`; zie het raakvlak V1.4/V1.5 hierboven). De verdieping — PDF-generatie, latere digitale ondertekening en per-werkmaatschappij centraal beheer bovenop de Werkgever-entiteit — volgt in latere increments.
+
+## Versiebeheer Document Studio-modellen — gebouwd (8 juli 2026)
+
+Op Beheer › Documentopmaak › Document Studio (`/organisatie/studio`) is versiebeheer voor de per-werkgever/documenttype `connect_template_json`-modellen gebouwd:
+- Exact één ACTIEF (`goedgekeurd`) model per (werkgever, documenttype), afgedwongen met een partiële unieke index in de database.
+- Een nieuwe upload maakt altijd een nieuw CONCEPT-model; AI (genereren/bijstellen) werkt alleen op concepten — de server wijst dit server-side af (409) zodra het model al `goedgekeurd` of `gearchiveerd` is, dus een goedgekeurd model kan niet per ongeluk overschreven worden via een API-aanroep.
+- Expliciet goedkeuren archiveert het huidige actieve model (met tijdstempel) en activeert het nieuwe; niets wordt verwijderd of overschreven.
+- Volledige versiegeschiedenis blijft zichtbaar en is terug te zetten: een "Versiegeschiedenis"-knop per documenttype-kaart toont alle versies (concept/goedgekeurd/gearchiveerd) met tijdstempels; "Terugzetten" op een gearchiveerde versie hergebruikt dezelfde goedkeuren-actie (archiveert het huidige actieve model, activeert de gekozen versie onder een nieuw, hoger versienummer).
+- Bestaande gegenereerde documenten (offertes) blijven gekoppeld aan de modelversie waarmee ze zijn aangemaakt (`offertes.studio_model_id`), zodat een latere modelwijziging of terugzetting hun inhoud niet met terugwerkende kracht verandert.

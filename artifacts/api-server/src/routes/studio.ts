@@ -5,13 +5,14 @@ import { randomUUID } from "crypto";
 import { createRequire } from "node:module";
 import multer from "multer";
 import { db, documentStudioModellenTable, werkgeversTable } from "@workspace/db";
-import { eq, and } from "drizzle-orm";
+import { eq, and, desc, inArray, sql } from "drizzle-orm";
 import { DocumentStudioModelInputDocumentType } from "@workspace/api-zod";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { ObjectStorageService } from "../lib/objectStorage";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
-import { STUDIO_GENEREER_JSON_PROMPT, STUDIO_BIJSTUUR_JSON_PROMPT } from "../lib/aiPrompts";
+import { STUDIO_GENEREER_JSON_PROMPT, STUDIO_BIJSTUUR_JSON_PROMPT, STUDIO_HUISSTIJL_ANALYSE_PROMPT } from "../lib/aiPrompts";
 import { logActiviteit } from "../lib/activiteit";
+import { renderPdfPagina, resizeAfbeelding } from "../lib/pdfVisie";
 
 import { z } from "zod";
 
@@ -53,6 +54,62 @@ function valideerTemplateJson(json: string): z.infer<typeof studioTemplateJsonSc
   return studioTemplateJsonSchema.parse(parsed);
 }
 
+// ── Zod schema voor huisstijl-analyse — AI-voorstel, nooit blind toegepast ────
+// Elk veld wordt eerst defensief genormaliseerd (ongeldige/verzonnen waarden
+// worden null) en pas dan door Zod bevestigd — een leeg voorstel is altijd
+// veiliger dan een fout-gevalideerde waarde die de gebruiker per ongeluk
+// accepteert.
+
+const nullableTrimmedString = z.preprocess(
+  (v) => (typeof v === "string" && v.trim() ? v.trim().slice(0, 300) : null),
+  z.string().max(300).nullable(),
+);
+const nullableHexKleur = z.preprocess(
+  (v) => (typeof v === "string" && /^#[0-9a-fA-F]{6}$/.test(v) ? v : null),
+  z.string().nullable(),
+);
+const nullablePositie = z.preprocess(
+  (v) => (v === "links" || v === "midden" || v === "rechts" ? v : null),
+  z.enum(["links", "midden", "rechts"]).nullable(),
+);
+const nullableMarge = z.preprocess(
+  (v) => (typeof v === "number" && Number.isFinite(v) ? Math.round(v) : null),
+  z.number().min(0).max(100).nullable(),
+);
+
+const huisstijlVoorstelSchema = z.object({
+  adres:              nullableTrimmedString,
+  postcode:           nullableTrimmedString,
+  plaats:             nullableTrimmedString,
+  kvk:                nullableTrimmedString,
+  btw:                nullableTrimmedString,
+  iban:               nullableTrimmedString,
+  email:              nullableTrimmedString,
+  telefoon:           nullableTrimmedString,
+  website:            nullableTrimmedString,
+  voettekst:          nullableTrimmedString,
+  primaire_kleur:     nullableHexKleur,
+  koptekst_positie:   nullablePositie,
+  voettekst_positie:  nullablePositie,
+  marge_boven:        nullableMarge,
+  marge_onder:        nullableMarge,
+  marge_links:        nullableMarge,
+  marge_rechts:       nullableMarge,
+  redenering:         nullableTrimmedString,
+});
+
+function valideerHuisstijlVoorstel(json: string): z.infer<typeof huisstijlVoorstelSchema> {
+  const parsed: unknown = JSON.parse(json);
+  return huisstijlVoorstelSchema.parse(parsed);
+}
+
+/** Numerieke Drizzle-kolommen komen als string terug — veilig naar number of null. */
+function numeriekOfNull(v: string | null | undefined): number | null {
+  if (v === null || v === undefined) return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
 const lezen   = requireBevoegdheid("organisatie", 1);
 const schrijven = requireBevoegdheid("organisatie", 2);
 
@@ -82,10 +139,14 @@ function mapModel(
     versie:                 r.versie,
     goedgekeurd_op:         iso(r.goedgekeurdOp),
     goedgekeurd_door:       r.goedgekeurdDoor,
+    gearchiveerd_op:        iso(r.gearchiveerdOp),
+    aangemaakt_door:        r.aangemaaktDoor,
     aangemaakt_op:          r.aangemaaktOp.toISOString(),
     bijgewerkt_op:          iso(r.bijgewerktOp),
   };
 }
+
+const NIET_CLIENT_INSTELBAAR = new Set(["goedgekeurd", "gearchiveerd"]);
 
 // ── Werkgevers — selector voor Document Studio (gated op organisatie:1) ───────
 
@@ -137,7 +198,7 @@ router.get("/studio/modellen", lezen, async (req, res): Promise<void> => {
           ? eq(documentStudioModellenTable.werkgeverId, werkgeverId)
           : undefined,
       )
-      .orderBy(documentStudioModellenTable.documentType);
+      .orderBy(documentStudioModellenTable.documentType, desc(documentStudioModellenTable.id));
 
     res.json(modellen.map(({ model, naam }) => mapModel(model, naam)));
   } catch (err) {
@@ -241,6 +302,7 @@ router.post("/studio/modellen", schrijven, async (req, res): Promise<void> => {
       naam?: string | null;
       status?: string;
     };
+    const userId = req.session.userId as number | undefined;
 
     if (!werkgever_id || typeof werkgever_id !== "number") {
       return void res.status(400).json({ error: "werkgever_id is verplicht" });
@@ -248,8 +310,13 @@ router.post("/studio/modellen", schrijven, async (req, res): Promise<void> => {
     if (!document_type || !GELDIGE_TYPES.includes(document_type as never)) {
       return void res.status(400).json({ error: `document_type moet een van de volgende zijn: ${GELDIGE_TYPES.join(", ")}` });
     }
+    if (status && NIET_CLIENT_INSTELBAAR.has(status)) {
+      return void res.status(400).json({ error: "Status 'goedgekeurd'/'gearchiveerd' kan alleen via de goedkeuren-actie worden gezet" });
+    }
 
-    // Zoek bestaand model voor deze werkgever + type
+    // Versiebeheer: hergebruik alleen een bestaand CONCEPT/referentie/leeg model
+    // (nooit een actief 'goedgekeurd' of gearchiveerd model overschrijven). Als
+    // er meerdere kladversies zijn, pak de meest recente (deterministisch).
     const [bestaand] = await db
       .select()
       .from(documentStudioModellenTable)
@@ -257,8 +324,11 @@ router.post("/studio/modellen", schrijven, async (req, res): Promise<void> => {
         and(
           eq(documentStudioModellenTable.werkgeverId, werkgever_id),
           eq(documentStudioModellenTable.documentType, document_type),
+          inArray(documentStudioModellenTable.status, ["geen", "referentie", "concept"]),
         ),
-      );
+      )
+      .orderBy(desc(documentStudioModellenTable.id))
+      .limit(1);
 
     let model: typeof documentStudioModellenTable.$inferSelect;
 
@@ -281,6 +351,7 @@ router.post("/studio/modellen", schrijven, async (req, res): Promise<void> => {
           documentType: document_type,
           naam:         naam ?? null,
           status:       status ?? "geen",
+          aangemaaktDoor: userId ?? null,
         })
         .returning();
       model = nieuw;
@@ -310,6 +381,9 @@ router.patch("/studio/modellen/:id", schrijven, async (req, res): Promise<void> 
       connect_template_json?: string | null;
       goedgekeurd_door?: number | null;
     };
+    if (status !== undefined && NIET_CLIENT_INSTELBAAR.has(status)) {
+      return void res.status(400).json({ error: "Status 'goedgekeurd'/'gearchiveerd' kan alleen via de goedkeuren-actie worden gezet" });
+    }
 
     const setObj: Partial<typeof documentStudioModellenTable.$inferInsert> & { bijgewerktOp: Date } = {
       bijgewerktOp: new Date(),
@@ -368,6 +442,9 @@ router.post(
         .from(documentStudioModellenTable)
         .where(eq(documentStudioModellenTable.id, id));
       if (!bestaand) return void res.status(404).json({ error: "Model niet gevonden" });
+      if (bestaand.status === "goedgekeurd" || bestaand.status === "gearchiveerd") {
+        return void res.status(409).json({ error: "Uploaden kan niet op een actief of gearchiveerd model — maak eerst een nieuw concept aan" });
+      }
 
       // Upload naar object storage
       const ext = bestand.originalname.includes(".")
@@ -527,6 +604,9 @@ router.post("/studio/modellen/:id/genereer", schrijven, async (req, res): Promis
       .where(eq(documentStudioModellenTable.id, id));
 
     if (!rij) return void res.status(404).json({ error: "Model niet gevonden" });
+    if (rij.model.status === "goedgekeurd" || rij.model.status === "gearchiveerd") {
+      return void res.status(409).json({ error: "Dit model is actief of gearchiveerd en kan niet meer worden gegenereerd — upload een nieuwe referentie voor een nieuw concept" });
+    }
     if (!rij.model.referentieBestandPad) {
       return void res.status(400).json({ error: "Upload eerst een referentiebestand voor dit documenttype" });
     }
@@ -609,6 +689,9 @@ router.post("/studio/modellen/:id/bijstuur", schrijven, async (req, res): Promis
       .where(eq(documentStudioModellenTable.id, id));
 
     if (!rij) return void res.status(404).json({ error: "Model niet gevonden" });
+    if (rij.model.status === "goedgekeurd" || rij.model.status === "gearchiveerd") {
+      return void res.status(409).json({ error: "Dit model is actief of gearchiveerd en kan niet meer worden bijgesteld — upload een nieuwe referentie voor een nieuw concept" });
+    }
     if (!rij.model.connectTemplateJson) {
       return void res.status(400).json({ error: "Genereer eerst een concept-template via de genereer-actie" });
     }
@@ -647,6 +730,112 @@ router.post("/studio/modellen/:id/bijstuur", schrijven, async (req, res): Promis
   }
 });
 
+// ── Huisstijl-analyse — AI-voorstel uit referentiedocument (accept/wijzig/verwerp) ──
+// Slaat NOOIT rechtstreeks op in werkgevers: dit endpoint retourneert alleen een
+// voorstel + de huidige waarden, zodat de gebruiker per veld kan accepteren,
+// aanpassen of verwerpen (frontend-verantwoordelijkheid in T005).
+
+router.post("/studio/modellen/:id/huisstijl-analyse", schrijven, async (req, res): Promise<void> => {
+  try {
+    if (!heeftGateway()) {
+      return void res.status(503).json({ error: "AI niet beschikbaar — configureer een OpenAI-sleutel" });
+    }
+
+    const id = parseId(req.params.id);
+
+    const [rij] = await db
+      .select({ model: documentStudioModellenTable, wg: werkgeversTable })
+      .from(documentStudioModellenTable)
+      .leftJoin(werkgeversTable, eq(documentStudioModellenTable.werkgeverId, werkgeversTable.id))
+      .where(eq(documentStudioModellenTable.id, id));
+
+    if (!rij) return void res.status(404).json({ error: "Model niet gevonden" });
+    if (!rij.model.referentieBestandPad) {
+      return void res.status(400).json({ error: "Upload eerst een referentiebestand voor dit documenttype" });
+    }
+
+    let buffer: Buffer;
+    try {
+      buffer = await downloadAlsBuffer(rij.model.referentieBestandPad);
+    } catch (err) {
+      req.log.warn({ err }, "Referentiebestand kon niet worden gedownload voor huisstijl-analyse");
+      return void res.status(400).json({ error: "Referentiebestand kon niet worden gelezen" });
+    }
+
+    const isPdf = rij.model.referentieBestandPad.toLowerCase().endsWith(".pdf");
+    const documentTekst = isPdf ? await extraheerTekst(buffer, rij.model.referentieBestandPad) : "";
+    const afbeeldingBase64 = isPdf ? await renderPdfPagina(buffer) : await resizeAfbeelding(buffer);
+
+    const tekstInfo = documentTekst
+      ? `Geëxtraheerde tekst (${documentTekst.length} tekens):\n${documentTekst}`
+      : "Geëxtraheerde tekst: GEEN — beoordeel uitsluitend op basis van de afbeelding.";
+
+    type ContentBlock =
+      | { type: "text"; text: string }
+      | { type: "image_url"; image_url: { url: string; detail: "low" } };
+    const content: ContentBlock[] = [{ type: "text", text: tekstInfo }];
+    if (afbeeldingBase64) {
+      content.push({
+        type: "image_url",
+        image_url: { url: `data:image/jpeg;base64,${afbeeldingBase64}`, detail: "low" },
+      });
+    }
+
+    const analyseResultaat = await aiGateway.chat("fast", {
+      response_format: { type: "json_object" },
+      max_tokens: 800,
+      messages: [
+        { role: "system", content: STUDIO_HUISSTIJL_ANALYSE_PROMPT.tekst },
+        { role: "user", content } as any, // eslint-disable-line @typescript-eslint/no-explicit-any
+      ],
+    });
+
+    if (!analyseResultaat.ok || !analyseResultaat.inhoud.trim()) {
+      return void res.status(503).json({ error: "AI kon geen huisstijl-voorstel genereren — probeer opnieuw" });
+    }
+
+    const tekst = analyseResultaat.inhoud
+      .trim()
+      .replace(/^```[a-z]*\n?/i, "")
+      .replace(/\n?```$/i, "")
+      .trim();
+
+    const voorstel = valideerHuisstijlVoorstel(tekst);
+    const wg = rij.wg;
+
+    res.json({
+      model_id: id,
+      vision_gebruikt: afbeeldingBase64 !== null,
+      voorstel,
+      huidig: {
+        adres: wg?.adres ?? null,
+        postcode: wg?.postcode ?? null,
+        plaats: wg?.plaats ?? null,
+        kvk: wg?.kvk ?? null,
+        btw: wg?.btw ?? null,
+        iban: wg?.iban ?? null,
+        email: wg?.email ?? null,
+        telefoon: wg?.telefoon ?? null,
+        website: wg?.website ?? null,
+        voettekst: wg?.voettekst ?? null,
+        primaire_kleur: wg?.primaireKleur ?? null,
+        koptekst_positie: wg?.koptekstPositie ?? null,
+        voettekst_positie: wg?.voettekstPositie ?? null,
+        marge_boven: numeriekOfNull(wg?.margeBoven),
+        marge_onder: numeriekOfNull(wg?.margeOnder),
+        marge_links: numeriekOfNull(wg?.margeLinks),
+        marge_rechts: numeriekOfNull(wg?.margeRechts),
+      },
+    });
+  } catch (err) {
+    req.log.error(err);
+    if (err instanceof SyntaxError || err instanceof z.ZodError) {
+      return void res.status(503).json({ error: "AI retourneerde geen geldig huisstijl-voorstel — probeer opnieuw" });
+    }
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
 // ── Goedkeuren als Model 0 ────────────────────────────────────────────────────
 
 router.post("/studio/modellen/:id/goedkeuren", schrijven, async (req, res): Promise<void> => {
@@ -666,25 +855,66 @@ router.post("/studio/modellen/:id/goedkeuren", schrijven, async (req, res): Prom
     }
 
     const nu = new Date();
-    const [bijgewerkt] = await db
-      .update(documentStudioModellenTable)
-      .set({
-        status:          "goedgekeurd",
-        goedgekeurdOp:   nu,
-        goedgekeurdDoor: userId ?? null,
-        versie:          rij.model.versie + 1,
-        bijgewerktOp:    nu,
-      })
-      .where(eq(documentStudioModellenTable.id, id))
-      .returning();
 
-    await logActiviteit({
-      gebruikerId:  userId ?? null,
-      type:         "document_gewijzigd",
-      omschrijving: `Document Studio model goedgekeurd als Model 0 (${rij.model.documentType})`,
-    }).catch(() => {});
+    // Nooit een periode zonder actief model, en nooit twee actieve modellen
+    // tegelijk: in dezelfde transactie het huidige actieve model (indien
+    // aanwezig) archiveren vóórdat dit model actief wordt. De partial unique
+    // index op (werkgever_id, document_type) WHERE status='goedgekeurd' is de
+    // laatste verdedigingslinie tegen een race tussen twee gelijktijdige
+    // goedkeuringen (23505 → 409).
+    try {
+      const bijgewerkt = await db.transaction(async (tx) => {
+        await tx
+          .update(documentStudioModellenTable)
+          .set({ status: "gearchiveerd", gearchiveerdOp: nu, bijgewerktOp: nu })
+          .where(
+            and(
+              eq(documentStudioModellenTable.werkgeverId, rij.model.werkgeverId),
+              eq(documentStudioModellenTable.documentType, rij.model.documentType),
+              eq(documentStudioModellenTable.status, "goedgekeurd"),
+              sql`${documentStudioModellenTable.id} != ${id}`,
+            ),
+          );
 
-    res.json(mapModel(bijgewerkt, rij.wgNaam ?? null));
+        const [maxRij] = await tx
+          .select({ max: sql<number>`coalesce(max(${documentStudioModellenTable.versie}), 0)` })
+          .from(documentStudioModellenTable)
+          .where(
+            and(
+              eq(documentStudioModellenTable.werkgeverId, rij.model.werkgeverId),
+              eq(documentStudioModellenTable.documentType, rij.model.documentType),
+            ),
+          );
+        const nieuweVersie = Number(maxRij?.max ?? 0) + 1;
+
+        const [resultaat] = await tx
+          .update(documentStudioModellenTable)
+          .set({
+            status:          "goedgekeurd",
+            goedgekeurdOp:   nu,
+            goedgekeurdDoor: userId ?? null,
+            gearchiveerdOp:  null,
+            versie:          nieuweVersie,
+            bijgewerktOp:    nu,
+          })
+          .where(eq(documentStudioModellenTable.id, id))
+          .returning();
+        return resultaat;
+      });
+
+      await logActiviteit({
+        gebruikerId:  userId ?? null,
+        type:         "document_gewijzigd",
+        omschrijving: `Document Studio model goedgekeurd als actief model (${rij.model.documentType}, v${bijgewerkt.versie})`,
+      }).catch(() => {});
+
+      res.json(mapModel(bijgewerkt, rij.wgNaam ?? null));
+    } catch (err) {
+      if ((err as { code?: string })?.code === "23505") {
+        return void res.status(409).json({ error: "Er is al een ander model zojuist actief geworden voor dit documenttype — probeer opnieuw" });
+      }
+      throw err;
+    }
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });

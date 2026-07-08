@@ -88,6 +88,11 @@ export interface Offerte {
   verzend_type?: string;
   /** Aantal klantvragen zonder antwoord voor deze offerte */
   onbeantwoorde_vragen?: number;
+  /**
+     * Vastgepind Document Studio-model (offerte-type) op moment van verzenden — server-side gezet, niet client-instelbaar
+     * @nullable
+     */
+  studio_model_id?: number | null;
   aangemaakt_op: string;
   bijgewerkt_op: string;
 }

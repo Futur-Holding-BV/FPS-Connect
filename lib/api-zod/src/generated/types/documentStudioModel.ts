@@ -24,6 +24,10 @@ export interface DocumentStudioModel {
   goedgekeurd_op?: string | null;
   /** @nullable */
   goedgekeurd_door?: number | null;
+  /** @nullable */
+  gearchiveerd_op?: string | null;
+  /** @nullable */
+  aangemaakt_door?: number | null;
   aangemaakt_op: string;
   /** @nullable */
   bijgewerkt_op?: string | null;

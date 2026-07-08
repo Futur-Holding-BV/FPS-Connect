@@ -22,6 +22,7 @@ import { gebruikersTable } from "./gebruikers";
 import { crmKlantenTable } from "./crm";
 import { voorzieningenTable } from "./voorzieningen";
 import { projectenTable } from "./projecten";
+import { documentStudioModellenTable } from "./organisatie";
 
 // Voorwaardenbibliotheek — herbruikbare sets met algemene voorwaarden.
 // Bij verzenden wordt de tekst gekopieerd naar offertes.voorwaarden_snapshot.
@@ -93,6 +94,10 @@ export const offertesTable = pgTable("offertes", {
   // Voorwaardenbibliotheek-koppeling
   voorwaardenSetId: integer("voorwaarden_set_id").references(() => offerteVoorwaardenSetsTable.id, { onDelete: "set null" }),
   voorwaardenSnapshot: text("voorwaarden_snapshot"),
+  // Pin: het Document Studio-model waarmee deze offerte verzonden is (gezet bij
+  // /offertes/:id/verzenden). Zorgt dat een latere nieuwe goedkeuring van het
+  // model deze al verzonden offerte niet met terugwerkende kracht verandert.
+  studioModelId: integer("studio_model_id").references(() => documentStudioModellenTable.id, { onDelete: "set null" }),
   presentatieNiveau: integer("presentatie_niveau").default(3),
   klantType: text("klant_type"),
   vervolgOpties: jsonb("vervolg_opties"),

@@ -29,6 +29,7 @@ import {
   gebruikersTable,
   offerteKlantContractenTable,
   offerteContractAdviezenTable,
+  documentStudioModellenTable,
 } from "@workspace/db";
 import { ObjectStorageService } from "../lib/objectStorage";
 import { eq, desc, count, sql, and, not, inArray } from "drizzle-orm";
@@ -327,6 +328,7 @@ async function offerteNaarJson(o: typeof offertesTable.$inferSelect) {
     klant_type: o.klantType ?? null,
     vervolg_opties: o.vervolgOpties ?? null,
     vervolg_tekst: o.vervolgTekst ?? null,
+    studio_model_id: o.studioModelId ?? null,
     aangemaakt_door_id: o.aangemaaktDoorId,
     aangemaakt_op: iso(o.aangemaaktOp),
     bijgewerkt_op: iso(o.bijgewerktOp),
@@ -1799,6 +1801,7 @@ router.post("/offertes/:id/verzenden", schrijven, async (req, res): Promise<void
         portaalStatus: offertesTable.portaalStatus,
         voorwaardenSetId: offertesTable.voorwaardenSetId,
         voorwaarden: offertesTable.voorwaarden,
+        gebouwId: offertesTable.gebouwId,
       })
       .from(offertesTable)
       .where(eq(offertesTable.id, offerteId));
@@ -1923,12 +1926,38 @@ router.post("/offertes/:id/verzenden", schrijven, async (req, res): Promise<void
       voorwaardenSnapshot = offerte.voorwaarden;
     }
 
+    // Pin het actieve Document Studio-model (offerte-type) op het moment van
+    // verzenden, zodat latere wijzigingen aan het model deze verzonden offerte
+    // niet meer beïnvloeden. Resolutie via de directe FK-keten gebouw→werkgever
+    // (geen naam-matching). Geen actief model gevonden = geen harde fout.
+    let studioModelId: number | null = null;
+    if (offerte.gebouwId) {
+      const [gebouw] = await db
+        .select({ werkgeverId: gebouwenTable.werkgeverId })
+        .from(gebouwenTable)
+        .where(eq(gebouwenTable.id, offerte.gebouwId));
+      if (gebouw?.werkgeverId) {
+        const [actiefModel] = await db
+          .select({ id: documentStudioModellenTable.id })
+          .from(documentStudioModellenTable)
+          .where(
+            and(
+              eq(documentStudioModellenTable.werkgeverId, gebouw.werkgeverId),
+              eq(documentStudioModellenTable.documentType, "offerte"),
+              eq(documentStudioModellenTable.status, "goedgekeurd"),
+            ),
+          );
+        studioModelId = actiefModel?.id ?? null;
+      }
+    }
+
     await db
       .update(offertesTable)
       .set({
         portaalStatus: "verzonden",
         bijgewerktOp: new Date(),
         ...(voorwaardenSnapshot !== undefined && { voorwaardenSnapshot }),
+        ...(studioModelId !== null && { studioModelId }),
       })
       .where(
         and(

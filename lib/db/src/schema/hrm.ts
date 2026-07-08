@@ -5,7 +5,7 @@
 // werknemerstoelichting) voor de volledige FPS Groep (FPS Bouw, FPS
 // Brandpreventie, FPS Onderhoud, Fuegro). Fase 1 bevat BEWUST GEEN
 // salarisadministratie.
-import { pgTable, serial, text, integer, real, boolean, timestamp, date } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, real, boolean, timestamp, date, numeric } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { gebruikersTable } from "./gebruikers";
@@ -35,6 +35,13 @@ export const werkgeversTable = pgTable("werkgevers", {
   handtekeningUrl: text("handtekening_url"),
   logoUrl: text("logo_url"),
   primaireKleur: text("primaire_kleur").default("#F23B0D"),
+  iban: text("iban"),
+  koptekstPositie: text("koptekst_positie"),
+  voettekstPositie: text("voettekst_positie"),
+  margeBoven: numeric("marge_boven", { precision: 6, scale: 2 }),
+  margeOnder: numeric("marge_onder", { precision: 6, scale: 2 }),
+  margeLinks: numeric("marge_links", { precision: 6, scale: 2 }),
+  margeRechts: numeric("marge_rechts", { precision: 6, scale: 2 }),
   actief: boolean("actief").notNull().default(true),
   salarisverwerker: text("salarisverwerker"),
   boekhouderNaam: text("boekhouder_naam"),

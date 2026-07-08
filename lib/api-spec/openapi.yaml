@@ -19485,6 +19485,31 @@ paths:
         "503":
           description: AI niet beschikbaar
 
+  /studio/modellen/{id}/huisstijl-analyse:
+    post:
+      operationId: analyseerStudioHuisstijl
+      tags: [studio]
+      summary: AI leidt een huisstijl-voorstel af uit het referentiebestand — nooit direct opgeslagen, altijd een voorstel ter accordering
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Huisstijl-voorstel plus de huidige werkgeverwaarden ter vergelijking
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StudioHuisstijlAnalyseResponse"
+        "400":
+          description: Geen referentiebestand of het bestand kon niet worden gelezen
+        "404":
+          description: Niet gevonden
+        "503":
+          description: AI niet beschikbaar of gaf geen geldig voorstel terug
+
   /studio/modellen/{id}/goedkeuren:
     post:
       operationId: goedkeurenStudioTemplate
@@ -24957,6 +24982,22 @@ components:
         primaire_kleur:
           type: ["string", "null"]
           description: Primaire merkkleur als hex-waarde (bijv. #F23B0D) voor de documentopmaak.
+        iban:
+          type: ["string", "null"]
+        koptekst_positie:
+          type: ["string", "null"]
+          description: Positie van de koptekst in documentsjablonen (bijv. links/midden/rechts).
+        voettekst_positie:
+          type: ["string", "null"]
+          description: Positie van de voettekst in documentsjablonen (bijv. links/midden/rechts).
+        marge_boven:
+          type: ["number", "null"]
+        marge_onder:
+          type: ["number", "null"]
+        marge_links:
+          type: ["number", "null"]
+        marge_rechts:
+          type: ["number", "null"]
         actief:
           type: boolean
         boekhouder_naam:
@@ -25012,6 +25053,20 @@ components:
         primaire_kleur:
           type: ["string", "null"]
           description: Primaire merkkleur als hex-waarde (bijv. #F23B0D).
+        iban:
+          type: ["string", "null"]
+        koptekst_positie:
+          type: ["string", "null"]
+        voettekst_positie:
+          type: ["string", "null"]
+        marge_boven:
+          type: ["number", "null"]
+        marge_onder:
+          type: ["number", "null"]
+        marge_links:
+          type: ["number", "null"]
+        marge_rechts:
+          type: ["number", "null"]
         actief:
           type: boolean
         boekhouder_naam:
@@ -26782,6 +26837,9 @@ components:
         onbeantwoorde_vragen:
           type: integer
           description: "Aantal klantvragen zonder antwoord voor deze offerte"
+        studio_model_id:
+          type: ["integer", "null"]
+          description: "Vastgepind Document Studio-model (offerte-type) op moment van verzenden — server-side gezet, niet client-instelbaar"
         aangemaakt_op:
           type: string
         bijgewerkt_op:
@@ -36006,6 +36064,8 @@ components:
         versie:                   { type: integer }
         goedgekeurd_op:           { type: ["string", "null"] }
         goedgekeurd_door:         { type: ["integer", "null"] }
+        gearchiveerd_op:          { type: ["string", "null"] }
+        aangemaakt_door:          { type: ["integer", "null"] }
         aangemaakt_op:            { type: string }
         bijgewerkt_op:            { type: ["string", "null"] }
 
@@ -36088,6 +36148,68 @@ components:
               titel:  { type: ["string", "null"] }
               inhoud: { type: string }
         voettekst: { type: ["string", "null"] }
+
+    StudioHuisstijlVoorstel:
+      type: object
+      required:
+        [adres, postcode, plaats, kvk, btw, iban, email, telefoon, website, voettekst,
+         primaire_kleur, koptekst_positie, voettekst_positie,
+         marge_boven, marge_onder, marge_links, marge_rechts, redenering]
+      properties:
+        adres:              { type: ["string", "null"] }
+        postcode:           { type: ["string", "null"] }
+        plaats:             { type: ["string", "null"] }
+        kvk:                { type: ["string", "null"] }
+        btw:                { type: ["string", "null"] }
+        iban:               { type: ["string", "null"] }
+        email:              { type: ["string", "null"] }
+        telefoon:           { type: ["string", "null"] }
+        website:            { type: ["string", "null"] }
+        voettekst:          { type: ["string", "null"] }
+        primaire_kleur:     { type: ["string", "null"] }
+        koptekst_positie:   { type: ["string", "null"], enum: [links, midden, rechts, null] }
+        voettekst_positie:  { type: ["string", "null"], enum: [links, midden, rechts, null] }
+        marge_boven:        { type: ["number", "null"] }
+        marge_onder:        { type: ["number", "null"] }
+        marge_links:        { type: ["number", "null"] }
+        marge_rechts:       { type: ["number", "null"] }
+        redenering:         { type: ["string", "null"] }
+
+    StudioHuisstijlHuidig:
+      type: object
+      required:
+        [adres, postcode, plaats, kvk, btw, iban, email, telefoon, website, voettekst,
+         primaire_kleur, koptekst_positie, voettekst_positie,
+         marge_boven, marge_onder, marge_links, marge_rechts]
+      properties:
+        adres:              { type: ["string", "null"] }
+        postcode:           { type: ["string", "null"] }
+        plaats:             { type: ["string", "null"] }
+        kvk:                { type: ["string", "null"] }
+        btw:                { type: ["string", "null"] }
+        iban:               { type: ["string", "null"] }
+        email:              { type: ["string", "null"] }
+        telefoon:           { type: ["string", "null"] }
+        website:            { type: ["string", "null"] }
+        voettekst:          { type: ["string", "null"] }
+        primaire_kleur:     { type: ["string", "null"] }
+        koptekst_positie:   { type: ["string", "null"] }
+        voettekst_positie:  { type: ["string", "null"] }
+        marge_boven:        { type: ["number", "null"] }
+        marge_onder:        { type: ["number", "null"] }
+        marge_links:        { type: ["number", "null"] }
+        marge_rechts:       { type: ["number", "null"] }
+
+    StudioHuisstijlAnalyseResponse:
+      type: object
+      required: [model_id, vision_gebruikt, voorstel, huidig]
+      properties:
+        model_id:         { type: integer }
+        vision_gebruikt:  { type: boolean }
+        voorstel:
+          $ref: "#/components/schemas/StudioHuisstijlVoorstel"
+        huidig:
+          $ref: "#/components/schemas/StudioHuisstijlHuidig"
 
     AiChatBericht:
       type: object

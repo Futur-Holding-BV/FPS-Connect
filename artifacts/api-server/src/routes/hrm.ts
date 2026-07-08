@@ -94,6 +94,12 @@ const CAO_OPTIES = [
 // De werkgever is leidend voor CAO, briefpapier/logo en personeelsbeleid. Het
 // tekstveld `werkmaatschappij` op functies/medewerkers/verlofsoorten blijft als
 // legacy cache bestaan; bij elke schrijfactie leiden we hieruit de werkgever_id af.
+function numeriekOfNull(v: string | null | undefined): number | null {
+  if (v === null || v === undefined) return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
 const mapWerkgever = (w: typeof werkgeversTable.$inferSelect) => ({
   id: w.id,
   naam: w.naam,
@@ -113,6 +119,13 @@ const mapWerkgever = (w: typeof werkgeversTable.$inferSelect) => ({
   handtekening_url: w.handtekeningUrl,
   logo_url: w.logoUrl,
   primaire_kleur: w.primaireKleur ?? "#F23B0D",
+  iban: w.iban,
+  koptekst_positie: w.koptekstPositie,
+  voettekst_positie: w.voettekstPositie,
+  marge_boven: numeriekOfNull(w.margeBoven),
+  marge_onder: numeriekOfNull(w.margeOnder),
+  marge_links: numeriekOfNull(w.margeLinks),
+  marge_rechts: numeriekOfNull(w.margeRechts),
   actief: w.actief,
   boekhouder_naam: w.boekhouderNaam ?? null,
   boekhouder_email: w.boekhouderEmail ?? null,
@@ -145,7 +158,7 @@ router.get("/werkgevers", lezen, async (req, res): Promise<void> => {
 
 router.post("/werkgevers", schrijven, async (req, res): Promise<void> => {
   try {
-    const { naam, cao, logo_document_id, briefpapier_document_id, personeelsbeleid, adres, postcode, plaats, kvk, btw, telefoon, email, website, voettekst, handtekening_url, logo_url, primaire_kleur, actief } = req.body;
+    const { naam, cao, logo_document_id, briefpapier_document_id, personeelsbeleid, adres, postcode, plaats, kvk, btw, telefoon, email, website, voettekst, handtekening_url, logo_url, primaire_kleur, iban, koptekst_positie, voettekst_positie, marge_boven, marge_onder, marge_links, marge_rechts, actief } = req.body;
     if (!naam || typeof naam !== "string" || !naam.trim()) {
       return void res.status(400).json({ error: "naam is verplicht" });
     }
@@ -169,6 +182,13 @@ router.post("/werkgevers", schrijven, async (req, res): Promise<void> => {
         handtekeningUrl: handtekening_url ?? null,
         logoUrl: logo_url ?? null,
         primaireKleur: primaire_kleur ?? "#F23B0D",
+        iban: iban ?? null,
+        koptekstPositie: koptekst_positie ?? null,
+        voettekstPositie: voettekst_positie ?? null,
+        margeBoven: marge_boven != null ? String(marge_boven) : null,
+        margeOnder: marge_onder != null ? String(marge_onder) : null,
+        margeLinks: marge_links != null ? String(marge_links) : null,
+        margeRechts: marge_rechts != null ? String(marge_rechts) : null,
         actief: actief ?? true,
       })
       .returning();
@@ -193,7 +213,7 @@ router.get("/werkgevers/:id", lezen, async (req, res): Promise<void> => {
 router.patch("/werkgevers/:id", schrijven, async (req, res): Promise<void> => {
   try {
     const id = parseId(req.params.id);
-    const { naam, cao, logo_document_id, briefpapier_document_id, personeelsbeleid, adres, postcode, plaats, kvk, btw, telefoon, email, website, voettekst, handtekening_url, logo_url, primaire_kleur, actief } = req.body;
+    const { naam, cao, logo_document_id, briefpapier_document_id, personeelsbeleid, adres, postcode, plaats, kvk, btw, telefoon, email, website, voettekst, handtekening_url, logo_url, primaire_kleur, iban, koptekst_positie, voettekst_positie, marge_boven, marge_onder, marge_links, marge_rechts, actief } = req.body;
     const nieuweNaam = typeof naam === "string" && naam.trim() ? naam.trim() : undefined;
 
     const w = await db.transaction(async (tx) => {
@@ -220,6 +240,13 @@ router.patch("/werkgevers/:id", schrijven, async (req, res): Promise<void> => {
           handtekeningUrl: handtekening_url !== undefined ? handtekening_url : undefined,
           logoUrl: logo_url !== undefined ? logo_url : undefined,
           primaireKleur: primaire_kleur !== undefined ? primaire_kleur : undefined,
+          iban: iban !== undefined ? iban : undefined,
+          koptekstPositie: koptekst_positie !== undefined ? koptekst_positie : undefined,
+          voettekstPositie: voettekst_positie !== undefined ? voettekst_positie : undefined,
+          margeBoven: marge_boven !== undefined ? (marge_boven != null ? String(marge_boven) : null) : undefined,
+          margeOnder: marge_onder !== undefined ? (marge_onder != null ? String(marge_onder) : null) : undefined,
+          margeLinks: marge_links !== undefined ? (marge_links != null ? String(marge_links) : null) : undefined,
+          margeRechts: marge_rechts !== undefined ? (marge_rechts != null ? String(marge_rechts) : null) : undefined,
           actief,
           bijgewerktOp: new Date(),
         })
