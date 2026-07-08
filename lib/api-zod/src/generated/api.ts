@@ -7692,6 +7692,7 @@ export const UpdateInboxItemBody = zod.object({
   "gekoppelde_entiteit_type": zod.string().optional(),
   "gekoppelde_entiteit_id": zod.number().optional(),
   "gekoppelde_entiteit_naam": zod.string().optional(),
+  "ai_geconsolideerd": zod.boolean().optional(),
   "snagstream_opdrachtgever": zod.string().optional(),
   "snagstream_gebouw": zod.string().optional(),
   "snagstream_project": zod.string().optional(),

@@ -27,6 +27,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
+import { Switch } from "@/components/ui/switch";
 import {
   ArrowLeft, Sparkles, CheckCircle2, XCircle, ArrowRight,
   FileText, Clock, AlertTriangle, History, Edit2, CalendarClock,
@@ -55,6 +56,52 @@ const BESTEMMINGEN = [
   "Oplevering", "Onderhoud", "Productbibliotheek", "Certificaten", "Financieel",
   "HRM", "Wagenpark", "CRM", "DMS", "Snagstream", "Onbekend",
 ];
+
+function GeconsolideerdToggle({
+  geconsolideerd,
+  opslaglocatie,
+  bewerkbaar,
+  onWijzig,
+  bezig,
+}: {
+  geconsolideerd: boolean;
+  opslaglocatie: string | null;
+  bewerkbaar: boolean;
+  onWijzig: (nieuw: boolean) => void;
+  bezig: boolean;
+}) {
+  return (
+    <div className="border-t pt-3 space-y-2">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-xs font-medium text-muted-foreground">Subtype jaarrekening</p>
+          <p className="text-sm font-medium mt-0.5">
+            {geconsolideerd ? "Geconsolideerd (groep/holding)" : "Enkelvoudig (enkele entiteit)"}
+          </p>
+        </div>
+        {bewerkbaar && (
+          <div className="flex items-center gap-2 shrink-0">
+            <Label className="text-xs text-muted-foreground cursor-pointer" htmlFor="geconsolideerd-toggle">
+              Geconsolideerd
+            </Label>
+            <Switch
+              id="geconsolideerd-toggle"
+              checked={geconsolideerd}
+              onCheckedChange={(val) => !bezig && onWijzig(val)}
+              disabled={bezig}
+            />
+          </div>
+        )}
+      </div>
+      {opslaglocatie && (
+        <div className="rounded bg-amber-100/60 border border-amber-200 px-2 py-1">
+          <p className="text-[10px] text-amber-700 font-medium">Opslaglocatie</p>
+          <p className="text-xs text-amber-800 mt-0.5">{opslaglocatie}</p>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function InboxDetailPagina() {
   const { id } = useParams<{ id: string }>();
@@ -292,6 +339,24 @@ export default function InboxDetailPagina() {
                 </div>
               )}
             </div>
+          )}
+
+          {typedItem.document_categorie === "jaarrekening" && (
+            <GeconsolideerdToggle
+              geconsolideerd={typedItem.ai_geconsolideerd ?? false}
+              opslaglocatie={typedItem.ai_opslaglocatie ?? null}
+              bewerkbaar={kanActeren ?? false}
+              onWijzig={async (nieuw) => {
+                try {
+                  await bijwerken.mutateAsync({ id: numId, data: { ai_geconsolideerd: nieuw } });
+                  await invalideer();
+                  toast({ title: nieuw ? "Ingesteld als geconsolideerde jaarrekening" : "Ingesteld als enkelvoudige jaarrekening" });
+                } catch {
+                  toast({ title: "Fout bij opslaan", variant: "destructive" });
+                }
+              }}
+              bezig={bijwerken.isPending}
+            />
           )}
 
           {typedItem.ai_bewijs && typedItem.ai_bewijs.length > 0 && (

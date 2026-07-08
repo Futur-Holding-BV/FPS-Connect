@@ -18,6 +18,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useListMedewerkers } from "@workspace/api-client-react";
+import { Switch } from "@/components/ui/switch";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -93,6 +94,7 @@ interface UploadItem {
   actieGenomen: boolean;
   gekozenCategorie: CategorieUitgebreid | null;
   toelichting: string;
+  geconsolideerd_override?: boolean;
 }
 
 interface AutomatiseringsRegel {
@@ -430,6 +432,7 @@ function BeslisScherm({
   onBevestigenPersoneel,
   onNavigeer,
   onLogActie,
+  onGeconsolideerd,
 }: {
   item: UploadItem;
   onBevestigen: (cat: CategorieUitgebreid) => void;
@@ -437,6 +440,7 @@ function BeslisScherm({
   onBevestigenPersoneel?: (medewerkerId: number, docType: string) => void;
   onNavigeer?: (pad: string) => void;
   onLogActie?: (data: LogActieData) => void;
+  onGeconsolideerd?: (val: boolean) => void;
 }) {
   const [stap, setStap] = useState<0 | 1 | 2>(0);
   const [actieModus, setActieModus] = useState<"direct" | "later">("direct");
@@ -609,6 +613,35 @@ function BeslisScherm({
                 </li>
               ))}
             </ol>
+          </div>
+        )}
+
+        {effectiefeCat === "jaarrekening" && (
+          <div className="rounded-md border border-slate-200 bg-slate-50 p-3 space-y-2">
+            <p className="text-xs font-semibold text-slate-700">Subtype jaarrekening</p>
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs text-slate-600">
+                  {(item.geconsolideerd_override ?? suggestie.subtype === "geconsolideerd")
+                    ? "Geconsolideerd (groep/holding)"
+                    : "Enkelvoudig (enkele entiteit)"}
+                </p>
+                {suggestie.opslaglocatie && (
+                  <p className="text-[10px] text-muted-foreground mt-0.5">
+                    {(item.geconsolideerd_override ?? suggestie.subtype === "geconsolideerd")
+                      ? suggestie.opslaglocatie.replace("Jaarrekeningen", "Geconsolideerde jaarrekeningen")
+                      : suggestie.opslaglocatie.replace("Geconsolideerde jaarrekeningen", "Jaarrekeningen")}
+                  </p>
+                )}
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="text-xs text-muted-foreground">Geconsolideerd</span>
+                <Switch
+                  checked={item.geconsolideerd_override ?? suggestie.subtype === "geconsolideerd"}
+                  onCheckedChange={(val) => onGeconsolideerd?.(val)}
+                />
+              </div>
+            </div>
           </div>
         )}
 
@@ -931,6 +964,7 @@ function WachtrijKaart({
   onBevestigenPersoneel,
   onNavigeer,
   onLogActie,
+  onGeconsolideerd,
 }: {
   item: UploadItem;
   onToelichting: (tekst: string) => void;
@@ -940,6 +974,7 @@ function WachtrijKaart({
   onBevestigenPersoneel?: (medewerkerId: number, docType: string) => void;
   onNavigeer?: (pad: string) => void;
   onLogActie?: (data: LogActieData) => void;
+  onGeconsolideerd?: (val: boolean) => void;
 }) {
   const onAnalyseerRef = useRef(onAnalyseer);
   useEffect(() => { onAnalyseerRef.current = onAnalyseer; }, [onAnalyseer]);
@@ -995,6 +1030,7 @@ function WachtrijKaart({
                 onBevestigenPersoneel={onBevestigenPersoneel}
                 onNavigeer={onNavigeer}
                 onLogActie={onLogActie}
+                onGeconsolideerd={onGeconsolideerd}
               />
             </>
           )}
@@ -1015,11 +1051,14 @@ function WachtrijKaart({
 
 // ── Bestand naar inbox uploaden ───────────────────────────────────────────────
 
-async function uploadNaarInbox(bestand: File, toelichting?: string): Promise<boolean> {
+async function uploadNaarInbox(bestand: File, toelichting?: string, geconsolideerd_override?: boolean): Promise<boolean> {
   try {
     const form = new FormData();
     form.append("bestand", bestand);
     if (toelichting?.trim()) form.append("opmerkingen", toelichting.trim());
+    if (geconsolideerd_override !== undefined) {
+      form.append("geconsolideerd_override", geconsolideerd_override ? "true" : "false");
+    }
     const res = await fetch("/api/inbox/items", {
       method: "POST",
       body: form,
@@ -1252,7 +1291,7 @@ export function SlimUploadBalk() {
     herlaadRecente();
 
     // Upload het bestand naar de inbox (fire and forget)
-    void uploadNaarInbox(bestand, item.toelichting).then((ok) => {
+    void uploadNaarInbox(bestand, item.toelichting, item.geconsolideerd_override).then((ok) => {
       toast({
         title: ok ? "Opgeslagen in inbox" : "Categorisering bevestigd",
         description: ok
@@ -1497,6 +1536,7 @@ export function SlimUploadBalk() {
                 onBevestigenPersoneel={(mid, dt) => void opBevestigenPersoneelFn(item.id, mid, dt)}
                 onNavigeer={(pad) => { navigate(pad); opSluiten(); }}
                 onLogActie={logUploadActie}
+                onGeconsolideerd={(val) => setQueue((prev) => prev.map((i) => i.id === item.id ? { ...i, geconsolideerd_override: val } : i))}
               />
             ))}
 

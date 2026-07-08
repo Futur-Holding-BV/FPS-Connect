@@ -180,6 +180,8 @@ router.post("/inbox/items", schrijven, uploadEnkel.single("bestand"), async (req
     const opmerkingen: string | null = (req.body.opmerkingen as string | undefined) ?? null;
     const gebruikerId = req.session.userId ?? null;
 
+    const geconsolideerd_override: string | undefined = req.body.geconsolideerd_override as string | undefined;
+
     const analyse = await classificeerDocument({
       buffer: bestand?.buffer ?? null,
       bestandsnaam,
@@ -189,6 +191,18 @@ router.post("/inbox/items", schrijven, uploadEnkel.single("bestand"), async (req
     const documentCategorie = DOC_CATEGORIE_NAAR_INBOX[analyse.categorie];
     const bestemming = analyse.module_bestemming;
     const isSnagstream = analyse.categorie === "snagstream";
+
+    const heeftGeconsolideerdOverride =
+      analyse.categorie === "jaarrekening" && geconsolideerd_override !== undefined;
+    const geconsolideerdWaarde = heeftGeconsolideerdOverride
+      ? geconsolideerd_override === "true" || geconsolideerd_override === "1"
+      : analyse.subtype === "geconsolideerd";
+    const opslaglocatieWaarde = heeftGeconsolideerdOverride
+      ? (() => {
+          const type = geconsolideerdWaarde ? "Geconsolideerde jaarrekeningen" : "Jaarrekeningen";
+          return analyse.jaar ? `Archief → ${type} → ${analyse.jaar}` : `Archief → ${type} → jaar onbekend`;
+        })()
+      : analyse.opslaglocatie;
 
     // Upload het bestand naar object storage als bytes aanwezig zijn
     let bestandspad: string;
@@ -222,8 +236,8 @@ router.post("/inbox/items", schrijven, uploadEnkel.single("bestand"), async (req
         aiVolgendeActie: analyse.directe_actie_beschrijving || null,
         aiOrganisatie: analyse.organisatie,
         aiJaar: analyse.jaar,
-        aiGeconsolideerd: analyse.subtype === "geconsolideerd",
-        aiOpslaglocatie: analyse.opslaglocatie,
+        aiGeconsolideerd: geconsolideerdWaarde,
+        aiOpslaglocatie: opslaglocatieWaarde,
         aiBewijs: JSON.stringify(analyse.bewijs),
         snagstreamOpdrachtgever: isSnagstream ? (analyse.organisatie ?? analyse.gevonden_gegevens.opdrachtgever ?? null) : null,
         snagstreamGebouw: isSnagstream ? (analyse.gevonden_gegevens.locatie ?? analyse.gevonden_gegevens.gebouw ?? null) : null,
@@ -279,32 +293,71 @@ router.patch("/inbox/items/:id", schrijven, async (req, res): Promise<void> => {
       gekoppelde_entiteit_type, gekoppelde_entiteit_id, gekoppelde_entiteit_naam,
       snagstream_opdrachtgever, snagstream_gebouw, snagstream_project,
       snagstream_rapportdatum, snagstream_rapporttype, snagstream_status,
-    } = req.body;
+      ai_geconsolideerd,
+    } = req.body as {
+      document_categorie?: string;
+      bestemming?: string;
+      opmerkingen?: string;
+      gekoppelde_entiteit_type?: string;
+      gekoppelde_entiteit_id?: string | number;
+      gekoppelde_entiteit_naam?: string;
+      snagstream_opdrachtgever?: string;
+      snagstream_gebouw?: string;
+      snagstream_project?: string;
+      snagstream_rapportdatum?: string;
+      snagstream_rapporttype?: string;
+      snagstream_status?: string;
+      ai_geconsolideerd?: boolean;
+    };
+
+    type InboxSetValues = Partial<typeof inboxItemsTable.$inferInsert> & { bijgewerktOp: Date };
+    const setValues: InboxSetValues = {
+      documentCategorie: document_categorie,
+      bestemming,
+      opmerkingen,
+      gekoppeldeEntiteitType: gekoppelde_entiteit_type,
+      gekoppeldeEntiteitId: gekoppelde_entiteit_id ? parseId(gekoppelde_entiteit_id) : undefined,
+      gekoppeldeEntiteitNaam: gekoppelde_entiteit_naam,
+      snagstreamOpdrachtgever: snagstream_opdrachtgever,
+      snagstreamGebouw: snagstream_gebouw,
+      snagstreamProject: snagstream_project,
+      snagstreamRapportdatum: snagstream_rapportdatum,
+      snagstreamRapporttype: snagstream_rapporttype,
+      snagstreamStatus: snagstream_status,
+      bijgewerktOp: new Date(),
+    };
+
+    if (ai_geconsolideerd !== undefined) {
+      const geconsolideerd = Boolean(ai_geconsolideerd);
+      setValues.aiGeconsolideerd = geconsolideerd;
+
+      const [huidig] = await db
+        .select({ documentCategorie: inboxItemsTable.documentCategorie, aiJaar: inboxItemsTable.aiJaar })
+        .from(inboxItemsTable)
+        .where(eq(inboxItemsTable.id, id));
+
+      if (huidig?.documentCategorie === "jaarrekening") {
+        const type = geconsolideerd ? "Geconsolideerde jaarrekeningen" : "Jaarrekeningen";
+        const jaar = huidig.aiJaar;
+        setValues.aiOpslaglocatie = jaar
+          ? `Archief → ${type} → ${jaar}`
+          : `Archief → ${type} → jaar onbekend`;
+      }
+    }
 
     const [item] = await db
       .update(inboxItemsTable)
-      .set({
-        documentCategorie: document_categorie,
-        bestemming,
-        opmerkingen,
-        gekoppeldeEntiteitType: gekoppelde_entiteit_type,
-        gekoppeldeEntiteitId: gekoppelde_entiteit_id ? parseId(gekoppelde_entiteit_id) : undefined,
-        gekoppeldeEntiteitNaam: gekoppelde_entiteit_naam,
-        snagstreamOpdrachtgever: snagstream_opdrachtgever,
-        snagstreamGebouw: snagstream_gebouw,
-        snagstreamProject: snagstream_project,
-        snagstreamRapportdatum: snagstream_rapportdatum,
-        snagstreamRapporttype: snagstream_rapporttype,
-        snagstreamStatus: snagstream_status,
-        bijgewerktOp: new Date(),
-      })
+      .set(setValues)
       .where(eq(inboxItemsTable.id, id))
       .returning();
 
     if (!item) return void res.status(404).json({ error: "Item niet gevonden" });
 
     const gebruikerId = req.session.userId ?? null;
-    await db.insert(inboxAuditLogTable).values({ inboxItemId: id, actie: "bijgewerkt", gebruikerId, details: "Metagegevens bijgewerkt" });
+    const auditDetails = ai_geconsolideerd !== undefined
+      ? `Geconsolideerd-instelling gewijzigd naar: ${Boolean(ai_geconsolideerd) ? "ja" : "nee"}`
+      : "Metagegevens bijgewerkt";
+    await db.insert(inboxAuditLogTable).values({ inboxItemId: id, actie: "bijgewerkt", gebruikerId, details: auditDetails });
 
     res.json(mapItem(item));
   } catch (err) {

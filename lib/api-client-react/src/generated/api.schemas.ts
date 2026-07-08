@@ -930,6 +930,7 @@ export interface InboxItemPatch {
   gekoppelde_entiteit_type?: string;
   gekoppelde_entiteit_id?: number;
   gekoppelde_entiteit_naam?: string;
+  ai_geconsolideerd?: boolean;
   snagstream_opdrachtgever?: string;
   snagstream_gebouw?: string;
   snagstream_project?: string;

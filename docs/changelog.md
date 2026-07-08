@@ -19,6 +19,25 @@ Tijdens de verificatie bleken de gegenereerde API-types (`lib/api-client-react/s
 - `lib/api-client-react/src/generated/api.schemas.ts` en `api.ts` — bijgewerkt via codegen (niet handmatig)
 - Restscope V1.5 "vrije-tekst zoekfunctie in de bibliotheek" afgevinkt in replit.md
 
+## 2026-07-08 — Handmatige correctie jaarrekening-subtype (geconsolideerd)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (additieve UI + PATCH-uitbreiding, geen DB-wijziging)
+
+**Wat is gebouwd:**
+
+Gebruikers kunnen het AI-voorstel "geconsolideerd" nu vóór goedkeuring corrigeren zonder het document te verwijderen en opnieuw te uploaden:
+
+- **Inbox-detailpagina** (`artifacts/firevault/src/pages/inbox/detail.tsx`): Een `GeconsolideerdToggle`-component verschijnt in de AI-classificatiekaart zodra `document_categorie === "jaarrekening"`. De toggle is bewerkbaar zolang het item actief is (nog niet goedgekeurd/verplaatst/afgewezen). Na togglen wordt de opslaglocatie live bijgewerkt op basis van het nieuwe subtype.
+
+- **Slim Upload-bevestigingsstap** (`artifacts/firevault/src/components/slim-upload-balk.tsx`): In de beslisscherm voor categorie "jaarrekening" (stap 0) verschijnt een geconsolideerd-toggle die de `geconsolideerd_override` op het `UploadItem` bijhoudt. Bij bevestiging stuurt `uploadNaarInbox` het als `geconsolideerd_override`-formulierveld mee.
+
+**Technische aanpak:**
+
+- `artifacts/api-server/src/routes/inbox.ts` — PATCH `/inbox/items/:id` accepteert nu `ai_geconsolideerd: boolean`; wanneer aanwezig wordt ook `aiOpslaglocatie` herberekend (preread voor `aiJaar` + categorie, geen DB-schema-wijziging). POST `/inbox/items` accepteert `geconsolideerd_override` als formulierveld; overschrijft de AI-bepaling vóór opslaan.
+- `lib/api-spec/openapi.yaml` — `ai_geconsolideerd: boolean` toegevoegd aan `InboxItemPatch`; codegen uitgevoerd.
+
+**Verificatie:** firevault typecheck slaagt zonder fouten; api-server draait gezond.
+
 ## 2026-07-08 — Herstel AI-documentclassificatiepipeline (Document Intelligence)
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** midden (raakt zowel Inbox-upload als Slim Upload; DB-schema-uitbreiding)

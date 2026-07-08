@@ -21702,6 +21702,8 @@ components:
           type: integer
         gekoppelde_entiteit_naam:
           type: string
+        ai_geconsolideerd:
+          type: boolean
         snagstream_opdrachtgever:
           type: string
         snagstream_gebouw:
