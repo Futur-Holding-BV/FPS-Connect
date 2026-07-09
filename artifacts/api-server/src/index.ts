@@ -10,6 +10,7 @@ import { planDagelijkseReactietermijnSignalering } from "./lib/reactietermijnSig
 import { planDagelijkseScout } from "./lib/scoutService";
 import { planDagelijkseLeermomenten } from "./services/fie-service";
 import { planUurlijkseAiDrempelCheck } from "./lib/aiDrempelCheck";
+import { planDagelijkseKwartaalcontrole } from "./lib/pushService";
 
 const rawPort = process.env["PORT"];
 
@@ -55,6 +56,7 @@ ensureSessionTable()
       planDagelijkseScout();
       planDagelijkseLeermomenten();
       planUurlijkseAiDrempelCheck();
+      planDagelijkseKwartaalcontrole();
     });
   })
   .catch((err) => {

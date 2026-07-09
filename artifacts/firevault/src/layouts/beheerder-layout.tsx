@@ -1134,11 +1134,24 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                       <SidebarMenuItem className="pl-5">
                         <SidebarMenuButton
                           asChild
-                          isActive={location === "/wagenpark" || location.startsWith("/wagenpark/")}
+                          isActive={location === "/wagenpark" || (location.startsWith("/wagenpark/") && location !== "/wagenpark/meldingen")}
                         >
                           <Link href="/wagenpark">
                             <Truck />
                             <span>Wagenpark</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    )}
+                    {toonWagenpark && (
+                      <SidebarMenuItem className="pl-9">
+                        <SidebarMenuButton
+                          asChild
+                          isActive={location === "/wagenpark/meldingen"}
+                        >
+                          <Link href="/wagenpark/meldingen">
+                            <ClipboardList />
+                            <span>Meldingen</span>
                           </Link>
                         </SidebarMenuButton>
                       </SidebarMenuItem>

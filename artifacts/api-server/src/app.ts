@@ -22,6 +22,9 @@ const TOEGESTANE_ORIGINS: Set<string> = (() => {
   // Dev-tunnel
   const devDomain = process.env.REPLIT_DEV_DOMAIN ?? "";
   if (devDomain) origins.add(`https://${devDomain}`);
+  // Expo dev-domein (aparte subdomain buiten de normale proxy, nodig voor e2e)
+  const expoDev = process.env.REPLIT_EXPO_DEV_DOMAIN ?? "";
+  if (expoDev) origins.add(`https://${expoDev}`);
   // Lokale ontwikkeling — alleen als NODE_ENV niet production is
   if (process.env.NODE_ENV !== "production") {
     origins.add("http://localhost:25392");

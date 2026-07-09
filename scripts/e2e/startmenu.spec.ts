@@ -95,6 +95,12 @@ test.beforeAll(async () => {
 // verlopen tijdens een trage koude load) wordt in een nieuw venster opnieuw
 // geprobeerd.
 async function logIn(page: Page): Promise<void> {
+  // Frisse Playwright-browser heeft geen localStorage. De app redirectt na login
+  // naar /onboarding als fps_onboarding_voltooid niet gezet is. Zet het vooraf
+  // zodat de onboarding nooit wordt getoond tijdens de e2e-test.
+  await page.addInitScript(() => {
+    window.localStorage.setItem("fps_onboarding_voltooid", "1");
+  });
   await page.goto("/");
 
   const inputs = page.locator("input");

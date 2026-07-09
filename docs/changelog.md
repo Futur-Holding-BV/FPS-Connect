@@ -11,8 +11,6 @@ Voor elke taak drie scores:
 
 **Wat is gebouwd:**
 
-**Wat is gebouwd:**
-
 Tegel "Verlopen reactietermijnen" toegevoegd aan het operationele beheerdersdashboard (`beheerder.tsx`):
 - Toont het aantal definitieve rapporten met `opleverstatus === "verstreken"`.
 - Alleen zichtbaar voor hoofdbeheerder en gebruikers met `rapportages >= 1` bevoegdheid (via `magRapportages`).
@@ -48,7 +46,7 @@ Een nieuwe conceptversie van een rapport (`POST /nieuwe-versie`) erfde al correc
 Klanten kunnen nu in FPS One (klantportaal `/klant/rapportages`) op "Ontvangst bevestigen" klikken bij een definitief rapport. De bevestiging wordt opgeslagen in de database en is direct zichtbaar voor interne gebruikers in de gebouwkaart-rapporten-tab.
 
 - DB: twee nieuwe kolommen op `opleverrapporten`: `klant_reactie_op` (TIMESTAMPTZ) en `klant_reactie_type` (TEXT). Toegevoegd via directe ALTER TABLE (additief, geen drizzle push vereist).
-- OpenAPI: `Rapport`-schema uitgebreid met `klant_reactie_op` en `klant_reactie_type`; nieuw endpoint `POST /gebouwen/{id}/rapporten/{rapportId}/klant-reactie` + `KlantReactieInput` schema.
+- OpenAPI: `Rapport`-schema uitgebreid met `klant_reactie_op` and `klant_reactie_type`; nieuw endpoint `POST /gebouwen/{id}/rapporten/{rapportId}/klant-reactie` + `KlantReactieInput` schema.
 - API server (`rapporten.ts`): nieuw route-handler. Alleen op definitieve rapporten; eenmalig (409 bij tweede poging); klant en interne gebruikers mogen beide bevestigen. `mapRapport` geeft beide velden mee.
 - Frontend klant (`klant/rapportages.tsx`): nieuwe `OntvangstBevestigenKnop`-component — toont knop bij definitieve rapporten zonder reactie; toont groene bevestigingsregel daarna.
 - Frontend intern (`gebouwen/gebouw-rapporten.tsx`): toont "Klant bevestigd ontvangst op [datum]" in groen bij rapporten met een klantreactie.
@@ -263,6 +261,51 @@ Bij het oppakken van de opdracht V1.4 Opleverrapportage bleek het merendeel al i
 - `artifacts/api-server/src/routes/uren.ts`: `GET /weekstaten/:id` retourneert gekoppelde verlofregels; nieuwe route voor tijd-voor-tijd-aanvraag
 - Codegen (`pnpm --filter @workspace/api-spec run codegen`) uitgevoerd; volledige `pnpm run typecheck` schoon op alle geraakte packages (twee pre-existing, ongerelateerde TS7030-fouten in `documenten.ts`/`offertes.ts` blijven onaangeroerd)
 - Frontend (desktop-only, `artifacts/firevault`): "Leidinggevende"-select op medewerker-aanmaak (`personeel/index.tsx`) en medewerker-profiel (`personeel/detail.tsx`, incl. read-only weergave op de medewerker-detailpagina); "Minimale bezetting"-veld op het functie-formulier; `uren/weekstaten.tsx` toont verlof per week en bevat de nieuwe `TijdVoorTijdAanvraagDialog` (herbruikbaar, ook gebruikt op `uren/index.tsx`)
+=======
+## 2026-07-09 — Meldingen module (wagenpark, kwartaalcontrole, push, offline)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (additief, geen bestaande flows geraakt)
+
+**Wat is gebouwd:**
+
+Eén geïntegreerde meldingen-module voor zowel de monteur-app als het kantoor-wagenparkbeheer. Geen aparte app.
+
+**Datamodel (lib/db):**
+- Nieuwe tabel `voertuig_meldingen` met rijke velden: `schade_locatie` (voorlinks/voorrechts/achterlinks/achterrechts/dak/interieur), `storing_type` (motor/electra/banden/remmen/verlichting/carrosserie/overig), `ai_beoordeling` (JSON), `prioriteit` (laag/normaal/hoog/kritiek), `behandeld_door`, `behandeld_op`, `afgehandeld`
+- Tabel `push_tokens` voor Expo push-registraties per gebruiker
+- `kwartaalcontrole_status` JSONB-kolom op voertuigen voor kwartaalcontrole-voortgang
+
+**Permissies:**
+- Bevoegdhedenmatrix uitgebreid: `wagenpark` module dekt nu ook meldingen (lezen/schrijven)
+- Preset "Onderhoudsmonteur" en "Externe inhuur" hebben standaard lees-bevoegdheid op wagenpark
+
+**Backend routes (api-server):**
+- `GET/POST /wagenpark/meldingen` — lijst en aanmaken meldingen
+- `GET/PATCH /wagenpark/meldingen/:id` — detail en afhandelen (kantoor)
+- `POST /wagenpark/push-token` — Expo push-token registratie
+- `POST /wagenpark/kwartaalcontrole` — 7-staps kwartaalcontrole opslaan
+- Geplande taak: dagelijkse kwartaalcontrole-herinnering via push (10:00 uur, alleen actieve voertuigen met openstaande controle)
+
+**Web kantoor-UI (firevault):**
+- Wagenparkbeheer uitgebreid met tabblad "Meldingen": lijst met prioriteit-badges, filterbalk (alle/open/afgehandeld), detailpagina met AI-beoordeling en afhandelings-formulier
+- Meldingen tonen schade-locatie en storing-type als gecategoriseerde chips
+- Afhandelen via kantoor: behandeld_door, behandeld_op, interne notities, toggle afgehandeld
+
+**Mobiele monteur-app:**
+- `voertuig-melding.tsx` volledig herschreven: offline-first met SyncQueue, schade-locatie picker (voertuig-silhouet met tapbare zones), storing-type selector, AI-beoordeling weergave (kleur/urgentie/aanbeveling), foto's voor en na
+- `kwartaalcontrole.tsx` nieuw scherm: 7-staps gestructureerde controle (remmen, banden, verlichting, vloeistoffen, koetswerk, interieur, handtekening), stappenvoortgang, offline-opslag en sync
+- `lib/pushNotifications.ts` nieuw: Expo Notifications registratie, toestemming vragen, token opslaan via API
+- `context/auth.tsx`: push-token registratie na succesvolle login (niet-blokkerend)
+- `context/sync.tsx`: `create_melding` SyncHandler toegevoegd
+- `werkdag/[id].tsx`: kwartaalcontrole-nudge widget (toont wanneer controle vervallen is)
+
+**Infrastructuur fixes:**
+- CORS: `REPLIT_EXPO_DEV_DOMAIN` toegevoegd aan TOEGESTANE_ORIGINS in api-server
+- `EXPO_PUBLIC_DOMAIN` in monteur-app `.env` bijgewerkt naar de correcte `REPLIT_DEV_DOMAIN`
+- e2e-test: `addInitScript` zet `fps_onboarding_voltooid=1` in localStorage voor de test zodat het onboarding-scherm nooit de e2e-flow blokkeert
+
+**e2e-menu:** `1 passed (26.8s)` — login, waaier en doorlinken volledig geverifieerd
+>>>>>>> a19c313 (feat: meldingen module (wagenpark, kwartaalcontrole, push, offline))
 
 ## 2026-07-08 — Beheer wachtwoorden (alleen hoofdbeheerder)
 

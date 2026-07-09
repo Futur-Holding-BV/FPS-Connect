@@ -132,6 +132,11 @@ export default function WerkdagDetailScherm() {
   const [toonMeerwerkFormulier, setToonMeerwerkFormulier] = useState(false);
   const [meerwerkTekst, setMeerwerkTekst] = useState("");
   const [meerwerkBezig, setMeerwerkBezig] = useState(false);
+  const [openKwartaalCyclus, setOpenKwartaalCyclus] = useState<{
+    id: number;
+    deadline: string | null;
+    voertuig_kenteken: string | null;
+  } | null>(null);
 
   if (!token) return <Redirect href="/login" />;
 
@@ -159,6 +164,22 @@ export default function WerkdagDetailScherm() {
       }
     });
   }, [fotoDir]);
+
+  // Check of er een open kwartaalcontrole-cyclus klaarstaat voor dit voertuig
+  useEffect(() => {
+    if (!token || !isOnline) return;
+    const basis = `https://${process.env.EXPO_PUBLIC_DOMAIN ?? ""}`;
+    void fetch(`${basis}/api/wagenpark/kwartaalcontrole/mijn`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((r) => (r.ok ? r.json() : null))
+      .then(
+        (data: { id: number; deadline: string | null; voertuig_kenteken: string | null } | null) => {
+          if (data?.id) setOpenKwartaalCyclus(data);
+        },
+      )
+      .catch(() => undefined);
+  }, [token, isOnline]);
 
   const statusMutatie = useUpdateWerkdagItemStatus({
     mutation: {
@@ -943,6 +964,49 @@ export default function WerkdagDetailScherm() {
                 </Text>
               </View>
               <Ionicons name="chevron-forward" size={16} color={c.mutedForeground} />
+            </Pressable>
+          )}
+
+          {/* ── Kwartaalcontrole (nudge als er een open cyclus is) ──────── */}
+          {openKwartaalCyclus && (
+            <Pressable
+              onPress={() => router.push("/kwartaalcontrole" as Parameters<typeof router.push>[0])}
+              style={({ pressed }) => ({
+                backgroundColor: pressed ? "#fef3c7" : "#fffbeb",
+                borderRadius: 12,
+                padding: 16,
+                marginBottom: 12,
+                marginHorizontal: 16,
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 12,
+                borderWidth: 1.5,
+                borderColor: "#fbbf24",
+              })}
+            >
+              <View
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 8,
+                  backgroundColor: "#fef3c7",
+                  justifyContent: "center",
+                  alignItems: "center",
+                }}
+              >
+                <Ionicons name="clipboard-outline" size={18} color="#d97706" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: "#92400e", fontSize: 13, fontFamily: "Inter_700Bold" }}>
+                  Kwartaalcontrole uitvoeren
+                </Text>
+                <Text style={{ color: "#a16207", fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 1 }}>
+                  {openKwartaalCyclus.voertuig_kenteken
+                    ? `Verplicht voor ${openKwartaalCyclus.voertuig_kenteken}`
+                    : "Verplichte dashboardfoto en kilometerstand"}
+                </Text>
+              </View>
+              <Ionicons name="alert-circle" size={18} color="#d97706" />
             </Pressable>
           )}
 

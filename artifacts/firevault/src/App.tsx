@@ -105,6 +105,7 @@ import GereedschapDetailPagina from "@/pages/gereedschappen/detail";
 import WagenparkPagina from "@/pages/wagenpark/index";
 import WagenparkDetailPagina from "@/pages/wagenpark/detail";
 import WagenparkBrandstofImportPagina from "@/pages/wagenpark/brandstof-import";
+import WagenparkMeldingenPagina from "@/pages/wagenpark/meldingen";
 import MagazijnDashboardPagina from "@/pages/magazijn/dashboard";
 import MagazijnArtikelenPagina from "@/pages/magazijn/artikelen";
 import MagazijnArtikelDetailPagina from "@/pages/magazijn/artikel-detail";
@@ -439,6 +440,7 @@ function ConnectPortal() {
         <Route path="/gereedschappen/:id" component={GereedschapDetailPagina} />
         <Route path="/wagenpark" component={WagenparkPagina} />
         <Route path="/wagenpark/brandstof-import" component={WagenparkBrandstofImportPagina} />
+        <Route path="/wagenpark/meldingen" component={WagenparkMeldingenPagina} />
         <Route path="/wagenpark/:id" component={WagenparkDetailPagina} />
 
         {/* ── Magazijn ── */}

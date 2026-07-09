@@ -8,7 +8,10 @@ import {
   useListVoertuigKosten,
   useCreateVoertuigKosten,
   useListVoertuigRitten,
+  useListToewijsbareGebruikers,
 } from "@workspace/api-client-react";
+import { MeldingKaart } from "@/components/wagenpark/melding-kaart";
+import type { VoertuigMelding } from "@/lib/wagenpark-melding-types";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
 import {
   Card, CardContent, CardHeader, CardTitle,
@@ -33,30 +36,10 @@ import {
 } from "@/components/ui/alert";
 import {
   ArrowLeft, Truck, Wrench, Euro, Route, ShieldAlert, Plus, CheckCircle,
-  AlertTriangle, Sparkles, RefreshCw, Car,
+  AlertTriangle, Sparkles, RefreshCw,
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { WagenparkOnderhoud } from "@workspace/api-client-react";
-
-// ── Types ──────────────────────────────────────────────────
-
-interface VoertuigMelding {
-  id: number;
-  voertuig_id: number;
-  gemeld_door_id: number | null;
-  type: "storing" | "schade";
-  omschrijving: string;
-  foto_paden: string[];
-  ai_diagnose: string | null;
-  ai_oplossing: string | null;
-  ai_kosten_indicatie: boolean;
-  ai_kosten_tekst: string | null;
-  status: "nieuw" | "in_behandeling" | "afgehandeld";
-  admin_notitie: string | null;
-  monteur_naam: string | null;
-  aangemaakt_op: string | null;
-  bijgewerkt_op: string | null;
-}
 
 // ── Helpers ────────────────────────────────────────────────
 
@@ -313,20 +296,29 @@ export default function WagenparkDetailPagina() {
     refetchInterval: 30000,
   });
 
+  const { data: toewijsbareGebruikers = [] } = useListToewijsbareGebruikers();
+
   const patchMelding = useMutation({
-    mutationFn: async ({ id, status, admin_notitie }: { id: number; status?: string; admin_notitie?: string }) => {
+    mutationFn: async ({ id, ...waarden }: {
+      id: number;
+      status?: string;
+      admin_notitie?: string;
+      toegewezen_beheerder_id?: number | null;
+      onderhoud_id?: number | null;
+      opvolg_notitie?: string;
+    }) => {
       const r = await fetch(`/api/wagenpark/meldingen/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ status, admin_notitie }),
+        body: JSON.stringify(waarden),
       });
       if (!r.ok) throw new Error("Bijwerken mislukt");
     },
     onSuccess: () => void qc.invalidateQueries({ queryKey: ["wagenpark-meldingen", voertuigId] }),
   });
 
-  const nieuweMeldingen = meldingen.filter(m => m.status === "nieuw").length;
+  const nieuweMeldingen = meldingen.filter(m => m.status === "nieuw" || m.status === "actie_nodig").length;
 
   const updateOnderhoud = useUpdateVoertuigOnderhoud();
 
@@ -785,83 +777,13 @@ export default function WagenparkDetailPagina() {
             </p>
           ) : (
             meldingen.map((m) => (
-              <Card key={m.id} className={m.status === "nieuw" ? "border-red-200" : ""}>
-                <CardContent className="p-4 space-y-3">
-                  {/* Kop */}
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-start gap-2">
-                      <Car className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
-                      <div>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-sm font-semibold capitalize">{m.type}</span>
-                          <Badge
-                            className={`text-xs px-1.5 py-0 border-0 ${
-                              m.status === "nieuw" ? "bg-red-100 text-red-800" :
-                              m.status === "in_behandeling" ? "bg-blue-100 text-blue-800" :
-                              "bg-green-100 text-green-800"
-                            }`}
-                          >
-                            {m.status === "nieuw" ? "Nieuw" :
-                             m.status === "in_behandeling" ? "In behandeling" : "Afgehandeld"}
-                          </Badge>
-                          {m.ai_kosten_indicatie && (
-                            <Badge className="text-xs px-1.5 py-0 bg-amber-100 text-amber-800 border-0">
-                              Kosten verwacht
-                            </Badge>
-                          )}
-                        </div>
-                        <div className="text-xs text-muted-foreground mt-0.5">
-                          {m.monteur_naam ?? "Onbekend"} · {m.aangemaakt_op ? new Date(m.aangemaakt_op).toLocaleDateString("nl-NL", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : ""}
-                        </div>
-                      </div>
-                    </div>
-                    <select
-                      className="text-xs border rounded px-2 py-1 bg-background"
-                      value={m.status}
-                      onChange={(e) => patchMelding.mutate({ id: m.id, status: e.target.value })}
-                    >
-                      <option value="nieuw">Nieuw</option>
-                      <option value="in_behandeling">In behandeling</option>
-                      <option value="afgehandeld">Afgehandeld</option>
-                    </select>
-                  </div>
-
-                  {/* Omschrijving */}
-                  <p className="text-sm">{m.omschrijving}</p>
-
-                  {/* AI diagnose */}
-                  {(m.ai_diagnose || m.ai_oplossing) && (
-                    <div className="rounded-md bg-muted/50 border px-3 py-2.5 space-y-1.5 text-sm">
-                      <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground mb-1">
-                        <Sparkles className="h-3 w-3" />
-                        AI analyse
-                      </div>
-                      {m.ai_diagnose && (
-                        <div>
-                          <span className="text-xs font-medium text-muted-foreground">Diagnose: </span>
-                          {m.ai_diagnose}
-                        </div>
-                      )}
-                      {m.ai_oplossing && (
-                        <div>
-                          <span className="text-xs font-medium text-muted-foreground">Aanpak: </span>
-                          {m.ai_oplossing}
-                        </div>
-                      )}
-                      {m.ai_kosten_indicatie && m.ai_kosten_tekst && (
-                        <div className="mt-1 text-xs text-amber-700 font-medium">{m.ai_kosten_tekst}</div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Admin notitie */}
-                  {m.admin_notitie && (
-                    <div className="text-xs text-muted-foreground italic border-t pt-2">
-                      Notitie: {m.admin_notitie}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+              <MeldingKaart
+                key={m.id}
+                melding={m}
+                toewijsbareGebruikers={toewijsbareGebruikers}
+                onderhoudOpties={onderhoud}
+                onPatch={(waarden) => patchMelding.mutate({ id: m.id, ...waarden })}
+              />
             ))
           )}
         </TabsContent>
