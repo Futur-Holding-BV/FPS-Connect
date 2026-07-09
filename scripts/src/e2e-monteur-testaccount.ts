@@ -25,6 +25,14 @@ export const E2E_WACHTWOORD = "E2eMenuTest!2026";
 // Vaste secret: de e2e-test gebruikt dezelfde secret om een live code te maken.
 export const E2E_TOTP_SECRET = "PAOSGYZWOEMU2HDD";
 
+// Eigen vast account voor de web-e2e-suite (gebouw-detail + offerte-badge).
+// Bewust GESCHEIDEN van het monteur-account hierboven: de web- en monteur-suite
+// kunnen parallel draaien (o.a. in de validatiepijplijn) en de opruiming in het
+// finally-blok van de ene runner mag de lopende tests van de andere nooit raken.
+export const E2E_WEB_EMAIL = "e2e-web@fps.local";
+export const E2E_WEB_WACHTWOORD = "E2eWebTest!2026";
+export const E2E_WEB_TOTP_SECRET = "KJ4WWZLNMNXW4RTF";
+
 // Veiligheidsgrendel: e2e-accounts mogen uitsluitend in de dev-omgeving
 // worden aangemaakt of geheractiveerd — nooit in een deployment/productie.
 function weigerBuitenDev(): void {
@@ -40,26 +48,32 @@ function weigerBuitenDev(): void {
   }
 }
 
-// Maakt of werkt het vaste e2e-account bij. Idempotent en herbruikbaar vanuit
-// een testrun (Playwright beforeAll) zonder dat het proces wordt afgesloten.
-export async function setupE2eAccount(): Promise<number> {
+// Gedeelde aanmaak-/bijwerklogica voor beide vaste e2e-accounts. Idempotent en
+// herbruikbaar vanuit een testrun (Playwright beforeAll) zonder dat het proces
+// wordt afgesloten.
+async function maakOfUpdateE2eAccount(opties: {
+  email: string;
+  naam: string;
+  wachtwoord: string;
+  totpSecret: string;
+}): Promise<number> {
   weigerBuitenDev();
-  const hash = await bcrypt.hash(E2E_WACHTWOORD, 10);
+  const hash = await bcrypt.hash(opties.wachtwoord, 10);
   const bevoegdheden = Object.fromEntries(MODULE_IDS.map((m) => [m, 4]));
 
   const [bestaand] = await db
     .select({ id: gebruikersTable.id })
     .from(gebruikersTable)
-    .where(eq(gebruikersTable.email, E2E_EMAIL));
+    .where(eq(gebruikersTable.email, opties.email));
 
   if (bestaand) {
     await db
       .update(gebruikersTable)
       .set({
-        naam: "E2E Test Monteur",
+        naam: opties.naam,
         rol: "gebruiker",
         wachtwoord: hash,
-        totpSecret: E2E_TOTP_SECRET,
+        totpSecret: opties.totpSecret,
         tweeFactorIngeschakeld: true,
         actief: true,
         gearchiveerd: false,
@@ -72,11 +86,11 @@ export async function setupE2eAccount(): Promise<number> {
   const [nieuw] = await db
     .insert(gebruikersTable)
     .values({
-      naam: "E2E Test Monteur",
-      email: E2E_EMAIL,
+      naam: opties.naam,
+      email: opties.email,
       rol: "gebruiker",
       wachtwoord: hash,
-      totpSecret: E2E_TOTP_SECRET,
+      totpSecret: opties.totpSecret,
       tweeFactorIngeschakeld: true,
       actief: true,
       bevoegdheden,
@@ -85,15 +99,43 @@ export async function setupE2eAccount(): Promise<number> {
   return nieuw.id;
 }
 
-// Archiveert en deactiveert het vaste e2e-account ná een testrun, zodat het
+// Vast e2e-account voor de monteur-suite (startmenu.spec.ts).
+export async function setupE2eAccount(): Promise<number> {
+  return maakOfUpdateE2eAccount({
+    email: E2E_EMAIL,
+    naam: "E2E Test Monteur",
+    wachtwoord: E2E_WACHTWOORD,
+    totpSecret: E2E_TOTP_SECRET,
+  });
+}
+
+// Vast e2e-account voor de web-suite (web-gebouw-detail + web-offerte-badge).
+export async function setupE2eWebAccount(): Promise<number> {
+  return maakOfUpdateE2eAccount({
+    email: E2E_WEB_EMAIL,
+    naam: "E2E Test Web",
+    wachtwoord: E2E_WEB_WACHTWOORD,
+    totpSecret: E2E_WEB_TOTP_SECRET,
+  });
+}
+
+// Archiveert en deactiveert een vast e2e-account ná een testrun, zodat het
 // niet zichtbaar blijft in Gebruikersbeheer en niet kan inloggen buiten een
-// test om. De eerstvolgende testrun zet het via setupE2eAccount (idempotent)
+// test om. De eerstvolgende testrun zet het via de setup-functie (idempotent)
 // weer op actief.
-export async function archiveerE2eAccount(): Promise<void> {
+async function archiveerAccount(email: string): Promise<void> {
   await db
     .update(gebruikersTable)
     .set({ actief: false, gearchiveerd: true })
-    .where(eq(gebruikersTable.email, E2E_EMAIL));
+    .where(eq(gebruikersTable.email, email));
+}
+
+export async function archiveerE2eAccount(): Promise<void> {
+  await archiveerAccount(E2E_EMAIL);
+}
+
+export async function archiveerE2eWebAccount(): Promise<void> {
+  await archiveerAccount(E2E_WEB_EMAIL);
 }
 
 // Wacht tot het huidige TOTP-venster voldoende resttijd heeft en geeft dan een
@@ -106,6 +148,15 @@ export async function genereerVersTotp(minResterendeSec = 20): Promise<string> {
     await new Promise((r) => setTimeout(r, (resterend + 1) * 1000));
   }
   return authenticator.generate(E2E_TOTP_SECRET);
+}
+
+// Zelfde als genereerVersTotp maar voor het web-account.
+export async function genereerVersWebTotp(minResterendeSec = 20): Promise<string> {
+  const resterend = authenticator.timeRemaining();
+  if (resterend < minResterendeSec) {
+    await new Promise((r) => setTimeout(r, (resterend + 1) * 1000));
+  }
+  return authenticator.generate(E2E_WEB_TOTP_SECRET);
 }
 
 // Wacht tot het volgende 30s-venster begint. Gebruikt tussen mislukte

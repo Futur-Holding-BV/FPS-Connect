@@ -12,7 +12,7 @@ import { spawn, type ChildProcess } from "node:child_process";
 import http from "node:http";
 import https from "node:https";
 
-import { archiveerE2eAccount } from "./e2e-monteur-testaccount";
+import { archiveerE2eWebAccount } from "./e2e-monteur-testaccount";
 import { archiveerE2eWachtwoordAccounts } from "./e2e-wachtwoord-testaccounts";
 
 const WORKSPACE_ROOT = new URL("../../", import.meta.url).pathname;
@@ -169,10 +169,12 @@ async function main(): Promise<void> {
     // zodat ze niet zichtbaar blijven in Gebruikersbeheer. De volgende run
     // activeert ze opnieuw via de idempotente seeder.
     try {
-      // Zowel de wachtwoord-testaccounts als het gedeelde e2e-menu-account
-      // (gebruikt door web-gebouw-detail en web-offerte-badge specs).
+      // Zowel de wachtwoord-testaccounts als het eigen web-account (gebruikt
+      // door web-gebouw-detail en web-offerte-badge specs). Bewust NIET het
+      // monteur-account: de monteur-suite kan parallel draaien en beheert
+      // haar eigen account.
       await archiveerE2eWachtwoordAccounts();
-      await archiveerE2eAccount();
+      await archiveerE2eWebAccount();
       log("E2e-testaccounts gearchiveerd en gedeactiveerd.");
     } catch (err) {
       log(`Waarschuwing: opruimen e2e-testaccounts mislukt: ${(err as Error).message}`);

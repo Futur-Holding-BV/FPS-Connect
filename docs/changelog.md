@@ -22,8 +22,8 @@ Voor elke taak drie scores:
 - Seeders (`e2e-wachtwoord-testaccounts.ts`, `e2e-monteur-testaccount.ts`) hebben nu archiveer-functies; de monteur-seeder zet bij heractivatie ook expliciet `gearchiveerd=false`.
 - Beide e2e-runners (`e2e-web-run.ts`, `e2e-monteur-run.ts`) archiveren en deactiveren de testaccounts **altijd** in hun `finally`-blok — ook wanneer tests falen. De volgende run heractiveert ze via de idempotente seeders.
 - Beide seeders hebben nu een `weigerBuitenDev()`-guard: e2e-accounts kunnen nooit in een deployment/productie worden aangemaakt of geheractiveerd (de monteur-seeder miste deze guard nog; op advies van de review toegevoegd).
-- Kanttekening 1: het `e2e-menu`-account wordt door beide suites gedeeld; draaien beide suites gelijktijdig, dan kan de opruiming van de ene suite de andere breken voor de resterende testduur (de API controleert `actief` bij elke request). Zelfherstellend bij de volgende run; suites niet parallel draaien.
-- Kanttekening 2: een hard afgebroken run (kill/workflow-herstart middenin) slaat de opruiming over; de accounts blijven dan actief tot de eerstvolgende voltooide run.
+- **Accountsplitsing web/monteur**: de web-suite gebruikte aanvankelijk hetzelfde `e2e-menu`-account als de monteur-suite; bij parallelle runs (zoals in de validatiepijplijn) brak de opruiming van de ene suite de lopende tests van de andere (de API controleert `actief` bij elke request). Opgelost door de web-suite een eigen vast account te geven (`e2e-web@fps.local`, eigen TOTP-secret); elke runner archiveert uitsluitend zijn eigen accounts. Bewezen met een gelijktijdige run van beide suites: beide groen, alle accounts na afloop gearchiveerd.
+- Kanttekening: een hard afgebroken run (kill/workflow-herstart middenin) slaat de opruiming over; de accounts blijven dan actief tot de eerstvolgende voltooide run.
 
 ## 2026-07-09 — Loginfouten e2e opgelost: rate-limiter + inbox-schemadrift
 
