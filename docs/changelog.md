@@ -4,6 +4,28 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-09 — Verlopen reactietermijnen tegel op operationeel dashboard
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+**Wat is gebouwd:**
+
+Tegel "Verlopen reactietermijnen" toegevoegd aan het operationele beheerdersdashboard (`beheerder.tsx`):
+- Toont het aantal definitieve rapporten met `opleverstatus === "verstreken"`.
+- Alleen zichtbaar voor hoofdbeheerder en gebruikers met `rapportages >= 1` bevoegdheid (via `magRapportages`).
+- Tegel is altijd aanwezig (ook bij 0 — geen verrassingsverschijning).
+- Klikbaar: linkt door naar `/rapporten?status=verstreken`.
+- Telt rood als er verlopen termijnen zijn, neutraal bij 0.
+
+URL-param support toegevoegd aan `rapporten/index.tsx`:
+- `?status=<waarde>` in de URL overschrijft de sessionStorage-beginwaarde van het statusfilter.
+- Maakt een directe deep-link vanuit het dashboard (of elke andere plek) mogelijk.
+- Alleen geldige statussen (uit `GELDIGE_OPLEVERSTATUS_WAARDEN`) worden geaccepteerd.
+
+**Bestanden gewijzigd:**
+- `artifacts/firevault/src/pages/dashboard/beheerder.tsx`
+- `artifacts/firevault/src/pages/rapporten/index.tsx`
+
 ## 2026-07-08 — Pre-push typecheck fix: opleverstatus status-strings
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag

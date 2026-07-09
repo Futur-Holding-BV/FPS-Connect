@@ -20,13 +20,14 @@ import {
   useGetInboxStats,
   useGetVeiligheidDashboard,
   useGetCapaciteitBezetting,
+  useListRapporten,
 } from "@workspace/api-client-react";
 import {
   Building, ShieldCheck, AlertTriangle, Calendar, TrendingUp, Clock,
   Users, HeartPulse, ChevronRight, TriangleAlert, BrainCircuit,
   LayoutDashboard, FolderOpen, FileText, Bug, Euro, BarChart3,
   CheckCircle2, XCircle, Inbox, Star, ArrowUpRight, HardHat,
-  Activity, Percent, ShieldAlert, Wrench,
+  Activity, Percent, ShieldAlert, Wrench, AlertCircle,
 } from "lucide-react";
 import { useRol } from "@/context/rol-context";
 import { useAuth } from "@/context/auth-context";
@@ -168,10 +169,12 @@ function DashboardKiezer({
 function OperationeelDashboard({
   magHrm,
   magVerlof,
+  magRapportages,
   isHoofdBeheerder,
 }: {
   magHrm: boolean;
   magVerlof: boolean;
+  magRapportages: boolean;
   isHoofdBeheerder: boolean;
 }) {
   const { data: stats }       = useGetDashboardStats();
@@ -183,6 +186,14 @@ function OperationeelDashboard({
   const { data: drempelStatus } = useGetAiDrempelStatus({
     query: { queryKey: ["ai-drempel-status"] },
   });
+  const { data: definitiefRapporten = [] } = useListRapporten(
+    { status: "definitief" },
+    { query: { enabled: magRapportages, queryKey: ["rapporten", "definitief", "dashboard"] } },
+  );
+
+  const verlopenRapportenAantal = definitiefRapporten.filter(
+    (r) => r.opleverstatus === "verstreken",
+  ).length;
 
   const statusTotalen = (verdeling ?? []).reduce(
     (acc, v) => {
@@ -208,6 +219,23 @@ function OperationeelDashboard({
     { label: "Open onderhoud",       waarde: stats?.openstaande_onderhoud ?? 0, icoon: AlertTriangle, kleur: "text-orange-500" },
     { label: "Afgekeurde inspecties",waarde: stats?.vervallen_inspecties ?? 0,  icoon: Calendar,      kleur: "text-destructive" },
   ];
+
+  const verlopenTegel = magRapportages ? (
+    <Link href="/rapporten?status=verstreken">
+      <Card className="cursor-pointer hover:bg-muted/40 transition-colors">
+        <CardHeader className="flex flex-row items-center justify-between pb-2">
+          <CardTitle className="text-sm font-medium text-muted-foreground">Verlopen reactietermijnen</CardTitle>
+          <AlertCircle className={`h-4 w-4 ${verlopenRapportenAantal > 0 ? "text-destructive" : "text-muted-foreground"}`} />
+        </CardHeader>
+        <CardContent>
+          <div className={`text-3xl font-bold ${verlopenRapportenAantal > 0 ? "text-destructive" : ""}`}>
+            {verlopenRapportenAantal}
+          </div>
+          <div className="text-xs text-muted-foreground mt-0.5">Bekijken in rapportenbibliotheek</div>
+        </CardContent>
+      </Card>
+    </Link>
+  ) : null;
 
   const chartData = MAAND_KORT.map((naam, i) => {
     const maandNr   = i + 1;
@@ -284,6 +312,9 @@ function OperationeelDashboard({
           </Card>
         ))}
       </div>
+
+      {/* Verlopen reactietermijnen — gated op rapportages-bevoegdheid */}
+      {verlopenTegel}
 
       {/* HRM signaleringen */}
       {(magVerlof || magHrm) && (
@@ -1345,8 +1376,9 @@ export default function BeheerderDashboard() {
   const functietitel = gebruiker?.functietitels?.[0] ?? null;
 
   const isHoofdBeheerder = echteRol === "hoofdbeheerder";
-  const magHrm    = isHoofdBeheerder || (bevoegdheden.personeel ?? 0) >= 1;
-  const magVerlof = magHrm || (bevoegdheden.planning ?? 0) >= 1;
+  const magHrm         = isHoofdBeheerder || (bevoegdheden.personeel ?? 0) >= 1;
+  const magVerlof      = magHrm || (bevoegdheden.planning ?? 0) >= 1;
+  const magRapportages = isHoofdBeheerder || (bevoegdheden.rapportages ?? 0) >= 1;
 
   const [weergave, setWeergave] = useState<DashboardWeergave>(() => {
     try {
@@ -1390,7 +1422,7 @@ export default function BeheerderDashboard() {
 
       {/* Actieve dashboard-inhoud */}
       {weergave === "operationeel" && (
-        <OperationeelDashboard magHrm={magHrm} magVerlof={magVerlof} isHoofdBeheerder={isHoofdBeheerder} />
+        <OperationeelDashboard magHrm={magHrm} magVerlof={magVerlof} magRapportages={magRapportages} isHoofdBeheerder={isHoofdBeheerder} />
       )}
       {weergave === "spots" && <SpotsDashboard />}
       {weergave === "projecten" && <ProjectenDashboard />}
