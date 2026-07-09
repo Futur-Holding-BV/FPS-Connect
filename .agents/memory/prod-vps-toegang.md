@@ -22,3 +22,7 @@ description: Bewezen deploypad naar de productie-VPS (TransIP) en de valkuilen d
 - `/tmp` op Replit is vluchtig: sleutelbestand na omgevingsherstart opnieuw aanmaken.
 
 **Restpunt:** handmatige weblogin-smoketest (TOTP) door gebruiker; sleutelrotatie bij gelegenheid.
+
+**Productie-config gaten (9 juli 2026):**
+- `deploy/.env.production` heeft GEEN mailvariabelen (AZURE_TENANT_ID/CLIENT_ID/CLIENT_SECRET, MAIL_FROM, MAIL_MAILBOX) → uitnodigings- en wachtwoord-vergeten-mails komen op productie nooit aan; "gebruiker kan niet inloggen" eerst hierop checken (login_pogingen-tabel geeft bewijs). Dev heeft ze wél.
+- De api-container logt 0 regels (json-file driver, maar leeg) — LOG_LEVEL nakijken; debugging loopt nu noodgedwongen via de login_pogingen-tabel en DB-queries.

@@ -77,6 +77,10 @@ router.post("/uitnodiging/:token/activeren", async (req, res): Promise<void> => 
         wachtwoord: gehasht,
         taal,
         uitnodigingGeopendOp: g.uitnodigingGeopendOp ?? new Date(),
+        // De gebruiker kiest hier zelf een wachtwoord; de vlag "moet wachtwoord
+        // wijzigen" (gezet bij aanmaak met tijdelijk wachtwoord) is dan vervuld.
+        // Zonder dit dwingt de app direct na activatie alsnog een wijziging af.
+        moetWachtwoordWijzigen: false,
       })
       .where(eq(gebruikersTable.id, g.id));
 

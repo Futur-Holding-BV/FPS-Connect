@@ -4,6 +4,18 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-09 — Onderzoek "Jacqueline kan niet inloggen" (productie) + activatiefix
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** geen (onderzoek read-only op productie; codefix is één gedragscorrectie in de activatieflow, alleen in dev)
+
+**Diagnose met bewijs (productie-DB, read-only):** account Jacqueline (id 2) was actief, niet vergrendeld, wachtwoordhash aanwezig — maar álle ~20 inlogpogingen (8–9 juli) faalden op de wachtwoordcontrole. Oorzaak: de uitnodigingsmail waarmee ze haar wachtwoord moest instellen is **nooit aangekomen, omdat productie geen mailconfiguratie heeft** (geen `AZURE_TENANT_ID`/`AZURE_CLIENT_ID`/`AZURE_CLIENT_SECRET`/`MAIL_FROM`/`MAIL_MAILBOX` in `deploy/.env.production`). Ze had dus nooit een werkend wachtwoord.
+
+**Afloop:** om 12:40:24 is het account alsnog succesvol geactiveerd via de activatielink (wachtwoord gezet, 2FA ingericht, login gelukt — zelfde apparaat/IP als alle eerdere pogingen). Login-registratie id 40: `gelukt=true`.
+
+**Codefix (dev):** `POST /uitnodiging/:token/activeren` zette de vlag `moet_wachtwoord_wijzigen` niet uit, terwijl de gebruiker daar zelf een wachtwoord kiest — de app dwong dan direct na activatie alsnog een wijziging af. Nu wordt de vlag daar uitgezet (consistent met wachtwoord-reset en wachtwoord-wijzigen). Typecheck groen.
+
+**Structureel openstaand:** productie kan géén e-mail versturen — uitnodigingen en wachtwoord-vergeten-mails komen nooit aan. Vereist de Microsoft 365 Graph-variabelen in `deploy/.env.production` op de VPS. Daarnaast: de api-container op productie logt 0 regels (LOG_LEVEL-instelling controleren bij een volgende release).
+
 ## 2026-07-09 — Productie-release a8a8dc7c uitgerold naar connect.fps-one.nl
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (back-up vooraf; alle checks groen; rollback-procedure beschikbaar)
