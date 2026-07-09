@@ -41,5 +41,6 @@ pnpm-debug.log*
 artifacts/monteur-app
 artifacts/mockup-sandbox
 attached_assets
-scripts
+scripts/*
+!scripts/package.json
 docs
