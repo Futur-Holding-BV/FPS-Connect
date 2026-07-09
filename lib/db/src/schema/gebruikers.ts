@@ -73,6 +73,29 @@ export const profielenTable = pgTable("profielen", {
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
 });
 
+// Koppeltabel gebruiker <-> profiel (P2: meerdere rollen per gebruiker).
+// Een gebruiker kan 0..n profielen ("rollen") hebben; de effectieve
+// bevoegdheden zijn per module het hoogste niveau over alle gekoppelde
+// profielen (zie combineerBevoegdheden in @workspace/permissies).
+// Increment 1: alleen de tabel — nog niet in gebruik door runtime-code.
+// Let op: de UNIQUE-constraint op (gebruiker_id, profiel_id) wordt bewust NIET
+// hier gedeclareerd maar via idempotente SQL in lib/db/scripts/apply-additive.mjs
+// (uniqueIndex in het drizzle-schema gaf eerder deployment-validatiefouten).
+export const gebruikerProfielenTable = pgTable(
+  "gebruiker_profielen",
+  {
+    id: serial("id").primaryKey(),
+    gebruikerId: integer("gebruiker_id")
+      .notNull()
+      .references(() => gebruikersTable.id, { onDelete: "cascade" }),
+    profielId: integer("profiel_id")
+      .notNull()
+      .references(() => profielenTable.id, { onDelete: "cascade" }),
+    aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+  },
+  (t) => [index("gp_gebruiker_idx").on(t.gebruikerId), index("gp_profiel_idx").on(t.profielId)],
+);
+
 // Tokens voor het resetten van een vergeten wachtwoord. Eenmalig gebruik,
 // verlopen na 1 uur. De token is een willekeurige hex-string (32 bytes).
 export const wachtwoordResetTokensTable = pgTable(
@@ -94,3 +117,4 @@ export const insertGebruikerSchema = createInsertSchema(gebruikersTable).omit({ 
 export type InsertGebruiker = z.infer<typeof insertGebruikerSchema>;
 export type Gebruiker = typeof gebruikersTable.$inferSelect;
 export type Profiel = typeof profielenTable.$inferSelect;
+export type GebruikerProfiel = typeof gebruikerProfielenTable.$inferSelect;

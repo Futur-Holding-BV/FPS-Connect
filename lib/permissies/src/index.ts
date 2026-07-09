@@ -364,6 +364,30 @@ export const PRESETS: Preset[] = [
   },
 ];
 
+// ── Meerdere rollen per gebruiker (P2) ────────────────────────────────────
+// Combineert de matrices van meerdere gekoppelde rollen (profielen) tot één
+// effectieve matrix: per module geldt het hoogste niveau (unie van rollen).
+// - Lege invoer (geen rollen) geeft een lege matrix, zodat de bestaande
+//   legacy-fallback (bevoegdhedenVoorLegacyRol) en "geen toegang"-logica
+//   ongewijzigd blijven werken.
+// - Onbekende module-sleutels blijven behouden (open map, zie Bevoegdheden).
+// - Ongeldige waarden (niet-numeriek of <= 0) tellen als 0, conform niveauVan.
+export function combineerBevoegdheden(
+  matrices: ReadonlyArray<Bevoegdheden | null | undefined>,
+): Bevoegdheden {
+  const aanwezig = matrices.filter((m): m is Bevoegdheden => m != null);
+  if (aanwezig.length === 0) return {};
+  const out: Bevoegdheden = {};
+  for (const m of MODULE_IDS) out[m] = 0;
+  for (const mtx of aanwezig) {
+    for (const [sleutel, waarde] of Object.entries(mtx)) {
+      const niveau = typeof waarde === "number" && waarde > 0 ? waarde : 0;
+      if (niveau > (out[sleutel] ?? 0)) out[sleutel] = niveau;
+    }
+  }
+  return out;
+}
+
 // ── Re-exports centrale rechtenstructuur ──────────────────────────────────
 export type { ObjectType, ObjectRecht, PermissieContext } from "./types";
 export { PermissieEngine } from "./engine";

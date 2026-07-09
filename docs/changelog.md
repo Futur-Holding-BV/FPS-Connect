@@ -4,6 +4,24 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-09 — P2 increment 1: fundament meerdere rollen per gebruiker
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+**Wat is gebouwd (bewust zonder gedragswijziging):**
+
+1. `combineerBevoegdheden(matrices[])` in `@workspace/permissies`: combineert de matrices van meerdere rollen (profielen) tot één effectieve matrix — per module het hoogste niveau. Lege invoer geeft een lege matrix zodat de bestaande legacy-fallback (`bevoegdhedenVoorLegacyRol`) ongewijzigd blijft. Nog nergens aangeroepen door runtime-code.
+2. 18 unit tests (`combineer-bevoegdheden.test.ts`): per-module max over meerdere rollen (incl. echte presets), regressie één rol (identieke rechten voor alle 18 presets), regressie geen rollen/legacy-fallback, onbekende module-sleutels, ongeldige waarden, immutabiliteit.
+3. Additieve koppeltabel `gebruiker_profielen` (gebruiker_id FK cascade, profiel_id FK cascade, UNIQUE-paar, indexen) in het Drizzle-schema, `apply-additive.mjs` en `schema-healthcheck.mjs`; aangemaakt op de ontwikkeldatabase. UNIQUE via SQL, niet via drizzle-schema (bekende deployment-validatievalkuil). Bestaande kolommen (`bevoegdheden`, `herkomst_profiel_id`, `herkomst_automatisch`) onaangeroerd.
+
+**Verificatie:** 193/193 vitest-tests groen; typecheck libs + firevault + monteur-app groen (alleen de 3 bekende, reeds bestaande TS7030 in api-server); api-server esbuild-build groen; schema-healthcheck 10/10.
+
+**Bestanden gewijzigd:**
+- `lib/permissies/src/index.ts` (+ nieuw `combineer-bevoegdheden.test.ts`)
+- `lib/db/src/schema/gebruikers.ts`
+- `lib/db/scripts/apply-additive.mjs`
+- `lib/db/scripts/schema-healthcheck.mjs`
+
 ## 2026-07-09 — P1 Hotfix: klant-reactievelden (typefout + ontbrekende databasekolommen)
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
