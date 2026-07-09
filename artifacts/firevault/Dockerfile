@@ -1,6 +1,9 @@
 # ─── Stage 1: Build ───────────────────────────────────────────────────────────
-FROM node:24-alpine AS builder
-RUN corepack enable pnpm
+# node:24-slim (glibc): de workspace-overrides sluiten musl-natives uit (rollup/oxide),
+# dus alpine (musl) kan de vite-build niet draaien; deploy/Dockerfile.* gebruikt ook slim
+FROM node:24-slim AS builder
+# Pin pnpm 10 (corepack zonder pin haalt pnpm 11 binnen, die faalt op ERR_PNPM_IGNORED_BUILDS)
+RUN npm install -g pnpm@10.26.1
 WORKDIR /workspace
 
 # Kopieer workspace-configuratie
