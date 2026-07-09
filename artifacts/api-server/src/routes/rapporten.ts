@@ -17,6 +17,7 @@ import { ObjectStorageService } from "../lib/objectStorage";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
 import { RAPPORT_SAMENVATTING_PROMPT } from "../lib/aiPrompts";
 import { bouwNieuweVersieWaarden } from "../lib/rapport-helpers";
+import { extraheerPdfTekst } from "../lib/pdfTekst";
 
 const router = Router();
 
@@ -640,10 +641,8 @@ router.get("/gebouwen/:id/rapporten/:rapportId/bijlagenbundel", lezenRapporten, 
           let samenvatting = "";
           if (heeftGateway()) {
             try {
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              const pdfParse = ((await import("pdf-parse")) as any).default as (buf: Buffer) => Promise<{ text: string }>;
-              const parsed = await pdfParse(buffer);
-              const tekst  = parsed.text.slice(0, 8000);
+              const parsed = await extraheerPdfTekst(buffer);
+              const tekst  = (parsed.tekst ?? "").slice(0, 8000);
               const samenvattingResultaat = await aiGateway.chat("default", {
                 messages: [
                   {

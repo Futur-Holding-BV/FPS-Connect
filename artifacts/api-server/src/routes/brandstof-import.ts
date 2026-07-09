@@ -15,6 +15,7 @@ import {
 import { eq, and, inArray } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth.js";
 import { logger } from "../lib/logger.js";
+import { extraheerPdfTekst } from "../lib/pdfTekst";
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 * 1024 * 1024 } });
@@ -211,7 +212,6 @@ function parseUblXml(buffer: Buffer): RuweRegel[] {
 // ── EML / mailbijlage parser ──────────────────────────────────────────────────
 
 async function parseEml(buffer: Buffer): Promise<{ regels: RuweRegel[]; bestandsnaam: string }> {
-  const pdfParseLib = ((await import("pdf-parse")) as unknown as { default: (b: Buffer) => Promise<{ text: string }> }).default;
   const parsed = await simpleParser(buffer);
   const regels: RuweRegel[] = [];
   let bestandsnaam = parsed.subject ?? "e-mail bijlage";
@@ -220,7 +220,7 @@ async function parseEml(buffer: Buffer): Promise<{ regels: RuweRegel[]; bestands
     const mime = att.contentType ?? "";
     const naam = att.filename ?? "";
     if (mime === "application/pdf" || naam.toLowerCase().endsWith(".pdf")) {
-      const tekst = await pdfParseLib(att.content).then((r: { text: string }) => r.text).catch(() => "");
+      const tekst = await extraheerPdfTekst(att.content).then((r) => r.tekst ?? "").catch(() => "");
       regels.push(...parsePdfRuweRegels(tekst));
       if (naam) bestandsnaam = naam;
     } else if (
@@ -442,13 +442,12 @@ router.post("/", schrijven, upload.single("bestand"), async (req, res): Promise<
       ruweRegels = parseUblXml(buffer);
     } else if (ext === "pdf" || mimetype === "application/pdf") {
       brontype = "pdf";
-      const pdfParseLib = ((await import("pdf-parse")) as unknown as { default: (b: Buffer) => Promise<{ text: string }> }).default;
-      const data = await pdfParseLib(buffer);
-      if (!isMkbBrandstof(data.text)) {
+      const data = await extraheerPdfTekst(buffer);
+      if (!isMkbBrandstof(data.tekst ?? "")) {
         res.status(400).json({ error: "Dit lijkt geen MKB Brandstof-factuur te zijn." });
         return;
       }
-      ruweRegels = parsePdfRuweRegels(data.text);
+      ruweRegels = parsePdfRuweRegels(data.tekst ?? "");
     } else {
       // Onbekend bestandstype — probeer als tekst
       brontype = "handmatig";

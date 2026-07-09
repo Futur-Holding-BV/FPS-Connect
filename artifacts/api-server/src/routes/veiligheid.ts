@@ -23,16 +23,12 @@ import { requireAuth, requireBevoegdheid } from "../middlewares/auth.js";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
 import { TOOLBOX_ANALYSE_PROMPT, TOOLBOX_KOPPELING_PROMPT, TOOLBOX_GENEREER_PROMPT, LMRA_VOORSTEL_PROMPT, INCIDENT_REGISTRATIE_PROMPT } from "../lib/aiPrompts";
 import { logActiviteit } from "../lib/activiteit.js";
-import { createRequire } from "module";
 import { ObjectStorageService } from "../lib/objectStorage.js";
 import { logger } from "../lib/logger.js";
 
 const objectStorage = new ObjectStorageService();
 
-// pdf-parse is CJS-only; gebruik createRequire voor ESM-compatibiliteit
-const _require = createRequire(import.meta.url);
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const pdfParse: (buf: Buffer) => Promise<{ text: string }> = _require("pdf-parse");
+import { extraheerPdfTekst } from "../lib/pdfTekst";
 
 const veiligheidRouter = Router();
 
@@ -415,8 +411,8 @@ veiligheidRouter.post("/veiligheid/toolboxen/:id/ai-analyse", schrijvenVeilighei
         const stream = file.createReadStream();
         for await (const chunk of stream) chunks.push(Buffer.from(chunk));
         const buffer = Buffer.concat(chunks);
-        const parsed = await pdfParse(buffer);
-        pdfTekst = parsed.text?.slice(0, 12000) ?? "";
+        const parsed = await extraheerPdfTekst(buffer);
+        pdfTekst = parsed.tekst?.slice(0, 12000) ?? "";
       } catch (e) {
         logger.warn({ err: e, toolboxId: id }, "PDF tekst extractie mislukt");
       }

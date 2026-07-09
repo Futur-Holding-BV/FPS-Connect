@@ -21,6 +21,25 @@ Voor elke taak drie scores:
 - `docs/kwaliteitscontrole.md`
 - `.agents/memory/MEMORY.md` + `.agents/memory/kwaliteitskader.md` (nieuw)
 
+## 2026-07-09 — Bugfix: PDF-tekstextractie hersteld (pdf-parse v2-API)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+**Wat is hersteld:**
+
+1. Alle PDF-tekstextractie faalde stil: het geïnstalleerde `pdf-parse` v2.4.5 heeft geen default-functie-export meer (alleen de named class `PDFParse`), terwijl vrijwel alle aanroepplekken de oude v1-API gebruikten. Elke extractie gooide `TypeError: pdfParse is not a function`, ingeslikt door try/catch. De AI-documentclassifier (Document Intelligence, Slim Upload, Inbox) ontving daardoor nooit de PDF-inhoud ("Geëxtraheerde tekst: GEEN").
+2. Eén centrale extractiehelper toegevoegd (`artifacts/api-server/src/lib/pdfTekst.ts`, v2-API met `getText()`/`destroy()` + paginateller). Alle 10 aanroepplekken gemigreerd: documentIntelligence, pdfVisie (`haalPdfTekst`), rapporten (AI-samenvatting), hrm (2×), studio (huisstijlanalyse), brandstof-import (2×), veiligheid, organisatie en pim. Misleidende `createRequire`-workarounds en "pdf-parse is CJS-only"-commentaren verwijderd.
+3. `@types/pdf-parse` (v1-API) verwijderd zodat typecheck de echte v2-API bewaakt in plaats van de oude te maskeren.
+4. Regressietest toegevoegd (`src/lib/pdfTekst.test.ts` + mini-PDF-fixture): bewaakt dat extractie echt tekst en paginateller oplevert en dat corrupte input een fout gooit in plaats van stil te falen.
+
+**Verificatie:** typecheck api-server groen (op 3 bekende pre-existing TS7030's na); alle 173 vitest-tests groen; end-to-end via Slim Upload met een echte certificaat-PDF: bewijsketen toont "tekstextractie: gelukt via tekstlaag — 1415 tekens, 1 pagina('s)", AI-analyse draait op inhoud, betrouwbaarheid "hoog" (score 7/8).
+
+**Bestanden gewijzigd:**
+- `artifacts/api-server/src/lib/pdfTekst.ts` (nieuw) + `pdfTekst.test.ts` (nieuw) + `__fixtures__/test-document.pdf` (nieuw)
+- `artifacts/api-server/src/lib/documentIntelligence.ts`, `pdfVisie.ts`
+- `artifacts/api-server/src/routes/rapporten.ts`, `hrm.ts`, `studio.ts`, `brandstof-import.ts`, `veiligheid.ts`, `organisatie.ts`, `pim.ts`
+- `artifacts/api-server/package.json` (@types/pdf-parse verwijderd)
+
 ## 2026-07-09 — Bugfix: wachtwoord bij "Gebruiker bewerken" werd stilzwijgend genegeerd + methodologie-review
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag

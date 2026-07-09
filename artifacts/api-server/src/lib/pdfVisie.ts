@@ -6,6 +6,7 @@ import { writeFile, readFile, unlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { logger } from "./logger";
+import { extraheerPdfTekst } from "./pdfTekst";
 
 export async function renderPdfPagina(buffer: Buffer): Promise<string | null> {
   const id = `${Date.now()}_${Math.random().toString(36).slice(2)}`;
@@ -49,9 +50,8 @@ export async function renderPdfPagina(buffer: Buffer): Promise<string | null> {
 
 export async function haalPdfTekst(buffer: Buffer): Promise<string | null> {
   try {
-    const pdfParse = ((await import("pdf-parse")) as unknown as { default: (b: Buffer) => Promise<{ text: string }> }).default;
-    const result = await pdfParse(buffer);
-    return result.text?.trim() || null;
+    const result = await extraheerPdfTekst(buffer);
+    return result.tekst;
   } catch { return null; }
 }
 

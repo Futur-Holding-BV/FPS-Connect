@@ -16,6 +16,7 @@
 import { db, werkgeversTable } from "@workspace/db";
 import { aiGateway, heeftGateway } from "./aiGateway";
 import { renderPdfPagina, haalPdfTekst, resizeAfbeelding } from "./pdfVisie";
+import { extraheerPdfTekst } from "./pdfTekst";
 import { logger } from "./logger";
 
 // ── Canonieke categorie-taxonomie ─────────────────────────────────────────────
@@ -90,12 +91,8 @@ async function extraheerTekst(buffer: Buffer, mime: string, bestandsnaam: string
   const naam = bestandsnaam.toLowerCase();
   if (mime === "application/pdf") {
     try {
-      const pdfParse = ((await import("pdf-parse")) as unknown as {
-        default: (b: Buffer) => Promise<{ text: string; numpages?: number }>;
-      }).default;
-      const result = await pdfParse(buffer);
-      const tekst = result.text?.trim() || null;
-      return { tekst, bron: tekst ? "tekstlaag" : "geen", paginaAantal: result.numpages ?? null };
+      const result = await extraheerPdfTekst(buffer);
+      return { tekst: result.tekst, bron: result.tekst ? "tekstlaag" : "geen", paginaAantal: result.paginaAantal };
     } catch (err) {
       logger.warn({ err }, "documentIntelligence: PDF-tekstextractie mislukt");
       return { tekst: null, bron: "geen", paginaAantal: null };

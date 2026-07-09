@@ -2,7 +2,6 @@
 // Beheert modellen (geen|referentie|concept|goedgekeurd) per documenttype per werkgever.
 import { Router } from "express";
 import { randomUUID } from "crypto";
-import { createRequire } from "node:module";
 import multer from "multer";
 import { db, documentStudioModellenTable, werkgeversTable } from "@workspace/db";
 import { eq, and, desc, inArray, sql } from "drizzle-orm";
@@ -16,10 +15,7 @@ import { renderPdfPagina, resizeAfbeelding } from "../lib/pdfVisie";
 
 import { z } from "zod";
 
-// pdf-parse is CJS-only; gebruik createRequire voor ESM-compatibiliteit.
-const _req = createRequire(import.meta.url);
-type PdfParseFn = (buf: Buffer) => Promise<{ text: string; numpages: number }>;
-const pdfParse: PdfParseFn = (_req("pdf-parse") as { default?: PdfParseFn }).default ?? (_req("pdf-parse") as PdfParseFn);
+import { extraheerPdfTekst } from "../lib/pdfTekst";
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
@@ -499,8 +495,8 @@ async function extraheerTekst(buffer: Buffer, pad: string): Promise<string> {
   const ext = pad.split(".").pop()?.toLowerCase() ?? "";
   if (ext === "pdf") {
     try {
-      const resultaat = await pdfParse(buffer);
-      return resultaat.text.trim().slice(0, 8000); // limiet voor prompt
+      const resultaat = await extraheerPdfTekst(buffer);
+      return (resultaat.tekst ?? "").slice(0, 8000); // limiet voor prompt
     } catch {
       return "";
     }

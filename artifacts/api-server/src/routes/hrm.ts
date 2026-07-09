@@ -8,15 +8,8 @@
 // stelt opleidingen/cursussen voor per functie. Conform het projectprincipe stelt
 // de AI alleen voor; een mens bevestigt en bewaart (geen automatische opslag).
 import { Router } from "express";
-import { createRequire } from "module";
 import multer from "multer";
-// pdf-parse is a CJS module; gebruik createRequire zodat Node.js de CJS-versie laadt
-// en niet de ESM-stub die geen default-export heeft.
-const _req = createRequire(import.meta.url);
-type PdfParseResult = { text: string; numpages: number };
-type PdfParseFn = (buffer: Buffer, options?: object) => Promise<PdfParseResult>;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const pdfParse: PdfParseFn = (_req("pdf-parse") as any).default ?? (_req("pdf-parse") as any);
+import { extraheerPdfTekst } from "../lib/pdfTekst";
 import {
   db,
   werkgeversTable,
@@ -3124,8 +3117,8 @@ router.post(
         bestand.originalname.toLowerCase().endsWith(".pdf");
       if (isPdf) {
         try {
-          const parsed = await pdfParse(bestand.buffer);
-          tekst = parsed.text ?? "";
+          const parsed = await extraheerPdfTekst(bestand.buffer);
+          tekst = parsed.tekst ?? "";
         } catch {
           return void res
             .status(422)
@@ -3768,8 +3761,8 @@ router.post("/medewerkers/:id/ai-contract-analyse", schrijven, async (req, res):
         (doc.contentType ?? "").includes("pdf") ||
         doc.bestandsnaam.toLowerCase().endsWith(".pdf");
       if (isPdf) {
-        const parsed = await pdfParse(buf);
-        tekst = parsed.text ?? "";
+        const parsed = await extraheerPdfTekst(buf);
+        tekst = parsed.tekst ?? "";
       } else {
         tekst = buf.toString("utf-8");
       }

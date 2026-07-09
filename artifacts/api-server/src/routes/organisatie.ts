@@ -5,7 +5,6 @@ import { Router } from "express";
 import { createHash } from "crypto";
 import { randomUUID } from "crypto";
 import { Readable } from "stream";
-import { createRequire } from "module";
 import multer from "multer";
 import { db, orgVerzekeringenTable, orgJaarverslagenTable, orgBedrijfsdocumentenTable, aiCategorieCorrectiesTable, aiVeldCorrectiesTable } from "@workspace/db";
 import { eq, desc } from "drizzle-orm";
@@ -19,8 +18,7 @@ import {
 } from "../lib/aiPrompts";
 import { ObjectStorageService, ObjectNotFoundError } from "../lib/objectStorage";
 
-const _require = createRequire(import.meta.url);
-const pdfParse: (buf: Buffer) => Promise<{ text: string }> = _require("pdf-parse");
+import { extraheerPdfTekst } from "../lib/pdfTekst";
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } });
 
 const router = Router();
@@ -369,8 +367,8 @@ router.post(
       const mime = req.file.mimetype;
       if (mime === "application/pdf" || req.file.originalname.endsWith(".pdf")) {
         try {
-          const resultaat = await pdfParse(buffer);
-          tekstBlok = (resultaat.text ?? "").slice(0, 8000);
+          const resultaat = await extraheerPdfTekst(buffer);
+          tekstBlok = (resultaat.tekst ?? "").slice(0, 8000);
         } catch {
           tekstBlok = "";
         }
