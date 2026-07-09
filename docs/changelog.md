@@ -4,6 +4,17 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-09 — GitHub CI groen: lokale main gepusht (TS7030 opgelost op GitHub)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** geen (geen codewijziging; alleen synchronisatie met GitHub)
+
+De GitHub CI faalde op drie TS7030-fouten die lokaal al lang gefixt waren; GitHub stond commits achter omdat het token verlopen was. Uitgevoerd:
+
+1. GitHub-authenticatie hersteld via de Replit GitHub-integratie.
+2. Vooraf de exacte CI-stappen lokaal gedraaid: volledige typecheck, api-server build en firevault productie-build — alle groen.
+3. `origin/main` bleek één GitHub-zijde mergecommit vooruit te staan, maar de boominhoud daarvan was byte-identiek aan bestaande lokale commits — daarom veilig gemerged (geen force-push, geen contentwijziging) en gepusht.
+4. GitHub Actions-run op de gepushte commit `0c9848a` is volledig groen: https://github.com/vinkrene-jpg/fps-one/actions/runs/29007724693
+
 ## 2026-07-09 — Pre-Publish Validatie: 10 kritieke identiteitsflows aantoonbaar groen
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** geen (uitsluitend validatie + testscript; geen productiewijziging)

@@ -102,4 +102,5 @@
 - [Reactietermijn-statusmachine patroon](reactietermijn-statusmachine.md) — afgeleide status (bv. "termijn verstreken") berekenen bij lezen uit status+datum, geen achtergrondworker; alleen echte state-transities (vervangen) los opslaan.
 - [runTest infra-failure diagnosis](runtest-infra-failure-diagnosis.md) — if runTest fails every attempt with "Maximum iterations", check e2e-* validation commands to see if Playwright itself still works; if so, fall back to curl/API-level verification.
 - [pdf-parse v2 API](pdf-parse-v2.md) — pdf-parse >=2.x heeft alleen PDFParse-class (geen default-functie); alle PDF-extractie via lib/pdfTekst.ts, @types/pdf-parse nooit herinstalleren.
+- [GitHub push-synchronisatie](github-push-sync.md) — verlopen token via integratie vernieuwen (GIT_ASKPASS); divergente origin-commits eerst op tree-identiteit checken → merge i.p.v. force-push.
 - [Bewijs vs. inferentie](bewijs-vs-inferentie.md) — stilte in logs/tabellen is pas bewijs ná positieve kanaalcontrole + dekkingscheck; volledige regels in docs/diagnose-methodologie.md.
