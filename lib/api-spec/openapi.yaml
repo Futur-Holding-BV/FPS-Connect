@@ -23803,6 +23803,10 @@ components:
           type: ["integer", "null"]
         herkomst_automatisch:
           type: boolean
+        profiel_ids:
+          type: array
+          items:
+            type: integer
         dienstverband:
           type: ["string", "null"]
         bedrijf_uitzendbureau:
@@ -24059,6 +24063,10 @@ components:
             type: integer
         herkomst_profiel_id:
           type: ["integer", "null"]
+        profiel_ids:
+          type: array
+          items:
+            type: integer
         dienstverband:
           type: string
         bedrijf_uitzendbureau:
@@ -24101,6 +24109,10 @@ components:
             type: integer
         herkomst_profiel_id:
           type: ["integer", "null"]
+        profiel_ids:
+          type: array
+          items:
+            type: integer
         dienstverband:
           type: string
         bedrijf_uitzendbureau:

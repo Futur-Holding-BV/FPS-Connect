@@ -2,8 +2,13 @@ import crypto from "node:crypto";
 import { Router } from "express";
 import bcrypt from "bcryptjs";
 import { db } from "@workspace/db";
-import { gebruikersTable, profielenTable, wachtwoordResetTokensTable } from "@workspace/db";
-import { eq, and, isNotNull, inArray, sql } from "drizzle-orm";
+import {
+  gebruikersTable,
+  profielenTable,
+  gebruikerProfielenTable,
+  wachtwoordResetTokensTable,
+} from "@workspace/db";
+import { eq, and, isNotNull, inArray, sql, asc } from "drizzle-orm";
 import type { PgUpdateSetSource } from "drizzle-orm/pg-core";
 import {
   stuurUitnodigingsmail,
@@ -12,7 +17,7 @@ import {
   MAIL_FOUT_OMSCHRIJVING,
 } from "../services/email";
 import { requireBevoegdheid, requireRol, requireEnigeBevoegdheid } from "../middlewares/auth";
-import { heeftNiveau, MODULE_IDS } from "@workspace/permissies";
+import { heeftNiveau, MODULE_IDS, combineerBevoegdheden } from "@workspace/permissies";
 import {
   kiesUniekeHerkomstPreset,
   magAutomatischKoppelen,
@@ -64,7 +69,8 @@ const schoonFunctietitels = (waarde: unknown): string[] => {
   return [...uniek];
 };
 
-const mapGebruiker = (g: typeof gebruikersTable.$inferSelect) => ({
+const mapGebruiker = (g: typeof gebruikersTable.$inferSelect, profielIds?: number[]) => ({
+  profiel_ids: profielIds,
   id: g.id,
   naam: g.naam,
   email: g.email,
@@ -156,6 +162,61 @@ async function vindUniekeHerkomstPreset(
   );
 }
 
+// ── P2: meerdere rollen (profielen) per gebruiker ──────────────────────────
+// Parseer en valideer een profiel_ids-payload. undefined = niet meegestuurd
+// (koppelingen ongemoeid laten); een array vervangt de volledige set.
+function parseProfielIds(invoer: unknown): { ids?: number[]; fout: string | null } {
+  if (invoer === undefined) return { fout: null };
+  if (!Array.isArray(invoer)) {
+    return { fout: "profiel_ids moet een lijst van profiel-id's zijn" };
+  }
+  const ids: number[] = [];
+  for (const waarde of invoer) {
+    if (typeof waarde !== "number" || !Number.isInteger(waarde)) {
+      return { fout: "profiel_ids mag alleen gehele profiel-id's bevatten" };
+    }
+    if (!ids.includes(waarde)) ids.push(waarde);
+  }
+  return { ids, fout: null };
+}
+
+// Haal de bevoegdheden-matrices van een set profielen op. Retourneert null
+// wanneer één of meer id's niet bestaan (de route hoort dan 400 te geven).
+async function haalProfielMatrices(
+  ids: number[],
+): Promise<Record<string, number>[] | null> {
+  if (ids.length === 0) return [];
+  const rijen = await db
+    .select({ id: profielenTable.id, bevoegdheden: profielenTable.bevoegdheden })
+    .from(profielenTable)
+    .where(inArray(profielenTable.id, ids));
+  if (rijen.length !== ids.length) return null;
+  return rijen.map((r) => (r.bevoegdheden as Record<string, number>) ?? {});
+}
+
+// Gekoppelde profiel-id's per gebruiker (koppeltabel gebruiker_profielen), in
+// één query voor een hele lijst gebruikers — vermijdt N+1 op het overzicht.
+async function profielIdsPerGebruiker(
+  gebruikerIds: number[],
+): Promise<Map<number, number[]>> {
+  const map = new Map<number, number[]>();
+  if (gebruikerIds.length === 0) return map;
+  const rijen = await db
+    .select({
+      gebruikerId: gebruikerProfielenTable.gebruikerId,
+      profielId: gebruikerProfielenTable.profielId,
+    })
+    .from(gebruikerProfielenTable)
+    .where(inArray(gebruikerProfielenTable.gebruikerId, gebruikerIds))
+    .orderBy(asc(gebruikerProfielenTable.profielId));
+  for (const r of rijen) {
+    const lijst = map.get(r.gebruikerId) ?? [];
+    lijst.push(r.profielId);
+    map.set(r.gebruikerId, lijst);
+  }
+  return map;
+}
+
 async function isBeheerder(userId: number | undefined): Promise<boolean> {
   if (!userId) return false;
   const [g] = await db
@@ -177,8 +238,11 @@ router.get("/gebruikers", lezenGebruikers, async (req, res): Promise<void> => {
   try {
     const gebruikers = await db.select().from(gebruikersTable);
     const volledig = await isBeheerder(req.session.userId);
-    const mapper = volledig ? mapGebruiker : mapGebruikerPubliek;
-    res.json(gebruikers.map((g) => mapper(g)));
+    if (!volledig) {
+      return void res.json(gebruikers.map((g) => mapGebruikerPubliek(g)));
+    }
+    const koppel = await profielIdsPerGebruiker(gebruikers.map((g) => g.id));
+    res.json(gebruikers.map((g) => mapGebruiker(g, koppel.get(g.id) ?? [])));
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });
@@ -224,7 +288,7 @@ router.post("/gebruikers", alleenBeheerder, async (req, res): Promise<void> => {
     const {
       naam, email, rol, functietitels, telefoon, bedrijf, wachtwoord,
       avatar_url, bedrijfslogo_url, bedrijfskleuren, taal, bevoegdheden,
-      herkomst_profiel_id, dienstverband, bedrijf_uitzendbureau,
+      herkomst_profiel_id, profiel_ids, dienstverband, bedrijf_uitzendbureau,
     } = req.body;
     if (!naam || !email || !rol) {
       return void res.status(400).json({ error: "naam, email en rol zijn verplicht" });
@@ -232,19 +296,41 @@ router.post("/gebruikers", alleenBeheerder, async (req, res): Promise<void> => {
     const functies = isBeheerderRol(rol)
       ? schoonFunctietitels(functietitels)
       : [];
-    // Zelf-escalatiebeveiliging: niemand mag hogere niveaus toekennen dan eigen matrix.
+    // P2: meerdere rollen (profielen). profiel_ids vervangt de volledige set
+    // koppelingen; de matrices zijn nodig voor de afgeleide effectieve matrix.
+    const { ids: profielIds, fout: profielFout } = parseProfielIds(profiel_ids);
+    if (profielFout) return void res.status(400).json({ error: profielFout });
+    let matrices: Record<string, number>[] = [];
+    if (profielIds && profielIds.length > 0) {
+      const gevonden = await haalProfielMatrices(profielIds);
+      if (!gevonden) {
+        return void res.status(400).json({ error: "Eén of meer profielen bestaan niet" });
+      }
+      matrices = gevonden;
+    }
+    // Effectieve matrix: bij meegestuurde rollen wordt de matrix ALTIJD
+    // server-side afgeleid (per module het hoogste niveau over alle rollen;
+    // lege set = geen toegang, consistent met PATCH). Rollen zijn de bron van
+    // waarheid; een meegestuurde client-matrix kan die niet overschrijven —
+    // uitzonderingen horen een eigen benoemde rol te worden, geen losse
+    // per-gebruiker rechten (eis 7). Alleen zonder profiel_ids in de request
+    // geldt het legacy-pad met een meegestuurde matrix (oudere clients).
     let toegestaanBevoegdheden: Record<string, number> = {};
-    if (typeof bevoegdheden === "object" && bevoegdheden !== null) {
-      if (!req.permissies!.isHoofdbeheerder) {
-        for (const [mod, lvl] of Object.entries(bevoegdheden as Record<string, number>)) {
-          if (typeof lvl === "number" && !req.permissies!.heeftModuleRecht(mod, lvl)) {
-            return void res.status(403).json({
-              error: "Geen toegang: bevoegdheid kan niet hoger zijn dan uw eigen niveau",
-            });
-          }
+    if (profielIds !== undefined) {
+      toegestaanBevoegdheden = combineerBevoegdheden(matrices);
+    } else if (typeof bevoegdheden === "object" && bevoegdheden !== null) {
+      toegestaanBevoegdheden = bevoegdheden as Record<string, number>;
+    }
+    // Zelf-escalatiebeveiliging: niemand mag hogere niveaus toekennen dan eigen
+    // matrix — geldt ook voor de uit rollen afgeleide matrix.
+    if (!req.permissies!.isHoofdbeheerder) {
+      for (const [mod, lvl] of Object.entries(toegestaanBevoegdheden)) {
+        if (typeof lvl === "number" && !req.permissies!.heeftModuleRecht(mod, lvl)) {
+          return void res.status(403).json({
+            error: "Geen toegang: bevoegdheid kan niet hoger zijn dan uw eigen niveau",
+          });
         }
       }
-      toegestaanBevoegdheden = bevoegdheden as Record<string, number>;
     }
     let herkomstId =
       typeof herkomst_profiel_id === "number" && Number.isInteger(herkomst_profiel_id)
@@ -252,33 +338,46 @@ router.post("/gebruikers", alleenBeheerder, async (req, res): Promise<void> => {
         : null;
     // Een expliciet gekozen preset is een handmatige koppeling.
     let herkomstAutomatisch = false;
-    // Geen expliciete preset gekozen, maar de meegestuurde matrix komt exact en
-    // als enige overeen met een profiel? Markeer dat profiel dan als herkomst
-    // (automatisch afgeleid).
-    if (herkomstId == null) {
+    if (profielIds !== undefined) {
+      // Rollen expliciet meegestuurd: herkomst volgt de rollen. Bij precies één
+      // rol blijft het bestaande single-preset gedrag gelden; bij meerdere is
+      // een enkelvoudige herkomst misleidend en blijft die leeg.
+      herkomstId = profielIds.length === 1 ? profielIds[0] : null;
+    } else if (herkomstId == null) {
+      // Geen expliciete preset gekozen, maar de meegestuurde matrix komt exact en
+      // als enige overeen met een profiel? Markeer dat profiel dan als herkomst
+      // (automatisch afgeleid).
       herkomstId = await vindUniekeHerkomstPreset(toegestaanBevoegdheden);
       herkomstAutomatisch = herkomstId != null;
     }
-    const g = await maakGebruikerAan(db, {
-      naam,
-      email,
-      rol,
-      wachtwoord,
-      functietitels: functies,
-      telefoon,
-      bedrijf,
-      avatarUrl: avatar_url,
-      bedrijfslogoUrl: bedrijfslogo_url,
-      bedrijfskleuren,
-      taal,
-      bevoegdheden: toegestaanBevoegdheden,
-      herkomstProfielId: herkomstId,
-      herkomstAutomatisch,
-      uitnodigingStatus: "niet_uitgenodigd",
-      dienstverband,
-      bedrijfUitzendbureau: bedrijf_uitzendbureau || null,
+    const g = await db.transaction(async (tx) => {
+      const nieuw = await maakGebruikerAan(tx, {
+        naam,
+        email,
+        rol,
+        wachtwoord,
+        functietitels: functies,
+        telefoon,
+        bedrijf,
+        avatarUrl: avatar_url,
+        bedrijfslogoUrl: bedrijfslogo_url,
+        bedrijfskleuren,
+        taal,
+        bevoegdheden: toegestaanBevoegdheden,
+        herkomstProfielId: herkomstId,
+        herkomstAutomatisch,
+        uitnodigingStatus: "niet_uitgenodigd",
+        dienstverband,
+        bedrijfUitzendbureau: bedrijf_uitzendbureau || null,
+      });
+      if (profielIds && profielIds.length > 0) {
+        await tx.insert(gebruikerProfielenTable).values(
+          profielIds.map((pid) => ({ gebruikerId: nieuw.id, profielId: pid })),
+        );
+      }
+      return nieuw;
     });
-    res.status(201).json(mapGebruiker(g));
+    res.status(201).json(mapGebruiker(g, profielIds ?? []));
   } catch (err: any) {
     if (isEmailConflictFout(err)) {
       return void res.status(409).json({ error: "Dit e-mailadres is al in gebruik bij een andere gebruiker." });
@@ -296,7 +395,9 @@ router.get("/gebruikers/:id", async (req, res): Promise<void> => {
     if (!g) return void res.status(404).json({ error: "Gebruiker niet gevonden" });
     // Beheerders en het eigen account zien volledige gegevens; anderen alleen veilig.
     const volledig = id === req.session.userId || (await isBeheerder(req.session.userId));
-    res.json(volledig ? mapGebruiker(g) : mapGebruikerPubliek(g));
+    if (!volledig) return void res.json(mapGebruikerPubliek(g));
+    const koppel = await profielIdsPerGebruiker([id]);
+    res.json(mapGebruiker(g, koppel.get(id) ?? []));
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });
@@ -310,8 +411,20 @@ router.patch("/gebruikers/:id", alleenBeheerder, async (req, res): Promise<void>
     const {
       naam, email, rol, functietitels, telefoon, bedrijf, actief, wachtwoord,
       avatar_url, bedrijfslogo_url, bedrijfskleuren, uitnodiging_status, taal, bevoegdheden,
-      herkomst_profiel_id, dienstverband, bedrijf_uitzendbureau,
+      herkomst_profiel_id, profiel_ids, dienstverband, bedrijf_uitzendbureau,
     } = req.body;
+    // P2: meerdere rollen (profielen). undefined = koppelingen ongemoeid laten;
+    // een array vervangt de volledige set.
+    const { ids: profielIds, fout: profielFout } = parseProfielIds(profiel_ids);
+    if (profielFout) return void res.status(400).json({ error: profielFout });
+    let profielMatrices: Record<string, number>[] = [];
+    if (profielIds && profielIds.length > 0) {
+      const gevonden = await haalProfielMatrices(profielIds);
+      if (!gevonden) {
+        return void res.status(400).json({ error: "Eén of meer profielen bestaan niet" });
+      }
+      profielMatrices = gevonden;
+    }
     // Bestaande rol én functietitels ophalen: zo wist een partiële PATCH niets
     // onterecht, terwijl een expliciete rolwissel de oude functies wél opschoont.
     const [bestaand] = await db
@@ -356,12 +469,23 @@ router.patch("/gebruikers/:id", alleenBeheerder, async (req, res): Promise<void>
       dienstverband: dienstverband || undefined,
       bedrijfUitzendbureau: bedrijf_uitzendbureau !== undefined ? (bedrijf_uitzendbureau || null) : undefined,
     };
-    if (bevoegdheden !== undefined && typeof bevoegdheden === "object" && bevoegdheden !== null) {
-      // Zelf-escalatiebeveiliging: niemand mag hogere niveaus toekennen dan eigen matrix.
+    // Effectieve matrix: bij meegestuurde rollen wordt de matrix ALTIJD
+    // server-side afgeleid (per module het hoogste niveau over alle rollen;
+    // lege set = geen toegang). Rollen zijn de bron van waarheid; een
+    // meegestuurde client-matrix kan die niet overschrijven — uitzonderingen
+    // horen een eigen benoemde rol te worden (eis 7). Alleen zonder rollen
+    // geldt het legacy-pad met een meegestuurde matrix (oudere clients).
+    let nieuweMatrix: Record<string, number> | undefined;
+    if (profielIds !== undefined) {
+      nieuweMatrix = combineerBevoegdheden(profielMatrices);
+    } else if (bevoegdheden !== undefined && typeof bevoegdheden === "object" && bevoegdheden !== null) {
+      nieuweMatrix = bevoegdheden as Record<string, number>;
+    }
+    if (nieuweMatrix !== undefined) {
+      // Zelf-escalatiebeveiliging: niemand mag hogere niveaus toekennen dan
+      // eigen matrix — geldt ook voor de uit rollen afgeleide matrix.
       if (!req.permissies!.isHoofdbeheerder) {
-        for (const [mod, lvl] of Object.entries(
-          bevoegdheden as Record<string, number>,
-        )) {
+        for (const [mod, lvl] of Object.entries(nieuweMatrix)) {
           if (typeof lvl === "number" && !req.permissies!.heeftModuleRecht(mod, lvl)) {
             return void res.status(403).json({
               error: "Geen toegang: bevoegdheid kan niet hoger zijn dan uw eigen niveau",
@@ -369,13 +493,19 @@ router.patch("/gebruikers/:id", alleenBeheerder, async (req, res): Promise<void>
           }
         }
       }
-      wijziging.bevoegdheden = bevoegdheden as Record<string, number>;
+      wijziging.bevoegdheden = nieuweMatrix;
     }
     // Herkomst (preset) alleen wijzigen wanneer expliciet meegestuurd: null wist
     // de koppeling, een geldig id (her)koppelt. undefined laat het veld ongemoeid.
     // Een expliciet meegestuurde herkomst is altijd een handmatige (bevestigde)
     // koppeling, dus automatisch-vlag op false.
-    if (herkomst_profiel_id !== undefined) {
+    if (profielIds !== undefined) {
+      // P2: rollen expliciet meegestuurd — herkomst volgt de rollen. Bij precies
+      // één rol blijft het single-preset gedrag gelden; bij meerdere (of nul)
+      // is een enkelvoudige herkomst misleidend en wordt die gewist.
+      wijziging.herkomstProfielId = profielIds.length === 1 ? profielIds[0] : null;
+      wijziging.herkomstAutomatisch = false;
+    } else if (herkomst_profiel_id !== undefined) {
       const nieuweId =
         typeof herkomst_profiel_id === "number" && Number.isInteger(herkomst_profiel_id)
           ? herkomst_profiel_id
@@ -400,13 +530,31 @@ router.patch("/gebruikers/:id", alleenBeheerder, async (req, res): Promise<void>
     if (wachtwoord) {
       wijziging.wachtwoord = await bcrypt.hash(String(wachtwoord), 10);
     }
-    const [g] = await db
-      .update(gebruikersTable)
-      .set(wijziging)
-      .where(eq(gebruikersTable.id, id))
-      .returning();
+    // Update en koppelingen-sync in één transactie: profiel_ids vervangt de
+    // volledige set (delete + insert), zodat matrix en rollen nooit uiteenlopen.
+    const g = await db.transaction(async (tx) => {
+      const [rij] = await tx
+        .update(gebruikersTable)
+        .set(wijziging)
+        .where(eq(gebruikersTable.id, id))
+        .returning();
+      if (!rij) return undefined;
+      if (profielIds !== undefined) {
+        await tx
+          .delete(gebruikerProfielenTable)
+          .where(eq(gebruikerProfielenTable.gebruikerId, id));
+        if (profielIds.length > 0) {
+          await tx.insert(gebruikerProfielenTable).values(
+            profielIds.map((pid) => ({ gebruikerId: id, profielId: pid })),
+          );
+        }
+      }
+      return rij;
+    });
     if (!g) return void res.status(404).json({ error: "Gebruiker niet gevonden" });
-    res.json(mapGebruiker(g));
+    const koppel =
+      profielIds ?? (await profielIdsPerGebruiker([id])).get(id) ?? [];
+    res.json(mapGebruiker(g, koppel));
   } catch (err: any) {
     if (err?.cause?.code === "23505" || err?.message?.includes("gebruikers_email_unique")) {
       return void res.status(409).json({ error: "Dit e-mailadres is al in gebruik bij een andere gebruiker." });

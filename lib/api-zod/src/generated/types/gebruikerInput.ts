@@ -23,6 +23,7 @@ export interface GebruikerInput {
   bevoegdheden?: GebruikerInputBevoegdheden;
   /** @nullable */
   herkomst_profiel_id?: number | null;
+  profiel_ids?: number[];
   dienstverband?: string;
   bedrijf_uitzendbureau?: string;
 }

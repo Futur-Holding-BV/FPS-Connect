@@ -1,7 +1,13 @@
 import { Router } from "express";
-import { db, profielenTable, gebruikersTable } from "@workspace/db";
-import { asc, eq } from "drizzle-orm";
-import { MODULE_IDS, MAX_NIVEAU, bevoegdhedenGelijk, PRESETS } from "@workspace/permissies";
+import { db, profielenTable, gebruikersTable, gebruikerProfielenTable } from "@workspace/db";
+import { asc, eq, inArray, and, notInArray } from "drizzle-orm";
+import {
+  MODULE_IDS,
+  MAX_NIVEAU,
+  bevoegdhedenGelijk,
+  PRESETS,
+  combineerBevoegdheden,
+} from "@workspace/permissies";
 import { requireBevoegdheid, requireRol } from "../middlewares/auth";
 
 const router = Router();
@@ -66,7 +72,7 @@ function serialiseer(
 
 router.get("/profielen", requireBevoegdheid("gebruikers", 1), async (req, res): Promise<void> => {
   try {
-    const [profielen, gebruikers] = await Promise.all([
+    const [profielen, gebruikers, koppelingen] = await Promise.all([
       db.select().from(profielenTable).orderBy(asc(profielenTable.id)),
       db
         .select({
@@ -78,14 +84,36 @@ router.get("/profielen", requireBevoegdheid("gebruikers", 1), async (req, res): 
         })
         .from(gebruikersTable)
         .orderBy(asc(gebruikersTable.naam)),
+      db
+        .select({
+          gebruikerId: gebruikerProfielenTable.gebruikerId,
+          profielId: gebruikerProfielenTable.profielId,
+        })
+        .from(gebruikerProfielenTable),
     ]);
 
+    const gebruikerIndex = new Map(gebruikers.map((g) => [g.id, g]));
     const perProfiel = new Map<number, GekoppeldeGebruiker[]>();
+    const gezienPerProfiel = new Map<number, Set<number>>();
+    const voegToe = (profielId: number, gebruikerId: number) => {
+      const g = gebruikerIndex.get(gebruikerId);
+      if (!g) return;
+      const gezien = gezienPerProfiel.get(profielId) ?? new Set<number>();
+      if (gezien.has(g.id)) return;
+      gezien.add(g.id);
+      gezienPerProfiel.set(profielId, gezien);
+      const lijst = perProfiel.get(profielId) ?? [];
+      lijst.push({ id: g.id, naam: g.naam, rol: g.rol, gelijk: false });
+      perProfiel.set(profielId, lijst);
+    };
+    // Enkelvoudige herkomst (legacy/single-preset) én meervoudige rollen via de
+    // koppeltabel tellen allebei mee; dedupe per profiel op gebruiker-id.
     for (const g of gebruikers) {
       if (g.herkomstProfielId == null) continue;
-      const lijst = perProfiel.get(g.herkomstProfielId) ?? [];
-      lijst.push({ id: g.id, naam: g.naam, rol: g.rol, gelijk: false });
-      perProfiel.set(g.herkomstProfielId, lijst);
+      voegToe(g.herkomstProfielId, g.id);
+    }
+    for (const k of koppelingen) {
+      voegToe(k.profielId, k.gebruikerId);
     }
 
     const result = profielen.map((p) => {
@@ -312,12 +340,58 @@ router.post("/profielen/:id/toepassen", requireRol("hoofdbeheerder"), async (req
       return;
     }
     const bevoegdheden = (profiel.bevoegdheden as Record<string, number>) ?? {};
-    const bijgewerkt = await db
-      .update(gebruikersTable)
-      .set({ bevoegdheden })
-      .where(eq(gebruikersTable.herkomstProfielId, id))
-      .returning({ id: gebruikersTable.id });
-    res.json({ bijgewerkt: bijgewerkt.length });
+    const aantal = await db.transaction(async (tx) => {
+      // Gebruikers met meerdere rollen (koppeltabel): hun matrix is een
+      // combinatie over ál hun rollen — herbereken die volledig, zodat de
+      // gewijzigde preset meetelt maar de overige rollen behouden blijven.
+      const koppelingenVanPreset = await tx
+        .select({ gebruikerId: gebruikerProfielenTable.gebruikerId })
+        .from(gebruikerProfielenTable)
+        .where(eq(gebruikerProfielenTable.profielId, id));
+      const meervoudigeIds = [...new Set(koppelingenVanPreset.map((k) => k.gebruikerId))];
+      if (meervoudigeIds.length > 0) {
+        const alleKoppelingen = await tx
+          .select({
+            gebruikerId: gebruikerProfielenTable.gebruikerId,
+            profielId: gebruikerProfielenTable.profielId,
+          })
+          .from(gebruikerProfielenTable)
+          .where(inArray(gebruikerProfielenTable.gebruikerId, meervoudigeIds));
+        const profielIdsNodig = [...new Set(alleKoppelingen.map((k) => k.profielId))];
+        const matrixRijen = await tx
+          .select({ id: profielenTable.id, bevoegdheden: profielenTable.bevoegdheden })
+          .from(profielenTable)
+          .where(inArray(profielenTable.id, profielIdsNodig));
+        const matrixPerProfiel = new Map(
+          matrixRijen.map((r) => [r.id, (r.bevoegdheden as Record<string, number>) ?? {}]),
+        );
+        for (const gebruikerId of meervoudigeIds) {
+          const matrices = alleKoppelingen
+            .filter((k) => k.gebruikerId === gebruikerId)
+            .map((k) => matrixPerProfiel.get(k.profielId) ?? {});
+          await tx
+            .update(gebruikersTable)
+            .set({ bevoegdheden: combineerBevoegdheden(matrices) })
+            .where(eq(gebruikersTable.id, gebruikerId));
+        }
+      }
+      // Gebruikers met alleen een enkelvoudige herkomst (geen koppelrijen):
+      // het bestaande gedrag — matrix wordt exact de preset.
+      const enkelvoudig = await tx
+        .update(gebruikersTable)
+        .set({ bevoegdheden })
+        .where(
+          meervoudigeIds.length > 0
+            ? and(
+                eq(gebruikersTable.herkomstProfielId, id),
+                notInArray(gebruikersTable.id, meervoudigeIds),
+              )
+            : eq(gebruikersTable.herkomstProfielId, id),
+        )
+        .returning({ id: gebruikersTable.id });
+      return meervoudigeIds.length + enkelvoudig.length;
+    });
+    res.json({ bijgewerkt: aantal });
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });

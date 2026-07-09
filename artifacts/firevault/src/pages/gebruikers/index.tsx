@@ -50,6 +50,7 @@ import {
   Layers, Search, RotateCcw, Check, CheckCheck, Briefcase, Hammer, Wrench, TrendingUp,
   ListChecks, Loader2, AlertTriangle, MoreVertical, KeyRound, LogOut, Lock, Unlock, Copy,
 } from "lucide-react";
+import { MODULES, NIVEAUS, combineerBevoegdheden } from "@workspace/permissies";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useRol } from "@/context/rol-context";
@@ -96,29 +97,8 @@ const FUNCTIE_GROEPEN: FunctieGroep[] = [
 
 const GROEP_NAMEN = new Set(FUNCTIE_GROEPEN.map((g) => g.naam));
 
-const MODULES: { id: string; label: string }[] = [
-  { id: "gebouwen",      label: "Gebouwen" },
-  { id: "voorzieningen", label: "Spots" },
-  { id: "inspecties",    label: "Inspecties" },
-  { id: "onderhoud",     label: "Onderhoud" },
-  { id: "rapportages",   label: "Rapportages" },
-  { id: "bibliotheek",   label: "Bibliotheek" },
-  { id: "gebruikers",    label: "Gebruikers" },
-  { id: "crm",           label: "CRM" },
-  { id: "abonnementen",  label: "Abonnementen" },
-  { id: "systeem",       label: "Systeembeheer" },
-];
-
-const NIVEAUS = [
-  { waarde: 0, label: "Geen" },
-  { waarde: 1, label: "Lezen" },
-  { waarde: 2, label: "Wijzigen" },
-  { waarde: 3, label: "Aanmaken" },
-  { waarde: 4, label: "Volledig" },
-];
-
 function niveauLabel(n: number): string {
-  return NIVEAUS.find((x) => x.waarde === n)?.label ?? "";
+  return NIVEAUS.find((x) => x.waarde === n)?.kort ?? "";
 }
 
 const ROL_CONFIG: Record<Rol, {
@@ -239,6 +219,7 @@ const leegForm = {
   bevoegdheden: {} as Record<string, number>,
   herkomst_profiel_id: null as number | null,
   herkomst_automatisch: false,
+  profiel_ids: [] as number[],
   dienstverband: "intern",
   bedrijf_uitzendbureau: "",
 };
@@ -260,6 +241,7 @@ type Gebruiker = {
   bedrijfskleuren?: string | null;
   bevoegdheden?: Record<string, number> | null;
   herkomst_profiel_id?: number | null;
+  profiel_ids?: number[] | null;
   dienstverband?: string | null;
   bedrijf_uitzendbureau?: string | null;
   uitnodiging_status?: string | null;
@@ -427,6 +409,7 @@ export default function Gebruikers() {
           bedrijfskleuren:  toevoegenForm.bedrijfskleuren    || undefined,
           bevoegdheden:     toevoegenForm.bevoegdheden,
           herkomst_profiel_id: toevoegenForm.herkomst_profiel_id,
+          profiel_ids:      toevoegenForm.profiel_ids,
           dienstverband:    toevoegenForm.dienstverband || undefined,
           bedrijf_uitzendbureau: toevoegenForm.bedrijf_uitzendbureau.trim() || undefined,
         },
@@ -442,6 +425,24 @@ export default function Gebruikers() {
 
   function openBewerken(g: Gebruiker) {
     setBewerkGebruiker(g);
+    const rolIds =
+      g.profiel_ids && g.profiel_ids.length > 0
+        ? [...g.profiel_ids]
+        : g.herkomst_profiel_id != null
+          ? [g.herkomst_profiel_id]
+          : [];
+    // Rolgestuurde gebruiker: toon in het read-only grid de uit de rollen
+    // afgeleide matrix (= wat er na opslaan geldt), zodat een eventuele
+    // handmatige afwijking niet stilzwijgend verdwijnt zonder dat de
+    // beheerder het ziet. Lukt het afleiden niet (profielen nog niet
+    // geladen), dan valt het terug op de opgeslagen matrix.
+    const rolMatrices = rolIds
+      .map((pid) => profielMap.get(pid)?.bevoegdheden)
+      .filter((m): m is Record<string, number> => m != null);
+    const afgeleid =
+      rolIds.length > 0 && rolMatrices.length === rolIds.length
+        ? combineerBevoegdheden(rolMatrices)
+        : null;
     setBewerkForm({
       naam:             g.naam            ?? "",
       email:            g.email           ?? "",
@@ -454,9 +455,10 @@ export default function Gebruikers() {
       avatar_url:       g.avatar_url      ?? "",
       bedrijfslogo_url: g.bedrijfslogo_url ?? "",
       bedrijfskleuren:  g.bedrijfskleuren  ?? "",
-      bevoegdheden:     g.bevoegdheden    ?? {},
+      bevoegdheden:     afgeleid ?? g.bevoegdheden ?? {},
       herkomst_profiel_id: g.herkomst_profiel_id ?? null,
       herkomst_automatisch: (g as any).herkomst_automatisch === true,
+      profiel_ids:      rolIds,
       dienstverband: g.dienstverband ?? "intern",
       bedrijf_uitzendbureau: g.bedrijf_uitzendbureau ?? "",
     });
@@ -488,6 +490,17 @@ export default function Gebruikers() {
           bedrijfskleuren:  bewerkForm.bedrijfskleuren    || undefined,
           bevoegdheden:     bewerkForm.bevoegdheden,
           herkomst_profiel_id: bewerkForm.herkomst_profiel_id,
+          // profiel_ids alleen meesturen als de gebruiker rolgestuurd is
+          // (had al rollen of er zijn nu rollen gekozen). Een legacy-gebruiker
+          // met handmatige matrix en zonder rollen behoudt zo zijn rechten
+          // bij het bewerken van niet-gerelateerde velden; [] meesturen zou
+          // die server-side naar "geen toegang" afleiden.
+          profiel_ids:
+            bewerkForm.profiel_ids.length > 0 ||
+            (bewerkGebruiker.profiel_ids?.length ?? 0) > 0 ||
+            bewerkGebruiker.herkomst_profiel_id != null
+              ? bewerkForm.profiel_ids
+              : undefined,
           dienstverband:    bewerkForm.dienstverband || undefined,
           bedrijf_uitzendbureau: bewerkForm.bedrijf_uitzendbureau.trim() || undefined,
         },
@@ -1228,6 +1241,7 @@ export default function Gebruikers() {
                           functietitels,
                           bevoegdheden,
                           herkomst_profiel_id: herkomstProfielId,
+                          profiel_ids: herkomstProfielId != null ? [herkomstProfielId] : [],
                         }));
                         setToevoegenStap(2);
                       }}
@@ -1544,8 +1558,15 @@ export default function Gebruikers() {
 
                 {(() => {
                   const actief = actieveBevoegdheden(bekijkGebruiker.bevoegdheden);
+                  const rolIds =
+                    bekijkGebruiker.profiel_ids && bekijkGebruiker.profiel_ids.length > 0
+                      ? bekijkGebruiker.profiel_ids
+                      : bekijkGebruiker.herkomst_profiel_id != null
+                        ? [bekijkGebruiker.herkomst_profiel_id]
+                        : [];
+                  const meerdere = rolIds.length > 1;
                   const profiel =
-                    bekijkGebruiker.herkomst_profiel_id != null
+                    !meerdere && bekijkGebruiker.herkomst_profiel_id != null
                       ? profielMap.get(bekijkGebruiker.herkomst_profiel_id)
                       : undefined;
                   const afwijkend = profiel
@@ -1557,6 +1578,23 @@ export default function Gebruikers() {
                         <ShieldCheck className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                         <div className="text-sm font-medium">Bevoegdheden</div>
                       </div>
+                      {meerdere && (
+                        <div className="mb-3 flex flex-wrap items-center gap-1.5 text-xs">
+                          <Layers className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+                          <span className="text-muted-foreground">Gekoppelde rollen</span>
+                          {rolIds.map((pid) => {
+                            const p = profielMap.get(pid);
+                            return p ? (
+                              <Badge key={pid} variant="secondary" className="text-xs h-5 px-1.5 text-muted-foreground">
+                                {p.naam}
+                              </Badge>
+                            ) : null;
+                          })}
+                          <span className="w-full text-muted-foreground">
+                            Per module geldt het hoogste niveau van deze rollen.
+                          </span>
+                        </div>
+                      )}
                       {profiel && (() => {
                         const automatisch = (bekijkGebruiker as any).herkomst_automatisch === true;
                         return (
@@ -1694,20 +1732,32 @@ function VeldRij({ icon: Icon, label, waarde }: { icon: React.ElementType; label
 
 function BevoegdhedenEditor({
   bevoegdheden,
-  onChange,
-  onPresetGekozen,
-  herkomstProfielId,
+  onProfielenGewijzigd,
+  profielIds,
   herkomstAutomatisch,
 }: {
   bevoegdheden: Record<string, number>;
-  onChange: (b: Record<string, number>) => void;
-  onPresetGekozen?: (profielId: number) => void;
-  herkomstProfielId?: number | null;
+  onProfielenGewijzigd?: (ids: number[], matrix: Record<string, number>) => void;
+  profielIds?: number[];
   herkomstAutomatisch?: boolean;
 }) {
   const { data: profielen } = useListProfielen();
-  const gekoppeldProfiel =
-    herkomstProfielId != null ? profielen?.find((p) => p.id === herkomstProfielId) : undefined;
+  const geselecteerd = profielIds ?? [];
+  const gekozenProfielen = (profielen ?? []).filter((p) => geselecteerd.includes(p.id));
+
+  function toggleProfiel(profielId: number) {
+    if (!profielen) return;
+    const nieuw = geselecteerd.includes(profielId)
+      ? geselecteerd.filter((id) => id !== profielId)
+      : [...geselecteerd, profielId];
+    // Gecombineerde matrix: per module het hoogste niveau over alle gekozen
+    // rollen. Lege selectie = lege matrix (geen toegang), zichtbaar in het grid.
+    const matrices = nieuw.map(
+      (id) =>
+        (profielen.find((p) => p.id === id)?.bevoegdheden as Record<string, number>) ?? {},
+    );
+    onProfielenGewijzigd?.(nieuw, combineerBevoegdheden(matrices));
+  }
 
   return (
     <div className="rounded-lg border p-3 space-y-3">
@@ -1715,20 +1765,24 @@ function BevoegdhedenEditor({
         <ShieldCheck className="h-3.5 w-3.5" /> Bevoegdheden
       </div>
 
-      {gekoppeldProfiel && (
+      {gekozenProfielen.length > 0 && (
         <div className="flex flex-wrap items-center gap-1.5 text-xs">
           <Layers className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
           <span className="text-muted-foreground">
-            {herkomstAutomatisch ? "Automatisch gekoppeld aan profiel" : "Gekoppeld aan profiel"}
+            {gekozenProfielen.length === 1
+              ? herkomstAutomatisch
+                ? "Automatisch gekoppeld aan rol"
+                : "Gekoppeld aan rol"
+              : "Gekoppelde rollen"}
           </span>
-          <span className="font-medium">{gekoppeldProfiel.naam}</span>
-          {herkomstAutomatisch ? (
+          {gekozenProfielen.map((p) => (
+            <Badge key={p.id} variant="secondary" className="text-xs h-5 px-1.5 text-muted-foreground">
+              {p.naam}
+            </Badge>
+          ))}
+          {gekozenProfielen.length === 1 && herkomstAutomatisch && (
             <Badge variant="outline" className="text-xs h-5 px-1.5 bg-amber-50 text-amber-700 border-amber-200">
               Automatisch
-            </Badge>
-          ) : (
-            <Badge variant="secondary" className="text-xs h-5 px-1.5 text-muted-foreground">
-              Handmatig
             </Badge>
           )}
         </div>
@@ -1736,57 +1790,53 @@ function BevoegdhedenEditor({
 
       {profielen && profielen.length > 0 && (
         <div className="space-y-1.5">
-          <Label>Preset toepassen</Label>
-          <Select
-            value={herkomstProfielId != null ? String(herkomstProfielId) : ""}
-            onValueChange={(profielId) => {
-              const profiel = profielen.find((p) => String(p.id) === profielId);
-              if (profiel) {
-                onChange({ ...(profiel.bevoegdheden as Record<string, number>) });
-                onPresetGekozen?.(profiel.id);
-              }
-            }}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Kies een preset..." />
-            </SelectTrigger>
-            <SelectContent>
-              {profielen.map((p) => (
-                <SelectItem key={p.id} value={String(p.id)}>
+          <Label>Rollen (presets)</Label>
+          <div className="flex flex-wrap gap-1.5">
+            {profielen.map((p) => {
+              const actief = geselecteerd.includes(p.id);
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => toggleProfiel(p.id)}
+                  aria-pressed={actief}
+                  className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs transition-colors ${
+                    actief
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-input bg-background text-foreground hover:bg-muted/50"
+                  }`}
+                >
+                  {actief && <Check className="h-3 w-3" />}
                   {p.naam}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+                </button>
+              );
+            })}
+          </div>
           <p className="text-xs text-muted-foreground">
-            {herkomstAutomatisch
-              ? "Een preset kiezen legt een handmatige (bevestigde) koppeling. Preset overschrijft alle modulewaarden — daarna nog per module aanpasbaar."
-              : "Een preset kiezen legt een handmatige koppeling. Preset overschrijft alle modulewaarden — daarna nog per module aanpasbaar."}
+            Meerdere rollen mogelijk: per module geldt het hoogste niveau van de gekozen rollen.
+            Andere rechten nodig? Maak een eigen rol aan onder Beheer › Rollen &amp; rechten.
           </p>
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-2">
-        {MODULES.map((mod) => (
-          <div key={mod.id} className="space-y-0.5">
-            <Label className="text-xs">{mod.label}</Label>
-            <Select
-              value={String(bevoegdheden[mod.id] ?? 0)}
-              onValueChange={(v) => onChange({ ...bevoegdheden, [mod.id]: Number(v) })}
-            >
-              <SelectTrigger className="h-8 text-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {NIVEAUS.map((n) => (
-                  <SelectItem key={n.waarde} value={String(n.waarde)} className="text-xs">
-                    {n.waarde} — {n.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        ))}
+      <div className="space-y-1">
+        <Label className="text-xs text-muted-foreground">Effectieve rechten (afgeleid uit de rollen)</Label>
+        <div className="grid grid-cols-2 gap-x-3 gap-y-1">
+          {MODULES.map((mod) => {
+            const niveau = bevoegdheden[mod.id] ?? 0;
+            return (
+              <div key={mod.id} className="flex items-center justify-between gap-2 text-xs py-0.5">
+                <span className={niveau > 0 ? "" : "text-muted-foreground"}>{mod.label}</span>
+                <Badge
+                  variant={niveau > 0 ? "secondary" : "outline"}
+                  className={`text-xs h-5 px-1.5 font-normal ${niveau > 0 ? "" : "text-muted-foreground"}`}
+                >
+                  {niveauLabel(niveau)}
+                </Badge>
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
@@ -1931,11 +1981,16 @@ function GebruikerVelden({
       {form.rol !== "klant" && form.rol !== "hoofdbeheerder" && (
         <BevoegdhedenEditor
           bevoegdheden={form.bevoegdheden}
-          herkomstProfielId={form.herkomst_profiel_id}
+          profielIds={form.profiel_ids}
           herkomstAutomatisch={form.herkomst_automatisch}
-          onChange={(b) => setForm((f) => ({ ...f, bevoegdheden: b }))}
-          onPresetGekozen={(profielId) =>
-            setForm((f) => ({ ...f, herkomst_profiel_id: profielId, herkomst_automatisch: false }))
+          onProfielenGewijzigd={(ids, matrix) =>
+            setForm((f) => ({
+              ...f,
+              profiel_ids: ids,
+              bevoegdheden: matrix,
+              herkomst_profiel_id: ids.length === 1 ? ids[0] : null,
+              herkomst_automatisch: false,
+            }))
           }
         />
       )}

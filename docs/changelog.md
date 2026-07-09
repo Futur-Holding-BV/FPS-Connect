@@ -4,6 +4,23 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-09 — Meerdere rollen per gebruiker (increment 2: rollen als bron van waarheid)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (bestaande gebruikers ongewijzigd via legacy-pad; nieuwe flow end-to-end bewezen)
+
+**Wat gebouwd (conform goedgekeurde architectuur):** een gebruiker kan nu meerdere rollen (bevoegdheidsprofielen) tegelijk krijgen; de effectieve rechten zijn per module het **hoogste niveau over alle toegewezen rollen** en worden **server-side afgeleid** — de rollen zijn de bron van waarheid, een eventueel meegestuurde client-matrix wordt genegeerd.
+
+- **Server (`POST`/`PATCH /gebruikers`):** bij meegestuurde `profiel_ids` wordt de matrix altijd via `combineerBevoegdheden` afgeleid; koppeltabel `gebruiker_profielen` wordt in dezelfde transactie gesynchroniseerd; `herkomst_profiel_id` = het profiel bij exact één rol, anders leeg. Zelf-escalatiecheck draait op de afgeleide eindmatrix. Zonder `profiel_ids` blijft het bestaande gedrag (oude/mobiele clients) ongewijzigd.
+- **`POST /profielen/:id/toepassen`:** herberekent gebruikers met meerdere rollen over ál hun rollen (niet alleen het gewijzigde profiel).
+- **Frontend Gebruikersbeheer:** rolkeuze is nu een multi-select met chips; het module-grid is een **read-only weergave** van de effectieve rechten ("afgeleid uit de rollen") — handmatige per-module uitzonderingen zijn vervallen; wie andere rechten nodig heeft maakt een eigen rol aan onder Beheer › Rollen & rechten. Detailweergave toont bij meerdere rollen alle rolchips.
+- **Gedeelde bron:** frontend en server gebruiken dezelfde `MODULES`/`NIVEAUS`/`combineerBevoegdheden` uit `@workspace/permissies` (lokale kopieën verwijderd).
+
+**Bewijs (end-to-end tegen dev, met DB-verificatie):** POST met 2 rollen + opzettelijk foute client-matrix → matrix = MAX-combinatie, nepmatrix genegeerd; koppeltabel exact [A,B], herkomst leeg; PATCH naar [A] → matrix exact profiel A, herkomst=A, koppeltabel gesynct; PATCH naar [] → geen toegang (alle modules 0), koppeltabel leeg. Testgebruiker opgeruimd. Typecheck volledig groen.
+
+**Architectreview-fixes (zelfde dag, beide end-to-end bewezen):**
+1. `POST /gebruikers` met `profiel_ids: []` viel nog in het legacy-pad en nam de client-matrix over — nu consistent met PATCH: lege rollenset = server-afgeleid "geen toegang" (nep-clientmatrix aantoonbaar genegeerd).
+2. Stille rechten-wipe voorkomen: het bewerkformulier stuurt `profiel_ids` alleen mee als de gebruiker rolgestuurd is (had rollen of er zijn rollen gekozen). Een legacy-gebruiker met handmatige matrix en zonder rollen behoudt zijn rechten bij het bewerken van losse velden (API + DB bewezen). Daarnaast toont het read-only grid bij een rolgestuurde gebruiker nu de uit de rollen afgeleide matrix — precies wat er na opslaan geldt — zodat een handmatige afwijking nooit onzichtbaar verdwijnt.
+
 ## 2026-07-09 — Onderzoek "Jacqueline kan niet inloggen" (productie) + activatiefix
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** geen (onderzoek read-only op productie; codefix is één gedragscorrectie in de activatieflow, alleen in dev)

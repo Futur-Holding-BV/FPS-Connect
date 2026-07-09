@@ -2451,6 +2451,7 @@ export interface Gebruiker {
   /** @nullable */
   herkomst_profiel_id?: number | null;
   herkomst_automatisch?: boolean;
+  profiel_ids?: number[];
   /** @nullable */
   dienstverband?: string | null;
   /** @nullable */
@@ -2611,6 +2612,7 @@ export interface GebruikerInput {
   bevoegdheden?: GebruikerInputBevoegdheden;
   /** @nullable */
   herkomst_profiel_id?: number | null;
+  profiel_ids?: number[];
   dienstverband?: string;
   bedrijf_uitzendbureau?: string;
 }
@@ -2634,6 +2636,7 @@ export interface GebruikerUpdate {
   bevoegdheden?: GebruikerUpdateBevoegdheden;
   /** @nullable */
   herkomst_profiel_id?: number | null;
+  profiel_ids?: number[];
   dienstverband?: string;
   bedrijf_uitzendbureau?: string;
 }

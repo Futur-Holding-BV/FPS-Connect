@@ -23,3 +23,12 @@ ALLE koppelingen — inclusief gearchiveerde/vervangen revisies die juridisch no
 - Render een aparte `isError`-tak (geen lege-state-tekst die een mislukte load maskeert).
 - Geldt voor elke many-to-many "vervang de hele set"-dialoog, beide kanten van een
   spiegelpaar (`PUT /labels/:id/documenten` ↔ `PUT /documenten/:id/toepassingen`).
+
+## Variant: optioneel set-veld in een breed edit-formulier
+
+Als een set-veld (bv. `profiel_ids` op gebruikers) `undefined`=ongemoeid en `[]`=alles-weg
+betekent, dan mag een generiek bewerkformulier het veld ALLEEN meesturen als de entiteit
+daadwerkelijk door dat veld bestuurd wordt (had al items, of gebruiker koos er nu). Anders
+wist het bewerken van een los veld (telefoonnummer) stilzwijgend de hele set/afgeleide staat
+van legacy-records. En: houd POST en PATCH branch-condities identiek (`!== undefined`, niet
+`length > 0`) — asymmetrie geeft een sluippad waar client-data toch doorsijpelt.
