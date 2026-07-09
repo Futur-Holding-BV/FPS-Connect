@@ -13,7 +13,7 @@
 import { pathToFileURL } from "node:url";
 
 import bcrypt from "bcryptjs";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { authenticator } from "otplib";
 
 import { db, gebruikersTable } from "@workspace/db";
@@ -107,6 +107,17 @@ export async function setupE2eWachtwoordAccounts(): Promise<{ adminId: number; t
   });
 
   return { adminId, targetId };
+}
+
+// Archiveert en deactiveert de vaste e2e-accounts ná een testrun, zodat ze
+// niet zichtbaar blijven in Gebruikersbeheer en niet kunnen inloggen buiten
+// een test om. De eerstvolgende testrun zet ze via setupE2eWachtwoordAccounts
+// (idempotent) weer op actief.
+export async function archiveerE2eWachtwoordAccounts(): Promise<void> {
+  await db
+    .update(gebruikersTable)
+    .set({ actief: false, gearchiveerd: true })
+    .where(inArray(gebruikersTable.email, [E2E_WW_ADMIN_EMAIL, E2E_WW_TARGET_EMAIL]));
 }
 
 // Wacht tot het huidige TOTP-venster voldoende resttijd heeft en geeft dan een

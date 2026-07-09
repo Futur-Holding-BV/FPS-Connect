@@ -25,9 +25,25 @@ export const E2E_WACHTWOORD = "E2eMenuTest!2026";
 // Vaste secret: de e2e-test gebruikt dezelfde secret om een live code te maken.
 export const E2E_TOTP_SECRET = "PAOSGYZWOEMU2HDD";
 
+// Veiligheidsgrendel: e2e-accounts mogen uitsluitend in de dev-omgeving
+// worden aangemaakt of geheractiveerd — nooit in een deployment/productie.
+function weigerBuitenDev(): void {
+  if (process.env.REPLIT_DEPLOYMENT) {
+    throw new Error(
+      "GEWEIGERD: e2e-testaccounts mogen niet in een deployment (productie) worden aangemaakt.",
+    );
+  }
+  if (process.env.NODE_ENV === "production") {
+    throw new Error(
+      "GEWEIGERD: e2e-testaccounts mogen niet met NODE_ENV=production worden aangemaakt.",
+    );
+  }
+}
+
 // Maakt of werkt het vaste e2e-account bij. Idempotent en herbruikbaar vanuit
 // een testrun (Playwright beforeAll) zonder dat het proces wordt afgesloten.
 export async function setupE2eAccount(): Promise<number> {
+  weigerBuitenDev();
   const hash = await bcrypt.hash(E2E_WACHTWOORD, 10);
   const bevoegdheden = Object.fromEntries(MODULE_IDS.map((m) => [m, 4]));
 
@@ -46,6 +62,7 @@ export async function setupE2eAccount(): Promise<number> {
         totpSecret: E2E_TOTP_SECRET,
         tweeFactorIngeschakeld: true,
         actief: true,
+        gearchiveerd: false,
         bevoegdheden,
       })
       .where(eq(gebruikersTable.id, bestaand.id));
@@ -66,6 +83,17 @@ export async function setupE2eAccount(): Promise<number> {
     })
     .returning({ id: gebruikersTable.id });
   return nieuw.id;
+}
+
+// Archiveert en deactiveert het vaste e2e-account ná een testrun, zodat het
+// niet zichtbaar blijft in Gebruikersbeheer en niet kan inloggen buiten een
+// test om. De eerstvolgende testrun zet het via setupE2eAccount (idempotent)
+// weer op actief.
+export async function archiveerE2eAccount(): Promise<void> {
+  await db
+    .update(gebruikersTable)
+    .set({ actief: false, gearchiveerd: true })
+    .where(eq(gebruikersTable.email, E2E_EMAIL));
 }
 
 // Wacht tot het huidige TOTP-venster voldoende resttijd heeft en geeft dan een
