@@ -42,6 +42,8 @@ function maakRapport(overrides: Partial<RapportRij> = {}): RapportRij {
     certificaatGarantieMaanden: 12,
     reactietermijnMeldingVerzondOp: null,
     vervangenDoorId: null,
+    klantReactieOp: null,
+    klantReactieType: null,
     aangemaaktDoor: 5,
     aangemaaktOp: new Date("2025-01-01"),
     bijgewerktOp: new Date("2025-01-01"),

@@ -4,6 +4,22 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-09 — P1 Hotfix: klant-reactievelden (typefout + ontbrekende databasekolommen)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+**Wat is hersteld:**
+
+1. Typecheck-fout in `rapport-melding-reset.test.ts`: het testfixture miste de nieuwe velden `klantReactieOp` en `klantReactieType` uit de ontvangstbevestiging-commit. Beide toegevoegd als `null` — geen gedragswijziging, alle 11 unit tests slagen.
+2. Databasedrift: kolommen `klant_reactie_op` (timestamp) en `klant_reactie_type` (text) ontbraken op `opleverrapporten` in de ontwikkeldatabase, terwijl het Drizzle-schema ze wel definieert. Toegevoegd via directe `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`, en tevens opgenomen in `apply-additive.mjs` (post-merge herstelt dit voortaan automatisch in elke omgeving) en `schema-healthcheck.mjs` (drift wordt voortaan gesignaleerd).
+
+**Resultaat:** de e2e-webtest "rapportenbibliotheek toont, zoekt en filtert rapporten cross-gebouw" slaagt weer.
+
+**Bestanden gewijzigd:**
+- `artifacts/api-server/src/__tests__/rapport-melding-reset.test.ts`
+- `lib/db/scripts/apply-additive.mjs`
+- `lib/db/scripts/schema-healthcheck.mjs`
+
 ## 2026-07-09 — Verlopen reactietermijnen tegel op operationeel dashboard
 ## 2026-07-09 — Klant kan ontvangst bevestigen van een definitief rapport
 
