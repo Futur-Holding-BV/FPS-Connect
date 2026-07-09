@@ -24,6 +24,7 @@ Voor elke taak drie scores:
 - Beide seeders hebben nu een `weigerBuitenDev()`-guard: e2e-accounts kunnen nooit in een deployment/productie worden aangemaakt of geheractiveerd (de monteur-seeder miste deze guard nog; op advies van de review toegevoegd).
 - **Accountsplitsing web/monteur**: de web-suite gebruikte aanvankelijk hetzelfde `e2e-menu`-account als de monteur-suite; bij parallelle runs (zoals in de validatiepijplijn) brak de opruiming van de ene suite de lopende tests van de andere (de API controleert `actief` bij elke request). Opgelost door de web-suite een eigen vast account te geven (`e2e-web@fps.local`, eigen TOTP-secret); elke runner archiveert uitsluitend zijn eigen accounts. Bewezen met een gelijktijdige run van beide suites: beide groen, alle accounts na afloop gearchiveerd.
 - Kanttekening: een hard afgebroken run (kill/workflow-herstart middenin) slaat de opruiming over; de accounts blijven dan actief tot de eerstvolgende voltooide run.
+- **Nagekomen fix (release-readiness-check)**: de Pre-Publish Validatie herstelde in haar opruimstap de ww-accounts via `setupE2eWachtwoordAccounts()` maar liet ze daardoor **actief** achter. Nu roept `ruimOp()` daarna ook `archiveerE2eWachtwoordAccounts()` aan; de achtergebleven actieve accounts (ids 40/41) zijn direct gearchiveerd. Eindstand dev: alleen de twee echte accounts actief.
 
 ## 2026-07-09 — Loginfouten e2e opgelost: rate-limiter + inbox-schemadrift
 
