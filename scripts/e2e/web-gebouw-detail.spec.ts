@@ -11,10 +11,10 @@
 import { expect, test, type Page } from "@playwright/test";
 
 import {
-  E2E_EMAIL,
-  E2E_WACHTWOORD,
-  genereerVersTotp,
-  setupE2eAccount,
+  E2E_WEB_EMAIL,
+  E2E_WEB_WACHTWOORD,
+  genereerVersWebTotp,
+  setupE2eWebAccount,
   wachtOpNieuwTotpVenster,
 } from "../src/e2e-monteur-testaccount";
 
@@ -29,8 +29,8 @@ async function logIn(page: Page): Promise<void> {
   // Wacht tot het e-mailveld zichtbaar is (koude Vite-load kan even duren).
   await expect(page.locator("#email")).toBeVisible({ timeout: 60_000 });
 
-  await page.locator("#email").fill(E2E_EMAIL);
-  await page.locator("#wachtwoord").fill(E2E_WACHTWOORD);
+  await page.locator("#email").fill(E2E_WEB_EMAIL);
+  await page.locator("#wachtwoord").fill(E2E_WEB_WACHTWOORD);
 
   // Meerdere pogingen: als de TOTP-code verloopt tijdens een trage load,
   // genereren we in het volgende venster een nieuwe.
@@ -39,8 +39,8 @@ async function logIn(page: Page): Promise<void> {
       await wachtOpNieuwTotpVenster();
       // Terug naar de inlogstap bij een mislukte TOTP.
       if (await page.locator("#email").isVisible().catch(() => false)) {
-        await page.locator("#email").fill(E2E_EMAIL);
-        await page.locator("#wachtwoord").fill(E2E_WACHTWOORD);
+        await page.locator("#email").fill(E2E_WEB_EMAIL);
+        await page.locator("#wachtwoord").fill(E2E_WEB_WACHTWOORD);
       }
     }
 
@@ -60,7 +60,7 @@ async function logIn(page: Page): Promise<void> {
     }
 
     // Type de 6-cijferige TOTP-code direct in de verborgen OTP-input.
-    const code = await genereerVersTotp();
+    const code = await genereerVersWebTotp();
     await page.locator("[data-input-otp]").focus();
     await page.keyboard.type(code);
 
@@ -83,7 +83,7 @@ function zichtbaar(page: Page, tekst: string | RegExp) {
 
 // ── Setup ─────────────────────────────────────────────────────────────────────
 test.beforeAll(async () => {
-  await setupE2eAccount();
+  await setupE2eWebAccount();
 });
 
 // ── Spec ──────────────────────────────────────────────────────────────────────

@@ -12,6 +12,8 @@ import { spawn, type ChildProcess } from "node:child_process";
 import http from "node:http";
 import https from "node:https";
 
+import { archiveerE2eAccount } from "./e2e-monteur-testaccount";
+
 const WORKSPACE_ROOT = new URL("../../", import.meta.url).pathname;
 
 type Service = {
@@ -176,6 +178,15 @@ async function main(): Promise<void> {
     log(`Fout: ${(err as Error).message}`);
     exitCode = 1;
   } finally {
+    // Testaccount altijd archiveren/deactiveren (ook bij falende tests),
+    // zodat het niet zichtbaar blijft in Gebruikersbeheer. De volgende run
+    // activeert het opnieuw via de idempotente seeder.
+    try {
+      await archiveerE2eAccount();
+      log("E2e-testaccount gearchiveerd en gedeactiveerd.");
+    } catch (err) {
+      log(`Waarschuwing: opruimen e2e-testaccount mislukt: ${(err as Error).message}`);
+    }
     stopOpgestarteServices();
   }
   process.exit(exitCode);

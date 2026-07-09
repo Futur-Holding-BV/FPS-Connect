@@ -11,10 +11,10 @@
 import { expect, test, type Page } from "@playwright/test";
 
 import {
-  E2E_EMAIL,
-  E2E_WACHTWOORD,
-  genereerVersTotp,
-  setupE2eAccount,
+  E2E_WEB_EMAIL,
+  E2E_WEB_WACHTWOORD,
+  genereerVersWebTotp,
+  setupE2eWebAccount,
   wachtOpNieuwTotpVenster,
 } from "../src/e2e-monteur-testaccount";
 
@@ -23,15 +23,15 @@ const INHOUD_TIMEOUT = 20_000;
 async function logIn(page: Page): Promise<void> {
   await page.goto("/");
   await expect(page.locator("#email")).toBeVisible({ timeout: 60_000 });
-  await page.locator("#email").fill(E2E_EMAIL);
-  await page.locator("#wachtwoord").fill(E2E_WACHTWOORD);
+  await page.locator("#email").fill(E2E_WEB_EMAIL);
+  await page.locator("#wachtwoord").fill(E2E_WEB_WACHTWOORD);
 
   for (let poging = 1; poging <= 3; poging++) {
     if (poging > 1) {
       await wachtOpNieuwTotpVenster();
       if (await page.locator("#email").isVisible().catch(() => false)) {
-        await page.locator("#email").fill(E2E_EMAIL);
-        await page.locator("#wachtwoord").fill(E2E_WACHTWOORD);
+        await page.locator("#email").fill(E2E_WEB_EMAIL);
+        await page.locator("#wachtwoord").fill(E2E_WEB_WACHTWOORD);
       }
     }
 
@@ -46,7 +46,7 @@ async function logIn(page: Page): Promise<void> {
       continue;
     }
 
-    const code = await genereerVersTotp();
+    const code = await genereerVersWebTotp();
     await page.locator("[data-input-otp]").focus();
     await page.keyboard.type(code);
 
@@ -60,7 +60,7 @@ async function logIn(page: Page): Promise<void> {
 }
 
 test.beforeAll(async () => {
-  await setupE2eAccount();
+  await setupE2eWebAccount();
 });
 
 test("Web: Studio-badge op offerte-print valt niet buiten de 210mm kadrering bij 1024px viewport", async ({ page }) => {

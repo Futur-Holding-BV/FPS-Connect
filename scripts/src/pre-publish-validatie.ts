@@ -35,6 +35,7 @@ import {
   E2E_WW_ADMIN_TOTP_SECRET,
   E2E_WW_ADMIN_WACHTWOORD,
   E2E_WW_TARGET_EMAIL,
+  archiveerE2eWachtwoordAccounts,
   setupE2eWachtwoordAccounts,
 } from "./e2e-wachtwoord-testaccounts";
 
@@ -380,8 +381,9 @@ async function ruimOp(): Promise<void> {
         .where(eq(gebruikersTable.id, id));
     }
     await setupE2eWachtwoordAccounts(); // herstelt doelaccount-wachtwoord en vlaggen
+    await archiveerE2eWachtwoordAccounts(); // en daarna weer archiveren: geen actieve testaccounts achterlaten
     console.log(
-      `Opruimen: ${aangemaakteTestIds.length} testgebruiker(s) [${aangemaakteTestIds.join(", ")}] gedeactiveerd+gearchiveerd, e2e-doelaccount hersteld`,
+      `Opruimen: ${aangemaakteTestIds.length} testgebruiker(s) [${aangemaakteTestIds.join(", ")}] gedeactiveerd+gearchiveerd, e2e-accounts hersteld en gearchiveerd`,
     );
   } catch (err) {
     console.error("Waarschuwing: opruimen niet volledig gelukt:", err);

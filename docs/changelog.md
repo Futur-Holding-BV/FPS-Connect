@@ -4,6 +4,48 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-09 — Onderzoek testgebruikers in preview + automatische e2e-opruiming
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** geen (alleen testscripts + dev-data; productie aantoonbaar onaangetast)
+
+**Aanleiding:** Gebruikersbeheer in de preview toonde e2e-/testaccounts. Onderzocht met bewijs:
+
+1. De preview draait op de Replit **dev-database** (`heliumdb`), niet op productie.
+2. Er is **geen mock- of fallbackdata**: de gebruikerspagina toont uitsluitend echte rijen uit `GET /gebruikers` (grep op mock/dummy in de frontend: leeg).
+3. De zichtbare accounts waren **echte dev-rijen**: vaste e2e-accounts (`e2e-menu@`, `e2e-ww-admin@`, `e2e-ww-target@fps.local`) die bewust persistent waren voor herhaalbare tests, plus één handmatig testscenario-account (`testgebruiker@fps.local`, opdracht 5 juli).
+4. De Pre-Publish Validatie ruimde haar wegwerpaccounts **wél** op (ids 42–45 stonden al op inactief + gearchiveerd); alleen de vaste accounts bleven actief staan.
+5. **Productie is onaangetast**: read-only query op de productie-database toont géén enkel e2e-/PrePub-account (alleen de drie oude `@fps-test.nl` accounts uit een eerdere fase).
+
+**Opgeruimd:** alle 8 test-/e2e-rijen in dev staan nu op inactief + gearchiveerd en zijn daarmee uit het standaardoverzicht van Gebruikersbeheer verdwenen (de lijst verbergt gearchiveerden standaard).
+
+**Structureel geregeld (automatische opruiming):**
+- Seeders (`e2e-wachtwoord-testaccounts.ts`, `e2e-monteur-testaccount.ts`) hebben nu archiveer-functies; de monteur-seeder zet bij heractivatie ook expliciet `gearchiveerd=false`.
+- Beide e2e-runners (`e2e-web-run.ts`, `e2e-monteur-run.ts`) archiveren en deactiveren de testaccounts **altijd** in hun `finally`-blok — ook wanneer tests falen. De volgende run heractiveert ze via de idempotente seeders.
+- Beide seeders hebben nu een `weigerBuitenDev()`-guard: e2e-accounts kunnen nooit in een deployment/productie worden aangemaakt of geheractiveerd (de monteur-seeder miste deze guard nog; op advies van de review toegevoegd).
+- **Accountsplitsing web/monteur**: de web-suite gebruikte aanvankelijk hetzelfde `e2e-menu`-account als de monteur-suite; bij parallelle runs (zoals in de validatiepijplijn) brak de opruiming van de ene suite de lopende tests van de andere (de API controleert `actief` bij elke request). Opgelost door de web-suite een eigen vast account te geven (`e2e-web@fps.local`, eigen TOTP-secret); elke runner archiveert uitsluitend zijn eigen accounts. Bewezen met een gelijktijdige run van beide suites: beide groen, alle accounts na afloop gearchiveerd.
+- Kanttekening: een hard afgebroken run (kill/workflow-herstart middenin) slaat de opruiming over; de accounts blijven dan actief tot de eerstvolgende voltooide run.
+- **Nagekomen fix (release-readiness-check)**: de Pre-Publish Validatie herstelde in haar opruimstap de ww-accounts via `setupE2eWachtwoordAccounts()` maar liet ze daardoor **actief** achter. Nu roept `ruimOp()` daarna ook `archiveerE2eWachtwoordAccounts()` aan; de achtergebleven actieve accounts (ids 40/41) zijn direct gearchiveerd. Eindstand dev: alleen de twee echte accounts actief.
+
+## 2026-07-09 — Loginfouten e2e opgelost: rate-limiter + inbox-schemadrift
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (fixes uitsluitend in dev-omgeving geverifieerd)
+
+Twee oorzaken van falende e2e-webtests gevonden en verholpen:
+
+1. **Login-rate-limiter** telde ook geslaagde logins mee, waardoor opeenvolgende testsuites tegen 429 aanliepen. Fix: `verlaagLoginRateTeller` in `auth.ts` geeft het budget terug bij een geslaagde login (wachtwoordstap én TOTP-stap). Misbruikbeveiliging blijft intact: mislukte pogingen tellen onverminderd mee.
+2. **Schemadrift `inbox_items`**: vier kolommen (`ai_organisatie`, `ai_jaar`, `geconsolideerd_override`, `ai_bewijs`) bestonden wel in het Drizzle-schema maar niet in de dev-database → detailpagina gaf 500 → twee inbox-e2e-tests faalden. Kolommen additief toegevoegd via `ALTER TABLE`; beide tests daarna groen.
+
+## 2026-07-09 — GitHub CI groen: lokale main gepusht (TS7030 opgelost op GitHub)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** geen (geen codewijziging; alleen synchronisatie met GitHub)
+
+De GitHub CI faalde op drie TS7030-fouten die lokaal al lang gefixt waren; GitHub stond commits achter omdat het token verlopen was. Uitgevoerd:
+
+1. GitHub-authenticatie hersteld via de Replit GitHub-integratie.
+2. Vooraf de exacte CI-stappen lokaal gedraaid: volledige typecheck, api-server build en firevault productie-build — alle groen.
+3. `origin/main` bleek één GitHub-zijde mergecommit vooruit te staan, maar de boominhoud daarvan was byte-identiek aan bestaande lokale commits — daarom veilig gemerged (geen force-push, geen contentwijziging) en gepusht.
+4. GitHub Actions-run op de gepushte commit `0c9848a` is volledig groen: https://github.com/vinkrene-jpg/fps-one/actions/runs/29007724693
+
 ## 2026-07-09 — Pre-Publish Validatie: 10 kritieke identiteitsflows aantoonbaar groen
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** geen (uitsluitend validatie + testscript; geen productiewijziging)

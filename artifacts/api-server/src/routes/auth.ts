@@ -49,6 +49,16 @@ function checkLoginRateLimit(req: import("express").Request, res: import("expres
   return true;
 }
 
+// Succesvolle pogingen tellen niet mee voor het brute-force-budget (standaard
+// "skip successful requests"-patroon): na een geslaagde stap wordt de telling
+// voor dit IP teruggegeven. Alleen mislukte pogingen verbruiken het limiet,
+// zodat legitiem verkeer (bv. meerdere gebruikers achter één IP, e2e-suites)
+// het venster niet uitput terwijl brute-force (mislukkingen) geblokkeerd blijft.
+function verlaagLoginRateTeller(req: import("express").Request): void {
+  const entry = loginRateMap.get(req.ip ?? "onbekend");
+  if (entry && entry.count > 0) entry.count--;
+}
+
 // Ruim verlopen entries op elke 30 minuten om geheugenlek te voorkomen
 setInterval(() => {
   const nu = Date.now();
@@ -142,6 +152,7 @@ router.post("/auth/login", async (req, res): Promise<void> => {
     req.session.pendingUserId = g.id;
     delete req.session.userId;
     delete req.session.pendingSecret;
+    verlaagLoginRateTeller(req);
     if (g.tweeFactorIngeschakeld && g.totpSecret) {
       return void res.json({ status: "verify_2fa" });
     }
@@ -254,6 +265,7 @@ router.post("/auth/2fa/verify", async (req, res): Promise<void> => {
       });
       return void res.status(401).json({ error: "Onjuiste code, probeer opnieuw" });
     }
+    verlaagLoginRateTeller(req);
     await db
       .update(gebruikersTable)
       .set({
@@ -324,6 +336,7 @@ router.post("/auth/mobile/login", async (req, res): Promise<void> => {
         .status(401)
         .json({ error: "Onjuiste code, probeer opnieuw", status: "verify_2fa" });
     }
+    verlaagLoginRateTeller(req);
     await resetMislukteInlogpogingen(g.id);
     await db
       .update(gebruikersTable)

@@ -72,6 +72,7 @@
 - [html2canvas + Tailwind v4 oklch](html2canvas-oklch.md) — firevault DOM->PDF/canvas capture moet html2canvas-pro; klassieke html2canvas 1.4.1 kan oklch()-kleuren niet parsen.
 - [HRM lege catalogi dropdowns](hrm-lege-catalogi.md) — functies/opleidingen zijn user-managed, bewust niet geseed; data-gedreven Selects zijn dan leeg en lijken kapot; geef empty-state, geen nepdata.
 - [E2E TOTP login timing](e2e-totp-timing.md) — runTest cold-load verloopt TOTP-code; genereer next-window code (Date.now()+30000) na vensgrens voor ~90s; vast e2e-account via scripts/e2e-monteur-testaccount; Expo buiten /api-proxy.
+- [E2e-testaccount lifecycle](e2e-testaccount-lifecycle.md) — runners archiveren vaste e2e-accounts in finally (ook bij falen); seeders heractiveren idempotent; e2e-menu-account gedeeld tussen suites = klein concurrency-risico.
 - [EXPO_PUBLIC_DOMAIN staleness](expo-public-domain.md) — .env waarde kan stale zijn; dev-script zet het dynamisch via $REPLIT_DEV_DOMAIN, maar bij Metro-cache-hit wint de .env; houd .env in sync, en voeg REPLIT_EXPO_DEV_DOMAIN toe aan CORS TOEGESTANE_ORIGINS.
 - [E2E onboarding-scherm blokkade](e2e-onboarding-blokkade.md) — frisse Playwright-browser heeft geen fps_onboarding_voltooid in localStorage; na login redirect naar /onboarding; radiaal-fps niet zichtbaar; fix: page.addInitScript vóór goto zet localStorage item.
 - [E2E menu-test validatiestap](e2e-validatie-runner.md) — validatiestap `e2e-menu` (e2e-monteur-ci wrapper) boot api-server+expo zelf (health-poll, detached spawn, kill alleen self-started); CI heeft geen restart_workflow.
@@ -102,4 +103,5 @@
 - [Reactietermijn-statusmachine patroon](reactietermijn-statusmachine.md) — afgeleide status (bv. "termijn verstreken") berekenen bij lezen uit status+datum, geen achtergrondworker; alleen echte state-transities (vervangen) los opslaan.
 - [runTest infra-failure diagnosis](runtest-infra-failure-diagnosis.md) — if runTest fails every attempt with "Maximum iterations", check e2e-* validation commands to see if Playwright itself still works; if so, fall back to curl/API-level verification.
 - [pdf-parse v2 API](pdf-parse-v2.md) — pdf-parse >=2.x heeft alleen PDFParse-class (geen default-functie); alle PDF-extractie via lib/pdfTekst.ts, @types/pdf-parse nooit herinstalleren.
+- [GitHub push-synchronisatie](github-push-sync.md) — verlopen token via integratie vernieuwen (GIT_ASKPASS); divergente origin-commits eerst op tree-identiteit checken → merge i.p.v. force-push.
 - [Bewijs vs. inferentie](bewijs-vs-inferentie.md) — stilte in logs/tabellen is pas bewijs ná positieve kanaalcontrole + dekkingscheck; volledige regels in docs/diagnose-methodologie.md.
