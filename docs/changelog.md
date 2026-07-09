@@ -4,6 +4,23 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-09 — Productie-release a8a8dc7c uitgerold naar connect.fps-one.nl
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (back-up vooraf; alle checks groen; rollback-procedure beschikbaar)
+
+**Toegang hersteld (reconstructie):** de originele deploymethode is gereconstrueerd en bewezen: SSH als **`rene`** (niet `fps-beheer`) met de originele sleutel `fps_productie_nieuw`; repo staat in **`/opt/fps-one`** (niet `/opt/fps-connect` zoals het runbook beweerde). Alle eerdere mislukte pogingen testten tegen de verkeerde gebruikersnaam.
+
+**Uitgevoerd volgens checklist:**
+1. Pre-release databaseback-up (`~/backups/pre-release-20260709.sql.gz`, integriteit gecontroleerd)
+2. `git pull` naar mergecommit `a8a8dc7c` (66 commits achterstand ingelopen)
+3. Images gebouwd (api, caddy, migrate) — eerste build faalde op het caddy-doel omdat de upstream `.dockerignore` heel `scripts` uitsloot terwijl `Dockerfile.caddy` `scripts/package.json` kopieert; de bestaande serverfix (`scripts/*` + `!scripts/package.json`) teruggezet en als commit `c93e4b42` naar `main` gepusht zodat volgende deploys dit niet meer raken
+4. Migraties toegepast (drizzle: "Changes applied", exit 0)
+5. Stack herstart; api healthy, caddy up
+
+**Verificatie:** healthz `{"status":"ok"}`; nieuwe frontend-bundel wordt uitgeleverd; onbevoegde API-toegang geeft 401; foute login geeft 401; API-logs zonder fouten; migrate-container exit 0; draaiende containers gebruiken aantoonbaar de verse images.
+
+**Restpunt voor gebruiker:** handmatige weblogin-check (TOTP-inlog, gebruiker bewerken, AI Inbox upload) — vereist productie-inloggegevens. **Beveiligingsadvies:** de deploysleutel is tijdens deze sessie in de chat gedeeld en daarmee blootgesteld; bij gelegenheid vervangen.
+
 ## 2026-07-09 — Onderzoek testgebruikers in preview + automatische e2e-opruiming
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** geen (alleen testscripts + dev-data; productie aantoonbaar onaangetast)

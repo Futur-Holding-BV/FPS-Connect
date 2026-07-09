@@ -8,8 +8,8 @@
 | VPS IP | 149.210.181.47 |
 | Domein | connect.fps-one.nl |
 | OS | Ubuntu 24.04 LTS |
-| Deploymentpad | /opt/fps-connect |
-| Beheerdersgebruiker | fps-beheer |
+| Deploymentpad | /opt/fps-one |
+| SSH-gebruiker voor deploys | rene (lid van docker-groep) |
 | SSH-poort | 22 |
 
 ---
@@ -18,15 +18,15 @@
 
 | Bestand | Pad op VPS |
 |---|---|
-| Compose file | /opt/fps-connect/deploy/docker-compose.production.yml |
-| Env file | /opt/fps-connect/deploy/.env.production |
-| Caddyfile | /opt/fps-connect/deploy/Caddyfile (ingebakken in image) |
+| Compose file | /opt/fps-one/deploy/docker-compose.production.yml |
+| Env file | /opt/fps-one/deploy/.env.production (ongetrackt, blijft bij pulls staan) |
+| Caddyfile | /opt/fps-one/deploy/Caddyfile (ingebakken in image) |
 
 ---
 
 ## Standaard deployment-commando's
 
-Alle commando's worden uitgevoerd als `fps-beheer` vanuit `/opt/fps-connect`.
+Alle commando's worden uitgevoerd als `rene` vanuit `/opt/fps-one`.
 
 ### Pre-release backup
 
@@ -118,24 +118,17 @@ Het kantoornetwerk blokkeert toegang tot `connect.fps-one.nl` via de FortiGate-f
 
 ---
 
-## Open punten
+## SSH-sleutelbeheer (gereconstrueerd en bevestigd, 9 juli 2026)
 
-### SSH-sleutelbeheer
+- Sleutelbestand: `C:\Users\rene\.ssh\fps_productie_nieuw` (ed25519, commentaar `fps-productie-beheer`)
+- Geautoriseerd op VPS: `/home/rene/.ssh/authorized_keys` — deploys lopen als **`rene`**, niet als `fps-beheer`
+- `fps-beheer` heeft géén geautoriseerde sleutel; de hardening uit `deploy/SERVER_HARDENING.md` (AllowUsers, PasswordAuthentication no) is nooit toegepast
+- De eerdere claim dat deployments via de Node.js `ssh2`-bibliotheek liepen is weerlegd: daar is geen bewijs voor gevonden; deploys gaan via gewone `ssh -i <sleutel> rene@149.210.181.47`
+- **Aanbevolen:** de sleutel is op 9 juli 2026 in de chat gedeeld en daarmee blootgesteld — vervang hem bij gelegenheid (nieuwe sleutel genereren, publieke sleutel toevoegen aan `/home/rene/.ssh/authorized_keys`, oude regel verwijderen)
 
-**Open punt — vastleggen vanaf welke machine de private SSH-sleutel beschikbaar is.**
+### Bekende valkuil: .dockerignore en scripts/package.json
 
-Wat bekend is:
-- Sleutelnaam: `fps_productie` (ed25519, commentaar `fps-productie-beheer`)
-- Publiek sleutelformaat: `ssh-keygen -t ed25519 -C "fps-productie-beheer" -f ~/.ssh/fps_productie`
-- Geautoriseerd op VPS: `/home/fps-beheer/.ssh/authorized_keys`
-- Vorige deployments zijn uitgevoerd via de Node.js `ssh2`-bibliotheek vanuit de Replit-omgeving, waarbij de private key als Replit-secret beschikbaar was
-
-**Nog niet vastgelegd:**
-- Op welke naam de private key als Replit-secret stond opgeslagen (niet meer aanwezig in de huidige secretslijst)
-- Of er een lokale kopie van de private key op een andere machine staat
-- Of de TransIP-sleutel `rene@fps-one.nl` overeenkomt met de `fps_productie`-sleutel
-
-**Actie vereist:** bevestig waar de private key `fps_productie` bewaard is en sla deze opnieuw op als Replit-secret zodat geautomatiseerde deploys vanuit Replit weer mogelijk zijn.
+`deploy/Dockerfile.caddy` kopieert `scripts/package.json`; de `.dockerignore` moet daarom `scripts/*` + `!scripts/package.json` bevatten (niet kaal `scripts`). Sinds commit `c93e4b42` staat dit correct op `main`.
 
 ---
 
