@@ -1,6 +1,7 @@
 # ─── Stage 1: Build ───────────────────────────────────────────────────────────
 FROM node:24-alpine AS builder
-RUN corepack enable pnpm
+# Pin pnpm 10 (corepack zonder pin haalt pnpm 11 binnen, die faalt op ERR_PNPM_IGNORED_BUILDS)
+RUN npm install -g pnpm@10.26.1
 WORKDIR /workspace
 
 # Kopieer workspace-configuratie
@@ -21,7 +22,7 @@ RUN pnpm --filter @workspace/api-server run build
 
 # ─── Stage 2: Productie-dependencies ──────────────────────────────────────────
 FROM node:24-alpine AS prod-deps
-RUN corepack enable pnpm
+RUN npm install -g pnpm@10.26.1
 WORKDIR /workspace
 
 COPY --from=builder /workspace .
