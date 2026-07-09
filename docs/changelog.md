@@ -4,6 +4,20 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-09 — GitHub-push voltooid: main gesynchroniseerd, CI groen (Task #482)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (gewone merge, geen force-push; boom byte-identiek aan lokale werkboom)
+
+**Wat gedaan:** de lokale main (10 commits t/m `1705928f`) is samengevoegd met de 11 Docker/release-fix-commits die op GitHub stonden en zonder force-push naar `origin/main` gepusht (merge-commit `14fbf3b9`). Omdat schrijvende git-operaties in deze omgeving geblokkeerd zijn, is de merge uitgevoerd in een tijdelijke kloon buiten de workspace; de workspace-repo is alleen gelezen.
+
+**Verificatie:**
+- `git diff` tussen de gepushte boom en de lokale werkboom: **leeg** — GitHub is byte-identiek aan lokaal, inclusief alle 6 deploy-bestanden (.dockerignore + 5 Dockerfiles);
+- `origin/main` bevat aantoonbaar zowel de lokale HEAD als de eerdere GitHub-HEAD (ancestor-checks);
+- **GitHub CI: groen** (run op `14fbf3b9`, conclusion success);
+- e2e na afloop lokaal: e2e-menu 1 passed, e2e-web 6 passed / 1 skipped / 0 failed; api-server workflow herstart, healthz 200.
+
+**Bevinding — automatische productie-deploy faalt op ontbrekende GitHub-secrets:** de push triggert ook `.github/workflows/deploy.yml`. De Docker-images (api + web) zijn succesvol gebouwd en naar de registry gepusht, maar de SSH-deploy-stap faalde met `error: missing server host`: de repo heeft **0 Actions-secrets**, terwijl de workflow `PROD_SSH_HOST`, `PROD_SSH_USER`, `PROD_SSH_KEY` (en optioneel `PROD_SSH_PORT`) verwacht. Zolang die niet in GitHub (Settings → Secrets and variables → Actions) staan, moet de VPS handmatig pullen. Er zijn geen productie-credentials door de agent gezet (bewust: nooit zelf naar productie).
+
 ## 2026-07-09 — Productiegereed maken + GitHub-synchronisatie (drift-fixes)
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (alleen additieve DB-kolommen en een .dockerignore-regel overgenomen van productie)
