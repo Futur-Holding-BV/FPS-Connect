@@ -325,6 +325,12 @@ export default function GebouwRapporten({ gebouwId, isBeheerder }: { gebouwId: n
                               Bevrozen op {dagToString(r.bevroren_op)}
                             </div>
                           )}
+                          {r.klant_reactie_op && (
+                            <div className="flex items-center gap-1 text-green-700 font-medium">
+                              <CheckCircle2 className="h-3 w-3" />
+                              Klant bevestigd ontvangst op {dagToString(r.klant_reactie_op)}
+                            </div>
+                          )}
                           {isVervangen && r.vervangen_door_id && (
                             <div className="text-neutral-500">
                               Vervangen door versie{" "}

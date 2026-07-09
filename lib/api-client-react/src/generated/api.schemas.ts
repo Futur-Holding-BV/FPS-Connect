@@ -6395,6 +6395,17 @@ export type RapportSpotSelectie = { [key: string]: unknown };
  */
 export type RapportBevrorenDocumentRevisies = { [key: string]: unknown } | null;
 
+/**
+ * Type klantreactie (ontvangst_bevestigd).
+ * @nullable
+ */
+export type RapportKlantReactieType = typeof RapportKlantReactieType[keyof typeof RapportKlantReactieType] | null;
+
+
+export const RapportKlantReactieType = {
+  ontvangst_bevestigd: 'ontvangst_bevestigd',
+} as const;
+
 export interface Rapport {
   id: number;
   gebouw_id: number;
@@ -6444,6 +6455,16 @@ export interface Rapport {
   certificaat_geaccordeerd_op?: string | null;
   /** Garantieduur in maanden (standaard 12). */
   certificaat_garantie_maanden?: number;
+  /**
+     * Tijdstip waarop de klant heeft gereageerd op dit rapport.
+     * @nullable
+     */
+  klant_reactie_op?: string | null;
+  /**
+     * Type klantreactie (ontvangst_bevestigd).
+     * @nullable
+     */
+  klant_reactie_type?: RapportKlantReactieType;
   /** @nullable */
   aangemaakt_door?: number | null;
   /** @nullable */
@@ -6452,6 +6473,21 @@ export interface Rapport {
   gebouw_naam?: string | null;
   aangemaakt_op: string;
   bijgewerkt_op: string;
+}
+
+/**
+ * Type reactie van de klant.
+ */
+export type KlantReactieInputReactieType = typeof KlantReactieInputReactieType[keyof typeof KlantReactieInputReactieType];
+
+
+export const KlantReactieInputReactieType = {
+  ontvangst_bevestigd: 'ontvangst_bevestigd',
+} as const;
+
+export interface KlantReactieInput {
+  /** Type reactie van de klant. */
+  reactie_type: KlantReactieInputReactieType;
 }
 
 export type RapportInputSecties = { [key: string]: unknown };

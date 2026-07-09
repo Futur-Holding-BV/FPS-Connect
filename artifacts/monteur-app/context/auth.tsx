@@ -161,6 +161,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         bewaarToken(data.token),
         AsyncStorage.setItem(USER_KEY, JSON.stringify(data.gebruiker)),
       ]);
+      // Push-token registreren (niet-blokkerend — fouten negeren)
+      const verkregenToken = data.token;
+      import("@/lib/pushNotifications")
+        .then(({ registreerPushToken }) =>
+          registreerPushToken(verkregenToken).catch(() => undefined),
+        )
+        .catch(() => undefined);
     },
     [],
   );

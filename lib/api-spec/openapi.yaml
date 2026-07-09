@@ -1293,6 +1293,42 @@ paths:
         "409":
           description: Certificaat is al geaccordeerd
 
+  /gebouwen/{id}/rapporten/{rapportId}/klant-reactie:
+    post:
+      operationId: registreerKlantReactie
+      tags: [gebouwen]
+      summary: Klant bevestigt ontvangst van een definitief rapport
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: rapportId
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/KlantReactieInput"
+      responses:
+        "200":
+          description: Reactie geregistreerd
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Rapport"
+        "403":
+          description: Geen toegang — alleen klant of interne gebruiker
+        "404":
+          description: Rapport niet gevonden
+        "409":
+          description: Klant heeft al gereageerd op dit rapport
+
   /gebouwen/{id}/rapporten/{rapportId}/bijlagenbundel:
     get:
       operationId: getOpleverrapportBijlagenbundel
@@ -29211,6 +29247,14 @@ components:
         certificaat_garantie_maanden:
           type: integer
           description: Garantieduur in maanden (standaard 12).
+        klant_reactie_op:
+          type: ["string", "null"]
+          format: date-time
+          description: Tijdstip waarop de klant heeft gereageerd op dit rapport.
+        klant_reactie_type:
+          type: ["string", "null"]
+          enum: [ontvangst_bevestigd, null]
+          description: Type klantreactie (ontvangst_bevestigd).
         aangemaakt_door:
           type: ["integer", "null"]
         aangemaakt_door_naam:
@@ -29223,6 +29267,15 @@ components:
         bijgewerkt_op:
           type: string
           format: date-time
+
+    KlantReactieInput:
+      type: object
+      required: [reactie_type]
+      properties:
+        reactie_type:
+          type: string
+          enum: [ontvangst_bevestigd]
+          description: Type reactie van de klant.
 
     RapportInput:
       type: object

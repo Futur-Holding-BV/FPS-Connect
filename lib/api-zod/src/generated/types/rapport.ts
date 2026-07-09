@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { RapportBevrorenDocumentRevisies } from './rapportBevrorenDocumentRevisies';
+import type { RapportKlantReactieType } from './rapportKlantReactieType';
 import type { RapportOpleverstatus } from './rapportOpleverstatus';
 import type { RapportSecties } from './rapportSecties';
 import type { RapportSpotSelectie } from './rapportSpotSelectie';
@@ -60,6 +61,16 @@ export interface Rapport {
   certificaat_geaccordeerd_op?: Date | null;
   /** Garantieduur in maanden (standaard 12). */
   certificaat_garantie_maanden?: number;
+  /**
+     * Tijdstip waarop de klant heeft gereageerd op dit rapport.
+     * @nullable
+     */
+  klant_reactie_op?: Date | null;
+  /**
+     * Type klantreactie (ontvangst_bevestigd).
+     * @nullable
+     */
+  klant_reactie_type?: RapportKlantReactieType;
   /** @nullable */
   aangemaakt_door?: number | null;
   /** @nullable */

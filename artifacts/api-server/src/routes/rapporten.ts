@@ -16,6 +16,7 @@ import { requireBevoegdheid, requireBevoegdheidOfKlant } from "../middlewares/au
 import { ObjectStorageService } from "../lib/objectStorage";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
 import { RAPPORT_SAMENVATTING_PROMPT } from "../lib/aiPrompts";
+import { bouwNieuweVersieWaarden } from "../lib/rapport-helpers";
 
 const router = Router();
 
@@ -72,6 +73,8 @@ function mapRapport(
     certificaat_geaccordeerd: r.certificaatGeaccordeerd,
     certificaat_geaccordeerd_op: iso(r.certificaatGeaccordeerdOp),
     certificaat_garantie_maanden: r.certificaatGarantieMaanden,
+    klant_reactie_op: iso(r.klantReactieOp),
+    klant_reactie_type: r.klantReactieType ?? null,
     aangemaakt_door: r.aangemaaktDoor,
     aangemaakt_door_naam: extra?.aangemaaktDoorNaam ?? null,
     gebouw_naam: extra?.gebouwNaam ?? null,
@@ -356,6 +359,9 @@ router.post("/gebouwen/:id/rapporten/:rapportId/definitief", aanmakenRapporten, 
         bevrorenDocumentRevisies: bevrorenRevisies,
         reactietermijnDatum,
         reactietermijnGestarteOp: nu,
+        // Expliciete reset: een herstart-scenario mag nooit een eerder ingevulde
+        // melding-markering doorlaten naar een nieuwe definitieve versie.
+        reactietermijnMeldingVerzondOp: null,
         bijgewerktOp: nu,
       })
       .where(eq(opleverrapportenTable.id, rapportId))
@@ -448,22 +454,11 @@ router.post("/gebouwen/:id/rapporten/:rapportId/nieuwe-versie", aanmakenRapporte
 
     const nu = new Date();
 
-    // Nieuwe conceptversie aanmaken als kopie van het huidige rapport
+    // Nieuwe conceptversie aanmaken als kopie van het huidige rapport.
+    // bouwNieuweVersieWaarden sluit reactietermijn_melding_verzond_op bewust uit.
     const [nieuw] = await db
       .insert(opleverrapportenTable)
-      .values({
-        gebouwId,
-        rapportType: huidig.rapportType,
-        versie: huidig.versie + 1,
-        status: "concept",
-        titel: huidig.titel,
-        secties: (huidig.secties ?? {}) as Record<string, unknown>,
-        spotSelectie: (huidig.spotSelectie ?? {}) as Record<string, unknown>,
-        bijlagenIds: huidig.bijlagenIds ?? [],
-        tekeningIds: huidig.tekeningIds ?? [],
-        aangemaaktDoor: userId(req),
-        bijgewerktOp: nu,
-      })
+      .values(bouwNieuweVersieWaarden(huidig, userId(req), nu))
       .returning();
 
     // Oud rapport markeren als vervangen
@@ -509,6 +504,54 @@ router.post("/gebouwen/:id/rapporten/:rapportId/certificaat-akkoord", aanmakenRa
         certificaatGeaccordeerd: true,
         certificaatGeaccordeerdOp: nu,
         ...(maanden && !isNaN(maanden) && maanden > 0 ? { certificaatGarantieMaanden: maanden } : {}),
+        bijgewerktOp: nu,
+      })
+      .where(eq(opleverrapportenTable.id, rapportId))
+      .returning();
+
+    res.json(mapRapport(bijgewerkt));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Serverfout" });
+  }
+});
+
+// ── POST /gebouwen/:id/rapporten/:rapportId/klant-reactie ─────────────────────
+// Klant bevestigt ontvangst van een definitief rapport.
+router.post("/gebouwen/:id/rapporten/:rapportId/klant-reactie", lezenRapportenOfKlant, async (req, res): Promise<void> => {
+  try {
+    const gebouwId = parseId(req.params.id);
+    const rapportId = parseId(req.params.rapportId);
+
+    const [huidig] = await db
+      .select()
+      .from(opleverrapportenTable)
+      .where(and(
+        eq(opleverrapportenTable.id, rapportId),
+        eq(opleverrapportenTable.gebouwId, gebouwId),
+      ));
+    if (!huidig) { res.status(404).json({ error: "Rapport niet gevonden" }); return; }
+    if (huidig.status !== "definitief") {
+      res.status(409).json({ error: "Alleen definitieve rapporten kunnen worden bevestigd" });
+      return;
+    }
+    if (huidig.klantReactieOp != null) {
+      res.status(409).json({ error: "Er is al een reactie geregistreerd voor dit rapport" });
+      return;
+    }
+
+    const { reactie_type } = (req.body ?? {}) as { reactie_type?: string };
+    if (!reactie_type || reactie_type !== "ontvangst_bevestigd") {
+      res.status(400).json({ error: "reactie_type moet 'ontvangst_bevestigd' zijn" });
+      return;
+    }
+
+    const nu = new Date();
+    const [bijgewerkt] = await db
+      .update(opleverrapportenTable)
+      .set({
+        klantReactieOp: nu,
+        klantReactieType: reactie_type,
         bijgewerktOp: nu,
       })
       .where(eq(opleverrapportenTable.id, rapportId))

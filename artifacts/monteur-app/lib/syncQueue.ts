@@ -86,6 +86,24 @@ export type SyncActie =
       /** Lokale file:// URI's van offline genomen foto's — worden bij sync geüpload */
       lokale_foto_paden?: string[];
     }
+  // Voertuigmelding (storing/schade/kwartaalcontrole) aanmaken terwijl offline
+  | {
+      type: "create_melding";
+      lokaalId: string;
+      payload: {
+        type: string;
+        omschrijving: string;
+        schade_locatie?: string | null;
+        storing_type?: string | null;
+        ai_fotokwaliteit_ok?: boolean | null;
+        ai_gelezen_km_stand?: number | null;
+        ai_gelezen_waarschuwingen?: string[];
+        /** Al geüploade object-paden (als upload vóór netwerkverlies lukte) */
+        foto_paden?: string[];
+      };
+      /** Lokale file:// URI's — worden bij sync geüpload naar object storage */
+      lokale_foto_paden: string[];
+    }
   // PIM foto-analyse offline bufferen — analyse volgt zodra verbinding hersteld
   | {
       type: "foto_analyse";

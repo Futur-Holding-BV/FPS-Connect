@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "wouter";
+import { Link, useSearch } from "wouter";
 import { useListRapporten, type Rapport } from "@workspace/api-client-react";
 import { useAuth } from "@/context/auth-context";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
@@ -233,7 +233,16 @@ function leesFilterState(): RapportenFilterState {
 }
 
 export default function RapportenPagina() {
-  const [opleverstatusFilter, setOpleverstatusFilter] = useState<string>(() => leesFilterState().opleverstatusFilter);
+  const zoekString = useSearch();
+
+  const initieleStatus = (() => {
+    const params = new URLSearchParams(zoekString);
+    const statusParam = params.get("status") ?? "";
+    if (GELDIGE_OPLEVERSTATUS_WAARDEN.has(statusParam)) return statusParam;
+    return leesFilterState().opleverstatusFilter;
+  })();
+
+  const [opleverstatusFilter, setOpleverstatusFilter] = useState<string>(initieleStatus);
   const [zoekterm, setZoekterm] = useState(() => leesFilterState().zoekterm);
   const [gebouwFilter, setGebouwFilter] = useState<string>(() => leesFilterState().gebouwFilter);
   const [typeFilter, setTypeFilter] = useState<string>(() => leesFilterState().typeFilter);
@@ -551,6 +560,12 @@ export default function RapportenPagina() {
                             <span className="flex items-center gap-1 text-red-600">
                               <AlertCircle className="h-3 w-3" />
                               Verstreken {new Date(r.reactietermijn_datum).toLocaleDateString("nl-NL", { day: "numeric", month: "short", year: "numeric" })}
+                            </span>
+                          )}
+                          {r.klant_reactie_op && (
+                            <span className="flex items-center gap-1 text-green-700 font-medium">
+                              <CheckCircle2 className="h-3 w-3" />
+                              Klant bevestigd {new Date(r.klant_reactie_op).toLocaleDateString("nl-NL", { day: "numeric", month: "short", year: "numeric" })}
                             </span>
                           )}
                           {isVervangen && r.vervangen_door_id && (

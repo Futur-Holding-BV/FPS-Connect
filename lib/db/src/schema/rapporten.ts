@@ -26,6 +26,8 @@ export const opleverrapportenTable = pgTable("opleverrapporten", {
   certificaatGarantieMaanden: integer("certificaat_garantie_maanden").notNull().default(12),
   reactietermijnMeldingVerzondOp: timestamp("reactietermijn_melding_verzond_op"),
   vervangenDoorId: integer("vervangen_door_id"),
+  klantReactieOp: timestamp("klant_reactie_op"),
+  klantReactieType: text("klant_reactie_type"),
   aangemaaktDoor: integer("aangemaakt_door").references(() => gebruikersTable.id, { onDelete: "set null" }),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),

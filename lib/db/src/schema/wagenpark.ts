@@ -295,18 +295,40 @@ export const wagenparkMeldingenTable = pgTable("wagenpark_meldingen", {
   gemeldDoorId:    integer("gemeld_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
 
   type:            text("type").notNull().default("storing"),
-  // "storing" | "schade"
+  // "storing" | "schade" | "kwartaalcontrole" | "onderhoud" | "overige"
 
   omschrijving:    text("omschrijving").notNull(),
   fotoPaden:       text("foto_paden").array().notNull().default([]),
+
+  // Schade-specifiek
+  schadeLocatie:   text("schade_locatie"),
+  // "voorzijde" | "achterzijde" | "links" | "rechts" | "interieur" | "laadruimte" | "ruit" | "band" | "velg"
+
+  // Storing-specifiek
+  storingType:     text("storing_type"),
+  // "motor" | "verlichting" | "banden" | "remmen" | "accu" | "ruit" | "airco" | "onderhoudsmelding" | "overige"
 
   aiDiagnose:      text("ai_diagnose"),
   aiOplossing:     text("ai_oplossing"),
   aiKostenIndicatie: boolean("ai_kosten_indicatie").notNull().default(false),
   aiKostenTekst:   text("ai_kosten_tekst"),
 
+  // AI-uitkomsten (kwartaalcontrole/schade/storing) — mens bevestigt altijd vóór verzenden
+  aiFotokwaliteitOk:      boolean("ai_fotokwaliteit_ok"),
+  aiGelezenKmStand:       integer("ai_gelezen_km_stand"),
+  aiGelezenWaarschuwingen: jsonb("ai_gelezen_waarschuwingen"), // string[]
+  aiErnstIndicatie:       text("ai_ernst_indicatie"),
+  // "licht" | "matig" | "ernstig"
+  aiMogelijkDuplicaatVanId: integer("ai_mogelijk_duplicaat_van_id"),
+  // (geen self-FK-constraint i.v.m. eenvoud van cascades; wordt server-side gevalideerd)
+
   status:          text("status").notNull().default("nieuw"),
-  // "nieuw" | "in_behandeling" | "afgehandeld"
+  // "nieuw" | "in_beoordeling" | "actie_nodig" | "ingepland" | "opgelost" | "afgewezen_duplicaat"
+
+  toegewezenBeheerderId: integer("toegewezen_beheerder_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
+  onderhoudId:           integer("onderhoud_id").references(() => wagenparkOnderhoudTable.id, { onDelete: "set null" }),
+  opvolgNotitie:         text("opvolg_notitie"),
+  // Vrij tekstveld voor schadeherstel/verzekering/lease-opvolging (geen aparte entiteit)
 
   adminNotitie:    text("admin_notitie"),
 
@@ -315,13 +337,72 @@ export const wagenparkMeldingenTable = pgTable("wagenpark_meldingen", {
 });
 
 export const wagenparkMeldingInsertSchema = createInsertSchema(wagenparkMeldingenTable, {
-  type:     z.enum(["storing", "schade"]),
-  status:   z.enum(["nieuw", "in_behandeling", "afgehandeld"]),
+  type:     z.enum(["storing", "schade", "kwartaalcontrole", "onderhoud", "overige"]),
+  status:   z.enum(["nieuw", "in_beoordeling", "actie_nodig", "ingepland", "opgelost", "afgewezen_duplicaat"]),
   omschrijving: z.string().min(1),
+  schadeLocatie: z.enum([
+    "voorzijde", "achterzijde", "links", "rechts", "interieur", "laadruimte", "ruit", "band", "velg",
+  ]).nullish(),
+  storingType: z.enum([
+    "motor", "verlichting", "banden", "remmen", "accu", "ruit", "airco", "onderhoudsmelding", "overige",
+  ]).nullish(),
+  aiErnstIndicatie: z.enum(["licht", "matig", "ernstig"]).nullish(),
 }).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });
 
 export type WagenparkMeldingInsert = z.infer<typeof wagenparkMeldingInsertSchema>;
 export type WagenparkMelding = typeof wagenparkMeldingenTable.$inferSelect;
+
+// ═══════════════════════════════════════════════════════════
+// Kwartaalcontrole-cyclus per voertuig (voor oplopend dringende pushmeldingen)
+// ═══════════════════════════════════════════════════════════
+
+export const wagenparkKwartaalcontroleTable = pgTable("wagenpark_kwartaalcontrole", {
+  id:          serial("id").primaryKey(),
+  voertuigId:  integer("voertuig_id").notNull().references(() => voertuigenTable.id, { onDelete: "cascade" }),
+
+  periodeStart:   timestamp("periode_start").notNull(),   // start van het kwartaal
+  deadline:       timestamp("deadline").notNull(),        // einde van het kwartaal
+
+  status:      text("status").notNull().default("open"),
+  // "open" | "voltooid" | "verlopen"
+  meldingId:   integer("melding_id").references(() => wagenparkMeldingenTable.id, { onDelete: "set null" }),
+
+  laatsteHerinneringOp: timestamp("laatste_herinnering_op"),
+  aantalHerinneringen:  integer("aantal_herinneringen").notNull().default(0),
+
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+  bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+});
+
+export const wagenparkKwartaalcontroleInsertSchema = createInsertSchema(wagenparkKwartaalcontroleTable, {
+  status: z.enum(["open", "voltooid", "verlopen"]),
+}).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });
+
+export type WagenparkKwartaalcontroleInsert = z.infer<typeof wagenparkKwartaalcontroleInsertSchema>;
+export type WagenparkKwartaalcontrole = typeof wagenparkKwartaalcontroleTable.$inferSelect;
+
+// ═══════════════════════════════════════════════════════════
+// Expo-pushtokens per gebruiker/toestel
+// ═══════════════════════════════════════════════════════════
+
+export const pushTokensTable = pgTable("push_tokens", {
+  id:            serial("id").primaryKey(),
+  gebruikerId:   integer("gebruiker_id").notNull().references(() => gebruikersTable.id, { onDelete: "cascade" }),
+  expoPushToken: text("expo_push_token").notNull(),
+  platform:      text("platform").notNull().default("onbekend"),
+  // "ios" | "android" | "onbekend"
+
+  aangemaaktOp:      timestamp("aangemaakt_op").notNull().defaultNow(),
+  laatstGebruiktOp:  timestamp("laatst_gebruikt_op").notNull().defaultNow(),
+});
+
+export const pushTokenInsertSchema = createInsertSchema(pushTokensTable, {
+  expoPushToken: z.string().min(1),
+  platform: z.enum(["ios", "android", "onbekend"]),
+}).omit({ id: true, aangemaaktOp: true, laatstGebruiktOp: true });
+
+export type PushTokenInsert = z.infer<typeof pushTokenInsertSchema>;
+export type PushToken = typeof pushTokensTable.$inferSelect;
 
 // ═══════════════════════════════════════════════════════════
 

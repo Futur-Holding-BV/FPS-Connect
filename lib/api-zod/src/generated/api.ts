@@ -1114,6 +1114,8 @@ export const ListRapportenResponseItem = zod.object({
   "certificaat_geaccordeerd": zod.boolean().optional(),
   "certificaat_geaccordeerd_op": zod.coerce.date().nullish(),
   "certificaat_garantie_maanden": zod.number().optional().describe('Garantieduur in maanden (standaard 12).'),
+  "klant_reactie_op": zod.coerce.date().nullish().describe('Tijdstip waarop de klant heeft gereageerd op dit rapport.'),
+  "klant_reactie_type": zod.union([zod.literal('ontvangst_bevestigd'),zod.literal(null)]).nullish().describe('Type klantreactie (ontvangst_bevestigd).'),
   "aangemaakt_door": zod.number().nullish(),
   "aangemaakt_door_naam": zod.string().nullish(),
   "gebouw_naam": zod.string().nullish(),
@@ -1160,6 +1162,8 @@ export const ListGebouwRapportenResponseItem = zod.object({
   "certificaat_geaccordeerd": zod.boolean().optional(),
   "certificaat_geaccordeerd_op": zod.coerce.date().nullish(),
   "certificaat_garantie_maanden": zod.number().optional().describe('Garantieduur in maanden (standaard 12).'),
+  "klant_reactie_op": zod.coerce.date().nullish().describe('Tijdstip waarop de klant heeft gereageerd op dit rapport.'),
+  "klant_reactie_type": zod.union([zod.literal('ontvangst_bevestigd'),zod.literal(null)]).nullish().describe('Type klantreactie (ontvangst_bevestigd).'),
   "aangemaakt_door": zod.number().nullish(),
   "aangemaakt_door_naam": zod.string().nullish(),
   "gebouw_naam": zod.string().nullish(),
@@ -1232,6 +1236,8 @@ export const GetRapportResponse = zod.object({
   "certificaat_geaccordeerd": zod.boolean().optional(),
   "certificaat_geaccordeerd_op": zod.coerce.date().nullish(),
   "certificaat_garantie_maanden": zod.number().optional().describe('Garantieduur in maanden (standaard 12).'),
+  "klant_reactie_op": zod.coerce.date().nullish().describe('Tijdstip waarop de klant heeft gereageerd op dit rapport.'),
+  "klant_reactie_type": zod.union([zod.literal('ontvangst_bevestigd'),zod.literal(null)]).nullish().describe('Type klantreactie (ontvangst_bevestigd).'),
   "aangemaakt_door": zod.number().nullish(),
   "aangemaakt_door_naam": zod.string().nullish(),
   "gebouw_naam": zod.string().nullish(),
@@ -1292,6 +1298,8 @@ export const UpdateRapportResponse = zod.object({
   "certificaat_geaccordeerd": zod.boolean().optional(),
   "certificaat_geaccordeerd_op": zod.coerce.date().nullish(),
   "certificaat_garantie_maanden": zod.number().optional().describe('Garantieduur in maanden (standaard 12).'),
+  "klant_reactie_op": zod.coerce.date().nullish().describe('Tijdstip waarop de klant heeft gereageerd op dit rapport.'),
+  "klant_reactie_type": zod.union([zod.literal('ontvangst_bevestigd'),zod.literal(null)]).nullish().describe('Type klantreactie (ontvangst_bevestigd).'),
   "aangemaakt_door": zod.number().nullish(),
   "aangemaakt_door_naam": zod.string().nullish(),
   "gebouw_naam": zod.string().nullish(),
@@ -1357,6 +1365,8 @@ export const MaakRapportDefinitiefResponse = zod.object({
   "certificaat_geaccordeerd": zod.boolean().optional(),
   "certificaat_geaccordeerd_op": zod.coerce.date().nullish(),
   "certificaat_garantie_maanden": zod.number().optional().describe('Garantieduur in maanden (standaard 12).'),
+  "klant_reactie_op": zod.coerce.date().nullish().describe('Tijdstip waarop de klant heeft gereageerd op dit rapport.'),
+  "klant_reactie_type": zod.union([zod.literal('ontvangst_bevestigd'),zod.literal(null)]).nullish().describe('Type klantreactie (ontvangst_bevestigd).'),
   "aangemaakt_door": zod.number().nullish(),
   "aangemaakt_door_naam": zod.string().nullish(),
   "gebouw_naam": zod.string().nullish(),
@@ -1418,6 +1428,60 @@ export const AccordeerCertificaatResponse = zod.object({
   "certificaat_geaccordeerd": zod.boolean().optional(),
   "certificaat_geaccordeerd_op": zod.coerce.date().nullish(),
   "certificaat_garantie_maanden": zod.number().optional().describe('Garantieduur in maanden (standaard 12).'),
+  "klant_reactie_op": zod.coerce.date().nullish().describe('Tijdstip waarop de klant heeft gereageerd op dit rapport.'),
+  "klant_reactie_type": zod.union([zod.literal('ontvangst_bevestigd'),zod.literal(null)]).nullish().describe('Type klantreactie (ontvangst_bevestigd).'),
+  "aangemaakt_door": zod.number().nullish(),
+  "aangemaakt_door_naam": zod.string().nullish(),
+  "gebouw_naam": zod.string().nullish(),
+  "aangemaakt_op": zod.coerce.date(),
+  "bijgewerkt_op": zod.coerce.date()
+})
+
+
+/**
+ * @summary Klant bevestigt ontvangst van een definitief rapport
+ */
+export const RegistreerKlantReactieParams = zod.object({
+  "id": zod.coerce.number(),
+  "rapportId": zod.coerce.number()
+})
+
+export const RegistreerKlantReactieBody = zod.object({
+  "reactie_type": zod.enum(['ontvangst_bevestigd']).describe('Type reactie van de klant.')
+})
+
+export const RegistreerKlantReactieResponse = zod.object({
+  "id": zod.number(),
+  "gebouw_id": zod.number(),
+  "werkbon_id": zod.number().nullish().describe('Optionele koppeling met een onderhoudswerkbon.'),
+  "werkbon_nummer": zod.string().nullish().describe('Werkbonnummer van de gekoppelde werkbon (server-side opgelost).'),
+  "rapport_type": zod.string(),
+  "versie": zod.number(),
+  "status": zod.enum(['concept', 'definitief', 'gearchiveerd']),
+  "opleverstatus": zod.enum(['concept', 'verzonden', 'reactietermijn_loopt', 'verstreken', 'vervangen', 'gearchiveerd']).describe('Afgeleid leveringsstatus — concept\/verzonden\/reactietermijn_loopt\/verstreken\/vervangen\/gearchiveerd'),
+  "vervangen_door_id": zod.number().nullish().describe('ID van het rapport dat dit rapport vervangt (nieuwe versie)'),
+  "titel": zod.string().nullish(),
+  "secties": zod.object({
+
+}).passthrough(),
+  "spot_selectie": zod.object({
+
+}).passthrough(),
+  "bijlagen_ids": zod.array(zod.number()),
+  "tekening_ids": zod.array(zod.number()),
+  "bevroren_op": zod.string().nullish(),
+  "bevroren_document_revisies": zod.object({
+
+}).passthrough().nullish(),
+  "reactietermijn_datum": zod.string().nullish(),
+  "reactietermijn_gestart_op": zod.string().nullish(),
+  "vervangen_door_rapport_id": zod.number().nullish().describe('Verwijst naar de nieuwere rapportversie die dit rapport heeft vervangen.'),
+  "vervangen_op": zod.string().nullish(),
+  "certificaat_geaccordeerd": zod.boolean().optional(),
+  "certificaat_geaccordeerd_op": zod.coerce.date().nullish(),
+  "certificaat_garantie_maanden": zod.number().optional().describe('Garantieduur in maanden (standaard 12).'),
+  "klant_reactie_op": zod.coerce.date().nullish().describe('Tijdstip waarop de klant heeft gereageerd op dit rapport.'),
+  "klant_reactie_type": zod.union([zod.literal('ontvangst_bevestigd'),zod.literal(null)]).nullish().describe('Type klantreactie (ontvangst_bevestigd).'),
   "aangemaakt_door": zod.number().nullish(),
   "aangemaakt_door_naam": zod.string().nullish(),
   "gebouw_naam": zod.string().nullish(),

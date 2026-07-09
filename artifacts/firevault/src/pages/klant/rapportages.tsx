@@ -3,8 +3,11 @@ import { Link } from "wouter";
 import {
   useListGebouwen,
   useListGebouwRapporten,
+  useRegistreerKlantReactie,
+  getListGebouwRapportenQueryKey,
   type Rapport,
 } from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -29,6 +32,7 @@ import {
   RefreshCw,
   Archive,
   ChevronRight,
+  ThumbsUp,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -158,6 +162,60 @@ function DownloadKnop({
   );
 }
 
+function OntvangstBevestigenKnop({
+  gebouwId,
+  rapport,
+}: {
+  gebouwId: number;
+  rapport: Rapport;
+}) {
+  const { toast } = useToast();
+  const qc = useQueryClient();
+  const bevestig = useRegistreerKlantReactie();
+
+  async function handleBevestig() {
+    try {
+      await bevestig.mutateAsync({
+        id: gebouwId,
+        rapportId: rapport.id,
+        data: { reactie_type: "ontvangst_bevestigd" },
+      });
+      qc.invalidateQueries({ queryKey: getListGebouwRapportenQueryKey(gebouwId) });
+      toast({ title: "Ontvangst bevestigd", description: "Uw bevestiging is geregistreerd." });
+    } catch {
+      toast({ title: "Bevestigen mislukt", variant: "destructive" });
+    }
+  }
+
+  if (rapport.klant_reactie_op) {
+    return (
+      <div className="flex items-center gap-1.5 text-xs text-green-700 font-medium mt-1">
+        <CheckCircle2 className="h-3.5 w-3.5" />
+        Ontvangst bevestigd op {new Date(rapport.klant_reactie_op).toLocaleDateString("nl-NL", { day: "numeric", month: "short", year: "numeric" })}
+      </div>
+    );
+  }
+
+  if (rapport.status !== "definitief") return null;
+
+  return (
+    <Button
+      variant="default"
+      size="sm"
+      className="h-8 text-xs gap-1"
+      onClick={handleBevestig}
+      disabled={bevestig.isPending}
+    >
+      {bevestig.isPending ? (
+        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+      ) : (
+        <ThumbsUp className="h-3.5 w-3.5" />
+      )}
+      Ontvangst bevestigen
+    </Button>
+  );
+}
+
 function GebouwRapportenBlok({
   gebouwId,
   gebouwNaam,
@@ -243,7 +301,7 @@ function GebouwRapportenBlok({
                   )}
                 </div>
 
-                <div className="flex items-center gap-2 mt-2">
+                <div className="flex items-center gap-2 mt-2 flex-wrap">
                   <Link href={`/gebouwen/${gebouwId}/print?rapport_id=${r.id}`}>
                     <Button variant="outline" size="sm" className="h-8 text-xs gap-1">
                       <Eye className="h-3.5 w-3.5" />
@@ -257,6 +315,7 @@ function GebouwRapportenBlok({
                       titel={veiligeTitel}
                     />
                   )}
+                  <OntvangstBevestigenKnop gebouwId={gebouwId} rapport={r} />
                 </div>
               </div>
             </div>

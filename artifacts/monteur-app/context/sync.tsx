@@ -417,6 +417,53 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
           break;
         }
 
+        case "create_melding": {
+          // 1. Upload eventuele lokale foto-URI's (bij storing/schade die offline aangemeld waren)
+          const geuploadePaden: string[] = [];
+          for (const lokaalPad of item.lokale_foto_paden) {
+            const fileInfo = await FileSystem.getInfoAsync(lokaalPad);
+            if (!fileInfo.exists) continue;
+
+            const naam = lokaalPad.split("/").pop() ?? `melding_foto_${Date.now()}.jpg`;
+            const urlResp = await fetch(`${basis}/api/storage/uploads/request-url`, {
+              method: "POST",
+              headers,
+              body: JSON.stringify({
+                name: naam,
+                size: fileInfo.size ?? 1,
+                contentType: "image/jpeg",
+                bestand_type: "foto",
+              }),
+            });
+            if (!urlResp.ok) throw new Error(`Upload-URL HTTP ${urlResp.status}`);
+            const { uploadURL, objectPath } = (await urlResp.json()) as {
+              uploadURL: string;
+              objectPath: string;
+            };
+            const uploadResult = await FileSystem.uploadAsync(lokaalPad, uploadURL, {
+              httpMethod: "PUT",
+              headers: { "Content-Type": "image/jpeg" },
+            });
+            if (uploadResult.status >= 300) throw new Error(`Foto-upload HTTP ${uploadResult.status}`);
+            geuploadePaden.push(objectPath);
+          }
+
+          // 2. Combineer pre-geüploade paden (kwartaalcontrole) met vers geüploade paden
+          const alleFotoPaden = [
+            ...(item.payload.foto_paden ?? []),
+            ...geuploadePaden,
+          ];
+
+          // 3. POST melding aanmaken
+          const r = await fetch(`${basis}/api/wagenpark/meldingen`, {
+            method: "POST",
+            headers,
+            body: JSON.stringify({ ...item.payload, foto_paden: alleFotoPaden }),
+          });
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          break;
+        }
+
         default:
           // Onbekend type — verwijder uit queue zodat het niet eindeloos retried
           break;
