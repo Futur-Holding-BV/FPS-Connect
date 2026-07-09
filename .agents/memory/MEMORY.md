@@ -105,3 +105,4 @@
 - [pdf-parse v2 API](pdf-parse-v2.md) — pdf-parse >=2.x heeft alleen PDFParse-class (geen default-functie); alle PDF-extractie via lib/pdfTekst.ts, @types/pdf-parse nooit herinstalleren.
 - [GitHub push-synchronisatie](github-push-sync.md) — verlopen token via integratie vernieuwen (GIT_ASKPASS); divergente origin-commits eerst op tree-identiteit checken → merge i.p.v. force-push.
 - [Bewijs vs. inferentie](bewijs-vs-inferentie.md) — stilte in logs/tabellen is pas bewijs ná positieve kanaalcontrole + dekkingscheck; volledige regels in docs/diagnose-methodologie.md.
+- [Productie-VPS SSH-toegang](prod-vps-toegang.md) — deploy gepauzeerd: geen SSH-toegang; TransIP-paneelsleutels gelden alleen bij herinstallatie, console verhaspelt plakwerk, secret-saves belandden elders.

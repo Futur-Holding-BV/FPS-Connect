@@ -24,10 +24,6 @@ args = "e2e-menu"
 task = "workflow.run"
 args = "e2e-web"
 
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "deploy-sleutel"
-
 [[workflows.workflow]]
 name = "e2e-menu"
 author = "agent"
@@ -49,19 +45,6 @@ args = "pnpm --filter @workspace/scripts run e2e-web-ci"
 
 [workflows.workflow.metadata]
 isValidation = true
-
-[[workflows.workflow]]
-name = "deploy-sleutel"
-author = "agent"
-
-[workflows.workflow.metadata]
-outputType = "console"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = """
-sh -c 'umask 077; printf \"%s
-\" \"$PROD_SSH_KEY\" > /tmp/prod_deploy_key && echo \"sleutel: $(wc -c < /tmp/prod_deploy_key) bytes | test: $DEPLOY_TEST_SYNC\"'"""
 
 [agent]
 stack = "PNPM_WORKSPACE"
