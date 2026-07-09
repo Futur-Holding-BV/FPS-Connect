@@ -4,6 +4,25 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-09 — Productiegereed maken + GitHub-synchronisatie (drift-fixes)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (alleen additieve DB-kolommen en een .dockerignore-regel overgenomen van productie)
+
+**DB-drift volledig hersteld (dev):** na de merges van de afgelopen taken liep de dev-database achter op het Drizzle-schema (drizzle push blijft hangen op de interactieve prompt). Een volledige audit (alle 256 schema-tabellen vergeleken met `information_schema`) vond 7 driftpunten, alle additief gedicht via directe DDL met de schema-defaults en foreign keys:
+- `verlofsoorten`: kolommen `hoofdcategorie` + `is_tijd_voor_tijd` (veroorzaakte 500 op `GET /api/mijn/verlofsoorten`);
+- `medewerkers`: kolommen `verjaardag_zichtbaar` (veroorzaakte 500 op `GET /api/moments/vandaag`) + `leidinggevende_id`;
+- `functies`: kolom `minimale_bezetting`;
+- `wagenpark_meldingen`: 10 kolommen (schade/storing/AI-uitkomsten/opvolging);
+- ontbrekende tabellen `wagenpark_kwartaalcontrole`, `push_tokens` en `pim_foto_analyses` aangemaakt.
+
+Eindcontrole: audit opnieuw gedraaid — 256 tabellen, **geen drift**.
+
+**Api-server hersteld:** de workflow faalde op `EADDRINUSE :8080` doordat een losgeraakte api-server van een e2e-run de poort bezet hield; na het vrijkomen van de poort herstart — healthz 200.
+
+**GitHub-synchronisatie voorbereid:** origin/main en lokaal zijn gedivergeerd sinds commit `a0f4768` (lokaal 10 commits: increment 2, Task #480 e.a.; GitHub 11 commits: Docker/release-fixes die tijdens de productie-uitrol direct op GitHub zijn gezet). Inhoudelijke vergelijking: 5 van de 6 remote-gewijzigde bestanden zijn byte-identiek aan lokaal; alleen `.dockerignore` verschilde (productie-fix `scripts/*` + `!scripts/package.json` voor Dockerfile.caddy) — die fix is nu lokaal overgenomen, zodat de merge conflictvrij is. Push verloopt via een aparte achtergrondtaak (git-operaties met schrijfacties zijn in deze omgeving geblokkeerd); nooit force-push.
+
+**Kwaliteitscontrole:** volledige kwaliteitscheck groen — 0 kritiek, 0 hoog; stale lib-declaraties opgelost via `typecheck:libs`. Resterende middel-punten zijn bekend en vooraf bestaand (2 niet-patchbare npm-advisories, verwachte pages-directories van het PIM/inkoop-spoor).
+
 ## 2026-07-09 — Meerdere rollen per gebruiker (increment 2: rollen als bron van waarheid)
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (bestaande gebruikers ongewijzigd via legacy-pad; nieuwe flow end-to-end bewezen)

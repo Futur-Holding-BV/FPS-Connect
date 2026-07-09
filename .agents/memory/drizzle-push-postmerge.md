@@ -55,3 +55,11 @@ After all prompts are resolved, `push` may still print "[✓] Changes applied" o
 **Why:** the `_key`/`_unique` mismatch is the dominant recurring cause of the non-TTY abort; automating the rename removes the whack-a-mole without the dangerous `--force`.
 
 **Still manual:** adding a NEW `.unique()` to an existing, populated column that has *no* constraint yet — reconcile only renames constraints that already exist. That case still needs a dup-check + direct `ALTER TABLE … ADD CONSTRAINT …_unique UNIQUE(...)`. Also watch 63-char identifier truncation on very long/composite unique names: it can leave a residual mismatch (monitor if push prompts again; never `--force`).
+
+## Full drift audit in one pass (beats endpoint whack-a-mole)
+
+Drift rarely comes alone: one 500 usually means several tables/columns are missing after a run of merges. Instead of fixing per failing endpoint, run a one-shot audit: a tsx script in `scripts/src/` that imports `* as schema from "@workspace/db"`, filters `value instanceof PgTable`, reads `getTableConfig(t).columns[].name`, and diffs against `information_schema.columns` (via `db.execute(sql\`...\`)` — plain `pg` is not a scripts dep, and `@workspace/db` does not resolve from the code_execution sandbox).
+
+**Why:** a real session found 6 drifted tables (incl. 3 entirely missing tables) behind a single visible 500; each missing piece 500s a different endpoint at unpredictable times.
+
+**How to apply:** on any "column/relation does not exist" 500, run the audit, apply all missing pieces additively (CREATE TABLE / ALTER ADD COLUMN with schema defaults + FKs), rerun until "GEEN DRIFT", delete the temp script. Note: the audit only checks schema→DB direction; extra DB-only columns are legacy-tolerated here.
