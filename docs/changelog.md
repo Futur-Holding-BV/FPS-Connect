@@ -26,6 +26,22 @@ URL-param support toegevoegd aan `rapporten/index.tsx`:
 - `artifacts/firevault/src/pages/dashboard/beheerder.tsx`
 - `artifacts/firevault/src/pages/rapporten/index.tsx`
 
+## 2026-07-09 — Rapport melding-markering nooit geërfd door nieuwe versie
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+**Wat is gebouwd / hersteld:**
+
+Een nieuwe conceptversie van een rapport (`POST /nieuwe-versie`) erfde al correct geen `reactietermijn_melding_verzond_op` — het veld werd nooit in de insert-waarden opgenomen. Ter hardening en documentatie zijn twee aanvullende maatregelen genomen:
+
+1. **Expliciete null-reset in de definitief-route** (`POST /definitief`): bij het definitief maken van een concept wordt `reactietermijn_melding_verzond_op` nu expliciet op `null` gezet. Dit borgt dat een herstart scenario (bijv. een concept dat ooit tijdelijk een waarde had) de melding-markering nooit onbedoeld kan doorlaten.
+2. **Pure helper-functie + 11 unit-tests**: de insert-logica is geëxtraheerd naar `artifacts/api-server/src/lib/rapport-helpers.ts` (`bouwNieuweVersieWaarden`). Twee tests bevestigen direct dat `reactietermijnMeldingVerzondOp` nooit aanwezig is in de nieuwe versie, ook niet als het bronrapport de kolom gevuld heeft. Aanvullende scenario's dekken versienummer, status en inhoud-continuïteit.
+
+**Technische details:**
+- `artifacts/api-server/src/lib/rapport-helpers.ts` — nieuw bestand met geïsoleerde, unit-testbare helper
+- `artifacts/api-server/src/routes/rapporten.ts` — definitief-route reset nu expliciet `reactietermijnMeldingVerzondOp: null`; nieuwe-versie-route gebruikt de helper
+- `artifacts/api-server/src/__tests__/rapport-melding-reset.test.ts` — 11 tests, alle groen
+
 ## 2026-07-08 — Pre-push typecheck fix: opleverstatus status-strings
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag

@@ -16,6 +16,7 @@ import { requireBevoegdheid, requireBevoegdheidOfKlant } from "../middlewares/au
 import { ObjectStorageService } from "../lib/objectStorage";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
 import { RAPPORT_SAMENVATTING_PROMPT } from "../lib/aiPrompts";
+import { bouwNieuweVersieWaarden } from "../lib/rapport-helpers";
 
 const router = Router();
 
@@ -356,6 +357,9 @@ router.post("/gebouwen/:id/rapporten/:rapportId/definitief", aanmakenRapporten, 
         bevrorenDocumentRevisies: bevrorenRevisies,
         reactietermijnDatum,
         reactietermijnGestarteOp: nu,
+        // Expliciete reset: een herstart-scenario mag nooit een eerder ingevulde
+        // melding-markering doorlaten naar een nieuwe definitieve versie.
+        reactietermijnMeldingVerzondOp: null,
         bijgewerktOp: nu,
       })
       .where(eq(opleverrapportenTable.id, rapportId))
@@ -448,22 +452,11 @@ router.post("/gebouwen/:id/rapporten/:rapportId/nieuwe-versie", aanmakenRapporte
 
     const nu = new Date();
 
-    // Nieuwe conceptversie aanmaken als kopie van het huidige rapport
+    // Nieuwe conceptversie aanmaken als kopie van het huidige rapport.
+    // bouwNieuweVersieWaarden sluit reactietermijn_melding_verzond_op bewust uit.
     const [nieuw] = await db
       .insert(opleverrapportenTable)
-      .values({
-        gebouwId,
-        rapportType: huidig.rapportType,
-        versie: huidig.versie + 1,
-        status: "concept",
-        titel: huidig.titel,
-        secties: (huidig.secties ?? {}) as Record<string, unknown>,
-        spotSelectie: (huidig.spotSelectie ?? {}) as Record<string, unknown>,
-        bijlagenIds: huidig.bijlagenIds ?? [],
-        tekeningIds: huidig.tekeningIds ?? [],
-        aangemaaktDoor: userId(req),
-        bijgewerktOp: nu,
-      })
+      .values(bouwNieuweVersieWaarden(huidig, userId(req), nu))
       .returning();
 
     // Oud rapport markeren als vervangen
