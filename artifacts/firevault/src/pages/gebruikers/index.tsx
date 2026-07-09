@@ -481,6 +481,7 @@ export default function Gebruikers() {
           functietitels:    bewerkForm.functietitels,
           telefoon:         bewerkForm.telefoon.trim()    || undefined,
           bedrijf:          bewerkForm.bedrijf.trim()     || undefined,
+          wachtwoord:       bewerkForm.wachtwoord.trim()  || undefined,
           actief:           bewerkForm.actief,
           avatar_url:       bewerkForm.avatar_url         || undefined,
           bedrijfslogo_url: bewerkForm.bedrijfslogo_url   || undefined,

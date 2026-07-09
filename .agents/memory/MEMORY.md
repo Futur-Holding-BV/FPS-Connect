@@ -100,3 +100,4 @@
 - [Document Intelligence engine](document-intelligence-engine.md) — één staged classificatiemotor (bewijsketen per stap) voor Inbox+Slim Upload; nieuwe documenttypes altijd in documentIntelligence.ts, nooit per-route.
 - [Reactietermijn-statusmachine patroon](reactietermijn-statusmachine.md) — afgeleide status (bv. "termijn verstreken") berekenen bij lezen uit status+datum, geen achtergrondworker; alleen echte state-transities (vervangen) los opslaan.
 - [runTest infra-failure diagnosis](runtest-infra-failure-diagnosis.md) — if runTest fails every attempt with "Maximum iterations", check e2e-* validation commands to see if Playwright itself still works; if so, fall back to curl/API-level verification.
+- [Bewijs vs. inferentie](bewijs-vs-inferentie.md) — stilte in logs/tabellen is pas bewijs ná positieve kanaalcontrole + dekkingscheck; volledige regels in docs/diagnose-methodologie.md.

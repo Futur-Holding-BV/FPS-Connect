@@ -4,6 +4,23 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-09 — Bugfix: wachtwoord bij "Gebruiker bewerken" werd stilzwijgend genegeerd + methodologie-review
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+**Wat is hersteld:**
+
+1. De bewerkdialoog in Gebruikersbeheer toonde een wachtwoordveld ("Leeg = ongewijzigd"), maar `verstuurBewerken` stuurde het veld nooit mee in de PATCH-payload. Een door de beheerder ingevuld nieuw wachtwoord werd dus stilzwijgend genegeerd — de oorzaak van het productie-account zonder wachtwoordhash. Fix: één regel in `artifacts/firevault/src/pages/gebruikers/index.tsx` (`wachtwoord: bewerkForm.wachtwoord.trim() || undefined`). Server-side (hashing met bcrypt in de PATCH-handler) en OpenAPI-schema waren al correct.
+2. Regressietest op UI-niveau toegevoegd aan `scripts/e2e/web-wachtwoord-beheer.spec.ts`: login als hoofdbeheerder (TOTP), bewerkdialoog openen, wachtwoord invullen, opslaan; daarna bcrypt-hashwijziging in de database geverifieerd én login met het nieuwe wachtwoord (status `setup_2fa`).
+3. Nieuw referentiedocument `docs/diagnose-methodologie.md`: bewijs versus inferentie bij storingsonderzoek (positieve kanaalcontrole, dekkingsgaten per kanaal, hypothese-gedreven werken), naar aanleiding van de onterecht stellige conclusie "het request heeft productie nooit bereikt" in het eerdere login-onderzoek.
+
+**Verificatie:** typecheck firevault + scripts groen; API-level end-to-end in dev (PATCH → bcrypt-hash `$2b$10$…` gewijzigd in DB → login nieuw wachtwoord 200/`setup_2fa` → oud wachtwoord 401); Playwright-regressietest groen (1 passed, 40s). Productieverificatie vereist herpublicatie (op verzoek nog niet uitgevoerd).
+
+**Bestanden gewijzigd:**
+- `artifacts/firevault/src/pages/gebruikers/index.tsx`
+- `scripts/e2e/web-wachtwoord-beheer.spec.ts`
+- `docs/diagnose-methodologie.md` (nieuw)
+
 ## 2026-07-09 — P2 increment 1: fundament meerdere rollen per gebruiker
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
