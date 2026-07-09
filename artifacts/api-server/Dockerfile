@@ -28,7 +28,8 @@ WORKDIR /workspace
 COPY --from=builder /workspace .
 
 # Maak een standalone deployment met alleen runtime-dependencies
-RUN pnpm --filter @workspace/api-server --prod deploy /deploy/api-server
+# --legacy: pnpm 10 vereist anders inject-workspace-packages=true (ERR_PNPM_DEPLOY_NONINJECTED_WORKSPACE)
+RUN pnpm --filter @workspace/api-server --prod deploy --legacy /deploy/api-server
 
 # ─── Stage 3: Finale image ────────────────────────────────────────────────────
 FROM node:24-alpine
