@@ -350,6 +350,7 @@ import type {
   KbBedrijfsstandaardPatch,
   KbOpdrachtgeverVoorkeur,
   KbOpdrachtgeverVoorkeurInput,
+  KlantReactieInput,
   LaadBrandstofImport200,
   Label,
   LabelDocumentenInput,
@@ -4628,6 +4629,79 @@ export const useAccordeerCertificaat = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getAccordeerCertificaatMutationOptions(options));
+    }
+
+export const getRegistreerKlantReactieUrl = (id: number,
+    rapportId: number,) => {
+
+
+
+
+  return `/api/gebouwen/${id}/rapporten/${rapportId}/klant-reactie`
+}
+
+/**
+ * @summary Klant bevestigt ontvangst van een definitief rapport
+ */
+export const registreerKlantReactie = async (id: number,
+    rapportId: number,
+    klantReactieInput: KlantReactieInput, options?: RequestInit): Promise<Rapport> => {
+
+  return customFetch<Rapport>(getRegistreerKlantReactieUrl(id,rapportId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(klantReactieInput)
+  }
+);}
+
+
+
+
+export const getRegistreerKlantReactieMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof registreerKlantReactie>>, TError,{id: number;rapportId: number;data: BodyType<KlantReactieInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof registreerKlantReactie>>, TError,{id: number;rapportId: number;data: BodyType<KlantReactieInput>}, TContext> => {
+
+const mutationKey = ['registreerKlantReactie'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof registreerKlantReactie>>, {id: number;rapportId: number;data: BodyType<KlantReactieInput>}> = (props) => {
+          const {id,rapportId,data} = props ?? {};
+
+          return  registreerKlantReactie(id,rapportId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RegistreerKlantReactieMutationResult = NonNullable<Awaited<ReturnType<typeof registreerKlantReactie>>>
+    export type RegistreerKlantReactieMutationBody = BodyType<KlantReactieInput>
+    export type RegistreerKlantReactieMutationError = ErrorType<void>
+
+    /**
+ * @summary Klant bevestigt ontvangst van een definitief rapport
+ */
+export const useRegistreerKlantReactie = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof registreerKlantReactie>>, TError,{id: number;rapportId: number;data: BodyType<KlantReactieInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof registreerKlantReactie>>,
+        TError,
+        {id: number;rapportId: number;data: BodyType<KlantReactieInput>},
+        TContext
+      > => {
+      return useMutation(getRegistreerKlantReactieMutationOptions(options));
     }
 
 export const getGetOpleverrapportBijlagenbundelUrl = (id: number,

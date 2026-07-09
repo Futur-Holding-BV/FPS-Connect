@@ -5,8 +5,11 @@ Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
 ## 2026-07-09 — Verlopen reactietermijnen tegel op operationeel dashboard
+## 2026-07-09 — Klant kan ontvangst bevestigen van een definitief rapport
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+**Wat is gebouwd:**
 
 **Wat is gebouwd:**
 
@@ -41,6 +44,14 @@ Een nieuwe conceptversie van een rapport (`POST /nieuwe-versie`) erfde al correc
 - `artifacts/api-server/src/lib/rapport-helpers.ts` — nieuw bestand met geïsoleerde, unit-testbare helper
 - `artifacts/api-server/src/routes/rapporten.ts` — definitief-route reset nu expliciet `reactietermijnMeldingVerzondOp: null`; nieuwe-versie-route gebruikt de helper
 - `artifacts/api-server/src/__tests__/rapport-melding-reset.test.ts` — 11 tests, alle groen
+
+Klanten kunnen nu in FPS One (klantportaal `/klant/rapportages`) op "Ontvangst bevestigen" klikken bij een definitief rapport. De bevestiging wordt opgeslagen in de database en is direct zichtbaar voor interne gebruikers in de gebouwkaart-rapporten-tab.
+
+- DB: twee nieuwe kolommen op `opleverrapporten`: `klant_reactie_op` (TIMESTAMPTZ) en `klant_reactie_type` (TEXT). Toegevoegd via directe ALTER TABLE (additief, geen drizzle push vereist).
+- OpenAPI: `Rapport`-schema uitgebreid met `klant_reactie_op` en `klant_reactie_type`; nieuw endpoint `POST /gebouwen/{id}/rapporten/{rapportId}/klant-reactie` + `KlantReactieInput` schema.
+- API server (`rapporten.ts`): nieuw route-handler. Alleen op definitieve rapporten; eenmalig (409 bij tweede poging); klant en interne gebruikers mogen beide bevestigen. `mapRapport` geeft beide velden mee.
+- Frontend klant (`klant/rapportages.tsx`): nieuwe `OntvangstBevestigenKnop`-component — toont knop bij definitieve rapporten zonder reactie; toont groene bevestigingsregel daarna.
+- Frontend intern (`gebouwen/gebouw-rapporten.tsx`): toont "Klant bevestigd ontvangst op [datum]" in groen bij rapporten met een klantreactie.
 
 ## 2026-07-08 — Pre-push typecheck fix: opleverstatus status-strings
 

@@ -562,6 +562,12 @@ export default function RapportenPagina() {
                               Verstreken {new Date(r.reactietermijn_datum).toLocaleDateString("nl-NL", { day: "numeric", month: "short", year: "numeric" })}
                             </span>
                           )}
+                          {r.klant_reactie_op && (
+                            <span className="flex items-center gap-1 text-green-700 font-medium">
+                              <CheckCircle2 className="h-3 w-3" />
+                              Klant bevestigd {new Date(r.klant_reactie_op).toLocaleDateString("nl-NL", { day: "numeric", month: "short", year: "numeric" })}
+                            </span>
+                          )}
                           {isVervangen && r.vervangen_door_id && (
                             <span className="text-neutral-500">
                               Vervangen door v{
