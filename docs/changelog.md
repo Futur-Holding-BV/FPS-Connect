@@ -4,6 +4,33 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-09 — Pre-Publish Validatie: 10 kritieke identiteitsflows aantoonbaar groen
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** geen (uitsluitend validatie + testscript; geen productiewijziging)
+
+**Wat is gevalideerd (dev-omgeving, alle 10 stappen PASS in één run):**
+
+1. Gebruiker aanmaken — 201, bcrypt-hash in DB verifieert tegen het opgegeven wachtwoord.
+2. Gebruiker bewerken zonder wachtwoord — 200, wachtwoordhash byte-voor-byte ongewijzigd (regressiecontrole op de eerder herstelde bug).
+3. Wachtwoord wijzigen via Bewerken — 200, hash gewijzigd, oud wachtwoord ongeldig.
+4. Wachtwoord-resetflow — beide paden: admin-reset met tijdelijk wachtwoord (moet_wachtwoord_wijzigen=true, login werkt) én publieke resetlink (token aangemaakt, eenmalig gemarkeerd, login met nieuw wachtwoord werkt).
+5. Uitnodigingsflow — uitnodigingsmail écht verzonden via Microsoft Graph (mail_logboek: verzonden; plus-adressering naar de eigen gedeelde postbus, dus geen bounce), token geverifieerd, geactiveerd met wachtwoord+taal, 2FA ingericht, status geaccepteerd.
+6. Weblogin — wachtwoordstap + TOTP-inrichting, volledige sessie.
+7. GET /auth/me — 200 met juiste id/e-mail/rol/bevoegdheden.
+8. Rollen laden — hoofdbeheerder krijgt 200 op GET /gebruikers, gebruiker met lege matrix 403.
+9. Uitloggen — 204, sessie vernietigd, /auth/me daarna 401.
+10. Herlogin met gewijzigd wachtwoord — oud wachtwoord 401, nieuw wachtwoord + TOTP 200.
+
+**Technische details:**
+- Nieuw herhaalbaar script `scripts/src/pre-publish-validatie.ts` (`pnpm --filter @workspace/scripts run pre-publish-validatie`): draait tegen `https://$REPLIT_DEV_DOMAIN` met cookie-jar-sessies, verifieert per stap ook rechtstreeks in de database (hashes, tokens, statussen) en stopt met exitcode 1 bij de eerste afwijking.
+- Testgebruikers worden na afloop gedeactiveerd + gearchiveerd; het vaste e2e-doelaccount wordt hersteld.
+- Vooraf de api-server herstarten reset de in-memory login-rate-limiter (10/15 min per IP); het script blijft binnen dat budget (~8 rate-gelimiteerde calls).
+- Seeder `scripts/src/e2e-wachtwoord-testaccounts.ts` heeft nu een `weigerBuitenDev()`-guard (weigert bij `REPLIT_DEPLOYMENT` of `NODE_ENV=production`); het validatiescript ruimt testgebruikers ook op bij een gefaalde run (failure-path cleanup).
+
+**Aansluitende buildfixes (repo weer volledig typecheck-groen):**
+- `artifacts/api-server/src/routes/documenten.ts` en `offertes.ts`: drie reeds bestaande TS7030-fouten ("not all code paths return a value") hersteld zonder gedragswijziging.
+- `artifacts/monteur-app/app/pbm.tsx`: gebruikte een niet-bestaand `apiUrl` uit `useAuth` plus cookie-auth (`credentials: "include"`); omgezet naar het vaste mobiele patroon — bearer-token uit `useAuth` + `https://EXPO_PUBLIC_DOMAIN/api/...`. Zonder deze fix werkten de PBM-lijst en foto-inspectie op mobiel überhaupt niet (401, geen sessiecookies in de app).
+
 ## 2026-07-09 — Kwaliteits-, Validatie- en Uitvoeringskader verankerd als verplicht referentiedocument
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** geen (uitsluitend documentatie)

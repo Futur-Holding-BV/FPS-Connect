@@ -391,7 +391,7 @@ router.post("/documenten", requireBevoegdheid("bibliotheek", 3), async (req, res
         gebruikerNaam: null,
         uploadBron: "document",
       })
-        .then((scan) => { if (scan.dbId != null) return koppelDocumentAanScan(scan.dbId, d.id); })
+        .then((scan) => (scan.dbId != null ? koppelDocumentAanScan(scan.dbId, d.id) : undefined))
         .catch(() => {});
     }
 
@@ -557,7 +557,7 @@ router.post("/documenten/:id/revisies", requireBevoegdheid("bibliotheek", 3), as
         gebruikerNaam: null,
         uploadBron: "document",
       })
-        .then((scan) => { if (scan.dbId != null) return koppelDocumentAanScan(scan.dbId, nieuw.id); })
+        .then((scan) => (scan.dbId != null ? koppelDocumentAanScan(scan.dbId, nieuw.id) : undefined))
         .catch(() => {});
     }
 

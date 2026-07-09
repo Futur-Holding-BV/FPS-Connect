@@ -691,17 +691,17 @@ router.delete("/offertes/:id", schrijven, async (req, res): Promise<void> => {
 // Rendert de bestaande DDS-printpagina (/offertes/:id/print) via een headless
 // browser en retourneert de uitvoer als binary PDF. Hierdoor worden de actieve
 // Document Studio-instellingen en de volledige DDS-layout exact nagebouwd.
-router.get("/offertes/:id/pdf", lezen, async (req, res) => {
+router.get("/offertes/:id/pdf", lezen, async (req, res): Promise<void> => {
   try {
     const offerteId = parseId(req.params.id);
     const [offerte] = await db
       .select({ id: offertesTable.id, offertenummer: offertesTable.offertenummer })
       .from(offertesTable)
       .where(eq(offertesTable.id, offerteId));
-    if (!offerte) return res.status(404).json({ error: "Offerte niet gevonden" });
+    if (!offerte) return void res.status(404).json({ error: "Offerte niet gevonden" });
 
     if (!CHROMIUM_PAD) {
-      return res.status(503).json({ error: "PDF-generatie niet beschikbaar in deze omgeving (chromium niet gevonden)" });
+      return void res.status(503).json({ error: "PDF-generatie niet beschikbaar in deze omgeving (chromium niet gevonden)" });
     }
 
     const puppeteer = await import("puppeteer-core");
@@ -734,7 +734,7 @@ router.get("/offertes/:id/pdf", lezen, async (req, res) => {
         null;
       if (!vertrouwdDomain) {
         await browser.close();
-        return res.status(503).json({ error: "PDF-generatie niet geconfigureerd (REPLIT_DEV_DOMAIN niet ingesteld)" });
+        return void res.status(503).json({ error: "PDF-generatie niet geconfigureerd (REPLIT_DEV_DOMAIN niet ingesteld)" });
       }
       const protocol = vertrouwdDomain.includes("localhost") ? "http" : "https";
       const printUrl = `${protocol}://${vertrouwdDomain}/offertes/${offerteId}/print`;

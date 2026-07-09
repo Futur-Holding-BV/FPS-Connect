@@ -24,6 +24,7 @@ Bestaande termen (klantomgeving, klantenportaal, gebruikersomgeving, appnaam) wo
 - `pnpm --filter @workspace/db run push` — DB schema pushen (dev only)
 - `pnpm --filter @workspace/scripts run security-scan` — beveiligingsscan (pnpm audit + verouderde pakketten), rapporteert alleen, wijzigt niets
 - `pnpm --filter @workspace/scripts run kwaliteitscheck` — volledige kwaliteitscontrole (typecheck alle packages, build, OpenAPI-drift, DB schema, architectuur, security); rapporteert alleen, wijzigt niets. Zie [docs/kwaliteitscontrole.md](docs/kwaliteitscontrole.md).
+- `pnpm --filter @workspace/scripts run pre-publish-validatie` — 10 kritieke identiteitsflows end-to-end valideren tegen dev (aanmaken/bewerken/wachtwoord/reset/uitnodiging/login/me/rollen/logout/herlogin), met DB-bewijsvoering; api-server vooraf herstarten i.v.m. login-rate-limiter.
 - Vereiste env: `DATABASE_URL` — Postgres connectiestring
 
 ## Stack

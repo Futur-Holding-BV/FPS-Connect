@@ -50,6 +50,8 @@ const SLIJTAGE_KLEUR: Record<string, string> = {
   ernstig: "#dc2626",
 };
 
+const DOMEIN = process.env.EXPO_PUBLIC_DOMAIN ?? "";
+
 function datumLabel(d: string | null | undefined) {
   if (!d) return "—";
   return new Date(d).toLocaleDateString("nl-NL", { day: "numeric", month: "short", year: "numeric" });
@@ -63,7 +65,7 @@ function isVervangingBinnenkort(d: string | null | undefined) {
 // ── Hoofd-scherm ─────────────────────────────────────────────────────────────
 
 export default function PbmScherm() {
-  const { apiUrl } = useAuth();
+  const { token } = useAuth();
   const { uploadFoto } = useFotoUpload();
 
   const [items, setItems] = useState<PbmItem[]>([]);
@@ -79,7 +81,9 @@ export default function PbmScherm() {
   async function laadItems() {
     setLaden(true);
     try {
-      const r = await fetch(`${apiUrl}/pbm/items/eigen`, { credentials: "include" });
+      const r = await fetch(`https://${DOMEIN}/api/pbm/items/eigen`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       if (r.ok) setItems(await r.json() as PbmItem[]);
     } catch { /* stil falen */ }
     setLaden(false);
@@ -89,7 +93,7 @@ export default function PbmScherm() {
     return (
       <PbmItemDetail
         item={geselecteerd}
-        apiUrl={apiUrl}
+        token={token}
         uploadFoto={uploadFoto}
         onTerug={() => { setGeselecteerd(null); void laadItems(); }}
       />
@@ -148,12 +152,12 @@ export default function PbmScherm() {
 
 interface DetailProps {
   item: PbmItem;
-  apiUrl: string;
+  token: string | null;
   uploadFoto: (uri: string) => Promise<string | null>;
   onTerug: () => void;
 }
 
-function PbmItemDetail({ item, apiUrl, uploadFoto, onTerug }: DetailProps) {
+function PbmItemDetail({ item, token, uploadFoto, onTerug }: DetailProps) {
   const [fotoUris, setFotoUris] = useState<string[]>([]);
   const [ai, setAi] = useState<AiResultaat | null>(null);
   const [bezig, setBezig] = useState(false);
@@ -192,10 +196,9 @@ function PbmItemDetail({ item, apiUrl, uploadFoto, onTerug }: DetailProps) {
       }
       if (!paden.length) throw new Error("Upload mislukt");
 
-      const r = await fetch(`${apiUrl}/pbm/items/${item.id}/foto-inspectie`, {
+      const r = await fetch(`https://${DOMEIN}/api/pbm/items/${item.id}/foto-inspectie`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ fotoPaden: paden, pbmType: item.type }),
       });
       if (!r.ok) throw new Error("AI-inspectie mislukt");

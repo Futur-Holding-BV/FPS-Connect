@@ -69,7 +69,24 @@ async function maakOfUpdate(
   return nieuw.id;
 }
 
+// Harde guard: deze seeder maakt/reset een actieve hoofdbeheerder met in de
+// repo bekende inloggegevens en TOTP-secret. Dat mag UITSLUITEND op een
+// dev-database gebeuren — nooit in een productie-/deploy-omgeving.
+function weigerBuitenDev(): void {
+  if (process.env.REPLIT_DEPLOYMENT) {
+    throw new Error(
+      "GEWEIGERD: e2e-testaccounts mogen niet in een deployment (productie) worden aangemaakt.",
+    );
+  }
+  if (process.env.NODE_ENV === "production") {
+    throw new Error(
+      "GEWEIGERD: e2e-testaccounts mogen niet met NODE_ENV=production worden aangemaakt.",
+    );
+  }
+}
+
 export async function setupE2eWachtwoordAccounts(): Promise<{ adminId: number; targetId: number }> {
+  weigerBuitenDev();
   const adminHash = await bcrypt.hash(E2E_WW_ADMIN_WACHTWOORD, 10);
   const targetHash = await bcrypt.hash(E2E_WW_TARGET_WACHTWOORD, 10);
 

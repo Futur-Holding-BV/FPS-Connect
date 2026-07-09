@@ -19,6 +19,7 @@
     "kwaliteitscheck": "tsx ./src/kwaliteitscheck.ts",
     "broncode-export": "tsx ./src/broncode-export.ts",
     "valideer-installatie": "tsx ./src/valideer-installatie.ts",
+    "pre-publish-validatie": "tsx ./src/pre-publish-validatie.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {

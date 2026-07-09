@@ -13,12 +13,13 @@ fail typecheck this way.
 **How to apply:** Don't pass a bare `{ query: { enabled } }`. Either omit options (call the hook only
 when the id is guaranteed, e.g. gate the component mount) or include a `queryKey`.
 
-## api-server has pre-existing TS7030 errors; build ignores them
-`tsconfig.base.json` sets `noImplicitReturns: true`. Many route handlers mix `return res.json(...)`
-with bare `res.json(...)`, triggering TS7030 across ALL route files (even untouched ones). The
-esbuild bundle does NOT enforce this, so the server runs fine. `pnpm run typecheck` will report these.
-**How to apply:** Don't treat these as your regression; don't try to fix them all. Keep new handlers
-consistent (a handler with no early-return branch won't add an error).
+## api-server TS7030 (noImplicitReturns) — since July 2026 fully green; keep it that way
+`tsconfig.base.json` sets `noImplicitReturns: true`. Route handlers that mix `return res.json(...)`
+with bare `res.json(...)` trigger TS7030. The last pre-existing offenders were fixed on 2026-07-09;
+`pnpm --filter @workspace/api-server run typecheck` is now green.
+**How to apply:** new/edited handlers must keep return style consistent (value-return handlers →
+`return res.status(...)...`; void/`Promise<void>` handlers → `res.status(...)...; return;`).
+For `.then(cb)` promise chains, a ternary expression avoids TS7030 where an if-without-else return would trip it.
 
 ## React is 19 → no pnpm overrides for Uppy v5
 Catalog pins `react`/`react-dom` to 19.1.0. The object-storage skill's warning about adding
