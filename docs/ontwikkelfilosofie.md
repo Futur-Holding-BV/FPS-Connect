@@ -2,6 +2,8 @@
 
 Deze ontwikkelfilosofie is leidend voor alle toekomstige werkzaamheden aan FPS Connect.
 
+> **Rolverdeling documenten:** dit document bepaalt *wat we bouwen en waarom*; [`kwaliteitscontrole.md`](kwaliteitscontrole.md) beschrijft het *rapporterende controlescript*; [`kwaliteitskader.md`](kwaliteitskader.md) bepaalt *wanneer een taak gereed is* (Definition of Done, bewijsvoering, business-scenario-validatie). Alle drie zijn verplicht.
+
 ## Hoofddoel
 
 FPS Connect wordt in de eerste plaats gebouwd als een stabiel, betrouwbaar en prettig werkend bedrijfsplatform voor dagelijks gebruik binnen FPS.

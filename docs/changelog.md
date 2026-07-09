@@ -4,6 +4,23 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-09 — Kwaliteits-, Validatie- en Uitvoeringskader verankerd als verplicht referentiedocument
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** geen (uitsluitend documentatie)
+
+**Wat is vastgelegd:**
+
+1. Nieuw verplicht referentiedocument `docs/kwaliteitskader.md`: het door de platformeigenaar vastgestelde Kwaliteits-, Validatie- en Uitvoeringskader, inhoudelijk 1-op-1 overgenomen. Kern: een taak is pas gereed wanneer het volledige bedrijfsproces aantoonbaar correct functioneert — build/typecheck is noodzakelijk maar nooit voldoende. Bevat de vier validatieniveaus (codekwaliteit, architectuur, integratie, business-scenario), verplichte bewijsvoering, root-cause-eerst, regressietesten op eindgebruikersniveau, autonome uitvoering binnen scope, productie-uitrolverbod zonder expliciete goedkeuring en de Definition of Done.
+2. Kruisverwijzingen met heldere rolverdeling: `replit.md` (beknopte pointer naast de ontwikkelfilosofie), `docs/ontwikkelfilosofie.md` (wat we bouwen en waarom) en `docs/kwaliteitscontrole.md` (het rapporterende controlescript) verwijzen elk naar het kader (wanneer een taak gereed is).
+3. Agent-geheugen bijgewerkt zodat toekomstige sessies het kader kennen en toepassen.
+
+**Bestanden gewijzigd:**
+- `docs/kwaliteitskader.md` (nieuw)
+- `replit.md`
+- `docs/ontwikkelfilosofie.md`
+- `docs/kwaliteitscontrole.md`
+- `.agents/memory/MEMORY.md` + `.agents/memory/kwaliteitskader.md` (nieuw)
+
 ## 2026-07-09 — Bugfix: wachtwoord bij "Gebruiker bewerken" werd stilzwijgend genegeerd + methodologie-review
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag

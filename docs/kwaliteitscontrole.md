@@ -2,6 +2,8 @@
 
 > Vastgesteld door de platformeigenaar. Van kracht voor het volledige FPS-platform:
 > FPS Connect, FPS One en alle toekomstige modules.
+>
+> **Rolverdeling documenten:** dit document beschrijft het *rapporterende controlescript* (kwaliteitscheck); [`ontwikkelfilosofie.md`](ontwikkelfilosofie.md) bepaalt *wat we bouwen en waarom*; [`kwaliteitskader.md`](kwaliteitskader.md) bepaalt *wanneer een taak gereed is* (Definition of Done, bewijsvoering, business-scenario-validatie).
 
 ## Hoofddoel
 
