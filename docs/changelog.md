@@ -21,6 +21,12 @@ Voor elke taak drie scores:
 1. `POST /gebruikers` met `profiel_ids: []` viel nog in het legacy-pad en nam de client-matrix over — nu consistent met PATCH: lege rollenset = server-afgeleid "geen toegang" (nep-clientmatrix aantoonbaar genegeerd).
 2. Stille rechten-wipe voorkomen: het bewerkformulier stuurt `profiel_ids` alleen mee als de gebruiker rolgestuurd is (had rollen of er zijn rollen gekozen). Een legacy-gebruiker met handmatige matrix en zonder rollen behoudt zijn rechten bij het bewerken van losse velden (API + DB bewezen). Daarnaast toont het read-only grid bij een rolgestuurde gebruiker nu de uit de rollen afgeleide matrix — precies wat er na opslaan geldt — zodat een handmatige afwijking nooit onzichtbaar verdwijnt.
 
+## 2026-07-09 — Nieuwsbalk in taakbalk twee keer zo snel
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** geen
+
+De nieuwsticker in de taakbalk onderin scrollt nu twee keer zo snel: de animatieduur is gehalveerd (factor 2,5s → 1,25s per nieuwsitem, minimum 15s → 7,5s). De duur schaalt nog steeds mee met het aantal items; de naadloze herhaling (translateX -50%), hover-pauze en de pauzeknop zijn ongewijzigd. Alleen `artifacts/firevault/src/components/nieuws-ticker.tsx` aangepast. Typecheck groen (na regeneratie van stale lib-declaraties via codegen).
+
 ## 2026-07-09 — Onderzoek "Jacqueline kan niet inloggen" (productie) + activatiefix
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** geen (onderzoek read-only op productie; codefix is één gedragscorrectie in de activatieflow, alleen in dev)
