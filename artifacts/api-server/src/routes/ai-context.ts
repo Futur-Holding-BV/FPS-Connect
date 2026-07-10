@@ -5,8 +5,11 @@ import { bouwContextBundel, type ContextEntiteitType } from "../lib/aiContext";
 // ── Live-validatie-endpoint voor de AI Context Service ───────────────────────
 //
 // Handgeschreven beheerdersroute (buiten de OpenAPI-spec, net als ai-log.ts):
-// puur diagnostisch, geen client-hook. Alleen de hoofdbeheerder mag hem
-// aanroepen. Autorisatie van de opgebouwde bundel loopt via `req.permissies` —
+// puur diagnostisch, geen client-hook. Let op: dit bestand mount relatief
+// t.o.v. de "/api"-prefix in app.ts — NIET nogmaals "/api/..." in het pad
+// zetten (dat gaf voorheen een onbereikbare "/api/api/..."-route).
+// Alleen de hoofdbeheerder mag hem aanroepen. Autorisatie van de opgebouwde
+// bundel loopt via `req.permissies` —
 // de effectieve (impersonatie-bewuste) PermissieService die `laadPermissies`
 // globaal zet. Zo kan een hoofdbeheerder via "bekijken als" live controleren
 // dat de bundel voor een beperkte gebruiker correct wordt ingeperkt.
@@ -25,7 +28,7 @@ const GELDIGE_TYPES: ContextEntiteitType[] = [
 ];
 
 router.get(
-  "/api/beheer/ai-context",
+  "/beheer/ai-context",
   requireRol("hoofdbeheerder"),
   async (req, res): Promise<void> => {
     const type = String(req.query.type ?? "") as ContextEntiteitType;

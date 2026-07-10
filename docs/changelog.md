@@ -12,6 +12,21 @@ Voor elke taak drie scores:
 
 **Wat is toegevoegd (`.github/workflows/deploy.yml`):** een post-deploy healthcheck na `up -d`. Een retry-lus (30 pogingen × 5s = ~150s) pollt `GET /api/healthz` binnen de api-container via de al bestaande node-check (poort 8080 is intern, niet op de host gepubliceerd). Daarna wordt de publieke route via caddy gecontroleerd (`curl -fsSk https://localhost/api/healthz`). Faalt een van beide binnen de timeout, dan print de workflow `docker compose ps` + laatste container-logs en faalt de run (`exit 1`), zodat een kapotte release direct zichtbaar faalt in GitHub Actions. De ruime timeout + retries voorkomen valse positieven bij normale opstarttijd.
 
+## 2026-07-10 — AI Context Service aangesloten op spotherkenning (Task #506)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (één AI-functie omgebouwd, bestaand gedrag/response ongewijzigd; overige AI-functies nog ad-hoc)
+
+**Wat gebouwd:** de eerder gebouwde maar ongebruikte AI Context Service (`bouwContextBundel`, §4.1) is nu daadwerkelijk aangesloten op een echte AI-functie: `POST /voorzieningen/ai-spotvoorstel` (spotherkenning) bouwt vóór de AI-aanroep een geautoriseerde contextbundel rond het gebouw, met `req.permissies` (impersonatie-veilig — "bekijken als" werkt automatisch mee). De geserialiseerde `contextBronnen` worden zowel gelogd (`ai_aanroepen.context_json`) als daadwerkelijk in de model-prompt gezet, niet alleen in de log. Terzijde gefixt: `ai-context.ts` (diagnostisch endpoint) had een dubbele `/api`-prefix waardoor het pad nooit bereikbaar was — router mount al onder `/api` in `app.ts`.
+
+**Bewijs (echte flow, geen typecheck-only):** ingelogd als hoofdbeheerder-testaccount (2FA), een echte foto geüpload naar objectstorage, `POST /voorzieningen/ai-spotvoorstel` aangeroepen met gebouw 14 — resultaat 200 met een echt AI-voorstel. `ai_aanroepen`-rij voor die aanroep (`module=spots`, `functie=spot-analyse`) heeft een gevulde `context_json` met de echte gebouwgegevens (naam, adres, stad, type); eerdere/andere AI-aanroepen in dezelfde tabel hebben `context_json: null` ter vergelijking.
+
+**Bestanden gewijzigd:**
+- `artifacts/api-server/src/routes/voorzieningen.ts` — bouwt contextbundel vóór `analyseerSpot`-aanroep
+- `artifacts/api-server/src/services/spot-ai.ts` — `tekstUitContextBronnen()` + injectie in AI-prompt
+- `artifacts/api-server/src/routes/ai-context.ts` — pad-fix (dubbele `/api`-prefix verwijderd)
+
+**Restscope (niet in deze taak):** overige ~12 AI-functies (gebouw-ai, document-ai, opleiding-ai, email-ai, documentIntelligence) draaien nog op hun eigen ad-hoc `LogContext`; `backups.ts` heeft dezelfde dubbele-prefix-bug als `ai-context.ts` had, nog niet gefixt.
+
 ## 2026-07-10 — Slim uploaden jaarrekeningen + Meerjarenoverzicht (Financieel, Task #488)
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (nieuwe, geïsoleerde module; bestaande OHW-jaarrekening en `onderhanden-werk.ts` ongemoeid)

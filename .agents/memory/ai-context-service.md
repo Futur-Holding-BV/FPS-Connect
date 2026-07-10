@@ -5,7 +5,7 @@ description: Centrale contextbundel-motor (architectuur §4.1) — durzame ontwe
 
 # AI Context Service (`lib/aiContext/`)
 
-Stelt automatisch de volledige, geautoriseerde contextbundel samen rond een entiteit zodat een AI-functie nooit alleen het huidige formulier ziet. Los valideerbaar; **nog niet aangesloten op AI-functies**.
+Stelt automatisch de volledige, geautoriseerde contextbundel samen rond een entiteit zodat een AI-functie nooit alleen het huidige formulier ziet. Sinds 10 juli 2026 aangesloten op `analyseerSpot` (spot-ai.ts via `voorzieningen.ts`/`POST /voorzieningen/ai-spotvoorstel`): route bouwt de bundel met `req.permissies` (impersonatie-veilig) vóórdat de AI-aanroep start, en de geserialiseerde `contextBronnen` worden ook echt in de model-prompt gezet (niet alleen gelogd). Bewezen met een echte inlog+upload+aanroep-flow (niet alleen typecheck): `ai_aanroepen.context_json` toont een gevulde bundel voor de betreffende `spots`/`spot-analyse`-rij, terwijl niet-gewrapte AI-calls `context_json: null` hebben.
 
 ## Durzame ontwerpbesluiten (why > wat)
 - **Scoping nooit op rolnaam.** Autorisatie loopt uitsluitend via de bevoegdheden-matrix (`heeftModuleRecht`/`heeftObjectRecht`) + gebouwtoewijzing (`magBijGebouw`), gevat in een `ContextScope`-interface die de bestaande `PermissieService` structureel vervult. **Why:** rolnaam-gating is elders al de bron van bugs; matrix is de enige waarheid en impersonatie ("bekijken als") werkt gratis mee via `req.permissies`.

@@ -199,6 +199,18 @@ async function documentVoorLabel(
   return { id: gekozen.id, naam: gekozen.naam };
 }
 
+function tekstUitContextBronnen(bronnen: LogContext["contextBronnen"]): string | null {
+  if (!bronnen || bronnen.length === 0) return null;
+  const regels = bronnen.map((b) => {
+    const payload = b.payload as Record<string, unknown>;
+    const entiteit = typeof payload.entiteit === "string" ? payload.entiteit : b.type;
+    const zonderEntiteit = { ...payload };
+    delete zonderEntiteit.entiteit;
+    return `- ${entiteit}${b.bronId ? ` (${b.bronId})` : ""}: ${JSON.stringify(zonderEntiteit)}`;
+  });
+  return regels.join("\n");
+}
+
 export async function analyseerSpot(opts: {
   gebouwId: number;
   fotoVoorObjectPath: string | null;
@@ -227,6 +239,7 @@ export async function analyseerSpot(opts: {
       : "(geen applicaties in de catalogus)";
 
   const leersetTekst = await bouwLeersetTekst(opts.gebouwId);
+  const contextTekst = tekstUitContextBronnen(opts.logCtx?.contextBronnen);
 
   const userInhoud: Array<
     | { type: "text"; text: string }
@@ -236,7 +249,8 @@ export async function analyseerSpot(opts: {
       type: "text",
       text:
         `Catalogus met beschikbare applicaties (kies de code exact hieruit):\n${catalogusTekst}` +
-        (leersetTekst ? `\n\n${leersetTekst}` : ""),
+        (leersetTekst ? `\n\n${leersetTekst}` : "") +
+        (contextTekst ? `\n\nAanvullende, geautoriseerde gebouwcontext (automatisch verzameld door de AI Context Service):\n${contextTekst}` : ""),
     },
   ];
   if (voorUrl) {

@@ -23,6 +23,7 @@ import { effectieveContext, toegewezenGebouwIds } from "../utils/rol";
 import { getLabelsVoorVoorziening, syncVoorzieningLabels } from "../lib/classificatie";
 import { logActiviteit } from "../lib/activiteit";
 import { analyseerSpot } from "../services/spot-ai";
+import { bouwContextBundel } from "../lib/aiContext";
 import { triggerNacalculatieHerberekeningVoorGebouw } from "../services/fie-service";
 
 const router = Router();
@@ -356,6 +357,21 @@ router.post("/voorzieningen/ai-spotvoorstel", requireBevoegdheid("voorzieningen"
     if (!(req.permissies!.magBijGebouw(Number(gebouw_id)))) {
       return void res.status(403).json({ error: "Geen toegang tot dit gebouw" });
     }
+    // AI Context Service (architectuur §4.1): bouw de volledige, geautoriseerde
+    // contextbundel rond het gebouw op vóórdat de AI-aanroep plaatsvindt, zodat
+    // de spotherkenning niet uitsluitend op de twee foto's + eigen ad-hoc
+    // leerset draait. Autorisatie loopt via req.permissies (impersonatie-veilig).
+    const contextBundel = await bouwContextBundel({
+      entiteitstype: "gebouw",
+      entiteitId: Number(gebouw_id),
+      scope: req.permissies!,
+      modelSlot: "vision",
+    });
+    // Alleen de aanvullende contextbronnen en vlakke businessvelden overnemen —
+    // module/functie/entiteitstype/entiteitId blijven expliciet "spots"/
+    // "spot-analyse" (bepaald in analyseerSpot zelf), niet "ai-context".
+    const { module: _m, functie: _f, entiteitstype: _e, entiteitId: _i, gebruikerId: _g, ...contextVelden } =
+      contextBundel.geautoriseerd ? contextBundel.logContext : {};
     const voorstel = await analyseerSpot({
       gebouwId: Number(gebouw_id),
       fotoVoorObjectPath: foto_voor_url ? String(foto_voor_url) : null,
@@ -365,6 +381,7 @@ router.post("/voorzieningen/ai-spotvoorstel", requireBevoegdheid("voorzieningen"
         // voorziening_id is niet beschikbaar: de AI-analyse loopt vóór het aanmaken
         // van de voorziening. Nadat de monteur het voorstel bevestigt en POST /voorzieningen
         // aanroept, is het voorziening-id pas bekend.
+        ...contextVelden,
       },
     });
     return void res.json(voorstel);
