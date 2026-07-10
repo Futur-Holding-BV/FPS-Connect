@@ -28,6 +28,14 @@ up -d → healthz-check. De ongetrackte productie-envfile op de server moet blij
 - `/tmp` op Replit is vluchtig: tijdelijke sleutelbestanden na omgevingsherstart
   opnieuw aanmaken.
 
+**GitHub-deploy vs. werkelijke servermodel (bevestigd, mismatch):**
+- `.github/workflows/deploy.yml` bouwt images in Actions → pusht naar ghcr → SSH `docker compose pull` + `up`. De server draait echter het lokale-build-model: `docker compose ls` wijst `/opt/fps-one/deploy/docker-compose.production.yml` aan (project `deploy`, containers `deploy-api`/`deploy-caddy` = lokaal gebouwd, GEEN registry-images). `pull` haalt dus niets nuttigs; `up` zonder `--build` zet geen nieuwe code live.
+- Bovendien wees het deploy-script naar `/opt/fps-connect` (bestaat niet); echte pad is `/opt/fps-one/deploy`. Er staan twee compose-varianten in de repo: root `docker-compose.production.yml` = registry-model (ghcr images + minio/web), `deploy/docker-compose.production.yml` = lokaal-build-model (draait op de server). Aligneren = architectuurkeuze (vraag de gebruiker); de bewezen volgorde blijft git-pull+build.
+
+**Secret-staleness bij lopende agent-processen:**
+- Een net bijgewerkte Replit-secret bereikt NIET de al draaiende bash-tool of code_execution-sandbox (die lezen een stale/lege env). Lees zo'n secret via de validation-runner (start een vers proces) i.p.v. direct in bash.
+- Een meerregelige PEM/OpenSSH private key die in een secret-veld wordt geplakt verliest vaak zijn newlines (wordt één spatie-gescheiden regel) → OpenSSH faalt met `error in libcrypto` / `Permission denied`. Reconstrueer: strip alle whitespace uit de base64-body tussen de BEGIN/END-headers en herwrap op 70 tekens. Sleutelmateriaal nooit printen.
+
 **Structurele productie-config-gaten:**
 - Productie mist mailvariabelen (Azure Graph + afzender/postbus) → uitnodigings-
   en wachtwoord-vergeten-mails komen daar nooit aan; bij "gebruiker kan niet

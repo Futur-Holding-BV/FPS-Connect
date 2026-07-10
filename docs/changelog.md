@@ -36,6 +36,26 @@ Voor elke taak drie scores:
 
 **Verificatie:** documentatie-only taak; geen build/typecheck relevant (geen code gewijzigd). De `api-server`-workflow stond al op failed vóór deze taak en is niet geraakt (alleen een Markdown-bestand toegevoegd).
 
+## 2026-07-10 — Automatische productie-deploy vanaf GitHub werkend gemaakt (Task #483)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (alleen workflow-configuratie; geen productie-deploy uitgevoerd)
+
+**Aanleiding:** Task #482 stelde vast dat de automatische deploy faalde op ontbrekende GitHub Actions-secrets ("error: missing server host") en dat `.github/workflows/deploy.yml` niet paste bij hoe de VPS werkelijk deployt (verwees naar het niet-bestaande `/opt/fps-connect` en gebruikte een ghcr build-push-pull-model, terwijl de live stack lokaal bouwt vanuit `/opt/fps-one/deploy`).
+
+**Wat gedaan:**
+
+1. **GitHub Actions-secrets gezet** in `vinkrene-jpg/fps-one`: `PROD_SSH_HOST`, `PROD_SSH_USER`, `PROD_SSH_KEY`, `PROD_SSH_PORT`. De aangeleverde privésleutel was misvormd (regeleinden platgeslagen tot spaties → OpenSSH `error in libcrypto`); gecorrigeerd door de base64-body opnieuw op 70 tekens te wrappen en de herstelde sleutel als secret op te slaan. SSH-authenticatie read-only geverifieerd (logt in als `rene`, docker-groep, passwordless sudo).
+
+2. **`deploy.yml` herschreven** naar het bewezen servermodel (na expliciete keuze van de gebruiker): SSH naar de VPS → `cd /opt/fps-one/deploy` → `git pull --ff-only origin main` → images **lokaal** bouwen → `migrate` → `up -d`. Verwijderd: het ghcr build-push-pull-model, alle `/opt/fps-connect`-verwijzingen en de handmatige goedkeuringsstap (`environment: production`). Deploy draait nu automatisch bij elke push naar `main` (plus handmatig via `workflow_dispatch`); bij elke fout stopt de deploy onmiddellijk (`set -euo pipefail`).
+
+**Verificatie (read-only, geen deploy uitgevoerd):**
+- server kan non-interactief van GitHub pullen (`git fetch` OK; remote `git@github.com:vinkrene-jpg/fps-one.git`);
+- server staat 12 commits achter op `origin/main`, 0 vooruit, schone werkboom → `git pull --ff-only` fast-forward't schoon;
+- `docker compose config` slaagt mét `--env-file .env.production` en waarschuwt zonder → `--env-file .env.production` is vereist (interpoleert `${DATABASE_URL}`/`${POSTGRES_PASSWORD}`) en is in alle compose-commando's opgenomen;
+- workflow-YAML gevalideerd (js-yaml parse): geldig, geen registry/ghcr-logica, geen goedkeuringspoort.
+
+**Belangrijk voor de gebruiker:** zodra deze wijziging in `main` wordt samengevoegd, triggert de push de nieuwe workflow en draait de **eerste automatische productie-deploy** (haalt de 12 achterstallige commits + deze wijziging op en bouwt lokaal). Dit is exact de gevraagde automatisering. Er is door de agent bewust géén deploy handmatig gestart (kwaliteitskader: nooit zelf naar productie zonder expliciete opdracht).
+
 ## 2026-07-09 — GitHub-push voltooid: main gesynchroniseerd, CI groen (Task #482)
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (gewone merge, geen force-push; boom byte-identiek aan lokale werkboom)
