@@ -61,7 +61,48 @@ jobs:
             # 4. Stack starten/bijwerken (langlopende services)
             $COMPOSE up -d --remove-orphans db api caddy
 
-            # 5. Opschonen van oude images (ouder dan 72u)
+            # 5. Post-deploy healthcheck: bevestig dat de release ook echt gezond
+            #    draait. `up -d` slaagt al zodra de containers zijn gestart, maar
+            #    zegt niets over een halve migratie of een api die niet opstart.
+            #    We pollen daarom de healthz-route BINNEN de api-container (poort
+            #    8080 is intern, niet op de host gepubliceerd) met dezelfde
+            #    node-check die de container-healthcheck gebruikt, plus de publieke
+            #    route via caddy. Faalt dit binnen de timeout, dan faalt de run.
+            echo "Post-deploy healthcheck gestart..."
+            HEALTH_POGINGEN=30   # 30 pogingen x 5s = max ~150s wachttijd
+            HEALTH_OK=0
+            for i in $(seq 1 "$HEALTH_POGINGEN"); do
+              if $COMPOSE exec -T api node -e "require('http').get('http://localhost:8080/api/healthz', r => process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"; then
+                HEALTH_OK=1
+                echo "API gezond (poging $i/$HEALTH_POGINGEN)"
+                break
+              fi
+              echo "API nog niet gezond (poging $i/$HEALTH_POGINGEN), 5s wachten..."
+              sleep 5
+            done
+
+            if [ "$HEALTH_OK" -ne 1 ]; then
+              echo "FOUT: API werd niet gezond binnen de timeout. Release is NIET gezond." >&2
+              $COMPOSE ps || true
+              echo "--- Laatste api-logs ---" >&2
+              $COMPOSE logs --tail=80 api || true
+              exit 1
+            fi
+
+            # Publieke route via caddy controleren (proxy /api/* -> api:8080).
+            # -k: caddy serveert een cert voor de productiedomeinnaam, niet voor
+            # localhost; we testen hier alleen dat de proxy-keten werkt.
+            echo "Publieke healthz via caddy controleren..."
+            if ! curl -fsSk --max-time 10 https://localhost/api/healthz >/dev/null; then
+              echo "FOUT: healthz niet bereikbaar via caddy. Release is NIET gezond." >&2
+              $COMPOSE ps || true
+              echo "--- Laatste caddy-logs ---" >&2
+              $COMPOSE logs --tail=80 caddy || true
+              exit 1
+            fi
+            echo "Healthcheck geslaagd: release is gezond."
+
+            # 6. Opschonen van oude images (ouder dan 72u)
             docker image prune -f --filter "until=72h"
 
             echo "Deploy voltooid"
