@@ -5,6 +5,15 @@ Deze handleiding beschrijft hoe de productieversie van FPS Connect op een
 externe server wordt ingericht met een eigen database, object storage en
 een gecontroleerd deployment-proces.
 
+> **Deploybeleid (vastgesteld 10 juli 2026): productie als acceptatieomgeving.**
+> Productie is momenteel de actieve acceptatie-/testomgeving. Noodzakelijke fixes
+> worden **direct naar productie gedeployed zodra GitHub CI groen is** — zonder aparte
+> staging-cyclus en zonder aparte productie-goedkeuring per fix. Het eerdere proces
+> "deploy pas ná goedkeuring van een reviewer" is hiermee **vervallen**. De vijf gates,
+> de smoketest en de uitzonderingen staan als leidend beleid in
+> [`docs/PRODUCTION_RUNBOOK.md`](PRODUCTION_RUNBOOK.md). De passages hieronder zijn met
+> dat beleid in lijn gebracht.
+
 ---
 
 ## Inhoudsopgave
@@ -17,7 +26,7 @@ een gecontroleerd deployment-proces.
 6. [Omgevingsvariabelen](#6-omgevingsvariabelen)
 7. [GitHub Actions CI/CD](#7-github-actions-cicd)
 8. [Eerste deployment](#8-eerste-deployment)
-9. [Latere deployments (met goedkeuring)](#9-latere-deployments-met-goedkeuring)
+9. [Latere deployments (direct-deploy-beleid)](#9-latere-deployments-direct-deploy-beleid)
 10. [TLS / HTTPS](#10-tls--https)
 11. [Back-up & onderhoud](#11-back-up--onderhoud)
 12. [Troubleshooting](#12-troubleshooting)
@@ -224,35 +233,44 @@ en voeg toe:
 | `PROD_SSH_KEY` | Inhoud van `~/.ssh/fps_deploy_key` (privésleutel) |
 | `PROD_SSH_PORT` | SSH-poort (standaard: `22`) |
 
-### Productie-environment instellen (goedkeuringsvereiste)
+### Deploybeleid: geen aparte reviewer-goedkeuring meer
 
-Ga naar **GitHub → Repository → Settings → Environments → New environment**:
+> **Vervallen (10 juli 2026).** De eerdere instelling met een `production`-environment en
+> **Required reviewers** in GitHub gold onder het oude proces "deploy pas ná goedkeuring
+> van een reviewer". Dat proces is vervangen door het direct-deploy-beleid: zodra de
+> vijf gates groen zijn wordt direct gedeployed, zonder aparte productie-goedkeuring per
+> fix (uitzonderingen: destructieve migratie, beveiligingsrisico of deploymentfout). Zie
+> [`docs/PRODUCTION_RUNBOOK.md`](PRODUCTION_RUNBOOK.md) voor het leidende beleid.
 
-1. Naam: `production`
-2. **Required reviewers**: voeg de persoon/personen toe die moeten goedkeuren
-3. **Prevent self-review**: inschakelen (de auteur kan niet zelf goedkeuren)
-4. **Wait timer**: optioneel 5 minuten wachttijd na aanvraag
-
-Zonder goedkeuring van een reviewer wordt de deploy-stap **niet uitgevoerd**.
+**Aan te passen punt in de workflow.** `.github/workflows/deploy.yml` bevat nog
+`environment: production` op de deploy-job. Als op dat environment in GitHub een
+Required-reviewers-regel staat ingesteld, blijft die een aparte goedkeuring afdwingen en
+is dat in strijd met het huidige beleid. Verwijder in dat geval de Required-reviewers op
+**GitHub → Settings → Environments → production** (of verwijder de `environment: production`-
+regel uit de workflow). De actieve deployroute is echter niet deze SSH-job maar het
+handmatig pullen op de server (zie sectie 9); de GitHub-deploy-job draait bovendien pas
+als de `PROD_SSH_*`-secrets zijn ingesteld.
 
 ### Workflow-bestanden
 
 De CI/CD-configuratie staat in `.github/workflows/`:
 
-- `ci.yml` — draait bij elke push: typecheck + build
-- `deploy.yml` — bouwt Docker images + deployt naar productie **na goedkeuring**
+- `ci.yml` — draait bij elke push: typecheck + build (dit is gate 1 uit het beleid)
+- `deploy.yml` — bouwt Docker images + kan via SSH naar productie deployen
 
 ### Deployment starten
 
-**Handmatig** (aanbevolen voor eerste deployment):
+De feitelijke productie-deploy verloopt via de bekende route (server pullt zelf); zie
+sectie 9. De GitHub Actions-workflow blijft optioneel beschikbaar:
+
+**Handmatig** (GitHub Actions):
 1. Ga naar **GitHub → Actions → Deploy naar productie → Run workflow**
 2. Kies de branch en optionele image tag
-3. Een reviewer ontvangt een goedkeuringsverzoek per e-mail
-4. Na goedkeuring start de deployment automatisch
+3. De deployment start zonder aparte goedkeuring zodra de gates groen zijn
 
 **Automatisch** (na merge naar `main`):
-- CI draait na elke push
-- Bij succes op `main` wordt de deploy-workflow gestart en wacht op goedkeuring
+- CI draait na elke push (gate 1)
+- Bij succes op `main` kan de deploy-workflow starten; er is geen goedkeuringswachtrij meer
 
 ---
 
@@ -303,22 +321,40 @@ curl http://localhost:8080/healthz
 
 ---
 
-## 9. Latere deployments (met goedkeuring)
+## 9. Latere deployments (direct-deploy-beleid)
 
-Elke nieuwe deployment verloopt als volgt:
+Vanaf 10 juli 2026 geldt: productie is de actieve acceptatieomgeving en noodzakelijke
+fixes gaan **direct naar productie zodra de gates groen zijn**, zonder aparte
+reviewer-goedkeuring per fix. Het leidende beleid staat in
+[`docs/PRODUCTION_RUNBOOK.md`](PRODUCTION_RUNBOOK.md).
 
-1. **Ontwikkel** op Replit (dev/test)
-2. **Commit en push** naar de `main`-branch op GitHub
-3. **CI** draait automatisch (typecheck + build)
-4. **Goedkeuringsverzoek** wordt verstuurd naar de reviewers
-5. **Reviewer keurt goed** in GitHub Actions → deployment start
-6. **Docker images** worden gebouwd en gepushed naar de registry
-7. **Productieserver** haalt nieuwe images op en herstart containers
-8. **Zero-downtime**: nieuwe containers starten vóór de oude stoppen
+**Verplichte gates (alle vier groen vóór deploy):**
+
+1. GitHub CI groen.
+2. Geen destructieve databasemigratie zonder expliciete waarschuwing.
+3. Geen verzwakking van de beveiliging.
+4. Deploy via de bekende route (server pullt zelf van GitHub).
+
+**Deployvolgorde op de server** (`rene@149.210.181.47`, repo in `/opt/fps-one`):
+
+1. **Ontwikkel** op Replit (dev/test) en push naar `main`; CI draait (gate 1)
+2. **Back-up** maken (pre-release database-back-up + integriteitscontrole)
+3. **`git pull origin main`** op de server
+4. **`docker compose build`** van de gewijzigde images
+5. **Migreren** (`run --rm migrate`) bij schemawijzigingen — gate 2 bewaken
+6. **`up -d`** — containers herstarten (zero-downtime: nieuwe vóór oude)
+7. **`/api/healthz`** controleren + de minimale smoketest uitvoeren
+
+**Smoketest na elke deploy:** `/api/healthz`, René login, Jacqueline login,
+Gebruikersbeheer opent, en de geraakte functionaliteit werkt.
+**Bij falende smoketest:** direct fixen → opnieuw deployen → opnieuw testen.
+
+**Geen aparte productie-goedkeuring vereist**, behalve bij: destructieve migratie,
+beveiligingsrisico of deploymentfout.
 
 **Rollback** bij problemen:
 ```bash
-cd /opt/fps-connect
+cd /opt/fps-one
 # Terug naar de vorige image tag
 IMAGE_TAG=<vorige-sha> docker compose -f docker-compose.production.yml up -d
 ```

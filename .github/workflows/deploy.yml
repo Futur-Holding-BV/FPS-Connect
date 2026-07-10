@@ -15,11 +15,15 @@ on:
     types: [completed]
     branches: [main]
 
-# ─── Expliciete goedkeuring vereist ──────────────────────────────────────────
-# Stel in GitHub → Settings → Environments → production in:
-#   - Required reviewers: voeg de goedkeurder(s) toe
-#   - Prevent self-review: aan
-# Zonder goedkeuring wordt de deploy-stap niet uitgevoerd.
+# ─── Deploybeleid (vastgesteld 10 juli 2026): geen aparte goedkeuring meer ────
+# Productie is de actieve acceptatieomgeving; fixes gaan direct naar productie
+# zodra de gates groen zijn (zie docs/PRODUCTION_RUNBOOK.md). Het oude proces met
+# Required reviewers op het `production`-environment is VERVALLEN.
+# AAN TE PASSEN PUNT: als op GitHub → Settings → Environments → production nog
+# Required reviewers staan ingesteld, verwijder die zodat er geen aparte
+# goedkeuring meer wordt afgedwongen. De actieve deployroute is echter niet deze
+# SSH-job maar het handmatig pullen op de server; deze job draait bovendien pas
+# als de PROD_SSH_*-secrets zijn ingesteld (die staan nu niet in de repo).
 
 jobs:
   # ─── Stap 1: Bouw en push Docker images ──────────────────────────────────
@@ -90,12 +94,12 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  # ─── Stap 2: Deploy naar productie (VEREIST GOEDKEURING) ─────────────────
+  # ─── Stap 2: Deploy naar productie (geen aparte goedkeuring — zie beleid boven) ──
   deploy:
     name: Deploy naar productie
     needs: build
     runs-on: ubuntu-latest
-    environment: production        # <-- hier vereist GitHub goedkeuring
+    environment: production        # aan te passen punt: verwijder eventuele Required reviewers op dit environment (beleid: direct deployen)
     concurrency:
       group: production
       cancel-in-progress: false    # nooit een lopende deploy annuleren

@@ -4,6 +4,21 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-10 — Deploybeleid vastgelegd: productie als acceptatieomgeving
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** geen (uitsluitend documentatie)
+
+**Wat is vastgelegd:** het nieuwe, bindende deploybeleid is nu in de projectdocumentatie verankerd. Productie is momenteel de actieve acceptatie-/testomgeving; noodzakelijke fixes gaan direct naar productie zodra GitHub CI groen is — zonder aparte staging-cyclus en zonder aparte reviewer-/productie-goedkeuring per fix. Het oude proces "deploy pas ná goedkeuring van een reviewer" is overal als vervallen gemarkeerd.
+
+**Beleid (canoniek in het runbook):** vijf gates (1. GitHub CI groen, 2. geen destructieve migratie zonder waarschuwing, 3. geen verzwakking van de beveiliging, 4. deploy via de bekende route `rene@149.210.181.47` / `/opt/fps-one`, server pullt zelf), een minimale smoketest na elke deploy (`/api/healthz`, René login, Jacqueline login, Gebruikersbeheer opent, geraakte functionaliteit werkt), en "bij falen: fix → redeploy → retest". Aparte productie-goedkeuring alleen bij destructieve migratie, beveiligingsrisico of deploymentfout.
+
+**Bestanden gewijzigd:**
+- `docs/PRODUCTION_RUNBOOK.md` — beleid als leidend deel toegevoegd, inclusief smoketest-checklist en de bekende aandachtspunten (mailvariabelen ontbreken op productie; api-logs leeg → bewijs via `login_pogingen`-tabel).
+- `docs/deployment.md` — sectie 7 en 9 herschreven naar het direct-deploy-model met de gates; goedkeuringsvereiste als vervallen gemarkeerd; TOC bijgewerkt.
+- `deploy/RELEASE_PRODUCTION_CHECKLIST.md` — gates + smoketest bovenaan; geen aparte goedkeuringsstap meer.
+- `replit.md` — korte verwijzing naar het beleid met pointer naar het runbook.
+- `.github/workflows/deploy.yml` — reviewer-goedkeuringscommentaar bijgewerkt; de `environment: production`-gate benoemd als aan te passen punt in de docs (mechanisme ongewijzigd gelaten, geen risico).
+
 ## 2026-07-09 — GitHub-push voltooid: main gesynchroniseerd, CI groen (Task #482)
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (gewone merge, geen force-push; boom byte-identiek aan lokale werkboom)

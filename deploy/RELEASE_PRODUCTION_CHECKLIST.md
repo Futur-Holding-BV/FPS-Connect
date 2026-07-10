@@ -5,6 +5,36 @@ Vink elk punt af vóór vrijgave. Geen stap overslaan.
 
 ---
 
+## Deploybeleid (vastgesteld 10 juli 2026): productie als acceptatieomgeving
+
+Productie is momenteel de actieve acceptatie-/testomgeving. Noodzakelijke fixes gaan
+**direct naar productie zodra GitHub CI groen is** — zonder aparte staging-cyclus en
+**zonder aparte reviewer-/productie-goedkeuring per fix**. Het eerdere "deploy pas ná
+goedkeuring van een reviewer" is vervallen. Leidend beleid:
+[`docs/PRODUCTION_RUNBOOK.md`](../docs/PRODUCTION_RUNBOOK.md).
+
+**Verplichte gates (alle vier groen vóór deploy):**
+
+- [ ] Gate 1 — GitHub CI groen
+- [ ] Gate 2 — Geen destructieve databasemigratie zonder expliciete waarschuwing
+- [ ] Gate 3 — Geen verzwakking van de beveiliging
+- [ ] Gate 4 — Deploy via de bekende route: `rene@149.210.181.47`, repo in `/opt/fps-one`
+      (server pullt zelf van GitHub; back-up → git pull → compose build → migrate → up -d → healthz)
+
+**Minimale smoketest na elke deploy** (bij falen: fix → redeploy → retest):
+
+- [ ] `/api/healthz` geeft `{"status":"ok"}`
+- [ ] René login werkt
+- [ ] Jacqueline login werkt
+- [ ] Gebruikersbeheer opent
+- [ ] De geraakte functionaliteit werkt
+
+**Geen aparte productie-goedkeuring vereist**, behalve bij: destructieve migratie,
+beveiligingsrisico of deploymentfout. De uitgebreide checklist hieronder blijft nuttig
+voor grotere, geplande releases; voor een losse fix volstaan de gates + smoketest.
+
+---
+
 ## A. Voorbereiding (dag voor de release)
 
 - [ ] Release-branch gemerged en getest in Replit-development

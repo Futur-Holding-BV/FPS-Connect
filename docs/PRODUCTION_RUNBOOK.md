@@ -1,5 +1,47 @@
 # FPS Connect — Production Runbook
 
+## Deploybeleid: productie als acceptatieomgeving (vastgesteld 10 juli 2026)
+
+Dit beleid is leidend voor het hele runbook en voor alle deploys.
+
+**Context.** Productie is momenteel de actieve acceptatie-/testomgeving. Noodzakelijke
+fixes worden **direct naar productie gedeployed zodra GitHub CI groen is** — zonder aparte
+staging-cyclus en zonder aparte productie-goedkeuring per fix. Dit vervangt het eerdere
+proces "deploy pas ná goedkeuring van een reviewer".
+
+**Verplichte gates (alle vier groen vóór deploy):**
+
+1. GitHub CI groen.
+2. Geen destructieve databasemigratie zonder expliciete waarschuwing.
+3. Geen verzwakking van de beveiliging.
+4. Deploy via de bekende route: `rene@149.210.181.47`, repo in `/opt/fps-one` (server
+   pullt zelf van GitHub; volgorde: back-up → git pull → compose build → migrate → up -d
+   → healthz).
+
+**Minimale smoketest na elke deploy:**
+
+- [ ] `/api/healthz` geeft `{"status":"ok"}`
+- [ ] René login werkt
+- [ ] Jacqueline login werkt
+- [ ] Gebruikersbeheer opent
+- [ ] De geraakte functionaliteit werkt
+
+**Bij falende smoketest:** direct fixen → opnieuw deployen → opnieuw testen.
+
+**Geen aparte productie-goedkeuring vereist**, behalve bij één van deze drie
+uitzonderingen: destructieve migratie, beveiligingsrisico of deploymentfout.
+
+**Bekende aandachtspunten bij de smoketest (nog niet opgelost, zie changelog 9 juli 2026):**
+
+- **Mailvariabelen ontbreken op productie.** `deploy/.env.production` mist de Microsoft 365
+  Graph-variabelen (`AZURE_TENANT_ID`/`AZURE_CLIENT_ID`/`AZURE_CLIENT_SECRET`/`MAIL_FROM`/
+  `MAIL_MAILBOX`); uitnodigings- en wachtwoord-vergeten-mails komen daardoor niet aan. Test
+  loginflows daarom met accounts die al een wachtwoord hebben.
+- **Api-container logt 0 regels op productie.** Bewijsvoering van geslaagde/mislukte logins
+  loopt via de `login_pogingen`-tabel (read-only DB-query), niet via de container-logs.
+
+---
+
 ## Servergegevens
 
 | Gegeven | Waarde |

@@ -152,6 +152,10 @@ DB-kolommen (`wbdbo`, `wrd`) en de bijbehorende prop-typevelden blijven bestaan 
 - Route handlers moeten `bijgewerktOp: new Date()` meesturen bij PATCH/PUT
 - `pnpm run dev` niet uitvoeren vanuit de root — gebruik workflows
 
+## Deploybeleid
+
+Productie is momenteel de actieve acceptatie-/testomgeving: noodzakelijke fixes gaan direct naar productie zodra GitHub CI groen is, zonder aparte staging-cyclus of aparte reviewer-goedkeuring per fix (uitzonderingen: destructieve migratie, beveiligingsrisico, deploymentfout). Het leidende beleid — de vijf gates, de smoketest en de bekende aandachtspunten — staat in [`docs/PRODUCTION_RUNBOOK.md`](docs/PRODUCTION_RUNBOOK.md); de deploymenthandleiding is [`docs/deployment.md`](docs/deployment.md).
+
 ## Pointers
 
 - Zie de `pnpm-workspace` skill voor workspace structuur, TypeScript setup en package details
