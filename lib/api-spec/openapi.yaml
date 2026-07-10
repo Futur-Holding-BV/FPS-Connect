@@ -73,6 +73,8 @@ tags:
     description: Visual Library — goedgekeurde visuals voor de AI Visual Guidance Engine (tekeningen, referentiefoto's, animaties)
   - name: financieel-jaarrekeningen
     description: Vertrouwelijke financiele jaarstukken — (geconsolideerde) jaarrekeningen, kerncijferextractie met bronbewijs en het meerjarenoverzicht (recht financieel_vertrouwelijk)
+  - name: goedkeuring
+    description: Governance & Approval Engine — generiek goedkeuringsbeleid en -aanvragen voor elk documenttype (offertes, inkoop, etc.)
 
 paths:
   /healthz:
@@ -5214,6 +5216,272 @@ paths:
                     type: integer
         "404":
           description: Niet gevonden
+
+  /goedkeuring/beleidsregels:
+    get:
+      operationId: listGoedkeuringBeleidsregels
+      tags: [goedkeuring]
+      summary: Goedkeuringsbeleidsregels ophalen
+      parameters:
+        - in: query
+          name: document_type
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/GoedkeuringBeleidsregel"
+    post:
+      operationId: createGoedkeuringBeleidsregel
+      tags: [goedkeuring]
+      summary: Goedkeuringsbeleidsregel aanmaken (beleidsbeheer)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GoedkeuringBeleidsregelInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GoedkeuringBeleidsregel"
+
+  /goedkeuring/beleidsregels/{id}:
+    patch:
+      operationId: updateGoedkeuringBeleidsregel
+      tags: [goedkeuring]
+      summary: Goedkeuringsbeleidsregel bijwerken (beleidsbeheer)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GoedkeuringBeleidsregelInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GoedkeuringBeleidsregel"
+        "404":
+          description: Niet gevonden
+    delete:
+      operationId: deleteGoedkeuringBeleidsregel
+      tags: [goedkeuring]
+      summary: Goedkeuringsbeleidsregel verwijderen (beleidsbeheer)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Verwijderd
+        "404":
+          description: Niet gevonden
+
+  /goedkeuring/aanvragen:
+    get:
+      operationId: listGoedkeuringAanvragen
+      tags: [goedkeuring]
+      summary: Goedkeuringsaanvragen ophalen
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+        - in: query
+          name: object_type
+          schema:
+            type: string
+        - in: query
+          name: alleen_mijn_acties
+          description: Alleen aanvragen tonen die de ingelogde gebruiker mag goedkeuren/afwijzen
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/GoedkeuringAanvraag"
+    post:
+      operationId: dienGoedkeuringAanvraagIn
+      tags: [goedkeuring]
+      summary: Goedkeuringsaanvraag indienen voor een document (generiek voor elk object_type)
+      description: >
+        Bestaat er al een open (ingediend) aanvraag voor dit object, dan wordt die
+        teruggegeven. Is er geen passend goedkeuringsbeleid voor dit documenttype
+        en bedrag, dan komt een 422 terug — governance is dan niet vereist.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GoedkeuringAanvraagInput"
+      responses:
+        "201":
+          description: Aanvraag aangemaakt (of bestaande open aanvraag teruggegeven)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GoedkeuringAanvraag"
+        "422":
+          description: Geen goedkeuringsbeleid geconfigureerd voor dit documenttype/bedrag
+
+  /goedkeuring/aanvragen/{id}:
+    get:
+      operationId: getGoedkeuringAanvraag
+      tags: [goedkeuring]
+      summary: Eén goedkeuringsaanvraag ophalen, inclusief stappen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GoedkeuringAanvraag"
+        "404":
+          description: Niet gevonden
+
+  /goedkeuring/aanvragen/{id}/goedkeuren:
+    post:
+      operationId: goedkeuringAanvraagGoedkeuren
+      tags: [goedkeuring]
+      summary: Aanvraag goedkeuren (vier-ogen + rechtencontrole server-side)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GoedkeuringActieInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GoedkeuringAanvraag"
+        "403":
+          description: Niet toegestaan (geen goedkeurder, of vier-ogen)
+        "404":
+          description: Niet gevonden
+        "409":
+          description: Aanvraag al afgehandeld
+
+  /goedkeuring/aanvragen/{id}/afwijzen:
+    post:
+      operationId: goedkeuringAanvraagAfwijzen
+      tags: [goedkeuring]
+      summary: Aanvraag afwijzen (reden verplicht)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GoedkeuringAfwijzenInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GoedkeuringAanvraag"
+        "403":
+          description: Niet toegestaan
+        "404":
+          description: Niet gevonden
+        "409":
+          description: Aanvraag al afgehandeld
+
+  /goedkeuring/aanvragen/{id}/intrekken:
+    post:
+      operationId: goedkeuringAanvraagIntrekken
+      tags: [goedkeuring]
+      summary: Eigen aanvraag intrekken (indiener of hoofdbeheerder)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GoedkeuringAanvraag"
+        "403":
+          description: Niet toegestaan
+        "404":
+          description: Niet gevonden
+        "409":
+          description: Ongeldige status
+
+  /goedkeuring/object/{object_type}/{object_id}:
+    get:
+      operationId: getGoedkeuringVoorObject
+      tags: [goedkeuring]
+      summary: >-
+        Laatste goedkeuringsaanvraag + status voor een specifiek document
+        ophalen (voor de statuswidget in het brondocument)
+      parameters:
+        - in: path
+          name: object_type
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: object_id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK (null als er nog geen aanvraag bestaat)
+          content:
+            application/json:
+              schema:
+                type: ["object", "null"]
+                allOf:
+                  - $ref: "#/components/schemas/GoedkeuringAanvraag"
 
   /uitnodiging/{token}:
     get:
@@ -24792,6 +25060,205 @@ components:
           type: object
           additionalProperties:
             type: integer
+
+    GoedkeuringBeleidsregel:
+      type: object
+      required:
+        - id
+        - naam
+        - document_type
+        - aantal_goedkeuringen_vereist
+        - vier_ogen_verplicht
+        - actief
+        - aangemaakt_op
+        - bijgewerkt_op
+      properties:
+        id:
+          type: integer
+        naam:
+          type: string
+        document_type:
+          type: string
+          description: >-
+            Vrij te kiezen sleutel voor het onderliggende documenttype
+            (bijv. "offerte", "inkooporder", "factuur").
+        werkmaatschappij_id:
+          type: ["integer", "null"]
+        ondergrens:
+          type: ["number", "null"]
+        bovengrens:
+          type: ["number", "null"]
+        goedkeurder_gebruiker_id:
+          type: ["integer", "null"]
+        goedkeurder_module:
+          type: ["string", "null"]
+        goedkeurder_min_niveau:
+          type: ["integer", "null"]
+        aantal_goedkeuringen_vereist:
+          type: integer
+        vier_ogen_verplicht:
+          type: boolean
+        vervanger_gebruiker_id:
+          type: ["integer", "null"]
+        reactietermijn_uren:
+          type: ["integer", "null"]
+        actief:
+          type: boolean
+        aangemaakt_door_id:
+          type: ["integer", "null"]
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+
+    GoedkeuringBeleidsregelInput:
+      type: object
+      required: [naam, document_type, aantal_goedkeuringen_vereist, vier_ogen_verplicht, actief]
+      properties:
+        naam:
+          type: string
+          minLength: 1
+        document_type:
+          type: string
+          minLength: 1
+        werkmaatschappij_id:
+          type: ["integer", "null"]
+        ondergrens:
+          type: ["number", "null"]
+        bovengrens:
+          type: ["number", "null"]
+        goedkeurder_gebruiker_id:
+          type: ["integer", "null"]
+        goedkeurder_module:
+          type: ["string", "null"]
+        goedkeurder_min_niveau:
+          type: ["integer", "null"]
+        aantal_goedkeuringen_vereist:
+          type: integer
+          minimum: 1
+        vier_ogen_verplicht:
+          type: boolean
+        vervanger_gebruiker_id:
+          type: ["integer", "null"]
+        reactietermijn_uren:
+          type: ["integer", "null"]
+        actief:
+          type: boolean
+
+    GoedkeuringStap:
+      type: object
+      required: [id, aanvraag_id, actie, aangemaakt_op]
+      properties:
+        id:
+          type: integer
+        aanvraag_id:
+          type: integer
+        actie:
+          type: string
+        gebruiker_id:
+          type: ["integer", "null"]
+        gebruiker_naam:
+          type: ["string", "null"]
+        reden:
+          type: ["string", "null"]
+        aangemaakt_op:
+          type: string
+
+    GoedkeuringAanvraag:
+      type: object
+      required:
+        - id
+        - object_type
+        - object_id
+        - document_type
+        - status
+        - vereiste_goedkeuringen
+        - ontvangen_goedkeuringen
+        - aangemaakt_op
+        - bijgewerkt_op
+      properties:
+        id:
+          type: integer
+        object_type:
+          type: string
+        object_id:
+          type: integer
+        document_type:
+          type: string
+        omschrijving:
+          type: ["string", "null"]
+        bedrag:
+          type: ["number", "null"]
+        werkmaatschappij_id:
+          type: ["integer", "null"]
+        status:
+          type: string
+          enum: [concept, ingediend, goedgekeurd, afgewezen, ingetrokken, vervangen]
+        beleidsregel_id:
+          type: ["integer", "null"]
+        beleid_snapshot:
+          type: ["object", "null"]
+          additionalProperties: true
+        vereiste_goedkeuringen:
+          type: integer
+        ontvangen_goedkeuringen:
+          type: integer
+        ingediend_door_id:
+          type: ["integer", "null"]
+        ingediend_door_naam:
+          type: ["string", "null"]
+        ingediend_op:
+          type: ["string", "null"]
+        afgehandeld_op:
+          type: ["string", "null"]
+        afwijzing_reden:
+          type: ["string", "null"]
+        vervangen_door_id:
+          type: ["integer", "null"]
+        mag_goedkeuren:
+          type: boolean
+          description: Of de ingelogde gebruiker deze aanvraag kan goedkeuren/afwijzen.
+        stappen:
+          type: array
+          items:
+            $ref: "#/components/schemas/GoedkeuringStap"
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+
+    GoedkeuringAanvraagInput:
+      type: object
+      required: [object_type, object_id, document_type]
+      properties:
+        object_type:
+          type: string
+          description: Type onderliggend document, bijv. "offerte", "inkoopbon".
+        object_id:
+          type: integer
+        document_type:
+          type: string
+          description: Documenttype waarop het goedkeuringsbeleid wordt gematcht (meestal gelijk aan object_type).
+        omschrijving:
+          type: ["string", "null"]
+        bedrag:
+          type: ["number", "null"]
+        werkmaatschappij_id:
+          type: ["integer", "null"]
+
+    GoedkeuringActieInput:
+      type: object
+      properties:
+        reden:
+          type: ["string", "null"]
+
+    GoedkeuringAfwijzenInput:
+      type: object
+      required: [reden]
+      properties:
+        reden:
+          type: string
+          minLength: 1
 
     LoginPoging:
       type: object

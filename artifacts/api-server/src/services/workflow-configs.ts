@@ -28,6 +28,7 @@ import {
   type TransitieContext,
   type WorkflowConfig,
 } from "./workflow-engine";
+import { checkVereistGoedkeuring } from "./goedkeuring-engine";
 
 // ── Hulpfuncties ───────────────────────────────────────────────────────────────
 
@@ -248,7 +249,34 @@ const inkoopbonConfig: WorkflowConfig<Inkoopbon> = {
     return r!;
   },
   transities: [
-    { van: "concept", naar: "goedgekeurd", label: "Goedkeuren", bevoegdheid: ["offertes", 2] },
+    {
+      van: "concept",
+      naar: "goedgekeurd",
+      label: "Goedkeuren",
+      // `viaGoedkeuring` wordt alleen gezet door de Governance & Approval
+      // Engine ná volledige goedkeuring (zie goedkeuring-engine.ts) — de
+      // bevoegdheids- en beleidscheck zijn dan al door die motor afgehandeld.
+      magUitvoeren: async (_entity, ctx) => {
+        if (ctx.params?.viaGoedkeuring === true) return true;
+        if (ctx.isHoofdbeheerder) return true;
+        return (ctx.bevoegdheden["offertes"] ?? 0) >= 2;
+      },
+      precheck: async (entity, ctx) => {
+        if (ctx.params?.viaGoedkeuring === true) return null;
+        const { vereist } = await checkVereistGoedkeuring(
+          ctx.db,
+          "inkoopbon",
+          entity.totaalBedrag,
+          null,
+        );
+        if (vereist) {
+          return voorwaardeFout(
+            "Voor deze inkoopbon is volgens het geldende goedkeuringsbeleid een formele goedkeuringsaanvraag vereist. Dien de bon in via het goedkeuringsproces in plaats van de status direct te wijzigen.",
+          );
+        }
+        return null;
+      },
+    },
     { van: "goedgekeurd", naar: "besteld", label: "Besteld markeren", bevoegdheid: ["offertes", 2] },
     { van: "besteld", naar: "geleverd", label: "Geleverd markeren", bevoegdheid: ["offertes", 2] },
     { van: "goedgekeurd", naar: "concept", label: "Goedkeuring intrekken", bevoegdheid: ["offertes", 3] },

@@ -137,6 +137,12 @@ export const MODULES = [
     label: "Magazijn",
     omschrijving: "Voorraadbeheer, locaties, mutaties, reserveringen, uitgiftes en retouren",
   },
+  {
+    id: "goedkeuring",
+    label: "Goedkeuringsbeleid",
+    omschrijving:
+      "Governance & Approval Engine: financiële grenzen, vier-ogen-regels en goedkeurings-/afwijzingsacties voor offertes, facturen, inkoop en overige documenten. Niveau 1 = tijdlijn en beleid inzien, niveau 3 = zelf goedkeuren/afwijzen, niveau 4 = beleidsregels beheren",
+  },
 ] as const;
 
 export type ModuleId = (typeof MODULES)[number]["id"];
@@ -238,7 +244,7 @@ export const PRESETS: Preset[] = [
       gebouwen: 4, voorzieningen: 4, inspecties: 4, onderhoud: 4,
       rapportages: 4, bibliotheek: 3, crm: 3,
       planning: 3, toolbox: 3, calculaties: 1,
-      financieel: 2,
+      financieel: 2, goedkeuring: 3,
     }),
   },
   {
@@ -311,6 +317,7 @@ export const PRESETS: Preset[] = [
       rapportages: 4, bibliotheek: 2, crm: 4, abonnementen: 4,
       personeel: 2, dossiers: 2, offertes: 2, calculaties: 1, planning: 2,
       financieel: 4, financieel_vertrouwelijk: 4, salarisarchief: 1,
+      goedkeuring: 4,
     }),
   },
   {
@@ -319,6 +326,7 @@ export const PRESETS: Preset[] = [
       gebouwen: 2, inspecties: 1, onderhoud: 2, rapportages: 3,
       crm: 2, personeel: 2, dossiers: 3, offertes: 1, planning: 1,
       financieel: 4, financieel_vertrouwelijk: 2, salarisarchief: 2,
+      goedkeuring: 3,
     }),
   },
   {

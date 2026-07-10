@@ -1,3 +1,15 @@
+## 2026-07-10 — Governance & Approval Engine — kernmotor + pilot inkoopbon (Task #519)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (additieve tabellen/module + één pilot-integratie, generieke motor niet gekoppeld aan bestaande transitiepaden buiten de pilot)
+
+**Nieuw gebouwd:**
+- #519 — generieke Governance & Approval Engine: `goedkeuring_beleidsregels` (per document_type/werkmaatschappij/bedragrange, met vereist aantal goedkeuringen, vier-ogen-verplichting, vervanger en reactietermijn) en `goedkeuring_aanvragen` (met beleid_snapshot, ingediend_op/afgehandeld_op, vervangen_door_id) toegevoegd. Nieuwe permissiemodule `goedkeuring` in de bevoegdhedenmatrix. Service-laag `goedkeuringEngine` bepaalt of een object een aanvraag nodig heeft, wie mag goedkeuren, en verwerkt indienen/goedkeuren/afwijzen/intrekken als state machine.
+- Route handlers + OpenAPI/codegen voor beleidsregels-CRUD en aanvragen (indienen, goedkeuren, afwijzen, intrekken, ophalen per object).
+- Pilotkoppeling **inkoopbon**: de bestaande status-transitie concept→goedgekeurd (`workflow-configs.ts`) blokkeert nu (422, `VOORWAARDE`) direct PATCHen als een beleidsregel van toepassing is, met verwijzing naar het formele goedkeuringsproces; eenmaal via de motor goedgekeurd voert de motor de transitie zelf uit (`viaGoedkeuring: true` slaat de precheck en de gewone bevoegdheidscheck over).
+- Frontend: herbruikbare `GoedkeuringWidget` (status, indienen/goedkeuren/afwijzen-met-reden/intrekken) geïntegreerd in de inkoopbonkaart (`opdrachten/inkoopplanning-tab.tsx`); bij een 422 op de directe status-PATCH toont een toast met een "Indienen"-actieknop die de formele aanvraag start. Nieuw beheerscherm `/beheer/goedkeuringsbeleid` (tabs "Aanvragen" en "Beleidsregels", CRUD gated op `goedkeuring`-niveau 4) met bijbehorend navigatie-item.
+
+**Bewijs:** `pnpm run typecheck` (volledige workspace, alle 5 packages) groen; workflows `api-server`/`firevault`/`monteur-app` herstart en gezond (geen startfouten). `e2e-web` uitgevoerd: 2 geslaagd, 6 gefaald — alle 6 falen op "TOTP-invoer niet verschenen na 3 pogingen" tijdens de gedeelde inlog-helper, een reeds bekend cold-load/timing-probleem (zie e2e-totp-timing in agent-memory), niet gerelateerd aan de goedkeuringsfunctionaliteit; geen van de falende specs raakt inkoopbon/goedkeuring. Screenshot van de inlogpagina bevestigt geen consolefouten na de wijzigingen.
+
 ## 2026-07-10 — Onderhoudsplanning kalenderweergave (Task #167)
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (UI-uitbreiding + API-parameter)

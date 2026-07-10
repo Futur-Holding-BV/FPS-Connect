@@ -310,6 +310,12 @@ import type {
   GoLiveMijnActie,
   GoLiveReadinessItem,
   GoLiveTestdataOverzicht,
+  GoedkeuringAanvraag,
+  GoedkeuringAanvraagInput,
+  GoedkeuringActieInput,
+  GoedkeuringAfwijzenInput,
+  GoedkeuringBeleidsregel,
+  GoedkeuringBeleidsregelInput,
   HallOfFameEntry,
   HealthStatus,
   HelpdeskTicket,
@@ -403,6 +409,8 @@ import type {
   ListGebouwenParams,
   ListGekoppeldeDocumentenParams,
   ListGereedschappenParams,
+  ListGoedkeuringAanvragenParams,
+  ListGoedkeuringBeleidsregelsParams,
   ListInboxItemsParams,
   ListInkoopoverzichtParams,
   ListInspectiesParams,
@@ -17757,6 +17765,827 @@ export const useProfielToepassen = <TError = ErrorType<void>,
       > => {
       return useMutation(getProfielToepassenMutationOptions(options));
     }
+
+export const getListGoedkeuringBeleidsregelsUrl = (params?: ListGoedkeuringBeleidsregelsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/goedkeuring/beleidsregels?${stringifiedParams}` : `/api/goedkeuring/beleidsregels`
+}
+
+/**
+ * @summary Goedkeuringsbeleidsregels ophalen
+ */
+export const listGoedkeuringBeleidsregels = async (params?: ListGoedkeuringBeleidsregelsParams, options?: RequestInit): Promise<GoedkeuringBeleidsregel[]> => {
+
+  return customFetch<GoedkeuringBeleidsregel[]>(getListGoedkeuringBeleidsregelsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListGoedkeuringBeleidsregelsQueryKey = (params?: ListGoedkeuringBeleidsregelsParams,) => {
+    return [
+    `/api/goedkeuring/beleidsregels`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListGoedkeuringBeleidsregelsQueryOptions = <TData = Awaited<ReturnType<typeof listGoedkeuringBeleidsregels>>, TError = ErrorType<unknown>>(params?: ListGoedkeuringBeleidsregelsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listGoedkeuringBeleidsregels>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListGoedkeuringBeleidsregelsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listGoedkeuringBeleidsregels>>> = ({ signal }) => listGoedkeuringBeleidsregels(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listGoedkeuringBeleidsregels>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListGoedkeuringBeleidsregelsQueryResult = NonNullable<Awaited<ReturnType<typeof listGoedkeuringBeleidsregels>>>
+export type ListGoedkeuringBeleidsregelsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Goedkeuringsbeleidsregels ophalen
+ */
+
+export function useListGoedkeuringBeleidsregels<TData = Awaited<ReturnType<typeof listGoedkeuringBeleidsregels>>, TError = ErrorType<unknown>>(
+ params?: ListGoedkeuringBeleidsregelsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listGoedkeuringBeleidsregels>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListGoedkeuringBeleidsregelsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateGoedkeuringBeleidsregelUrl = () => {
+
+
+
+
+  return `/api/goedkeuring/beleidsregels`
+}
+
+/**
+ * @summary Goedkeuringsbeleidsregel aanmaken (beleidsbeheer)
+ */
+export const createGoedkeuringBeleidsregel = async (goedkeuringBeleidsregelInput: GoedkeuringBeleidsregelInput, options?: RequestInit): Promise<GoedkeuringBeleidsregel> => {
+
+  return customFetch<GoedkeuringBeleidsregel>(getCreateGoedkeuringBeleidsregelUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(goedkeuringBeleidsregelInput)
+  }
+);}
+
+
+
+
+export const getCreateGoedkeuringBeleidsregelMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createGoedkeuringBeleidsregel>>, TError,{data: BodyType<GoedkeuringBeleidsregelInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createGoedkeuringBeleidsregel>>, TError,{data: BodyType<GoedkeuringBeleidsregelInput>}, TContext> => {
+
+const mutationKey = ['createGoedkeuringBeleidsregel'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createGoedkeuringBeleidsregel>>, {data: BodyType<GoedkeuringBeleidsregelInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createGoedkeuringBeleidsregel(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateGoedkeuringBeleidsregelMutationResult = NonNullable<Awaited<ReturnType<typeof createGoedkeuringBeleidsregel>>>
+    export type CreateGoedkeuringBeleidsregelMutationBody = BodyType<GoedkeuringBeleidsregelInput>
+    export type CreateGoedkeuringBeleidsregelMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Goedkeuringsbeleidsregel aanmaken (beleidsbeheer)
+ */
+export const useCreateGoedkeuringBeleidsregel = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createGoedkeuringBeleidsregel>>, TError,{data: BodyType<GoedkeuringBeleidsregelInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createGoedkeuringBeleidsregel>>,
+        TError,
+        {data: BodyType<GoedkeuringBeleidsregelInput>},
+        TContext
+      > => {
+      return useMutation(getCreateGoedkeuringBeleidsregelMutationOptions(options));
+    }
+
+export const getUpdateGoedkeuringBeleidsregelUrl = (id: number,) => {
+
+
+
+
+  return `/api/goedkeuring/beleidsregels/${id}`
+}
+
+/**
+ * @summary Goedkeuringsbeleidsregel bijwerken (beleidsbeheer)
+ */
+export const updateGoedkeuringBeleidsregel = async (id: number,
+    goedkeuringBeleidsregelInput: GoedkeuringBeleidsregelInput, options?: RequestInit): Promise<GoedkeuringBeleidsregel> => {
+
+  return customFetch<GoedkeuringBeleidsregel>(getUpdateGoedkeuringBeleidsregelUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(goedkeuringBeleidsregelInput)
+  }
+);}
+
+
+
+
+export const getUpdateGoedkeuringBeleidsregelMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateGoedkeuringBeleidsregel>>, TError,{id: number;data: BodyType<GoedkeuringBeleidsregelInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateGoedkeuringBeleidsregel>>, TError,{id: number;data: BodyType<GoedkeuringBeleidsregelInput>}, TContext> => {
+
+const mutationKey = ['updateGoedkeuringBeleidsregel'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateGoedkeuringBeleidsregel>>, {id: number;data: BodyType<GoedkeuringBeleidsregelInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateGoedkeuringBeleidsregel(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateGoedkeuringBeleidsregelMutationResult = NonNullable<Awaited<ReturnType<typeof updateGoedkeuringBeleidsregel>>>
+    export type UpdateGoedkeuringBeleidsregelMutationBody = BodyType<GoedkeuringBeleidsregelInput>
+    export type UpdateGoedkeuringBeleidsregelMutationError = ErrorType<void>
+
+    /**
+ * @summary Goedkeuringsbeleidsregel bijwerken (beleidsbeheer)
+ */
+export const useUpdateGoedkeuringBeleidsregel = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateGoedkeuringBeleidsregel>>, TError,{id: number;data: BodyType<GoedkeuringBeleidsregelInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateGoedkeuringBeleidsregel>>,
+        TError,
+        {id: number;data: BodyType<GoedkeuringBeleidsregelInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateGoedkeuringBeleidsregelMutationOptions(options));
+    }
+
+export const getDeleteGoedkeuringBeleidsregelUrl = (id: number,) => {
+
+
+
+
+  return `/api/goedkeuring/beleidsregels/${id}`
+}
+
+/**
+ * @summary Goedkeuringsbeleidsregel verwijderen (beleidsbeheer)
+ */
+export const deleteGoedkeuringBeleidsregel = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteGoedkeuringBeleidsregelUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteGoedkeuringBeleidsregelMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteGoedkeuringBeleidsregel>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteGoedkeuringBeleidsregel>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteGoedkeuringBeleidsregel'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteGoedkeuringBeleidsregel>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteGoedkeuringBeleidsregel(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteGoedkeuringBeleidsregelMutationResult = NonNullable<Awaited<ReturnType<typeof deleteGoedkeuringBeleidsregel>>>
+
+    export type DeleteGoedkeuringBeleidsregelMutationError = ErrorType<void>
+
+    /**
+ * @summary Goedkeuringsbeleidsregel verwijderen (beleidsbeheer)
+ */
+export const useDeleteGoedkeuringBeleidsregel = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteGoedkeuringBeleidsregel>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteGoedkeuringBeleidsregel>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteGoedkeuringBeleidsregelMutationOptions(options));
+    }
+
+export const getListGoedkeuringAanvragenUrl = (params?: ListGoedkeuringAanvragenParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/goedkeuring/aanvragen?${stringifiedParams}` : `/api/goedkeuring/aanvragen`
+}
+
+/**
+ * @summary Goedkeuringsaanvragen ophalen
+ */
+export const listGoedkeuringAanvragen = async (params?: ListGoedkeuringAanvragenParams, options?: RequestInit): Promise<GoedkeuringAanvraag[]> => {
+
+  return customFetch<GoedkeuringAanvraag[]>(getListGoedkeuringAanvragenUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListGoedkeuringAanvragenQueryKey = (params?: ListGoedkeuringAanvragenParams,) => {
+    return [
+    `/api/goedkeuring/aanvragen`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListGoedkeuringAanvragenQueryOptions = <TData = Awaited<ReturnType<typeof listGoedkeuringAanvragen>>, TError = ErrorType<unknown>>(params?: ListGoedkeuringAanvragenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listGoedkeuringAanvragen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListGoedkeuringAanvragenQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listGoedkeuringAanvragen>>> = ({ signal }) => listGoedkeuringAanvragen(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listGoedkeuringAanvragen>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListGoedkeuringAanvragenQueryResult = NonNullable<Awaited<ReturnType<typeof listGoedkeuringAanvragen>>>
+export type ListGoedkeuringAanvragenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Goedkeuringsaanvragen ophalen
+ */
+
+export function useListGoedkeuringAanvragen<TData = Awaited<ReturnType<typeof listGoedkeuringAanvragen>>, TError = ErrorType<unknown>>(
+ params?: ListGoedkeuringAanvragenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listGoedkeuringAanvragen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListGoedkeuringAanvragenQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getDienGoedkeuringAanvraagInUrl = () => {
+
+
+
+
+  return `/api/goedkeuring/aanvragen`
+}
+
+/**
+ * Bestaat er al een open (ingediend) aanvraag voor dit object, dan wordt die teruggegeven. Is er geen passend goedkeuringsbeleid voor dit documenttype en bedrag, dan komt een 422 terug — governance is dan niet vereist.
+ * @summary Goedkeuringsaanvraag indienen voor een document (generiek voor elk object_type)
+ */
+export const dienGoedkeuringAanvraagIn = async (goedkeuringAanvraagInput: GoedkeuringAanvraagInput, options?: RequestInit): Promise<GoedkeuringAanvraag> => {
+
+  return customFetch<GoedkeuringAanvraag>(getDienGoedkeuringAanvraagInUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(goedkeuringAanvraagInput)
+  }
+);}
+
+
+
+
+export const getDienGoedkeuringAanvraagInMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof dienGoedkeuringAanvraagIn>>, TError,{data: BodyType<GoedkeuringAanvraagInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof dienGoedkeuringAanvraagIn>>, TError,{data: BodyType<GoedkeuringAanvraagInput>}, TContext> => {
+
+const mutationKey = ['dienGoedkeuringAanvraagIn'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof dienGoedkeuringAanvraagIn>>, {data: BodyType<GoedkeuringAanvraagInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  dienGoedkeuringAanvraagIn(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DienGoedkeuringAanvraagInMutationResult = NonNullable<Awaited<ReturnType<typeof dienGoedkeuringAanvraagIn>>>
+    export type DienGoedkeuringAanvraagInMutationBody = BodyType<GoedkeuringAanvraagInput>
+    export type DienGoedkeuringAanvraagInMutationError = ErrorType<void>
+
+    /**
+ * @summary Goedkeuringsaanvraag indienen voor een document (generiek voor elk object_type)
+ */
+export const useDienGoedkeuringAanvraagIn = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof dienGoedkeuringAanvraagIn>>, TError,{data: BodyType<GoedkeuringAanvraagInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof dienGoedkeuringAanvraagIn>>,
+        TError,
+        {data: BodyType<GoedkeuringAanvraagInput>},
+        TContext
+      > => {
+      return useMutation(getDienGoedkeuringAanvraagInMutationOptions(options));
+    }
+
+export const getGetGoedkeuringAanvraagUrl = (id: number,) => {
+
+
+
+
+  return `/api/goedkeuring/aanvragen/${id}`
+}
+
+/**
+ * @summary Eén goedkeuringsaanvraag ophalen, inclusief stappen
+ */
+export const getGoedkeuringAanvraag = async (id: number, options?: RequestInit): Promise<GoedkeuringAanvraag> => {
+
+  return customFetch<GoedkeuringAanvraag>(getGetGoedkeuringAanvraagUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetGoedkeuringAanvraagQueryKey = (id: number,) => {
+    return [
+    `/api/goedkeuring/aanvragen/${id}`
+    ] as const;
+    }
+
+
+export const getGetGoedkeuringAanvraagQueryOptions = <TData = Awaited<ReturnType<typeof getGoedkeuringAanvraag>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getGoedkeuringAanvraag>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetGoedkeuringAanvraagQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getGoedkeuringAanvraag>>> = ({ signal }) => getGoedkeuringAanvraag(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getGoedkeuringAanvraag>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetGoedkeuringAanvraagQueryResult = NonNullable<Awaited<ReturnType<typeof getGoedkeuringAanvraag>>>
+export type GetGoedkeuringAanvraagQueryError = ErrorType<void>
+
+
+/**
+ * @summary Eén goedkeuringsaanvraag ophalen, inclusief stappen
+ */
+
+export function useGetGoedkeuringAanvraag<TData = Awaited<ReturnType<typeof getGoedkeuringAanvraag>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getGoedkeuringAanvraag>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetGoedkeuringAanvraagQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGoedkeuringAanvraagGoedkeurenUrl = (id: number,) => {
+
+
+
+
+  return `/api/goedkeuring/aanvragen/${id}/goedkeuren`
+}
+
+/**
+ * @summary Aanvraag goedkeuren (vier-ogen + rechtencontrole server-side)
+ */
+export const goedkeuringAanvraagGoedkeuren = async (id: number,
+    goedkeuringActieInput?: GoedkeuringActieInput, options?: RequestInit): Promise<GoedkeuringAanvraag> => {
+
+  return customFetch<GoedkeuringAanvraag>(getGoedkeuringAanvraagGoedkeurenUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(goedkeuringActieInput)
+  }
+);}
+
+
+
+
+export const getGoedkeuringAanvraagGoedkeurenMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof goedkeuringAanvraagGoedkeuren>>, TError,{id: number;data?: BodyType<GoedkeuringActieInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof goedkeuringAanvraagGoedkeuren>>, TError,{id: number;data?: BodyType<GoedkeuringActieInput>}, TContext> => {
+
+const mutationKey = ['goedkeuringAanvraagGoedkeuren'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof goedkeuringAanvraagGoedkeuren>>, {id: number;data?: BodyType<GoedkeuringActieInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  goedkeuringAanvraagGoedkeuren(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type GoedkeuringAanvraagGoedkeurenMutationResult = NonNullable<Awaited<ReturnType<typeof goedkeuringAanvraagGoedkeuren>>>
+    export type GoedkeuringAanvraagGoedkeurenMutationBody = BodyType<GoedkeuringActieInput> | undefined
+    export type GoedkeuringAanvraagGoedkeurenMutationError = ErrorType<void>
+
+    /**
+ * @summary Aanvraag goedkeuren (vier-ogen + rechtencontrole server-side)
+ */
+export const useGoedkeuringAanvraagGoedkeuren = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof goedkeuringAanvraagGoedkeuren>>, TError,{id: number;data?: BodyType<GoedkeuringActieInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof goedkeuringAanvraagGoedkeuren>>,
+        TError,
+        {id: number;data?: BodyType<GoedkeuringActieInput>},
+        TContext
+      > => {
+      return useMutation(getGoedkeuringAanvraagGoedkeurenMutationOptions(options));
+    }
+
+export const getGoedkeuringAanvraagAfwijzenUrl = (id: number,) => {
+
+
+
+
+  return `/api/goedkeuring/aanvragen/${id}/afwijzen`
+}
+
+/**
+ * @summary Aanvraag afwijzen (reden verplicht)
+ */
+export const goedkeuringAanvraagAfwijzen = async (id: number,
+    goedkeuringAfwijzenInput: GoedkeuringAfwijzenInput, options?: RequestInit): Promise<GoedkeuringAanvraag> => {
+
+  return customFetch<GoedkeuringAanvraag>(getGoedkeuringAanvraagAfwijzenUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(goedkeuringAfwijzenInput)
+  }
+);}
+
+
+
+
+export const getGoedkeuringAanvraagAfwijzenMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof goedkeuringAanvraagAfwijzen>>, TError,{id: number;data: BodyType<GoedkeuringAfwijzenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof goedkeuringAanvraagAfwijzen>>, TError,{id: number;data: BodyType<GoedkeuringAfwijzenInput>}, TContext> => {
+
+const mutationKey = ['goedkeuringAanvraagAfwijzen'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof goedkeuringAanvraagAfwijzen>>, {id: number;data: BodyType<GoedkeuringAfwijzenInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  goedkeuringAanvraagAfwijzen(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type GoedkeuringAanvraagAfwijzenMutationResult = NonNullable<Awaited<ReturnType<typeof goedkeuringAanvraagAfwijzen>>>
+    export type GoedkeuringAanvraagAfwijzenMutationBody = BodyType<GoedkeuringAfwijzenInput>
+    export type GoedkeuringAanvraagAfwijzenMutationError = ErrorType<void>
+
+    /**
+ * @summary Aanvraag afwijzen (reden verplicht)
+ */
+export const useGoedkeuringAanvraagAfwijzen = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof goedkeuringAanvraagAfwijzen>>, TError,{id: number;data: BodyType<GoedkeuringAfwijzenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof goedkeuringAanvraagAfwijzen>>,
+        TError,
+        {id: number;data: BodyType<GoedkeuringAfwijzenInput>},
+        TContext
+      > => {
+      return useMutation(getGoedkeuringAanvraagAfwijzenMutationOptions(options));
+    }
+
+export const getGoedkeuringAanvraagIntrekkenUrl = (id: number,) => {
+
+
+
+
+  return `/api/goedkeuring/aanvragen/${id}/intrekken`
+}
+
+/**
+ * @summary Eigen aanvraag intrekken (indiener of hoofdbeheerder)
+ */
+export const goedkeuringAanvraagIntrekken = async (id: number, options?: RequestInit): Promise<GoedkeuringAanvraag> => {
+
+  return customFetch<GoedkeuringAanvraag>(getGoedkeuringAanvraagIntrekkenUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getGoedkeuringAanvraagIntrekkenMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof goedkeuringAanvraagIntrekken>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof goedkeuringAanvraagIntrekken>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['goedkeuringAanvraagIntrekken'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof goedkeuringAanvraagIntrekken>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  goedkeuringAanvraagIntrekken(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type GoedkeuringAanvraagIntrekkenMutationResult = NonNullable<Awaited<ReturnType<typeof goedkeuringAanvraagIntrekken>>>
+
+    export type GoedkeuringAanvraagIntrekkenMutationError = ErrorType<void>
+
+    /**
+ * @summary Eigen aanvraag intrekken (indiener of hoofdbeheerder)
+ */
+export const useGoedkeuringAanvraagIntrekken = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof goedkeuringAanvraagIntrekken>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof goedkeuringAanvraagIntrekken>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getGoedkeuringAanvraagIntrekkenMutationOptions(options));
+    }
+
+export const getGetGoedkeuringVoorObjectUrl = (objectType: string,
+    objectId: number,) => {
+
+
+
+
+  return `/api/goedkeuring/object/${objectType}/${objectId}`
+}
+
+/**
+ * @summary Laatste goedkeuringsaanvraag + status voor een specifiek document ophalen (voor de statuswidget in het brondocument)
+ */
+export const getGoedkeuringVoorObject = async (objectType: string,
+    objectId: number, options?: RequestInit): Promise<GoedkeuringAanvraag | null> => {
+
+  return customFetch<GoedkeuringAanvraag | null>(getGetGoedkeuringVoorObjectUrl(objectType,objectId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetGoedkeuringVoorObjectQueryKey = (objectType: string,
+    objectId: number,) => {
+    return [
+    `/api/goedkeuring/object/${objectType}/${objectId}`
+    ] as const;
+    }
+
+
+export const getGetGoedkeuringVoorObjectQueryOptions = <TData = Awaited<ReturnType<typeof getGoedkeuringVoorObject>>, TError = ErrorType<unknown>>(objectType: string,
+    objectId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getGoedkeuringVoorObject>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetGoedkeuringVoorObjectQueryKey(objectType,objectId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getGoedkeuringVoorObject>>> = ({ signal }) => getGoedkeuringVoorObject(objectType,objectId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: objectType !== null && objectType !== undefined && objectId !== null && objectId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getGoedkeuringVoorObject>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetGoedkeuringVoorObjectQueryResult = NonNullable<Awaited<ReturnType<typeof getGoedkeuringVoorObject>>>
+export type GetGoedkeuringVoorObjectQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Laatste goedkeuringsaanvraag + status voor een specifiek document ophalen (voor de statuswidget in het brondocument)
+ */
+
+export function useGetGoedkeuringVoorObject<TData = Awaited<ReturnType<typeof getGoedkeuringVoorObject>>, TError = ErrorType<unknown>>(
+ objectType: string,
+    objectId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getGoedkeuringVoorObject>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetGoedkeuringVoorObjectQueryOptions(objectType,objectId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
 export const getUitnodigingVerifieerUrl = (token: string,) => {
 

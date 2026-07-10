@@ -123,4 +123,18 @@ Formeel akkoord van de gebruiker, inclusief het V1.5-deel (opleverdossier-bevrie
 
 **Fase 5 — dashboard + audittrail + mobiel:** DMS-dashboard in `documenten-tab.tsx` met signaleringen + zoeken; per-document logboek + globaal audittrail (gated, bibliotheek ≥4). `GET /documenten/:id/download` logt de download en redirect (302) naar het bestand. monteur-app: read-only documentenlijst + detail + PDF openen (hergebruikt de bestaande tekening-viewer via `?url=&naam=`); navigatieknop in `gebouwen.tsx`.
 
+## Governance & Approval Engine — kernmotor + pilot inkoopbon (gebouwd — 10 juli 2026)
+
+Generieke goedkeuringsmotor voor bedrijfskritieke besluiten, expliciet niet gekoppeld aan één specifiek proces. Eerste (en vooralsnog enige) koppeling is de inkoopbon-workflow; alle overige koppelingen (offertes, personeelsbesluiten, etc.) volgen later op dezelfde motor zonder architectuurwijziging.
+
+**Datamodel:** `goedkeuring_beleidsregels` (per document_type/werkmaatschappij/bedragrange: vereist aantal goedkeuringen, vier-ogen-verplichting, vervanger, reactietermijn) en `goedkeuring_aanvragen` (met `beleid_snapshot` — het beleid ten tijde van indienen blijft historisch correct ook als het beleid later wijzigt — plus `ingediend_op`/`afgehandeld_op`/`vervangen_door_id`). Nieuwe permissiemodule `goedkeuring` in de bevoegdhedenmatrix.
+
+**Service-laag:** `goedkeuringEngine` (api-server) bepaalt of een object een aanvraag nodig heeft (op basis van van toepassing zijnde beleidsregel), wie mag goedkeuren, en verwerkt indienen/goedkeuren/afwijzen/intrekken als een expliciete state machine (niet losse ad-hoc statuswissels).
+
+**Pilotkoppeling inkoopbon:** de bestaande status-transitie concept→goedgekeurd in de workflow-engine (`workflow-configs.ts`) blokkeert een directe PATCH met HTTP 422 (`VOORWAARDE`) zodra een beleidsregel van toepassing is; de motor voert de transitie zelf uit zodra formeel goedgekeurd (`viaGoedkeuring: true` slaat de precheck en de gewone bevoegdheidscheck bewust over — dit is het enige geautoriseerde pad omheen de normale check). Dit bewijst het patroon werkt binnen een bestaande workflow-engine-config zonder die engine zelf te herschrijven.
+
+**Frontend:** herbruikbare `GoedkeuringWidget` (status, indienen/goedkeuren/afwijzen-met-reden/intrekken) geïntegreerd in de inkoopbonkaart; een 422 op de directe status-PATCH toont een toast met een "Indienen"-actieknop naar de formele aanvraag i.p.v. een kale foutmelding. Beheerscherm `/beheer/goedkeuringsbeleid` (tabs Aanvragen/Beleidsregels, CRUD gated op `goedkeuring`-niveau 4).
+
+**Nog niet gebouwd (bewust buiten deze increment):** koppeling aan andere documenttypes dan inkoopbon (offertes, HRM-besluiten); e-mailnotificaties bij een openstaande aanvraag; een dashboard-widget met openstaande aanvragen voor de goedkeurder.
+
 **Bevoegdheden:** lezen = ingelogd; goedkeuren/afkeuren + globaal audittrail = bibliotheek niveau ≥4; indienen = niveau ≥3; koppelingen/status = niveau ≥2 (sluit aan op de bestaande bevoegdheden-matrix).

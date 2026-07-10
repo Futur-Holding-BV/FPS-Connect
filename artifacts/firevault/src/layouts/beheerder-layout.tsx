@@ -124,6 +124,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
   const toonWagenpark = heeftNiveau("wagenpark", 1);
   const toonMagazijn  = heeftNiveau("magazijn", 1);
   const toonLoonOutput = heeftNiveau("salarisarchief", 2);
+  const toonGoedkeuring = heeftNiveau("goedkeuring", 1);
 
   const heeftOne = isHoofdbeheerder;
   const aantalOmgevingen = 1 + (heeftOne ? 1 : 0);
@@ -212,6 +213,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
     "communicatie",
     "veiligheid",
     "financieel",
+    "goedkeuring",
     "organisatie",
     "personeel",
     "loon",
@@ -1130,6 +1132,34 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                     </SidebarMenu>
                   </SidebarGroupContent>
                 </SidebarGroup>
+              </HerschikbaarHoofdstuk>
+              )}
+
+              {/* Goedkeuring */}
+              {toonGoedkeuring && (
+              <HerschikbaarHoofdstuk
+                sleutel="goedkeuring"
+                positie={hoofdstukPositie("goedkeuring")}
+                onVerplaats={verplaatsHoofdstuk}
+              >
+              <SidebarGroup>
+                <SidebarGroupLabel>Goedkeuring</SidebarGroupLabel>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    <SidebarMenuItem className="pl-5">
+                      <SidebarMenuButton
+                        asChild
+                        isActive={location === "/beheer/goedkeuringsbeleid"}
+                      >
+                        <Link href="/beheer/goedkeuringsbeleid">
+                          <ShieldCheck />
+                          <span>Goedkeuringsbeleid</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
               </HerschikbaarHoofdstuk>
               )}
 

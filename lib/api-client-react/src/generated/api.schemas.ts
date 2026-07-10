@@ -2798,6 +2798,154 @@ export interface ProfielInput {
   bevoegdheden: ProfielInputBevoegdheden;
 }
 
+export interface GoedkeuringBeleidsregel {
+  id: number;
+  naam: string;
+  /** Vrij te kiezen sleutel voor het onderliggende documenttype (bijv. "offerte", "inkooporder", "factuur"). */
+  document_type: string;
+  /** @nullable */
+  werkmaatschappij_id?: number | null;
+  /** @nullable */
+  ondergrens?: number | null;
+  /** @nullable */
+  bovengrens?: number | null;
+  /** @nullable */
+  goedkeurder_gebruiker_id?: number | null;
+  /** @nullable */
+  goedkeurder_module?: string | null;
+  /** @nullable */
+  goedkeurder_min_niveau?: number | null;
+  aantal_goedkeuringen_vereist: number;
+  vier_ogen_verplicht: boolean;
+  /** @nullable */
+  vervanger_gebruiker_id?: number | null;
+  /** @nullable */
+  reactietermijn_uren?: number | null;
+  actief: boolean;
+  /** @nullable */
+  aangemaakt_door_id?: number | null;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export interface GoedkeuringBeleidsregelInput {
+  /** @minLength 1 */
+  naam: string;
+  /** @minLength 1 */
+  document_type: string;
+  /** @nullable */
+  werkmaatschappij_id?: number | null;
+  /** @nullable */
+  ondergrens?: number | null;
+  /** @nullable */
+  bovengrens?: number | null;
+  /** @nullable */
+  goedkeurder_gebruiker_id?: number | null;
+  /** @nullable */
+  goedkeurder_module?: string | null;
+  /** @nullable */
+  goedkeurder_min_niveau?: number | null;
+  /** @minimum 1 */
+  aantal_goedkeuringen_vereist: number;
+  vier_ogen_verplicht: boolean;
+  /** @nullable */
+  vervanger_gebruiker_id?: number | null;
+  /** @nullable */
+  reactietermijn_uren?: number | null;
+  actief: boolean;
+}
+
+export interface GoedkeuringStap {
+  id: number;
+  aanvraag_id: number;
+  actie: string;
+  /** @nullable */
+  gebruiker_id?: number | null;
+  /** @nullable */
+  gebruiker_naam?: string | null;
+  /** @nullable */
+  reden?: string | null;
+  aangemaakt_op: string;
+}
+
+export type GoedkeuringAanvraagStatus = typeof GoedkeuringAanvraagStatus[keyof typeof GoedkeuringAanvraagStatus];
+
+
+export const GoedkeuringAanvraagStatus = {
+  concept: 'concept',
+  ingediend: 'ingediend',
+  goedgekeurd: 'goedgekeurd',
+  afgewezen: 'afgewezen',
+  ingetrokken: 'ingetrokken',
+  vervangen: 'vervangen',
+} as const;
+
+/**
+ * @nullable
+ */
+export type GoedkeuringAanvraagBeleidSnapshot = { [key: string]: unknown } | null;
+
+export interface GoedkeuringAanvraag {
+  id: number;
+  object_type: string;
+  object_id: number;
+  document_type: string;
+  /** @nullable */
+  omschrijving?: string | null;
+  /** @nullable */
+  bedrag?: number | null;
+  /** @nullable */
+  werkmaatschappij_id?: number | null;
+  status: GoedkeuringAanvraagStatus;
+  /** @nullable */
+  beleidsregel_id?: number | null;
+  /** @nullable */
+  beleid_snapshot?: GoedkeuringAanvraagBeleidSnapshot;
+  vereiste_goedkeuringen: number;
+  ontvangen_goedkeuringen: number;
+  /** @nullable */
+  ingediend_door_id?: number | null;
+  /** @nullable */
+  ingediend_door_naam?: string | null;
+  /** @nullable */
+  ingediend_op?: string | null;
+  /** @nullable */
+  afgehandeld_op?: string | null;
+  /** @nullable */
+  afwijzing_reden?: string | null;
+  /** @nullable */
+  vervangen_door_id?: number | null;
+  /** Of de ingelogde gebruiker deze aanvraag kan goedkeuren/afwijzen. */
+  mag_goedkeuren?: boolean;
+  stappen?: GoedkeuringStap[];
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export interface GoedkeuringAanvraagInput {
+  /** Type onderliggend document, bijv. "offerte", "inkoopbon". */
+  object_type: string;
+  object_id: number;
+  /** Documenttype waarop het goedkeuringsbeleid wordt gematcht (meestal gelijk aan object_type). */
+  document_type: string;
+  /** @nullable */
+  omschrijving?: string | null;
+  /** @nullable */
+  bedrag?: number | null;
+  /** @nullable */
+  werkmaatschappij_id?: number | null;
+}
+
+export interface GoedkeuringActieInput {
+  /** @nullable */
+  reden?: string | null;
+}
+
+export interface GoedkeuringAfwijzenInput {
+  /** @minLength 1 */
+  reden: string;
+}
+
 export interface LoginPoging {
   id: number;
   /** @nullable */
@@ -12234,6 +12382,19 @@ export type ProfielenAanvullen200 = {
 
 export type ProfielToepassen200 = {
   bijgewerkt: number;
+};
+
+export type ListGoedkeuringBeleidsregelsParams = {
+document_type?: string;
+};
+
+export type ListGoedkeuringAanvragenParams = {
+status?: string;
+object_type?: string;
+/**
+ * Alleen aanvragen tonen die de ingelogde gebruiker mag goedkeuren/afwijzen
+ */
+alleen_mijn_acties?: boolean;
 };
 
 export type UitnodigingActiveren200 = {

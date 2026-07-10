@@ -18,8 +18,12 @@ import {
   useListLeveranciers,
   useCorrectieVoorraad,
   useListArtikelen,
+  useDienGoedkeuringAanvraagIn,
+  ApiError,
 } from "@workspace/api-client-react";
 import type { InkoopplanRegel, Inkoopbon, InkoopbonAiSuggestieResultaat } from "@workspace/api-client-react";
+import { GoedkeuringWidget } from "@/components/goedkeuring/goedkeuring-widget";
+import { ToastAction } from "@/components/ui/toast";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -749,13 +753,50 @@ function InkoopbonKaart({ bon, opdrachtId, leverancierEmail }: InkoopbonKaartPro
   const qc = useQueryClient();
   const statusInfo = BON_STATUS_LABELS[bon.status] ?? BON_STATUS_LABELS.concept;
 
+  const dienGoedkeuringIn = useDienGoedkeuringAanvraagIn({
+    mutation: {
+      onSuccess: () => {
+        qc.invalidateQueries({ queryKey: getListInkoopbonnenQueryKey(opdrachtId) });
+        toast({ title: "Ter goedkeuring ingediend" });
+      },
+      onError: () => toast({ title: "Indienen mislukt", variant: "destructive" }),
+    },
+  });
+
   const patchMutatie = usePatchInkoopbon({
     mutation: {
       onSuccess: () => {
         qc.invalidateQueries({ queryKey: getListInkoopbonnenQueryKey(opdrachtId) });
         toast({ title: "Inkoopbon bijgewerkt" });
       },
-      onError: () => toast({ title: "Bijwerken mislukt", variant: "destructive" }),
+      onError: (err) => {
+        if (err instanceof ApiError && err.status === 422) {
+          toast({
+            title: "Formele goedkeuring vereist",
+            description: "Volgens het geldende goedkeuringsbeleid moet deze inkoopbon eerst ter goedkeuring worden ingediend.",
+            action: (
+              <ToastAction
+                altText="Ter goedkeuring indienen"
+                onClick={() =>
+                  dienGoedkeuringIn.mutate({
+                    data: {
+                      object_type: "inkoopbon",
+                      object_id: bon.id,
+                      document_type: "inkoopbon",
+                      omschrijving: `Inkoopbon${bon.bon_nummer ? ` ${bon.bon_nummer}` : ""} — ${bon.leverancier}`,
+                      bedrag: bon.totaal_bedrag,
+                    },
+                  })
+                }
+              >
+                Indienen
+              </ToastAction>
+            ),
+          });
+        } else {
+          toast({ title: "Bijwerken mislukt", variant: "destructive" });
+        }
+      },
     },
   });
 
@@ -816,6 +857,16 @@ function InkoopbonKaart({ bon, opdrachtId, leverancierEmail }: InkoopbonKaartPro
                 {bon.totaal_bedrag != null && (
                   <span className="text-xs font-medium">{euro(bon.totaal_bedrag)}</span>
                 )}
+              </div>
+              <div className="mt-1">
+                <GoedkeuringWidget
+                  objectType="inkoopbon"
+                  objectId={bon.id}
+                  documentType="inkoopbon"
+                  bedrag={bon.totaal_bedrag}
+                  omschrijving={`Inkoopbon${bon.bon_nummer ? ` ${bon.bon_nummer}` : ""} — ${bon.leverancier}`}
+                  toonIndienKnop={bon.status === "concept"}
+                />
               </div>
               {isVerzonden && bon.verzonden_naar && (
                 <p className="text-xs text-muted-foreground mt-0.5">

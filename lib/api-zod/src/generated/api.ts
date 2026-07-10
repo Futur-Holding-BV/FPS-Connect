@@ -6202,6 +6202,398 @@ export const ProfielToepassenResponse = zod.object({
 
 
 /**
+ * @summary Goedkeuringsbeleidsregels ophalen
+ */
+export const ListGoedkeuringBeleidsregelsQueryParams = zod.object({
+  "document_type": zod.coerce.string().optional()
+})
+
+export const ListGoedkeuringBeleidsregelsResponseItem = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "document_type": zod.string().describe('Vrij te kiezen sleutel voor het onderliggende documenttype (bijv. \"offerte\", \"inkooporder\", \"factuur\").'),
+  "werkmaatschappij_id": zod.number().nullish(),
+  "ondergrens": zod.number().nullish(),
+  "bovengrens": zod.number().nullish(),
+  "goedkeurder_gebruiker_id": zod.number().nullish(),
+  "goedkeurder_module": zod.string().nullish(),
+  "goedkeurder_min_niveau": zod.number().nullish(),
+  "aantal_goedkeuringen_vereist": zod.number(),
+  "vier_ogen_verplicht": zod.boolean(),
+  "vervanger_gebruiker_id": zod.number().nullish(),
+  "reactietermijn_uren": zod.number().nullish(),
+  "actief": zod.boolean(),
+  "aangemaakt_door_id": zod.number().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+export const ListGoedkeuringBeleidsregelsResponse = zod.array(ListGoedkeuringBeleidsregelsResponseItem)
+
+
+/**
+ * @summary Goedkeuringsbeleidsregel aanmaken (beleidsbeheer)
+ */
+
+
+
+
+
+export const CreateGoedkeuringBeleidsregelBody = zod.object({
+  "naam": zod.string().min(1),
+  "document_type": zod.string().min(1),
+  "werkmaatschappij_id": zod.number().nullish(),
+  "ondergrens": zod.number().nullish(),
+  "bovengrens": zod.number().nullish(),
+  "goedkeurder_gebruiker_id": zod.number().nullish(),
+  "goedkeurder_module": zod.string().nullish(),
+  "goedkeurder_min_niveau": zod.number().nullish(),
+  "aantal_goedkeuringen_vereist": zod.number().min(1),
+  "vier_ogen_verplicht": zod.boolean(),
+  "vervanger_gebruiker_id": zod.number().nullish(),
+  "reactietermijn_uren": zod.number().nullish(),
+  "actief": zod.boolean()
+})
+
+export const CreateGoedkeuringBeleidsregelResponse = zod.void()
+
+
+/**
+ * @summary Goedkeuringsbeleidsregel bijwerken (beleidsbeheer)
+ */
+export const UpdateGoedkeuringBeleidsregelParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+
+
+
+
+export const UpdateGoedkeuringBeleidsregelBody = zod.object({
+  "naam": zod.string().min(1),
+  "document_type": zod.string().min(1),
+  "werkmaatschappij_id": zod.number().nullish(),
+  "ondergrens": zod.number().nullish(),
+  "bovengrens": zod.number().nullish(),
+  "goedkeurder_gebruiker_id": zod.number().nullish(),
+  "goedkeurder_module": zod.string().nullish(),
+  "goedkeurder_min_niveau": zod.number().nullish(),
+  "aantal_goedkeuringen_vereist": zod.number().min(1),
+  "vier_ogen_verplicht": zod.boolean(),
+  "vervanger_gebruiker_id": zod.number().nullish(),
+  "reactietermijn_uren": zod.number().nullish(),
+  "actief": zod.boolean()
+})
+
+export const UpdateGoedkeuringBeleidsregelResponse = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "document_type": zod.string().describe('Vrij te kiezen sleutel voor het onderliggende documenttype (bijv. \"offerte\", \"inkooporder\", \"factuur\").'),
+  "werkmaatschappij_id": zod.number().nullish(),
+  "ondergrens": zod.number().nullish(),
+  "bovengrens": zod.number().nullish(),
+  "goedkeurder_gebruiker_id": zod.number().nullish(),
+  "goedkeurder_module": zod.string().nullish(),
+  "goedkeurder_min_niveau": zod.number().nullish(),
+  "aantal_goedkeuringen_vereist": zod.number(),
+  "vier_ogen_verplicht": zod.boolean(),
+  "vervanger_gebruiker_id": zod.number().nullish(),
+  "reactietermijn_uren": zod.number().nullish(),
+  "actief": zod.boolean(),
+  "aangemaakt_door_id": zod.number().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Goedkeuringsbeleidsregel verwijderen (beleidsbeheer)
+ */
+export const DeleteGoedkeuringBeleidsregelParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteGoedkeuringBeleidsregelResponse = zod.void()
+
+
+/**
+ * @summary Goedkeuringsaanvragen ophalen
+ */
+export const ListGoedkeuringAanvragenQueryParams = zod.object({
+  "status": zod.coerce.string().optional(),
+  "object_type": zod.coerce.string().optional(),
+  "alleen_mijn_acties": zod.coerce.boolean().optional().describe('Alleen aanvragen tonen die de ingelogde gebruiker mag goedkeuren\/afwijzen')
+})
+
+export const ListGoedkeuringAanvragenResponseItem = zod.object({
+  "id": zod.number(),
+  "object_type": zod.string(),
+  "object_id": zod.number(),
+  "document_type": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "bedrag": zod.number().nullish(),
+  "werkmaatschappij_id": zod.number().nullish(),
+  "status": zod.enum(['concept', 'ingediend', 'goedgekeurd', 'afgewezen', 'ingetrokken', 'vervangen']),
+  "beleidsregel_id": zod.number().nullish(),
+  "beleid_snapshot": zod.record(zod.string(), zod.unknown()).nullish(),
+  "vereiste_goedkeuringen": zod.number(),
+  "ontvangen_goedkeuringen": zod.number(),
+  "ingediend_door_id": zod.number().nullish(),
+  "ingediend_door_naam": zod.string().nullish(),
+  "ingediend_op": zod.string().nullish(),
+  "afgehandeld_op": zod.string().nullish(),
+  "afwijzing_reden": zod.string().nullish(),
+  "vervangen_door_id": zod.number().nullish(),
+  "mag_goedkeuren": zod.boolean().optional().describe('Of de ingelogde gebruiker deze aanvraag kan goedkeuren\/afwijzen.'),
+  "stappen": zod.array(zod.object({
+  "id": zod.number(),
+  "aanvraag_id": zod.number(),
+  "actie": zod.string(),
+  "gebruiker_id": zod.number().nullish(),
+  "gebruiker_naam": zod.string().nullish(),
+  "reden": zod.string().nullish(),
+  "aangemaakt_op": zod.string()
+})).optional(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+export const ListGoedkeuringAanvragenResponse = zod.array(ListGoedkeuringAanvragenResponseItem)
+
+
+/**
+ * Bestaat er al een open (ingediend) aanvraag voor dit object, dan wordt die teruggegeven. Is er geen passend goedkeuringsbeleid voor dit documenttype en bedrag, dan komt een 422 terug — governance is dan niet vereist.
+ * @summary Goedkeuringsaanvraag indienen voor een document (generiek voor elk object_type)
+ */
+export const DienGoedkeuringAanvraagInBody = zod.object({
+  "object_type": zod.string().describe('Type onderliggend document, bijv. \"offerte\", \"inkoopbon\".'),
+  "object_id": zod.number(),
+  "document_type": zod.string().describe('Documenttype waarop het goedkeuringsbeleid wordt gematcht (meestal gelijk aan object_type).'),
+  "omschrijving": zod.string().nullish(),
+  "bedrag": zod.number().nullish(),
+  "werkmaatschappij_id": zod.number().nullish()
+})
+
+export const DienGoedkeuringAanvraagInResponse = zod.void()
+
+
+/**
+ * @summary Eén goedkeuringsaanvraag ophalen, inclusief stappen
+ */
+export const GetGoedkeuringAanvraagParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetGoedkeuringAanvraagResponse = zod.object({
+  "id": zod.number(),
+  "object_type": zod.string(),
+  "object_id": zod.number(),
+  "document_type": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "bedrag": zod.number().nullish(),
+  "werkmaatschappij_id": zod.number().nullish(),
+  "status": zod.enum(['concept', 'ingediend', 'goedgekeurd', 'afgewezen', 'ingetrokken', 'vervangen']),
+  "beleidsregel_id": zod.number().nullish(),
+  "beleid_snapshot": zod.record(zod.string(), zod.unknown()).nullish(),
+  "vereiste_goedkeuringen": zod.number(),
+  "ontvangen_goedkeuringen": zod.number(),
+  "ingediend_door_id": zod.number().nullish(),
+  "ingediend_door_naam": zod.string().nullish(),
+  "ingediend_op": zod.string().nullish(),
+  "afgehandeld_op": zod.string().nullish(),
+  "afwijzing_reden": zod.string().nullish(),
+  "vervangen_door_id": zod.number().nullish(),
+  "mag_goedkeuren": zod.boolean().optional().describe('Of de ingelogde gebruiker deze aanvraag kan goedkeuren\/afwijzen.'),
+  "stappen": zod.array(zod.object({
+  "id": zod.number(),
+  "aanvraag_id": zod.number(),
+  "actie": zod.string(),
+  "gebruiker_id": zod.number().nullish(),
+  "gebruiker_naam": zod.string().nullish(),
+  "reden": zod.string().nullish(),
+  "aangemaakt_op": zod.string()
+})).optional(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Aanvraag goedkeuren (vier-ogen + rechtencontrole server-side)
+ */
+export const GoedkeuringAanvraagGoedkeurenParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GoedkeuringAanvraagGoedkeurenBody = zod.object({
+  "reden": zod.string().nullish()
+})
+
+export const GoedkeuringAanvraagGoedkeurenResponse = zod.object({
+  "id": zod.number(),
+  "object_type": zod.string(),
+  "object_id": zod.number(),
+  "document_type": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "bedrag": zod.number().nullish(),
+  "werkmaatschappij_id": zod.number().nullish(),
+  "status": zod.enum(['concept', 'ingediend', 'goedgekeurd', 'afgewezen', 'ingetrokken', 'vervangen']),
+  "beleidsregel_id": zod.number().nullish(),
+  "beleid_snapshot": zod.record(zod.string(), zod.unknown()).nullish(),
+  "vereiste_goedkeuringen": zod.number(),
+  "ontvangen_goedkeuringen": zod.number(),
+  "ingediend_door_id": zod.number().nullish(),
+  "ingediend_door_naam": zod.string().nullish(),
+  "ingediend_op": zod.string().nullish(),
+  "afgehandeld_op": zod.string().nullish(),
+  "afwijzing_reden": zod.string().nullish(),
+  "vervangen_door_id": zod.number().nullish(),
+  "mag_goedkeuren": zod.boolean().optional().describe('Of de ingelogde gebruiker deze aanvraag kan goedkeuren\/afwijzen.'),
+  "stappen": zod.array(zod.object({
+  "id": zod.number(),
+  "aanvraag_id": zod.number(),
+  "actie": zod.string(),
+  "gebruiker_id": zod.number().nullish(),
+  "gebruiker_naam": zod.string().nullish(),
+  "reden": zod.string().nullish(),
+  "aangemaakt_op": zod.string()
+})).optional(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Aanvraag afwijzen (reden verplicht)
+ */
+export const GoedkeuringAanvraagAfwijzenParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+
+
+export const GoedkeuringAanvraagAfwijzenBody = zod.object({
+  "reden": zod.string().min(1)
+})
+
+export const GoedkeuringAanvraagAfwijzenResponse = zod.object({
+  "id": zod.number(),
+  "object_type": zod.string(),
+  "object_id": zod.number(),
+  "document_type": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "bedrag": zod.number().nullish(),
+  "werkmaatschappij_id": zod.number().nullish(),
+  "status": zod.enum(['concept', 'ingediend', 'goedgekeurd', 'afgewezen', 'ingetrokken', 'vervangen']),
+  "beleidsregel_id": zod.number().nullish(),
+  "beleid_snapshot": zod.record(zod.string(), zod.unknown()).nullish(),
+  "vereiste_goedkeuringen": zod.number(),
+  "ontvangen_goedkeuringen": zod.number(),
+  "ingediend_door_id": zod.number().nullish(),
+  "ingediend_door_naam": zod.string().nullish(),
+  "ingediend_op": zod.string().nullish(),
+  "afgehandeld_op": zod.string().nullish(),
+  "afwijzing_reden": zod.string().nullish(),
+  "vervangen_door_id": zod.number().nullish(),
+  "mag_goedkeuren": zod.boolean().optional().describe('Of de ingelogde gebruiker deze aanvraag kan goedkeuren\/afwijzen.'),
+  "stappen": zod.array(zod.object({
+  "id": zod.number(),
+  "aanvraag_id": zod.number(),
+  "actie": zod.string(),
+  "gebruiker_id": zod.number().nullish(),
+  "gebruiker_naam": zod.string().nullish(),
+  "reden": zod.string().nullish(),
+  "aangemaakt_op": zod.string()
+})).optional(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Eigen aanvraag intrekken (indiener of hoofdbeheerder)
+ */
+export const GoedkeuringAanvraagIntrekkenParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GoedkeuringAanvraagIntrekkenResponse = zod.object({
+  "id": zod.number(),
+  "object_type": zod.string(),
+  "object_id": zod.number(),
+  "document_type": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "bedrag": zod.number().nullish(),
+  "werkmaatschappij_id": zod.number().nullish(),
+  "status": zod.enum(['concept', 'ingediend', 'goedgekeurd', 'afgewezen', 'ingetrokken', 'vervangen']),
+  "beleidsregel_id": zod.number().nullish(),
+  "beleid_snapshot": zod.record(zod.string(), zod.unknown()).nullish(),
+  "vereiste_goedkeuringen": zod.number(),
+  "ontvangen_goedkeuringen": zod.number(),
+  "ingediend_door_id": zod.number().nullish(),
+  "ingediend_door_naam": zod.string().nullish(),
+  "ingediend_op": zod.string().nullish(),
+  "afgehandeld_op": zod.string().nullish(),
+  "afwijzing_reden": zod.string().nullish(),
+  "vervangen_door_id": zod.number().nullish(),
+  "mag_goedkeuren": zod.boolean().optional().describe('Of de ingelogde gebruiker deze aanvraag kan goedkeuren\/afwijzen.'),
+  "stappen": zod.array(zod.object({
+  "id": zod.number(),
+  "aanvraag_id": zod.number(),
+  "actie": zod.string(),
+  "gebruiker_id": zod.number().nullish(),
+  "gebruiker_naam": zod.string().nullish(),
+  "reden": zod.string().nullish(),
+  "aangemaakt_op": zod.string()
+})).optional(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Laatste goedkeuringsaanvraag + status voor een specifiek document ophalen (voor de statuswidget in het brondocument)
+ */
+export const GetGoedkeuringVoorObjectParams = zod.object({
+  "object_type": zod.coerce.string(),
+  "object_id": zod.coerce.number()
+})
+
+export const GetGoedkeuringVoorObjectResponse = zod.object({
+  "id": zod.number(),
+  "object_type": zod.string(),
+  "object_id": zod.number(),
+  "document_type": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "bedrag": zod.number().nullish(),
+  "werkmaatschappij_id": zod.number().nullish(),
+  "status": zod.enum(['concept', 'ingediend', 'goedgekeurd', 'afgewezen', 'ingetrokken', 'vervangen']),
+  "beleidsregel_id": zod.number().nullish(),
+  "beleid_snapshot": zod.record(zod.string(), zod.unknown()).nullish(),
+  "vereiste_goedkeuringen": zod.number(),
+  "ontvangen_goedkeuringen": zod.number(),
+  "ingediend_door_id": zod.number().nullish(),
+  "ingediend_door_naam": zod.string().nullish(),
+  "ingediend_op": zod.string().nullish(),
+  "afgehandeld_op": zod.string().nullish(),
+  "afwijzing_reden": zod.string().nullish(),
+  "vervangen_door_id": zod.number().nullish(),
+  "mag_goedkeuren": zod.boolean().optional().describe('Of de ingelogde gebruiker deze aanvraag kan goedkeuren\/afwijzen.'),
+  "stappen": zod.array(zod.object({
+  "id": zod.number(),
+  "aanvraag_id": zod.number(),
+  "actie": zod.string(),
+  "gebruiker_id": zod.number().nullish(),
+  "gebruiker_naam": zod.string().nullish(),
+  "reden": zod.string().nullish(),
+  "aangemaakt_op": zod.string()
+})).optional(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+}).nullable()
+
+
+/**
  * @summary Uitnodigingstoken controleren en markeren als geopend (publiek)
  */
 export const UitnodigingVerifieerParams = zod.object({

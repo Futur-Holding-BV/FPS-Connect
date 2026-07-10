@@ -84,6 +84,7 @@ import PrivacyCentrum from "@/pages/mijn/privacy";
 import BeheerPrivacy from "@/pages/beheer/privacy";
 import AvgBeheer from "@/pages/beheer/avg";
 import RollenRechtenBeheer from "@/pages/beheer/rollen-rechten";
+import GoedkeuringsbeleidBeheer from "@/pages/beheer/goedkeuringsbeleid";
 import ObjectRechtenBeheer from "@/pages/beheer/object-rechten";
 import OpnamePagina from "@/pages/opname/index";
 import OpnameDetailPagina from "@/pages/opname/detail";
@@ -503,6 +504,7 @@ function ConnectPortal() {
         <Route path="/beheer/visual-library" component={VisualLibraryBeheer} />
         <Route path="/beheer/profielen" component={ProfielenBeheer} />
         <Route path="/beheer/rollen-rechten" component={RollenRechtenBeheer} />
+        <Route path="/beheer/goedkeuringsbeleid" component={GoedkeuringsbeleidBeheer} />
         <Route path="/beheer/object-rechten" component={ObjectRechtenBeheer} />
         <Route path="/beheer/ontwikkelstatus" component={Ontwikkelstatus} />
         <Route path="/organisatie/documentopmaak" component={DocumentopmaakBeheer} />

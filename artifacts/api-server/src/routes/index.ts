@@ -103,6 +103,7 @@ import securityValidationRouter from "./security-validation";
 import { cqoRouter } from "./cqo";
 import kantoorReleaseRouter from "./kantoor-release";
 import financieelJaarrekeningenRouter from "./financieel-jaarrekeningen";
+import goedkeuringRouter from "./goedkeuring";
 import "../services/workflow-configs";
 
 const router: IRouter = Router();
@@ -227,5 +228,6 @@ router.use(securityValidationRouter);
 router.use(cqoRouter);
 router.use(kantoorReleaseRouter);
 router.use(financieelJaarrekeningenRouter);
+router.use(goedkeuringRouter);
 
 export default router;
