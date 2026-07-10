@@ -1980,7 +1980,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
 
         </SidebarContent>
 
-        <SidebarFooter>
+        <SidebarFooter className="pb-16">
           <PwaInstalleerKnop />
           <SidebarMenu>
             <SidebarMenuItem>

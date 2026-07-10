@@ -101,7 +101,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     document.documentElement.style.removeProperty("--primary");
     queryClient.clear();
-    queryClient.invalidateQueries({ queryKey: meKey });
+    // Harde herlaad naar de app-root. De serversessie is nu vernietigd, dus
+    // na een volledige herlaad haalt /auth/me een 401 op en verschijnt het
+    // loginscherm gegarandeerd. Enkel de React Query-cache legen (of
+    // setQueryData/invalidateQueries) bleek de gebruiker in het portaal te
+    // laten hangen ("Uitloggen doet niets"): de me-query flipte niet betrouwbaar
+    // naar uitgelogd. Een volledige herlaad is de robuuste, standaard uitlog.
+    window.location.assign(import.meta.env.BASE_URL);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [queryClient]);
 

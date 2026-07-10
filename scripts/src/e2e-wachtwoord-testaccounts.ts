@@ -35,6 +35,7 @@ async function maakOfUpdate(
     wachtwoordHash: string;
     totpSecret: string | null;
     tweeFactorIngeschakeld: boolean;
+    bevoegdheden?: Record<string, number>;
   },
 ): Promise<number> {
   const [bestaand] = await db
@@ -48,6 +49,7 @@ async function maakOfUpdate(
     wachtwoord: waarden.wachtwoordHash,
     totpSecret: waarden.totpSecret,
     tweeFactorIngeschakeld: waarden.tweeFactorIngeschakeld,
+    bevoegdheden: waarden.bevoegdheden ?? {},
     actief: true,
     gearchiveerd: false,
     // Zorg dat een eerdere testrun geen vergrendeling/geforceerde wijziging
@@ -104,6 +106,11 @@ export async function setupE2eWachtwoordAccounts(): Promise<{ adminId: number; t
     wachtwoordHash: targetHash,
     totpSecret: null,
     tweeFactorIngeschakeld: false,
+    // Leesrecht op ten minste één module zodat de "Bekijken als"-impersonatie
+    // door een hoofdbeheerder in het Connect-portaal blijft (met leesrechten),
+    // en niet op het "Geen toegang"-scherm eindigt. Zonder bevoegdheden zou het
+    // gebruikersmenu (incl. de terugschakelknop) verdwijnen.
+    bevoegdheden: { gebouwen: 1 },
   });
 
   return { adminId, targetId };

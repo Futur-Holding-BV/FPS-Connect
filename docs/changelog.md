@@ -216,6 +216,19 @@
 - `lib/db/src/schema/ai-governance.ts` — tabel `ai_beslissingen` toegevoegd.
 - `lib/api-spec/openapi.yaml` + gegenereerde hooks/Zod — AI-beslislaag-contract.
 - `artifacts/api-server/src/__tests__/ai-decision-engine.test.ts` — nieuw.
+## 2026-07-10 — Uitloggen-knop en volledig gebruikersmenu hersteld (Task #495)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (frontend-fix + layout-fix; geen DB, geen API, geen migratie)
+
+**Klacht:** de "Uitloggen"-knop in het gebruikersmenu (sidebar) deed niets — na klikken bleef de gebruiker in het portaal hangen.
+
+**Twee bugs gevonden en hersteld (met business-scenario E2E-bewijs, conform Kwaliteitskader):**
+- **Uitloggen (kernklacht):** `uitloggen()` in `artifacts/firevault/src/context/auth-context.tsx` vernietigde de serversessie correct (logout → 204), maar de React Query `me`-query flipte daarna niet betrouwbaar naar "uitgelogd" — `queryClient.clear()` + `invalidateQueries`/`setQueryData(null)` lieten `isAuthenticated` alsnog `true`, waardoor het portaal tot de `staleTime` (15 min) bleef staan. Vervangen door een volledige herlaad naar de app-root (`window.location.assign(import.meta.env.BASE_URL)`) na het legen van de cache: de vernietigde sessie levert bij herlaad een 401 op `/auth/me` en het loginscherm verschijnt gegarandeerd. Dit is de robuuste, standaard uitlog en is onafhankelijk van React Query-timing.
+- **Onderste menuknoppen niet klikbaar:** de vaste `NieuwsTicker` (`fixed bottom-0 h-14 z-40`) ving pointer-events af op de laagste sidebar-knoppen. `pb-16` toegevoegd aan de `SidebarFooter` in `artifacts/firevault/src/layouts/beheerder-layout.tsx` zodat de knoppen boven de ticker vallen.
+
+**Verificatie (E2E):** nieuwe spec `scripts/e2e/web-gebruiker-menu.spec.ts` valideert alle zes menuknoppen end-to-end tegen dev — Bekijken als (admin), taalkeuze (POST /auth/taal 200/204), Wachtwoord-dialoog, Uitloggen (POST /auth/logout 204 → loginscherm met #email verschijnt), Privacy-navigatie en App-informatie-navigatie. Volledige `e2e-web`-suite groen: 7 geslaagd, 1 bewust overgeslagen. `pnpm --filter @workspace/firevault run typecheck` groen.
+
+**Buiten scope (bewust ongewijzigd):** herontwerp, rollen/bevoegdheden-logica, en de NIEUWS-ticker-functie zelf.
 
 ## 2026-07-10 — Deploybeleid vastgelegd: productie als acceptatieomgeving
 
