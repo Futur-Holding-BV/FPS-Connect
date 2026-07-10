@@ -4,6 +4,21 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-10 — Eerste automatische productie-deploy geverifieerd (read-only) (Task #497)
+
+- **Uitvoering:** gedeeltelijk (bevestiging uitgesteld tot na de merge) | **Kwaliteit:** hoog | **Risico:** geen (geen deploy uitgevoerd, geen codewijziging)
+
+**Doel:** met eigen ogen bevestigen dat de eerste échte automatische deploy de live site bijwerkt.
+
+**Read-only bevindingen (bewijsgestuurd):**
+- Live productie is bereikbaar: `https://connect.fps-one.nl/api/healthz` → `HTTP 200 {"status":"ok"}`, root `/` → 200. Draait nog de oude code (server loopt achter).
+- De GitHub Actions-workflow "Deploy naar productie" is nog **nooit groen** geweest: elke run faalde of werd geskipt. De recentste faalde bij de SSH-stap met `error: missing server host`.
+- Die falende run draaide nog de **oude** twee-jobs workflow (ghcr build+push → deploy, `workflow_run: [CI]`, `environment: production`). `origin/main` (HEAD `14fbf3b`) bevat nog steeds die oude versie.
+- De correctie uit Task #483 (single-job `appleboy/ssh-action` → `/opt/fps-one/deploy` → pull+build+migrate+up, getriggerd op `push: main`) staat nog **niet** op `origin/main`; die landt pas na de merge van deze taak.
+- De vereiste secrets `PROD_SSH_HOST/USER/KEY/PORT` bestaan nu op repo-niveau en het `production`-environment heeft geen required reviewers meer. De integriteit van de SSH-private-key kon niet geverifieerd worden.
+
+**Conclusie:** de eerste echte deploy kan niet vanuit deze omgeving bevestigd worden — de fix moet eerst naar `origin/main` (post-merge) en verificatie van de VPS vereist SSH-toegang die de agent niet heeft; conform het kwaliteitskader wordt niet zelf naar productie gedeployed. De gebruiker heeft expliciet "deploy nu"-toestemming gegeven om, zodra de fix op `origin/main` staat, de deploy handmatig te starten (workflow_dispatch) en de GitHub-run te volgen. Dit is als follow-up vastgelegd.
+
 ## 2026-07-10 — Post-deploy healthcheck: mislukte release faalt automatisch (Task #496)
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (uitsluitend CI/deploy-script; geen app-, DB- of libwijziging)

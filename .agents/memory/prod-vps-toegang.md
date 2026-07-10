@@ -36,6 +36,10 @@ up -d → healthz-check. De ongetrackte productie-envfile op de server moet blij
 - Een net bijgewerkte Replit-secret bereikt NIET de al draaiende bash-tool of code_execution-sandbox (die lezen een stale/lege env). Lees zo'n secret via de validation-runner (start een vers proces) i.p.v. direct in bash.
 - Een meerregelige PEM/OpenSSH private key die in een secret-veld wordt geplakt verliest vaak zijn newlines (wordt één spatie-gescheiden regel) → OpenSSH faalt met `error in libcrypto` / `Permission denied`. Reconstrueer: strip alle whitespace uit de base64-body tussen de BEGIN/END-headers en herwrap op 70 tekens. Sleutelmateriaal nooit printen.
 
+**Automatische GitHub-deploy — status (bevestigd):**
+- De "Deploy naar productie"-workflow is nog NOOIT groen geweest: elke run faalde of werd geskipt. Een recente run faalde bij de SSH-stap met `error: missing server host` — de job las environment-scoped secrets (leeg); repo-level `PROD_SSH_HOST/USER/KEY/PORT` bestaan inmiddels wél en het `production`-environment heeft geen required reviewers meer.
+- De correcte single-job workflow (push→appleboy/ssh-action→`/opt/fps-one/deploy`→pull+build+migrate+up -d) wordt pas actief zodra hij op origin/main staat. Het bevestigen van de eerste échte deploy is daarmee per definitie een POST-MERGE activiteit: vereist GitHub Actions-observatie én servertoegang. Zonder SSH kan de agent alleen healthz + de GitHub-run controleren, niet de VPS-git-HEAD/containers.
+
 **Structurele productie-config-gaten:**
 - Productie mist mailvariabelen (Azure Graph + afzender/postbus) → uitnodigings-
   en wachtwoord-vergeten-mails komen daar nooit aan; bij "gebruiker kan niet
