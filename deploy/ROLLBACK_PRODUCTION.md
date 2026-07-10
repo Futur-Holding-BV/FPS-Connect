@@ -1,6 +1,27 @@
 # FPS Connect — Rollback Productie
 
-## Wanneer rollback uitvoeren
+## Automatische rollback bij falende healthcheck
+
+`.github/workflows/deploy.yml` rolt zichzelf al automatisch terug wanneer de
+post-deploy healthcheck faalt: vóór de `git pull` wordt de huidige (nog
+gezonde) commit onthouden; faalt de healthcheck ná `build`/`migrate`/`up -d`
+van de nieuwe release, dan doet de workflow zelf `git checkout <vorige-commit>`
+gevolgd door opnieuw `build` + `up -d`, en draait daarna de healthcheck nog
+een keer om te bevestigen dat productie weer gezond is.
+
+Dit automatische pad is exact **Rollback Niveau 1** hieronder (alleen
+applicatiecode, geen database-herstel) — het dekt dus alleen releases zonder
+schema-wijzigingen. De GitHub Actions-run faalt altijd zodra de oorspronkelijke
+healthcheck faalde, ook als de automatische rollback zelf slaagt: de deploy
+was mislukt en dat moet zichtbaar blijven. Als ook de rollback-healthcheck
+faalt (bijv. omdat het probleem in de database zit), meldt de workflow dat
+handmatige interventie nodig is — ga dan verder met **Niveau 2** hieronder.
+
+De onderstaande handmatige procedures blijven leidend voor alles wat het
+automatische pad niet dekt (database-herstel, of wanneer je buiten een
+GitHub Actions-run om moet ingrijpen).
+
+## Wanneer (handmatig) rollback uitvoeren
 
 - Kritieke fout na deployment die niet snel opgelost kan worden
 - Data-inconsistentie gedetecteerd
