@@ -4,11 +4,42 @@ import { Router } from "express";
 import { Readable } from "stream";
 import { randomUUID } from "crypto";
 import multer from "multer";
-import { db, documentStudioModellenTable, werkgeversTable } from "@workspace/db";
-import { eq, and, desc, inArray, sql } from "drizzle-orm";
+import { db, documentStudioModellenTable, werkgeversTable, gebruikersTable, gebouwToewijzingenTable } from "@workspace/db";
+import { eq, and, desc, inArray, sql, ne } from "drizzle-orm";
 import { DocumentStudioModelInputDocumentType } from "@workspace/api-zod";
-import { requireBevoegdheid } from "../middlewares/auth";
+import { requireBevoegdheid, requireAuth } from "../middlewares/auth";
 import { ObjectStorageService, ObjectNotFoundError } from "../lib/objectStorage";
+import { isBeperktTotToegewezen } from "../utils/rol";
+import { haalScanStatusOpVoorPad } from "../services/security-intake-engine";
+
+async function magBestandInGebouw(
+  userId: number,
+  objectPath: string,
+): Promise<boolean> {
+  const gebouwIdMatch = objectPath.match(/\/objects\/(\d+)\//);
+  const gebouwId = gebouwIdMatch ? parseInt(gebouwIdMatch[1], 10) : null;
+  
+  if (gebouwId == null) return true;
+  if (!(await isBeperktTotToegewezen(userId))) return true;
+  const rows = await db
+    .select({ gebouwId: gebouwToewijzingenTable.gebouwId })
+    .from(gebouwToewijzingenTable)
+    .where(eq(gebouwToewijzingenTable.gebruikerId, userId));
+  return rows.some((r) => r.gebouwId === gebouwId);
+}
+
+async function magDocumentBestandZien(
+  userId: number,
+  objectPath: string,
+): Promise<boolean> {
+  // Voor studio-bestanden geldt: alleen hoofdbeheerders als het niet expliciet een publiek model is (hier simpeler check: vereist organisatie bevoegdheid)
+  // De route zelf checkt al bevoegdheid "organisatie", maar dit is extra server-side document check
+  const [gebruiker] = await db
+    .select({ rol: gebruikersTable.rol })
+    .from(gebruikersTable)
+    .where(eq(gebruikersTable.id, userId));
+  return gebruiker?.rol === "hoofdbeheerder" || gebruiker?.rol === "gebruiker";
+}
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
 import { STUDIO_GENEREER_JSON_PROMPT, STUDIO_BIJSTUUR_JSON_PROMPT, STUDIO_HUISSTIJL_ANALYSE_PROMPT } from "../lib/aiPrompts";
 import { logActiviteit } from "../lib/activiteit";
@@ -398,6 +429,18 @@ router.patch("/studio/modellen/:id", schrijven, async (req, res): Promise<void> 
 
     if (status === "goedgekeurd") {
       setObj.goedgekeurdOp = new Date();
+      // Oude actieve model archiveren
+      const [huidig] = await db.select().from(documentStudioModellenTable).where(eq(documentStudioModellenTable.id, id));
+      if (huidig) {
+        await db.update(documentStudioModellenTable)
+          .set({ status: "gearchiveerd", gearchiveerdOp: new Date() })
+          .where(and(
+            eq(documentStudioModellenTable.werkgeverId, huidig.werkgeverId),
+            eq(documentStudioModellenTable.documentType, huidig.documentType),
+            eq(documentStudioModellenTable.status, "goedgekeurd"),
+            ne(documentStudioModellenTable.id, id)
+          ));
+      }
     }
 
     const [rij] = await db
@@ -421,9 +464,11 @@ router.patch("/studio/modellen/:id", schrijven, async (req, res): Promise<void> 
 
 // ── Download referentie ───────────────────────────────────────────────────────
 
-router.get("/studio/modellen/:id/referentie", lezen, async (req, res): Promise<void> => {
+router.get("/studio/modellen/:id/referentie", requireAuth, lezen, async (req, res): Promise<void> => {
   try {
     const id = parseId(req.params.id);
+    const userId = req.session.userId!;
+
     const [rij] = await db
       .select()
       .from(documentStudioModellenTable)
@@ -433,8 +478,23 @@ router.get("/studio/modellen/:id/referentie", lezen, async (req, res): Promise<v
       return void res.status(404).json({ error: "Referentiebestand niet gevonden" });
     }
 
+    // ACL checks
+    const objectPath = rij.referentieBestandPad;
+    if (!(await magBestandInGebouw(userId, objectPath))) {
+      return void res.status(403).json({ error: "Geen toegang tot dit gebouw" });
+    }
+    if (!(await magDocumentBestandZien(userId, objectPath))) {
+      return void res.status(403).json({ error: "Geen toegang tot dit bestand" });
+    }
+
+    // Scan check
+    const scanStatus = await haalScanStatusOpVoorPad(objectPath).catch(() => null);
+    if (scanStatus?.geblokkeerd) {
+      return void res.status(403).json({ error: "Bestand geblokkeerd door scan" });
+    }
+
     try {
-      const file = await oss.getObjectEntityFile(rij.referentieBestandPad);
+      const file = await oss.getObjectEntityFile(rij.referentieBestandPad!);
       const response = await oss.downloadObject(file, { isPublic: false });
 
       res.status(response.status);

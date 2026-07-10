@@ -27,4 +27,6 @@ export interface OpdrachtMateriaalRegel {
   datum: string;
   /** @nullable */
   reservering_id?: number | null;
+  /** @nullable */
+  vrij_voorraad?: number | null;
 }

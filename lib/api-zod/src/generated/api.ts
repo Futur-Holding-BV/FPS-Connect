@@ -1520,7 +1520,8 @@ export const ListVoorzieningenQueryParams = zod.object({
   "aangemaakt_van": zod.date().optional().describe('Filter spots aangemaakt op of na deze datum (YYYY-MM-DD)'),
   "aangemaakt_tot": zod.date().optional().describe('Filter spots aangemaakt op of voor deze datum (YYYY-MM-DD)'),
   "pagina": zod.coerce.number().default(listVoorzieningenQueryPaginaDefault),
-  "per_pagina": zod.coerce.number().default(listVoorzieningenQueryPerPaginaDefault)
+  "per_pagina": zod.coerce.number().default(listVoorzieningenQueryPerPaginaDefault),
+  "cluster_id": zod.coerce.number().optional().describe('Filter spots op cluster ID.')
 })
 
 export const ListVoorzieningenResponse = zod.object({
@@ -2456,6 +2457,35 @@ export const GetMijnCertificatenResponse = zod.object({
   "ehbo_vervaldatum": zod.string().nullish(),
   "bhv_vervaldatum": zod.string().nullish()
 })
+
+
+/**
+ * @summary Opleidingen/cursussen (behaald, gepland) van de ingelogde medewerker, met catalogusdetails
+ */
+export const GetMijnOpleidingenResponseItem = zod.object({
+  "id": zod.number(),
+  "opleiding_id": zod.number(),
+  "opleiding_naam": zod.string(),
+  "soort": zod.string().nullish(),
+  "categorie": zod.string().nullish(),
+  "niveau": zod.string().nullish(),
+  "opleider": zod.string().nullish(),
+  "studieduur": zod.string().nullish(),
+  "studiebelasting": zod.string().nullish(),
+  "lesvorm": zod.string().nullish(),
+  "kosten_indicatie": zod.string().nullish(),
+  "kosten_werkgever_pct": zod.number().nullish(),
+  "kosten_werknemer_pct": zod.number().nullish(),
+  "geldigheid_maanden": zod.number().nullish(),
+  "verplicht": zod.boolean().optional(),
+  "status": zod.string(),
+  "behaald_op": zod.string().nullish(),
+  "verloopt_op": zod.string().nullish(),
+  "opmerking": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+export const GetMijnOpleidingenResponse = zod.array(GetMijnOpleidingenResponseItem)
 
 
 /**
@@ -8764,6 +8794,7 @@ export const VoorstelOpleidingenVoorFunctieParams = zod.object({
 export const VoorstelOpleidingenVoorFunctieResponse = zod.object({
   "voorstellen": zod.array(zod.object({
   "naam": zod.string(),
+  "bestaand_id": zod.number().nullish().describe('ID van een bestaande opleiding in de catalogus met dezelfde naam (indien gevonden).'),
   "soort": zod.enum(['opleiding', 'cursus']),
   "categorie": zod.string().nullish(),
   "omschrijving": zod.string().nullish(),
@@ -8781,6 +8812,17 @@ export const VoorstelOpleidingenVoorFunctieResponse = zod.object({
   "toelichting": zod.string().nullish(),
   "betrouwbaarheid": zod.string().nullish()
 })
+
+
+/**
+ * @summary Bestaande opleiding uit catalogus koppelen aan functie
+ */
+export const KoppelOpleidingAanFunctieParams = zod.object({
+  "id": zod.coerce.number(),
+  "opleidingId": zod.coerce.number()
+})
+
+export const KoppelOpleidingAanFunctieResponse = zod.void()
 
 
 /**
@@ -13903,7 +13945,8 @@ export const GetOpdrachtMateriaalResponse = zod.object({
   "status": zod.string().nullish(),
   "omschrijving": zod.string().nullish(),
   "datum": zod.string(),
-  "reservering_id": zod.number().nullish()
+  "reservering_id": zod.number().nullish(),
+  "vrij_voorraad": zod.number().nullish()
 })),
   "uitgiftes": zod.array(zod.object({
   "id": zod.number(),
@@ -13918,7 +13961,8 @@ export const GetOpdrachtMateriaalResponse = zod.object({
   "status": zod.string().nullish(),
   "omschrijving": zod.string().nullish(),
   "datum": zod.string(),
-  "reservering_id": zod.number().nullish()
+  "reservering_id": zod.number().nullish(),
+  "vrij_voorraad": zod.number().nullish()
 })),
   "totaal_kosten_reserveringen": zod.number(),
   "totaal_kosten_uitgiftes": zod.number()

@@ -1,10 +1,11 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { aiAanroepenTable, appInstellingenTable, gebouwenTable, offertesTable, gebruikersTable, gebruikersMeldingenTable } from "@workspace/db";
-import { desc, count, eq, and, gte, lte, sql, sum, ilike, getTableColumns } from "drizzle-orm";
+import { desc, count, eq, and, gte, lte, sql, sum, ilike, getTableColumns, isNotNull } from "drizzle-orm";
 import { requireRol } from "../middlewares/auth";
 import { logger } from "../lib/logger";
 import { verstuurMail, isGeconfigureerd as isMailGeconfigureerd } from "../services/email";
+import { spotAiVoorstellenTable } from "@workspace/db";
 
 const router = Router();
 
@@ -413,5 +414,51 @@ router.get(
     });
   },
 );
+
+// GET /beheer/ai-voorstellen — Alle opgeslagen AI-voorstellen met afwijkingen voor beheerder-review.
+router.get("/api/beheer/ai-voorstellen", requireRol("hoofdbeheerder"), async (req, res): Promise<void> => {
+  try {
+    const rijen = await db
+      .select({
+        id: spotAiVoorstellenTable.id,
+        voorzieningId: spotAiVoorstellenTable.voorzieningId,
+        gebouwId: spotAiVoorstellenTable.gebouwId,
+        gebouwNaam: gebouwenTable.naam,
+        aangemaaktOp: spotAiVoorstellenTable.aangemaaktOp,
+        herkomst: spotAiVoorstellenTable.herkomst,
+        beheerderBevestigdOp: spotAiVoorstellenTable.beheerderBevestigdOp,
+      })
+      .from(spotAiVoorstellenTable)
+      .leftJoin(gebouwenTable, eq(spotAiVoorstellenTable.gebouwId, gebouwenTable.id))
+      .where(isNotNull(spotAiVoorstellenTable.herkomst))
+      .orderBy(desc(spotAiVoorstellenTable.aangemaaktOp))
+      .limit(100);
+
+    return void res.json(rijen.map(r => ({
+      id: r.id,
+      voorziening_id: r.voorzieningId,
+      gebouw_id: r.gebouwId,
+      gebouw_naam: r.gebouwNaam,
+      aangemaakt_op: r.aangemaaktOp.toISOString(),
+      herkomst: r.herkomst,
+      bevestigd: !!r.beheerderBevestigdOp
+    })));
+  } catch (err) {
+    req.log.error(err);
+    return void res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// DELETE /beheer/ai-voorstellen/:id — Verwijderen van een opgeslagen AI-correctie/voorstel.
+router.delete("/api/beheer/ai-voorstellen/:id", requireRol("hoofdbeheerder"), async (req, res): Promise<void> => {
+  try {
+    const id = parseInt(String(req.params.id));
+    await db.delete(spotAiVoorstellenTable).where(eq(spotAiVoorstellenTable.id, id));
+    return void res.status(204).end();
+  } catch (err) {
+    req.log.error(err);
+    return void res.status(500).json({ error: "Interne serverfout" });
+  }
+});
 
 export default router;

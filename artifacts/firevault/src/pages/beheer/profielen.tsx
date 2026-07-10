@@ -10,6 +10,7 @@ import {
   getListGebruikersQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -47,6 +48,7 @@ type ProfielForm = {
 const LEEG_FORM: ProfielForm = { id: null, naam: "", bevoegdheden: {} };
 
 export default function ProfielenBeheer() {
+  const { toast } = useToast();
   const queryClient = useQueryClient();
   const { data, isLoading } = useListProfielen();
   const profielen = data ?? [];
@@ -121,9 +123,19 @@ export default function ProfielenBeheer() {
     if (!toepassenTarget) return;
     setToepassenBezigId(toepassenTarget.id);
     try {
-      await pasProfielToe.mutateAsync({ id: toepassenTarget.id });
+      const result = await pasProfielToe.mutateAsync({ id: toepassenTarget.id });
       await invalideer();
       await queryClient.invalidateQueries({ queryKey: getListGebruikersQueryKey() });
+      toast({
+        title: "Profiel toegepast",
+        description: `Bevoegdheden bijgewerkt voor ${result.bijgewerkt} ${result.bijgewerkt === 1 ? "gebruiker" : "gebruikers"}.`,
+      });
+    } catch (err: any) {
+      toast({
+        title: "Toepassen mislukt",
+        description: err?.response?.data?.error || "Er is een fout opgetreden bij het toepassen van het profiel.",
+        variant: "destructive",
+      });
     } finally {
       setToepassenBezigId(null);
       setToepassenTarget(null);

@@ -245,10 +245,14 @@ function ClusterOmhulling({ leden, kleur }: { leden: SVGVoorziening[]; kleur: st
 }
 
 // Telbubbel voor een visuele groep van dicht opeenliggende spots.
-function ClusterBubble({ centroid, aantal, schaal }: { centroid: Punt; aantal: number; schaal: number }) {
+function ClusterBubble({ centroid, aantal, schaal, onClick }: { centroid: Punt; aantal: number; schaal: number; onClick?: () => void }) {
   const r = Math.max(18, 22 / schaal);
   return (
-    <g transform={`translate(${centroid.x}, ${centroid.y})`} style={{ pointerEvents: "none" }}>
+    <g
+      transform={`translate(${centroid.x}, ${centroid.y})`}
+      style={{ cursor: onClick ? "pointer" : "default" }}
+      onClick={onClick}
+    >
       <circle r={r + 4} fill="#1e293b" opacity={0.18} />
       <circle r={r} fill="#1e293b" stroke="#fff" strokeWidth={2 / schaal} />
       <text
@@ -454,6 +458,12 @@ function PlattegrondCanvas({
               centroid={groepCentroid(groep)}
               aantal={groep.length}
               schaal={fitSchaal}
+              onClick={() => {
+                // In de hero (read-only) hebben we geen pan/zoom state.
+                // We kunnen eventueel doorsturen naar de editor, of een modal tonen.
+                // Voor nu maken we de bubbel interactief zodat de cursor wijzigt,
+                // wat aangeeft dat inzoomen (via de browser of dubbelklik) nuttig is.
+              }}
             />
           ),
         )}

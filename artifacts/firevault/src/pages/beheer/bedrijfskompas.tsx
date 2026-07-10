@@ -1237,10 +1237,10 @@ function LeermomentRij({ lm, onSaved }: { lm: FieLeermoment; onSaved: () => void
   }
 
   return (
-    <>
+    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
       <tr className="border-b last:border-0 text-sm hover:bg-muted/30">
         <td className="py-2 pr-3 pl-4">
-          <CollapsibleTrigger asChild onClick={() => setIsOpen(!isOpen)}>
+          <CollapsibleTrigger asChild>
             <Button variant="ghost" size="sm" className="h-7 w-full justify-start font-medium capitalize px-1 gap-1">
               {isOpen ? <ChevronDown className="h-3 w-3" /> : <ChevronRightIcon className="h-3 w-3" />}
               {lm.werktype}
@@ -1345,11 +1345,12 @@ function LeermomentRij({ lm, onSaved }: { lm: FieLeermoment; onSaved: () => void
           </CollapsibleContent>
         </td>
       </tr>
-    </>
+    </Collapsible>
   );
 }
 
 function LeereffectenBeheerTab() {
+  const { toast } = useToast();
   const { data: leermomenten, isLoading, refetch } = useListFieLeermomenten();
   const herbereken = useHerberekeenFieLeermomenten();
   const herberekeenVerouderd = useHerberekeenVerouderdeNacalculaties();
@@ -1359,17 +1360,25 @@ function LeereffectenBeheerTab() {
   const aantalVerouderd = verouderdAantal?.aantal ?? 0;
 
   function startHerbereken() {
-    herbereken.mutate(undefined, { onSuccess: () => { void refetch(); } });
+    herbereken.mutate(undefined, { 
+      onSuccess: (data: any) => { 
+        toast({ title: "Leermomenten herberekend", description: `${data.verwerkt ?? 0} werktypes bijgewerkt.` });
+        void refetch(); 
+      },
+      onError: () => toast({ title: "Herberekening mislukt", variant: "destructive" }),
+    });
   }
 
   function startHerberekeenVerouderd() {
     setVerouderdResultaat(null);
     herberekeenVerouderd.mutate(undefined, {
-      onSuccess: (data) => {
+      onSuccess: (data: any) => {
         setVerouderdResultaat(data.herberekend);
+        toast({ title: "Werktypes bijgewerkt", description: `${data.herberekend ?? 0} nacalculaties gecorrigeerd naar specifiek werktype.` });
         void refetch();
         void refetchVerouderdAantal();
       },
+      onError: () => toast({ title: "Bijwerken mislukt", variant: "destructive" }),
     });
   }
 
@@ -1460,9 +1469,7 @@ function LeereffectenBeheerTab() {
               </thead>
               <tbody>
                 {leermomenten.map(lm => (
-                  <Collapsible key={lm.id} asChild>
-                    <LeermomentRij lm={lm} onSaved={() => void refetch()} />
-                  </Collapsible>
+                  <LeermomentRij key={lm.id} lm={lm} onSaved={() => void refetch()} />
                 ))}
               </tbody>
             </table>

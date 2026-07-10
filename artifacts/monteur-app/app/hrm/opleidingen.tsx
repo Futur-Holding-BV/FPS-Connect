@@ -1,4 +1,4 @@
-import { useListOpleidingen } from "@workspace/api-client-react";
+import { useGetMijnOpleidingen, useListOpleidingen } from "@workspace/api-client-react";
 import { Redirect, useRouter } from "expo-router";
 import React from "react";
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, Text, View } from "react-native";
@@ -9,6 +9,18 @@ import { useAuth } from "@/context/auth";
 import { useColors } from "@/hooks/useColors";
 import { useResponsive } from "@/hooks/useResponsive";
 
+function isVerlopen(datum: string | null | undefined): boolean {
+  if (!datum) return false;
+  return new Date(datum).getTime() < Date.now();
+}
+
+function isBinnenkortVerlopen(datum: string | null | undefined): boolean {
+  if (!datum) return false;
+  const t = new Date(datum).getTime();
+  const nu = Date.now();
+  return t >= nu && t <= nu + 60 * 24 * 60 * 60 * 1000;
+}
+
 export default function OpleidingenScherm() {
   const c = useColors();
   const router = useRouter();
@@ -16,10 +28,12 @@ export default function OpleidingenScherm() {
   const { inhoudMaxBreedte } = useResponsive();
   const { token } = useAuth();
   const { data, isLoading, isError, refetch, isRefetching } = useListOpleidingen();
+  const { data: mijnData } = useGetMijnOpleidingen({ query: { queryKey: ["mijn", "opleidingen"], retry: false } });
 
   if (!token) return <Redirect href="/login" />;
 
   const opleidingen = data ?? [];
+  const mijnOpleidingen = mijnData ?? [];
 
   return (
     <View style={{ flex: 1, backgroundColor: c.background }}>
@@ -54,6 +68,75 @@ export default function OpleidingenScherm() {
             <Text style={{ textAlign: "center", color: c.mutedForeground, marginTop: 48, fontFamily: "Inter_400Regular" }}>
               Geen opleidingen gevonden.
             </Text>
+          }
+          ListHeaderComponent={
+            mijnOpleidingen.length > 0 ? (
+              <View style={{ marginBottom: 4 }}>
+                <Text style={{ fontSize: 14, color: c.foreground, fontFamily: "Inter_700Bold", marginBottom: 8 }}>
+                  Mijn opleidingen
+                </Text>
+                <View style={{ gap: 10, marginBottom: 16 }}>
+                  {mijnOpleidingen.map((m) => {
+                    const verlopen = isVerlopen(m.verloopt_op);
+                    const bijnaVerlopen = !verlopen && isBinnenkortVerlopen(m.verloopt_op);
+                    return (
+                      <View
+                        key={m.id}
+                        style={{
+                          backgroundColor: c.card,
+                          borderRadius: c.radius,
+                          borderWidth: 1,
+                          borderColor: verlopen ? c.destructive : c.border,
+                          padding: 14,
+                        }}
+                      >
+                        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                          <Text style={{ flex: 1, fontSize: 15, color: c.foreground, fontFamily: "Inter_600SemiBold" }}>
+                            {m.opleiding_naam}
+                          </Text>
+                          <View
+                            style={{
+                              backgroundColor: verlopen ? c.destructive : bijnaVerlopen ? c.accent : c.muted,
+                              paddingHorizontal: 10,
+                              paddingVertical: 4,
+                              borderRadius: 8,
+                            }}
+                          >
+                            <Text
+                              style={{
+                                color: verlopen ? c.destructiveForeground : bijnaVerlopen ? c.accentForeground : c.mutedForeground,
+                                fontSize: 12,
+                                fontFamily: "Inter_600SemiBold",
+                              }}
+                            >
+                              {verlopen ? "Verlopen" : m.status}
+                            </Text>
+                          </View>
+                        </View>
+                        {m.behaald_op ? (
+                          <Text style={{ fontSize: 13, color: c.mutedForeground, marginTop: 6, fontFamily: "Inter_400Regular" }}>
+                            Behaald op {new Date(m.behaald_op).toLocaleDateString("nl-NL")}
+                          </Text>
+                        ) : null}
+                        {m.verloopt_op ? (
+                          <Text style={{ fontSize: 13, color: c.mutedForeground, marginTop: 2, fontFamily: "Inter_400Regular" }}>
+                            {verlopen ? "Verlopen op" : "Geldig tot"} {new Date(m.verloopt_op).toLocaleDateString("nl-NL")}
+                          </Text>
+                        ) : null}
+                        {m.opleider ? (
+                          <Text style={{ fontSize: 13, color: c.mutedForeground, marginTop: 2, fontFamily: "Inter_400Regular" }}>
+                            Opleider: {m.opleider}
+                          </Text>
+                        ) : null}
+                      </View>
+                    );
+                  })}
+                </View>
+                <Text style={{ fontSize: 14, color: c.foreground, fontFamily: "Inter_700Bold", marginBottom: 8 }}>
+                  Catalogus
+                </Text>
+              </View>
+            ) : null
           }
           renderItem={({ item }) => (
             <View

@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
-import { Bot, TrendingUp, AlertCircle, Clock, Loader2, Filter, RefreshCw, Download, TriangleAlert, Settings2, Check } from "lucide-react";
+import { Bot, TrendingUp, AlertCircle, Clock, Loader2, Filter, RefreshCw, Download, TriangleAlert, Settings2, Check, Trash2, ExternalLink } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { useToast } from "@/hooks/use-toast";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
@@ -450,6 +451,127 @@ function UploadLogSectie() {
   );
 }
 
+function AiVoorstellenSectie() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [voorstellen, setVoorstellen] = useState<any[]>([]);
+  const [laden, setLaden] = useState(false);
+  const [fout, setFout] = useState<string | null>(null);
+  const [open, setOpen] = useState(false);
+
+  async function laadVoorstellen() {
+    setLaden(true);
+    setFout(null);
+    try {
+      const r = await fetch("/api/beheer/ai-voorstellen");
+      if (!r.ok) throw new Error("Laden mislukt");
+      const data = await r.json();
+      setVoorstellen(data);
+    } catch {
+      setFout("Laden mislukt.");
+    } finally {
+      setLaden(false);
+    }
+  }
+
+  useEffect(() => {
+    if (open) void laadVoorstellen();
+  }, [open]);
+
+  async function handleVerwijder(id: number) {
+    if (!confirm("Weet u zeker dat u deze correctie wilt verwijderen?")) return;
+    try {
+      const r = await fetch(`/api/beheer/ai-voorstellen/${id}`, { method: "DELETE" });
+      if (!r.ok) throw new Error("Verwijderen mislukt");
+      toast({ title: "Verwijderd", description: "De AI-correctie is verwijderd." });
+      void laadVoorstellen();
+    } catch {
+      toast({ title: "Fout", description: "Verwijderen mislukt.", variant: "destructive" });
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader className="py-3 px-4">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-sm font-semibold flex items-center gap-2">
+            AI-correcties (leerset)
+          </CardTitle>
+          <Button size="sm" variant="outline" onClick={() => setOpen((o) => !o)}>
+            {open ? "Verbergen" : "Tonen"}
+          </Button>
+        </div>
+        <p className="text-xs text-muted-foreground mt-0.5">
+          Opgeslagen AI-correcties van monteurs voor herkenning-optimalisatie.
+        </p>
+      </CardHeader>
+      {open && (
+        <CardContent className="p-0">
+          {laden && (
+            <div className="flex items-center gap-2 px-4 py-6 text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span className="text-xs">Laden…</span>
+            </div>
+          )}
+          {fout && <p className="px-4 py-4 text-xs text-destructive">{fout}</p>}
+          {!laden && !fout && voorstellen.length === 0 && (
+            <p className="px-4 py-6 text-xs text-muted-foreground text-center">Nog geen AI-correcties geregistreerd.</p>
+          )}
+          {!laden && voorstellen.length > 0 && (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-xs py-2">Datum</TableHead>
+                    <TableHead className="text-xs py-2">Gebouw</TableHead>
+                    <TableHead className="text-xs py-2">Spot ID</TableHead>
+                    <TableHead className="text-xs py-2">Herkomst</TableHead>
+                    <TableHead className="text-xs py-2">Status</TableHead>
+                    <TableHead className="text-xs py-2 text-right">Acties</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {voorstellen.map((r) => (
+                    <TableRow key={r.id}>
+                      <TableCell className="text-xs py-2 whitespace-nowrap">
+                        {new Date(r.aangemaakt_op).toLocaleDateString("nl-NL")}
+                      </TableCell>
+                      <TableCell className="text-xs py-2">{r.gebouw_naam ?? "—"}</TableCell>
+                      <TableCell className="text-xs py-2">{r.voorziening_id}</TableCell>
+                      <TableCell className="text-xs py-2">
+                        <Badge variant="outline" className="text-[10px] capitalize">
+                          {r.herkomst}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-xs py-2">
+                        {r.bevestigd ? (
+                          <Badge className="text-[10px] bg-green-100 text-green-800 border-green-200" variant="outline">Geverifieerd</Badge>
+                        ) : (
+                          <Badge variant="secondary" className="text-[10px]">Wachtend</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-xs py-2 text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => window.open(`/gebouwen/${r.gebouw_id}/plattegrond?spot=${r.voorziening_id}`)}>
+                            <ExternalLink className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => handleVerwijder(r.id)}>
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      )}
+    </Card>
+  );
+}
+
 export default function AiLogPagina() {
   const { rol } = useRol();
   const [, navigate] = useLocation();
@@ -771,6 +893,7 @@ export default function AiLogPagina() {
                     <TableHead className="text-xs">Module</TableHead>
                     <TableHead className="text-xs">Functie</TableHead>
                     <TableHead className="text-xs">Model</TableHead>
+                    <TableHead className="text-xs">Versie</TableHead>
                     <TableHead className="text-xs">Status</TableHead>
                     <TableHead className="text-xs text-right">Tokens</TableHead>
                     <TableHead className="text-xs text-right">Kosten</TableHead>
@@ -796,6 +919,9 @@ export default function AiLogPagina() {
                       <TableCell>
                         <span className="font-mono text-[11px]">{r.model_naam}</span>
                         <span className="ml-1 text-muted-foreground">({r.model_slot})</span>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {r.prompt_versie ?? "—"}
                       </TableCell>
                       <TableCell>
                         <Badge
@@ -880,6 +1006,7 @@ export default function AiLogPagina() {
         </div>
       )}
 
+      <AiVoorstellenSectie />
       <UploadLogSectie />
     </div>
   );

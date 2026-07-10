@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,7 +22,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
-  ArrowLeft, Plus, Pencil, Trash2, Upload, Download, Package, Building2, Search, BookOpen,
+  ArrowLeft, Plus, Pencil, Trash2, Upload, Download, Package, Building2, Search, BookOpen, RefreshCw,
 } from "lucide-react";
 import { AiInvullenKnop } from "@/components/ai-invullen-knop";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -171,6 +172,19 @@ export default function ModulesCalculatieLeveranciers() {
     }
   }
 
+  const synchStandaardData = useMutation({
+    mutationFn: () => fetch(`${BASE}/synchroniseer-standaard`, { method: "POST" }).then((r) => r.json()),
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ["calc-artikelen"] });
+      qc.invalidateQueries({ queryKey: ["calc-leveranciers"] });
+      toast({ 
+        title: "Standaard data gesynchroniseerd", 
+        description: `${data.tarieven_toegevoegd} tarieven en ${data.normtijden_toegevoegd} normtijden toegevoegd.` 
+      });
+    },
+    onError: () => toast({ title: "Synchronisatie mislukt", variant: "destructive" }),
+  });
+
   async function handleImport() {
     if (!importCsv.trim()) return;
     setImportBezig(true);
@@ -318,6 +332,15 @@ export default function ModulesCalculatieLeveranciers() {
               </SelectContent>
             </Select>
             <div className="ml-auto flex gap-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => synchStandaardData.mutate()} 
+                disabled={synchStandaardData.isPending}
+              >
+                <RefreshCw className={cn("h-4 w-4 mr-1.5", synchStandaardData.isPending && "animate-spin")} />
+                Standaard vullen
+              </Button>
               <Button variant="outline" size="sm" onClick={() => setImportDialoog(true)}>
                 <Upload className="h-4 w-4 mr-1.5" />
                 CSV importeren

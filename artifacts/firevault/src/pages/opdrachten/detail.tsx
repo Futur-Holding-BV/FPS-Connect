@@ -58,7 +58,7 @@ import InkoopplanningTab from "./inkoopplanning-tab";
 import UitvoeringsplanningTab from "./uitvoeringsplanning-tab";
 import OnderaannemeringTab from "./onderaanneming-tab";
 import MateriaaltabTab from "./materiaal-tab";
-import PimUitvoeringTab from "./pim-uitvoering-tab";
+import PimUitvoeringTab, { StappenOverzicht } from "./pim-uitvoering-tab";
 import PimOpleveringTab from "./pim-oplevering-tab";
 
 function euro(n: number | null | undefined) {
@@ -529,6 +529,12 @@ export default function OpdrachtDetailPagina() {
 
   const aiChatMut = useAiChatWerkbegroting();
 
+  const isGereed = opdracht?.status === "afgerond";
+
+  function downloadNacalculatiePdf() {
+    window.print();
+  }
+
   if (opdrachtLoading) {
     return (
       <div className="p-6 max-w-5xl mx-auto space-y-4">
@@ -572,6 +578,19 @@ export default function OpdrachtDetailPagina() {
             {wbStatus && (
               <Badge variant="outline" className={wbStatus.kleur}>Begroting: {wbStatus.label}</Badge>
             )}
+            <div className="flex-1" />
+            <div className="flex gap-2 print:hidden">
+              {isGereed && (
+                <Button variant="outline" size="sm" onClick={downloadNacalculatiePdf}>
+                  <Printer className="h-4 w-4 mr-1.5" />
+                  Nacalculatie PDF
+                </Button>
+              )}
+              <Button variant="outline" size="sm" onClick={() => setChatOpen(true)}>
+                <MessageSquare className="h-4 w-4 mr-1.5" />
+                AI-chat
+              </Button>
+            </div>
           </div>
           {opdracht.werknummer && <p className="text-xs text-muted-foreground mt-0.5">{opdracht.werknummer}</p>}
         </div>
@@ -608,6 +627,9 @@ export default function OpdrachtDetailPagina() {
       {/* AI-projectcontroller */}
       <div className="print:hidden">
         <ProjectControllerSignalen nacalculatie={nacalculatie} />
+
+      {/* Live Uitvoeringsvoortgang (Task #309) */}
+      <StappenOverzicht opdrachtId={opdrachtId} />
       </div>
 
       {/* Tabs */}
@@ -628,7 +650,7 @@ export default function OpdrachtDetailPagina() {
           </TabsTrigger>
           <TabsTrigger value="materiaal">
             <Package className="h-3.5 w-3.5 mr-1.5" />
-            Materiaal
+            Materiaal & uitgiftes
           </TabsTrigger>
           <TabsTrigger value="nacalculatie">Nacalculatie</TabsTrigger>
           <TabsTrigger value="planning">Planning-uren</TabsTrigger>

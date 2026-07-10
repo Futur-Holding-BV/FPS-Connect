@@ -448,21 +448,40 @@ async function syncOpleidingFuncties(opleidingId: number, functieIds: unknown): 
   }
 }
 
+// Opleiding aan functie koppelen (toevoegen aan bestaande koppelingen).
+async function koppelOpleidingAanFunctie(opleidingId: number, functieId: number): Promise<void> {
+  const [bestaand] = await db
+    .select()
+    .from(functieOpleidingenTable)
+    .where(and(eq(functieOpleidingenTable.opleidingId, opleidingId), eq(functieOpleidingenTable.functieId, functieId)));
+  if (bestaand) return;
+
+  const [functie] = await db.select({ id: functiesTable.id }).from(functiesTable).where(eq(functiesTable.id, functieId));
+  if (!functie) return;
+
+  await db.insert(functieOpleidingenTable).values({ opleidingId, functieId }).onConflictDoNothing();
+}
+
 const soortOf = (v: unknown): "opleiding" | "cursus" | undefined =>
   v === "opleiding" ? "opleiding" : v === "cursus" ? "cursus" : undefined;
 
 // Kostenverdeling werkgever/werknemer moet, indien beide bekend zijn, optellen tot 100%.
 // Geeft een foutmelding terug (of null als geldig) zodat routes vroeg met 400 kunnen stoppen.
 function kostenverdelingFout(werkgeverPct: unknown, werknemerPct: unknown): string | null {
-  if (werkgeverPct == null || werknemerPct == null) return null;
-  const w1 = Number(werkgeverPct);
-  const w2 = Number(werknemerPct);
-  if (!Number.isFinite(w1) || !Number.isFinite(w2) || w1 < 0 || w2 < 0 || w1 > 100 || w2 > 100) {
-    return "Kostenverdeling werkgever/werknemer moet percentages tussen 0 en 100 zijn";
-  }
-  if (w1 + w2 !== 100) {
+  const w1 = werkgeverPct != null ? Number(werkgeverPct) : null;
+  const w2 = werknemerPct != null ? Number(werknemerPct) : null;
+
+  if (w1 != null && (isNaN(w1) || w1 < 0 || w1 > 100)) return "Werkgever percentage moet tussen 0 en 100 liggen";
+  if (w2 != null && (isNaN(w2) || w2 < 0 || w2 > 100)) return "Werknemer percentage moet tussen 0 en 100 liggen";
+
+  if (w1 != null && w2 != null && w1 + w2 !== 100) {
     return "Kostenverdeling werkgever + werknemer moet optellen tot 100%";
   }
+
+  // Als één van beide 100 is, moet de ander 0 zijn (indien gezet)
+  if (w1 === 100 && w2 != null && w2 !== 0) return "Bij 100% werkgever moet werknemer 0% zijn";
+  if (w2 === 100 && w1 != null && w1 !== 0) return "Bij 100% werknemer moet werkgever 0% zijn";
+
   return null;
 }
 
@@ -477,14 +496,29 @@ router.get("/opleidingen", lezen, async (req, res): Promise<void> => {
   }
 });
 
+// Als slechts één van de twee percentages is ingevuld, vult dit de andere aan
+// zodat de kostenverdeling altijd optelt tot 100% (afdwingen, niet alleen
+// valideren wanneer beide toevallig zijn meegestuurd).
+function vulKostenverdelingAan(
+  werkgeverPct: unknown,
+  werknemerPct: unknown,
+): { werkgever: number | null; werknemer: number | null } {
+  const w1 = werkgeverPct != null ? Number(werkgeverPct) : null;
+  const w2 = werknemerPct != null ? Number(werknemerPct) : null;
+  if (w1 != null && w2 == null) return { werkgever: w1, werknemer: Math.max(0, 100 - w1) };
+  if (w2 != null && w1 == null) return { werkgever: Math.max(0, 100 - w2), werknemer: w2 };
+  return { werkgever: w1, werknemer: w2 };
+}
+
 router.post("/opleidingen", schrijven, async (req, res): Promise<void> => {
   try {
     const {
       naam, categorie, soort, omschrijving, niveau, opleider, studieduur, studiebelasting,
-      lesvorm, kosten_indicatie, kosten_werkgever_pct, kosten_werknemer_pct,
-      geldigheid_maanden, verplicht, functie_ids,
+      lesvorm, kosten_indicatie, geldigheid_maanden, verplicht, functie_ids,
     } = req.body;
     if (!naam) return void res.status(400).json({ error: "naam is verplicht" });
+    const { werkgever: kosten_werkgever_pct, werknemer: kosten_werknemer_pct } =
+      vulKostenverdelingAan(req.body.kosten_werkgever_pct, req.body.kosten_werknemer_pct);
     const kvFout = kostenverdelingFout(kosten_werkgever_pct, kosten_werknemer_pct);
     if (kvFout) return void res.status(400).json({ error: kvFout });
     const [o] = await db
@@ -519,18 +553,23 @@ router.patch("/opleidingen/:id", schrijven, async (req, res): Promise<void> => {
   try {
     const {
       naam, categorie, soort, omschrijving, niveau, opleider, studieduur, studiebelasting,
-      lesvorm, kosten_indicatie, kosten_werkgever_pct, kosten_werknemer_pct,
-      geldigheid_maanden, verplicht, functie_ids,
+      lesvorm, kosten_indicatie, geldigheid_maanden, verplicht, functie_ids,
     } = req.body;
+    let { kosten_werkgever_pct, kosten_werknemer_pct } = req.body;
     const id = parseId(req.params.id);
     if (kosten_werkgever_pct !== undefined || kosten_werknemer_pct !== undefined) {
-      const [bestaand] = await db
-        .select({ w1: opleidingenTable.kostenWerkgeverPct, w2: opleidingenTable.kostenWerknemerPct })
-        .from(opleidingenTable)
-        .where(eq(opleidingenTable.id, id));
-      const effectiefWerkgever = kosten_werkgever_pct !== undefined ? kosten_werkgever_pct : bestaand?.w1 ?? null;
-      const effectiefWerknemer = kosten_werknemer_pct !== undefined ? kosten_werknemer_pct : bestaand?.w2 ?? null;
-      const kvFout = kostenverdelingFout(effectiefWerkgever, effectiefWerknemer);
+      // Slechts één kant meegestuurd bij PATCH: leidt de andere kant af zodat
+      // de verdeling altijd optelt tot 100% (afdwingen), i.p.v. de bestaande
+      // (mogelijk niet-complementaire) DB-waarde van de andere kant te laten staan.
+      if (kosten_werkgever_pct === undefined || kosten_werknemer_pct === undefined) {
+        const aangevuld = vulKostenverdelingAan(
+          kosten_werkgever_pct !== undefined ? kosten_werkgever_pct : null,
+          kosten_werknemer_pct !== undefined ? kosten_werknemer_pct : null,
+        );
+        if (kosten_werkgever_pct !== undefined) kosten_werknemer_pct = aangevuld.werknemer;
+        if (kosten_werknemer_pct !== undefined) kosten_werkgever_pct = aangevuld.werkgever;
+      }
+      const kvFout = kostenverdelingFout(kosten_werkgever_pct, kosten_werknemer_pct);
       if (kvFout) return void res.status(400).json({ error: kvFout });
     }
     // Partiele PATCH: alleen meegestuurde velden bijwerken. Drizzle .set() slaat
@@ -587,7 +626,29 @@ router.post("/functies/:id/opleidingen-voorstel", schrijven, async (req, res): P
       // specifieke medewerker wordt aangevraagd; bij een functie-niveau-aanroep null.
       medewerker_id: typeof req.body?.medewerker_id === "number" ? req.body.medewerker_id : null,
     });
-    res.json(resultaat);
+
+    // Check of er al bestaande opleidingen zijn met dezelfde naam
+    const verrijkt = await Promise.all(resultaat.voorstellen.map(async (v) => {
+      const [bestaand] = await db
+        .select({ id: opleidingenTable.id })
+        .from(opleidingenTable)
+        .where(eq(sql`LOWER(${opleidingenTable.naam})`, v.naam.toLowerCase()));
+      return { ...v, bestaand_id: bestaand?.id ?? null };
+    }));
+
+    res.json({ ...resultaat, voorstellen: verrijkt });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+router.post("/functies/:id/opleidingen/:opleidingId/koppel", schrijven, async (req, res): Promise<void> => {
+  try {
+    const functieId = parseId(req.params.id);
+    const opleidingId = parseId(req.params.opleidingId);
+    await koppelOpleidingAanFunctie(opleidingId, functieId);
+    res.status(204).send();
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });
@@ -1479,8 +1540,14 @@ router.get("/medewerkers/:id/verlofaanvragen", lezen, async (req, res): Promise<
 
 router.post("/medewerkers/:id/verlofaanvragen", schrijven, async (req, res): Promise<void> => {
   try {
-    const { verlofsoort_id, start_datum, eind_datum, aantal_uren, status, reden, opmerking } = req.body;
+    const { medewerker_id, verlofsoort_id, start_datum, eind_datum, aantal_uren, status, reden, opmerking } = req.body;
     if (verlofsoort_id == null || !start_datum || !eind_datum) return void res.status(400).json({ error: "verlofsoort_id, start_datum en eind_datum zijn verplicht" });
+    
+    // Server-side datumvolgorde validatie (#101)
+    if (new Date(start_datum) > new Date(eind_datum)) {
+      return void res.status(400).json({ error: "Startdatum mag niet na de einddatum liggen" });
+    }
+
     const [a] = await db
       .insert(verlofAanvragenTable)
       .values({
@@ -1625,6 +1692,11 @@ router.patch("/verlofaanvragen/:id", async (req, res): Promise<void> => {
   try {
     const { verlofsoort_id, start_datum, eind_datum, aantal_uren, status, reden, opmerking, negeer_bezetting } = req.body;
     const aanvraagId = parseId(req.params.id);
+
+    // Server-side datumvolgorde validatie (#101)
+    if (start_datum && eind_datum && new Date(start_datum) > new Date(eind_datum)) {
+      return void res.status(400).json({ error: "Startdatum mag niet na de einddatum liggen" });
+    }
 
     // Veldwijzigingen ANDERS dan status/reden/opmerking (verlofsoort, datums, uren)
     // blijven personeel-schrijfrecht vereisen — dit is administratieve correctie,
@@ -2697,6 +2769,47 @@ router.get("/mijn/certificaten", async (req, res): Promise<void> => {
       ehbo_vervaldatum: m.ehboVervaldatum ?? null,
       bhv_vervaldatum: m.bhvVervaldatum ?? null,
     });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+router.get("/mijn/opleidingen", async (req, res): Promise<void> => {
+  try {
+    const medewerkerId = await getMijnMedewerkerId(req);
+    if (!medewerkerId) return void res.status(404).json({ error: "Geen medewerker-koppeling" });
+    const rijen = await db
+      .select({ mo: medewerkerOpleidingenTable, o: opleidingenTable })
+      .from(medewerkerOpleidingenTable)
+      .leftJoin(opleidingenTable, eq(medewerkerOpleidingenTable.opleidingId, opleidingenTable.id))
+      .where(eq(medewerkerOpleidingenTable.medewerkerId, medewerkerId))
+      .orderBy(desc(medewerkerOpleidingenTable.behaaldOp));
+    res.json(
+      rijen.map((r) => ({
+        id: r.mo.id,
+        opleiding_id: r.mo.opleidingId,
+        opleiding_naam: r.o?.naam ?? "Onbekende opleiding",
+        soort: r.o?.soort ?? null,
+        categorie: r.o?.categorie ?? null,
+        niveau: r.o?.niveau ?? null,
+        opleider: r.o?.opleider ?? null,
+        studieduur: r.o?.studieduur ?? null,
+        studiebelasting: r.o?.studiebelasting ?? null,
+        lesvorm: r.o?.lesvorm ?? null,
+        kosten_indicatie: r.o?.kostenIndicatie ?? null,
+        kosten_werkgever_pct: r.o?.kostenWerkgeverPct ?? null,
+        kosten_werknemer_pct: r.o?.kostenWerknemerPct ?? null,
+        geldigheid_maanden: r.o?.geldigheidMaanden ?? null,
+        verplicht: r.o?.verplicht ?? false,
+        status: r.mo.status,
+        behaald_op: r.mo.behaaldOp,
+        verloopt_op: r.mo.verlooptOp,
+        opmerking: r.mo.opmerking,
+        aangemaakt_op: iso(r.mo.aangemaaktOp),
+        bijgewerkt_op: iso(r.mo.bijgewerktOp),
+      })),
+    );
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });

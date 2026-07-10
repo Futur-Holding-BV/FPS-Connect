@@ -1297,15 +1297,15 @@ export default function Gebruikers() {
           {(() => {
             const bewerkProfiel = bewerkForm.herkomst_profiel_id != null ? profielMap.get(bewerkForm.herkomst_profiel_id) : undefined;
             if (!bewerkProfiel) return null;
+            // Alleen markeren als de gebruiker een herkomst_profiel_id heeft (single-preset koppeling)
+            // of als hij meerdere profielen heeft (dan is de matrix afgeleid en kan hij ook afwijken)
             const bewerkAfwijkend = !bevoegdhedenGelijk(bewerkForm.bevoegdheden, bewerkProfiel.bevoegdheden);
             if (!bewerkAfwijkend) return null;
             return (
-              <div className="flex items-center gap-1.5 text-xs -mt-2">
-                <Badge variant="outline" className="text-xs h-5 px-1.5 bg-amber-50 text-amber-700 border-amber-200">
-                  Aangepast t.o.v. profiel
-                </Badge>
-                <span className="text-muted-foreground">
-                  De bevoegdheden wijken af van het gekoppelde profiel “{bewerkProfiel.naam}”.
+              <div className="flex items-center gap-1.5 text-xs -mt-2 bg-amber-50 border border-amber-100 p-2 rounded-md">
+                <AlertTriangle className="h-3.5 w-3.5 text-amber-600 shrink-0" />
+                <span className="text-amber-800">
+                  De bevoegdheden wijken af van het gekoppelde profiel “{bewerkProfiel.naam}”. Bij opslaan blijven deze handmatige wijzigingen behouden.
                 </span>
               </div>
             );

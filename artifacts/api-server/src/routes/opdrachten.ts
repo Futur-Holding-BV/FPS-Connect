@@ -17,6 +17,7 @@ import {
   gebouwenTable,
   reserveringenTable,
   voorraadMutatiesTable,
+  voorraadTable,
   artikelenTable,
   werkbegrotingAdviezenTable,
   inkoopplannenTable,
@@ -779,6 +780,16 @@ router.get("/opdrachten/:id/materiaal", lezen, async (req, res): Promise<void> =
       )
       .orderBy(desc(voorraadMutatiesTable.aangemaaktOp));
 
+    // Vrije voorraad ophalen
+    const voorraadTotaal = await db.select({
+      artikelId: voorraadTable.artikelId,
+      vrij: sql<number>`SUM(GREATEST(0, ${voorraadTable.hoeveelheid} - ${voorraadTable.gereserveerd}))`,
+    })
+      .from(voorraadTable)
+      .groupBy(voorraadTable.artikelId);
+
+    const voorraadMap = new Map(voorraadTotaal.map(v => [v.artikelId, v.vrij]));
+
     const reserveringen = reserveringRijen.map(r => {
       const prijs = r.inkoopprijs ?? null;
       const totaal = prijs != null ? Math.round(prijs * r.reservering.hoeveelheid * 100) / 100 : null;
@@ -796,6 +807,7 @@ router.get("/opdrachten/:id/materiaal", lezen, async (req, res): Promise<void> =
         omschrijving: r.reservering.omschrijving ?? null,
         datum: iso(r.reservering.gereserveerdOp),
         reservering_id: r.reservering.id,
+        vrij_voorraad: voorraadMap.get(r.reservering.artikelId) ?? 0,
       };
     });
 
@@ -817,6 +829,7 @@ router.get("/opdrachten/:id/materiaal", lezen, async (req, res): Promise<void> =
         omschrijving: m.mutatie.omschrijving ?? null,
         datum: iso(m.mutatie.aangemaaktOp),
         reservering_id: null,
+        vrij_voorraad: voorraadMap.get(m.mutatie.artikelId) ?? 0,
       };
     });
 

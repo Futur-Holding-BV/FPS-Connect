@@ -190,6 +190,7 @@ router.get("/voorzieningen", lezenVoorzieningen, async (req, res): Promise<void>
 
     if (gebouw_id) all = all.filter((v) => v.gebouwId === parseInt(gebouw_id as string));
     if (verdieping_id) all = all.filter((v) => v.verdiepingId === parseInt(verdieping_id as string));
+    if (req.query.cluster_id) all = all.filter((v) => v.clusterId === parseInt(req.query.cluster_id as string));
     if (type) all = all.filter((v) => v.type === type);
     if (status) all = all.filter((v) => v.status === status);
     if (classificatie) all = all.filter((v) => v.classificatie === classificatie);
@@ -1211,10 +1212,64 @@ router.post("/voorzieningen/:id/ai-controle", requireBevoegdheid("voorzieningen"
       gebruikerId: req.session.userId,
     });
 
-    return void res.json(await mapSpotAiVoorstel(rij));
+    return void res.json({ 
+      bericht: "AI-correctie succesvol opgeslagen en verwerkt in de leerset.",
+      voorstel: await mapSpotAiVoorstel(rij) 
+    });
   } catch (err) {
     req.log.error(err);
     return void res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// PATCH /voorzieningen/:id/archief
+router.patch("/voorzieningen/:id/archief", requireBevoegdheid("voorzieningen", 4), async (req, res): Promise<void> => {
+  try {
+    const id = parseInt(String(req.params.id));
+    const gebouwId = await gebouwIdVanVoorziening(id);
+    if (gebouwId == null) return void res.status(404).json({ error: "Voorziening niet gevonden" });
+
+    if (!(req.permissies!.magBijGebouw(gebouwId))) {
+      return void res.status(403).json({ error: "Geen toegang tot deze voorziening" });
+    }
+
+    const { gearchiveerd } = req.body;
+    if (typeof gearchiveerd !== "boolean") {
+      return void res.status(400).json({ error: "gearchiveerd (boolean) is verplicht" });
+    }
+
+    const [v] = await db
+      .update(voorzieningenTable)
+      .set({
+        gearchiveerd,
+        gearchiveerdOp: gearchiveerd ? new Date() : null,
+        bijgewerktOp: new Date(),
+        status: gearchiveerd ? "vervallen" : undefined,
+      })
+      .where(eq(voorzieningenTable.id, id))
+      .returning();
+
+    if (!v) return void res.status(404).json({ error: "Voorziening niet gevonden" });
+
+    await logActiviteit({
+      type: gearchiveerd ? "voorziening_gearchiveerd" : "voorziening_teruggeplaatst",
+      omschrijving: `Voorziening ${v.objectnummer} ${gearchiveerd ? "gearchiveerd" : "teruggeplaatst uit archief"}`,
+      gebouwId: v.gebouwId,
+      voorzieningId: v.id,
+      voorzieningNummer: v.objectnummer,
+      gebruikerId: req.session.userId,
+    });
+
+    invalideerContext("voorziening", v.id);
+
+    // Bij archiveren (of terugplaatsen) kan het dominante werktype van een gebouw wijzigen.
+    // Dit lost #283 op doordat het werktype opnieuw wordt afgeleid op basis van de overgebleven spots.
+    triggerNacalculatieHerberekeningVoorGebouw(v.gebouwId, req.log);
+
+    res.json(await mapVoorziening(v));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
   }
 });
 

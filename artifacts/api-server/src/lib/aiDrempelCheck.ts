@@ -105,10 +105,25 @@ async function controleerAiDrempel(): Promise<void> {
   }
 
   // Taak #217: in-app fallback — de dashboardbanner (BeheerderDashboard) toont de
-  // overschrijding live aan alle hoofdbeheerders zodra zij inloggen in FPS Connect,
-  // ongeacht of de mail is geconfigureerd/gelukt. Er is bewust geen aparte
-  // notificatietabel: de banner leest live uit GET /ai-log/drempel-status, dus is
-  // altijd "aangemaakt" zodra de drempel overschreden is.
+  // overschrijding live aan alle hoofdbeheerder zodra zij inloggen in FPS Connect,
+  // ongeacht of de mail is geconfigureerd/gelukt.
+  // We sturen ook een expliciete in-app notificatie naar alle hoofdbeheerders.
+  for (const gebruiker of hoofdbeheerders) {
+    try {
+      const nu_datum = new Date();
+      await db.insert(sql`gebruikers_meldingen` as any).values({
+        type: "ai_drempel",
+        omschrijving: `AI-kostendrempel overschreden voor ${maandLabel}: ${kostenFormatted} (limiet ${drempelFormatted}).`,
+        urgentie: "hoog",
+        status: "nieuw",
+        gebruikerId: gebruiker.id,
+        gebruikerNaam: gebruiker.naam,
+        aangemaaktOp: nu_datum,
+      });
+    } catch (err) {
+      logger.warn({ err, gebruikerId: gebruiker.id }, "AI drempel in-app notificatie mislukt");
+    }
+  }
   meldingVerstuurdOfGeregistreerd = true;
 
   if (meldingVerstuurdOfGeregistreerd) {

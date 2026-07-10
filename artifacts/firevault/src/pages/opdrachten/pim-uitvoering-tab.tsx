@@ -289,7 +289,7 @@ interface StappenOverzichtProps {
   actieveStapId?: number;
 }
 
-function StappenOverzicht({ opdrachtId, actieveStapId }: StappenOverzichtProps) {
+export function StappenOverzicht({ opdrachtId, actieveStapId }: StappenOverzichtProps) {
   const stappenQuery = useListPimUitvoeringStappen(opdrachtId);
   const stappen = (stappenQuery.data as PimUitvoeringStap[] | undefined) ?? [];
 

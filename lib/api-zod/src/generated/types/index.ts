@@ -617,6 +617,7 @@ export * from './meldingUpdateStatus';
 export * from './mijnCertificaten';
 export * from './mijnMedewerkerProfiel';
 export * from './mijnOpleiding';
+export * from './mijnOpleidingDetail';
 export * from './mijnPrivacyGegevens';
 export * from './mijnPrivacyInstellingen';
 export * from './mijnPrivacyInstellingenInput';

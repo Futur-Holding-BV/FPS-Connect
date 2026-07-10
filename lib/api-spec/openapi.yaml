@@ -1425,6 +1425,11 @@ paths:
           schema:
             type: integer
             default: 50
+        - in: query
+          name: cluster_id
+          schema:
+            type: integer
+          description: Filter spots op cluster ID.
       responses:
         "200":
           description: OK
@@ -2065,6 +2070,23 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/MijnCertificaten"
+        "404":
+          description: Geen medewerker gekoppeld
+
+  /mijn/opleidingen:
+    get:
+      operationId: getMijnOpleidingen
+      tags: [mijn]
+      summary: Opleidingen/cursussen (behaald, gepland) van de ingelogde medewerker, met catalogusdetails
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MijnOpleidingDetail"
         "404":
           description: Geen medewerker gekoppeld
 
@@ -7057,6 +7079,28 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/OpleidingenVoorstelResultaat"
+
+  /functies/{id}/opleidingen/{opleidingId}/koppel:
+    post:
+      operationId: koppelOpleidingAanFunctie
+      tags: [personeel]
+      summary: Bestaande opleiding uit catalogus koppelen aan functie
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: opleidingId
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Gekoppeld
+        "404":
+          description: Functie of opleiding niet gevonden
 
   /opleidingen:
     get:
@@ -26407,6 +26451,9 @@ components:
       properties:
         naam:
           type: string
+        bestaand_id:
+          type: ["integer", "null"]
+          description: ID van een bestaande opleiding in de catalogus met dezelfde naam (indien gevonden).
         soort:
           type: string
           enum: [opleiding, cursus]
@@ -26651,6 +26698,53 @@ components:
           type: ["string", "null"]
         bhv_vervaldatum:
           type: ["string", "null"]
+
+    MijnOpleidingDetail:
+      type: object
+      required: [id, opleiding_id, opleiding_naam, status, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id:
+          type: integer
+        opleiding_id:
+          type: integer
+        opleiding_naam:
+          type: string
+        soort:
+          type: ["string", "null"]
+        categorie:
+          type: ["string", "null"]
+        niveau:
+          type: ["string", "null"]
+        opleider:
+          type: ["string", "null"]
+        studieduur:
+          type: ["string", "null"]
+        studiebelasting:
+          type: ["string", "null"]
+        lesvorm:
+          type: ["string", "null"]
+        kosten_indicatie:
+          type: ["string", "null"]
+        kosten_werkgever_pct:
+          type: ["number", "null"]
+        kosten_werknemer_pct:
+          type: ["number", "null"]
+        geldigheid_maanden:
+          type: ["integer", "null"]
+        verplicht:
+          type: boolean
+        status:
+          type: string
+        behaald_op:
+          type: ["string", "null"]
+        verloopt_op:
+          type: ["string", "null"]
+        opmerking:
+          type: ["string", "null"]
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
 
     MedewerkerOnboardingInput:
       type: object
@@ -37235,6 +37329,7 @@ components:
         omschrijving:  { type: ["string", "null"] }
         datum:         { type: string }
         reservering_id: { type: ["integer", "null"] }
+        vrij_voorraad: { type: ["number", "null"] }
 
     OpdrachtMateriaal:
       type: object

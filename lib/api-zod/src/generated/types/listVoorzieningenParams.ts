@@ -25,4 +25,8 @@ aangemaakt_van?: Date;
 aangemaakt_tot?: Date;
 pagina?: number;
 per_pagina?: number;
+/**
+ * Filter spots op cluster ID.
+ */
+cluster_id?: number;
 };

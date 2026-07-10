@@ -19,6 +19,11 @@ import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from "@/components/ui/tooltip";
 import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel,
+  AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
+  AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   KeyRound, CheckCircle2, XCircle, MinusCircle, AlertTriangle,
   Users, ShieldCheck, ExternalLink, Info, RefreshCw, Loader2,
 } from "lucide-react";
@@ -105,6 +110,7 @@ function RollenmatrixTab() {
   const { data, isLoading } = useListProfielen();
   const profielen = data ?? [];
   const synchroniseer = { mutate: () => {}, isPending: false, isSuccess: false as const, data: { aangemaakt: 0 } };
+  const [bevestigOpen, setBevestigOpen] = useState(false);
 
   const zichtbareModules = MODULES.filter(
     (m) => !["abonnementen", "systeem"].includes(m.id),
@@ -158,7 +164,13 @@ function RollenmatrixTab() {
           <Button
             size="sm"
             variant="outline"
-            onClick={() => synchroniseer.mutate()}
+            onClick={() => {
+              if (profielen.some(p => !p.systeem)) {
+                setBevestigOpen(true);
+              } else {
+                synchroniseer.mutate();
+              }
+            }}
             disabled={synchroniseer.isPending}
             className="shrink-0 border-amber-300 text-amber-800 hover:bg-amber-100"
           >
@@ -187,6 +199,23 @@ function RollenmatrixTab() {
           .
         </span>
       </div>
+
+      <AlertDialog open={bevestigOpen} onOpenChange={setBevestigOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Standaardrollen synchroniseren?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Er bestaan al aangepaste profielen in dit systeem. Synchroniseren zal ontbrekende standaardrollen toevoegen en bestaande standaardrollen bijwerken naar de systeemdefinitie. Aangepaste (niet-systeem) profielen blijven ongewijzigd.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuleren</AlertDialogCancel>
+            <AlertDialogAction onClick={() => synchroniseer.mutate()}>
+              Synchroniseren
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <div className="overflow-x-auto rounded-md border">
         <Table>

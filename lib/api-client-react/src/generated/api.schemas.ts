@@ -4024,6 +4024,11 @@ export const OpleidingVoorstelSoort = {
 
 export interface OpleidingVoorstel {
   naam: string;
+  /**
+     * ID van een bestaande opleiding in de catalogus met dezelfde naam (indien gevonden).
+     * @nullable
+     */
+  bestaand_id?: number | null;
   soort: OpleidingVoorstelSoort;
   /** @nullable */
   categorie?: string | null;
@@ -4220,6 +4225,44 @@ export interface MijnCertificaten {
   ehbo_vervaldatum?: string | null;
   /** @nullable */
   bhv_vervaldatum?: string | null;
+}
+
+export interface MijnOpleidingDetail {
+  id: number;
+  opleiding_id: number;
+  opleiding_naam: string;
+  /** @nullable */
+  soort?: string | null;
+  /** @nullable */
+  categorie?: string | null;
+  /** @nullable */
+  niveau?: string | null;
+  /** @nullable */
+  opleider?: string | null;
+  /** @nullable */
+  studieduur?: string | null;
+  /** @nullable */
+  studiebelasting?: string | null;
+  /** @nullable */
+  lesvorm?: string | null;
+  /** @nullable */
+  kosten_indicatie?: string | null;
+  /** @nullable */
+  kosten_werkgever_pct?: number | null;
+  /** @nullable */
+  kosten_werknemer_pct?: number | null;
+  /** @nullable */
+  geldigheid_maanden?: number | null;
+  verplicht?: boolean;
+  status: string;
+  /** @nullable */
+  behaald_op?: string | null;
+  /** @nullable */
+  verloopt_op?: string | null;
+  /** @nullable */
+  opmerking?: string | null;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
 }
 
 export interface MedewerkerOnboardingInput {
@@ -10837,6 +10880,8 @@ export interface OpdrachtMateriaalRegel {
   datum: string;
   /** @nullable */
   reservering_id?: number | null;
+  /** @nullable */
+  vrij_voorraad?: number | null;
 }
 
 export interface OpdrachtMateriaal {
@@ -12021,6 +12066,10 @@ aangemaakt_van?: string;
 aangemaakt_tot?: string;
 pagina?: number;
 per_pagina?: number;
+/**
+ * Filter spots op cluster ID.
+ */
+cluster_id?: number;
 };
 
 export type ListVoorzieningTypesParams = {

@@ -57,8 +57,11 @@ const PRIJS_PER_MODEL: Record<string, ModelPrijs> = {
   "gpt-5":                    { input: 2.50,  output: 10.00 },
   "gpt-4-turbo":              { input: 10.00, output: 30.00 },
   "gpt-4":                    { input: 30.00, output: 60.00 },
+  "o1":                       { input: 15.00, output: 60.00 },
+  "o1-mini":                  { input: 1.10,  output: 4.40  },
   "text-embedding-3-small":   { input: 0.02,  output: 0.00  },
   "text-embedding-3-large":   { input: 0.13,  output: 0.00  },
+  "default_fallback":         { input: 10.00, output: 30.00 },
 };
 
 function berekenKosten(
@@ -66,10 +69,10 @@ function berekenKosten(
   promptTokens: number | null | undefined,
   completionTokens: number | null | undefined,
 ): string | null {
-  const prijs = PRIJS_PER_MODEL[modelNaam];
+  let prijs = PRIJS_PER_MODEL[modelNaam];
   if (!prijs) {
-    logger.warn({ modelNaam }, "AI model niet gevonden in PRIJS_PER_MODEL — kosten worden als 0.000000 geregistreerd. Voeg het model toe aan PRIJS_PER_MODEL.");
-    return "0.000000";
+    logger.warn({ modelNaam }, "AI model niet gevonden in PRIJS_PER_MODEL — kosten worden berekend met default_fallback tarief. Voeg het model toe aan PRIJS_PER_MODEL.");
+    prijs = PRIJS_PER_MODEL["default_fallback"];
   }
   const inp = promptTokens ?? 0;
   const out = completionTokens ?? 0;

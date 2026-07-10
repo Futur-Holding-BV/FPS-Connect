@@ -62,7 +62,8 @@ export function DocumentVoet({ meta, mij }: { meta: DocumentMeta; mij: Werkmaats
         paddingRight: margeRechts !== undefined ? `${margeRechts}mm` : undefined,
       }}
     >
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between border-t border-slate-100 pt-4 mb-2">
+        <img src={resolveAssetUrl(mij.logoUrl)} alt={mij.naam} className="h-6 object-contain opacity-50 grayscale hover:grayscale-0 transition-all" />
         <div className="flex items-center space-x-6">
           {meta.versie && <span>Versie {meta.versie}</span>}
           <span>{meta.datum}</span>

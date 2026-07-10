@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { voorzieningenTable, verdiepingenTable, gebouwenTable } from "@workspace/db";
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth.js";
 
 const mijnWerkRouter = Router();
@@ -31,6 +31,7 @@ mijnWerkRouter.get("/mijn-werk", requireAuth, async (req, res): Promise<void> =>
       and(
         eq(voorzieningenTable.monteurId, userId),
         eq(voorzieningenTable.gearchiveerd, false),
+        inArray(voorzieningenTable.status, ["voorbereid", "geplaatst", "afgekeurd", "ter_inspectie", "hersteld", "vervangen"])
       ),
     )
     .orderBy(gebouwenTable.naam, voorzieningenTable.objectnummer);

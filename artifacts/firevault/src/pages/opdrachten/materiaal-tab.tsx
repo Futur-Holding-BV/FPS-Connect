@@ -26,10 +26,11 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Package, ArrowDownToLine, ArrowUpFromLine, X } from "lucide-react";
+import { Package, ArrowDownToLine, ArrowUpFromLine, X, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
+import { cn } from "@/lib/utils";
 
 function euro(n: number | null | undefined) {
   return new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(n ?? 0);
@@ -102,6 +103,7 @@ function UitgifteDialoog({ opdrachtId, openReserveringen, open, onClose }: Uitgi
   function verstuur() {
     const h = parseFloat(hoeveelheid);
     if (!h || h <= 0) { toast({ title: "Voer een geldige hoeveelheid in", variant: "destructive" }); return; }
+    if (!opdrachtId) { toast({ title: "Opdracht is verplicht", variant: "destructive" }); return; }
 
     if (modus === "via_reservering") {
       if (!reserveringId) { toast({ title: "Kies een reservering", variant: "destructive" }); return; }
@@ -113,7 +115,6 @@ function UitgifteDialoog({ opdrachtId, openReserveringen, open, onClose }: Uitgi
       });
     } else {
       if (!artikelId) { toast({ title: "Kies een artikel", variant: "destructive" }); return; }
-      if (!verplichtOpdrachtGekozen) { toast({ title: "Koppeling aan opdracht is verplicht", variant: "destructive" }); return; }
       if (vrijeVoorraadDirect != null && h > vrijeVoorraadDirect) {
         toast({ title: `Onvoldoende vrije voorraad (${vrijeVoorraadDirect} ${artikelEenheid} beschikbaar)`, variant: "destructive" });
         return;
@@ -167,7 +168,7 @@ function UitgifteDialoog({ opdrachtId, openReserveringen, open, onClose }: Uitgi
                   <SelectContent>
                     {openReserveringen.map(r => (
                       <SelectItem key={r.id} value={String(r.reservering_id ?? r.id)}>
-                        {r.artikel_naam ?? `Artikel ${r.artikel_id}`} — {r.hoeveelheid} {r.eenheid}
+                        {r.artikel_naam ?? `Artikel ${r.artikel_id}`} — {r.hoeveelheid} {r.eenheid} (Vrij: {r.vrij_voorraad ?? 0})
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -417,8 +418,19 @@ export default function MateriaaltabTab({ opdrachtId }: MateriaaltabProps) {
   const totaalReserveringen = data?.totaal_kosten_reserveringen ?? 0;
   const totaalUitgiftes = data?.totaal_kosten_uitgiftes ?? 0;
 
+  const artikelenOnvoldoendeVoorraad = openReserveringen.filter(r => (r.vrij_voorraad ?? 0) < r.hoeveelheid);
+
   return (
     <div className="space-y-4 mt-4">
+      {artikelenOnvoldoendeVoorraad.length > 0 && (
+        <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3 flex items-center gap-3 text-destructive text-sm">
+          <AlertTriangle className="h-4 w-4 shrink-0" />
+          <p className="font-medium">
+            Let op: er zijn {artikelenOnvoldoendeVoorraad.length} gereserveerde artikelen met onvoldoende vrije voorraad in het magazijn.
+          </p>
+        </div>
+      )}
+
       {/* Kostenoverzicht */}
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
         <Card>
@@ -475,6 +487,7 @@ export default function MateriaaltabTab({ opdrachtId }: MateriaaltabProps) {
                   <th className="text-right pb-1 font-normal">Hoev.</th>
                   <th className="text-right pb-1 font-normal">Prijs/e.</th>
                   <th className="text-right pb-1 font-normal">Totaal</th>
+                  <th className="text-right pb-1 font-normal">Vrij</th>
                   <th className="text-right pb-1 font-normal">Status</th>
                   <th className="text-right pb-1 font-normal">Datum</th>
                   {isBeheerder && <th className="w-6"></th>}
@@ -495,6 +508,14 @@ export default function MateriaaltabTab({ opdrachtId }: MateriaaltabProps) {
                       </td>
                       <td className="text-right py-1.5 tabular-nums font-medium">
                         {r.totaal_kosten != null ? euro(r.totaal_kosten) : "—"}
+                      </td>
+                      <td className="text-right py-1.5 tabular-nums">
+                        <span className={cn(
+                          "text-xs",
+                          (r.vrij_voorraad ?? 0) < r.hoeveelheid ? "text-destructive font-semibold" : "text-muted-foreground"
+                        )}>
+                          {r.vrij_voorraad ?? 0}
+                        </span>
                       </td>
                       <td className="text-right py-1.5">
                         <Badge variant="outline" className={`text-xs ${st.kleur}`}>{st.label}</Badge>

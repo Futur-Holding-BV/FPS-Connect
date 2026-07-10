@@ -495,6 +495,7 @@ import type {
   MeldingOverzichtItem,
   MeldingUpdate,
   MijnCertificaten,
+  MijnOpleidingDetail,
   MijnPrivacyGegevens,
   MijnPrivacyInstellingen,
   MijnPrivacyInstellingenInput,
@@ -7014,6 +7015,83 @@ export function useGetMijnCertificaten<TData = Awaited<ReturnType<typeof getMijn
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetMijnCertificatenQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetMijnOpleidingenUrl = () => {
+
+
+
+
+  return `/api/mijn/opleidingen`
+}
+
+/**
+ * @summary Opleidingen/cursussen (behaald, gepland) van de ingelogde medewerker, met catalogusdetails
+ */
+export const getMijnOpleidingen = async ( options?: RequestInit): Promise<MijnOpleidingDetail[]> => {
+
+  return customFetch<MijnOpleidingDetail[]>(getGetMijnOpleidingenUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetMijnOpleidingenQueryKey = () => {
+    return [
+    `/api/mijn/opleidingen`
+    ] as const;
+    }
+
+
+export const getGetMijnOpleidingenQueryOptions = <TData = Awaited<ReturnType<typeof getMijnOpleidingen>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMijnOpleidingen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetMijnOpleidingenQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMijnOpleidingen>>> = ({ signal }) => getMijnOpleidingen({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMijnOpleidingen>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetMijnOpleidingenQueryResult = NonNullable<Awaited<ReturnType<typeof getMijnOpleidingen>>>
+export type GetMijnOpleidingenQueryError = ErrorType<void>
+
+
+/**
+ * @summary Opleidingen/cursussen (behaald, gepland) van de ingelogde medewerker, met catalogusdetails
+ */
+
+export function useGetMijnOpleidingen<TData = Awaited<ReturnType<typeof getMijnOpleidingen>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMijnOpleidingen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetMijnOpleidingenQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
@@ -24607,6 +24685,78 @@ export const useVoorstelOpleidingenVoorFunctie = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getVoorstelOpleidingenVoorFunctieMutationOptions(options));
+    }
+
+export const getKoppelOpleidingAanFunctieUrl = (id: number,
+    opleidingId: number,) => {
+
+
+
+
+  return `/api/functies/${id}/opleidingen/${opleidingId}/koppel`
+}
+
+/**
+ * @summary Bestaande opleiding uit catalogus koppelen aan functie
+ */
+export const koppelOpleidingAanFunctie = async (id: number,
+    opleidingId: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getKoppelOpleidingAanFunctieUrl(id,opleidingId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getKoppelOpleidingAanFunctieMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof koppelOpleidingAanFunctie>>, TError,{id: number;opleidingId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof koppelOpleidingAanFunctie>>, TError,{id: number;opleidingId: number}, TContext> => {
+
+const mutationKey = ['koppelOpleidingAanFunctie'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof koppelOpleidingAanFunctie>>, {id: number;opleidingId: number}> = (props) => {
+          const {id,opleidingId} = props ?? {};
+
+          return  koppelOpleidingAanFunctie(id,opleidingId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type KoppelOpleidingAanFunctieMutationResult = NonNullable<Awaited<ReturnType<typeof koppelOpleidingAanFunctie>>>
+
+    export type KoppelOpleidingAanFunctieMutationError = ErrorType<void>
+
+    /**
+ * @summary Bestaande opleiding uit catalogus koppelen aan functie
+ */
+export const useKoppelOpleidingAanFunctie = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof koppelOpleidingAanFunctie>>, TError,{id: number;opleidingId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof koppelOpleidingAanFunctie>>,
+        TError,
+        {id: number;opleidingId: number},
+        TContext
+      > => {
+      return useMutation(getKoppelOpleidingAanFunctieMutationOptions(options));
     }
 
 export const getListOpleidingenUrl = () => {

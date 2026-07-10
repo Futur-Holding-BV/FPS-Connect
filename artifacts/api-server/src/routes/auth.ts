@@ -139,6 +139,10 @@ router.post("/auth/login", async (req, res): Promise<void> => {
       });
       return void res.status(401).json({ error: "Onjuiste inloggegevens" });
     }
+    // #261: Fail-closed blokkering van geanonimiseerde accounts
+    if (g.geanonimiseerd) {
+      return void res.status(401).json({ error: "Onjuiste inloggegevens" });
+    }
     if (isVergrendeld(g.vergrendeldTot)) {
       return void res.status(423).json(vergrendeldRespons(g.vergrendeldTot!));
     }

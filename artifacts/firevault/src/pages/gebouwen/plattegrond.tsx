@@ -860,8 +860,11 @@ export default function Plattegrond() {
     const cw = cont.clientWidth;
     const ch = cont.clientHeight;
     const c = groepCentroid(groep);
+    
+    // Snelle zoom: als er veel spots overlappen, zoom dan direct fors in naar
+    // een niveau waar ze waarschijnlijk splitsen (minimaal 2.5x).
     setView((v) => {
-      const nz = Math.min(MAX_ZOOM, v.zoom * 2.2);
+      const nz = Math.min(MAX_ZOOM, Math.max(v.zoom * 2.2, 2.5));
       return { zoom: nz, x: cw / 2 - c.x * nz, y: ch / 2 - c.y * nz };
     });
   }, []);

@@ -392,9 +392,10 @@ router.post("/profielen/:id/toepassen", requireRol("hoofdbeheerder"), async (req
       return meervoudigeIds.length + enkelvoudig.length;
     });
     res.json({ bijgewerkt: aantal });
-  } catch (err) {
+  } catch (err: any) {
     req.log.error(err);
-    res.status(500).json({ error: "Interne serverfout" });
+    const errorMsg = err?.message || "Interne serverfout";
+    res.status(500).json({ error: errorMsg });
   }
 });
 

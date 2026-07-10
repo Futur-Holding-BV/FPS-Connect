@@ -27,7 +27,7 @@ import { Loader2, Upload, Palette } from "lucide-react";
 function werkgeverNaarMij(w: Werkgever): WerkmaatschappijInfo {
   const logoUrl = w.logo_url
     ? (w.logo_url.startsWith("/") ? `/api/storage${w.logo_url}` : `/api/storage/objects/${w.logo_url}`)
-    : "logo-fps.png";
+    : "/logo-fps.png";
   return {
     id: String(w.id),
     naam: w.naam,

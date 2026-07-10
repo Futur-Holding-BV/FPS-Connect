@@ -5,20 +5,15 @@
  * FPS Brandpreventie - Platform voor brandpreventieve gebouwvoorzieningen
  * OpenAPI spec version: 0.1.0
  */
-import type { OpleidingVoorstelSoort } from './opleidingVoorstelSoort';
 
-export interface OpleidingVoorstel {
-  naam: string;
-  /**
-     * ID van een bestaande opleiding in de catalogus met dezelfde naam (indien gevonden).
-     * @nullable
-     */
-  bestaand_id?: number | null;
-  soort: OpleidingVoorstelSoort;
+export interface MijnOpleidingDetail {
+  id: number;
+  opleiding_id: number;
+  opleiding_naam: string;
+  /** @nullable */
+  soort?: string | null;
   /** @nullable */
   categorie?: string | null;
-  /** @nullable */
-  omschrijving?: string | null;
   /** @nullable */
   niveau?: string | null;
   /** @nullable */
@@ -38,4 +33,13 @@ export interface OpleidingVoorstel {
   /** @nullable */
   geldigheid_maanden?: number | null;
   verplicht?: boolean;
+  status: string;
+  /** @nullable */
+  behaald_op?: string | null;
+  /** @nullable */
+  verloopt_op?: string | null;
+  /** @nullable */
+  opmerking?: string | null;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
 }

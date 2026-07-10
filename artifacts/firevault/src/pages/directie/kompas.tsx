@@ -448,6 +448,19 @@ function LeermomentRij({ lm, onSaved }: { lm: FieLeermoment; onSaved: () => void
   const verwijder = useDeleteFieLeermoment();
   const { toast } = useToast();
 
+  const verouderdAantal = useGetFieNacalculatiesVerouderdAantal();
+  const herberekeenVerouderd = useHerberekeenVerouderdeNacalculaties();
+
+  function startHerberekeenVerouderd() {
+    herberekeenVerouderd.mutate(undefined, {
+      onSuccess: (data: any) => {
+        toast({ title: "Werktypes bijgewerkt", description: `${data.herberekend ?? 0} nacalculaties gecorrigeerd.` });
+        onSaved();
+      },
+      onError: () => toast({ title: "Bijwerken mislukt", variant: "destructive" }),
+    });
+  }
+
   const factorGeldig = (() => {
     const f = Number(factorInput);
     return isFinite(f) && f >= 0.5 && f <= 3.0;
@@ -473,10 +486,10 @@ function LeermomentRij({ lm, onSaved }: { lm: FieLeermoment; onSaved: () => void
   }
 
   return (
-    <>
+    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
       <tr className="border-b last:border-0 text-sm hover:bg-muted/30">
         <td className="py-2 pr-3 pl-4">
-          <CollapsibleTrigger asChild onClick={() => setIsOpen(!isOpen)}>
+          <CollapsibleTrigger asChild>
             <Button variant="ghost" size="sm" className="h-7 w-full justify-start font-medium capitalize px-1 gap-1">
               {isOpen ? <ChevronDown className="h-3 w-3" /> : <ChevronRightIcon className="h-3 w-3" />}
               {lm.werktype}
@@ -581,11 +594,12 @@ function LeermomentRij({ lm, onSaved }: { lm: FieLeermoment; onSaved: () => void
           </CollapsibleContent>
         </td>
       </tr>
-    </>
+    </Collapsible>
   );
 }
 
 function LeereffectenPaneel() {
+  const { toast } = useToast();
   const { data: leermomenten, isLoading, refetch } = useListFieLeermomenten();
   const herbereken = useHerberekeenFieLeermomenten();
   const herberekeenVerouderd = useHerberekeenVerouderdeNacalculaties();
@@ -595,17 +609,25 @@ function LeereffectenPaneel() {
   const aantalVerouderd = verouderdAantalData?.aantal ?? 0;
 
   function startHerbereken() {
-    herbereken.mutate(undefined, { onSuccess: () => { void refetch(); } });
+    herbereken.mutate(undefined, { 
+      onSuccess: (data: any) => { 
+        toast({ title: "Leermomenten herberekend", description: `${data.verwerkt ?? 0} werktypes bijgewerkt.` });
+        void refetch(); 
+      },
+      onError: () => toast({ title: "Herberekening mislukt", variant: "destructive" }),
+    });
   }
 
   function startHerberekeenVerouderd() {
     setVerouderdResultaat(null);
     herberekeenVerouderd.mutate(undefined, {
-      onSuccess: (data) => {
+      onSuccess: (data: any) => {
         setVerouderdResultaat(data.herberekend);
+        toast({ title: "Werktypes bijgewerkt", description: `${data.herberekend ?? 0} nacalculaties gecorrigeerd.` });
         void refetch();
         void refetchVerouderdAantal();
       },
+      onError: () => toast({ title: "Bijwerken mislukt", variant: "destructive" }),
     });
   }
 
@@ -696,9 +718,7 @@ function LeereffectenPaneel() {
               </thead>
               <tbody className="pl-4">
                 {leermomenten.map(lm => (
-                  <Collapsible key={lm.id} asChild>
-                    <LeermomentRij lm={lm} onSaved={() => void refetch()} />
-                  </Collapsible>
+                  <LeermomentRij key={lm.id} lm={lm} onSaved={() => void refetch()} />
                 ))}
               </tbody>
             </table>
@@ -753,6 +773,25 @@ function KompasInhoud() {
   return (
     <div className="space-y-5 p-1">
       {/* Paginakop */}
+      {aantalVerouderd > 0 && (
+        <div className="flex items-center justify-between gap-3 bg-amber-50 border border-amber-200 rounded-lg p-3 text-amber-800 text-sm">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4 shrink-0" />
+            <p>
+              Er zijn <strong>{aantalVerouderd}</strong> verouderde nacalculaties gedetecteerd (werktype 'algemeen' terwijl er spots zijn).
+            </p>
+          </div>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="border-amber-300 hover:bg-amber-100 h-7 whitespace-nowrap"
+            onClick={() => setActieveTab("leereffecten")}
+          >
+            Bekijken
+          </Button>
+        </div>
+      )}
+
       <div className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-xl font-bold">Bedrijfskompas</h1>

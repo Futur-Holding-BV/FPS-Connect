@@ -22,6 +22,7 @@ import {
   useGetCapaciteitBezetting,
   useListRapporten,
   useGetMagazijnSignalering,
+  useGetMagazijnDashboard,
 } from "@workspace/api-client-react";
 import {
   Building, ShieldCheck, AlertTriangle, Calendar, TrendingUp, Clock, Hammer,
@@ -187,6 +188,9 @@ function OperationeelDashboard({
   const { data: drempelStatus } = useGetAiDrempelStatus({
     query: { queryKey: ["ai-drempel-status"] },
   });
+  const { data: magazijnDashboard } = useGetMagazijnDashboard({
+    query: { enabled: true, queryKey: ["magazijn-dashboard", "operationeel"] },
+  });
 
   const [drempelBannerVerborgen, setDrempelBannerVerborgen] = useState(() => {
     const s = localStorage.getItem("ai_drempel_banner_verborgen_maand");
@@ -343,6 +347,23 @@ function OperationeelDashboard({
           </Card>
         ))}
       </div>
+
+      {/* Kritieke voorraad meldingen */}
+      {magazijnDashboard?.kritieke_artikelen && magazijnDashboard.kritieke_artikelen.length > 0 && (
+        <Link href="/magazijn">
+          <div role="alert" className="flex items-center gap-3 px-4 py-3 rounded-lg bg-red-50 border border-red-200 text-red-900 cursor-pointer hover:bg-red-100 transition-colors">
+            <ShieldAlert className="h-5 w-5 shrink-0 text-red-600" />
+            <div className="flex-1 min-w-0">
+              <span className="font-semibold text-sm">Magazijn alert: {magazijnDashboard.kritieke_artikelen.length} artikelen onder minimumvoorraad</span>
+              <p className="text-xs text-red-700 mt-0.5">
+                Kritiek: {magazijnDashboard.kritieke_artikelen.slice(0, 3).map(a => a.naam).join(", ")}
+                {magazijnDashboard.kritieke_artikelen.length > 3 ? ` en ${magazijnDashboard.kritieke_artikelen.length - 3} meer...` : ""}
+              </p>
+            </div>
+            <ChevronRight className="h-4 w-4 text-red-400" />
+          </div>
+        </Link>
+      )}
 
       {/* Verlopen reactietermijnen — gated op rapportages-bevoegdheid */}
       {verlopenTegel}

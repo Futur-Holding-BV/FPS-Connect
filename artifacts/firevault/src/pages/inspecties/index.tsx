@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar, Building, CheckCircle, Clock, AlertCircle, FileText, X, ClipboardList } from "lucide-react";
+import { Calendar, Building, CheckCircle, Clock, AlertCircle, FileText, X, ClipboardList, ChevronUp, ChevronDown } from "lucide-react";
 import { LegeStatus } from "@/components/lege-status";
 import { useVoorkeur } from "@/hooks/use-voorkeur";
 import { PaginaHulp } from "@/components/pagina-hulp";
@@ -35,12 +35,24 @@ export default function Inspecties() {
   const { t } = useTranslation();
   const [statusFilter, setStatusFilter] = useVoorkeur("inspecties_status", "all");
   const [typeFilter, setTypeFilter] = useVoorkeur("inspecties_type", "all");
+  const [sorteerKolom, setSorteerKolom] = useVoorkeur("inspecties_sort_col", "geplande_datum");
+  const [sorteerRichting, setSorteerRichting] = useVoorkeur("inspecties_sort_dir", "desc");
   const filterActief = statusFilter !== "all" || typeFilter !== "all";
 
   const { data: inspecties, isLoading } = useListInspecties({
     status: statusFilter !== "all" ? statusFilter : undefined,
     type: typeFilter !== "all" ? typeFilter : undefined,
   });
+
+  const gesorteerdeInspecties = inspecties ? [...inspecties].sort((a, b) => {
+    const valA = a[sorteerKolom as keyof typeof a];
+    const valB = b[sorteerKolom as keyof typeof b];
+    if (valA === valB) return 0;
+    if (valA == null) return 1;
+    if (valB == null) return -1;
+    const factor = sorteerRichting === "asc" ? 1 : -1;
+    return valA < valB ? -factor : factor;
+  }) : [];
 
   const statusIcon = (status: string) => {
     if (status === "afgerond") return <CheckCircle className="h-4 w-4 text-green-600" />;
@@ -101,6 +113,29 @@ export default function Inspecties() {
             <X className="h-4 w-4 mr-1" /> Filter wissen
           </Button>
         )}
+
+        <div className="ml-auto flex gap-2">
+          <Select value={sorteerKolom} onValueChange={setSorteerKolom}>
+            <SelectTrigger className="w-40">
+              <SelectValue placeholder="Sorteren op" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="geplande_datum">Gepland op</SelectItem>
+              <SelectItem value="gebouw_naam">Gebouw</SelectItem>
+              <SelectItem value="status">Status</SelectItem>
+              <SelectItem value="type">Type</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => setSorteerRichting(sorteerRichting === "asc" ? "desc" : "asc")}
+            title={sorteerRichting === "asc" ? "Oplopend" : "Aflopend"}
+          >
+            {sorteerRichting === "asc" ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+          </Button>
+        </div>
       </div>
 
       {isLoading && (
@@ -113,7 +148,7 @@ export default function Inspecties() {
 
       {!isLoading && (
         <div className="space-y-3">
-          {inspecties?.map((inspectie) => (
+          {gesorteerdeInspecties.map((inspectie) => (
             <Card key={inspectie.id} className="hover:shadow-md transition-shadow">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">

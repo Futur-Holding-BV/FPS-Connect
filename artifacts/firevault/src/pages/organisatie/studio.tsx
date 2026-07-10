@@ -239,7 +239,7 @@ export default function DocumentStudioPagina() {
     try {
       await upload.mutateAsync({ id: uploadModelId, data: { bestand } });
       invalideer();
-      toast({ title: "Referentie ge-upload", description: "Het referentiedocument is opgeslagen." });
+      toast({ title: "Bestand gekoppeld", description: "Het referentiedocument is succesvol gekoppeld aan de registratie." });
       sluitUploadDialoog();
     } catch {
       toast({ title: "Upload mislukt", description: "Probeer het opnieuw.", variant: "destructive" });
@@ -634,14 +634,26 @@ export default function DocumentStudioPagina() {
                         </div>
                       )}
                       {conceptInBeoordeling && (
-                        <button
-                          type="button"
-                          className="flex items-center gap-1.5 text-xs rounded-md border border-blue-200 bg-blue-50 px-2 py-1.5 text-blue-700 text-left hover:bg-blue-100 transition-colors"
-                          onClick={() => void openAiDialoog(type, conceptInBeoordeling.id)}
-                        >
-                          <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-                          <span>Nieuw concept wacht op beoordeling naast het actieve model</span>
-                        </button>
+                        <div className="flex flex-col gap-1.5 mt-2">
+                          <button
+                            type="button"
+                            className="flex items-center gap-1.5 text-xs rounded-md border border-blue-200 bg-blue-50 px-2 py-1.5 text-blue-700 text-left hover:bg-blue-100 transition-colors"
+                            onClick={() => void openAiDialoog(type, conceptInBeoordeling.id)}
+                          >
+                            <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                            <span>Nieuw concept wacht op beoordeling naast het actieve model</span>
+                          </button>
+                          <div className="flex items-center gap-2 px-1">
+                            <Button
+                              size="sm"
+                              variant="link"
+                              className="h-auto p-0 text-[10px] text-blue-600"
+                              onClick={() => window.open(`/api/studio/modellen/${conceptInBeoordeling.id}/referentie`, "_blank")}
+                            >
+                              Bekijk referentie
+                            </Button>
+                          </div>
+                        </div>
                       )}
                       {magSchrijven && (
                         <div className="flex flex-col gap-2 mt-auto">

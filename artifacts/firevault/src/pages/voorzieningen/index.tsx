@@ -70,6 +70,52 @@ type SpotVoorBeheer = {
 const GEEN_FILTER = "__alle__";
 const ZONDER_CLUSTER = "__zonder_cluster__";
 
+function MonteurToewijzenSnelKnop({
+  clusterId,
+  huidigeMonteurId,
+  onSuccess,
+}: {
+  clusterId: number;
+  huidigeMonteurId: number | null;
+  onSuccess: () => void;
+}) {
+  const { data: gebruikers } = useListToewijsbareGebruikers();
+  const monteurs = ((gebruikers ?? []) as any[]).filter((g) => g.rol !== "hoofdbeheerder");
+  const wijsClusterMonteurToe = useAssignClusterMonteur();
+  const [bezig, setBezig] = useState(false);
+
+  async function wijzig(waarde: string) {
+    setBezig(true);
+    try {
+      await wijsClusterMonteurToe.mutateAsync({
+        clusterId,
+        data: { monteur_id: waarde === "geen" ? null : Number(waarde) },
+      });
+      onSuccess();
+    } finally {
+      setBezig(false);
+    }
+  }
+
+  return (
+    <Select
+      value={huidigeMonteurId ? String(huidigeMonteurId) : "geen"}
+      onValueChange={wijzig}
+      disabled={bezig}
+    >
+      <SelectTrigger className="h-7 w-32 text-[10px] px-2">
+        <SelectValue placeholder="Monteur" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="geen">Geen monteur</SelectItem>
+        {monteurs.map((m) => (
+          <SelectItem key={m.id} value={String(m.id)}>{m.naam}</SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
+
 export default function Voorzieningen() {
   const { t } = useTranslation();
   const { heeftNiveau } = useBevoegdheid();
@@ -395,23 +441,32 @@ export default function Voorzieningen() {
                             <span className="text-muted-foreground">—</span>
                           )}
                           {magClustersBeheren && v.gebouw_id != null && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7 text-muted-foreground"
-                              title="Clusters beheren"
-                              onClick={() =>
-                                setBeheerSpot({
-                                  id: v.id,
-                                  objectnummer: v.objectnummer,
-                                  gebouw_id: v.gebouw_id as number,
-                                  gebouw_naam: v.gebouw_naam ?? null,
-                                  cluster_id: (v as any).cluster_id ?? null,
-                                })
-                              }
-                            >
-                              <Boxes className="h-4 w-4" />
-                            </Button>
+                            <div className="flex items-center gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 text-muted-foreground"
+                                title="Clusters beheren"
+                                onClick={() =>
+                                  setBeheerSpot({
+                                    id: v.id,
+                                    objectnummer: v.objectnummer,
+                                    gebouw_id: v.gebouw_id as number,
+                                    gebouw_naam: v.gebouw_naam ?? null,
+                                    cluster_id: (v as any).cluster_id ?? null,
+                                  })
+                                }
+                              >
+                                <Boxes className="h-4 w-4" />
+                              </Button>
+                              {(v as any).cluster_id != null && (
+                                <MonteurToewijzenSnelKnop
+                                  clusterId={(v as any).cluster_id}
+                                  huidigeMonteurId={(v as any).cluster_monteur_id ?? null}
+                                  onSuccess={() => refetch()}
+                                />
+                              )}
+                            </div>
                           )}
                         </div>
                       </td>
