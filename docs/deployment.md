@@ -14,6 +14,15 @@ een gecontroleerd deployment-proces.
 > [`docs/PRODUCTION_RUNBOOK.md`](PRODUCTION_RUNBOOK.md). De passages hieronder zijn met
 > dat beleid in lijn gebracht.
 
+> **Let op — leidend deploymodel.** De productie-VPS draait het **lokale-build-model**
+> uit [`deploy/docker-compose.production.yml`](../deploy/docker-compose.production.yml)
+> (de server bouwt de images zelf; zie `.github/workflows/deploy.yml`). De onderstaande
+> passages die het root-`docker-compose.production.yml` met ghcr.io-registry-images
+> beschrijven horen bij het **oude registry-model dat NIET meer in gebruik is** — volg
+> die niet om te deployen. De praktische installatie-/deploystappen staan in
+> [`deploy/INSTALL_PRODUCTION.md`](../deploy/INSTALL_PRODUCTION.md) en
+> [`docs/PRODUCTION_RUNBOOK.md`](PRODUCTION_RUNBOOK.md).
+
 ---
 
 ## Inhoudsopgave

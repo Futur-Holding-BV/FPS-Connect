@@ -1,7 +1,23 @@
 version: "3.9"
 
+# ═════════════════════════════════════════════════════════════
+#  ⚠️  NIET IN GEBRUIK — DIT IS NIET HET LEIDENDE DEPLOYMODEL  ⚠️
+#
+#  Dit bestand beschrijft het OUDE registry-model (pre-built images
+#  vanuit GitHub ghcr.io). Dat model wordt NIET gebruikt: er is geen
+#  workflow, script of CI die deze images bouwt/pusht of dit bestand
+#  draait, en het default REGISTRY-pad hieronder is bovendien onjuist.
+#
+#  Het leidende productie-deploymodel is:
+#      deploy/docker-compose.production.yml   (lokale-build-model)
+#  Dat is wat de VPS draait en wat .github/workflows/deploy.yml gebruikt.
+#
+#  Gebruik dit bestand dus niet om te deployen. Het blijft alleen als
+#  historische referentie voor het registry-model staan.
+# ═════════════════════════════════════════════════════════════
+#
 # ─────────────────────────────────────────────────────────────
-#  FPS Connect — CI/CD productie Docker Compose
+#  FPS Connect — (LEGACY) CI/CD productie Docker Compose
 #
 #  Gebruik: pre-built images vanuit container registry (GitHub ghcr.io)
 #
