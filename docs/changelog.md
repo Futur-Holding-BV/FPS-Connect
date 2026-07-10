@@ -25,6 +25,20 @@ Voor elke taak drie scores:
 
 **Verificatie:** volledige `pnpm run typecheck` groen (alle packages); `/api/healthz`=200; `/api/financieel/jaarrekeningen` ongeauthenticeerd=401 (fail-closed bevestigd); e2e-web afgerond. De e2e-menu-run faalde op infrastructuur (poort 8080 EADDRINUSE + bekende TOTP-timing), niet op deze web-only wijziging; de monteur-app is niet aangeraakt.
 
+## 2026-07-10 — Inloggen in Firefox hersteld (autofill-bestendige formulieren) (Task #494)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (alleen frontend-formulieren; geen server-, DB- of API-wijziging)
+
+**Probleem:** in Firefox mislukte inloggen met "Onjuiste inloggegevens" terwijl exact dezelfde login in Chrome/Edge werkte. Oorzaak: de inlogformulieren verstuurden de React-state, niet de werkelijke veldwaarden. Bij browser-autofill (met name Firefox) wordt een veld visueel gevuld zonder dat het change-event altijd vuurt, waardoor de state leeg/verouderd bleef en de server terecht 401 gaf.
+
+**Oplossing:** de betrokken formulieren lezen bij verzenden de werkelijke veldwaarden uit via refs op de invulvelden (`ref.current?.value`), met terugval op de bestaande state wanneer de ref nog niet beschikbaar is. **Aanvullend (na terugmelding "werkt nog niet in Firefox"):** de invulvelden zijn omgezet van *gecontroleerd* (`value={state}`) naar *ongecontroleerd* (`defaultValue={state}` + ref). Bij een gecontroleerd React-veld overschrijft React bij elke re-render de DOM-waarde terug naar de (lege) state, waardoor Firefox' automatisch ingevulde waarde weer werd gewist vóór verzenden — precies het verschil met Chrome/Edge, waar de timing anders uitpakt. Met een ongecontroleerd veld raakt React de door de browser ingevulde waarde niet meer aan, en leest de ref bij verzenden altijd de juiste waarde. De getoonde state en `onChange` blijven behouden voor UI (wachtwoord tonen/verbergen, validatie, handmatig typen). Tevens `name`- en `autoComplete`-attributen toegevoegd waar die ontbraken. De TOTP/tweestapsverificatie-flow is niet aangeraakt.
+
+**Bestanden gewijzigd:**
+- `artifacts/firevault/src/pages/auth/login.tsx` — e-mail/wachtwoord via refs uitgelezen bij submit.
+- `artifacts/firevault/src/pages/auth/wachtwoord-reset.tsx` — nieuw/bevestig wachtwoord via refs.
+- `artifacts/firevault/src/pages/uitnodiging/index.tsx` — wachtwoord/bevestig via refs.
+- `artifacts/firevault/src/pages/installatie/index.tsx` — naam/bedrijf/e-mail/wachtwoord/bevestig via refs.
+
 ## 2026-07-10 — Deploybeleid vastgelegd: productie als acceptatieomgeving
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** geen (uitsluitend documentatie)

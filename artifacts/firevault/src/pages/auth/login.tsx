@@ -172,6 +172,8 @@ export default function LoginPagina() {
   const [fout, setFout] = useState<string | null>(null);
   const [taalGekozen, setTaalGekozen] = useState(false);
   const [toonWachtwoord, setToonWachtwoord] = useState(false);
+  const emailRef = useRef<HTMLInputElement>(null);
+  const wachtwoordRef = useRef<HTMLInputElement>(null);
 
   async function verstuurInloggen(e: React.FormEvent) {
     e.preventDefault();
@@ -179,7 +181,16 @@ export default function LoginPagina() {
     setFout(null);
     setBezig(true);
     try {
-      const resultaat = await login({ email, wachtwoord });
+      // Lees de werkelijke veldwaarden uit bij verzenden. Browser-autofill
+      // (met name Firefox) vult velden soms zonder een change-event te vuren,
+      // waardoor de React-state leeg/verouderd blijft. Val terug op de state
+      // wanneer de ref (nog) niet beschikbaar is.
+      const emailWaarde = emailRef.current?.value ?? email;
+      const wachtwoordWaarde = wachtwoordRef.current?.value ?? wachtwoord;
+      const resultaat = await login({
+        email: emailWaarde,
+        wachtwoord: wachtwoordWaarde,
+      });
       setCode("");
       if (resultaat.status === "setup_2fa") {
         const data = await tweeFactorSetup();
@@ -302,10 +313,12 @@ export default function LoginPagina() {
                   </Label>
                   <Input
                     id="email"
+                    name="email"
+                    ref={emailRef}
                     type="email"
                     autoComplete="username"
                     placeholder="naam@bedrijf.nl"
-                    value={email}
+                    defaultValue={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
                     className="border-white/10 bg-white/[0.07] text-white placeholder:text-white/25 focus-visible:border-[#F23B0D]/60 focus-visible:ring-[#F23B0D]/20 focus-visible:ring-2 transition-all"
@@ -322,9 +335,11 @@ export default function LoginPagina() {
                   <div className="relative">
                     <Input
                       id="wachtwoord"
+                      name="wachtwoord"
+                      ref={wachtwoordRef}
                       type={toonWachtwoord ? "text" : "password"}
                       autoComplete="current-password"
-                      value={wachtwoord}
+                      defaultValue={wachtwoord}
                       onChange={(e) => setWachtwoord(e.target.value)}
                       className="border-white/10 bg-white/[0.07] pr-10 text-white placeholder:text-white/25 focus-visible:border-[#F23B0D]/60 focus-visible:ring-[#F23B0D]/20 focus-visible:ring-2 transition-all"
                       required

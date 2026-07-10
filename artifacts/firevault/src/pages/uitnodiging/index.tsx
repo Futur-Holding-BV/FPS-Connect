@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Loader2, ShieldCheck, Eye, EyeOff, CheckCircle, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -48,6 +48,8 @@ export default function ActivatiePagina({ token }: Props) {
   const [toonWw, setToonWw] = useState(false);
   const [toonBev, setToonBev] = useState(false);
   const [bezig, setBezig] = useState(false);
+  const wachtwoordRef = useRef<HTMLInputElement>(null);
+  const bevestigRef = useRef<HTMLInputElement>(null);
 
   const [qrCode, setQrCode] = useState("");
   const [otpCode, setOtpCode] = useState("");
@@ -68,11 +70,15 @@ export default function ActivatiePagina({ token }: Props) {
 
   async function activeer() {
     setFoutmelding("");
-    if (wachtwoord.length < 8) {
+    // Lees de werkelijke veldwaarden uit zodat browser-autofill (met name
+    // Firefox, dat geen change-event vuurt) altijd wordt meegenomen.
+    const wachtwoordWaarde = wachtwoordRef.current?.value ?? wachtwoord;
+    const bevestigWaarde = bevestigRef.current?.value ?? bevestig;
+    if (wachtwoordWaarde.length < 8) {
       setFoutmelding("Wachtwoord moet minimaal 8 tekens bevatten.");
       return;
     }
-    if (wachtwoord !== bevestig) {
+    if (wachtwoordWaarde !== bevestigWaarde) {
       setFoutmelding("Wachtwoorden komen niet overeen.");
       return;
     }
@@ -81,7 +87,7 @@ export default function ActivatiePagina({ token }: Props) {
       const r = await api(`/uitnodiging/${token}/activeren`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ wachtwoord, taal }),
+        body: JSON.stringify({ wachtwoord: wachtwoordWaarde, taal }),
       });
       const data = await r.json();
       if (!r.ok) { setFoutmelding(data.error ?? "Er is een fout opgetreden."); return; }
@@ -202,8 +208,11 @@ export default function ActivatiePagina({ token }: Props) {
                   </Label>
                   <div className="relative mt-1">
                     <Input
+                      name="nieuw-wachtwoord"
+                      ref={wachtwoordRef}
                       type={toonWw ? "text" : "password"}
-                      value={wachtwoord}
+                      autoComplete="new-password"
+                      defaultValue={wachtwoord}
                       onChange={(e) => setWachtwoord(e.target.value)}
                       placeholder="Kies een sterk wachtwoord"
                       className="pr-10"
@@ -221,8 +230,11 @@ export default function ActivatiePagina({ token }: Props) {
                   <Label className="text-zinc-700 text-sm font-medium">Wachtwoord bevestigen</Label>
                   <div className="relative mt-1">
                     <Input
+                      name="bevestig-wachtwoord"
+                      ref={bevestigRef}
                       type={toonBev ? "text" : "password"}
-                      value={bevestig}
+                      autoComplete="new-password"
+                      defaultValue={bevestig}
                       onChange={(e) => setBevestig(e.target.value)}
                       placeholder="Herhaal uw wachtwoord"
                       className="pr-10"

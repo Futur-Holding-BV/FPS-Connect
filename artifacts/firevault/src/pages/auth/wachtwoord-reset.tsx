@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { Loader2, ArrowLeft, KeyRound, CheckCircle, Eye, EyeOff } from "lucide-react";
 import { wachtwoordReset } from "@workspace/api-client-react";
@@ -27,24 +27,31 @@ export default function WachtwoordResetPagina({ token }: Props) {
   const [gelukt, setGelukt] = useState(false);
   const [toonNieuw, setToonNieuw] = useState(false);
   const [toonBevestig, setToonBevestig] = useState(false);
+  const nieuwRef = useRef<HTMLInputElement>(null);
+  const bevestigRef = useRef<HTMLInputElement>(null);
 
   async function verstuur(e: React.FormEvent) {
     e.preventDefault();
     if (bezig) return;
     setFout(null);
 
-    if (nieuwWachtwoord.length < 8) {
+    // Lees de werkelijke veldwaarden uit bij verzenden zodat browser-autofill
+    // (met name Firefox, dat geen change-event vuurt) altijd wordt meegenomen.
+    const nieuwWaarde = nieuwRef.current?.value ?? nieuwWachtwoord;
+    const bevestigWaarde = bevestigRef.current?.value ?? bevestig;
+
+    if (nieuwWaarde.length < 8) {
       setFout(t("auth.resetFoutMinimaal"));
       return;
     }
-    if (nieuwWachtwoord !== bevestig) {
+    if (nieuwWaarde !== bevestigWaarde) {
       setFout(t("auth.resetFoutOvereen"));
       return;
     }
 
     setBezig(true);
     try {
-      await wachtwoordReset({ token, nieuw_wachtwoord: nieuwWachtwoord });
+      await wachtwoordReset({ token, nieuw_wachtwoord: nieuwWaarde });
       setGelukt(true);
     } catch {
       setFout(t("auth.resetFoutToken"));
@@ -80,9 +87,11 @@ export default function WachtwoordResetPagina({ token }: Props) {
                     <div className="relative">
                       <Input
                         id="nieuw"
+                        name="nieuw-wachtwoord"
+                        ref={nieuwRef}
                         type={toonNieuw ? "text" : "password"}
                         autoComplete="new-password"
-                        value={nieuwWachtwoord}
+                        defaultValue={nieuwWachtwoord}
                         onChange={(e) => setNieuwWachtwoord(e.target.value)}
                         className="pr-10"
                         required
@@ -103,9 +112,11 @@ export default function WachtwoordResetPagina({ token }: Props) {
                     <div className="relative">
                       <Input
                         id="bevestig"
+                        name="bevestig-wachtwoord"
+                        ref={bevestigRef}
                         type={toonBevestig ? "text" : "password"}
                         autoComplete="new-password"
-                        value={bevestig}
+                        defaultValue={bevestig}
                         onChange={(e) => setBevestig(e.target.value)}
                         className="pr-10"
                         required

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Loader2, ShieldCheck, Eye, EyeOff, CheckCircle, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,6 +23,11 @@ export default function InstallatiePagina() {
   const [toonWw, setToonWw] = useState(false);
   const [toonBev, setToonBev] = useState(false);
   const [bezig, setBezig] = useState(false);
+  const naamRef = useRef<HTMLInputElement>(null);
+  const bedrijfsnaamRef = useRef<HTMLInputElement>(null);
+  const emailRef = useRef<HTMLInputElement>(null);
+  const wachtwoordRef = useRef<HTMLInputElement>(null);
+  const bevestigRef = useRef<HTMLInputElement>(null);
 
   const [qrCode, setQrCode] = useState("");
   const [otpCode, setOtpCode] = useState("");
@@ -40,15 +45,22 @@ export default function InstallatiePagina() {
 
   async function installeer() {
     setFoutmelding("");
-    if (!naam.trim() || !bedrijfsnaam.trim() || !email.trim()) {
+    // Lees de werkelijke veldwaarden uit zodat browser-autofill (met name
+    // Firefox, dat geen change-event vuurt) altijd wordt meegenomen.
+    const naamWaarde = naamRef.current?.value ?? naam;
+    const bedrijfsnaamWaarde = bedrijfsnaamRef.current?.value ?? bedrijfsnaam;
+    const emailWaarde = emailRef.current?.value ?? email;
+    const wachtwoordWaarde = wachtwoordRef.current?.value ?? wachtwoord;
+    const bevestigWaarde = bevestigRef.current?.value ?? bevestig;
+    if (!naamWaarde.trim() || !bedrijfsnaamWaarde.trim() || !emailWaarde.trim()) {
       setFoutmelding("Vul alle velden in.");
       return;
     }
-    if (wachtwoord.length < 8) {
+    if (wachtwoordWaarde.length < 8) {
       setFoutmelding("Wachtwoord moet minimaal 8 tekens bevatten.");
       return;
     }
-    if (wachtwoord !== bevestig) {
+    if (wachtwoordWaarde !== bevestigWaarde) {
       setFoutmelding("Wachtwoorden komen niet overeen.");
       return;
     }
@@ -57,7 +69,12 @@ export default function InstallatiePagina() {
       const r = await api("/installatie", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ naam, bedrijfsnaam, email, wachtwoord }),
+        body: JSON.stringify({
+          naam: naamWaarde,
+          bedrijfsnaam: bedrijfsnaamWaarde,
+          email: emailWaarde,
+          wachtwoord: wachtwoordWaarde,
+        }),
       });
       const data = await r.json();
       if (!r.ok) {
@@ -162,7 +179,10 @@ export default function InstallatiePagina() {
                 <div>
                   <Label className="text-zinc-700 text-sm font-medium">Naam</Label>
                   <Input
-                    value={naam}
+                    name="naam"
+                    ref={naamRef}
+                    autoComplete="name"
+                    defaultValue={naam}
                     onChange={(e) => setNaam(e.target.value)}
                     placeholder="Voor- en achternaam"
                     className="mt-1"
@@ -171,7 +191,10 @@ export default function InstallatiePagina() {
                 <div>
                   <Label className="text-zinc-700 text-sm font-medium">Bedrijfsnaam</Label>
                   <Input
-                    value={bedrijfsnaam}
+                    name="bedrijfsnaam"
+                    ref={bedrijfsnaamRef}
+                    autoComplete="organization"
+                    defaultValue={bedrijfsnaam}
                     onChange={(e) => setBedrijfsnaam(e.target.value)}
                     placeholder="Naam van uw bedrijf"
                     className="mt-1"
@@ -180,8 +203,11 @@ export default function InstallatiePagina() {
                 <div>
                   <Label className="text-zinc-700 text-sm font-medium">E-mailadres</Label>
                   <Input
+                    name="email"
+                    ref={emailRef}
                     type="email"
-                    value={email}
+                    autoComplete="email"
+                    defaultValue={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="naam@bedrijf.nl"
                     className="mt-1"
@@ -193,8 +219,11 @@ export default function InstallatiePagina() {
                   </Label>
                   <div className="relative mt-1">
                     <Input
+                      name="nieuw-wachtwoord"
+                      ref={wachtwoordRef}
                       type={toonWw ? "text" : "password"}
-                      value={wachtwoord}
+                      autoComplete="new-password"
+                      defaultValue={wachtwoord}
                       onChange={(e) => setWachtwoord(e.target.value)}
                       placeholder="Kies een sterk wachtwoord"
                       className="pr-10"
@@ -212,8 +241,11 @@ export default function InstallatiePagina() {
                   <Label className="text-zinc-700 text-sm font-medium">Wachtwoord bevestigen</Label>
                   <div className="relative mt-1">
                     <Input
+                      name="bevestig-wachtwoord"
+                      ref={bevestigRef}
                       type={toonBev ? "text" : "password"}
-                      value={bevestig}
+                      autoComplete="new-password"
+                      defaultValue={bevestig}
                       onChange={(e) => setBevestig(e.target.value)}
                       placeholder="Herhaal uw wachtwoord"
                       className="pr-10"
