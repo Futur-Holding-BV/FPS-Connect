@@ -14,6 +14,13 @@ pnpm --filter @workspace/db run reconcile
 # die Drizzle wil droppen worden vooraf handmatig via directe SQL verwijderd zodat
 # --force nooit onbedoeld echte data verwijdert.
 pnpm --filter @workspace/db run push-force
+# Stap 3b: 'drizzle-kit push --force' kan de handmatig aangemaakte
+# gebruiker_profielen-UNIQUE-constraint (en vergelijkbare additieve constraints)
+# als "drift" beschouwen en droppen. apply-additive is idempotent (IF NOT EXISTS /
+# DO-block met pg_constraint-check), dus opnieuw draaien ná de push herstelt dit
+# zonder gevolgen als er niets ontbreekt. Voorkomt dat elke merge opnieuw handmatig
+# hersteld moet worden.
+pnpm --filter @workspace/db run apply-additive
 # Stap 4: Schema-healthcheck — voert een lees-only SELECT uit op de kerntabellen om te
 # bevestigen dat alle kritieke kolommen daadwerkelijk aanwezig zijn in de database.
 # Faalt met exit 1 en een duidelijke foutmelding als een tabel of kolom ontbreekt.
