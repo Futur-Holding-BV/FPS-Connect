@@ -63,3 +63,13 @@ Drift rarely comes alone: one 500 usually means several tables/columns are missi
 **Why:** a real session found 6 drifted tables (incl. 3 entirely missing tables) behind a single visible 500; each missing piece 500s a different endpoint at unpredictable times.
 
 **How to apply:** on any "column/relation does not exist" 500, run the audit, apply all missing pieces additively (CREATE TABLE / ALTER ADD COLUMN with schema defaults + FKs), rerun until "GEEN DRIFT", delete the temp script. Note: the audit only checks schema→DB direction; extra DB-only columns are legacy-tolerated here.
+
+## Now auto-healed: `apply-additive` re-runs after `push-force`
+
+`push --force` (used in post-merge because it must be non-interactive) can treat a manually-added constraint (e.g. `gebruiker_profielen`'s composite UNIQUE, added via `apply-additive`'s `DO $$ IF NOT EXISTS` block) as unmodeled "drift" and silently drop it — even though the same constraint isn't declared as `.unique()` in the Drizzle schema on purpose (see the deployment-validation note above). This made `schema-healthcheck` fail on two separate merges in a row with the exact same missing-constraint error.
+
+**Fix (permanent, already applied):** `scripts/post-merge.sh` now runs `pnpm --filter @workspace/db run apply-additive` a second time, immediately after `push-force` and before `schema-healthcheck`. `apply-additive` is idempotent, so re-running it is a no-op when nothing was dropped and self-heals when `push --force` did drop something.
+
+**Why:** any constraint/table that exists only via manual SQL in `apply-additive` (not modeled in the Drizzle schema) is invisible to drizzle's diff and therefore a `--force` push target for removal on every merge, not just the first one that created it.
+
+**How to apply:** if `schema-healthcheck` ever again fails post-merge on a constraint/column that only exists via `apply-additive` SQL, check first whether `apply-additive` already runs both before AND after `push`/`push-force` in `scripts/post-merge.sh` — if a new manual-SQL step gets added to `apply-additive.mjs` without this ordering already in place, the same drop-then-fail loop will recur for it.
