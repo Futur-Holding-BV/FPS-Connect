@@ -1,13 +1,14 @@
 // Document Studio — referentiebibliotheek per werkmaatschappij.
 // Beheert modellen (geen|referentie|concept|goedgekeurd) per documenttype per werkgever.
 import { Router } from "express";
+import { Readable } from "stream";
 import { randomUUID } from "crypto";
 import multer from "multer";
 import { db, documentStudioModellenTable, werkgeversTable } from "@workspace/db";
 import { eq, and, desc, inArray, sql } from "drizzle-orm";
 import { DocumentStudioModelInputDocumentType } from "@workspace/api-zod";
 import { requireBevoegdheid } from "../middlewares/auth";
-import { ObjectStorageService } from "../lib/objectStorage";
+import { ObjectStorageService, ObjectNotFoundError } from "../lib/objectStorage";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
 import { STUDIO_GENEREER_JSON_PROMPT, STUDIO_BIJSTUUR_JSON_PROMPT, STUDIO_HUISSTIJL_ANALYSE_PROMPT } from "../lib/aiPrompts";
 import { logActiviteit } from "../lib/activiteit";
@@ -377,8 +378,14 @@ router.patch("/studio/modellen/:id", schrijven, async (req, res): Promise<void> 
       connect_template_json?: string | null;
       goedgekeurd_door?: number | null;
     };
-    if (status !== undefined && NIET_CLIENT_INSTELBAAR.has(status)) {
-      return void res.status(400).json({ error: "Status 'goedgekeurd'/'gearchiveerd' kan alleen via de goedkeuren-actie worden gezet" });
+    if (status !== undefined && status !== "goedgekeurd" && NIET_CLIENT_INSTELBAAR.has(status)) {
+      return void res.status(400).json({ error: "Status 'gearchiveerd' kan alleen via de goedkeuren-actie worden gezet" });
+    }
+
+    if (status === "goedgekeurd") {
+      // De status 'goedgekeurd' via PATCH wordt intern afgehandeld door de goedkeuren-logica
+      // om versiebeheer en archivering correct te regelen.
+      return void res.redirect(307, `/api/studio/modellen/${id}/goedkeuren`);
     }
 
     const setObj: Partial<typeof documentStudioModellenTable.$inferInsert> & { bijgewerktOp: Date } = {
@@ -388,6 +395,10 @@ router.patch("/studio/modellen/:id", schrijven, async (req, res): Promise<void> 
     if (status !== undefined)                 setObj.status = status;
     if (connect_template_json !== undefined)  setObj.connectTemplateJson = connect_template_json;
     if (goedgekeurd_door !== undefined)       setObj.goedgekeurdDoor = goedgekeurd_door;
+
+    if (status === "goedgekeurd") {
+      setObj.goedgekeurdOp = new Date();
+    }
 
     const [rij] = await db
       .update(documentStudioModellenTable)
@@ -402,6 +413,49 @@ router.patch("/studio/modellen/:id", schrijven, async (req, res): Promise<void> 
       .where(eq(werkgeversTable.id, rij.werkgeverId));
 
     res.json(mapModel(rij, wg?.naam ?? null));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// ── Download referentie ───────────────────────────────────────────────────────
+
+router.get("/studio/modellen/:id/referentie", lezen, async (req, res): Promise<void> => {
+  try {
+    const id = parseId(req.params.id);
+    const [rij] = await db
+      .select()
+      .from(documentStudioModellenTable)
+      .where(eq(documentStudioModellenTable.id, id));
+
+    if (!rij || !rij.referentieBestandPad) {
+      return void res.status(404).json({ error: "Referentiebestand niet gevonden" });
+    }
+
+    try {
+      const file = await oss.getObjectEntityFile(rij.referentieBestandPad);
+      const response = await oss.downloadObject(file, { isPublic: false });
+
+      res.status(response.status);
+      response.headers.forEach((value, key) => res.setHeader(key, value));
+
+      if (response.body) {
+        const nodeStream = Readable.fromWeb(response.body as any);
+        nodeStream.pipe(res);
+      } else {
+        res.end();
+      }
+    } catch (err) {
+      if (err instanceof ObjectNotFoundError) {
+        return void res.status(404).json({ error: "Referentiebestand niet gevonden in opslag" });
+      }
+      // Als de opslag-config ontbreekt (GCS/S3)
+      if (err instanceof Error && (err.message.includes("is niet ingesteld") || err.message.includes("niet geconfigureerd"))) {
+        return void res.status(503).json({ error: "Opslagservice niet geconfigureerd" });
+      }
+      throw err;
+    }
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });
@@ -450,7 +504,8 @@ router.post(
       const bestandPad = await oss.uploadBestand(subPath, bestand.buffer, bestand.mimetype);
 
       // Status bijwerken naar referentie (als nog geen hoger model)
-      const nieuweStatus = bestaand.status === "geen" ? "referentie" : bestaand.status;
+      // Indien het model al goedgekeurd was, wordt het teruggezet naar referentie.
+      const nieuweStatus = (bestaand.status === "geen" || bestaand.status === "goedgekeurd") ? "referentie" : bestaand.status;
 
       const [bijgewerkt] = await db
         .update(documentStudioModellenTable)

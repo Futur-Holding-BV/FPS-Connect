@@ -11,4 +11,6 @@ contract_id?: number;
 gebouw_id?: number;
 status?: string;
 monteur_id?: number;
+start_datum?: Date;
+eind_datum?: Date;
 };

@@ -7,6 +7,8 @@ import {
   useUpdateCluster,
   useDeleteCluster,
   useUpdateVoorziening,
+  useAssignClusterMonteur,
+  useListToewijsbareGebruikers,
 } from "@workspace/api-client-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -27,9 +29,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Search, AlertCircle, Boxes, Pencil, Trash2, Calendar, X, Filter } from "lucide-react";
+import { Plus, Search, AlertCircle, Boxes, Pencil, Trash2, Calendar, X, Filter, UserCheck } from "lucide-react";
 import { Link } from "wouter";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { useVoorkeur } from "@/hooks/use-voorkeur";
 import { PaginaHulp } from "@/components/pagina-hulp";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
@@ -65,10 +68,10 @@ type SpotVoorBeheer = {
 };
 
 const GEEN_FILTER = "__alle__";
+const ZONDER_CLUSTER = "__zonder_cluster__";
 
 export default function Voorzieningen() {
   const { t } = useTranslation();
-  const { data: voorzieningenLijst, isLoading, refetch } = useListVoorzieningen({});
   const { heeftNiveau } = useBevoegdheid();
   const magClustersBeheren = heeftNiveau("voorzieningen", 2);
   const [beheerSpot, setBeheerSpot] = useState<SpotVoorBeheer | null>(null);
@@ -77,6 +80,7 @@ export default function Voorzieningen() {
   const [typeFilter, setTypeFilter, wisType] = useVoorkeur("voorzieningen_type", GEEN_FILTER);
   const [statusFilter, setStatusFilter, wisStatus] = useVoorkeur("voorzieningen_status", GEEN_FILTER);
   const [gebouwFilter, setGebouwFilter, wisGebouw] = useVoorkeur("voorzieningen_gebouw", GEEN_FILTER);
+  const [clusterFilter, setClusterFilter, wisCluster] = useVoorkeur("voorzieningen_cluster", GEEN_FILTER);
   const [alleenTeControleren, setAlleenTeControleren, wisTeControleren] = useVoorkeur(
     "voorzieningen_alleen_te_controleren",
     false,
@@ -85,8 +89,16 @@ export default function Voorzieningen() {
     "voorzieningen_alleen_voorbereid",
     false,
   );
+  const [toonGearchiveerd, setToonGearchiveerd, wisGearchiveerd] = useVoorkeur(
+    "voorzieningen_toon_gearchiveerd",
+    false,
+  );
   const [aanmaakVan, setAanmaakVan, wisVan] = useVoorkeur("voorzieningen_aanmaak_van", "");
   const [aanmaakTot, setAanmaakTot, wisTot] = useVoorkeur("voorzieningen_aanmaak_tot", "");
+
+  const { data: voorzieningenLijst, isLoading, refetch } = useListVoorzieningen({
+    gearchiveerd: toonGearchiveerd ? true : false,
+  });
 
   const teControlerenAantal = useMemo(
     () => (voorzieningenLijst?.items ?? []).filter((v) => (v as any).ai_te_controleren).length,
@@ -112,6 +124,18 @@ export default function Voorzieningen() {
     return Array.from(map.keys()).sort();
   }, [voorzieningenLijst]);
 
+  const alleClusters = useMemo(() => {
+    const map = new Map<number, string>();
+    (voorzieningenLijst?.items ?? []).forEach((v) => {
+      const clusterId = (v as any).cluster_id as number | null | undefined;
+      const clusterNaam = (v as any).cluster_naam as string | null | undefined;
+      if (clusterId != null && clusterNaam) map.set(clusterId, clusterNaam);
+    });
+    return Array.from(map.entries())
+      .map(([id, naam]) => ({ id, naam }))
+      .sort((a, b) => a.naam.localeCompare(b.naam));
+  }, [voorzieningenLijst]);
+
   const datumFilterActief = aanmaakVan !== "" || aanmaakTot !== "";
 
   const actieveFilterAantal = [
@@ -119,8 +143,10 @@ export default function Voorzieningen() {
     typeFilter !== GEEN_FILTER,
     statusFilter !== GEEN_FILTER,
     gebouwFilter !== GEEN_FILTER,
+    clusterFilter !== GEEN_FILTER,
     alleenTeControleren,
     alleenVoorbereid,
+    toonGearchiveerd,
     datumFilterActief,
   ].filter(Boolean).length;
 
@@ -129,8 +155,10 @@ export default function Voorzieningen() {
     wisType();
     wisStatus();
     wisGebouw();
+    wisCluster();
     wisTeControleren();
     wisVoorbereid();
+    wisGearchiveerd();
     wisVan();
     wisTot();
   }
@@ -143,6 +171,11 @@ export default function Voorzieningen() {
     if (typeFilter !== GEEN_FILTER) items = items.filter((v) => v.type === typeFilter);
     if (statusFilter !== GEEN_FILTER) items = items.filter((v) => (v.status ?? "concept") === statusFilter);
     if (gebouwFilter !== GEEN_FILTER) items = items.filter((v) => v.gebouw_naam === gebouwFilter);
+    if (clusterFilter === ZONDER_CLUSTER) {
+      items = items.filter((v) => (v as any).cluster_id == null);
+    } else if (clusterFilter !== GEEN_FILTER) {
+      items = items.filter((v) => String((v as any).cluster_id ?? "") === clusterFilter);
+    }
     if (aanmaakVan) {
       const van = new Date(`${aanmaakVan}T00:00:00`);
       items = items.filter((v) => {
@@ -162,7 +195,7 @@ export default function Voorzieningen() {
       [v.objectnummer, v.type, v.gebouw_naam, v.status]
         .some((veld) => (veld ?? "").toLowerCase().includes(term)),
     );
-  }, [voorzieningenLijst, zoek, typeFilter, statusFilter, gebouwFilter, alleenTeControleren, alleenVoorbereid, aanmaakVan, aanmaakTot]);
+  }, [voorzieningenLijst, zoek, typeFilter, statusFilter, gebouwFilter, clusterFilter, alleenTeControleren, alleenVoorbereid, aanmaakVan, aanmaakTot]);
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
@@ -255,6 +288,32 @@ export default function Voorzieningen() {
             ))}
           </SelectContent>
         </Select>
+
+        {/* Cluster-filter */}
+        <Select value={clusterFilter} onValueChange={setClusterFilter}>
+          <SelectTrigger className="h-8 w-48 text-xs">
+            <SelectValue placeholder="Alle clusters" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={GEEN_FILTER}>Alle clusters</SelectItem>
+            <SelectItem value={ZONDER_CLUSTER}>Zonder cluster</SelectItem>
+            {alleClusters.map((c) => (
+              <SelectItem key={c.id} value={String(c.id)}>{c.naam}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {heeftNiveau("voorzieningen", 2) && (
+          <div className="flex items-center space-x-2 border rounded-md px-2 h-8 bg-background">
+            <Label htmlFor="toon-gearchiveerd" className="text-xs cursor-pointer">Gearchiveerd</Label>
+            <Switch
+              id="toon-gearchiveerd"
+              checked={toonGearchiveerd}
+              onCheckedChange={setToonGearchiveerd}
+              className="scale-75"
+            />
+          </div>
+        )}
 
         {/* Datum-filter */}
         <div className="flex items-center gap-1.5">
@@ -371,7 +430,7 @@ export default function Voorzieningen() {
                       </td>
                       <td className="px-6 py-4 text-right">
                         <Link href={`/voorzieningen/${v.id}`}>
-                          <Button variant="ghost" size="sm">Details</Button>
+                          <Button variant="ghost" size="sm" data-testid="spot-details-knop">Details</Button>
                         </Link>
                       </td>
                     </tr>
@@ -414,6 +473,9 @@ function SpotClusterDialog({
   const wijzigCluster = useUpdateCluster();
   const verwijderCluster = useDeleteCluster();
   const updateVoorziening = useUpdateVoorziening();
+  const wijsClusterMonteurToe = useAssignClusterMonteur();
+  const { data: gebruikers } = useListToewijsbareGebruikers();
+  const monteurs = ((gebruikers ?? []) as any[]).filter((g) => g.rol !== "hoofdbeheerder");
 
   const [nieuwNaam, setNieuwNaam] = useState("");
   const [nieuwType, setNieuwType] = useState("schacht");
@@ -422,6 +484,21 @@ function SpotClusterDialog({
   const [bewerkNaam, setBewerkNaam] = useState("");
   const [huidigClusterId, setHuidigClusterId] = useState<number | null>(spot.cluster_id);
   const [bezigKoppelen, setBezigKoppelen] = useState(false);
+  const [bezigMonteurClusterId, setBezigMonteurClusterId] = useState<number | null>(null);
+
+  async function wijsMonteurToe(clusterId: number, waarde: string) {
+    setBezigMonteurClusterId(clusterId);
+    try {
+      await wijsClusterMonteurToe.mutateAsync({
+        clusterId,
+        data: { monteur_id: waarde === "geen" ? null : Number(waarde) },
+      });
+      await refetchClusters();
+      onWijziging();
+    } finally {
+      setBezigMonteurClusterId(null);
+    }
+  }
 
   const GEEN_CLUSTER = "__geen__";
   const lijst = (clusters ?? []) as any[];
@@ -535,6 +612,22 @@ function SpotClusterDialog({
                 )}
                 <Badge variant="secondary" className="text-xs">{c.voorziening_aantal} spots</Badge>
                 {c.type && <Badge variant="outline" className="text-xs">{CLUSTER_TYPEN[c.type] ?? c.type}</Badge>}
+                <Select
+                  value={c.monteur_id != null ? String(c.monteur_id) : "geen"}
+                  onValueChange={(v) => wijsMonteurToe(c.id, v)}
+                  disabled={bezigMonteurClusterId === c.id}
+                >
+                  <SelectTrigger className="h-7 w-36 text-xs" title="Cluster aan monteur toewijzen">
+                    <UserCheck className="h-3.5 w-3.5 mr-1 shrink-0" />
+                    <SelectValue placeholder="Toewijzen" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="geen">Niet toegewezen</SelectItem>
+                    {monteurs.map((m) => (
+                      <SelectItem key={m.id} value={String(m.id)}>{m.naam}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <Button
                   variant="ghost" size="icon" className="h-7 w-7"
                   onClick={() => { setBewerkId(c.id); setBewerkNaam(c.naam); }}

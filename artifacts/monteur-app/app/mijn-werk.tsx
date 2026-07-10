@@ -38,6 +38,7 @@ const TYPEN: Record<string, string> = {
 
 const STATUSKLEUR: Record<string, string> = {
   concept: "#6b7280",
+  voorbereid: "#cbd5e1",
   geplaatst: "#2563eb",
   goedgekeurd: "#16a34a",
   afgekeurd: "#dc2626",
@@ -48,6 +49,7 @@ const STATUSKLEUR: Record<string, string> = {
 
 const STATUSLABEL: Record<string, string> = {
   concept: "Concept",
+  voorbereid: "Voorbereid",
   geplaatst: "Geplaatst",
   goedgekeurd: "Goedgekeurd",
   afgekeurd: "Afgekeurd",
@@ -83,6 +85,12 @@ export default function MijnWerkScherm() {
     0,
   );
 
+  const aantalVoorbereid = (data ?? []).reduce(
+    (som: number, g: MijnWerkGebouw) =>
+      som + g.spots.filter((s: MijnWerkSpot) => s.status === "voorbereid").length,
+    0,
+  );
+
   return (
     <View style={{ flex: 1, backgroundColor: c.background }}>
       <View
@@ -109,6 +117,9 @@ export default function MijnWerkScherm() {
               {totaalSpots === 0
                 ? "Geen spots aan u toegewezen"
                 : `${totaalSpots} spot${totaalSpots !== 1 ? "s" : ""} in ${(data ?? []).length} gebouw${(data ?? []).length !== 1 ? "en" : ""}`}
+              {aantalVoorbereid > 0
+                ? ` · ${aantalVoorbereid} nog af te werken`
+                : ""}
             </Text>
           )}
           <View style={{ marginTop: 10 }}>
@@ -291,7 +302,14 @@ function SpotRij({
 
   function navigeer() {
     if (spot.verdieping_id) {
-      router.push(`/plattegrond/${spot.verdieping_id}`);
+      router.push({
+        pathname: "/plattegrond/[verdiepingId]",
+        params: {
+          verdiepingId: String(spot.verdieping_id),
+          gebouwId: gebouw ? String(gebouw.gebouw_id) : "",
+          spotId: String(spot.id),
+        },
+      });
     } else if (gebouw) {
       router.push(`/gebouw/${gebouw.gebouw_id}`);
     }

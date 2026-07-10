@@ -73,9 +73,49 @@ export default function OpleidingenScherm() {
                   </View>
                 ) : null}
               </View>
-              {item.categorie ? (
-                <Text style={{ fontSize: 13, color: c.mutedForeground, marginTop: 4, fontFamily: "Inter_400Regular" }}>
-                  {item.categorie}
+
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
+                <View style={{ backgroundColor: c.muted, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 }}>
+                  <Text style={{ color: c.mutedForeground, fontSize: 12, fontFamily: "Inter_600SemiBold" }}>
+                    {item.soort === "opleiding" ? "Opleiding" : "Cursus"}
+                  </Text>
+                </View>
+                {item.categorie ? (
+                  <View style={{ backgroundColor: c.muted, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 }}>
+                    <Text style={{ color: c.mutedForeground, fontSize: 12, fontFamily: "Inter_600SemiBold" }}>
+                      {item.categorie}
+                    </Text>
+                  </View>
+                ) : null}
+                {item.niveau ? (
+                  <View style={{ backgroundColor: c.muted, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 }}>
+                    <Text style={{ color: c.mutedForeground, fontSize: 12, fontFamily: "Inter_600SemiBold" }}>
+                      {item.niveau}
+                    </Text>
+                  </View>
+                ) : null}
+                {item.lesvorm ? (
+                  <View style={{ backgroundColor: c.muted, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 }}>
+                    <Text style={{ color: c.mutedForeground, fontSize: 12, fontFamily: "Inter_600SemiBold" }}>
+                      {item.lesvorm}
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
+
+              {item.opleider ? (
+                <Text style={{ fontSize: 13, color: c.mutedForeground, marginTop: 8, fontFamily: "Inter_400Regular" }}>
+                  Opleider: {item.opleider}
+                </Text>
+              ) : null}
+              {item.studieduur || item.studiebelasting ? (
+                <Text style={{ fontSize: 13, color: c.mutedForeground, marginTop: 2, fontFamily: "Inter_400Regular" }}>
+                  {[item.studieduur, item.studiebelasting].filter(Boolean).join(" · ")}
+                </Text>
+              ) : null}
+              {item.kosten_werkgever_pct != null || item.kosten_werknemer_pct != null ? (
+                <Text style={{ fontSize: 13, color: c.mutedForeground, marginTop: 2, fontFamily: "Inter_400Regular" }}>
+                  Kostenverdeling: werkgever {item.kosten_werkgever_pct ?? 0}% · werknemer {item.kosten_werknemer_pct ?? 0}%
                 </Text>
               ) : null}
               {item.geldigheid_maanden != null ? (

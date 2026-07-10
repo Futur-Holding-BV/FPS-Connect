@@ -215,9 +215,12 @@ export const offerteHandtekeningenTable = pgTable("offerte_handtekeningen", {
   portaalToken:   text("portaal_token"),
   aangemaaktOp:   timestamp("aangemaakt_op").notNull().defaultNow(),
 }, (t) => [
-  // Voorkomt dubbele handtekeningen per portaallink: één token kan slechts éénmalig ondertekenen.
-  // NULL != NULL in PostgreSQL, dus rijen zonder portaal_token raken de constraint nooit.
-  uniqueIndex("uq_handtekeningen_offerte_token").on(t.offerteId, t.portaalToken),
+  // Voorkomt dubbele handtekeningen per offerte: een offerte kan slechts éénmalig
+  // ondertekend worden, ook bij een gelijktijdige dubbele indiening (dubbele submit
+  // vóórdat de eerste respons terug is). De atomaire status-claim in de
+  // ondertekenen-handler is de primaire bescherming; deze constraint is het
+  // veiligheidsnet op databaseniveau.
+  uniqueIndex("uq_handtekeningen_offerte").on(t.offerteId),
 ]);
 
 // Vragen van bezoekers via de portaalpagina.

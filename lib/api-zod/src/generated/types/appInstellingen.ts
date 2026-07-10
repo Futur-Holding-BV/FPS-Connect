@@ -25,6 +25,16 @@ export interface AppInstellingen {
      * @nullable
      */
   ai_kostendrempel_eur?: number | null;
+  /**
+     * Dag van de maand (1-28) waarop het AI-logboek automatisch als CSV per e-mail wordt verstuurd. Null betekent uitgeschakeld.
+     * @nullable
+     */
+  ai_maandelijkse_export_dag?: number | null;
+  /**
+     * E-mailadres dat de maandelijkse AI-logboek-CSV ontvangt. Null betekent uitgeschakeld.
+     * @nullable
+     */
+  ai_maandelijkse_export_email?: string | null;
   bijgewerkt_op: string;
   /** @nullable */
   bijgewerkt_door_id?: number | null;

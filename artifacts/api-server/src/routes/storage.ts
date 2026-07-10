@@ -14,7 +14,7 @@ import {
 } from "../lib/objectStorage";
 import { requireAuth } from "../middlewares/auth";
 import { db } from "@workspace/db";
-import { gebouwToewijzingenTable } from "@workspace/db";
+import { gebouwToewijzingenTable, tekeningenTable, gebruikersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { isBeperktTotToegewezen } from "../utils/rol";
 import { haalScanStatusOpVoorPad } from "../services/security-intake-engine";
@@ -51,6 +51,34 @@ async function magBestandInGebouw(
     .from(gebouwToewijzingenTable)
     .where(eq(gebouwToewijzingenTable.gebruikerId, userId));
   return rows.some((r) => r.gebouwId === gebouwId);
+}
+
+// ---- Document-ACL helper ----
+// Interne documenten (tekeningen.type === "document") zijn alleen zichtbaar
+// voor hoofdbeheerder, tenzij expliciet aangevinkt als zichtbaar_monteur.
+// Dit spiegelt de lijstfilter in GET /gebouwen/:id/tekeningen, maar dan op
+// bestandsniveau zodat een geraden/gedeelde directe URL niet alsnog toegang
+// geeft tot een niet-aangevinkt document.
+async function magDocumentBestandZien(
+  userId: number,
+  objectPath: string,
+): Promise<boolean> {
+  const [tekening] = await db
+    .select({
+      type: tekeningenTable.type,
+      zichtbaarMonteur: tekeningenTable.zichtbaarMonteur,
+    })
+    .from(tekeningenTable)
+    .where(eq(tekeningenTable.url, objectPath));
+  // Geen tekening-registratie voor dit pad (bv. plattegrond, foto, ander
+  // bestandstype): dit slot bemoeit zich er niet mee.
+  if (!tekening) return true;
+  if (tekening.type !== "document" || tekening.zichtbaarMonteur) return true;
+  const [gebruiker] = await db
+    .select({ rol: gebruikersTable.rol })
+    .from(gebruikersTable)
+    .where(eq(gebruikersTable.id, userId));
+  return gebruiker?.rol === "hoofdbeheerder";
 }
 
 /**
@@ -192,6 +220,12 @@ router.get("/storage/objects/*path", requireAuth, async (req: Request, res: Resp
       res.status(403).json({ error: "Geen toegang tot dit bestand" });
       return;
     }
+    // Document-ACL: niet-aangevinkte interne documenten blijven ook op
+    // bestandsniveau afgeschermd, niet alleen in de lijstweergave.
+    if (!(await magDocumentBestandZien(userId, objectPath))) {
+      res.status(403).json({ error: "Geen toegang tot dit bestand" });
+      return;
+    }
 
     // ── Scan-first gate (OWASP File Upload — automatische blokkade ongescande bestanden) ────
     // Bestanden die na beveiligingsscan geblokkeerd zijn, worden NOOIT geserveerd.
@@ -248,6 +282,11 @@ router.get("/storage/thumbnails/*path", requireAuth, async (req: Request, res: R
     // Gebouw-ACL
     const userId = req.session.userId!;
     if (!(await magBestandInGebouw(userId, objectPath))) {
+      res.status(403).json({ error: "Geen toegang tot dit bestand" });
+      return;
+    }
+    // Document-ACL: zelfde bescherming als /storage/objects/*.
+    if (!(await magDocumentBestandZien(userId, objectPath))) {
       res.status(403).json({ error: "Geen toegang tot dit bestand" });
       return;
     }

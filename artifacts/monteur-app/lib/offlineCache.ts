@@ -177,6 +177,26 @@ export async function verwijderOfflineUren(lokaalId: string): Promise<void> {
   );
 }
 
+// ─── Artikelen cache ──────────────────────────────────────────────────────────
+const ARTIKELEN_KEY = `${P}:artikelen`;
+
+export type CachedArtikel = {
+  id: number;
+  naam: string;
+  barcode: string | null;
+  eenheid: string;
+  categorie: string | null;
+  code: string | null;
+};
+
+export async function slaArtikelenOp(data: CachedArtikel[]): Promise<void> {
+  await sla(ARTIKELEN_KEY, data);
+}
+
+export async function leesArtikelen(): Promise<CachedArtikel[] | null> {
+  return lees<CachedArtikel[]>(ARTIKELEN_KEY);
+}
+
 // ─── Volledige cache wissen ───────────────────────────────────────────────────
 export async function wisOfflineCache(): Promise<void> {
   const all = await AsyncStorage.getAllKeys();

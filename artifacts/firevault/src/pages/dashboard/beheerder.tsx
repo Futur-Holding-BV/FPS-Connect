@@ -21,9 +21,10 @@ import {
   useGetVeiligheidDashboard,
   useGetCapaciteitBezetting,
   useListRapporten,
+  useGetMagazijnSignalering,
 } from "@workspace/api-client-react";
 import {
-  Building, ShieldCheck, AlertTriangle, Calendar, TrendingUp, Clock,
+  Building, ShieldCheck, AlertTriangle, Calendar, TrendingUp, Clock, Hammer,
   Users, HeartPulse, ChevronRight, TriangleAlert, BrainCircuit,
   LayoutDashboard, FolderOpen, FileText, Bug, Euro, BarChart3,
   CheckCircle2, XCircle, Inbox, Star, ArrowUpRight, HardHat,
@@ -186,6 +187,22 @@ function OperationeelDashboard({
   const { data: drempelStatus } = useGetAiDrempelStatus({
     query: { queryKey: ["ai-drempel-status"] },
   });
+
+  const [drempelBannerVerborgen, setDrempelBannerVerborgen] = useState(() => {
+    const s = localStorage.getItem("ai_drempel_banner_verborgen_maand");
+    const nu = new Date();
+    const sleutel = `${nu.getFullYear()}-${nu.getMonth()}`;
+    return s === sleutel;
+  });
+
+  const verbergDrempelBanner = () => {
+    const nu = new Date();
+    const sleutel = `${nu.getFullYear()}-${nu.getMonth()}`;
+    localStorage.setItem("ai_drempel_banner_verborgen_maand", sleutel);
+    setDrempelBannerVerborgen(true);
+  };
+
+  // ... rest of the code where drempelStatus is used
   const { data: definitiefRapporten = [] } = useListRapporten(
     { status: "definitief" },
     { query: { enabled: magRapportages, queryKey: ["rapporten", "definitief", "dashboard"] } },
@@ -216,8 +233,8 @@ function OperationeelDashboard({
   const kpiKaarten = [
     { label: "Gebouwen",             waarde: stats?.totaal_gebouwen ?? 0,       icoon: Building,      kleur: "text-primary" },
     { label: "Spots",                waarde: stats?.totaal_voorzieningen ?? 0,  icoon: ShieldCheck,   kleur: "text-blue-600" },
+    { label: "In uitvoering",        waarde: stats?.opdrachten_in_uitvoering ?? 0, icoon: Hammer,      kleur: "text-blue-500" },
     { label: "Open onderhoud",       waarde: stats?.openstaande_onderhoud ?? 0, icoon: AlertTriangle, kleur: "text-orange-500" },
-    { label: "Afgekeurde inspecties",waarde: stats?.vervallen_inspecties ?? 0,  icoon: Calendar,      kleur: "text-destructive" },
   ];
 
   const verlopenTegel = magRapportages ? (
@@ -251,17 +268,31 @@ function OperationeelDashboard({
       {/* AI-kosten sectie (alleen hoofdbeheerder) */}
       {isHoofdBeheerder && drempelStatus && (
         <div className="flex flex-col gap-2">
-          {drempelStatus.overschreden && (
-            <Link href="/beheer/ai-log">
-              <div role="alert" className="flex items-center gap-3 px-4 py-3 rounded-lg bg-orange-50 border border-orange-300 text-orange-900 cursor-pointer hover:bg-orange-100 transition-colors">
-                <TriangleAlert className="h-5 w-5 shrink-0 text-orange-600" />
-                <div className="flex-1 min-w-0">
-                  <span className="font-semibold text-sm">Maandelijkse AI-kostendrempel overschreden</span>
-                  <p className="text-xs text-orange-700 mt-0.5">Klik om naar Beheer &rsaquo; AI-aanroepen te gaan en de drempel aan te passen.</p>
-                </div>
-                <ChevronRight className="h-4 w-4 shrink-0 text-orange-600" />
+          {drempelStatus.overschreden && !drempelBannerVerborgen && (
+            <div role="alert" className="flex items-center gap-3 px-4 py-3 rounded-lg bg-orange-50 border border-orange-300 text-orange-900">
+              <TriangleAlert className="h-5 w-5 shrink-0 text-orange-600" />
+              <div className="flex-1 min-w-0">
+                <span className="font-semibold text-sm">Maandelijkse AI-kostendrempel overschreden</span>
+                <p className="text-xs text-orange-700 mt-0.5">
+                  De AI-kosten deze maand ({drempelStatus.huidig_maand_kosten_eur.toLocaleString("nl-NL", { style: "currency", currency: "EUR" })}) zijn
+                  hoger dan het ingestelde plafond ({drempelStatus.drempel_eur?.toLocaleString("nl-NL", { style: "currency", currency: "EUR" })}).
+                </p>
               </div>
-            </Link>
+              <div className="flex items-center gap-2">
+                <Link href="/beheer/ai-log">
+                  <Button size="sm" variant="outline" className="h-7 text-xs bg-white border-orange-300 hover:bg-orange-50 text-orange-900">
+                    Aanpassen
+                  </Button>
+                </Link>
+                <button
+                  type="button"
+                  onClick={verbergDrempelBanner}
+                  className="shrink-0 text-orange-600 hover:text-orange-800 text-xs underline px-2"
+                >
+                  Sluiten
+                </button>
+              </div>
+            </div>
           )}
           {(() => {
             const kosten  = drempelStatus.huidig_maand_kosten_eur ?? 0;
@@ -269,7 +300,7 @@ function OperationeelDashboard({
             const pct     = drempel != null && drempel > 0 ? Math.min(100, (kosten / drempel) * 100) : null;
             const balkKleur = pct == null ? "" : pct >= 90 ? "bg-red-500" : pct >= 70 ? "bg-amber-400" : "bg-primary/70";
             return (
-              <Link href="/beheer/ai-aanroepen">
+              <Link href="/beheer/ai-log">
                 <Card className="cursor-pointer hover:bg-muted/40 transition-colors border-dashed">
                   <CardHeader className="flex flex-row items-center justify-between pb-2">
                     <CardTitle className="text-sm font-medium text-muted-foreground">AI-kosten deze maand</CardTitle>
@@ -1369,6 +1400,26 @@ function MaandDashboard() {
 // HOOFD-COMPONENT
 // ---------------------------------------------------------------------------
 
+function MagazijnWaarschuwingsbanner() {
+  const { data } = useGetMagazijnSignalering();
+  const aantal = data?.kritiek_aantal ?? 0;
+  if (aantal === 0) return null;
+
+  return (
+    <Link href="/magazijn/voorraad">
+      <div className="flex items-center gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-red-800 hover:bg-red-100 transition-colors cursor-pointer">
+        <AlertTriangle className="h-5 w-5 shrink-0" />
+        <span className="text-sm font-medium">
+          {aantal === 1
+            ? "1 artikel zit onder de minimumvoorraad in het magazijn."
+            : `${aantal} artikelen zitten onder de minimumvoorraad in het magazijn.`}
+        </span>
+        <ChevronRight className="h-4 w-4 ml-auto shrink-0" />
+      </div>
+    </Link>
+  );
+}
+
 export default function BeheerderDashboard() {
   const { t } = useTranslation();
   const { echteRol, bevoegdheden } = useRol();
@@ -1395,12 +1446,14 @@ export default function BeheerderDashboard() {
   }, [weergave]);
 
   const actieveDef = DASHBOARD_DEFINITIES.find((d) => d.id === weergave);
+  const magMagazijn = isHoofdBeheerder || (bevoegdheden.magazijn ?? 0) >= 1;
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
       <PaginaHulp pagina="dashboard-beheerder" />
       <MomentsFelicitatie gebruikerId={gebruiker?.id} />
       <VandaagJarigWidget />
+      {magMagazijn && <MagazijnWaarschuwingsbanner />}
 
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <div>

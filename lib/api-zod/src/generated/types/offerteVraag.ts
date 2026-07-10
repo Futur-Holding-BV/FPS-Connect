@@ -16,4 +16,5 @@ export interface OfferteVraag {
   /** @nullable */
   antwoord?: string | null;
   aangemaakt_op: string;
+  bijgewerkt_op: string;
 }

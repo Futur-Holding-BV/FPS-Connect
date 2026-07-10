@@ -124,6 +124,11 @@ router.post("/auth/login", async (req, res): Promise<void> => {
       .select()
       .from(gebruikersTable)
       .where(eq(gebruikersTable.email, String(email).trim().toLowerCase()));
+
+    if (g?.geanonimiseerd) {
+      return void res.status(403).json({ error: "Dit account is geanonimiseerd en kan niet meer worden gebruikt." });
+    }
+
     if (!g || !g.actief || !g.wachtwoord) {
       await legLoginPogingVast({
         gebruikerId: g?.id ?? null,
@@ -176,6 +181,9 @@ router.post("/auth/2fa/setup", async (req, res): Promise<void> => {
       .where(eq(gebruikersTable.id, pendingId));
     if (!g) {
       return void res.status(404).json({ error: "Gebruiker niet gevonden" });
+    }
+    if (g.geanonimiseerd) {
+      return void res.status(403).json({ error: "Dit account is geanonimiseerd." });
     }
     const secret = authenticator.generateSecret();
     req.session.pendingSecret = secret;
@@ -307,6 +315,11 @@ router.post("/auth/mobile/login", async (req, res): Promise<void> => {
       .select()
       .from(gebruikersTable)
       .where(eq(gebruikersTable.email, String(email).trim().toLowerCase()));
+
+    if (g?.geanonimiseerd) {
+      return void res.status(403).json({ error: "Dit account is geanonimiseerd en kan niet meer worden gebruikt." });
+    }
+
     if (!g || !g.actief || !g.wachtwoord) {
       return void res.status(401).json({ error: "Onjuiste inloggegevens" });
     }

@@ -538,6 +538,11 @@ export default function WerkvoorbereidingOverzicht() {
                           <Badge variant="outline" className={`text-xs ${opStatus.kleur}`}>
                             {opStatus.label}
                           </Badge>
+                          {o.ai_fase === "uitvoering" && o.uitvoering_stap_actief != null && (
+                            <Badge className="bg-blue-600 text-white text-xs hover:bg-blue-700">
+                              In uitvoering (stap {o.uitvoering_stap_actief})
+                            </Badge>
+                          )}
                           {wbStatus && (
                             <Badge variant="outline" className={`text-xs ${wbStatus.kleur}`}>
                               Begroting: {wbStatus.label}

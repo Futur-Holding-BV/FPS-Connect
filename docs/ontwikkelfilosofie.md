@@ -116,6 +116,24 @@ Dit script voert achtereenvolgens uit:
   ```
 - Het script `pnpm --filter @workspace/scripts run check-codegen-stale` kan ook los worden uitgevoerd.
 
+## Routehandler-conventie: `Promise<void>` (verplicht)
+
+Alle Express route-handlers in `artifacts/api-server/src/routes/*.ts` moeten expliciet `Promise<void>` als returntype hebben en elke `res.json()` / `res.send()` / `res.status(...).json()` aanroep met `return void ...` afsluiten, bijvoorbeeld:
+
+```ts
+router.get("/voorbeeld", requireAuth, async (req, res): Promise<void> => {
+  const item = await ophalenIets();
+  if (!item) {
+    return void res.status(404).json({ error: "Niet gevonden" });
+  }
+  return void res.json(item);
+});
+```
+
+**Waarom:** zonder deze annotatie accepteert TypeScript ook code paden die stilzwijgend niets teruggeven (`TS7030: Not all code paths return a value`), wat leidt tot hangende requests of onduidelijke lege responses. Dit patroon is in 2026 toegepast om 354 bestaande TS7030-fouten structureel op te lossen.
+
+Er is (bewust) geen ESLint-configuratie in deze monorepo — handhaving gebeurt via code review en `pnpm run typecheck`. Voeg bij het schrijven van een nieuwe route-handler dus altijd dit patroon toe; het compileert niet stil weg als je het vergeet, omdat het ontbrekende returntype samen met `strict: true` (zie `tsconfig.base.json`) een typecheck-fout oplevert zodra een pad geen waarde retourneert.
+
 ## Verplicht bij elke opdracht
 
 Bij iedere implementatie moet worden aangegeven:

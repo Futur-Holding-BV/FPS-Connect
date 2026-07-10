@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import {
   useListFieBegrotingen,
   useCreateFieBegroting,
@@ -18,6 +19,8 @@ import {
   useGetFieNacalculatiesVerouderdAantal,
   useUpdateFieLeermoment,
   useDeleteFieLeermoment,
+  useListFieNacalculaties,
+  getListFieNacalculatiesQueryKey,
   type FieJaarbegroting,
   type FieAkPost,
   type FieJaarprognose,
@@ -41,12 +44,14 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   ArrowLeft, Plus, Pencil, Trash2, TrendingUp,
   Calculator, CheckCircle2, Clock, XCircle, AlertTriangle, Users, Info,
-  Check, X, BookOpen, RefreshCw,
+  Check, X, BookOpen, RefreshCw, ChevronDown, ChevronRight as ChevronRightIcon,
+  ExternalLink,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -1192,9 +1197,16 @@ function BegrotingDetail({ begrotingId, onTerug }: { begrotingId: number; onTeru
 // ─── Leereffecten (Fase 5 nacalculatie-terugkoppeling) ───────────────────────
 
 function LeermomentRij({ lm, onSaved }: { lm: FieLeermoment; onSaved: () => void }) {
+  const [isOpen, setIsOpen] = useState(false);
   const [bewerkModus, setBewerkModus] = useState(false);
   const [factorInput, setFactorInput] = useState(String(lm.correctie_factor));
   const [opmerkingenInput, setOpmerkingenInput] = useState(lm.opmerkingen ?? "");
+  const [, setLocation] = useLocation();
+
+  const { data: nacalculaties, isLoading: isLoadingNacalculaties } = useListFieNacalculaties(
+    { werktype: lm.werktype },
+    { query: { queryKey: getListFieNacalculatiesQueryKey({ werktype: lm.werktype }), enabled: isOpen } }
+  );
 
   const patch = useUpdateFieLeermoment();
   const verwijder = useDeleteFieLeermoment();
@@ -1225,71 +1237,115 @@ function LeermomentRij({ lm, onSaved }: { lm: FieLeermoment; onSaved: () => void
   }
 
   return (
-    <tr className="border-b last:border-0 text-sm">
-      <td className="py-2 pr-3 font-medium capitalize pl-4">{lm.werktype}</td>
-      <td className={cn("py-2 pr-3 text-right tabular-nums", afwijkingKleur(lm.afwijking_pct_arbeid))}>
-        {lm.afwijking_pct_arbeid != null ? `${lm.afwijking_pct_arbeid > 0 ? "+" : ""}${lm.afwijking_pct_arbeid.toFixed(1)}%` : "—"}
-      </td>
-      <td className={cn("py-2 pr-3 text-right tabular-nums", afwijkingKleur(lm.afwijking_pct_materiaal))}>
-        {lm.afwijking_pct_materiaal != null ? `${lm.afwijking_pct_materiaal > 0 ? "+" : ""}${lm.afwijking_pct_materiaal.toFixed(1)}%` : "—"}
-      </td>
-      <td className="py-2 pr-3 text-right tabular-nums text-muted-foreground">{lm.gebaseerd_op_n_projecten}</td>
-      <td className="py-2 pr-3 text-right tabular-nums">
-        {bewerkModus ? (
-          <div className="flex flex-col items-end gap-0.5">
+    <>
+      <tr className="border-b last:border-0 text-sm hover:bg-muted/30">
+        <td className="py-2 pr-3 pl-4">
+          <CollapsibleTrigger asChild onClick={() => setIsOpen(!isOpen)}>
+            <Button variant="ghost" size="sm" className="h-7 w-full justify-start font-medium capitalize px-1 gap-1">
+              {isOpen ? <ChevronDown className="h-3 w-3" /> : <ChevronRightIcon className="h-3 w-3" />}
+              {lm.werktype}
+            </Button>
+          </CollapsibleTrigger>
+        </td>
+        <td className={cn("py-2 pr-3 text-right tabular-nums", afwijkingKleur(lm.afwijking_pct_arbeid))}>
+          {lm.afwijking_pct_arbeid != null ? `${lm.afwijking_pct_arbeid > 0 ? "+" : ""}${lm.afwijking_pct_arbeid.toFixed(1)}%` : "—"}
+        </td>
+        <td className={cn("py-2 pr-3 text-right tabular-nums", afwijkingKleur(lm.afwijking_pct_materiaal))}>
+          {lm.afwijking_pct_materiaal != null ? `${lm.afwijking_pct_materiaal > 0 ? "+" : ""}${lm.afwijking_pct_materiaal.toFixed(1)}%` : "—"}
+        </td>
+        <td className="py-2 pr-3 text-right tabular-nums text-muted-foreground">{lm.gebaseerd_op_n_projecten}</td>
+        <td className="py-2 pr-3 text-right tabular-nums">
+          {bewerkModus ? (
+            <div className="flex flex-col items-end gap-0.5">
+              <Input
+                className={`h-7 w-20 text-xs text-right${!factorGeldig ? " border-red-500 focus-visible:ring-red-500" : ""}`}
+                value={factorInput}
+                onChange={e => setFactorInput(e.target.value)}
+                type="number" step="0.01" min="0.5" max="3"
+              />
+              {!factorGeldig && (
+                <span className="text-[10px] text-red-600 leading-tight text-right">0,5 – 3,0</span>
+              )}
+            </div>
+          ) : (
+            <span>{lm.correctie_factor.toFixed(2)}&times;</span>
+          )}
+        </td>
+        <td className="py-2 pr-3 text-muted-foreground text-xs max-w-[160px] truncate">
+          {bewerkModus ? (
             <Input
-              className={`h-7 w-20 text-xs text-right${!factorGeldig ? " border-red-500 focus-visible:ring-red-500" : ""}`}
-              value={factorInput}
-              onChange={e => setFactorInput(e.target.value)}
-              type="number" step="0.01" min="0.5" max="3"
+              className="h-7 text-xs"
+              value={opmerkingenInput}
+              onChange={e => setOpmerkingenInput(e.target.value)}
+              placeholder="Toelichting..."
             />
-            {!factorGeldig && (
-              <span className="text-[10px] text-red-600 leading-tight text-right">0,5 – 3,0</span>
-            )}
-          </div>
-        ) : (
-          <span>{lm.correctie_factor.toFixed(2)}&times;</span>
-        )}
-      </td>
-      <td className="py-2 pr-3 text-muted-foreground text-xs max-w-[160px] truncate">
-        {bewerkModus ? (
-          <Input
-            className="h-7 text-xs"
-            value={opmerkingenInput}
-            onChange={e => setOpmerkingenInput(e.target.value)}
-            placeholder="Toelichting..."
-          />
-        ) : (
-          lm.opmerkingen ?? <span className="italic opacity-50">Geen toelichting</span>
-        )}
-      </td>
-      <td className="py-2 pr-2 text-right">
-        {bewerkModus ? (
-          <span className="flex justify-end gap-1">
-            <Button size="icon" variant="ghost" className="h-6 w-6" onClick={opslaan} disabled={patch.isPending || !factorGeldig}>
-              <Check className="h-3.5 w-3.5" />
-            </Button>
-            <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => setBewerkModus(false)}>
-              <X className="h-3.5 w-3.5" />
-            </Button>
-          </span>
-        ) : (
-          <span className="flex justify-end gap-1">
-            <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => setBewerkModus(true)}>
-              <Pencil className="h-3.5 w-3.5" />
-            </Button>
-            <Button
-              size="icon" variant="ghost"
-              className="h-6 w-6 text-destructive hover:text-destructive"
-              onClick={() => { if (confirm(`Leermoment "${lm.werktype}" verwijderen?`)) verwijder.mutate({ id: lm.id }, { onSuccess: onSaved }); }}
-              disabled={verwijder.isPending}
-            >
-              <X className="h-3.5 w-3.5" />
-            </Button>
-          </span>
-        )}
-      </td>
-    </tr>
+          ) : (
+            lm.opmerkingen ?? <span className="italic opacity-50">Geen toelichting</span>
+          )}
+        </td>
+        <td className="py-2 pr-2 text-right">
+          {bewerkModus ? (
+            <span className="flex justify-end gap-1">
+              <Button size="icon" variant="ghost" className="h-6 w-6" onClick={opslaan} disabled={patch.isPending || !factorGeldig}>
+                <Check className="h-3.5 w-3.5" />
+              </Button>
+              <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => setBewerkModus(false)}>
+                <X className="h-3.5 w-3.5" />
+              </Button>
+            </span>
+          ) : (
+            <span className="flex justify-end gap-1">
+              <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => setBewerkModus(true)}>
+                <Pencil className="h-3.5 w-3.5" />
+              </Button>
+              <Button
+                size="icon" variant="ghost"
+                className="h-6 w-6 text-destructive hover:text-destructive"
+                onClick={() => { if (confirm(`Leermoment "${lm.werktype}" verwijderen?`)) verwijder.mutate({ id: lm.id }, { onSuccess: onSaved, onError: () => toast({ title: "Verwijderen mislukt", variant: "destructive" }) }); }}
+                disabled={verwijder.isPending}
+              >
+                <X className="h-3.5 w-3.5" />
+              </Button>
+            </span>
+          )}
+        </td>
+      </tr>
+      <tr>
+        <td colSpan={7} className="p-0">
+          <CollapsibleContent>
+            <div className="bg-muted/20 px-4 py-3 border-b space-y-2">
+              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Gekoppelde opdrachten ({lm.werktype})</p>
+              {isLoadingNacalculaties ? (
+                <div className="flex items-center gap-2 py-2">
+                  <RefreshCw className="h-3 w-3 animate-spin text-muted-foreground" />
+                  <span className="text-xs text-muted-foreground">Opdrachten laden...</span>
+                </div>
+              ) : !nacalculaties || nacalculaties.length === 0 ? (
+                <p className="text-xs text-muted-foreground py-2 italic">Geen opdrachten gevonden voor dit werktype.</p>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                  {nacalculaties.map(n => (
+                    <Button
+                      key={n.id}
+                      variant="outline"
+                      size="sm"
+                      className="h-auto py-1.5 px-2 justify-start text-left flex flex-col items-start gap-0.5"
+                      onClick={() => setLocation(`/opdrachten/${n.opdracht_id}?tab=nacalculatie`)}
+                    >
+                      <div className="flex items-center justify-between w-full gap-2">
+                        <span className="font-mono text-[10px] font-bold text-primary">{n.opdracht_nummer}</span>
+                        <ExternalLink className="h-3 w-3 text-muted-foreground" />
+                      </div>
+                      <span className="text-[11px] truncate w-full">{n.opdracht_titel}</span>
+                    </Button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </CollapsibleContent>
+        </td>
+      </tr>
+    </>
   );
 }
 
@@ -1404,7 +1460,9 @@ function LeereffectenBeheerTab() {
               </thead>
               <tbody>
                 {leermomenten.map(lm => (
-                  <LeermomentRij key={lm.id} lm={lm} onSaved={() => void refetch()} />
+                  <Collapsible key={lm.id} asChild>
+                    <LeermomentRij lm={lm} onSaved={() => void refetch()} />
+                  </Collapsible>
                 ))}
               </tbody>
             </table>

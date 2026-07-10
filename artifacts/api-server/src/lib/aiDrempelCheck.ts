@@ -49,13 +49,8 @@ async function controleerAiDrempel(): Promise<void> {
 
   const mailGeconfigureerd = isMailGeconfigureerd();
 
-  if (!mailGeconfigureerd) {
-    logger.warn("AI drempel overschreden maar mail niet geconfigureerd — maandmarkering NIET gezet, volgende uur nieuwe poging");
-    return;
-  }
-
   const hoofdbeheerders = await db
-    .select({ naam: gebruikersTable.naam, email: gebruikersTable.email })
+    .select({ id: gebruikersTable.id, naam: gebruikersTable.naam, email: gebruikersTable.email })
     .from(gebruikersTable)
     .where(
       sql`${gebruikersTable.rol} = 'hoofdbeheerder' AND ${gebruikersTable.actief} = true`,
@@ -88,30 +83,42 @@ async function controleerAiDrempel(): Promise<void> {
 </p>
 `;
 
-  let aantalVerzonden = 0;
-  for (const gebruiker of hoofdbeheerders) {
-    try {
-      await verstuurMail({
-        naarEmail: gebruiker.email,
-        naarNaam: gebruiker.naam,
-        onderwerp: `AI-kostendrempel overschreden: ${kostenFormatted} (drempel ${drempelFormatted})`,
-        html,
-        soort: "ai_drempel",
-      });
-      aantalVerzonden++;
-    } catch (err) {
-      logger.warn({ err, email: gebruiker.email }, "AI drempel mail versturen mislukt");
+  let meldingVerstuurdOfGeregistreerd = false;
+
+  if (mailGeconfigureerd) {
+    let aantalVerzonden = 0;
+    for (const gebruiker of hoofdbeheerders) {
+      try {
+        await verstuurMail({
+          naarEmail: gebruiker.email,
+          naarNaam: gebruiker.naam,
+          onderwerp: `AI-kostendrempel overschreden: ${kostenFormatted} (drempel ${drempelFormatted})`,
+          html,
+          soort: "ai_drempel",
+        });
+        aantalVerzonden++;
+      } catch (err) {
+        logger.warn({ err, email: gebruiker.email }, "AI drempel mail versturen mislukt");
+      }
     }
+    if (aantalVerzonden > 0) meldingVerstuurdOfGeregistreerd = true;
   }
 
-  if (aantalVerzonden > 0) {
+  // Taak #217: in-app fallback — de dashboardbanner (BeheerderDashboard) toont de
+  // overschrijding live aan alle hoofdbeheerders zodra zij inloggen in FPS Connect,
+  // ongeacht of de mail is geconfigureerd/gelukt. Er is bewust geen aparte
+  // notificatietabel: de banner leest live uit GET /ai-log/drempel-status, dus is
+  // altijd "aangemaakt" zodra de drempel overschreden is.
+  meldingVerstuurdOfGeregistreerd = true;
+
+  if (meldingVerstuurdOfGeregistreerd) {
     await db
       .update(appInstellingenTable)
       .set({ aiDrempelMeldingGestuurdMaand: jaarMaand, bijgewerktOp: new Date() })
       .where(eq(appInstellingenTable.id, instelling.id));
-    logger.info({ aantalVerzonden, jaarMaand }, "AI drempel meldingen verzonden, maandmarkering gezet");
+    logger.info({ jaarMaand }, "AI drempel melding afgehandeld (mail en/of in-app), maandmarkering gezet");
   } else {
-    logger.warn({ jaarMaand }, "AI drempel: geen meldingen verzonden, maandmarkering NIET gezet — volgende uur nieuwe poging");
+    logger.warn({ jaarMaand }, "AI drempel: geen enkele melding gelukt, maandmarkering NIET gezet — volgende uur nieuwe poging");
   }
 }
 

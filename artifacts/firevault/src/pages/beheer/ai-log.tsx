@@ -102,6 +102,16 @@ function DrempelInstellingKaart() {
     setFout(null);
   }
 
+  const [aiMaandelijkseExportDag, setAiMaandelijkseExportDag] = useState<string>("");
+  const [aiMaandelijkseExportEmail, setAiMaandelijkseExportEmail] = useState<string>("");
+
+  useEffect(() => {
+    if (instelling) {
+      setAiMaandelijkseExportDag(instelling.ai_maandelijkse_export_dag != null ? String(instelling.ai_maandelijkse_export_dag) : "");
+      setAiMaandelijkseExportEmail(instelling.ai_maandelijkse_export_email ?? "");
+    }
+  }, [instelling]);
+
   async function opslaan_handler() {
     const waarde = invoer.trim();
     let numVal: number | null = null;
@@ -112,6 +122,12 @@ function DrempelInstellingKaart() {
         setFout("Voer een geldig bedrag in (bijv. 10 of 25.50).");
         return;
       }
+    }
+
+    const dagNum = aiMaandelijkseExportDag === "" ? null : parseInt(aiMaandelijkseExportDag, 10);
+    if (dagNum !== null && (isNaN(dagNum) || dagNum < 1 || dagNum > 28)) {
+      setFout("De exportdag moet tussen 1 en 28 liggen.");
+      return;
     }
 
     setOpslaan(true);
@@ -125,8 +141,11 @@ function DrempelInstellingKaart() {
             support_website: instelling.support_website ?? undefined,
             extra_disclaimer: instelling.extra_disclaimer ?? undefined,
             opdrachtbevestiging_auto_verzenden: instelling.opdrachtbevestiging_auto_verzenden,
+            moments_verjaardag_ingeschakeld: instelling.moments_verjaardag_ingeschakeld,
           } : {}),
           ai_kostendrempel_eur: numVal,
+          ai_maandelijkse_export_dag: dagNum,
+          ai_maandelijkse_export_email: aiMaandelijkseExportEmail || null,
         },
       });
       await Promise.all([
@@ -221,10 +240,37 @@ function DrempelInstellingKaart() {
                   autoFocus
                 />
               </div>
-              {fout && <p className="text-xs text-red-600 mt-1">{fout}</p>}
-              <p className="text-xs text-muted-foreground mt-1.5">
-                De drempelmelding wordt eenmalig per maand verstuurd. Als je de drempel verlaagt, wordt de melding direct opnieuw ingeschakeld.
-              </p>
+            {fout && <p className="text-xs text-red-600 mt-1">{fout}</p>}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3 pt-3 border-t">
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">
+                  Maandelijkse exportdag (1-28)
+                </label>
+                <Input
+                  className="h-8 text-sm"
+                  type="number"
+                  min="1"
+                  max="28"
+                  value={aiMaandelijkseExportDag}
+                  onChange={(e) => setAiMaandelijkseExportDag(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">
+                  E-mailadres voor maandelijkse export
+                </label>
+                <Input
+                  className="h-8 text-sm"
+                  type="email"
+                  placeholder="beheer@voorbeeld.nl"
+                  value={aiMaandelijkseExportEmail}
+                  onChange={(e) => setAiMaandelijkseExportEmail(e.target.value)}
+                />
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1.5">
+              De drempelmelding wordt eenmalig per maand verstuurd. Als je de drempel verlaagt, wordt de melding direct opnieuw ingeschakeld.
+            </p>
             </div>
             <div className="flex gap-2">
               <Button

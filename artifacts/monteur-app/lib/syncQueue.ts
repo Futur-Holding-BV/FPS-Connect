@@ -113,6 +113,21 @@ export type SyncActie =
       lokaalPad: string;
       /** Tijdelijk lokale status: "wachtend_op_ai" */
       lokaleStatus: "wachtend_op_ai";
+    }
+  // Magazijn acties offline bufferen
+  | {
+      type: "create_uitgifte";
+      payload: {
+        opdracht_id: number | null;
+        regels: { artikel_id: number; hoeveelheid: number; locatie_id: number | null }[];
+      };
+    }
+  | {
+      type: "create_retour";
+      payload: {
+        opdracht_id: number | null;
+        regels: { artikel_id: number; hoeveelheid: number; locatie_id: number | null; conditie: string }[];
+      };
     };
 
 export type WachtrijItem = SyncActie & {

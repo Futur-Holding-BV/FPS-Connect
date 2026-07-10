@@ -30,6 +30,8 @@ import {
   getListOpdrachtenQueryKey,
   useGetAiPresentatieNiveau,
   getListOffertesQueryKey,
+  useListOfferteTransitieLog,
+  getListOfferteTransitieLogQueryKey,
 } from "@workspace/api-client-react";
 import type { OfferteSectie } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
@@ -43,6 +45,10 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -50,11 +56,13 @@ import { Checkbox } from "@/components/ui/checkbox";
 import {
   ArrowLeft, Sparkles, ChevronUp, ChevronDown, Eye, Printer, Plus,
   Trash2, BookOpen, Clock, Paperclip, Check, X, GripVertical, ToggleLeft, ToggleRight, Send,
-  FolderOpen, CreditCard, FileText, Hammer, Layers, FileDown,
+  FolderOpen, CreditCard, FileText, Hammer, Layers, FileDown, History, ArrowRight, User,
 } from "lucide-react";
 import { VerzendTab } from "./verzend-tab";
 import { useToast } from "@/hooks/use-toast";
+import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
 import { PaginaHulp } from "@/components/pagina-hulp";
+import { cn } from "@/lib/utils";
 
 const STATUS_KLEUR: Record<string, string> = {
   concept: "bg-amber-100 text-amber-800 border-amber-200",
@@ -85,6 +93,10 @@ const VOLGENDE_STATUSSEN: Record<string, string[]> = {
   geaccepteerd: [],
   vervallen: [],
 };
+
+// Overgangen naar deze statussen zijn (vrijwel) niet terug te draaien — vraag
+// altijd expliciete bevestiging voordat de statuswijziging wordt doorgevoerd.
+const IRREVERSIBELE_STATUSSEN = new Set(["ondertekend", "vervallen"]);
 
 const SECTIE_TYPEN = [
   { value: "aanbiedingsbrief", label: "Aanbiedingsbrief" },
@@ -123,6 +135,8 @@ export default function ProposalStudio() {
   const offerteId = parseInt(id ?? "0", 10);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { heeftNiveau } = useBevoegdheid();
+  const kanSchrijven = heeftNiveau("offertes", 2);
 
   const { data: offerte, isLoading: offerteLoading } = useGetOfferte(offerteId, {
     query: { queryKey: getGetOfferteQueryKey(offerteId), enabled: !!offerteId },
@@ -144,6 +158,9 @@ export default function ProposalStudio() {
   });
   const { data: vragen, isLoading: vragenLaden } = useListOfferteVragen(offerteId, {
     query: { queryKey: getListOfferteVragenQueryKey(offerteId), enabled: !!offerteId },
+  });
+  const { data: transitieLog } = useListOfferteTransitieLog(offerteId, {
+    query: { queryKey: getListOfferteTransitieLogQueryKey(offerteId), enabled: !!offerteId },
   });
 
   const aantalOnbeantwoord = (vragen ?? []).filter((v) => v.antwoord === null || v.antwoord === undefined).length;
@@ -193,6 +210,7 @@ export default function ProposalStudio() {
   const [heeftWijzigingen, setHeeftWijzigingen] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiVoorstel, setAiVoorstel] = useState<string | null>(null);
+  const [aiContextExtra, setAiContextExtra] = useState("");
   const [sectieDialoogOpen, setSectieDialoogOpen] = useState(false);
   const [nieuwSectieType, setNieuwSectieType] = useState("vrij");
   const [nieuwSectieNaam, setNieuwSectieNaam] = useState("");
@@ -213,6 +231,7 @@ export default function ProposalStudio() {
   });
   const [conditiesOpgeslagen, setConditiesOpgeslagen] = useState(false);
   const [statusWijzigenBusy, setStatusWijzigenBusy] = useState(false);
+  const [bevestigStatus, setBevestigStatus] = useState<string | null>(null);
 
   const VERVOLG_OPTIES_LABELS: Record<string, string> = {
     periodiek_onderhoud: "Periodiek onderhoud aanbieden",
@@ -467,7 +486,7 @@ export default function ProposalStudio() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({}),
+        body: JSON.stringify(aiContextExtra.trim() ? { context_extra: aiContextExtra.trim() } : {}),
       });
       if (!resp.ok) throw new Error("AI niet beschikbaar");
       const data = (await resp.json()) as { tekst: string };
@@ -659,13 +678,28 @@ export default function ProposalStudio() {
             <div>
               <div className="flex items-center gap-2 flex-wrap">
                 <h1 className="text-xl font-bold tracking-tight">{offerte.titel}</h1>
-                <Badge variant="outline" className={STATUS_KLEUR[offerte.status] ?? ""}>
-                  {STATUS_LABEL[offerte.status] ?? offerte.status}
-                </Badge>
-                {(VOLGENDE_STATUSSEN[offerte.status] ?? []).length > 0 && (
+                <div className="flex flex-wrap gap-2 items-center">
+                  <Badge variant="outline" className={STATUS_KLEUR[offerte.status] ?? ""}>
+                    {STATUS_LABEL[offerte.status] ?? offerte.status}
+                  </Badge>
+                  {offerte.calculatie_id && (
+                    <Badge variant="outline" className="px-3 py-1 text-sm font-normal bg-blue-50 text-blue-700 border-blue-200">
+                      <Hammer className="h-3 w-3 mr-1.5" />
+                      Op basis van calculatie:{" "}
+                      <Link href={`/modules/calculaties/${offerte.calculatie_id}`} className="ml-1 font-semibold hover:underline text-blue-700">
+                        {offerte.calculatie_naam || `#${offerte.calculatie_id}`}
+                      </Link>
+                    </Badge>
+                  )}
+                </div>
+                {kanSchrijven && (VOLGENDE_STATUSSEN[offerte.status] ?? []).length > 0 && (
                   <Select
                     value=""
-                    onValueChange={(v) => { if (v) void wijzigStatus(v); }}
+                    onValueChange={(v) => {
+                      if (!v) return;
+                      if (IRREVERSIBELE_STATUSSEN.has(v)) { setBevestigStatus(v); return; }
+                      void wijzigStatus(v);
+                    }}
                     disabled={statusWijzigenBusy}
                   >
                     <SelectTrigger className="h-7 text-xs px-2.5 w-auto gap-1">
@@ -678,6 +712,30 @@ export default function ProposalStudio() {
                     </SelectContent>
                   </Select>
                 )}
+                <AlertDialog open={bevestigStatus !== null} onOpenChange={(open) => { if (!open) setBevestigStatus(null); }}>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>
+                        Status wijzigen naar &quot;{bevestigStatus ? (STATUS_LABEL[bevestigStatus] ?? bevestigStatus) : ""}&quot;?
+                      </AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Deze statuswijziging is niet terug te draaien. Weet je zeker dat je wilt doorgaan?
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel onClick={() => setBevestigStatus(null)}>Annuleren</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={() => {
+                          const doel = bevestigStatus;
+                          setBevestigStatus(null);
+                          if (doel) void wijzigStatus(doel);
+                        }}
+                      >
+                        Bevestigen
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               </div>
               {offerte.offertenummer && (
                 <p className="text-xs text-muted-foreground">{offerte.offertenummer}</p>
@@ -781,6 +839,7 @@ export default function ProposalStudio() {
                 <TabsTrigger value="voorbeeld"><Eye className="h-3.5 w-3.5 mr-1.5" />Voorbeeld</TabsTrigger>
                 <TabsTrigger value="bijlagen"><Paperclip className="h-3.5 w-3.5 mr-1.5" />Bijlagen</TabsTrigger>
                 <TabsTrigger value="versies"><Clock className="h-3.5 w-3.5 mr-1.5" />Versies</TabsTrigger>
+                <TabsTrigger value="historie"><History className="h-3.5 w-3.5 mr-1.5" />Historie</TabsTrigger>
                 <TabsTrigger value="verzenden" className="relative">
                   <Send className="h-3.5 w-3.5 mr-1.5" />
                   Verzenden
@@ -823,6 +882,13 @@ export default function ProposalStudio() {
                         </Button>
                       </div>
                     </div>
+
+                    <Input
+                      value={aiContextExtra}
+                      onChange={(e) => setAiContextExtra(e.target.value)}
+                      className="text-xs h-8"
+                      placeholder="Extra context voor AI-tekst (optioneel)"
+                    />
 
                     {aiVoorstel && (
                       <Card className="border-amber-200 bg-amber-50">
@@ -1285,6 +1351,58 @@ export default function ProposalStudio() {
                             </div>
                           </CardContent>
                         </Card>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </TabsContent>
+
+              <TabsContent value="historie">
+                <div className="space-y-4">
+                  <h2 className="font-semibold">Statushistorie</h2>
+                  {(!transitieLog || transitieLog.length === 0) ? (
+                    <Card>
+                      <CardContent className="py-10 text-center text-muted-foreground">
+                        Nog geen statusovergangen geregistreerd.
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    <div className="relative space-y-4 before:absolute before:inset-0 before:ml-5 before:-translate-x-px before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-slate-300 before:to-transparent">
+                      {transitieLog.map((log) => (
+                        <div key={log.id} className="relative flex items-start gap-4 pl-10">
+                          <div className="absolute left-0 mt-1.5 flex h-10 w-10 items-center justify-center rounded-full border bg-background shadow-sm">
+                            <div className={cn("h-2 w-2 rounded-full", STATUS_KLEUR[log.naar_status] ?? "bg-slate-400")} />
+                          </div>
+                          <div className="flex flex-1 flex-col gap-1 rounded-lg border bg-card p-3 shadow-sm">
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-muted border">
+                                  {STATUS_LABEL[log.van_status] || log.van_status}
+                                </span>
+                                <ArrowRight className="h-3 w-3 text-muted-foreground" />
+                                <span className={cn("text-xs font-medium px-2 py-0.5 rounded-full border", STATUS_KLEUR[log.naar_status] || "bg-muted")}>
+                                  {STATUS_LABEL[log.naar_status] || log.naar_status}
+                                </span>
+                              </div>
+                              <time className="text-[10px] text-muted-foreground whitespace-nowrap">
+                                {datumNl(log.aangemaakt_op)}
+                              </time>
+                            </div>
+                            <div className="text-sm text-foreground">
+                              Status gewijzigd naar <span className="font-medium">{STATUS_LABEL[log.naar_status] || log.naar_status}</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
+                              <User className="h-3 w-3" />
+                              <span>{log.gebruiker_naam || "Systeem"}</span>
+                              {log.reden && (
+                                <>
+                                  <span className="text-muted-foreground/30">•</span>
+                                  <span>Reden: {log.reden}</span>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        </div>
                       ))}
                     </div>
                   )}

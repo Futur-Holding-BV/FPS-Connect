@@ -87,7 +87,14 @@ function statusVariant(s: string): "default" | "secondary" | "destructive" | "ou
 }
 
 function typeLabel(t: string): string {
-  return t === "verwijdering" ? "Verwijderverzoek" : "Inzageverzoek";
+  const map: Record<string, string> = {
+    inzage: "Inzageverzoek",
+    verwijdering: "Verwijderverzoek",
+    correctie: "Correctieverzoek",
+    beperking: "Beperkingsverzoek",
+    bezwaar: "Bezwaarverzoek",
+  };
+  return map[t] ?? "Inzageverzoek";
 }
 
 function formatDatum(iso: string | null): string {
@@ -135,6 +142,27 @@ function useInactieveAccounts(dagen: number) {
         credentials: "include",
       });
       if (!r.ok) throw new Error("Fout bij laden inactieve accounts");
+      return r.json();
+    },
+  });
+}
+
+type OpschoonStatus = {
+  bewaardagen: number;
+  wachtend_op_anonimisering: number;
+  laatste_run: {
+    uitgevoerd_op: string;
+    accounts_geanonimiseerd: number;
+    activiteiten_verwijderd: number;
+  } | null;
+};
+
+function useAvgOpschoonStatus() {
+  return useQuery<OpschoonStatus>({
+    queryKey: ["avg", "opschoon-status"],
+    queryFn: async () => {
+      const r = await fetch("/api/avg/opschoon-status", { credentials: "include" });
+      if (!r.ok) throw new Error("Fout bij laden opschoonstatus");
       return r.json();
     },
   });
@@ -337,6 +365,7 @@ export default function AvgBeheer() {
   const stats = useAvgStats();
   const verzoeken = useAvgVerzoeken(statusFilter);
   const inactief = useInactieveAccounts(inactiefDagen);
+  const opschoonStatus = useAvgOpschoonStatus();
 
   const archiveerMutation = useMutation({
     mutationFn: async (id: number) => {
@@ -463,6 +492,39 @@ export default function AvgBeheer() {
       {/* Inactieve accounts */}
       {tabblad === "inactief" && (
         <div className="space-y-4">
+          {opschoonStatus.data && (
+            <Card className="bg-muted/40">
+              <CardContent className="pt-4 pb-3 space-y-1">
+                <div className="text-sm font-medium">Geautomatiseerde accountopschoning</div>
+                <p className="text-xs text-muted-foreground">
+                  Accounts die langer dan {opschoonStatus.data.bewaardagen} dagen inactief zijn
+                  worden dagelijks automatisch geanonimiseerd.{" "}
+                  {opschoonStatus.data.wachtend_op_anonimisering > 0 ? (
+                    <span className="text-amber-700 font-medium">
+                      {opschoonStatus.data.wachtend_op_anonimisering} account
+                      {opschoonStatus.data.wachtend_op_anonimisering === 1 ? "" : "s"} wachten op de
+                      volgende run.
+                    </span>
+                  ) : (
+                    "Geen accounts wachten momenteel."
+                  )}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {opschoonStatus.data.laatste_run ? (
+                    <>
+                      Laatste run: {formatDatum(opschoonStatus.data.laatste_run.uitgevoerd_op)} ·{" "}
+                      {opschoonStatus.data.laatste_run.accounts_geanonimiseerd} account(s)
+                      geanonimiseerd · {opschoonStatus.data.laatste_run.activiteiten_verwijderd}{" "}
+                      activiteitenregels verwijderd
+                    </>
+                  ) : (
+                    "Nog geen opschoonrun uitgevoerd."
+                  )}
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
           <div className="flex items-center gap-3 flex-wrap">
             <div className="flex items-center gap-2">
               <Clock className="h-4 w-4 text-muted-foreground" />

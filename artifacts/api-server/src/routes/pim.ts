@@ -43,6 +43,7 @@ import {
   PIM_OPLEVERING_CONTROLEER_PROMPT,
   PIM_OPLEVERING_GENEREER_PROMPT,
   PIM_ONDERHOUD_NOTITIE_PROMPT,
+  PIM_UITVOERING_VERSLAG_PROMPT,
   KB_BESLISSTRUCTUUR,
 } from "../lib/aiPrompts";
 import { kbService } from "../lib/kbService";
@@ -273,6 +274,34 @@ router.post("/aanvragen", schrijven, async (req, res): Promise<void> => {
           bijgewerktOp: new Date(),
         })
         .returning();
+
+      // Koppelen van bijlagen uit aanvraag_context aan de opdracht in het DMS
+      const bijlagen = (aanvraag_context?.bijlagen as any[]) ?? [];
+      for (const bijlage of bijlagen) {
+        if (bijlage.object_path && bijlage.naam) {
+          // 1. Maak document aan in DMS
+          const [doc] = await tx
+            .insert(documentenTable)
+            .values({
+              naam: bijlage.naam,
+              documenttype: "overig", // Of afleiden van mime-type indien nodig
+              pdfUrl: bijlage.object_path,
+              bestandsgrootte: bijlage.grootte ?? null,
+              status: "actueel",
+              goedkeuringStatus: "goedgekeurd",
+              aangemaaktOp: new Date(),
+              bijgewerktOp: new Date(),
+            })
+            .returning();
+
+          // 2. Koppel document aan opdracht
+          await tx.insert(documentKoppelingenTable).values({
+            documentId: doc.id,
+            doelType: "opdracht",
+            doelId: opdracht.id,
+          });
+        }
+      }
 
       return { opdracht, pim };
     });
@@ -1555,7 +1584,7 @@ async function resolvePimVoorOpdracht(
 }
 
 /** POST /opdrachten/:id/pim/uitvoering/stap/:stapId/voltooien */
-router.post("/opdrachten/:id/pim/uitvoering/stap/:stapId/voltooien", schrijven, async (req, res) => {
+router.post("/opdrachten/:id/pim/uitvoering/stap/:stapId/voltooien", schrijven, async (req, res): Promise<void> => {
   const opdrachtId = parseInt(String(req.params.id), 10);
   const stapId = parseInt(String(req.params.stapId), 10);
   if (isNaN(opdrachtId) || isNaN(stapId)) { res.status(400).json({ error: "Ongeldig ID" }); return; }
@@ -1572,6 +1601,12 @@ router.post("/opdrachten/:id/pim/uitvoering/stap/:stapId/voltooien", schrijven, 
     const resolved = await resolvePimVoorOpdracht(opdrachtId, stapId);
     if (!resolved) { res.status(404).json({ error: "Stap niet gevonden of behoort niet tot deze opdracht" }); return; }
     const { pim, stap } = resolved;
+
+    // Idempotentie-check: als de stap al voltooid is, geef 200 terug.
+    if (stap.status === "voltooid") {
+      res.json({ voltooid_stap_id: stapId, uitvoering_gereed: false });
+      return;
+    }
 
     if (stap.status !== "actief") { res.status(409).json({ error: "Stap is niet actief" }); return; }
 
@@ -3116,6 +3151,99 @@ router.patch("/opdrachten/:id/pim/uitvoering/stap/:stapId/voorzieningen", requir
   } catch (err) {
     logger.error({ err }, "koppelPimStapVoorzieningen fout");
     res.status(500).json({ error: "Serverfout bij koppelen spots aan stap" });
+  }
+});
+
+/** GET /opdrachten/:id/pim/uitvoering/verslag */
+router.get("/opdrachten/:id/pim/uitvoering/verslag", lezen, async (req, res): Promise<void> => {
+  const opdrachtId = parseInt(String(req.params.id), 10);
+  if (isNaN(opdrachtId)) { res.status(400).json({ error: "Ongeldig opdracht-ID" }); return; }
+  const gebruikerId = req.session.userId ?? null;
+
+  try {
+    const [pim] = await db
+      .select()
+      .from(pimModellenTable)
+      .where(eq(pimModellenTable.opdrachtId, opdrachtId));
+    if (!pim) { res.status(404).json({ error: "PIM niet gevonden" }); return; }
+
+    const stappen = await db
+      .select()
+      .from(pimUitvoeringStappenTable)
+      .where(eq(pimUitvoeringStappenTable.pimId, pim.id))
+      .orderBy(asc(pimUitvoeringStappenTable.volgorde));
+
+    if (stappen.length === 0) {
+      res.status(409).json({ error: "Uitvoering nog niet gestart" });
+      return;
+    }
+
+    const afwijkingen = stappen
+      .filter(s => s.status === "afgeweken" || (s.afwijkingJson as any)?.beslissing)
+      .map(s => {
+        const afw = s.afwijkingJson as any;
+        return {
+          volgorde: s.volgorde,
+          omschrijving: afw?.afwijking_omschrijving ?? "Onbekende afwijking",
+          beslissing: afw?.beslissing ?? "Geen beslissing genomen",
+        };
+      });
+
+    const stappenLijst = stappen.map(s => ({
+      volgorde: s.volgorde,
+      doel: (s.instructieJson as any)?.doel ?? `Stap ${s.volgorde}`,
+      status: s.status,
+      voltooid_op: s.voltooidOp ? s.voltooidOp.toISOString() : undefined,
+    }));
+
+    let samenvatting = "Er is nog geen samenvatting gegenereerd.";
+    if (heeftGateway()) {
+      const verslagCtx = {
+        opdracht_id: opdrachtId,
+        stappen: stappenLijst,
+        afwijkingen,
+      };
+
+      const resultaat = await aiGateway.chat(
+        "default",
+        {
+          messages: [
+            { role: "system", content: PIM_UITVOERING_VERSLAG_PROMPT.tekst },
+            { role: "user", content: `Genereer een verslag op basis van deze data:\n${JSON.stringify(verslagCtx, null, 2)}` },
+          ],
+          response_format: { type: "json_object" },
+          max_tokens: 1000,
+        },
+        45_000,
+        {
+          module: "pim_uitvoering",
+          functie: "genereer_verslag",
+          gebruikerId,
+          promptNaam: PIM_UITVOERING_VERSLAG_PROMPT.naam,
+          promptVersie: PIM_UITVOERING_VERSLAG_PROMPT.versie,
+        }
+      );
+
+      if (resultaat.ok && resultaat.inhoud) {
+        try {
+          const parsed = JSON.parse(resultaat.inhoud);
+          samenvatting = parsed.samenvatting ?? samenvatting;
+        } catch (e) {
+          logger.warn({ err: e }, "AI verslag JSON parsen mislukt");
+        }
+      }
+    }
+
+    res.json({
+      opdracht_id: opdrachtId,
+      samenvatting,
+      stappen: stappenLijst,
+      afwijkingen,
+      gegenereerd_op: new Date().toISOString(),
+    });
+  } catch (err) {
+    logger.error({ err }, "getPimUitvoeringVerslag fout");
+    res.status(500).json({ error: "Serverfout bij ophalen uitvoeringsverslag" });
   }
 });
 

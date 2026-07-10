@@ -7,8 +7,9 @@ import {
   onderhoudTable,
   activiteitenTable,
   gebouwToewijzingenTable,
+  opdrachtenTable,
 } from "@workspace/db";
-import { eq, count, desc, inArray } from "drizzle-orm";
+import { eq, count, desc, inArray, and } from "drizzle-orm";
 import { effectieveContext } from "../utils/rol";
 import { requireBevoegdheidOfKlant } from "../middlewares/auth";
 
@@ -61,13 +62,21 @@ router.get("/dashboard/stats", dashboardLezen, async (req, res): Promise<void> =
           (await db.select({ count: count() }).from(gebouwenTable))[0]?.count ?? 0,
         );
 
+    const opdrachtenInUitvoering = Number(
+      (await db
+        .select({ count: count() })
+        .from(opdrachtenTable)
+        .where(eq(opdrachtenTable.aiFase, "uitvoering")))[0]?.count ?? 0,
+    );
+
     let voorzieningen = await db
       .select({
         status: voorzieningenTable.status,
         type: voorzieningenTable.type,
         gebouwId: voorzieningenTable.gebouwId,
       })
-      .from(voorzieningenTable);
+      .from(voorzieningenTable)
+      .where(eq(voorzieningenTable.gearchiveerd, false));
     let inspecties = await db
       .select({ status: inspectiesTable.status, gebouwId: inspectiesTable.gebouwId })
       .from(inspectiesTable);
@@ -96,6 +105,7 @@ router.get("/dashboard/stats", dashboardLezen, async (req, res): Promise<void> =
       openstaande_inspecties: inspecties.filter((i) => i.status === "gepland").length,
       openstaande_onderhoud: onderhoud.filter((o) => o.status === "open").length,
       vervallen_inspecties: inspecties.filter((i) => i.status === "afgekeurd").length,
+      opdrachten_in_uitvoering: opdrachtenInUitvoering,
       voorzieningen_per_type: Object.entries(typeCount).map(([type, aantal]) => ({ type, aantal })),
     });
   } catch (err) {
@@ -173,7 +183,12 @@ router.get("/dashboard/status-verdeling", dashboardLezen, async (req, res): Prom
         const vv = await db
           .select({ status: voorzieningenTable.status })
           .from(voorzieningenTable)
-          .where(eq(voorzieningenTable.gebouwId, g.id));
+          .where(
+            and(
+              eq(voorzieningenTable.gebouwId, g.id),
+              eq(voorzieningenTable.gearchiveerd, false)
+            )
+          );
         return {
           gebouw_id: g.id,
           gebouw_naam: g.naam,
@@ -212,8 +227,10 @@ router.get("/dashboard/vervaldagen", dashboardLezen, async (req, res): Promise<v
       .select()
       .from(voorzieningenTable)
       .where(
-        // Get all with volgende_inspectie set
-        eq(voorzieningenTable.status, "goedgekeurd")
+        and(
+          eq(voorzieningenTable.status, "goedgekeurd"),
+          eq(voorzieningenTable.gearchiveerd, false)
+        )
       );
 
     const result = [];

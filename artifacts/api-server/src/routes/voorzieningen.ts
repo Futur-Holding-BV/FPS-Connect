@@ -668,6 +668,9 @@ router.patch("/voorzieningen/:id/archief", requireBevoegdheid("voorzieningen", 3
     if (!v) return void res.status(404).json({ error: "Voorziening niet gevonden" });
     invalideerContext("voorziening", id);
 
+    // Na archiveren/herstellen: herbereken nacalculaties voor dit gebouw
+    triggerNacalculatieHerberekeningVoorGebouw(v.gebouwId, req.log);
+
     await logActiviteit({
       type: gearchiveerd ? "voorziening_gearchiveerd" : "voorziening_teruggeplaatst",
       omschrijving: gearchiveerd

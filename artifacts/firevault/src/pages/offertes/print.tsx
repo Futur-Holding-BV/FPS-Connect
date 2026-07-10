@@ -153,6 +153,9 @@ export default function OffertePrintPagina() {
   const werkgever = _actieveWerkgeverNaam
     ? ((werkgevers ?? []).find(w => w.naam === _actieveWerkgeverNaam) ?? (werkgevers ?? [])[0])
     : ((werkgevers ?? [])[0] ?? null);
+
+  const studioLogoUrl = (studioWerkgevers ?? []).find(w => w.id === studioWerkgeverId)?.logo_url ?? "/logo-fps.png";
+
   const datum = datumNl((offerte as any).datum ?? offerte.aangemaakt_op);
 
   const templateJson = (() => {
@@ -160,7 +163,7 @@ export default function OffertePrintPagina() {
     try { return JSON.parse(gebruiktModel.connect_template_json) as { koptekst?: { logo_positie?: string }; kleurschema?: { primair?: string }; voettekst?: string | null }; }
     catch { return null; }
   })();
-  const accentKleur      = templateJson?.kleurschema?.primair ?? null;
+  const accentKleur      = templateJson?.kleurschema?.primair ?? "#F23B0D";
   const logoPositie      = templateJson?.koptekst?.logo_positie ?? "rechts";
   const offerteVoettekst = templateJson?.voettekst ?? null;
   const sektieHeaderKlasse = cn(
@@ -171,8 +174,8 @@ export default function OffertePrintPagina() {
 
   const mij = {
     naam: werkgever?.naam ?? "FPS Brandpreventie",
-    logoUrl: (studioWerkgevers ?? []).find(w => w.id === studioWerkgeverId)?.logo_url ?? "/fps-logo.png",
-    primaireKleur: accentKleur ?? undefined,
+    logoUrl: studioLogoUrl,
+    primaireKleur: accentKleur,
     adres: [werkgever?.adres].filter(Boolean).join("") || "",
     postcodeWoonplaats: [werkgever?.postcode, werkgever?.plaats].filter(Boolean).join("  ") || "",
     website: werkgever?.website ?? "",

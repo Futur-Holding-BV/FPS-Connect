@@ -976,20 +976,33 @@ export function VerzendTab({
           ) : (vragen ?? []).length === 0 ? (
             <p className="text-sm text-muted-foreground italic">Geen klantvragen ontvangen.</p>
           ) : (
-            <div className="space-y-3">
-              {(vragen ?? []).map((v: OfferteVraag) => (
-                <div key={v.id} className="rounded-md border p-3 space-y-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2 min-w-0">
-                      {v.antwoord ? (
-                        <CheckCircle className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
-                      ) : (
-                        <AlertCircle className="h-3.5 w-3.5 text-amber-600 shrink-0" />
-                      )}
-                      <span className="text-xs text-muted-foreground truncate">
-                        {v.bezoeker_naam ?? "Klant"} — {datumLabel(v.aangemaakt_op)}
-                      </span>
-                    </div>
+              <div className="space-y-3">
+                {(vragen ?? []).map((v: OfferteVraag) => (
+                  <div
+                    key={v.id}
+                    className={`rounded-md border p-3 space-y-2 transition-all ${
+                      !v.antwoord
+                        ? "border-rose-200 bg-rose-50/30 shadow-sm ring-1 ring-rose-100"
+                        : "bg-background"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        {v.antwoord ? (
+                          <CheckCircle className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                        ) : (
+                          <AlertCircle className="h-3.5 w-3.5 text-rose-600 shrink-0 animate-pulse" />
+                        )}
+                        <span className="text-xs text-muted-foreground truncate">
+                          <span className="font-semibold text-foreground">{v.bezoeker_naam ?? "Klant"}</span>
+                          {v.bezoeker_email ? ` (${v.bezoeker_email})` : ""} — {datumLabel(v.aangemaakt_op)}
+                          {!v.antwoord && (
+                            <Badge className="ml-2 h-4 px-1.5 text-[10px] bg-rose-600 hover:bg-rose-600 text-white border-none">
+                              Onbeantwoord
+                            </Badge>
+                          )}
+                        </span>
+                      </div>
                     {!v.antwoord && openAntwoord !== v.id && (
                       <Button
                         size="sm"
@@ -1022,7 +1035,17 @@ export function VerzendTab({
                   <p className="text-sm font-medium">{v.vraag}</p>
 
                   {v.antwoord && openAntwoord !== v.id && (
-                    <p className="text-sm text-muted-foreground pl-3 border-l-2 border-primary/30">{v.antwoord}</p>
+                    <div className="mt-2 pl-3 border-l-2 border-primary/30 space-y-1">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="text-[10px] h-4 px-1 bg-primary/5">Antwoord</Badge>
+                        {v.bijgewerkt_op && (
+                          <span className="text-[10px] text-muted-foreground">
+                            {datumLabel(v.bijgewerkt_op)}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-sm text-muted-foreground">{v.antwoord}</p>
+                    </div>
                   )}
 
                   {openAntwoord === v.id && (

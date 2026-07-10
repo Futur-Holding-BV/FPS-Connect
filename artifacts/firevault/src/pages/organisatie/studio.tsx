@@ -570,12 +570,18 @@ export default function DocumentStudioPagina() {
                 const aantalVersies = versiesVoorType(type).length;
 
                 return (
-                  <Card key={type} className="flex flex-col">
+                  <Card
+                    key={type}
+                    className={cn(
+                      "flex flex-col transition-all",
+                      status === "goedgekeurd" ? "border-green-500 shadow-sm shadow-green-100" : ""
+                    )}
+                  >
                     <CardHeader className="pb-2">
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex items-center gap-2">
-                          <div className="p-2 rounded-md bg-muted">
-                            <Icoon className="h-4 w-4 text-muted-foreground" />
+                          <div className={cn("p-2 rounded-md", status === "goedgekeurd" ? "bg-green-100" : "bg-muted")}>
+                            <Icoon className={cn("h-4 w-4", status === "goedgekeurd" ? "text-green-700" : "text-muted-foreground")} />
                           </div>
                           <CardTitle className="text-sm font-semibold">{label}</CardTitle>
                         </div>
@@ -593,12 +599,24 @@ export default function DocumentStudioPagina() {
                         {cfg.label}
                       </Badge>
                       <p className="text-xs text-muted-foreground flex-1">{cfg.beschrijving}</p>
+                      
                       {model?.referentie_bestand_pad && (
-                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <ImageIcon className="h-3 w-3" />
-                          <span>Referentie aanwezig</span>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <ImageIcon className="h-3 w-3" />
+                            <span>Referentie aanwezig</span>
+                          </div>
+                          <Button
+                            variant="link"
+                            size="sm"
+                            className="h-auto p-0 text-xs"
+                            onClick={() => window.open(`/api/storage${model.referentie_bestand_pad}`, "_blank")}
+                          >
+                            Bekijk
+                          </Button>
                         </div>
                       )}
+
                       {model?.goedgekeurd_op && (
                         <div className="flex items-center gap-1 text-xs text-green-600">
                           <CheckCircle2 className="h-3 w-3" />
@@ -638,6 +656,22 @@ export default function DocumentStudioPagina() {
                             >
                               <Sparkles className="h-3.5 w-3.5 mr-1" />
                               {status === "goedgekeurd" ? "Template bekijken" : heeftConcept ? "Template verfijnen" : "Genereer met AI"}
+                            </Button>
+                          )}
+                          {/* Goedkeuren knop voor concepten */}
+                          {status === "concept" && heeftConcept && (
+                            <Button
+                              size="sm"
+                              className="w-full"
+                              variant="default"
+                              onClick={() => {
+                                setAiModelId(model?.id ?? null);
+                                setGoedkeurBevestigOpen(true);
+                              }}
+                              disabled={goedkeur.isPending}
+                            >
+                              <ThumbsUp className="h-3.5 w-3.5 mr-1" />
+                              Goedkeuren als Model 0
                             </Button>
                           )}
                           {/* Huisstijl-analyse knop — leidt een voorstel af, past nooit direct iets toe */}

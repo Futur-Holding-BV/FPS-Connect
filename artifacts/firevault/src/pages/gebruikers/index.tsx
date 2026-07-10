@@ -325,6 +325,7 @@ export default function Gebruikers() {
   const [toonGearchiveerd, setToonGearchiveerd] = useState<boolean>(false);
   const [bulkBevestigOpen, setBulkBevestigOpen] = useState<boolean>(false);
   const [bulkResultaat, setBulkResultaat] = useState<string | null>(null);
+  const [herkomstToepassenTarget, setHerkomstToepassenTarget] = useState<Gebruiker | null>(null);
 
   const invalideer = () => queryClient.invalidateQueries({ queryKey: getListGebruikersQueryKey() });
 
@@ -342,7 +343,9 @@ export default function Gebruikers() {
       const bijgewerkt = await herkomstToepassen.mutateAsync({ id: g.id });
       invalideer();
       setBekijkGebruiker((huidig) => huidig && huidig.id === g.id ? (bijgewerkt as Gebruiker) : huidig);
+      toast({ title: "Profiel opnieuw toegepast", description: `De bevoegdheden van ${g.naam ?? "de gebruiker"} zijn teruggezet naar het gekoppelde profiel.` });
     } catch {
+      toast({ title: "Profiel opnieuw toepassen mislukt", description: "Probeer het later opnieuw.", variant: "destructive" });
     } finally { setHerkomstBezig(null); }
   }
 
@@ -1291,6 +1294,22 @@ export default function Gebruikers() {
           <p id="bewerk-beschr" className="text-sm text-muted-foreground -mt-1">
             Pas de gegevens van <strong>{bewerkGebruiker?.naam}</strong> aan.
           </p>
+          {(() => {
+            const bewerkProfiel = bewerkForm.herkomst_profiel_id != null ? profielMap.get(bewerkForm.herkomst_profiel_id) : undefined;
+            if (!bewerkProfiel) return null;
+            const bewerkAfwijkend = !bevoegdhedenGelijk(bewerkForm.bevoegdheden, bewerkProfiel.bevoegdheden);
+            if (!bewerkAfwijkend) return null;
+            return (
+              <div className="flex items-center gap-1.5 text-xs -mt-2">
+                <Badge variant="outline" className="text-xs h-5 px-1.5 bg-amber-50 text-amber-700 border-amber-200">
+                  Aangepast t.o.v. profiel
+                </Badge>
+                <span className="text-muted-foreground">
+                  De bevoegdheden wijken af van het gekoppelde profiel “{bewerkProfiel.naam}”.
+                </span>
+              </div>
+            );
+          })()}
           <form onSubmit={verstuurBewerken} className="space-y-4 pt-1">
             <GebruikerVelden form={bewerkForm} setForm={setBewerkForm} toonActief toonHoofd={isHoofd} />
             {bewerkFout && <Foutmelding tekst={bewerkFout} />}
@@ -1367,6 +1386,33 @@ export default function Gebruikers() {
             <AlertDialogCancel>Annuleren</AlertDialogCancel>
             <AlertDialogAction onClick={(e) => { e.preventDefault(); bevestigSessiesBeeindigen(); }} disabled={sessiesBeeindigen.isPending}>
               {sessiesBeeindigen.isPending ? "Bezig..." : "Sessies beëindigen"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* AlertDialog: profiel opnieuw toepassen */}
+      <AlertDialog open={!!herkomstToepassenTarget} onOpenChange={(o) => { if (!o) setHerkomstToepassenTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Profiel opnieuw toepassen?</AlertDialogTitle>
+            <AlertDialogDescription>
+              De bevoegdheden van <strong>{herkomstToepassenTarget?.naam}</strong> zijn sinds de koppeling
+              handmatig aangepast. Opnieuw toepassen zet de bevoegdheden terug naar exact het gekoppelde
+              profiel; de eigen aanpassingen gaan hiermee verloren.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuleren</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                if (herkomstToepassenTarget) pasHerkomstToe(herkomstToepassenTarget);
+                setHerkomstToepassenTarget(null);
+              }}
+              disabled={herkomstBezig === herkomstToepassenTarget?.id}
+            >
+              {herkomstBezig === herkomstToepassenTarget?.id ? "Bezig..." : "Opnieuw toepassen"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -1650,7 +1696,7 @@ export default function Gebruikers() {
                                   <Button
                                     variant="outline" size="sm" className="h-6 px-2 text-xs ml-auto"
                                     disabled={herkomstBezig === bekijkGebruiker.id}
-                                    onClick={() => pasHerkomstToe(bekijkGebruiker)}
+                                    onClick={() => setHerkomstToepassenTarget(bekijkGebruiker)}
                                   >
                                     <RotateCcw className={`h-3 w-3 mr-1 ${herkomstBezig === bekijkGebruiker.id ? "animate-spin" : ""}`} />
                                     Profiel opnieuw toepassen

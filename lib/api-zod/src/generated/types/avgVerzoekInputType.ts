@@ -12,4 +12,7 @@ export type AvgVerzoekInputType = typeof AvgVerzoekInputType[keyof typeof AvgVer
 export const AvgVerzoekInputType = {
   inzage: 'inzage',
   verwijdering: 'verwijdering',
+  correctie: 'correctie',
+  beperking: 'beperking',
+  bezwaar: 'bezwaar',
 } as const;

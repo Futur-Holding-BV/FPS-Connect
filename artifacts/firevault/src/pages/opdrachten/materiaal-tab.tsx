@@ -5,9 +5,11 @@ import {
   useCreateUitgifte,
   useCreateRetour,
   useAnnuleerReservering,
+  useListVoorraadTotaal,
   getGetOpdrachtMateriaalQueryKey,
 } from "@workspace/api-client-react";
 import type { OpdrachtMateriaalRegel } from "@workspace/api-client-react";
+import { ArtikelPicker } from "@/components/artikel-picker";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -34,6 +36,7 @@ function euro(n: number | null | undefined) {
 }
 
 function datumKort(iso: string) {
+  if (!iso) return "—";
   return new Date(iso).toLocaleDateString("nl-NL", { day: "numeric", month: "short", year: "numeric" });
 }
 
@@ -61,12 +64,15 @@ interface UitgifteDialoogProps {
 function UitgifteDialoog({ opdrachtId, openReserveringen, open, onClose }: UitgifteDialoogProps) {
   const [modus, setModus] = useState<"via_reservering" | "direct">("via_reservering");
   const [reserveringId, setReserveringId] = useState("");
-  const [artikelId, setArtikelId] = useState("");
+  const [artikelId, setArtikelId] = useState<number | null>(null);
+  const [artikelEenheid, setArtikelEenheid] = useState("st");
   const [hoeveelheid, setHoeveelheid] = useState("");
   const { toast } = useToast();
   const qc = useQueryClient();
+  const { data: voorraadTotaal = [] } = useListVoorraadTotaal();
 
   const gekozenReservering = openReserveringen.find(r => r.reservering_id === Number(reserveringId));
+  const vrijeVoorraadDirect = artikelId != null ? voorraadTotaal.find(v => v.artikel_id === artikelId)?.vrij ?? 0 : null;
 
   const mutatie = useCreateUitgifte({
     mutation: {
@@ -86,9 +92,12 @@ function UitgifteDialoog({ opdrachtId, openReserveringen, open, onClose }: Uitgi
   function reset() {
     setModus("via_reservering");
     setReserveringId("");
-    setArtikelId("");
+    setArtikelId(null);
+    setArtikelEenheid("st");
     setHoeveelheid("");
   }
+
+  const verplichtOpdrachtGekozen = !!opdrachtId;
 
   function verstuur() {
     const h = parseFloat(hoeveelheid);
@@ -103,12 +112,16 @@ function UitgifteDialoog({ opdrachtId, openReserveringen, open, onClose }: Uitgi
         },
       });
     } else {
-      const aId = parseInt(artikelId, 10);
-      if (!aId) { toast({ title: "Voer een geldig artikel-ID in", variant: "destructive" }); return; }
+      if (!artikelId) { toast({ title: "Kies een artikel", variant: "destructive" }); return; }
+      if (!verplichtOpdrachtGekozen) { toast({ title: "Koppeling aan opdracht is verplicht", variant: "destructive" }); return; }
+      if (vrijeVoorraadDirect != null && h > vrijeVoorraadDirect) {
+        toast({ title: `Onvoldoende vrije voorraad (${vrijeVoorraadDirect} ${artikelEenheid} beschikbaar)`, variant: "destructive" });
+        return;
+      }
       mutatie.mutate({
         data: {
           opdracht_id: opdrachtId,
-          regels: [{ artikel_id: aId, hoeveelheid: h }],
+          regels: [{ artikel_id: artikelId, hoeveelheid: h }],
         },
       });
     }
@@ -184,15 +197,16 @@ function UitgifteDialoog({ opdrachtId, openReserveringen, open, onClose }: Uitgi
           ) : (
             <div className="space-y-3">
               <div className="space-y-1.5">
-                <Label>Artikel-ID</Label>
-                <Input
-                  type="number"
-                  min="1"
+                <Label>Artikel</Label>
+                <ArtikelPicker
                   value={artikelId}
-                  onChange={e => setArtikelId(e.target.value)}
-                  placeholder="Bijv. 42"
+                  onValueChange={(id, artikel) => { setArtikelId(id); setArtikelEenheid(artikel.eenheid); }}
                 />
-                <p className="text-xs text-muted-foreground">Het interne artikel-ID uit het magazijn.</p>
+                {vrijeVoorraadDirect != null && (
+                  <p className={`text-xs ${vrijeVoorraadDirect <= 0 ? "text-destructive" : "text-muted-foreground"}`}>
+                    Vrije voorraad: {vrijeVoorraadDirect} {artikelEenheid}
+                  </p>
+                )}
               </div>
               <div className="space-y-1.5">
                 <Label>Hoeveelheid</Label>
@@ -200,6 +214,7 @@ function UitgifteDialoog({ opdrachtId, openReserveringen, open, onClose }: Uitgi
                   type="number"
                   min="0.01"
                   step="0.01"
+                  max={vrijeVoorraadDirect ?? undefined}
                   value={hoeveelheid}
                   onChange={e => setHoeveelheid(e.target.value)}
                 />
@@ -228,7 +243,8 @@ interface RetourDialoogProps {
 }
 
 function RetourDialoog({ opdrachtId, open, onClose }: RetourDialoogProps) {
-  const [artikelId, setArtikelId] = useState("");
+  const [artikelId, setArtikelId] = useState<number | null>(null);
+  const [artikelEenheid, setArtikelEenheid] = useState("st");
   const [hoeveelheid, setHoeveelheid] = useState("");
   const [conditie, setConditie] = useState<"goed" | "defect" | "afval">("goed");
   const { toast } = useToast();
@@ -250,20 +266,20 @@ function RetourDialoog({ opdrachtId, open, onClose }: RetourDialoogProps) {
   });
 
   function reset() {
-    setArtikelId("");
+    setArtikelId(null);
+    setArtikelEenheid("st");
     setHoeveelheid("");
     setConditie("goed");
   }
 
   function verstuur() {
-    const aId = parseInt(artikelId, 10);
     const h = parseFloat(hoeveelheid);
-    if (!aId) { toast({ title: "Voer een geldig artikel-ID in", variant: "destructive" }); return; }
+    if (!artikelId) { toast({ title: "Kies een artikel", variant: "destructive" }); return; }
     if (!h || h <= 0) { toast({ title: "Voer een geldige hoeveelheid in", variant: "destructive" }); return; }
     mutatie.mutate({
       data: {
         opdracht_id: opdrachtId,
-        regels: [{ artikel_id: aId, hoeveelheid: h, conditie }],
+        regels: [{ artikel_id: artikelId, hoeveelheid: h, conditie }],
       },
     });
   }
@@ -277,15 +293,11 @@ function RetourDialoog({ opdrachtId, open, onClose }: RetourDialoogProps) {
 
         <div className="space-y-4">
           <div className="space-y-1.5">
-            <Label>Artikel-ID</Label>
-            <Input
-              type="number"
-              min="1"
+            <Label>Artikel</Label>
+            <ArtikelPicker
               value={artikelId}
-              onChange={e => setArtikelId(e.target.value)}
-              placeholder="Bijv. 42"
+              onValueChange={(id, artikel) => { setArtikelId(id); setArtikelEenheid(artikel.eenheid); }}
             />
-            <p className="text-xs text-muted-foreground">Het interne artikel-ID uit het magazijn.</p>
           </div>
           <div className="space-y-1.5">
             <Label>Hoeveelheid</Label>
@@ -296,6 +308,7 @@ function RetourDialoog({ opdrachtId, open, onClose }: RetourDialoogProps) {
               value={hoeveelheid}
               onChange={e => setHoeveelheid(e.target.value)}
             />
+            {artikelId != null && <p className="text-xs text-muted-foreground">In {artikelEenheid}</p>}
           </div>
           <div className="space-y-1.5">
             <Label>Conditie</Label>

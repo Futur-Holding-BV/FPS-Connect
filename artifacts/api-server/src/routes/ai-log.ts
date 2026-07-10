@@ -1,10 +1,109 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { aiAanroepenTable, appInstellingenTable, gebouwenTable, offertesTable } from "@workspace/db";
+import { aiAanroepenTable, appInstellingenTable, gebouwenTable, offertesTable, gebruikersTable, gebruikersMeldingenTable } from "@workspace/db";
 import { desc, count, eq, and, gte, lte, sql, sum, ilike, getTableColumns } from "drizzle-orm";
 import { requireRol } from "../middlewares/auth";
+import { logger } from "../lib/logger";
+import { verstuurMail, isGeconfigureerd as isMailGeconfigureerd } from "../services/email";
 
 const router = Router();
+
+async function genereerMaandelijkseExport() {
+  const nu = new Date();
+  const vorigMaand = new Date(nu.getFullYear(), nu.getMonth() - 1, 1);
+  const vorigMaandEind = new Date(nu.getFullYear(), nu.getMonth(), 0, 23, 59, 59, 999);
+  const maandNaam = vorigMaand.toLocaleString("nl-NL", { month: "long", year: "numeric" });
+
+  const [instelling] = await db.select().from(appInstellingenTable).orderBy(appInstellingenTable.id).limit(1);
+  if (!instelling || !instelling.aiMaandelijkseExportEmail) return;
+
+  const jaarMaand = `${vorigMaand.getFullYear()}-${String(vorigMaand.getMonth() + 1).padStart(2, "0")}`;
+  if (instelling.aiMaandelijkseExportLaatstVerzondenMaand === jaarMaand) return;
+
+  const rows = await db
+    .select()
+    .from(aiAanroepenTable)
+    .where(and(gte(aiAanroepenTable.aangemaaktOp, vorigMaand), lte(aiAanroepenTable.aangemaaktOp, vorigMaandEind)))
+    .orderBy(desc(aiAanroepenTable.aangemaaktOp));
+
+  if (rows.length === 0) return;
+
+  const perModule = await db
+    .select({
+      module: aiAanroepenTable.module,
+      aanroepen: count(),
+      kosten_eur: sql<string>`COALESCE(SUM(${aiAanroepenTable.geschatteKostenEur}), 0)::text`,
+    })
+    .from(aiAanroepenTable)
+    .where(and(gte(aiAanroepenTable.aangemaaktOp, vorigMaand), lte(aiAanroepenTable.aangemaaktOp, vorigMaandEind)))
+    .groupBy(aiAanroepenTable.module);
+
+  const escapeCell = (val: any): string => {
+    if (val == null) return "";
+    let s = String(val);
+    if (s.length > 0 && "=+-@\t\r".includes(s[0]!)) s = `'${s}`;
+    if (s.includes(",") || s.includes('"') || s.includes("\n")) return `"${s.replace(/"/g, '""')}"`;
+    return s;
+  };
+
+  const header = ["datum", "module", "functie", "model", "tokens", "kosten_eur", "status"].join(",");
+  const lines = rows.map((r) => [
+    escapeCell(r.aangemaaktOp.toISOString()),
+    escapeCell(r.module),
+    escapeCell(r.functie),
+    escapeCell(r.modelNaam),
+    escapeCell(r.totalTokens),
+    escapeCell(r.geschatteKostenEur),
+    escapeCell(r.status),
+  ].join(","));
+  const csvContent = [header, ...lines].join("\r\n");
+
+  const moduleOverzicht = perModule
+    .map((m) => `- ${m.module}: € ${parseFloat(m.kosten_eur).toFixed(2)} (${m.aanroepen} aanroepen)`)
+    .join("\n");
+  const totaalKosten = perModule.reduce((acc, m) => acc + parseFloat(m.kosten_eur), 0);
+
+  const html = `
+    <p>Beste beheerder,</p>
+    <p>Hierbij ontvangt u het AI-logboek over de maand <strong>${maandNaam}</strong>.</p>
+    <p><strong>Overzicht per module:</strong></p>
+    <pre>${moduleOverzicht}</pre>
+    <p><strong>Totaal geschatte kosten: € ${totaalKosten.toFixed(2)}</strong></p>
+    <p>De volledige export is als CSV-bijlage toegevoegd aan deze e-mail.</p>
+  `;
+
+  await verstuurMail({
+    naarEmail: instelling.aiMaandelijkseExportEmail,
+    onderwerp: `Maandelijks AI-logboek: ${maandNaam}`,
+    html,
+    soort: "ai_drempel", // Gebruik bestaande soort voor nu
+    bijlagen: [{
+      naam: `ai-logboek-${jaarMaand}.csv`,
+      inhoud: Buffer.from(csvContent),
+      contentType: "text/csv"
+    }]
+  });
+
+  await db.update(appInstellingenTable)
+    .set({ aiMaandelijkseExportLaatstVerzondenMaand: jaarMaand, bijgewerktOp: new Date() })
+    .where(eq(appInstellingenTable.id, instelling.id));
+}
+
+export function planMaandelijkseAiExportCheck() {
+  setInterval(async () => {
+    try {
+      const [instelling] = await db.select().from(appInstellingenTable).orderBy(appInstellingenTable.id).limit(1);
+      if (!instelling || instelling.aiMaandelijkseExportDag == null) return;
+      
+      const nu = new Date();
+      if (nu.getDate() >= instelling.aiMaandelijkseExportDag) {
+        await genereerMaandelijkseExport();
+      }
+    } catch (err) {
+      logger.error({ err }, "Maandelijkse AI export check mislukt");
+    }
+  }, 1000 * 60 * 60 * 6); // Elke 6 uur
+}
 
 router.get(
   "/api/beheer/ai-aanroepen",

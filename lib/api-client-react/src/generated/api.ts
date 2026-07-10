@@ -65,6 +65,7 @@ import type {
   ArtikelInput,
   AssignClusterMonteur200,
   AuthGebruiker,
+  AvgOpschoonStatus,
   AvgStats,
   AvgVerzoek,
   AvgVerzoekInput,
@@ -216,6 +217,7 @@ import type {
   FieJaarprognose,
   FieLeermoment,
   FieLeermomentPatch,
+  FieNacalculatieOverzicht,
   FieObservatiesResponse,
   FinancieelDashboard,
   FinancieelDocument,
@@ -396,6 +398,7 @@ import type {
   ListFabrikantenParams,
   ListFacturenParams,
   ListFeestdagenParams,
+  ListFieNacalculatiesParams,
   ListFinancieleDocumentenParams,
   ListGebouwenParams,
   ListGekoppeldeDocumentenParams,
@@ -460,9 +463,13 @@ import type {
   MagazijnBestelbonInput,
   MagazijnBestelbonResultaat,
   MagazijnDashboard,
+  MagazijnInstellingen,
+  MagazijnInstellingenInput,
   MagazijnLocatie,
   MagazijnLocatieInput,
   MagazijnSignalering,
+  MagazijnSnooze,
+  MagazijnSnoozeInput,
   MagazijnStellingsscan,
   MagazijnStellingsscanGoedkeuringInput,
   MagazijnStellingsscanInput,
@@ -581,6 +588,7 @@ import type {
   OrgAiCategorieCorrectie,
   OrgAiCategorieCorrectieInput,
   OrgAiInvullenInput,
+  OrgAiVeldCorrectie,
   OrgAiVerzekeringInput,
   OrgBedrijfsdocument,
   OrgBedrijfsdocumentAnalyse,
@@ -610,6 +618,7 @@ import type {
   PimUitvoeringAfwijkingInput,
   PimUitvoeringBeslisInput,
   PimUitvoeringStap,
+  PimUitvoeringVerslag,
   PimUitvoeringVoltooiResultaat,
   PimUitvoeringVoltooienInput,
   PimVaststellenResultaat,
@@ -701,6 +710,7 @@ import type {
   StudioBijstuurInput,
   StudioGenereerInput,
   StudioHuisstijlAnalyseResponse,
+  SynchroniseerStandaardCalculatieData200,
   TaalWijzigen,
   Tekening,
   TekeningAiAnalyseInput,
@@ -836,6 +846,7 @@ import type {
   WorkflowDetail,
   WorkflowLane,
   WorkflowLaneInput,
+  WorkflowTransitieLog,
   Ziekmelding,
   ZiekmeldingenInput,
   ZiekmeldingenSelfInput,
@@ -8678,6 +8689,83 @@ export function useGetAvgStats<TData = Awaited<ReturnType<typeof getAvgStats>>, 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetAvgStatsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetAvgOpschoonStatusUrl = () => {
+
+
+
+
+  return `/api/avg/opschoon-status`
+}
+
+/**
+ * @summary Status van de geautomatiseerde AVG-accountopschoning (beheerder)
+ */
+export const getAvgOpschoonStatus = async ( options?: RequestInit): Promise<AvgOpschoonStatus> => {
+
+  return customFetch<AvgOpschoonStatus>(getGetAvgOpschoonStatusUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetAvgOpschoonStatusQueryKey = () => {
+    return [
+    `/api/avg/opschoon-status`
+    ] as const;
+    }
+
+
+export const getGetAvgOpschoonStatusQueryOptions = <TData = Awaited<ReturnType<typeof getAvgOpschoonStatus>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAvgOpschoonStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAvgOpschoonStatusQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAvgOpschoonStatus>>> = ({ signal }) => getAvgOpschoonStatus({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAvgOpschoonStatus>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetAvgOpschoonStatusQueryResult = NonNullable<Awaited<ReturnType<typeof getAvgOpschoonStatus>>>
+export type GetAvgOpschoonStatusQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Status van de geautomatiseerde AVG-accountopschoning (beheerder)
+ */
+
+export function useGetAvgOpschoonStatus<TData = Awaited<ReturnType<typeof getAvgOpschoonStatus>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAvgOpschoonStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetAvgOpschoonStatusQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
@@ -34721,6 +34809,83 @@ export function useListOfferteTracking<TData = Awaited<ReturnType<typeof listOff
 
 
 
+export const getListOfferteTransitieLogUrl = (id: number,) => {
+
+
+
+
+  return `/api/offertes/${id}/transitielogboek`
+}
+
+/**
+ * @summary Statusovergangen van een offerte ophalen
+ */
+export const listOfferteTransitieLog = async (id: number, options?: RequestInit): Promise<WorkflowTransitieLog[]> => {
+
+  return customFetch<WorkflowTransitieLog[]>(getListOfferteTransitieLogUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListOfferteTransitieLogQueryKey = (id: number,) => {
+    return [
+    `/api/offertes/${id}/transitielogboek`
+    ] as const;
+    }
+
+
+export const getListOfferteTransitieLogQueryOptions = <TData = Awaited<ReturnType<typeof listOfferteTransitieLog>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listOfferteTransitieLog>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListOfferteTransitieLogQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listOfferteTransitieLog>>> = ({ signal }) => listOfferteTransitieLog(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listOfferteTransitieLog>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListOfferteTransitieLogQueryResult = NonNullable<Awaited<ReturnType<typeof listOfferteTransitieLog>>>
+export type ListOfferteTransitieLogQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Statusovergangen van een offerte ophalen
+ */
+
+export function useListOfferteTransitieLog<TData = Awaited<ReturnType<typeof listOfferteTransitieLog>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listOfferteTransitieLog>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListOfferteTransitieLogQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
 export const getGetAiPresentatieNiveauUrl = (id: number,) => {
 
 
@@ -37994,6 +38159,83 @@ export const useBeslisPimUitvoeringAfwijking = <TError = ErrorType<void>,
       > => {
       return useMutation(getBeslisPimUitvoeringAfwijkingMutationOptions(options));
     }
+
+export const getGetPimUitvoeringVerslagUrl = (id: number,) => {
+
+
+
+
+  return `/api/opdrachten/${id}/pim/uitvoering/verslag`
+}
+
+/**
+ * @summary Uitvoeringsverslag ophalen met samenvatting van voltooide stappen en afwijkingen
+ */
+export const getPimUitvoeringVerslag = async (id: number, options?: RequestInit): Promise<PimUitvoeringVerslag> => {
+
+  return customFetch<PimUitvoeringVerslag>(getGetPimUitvoeringVerslagUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPimUitvoeringVerslagQueryKey = (id: number,) => {
+    return [
+    `/api/opdrachten/${id}/pim/uitvoering/verslag`
+    ] as const;
+    }
+
+
+export const getGetPimUitvoeringVerslagQueryOptions = <TData = Awaited<ReturnType<typeof getPimUitvoeringVerslag>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPimUitvoeringVerslag>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPimUitvoeringVerslagQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPimUitvoeringVerslag>>> = ({ signal }) => getPimUitvoeringVerslag(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPimUitvoeringVerslag>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetPimUitvoeringVerslagQueryResult = NonNullable<Awaited<ReturnType<typeof getPimUitvoeringVerslag>>>
+export type GetPimUitvoeringVerslagQueryError = ErrorType<void>
+
+
+/**
+ * @summary Uitvoeringsverslag ophalen met samenvatting van voltooide stappen en afwijkingen
+ */
+
+export function useGetPimUitvoeringVerslag<TData = Awaited<ReturnType<typeof getPimUitvoeringVerslag>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPimUitvoeringVerslag>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetPimUitvoeringVerslagQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
 export const getListPimSpotsUrl = (id: number,) => {
 
@@ -43180,6 +43422,76 @@ export const useCreateModCalculatie = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getCreateModCalculatieMutationOptions(options));
+    }
+
+export const getSynchroniseerStandaardCalculatieDataUrl = () => {
+
+
+
+
+  return `/api/modules/calculaties/synchroniseer-standaard`
+}
+
+/**
+ * @summary Standaard tarieven en normtijden synchroniseren
+ */
+export const synchroniseerStandaardCalculatieData = async ( options?: RequestInit): Promise<SynchroniseerStandaardCalculatieData200> => {
+
+  return customFetch<SynchroniseerStandaardCalculatieData200>(getSynchroniseerStandaardCalculatieDataUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getSynchroniseerStandaardCalculatieDataMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof synchroniseerStandaardCalculatieData>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof synchroniseerStandaardCalculatieData>>, TError,void, TContext> => {
+
+const mutationKey = ['synchroniseerStandaardCalculatieData'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof synchroniseerStandaardCalculatieData>>, void> = () => {
+
+
+          return  synchroniseerStandaardCalculatieData(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SynchroniseerStandaardCalculatieDataMutationResult = NonNullable<Awaited<ReturnType<typeof synchroniseerStandaardCalculatieData>>>
+
+    export type SynchroniseerStandaardCalculatieDataMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Standaard tarieven en normtijden synchroniseren
+ */
+export const useSynchroniseerStandaardCalculatieData = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof synchroniseerStandaardCalculatieData>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof synchroniseerStandaardCalculatieData>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getSynchroniseerStandaardCalculatieDataMutationOptions(options));
     }
 
 export const getListModCalcTarievenUrl = () => {
@@ -64866,6 +65178,153 @@ export const useSlaAiCategorieCorrectieLeren = <TError = ErrorType<unknown>,
       return useMutation(getSlaAiCategorieCorrectieLerenMutationOptions(options));
     }
 
+export const getListAiVeldCorrectiesUrl = () => {
+
+
+
+
+  return `/api/organisatie/bedrijfsdocumenten/veld-correcties`
+}
+
+/**
+ * @summary Alle opgeslagen AI-veld-correcties ophalen
+ */
+export const listAiVeldCorrecties = async ( options?: RequestInit): Promise<OrgAiVeldCorrectie[]> => {
+
+  return customFetch<OrgAiVeldCorrectie[]>(getListAiVeldCorrectiesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListAiVeldCorrectiesQueryKey = () => {
+    return [
+    `/api/organisatie/bedrijfsdocumenten/veld-correcties`
+    ] as const;
+    }
+
+
+export const getListAiVeldCorrectiesQueryOptions = <TData = Awaited<ReturnType<typeof listAiVeldCorrecties>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAiVeldCorrecties>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAiVeldCorrectiesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAiVeldCorrecties>>> = ({ signal }) => listAiVeldCorrecties({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAiVeldCorrecties>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListAiVeldCorrectiesQueryResult = NonNullable<Awaited<ReturnType<typeof listAiVeldCorrecties>>>
+export type ListAiVeldCorrectiesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Alle opgeslagen AI-veld-correcties ophalen
+ */
+
+export function useListAiVeldCorrecties<TData = Awaited<ReturnType<typeof listAiVeldCorrecties>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAiVeldCorrecties>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListAiVeldCorrectiesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getDeleteAiVeldCorrectieUrl = (id: number,) => {
+
+
+
+
+  return `/api/organisatie/bedrijfsdocumenten/veld-correcties/${id}`
+}
+
+/**
+ * @summary Verwijder een AI-veld-correctie
+ */
+export const deleteAiVeldCorrectie = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteAiVeldCorrectieUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteAiVeldCorrectieMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteAiVeldCorrectie>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteAiVeldCorrectie>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteAiVeldCorrectie'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteAiVeldCorrectie>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteAiVeldCorrectie(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteAiVeldCorrectieMutationResult = NonNullable<Awaited<ReturnType<typeof deleteAiVeldCorrectie>>>
+
+    export type DeleteAiVeldCorrectieMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Verwijder een AI-veld-correctie
+ */
+export const useDeleteAiVeldCorrectie = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteAiVeldCorrectie>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteAiVeldCorrectie>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteAiVeldCorrectieMutationOptions(options));
+    }
+
 export const getAiCentraalInvullenUrl = () => {
 
 
@@ -66457,6 +66916,230 @@ export function useGetMagazijnSignalering<TData = Awaited<ReturnType<typeof getM
 
 
 
+export const getGetMagazijnInstellingenUrl = () => {
+
+
+
+
+  return `/api/magazijn/instellingen`
+}
+
+/**
+ * @summary Instellingen voor de dagelijkse minimumvoorraad-signalering (tijdstip + marge)
+ */
+export const getMagazijnInstellingen = async ( options?: RequestInit): Promise<MagazijnInstellingen> => {
+
+  return customFetch<MagazijnInstellingen>(getGetMagazijnInstellingenUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetMagazijnInstellingenQueryKey = () => {
+    return [
+    `/api/magazijn/instellingen`
+    ] as const;
+    }
+
+
+export const getGetMagazijnInstellingenQueryOptions = <TData = Awaited<ReturnType<typeof getMagazijnInstellingen>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMagazijnInstellingen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetMagazijnInstellingenQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMagazijnInstellingen>>> = ({ signal }) => getMagazijnInstellingen({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMagazijnInstellingen>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetMagazijnInstellingenQueryResult = NonNullable<Awaited<ReturnType<typeof getMagazijnInstellingen>>>
+export type GetMagazijnInstellingenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Instellingen voor de dagelijkse minimumvoorraad-signalering (tijdstip + marge)
+ */
+
+export function useGetMagazijnInstellingen<TData = Awaited<ReturnType<typeof getMagazijnInstellingen>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMagazijnInstellingen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetMagazijnInstellingenQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUpdateMagazijnInstellingenUrl = () => {
+
+
+
+
+  return `/api/magazijn/instellingen`
+}
+
+/**
+ * @summary Tijdstip en/of marge van de signalering bijwerken
+ */
+export const updateMagazijnInstellingen = async (magazijnInstellingenInput: MagazijnInstellingenInput, options?: RequestInit): Promise<MagazijnInstellingen> => {
+
+  return customFetch<MagazijnInstellingen>(getUpdateMagazijnInstellingenUrl(),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(magazijnInstellingenInput)
+  }
+);}
+
+
+
+
+export const getUpdateMagazijnInstellingenMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateMagazijnInstellingen>>, TError,{data: BodyType<MagazijnInstellingenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateMagazijnInstellingen>>, TError,{data: BodyType<MagazijnInstellingenInput>}, TContext> => {
+
+const mutationKey = ['updateMagazijnInstellingen'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateMagazijnInstellingen>>, {data: BodyType<MagazijnInstellingenInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  updateMagazijnInstellingen(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateMagazijnInstellingenMutationResult = NonNullable<Awaited<ReturnType<typeof updateMagazijnInstellingen>>>
+    export type UpdateMagazijnInstellingenMutationBody = BodyType<MagazijnInstellingenInput>
+    export type UpdateMagazijnInstellingenMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Tijdstip en/of marge van de signalering bijwerken
+ */
+export const useUpdateMagazijnInstellingen = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateMagazijnInstellingen>>, TError,{data: BodyType<MagazijnInstellingenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateMagazijnInstellingen>>,
+        TError,
+        {data: BodyType<MagazijnInstellingenInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateMagazijnInstellingenMutationOptions(options));
+    }
+
+export const getListMagazijnSnoozesUrl = () => {
+
+
+
+
+  return `/api/magazijn/snoozes`
+}
+
+/**
+ * @summary Lijst van artikelen waarvan de dagelijkse signalering-mail tijdelijk is onderdrukt
+ */
+export const listMagazijnSnoozes = async ( options?: RequestInit): Promise<MagazijnSnooze[]> => {
+
+  return customFetch<MagazijnSnooze[]>(getListMagazijnSnoozesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListMagazijnSnoozesQueryKey = () => {
+    return [
+    `/api/magazijn/snoozes`
+    ] as const;
+    }
+
+
+export const getListMagazijnSnoozesQueryOptions = <TData = Awaited<ReturnType<typeof listMagazijnSnoozes>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMagazijnSnoozes>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListMagazijnSnoozesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listMagazijnSnoozes>>> = ({ signal }) => listMagazijnSnoozes({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listMagazijnSnoozes>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListMagazijnSnoozesQueryResult = NonNullable<Awaited<ReturnType<typeof listMagazijnSnoozes>>>
+export type ListMagazijnSnoozesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Lijst van artikelen waarvan de dagelijkse signalering-mail tijdelijk is onderdrukt
+ */
+
+export function useListMagazijnSnoozes<TData = Awaited<ReturnType<typeof listMagazijnSnoozes>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMagazijnSnoozes>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListMagazijnSnoozesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
 export const getGetMagazijnDashboardUrl = () => {
 
 
@@ -67045,6 +67728,147 @@ export const useUpdateMagazijnArtikel = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getUpdateMagazijnArtikelMutationOptions(options));
+    }
+
+export const getSnoozeMagazijnArtikelUrl = (id: number,) => {
+
+
+
+
+  return `/api/magazijn/artikelen/${id}/snooze`
+}
+
+/**
+ * @summary Dagelijkse signalering-mail voor dit artikel tijdelijk onderdrukken
+ */
+export const snoozeMagazijnArtikel = async (id: number,
+    magazijnSnoozeInput: MagazijnSnoozeInput, options?: RequestInit): Promise<MagazijnSnooze> => {
+
+  return customFetch<MagazijnSnooze>(getSnoozeMagazijnArtikelUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(magazijnSnoozeInput)
+  }
+);}
+
+
+
+
+export const getSnoozeMagazijnArtikelMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof snoozeMagazijnArtikel>>, TError,{id: number;data: BodyType<MagazijnSnoozeInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof snoozeMagazijnArtikel>>, TError,{id: number;data: BodyType<MagazijnSnoozeInput>}, TContext> => {
+
+const mutationKey = ['snoozeMagazijnArtikel'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof snoozeMagazijnArtikel>>, {id: number;data: BodyType<MagazijnSnoozeInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  snoozeMagazijnArtikel(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SnoozeMagazijnArtikelMutationResult = NonNullable<Awaited<ReturnType<typeof snoozeMagazijnArtikel>>>
+    export type SnoozeMagazijnArtikelMutationBody = BodyType<MagazijnSnoozeInput>
+    export type SnoozeMagazijnArtikelMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Dagelijkse signalering-mail voor dit artikel tijdelijk onderdrukken
+ */
+export const useSnoozeMagazijnArtikel = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof snoozeMagazijnArtikel>>, TError,{id: number;data: BodyType<MagazijnSnoozeInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof snoozeMagazijnArtikel>>,
+        TError,
+        {id: number;data: BodyType<MagazijnSnoozeInput>},
+        TContext
+      > => {
+      return useMutation(getSnoozeMagazijnArtikelMutationOptions(options));
+    }
+
+export const getVerwijderMagazijnSnoozeUrl = (id: number,) => {
+
+
+
+
+  return `/api/magazijn/artikelen/${id}/snooze`
+}
+
+/**
+ * @summary Snooze voor dit artikel opheffen
+ */
+export const verwijderMagazijnSnooze = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getVerwijderMagazijnSnoozeUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getVerwijderMagazijnSnoozeMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof verwijderMagazijnSnooze>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof verwijderMagazijnSnooze>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['verwijderMagazijnSnooze'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof verwijderMagazijnSnooze>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  verwijderMagazijnSnooze(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type VerwijderMagazijnSnoozeMutationResult = NonNullable<Awaited<ReturnType<typeof verwijderMagazijnSnooze>>>
+
+    export type VerwijderMagazijnSnoozeMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Snooze voor dit artikel opheffen
+ */
+export const useVerwijderMagazijnSnooze = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof verwijderMagazijnSnooze>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof verwijderMagazijnSnooze>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getVerwijderMagazijnSnoozeMutationOptions(options));
     }
 
 export const getListVoorraadUrl = (params?: ListVoorraadParams,) => {
@@ -68753,6 +69577,83 @@ export const useUpdateDocumentStudioModel = <TError = ErrorType<unknown>,
       return useMutation(getUpdateDocumentStudioModelMutationOptions(options));
     }
 
+export const getGetDocumentStudioReferentieUrl = (id: number,) => {
+
+
+
+
+  return `/api/studio/modellen/${id}/referentie`
+}
+
+/**
+ * @summary Download het referentiebestand van een Document Studio model
+ */
+export const getDocumentStudioReferentie = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getGetDocumentStudioReferentieUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetDocumentStudioReferentieQueryKey = (id: number,) => {
+    return [
+    `/api/studio/modellen/${id}/referentie`
+    ] as const;
+    }
+
+
+export const getGetDocumentStudioReferentieQueryOptions = <TData = Awaited<ReturnType<typeof getDocumentStudioReferentie>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getDocumentStudioReferentie>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetDocumentStudioReferentieQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getDocumentStudioReferentie>>> = ({ signal }) => getDocumentStudioReferentie(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getDocumentStudioReferentie>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetDocumentStudioReferentieQueryResult = NonNullable<Awaited<ReturnType<typeof getDocumentStudioReferentie>>>
+export type GetDocumentStudioReferentieQueryError = ErrorType<void>
+
+
+/**
+ * @summary Download het referentiebestand van een Document Studio model
+ */
+
+export function useGetDocumentStudioReferentie<TData = Awaited<ReturnType<typeof getDocumentStudioReferentie>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getDocumentStudioReferentie>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetDocumentStudioReferentieQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
 export const getUploadDocumentStudioReferentieUrl = (id: number,) => {
 
 
@@ -70299,6 +71200,90 @@ export function useGetFieObservaties<TData = Awaited<ReturnType<typeof getFieObs
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetFieObservatiesQueryOptions(boekjaar,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListFieNacalculatiesUrl = (params: ListFieNacalculatiesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/fie/nacalculaties?${stringifiedParams}` : `/api/fie/nacalculaties`
+}
+
+/**
+ * @summary Lijst van nacalculaties gefilterd op werktype
+ */
+export const listFieNacalculaties = async (params: ListFieNacalculatiesParams, options?: RequestInit): Promise<FieNacalculatieOverzicht[]> => {
+
+  return customFetch<FieNacalculatieOverzicht[]>(getListFieNacalculatiesUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListFieNacalculatiesQueryKey = (params?: ListFieNacalculatiesParams,) => {
+    return [
+    `/api/fie/nacalculaties`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListFieNacalculatiesQueryOptions = <TData = Awaited<ReturnType<typeof listFieNacalculaties>>, TError = ErrorType<unknown>>(params: ListFieNacalculatiesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listFieNacalculaties>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListFieNacalculatiesQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listFieNacalculaties>>> = ({ signal }) => listFieNacalculaties(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listFieNacalculaties>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListFieNacalculatiesQueryResult = NonNullable<Awaited<ReturnType<typeof listFieNacalculaties>>>
+export type ListFieNacalculatiesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Lijst van nacalculaties gefilterd op werktype
+ */
+
+export function useListFieNacalculaties<TData = Awaited<ReturnType<typeof listFieNacalculaties>>, TError = ErrorType<unknown>>(
+ params: ListFieNacalculatiesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listFieNacalculaties>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListFieNacalculatiesQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

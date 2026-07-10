@@ -61,6 +61,8 @@ router.put(
         opdrachtbevestiging_auto_verzenden,
         moments_verjaardag_ingeschakeld,
         ai_kostendrempel_eur,
+        ai_maandelijkse_export_dag,
+        ai_maandelijkse_export_email,
       } = req.body as {
           support_email?: string;
           support_telefoon?: string;
@@ -69,8 +71,20 @@ router.put(
           opdrachtbevestiging_auto_verzenden?: boolean;
           moments_verjaardag_ingeschakeld?: boolean;
           ai_kostendrempel_eur?: number | null;
+          ai_maandelijkse_export_dag?: number | null;
+          ai_maandelijkse_export_email?: string | null;
         };
       const gebruikerId = req.session.userId!;
+
+      const [bestaand] = await db
+        .select({
+          id: appInstellingenTable.id,
+          aiKostendrempelEur: appInstellingenTable.aiKostendrempelEur,
+          aiDrempelMeldingGestuurdMaand: appInstellingenTable.aiDrempelMeldingGestuurdMaand,
+        })
+        .from(appInstellingenTable)
+        .orderBy(appInstellingenTable.id)
+        .limit(1);
 
       const payload: Record<string, unknown> = {
         supportEmail: support_email ?? null,
@@ -85,28 +99,31 @@ router.put(
         ...(typeof moments_verjaardag_ingeschakeld === "boolean"
           ? { momentsVerjaardagIngeschakeld: moments_verjaardag_ingeschakeld }
           : {}),
-        ...(ai_kostendrempel_eur !== undefined
-          ? { aiKostendrempelEur: ai_kostendrempel_eur != null ? String(ai_kostendrempel_eur) : null }
-          : {}),
       };
 
-      const [bestaand] = await db
-        .select({
-          id: appInstellingenTable.id,
-          aiKostendrempelEur: appInstellingenTable.aiKostendrempelEur,
-          aiDrempelMeldingGestuurdMaand: appInstellingenTable.aiDrempelMeldingGestuurdMaand,
-        })
-        .from(appInstellingenTable);
+      if (ai_kostendrempel_eur !== undefined) {
+        const nieuweDrempel = ai_kostendrempel_eur != null ? String(ai_kostendrempel_eur) : null;
+        payload.aiKostendrempelEur = nieuweDrempel;
 
-      if (ai_kostendrempel_eur !== undefined && bestaand?.aiDrempelMeldingGestuurdMaand) {
-        const huidigeDrempel =
-          bestaand.aiKostendrempelEur != null ? parseFloat(bestaand.aiKostendrempelEur) : null;
-        const nieuweDrempel = ai_kostendrempel_eur;
-        const drempelVerlaagd =
-          nieuweDrempel != null && (huidigeDrempel == null || nieuweDrempel < huidigeDrempel);
-        if (drempelVerlaagd) {
-          payload.aiDrempelMeldingGestuurdMaand = null;
+        // Taak #212: Als de drempel wordt verlaagd of nieuw gezet, wissen we de melding-markering
+        if (nieuweDrempel) {
+          const nieuw = parseFloat(nieuweDrempel);
+          if (bestaand?.aiKostendrempelEur) {
+            const oud = parseFloat(bestaand.aiKostendrempelEur);
+            if (nieuw < oud) {
+              payload.aiDrempelMeldingGestuurdMaand = null;
+            }
+          } else {
+            payload.aiDrempelMeldingGestuurdMaand = null;
+          }
         }
+      }
+
+      if (ai_maandelijkse_export_dag !== undefined) {
+        payload.aiMaandelijkseExportDag = ai_maandelijkse_export_dag;
+      }
+      if (ai_maandelijkse_export_email !== undefined) {
+        payload.aiMaandelijkseExportEmail = ai_maandelijkse_export_email;
       }
 
       let result;
@@ -134,6 +151,8 @@ router.put(
         opdrachtbevestiging_auto_verzenden: result.opdrachtbevestigingAutoVerzenden,
         moments_verjaardag_ingeschakeld: result.momentsVerjaardagIngeschakeld,
         ai_kostendrempel_eur: result.aiKostendrempelEur != null ? parseFloat(result.aiKostendrempelEur) : null,
+        ai_maandelijkse_export_dag: result.aiMaandelijkseExportDag,
+        ai_maandelijkse_export_email: result.aiMaandelijkseExportEmail,
         bijgewerkt_op: result.bijgewerktOp.toISOString(),
         bijgewerkt_door_id: result.bijgewerktDoorId,
       });

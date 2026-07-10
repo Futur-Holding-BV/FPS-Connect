@@ -421,6 +421,19 @@ test("FPS startmenu: login, waaier en doorlinken", async ({ page }) => {
       await expect(
         page.getByTestId("verlof-formulier-fout").getByText("Kies een geldige startdatum."),
       ).toBeVisible({ timeout: INHOUD_TIMEOUT });
+
+      // Scenario 3: geldige datums, maar einddatum vóór startdatum → volgorde-foutmelding.
+      await page.getByTestId("verlof-startdatum-input").fill("2030-06-10");
+      await page.getByTestId("verlof-einddatum-input").fill("2030-06-01");
+      await page.getByTestId("verlof-indienen-knop").click();
+      await expect(page.getByTestId("verlof-formulier-fout")).toBeVisible({
+        timeout: INHOUD_TIMEOUT,
+      });
+      await expect(
+        page.getByTestId("verlof-formulier-fout").getByText(
+          "De einddatum mag niet vóór de startdatum liggen.",
+        ),
+      ).toBeVisible({ timeout: INHOUD_TIMEOUT });
     } else {
       // Geen verlofsoorten beschikbaar in de catalog; sluit de picker via testID.
       await page.getByTestId("verlofsoort-picker-sluiten").click();

@@ -4,7 +4,7 @@ import { crmKlantenTable, gebouwenTable, leveranciersTable } from "@workspace/db
 import { eq } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
-import { AI_INVULLEN_PROMPT } from "../lib/aiPrompts";
+import { AI_INVULLEN_PROMPT, CRM_CONCURRENT_PROFIEL_PROMPT } from "../lib/aiPrompts";
 
 const router = Router();
 
@@ -232,6 +232,11 @@ router.post("/ai/invullen", requireAuth, async (req, res): Promise<void> => {
         { role: "user",   content: gebruikerPrompt },
       ],
       response_format: { type: "json_object" },
+    }, undefined, {
+      module: "ai",
+      functie: "invullen",
+      promptNaam: AI_INVULLEN_PROMPT.naam,
+      promptVersie: AI_INVULLEN_PROMPT.versie,
     });
     let data: Record<string, string | null> = {};
     try { data = JSON.parse(aiInvulResultaat.ok ? aiInvulResultaat.inhoud : "{}") as Record<string, string | null>; } catch { data = {}; }

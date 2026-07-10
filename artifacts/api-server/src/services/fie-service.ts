@@ -903,6 +903,7 @@ export async function berekenEnSlaOpNacalculatie(opdrachtId: number): Promise<vo
   // spot-DELETE-trigger (triggerNacalculatieHerberekeningVoorGebouw) deze
   // functie aanroepen, waarna werktype netjes terugvalt op "algemeen".
   let werktype = "algemeen";
+  let werktypeBron = "fallback";
   if (opdracht?.gebouwId) {
     const spotRows = await db
       .select({ type: voorzieningenTable.type })
@@ -917,15 +918,18 @@ export async function berekenEnSlaOpNacalculatie(opdrachtId: number): Promise<vo
       for (const r of spotRows) {
         if (r.type) tellingen.set(r.type, (tellingen.get(r.type) ?? 0) + 1);
       }
-      let maxAantal = 0;
-      let dominantType = "algemeen";
-      for (const [type, aantal] of tellingen.entries()) {
-        if (aantal > maxAantal) {
-          maxAantal = aantal;
-          dominantType = type;
+      if (tellingen.size > 0) {
+        let maxAantal = 0;
+        let dominantType = "algemeen";
+        for (const [type, aantal] of tellingen.entries()) {
+          if (aantal > maxAantal) {
+            maxAantal = aantal;
+            dominantType = type;
+          }
         }
+        werktype = dominantType;
+        werktypeBron = "spots";
       }
-      werktype = dominantType;
     }
   }
 
@@ -1043,6 +1047,7 @@ export async function berekenEnSlaOpNacalculatie(opdrachtId: number): Promise<vo
   const values = {
     opdrachtId,
     werktype,
+    werktypeBron,
     calcArbeidUren,
     werkelijkArbeidUren,
     afwijkingPctArbeid,
@@ -1222,10 +1227,7 @@ export function triggerNacalculatieHerberekeningVoorGebouw(
         .select({ opdrachtId: fieNacalculatiesTable.opdrachtId })
         .from(fieNacalculatiesTable)
         .innerJoin(opdrachtenTable, eq(opdrachtenTable.id, fieNacalculatiesTable.opdrachtId))
-        .where(and(
-          eq(opdrachtenTable.gebouwId, gebouwId),
-          eq(fieNacalculatiesTable.werktype, "algemeen"),
-        ));
+        .where(eq(opdrachtenTable.gebouwId, gebouwId));
 
       for (const k of kandidaten) {
         await berekenEnSlaOpNacalculatie(k.opdrachtId).catch((err: unknown) => {

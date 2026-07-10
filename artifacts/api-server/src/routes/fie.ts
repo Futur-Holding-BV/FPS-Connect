@@ -2,8 +2,17 @@
 // Alle financiële berekeningen lopen via fie-service.ts; hier alleen routing + validatie.
 // Fase 1+2: jaarbegrotingen, AK-posten, capaciteitssnapsots en live calculatieblok.
 import { Router, Request, Response } from "express";
-import { db, fieJaarbegrotingenTable, fieAkPostenTable, fieCapaciteitSnapshotsTable, fieLeerMomentenTable, werkgeversTable } from "@workspace/db";
-import { eq, desc } from "drizzle-orm";
+import {
+  db,
+  fieJaarbegrotingenTable,
+  fieAkPostenTable,
+  fieCapaciteitSnapshotsTable,
+  fieLeerMomentenTable,
+  fieNacalculatiesTable,
+  opdrachtenTable,
+  werkgeversTable,
+} from "@workspace/db";
+import { eq, desc, and } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { berekenFieContext, berekenCapaciteit, berekenDoelmarge, berekenJaarprognose, leesPrognoseObservaties, rnd2, herberekeenLeermomenten, berekenEnSlaOpNacalculatie, herberekeenVerouderdeNacalculaties, telVerouderdeNacalculaties } from "../services/fie-service";
 
@@ -702,6 +711,35 @@ function mapLeermoment(r: typeof fieLeerMomentenTable.$inferSelect) {
     aangemaakt_op:            r.aangemaaktOp.toISOString(),
   };
 }
+
+// GET /fie/nacalculaties
+router.get("/fie/nacalculaties", lezen, async (req: Request, res: Response): Promise<void> => {
+  const werktype = req.query.werktype as string | undefined;
+  if (!werktype) {
+    res.status(400).json({ error: "werktype is verplicht" });
+    return;
+  }
+
+  const rows = await db
+    .select({
+      id: fieNacalculatiesTable.id,
+      opdrachtId: fieNacalculatiesTable.opdrachtId,
+      werktype: fieNacalculatiesTable.werktype,
+      opdrachtnummer: opdrachtenTable.werknummer,
+      opdrachtTitel: opdrachtenTable.titel,
+    })
+    .from(fieNacalculatiesTable)
+    .innerJoin(opdrachtenTable, eq(opdrachtenTable.id, fieNacalculatiesTable.opdrachtId))
+    .where(eq(fieNacalculatiesTable.werktype, werktype));
+
+  res.json(rows.map(r => ({
+    id: r.id,
+    opdracht_id: r.opdrachtId,
+    werktype: r.werktype,
+    opdracht_nummer: r.opdrachtnummer ?? "—",
+    opdracht_titel: r.opdrachtTitel,
+  })));
+});
 
 // GET /fie/leermomenten
 router.get("/fie/leermomenten", lezen, async (_req: Request, res: Response): Promise<void> => {

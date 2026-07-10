@@ -91,6 +91,7 @@ export const fieNacalculatiesTable = pgTable("fie_nacalculaties", {
   calcOnderaannemingBedrag: real("calc_onderaanneming_bedrag").default(0),
   werkelijkOnderaannemingBedrag: real("werkelijk_onderaanneming_bedrag").default(0),
   afwijkingPctOnderaanneming: real("afwijking_pct_onderaanneming"),
+  werktypeBron: text("werktype_bron"), // spots | fallback
   afgesloten: boolean("afgesloten").notNull().default(false),
   berekendOp: timestamp("berekend_op").notNull().defaultNow(),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),

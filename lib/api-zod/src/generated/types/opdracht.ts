@@ -47,4 +47,9 @@ export interface Opdracht {
      * @nullable
      */
   ai_fase?: string | null;
+  /**
+     * Huidige stapnummer in uitvoering (aantal voltooide + actieve stap)
+     * @nullable
+     */
+  uitvoering_stap_actief?: number | null;
 }

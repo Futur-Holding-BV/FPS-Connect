@@ -1813,6 +1813,17 @@ function KoppelVoorstellenDialog({
                         Alles overnemen
                       </Button>
                     )}
+                    {reeds.size > 1 && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="text-xs"
+                        disabled={bezigDoc === v.document_id}
+                        onClick={() => trekIn(v, Array.from(reeds))}
+                      >
+                        Alles terugdraaien
+                      </Button>
+                    )}
                   </div>
                   <div className="space-y-1.5">
                     {v.suggesties.map((s) => {

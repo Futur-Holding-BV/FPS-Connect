@@ -50,7 +50,7 @@ const LABEL_FORMATEN: LabelFormaat[] = [
 
 // ── Barcode-labelformaten ───────────────────────────────────────────────────
 // Barcodes (Code 128) zijn breder dan hoog; kies bij voorkeur een breed formaat.
-type BarcodeLabelFormaat = {
+export type BarcodeLabelFormaat = {
   id: string;
   label: string;
   breedte: number;
@@ -60,7 +60,7 @@ type BarcodeLabelFormaat = {
   fontSub: number;
 };
 
-const BARCODE_FORMATEN: BarcodeLabelFormaat[] = [
+export const BARCODE_FORMATEN: BarcodeLabelFormaat[] = [
   {
     id: "100x50",
     label: "100 × 50 mm — Standaard productlabel",
@@ -88,7 +88,7 @@ const BARCODE_FORMATEN: BarcodeLabelFormaat[] = [
 ];
 
 // 1 mm ≈ 3.78px bij 96 dpi — schaalfactor voor de schermpreview
-const MM_TO_PX = 3.78;
+export const MM_TO_PX = 3.78;
 
 // ── QR-label inhoud ────────────────────────────────────────────────────────
 function ArtikelLabelInhoud({
@@ -262,7 +262,7 @@ function BarcodeSVG({ waarde, hoogte, fontGrootte }: { waarde: string; hoogte: n
 }
 
 // ── Barcode-label inhoud ───────────────────────────────────────────────────
-function BarcodeLabelInhoud({
+export function BarcodeLabelInhoud({
   artikel,
   fmt,
   locatieNaam,

@@ -47,6 +47,11 @@ import {
   TrendingUp, TrendingDown, Edit2, Package, ShoppingCart, Building2, ShoppingBag, MessageSquare, CheckCircle2, HardHat, Printer, Brain, FileCheck2, ShieldAlert, ShieldCheck,
   ChevronDown, ChevronUp,
 } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import InkoopplanningTab from "./inkoopplanning-tab";
@@ -128,7 +133,7 @@ function berekenSignalen(
     dekkingToelichting = `${uren(gepland)} gepland, ${uren(restant)} resteert`;
   }
 
-  return [
+  const signalen: { label: string; status: SignaalStatus; waarde: string; toelichting: string }[] = [
     {
       label: "Urenstatus",
       status: urenStatus,
@@ -150,6 +155,23 @@ function berekenSignalen(
       toelichting: dekkingToelichting,
     },
   ];
+
+  const begrotingMateriaal = nacalc.begroting_materiaal_bedrag ?? 0;
+  if (begrotingMateriaal > 0) {
+    const werkelijkMateriaal = nacalc.werkelijke_materiaal_bedrag ?? 0;
+    const materiaalPct = werkelijkMateriaal / begrotingMateriaal;
+    const materiaalStatus: SignaalStatus = materiaalPct > 1 ? "rood" : materiaalPct > 0.75 ? "oranje" : "groen";
+    signalen.push({
+      label: "Materiaalstatus",
+      status: materiaalStatus,
+      waarde: `${Math.round(materiaalPct * 100)}%`,
+      toelichting: materiaalPct > 1
+        ? `${euro(werkelijkMateriaal - begrotingMateriaal)} boven begroting`
+        : `${euro(werkelijkMateriaal)} van ${euro(begrotingMateriaal)} begroot verbruikt`,
+    });
+  }
+
+  return signalen;
 }
 
 function ProjectControllerSignalen({ nacalculatie }: { nacalculatie: OpdrachtNacalculatie | null | undefined }) {
@@ -166,7 +188,7 @@ function ProjectControllerSignalen({ nacalculatie }: { nacalculatie: OpdrachtNac
         </div>
       </CardHeader>
       <CardContent className="pb-4">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {signalen.map((s) => (
             <div
               key={s.label}
@@ -539,7 +561,7 @@ export default function OpdrachtDetailPagina() {
   return (
     <div className="p-4 md:p-6 max-w-5xl mx-auto space-y-4">
       {/* Header */}
-      <div className="flex items-center gap-3 flex-wrap">
+      <div className="flex items-center gap-3 flex-wrap print:hidden">
         <Link href={opdracht.offerte_id ? `/offertes/${opdracht.offerte_id}` : "/offertes"}>
           <Button variant="outline" size="icon"><ArrowLeft className="h-4 w-4" /></Button>
         </Link>
@@ -556,7 +578,7 @@ export default function OpdrachtDetailPagina() {
       </div>
 
       {/* Overzichtkaart */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 print:hidden">
         <Card>
           <CardContent className="pt-4 pb-3">
             <p className="text-xs text-muted-foreground">Arbeid begroot</p>
@@ -584,11 +606,13 @@ export default function OpdrachtDetailPagina() {
       </div>
 
       {/* AI-projectcontroller */}
-      <ProjectControllerSignalen nacalculatie={nacalculatie} />
+      <div className="print:hidden">
+        <ProjectControllerSignalen nacalculatie={nacalculatie} />
+      </div>
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="flex-wrap h-auto gap-1">
+        <TabsList className="flex-wrap h-auto gap-1 print:hidden">
           <TabsTrigger value="werkbegroting">Werkbegroting</TabsTrigger>
           <TabsTrigger value="inkoopplanning">
             <ShoppingCart className="h-3.5 w-3.5 mr-1.5" />
@@ -923,11 +947,38 @@ export default function OpdrachtDetailPagina() {
             <Card><CardContent className="py-8 text-center text-muted-foreground">Nog geen nacalculatiegegevens beschikbaar.</CardContent></Card>
           ) : (
             <div className="space-y-4">
+              {/* Print-only kop: opdrachttitel, werknummer en datum */}
+              <div className="hidden print:block mb-2">
+                <h1 className="text-lg font-bold">{opdracht.titel}</h1>
+                <p className="text-sm text-muted-foreground">
+                  {opdracht.werknummer && <>Werknummer: {opdracht.werknummer} · </>}
+                  Nacalculatie geëxporteerd op {new Date().toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" })}
+                </p>
+              </div>
               <div className="flex items-center justify-between">
                 {nacalculatie.werktype ? (
                   <div className="flex items-center gap-2">
                     <p className="text-xs text-muted-foreground">Werktype (afgeleid uit dominante spotsoort):</p>
-                    <Badge variant="secondary" className="capitalize text-xs">{nacalculatie.werktype}</Badge>
+                    {nacalculatie.werktype === "algemeen" && nacalculatie.werktype_bron === "fallback" ? (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Badge variant="secondary" className="capitalize text-xs cursor-help border-amber-200 bg-amber-50 text-amber-800">
+                            <AlertTriangle className="h-3 w-3 mr-1" />
+                            {nacalculatie.werktype}
+                          </Badge>
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-xs">
+                          <p>Geen spots gevonden voor dit gebouw — werktype kon niet worden afgeleid.</p>
+                          {opdracht.gebouw_id && (
+                            <Link href={`/gebouwen/${opdracht.gebouw_id}`} className="block mt-2 font-semibold underline">
+                              Ga naar gebouwpagina om spots te registreren
+                            </Link>
+                          )}
+                        </TooltipContent>
+                      </Tooltip>
+                    ) : (
+                      <Badge variant="secondary" className="capitalize text-xs">{nacalculatie.werktype}</Badge>
+                    )}
                   </div>
                 ) : (
                   <p className="text-xs text-muted-foreground">Werktype nog niet bepaald — beschikbaar na eerste FIE-berekening.</p>
@@ -936,9 +987,10 @@ export default function OpdrachtDetailPagina() {
                   size="sm"
                   variant="outline"
                   onClick={() => window.print()}
+                  className="print:hidden"
                 >
                   <Printer className="h-3.5 w-3.5" />
-                  Afdrukken / PDF
+                  Exporteren als PDF
                 </Button>
               </div>
               {/* ── Arbeid ── */}

@@ -1,11 +1,12 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
-import { useRoute, useLocation } from "wouter";
+import { useRoute, useLocation, Link } from "wouter";
 import {
   useGetModCalculatie,
   useUpdateModCalculatie,
   useDeleteModCalculatie,
   useDupliceerModCalculatie,
   useMaakOfferteVanCalculatie,
+  useListOffertes,
   useCreateModCalcRegel,
   useUpdateModCalcRegel,
   useDeleteModCalcRegel,
@@ -1900,98 +1901,106 @@ function FieContextBlok({ calculatieId }: { calculatieId: number }) {
         Bedrijfskompas
       </h3>
 
-      {/* Adviesbadge */}
-      <div className={cn("rounded-md border p-2.5 text-xs flex items-start gap-2", adviesKleur[advies_status ?? ""] ?? adviesKleur.neutraal)}>
-        <AdviesIcoon />
-        <span className="leading-snug">{advies_tekst}</span>
-      </div>
+      {heeftRegels ? (
+        <>
+          {/* Adviesbadge */}
+          <div className={cn("rounded-md border p-2.5 text-xs flex items-start gap-2", adviesKleur[advies_status ?? ""] ?? adviesKleur.neutraal)}>
+            <AdviesIcoon />
+            <span className="leading-snug">{advies_tekst}</span>
+          </div>
 
-      {/* Projectomzet / kostprijs / brutowinst */}
-      {heeftRegels && (
-        <div className="space-y-1 text-xs border-t pt-2">
-          <div className="flex justify-between text-muted-foreground">
-            <span>Projectomzet</span>
-            <span className="tabular-nums font-semibold text-foreground">{fmtEur(totaal_incl_opslag)}</span>
-          </div>
-          <div className="flex justify-between text-muted-foreground">
-            <span>Kostprijs (dir. kosten)</span>
-            <span className="tabular-nums">{fmtEur(totaal_excl_opslag)}</span>
-          </div>
-          {ak_bijdrage != null && (
+          {/* Projectomzet / kostprijs / brutowinst */}
+          <div className="space-y-1 text-xs border-t pt-2">
             <div className="flex justify-between text-muted-foreground">
-              <span>AK-bijdrage ({totaal_mu != null ? `${Math.round(totaal_mu)} MU` : "—"})</span>
-              <span className="tabular-nums">{fmtEur(ak_bijdrage)}</span>
+              <span>Projectomzet</span>
+              <span className="tabular-nums font-semibold text-foreground">{fmtEur(totaal_incl_opslag)}</span>
             </div>
-          )}
-          {verwachte_marge_abs != null && (
-            <div className="flex justify-between font-medium border-t pt-1 mt-1">
-              <span>Brutowinst</span>
-              <span className={cn("tabular-nums", advies_status === "goed" ? "text-green-700" : advies_status === "laag" ? "text-amber-700" : "text-foreground")}>
-                {fmtEur(verwachte_marge_abs)}
-              </span>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Leereffect-correctie: gecorrigeerde arbeid- en materiaalindicatoren */}
-      {heeftLeereffect && (gecorrigeerde_arbeid != null || gecorrigeerde_materiaal != null) && (
-        <div className="space-y-1.5 text-xs border-t pt-2">
-          <div className="flex items-center gap-1.5 text-amber-700 font-semibold">
-            <AlertTriangle className="h-3 w-3 shrink-0" />
-            <span>Leereffect-correctie</span>
-            <span className="ml-auto inline-flex items-center rounded-full border border-amber-300 bg-amber-50 px-1.5 py-px text-[10px] font-bold text-amber-800 tabular-nums">
-              &times;{correctie_factor!.toFixed(2)}
-            </span>
-          </div>
-          {totaal_arbeid != null && gecorrigeerde_arbeid != null && (
-            <div className="flex justify-between text-muted-foreground pl-4">
-              <span>
-                Arbeid origineel
-              </span>
-              <span className="tabular-nums line-through decoration-amber-400">{fmtEur(totaal_arbeid)}</span>
-            </div>
-          )}
-          {gecorrigeerde_arbeid != null && (
-            <div className="flex justify-between pl-4 font-medium text-amber-800">
-              <span>Gecorrigeerde arbeid</span>
-              <span className="tabular-nums">{fmtEur(gecorrigeerde_arbeid)}</span>
-            </div>
-          )}
-          {totaal_materiaal != null && gecorrigeerde_materiaal != null && (
-            <div className="flex justify-between text-muted-foreground pl-4">
-              <span>Materiaal origineel</span>
-              <span className="tabular-nums line-through decoration-amber-400">{fmtEur(totaal_materiaal)}</span>
-            </div>
-          )}
-          {gecorrigeerde_materiaal != null && (
-            <div className="flex justify-between pl-4 font-medium text-amber-800">
-              <span>Gecorrigeerd materiaal</span>
-              <span className="tabular-nums">{fmtEur(gecorrigeerde_materiaal)}</span>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Margepercentages + doelmarge */}
-      {heeft_begroting && verwachte_marge_pct != null && (
-        <div className="space-y-1 text-xs border-t pt-2">
-          <div className="flex justify-between text-muted-foreground">
-            <span>Brutomarge</span>
-            <span className={cn("tabular-nums font-semibold", advies_status === "goed" ? "text-green-700" : advies_status === "laag" ? "text-amber-700" : "text-foreground")}>
-              {fmtPct(verwachte_marge_pct)}
-            </span>
-          </div>
-          <div className="flex justify-between text-muted-foreground">
-            <span>Doelmarge</span>
-            <span className="tabular-nums font-medium">{fmtPct(doel_marge_pct)}</span>
-          </div>
-          {ak_per_uur != null && (
             <div className="flex justify-between text-muted-foreground">
-              <span>Norm AK/uur</span>
-              <span className="tabular-nums">{fmtEur(ak_per_uur)}</span>
+              <span>Kostprijs (dir. kosten)</span>
+              <span className="tabular-nums">{fmtEur(totaal_excl_opslag)}</span>
+            </div>
+            {ak_bijdrage != null && (
+              <div className="flex justify-between text-muted-foreground">
+                <span>AK-bijdrage ({totaal_mu != null ? `${Math.round(totaal_mu)} MU` : "—"})</span>
+                <span className="tabular-nums">{fmtEur(ak_bijdrage)}</span>
+              </div>
+            )}
+            {verwachte_marge_abs != null && (
+              <div className="flex justify-between font-medium border-t pt-1 mt-1">
+                <span>Brutowinst</span>
+                <span className={cn("tabular-nums", advies_status === "goed" ? "text-green-700" : advies_status === "laag" ? "text-amber-700" : "text-foreground")}>
+                  {fmtEur(verwachte_marge_abs)}
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Leereffect-correctie: gecorrigeerde arbeid- en materiaalindicatoren */}
+          {heeftLeereffect && (gecorrigeerde_arbeid != null || gecorrigeerde_materiaal != null) && (
+            <div className="space-y-1.5 text-xs border-t pt-2">
+              <div className="flex items-center gap-1.5 text-amber-700 font-semibold">
+                <AlertTriangle className="h-3 w-3 shrink-0" />
+                <span>Leereffect-correctie</span>
+                <span className="ml-auto inline-flex items-center rounded-full border border-amber-300 bg-amber-50 px-1.5 py-px text-[10px] font-bold text-amber-800 tabular-nums">
+                  &times;{correctie_factor!.toFixed(2)}
+                </span>
+              </div>
+              {totaal_arbeid != null && gecorrigeerde_arbeid != null && (
+                <div className="flex justify-between text-muted-foreground pl-4">
+                  <span>
+                    Arbeid origineel
+                  </span>
+                  <span className="tabular-nums line-through decoration-amber-400">{fmtEur(totaal_arbeid)}</span>
+                </div>
+              )}
+              {gecorrigeerde_arbeid != null && (
+                <div className="flex justify-between pl-4 font-medium text-amber-800">
+                  <span>Gecorrigeerde arbeid</span>
+                  <span className="tabular-nums">{fmtEur(gecorrigeerde_arbeid)}</span>
+                </div>
+              )}
+              {totaal_materiaal != null && gecorrigeerde_materiaal != null && (
+                <div className="flex justify-between text-muted-foreground pl-4">
+                  <span>Materiaal origineel</span>
+                  <span className="tabular-nums line-through decoration-amber-400">{fmtEur(totaal_materiaal)}</span>
+                </div>
+              )}
+              {gecorrigeerde_materiaal != null && (
+                <div className="flex justify-between pl-4 font-medium text-amber-800">
+                  <span>Gecorrigeerd materiaal</span>
+                  <span className="tabular-nums">{fmtEur(gecorrigeerde_materiaal)}</span>
+                </div>
+              )}
             </div>
           )}
+
+          {/* Margepercentages + doelmarge */}
+          {heeft_begroting && verwachte_marge_pct != null && (
+            <div className="space-y-1 text-xs border-t pt-2">
+              <div className="flex justify-between text-muted-foreground">
+                <span>Brutomarge</span>
+                <span className={cn("tabular-nums font-semibold", advies_status === "goed" ? "text-green-700" : advies_status === "laag" ? "text-amber-700" : "text-foreground")}>
+                  {fmtPct(verwachte_marge_pct)}
+                </span>
+              </div>
+              <div className="flex justify-between text-muted-foreground">
+                <span>Doelmarge</span>
+                <span className="tabular-nums font-medium">{fmtPct(doel_marge_pct)}</span>
+              </div>
+              {ak_per_uur != null && (
+                <div className="flex justify-between text-muted-foreground">
+                  <span>Norm AK/uur</span>
+                  <span className="tabular-nums">{fmtEur(ak_per_uur)}</span>
+                </div>
+              )}
+            </div>
+          )}
+        </>
+      ) : (
+        <div className="rounded-md border border-dashed border-border p-3 text-center">
+          <p className="text-[10px] text-muted-foreground leading-relaxed">
+            Voeg regels toe om het margeadvies te activeren
+          </p>
         </div>
       )}
     </div>
@@ -2020,6 +2029,7 @@ export default function ModulesCalculatieDetail() {
   const { data: tarieven = [] } = useListModCalcTarieven({ query: { queryKey: ["mod-calc-tarieven"] } });
   const { data: inkoopItems = [] } = useListModCalcInkoopItems(id, { query: { queryKey: getListModCalcInkoopItemsQueryKey(id), enabled: id > 0 } });
   const { data: eenheden = [] } = useListModCalcEenheden(id, { query: { queryKey: getListModCalcEenhedenQueryKey(id), enabled: id > 0 } });
+  const { data: offertes = [] } = (useListOffertes as any)({ calculatie_id: id }, { query: { enabled: id > 0 } });
   const maakEenheidMut    = useCreateModCalcEenheid({ mutation: { onSuccess: invalidate } });
   const updateEenheidMut  = useUpdateModCalcEenheid({ mutation: { onSuccess: invalidate } });
   const verwijderEenheidMut = useDeleteModCalcEenheid({ mutation: { onSuccess: invalidate } });
@@ -2465,6 +2475,16 @@ export default function ModulesCalculatieDetail() {
             <div className="flex gap-1.5 items-center">
               <span className="text-muted-foreground text-xs">Klant:</span>
               <span className="font-medium">{data.klant_naam}</span>
+            </div>
+          )}
+          {offertes.length > 0 && (
+            <div className="flex gap-1.5 items-center">
+              <span className="text-muted-foreground text-xs">Offerte aangemaakt:</span>
+              {offertes.map((o: any) => (
+                <Link key={o.id} href={`/offertes/${o.id}`} className="font-medium text-blue-600 hover:underline">
+                  {o.offertenummer || `#${o.id}`}
+                </Link>
+              ))}
             </div>
           )}
           {data.project_naam && (

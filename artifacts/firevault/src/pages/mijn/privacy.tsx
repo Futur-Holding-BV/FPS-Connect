@@ -14,6 +14,7 @@ import {
   useCreateAvgInzageverzoek,
   useUpdateMijnPrivacyInstellingen,
   type AvgVerzoek,
+  type AvgVerzoekInputType,
 } from "@workspace/api-client-react";
 import { useRol } from "@/context/rol-context";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
@@ -36,6 +37,9 @@ import {
   CheckCircle2,
   Loader2,
   Cake,
+  Pencil,
+  PauseCircle,
+  type LucideIcon,
 } from "lucide-react";
 
 const DIENSTVERBAND_LABELS: Record<string, string> = {
@@ -78,8 +82,60 @@ const VERZOEK_STATUS_LABELS: Record<string, string> = {
 
 const VERZOEK_TYPE_LABELS: Record<string, string> = {
   inzage: "Inzageverzoek",
-  verwijdering: "Verwijderverzoek",
+  verwijdering: "Verwijdering / wissing",
+  correctie: "Correctieverzoek",
+  beperking: "Beperking van verwerking",
+  bezwaar: "Bezwaar",
 };
+
+const VERZOEK_TYPES: Array<{
+  type: AvgVerzoekInputType;
+  titel: string;
+  beschrijving: string;
+  destructief: boolean;
+  icon: LucideIcon;
+}> = [
+  {
+    type: "inzage",
+    titel: "Inzageverzoek",
+    beschrijving:
+      "U kunt een volledig overzicht opvragen van alle persoonsgegevens die FPS Connect over u heeft opgeslagen.",
+    destructief: false,
+    icon: FileSearch,
+  },
+  {
+    type: "correctie",
+    titel: "Correctieverzoek",
+    beschrijving:
+      "Kloppen uw gegevens niet? Geef in de toelichting aan welke gegevens onjuist of onvolledig zijn, dan corrigeert de beheerder dit.",
+    destructief: false,
+    icon: Pencil,
+  },
+  {
+    type: "beperking",
+    titel: "Beperking van verwerking",
+    beschrijving:
+      "U kunt verzoeken de verwerking van uw gegevens tijdelijk te beperken, bijvoorbeeld tijdens een lopend geschil over de juistheid ervan.",
+    destructief: false,
+    icon: PauseCircle,
+  },
+  {
+    type: "bezwaar",
+    titel: "Bezwaar",
+    beschrijving:
+      "U kunt bezwaar maken tegen een specifieke verwerking van uw persoonsgegevens. Geef in de toelichting aan om welke verwerking het gaat.",
+    destructief: false,
+    icon: AlertTriangle,
+  },
+  {
+    type: "verwijdering",
+    titel: "Verwijdering / wissing",
+    beschrijving:
+      "U kunt verzoeken uw persoonsgegevens te laten verwijderen. Uw account wordt dan geanonimiseerd. Wettelijk verplichte gegevens (bijv. fiscale administratie) worden niet verwijderd maar losgekoppeld.",
+    destructief: true,
+    icon: Trash2,
+  },
+];
 
 function fmtDatum(d?: string | null) {
   if (!d) return "—";
@@ -400,10 +456,12 @@ function ActiviteitenTab() {
 
 function VerzoekFormulier({
   type,
+  destructief,
   heeftOpenVerzoek,
   onSuccess,
 }: {
-  type: "inzage" | "verwijdering";
+  type: AvgVerzoekInputType;
+  destructief: boolean;
   heeftOpenVerzoek: boolean;
   onSuccess: () => void;
 }) {
@@ -437,7 +495,7 @@ function VerzoekFormulier({
   if (heeftOpenVerzoek) {
     return (
       <p className="text-sm text-muted-foreground py-3">
-        Er staat al een open {type === "inzage" ? "inzageverzoek" : "verwijderverzoek"} voor uw account.
+        Er staat al een open {(VERZOEK_TYPE_LABELS[type] ?? type).toLowerCase()} voor uw account.
         U kunt een nieuw verzoek indienen nadat het huidige is afgehandeld.
       </p>
     );
@@ -446,13 +504,13 @@ function VerzoekFormulier({
   return (
     <div className="space-y-3 pt-1">
       <Textarea
-        placeholder="Optionele toelichting (bijv. waarover u inzage wilt of wat u wilt laten verwijderen)"
+        placeholder="Optionele toelichting"
         rows={3}
         value={toelichting}
         onChange={(e) => setToelichting(e.target.value)}
         className="text-sm resize-none"
       />
-      {type === "verwijdering" && (
+      {destructief && (
         <label className="flex items-start gap-2 text-sm cursor-pointer">
           <input
             type="checkbox"
@@ -469,7 +527,7 @@ function VerzoekFormulier({
       <Button
         size="sm"
         onClick={indienen}
-        disabled={maakVerzoek.isPending || (type === "verwijdering" && !bevestigd)}
+        disabled={maakVerzoek.isPending || (destructief && !bevestigd)}
         className="flex items-center gap-2"
       >
         {maakVerzoek.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
@@ -513,12 +571,11 @@ function VerzoekHistorie({ verzoeken }: { verzoeken: AvgVerzoek[] | undefined })
 function VerzoekTab() {
   const { data: verzoeken, isLoading, refetch } = useListAvgMijnVerzoeken();
 
-  const heeftOpenInzage = (verzoeken ?? []).some(
-    (v) => v.type === "inzage" && (v.status === "open" || v.status === "in_behandeling")
-  );
-  const heeftOpenVerwijdering = (verzoeken ?? []).some(
-    (v) => v.type === "verwijdering" && (v.status === "open" || v.status === "in_behandeling")
-  );
+  function heeftOpenVerzoekVanType(type: string) {
+    return (verzoeken ?? []).some(
+      (v) => v.type === type && (v.status === "open" || v.status === "in_behandeling")
+    );
+  }
 
   if (isLoading) {
     return (
@@ -532,49 +589,33 @@ function VerzoekTab() {
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">
-        Op grond van de AVG heeft u het recht om te weten welke gegevens FPS Connect over u bewaart (inzage)
-        en om deze te laten verwijderen (verwijdering). Dien hieronder een verzoek in; de beheerder
-        behandelt het binnen 1 maand.
+        Op grond van de AVG heeft u het recht op inzage, correctie, beperking van de verwerking, bezwaar en
+        verwijdering van uw persoonsgegevens. Dien hieronder een verzoek in; de beheerder behandelt het
+        binnen 1 maand.
       </p>
 
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
-            <FileSearch className="h-4 w-4 text-muted-foreground" />
-            Inzageverzoek
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground mb-3">
-            U kunt een volledig overzicht opvragen van alle persoonsgegevens die FPS Connect over u heeft opgeslagen.
-          </p>
-          <VerzoekFormulier
-            type="inzage"
-            heeftOpenVerzoek={heeftOpenInzage}
-            onSuccess={() => refetch()}
-          />
-        </CardContent>
-      </Card>
-
-      <Card className="border-destructive/20">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
-            <Trash2 className="h-4 w-4 text-destructive/70" />
-            Verwijderverzoek
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground mb-3">
-            U kunt verzoeken uw persoonsgegevens te laten verwijderen. Uw account wordt dan geanonimiseerd.
-            Wettelijk verplichte gegevens (bijv. fiscale administratie) worden niet verwijderd maar losgekoppeld.
-          </p>
-          <VerzoekFormulier
-            type="verwijdering"
-            heeftOpenVerzoek={heeftOpenVerwijdering}
-            onSuccess={() => refetch()}
-          />
-        </CardContent>
-      </Card>
+      {VERZOEK_TYPES.map((cfg) => {
+        const Icon = cfg.icon;
+        return (
+          <Card key={cfg.type} className={cfg.destructief ? "border-destructive/20" : undefined}>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Icon className={`h-4 w-4 ${cfg.destructief ? "text-destructive/70" : "text-muted-foreground"}`} />
+                {cfg.titel}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground mb-3">{cfg.beschrijving}</p>
+              <VerzoekFormulier
+                type={cfg.type}
+                destructief={cfg.destructief}
+                heeftOpenVerzoek={heeftOpenVerzoekVanType(cfg.type)}
+                onSuccess={() => refetch()}
+              />
+            </CardContent>
+          </Card>
+        );
+      })}
 
       <VerzoekHistorie verzoeken={verzoeken} />
     </div>

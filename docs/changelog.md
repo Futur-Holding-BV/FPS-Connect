@@ -1,8 +1,105 @@
-# Changelog — FPS Connect
+## 2026-07-10 — Onderhoudsplanning kalenderweergave (Task #167)
 
-Overzicht van opdrachten, fixes en bouwwerk per datum.
-Voor elke taak drie scores:
-- **Uitvoering** — volledig / gedeeltelijk / niet
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (UI-uitbreiding + API-parameter)
+
+**Nieuw gebouwd:**
+- #167 — De onderhoudsmodule heeft nu een "Planning"-tab (`/onderhoud/planning`) met een maand- en kwartaalkalender. Werkbonnen worden als interactieve blokken getoond op hun geplande datum. Gebruikers kunnen filteren op monteur, type onderhoud en status. De `listWerkbonnen` API is uitgebreid met `start_datum` en `eind_datum` parameters om efficiënt alleen de benodigde bonnen voor het gekozen tijdsbestek op te halen.
+
+**Bewijs:** OpenAPI-codegen uitgevoerd; `pnpm run typecheck` groen voor `firevault` en `api-client-react`. Bestanden: `lib/api-spec/openapi.yaml`, `artifacts/firevault/src/pages/onderhoud/index.tsx`, `artifacts/firevault/src/pages/onderhoud/planning.tsx`.
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (UI-verbetering + DMS-koppeling)
+
+**Nieuw gebouwd:**
+- #307 — De adviescentrum-pagina (`/one/adviescentrum`) is uitgebreid met directe document-upload functionaliteit. Klanten kunnen nu PDF's en afbeeldingen (JPG, PNG, WebP) tot 20MB uploaden. Geüploade bestanden worden via object-storage opgeslagen en bij het indienen van de aanvraag automatisch als document record aangemaakt en gekoppeld aan de nieuwe opdracht in het DMS. De UI toont nu een bestandenlijst met voortgang-indicatie en validatiefouten via toasts.
+
+**Bewijs:** `pnpm --filter @workspace/firevault run typecheck` en `pnpm --filter @workspace/api-server run typecheck` uitgevoerd.
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (UI-only + documentatie)
+
+**Nieuw gebouwd:**
+- #257 — de bestaande "Afdrukken"-knop op de nacalculatie-tab (`opdrachten/detail.tsx`) hergebruikt nu expliciet als "Exporteren als PDF"; header, overzichtkaarten, AI-projectcontroller en tabnavigatie zijn `print:hidden` gemaakt en een print-only kop (opdrachttitel, werknummer, exportdatum) is toegevoegd zodat de PDF/afdruk alleen de nacalculatie-secties toont in plaats van de volledige portal-chrome.
+- #249 — de `: Promise<void>` + `return void res.json()`-conventie voor route-handlers (opgelost in de 354 TS7030-fixes) is vastgelegd in `docs/ontwikkelfilosofie.md`. Er is bewust geen ESLint toegevoegd (geen bestaande ESLint-infrastructuur in de monorepo); handhaving loopt via `pnpm run typecheck` (dat een ontbrekend returntype al afvangt) en code review.
+
+**Bevindingen (al aanwezig, geen wijziging nodig):**
+- #256 — de opdracht-materiaal-tab (`opdrachten/materiaal-tab.tsx`) toont al een tabel met alle uitgiftes (artikel, hoeveelheid, datum, kosten) via `GET /magazijn/mutaties?opdracht_id=...`.
+
+**Bewijs:** `pnpm --filter @workspace/firevault run typecheck` groen voor de gewijzigde bestanden.
+
+## 2026-07-10 — Magazijn: instelbare signaleringstijd/marge, snooze per artikel en dashboard-banner (Task #145/#146/#147)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (additieve tabellen + routes, gated op bestaande bevoegdhedenmatrix)
+
+**Nieuw gebouwd:**
+- #145 — `magazijn_instellingen` (singleton: signalering_uur/minuut/marge) toegevoegd. `GET/PATCH /magazijn/instellingen` (PATCH vereist `magazijn`-niveau beheer). De dagelijkse signaleringsjob leest nu de instellingen uit de DB i.p.v. een vast tijdstip, past de marge toe bovenop de minimumvoorraad-drempel, en herplant zichzelf direct na een PATCH (`herplanMagazijnSignalering`). UI: kaart "Signalering-instellingen" onderaan het magazijndashboard (alleen zichtbaar bij beheer-niveau).
+- #146 — `magazijn_snoozes` (uniek per artikel) toegevoegd. `GET /magazijn/snoozes`, `POST/DELETE /magazijn/artikelen/:id/snooze` (schrijven-niveau). Gesnoozede artikelen worden uitgesloten van de dagelijkse signaleringsmail. UI: klok-knop per kritiek artikel in het dashboard (7/14/30 dagen) + kaart met actieve snoozes en een opheefknop.
+- #147 — de kritieke-voorraadbanner op het beheerdersdashboard (`MagazijnWaarschuwingsbanner`) had een foutieve geneste `<a>` binnen wouter's `Link`; gefixt door de wrapper direct aan `Link` te geven.
+
+**Bewijs:** DB-schema gepusht en geverifieerd via `psql \d`; OpenAPI-codegen groen; api-server + firevault `typecheck` groen; `/api/healthz` bevestigt 200 na herstart.
+
+## 2026-07-10 — Bedrijfsdocumenten AI: opslagbevestiging en volledig leergeschiedenis-beheer (Task #142/#143/#144)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (additief; #143 bleek al aanwezig)
+
+**Bevindingen (al aanwezig, geen wijziging nodig):**
+- #143 — het onBlur-patroon (`handleVeldBlur`) was al op alle relevante AI-invoervelden aangesloten; geen wijziging nodig.
+
+**Nieuw gebouwd:**
+- #142 — `stuurCorrectie`/`stuurVeldCorrectie` geven nu `Promise<boolean>` terug (op basis van `resp.ok`); bij succes toont een toast ("Correctie opgeslagen") dat de gebruiker bevestigt dat zijn correctie is opgeslagen voor het AI-leerproces (`handleVeldBlur`, `kiesCategorieHandmatig`).
+- #144 — het AI-leergeschiedenis-scherm in Beheer › Bedrijfsdocumenten toonde alleen categorie-correcties. Veldcorrecties (`ai_veld_correcties`) hadden alleen een POST-endpoint. Toegevoegd: `GET`/`DELETE /organisatie/bedrijfsdocumenten/veld-correcties(/:id)` (OpenAPI + Express-handlers, spiegelt het bestaande categorie-correctiepatroon) en een tweede, inklapbaar paneel "AI-leergeschiedenis — veldcorrecties" met tabel (datum/veld/AI-voorstel/gekozen waarde/tekstfragment) en verwijderknop + bevestigingsdialoog, analoog aan het categorie-paneel.
+
+**Bewijs:** OpenAPI-codegen + `typecheck:libs` groen; typecheck (`api-server`, `firevault`) groen; api-server herstart en `/api/healthz` bevestigt 200 na de routewijziging.
+
+## 2026-07-10 — Klantportaal/offertes: notificaties, badges en dubbele-handtekening-veiligheidsnet (Task #123/#124/#125/#126/#129/#130/#131)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (grotendeels bevestiging van bestaande functionaliteit + één additieve DB-constraint)
+
+**Bevindingen (al aanwezig, geen wijziging nodig):**
+- #123/#129 — `POST /portaal/:token/ondertekenen` en `/afwijzen` versturen al fire-and-forget `stuurOndertekeningNotificatie`/`stuurAfwijzingNotificatie` naar het interne team, met link naar het gebouw/project en (bij afwijzing) de reden.
+- #126 — `POST /portaal/:token/vraag` verstuurt al `stuurKlantvraagBevestiging` naar de bezoeker wanneer een e-mailadres is opgegeven.
+- #130 — het mail-logboek (`beheer/mail.tsx`) toont "Ondertekening" al als herkenbaar label (`SOORT_LABEL.ondertekening`); geen filteroptie toegevoegd (optioneel, niet vereist).
+- #124 — de offertelijst toont al een rode badge met het aantal onbeantwoorde klantvragen per offerte (backend telt al mee in `GET /offertes`, frontend rendert de badge in `offertes/index.tsx`).
+
+**Nieuw gebouwd:**
+- #125 — het e-mailadres van de vraagsteller wordt nu naast de naam getoond in de klantvragenlijst (`offertes/verzend-tab.tsx`), niet pas na het openen van het antwoordformulier.
+- #131 — `offerte_handtekeningen` had een samengestelde UNIQUE-constraint op `(offerte_id, portaal_token)`, die geen bescherming bood tegen dubbele handtekeningen via twee verschillende tokens voor dezelfde offerte. Vervangen door een enkelvoudige UNIQUE-constraint op `offerte_id` (`uq_handtekeningen_offerte`) — een offerte kan nu op databaseniveau nooit meer dan één handtekening hebben, als veiligheidsnet naast de al bestaande atomaire status-claim in de ondertekenen-handler. Constraintnaam-check in `portaal.ts` bijgewerkt; geen bestaande rijen troffen de wijziging (0 offertes met dubbele handtekening).
+
+**Bewijs:** typecheck (`api-server`, `firevault`) groen; DB-query bevestigt vooraf 0 duplicaten en na `db push` de nieuwe enkelvoudige index (`uq_handtekeningen_offerte` op `offerte_id`).
+
+## 2026-07-10 — Offerte Studio: PDF-export als bijlage bewaard, bevestiging bij onomkeerbare statuswijziging, extra AI-context (Task #108/#109/#110)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (additief; bestaand gedrag van directe PDF-download blijft ongewijzigd, opslag is best-effort)
+
+**Wat gebouwd:**
+- `GET /offertes/:id/pdf` bewaart de gegenereerde PDF nu ook in object storage (gebouw-gescoped pad, of `algemeen/` zonder gekoppeld gebouw) en koppelt 'm als bijlage (`bijlage_type: "pdf-export"`) aan de offerte — zichtbaar in het Bijlagen-tabblad van de Studio. Bestandsnaam volgt nu het gevraagde formaat `<offertenummer>-<jjjjmmdd>.pdf`. Een opslagfout blokkeert nooit de directe download van de gebruiker (try/catch rond de opslagstap, alleen gelogd).
+- Statuswijziging naar een onomkeerbare status ("ondertekend", "vervallen") vraagt nu expliciete bevestiging via een AlertDialog vóórdat de wijziging wordt doorgevoerd; overige overgangen blijven direct.
+- AI-schrijven in de Studio heeft nu een optioneel tekstveld "Extra context voor AI-tekst" dat wordt meegestuurd als `context_extra` — de serverkant ondersteunde dit al (top-8 begrotingsregels + uitgangspunten + context_extra in de prompt), alleen de UI-invoer ontbrak nog.
+
+**Bewijsvoering (#108):** eindtoetsend script tegen de draaiende dev-server (wegwerp-testgebruiker + wegwerp-offerte, achteraf verwijderd) bevestigt: PDF-download geeft 200 met een geldige PDF (`%PDF`-magic, >2MB), er verschijnt precies één nieuwe bijlage met het juiste type/bestandsnaamformaat/URL, en het opgeslagen bestand is via die URL ook daadwerkelijk terug te downloaden (200, `application/pdf`). Typecheck (`api-server`, `firevault`) groen.
+
+## 2026-07-10 — E2E-selector fix: 'Details'-knop conflict opgelost (Task #308)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (alleen test-selector en data-testid toegevoegd)
+
+**Wat gebouwd:**
+- De spot-detailknop in de voorzieningenlijst (`artifacts/firevault/src/pages/voorzieningen/index.tsx`) heeft nu een unieke `data-testid="spot-details-knop"`.
+- De E2E-test `scripts/e2e/web-gebouw-detail.spec.ts` is bijgewerkt om `getByTestId("spot-details-knop")` te gebruiken in plaats van een generieke `getByRole("button", { name: "Details" })`, die conflicteerde met de nieuws-ticker. Dit lost de "element not stable" fouten op en maakt de test betrouwbaar.
+
+**Bewijs:** `pnpm run typecheck` in zowel de `firevault` als `scripts` package is groen.
+
+## 2026-07-10 — AVG-uitbreiding: verzoektypes, geautomatiseerde opschoning en volledige accountsluiting bij anonimisering (Task #106/#107)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (nieuwe/verbrede AVG-functionaliteit, geen bestaand gedrag afgebroken; schema-wijziging is additief)
+
+**Wat gebouwd:**
+- AVG-inzageverzoek uitgebreid van 2 naar 5 types (inzage, verwijdering, correctie, beperking, bezwaar) — backend-validatie, bevestigingsmail, openapi-enum, frontend-labels (`beheer/avg.tsx`, `mijn/privacy.tsx`) synchroon bijgewerkt.
+- Geautomatiseerde dagelijkse opschoonjob (`avgOpruiming.ts`, 02:30): verwijdert verlopen activiteitenlog (>365 dagen, configureerbaar) en anonimiseert accounts die >730 dagen inactief zijn (configureerbaar), met een `avg_opschoon_log`-tabel als audittrail en een `GET /avg/opschoon-status` endpoint + statuspaneel in Beheer › AVG.
+- Anonimiseringslogica gecentraliseerd in `avgAnonimiseren.ts`, hergebruikt door zowel het handmatige beheerderspad als de automatische job.
+
+**Bevinding tijdens eigen verificatie (business-scenario, niet alleen typecheck):** het handmatige anonimiseringspad zette wél e-mail/naam/telefoon/TOTP op een pseudoniem, maar liet `actief=true` en het wachtwoord-hash intact staan. Omdat `tweeFactorIngeschakeld=false` na anonimisering de login-flow naar `setup_2fa` stuurt (nieuwe QR-code inrichten), kon een geanonimiseerd account — ondanks de bedoeling — nog steeds ingelogd worden door wie het oorspronkelijke wachtwoord kende. Gefixt: `anonimiseerGebruiker()` zet nu ook `wachtwoord: null`, `actief: false` en `gedeactiveerdOp` bij anonimisering, consistent met het bestaande deactiveringspatroon in `gebruikers.ts`.
+
+**Bewijs (echte flow tegen de dev-omgeving, geen mock):** met een tijdelijk verificatiescript (verwijderd na gebruik) ingelogd via het echte 2-staps login/2FA-endpoint, daarna: 3 nieuwe verzoektypes succesvol aangemaakt, dubbel-verzoek-guard gaf 409, `GET /avg/opschoon-status` gaf geldige cijfers terug, en de anonimiseer-actie op een echt verzoek resulteerde in een geverifieerde DB-staat (`geanonimiseerd` gezet, `actief=false`, naam overschreven, verzoek op `afgerond` met `geanonimiseerdOp`). Testdata (2 tijdelijke gebruikersrijen + verzoeken) na afloop opgeruimd; vast e2e-webaccount hersteld en gearchiveerd.
+
+**Bestanden:** `artifacts/api-server/src/routes/avg.ts`, `lib/avgAnonimiseren.ts`, `lib/avgOpruiming.ts`, `services/email.ts`, `routes/gebruikers.ts`, `lib/db/src/schema/{gebruikers,avg}.ts`, `lib/api-spec/openapi.yaml`, `beheer/avg.tsx`, `mijn/privacy.tsx`. Volledige `pnpm run typecheck` (alle packages) groen.
 
 ## 2026-07-10 — Eerste automatische productie-deploy geverifieerd (read-only) (Task #497)
 
@@ -276,3 +373,13 @@ De nieuwsticker in de taakbalk onderin scrollt nu twee keer zo snel: de animatie
 - Beide e2e-runners (`e2e-web-run.ts`, `e2e-monteur-run.ts`) archiveren en deactiveren de testaccounts **altijd** in hun `finally`-blok — ook wanneer tests falen. De volgende run heractiveert ze via de idempotente seeders.
 - Beide seeders hebben nu een `weigerBuitenDev()`-guard: e2e-accounts kunnen nooit in een deployment/productie worden aangemaakt of geheractiveerd (de monteur-seeder miste deze guard nog; op advies van de review toegevoegd).
 - **Accountsplitsing web/monteur**: de web-suite gebruikte aanvankelijk hetzelfde `e2e-menu`-account als de monteur-suite; bij parallelle runs (zoals in de validatiepijplijn) brak de opruiming van de ene suite de lopende tests van de andere (de API controleert `actief` bij elke request). Opgelost door de web-suite een eigen vast account te geven (`e2e-web@fps.local`, eigen TOTP-secret); elke runner archiveert uitsluitend zijn eigen accounts. Bewezen met een gelijktijdige run van beide suites: beide groen, alle accounts na afloop gearchiveerd.
+
+## 2026-07-10 — AVG-verzoek notificaties en login-blokkade (Task #260/#261)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (additieve e-mailfunctionaliteit + extra login-check)
+
+**Nieuw gebouwd:**
+- #260 — Automatische e-mailnotificatie bij het afhandelen of afwijzen van een AVG-verzoek. Bij status "afgerond" of "afgewezen" in `PATCH /avg/inzageverzoek/:id` ontvangt de gebruiker nu een e-mail met de status en toelichting. Bij een afgerond inzageverzoek bevat de mail een directe link naar de gegevens-export (`/api/avg/inzageverzoek/:id/export`).
+- #261 — Inlogbeveiliging aangescherpt voor geanonimiseerde accounts. De login-routes (`/auth/login` en `/auth/mobile/login`) en het 2FA-setup-endpoint (`/auth/2fa/setup`) controleren nu expliciet op het `geanonimiseerd`-veld in de database en weigeren toegang met een 403-foutmelding. Dit voorkomt dat geanonimiseerde accounts opnieuw geactiveerd of gebruikt kunnen worden.
+
+**Bewijs:** api-server `typecheck` groen; e-mailservice uitgebreid met `stuurAvgVerzoekAfgehandeldMail`; auth-logic geverifieerd op blokkade van geanonimiseerde records.

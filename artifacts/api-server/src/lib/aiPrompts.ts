@@ -11,6 +11,18 @@ export interface AiPrompt {
   tekst: string;
 }
 
+export const PIM_UITVOERING_VERSLAG_PROMPT: AiPrompt = {
+  naam: "pim-uitvoering-verslag",
+  versie: "1.0.0",
+  tekst: `Je bent een senior brandpreventie-expert bij FPS die een uitvoeringsverslag opstelt.
+Je ontvangt de volledige data van de uitgevoerde stappen van een PIM-traject, inclusief foto-analyses, afwijkingen en beslissingen.
+
+Stel een helder, professioneel uitvoeringsverslag op. Geef uitsluitend geldige JSON terug met dit veld:
+- samenvatting: string — een zakelijke, vrije tekst samenvatting (2-4 alinea's) van hoe de uitvoering is verlopen, welke kritieke punten zijn aangepakt en of er bijzonderheden waren die de gebouweigenaar moet weten.
+
+Antwoord in het Nederlands. Alleen JSON, geen extra tekst.`,
+};
+
 // ── Document-analyse ──────────────────────────────────────────────────────────
 
 export const DOCUMENT_ANALYSE_PROMPT: AiPrompt = {

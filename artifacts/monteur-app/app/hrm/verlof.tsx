@@ -72,6 +72,48 @@ function isGeldigeDatum(s: string): boolean {
   return !Number.isNaN(d.getTime());
 }
 
+// Web heeft geen native datumkiezer (@react-native-community/datetimepicker ondersteunt
+// alleen android/ios). Render daarom op web een echte HTML date-input i.p.v. de
+// Pressable-knop die een niet-bestaande modal zou moeten openen.
+function WebDatumInput({
+  label,
+  waarde,
+  onChange,
+  c,
+  testID,
+}: {
+  label: string;
+  waarde: string;
+  onChange: (iso: string) => void;
+  c: ReturnType<typeof useColors>;
+  testID?: string;
+}) {
+  return (
+    <View style={{ gap: 4 }}>
+      <Text style={{ color: c.mutedForeground, fontSize: 12, fontFamily: "Inter_600SemiBold" }}>
+        {label}
+      </Text>
+      {React.createElement("input", {
+        type: "date",
+        value: waarde,
+        "data-testid": testID,
+        onChange: (e: { target: { value: string } }) => onChange(e.target.value),
+        style: {
+          border: `1px solid ${c.border}`,
+          borderRadius: 8,
+          padding: "12px 14px",
+          fontSize: 15,
+          fontFamily: "Inter_400Regular, sans-serif",
+          color: c.foreground,
+          backgroundColor: c.background,
+          width: "100%",
+          boxSizing: "border-box",
+        },
+      })}
+    </View>
+  );
+}
+
 function DatumKnop({
   label,
   waarde,
@@ -493,21 +535,42 @@ export default function VerlofScherm() {
             {/* Datums naast elkaar */}
             <View style={{ flexDirection: "row", gap: 12 }}>
               <View style={{ flex: 1 }}>
-                <DatumKnop
-                  label="STARTDATUM"
-                  waarde={startDatum}
-                  onPress={() => openDatumPicker("start")}
-                  c={c}
-                  testID="verlof-startdatum-input"
-                />
+                {Platform.OS === "web" ? (
+                  <WebDatumInput
+                    label="STARTDATUM"
+                    waarde={startDatum}
+                    onChange={setStartDatum}
+                    c={c}
+                    testID="verlof-startdatum-input"
+                  />
+                ) : (
+                  <DatumKnop
+                    label="STARTDATUM"
+                    waarde={startDatum}
+                    onPress={() => openDatumPicker("start")}
+                    c={c}
+                    testID="verlof-startdatum-input"
+                  />
+                )}
               </View>
               <View style={{ flex: 1 }}>
-                <DatumKnop
-                  label="EINDDATUM"
-                  waarde={eindDatum}
-                  onPress={() => openDatumPicker("eind")}
-                  c={c}
-                />
+                {Platform.OS === "web" ? (
+                  <WebDatumInput
+                    label="EINDDATUM"
+                    waarde={eindDatum}
+                    onChange={setEindDatum}
+                    c={c}
+                    testID="verlof-einddatum-input"
+                  />
+                ) : (
+                  <DatumKnop
+                    label="EINDDATUM"
+                    waarde={eindDatum}
+                    onPress={() => openDatumPicker("eind")}
+                    c={c}
+                    testID="verlof-einddatum-input"
+                  />
+                )}
               </View>
             </View>
 

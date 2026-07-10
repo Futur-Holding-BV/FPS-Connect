@@ -2523,6 +2523,19 @@ paths:
               schema:
                 $ref: "#/components/schemas/AvgStats"
 
+  /avg/opschoon-status:
+    get:
+      operationId: getAvgOpschoonStatus
+      tags: [avg]
+      summary: Status van de geautomatiseerde AVG-accountopschoning (beheerder)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AvgOpschoonStatus"
+
   /mijn-werk:
     get:
       operationId: getMijnWerk
@@ -4615,6 +4628,12 @@ paths:
         - in: query
           name: monteur_id
           schema: { type: integer }
+        - in: query
+          name: start_datum
+          schema: { type: string, format: date }
+        - in: query
+          name: eind_datum
+          schema: { type: string, format: date }
       responses:
         "200":
           description: OK
@@ -9826,6 +9845,27 @@ paths:
                 items:
                   $ref: "#/components/schemas/OfferteTrackingEvent"
 
+  /offertes/{id}/transitielogboek:
+    get:
+      operationId: listOfferteTransitieLog
+      tags: [offertes]
+      summary: Statusovergangen van een offerte ophalen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/WorkflowTransitieLog"
+
   /offertes/{id}/ai-presentatieniveau:
     post:
       operationId: getAiPresentatieNiveau
@@ -10954,6 +10994,29 @@ paths:
           description: Stap niet gevonden
         "409":
           description: Stap heeft geen afwijking
+
+  /opdrachten/{id}/pim/uitvoering/verslag:
+    get:
+      operationId: getPimUitvoeringVerslag
+      tags: [pim]
+      summary: Uitvoeringsverslag ophalen met samenvatting van voltooide stappen en afwijkingen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PimUitvoeringVerslag"
+        "404":
+          description: Opdracht of PIM niet gevonden
+        "409":
+          description: Uitvoering nog niet voltooid
 
   /opdrachten/{id}/pim/spots:
     get:
@@ -12475,6 +12538,24 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ModCalcHeader'
+
+  /modules/calculaties/synchroniseer-standaard:
+    post:
+      operationId: synchroniseerStandaardCalculatieData
+      summary: Standaard tarieven en normtijden synchroniseren
+      tags: [CalulatieModule]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tarieven_toegevoegd:
+                    type: integer
+                  normtijden_toegevoegd:
+                    type: integer
 
   /modules/calculaties/tarieven:
     get:
@@ -18517,6 +18598,36 @@ paths:
         "204":
           description: Opgeslagen
 
+  /organisatie/bedrijfsdocumenten/veld-correcties:
+    get:
+      operationId: listAiVeldCorrecties
+      tags: [organisatie]
+      summary: Alle opgeslagen AI-veld-correcties ophalen
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/OrgAiVeldCorrectie"
+
+  /organisatie/bedrijfsdocumenten/veld-correcties/{id}:
+    delete:
+      operationId: deleteAiVeldCorrectie
+      tags: [organisatie]
+      summary: Verwijder een AI-veld-correctie
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Verwijderd
+
   # ── AI — Centraal invullen ───────────────────────────────────────────────────
 
   /ai/invullen:
@@ -19016,6 +19127,51 @@ paths:
               schema:
                 $ref: "#/components/schemas/MagazijnSignalering"
 
+  /magazijn/instellingen:
+    get:
+      operationId: getMagazijnInstellingen
+      tags: [magazijn]
+      summary: Instellingen voor de dagelijkse minimumvoorraad-signalering (tijdstip + marge)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MagazijnInstellingen"
+    patch:
+      operationId: updateMagazijnInstellingen
+      tags: [magazijn]
+      summary: Tijdstip en/of marge van de signalering bijwerken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MagazijnInstellingenInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MagazijnInstellingen"
+
+  /magazijn/snoozes:
+    get:
+      operationId: listMagazijnSnoozes
+      tags: [magazijn]
+      summary: Lijst van artikelen waarvan de dagelijkse signalering-mail tijdelijk is onderdrukt
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MagazijnSnooze"
+
   /magazijn/dashboard:
     get:
       operationId: getMagazijnDashboard
@@ -19161,6 +19317,44 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Artikel"
+
+  /magazijn/artikelen/{id}/snooze:
+    post:
+      operationId: snoozeMagazijnArtikel
+      tags: [magazijn]
+      summary: Dagelijkse signalering-mail voor dit artikel tijdelijk onderdrukken
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MagazijnSnoozeInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MagazijnSnooze"
+    delete:
+      operationId: verwijderMagazijnSnooze
+      tags: [magazijn]
+      summary: Snooze voor dit artikel opheffen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Verwijderd
 
   /magazijn/voorraad:
     get:
@@ -19610,6 +19804,25 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/DocumentStudioModel"
+
+  /studio/modellen/{id}/referentie:
+    get:
+      operationId: getDocumentStudioReferentie
+      tags: [studio]
+      summary: Download het referentiebestand van een Document Studio model
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK (het bestand zelf)
+        "404":
+          description: Niet gevonden of geen referentie aanwezig
+        "503":
+          description: Opslagservice niet geconfigureerd
 
   /studio/modellen/{id}/referentie-upload:
     post:
@@ -20086,6 +20299,27 @@ paths:
                 $ref: "#/components/schemas/FieObservatiesResponse"
         "400":
           description: Ongeldig boekjaar
+
+  /fie/nacalculaties:
+    get:
+      operationId: listFieNacalculaties
+      tags: [fie]
+      summary: Lijst van nacalculaties gefilterd op werktype
+      parameters:
+        - in: query
+          name: werktype
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FieNacalculatieOverzicht"
 
   /fie/leermomenten:
     get:
@@ -21273,7 +21507,7 @@ components:
       properties:
         type:
           type: string
-          enum: [inzage, verwijdering]
+          enum: [inzage, verwijdering, correctie, beperking, bezwaar]
         toelichting:
           type: string
           nullable: true
@@ -21324,6 +21558,25 @@ components:
         in_behandeling:      { type: integer }
         afgehandeld:         { type: integer }
         inactieve_accounts:  { type: integer }
+
+    AvgOpschoonRun:
+      type: object
+      required: [uitgevoerd_op, accounts_geanonimiseerd, activiteiten_verwijderd]
+      properties:
+        uitgevoerd_op:             { type: string, format: date-time }
+        accounts_geanonimiseerd:   { type: integer }
+        activiteiten_verwijderd:   { type: integer }
+
+    AvgOpschoonStatus:
+      type: object
+      required: [bewaardagen, wachtend_op_anonimisering, laatste_run]
+      properties:
+        bewaardagen:                { type: integer }
+        wachtend_op_anonimisering:  { type: integer }
+        laatste_run:
+          allOf:
+            - $ref: "#/components/schemas/AvgOpschoonRun"
+          nullable: true
 
     AiAanroepLog:
       type: object
@@ -22621,6 +22874,8 @@ components:
         openstaande_onderhoud:
           type: integer
         vervallen_inspecties:
+          type: integer
+        opdrachten_in_uitvoering:
           type: integer
         voorzieningen_per_type:
           type: array
@@ -25039,6 +25294,12 @@ components:
         ai_kostendrempel_eur:
           type: ["number", "null"]
           description: Maandelijks kostenplafond voor AI-gebruik in euro. Null betekent geen drempel.
+        ai_maandelijkse_export_dag:
+          type: ["integer", "null"]
+          description: Dag van de maand (1-28) waarop het AI-logboek automatisch als CSV per e-mail wordt verstuurd. Null betekent uitgeschakeld.
+        ai_maandelijkse_export_email:
+          type: ["string", "null"]
+          description: E-mailadres dat de maandelijkse AI-logboek-CSV ontvangt. Null betekent uitgeschakeld.
         bijgewerkt_op:
           type: string
         bijgewerkt_door_id:
@@ -25063,6 +25324,12 @@ components:
         ai_kostendrempel_eur:
           type: ["number", "null"]
           description: Maandelijks kostenplafond voor AI-gebruik in euro. Null of weglaten om drempel te verwijderen.
+        ai_maandelijkse_export_dag:
+          type: ["integer", "null"]
+          description: Dag van de maand (1-28) waarop het AI-logboek automatisch als CSV per e-mail wordt verstuurd. Null of weglaten om uit te schakelen.
+        ai_maandelijkse_export_email:
+          type: ["string", "null"]
+          description: E-mailadres dat de maandelijkse AI-logboek-CSV ontvangt.
 
     AiDrempelStatus:
       type: object
@@ -27748,6 +28015,12 @@ components:
           type: string
         portaal_status:
           type: string
+        calculatie_id:
+          type: ["integer", "null"]
+          description: "ID van de broncalculatie"
+        calculatie_naam:
+          type: ["string", "null"]
+          description: "Naam/referentie van de broncalculatie"
         auto_project_id:
           type: ["integer", "null"]
         aangemaakt_door_id:
@@ -27840,6 +28113,8 @@ components:
           type: number
         status:
           type: string
+        calculatie_id:
+          type: ["integer", "null"]
         begroting_weergave:
           type: ["object", "null"]
           properties:
@@ -28161,6 +28436,34 @@ components:
           type: string
 
     # ── Portaal & analytics schema's ──────────────────────────────────────────
+    WorkflowTransitieLog:
+      type: object
+      required: [id, workflow_id, entity_id, entity_type, van_status, naar_status, aangemaakt_op]
+      properties:
+        id:
+          type: integer
+        workflow_id:
+          type: string
+        entity_id:
+          type: integer
+        entity_type:
+          type: string
+        van_status:
+          type: string
+        naar_status:
+          type: string
+        gebruiker_id:
+          type: ["integer", "null"]
+        gebruiker_naam:
+          type: ["string", "null"]
+        reden:
+          type: ["string", "null"]
+        metadata:
+          type: ["object", "null"]
+          additionalProperties: true
+        aangemaakt_op:
+          type: string
+
     OfferteAnalytics:
       type: object
       required: [totaal, concept, verzonden, bekeken, ondertekend, afgewezen, vervallen, conversie_procent, gemiddelde_waarde, gemiddelde_doorlooptijd_dagen, ai_acceptatie_score, top_bijlagen, recente_offertes]
@@ -28267,7 +28570,7 @@ components:
 
     OfferteVraag:
       type: object
-      required: [id, vraag, aangemaakt_op]
+      required: [id, vraag, aangemaakt_op, bijgewerkt_op]
       properties:
         id:
           type: integer
@@ -28280,6 +28583,8 @@ components:
         antwoord:
           type: ["string", "null"]
         aangemaakt_op:
+          type: string
+        bijgewerkt_op:
           type: string
 
     OfferteVraagAntwoordInput:
@@ -28341,6 +28646,9 @@ components:
         ai_fase:
           type: ["string", "null"]
           description: "AI-fasering: nieuw | advies | werkvoorbereiding | inkoop | uitvoering | oplevering | gereed"
+        uitvoering_stap_actief:
+          type: ["integer", "null"]
+          description: "Huidige stapnummer in uitvoering (aantal voltooide + actieve stap)"
 
     MaakOpdrachtInput:
       type: object
@@ -28779,6 +29087,44 @@ components:
           type: string
           nullable: true
 
+    PimUitvoeringVerslag:
+      type: object
+      required: [opdracht_id, samenvatting, stappen, afwijkingen, gegenereerd_op]
+      properties:
+        opdracht_id:
+          type: integer
+        samenvatting:
+          type: string
+          description: AI gegenereerde samenvatting van de uitvoering
+        stappen:
+          type: array
+          items:
+            type: object
+            required: [volgorde, doel, status]
+            properties:
+              volgorde:
+                type: integer
+              doel:
+                type: string
+              status:
+                type: string
+              voltooid_op:
+                type: string
+        afwijkingen:
+          type: array
+          items:
+            type: object
+            required: [volgorde, omschrijving, beslissing]
+            properties:
+              volgorde:
+                type: integer
+              omschrijving:
+                type: string
+              beslissing:
+                type: string
+        gegenereerd_op:
+          type: string
+
     PimOpleveringControlerapport:
       type: object
       required: [opdracht_id, volledig, controle_punten, ontbrekende_punten, aandachtspunten_oplevering, ai_samenvatting, ai_fase]
@@ -28936,6 +29282,11 @@ components:
           type: string
           nullable: true
           description: Afgeleid werktype op basis van het dominante spottype van het gebouw (branddeur, doorvoering, brandklep…). Null als er nog geen FIE-nacalculatie is berekend.
+        werktype_bron:
+          type: string
+          enum: [spots, fallback]
+          nullable: true
+          description: De bron van het werktype. "spots" indien afgeleid uit getelde spots, "fallback" indien teruggevallen op algemeen wegens ontbrekende spots.
         calculatie_arbeid_uren:
           type: number
         begroting_arbeid_uren:
@@ -36326,6 +36677,17 @@ components:
         hash:          { type: string }
         tekst_fragment: { type: string }
 
+    OrgAiVeldCorrectie:
+      type: object
+      required: [id, veld_naam, ai_voorstel, gekozen, aangemaakt_op]
+      properties:
+        id:             { type: integer }
+        veld_naam:      { type: string }
+        ai_voorstel:    { type: string }
+        gekozen:        { type: string }
+        tekst_fragment: { type: ["string", "null"] }
+        aangemaakt_op:  { type: string }
+
     OrgBedrijfsdocumentAnalyse:
       type: object
       required: [naam, categorie, hash]
@@ -36498,6 +36860,40 @@ components:
       required: [kritiek_aantal]
       properties:
         kritiek_aantal: { type: integer }
+
+    MagazijnInstellingen:
+      type: object
+      required: [signalering_uur, signalering_minuut, signalering_marge, bijgewerkt_op]
+      properties:
+        signalering_uur:    { type: integer, minimum: 0, maximum: 23 }
+        signalering_minuut: { type: integer, minimum: 0, maximum: 59 }
+        signalering_marge:  { type: integer, minimum: 0 }
+        bijgewerkt_op:      { type: string, format: date-time }
+
+    MagazijnInstellingenInput:
+      type: object
+      properties:
+        signalering_uur:    { type: integer, minimum: 0, maximum: 23 }
+        signalering_minuut: { type: integer, minimum: 0, maximum: 59 }
+        signalering_marge:  { type: integer, minimum: 0 }
+
+    MagazijnSnooze:
+      type: object
+      required: [id, artikel_id, artikel_naam, gesnoozed_tot, reden, aangemaakt_op]
+      properties:
+        id:            { type: integer }
+        artikel_id:    { type: integer }
+        artikel_naam:  { type: string }
+        gesnoozed_tot: { type: string, format: date-time }
+        reden:         { type: ["string", "null"] }
+        aangemaakt_op: { type: string, format: date-time }
+
+    MagazijnSnoozeInput:
+      type: object
+      required: [dagen]
+      properties:
+        dagen: { type: integer, minimum: 1, maximum: 90 }
+        reden: { type: string }
 
     MagazijnDashboard:
       type: object
@@ -37805,6 +38201,21 @@ components:
         n_getoond:             { type: integer }
         pct_zonder_herstelwerk: { type: ["number", "null"] }
         gem_stap_duur:         { type: ["number", "null"] }
+
+    FieNacalculatieOverzicht:
+      type: object
+      required: [id, opdracht_id, werktype, opdracht_nummer, opdracht_titel]
+      properties:
+        id:
+          type: integer
+        opdracht_id:
+          type: integer
+        werktype:
+          type: string
+        opdracht_nummer:
+          type: string
+        opdracht_titel:
+          type: string
 
     FieLeermoment:
       type: object

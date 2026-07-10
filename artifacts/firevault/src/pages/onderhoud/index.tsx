@@ -3,13 +3,15 @@ import { FileText, LayoutDashboard, Wrench, ClipboardList, Calendar } from "luci
 import OnderhoudDashboard from "./dashboard";
 import ContractenLijst from "./contracten";
 import WerkbonnenLijst from "./werkbonnen-lijst";
+import OnderhoudPlanning from "./planning";
 
-type Tab = "dashboard" | "contracten" | "werkbonnen";
+type Tab = "dashboard" | "contracten" | "werkbonnen" | "planning";
 
 const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { id: "contracten", label: "Contracten", icon: FileText },
   { id: "werkbonnen", label: "Werkbonnen", icon: ClipboardList },
+  { id: "planning", label: "Planning", icon: Calendar },
 ];
 
 export default function OnderhoudModule() {
@@ -18,6 +20,7 @@ export default function OnderhoudModule() {
   const actieveTab: Tab = (() => {
     if (location.startsWith("/onderhoud/contracten")) return "contracten";
     if (location.startsWith("/onderhoud/werkbonnen")) return "werkbonnen";
+    if (location.startsWith("/onderhoud/planning")) return "planning";
     return "dashboard";
   })();
 
@@ -63,6 +66,7 @@ export default function OnderhoudModule() {
         {actieveTab === "dashboard" && <OnderhoudDashboard />}
         {actieveTab === "contracten" && <ContractenLijst />}
         {actieveTab === "werkbonnen" && <WerkbonnenLijst />}
+        {actieveTab === "planning" && <OnderhoudPlanning />}
       </div>
     </div>
   );

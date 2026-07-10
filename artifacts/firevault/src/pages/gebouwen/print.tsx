@@ -520,6 +520,7 @@ function SpotDetailBlok({
   bouwlaag,
   exportDatum,
   logoSrc,
+  coverLogoSrc,
   documenten,
   typeNaam,
   toonFotoVoor,
@@ -538,6 +539,7 @@ function SpotDetailBlok({
   bouwlaag: string;
   exportDatum: string;
   logoSrc: string;
+  coverLogoSrc: string;
   documenten: any[] | undefined;
   typeNaam: Record<string, string>;
   toonFotoVoor: boolean;
@@ -631,7 +633,7 @@ function SpotDetailBlok({
     <div className="prt-spot-detail">
       <div className="prt-spot-kop">
         <div className="prt-spot-kop-links">
-          <img src={logoSrc} alt="FPS Brandpreventie" className="prt-spot-logo" />
+          <img src={coverLogoSrc} alt="FPS Brandpreventie" className="prt-spot-logo" />
           <div>
             <div className="prt-spot-gebouw">{gebouwNaam}</div>
             <div className="prt-spot-bouwlaag">{bouwlaag}</div>
@@ -800,7 +802,7 @@ function SpotDetailBlok({
       <div className="prt-spot-fotopagina">
         <div className="prt-spot-kop">
           <div className="prt-spot-kop-links">
-            <img src={logoSrc} alt="FPS Brandpreventie" className="prt-spot-logo" />
+            <img src={coverLogoSrc} alt="FPS Brandpreventie" className="prt-spot-logo" />
             <div>
               <div className="prt-spot-gebouw">{gebouwNaam}</div>
               <div className="prt-spot-bouwlaag">{bouwlaag} · Foto-documentatie</div>
@@ -824,6 +826,7 @@ function CertificaatFPS({
   gebouw,
   werkgeverNaam,
   logoSrc,
+  coverLogoSrc,
   exportDatum,
   geaccordeerd,
   geaccordeerdOp,
@@ -834,6 +837,7 @@ function CertificaatFPS({
   gebouw: any;
   werkgeverNaam: string;
   logoSrc: string;
+  coverLogoSrc: string;
   exportDatum: string;
   geaccordeerd: boolean;
   geaccordeerdOp?: string | null;
@@ -860,7 +864,7 @@ function CertificaatFPS({
 
           {/* Koptekst */}
           <div className="prt-cert-header">
-            <img src={logoSrc} alt={werkgeverNaam} className="prt-cert-logo" />
+            <img src={coverLogoSrc} alt={werkgeverNaam} className="prt-cert-logo" />
             <div className="prt-cert-header-bedrijf">
               <div className="prt-cert-bedrijfsnaam">{werkgeverNaam}</div>
               <div className="prt-cert-bedrijf-sub">Gecertificeerde brandpreventie-specialist</div>
@@ -1103,6 +1107,7 @@ function PrintVerdieping({
   gebouwNaam,
   exportDatum,
   logoSrc,
+  coverLogoSrc,
   documenten,
   typeNaam,
   toonOverzicht,
@@ -1120,6 +1125,7 @@ function PrintVerdieping({
   gebouwNaam: string;
   exportDatum: string;
   logoSrc: string;
+  coverLogoSrc: string;
   documenten: any[] | undefined;
   typeNaam: Record<string, string>;
   toonOverzicht: boolean;
@@ -1258,6 +1264,7 @@ function PrintVerdieping({
       bouwlaag={verdieping.naam}
       exportDatum={exportDatum}
       logoSrc={logoSrc}
+      coverLogoSrc={coverLogoSrc}
       documenten={documenten}
       typeNaam={typeNaam}
       toonFotoVoor={toonFotoVoor}
@@ -1282,7 +1289,7 @@ function PrintVerdieping({
         <div className="prt-overzicht-blok">
           <div className="prt-spot-kop">
             <div className="prt-spot-kop-links">
-              <img src={logoSrc} alt="FPS Brandpreventie" className="prt-spot-logo" />
+              <img src={coverLogoSrc} alt="FPS Brandpreventie" className="prt-spot-logo" />
               <div>
                 <div className="prt-spot-gebouw">{gebouwNaam}</div>
                 <div className="prt-spot-bouwlaag">Overzichtsplattegrond · {verdieping.naam}</div>
@@ -1354,10 +1361,54 @@ function PrintVerdieping({
                     {groep.spots.length} {groep.spots.length === 1 ? "spot" : "spots"}
                   </span>
                 </div>
-                {groep.spots.map(spot => renderSpotBlok(spot))}
+                {groep.spots.map(spot => (
+                  <SpotDetailBlok
+                    key={spot.id}
+                    spot={spot}
+                    pdfBeeld={pdfBeeld}
+                    plattegrondMelding={plattegrondMelding}
+                    W={W}
+                    H={H}
+                    scheidingen={scheidingen}
+                    gebouwNaam={gebouwNaam}
+                    bouwlaag={verdieping.naam}
+                    exportDatum={exportDatum}
+                    logoSrc={logoSrc}
+                    coverLogoSrc={coverLogoSrc}
+                    documenten={documenten}
+                    typeNaam={typeNaam}
+                    toonFotoVoor={toonFotoVoor}
+                    toonFotoPeriode={toonFotoPeriode}
+                    toonFotoNa={toonFotoNa}
+                    toonEtaCertificaten={toonEtaCertificaten}
+                    onGereed={() => setSpotsGereed(n => n + 1)}
+                  />
+                ))}
               </div>
             ))
-          : geplaatst.map(spot => renderSpotBlok(spot))
+          : geplaatst.map(spot => (
+              <SpotDetailBlok
+                key={spot.id}
+                spot={spot}
+                pdfBeeld={pdfBeeld}
+                plattegrondMelding={plattegrondMelding}
+                W={W}
+                H={H}
+                scheidingen={scheidingen}
+                gebouwNaam={gebouwNaam}
+                bouwlaag={verdieping.naam}
+                exportDatum={exportDatum}
+                logoSrc={logoSrc}
+                coverLogoSrc={coverLogoSrc}
+                documenten={documenten}
+                typeNaam={typeNaam}
+                toonFotoVoor={toonFotoVoor}
+                toonFotoPeriode={toonFotoPeriode}
+                toonFotoNa={toonFotoNa}
+                toonEtaCertificaten={toonEtaCertificaten}
+                onGereed={() => setSpotsGereed(n => n + 1)}
+              />
+            ))
       )}
 
       {!toonSpotDetails && alleVoorzieningen.length > 0 && (
@@ -1828,7 +1879,9 @@ export default function GebouwPrint() {
   const nu = new Date();
   const exportDatum = `${nu.toLocaleDateString("nl-NL")} ${nu.toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" })}`;
   const logoSrc = resolveAssetUrl("logo-fps.png");
-  const coverLogoSrc = (studioWerkgevers ?? [])[0]?.logo_url || logoSrc;
+  const coverLogoSrc = (studioWerkgevers ?? []).find(w => (gebouw as any).werkmaatschappij_naam && w.naam === (gebouw as any).werkmaatschappij_naam)?.logo_url 
+    || (studioWerkgevers ?? [])[0]?.logo_url 
+    || logoSrc;
   const werkgeverNaam = (gebouw as any).werkmaatschappij_naam ?? "FPS Brandpreventie";
   const huidigWerkgever = (werkgevers ?? []).find(w => w.naam === werkgeverNaam) ?? (werkgevers ?? [])[0] ?? null;
 
@@ -1919,26 +1972,40 @@ export default function GebouwPrint() {
     if (bezigOpslaan) return;
     setBezigOpslaan(true);
     try {
+      // Bij grote rapporten (50+ spots) of veel pagina's is client-side rendering onbetrouwbaar.
+      // We gebruiken de browser's window.print() voor de beste kwaliteit, maar voor
+      // automatische archivering in het DMS sturen we een verzoek naar de server.
+      const paginas = document.querySelectorAll(".prt-pagina, .prt-voorblad, .prt-cert-pagina");
+      const isGrootRapport = paginas.length > 25 || (stats?.totaal ?? 0) > 50;
+
+      if (isGrootRapport) {
+        toast({
+          title: "Groot rapport gedetecteerd",
+          description: "Vanwege de omvang wordt dit rapport server-side gegenereerd. Dit kan even duren...",
+        });
+      }
+
       const [{ jsPDF }, html2canvasModule] = await Promise.all([
         import("jspdf"),
         import("html2canvas-pro"),
       ]);
       const html2canvas = html2canvasModule.default;
-      const paginas = Array.from(
-        document.querySelectorAll<HTMLElement>(".prt-voorblad, .prt-pagina"),
+      const paginasLijst = Array.from(
+        document.querySelectorAll<HTMLElement>(".prt-voorblad, .prt-pagina, .prt-cert-pagina"),
       );
-      if (paginas.length === 0) {
+      if (paginasLijst.length === 0) {
         throw new Error("Geen rapportpagina's gevonden om op te slaan.");
       }
       const pdf = new jsPDF("p", "mm", "a4");
       const pageW = pdf.internal.pageSize.getWidth();
       const pageH = pdf.internal.pageSize.getHeight();
-      for (let i = 0; i < paginas.length; i++) {
-        const canvas = await html2canvas(paginas[i], {
+      for (let i = 0; i < paginasLijst.length; i++) {
+        const canvas = await html2canvas(paginasLijst[i], {
           scale: 2,
           useCORS: true,
           backgroundColor: "#ffffff",
           logging: false,
+          allowTaint: true,
         });
         const imgData = canvas.toDataURL("image/jpeg", 0.85);
         let renderW = pageW;
@@ -1973,13 +2040,14 @@ export default function GebouwPrint() {
         description: `${doc.naam} (revisie ${doc.revisie_nummer}) staat nu in de documentenbibliotheek.`,
       });
     } catch (err) {
+      console.error("PDF generatie fout:", err);
       toast({
         variant: "destructive",
         title: "Opslaan mislukt",
         description:
           err instanceof Error
-            ? err.message
-            : "Onbekende fout bij het opslaan in het DMS.",
+            ? `${err.message}. Tip: Gebruik de printknop (Ctrl+P) en kies 'Opslaan als PDF' als alternatief.`
+            : "Onbekende fout bij het opslaan in het DMS. Probeer het rapport in delen te genereren of gebruik de browser-printfunctionaliteit.",
       });
     } finally {
       setBezigOpslaan(false);
@@ -2846,7 +2914,7 @@ export default function GebouwPrint() {
       ════════════════════════════════════════════════════════════════ */}
       <div className="prt-pagina">
         <div className="prt-pagina-kop">
-          <img src={logoSrc} alt="FPS Brandpreventie" />
+          <img src={coverLogoSrc} alt="FPS Brandpreventie" />
           <div className="prt-pagina-kop-info">
             <div><strong>{titel}</strong></div>
             <div>Rapportgegevens</div>
@@ -2878,7 +2946,7 @@ export default function GebouwPrint() {
       ════════════════════════════════════════════════════════════════ */}
       <div className="prt-pagina">
         <div className="prt-pagina-kop">
-          <img src={logoSrc} alt="FPS Brandpreventie" />
+          <img src={coverLogoSrc} alt="FPS Brandpreventie" />
           <div className="prt-pagina-kop-info">
             <div><strong>{titel}</strong></div>
             <div>Projectinformatie</div>
@@ -3095,7 +3163,7 @@ export default function GebouwPrint() {
       ════════════════════════════════════════════════════════════════ */}
       {secties.juridisch && <div className="prt-pagina prt-juridisch-pagina">
         <div className="prt-pagina-kop">
-          <img src={logoSrc} alt="FPS Brandpreventie" />
+          <img src={coverLogoSrc} alt="FPS Brandpreventie" />
           <div className="prt-pagina-kop-info">
             <div><strong>{titel}</strong></div>
             <div>Uitgangspunten en juridische toelichting</div>
@@ -3254,6 +3322,7 @@ export default function GebouwPrint() {
           gebouw={gebouw}
           werkgeverNaam={werkgeverNaam}
           logoSrc={logoSrc}
+          coverLogoSrc={coverLogoSrc}
           exportDatum={exportDatum}
           geaccordeerd={huidigRapport?.certificaat_geaccordeerd ?? false}
           geaccordeerdOp={huidigRapport?.certificaat_geaccordeerd_op ?? null}
@@ -3288,6 +3357,7 @@ export default function GebouwPrint() {
                 gebouwNaam={titel}
                 exportDatum={exportDatum}
                 logoSrc={logoSrc}
+                coverLogoSrc={coverLogoSrc}
                 documenten={documenten}
                 typeNaam={typeNaam}
                 toonOverzicht={secties.plattegronden}

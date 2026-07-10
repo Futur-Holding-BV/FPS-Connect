@@ -4,14 +4,16 @@ import {
   useCreateRetour,
   useCreateUitgifte,
   useGetMagazijnArtikel,
+  useListArtikelen,
   useListMagazijnLocaties,
   useListOpdrachten,
   useListVoorraadTotaal,
+  getListArtikelenQueryKey,
 } from "@workspace/api-client-react";
 import { Ionicons } from "@expo/vector-icons";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { Redirect, useLocalSearchParams, useRouter } from "expo-router";
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -30,6 +32,9 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { bovenInset } from "@/components/ui";
 import { useAuth } from "@/context/auth";
 import { useColors } from "@/hooks/useColors";
+import * as offlineCache from "@/lib/offlineCache";
+import { voegToeAanWachtrij } from "@/lib/syncQueue";
+import { useOffline } from "@/context/offline";
 
 type Modus = "scan" | "resultaat";
 type Actie = "uitgifte" | "retour" | "verplaatsen";
@@ -204,6 +209,7 @@ function ArtikelKaart({
   onSluit: () => void;
 }) {
   const c = useColors();
+  const { isOnline } = useOffline();
   const uitgifte = useCreateUitgifte();
   const retour = useCreateRetour();
   const verplaatsen = useCreateMagazijnVerplaatsing();
@@ -254,45 +260,78 @@ function ArtikelKaart({
 
     setBezig(true);
     try {
-      if (actie === "uitgifte") {
-        await uitgifte.mutateAsync({
-          data: {
-            opdracht_id: opdrachtId,
-            regels: [{ artikel_id: artikelId, hoeveelheid: aantal, locatie_id: vanLocatieId }],
-          },
-        });
-        Alert.alert(
-          "Uitgifte geregistreerd",
-          `${aantal} ${eenheidLabel(artikel?.eenheid)} "${artikel?.naam}" uitgeleverd.${opdrachtNaam ? `\nOpdracht: ${opdrachtNaam}` : ""}`,
-          [{ text: "OK", onPress: onSluit }],
-        );
-      } else if (actie === "retour") {
-        await retour.mutateAsync({
-          data: {
-            opdracht_id: opdrachtId,
-            regels: [{ artikel_id: artikelId, hoeveelheid: aantal, locatie_id: naarLocatieId, conditie: "goed" }],
-          },
-        });
-        Alert.alert(
-          "Retour geregistreerd",
-          `${aantal} ${eenheidLabel(artikel?.eenheid)} "${artikel?.naam}" ingenomen.`,
-          [{ text: "OK", onPress: onSluit }],
-        );
+      if (isOnline) {
+        if (actie === "uitgifte") {
+          await uitgifte.mutateAsync({
+            data: {
+              opdracht_id: opdrachtId,
+              regels: [{ artikel_id: artikelId, hoeveelheid: aantal, locatie_id: vanLocatieId }],
+            },
+          });
+          Alert.alert(
+            "Uitgifte geregistreerd",
+            `${aantal} ${eenheidLabel(artikel?.eenheid)} "${artikel?.naam}" uitgeleverd.${opdrachtNaam ? `\nOpdracht: ${opdrachtNaam}` : ""}`,
+            [{ text: "OK", onPress: onSluit }],
+          );
+        } else if (actie === "retour") {
+          await retour.mutateAsync({
+            data: {
+              opdracht_id: opdrachtId,
+              regels: [{ artikel_id: artikelId, hoeveelheid: aantal, locatie_id: naarLocatieId, conditie: "goed" }],
+            },
+          });
+          Alert.alert(
+            "Retour geregistreerd",
+            `${aantal} ${eenheidLabel(artikel?.eenheid)} "${artikel?.naam}" ingenomen.`,
+            [{ text: "OK", onPress: onSluit }],
+          );
+        } else {
+          await verplaatsen.mutateAsync({
+            data: {
+              artikel_id: artikelId,
+              hoeveelheid: aantal,
+              van_locatie_id: vanLocatieId,
+              naar_locatie_id: naarLocatieId!,
+              omschrijving: `Verplaatsing${vanLocatieNaam ? ` van ${vanLocatieNaam}` : ""}${naarLocatieNaam ? ` naar ${naarLocatieNaam}` : ""}`,
+            },
+          });
+          Alert.alert(
+            "Verplaatsing geregistreerd",
+            `${aantal} ${eenheidLabel(artikel?.eenheid)} "${artikel?.naam}" verplaatst naar ${naarLocatieNaam ?? "nieuwe locatie"}.`,
+            [{ text: "OK", onPress: onSluit }],
+          );
+        }
       } else {
-        await verplaatsen.mutateAsync({
-          data: {
-            artikel_id: artikelId,
-            hoeveelheid: aantal,
-            van_locatie_id: vanLocatieId,
-            naar_locatie_id: naarLocatieId!,
-            omschrijving: `Verplaatsing${vanLocatieNaam ? ` van ${vanLocatieNaam}` : ""}${naarLocatieNaam ? ` naar ${naarLocatieNaam}` : ""}`,
-          },
-        });
-        Alert.alert(
-          "Verplaatsing geregistreerd",
-          `${aantal} ${eenheidLabel(artikel?.eenheid)} "${artikel?.naam}" verplaatst naar ${naarLocatieNaam ?? "nieuwe locatie"}.`,
-          [{ text: "OK", onPress: onSluit }],
-        );
+        // Offline modus: voeg toe aan SyncQueue
+        if (actie === "uitgifte") {
+          await voegToeAanWachtrij({
+            type: "create_uitgifte",
+            payload: {
+              opdracht_id: opdrachtId,
+              regels: [{ artikel_id: artikelId, hoeveelheid: aantal, locatie_id: vanLocatieId }],
+            },
+          });
+          Alert.alert(
+            "Offline opgeslagen",
+            `De uitgifte van ${aantal} ${eenheidLabel(artikel?.eenheid)} "${artikel?.naam}" is lokaal opgeslagen en wordt gesynchroniseerd zodra er weer verbinding is.`,
+            [{ text: "OK", onPress: onSluit }],
+          );
+        } else if (actie === "retour") {
+          await voegToeAanWachtrij({
+            type: "create_retour",
+            payload: {
+              opdracht_id: opdrachtId,
+              regels: [{ artikel_id: artikelId, hoeveelheid: aantal, locatie_id: naarLocatieId, conditie: "goed" }],
+            },
+          });
+          Alert.alert(
+            "Offline opgeslagen",
+            `De retour van ${aantal} ${eenheidLabel(artikel?.eenheid)} "${artikel?.naam}" is lokaal opgeslagen en wordt gesynchroniseerd zodra er weer verbinding is.`,
+            [{ text: "OK", onPress: onSluit }],
+          );
+        } else {
+          Alert.alert("Offline niet mogelijk", "Verplaatsingen kunnen momenteel alleen online worden geregistreerd.");
+        }
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Controleer je verbinding en probeer het opnieuw.";
@@ -590,12 +629,166 @@ function ArtikelKaart({
   );
 }
 
+function HandmatigZoekenModal({
+  zichtbaar,
+  onSluit,
+  onKies,
+}: {
+  zichtbaar: boolean;
+  onSluit: () => void;
+  onKies: (artikelId: number) => void;
+}) {
+  const c = useColors();
+  const insets = useSafeAreaInsets();
+  const [zoekInvoer, setZoekInvoer] = useState("");
+  const [zoek, setZoek] = useState("");
+
+  React.useEffect(() => {
+    const timer = setTimeout(() => setZoek(zoekInvoer), 300);
+    return () => clearTimeout(timer);
+  }, [zoekInvoer]);
+
+  const params = { zoek: zoek.trim() || undefined, actief: true };
+  const { data: resultaten = [], isLoading, isFetching } = useListArtikelen(params, {
+    query: { enabled: zichtbaar, queryKey: getListArtikelenQueryKey(params) },
+  });
+
+  return (
+    <Modal visible={zichtbaar} transparent animationType="slide" onRequestClose={onSluit}>
+      <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)" }} onPress={onSluit} />
+      <View
+        style={{
+          backgroundColor: c.card,
+          borderTopLeftRadius: 20,
+          borderTopRightRadius: 20,
+          paddingBottom: insets.bottom + 8,
+          maxHeight: "80%",
+        }}
+      >
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+            paddingHorizontal: 20,
+            paddingVertical: 16,
+            borderBottomWidth: 1,
+            borderBottomColor: c.border,
+          }}
+        >
+          <Text style={{ fontSize: 16, fontFamily: "Inter_700Bold", color: c.text }}>Artikel zoeken</Text>
+          <Pressable onPress={onSluit} hitSlop={12}>
+            <Ionicons name="close" size={22} color={c.mutedForeground} />
+          </Pressable>
+        </View>
+        <View style={{ paddingHorizontal: 20, paddingTop: 14, paddingBottom: 10 }}>
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              borderWidth: 1,
+              borderColor: c.border,
+              borderRadius: 10,
+              paddingHorizontal: 12,
+              backgroundColor: c.background,
+              gap: 8,
+            }}
+          >
+            <Ionicons name="search" size={17} color={c.mutedForeground} />
+            <TextInput
+              value={zoekInvoer}
+              onChangeText={setZoekInvoer}
+              placeholder="Zoek op naam, code of omschrijving..."
+              placeholderTextColor={c.mutedForeground}
+              autoFocus
+              style={{
+                flex: 1,
+                paddingVertical: 12,
+                fontSize: 15,
+                fontFamily: "Inter_400Regular",
+                color: c.text,
+              }}
+            />
+            {isFetching && <ActivityIndicator size="small" color={c.mutedForeground} />}
+          </View>
+        </View>
+        <FlatList
+          data={resultaten}
+          keyExtractor={(item) => String(item.id)}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          ListEmptyComponent={
+            <Text
+              style={{
+                textAlign: "center",
+                color: c.mutedForeground,
+                fontFamily: "Inter_400Regular",
+                paddingVertical: 24,
+              }}
+            >
+              {isLoading ? "Zoeken..." : "Geen artikelen gevonden."}
+            </Text>
+          }
+          renderItem={({ item }) => (
+            <Pressable
+              onPress={() => { onKies(item.id); onSluit(); }}
+              style={({ pressed }) => ({
+                flexDirection: "row",
+                alignItems: "center",
+                paddingHorizontal: 20,
+                paddingVertical: 14,
+                backgroundColor: pressed ? c.muted : c.card,
+                borderBottomWidth: 1,
+                borderBottomColor: c.border,
+                gap: 12,
+              })}
+            >
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 14, fontFamily: "Inter_600SemiBold", color: c.text }}>
+                  {item.naam}
+                  {item.code ? (
+                    <Text style={{ color: c.mutedForeground, fontFamily: "Inter_400Regular" }}> ({item.code})</Text>
+                  ) : null}
+                </Text>
+                {item.leverancier_naam ? (
+                  <Text style={{ fontSize: 12, color: c.mutedForeground, fontFamily: "Inter_400Regular", marginTop: 1 }}>
+                    {item.leverancier_naam}
+                  </Text>
+                ) : null}
+              </View>
+              <Text style={{ fontSize: 12, color: c.mutedForeground, fontFamily: "Inter_400Regular" }}>
+                {eenheidLabel(item.eenheid)}
+              </Text>
+            </Pressable>
+          )}
+        />
+      </View>
+    </Modal>
+  );
+}
+
 export default function MagazijnScanScherm() {
   const c = useColors();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { token } = useAuth();
+  const { isOnline } = useOffline();
   const params = useLocalSearchParams<{ artikel_id?: string }>();
+
+  // Offline cache sync bij eerste online gebruik
+  const { data: alleArtikelenRaw } = useListArtikelen({ actief: true }, { query: { enabled: isOnline, queryKey: getListArtikelenQueryKey({ actief: true }) } });
+  useEffect(() => {
+    if (isOnline && alleArtikelenRaw && alleArtikelenRaw.length > 0) {
+      void offlineCache.slaArtikelenOp(alleArtikelenRaw.map(a => ({
+        id: a.id,
+        naam: a.naam,
+        barcode: a.barcode ?? null,
+        eenheid: a.eenheid,
+        categorie: a.categorie ?? null,
+        code: a.code ?? null,
+      })));
+    }
+  }, [isOnline, alleArtikelenRaw]);
 
   const [permission, requestPermission] = useCameraPermissions();
   const [modus, setModus] = useState<Modus>(params.artikel_id ? "resultaat" : "scan");
@@ -604,6 +797,7 @@ export default function MagazijnScanScherm() {
   );
   const [scanFout, setScanFout] = useState<string | null>(null);
   const [scanBezig, setScanBezig] = useState(false);
+  const [zoekOpen, setZoekOpen] = useState(false);
 
   const geblokkeerd = useRef(false);
 
@@ -616,13 +810,28 @@ export default function MagazijnScanScherm() {
     setScanFout(null);
 
     try {
-      const artikelen = await listArtikelen({ barcode: data });
-      if (!artikelen || artikelen.length === 0) {
+      let artikelId: number | null = null;
+
+      if (isOnline) {
+        const artikelen = await listArtikelen({ barcode: data });
+        if (artikelen && artikelen.length > 0) {
+          artikelId = artikelen[0].id;
+        }
+      } else {
+        // Offline zoeken in cache
+        const cache = await offlineCache.leesArtikelen();
+        const gevonden = cache?.find(a => a.barcode === data || a.code === data);
+        if (gevonden) {
+          artikelId = gevonden.id;
+        }
+      }
+
+      if (artikelId) {
+        setGevondenArtikelId(artikelId);
+        setModus("resultaat");
+      } else {
         setScanFout(`Geen artikel gevonden voor barcode: ${data}`);
         setTimeout(() => { setScanFout(null); geblokkeerd.current = false; }, 2500);
-      } else {
-        setGevondenArtikelId(artikelen[0].id);
-        setModus("resultaat");
       }
     } catch {
       setScanFout("Fout bij ophalen artikel. Controleer je verbinding.");
@@ -690,6 +899,27 @@ export default function MagazijnScanScherm() {
               <Ionicons name="scan-outline" size={15} color={c.darkForeground} />
               <Text style={{ color: c.darkForeground, fontSize: 12, fontFamily: "Inter_600SemiBold" }}>
                 Opnieuw
+              </Text>
+            </Pressable>
+          )}
+          {modus === "scan" && !viaParam && (
+            <Pressable
+              onPress={() => setZoekOpen(true)}
+              hitSlop={12}
+              style={({ pressed }) => ({
+                opacity: pressed ? 0.6 : 1,
+                backgroundColor: "rgba(255,255,255,0.12)",
+                borderRadius: 8,
+                paddingHorizontal: 10,
+                paddingVertical: 6,
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 4,
+              })}
+            >
+              <Ionicons name="search" size={15} color={c.darkForeground} />
+              <Text style={{ color: c.darkForeground, fontSize: 12, fontFamily: "Inter_600SemiBold" }}>
+                Zoeken
               </Text>
             </Pressable>
           )}
@@ -777,6 +1007,16 @@ export default function MagazijnScanScherm() {
           )}
         </View>
       )}
+
+      <HandmatigZoekenModal
+        zichtbaar={zoekOpen}
+        onSluit={() => setZoekOpen(false)}
+        onKies={(artikelId) => {
+          setGevondenArtikelId(artikelId);
+          setScanFout(null);
+          setModus("resultaat");
+        }}
+      />
     </View>
   );
 }

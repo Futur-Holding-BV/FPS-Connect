@@ -81,6 +81,9 @@ export const appInstellingenTable = pgTable("app_instellingen", {
   momentsVerjaardagIngeschakeld: boolean("moments_verjaardag_ingeschakeld").notNull().default(true),
   aiKostendrempelEur: numeric("ai_kostendrempel_eur", { precision: 10, scale: 4 }),
   aiDrempelMeldingGestuurdMaand: text("ai_drempel_melding_gestuurd_maand"),
+  aiMaandelijkseExportDag: integer("ai_maandelijkse_export_dag"), // 1-28, null = uit
+  aiMaandelijkseExportEmail: text("ai_maandelijkse_export_email"),
+  aiMaandelijkseExportLaatstVerzondenMaand: text("ai_maandelijkse_export_laatst_verzonden_maand"), // 'JJJJ-MM'
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
   bijgewerktDoorId: integer("bijgewerkt_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
 });

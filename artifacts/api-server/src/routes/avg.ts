@@ -12,10 +12,13 @@ import {
   auditLogTable,
   verlofAanvragenTable,
   opdrachtenTable,
+  avgOpschoonLogTable,
 } from "@workspace/db";
 import { eq, desc, and, lt, sql } from "drizzle-orm";
 import { requireBevoegdheid, requireAuth } from "../middlewares/auth";
 import { logActiviteit } from "../lib/activiteit";
+import { anonimiseerGebruiker } from "../lib/avgAnonimiseren";
+import { stuurAvgVerzoekBevestiging, stuurAvgVerzoekAfgehandeldMail } from "../services/email";
 
 const router = Router();
 
@@ -48,7 +51,8 @@ router.post("/avg/inzageverzoek", requireAuth, async (req, res): Promise<void> =
     if (!gebruikerId) return void res.status(401).json({ error: "Niet ingelogd" });
 
     const { type, toelichting } = req.body ?? {};
-    const verzoekType = type === "verwijdering" ? "verwijdering" : "inzage";
+    const TOEGESTANE_TYPES = ["inzage", "verwijdering", "correctie", "beperking", "bezwaar"];
+    const verzoekType = TOEGESTANE_TYPES.includes(type) ? type : "inzage";
 
     // Maximaal 1 open verzoek per type per gebruiker
     const [bestaand] = await db
@@ -85,6 +89,20 @@ router.post("/avg/inzageverzoek", requireAuth, async (req, res): Promise<void> =
       omschrijving: `AVG-${verzoekType}verzoek ingediend`,
       gebruikerId,
     });
+
+    const [indiener] = await db
+      .select({ naam: gebruikersTable.naam, email: gebruikersTable.email })
+      .from(gebruikersTable)
+      .where(eq(gebruikersTable.id, gebruikerId))
+      .limit(1);
+    if (indiener?.email) {
+      void stuurAvgVerzoekBevestiging({
+        naarEmail: indiener.email,
+        naarNaam: indiener.naam,
+        type: verzoekType,
+        verzoekId: verzoek.id,
+      });
+    }
 
     req.log.info({ gebruikerId, type: verzoekType }, "AVG-verzoek ingediend");
     res.status(201).json(mapVerzoek(verzoek));
@@ -159,12 +177,29 @@ router.patch("/avg/inzageverzoek/:id", alleenBeheer, async (req, res): Promise<v
 
     if (!bijgewerkt) return void res.status(404).json({ error: "Verzoek niet gevonden" });
 
-    const [{ naam }] = await db
-      .select({ naam: gebruikersTable.naam })
+    const [gebruiker] = await db
+      .select({ naam: gebruikersTable.naam, email: gebruikersTable.email })
       .from(gebruikersTable)
       .where(eq(gebruikersTable.id, bijgewerkt.gebruikerId));
 
-    res.json(mapVerzoek(bijgewerkt, naam));
+    if (gebruiker?.email && (status === "afgerond" || status === "afgewezen")) {
+      const domeinen = (process.env.REPLIT_DOMAINS ?? "").split(",").map((d) => d.trim()).filter(Boolean);
+      const host = domeinen[0] ?? req.get("host") ?? "localhost";
+      const exportLink = status === "afgerond" && bijgewerkt.type === "inzage" 
+        ? `https://${host}/api/avg/inzageverzoek/${bijgewerkt.id}/export`
+        : null;
+
+      void stuurAvgVerzoekAfgehandeldMail({
+        naarEmail: gebruiker.email,
+        naarNaam: gebruiker.naam,
+        type: bijgewerkt.type,
+        status: status as "afgerond" | "afgewezen",
+        beheerderOpmerking: bijgewerkt.beheerderOpmerking,
+        exportLink
+      }).catch(err => req.log.error(err, "Fout bij versturen AVG afhandeling mail"));
+    }
+
+    res.json(mapVerzoek(bijgewerkt, gebruiker?.naam));
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });
@@ -415,52 +450,8 @@ router.post("/avg/inzageverzoek/:id/anonimiseer", alleenBeheer, async (req, res)
     }
 
     const gebruikerId = verzoek.gebruikerId;
-    const pseudoniem = `[geanonimiseerd-${gebruikerId}]`;
-    const pseudoniemEmail = `anon-${gebruikerId}@verwijderd.fps`;
-    const nu = new Date();
-    const nuIso = nu.toISOString();
 
-    await db.transaction(async (tx) => {
-      // Overschrijf PII in gebruikers; zet geanonimiseerd-timestamp
-      await tx
-        .update(gebruikersTable)
-        .set({
-          naam: pseudoniem,
-          email: pseudoniemEmail,
-          telefoon: null,
-          bedrijf: null,
-          avatarUrl: null,
-          bedrijfslogoUrl: null,
-          bedrijfskleuren: null,
-          totpSecret: null,
-          tweeFactorIngeschakeld: false,
-          geanonimiseerd: nuIso,
-        })
-        .where(eq(gebruikersTable.id, gebruikerId));
-
-      // Overschrijf PII in medewerkers (indien aanwezig)
-      await tx
-        .update(medewerkersTable)
-        .set({
-          naam: pseudoniem,
-          email: null,
-          telefoon: null,
-          mobiel: null,
-          bijgewerktOp: nu,
-        })
-        .where(eq(medewerkersTable.gebruikerId, gebruikerId));
-
-      // Markeer verzoek als geanonimiseerd en afgerond
-      await tx
-        .update(avgInzageverzoekTable)
-        .set({
-          status: "afgerond",
-          geanonimiseerdOp: nu,
-          afgerondOp: nu,
-          bijgewerktOp: nu,
-        })
-        .where(eq(avgInzageverzoekTable.id, verzoekId));
-    });
+    await anonimiseerGebruiker(gebruikerId, verzoekId);
 
     req.log.info({ gebruikerId, verzoekId }, "AVG: gebruiker geanonimiseerd");
     res.json({ bericht: "Account is geanonimiseerd", gebruiker_id: gebruikerId });
@@ -572,6 +563,50 @@ router.get("/avg/stats", alleenBeheer, async (req, res): Promise<void> => {
       in_behandeling: behandeling?.n ?? 0,
       afgehandeld: afgehandeld?.n ?? 0,
       inactieve_accounts: inactief?.n ?? 0,
+    });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// ── GET /avg/opschoon-status — status geautomatiseerde accountopschoning ─────
+
+const AVG_ACCOUNT_BEWAARDAGEN = parseInt(process.env.AVG_ACCOUNT_BEWAARDAGEN ?? "730", 10) || 730;
+
+router.get("/avg/opschoon-status", alleenBeheer, async (req, res): Promise<void> => {
+  try {
+    const grens = new Date();
+    grens.setDate(grens.getDate() - AVG_ACCOUNT_BEWAARDAGEN);
+
+    const [wachtend] = await db
+      .select({ n: sql<number>`count(*)::int` })
+      .from(gebruikersTable)
+      .where(
+        and(
+          eq(gebruikersTable.actief, false),
+          sql`${gebruikersTable.geanonimiseerd} IS NULL`,
+          sql`${gebruikersTable.gedeactiveerdOp} IS NOT NULL`,
+          lt(gebruikersTable.gedeactiveerdOp, grens),
+        ),
+      );
+
+    const [laatsteRun] = await db
+      .select()
+      .from(avgOpschoonLogTable)
+      .orderBy(desc(avgOpschoonLogTable.uitgevoerdOp))
+      .limit(1);
+
+    res.json({
+      bewaardagen: AVG_ACCOUNT_BEWAARDAGEN,
+      wachtend_op_anonimisering: wachtend?.n ?? 0,
+      laatste_run: laatsteRun
+        ? {
+            uitgevoerd_op: laatsteRun.uitgevoerdOp.toISOString(),
+            accounts_geanonimiseerd: laatsteRun.accountsGeanonimiseerd,
+            activiteiten_verwijderd: laatsteRun.activiteitenVerwijderd,
+          }
+        : null,
     });
   } catch (err) {
     req.log.error(err);

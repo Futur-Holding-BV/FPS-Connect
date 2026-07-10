@@ -630,13 +630,26 @@ export default function PersoneelPagina() {
       toast({ title: "Selecteer minstens één voorstel", variant: "destructive" });
       return;
     }
-    const bestaandeNamen = new Set((opleidingen ?? []).map((o) => o.naam.trim().toLowerCase()));
+    const bestaandeOpNaam = new Map(
+      (opleidingen ?? []).map((o) => [o.naam.trim().toLowerCase(), o] as const),
+    );
     try {
       let toegevoegd = 0;
+      let gekoppeld = 0;
       let overgeslagen = 0;
       for (const v of gekozen) {
-        if (bestaandeNamen.has(v.naam.trim().toLowerCase())) {
-          overgeslagen++;
+        const bestaand = bestaandeOpNaam.get(v.naam.trim().toLowerCase());
+        if (bestaand) {
+          const huidigeFunctieIds = bestaand.functie_ids ?? [];
+          if (id && !huidigeFunctieIds.includes(id)) {
+            await wijzigOpleiding.mutateAsync({
+              id: bestaand.id,
+              data: { naam: bestaand.naam, functie_ids: [...huidigeFunctieIds, id] },
+            });
+            gekoppeld++;
+          } else {
+            overgeslagen++;
+          }
           continue;
         }
         await maakOpleiding.mutateAsync({
@@ -661,9 +674,12 @@ export default function PersoneelPagina() {
         toegevoegd++;
       }
       await queryClient.invalidateQueries({ queryKey: getListOpleidingenQueryKey() });
-      toast({
-        title: `${toegevoegd} opgeslagen${overgeslagen ? `, ${overgeslagen} overgeslagen (bestaat al)` : ""}`,
-      });
+      const delen = [
+        `${toegevoegd} opgeslagen`,
+        gekoppeld ? `${gekoppeld} gekoppeld aan bestaande opleiding` : null,
+        overgeslagen ? `${overgeslagen} overgeslagen (bestaat al)` : null,
+      ].filter(Boolean);
+      toast({ title: delen.join(", ") });
       setVoorstellen([]);
       setVoorstelGedaan(false);
       setGekozenVoorstellen(new Set());

@@ -74,6 +74,32 @@ export const reserveringenTable = pgTable("reserveringen", {
 });
 
 // ═══════════════════════════════════════════════════════════
+// Signalering-instellingen (singleton rij, id altijd 1)
+// ═══════════════════════════════════════════════════════════
+
+export const magazijnInstellingenTable = pgTable("magazijn_instellingen", {
+  id:               integer("id").primaryKey().default(1),
+  signaleringUur:   integer("signalering_uur").notNull().default(7),     // 0-23
+  signaleringMinuut: integer("signalering_minuut").notNull().default(0), // 0-59
+  signaleringMarge: integer("signalering_marge").notNull().default(0),   // extra buffer bovenop minimumvoorraad
+  bijgewerktOp:     timestamp("bijgewerkt_op").notNull().defaultNow(),
+  bijgewerktDoorId: integer("bijgewerkt_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
+});
+
+// ═══════════════════════════════════════════════════════════
+// Snoozes — tijdelijk onderdrukken van de dagelijkse e-mail per artikel
+// ═══════════════════════════════════════════════════════════
+
+export const magazijnSnoozesTable = pgTable("magazijn_snoozes", {
+  id:            serial("id").primaryKey(),
+  artikelId:     integer("artikel_id").notNull().references(() => artikelenTable.id, { onDelete: "cascade" }).unique(),
+  gesnoozedTot:  timestamp("gesnoozed_tot").notNull(),
+  reden:         text("reden"),
+  aangemaaktDoorId: integer("aangemaakt_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
+  aangemaaktOp:  timestamp("aangemaakt_op").notNull().defaultNow(),
+});
+
+// ═══════════════════════════════════════════════════════════
 // Stellingscans (AI-gestuurde voorraadcontrole via foto)
 // ═══════════════════════════════════════════════════════════
 

@@ -15,5 +15,6 @@ export interface DashboardStats {
   openstaande_inspecties: number;
   openstaande_onderhoud: number;
   vervallen_inspecties: number;
+  opdrachten_in_uitvoering?: number;
   voorzieningen_per_type: DashboardStatsVoorzieningenPerTypeItem[];
 }

@@ -113,12 +113,19 @@ export default function MagazijnArtikelDetailPagina() {
               QR-label
             </Button>
           </Link>
-          <Link href={`/magazijn/artikelen/${artikelId}/label?type=barcode`} target="_blank">
-            <Button variant="outline" size="sm">
+          {artikel.barcode || artikel.code ? (
+            <Link href={`/magazijn/artikelen/${artikelId}/label?type=barcode`} target="_blank">
+              <Button variant="outline" size="sm">
+                <Barcode className="h-4 w-4 mr-1.5" />
+                Barcode afdrukken
+              </Button>
+            </Link>
+          ) : (
+            <Button variant="outline" size="sm" disabled title="Vul eerst een artikelcode of barcode in">
               <Barcode className="h-4 w-4 mr-1.5" />
               Barcode afdrukken
             </Button>
-          </Link>
+          )}
         </div>
       </div>
 

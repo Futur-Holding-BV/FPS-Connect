@@ -22,6 +22,8 @@ import {
   inkoopplannenTable,
   inkoopplanRegelsTable,
   fieNacalculatiesTable,
+  pimUitvoeringStappenTable,
+  pimModellenTable,
 } from "@workspace/db";
 import { eq, and, sql, sum, asc, isNull, desc, or, inArray, isNotNull } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
@@ -41,6 +43,7 @@ function mapOpdracht(
   begrotingStatus: string | null,
   begrotingUren: number | null,
   g?: { naam: string | null; adres: string | null; postcode: string | null; stad: string | null } | null,
+  uitvoeringStapActief?: number | null,
 ) {
   return {
     id: o.id,
@@ -64,6 +67,7 @@ function mapOpdracht(
     begroting_status: begrotingStatus,
     begroting_totaal_arbeid_uren: begrotingUren,
     ai_fase: o.aiFase ?? null,
+    uitvoering_stap_actief: uitvoeringStapActief ?? null,
   };
 }
 
@@ -280,10 +284,14 @@ router.get("/opdrachten", lezen, async (req, res): Promise<void> => {
         postcode: gebouwenTable.postcode,
         stad: gebouwenTable.stad,
       },
+      p: {
+        id: pimModellenTable.id,
+      },
     })
       .from(opdrachtenTable)
       .leftJoin(projectBegrotingenTable, eq(projectBegrotingenTable.opdrachtId, opdrachtenTable.id))
       .leftJoin(gebouwenTable, eq(gebouwenTable.id, opdrachtenTable.gebouwId))
+      .leftJoin(pimModellenTable, eq(pimModellenTable.opdrachtId, opdrachtenTable.id))
       .where(
         and(
           gebouwFilter ? eq(opdrachtenTable.gebouwId, gebouwFilter) : undefined,
@@ -296,7 +304,22 @@ router.get("/opdrachten", lezen, async (req, res): Promise<void> => {
       )
       .orderBy(asc(opdrachtenTable.aangemaaktOp));
 
-    res.json(rows.map(r => mapOpdracht(r.o, r.b?.id ?? null, r.b?.status ?? null, r.b?.totaalArbeidUren ?? null, r.g)));
+    const result = await Promise.all(rows.map(async (r) => {
+      let stapActief: number | null = null;
+      if (r.o.aiFase === "uitvoering" && r.p?.id) {
+        const stappen = await db
+          .select({ volgorde: pimUitvoeringStappenTable.volgorde, status: pimUitvoeringStappenTable.status })
+          .from(pimUitvoeringStappenTable)
+          .where(eq(pimUitvoeringStappenTable.pimId, r.p.id));
+        
+        const voltooid = stappen.filter(s => s.status === "voltooid").length;
+        const heeftActief = stappen.some(s => s.status === "actief" || s.status === "afgeweken");
+        stapActief = voltooid + (heeftActief ? 1 : 0);
+      }
+      return mapOpdracht(r.o, r.b?.id ?? null, r.b?.status ?? null, r.b?.totaalArbeidUren ?? null, r.g, stapActief);
+    }));
+
+    res.json(result);
   } catch (err) {
     logger.error({ err }, "listOpdrachten fout");
     res.status(500).json({ error: "Serverfout" });
@@ -645,7 +668,10 @@ router.get("/opdrachten/:id/nacalculatie", lezen, async (req, res): Promise<void
     }));
 
     // Werktype afgeleid via berekenEnSlaOpNacalculatie (dominant spottype gebouw)
-    const [fieRij] = await db.select({ werktype: fieNacalculatiesTable.werktype })
+    const [fieRij] = await db.select({
+      werktype: fieNacalculatiesTable.werktype,
+      werktypeBron: fieNacalculatiesTable.werktypeBron,
+    })
       .from(fieNacalculatiesTable)
       .where(eq(fieNacalculatiesTable.opdrachtId, id))
       .limit(1);
@@ -653,6 +679,7 @@ router.get("/opdrachten/:id/nacalculatie", lezen, async (req, res): Promise<void
     res.json({
       opdracht_id: id,
       werktype: fieRij?.werktype ?? null,
+      werktype_bron: fieRij?.werktypeBron ?? null,
       calculatie_arbeid_uren: calcArbeidUren,
       begroting_arbeid_uren: begrotingUren,
       planning_uren: planningUren,

@@ -23,10 +23,13 @@ import { useUpload } from "@workspace/object-storage-web";
 import { Loader2 } from "lucide-react";
 
 function werkgeverNaarMij(w: Werkgever): WerkmaatschappijInfo {
+  const logoUrl = w.logo_url
+    ? (w.logo_url.startsWith("/") ? `/api/storage${w.logo_url}` : `/api/storage/objects/${w.logo_url}`)
+    : "logo-fps.png";
   return {
     id: String(w.id),
     naam: w.naam,
-    logoUrl: "logo-fps.png",
+    logoUrl,
     adres: w.adres ?? "",
     postcodeWoonplaats: [w.postcode, w.plaats].filter(Boolean).join(" "),
     telefoon: w.telefoon ?? "",

@@ -17,7 +17,7 @@ import { ApplicatieKiezer } from "@/components/ApplicatieKiezer";
 import { ToepassingKiezer } from "@/components/ToepassingKiezer";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -42,6 +42,7 @@ import {
 } from "@/components/ui";
 import {
   PdfPlattegrond,
+  type PdfPlattegrondHandle,
   type PlattegrondSpot,
   type PlattegrondScheiding,
   type PlattegrondCluster,
@@ -104,10 +105,11 @@ export default function Plattegrond() {
   const insets = useSafeAreaInsets();
   const { isTablet, formMaxBreedte } = useResponsive();
   const { gebruiker, token } = useAuth();
-  const { verdiepingId, gebouwId, naam } = useLocalSearchParams<{
+  const { verdiepingId, gebouwId, naam, spotId } = useLocalSearchParams<{
     verdiepingId: string;
     gebouwId: string;
     naam: string;
+    spotId?: string;
   }>();
 
   const vId = Number(verdiepingId);
@@ -116,6 +118,13 @@ export default function Plattegrond() {
   const { data: verdieping } = useGetVerdieping(vId);
   const { data: voorzieningen, refetch } = useListVoorzieningenOpVerdieping(vId);
   const { data: scheidingenData } = useListScheidingen(vId);
+
+  useEffect(() => {
+    if (!token) return;
+    const timer = setInterval(() => void refetch(), 60000);
+    return () => clearInterval(timer);
+  }, [token, refetch]);
+
   const { data: clusterData } = useListClusters(gId);
   const { data: volgendSpot, refetch: refetchSpotnummer } = useGetVolgendSpotnummer(gId);
   const maakVoorziening = useCreateVoorziening();
@@ -138,6 +147,8 @@ export default function Plattegrond() {
   const [detailId, setDetailId] = useState<number | null>(null);
   const [clusterDetailId, setClusterDetailId] = useState<number | null>(null);
   const [groepSpotIds, setGroepSpotIds] = useState<number[] | null>(null);
+  const [groepCentroid, setGroepCentroid] = useState<{ x: number; y: number } | null>(null);
+  const plattegrondRef = useRef<PdfPlattegrondHandle>(null);
   const [aiVoorstel, setAiVoorstel] = useState<SpotAiVoorstelResultaat | null>(null);
   const [aiBezig, setAiBezig] = useState(false);
   const [aiVelden, setAiVelden] = useState<Set<string>>(new Set());
@@ -183,6 +194,17 @@ export default function Plattegrond() {
     }));
 
   const detailSpot = (voorzieningen ?? []).find((v) => v.id === detailId) ?? null;
+
+  // Vanuit "Mijn werk" kan direct naar de afwerkflow van één spot genavigeerd worden
+  // via ?spotId=. Zodra de spots geladen zijn, openen we het detail automatisch.
+  useEffect(() => {
+    if (!spotId) return;
+    const gevraagdId = Number(spotId);
+    if (!Number.isFinite(gevraagdId)) return;
+    if ((voorzieningen ?? []).some((v) => v.id === gevraagdId)) {
+      setDetailId(gevraagdId);
+    }
+  }, [spotId, voorzieningen]);
 
   const clusterDetail =
     (clusterData ?? []).find((cl: any) => cl.id === clusterDetailId) ?? null;
@@ -404,6 +426,7 @@ export default function Plattegrond() {
   return (
     <View style={{ flex: 1, backgroundColor: "#2b303b" }}>
       <PdfPlattegrond
+        ref={plattegrondRef}
         plattegrondUrl={verdieping?.plattegrond_url ?? null}
         spots={spots}
         scheidingen={scheidingen}
@@ -414,7 +437,10 @@ export default function Plattegrond() {
         onTap={opTap}
         onSpot={(id) => setDetailId(id)}
         onCluster={(id) => setClusterDetailId(id)}
-        onGroep={(ids) => setGroepSpotIds(ids)}
+        onGroep={(ids, centroid) => {
+          setGroepSpotIds(ids);
+          setGroepCentroid(centroid);
+        }}
       />
 
       {/* Kopbalk over de WebView */}
@@ -862,6 +888,14 @@ export default function Plattegrond() {
                 setDetailId(id);
               }}
               onSluit={() => setGroepSpotIds(null)}
+              onZoom={
+                groepCentroid
+                  ? () => {
+                      plattegrondRef.current?.zoomNaar(groepCentroid.x, groepCentroid.y);
+                      setGroepSpotIds(null);
+                    }
+                  : undefined
+              }
             />
           </Pressable>
         </Pressable>
@@ -874,10 +908,12 @@ function OverlappendeSpots({
   spots,
   onSpot,
   onSluit,
+  onZoom,
 }: {
   spots: { id: number; objectnummer: string; type: string; status: string }[];
   onSpot: (id: number) => void;
   onSluit: () => void;
+  onZoom?: () => void;
 }) {
   const c = useColors();
 
@@ -897,6 +933,26 @@ function OverlappendeSpots({
             <Text style={{ color: c.mutedForeground, fontSize: 22, fontFamily: "Inter_600SemiBold" }}>✕</Text>
           </Pressable>
         </View>
+        {onZoom ? (
+          <Pressable
+            onPress={onZoom}
+            style={{
+              marginTop: 12,
+              alignSelf: "flex-start",
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 6,
+              paddingHorizontal: 14,
+              paddingVertical: 9,
+              borderRadius: 10,
+              backgroundColor: c.primary,
+            }}
+          >
+            <Text style={{ color: "#fff", fontSize: 14, fontFamily: "Inter_600SemiBold" }}>
+              Inzoomen op dit gebied
+            </Text>
+          </Pressable>
+        ) : null}
       </View>
 
       <View style={{ height: 1, backgroundColor: c.border }} />

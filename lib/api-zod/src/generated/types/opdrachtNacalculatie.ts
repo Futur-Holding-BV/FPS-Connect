@@ -6,11 +6,14 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { OpdrachtNacalculatieRegel } from './opdrachtNacalculatieRegel';
+import type { OpdrachtNacalculatieWerktypeBron } from './opdrachtNacalculatieWerktypeBron';
 
 export interface OpdrachtNacalculatie {
   opdracht_id: number;
   /** Afgeleid werktype op basis van het dominante spottype van het gebouw (branddeur, doorvoering, brandklep…). Null als er nog geen FIE-nacalculatie is berekend. */
   werktype?: string | null;
+  /** De bron van het werktype. "spots" indien afgeleid uit getelde spots, "fallback" indien teruggevallen op algemeen wegens ontbrekende spots. */
+  werktype_bron?: OpdrachtNacalculatieWerktypeBron;
   calculatie_arbeid_uren: number;
   begroting_arbeid_uren: number;
   planning_uren: number;

@@ -42,7 +42,7 @@ export default function PlanningScherm() {
   const insets = useSafeAreaInsets();
   const { token } = useAuth();
   const { inhoudMaxBreedte } = useResponsive();
-  const { isOnline, isDownloading, downloadVandaag, getCachedPlanning } = useOffline();
+  const { isOnline, isDownloading, downloadVandaag, getCachedPlanning, gecachedOp } = useOffline();
 
   const { data, isLoading, isError, refetch } = useGetMijnWerk();
   const [cachedPlanning, setCachedPlanning] = useState<MijnWerkGebouw[] | null>(null);
@@ -148,6 +148,7 @@ export default function PlanningScherm() {
           <Ionicons name="time-outline" size={13} color="#facc15" />
           <Text style={{ color: "#facc15", fontSize: 11, fontFamily: "Inter_400Regular" }}>
             Routeplanning uit lokale cache
+            {gecachedOp ? ` (geladen op ${new Date(gecachedOp).toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" })})` : ""}
           </Text>
         </View>
       ) : null}

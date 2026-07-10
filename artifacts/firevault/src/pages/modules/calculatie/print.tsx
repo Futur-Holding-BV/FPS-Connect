@@ -3,6 +3,8 @@ import { useRoute } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { useListStudioWerkgevers, useListWerkgevers } from "@workspace/api-client-react";
 import { useActiefStudioModel } from "@/hooks/use-actief-studio-model";
+import { AlertTriangle, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 type PrintData = {
   header: {
@@ -22,6 +24,15 @@ type PrintData = {
     risico_bedrag: number; winst_bedrag: number; korting_bedrag: number;
     eindtotaal: number; excl_btw: number; incl_btw: number;
   };
+  fie?: {
+    correctie_factor: number | null;
+    gecorrigeerde_arbeid: number | null;
+    gecorrigeerde_materiaal: number | null;
+    totaal_arbeid: number | null;
+    totaal_materiaal: number | null;
+    advies_status: string | null;
+    advies_tekst: string | null;
+  } | null;
 };
 
 function formatBedrag(n: number) {
@@ -104,9 +115,23 @@ export default function ModulesCalculatiePrint() {
     );
   }
 
-  const { header, regels, totalen } = data;
+  const { header, regels, totalen, fie } = data;
   const directeRegels = regels.filter((r) => !r.is_staartkosten);
   const staartRegels = regels.filter((r) => r.is_staartkosten);
+
+  const heeftLeereffect = fie?.correctie_factor != null && fie.correctie_factor !== 1.0;
+
+  const adviesKleur: Record<string, string> = {
+    goed: "bg-green-50 border-green-200 text-green-800",
+    neutraal: "bg-slate-50 border-slate-200 text-slate-600",
+    laag: "bg-amber-50 border-amber-200 text-amber-800",
+  };
+
+  const AdviesIcoon = ({ status }: { status: string }) => {
+    if (status === "goed") return <TrendingUp className="h-3.5 w-3.5 text-green-600 shrink-0" />;
+    if (status === "laag") return <TrendingDown className="h-3.5 w-3.5 text-amber-600 shrink-0" />;
+    return <Minus className="h-3.5 w-3.5 text-muted-foreground shrink-0" />;
+  };
 
   const byHoofdstuk = HOOFDSTUK_OPTIES.map((h) => ({
     hoofdstuk: h,
@@ -167,6 +192,57 @@ export default function ModulesCalculatiePrint() {
             <div className="col-span-3"><span className="text-muted-foreground">Omschrijving:</span><br />{header.omschrijving}</div>
           )}
         </div>
+
+        {/* FIE Bedrijfskompas - Advies & Leereffect */}
+        {fie && (
+          <div className="mb-6 grid grid-cols-2 gap-4">
+            <div className={cn("p-3 rounded border text-[11px] flex items-start gap-2", adviesKleur[fie.advies_status ?? ""] ?? adviesKleur.neutraal)}>
+              <AdviesIcoon status={fie.advies_status ?? "neutraal"} />
+              <div>
+                <div className="font-bold mb-0.5 uppercase tracking-wide text-[9px]">Marge-advies</div>
+                <div className="leading-snug">{fie.advies_tekst}</div>
+              </div>
+            </div>
+
+            {heeftLeereffect && (fie.gecorrigeerde_arbeid != null || fie.gecorrigeerde_materiaal != null) && (
+              <div className="p-3 rounded border border-amber-200 bg-amber-50 text-[11px]">
+                <div className="flex items-center gap-1.5 text-amber-800 font-bold uppercase tracking-wide text-[9px] mb-2">
+                  <AlertTriangle className="h-3 w-3 shrink-0" />
+                  <span>Leereffect-correctie</span>
+                  <span className="ml-auto inline-flex items-center rounded-full border border-amber-300 bg-white px-1.5 py-px text-[10px] font-bold text-amber-800 tabular-nums">
+                    &times;{fie.correctie_factor!.toFixed(2)}
+                  </span>
+                </div>
+                <div className="space-y-1">
+                  {fie.totaal_arbeid != null && fie.gecorrigeerde_arbeid != null && (
+                    <div className="flex justify-between text-amber-900/60">
+                      <span>Arbeid (origineel)</span>
+                      <span className="tabular-nums line-through">{formatBedrag(fie.totaal_arbeid)}</span>
+                    </div>
+                  )}
+                  {fie.gecorrigeerde_arbeid != null && (
+                    <div className="flex justify-between text-amber-900 font-semibold">
+                      <span>Gecorrigeerde arbeid</span>
+                      <span className="tabular-nums">{formatBedrag(fie.gecorrigeerde_arbeid)}</span>
+                    </div>
+                  )}
+                  {fie.totaal_materiaal != null && fie.gecorrigeerde_materiaal != null && (
+                    <div className="flex justify-between text-amber-900/60 mt-1 border-t border-amber-200/50 pt-1">
+                      <span>Materiaal (origineel)</span>
+                      <span className="tabular-nums line-through">{formatBedrag(fie.totaal_materiaal)}</span>
+                    </div>
+                  )}
+                  {fie.gecorrigeerde_materiaal != null && (
+                    <div className="flex justify-between text-amber-900 font-semibold">
+                      <span>Gecorrigeerd materiaal</span>
+                      <span className="tabular-nums">{formatBedrag(fie.gecorrigeerde_materiaal)}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Regels per hoofdstuk */}
         {byHoofdstuk.map(({ hoofdstuk, regels: hRegels }) => (

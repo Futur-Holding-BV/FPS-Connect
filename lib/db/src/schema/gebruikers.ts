@@ -61,6 +61,10 @@ export const gebruikersTable = pgTable("gebruikers", {
   // Account-lockout na herhaalde mislukte inlogpogingen (wachtwoord of TOTP).
   misluktePogingen: integer("mislukte_pogingen").notNull().default(0),
   vergrendeldTot: timestamp("vergrendeld_tot"),
+  // AVG: moment waarop het account inactief is gezet (actief: true -> false).
+  // Wordt gewist zodra het account weer actief wordt. Gebruikt door de
+  // automatische opschoonjob om na 2 jaar inactiviteit te anonimiseren.
+  gedeactiveerdOp: timestamp("gedeactiveerd_op"),
 });
 
 // Standaardprofielen (presets) die de bevoegdheden-matrix als startpunt vullen.

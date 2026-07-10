@@ -53,7 +53,7 @@ export class MailFout extends Error {
   }
 }
 
-export type MailSoort = "test" | "uitnodiging" | "wachtwoord_reset" | "offerte" | "klantvraag" | "ondertekening" | "inkoopbon" | "opdrachtbevestiging" | "magazijn_signalering" | "magazijn_bestelbon" | "aanvraag_bevestiging" | "planning_melding" | "incident_melding" | "ai_drempel" | "reactietermijn_melding" | "rapport_melding";
+export type MailSoort = "test" | "uitnodiging" | "wachtwoord_reset" | "offerte" | "klantvraag" | "afwijzing" | "ondertekening" | "inkoopbon" | "opdrachtbevestiging" | "magazijn_signalering" | "magazijn_bestelbon" | "aanvraag_bevestiging" | "planning_melding" | "incident_melding" | "ai_drempel" | "reactietermijn_melding" | "rapport_melding" | "avg_verzoek_bevestiging" | "avg_verzoek_afgehandeld";
 
 // ── Configuratie-helpers ─────────────────────────────────────────────────────
 export function isGeconfigureerd(): boolean {
@@ -601,6 +601,57 @@ export async function stuurKlantvraagBevestiging(opties: {
 }
 
 /**
+ * Stuurt een bevestigingsmail naar de klant nadat deze een offerte heeft afgewezen via het portaal.
+ * Gooit nooit — mislukkingen worden stilzwijgend genegeerd.
+ */
+export async function stuurAfwijzingBevestiging(opties: {
+  naarEmail: string;
+  naarNaam: string | null;
+  offerteId: number;
+  offertenummer: string | null;
+  offerteTitel: string;
+  reden: string | null;
+}): Promise<void> {
+  const { naarEmail, naarNaam, offerteId, offertenummer, offerteTitel, reden } = opties;
+
+  if (!isGeconfigureerd()) {
+    logger.warn({ offerteId }, "E-mailservice niet geconfigureerd — afwijzing-bevestiging niet verstuurd");
+    return;
+  }
+
+  const offerteLabel = offertenummer ? `offerte ${escapeHtml(offertenummer)}` : `offerte #${offerteId}`;
+  const aanhef = naarNaam ? `Geachte ${escapeHtml(naarNaam)},` : "Geachte klant,";
+  const onderwerp = `Bevestiging afwijzing — ${offertenummer ?? `#${offerteId}`}`;
+
+  const paragrafen = [
+    aanhef,
+    `Wij hebben uw afwijzing ontvangen voor <strong>${escapeHtml(offerteTitel)}</strong> (${offerteLabel}).`,
+  ];
+
+  if (reden) {
+    paragrafen.push(
+      `U heeft de volgende reden opgegeven:`,
+      `<blockquote style="margin:0 0 16px;padding:12px 16px;background:#f4f4f5;border-left:4px solid #F23B0D;border-radius:4px;font-style:italic;color:#3f3f46;">${escapeHtml(knip(reden, 2000))}</blockquote>`,
+    );
+  }
+
+  paragrafen.push("Mocht u in de toekomst alsnog interesse hebben in onze diensten, dan horen wij dat graag.");
+
+  const html = mailShell({
+    titel: onderwerp,
+    kopje: "Uw afwijzing is ontvangen",
+    paragrafen,
+    voettekst: `Dit bericht is automatisch gegenereerd door FPS Brandpreventie &bull; U ontvangt dit omdat u een offerte heeft afgewezen via ons portaal.`,
+  });
+
+  try {
+    await verstuurMail({ naarEmail, naarNaam: naarNaam ?? undefined, onderwerp, html, soort: "afwijzing" });
+  } catch (err) {
+    logger.warn({ err, offerteId }, "Afwijzing-bevestigingsmail mislukt (niet-kritiek)");
+  }
+}
+
+/**
  * Stuurt een notificatiemail naar de behandelend beheerder (of algemene postbus)
  * zodra een klant een offerte heeft afgewezen via het portaal.
  * Gooit nooit — mislukkingen worden stilzwijgend genegeerd.
@@ -1107,6 +1158,63 @@ export async function stuurAanvraagBevestiging(opties: {
   }
 }
 
+// ── AVG-verzoek bevestiging ────────────────────────────────────────────────────
+
+const AVG_TYPE_OMSCHRIJVING: Record<string, string> = {
+  inzage: "inzageverzoek",
+  verwijdering: "verzoek tot verwijdering",
+  correctie: "correctieverzoek",
+  beperking: "verzoek tot beperking van verwerking",
+  bezwaar: "bezwaar tegen verwerking",
+};
+
+function avgVerzoekBevestigingHtml(opties: { naam: string; typeOmschrijving: string }): string {
+  const { naam, typeOmschrijving } = opties;
+  return `<!DOCTYPE html>
+<html lang="nl"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/><title>Uw AVG-verzoek is ontvangen</title></head>
+<body style="margin:0;padding:0;background:#f4f4f5;font-family:system-ui,-apple-system,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f5;padding:40px 0;"><tr><td align="center">
+<table width="560" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.12);">
+  <tr><td style="background:#212631;padding:28px 40px;text-align:center;">
+    <p style="margin:0;">
+      <span style="display:inline-block;width:28px;height:28px;background:#F23B0D;border-radius:6px;vertical-align:middle;"></span>
+      <span style="color:#ffffff;font-size:16px;letter-spacing:.5px;font-weight:700;vertical-align:middle;margin-left:8px;">FPS Connect</span>
+    </p>
+  </td></tr>
+  <tr><td style="padding:32px 40px;">
+    <p style="margin:0 0 16px;font-size:15px;color:#3f3f46;">Beste ${escapeHtml(naam)},</p>
+    <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#3f3f46;">Wij hebben uw <strong>${escapeHtml(typeOmschrijving)}</strong> ontvangen en in behandeling genomen. U ontvangt bericht zodra dit is afgehandeld.</p>
+    <p style="margin:0;font-size:15px;line-height:1.6;color:#3f3f46;">U kunt de status van uw verzoek volgen via Mijn privacy in uw account.</p>
+  </td></tr>
+  <tr><td style="background:#f4f4f5;padding:20px 40px;border-top:1px solid #e4e4e7;">
+    <p style="margin:0;font-size:12px;color:#71717a;text-align:center;">Dit bericht is automatisch verstuurd &bull; FPS Brandpreventie</p>
+  </td></tr>
+</table>
+</td></tr></table>
+</body></html>`;
+}
+
+/** Stuurt een automatische bevestiging na het indienen van een AVG-verzoek. Fire-and-forget — gooit nooit. */
+export async function stuurAvgVerzoekBevestiging(opties: {
+  naarEmail: string;
+  naarNaam: string;
+  type: string;
+  verzoekId: number;
+}): Promise<void> {
+  if (!isGeconfigureerd()) {
+    logger.warn({ verzoekId: opties.verzoekId }, "E-mailservice niet geconfigureerd — AVG-verzoekbevestiging niet verstuurd");
+    return;
+  }
+  const typeOmschrijving = AVG_TYPE_OMSCHRIJVING[opties.type] ?? "verzoek";
+  const onderwerp = `Uw ${typeOmschrijving} is ontvangen`;
+  const html = avgVerzoekBevestigingHtml({ naam: opties.naarNaam, typeOmschrijving });
+  try {
+    await verstuurMail({ naarEmail: opties.naarEmail, naarNaam: opties.naarNaam, onderwerp, html, soort: "avg_verzoek_bevestiging" });
+  } catch (err) {
+    logger.error({ err, verzoekId: opties.verzoekId }, "AVG-verzoekbevestiging verzenden mislukt");
+  }
+}
+
 // ── Planning-melding ──────────────────────────────────────────────────────────
 
 /** Stuurt een overzicht van aanstaande / verlopen planningsdeadlines naar een PL. Fire-and-forget — gooit nooit. */
@@ -1303,5 +1411,52 @@ export async function stuurTestmail(opties: {
     html,
     soort: "test",
     verstuurdDoorId: opties.verstuurdDoorId,
+  });
+}
+
+/**
+ * Stuurt een bericht naar de gebruiker wanneer een AVG-verzoek is afgehandeld of afgewezen.
+ */
+export async function stuurAvgVerzoekAfgehandeldMail(opties: {
+  naarEmail: string;
+  naarNaam: string;
+  type: string;
+  status: "afgerond" | "afgewezen";
+  beheerderOpmerking?: string | null;
+  exportLink?: string | null;
+}): Promise<void> {
+  const { naarEmail, naarNaam, type, status, beheerderOpmerking, exportLink } = opties;
+  
+  const statusTekst = status === "afgerond" ? "afgehandeld" : "afgewezen";
+  const onderwerp = `Uw AVG-${type}verzoek is ${statusTekst} — FPS Connect`;
+  
+  const paragrafen = [
+    `Beste ${naarNaam},`,
+    `Uw verzoek met betrekking tot ${type} is door onze beheerder ${statusTekst}.`
+  ];
+
+  if (beheerderOpmerking) {
+    paragrafen.push(`Toelichting van de beheerder: ${beheerderOpmerking}`);
+  }
+
+  if (status === "afgerond" && type === "inzage" && exportLink) {
+    paragrafen.push("U kunt uw gegevens-export downloaden via de onderstaande knop. Deze link is uitsluitend voor u toegankelijk na inloggen.");
+  }
+
+  const html = mailShell({
+    titel: onderwerp,
+    kopje: `AVG-verzoek ${statusTekst}`,
+    paragrafen,
+    knop: (status === "afgerond" && type === "inzage" && exportLink) 
+      ? { label: "Download export", link: exportLink } 
+      : undefined
+  });
+
+  await verstuurMail({
+    naarEmail,
+    naarNaam,
+    onderwerp,
+    html,
+    soort: "avg_verzoek_afgehandeld",
   });
 }

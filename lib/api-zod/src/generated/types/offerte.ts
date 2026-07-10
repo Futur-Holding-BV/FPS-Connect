@@ -55,6 +55,16 @@ export interface Offerte {
   bedrag_incl_btw: number;
   status: string;
   portaal_status?: string;
+  /**
+     * ID van de broncalculatie
+     * @nullable
+     */
+  calculatie_id?: number | null;
+  /**
+     * Naam/referentie van de broncalculatie
+     * @nullable
+     */
+  calculatie_naam?: string | null;
   /** @nullable */
   auto_project_id?: number | null;
   /** @nullable */

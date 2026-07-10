@@ -27,6 +27,7 @@ export const GetDashboardStatsResponse = zod.object({
   "openstaande_inspecties": zod.number(),
   "openstaande_onderhoud": zod.number(),
   "vervallen_inspecties": zod.number(),
+  "opdrachten_in_uitvoering": zod.number().optional(),
   "voorzieningen_per_type": zod.array(zod.object({
   "type": zod.string(),
   "aantal": zod.number()
@@ -2772,7 +2773,7 @@ export const ListMijnActiviteitenResponse = zod.array(ListMijnActiviteitenRespon
  * @summary AVG-inzageverzoek of verwijderverzoek indienen (ingelogde gebruiker)
  */
 export const CreateAvgInzageverzoekBody = zod.object({
-  "type": zod.enum(['inzage', 'verwijdering']),
+  "type": zod.enum(['inzage', 'verwijdering', 'correctie', 'beperking', 'bezwaar']),
   "toelichting": zod.string().nullish()
 })
 
@@ -2913,6 +2914,20 @@ export const GetAvgStatsResponse = zod.object({
   "in_behandeling": zod.number(),
   "afgehandeld": zod.number(),
   "inactieve_accounts": zod.number()
+})
+
+
+/**
+ * @summary Status van de geautomatiseerde AVG-accountopschoning (beheerder)
+ */
+export const GetAvgOpschoonStatusResponse = zod.object({
+  "bewaardagen": zod.number(),
+  "wachtend_op_anonimisering": zod.number(),
+  "laatste_run": zod.object({
+  "uitgevoerd_op": zod.coerce.date(),
+  "accounts_geanonimiseerd": zod.number(),
+  "activiteiten_verwijderd": zod.number()
+}).nullable()
 })
 
 
@@ -5385,7 +5400,9 @@ export const ListWerkbonnenQueryParams = zod.object({
   "contract_id": zod.coerce.number().optional(),
   "gebouw_id": zod.coerce.number().optional(),
   "status": zod.coerce.string().optional(),
-  "monteur_id": zod.coerce.number().optional()
+  "monteur_id": zod.coerce.number().optional(),
+  "start_datum": zod.date().optional(),
+  "eind_datum": zod.date().optional()
 })
 
 export const ListWerkbonnenResponseItem = zod.object({
@@ -6469,6 +6486,8 @@ export const GetInfoInstellingenResponse = zod.object({
   "opdrachtbevestiging_auto_verzenden": zod.boolean().describe('Als true wordt de opdrachtbevestigingsmail automatisch naar de klant verstuurd na ondertekening. Als false wordt de mail niet verstuurd.'),
   "moments_verjaardag_ingeschakeld": zod.boolean().optional().describe('Organisatiebrede schakelaar voor FPS Moments — verjaardag. Uit = geen enkele verjaardag wordt getoond, ook niet aan de jarige zelf. Standaard aan.'),
   "ai_kostendrempel_eur": zod.number().nullish().describe('Maandelijks kostenplafond voor AI-gebruik in euro. Null betekent geen drempel.'),
+  "ai_maandelijkse_export_dag": zod.number().nullish().describe('Dag van de maand (1-28) waarop het AI-logboek automatisch als CSV per e-mail wordt verstuurd. Null betekent uitgeschakeld.'),
+  "ai_maandelijkse_export_email": zod.string().nullish().describe('E-mailadres dat de maandelijkse AI-logboek-CSV ontvangt. Null betekent uitgeschakeld.'),
   "bijgewerkt_op": zod.string(),
   "bijgewerkt_door_id": zod.number().nullish()
 })
@@ -6484,7 +6503,9 @@ export const UpdateInfoInstellingenBody = zod.object({
   "extra_disclaimer": zod.string().optional(),
   "opdrachtbevestiging_auto_verzenden": zod.boolean().optional(),
   "moments_verjaardag_ingeschakeld": zod.boolean().optional().describe('Organisatiebrede schakelaar voor FPS Moments — verjaardag (alleen hoofdbeheerder).'),
-  "ai_kostendrempel_eur": zod.number().nullish().describe('Maandelijks kostenplafond voor AI-gebruik in euro. Null of weglaten om drempel te verwijderen.')
+  "ai_kostendrempel_eur": zod.number().nullish().describe('Maandelijks kostenplafond voor AI-gebruik in euro. Null of weglaten om drempel te verwijderen.'),
+  "ai_maandelijkse_export_dag": zod.number().nullish().describe('Dag van de maand (1-28) waarop het AI-logboek automatisch als CSV per e-mail wordt verstuurd. Null of weglaten om uit te schakelen.'),
+  "ai_maandelijkse_export_email": zod.string().nullish().describe('E-mailadres dat de maandelijkse AI-logboek-CSV ontvangt.')
 })
 
 export const UpdateInfoInstellingenResponse = zod.object({
@@ -6496,6 +6517,8 @@ export const UpdateInfoInstellingenResponse = zod.object({
   "opdrachtbevestiging_auto_verzenden": zod.boolean().describe('Als true wordt de opdrachtbevestigingsmail automatisch naar de klant verstuurd na ondertekening. Als false wordt de mail niet verstuurd.'),
   "moments_verjaardag_ingeschakeld": zod.boolean().optional().describe('Organisatiebrede schakelaar voor FPS Moments — verjaardag. Uit = geen enkele verjaardag wordt getoond, ook niet aan de jarige zelf. Standaard aan.'),
   "ai_kostendrempel_eur": zod.number().nullish().describe('Maandelijks kostenplafond voor AI-gebruik in euro. Null betekent geen drempel.'),
+  "ai_maandelijkse_export_dag": zod.number().nullish().describe('Dag van de maand (1-28) waarop het AI-logboek automatisch als CSV per e-mail wordt verstuurd. Null betekent uitgeschakeld.'),
+  "ai_maandelijkse_export_email": zod.string().nullish().describe('E-mailadres dat de maandelijkse AI-logboek-CSV ontvangt. Null betekent uitgeschakeld.'),
   "bijgewerkt_op": zod.string(),
   "bijgewerkt_door_id": zod.number().nullish()
 })
@@ -11083,6 +11106,8 @@ export const ListOffertesResponseItem = zod.object({
   "bedrag_incl_btw": zod.number(),
   "status": zod.string(),
   "portaal_status": zod.string().optional(),
+  "calculatie_id": zod.number().nullish().describe('ID van de broncalculatie'),
+  "calculatie_naam": zod.string().nullish().describe('Naam\/referentie van de broncalculatie'),
   "auto_project_id": zod.number().nullish(),
   "aangemaakt_door_id": zod.number().nullish(),
   "begroting_weergave": zod.object({
@@ -11141,6 +11166,7 @@ export const CreateOfferteBody = zod.object({
   "btw_percentage": zod.number().optional(),
   "bedrag_incl_btw": zod.number().optional(),
   "status": zod.string().optional(),
+  "calculatie_id": zod.number().nullish(),
   "begroting_weergave": zod.object({
   "toon_aantal": zod.boolean().optional(),
   "toon_eenheid": zod.boolean().optional(),
@@ -11204,6 +11230,8 @@ export const GetOfferteResponse = zod.object({
   "bedrag_incl_btw": zod.number(),
   "status": zod.string(),
   "portaal_status": zod.string().optional(),
+  "calculatie_id": zod.number().nullish().describe('ID van de broncalculatie'),
+  "calculatie_naam": zod.string().nullish().describe('Naam\/referentie van de broncalculatie'),
   "auto_project_id": zod.number().nullish(),
   "aangemaakt_door_id": zod.number().nullish(),
   "begroting_weergave": zod.object({
@@ -11265,6 +11293,7 @@ export const UpdateOfferteBody = zod.object({
   "btw_percentage": zod.number().optional(),
   "bedrag_incl_btw": zod.number().optional(),
   "status": zod.string().optional(),
+  "calculatie_id": zod.number().nullish(),
   "begroting_weergave": zod.object({
   "toon_aantal": zod.boolean().optional(),
   "toon_eenheid": zod.boolean().optional(),
@@ -11318,6 +11347,8 @@ export const UpdateOfferteResponse = zod.object({
   "bedrag_incl_btw": zod.number(),
   "status": zod.string(),
   "portaal_status": zod.string().optional(),
+  "calculatie_id": zod.number().nullish().describe('ID van de broncalculatie'),
+  "calculatie_naam": zod.string().nullish().describe('Naam\/referentie van de broncalculatie'),
   "auto_project_id": zod.number().nullish(),
   "aangemaakt_door_id": zod.number().nullish(),
   "begroting_weergave": zod.object({
@@ -11992,7 +12023,8 @@ export const ListOfferteVragenResponseItem = zod.object({
   "bezoeker_email": zod.string().nullish(),
   "vraag": zod.string(),
   "antwoord": zod.string().nullish(),
-  "aangemaakt_op": zod.string()
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
 })
 export const ListOfferteVragenResponse = zod.array(ListOfferteVragenResponseItem)
 
@@ -12017,7 +12049,8 @@ export const BeantwoordOfferteVraagResponse = zod.object({
   "bezoeker_email": zod.string().nullish(),
   "vraag": zod.string(),
   "antwoord": zod.string().nullish(),
-  "aangemaakt_op": zod.string()
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
 })
 
 
@@ -12035,6 +12068,29 @@ export const ListOfferteTrackingResponseItem = zod.object({
   "aangemaakt_op": zod.string()
 })
 export const ListOfferteTrackingResponse = zod.array(ListOfferteTrackingResponseItem)
+
+
+/**
+ * @summary Statusovergangen van een offerte ophalen
+ */
+export const ListOfferteTransitieLogParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListOfferteTransitieLogResponseItem = zod.object({
+  "id": zod.number(),
+  "workflow_id": zod.string(),
+  "entity_id": zod.number(),
+  "entity_type": zod.string(),
+  "van_status": zod.string(),
+  "naar_status": zod.string(),
+  "gebruiker_id": zod.number().nullish(),
+  "gebruiker_naam": zod.string().nullish(),
+  "reden": zod.string().nullish(),
+  "metadata": zod.record(zod.string(), zod.unknown()).nullish(),
+  "aangemaakt_op": zod.string()
+})
+export const ListOfferteTransitieLogResponse = zod.array(ListOfferteTransitieLogResponseItem)
 
 
 /**
@@ -12097,7 +12153,8 @@ export const ListOpdrachtenResponseItem = zod.object({
   "begroting_id": zod.number().nullish(),
   "begroting_status": zod.string().nullish(),
   "begroting_totaal_arbeid_uren": zod.number().nullish(),
-  "ai_fase": zod.string().nullish().describe('AI-fasering: nieuw | advies | werkvoorbereiding | inkoop | uitvoering | oplevering | gereed')
+  "ai_fase": zod.string().nullish().describe('AI-fasering: nieuw | advies | werkvoorbereiding | inkoop | uitvoering | oplevering | gereed'),
+  "uitvoering_stap_actief": zod.number().nullish().describe('Huidige stapnummer in uitvoering (aantal voltooide + actieve stap)')
 })
 export const ListOpdrachtenResponse = zod.array(ListOpdrachtenResponseItem)
 
@@ -12130,7 +12187,8 @@ export const GetOpdrachtResponse = zod.object({
   "begroting_id": zod.number().nullish(),
   "begroting_status": zod.string().nullish(),
   "begroting_totaal_arbeid_uren": zod.number().nullish(),
-  "ai_fase": zod.string().nullish().describe('AI-fasering: nieuw | advies | werkvoorbereiding | inkoop | uitvoering | oplevering | gereed')
+  "ai_fase": zod.string().nullish().describe('AI-fasering: nieuw | advies | werkvoorbereiding | inkoop | uitvoering | oplevering | gereed'),
+  "uitvoering_stap_actief": zod.number().nullish().describe('Huidige stapnummer in uitvoering (aantal voltooide + actieve stap)')
 })
 
 
@@ -12168,7 +12226,8 @@ export const UpdateOpdrachtResponse = zod.object({
   "begroting_id": zod.number().nullish(),
   "begroting_status": zod.string().nullish(),
   "begroting_totaal_arbeid_uren": zod.number().nullish(),
-  "ai_fase": zod.string().nullish().describe('AI-fasering: nieuw | advies | werkvoorbereiding | inkoop | uitvoering | oplevering | gereed')
+  "ai_fase": zod.string().nullish().describe('AI-fasering: nieuw | advies | werkvoorbereiding | inkoop | uitvoering | oplevering | gereed'),
+  "uitvoering_stap_actief": zod.number().nullish().describe('Huidige stapnummer in uitvoering (aantal voltooide + actieve stap)')
 })
 
 
@@ -12403,6 +12462,7 @@ export const GetNacalculatieParams = zod.object({
 export const GetNacalculatieResponse = zod.object({
   "opdracht_id": zod.number(),
   "werktype": zod.string().nullish().describe('Afgeleid werktype op basis van het dominante spottype van het gebouw (branddeur, doorvoering, brandklep…). Null als er nog geen FIE-nacalculatie is berekend.'),
+  "werktype_bron": zod.enum(['spots', 'fallback']).nullish().describe('De bron van het werktype. \"spots\" indien afgeleid uit getelde spots, \"fallback\" indien teruggevallen op algemeen wegens ontbrekende spots.'),
   "calculatie_arbeid_uren": zod.number(),
   "begroting_arbeid_uren": zod.number(),
   "planning_uren": zod.number(),
@@ -13333,6 +13393,31 @@ export const BeslisPimUitvoeringAfwijkingResponse = zod.object({
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 }).optional()
+})
+
+
+/**
+ * @summary Uitvoeringsverslag ophalen met samenvatting van voltooide stappen en afwijkingen
+ */
+export const GetPimUitvoeringVerslagParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetPimUitvoeringVerslagResponse = zod.object({
+  "opdracht_id": zod.number(),
+  "samenvatting": zod.string().describe('AI gegenereerde samenvatting van de uitvoering'),
+  "stappen": zod.array(zod.object({
+  "volgorde": zod.number(),
+  "doel": zod.string(),
+  "status": zod.string(),
+  "voltooid_op": zod.string().optional()
+})),
+  "afwijkingen": zod.array(zod.object({
+  "volgorde": zod.number(),
+  "omschrijving": zod.string(),
+  "beslissing": zod.string()
+})),
+  "gegenereerd_op": zod.string()
 })
 
 
@@ -15010,6 +15095,15 @@ export const CreateModCalculatieBody = zod.object({
 })
 
 export const CreateModCalculatieResponse = zod.void()
+
+
+/**
+ * @summary Standaard tarieven en normtijden synchroniseren
+ */
+export const SynchroniseerStandaardCalculatieDataResponse = zod.object({
+  "tarieven_toegevoegd": zod.number().optional(),
+  "normtijden_toegevoegd": zod.number().optional()
+})
 
 
 /**
@@ -23212,6 +23306,30 @@ export const SlaAiCategorieCorrectieLerenResponse = zod.void()
 
 
 /**
+ * @summary Alle opgeslagen AI-veld-correcties ophalen
+ */
+export const ListAiVeldCorrectiesResponseItem = zod.object({
+  "id": zod.number(),
+  "veld_naam": zod.string(),
+  "ai_voorstel": zod.string(),
+  "gekozen": zod.string(),
+  "tekst_fragment": zod.string().nullish(),
+  "aangemaakt_op": zod.string()
+})
+export const ListAiVeldCorrectiesResponse = zod.array(ListAiVeldCorrectiesResponseItem)
+
+
+/**
+ * @summary Verwijder een AI-veld-correctie
+ */
+export const DeleteAiVeldCorrectieParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteAiVeldCorrectieResponse = zod.void()
+
+
+/**
  * @summary Centraal AI-invullen — vult formuliervelden in op basis van context en websearch
  */
 export const AiCentraalInvullenBody = zod.object({
@@ -23792,6 +23910,78 @@ export const GetMagazijnSignaleringResponse = zod.object({
 
 
 /**
+ * @summary Instellingen voor de dagelijkse minimumvoorraad-signalering (tijdstip + marge)
+ */
+export const getMagazijnInstellingenResponseSignaleringUurMin = 0;
+export const getMagazijnInstellingenResponseSignaleringUurMax = 23;
+
+export const getMagazijnInstellingenResponseSignaleringMinuutMin = 0;
+export const getMagazijnInstellingenResponseSignaleringMinuutMax = 59;
+
+export const getMagazijnInstellingenResponseSignaleringMargeMin = 0;
+
+
+
+export const GetMagazijnInstellingenResponse = zod.object({
+  "signalering_uur": zod.number().min(getMagazijnInstellingenResponseSignaleringUurMin).max(getMagazijnInstellingenResponseSignaleringUurMax),
+  "signalering_minuut": zod.number().min(getMagazijnInstellingenResponseSignaleringMinuutMin).max(getMagazijnInstellingenResponseSignaleringMinuutMax),
+  "signalering_marge": zod.number().min(getMagazijnInstellingenResponseSignaleringMargeMin),
+  "bijgewerkt_op": zod.coerce.date()
+})
+
+
+/**
+ * @summary Tijdstip en/of marge van de signalering bijwerken
+ */
+export const updateMagazijnInstellingenBodySignaleringUurMin = 0;
+export const updateMagazijnInstellingenBodySignaleringUurMax = 23;
+
+export const updateMagazijnInstellingenBodySignaleringMinuutMin = 0;
+export const updateMagazijnInstellingenBodySignaleringMinuutMax = 59;
+
+export const updateMagazijnInstellingenBodySignaleringMargeMin = 0;
+
+
+
+export const UpdateMagazijnInstellingenBody = zod.object({
+  "signalering_uur": zod.number().min(updateMagazijnInstellingenBodySignaleringUurMin).max(updateMagazijnInstellingenBodySignaleringUurMax).optional(),
+  "signalering_minuut": zod.number().min(updateMagazijnInstellingenBodySignaleringMinuutMin).max(updateMagazijnInstellingenBodySignaleringMinuutMax).optional(),
+  "signalering_marge": zod.number().min(updateMagazijnInstellingenBodySignaleringMargeMin).optional()
+})
+
+export const updateMagazijnInstellingenResponseSignaleringUurMin = 0;
+export const updateMagazijnInstellingenResponseSignaleringUurMax = 23;
+
+export const updateMagazijnInstellingenResponseSignaleringMinuutMin = 0;
+export const updateMagazijnInstellingenResponseSignaleringMinuutMax = 59;
+
+export const updateMagazijnInstellingenResponseSignaleringMargeMin = 0;
+
+
+
+export const UpdateMagazijnInstellingenResponse = zod.object({
+  "signalering_uur": zod.number().min(updateMagazijnInstellingenResponseSignaleringUurMin).max(updateMagazijnInstellingenResponseSignaleringUurMax),
+  "signalering_minuut": zod.number().min(updateMagazijnInstellingenResponseSignaleringMinuutMin).max(updateMagazijnInstellingenResponseSignaleringMinuutMax),
+  "signalering_marge": zod.number().min(updateMagazijnInstellingenResponseSignaleringMargeMin),
+  "bijgewerkt_op": zod.coerce.date()
+})
+
+
+/**
+ * @summary Lijst van artikelen waarvan de dagelijkse signalering-mail tijdelijk is onderdrukt
+ */
+export const ListMagazijnSnoozesResponseItem = zod.object({
+  "id": zod.number(),
+  "artikel_id": zod.number(),
+  "artikel_naam": zod.string(),
+  "gesnoozed_tot": zod.coerce.date(),
+  "reden": zod.string().nullable(),
+  "aangemaakt_op": zod.coerce.date()
+})
+export const ListMagazijnSnoozesResponse = zod.array(ListMagazijnSnoozesResponseItem)
+
+
+/**
  * @summary Magazijn dashboard statistieken
  */
 export const GetMagazijnDashboardResponse = zod.object({
@@ -23972,6 +24162,42 @@ export const UpdateMagazijnArtikelResponse = zod.object({
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })
+
+
+/**
+ * @summary Dagelijkse signalering-mail voor dit artikel tijdelijk onderdrukken
+ */
+export const SnoozeMagazijnArtikelParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const snoozeMagazijnArtikelBodyDagenMax = 90;
+
+
+
+export const SnoozeMagazijnArtikelBody = zod.object({
+  "dagen": zod.number().min(1).max(snoozeMagazijnArtikelBodyDagenMax),
+  "reden": zod.string().optional()
+})
+
+export const SnoozeMagazijnArtikelResponse = zod.object({
+  "id": zod.number(),
+  "artikel_id": zod.number(),
+  "artikel_naam": zod.string(),
+  "gesnoozed_tot": zod.coerce.date(),
+  "reden": zod.string().nullable(),
+  "aangemaakt_op": zod.coerce.date()
+})
+
+
+/**
+ * @summary Snooze voor dit artikel opheffen
+ */
+export const VerwijderMagazijnSnoozeParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const VerwijderMagazijnSnoozeResponse = zod.void()
 
 
 /**
@@ -24484,6 +24710,16 @@ export const UpdateDocumentStudioModelResponse = zod.object({
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string().nullish()
 })
+
+
+/**
+ * @summary Download het referentiebestand van een Document Studio model
+ */
+export const GetDocumentStudioReferentieParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetDocumentStudioReferentieResponse = zod.unknown()
 
 
 /**
@@ -25065,6 +25301,23 @@ export const GetFieObservatiesResponse = zod.object({
   "betrouwbaarheidsscore": zod.number().nullish()
 }))
 })
+
+
+/**
+ * @summary Lijst van nacalculaties gefilterd op werktype
+ */
+export const ListFieNacalculatiesQueryParams = zod.object({
+  "werktype": zod.coerce.string()
+})
+
+export const ListFieNacalculatiesResponseItem = zod.object({
+  "id": zod.number(),
+  "opdracht_id": zod.number(),
+  "werktype": zod.string(),
+  "opdracht_nummer": zod.string(),
+  "opdracht_titel": zod.string()
+})
+export const ListFieNacalculatiesResponse = zod.array(ListFieNacalculatiesResponseItem)
 
 
 /**

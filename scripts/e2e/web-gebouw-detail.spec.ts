@@ -178,7 +178,7 @@ test("Web: gebouw-detail en voorziening-detail regressie", async ({ page }) => {
       timeout: INHOUD_TIMEOUT,
     });
 
-    const detailKnop = page.getByRole("button", { name: "Details" }).first();
+    const detailKnop = page.getByTestId("spot-details-knop").first();
     const leegStaat = zichtbaar(page, "Geen spots gevonden.");
 
     // Wacht tot de lijst geladen is.

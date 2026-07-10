@@ -17,7 +17,7 @@ import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
 import { authenticator } from "otplib";
 
-import { db, gebruikersTable } from "@workspace/db";
+import { db, gebruikersTable, verlofsoortenTable } from "@workspace/db";
 import { MODULE_IDS } from "@workspace/permissies";
 
 export const E2E_EMAIL = "e2e-menu@fps.local";
@@ -99,14 +99,48 @@ async function maakOfUpdateE2eAccount(opties: {
   return nieuw.id;
 }
 
+// Vaste naam voor de e2e-verlofsoort. Zorgt dat de verlofformulier-e2e-stap
+// (scripts/e2e/startmenu.spec.ts) altijd minstens één keuzeoptie heeft, ook in
+// een schone CI-omgeving zonder handmatig geseedde verlofsoorten. Idempotent:
+// een bestaande soort met deze naam wordt alleen op "actief" gezet, niet
+// gedupliceerd.
+const E2E_VERLOFSOORT_NAAM = "E2E Vakantiedagen";
+
+async function zorgVoorE2eVerlofsoort(): Promise<void> {
+  weigerBuitenDev();
+  const [bestaand] = await db
+    .select({ id: verlofsoortenTable.id })
+    .from(verlofsoortenTable)
+    .where(eq(verlofsoortenTable.naam, E2E_VERLOFSOORT_NAAM));
+
+  if (bestaand) {
+    await db
+      .update(verlofsoortenTable)
+      .set({ actief: true })
+      .where(eq(verlofsoortenTable.id, bestaand.id));
+    return;
+  }
+
+  await db.insert(verlofsoortenTable).values({
+    naam: E2E_VERLOFSOORT_NAAM,
+    categorie: "wettelijk",
+    hoofdcategorie: "vakantie",
+    betaald: true,
+    collectief: false,
+    actief: true,
+  });
+}
+
 // Vast e2e-account voor de monteur-suite (startmenu.spec.ts).
 export async function setupE2eAccount(): Promise<number> {
-  return maakOfUpdateE2eAccount({
+  const id = await maakOfUpdateE2eAccount({
     email: E2E_EMAIL,
     naam: "E2E Test Monteur",
     wachtwoord: E2E_WACHTWOORD,
     totpSecret: E2E_TOTP_SECRET,
   });
+  await zorgVoorE2eVerlofsoort();
+  return id;
 }
 
 // Vast e2e-account voor de web-suite (web-gebouw-detail + web-offerte-badge).

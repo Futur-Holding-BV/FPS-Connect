@@ -11,14 +11,17 @@ import {
   leveranciersTable,
   opdrachtenTable,
   magazijnStellingscansTable,
+  magazijnInstellingenTable,
+  magazijnSnoozesTable,
 } from "@workspace/db";
-import { eq, and, asc, desc, ilike, lt, lte, sql } from "drizzle-orm";
+import { eq, and, asc, desc, ilike, lt, lte, sql, gt } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { logger } from "../lib/logger";
 import { verstuurMail, MailFout } from "../services/email";
 import { ObjectStorageService } from "../lib/objectStorage";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
 import { MAGAZIJN_RETOUR_SCAN_BASE_PROMPT, MAGAZIJN_STELLING_SCAN_BASE_PROMPT } from "../lib/aiPrompts";
+import { herplanMagazijnSignalering } from "../lib/magazijnSignalering";
 
 const router = Router();
 
@@ -232,6 +235,154 @@ router.get("/magazijn/signalering", lezen, async (req, res): Promise<void> => {
     res.json({ kritiek_aantal: kritiekAantal });
   } catch (err) {
     logger.error({ err }, "magazijn signalering fout");
+    res.status(500).json({ error: "Serverfout" });
+  }
+});
+
+// ── Signalering-instellingen: tijdstip + marge van de dagelijkse controle ────
+
+router.get("/magazijn/instellingen", lezen, async (req, res): Promise<void> => {
+  try {
+    const [rij] = await db.select().from(magazijnInstellingenTable).where(eq(magazijnInstellingenTable.id, 1));
+    if (!rij) {
+      res.json({ signalering_uur: 7, signalering_minuut: 0, signalering_marge: 0, bijgewerkt_op: new Date().toISOString() });
+      return;
+    }
+    res.json({
+      signalering_uur: rij.signaleringUur,
+      signalering_minuut: rij.signaleringMinuut,
+      signalering_marge: rij.signaleringMarge,
+      bijgewerkt_op: iso(rij.bijgewerktOp),
+    });
+  } catch (err) {
+    logger.error({ err }, "magazijn instellingen ophalen fout");
+    res.status(500).json({ error: "Serverfout" });
+  }
+});
+
+router.patch("/magazijn/instellingen", beheer, async (req, res): Promise<void> => {
+  try {
+    const { signalering_uur, signalering_minuut, signalering_marge } = req.body as {
+      signalering_uur?: number;
+      signalering_minuut?: number;
+      signalering_marge?: number;
+    };
+
+    if (signalering_uur != null && (signalering_uur < 0 || signalering_uur > 23)) {
+      res.status(400).json({ error: "signalering_uur moet tussen 0 en 23 liggen" });
+      return;
+    }
+    if (signalering_minuut != null && (signalering_minuut < 0 || signalering_minuut > 59)) {
+      res.status(400).json({ error: "signalering_minuut moet tussen 0 en 59 liggen" });
+      return;
+    }
+    if (signalering_marge != null && signalering_marge < 0) {
+      res.status(400).json({ error: "signalering_marge mag niet negatief zijn" });
+      return;
+    }
+
+    const [bestaand] = await db.select().from(magazijnInstellingenTable).where(eq(magazijnInstellingenTable.id, 1));
+
+    const waarden = {
+      signaleringUur: signalering_uur ?? bestaand?.signaleringUur ?? 7,
+      signaleringMinuut: signalering_minuut ?? bestaand?.signaleringMinuut ?? 0,
+      signaleringMarge: signalering_marge ?? bestaand?.signaleringMarge ?? 0,
+      bijgewerktOp: new Date(),
+      bijgewerktDoorId: req.session.userId ?? null,
+    };
+
+    const [rij] = bestaand
+      ? await db.update(magazijnInstellingenTable).set(waarden).where(eq(magazijnInstellingenTable.id, 1)).returning()
+      : await db.insert(magazijnInstellingenTable).values({ id: 1, ...waarden }).returning();
+
+    herplanMagazijnSignalering();
+
+    res.json({
+      signalering_uur: rij.signaleringUur,
+      signalering_minuut: rij.signaleringMinuut,
+      signalering_marge: rij.signaleringMarge,
+      bijgewerkt_op: iso(rij.bijgewerktOp),
+    });
+  } catch (err) {
+    logger.error({ err }, "magazijn instellingen bijwerken fout");
+    res.status(500).json({ error: "Serverfout" });
+  }
+});
+
+// ── Snoozes: dagelijkse mail per artikel tijdelijk onderdrukken ─────────────
+
+router.get("/magazijn/snoozes", lezen, async (req, res): Promise<void> => {
+  try {
+    const rijen = await db
+      .select({
+        id: magazijnSnoozesTable.id,
+        artikel_id: magazijnSnoozesTable.artikelId,
+        artikel_naam: artikelenTable.naam,
+        gesnoozed_tot: magazijnSnoozesTable.gesnoozedTot,
+        reden: magazijnSnoozesTable.reden,
+        aangemaakt_op: magazijnSnoozesTable.aangemaaktOp,
+      })
+      .from(magazijnSnoozesTable)
+      .innerJoin(artikelenTable, eq(artikelenTable.id, magazijnSnoozesTable.artikelId))
+      .where(gt(magazijnSnoozesTable.gesnoozedTot, new Date()))
+      .orderBy(asc(magazijnSnoozesTable.gesnoozedTot));
+
+    res.json(rijen.map((r) => ({ ...r, gesnoozed_tot: iso(r.gesnoozed_tot), aangemaakt_op: iso(r.aangemaakt_op) })));
+  } catch (err) {
+    logger.error({ err }, "magazijn snoozes ophalen fout");
+    res.status(500).json({ error: "Serverfout" });
+  }
+});
+
+router.post("/magazijn/artikelen/:id/snooze", schrijven, async (req, res): Promise<void> => {
+  try {
+    const artikelId = Number(req.params.id);
+    const { dagen, reden } = req.body as { dagen: number; reden?: string };
+
+    if (!dagen || dagen < 1 || dagen > 90) {
+      res.status(400).json({ error: "dagen moet tussen 1 en 90 liggen" });
+      return;
+    }
+
+    const [artikel] = await db.select({ id: artikelenTable.id, naam: artikelenTable.naam }).from(artikelenTable).where(eq(artikelenTable.id, artikelId));
+    if (!artikel) {
+      res.status(404).json({ error: "Artikel niet gevonden" });
+      return;
+    }
+
+    const gesnoozedTot = new Date();
+    gesnoozedTot.setDate(gesnoozedTot.getDate() + dagen);
+
+    const [rij] = await db
+      .insert(magazijnSnoozesTable)
+      .values({ artikelId, gesnoozedTot, reden: reden ?? null, aangemaaktDoorId: req.session.userId ?? null })
+      .onConflictDoUpdate({
+        target: magazijnSnoozesTable.artikelId,
+        set: { gesnoozedTot, reden: reden ?? null, aangemaaktDoorId: req.session.userId ?? null, aangemaaktOp: new Date() },
+      })
+      .returning();
+
+    res.json({
+      id: rij.id,
+      artikel_id: rij.artikelId,
+      artikel_naam: artikel.naam,
+      gesnoozed_tot: iso(rij.gesnoozedTot),
+      reden: rij.reden,
+      aangemaakt_op: iso(rij.aangemaaktOp),
+    });
+  } catch (err) {
+    logger.error({ err }, "magazijn snooze aanmaken fout");
+    res.status(500).json({ error: "Serverfout" });
+  }
+});
+
+router.delete("/magazijn/artikelen/:id/snooze", schrijven, async (req, res): Promise<void> => {
+  try {
+    const artikelId = Number(req.params.id);
+    await db.delete(magazijnSnoozesTable).where(eq(magazijnSnoozesTable.artikelId, artikelId));
+    res.status(204).send();
+  } catch (err) {
+    logger.error({ err }, "magazijn snooze verwijderen fout");
     res.status(500).json({ error: "Serverfout" });
   }
 });
@@ -764,7 +915,7 @@ router.post("/magazijn/uitgiftes", aanmaken, async (req, res): Promise<void> => 
 
     // Beheerders (hoofdbeheerder of magazijn niveau 4) mogen zonder opdracht uitgeven.
     // Overige gebruikers (monteurs) moeten altijd een opdracht koppelen.
-    const isBeheer = req.permissies!.isHoofdbeheerder || req.permissies!.heeftModuleRecht("magazijn", 4);
+    const isBeheer = req.permissies?.isHoofdbeheerder || (req.permissies?.heeftModuleRecht && req.permissies.heeftModuleRecht("magazijn", 4));
     if (!isBeheer && !opdrachtId) {
       res.status(422).json({ error: "Een opdracht is verplicht bij uitgifte", code: "OPDRACHT_VERPLICHT" }); return;
     }

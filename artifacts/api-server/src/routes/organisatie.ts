@@ -559,6 +559,41 @@ router.post("/organisatie/bedrijfsdocumenten/veld-correctie", schrijven, async (
   }
 });
 
+// ── Bedrijfsdocumenten — AI veld-correcties overzicht ────────────────────────
+
+router.get("/organisatie/bedrijfsdocumenten/veld-correcties", lezen, async (req, res): Promise<void> => {
+  try {
+    const rijen = await db
+      .select()
+      .from(aiVeldCorrectiesTable)
+      .orderBy(desc(aiVeldCorrectiesTable.aangemaaktOp));
+    res.json(
+      rijen.map((r) => ({
+        id:             r.id,
+        veld_naam:      r.veldNaam,
+        ai_voorstel:    r.aiVoorstel,
+        gekozen:        r.gekozen,
+        tekst_fragment: r.tekstFragment ?? null,
+        aangemaakt_op:  r.aangemaaktOp,
+      }))
+    );
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+router.delete("/organisatie/bedrijfsdocumenten/veld-correcties/:id", schrijven, async (req, res): Promise<void> => {
+  try {
+    const id = parseId(req.params.id);
+    await db.delete(aiVeldCorrectiesTable).where(eq(aiVeldCorrectiesTable.id, id));
+    res.status(204).end();
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
 router.delete("/organisatie/bedrijfsdocumenten/:id", schrijven, async (req, res): Promise<void> => {
   try {
     const id = parseId(req.params.id);

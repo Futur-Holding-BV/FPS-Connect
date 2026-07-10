@@ -7,6 +7,9 @@ import {
   useListAiCategorieCorrecties,
   useDeleteAiCategorieCorrectie,
   getListAiCategorieCorrectiesQueryKey,
+  useListAiVeldCorrecties,
+  useDeleteAiVeldCorrectie,
+  getListAiVeldCorrectiesQueryKey,
 } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -51,6 +54,15 @@ const CATEGORIEEN: { waarde: string; label: string; icoon: typeof FileText }[] =
 const CATEGORIE_LABELS: Record<string, string> = Object.fromEntries(
   CATEGORIEEN.map((c) => [c.waarde, c.label])
 );
+
+const VELD_LABELS: Record<string, string> = {
+  naam:         "Naam",
+  uitgever:     "Uitgever",
+  referentie:   "Referentie",
+  ingangsdatum: "Ingangsdatum",
+  vervaldatum:  "Vervaldatum",
+  omschrijving: "Omschrijving",
+};
 
 const STATUS_KLEUREN: Record<string, string> = {
   actief:      "bg-green-100 text-green-700",
@@ -104,16 +116,18 @@ const TOEGESTANE_TYPES = [
   "image/webp",
 ];
 
-async function stuurCorrectie(aiVoorstel: string, gekozen: string, hash: string | null, tekstFragment: string | null) {
+async function stuurCorrectie(aiVoorstel: string, gekozen: string, hash: string | null, tekstFragment: string | null): Promise<boolean> {
   try {
-    await fetch("/api/organisatie/bedrijfsdocumenten/correctie", {
+    const resp = await fetch("/api/organisatie/bedrijfsdocumenten/correctie", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
       body: JSON.stringify({ ai_voorstel: aiVoorstel, gekozen, hash, tekst_fragment: tekstFragment }),
     });
+    return resp.ok;
   } catch {
     // Stil falen — niet-kritieke achtergrondactie
+    return false;
   }
 }
 
@@ -123,9 +137,9 @@ async function stuurVeldCorrectie(
   gekozen: string,
   hash: string | null,
   tekstFragment: string | null,
-) {
+): Promise<boolean> {
   try {
-    await fetch("/api/organisatie/bedrijfsdocumenten/veld-correctie", {
+    const resp = await fetch("/api/organisatie/bedrijfsdocumenten/veld-correctie", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
@@ -137,18 +151,22 @@ async function stuurVeldCorrectie(
         tekst_fragment: tekstFragment,
       }),
     });
+    return resp.ok;
   } catch {
     // Stil falen — niet-kritieke achtergrondactie
+    return false;
   }
 }
 
 export default function BedrijfsdocumentenPagina() {
   const { data: documenten = [], isLoading } = useListOrgBedrijfsdocumenten();
   const { data: correcties = [] } = useListAiCategorieCorrecties();
+  const { data: veldCorrecties = [] } = useListAiVeldCorrecties();
   const createDoc = useCreateOrgBedrijfsdocument();
   const updateDoc = useUpdateOrgBedrijfsdocument();
   const deleteDoc = useDeleteOrgBedrijfsdocument();
   const deleteCorrectie = useDeleteAiCategorieCorrectie();
+  const deleteVeldCorrectie = useDeleteAiVeldCorrectie();
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { heeftNiveau } = useBevoegdheid();
@@ -164,9 +182,13 @@ export default function BedrijfsdocumentenPagina() {
   const [verwijderBevestiging, setVerwijderBevestiging] = useState<number | null>(null);
   const [actieveCat, setActieveCat]             = useState<string>("alle");
   const [bestaandBestandPad, setBestaandBestandPad] = useState<string | null>(null);
+  const [bestaandBestandHash, setBestaandBestandHash] = useState<string | null>(null);
+  const [nieuwBestandsNaam, setNieuwBestandsNaam]     = useState<string | null>(null);
   const [vervangBestand, setVervangBestand]     = useState(false);
   const [correctiesPanelOpen, setCorrectiesPanelOpen] = useState(false);
   const [verwijderCorrectie, setVerwijderCorrectie]   = useState<number | null>(null);
+  const [veldCorrectiesPanelOpen, setVeldCorrectiesPanelOpen] = useState(false);
+  const [verwijderVeldCorrectie, setVerwijderVeldCorrectie]   = useState<number | null>(null);
 
   const hashRef                = useRef<string | null>(null);
   const tekstFragmentRef       = useRef<string | null>(null);
@@ -191,12 +213,18 @@ export default function BedrijfsdocumentenPagina() {
     // aiVoorgesteldeVelden.current[k] blijft bewaard totdat onBlur de eindwaarde stuurt
   };
 
+  const toonCorrectieBevestiging = () => {
+    toast({ title: "Correctie opgeslagen", description: "AI leert hiervan voor volgende documenten.", duration: 3000 });
+  };
+
   // Correctie versturen bij verlaten veld (onBlur) — eindwaarde, niet tussenwaarde
   const handleVeldBlur = (k: keyof typeof leegForm, eindWaarde: string) => {
     if (!(VELD_CORRECTIE_VELDEN as ReadonlyArray<string>).includes(k)) return;
     const aiVoorstel = aiVoorgesteldeVelden.current[k] ?? null;
     if (aiVoorstel !== null && eindWaarde !== aiVoorstel) {
-      void stuurVeldCorrectie(k, aiVoorstel, eindWaarde, hashRef.current, tekstFragmentRef.current);
+      void stuurVeldCorrectie(k, aiVoorstel, eindWaarde, hashRef.current, tekstFragmentRef.current).then((ok) => {
+        if (ok) toonCorrectieBevestiging();
+      });
       delete aiVoorgesteldeVelden.current[k];
     }
   };
@@ -206,7 +234,9 @@ export default function BedrijfsdocumentenPagina() {
     setFormVeld("categorie", waarde);
     // Als AI een voorstel had en de gebruiker kiest iets anders → stuur correctie
     if (aiVoorgesteldCat.current && aiVoorgesteldCat.current !== waarde) {
-      stuurCorrectie(aiVoorgesteldCat.current, waarde, hashRef.current, tekstFragmentRef.current);
+      void stuurCorrectie(aiVoorgesteldCat.current, waarde, hashRef.current, tekstFragmentRef.current).then((ok) => {
+        if (ok) toonCorrectieBevestiging();
+      });
       aiVoorgesteldCat.current = null;
     }
     void was;
@@ -221,6 +251,8 @@ export default function BedrijfsdocumentenPagina() {
     aiVoorgesteldeVelden.current = {};
     setDubbeling(null);
     setBestaandBestandPad(null);
+    setBestaandBestandHash(null);
+    setNieuwBestandsNaam(null);
     setVervangBestand(false);
   };
 
@@ -246,6 +278,7 @@ export default function BedrijfsdocumentenPagina() {
     });
     resetDialoog();
     hashRef.current = d.bestand_hash ?? null;
+    setBestaandBestandHash(d.bestand_hash ?? null);
     setBestaandBestandPad(d.bestand_pad ?? null);
     setDialoogOpen(true);
   };
@@ -303,7 +336,10 @@ export default function BedrijfsdocumentenPagina() {
 
       setForm((prev) => ({ ...prev, ...updates }));
       setAiVelden(ingevuldeVelden);
-      if (data.dubbeling) setDubbeling(data.dubbeling);
+      setNieuwBestandsNaam(bestand.name);
+      if (data.dubbeling && (!bewerkId || data.dubbeling.id !== bewerkId)) {
+        setDubbeling(data.dubbeling);
+      }
     } catch {
       toast({ title: "Analyse mislukt", description: "Verbinding mislukt", variant: "destructive" });
     } finally {
@@ -368,6 +404,17 @@ export default function BedrijfsdocumentenPagina() {
       await deleteCorrectie.mutateAsync({ id });
       queryClient.invalidateQueries({ queryKey: getListAiCategorieCorrectiesQueryKey() });
       setVerwijderCorrectie(null);
+      toast({ title: "Correctie verwijderd" });
+    } catch {
+      toast({ title: "Verwijderen mislukt", variant: "destructive" });
+    }
+  };
+
+  const verwijderVeldCorrectieFn = async (id: number) => {
+    try {
+      await deleteVeldCorrectie.mutateAsync({ id });
+      queryClient.invalidateQueries({ queryKey: getListAiVeldCorrectiesQueryKey() });
+      setVerwijderVeldCorrectie(null);
       toast({ title: "Correctie verwijderd" });
     } catch {
       toast({ title: "Verwijderen mislukt", variant: "destructive" });
@@ -630,6 +677,95 @@ export default function BedrijfsdocumentenPagina() {
         )}
       </Card>
 
+      {/* ── AI-leergeschiedenis: veld-correcties ───────────────────────────── */}
+      <Card>
+        <CardHeader className="pb-3">
+          <button
+            className="flex items-center gap-2 w-full text-left"
+            onClick={() => setVeldCorrectiesPanelOpen((v) => !v)}
+          >
+            <Brain className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-base">AI-leergeschiedenis — veldcorrecties</CardTitle>
+            <Badge variant="secondary" className="ml-1">{veldCorrecties.length}</Badge>
+            <span className="ml-auto text-muted-foreground">
+              {veldCorrectiesPanelOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            </span>
+          </button>
+          {veldCorrectiesPanelOpen && (
+            <p className="text-sm text-muted-foreground mt-1">
+              Elke keer dat een gebruiker een door de AI voorgesteld veld corrigeert, wordt dat opgeslagen. Verwijder een rij als de correctie foutief was.
+            </p>
+          )}
+        </CardHeader>
+        {veldCorrectiesPanelOpen && (
+          <CardContent className="pt-0">
+            {veldCorrecties.length === 0 ? (
+              <p className="text-sm text-muted-foreground italic py-4 text-center">
+                Nog geen veldcorrecties opgeslagen. Zodra een gebruiker een AI-veldvoorstel aanpast, verschijnt dat hier.
+              </p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b text-muted-foreground">
+                      <th className="text-left py-2 pr-4 font-medium">Datum</th>
+                      <th className="text-left py-2 pr-4 font-medium">Veld</th>
+                      <th className="text-left py-2 pr-4 font-medium">AI-voorstel</th>
+                      <th className="text-left py-2 pr-4 font-medium">Gekozen waarde</th>
+                      <th className="text-left py-2 pr-4 font-medium">Tekstfragment</th>
+                      {magSchrijven && <th className="py-2 w-8" />}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {veldCorrecties.map((c) => (
+                      <tr key={c.id} className="hover:bg-muted/30">
+                        <td className="py-2 pr-4 whitespace-nowrap text-muted-foreground">
+                          {new Date(c.aangemaakt_op).toLocaleDateString("nl-NL", { day: "2-digit", month: "2-digit", year: "numeric" })}
+                        </td>
+                        <td className="py-2 pr-4">
+                          <Badge variant="outline">
+                            {VELD_LABELS[c.veld_naam] ?? c.veld_naam}
+                          </Badge>
+                        </td>
+                        <td className="py-2 pr-4">
+                          <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-300">
+                            {c.ai_voorstel}
+                          </Badge>
+                        </td>
+                        <td className="py-2 pr-4">
+                          <Badge variant="secondary">
+                            {c.gekozen}
+                          </Badge>
+                        </td>
+                        <td className="py-2 pr-4 max-w-xs">
+                          {c.tekst_fragment ? (
+                            <span className="text-xs text-muted-foreground line-clamp-2">{c.tekst_fragment}</span>
+                          ) : (
+                            <span className="text-xs text-muted-foreground italic">—</span>
+                          )}
+                        </td>
+                        {magSchrijven && (
+                          <td className="py-2">
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-7 w-7 text-destructive hover:text-destructive"
+                              onClick={() => setVerwijderVeldCorrectie(c.id)}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </td>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </CardContent>
+        )}
+      </Card>
+
       {/* ── Registreer / bewerkdialoog ─────────────────────────────────────── */}
       <Dialog open={dialoogOpen} onOpenChange={(open) => { if (!open) { setDialoogOpen(false); resetDialoog(); } }}>
         <DialogContent className="max-w-lg">
@@ -649,6 +785,27 @@ export default function BedrijfsdocumentenPagina() {
                   onClick={() => setVervangBestand(true)}
                 >
                   Vervang bestand
+                </button>
+              </div>
+            ) : bewerkId && nieuwBestandsNaam ? (
+              <div className="flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-3 py-2">
+                <Check className="h-4 w-4 text-green-600 shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-green-800 font-medium truncate">{nieuwBestandsNaam}</p>
+                  <p className="text-xs text-green-700">Bestand klaar — sla op om te bevestigen</p>
+                </div>
+                <button
+                  type="button"
+                  className="text-xs text-green-700 hover:underline shrink-0"
+                  onClick={() => {
+                    setNieuwBestandsNaam(null);
+                    setVervangBestand(false);
+                    hashRef.current = bestaandBestandHash;
+                    bestandPadRef.current = null;
+                    setDubbeling(null);
+                  }}
+                >
+                  Annuleren
                 </button>
               </div>
             ) : (!bewerkId || !bestaandBestandPad || vervangBestand) && (
@@ -922,6 +1079,27 @@ export default function BedrijfsdocumentenPagina() {
               variant="destructive"
               onClick={() => verwijderCorrectie && verwijderCorrectieFn(verwijderCorrectie)}
               disabled={deleteCorrectie.isPending}
+            >
+              Verwijderen
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* ── Verwijder-bevestiging veldcorrectie ────────────────────────────── */}
+      <Dialog open={verwijderVeldCorrectie !== null} onOpenChange={() => setVerwijderVeldCorrectie(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Correctie verwijderen</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Weet u zeker dat u deze AI-veldcorrectie wilt verwijderen? De AI zal dit voorbeeld niet meer meenemen bij toekomstige analyses.
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setVerwijderVeldCorrectie(null)}>Annuleren</Button>
+            <Button
+              variant="destructive"
+              onClick={() => verwijderVeldCorrectie && verwijderVeldCorrectieFn(verwijderVeldCorrectie)}
+              disabled={deleteVeldCorrectie.isPending}
             >
               Verwijderen
             </Button>

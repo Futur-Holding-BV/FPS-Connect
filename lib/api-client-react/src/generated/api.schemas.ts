@@ -396,6 +396,9 @@ export type AvgVerzoekInputType = typeof AvgVerzoekInputType[keyof typeof AvgVer
 export const AvgVerzoekInputType = {
   inzage: 'inzage',
   verwijdering: 'verwijdering',
+  correctie: 'correctie',
+  beperking: 'beperking',
+  bezwaar: 'bezwaar',
 } as const;
 
 export interface AvgVerzoekInput {
@@ -447,6 +450,18 @@ export interface AvgStats {
   in_behandeling: number;
   afgehandeld: number;
   inactieve_accounts: number;
+}
+
+export interface AvgOpschoonRun {
+  uitgevoerd_op: string;
+  accounts_geanonimiseerd: number;
+  activiteiten_verwijderd: number;
+}
+
+export interface AvgOpschoonStatus {
+  bewaardagen: number;
+  wachtend_op_anonimisering: number;
+  laatste_run: AvgOpschoonRun | null;
 }
 
 /**
@@ -1395,6 +1410,7 @@ export interface DashboardStats {
   openstaande_inspecties: number;
   openstaande_onderhoud: number;
   vervallen_inspecties: number;
+  opdrachten_in_uitvoering?: number;
   voorzieningen_per_type: DashboardStatsVoorzieningenPerTypeItem[];
 }
 
@@ -3171,6 +3187,16 @@ export interface AppInstellingen {
      * @nullable
      */
   ai_kostendrempel_eur?: number | null;
+  /**
+     * Dag van de maand (1-28) waarop het AI-logboek automatisch als CSV per e-mail wordt verstuurd. Null betekent uitgeschakeld.
+     * @nullable
+     */
+  ai_maandelijkse_export_dag?: number | null;
+  /**
+     * E-mailadres dat de maandelijkse AI-logboek-CSV ontvangt. Null betekent uitgeschakeld.
+     * @nullable
+     */
+  ai_maandelijkse_export_email?: string | null;
   bijgewerkt_op: string;
   /** @nullable */
   bijgewerkt_door_id?: number | null;
@@ -3189,6 +3215,16 @@ export interface AppInstellingenInput {
      * @nullable
      */
   ai_kostendrempel_eur?: number | null;
+  /**
+     * Dag van de maand (1-28) waarop het AI-logboek automatisch als CSV per e-mail wordt verstuurd. Null of weglaten om uit te schakelen.
+     * @nullable
+     */
+  ai_maandelijkse_export_dag?: number | null;
+  /**
+     * E-mailadres dat de maandelijkse AI-logboek-CSV ontvangt.
+     * @nullable
+     */
+  ai_maandelijkse_export_email?: string | null;
 }
 
 export interface AiDrempelStatus {
@@ -5127,6 +5163,16 @@ export interface Offerte {
   bedrag_incl_btw: number;
   status: string;
   portaal_status?: string;
+  /**
+     * ID van de broncalculatie
+     * @nullable
+     */
+  calculatie_id?: number | null;
+  /**
+     * Naam/referentie van de broncalculatie
+     * @nullable
+     */
+  calculatie_naam?: string | null;
   /** @nullable */
   auto_project_id?: number | null;
   /** @nullable */
@@ -5221,6 +5267,8 @@ export interface OfferteInput {
   btw_percentage?: number;
   bedrag_incl_btw?: number;
   status?: string;
+  /** @nullable */
+  calculatie_id?: number | null;
   /** @nullable */
   begroting_weergave?: OfferteInputBegrotingWeergave;
   /** @nullable */
@@ -5420,6 +5468,29 @@ export interface OfferteBijlage {
   bijgewerkt_op: string;
 }
 
+/**
+ * @nullable
+ */
+export type WorkflowTransitieLogMetadata = { [key: string]: unknown } | null;
+
+export interface WorkflowTransitieLog {
+  id: number;
+  workflow_id: string;
+  entity_id: number;
+  entity_type: string;
+  van_status: string;
+  naar_status: string;
+  /** @nullable */
+  gebruiker_id?: number | null;
+  /** @nullable */
+  gebruiker_naam?: string | null;
+  /** @nullable */
+  reden?: string | null;
+  /** @nullable */
+  metadata?: WorkflowTransitieLogMetadata;
+  aangemaakt_op: string;
+}
+
 export type OfferteAnalyticsTopBijlagenItem = {
   offerte_id?: number;
   /** @nullable */
@@ -5491,6 +5562,7 @@ export interface OfferteVraag {
   /** @nullable */
   antwoord?: string | null;
   aangemaakt_op: string;
+  bijgewerkt_op: string;
 }
 
 export interface OfferteVraagAntwoordInput {
@@ -5541,6 +5613,11 @@ export interface Opdracht {
      * @nullable
      */
   ai_fase?: string | null;
+  /**
+     * Huidige stapnummer in uitvoering (aantal voltooide + actieve stap)
+     * @nullable
+     */
+  uitvoering_stap_actief?: number | null;
 }
 
 export interface MaakOpdrachtInput {
@@ -5947,6 +6024,28 @@ export interface PimOpleveringControlepunt {
   detail?: string | null;
 }
 
+export type PimUitvoeringVerslagStappenItem = {
+  volgorde: number;
+  doel: string;
+  status: string;
+  voltooid_op?: string;
+};
+
+export type PimUitvoeringVerslagAfwijkingenItem = {
+  volgorde: number;
+  omschrijving: string;
+  beslissing: string;
+};
+
+export interface PimUitvoeringVerslag {
+  opdracht_id: number;
+  /** AI gegenereerde samenvatting van de uitvoering */
+  samenvatting: string;
+  stappen: PimUitvoeringVerslagStappenItem[];
+  afwijkingen: PimUitvoeringVerslagAfwijkingenItem[];
+  gegenereerd_op: string;
+}
+
 export interface PimOpleveringControlerapport {
   opdracht_id: number;
   volledig: boolean;
@@ -6034,10 +6133,23 @@ export interface OpdrachtNacalculatieRegel {
   verschil_begroting_vs_verbruikt?: number;
 }
 
+/**
+ * De bron van het werktype. "spots" indien afgeleid uit getelde spots, "fallback" indien teruggevallen op algemeen wegens ontbrekende spots.
+ */
+export type OpdrachtNacalculatieWerktypeBron = typeof OpdrachtNacalculatieWerktypeBron[keyof typeof OpdrachtNacalculatieWerktypeBron] | null;
+
+
+export const OpdrachtNacalculatieWerktypeBron = {
+  spots: 'spots',
+  fallback: 'fallback',
+} as const;
+
 export interface OpdrachtNacalculatie {
   opdracht_id: number;
   /** Afgeleid werktype op basis van het dominante spottype van het gebouw (branddeur, doorvoering, brandklep…). Null als er nog geen FIE-nacalculatie is berekend. */
   werktype?: string | null;
+  /** De bron van het werktype. "spots" indien afgeleid uit getelde spots, "fallback" indien teruggevallen op algemeen wegens ontbrekende spots. */
+  werktype_bron?: OpdrachtNacalculatieWerktypeBron;
   calculatie_arbeid_uren: number;
   begroting_arbeid_uren: number;
   planning_uren: number;
@@ -10116,6 +10228,16 @@ export interface OrgAiCategorieCorrectieInput {
   tekst_fragment?: string;
 }
 
+export interface OrgAiVeldCorrectie {
+  id: number;
+  veld_naam: string;
+  ai_voorstel: string;
+  gekozen: string;
+  /** @nullable */
+  tekst_fragment?: string | null;
+  aangemaakt_op: string;
+}
+
 export type OrgBedrijfsdocumentAnalyseDubbeling = {
   id: number;
   naam: string;
@@ -10307,6 +10429,56 @@ export interface ArtikelInput {
 
 export interface MagazijnSignalering {
   kritiek_aantal: number;
+}
+
+export interface MagazijnInstellingen {
+  /**
+     * @minimum 0
+     * @maximum 23
+     */
+  signalering_uur: number;
+  /**
+     * @minimum 0
+     * @maximum 59
+     */
+  signalering_minuut: number;
+  /** @minimum 0 */
+  signalering_marge: number;
+  bijgewerkt_op: string;
+}
+
+export interface MagazijnInstellingenInput {
+  /**
+     * @minimum 0
+     * @maximum 23
+     */
+  signalering_uur?: number;
+  /**
+     * @minimum 0
+     * @maximum 59
+     */
+  signalering_minuut?: number;
+  /** @minimum 0 */
+  signalering_marge?: number;
+}
+
+export interface MagazijnSnooze {
+  id: number;
+  artikel_id: number;
+  artikel_naam: string;
+  gesnoozed_tot: string;
+  /** @nullable */
+  reden: string | null;
+  aangemaakt_op: string;
+}
+
+export interface MagazijnSnoozeInput {
+  /**
+     * @minimum 1
+     * @maximum 90
+     */
+  dagen: number;
+  reden?: string;
 }
 
 export type MagazijnDashboardKritiekeArtikelenItem = {
@@ -11692,6 +11864,14 @@ export interface FpsVisualEffectiviteit {
   gem_stap_duur?: number | null;
 }
 
+export interface FieNacalculatieOverzicht {
+  id: number;
+  opdracht_id: number;
+  werktype: string;
+  opdracht_nummer: string;
+  opdracht_titel: string;
+}
+
 export interface FieLeermoment {
   id: number;
   werktype: string;
@@ -11984,6 +12164,8 @@ contract_id?: number;
 gebouw_id?: number;
 status?: string;
 monteur_id?: number;
+start_datum?: string;
+eind_datum?: string;
 };
 
 export type GebruikerHerkomstBevestigenBulk200 = {
@@ -12172,6 +12354,11 @@ gebouw_id?: number;
 export type ListModCalculatiesParams = {
 status?: string;
 zoek?: string;
+};
+
+export type SynchroniseerStandaardCalculatieData200 = {
+  tarieven_toegevoegd?: number;
+  normtijden_toegevoegd?: number;
 };
 
 export type AiModCalcRegels200 = {
@@ -12510,6 +12697,10 @@ document_type: string;
 };
 
 export type ListActieveDocumentStudioModellen200 = {[key: string]: DocumentStudioModel};
+
+export type ListFieNacalculatiesParams = {
+werktype: string;
+};
 
 export type HerberekeenFieLeermomenten200 = {
   verwerkt: number;

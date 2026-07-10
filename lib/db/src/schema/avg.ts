@@ -17,3 +17,14 @@ export const avgInzageverzoekTable = pgTable("avg_inzageverzoeken", {
 });
 
 export type AvgInzageverzoek = typeof avgInzageverzoekTable.$inferSelect;
+
+// Logregel per uitvoering van de geautomatiseerde AVG-opschoonjob
+// (activiteiten-retentie + anonimisering van langdurig inactieve accounts).
+export const avgOpschoonLogTable = pgTable("avg_opschoon_log", {
+  id: serial("id").primaryKey(),
+  activiteitenVerwijderd: integer("activiteiten_verwijderd").notNull().default(0),
+  accountsGeanonimiseerd: integer("accounts_geanonimiseerd").notNull().default(0),
+  uitgevoerdOp: timestamp("uitgevoerd_op").notNull().defaultNow(),
+});
+
+export type AvgOpschoonLog = typeof avgOpschoonLogTable.$inferSelect;

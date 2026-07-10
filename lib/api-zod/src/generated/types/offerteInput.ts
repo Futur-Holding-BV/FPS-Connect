@@ -37,6 +37,8 @@ export interface OfferteInput {
   bedrag_incl_btw?: number;
   status?: string;
   /** @nullable */
+  calculatie_id?: number | null;
+  /** @nullable */
   begroting_weergave?: OfferteInputBegrotingWeergave;
   /** @nullable */
   presentatie_niveau?: number | null;

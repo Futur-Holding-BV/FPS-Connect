@@ -67,7 +67,10 @@ function berekenKosten(
   completionTokens: number | null | undefined,
 ): string | null {
   const prijs = PRIJS_PER_MODEL[modelNaam];
-  if (!prijs) return null;
+  if (!prijs) {
+    logger.warn({ modelNaam }, "AI model niet gevonden in PRIJS_PER_MODEL — kosten worden als 0.000000 geregistreerd. Voeg het model toe aan PRIJS_PER_MODEL.");
+    return "0.000000";
+  }
   const inp = promptTokens ?? 0;
   const out = completionTokens ?? 0;
   const totaal = (inp * prijs.input + out * prijs.output) / 1_000_000;

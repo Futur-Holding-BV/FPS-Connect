@@ -451,6 +451,21 @@ async function syncOpleidingFuncties(opleidingId: number, functieIds: unknown): 
 const soortOf = (v: unknown): "opleiding" | "cursus" | undefined =>
   v === "opleiding" ? "opleiding" : v === "cursus" ? "cursus" : undefined;
 
+// Kostenverdeling werkgever/werknemer moet, indien beide bekend zijn, optellen tot 100%.
+// Geeft een foutmelding terug (of null als geldig) zodat routes vroeg met 400 kunnen stoppen.
+function kostenverdelingFout(werkgeverPct: unknown, werknemerPct: unknown): string | null {
+  if (werkgeverPct == null || werknemerPct == null) return null;
+  const w1 = Number(werkgeverPct);
+  const w2 = Number(werknemerPct);
+  if (!Number.isFinite(w1) || !Number.isFinite(w2) || w1 < 0 || w2 < 0 || w1 > 100 || w2 > 100) {
+    return "Kostenverdeling werkgever/werknemer moet percentages tussen 0 en 100 zijn";
+  }
+  if (w1 + w2 !== 100) {
+    return "Kostenverdeling werkgever + werknemer moet optellen tot 100%";
+  }
+  return null;
+}
+
 router.get("/opleidingen", lezen, async (req, res): Promise<void> => {
   try {
     const rijen = await db.select().from(opleidingenTable).orderBy(opleidingenTable.naam);
@@ -470,6 +485,8 @@ router.post("/opleidingen", schrijven, async (req, res): Promise<void> => {
       geldigheid_maanden, verplicht, functie_ids,
     } = req.body;
     if (!naam) return void res.status(400).json({ error: "naam is verplicht" });
+    const kvFout = kostenverdelingFout(kosten_werkgever_pct, kosten_werknemer_pct);
+    if (kvFout) return void res.status(400).json({ error: kvFout });
     const [o] = await db
       .insert(opleidingenTable)
       .values({
@@ -506,6 +523,16 @@ router.patch("/opleidingen/:id", schrijven, async (req, res): Promise<void> => {
       geldigheid_maanden, verplicht, functie_ids,
     } = req.body;
     const id = parseId(req.params.id);
+    if (kosten_werkgever_pct !== undefined || kosten_werknemer_pct !== undefined) {
+      const [bestaand] = await db
+        .select({ w1: opleidingenTable.kostenWerkgeverPct, w2: opleidingenTable.kostenWerknemerPct })
+        .from(opleidingenTable)
+        .where(eq(opleidingenTable.id, id));
+      const effectiefWerkgever = kosten_werkgever_pct !== undefined ? kosten_werkgever_pct : bestaand?.w1 ?? null;
+      const effectiefWerknemer = kosten_werknemer_pct !== undefined ? kosten_werknemer_pct : bestaand?.w2 ?? null;
+      const kvFout = kostenverdelingFout(effectiefWerkgever, effectiefWerknemer);
+      if (kvFout) return void res.status(400).json({ error: kvFout });
+    }
     // Partiele PATCH: alleen meegestuurde velden bijwerken. Drizzle .set() slaat
     // undefined over, dus niet coalescen naar null (anders wist een partiele
     // PATCH bestaande waarden).

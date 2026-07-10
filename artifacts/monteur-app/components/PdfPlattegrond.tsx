@@ -1,4 +1,11 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  forwardRef,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { StyleSheet, View } from "react-native";
 import { WebView, type WebViewMessageEvent } from "react-native-webview";
 
@@ -42,7 +49,11 @@ type Props = {
   onTap: (x: number, y: number) => void;
   onSpot: (id: number) => void;
   onCluster: (id: number) => void;
-  onGroep: (ids: number[]) => void;
+  onGroep: (ids: number[], centroid: { x: number; y: number }) => void;
+};
+
+export type PdfPlattegrondHandle = {
+  zoomNaar: (x: number, y: number, doelScale?: number) => void;
 };
 
 const TYPE_KLEUREN: Record<string, { kleur: string }> = Object.fromEntries(
@@ -234,10 +245,10 @@ function bouwHtml(domein: string, token: string, url: string | null): string {
       b.className='cb';
       b.style.left=c.x+'px'; b.style.top=c.y+'px';
       b.textContent=String(groep.length);
-      (function(groep){
+      (function(groep,c){
         var ids=groep.map(function(g){ return g.id; });
-        b.addEventListener('click',function(ev){ ev.stopPropagation(); post({type:'groep',ids:ids}); });
-      })(groep);
+        b.addEventListener('click',function(ev){ ev.stopPropagation(); post({type:'groep',ids:ids,x:c.x,y:c.y}); });
+      })(groep,c);
       wrap.appendChild(b);
     });
   }
@@ -309,6 +320,16 @@ function bouwHtml(domein: string, token: string, url: string | null): string {
     if (!isFinite(s)||s<=0) s=1;
     scale=s; tx=(sw-pageW*scale)/2; ty=(sh-pageH*scale)/2; apply();
   }
+
+  function zoomNaarPunt(cx, cy, doelScale){
+    if (!rendered) return;
+    var sw=stage.clientWidth, sh=stage.clientHeight;
+    var fitScale=Math.min(sw/pageW,sh/pageH);
+    if (!isFinite(fitScale)||fitScale<=0) fitScale=1;
+    var s=Math.min(MAXS, Math.max(MINS, doelScale!=null?doelScale:fitScale*2.5));
+    scale=s; tx=sw/2-cx*s; ty=sh/2-cy*s; apply();
+  }
+  window.__zoomNaar=function(x,y,doelScale){ zoomNaarPunt(Number(x),Number(y),doelScale!=null?Number(doelScale):null); };
 
   function loadPdf(){
     if (!CFG.url){ msg.textContent='Geen plattegrond geüpload voor deze verdieping.'; return; }
@@ -437,21 +458,36 @@ function bouwHtml(domein: string, token: string, url: string | null): string {
 </html>`;
 }
 
-export function PdfPlattegrond({
-  plattegrondUrl,
-  spots,
-  scheidingen,
-  clusters,
-  plaatsModus,
-  token,
-  domein,
-  onTap,
-  onSpot,
-  onCluster,
-  onGroep,
-}: Props) {
+export const PdfPlattegrond = forwardRef<PdfPlattegrondHandle, Props>(function PdfPlattegrond(
+  {
+    plattegrondUrl,
+    spots,
+    scheidingen,
+    clusters,
+    plaatsModus,
+    token,
+    domein,
+    onTap,
+    onSpot,
+    onCluster,
+    onGroep,
+  }: Props,
+  ref,
+) {
   const webRef = useRef<WebView>(null);
   const [klaar, setKlaar] = useState(false);
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      zoomNaar: (x: number, y: number, doelScale?: number) => {
+        webRef.current?.injectJavaScript(
+          `window.__zoomNaar && window.__zoomNaar(${x}, ${y}, ${doelScale != null ? doelScale : "null"}); true;`,
+        );
+      },
+    }),
+    [],
+  );
 
   const html = useMemo(
     () => bouwHtml(domein, token, plattegrondUrl ?? null),
@@ -505,7 +541,8 @@ export function PdfPlattegrond({
       if (m.type === "tap" && m.x != null && m.y != null) onTap(m.x, m.y);
       else if (m.type === "spot" && m.id != null) onSpot(m.id);
       else if (m.type === "cluster" && m.id != null) onCluster(m.id);
-      else if (m.type === "groep" && Array.isArray(m.ids)) onGroep(m.ids);
+      else if (m.type === "groep" && Array.isArray(m.ids) && m.x != null && m.y != null)
+        onGroep(m.ids, { x: m.x, y: m.y });
     } catch {
       // negeren
     }
@@ -529,7 +566,7 @@ export function PdfPlattegrond({
       />
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   vlak: { flex: 1, backgroundColor: "#2b303b" },

@@ -24,7 +24,7 @@ import {
   offerteRegelsTable,
 } from "@workspace/db";
 import { eq, desc, asc, ilike, or, count, sql, and } from "drizzle-orm";
-import { requireBevoegdheid } from "../middlewares/auth";
+import { requireBevoegdheid, requireRol } from "../middlewares/auth";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
 import { CALCULATIE_CHAT_BASE_PROMPT, CALCULATIE_ANALYSE_BASE_PROMPT, CALCULATIE_VULLEN_BASE_PROMPT, CALCULATIE_INKOOP_MAIL_PROMPT } from "../lib/aiPrompts";
 
@@ -202,6 +202,68 @@ function berekenRegelTotaal(body: Record<string, unknown>, existing?: {
 }
 
 // ── Tarieven ───────────────────────────────────────────────────────────────
+
+router.post("/modules/calculaties/synchroniseer-standaard", requireRol("hoofdbeheerder"), async (req, res): Promise<void> => {
+  try {
+    const STANDAARD_TARIEVEN = [
+      { naam: "Monteur junior", tarief: 47.50, eenheid: "uur", categorie: "arbeid" },
+      { naam: "Monteur medior", tarief: 57.50, eenheid: "uur", categorie: "arbeid" },
+      { naam: "Monteur senior", tarief: 67.50, eenheid: "uur", categorie: "arbeid" },
+      { naam: "Uitvoerder", tarief: 77.50, eenheid: "uur", categorie: "arbeid" },
+      { naam: "Projectleider", tarief: 87.50, eenheid: "uur", categorie: "arbeid" },
+      { naam: "Klein materieel", tarief: 7.50, eenheid: "uur", categorie: "materieel" },
+      { naam: "Hoogwerker / Klimmaterieel", tarief: 22.50, eenheid: "uur", categorie: "materieel" },
+    ];
+
+    const STANDAARD_NORMTIJDEN = [
+      { code: "DOORV", omschrijving: "Brandwerende doorvoering", muPerEenheid: 0.25, eenheid: "st", categorie: "brandwerende afdichting" },
+      { code: "DEUR", omschrijving: "Brandwerende deur", muPerEenheid: 1.50, eenheid: "st", categorie: "bouwkundig" },
+      { code: "KLEP", omschrijving: "Brandklep", muPerEenheid: 0.50, eenheid: "st", categorie: "installatietechnisch" },
+      { code: "MANCH", omschrijving: "Brandmanchet", muPerEenheid: 0.15, eenheid: "st", categorie: "brandwerende afdichting" },
+      { code: "PVC", omschrijving: "PVC doorvoering", muPerEenheid: 0.25, eenheid: "st", categorie: "brandwerende afdichting" },
+      { code: "COAT", omschrijving: "Brandwerende coating", muPerEenheid: 0.08, eenheid: "m2", categorie: "brandwerende afdichting" },
+      { code: "KIT", omschrijving: "Brandwerende kit", muPerEenheid: 0.06, eenheid: "m1", categorie: "brandwerende afdichting" },
+      { code: "GLAS", omschrijving: "Brandwerende beglazing", muPerEenheid: 2.00, eenheid: "st", categorie: "bouwkundig" },
+      { code: "INSP", omschrijving: "Inspectie", muPerEenheid: 0.50, eenheid: "st", categorie: "inspectie" },
+      { code: "AFDICHT", omschrijving: "Brandwerende afdichting", muPerEenheid: 0.20, eenheid: "st", categorie: "brandwerende afdichting" },
+      { code: "SCHUIM", omschrijving: "Brandwerend schuim", muPerEenheid: 0.10, eenheid: "st", categorie: "brandwerende afdichting" },
+      { code: "PLAAT", omschrijving: "Brandwerende plaat", muPerEenheid: 0.30, eenheid: "m2", categorie: "brandwerende afdichting" },
+      { code: "STOPV", omschrijving: "Brandwerende stopverf", muPerEenheid: 0.12, eenheid: "st", categorie: "brandwerende afdichting" },
+      { code: "HOUDER", omschrijving: "Kabelhouder brandwerend", muPerEenheid: 0.10, eenheid: "st", categorie: "brandwerende afdichting" },
+    ];
+
+    let tarievenToegevoegd = 0;
+    let normtijdenToegevoegd = 0;
+
+    // Synchroniseer tarieven
+    const bestaandeTarieven = await db.select().from(modCalcTarievenTable);
+    const bestaandeTarievenNamen = new Set(bestaandeTarieven.map(t => t.naam));
+    for (const t of STANDAARD_TARIEVEN) {
+      if (!bestaandeTarievenNamen.has(t.naam)) {
+        await db.insert(modCalcTarievenTable).values(t);
+        tarievenToegevoegd++;
+      }
+    }
+
+    // Synchroniseer normtijden
+    const bestaandeNormtijden = await db.select().from(modCalcNormtijdenTable);
+    const bestaandeNormtijdenCodes = new Set(bestaandeNormtijden.map(n => n.code));
+    for (const n of STANDAARD_NORMTIJDEN) {
+      if (!bestaandeNormtijdenCodes.has(n.code)) {
+        await db.insert(modCalcNormtijdenTable).values(n);
+        normtijdenToegevoegd++;
+      }
+    }
+
+    res.json({
+      tarieven_toegevoegd: tarievenToegevoegd,
+      normtijden_toegevoegd: normtijdenToegevoegd,
+    });
+  } catch (e) {
+    req.log.error(e);
+    res.status(500).json({ error: "Interne fout bij synchroniseren standaard data" });
+  }
+});
 
 router.get("/modules/calculaties/tarieven", lezenCalc, async (req, res): Promise<void> => {
   try {

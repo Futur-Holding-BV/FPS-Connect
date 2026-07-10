@@ -20,7 +20,7 @@ import {
   appInstellingenTable,
 } from "@workspace/db";
 import { eq, and, desc, ne, or, isNull } from "drizzle-orm";
-import { stuurKlantvraagNotificatie, stuurKlantvraagBevestiging, stuurOndertekeningNotificatie, stuurOpdrachtbevestiging, stuurAfwijzingNotificatie } from "../services/email";
+import { stuurKlantvraagNotificatie, stuurKlantvraagBevestiging, stuurOndertekeningNotificatie, stuurOpdrachtbevestiging, stuurAfwijzingNotificatie, stuurAfwijzingBevestiging } from "../services/email";
 import { logActiviteit } from "../lib/activiteit";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
 
@@ -553,7 +553,7 @@ router.post("/portaal/:token/ondertekenen", async (req, res): Promise<void> => {
       // bij ongerelateerde unique-schendingen elders in de transactie.
       const pgCode = (txErr as { code?: string; constraint?: string })?.code;
       const pgConstraint = (txErr as { constraint?: string })?.constraint;
-      if (pgCode === "23505" && pgConstraint === "uq_handtekeningen_offerte_token") {
+      if (pgCode === "23505" && pgConstraint === "uq_handtekeningen_offerte") {
         return void res.status(409).json({ error: "Deze offerte is al ondertekend." });
       }
       throw txErr;
@@ -803,6 +803,20 @@ router.post("/portaal/:token/afwijzen", async (req, res): Promise<void> => {
           offerteTitel: offerte.titel,
           connectUrl,
         });
+
+        // Bevestigingsmail naar klant — alleen als e-mailadres bekend
+        const bezoekerEmail = String(req.body?.email ?? "").trim() || null;
+        const bezoekerNaam = String(req.body?.naam ?? "").trim() || null;
+        if (bezoekerEmail) {
+          await stuurAfwijzingBevestiging({
+            naarEmail: bezoekerEmail,
+            naarNaam: bezoekerNaam,
+            offerteId: offerte.id,
+            offertenummer: offerte.offertenummer,
+            offerteTitel: offerte.titel,
+            reden,
+          });
+        }
       } catch (mailErr) {
         req.log.warn(mailErr, "Afwijzing-notificatie mislukt (niet-kritiek)");
       }

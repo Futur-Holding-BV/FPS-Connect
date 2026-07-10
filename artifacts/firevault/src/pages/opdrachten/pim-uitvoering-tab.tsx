@@ -10,6 +10,7 @@ import {
   useListPimSpots,
   useKoppelPimStapVoorzieningen,
   useRequestUploadUrl,
+  useGetPimUitvoeringVerslag,
   getGetHuidigePimUitvoeringStapQueryKey,
   getListPimUitvoeringStappenQueryKey,
 } from "@workspace/api-client-react";
@@ -44,6 +45,9 @@ import {
   ChevronDown,
   ChevronUp,
   XCircle,
+  FileText,
+  Download,
+  RefreshCw,
 } from "lucide-react";
 
 // ── Status labels & kleuren ───────────────────────────────────────────────────
@@ -807,6 +811,105 @@ function AfwijkingBeslisForm({ stap, opdrachtId, onGereed }: AfwijkingBeslisForm
   );
 }
 
+// ── Uitvoeringsverslag component ─────────────────────────────────────────────
+
+function Uitvoeringsverslag({ opdrachtId }: { opdrachtId: number }) {
+  const verslagQuery = useGetPimUitvoeringVerslag(opdrachtId);
+  const { toast } = useToast();
+
+  const handleDownloadPdf = async () => {
+    try {
+      // In dit project wordt jsPDF en html2canvas-pro gebruikt voor PDF-generatie.
+      // We laden ze dynamisch om de bundle size klein te houden.
+      const html2canvas = (await import("html2canvas-pro")).default;
+      const { jsPDF } = await import("jspdf");
+
+      const element = document.getElementById("pim-uitvoeringsverslag-content");
+      if (!element) return;
+
+      const canvas = await html2canvas(element, { scale: 2 });
+      const imgData = canvas.toDataURL("image/png");
+      const pdf = new jsPDF("p", "mm", "a4");
+      const imgProps = pdf.getImageProperties(imgData);
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+
+      pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
+      pdf.save(`uitvoeringsverslag-opdracht-${opdrachtId}.pdf`);
+      
+      toast({ title: "PDF gegenereerd", description: "Het verslag is gedownload." });
+    } catch (err) {
+      console.error("PDF generatie fout:", err);
+      toast({ title: "Fout", description: "PDF genereren mislukt.", variant: "destructive" });
+    }
+  };
+
+  if (verslagQuery.isLoading) return <Skeleton className="h-64 w-full" />;
+  if (verslagQuery.isError) return null;
+
+  const data = verslagQuery.data;
+  if (!data) return null;
+
+  return (
+    <Card className="overflow-hidden border-blue-200">
+      <CardHeader className="bg-blue-50/50 flex flex-row items-center justify-between pb-3">
+        <div className="flex items-center gap-2">
+          <FileText className="h-5 w-5 text-blue-600" />
+          <CardTitle className="text-lg">Uitvoeringsverslag</CardTitle>
+        </div>
+        <Button variant="outline" size="sm" onClick={handleDownloadPdf} className="gap-2">
+          <Download className="h-4 w-4" /> PDF Download
+        </Button>
+      </CardHeader>
+      <CardContent className="pt-6" id="pim-uitvoeringsverslag-content">
+        <div className="space-y-6">
+          <section>
+            <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-2">Samenvatting</h3>
+            <p className="text-sm leading-relaxed whitespace-pre-line bg-slate-50 p-4 rounded-md border border-slate-100">
+              {data.samenvatting}
+            </p>
+          </section>
+
+          {data.afwijkingen && data.afwijkingen.length > 0 && (
+            <section>
+              <h3 className="text-sm font-semibold text-amber-600 uppercase tracking-wide mb-2">Geregistreerde afwijkingen</h3>
+              <div className="space-y-3">
+                {data.afwijkingen.map((afw, i) => (
+                  <div key={i} className="text-sm p-3 border border-amber-100 bg-amber-50/30 rounded-md">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Badge variant="outline" className="bg-amber-100 text-amber-700 text-[10px] h-4">Stap {afw.volgorde}</Badge>
+                      <span className="font-medium text-amber-900">{afw.omschrijving}</span>
+                    </div>
+                    <p className="text-xs text-amber-800 ml-1">Beslissing: {afw.beslissing}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
+          <section>
+            <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-2">Doorlopen stappen</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {data.stappen?.map((s, i) => (
+                <div key={i} className="flex items-center gap-2 text-xs p-2 border rounded bg-white">
+                  <CheckCircle2 className="h-3.5 w-3.5 text-green-500 shrink-0" />
+                  <span className="text-slate-400 font-mono w-4">{(s as any).volgorde}</span>
+                  <span className="flex-1 truncate">{(s as any).doel}</span>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <div className="pt-4 mt-4 border-t text-[10px] text-muted-foreground flex justify-between">
+            <span>Gegenereerd op: {new Date(data.gegenereerd_op).toLocaleString("nl-NL")}</span>
+            <span>Referentie: PIM-UV-{opdrachtId}</span>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 // ── Hoofdcomponent ────────────────────────────────────────────────────────────
 
 interface PimUitvoeringTabProps {
@@ -841,23 +944,45 @@ export default function PimUitvoeringTab({ opdrachtId }: PimUitvoeringTabProps) 
   const geenActieveStap = huidigStapQuery.error !== null && !huidigStapQuery.data;
 
   const handleStapGereed = (volgendeStap: PimUitvoeringStap | null, gereed: boolean) => {
-    if (gereed && !volgendeStap) {
+    if (gereed) {
       setUitvoeringGereed(true);
     }
     qc.invalidateQueries({ queryKey: getGetHuidigePimUitvoeringStapQueryKey(opdrachtId) });
     qc.invalidateQueries({ queryKey: getListPimUitvoeringStappenQueryKey(opdrachtId) });
   };
 
-  if (uitvoeringGereed) {
+  if (huidigStapQuery.isError && (huidigStapQuery.error as any)?.status !== 404) {
+    return (
+      <div className="mt-4 p-8 border-2 border-dashed rounded-lg flex flex-col items-center justify-center gap-4 text-center">
+        <AlertTriangle className="h-10 w-10 text-destructive opacity-50" />
+        <div>
+          <h3 className="text-lg font-semibold">Verbinding verbroken</h3>
+          <p className="text-sm text-muted-foreground max-w-sm">
+            Er is een probleem met de verbinding naar de server. Controleer uw internetverbinding of probeer het opnieuw.
+          </p>
+        </div>
+        <Button onClick={() => huidigStapQuery.refetch()} variant="outline" className="gap-2">
+          <RefreshCw className="h-4 w-4" /> Probeer opnieuw
+        </Button>
+      </div>
+    );
+  }
+
+  if (uitvoeringGereed || (stap && (stap as any).uitvoering_gereed)) {
     return (
       <div className="mt-4 space-y-6">
-        <div className="flex flex-col items-center justify-center py-12 gap-4 text-center">
+        <div className="flex flex-col items-center justify-center py-8 gap-3 text-center">
           <CheckCircle2 className="h-12 w-12 text-green-500" />
           <h2 className="text-xl font-semibold">Uitvoering afgerond</h2>
           <p className="text-muted-foreground text-sm max-w-md">
-            Alle uitvoeringsstappen zijn doorlopen. Ga verder met de oplevering.
+            Alle uitvoeringsstappen zijn doorlopen. Bekijk hieronder het verslag.
           </p>
         </div>
+
+        <Uitvoeringsverslag opdrachtId={opdrachtId} />
+        
+        <Separator />
+        
         <StappenOverzicht opdrachtId={opdrachtId} />
       </div>
     );

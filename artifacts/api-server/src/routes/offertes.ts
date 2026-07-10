@@ -24,6 +24,7 @@ import {
   offerteEmailLogTable,
   offerteTrackingTable,
   offerteVragenTable,
+  workflowTransitieLogTable,
   voorzieningenTable,
   crmKlantenTable,
   gebouwenTable,
@@ -31,6 +32,7 @@ import {
   offerteKlantContractenTable,
   offerteContractAdviezenTable,
   documentStudioModellenTable,
+  modCalcHeadersTable,
 } from "@workspace/db";
 import { ObjectStorageService } from "../lib/objectStorage";
 import { eq, desc, count, sql, and, not, inArray } from "drizzle-orm";
@@ -295,6 +297,11 @@ async function offerteNaarJson(o: typeof offertesTable.$inferSelect) {
     const [u] = await db.select({ naam: gebruikersTable.naam }).from(gebruikersTable).where(eq(gebruikersTable.id, o.behandeldDoorId));
     behandeldDoorNaam = u?.naam ?? null;
   }
+  let calculatieNaam: string | null = null;
+  if (o.calculatieId != null) {
+    const [c] = await db.select({ naam: modCalcHeadersTable.naam }).from(modCalcHeadersTable).where(eq(modCalcHeadersTable.id, o.calculatieId));
+    calculatieNaam = c?.naam ?? null;
+  }
   return {
     id: o.id,
     offertenummer: o.offertenummer,
@@ -310,6 +317,8 @@ async function offerteNaarJson(o: typeof offertesTable.$inferSelect) {
     uw_brief_van: o.uwBriefVan,
     behandeld_door_id: o.behandeldDoorId,
     behandeld_door_naam: behandeldDoorNaam,
+    calculatie_id: o.calculatieId,
+    calculatie_naam: calculatieNaam,
     datum: o.datum,
     geldigheid_dagen: o.geldigheidDagen,
     voorwaarden: o.voorwaarden,
@@ -578,6 +587,39 @@ router.get("/offertes/:id", lezen, async (req, res): Promise<void> => {
   }
 });
 
+router.get("/offertes/:id/transitielogboek", lezen, async (req, res): Promise<void> => {
+  try {
+    const offerteId = parseId(req.params.id);
+    const rijen = await db
+      .select()
+      .from(workflowTransitieLogTable)
+      .where(
+        and(
+          eq(workflowTransitieLogTable.entityType, "offerte"),
+          eq(workflowTransitieLogTable.entityId, offerteId)
+        )
+      )
+      .orderBy(desc(workflowTransitieLogTable.aangemaaktOp));
+
+    res.json(rijen.map(r => ({
+      id: r.id,
+      workflow_id: r.workflowId,
+      entity_id: r.entityId,
+      entity_type: r.entityType,
+      van_status: r.vanStatus,
+      naar_status: r.naarStatus,
+      gebruiker_id: r.gebruikerId,
+      gebruiker_naam: r.gebruikerNaam,
+      reden: r.reden,
+      metadata: r.metadata,
+      aangemaakt_op: iso(r.aangemaaktOp),
+    })));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
 router.patch("/offertes/:id", schrijven, async (req, res): Promise<void> => {
   try {
     const offerteId = parseId(req.params.id);
@@ -699,7 +741,7 @@ router.get("/offertes/:id/pdf", lezen, async (req, res): Promise<void> => {
   try {
     const offerteId = parseId(req.params.id);
     const [offerte] = await db
-      .select({ id: offertesTable.id, offertenummer: offertesTable.offertenummer })
+      .select({ id: offertesTable.id, offertenummer: offertesTable.offertenummer, gebouwId: offertesTable.gebouwId })
       .from(offertesTable)
       .where(eq(offertesTable.id, offerteId));
     if (!offerte) return void res.status(404).json({ error: "Offerte niet gevonden" });
@@ -778,11 +820,37 @@ router.get("/offertes/:id/pdf", lezen, async (req, res): Promise<void> => {
         margin: { top: "0", right: "0", bottom: "0", left: "0" },
       });
 
-      const bestandsnaam = `offerte-${offerte.offertenummer ?? offerteId}.pdf`;
+      const datumStr = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+      const basisnaam = offerte.offertenummer ?? `OFR-${offerteId}`;
+      const bestandsnaam = `${basisnaam}-${datumStr}.pdf`;
+      const pdfBufferNode = Buffer.from(pdfBuffer);
+
+      // Bewaar de gegenereerde PDF in object storage en koppel 'm als bijlage
+      // aan de offerte, zodat gebruikers eerdere PDF-versies kunnen terugvinden
+      // in het Bijlagen-tabblad. Best-effort: een opslagfout mag de download
+      // van de gebruiker niet blokkeren.
+      try {
+        const gebouwSegment = offerte.gebouwId ? String(offerte.gebouwId) : "algemeen";
+        const uniekeSuffix = randomBytes(4).toString("hex");
+        const subPath = `${gebouwSegment}/offerte-pdfs/${offerteId}-${datumStr}-${uniekeSuffix}.pdf`;
+        const storage = new ObjectStorageService();
+        await storage.uploadBestand(subPath, pdfBufferNode, "application/pdf");
+        await db.insert(offerteBijlagenTable).values({
+          offerteId,
+          bijlageType: "pdf-export",
+          naam: bestandsnaam,
+          beschrijving: "Gegenereerde PDF-export vanuit de Studio",
+          url: `/api/storage/objects/${subPath}`,
+          volgorde: 0,
+        });
+      } catch (opslagErr) {
+        req.log.error(opslagErr, "PDF-export kon niet als bijlage worden opgeslagen");
+      }
+
       res.setHeader("Content-Type", "application/pdf");
       res.setHeader("Content-Disposition", `attachment; filename="${bestandsnaam}"`);
-      res.setHeader("Content-Length", String(pdfBuffer.length));
-      res.send(Buffer.from(pdfBuffer));
+      res.setHeader("Content-Length", String(pdfBufferNode.length));
+      res.send(pdfBufferNode);
     } finally {
       await browser.close();
     }
@@ -1576,6 +1644,7 @@ router.get("/offertes/:id/vragen", lezen, async (req, res): Promise<void> => {
         vraag: v.vraag,
         antwoord: v.antwoord,
         aangemaakt_op: v.aangemaaktOp.toISOString(),
+        bijgewerkt_op: v.bijgewerktOp.toISOString(),
       })),
     );
   } catch (err) {

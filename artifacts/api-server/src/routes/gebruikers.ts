@@ -432,6 +432,7 @@ router.patch("/gebruikers/:id", alleenBeheerder, async (req, res): Promise<void>
         rol: gebruikersTable.rol,
         functietitels: gebruikersTable.functietitels,
         herkomstProfielId: gebruikersTable.herkomstProfielId,
+        actief: gebruikersTable.actief,
       })
       .from(gebruikersTable)
       .where(eq(gebruikersTable.id, id));
@@ -469,6 +470,11 @@ router.patch("/gebruikers/:id", alleenBeheerder, async (req, res): Promise<void>
       dienstverband: dienstverband || undefined,
       bedrijfUitzendbureau: bedrijf_uitzendbureau !== undefined ? (bedrijf_uitzendbureau || null) : undefined,
     };
+    // AVG: opschoonklok alleen aanraken bij een echte overgang, nooit bij een
+    // no-op PATCH (anders reset elke onbedoelde `actief`-meesturing de termijn).
+    if (typeof actief === "boolean" && actief !== bestaand.actief) {
+      wijziging.gedeactiveerdOp = actief ? null : new Date();
+    }
     // Effectieve matrix: bij meegestuurde rollen wordt de matrix ALTIJD
     // server-side afgeleid (per module het hoogste niveau over alle rollen;
     // lege set = geen toegang). Rollen zijn de bron van waarheid; een
@@ -1082,7 +1088,14 @@ router.delete("/gebruikers/:id", alleenBeheerder, async (req, res): Promise<void
     }
     const [bijgewerkt] = await db
       .update(gebruikersTable)
-      .set({ gearchiveerd: true, actief: false })
+      .set({
+        gearchiveerd: true,
+        actief: false,
+        // AVG: alleen de klok starten bij de overgang actief -> inactief;
+        // opnieuw archiveren van een al-inactief account mag de bestaande
+        // opschoontermijn niet resetten.
+        gedeactiveerdOp: sql`CASE WHEN ${gebruikersTable.actief} THEN now() ELSE ${gebruikersTable.gedeactiveerdOp} END`,
+      })
       .where(eq(gebruikersTable.id, id))
       .returning();
     if (!bijgewerkt) return void res.status(404).json({ error: "Gebruiker niet gevonden" });
@@ -1099,7 +1112,7 @@ router.post("/gebruikers/:id/herstellen", alleenBeheerder, async (req, res): Pro
     const id = parseInt(String(req.params.id), 10);
     const [bijgewerkt] = await db
       .update(gebruikersTable)
-      .set({ gearchiveerd: false, actief: true })
+      .set({ gearchiveerd: false, actief: true, gedeactiveerdOp: null })
       .where(eq(gebruikersTable.id, id))
       .returning();
     if (!bijgewerkt) return void res.status(404).json({ error: "Gebruiker niet gevonden" });
