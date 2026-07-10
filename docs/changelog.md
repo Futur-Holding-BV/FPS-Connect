@@ -4,6 +4,27 @@ Overzicht van opdrachten, fixes en bouwwerk per datum.
 Voor elke taak drie scores:
 - **Uitvoering** — volledig / gedeeltelijk / niet
 
+## 2026-07-10 — Slim uploaden jaarrekeningen + Meerjarenoverzicht (Financieel, Task #488)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (nieuwe, geïsoleerde module; bestaande OHW-jaarrekening en `onderhanden-werk.ts` ongemoeid)
+
+**Wat gebouwd:** "Slim uploaden" van (geconsolideerde) jaarrekeningen wordt nu vertrouwelijk opgeslagen onder Financieel → Jaarrekeningen (subpad "Geconsolideerde jaarrekeningen" bij consolidatie) in plaats van het algemene Archief. De volledige keten is gerealiseerd: classificatie → beveiligde opslag met rechten → extractie van kerncijfers mét bewijs per cijfer (document-id, pagina, tabel/sectie, oorspronkelijke tekst, methode, zekerheid) → menselijke validatie (proposed/reviewed/approved/rejected/superseded) → Meerjarenoverzicht met trends en signalen → versie-/duplicaatdetectie → audittrail. Werkt ook zonder AI-gateway via een heuristische fallback.
+
+**Beveiliging:** nieuwe bevoegdheid `financieel_vertrouwelijk` (standaard 0, server-side fail-closed, niveau 1=lezen / 2=schrijven). Alle jaarrekening-routes staan erachter; ongeauthenticeerd geeft 401, zonder recht 403. Nav-items en het Meerjarenoverzicht zijn gated op `financieel_vertrouwelijk` niveau 1; beoordelen/goedkeuren vereist niveau 2.
+
+**Bestanden gewijzigd:**
+- `lib/db/src/schema/index.ts` — datamodel financiële documenten + kerncijfers + logboek
+- `artifacts/api-server/src/routes/financieel-jaarrekeningen.ts` — routes (upload, lijst, detail, extractie, kerncijfer-patch, dataset-status, meerjarenoverzicht, download, duplicaatcontrole)
+- `artifacts/api-server/src/services/financieleExtractie.ts` — extractie-engine met bewijsketen + heuristische fallback
+- `artifacts/api-server/src/services/documentIntelligence.ts` — classificatie jaarrekening (geconsolideerd/enkelvoudig)
+- `lib/api-spec/openapi.yaml` + gegenereerde hooks/schemas — API-contract
+- `artifacts/firevault/src/components/slim-upload-balk.tsx` — jaarrekening routeert naar Financieel i.p.v. Inbox
+- `artifacts/firevault/src/pages/financieel/jaarrekeningen/index.tsx` — validatiescherm (master-detail, per-cijfer beoordeling + bewijs, audittrail)
+- `artifacts/firevault/src/pages/financieel/meerjarenoverzicht/index.tsx` — meerjarenoverzicht met trends + signalen
+- `artifacts/firevault/src/App.tsx` + `layouts/beheerder-layout.tsx` — routes en gated nav-items
+
+**Verificatie:** volledige `pnpm run typecheck` groen (alle packages); `/api/healthz`=200; `/api/financieel/jaarrekeningen` ongeauthenticeerd=401 (fail-closed bevestigd); e2e-web afgerond. De e2e-menu-run faalde op infrastructuur (poort 8080 EADDRINUSE + bekende TOTP-timing), niet op deze web-only wijziging; de monteur-app is niet aangeraakt.
+
 ## 2026-07-10 — Deploybeleid vastgelegd: productie als acceptatieomgeving
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** geen (uitsluitend documentatie)

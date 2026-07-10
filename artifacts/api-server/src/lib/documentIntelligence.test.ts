@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { _test, CATEGORIE_MODULE } from "./documentIntelligence";
 
-const { heuristischClassificeerInhoud, herkenJaarUitTekst, herkenJaarUitBestandsnaam, bepaalOpslaglocatie, berekenVertrouwen } = _test;
+const { heuristischClassificeerInhoud, herkenJaarUitTekst, herkenJaarUitBestandsnaam, bepaalOpslaglocatie, berekenVertrouwen, herkenFinancieleStatus } = _test;
 
 // Regressietests voor de gedeelde Document Intelligence-engine (heuristisch pad,
 // geen AI/DB-netwerkcall nodig). Dekt de 8 kern-documenttypes die zowel Inbox
@@ -133,21 +133,26 @@ describe("heuristischClassificeerInhoud — 8 documenttypes", () => {
   });
 });
 
-describe("bepaalOpslaglocatie — jaarrekening naar Archief", () => {
-  it("stuurt een gewone jaarrekening naar Archief → Jaarrekeningen → jaar", () => {
+describe("bepaalOpslaglocatie — jaarrekening naar Financieel (vertrouwelijk, niet meer Archief)", () => {
+  it("stuurt een gewone jaarrekening naar Financieel → Jaarrekeningen → jaar", () => {
     const loc = bepaalOpslaglocatie("jaarrekening", CATEGORIE_MODULE.jaarrekening, 2025, null, "FPS Brandpreventie BV");
-    expect(CATEGORIE_MODULE.jaarrekening).toBe("Archief");
-    expect(loc).toBe("Archief → Jaarrekeningen → 2025");
+    expect(CATEGORIE_MODULE.jaarrekening).toBe("Financieel");
+    expect(loc).toBe("Financieel → Jaarrekeningen → 2025");
   });
 
   it("stuurt een geconsolideerde jaarrekening naar het geconsolideerde subpad", () => {
     const loc = bepaalOpslaglocatie("jaarrekening", CATEGORIE_MODULE.jaarrekening, 2024, "geconsolideerd", "FPS Groep");
-    expect(loc).toBe("Archief → Geconsolideerde jaarrekeningen → 2024");
+    expect(loc).toBe("Financieel → Geconsolideerde jaarrekeningen → 2024");
+  });
+
+  it("stuurt jaarrekeningen nooit meer naar het algemene Archief", () => {
+    const loc = bepaalOpslaglocatie("jaarrekening", CATEGORIE_MODULE.jaarrekening, 2023, "geconsolideerd", "FPS Groep");
+    expect(loc.startsWith("Archief")).toBe(false);
   });
 
   it("valt terug op 'jaar onbekend' als er geen jaar herkend is", () => {
     const loc = bepaalOpslaglocatie("jaarrekening", CATEGORIE_MODULE.jaarrekening, null, null, null);
-    expect(loc).toBe("Archief → Jaarrekeningen → jaar onbekend");
+    expect(loc).toBe("Financieel → Jaarrekeningen → jaar onbekend");
   });
 
   it("plaatst verzekeringen bij Financieel per jaar", () => {
@@ -158,6 +163,29 @@ describe("bepaalOpslaglocatie — jaarrekening naar Archief", () => {
   it("groepeert overige categorieën op organisatie indien bekend", () => {
     const loc = bepaalOpslaglocatie("factuur", CATEGORIE_MODULE.factuur, 2026, null, "Leverancier BV");
     expect(loc).toBe("Financieel → Leverancier BV");
+  });
+});
+
+describe("herkenFinancieleStatus — definitief / concept / onbekend", () => {
+  it("herkent een vastgestelde/gedeponeerde jaarrekening als definitief", () => {
+    expect(herkenFinancieleStatus("De vastgestelde jaarrekening is gedeponeerd bij de Kamer van Koophandel.", {})).toBe("definitief");
+  });
+
+  it("herkent een accountants-/controleverklaring als definitief", () => {
+    expect(herkenFinancieleStatus("Bij deze jaarrekening is een controleverklaring van de onafhankelijke accountant afgegeven.", {})).toBe("definitief");
+  });
+
+  it("herkent een concept-jaarrekening als concept", () => {
+    expect(herkenFinancieleStatus("Concept-jaarrekening 2023 — nog niet vastgesteld door de algemene vergadering.", {})).toBe("concept");
+  });
+
+  it("geeft onbekend zonder duidelijke status-aanwijzing", () => {
+    expect(herkenFinancieleStatus("Balans per 31 december en winst-en-verliesrekening over het boekjaar.", {})).toBe("onbekend");
+  });
+
+  it("laat een AI-hint uit gevonden gegevens voorgaan", () => {
+    expect(herkenFinancieleStatus("", { status: "concept" })).toBe("concept");
+    expect(herkenFinancieleStatus("", { status: "definitief" })).toBe("definitief");
   });
 });
 

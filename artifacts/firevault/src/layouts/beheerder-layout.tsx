@@ -1066,6 +1066,32 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                           </Link>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
+                      {heeftNiveau("financieel_vertrouwelijk", 1) && (
+                        <>
+                          <SidebarMenuItem className="pl-5">
+                            <SidebarMenuButton
+                              asChild
+                              isActive={location === "/financieel/jaarrekeningen"}
+                            >
+                              <Link href="/financieel/jaarrekeningen">
+                                <ShieldCheck />
+                                <span>Jaarrekeningen</span>
+                              </Link>
+                            </SidebarMenuButton>
+                          </SidebarMenuItem>
+                          <SidebarMenuItem className="pl-5">
+                            <SidebarMenuButton
+                              asChild
+                              isActive={location === "/financieel/meerjarenoverzicht"}
+                            >
+                              <Link href="/financieel/meerjarenoverzicht">
+                                <TrendingUp />
+                                <span>Meerjarenoverzicht</span>
+                              </Link>
+                            </SidebarMenuButton>
+                          </SidebarMenuItem>
+                        </>
+                      )}
                       <SidebarMenuItem className="pl-5">
                         <SidebarMenuButton
                           asChild

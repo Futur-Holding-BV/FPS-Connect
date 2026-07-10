@@ -214,6 +214,16 @@ import type {
   FieLeermomentPatch,
   FieObservatiesResponse,
   FinancieelDashboard,
+  FinancieelDocument,
+  FinancieelDocumentDetail,
+  FinancieelDocumentInput,
+  FinancieelDocumentPatch,
+  FinancieelDownloadResultaat,
+  FinancieelDuplicaatInput,
+  FinancieelDuplicaatResultaat,
+  FinancieelKerncijfer,
+  FinancieelKerncijferPatch,
+  FinancieelMeerjarenoverzicht,
   Foto,
   FotoInput,
   FpsVisualEffectiviteit,
@@ -259,6 +269,7 @@ import type {
   GetCrmAiCoach503,
   GetFactuurUploadUrl200,
   GetFieNacalculatiesVerouderdAantal200,
+  GetFinancieelMeerjarenoverzichtParams,
   GetGebouwGevelbeeld200,
   GetJarrekeningOnderhandenWerkParams,
   GetLoonOutputParams,
@@ -381,6 +392,7 @@ import type {
   ListFabrikantenParams,
   ListFacturenParams,
   ListFeestdagenParams,
+  ListFinancieleDocumentenParams,
   ListGebouwenParams,
   ListGekoppeldeDocumentenParams,
   ListGereedschappenParams,
@@ -72065,4 +72077,678 @@ export const useDeleteBeheerVisual = <TError = ErrorType<void>,
       > => {
       return useMutation(getDeleteBeheerVisualMutationOptions(options));
     }
+
+export const getListFinancieleDocumentenUrl = (params?: ListFinancieleDocumentenParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/financieel/jaarrekeningen?${stringifiedParams}` : `/api/financieel/jaarrekeningen`
+}
+
+/**
+ * @summary Vertrouwelijke financiele jaarstukken ophalen (recht financieel_vertrouwelijk)
+ */
+export const listFinancieleDocumenten = async (params?: ListFinancieleDocumentenParams, options?: RequestInit): Promise<FinancieelDocument[]> => {
+
+  return customFetch<FinancieelDocument[]>(getListFinancieleDocumentenUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListFinancieleDocumentenQueryKey = (params?: ListFinancieleDocumentenParams,) => {
+    return [
+    `/api/financieel/jaarrekeningen`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListFinancieleDocumentenQueryOptions = <TData = Awaited<ReturnType<typeof listFinancieleDocumenten>>, TError = ErrorType<void>>(params?: ListFinancieleDocumentenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listFinancieleDocumenten>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListFinancieleDocumentenQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listFinancieleDocumenten>>> = ({ signal }) => listFinancieleDocumenten(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listFinancieleDocumenten>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListFinancieleDocumentenQueryResult = NonNullable<Awaited<ReturnType<typeof listFinancieleDocumenten>>>
+export type ListFinancieleDocumentenQueryError = ErrorType<void>
+
+
+/**
+ * @summary Vertrouwelijke financiele jaarstukken ophalen (recht financieel_vertrouwelijk)
+ */
+
+export function useListFinancieleDocumenten<TData = Awaited<ReturnType<typeof listFinancieleDocumenten>>, TError = ErrorType<void>>(
+ params?: ListFinancieleDocumentenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listFinancieleDocumenten>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListFinancieleDocumentenQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getOpslaanFinancieelDocumentUrl = () => {
+
+
+
+
+  return `/api/financieel/jaarrekeningen`
+}
+
+/**
+ * @summary Bevestigd jaarstuk vertrouwelijk opslaan onder Financieel (recht financieel_vertrouwelijk). Multipart in de praktijk; het bestand wordt met dit metadatablok meegestuurd.
+ */
+export const opslaanFinancieelDocument = async (financieelDocumentInput: FinancieelDocumentInput, options?: RequestInit): Promise<FinancieelDocumentDetail> => {
+
+  return customFetch<FinancieelDocumentDetail>(getOpslaanFinancieelDocumentUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(financieelDocumentInput)
+  }
+);}
+
+
+
+
+export const getOpslaanFinancieelDocumentMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof opslaanFinancieelDocument>>, TError,{data: BodyType<FinancieelDocumentInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof opslaanFinancieelDocument>>, TError,{data: BodyType<FinancieelDocumentInput>}, TContext> => {
+
+const mutationKey = ['opslaanFinancieelDocument'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof opslaanFinancieelDocument>>, {data: BodyType<FinancieelDocumentInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  opslaanFinancieelDocument(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type OpslaanFinancieelDocumentMutationResult = NonNullable<Awaited<ReturnType<typeof opslaanFinancieelDocument>>>
+    export type OpslaanFinancieelDocumentMutationBody = BodyType<FinancieelDocumentInput>
+    export type OpslaanFinancieelDocumentMutationError = ErrorType<void>
+
+    /**
+ * @summary Bevestigd jaarstuk vertrouwelijk opslaan onder Financieel (recht financieel_vertrouwelijk). Multipart in de praktijk; het bestand wordt met dit metadatablok meegestuurd.
+ */
+export const useOpslaanFinancieelDocument = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof opslaanFinancieelDocument>>, TError,{data: BodyType<FinancieelDocumentInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof opslaanFinancieelDocument>>,
+        TError,
+        {data: BodyType<FinancieelDocumentInput>},
+        TContext
+      > => {
+      return useMutation(getOpslaanFinancieelDocumentMutationOptions(options));
+    }
+
+export const getControleerFinancieelDuplicaatUrl = () => {
+
+
+
+
+  return `/api/financieel/jaarrekeningen/controleer-duplicaat`
+}
+
+/**
+ * @summary Controleer op mogelijke duplicaten (identiek bestand via hash, of gelijke entiteit/boekjaar/subtype). Waarschuwt alleen.
+ */
+export const controleerFinancieelDuplicaat = async (financieelDuplicaatInput: FinancieelDuplicaatInput, options?: RequestInit): Promise<FinancieelDuplicaatResultaat> => {
+
+  return customFetch<FinancieelDuplicaatResultaat>(getControleerFinancieelDuplicaatUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(financieelDuplicaatInput)
+  }
+);}
+
+
+
+
+export const getControleerFinancieelDuplicaatMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof controleerFinancieelDuplicaat>>, TError,{data: BodyType<FinancieelDuplicaatInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof controleerFinancieelDuplicaat>>, TError,{data: BodyType<FinancieelDuplicaatInput>}, TContext> => {
+
+const mutationKey = ['controleerFinancieelDuplicaat'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof controleerFinancieelDuplicaat>>, {data: BodyType<FinancieelDuplicaatInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  controleerFinancieelDuplicaat(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ControleerFinancieelDuplicaatMutationResult = NonNullable<Awaited<ReturnType<typeof controleerFinancieelDuplicaat>>>
+    export type ControleerFinancieelDuplicaatMutationBody = BodyType<FinancieelDuplicaatInput>
+    export type ControleerFinancieelDuplicaatMutationError = ErrorType<void>
+
+    /**
+ * @summary Controleer op mogelijke duplicaten (identiek bestand via hash, of gelijke entiteit/boekjaar/subtype). Waarschuwt alleen.
+ */
+export const useControleerFinancieelDuplicaat = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof controleerFinancieelDuplicaat>>, TError,{data: BodyType<FinancieelDuplicaatInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof controleerFinancieelDuplicaat>>,
+        TError,
+        {data: BodyType<FinancieelDuplicaatInput>},
+        TContext
+      > => {
+      return useMutation(getControleerFinancieelDuplicaatMutationOptions(options));
+    }
+
+export const getGetFinancieelDocumentUrl = (id: number,) => {
+
+
+
+
+  return `/api/financieel/jaarrekeningen/${id}`
+}
+
+/**
+ * @summary Detail van een vertrouwelijk jaarstuk incl. kerncijfers en logboek (recht financieel_vertrouwelijk)
+ */
+export const getFinancieelDocument = async (id: number, options?: RequestInit): Promise<FinancieelDocumentDetail> => {
+
+  return customFetch<FinancieelDocumentDetail>(getGetFinancieelDocumentUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetFinancieelDocumentQueryKey = (id: number,) => {
+    return [
+    `/api/financieel/jaarrekeningen/${id}`
+    ] as const;
+    }
+
+
+export const getGetFinancieelDocumentQueryOptions = <TData = Awaited<ReturnType<typeof getFinancieelDocument>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getFinancieelDocument>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetFinancieelDocumentQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getFinancieelDocument>>> = ({ signal }) => getFinancieelDocument(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getFinancieelDocument>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetFinancieelDocumentQueryResult = NonNullable<Awaited<ReturnType<typeof getFinancieelDocument>>>
+export type GetFinancieelDocumentQueryError = ErrorType<void>
+
+
+/**
+ * @summary Detail van een vertrouwelijk jaarstuk incl. kerncijfers en logboek (recht financieel_vertrouwelijk)
+ */
+
+export function useGetFinancieelDocument<TData = Awaited<ReturnType<typeof getFinancieelDocument>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getFinancieelDocument>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetFinancieelDocumentQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUpdateFinancieelDocumentUrl = (id: number,) => {
+
+
+
+
+  return `/api/financieel/jaarrekeningen/${id}`
+}
+
+/**
+ * @summary Metadata of dataset-status van een jaarstuk bijwerken (recht financieel_vertrouwelijk, schrijfniveau)
+ */
+export const updateFinancieelDocument = async (id: number,
+    financieelDocumentPatch: FinancieelDocumentPatch, options?: RequestInit): Promise<FinancieelDocumentDetail> => {
+
+  return customFetch<FinancieelDocumentDetail>(getUpdateFinancieelDocumentUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(financieelDocumentPatch)
+  }
+);}
+
+
+
+
+export const getUpdateFinancieelDocumentMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateFinancieelDocument>>, TError,{id: number;data: BodyType<FinancieelDocumentPatch>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateFinancieelDocument>>, TError,{id: number;data: BodyType<FinancieelDocumentPatch>}, TContext> => {
+
+const mutationKey = ['updateFinancieelDocument'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateFinancieelDocument>>, {id: number;data: BodyType<FinancieelDocumentPatch>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateFinancieelDocument(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateFinancieelDocumentMutationResult = NonNullable<Awaited<ReturnType<typeof updateFinancieelDocument>>>
+    export type UpdateFinancieelDocumentMutationBody = BodyType<FinancieelDocumentPatch>
+    export type UpdateFinancieelDocumentMutationError = ErrorType<void>
+
+    /**
+ * @summary Metadata of dataset-status van een jaarstuk bijwerken (recht financieel_vertrouwelijk, schrijfniveau)
+ */
+export const useUpdateFinancieelDocument = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateFinancieelDocument>>, TError,{id: number;data: BodyType<FinancieelDocumentPatch>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateFinancieelDocument>>,
+        TError,
+        {id: number;data: BodyType<FinancieelDocumentPatch>},
+        TContext
+      > => {
+      return useMutation(getUpdateFinancieelDocumentMutationOptions(options));
+    }
+
+export const getExtraheerFinancieleKerncijfersUrl = (id: number,) => {
+
+
+
+
+  return `/api/financieel/jaarrekeningen/${id}/extraheer`
+}
+
+/**
+ * @summary (Her)extraheer kerncijfers uit het jaarstuk; bestaande voorstellen worden vervangen (recht financieel_vertrouwelijk, schrijfniveau)
+ */
+export const extraheerFinancieleKerncijfers = async (id: number, options?: RequestInit): Promise<FinancieelDocumentDetail> => {
+
+  return customFetch<FinancieelDocumentDetail>(getExtraheerFinancieleKerncijfersUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getExtraheerFinancieleKerncijfersMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof extraheerFinancieleKerncijfers>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof extraheerFinancieleKerncijfers>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['extraheerFinancieleKerncijfers'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof extraheerFinancieleKerncijfers>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  extraheerFinancieleKerncijfers(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ExtraheerFinancieleKerncijfersMutationResult = NonNullable<Awaited<ReturnType<typeof extraheerFinancieleKerncijfers>>>
+
+    export type ExtraheerFinancieleKerncijfersMutationError = ErrorType<void>
+
+    /**
+ * @summary (Her)extraheer kerncijfers uit het jaarstuk; bestaande voorstellen worden vervangen (recht financieel_vertrouwelijk, schrijfniveau)
+ */
+export const useExtraheerFinancieleKerncijfers = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof extraheerFinancieleKerncijfers>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof extraheerFinancieleKerncijfers>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getExtraheerFinancieleKerncijfersMutationOptions(options));
+    }
+
+export const getDownloadFinancieelDocumentUrl = (id: number,) => {
+
+
+
+
+  return `/api/financieel/jaarrekeningen/${id}/download`
+}
+
+/**
+ * @summary Beveiligde downloadverwijzing voor een jaarstuk; toegang wordt gelogd (recht financieel_vertrouwelijk)
+ */
+export const downloadFinancieelDocument = async (id: number, options?: RequestInit): Promise<FinancieelDownloadResultaat> => {
+
+  return customFetch<FinancieelDownloadResultaat>(getDownloadFinancieelDocumentUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getDownloadFinancieelDocumentQueryKey = (id: number,) => {
+    return [
+    `/api/financieel/jaarrekeningen/${id}/download`
+    ] as const;
+    }
+
+
+export const getDownloadFinancieelDocumentQueryOptions = <TData = Awaited<ReturnType<typeof downloadFinancieelDocument>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof downloadFinancieelDocument>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getDownloadFinancieelDocumentQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof downloadFinancieelDocument>>> = ({ signal }) => downloadFinancieelDocument(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof downloadFinancieelDocument>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type DownloadFinancieelDocumentQueryResult = NonNullable<Awaited<ReturnType<typeof downloadFinancieelDocument>>>
+export type DownloadFinancieelDocumentQueryError = ErrorType<void>
+
+
+/**
+ * @summary Beveiligde downloadverwijzing voor een jaarstuk; toegang wordt gelogd (recht financieel_vertrouwelijk)
+ */
+
+export function useDownloadFinancieelDocument<TData = Awaited<ReturnType<typeof downloadFinancieelDocument>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof downloadFinancieelDocument>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getDownloadFinancieelDocumentQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUpdateFinancieelKerncijferUrl = (id: number,) => {
+
+
+
+
+  return `/api/financieel/kerncijfers/${id}`
+}
+
+/**
+ * @summary Een kerncijfer beoordelen of corrigeren (status, waarde, uitsluiten) — bewijsketen blijft behouden (recht financieel_vertrouwelijk, schrijfniveau)
+ */
+export const updateFinancieelKerncijfer = async (id: number,
+    financieelKerncijferPatch: FinancieelKerncijferPatch, options?: RequestInit): Promise<FinancieelKerncijfer> => {
+
+  return customFetch<FinancieelKerncijfer>(getUpdateFinancieelKerncijferUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(financieelKerncijferPatch)
+  }
+);}
+
+
+
+
+export const getUpdateFinancieelKerncijferMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateFinancieelKerncijfer>>, TError,{id: number;data: BodyType<FinancieelKerncijferPatch>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateFinancieelKerncijfer>>, TError,{id: number;data: BodyType<FinancieelKerncijferPatch>}, TContext> => {
+
+const mutationKey = ['updateFinancieelKerncijfer'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateFinancieelKerncijfer>>, {id: number;data: BodyType<FinancieelKerncijferPatch>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateFinancieelKerncijfer(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateFinancieelKerncijferMutationResult = NonNullable<Awaited<ReturnType<typeof updateFinancieelKerncijfer>>>
+    export type UpdateFinancieelKerncijferMutationBody = BodyType<FinancieelKerncijferPatch>
+    export type UpdateFinancieelKerncijferMutationError = ErrorType<void>
+
+    /**
+ * @summary Een kerncijfer beoordelen of corrigeren (status, waarde, uitsluiten) — bewijsketen blijft behouden (recht financieel_vertrouwelijk, schrijfniveau)
+ */
+export const useUpdateFinancieelKerncijfer = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateFinancieelKerncijfer>>, TError,{id: number;data: BodyType<FinancieelKerncijferPatch>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateFinancieelKerncijfer>>,
+        TError,
+        {id: number;data: BodyType<FinancieelKerncijferPatch>},
+        TContext
+      > => {
+      return useMutation(getUpdateFinancieelKerncijferMutationOptions(options));
+    }
+
+export const getGetFinancieelMeerjarenoverzichtUrl = (params?: GetFinancieelMeerjarenoverzichtParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/financieel/meerjarenoverzicht?${stringifiedParams}` : `/api/financieel/meerjarenoverzicht`
+}
+
+/**
+ * @summary Meerjarenoverzicht van goedgekeurde kerncijfers per entiteit, met trends en signalen (recht financieel_vertrouwelijk)
+ */
+export const getFinancieelMeerjarenoverzicht = async (params?: GetFinancieelMeerjarenoverzichtParams, options?: RequestInit): Promise<FinancieelMeerjarenoverzicht> => {
+
+  return customFetch<FinancieelMeerjarenoverzicht>(getGetFinancieelMeerjarenoverzichtUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetFinancieelMeerjarenoverzichtQueryKey = (params?: GetFinancieelMeerjarenoverzichtParams,) => {
+    return [
+    `/api/financieel/meerjarenoverzicht`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetFinancieelMeerjarenoverzichtQueryOptions = <TData = Awaited<ReturnType<typeof getFinancieelMeerjarenoverzicht>>, TError = ErrorType<void>>(params?: GetFinancieelMeerjarenoverzichtParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getFinancieelMeerjarenoverzicht>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetFinancieelMeerjarenoverzichtQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getFinancieelMeerjarenoverzicht>>> = ({ signal }) => getFinancieelMeerjarenoverzicht(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getFinancieelMeerjarenoverzicht>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetFinancieelMeerjarenoverzichtQueryResult = NonNullable<Awaited<ReturnType<typeof getFinancieelMeerjarenoverzicht>>>
+export type GetFinancieelMeerjarenoverzichtQueryError = ErrorType<void>
+
+
+/**
+ * @summary Meerjarenoverzicht van goedgekeurde kerncijfers per entiteit, met trends en signalen (recht financieel_vertrouwelijk)
+ */
+
+export function useGetFinancieelMeerjarenoverzicht<TData = Awaited<ReturnType<typeof getFinancieelMeerjarenoverzicht>>, TError = ErrorType<void>>(
+ params?: GetFinancieelMeerjarenoverzichtParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getFinancieelMeerjarenoverzicht>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetFinancieelMeerjarenoverzichtQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 

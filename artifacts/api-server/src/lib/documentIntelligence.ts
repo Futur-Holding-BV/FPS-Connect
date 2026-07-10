@@ -72,6 +72,9 @@ export interface DocumentIntelligenceResultaat {
   jaar: number | null;
   module_bestemming: string;
   opslaglocatie: string;
+  // Vertrouwelijke financiele jaarstukken: markering + status van het jaarstuk zelf.
+  beveiligingsprofiel: string | null;
+  documentstatus: "definitief" | "concept" | "onbekend" | null;
   impact_niveau: "geen" | "laag" | "midden" | "hoog";
   impact_omschrijving: string;
   vereist_bevestiging: boolean;
@@ -139,6 +142,29 @@ function herkenJaarUitBestandsnaam(bestandsnaam: string): number | null {
   return plausibel[0] ?? null;
 }
 
+// ── Documentstatus jaarrekening: definitief / concept / onbekend ─────────────
+// Bepaalt of een financieel jaarstuk vastgesteld/definitief is dan wel concept.
+// Werkt puur inhoudsgedreven (tekst + AI-hint), zonder AI-afhankelijkheid.
+export function herkenFinancieleStatus(
+  tekst: string | null,
+  gevonden: Record<string, string>,
+): "definitief" | "concept" | "onbekend" {
+  const hint = (gevonden.status ?? gevonden.documentstatus ?? "").toLowerCase();
+  if (hint.includes("concept") || hint.includes("voorlopig")) return "concept";
+  if (hint.includes("definitief") || hint.includes("vastgesteld")) return "definitief";
+  const t = (tekst ?? "").toLowerCase();
+  if (!t.trim()) return "onbekend";
+  const conceptWoorden = ["concept", "voorlopig", "voorlopige", "draft", "concept-jaarrekening", "nog niet vastgesteld"];
+  const definitiefWoorden = [
+    "vastgestelde jaarrekening", "vastgesteld door", "gedeponeerd", "definitieve jaarrekening",
+    "controleverklaring", "samenstellingsverklaring", "accountantsverklaring", "ondertekend",
+    "goedgekeurd door de algemene vergadering",
+  ];
+  if (conceptWoorden.some((w) => t.includes(w))) return "concept";
+  if (definitiefWoorden.some((w) => t.includes(w))) return "definitief";
+  return "onbekend";
+}
+
 // ── Stap 5: organisatie herkennen ──────────────────────────────────────────────
 
 async function herkenOrganisatie(
@@ -181,7 +207,7 @@ export const CATEGORIE_MODULE: Record<DocCategorie, string> = {
   personeelsdocument: "HRM",
   verzekering: "Financieel",
   snagstream: "Snagstream",
-  jaarrekening: "Archief",
+  jaarrekening: "Financieel",
   contract: "CRM",
   bibliotheek: "Productbibliotheek",
   document_sjabloon: "DMS",
@@ -255,7 +281,8 @@ REGELS:
 3. Geef altijd 2–3 alternatieven.
 4. Extraheer in "gevonden_gegevens" relevante velden, en ALTIJD als aanwezig: organisatie (naam van de betrokken
    onderneming/klant/leverancier/opdrachtgever) en jaar (viercijferig boekjaar/rapportagejaar/geldigheidsjaar).
-   - jaarrekening: organisatie, jaar (boekjaar), subtype ("geconsolideerd" of leeg), accountant
+   - jaarrekening: organisatie, jaar (boekjaar), subtype ("geconsolideerd" of leeg), accountant,
+     status ("definitief" bij vastgestelde/gedeponeerde jaarrekening of accountants-/controleverklaring, "concept" bij voorlopig/concept, anders leeg)
    - factuur: organisatie (leverancier), bedrag, factuurnummer, jaar
    - aanvraag: organisatie (klant), locatie, projectnaam
    - testrapport/eta/dop/certificaat: organisatie (fabrikant), productnaam, normen, jaar
@@ -573,6 +600,18 @@ export async function classificeerDocument(input: {
   const opslaglocatie = bepaalOpslaglocatie(basis.categorie, module, jaar, subtype, organisatie);
   bewijs.push({ stap: "opslaglocatie_voorgesteld", resultaat: opslaglocatie });
 
+  let beveiligingsprofiel: string | null = null;
+  let documentstatus: "definitief" | "concept" | "onbekend" | null = null;
+  if (basis.categorie === "jaarrekening") {
+    beveiligingsprofiel = "FINANCIAL_CONFIDENTIAL";
+    documentstatus = herkenFinancieleStatus(extractie.tekst, basis.gevonden_gegevens);
+    bewijs.push({
+      stap: "financieel_profiel",
+      resultaat: "FINANCIAL_CONFIDENTIAL",
+      detail: `Vertrouwelijk financieel jaarstuk; documentstatus ${documentstatus}, ${subtype === "geconsolideerd" ? "geconsolideerd" : "enkelvoudig"}`,
+    });
+  }
+
   const vertrouwen = berekenVertrouwen({
     aiBeschikbaar: basis.ai_beschikbaar,
     aiVertrouwen: aiAnalyse ? aiAnalyse.vertrouwen : null,
@@ -604,6 +643,8 @@ export async function classificeerDocument(input: {
     jaar,
     module_bestemming: module,
     opslaglocatie,
+    beveiligingsprofiel,
+    documentstatus,
     impact_niveau: basis.impact_niveau,
     impact_omschrijving: basis.impact_omschrijving,
     vereist_bevestiging: basis.vereist_bevestiging,
@@ -613,4 +654,4 @@ export async function classificeerDocument(input: {
 }
 
 // Puur-functionele exports voor unit tests (geen DB/AI-netwerkcall nodig).
-export const _test = { heuristischClassificeerInhoud, herkenJaarUitTekst, herkenJaarUitBestandsnaam, bepaalOpslaglocatie, berekenVertrouwen };
+export const _test = { heuristischClassificeerInhoud, herkenJaarUitTekst, herkenJaarUitBestandsnaam, bepaalOpslaglocatie, berekenVertrouwen, herkenFinancieleStatus, CATEGORIE_MODULE };

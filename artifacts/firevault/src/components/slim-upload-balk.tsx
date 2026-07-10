@@ -1070,6 +1070,31 @@ async function uploadNaarInbox(bestand: File, toelichting?: string, geconsolidee
   }
 }
 
+// Jaarrekeningen gaan NIET naar de algemene inbox/archief, maar vertrouwelijk naar
+// Financieel › Jaarrekeningen (subpad "Geconsolideerde jaarrekeningen" indien geconsolideerd).
+// Gated op het recht financieel_vertrouwelijk (server-side fail-closed).
+async function uploadNaarFinancieel(
+  bestand: File,
+  opties: { toelichting?: string; geconsolideerd?: boolean; boekjaar?: number | null; entiteit?: string | null },
+): Promise<{ ok: boolean; status: number }> {
+  try {
+    const form = new FormData();
+    form.append("bestand", bestand);
+    form.append("subtype", opties.geconsolideerd ? "geconsolideerd" : "enkelvoudig");
+    if (opties.toelichting?.trim()) form.append("opmerkingen", opties.toelichting.trim());
+    if (opties.boekjaar != null) form.append("boekjaar", String(opties.boekjaar));
+    if (opties.entiteit?.trim()) form.append("entiteit", opties.entiteit.trim());
+    const res = await fetch("/api/financieel/jaarrekeningen", {
+      method: "POST",
+      body: form,
+      credentials: "include",
+    });
+    return { ok: res.ok, status: res.status };
+  } catch {
+    return { ok: false, status: 0 };
+  }
+}
+
 // ── Hoofd-component ───────────────────────────────────────────────────────────
 
 export function SlimUploadBalk() {
@@ -1290,15 +1315,36 @@ export function SlimUploadBalk() {
     voegRecentToe(recentItem);
     herlaadRecente();
 
-    // Upload het bestand naar de inbox (fire and forget)
-    void uploadNaarInbox(bestand, item.toelichting, item.geconsolideerd_override).then((ok) => {
-      toast({
-        title: ok ? "Opgeslagen in inbox" : "Categorisering bevestigd",
-        description: ok
-          ? `${bestand.name} staat nu in Slim uploaden › Inbox.`
-          : `${bestand.name} → ${info.label}. Opslaan mislukt — upload het bestand handmatig.`,
+    if (cat === "jaarrekening") {
+      // Vertrouwelijke route: sla op onder Financieel › Jaarrekeningen (niet in het algemene archief).
+      const geconsolideerd = item.geconsolideerd_override ?? item.suggestie?.subtype === "geconsolideerd";
+      void uploadNaarFinancieel(bestand, {
+        toelichting: item.toelichting,
+        geconsolideerd,
+        boekjaar: item.suggestie?.jaar ?? null,
+        entiteit: item.suggestie?.organisatie ?? null,
+      }).then(({ ok, status }) => {
+        toast({
+          title: ok ? "Opgeslagen bij Financieel" : "Opslaan mislukt",
+          description: ok
+            ? `${bestand.name} staat nu vertrouwelijk onder Financieel › ${geconsolideerd ? "Geconsolideerde jaarrekeningen" : "Jaarrekeningen"}.`
+            : status === 401 || status === 403
+              ? "Je hebt geen recht op vertrouwelijke financiële documenten. Neem contact op met de hoofdbeheerder."
+              : `${bestand.name} kon niet worden opgeslagen. Probeer het opnieuw.`,
+          variant: ok ? undefined : "destructive",
+        });
       });
-    });
+    } else {
+      // Upload het bestand naar de inbox (fire and forget)
+      void uploadNaarInbox(bestand, item.toelichting, item.geconsolideerd_override).then((ok) => {
+        toast({
+          title: ok ? "Opgeslagen in inbox" : "Categorisering bevestigd",
+          description: ok
+            ? `${bestand.name} staat nu in Slim uploaden › Inbox.`
+            : `${bestand.name} → ${info.label}. Opslaan mislukt — upload het bestand handmatig.`,
+        });
+      });
+    }
 
     // Markeer als afgehandeld — wachtrij blijft open
     setQueue((prev) =>

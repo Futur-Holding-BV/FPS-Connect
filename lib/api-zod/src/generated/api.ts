@@ -25591,3 +25591,466 @@ export const DeleteBeheerVisualParams = zod.object({
 export const DeleteBeheerVisualResponse = zod.void()
 
 
+/**
+ * @summary Vertrouwelijke financiele jaarstukken ophalen (recht financieel_vertrouwelijk)
+ */
+export const ListFinancieleDocumentenQueryParams = zod.object({
+  "zoek": zod.coerce.string().optional().describe('Vrije zoekterm (titel, entiteit, bestandsnaam)'),
+  "entiteit": zod.coerce.string().optional(),
+  "boekjaar": zod.coerce.number().optional(),
+  "subtype": zod.enum(['geconsolideerd', 'enkelvoudig']).optional(),
+  "dataset_status": zod.enum(['proposed', 'reviewed', 'approved', 'rejected', 'superseded']).optional(),
+  "inclusief_niet_actueel": zod.coerce.boolean().optional().describe('Ook vervangen\/oudere versies tonen')
+})
+
+export const ListFinancieleDocumentenResponseItem = zod.object({
+  "id": zod.number(),
+  "bestandsnaam": zod.string(),
+  "titel": zod.string(),
+  "bestandspad": zod.string().optional(),
+  "bestandsgrootte": zod.number().nullish(),
+  "mimetype": zod.string().optional(),
+  "bestands_hash": zod.string().nullish(),
+  "documenttype": zod.string(),
+  "entiteit": zod.string().nullish(),
+  "boekjaar": zod.number().nullish(),
+  "subtype": zod.enum(['geconsolideerd', 'enkelvoudig']),
+  "documentstatus": zod.enum(['definitief', 'concept', 'onbekend']),
+  "beveiligingsprofiel": zod.string(),
+  "opslaglocatie": zod.string(),
+  "classificatie_methode": zod.string().optional(),
+  "betrouwbaarheid": zod.string().optional(),
+  "betrouwbaarheid_score": zod.number().optional(),
+  "gevonden_gegevens": zod.record(zod.string(), zod.unknown()).nullish(),
+  "extractie_status": zod.enum(['niet_gestart', 'bezig', 'voltooid', 'mislukt']),
+  "dataset_status": zod.enum(['proposed', 'reviewed', 'approved', 'rejected', 'superseded']).describe('Levenscyclus van de kerncijfer-dataset als geheel'),
+  "vervangt_document_id": zod.number().nullish(),
+  "is_actueel": zod.boolean(),
+  "aantal_kerncijfers": zod.number().optional(),
+  "aantal_goedgekeurd": zod.number().optional(),
+  "geupload_door": zod.number().nullish(),
+  "geupload_door_naam": zod.string().nullish(),
+  "geupload_op": zod.string(),
+  "goedgekeurd_door": zod.number().nullish(),
+  "goedgekeurd_op": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+export const ListFinancieleDocumentenResponse = zod.array(ListFinancieleDocumentenResponseItem)
+
+
+/**
+ * @summary Bevestigd jaarstuk vertrouwelijk opslaan onder Financieel (recht financieel_vertrouwelijk). Multipart in de praktijk; het bestand wordt met dit metadatablok meegestuurd.
+ */
+export const OpslaanFinancieelDocumentBody = zod.object({
+  "bestandsnaam": zod.string(),
+  "titel": zod.string(),
+  "bestandspad": zod.string().optional(),
+  "bestandsgrootte": zod.number().nullish(),
+  "mimetype": zod.string().optional(),
+  "bestands_hash": zod.string().nullish(),
+  "entiteit": zod.string().nullish(),
+  "boekjaar": zod.number().nullish(),
+  "subtype": zod.enum(['geconsolideerd', 'enkelvoudig']).optional(),
+  "documentstatus": zod.enum(['definitief', 'concept', 'onbekend']).optional(),
+  "opslaglocatie": zod.string().nullish(),
+  "classificatie_methode": zod.string().nullish(),
+  "betrouwbaarheid": zod.string().nullish(),
+  "betrouwbaarheid_score": zod.number().nullish(),
+  "ai_bewijs": zod.array(zod.object({
+  "stap": zod.string(),
+  "resultaat": zod.string(),
+  "detail": zod.string().nullish()
+})).nullish(),
+  "gevonden_gegevens": zod.record(zod.string(), zod.unknown()).nullish(),
+  "vervangt_document_id": zod.number().nullish(),
+  "direct_extraheren": zod.boolean().optional().describe('Direct na opslaan de kerncijferextractie starten (standaard true)')
+})
+
+export const OpslaanFinancieelDocumentResponse = zod.void()
+
+
+/**
+ * @summary Controleer op mogelijke duplicaten (identiek bestand via hash, of gelijke entiteit/boekjaar/subtype). Waarschuwt alleen.
+ */
+export const ControleerFinancieelDuplicaatBody = zod.object({
+  "bestands_hash": zod.string().nullish(),
+  "entiteit": zod.string().nullish(),
+  "boekjaar": zod.number().nullish(),
+  "subtype": zod.enum(['geconsolideerd', 'enkelvoudig']).optional()
+})
+
+export const ControleerFinancieelDuplicaatResponse = zod.object({
+  "is_duplicaat": zod.boolean(),
+  "reden": zod.string().nullish(),
+  "treffers": zod.array(zod.object({
+  "id": zod.number(),
+  "bestandsnaam": zod.string(),
+  "titel": zod.string(),
+  "bestandspad": zod.string().optional(),
+  "bestandsgrootte": zod.number().nullish(),
+  "mimetype": zod.string().optional(),
+  "bestands_hash": zod.string().nullish(),
+  "documenttype": zod.string(),
+  "entiteit": zod.string().nullish(),
+  "boekjaar": zod.number().nullish(),
+  "subtype": zod.enum(['geconsolideerd', 'enkelvoudig']),
+  "documentstatus": zod.enum(['definitief', 'concept', 'onbekend']),
+  "beveiligingsprofiel": zod.string(),
+  "opslaglocatie": zod.string(),
+  "classificatie_methode": zod.string().optional(),
+  "betrouwbaarheid": zod.string().optional(),
+  "betrouwbaarheid_score": zod.number().optional(),
+  "gevonden_gegevens": zod.record(zod.string(), zod.unknown()).nullish(),
+  "extractie_status": zod.enum(['niet_gestart', 'bezig', 'voltooid', 'mislukt']),
+  "dataset_status": zod.enum(['proposed', 'reviewed', 'approved', 'rejected', 'superseded']).describe('Levenscyclus van de kerncijfer-dataset als geheel'),
+  "vervangt_document_id": zod.number().nullish(),
+  "is_actueel": zod.boolean(),
+  "aantal_kerncijfers": zod.number().optional(),
+  "aantal_goedgekeurd": zod.number().optional(),
+  "geupload_door": zod.number().nullish(),
+  "geupload_door_naam": zod.string().nullish(),
+  "geupload_op": zod.string(),
+  "goedgekeurd_door": zod.number().nullish(),
+  "goedgekeurd_op": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+}))
+})
+
+
+/**
+ * @summary Detail van een vertrouwelijk jaarstuk incl. kerncijfers en logboek (recht financieel_vertrouwelijk)
+ */
+export const GetFinancieelDocumentParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetFinancieelDocumentResponse = zod.object({
+  "id": zod.number(),
+  "bestandsnaam": zod.string(),
+  "titel": zod.string(),
+  "bestandspad": zod.string().optional(),
+  "bestandsgrootte": zod.number().nullish(),
+  "mimetype": zod.string().optional(),
+  "bestands_hash": zod.string().nullish(),
+  "documenttype": zod.string(),
+  "entiteit": zod.string().nullish(),
+  "boekjaar": zod.number().nullish(),
+  "subtype": zod.enum(['geconsolideerd', 'enkelvoudig']),
+  "documentstatus": zod.enum(['definitief', 'concept', 'onbekend']),
+  "beveiligingsprofiel": zod.string(),
+  "opslaglocatie": zod.string(),
+  "classificatie_methode": zod.string().optional(),
+  "betrouwbaarheid": zod.string().optional(),
+  "betrouwbaarheid_score": zod.number().optional(),
+  "gevonden_gegevens": zod.record(zod.string(), zod.unknown()).nullish(),
+  "extractie_status": zod.enum(['niet_gestart', 'bezig', 'voltooid', 'mislukt']),
+  "dataset_status": zod.enum(['proposed', 'reviewed', 'approved', 'rejected', 'superseded']).describe('Levenscyclus van de kerncijfer-dataset als geheel'),
+  "vervangt_document_id": zod.number().nullish(),
+  "is_actueel": zod.boolean(),
+  "aantal_kerncijfers": zod.number().optional(),
+  "aantal_goedgekeurd": zod.number().optional(),
+  "geupload_door": zod.number().nullish(),
+  "geupload_door_naam": zod.string().nullish(),
+  "geupload_op": zod.string(),
+  "goedgekeurd_door": zod.number().nullish(),
+  "goedgekeurd_op": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+}).and(zod.object({
+  "ai_bewijs": zod.array(zod.object({
+  "stap": zod.string(),
+  "resultaat": zod.string(),
+  "detail": zod.string().nullish()
+})).optional(),
+  "kerncijfers": zod.array(zod.object({
+  "id": zod.number(),
+  "document_id": zod.number(),
+  "entiteit": zod.string().nullish(),
+  "boekjaar": zod.number().nullish(),
+  "geconsolideerd": zod.boolean().optional(),
+  "sleutel": zod.string(),
+  "label": zod.string(),
+  "waarde": zod.number().nullish(),
+  "eenheid": zod.string(),
+  "status": zod.enum(['proposed', 'reviewed', 'approved', 'rejected', 'superseded']),
+  "is_berekend": zod.boolean(),
+  "uitgesloten": zod.boolean(),
+  "handmatig_aangepast": zod.boolean().optional(),
+  "oorspronkelijke_waarde": zod.number().nullish(),
+  "bron_pagina": zod.number().nullish(),
+  "bron_tabel": zod.string().nullish(),
+  "bron_tekst": zod.string().nullish(),
+  "extractie_methode": zod.string(),
+  "confidence": zod.number().nullish(),
+  "beoordeeld_door": zod.number().nullish(),
+  "beoordeeld_op": zod.string().nullish(),
+  "aangemaakt_op": zod.string().optional(),
+  "bijgewerkt_op": zod.string().optional()
+})).optional(),
+  "logboek": zod.array(zod.object({
+  "id": zod.number(),
+  "actie": zod.string(),
+  "gebruiker_id": zod.number().nullish(),
+  "gebruiker_naam": zod.string().nullish(),
+  "details": zod.string().nullish(),
+  "aangemaakt_op": zod.string()
+})).optional()
+}))
+
+
+/**
+ * @summary Metadata of dataset-status van een jaarstuk bijwerken (recht financieel_vertrouwelijk, schrijfniveau)
+ */
+export const UpdateFinancieelDocumentParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateFinancieelDocumentBody = zod.object({
+  "titel": zod.string().optional(),
+  "entiteit": zod.string().nullish(),
+  "boekjaar": zod.number().nullish(),
+  "subtype": zod.enum(['geconsolideerd', 'enkelvoudig']).optional(),
+  "documentstatus": zod.enum(['definitief', 'concept', 'onbekend']).optional(),
+  "dataset_status": zod.enum(['proposed', 'reviewed', 'approved', 'rejected', 'superseded']).optional().describe('Levenscyclus van de kerncijfer-dataset als geheel')
+})
+
+export const UpdateFinancieelDocumentResponse = zod.object({
+  "id": zod.number(),
+  "bestandsnaam": zod.string(),
+  "titel": zod.string(),
+  "bestandspad": zod.string().optional(),
+  "bestandsgrootte": zod.number().nullish(),
+  "mimetype": zod.string().optional(),
+  "bestands_hash": zod.string().nullish(),
+  "documenttype": zod.string(),
+  "entiteit": zod.string().nullish(),
+  "boekjaar": zod.number().nullish(),
+  "subtype": zod.enum(['geconsolideerd', 'enkelvoudig']),
+  "documentstatus": zod.enum(['definitief', 'concept', 'onbekend']),
+  "beveiligingsprofiel": zod.string(),
+  "opslaglocatie": zod.string(),
+  "classificatie_methode": zod.string().optional(),
+  "betrouwbaarheid": zod.string().optional(),
+  "betrouwbaarheid_score": zod.number().optional(),
+  "gevonden_gegevens": zod.record(zod.string(), zod.unknown()).nullish(),
+  "extractie_status": zod.enum(['niet_gestart', 'bezig', 'voltooid', 'mislukt']),
+  "dataset_status": zod.enum(['proposed', 'reviewed', 'approved', 'rejected', 'superseded']).describe('Levenscyclus van de kerncijfer-dataset als geheel'),
+  "vervangt_document_id": zod.number().nullish(),
+  "is_actueel": zod.boolean(),
+  "aantal_kerncijfers": zod.number().optional(),
+  "aantal_goedgekeurd": zod.number().optional(),
+  "geupload_door": zod.number().nullish(),
+  "geupload_door_naam": zod.string().nullish(),
+  "geupload_op": zod.string(),
+  "goedgekeurd_door": zod.number().nullish(),
+  "goedgekeurd_op": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+}).and(zod.object({
+  "ai_bewijs": zod.array(zod.object({
+  "stap": zod.string(),
+  "resultaat": zod.string(),
+  "detail": zod.string().nullish()
+})).optional(),
+  "kerncijfers": zod.array(zod.object({
+  "id": zod.number(),
+  "document_id": zod.number(),
+  "entiteit": zod.string().nullish(),
+  "boekjaar": zod.number().nullish(),
+  "geconsolideerd": zod.boolean().optional(),
+  "sleutel": zod.string(),
+  "label": zod.string(),
+  "waarde": zod.number().nullish(),
+  "eenheid": zod.string(),
+  "status": zod.enum(['proposed', 'reviewed', 'approved', 'rejected', 'superseded']),
+  "is_berekend": zod.boolean(),
+  "uitgesloten": zod.boolean(),
+  "handmatig_aangepast": zod.boolean().optional(),
+  "oorspronkelijke_waarde": zod.number().nullish(),
+  "bron_pagina": zod.number().nullish(),
+  "bron_tabel": zod.string().nullish(),
+  "bron_tekst": zod.string().nullish(),
+  "extractie_methode": zod.string(),
+  "confidence": zod.number().nullish(),
+  "beoordeeld_door": zod.number().nullish(),
+  "beoordeeld_op": zod.string().nullish(),
+  "aangemaakt_op": zod.string().optional(),
+  "bijgewerkt_op": zod.string().optional()
+})).optional(),
+  "logboek": zod.array(zod.object({
+  "id": zod.number(),
+  "actie": zod.string(),
+  "gebruiker_id": zod.number().nullish(),
+  "gebruiker_naam": zod.string().nullish(),
+  "details": zod.string().nullish(),
+  "aangemaakt_op": zod.string()
+})).optional()
+}))
+
+
+/**
+ * @summary (Her)extraheer kerncijfers uit het jaarstuk; bestaande voorstellen worden vervangen (recht financieel_vertrouwelijk, schrijfniveau)
+ */
+export const ExtraheerFinancieleKerncijfersParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ExtraheerFinancieleKerncijfersResponse = zod.object({
+  "id": zod.number(),
+  "bestandsnaam": zod.string(),
+  "titel": zod.string(),
+  "bestandspad": zod.string().optional(),
+  "bestandsgrootte": zod.number().nullish(),
+  "mimetype": zod.string().optional(),
+  "bestands_hash": zod.string().nullish(),
+  "documenttype": zod.string(),
+  "entiteit": zod.string().nullish(),
+  "boekjaar": zod.number().nullish(),
+  "subtype": zod.enum(['geconsolideerd', 'enkelvoudig']),
+  "documentstatus": zod.enum(['definitief', 'concept', 'onbekend']),
+  "beveiligingsprofiel": zod.string(),
+  "opslaglocatie": zod.string(),
+  "classificatie_methode": zod.string().optional(),
+  "betrouwbaarheid": zod.string().optional(),
+  "betrouwbaarheid_score": zod.number().optional(),
+  "gevonden_gegevens": zod.record(zod.string(), zod.unknown()).nullish(),
+  "extractie_status": zod.enum(['niet_gestart', 'bezig', 'voltooid', 'mislukt']),
+  "dataset_status": zod.enum(['proposed', 'reviewed', 'approved', 'rejected', 'superseded']).describe('Levenscyclus van de kerncijfer-dataset als geheel'),
+  "vervangt_document_id": zod.number().nullish(),
+  "is_actueel": zod.boolean(),
+  "aantal_kerncijfers": zod.number().optional(),
+  "aantal_goedgekeurd": zod.number().optional(),
+  "geupload_door": zod.number().nullish(),
+  "geupload_door_naam": zod.string().nullish(),
+  "geupload_op": zod.string(),
+  "goedgekeurd_door": zod.number().nullish(),
+  "goedgekeurd_op": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+}).and(zod.object({
+  "ai_bewijs": zod.array(zod.object({
+  "stap": zod.string(),
+  "resultaat": zod.string(),
+  "detail": zod.string().nullish()
+})).optional(),
+  "kerncijfers": zod.array(zod.object({
+  "id": zod.number(),
+  "document_id": zod.number(),
+  "entiteit": zod.string().nullish(),
+  "boekjaar": zod.number().nullish(),
+  "geconsolideerd": zod.boolean().optional(),
+  "sleutel": zod.string(),
+  "label": zod.string(),
+  "waarde": zod.number().nullish(),
+  "eenheid": zod.string(),
+  "status": zod.enum(['proposed', 'reviewed', 'approved', 'rejected', 'superseded']),
+  "is_berekend": zod.boolean(),
+  "uitgesloten": zod.boolean(),
+  "handmatig_aangepast": zod.boolean().optional(),
+  "oorspronkelijke_waarde": zod.number().nullish(),
+  "bron_pagina": zod.number().nullish(),
+  "bron_tabel": zod.string().nullish(),
+  "bron_tekst": zod.string().nullish(),
+  "extractie_methode": zod.string(),
+  "confidence": zod.number().nullish(),
+  "beoordeeld_door": zod.number().nullish(),
+  "beoordeeld_op": zod.string().nullish(),
+  "aangemaakt_op": zod.string().optional(),
+  "bijgewerkt_op": zod.string().optional()
+})).optional(),
+  "logboek": zod.array(zod.object({
+  "id": zod.number(),
+  "actie": zod.string(),
+  "gebruiker_id": zod.number().nullish(),
+  "gebruiker_naam": zod.string().nullish(),
+  "details": zod.string().nullish(),
+  "aangemaakt_op": zod.string()
+})).optional()
+}))
+
+
+/**
+ * @summary Beveiligde downloadverwijzing voor een jaarstuk; toegang wordt gelogd (recht financieel_vertrouwelijk)
+ */
+export const DownloadFinancieelDocumentParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DownloadFinancieelDocumentResponse = zod.object({
+  "url": zod.string(),
+  "bestandsnaam": zod.string().optional()
+})
+
+
+/**
+ * @summary Een kerncijfer beoordelen of corrigeren (status, waarde, uitsluiten) — bewijsketen blijft behouden (recht financieel_vertrouwelijk, schrijfniveau)
+ */
+export const UpdateFinancieelKerncijferParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateFinancieelKerncijferBody = zod.object({
+  "status": zod.enum(['proposed', 'reviewed', 'approved', 'rejected', 'superseded']).optional(),
+  "waarde": zod.number().nullish(),
+  "uitgesloten": zod.boolean().optional(),
+  "label": zod.string().optional(),
+  "eenheid": zod.string().optional()
+})
+
+export const UpdateFinancieelKerncijferResponse = zod.object({
+  "id": zod.number(),
+  "document_id": zod.number(),
+  "entiteit": zod.string().nullish(),
+  "boekjaar": zod.number().nullish(),
+  "geconsolideerd": zod.boolean().optional(),
+  "sleutel": zod.string(),
+  "label": zod.string(),
+  "waarde": zod.number().nullish(),
+  "eenheid": zod.string(),
+  "status": zod.enum(['proposed', 'reviewed', 'approved', 'rejected', 'superseded']),
+  "is_berekend": zod.boolean(),
+  "uitgesloten": zod.boolean(),
+  "handmatig_aangepast": zod.boolean().optional(),
+  "oorspronkelijke_waarde": zod.number().nullish(),
+  "bron_pagina": zod.number().nullish(),
+  "bron_tabel": zod.string().nullish(),
+  "bron_tekst": zod.string().nullish(),
+  "extractie_methode": zod.string(),
+  "confidence": zod.number().nullish(),
+  "beoordeeld_door": zod.number().nullish(),
+  "beoordeeld_op": zod.string().nullish(),
+  "aangemaakt_op": zod.string().optional(),
+  "bijgewerkt_op": zod.string().optional()
+})
+
+
+/**
+ * @summary Meerjarenoverzicht van goedgekeurde kerncijfers per entiteit, met trends en signalen (recht financieel_vertrouwelijk)
+ */
+export const GetFinancieelMeerjarenoverzichtQueryParams = zod.object({
+  "entiteit": zod.coerce.string().optional(),
+  "geconsolideerd": zod.coerce.boolean().optional()
+})
+
+export const GetFinancieelMeerjarenoverzichtResponse = zod.object({
+  "entiteiten": zod.array(zod.string()),
+  "geselecteerde_entiteit": zod.string().nullish(),
+  "boekjaren": zod.array(zod.number()),
+  "rijen": zod.array(zod.object({
+  "sleutel": zod.string(),
+  "label": zod.string(),
+  "eenheid": zod.string(),
+  "waarden": zod.record(zod.string(), zod.number().nullable()).describe('Map van boekjaar (string) naar waarde'),
+  "trend_pct": zod.number().nullish().describe('Procentuele verandering laatste twee beschikbare jaren')
+})),
+  "signalen": zod.array(zod.object({
+  "niveau": zod.enum(['info', 'let_op', 'waarschuwing']),
+  "sleutel": zod.string(),
+  "boekjaar": zod.number(),
+  "bericht": zod.string()
+}))
+})
+
+

@@ -98,6 +98,11 @@ export const MODULES = [
     omschrijving: "Factuurverwerking, accordering en AccountView-export",
   },
   {
+    id: "financieel_vertrouwelijk",
+    label: "Financieel vertrouwelijk (jaarstukken)",
+    omschrijving: "Vertrouwelijke jaarrekeningen, kerncijfers en het meerjarenoverzicht voor directie",
+  },
+  {
     id: "salarisarchief",
     label: "Salarisarchief & SEPA",
     omschrijving: "Loonstroken, jaaropgaven, SEPA-betaalbestanden en salarisdocumentbeheer",
@@ -305,7 +310,7 @@ export const PRESETS: Preset[] = [
       gebouwen: 2, voorzieningen: 2, inspecties: 2, onderhoud: 2,
       rapportages: 4, bibliotheek: 2, crm: 4, abonnementen: 4,
       personeel: 2, dossiers: 2, offertes: 2, calculaties: 1, planning: 2,
-      financieel: 4, salarisarchief: 1,
+      financieel: 4, financieel_vertrouwelijk: 4, salarisarchief: 1,
     }),
   },
   {
@@ -313,7 +318,7 @@ export const PRESETS: Preset[] = [
     bevoegdheden: matrix({
       gebouwen: 2, inspecties: 1, onderhoud: 2, rapportages: 3,
       crm: 2, personeel: 2, dossiers: 3, offertes: 1, planning: 1,
-      financieel: 4, salarisarchief: 2,
+      financieel: 4, financieel_vertrouwelijk: 2, salarisarchief: 2,
     }),
   },
   {
@@ -335,6 +340,7 @@ export const PRESETS: Preset[] = [
     bevoegdheden: matrix({
       rapportages: 1,
       financieel: 4,
+      financieel_vertrouwelijk: 2,
       salarisarchief: 2,
       salaris_mutaties: 1,
       boekhouder_portaal: 4,

@@ -71,6 +71,8 @@ tags:
     description: Project Intelligence Model — AI-context en fasebeheer per opdracht; aanvraagstroom (FPS One)
   - name: visuals
     description: Visual Library — goedgekeurde visuals voor de AI Visual Guidance Engine (tekeningen, referentiefoto's, animaties)
+  - name: financieel-jaarrekeningen
+    description: Vertrouwelijke financiele jaarstukken — (geconsolideerde) jaarrekeningen, kerncijferextractie met bronbewijs en het meerjarenoverzicht (recht financieel_vertrouwelijk)
 
 paths:
   /healthz:
@@ -20563,8 +20565,482 @@ paths:
         '404':
           description: Niet gevonden
 
+  /financieel/jaarrekeningen:
+    get:
+      operationId: listFinancieleDocumenten
+      tags: [financieel-jaarrekeningen]
+      summary: Vertrouwelijke financiele jaarstukken ophalen (recht financieel_vertrouwelijk)
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - in: query
+          name: zoek
+          description: Vrije zoekterm (titel, entiteit, bestandsnaam)
+          schema: { type: string }
+        - in: query
+          name: entiteit
+          schema: { type: string }
+        - in: query
+          name: boekjaar
+          schema: { type: integer }
+        - in: query
+          name: subtype
+          schema: { $ref: "#/components/schemas/FinancieelSubtype" }
+        - in: query
+          name: dataset_status
+          schema: { $ref: "#/components/schemas/FinancieelDatasetStatus" }
+        - in: query
+          name: inclusief_niet_actueel
+          description: Ook vervangen/oudere versies tonen
+          schema: { type: boolean }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FinancieelDocument"
+        "403":
+          description: Geen toegang (recht financieel_vertrouwelijk vereist)
+    post:
+      operationId: opslaanFinancieelDocument
+      tags: [financieel-jaarrekeningen]
+      summary: Bevestigd jaarstuk vertrouwelijk opslaan onder Financieel (recht financieel_vertrouwelijk). Multipart in de praktijk; het bestand wordt met dit metadatablok meegestuurd.
+      security: [{ cookieAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FinancieelDocumentInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FinancieelDocumentDetail"
+        "403":
+          description: Geen toegang
+
+  /financieel/jaarrekeningen/controleer-duplicaat:
+    post:
+      operationId: controleerFinancieelDuplicaat
+      tags: [financieel-jaarrekeningen]
+      summary: Controleer op mogelijke duplicaten (identiek bestand via hash, of gelijke entiteit/boekjaar/subtype). Waarschuwt alleen.
+      security: [{ cookieAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FinancieelDuplicaatInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FinancieelDuplicaatResultaat"
+        "403":
+          description: Geen toegang
+
+  /financieel/jaarrekeningen/{id}:
+    get:
+      operationId: getFinancieelDocument
+      tags: [financieel-jaarrekeningen]
+      summary: Detail van een vertrouwelijk jaarstuk incl. kerncijfers en logboek (recht financieel_vertrouwelijk)
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FinancieelDocumentDetail"
+        "403":
+          description: Geen toegang
+        "404":
+          description: Niet gevonden
+    patch:
+      operationId: updateFinancieelDocument
+      tags: [financieel-jaarrekeningen]
+      summary: Metadata of dataset-status van een jaarstuk bijwerken (recht financieel_vertrouwelijk, schrijfniveau)
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FinancieelDocumentPatch"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FinancieelDocumentDetail"
+        "403":
+          description: Geen toegang
+        "404":
+          description: Niet gevonden
+
+  /financieel/jaarrekeningen/{id}/extraheer:
+    post:
+      operationId: extraheerFinancieleKerncijfers
+      tags: [financieel-jaarrekeningen]
+      summary: (Her)extraheer kerncijfers uit het jaarstuk; bestaande voorstellen worden vervangen (recht financieel_vertrouwelijk, schrijfniveau)
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FinancieelDocumentDetail"
+        "403":
+          description: Geen toegang
+        "404":
+          description: Niet gevonden
+
+  /financieel/jaarrekeningen/{id}/download:
+    get:
+      operationId: downloadFinancieelDocument
+      tags: [financieel-jaarrekeningen]
+      summary: Beveiligde downloadverwijzing voor een jaarstuk; toegang wordt gelogd (recht financieel_vertrouwelijk)
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FinancieelDownloadResultaat"
+        "403":
+          description: Geen toegang
+        "404":
+          description: Niet gevonden
+
+  /financieel/kerncijfers/{id}:
+    patch:
+      operationId: updateFinancieelKerncijfer
+      tags: [financieel-jaarrekeningen]
+      summary: Een kerncijfer beoordelen of corrigeren (status, waarde, uitsluiten) — bewijsketen blijft behouden (recht financieel_vertrouwelijk, schrijfniveau)
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FinancieelKerncijferPatch"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FinancieelKerncijfer"
+        "403":
+          description: Geen toegang
+        "404":
+          description: Niet gevonden
+
+  /financieel/meerjarenoverzicht:
+    get:
+      operationId: getFinancieelMeerjarenoverzicht
+      tags: [financieel-jaarrekeningen]
+      summary: Meerjarenoverzicht van goedgekeurde kerncijfers per entiteit, met trends en signalen (recht financieel_vertrouwelijk)
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - in: query
+          name: entiteit
+          schema: { type: string }
+        - in: query
+          name: geconsolideerd
+          schema: { type: boolean }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FinancieelMeerjarenoverzicht"
+        "403":
+          description: Geen toegang
+
 components:
   schemas:
+    FinancieelSubtype:
+      type: string
+      enum: [geconsolideerd, enkelvoudig]
+    FinancieelDocumentstatus:
+      type: string
+      enum: [definitief, concept, onbekend]
+    FinancieelDatasetStatus:
+      type: string
+      description: Levenscyclus van de kerncijfer-dataset als geheel
+      enum: [proposed, reviewed, approved, rejected, superseded]
+    FinancieelKerncijferStatus:
+      type: string
+      enum: [proposed, reviewed, approved, rejected, superseded]
+    FinancieelExtractieStatus:
+      type: string
+      enum: [niet_gestart, bezig, voltooid, mislukt]
+
+    FinancieelBewijsStap:
+      type: object
+      required: [stap, resultaat]
+      properties:
+        stap: { type: string }
+        resultaat: { type: string }
+        detail: { type: string, nullable: true }
+
+    FinancieelKerncijfer:
+      type: object
+      required: [id, document_id, sleutel, label, eenheid, status, is_berekend, uitgesloten, extractie_methode]
+      properties:
+        id: { type: integer }
+        document_id: { type: integer }
+        entiteit: { type: string, nullable: true }
+        boekjaar: { type: integer, nullable: true }
+        geconsolideerd: { type: boolean }
+        sleutel: { type: string }
+        label: { type: string }
+        waarde: { type: number, nullable: true }
+        eenheid: { type: string }
+        status: { $ref: "#/components/schemas/FinancieelKerncijferStatus" }
+        is_berekend: { type: boolean }
+        uitgesloten: { type: boolean }
+        handmatig_aangepast: { type: boolean }
+        oorspronkelijke_waarde: { type: number, nullable: true }
+        bron_pagina: { type: integer, nullable: true }
+        bron_tabel: { type: string, nullable: true }
+        bron_tekst: { type: string, nullable: true }
+        extractie_methode: { type: string }
+        confidence: { type: number, nullable: true }
+        beoordeeld_door: { type: integer, nullable: true }
+        beoordeeld_op: { type: string, nullable: true }
+        aangemaakt_op: { type: string }
+        bijgewerkt_op: { type: string }
+
+    FinancieelKerncijferPatch:
+      type: object
+      properties:
+        status: { $ref: "#/components/schemas/FinancieelKerncijferStatus" }
+        waarde: { type: number, nullable: true }
+        uitgesloten: { type: boolean }
+        label: { type: string }
+        eenheid: { type: string }
+
+    FinancieelDocumentLogRegel:
+      type: object
+      required: [id, actie, aangemaakt_op]
+      properties:
+        id: { type: integer }
+        actie: { type: string }
+        gebruiker_id: { type: integer, nullable: true }
+        gebruiker_naam: { type: string, nullable: true }
+        details: { type: string, nullable: true }
+        aangemaakt_op: { type: string }
+
+    FinancieelDocument:
+      type: object
+      required: [id, bestandsnaam, titel, documenttype, subtype, documentstatus, beveiligingsprofiel, opslaglocatie, extractie_status, dataset_status, is_actueel, geupload_op, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id: { type: integer }
+        bestandsnaam: { type: string }
+        titel: { type: string }
+        bestandspad: { type: string }
+        bestandsgrootte: { type: integer, nullable: true }
+        mimetype: { type: string }
+        bestands_hash: { type: string, nullable: true }
+        documenttype: { type: string }
+        entiteit: { type: string, nullable: true }
+        boekjaar: { type: integer, nullable: true }
+        subtype: { $ref: "#/components/schemas/FinancieelSubtype" }
+        documentstatus: { $ref: "#/components/schemas/FinancieelDocumentstatus" }
+        beveiligingsprofiel: { type: string }
+        opslaglocatie: { type: string }
+        classificatie_methode: { type: string }
+        betrouwbaarheid: { type: string }
+        betrouwbaarheid_score: { type: integer }
+        gevonden_gegevens:
+          type: object
+          additionalProperties: true
+          nullable: true
+        extractie_status: { $ref: "#/components/schemas/FinancieelExtractieStatus" }
+        dataset_status: { $ref: "#/components/schemas/FinancieelDatasetStatus" }
+        vervangt_document_id: { type: integer, nullable: true }
+        is_actueel: { type: boolean }
+        aantal_kerncijfers: { type: integer }
+        aantal_goedgekeurd: { type: integer }
+        geupload_door: { type: integer, nullable: true }
+        geupload_door_naam: { type: string, nullable: true }
+        geupload_op: { type: string }
+        goedgekeurd_door: { type: integer, nullable: true }
+        goedgekeurd_op: { type: string, nullable: true }
+        aangemaakt_op: { type: string }
+        bijgewerkt_op: { type: string }
+
+    FinancieelDocumentDetail:
+      allOf:
+        - $ref: "#/components/schemas/FinancieelDocument"
+        - type: object
+          properties:
+            ai_bewijs:
+              type: array
+              items:
+                $ref: "#/components/schemas/FinancieelBewijsStap"
+            kerncijfers:
+              type: array
+              items:
+                $ref: "#/components/schemas/FinancieelKerncijfer"
+            logboek:
+              type: array
+              items:
+                $ref: "#/components/schemas/FinancieelDocumentLogRegel"
+
+    FinancieelDocumentInput:
+      type: object
+      required: [bestandsnaam, titel]
+      properties:
+        bestandsnaam: { type: string }
+        titel: { type: string }
+        bestandspad: { type: string }
+        bestandsgrootte: { type: integer, nullable: true }
+        mimetype: { type: string }
+        bestands_hash: { type: string, nullable: true }
+        entiteit: { type: string, nullable: true }
+        boekjaar: { type: integer, nullable: true }
+        subtype: { $ref: "#/components/schemas/FinancieelSubtype" }
+        documentstatus: { $ref: "#/components/schemas/FinancieelDocumentstatus" }
+        opslaglocatie: { type: string, nullable: true }
+        classificatie_methode: { type: string, nullable: true }
+        betrouwbaarheid: { type: string, nullable: true }
+        betrouwbaarheid_score: { type: integer, nullable: true }
+        ai_bewijs:
+          type: array
+          nullable: true
+          items:
+            $ref: "#/components/schemas/FinancieelBewijsStap"
+        gevonden_gegevens:
+          type: object
+          additionalProperties: true
+          nullable: true
+        vervangt_document_id: { type: integer, nullable: true }
+        direct_extraheren:
+          type: boolean
+          description: Direct na opslaan de kerncijferextractie starten (standaard true)
+
+    FinancieelDocumentPatch:
+      type: object
+      properties:
+        titel: { type: string }
+        entiteit: { type: string, nullable: true }
+        boekjaar: { type: integer, nullable: true }
+        subtype: { $ref: "#/components/schemas/FinancieelSubtype" }
+        documentstatus: { $ref: "#/components/schemas/FinancieelDocumentstatus" }
+        dataset_status: { $ref: "#/components/schemas/FinancieelDatasetStatus" }
+
+    FinancieelDuplicaatInput:
+      type: object
+      properties:
+        bestands_hash: { type: string, nullable: true }
+        entiteit: { type: string, nullable: true }
+        boekjaar: { type: integer, nullable: true }
+        subtype: { $ref: "#/components/schemas/FinancieelSubtype" }
+
+    FinancieelDuplicaatResultaat:
+      type: object
+      required: [is_duplicaat, treffers]
+      properties:
+        is_duplicaat: { type: boolean }
+        reden: { type: string, nullable: true }
+        treffers:
+          type: array
+          items:
+            $ref: "#/components/schemas/FinancieelDocument"
+
+    FinancieelDownloadResultaat:
+      type: object
+      required: [url]
+      properties:
+        url: { type: string }
+        bestandsnaam: { type: string }
+
+    FinancieelMeerjarenRij:
+      type: object
+      required: [sleutel, label, eenheid, waarden]
+      properties:
+        sleutel: { type: string }
+        label: { type: string }
+        eenheid: { type: string }
+        waarden:
+          type: object
+          description: Map van boekjaar (string) naar waarde
+          additionalProperties:
+            type: number
+            nullable: true
+        trend_pct:
+          type: number
+          nullable: true
+          description: Procentuele verandering laatste twee beschikbare jaren
+
+    FinancieelSignaal:
+      type: object
+      required: [niveau, sleutel, boekjaar, bericht]
+      properties:
+        niveau: { type: string, enum: [info, let_op, waarschuwing] }
+        sleutel: { type: string }
+        boekjaar: { type: integer }
+        bericht: { type: string }
+
+    FinancieelMeerjarenoverzicht:
+      type: object
+      required: [entiteiten, boekjaren, rijen, signalen]
+      properties:
+        entiteiten:
+          type: array
+          items: { type: string }
+        geselecteerde_entiteit: { type: string, nullable: true }
+        boekjaren:
+          type: array
+          items: { type: integer }
+        rijen:
+          type: array
+          items:
+            $ref: "#/components/schemas/FinancieelMeerjarenRij"
+        signalen:
+          type: array
+          items:
+            $ref: "#/components/schemas/FinancieelSignaal"
+
     KbBedrijfsstandaard:
       type: object
       required: [id, sleutel, categorie, titel, inhoud, actief]

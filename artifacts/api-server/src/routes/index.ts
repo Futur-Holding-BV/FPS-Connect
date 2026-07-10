@@ -100,6 +100,7 @@ import visualLibraryRouter from "./visual-library";
 import securityValidationRouter from "./security-validation";
 import { cqoRouter } from "./cqo";
 import kantoorReleaseRouter from "./kantoor-release";
+import financieelJaarrekeningenRouter from "./financieel-jaarrekeningen";
 import "../services/workflow-configs";
 
 const router: IRouter = Router();
@@ -221,5 +222,6 @@ router.use(visualLibraryRouter);
 router.use(securityValidationRouter);
 router.use(cqoRouter);
 router.use(kantoorReleaseRouter);
+router.use(financieelJaarrekeningenRouter);
 
 export default router;

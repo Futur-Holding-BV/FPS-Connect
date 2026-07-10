@@ -5,6 +5,239 @@
  * FPS Brandpreventie - Platform voor brandpreventieve gebouwvoorzieningen
  * OpenAPI spec version: 0.1.0
  */
+export type FinancieelSubtype = typeof FinancieelSubtype[keyof typeof FinancieelSubtype];
+
+
+export const FinancieelSubtype = {
+  geconsolideerd: 'geconsolideerd',
+  enkelvoudig: 'enkelvoudig',
+} as const;
+
+export type FinancieelDocumentstatus = typeof FinancieelDocumentstatus[keyof typeof FinancieelDocumentstatus];
+
+
+export const FinancieelDocumentstatus = {
+  definitief: 'definitief',
+  concept: 'concept',
+  onbekend: 'onbekend',
+} as const;
+
+/**
+ * Levenscyclus van de kerncijfer-dataset als geheel
+ */
+export type FinancieelDatasetStatus = typeof FinancieelDatasetStatus[keyof typeof FinancieelDatasetStatus];
+
+
+export const FinancieelDatasetStatus = {
+  proposed: 'proposed',
+  reviewed: 'reviewed',
+  approved: 'approved',
+  rejected: 'rejected',
+  superseded: 'superseded',
+} as const;
+
+export type FinancieelKerncijferStatus = typeof FinancieelKerncijferStatus[keyof typeof FinancieelKerncijferStatus];
+
+
+export const FinancieelKerncijferStatus = {
+  proposed: 'proposed',
+  reviewed: 'reviewed',
+  approved: 'approved',
+  rejected: 'rejected',
+  superseded: 'superseded',
+} as const;
+
+export type FinancieelExtractieStatus = typeof FinancieelExtractieStatus[keyof typeof FinancieelExtractieStatus];
+
+
+export const FinancieelExtractieStatus = {
+  niet_gestart: 'niet_gestart',
+  bezig: 'bezig',
+  voltooid: 'voltooid',
+  mislukt: 'mislukt',
+} as const;
+
+export interface FinancieelBewijsStap {
+  stap: string;
+  resultaat: string;
+  detail?: string | null;
+}
+
+export interface FinancieelKerncijfer {
+  id: number;
+  document_id: number;
+  entiteit?: string | null;
+  boekjaar?: number | null;
+  geconsolideerd?: boolean;
+  sleutel: string;
+  label: string;
+  waarde?: number | null;
+  eenheid: string;
+  status: FinancieelKerncijferStatus;
+  is_berekend: boolean;
+  uitgesloten: boolean;
+  handmatig_aangepast?: boolean;
+  oorspronkelijke_waarde?: number | null;
+  bron_pagina?: number | null;
+  bron_tabel?: string | null;
+  bron_tekst?: string | null;
+  extractie_methode: string;
+  confidence?: number | null;
+  beoordeeld_door?: number | null;
+  beoordeeld_op?: string | null;
+  aangemaakt_op?: string;
+  bijgewerkt_op?: string;
+}
+
+export interface FinancieelKerncijferPatch {
+  status?: FinancieelKerncijferStatus;
+  waarde?: number | null;
+  uitgesloten?: boolean;
+  label?: string;
+  eenheid?: string;
+}
+
+export interface FinancieelDocumentLogRegel {
+  id: number;
+  actie: string;
+  gebruiker_id?: number | null;
+  gebruiker_naam?: string | null;
+  details?: string | null;
+  aangemaakt_op: string;
+}
+
+export type FinancieelDocumentGevondenGegevens = { [key: string]: unknown } | null;
+
+export interface FinancieelDocument {
+  id: number;
+  bestandsnaam: string;
+  titel: string;
+  bestandspad?: string;
+  bestandsgrootte?: number | null;
+  mimetype?: string;
+  bestands_hash?: string | null;
+  documenttype: string;
+  entiteit?: string | null;
+  boekjaar?: number | null;
+  subtype: FinancieelSubtype;
+  documentstatus: FinancieelDocumentstatus;
+  beveiligingsprofiel: string;
+  opslaglocatie: string;
+  classificatie_methode?: string;
+  betrouwbaarheid?: string;
+  betrouwbaarheid_score?: number;
+  gevonden_gegevens?: FinancieelDocumentGevondenGegevens;
+  extractie_status: FinancieelExtractieStatus;
+  dataset_status: FinancieelDatasetStatus;
+  vervangt_document_id?: number | null;
+  is_actueel: boolean;
+  aantal_kerncijfers?: number;
+  aantal_goedgekeurd?: number;
+  geupload_door?: number | null;
+  geupload_door_naam?: string | null;
+  geupload_op: string;
+  goedgekeurd_door?: number | null;
+  goedgekeurd_op?: string | null;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export type FinancieelDocumentDetail = FinancieelDocument & {
+  ai_bewijs?: FinancieelBewijsStap[];
+  kerncijfers?: FinancieelKerncijfer[];
+  logboek?: FinancieelDocumentLogRegel[];
+};
+
+export type FinancieelDocumentInputGevondenGegevens = { [key: string]: unknown } | null;
+
+export interface FinancieelDocumentInput {
+  bestandsnaam: string;
+  titel: string;
+  bestandspad?: string;
+  bestandsgrootte?: number | null;
+  mimetype?: string;
+  bestands_hash?: string | null;
+  entiteit?: string | null;
+  boekjaar?: number | null;
+  subtype?: FinancieelSubtype;
+  documentstatus?: FinancieelDocumentstatus;
+  opslaglocatie?: string | null;
+  classificatie_methode?: string | null;
+  betrouwbaarheid?: string | null;
+  betrouwbaarheid_score?: number | null;
+  ai_bewijs?: FinancieelBewijsStap[] | null;
+  gevonden_gegevens?: FinancieelDocumentInputGevondenGegevens;
+  vervangt_document_id?: number | null;
+  /** Direct na opslaan de kerncijferextractie starten (standaard true) */
+  direct_extraheren?: boolean;
+}
+
+export interface FinancieelDocumentPatch {
+  titel?: string;
+  entiteit?: string | null;
+  boekjaar?: number | null;
+  subtype?: FinancieelSubtype;
+  documentstatus?: FinancieelDocumentstatus;
+  dataset_status?: FinancieelDatasetStatus;
+}
+
+export interface FinancieelDuplicaatInput {
+  bestands_hash?: string | null;
+  entiteit?: string | null;
+  boekjaar?: number | null;
+  subtype?: FinancieelSubtype;
+}
+
+export interface FinancieelDuplicaatResultaat {
+  is_duplicaat: boolean;
+  reden?: string | null;
+  treffers: FinancieelDocument[];
+}
+
+export interface FinancieelDownloadResultaat {
+  url: string;
+  bestandsnaam?: string;
+}
+
+/**
+ * Map van boekjaar (string) naar waarde
+ */
+export type FinancieelMeerjarenRijWaarden = {[key: string]: number | null};
+
+export interface FinancieelMeerjarenRij {
+  sleutel: string;
+  label: string;
+  eenheid: string;
+  /** Map van boekjaar (string) naar waarde */
+  waarden: FinancieelMeerjarenRijWaarden;
+  /** Procentuele verandering laatste twee beschikbare jaren */
+  trend_pct?: number | null;
+}
+
+export type FinancieelSignaalNiveau = typeof FinancieelSignaalNiveau[keyof typeof FinancieelSignaalNiveau];
+
+
+export const FinancieelSignaalNiveau = {
+  info: 'info',
+  let_op: 'let_op',
+  waarschuwing: 'waarschuwing',
+} as const;
+
+export interface FinancieelSignaal {
+  niveau: FinancieelSignaalNiveau;
+  sleutel: string;
+  boekjaar: number;
+  bericht: string;
+}
+
+export interface FinancieelMeerjarenoverzicht {
+  entiteiten: string[];
+  geselecteerde_entiteit?: string | null;
+  boekjaren: number[];
+  rijen: FinancieelMeerjarenRij[];
+  signalen: FinancieelSignaal[];
+}
+
 export interface KbBedrijfsstandaard {
   id: number;
   sleutel: string;
@@ -12284,4 +12517,24 @@ export const GetVisualsGuidanceStapType = {
   controle: 'controle',
   foto: 'foto',
 } as const;
+
+export type ListFinancieleDocumentenParams = {
+/**
+ * Vrije zoekterm (titel, entiteit, bestandsnaam)
+ */
+zoek?: string;
+entiteit?: string;
+boekjaar?: number;
+subtype?: FinancieelSubtype;
+dataset_status?: FinancieelDatasetStatus;
+/**
+ * Ook vervangen/oudere versies tonen
+ */
+inclusief_niet_actueel?: boolean;
+};
+
+export type GetFinancieelMeerjarenoverzichtParams = {
+entiteit?: string;
+geconsolideerd?: boolean;
+};
 
