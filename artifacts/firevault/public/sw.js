@@ -1,9 +1,11 @@
-// FPS Connect Service Worker v2
+// FPS Connect Service Worker v3
 // - Cachet nooit Vite dev-bestanden (HMR tokens zijn sessie-specifiek)
 // - Navigatie: network-first met cache-update (altijd verse HTML-shell)
 // - Statische assets: stale-while-revalidate (snel + automatisch vernieuwd)
 // - API: altijd netwerk, nooit cache
-const CACHE = "fps-connect-v2";
+// LET OP: verhoog het versienummer in CACHE bij elke release zodat oude
+// caches bij activatie worden opgeruimd en de nieuwe build wordt geserveerd.
+const CACHE = "fps-connect-v3";
 
 function isViteDevBestand(url) {
   return (
