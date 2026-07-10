@@ -108,3 +108,4 @@
 - [Productie-VPS SSH-toegang](prod-vps-toegang.md) — deploy gepauzeerd: geen SSH-toegang; TransIP-paneelsleutels gelden alleen bij herinstallatie, console verhaspelt plakwerk, secret-saves belandden elders.
 - [AI Context Service](ai-context-service.md) — centrale contextbundel-motor (§4.1) in lib/aiContext; scoping via PermissieService nooit rolnaam; autorisatiegrens stopt graaf-expansie; sinds 10 juli 2026 aangesloten op analyseerSpot (bewezen via echte flow).
 - [Handgeschreven route dubbel /api-prefix](handgeschreven-route-dubbel-prefix.md) — niet-OpenAPI routes mogen pad NOOIT met "/api/" beginnen (router mount al onder /api); anders 404, compileert wel; backups.ts heeft 'm nog.
+- [Deploy-failure alerting](deploy-failure-alerting.md) — deploy.yml faalmelding via Graph client-credentials direct vanuit Actions runner (geen app-server nodig); GitHub secrets nodig, apart van Replit env.

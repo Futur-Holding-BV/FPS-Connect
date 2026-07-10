@@ -32,6 +32,7 @@ jobs:
 
     steps:
       - name: Deploy via SSH
+        id: deploy
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.PROD_SSH_HOST }}
@@ -148,3 +149,78 @@ jobs:
             # ook als de rollback zelf slaagde: de deploy an sich is mislukt en
             # dat moet zichtbaar zijn in GitHub Actions.
             exit 1
+
+      # ─── Meldingen bij falen/slagen ──────────────────────────────────────────
+      # René moet een kapotte release direct horen, niet later ontdekken via de
+      # Actions-tab. Verstuurt via dezelfde Microsoft 365/Graph-mailkoppeling als
+      # de app zelf (client-credentials, geen wachtwoord). Bij een geslaagde
+      # deploy géén melding (voorkomt mailmoeheid).
+      - name: Faalmelding e-mailen naar René
+        if: failure()
+        env:
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          MAIL_FROM: ${{ secrets.MAIL_FROM || 'noreply@fpsbrandpreventie.nl' }}
+          MAIL_MAILBOX: ${{ secrets.MAIL_MAILBOX || 'app@fpsbrandpreventie.nl' }}
+          RENE_EMAIL: ${{ secrets.RENE_ALERT_EMAIL }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${AZURE_TENANT_ID:-}" ] || [ -z "${AZURE_CLIENT_ID:-}" ] || [ -z "${AZURE_CLIENT_SECRET:-}" ] || [ -z "${RENE_EMAIL:-}" ]; then
+            echo "Mailconfig (AZURE_TENANT_ID/AZURE_CLIENT_ID/AZURE_CLIENT_SECRET/RENE_ALERT_EMAIL) ontbreekt als GitHub Actions secret; faalmelding kan niet verzonden worden." >&2
+            exit 0
+          fi
+
+          TOKEN=$(curl -fsS -X POST \
+            "https://login.microsoftonline.com/${AZURE_TENANT_ID}/oauth2/v2.0/token" \
+            -d "client_id=${AZURE_CLIENT_ID}" \
+            -d "client_secret=${AZURE_CLIENT_SECRET}" \
+            -d "scope=https://graph.microsoft.com/.default" \
+            -d "grant_type=client_credentials" | node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{try{console.log(JSON.parse(d).access_token||'')}catch(e){console.log('')}})")
+
+          if [ -z "$TOKEN" ]; then
+            echo "Kon geen Graph-token ophalen; faalmelding kan niet verzonden worden." >&2
+            exit 0
+          fi
+
+          COMMIT_MSG=$(git log -1 --pretty=%s 2>/dev/null || echo "onbekend")
+          BODY=$(cat <<EOF
+          Productie-release GEFAALD.
+
+          Commit: ${GITHUB_SHA}
+          Omschrijving: ${COMMIT_MSG}
+          Reden: post-deploy healthcheck (of een eerdere deploy-stap) is mislukt.
+          Actions-run: ${RUN_URL}
+
+          Controleer de run-logs en de productiestatus zo snel mogelijk.
+          EOF
+          )
+
+          PAYLOAD=$(node -e "
+            const body = {
+              message: {
+                subject: 'FPS Connect: productie-release GEFAALD',
+                body: { contentType: 'Text', content: process.env.MAIL_BODY },
+                toRecipients: [{ emailAddress: { address: process.env.RENE_EMAIL } }],
+                from: { emailAddress: { address: process.env.MAIL_FROM, name: 'FPS Connect' } },
+              },
+              saveToSentItems: false,
+            };
+            console.log(JSON.stringify(body));
+          " MAIL_BODY="$BODY")
+
+          HTTP_CODE=$(curl -sS -o /tmp/graph-response.json -w "%{http_code}" \
+            -X POST "https://graph.microsoft.com/v1.0/users/${MAIL_MAILBOX}/sendMail" \
+            -H "Authorization: Bearer ${TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d "$PAYLOAD")
+
+          if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
+            echo "Faalmelding verzonden naar René."
+          else
+            echo "Verzenden van faalmelding gaf HTTP $HTTP_CODE." >&2
+            cat /tmp/graph-response.json >&2 || true
+            exit 0
+          fi

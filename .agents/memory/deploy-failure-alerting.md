@@ -1,0 +1,26 @@
+---
+name: Deploy-failure alerting (GitHub Actions)
+description: How the production deploy workflow notifies on failure, and why it calls Graph directly instead of the app's mail service.
+---
+
+`.github/workflows/deploy.yml` has an `if: failure()` step after the deploy
+step that emails René when the SSH deploy step fails (build, migration, or
+post-deploy healthcheck).
+
+**Why call Microsoft Graph directly from the runner instead of the app's
+`services/email.ts`:** the GitHub Actions runner has no network path to the
+app's internal API/service layer during a failed deploy (and the app itself
+may be the thing that's down). So the workflow does its own client-credentials
+OAuth token request + `sendMail` call via curl/node, reusing the same Azure
+app registration and MAIL_FROM/MAIL_MAILBOX convention as the app.
+
+**Non-obvious requirement:** these are GitHub Actions repo secrets
+(`AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`,
+`RENE_ALERT_EMAIL`), separate from the Replit environment's own copies of the
+same Azure values — they must be added independently under GitHub repo
+Settings > Secrets and variables > Actions, or the notification step silently
+no-ops (exits 0 with a warning) rather than failing the run.
+
+The step intentionally never notifies on a successful deploy (avoid mail
+fatigue) and always exits 0 on its own errors so a broken notification path
+never masks the real deploy failure in the Actions UI.
