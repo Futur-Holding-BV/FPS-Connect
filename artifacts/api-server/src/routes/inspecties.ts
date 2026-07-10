@@ -12,6 +12,7 @@ import { eq, inArray } from "drizzle-orm";
 import { requireBevoegdheid, requireBevoegdheidOfKlant } from "../middlewares/auth";
 import { effectieveContext, toegewezenGebouwIds } from "../utils/rol";
 import { logActiviteit } from "../lib/activiteit";
+import { invalideerContext } from "../lib/aiContext/cache";
 
 const router = Router();
 const lezenInspecties = requireBevoegdheid("inspecties", 1);
@@ -150,6 +151,7 @@ router.post("/inspecties", requireBevoegdheid("inspecties", 3), async (req, res)
       gebruikerId: req.session.userId,
     });
 
+    if (voorziening_id != null) invalideerContext("voorziening", voorziening_id);
     res.status(201).json(await mapInspectie(i));
   } catch (err) {
     req.log.error(err);
@@ -228,6 +230,7 @@ router.patch("/inspecties/:id", requireBevoegdheid("inspecties", 2), async (req,
       .returning();
 
     if (!i) { res.status(404).json({ error: "Inspectie niet gevonden" }); return; }
+    if (i.voorzieningId != null) invalideerContext("voorziening", i.voorzieningId);
     res.json(await mapInspectie(i));
   } catch (err) {
     req.log.error(err);
@@ -239,7 +242,12 @@ router.patch("/inspecties/:id", requireBevoegdheid("inspecties", 2), async (req,
 router.delete("/inspecties/:id", requireBevoegdheid("inspecties", 4), async (req, res): Promise<void> => {
   try {
     const id = parseInt(String(req.params.id));
+    const [bestaand] = await db
+      .select({ voorzieningId: inspectiesTable.voorzieningId })
+      .from(inspectiesTable)
+      .where(eq(inspectiesTable.id, id));
     await db.delete(inspectiesTable).where(eq(inspectiesTable.id, id));
+    if (bestaand?.voorzieningId != null) invalideerContext("voorziening", bestaand.voorzieningId);
     res.status(204).send();
   } catch (err) {
     req.log.error(err);
@@ -494,6 +502,7 @@ router.post("/inspecties/:id/herinspectie", requireBevoegdheid("inspecties", 3),
       gebruikerId: req.session.userId,
     });
 
+    if (insp.voorzieningId != null) invalideerContext("voorziening", insp.voorzieningId);
     res.status(201).json(await mapInspectie(nieuw));
   } catch (err) {
     req.log.error(err);

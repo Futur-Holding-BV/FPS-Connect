@@ -10,6 +10,7 @@
 import { Router } from "express";
 import multer from "multer";
 import { extraheerPdfTekst } from "../lib/pdfTekst";
+import { invalideerContext } from "../lib/aiContext/cache";
 import {
   db,
   werkgeversTable,
@@ -252,16 +253,23 @@ router.patch("/werkgevers/:id", schrijven, async (req, res): Promise<void> => {
       // Bij hernoemen de legacy werkmaatschappij-cache op gekoppelde kinderen
       // meeschrijven, zodat naam-afgeleide logica (werkgeverIdVoor) en weergave
       // niet uit elkaar lopen.
+      let herbenoemdeMedewerkerIds: number[] = [];
       if (nieuweNaam && nieuweNaam !== huidig.naam) {
         await tx.update(functiesTable).set({ werkmaatschappij: nieuweNaam, bijgewerktOp: new Date() }).where(eq(functiesTable.werkgeverId, id));
-        await tx.update(medewerkersTable).set({ werkmaatschappij: nieuweNaam, bijgewerktOp: new Date() }).where(eq(medewerkersTable.werkgeverId, id));
+        const geraakteMedewerkers = await tx
+          .update(medewerkersTable)
+          .set({ werkmaatschappij: nieuweNaam, bijgewerktOp: new Date() })
+          .where(eq(medewerkersTable.werkgeverId, id))
+          .returning({ id: medewerkersTable.id });
+        herbenoemdeMedewerkerIds = geraakteMedewerkers.map((m) => m.id);
         await tx.update(verlofsoortenTable).set({ werkmaatschappij: nieuweNaam, bijgewerktOp: new Date() }).where(eq(verlofsoortenTable.werkgeverId, id));
       }
-      return bijgewerkt;
+      return { bijgewerkt, herbenoemdeMedewerkerIds };
     });
 
-    if (!w) return void res.status(404).json({ error: "Werkgever niet gevonden" });
-    res.json(mapWerkgever(w));
+    if (!w?.bijgewerkt) return void res.status(404).json({ error: "Werkgever niet gevonden" });
+    for (const medId of w.herbenoemdeMedewerkerIds) invalideerContext("medewerker", medId);
+    res.json(mapWerkgever(w.bijgewerkt));
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });
@@ -720,6 +728,7 @@ router.post("/medewerkers", schrijven, async (req, res): Promise<void> => {
         opmerkingen,
       })
       .returning();
+    invalideerContext("medewerker", m.id);
     res.status(201).json(await medewerkerNaarJson(m));
   } catch (err) {
     req.log.error(err);
@@ -850,6 +859,7 @@ router.post("/medewerkers/onboarding", schrijven, async (req, res): Promise<void
       db,
     );
 
+    invalideerContext("medewerker", m.id);
     res.status(201).json(await medewerkerNaarJson(m));
   } catch (err) {
     req.log.error(err);
@@ -922,6 +932,7 @@ router.patch("/medewerkers/:id", schrijven, async (req, res): Promise<void> => {
       .where(eq(medewerkersTable.id, parseId(req.params.id)))
       .returning();
     if (!m) return void res.status(404).json({ error: "Medewerker niet gevonden" });
+    invalideerContext("medewerker", m.id);
     res.json(await medewerkerNaarJson(m));
   } catch (err) {
     req.log.error(err);
@@ -931,7 +942,9 @@ router.patch("/medewerkers/:id", schrijven, async (req, res): Promise<void> => {
 
 router.delete("/medewerkers/:id", schrijven, async (req, res): Promise<void> => {
   try {
-    await db.delete(medewerkersTable).where(eq(medewerkersTable.id, parseId(req.params.id)));
+    const id = parseId(req.params.id);
+    await db.delete(medewerkersTable).where(eq(medewerkersTable.id, id));
+    invalideerContext("medewerker", id);
     res.status(204).send();
   } catch (err) {
     req.log.error(err);
@@ -3492,6 +3505,7 @@ router.post("/medewerkers/:id/offboard", schrijven, async (req, res): Promise<vo
     }
 
     req.log.info({ medewerker_id: id, uit_dienst_per, reden }, "Offboard uitgevoerd");
+    invalideerContext("medewerker", id);
 
     const [functie] = bijgewerkt.functieId
       ? await db.select().from(functiesTable).where(eq(functiesTable.id, bijgewerkt.functieId))
@@ -3664,6 +3678,7 @@ router.patch("/medewerkers/:id/aanstellingen/:aanstellingId", schrijven, async (
 
     if (bijgewerkt.isHoofd) {
       await syncHoofdNaarMedewerker(medId, bijgewerkt);
+      invalideerContext("medewerker", medId);
     }
 
     res.json(mapAanstelling(bijgewerkt, functieNaam));
@@ -3707,6 +3722,7 @@ router.post("/medewerkers/:id/aanstellingen/:aanstellingId/hoofd", schrijven, as
     });
 
     await syncHoofdNaarMedewerker(medId, { ...doelwit, isHoofd: true });
+    invalideerContext("medewerker", medId);
 
     let functieNaam: string | null = null;
     if (doelwit.functieId) {

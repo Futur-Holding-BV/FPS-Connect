@@ -11,6 +11,7 @@ import { requireBevoegdheid } from "../middlewares/auth";
 import { effectieveContext, toegewezenGebouwIds } from "../utils/rol";
 import { logActiviteit } from "../lib/activiteit";
 import { workflowService, maakTransitieContext } from "../services/workflow-engine";
+import { invalideerContext } from "../lib/aiContext/cache";
 
 const router = Router();
 const lezenOnderhoud = requireBevoegdheid("onderhoud", 1);
@@ -144,6 +145,7 @@ router.post("/onderhoud", requireBevoegdheid("onderhoud", 3), async (req, res): 
       gebruikerId: req.session.userId,
     });
 
+    invalideerContext("onderhoud", o.id);
     res.status(201).json(await mapOnderhoud(o));
   } catch (err) {
     req.log.error(err);
@@ -222,6 +224,7 @@ router.patch("/onderhoud/:id", requireBevoegdheid("onderhoud", 2), async (req, r
 
     if (!o) return void res.status(404).json({ error: "Onderhoudstaak niet gevonden" });
 
+    invalideerContext("onderhoud", id);
     res.json(await mapOnderhoud(o));
   } catch (err) {
     req.log.error(err);
@@ -234,6 +237,7 @@ router.delete("/onderhoud/:id", requireBevoegdheid("onderhoud", 4), async (req, 
   try {
     const id = parseInt(String(req.params.id));
     await db.delete(onderhoudTable).where(eq(onderhoudTable.id, id));
+    invalideerContext("onderhoud", id);
     res.status(204).send();
   } catch (err) {
     req.log.error(err);

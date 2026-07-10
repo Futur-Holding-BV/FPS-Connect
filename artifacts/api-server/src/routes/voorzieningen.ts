@@ -25,6 +25,7 @@ import { logActiviteit } from "../lib/activiteit";
 import { analyseerSpot } from "../services/spot-ai";
 import { bouwContextBundel } from "../lib/aiContext";
 import { triggerNacalculatieHerberekeningVoorGebouw } from "../services/fie-service";
+import { invalideerContext } from "../lib/aiContext/cache";
 
 const router = Router();
 const lezenVoorzieningen = requireBevoegdheid("voorzieningen", 1);
@@ -334,6 +335,7 @@ router.post("/voorzieningen", requireBevoegdheid("voorzieningen", 3), async (req
       gebruikerId: req.session.userId,
     });
 
+    invalideerContext("voorziening", v.id);
     res.status(201).json(await mapVoorziening(v));
 
     // Na succesvol aanmaken: herbereken direct nacalculaties met werktype "algemeen"
@@ -495,6 +497,7 @@ router.patch("/voorzieningen/:id", requireBevoegdheid("voorzieningen", 2), async
       await syncVoorzieningLabels(v.id, label_ids.map((n: unknown) => Number(n)));
     }
 
+    invalideerContext("voorziening", v.id);
     res.json(await mapVoorziening(v));
   } catch (err) {
     req.log.error(err);
@@ -512,6 +515,7 @@ router.delete("/voorzieningen/:id", requireBevoegdheid("voorzieningen", 4), asyn
     const gebouwId = await gebouwIdVanVoorziening(id);
 
     await db.delete(voorzieningenTable).where(eq(voorzieningenTable.id, id));
+    invalideerContext("voorziening", id);
     res.status(204).send();
 
     // Na succesvol verwijderen: herbereken direct nacalculaties met werktype "algemeen"
@@ -564,6 +568,7 @@ router.post("/voorzieningen/:id/fotos", requireBevoegdheid("voorzieningen", 3), 
       .insert(fotosTable)
       .values({ voorzieningId, fase, url, beschrijving })
       .returning();
+    invalideerContext("voorziening", voorzieningId);
     res.status(201).json({
       id: f.id,
       voorziening_id: f.voorzieningId,
@@ -597,6 +602,7 @@ router.delete("/voorzieningen/:id/fotos/:fotoId", requireBevoegdheid("voorzienin
       res.status(404).json({ error: "Foto niet gevonden" });
       return;
     }
+    invalideerContext("voorziening", voorzieningId);
     res.status(204).send();
   } catch (err) {
     req.log.error(err);
@@ -628,6 +634,7 @@ router.patch("/voorzieningen/:id/status", requireBevoegdheid("voorzieningen", 2)
       gebruikerId: req.session.userId,
     });
 
+    invalideerContext("voorziening", v.id);
     res.json(await mapVoorziening(v));
   } catch (err) {
     req.log.error(err);
@@ -659,6 +666,7 @@ router.patch("/voorzieningen/:id/archief", requireBevoegdheid("voorzieningen", 3
       .where(eq(voorzieningenTable.id, id))
       .returning();
     if (!v) return void res.status(404).json({ error: "Voorziening niet gevonden" });
+    invalideerContext("voorziening", id);
 
     await logActiviteit({
       type: gearchiveerd ? "voorziening_gearchiveerd" : "voorziening_teruggeplaatst",

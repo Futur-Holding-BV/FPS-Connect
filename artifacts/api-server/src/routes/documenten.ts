@@ -26,6 +26,7 @@ import {
   isGetestVoor,
 } from "../lib/documenten";
 import { logDocumentActie } from "../lib/document-logboek";
+import { invalideerContext } from "../lib/aiContext/cache";
 import { analyseerDocumentTekst, stelToepassingenVoor } from "../services/document-ai";
 import { scanBestandMetadata, koppelDocumentAanScan } from "../services/security-intake-engine";
 
@@ -395,6 +396,7 @@ router.post("/documenten", requireBevoegdheid("bibliotheek", 3), async (req, res
         .catch(() => {});
     }
 
+    invalideerContext("document", d.id);
     return void res.status(201).json(await mapDocument(d));
   } catch (err) {
     req.log.error(err);
@@ -442,6 +444,7 @@ router.patch("/documenten/:id", requireBevoegdheid("bibliotheek", 2), async (req
       .where(eq(documentenTable.id, id))
       .returning();
     if (!d) return void res.status(404).json({ error: "Document niet gevonden" });
+    invalideerContext("document", id);
     return void res.json(await mapDocument(d));
   } catch (err) {
     req.log.error(err);
@@ -548,6 +551,9 @@ router.post("/documenten/:id/revisies", requireBevoegdheid("bibliotheek", 3), as
       detail: `revisie ${nieuw.revisieNummer}`,
     });
 
+    invalideerContext("document", bron.id);
+    invalideerContext("document", nieuw.id);
+
     // Poort 2 — security scan op nieuwe revisie (fire-and-forget)
     if (nieuw.naam) {
       scanBestandMetadata({
@@ -640,6 +646,7 @@ router.post(
         actie: "gekoppeld",
         detail: `${doelType} #${doelId}`,
       });
+      invalideerContext("document", id);
       const [mapped] = await mapKoppelingen([rij]);
       return void res.status(201).json(mapped);
     } catch (err) {
@@ -676,6 +683,7 @@ router.delete(
         actie: "ontkoppeld",
         detail: `${bestaand.doelType} #${bestaand.doelId}`,
       });
+      invalideerContext("document", id);
       return void res.status(204).send();
     } catch (err) {
       req.log.error(err);
@@ -721,6 +729,7 @@ async function zetGoedkeuring(
     actie,
     detail: opmerking,
   });
+  invalideerContext("document", id);
   return void res.json(await mapDocument(bij));
 }
 

@@ -7,6 +7,7 @@
 import { execSync } from "child_process";
 import { Router } from "express";
 import { workflowService, maakTransitieContext } from "../services/workflow-engine";
+import { invalideerContext } from "../lib/aiContext/cache";
 import PDFDocument from "pdfkit";
 import {
   db,
@@ -447,6 +448,7 @@ router.post("/offertes", schrijven, async (req, res): Promise<void> => {
         aangemaaktDoorId: req.session.userId ?? null,
       })
       .returning();
+    invalideerContext("offerte", o.id);
     res.status(201).json(await offerteNaarJson(o));
   } catch (err) {
     req.log.error(err);
@@ -626,6 +628,7 @@ router.patch("/offertes/:id", schrijven, async (req, res): Promise<void> => {
       .where(eq(offertesTable.id, offerteId))
       .returning();
     if (!o) return void res.status(404).json({ error: "Offerte niet gevonden" });
+    invalideerContext("offerte", offerteId);
     res.json(await offerteNaarJson(o));
   } catch (err) {
     req.log.error(err);
@@ -680,6 +683,7 @@ router.delete("/offertes/:id", schrijven, async (req, res): Promise<void> => {
     if (await isOfferteBlokkeerd(offerteId))
       return void res.status(409).json({ error: "Ondertekende of afgewezen offerte kan niet worden verwijderd." });
     await db.delete(offertesTable).where(eq(offertesTable.id, offerteId));
+    invalideerContext("offerte", offerteId);
     res.status(204).send();
   } catch (err) {
     req.log.error(err);
@@ -851,6 +855,7 @@ router.post("/offertes/:id/regels", schrijven, async (req, res): Promise<void> =
         aiVoorstel: ai_voorstel ?? false,
       })
       .returning();
+    invalideerContext("offerte", offerteId);
     res.status(201).json(mapRegel(r));
   } catch (err) {
     req.log.error(err);
@@ -888,6 +893,7 @@ router.patch("/offerte-regels/:id", schrijven, async (req, res): Promise<void> =
       .where(eq(offerteRegelsTable.id, parseId(req.params.id)))
       .returning();
     if (!r) return void res.status(404).json({ error: "Begrotingsregel niet gevonden" });
+    invalideerContext("offerte", bestaandeRegel.offerteId);
     res.json(mapRegel(r));
   } catch (err) {
     req.log.error(err);
@@ -902,6 +908,7 @@ router.delete("/offerte-regels/:id", schrijven, async (req, res): Promise<void> 
     if (await isOfferteBlokkeerd(bestaandeRegel.offerteId))
       return void res.status(409).json({ error: "Ondertekende offerte kan niet meer worden gewijzigd." });
     await db.delete(offerteRegelsTable).where(eq(offerteRegelsTable.id, parseId(req.params.id)));
+    invalideerContext("offerte", bestaandeRegel.offerteId);
     res.status(204).send();
   } catch (err) {
     req.log.error(err);
@@ -1492,6 +1499,7 @@ router.post("/offertes/:id/uit-spots", schrijven, async (req, res): Promise<void
       i += 1;
     }
 
+    if (nieuw.length > 0) invalideerContext("offerte", offerteId);
     res.status(201).json({ aangemaakt: nieuw.length, overgeslagen: spots.length - teMaken.length, regels: nieuw.map(mapRegel) });
   } catch (err) {
     req.log.error(err);

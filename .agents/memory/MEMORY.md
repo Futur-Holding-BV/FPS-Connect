@@ -110,3 +110,4 @@
 - [AI Decision Engine (Fase 0)](ai-decision-engine.md) — passthrough-laag boven aiGateway; passthrough==directe gateway, human-in-the-loop via token; token-endpoints fail-closed op module-matrix.
 - [Handgeschreven route dubbel /api-prefix](handgeschreven-route-dubbel-prefix.md) — niet-OpenAPI routes mogen pad NOOIT met "/api/" beginnen (router mount al onder /api); anders 404, compileert wel; backups.ts heeft 'm nog.
 - [Deploy-failure alerting](deploy-failure-alerting.md) — deploy.yml faalmelding via Graph client-credentials direct vanuit Actions runner (geen app-server nodig); GitHub secrets nodig, apart van Replit env.
+- [AI context cache invalidation coverage](ai-context-cache-invalidation.md) — invalideerContext(type,id) wired into 8 core entities' primary mutation routes; sub-resources not in resolvers.ts payload deliberately skipped, re-check before assuming coverage.

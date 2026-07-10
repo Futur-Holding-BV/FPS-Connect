@@ -20,6 +20,7 @@ import { effectieveContext, toegewezenGebouwIds } from "../utils/rol";
 import { logActiviteit } from "../lib/activiteit";
 import { mapDocument } from "../lib/documenten";
 import { logDocumentActie } from "../lib/document-logboek";
+import { invalideerContext } from "../lib/aiContext/cache";
 import {
   analyseerGebouwVrijeTekst,
   analyseerTekening,
@@ -297,6 +298,7 @@ router.post("/gebouwen", requireBevoegdheid("gebouwen", 3), async (req, res): Pr
     const wgNaam = gebouw.werkgeverId
       ? ((await db.select({ naam: werkgeversTable.naam }).from(werkgeversTable).where(eq(werkgeversTable.id, gebouw.werkgeverId))).at(0)?.naam ?? null)
       : null;
+    invalideerContext("gebouw", gebouw.id);
     res.status(201).json(gebouwRij(gebouw, 0, await klantNaam(gebouw.klantId), [], null, wgNaam));
   } catch (err) {
     if (uniekFoutAntwoord(err, res)) {
@@ -711,6 +713,7 @@ router.patch("/gebouwen/:id", requireBevoegdheid("gebouwen", 2), async (req, res
     const patchWgNaam = gebouw.werkgeverId
       ? ((await db.select({ naam: werkgeversTable.naam }).from(werkgeversTable).where(eq(werkgeversTable.id, gebouw.werkgeverId))).at(0)?.naam ?? null)
       : null;
+    invalideerContext("gebouw", id);
     res.json(gebouwRij(gebouw, Number(totaal?.count ?? 0), await klantNaam(gebouw.klantId), [], null, patchWgNaam));
   } catch (err) {
     if (uniekFoutAntwoord(err, res)) {
@@ -736,6 +739,7 @@ router.patch("/gebouwen/:id/gereed", requireBevoegdheid("gebouwen", 3), async (r
       .select({ count: count() })
       .from(voorzieningenTable)
       .where(eq(voorzieningenTable.gebouwId, id));
+    invalideerContext("gebouw", id);
     res.json(gebouwRij(gebouw, Number(totaal?.count ?? 0), await klantNaam(gebouw.klantId)));
   } catch (err) {
     req.log.error(err);
@@ -757,6 +761,7 @@ router.delete("/gebouwen/:id/gereed", requireBevoegdheid("gebouwen", 3), async (
       .select({ count: count() })
       .from(voorzieningenTable)
       .where(eq(voorzieningenTable.gebouwId, id));
+    invalideerContext("gebouw", id);
     res.json(gebouwRij(gebouw, Number(totaal?.count ?? 0), await klantNaam(gebouw.klantId)));
   } catch (err) {
     req.log.error(err);
@@ -769,6 +774,7 @@ router.delete("/gebouwen/:id", requireBevoegdheid("gebouwen", 4), async (req, re
   try {
     const id = parseInt(String(req.params.id));
     await db.delete(gebouwenTable).where(eq(gebouwenTable.id, id));
+    invalideerContext("gebouw", id);
     res.status(204).send();
   } catch (err) {
     req.log.error(err);
@@ -1474,6 +1480,7 @@ router.patch("/gebouwen/:id/archief", requireBevoegdheid("gebouwen", 4), async (
       })
       .where(eq(gebouwenTable.id, id))
       .returning();
+    invalideerContext("gebouw", id);
 
     await logActiviteit({
       type: gearchiveerd ? "gebouw_gearchiveerd" : "gebouw_teruggeplaatst",

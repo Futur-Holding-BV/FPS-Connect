@@ -17,6 +17,7 @@ import { eq, desc, ilike, or, and, count } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
 import { CRM_CONCURRENT_PROFIEL_PROMPT } from "../lib/aiPrompts";
+import { invalideerContext } from "../lib/aiContext/cache";
 
 const router = Router();
 
@@ -209,6 +210,7 @@ router.post("/crm/klanten", schrijven, async (req, res): Promise<void> => {
       .insert(crmKlantenTable)
       .values({ naam, type: type || "overig", kvk, adres, postcode, stad, regio, telefoon, email, website, linkedinUrl: linkedin_url, branche, status: status || "prospect", relatieStatus: relatie_status || "onbekend", voorkeurFpsBedrijf: voorkeur_fps_bedrijf, opmerkingen })
       .returning();
+    invalideerContext("klant", k.id);
     res.status(201).json(mapOrg(k));
   } catch (err) {
     req.log.error(err);
@@ -242,6 +244,7 @@ router.patch("/crm/klanten/:id", schrijven, async (req, res): Promise<void> => {
       .where(eq(crmKlantenTable.id, parseId(req.params.id)))
       .returning();
     if (!k) return void res.status(404).json({ error: "Organisatie niet gevonden" });
+    invalideerContext("klant", k.id);
     res.json(mapOrg(k));
   } catch (err) {
     req.log.error(err);
@@ -251,7 +254,9 @@ router.patch("/crm/klanten/:id", schrijven, async (req, res): Promise<void> => {
 
 router.delete("/crm/klanten/:id", schrijven, async (req, res): Promise<void> => {
   try {
-    await db.delete(crmKlantenTable).where(eq(crmKlantenTable.id, parseId(req.params.id)));
+    const id = parseId(req.params.id);
+    await db.delete(crmKlantenTable).where(eq(crmKlantenTable.id, id));
+    invalideerContext("klant", id);
     res.status(204).end();
   } catch (err) {
     req.log.error(err);
@@ -301,6 +306,7 @@ router.post("/crm/klanten/:id/contactpersonen", schrijven, async (req, res): Pro
       .insert(crmContactpersonenTable)
       .values({ klantId: parseId(req.params.id), naam, functie, email, telefoon, mobiel, linkedinUrl: linkedin_url, beslisrol: beslisrol || "onbekend", relatiesterkte: relatiesterkte || "onbekend", primair: primair ?? false, opmerkingen, laatste_contact_datum, volgende_actie })
       .returning();
+    if (c.klantId != null) invalideerContext("klant", c.klantId);
     res.status(201).json(mapContactpersoon(c));
   } catch (err) {
     req.log.error(err);
@@ -317,6 +323,7 @@ router.patch("/crm/contactpersonen/:id", schrijven, async (req, res): Promise<vo
       .where(eq(crmContactpersonenTable.id, parseId(req.params.id)))
       .returning();
     if (!c) return void res.status(404).json({ error: "Contactpersoon niet gevonden" });
+    if (c.klantId != null) invalideerContext("klant", c.klantId);
     res.json(mapContactpersoon(c));
   } catch (err) {
     req.log.error(err);
@@ -326,7 +333,10 @@ router.patch("/crm/contactpersonen/:id", schrijven, async (req, res): Promise<vo
 
 router.delete("/crm/contactpersonen/:id", schrijven, async (req, res): Promise<void> => {
   try {
-    await db.delete(crmContactpersonenTable).where(eq(crmContactpersonenTable.id, parseId(req.params.id)));
+    const id = parseId(req.params.id);
+    const [bestaand] = await db.select({ klantId: crmContactpersonenTable.klantId }).from(crmContactpersonenTable).where(eq(crmContactpersonenTable.id, id));
+    await db.delete(crmContactpersonenTable).where(eq(crmContactpersonenTable.id, id));
+    if (bestaand?.klantId != null) invalideerContext("klant", bestaand.klantId);
     res.status(204).end();
   } catch (err) {
     req.log.error(err);

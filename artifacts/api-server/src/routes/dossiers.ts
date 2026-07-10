@@ -17,6 +17,7 @@ import {
 import { eq, desc, inArray } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { logActiviteit } from "../lib/activiteit";
+import { invalideerContext } from "../lib/aiContext/cache";
 
 const router = Router();
 
@@ -111,6 +112,7 @@ router.post("/dossiers", schrijven, async (req, res): Promise<void> => {
       gebouwId: d.gebouwId,
       gebruikerId: req.session.userId ?? null,
     });
+    invalideerContext("dossier", d.id);
     res.status(201).json(await dossierNaarJson(d));
   } catch (err) {
     req.log.error(err);
@@ -142,6 +144,7 @@ router.patch("/dossiers/:id", schrijven, async (req, res): Promise<void> => {
       .set({ naam, type, gebouwId: gebouw_id ?? null, omschrijving, status, bijgewerktOp: new Date() })
       .where(eq(dossiersTable.id, parseId(req.params.id)))
       .returning();
+    invalideerContext("dossier", d.id);
     res.json(await dossierNaarJson(d));
   } catch (err) {
     req.log.error(err);
@@ -206,6 +209,7 @@ router.post("/dossiers/:id/definitief", schrijven, async (req, res): Promise<voi
       gebouwId: d.gebouwId,
       gebruikerId: req.session.userId ?? null,
     });
+    invalideerContext("dossier", d.id);
     res.json(await dossierNaarJson(d));
   } catch (err) {
     req.log.error(err);
@@ -228,6 +232,7 @@ router.post("/dossiers/:id/archiveren", schrijven, async (req, res): Promise<voi
       gebouwId: d.gebouwId,
       gebruikerId: req.session.userId ?? null,
     });
+    invalideerContext("dossier", d.id);
     res.json(await dossierNaarJson(d));
   } catch (err) {
     req.log.error(err);
@@ -243,6 +248,7 @@ router.delete("/dossiers/:id", schrijven, async (req, res): Promise<void> => {
       return void res.status(409).json({ error: "Een definitief of gearchiveerd dossier kan niet worden verwijderd." });
     }
     await db.delete(dossiersTable).where(eq(dossiersTable.id, parseId(req.params.id)));
+    invalideerContext("dossier", parseId(req.params.id));
     res.status(204).send();
   } catch (err) {
     req.log.error(err);
@@ -353,6 +359,7 @@ router.post("/dossiers/:id/documenten", schrijven, async (req, res): Promise<voi
       })
       .returning();
     const actueel = await actueleRevisiePerDocument([x.documentId]);
+    invalideerContext("dossier", x.dossierId);
     res.status(201).json(
       mapDossierDocument(x, x.documentId != null ? (actueel.get(x.documentId) ?? null) : null),
     );
@@ -389,6 +396,7 @@ router.patch("/dossier-documenten/:id", schrijven, async (req, res): Promise<voi
       .returning();
     if (!x) return void res.status(404).json({ error: "Dossierdocument niet gevonden" });
     const actueel = await actueleRevisiePerDocument([x.documentId]);
+    invalideerContext("dossier", x.dossierId);
     res.json(
       mapDossierDocument(x, x.documentId != null ? (actueel.get(x.documentId) ?? null) : null),
     );
@@ -416,6 +424,7 @@ router.delete("/dossier-documenten/:id", schrijven, async (req, res): Promise<vo
       });
     }
     await db.delete(dossierDocumentenTable).where(eq(dossierDocumentenTable.id, ddId));
+    invalideerContext("dossier", bestaand.dossierId);
     res.status(204).send();
   } catch (err) {
     req.log.error(err);
