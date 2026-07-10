@@ -8,7 +8,7 @@ import path from "node:path";
 import { logger } from "./logger";
 import { extraheerPdfTekst } from "./pdfTekst";
 
-export async function renderPdfPagina(buffer: Buffer): Promise<string | null> {
+export async function renderPdfPagina(buffer: Buffer, paginaNummer = 1): Promise<string | null> {
   const id = `${Date.now()}_${Math.random().toString(36).slice(2)}`;
   const tmpIn     = path.join(tmpdir(), `fps_in_${id}.pdf`);
   const tmpPrefix = path.join(tmpdir(), `fps_out_${id}`);
@@ -19,14 +19,15 @@ export async function renderPdfPagina(buffer: Buffer): Promise<string | null> {
     await new Promise<void>((resolve, reject) => {
       execFile(
         "pdftoppm",
-        ["-jpeg", "-f", "1", "-l", "1", "-r", "120", tmpIn, tmpPrefix],
+        ["-jpeg", "-f", String(paginaNummer), "-l", String(paginaNummer), "-r", "120", tmpIn, tmpPrefix],
         { timeout: 15_000 },
         (err) => { if (err) reject(err); else resolve(); },
       );
     });
 
     let imgBuffer: Buffer | null = null;
-    for (const candidate of [`${tmpPrefix}-01.jpg`, `${tmpPrefix}-1.jpg`]) {
+    const paginaStr = String(paginaNummer).padStart(2, "0");
+    for (const candidate of [`${tmpPrefix}-${paginaStr}.jpg`, `${tmpPrefix}-${paginaNummer}.jpg`]) {
       try {
         imgBuffer = await readFile(candidate);
         await unlink(candidate).catch(() => {});
@@ -41,11 +42,29 @@ export async function renderPdfPagina(buffer: Buffer): Promise<string | null> {
       .jpeg({ quality: 75 })
       .toBuffer()).toString("base64");
   } catch (err) {
-    logger.warn({ err }, "pdfVisie: PDF→afbeelding mislukt, doorgaan zonder vision");
+    logger.warn({ err, paginaNummer }, "pdfVisie: PDF→afbeelding mislukt, doorgaan zonder vision");
     return null;
   } finally {
     await unlink(tmpIn).catch(() => {});
   }
+}
+
+/**
+ * Rendert meerdere pagina's van dezelfde PDF naar afbeeldingen (voor multi-page
+ * vision bij documenten met een zwakke/geen tekstlaag). Geeft alleen de
+ * pagina's terug die daadwerkelijk gerenderd konden worden — een mislukte
+ * pagina wordt overgeslagen, niet de hele aanroep.
+ */
+export async function renderPdfPaginas(
+  buffer: Buffer,
+  paginaNummers: number[],
+): Promise<Array<{ paginaNummer: number; base64: string }>> {
+  const resultaten: Array<{ paginaNummer: number; base64: string }> = [];
+  for (const paginaNummer of paginaNummers) {
+    const base64 = await renderPdfPagina(buffer, paginaNummer);
+    if (base64) resultaten.push({ paginaNummer, base64 });
+  }
+  return resultaten;
 }
 
 export async function haalPdfTekst(buffer: Buffer): Promise<string | null> {

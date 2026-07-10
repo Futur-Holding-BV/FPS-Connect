@@ -8,6 +8,8 @@ import { PDFParse } from "pdf-parse";
 export interface PdfTekstResultaat {
   tekst: string | null;
   paginaAantal: number | null;
+  /** Tekst per pagina, index 0 = pagina 1. Leeg als per-pagina-extractie niet lukte. */
+  paginaTeksten: string[];
 }
 
 export async function extraheerPdfTekst(buffer: Buffer): Promise<PdfTekstResultaat> {
@@ -15,7 +17,10 @@ export async function extraheerPdfTekst(buffer: Buffer): Promise<PdfTekstResulta
   try {
     const resultaat = await parser.getText();
     const tekst = resultaat.text?.trim() || null;
-    return { tekst, paginaAantal: resultaat.total ?? null };
+    const paginaTeksten = Array.isArray(resultaat.pages)
+      ? [...resultaat.pages].sort((a, b) => a.num - b.num).map((p) => p.text ?? "")
+      : [];
+    return { tekst, paginaAantal: resultaat.total ?? null, paginaTeksten };
   } finally {
     await parser.destroy().catch(() => {});
   }
