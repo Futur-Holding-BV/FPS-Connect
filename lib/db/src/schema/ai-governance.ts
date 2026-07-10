@@ -36,3 +36,30 @@ export const aiWijzigingsvoorstellenTable = pgTable("ai_wijzigingsvoorstellen", 
   afgehandeldOp: timestamp("afgehandeld_op"),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
 });
+
+// ── AI Decision Engine — human-in-the-loop beslissingen ──────────────────────
+// Bewaart AI-voorstellen die op menselijke goedkeuring wachten, zodat het
+// wacht_op_gebruiker-pad over twee HTTP-verzoeken kan werken. Additief; raakt
+// bestaande AI-functies niet. Het token is tijdgebonden en eenmalig.
+export const aiBeslissingenTable = pgTable("ai_beslissingen", {
+  id: serial("id").primaryKey(),
+  token: text("token").notNull().unique(),
+  taaknaam: text("taaknaam").notNull(),
+  module: text("module").notNull(),
+  procesNaam: text("proces_naam"),
+  aanvragerId: integer("aanvrager_id"),
+  status: text("status").notNull().default("wacht_op_gebruiker"),
+  voorstel: text("voorstel"),
+  betrouwbaarheid: text("betrouwbaarheid"),
+  controleNodig: boolean("controle_nodig").notNull().default(false),
+  modelSlot: text("model_slot"),
+  promptNaam: text("prompt_naam"),
+  promptVersie: text("prompt_versie"),
+  contextJson: jsonb("context_json"),
+  beslistDoorId: integer("beslist_door_id"),
+  beslistOp: timestamp("beslist_op"),
+  opmerking: text("opmerking"),
+  verlooptOp: timestamp("verloopt_op"),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+  bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+});

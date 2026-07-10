@@ -26054,3 +26054,101 @@ export const GetFinancieelMeerjarenoverzichtResponse = zod.object({
 })
 
 
+/**
+ * Start een AI-taak uit het taakregister. Bij passthrough-taken komt het AI-voorstel direct terug (status "voorstel"). Bij taken die menselijke goedkeuring vereisen komt status "wacht_op_gebruiker" terug met een token dat via /ai/beslissingen/{token}/beoordeling wordt beoordeeld.
+ * @summary Voer een geregistreerde AI-taak uit via de Decision Engine
+ */
+export const VoerAiTaakUitParams = zod.object({
+  "taaknaam": zod.coerce.string()
+})
+
+export const VoerAiTaakUitBody = zod.object({
+  "invoer": zod.string(),
+  "context_bundel": zod.string().nullish()
+})
+
+export const VoerAiTaakUitResponse = zod.object({
+  "status": zod.enum(['voorstel', 'wacht_op_gebruiker', 'akkoord', 'afgewezen', 'uitgevoerd', 'fout']),
+  "resultaat": zod.string().nullish(),
+  "human_approval_token": zod.string().nullish(),
+  "betrouwbaarheid": zod.string().nullish(),
+  "controle_nodig": zod.boolean().nullish(),
+  "foutmelding": zod.string().nullish()
+})
+
+
+/**
+ * @summary Lijst AI-beslissingen (human-in-the-loop)
+ */
+export const ListAiBeslissingenResponseItem = zod.object({
+  "token": zod.string(),
+  "taaknaam": zod.string(),
+  "module": zod.string(),
+  "proces_naam": zod.string().nullish(),
+  "aanvrager_id": zod.number().nullish(),
+  "status": zod.string(),
+  "voorstel": zod.string().nullish(),
+  "betrouwbaarheid": zod.string().nullish(),
+  "controle_nodig": zod.boolean().optional(),
+  "model_slot": zod.string().nullish(),
+  "prompt_naam": zod.string().nullish(),
+  "prompt_versie": zod.string().nullish(),
+  "beslist_door_id": zod.number().nullish(),
+  "beslist_op": zod.string().nullish(),
+  "opmerking": zod.string().nullish(),
+  "verloopt_op": zod.string().nullish(),
+  "aangemaakt_op": zod.string().nullish()
+})
+export const ListAiBeslissingenResponse = zod.array(ListAiBeslissingenResponseItem)
+
+
+/**
+ * @summary Eén AI-beslissing ophalen via token
+ */
+export const GetAiBeslissingParams = zod.object({
+  "token": zod.coerce.string()
+})
+
+export const GetAiBeslissingResponse = zod.object({
+  "token": zod.string(),
+  "taaknaam": zod.string(),
+  "module": zod.string(),
+  "proces_naam": zod.string().nullish(),
+  "aanvrager_id": zod.number().nullish(),
+  "status": zod.string(),
+  "voorstel": zod.string().nullish(),
+  "betrouwbaarheid": zod.string().nullish(),
+  "controle_nodig": zod.boolean().optional(),
+  "model_slot": zod.string().nullish(),
+  "prompt_naam": zod.string().nullish(),
+  "prompt_versie": zod.string().nullish(),
+  "beslist_door_id": zod.number().nullish(),
+  "beslist_op": zod.string().nullish(),
+  "opmerking": zod.string().nullish(),
+  "verloopt_op": zod.string().nullish(),
+  "aangemaakt_op": zod.string().nullish()
+})
+
+
+/**
+ * @summary Beoordeel een wachtend AI-voorstel (akkoord of afwijzing)
+ */
+export const BeoordeelAiBeslissingParams = zod.object({
+  "token": zod.coerce.string()
+})
+
+export const BeoordeelAiBeslissingBody = zod.object({
+  "akkoord": zod.boolean(),
+  "opmerking": zod.string().nullish()
+})
+
+export const BeoordeelAiBeslissingResponse = zod.object({
+  "status": zod.enum(['voorstel', 'wacht_op_gebruiker', 'akkoord', 'afgewezen', 'uitgevoerd', 'fout']),
+  "resultaat": zod.string().nullish(),
+  "human_approval_token": zod.string().nullish(),
+  "betrouwbaarheid": zod.string().nullish(),
+  "controle_nodig": zod.boolean().nullish(),
+  "foutmelding": zod.string().nullish()
+})
+
+

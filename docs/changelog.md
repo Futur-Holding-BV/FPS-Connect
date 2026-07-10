@@ -81,6 +81,29 @@ Voor elke taak drie scores:
 - `artifacts/api-server/src/routes/ai-context.ts` + mount in `routes/index.ts`.
 
 **Verificatie:** `pnpm run typecheck:libs` + api-server typecheck groen; 14/14 unit-tests groen; server boot OK, `/api/healthz` 200, endpoint 401 zonder sessie; live smoke tegen echte DB (voorziening→gebouw graaf, correcte flat-velden, geen lek).
+## 2026-07-10 — AI Decision Engine, Prompt Builder en modelrouter (Fase 0, passthrough) (Task #491)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (volledig additief; geen bestaande AI-functie aangeraakt, geen gedragswijziging; alleen nieuwe lib-bestanden, nieuwe routes en één nieuwe DB-tabel)
+
+**Wat gedaan:** de Fase 0-basis uit [`docs/architectuur/ai-platform/README.md`](architectuur/ai-platform/README.md) §7-§8 werkend gemaakt bovenop de bestaande centrale AI-laag (`aiGateway`), zonder enige bestaande AI-functie te wijzigen. Drie nieuwe componenten en de bijbehorende werkende beslislaag:
+
+- **Modelrouter** (`aiModelRouter.ts`): vertaalt een declaratief taakprofiel (vision/redenering/kostengevoelig/embedding) naar een bestaand modelslot, met leesbare reden. `MODEL_REGISTRY` in `aiGateway.ts` blijft de enige plek met modelnamen.
+- **Prompt Builder** (`aiPromptBuilder.ts`): stelt prompts samen uit het bestaande promptregister + gedeelde guardrails + optionele contextbundel + optionele outputschema-instructie. Voegt geen tweede promptbron toe.
+- **Taakregister** (`aiTaakregister.ts`): declaratieve AI-taken (prompt, taakprofiel, `requiresHumanApproval`, optioneel Zod-outputschema — Fase 0: aangeboden, niet afgedwongen). Twee demonstratietaken die niet aan bestaande routes zijn gekoppeld.
+- **Decision Engine** (`aiDecisionEngine.ts`): roept uitsluitend `aiGateway.chat()` aan (governance blijft de eerste poort). Passthrough (`requiresHumanApproval=false`) geeft de ruwe gateway-uitvoer ongewijzigd terug — functioneel identiek aan een directe gateway-aanroep. Human-in-the-loop (`true`) bewaart het voorstel met een eenmalig, tijdgebonden token en status `wacht_op_gebruiker`; een tweede aanroep beoordeelt naar `akkoord`/`afgewezen`. De opslag zit achter een interface (`BeslissingStore`) zodat de engine zuiver testbaar is.
+
+**Contract-first:** nieuwe OpenAPI-paden onder `/ai/...` (`voerAiTaakUit`, `listAiBeslissingen`, `getAiBeslissing`, `beoordeelAiBeslissing`) met named `$ref`-schema's; codegen uitgevoerd. Nieuwe DB-tabel `ai_beslissingen` (Drizzle-schema + directe `CREATE TABLE` want push faalt op TTY).
+
+**Beveiliging (fail-closed):** de token-endpoints (`GET /ai/beslissingen/:token`, `POST .../beoordeling`) doen naast `requireAuth` een module-matrixcheck op de opgeslagen beslissing — het hoogentropische token is geen capability-URL. De engine geeft bij een mislukte statusupdate (race/store-anomalie) een fout in plaats van een mogelijk stale voorstel vrij te geven.
+
+**Bewijsvoering (DoD):** 7 nieuwe unit-tests bewijzen passthrough === directe gateway-uitvoer, de volledige statusmachine (akkoord geeft voorstel vrij, afwijzing niet, reeds-afgehandeld token weigert, onbekende taak/gateway-fout nette fout) én het fail-closed-pad; alle 202 tests groen. `pnpm run typecheck` groen. API-server boot schoon; de nieuwe endpoints zijn live en auth-gated (401 zonder sessie), `/api/healthz` 200.
+
+**Bestanden gewijzigd/toegevoegd:**
+- `artifacts/api-server/src/lib/aiModelRouter.ts`, `aiPromptBuilder.ts`, `aiTaakregister.ts`, `aiDecisionEngine.ts` — nieuw.
+- `artifacts/api-server/src/routes/ai-beslissingen.ts` — nieuw; geregistreerd in `routes/index.ts`.
+- `lib/db/src/schema/ai-governance.ts` — tabel `ai_beslissingen` toegevoegd.
+- `lib/api-spec/openapi.yaml` + gegenereerde hooks/Zod — AI-beslislaag-contract.
+- `artifacts/api-server/src/__tests__/ai-decision-engine.test.ts` — nieuw.
 
 ## 2026-07-10 — Deploybeleid vastgelegd: productie als acceptatieomgeving
 

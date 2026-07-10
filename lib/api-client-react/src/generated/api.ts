@@ -40,6 +40,8 @@ import type {
   AiAanroepenAggregaat,
   AiAanroepenPagina,
   AiAnalyseToolboxBerichten200,
+  AiBeslissing,
+  AiBeslissingBeoordeling,
   AiCalculatieRegels200,
   AiChatAntwoord,
   AiChatInput,
@@ -50,6 +52,8 @@ import type {
   AiModCalcRegels200,
   AiProfielCrmConcurrent200,
   AiSuggestiesOrgVerzekeringen200,
+  AiTaakInvoer,
+  AiTaakResultaat,
   AnonimiseerAvgGebruiker200,
   AppInstellingen,
   AppInstellingenInput,
@@ -72751,4 +72755,301 @@ export function useGetFinancieelMeerjarenoverzicht<TData = Awaited<ReturnType<ty
 
 
 
+
+export const getVoerAiTaakUitUrl = (taaknaam: string,) => {
+
+
+
+
+  return `/api/ai/taken/${taaknaam}/uitvoeren`
+}
+
+/**
+ * Start een AI-taak uit het taakregister. Bij passthrough-taken komt het AI-voorstel direct terug (status "voorstel"). Bij taken die menselijke goedkeuring vereisen komt status "wacht_op_gebruiker" terug met een token dat via /ai/beslissingen/{token}/beoordeling wordt beoordeeld.
+ * @summary Voer een geregistreerde AI-taak uit via de Decision Engine
+ */
+export const voerAiTaakUit = async (taaknaam: string,
+    aiTaakInvoer: AiTaakInvoer, options?: RequestInit): Promise<AiTaakResultaat> => {
+
+  return customFetch<AiTaakResultaat>(getVoerAiTaakUitUrl(taaknaam),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(aiTaakInvoer)
+  }
+);}
+
+
+
+
+export const getVoerAiTaakUitMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof voerAiTaakUit>>, TError,{taaknaam: string;data: BodyType<AiTaakInvoer>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof voerAiTaakUit>>, TError,{taaknaam: string;data: BodyType<AiTaakInvoer>}, TContext> => {
+
+const mutationKey = ['voerAiTaakUit'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof voerAiTaakUit>>, {taaknaam: string;data: BodyType<AiTaakInvoer>}> = (props) => {
+          const {taaknaam,data} = props ?? {};
+
+          return  voerAiTaakUit(taaknaam,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type VoerAiTaakUitMutationResult = NonNullable<Awaited<ReturnType<typeof voerAiTaakUit>>>
+    export type VoerAiTaakUitMutationBody = BodyType<AiTaakInvoer>
+    export type VoerAiTaakUitMutationError = ErrorType<void>
+
+    /**
+ * @summary Voer een geregistreerde AI-taak uit via de Decision Engine
+ */
+export const useVoerAiTaakUit = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof voerAiTaakUit>>, TError,{taaknaam: string;data: BodyType<AiTaakInvoer>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof voerAiTaakUit>>,
+        TError,
+        {taaknaam: string;data: BodyType<AiTaakInvoer>},
+        TContext
+      > => {
+      return useMutation(getVoerAiTaakUitMutationOptions(options));
+    }
+
+export const getListAiBeslissingenUrl = () => {
+
+
+
+
+  return `/api/ai/beslissingen`
+}
+
+/**
+ * @summary Lijst AI-beslissingen (human-in-the-loop)
+ */
+export const listAiBeslissingen = async ( options?: RequestInit): Promise<AiBeslissing[]> => {
+
+  return customFetch<AiBeslissing[]>(getListAiBeslissingenUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListAiBeslissingenQueryKey = () => {
+    return [
+    `/api/ai/beslissingen`
+    ] as const;
+    }
+
+
+export const getListAiBeslissingenQueryOptions = <TData = Awaited<ReturnType<typeof listAiBeslissingen>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAiBeslissingen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAiBeslissingenQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAiBeslissingen>>> = ({ signal }) => listAiBeslissingen({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAiBeslissingen>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListAiBeslissingenQueryResult = NonNullable<Awaited<ReturnType<typeof listAiBeslissingen>>>
+export type ListAiBeslissingenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Lijst AI-beslissingen (human-in-the-loop)
+ */
+
+export function useListAiBeslissingen<TData = Awaited<ReturnType<typeof listAiBeslissingen>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAiBeslissingen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListAiBeslissingenQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetAiBeslissingUrl = (token: string,) => {
+
+
+
+
+  return `/api/ai/beslissingen/${token}`
+}
+
+/**
+ * @summary Eén AI-beslissing ophalen via token
+ */
+export const getAiBeslissing = async (token: string, options?: RequestInit): Promise<AiBeslissing> => {
+
+  return customFetch<AiBeslissing>(getGetAiBeslissingUrl(token),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetAiBeslissingQueryKey = (token: string,) => {
+    return [
+    `/api/ai/beslissingen/${token}`
+    ] as const;
+    }
+
+
+export const getGetAiBeslissingQueryOptions = <TData = Awaited<ReturnType<typeof getAiBeslissing>>, TError = ErrorType<void>>(token: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAiBeslissing>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAiBeslissingQueryKey(token);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAiBeslissing>>> = ({ signal }) => getAiBeslissing(token, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: token !== null && token !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAiBeslissing>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetAiBeslissingQueryResult = NonNullable<Awaited<ReturnType<typeof getAiBeslissing>>>
+export type GetAiBeslissingQueryError = ErrorType<void>
+
+
+/**
+ * @summary Eén AI-beslissing ophalen via token
+ */
+
+export function useGetAiBeslissing<TData = Awaited<ReturnType<typeof getAiBeslissing>>, TError = ErrorType<void>>(
+ token: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAiBeslissing>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetAiBeslissingQueryOptions(token,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getBeoordeelAiBeslissingUrl = (token: string,) => {
+
+
+
+
+  return `/api/ai/beslissingen/${token}/beoordeling`
+}
+
+/**
+ * @summary Beoordeel een wachtend AI-voorstel (akkoord of afwijzing)
+ */
+export const beoordeelAiBeslissing = async (token: string,
+    aiBeslissingBeoordeling: AiBeslissingBeoordeling, options?: RequestInit): Promise<AiTaakResultaat> => {
+
+  return customFetch<AiTaakResultaat>(getBeoordeelAiBeslissingUrl(token),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(aiBeslissingBeoordeling)
+  }
+);}
+
+
+
+
+export const getBeoordeelAiBeslissingMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof beoordeelAiBeslissing>>, TError,{token: string;data: BodyType<AiBeslissingBeoordeling>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof beoordeelAiBeslissing>>, TError,{token: string;data: BodyType<AiBeslissingBeoordeling>}, TContext> => {
+
+const mutationKey = ['beoordeelAiBeslissing'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof beoordeelAiBeslissing>>, {token: string;data: BodyType<AiBeslissingBeoordeling>}> = (props) => {
+          const {token,data} = props ?? {};
+
+          return  beoordeelAiBeslissing(token,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type BeoordeelAiBeslissingMutationResult = NonNullable<Awaited<ReturnType<typeof beoordeelAiBeslissing>>>
+    export type BeoordeelAiBeslissingMutationBody = BodyType<AiBeslissingBeoordeling>
+    export type BeoordeelAiBeslissingMutationError = ErrorType<void>
+
+    /**
+ * @summary Beoordeel een wachtend AI-voorstel (akkoord of afwijzing)
+ */
+export const useBeoordeelAiBeslissing = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof beoordeelAiBeslissing>>, TError,{token: string;data: BodyType<AiBeslissingBeoordeling>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof beoordeelAiBeslissing>>,
+        TError,
+        {token: string;data: BodyType<AiBeslissingBeoordeling>},
+        TContext
+      > => {
+      return useMutation(getBeoordeelAiBeslissingMutationOptions(options));
+    }
 

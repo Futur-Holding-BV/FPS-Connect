@@ -238,6 +238,57 @@ export interface FinancieelMeerjarenoverzicht {
   signalen: FinancieelSignaal[];
 }
 
+export interface AiTaakInvoer {
+  invoer: string;
+  context_bundel?: string | null;
+}
+
+export type AiTaakResultaatStatus = typeof AiTaakResultaatStatus[keyof typeof AiTaakResultaatStatus];
+
+
+export const AiTaakResultaatStatus = {
+  voorstel: 'voorstel',
+  wacht_op_gebruiker: 'wacht_op_gebruiker',
+  akkoord: 'akkoord',
+  afgewezen: 'afgewezen',
+  uitgevoerd: 'uitgevoerd',
+  fout: 'fout',
+} as const;
+
+export interface AiTaakResultaat {
+  status: AiTaakResultaatStatus;
+  resultaat?: string | null;
+  human_approval_token?: string | null;
+  betrouwbaarheid?: string | null;
+  controle_nodig?: boolean | null;
+  foutmelding?: string | null;
+}
+
+export interface AiBeslissingBeoordeling {
+  akkoord: boolean;
+  opmerking?: string | null;
+}
+
+export interface AiBeslissing {
+  token: string;
+  taaknaam: string;
+  module: string;
+  proces_naam?: string | null;
+  aanvrager_id?: number | null;
+  status: string;
+  voorstel?: string | null;
+  betrouwbaarheid?: string | null;
+  controle_nodig?: boolean;
+  model_slot?: string | null;
+  prompt_naam?: string | null;
+  prompt_versie?: string | null;
+  beslist_door_id?: number | null;
+  beslist_op?: string | null;
+  opmerking?: string | null;
+  verloopt_op?: string | null;
+  aangemaakt_op?: string | null;
+}
+
 export interface KbBedrijfsstandaard {
   id: number;
   sleutel: string;

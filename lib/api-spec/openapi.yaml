@@ -20794,6 +20794,95 @@ paths:
         "403":
           description: Geen toegang
 
+  # ── AI Decision Engine (Fase 0) ────────────────────────────────────────────
+  /ai/taken/{taaknaam}/uitvoeren:
+    post:
+      summary: Voer een geregistreerde AI-taak uit via de Decision Engine
+      description: >
+        Start een AI-taak uit het taakregister. Bij passthrough-taken komt het
+        AI-voorstel direct terug (status "voorstel"). Bij taken die menselijke
+        goedkeuring vereisen komt status "wacht_op_gebruiker" terug met een token
+        dat via /ai/beslissingen/{token}/beoordeling wordt beoordeeld.
+      operationId: voerAiTaakUit
+      tags: [ai]
+      parameters:
+        - in: path
+          name: taaknaam
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AiTaakInvoer' }
+      responses:
+        '200':
+          description: Resultaat van de taak
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AiTaakResultaat' }
+        '403':
+          description: Onvoldoende bevoegdheid
+        '404':
+          description: Onbekende taak
+
+  /ai/beslissingen:
+    get:
+      summary: Lijst AI-beslissingen (human-in-the-loop)
+      operationId: listAiBeslissingen
+      tags: [ai]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/AiBeslissing' }
+
+  /ai/beslissingen/{token}:
+    get:
+      summary: Eén AI-beslissing ophalen via token
+      operationId: getAiBeslissing
+      tags: [ai]
+      parameters:
+        - in: path
+          name: token
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AiBeslissing' }
+        '404':
+          description: Niet gevonden
+
+  /ai/beslissingen/{token}/beoordeling:
+    post:
+      summary: Beoordeel een wachtend AI-voorstel (akkoord of afwijzing)
+      operationId: beoordeelAiBeslissing
+      tags: [ai]
+      parameters:
+        - in: path
+          name: token
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AiBeslissingBeoordeling' }
+      responses:
+        '200':
+          description: Resultaat na beoordeling
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AiTaakResultaat' }
+        '404':
+          description: Onbekend token
+
 components:
   schemas:
     FinancieelSubtype:
@@ -21041,6 +21130,51 @@ components:
           items:
             $ref: "#/components/schemas/FinancieelSignaal"
 
+    AiTaakInvoer:
+      type: object
+      required: [invoer]
+      properties:
+        invoer:        { type: string }
+        context_bundel: { type: string, nullable: true }
+    AiTaakResultaat:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [voorstel, wacht_op_gebruiker, akkoord, afgewezen, uitgevoerd, fout]
+        resultaat:            { type: string, nullable: true }
+        human_approval_token: { type: string, nullable: true }
+        betrouwbaarheid:      { type: string, nullable: true }
+        controle_nodig:       { type: boolean, nullable: true }
+        foutmelding:          { type: string, nullable: true }
+    AiBeslissingBeoordeling:
+      type: object
+      required: [akkoord]
+      properties:
+        akkoord:   { type: boolean }
+        opmerking: { type: string, nullable: true }
+    AiBeslissing:
+      type: object
+      required: [token, taaknaam, module, status]
+      properties:
+        token:           { type: string }
+        taaknaam:        { type: string }
+        module:          { type: string }
+        proces_naam:     { type: string, nullable: true }
+        aanvrager_id:    { type: integer, nullable: true }
+        status:          { type: string }
+        voorstel:        { type: string, nullable: true }
+        betrouwbaarheid: { type: string, nullable: true }
+        controle_nodig:  { type: boolean }
+        model_slot:      { type: string, nullable: true }
+        prompt_naam:     { type: string, nullable: true }
+        prompt_versie:   { type: string, nullable: true }
+        beslist_door_id: { type: integer, nullable: true }
+        beslist_op:      { type: string, nullable: true }
+        opmerking:       { type: string, nullable: true }
+        verloopt_op:     { type: string, nullable: true }
+        aangemaakt_op:   { type: string, nullable: true }
     KbBedrijfsstandaard:
       type: object
       required: [id, sleutel, categorie, titel, inhoud, actief]
