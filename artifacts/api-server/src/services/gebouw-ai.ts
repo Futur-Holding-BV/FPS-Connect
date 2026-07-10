@@ -116,6 +116,18 @@ type GeocodeUitkomst =
 const MAPS_NIET_GEACTIVEERD =
   "De Google Maps API is niet geactiveerd voor de gebruikte API-sleutel. Activeer 'Geocoding API', 'Maps Static API' en 'Street View Static API' in de Google Cloud Console om automatisch invullen en het gevelbeeld te gebruiken.";
 
+// Drie afzonderlijke meldingen zodat de gebruiker precies ziet welke sleutel ontbreekt
+// (in plaats van één gecombineerde melding die ten onrechte allebei noemt terwijl er
+// maar één sleutel mist).
+const OPENAI_SLEUTEL_ONTBREEKT =
+  "De OpenAI API-sleutel ontbreekt. Activeer AI_INTEGRATIONS_OPENAI_API_KEY/BASE_URL of OPENAI_API_KEY in de omgevingsvariabelen, of vul de velden handmatig in.";
+const GOOGLE_SLEUTEL_ONTBREEKT =
+  "De Google Maps API-sleutel ontbreekt en de omschrijving kon niet worden verwerkt. " +
+  "Activeer GOOGLE_MAPS_API_KEY in de omgevingsvariabelen of vul de velden handmatig in.";
+const BEIDE_SLEUTELS_ONTBREKEN =
+  "Zowel de OpenAI API-sleutel als de Google Maps API-sleutel ontbreken. " +
+  "Activeer de sleutels in de omgevingsvariabelen of vul de velden handmatig in.";
+
 // Maximaal aantal suggesties dat bij onduidelijke invoer wordt teruggegeven.
 const MAX_SUGGESTIES = 5;
 
@@ -771,10 +783,7 @@ function splitsAdres(formatted: string): {
 // ruwe invoer → als dat ook mislukt, leeg resultaat met duidelijke melding.
 export async function analyseerGebouwVrijeTekst(beschrijving: string, logCtx?: Partial<LogContext>): Promise<GebouwAnalyse> {
   if (!HEEFT_OPENAI && !GOOGLE_KEY) {
-    return leegResultaat(
-      "Zowel de OpenAI API-sleutel als de Google Maps API-sleutel ontbreken. " +
-        "Activeer de sleutels in de omgevingsvariabelen of vul de velden handmatig in.",
-    );
+    return leegResultaat(BEIDE_SLEUTELS_ONTBREKEN);
   }
 
   const ruwZoek = beschrijving.slice(0, 200).trim();
@@ -829,10 +838,7 @@ export async function analyseerGebouwVrijeTekst(beschrijving: string, logCtx?: P
   if (!GOOGLE_KEY) {
     // Geen kaart-API: tevreden met alleen de OpenAI-extractie.
     if (!extract) {
-      return leegResultaat(
-        "De Google Maps API-sleutel ontbreekt en de omschrijving kon niet worden verwerkt. " +
-          "Vul de velden handmatig in.",
-      );
+      return leegResultaat(GOOGLE_SLEUTEL_ONTBREEKT);
     }
     result.toelichting =
       "Google Maps API-sleutel ontbreekt; geen adresopzoek of satellietanalyse mogelijk. " +

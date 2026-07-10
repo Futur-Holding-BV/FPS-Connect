@@ -35,3 +35,11 @@ geverifieerd werkend (chat/completions HTTP 200 via de proxy, geen `insufficient
 api-server logt "OpenAI-configuratie geladen"). De OpenAI-blokkade is dus weg — alleen project
 gebruikt nu de Replit-proxy ipv eigen `OPENAI_API_KEY`. Google Static Maps 403 kan los nog spelen.
 Na (her)activeren altijd de api-server herstarten zodat de nieuwe env-vars geladen worden.
+
+**Ander symptoom, zelfde oorzaak:** dezelfde module-level caching (`HEEFT_OPENAI` in `openai.ts`,
+`GOOGLE_KEY` in `gebouw-ai.ts`) kan ook de foutmelding zelf verkeerd maken: als sleutels ná de
+laatste opstart zijn toegevoegd, blijft de server denken dat ze ontbreken en toont het de
+gecombineerde "beide sleutels ontbreken"-melding terwijl beide sleutels in werkelijkheid gezet
+zijn. Los van de 3-voudige melding-splitsing (losse constanten per scenario in `gebouw-ai.ts`)
+is de eerste diagnosestap bij zo'n melding altijd: herstart de api-server en check de boot-log
+(`aiBron: "replit-proxy"` / GOOGLE_MAPS_API_KEY-check) vóórdat je de code verdenkt.
