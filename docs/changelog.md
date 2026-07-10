@@ -39,6 +39,26 @@ Voor elke taak drie scores:
 - `artifacts/firevault/src/pages/uitnodiging/index.tsx` — wachtwoord/bevestig via refs.
 - `artifacts/firevault/src/pages/installatie/index.tsx` — naam/bedrijf/e-mail/wachtwoord/bevestig via refs.
 
+## 2026-07-10 — AI Context Service gebouwd (los valideerbaar, nog niet aangesloten) (Task #490)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (additief; nieuwe module + handgeschreven beheerdersroute buiten OpenAPI; geen bestaande code/route gewijzigd behalve mount; geen DB-migratie)
+
+**Wat gebouwd:** de centrale AI Context Service uit [architectuur §4.1](architectuur/ai-platform/README.md). Harde eis geborgd: een AI-functie krijgt nooit alleen het huidige formulier — de service stelt automatisch de volledige, geautoriseerde contextbundel samen rond een entiteit.
+
+**Kern:**
+- Context-resolvers per entiteit (gebouw, voorziening, offerte, medewerker, document, dossier, onderhoud, klant) die per knoop verwijzingen naar gerelateerde entiteiten teruggeven; de Orchestrator doorloopt die als graaf (BFS, instelbare diepte).
+- Scoping uitsluitend via de bevoegdheden-matrix (`heeftModuleRecht`/`heeftObjectRecht`) + gebouwtoewijzing (`magBijGebouw`), nooit rolnaam; impersonatie ("bekijken als") werkt via de bestaande `req.permissies`. Een niet-toegankelijke knoop valt weg én wordt niet verder uitgebreid (autorisatiegrens — geen lek naar wat erachter ligt).
+- Tokenbudget-trimming per model-slot (inkorten inkortbare tekst, overloop weglaten, wortel nooit droppen) en een cache van de ruwe (scope-onafhankelijke) knoop met TTL + `invalideerContext`-hook (nog niet aangesloten op mutaties).
+- Levering als `contextBronnen: AiContextBron[]` + vlakke LogContext-velden, zoals de gateway verwacht.
+- Los valideerbaar: nog NIET aangesloten op AI-functies. Diagnostisch endpoint `GET /api/beheer/ai-context` (hoofdbeheerder, buiten OpenAPI zoals `ai-log.ts`) voor live-controle incl. "bekijken als".
+
+**Bestanden:**
+- `artifacts/api-server/src/lib/aiContext/{types,tokenBudget,cache,resolvers,index}.ts` — de service.
+- `artifacts/api-server/src/lib/aiContext/aiContext.test.ts` — 14 pure unit-tests (scoping, autorisatiegrens, graaf, budget, flat-velden).
+- `artifacts/api-server/src/routes/ai-context.ts` + mount in `routes/index.ts`.
+
+**Verificatie:** `pnpm run typecheck:libs` + api-server typecheck groen; 14/14 unit-tests groen; server boot OK, `/api/healthz` 200, endpoint 401 zonder sessie; live smoke tegen echte DB (voorziening→gebouw graaf, correcte flat-velden, geen lek).
+
 ## 2026-07-10 — Deploybeleid vastgelegd: productie als acceptatieomgeving
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** geen (uitsluitend documentatie)
