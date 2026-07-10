@@ -133,7 +133,11 @@ jobs:
             if [ "$VORIGE_COMMIT" = "$(git rev-parse HEAD)" ]; then
               echo "WAARSCHUWING: er was geen vorige commit om naar terug te rollen (eerste deploy?)." >&2
             else
-              git checkout "$VORIGE_COMMIT" --
+              # `git checkout <commit> --` is ongeldig zonder pathspec en faalt
+              # onder `set -e`. `reset --hard` verplaatst de lokale main-branch
+              # terug naar de vorige gezonde commit (geen detached HEAD), zodat
+              # een volgende deploy gewoon weer `git pull --ff-only` kan draaien.
+              git reset --hard "$VORIGE_COMMIT"
               $COMPOSE build
               $COMPOSE up -d --remove-orphans db api caddy
             fi
@@ -198,7 +202,7 @@ jobs:
           EOF
           )
 
-          PAYLOAD=$(node -e "
+          PAYLOAD=$(MAIL_BODY="$BODY" node -e "
             const body = {
               message: {
                 subject: 'FPS Connect: productie-release GEFAALD',
@@ -209,7 +213,7 @@ jobs:
               saveToSentItems: false,
             };
             console.log(JSON.stringify(body));
-          " MAIL_BODY="$BODY")
+          ")
 
           HTTP_CODE=$(curl -sS -o /tmp/graph-response.json -w "%{http_code}" \
             -X POST "https://graph.microsoft.com/v1.0/users/${MAIL_MAILBOX}/sendMail" \
