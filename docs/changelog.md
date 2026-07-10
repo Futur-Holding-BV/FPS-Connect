@@ -19,6 +19,23 @@ Voor elke taak drie scores:
 - `replit.md` — korte verwijzing naar het beleid met pointer naar het runbook.
 - `.github/workflows/deploy.yml` — reviewer-goedkeuringscommentaar bijgewerkt; de `environment: production`-gate benoemd als aan te passen punt in de docs (mechanisme ongewijzigd gelaten, geen risico).
 
+## 2026-07-10 — AI-platform architectuur ontworpen (nog geen code) (Task #484)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (uitsluitend documentatie toegevoegd; geen code, geen migraties, geen wijzigingen in `artifacts/` of `lib/`)
+
+**Wat gedaan:** een compleet, samenhangend architectuurdocument geschreven onder [`docs/architectuur/ai-platform/README.md`](architectuur/ai-platform/README.md) dat alle ~13 bestaande AI-functies samenbrengt in één gedeelde AI-beslislaag. Harde eis geborgd in het ontwerp: de AI ontvangt nooit alleen het huidige formulier — elk AI-verzoek krijgt automatisch de volledige relevante context via een centrale Context Service.
+
+**Inhoud van het document:**
+- Volledige inventarisatie van elke AI-functie (doel, bestanden, modelslot, huidige context, resultaatgebruik);
+- Benoeming van de gedupliceerde patronen die worden opgeruimd (per-feature contextopbouw, base64/vision-encoding, "alleen JSON"-instructies, `strOfNull`/`intOfNull`/`numOfNull`, betrouwbaarheidsscoring, handmatig `JSON.parse` zonder Zod, markdown-fence-stripping, ad-hoc modelkeuze);
+- Ontwerp van de zeven centrale componenten (Context Service, Decision Engine, Prompt Builder, Knowledge & Context Provider, externe connectorlaag, AI-audit-/redeneerlog, modelrouteringslaag);
+- Componentdiagram + datastroom-sequentiediagram (Mermaid);
+- Migratiepad per bestaande AI-functie, migratieroadmap (Fase 0–5), implementatievolgorde met expliciete afhankelijkheden, en de secties risico's, achterwaartse compatibiliteit, performancestrategie en beveiligingsstrategie.
+
+**Kaders gerespecteerd:** bouwt voort op de bestaande centrale laag (gateway, promptregister, orchestrator-interfaces, governance/kill-switch, modelregister, `ai_aanroepen`); behoudt "AI stelt voor, mens beslist"; contract-first (OpenAPI → codegen); scoping via bevoegdheden-matrix + gebouwtoewijzing (nooit rolnaam). Bouwen gebeurt pas ná expliciet akkoord, als afzonderlijke terugdraaibare taken.
+
+**Verificatie:** documentatie-only taak; geen build/typecheck relevant (geen code gewijzigd). De `api-server`-workflow stond al op failed vóór deze taak en is niet geraakt (alleen een Markdown-bestand toegevoegd).
+
 ## 2026-07-09 — GitHub-push voltooid: main gesynchroniseerd, CI groen (Task #482)
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (gewone merge, geen force-push; boom byte-identiek aan lokale werkboom)
