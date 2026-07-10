@@ -81,7 +81,7 @@ export function OndersteuningWidget() {
 
   return (
     <>
-      <div className="fixed bottom-5 right-5 z-50 flex flex-col items-end gap-2">
+      <div className="fixed bottom-[72px] right-5 z-50 flex flex-col items-end gap-2">
         {modus === "menu" && (
           <div className="flex flex-col gap-2 rounded-lg border bg-card p-2 shadow-lg">
             <Button
