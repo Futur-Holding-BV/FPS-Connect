@@ -824,6 +824,7 @@ export const ListGebouwFacturenParams = zod.object({
 export const ListGebouwFacturenResponseItem = zod.object({
   "id": zod.number(),
   "type": zod.string(),
+  "subtype": zod.string().nullish().describe('Bijzonder factuursoort voor afwijkend goedkeuringsbeleid: creditnota | prijsafwijking | null'),
   "factuurnummer": zod.string().nullish(),
   "factuurdatum": zod.string().nullish(),
   "vervaldatum": zod.string().nullish(),
@@ -20015,6 +20016,7 @@ export const ListFacturenQueryParams = zod.object({
 export const ListFacturenResponseItem = zod.object({
   "id": zod.number(),
   "type": zod.string(),
+  "subtype": zod.string().nullish().describe('Bijzonder factuursoort voor afwijkend goedkeuringsbeleid: creditnota | prijsafwijking | null'),
   "factuurnummer": zod.string().nullish(),
   "factuurdatum": zod.string().nullish(),
   "vervaldatum": zod.string().nullish(),
@@ -20079,6 +20081,7 @@ export const ListFacturenResponse = zod.array(ListFacturenResponseItem)
  */
 export const CreateFactuurBody = zod.object({
   "type": zod.string(),
+  "subtype": zod.string().nullish().describe('Bijzonder factuursoort voor afwijkend goedkeuringsbeleid: creditnota | prijsafwijking | null'),
   "factuurnummer": zod.string().nullish(),
   "factuurdatum": zod.string().nullish(),
   "vervaldatum": zod.string().nullish(),
@@ -20119,6 +20122,7 @@ export const GetFactuurUploadUrlResponse = zod.object({
 export const ListFacturenKlaarVoorExportResponseItem = zod.object({
   "id": zod.number(),
   "type": zod.string(),
+  "subtype": zod.string().nullish().describe('Bijzonder factuursoort voor afwijkend goedkeuringsbeleid: creditnota | prijsafwijking | null'),
   "factuurnummer": zod.string().nullish(),
   "factuurdatum": zod.string().nullish(),
   "vervaldatum": zod.string().nullish(),
@@ -20188,6 +20192,7 @@ export const GetFactuurParams = zod.object({
 export const GetFactuurResponse = zod.object({
   "id": zod.number(),
   "type": zod.string(),
+  "subtype": zod.string().nullish().describe('Bijzonder factuursoort voor afwijkend goedkeuringsbeleid: creditnota | prijsafwijking | null'),
   "factuurnummer": zod.string().nullish(),
   "factuurdatum": zod.string().nullish(),
   "vervaldatum": zod.string().nullish(),
@@ -20254,6 +20259,7 @@ export const UpdateFactuurParams = zod.object({
 })
 
 export const UpdateFactuurBody = zod.object({
+  "subtype": zod.string().nullish().describe('Bijzonder factuursoort voor afwijkend goedkeuringsbeleid: creditnota | prijsafwijking | null'),
   "factuurnummer": zod.string().nullish(),
   "factuurdatum": zod.string().nullish(),
   "vervaldatum": zod.string().nullish(),
@@ -20276,6 +20282,7 @@ export const UpdateFactuurBody = zod.object({
 export const UpdateFactuurResponse = zod.object({
   "id": zod.number(),
   "type": zod.string(),
+  "subtype": zod.string().nullish().describe('Bijzonder factuursoort voor afwijkend goedkeuringsbeleid: creditnota | prijsafwijking | null'),
   "factuurnummer": zod.string().nullish(),
   "factuurdatum": zod.string().nullish(),
   "vervaldatum": zod.string().nullish(),
@@ -20354,6 +20361,7 @@ export const AiUitlezenFactuurParams = zod.object({
 export const AiUitlezenFactuurResponse = zod.object({
   "id": zod.number(),
   "type": zod.string(),
+  "subtype": zod.string().nullish().describe('Bijzonder factuursoort voor afwijkend goedkeuringsbeleid: creditnota | prijsafwijking | null'),
   "factuurnummer": zod.string().nullish(),
   "factuurdatum": zod.string().nullish(),
   "vervaldatum": zod.string().nullish(),
@@ -20422,6 +20430,7 @@ export const AccorderenFactuurParams = zod.object({
 export const AccorderenFactuurResponse = zod.object({
   "id": zod.number(),
   "type": zod.string(),
+  "subtype": zod.string().nullish().describe('Bijzonder factuursoort voor afwijkend goedkeuringsbeleid: creditnota | prijsafwijking | null'),
   "factuurnummer": zod.string().nullish(),
   "factuurdatum": zod.string().nullish(),
   "vervaldatum": zod.string().nullish(),
@@ -20495,6 +20504,7 @@ export const BlokkerenFactuurBody = zod.object({
 export const BlokkerenFactuurResponse = zod.object({
   "id": zod.number(),
   "type": zod.string(),
+  "subtype": zod.string().nullish().describe('Bijzonder factuursoort voor afwijkend goedkeuringsbeleid: creditnota | prijsafwijking | null'),
   "factuurnummer": zod.string().nullish(),
   "factuurdatum": zod.string().nullish(),
   "vervaldatum": zod.string().nullish(),
@@ -20608,6 +20618,7 @@ export const AfkeurenFactuurBody = zod.object({
 export const AfkeurenFactuurResponse = zod.object({
   "id": zod.number(),
   "type": zod.string(),
+  "subtype": zod.string().nullish().describe('Bijzonder factuursoort voor afwijkend goedkeuringsbeleid: creditnota | prijsafwijking | null'),
   "factuurnummer": zod.string().nullish(),
   "factuurdatum": zod.string().nullish(),
   "vervaldatum": zod.string().nullish(),
@@ -20681,6 +20692,7 @@ export const BeoordelenFactuurPLBody = zod.object({
 export const BeoordelenFactuurPLResponse = zod.object({
   "id": zod.number(),
   "type": zod.string(),
+  "subtype": zod.string().nullish().describe('Bijzonder factuursoort voor afwijkend goedkeuringsbeleid: creditnota | prijsafwijking | null'),
   "factuurnummer": zod.string().nullish(),
   "factuurdatum": zod.string().nullish(),
   "vervaldatum": zod.string().nullish(),
@@ -20754,6 +20766,7 @@ export const BeoordelenFactuurWVBBody = zod.object({
 export const BeoordelenFactuurWVBResponse = zod.object({
   "id": zod.number(),
   "type": zod.string(),
+  "subtype": zod.string().nullish().describe('Bijzonder factuursoort voor afwijkend goedkeuringsbeleid: creditnota | prijsafwijking | null'),
   "factuurnummer": zod.string().nullish(),
   "factuurdatum": zod.string().nullish(),
   "vervaldatum": zod.string().nullish(),
@@ -20827,6 +20840,7 @@ export const DoorstuurenFactuurMedewerkerBody = zod.object({
 export const DoorstuurenFactuurMedewerkerResponse = zod.object({
   "id": zod.number(),
   "type": zod.string(),
+  "subtype": zod.string().nullish().describe('Bijzonder factuursoort voor afwijkend goedkeuringsbeleid: creditnota | prijsafwijking | null'),
   "factuurnummer": zod.string().nullish(),
   "factuurdatum": zod.string().nullish(),
   "vervaldatum": zod.string().nullish(),
@@ -20900,6 +20914,7 @@ export const BeoordelenFactuurMedewerkerBody = zod.object({
 export const BeoordelenFactuurMedewerkerResponse = zod.object({
   "id": zod.number(),
   "type": zod.string(),
+  "subtype": zod.string().nullish().describe('Bijzonder factuursoort voor afwijkend goedkeuringsbeleid: creditnota | prijsafwijking | null'),
   "factuurnummer": zod.string().nullish(),
   "factuurdatum": zod.string().nullish(),
   "vervaldatum": zod.string().nullish(),

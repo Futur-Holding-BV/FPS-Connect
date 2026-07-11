@@ -24,6 +24,11 @@ import { logger } from "../lib/logger";
 import { verstuurMail, isGeconfigureerd } from "../services/email";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
 import { INKOOP_PROMPT, UITVOERINGSPLAN_PROMPT } from "../lib/aiPrompts";
+import {
+  checkVereistGoedkeuring,
+  haalGoedgekeurdeAanvraag,
+  haalOpenAanvraag,
+} from "../services/goedkeuring-engine";
 
 const router = Router();
 const iso = (d: Date | null | undefined) => d?.toISOString() ?? null;
@@ -951,6 +956,25 @@ router.post("/opdrachten/:id/inkoopplanning/inkoopbonnen/:bonId/verzenden", schr
     const [bon] = await db.select().from(inkoopbonnenTable)
       .where(and(eq(inkoopbonnenTable.id, bonId), eq(inkoopbonnenTable.opdrachtId, id)));
     if (!bon) { res.status(404).json({ error: "Inkoopbon niet gevonden" }); return; }
+
+    // Goedkeuringsgate: als er een actieve beleidsregel geldt voor inkoopbonnen
+    // boven het totaalbedrag van deze bon, mag de bon pas verzonden worden nadat
+    // de goedkeuringsmotor de aanvraag heeft goedgekeurd.
+    const { vereist: goedkeuringVereist } = await checkVereistGoedkeuring(db, "inkoopbon", bon.totaalBedrag ?? null, null);
+    if (goedkeuringVereist) {
+      const goedgekeurd = await haalGoedgekeurdeAanvraag(db, "inkoopbon", bonId);
+      if (!goedgekeurd) {
+        const open = await haalOpenAanvraag(db, "inkoopbon", bonId);
+        res.status(422).json({
+          error: "Goedkeuring vereist",
+          detail: open
+            ? "Er loopt een openstaande goedkeuringsaanvraag voor deze inkoopbon. Wacht op de uitkomst voordat u verzendt."
+            : "Deze inkoopbon overschrijdt de ingestelde drempel. Dien de inkoopbon ter goedkeuring in via het goedkeuringswidget op de detailpagina.",
+          viaGoedkeuring: true,
+        });
+        return;
+      }
+    }
 
     const regels = await db.select().from(inkoopbonRegelsTable)
       .where(eq(inkoopbonRegelsTable.inkoopbonId, bonId))

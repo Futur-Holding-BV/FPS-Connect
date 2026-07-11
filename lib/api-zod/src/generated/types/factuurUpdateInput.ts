@@ -7,6 +7,8 @@
  */
 
 export interface FactuurUpdateInput {
+  /** Bijzonder factuursoort voor afwijkend goedkeuringsbeleid: creditnota | prijsafwijking | null */
+  subtype?: string | null;
   factuurnummer?: string | null;
   factuurdatum?: string | null;
   vervaldatum?: string | null;

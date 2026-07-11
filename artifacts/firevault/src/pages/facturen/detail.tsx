@@ -36,6 +36,7 @@ import {
   Send, CornerDownRight, CheckCheck,
 } from "lucide-react";
 import type { Factuur, AccountviewExportLog, FactuurOpmerking, FactuurProceslogRegel } from "@workspace/api-client-react";
+import { GoedkeuringWidget } from "@/components/goedkeuring/goedkeuring-widget";
 
 const STATUS_LABEL: Record<string, string> = {
   ontvangen: "Ontvangen",
@@ -430,6 +431,27 @@ export default function FactuurDetailPagina() {
           </div>
         </div>
       )}
+
+      {/* Goedkeuringsstatus (Governance & Approval Engine) */}
+      {(() => {
+        const docType = f.subtype === "creditnota" ? "creditnota"
+          : f.subtype === "prijsafwijking" ? "prijsafwijking"
+          : f.type === "inkoop" ? "inkoop_factuur" : "verkoop_factuur";
+        const typeLabel = f.subtype === "creditnota" ? "Creditnota"
+          : f.subtype === "prijsafwijking" ? "Prijsafwijking"
+          : f.type === "inkoop" ? "Inkoopfactuur" : "Verkoopfactuur";
+        return (
+          <GoedkeuringWidget
+            objectType={docType}
+            objectId={id}
+            documentType={docType}
+            bedrag={f.bedrag_incl_btw ? parseFloat(f.bedrag_incl_btw) : null}
+            omschrijving={`${typeLabel} ${f.factuurnummer ?? `#${id}`}${f.relatienaam ? ` — ${f.relatienaam}` : ""}`}
+            toonIndienKnop={!f.geaccordeerd && !f.geblokkeerd}
+            onWijziging={() => invalideer()}
+          />
+        );
+      })()}
 
       {/* Gegevens */}
       <div className="grid grid-cols-2 gap-4">

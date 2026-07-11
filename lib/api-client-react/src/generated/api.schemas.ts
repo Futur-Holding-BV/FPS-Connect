@@ -9081,6 +9081,8 @@ export type FactuurAiMetadata = { [key: string]: unknown } | null;
 export interface Factuur {
   id: number;
   type: string;
+  /** Bijzonder factuursoort voor afwijkend goedkeuringsbeleid: creditnota | prijsafwijking | null */
+  subtype?: string | null;
   factuurnummer?: string | null;
   factuurdatum?: string | null;
   vervaldatum?: string | null;
@@ -9140,6 +9142,8 @@ export interface Factuur {
 
 export interface FactuurInput {
   type: string;
+  /** Bijzonder factuursoort voor afwijkend goedkeuringsbeleid: creditnota | prijsafwijking | null */
+  subtype?: string | null;
   factuurnummer?: string | null;
   factuurdatum?: string | null;
   vervaldatum?: string | null;
@@ -9159,6 +9163,8 @@ export interface FactuurInput {
 }
 
 export interface FactuurUpdateInput {
+  /** Bijzonder factuursoort voor afwijkend goedkeuringsbeleid: creditnota | prijsafwijking | null */
+  subtype?: string | null;
   factuurnummer?: string | null;
   factuurdatum?: string | null;
   vervaldatum?: string | null;

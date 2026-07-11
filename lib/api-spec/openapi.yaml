@@ -35142,6 +35142,10 @@ components:
           type: integer
         type:
           type: string
+        subtype:
+          type: string
+          nullable: true
+          description: "Bijzonder factuursoort voor afwijkend goedkeuringsbeleid: creditnota | prijsafwijking | null"
         factuurnummer:
           type: string
           nullable: true
@@ -35308,6 +35312,10 @@ components:
       properties:
         type:
           type: string
+        subtype:
+          type: string
+          nullable: true
+          description: "Bijzonder factuursoort voor afwijkend goedkeuringsbeleid: creditnota | prijsafwijking | null"
         factuurnummer:
           type: string
           nullable: true
@@ -35360,6 +35368,10 @@ components:
     FactuurUpdateInput:
       type: object
       properties:
+        subtype:
+          type: string
+          nullable: true
+          description: "Bijzonder factuursoort voor afwijkend goedkeuringsbeleid: creditnota | prijsafwijking | null"
         factuurnummer:
           type: string
           nullable: true

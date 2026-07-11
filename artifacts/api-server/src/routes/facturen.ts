@@ -22,9 +22,25 @@ import { maakAccountViewClient } from "../services/accountview-client";
 import type { AccountviewBoeking } from "../services/accountview-client";
 import crypto from "crypto";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
+import {
+  checkVereistGoedkeuring,
+  haalGoedgekeurdeAanvraag,
+  haalOpenAanvraag,
+  dienIn,
+  maakGoedkeuringActor,
+} from "../services/goedkeuring-engine";
 
 const router = Router();
 const objectStorage = new ObjectStorageService();
+
+// Leidt het goedkeurings-objectType af uit het factuurtype + eventueel subtype.
+// Creditnota's en prijsafwijkingen krijgen een eigen objectType zodat per-type
+// beleidsregels in de goedkeuringsmotor correct worden geselecteerd.
+function bepaalFactuurDocumentType(f: { type: string; subtype?: string | null }): string {
+  if (f.subtype === "creditnota") return "creditnota";
+  if (f.subtype === "prijsafwijking") return "prijsafwijking";
+  return f.type === "verkoop" ? "verkoop_factuur" : "inkoop_factuur";
+}
 
 function sessionUserId(req: Request): number | null {
   const sess = req.session as unknown as Record<string, unknown>;
@@ -53,6 +69,7 @@ async function mapFactuur(r: typeof facturenTable.$inferSelect) {
   return {
     id: r.id,
     type: r.type,
+    subtype: r.subtype ?? null,
     factuurnummer: r.factuurnummer,
     factuurdatum: r.factuurdatum,
     vervaldatum: r.vervaldatum,
@@ -157,14 +174,17 @@ router.get("/facturen", requireBevoegdheid("financieel", 1), async (req: Request
 // ── POST /facturen ─────────────────────────────────────────────────────────────
 router.post("/facturen", requireBevoegdheid("financieel", 1), async (req: Request, res: Response): Promise<void> => {
   const body = req.body as {
-    type?: string; factuurnummer?: string; factuurdatum?: string; vervaldatum?: string;
+    type?: string; subtype?: string | null; factuurnummer?: string; factuurdatum?: string; vervaldatum?: string;
     omschrijving?: string; relatienaam?: string; relatie_code?: string; relatie_adres?: string;
     bedrag_excl_btw?: string; btw_bedrag?: string; bedrag_incl_btw?: string;
     btw_code?: string; grootboekrekening?: string; kostenplaats?: string; project_code?: string;
     pdf_url?: string; bestandsnaam?: string; gebouw_id?: number;
   };
+  const TOEGESTANE_SUBTYPES = new Set(["creditnota", "prijsafwijking"]);
+  const subtype = body.subtype && TOEGESTANE_SUBTYPES.has(body.subtype) ? body.subtype : null;
   const [rij] = await db.insert(facturenTable).values({
     type: body.type ?? "inkoop",
+    subtype,
     factuurnummer: body.factuurnummer ?? null,
     factuurdatum: body.factuurdatum ?? null,
     vervaldatum: body.vervaldatum ?? null,
@@ -237,6 +257,11 @@ router.patch("/facturen/:id", requireBevoegdheid("financieel", 1), async (req: R
   const body = req.body as Record<string, unknown>;
 
   const update: Partial<typeof facturenTable.$inferInsert> = { bijgewerktOp: new Date() };
+  if ("subtype" in body) {
+    const TOEGESTANE_SUBTYPES = new Set(["creditnota", "prijsafwijking"]);
+    const sub = body["subtype"];
+    update.subtype = typeof sub === "string" && TOEGESTANE_SUBTYPES.has(sub) ? sub : null;
+  }
   if ("factuurnummer" in body) update.factuurnummer = body["factuurnummer"] as string | null;
   if ("factuurdatum" in body) update.factuurdatum = body["factuurdatum"] as string | null;
   if ("vervaldatum" in body) update.vervaldatum = body["vervaldatum"] as string | null;
@@ -542,12 +567,72 @@ router.get("/facturen/:id/afwijkingen", requireBevoegdheid("financieel", 1), asy
   res.json({ factuur_id: id, aantal_signalen: signalen.length, signalen });
 });
 
+// ── POST /facturen/:id/ter-goedkeuring-indienen ────────────────────────────────
+// Dient een factuur ter goedkeuring in via de generieke Governance & Approval Engine.
+// Wordt gebruikt wanneer het beleidsscherm een goedkeuringsregel voor dit factuurtype
+// en bedrag heeft ingesteld. Na goedkeuring door de motor wordt de factuur automatisch
+// op klaar_voor_accountview + geaccordeerd gezet (via pasObjectStatusToe).
+router.post("/facturen/:id/ter-goedkeuring-indienen", requireBevoegdheid("financieel", 1), async (req: Request, res: Response): Promise<void> => {
+  const id = paramInt(req.params["id"]);
+  const [factuur] = await db.select().from(facturenTable).where(eq(facturenTable.id, id)).limit(1);
+  if (!factuur) { res.status(404).json({ error: "Niet gevonden" }); return; }
+  if (factuur.geblokkeerd) { res.status(409).json({ error: "Factuur is geblokkeerd" }); return; }
+
+  const actor = await maakGoedkeuringActor(req as { session: { userId?: number | null } }, db);
+  if (!actor) { res.status(401).json({ error: "Niet ingelogd" }); return; }
+
+  const documentType = bepaalFactuurDocumentType(factuur);
+  const bedrag = factuur.bedragInclBtw ? parseFloat(factuur.bedragInclBtw) : null;
+  const typeLabel = factuur.subtype === "creditnota" ? "Creditnota"
+    : factuur.subtype === "prijsafwijking" ? "Prijsafwijking"
+    : factuur.type === "verkoop" ? "Verkoopfactuur" : "Inkoopfactuur";
+  const omschrijving = `${typeLabel} ${factuur.factuurnummer ?? `#${id}`}${factuur.relatienaam ? ` — ${factuur.relatienaam}` : ""}`;
+
+  const resultaat = await dienIn(db, {
+    objectType: documentType,
+    objectId: id,
+    documentType,
+    omschrijving,
+    bedrag,
+    werkmaatschappijId: null,
+    actor,
+  });
+
+  if (!resultaat.ok) {
+    res.status(resultaat.error!.httpStatus ?? 422).json({ error: resultaat.error!.bericht });
+    return;
+  }
+
+  res.status(201).json(resultaat.aanvraag);
+});
+
 // ── POST /facturen/:id/accorderen ──────────────────────────────────────────────
 router.post("/facturen/:id/accorderen", requireBevoegdheid("financieel", 4), async (req: Request, res: Response): Promise<void> => {
   const id = paramInt(req.params["id"]);
   const [factuur] = await db.select().from(facturenTable).where(eq(facturenTable.id, id)).limit(1);
   if (!factuur) { res.status(404).json({ error: "Niet gevonden" }); return; }
   if (factuur.geblokkeerd) { res.status(409).json({ error: "Factuur is geblokkeerd" }); return; }
+
+  // Goedkeuringsgate: als er een actieve beleidsregel geldt voor dit factuurtype +
+  // bedrag, moet er een goedgekeurde aanvraag bestaan voordat manueel accorderen
+  // is toegestaan. Dit voorkomt omzeiling van de vier-ogen-controle.
+  const documentType = bepaalFactuurDocumentType(factuur);
+  const bedrag = factuur.bedragInclBtw ? parseFloat(factuur.bedragInclBtw) : null;
+  const { vereist } = await checkVereistGoedkeuring(db, documentType, bedrag, null);
+  if (vereist) {
+    const goedgekeurd = await haalGoedgekeurdeAanvraag(db, documentType, id);
+    if (!goedgekeurd) {
+      const open = await haalOpenAanvraag(db, documentType, id);
+      res.status(422).json({
+        error: "Goedkeuring vereist",
+        detail: open
+          ? "Er loopt een openstaande goedkeuringsaanvraag. Wacht op de uitkomst voordat u accordeert."
+          : "Dien de factuur eerst ter goedkeuring in (knop Ter goedkeuring indienen). Na goedkeuring wordt de factuur automatisch geaccordeerd.",
+        viaGoedkeuring: true,
+      });
+      return;
+    }
+  }
 
   const userId = sessionUserId(req);
   const [updated] = await db.update(facturenTable).set({

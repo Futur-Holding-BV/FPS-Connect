@@ -6,6 +6,7 @@ import {
   goedkeuringStappenTable,
   goedkeuringEscalatiesTable,
   gebruikersTable,
+  facturenTable,
   insertGoedkeuringBeleidsregelSchema,
   type GoedkeuringBeleidsregel,
   type GoedkeuringAanvraag,
@@ -14,6 +15,7 @@ import {
 } from "@workspace/db";
 import { and, eq, desc, inArray, or, sql } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
+import { heeftNiveau } from "@workspace/permissies";
 import {
   maakGoedkeuringActor,
   magGoedkeuren,
@@ -451,10 +453,58 @@ router.post(
             : null;
       const omschrijving = typeof body.omschrijving === "string" ? body.omschrijving : null;
 
+      // Object-level autorisatie voor financiële types:
+      // (a) De indiener moet minimaal financieel:1 hebben — dezelfde drempel
+      //     als de factuur-detail/mutatieroutes — niet alleen goedkeuring:1.
+      // (b) Het object moet bestaan in de facturentabel.
+      // (c) Zowel objectType als documentType worden server-side afgeleid uit
+      //     factuur.type + factuur.subtype — client-input wordt genegeerd.
+      //     Dit voorkomt dat een indiener een zwakker beleid kan activeren door
+      //     een ander document_type mee te sturen dan het werkelijke factuurtype.
+      const FINANCIELE_TYPES = new Set(["inkoop_factuur", "verkoop_factuur", "creditnota", "prijsafwijking"]);
+      let effectiefDocumentType = documentType;
+      if (FINANCIELE_TYPES.has(objectType)) {
+        // (a) Bevoegdheidscheck financieel:1
+        const userId = req.session?.userId as number | undefined;
+        if (!userId) { res.status(401).json({ error: "Niet ingelogd" }); return; }
+        const [gebruiker] = await db
+          .select({ rol: gebruikersTable.rol, bevoegdheden: gebruikersTable.bevoegdheden })
+          .from(gebruikersTable)
+          .where(eq(gebruikersTable.id, userId))
+          .limit(1);
+        if (!gebruiker) { res.status(403).json({ error: "Geen toegang" }); return; }
+        const isHoofdbeheerder = gebruiker.rol === "hoofdbeheerder";
+        const bev = (gebruiker.bevoegdheden as Record<string, number> | null) ?? {};
+        if (!isHoofdbeheerder && !heeftNiveau(bev, "financieel", 1)) {
+          res.status(403).json({ error: "Financieel module-toegang vereist voor dit type goedkeuringsaanvraag" });
+          return;
+        }
+        // (b) Object-bestaan
+        const [factuur] = await db
+          .select({ id: facturenTable.id, type: facturenTable.type, subtype: facturenTable.subtype })
+          .from(facturenTable)
+          .where(eq(facturenTable.id, objectId))
+          .limit(1);
+        if (!factuur) { res.status(404).json({ error: "Factuur niet gevonden" }); return; }
+        // (c) ObjectType-consistentie: client-opgegeven objectType moet matchen
+        const afgeleidType = factuur.subtype === "creditnota" ? "creditnota"
+          : factuur.subtype === "prijsafwijking" ? "prijsafwijking"
+          : factuur.type === "verkoop" ? "verkoop_factuur" : "inkoop_factuur";
+        if (objectType !== afgeleidType) {
+          res.status(422).json({
+            error: `ObjectType '${objectType}' komt niet overeen met het werkelijke factuurtype '${afgeleidType}'`,
+          });
+          return;
+        }
+        // (c) documentType server-side overschrijven — client-input wordt genegeerd
+        // zodat een aanvaller niet via document_type een zwakker beleid kan activeren.
+        effectiefDocumentType = afgeleidType;
+      }
+
       const resultaat = await dienIn(db, {
         objectType,
         objectId,
-        documentType,
+        documentType: effectiefDocumentType,
         omschrijving,
         bedrag,
         werkmaatschappijId,

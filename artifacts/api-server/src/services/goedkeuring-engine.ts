@@ -14,6 +14,7 @@ import {
   goedkeuringStappenTable,
   workflowTransitieLogTable,
   gebruikersTable,
+  facturenTable,
   type GoedkeuringBeleidsregel,
   type GoedkeuringAanvraag,
 } from "@workspace/db";
@@ -35,42 +36,82 @@ const OBJECT_WORKFLOW_ACTIE: Record<string, { workflowId: string; naarStatus: st
   inkoopbon: { workflowId: "inkoopbon", naarStatus: "goedgekeurd" },
 };
 
+// Directe DB-statusovergang na goedkeuring voor entiteiten die géén WorkflowService
+// gebruiken (zoals facturen). Na goedkeuring wordt het onderliggende document direct
+// bijgewerkt in de database zonder tussenkomst van de workflowmotor.
+//
+// Financiële documenttypes die op de facturenTable leven:
+//   - verkoop_factuur / inkoop_factuur  — reguliere facturen (type "verkoop"/"inkoop")
+//   - creditnota                        — creditnota's die als factuur geregistreerd zijn
+//   - prijsafwijking                    — marge-/prijsafwijkingen, altijd directiegoedkeuring
+//     (bovengrens in de beleidsregel bepaalt wanneer goedkeuring vereist is)
+const OBJECT_DIRECTE_ACTIE: Record<string, { naarStatus: string; setGeaccordeerd: boolean }> = {
+  verkoop_factuur: { naarStatus: "klaar_voor_accountview", setGeaccordeerd: true },
+  inkoop_factuur: { naarStatus: "klaar_voor_accountview", setGeaccordeerd: true },
+  creditnota: { naarStatus: "klaar_voor_accountview", setGeaccordeerd: true },
+  prijsafwijking: { naarStatus: "klaar_voor_accountview", setGeaccordeerd: true },
+};
+
 // Zet, ná volledige goedkeuring, het onderliggende document automatisch door
-// via de bestaande WorkflowService. `viaGoedkeuring: true` laat de
-// workflow-config weten dat de bevoegdheids-/beleidscheck al is afgehandeld
-// door de goedkeuringsmotor zelf.
+// via de bestaande WorkflowService (voor inkoopbonnen e.d.) of via een directe
+// DB-update (voor facturen e.d.). `viaGoedkeuring: true` laat de workflow-config
+// weten dat de bevoegdheids-/beleidscheck al is afgehandeld door de motor zelf.
 async function pasObjectStatusToe(
   db: Db,
   aanvraag: GoedkeuringAanvraag,
   actor: GoedkeuringActor,
 ): Promise<void> {
+  // WorkflowService-pad (inkoopbon en gelijkaardige entiteiten)
   const actie = OBJECT_WORKFLOW_ACTIE[aanvraag.objectType];
-  if (!actie || !workflowService.isGeconfigureerd(actie.workflowId)) return;
-  try {
-    const resultaat = await workflowService.transiteer(
-      actie.workflowId,
-      aanvraag.objectId,
-      actie.naarStatus,
-      {
-        db,
-        gebruikerId: actor.gebruikerId,
-        gebruikerNaam: actor.gebruikerNaam,
-        bevoegdheden: actor.bevoegdheden,
-        isHoofdbeheerder: actor.isHoofdbeheerder,
-        params: { viaGoedkeuring: true },
-      },
-    );
-    if (!resultaat.ok) {
-      logger.warn(
-        { aanvraagId: aanvraag.id, objectType: aanvraag.objectType, error: resultaat.error },
-        "Automatische statusovergang na goedkeuring is niet gelukt",
+  if (actie && workflowService.isGeconfigureerd(actie.workflowId)) {
+    try {
+      const resultaat = await workflowService.transiteer(
+        actie.workflowId,
+        aanvraag.objectId,
+        actie.naarStatus,
+        {
+          db,
+          gebruikerId: actor.gebruikerId,
+          gebruikerNaam: actor.gebruikerNaam,
+          bevoegdheden: actor.bevoegdheden,
+          isHoofdbeheerder: actor.isHoofdbeheerder,
+          params: { viaGoedkeuring: true },
+        },
+      );
+      if (!resultaat.ok) {
+        logger.warn(
+          { aanvraagId: aanvraag.id, objectType: aanvraag.objectType, error: resultaat.error },
+          "Automatische statusovergang na goedkeuring is niet gelukt",
+        );
+      }
+    } catch (err) {
+      logger.error(
+        { err, aanvraagId: aanvraag.id, objectType: aanvraag.objectType },
+        "Kon onderliggend document niet automatisch bijwerken na goedkeuring",
       );
     }
-  } catch (err) {
-    logger.error(
-      { err, aanvraagId: aanvraag.id, objectType: aanvraag.objectType },
-      "Kon onderliggend document niet automatisch bijwerken na goedkeuring",
-    );
+  }
+
+  // Directe DB-pad (facturen en andere entiteiten zonder WorkflowService)
+  const directeActie = OBJECT_DIRECTE_ACTIE[aanvraag.objectType];
+  if (directeActie) {
+    try {
+      const nu = new Date();
+      await db.update(facturenTable)
+        .set({
+          status: directeActie.naarStatus,
+          bijgewerktOp: nu,
+          ...(directeActie.setGeaccordeerd
+            ? { geaccordeerd: true, geaccordeerdOp: nu, geaccordeerdDoor: actor.gebruikerId }
+            : {}),
+        })
+        .where(eq(facturenTable.id, aanvraag.objectId));
+    } catch (err) {
+      logger.error(
+        { err, aanvraagId: aanvraag.id, objectType: aanvraag.objectType },
+        "Kon factuur niet automatisch bijwerken na goedkeuring (directe DB-update)",
+      );
+    }
   }
 }
 

@@ -602,3 +602,25 @@ De nieuwsticker in de taakbalk onderin scrollt nu twee keer zo snel: de animatie
 - #261 — Inlogbeveiliging aangescherpt voor geanonimiseerde accounts. De login-routes (`/auth/login` en `/auth/mobile/login`) en het 2FA-setup-endpoint (`/auth/2fa/setup`) controleren nu expliciet op het `geanonimiseerd`-veld in de database en weigeren toegang met een 403-foutmelding. Dit voorkomt dat geanonimiseerde accounts opnieuw geactiveerd of gebruikt kunnen worden.
 
 **Bewijs:** api-server `typecheck` groen; e-mailservice uitgebreid met `stuurAvgVerzoekAfgehandeldMail`; auth-logic geverifieerd op blokkade van geanonimiseerde records.
+
+## 2026-07-11 — Governance & Approval Engine — facturen gekoppeld (Task #520)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (additief; bestaande handmatige accordering blijft werken wanneer geen beleidsregel van toepassing is)
+
+**Nieuw gebouwd:**
+- **Goedkeuringsmotor gekoppeld aan facturen** — Verkoop- en inkoopfacturen doorlopen nu het generieke Governance & Approval Engine-traject. De motor is bewezen generiek: `OBJECT_DIRECTE_ACTIE` in `goedkeuring-engine.ts` registreert `verkoop_factuur` en `inkoop_factuur` met een directe DB-update (geen WorkflowService nodig) zodat `pasObjectStatusToe` na goedkeuring automatisch `status = klaar_voor_accountview` + `geaccordeerd = true` zet.
+- **`POST /facturen/:id/ter-goedkeuring-indienen`** — Nieuw endpoint; roept `dienIn` aan vanuit de engine, afgeleid `documentType` en `bedrag` uit de factuur, actor uit de sessie. Retourneert 201 met de aanvraag of 422 met de foutmelding uit de motor.
+- **Gate op `POST /facturen/:id/accorderen`** — Wanneer een actieve beleidsregel van toepassing is (`checkVereistGoedkeuring`), blokkeert het endpoint handmatig accorderen met 422 + `viaGoedkeuring: true`. Zodra de motor de aanvraag heeft goedgekeurd (en de factuur automatisch heeft bijgewerkt), slaagt het endpoint alsnog. Bestaande facturen zonder beleidsregel blijven direct accordeerbaar.
+- **AccountView-export-gate** — Reeds aanwezig (`!factuur.geaccordeerd` check op `export-accountview`); nu effectief geblokkeerd totdat de goedkeuringsmotor of de handmatige accordering `geaccordeerd = true` zet.
+- **`GoedkeuringWidget` in factuur-detailpagina** — De herbruikbare widget verschijnt op elke factuurdetailpagina met het juiste `objectType` (`inkoop_factuur` / `verkoop_factuur`), bedrag en omschrijving. `toonIndienKnop` staat aan zolang de factuur niet geaccordeerd of geblokkeerd is.
+- **Beleidsscherm (`/beheer/goedkeuringsbeleid`)** — Vrij-tekst Input voor `document_type` vervangen door een Select-dropdown met voorgedefinieerde opties: Inkoopbon, Inkoopfactuur, Verkoopfactuur, Inkooporder, Creditnota, Prijsafwijking. Tabelweergave toont leesbare labels via `DOCUMENT_TYPE_LABELS`-map.
+
+**Aanvulling (code review herstel):**
+- **Inkoopbon verzend-gate** — `POST /opdrachten/:id/inkoopplanning/inkoopbonnen/:bonId/verzenden` in `werkvoorbereiding.ts` geeft nu 422 wanneer een beleidsregel geldt én er geen goedgekeurde aanvraag bestaat. Bericht verschilt: open aanvraag → "wacht op uitkomst"; geen aanvraag → "dien ter goedkeuring in". Verzending gaat daarna ongewijzigd door zodra de motor heeft goedgekeurd.
+- **`subtype`-kolom op facturenTable** — Additieve kolom (`ALTER TABLE facturen ADD COLUMN IF NOT EXISTS subtype text`). Waarden: `null` (gewone factuur) | `creditnota` | `prijsafwijking`. Doet dienst als domeinveld zodat de goedkeuringsmotor het juiste beleidstype selecteert.
+- **`bepaalFactuurDocumentType` helper** — Deterministisch: `subtype === "creditnota"` → `"creditnota"`, `subtype === "prijsafwijking"` → `"prijsafwijking"`, anders `verkoop_factuur` / `inkoop_factuur` op basis van `type`. Gebruikt in beide factuur-eindpunten (ter-goedkeuring-indienen + accorderen-gate).
+- **`creditnota` en `prijsafwijking` in OBJECT_DIRECTE_ACTIE** — Beide documenttypes in de engine-configuratie; na goedkeuring zet de motor `klaar_voor_accountview` + `geaccordeerd = true`. Beleidsregels met type-specifieke drempels zijn nu instelbaar via het bestaande beleidsscherm.
+- **GoedkeuringWidget in factuur-detailpagina bijgewerkt** — Widget leidt `objectType`, `documentType` en omschrijvingslabel nu af uit `f.subtype`; creditnota's en prijsafwijkingen tonen hun eigen label én worden via het juiste beleidstype ingediend.
+- **Object-level autorisatie op generieke aanvragen-endpoint** — `POST /goedkeuring/aanvragen` verifieert voor financiële types (`inkoop_factuur`, `verkoop_factuur`, `creditnota`, `prijsafwijking`) dat het object bestaat in de facturentabel; geeft 404 terug als het object niet gevonden wordt.
+
+**Bewijs:** volledige typecheck groen (alle 5 artifacts); inkoopbon-gate reageert 422 met `viaGoedkeuring: true` wanneer beleidsregel actief en geen goedgekeurde aanvraag; facturen-gate en AccountView-export-gate ongewijzigd werkend; e2e-menu en e2e-web groen.

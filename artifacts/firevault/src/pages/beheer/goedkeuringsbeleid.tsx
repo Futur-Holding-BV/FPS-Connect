@@ -51,8 +51,15 @@ import {
 import { GOEDKEURING_STATUS_INFO } from "@/components/goedkeuring/goedkeuring-widget";
 import { MODULES } from "@workspace/permissies";
 
+// Documenttypes die exact overeenkomen met de objectType-sleutels in de goedkeuringsmotor.
+// "inkoopbon" is de canonieke sleutel voor inkooporders/bestellingen; de UI toont "Inkoopbon / Inkooporder"
+// zodat beheerders begrijpen waarvoor de drempel geldt.
 const DOCUMENT_TYPE_LABELS: Record<string, string> = {
-  inkoopbon: "Inkoopbon",
+  inkoopbon: "Inkoopbon / Inkooporder",
+  inkoop_factuur: "Inkoopfactuur",
+  verkoop_factuur: "Verkoopfactuur",
+  creditnota: "Creditnota",
+  prijsafwijking: "Prijsafwijking",
   offerte: "Offerte",
   factuur: "Factuur",
   arbeidsovereenkomst: "Arbeidsovereenkomst",
@@ -66,6 +73,7 @@ const DOCUMENT_TYPE_LABELS: Record<string, string> = {
 function documentTypeLabel(type: string): string {
   return DOCUMENT_TYPE_LABELS[type] ?? type;
 }
+
 
 const LEEG_REGEL: GoedkeuringBeleidsregelInput = {
   naam: "",
@@ -269,10 +277,19 @@ function BeleidsregelsTab({ magBeheren }: { magBeheren: boolean }) {
             </div>
             <div className="space-y-1.5">
               <Label>Documenttype</Label>
+              {/* Vrije invoer met voorgedefinieerde suggesties — behoudt generieke engine-werking */}
+              <datalist id="documenttype-opties">
+                <option value="inkoopbon" />
+                <option value="inkoop_factuur" />
+                <option value="verkoop_factuur" />
+                <option value="creditnota" />
+                <option value="prijsafwijking" />
+              </datalist>
               <Input
+                list="documenttype-opties"
                 value={form.document_type}
-                placeholder="bijv. inkoopbon, offerte, factuur"
                 onChange={(e) => setForm({ ...form, document_type: e.target.value })}
+                placeholder="bijv. inkoopbon, inkoop_factuur, offerte…"
               />
             </div>
             <div className="space-y-1.5">

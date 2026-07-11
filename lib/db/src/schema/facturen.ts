@@ -36,6 +36,8 @@ export const facturenTable = pgTable("facturen", {
 
   // Type
   type: text("type").notNull().default("inkoop"), // inkoop | verkoop
+  // Subtype voor bijzondere factuursoorten die een eigen goedkeuringsbeleid vereisen
+  subtype: text("subtype"), // null | creditnota | prijsafwijking
 
   // Basisgegevens
   factuurnummer: text("factuurnummer"),
