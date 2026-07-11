@@ -1665,6 +1665,77 @@ async function logVerlofMutatie(
   }
 }
 
+// Koppelt een ziekmelding aan ADV/ATV-verlofaanvragen: aangevraagde of goedgekeurde
+// ADV-aanvragen die overlappen met de ziekteperiode worden automatisch ingetrokken
+// en het verlofsaldo wordt gecorrigeerd. Idempotent: al-ingetrokken aanvragen worden
+// overgeslagen. Fouten blokkeren de hoofdactie niet (catch + log).
+async function koppelZiekteAanAdv(
+  medewerkerId: number,
+  startDatum: string,
+  eindDatum: string | null | undefined,
+  actorId: number | null,
+  logger: { info: (...a: unknown[]) => void; error: (...a: unknown[]) => void },
+): Promise<number> {
+  try {
+    const eindStr = eindDatum ?? "9999-12-31";
+    const overlappendAdv = await db
+      .select({
+        a: verlofAanvragenTable,
+        hoofdcategorie: verlofsoortenTable.hoofdcategorie,
+      })
+      .from(verlofAanvragenTable)
+      .leftJoin(verlofsoortenTable, eq(verlofAanvragenTable.verlofsoortId, verlofsoortenTable.id))
+      .where(
+        and(
+          eq(verlofAanvragenTable.medewerkerId, medewerkerId),
+          inArray(verlofAanvragenTable.status, ["aangevraagd", "goedgekeurd"]),
+          lte(verlofAanvragenTable.startDatum, eindStr),
+          gte(verlofAanvragenTable.eindDatum, startDatum),
+        ),
+      );
+
+    const advAanvragen = overlappendAdv.filter((r) => r.hoofdcategorie === "adv_atv");
+    if (advAanvragen.length === 0) return 0;
+
+    let aantalIngetrokken = 0;
+    await db.transaction(async (tx) => {
+      for (const { a } of advAanvragen) {
+        await tx
+          .update(verlofAanvragenTable)
+          .set({
+            status: "ingetrokken",
+            reden: "Automatisch ingetrokken wegens ziekmelding",
+            beoordeeldOp: new Date(),
+            bijgewerktOp: new Date(),
+          })
+          .where(eq(verlofAanvragenTable.id, a.id));
+
+        if (a.status === "goedgekeurd" && a.aantalUren > 0) {
+          await pasVerlofSaldoAan(tx, a.medewerkerId, a.verlofsoortId, jaarVanDatum(a.startDatum), -a.aantalUren);
+        }
+
+        await logVerlofMutatie(tx, a.id, a.medewerkerId, "ingetrokken_wegens_ziekte", {
+          oudStatus: a.status,
+          nieuwStatus: "ingetrokken",
+          opmerking: "Automatisch ingetrokken wegens registratie ziekmelding",
+          uitgevoerdDoorId: actorId,
+        });
+
+        aantalIngetrokken++;
+      }
+    });
+
+    logger.info(
+      { medewerker_id: medewerkerId, start_datum: startDatum, eind_datum: eindDatum, ingetrokken: aantalIngetrokken },
+      "ziekte-adv koppeling: ADV-aanvragen ingetrokken",
+    );
+    return aantalIngetrokken;
+  } catch (err) {
+    logger.error({ err, medewerker_id: medewerkerId }, "ziekte-adv koppeling: fout bij intrekken ADV-aanvragen");
+    return 0;
+  }
+}
+
 // Centrale beoordelingslijst: alle verlofaanvragen, optioneel gefilterd op status.
 router.get("/verlofaanvragen", lezen, async (req, res): Promise<void> => {
   try {
@@ -3068,6 +3139,10 @@ router.post("/ziekmeldingen", schrijven, async (req, res): Promise<void> => {
         gemeldDoorId: req.session.userId ?? null,
       })
       .returning();
+
+    // Koppeling: intrek overlappende ADV-aanvragen automatisch.
+    await koppelZiekteAanAdv(z.medewerkerId, z.startDatum, z.eindDatum, req.session.userId ?? null, req.log);
+
     const [m] = await db.select({ naam: medewerkersTable.naam }).from(medewerkersTable).where(eq(medewerkersTable.id, z.medewerkerId));
     res.status(201).json(mapZiekmelding({ ...z, medewerker_naam: m?.naam ?? null } as Parameters<typeof mapZiekmelding>[0]));
   } catch (err) {
@@ -3164,6 +3239,13 @@ router.patch("/ziekmeldingen/:id", schrijven, async (req, res): Promise<void> =>
       .where(eq(ziekmeldingenTable.id, id))
       .returning();
     if (!z) return void res.status(404).json({ error: "Niet gevonden" });
+
+    // Koppeling: herbereken overlappende ADV-aanvragen als de periode is gewijzigd
+    // en de melding (nog) actief is (niet hersteld).
+    if (z.status !== "hersteld" && (start_datum != null || eind_datum !== undefined)) {
+      await koppelZiekteAanAdv(z.medewerkerId, z.startDatum, z.eindDatum, req.session.userId ?? null, req.log);
+    }
+
     const [m] = await db.select({ naam: medewerkersTable.naam }).from(medewerkersTable).where(eq(medewerkersTable.id, z.medewerkerId));
     res.json(mapZiekmelding({ ...z, medewerker_naam: m?.naam ?? null } as Parameters<typeof mapZiekmelding>[0]));
   } catch (err) {

@@ -1,3 +1,15 @@
+## 2026-07-11 — Verlof: ziekte-ADV koppeling (automatisch intrekken ADV bij ziekmelding)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (additief; geen bestaande routes gebroken, koppeling is fail-safe)
+
+**Gebouwd:**
+- **`koppelZiekteAanAdv()`** — nieuwe helper in `hrm.ts`: zoekt alle overlappende ADV/ATV-aanvragen (`hoofdcategorie = 'adv_atv'`, status `aangevraagd` of `goedgekeurd`) die de ziekteperiode overlappen, zet ze atomair op `ingetrokken`, corrigeert het verlofsaldo via de bestaande `pasVerlofSaldoAan`-helper (–aantalUren voor goedgekeurde aanvragen) en schrijft een auditlogregel per aanvraag. Idempotent: al-ingetrokken aanvragen worden overgeslagen.
+- **POST /ziekmeldingen** — roept de koppeling automatisch aan na elke nieuwe ziekmelding.
+- **PATCH /ziekmeldingen/:id** — roept de koppeling opnieuw aan wanneer `start_datum` of `eind_datum` wijzigt en de melding nog actief is (status ≠ `hersteld`); dit vangt periodewijzigingen op.
+- **Fail-safe**: de koppeling omhult zichzelf met een eigen try/catch; een onverwachte fout blokkeert de ziekmelding nooit — hij wordt gelogd en de melding wordt correct opgeslagen.
+
+**Bewijs:** typecheck groen (api-server); herstart zonder fouten.
+
 ## 2026-07-11 — Verlof: CAO-presets, automatisch verval en proactieve signalering
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (additief; geen bestaande endpoints of schema's gebroken)
