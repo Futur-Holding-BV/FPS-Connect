@@ -1,6 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { useState, useEffect } from "react";
 import { SlimUploadBalk } from "@/components/slim-upload-balk";
+import { AdviseurChat } from "@/components/adviseur-chat";
 import { useTranslation } from "react-i18next";
 import { useListChatGesprekken, useGetMagazijnSignalering } from "@workspace/api-client-react";
 import { BerichtNotificatieToast } from "@/components/bericht-notificatie-toast";
@@ -2044,6 +2045,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
       <BerichtNotificatieToast />
       <SlimUploadBalk />
       <NieuwsTicker />
+      <AdviseurChat />
     </SidebarProvider>
   );
 }

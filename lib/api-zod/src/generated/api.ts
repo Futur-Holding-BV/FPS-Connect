@@ -10867,6 +10867,26 @@ export const SynchroniseerCaoPresetsResponse = zod.object({
 
 
 /**
+ * @summary Stel een vraag aan de FPS Bedrijfsadviseur
+ */
+export const vraagAdviseurBodyVraagMax = 2000;
+
+
+
+export const VraagAdviseurBody = zod.object({
+  "vraag": zod.string().max(vraagAdviseurBodyVraagMax),
+  "geschiedenis": zod.array(zod.object({
+  "rol": zod.enum(['user', 'assistant']),
+  "inhoud": zod.string()
+})).optional()
+})
+
+export const VraagAdviseurResponse = zod.object({
+  "antwoord": zod.string()
+})
+
+
+/**
  * @summary Bezettingsgraad per dag voor een week
  */
 export const GetCapaciteitBezettingQueryParams = zod.object({

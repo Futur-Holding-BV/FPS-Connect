@@ -472,6 +472,28 @@ De nieuwsticker in de taakbalk onderin scrollt nu twee keer zo snel: de animatie
 - Beide seeders hebben nu een `weigerBuitenDev()`-guard: e2e-accounts kunnen nooit in een deployment/productie worden aangemaakt of geheractiveerd (de monteur-seeder miste deze guard nog; op advies van de review toegevoegd).
 - **Accountsplitsing web/monteur**: de web-suite gebruikte aanvankelijk hetzelfde `e2e-menu`-account als de monteur-suite; bij parallelle runs (zoals in de validatiepijplijn) brak de opruiming van de ene suite de lopende tests van de andere (de API controleert `actief` bij elke request). Opgelost door de web-suite een eigen vast account te geven (`e2e-web@fps.local`, eigen TOTP-secret); elke runner archiveert uitsluitend zijn eigen accounts. Bewezen met een gelijktijdige run van beide suites: beide groen, alle accounts na afloop gearchiveerd.
 
+## 2026-07-11 — AI Bedrijfsadviseur chat-widget + Verlof CAO-presets/verval/signalering + Ziekte-ADV koppeling
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (additief, geen DB-migratie)
+
+**AI Bedrijfsadviseur (chat-widget):**
+- Zwevende chatknop rechtsonder op alle Connect-pagina's (beheerder-layout); geen aparte pagina vereist.
+- `POST /adviseur/vraag` — leest sessie-gebruiker, bouwt persoonsgebonden systeem-prompt met rol + bevoegdhedenmatrix, verstuurt naar `aiGateway.chat("default")`.
+- Permissie-scoping: de AI kent exact welke modules de gebruiker mag zien en weigert expliciet info buiten zijn toegangsniveau (bijv. salarisgegevens van anderen voor gebruikers zonder `salarisarchief`-bevoegdheid).
+- Conversiehist. staat in React-state (client-side, geen persistentie), maximaal 10 berichten als context naar AI.
+- Snelle startvragen als chips bij leeg gesprek; wis-knop voor nieuw gesprek; toetsenbord-support (Enter = verstuur, Shift+Enter = newline).
+- OpenAPI-schemas `AdviseurVraagInput` + `AdviseurAntwoord`; codegen geproduceerd; typecheck groen.
+
+**Verlof CAO-presets + verval + signalering:**
+- `lib/verlofPresets.ts` — zestien verlofsoorten incl. ADV, bijzonder verlof, CAO Metaal/Bouw-uren; `POST /verlof/synchroniseer-cao-presets`.
+- `lib/verlofVervalService.ts` — nacht-job die verlopen verlofaanvragen automatisch afwijst.
+- `GET /verlof/vervalsignalen` — drie urgentieniveaus (kritiek/waarschuwing/info); banner in verlof-overzicht.
+
+**Ziekte-ADV koppeling:**
+- `koppelZiekteAanAdv()` in `hrm.ts` — atomisch overlappende ADV-aanvragen annuleren + saldo corrigeren bij ziekte-in/uit.
+
+**Bewijs:** api-server + firevault typecheck groen; api-server herstart en draait; Vite HMR bevestigd.
+
 ## 2026-07-10 — AVG-verzoek notificaties en login-blokkade (Task #260/#261)
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (additieve e-mailfunctionaliteit + extra login-check)

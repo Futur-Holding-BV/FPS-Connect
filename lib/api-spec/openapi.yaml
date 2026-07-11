@@ -8704,6 +8704,25 @@ paths:
               schema:
                 $ref: "#/components/schemas/CaoPresetsSyncResultaat"
 
+  /adviseur/vraag:
+    post:
+      operationId: vraagAdviseur
+      tags: [adviseur]
+      summary: Stel een vraag aan de FPS Bedrijfsadviseur
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdviseurVraagInput"
+      responses:
+        "200":
+          description: Antwoord van de adviseur
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdviseurAntwoord"
+
   /capaciteit/bezetting:
     get:
       operationId: getCapaciteitBezetting
@@ -38962,6 +38981,32 @@ components:
         urgentie:
           type: string
           enum: [kritiek, waarschuwing, info]
+
+    AdviseurVraagInput:
+      type: object
+      required: [vraag]
+      properties:
+        vraag:
+          type: string
+          maxLength: 2000
+        geschiedenis:
+          type: array
+          items:
+            type: object
+            required: [rol, inhoud]
+            properties:
+              rol:
+                type: string
+                enum: [user, assistant]
+              inhoud:
+                type: string
+
+    AdviseurAntwoord:
+      type: object
+      required: [antwoord]
+      properties:
+        antwoord:
+          type: string
 
     CaoPresetsSyncResultaat:
       type: object

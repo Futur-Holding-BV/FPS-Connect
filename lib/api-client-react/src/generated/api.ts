@@ -37,6 +37,8 @@ import type {
   AccountviewRelatieMappingInput,
   AchievementControleerResponse,
   Activiteit,
+  AdviseurAntwoord,
+  AdviseurVraagInput,
   AiAanroepenAggregaat,
   AiAanroepenPagina,
   AiAnalyseToolboxBerichten200,
@@ -30528,6 +30530,76 @@ export const useSynchroniseerCaoPresets = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getSynchroniseerCaoPresetsMutationOptions(options));
+    }
+
+export const getVraagAdviseurUrl = () => {
+
+
+
+
+  return `/api/adviseur/vraag`
+}
+
+/**
+ * @summary Stel een vraag aan de FPS Bedrijfsadviseur
+ */
+export const vraagAdviseur = async (adviseurVraagInput: AdviseurVraagInput, options?: RequestInit): Promise<AdviseurAntwoord> => {
+
+  return customFetch<AdviseurAntwoord>(getVraagAdviseurUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(adviseurVraagInput)
+  }
+);}
+
+
+
+
+export const getVraagAdviseurMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof vraagAdviseur>>, TError,{data: BodyType<AdviseurVraagInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof vraagAdviseur>>, TError,{data: BodyType<AdviseurVraagInput>}, TContext> => {
+
+const mutationKey = ['vraagAdviseur'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof vraagAdviseur>>, {data: BodyType<AdviseurVraagInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  vraagAdviseur(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type VraagAdviseurMutationResult = NonNullable<Awaited<ReturnType<typeof vraagAdviseur>>>
+    export type VraagAdviseurMutationBody = BodyType<AdviseurVraagInput>
+    export type VraagAdviseurMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Stel een vraag aan de FPS Bedrijfsadviseur
+ */
+export const useVraagAdviseur = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof vraagAdviseur>>, TError,{data: BodyType<AdviseurVraagInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof vraagAdviseur>>,
+        TError,
+        {data: BodyType<AdviseurVraagInput>},
+        TContext
+      > => {
+      return useMutation(getVraagAdviseurMutationOptions(options));
     }
 
 export const getGetCapaciteitBezettingUrl = (params?: GetCapaciteitBezettingParams,) => {

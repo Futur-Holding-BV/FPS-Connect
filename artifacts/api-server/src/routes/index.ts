@@ -38,6 +38,7 @@ import gereedschappenRouter from "./gereedschappen";
 import wagenparkRouter from "./wagenpark";
 import wagenparkMeldingenRouter from "./wagenpark-meldingen";
 import { achievementsRouter } from "./achievements";
+import adviseurRouter from "./adviseur";
 import urenRouter from "./uren";
 import chatRouter from "./chat";
 import backupsRouter from "./backups";
@@ -229,5 +230,6 @@ router.use(cqoRouter);
 router.use(kantoorReleaseRouter);
 router.use(financieelJaarrekeningenRouter);
 router.use(goedkeuringRouter);
+router.use(adviseurRouter);
 
 export default router;

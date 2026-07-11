@@ -12178,6 +12178,29 @@ export interface Vervalsignaal {
   urgentie: VervalsignaalUrgentie;
 }
 
+export type AdviseurVraagInputGeschiedenisItemRol = typeof AdviseurVraagInputGeschiedenisItemRol[keyof typeof AdviseurVraagInputGeschiedenisItemRol];
+
+
+export const AdviseurVraagInputGeschiedenisItemRol = {
+  user: 'user',
+  assistant: 'assistant',
+} as const;
+
+export type AdviseurVraagInputGeschiedenisItem = {
+  rol: AdviseurVraagInputGeschiedenisItemRol;
+  inhoud: string;
+};
+
+export interface AdviseurVraagInput {
+  /** @maxLength 2000 */
+  vraag: string;
+  geschiedenis?: AdviseurVraagInputGeschiedenisItem[];
+}
+
+export interface AdviseurAntwoord {
+  antwoord: string;
+}
+
 export interface CaoPresetsSyncResultaat {
   verlofsoorten_toegevoegd: number;
   feestdagen_toegevoegd: number;
