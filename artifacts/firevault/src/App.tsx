@@ -138,6 +138,7 @@ import DossiersPagina from "@/pages/dossiers/index";
 import OffertesPagina from "@/pages/offertes/index";
 import ProposalStudio from "@/pages/offertes/studio";
 import OffertePrintPagina from "@/pages/offertes/print";
+import FactuurPrintPagina from "@/pages/facturen/print";
 import OpdrachtDetailPagina from "@/pages/opdrachten/detail";
 import WerkvoorbereidingOverzicht from "@/pages/werkvoorbereiding/index";
 import RegiePagina from "@/pages/regie/index";
@@ -372,6 +373,7 @@ function ConnectPortal() {
         {/* ── Offertes & Opdrachten ── */}
         <Route path="/offertes" component={OffertesPagina} />
         <Route path="/offertes/:id/print" component={OffertePrintPagina} />
+        <Route path="/facturen/:id/print" component={FactuurPrintPagina} />
         <Route path="/offertes/:id" component={ProposalStudio} />
         <Route path="/opdrachten/:id" component={OpdrachtDetailPagina} />
         <Route path="/werkvoorbereiding" component={WerkvoorbereidingOverzicht} />

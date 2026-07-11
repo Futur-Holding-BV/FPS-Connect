@@ -1,3 +1,39 @@
+## 2026-07-11 — Factuur-briefpapier template (DDS Familie A)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (puur additief — nieuwe component + nieuwe route, geen bestaand gedrag gewijzigd)
+
+**Nieuw gebouwd:**
+
+**1. `FactuurTemplateA` component** (`components/documentopmaak/FamilieA.tsx`)
+- Volledig A4-factuurlay-out in DDS Familie A-stijl
+- Koptekst: logo (positie instelbaar via studio-model: links/rechts/midden) + afzender-adresblok
+- Optioneel briefpapier als halftransparante achtergrondlaag over de koptekst
+- Geadresseerd-blok (debiteur naam, t.a.v., adres, postcode/woonplaats)
+- Factuurkoptekst-tabel: factuurnummer, -datum, vervaldatum, uw referentie, ons kenmerk
+- Regelstabel: omschrijving / aantal / eenheid / prijs p/e / BTW% / totaal
+- Totaalblok: excl. BTW, BTW-bedrag, incl. BTW (accentkleur op eindtotaal)
+- Betalingsinstructie-blok met IBAN, bedrag en kenmerk (alleen als `mij.iban` gevuld)
+- Voettekst via `DocumentVoet`
+- Props: `mij`, `factuur`, `debiteur`, `regels`, `totalen`, `accentKleur`, `logoPositie`, `briefpapierUrl`, `betalingstermijn`, `meta`
+
+**2. Factuur print-route** (`pages/facturen/print.tsx` + `App.tsx`)
+- Nieuwe standalone route `/facturen/:id/print` — buiten portal-layout (zelfde patroon als `offertes/print.tsx`)
+- Laadt factuur + factuurregels + werkgever + DDS studio-model (factuur-type)
+- Haalt accentkleur en logo-positie uit het actieve studio-model JSON
+- Toont model-statusbanner (actief/vastgezet/niet gevonden) — alleen op scherm, niet in print
+- Triggert `window.print()` automatisch na 800ms zodra data klaar is
+
+**3. Printknop in factuurdetail** (`pages/facturen/detail.tsx`)
+- Knop "Afdrukken" (Printer-icoon) naast "Bewerken" — opent `/facturen/:id/print` in nieuw tabblad
+
+**4. DDS preview-uitbreiding** (`pages/beheer/documentopmaak.tsx`)
+- Template-dropdown uitgebreid met "Familie A - Factuurtemplate"
+- Dummy-data toont realistisch voorbeeld (3 factuurregels, debiteur WBO Wonen, IBAN-betalingsinstructie)
+
+**Technisch:**
+- Typecheck schoon na `as unknown` double-cast voor Werkgever/Factuur runtime-velden buiten schema
+- Directe Factuur-velden gebruikt (`factuurnummer`, `factuurdatum`, `vervaldatum`, `relatienaam`, `relatie_adres`, `btw_bedrag`)
+
 ## 2026-07-11 — Factuurmodule: verdeelsleutel G-rekening, aanmaningsflow en incasso
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (additieve DB-kolommen, nieuwe tabel, geen bestaand gedrag gewijzigd)

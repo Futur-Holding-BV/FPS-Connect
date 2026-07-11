@@ -13,6 +13,7 @@ import {
   HoofdstukpaginaA,
   VervolgpaginaB,
   ChecklistpaginaC,
+  FactuurTemplateA,
   type WerkmaatschappijInfo,
   type DocumentMeta,
 } from "@/components/documentopmaak";
@@ -81,7 +82,7 @@ const DUMMY_META_OP: DocumentMeta = {
   totaalPaginas: 1,
 };
 
-type TemplateId = "A1" | "A2" | "A3" | "B1" | "C1";
+type TemplateId = "A1" | "A2" | "A3" | "A4" | "B1" | "C1";
 
 const LEGE_MIJ: WerkmaatschappijInfo = {
   naam: "",
@@ -157,6 +158,31 @@ export default function DocumentDesignSystem() {
       case "A2": return <InhoudspaginaA meta={{...DUMMY_META_KLANT, paginaNummer: 2}} mij={mij} />;
       case "A3": return <HoofdstukpaginaA meta={{...DUMMY_META_KLANT, paginaNummer: 8}} mij={mij} />;
       case "B1": return <VervolgpaginaB meta={DUMMY_META_HRM} mij={mij} />;
+      case "A4": return (
+        <FactuurTemplateA
+          mij={{ ...mij, iban: mij.iban ?? "NL91 ABNA 0417 1643 00" }}
+          factuur={{
+            nummer: "FACT-2025-0042",
+            datum: "12 augustus 2026",
+            vervaldatum: "11 september 2026",
+            referentie: "PO-2025-108",
+            kenmerk: "FACT-2025-0042",
+          }}
+          debiteur={{
+            naam: "WBO Wonen",
+            tav: "Afd. Vastgoedbeheer",
+            adres: "Burg. Wallerstraat 12",
+            postcodeWoonplaats: "7575 AB Oldenzaal",
+          }}
+          regels={[
+            { omschrijving: "Brandwerende voorzieningen — Fase 1", hoeveelheid: 1, eenheid: "opdracht", stukprijs: "4250.00", bedragExclBtw: "4250.00", btwPercentage: 21, btwBedrag: "892.50" },
+            { omschrijving: "Coördinatie & projectbegeleiding", hoeveelheid: 8, eenheid: "uur", stukprijs: "95.00", bedragExclBtw: "760.00", btwPercentage: 21, btwBedrag: "159.60" },
+            { omschrijving: "Materiaalkosten brandwerende manchetten", hoeveelheid: 24, eenheid: "st", stukprijs: "38.50", bedragExclBtw: "924.00", btwPercentage: 21, btwBedrag: "194.04" },
+          ]}
+          totalen={{ exclBtw: 5934.00, btwBedrag: 1246.14, inclBtw: 7180.14, btwPercentage: 21 }}
+          betalingstermijn={30}
+        />
+      );
       case "C1": return <ChecklistpaginaC meta={DUMMY_META_OP} mij={mij} />;
       default: return null;
     }
@@ -222,6 +248,7 @@ export default function DocumentDesignSystem() {
                 <SelectItem value="A1">Familie A - Voorblad Klantdocument</SelectItem>
                 <SelectItem value="A2">Familie A - Inhoudspagina</SelectItem>
                 <SelectItem value="A3">Familie A - Hoofdstukpagina</SelectItem>
+                <SelectItem value="A4">Familie A - Factuurtemplate</SelectItem>
                 <SelectItem value="B1">Familie B - HRM Vervolgpagina</SelectItem>
                 <SelectItem value="C1">Familie C - Operationele Checklist</SelectItem>
               </SelectContent>

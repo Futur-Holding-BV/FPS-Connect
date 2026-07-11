@@ -38,7 +38,7 @@ import {
   ArrowUpRight, Ban, Loader2, ChevronRight, Receipt, Shield,
   Info, Clock, RotateCcw, Eye, MessageSquare, History, UserCheck,
   Send, CornerDownRight, CheckCheck, ArrowLeftRight, Bell, Gavel,
-  BellRing, FileWarning, Plus,
+  BellRing, FileWarning, Plus, Printer,
 } from "lucide-react";
 import type { Factuur, AccountviewExportLog, FactuurOpmerking, FactuurProceslogRegel } from "@workspace/api-client-react";
 import { GoedkeuringWidget } from "@/components/goedkeuring/goedkeuring-widget";
@@ -359,6 +359,9 @@ export default function FactuurDetailPagina() {
                   {aiBezig ? <><Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />AI bezig...</> : <><Sparkles className="h-3.5 w-3.5 mr-1.5" />AI uitlezen</>}
                 </Button>
               )}
+              <Button size="sm" variant="outline" onClick={() => window.open(`/facturen/${id}/print`, "_blank")}>
+                <Printer className="h-3.5 w-3.5 mr-1.5" />Afdrukken
+              </Button>
               <Button size="sm" variant="outline" onClick={() => openBewerk(f)}>Bewerken</Button>
               {kanAccorderen && (
                 <Button size="sm" disabled={accorderenMut.isPending} onClick={() => accorderenMut.mutate({ id })}>
