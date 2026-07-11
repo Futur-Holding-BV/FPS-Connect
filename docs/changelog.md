@@ -1,3 +1,20 @@
+## 2026-07-11 — Goedkeuringsnotificatie: directe link + alle module-goedkeurders (Task #557)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (additief; alleen notificatielogica uitgebreid)
+
+**Verbeterd:**
+- **Directe dashboard-link in notificatiemail**: `stuurGoedkeuringIndienenMail()` in `email.ts` uitgebreid met optionele `dashboardUrl`-parameter. De e-mail toont nu een oranje knop "Bekijk aanvraag in FPS Connect" die direct naar `/beheer/goedkeuringen-dashboard` leidt. URL wordt samengesteld uit `REPLIT_DOMAINS` (hetzelfde patroon als in auth.ts/portaal.ts).
+- **Alle bevoegde module-goedkeurders ontvangen de notificatie**: wanneer een beleidsregel een module+niveau-drempel gebruikt (`goedkeurderModule`+`goedkeurderMinNiveau`) in plaats van een vaste gebruiker, query't `dienIn()` nu ALLE actieve gebruikers die aan de drempel voldoen (inclusief hoofdbeheerder) en stuurt naar iedereen een notificatiemail. Voorheen ontving alleen de hoofdbeheerder als noodvallback een bericht.
+- **Vaste goedkeurder + vervanger**: wanneer de beleidsregel een `goedkeurderGebruikerId` bevat én een `vervangerGebruikerId`, ontvangen beide een notificatie (was: alleen de primaire goedkeurder).
+
+**Bestanden gewijzigd:**
+- `artifacts/api-server/src/services/email.ts` — `dashboardUrl`-parameter + knop-rendering in `stuurGoedkeuringIndienenMail()`
+- `artifacts/api-server/src/services/goedkeuring-engine.ts` — ontvangerlijst-logica herschreven, `inArray`-import toegevoegd
+
+**Typecheck:** geen nieuwe fouten in gewijzigde bestanden (pre-existente fouten in goedkeuring.ts/facturen.ts/goedkeuringBewaking.ts ongewijzigd).
+
+---
+
 ## 2026-07-11 — Loonstrookjes-module: split-PDF + monteur-app self-service
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (additief; geen bestaande routes gewijzigd)

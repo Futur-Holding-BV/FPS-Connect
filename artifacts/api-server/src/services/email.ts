@@ -1471,6 +1471,7 @@ export async function stuurGoedkeuringIndienenMail(opties: {
   omschrijving?: string | null;
   ingediendDoorNaam?: string | null;
   bedrag?: number | null;
+  dashboardUrl?: string | null;
 }): Promise<void> {
   const bedragTekst =
     opties.bedrag != null
@@ -1481,10 +1482,15 @@ export async function stuurGoedkeuringIndienenMail(opties: {
     titel: "Nieuwe goedkeuringsaanvraag",
     kopje: `Aanvraag #${opties.aanvraagId} — ${opties.documentType}${bedragTekst}`,
     paragrafen: [
-      `Er is een nieuwe goedkeuringsaanvraag voor u ingediend${opties.ingediendDoorNaam ? ` door ${opties.ingediendDoorNaam}` : ""}.`,
-      ...(opties.omschrijving ? [`Omschrijving: ${opties.omschrijving}`] : []),
-      "Log in op FPS Connect om de aanvraag te bekijken en goed te keuren of af te wijzen.",
+      `Er is een nieuwe goedkeuringsaanvraag voor u ingediend${opties.ingediendDoorNaam ? ` door ${escapeHtml(opties.ingediendDoorNaam)}` : ""}.`,
+      ...(opties.omschrijving ? [`Omschrijving: ${escapeHtml(opties.omschrijving)}`] : []),
+      opties.dashboardUrl
+        ? "Gebruik de knop hieronder om direct naar het goedkeuringsdashboard te gaan."
+        : "Log in op FPS Connect om de aanvraag te bekijken en goed te keuren of af te wijzen.",
     ],
+    ...(opties.dashboardUrl
+      ? { knop: { label: "Bekijk aanvraag in FPS Connect", link: opties.dashboardUrl } }
+      : {}),
   });
   await verstuurMail({ naarEmail: opties.naarEmail, naarNaam: opties.naarNaam ?? undefined, onderwerp, html, soort: "goedkeuring_indiening" });
 }

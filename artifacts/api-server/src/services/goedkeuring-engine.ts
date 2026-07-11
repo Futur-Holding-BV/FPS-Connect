@@ -18,7 +18,7 @@ import {
   type GoedkeuringBeleidsregel,
   type GoedkeuringAanvraag,
 } from "@workspace/db";
-import { and, eq, or, isNull, desc } from "drizzle-orm";
+import { and, eq, or, isNull, desc, inArray } from "drizzle-orm";
 import { heeftNiveau, MODULE_IDS, type ModuleId } from "@workspace/permissies";
 import { logAudit } from "../lib/audit";
 import { workflowService } from "./workflow-engine";
@@ -539,28 +539,60 @@ export async function dienIn(
     meta: { aanvraagId: aanvraag!.id, bedrag: params.bedrag, beleidsregelId: regel.id },
   });
 
-  // Stuur direct een notificatie naar de aangewezen goedkeurder.
+  // Stuur direct een notificatie naar alle bevoegde goedkeurders.
   // Fouten worden geslikt — de aanvraag is al opgeslagen.
   try {
-    let ontvangerGebruikerId: number | null = regel.goedkeurderGebruikerId ?? null;
-    if (!ontvangerGebruikerId && regel.vervangerGebruikerId) {
-      ontvangerGebruikerId = regel.vervangerGebruikerId;
-    }
-    // Fallback: stuur naar de hoofdbeheerder als er geen specifieke goedkeurder is
-    if (!ontvangerGebruikerId) {
+    const domein = (process.env.REPLIT_DOMAINS ?? "").split(",")[0]?.trim();
+    const dashboardUrl = domein
+      ? `https://${domein}/beheer/goedkeuringen-dashboard`
+      : null;
+
+    // Stel de ontvangerlijst samen: specifieke gebruiker(s) of alle gebruikers
+    // met de vereiste module-toegang.
+    const ontvangerIds: number[] = [];
+
+    if (regel.goedkeurderGebruikerId) {
+      // Beleidsregel wijst een vaste goedkeurder aan.
+      ontvangerIds.push(regel.goedkeurderGebruikerId);
+      // Voeg de vervanger toe als die apart is ingesteld.
+      if (regel.vervangerGebruikerId && regel.vervangerGebruikerId !== regel.goedkeurderGebruikerId) {
+        ontvangerIds.push(regel.vervangerGebruikerId);
+      }
+    } else if (regel.goedkeurderModule && regel.goedkeurderMinNiveau != null) {
+      // Beleidsregel wijst een module+niveau aan — stuur naar ALLE actieve
+      // gebruikers die aan de drempel voldoen (hoofdbeheerder altijd inclusief).
+      const alleGebruikers = await db
+        .select({ id: gebruikersTable.id, rol: gebruikersTable.rol, bevoegdheden: gebruikersTable.bevoegdheden })
+        .from(gebruikersTable)
+        .where(eq(gebruikersTable.actief, true));
+      const moduleId = regel.goedkeurderModule as ModuleId;
+      const minNiveau = regel.goedkeurderMinNiveau;
+      for (const g of alleGebruikers) {
+        const isHb = g.rol === "hoofdbeheerder";
+        const bev = (g.bevoegdheden as Record<string, number> | null) ?? {};
+        if (isHb || heeftNiveau(bev, moduleId, minNiveau)) {
+          ontvangerIds.push(g.id);
+        }
+      }
+    } else {
+      // Geen goedkeurder geconfigureerd — val terug op de hoofdbeheerder.
       const [hb] = await db
         .select({ id: gebruikersTable.id })
         .from(gebruikersTable)
         .where(and(eq(gebruikersTable.rol, "hoofdbeheerder"), eq(gebruikersTable.actief, true)))
         .limit(1);
-      ontvangerGebruikerId = hb?.id ?? null;
+      if (hb) ontvangerIds.push(hb.id);
     }
-    if (ontvangerGebruikerId) {
-      const [ontvanger] = await db
-        .select({ naam: gebruikersTable.naam, email: gebruikersTable.email })
+
+    if (ontvangerIds.length > 0) {
+      // Haal naam + e-mail op voor alle ontvangers in één query.
+      const ontvangers = await db
+        .select({ id: gebruikersTable.id, naam: gebruikersTable.naam, email: gebruikersTable.email })
         .from(gebruikersTable)
-        .where(eq(gebruikersTable.id, ontvangerGebruikerId));
-      if (ontvanger?.email) {
+        .where(inArray(gebruikersTable.id, ontvangerIds));
+
+      for (const ontvanger of ontvangers) {
+        if (!ontvanger.email) continue;
         await stuurGoedkeuringIndienenMail({
           naarEmail: ontvanger.email,
           naarNaam: ontvanger.naam,
@@ -569,6 +601,7 @@ export async function dienIn(
           omschrijving: params.omschrijving,
           ingediendDoorNaam: params.actor.gebruikerNaam,
           bedrag: params.bedrag,
+          dashboardUrl,
         });
       }
     }
