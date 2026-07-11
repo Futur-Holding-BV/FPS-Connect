@@ -17,7 +17,11 @@ import {
   useAfhandelenFactuurOpmerking,
   useGetFactuurProceslog,
   useListToewijsbareGebruikers,
+  useListFactuurHerinneringen,
+  useAddFactuurHerinnering,
+  useIncassoFactuur,
 } from "@workspace/api-client-react";
+import type { FactuurHerinnering } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -33,7 +37,8 @@ import {
   ArrowLeft, Sparkles, CheckCircle2, AlertTriangle, XCircle,
   ArrowUpRight, Ban, Loader2, ChevronRight, Receipt, Shield,
   Info, Clock, RotateCcw, Eye, MessageSquare, History, UserCheck,
-  Send, CornerDownRight, CheckCheck,
+  Send, CornerDownRight, CheckCheck, ArrowLeftRight, Bell, Gavel,
+  BellRing, FileWarning, Plus,
 } from "lucide-react";
 import type { Factuur, AccountviewExportLog, FactuurOpmerking, FactuurProceslogRegel } from "@workspace/api-client-react";
 import { GoedkeuringWidget } from "@/components/goedkeuring/goedkeuring-widget";
@@ -114,6 +119,17 @@ export default function FactuurDetailPagina() {
   const [actievTabblad, setActiefTabblad] = useState<"opmerkingen" | "proceslog">("opmerkingen");
   const opmerkingInputRef = useRef<HTMLTextAreaElement>(null);
 
+  // Herinneringen / aanmaningsflow
+  const [herinneringOpen, setHerinneringOpen] = useState(false);
+  const [herinneringType, setHerinneringType] = useState("eerste_herinnering");
+  const [herinneringEmail, setHerinneringEmail] = useState("");
+  const [herinneringOpmerking, setHerinneringOpmerking] = useState("");
+
+  // Incasso
+  const [incassoOpen, setIncassoOpen] = useState(false);
+  const [incassoRef, setIncassoRef] = useState("");
+  const [incassoOpm, setIncassoOpm] = useState("");
+
   const invalideer = () => {
     queryClient.invalidateQueries({ queryKey: ["factuur", id] });
     queryClient.invalidateQueries({ queryKey: ["facturen"] });
@@ -141,6 +157,10 @@ export default function FactuurDetailPagina() {
   );
   const { data: toewijsbareGebruikers = [] } = useListToewijsbareGebruikers(
     { query: { queryKey: ["toewijsbare-gebruikers"], enabled: doorstuurOpen } },
+  );
+  const { data: herinneringen = [] } = useListFactuurHerinneringen(
+    id,
+    { query: { queryKey: ["factuur-herinneringen", id], enabled: id > 0 } },
   );
 
   const { toast } = useToast();
@@ -176,6 +196,30 @@ export default function FactuurDetailPagina() {
   });
   const afhandelenMut = useAfhandelenFactuurOpmerking({
     mutation: { onSuccess: () => invalideerOpmerkingen() },
+  });
+  const herinneringMut = useAddFactuurHerinnering({
+    mutation: {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ["factuur-herinneringen", id] });
+        setHerinneringOpen(false);
+        setHerinneringType("eerste_herinnering");
+        setHerinneringEmail("");
+        setHerinneringOpmerking("");
+        toast({ title: "Herinnering geregistreerd" });
+      },
+    },
+  });
+  const incassoMut = useIncassoFactuur({
+    mutation: {
+      onSuccess: () => {
+        invalideer();
+        queryClient.invalidateQueries({ queryKey: ["factuur-herinneringen", id] });
+        setIncassoOpen(false);
+        setIncassoRef("");
+        setIncassoOpm("");
+        toast({ title: "Factuur naar incasso gezet" });
+      },
+    },
   });
   const blokkerenMut = useBlokkerenFactuur({ mutation: { onSuccess: () => { invalideer(); setBlokkerenOpen(false); } } });
   const afkeurenMut = useAfkeurenFactuur({
@@ -519,6 +563,59 @@ export default function FactuurDetailPagina() {
         </Card>
       </div>
 
+      {/* G-rekening verdeelsleutel */}
+      {f.g_rekening_van_toepassing && f.g_rekening_bedrag && f.bedrag_incl_btw && (() => {
+        const totaal = parseFloat(f.bedrag_incl_btw);
+        const gBedrag = parseFloat(f.g_rekening_bedrag);
+        const courant = f.normaal_bedrag ? parseFloat(f.normaal_bedrag) : totaal - gBedrag;
+        const gPct = totaal > 0 ? Math.round((gBedrag / totaal) * 100) : 0;
+        return (
+          <Card className="border-orange-200 bg-orange-50/30">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm flex items-center gap-2 text-orange-800">
+                <ArrowLeftRight className="h-4 w-4" />
+                G-rekening verdeelsleutel
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Visuele balk */}
+              <div className="space-y-1.5">
+                <div className="flex text-xs text-muted-foreground justify-between">
+                  <span>Courante rekening ({100 - gPct}%)</span>
+                  <span>G-rekening ({gPct}%)</span>
+                </div>
+                <div className="flex h-4 rounded-full overflow-hidden">
+                  <div className="bg-blue-400" style={{ width: `${100 - gPct}%` }} />
+                  <div className="bg-orange-400" style={{ width: `${gPct}%` }} />
+                </div>
+              </div>
+
+              {/* Bedragen */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2">
+                  <div className="text-xs text-blue-700 font-medium mb-0.5">Courante rekening</div>
+                  <div className="font-mono font-semibold text-blue-900">{euro(String(courant))}</div>
+                  <div className="text-xs text-muted-foreground mt-0.5">Betalen op normaal IBAN</div>
+                </div>
+                <div className="rounded-lg border border-orange-200 bg-orange-50 px-3 py-2">
+                  <div className="text-xs text-orange-700 font-medium mb-0.5">G-rekening</div>
+                  <div className="font-mono font-semibold text-orange-900">{euro(f.g_rekening_bedrag)}</div>
+                  <div className="text-xs text-muted-foreground mt-0.5">Storten op G-rekening leverancier</div>
+                </div>
+              </div>
+
+              <div className="rounded-md bg-orange-100/60 border border-orange-200 px-3 py-2 text-xs text-orange-800 flex items-start gap-1.5">
+                <Info className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                <span>
+                  G-rekening is een geblokkeerde rekening voor loonheffingen. Betaal <strong>{euro(String(courant))}</strong> op het normale IBAN
+                  en <strong>{euro(f.g_rekening_bedrag)}</strong> op de G-rekening van de leverancier. Totaal: <strong>{euro(f.bedrag_incl_btw)}</strong>.
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })()}
+
       {/* Factuurregels (AI-extractie) */}
       <FactuurRegelsKaart factuurId={id} />
 
@@ -597,6 +694,244 @@ export default function FactuurDetailPagina() {
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* Aanmaningsflow + Incasso */}
+      <Card>
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <BellRing className="h-4 w-4" />
+              Aanmaningsflow
+              {herinneringen.length > 0 && (
+                <span className="bg-slate-100 text-slate-600 text-xs px-1.5 py-0.5 rounded-full">{herinneringen.length}</span>
+              )}
+            </CardTitle>
+            <div className="flex items-center gap-2">
+              {f.betaalstatus !== "incasso" && f.betaalstatus !== "betaald" && (
+                <>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-7 text-xs"
+                    onClick={() => setHerinneringOpen(true)}
+                  >
+                    <Bell className="h-3 w-3 mr-1" />
+                    Herinnering sturen
+                  </Button>
+                  {herinneringen.length >= 2 && (
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      className="h-7 text-xs"
+                      onClick={() => setIncassoOpen(true)}
+                    >
+                      <Gavel className="h-3 w-3 mr-1" />
+                      Incasso
+                    </Button>
+                  )}
+                </>
+              )}
+              {f.betaalstatus === "incasso" && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-100 text-red-800 text-xs font-medium">
+                  <Gavel className="h-3 w-3" />
+                  Incasso
+                  {f.incasso_datum && <span className="ml-0.5 text-red-600">({new Date(f.incasso_datum).toLocaleDateString("nl-NL")})</span>}
+                </span>
+              )}
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {herinneringen.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-3 text-center">
+              Nog geen herinneringen of aanmaningen verstuurd.
+            </p>
+          ) : (
+            <div className="relative">
+              <div className="absolute left-3.5 top-0 bottom-0 w-px bg-slate-200" />
+              <div className="space-y-3">
+                {(herinneringen as FactuurHerinnering[]).map((h) => {
+                  const TYPE_LABEL: Record<string, string> = {
+                    eerste_herinnering: "Eerste herinnering",
+                    tweede_herinnering: "Tweede herinnering",
+                    aanmaning: "Aanmaning",
+                    ingebrekestelling: "Ingebrekestelling",
+                    incasso: "Naar incasso gezet",
+                  };
+                  const TYPE_KLEUR: Record<string, string> = {
+                    eerste_herinnering: "bg-amber-100 text-amber-700 border-amber-200",
+                    tweede_herinnering: "bg-orange-100 text-orange-700 border-orange-200",
+                    aanmaning: "bg-red-100 text-red-700 border-red-200",
+                    ingebrekestelling: "bg-red-200 text-red-900 border-red-300",
+                    incasso: "bg-red-900 text-white border-red-900",
+                  };
+                  return (
+                    <div key={h.id} className="relative pl-8">
+                      <div className="absolute left-2 top-2 w-3 h-3 rounded-full bg-white border-2 border-slate-400" />
+                      <div className="rounded-lg border px-3 py-2.5 bg-white shadow-sm text-sm">
+                        <div className="flex items-center justify-between gap-2 flex-wrap">
+                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-xs font-medium ${TYPE_KLEUR[h.type] ?? "bg-slate-100 text-slate-700 border-slate-200"}`}>
+                            <FileWarning className="h-3 w-3" />
+                            {TYPE_LABEL[h.type] ?? h.type}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            {h.verstuurd_op ? new Date(h.verstuurd_op).toLocaleString("nl-NL", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : new Date(h.aangemaakt_op).toLocaleString("nl-NL", { day: "numeric", month: "short", year: "numeric" })}
+                          </span>
+                        </div>
+                        {(h.verstuurd_door_naam || h.ontvanger_email) && (
+                          <div className="flex items-center gap-3 mt-1.5 text-xs text-muted-foreground">
+                            {h.verstuurd_door_naam && <span>Door: {h.verstuurd_door_naam}</span>}
+                            {h.ontvanger_email && <span>Aan: {h.ontvanger_email}</span>}
+                          </div>
+                        )}
+                        {h.opmerkingen && (
+                          <p className="mt-1.5 text-xs text-slate-600 italic">{h.opmerkingen}</p>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+          {f.incasso_referentie && (
+            <div className="mt-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800 flex items-start gap-1.5">
+              <Gavel className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+              <div>
+                <span className="font-medium">Incasso-referentie:</span> {f.incasso_referentie}
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Dialoog: Herinnering registreren */}
+      {herinneringOpen && (
+        <Dialog open onOpenChange={setHerinneringOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Bell className="h-4 w-4" />
+                Herinnering registreren
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-2">
+              <div>
+                <Label>Type</Label>
+                <Select value={herinneringType} onValueChange={setHerinneringType}>
+                  <SelectTrigger className="mt-1">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="eerste_herinnering">Eerste herinnering</SelectItem>
+                    <SelectItem value="tweede_herinnering">Tweede herinnering</SelectItem>
+                    <SelectItem value="aanmaning">Aanmaning</SelectItem>
+                    <SelectItem value="ingebrekestelling">Ingebrekestelling</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>E-mailadres ontvanger <span className="text-muted-foreground">(optioneel)</span></Label>
+                <Input
+                  className="mt-1"
+                  type="email"
+                  placeholder="debiteuren@bedrijf.nl"
+                  value={herinneringEmail}
+                  onChange={(e) => setHerinneringEmail(e.target.value)}
+                />
+              </div>
+              <div>
+                <Label>Opmerking <span className="text-muted-foreground">(optioneel)</span></Label>
+                <Textarea
+                  className="mt-1 resize-none"
+                  rows={3}
+                  placeholder="Aanvullende toelichting..."
+                  value={herinneringOpmerking}
+                  onChange={(e) => setHerinneringOpmerking(e.target.value)}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setHerinneringOpen(false)}>Annuleren</Button>
+              <Button
+                onClick={() => herinneringMut.mutate({
+                  id,
+                  data: {
+                    type: herinneringType,
+                    ontvanger_email: herinneringEmail || undefined,
+                    opmerkingen: herinneringOpmerking || undefined,
+                  },
+                })}
+                disabled={herinneringMut.isPending}
+              >
+                {herinneringMut.isPending && <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />}
+                <Send className="h-3.5 w-3.5 mr-1.5" />
+                Registreren
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Dialoog: Naar incasso zetten */}
+      {incassoOpen && (
+        <Dialog open onOpenChange={setIncassoOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-red-700">
+                <Gavel className="h-4 w-4" />
+                Factuur naar incasso zetten
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-2">
+              <div className="rounded-md bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-800 flex items-start gap-1.5">
+                <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                <span>
+                  Hiermee wordt de betaalstatus van deze factuur op <strong>Incasso</strong> gezet.
+                  Dit is bedoeld voor facturen die na meerdere herinneringen en aanmaningen onbetaald zijn gebleven.
+                </span>
+              </div>
+              <div>
+                <Label>Incasso-referentie <span className="text-muted-foreground">(optioneel)</span></Label>
+                <Input
+                  className="mt-1"
+                  placeholder="bijv. INC-2025-001 of naam deurwaarder"
+                  value={incassoRef}
+                  onChange={(e) => setIncassoRef(e.target.value)}
+                />
+              </div>
+              <div>
+                <Label>Opmerking <span className="text-muted-foreground">(optioneel)</span></Label>
+                <Textarea
+                  className="mt-1 resize-none"
+                  rows={3}
+                  placeholder="Toelichting voor de tijdlijn..."
+                  value={incassoOpm}
+                  onChange={(e) => setIncassoOpm(e.target.value)}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIncassoOpen(false)}>Annuleren</Button>
+              <Button
+                variant="destructive"
+                onClick={() => incassoMut.mutate({
+                  id,
+                  data: {
+                    incasso_referentie: incassoRef || undefined,
+                    opmerkingen: incassoOpm || undefined,
+                  },
+                })}
+                disabled={incassoMut.isPending}
+              >
+                {incassoMut.isPending && <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />}
+                <Gavel className="h-3.5 w-3.5 mr-1.5" />
+                Naar incasso zetten
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       )}
 
       {/* Opmerkingen + Proceslog */}

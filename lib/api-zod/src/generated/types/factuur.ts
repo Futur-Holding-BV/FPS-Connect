@@ -67,4 +67,6 @@ export interface Factuur {
   normaal_bedrag?: string | null;
   iban_uitgelezen?: string | null;
   iban_afwijking?: boolean;
+  incasso_datum?: string | null;
+  incasso_referentie?: string | null;
 }

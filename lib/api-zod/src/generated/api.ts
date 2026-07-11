@@ -879,7 +879,9 @@ export const ListGebouwFacturenResponseItem = zod.object({
   "g_rekening_bedrag": zod.string().nullish(),
   "normaal_bedrag": zod.string().nullish(),
   "iban_uitgelezen": zod.string().nullish(),
-  "iban_afwijking": zod.boolean().optional()
+  "iban_afwijking": zod.boolean().optional(),
+  "incasso_datum": zod.string().nullish(),
+  "incasso_referentie": zod.string().nullish()
 })
 export const ListGebouwFacturenResponse = zod.array(ListGebouwFacturenResponseItem)
 
@@ -20119,7 +20121,9 @@ export const ListFacturenResponseItem = zod.object({
   "g_rekening_bedrag": zod.string().nullish(),
   "normaal_bedrag": zod.string().nullish(),
   "iban_uitgelezen": zod.string().nullish(),
-  "iban_afwijking": zod.boolean().optional()
+  "iban_afwijking": zod.boolean().optional(),
+  "incasso_datum": zod.string().nullish(),
+  "incasso_referentie": zod.string().nullish()
 })
 export const ListFacturenResponse = zod.array(ListFacturenResponseItem)
 
@@ -20225,7 +20229,9 @@ export const ListFacturenKlaarVoorExportResponseItem = zod.object({
   "g_rekening_bedrag": zod.string().nullish(),
   "normaal_bedrag": zod.string().nullish(),
   "iban_uitgelezen": zod.string().nullish(),
-  "iban_afwijking": zod.boolean().optional()
+  "iban_afwijking": zod.boolean().optional(),
+  "incasso_datum": zod.string().nullish(),
+  "incasso_referentie": zod.string().nullish()
 })
 export const ListFacturenKlaarVoorExportResponse = zod.array(ListFacturenKlaarVoorExportResponseItem)
 
@@ -20295,7 +20301,9 @@ export const GetFactuurResponse = zod.object({
   "g_rekening_bedrag": zod.string().nullish(),
   "normaal_bedrag": zod.string().nullish(),
   "iban_uitgelezen": zod.string().nullish(),
-  "iban_afwijking": zod.boolean().optional()
+  "iban_afwijking": zod.boolean().optional(),
+  "incasso_datum": zod.string().nullish(),
+  "incasso_referentie": zod.string().nullish()
 })
 
 
@@ -20385,7 +20393,9 @@ export const UpdateFactuurResponse = zod.object({
   "g_rekening_bedrag": zod.string().nullish(),
   "normaal_bedrag": zod.string().nullish(),
   "iban_uitgelezen": zod.string().nullish(),
-  "iban_afwijking": zod.boolean().optional()
+  "iban_afwijking": zod.boolean().optional(),
+  "incasso_datum": zod.string().nullish(),
+  "incasso_referentie": zod.string().nullish()
 })
 
 
@@ -20464,7 +20474,9 @@ export const AiUitlezenFactuurResponse = zod.object({
   "g_rekening_bedrag": zod.string().nullish(),
   "normaal_bedrag": zod.string().nullish(),
   "iban_uitgelezen": zod.string().nullish(),
-  "iban_afwijking": zod.boolean().optional()
+  "iban_afwijking": zod.boolean().optional(),
+  "incasso_datum": zod.string().nullish(),
+  "incasso_referentie": zod.string().nullish()
 })
 
 
@@ -20533,7 +20545,9 @@ export const AccorderenFactuurResponse = zod.object({
   "g_rekening_bedrag": zod.string().nullish(),
   "normaal_bedrag": zod.string().nullish(),
   "iban_uitgelezen": zod.string().nullish(),
-  "iban_afwijking": zod.boolean().optional()
+  "iban_afwijking": zod.boolean().optional(),
+  "incasso_datum": zod.string().nullish(),
+  "incasso_referentie": zod.string().nullish()
 })
 
 
@@ -20617,7 +20631,9 @@ export const BlokkerenFactuurResponse = zod.object({
   "g_rekening_bedrag": zod.string().nullish(),
   "normaal_bedrag": zod.string().nullish(),
   "iban_uitgelezen": zod.string().nullish(),
-  "iban_afwijking": zod.boolean().optional()
+  "iban_afwijking": zod.boolean().optional(),
+  "incasso_datum": zod.string().nullish(),
+  "incasso_referentie": zod.string().nullish()
 })
 
 
@@ -20731,7 +20747,9 @@ export const AfkeurenFactuurResponse = zod.object({
   "g_rekening_bedrag": zod.string().nullish(),
   "normaal_bedrag": zod.string().nullish(),
   "iban_uitgelezen": zod.string().nullish(),
-  "iban_afwijking": zod.boolean().optional()
+  "iban_afwijking": zod.boolean().optional(),
+  "incasso_datum": zod.string().nullish(),
+  "incasso_referentie": zod.string().nullish()
 })
 
 
@@ -20805,7 +20823,9 @@ export const BeoordelenFactuurPLResponse = zod.object({
   "g_rekening_bedrag": zod.string().nullish(),
   "normaal_bedrag": zod.string().nullish(),
   "iban_uitgelezen": zod.string().nullish(),
-  "iban_afwijking": zod.boolean().optional()
+  "iban_afwijking": zod.boolean().optional(),
+  "incasso_datum": zod.string().nullish(),
+  "incasso_referentie": zod.string().nullish()
 })
 
 
@@ -20879,7 +20899,9 @@ export const BeoordelenFactuurWVBResponse = zod.object({
   "g_rekening_bedrag": zod.string().nullish(),
   "normaal_bedrag": zod.string().nullish(),
   "iban_uitgelezen": zod.string().nullish(),
-  "iban_afwijking": zod.boolean().optional()
+  "iban_afwijking": zod.boolean().optional(),
+  "incasso_datum": zod.string().nullish(),
+  "incasso_referentie": zod.string().nullish()
 })
 
 
@@ -20953,7 +20975,9 @@ export const DoorstuurenFactuurMedewerkerResponse = zod.object({
   "g_rekening_bedrag": zod.string().nullish(),
   "normaal_bedrag": zod.string().nullish(),
   "iban_uitgelezen": zod.string().nullish(),
-  "iban_afwijking": zod.boolean().optional()
+  "iban_afwijking": zod.boolean().optional(),
+  "incasso_datum": zod.string().nullish(),
+  "incasso_referentie": zod.string().nullish()
 })
 
 
@@ -21027,7 +21051,9 @@ export const BeoordelenFactuurMedewerkerResponse = zod.object({
   "g_rekening_bedrag": zod.string().nullish(),
   "normaal_bedrag": zod.string().nullish(),
   "iban_uitgelezen": zod.string().nullish(),
-  "iban_afwijking": zod.boolean().optional()
+  "iban_afwijking": zod.boolean().optional(),
+  "incasso_datum": zod.string().nullish(),
+  "incasso_referentie": zod.string().nullish()
 })
 
 
@@ -21110,6 +21136,118 @@ export const GetFactuurProceslogResponseItem = zod.object({
   "detail": zod.record(zod.string(), zod.unknown()).nullish()
 })
 export const GetFactuurProceslogResponse = zod.array(GetFactuurProceslogResponseItem)
+
+
+/**
+ * @summary Herinneringen/aanmaningen voor een factuur (chronologisch)
+ */
+export const ListFactuurHerinneringenParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListFactuurHerinneringenResponseItem = zod.object({
+  "id": zod.number(),
+  "factuur_id": zod.number(),
+  "type": zod.string().describe('eerste_herinnering | tweede_herinnering | aanmaning | ingebrekestelling'),
+  "verstuurd_op": zod.string().nullish(),
+  "verstuurd_door_naam": zod.string().nullish(),
+  "ontvanger_email": zod.string().nullish(),
+  "opmerkingen": zod.string().nullish(),
+  "aangemaakt_op": zod.string()
+})
+export const ListFactuurHerinneringenResponse = zod.array(ListFactuurHerinneringenResponseItem)
+
+
+/**
+ * @summary Herinnering of aanmaning registreren bij een factuur
+ */
+export const AddFactuurHerinneringParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AddFactuurHerinneringBody = zod.object({
+  "type": zod.string().describe('eerste_herinnering | tweede_herinnering | aanmaning | ingebrekestelling'),
+  "ontvanger_email": zod.string().nullish(),
+  "opmerkingen": zod.string().nullish()
+})
+
+export const AddFactuurHerinneringResponse = zod.void()
+
+
+/**
+ * @summary Factuur naar incasso zetten (betaalstatus=incasso)
+ */
+export const IncassoFactuurParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const IncassoFactuurBody = zod.object({
+  "incasso_referentie": zod.string().nullish(),
+  "opmerkingen": zod.string().nullish()
+})
+
+export const IncassoFactuurResponse = zod.object({
+  "id": zod.number(),
+  "type": zod.string(),
+  "subtype": zod.string().nullish().describe('Bijzonder factuursoort voor afwijkend goedkeuringsbeleid: creditnota | prijsafwijking | null'),
+  "factuurnummer": zod.string().nullish(),
+  "factuurdatum": zod.string().nullish(),
+  "vervaldatum": zod.string().nullish(),
+  "omschrijving": zod.string().nullish(),
+  "relatienaam": zod.string().nullish(),
+  "relatie_code": zod.string().nullish(),
+  "relatie_adres": zod.string().nullish(),
+  "bedrag_excl_btw": zod.string().nullish(),
+  "btw_bedrag": zod.string().nullish(),
+  "bedrag_incl_btw": zod.string().nullish(),
+  "btw_code": zod.string().nullish(),
+  "grootboekrekening": zod.string().nullish(),
+  "kostenplaats": zod.string().nullish(),
+  "dagboek": zod.string().nullish(),
+  "project_code": zod.string().nullish(),
+  "pdf_url": zod.string().nullish(),
+  "bestandsnaam": zod.string().nullish(),
+  "gebouw_id": zod.number().nullish(),
+  "gebouw_naam": zod.string().nullish(),
+  "ai_metadata": zod.record(zod.string(), zod.unknown()).nullish(),
+  "status": zod.string(),
+  "geblokkeerd": zod.boolean(),
+  "blokkering_reden": zod.string().nullish(),
+  "geaccordeerd": zod.boolean(),
+  "geaccordeerd_op": zod.string().nullish(),
+  "geaccordeerd_door_naam": zod.string().nullish(),
+  "accountview_boeking_id": zod.string().nullish(),
+  "accountview_export_op": zod.string().nullish(),
+  "accountview_status": zod.string().nullish(),
+  "accountview_fout": zod.string().nullish(),
+  "payload_hash": zod.string().nullish(),
+  "betaalstatus": zod.string().nullish(),
+  "betaaldatum": zod.string().nullish(),
+  "boekingsnummer": zod.string().nullish(),
+  "terugkoppeling_op": zod.string().nullish(),
+  "afgekeurd": zod.boolean().optional(),
+  "afkeuring_reden": zod.string().nullish(),
+  "afgekeurd_op": zod.string().nullish(),
+  "afgekeurd_door_naam": zod.string().nullish(),
+  "herexport_op": zod.string().nullish(),
+  "herexport_reden": zod.string().nullish(),
+  "beoordelaar_id": zod.number().nullish(),
+  "beoordelaar_naam": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().optional(),
+  "opdracht_id": zod.number().nullish(),
+  "leverancier_id": zod.number().nullish(),
+  "categorie": zod.string().nullish(),
+  "voorstel_bron": zod.string().nullish(),
+  "voorstel_bron_id": zod.number().nullish(),
+  "g_rekening_van_toepassing": zod.boolean().optional(),
+  "g_rekening_bedrag": zod.string().nullish(),
+  "normaal_bedrag": zod.string().nullish(),
+  "iban_uitgelezen": zod.string().nullish(),
+  "iban_afwijking": zod.boolean().optional(),
+  "incasso_datum": zod.string().nullish(),
+  "incasso_referentie": zod.string().nullish()
+})
 
 
 /**

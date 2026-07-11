@@ -1,3 +1,43 @@
+## 2026-07-11 — Factuurmodule: verdeelsleutel G-rekening, aanmaningsflow en incasso
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (additieve DB-kolommen, nieuwe tabel, geen bestaand gedrag gewijzigd)
+
+**Nieuw gebouwd:**
+
+**1. G-rekening verdeelsleutel-UI** (`facturen/detail.tsx`)
+- Oranje kaart verschijnt alleen als `g_rekening_van_toepassing = true`
+- Visuele splitsbar (blauw = courante rekening, oranje = G-rekening) met percentages
+- Twee bedragboxen met bedragen en betalingsinstructies
+- Uitleg-banner: wat een G-rekening is en wat er waar heen moet
+
+**2. Aanmaningsflow + tijdlijn** (`facturen/detail.tsx`)
+- Verticale tijdlijn met alle herinneringen en aanmaningen op chronologische volgorde
+- "Herinnering sturen"-knop opent dialoog (type: eerste/tweede herinnering, aanmaning, ingebrekestelling + optioneel e-mailadres + opmerking)
+- Kleurcodering per type: amber → oranje → rood → donkerrood
+- "Incasso"-knop verschijnt pas na 2+ herinneringen (drempelbewaking)
+- Betaalstatus `incasso` toont badge met datum in kaart-koptekst
+
+**3. Incasso-flow** (`facturen/detail.tsx`)
+- Rode bevestigingsdialoog met uitleg + optioneel incasso-referentieveld (deurwaarder-naam/kenmerk)
+- Zet `betaalstatus = "incasso"` + `incasso_datum` + `incasso_referentie` op de factuur
+- Registreert ook een tijdlijn-entry als een opmerking is meegegeven
+- Incasso-referentie getoond als rode infobox onderaan tijdlijn
+
+**4. Incasso-tab in facturenlijst** (`facturen/index.tsx`)
+- Nieuw tab "Incasso" (met Gavel-icoon) filtert client-side op `betaalstatus === "incasso"`
+- Bestaande status-tabs en historisch-archief ongewijzigd
+
+**DB-wijzigingen (additief):**
+- `ALTER TABLE facturen ADD COLUMN incasso_datum text` + `incasso_referentie text`
+- `CREATE TABLE factuur_herinneringen (id, factuur_id, gebruiker_id, type, verstuurd_op, ontvanger_email, opmerkingen, aangemaakt_op)`
+
+**API-routes (nieuw):**
+- `GET /facturen/:id/herinneringen` — bevoegdheid financieel:1
+- `POST /facturen/:id/herinneringen` — bevoegdheid financieel:2; valideert type-enum
+- `POST /facturen/:id/incasso` — bevoegdheid financieel:3; zet betaalstatus + registreert tijdlijn-entry
+
+---
+
 ## 2026-07-11 — Demo Data: illustratieve voorbeelddata op lege modulepagina's
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** geen (puur frontend, geen DB-schrijfacties)

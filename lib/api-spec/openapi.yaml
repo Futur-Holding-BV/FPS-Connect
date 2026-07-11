@@ -16744,6 +16744,75 @@ paths:
                 items:
                   $ref: "#/components/schemas/FactuurProceslogRegel"
 
+  /facturen/{id}/herinneringen:
+    get:
+      operationId: listFactuurHerinneringen
+      summary: Herinneringen/aanmaningen voor een factuur (chronologisch)
+      tags: [Facturen]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Lijst herinneringen
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FactuurHerinnering"
+    post:
+      operationId: addFactuurHerinnering
+      summary: Herinnering of aanmaning registreren bij een factuur
+      tags: [Facturen]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FactuurHerinneringInput"
+      responses:
+        "201":
+          description: Aangemaakte herinnering
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FactuurHerinnering"
+
+  /facturen/{id}/incasso:
+    post:
+      operationId: incassoFactuur
+      summary: Factuur naar incasso zetten (betaalstatus=incasso)
+      tags: [Facturen]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FactuurIncassoInput"
+      responses:
+        "200":
+          description: Bijgewerkte factuur
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Factuur"
+
   /facturen/{id}/forceer-herexport:
     post:
       operationId: forceerHerexportFactuur
@@ -35440,6 +35509,62 @@ components:
           nullable: true
         iban_afwijking:
           type: boolean
+        incasso_datum:
+          type: string
+          nullable: true
+        incasso_referentie:
+          type: string
+          nullable: true
+
+    FactuurHerinnering:
+      type: object
+      required: [id, factuur_id, type, aangemaakt_op]
+      properties:
+        id:
+          type: integer
+        factuur_id:
+          type: integer
+        type:
+          type: string
+          description: "eerste_herinnering | tweede_herinnering | aanmaning | ingebrekestelling"
+        verstuurd_op:
+          type: string
+          nullable: true
+        verstuurd_door_naam:
+          type: string
+          nullable: true
+        ontvanger_email:
+          type: string
+          nullable: true
+        opmerkingen:
+          type: string
+          nullable: true
+        aangemaakt_op:
+          type: string
+
+    FactuurHerinneringInput:
+      type: object
+      required: [type]
+      properties:
+        type:
+          type: string
+          description: "eerste_herinnering | tweede_herinnering | aanmaning | ingebrekestelling"
+        ontvanger_email:
+          type: string
+          nullable: true
+        opmerkingen:
+          type: string
+          nullable: true
+
+    FactuurIncassoInput:
+      type: object
+      properties:
+        incasso_referentie:
+          type: string
+          nullable: true
+        opmerkingen:
+          type: string
+          nullable: true
 
     FactuurInput:
       type: object

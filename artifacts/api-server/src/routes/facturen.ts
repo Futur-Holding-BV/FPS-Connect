@@ -10,6 +10,7 @@ import {
   factuurOpmerkingenTable,
   factuurRegelsTable,
   factuurTermijnenTable,
+  factuurHerinneringenTable,
   gebouwenTable,
   gebruikersTable,
   leveranciersTable,
@@ -124,6 +125,8 @@ async function mapFactuur(r: typeof facturenTable.$inferSelect) {
     normaal_bedrag: r.normaalBedrag ?? null,
     iban_uitgelezen: r.ibanUitgelezen ?? null,
     iban_afwijking: r.ibanAfwijking,
+    incasso_datum: r.incassoDatum ?? null,
+    incasso_referentie: r.incassoReferentie ?? null,
     aangemaakt_op: r.aangemaaktOp.toISOString(),
     bijgewerkt_op: r.bijgewerktOp.toISOString(),
   };
@@ -1193,6 +1196,115 @@ router.get("/facturen/:id/proceslog", requireBevoegdheid("financieel", 1), async
   regels.sort((a, b) => a._ts.getTime() - b._ts.getTime());
 
   res.json(regels.map(({ _ts, ...r }) => r));
+});
+
+// ── GET /facturen/:id/herinneringen ───────────────────────────────────────────
+router.get("/facturen/:id/herinneringen", requireBevoegdheid("financieel", 1), async (req: Request, res: Response): Promise<void> => {
+  const id = paramInt(req.params["id"]);
+  const rijen = await db
+    .select({
+      id: factuurHerinneringenTable.id,
+      factuurId: factuurHerinneringenTable.factuurId,
+      type: factuurHerinneringenTable.type,
+      verstuurOp: factuurHerinneringenTable.verstuurOp,
+      ontvangerEmail: factuurHerinneringenTable.ontvangerEmail,
+      opmerkingen: factuurHerinneringenTable.opmerkingen,
+      aangemaaktOp: factuurHerinneringenTable.aangemaaktOp,
+      gebruikerNaam: gebruikersTable.naam,
+    })
+    .from(factuurHerinneringenTable)
+    .leftJoin(gebruikersTable, eq(factuurHerinneringenTable.gebruikerId, gebruikersTable.id))
+    .where(eq(factuurHerinneringenTable.factuurId, id))
+    .orderBy(factuurHerinneringenTable.aangemaaktOp);
+
+  res.json(rijen.map((r) => ({
+    id: r.id,
+    factuur_id: r.factuurId,
+    type: r.type,
+    verstuurd_op: r.verstuurOp?.toISOString() ?? null,
+    verstuurd_door_naam: r.gebruikerNaam ?? null,
+    ontvanger_email: r.ontvangerEmail ?? null,
+    opmerkingen: r.opmerkingen ?? null,
+    aangemaakt_op: r.aangemaaktOp.toISOString(),
+  })));
+});
+
+// ── POST /facturen/:id/herinneringen ──────────────────────────────────────────
+router.post("/facturen/:id/herinneringen", requireBevoegdheid("financieel", 2), async (req: Request, res: Response): Promise<void> => {
+  const id = paramInt(req.params["id"]);
+  const { type, ontvanger_email, opmerkingen } = req.body as {
+    type?: string;
+    ontvanger_email?: string;
+    opmerkingen?: string;
+  };
+
+  const GELDIGE_TYPEN = ["eerste_herinnering", "tweede_herinnering", "aanmaning", "ingebrekestelling"];
+  if (!type || !GELDIGE_TYPEN.includes(type)) {
+    res.status(400).json({ error: `type is verplicht: ${GELDIGE_TYPEN.join(" | ")}` });
+    return;
+  }
+
+  const [factuur] = await db.select({ id: facturenTable.id })
+    .from(facturenTable).where(eq(facturenTable.id, id)).limit(1);
+  if (!factuur) { res.status(404).json({ error: "Factuur niet gevonden" }); return; }
+
+  const userId = sessionUserId(req);
+  const [rij] = await db.insert(factuurHerinneringenTable).values({
+    factuurId: id,
+    gebruikerId: userId,
+    type,
+    verstuurOp: new Date(),
+    ontvangerEmail: ontvanger_email?.trim() || null,
+    opmerkingen: opmerkingen?.trim() || null,
+  }).returning();
+
+  const [gebruiker] = userId
+    ? await db.select({ naam: gebruikersTable.naam }).from(gebruikersTable).where(eq(gebruikersTable.id, userId)).limit(1)
+    : [null];
+
+  res.status(201).json({
+    id: rij!.id,
+    factuur_id: rij!.factuurId,
+    type: rij!.type,
+    verstuurd_op: rij!.verstuurOp?.toISOString() ?? null,
+    verstuurd_door_naam: gebruiker?.naam ?? null,
+    ontvanger_email: rij!.ontvangerEmail ?? null,
+    opmerkingen: rij!.opmerkingen ?? null,
+    aangemaakt_op: rij!.aangemaaktOp.toISOString(),
+  });
+});
+
+// ── POST /facturen/:id/incasso ────────────────────────────────────────────────
+router.post("/facturen/:id/incasso", requireBevoegdheid("financieel", 3), async (req: Request, res: Response): Promise<void> => {
+  const id = paramInt(req.params["id"]);
+  const { incasso_referentie, opmerkingen } = req.body as { incasso_referentie?: string; opmerkingen?: string };
+
+  const [factuur] = await db.select().from(facturenTable).where(eq(facturenTable.id, id)).limit(1);
+  if (!factuur) { res.status(404).json({ error: "Factuur niet gevonden" }); return; }
+
+  const userId = sessionUserId(req);
+
+  await db.update(facturenTable).set({
+    betaalstatus: "incasso",
+    incassoDatum: new Date().toISOString().slice(0, 10),
+    incassoReferentie: incasso_referentie?.trim() || null,
+    bijgewerktOp: new Date(),
+  }).where(eq(facturenTable.id, id));
+
+  // Registreer als herinnering-stap in de tijdlijn
+  if (opmerkingen?.trim()) {
+    const userId2 = userId;
+    await db.insert(factuurHerinneringenTable).values({
+      factuurId: id,
+      gebruikerId: userId2,
+      type: "incasso",
+      verstuurOp: new Date(),
+      opmerkingen: opmerkingen.trim(),
+    });
+  }
+
+  const bijgewerkt = await db.select().from(facturenTable).where(eq(facturenTable.id, id)).limit(1);
+  res.json(mapFactuur(bijgewerkt[0]!));
 });
 
 // ── POST /facturen/:id/forceer-herexport ───────────────────────────────────────

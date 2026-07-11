@@ -9151,6 +9151,32 @@ export interface Factuur {
   normaal_bedrag?: string | null;
   iban_uitgelezen?: string | null;
   iban_afwijking?: boolean;
+  incasso_datum?: string | null;
+  incasso_referentie?: string | null;
+}
+
+export interface FactuurHerinnering {
+  id: number;
+  factuur_id: number;
+  /** eerste_herinnering | tweede_herinnering | aanmaning | ingebrekestelling */
+  type: string;
+  verstuurd_op?: string | null;
+  verstuurd_door_naam?: string | null;
+  ontvanger_email?: string | null;
+  opmerkingen?: string | null;
+  aangemaakt_op: string;
+}
+
+export interface FactuurHerinneringInput {
+  /** eerste_herinnering | tweede_herinnering | aanmaning | ingebrekestelling */
+  type: string;
+  ontvanger_email?: string | null;
+  opmerkingen?: string | null;
+}
+
+export interface FactuurIncassoInput {
+  incasso_referentie?: string | null;
+  opmerkingen?: string | null;
 }
 
 export interface FactuurInput {

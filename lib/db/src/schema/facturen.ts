@@ -151,6 +151,10 @@ export const facturenTable = pgTable("facturen", {
   ibanUitgelezen: text("iban_uitgelezen"),
   ibanAfwijking: boolean("iban_afwijking").notNull().default(false),
 
+  // Incasso
+  incassoDatum: text("incasso_datum"),
+  incassoReferentie: text("incasso_referentie"),
+
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
 });
@@ -175,6 +179,21 @@ export const factuurOpmerkingenTable = pgTable("factuur_opmerkingen", {
 });
 
 export type FactuurOpmerking = typeof factuurOpmerkingenTable.$inferSelect;
+
+// ── Factuur herinneringen / aanmaningsflow ────────────────────────────────────
+// type: eerste_herinnering | tweede_herinnering | aanmaning | ingebrekestelling
+export const factuurHerinneringenTable = pgTable("factuur_herinneringen", {
+  id: serial("id").primaryKey(),
+  factuurId: integer("factuur_id").notNull().references(() => facturenTable.id, { onDelete: "cascade" }),
+  gebruikerId: integer("gebruiker_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
+  type: text("type").notNull(),
+  verstuurOp: timestamp("verstuurd_op"),
+  ontvangerEmail: text("ontvanger_email"),
+  opmerkingen: text("opmerkingen"),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+});
+
+export type FactuurHerinnering = typeof factuurHerinneringenTable.$inferSelect;
 
 // ── AccountView export logs ───────────────────────────────────────────────────
 export const accountviewExportLogsTable = pgTable("accountview_export_logs", {

@@ -18,7 +18,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Receipt, Upload, Sparkles, Eye, Trash2, Loader2, Plus, AlertCircle,
-  CheckCircle2, Clock, ArrowUpRight, XCircle, Ban, ChevronRight, FileDown, Archive,
+  CheckCircle2, Clock, ArrowUpRight, XCircle, Ban, ChevronRight, FileDown, Archive, Gavel,
 } from "lucide-react";
 import type { Factuur } from "@workspace/api-client-react";
 import { DemoBanner } from "@/components/ui/demo-banner";
@@ -73,11 +73,15 @@ export default function FacturenPagina() {
   const [aiBezig, setAiBezig] = useState<number | null>(null);
 
   const isHistorischTab = tab === "historisch";
-  const statusFilter = tab === "alle" ? undefined : tab;
-  const { data: facturen = [], isLoading } = useListFacturen(
+  const isIncassoTab = tab === "incasso";
+  const statusFilter = (tab === "alle" || isHistorischTab || isIncassoTab) ? undefined : tab;
+  const { data: facturenRaw = [], isLoading } = useListFacturen(
     { ...(statusFilter ? { status: statusFilter } : {}) },
     { query: { queryKey: ["facturen", tab] } },
   );
+  const facturen = isIncassoTab
+    ? (facturenRaw as Factuur[]).filter((f) => (f as Factuur & { betaalstatus?: string }).betaalstatus === "incasso")
+    : facturenRaw;
   const { data: gebouwen = [] } = useListGebouwen({}, { query: { queryKey: ["gebouwen-facturen"] } });
 
   const deleteMut = useDeleteFactuur({ mutation: { onSuccess: () => queryClient.invalidateQueries({ queryKey: ["facturen"] }) } });
@@ -107,7 +111,7 @@ export default function FacturenPagina() {
     }
   }
 
-  const lijst = facturen as Factuur[];
+  const lijst = facturen as (Factuur & { betaalstatus?: string })[];
 
   return (
     <div className="p-6 space-y-5 max-w-5xl">
@@ -147,6 +151,10 @@ export default function FacturenPagina() {
             <TabsTrigger value="klaar_voor_accountview">Exportklaar</TabsTrigger>
             <TabsTrigger value="verwerkt">Verwerkt</TabsTrigger>
             <TabsTrigger value="fout_bij_verzending">Fouten</TabsTrigger>
+            <TabsTrigger value="incasso" className="gap-1.5">
+              <Gavel className="h-3.5 w-3.5" />
+              Incasso
+            </TabsTrigger>
             <TabsTrigger value="historisch" className="gap-1.5">
               <Archive className="h-3.5 w-3.5" />
               Historisch archief

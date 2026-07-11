@@ -195,6 +195,9 @@ import type {
   FactuurBlokkerenInput,
   FactuurDoorstuurInput,
   FactuurHerexportInput,
+  FactuurHerinnering,
+  FactuurHerinneringInput,
+  FactuurIncassoInput,
   FactuurInput,
   FactuurOpmerking,
   FactuurOpmerkingAfhandelenInput,
@@ -57945,6 +57948,225 @@ export function useGetFactuurProceslog<TData = Awaited<ReturnType<typeof getFact
 
 
 
+
+export const getListFactuurHerinneringenUrl = (id: number,) => {
+
+
+
+
+  return `/api/facturen/${id}/herinneringen`
+}
+
+/**
+ * @summary Herinneringen/aanmaningen voor een factuur (chronologisch)
+ */
+export const listFactuurHerinneringen = async (id: number, options?: RequestInit): Promise<FactuurHerinnering[]> => {
+
+  return customFetch<FactuurHerinnering[]>(getListFactuurHerinneringenUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListFactuurHerinneringenQueryKey = (id: number,) => {
+    return [
+    `/api/facturen/${id}/herinneringen`
+    ] as const;
+    }
+
+
+export const getListFactuurHerinneringenQueryOptions = <TData = Awaited<ReturnType<typeof listFactuurHerinneringen>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listFactuurHerinneringen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListFactuurHerinneringenQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listFactuurHerinneringen>>> = ({ signal }) => listFactuurHerinneringen(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listFactuurHerinneringen>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListFactuurHerinneringenQueryResult = NonNullable<Awaited<ReturnType<typeof listFactuurHerinneringen>>>
+export type ListFactuurHerinneringenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Herinneringen/aanmaningen voor een factuur (chronologisch)
+ */
+
+export function useListFactuurHerinneringen<TData = Awaited<ReturnType<typeof listFactuurHerinneringen>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listFactuurHerinneringen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListFactuurHerinneringenQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getAddFactuurHerinneringUrl = (id: number,) => {
+
+
+
+
+  return `/api/facturen/${id}/herinneringen`
+}
+
+/**
+ * @summary Herinnering of aanmaning registreren bij een factuur
+ */
+export const addFactuurHerinnering = async (id: number,
+    factuurHerinneringInput: FactuurHerinneringInput, options?: RequestInit): Promise<FactuurHerinnering> => {
+
+  return customFetch<FactuurHerinnering>(getAddFactuurHerinneringUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(factuurHerinneringInput)
+  }
+);}
+
+
+
+
+export const getAddFactuurHerinneringMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addFactuurHerinnering>>, TError,{id: number;data: BodyType<FactuurHerinneringInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof addFactuurHerinnering>>, TError,{id: number;data: BodyType<FactuurHerinneringInput>}, TContext> => {
+
+const mutationKey = ['addFactuurHerinnering'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof addFactuurHerinnering>>, {id: number;data: BodyType<FactuurHerinneringInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  addFactuurHerinnering(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AddFactuurHerinneringMutationResult = NonNullable<Awaited<ReturnType<typeof addFactuurHerinnering>>>
+    export type AddFactuurHerinneringMutationBody = BodyType<FactuurHerinneringInput>
+    export type AddFactuurHerinneringMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Herinnering of aanmaning registreren bij een factuur
+ */
+export const useAddFactuurHerinnering = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addFactuurHerinnering>>, TError,{id: number;data: BodyType<FactuurHerinneringInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof addFactuurHerinnering>>,
+        TError,
+        {id: number;data: BodyType<FactuurHerinneringInput>},
+        TContext
+      > => {
+      return useMutation(getAddFactuurHerinneringMutationOptions(options));
+    }
+
+export const getIncassoFactuurUrl = (id: number,) => {
+
+
+
+
+  return `/api/facturen/${id}/incasso`
+}
+
+/**
+ * @summary Factuur naar incasso zetten (betaalstatus=incasso)
+ */
+export const incassoFactuur = async (id: number,
+    factuurIncassoInput?: FactuurIncassoInput, options?: RequestInit): Promise<Factuur> => {
+
+  return customFetch<Factuur>(getIncassoFactuurUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(factuurIncassoInput)
+  }
+);}
+
+
+
+
+export const getIncassoFactuurMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof incassoFactuur>>, TError,{id: number;data?: BodyType<FactuurIncassoInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof incassoFactuur>>, TError,{id: number;data?: BodyType<FactuurIncassoInput>}, TContext> => {
+
+const mutationKey = ['incassoFactuur'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof incassoFactuur>>, {id: number;data?: BodyType<FactuurIncassoInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  incassoFactuur(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type IncassoFactuurMutationResult = NonNullable<Awaited<ReturnType<typeof incassoFactuur>>>
+    export type IncassoFactuurMutationBody = BodyType<FactuurIncassoInput> | undefined
+    export type IncassoFactuurMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Factuur naar incasso zetten (betaalstatus=incasso)
+ */
+export const useIncassoFactuur = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof incassoFactuur>>, TError,{id: number;data?: BodyType<FactuurIncassoInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof incassoFactuur>>,
+        TError,
+        {id: number;data?: BodyType<FactuurIncassoInput>},
+        TContext
+      > => {
+      return useMutation(getIncassoFactuurMutationOptions(options));
+    }
 
 export const getForceerHerexportFactuurUrl = (id: number,) => {
 
