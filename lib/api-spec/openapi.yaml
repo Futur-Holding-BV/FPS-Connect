@@ -8670,6 +8670,40 @@ paths:
               schema:
                 $ref: "#/components/schemas/JaarAfsluitingResultaat"
 
+  /verlof/vervalsignalen:
+    get:
+      operationId: getVerlofVervalsignalen
+      tags: [personeel]
+      summary: Verlofsoorten die binnenkort vervallen (per medewerker)
+      parameters:
+        - in: query
+          name: dagvenster
+          schema:
+            type: integer
+          description: Aantal dagen vooruit kijken (standaard 90, max 365)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Vervalsignaal"
+
+  /verlof/synchroniseer-cao-presets:
+    post:
+      operationId: synchroniseerCaoPresets
+      tags: [personeel]
+      summary: CAO-verlofsoorten, feestdagen en jaarafsluiting-regels synchroniseren (beheerder)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CaoPresetsSyncResultaat"
+
   /capaciteit/bezetting:
     get:
       operationId: getCapaciteitBezetting
@@ -38910,3 +38944,30 @@ components:
       properties:
         upload_url:  { type: string }
         object_path: { type: string }
+
+    Vervalsignaal:
+      type: object
+      required: [saldo_id, medewerker_id, verlofsoort_id, jaar, saldo_uren, vervalt_op, dagen_tot_verval, urgentie]
+      properties:
+        saldo_id:               { type: integer }
+        medewerker_id:          { type: integer }
+        medewerker_naam:        { type: string, nullable: true }
+        verlofsoort_id:         { type: integer }
+        verlofsoort_naam:       { type: string, nullable: true }
+        verlofsoort_categorie:  { type: string, nullable: true }
+        jaar:                   { type: integer }
+        saldo_uren:             { type: number }
+        vervalt_op:             { type: string }
+        dagen_tot_verval:       { type: integer }
+        urgentie:
+          type: string
+          enum: [kritiek, waarschuwing, info]
+
+    CaoPresetsSyncResultaat:
+      type: object
+      required: [verlofsoorten_toegevoegd, feestdagen_toegevoegd, jaarafsluiting_regels_toegevoegd, bericht]
+      properties:
+        verlofsoorten_toegevoegd:          { type: integer }
+        feestdagen_toegevoegd:             { type: integer }
+        jaarafsluiting_regels_toegevoegd:  { type: integer }
+        bericht:                           { type: string }

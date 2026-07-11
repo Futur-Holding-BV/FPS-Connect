@@ -12155,6 +12155,36 @@ export interface BeheerVisualUploadUrlResponse {
   object_path: string;
 }
 
+export type VervalsignaalUrgentie = typeof VervalsignaalUrgentie[keyof typeof VervalsignaalUrgentie];
+
+
+export const VervalsignaalUrgentie = {
+  kritiek: 'kritiek',
+  waarschuwing: 'waarschuwing',
+  info: 'info',
+} as const;
+
+export interface Vervalsignaal {
+  saldo_id: number;
+  medewerker_id: number;
+  medewerker_naam?: string | null;
+  verlofsoort_id: number;
+  verlofsoort_naam?: string | null;
+  verlofsoort_categorie?: string | null;
+  jaar: number;
+  saldo_uren: number;
+  vervalt_op: string;
+  dagen_tot_verval: number;
+  urgentie: VervalsignaalUrgentie;
+}
+
+export interface CaoPresetsSyncResultaat {
+  verlofsoorten_toegevoegd: number;
+  feestdagen_toegevoegd: number;
+  jaarafsluiting_regels_toegevoegd: number;
+  bericht: string;
+}
+
 export type GetRecenteActiviteitParams = {
 limit?: number;
 };
@@ -12470,6 +12500,13 @@ jaar?: number;
 
 export type ListJaarAfsluitingRegelsParams = {
 jaar?: number;
+};
+
+export type GetVerlofVervalsignalenParams = {
+/**
+ * Aantal dagen vooruit kijken (standaard 90, max 365)
+ */
+dagvenster?: number;
 };
 
 export type GetCapaciteitBezettingParams = {

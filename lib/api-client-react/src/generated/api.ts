@@ -104,6 +104,7 @@ import type {
   CalculatieRegel,
   CalculatieRegelInput,
   CaoOptie,
+  CaoPresetsSyncResultaat,
   CapaciteitAnalyseInput,
   CapaciteitAnalyseResultaat,
   CapaciteitBezetting,
@@ -297,6 +298,7 @@ import type {
   GetVeiligheidMeldingenUploadUrl200,
   GetVeiligheidToolboxenParams,
   GetVerlofOverzichtParams,
+  GetVerlofVervalsignalenParams,
   GetVervaldagenParams,
   GetVisualsGuidanceParams,
   GetZiekmeldingenStatistiekenParams,
@@ -793,6 +795,7 @@ import type {
   Verlofsoort,
   VerlofsoortInput,
   Vervaldag,
+  Vervalsignaal,
   VerzendOfferte200,
   Visual,
   VisualGuidanceResult,
@@ -30371,6 +30374,160 @@ export const useVoerJaarAfsluitingUit = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getVoerJaarAfsluitingUitMutationOptions(options));
+    }
+
+export const getGetVerlofVervalsignalenUrl = (params?: GetVerlofVervalsignalenParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/verlof/vervalsignalen?${stringifiedParams}` : `/api/verlof/vervalsignalen`
+}
+
+/**
+ * @summary Verlofsoorten die binnenkort vervallen (per medewerker)
+ */
+export const getVerlofVervalsignalen = async (params?: GetVerlofVervalsignalenParams, options?: RequestInit): Promise<Vervalsignaal[]> => {
+
+  return customFetch<Vervalsignaal[]>(getGetVerlofVervalsignalenUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetVerlofVervalsignalenQueryKey = (params?: GetVerlofVervalsignalenParams,) => {
+    return [
+    `/api/verlof/vervalsignalen`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetVerlofVervalsignalenQueryOptions = <TData = Awaited<ReturnType<typeof getVerlofVervalsignalen>>, TError = ErrorType<unknown>>(params?: GetVerlofVervalsignalenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getVerlofVervalsignalen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetVerlofVervalsignalenQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getVerlofVervalsignalen>>> = ({ signal }) => getVerlofVervalsignalen(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getVerlofVervalsignalen>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetVerlofVervalsignalenQueryResult = NonNullable<Awaited<ReturnType<typeof getVerlofVervalsignalen>>>
+export type GetVerlofVervalsignalenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Verlofsoorten die binnenkort vervallen (per medewerker)
+ */
+
+export function useGetVerlofVervalsignalen<TData = Awaited<ReturnType<typeof getVerlofVervalsignalen>>, TError = ErrorType<unknown>>(
+ params?: GetVerlofVervalsignalenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getVerlofVervalsignalen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetVerlofVervalsignalenQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getSynchroniseerCaoPresetsUrl = () => {
+
+
+
+
+  return `/api/verlof/synchroniseer-cao-presets`
+}
+
+/**
+ * @summary CAO-verlofsoorten, feestdagen en jaarafsluiting-regels synchroniseren (beheerder)
+ */
+export const synchroniseerCaoPresets = async ( options?: RequestInit): Promise<CaoPresetsSyncResultaat> => {
+
+  return customFetch<CaoPresetsSyncResultaat>(getSynchroniseerCaoPresetsUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getSynchroniseerCaoPresetsMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof synchroniseerCaoPresets>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof synchroniseerCaoPresets>>, TError,void, TContext> => {
+
+const mutationKey = ['synchroniseerCaoPresets'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof synchroniseerCaoPresets>>, void> = () => {
+
+
+          return  synchroniseerCaoPresets(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SynchroniseerCaoPresetsMutationResult = NonNullable<Awaited<ReturnType<typeof synchroniseerCaoPresets>>>
+
+    export type SynchroniseerCaoPresetsMutationError = ErrorType<unknown>
+
+    /**
+ * @summary CAO-verlofsoorten, feestdagen en jaarafsluiting-regels synchroniseren (beheerder)
+ */
+export const useSynchroniseerCaoPresets = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof synchroniseerCaoPresets>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof synchroniseerCaoPresets>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getSynchroniseerCaoPresetsMutationOptions(options));
     }
 
 export const getGetCapaciteitBezettingUrl = (params?: GetCapaciteitBezettingParams,) => {

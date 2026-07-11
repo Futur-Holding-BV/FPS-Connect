@@ -10833,6 +10833,40 @@ export const VoerJaarAfsluitingUitResponse = zod.object({
 
 
 /**
+ * @summary Verlofsoorten die binnenkort vervallen (per medewerker)
+ */
+export const GetVerlofVervalsignalenQueryParams = zod.object({
+  "dagvenster": zod.coerce.number().optional().describe('Aantal dagen vooruit kijken (standaard 90, max 365)')
+})
+
+export const GetVerlofVervalsignalenResponseItem = zod.object({
+  "saldo_id": zod.number(),
+  "medewerker_id": zod.number(),
+  "medewerker_naam": zod.string().nullish(),
+  "verlofsoort_id": zod.number(),
+  "verlofsoort_naam": zod.string().nullish(),
+  "verlofsoort_categorie": zod.string().nullish(),
+  "jaar": zod.number(),
+  "saldo_uren": zod.number(),
+  "vervalt_op": zod.string(),
+  "dagen_tot_verval": zod.number(),
+  "urgentie": zod.enum(['kritiek', 'waarschuwing', 'info'])
+})
+export const GetVerlofVervalsignalenResponse = zod.array(GetVerlofVervalsignalenResponseItem)
+
+
+/**
+ * @summary CAO-verlofsoorten, feestdagen en jaarafsluiting-regels synchroniseren (beheerder)
+ */
+export const SynchroniseerCaoPresetsResponse = zod.object({
+  "verlofsoorten_toegevoegd": zod.number(),
+  "feestdagen_toegevoegd": zod.number(),
+  "jaarafsluiting_regels_toegevoegd": zod.number(),
+  "bericht": zod.string()
+})
+
+
+/**
  * @summary Bezettingsgraad per dag voor een week
  */
 export const GetCapaciteitBezettingQueryParams = zod.object({

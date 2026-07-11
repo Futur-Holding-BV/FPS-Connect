@@ -10,6 +10,7 @@ import {
   useUpdateFeestdag,
   useDeleteFeestdag,
   useListWerkgevers,
+  useSynchroniseerCaoPresets,
 } from "@workspace/api-client-react";
 import type { VerlofInstellingen, Feestdag } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -29,7 +30,7 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { Plus, Pencil, Trash2, Settings, CalendarDays } from "lucide-react";
+import { Plus, Pencil, Trash2, Settings, CalendarDays, RefreshCw } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 const HUIDIG_JAAR = new Date().getFullYear();
@@ -52,6 +53,7 @@ export default function VerlofInstellingenPagina() {
   const createFd = useCreateFeestdag();
   const updateFd = useUpdateFeestdag();
   const deleteFd = useDeleteFeestdag();
+  const syncCaoPresets = useSynchroniseerCaoPresets();
 
   // ── Instellingen formulier ──
   const [instForm, setInstForm] = useState({
@@ -194,16 +196,40 @@ export default function VerlofInstellingenPagina() {
           <h1 className="text-2xl font-bold">Verlof-instellingen</h1>
           <p className="text-muted-foreground text-sm mt-1">Aanvraagtermijnen, feestdagen en automatische goedkeuring</p>
         </div>
-        <Select value={String(jaar)} onValueChange={(v) => setJaar(Number(v))}>
-          <SelectTrigger className="w-32">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {JAREN.map((j) => (
-              <SelectItem key={j} value={String(j)}>{j}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={syncCaoPresets.isPending}
+            onClick={() => {
+              syncCaoPresets.mutate(undefined, {
+                onSuccess: (resultaat) => {
+                  toast({
+                    title: "CAO-presets gesynchroniseerd",
+                    description: resultaat.bericht,
+                  });
+                  void qc.invalidateQueries();
+                },
+                onError: () => {
+                  toast({ title: "Synchronisatie mislukt", variant: "destructive" });
+                },
+              });
+            }}
+          >
+            <RefreshCw className={`h-4 w-4 mr-1.5 ${syncCaoPresets.isPending ? "animate-spin" : ""}`} />
+            CAO-presets synchroniseren
+          </Button>
+          <Select value={String(jaar)} onValueChange={(v) => setJaar(Number(v))}>
+            <SelectTrigger className="w-32">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {JAREN.map((j) => (
+                <SelectItem key={j} value={String(j)}>{j}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       <Tabs defaultValue="instellingen">

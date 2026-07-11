@@ -11,6 +11,8 @@ import { planDagelijkseScout } from "./lib/scoutService";
 import { planDagelijkseLeermomenten } from "./services/fie-service";
 import { planUurlijkseAiDrempelCheck } from "./lib/aiDrempelCheck";
 import { planDagelijkseKwartaalcontrole } from "./lib/pushService";
+import { startVerlofPresets } from "./lib/verlofPresets";
+import { startVerlofVervalService } from "./lib/verlofVervalService";
 
 const rawPort = process.env["PORT"];
 
@@ -57,6 +59,8 @@ ensureSessionTable()
       planDagelijkseLeermomenten();
       planUurlijkseAiDrempelCheck();
       planDagelijkseKwartaalcontrole();
+      startVerlofPresets();
+      startVerlofVervalService();
     });
   })
   .catch((err) => {

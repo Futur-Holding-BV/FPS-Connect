@@ -11,6 +11,8 @@ import { Router } from "express";
 import multer from "multer";
 import { extraheerPdfTekst } from "../lib/pdfTekst";
 import { invalideerContext } from "../lib/aiContext/cache";
+import { haalVervalsignalen } from "../lib/verlofVervalService";
+import { zaaiVerlofPresets } from "../lib/verlofPresets";
 import {
   db,
   werkgeversTable,
@@ -4377,6 +4379,40 @@ router.delete("/zzp-overeenkomsten/:id", schrijven, async (req, res): Promise<vo
     await db.delete(zzpOvereenkomstenTable).where(eq(zzpOvereenkomstenTable.id, id));
     req.log.info({ id }, "ZZP-overeenkomst verwijderd");
     res.status(204).end();
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// ── Verlof-vervalsignalen ─────────────────────────────────────────────────────
+
+router.get("/verlof/vervalsignalen", lezen, async (req, res): Promise<void> => {
+  try {
+    const dagvenster = req.query.dagvenster ? Math.min(Number(req.query.dagvenster), 365) : 90;
+    const signalen = await haalVervalsignalen(isNaN(dagvenster) ? 90 : dagvenster);
+    res.json(signalen);
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// ── CAO-presets synchroniseren ────────────────────────────────────────────────
+
+router.post("/verlof/synchroniseer-cao-presets", alleenBeheerder, async (req, res): Promise<void> => {
+  try {
+    const resultaat = await zaaiVerlofPresets();
+    req.log.info(resultaat, "CAO-presets handmatig gesynchroniseerd");
+    res.json({
+      verlofsoorten_toegevoegd: resultaat.verlofsoorten,
+      feestdagen_toegevoegd: resultaat.feestdagen,
+      jaarafsluiting_regels_toegevoegd: resultaat.jaarAfsluitingRegels,
+      bericht:
+        resultaat.verlofsoorten + resultaat.feestdagen + resultaat.jaarAfsluitingRegels === 0
+          ? "Alles is al up-to-date."
+          : `${resultaat.verlofsoorten} verlofsoorten, ${resultaat.feestdagen} feestdagen en ${resultaat.jaarAfsluitingRegels} jaarafsluitingregels toegevoegd.`,
+    });
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });

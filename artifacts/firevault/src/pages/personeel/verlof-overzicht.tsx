@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useGetVerlofOverzicht, useListAlleVerlofAanvragen, useUpdateVerlofAanvraag } from "@workspace/api-client-react";
+import { useGetVerlofOverzicht, useListAlleVerlofAanvragen, useUpdateVerlofAanvraag, useGetVerlofVervalsignalen } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -90,6 +90,7 @@ export default function VerlofOverzichtPagina() {
   const { data: overzicht, isLoading } = useGetVerlofOverzicht({ jaar });
   const { data: alleAanvragenData } = useListAlleVerlofAanvragen();
   const updateAanvraag = useUpdateVerlofAanvraag();
+  const { data: vervalsignalen = [] } = useGetVerlofVervalsignalen();
 
   const aanvragen = overzicht?.aanvragen ?? [];
   const saldi = overzicht?.saldi ?? [];
@@ -103,12 +104,9 @@ export default function VerlofOverzichtPagina() {
   const aangevraagd = gefilterd.filter((a) => a.status === "aangevraagd");
   const alleGeselecteerdAangevraagd = aangevraagd.length > 0 && aangevraagd.every((a) => geselecteerdeIds.has(a.id));
 
-  const verlopendeSaldi = saldi.filter((s) => {
-    if (!s.vervalt_op) return false;
-    const vervalMs = new Date(s.vervalt_op).getTime();
-    const drieManenDag = Date.now() + 90 * 24 * 60 * 60 * 1000;
-    return vervalMs < drieManenDag && s.saldo_uren > 0;
-  });
+  const kritiekSignalen = vervalsignalen.filter((s) => s.urgentie === "kritiek");
+  const waarschuwingSignalen = vervalsignalen.filter((s) => s.urgentie === "waarschuwing");
+  const infoSignalen = vervalsignalen.filter((s) => s.urgentie === "info");
 
   function toggleSelecteer(id: number) {
     setGeselecteerdeIds((prev) => {
@@ -244,17 +242,57 @@ export default function VerlofOverzichtPagina() {
         </Select>
       </div>
 
-      {verlopendeSaldi.length > 0 && (
+      {kritiekSignalen.length > 0 && (
+        <Card className="border-red-200 bg-red-50">
+          <CardContent className="py-3">
+            <div className="flex items-start gap-2">
+              <AlertTriangle className="h-4 w-4 text-red-600 mt-0.5 shrink-0" />
+              <div>
+                <p className="text-sm font-medium text-red-800">Verlofuren vervallen binnen 14 dagen</p>
+                <ul className="mt-1 space-y-0.5">
+                  {kritiekSignalen.map((s) => (
+                    <li key={s.saldo_id} className="text-xs text-red-700">
+                      {s.medewerker_naam} — {s.verlofsoort_naam}: {s.saldo_uren}u — vervalt {s.vervalt_op} ({s.dagen_tot_verval} dag{s.dagen_tot_verval === 1 ? "" : "en"})
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {waarschuwingSignalen.length > 0 && (
         <Card className="border-amber-200 bg-amber-50">
           <CardContent className="py-3">
             <div className="flex items-start gap-2">
               <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
               <div>
-                <p className="text-sm font-medium text-amber-800">Verlofuren verlopen binnenkort</p>
+                <p className="text-sm font-medium text-amber-800">Verlofuren verlopen binnen 30 dagen</p>
                 <ul className="mt-1 space-y-0.5">
-                  {verlopendeSaldi.map((s) => (
-                    <li key={s.id} className="text-xs text-amber-700">
-                      {s.medewerker_naam} — {s.verlofsoort_naam}: {s.saldo_uren}u verloopt {s.vervalt_op}
+                  {waarschuwingSignalen.map((s) => (
+                    <li key={s.saldo_id} className="text-xs text-amber-700">
+                      {s.medewerker_naam} — {s.verlofsoort_naam}: {s.saldo_uren}u — vervalt {s.vervalt_op} ({s.dagen_tot_verval} dagen)
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {infoSignalen.length > 0 && (
+        <Card className="border-blue-100 bg-blue-50">
+          <CardContent className="py-3">
+            <div className="flex items-start gap-2">
+              <AlertTriangle className="h-4 w-4 text-blue-500 mt-0.5 shrink-0" />
+              <div>
+                <p className="text-sm font-medium text-blue-800">Verlofuren verlopen de komende 90 dagen</p>
+                <ul className="mt-1 space-y-0.5">
+                  {infoSignalen.map((s) => (
+                    <li key={s.saldo_id} className="text-xs text-blue-700">
+                      {s.medewerker_naam} — {s.verlofsoort_naam}: {s.saldo_uren}u — vervalt {s.vervalt_op} ({s.dagen_tot_verval} dagen)
                     </li>
                   ))}
                 </ul>

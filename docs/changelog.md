@@ -1,3 +1,23 @@
+## 2026-07-11 — Verlof: CAO-presets, automatisch verval en proactieve signalering
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (additief; geen bestaande endpoints of schema's gebroken)
+
+**Nieuw gebouwd:**
+
+- **CAO-preset seeder** (`verlofPresets.ts`): idempotente seeder die bij elke api-server-start ontbrekende verlofsoorten (13), feestdagen (33, jaren 2025–2027) en jaarafsluiting-regels (8) toevoegt voor CAO Metaal & Techniek, Bouw & Infra en Geen CAO. Geconfirmeerd via logs: `verlof-presets: seeding voltooid`.
+
+- **Automatisch verlof-verval** (`verlofVervalService.ts`): dagelijkse achtergrondtaak (00:02 nachtelijk, recursive `setTimeout` + `.unref()`) die verlofSaldi met `vervaltOp <= vandaag` en `saldoUren > 0` op nul zet. Resultaat wordt gelogd per medewerker.
+
+- **Proactieve vervalsignalering**: `haalVervalsignalen(dagvenster)` retourneert drie urgentieniveaus — `kritiek` (≤ 14 dagen), `waarschuwing` (≤ 30 dagen), `info` (≤ 90 dagen).
+
+- **API-routes** (`GET /verlof/vervalsignalen`, `POST /verlof/synchroniseer-cao-presets`): respectievelijk voor signaalweergave (personeel lezen) en handmatige sync (alleenBeheerder). OpenAPI-schemas `Vervalsignaal` en `CaoPresetsSyncResultaat` toegevoegd; codegen uitgevoerd.
+
+- **Frontend verlof-overzicht**: de lokale `verlopendeSaldi`-berekening vervangen door de nieuwe `useGetVerlofVervalsignalen`-hook. Drie gescheiden banners met kleurcodering (rood/amber/blauw) op basis van urgentieniveau; elk met naam, verlofsoort, uren en exacte vervaldatum + resterende dagen.
+
+- **Frontend verlof-instellingen**: knop "CAO-presets synchroniseren" (met draai-animatie tijdens laden) toegevoegd naast de jaarselectie. Toont toast met resultaatbericht na succes.
+
+**Bewijs:** api-server herstart — seeder ziet 13 verlofsoorten / 33 feestdagen / 8 regels / scheduler gestart; `GET /api/verlof/vervalsignalen` retourneert 401 (verwacht zonder sessie); typecheck groen (firevault + api-server); Vite HMR bevestigd.
+
 ## 2026-07-11 — Medewerker onboarding: automatische verlofsoort-selectie, uren-preview en geboortedatum
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (additief; POST /medewerkers + frontend onboarding-formulier, geen bestaande endpoints gebroken)
