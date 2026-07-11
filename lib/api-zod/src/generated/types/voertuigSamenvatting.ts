@@ -16,8 +16,11 @@ export interface VoertuigSamenvatting {
   status: string;
   km_stand: number;
   apk_datum?: Date | null;
-  bandenwissels_status?: string;
+  verzekering_verval_dat?: Date | null;
+  lease_eind_datum?: Date | null;
+  leasemaatschappij?: string | null;
   eigendoms_type?: string;
+  bandenwissels_status?: string;
   fleet_provider?: string | null;
   provider_voertuig_id?: string | null;
   aandacht_nodig?: boolean;

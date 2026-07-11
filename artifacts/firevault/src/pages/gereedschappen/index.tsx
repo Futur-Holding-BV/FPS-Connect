@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { ListCard } from "@/components/ui/list-card";
-import { Plus, Wrench, Search, User, Camera, Sparkles, CheckCircle } from "lucide-react";
+import { Plus, Wrench, Search, User, Camera, Sparkles, CheckCircle, AlertTriangle } from "lucide-react";
 
 const STATUSSEN = [
   "Beschikbaar", "In bruikleen", "Defect gemeld", "Beschadigd",
@@ -285,6 +285,19 @@ export default function GereedschappenPagina() {
                     {item.status}
                   </span>
                 </div>
+                {item.keuringsplichtig && item.keuring_verval_datum && (() => {
+                  const verval = new Date(item.keuring_verval_datum);
+                  const over30 = new Date(Date.now() + 30 * 86_400_000);
+                  const verlopen = verval < new Date();
+                  const binnenkort = verval < over30;
+                  if (!verlopen && !binnenkort) return null;
+                  return (
+                    <div className={`hidden xl:flex items-center gap-1 text-xs font-medium w-40 shrink-0 ${verlopen ? "text-red-600" : "text-orange-600"}`}>
+                      <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                      <span>{verlopen ? "Keuring verlopen" : "Keuring binnenkort"}</span>
+                    </div>
+                  );
+                })()}
                 {item.huidige_medewerker_naam ? (
                   <div className="hidden lg:flex items-center gap-1 text-sm text-muted-foreground w-36 shrink-0">
                     <User className="h-3.5 w-3.5 shrink-0" />
@@ -474,7 +487,7 @@ export default function GereedschappenPagina() {
                 { key: "accu_inbegrepen", label: "Accu inbegrepen" },
                 { key: "lader_inbegrepen", label: "Lader inbegrepen" },
                 { key: "koffer_inbegrepen", label: "Koffer inbegrepen" },
-                { key: "keuringsplichtig", label: "Keuringsplichtig" },
+                { key: "keuringsplichtig", label: "Keuringsplichtig (NEN/CE)" },
               ].map(({ key, label }) => (
                 <label key={key} className="flex items-center gap-2 text-sm cursor-pointer">
                   <input
@@ -487,6 +500,25 @@ export default function GereedschappenPagina() {
                 </label>
               ))}
             </div>
+            {(formulier as unknown as Record<string, unknown>)["keuringsplichtig"] && (
+              <div className="grid grid-cols-2 gap-3 rounded-md border border-orange-200 bg-orange-50 p-3">
+                <div className="space-y-1">
+                  <Label>Keuringnorm</Label>
+                  <Input
+                    placeholder="bijv. NEN3140, NEN1010, CE"
+                    value={(formulier as unknown as Record<string, unknown>)["keuring_norm"] as string ?? ""}
+                    onChange={(e) => setFormulier((f) => ({ ...f, keuring_norm: e.target.value || null }))}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label>Keuringsverval</Label>
+                  <DatePicker
+                    value={(formulier as unknown as Record<string, unknown>)["keuring_verval_datum"] as string ?? ""}
+                    onChange={(v) => setFormulier((f) => ({ ...f, keuring_verval_datum: v || null }))}
+                  />
+                </div>
+              </div>
+            )}
             <div className="space-y-1">
               <Label>Opmerkingen</Label>
               <Input

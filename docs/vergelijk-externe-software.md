@@ -2,7 +2,7 @@
 
 **Datum:** 11 juli 2026
 **Scope:** Alle hoofdmodules van FPS Connect
-**Benchmark:** AFAS (primair — marktleider NL bouw/installatie) + generiek marktstandaard
+**Benchmark:** AFAS (primair — marktleider NL bouw/installatie) + ENK, IBIS, Nmbrs, Visma, Fleetio, ToolSense, Ultimo, Steps/BuildSmart
 **Doel:** Geprioriteerd doorontwikkelplan — wat zelf bouwen, wat koppelen
 
 ---
@@ -11,18 +11,19 @@
 
 | Symbool | Betekenis |
 |---|---|
+| GEBOUWD | Al aanwezig en werkend in FPS Connect |
+| GEDEELTELIJK | Basis aanwezig, verdieping ontbreekt |
 | BOUWEN | Zelf uitbouwen in FPS Connect |
 | KOPPELEN | Externe software aansluiten via API/koppeling |
 | EXTERN | Bewust buiten scope — extern pakket blijft leidend |
-| GEBOUWD | Al aanwezig in FPS Connect |
 
-Prioriteit: **P1** = direct, **P2** = komend half jaar, **P3** = strategische horizon
+Prioriteit: **P1** = komende 3 maanden | **P2** = komend halfjaar | **P3** = strategische horizon
 
 ---
 
 ## 1. Brandpreventie & Gebouwbeheer (Core)
 
-> FPS Connect IS hier het product. Dit bestaat nergens anders in deze combinatie.
+> FPS Connect IS hier het product. Dit bestaat nergens anders in deze combinatie voor de brandpreventie-sector.
 
 | Functie | FPS Connect | AFAS | Generiek (Ultimo, Planon) |
 |---|---|---|---|
@@ -30,228 +31,321 @@ Prioriteit: **P1** = direct, **P2** = komend half jaar, **P3** = strategische ho
 | Spots / objecten per verdieping | GEBOUWD | Nee | Nee |
 | Plattegrond-editor + SVG | GEBOUWD | Nee | Nee |
 | Inspecties (oplevering/periodiek) | GEBOUWD | Nee | Beperkt |
-| Bibliotheek (toepassingen, labels) | GEBOUWD | Nee | Nee |
+| Bibliotheek (toepassingen, labels, fabrikanten) | GEBOUWD | Nee | Nee |
 | Opleverrapportage + PDF | GEBOUWD | Nee | Nee |
-| AI-spotherkenning | GEBOUWD | Nee | Nee |
-| Rapportenbibliotheek (V1.5) | GEBOUWD | Nee | Nee |
+| Rapportenbibliotheek + reactietermijnen | GEBOUWD | Nee | Nee |
+| AI-spotherkenning + validatie | GEBOUWD | Nee | Nee |
+| Samengestelde constructies (S.G.) | Gepland | Nee | Nee |
 | Klantportaal (FPS One) | Fase 1 | Nee | Beperkt |
 
-**Advies:** Geen vergelijk nodig — dit is de bestaansreden van FPS Connect. Volledig zelf bouwen en beheren.
-
-**Doorontwikkelen (P1):** FPS One klantportaal afmaken (rapporten, reactietermijnen, document-download).
+**Advies:** Volledig zelf bouwen en beheren. FPS One klantportaal afmaken is P1 (rapporten, reactietermijnen, document-download voor klanten).
 
 ---
 
-## 2. HRM / Personeel
+## 2. Financieel / Factuurstroom
 
-| Functie | FPS Connect | AFAS HRM | Nmbrs/Visma |
+### 2a. Wat al gebouwd is in FPS Connect
+
+| Functie | Status | Opmerking |
+|---|---|---|
+| Inkoopfacturen registreren + AI-scan | GEBOUWD | OCR + AI-extractie |
+| Verkoopfacturen (losse facturen) | GEBOUWD | type=verkoop, standalone |
+| Creditnota's | GEBOUWD | subtype=creditnota |
+| Prijsafwijking-factuur | GEBOUWD | subtype=prijsafwijking |
+| BTW-codes (21% / 9% / verlegd / 0%) | GEBOUWD | btw_code field + UI |
+| BTW-verlegd | GEBOUWD | als btw_code waarde "verlegd" |
+| G-rekening (depot bouwnijverheid) | GEBOUWD | g_rekening_van_toepassing + g_rekening_bedrag |
+| Betalingstermijn (in dagen) | GEBOUWD | betalingstermijn_dagen in OpenAPI |
+| Ons kenmerk / uw kenmerk | GEBOUWD | beide velden in OpenAPI |
+| Factuurdatum + vervaldatum | GEBOUWD | beide velden |
+| Inkoopbonnen + goedkeuringsmotor | GEBOUWD | inclusief escalatie en e-mail |
+| SEPA-betalingen genereren | GEBOUWD | batch-export |
+| AccountView-koppeling (handmatig) | GEBOUWD | export naar dagboek |
+| Regie (voorwaarden, tarieven, materialen) | GEBOUWD | volledig DB + API + web |
+| CSV-export goedkeuringsoverzicht | GEBOUWD | server-side, alle filters |
+
+### 2b. Wat ontbreekt t.o.v. AFAS / marktstandaard
+
+| Functie | FPS | AFAS | Exact/Twinfield |
 |---|---|---|---|
-| Medewerkerregistratie + profiel | GEBOUWD | Ja | Ja |
-| Functiehuis (per werkmaatschappij) | GEBOUWD | Ja | Beperkt |
-| Opleidingen & certificaten | GEBOUWD | Ja | Ja |
-| Bekwaamheidsmatrix | GEBOUWD | Beperkt | Nee |
-| Verlof (soorten, saldo, aanvragen) | GEBOUWD | Ja | Ja |
-| CAO-kaders (Metaal & Bouw) | GEBOUWD (basis) | Ja (volledig) | Ja |
-| Onboarding-flow | GEBOUWD | Ja | Beperkt |
-| **CAO-periodieken automatisch** | Nee | Ja | Ja |
-| **Verzuimbeheer (ziekte/WVP/UWV)** | Nee | Ja | Ja |
-| **Arbeidscontracten digitaal** | Nee | Ja | Ja |
-| **Beoordelingscyclus (POP)** | Nee | Ja | Beperkt |
-| **Werving & selectie** | Nee | Ja | Nee |
-| **UWV-koppeling** | Nee | Ja | Ja |
+| **Verdeelsleutel G-rekening** (automatisch berekenen welk bedrag naar G-rekening vs. courante rekening) | Nee | Ja | Ja |
+| **Aanmaningsflow** (1e/2e/3e herinnering per vervaldatum) | Nee | Ja | Ja |
+| **Incasso** (SEPA direct debit mandaten) | Nee | Ja | Beperkt |
+| **Briefpapier-template factuur** (DDS letterhead met logo, adres, behandelaar, handtekening directeur, kenmerk) | Nee | Ja | Ja |
+| **Behandelaar op factuur** (medewerker die factuur opstelt) | Nee | Ja | Ja |
+| **Directeur-ondertekening op factuur** | Nee | Ja | Ja |
+| **Projectcontrol** (begroting vs. werkelijk per project) | Nee | Ja | Nee |
+| **Bankafschriften inlezen / automatisch matchen** | Nee | Ja | Ja |
+| **BTW-aangifte / grootboek** | Nee (extern) | Ja | Ja |
+| **Debiteurbeheer rapportage** (openstaande posten per klant) | Nee | Ja | Ja |
+| **AccountView-push automatisch** (bij goedkeuring direct doorboeken) | Gedeeltelijk | N.v.t. | N.v.t. |
 
-**Gaps & advies:**
+**Gaps & advies — financieel:**
 
 | Gap | Advies | Prioriteit |
 |---|---|---|
-| CAO-periodieken automatisch (jaarlijkse verhoging, periodieke trede) | **BOUWEN** — CAO-basis is er al, kleine uitbreiding | P1 |
-| Arbeidscontract als document (DDS-template) | **BOUWEN** — Document Design System kan dit direct | P1 |
-| Verzuimbeheer (ziekmelding, hersteld, WVP-dag-teller) | **BOUWEN** (basis: datum in/uit + WVP-dag-counter) | P2 |
-| UWV-koppeling (officieel ziekmelden) | **KOPPELEN** (UWV SBR-koppeling, vereist certificering) | P3 |
+| Verdeelsleutel G-rekening (UI: % of bedrag → automatisch opsplitsen) | **BOUWEN** — g_rekening_bedrag is er, UI-logica toevoegen | P1 |
+| Briefpapier-template factuur (DDS FamilieA uitbreiden) | **BOUWEN** — DDS-engine is er, factuurlay-out toevoegen | P1 |
+| Behandelaar + directeur-handtekening op factuurtemplate | **BOUWEN** — werkgever.handtekening_url is er, behandelaar-veld toevoegen | P1 |
+| Aanmaningsflow (1e/2e/3e herinnering per vervaldatum) | **BOUWEN** — uitbreiding op verkoopfacturen | P2 |
+| AccountView-push automatisch bij goedkeuring | **BOUWEN** — eenrichtings-push aanwezig, automatiseren | P1 |
+| Incasso (SEPA direct debit, mandaten beheren) | **BOUWEN** — uitbreiding op SEPA-module | P2 |
+| Debiteurbeheer-overzicht (openstaande posten) | **BOUWEN** — koppeling verkoopfacturen + vervaldatum-filtering | P2 |
+| Bankafschriften inlezen | **KOPPELEN** — Twinfield/AccountView (extern blijft leidend) | P3 |
+| Grootboek / BTW-aangifte | **EXTERN** — AccountView blijft leidend | — |
+
+---
+
+## 3. HRM / Personeel
+
+### 3a. Wat al gebouwd is in FPS Connect
+
+| Functie | Status |
+|---|---|
+| Medewerkerregistratie + profiel | GEBOUWD |
+| Functiehuis (per werkmaatschappij, office vs. veld) | GEBOUWD |
+| Opleidingen & certificaten (niveau, opleider, kosten, M2M) | GEBOUWD |
+| Bekwaamheidsmatrix (per categorie/niveau) | GEBOUWD |
+| Verlof (soorten, saldo, aanvragen, goedkeuren/afwijzen) | GEBOUWD |
+| CAO-kaders (Metaal & Techniek, Bouw & Infra — voorselectie op werkmaatschappij) | GEBOUWD |
+| Onboarding-flow (CAO, verlofuren, aanvangsdatum) | GEBOUWD |
+| AI-opleidingsvoorstel per functie | GEBOUWD |
+| Loonstrookjes archief + self-service (web + app) | GEBOUWD |
+| SEPA salarisbetalingen | GEBOUWD |
+
+### 3b. Vergelijk met AFAS HRM / Nmbrs / Visma
+
+| Functie | FPS Connect | AFAS HRM | Nmbrs | Visma |
+|---|---|---|---|---|
+| Medewerkerregistratie | GEBOUWD | Ja | Ja | Ja |
+| Functiehuis | GEBOUWD | Ja | Beperkt | Beperkt |
+| Opleidingen & certificaten | GEBOUWD | Ja | Nee | Beperkt |
+| Bekwaamheidsmatrix | GEBOUWD | Beperkt | Nee | Nee |
+| Verlof + CAO-kaders | GEBOUWD | Ja (volledig) | Ja | Ja |
+| **CAO-periodieken automatisch** (jaarlijkse verhoging, trede-ophoging) | Nee | Ja | Ja | Ja |
+| **Verzuimbeheer** (ziekmelding, WVP-dag-teller, re-integratieplan) | Nee | Ja | Ja | Ja |
+| **Arbeidscontract digitaal** (template, versioning, ondertekening) | Nee | Ja | Ja | Beperkt |
+| **Beoordelingscyclus / POP** (functioneringsgesprek, doelen) | Nee | Ja | Nee | Beperkt |
+| **Werving & selectie** (vacatures, sollicitanten) | Nee | Ja | Nee | Nee |
+| **Arbodienst-koppeling** | Nee | Ja | Beperkt | Nee |
+| **UWV-koppeling** (officieel ziekmelden) | Nee | Ja | Ja | Ja |
+| **SBR-koppeling Belastingdienst** (loonaangifte) | Nee (extern) | Ja | Ja | Ja |
+| **Pensioenfonds-koppeling** (PFZW, BPF Bouw) | Nee | Ja | Ja | Beperkt |
+| **Verklaring Omtrent Gedrag (VOG)** bijhouden | Nee | Nee | Nee | Nee |
+| **VCA-certificaat** bijhouden + vervalwaarschuwing | GEBOUWD (via opleidingen) | Beperkt | Nee | Nee |
+| **BHV / EHBO** registreren + vervalwaarschuwing | GEBOUWD (via opleidingen) | Beperkt | Nee | Nee |
+| **NEN3140-bevoegdheid** registreren | GEBOUWD (via bekwaamheid) | Nee | Nee | Nee |
+
+**Gaps & advies — HRM:**
+
+| Gap | Advies | Prioriteit |
+|---|---|---|
+| CAO-periodieken automatisch (verhoging per datum, trede-ophoging op dienstjaar) | **BOUWEN** — CAO-basis aanwezig, logica toevoegen | P1 |
+| Arbeidscontract als DDS-template (B-familie, digitale versturing) | **BOUWEN** — DDS-engine beschikbaar | P1 |
+| Verzuimregistratie (ziekmelding, hersteld, WVP-dag-counter, re-integratienotities) | **BOUWEN** — basis: datum in/uit + dag-teller | P2 |
+| VOG bijhouden (datum aanvraag, ontvangen, geldig tot) | **BOUWEN** — veld op medewerker + signalering | P2 |
 | Beoordelingscyclus / POP | **BOUWEN** — V3.0 | P2 |
-| Werving & selectie | **KOPPELEN** — bijv. Teamtailor of AFAS Recruitment | P3 |
+| Arbodienst-koppeling | **KOPPELEN** — ArboNed/Zorg van de Zaak API | P3 |
+| UWV-koppeling (officieel ziekmelden) | **KOPPELEN** — UWV SBR, certificering vereist | P3 |
+| Pensioenfonds-koppeling | **KOPPELEN** — PFZW/BPF Bouw API | P3 |
+| Werving & selectie | **KOPPELEN** — Teamtailor / AFAS Recruitment | P3 |
 
 ---
 
-## 3. Payroll / Salarisverwerking
+## 4. Payroll / Salarisverwerking
 
-| Functie | FPS Connect | AFAS Payroll | Nmbrs/Visma |
-|---|---|---|---|
-| Loonstrookjes archief (PDF per medewerker) | GEBOUWD | Ja | Ja |
-| Self-service medewerker (web + app) | GEBOUWD | Ja (portaal) | Ja |
-| SEPA-batch salarisbetalingen | GEBOUWD | Ja | Ja |
-| Jaaropgaven archief | GEBOUWD (archief) | Ja + versturing | Ja |
-| **Salarisberekening (bruto → netto)** | Nee | Ja | Ja |
-| **Automatische loonheffing / premies** | Nee | Ja | Ja |
-| **Loonaangifte Belastingdienst (SBR)** | Nee | Ja | Ja |
-| **Vakantiegeldreservering automatisch** | Nee | Ja | Ja |
-| **Werkgeverskosten-analyse** | Nee | Ja | Ja |
+| Functie | FPS Connect | AFAS Payroll | Nmbrs | Visma |
+|---|---|---|---|---|
+| Loonstrookjes archief (PDF-split per medewerker) | GEBOUWD | Ja | Ja | Ja |
+| Self-service medewerker (web + app) | GEBOUWD | Ja (portaal) | Ja | Ja |
+| SEPA-batch salarisbetalingen | GEBOUWD | Ja | Ja | Ja |
+| Jaaropgaven archief | GEBOUWD | Ja + versturing | Ja | Ja |
+| **Jaaropgave push-notificatie** (web + app) | Nee | Ja | Ja | Ja |
+| **Salarisstrookje digitaal ondertekend ontvangen** | Nee | Ja | Ja | Beperkt |
+| **Vakantiegeldreservering** inzicht | Nee | Ja | Ja | Ja |
+| **Salarisberekening** (bruto → netto) | Nee (extern) | Ja | Ja | Ja |
+| **Loonheffing / premies automatisch** | Nee (extern) | Ja | Ja | Ja |
+| **Loonaangifte Belastingdienst** (SBR/Digipoort) | Nee (extern) | Ja | Ja | Ja |
+| **Koppeling salarispakket** (push PDF naar FPS) | Nee | N.v.t. | N.v.t. | N.v.t. |
 
-**Fundamenteel advies:** De salarisberekening zelf (bruto → netto, loonheffing, premies, SBR-aangifte) vereist een Belastingdienst-certificering en is te complex om zelf te bouwen. FPS Connect doet de **omgeving** (archief, zelfbediening, SEPA) — de **berekening** blijft extern.
-
-**Model:** Externe payroll-partij (AFAS/Nmbrs/Visma) berekent → exporteert PDF per medewerker → FPS Connect `split-pdf` importeert en distribueert.
+**Fundamenteel advies:** Salarisberekening, loonheffing en Belastingdienst-aangifte blijven bij extern pakket (AFAS/Nmbrs/Visma). FPS Connect beheert de omgeving: archief, zelfbediening, SEPA-uitbetaling.
 
 | Gap | Advies | Prioriteit |
 |---|---|---|
-| Jaaropgave-versturing via app + web | **BOUWEN** — archief is er, push-notificatie toevoegen | P1 |
-| Vakantiegeld-reservering zichtbaar in HRM | **BOUWEN** — naast verlof, als informatieveld | P2 |
-| Koppeling met salarispakket (push PDF) | **KOPPELEN** — API per pakket (AFAS/Nmbrs webhook) | P2 |
+| Jaaropgave push-notificatie bij beschikbaar stellen | **BOUWEN** — archief is er, notificatie toevoegen | P1 |
+| Koppeling salarispakket (webhook → PDF-split automatisch) | **KOPPELEN** — AFAS/Nmbrs webhook of SFTP-integratie | P2 |
+| Vakantiegeld-saldo inzichtelijk op medewerkerkaart | **BOUWEN** — informatieveld, geen berekening | P2 |
 
 ---
 
-## 4. Wagenparkbeheer
+## 5. Wagenparkbeheer
 
-| Functie | FPS Connect | AFAS | Vimcar/Fleetio |
-|---|---|---|---|
-| Voertuigregistratie (kenteken, merk) | GEBOUWD | Beperkt | Ja |
-| Onderhoud bijhouden | GEBOUWD | Nee | Ja |
-| Toewijzing medewerker | GEBOUWD | Nee | Ja |
-| Brandstof-import (CSV) | GEBOUWD | Nee | Ja (automatisch) |
-| Meldingen (defect, schade) | GEBOUWD | Nee | Ja |
-| **APK / keuring-reminders** | Nee | Nee | Ja |
-| **Rittenboek (privé vs. zakelijk)** | Nee | Nee | Ja (GPS) |
-| **Leasecontract beheren** | Nee | Nee | Ja |
-| **GPS-tracking / live-locatie** | Nee | Nee | Ja (hardware) |
-| **Tankpas-koppeling (automatisch)** | Nee | Nee | Ja |
-| **CO2-rapportage** | Nee | Nee | Ja |
-| **Schadeafhandeling (verzekeraar)** | Nee | Nee | Ja |
+| Functie | FPS Connect | AFAS | Vimcar | Fleetio |
+|---|---|---|---|---|
+| Voertuigregistratie (kenteken, merk, model) | GEBOUWD | Beperkt | Ja | Ja |
+| Onderhoud bijhouden | GEBOUWD | Nee | Ja | Ja |
+| Toewijzing medewerker | GEBOUWD | Nee | Ja | Ja |
+| Brandstof-import (CSV) | GEBOUWD | Nee | Ja (auto) | Ja |
+| Meldingen (defect, schade) | GEBOUWD | Nee | Ja | Ja |
+| **APK-datum / keuringsverval** | Nee | Nee | Ja | Ja |
+| **Verzekeringsverval** | Nee | Nee | Ja | Ja |
+| **Groene-kaart / kentekenbewijs** bijhouden | Nee | Nee | Ja | Ja |
+| **Leasecontract** (einddatum, km-grens, maandbedrag, leasemaatschappij) | Nee | Nee | Ja | Ja |
+| **Rittenboek** (privé vs. zakelijk, fiscaal bijtelling) | Nee | Nee | Ja (GPS) | Ja (GPS) |
+| **Brandstofkosten per voertuig** (rapportage) | Beperkt | Nee | Ja | Ja |
+| **Schade-registratie** (foto's, verzekeraar, eigen risico) | Nee | Nee | Ja | Ja |
+| **GPS-tracking / live-locatie** | Nee | Nee | Ja (hardware) | Ja (hardware) |
+| **Tankpas-koppeling automatisch** (BP, Shell, AS24) | Nee | Nee | Ja | Ja |
+| **CO2-rapportage** | Nee | Nee | Ja | Ja |
+| **Bandenwissel-registratie** (winter/zomer) | Nee | Nee | Beperkt | Ja |
 
-**Gaps & advies:**
+**Gaps & advies — wagenpark:**
 
 | Gap | Advies | Prioriteit |
 |---|---|---|
-| APK / keuring / verzekeringsverval-reminders | **BOUWEN** — datum-veld + signalering, structuur identiek aan kalibratie gereedschap | P1 |
-| Leasecontract beheren (einddatum, maandbedrag, km-grens) | **BOUWEN** — document-koppeling + alerting | P1 |
-| Rittenboek (privé/zakelijk, fiscaal bijtelling) | **BOUWEN** — hoge compliancewaarde, medewerker logt zelf | P2 |
+| APK / keuring / verzekeringsverval-reminders | **BOUWEN** — datum-veld + signalering, zelfde structuur als kalibratie gereedschap | P1 |
+| Leasecontract (einddatum, km-grens, maandbedrag) | **BOUWEN** — document-koppeling + alerting | P1 |
+| Schade-registratie (foto, beschrijving, verzekeraar, status) | **BOUWEN** — uitbreiding op meldingen-structuur | P1 |
+| Rittenboek (privé vs. zakelijk, fiscale bijtelling medewerker) | **BOUWEN** — medewerker logt rittten, fiscale export | P2 |
+| Brandstofkosten-rapportage per voertuig / per maand | **BOUWEN** — CSV-import is er, aggregatie toevoegen | P2 |
+| Bandenwissel-registratie (datum, km-stand, type) | **BOUWEN** — uitbreiding op onderhoud | P2 |
 | GPS-tracking | **KOPPELEN** — hardware-afhankelijk (TomTom/Vimcar API) | P3 |
 | Tankpas-koppeling automatisch | **KOPPELEN** — per aanbieder (BP, Shell, AS24) | P3 |
 
 ---
 
-## 5. Gereedschapbeheer
+## 6. Gereedschapbeheer
 
-| Functie | FPS Connect | AFAS | ToolSense/iSHARE |
-|---|---|---|---|
-| Gereedschap registreren (foto, serienr.) | GEBOUWD | Nee | Ja |
-| Bruikleen-registratie | GEBOUWD | Nee | Ja |
-| Meldingen (defect, vermissing) | GEBOUWD | Nee | Ja |
-| AI-foto-analyse | GEBOUWD | Nee | Nee |
-| **Kalibratiedatum / ijkdatum (NEN3140)** | Nee | Nee | Ja |
-| **Keuring-schema (CE, NEN3140)** | Nee | Nee | Ja |
-| **QR-code mobiel scannen (uitlenen)** | Nee | Nee | Ja |
-| **Reparatiehistorie per stuk** | Nee | Nee | Ja |
-| **Inspectierapport gereedschap** | Nee | Nee | Ja |
-| **Verbruiksmaterialen (bits, folie)** | Nee | Nee | Beperkt |
+### Benchmarks: ToolSense, Makita Tool Cloud, iSHARE, Rentman, Hilti ON!Track
 
-**Gaps & advies:**
+| Functie | FPS Connect | AFAS | ToolSense | Hilti ON!Track |
+|---|---|---|---|---|
+| Gereedschap registreren (foto, serienr.) | GEBOUWD | Nee | Ja | Ja |
+| Bruikleen-registratie (wie heeft wat) | GEBOUWD | Nee | Ja | Ja |
+| Meldingen (defect, vermissing) | GEBOUWD | Nee | Ja | Ja |
+| AI-foto-analyse bij toevoegen | GEBOUWD | Nee | Nee | Nee |
+| **Kalibratiedatum / ijkdatum** | Nee | Nee | Ja | Ja |
+| **NEN3140-keuring** (elektra-gereedschap, vervaldatum) | Nee | Nee | Ja | Ja |
+| **CE-keuring / KEUR** bijhouden | Nee | Nee | Ja | Ja |
+| **Keuring-schema** (jaarlijks/halfjaarlijks per categorie) | Nee | Nee | Ja | Ja |
+| **QR-code / barcode scannen** (mobiel uitlenen) | Nee | Nee | Ja | Ja |
+| **Reparatiehistorie** per stuk | Nee | Nee | Ja | Ja |
+| **Inspectierapport** gereedschap (PDF) | Nee | Nee | Ja | Beperkt |
+| **Verbruiksmaterialen** (bits, koronetten, folie) | Nee | Nee | Beperkt | Nee |
+| **Gereedschapsverzekering** (claim bij diefstal/schade) | Nee | Nee | Beperkt | Nee |
+| **Categorie-beheer** (hand/elektrisch/meetapparatuur/persoonlijk) | GEBOUWD | Nee | Ja | Ja |
+| **Depot / buslocatie** (welk gereedschap op welke bus/locatie) | Nee | Nee | Ja | Ja |
+| **Geplande onderhoudsbeurt** (km of tijd-gebaseerd) | Nee | Nee | Ja | Ja |
+
+**Gaps & advies — gereedschappen:**
 
 | Gap | Advies | Prioriteit |
 |---|---|---|
-| Kalibratiedatum + keuring NEN3140 (elektra-gereedschap) | **BOUWEN** — compliance-must voor brandpreventie-monteurs | P1 |
-| Keuring-reminders (NEN3140-check vervaldatum) | **BOUWEN** — signalering identiek aan wagenpark APK | P1 |
-| QR-code scannen mobiel (bruikleen) | **BOUWEN** — Expo-camera is er al | P2 |
-| Reparatiehistorie | **BOUWEN** — uitbreiding op meldingen | P2 |
+| Kalibratiedatum + NEN3140 keuringsverval-datum | **BOUWEN** — compliance-must voor elektra-gereedschap bij brandpreventie | P1 |
+| Keuring-reminders (NEN3140-check datum, CE-keuring) | **BOUWEN** — signalering identiek aan wagenpark APK | P1 |
+| QR-code mobiel scannen (Expo-camera beschikbaar) | **BOUWEN** — scan → directe bruikleen-registratie | P2 |
+| Reparatiehistorie per stuk | **BOUWEN** — uitbreiding op meldingen (defect → gerepareerd → kosten) | P2 |
+| Depot / buslocatie-koppeling | **BOUWEN** — wagenpark-koppeling (gereedschap op bus X) | P2 |
 | Verbruiksmaterialen (magazijn-koppeling) | **BOUWEN** — aansluiten op bestaande magazijn-module | P2 |
+| Inspectierapport gereedschap (PDF) | **BOUWEN** — DDS-template C-familie | P2 |
+| Geplande onderhoudsbeurt | **BOUWEN** — uitbreiding op onderhoud-module | P3 |
 
 ---
 
-## 6. Calculatie
+## 7. Calculatie
 
-| Functie | FPS Connect | AFAS | Steps/BuildSmart |
-|---|---|---|---|
-| Offerte (regels, opslagen, preview) | GEBOUWD | Ja | Ja |
-| Normtijden-bibliotheek | GEBOUWD | Ja | Ja |
-| Werkbegroting (offerte → opdracht) | GEBOUWD | Ja | Ja |
-| Opslagen AK/risico/winst | GEBOUWD | Ja | Ja |
-| **Nacalculatie (uren vs. begroting)** | Basis | Ja | Ja |
-| **Materiaalprijs-database** | Nee | Ja | Ja |
-| **Leveranciers-prijs-koppeling** | Nee | Nee | Beperkt |
-| **Projectbegroting vs. werkelijk** | Nee | Ja | Ja |
-| **Resultatenanalyse per project** | Nee | Ja | Ja |
-| **Inkoopprijs vs. verkoopprijs-analyse** | Nee | Ja | Ja |
+### Benchmarks: ENK, IBIS, Steps, BuildSmart, Aardbei, PTC Opiplus
 
-**Gaps & advies:**
+| Functie | FPS Connect | AFAS | ENK | IBIS |
+|---|---|---|---|---|
+| Offerte (regels, opslagen, preview) | GEBOUWD | Ja | Ja | Ja |
+| Normtijden-bibliotheek | GEBOUWD | Beperkt | Ja | Ja |
+| Werkbegroting (offerte → opdracht) | GEBOUWD | Ja | Ja | Ja |
+| Opslagen (AK, risico, winst — configureerbaar) | GEBOUWD | Ja | Ja | Ja |
+| Offerte-sjablonen | GEBOUWD | Ja | Ja | Ja |
+| **Normtijden-database (landelijk NEN)** | Nee | Nee | Ja | Ja |
+| **Materiaalprijs-database** (actueel per leverancier) | Nee | Beperkt | Ja | Ja |
+| **Nacalculatie** (uren vs. begroot, automatisch) | Gedeeltelijk | Ja | Ja | Ja |
+| **Arbeidsproductiviteit-analyse** (norm vs. werkelijk) | Nee | Ja | Ja | Ja |
+| **Projectbegroting vs. werkelijk** (projectcontrol) | Nee | Ja | Ja | Ja |
+| **Resultatenanalyse** (marge per project) | Nee | Ja | Ja | Ja |
+| **Inkoopprijs vs. verkoopprijs-analyse** | Nee | Ja | Beperkt | Ja |
+| **Onderaannemer-calculatie** (inclusief gunningen) | Nee | Ja | Ja | Ja |
+| **Revisie-calculatie** (versioning per offerte) | GEBOUWD (via offerte-versiebeheer) | Ja | Ja | Ja |
+| **Leveranciersprijs-koppeling** (Technische Unie / Brink) | Nee | Nee | Ja | Ja |
+| **STABU/CROW-koppeling** (bestekken) | Nee | Nee | Ja | Ja |
+| **Intern werktarief vs. extern tarief** | GEBOUWD (via normtijden/uurtarief) | Ja | Ja | Ja |
+| **Regie-afrekening factuur** (uren + materiaal → factuur) | GEBOUWD (regie-module) | Ja | Ja | Ja |
+
+**ENK specifiek:** calculatiesoftware voor installatiebedrijven, sterk in normtijden-database (NEN-gebonden) en arbeidsproductiviteit. Koppelt aan AFAS voor boekhouding.
+
+**IBIS specifiek:** breed werkvoorbereidingspakket (bouw/installatie), sterk in bestek-koppeling (STABU/UAV-gc), onderaannemer-gunning, nacalculatie. Wordt veel gebruikt bij grotere installatiebedrijven.
+
+**Gaps & advies — calculatie:**
 
 | Gap | Advies | Prioriteit |
 |---|---|---|
-| Nacalculatie arbeidsproductiviteit (uren-koppeling) | **BOUWEN** — uren-module is er, koppeling toevoegen | P1 |
-| Projectbegroting vs. werkelijk (dashboard) | **BOUWEN** — fase 2 kernfunctie | P2 |
-| Materiaalprijs-database bijhouden | **BOUWEN** — handmatig beheer voldoende voor start | P2 |
-| Leveranciers-prijs-koppeling (Technische Unie API) | **KOPPELEN** — fase 2 | P3 |
+| Nacalculatie koppeling (uren-module → begroting automatisch) | **BOUWEN** — uren-module aanwezig, koppeling toevoegen | P1 |
+| Arbeidsproductiviteit-overzicht (norm-uren vs. bestede uren) | **BOUWEN** — uitbreiding nacalculatie | P2 |
+| Projectbegroting vs. werkelijk dashboard | **BOUWEN** — fase 2 kernfunctie bedrijfsbesturing | P2 |
+| Materiaalprijs-database (handmatig beheer initieel) | **BOUWEN** — beheerscherm voor standaard materiaalprijzen | P2 |
+| Resultatenanalyse (marge per project, portfolio) | **BOUWEN** — uitbreiding op nacalculatie | P2 |
+| Leveranciersprijs-koppeling (Technische Unie API) | **KOPPELEN** — fase 2+ | P3 |
+| STABU/CROW-koppeling | **KOPPELEN** — voor grotere projecten | P3 |
 
 ---
 
-## 7. CRM
+## 8. CRM
 
-| Functie | FPS Connect | AFAS CRM | HubSpot/Exact |
-|---|---|---|---|
-| Contacten & organisaties | GEBOUWD | Ja | Ja |
-| Projectkansen | GEBOUWD | Ja | Ja |
-| Concurrenten registreren | GEBOUWD | Nee | Nee |
-| Marktintelligentie | GEBOUWD | Nee | Beperkt |
-| Offertes gekoppeld aan relatie | GEBOUWD | Ja | Ja |
-| **Pipeline-forecast (gewogen kansen)** | Nee | Ja | Ja |
-| **Activiteitenhistorie (bel/mail/bezoek)** | Nee | Ja | Ja |
-| **Outlook-koppeling (e-mail loggen)** | Nee | Ja (betaald) | Ja |
-| **NPS / klanttevredenheid** | Nee | Nee | Ja |
-| **Takenlijst per relatie** | Nee | Ja | Ja |
-| **Segmentatie & doelgroepen** | Nee | Ja | Ja |
-| **Marketingcampagnes** | Nee | Beperkt | Ja |
+| Functie | FPS Connect | AFAS CRM | HubSpot | Exact CRM |
+|---|---|---|---|---|
+| Contacten & organisaties | GEBOUWD | Ja | Ja | Ja |
+| Projectkansen | GEBOUWD | Ja | Ja | Ja |
+| Concurrenten registreren | GEBOUWD | Nee | Nee | Nee |
+| Marktintelligentie | GEBOUWD | Nee | Beperkt | Nee |
+| Offertes gekoppeld aan relatie | GEBOUWD | Ja | Ja | Ja |
+| **Pipeline-forecast** (gewogen kansen, totaalwaarde) | Nee | Ja | Ja | Ja |
+| **Activiteitenlog** (bel/bezoek/mail handmatig) | Nee | Ja | Ja | Ja |
+| **Takenlijst per relatie** (follow-up, herinnering) | Nee | Ja | Ja | Ja |
+| **Outlook-koppeling** (e-mail automatisch loggen) | Nee | Ja (betaald) | Ja | Beperkt |
+| **NPS / klanttevredenheid** (na oplevering) | Nee | Nee | Ja | Nee |
+| **Segmentatie** (doelgroepen, filter op type/regio) | Nee | Ja | Ja | Ja |
+| **Relatiehistorie** (volledig dossier per klant) | Gedeeltelijk | Ja | Ja | Ja |
+| **Klantportaal-koppeling** | Gedeeltelijk | Nee | Nee | Nee |
+| **Marketingcampagnes** | Nee | Beperkt | Ja | Nee |
 
-**Gaps & advies:**
-
-| Gap | Advies | Prioriteit |
-|---|---|---|
-| Pipeline-forecast (kansen × sluitkans × waarde) | **BOUWEN** — uitbreiding op projectkansen | P1 |
-| Activiteitenlog (telefoontje/bezoek/mail handmatig) | **BOUWEN** — simpel, hoge dagelijkse gebruikswaarde | P1 |
-| Takenlijst per relatie / follow-up datum | **BOUWEN** — herinnering-systeem | P2 |
-| NPS na oplevering (automatisch uitsturen) | **BOUWEN** — koppelen aan opleverrapport | P2 |
-| Outlook-koppeling (automatisch loggen) | **KOPPELEN** — Microsoft Graph API | P2 |
-| Marketingcampagnes | **KOPPELEN** — Mailchimp/ActiveCampaign | P3 |
-
----
-
-## 8. Financieel / Factuurstroom
-
-| Functie | FPS Connect | AFAS Financieel | AccountView |
-|---|---|---|---|
-| Inkoopfacturen registreren | GEBOUWD | Ja | Ja |
-| Verkoopfacturen | GEBOUWD | Ja | Ja |
-| Creditnota's | GEBOUWD | Ja | Ja |
-| Inkoopbonnen + goedkeuringsmotor | GEBOUWD | Ja (basis) | Nee |
-| SEPA-betalingen genereren | GEBOUWD | Ja | Ja |
-| Koppeling AccountView | GEBOUWD | N.v.t. | N.v.t. |
-| **Grootboek / BTW-aangifte** | Nee | Ja | Ja |
-| **Bankafschriften inlezen (automatisch matchen)** | Nee | Ja | Ja |
-| **Debiteurbeheer (aanmaningen)** | Nee | Ja | Beperkt |
-| **Projectcontrol (budget vs. werkelijk)** | Nee | Ja | Nee |
-
-**Fundamenteel advies:** Grootboek, BTW en bank blijven in AccountView. FPS Connect beheert de **operationele factuurstroom** (inkoop → goedkeuring → betaling → doorboeken).
+**Gaps & advies — CRM:**
 
 | Gap | Advies | Prioriteit |
 |---|---|---|
-| Debiteurbeheer — aanmaningsflow (1e/2e/3e sommatie) | **BOUWEN** — koppelen aan verkoopfacturen | P2 |
-| Projectcontrol (begroting vs. werkelijk per project) | **BOUWEN** — fase 2, kernfunctie bedrijfsbesturing | P2 |
-| AccountView-koppeling automatiseren (push bij goedkeuring) | **BOUWEN** — eenrichtings-push is al gedeeltelijk aanwezig | P1 |
+| Pipeline-forecast (kansen × sluitkans × waarde, grafisch) | **BOUWEN** — uitbreiding op projectkansen | P1 |
+| Activiteitenlog per relatie (bel/bezoek/mail handmatig) | **BOUWEN** — simpel, hoge dagelijkse gebruikswaarde | P1 |
+| Takenlijst per relatie + follow-up datum/reminder | **BOUWEN** — herinneringsnotificatie | P2 |
+| NPS na oplevering (automatisch na definitief rapport) | **BOUWEN** — koppelen aan opleverrapport-status | P2 |
+| Outlook/e-mail koppeling (automatisch loggen) | **KOPPELEN** — Microsoft Graph API | P2 |
+| Marketingcampagnes | **KOPPELEN** — Mailchimp / ActiveCampaign | P3 |
 
 ---
 
 ## 9. Planning & Capaciteit
 
-| Functie | FPS Connect | AFAS Planning | Specialist (Snelstart/PTC) |
-|---|---|---|---|
-| Werkorders aanmaken en toewijzen | GEBOUWD | Ja | Ja |
-| Capaciteitsplanning medewerkers | GEBOUWD (basis) | Ja | Ja |
-| Werkdag-module monteur (mobiel) | GEBOUWD | Nee | Nee |
-| **Grafische planningboard (drag & drop)** | Nee | Ja | Ja |
-| **Overbelasting-signalering** | Nee | Ja | Ja |
-| **Reisplanning / routeoptimalisatie** | Nee | Nee | Beperkt |
+| Functie | FPS Connect | AFAS | Snelstart | PTC Opiplus |
+|---|---|---|---|---|
+| Werkorders aanmaken en toewijzen | GEBOUWD | Ja | Ja | Ja |
+| Capaciteitsplanning medewerkers | GEBOUWD (basis) | Ja | Ja | Ja |
+| Werkdag-module monteur (mobiel) | GEBOUWD | Nee | Nee | Nee |
+| **Grafische planningboard** (dag/week/maand, drag & drop) | Nee | Ja | Ja | Ja |
+| **Overbelasting-signalering** (ingepland > capaciteit) | Nee | Ja | Ja | Ja |
+| **Reisplanning / routeoptimalisatie** | Nee | Nee | Beperkt | Ja |
+| **Bezettingsgraad-rapportage** | Nee | Ja | Ja | Ja |
+
+**Gaps & advies:**
 
 | Gap | Advies | Prioriteit |
 |---|---|---|
 | Grafische planningboard (week/maand, drag & drop) | **BOUWEN** — fase 2 | P2 |
-| Overbelasting-signalering (medewerker ingepland > capaciteit) | **BOUWEN** — uitbreiding op capaciteitsplanning | P2 |
-| Routeoptimalisatie (volgorde bezoeken) | **KOPPELEN** — Google Maps / HERE Routing API | P3 |
+| Overbelasting-signalering | **BOUWEN** — uitbreiding capaciteitsplanning | P2 |
+| Routeoptimalisatie (volgorde bezoeken op dag) | **KOPPELEN** — Google Maps / HERE Routing API | P3 |
 
 ---
 
@@ -265,60 +359,77 @@ Prioriteit: **P1** = direct, **P2** = komend half jaar, **P3** = strategische ho
 | Document Intelligence (AI classificatie) | GEBOUWD | Nee | Nee |
 | Polymorfe koppelingen (gebouw/klant/dossier) | GEBOUWD | Nee | Nee |
 | Audittrail & downloadlogging | GEBOUWD | Nee | Beperkt |
-| **Digitale handtekening (contracten)** | Nee | Nee | Via DocuSign |
-| **OCR / automatisch invullen metadata** | Nee | Nee | Beperkt |
+| **Document Design System** (templates A/B/C, werkgever-branding) | GEDEELTELIJK | Nee | Nee |
+| **Factuur-briefpapier template** (DDS FamilieA, letterhead) | Nee | Ja | N.v.t. |
+| **Arbeidscontract-template** (DDS FamilieB) | Nee | Ja | N.v.t. |
+| **Digitale handtekening** (klant ondertekent online) | Nee | Nee | Via DocuSign |
+| **OCR metadata-extractie bij upload** | GEBOUWD (via Document Intelligence) | Nee | Beperkt |
+
+**Gaps & advies:**
 
 | Gap | Advies | Prioriteit |
 |---|---|---|
-| Digitale handtekening (arbeidscontracten, offertes) | **KOPPELEN** — DocuSign of iSignThis API | P2 |
-| OCR metadata-extractie bij upload | **BOUWEN** — AI-laag (Document Intelligence uitbreiden) | P2 |
+| Factuur-briefpapier template (DDS FamilieA: logo, adres, behandelaar, handtekening directeur, ons/uw kenmerk, betalingstermijn) | **BOUWEN** — DDS-engine beschikbaar, template toevoegen | P1 |
+| Arbeidscontract-template (DDS FamilieB) | **BOUWEN** — DDS FamilieB uitbreiden | P1 |
+| Digitale handtekening (klant ondertekent offerte/contract online) | **KOPPELEN** — DocuSign of iSignThis API | P2 |
 
 ---
 
-## Samenvatting: Prioriteiten doorontwikkelplan
+## Samenvatting: Geprioriteerd doorontwikkelplan
 
-### P1 — Direct (komende 3 maanden)
+### P1 — Komende 3 maanden (hoog impact, lage inspanning)
 
-| Module | Wat bouwen |
-|---|---|
-| HRM | CAO-periodieken automatisch (jaarlijkse verhoging, trede-ophoging) |
-| HRM | Arbeidscontract via Document Design System (template + digitale versturing) |
-| Wagenparkbeheer | APK / keuring / verzekering-reminders |
-| Wagenparkbeheer | Leasecontract beheren (einddatum, km-grens, maandbedrag) |
-| Gereedschappen | Kalibratiedatum + NEN3140 keuring-reminders |
-| Calculatie | Nacalculatie — uren vs. begroting koppelen |
-| CRM | Pipeline-forecast (kansen × sluitkans) |
-| CRM | Activiteitenlog per relatie (bel/bezoek/mail handmatig) |
-| Financieel | AccountView-push automatiseren bij goedkeuring |
-| Payroll | Jaaropgave push-notificatie (web + app) |
+| Nr | Module | Wat bouwen |
+|---|---|---|
+| 1 | Financieel | Briefpapier-template factuur (DDS: logo, adres, behandelaar, handtekening directeur, ons/uw kenmerk, betalingstermijn) |
+| 2 | Financieel | Verdeelsleutel G-rekening UI (% of bedrag → auto-opsplitsen) |
+| 3 | Financieel | AccountView-push automatisch bij goedkeuring |
+| 4 | HRM | CAO-periodieken automatisch (jaarlijkse verhoging, trede-ophoging) |
+| 5 | HRM | Arbeidscontract-template (DDS FamilieB) |
+| 6 | Wagenpark | APK / keuring / verzekeringsverval-reminders |
+| 7 | Wagenpark | Leasecontract (einddatum, km-grens, maandbedrag) |
+| 8 | Wagenpark | Schade-registratie (foto, verzekeraar, status) |
+| 9 | Gereedschappen | Kalibratiedatum + NEN3140 keuringsverval-signalering |
+| 10 | Calculatie | Nacalculatie uren-koppeling (uren vs. begroot automatisch) |
+| 11 | CRM | Pipeline-forecast (kansen × sluitkans × waarde) |
+| 12 | CRM | Activiteitenlog per relatie |
+| 13 | Payroll | Jaaropgave push-notificatie (web + app) |
+| 14 | Brandpreventie | FPS One klantportaal (rapporten, reactietermijnen) |
 
 ### P2 — Komend halfjaar
 
 | Module | Wat bouwen | Wat koppelen |
 |---|---|---|
-| HRM | Verzuimregistratie (ziekmelding, WVP-dag-teller) | UWV-koppeling |
+| Financieel | Aanmaningsflow (1e/2e/3e herinnering) | — |
+| Financieel | Incasso (SEPA direct debit) | — |
+| Financieel | Debiteurbeheer-overzicht | — |
+| HRM | Verzuimregistratie (ziekmelding, WVP-dag-teller) | Arbodienst-koppeling |
+| HRM | VOG bijhouden + vervalwaarschuwing | — |
 | HRM | Beoordelingscyclus / POP | — |
-| Wagenpark | Rittenboek (privé vs. zakelijk, fiscale bijtelling) | GPS (TomTom/Vimcar) |
-| Gereedschappen | QR-code mobiel scannen + reparatiehistorie | — |
-| Gereedschappen | Verbruiksmaterialen (magazijn-koppeling) | — |
+| Wagenpark | Rittenboek (privé vs. zakelijk, bijtelling) | GPS (Vimcar/TomTom) |
+| Wagenpark | Brandstofkosten-rapportage | — |
+| Wagenpark | Bandenwissel-registratie | — |
+| Gereedschappen | QR-code mobiel scannen + bruikleen | — |
+| Gereedschappen | Reparatiehistorie + depot/bus-koppeling | — |
+| Gereedschappen | Verbruiksmaterialen + inspectierapport | — |
+| Calculatie | Projectbegroting vs. werkelijk + margeanalyse | — |
+| Calculatie | Materiaalprijs-database (handmatig beheer) | — |
 | CRM | Takenlijst + follow-up per relatie | Outlook (Microsoft Graph) |
-| CRM | NPS na oplevering (koppelen aan opleverrapport) | — |
-| Financieel | Debiteurbeheer + aanmaningsflow | — |
-| Financieel | Projectcontrol (begroting vs. werkelijk) | — |
+| CRM | NPS na oplevering | — |
 | Planning | Grafische planningboard (drag & drop) | — |
 | DMS | Digitale handtekening | DocuSign / iSignThis |
-| Payroll | Salarispakket-koppeling (push PDF naar FPS) | AFAS/Nmbrs webhook |
+| Payroll | Salarispakket-koppeling | AFAS/Nmbrs webhook |
 
 ### P3 — Strategische horizon (Fase 2+)
 
 | Module | Advies |
 |---|---|
-| Payroll | Salarisberekening blijft extern — nooit zelf bouwen (Belastingdienst-certificering) |
 | Wagenpark | Tankpas-koppeling (BP/Shell API) |
 | CRM | Marketingcampagnes (Mailchimp) |
-| Calculatie | Leveranciersprijs-koppeling (Technische Unie API) |
+| Calculatie | Leveranciersprijs-koppeling (Technische Unie) + STABU/CROW |
 | Planning | Routeoptimalisatie (Google Maps / HERE) |
-| Werving | Koppelen aan Teamtailor of AFAS Recruitment |
+| HRM | UWV-koppeling, pensioenfonds-koppeling |
+| HRM | Werving & selectie (Teamtailor) |
 
 ---
 
@@ -326,14 +437,15 @@ Prioriteit: **P1** = direct, **P2** = komend half jaar, **P3** = strategische ho
 
 | Functie | Reden |
 |---|---|
-| Salarisberekening (bruto→netto) | Belastingdienst-certificering vereist |
-| BTW-aangifte / grootboek | AccountView is leidend |
-| Bankafschriften inlezen | AccountView / Twinfield |
+| Salarisberekening (bruto→netto, loonheffing) | Belastingdienst-certificering vereist |
+| Loonaangifte SBR / Digipoort | Certificering + aansprakelijkheid |
+| BTW-aangifte / grootboek | AccountView leidend |
+| Bankafschriften inlezen / automatisch matchen | AccountView / Twinfield |
 | GPS-tracking wagenpark | Hardware-afhankelijk |
-| Marketingcampagnes | Te generiek — Mailchimp/ActiveCampaign beter |
-| Werving & selectie | Te gespecialiseerd — apart pakket |
+| Marketingcampagnes | Te generiek — Mailchimp beter |
+| Werving & selectie | Te gespecialiseerd — Teamtailor/AFAS |
 | UWV officieel ziekmelden | Certificering + juridische complexiteit |
 
 ---
 
-*Document bijgewerkt: 11 juli 2026. Gebaseerd op AFAS als primaire benchmark (NL bouw/installatie) + generieke marktstandaard.*
+*Document bijgewerkt: 11 juli 2026. Benchmarks: AFAS (primair), ENK, IBIS, Nmbrs, Visma, Vimcar, Fleetio, ToolSense, Hilti ON!Track, Steps/BuildSmart.*

@@ -32934,6 +32934,15 @@ components:
           nullable: true
         keuringsplichtig:
           type: boolean
+        keuring_norm:
+          type: string
+          nullable: true
+          description: 'Van toepassing zijnde norm, bijv. "NEN3140", "NEN1010", "CE", "KEUR"'
+        keuring_verval_datum:
+          type: string
+          format: date-time
+          nullable: true
+          description: Vervaldatum van de eerstvolgende verplichte keuring
         laatste_keuring:
           type: string
           nullable: true
@@ -33006,6 +33015,15 @@ components:
           nullable: true
         keuringsplichtig:
           type: boolean
+        keuring_norm:
+          type: string
+          nullable: true
+          description: 'Van toepassing zijnde norm, bijv. "NEN3140", "NEN1010", "CE", "KEUR"'
+        keuring_verval_datum:
+          type: string
+          format: date-time
+          nullable: true
+          description: Vervaldatum van de eerstvolgende verplichte keuring
         laatste_keuring:
           type: string
           nullable: true
@@ -37262,21 +37280,24 @@ components:
       type: object
       required: [id, kenteken, merk, type, status, km_stand]
       properties:
-        id:           { type: integer }
-        kenteken:     { type: string }
-        merk:         { type: string }
-        type:         { type: string }
-        bouwjaar:     { type: integer, nullable: true }
-        kleur:        { type: string, nullable: true }
-        status:       { type: string }
-        km_stand:     { type: integer }
-        apk_datum:    { type: string, format: date-time, nullable: true }
-        bandenwissels_status: { type: string }
-        eigendoms_type: { type: string }
-        fleet_provider: { type: string, nullable: true }
-        provider_voertuig_id: { type: string, nullable: true }
-        aandacht_nodig: { type: boolean }
-        bijgewerkt_op: { type: string, format: date-time }
+        id:                     { type: integer }
+        kenteken:               { type: string }
+        merk:                   { type: string }
+        type:                   { type: string }
+        bouwjaar:               { type: integer, nullable: true }
+        kleur:                  { type: string, nullable: true }
+        status:                 { type: string }
+        km_stand:               { type: integer }
+        apk_datum:              { type: string, format: date-time, nullable: true }
+        verzekering_verval_dat: { type: string, format: date-time, nullable: true }
+        lease_eind_datum:       { type: string, format: date-time, nullable: true }
+        leasemaatschappij:      { type: string, nullable: true }
+        eigendoms_type:         { type: string }
+        bandenwissels_status:   { type: string }
+        fleet_provider:         { type: string, nullable: true }
+        provider_voertuig_id:   { type: string, nullable: true }
+        aandacht_nodig:         { type: boolean }
+        bijgewerkt_op:          { type: string, format: date-time }
 
     Voertuig:
       allOf:

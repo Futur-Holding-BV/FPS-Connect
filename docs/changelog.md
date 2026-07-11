@@ -1,3 +1,33 @@
+## 2026-07-11 — P1: Wagenpark vervaldatums + Gereedschappen NEN3140-keuring signalering
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (additief)
+
+**Nieuw gebouwd:**
+
+**Wagenpark — Verzekering + Lease vervaldatums in lijstoverzicht:**
+- `mapVoertuigSamenvatting` uitgebreid met `verzekering_verval_dat`, `lease_eind_datum` en `leasemaatschappij` — waren al in DB en `berekenAandachtNodig`, maar ontbraken in de list-response.
+- OpenAPI `VoertuigSamenvatting` schema uitgebreid met deze drie velden.
+- Wagenpark-lijsttabel (`/wagenpark`) heeft nu twee extra kolommen: **Verzekering** en **Lease eindigt**. Beide tonen de datum oranje+vet wanneer de vervaldatum binnen 60 dagen valt (zelfde drempel als `berekenAandachtNodig`). Lege waarden tonen `—`.
+
+**Gereedschappen — NEN3140/CE keuringsverval signalering:**
+- DB: twee nieuwe kolommen toegevoegd via `ALTER TABLE`: `keuring_norm` (text, bijv. "NEN3140") en `keuring_verval_datum` (timestamptz). Tevens toegevoegd aan `lib/db/src/schema/gereedschappen.ts`.
+- OpenAPI `Gereedschap` + `GereedschapInput` schema's uitgebreid met `keuring_norm` en `keuring_verval_datum`.
+- `mapGereedschap`, `POST /gereedschappen` en `PATCH /gereedschappen/:id` verwerken de nieuwe velden.
+- Gereedschappenlijst toont bij keuringsplichtig gereedschap met verval ≤ 30 dagen (of al verlopen) een rode/oranje waarschuwingsbadge ("Keuring verlopen" / "Keuring binnenkort") in de lijstrij.
+- Aanmaakformulier: checkbox "Keuringsplichtig (NEN/CE)" ontvouwt een oranje sectie met vrij tekstveld **Keuringnorm** en een **Keuringsverval** datumkiezer.
+
+**Bestanden gewijzigd:**
+- `artifacts/api-server/src/routes/wagenpark.ts` — `mapVoertuigSamenvatting` uitgebreid
+- `artifacts/api-server/src/routes/gereedschappen.ts` — `mapGereedschap`, POST, PATCH uitgebreid
+- `lib/api-spec/openapi.yaml` — `VoertuigSamenvatting`, `Gereedschap`, `GereedschapInput` schemas uitgebreid
+- `lib/db/src/schema/gereedschappen.ts` — `keuringNorm`, `keuringVervalDatum` velden toegevoegd
+- `artifacts/firevault/src/pages/wagenpark/index.tsx` — twee extra tabelkolommen (Verzekering, Lease eindigt)
+- `artifacts/firevault/src/pages/gereedschappen/index.tsx` — vervalwaarschuwing in lijst + keuringsfields in formulier
+
+**Typecheck:** schoon (pre-existing fout in `salarisarchief.ts` ongewijzigd).
+
+---
+
 ## 2026-07-11 — Goedkeuringsnotificatie: directe link + alle module-goedkeurders (Task #557)
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (additief; alleen notificatielogica uitgebreid)

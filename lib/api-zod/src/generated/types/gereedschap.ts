@@ -29,6 +29,10 @@ export interface Gereedschap {
   huidige_medewerker_naam?: string | null;
   locatie?: string | null;
   keuringsplichtig: boolean;
+  /** Van toepassing zijnde norm, bijv. "NEN3140", "NEN1010", "CE", "KEUR" */
+  keuring_norm?: string | null;
+  /** Vervaldatum van de eerstvolgende verplichte keuring */
+  keuring_verval_datum?: Date | null;
   laatste_keuring?: string | null;
   volgende_keuring?: string | null;
   opmerkingen?: string | null;

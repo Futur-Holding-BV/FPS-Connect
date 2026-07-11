@@ -7991,6 +7991,10 @@ export interface Gereedschap {
   huidige_medewerker_naam?: string | null;
   locatie?: string | null;
   keuringsplichtig: boolean;
+  /** Van toepassing zijnde norm, bijv. "NEN3140", "NEN1010", "CE", "KEUR" */
+  keuring_norm?: string | null;
+  /** Vervaldatum van de eerstvolgende verplichte keuring */
+  keuring_verval_datum?: string | null;
   laatste_keuring?: string | null;
   volgende_keuring?: string | null;
   opmerkingen?: string | null;
@@ -8020,6 +8024,10 @@ export interface GereedschapInput {
   huidige_medewerker_id?: number | null;
   locatie?: string | null;
   keuringsplichtig?: boolean;
+  /** Van toepassing zijnde norm, bijv. "NEN3140", "NEN1010", "CE", "KEUR" */
+  keuring_norm?: string | null;
+  /** Vervaldatum van de eerstvolgende verplichte keuring */
+  keuring_verval_datum?: string | null;
   laatste_keuring?: string | null;
   volgende_keuring?: string | null;
   opmerkingen?: string | null;
@@ -10097,8 +10105,11 @@ export interface VoertuigSamenvatting {
   status: string;
   km_stand: number;
   apk_datum?: string | null;
-  bandenwissels_status?: string;
+  verzekering_verval_dat?: string | null;
+  lease_eind_datum?: string | null;
+  leasemaatschappij?: string | null;
   eigendoms_type?: string;
+  bandenwissels_status?: string;
   fleet_provider?: string | null;
   provider_voertuig_id?: string | null;
   aandacht_nodig?: boolean;

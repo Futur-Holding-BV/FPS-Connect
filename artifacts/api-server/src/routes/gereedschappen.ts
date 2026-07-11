@@ -51,6 +51,8 @@ function mapGereedschap(
     huidige_medewerker_naam: huidigNaam ?? null,
     locatie: g.locatie ?? null,
     keuringsplichtig: g.keuringsplichtig,
+    keuring_norm: g.keuringNorm ?? null,
+    keuring_verval_datum: g.keuringVervalDatum?.toISOString() ?? null,
     laatste_keuring: g.laatsteKeuring ?? null,
     volgende_keuring: g.volgendeKeuring ?? null,
     opmerkingen: g.opmerkingen ?? null,
@@ -155,7 +157,7 @@ router.post("/gereedschappen", schrijven, async (req, res): Promise<void> => {
     categorie, aandrijving, met_snoer, accu_inbegrepen, lader_inbegrepen,
     koffer_inbegrepen, aankoopdatum, aankoopprijs, leverancier,
     garantietermijn, status, huidige_medewerker_id, locatie,
-    keuringsplichtig, laatste_keuring, volgende_keuring, opmerkingen,
+    keuringsplichtig, keuring_norm, keuring_verval_datum, laatste_keuring, volgende_keuring, opmerkingen,
   } = req.body;
 
   if (!omschrijving || !categorie || !aandrijving) {
@@ -186,6 +188,8 @@ router.post("/gereedschappen", schrijven, async (req, res): Promise<void> => {
       huidigeMedewerkerId: huidige_medewerker_id ?? null,
       locatie: locatie ?? null,
       keuringsplichtig: keuringsplichtig ?? false,
+      keuringNorm: keuring_norm ?? null,
+      keuringVervalDatum: keuring_verval_datum ? new Date(keuring_verval_datum) : null,
       laatsteKeuring: laatste_keuring ?? null,
       volgendeKeuring: volgende_keuring ?? null,
       opmerkingen: opmerkingen ?? null,
@@ -223,7 +227,7 @@ router.patch("/gereedschappen/:id", schrijven, async (req, res): Promise<void> =
     categorie, aandrijving, met_snoer, accu_inbegrepen, lader_inbegrepen,
     koffer_inbegrepen, aankoopdatum, aankoopprijs, leverancier,
     garantietermijn, status, huidige_medewerker_id, locatie,
-    keuringsplichtig, laatste_keuring, volgende_keuring, opmerkingen, foto_url,
+    keuringsplichtig, keuring_norm, keuring_verval_datum, laatste_keuring, volgende_keuring, opmerkingen, foto_url,
   } = req.body;
 
   const [bijgewerkt] = await db
@@ -248,6 +252,8 @@ router.patch("/gereedschappen/:id", schrijven, async (req, res): Promise<void> =
       ...(huidige_medewerker_id !== undefined && { huidigeMedewerkerId: huidige_medewerker_id }),
       ...(locatie !== undefined && { locatie }),
       ...(keuringsplichtig !== undefined && { keuringsplichtig }),
+      ...(keuring_norm !== undefined && { keuringNorm: keuring_norm }),
+      ...(keuring_verval_datum !== undefined && { keuringVervalDatum: keuring_verval_datum ? new Date(keuring_verval_datum) : null }),
       ...(laatste_keuring !== undefined && { laatsteKeuring: laatste_keuring }),
       ...(volgende_keuring !== undefined && { volgendeKeuring: volgende_keuring }),
       ...(opmerkingen !== undefined && { opmerkingen }),

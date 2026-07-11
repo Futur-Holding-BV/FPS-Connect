@@ -37,6 +37,8 @@ export const gereedschappenTable = pgTable("gereedschappen", {
   ),
   locatie: text("locatie"),
   keuringsplichtig: boolean("keuringsplichtig").notNull().default(false),
+  keuringNorm: text("keuring_norm"),             // bijv. "NEN3140", "CE", "NEN1010"
+  keuringVervalDatum: timestamp("keuring_verval_datum"), // next inspection due date
   laatsteKeuring: text("laatste_keuring"),
   volgendeKeuring: text("volgende_keuring"),
   opmerkingen: text("opmerkingen"),

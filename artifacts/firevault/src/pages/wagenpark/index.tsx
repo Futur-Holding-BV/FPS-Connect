@@ -289,6 +289,8 @@ export default function WagenparkPagina() {
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Km-stand</TableHead>
                 <TableHead>APK</TableHead>
+                <TableHead>Verzekering</TableHead>
+                <TableHead>Lease eindigt</TableHead>
                 <TableHead>Eigendom</TableHead>
                 <TableHead></TableHead>
               </TableRow>
@@ -351,6 +353,32 @@ export default function WagenparkPagina() {
                             : ""
                         }>
                           {formatDatum(v.apk_datum)}
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {v.verzekering_verval_dat ? (
+                        <span className={
+                          new Date(v.verzekering_verval_dat) < new Date(Date.now() + 60 * 86_400_000)
+                            ? "text-orange-600 font-medium"
+                            : ""
+                        }>
+                          {formatDatum(v.verzekering_verval_dat)}
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {v.lease_eind_datum ? (
+                        <span className={
+                          new Date(v.lease_eind_datum) < new Date(Date.now() + 60 * 86_400_000)
+                            ? "text-orange-600 font-medium"
+                            : ""
+                        }>
+                          {formatDatum(v.lease_eind_datum)}
                         </span>
                       ) : (
                         <span className="text-muted-foreground">—</span>
