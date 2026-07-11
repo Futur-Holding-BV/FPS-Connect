@@ -458,11 +458,34 @@ const verlofConfig: WorkflowConfig<VerlofAanvraag> = {
       // override; daarnaast mag de leidinggevende van de aanvrager beoordelen —
       // dit is de primaire goedkeuringsroute in de praktijk.
       magUitvoeren: async (entity, ctx) => {
+        if (ctx.params?.viaGoedkeuring === true) return true;
         if (ctx.isHoofdbeheerder) return true;
         if ((ctx.bevoegdheden["personeel"] ?? 0) >= 2) return true;
         return isLeidinggevendeVan(ctx.gebruikerId, entity.medewerkerId, ctx.db);
       },
       precheck: async (entity, ctx) => {
+        // Governance precheck: bij een actieve beleidsregel voor verlofaanvragen
+        // moet de aanvraag eerst via de Governance & Approval Engine goedgekeurd
+        // worden. `viaGoedkeuring: true` wordt gezet door de motor zelf na volledige
+        // goedkeuring — de bevoegdheids- en beleidscheck zijn dan al afgehandeld.
+        if (ctx.params?.viaGoedkeuring !== true) {
+          const aantalDagen = Math.ceil((entity.aantalUren ?? 0) / 8);
+          const { vereist } = await checkVereistGoedkeuring(
+            ctx.db,
+            "verlofaanvraag",
+            aantalDagen,
+            null,
+          );
+          if (vereist) {
+            const goedgekeurd = await haalGoedgekeurdeAanvraag(ctx.db, "verlofaanvraag", entity.id);
+            if (!goedgekeurd) {
+              return voorwaardeFout(
+                "Voor deze verlofaanvraag is op basis van het geldende goedkeuringsbeleid een formele goedkeuringsaanvraag vereist. Gebruik het goedkeuringsproces (knop 'Ter goedkeuring indienen') om de aanvraag in te dienen.",
+              );
+            }
+          }
+        }
+
         const bezetting = await controleerBezetting(ctx.db, entity);
         if (!bezetting.onderschreden) return null;
 

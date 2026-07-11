@@ -34,6 +34,7 @@ type Db = typeof _mainDb;
 // — géén aparte goedkeuringslogica per documenttype.
 const OBJECT_WORKFLOW_ACTIE: Record<string, { workflowId: string; naarStatus: string }> = {
   inkoopbon: { workflowId: "inkoopbon", naarStatus: "goedgekeurd" },
+  verlofaanvraag: { workflowId: "verlofaanvraag", naarStatus: "goedgekeurd" },
 };
 
 // Directe DB-statusovergang na goedkeuring voor entiteiten die géén WorkflowService

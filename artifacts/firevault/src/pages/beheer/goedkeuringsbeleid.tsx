@@ -278,19 +278,17 @@ function BeleidsregelsTab({ magBeheren }: { magBeheren: boolean }) {
             <div className="space-y-1.5">
               <Label>Documenttype</Label>
               {/* Vrije invoer met voorgedefinieerde suggesties — behoudt generieke engine-werking */}
-              <datalist id="documenttype-opties">
-                <option value="inkoopbon" />
-                <option value="inkoop_factuur" />
-                <option value="verkoop_factuur" />
-                <option value="creditnota" />
-                <option value="prijsafwijking" />
-              </datalist>
               <Input
                 list="documenttype-opties"
+                placeholder="bijv. inkoopbon, offerte, verlofaanvraag"
                 value={form.document_type}
                 onChange={(e) => setForm({ ...form, document_type: e.target.value })}
-                placeholder="bijv. inkoopbon, inkoop_factuur, offerte…"
               />
+              {form.document_type === "verlofaanvraag" && (
+                <p className="text-xs text-muted-foreground">
+                  Voor verlofaanvragen geldt: ondergrens en bovengrens zijn in <strong>werkdagen</strong> (bijv. ondergrens 10 = meer dan 10 werkdagen vereist directeursgoedkeuring).
+                </p>
+              )}
             </div>
             <div className="space-y-1.5">
               <Label>Werkmaatschappij</Label>
@@ -676,18 +674,3 @@ export default function GoedkeuringsbeleidBeheer() {
         </div>
       </div>
 
-      <Tabs value={tabActief} onValueChange={setTabActief}>
-        <TabsList>
-          <TabsTrigger value="aanvragen">Aanvragen</TabsTrigger>
-          <TabsTrigger value="beleidsregels">Beleidsregels</TabsTrigger>
-        </TabsList>
-        <TabsContent value="aanvragen" className="mt-4">
-          <AanvragenTab />
-        </TabsContent>
-        <TabsContent value="beleidsregels" className="mt-4">
-          <BeleidsregelsTab magBeheren={magBeheren} />
-        </TabsContent>
-      </Tabs>
-    </div>
-  );
-}

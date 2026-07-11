@@ -42,6 +42,7 @@ import {
   useDeleteMedewerkerAanstelling,
   useSetHoofdAanstelling,
   getListMedewerkerAanstellingenQueryKey,
+  getGetGoedkeuringVoorObjectQueryKey,
 } from "@workspace/api-client-react";
 import type {
   MedewerkerInput,
@@ -71,6 +72,7 @@ import {
   Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { caoVoorWerkmaatschappij, werkmaatschappijOpties } from "@/lib/werkmaatschappijen";
+import { GoedkeuringWidget } from "@/components/goedkeuring/goedkeuring-widget";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
@@ -1026,9 +1028,22 @@ export default function MedewerkerDetailPagina() {
       await queryClient.invalidateQueries({ queryKey: getListAlleVerlofAanvragenQueryKey() });
       await queryClient.invalidateQueries({ queryKey: getGetHrmStatsQueryKey() });
       toast({ title: status === "goedgekeurd" ? "Aanvraag goedgekeurd" : "Aanvraag afgewezen" });
-    } catch {
-      toast({ title: "Beoordelen mislukt", variant: "destructive" });
+    } catch (err: unknown) {
+      const body = (err as { body?: { error?: string } })?.body;
+      if (body?.error) {
+        toast({ title: "Beoordelen geblokkeerd", description: body.error, variant: "destructive" });
+      } else {
+        toast({ title: "Beoordelen mislukt", variant: "destructive" });
+      }
     }
+  }
+
+  async function onGoedkeuringWijziging(aanvraagId: number) {
+    await queryClient.invalidateQueries({ queryKey: getListVerlofAanvragenQueryKey(id) });
+    await queryClient.invalidateQueries({ queryKey: getListVerlofSaldiQueryKey(id) });
+    await queryClient.invalidateQueries({ queryKey: getListAlleVerlofAanvragenQueryKey() });
+    await queryClient.invalidateQueries({ queryKey: getGetHrmStatsQueryKey() });
+    await queryClient.invalidateQueries({ queryKey: getGetGoedkeuringVoorObjectQueryKey("verlofaanvraag", aanvraagId) });
   }
 
   const gekoppeldeGebruiker = useMemo(
@@ -1518,25 +1533,38 @@ export default function MedewerkerDetailPagina() {
               <div className="space-y-2">
                 {(aanvragen ?? []).map((a) => (
                   <Card key={a.id}>
-                    <CardContent className="p-4 flex items-center justify-between gap-3">
-                      <div className="min-w-0">
-                        <div className="font-medium truncate">{a.verlofsoort_naam ?? `Soort #${a.verlofsoort_id}`}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {fmtDatum(a.start_datum)} – {fmtDatum(a.eind_datum)} · {uren(a.aantal_uren)}
+                    <CardContent className="p-4 space-y-2">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="font-medium truncate">{a.verlofsoort_naam ?? `Soort #${a.verlofsoort_id}`}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {fmtDatum(a.start_datum)} – {fmtDatum(a.eind_datum)} · {uren(a.aantal_uren)}
+                          </div>
+                          {a.reden && <div className="text-xs text-muted-foreground mt-1">{a.reden}</div>}
                         </div>
-                        {a.reden && <div className="text-xs text-muted-foreground mt-1">{a.reden}</div>}
+                        <div className="flex items-center gap-2 shrink-0">
+                          <Badge variant={a.status === "goedgekeurd" ? "secondary" : "outline"} className={a.status === "afgewezen" ? "border-destructive/40 text-destructive" : a.status === "aangevraagd" ? "border-amber-200 text-amber-700" : ""}>
+                            {VERLOF_STATUS_LABEL[a.status] ?? a.status}
+                          </Badge>
+                          {magSchrijven && a.status === "aangevraagd" && (
+                            <>
+                              <Button variant="outline" size="sm" onClick={() => beoordeelAanvraag(a, "goedgekeurd")}><Check className="h-4 w-4" /> Goedkeuren</Button>
+                              <Button variant="outline" size="sm" className="text-destructive hover:text-destructive" onClick={() => beoordeelAanvraag(a, "afgewezen")}><X className="h-4 w-4" /> Afwijzen</Button>
+                            </>
+                          )}
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <Badge variant={a.status === "goedgekeurd" ? "secondary" : "outline"} className={a.status === "afgewezen" ? "border-destructive/40 text-destructive" : a.status === "aangevraagd" ? "border-amber-200 text-amber-700" : ""}>
-                          {VERLOF_STATUS_LABEL[a.status] ?? a.status}
-                        </Badge>
-                        {magSchrijven && a.status === "aangevraagd" && (
-                          <>
-                            <Button variant="outline" size="sm" onClick={() => beoordeelAanvraag(a, "goedgekeurd")}><Check className="h-4 w-4" /> Goedkeuren</Button>
-                            <Button variant="outline" size="sm" className="text-destructive hover:text-destructive" onClick={() => beoordeelAanvraag(a, "afgewezen")}><X className="h-4 w-4" /> Afwijzen</Button>
-                          </>
-                        )}
-                      </div>
+                      {a.status === "aangevraagd" && (
+                        <GoedkeuringWidget
+                          objectType="verlofaanvraag"
+                          objectId={a.id}
+                          documentType="verlofaanvraag"
+                          bedrag={Math.ceil((a.aantal_uren ?? 0) / 8)}
+                          omschrijving={`Verlofaanvraag ${a.verlofsoort_naam ?? ""} (${fmtDatum(a.start_datum)} – ${fmtDatum(a.eind_datum)}, ${uren(a.aantal_uren)})`}
+                          toonIndienKnop
+                          onWijziging={() => onGoedkeuringWijziging(a.id)}
+                        />
+                      )}
                     </CardContent>
                   </Card>
                 ))}
