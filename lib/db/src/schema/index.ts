@@ -67,3 +67,4 @@ export * from "./security-validation";
 export * from "./cqo";
 export * from "./kantoor-release";
 export * from "./goedkeuring";
+export * from "./declaraties";

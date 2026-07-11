@@ -1,3 +1,38 @@
+## 2026-07-11 — Declaratiemodule (web + mobiel)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (puur additief — nieuwe tabellen, nieuwe routes, geen bestaand gedrag gewijzigd)
+
+**Nieuw gebouwd:**
+
+**1. DB-tabellen**
+- `declaraties`: medewerker_id (FK), categorie (reiskosten/maaltijden/materialen/overig), omschrijving, bedrag_totaal_cents, datum, status (concept/ingediend/goedgekeurd/afgekeurd/verwerkt), ingediend_op, beoordeeld_op/door, afwijzingsreden, verwerking_op/door, bijlage_pad
+- `declaratie_beleid`: vrije tekst voor beleidsregels, bijgewerkt_op/door
+
+**2. Permissies**
+- Module `declaraties` toegevoegd (niveaus 1–4) aan `lib/permissies/src/index.ts`
+- Presets: Monteur/Timmerman/Uitvoerder/Onderhoudsmonteur=2, Projectleider=3, Directie/Administratie=4, HRM-adviseur=1
+
+**3. OpenAPI + codegen**
+- Paden: GET/POST /declaraties, GET /mijn/declaraties, GET/PATCH/DELETE /declaraties/:id, POST /declaraties/:id/indienen|goedkeuren|afwijzen|verwerken, GET/PATCH /declaratiebeleid
+- Codegen gedraaid → alle hooks + Zod-schemas gegenereerd
+
+**4. Backend routes (`declaraties.ts`)**
+- Compleet CRUD met statusmachine (concept→ingediend→goedgekeurd→verwerkt / afgekeurd)
+- Bij indienen: mail naar alle actieve gebruikers met declaraties-niveau 3+
+- Bij afwijzen: mail naar de medewerker met afwijzingsreden
+- Scoping: niveau <3 ziet alleen eigen declaraties; niveau 3+ ziet alles
+
+**5. Web-frontend**
+- `/declaraties` — overzichtspagina met tabbladenfilter (alle/ingediend/goedgekeurd/afgekeurd/verwerkt) + nieuw-declaratie-dialoog
+- `/declaraties/:id` — detailpagina met bewerken (concept), statusknoppen (indienen/goedkeuren/afwijzen/verwerken), afwijzingsdialoog
+- Sidebar nav-item toegevoegd (na "Goedkeuring")
+
+**6. Mobiel (Expo)**
+- `/hrm/declaraties` — overzicht eigen declaraties + nieuw indienen
+- Nav-kaart toegevoegd aan HRM-dashboard
+
+---
+
 ## 2026-07-11 — CAO Bouw & Infra keuzes (vakantiegeld / gereedschapsgeld / spaarfonds)
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (puur additief — nieuwe tabel, nieuwe routes, geen bestaand gedrag gewijzigd)

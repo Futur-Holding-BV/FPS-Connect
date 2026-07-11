@@ -53,7 +53,7 @@ export class MailFout extends Error {
   }
 }
 
-export type MailSoort = "test" | "uitnodiging" | "wachtwoord_reset" | "offerte" | "klantvraag" | "afwijzing" | "ondertekening" | "inkoopbon" | "opdrachtbevestiging" | "magazijn_signalering" | "magazijn_bestelbon" | "aanvraag_bevestiging" | "planning_melding" | "incident_melding" | "ai_drempel" | "reactietermijn_melding" | "rapport_melding" | "avg_verzoek_bevestiging" | "avg_verzoek_afgehandeld" | "voertuig_melding_garage" | "goedkeuring_escalatie" | "goedkeuring_indiening" | "goedkeuring_goedgekeurd" | "goedkeuring_afgewezen";
+export type MailSoort = "test" | "uitnodiging" | "wachtwoord_reset" | "offerte" | "klantvraag" | "afwijzing" | "ondertekening" | "inkoopbon" | "opdrachtbevestiging" | "magazijn_signalering" | "magazijn_bestelbon" | "aanvraag_bevestiging" | "planning_melding" | "incident_melding" | "ai_drempel" | "reactietermijn_melding" | "rapport_melding" | "avg_verzoek_bevestiging" | "avg_verzoek_afgehandeld" | "voertuig_melding_garage" | "goedkeuring_escalatie" | "goedkeuring_indiening" | "goedkeuring_goedgekeurd" | "goedkeuring_afgewezen" | "declaratie_ingediend" | "declaratie_afgewezen";
 
 // ── Configuratie-helpers ─────────────────────────────────────────────────────
 export function isGeconfigureerd(): boolean {
@@ -1596,5 +1596,64 @@ export async function stuurGoedkeuringEscalatieMail(opties: {
     await verstuurMail({ naarEmail: opties.naarEmail, naarNaam: opties.naarNaam ?? undefined, onderwerp, html, soort: "goedkeuring_escalatie" });
   } catch {
     // Bewakingsservice logt al; hier niet opnieuw gooien zodat de loop doorgaat
+  }
+}
+
+// ── Declaratie-meldingen ──────────────────────────────────────────────────────
+
+export async function stuurDeclaratieIngediendMail(opties: {
+  naarEmail: string;
+  naarNaam?: string | null;
+  declaratieId: number;
+  medewerkernaam: string;
+  categorie: string;
+  bedragCents: number;
+  dashboardUrl?: string | null;
+}): Promise<void> {
+  const bedragTekst = new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(opties.bedragCents / 100);
+  const onderwerp = `Declaratie #${opties.declaratieId} ter beoordeling — ${bedragTekst}`;
+  const html = mailShell({
+    titel: "Nieuwe declaratie ter beoordeling",
+    kopje: `Declaratie #${opties.declaratieId} — ${escapeHtml(opties.categorie)} — ${bedragTekst}`,
+    paragrafen: [
+      `${escapeHtml(opties.medewerkernaam)} heeft een declaratie ingediend ter beoordeling.`,
+      opties.dashboardUrl
+        ? "Gebruik de knop hieronder om de declaratie te bekijken en goed te keuren of af te wijzen."
+        : "Log in op FPS Connect om de declaratie te beoordelen.",
+    ],
+    ...(opties.dashboardUrl ? { knop: { label: "Bekijk declaratie", link: opties.dashboardUrl } } : {}),
+  });
+  try {
+    await verstuurMail({ naarEmail: opties.naarEmail, naarNaam: opties.naarNaam ?? undefined, onderwerp, html, soort: "declaratie_ingediend" });
+  } catch {
+    // Stille fout — declaratie is al opgeslagen
+  }
+}
+
+export async function stuurDeclaratieAfgewezenMail(opties: {
+  naarEmail: string;
+  naarNaam?: string | null;
+  declaratieId: number;
+  afwijzingsreden: string;
+  beoordeeldDoorNaam?: string | null;
+  bedragCents: number;
+  dashboardUrl?: string | null;
+}): Promise<void> {
+  const bedragTekst = new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(opties.bedragCents / 100);
+  const onderwerp = `Declaratie #${opties.declaratieId} afgewezen`;
+  const html = mailShell({
+    titel: "Declaratie afgewezen",
+    kopje: `Declaratie #${opties.declaratieId} — ${bedragTekst}`,
+    paragrafen: [
+      `Uw declaratie is afgewezen${opties.beoordeeldDoorNaam ? ` door ${escapeHtml(opties.beoordeeldDoorNaam)}` : ""}.`,
+      `Reden: ${escapeHtml(opties.afwijzingsreden)}`,
+      "Als u vragen heeft over deze beslissing, neem dan contact op met uw leidinggevende.",
+    ],
+    ...(opties.dashboardUrl ? { knop: { label: "Bekijk declaratie", link: opties.dashboardUrl } } : {}),
+  });
+  try {
+    await verstuurMail({ naarEmail: opties.naarEmail, naarNaam: opties.naarNaam ?? undefined, onderwerp, html, soort: "declaratie_afgewezen" });
+  } catch {
+    // Stille fout — status is al opgeslagen
   }
 }

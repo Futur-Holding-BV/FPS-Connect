@@ -21928,6 +21928,178 @@ paths:
         '404':
           description: Onbekend token
 
+  # ── Declaraties ─────────────────────────────────────────────────────────────
+  /declaraties:
+    get:
+      operationId: listDeclaraties
+      tags: [declaraties]
+      summary: Lijst declaraties (beheerder=alle, medewerker=eigen)
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Declaratie' }
+    post:
+      operationId: createDeclaratie
+      tags: [declaraties]
+      summary: Nieuwe declaratie aanmaken (concept)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DeclaratieInput' }
+      responses:
+        '201':
+          description: Aangemaakt
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Declaratie' }
+
+  /declaraties/{id}:
+    get:
+      operationId: getDeclaratie
+      tags: [declaraties]
+      summary: Declaratie detail
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Declaratie' }
+        '404': { description: Niet gevonden }
+    patch:
+      operationId: updateDeclaratie
+      tags: [declaraties]
+      summary: Declaratie bijwerken (alleen concept)
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DeclaratieInput' }
+      responses:
+        '200':
+          description: Bijgewerkt
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Declaratie' }
+    delete:
+      operationId: deleteDeclaratie
+      tags: [declaraties]
+      summary: Declaratie verwijderen (alleen concept, eigen)
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        '204': { description: Verwijderd }
+
+  /declaraties/{id}/indienen:
+    post:
+      operationId: indieningDeclaratie
+      tags: [declaraties]
+      summary: Declaratie indienen (concept → ingediend)
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        '200':
+          description: Ingediend
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Declaratie' }
+
+  /declaraties/{id}/goedkeuren:
+    post:
+      operationId: goedkeurenDeclaratie
+      tags: [declaraties]
+      summary: Declaratie goedkeuren (ingediend → goedgekeurd) — directeur/hoofdbeheerder
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        '200':
+          description: Goedgekeurd
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Declaratie' }
+
+  /declaraties/{id}/afwijzen:
+    post:
+      operationId: afwijzenDeclaratie
+      tags: [declaraties]
+      summary: Declaratie afwijzen — directeur/hoofdbeheerder of admin
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DeclaratieAfwijzingInput' }
+      responses:
+        '200':
+          description: Afgekeurd
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Declaratie' }
+
+  /declaraties/{id}/verwerken:
+    post:
+      operationId: verwerkenDeclaratie
+      tags: [declaraties]
+      summary: Declaratie verwerken/uitbetalen (goedgekeurd → verwerkt) — admin/Hoekwoning
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        '200':
+          description: Verwerkt
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Declaratie' }
+
+  /declaratiebeleid:
+    get:
+      operationId: getDeclaratieBeleid
+      tags: [declaraties]
+      summary: Declaratiebeleid en voorwaarden ophalen
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Declaratiebeleid' }
+    patch:
+      operationId: updateDeclaratieBeleid
+      tags: [declaraties]
+      summary: Declaratiebeleid bijwerken (beheerder)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DeclaratiebeleidInput' }
+      responses:
+        '200':
+          description: Bijgewerkt
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Declaratiebeleid' }
+
+  /mijn/declaraties:
+    get:
+      operationId: listMijnDeclaraties
+      tags: [declaraties]
+      summary: Eigen declaraties van de ingelogde medewerker
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Declaratie' }
+
 components:
   schemas:
     FinancieelSubtype:
@@ -39725,3 +39897,57 @@ components:
         feestdagen_toegevoegd:             { type: integer }
         jaarafsluiting_regels_toegevoegd:  { type: integer }
         bericht:                           { type: string }
+
+    Declaratie:
+      type: object
+      required: [id, medewerker_id, medewerker_naam, categorie, omschrijving, bedrag_totaal_cents, datum, status, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id:                  { type: integer }
+        medewerker_id:       { type: integer }
+        medewerker_naam:     { type: string }
+        categorie:           { type: string }
+        omschrijving:        { type: string }
+        bedrag_totaal_cents: { type: integer }
+        datum:               { type: string }
+        status:              { type: string, enum: [concept, ingediend, goedgekeurd, afgekeurd, verwerkt] }
+        ingediend_op:        { type: ["string", "null"] }
+        beoordeeld_op:       { type: ["string", "null"] }
+        beoordeeld_door:     { type: ["integer", "null"] }
+        beoordeeld_door_naam: { type: ["string", "null"] }
+        afwijzingsreden:     { type: ["string", "null"] }
+        verwerking_op:       { type: ["string", "null"] }
+        verwerkt_door:       { type: ["integer", "null"] }
+        bijlage_pad:         { type: ["string", "null"] }
+        aangemaakt_op:       { type: string }
+        bijgewerkt_op:       { type: string }
+
+    DeclaratieInput:
+      type: object
+      required: [categorie, omschrijving, bedrag_totaal_cents, datum]
+      properties:
+        categorie:           { type: string, enum: [reiskosten, maaltijden, overnachting, representatie, gereedschap, overig] }
+        omschrijving:        { type: string }
+        bedrag_totaal_cents: { type: integer }
+        datum:               { type: string }
+        bijlage_pad:         { type: string }
+
+    DeclaratieAfwijzingInput:
+      type: object
+      required: [afwijzingsreden]
+      properties:
+        afwijzingsreden: { type: string }
+
+    Declaratiebeleid:
+      type: object
+      required: [id, inhoud, bijgewerkt_op]
+      properties:
+        id:             { type: integer }
+        inhoud:         { type: string }
+        bijgewerkt_op:  { type: string }
+        bijgewerkt_door: { type: ["integer", "null"] }
+
+    DeclaratiebeleidInput:
+      type: object
+      required: [inhoud]
+      properties:
+        inhoud: { type: string }

@@ -27396,3 +27396,291 @@ export const BeoordeelAiBeslissingResponse = zod.object({
 })
 
 
+/**
+ * @summary Lijst declaraties (beheerder=alle, medewerker=eigen)
+ */
+export const ListDeclaratiesResponseItem = zod.object({
+  "id": zod.number(),
+  "medewerker_id": zod.number(),
+  "medewerker_naam": zod.string(),
+  "categorie": zod.string(),
+  "omschrijving": zod.string(),
+  "bedrag_totaal_cents": zod.number(),
+  "datum": zod.string(),
+  "status": zod.enum(['concept', 'ingediend', 'goedgekeurd', 'afgekeurd', 'verwerkt']),
+  "ingediend_op": zod.string().nullish(),
+  "beoordeeld_op": zod.string().nullish(),
+  "beoordeeld_door": zod.number().nullish(),
+  "beoordeeld_door_naam": zod.string().nullish(),
+  "afwijzingsreden": zod.string().nullish(),
+  "verwerking_op": zod.string().nullish(),
+  "verwerkt_door": zod.number().nullish(),
+  "bijlage_pad": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+export const ListDeclaratiesResponse = zod.array(ListDeclaratiesResponseItem)
+
+
+/**
+ * @summary Nieuwe declaratie aanmaken (concept)
+ */
+export const CreateDeclaratieBody = zod.object({
+  "categorie": zod.enum(['reiskosten', 'maaltijden', 'overnachting', 'representatie', 'gereedschap', 'overig']),
+  "omschrijving": zod.string(),
+  "bedrag_totaal_cents": zod.number(),
+  "datum": zod.string(),
+  "bijlage_pad": zod.string().optional()
+})
+
+export const CreateDeclaratieResponse = zod.void()
+
+
+/**
+ * @summary Declaratie detail
+ */
+export const GetDeclaratieParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetDeclaratieResponse = zod.object({
+  "id": zod.number(),
+  "medewerker_id": zod.number(),
+  "medewerker_naam": zod.string(),
+  "categorie": zod.string(),
+  "omschrijving": zod.string(),
+  "bedrag_totaal_cents": zod.number(),
+  "datum": zod.string(),
+  "status": zod.enum(['concept', 'ingediend', 'goedgekeurd', 'afgekeurd', 'verwerkt']),
+  "ingediend_op": zod.string().nullish(),
+  "beoordeeld_op": zod.string().nullish(),
+  "beoordeeld_door": zod.number().nullish(),
+  "beoordeeld_door_naam": zod.string().nullish(),
+  "afwijzingsreden": zod.string().nullish(),
+  "verwerking_op": zod.string().nullish(),
+  "verwerkt_door": zod.number().nullish(),
+  "bijlage_pad": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Declaratie bijwerken (alleen concept)
+ */
+export const UpdateDeclaratieParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateDeclaratieBody = zod.object({
+  "categorie": zod.enum(['reiskosten', 'maaltijden', 'overnachting', 'representatie', 'gereedschap', 'overig']),
+  "omschrijving": zod.string(),
+  "bedrag_totaal_cents": zod.number(),
+  "datum": zod.string(),
+  "bijlage_pad": zod.string().optional()
+})
+
+export const UpdateDeclaratieResponse = zod.object({
+  "id": zod.number(),
+  "medewerker_id": zod.number(),
+  "medewerker_naam": zod.string(),
+  "categorie": zod.string(),
+  "omschrijving": zod.string(),
+  "bedrag_totaal_cents": zod.number(),
+  "datum": zod.string(),
+  "status": zod.enum(['concept', 'ingediend', 'goedgekeurd', 'afgekeurd', 'verwerkt']),
+  "ingediend_op": zod.string().nullish(),
+  "beoordeeld_op": zod.string().nullish(),
+  "beoordeeld_door": zod.number().nullish(),
+  "beoordeeld_door_naam": zod.string().nullish(),
+  "afwijzingsreden": zod.string().nullish(),
+  "verwerking_op": zod.string().nullish(),
+  "verwerkt_door": zod.number().nullish(),
+  "bijlage_pad": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Declaratie verwijderen (alleen concept, eigen)
+ */
+export const DeleteDeclaratieParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteDeclaratieResponse = zod.void()
+
+
+/**
+ * @summary Declaratie indienen (concept → ingediend)
+ */
+export const IndieningDeclaratieParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const IndieningDeclaratieResponse = zod.object({
+  "id": zod.number(),
+  "medewerker_id": zod.number(),
+  "medewerker_naam": zod.string(),
+  "categorie": zod.string(),
+  "omschrijving": zod.string(),
+  "bedrag_totaal_cents": zod.number(),
+  "datum": zod.string(),
+  "status": zod.enum(['concept', 'ingediend', 'goedgekeurd', 'afgekeurd', 'verwerkt']),
+  "ingediend_op": zod.string().nullish(),
+  "beoordeeld_op": zod.string().nullish(),
+  "beoordeeld_door": zod.number().nullish(),
+  "beoordeeld_door_naam": zod.string().nullish(),
+  "afwijzingsreden": zod.string().nullish(),
+  "verwerking_op": zod.string().nullish(),
+  "verwerkt_door": zod.number().nullish(),
+  "bijlage_pad": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Declaratie goedkeuren (ingediend → goedgekeurd) — directeur/hoofdbeheerder
+ */
+export const GoedkeurenDeclaratieParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GoedkeurenDeclaratieResponse = zod.object({
+  "id": zod.number(),
+  "medewerker_id": zod.number(),
+  "medewerker_naam": zod.string(),
+  "categorie": zod.string(),
+  "omschrijving": zod.string(),
+  "bedrag_totaal_cents": zod.number(),
+  "datum": zod.string(),
+  "status": zod.enum(['concept', 'ingediend', 'goedgekeurd', 'afgekeurd', 'verwerkt']),
+  "ingediend_op": zod.string().nullish(),
+  "beoordeeld_op": zod.string().nullish(),
+  "beoordeeld_door": zod.number().nullish(),
+  "beoordeeld_door_naam": zod.string().nullish(),
+  "afwijzingsreden": zod.string().nullish(),
+  "verwerking_op": zod.string().nullish(),
+  "verwerkt_door": zod.number().nullish(),
+  "bijlage_pad": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Declaratie afwijzen — directeur/hoofdbeheerder of admin
+ */
+export const AfwijzenDeclaratieParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AfwijzenDeclaratieBody = zod.object({
+  "afwijzingsreden": zod.string()
+})
+
+export const AfwijzenDeclaratieResponse = zod.object({
+  "id": zod.number(),
+  "medewerker_id": zod.number(),
+  "medewerker_naam": zod.string(),
+  "categorie": zod.string(),
+  "omschrijving": zod.string(),
+  "bedrag_totaal_cents": zod.number(),
+  "datum": zod.string(),
+  "status": zod.enum(['concept', 'ingediend', 'goedgekeurd', 'afgekeurd', 'verwerkt']),
+  "ingediend_op": zod.string().nullish(),
+  "beoordeeld_op": zod.string().nullish(),
+  "beoordeeld_door": zod.number().nullish(),
+  "beoordeeld_door_naam": zod.string().nullish(),
+  "afwijzingsreden": zod.string().nullish(),
+  "verwerking_op": zod.string().nullish(),
+  "verwerkt_door": zod.number().nullish(),
+  "bijlage_pad": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Declaratie verwerken/uitbetalen (goedgekeurd → verwerkt) — admin/Hoekwoning
+ */
+export const VerwerkenDeclaratieParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const VerwerkenDeclaratieResponse = zod.object({
+  "id": zod.number(),
+  "medewerker_id": zod.number(),
+  "medewerker_naam": zod.string(),
+  "categorie": zod.string(),
+  "omschrijving": zod.string(),
+  "bedrag_totaal_cents": zod.number(),
+  "datum": zod.string(),
+  "status": zod.enum(['concept', 'ingediend', 'goedgekeurd', 'afgekeurd', 'verwerkt']),
+  "ingediend_op": zod.string().nullish(),
+  "beoordeeld_op": zod.string().nullish(),
+  "beoordeeld_door": zod.number().nullish(),
+  "beoordeeld_door_naam": zod.string().nullish(),
+  "afwijzingsreden": zod.string().nullish(),
+  "verwerking_op": zod.string().nullish(),
+  "verwerkt_door": zod.number().nullish(),
+  "bijlage_pad": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Declaratiebeleid en voorwaarden ophalen
+ */
+export const GetDeclaratieBeleidResponse = zod.object({
+  "id": zod.number(),
+  "inhoud": zod.string(),
+  "bijgewerkt_op": zod.string(),
+  "bijgewerkt_door": zod.number().nullish()
+})
+
+
+/**
+ * @summary Declaratiebeleid bijwerken (beheerder)
+ */
+export const UpdateDeclaratieBeleidBody = zod.object({
+  "inhoud": zod.string()
+})
+
+export const UpdateDeclaratieBeleidResponse = zod.object({
+  "id": zod.number(),
+  "inhoud": zod.string(),
+  "bijgewerkt_op": zod.string(),
+  "bijgewerkt_door": zod.number().nullish()
+})
+
+
+/**
+ * @summary Eigen declaraties van de ingelogde medewerker
+ */
+export const ListMijnDeclaratiesResponseItem = zod.object({
+  "id": zod.number(),
+  "medewerker_id": zod.number(),
+  "medewerker_naam": zod.string(),
+  "categorie": zod.string(),
+  "omschrijving": zod.string(),
+  "bedrag_totaal_cents": zod.number(),
+  "datum": zod.string(),
+  "status": zod.enum(['concept', 'ingediend', 'goedgekeurd', 'afgekeurd', 'verwerkt']),
+  "ingediend_op": zod.string().nullish(),
+  "beoordeeld_op": zod.string().nullish(),
+  "beoordeeld_door": zod.number().nullish(),
+  "beoordeeld_door_naam": zod.string().nullish(),
+  "afwijzingsreden": zod.string().nullish(),
+  "verwerking_op": zod.string().nullish(),
+  "verwerkt_door": zod.number().nullish(),
+  "bijlage_pad": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+export const ListMijnDeclaratiesResponse = zod.array(ListMijnDeclaratiesResponseItem)
+
+

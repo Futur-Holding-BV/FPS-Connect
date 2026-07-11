@@ -12464,6 +12464,82 @@ export interface CaoPresetsSyncResultaat {
   bericht: string;
 }
 
+export type DeclaratieStatus = typeof DeclaratieStatus[keyof typeof DeclaratieStatus];
+
+
+export const DeclaratieStatus = {
+  concept: 'concept',
+  ingediend: 'ingediend',
+  goedgekeurd: 'goedgekeurd',
+  afgekeurd: 'afgekeurd',
+  verwerkt: 'verwerkt',
+} as const;
+
+export interface Declaratie {
+  id: number;
+  medewerker_id: number;
+  medewerker_naam: string;
+  categorie: string;
+  omschrijving: string;
+  bedrag_totaal_cents: number;
+  datum: string;
+  status: DeclaratieStatus;
+  /** @nullable */
+  ingediend_op?: string | null;
+  /** @nullable */
+  beoordeeld_op?: string | null;
+  /** @nullable */
+  beoordeeld_door?: number | null;
+  /** @nullable */
+  beoordeeld_door_naam?: string | null;
+  /** @nullable */
+  afwijzingsreden?: string | null;
+  /** @nullable */
+  verwerking_op?: string | null;
+  /** @nullable */
+  verwerkt_door?: number | null;
+  /** @nullable */
+  bijlage_pad?: string | null;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export type DeclaratieInputCategorie = typeof DeclaratieInputCategorie[keyof typeof DeclaratieInputCategorie];
+
+
+export const DeclaratieInputCategorie = {
+  reiskosten: 'reiskosten',
+  maaltijden: 'maaltijden',
+  overnachting: 'overnachting',
+  representatie: 'representatie',
+  gereedschap: 'gereedschap',
+  overig: 'overig',
+} as const;
+
+export interface DeclaratieInput {
+  categorie: DeclaratieInputCategorie;
+  omschrijving: string;
+  bedrag_totaal_cents: number;
+  datum: string;
+  bijlage_pad?: string;
+}
+
+export interface DeclaratieAfwijzingInput {
+  afwijzingsreden: string;
+}
+
+export interface Declaratiebeleid {
+  id: number;
+  inhoud: string;
+  bijgewerkt_op: string;
+  /** @nullable */
+  bijgewerkt_door?: number | null;
+}
+
+export interface DeclaratiebeleidInput {
+  inhoud: string;
+}
+
 export type GetRecenteActiviteitParams = {
 limit?: number;
 };

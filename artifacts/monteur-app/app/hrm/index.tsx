@@ -71,6 +71,7 @@ export default function HrmDashboard() {
     { titel: "Opleidingen", omschrijving: "Trainingen, certificaten en bekwaamheden", route: "/hrm/opleidingen" as const, testID: "hrm-opleidingen-navkaart" },
     { titel: "Kennisbank", omschrijving: "Werkafspraken, handboeken en toolboxen", route: "/hrm/kennisbank" as const, testID: "hrm-kennisbank-navkaart" },
     { titel: "Mijn CAO-keuzes", omschrijving: "Vakantiegeld, gereedschapsgeld en spaarfonds", route: "/hrm/keuzes" as const, testID: "hrm-keuzes-navkaart" },
+    { titel: "Declaraties", omschrijving: "Onkosten en reiskosten indienen", route: "/hrm/declaraties" as const, testID: "hrm-declaraties-navkaart" },
   ];
 
   return (

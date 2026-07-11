@@ -143,6 +143,12 @@ export const MODULES = [
     omschrijving:
       "Governance & Approval Engine: financiële grenzen, vier-ogen-regels en goedkeurings-/afwijzingsacties voor offertes, facturen, inkoop en overige documenten. Niveau 1 = tijdlijn en beleid inzien, niveau 3 = zelf goedkeuren/afwijzen, niveau 4 = beleidsregels beheren",
   },
+  {
+    id: "declaraties",
+    label: "Declaraties",
+    omschrijving:
+      "Onkostendeclaraties: indienen, beoordelen (directeur/hoofdbeheerder) en verwerken (administratie/Hoekwoning). Niveau 1 = eigen inzien, niveau 2 = aanmaken en indienen, niveau 3 = beoordelen en goedkeuren/afwijzen, niveau 4 = verwerken en beleid beheren",
+  },
 ] as const;
 
 export type ModuleId = (typeof MODULES)[number]["id"];
@@ -244,7 +250,7 @@ export const PRESETS: Preset[] = [
       gebouwen: 4, voorzieningen: 4, inspecties: 4, onderhoud: 4,
       rapportages: 4, bibliotheek: 3, crm: 3,
       planning: 3, toolbox: 3, calculaties: 1,
-      financieel: 2, goedkeuring: 3,
+      financieel: 2, goedkeuring: 3, declaraties: 3,
     }),
   },
   {
@@ -266,21 +272,21 @@ export const PRESETS: Preset[] = [
     naam: "Monteur",
     bevoegdheden: matrix({
       gebouwen: 1, voorzieningen: 3, inspecties: 3, onderhoud: 3,
-      rapportages: 1, bibliotheek: 1, planning: 1, toolbox: 1,
+      rapportages: 1, bibliotheek: 1, planning: 1, toolbox: 1, declaraties: 2,
     }),
   },
   {
     naam: "Timmerman",
     bevoegdheden: matrix({
       gebouwen: 1, voorzieningen: 3, inspecties: 2, onderhoud: 3,
-      rapportages: 1, bibliotheek: 1,
+      rapportages: 1, bibliotheek: 1, declaraties: 2,
     }),
   },
   {
     naam: "Uitvoerder",
     bevoegdheden: matrix({
       gebouwen: 2, voorzieningen: 3, inspecties: 3, onderhoud: 3,
-      rapportages: 2, bibliotheek: 1, planning: 2, toolbox: 1,
+      rapportages: 2, bibliotheek: 1, planning: 2, toolbox: 1, declaraties: 2,
     }),
   },
   {
@@ -317,7 +323,7 @@ export const PRESETS: Preset[] = [
       rapportages: 4, bibliotheek: 2, crm: 4, abonnementen: 4,
       personeel: 2, dossiers: 2, offertes: 2, calculaties: 1, planning: 2,
       financieel: 4, financieel_vertrouwelijk: 4, salarisarchief: 1,
-      goedkeuring: 4,
+      goedkeuring: 4, declaraties: 4,
     }),
   },
   {
@@ -326,14 +332,14 @@ export const PRESETS: Preset[] = [
       gebouwen: 2, inspecties: 1, onderhoud: 2, rapportages: 3,
       crm: 2, personeel: 2, dossiers: 3, offertes: 1, planning: 1,
       financieel: 4, financieel_vertrouwelijk: 2, salarisarchief: 2,
-      goedkeuring: 3,
+      goedkeuring: 3, declaraties: 4,
     }),
   },
   {
     naam: "Onderhoudsmonteur",
     bevoegdheden: matrix({
       gebouwen: 1, voorzieningen: 2, inspecties: 2, onderhoud: 4,
-      rapportages: 1, bibliotheek: 1, planning: 1, toolbox: 1,
+      rapportages: 1, bibliotheek: 1, planning: 1, toolbox: 1, declaraties: 2,
     }),
   },
   {

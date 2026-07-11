@@ -127,7 +127,8 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
   const toonSalarisMutaties = heeftNiveau("salaris_mutaties", 1);
   const toonScabMail = heeftNiveau("scab_mail", 1);
   const toonBoekhouderPortaal = heeftNiveau("boekhouder_portaal", 1);
-  const toonWagenpark = heeftNiveau("wagenpark", 1);
+  const toonWagenpark    = heeftNiveau("wagenpark", 1);
+  const toonDeclaraties  = heeftNiveau("declaraties", 1);
   const toonMagazijn  = heeftNiveau("magazijn", 1);
   const toonLoonOutput = heeftNiveau("salarisarchief", 2);
   const toonGoedkeuring = heeftNiveau("goedkeuring", 1);
@@ -233,6 +234,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
     "veiligheid",
     "financieel",
     "goedkeuring",
+    "declaraties",
     "organisatie",
     "personeel",
     "loon",
@@ -1189,6 +1191,34 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                         <Link href="/beheer/goedkeuringsbeleid">
                           <ShieldCheck />
                           <span>Goedkeuringsbeleid</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+              </HerschikbaarHoofdstuk>
+              )}
+
+              {/* Declaraties */}
+              {toonDeclaraties && (
+              <HerschikbaarHoofdstuk
+                sleutel="declaraties"
+                positie={hoofdstukPositie("declaraties")}
+                onVerplaats={verplaatsHoofdstuk}
+              >
+              <SidebarGroup>
+                <SidebarGroupLabel>Declaraties</SidebarGroupLabel>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    <SidebarMenuItem className="pl-5">
+                      <SidebarMenuButton
+                        asChild
+                        isActive={location.startsWith("/declaraties")}
+                      >
+                        <Link href="/declaraties">
+                          <Receipt />
+                          <span>Overzicht</span>
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>

@@ -151,6 +151,11 @@ import type {
   CrmProjectkansInput,
   CrmScoutStatus,
   DashboardStats,
+  Declaratie,
+  DeclaratieAfwijzingInput,
+  DeclaratieInput,
+  Declaratiebeleid,
+  DeclaratiebeleidInput,
   DeleteEenheidsprijs200,
   Document,
   DocumentAiAnalyseInput,
@@ -76530,4 +76535,874 @@ export const useBeoordeelAiBeslissing = <TError = ErrorType<void>,
       > => {
       return useMutation(getBeoordeelAiBeslissingMutationOptions(options));
     }
+
+export const getListDeclaratiesUrl = () => {
+
+
+
+
+  return `/api/declaraties`
+}
+
+/**
+ * @summary Lijst declaraties (beheerder=alle, medewerker=eigen)
+ */
+export const listDeclaraties = async ( options?: RequestInit): Promise<Declaratie[]> => {
+
+  return customFetch<Declaratie[]>(getListDeclaratiesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListDeclaratiesQueryKey = () => {
+    return [
+    `/api/declaraties`
+    ] as const;
+    }
+
+
+export const getListDeclaratiesQueryOptions = <TData = Awaited<ReturnType<typeof listDeclaraties>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listDeclaraties>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListDeclaratiesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listDeclaraties>>> = ({ signal }) => listDeclaraties({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listDeclaraties>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListDeclaratiesQueryResult = NonNullable<Awaited<ReturnType<typeof listDeclaraties>>>
+export type ListDeclaratiesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Lijst declaraties (beheerder=alle, medewerker=eigen)
+ */
+
+export function useListDeclaraties<TData = Awaited<ReturnType<typeof listDeclaraties>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listDeclaraties>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListDeclaratiesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateDeclaratieUrl = () => {
+
+
+
+
+  return `/api/declaraties`
+}
+
+/**
+ * @summary Nieuwe declaratie aanmaken (concept)
+ */
+export const createDeclaratie = async (declaratieInput: DeclaratieInput, options?: RequestInit): Promise<Declaratie> => {
+
+  return customFetch<Declaratie>(getCreateDeclaratieUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(declaratieInput)
+  }
+);}
+
+
+
+
+export const getCreateDeclaratieMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createDeclaratie>>, TError,{data: BodyType<DeclaratieInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createDeclaratie>>, TError,{data: BodyType<DeclaratieInput>}, TContext> => {
+
+const mutationKey = ['createDeclaratie'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createDeclaratie>>, {data: BodyType<DeclaratieInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createDeclaratie(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateDeclaratieMutationResult = NonNullable<Awaited<ReturnType<typeof createDeclaratie>>>
+    export type CreateDeclaratieMutationBody = BodyType<DeclaratieInput>
+    export type CreateDeclaratieMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Nieuwe declaratie aanmaken (concept)
+ */
+export const useCreateDeclaratie = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createDeclaratie>>, TError,{data: BodyType<DeclaratieInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createDeclaratie>>,
+        TError,
+        {data: BodyType<DeclaratieInput>},
+        TContext
+      > => {
+      return useMutation(getCreateDeclaratieMutationOptions(options));
+    }
+
+export const getGetDeclaratieUrl = (id: number,) => {
+
+
+
+
+  return `/api/declaraties/${id}`
+}
+
+/**
+ * @summary Declaratie detail
+ */
+export const getDeclaratie = async (id: number, options?: RequestInit): Promise<Declaratie> => {
+
+  return customFetch<Declaratie>(getGetDeclaratieUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetDeclaratieQueryKey = (id: number,) => {
+    return [
+    `/api/declaraties/${id}`
+    ] as const;
+    }
+
+
+export const getGetDeclaratieQueryOptions = <TData = Awaited<ReturnType<typeof getDeclaratie>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getDeclaratie>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetDeclaratieQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getDeclaratie>>> = ({ signal }) => getDeclaratie(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getDeclaratie>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetDeclaratieQueryResult = NonNullable<Awaited<ReturnType<typeof getDeclaratie>>>
+export type GetDeclaratieQueryError = ErrorType<void>
+
+
+/**
+ * @summary Declaratie detail
+ */
+
+export function useGetDeclaratie<TData = Awaited<ReturnType<typeof getDeclaratie>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getDeclaratie>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetDeclaratieQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUpdateDeclaratieUrl = (id: number,) => {
+
+
+
+
+  return `/api/declaraties/${id}`
+}
+
+/**
+ * @summary Declaratie bijwerken (alleen concept)
+ */
+export const updateDeclaratie = async (id: number,
+    declaratieInput: DeclaratieInput, options?: RequestInit): Promise<Declaratie> => {
+
+  return customFetch<Declaratie>(getUpdateDeclaratieUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(declaratieInput)
+  }
+);}
+
+
+
+
+export const getUpdateDeclaratieMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateDeclaratie>>, TError,{id: number;data: BodyType<DeclaratieInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateDeclaratie>>, TError,{id: number;data: BodyType<DeclaratieInput>}, TContext> => {
+
+const mutationKey = ['updateDeclaratie'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateDeclaratie>>, {id: number;data: BodyType<DeclaratieInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateDeclaratie(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateDeclaratieMutationResult = NonNullable<Awaited<ReturnType<typeof updateDeclaratie>>>
+    export type UpdateDeclaratieMutationBody = BodyType<DeclaratieInput>
+    export type UpdateDeclaratieMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Declaratie bijwerken (alleen concept)
+ */
+export const useUpdateDeclaratie = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateDeclaratie>>, TError,{id: number;data: BodyType<DeclaratieInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateDeclaratie>>,
+        TError,
+        {id: number;data: BodyType<DeclaratieInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateDeclaratieMutationOptions(options));
+    }
+
+export const getDeleteDeclaratieUrl = (id: number,) => {
+
+
+
+
+  return `/api/declaraties/${id}`
+}
+
+/**
+ * @summary Declaratie verwijderen (alleen concept, eigen)
+ */
+export const deleteDeclaratie = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteDeclaratieUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteDeclaratieMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteDeclaratie>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteDeclaratie>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteDeclaratie'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteDeclaratie>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteDeclaratie(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteDeclaratieMutationResult = NonNullable<Awaited<ReturnType<typeof deleteDeclaratie>>>
+
+    export type DeleteDeclaratieMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Declaratie verwijderen (alleen concept, eigen)
+ */
+export const useDeleteDeclaratie = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteDeclaratie>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteDeclaratie>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteDeclaratieMutationOptions(options));
+    }
+
+export const getIndieningDeclaratieUrl = (id: number,) => {
+
+
+
+
+  return `/api/declaraties/${id}/indienen`
+}
+
+/**
+ * @summary Declaratie indienen (concept → ingediend)
+ */
+export const indieningDeclaratie = async (id: number, options?: RequestInit): Promise<Declaratie> => {
+
+  return customFetch<Declaratie>(getIndieningDeclaratieUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getIndieningDeclaratieMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof indieningDeclaratie>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof indieningDeclaratie>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['indieningDeclaratie'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof indieningDeclaratie>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  indieningDeclaratie(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type IndieningDeclaratieMutationResult = NonNullable<Awaited<ReturnType<typeof indieningDeclaratie>>>
+
+    export type IndieningDeclaratieMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Declaratie indienen (concept → ingediend)
+ */
+export const useIndieningDeclaratie = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof indieningDeclaratie>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof indieningDeclaratie>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getIndieningDeclaratieMutationOptions(options));
+    }
+
+export const getGoedkeurenDeclaratieUrl = (id: number,) => {
+
+
+
+
+  return `/api/declaraties/${id}/goedkeuren`
+}
+
+/**
+ * @summary Declaratie goedkeuren (ingediend → goedgekeurd) — directeur/hoofdbeheerder
+ */
+export const goedkeurenDeclaratie = async (id: number, options?: RequestInit): Promise<Declaratie> => {
+
+  return customFetch<Declaratie>(getGoedkeurenDeclaratieUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getGoedkeurenDeclaratieMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof goedkeurenDeclaratie>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof goedkeurenDeclaratie>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['goedkeurenDeclaratie'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof goedkeurenDeclaratie>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  goedkeurenDeclaratie(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type GoedkeurenDeclaratieMutationResult = NonNullable<Awaited<ReturnType<typeof goedkeurenDeclaratie>>>
+
+    export type GoedkeurenDeclaratieMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Declaratie goedkeuren (ingediend → goedgekeurd) — directeur/hoofdbeheerder
+ */
+export const useGoedkeurenDeclaratie = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof goedkeurenDeclaratie>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof goedkeurenDeclaratie>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getGoedkeurenDeclaratieMutationOptions(options));
+    }
+
+export const getAfwijzenDeclaratieUrl = (id: number,) => {
+
+
+
+
+  return `/api/declaraties/${id}/afwijzen`
+}
+
+/**
+ * @summary Declaratie afwijzen — directeur/hoofdbeheerder of admin
+ */
+export const afwijzenDeclaratie = async (id: number,
+    declaratieAfwijzingInput: DeclaratieAfwijzingInput, options?: RequestInit): Promise<Declaratie> => {
+
+  return customFetch<Declaratie>(getAfwijzenDeclaratieUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(declaratieAfwijzingInput)
+  }
+);}
+
+
+
+
+export const getAfwijzenDeclaratieMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof afwijzenDeclaratie>>, TError,{id: number;data: BodyType<DeclaratieAfwijzingInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof afwijzenDeclaratie>>, TError,{id: number;data: BodyType<DeclaratieAfwijzingInput>}, TContext> => {
+
+const mutationKey = ['afwijzenDeclaratie'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof afwijzenDeclaratie>>, {id: number;data: BodyType<DeclaratieAfwijzingInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  afwijzenDeclaratie(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AfwijzenDeclaratieMutationResult = NonNullable<Awaited<ReturnType<typeof afwijzenDeclaratie>>>
+    export type AfwijzenDeclaratieMutationBody = BodyType<DeclaratieAfwijzingInput>
+    export type AfwijzenDeclaratieMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Declaratie afwijzen — directeur/hoofdbeheerder of admin
+ */
+export const useAfwijzenDeclaratie = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof afwijzenDeclaratie>>, TError,{id: number;data: BodyType<DeclaratieAfwijzingInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof afwijzenDeclaratie>>,
+        TError,
+        {id: number;data: BodyType<DeclaratieAfwijzingInput>},
+        TContext
+      > => {
+      return useMutation(getAfwijzenDeclaratieMutationOptions(options));
+    }
+
+export const getVerwerkenDeclaratieUrl = (id: number,) => {
+
+
+
+
+  return `/api/declaraties/${id}/verwerken`
+}
+
+/**
+ * @summary Declaratie verwerken/uitbetalen (goedgekeurd → verwerkt) — admin/Hoekwoning
+ */
+export const verwerkenDeclaratie = async (id: number, options?: RequestInit): Promise<Declaratie> => {
+
+  return customFetch<Declaratie>(getVerwerkenDeclaratieUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getVerwerkenDeclaratieMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof verwerkenDeclaratie>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof verwerkenDeclaratie>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['verwerkenDeclaratie'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof verwerkenDeclaratie>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  verwerkenDeclaratie(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type VerwerkenDeclaratieMutationResult = NonNullable<Awaited<ReturnType<typeof verwerkenDeclaratie>>>
+
+    export type VerwerkenDeclaratieMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Declaratie verwerken/uitbetalen (goedgekeurd → verwerkt) — admin/Hoekwoning
+ */
+export const useVerwerkenDeclaratie = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof verwerkenDeclaratie>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof verwerkenDeclaratie>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getVerwerkenDeclaratieMutationOptions(options));
+    }
+
+export const getGetDeclaratieBeleidUrl = () => {
+
+
+
+
+  return `/api/declaratiebeleid`
+}
+
+/**
+ * @summary Declaratiebeleid en voorwaarden ophalen
+ */
+export const getDeclaratieBeleid = async ( options?: RequestInit): Promise<Declaratiebeleid> => {
+
+  return customFetch<Declaratiebeleid>(getGetDeclaratieBeleidUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetDeclaratieBeleidQueryKey = () => {
+    return [
+    `/api/declaratiebeleid`
+    ] as const;
+    }
+
+
+export const getGetDeclaratieBeleidQueryOptions = <TData = Awaited<ReturnType<typeof getDeclaratieBeleid>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getDeclaratieBeleid>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetDeclaratieBeleidQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getDeclaratieBeleid>>> = ({ signal }) => getDeclaratieBeleid({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getDeclaratieBeleid>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetDeclaratieBeleidQueryResult = NonNullable<Awaited<ReturnType<typeof getDeclaratieBeleid>>>
+export type GetDeclaratieBeleidQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Declaratiebeleid en voorwaarden ophalen
+ */
+
+export function useGetDeclaratieBeleid<TData = Awaited<ReturnType<typeof getDeclaratieBeleid>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getDeclaratieBeleid>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetDeclaratieBeleidQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUpdateDeclaratieBeleidUrl = () => {
+
+
+
+
+  return `/api/declaratiebeleid`
+}
+
+/**
+ * @summary Declaratiebeleid bijwerken (beheerder)
+ */
+export const updateDeclaratieBeleid = async (declaratiebeleidInput: DeclaratiebeleidInput, options?: RequestInit): Promise<Declaratiebeleid> => {
+
+  return customFetch<Declaratiebeleid>(getUpdateDeclaratieBeleidUrl(),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(declaratiebeleidInput)
+  }
+);}
+
+
+
+
+export const getUpdateDeclaratieBeleidMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateDeclaratieBeleid>>, TError,{data: BodyType<DeclaratiebeleidInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateDeclaratieBeleid>>, TError,{data: BodyType<DeclaratiebeleidInput>}, TContext> => {
+
+const mutationKey = ['updateDeclaratieBeleid'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateDeclaratieBeleid>>, {data: BodyType<DeclaratiebeleidInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  updateDeclaratieBeleid(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateDeclaratieBeleidMutationResult = NonNullable<Awaited<ReturnType<typeof updateDeclaratieBeleid>>>
+    export type UpdateDeclaratieBeleidMutationBody = BodyType<DeclaratiebeleidInput>
+    export type UpdateDeclaratieBeleidMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Declaratiebeleid bijwerken (beheerder)
+ */
+export const useUpdateDeclaratieBeleid = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateDeclaratieBeleid>>, TError,{data: BodyType<DeclaratiebeleidInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateDeclaratieBeleid>>,
+        TError,
+        {data: BodyType<DeclaratiebeleidInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateDeclaratieBeleidMutationOptions(options));
+    }
+
+export const getListMijnDeclaratiesUrl = () => {
+
+
+
+
+  return `/api/mijn/declaraties`
+}
+
+/**
+ * @summary Eigen declaraties van de ingelogde medewerker
+ */
+export const listMijnDeclaraties = async ( options?: RequestInit): Promise<Declaratie[]> => {
+
+  return customFetch<Declaratie[]>(getListMijnDeclaratiesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListMijnDeclaratiesQueryKey = () => {
+    return [
+    `/api/mijn/declaraties`
+    ] as const;
+    }
+
+
+export const getListMijnDeclaratiesQueryOptions = <TData = Awaited<ReturnType<typeof listMijnDeclaraties>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMijnDeclaraties>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListMijnDeclaratiesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listMijnDeclaraties>>> = ({ signal }) => listMijnDeclaraties({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listMijnDeclaraties>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListMijnDeclaratiesQueryResult = NonNullable<Awaited<ReturnType<typeof listMijnDeclaraties>>>
+export type ListMijnDeclaratiesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Eigen declaraties van de ingelogde medewerker
+ */
+
+export function useListMijnDeclaraties<TData = Awaited<ReturnType<typeof listMijnDeclaraties>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMijnDeclaraties>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListMijnDeclaratiesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
