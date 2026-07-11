@@ -53,7 +53,7 @@ export class MailFout extends Error {
   }
 }
 
-export type MailSoort = "test" | "uitnodiging" | "wachtwoord_reset" | "offerte" | "klantvraag" | "afwijzing" | "ondertekening" | "inkoopbon" | "opdrachtbevestiging" | "magazijn_signalering" | "magazijn_bestelbon" | "aanvraag_bevestiging" | "planning_melding" | "incident_melding" | "ai_drempel" | "reactietermijn_melding" | "rapport_melding" | "avg_verzoek_bevestiging" | "avg_verzoek_afgehandeld";
+export type MailSoort = "test" | "uitnodiging" | "wachtwoord_reset" | "offerte" | "klantvraag" | "afwijzing" | "ondertekening" | "inkoopbon" | "opdrachtbevestiging" | "magazijn_signalering" | "magazijn_bestelbon" | "aanvraag_bevestiging" | "planning_melding" | "incident_melding" | "ai_drempel" | "reactietermijn_melding" | "rapport_melding" | "avg_verzoek_bevestiging" | "avg_verzoek_afgehandeld" | "voertuig_melding_garage";
 
 // ── Configuratie-helpers ─────────────────────────────────────────────────────
 export function isGeconfigureerd(): boolean {

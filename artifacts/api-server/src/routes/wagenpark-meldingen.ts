@@ -545,6 +545,132 @@ router.get("/meldingen", requireBevoegdheid("wagenpark", 1), async (req, res): P
   );
 });
 
+// ── POST /wagenpark/meldingen/:id/doorzetten-garage ──────────────────────────
+router.post("/meldingen/:id/doorzetten-garage", requireBevoegdheid("wagenpark", 2), async (req, res): Promise<void> => {
+  const id = parseInt(String(req.params.id), 10);
+  if (isNaN(id)) return void res.status(400).json({ error: "Ongeldig id" });
+
+  const { garage_email, garage_naam, notitie } = req.body as {
+    garage_email: string;
+    garage_naam?: string;
+    notitie?: string;
+  };
+
+  if (!garage_email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(garage_email)) {
+    return void res.status(422).json({ error: "Geldig e-mailadres van garage is verplicht" });
+  }
+
+  // Melding ophalen inclusief voertuig + monteur info
+  const [rij] = await db
+    .select({
+      melding: wagenparkMeldingenTable,
+      voertuig_kenteken: voertuigenTable.kenteken,
+      voertuig_merk: voertuigenTable.merk,
+      monteur_naam: gebruikersTable.naam,
+    })
+    .from(wagenparkMeldingenTable)
+    .leftJoin(voertuigenTable, eq(voertuigenTable.id, wagenparkMeldingenTable.voertuigId))
+    .leftJoin(gebruikersTable, eq(gebruikersTable.id, wagenparkMeldingenTable.gemeldDoorId))
+    .where(eq(wagenparkMeldingenTable.id, id));
+
+  if (!rij) return void res.status(404).json({ error: "Melding niet gevonden" });
+
+  // Status bijwerken naar doorgezet_garage
+  const datumTijd = new Date().toLocaleDateString("nl-NL", {
+    day: "numeric", month: "long", year: "numeric",
+    hour: "2-digit", minute: "2-digit",
+  });
+
+  const opvolgNotitie = [
+    rij.melding.opvolgNotitie,
+    `Doorgezet naar garage (${garage_email}) op ${datumTijd}.`,
+    notitie ? `Notitie: ${notitie}` : null,
+  ].filter(Boolean).join("\n");
+
+  const [bijgewerkt] = await db
+    .update(wagenparkMeldingenTable)
+    .set({ status: "doorgezet_garage", opvolgNotitie, bijgewerktOp: new Date() })
+    .where(eq(wagenparkMeldingenTable.id, id))
+    .returning();
+
+  if (!bijgewerkt) return void res.status(500).json({ error: "Bijwerken mislukt" });
+
+  // E-mail versturen naar garage (fire-and-forget, gooit bij mislukken alleen een warn)
+  const { isGeconfigureerd, verstuurMail } = await import("../services/email.js");
+  if (isGeconfigureerd()) {
+    const m = rij.melding;
+    const voertuigLabel = [rij.voertuig_merk, rij.voertuig_kenteken ? `(${rij.voertuig_kenteken})` : null]
+      .filter(Boolean).join(" ") || "Onbekend voertuig";
+    const typeLabel = m.type === "storing" ? "Storing" : m.type === "schade" ? "Schade" : m.type;
+    const ernstLabel = m.aiErnstIndicatie
+      ? m.aiErnstIndicatie === "licht" ? "Licht" : m.aiErnstIndicatie === "matig" ? "Matig" : "Ernstig"
+      : null;
+
+    const extraDetails: string[] = [];
+    if (m.type === "schade" && m.schadeLocatie) extraDetails.push(`Locatie: ${m.schadeLocatie}`);
+    if (m.type === "storing" && m.storingType) extraDetails.push(`Type storing: ${m.storingType}`);
+    if (ernstLabel) extraDetails.push(`Ernst: ${ernstLabel}`);
+    if (m.aiKostenIndicatie) extraDetails.push("Kosten verwacht");
+
+    const aiSectie = (m.aiDiagnose || m.aiOplossing) ? `
+      <div style="background:#f8f9fa;border-radius:6px;padding:14px 16px;margin:16px 0;border-left:3px solid #e5710a;">
+        <p style="font-size:12px;font-weight:600;color:#6b7280;margin:0 0 8px 0;text-transform:uppercase;letter-spacing:0.5px;">AI Diagnose</p>
+        ${m.aiDiagnose ? `<p style="margin:0 0 6px 0;font-size:14px;color:#111827;"><strong>Diagnose:</strong> ${m.aiDiagnose}</p>` : ""}
+        ${m.aiOplossing ? `<p style="margin:0;font-size:14px;color:#111827;"><strong>Aanbevolen aanpak:</strong> ${m.aiOplossing}</p>` : ""}
+        ${m.aiKostenTekst ? `<p style="margin:8px 0 0 0;font-size:13px;color:#92400e;font-style:italic;">${m.aiKostenTekst}</p>` : ""}
+      </div>` : "";
+
+    const fotoTekst = (m.fotoPaden?.length ?? 0) > 0
+      ? `<p style="font-size:13px;color:#374151;margin:8px 0 0 0;">Foto's bijgevoegd in de melding (${m.fotoPaden.length} stuks) — beschikbaar via FPS Connect.</p>`
+      : "";
+
+    const html = `<!DOCTYPE html><html lang="nl"><body style="font-family:system-ui,sans-serif;max-width:560px;margin:0 auto;padding:24px;color:#111827;">
+      <div style="background:#e5710a;border-radius:8px 8px 0 0;padding:18px 20px;">
+        <h2 style="color:#fff;margin:0;font-size:18px;">Voertuigmelding — ${typeLabel}</h2>
+        <p style="color:rgba(255,255,255,0.85);margin:4px 0 0 0;font-size:13px;">Doorgezet via FPS Connect op ${datumTijd}</p>
+      </div>
+      <div style="border:1px solid #e5e7eb;border-top:0;border-radius:0 0 8px 8px;padding:20px;">
+        <table style="width:100%;border-collapse:collapse;font-size:14px;">
+          <tr><td style="padding:6px 0;color:#6b7280;width:140px;">Voertuig</td><td style="padding:6px 0;font-weight:600;">${voertuigLabel}</td></tr>
+          <tr><td style="padding:6px 0;color:#6b7280;">Type melding</td><td style="padding:6px 0;">${typeLabel}</td></tr>
+          ${extraDetails.map((d) => `<tr><td style="padding:6px 0;color:#6b7280;">&nbsp;</td><td style="padding:6px 0;font-size:13px;color:#374151;">${d}</td></tr>`).join("")}
+          <tr><td style="padding:6px 0;color:#6b7280;">Gemeld door</td><td style="padding:6px 0;">${rij.monteur_naam ?? "Onbekend"}</td></tr>
+          <tr><td style="padding:6px 0;color:#6b7280;">Datum melding</td><td style="padding:6px 0;">${m.aangemaaktOp ? new Date(m.aangemaaktOp).toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" }) : "—"}</td></tr>
+        </table>
+        <div style="background:#fff7ed;border-radius:6px;padding:14px 16px;margin:16px 0;border-left:3px solid #f59e0b;">
+          <p style="font-size:12px;font-weight:600;color:#6b7280;margin:0 0 6px 0;text-transform:uppercase;letter-spacing:0.5px;">Omschrijving</p>
+          <p style="margin:0;font-size:14px;color:#111827;line-height:1.5;">${m.omschrijving}</p>
+        </div>
+        ${aiSectie}
+        ${fotoTekst}
+        ${notitie ? `<div style="margin-top:16px;padding:12px;background:#f3f4f6;border-radius:6px;font-size:13px;color:#374151;"><strong>Notitie van FPS:</strong> ${notitie}</div>` : ""}
+        <hr style="border:0;border-top:1px solid #e5e7eb;margin:20px 0;">
+        <p style="font-size:12px;color:#9ca3af;margin:0;">Dit bericht is automatisch gegenereerd vanuit FPS Connect. Neem voor vragen contact op met de afzender.</p>
+      </div>
+    </body></html>`;
+
+    try {
+      await verstuurMail({
+        naarEmail: garage_email,
+        naarNaam: garage_naam ?? null,
+        onderwerp: `Voertuigmelding ${typeLabel} — ${voertuigLabel}`,
+        html,
+        soort: "voertuig_melding_garage",
+      });
+    } catch (mailErr) {
+      req.log.warn({ mailErr, garage_email }, "doorzetten-garage: e-mail versturen mislukt, melding toch doorgezet");
+    }
+  } else {
+    req.log.info("doorzetten-garage: mail niet geconfigureerd, melding doorgezet zonder e-mail");
+  }
+
+  return void res.json(mapMeldingNaarApi(bijgewerkt, {
+    voertuig_kenteken: rij.voertuig_kenteken,
+    voertuig_merk: rij.voertuig_merk,
+    monteur_naam: rij.monteur_naam,
+  }));
+});
+
 // ── PATCH /wagenpark/meldingen/:id — status/toewijzing/koppeling bijwerken ──
 router.patch("/meldingen/:id", requireBevoegdheid("wagenpark", 2), async (req, res): Promise<void> => {
   const id = parseInt(String(req.params.id), 10);
@@ -560,7 +686,7 @@ router.patch("/meldingen/:id", requireBevoegdheid("wagenpark", 2), async (req, r
     opvolg_notitie?: string;
   };
 
-  const geldigeStatussen = ["nieuw", "in_beoordeling", "actie_nodig", "ingepland", "opgelost", "afgewezen_duplicaat"];
+  const geldigeStatussen = ["nieuw", "in_beoordeling", "actie_nodig", "ingepland", "doorgezet_garage", "opgelost", "afgewezen_duplicaat"];
   if (status !== undefined && !geldigeStatussen.includes(status)) {
     return void res.status(422).json({ error: "Ongeldige status" });
   }

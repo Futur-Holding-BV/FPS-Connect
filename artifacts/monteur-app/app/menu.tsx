@@ -110,6 +110,7 @@ export default function MenuScherm() {
     { sleutel: "magazijn", label: "Magazijn scan", icoon: "barcode-outline", onPress: () => router.push("/magazijn/scan" as "/werkdag") },
     { sleutel: "magazijn_artikelen", label: "Artikelen", icoon: "cube-outline", onPress: () => router.push("/magazijn/artikelen" as "/werkdag") },
     { sleutel: "magazijn_inkoop", label: "Inkoop aanvragen", icoon: "cart-outline", onPress: () => router.push("/magazijn/inkoop" as "/werkdag") },
+    { sleutel: "voertuig_melding", label: "Voertuig melden", icoon: "car-outline", onPress: () => router.push("/voertuig-melding") },
   ];
 
   const routeMap: Record<string, string> = {

@@ -9,6 +9,7 @@ export type MeldingStatus =
   | "in_beoordeling"
   | "actie_nodig"
   | "ingepland"
+  | "doorgezet_garage"
   | "opgelost"
   | "afgewezen_duplicaat";
 
@@ -57,6 +58,7 @@ export const MELDING_STATUS_LABELS: Record<MeldingStatus, string> = {
   in_beoordeling: "In beoordeling",
   actie_nodig: "Actie nodig",
   ingepland: "Ingepland",
+  doorgezet_garage: "Doorgezet naar garage",
   opgelost: "Opgelost",
   afgewezen_duplicaat: "Afgewezen / duplicaat",
 };
@@ -66,6 +68,7 @@ export const MELDING_STATUS_KLEUR: Record<MeldingStatus, string> = {
   in_beoordeling: "bg-blue-100 text-blue-800",
   actie_nodig: "bg-orange-100 text-orange-800",
   ingepland: "bg-purple-100 text-purple-800",
+  doorgezet_garage: "bg-teal-100 text-teal-800",
   opgelost: "bg-green-100 text-green-800",
   afgewezen_duplicaat: "bg-gray-100 text-gray-600",
 };

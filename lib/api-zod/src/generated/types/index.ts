@@ -211,6 +211,8 @@ export * from './documentStudioWerkgever';
 export * from './documentToepassingenInput';
 export * from './documentType';
 export * from './documentUpdate';
+export * from './doorzettenGarageInput';
+export * from './doorzettenNaarGarage200';
 export * from './dossier';
 export * from './dossierDocument';
 export * from './dossierDocumentInput';

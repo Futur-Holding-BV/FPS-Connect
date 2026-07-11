@@ -10867,6 +10867,26 @@ export const SynchroniseerCaoPresetsResponse = zod.object({
 
 
 /**
+ * @summary Melding doorzetten naar externe garage met e-mailnotificatie
+ */
+export const DoorzettenNaarGarageParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DoorzettenNaarGarageBody = zod.object({
+  "garage_email": zod.string().email(),
+  "garage_naam": zod.string().optional(),
+  "notitie": zod.string().optional()
+})
+
+export const DoorzettenNaarGarageResponse = zod.object({
+  "id": zod.number().optional(),
+  "status": zod.string().optional(),
+  "opvolg_notitie": zod.string().nullish()
+})
+
+
+/**
  * @summary Stel een vraag aan de FPS Bedrijfsadviseur
  */
 export const vraagAdviseurBodyVraagMax = 2000;

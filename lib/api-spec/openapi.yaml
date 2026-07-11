@@ -8704,6 +8704,34 @@ paths:
               schema:
                 $ref: "#/components/schemas/CaoPresetsSyncResultaat"
 
+  /wagenpark/meldingen/{id}/doorzetten-garage:
+    post:
+      operationId: doorzettenNaarGarage
+      tags: [wagenpark]
+      summary: Melding doorzetten naar externe garage met e-mailnotificatie
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DoorzettenGarageInput"
+      responses:
+        "200":
+          description: Bijgewerkte melding
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: { type: integer }
+                  status: { type: string }
+                  opvolg_notitie: { type: string, nullable: true }
+
   /adviseur/vraag:
     post:
       operationId: vraagAdviseur
@@ -38981,6 +39009,18 @@ components:
         urgentie:
           type: string
           enum: [kritiek, waarschuwing, info]
+
+    DoorzettenGarageInput:
+      type: object
+      required: [garage_email]
+      properties:
+        garage_email:
+          type: string
+          format: email
+        garage_naam:
+          type: string
+        notitie:
+          type: string
 
     AdviseurVraagInput:
       type: object

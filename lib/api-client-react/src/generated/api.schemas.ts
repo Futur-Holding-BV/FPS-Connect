@@ -12178,6 +12178,12 @@ export interface Vervalsignaal {
   urgentie: VervalsignaalUrgentie;
 }
 
+export interface DoorzettenGarageInput {
+  garage_email: string;
+  garage_naam?: string;
+  notitie?: string;
+}
+
 export type AdviseurVraagInputGeschiedenisItemRol = typeof AdviseurVraagInputGeschiedenisItemRol[keyof typeof AdviseurVraagInputGeschiedenisItemRol];
 
 
@@ -12530,6 +12536,12 @@ export type GetVerlofVervalsignalenParams = {
  * Aantal dagen vooruit kijken (standaard 90, max 365)
  */
 dagvenster?: number;
+};
+
+export type DoorzettenNaarGarage200 = {
+  id?: number;
+  status?: string;
+  opvolg_notitie?: string | null;
 };
 
 export type GetCapaciteitBezettingParams = {

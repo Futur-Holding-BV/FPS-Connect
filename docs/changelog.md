@@ -1,3 +1,16 @@
+## 2026-07-11 — Wagenpark: voertuig-melding in monteur-app + Doorzetten naar garage
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (additief; geen bestaande routes gebroken)
+
+**Gebouwd:**
+- **Monteur-app menu** — "Voertuig melden" toegevoegd aan het Meer-menu in `menu.tsx` (icoon: car-outline, navigeert naar het bestaande `/voertuig-melding`-scherm).
+- **Status `doorgezet_garage`** — nieuw statustype toegevoegd aan de `MeldingStatus`-union in `wagenpark-melding-types.ts`, inclusief label ("Doorgezet naar garage") en kleur (teal).
+- **MailSoort `voertuig_melding_garage`** — toegevoegd aan de MailSoort-union in `email.ts`.
+- **Backend route `POST /wagenpark/meldingen/:id/doorzetten-garage`** — vereist `wagenpark:2`; haalt meldingdetails op (voertuig + monteur via join), zet status op `doorgezet_garage`, voegt een tijdgestempelde opvolgnotitie toe en stuurt de garage een volledig HTML-e-mailbericht met voertuiginfo, AI-diagnose, omschrijving en optionele FPS-notitie. Mail is fire-and-forget: bij mislukken (of unconfigured) wordt de statuswijziging toch opgeslagen.
+- **PATCH geldigeStatussen uitgebreid** — `doorgezet_garage` is nu ook geldig als status-update via het bestaande PATCH-endpoint.
+- **MeldingKaart** — "Doorzetten naar garage"-knop zichtbaar bij open meldingen (niet bij `doorgezet_garage`/`opgelost`/`afgewezen_duplicaat`); opent een dialog met e-mailadres (verplicht), garagenaam en extra notitie; na bevestigen: POST naar de nieuwe route, toast-bevestiging, queryInvalidatie voor beide meldingen-querykeys.
+- **OpenAPI** — `POST /wagenpark/meldingen/{id}/doorzetten-garage` + `DoorzettenGarageInput`-schema toegevoegd; codegen en typecheck groen.
+
 ## 2026-07-11 — Verlof: ziekte-ADV koppeling (automatisch intrekken ADV bij ziekmelding)
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (additief; geen bestaande routes gebroken, koppeling is fail-safe)

@@ -172,6 +172,8 @@ import type {
   DocumentStudioWerkgever,
   DocumentToepassingenInput,
   DocumentUpdate,
+  DoorzettenGarageInput,
+  DoorzettenNaarGarage200,
   Dossier,
   DossierDocument,
   DossierDocumentInput,
@@ -30530,6 +30532,77 @@ export const useSynchroniseerCaoPresets = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getSynchroniseerCaoPresetsMutationOptions(options));
+    }
+
+export const getDoorzettenNaarGarageUrl = (id: number,) => {
+
+
+
+
+  return `/api/wagenpark/meldingen/${id}/doorzetten-garage`
+}
+
+/**
+ * @summary Melding doorzetten naar externe garage met e-mailnotificatie
+ */
+export const doorzettenNaarGarage = async (id: number,
+    doorzettenGarageInput: DoorzettenGarageInput, options?: RequestInit): Promise<DoorzettenNaarGarage200> => {
+
+  return customFetch<DoorzettenNaarGarage200>(getDoorzettenNaarGarageUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(doorzettenGarageInput)
+  }
+);}
+
+
+
+
+export const getDoorzettenNaarGarageMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof doorzettenNaarGarage>>, TError,{id: number;data: BodyType<DoorzettenGarageInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof doorzettenNaarGarage>>, TError,{id: number;data: BodyType<DoorzettenGarageInput>}, TContext> => {
+
+const mutationKey = ['doorzettenNaarGarage'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof doorzettenNaarGarage>>, {id: number;data: BodyType<DoorzettenGarageInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  doorzettenNaarGarage(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DoorzettenNaarGarageMutationResult = NonNullable<Awaited<ReturnType<typeof doorzettenNaarGarage>>>
+    export type DoorzettenNaarGarageMutationBody = BodyType<DoorzettenGarageInput>
+    export type DoorzettenNaarGarageMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Melding doorzetten naar externe garage met e-mailnotificatie
+ */
+export const useDoorzettenNaarGarage = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof doorzettenNaarGarage>>, TError,{id: number;data: BodyType<DoorzettenGarageInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof doorzettenNaarGarage>>,
+        TError,
+        {id: number;data: BodyType<DoorzettenGarageInput>},
+        TContext
+      > => {
+      return useMutation(getDoorzettenNaarGarageMutationOptions(options));
     }
 
 export const getVraagAdviseurUrl = () => {
