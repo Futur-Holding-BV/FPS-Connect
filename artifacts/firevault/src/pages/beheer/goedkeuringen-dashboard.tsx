@@ -200,6 +200,7 @@ export default function GoedkeuringenDashboard() {
   const [statusFilter, setStatusFilter] = useState<string>("alle");
   const [alleenVerlopen, setAlleenVerlopen] = useState(false);
   const [venster, setVenster] = useState<string>("7");
+  const [alleenMijnActies, setAlleenMijnActies] = useState(true);
   const [afwijzenAanvraag, setAfwijzenAanvraag] = useState<GoedkeuringDashboardItem | null>(null);
 
   const magGoedkeuren = heeftNiveau("goedkeuring", 3);
@@ -212,13 +213,14 @@ export default function GoedkeuringenDashboard() {
     if (alleenVerlopen) {
       p.alleen_verlopen = "true" as ListGoedkeuringDashboardParams["alleen_verlopen"];
     }
-    // Stuur venster alleen mee als er geen expliciete statusfilter is
-    // (backend negeert venster toch al bij expliciete status).
     if (statusFilter === "alle" && venster !== "7") {
       p.venster = parseInt(venster, 10);
     }
+    if (alleenMijnActies) {
+      p.alleen_mijn_acties = true;
+    }
     return Object.keys(p).length > 0 ? p : undefined;
-  }, [statusFilter, alleenVerlopen, venster]);
+  }, [statusFilter, alleenVerlopen, venster, alleenMijnActies]);
 
   const { data: items, isLoading } = useListGoedkeuringDashboard(params, {
     query: { queryKey: getListGoedkeuringDashboardQueryKey(params) },
@@ -273,6 +275,16 @@ export default function GoedkeuringenDashboard() {
 
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-3">
+        <div className="flex items-center gap-2 rounded-md border px-3 py-1.5 bg-primary/5 border-primary/20">
+          <Switch
+            id="alleen-mijn-acties"
+            checked={alleenMijnActies}
+            onCheckedChange={setAlleenMijnActies}
+          />
+          <Label htmlFor="alleen-mijn-acties" className="text-sm font-medium cursor-pointer">
+            Alleen mijn acties
+          </Label>
+        </div>
         <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); }}>
           <SelectTrigger className="w-52">
             <SelectValue />

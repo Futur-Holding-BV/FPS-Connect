@@ -3,7 +3,12 @@ import { useState, useEffect } from "react";
 import { SlimUploadBalk } from "@/components/slim-upload-balk";
 import { AdviseurChat } from "@/components/adviseur-chat";
 import { useTranslation } from "react-i18next";
-import { useListChatGesprekken, useGetMagazijnSignalering } from "@workspace/api-client-react";
+import {
+  useListChatGesprekken,
+  useGetMagazijnSignalering,
+  useListGoedkeuringAanvragen,
+  getListGoedkeuringAanvragenQueryKey,
+} from "@workspace/api-client-react";
 import { BerichtNotificatieToast } from "@/components/bericht-notificatie-toast";
 import { NieuwsTicker } from "@/components/nieuws-ticker";
 import {
@@ -126,6 +131,19 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
   const toonMagazijn  = heeftNiveau("magazijn", 1);
   const toonLoonOutput = heeftNiveau("salarisarchief", 2);
   const toonGoedkeuring = heeftNiveau("goedkeuring", 1);
+  const magGoedkeurenActies = heeftNiveau("goedkeuring", 3);
+
+  const { data: openGoedkeuringen } = useListGoedkeuringAanvragen(
+    { alleen_mijn_acties: true, status: "ingediend" },
+    {
+      query: {
+        enabled: magGoedkeurenActies,
+        queryKey: getListGoedkeuringAanvragenQueryKey({ alleen_mijn_acties: true, status: "ingediend" }),
+        refetchInterval: false,
+      },
+    },
+  );
+  const openGoedkeuringenAantal = openGoedkeuringen?.length ?? 0;
 
   const heeftOne = isHoofdbeheerder;
   const aantalOmgevingen = 1 + (heeftOne ? 1 : 0);
@@ -1155,6 +1173,11 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                         <Link href="/beheer/goedkeuringen-dashboard">
                           <LayoutDashboard />
                           <span>Dashboard</span>
+                          {magGoedkeurenActies && openGoedkeuringenAantal > 0 && (
+                            <Badge className="ml-auto h-4 min-w-4 shrink-0 px-1 text-[10px] leading-none bg-primary text-primary-foreground group-data-[collapsible=icon]:hidden">
+                              {openGoedkeuringenAantal}
+                            </Badge>
+                          )}
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>

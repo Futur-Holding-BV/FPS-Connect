@@ -23,4 +23,8 @@ alleen_verlopen?: ListGoedkeuringDashboardAlleenVerlopen;
  * @minimum 0
  */
 venster?: number;
+/**
+ * Toon alleen aanvragen die de ingelogde gebruiker mag goedkeuren/afwijzen (mag_goedkeuren=true).
+ */
+alleen_mijn_acties?: boolean;
 };

@@ -23,6 +23,8 @@ import {
   useListRapporten,
   useGetMagazijnSignalering,
   useGetMagazijnDashboard,
+  useListGoedkeuringAanvragen,
+  getListGoedkeuringAanvragenQueryKey,
 } from "@workspace/api-client-react";
 import {
   Building, ShieldCheck, AlertTriangle, Calendar, TrendingUp, Clock, Hammer,
@@ -173,11 +175,13 @@ function OperationeelDashboard({
   magVerlof,
   magRapportages,
   isHoofdBeheerder,
+  magGoedkeuren,
 }: {
   magHrm: boolean;
   magVerlof: boolean;
   magRapportages: boolean;
   isHoofdBeheerder: boolean;
+  magGoedkeuren: boolean;
 }) {
   const { data: stats }       = useGetDashboardStats();
   const { data: activiteit }  = useGetRecenteActiviteit();
@@ -191,6 +195,17 @@ function OperationeelDashboard({
   const { data: magazijnDashboard } = useGetMagazijnDashboard({
     query: { enabled: true, queryKey: ["magazijn-dashboard", "operationeel"] },
   });
+
+  const { data: openGoedkeuringen } = useListGoedkeuringAanvragen(
+    { alleen_mijn_acties: true, status: "ingediend" },
+    {
+      query: {
+        enabled: magGoedkeuren,
+        queryKey: getListGoedkeuringAanvragenQueryKey({ alleen_mijn_acties: true, status: "ingediend" }),
+      },
+    },
+  );
+  const openGoedkeuringenAantal = openGoedkeuringen?.length ?? 0;
 
   const [drempelBannerVerborgen, setDrempelBannerVerborgen] = useState(() => {
     const s = localStorage.getItem("ai_drempel_banner_verborgen_maand");
@@ -362,6 +377,27 @@ function OperationeelDashboard({
             </div>
             <ChevronRight className="h-4 w-4 text-red-400" />
           </div>
+        </Link>
+      )}
+
+      {/* Openstaande goedkeuringen — gated op goedkeuring:3 */}
+      {magGoedkeuren && openGoedkeuringenAantal > 0 && (
+        <Link href="/beheer/goedkeuringen-dashboard">
+          <Card className="cursor-pointer hover:bg-muted/40 transition-colors border-primary/30 bg-primary/5">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Mijn openstaande goedkeuringen</CardTitle>
+              <CheckCircle2 className="h-4 w-4 text-primary" />
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-end justify-between gap-2">
+                <div>
+                  <span className="text-3xl font-bold text-primary">{openGoedkeuringenAantal}</span>
+                  <div className="text-xs text-muted-foreground mt-0.5">Wachten op uw actie</div>
+                </div>
+                <ChevronRight className="h-4 w-4 text-muted-foreground mb-1" />
+              </div>
+            </CardContent>
+          </Card>
         </Link>
       )}
 
@@ -1496,7 +1532,13 @@ export default function BeheerderDashboard() {
 
       {/* Actieve dashboard-inhoud */}
       {weergave === "operationeel" && (
-        <OperationeelDashboard magHrm={magHrm} magVerlof={magVerlof} magRapportages={magRapportages} isHoofdBeheerder={isHoofdBeheerder} />
+        <OperationeelDashboard
+          magHrm={magHrm}
+          magVerlof={magVerlof}
+          magRapportages={magRapportages}
+          isHoofdBeheerder={isHoofdBeheerder}
+          magGoedkeuren={isHoofdBeheerder || (bevoegdheden.goedkeuring ?? 0) >= 3}
+        />
       )}
       {weergave === "spots" && <SpotsDashboard />}
       {weergave === "projecten" && <ProjectenDashboard />}

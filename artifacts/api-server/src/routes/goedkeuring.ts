@@ -257,6 +257,7 @@ router.get(
       const alleenVerlopen = req.query.alleen_verlopen === "true";
       const vensterRaw = typeof req.query.venster === "string" ? parseInt(req.query.venster, 10) : NaN;
       const vensterDagen = Number.isFinite(vensterRaw) && vensterRaw >= 0 ? vensterRaw : 7;
+      const alleenMijnActies = req.query.alleen_mijn_acties === "true";
 
       const whereCondities = [];
       if (statusFilter) {
@@ -375,7 +376,8 @@ router.get(
             bijgewerkt_op: aanvraag.bijgewerktOp.toISOString(),
           };
         })
-        .filter((item) => !alleenVerlopen || item.is_verlopen);
+        .filter((item) => !alleenVerlopen || item.is_verlopen)
+        .filter((item) => !alleenMijnActies || item.mag_goedkeuren);
 
       res.json(resultaat);
     } catch (err) {
