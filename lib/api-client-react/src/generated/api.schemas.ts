@@ -12178,6 +12178,43 @@ export interface Vervalsignaal {
   urgentie: VervalsignaalUrgentie;
 }
 
+export type PoortwachterMijlpaalStatus = typeof PoortwachterMijlpaalStatus[keyof typeof PoortwachterMijlpaalStatus];
+
+
+export const PoortwachterMijlpaalStatus = {
+  open: 'open',
+  nadert: 'nadert',
+  buiten_termijn: 'buiten_termijn',
+  afgerond: 'afgerond',
+} as const;
+
+export interface PoortwachterMijlpaal {
+  id: number;
+  dossier_id: number;
+  type: string;
+  label: string;
+  dag_offset: number;
+  deadline_datum: string;
+  status: PoortwachterMijlpaalStatus;
+  afgerond_op?: string | null;
+  notitie?: string | null;
+  bijgewerkt_door_naam?: string | null;
+}
+
+export interface PoortwachterDossier {
+  id: number;
+  ziekmelding_id: number;
+  medewerker_id: number;
+  medewerker_naam: string;
+  start_datum: string;
+  mijlpalen: PoortwachterMijlpaal[];
+}
+
+export interface PoortwachterMijlpaalInput {
+  afgerond?: boolean;
+  notitie?: string;
+}
+
 export interface DoorzettenGarageInput {
   garage_email: string;
   garage_naam?: string;

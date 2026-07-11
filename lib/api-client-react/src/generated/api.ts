@@ -654,6 +654,9 @@ import type {
   PlanningUrenRegel,
   PlattegrondAiAnalyseInput,
   PlattegrondAiAnalyseResultaat,
+  PoortwachterDossier,
+  PoortwachterMijlpaal,
+  PoortwachterMijlpaalInput,
   PortaalAfwijzenInput,
   PortaalAiUitlegInput,
   PortaalHandtekeningInput,
@@ -30532,6 +30535,233 @@ export const useSynchroniseerCaoPresets = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getSynchroniseerCaoPresetsMutationOptions(options));
+    }
+
+export const getListPoortwachterDossiersUrl = () => {
+
+
+
+
+  return `/api/hrm/poortwachter`
+}
+
+/**
+ * @summary Alle Poortwachter-dossiers (voor signalering)
+ */
+export const listPoortwachterDossiers = async ( options?: RequestInit): Promise<PoortwachterDossier[]> => {
+
+  return customFetch<PoortwachterDossier[]>(getListPoortwachterDossiersUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListPoortwachterDossiersQueryKey = () => {
+    return [
+    `/api/hrm/poortwachter`
+    ] as const;
+    }
+
+
+export const getListPoortwachterDossiersQueryOptions = <TData = Awaited<ReturnType<typeof listPoortwachterDossiers>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPoortwachterDossiers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListPoortwachterDossiersQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listPoortwachterDossiers>>> = ({ signal }) => listPoortwachterDossiers({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listPoortwachterDossiers>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListPoortwachterDossiersQueryResult = NonNullable<Awaited<ReturnType<typeof listPoortwachterDossiers>>>
+export type ListPoortwachterDossiersQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Alle Poortwachter-dossiers (voor signalering)
+ */
+
+export function useListPoortwachterDossiers<TData = Awaited<ReturnType<typeof listPoortwachterDossiers>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPoortwachterDossiers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListPoortwachterDossiersQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetPoortwachterDossierUrl = (id: number,) => {
+
+
+
+
+  return `/api/hrm/ziekmeldingen/${id}/poortwachter`
+}
+
+/**
+ * @summary Poortwachter-dossier ophalen of aanmaken voor een ziekmelding
+ */
+export const getPoortwachterDossier = async (id: number, options?: RequestInit): Promise<PoortwachterDossier> => {
+
+  return customFetch<PoortwachterDossier>(getGetPoortwachterDossierUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPoortwachterDossierQueryKey = (id: number,) => {
+    return [
+    `/api/hrm/ziekmeldingen/${id}/poortwachter`
+    ] as const;
+    }
+
+
+export const getGetPoortwachterDossierQueryOptions = <TData = Awaited<ReturnType<typeof getPoortwachterDossier>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPoortwachterDossier>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPoortwachterDossierQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPoortwachterDossier>>> = ({ signal }) => getPoortwachterDossier(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPoortwachterDossier>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetPoortwachterDossierQueryResult = NonNullable<Awaited<ReturnType<typeof getPoortwachterDossier>>>
+export type GetPoortwachterDossierQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Poortwachter-dossier ophalen of aanmaken voor een ziekmelding
+ */
+
+export function useGetPoortwachterDossier<TData = Awaited<ReturnType<typeof getPoortwachterDossier>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPoortwachterDossier>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetPoortwachterDossierQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getPatchPoortwachterMijlpaalUrl = (dossierId: number,
+    type: string,) => {
+
+
+
+
+  return `/api/hrm/poortwachter/${dossierId}/mijlpalen/${type}`
+}
+
+/**
+ * @summary Poortwachter-mijlpaal afvinken of notitie toevoegen
+ */
+export const patchPoortwachterMijlpaal = async (dossierId: number,
+    type: string,
+    poortwachterMijlpaalInput: PoortwachterMijlpaalInput, options?: RequestInit): Promise<PoortwachterMijlpaal> => {
+
+  return customFetch<PoortwachterMijlpaal>(getPatchPoortwachterMijlpaalUrl(dossierId,type),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(poortwachterMijlpaalInput)
+  }
+);}
+
+
+
+
+export const getPatchPoortwachterMijlpaalMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchPoortwachterMijlpaal>>, TError,{dossierId: number;type: string;data: BodyType<PoortwachterMijlpaalInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof patchPoortwachterMijlpaal>>, TError,{dossierId: number;type: string;data: BodyType<PoortwachterMijlpaalInput>}, TContext> => {
+
+const mutationKey = ['patchPoortwachterMijlpaal'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof patchPoortwachterMijlpaal>>, {dossierId: number;type: string;data: BodyType<PoortwachterMijlpaalInput>}> = (props) => {
+          const {dossierId,type,data} = props ?? {};
+
+          return  patchPoortwachterMijlpaal(dossierId,type,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PatchPoortwachterMijlpaalMutationResult = NonNullable<Awaited<ReturnType<typeof patchPoortwachterMijlpaal>>>
+    export type PatchPoortwachterMijlpaalMutationBody = BodyType<PoortwachterMijlpaalInput>
+    export type PatchPoortwachterMijlpaalMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Poortwachter-mijlpaal afvinken of notitie toevoegen
+ */
+export const usePatchPoortwachterMijlpaal = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchPoortwachterMijlpaal>>, TError,{dossierId: number;type: string;data: BodyType<PoortwachterMijlpaalInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof patchPoortwachterMijlpaal>>,
+        TError,
+        {dossierId: number;type: string;data: BodyType<PoortwachterMijlpaalInput>},
+        TContext
+      > => {
+      return useMutation(getPatchPoortwachterMijlpaalMutationOptions(options));
     }
 
 export const getDoorzettenNaarGarageUrl = (id: number,) => {

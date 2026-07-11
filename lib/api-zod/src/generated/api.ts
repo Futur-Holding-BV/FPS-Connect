@@ -10867,6 +10867,86 @@ export const SynchroniseerCaoPresetsResponse = zod.object({
 
 
 /**
+ * @summary Alle Poortwachter-dossiers (voor signalering)
+ */
+export const ListPoortwachterDossiersResponseItem = zod.object({
+  "id": zod.number(),
+  "ziekmelding_id": zod.number(),
+  "medewerker_id": zod.number(),
+  "medewerker_naam": zod.string(),
+  "start_datum": zod.coerce.date(),
+  "mijlpalen": zod.array(zod.object({
+  "id": zod.number(),
+  "dossier_id": zod.number(),
+  "type": zod.string(),
+  "label": zod.string(),
+  "dag_offset": zod.number(),
+  "deadline_datum": zod.coerce.date(),
+  "status": zod.enum(['open', 'nadert', 'buiten_termijn', 'afgerond']),
+  "afgerond_op": zod.coerce.date().nullish(),
+  "notitie": zod.string().nullish(),
+  "bijgewerkt_door_naam": zod.string().nullish()
+}))
+})
+export const ListPoortwachterDossiersResponse = zod.array(ListPoortwachterDossiersResponseItem)
+
+
+/**
+ * @summary Poortwachter-dossier ophalen of aanmaken voor een ziekmelding
+ */
+export const GetPoortwachterDossierParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetPoortwachterDossierResponse = zod.object({
+  "id": zod.number(),
+  "ziekmelding_id": zod.number(),
+  "medewerker_id": zod.number(),
+  "medewerker_naam": zod.string(),
+  "start_datum": zod.coerce.date(),
+  "mijlpalen": zod.array(zod.object({
+  "id": zod.number(),
+  "dossier_id": zod.number(),
+  "type": zod.string(),
+  "label": zod.string(),
+  "dag_offset": zod.number(),
+  "deadline_datum": zod.coerce.date(),
+  "status": zod.enum(['open', 'nadert', 'buiten_termijn', 'afgerond']),
+  "afgerond_op": zod.coerce.date().nullish(),
+  "notitie": zod.string().nullish(),
+  "bijgewerkt_door_naam": zod.string().nullish()
+}))
+})
+
+
+/**
+ * @summary Poortwachter-mijlpaal afvinken of notitie toevoegen
+ */
+export const PatchPoortwachterMijlpaalParams = zod.object({
+  "dossierId": zod.coerce.number(),
+  "type": zod.coerce.string()
+})
+
+export const PatchPoortwachterMijlpaalBody = zod.object({
+  "afgerond": zod.boolean().optional(),
+  "notitie": zod.string().optional()
+})
+
+export const PatchPoortwachterMijlpaalResponse = zod.object({
+  "id": zod.number(),
+  "dossier_id": zod.number(),
+  "type": zod.string(),
+  "label": zod.string(),
+  "dag_offset": zod.number(),
+  "deadline_datum": zod.coerce.date(),
+  "status": zod.enum(['open', 'nadert', 'buiten_termijn', 'afgerond']),
+  "afgerond_op": zod.coerce.date().nullish(),
+  "notitie": zod.string().nullish(),
+  "bijgewerkt_door_naam": zod.string().nullish()
+})
+
+
+/**
  * @summary Melding doorzetten naar externe garage met e-mailnotificatie
  */
 export const DoorzettenNaarGarageParams = zod.object({

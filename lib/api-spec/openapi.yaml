@@ -8704,6 +8704,67 @@ paths:
               schema:
                 $ref: "#/components/schemas/CaoPresetsSyncResultaat"
 
+  /hrm/poortwachter:
+    get:
+      operationId: listPoortwachterDossiers
+      tags: [hrm]
+      summary: Alle Poortwachter-dossiers (voor signalering)
+      responses:
+        "200":
+          description: Lijst van dossiers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PoortwachterDossier"
+
+  /hrm/ziekmeldingen/{id}/poortwachter:
+    get:
+      operationId: getPoortwachterDossier
+      tags: [hrm]
+      summary: Poortwachter-dossier ophalen of aanmaken voor een ziekmelding
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Poortwachter-dossier
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PoortwachterDossier"
+
+  /hrm/poortwachter/{dossierId}/mijlpalen/{type}:
+    patch:
+      operationId: patchPoortwachterMijlpaal
+      tags: [hrm]
+      summary: Poortwachter-mijlpaal afvinken of notitie toevoegen
+      parameters:
+        - in: path
+          name: dossierId
+          required: true
+          schema: { type: integer }
+        - in: path
+          name: type
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PoortwachterMijlpaalInput"
+      responses:
+        "200":
+          description: Bijgewerkte mijlpaal
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PoortwachterMijlpaal"
+
   /wagenpark/meldingen/{id}/doorzetten-garage:
     post:
       operationId: doorzettenNaarGarage
@@ -39009,6 +39070,43 @@ components:
         urgentie:
           type: string
           enum: [kritiek, waarschuwing, info]
+
+    PoortwachterMijlpaal:
+      type: object
+      required: [id, dossier_id, type, label, dag_offset, deadline_datum, status]
+      properties:
+        id: { type: integer }
+        dossier_id: { type: integer }
+        type: { type: string }
+        label: { type: string }
+        dag_offset: { type: integer }
+        deadline_datum: { type: string, format: date }
+        status:
+          type: string
+          enum: [open, nadert, buiten_termijn, afgerond]
+        afgerond_op: { type: string, format: date-time, nullable: true }
+        notitie: { type: string, nullable: true }
+        bijgewerkt_door_naam: { type: string, nullable: true }
+
+    PoortwachterDossier:
+      type: object
+      required: [id, ziekmelding_id, medewerker_id, medewerker_naam, start_datum, mijlpalen]
+      properties:
+        id: { type: integer }
+        ziekmelding_id: { type: integer }
+        medewerker_id: { type: integer }
+        medewerker_naam: { type: string }
+        start_datum: { type: string, format: date }
+        mijlpalen:
+          type: array
+          items:
+            $ref: "#/components/schemas/PoortwachterMijlpaal"
+
+    PoortwachterMijlpaalInput:
+      type: object
+      properties:
+        afgerond: { type: boolean }
+        notitie: { type: string }
 
     DoorzettenGarageInput:
       type: object

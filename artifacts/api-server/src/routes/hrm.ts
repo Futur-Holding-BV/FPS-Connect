@@ -34,6 +34,8 @@ import {
   medewerkerDocumentenTable,
   zzpOvereenkomstenTable,
   medewerkerAanstellingenTable,
+  poortwachterDossiersTable,
+  poortwachterMijlpalenTable,
 } from "@workspace/db";
 import { ObjectStorageService } from "../lib/objectStorage";
 import { eq, desc, and, ne, inArray, or, isNull, gte, lte, sql, getTableColumns } from "drizzle-orm";
@@ -4499,6 +4501,178 @@ router.post("/verlof/synchroniseer-cao-presets", alleenBeheerder, async (req, re
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });
   }
+});
+
+// ── Poortwachter (Wet Verbetering Poortwachter) ───────────────────────────────
+// 7 verplichte WvP-mijlpalen; gemiste deadlines → UWV-sanctie (max. 52 weken extra loon).
+
+const POORTWACHTER_MIJLPALEN_DEF = [
+  { type: "probleemanalyse",            label: "Probleemanalyse (bedrijfsarts)",         dagOffset: 42  },
+  { type: "plan_van_aanpak",            label: "Plan van aanpak",                        dagOffset: 56  },
+  { type: "uwv_melding",               label: "UWV-melding langdurig ziekte",            dagOffset: 294 },
+  { type: "eerstejaarsevaluatie",      label: "Eerstejaarsevaluatie (1e jaar)",          dagOffset: 364 },
+  { type: "arbeidsdeskundig_onderzoek", label: "Arbeidsdeskundig onderzoek",             dagOffset: 609 },
+  { type: "wia_aanvraag",              label: "WIA-aanvraag indienen",                   dagOffset: 637 },
+  { type: "einde_loondoorbetaling",    label: "Einde loondoorbetaling (104 weken)",      dagOffset: 728 },
+] as const;
+
+function berekenDeadlinePwt(startDatum: string, dagOffset: number): string {
+  const d = new Date(startDatum);
+  d.setDate(d.getDate() + dagOffset);
+  return d.toISOString().slice(0, 10);
+}
+
+function mijlpaalStatus(deadlineDatum: string, afgerondOp: Date | null): "afgerond" | "buiten_termijn" | "nadert" | "open" {
+  if (afgerondOp) return "afgerond";
+  const deadline = new Date(deadlineDatum);
+  const nu = new Date(); nu.setHours(0, 0, 0, 0);
+  const dagVerschil = Math.floor((deadline.getTime() - nu.getTime()) / 86400000);
+  if (dagVerschil < 0) return "buiten_termijn";
+  if (dagVerschil <= 14) return "nadert";
+  return "open";
+}
+
+function mapMijlpaalRow(
+  rij: typeof poortwachterMijlpalenTable.$inferSelect,
+  bijgewerktDoorNaam: string | null,
+) {
+  const def = POORTWACHTER_MIJLPALEN_DEF.find((d) => d.type === rij.type);
+  return {
+    id: rij.id,
+    dossier_id: rij.dossierId,
+    type: rij.type,
+    label: def?.label ?? rij.type,
+    dag_offset: def?.dagOffset ?? 0,
+    deadline_datum: rij.deadlineDatum,
+    status: mijlpaalStatus(rij.deadlineDatum, rij.afgerondOp),
+    afgerond_op: rij.afgerondOp?.toISOString() ?? null,
+    notitie: rij.notitie ?? null,
+    bijgewerkt_door_naam: bijgewerktDoorNaam,
+  };
+}
+
+async function haalMijlpalenVoorDossier(dossierId: number) {
+  return db
+    .select({ mijlpaal: poortwachterMijlpalenTable, naam: gebruikersTable.naam })
+    .from(poortwachterMijlpalenTable)
+    .leftJoin(gebruikersTable, eq(gebruikersTable.id, poortwachterMijlpalenTable.bijgewerktDoorId))
+    .where(eq(poortwachterMijlpalenTable.dossierId, dossierId))
+    .orderBy(poortwachterMijlpalenTable.deadlineDatum);
+}
+
+// GET /poortwachter — overzicht alle dossiers (voor signalering op dashboard)
+router.get("/poortwachter", requireBevoegdheid("personeel", 1), async (req, res): Promise<void> => {
+  const dossierRows = await db
+    .select({
+      dossier: poortwachterDossiersTable,
+      medewerker_naam: medewerkersTable.naam,
+      start_datum: ziekmeldingenTable.startDatum,
+    })
+    .from(poortwachterDossiersTable)
+    .innerJoin(medewerkersTable, eq(medewerkersTable.id, poortwachterDossiersTable.medewerkerId))
+    .innerJoin(ziekmeldingenTable, eq(ziekmeldingenTable.id, poortwachterDossiersTable.ziekmeldingId))
+    .orderBy(desc(poortwachterDossiersTable.aangemaaktOp));
+
+  const result = await Promise.all(dossierRows.map(async (d) => {
+    const mijlpalen = await haalMijlpalenVoorDossier(d.dossier.id);
+    return {
+      id: d.dossier.id,
+      ziekmelding_id: d.dossier.ziekmeldingId,
+      medewerker_id: d.dossier.medewerkerId,
+      medewerker_naam: d.medewerker_naam,
+      start_datum: d.start_datum,
+      mijlpalen: mijlpalen.map((m) => mapMijlpaalRow(m.mijlpaal, m.naam ?? null)),
+    };
+  }));
+
+  return void res.json(result);
+});
+
+// GET /ziekmeldingen/:id/poortwachter — dossier ophalen of aanmaken (idempotent)
+router.get("/ziekmeldingen/:id/poortwachter", requireBevoegdheid("personeel", 1), async (req, res): Promise<void> => {
+  const ziekmeldingId = parseInt(String(req.params.id), 10);
+  if (isNaN(ziekmeldingId)) return void res.status(400).json({ error: "Ongeldig id" });
+
+  const [ziekmelding] = await db
+    .select({ id: ziekmeldingenTable.id, medewerkerId: ziekmeldingenTable.medewerkerId, startDatum: ziekmeldingenTable.startDatum })
+    .from(ziekmeldingenTable)
+    .where(eq(ziekmeldingenTable.id, ziekmeldingId));
+  if (!ziekmelding) return void res.status(404).json({ error: "Ziekmelding niet gevonden" });
+
+  const [medewerker] = await db
+    .select({ id: medewerkersTable.id, naam: medewerkersTable.naam })
+    .from(medewerkersTable)
+    .where(eq(medewerkersTable.id, ziekmelding.medewerkerId));
+  if (!medewerker) return void res.status(404).json({ error: "Medewerker niet gevonden" });
+
+  let [dossier] = await db
+    .select()
+    .from(poortwachterDossiersTable)
+    .where(eq(poortwachterDossiersTable.ziekmeldingId, ziekmeldingId));
+
+  if (!dossier) {
+    [dossier] = await db
+      .insert(poortwachterDossiersTable)
+      .values({ ziekmeldingId, medewerkerId: ziekmelding.medewerkerId })
+      .returning();
+
+    await db.insert(poortwachterMijlpalenTable).values(
+      POORTWACHTER_MIJLPALEN_DEF.map((def) => ({
+        dossierId: dossier.id,
+        type: def.type,
+        deadlineDatum: berekenDeadlinePwt(ziekmelding.startDatum, def.dagOffset),
+      })),
+    );
+  }
+
+  const mijlpalen = await haalMijlpalenVoorDossier(dossier.id);
+
+  return void res.json({
+    id: dossier.id,
+    ziekmelding_id: dossier.ziekmeldingId,
+    medewerker_id: dossier.medewerkerId,
+    medewerker_naam: medewerker.naam,
+    start_datum: ziekmelding.startDatum,
+    mijlpalen: mijlpalen.map((m) => mapMijlpaalRow(m.mijlpaal, m.naam ?? null)),
+  });
+});
+
+// PATCH /poortwachter/:dossierId/mijlpalen/:type — mijlpaal afvinken of notitie bijwerken
+router.patch("/poortwachter/:dossierId/mijlpalen/:type", requireBevoegdheid("personeel", 2), async (req, res): Promise<void> => {
+  const dossierId = parseInt(String(req.params.dossierId), 10);
+  if (isNaN(dossierId)) return void res.status(400).json({ error: "Ongeldig dossier-id" });
+  const type = String(req.params.type);
+
+  const { afgerond, notitie } = req.body as { afgerond?: boolean; notitie?: string };
+
+  const [bestaand] = await db
+    .select()
+    .from(poortwachterMijlpalenTable)
+    .where(and(eq(poortwachterMijlpalenTable.dossierId, dossierId), eq(poortwachterMijlpalenTable.type, type)));
+  if (!bestaand) return void res.status(404).json({ error: "Mijlpaal niet gevonden" });
+
+  const gebruikerId: number | null = (req.session as { userId?: number }).userId ?? null;
+  const update: Partial<typeof poortwachterMijlpalenTable.$inferInsert> = {
+    bijgewerktOp: new Date(),
+    bijgewerktDoorId: gebruikerId,
+  };
+  if (afgerond === true && !bestaand.afgerondOp) update.afgerondOp = new Date();
+  if (afgerond === false) update.afgerondOp = null;
+  if (notitie !== undefined) update.notitie = notitie;
+
+  const [bijgewerkt] = await db
+    .update(poortwachterMijlpalenTable)
+    .set(update)
+    .where(and(eq(poortwachterMijlpalenTable.dossierId, dossierId), eq(poortwachterMijlpalenTable.type, type)))
+    .returning();
+
+  let naam: string | null = null;
+  if (bijgewerkt.bijgewerktDoorId) {
+    const [g] = await db.select({ naam: gebruikersTable.naam }).from(gebruikersTable).where(eq(gebruikersTable.id, bijgewerkt.bijgewerktDoorId));
+    naam = g?.naam ?? null;
+  }
+
+  return void res.json(mapMijlpaalRow(bijgewerkt, naam));
 });
 
 export default router;

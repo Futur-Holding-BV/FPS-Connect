@@ -1,3 +1,23 @@
+## 2026-07-11 — Poortwachter (Wet Verbetering Poortwachter) — Bouwstuk 1
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (additief, geen bestaande routes geraakt)
+
+**Gebouwd:**
+- **DB**: twee nieuwe tabellen — `poortwachter_dossiers` (1:1 aan ziekmelding, cascade-delete) en `poortwachter_mijlpalen` (7 vaste WvP-types per dossier, deadline als text ISO-datum afgeleid van start_datum + dag-offset). DB push geslaagd.
+- **7 WvP-mijlpalen** met wettelijke dag-offsets: Probleemanalyse (42), Plan van aanpak (56), UWV-melding langdurig ziekte (294), Eerstejaarsevaluatie (364), Arbeidsdeskundig onderzoek (609), WIA-aanvraag (637), Einde loondoorbetaling (728).
+- **Backend** (hrm.ts):
+  - `GET /hrm/poortwachter` — alle dossiers met mijlpalen (voor signalering); vereist `personeel:1`.
+  - `GET /hrm/ziekmeldingen/:id/poortwachter` — dossier ophalen of idempotent aanmaken met alle 7 mijlpalen; vereist `personeel:1`.
+  - `PATCH /hrm/poortwachter/:dossierId/mijlpalen/:type` — mijlpaal afvinken (`afgerond: true/false`) of notitie bijwerken; vereist `personeel:2`. Legt `bijgewerktDoorId` vast.
+  - `mijlpaalStatus()` berekent live status: `afgerond` / `buiten_termijn` (< vandaag) / `nadert` (≤ 14 dagen) / `open`.
+- **Frontend** (`poortwachter-sheet.tsx`):
+  - Sheet met 7 uitvouwbare mijlpaal-rijen; kleurcodering per status (groen/rood/amber/grijs).
+  - Kritiek waarschuwingsbanner als er mijlpalen `buiten_termijn` of `nadert` zijn.
+  - Per mijlpaal: afvinken, notitieveld met contextplaceholder (bijv. "PvA ondertekend..."), bijgewerkt-door melding.
+  - Laadt dossier via `useGetPoortwachterDossier` (auto-aanmaken); muteert via `usePatchPoortwachterMijlpaal`.
+- **Integratie personeel/index.tsx**: "Poortwachter"-knop op elke actieve ziekmelding-kaart; opent de sheet.
+- **OpenAPI** + codegen: `PoortwachterDossier`, `PoortwachterMijlpaal`, `PoortwachterMijlpaalInput` + 3 paden; codegen + typecheck groen.
+
 ## 2026-07-11 — Wagenpark: voertuig-melding in monteur-app + Doorzetten naar garage
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (additief; geen bestaande routes gebroken)

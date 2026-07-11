@@ -52,6 +52,7 @@ import type {
   ZiekmeldingenInput,
   CvAnalyseResultaat,
 } from "@workspace/api-client-react";
+import { PoortwachterSheet } from "@/components/hrm/poortwachter-sheet";
 import { useRol } from "@/context/rol-context";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -264,6 +265,7 @@ export default function PersoneelPagina() {
     start_datum: new Date().toISOString().slice(0, 10),
   });
   const [verwijderZiekId, setVerwijderZiekId] = useState<number | null>(null);
+  const [poortwachterZiekmeldingId, setPoortwachterZiekmeldingId] = useState<number | null>(null);
 
   const [offboardOpen, setOffboardOpen] = useState(false);
   const [offboardMedId, setOffboardMedId] = useState<number | null>(null);
@@ -1283,6 +1285,14 @@ export default function PersoneelPagina() {
                             >
                               {z.status === "langdurig" ? "Langdurig" : "Gemeld"}
                             </Badge>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="text-xs gap-1.5"
+                              onClick={() => setPoortwachterZiekmeldingId(z.id)}
+                            >
+                              Poortwachter
+                            </Button>
                             {magSchrijven && (
                               <>
                                 {z.status !== "langdurig" && (
@@ -2213,6 +2223,11 @@ export default function PersoneelPagina() {
       </Dialog>
 
       {/* Ziekmelding verwijderen */}
+      <PoortwachterSheet
+        ziekmeldingId={poortwachterZiekmeldingId}
+        onOpenChange={(open) => { if (!open) setPoortwachterZiekmeldingId(null); }}
+      />
+
       <Dialog open={verwijderZiekId !== null} onOpenChange={(o) => !o && setVerwijderZiekId(null)}>
         <DialogContent className="max-w-sm">
           <DialogHeader><DialogTitle>Ziekmelding verwijderen</DialogTitle></DialogHeader>

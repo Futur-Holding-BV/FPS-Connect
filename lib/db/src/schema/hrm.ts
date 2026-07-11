@@ -431,6 +431,30 @@ export const insertBekwaamheidSchema = createInsertSchema(bekwaamhedenTable).omi
 export const insertVerlofsoortSchema = createInsertSchema(verlofsoortenTable).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });
 export const insertVerlofSaldoSchema = createInsertSchema(verlofSaldiTable).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });
 export const insertVerlofAanvraagSchema = createInsertSchema(verlofAanvragenTable).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });
+// ── Poortwachter (Wet Verbetering Poortwachter) ───────────────────────────────
+// Reintegratiedossier per ziekmelding met de 7 verplichte WvP-mijlpalen.
+// Gemiste deadlines → UWV-sanctie (max. 52 extra weken loondoorbetaling).
+export const poortwachterDossiersTable = pgTable("poortwachter_dossiers", {
+  id: serial("id").primaryKey(),
+  ziekmeldingId: integer("ziekmelding_id").notNull().unique().references(() => ziekmeldingenTable.id, { onDelete: "cascade" }),
+  medewerkerId: integer("medewerker_id").notNull().references(() => medewerkersTable.id, { onDelete: "cascade" }),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+  bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+});
+
+// Eén rij per mijlpaaltype per dossier; deadline wordt berekend vanuit start_datum + dag_offset.
+export const poortwachterMijlpalenTable = pgTable("poortwachter_mijlpalen", {
+  id: serial("id").primaryKey(),
+  dossierId: integer("dossier_id").notNull().references(() => poortwachterDossiersTable.id, { onDelete: "cascade" }),
+  type: text("type").notNull(),
+  deadlineDatum: text("deadline_datum").notNull(),
+  afgerondOp: timestamp("afgerond_op"),
+  notitie: text("notitie"),
+  bijgewerktDoorId: integer("bijgewerkt_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+  bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+});
+
 export const insertZiekmeldingenSchema = createInsertSchema(ziekmeldingenTable).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });
 export const insertVerlofAanvraagLogSchema = createInsertSchema(verlofAanvraagLogTable).omit({ id: true, aangemaaktOp: true });
 export const insertVerlofInstellingenSchema = createInsertSchema(verlofInstellingenTable).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });
@@ -468,6 +492,8 @@ export type Feestdag = typeof feestdagenTable.$inferSelect;
 export type JaarAfsluitingRegel = typeof jaarAfsluitingRegelsTable.$inferSelect;
 export type InsertZiekmelding = z.infer<typeof insertZiekmeldingenSchema>;
 export type Ziekmelding = typeof ziekmeldingenTable.$inferSelect;
+export type PoortwachterDossier = typeof poortwachterDossiersTable.$inferSelect;
+export type PoortwachterMijlpaal = typeof poortwachterMijlpalenTable.$inferSelect;
 export type MedewerkerDocument = typeof medewerkerDocumentenTable.$inferSelect;
 export const insertMedewerkerAanstellingSchema = createInsertSchema(medewerkerAanstellingenTable).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });
 export type InsertMedewerkerAanstelling = z.infer<typeof insertMedewerkerAanstellingSchema>;
