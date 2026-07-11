@@ -63,12 +63,16 @@ const DOCUMENT_TYPE_LABELS: Record<string, string> = {
   offerte: "Offerte",
   factuur: "Factuur",
   arbeidsovereenkomst: "Arbeidsovereenkomst",
+  hrm_besluit: "HRM-besluit (contractverlenging / salariswijziging)",
+  verlofaanvraag: "Verlofaanvraag",
   inspectie: "Inspectierapport",
   opleverrapport: "Opleverrapport",
   certificaat: "Certificaat",
   weekstaat: "Weekstaat / Urenstaat",
   projectafsluiting: "Projectafsluiting",
 };
+
+const DOCUMENT_TYPE_OPTIES = Object.entries(DOCUMENT_TYPE_LABELS).map(([value, label]) => ({ value, label }));
 
 function documentTypeLabel(type: string): string {
   return DOCUMENT_TYPE_LABELS[type] ?? type;
@@ -277,13 +281,17 @@ function BeleidsregelsTab({ magBeheren }: { magBeheren: boolean }) {
             </div>
             <div className="space-y-1.5">
               <Label>Documenttype</Label>
-              {/* Vrije invoer met voorgedefinieerde suggesties — behoudt generieke engine-werking */}
-              <Input
-                list="documenttype-opties"
-                placeholder="bijv. inkoopbon, offerte, verlofaanvraag"
-                value={form.document_type}
-                onChange={(e) => setForm({ ...form, document_type: e.target.value })}
-              />
+              <Select
+                value={form.document_type || ""}
+                onValueChange={(v) => setForm({ ...form, document_type: v })}
+              >
+                <SelectTrigger><SelectValue placeholder="Kies een documenttype..." /></SelectTrigger>
+                <SelectContent>
+                  {DOCUMENT_TYPE_OPTIES.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               {form.document_type === "verlofaanvraag" && (
                 <p className="text-xs text-muted-foreground">
                   Voor verlofaanvragen geldt: ondergrens en bovengrens zijn in <strong>werkdagen</strong> (bijv. ondergrens 10 = meer dan 10 werkdagen vereist directeursgoedkeuring).

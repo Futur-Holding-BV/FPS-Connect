@@ -23,6 +23,7 @@ import { heeftNiveau, MODULE_IDS, type ModuleId } from "@workspace/permissies";
 import { logAudit } from "../lib/audit";
 import { workflowService } from "./workflow-engine";
 import { logger } from "../lib/logger";
+import { stuurGoedkeuringIndienenMail } from "./email";
 
 type Db = typeof _mainDb;
 
@@ -533,6 +534,43 @@ export async function dienIn(
     objectId: params.objectId,
     meta: { aanvraagId: aanvraag!.id, bedrag: params.bedrag, beleidsregelId: regel.id },
   });
+
+  // Stuur direct een notificatie naar de aangewezen goedkeurder.
+  // Fouten worden geslikt — de aanvraag is al opgeslagen.
+  try {
+    let ontvangerGebruikerId: number | null = regel.goedkeurderGebruikerId ?? null;
+    if (!ontvangerGebruikerId && regel.vervangerGebruikerId) {
+      ontvangerGebruikerId = regel.vervangerGebruikerId;
+    }
+    // Fallback: stuur naar de hoofdbeheerder als er geen specifieke goedkeurder is
+    if (!ontvangerGebruikerId) {
+      const [hb] = await db
+        .select({ id: gebruikersTable.id })
+        .from(gebruikersTable)
+        .where(and(eq(gebruikersTable.rol, "hoofdbeheerder"), eq(gebruikersTable.actief, true)))
+        .limit(1);
+      ontvangerGebruikerId = hb?.id ?? null;
+    }
+    if (ontvangerGebruikerId) {
+      const [ontvanger] = await db
+        .select({ naam: gebruikersTable.naam, email: gebruikersTable.email })
+        .from(gebruikersTable)
+        .where(eq(gebruikersTable.id, ontvangerGebruikerId));
+      if (ontvanger?.email) {
+        await stuurGoedkeuringIndienenMail({
+          naarEmail: ontvanger.email,
+          naarNaam: ontvanger.naam,
+          aanvraagId: aanvraag!.id,
+          documentType: params.documentType,
+          omschrijving: params.omschrijving,
+          ingediendDoorNaam: params.actor.gebruikerNaam,
+          bedrag: params.bedrag,
+        });
+      }
+    }
+  } catch (err) {
+    logger.warn({ err, aanvraagId: aanvraag!.id }, "Goedkeuring indiening-notificatie niet verstuurd");
+  }
 
   return { ok: true, aanvraag };
 }

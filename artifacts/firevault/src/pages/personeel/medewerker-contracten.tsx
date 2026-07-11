@@ -403,6 +403,24 @@ function BesluitPaneel({
 
       <Separator />
 
+      {/* Formele goedkeuring via Governance Engine */}
+      <div>
+        <p className="text-sm font-semibold text-slate-700 mb-1.5">Formele goedkeuring</p>
+        <p className="text-xs text-slate-500 mb-2">
+          Als het goedkeuringsbeleid een formele aanvraag vereist voor dit HRM-besluit, dient u het hier in.
+          Na goedkeuring kan het besluit definitief worden vastgelegd.
+        </p>
+        <GoedkeuringWidget
+          objectType="hrm_besluit"
+          objectId={contractId}
+          documentType="hrm_besluit"
+          omschrijving="Besluit contractverlenging / salariswijziging"
+          toonIndienKnop={true}
+        />
+      </div>
+
+      <Separator />
+
       {/* Besluit vastleggen */}
       <div>
         <p className="text-sm font-semibold text-slate-700 mb-2">Besluit</p>

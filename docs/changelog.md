@@ -1,3 +1,15 @@
+## 2026-07-11 — Escalatiebewaking gekoppeld aan offerte & HRM-besluiten (Task #543)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (additief; motor was al generiek)
+
+**Nieuw gebouwd:**
+- **E-mailnotificatie bij indiening**: `stuurGoedkeuringIndienenMail()` toegevoegd aan `email.ts` (soort `goedkeuring_indiening`). De `dienIn()`-functie in `goedkeuring-engine.ts` stuurt nu direct na indiening een notificatie naar de aangewezen goedkeurder (primair via `goedkeurderGebruikerId`, vervanger, of hoofdbeheerder als fallback). Voorheen ontving de goedkeurder alleen uren-later escalatieberichten.
+- **HRM-besluit documenttype**: `hrm_besluit` toegevoegd aan `DOCUMENT_TYPE_LABELS` in `goedkeuringsbeleid.tsx` zodat het dashboard aanvragen correct labelt als "HRM-besluit (contractverlenging / salariswijziging)".
+- **Documenttype-dropdown in beleidsscherm**: documenttype-invoerveld in beleidsregel-formulier gewijzigd van vrije tekst naar vaste Select-dropdown (10 erkende types). Foutbestendig aanmaken van beleid voor "offerte" en "hrm_besluit".
+- **GoedkeuringWidget in BesluitPaneel**: formele goedkeuringsectie (objectType="hrm_besluit") toegevoegd in `medewerker-contracten.tsx`, direct boven het besluit-formulier.
+
+**Bewijs:** `pnpm run typecheck` groen (alle packages); api-server bouwt en start; `MailSoort` uitgebreid met `goedkeuring_indiening`.
+
 ## 2026-07-11 — Governance & Approval Engine — uitbreiding documenttypen (Task #522)
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (additief; backend engine was al generiek, geen backend wijzigingen nodig)

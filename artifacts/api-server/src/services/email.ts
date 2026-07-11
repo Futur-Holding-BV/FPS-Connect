@@ -53,7 +53,7 @@ export class MailFout extends Error {
   }
 }
 
-export type MailSoort = "test" | "uitnodiging" | "wachtwoord_reset" | "offerte" | "klantvraag" | "afwijzing" | "ondertekening" | "inkoopbon" | "opdrachtbevestiging" | "magazijn_signalering" | "magazijn_bestelbon" | "aanvraag_bevestiging" | "planning_melding" | "incident_melding" | "ai_drempel" | "reactietermijn_melding" | "rapport_melding" | "avg_verzoek_bevestiging" | "avg_verzoek_afgehandeld" | "voertuig_melding_garage" | "goedkeuring_escalatie";
+export type MailSoort = "test" | "uitnodiging" | "wachtwoord_reset" | "offerte" | "klantvraag" | "afwijzing" | "ondertekening" | "inkoopbon" | "opdrachtbevestiging" | "magazijn_signalering" | "magazijn_bestelbon" | "aanvraag_bevestiging" | "planning_melding" | "incident_melding" | "ai_drempel" | "reactietermijn_melding" | "rapport_melding" | "avg_verzoek_bevestiging" | "avg_verzoek_afgehandeld" | "voertuig_melding_garage" | "goedkeuring_escalatie" | "goedkeuring_indiening";
 
 // ── Configuratie-helpers ─────────────────────────────────────────────────────
 export function isGeconfigureerd(): boolean {
@@ -1459,6 +1459,34 @@ export async function stuurAvgVerzoekAfgehandeldMail(opties: {
     html,
     soort: "avg_verzoek_afgehandeld",
   });
+}
+
+// ── Goedkeuring indiening-melding ─────────────────────────────────────────────
+// Wordt direct na indiening verstuurd naar de aangewezen goedkeurder.
+export async function stuurGoedkeuringIndienenMail(opties: {
+  naarEmail: string;
+  naarNaam?: string | null;
+  aanvraagId: number;
+  documentType: string;
+  omschrijving?: string | null;
+  ingediendDoorNaam?: string | null;
+  bedrag?: number | null;
+}): Promise<void> {
+  const bedragTekst =
+    opties.bedrag != null
+      ? ` (${new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(opties.bedrag)})`
+      : "";
+  const onderwerp = `Ter goedkeuring: ${opties.documentType}${bedragTekst} — aanvraag #${opties.aanvraagId}`;
+  const html = mailShell({
+    titel: "Nieuwe goedkeuringsaanvraag",
+    kopje: `Aanvraag #${opties.aanvraagId} — ${opties.documentType}${bedragTekst}`,
+    paragrafen: [
+      `Er is een nieuwe goedkeuringsaanvraag voor u ingediend${opties.ingediendDoorNaam ? ` door ${opties.ingediendDoorNaam}` : ""}.`,
+      ...(opties.omschrijving ? [`Omschrijving: ${opties.omschrijving}`] : []),
+      "Log in op FPS Connect om de aanvraag te bekijken en goed te keuren of af te wijzen.",
+    ],
+  });
+  await verstuurMail({ naarEmail: opties.naarEmail, naarNaam: opties.naarNaam ?? undefined, onderwerp, html, soort: "goedkeuring_indiening" });
 }
 
 // ── Goedkeuring escalatie-melding ─────────────────────────────────────────────
