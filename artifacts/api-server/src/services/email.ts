@@ -53,7 +53,7 @@ export class MailFout extends Error {
   }
 }
 
-export type MailSoort = "test" | "uitnodiging" | "wachtwoord_reset" | "offerte" | "klantvraag" | "afwijzing" | "ondertekening" | "inkoopbon" | "opdrachtbevestiging" | "magazijn_signalering" | "magazijn_bestelbon" | "aanvraag_bevestiging" | "planning_melding" | "incident_melding" | "ai_drempel" | "reactietermijn_melding" | "rapport_melding" | "avg_verzoek_bevestiging" | "avg_verzoek_afgehandeld" | "voertuig_melding_garage";
+export type MailSoort = "test" | "uitnodiging" | "wachtwoord_reset" | "offerte" | "klantvraag" | "afwijzing" | "ondertekening" | "inkoopbon" | "opdrachtbevestiging" | "magazijn_signalering" | "magazijn_bestelbon" | "aanvraag_bevestiging" | "planning_melding" | "incident_melding" | "ai_drempel" | "reactietermijn_melding" | "rapport_melding" | "avg_verzoek_bevestiging" | "avg_verzoek_afgehandeld" | "voertuig_melding_garage" | "goedkeuring_escalatie";
 
 // ── Configuratie-helpers ─────────────────────────────────────────────────────
 export function isGeconfigureerd(): boolean {
@@ -1459,4 +1459,37 @@ export async function stuurAvgVerzoekAfgehandeldMail(opties: {
     html,
     soort: "avg_verzoek_afgehandeld",
   });
+}
+
+// ── Goedkeuring escalatie-melding ─────────────────────────────────────────────
+export async function stuurGoedkeuringEscalatieMail(opties: {
+  naarEmail: string;
+  naarNaam?: string | null;
+  aanvraagId: number;
+  documentType: string;
+  omschrijving?: string | null;
+  escalatieType: "herinnering" | "escalatie_1" | "escalatie_2" | "max_doorlooptijd";
+  bericht: string;
+}): Promise<void> {
+  const typeLabels: Record<string, string> = {
+    herinnering: "Herinnering",
+    escalatie_1: "Escalatie — stap 1",
+    escalatie_2: "Escalatie — stap 2 (dringend)",
+    max_doorlooptijd: "Maximale doorlooptijd overschreden",
+  };
+  const onderwerp = `${typeLabels[opties.escalatieType] ?? "Signalering"}: goedkeuringsaanvraag #${opties.aanvraagId}`;
+  const html = mailShell({
+    titel: typeLabels[opties.escalatieType] ?? "Signalering",
+    kopje: `Aanvraag #${opties.aanvraagId} — ${opties.documentType}`,
+    paragrafen: [
+      opties.bericht,
+      ...(opties.omschrijving ? [`Omschrijving: ${opties.omschrijving}`] : []),
+      "Log in op FPS Connect om de aanvraag te bekijken en te verwerken.",
+    ],
+  });
+  try {
+    await verstuurMail({ naarEmail: opties.naarEmail, naarNaam: opties.naarNaam ?? undefined, onderwerp, html, soort: "goedkeuring_escalatie" });
+  } catch {
+    // Bewakingsservice logt al; hier niet opnieuw gooien zodat de loop doorgaat
+  }
 }

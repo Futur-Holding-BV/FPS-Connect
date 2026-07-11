@@ -2821,6 +2821,36 @@ export interface GoedkeuringBeleidsregel {
   vervanger_gebruiker_id?: number | null;
   /** @nullable */
   reactietermijn_uren?: number | null;
+  /**
+     * Uren na indiening waarna een herinnering wordt verstuurd naar de goedkeurder.
+     * @nullable
+     */
+  herinnering_uren?: number | null;
+  /**
+     * Uren na indiening waarna escalatie naar stap-1-persoon plaatsvindt.
+     * @nullable
+     */
+  escalatie_stap_1_uren?: number | null;
+  /**
+     * Gebruiker die bij stap-1 geescaleerd wordt (bijv. leidinggevende).
+     * @nullable
+     */
+  escalatie_stap_1_gebruiker_id?: number | null;
+  /**
+     * Uren na indiening waarna escalatie naar stap-2-persoon plaatsvindt.
+     * @nullable
+     */
+  escalatie_stap_2_uren?: number | null;
+  /**
+     * Gebruiker die bij stap-2 geescaleerd wordt (bijv. directeur).
+     * @nullable
+     */
+  escalatie_stap_2_gebruiker_id?: number | null;
+  /**
+     * Harde maximale doorlooptijd in uren; daarna altijd escalatie naar hoofdbeheerder.
+     * @nullable
+     */
+  max_doorlooptijd_uren?: number | null;
   actief: boolean;
   /** @nullable */
   aangemaakt_door_id?: number | null;
@@ -2852,7 +2882,93 @@ export interface GoedkeuringBeleidsregelInput {
   vervanger_gebruiker_id?: number | null;
   /** @nullable */
   reactietermijn_uren?: number | null;
+  /** @nullable */
+  herinnering_uren?: number | null;
+  /** @nullable */
+  escalatie_stap_1_uren?: number | null;
+  /** @nullable */
+  escalatie_stap_1_gebruiker_id?: number | null;
+  /** @nullable */
+  escalatie_stap_2_uren?: number | null;
+  /** @nullable */
+  escalatie_stap_2_gebruiker_id?: number | null;
+  /** @nullable */
+  max_doorlooptijd_uren?: number | null;
   actief: boolean;
+}
+
+export type GoedkeuringEscalatieType = typeof GoedkeuringEscalatieType[keyof typeof GoedkeuringEscalatieType];
+
+
+export const GoedkeuringEscalatieType = {
+  herinnering: 'herinnering',
+  escalatie_1: 'escalatie_1',
+  escalatie_2: 'escalatie_2',
+  max_doorlooptijd: 'max_doorlooptijd',
+} as const;
+
+export interface GoedkeuringEscalatie {
+  id: number;
+  aanvraag_id: number;
+  type: GoedkeuringEscalatieType;
+  /** @nullable */
+  naar_gebruiker_id?: number | null;
+  /** @nullable */
+  naar_gebruiker_naam?: string | null;
+  /** @nullable */
+  bericht?: string | null;
+  aangemaakt_op: string;
+}
+
+export type GoedkeuringDashboardItemStatus = typeof GoedkeuringDashboardItemStatus[keyof typeof GoedkeuringDashboardItemStatus];
+
+
+export const GoedkeuringDashboardItemStatus = {
+  concept: 'concept',
+  ingediend: 'ingediend',
+  goedgekeurd: 'goedgekeurd',
+  afgewezen: 'afgewezen',
+  ingetrokken: 'ingetrokken',
+  vervangen: 'vervangen',
+} as const;
+
+export interface GoedkeuringDashboardItem {
+  id: number;
+  object_type: string;
+  object_id: number;
+  document_type: string;
+  /** @nullable */
+  omschrijving?: string | null;
+  /** @nullable */
+  bedrag?: number | null;
+  status: GoedkeuringDashboardItemStatus;
+  vereiste_goedkeuringen: number;
+  ontvangen_goedkeuringen: number;
+  /** @nullable */
+  ingediend_door_naam?: string | null;
+  /** @nullable */
+  ingediend_op?: string | null;
+  /** @nullable */
+  afgehandeld_op?: string | null;
+  /** @nullable */
+  afwijzing_reden?: string | null;
+  mag_goedkeuren?: boolean;
+  /**
+     * Reactietermijn in uren (uit de beleidsregel).
+     * @nullable
+     */
+  reactietermijn_uren?: number | null;
+  /**
+     * ISO-tijdstip waarop de reactietermijn verloopt (ingediend_op + reactietermijn_uren).
+     * @nullable
+     */
+  deadline_op?: string | null;
+  /** Reactietermijn is verstreken en aanvraag staat nog open. */
+  is_verlopen?: boolean;
+  /** Verzonden herinneringen en escalaties voor deze aanvraag. */
+  escalaties: GoedkeuringEscalatie[];
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
 }
 
 export interface GoedkeuringStap {
@@ -12501,6 +12617,37 @@ object_type?: string;
  */
 alleen_mijn_acties?: boolean;
 };
+
+export type ListGoedkeuringDashboardParams = {
+/**
+ * Filter op status (standaard alle open + recent afgehandeld).
+ */
+status?: ListGoedkeuringDashboardStatus;
+document_type?: string;
+/**
+ * Toon alleen aanvragen waarvan de reactietermijn verstreken is.
+ */
+alleen_verlopen?: ListGoedkeuringDashboardAlleenVerlopen;
+};
+
+export type ListGoedkeuringDashboardStatus = typeof ListGoedkeuringDashboardStatus[keyof typeof ListGoedkeuringDashboardStatus];
+
+
+export const ListGoedkeuringDashboardStatus = {
+  ingediend: 'ingediend',
+  goedgekeurd: 'goedgekeurd',
+  afgewezen: 'afgewezen',
+  ingetrokken: 'ingetrokken',
+  vervangen: 'vervangen',
+} as const;
+
+export type ListGoedkeuringDashboardAlleenVerlopen = typeof ListGoedkeuringDashboardAlleenVerlopen[keyof typeof ListGoedkeuringDashboardAlleenVerlopen];
+
+
+export const ListGoedkeuringDashboardAlleenVerlopen = {
+  true: 'true',
+  false: 'false',
+} as const;
 
 export type UitnodigingActiveren200 = {
   status?: string;

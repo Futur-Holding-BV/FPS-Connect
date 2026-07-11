@@ -5455,6 +5455,40 @@ paths:
         "409":
           description: Ongeldige status
 
+  /goedkeuring/dashboard:
+    get:
+      operationId: listGoedkeuringDashboard
+      tags: [goedkeuring]
+      summary: >-
+        Centraal goedkeuringsdashboard — alle open, verlopen en afgewezen
+        aanvragen met escalatiestatus.
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [ingediend, goedgekeurd, afgewezen, ingetrokken, vervangen]
+          description: Filter op status (standaard alle open + recent afgehandeld).
+        - in: query
+          name: document_type
+          schema:
+            type: string
+        - in: query
+          name: alleen_verlopen
+          schema:
+            type: string
+            enum: ["true", "false"]
+          description: Toon alleen aanvragen waarvan de reactietermijn verstreken is.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/GoedkeuringDashboardItem"
+
   /goedkeuring/object/{object_type}/{object_id}:
     get:
       operationId: getGoedkeuringVoorObject
@@ -25277,6 +25311,24 @@ components:
           type: ["integer", "null"]
         reactietermijn_uren:
           type: ["integer", "null"]
+        herinnering_uren:
+          type: ["integer", "null"]
+          description: Uren na indiening waarna een herinnering wordt verstuurd naar de goedkeurder.
+        escalatie_stap_1_uren:
+          type: ["integer", "null"]
+          description: Uren na indiening waarna escalatie naar stap-1-persoon plaatsvindt.
+        escalatie_stap_1_gebruiker_id:
+          type: ["integer", "null"]
+          description: Gebruiker die bij stap-1 geescaleerd wordt (bijv. leidinggevende).
+        escalatie_stap_2_uren:
+          type: ["integer", "null"]
+          description: Uren na indiening waarna escalatie naar stap-2-persoon plaatsvindt.
+        escalatie_stap_2_gebruiker_id:
+          type: ["integer", "null"]
+          description: Gebruiker die bij stap-2 geescaleerd wordt (bijv. directeur).
+        max_doorlooptijd_uren:
+          type: ["integer", "null"]
+          description: Harde maximale doorlooptijd in uren; daarna altijd escalatie naar hoofdbeheerder.
         actief:
           type: boolean
         aangemaakt_door_id:
@@ -25317,8 +25369,102 @@ components:
           type: ["integer", "null"]
         reactietermijn_uren:
           type: ["integer", "null"]
+        herinnering_uren:
+          type: ["integer", "null"]
+        escalatie_stap_1_uren:
+          type: ["integer", "null"]
+        escalatie_stap_1_gebruiker_id:
+          type: ["integer", "null"]
+        escalatie_stap_2_uren:
+          type: ["integer", "null"]
+        escalatie_stap_2_gebruiker_id:
+          type: ["integer", "null"]
+        max_doorlooptijd_uren:
+          type: ["integer", "null"]
         actief:
           type: boolean
+
+    GoedkeuringEscalatie:
+      type: object
+      required: [id, aanvraag_id, type, aangemaakt_op]
+      properties:
+        id:
+          type: integer
+        aanvraag_id:
+          type: integer
+        type:
+          type: string
+          enum: [herinnering, escalatie_1, escalatie_2, max_doorlooptijd]
+        naar_gebruiker_id:
+          type: ["integer", "null"]
+        naar_gebruiker_naam:
+          type: ["string", "null"]
+        bericht:
+          type: ["string", "null"]
+        aangemaakt_op:
+          type: string
+
+    GoedkeuringDashboardItem:
+      type: object
+      required:
+        - id
+        - object_type
+        - object_id
+        - document_type
+        - status
+        - vereiste_goedkeuringen
+        - ontvangen_goedkeuringen
+        - aangemaakt_op
+        - bijgewerkt_op
+        - escalaties
+      properties:
+        id:
+          type: integer
+        object_type:
+          type: string
+        object_id:
+          type: integer
+        document_type:
+          type: string
+        omschrijving:
+          type: ["string", "null"]
+        bedrag:
+          type: ["number", "null"]
+        status:
+          type: string
+          enum: [concept, ingediend, goedgekeurd, afgewezen, ingetrokken, vervangen]
+        vereiste_goedkeuringen:
+          type: integer
+        ontvangen_goedkeuringen:
+          type: integer
+        ingediend_door_naam:
+          type: ["string", "null"]
+        ingediend_op:
+          type: ["string", "null"]
+        afgehandeld_op:
+          type: ["string", "null"]
+        afwijzing_reden:
+          type: ["string", "null"]
+        mag_goedkeuren:
+          type: boolean
+        reactietermijn_uren:
+          type: ["integer", "null"]
+          description: Reactietermijn in uren (uit de beleidsregel).
+        deadline_op:
+          type: ["string", "null"]
+          description: ISO-tijdstip waarop de reactietermijn verloopt (ingediend_op + reactietermijn_uren).
+        is_verlopen:
+          type: boolean
+          description: Reactietermijn is verstreken en aanvraag staat nog open.
+        escalaties:
+          type: array
+          items:
+            $ref: "#/components/schemas/GoedkeuringEscalatie"
+          description: Verzonden herinneringen en escalaties voor deze aanvraag.
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
 
     GoedkeuringStap:
       type: object

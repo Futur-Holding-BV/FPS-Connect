@@ -6222,6 +6222,12 @@ export const ListGoedkeuringBeleidsregelsResponseItem = zod.object({
   "vier_ogen_verplicht": zod.boolean(),
   "vervanger_gebruiker_id": zod.number().nullish(),
   "reactietermijn_uren": zod.number().nullish(),
+  "herinnering_uren": zod.number().nullish().describe('Uren na indiening waarna een herinnering wordt verstuurd naar de goedkeurder.'),
+  "escalatie_stap_1_uren": zod.number().nullish().describe('Uren na indiening waarna escalatie naar stap-1-persoon plaatsvindt.'),
+  "escalatie_stap_1_gebruiker_id": zod.number().nullish().describe('Gebruiker die bij stap-1 geescaleerd wordt (bijv. leidinggevende).'),
+  "escalatie_stap_2_uren": zod.number().nullish().describe('Uren na indiening waarna escalatie naar stap-2-persoon plaatsvindt.'),
+  "escalatie_stap_2_gebruiker_id": zod.number().nullish().describe('Gebruiker die bij stap-2 geescaleerd wordt (bijv. directeur).'),
+  "max_doorlooptijd_uren": zod.number().nullish().describe('Harde maximale doorlooptijd in uren; daarna altijd escalatie naar hoofdbeheerder.'),
   "actief": zod.boolean(),
   "aangemaakt_door_id": zod.number().nullish(),
   "aangemaakt_op": zod.string(),
@@ -6251,6 +6257,12 @@ export const CreateGoedkeuringBeleidsregelBody = zod.object({
   "vier_ogen_verplicht": zod.boolean(),
   "vervanger_gebruiker_id": zod.number().nullish(),
   "reactietermijn_uren": zod.number().nullish(),
+  "herinnering_uren": zod.number().nullish(),
+  "escalatie_stap_1_uren": zod.number().nullish(),
+  "escalatie_stap_1_gebruiker_id": zod.number().nullish(),
+  "escalatie_stap_2_uren": zod.number().nullish(),
+  "escalatie_stap_2_gebruiker_id": zod.number().nullish(),
+  "max_doorlooptijd_uren": zod.number().nullish(),
   "actief": zod.boolean()
 })
 
@@ -6282,6 +6294,12 @@ export const UpdateGoedkeuringBeleidsregelBody = zod.object({
   "vier_ogen_verplicht": zod.boolean(),
   "vervanger_gebruiker_id": zod.number().nullish(),
   "reactietermijn_uren": zod.number().nullish(),
+  "herinnering_uren": zod.number().nullish(),
+  "escalatie_stap_1_uren": zod.number().nullish(),
+  "escalatie_stap_1_gebruiker_id": zod.number().nullish(),
+  "escalatie_stap_2_uren": zod.number().nullish(),
+  "escalatie_stap_2_gebruiker_id": zod.number().nullish(),
+  "max_doorlooptijd_uren": zod.number().nullish(),
   "actief": zod.boolean()
 })
 
@@ -6299,6 +6317,12 @@ export const UpdateGoedkeuringBeleidsregelResponse = zod.object({
   "vier_ogen_verplicht": zod.boolean(),
   "vervanger_gebruiker_id": zod.number().nullish(),
   "reactietermijn_uren": zod.number().nullish(),
+  "herinnering_uren": zod.number().nullish().describe('Uren na indiening waarna een herinnering wordt verstuurd naar de goedkeurder.'),
+  "escalatie_stap_1_uren": zod.number().nullish().describe('Uren na indiening waarna escalatie naar stap-1-persoon plaatsvindt.'),
+  "escalatie_stap_1_gebruiker_id": zod.number().nullish().describe('Gebruiker die bij stap-1 geescaleerd wordt (bijv. leidinggevende).'),
+  "escalatie_stap_2_uren": zod.number().nullish().describe('Uren na indiening waarna escalatie naar stap-2-persoon plaatsvindt.'),
+  "escalatie_stap_2_gebruiker_id": zod.number().nullish().describe('Gebruiker die bij stap-2 geescaleerd wordt (bijv. directeur).'),
+  "max_doorlooptijd_uren": zod.number().nullish().describe('Harde maximale doorlooptijd in uren; daarna altijd escalatie naar hoofdbeheerder.'),
   "actief": zod.boolean(),
   "aangemaakt_door_id": zod.number().nullish(),
   "aangemaakt_op": zod.string(),
@@ -6549,6 +6573,48 @@ export const GoedkeuringAanvraagIntrekkenResponse = zod.object({
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })
+
+
+/**
+ * @summary Centraal goedkeuringsdashboard — alle open, verlopen en afgewezen aanvragen met escalatiestatus.
+ */
+export const ListGoedkeuringDashboardQueryParams = zod.object({
+  "status": zod.enum(['ingediend', 'goedgekeurd', 'afgewezen', 'ingetrokken', 'vervangen']).optional().describe('Filter op status (standaard alle open + recent afgehandeld).'),
+  "document_type": zod.coerce.string().optional(),
+  "alleen_verlopen": zod.enum(['true', 'false']).optional().describe('Toon alleen aanvragen waarvan de reactietermijn verstreken is.')
+})
+
+export const ListGoedkeuringDashboardResponseItem = zod.object({
+  "id": zod.number(),
+  "object_type": zod.string(),
+  "object_id": zod.number(),
+  "document_type": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "bedrag": zod.number().nullish(),
+  "status": zod.enum(['concept', 'ingediend', 'goedgekeurd', 'afgewezen', 'ingetrokken', 'vervangen']),
+  "vereiste_goedkeuringen": zod.number(),
+  "ontvangen_goedkeuringen": zod.number(),
+  "ingediend_door_naam": zod.string().nullish(),
+  "ingediend_op": zod.string().nullish(),
+  "afgehandeld_op": zod.string().nullish(),
+  "afwijzing_reden": zod.string().nullish(),
+  "mag_goedkeuren": zod.boolean().optional(),
+  "reactietermijn_uren": zod.number().nullish().describe('Reactietermijn in uren (uit de beleidsregel).'),
+  "deadline_op": zod.string().nullish().describe('ISO-tijdstip waarop de reactietermijn verloopt (ingediend_op + reactietermijn_uren).'),
+  "is_verlopen": zod.boolean().optional().describe('Reactietermijn is verstreken en aanvraag staat nog open.'),
+  "escalaties": zod.array(zod.object({
+  "id": zod.number(),
+  "aanvraag_id": zod.number(),
+  "type": zod.enum(['herinnering', 'escalatie_1', 'escalatie_2', 'max_doorlooptijd']),
+  "naar_gebruiker_id": zod.number().nullish(),
+  "naar_gebruiker_naam": zod.string().nullish(),
+  "bericht": zod.string().nullish(),
+  "aangemaakt_op": zod.string()
+})).describe('Verzonden herinneringen en escalaties voor deze aanvraag.'),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+export const ListGoedkeuringDashboardResponse = zod.array(ListGoedkeuringDashboardResponseItem)
 
 
 /**

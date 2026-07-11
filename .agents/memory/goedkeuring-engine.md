@@ -5,7 +5,23 @@ description: Generic approval/governance engine (goedkeuring_beleidsregels + goe
 
 ## What it is
 
-One generic engine (`goedkeuringEngine` service) for "does this object need a formal approval, and who may approve it" — not a per-feature approval flow. Policy rows (`goedkeuring_beleidsregels`, scoped by document_type/werkmaatschappij/bedragrange) determine required approver count, four-eyes requirement, substitute approver, and response deadline. Requests (`goedkeuring_aanvragen`) snapshot the policy at submission time (`beleid_snapshot`) so a later policy change never rewrites history for an in-flight or already-decided request.
+One generic engine (`goedkeuringEngine` service) for "does this object need a formal approval, and who may approve it" — not a per-feature approval flow. Policy rows (`goedkeuring_beleidsregels`, scoped by document_type/werkmaatschappij/bedragrange) determine required approver count, four-eyes requirement, substitute approver, response deadline, and escalation config (herinnering_uren / escalatie_stap_1_uren+gebruiker / escalatie_stap_2_uren+gebruiker / max_doorlooptijd_uren). Requests (`goedkeuring_aanvragen`) snapshot the policy at submission time (`beleid_snapshot`) so a later policy change never rewrites history for an in-flight or already-decided request.
+
+## Escalatie & bewaking
+
+Deterministic (no AI) hourly background task `planUurlijkseGoedkeuringBewaking()` in `api-server/src/lib/goedkeuringBewaking.ts`. It:
+1. Fetches all `ingediend` aanvragen with any escalation fields configured on their beleidsregel.
+2. For each time threshold (herinnering / escalatie_1 / escalatie_2 / max_doorlooptijd) that has elapsed since `ingediend_op`: checks `goedkeuring_escalaties` for a prior row (dedup), inserts one if absent, sends email via `stuurGoedkeuringEscalatieMail`, logs to `workflow_transitie_log`.
+3. Falls back to hoofdbeheerder when no specific escalation user is configured.
+4. max_doorlooptijd always escalates to hoofdbeheerder regardless of config.
+
+**Why:** deterministic, no AI, per-aanvraag dedup in DB, uses `.unref()` so it never blocks process exit.
+
+## Dashboard
+
+`GET /goedkeuring/dashboard` (bevoegdheid goedkeuring:1) returns open aanvragen + recent (7d) afgehandelde, enriched with escalaties (from goedkeuring_escalaties), deadline_op, is_verlopen, mag_goedkeuren. Frontend page at `/beheer/goedkeuringen-dashboard`, nav in sidebar Goedkeuring section.
+
+**maakGoedkeuringActor signature:** takes `(req, db)` — NOT `(userId, rol)`. Both are required.
 
 ## Integration pattern with an existing workflow-engine transition
 

@@ -29,6 +29,36 @@ export interface GoedkeuringBeleidsregel {
   vervanger_gebruiker_id?: number | null;
   /** @nullable */
   reactietermijn_uren?: number | null;
+  /**
+     * Uren na indiening waarna een herinnering wordt verstuurd naar de goedkeurder.
+     * @nullable
+     */
+  herinnering_uren?: number | null;
+  /**
+     * Uren na indiening waarna escalatie naar stap-1-persoon plaatsvindt.
+     * @nullable
+     */
+  escalatie_stap_1_uren?: number | null;
+  /**
+     * Gebruiker die bij stap-1 geescaleerd wordt (bijv. leidinggevende).
+     * @nullable
+     */
+  escalatie_stap_1_gebruiker_id?: number | null;
+  /**
+     * Uren na indiening waarna escalatie naar stap-2-persoon plaatsvindt.
+     * @nullable
+     */
+  escalatie_stap_2_uren?: number | null;
+  /**
+     * Gebruiker die bij stap-2 geescaleerd wordt (bijv. directeur).
+     * @nullable
+     */
+  escalatie_stap_2_gebruiker_id?: number | null;
+  /**
+     * Harde maximale doorlooptijd in uren; daarna altijd escalatie naar hoofdbeheerder.
+     * @nullable
+     */
+  max_doorlooptijd_uren?: number | null;
   actief: boolean;
   /** @nullable */
   aangemaakt_door_id?: number | null;

@@ -45,6 +45,20 @@ export const goedkeuringBeleidsregelsTable = pgTable(
     vervangerGebruikerId: integer("vervanger_gebruiker_id")
       .references(() => gebruikersTable.id, { onDelete: "set null" }),
     reactietermijnUren: integer("reactietermijn_uren"),
+    // Escalatie-configuratie — deterministische bewaking zonder AI.
+    // herinneringUren: N uur na indiening → herinnering naar de goedkeurder.
+    // escalatieStap1Uren: N uur → escalatie naar stap-1 persoon (bijv. leidinggevende).
+    // escalatieStap2Uren: N uur → escalatie naar stap-2 persoon (bijv. directeur).
+    // maxDoorlooptijdUren: Harde maximale doorlooptijd — wordt altijd geëscaleerd
+    //   naar hoofdbeheerder als de aanvraag hierna nog open staat.
+    herinneringUren: integer("herinnering_uren"),
+    escalatieStap1Uren: integer("escalatie_stap_1_uren"),
+    escalatieStap1GebruikerId: integer("escalatie_stap_1_gebruiker_id")
+      .references(() => gebruikersTable.id, { onDelete: "set null" }),
+    escalatieStap2Uren: integer("escalatie_stap_2_uren"),
+    escalatieStap2GebruikerId: integer("escalatie_stap_2_gebruiker_id")
+      .references(() => gebruikersTable.id, { onDelete: "set null" }),
+    maxDoorlooptijdUren: integer("max_doorlooptijd_uren"),
     actief: boolean("actief").notNull().default(true),
     aangemaaktDoorId: integer("aangemaakt_door_id")
       .references(() => gebruikersTable.id, { onDelete: "set null" }),
@@ -113,6 +127,30 @@ export const goedkeuringStappenTable = pgTable(
     index("goedkeuring_stappen_aanvraag_idx").on(t.aanvraagId),
   ],
 );
+
+// Escalatie-log — één rij per verzonden herinnering of escalatie-stap.
+// Voorkomt dubbele verzending: bewakingsservice slaat telkens op, route leest
+// terug welke stappen al zijn doorlopen. Cascadeert mee bij verwijdering aanvraag.
+export const goedkeuringEscalatiesTable = pgTable(
+  "goedkeuring_escalaties",
+  {
+    id: serial("id").primaryKey(),
+    aanvraagId: integer("aanvraag_id").notNull()
+      .references(() => goedkeuringAanvragenTable.id, { onDelete: "cascade" }),
+    // type: herinnering | escalatie_1 | escalatie_2 | max_doorlooptijd
+    type: text("type").notNull(),
+    naarGebruikerId: integer("naar_gebruiker_id")
+      .references(() => gebruikersTable.id, { onDelete: "set null" }),
+    naarGebruikerNaam: text("naar_gebruiker_naam"),
+    bericht: text("bericht"),
+    aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+  },
+  (t) => [
+    index("goedkeuring_escalaties_aanvraag_idx").on(t.aanvraagId),
+  ],
+);
+
+export type GoedkeuringEscalatie = typeof goedkeuringEscalatiesTable.$inferSelect;
 
 export const insertGoedkeuringBeleidsregelSchema = createInsertSchema(goedkeuringBeleidsregelsTable)
   .omit({ id: true, aangemaaktOp: true, bijgewerktOp: true })

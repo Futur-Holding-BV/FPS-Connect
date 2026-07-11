@@ -1150,6 +1150,17 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                     <SidebarMenuItem className="pl-5">
                       <SidebarMenuButton
                         asChild
+                        isActive={location === "/beheer/goedkeuringen-dashboard"}
+                      >
+                        <Link href="/beheer/goedkeuringen-dashboard">
+                          <LayoutDashboard />
+                          <span>Dashboard</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem className="pl-5">
+                      <SidebarMenuButton
+                        asChild
                         isActive={location === "/beheer/goedkeuringsbeleid"}
                       >
                         <Link href="/beheer/goedkeuringsbeleid">

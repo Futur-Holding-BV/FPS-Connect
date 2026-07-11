@@ -13,6 +13,7 @@ import { planUurlijkseAiDrempelCheck } from "./lib/aiDrempelCheck";
 import { planDagelijkseKwartaalcontrole } from "./lib/pushService";
 import { startVerlofPresets } from "./lib/verlofPresets";
 import { startVerlofVervalService } from "./lib/verlofVervalService";
+import { planUurlijkseGoedkeuringBewaking } from "./lib/goedkeuringBewaking";
 
 const rawPort = process.env["PORT"];
 
@@ -61,6 +62,7 @@ ensureSessionTable()
       planDagelijkseKwartaalcontrole();
       startVerlofPresets();
       startVerlofVervalService();
+      planUurlijkseGoedkeuringBewaking();
     });
   })
   .catch((err) => {

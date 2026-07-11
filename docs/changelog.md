@@ -1,3 +1,45 @@
+## 2026-07-11 — Governance & Approval Engine — uitbreiding documenttypen (Task #522)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (additief; backend engine was al generiek, geen backend wijzigingen nodig)
+
+**Nieuw gebouwd:**
+- **Inspecties** (`/inspecties/:id`): `GoedkeuringWidget` toegevoegd na de statusworkflow-knoppen (objectType="inspectie", documentType="inspectie"). Indienen-knop alleen zichtbaar als de inspectie afgerond is.
+- **Arbeidsovereenkomsten** (`/personeel/:id`, ContractKaart info-tab): `GoedkeuringWidget` toegevoegd met objectType="arbeidsovereenkomst". Toont het brutosalaris als bedrag. Altijd beschikbaar ongeacht contractstatus.
+- **Weekstaten / Urenstaten** (`/uren/weekstaten`, WeekStaatDetailDialog): `GoedkeuringWidget` toegevoegd na de afwijzingsreden-sectie (objectType="weekstaat"). Indienen-knop alleen bij status "ingediend".
+- **Opleverrapporten** (`/rapporten`, rapportenlijst): `GoedkeuringWidget` per rapport-item in de actieskolo (objectType="opleverrapport"). Indienen-knop bij conceptrapporten.
+- **Certificaten** (`/gebouwen/:id/print`, werkbalk): `GoedkeuringWidget` met objectType="certificaat" toegevoegd naast de bestaande "Certificaat accorderen"-knop. Zichtbaar zodra de certificaat-sectie actief is in de rapportsamensteller. Indienen-knop toont alleen bij definitief rapport vóór accorderen.
+- **Projectafsluitingen** (`/opdrachten/:id`): `GoedkeuringWidget` toegevoegd direct onder de projecttitel (objectType="projectafsluiting"). Zichtbaar + indienen-knop alleen als opdrachtstatus "afgerond" is. Klasse `print:hidden` zodat PDF-export niet beïnvloed wordt.
+- **Beleidsscherm** (`/beheer/goedkeuringsbeleid`): `DOCUMENT_TYPE_LABELS`-map en `documentTypeLabel()`-helper toegevoegd; de kolommen "Documenttype" in zowel de beleidsregelstabel als de aanvragentabel tonen nu een leesbare Nederlandse naam (bijv. "Arbeidsovereenkomst", "Inspectierapport", "Weekstaat / Urenstaat") in plaats van de ruwe sleutelstring.
+
+**Geen backend wijzigingen:** de goedkeuring-engine is volledig generiek; hij accepteert elk `objectType`-string-pair zonder codebaarheid.
+
+**Bewijs:** `pnpm --filter @workspace/firevault run typecheck` groen; beide workflows draaien; API healthcheck 200.
+
+## 2026-07-11 — Governance & Approval Engine — offertes pilotkoppeling
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (additief op bestaande motor + offerte-routes, geen bestaande transitiepaden gebroken)
+
+**Nieuw gebouwd:**
+- **Goedkeuringsgate offerte verzenden**: `POST /offertes/:id/verzenden` controleert nu of het goedkeuringsbeleid een formele aanvraag vereist voor dit offertebedrag; bij een openstaand of ontbrekend akkoord blokkeert verzending met HTTP 422 + code `GOEDKEURING_VEREIST`. Dezelfde check is ook in de werkflow-precheck (`concept → verzonden`) gebouwd.
+- **Materiële-wijzigingsguard**: een bedragwijziging via `PATCH /offertes/:id` nadat een aanvraag goedgekeurd is, markeert de aanvraag automatisch als "vervangen" (via nieuwe helper `vervangGoedgekeurdeAanvraag` in goedkeuring-engine.ts). Zo kan een offerte nooit in gewijzigde vorm worden verzonden op basis van een verouderd akkoord.
+- **Offerte intrekken**: nieuw endpoint `POST /offertes/:id/intrekken` (bevoegdheid offertes:3); reden verplicht; transitie via WorkflowService naar status "ingetrokken". Nieuwe overgang `{ van: ["verzonden","bekeken"], naar: "ingetrokken" }` in offerteConfig. Vanaf "ingetrokken" is heropenen als concept mogelijk.
+- **Goedkeuring-tab in Offerte Studio**: nieuw tabblad "Goedkeuring" in `studio.tsx` met de bestaande `GoedkeuringWidget` (objectType="offerte"). Toelichting over het proces en de materiële-wijzigingsregel zijn opgenomen als contextparagraaf. Indienen-knop alleen zichtbaar in concept-status.
+- **Statuslabels "ingetrokken"**: toegevoegd aan `STATUS_KLEUR`/`STATUS_LABEL` in `studio.tsx` (leigrijs) en `STATUS_KLEUR` in `index.tsx`.
+- **OpenAPI**: `POST /offertes/{id}/intrekken` + schema `OfferteIntrekkenInput` toegevoegd; codegen uitgevoerd → `useIntrekkenOfferte`-hook gegenereerd in `lib/api-client-react`.
+- **Engine helpers**: `haalGoedgekeurdeAanvraag(db, objectType, objectId)` en `vervangGoedgekeurdeAanvraag(db, objectType, objectId, actor, reden)` toegevoegd aan goedkeuring-engine.ts en geëxporteerd.
+
+**Hardening reden-verplichting (n.a.v. code review, ronde 1):** twee lagen toegevoegd zodat intrekken zonder reden onmogelijk is: (1) precheck in de `verzonden|bekeken → ingetrokken` workflow-transitie vereist `ctx.params.reden`; (2) expliciete 422-blokkade in `PATCH /offertes/:id` op `status: "ingetrokken"` met verwijzing naar het dedicated `/intrekken`-endpoint.
+
+**Hardening portaal + UI-intrekken-flow (n.a.v. code review, ronde 2):**
+- `portaal.ts POST /portaal/:token/ondertekenen`: blokkeert nu ook bij `offerte.status === "ingetrokken"` (409), zodat een ingetrokken offerte nooit meer ondertekend kan worden ongeacht de portaalstatus.
+- `studio.tsx`: "ingetrokken" verwijderd uit de generieke status-dropdown (`VOLGENDE_STATUSSEN`). In plaats daarvan een dedicated "Intrekken"-knop (zichtbaar bij verzonden/bekeken, bevoegdheid offertes:3) die een eigen dialoog opent. De dialoog vereist een vrije-tekst reden en roept `POST /offertes/:id/intrekken` aan via de gegenereerde `useIntrekkenOfferte`-hook. Na bevestiging worden de queries geïnvalideerd en toont een toast.
+
+**Hardening gecombineerde PATCH-bypass + bevoegdheids-afstemming (n.a.v. code review, ronde 3):**
+- `PATCH /offertes/:id`: blokkeert nu een gecombineerde bedrag+status="verzonden" in één aanroep (422, `GECOMBINEERDE_BEDRAG_STATUS_VERBODEN`). Zo kan een goedkeuringscheck nooit passeren op het oude bedrag terwijl het nieuwe bedrag de goedkeuring al zou invalideren. Volgorde blijft correct: bedrag opslaan (apart PATCH) → hernieuwde goedkeuringsaanvraag indien vereist → verzenden.
+- `studio.tsx`: intrekken-knop gated op `kanIntrekken` = `heeftNiveau("offertes", 3)` in lijn met de backend-vereiste.
+
+**Bewijs:** `pnpm run typecheck` groen (alle 5 packages, vier keer — na elke correctieronde); API server herstart zonder fouten.
+
 ## 2026-07-11 — Poortwachter (Wet Verbetering Poortwachter) — Bouwstuk 1
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (additief, geen bestaande routes geraakt)
@@ -24,7 +66,7 @@
 
 **Gebouwd:**
 - **Monteur-app menu** — "Voertuig melden" toegevoegd aan het Meer-menu in `menu.tsx` (icoon: car-outline, navigeert naar het bestaande `/voertuig-melding`-scherm).
-- **Status `doorgezet_garage`** — nieuw statustype toegevoegd aan de `MeldingStatus`-union in `wagenpark-melding-types.ts`, inclusief label ("Doorgezet naar garage") en kleur (teal).
+- **Status `doorgezet_garage`** — nieuw statustype toegevoegd aan the `MeldingStatus`-union in `wagenpark-melding-types.ts`, inclusief label ("Doorgezet naar garage") en kleur (teal).
 - **MailSoort `voertuig_melding_garage`** — toegevoegd aan de MailSoort-union in `email.ts`.
 - **Backend route `POST /wagenpark/meldingen/:id/doorzetten-garage`** — vereist `wagenpark:2`; haalt meldingdetails op (voertuig + monteur via join), zet status op `doorgezet_garage`, voegt een tijdgestempelde opvolgnotitie toe en stuurt de garage een volledig HTML-e-mailbericht met voertuiginfo, AI-diagnose, omschrijving en optionele FPS-notitie. Mail is fire-and-forget: bij mislukken (of unconfigured) wordt de statuswijziging toch opgeslagen.
 - **PATCH geldigeStatussen uitgebreid** — `doorgezet_garage` is nu ook geldig als status-update via het bestaande PATCH-endpoint.
@@ -37,9 +79,9 @@
 
 **Gebouwd:**
 - **`koppelZiekteAanAdv()`** — nieuwe helper in `hrm.ts`: zoekt alle overlappende ADV/ATV-aanvragen (`hoofdcategorie = 'adv_atv'`, status `aangevraagd` of `goedgekeurd`) die de ziekteperiode overlappen, zet ze atomair op `ingetrokken`, corrigeert het verlofsaldo via de bestaande `pasVerlofSaldoAan`-helper (–aantalUren voor goedgekeurde aanvragen) en schrijft een auditlogregel per aanvraag. Idempotent: al-ingetrokken aanvragen worden overgeslagen.
-- **POST /ziekmeldingen** — roept de koppeling automatisch aan na elke nieuwe ziekmelding.
-- **PATCH /ziekmeldingen/:id** — roept de koppeling opnieuw aan wanneer `start_datum` of `eind_datum` wijzigt en de melding nog actief is (status ≠ `hersteld`); dit vangt periodewijzigingen op.
-- **Fail-safe**: de koppeling omhult zichzelf met een eigen try/catch; een onverwachte fout blokkeert de ziekmelding nooit — hij wordt gelogd en de melding wordt correct opgeslagen.
+- **POST /ziekmeldingen** — roept the koppeling automatisch aan na elke nieuwe ziekmelding.
+- **PATCH /ziekmeldingen/:id** — roept the koppeling opnieuw aan wanneer `start_datum` of `eind_datum` wijzigt en de melding nog actief is (status ≠ `hersteld`); dit vangt periodewijzigingen op.
+- **Fail-safe**: de koppeling omhult zichzelf met een eigen try/catch; een onverwachte fout blokkeert de ziekmelding nooit — hij wordt gelogd en the melding wordt correct opgeslagen.
 
 **Bewijs:** typecheck groen (api-server); herstart zonder fouten.
 
@@ -65,19 +107,26 @@
 
 ## 2026-07-11 — Medewerker onboarding: automatische verlofsoort-selectie, uren-preview en geboortedatum
 
-- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (additief; POST /medewerkers + frontend onboarding-formulier, geen bestaande endpoints gebroken)
+- **Medewerker onboarding: automatische verlofsoort-selectie, uren-preview en geboortedatum**
+  - **Root bug opgelost**: `VastFormulier` gebruikt nu correct `verlofsoort_ids` via uitgebreide `MedewerkerInput`.
+  - **OpenAPI + codegen**: `verlofsoort_ids` en `jaar` toegevoegd aan `MedewerkerInput`.
+  - **Server (`POST /medewerkers`)**: roept `maakVerlofprofielAan` aan bij geldige invoer.
+  - **Automatische verlofsoort-selectie**: `useMemo` + `useEffect` selecteren automatisch de juiste soorten op basis van CAO/dienstverband.
+  - **Uren-preview**: toont pro-rata jaarsaldo op basis van contracturen.
+  - **Geboortedatum-veld**: nieuw veld met automatische leeftijdsberekening.
+  - **UI-verbeteringen**: "Alles / Geen" knoppen en nette lijstweergave voor verlofsoorten.
 
-**Nieuw gebouwd:**
-- **Root bug opgelost**: `VastFormulier` gebruikte `useCreateMedewerker()` maar stuurde nooit `verlofsoort_ids` mee → verlofprofiel werd nooit aangemaakt. Nu correct doorgestuurd via uitgebreide `MedewerkerInput`.
-- **OpenAPI + codegen**: `verlofsoort_ids` (integer-array) en `jaar` (integer) toegevoegd aan `MedewerkerInput`; codegen uitgevoerd → hooks en Zod-schemas bijgewerkt.
-- **Server (`POST /medewerkers`)**: roept `maakVerlofprofielAan` aan na medewerker-insert wanneer `verlofsoort_ids` + geldige CAO + geldige contracturen aanwezig zijn.
-- **Automatische verlofsoort-selectie**: `useMemo` + `useEffect` selecteren bij laden en bij elke CAO/dienstverband-wijziging automatisch de juiste verlofsoorten. Oproep/stage → alleen vakantie; vast/tijdelijk → alle soorten die bij de CAO passen of geen CAO-filter hebben.
-- **Uren-preview**: voor elke verlofsoort met een `opbouw_uren_per_jaar`-waarde toont het formulier het pro-rata jaarsaldo bij de ingevulde contracturen (factor = min(contracturen / standaard_uren_cao, 1)), afgerond op 1 decimaal.
-- **Geboortedatum-veld**: nieuw datumveld naast "In dienst sinds"; toont direct de berekende leeftijd in jaren. Veld opgeslagen via `geboortedatum` in `MedewerkerInput`.
-- **Alles / Geen knoppen**: beheerder kan automatische selectie in één klik overschrijven.
-- **UI verlofsoorten**: getoond als nette bordered lijst met naam links en "X uur/jaar" (of "handmatig") rechts; teller in het label.
+- **Governance & Approval Engine — escalatie, bewaking & dashboard**
+  - **Deterministische escalatie-bewaking** (`goedkeuringBewaking.ts`): uurlijkse achtergrondtaak voor herinneringen en escalaties via mail.
+  - **Vier nieuwe configuratievelden per beleidsregel**: `herinnering_uren`, `escalatie_stap_1_uren/gebruiker`, `escalatie_stap_2_uren/gebruiker`, `max_doorlooptijd_uren`.
+  - **goedkeuring_escalaties-tabel**: nieuwe tabel voor audit-trail en deduplicatie van escalaties.
+  - **Centraal goedkeuringsdashboard** (`GET /goedkeuring/dashboard`): overzicht van open en recent afgehandelde aanvragen inclusief deadlines en escalatiestatus.
+  - **Frontend dashboard** (`/beheer/goedkeuringen-dashboard`): statistieken, filters, escalatiebadges en inline acties.
+  - **Beleidsregel-formulier uitgebreid**: configuratie van escalatie-instellingen.
+  - **E-mailtype "goedkeuring_escalatie"** toegevoegd aan MailSoort.
 
-**Bewijs:** `pnpm run typecheck` groen (firevault + api-server); API-server herstart zonder fouten; Vite HMR geladen.
+**Bewijs:** `pnpm run typecheck` groen; API-server herstart zonder fouten; Vite HMR geladen.
+
 
 ## 2026-07-11 — Governance & Approval Engine — uitbreiding documenttypen (Task #522)
 

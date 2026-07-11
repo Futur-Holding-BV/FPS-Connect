@@ -80,6 +80,12 @@ const LEEG_REGEL: GoedkeuringBeleidsregelInput = {
   vier_ogen_verplicht: false,
   vervanger_gebruiker_id: null,
   reactietermijn_uren: null,
+  herinnering_uren: null,
+  escalatie_stap_1_uren: null,
+  escalatie_stap_1_gebruiker_id: null,
+  escalatie_stap_2_uren: null,
+  escalatie_stap_2_gebruiker_id: null,
+  max_doorlooptijd_uren: null,
   actief: true,
 };
 
@@ -143,6 +149,12 @@ function BeleidsregelsTab({ magBeheren }: { magBeheren: boolean }) {
       vier_ogen_verplicht: regel.vier_ogen_verplicht,
       vervanger_gebruiker_id: regel.vervanger_gebruiker_id ?? null,
       reactietermijn_uren: regel.reactietermijn_uren ?? null,
+      herinnering_uren: regel.herinnering_uren ?? null,
+      escalatie_stap_1_uren: regel.escalatie_stap_1_uren ?? null,
+      escalatie_stap_1_gebruiker_id: regel.escalatie_stap_1_gebruiker_id ?? null,
+      escalatie_stap_2_uren: regel.escalatie_stap_2_uren ?? null,
+      escalatie_stap_2_gebruiker_id: regel.escalatie_stap_2_gebruiker_id ?? null,
+      max_doorlooptijd_uren: regel.max_doorlooptijd_uren ?? null,
       actief: regel.actief,
     });
     setDialogOpen(true);
@@ -354,6 +366,77 @@ function BeleidsregelsTab({ magBeheren }: { magBeheren: boolean }) {
                 value={form.reactietermijn_uren ?? ""}
                 onChange={(e) => setForm({ ...form, reactietermijn_uren: e.target.value === "" ? null : Number(e.target.value) })}
               />
+            </div>
+            <div className="col-span-2">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Escalatie &amp; bewaking</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Herinnering na (uren)</Label>
+                  <Input
+                    type="number"
+                    placeholder="bijv. 24"
+                    value={form.herinnering_uren ?? ""}
+                    onChange={(e) => setForm({ ...form, herinnering_uren: e.target.value === "" ? null : Number(e.target.value) })}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Max. doorlooptijd (uren)</Label>
+                  <Input
+                    type="number"
+                    placeholder="bijv. 168"
+                    value={form.max_doorlooptijd_uren ?? ""}
+                    onChange={(e) => setForm({ ...form, max_doorlooptijd_uren: e.target.value === "" ? null : Number(e.target.value) })}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Escalatie stap 1 — na (uren)</Label>
+                  <Input
+                    type="number"
+                    placeholder="bijv. 48"
+                    value={form.escalatie_stap_1_uren ?? ""}
+                    onChange={(e) => setForm({ ...form, escalatie_stap_1_uren: e.target.value === "" ? null : Number(e.target.value) })}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Escalatie stap 1 — naar</Label>
+                  <Select
+                    value={form.escalatie_stap_1_gebruiker_id ? String(form.escalatie_stap_1_gebruiker_id) : "geen"}
+                    onValueChange={(v) => setForm({ ...form, escalatie_stap_1_gebruiker_id: v === "geen" ? null : Number(v) })}
+                  >
+                    <SelectTrigger><SelectValue placeholder="Selecteer..." /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="geen">Geen (hoofdbeheerder)</SelectItem>
+                      {(gebruikers ?? []).filter((g) => g.actief).map((g) => (
+                        <SelectItem key={g.id} value={String(g.id)}>{g.naam}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Escalatie stap 2 — na (uren)</Label>
+                  <Input
+                    type="number"
+                    placeholder="bijv. 96"
+                    value={form.escalatie_stap_2_uren ?? ""}
+                    onChange={(e) => setForm({ ...form, escalatie_stap_2_uren: e.target.value === "" ? null : Number(e.target.value) })}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Escalatie stap 2 — naar</Label>
+                  <Select
+                    value={form.escalatie_stap_2_gebruiker_id ? String(form.escalatie_stap_2_gebruiker_id) : "geen"}
+                    onValueChange={(v) => setForm({ ...form, escalatie_stap_2_gebruiker_id: v === "geen" ? null : Number(v) })}
+                  >
+                    <SelectTrigger><SelectValue placeholder="Selecteer..." /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="geen">Geen (hoofdbeheerder)</SelectItem>
+                      {(gebruikers ?? []).filter((g) => g.actief).map((g) => (
+                        <SelectItem key={g.id} value={String(g.id)}>{g.naam}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
             </div>
             <div className="col-span-2 flex items-center justify-between rounded-md border p-3">
               <div>

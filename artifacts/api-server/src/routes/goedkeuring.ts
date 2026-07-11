@@ -4,13 +4,15 @@ import {
   goedkeuringBeleidsregelsTable,
   goedkeuringAanvragenTable,
   goedkeuringStappenTable,
+  goedkeuringEscalatiesTable,
   gebruikersTable,
   insertGoedkeuringBeleidsregelSchema,
   type GoedkeuringBeleidsregel,
   type GoedkeuringAanvraag,
   type GoedkeuringStap,
+  type GoedkeuringEscalatie,
 } from "@workspace/db";
-import { and, eq, desc, inArray, sql } from "drizzle-orm";
+import { and, eq, desc, inArray, or, sql } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 import {
   maakGoedkeuringActor,
@@ -42,10 +44,28 @@ function serialiseerBeleidsregel(r: GoedkeuringBeleidsregel) {
     vier_ogen_verplicht: r.vierOgenVerplicht,
     vervanger_gebruiker_id: r.vervangerGebruikerId,
     reactietermijn_uren: r.reactietermijnUren,
+    herinnering_uren: r.herinneringUren,
+    escalatie_stap_1_uren: r.escalatieStap1Uren,
+    escalatie_stap_1_gebruiker_id: r.escalatieStap1GebruikerId,
+    escalatie_stap_2_uren: r.escalatieStap2Uren,
+    escalatie_stap_2_gebruiker_id: r.escalatieStap2GebruikerId,
+    max_doorlooptijd_uren: r.maxDoorlooptijdUren,
     actief: r.actief,
     aangemaakt_door_id: r.aangemaaktDoorId,
     aangemaakt_op: r.aangemaaktOp.toISOString(),
     bijgewerkt_op: r.bijgewerktOp.toISOString(),
+  };
+}
+
+function serialiseerEscalatie(e: GoedkeuringEscalatie) {
+  return {
+    id: e.id,
+    aanvraag_id: e.aanvraagId,
+    type: e.type,
+    naar_gebruiker_id: e.naarGebruikerId,
+    naar_gebruiker_naam: e.naarGebruikerNaam,
+    bericht: e.bericht,
+    aangemaakt_op: e.aangemaaktOp.toISOString(),
   };
 }
 
@@ -216,6 +236,139 @@ router.delete(
       }
       await db.delete(goedkeuringBeleidsregelsTable).where(eq(goedkeuringBeleidsregelsTable.id, id));
       res.status(204).end();
+    } catch (err) {
+      req.log.error(err);
+      res.status(500).json({ error: "Interne serverfout" });
+    }
+  },
+);
+
+// ── Dashboard (niveau 1, open + verlopen + afgewezen + escalatiestatus) ─────
+
+router.get(
+  "/goedkeuring/dashboard",
+  requireBevoegdheid("goedkeuring", 1),
+  async (req, res): Promise<void> => {
+    try {
+      const statusFilter = typeof req.query.status === "string" ? req.query.status : undefined;
+      const documentTypeFilter = typeof req.query.document_type === "string" ? req.query.document_type : undefined;
+      const alleenVerlopen = req.query.alleen_verlopen === "true";
+
+      const whereCondities = [];
+      if (statusFilter) {
+        whereCondities.push(eq(goedkeuringAanvragenTable.status, statusFilter));
+      } else {
+        // Standaard: alle ingediende aanvragen + recent (7d) afgehandelde
+        whereCondities.push(
+          or(
+            eq(goedkeuringAanvragenTable.status, "ingediend"),
+            and(
+              sql`${goedkeuringAanvragenTable.status} IN ('goedgekeurd', 'afgewezen')`,
+              sql`${goedkeuringAanvragenTable.afgehandeldOp} > now() - interval '7 days'`,
+            ),
+          ),
+        );
+      }
+      if (documentTypeFilter) {
+        whereCondities.push(eq(goedkeuringAanvragenTable.documentType, documentTypeFilter));
+      }
+
+      const aanvragen = await db
+        .select({
+          aanvraag: goedkeuringAanvragenTable,
+          beleid: {
+            reactietermijnUren: goedkeuringBeleidsregelsTable.reactietermijnUren,
+          },
+        })
+        .from(goedkeuringAanvragenTable)
+        .leftJoin(
+          goedkeuringBeleidsregelsTable,
+          eq(goedkeuringAanvragenTable.beleidsregelId, goedkeuringBeleidsregelsTable.id),
+        )
+        .where(and(...(whereCondities.length ? whereCondities : [sql`true`])))
+        .orderBy(desc(goedkeuringAanvragenTable.ingediendOp));
+
+      // Verrijken met ingediend_door_naam in één query
+      const indienerIds = [
+        ...new Set(
+          aanvragen
+            .map((r) => r.aanvraag.ingediendDoorId)
+            .filter((id): id is number => id != null),
+        ),
+      ];
+      const indienerMap = indienerIds.length > 0
+        ? new Map(
+            (await db
+              .select({ id: gebruikersTable.id, naam: gebruikersTable.naam })
+              .from(gebruikersTable)
+              .where(inArray(gebruikersTable.id, indienerIds)))
+              .map((g) => [g.id, g.naam]),
+          )
+        : new Map<number, string | null>();
+
+      // Verrijken met escalaties in één query
+      const aanvraagIds = aanvragen.map((r) => r.aanvraag.id);
+      const escalatieMap = new Map<number, GoedkeuringEscalatie[]>();
+      if (aanvraagIds.length > 0) {
+        const escalaties = await db
+          .select()
+          .from(goedkeuringEscalatiesTable)
+          .where(inArray(goedkeuringEscalatiesTable.aanvraagId, aanvraagIds))
+          .orderBy(goedkeuringEscalatiesTable.aangemaaktOp);
+        for (const e of escalaties) {
+          if (!escalatieMap.has(e.aanvraagId)) escalatieMap.set(e.aanvraagId, []);
+          escalatieMap.get(e.aanvraagId)!.push(e);
+        }
+      }
+
+      // Actor (voor mag_goedkeuren vlag)
+      const actor = await maakGoedkeuringActor(req, db);
+
+      const nu = Date.now();
+      const resultaat = aanvragen
+        .map(({ aanvraag, beleid }) => {
+          const reactietermijnUren = beleid?.reactietermijnUren ?? null;
+          const deadlineOp =
+            aanvraag.ingediendOp && reactietermijnUren
+              ? new Date(aanvraag.ingediendOp.getTime() + reactietermijnUren * 3_600_000)
+              : null;
+          const isVerlopen =
+            aanvraag.status === "ingediend" &&
+            deadlineOp != null &&
+            nu > deadlineOp.getTime();
+
+          const snapshot = (aanvraag.beleidSnapshot as BeleidSnapshot | null) ?? null;
+          const magGoedkeurenWaarde =
+            Boolean(actor) && aanvraag.status === "ingediend" && snapshot != null
+              ? magGoedkeuren(actor as GoedkeuringActor, aanvraag, snapshot)
+              : false;
+
+          return {
+            id: aanvraag.id,
+            object_type: aanvraag.objectType,
+            object_id: aanvraag.objectId,
+            document_type: aanvraag.documentType,
+            omschrijving: aanvraag.omschrijving,
+            bedrag: aanvraag.bedrag,
+            status: aanvraag.status,
+            vereiste_goedkeuringen: aanvraag.vereisteGoedkeuringen,
+            ontvangen_goedkeuringen: aanvraag.ontvangenGoedkeuringen,
+            ingediend_door_naam: indienerMap.get(aanvraag.ingediendDoorId ?? -1) ?? null,
+            ingediend_op: aanvraag.ingediendOp?.toISOString() ?? null,
+            afgehandeld_op: aanvraag.afgehandeldOp?.toISOString() ?? null,
+            afwijzing_reden: aanvraag.afwijzingReden,
+            mag_goedkeuren: magGoedkeurenWaarde,
+            reactietermijn_uren: reactietermijnUren,
+            deadline_op: deadlineOp?.toISOString() ?? null,
+            is_verlopen: isVerlopen,
+            escalaties: (escalatieMap.get(aanvraag.id) ?? []).map(serialiseerEscalatie),
+            aangemaakt_op: aanvraag.aangemaaktOp.toISOString(),
+            bijgewerkt_op: aanvraag.bijgewerktOp.toISOString(),
+          };
+        })
+        .filter((item) => !alleenVerlopen || item.is_verlopen);
+
+      res.json(resultaat);
     } catch (err) {
       req.log.error(err);
       res.status(500).json({ error: "Interne serverfout" });

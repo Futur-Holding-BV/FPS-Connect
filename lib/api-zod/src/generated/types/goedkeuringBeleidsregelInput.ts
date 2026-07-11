@@ -30,5 +30,17 @@ export interface GoedkeuringBeleidsregelInput {
   vervanger_gebruiker_id?: number | null;
   /** @nullable */
   reactietermijn_uren?: number | null;
+  /** @nullable */
+  herinnering_uren?: number | null;
+  /** @nullable */
+  escalatie_stap_1_uren?: number | null;
+  /** @nullable */
+  escalatie_stap_1_gebruiker_id?: number | null;
+  /** @nullable */
+  escalatie_stap_2_uren?: number | null;
+  /** @nullable */
+  escalatie_stap_2_gebruiker_id?: number | null;
+  /** @nullable */
+  max_doorlooptijd_uren?: number | null;
   actief: boolean;
 }
