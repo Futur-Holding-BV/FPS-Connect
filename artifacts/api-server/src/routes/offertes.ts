@@ -980,33 +980,57 @@ router.post("/offertes/:id/regels", schrijven, async (req, res): Promise<void> =
 
 router.patch("/offerte-regels/:id", schrijven, async (req, res): Promise<void> => {
   try {
-    const [bestaandeRegel] = await db.select({ offerteId: offerteRegelsTable.offerteId }).from(offerteRegelsTable).where(eq(offerteRegelsTable.id, parseId(req.params.id)));
+    const regelId = parseId(req.params.id);
+    const [bestaandeRegel] = await db
+      .select({ offerteId: offerteRegelsTable.offerteId, huidigKosten: offerteRegelsTable.kosten })
+      .from(offerteRegelsTable)
+      .where(eq(offerteRegelsTable.id, regelId));
     if (!bestaandeRegel) return void res.status(404).json({ error: "Begrotingsregel niet gevonden" });
     if (await isOfferteBlokkeerd(bestaandeRegel.offerteId))
       return void res.status(409).json({ error: "Ondertekende offerte kan niet meer worden gewijzigd." });
     const { maatregel, categorie, snag_referentie, voorziening_id, ruimte, uitgangspunten, eenheid, aantal, prijs_per_eenheid, kosten, volgorde, ai_voorstel, is_optioneel, weergave_override } = req.body;
     const berekendeKosten = kosten != null ? kosten : (aantal ?? 0) * (prijs_per_eenheid ?? 0);
-    const [r] = await db
-      .update(offerteRegelsTable)
-      .set({
-        maatregel,
-        categorie,
-        snagReferentie: snag_referentie,
-        voorzieningId: voorziening_id ?? null,
-        ruimte,
-        uitgangspunten,
-        eenheid,
-        aantal,
-        prijsPerEenheid: prijs_per_eenheid,
-        kosten: berekendeKosten,
-        volgorde,
-        aiVoorstel: ai_voorstel,
-        ...(is_optioneel !== undefined ? { isOptioneel: is_optioneel } : {}),
-        ...(weergave_override !== undefined ? { weergaveOverride: weergave_override } : {}),
-        bijgewerktOp: new Date(),
-      })
-      .where(eq(offerteRegelsTable.id, parseId(req.params.id)))
-      .returning();
+
+    // Materiële-wijzigingsguard: als kosten/aantal/prijs_per_eenheid wijzigt én
+    // de effectieve kosten veranderen, wordt een goedgekeurde aanvraag automatisch
+    // als "vervangen" gemarkeerd in dezelfde transactie als de update.
+    const kostenWijzigt =
+      (kosten !== undefined || aantal !== undefined || prijs_per_eenheid !== undefined) &&
+      String(berekendeKosten) !== String(bestaandeRegel.huidigKosten);
+    const actor = kostenWijzigt ? await maakGoedkeuringActor(req, db) : null;
+
+    const [r] = await db.transaction(async (tx) => {
+      if (kostenWijzigt && actor) {
+        await vervangGoedgekeurdeAanvraag(
+          tx as unknown as typeof db,
+          "offerte",
+          bestaandeRegel.offerteId,
+          actor,
+          "Begrotingsregel gewijzigd na goedkeuring",
+        );
+      }
+      return tx
+        .update(offerteRegelsTable)
+        .set({
+          maatregel,
+          categorie,
+          snagReferentie: snag_referentie,
+          voorzieningId: voorziening_id ?? null,
+          ruimte,
+          uitgangspunten,
+          eenheid,
+          aantal,
+          prijsPerEenheid: prijs_per_eenheid,
+          kosten: berekendeKosten,
+          volgorde,
+          aiVoorstel: ai_voorstel,
+          ...(is_optioneel !== undefined ? { isOptioneel: is_optioneel } : {}),
+          ...(weergave_override !== undefined ? { weergaveOverride: weergave_override } : {}),
+          bijgewerktOp: new Date(),
+        })
+        .where(eq(offerteRegelsTable.id, regelId))
+        .returning();
+    });
     if (!r) return void res.status(404).json({ error: "Begrotingsregel niet gevonden" });
     invalideerContext("offerte", bestaandeRegel.offerteId);
     res.json(mapRegel(r));
@@ -1259,25 +1283,44 @@ router.patch("/offerte-secties/:id", schrijven, async (req, res): Promise<void> 
   try {
     const sectieId = parseId(req.params.id);
     const [bestaandeSectie] = await db
-      .select({ offerteId: offerteSectiesTable.offerteId })
+      .select({ offerteId: offerteSectiesTable.offerteId, huidigInhoud: offerteSectiesTable.inhoud, huidigTitel: offerteSectiesTable.titel })
       .from(offerteSectiesTable)
       .where(eq(offerteSectiesTable.id, sectieId));
     if (!bestaandeSectie) return void res.status(404).json({ error: "Sectie niet gevonden" });
     if (await isOfferteBlokkeerd(bestaandeSectie.offerteId)) return void res.status(409).json({ error: "Ondertekende of afgewezen offerte kan niet worden gewijzigd." });
     const { sectie_type, volgorde, actief, titel, inhoud, ai_gegenereerd } = req.body;
-    const [s] = await db
-      .update(offerteSectiesTable)
-      .set({
-        ...(sectie_type !== undefined && { sectieType: sectie_type }),
-        ...(volgorde !== undefined && { volgorde }),
-        ...(actief !== undefined && { actief }),
-        ...(titel !== undefined && { titel }),
-        ...(inhoud !== undefined && { inhoud }),
-        ...(ai_gegenereerd !== undefined && { aiGegenereerd: ai_gegenereerd }),
-        bijgewerktOp: new Date(),
-      })
-      .where(eq(offerteSectiesTable.id, sectieId))
-      .returning();
+
+    // Materiële-wijzigingsguard: als de inhoud of titel van een sectie wijzigt
+    // wordt een goedgekeurde aanvraag automatisch als "vervangen" gemarkeerd.
+    const tekstWijzigt =
+      (inhoud !== undefined && inhoud !== bestaandeSectie.huidigInhoud) ||
+      (titel !== undefined && titel !== bestaandeSectie.huidigTitel);
+    const actor = tekstWijzigt ? await maakGoedkeuringActor(req, db) : null;
+
+    const [s] = await db.transaction(async (tx) => {
+      if (tekstWijzigt && actor) {
+        await vervangGoedgekeurdeAanvraag(
+          tx as unknown as typeof db,
+          "offerte",
+          bestaandeSectie.offerteId,
+          actor,
+          "Sectie-inhoud gewijzigd na goedkeuring",
+        );
+      }
+      return tx
+        .update(offerteSectiesTable)
+        .set({
+          ...(sectie_type !== undefined && { sectieType: sectie_type }),
+          ...(volgorde !== undefined && { volgorde }),
+          ...(actief !== undefined && { actief }),
+          ...(titel !== undefined && { titel }),
+          ...(inhoud !== undefined && { inhoud }),
+          ...(ai_gegenereerd !== undefined && { aiGegenereerd: ai_gegenereerd }),
+          bijgewerktOp: new Date(),
+        })
+        .where(eq(offerteSectiesTable.id, sectieId))
+        .returning();
+    });
     if (!s) return void res.status(404).json({ error: "Sectie niet gevonden" });
     res.json(mapSectie(s));
   } catch (err) {
