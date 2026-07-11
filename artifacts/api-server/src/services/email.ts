@@ -53,7 +53,7 @@ export class MailFout extends Error {
   }
 }
 
-export type MailSoort = "test" | "uitnodiging" | "wachtwoord_reset" | "offerte" | "klantvraag" | "afwijzing" | "ondertekening" | "inkoopbon" | "opdrachtbevestiging" | "magazijn_signalering" | "magazijn_bestelbon" | "aanvraag_bevestiging" | "planning_melding" | "incident_melding" | "ai_drempel" | "reactietermijn_melding" | "rapport_melding" | "avg_verzoek_bevestiging" | "avg_verzoek_afgehandeld" | "voertuig_melding_garage" | "goedkeuring_escalatie" | "goedkeuring_indiening";
+export type MailSoort = "test" | "uitnodiging" | "wachtwoord_reset" | "offerte" | "klantvraag" | "afwijzing" | "ondertekening" | "inkoopbon" | "opdrachtbevestiging" | "magazijn_signalering" | "magazijn_bestelbon" | "aanvraag_bevestiging" | "planning_melding" | "incident_melding" | "ai_drempel" | "reactietermijn_melding" | "rapport_melding" | "avg_verzoek_bevestiging" | "avg_verzoek_afgehandeld" | "voertuig_melding_garage" | "goedkeuring_escalatie" | "goedkeuring_indiening" | "goedkeuring_goedgekeurd" | "goedkeuring_afgewezen";
 
 // ── Configuratie-helpers ─────────────────────────────────────────────────────
 export function isGeconfigureerd(): boolean {
@@ -1487,6 +1487,77 @@ export async function stuurGoedkeuringIndienenMail(opties: {
     ],
   });
   await verstuurMail({ naarEmail: opties.naarEmail, naarNaam: opties.naarNaam ?? undefined, onderwerp, html, soort: "goedkeuring_indiening" });
+}
+
+// ── Goedkeuring uitkomst-meldingen ────────────────────────────────────────────
+// Worden verstuurd naar de indiener zodra zijn aanvraag volledig goedgekeurd
+// of afgewezen is. Fouten worden stilzwijgend genegeerd — de aanvraag is al
+// opgeslagen en de goedkeurder heeft al gehandeld.
+
+export async function stuurGoedkeuringGoedgekeurdMail(opties: {
+  naarEmail: string;
+  naarNaam?: string | null;
+  aanvraagId: number;
+  documentType: string;
+  omschrijving?: string | null;
+  goedgekeurdDoorNaam?: string | null;
+  bedrag?: number | null;
+}): Promise<void> {
+  const bedragTekst =
+    opties.bedrag != null
+      ? ` (${new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(opties.bedrag)})`
+      : "";
+  const onderwerp = `Aanvraag goedgekeurd: ${opties.documentType}${bedragTekst} — aanvraag #${opties.aanvraagId}`;
+  const html = mailShell({
+    titel: "Aanvraag goedgekeurd",
+    kopje: `Aanvraag #${opties.aanvraagId} is goedgekeurd`,
+    paragrafen: [
+      `Uw goedkeuringsaanvraag voor <strong>${escapeHtml(opties.documentType)}${escapeHtml(bedragTekst)}</strong> is volledig goedgekeurd${opties.goedgekeurdDoorNaam ? ` door ${escapeHtml(opties.goedgekeurdDoorNaam)}` : ""}.`,
+      ...(opties.omschrijving ? [`Omschrijving: ${escapeHtml(opties.omschrijving)}`] : []),
+      "Log in op FPS Connect om de status van uw aanvraag te bekijken.",
+    ],
+  });
+  await verstuurMail({
+    naarEmail: opties.naarEmail,
+    naarNaam: opties.naarNaam ?? undefined,
+    onderwerp,
+    html,
+    soort: "goedkeuring_goedgekeurd",
+  });
+}
+
+export async function stuurGoedkeuringAfgewezenMail(opties: {
+  naarEmail: string;
+  naarNaam?: string | null;
+  aanvraagId: number;
+  documentType: string;
+  omschrijving?: string | null;
+  afgewezenDoorNaam?: string | null;
+  reden: string;
+  bedrag?: number | null;
+}): Promise<void> {
+  const bedragTekst =
+    opties.bedrag != null
+      ? ` (${new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(opties.bedrag)})`
+      : "";
+  const onderwerp = `Aanvraag afgewezen: ${opties.documentType}${bedragTekst} — aanvraag #${opties.aanvraagId}`;
+  const html = mailShell({
+    titel: "Aanvraag afgewezen",
+    kopje: `Aanvraag #${opties.aanvraagId} is afgewezen`,
+    paragrafen: [
+      `Uw goedkeuringsaanvraag voor <strong>${escapeHtml(opties.documentType)}${escapeHtml(bedragTekst)}</strong> is afgewezen${opties.afgewezenDoorNaam ? ` door ${escapeHtml(opties.afgewezenDoorNaam)}` : ""}.`,
+      ...(opties.omschrijving ? [`Omschrijving: ${escapeHtml(opties.omschrijving)}`] : []),
+      `Reden: <em>${escapeHtml(opties.reden)}</em>`,
+      "Log in op FPS Connect om de details te bekijken of een nieuwe aanvraag in te dienen.",
+    ],
+  });
+  await verstuurMail({
+    naarEmail: opties.naarEmail,
+    naarNaam: opties.naarNaam ?? undefined,
+    onderwerp,
+    html,
+    soort: "goedkeuring_afgewezen",
+  });
 }
 
 // ── Goedkeuring escalatie-melding ─────────────────────────────────────────────

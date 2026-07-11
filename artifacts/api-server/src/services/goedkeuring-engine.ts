@@ -23,7 +23,11 @@ import { heeftNiveau, MODULE_IDS, type ModuleId } from "@workspace/permissies";
 import { logAudit } from "../lib/audit";
 import { workflowService } from "./workflow-engine";
 import { logger } from "../lib/logger";
-import { stuurGoedkeuringIndienenMail } from "./email";
+import {
+  stuurGoedkeuringIndienenMail,
+  stuurGoedkeuringGoedgekeurdMail,
+  stuurGoedkeuringAfgewezenMail,
+} from "./email";
 
 type Db = typeof _mainDb;
 
@@ -654,6 +658,30 @@ export async function goedkeuren(
 
   if (compleet) {
     await pasObjectStatusToe(db, bijgewerkt!, actor);
+
+    // Stuur de indiener een bevestiging dat zijn aanvraag goedgekeurd is.
+    // Fouten worden geslikt — de aanvraag is al afgehandeld.
+    try {
+      if (aanvraag.ingediendDoorId) {
+        const [indiener] = await db
+          .select({ naam: gebruikersTable.naam, email: gebruikersTable.email })
+          .from(gebruikersTable)
+          .where(eq(gebruikersTable.id, aanvraag.ingediendDoorId));
+        if (indiener?.email) {
+          await stuurGoedkeuringGoedgekeurdMail({
+            naarEmail: indiener.email,
+            naarNaam: indiener.naam,
+            aanvraagId,
+            documentType: aanvraag.documentType,
+            omschrijving: aanvraag.omschrijving,
+            goedgekeurdDoorNaam: actor.gebruikerNaam,
+            bedrag: aanvraag.bedrag,
+          });
+        }
+      }
+    } catch (err) {
+      logger.warn({ err, aanvraagId }, "Goedkeuring goedgekeurd-notificatie niet verstuurd");
+    }
   }
 
   return { ok: true, aanvraag: bijgewerkt };
@@ -715,6 +743,31 @@ export async function afwijzen(
     objectId: aanvraag.objectId,
     meta: { aanvraagId, reden },
   });
+
+  // Stuur de indiener een bericht dat zijn aanvraag afgewezen is, inclusief de reden.
+  // Fouten worden geslikt — de aanvraag is al afgehandeld.
+  try {
+    if (aanvraag.ingediendDoorId) {
+      const [indiener] = await db
+        .select({ naam: gebruikersTable.naam, email: gebruikersTable.email })
+        .from(gebruikersTable)
+        .where(eq(gebruikersTable.id, aanvraag.ingediendDoorId));
+      if (indiener?.email) {
+        await stuurGoedkeuringAfgewezenMail({
+          naarEmail: indiener.email,
+          naarNaam: indiener.naam,
+          aanvraagId,
+          documentType: aanvraag.documentType,
+          omschrijving: aanvraag.omschrijving,
+          afgewezenDoorNaam: actor.gebruikerNaam,
+          reden,
+          bedrag: aanvraag.bedrag,
+        });
+      }
+    }
+  } catch (err) {
+    logger.warn({ err, aanvraagId }, "Goedkeuring afgewezen-notificatie niet verstuurd");
+  }
 
   return { ok: true, aanvraag: bijgewerkt };
 }
