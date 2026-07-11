@@ -32,6 +32,7 @@ import {
   getListOffertesQueryKey,
   useListOfferteTransitieLog,
   getListOfferteTransitieLogQueryKey,
+  useIntrekkenOfferte,
 } from "@workspace/api-client-react";
 import type { OfferteSectie } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
@@ -59,6 +60,7 @@ import {
   FolderOpen, CreditCard, FileText, Hammer, Layers, FileDown, History, ArrowRight, User,
 } from "lucide-react";
 import { VerzendTab } from "./verzend-tab";
+import { GoedkeuringWidget } from "@/components/goedkeuring/goedkeuring-widget";
 import { useToast } from "@/hooks/use-toast";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
 import { PaginaHulp } from "@/components/pagina-hulp";
@@ -72,6 +74,7 @@ const STATUS_KLEUR: Record<string, string> = {
   geaccepteerd: "bg-emerald-100 text-emerald-800 border-emerald-200",
   afgewezen: "bg-rose-100 text-rose-800 border-rose-200",
   vervallen: "bg-muted text-muted-foreground border-border",
+  ingetrokken: "bg-slate-100 text-slate-700 border-slate-300",
 };
 
 const STATUS_LABEL: Record<string, string> = {
@@ -82,6 +85,7 @@ const STATUS_LABEL: Record<string, string> = {
   geaccepteerd: "Geaccepteerd",
   afgewezen: "Afgewezen",
   vervallen: "Vervallen",
+  ingetrokken: "Ingetrokken",
 };
 
 const VOLGENDE_STATUSSEN: Record<string, string[]> = {
@@ -92,6 +96,7 @@ const VOLGENDE_STATUSSEN: Record<string, string[]> = {
   ondertekend: [],
   geaccepteerd: [],
   vervallen: [],
+  ingetrokken: ["concept"],
 };
 
 // Overgangen naar deze statussen zijn (vrijwel) niet terug te draaien — vraag
@@ -137,6 +142,7 @@ export default function ProposalStudio() {
   const queryClient = useQueryClient();
   const { heeftNiveau } = useBevoegdheid();
   const kanSchrijven = heeftNiveau("offertes", 2);
+  const kanIntrekken = heeftNiveau("offertes", 3);
 
   const { data: offerte, isLoading: offerteLoading } = useGetOfferte(offerteId, {
     query: { queryKey: getGetOfferteQueryKey(offerteId), enabled: !!offerteId },
@@ -166,6 +172,7 @@ export default function ProposalStudio() {
   const aantalOnbeantwoord = (vragen ?? []).filter((v) => v.antwoord === null || v.antwoord === undefined).length;
 
   const werkOfferte = useUpdateOfferte();
+  const intrekkenMutatie = useIntrekkenOfferte();
   const { data: voorwaardenSets } = useListVoorwaardenSets();
 
   const maakSectie = useCreateOfferteSectie();
@@ -232,6 +239,9 @@ export default function ProposalStudio() {
   const [conditiesOpgeslagen, setConditiesOpgeslagen] = useState(false);
   const [statusWijzigenBusy, setStatusWijzigenBusy] = useState(false);
   const [bevestigStatus, setBevestigStatus] = useState<string | null>(null);
+  const [intrekkenDialoogOpen, setIntrekkenDialoogOpen] = useState(false);
+  const [intrekkenReden, setIntrekkenReden] = useState("");
+  const [intrekkenBusy, setIntrekkenBusy] = useState(false);
 
   const VERVOLG_OPTIES_LABELS: Record<string, string> = {
     periodiek_onderhoud: "Periodiek onderhoud aanbieden",
@@ -319,6 +329,23 @@ export default function ProposalStudio() {
       await queryClient.invalidateQueries({ queryKey: getListOfferteRegelsQueryKey(offerteId) });
     } catch {
       toast({ title: "Opslaan mislukt", variant: "destructive" });
+    }
+  }
+
+  async function voerIntrekkenUit() {
+    if (!intrekkenReden.trim()) return;
+    setIntrekkenBusy(true);
+    try {
+      await intrekkenMutatie.mutateAsync({ id: offerteId, data: { reden: intrekkenReden.trim() } });
+      await queryClient.invalidateQueries({ queryKey: getGetOfferteQueryKey(offerteId) });
+      await queryClient.invalidateQueries({ queryKey: getListOffertesQueryKey() });
+      toast({ title: "Offerte ingetrokken" });
+      setIntrekkenDialoogOpen(false);
+      setIntrekkenReden("");
+    } catch {
+      toast({ title: "Intrekken mislukt", variant: "destructive" });
+    } finally {
+      setIntrekkenBusy(false);
     }
   }
 
@@ -736,6 +763,46 @@ export default function ProposalStudio() {
                     </AlertDialogFooter>
                   </AlertDialogContent>
                 </AlertDialog>
+                {kanIntrekken && (offerte.status === "verzonden" || offerte.status === "bekeken") && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 px-2.5"
+                    onClick={() => { setIntrekkenReden(""); setIntrekkenDialoogOpen(true); }}
+                  >
+                    Intrekken
+                  </Button>
+                )}
+                <Dialog open={intrekkenDialoogOpen} onOpenChange={(open) => { if (!open) setIntrekkenDialoogOpen(false); }}>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Offerte intrekken</DialogTitle>
+                    </DialogHeader>
+                    <p className="text-sm text-muted-foreground">
+                      De offerte wordt formeel ingetrokken. De klant kan daarna niet meer ondertekenen. Geef een reden op voor de audittrail.
+                    </p>
+                    <div className="space-y-2">
+                      <Label htmlFor="intrekken-reden">Reden (verplicht)</Label>
+                      <Textarea
+                        id="intrekken-reden"
+                        value={intrekkenReden}
+                        onChange={(e) => setIntrekkenReden(e.target.value)}
+                        placeholder="Geef een reden op voor het intrekken van deze offerte…"
+                        rows={3}
+                      />
+                    </div>
+                    <DialogFooter>
+                      <Button variant="outline" onClick={() => setIntrekkenDialoogOpen(false)} disabled={intrekkenBusy}>Annuleren</Button>
+                      <Button
+                        variant="destructive"
+                        onClick={() => void voerIntrekkenUit()}
+                        disabled={intrekkenBusy || !intrekkenReden.trim()}
+                      >
+                        {intrekkenBusy ? "Bezig…" : "Offerte intrekken"}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
               </div>
               {offerte.offertenummer && (
                 <p className="text-xs text-muted-foreground">{offerte.offertenummer}</p>
@@ -840,6 +907,10 @@ export default function ProposalStudio() {
                 <TabsTrigger value="bijlagen"><Paperclip className="h-3.5 w-3.5 mr-1.5" />Bijlagen</TabsTrigger>
                 <TabsTrigger value="versies"><Clock className="h-3.5 w-3.5 mr-1.5" />Versies</TabsTrigger>
                 <TabsTrigger value="historie"><History className="h-3.5 w-3.5 mr-1.5" />Historie</TabsTrigger>
+                <TabsTrigger value="goedkeuring">
+                  <Check className="h-3.5 w-3.5 mr-1.5" />
+                  Goedkeuring
+                </TabsTrigger>
                 <TabsTrigger value="verzenden" className="relative">
                   <Send className="h-3.5 w-3.5 mr-1.5" />
                   Verzenden
@@ -1354,6 +1425,30 @@ export default function ProposalStudio() {
                       ))}
                     </div>
                   )}
+                </div>
+              </TabsContent>
+
+              <TabsContent value="goedkeuring">
+                <div className="space-y-4">
+                  <h2 className="font-semibold">Goedkeuring</h2>
+                  <Card>
+                    <CardContent className="pt-5 space-y-4">
+                      <p className="text-sm text-muted-foreground">
+                        Als het goedkeuringsbeleid een formele aanvraag vereist voor het offertebedrag, dient u de
+                        offerte hier in. Na goedkeuring door de bevoegde persoon(en) kan de offerte worden verzonden.
+                        Een materiële wijziging (bedragaanpassing) na goedkeuring maakt de aanvraag automatisch
+                        ongeldig.
+                      </p>
+                      <GoedkeuringWidget
+                        objectType="offerte"
+                        objectId={offerte.id}
+                        documentType="offerte"
+                        bedrag={offerte.bedrag_incl_btw}
+                        omschrijving={[offerte.offertenummer && `Offerte ${offerte.offertenummer}`, offerte.titel].filter(Boolean).join(" — ") || `Offerte #${offerte.id}`}
+                        toonIndienKnop={offerte.status === "concept"}
+                      />
+                    </CardContent>
+                  </Card>
                 </div>
               </TabsContent>
 

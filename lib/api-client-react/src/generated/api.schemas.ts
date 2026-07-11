@@ -5735,6 +5735,11 @@ export interface OfferteEmailVoorstel {
   afsluiting: string;
 }
 
+export interface OfferteIntrekkenInput {
+  /** Verplichte reden voor de intrekking van de offerte */
+  reden: string;
+}
+
 export interface OfferteVerzendenInput {
   naar_email: string;
   naar_naam?: string;
@@ -12482,6 +12487,10 @@ jaar?: number;
 };
 
 export type VerzendOfferte200 = {
+  ok?: boolean;
+};
+
+export type IntrekkenOfferte200 = {
   ok?: boolean;
 };
 

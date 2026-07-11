@@ -8,6 +8,12 @@ import { execSync } from "child_process";
 import { Router } from "express";
 import { workflowService, maakTransitieContext } from "../services/workflow-engine";
 import { invalideerContext } from "../lib/aiContext/cache";
+import {
+  maakGoedkeuringActor,
+  checkVereistGoedkeuring,
+  haalGoedgekeurdeAanvraag,
+  vervangGoedgekeurdeAanvraag,
+} from "../services/goedkeuring-engine";
 import PDFDocument from "pdfkit";
 import {
   db,
@@ -629,6 +635,24 @@ router.patch("/offertes/:id", schrijven, async (req, res): Promise<void> => {
 
     // Status via de WorkflowEngine
     if (status !== undefined) {
+      // Intrekken vereist een verplichte reden en een expliciete audit-stap;
+      // gebruik hiervoor het dedicated endpoint POST /offertes/:id/intrekken.
+      if (status === "ingetrokken") {
+        return void res.status(422).json({
+          error: "Gebruik POST /offertes/:id/intrekken om een offerte in te trekken. Een reden is verplicht.",
+          code: "GEBRUIK_INTREKKEN_ENDPOINT",
+        });
+      }
+      // Een gecombineerde bedragwijziging + statusovergang naar "verzonden" in
+      // één PATCH-call zou de goedkeuringscheck passeren op het oude bedrag en
+      // daarna pas het akkoord invalideren. Dat omzeilt de governance-intentie.
+      // Dwing twee stappen af: eerst bedrag bijwerken (apart PATCH), dan verzenden.
+      if (status === "verzonden" && (bedrag_excl_btw !== undefined || bedrag_incl_btw !== undefined)) {
+        return void res.status(422).json({
+          error: "Bedrag en status 'verzonden' mogen niet in dezelfde aanroep gecombineerd worden. Sla het bedrag eerst op en verstuur daarna via het verzend-tabblad.",
+          code: "GECOMBINEERDE_BEDRAG_STATUS_VERBODEN",
+        });
+      }
       const ctx = await maakTransitieContext(req, db);
       const result = await workflowService.transiteer("offerte", offerteId, status, ctx);
       if (!result.ok) {
@@ -636,39 +660,62 @@ router.patch("/offertes/:id", schrijven, async (req, res): Promise<void> => {
       }
     }
 
-    const [o] = await db
-      .update(offertesTable)
-      .set({
-        ...(titel !== undefined && { titel }),
-        ...(offertenummer !== undefined && { offertenummer }),
-        ...(gebouw_id !== undefined && { gebouwId: gebouw_id }),
-        ...(klant_id !== undefined && { klantId: klant_id }),
-        ...(sjabloon_id !== undefined && { sjabloonId: sjabloon_id }),
-        ...(opdrachtgever !== undefined && { opdrachtgever }),
-        ...(ons_kenmerk !== undefined && { onsKenmerk: ons_kenmerk }),
-        ...(uw_kenmerk !== undefined && { uwKenmerk: uw_kenmerk }),
-        ...(uw_brief_van !== undefined && { uwBriefVan: uw_brief_van }),
-        ...(behandeld_door_id !== undefined && { behandeldDoorId: behandeld_door_id }),
-        ...(datum !== undefined && { datum }),
-        ...(geldigheid_dagen !== undefined && { geldigheidDagen: geldigheid_dagen }),
-        ...(voorwaarden !== undefined && { voorwaarden }),
-        ...(betalingstermijn_dagen !== undefined && { betalingstermijnDagen: betalingstermijn_dagen }),
-        ...(betaalwijze !== undefined && { betaalwijze }),
-        ...(factuur_schema !== undefined && { factuurSchema: factuur_schema }),
-        ...(voorwaarden_set_id !== undefined && { voorwaardenSetId: voorwaarden_set_id }),
-        ...(bedrag_excl_btw !== undefined && { bedragExclBtw: bedrag_excl_btw }),
-        ...(btw_percentage !== undefined && { btwPercentage: btw_percentage }),
-        ...(bedrag_incl_btw !== undefined && { bedragInclBtw: bedrag_incl_btw }),
-        ...(begroting_weergave !== undefined && { begrotingWeergave: begroting_weergave }),
-        ...(presentatie_niveau !== undefined && { presentatieNiveau: presentatie_niveau }),
-        ...(klant_type !== undefined && { klantType: klant_type }),
-        ...(vervolg_opties !== undefined && { vervolgOpties: vervolg_opties }),
-        ...(vervolg_tekst !== undefined && { vervolgTekst: vervolg_tekst }),
-        ...(verzend_type !== undefined && { verzendType: verzend_type }),
-        bijgewerktOp: new Date(),
-      })
-      .where(eq(offertesTable.id, offerteId))
-      .returning();
+    // Materiële-wijzigingsguard + update atomair in één transactie:
+    // als het bedrag wijzigt en er is een goedgekeurde aanvraag, wordt die
+    // aanvraag als "vervangen" gemarkeerd in dezelfde transactie als de update.
+    // Zo kan een mislukte update de aanvraag nooit onterecht invalideren.
+    const actor = (bedrag_excl_btw !== undefined || bedrag_incl_btw !== undefined)
+      ? await maakGoedkeuringActor(req, db)
+      : null;
+
+    const [o] = await db.transaction(async (tx) => {
+      if (bedrag_excl_btw !== undefined || bedrag_incl_btw !== undefined) {
+        const [huidig] = await tx
+          .select({ bedragExclBtw: offertesTable.bedragExclBtw, bedragInclBtw: offertesTable.bedragInclBtw })
+          .from(offertesTable)
+          .where(eq(offertesTable.id, offerteId));
+        const bedragGewijzigd =
+          (bedrag_excl_btw !== undefined && String(huidig?.bedragExclBtw ?? "") !== String(bedrag_excl_btw)) ||
+          (bedrag_incl_btw !== undefined && String(huidig?.bedragInclBtw ?? "") !== String(bedrag_incl_btw));
+        if (bedragGewijzigd && actor) {
+          await vervangGoedgekeurdeAanvraag(tx as unknown as typeof db, "offerte", offerteId, actor, "Bedrag gewijzigd na goedkeuring");
+        }
+      }
+
+      return tx
+        .update(offertesTable)
+        .set({
+          ...(titel !== undefined && { titel }),
+          ...(offertenummer !== undefined && { offertenummer }),
+          ...(gebouw_id !== undefined && { gebouwId: gebouw_id }),
+          ...(klant_id !== undefined && { klantId: klant_id }),
+          ...(sjabloon_id !== undefined && { sjabloonId: sjabloon_id }),
+          ...(opdrachtgever !== undefined && { opdrachtgever }),
+          ...(ons_kenmerk !== undefined && { onsKenmerk: ons_kenmerk }),
+          ...(uw_kenmerk !== undefined && { uwKenmerk: uw_kenmerk }),
+          ...(uw_brief_van !== undefined && { uwBriefVan: uw_brief_van }),
+          ...(behandeld_door_id !== undefined && { behandeldDoorId: behandeld_door_id }),
+          ...(datum !== undefined && { datum }),
+          ...(geldigheid_dagen !== undefined && { geldigheidDagen: geldigheid_dagen }),
+          ...(voorwaarden !== undefined && { voorwaarden }),
+          ...(betalingstermijn_dagen !== undefined && { betalingstermijnDagen: betalingstermijn_dagen }),
+          ...(betaalwijze !== undefined && { betaalwijze }),
+          ...(factuur_schema !== undefined && { factuurSchema: factuur_schema }),
+          ...(voorwaarden_set_id !== undefined && { voorwaardenSetId: voorwaarden_set_id }),
+          ...(bedrag_excl_btw !== undefined && { bedragExclBtw: bedrag_excl_btw }),
+          ...(btw_percentage !== undefined && { btwPercentage: btw_percentage }),
+          ...(bedrag_incl_btw !== undefined && { bedragInclBtw: bedrag_incl_btw }),
+          ...(begroting_weergave !== undefined && { begrotingWeergave: begroting_weergave }),
+          ...(presentatie_niveau !== undefined && { presentatieNiveau: presentatie_niveau }),
+          ...(klant_type !== undefined && { klantType: klant_type }),
+          ...(vervolg_opties !== undefined && { vervolgOpties: vervolg_opties }),
+          ...(vervolg_tekst !== undefined && { vervolgTekst: vervolg_tekst }),
+          ...(verzend_type !== undefined && { verzendType: verzend_type }),
+          bijgewerktOp: new Date(),
+        })
+        .where(eq(offertesTable.id, offerteId))
+        .returning();
+    });
     if (!o) return void res.status(404).json({ error: "Offerte niet gevonden" });
     invalideerContext("offerte", offerteId);
     res.json(await offerteNaarJson(o));
@@ -1876,6 +1923,7 @@ router.post("/offertes/:id/verzenden", schrijven, async (req, res): Promise<void
         bedragInclBtw: offertesTable.bedragInclBtw,
         btwPercentage: offertesTable.btwPercentage,
         portaalStatus: offertesTable.portaalStatus,
+        status: offertesTable.status,
         voorwaardenSetId: offertesTable.voorwaardenSetId,
         voorwaarden: offertesTable.voorwaarden,
         gebouwId: offertesTable.gebouwId,
@@ -1885,6 +1933,29 @@ router.post("/offertes/:id/verzenden", schrijven, async (req, res): Promise<void
     if (!offerte) return void res.status(404).json({ error: "Offerte niet gevonden" });
     if (offerte.portaalStatus === "ondertekend" || offerte.portaalStatus === "afgewezen")
       return void res.status(409).json({ error: "Een ondertekende of afgewezen offerte kan niet opnieuw worden verzonden." });
+
+    // Expliciete blokkade: een ingetrokken offerte is formeel ongeldig en
+    // mag nooit meer worden verzonden, ongeacht de portaalstatus.
+    if (offerte.status === "ingetrokken")
+      return void res.status(409).json({ error: "Een ingetrokken offerte kan niet worden verzonden." });
+
+    // Goedkeuringsgate: als het beleid een formele goedkeuringsaanvraag
+    // vereist voor dit offertebedrag, moet er een goedgekeurde aanvraag
+    // bestaan voordat verzending is toegestaan.
+    {
+      const { vereist } = await checkVereistGoedkeuring(db, "offerte", offerte.bedragInclBtw, null);
+      if (vereist) {
+        const goedgekeurd = await haalGoedgekeurdeAanvraag(db, "offerte", offerteId);
+        if (!goedgekeurd) {
+          return void res.status(422).json({
+            error: "Goedkeuring vereist",
+            code: "GOEDKEURING_VEREIST",
+            bericht:
+              "Voor deze offerte is een formele goedkeuringsaanvraag vereist op basis van het geldende goedkeuringsbeleid. Dien de offerte in via het goedkeuringsproces in het tabblad 'Goedkeuring'.",
+          });
+        }
+      }
+    }
 
     const naarEmail = String(req.body?.naar_email ?? "").trim();
     const naarNaam = String(req.body?.naar_naam ?? "").trim() || null;
@@ -2051,6 +2122,39 @@ router.post("/offertes/:id/verzenden", schrijven, async (req, res): Promise<void
     });
 
     res.json({ ok: true, portaal_link: portaalLink });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// ── Offerte intrekken ──────────────────────────────────────────────────────────
+// Formeel intrekken van een verzonden offerte. Reden is verplicht; de
+// intrekking wordt gelogd in workflow_transitie_log. De offerte blijft
+// zichtbaar maar met status "ingetrokken".
+router.post("/offertes/:id/intrekken", requireBevoegdheid("offertes", 3), async (req, res): Promise<void> => {
+  try {
+    const offerteId = parseId(req.params.id);
+    const reden = typeof req.body?.reden === "string" ? req.body.reden.trim() : "";
+    if (!reden) return void res.status(400).json({ error: "Een reden voor intrekking is verplicht." });
+
+    const [offerte] = await db
+      .select({ id: offertesTable.id, status: offertesTable.status })
+      .from(offertesTable)
+      .where(eq(offertesTable.id, offerteId));
+    if (!offerte) return void res.status(404).json({ error: "Offerte niet gevonden" });
+
+    const ctx = await maakTransitieContext(req, db);
+    const result = await workflowService.transiteer("offerte", offerteId, "ingetrokken", {
+      ...ctx,
+      params: { reden },
+    });
+    if (!result.ok) {
+      return void res.status(result.error!.httpStatus).json({ error: result.error!.bericht });
+    }
+
+    invalideerContext("offerte", offerteId);
+    res.json({ ok: true });
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });

@@ -313,6 +313,58 @@ export function magGoedkeuren(
 
 // ── Kernacties ───────────────────────────────────────────────────────────────
 
+export async function haalGoedgekeurdeAanvraag(
+  db: Db,
+  objectType: string,
+  objectId: number,
+): Promise<GoedkeuringAanvraag | null> {
+  const [rij] = await db
+    .select()
+    .from(goedkeuringAanvragenTable)
+    .where(
+      and(
+        eq(goedkeuringAanvragenTable.objectType, objectType),
+        eq(goedkeuringAanvragenTable.objectId, objectId),
+        eq(goedkeuringAanvragenTable.status, "goedgekeurd"),
+      ),
+    )
+    .orderBy(desc(goedkeuringAanvragenTable.aangemaaktOp))
+    .limit(1);
+  return rij ?? null;
+}
+
+export async function vervangGoedgekeurdeAanvraag(
+  db: Db,
+  objectType: string,
+  objectId: number,
+  actor: GoedkeuringActor,
+  reden?: string | null,
+): Promise<void> {
+  const aanvraag = await haalGoedgekeurdeAanvraag(db, objectType, objectId);
+  if (!aanvraag) return;
+  const nu = new Date();
+  await db
+    .update(goedkeuringAanvragenTable)
+    .set({ status: "vervangen", afgehandeldOp: nu, bijgewerktOp: nu })
+    .where(eq(goedkeuringAanvragenTable.id, aanvraag.id));
+  await logTijdlijn(db, {
+    objectType,
+    objectId,
+    vanStatus: "goedgekeurd",
+    naarStatus: "vervangen",
+    gebruikerId: actor.gebruikerId,
+    gebruikerNaam: actor.gebruikerNaam,
+    reden: reden ?? "Materiële wijziging na goedkeuring",
+  });
+  logGoedkeuringAudit({
+    actor,
+    actie: "aanvraag_vervangen",
+    documentType: aanvraag.documentType,
+    objectId,
+    meta: { aanvraagId: aanvraag.id, reden },
+  });
+}
+
 export interface VereistGoedkeuring {
   vereist: boolean;
   beleidsregel: GoedkeuringBeleidsregel | null;

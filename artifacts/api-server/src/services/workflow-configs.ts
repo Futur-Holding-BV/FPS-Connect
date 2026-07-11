@@ -28,7 +28,7 @@ import {
   type TransitieContext,
   type WorkflowConfig,
 } from "./workflow-engine";
-import { checkVereistGoedkeuring } from "./goedkeuring-engine";
+import { checkVereistGoedkeuring, haalGoedgekeurdeAanvraag } from "./goedkeuring-engine";
 
 // ── Hulpfuncties ───────────────────────────────────────────────────────────────
 
@@ -176,7 +176,34 @@ const offerteConfig: WorkflowConfig<Offerte> = {
     return r!;
   },
   transities: [
-    { van: "concept", naar: "verzonden", label: "Verzenden", bevoegdheid: ["offertes", 2] },
+    {
+      van: "concept",
+      naar: "verzonden",
+      label: "Verzenden",
+      bevoegdheid: ["offertes", 2],
+      // Als het goedkeuringsbeleid een formele aanvraag vereist, moet de
+      // aanvraag eerst volledig goedgekeurd zijn voordat de offerte verzonden
+      // kan worden. `viaGoedkeuring: true` wordt alleen door de
+      // Governance & Approval Engine gezet na volledige goedkeuring.
+      precheck: async (entity, ctx) => {
+        if (ctx.params?.viaGoedkeuring === true) return null;
+        const { vereist } = await checkVereistGoedkeuring(
+          ctx.db,
+          "offerte",
+          entity.bedragInclBtw,
+          null,
+        );
+        if (vereist) {
+          const goedgekeurd = await haalGoedgekeurdeAanvraag(ctx.db, "offerte", entity.id);
+          if (!goedgekeurd) {
+            return voorwaardeFout(
+              "Voor deze offerte is een formele goedkeuringsaanvraag vereist op basis van het geldende goedkeuringsbeleid. Dien de offerte in via het goedkeuringsproces in het tabblad 'Goedkeuring'.",
+            );
+          }
+        }
+        return null;
+      },
+    },
     { van: ["concept", "verzonden"], naar: "bekeken", label: "Markeren als bekeken" },
     {
       van: ["verzonden", "bekeken"],
@@ -191,6 +218,19 @@ const offerteConfig: WorkflowConfig<Offerte> = {
       bevoegdheid: ["offertes", 2],
     },
     { van: "afgewezen", naar: "concept", label: "Heropenen als concept", bevoegdheid: ["offertes", 2] },
+    {
+      van: ["verzonden", "bekeken"],
+      naar: "ingetrokken",
+      label: "Intrekken",
+      bevoegdheid: ["offertes", 3],
+      precheck: async (_entity, ctx) => {
+        if (!ctx.params?.reden || String(ctx.params.reden).trim() === "") {
+          return voorwaardeFout("Een reden is verplicht bij het intrekken van een offerte.", ["reden"]);
+        }
+        return null;
+      },
+    },
+    { van: "ingetrokken", naar: "concept", label: "Heropenen als concept", bevoegdheid: ["offertes", 2] },
   ],
 };
 

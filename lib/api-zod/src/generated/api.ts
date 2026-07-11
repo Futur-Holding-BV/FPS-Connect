@@ -12332,6 +12332,23 @@ export const VerzendOfferteResponse = zod.object({
 
 
 /**
+ * Trekt een verzonden of bekeken offerte formeel in. Een reden is verplicht. De offerte blijft zichtbaar maar krijgt de status "ingetrokken". De intrekking wordt vastgelegd in het transitielogboek. Vereist bevoegdheidsniveau offertes:3.
+ * @summary Verzonden offerte formeel intrekken
+ */
+export const IntrekkenOfferteParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const IntrekkenOfferteBody = zod.object({
+  "reden": zod.string().describe('Verplichte reden voor de intrekking van de offerte')
+})
+
+export const IntrekkenOfferteResponse = zod.object({
+  "ok": zod.boolean().optional()
+})
+
+
+/**
  * @summary Klantcontracten van een offerte ophalen
  */
 export const ListOfferteKlantContractenParams = zod.object({

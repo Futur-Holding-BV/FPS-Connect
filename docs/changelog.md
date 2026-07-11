@@ -1,3 +1,28 @@
+## 2026-07-11 — Governance & Approval Engine — offertes pilotkoppeling
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (additief op bestaande motor + offerte-routes, geen bestaande transitiepaden gebroken)
+
+**Nieuw gebouwd:**
+- **Goedkeuringsgate offerte verzenden**: `POST /offertes/:id/verzenden` controleert nu of het goedkeuringsbeleid een formele aanvraag vereist voor dit offertebedrag; bij een openstaand of ontbrekend akkoord blokkeert verzending met HTTP 422 + code `GOEDKEURING_VEREIST`. Dezelfde check is ook in de werkflow-precheck (`concept → verzonden`) gebouwd.
+- **Materiële-wijzigingsguard**: een bedragwijziging via `PATCH /offertes/:id` nadat een aanvraag goedgekeurd is, markeert de aanvraag automatisch als "vervangen" (via nieuwe helper `vervangGoedgekeurdeAanvraag` in goedkeuring-engine.ts). Zo kan een offerte nooit in gewijzigde vorm worden verzonden op basis van een verouderd akkoord.
+- **Offerte intrekken**: nieuw endpoint `POST /offertes/:id/intrekken` (bevoegdheid offertes:3); reden verplicht; transitie via WorkflowService naar status "ingetrokken". Nieuwe overgang `{ van: ["verzonden","bekeken"], naar: "ingetrokken" }` in offerteConfig. Vanaf "ingetrokken" is heropenen als concept mogelijk.
+- **Goedkeuring-tab in Offerte Studio**: nieuw tabblad "Goedkeuring" in `studio.tsx` met de bestaande `GoedkeuringWidget` (objectType="offerte"). Toelichting over het proces en de materiële-wijzigingsregel zijn opgenomen als contextparagraaf. Indienen-knop alleen zichtbaar in concept-status.
+- **Statuslabels "ingetrokken"**: toegevoegd aan `STATUS_KLEUR`/`STATUS_LABEL` in `studio.tsx` (leigrijs) en `STATUS_KLEUR` in `index.tsx`.
+- **OpenAPI**: `POST /offertes/{id}/intrekken` + schema `OfferteIntrekkenInput` toegevoegd; codegen uitgevoerd → `useIntrekkenOfferte`-hook gegenereerd in `lib/api-client-react`.
+- **Engine helpers**: `haalGoedgekeurdeAanvraag(db, objectType, objectId)` en `vervangGoedgekeurdeAanvraag(db, objectType, objectId, actor, reden)` toegevoegd aan goedkeuring-engine.ts en geëxporteerd.
+
+**Hardening reden-verplichting (n.a.v. code review, ronde 1):** twee lagen toegevoegd zodat intrekken zonder reden onmogelijk is: (1) precheck in de `verzonden|bekeken → ingetrokken` workflow-transitie vereist `ctx.params.reden`; (2) expliciete 422-blokkade in `PATCH /offertes/:id` op `status: "ingetrokken"` met verwijzing naar het dedicated `/intrekken`-endpoint.
+
+**Hardening portaal + UI-intrekken-flow (n.a.v. code review, ronde 2):**
+- `portaal.ts POST /portaal/:token/ondertekenen`: blokkeert nu ook bij `offerte.status === "ingetrokken"` (409), zodat een ingetrokken offerte nooit meer ondertekend kan worden ongeacht de portaalstatus.
+- `studio.tsx`: "ingetrokken" verwijderd uit de generieke status-dropdown (`VOLGENDE_STATUSSEN`). In plaats daarvan een dedicated "Intrekken"-knop (zichtbaar bij verzonden/bekeken, bevoegdheid offertes:3) die een eigen dialoog opent. De dialoog vereist een vrije-tekst reden en roept `POST /offertes/:id/intrekken` aan via de gegenereerde `useIntrekkenOfferte`-hook. Na bevestiging worden de queries geïnvalideerd en toont een toast.
+
+**Hardening gecombineerde PATCH-bypass + bevoegdheids-afstemming (n.a.v. code review, ronde 3):**
+- `PATCH /offertes/:id`: blokkeert nu een gecombineerde bedrag+status="verzonden" in één aanroep (422, `GECOMBINEERDE_BEDRAG_STATUS_VERBODEN`). Zo kan een goedkeuringscheck nooit passeren op het oude bedrag terwijl het nieuwe bedrag de goedkeuring al zou invalideren. Volgorde blijft correct: bedrag opslaan (apart PATCH) → hernieuwde goedkeuringsaanvraag indien vereist → verzenden.
+- `studio.tsx`: intrekken-knop gated op `kanIntrekken` = `heeftNiveau("offertes", 3)` in lijn met de backend-vereiste.
+
+**Bewijs:** `pnpm run typecheck` groen (alle 5 packages, vier keer — na elke correctieronde); API server herstart zonder fouten.
+
 ## 2026-07-10 — Governance & Approval Engine — kernmotor + pilot inkoopbon (Task #519)
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (additieve tabellen/module + één pilot-integratie, generieke motor niet gekoppeld aan bestaande transitiepaden buiten de pilot)

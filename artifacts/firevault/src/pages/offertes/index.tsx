@@ -36,6 +36,7 @@ const STATUS_KLEUR: Record<string, string> = {
   geaccepteerd: "bg-emerald-100 text-emerald-800 border-emerald-200",
   afgewezen: "bg-rose-100 text-rose-800 border-rose-200",
   vervallen: "bg-muted text-muted-foreground border-border",
+  ingetrokken: "bg-slate-100 text-slate-700 border-slate-300",
 };
 
 function euro(bedrag: number) {

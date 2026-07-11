@@ -9946,6 +9946,39 @@ paths:
                   ok:
                     type: boolean
 
+  /offertes/{id}/intrekken:
+    post:
+      operationId: intrekkenOfferte
+      tags: [offertes]
+      summary: Verzonden offerte formeel intrekken
+      description: >
+        Trekt een verzonden of bekeken offerte formeel in. Een reden is verplicht.
+        De offerte blijft zichtbaar maar krijgt de status "ingetrokken". De
+        intrekking wordt vastgelegd in het transitielogboek. Vereist bevoegdheidsniveau
+        offertes:3.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OfferteIntrekkenInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+
   /offertes/{id}/klant-contracten:
     get:
       operationId: listOfferteKlantContracten
@@ -29113,6 +29146,14 @@ components:
           type: string
         afsluiting:
           type: string
+
+    OfferteIntrekkenInput:
+      type: object
+      required: [reden]
+      properties:
+        reden:
+          type: string
+          description: Verplichte reden voor de intrekking van de offerte
 
     OfferteVerzendenInput:
       type: object

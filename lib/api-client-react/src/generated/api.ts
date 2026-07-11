@@ -362,6 +362,7 @@ import type {
   InstallatieInput,
   InstallatieStatus,
   InstallatieUitvoeren201,
+  IntrekkenOfferte200,
   JaarAfsluitingInput,
   JaarAfsluitingRegel,
   JaarAfsluitingRegelInput,
@@ -540,6 +541,7 @@ import type {
   OfferteHoofdstuk,
   OfferteHoofdstukInput,
   OfferteInput,
+  OfferteIntrekkenInput,
   OfferteKlantContract,
   OfferteKlantContractInput,
   OffertePortaalToken,
@@ -35115,6 +35117,78 @@ export const useVerzendOfferte = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getVerzendOfferteMutationOptions(options));
+    }
+
+export const getIntrekkenOfferteUrl = (id: number,) => {
+
+
+
+
+  return `/api/offertes/${id}/intrekken`
+}
+
+/**
+ * Trekt een verzonden of bekeken offerte formeel in. Een reden is verplicht. De offerte blijft zichtbaar maar krijgt de status "ingetrokken". De intrekking wordt vastgelegd in het transitielogboek. Vereist bevoegdheidsniveau offertes:3.
+ * @summary Verzonden offerte formeel intrekken
+ */
+export const intrekkenOfferte = async (id: number,
+    offerteIntrekkenInput: OfferteIntrekkenInput, options?: RequestInit): Promise<IntrekkenOfferte200> => {
+
+  return customFetch<IntrekkenOfferte200>(getIntrekkenOfferteUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(offerteIntrekkenInput)
+  }
+);}
+
+
+
+
+export const getIntrekkenOfferteMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof intrekkenOfferte>>, TError,{id: number;data: BodyType<OfferteIntrekkenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof intrekkenOfferte>>, TError,{id: number;data: BodyType<OfferteIntrekkenInput>}, TContext> => {
+
+const mutationKey = ['intrekkenOfferte'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof intrekkenOfferte>>, {id: number;data: BodyType<OfferteIntrekkenInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  intrekkenOfferte(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type IntrekkenOfferteMutationResult = NonNullable<Awaited<ReturnType<typeof intrekkenOfferte>>>
+    export type IntrekkenOfferteMutationBody = BodyType<OfferteIntrekkenInput>
+    export type IntrekkenOfferteMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Verzonden offerte formeel intrekken
+ */
+export const useIntrekkenOfferte = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof intrekkenOfferte>>, TError,{id: number;data: BodyType<OfferteIntrekkenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof intrekkenOfferte>>,
+        TError,
+        {id: number;data: BodyType<OfferteIntrekkenInput>},
+        TContext
+      > => {
+      return useMutation(getIntrekkenOfferteMutationOptions(options));
     }
 
 export const getListOfferteKlantContractenUrl = (id: number,) => {

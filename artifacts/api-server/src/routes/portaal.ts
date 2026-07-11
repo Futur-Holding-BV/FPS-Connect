@@ -427,6 +427,8 @@ router.post("/portaal/:token/ondertekenen", async (req, res): Promise<void> => {
       .from(offertesTable)
       .where(eq(offertesTable.id, tokenRecord.offerteId));
     if (!offerte) return void res.status(404).json({ error: "Offerte niet gevonden." });
+    if (offerte.status === "ingetrokken")
+      return void res.status(409).json({ error: "Deze offerte is ingetrokken en kan niet meer worden ondertekend." });
     if (offerte.portaalStatus === "afgewezen")
       return void res.status(409).json({ error: "Afgewezen offerte kan niet meer worden ondertekend." });
 
