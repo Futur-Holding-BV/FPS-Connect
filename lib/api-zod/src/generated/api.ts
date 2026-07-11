@@ -6579,10 +6579,15 @@ export const GoedkeuringAanvraagIntrekkenResponse = zod.object({
 /**
  * @summary Centraal goedkeuringsdashboard — alle open, verlopen en afgewezen aanvragen met escalatiestatus.
  */
+export const listGoedkeuringDashboardQueryVensterMin = 0;
+
+
+
 export const ListGoedkeuringDashboardQueryParams = zod.object({
   "status": zod.enum(['ingediend', 'goedgekeurd', 'afgewezen', 'ingetrokken', 'vervangen']).optional().describe('Filter op status (standaard alle open + recent afgehandeld).'),
   "document_type": zod.coerce.string().optional(),
-  "alleen_verlopen": zod.enum(['true', 'false']).optional().describe('Toon alleen aanvragen waarvan de reactietermijn verstreken is.')
+  "alleen_verlopen": zod.enum(['true', 'false']).optional().describe('Toon alleen aanvragen waarvan de reactietermijn verstreken is.'),
+  "venster": zod.coerce.number().min(listGoedkeuringDashboardQueryVensterMin).optional().describe('Aantal dagen terug te kijken voor afgehandelde aanvragen (goedgekeurd\/afgewezen). 0 = toon alles zonder datumbeperking. Standaard 7. Wordt genegeerd als status expliciet opgegeven is.')
 })
 
 export const ListGoedkeuringDashboardResponseItem = zod.object({

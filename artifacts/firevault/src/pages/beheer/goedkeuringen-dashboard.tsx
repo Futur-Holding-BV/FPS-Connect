@@ -8,7 +8,7 @@ import {
   useGoedkeuringAanvraagAfwijzen,
   getListGoedkeuringDashboardQueryKey,
 } from "@workspace/api-client-react";
-import type { GoedkeuringDashboardItem } from "@workspace/api-client-react";
+import type { GoedkeuringDashboardItem, ListGoedkeuringDashboardParams } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
 import { useToast } from "@/hooks/use-toast";
@@ -77,7 +77,7 @@ function StatKaarten({ items }: { items: GoedkeuringDashboardItem[] }) {
       {[
         { label: "Open aanvragen", waarde: open, icoon: Clock, kleur: "text-blue-600" },
         { label: "Reactietermijn verlopen", waarde: verlopen, icoon: AlertTriangle, kleur: "text-amber-600" },
-        { label: "Afgewezen (7 dgn)", waarde: afgewezen, icoon: XCircle, kleur: "text-destructive" },
+        { label: "Afgewezen (zichtbaar)", waarde: afgewezen, icoon: XCircle, kleur: "text-destructive" },
         { label: "Met escalatie", waarde: metEscalatie, icoon: Bell, kleur: "text-orange-600" },
       ].map(({ label, waarde, icoon: Icon, kleur }) => (
         <Card key={label}>
@@ -199,16 +199,26 @@ export default function GoedkeuringenDashboard() {
 
   const [statusFilter, setStatusFilter] = useState<string>("alle");
   const [alleenVerlopen, setAlleenVerlopen] = useState(false);
+  const [venster, setVenster] = useState<string>("7");
   const [afwijzenAanvraag, setAfwijzenAanvraag] = useState<GoedkeuringDashboardItem | null>(null);
 
   const magGoedkeuren = heeftNiveau("goedkeuring", 3);
 
-  const params = useMemo(() => {
-    const p: Record<string, string> = {};
-    if (statusFilter !== "alle") p.status = statusFilter;
-    if (alleenVerlopen) p.alleen_verlopen = "true";
+  const params = useMemo((): ListGoedkeuringDashboardParams | undefined => {
+    const p: ListGoedkeuringDashboardParams = {};
+    if (statusFilter !== "alle") {
+      p.status = statusFilter as ListGoedkeuringDashboardParams["status"];
+    }
+    if (alleenVerlopen) {
+      p.alleen_verlopen = "true" as ListGoedkeuringDashboardParams["alleen_verlopen"];
+    }
+    // Stuur venster alleen mee als er geen expliciete statusfilter is
+    // (backend negeert venster toch al bij expliciete status).
+    if (statusFilter === "alle" && venster !== "7") {
+      p.venster = parseInt(venster, 10);
+    }
     return Object.keys(p).length > 0 ? p : undefined;
-  }, [statusFilter, alleenVerlopen]);
+  }, [statusFilter, alleenVerlopen, venster]);
 
   const { data: items, isLoading } = useListGoedkeuringDashboard(params, {
     query: { queryKey: getListGoedkeuringDashboardQueryKey(params) },
@@ -263,18 +273,31 @@ export default function GoedkeuringenDashboard() {
 
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-3">
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
+        <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); }}>
           <SelectTrigger className="w-52">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="alle">Alle (open + recent)</SelectItem>
+            <SelectItem value="alle">Alle (open + afgehandeld)</SelectItem>
             <SelectItem value="ingediend">Open — wacht op beslissing</SelectItem>
-            <SelectItem value="goedgekeurd">Goedgekeurd</SelectItem>
-            <SelectItem value="afgewezen">Afgewezen</SelectItem>
+            <SelectItem value="goedgekeurd">Goedgekeurd — volledig archief</SelectItem>
+            <SelectItem value="afgewezen">Afgewezen — volledig archief</SelectItem>
             <SelectItem value="ingetrokken">Ingetrokken</SelectItem>
           </SelectContent>
         </Select>
+        {statusFilter === "alle" && (
+          <Select value={venster} onValueChange={setVenster}>
+            <SelectTrigger className="w-52">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="7">Afgehandeld: laatste 7 dagen</SelectItem>
+              <SelectItem value="30">Afgehandeld: laatste 30 dagen</SelectItem>
+              <SelectItem value="90">Afgehandeld: laatste 90 dagen</SelectItem>
+              <SelectItem value="0">Afgehandeld: volledig archief</SelectItem>
+            </SelectContent>
+          </Select>
+        )}
         <div className="flex items-center gap-2">
           <Switch
             id="alleen-verlopen"

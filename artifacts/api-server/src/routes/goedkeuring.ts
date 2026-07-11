@@ -255,19 +255,26 @@ router.get(
       const statusFilter = typeof req.query.status === "string" ? req.query.status : undefined;
       const documentTypeFilter = typeof req.query.document_type === "string" ? req.query.document_type : undefined;
       const alleenVerlopen = req.query.alleen_verlopen === "true";
+      const vensterRaw = typeof req.query.venster === "string" ? parseInt(req.query.venster, 10) : NaN;
+      const vensterDagen = Number.isFinite(vensterRaw) && vensterRaw >= 0 ? vensterRaw : 7;
 
       const whereCondities = [];
       if (statusFilter) {
         whereCondities.push(eq(goedkeuringAanvragenTable.status, statusFilter));
       } else {
-        // Standaard: alle ingediende aanvragen + recent (7d) afgehandelde
+        // Standaard: alle ingediende aanvragen + afgehandelde binnen het venster.
+        // vensterDagen=0 betekent geen datumbeperking (toon alles).
+        const afgehandeldConditie =
+          vensterDagen === 0
+            ? sql`${goedkeuringAanvragenTable.status} IN ('goedgekeurd', 'afgewezen')`
+            : and(
+                sql`${goedkeuringAanvragenTable.status} IN ('goedgekeurd', 'afgewezen')`,
+                sql`${goedkeuringAanvragenTable.afgehandeldOp} > now() - (${vensterDagen} || ' days')::interval`,
+              );
         whereCondities.push(
           or(
             eq(goedkeuringAanvragenTable.status, "ingediend"),
-            and(
-              sql`${goedkeuringAanvragenTable.status} IN ('goedgekeurd', 'afgewezen')`,
-              sql`${goedkeuringAanvragenTable.afgehandeldOp} > now() - interval '7 days'`,
-            ),
+            afgehandeldConditie,
           ),
         );
       }

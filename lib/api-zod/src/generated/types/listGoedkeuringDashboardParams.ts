@@ -18,4 +18,9 @@ document_type?: string;
  * Toon alleen aanvragen waarvan de reactietermijn verstreken is.
  */
 alleen_verlopen?: ListGoedkeuringDashboardAlleenVerlopen;
+/**
+ * Aantal dagen terug te kijken voor afgehandelde aanvragen (goedgekeurd/afgewezen). 0 = toon alles zonder datumbeperking. Standaard 7. Wordt genegeerd als status expliciet opgegeven is.
+ * @minimum 0
+ */
+venster?: number;
 };
