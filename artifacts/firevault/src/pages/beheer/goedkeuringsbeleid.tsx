@@ -670,6 +670,14 @@ export default function GoedkeuringsbeleidBeheer() {
   const magBeheren = heeftNiveau("goedkeuring", 4);
   const [tabActief, setTabActief] = useState("aanvragen");
 
+  if (!heeftNiveau("goedkeuring", 1)) {
+    return (
+      <div className="p-6 text-sm text-muted-foreground">
+        U heeft geen toegang tot het goedkeuringsbeleid.
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-6 p-6">
       <div className="flex items-center gap-3">

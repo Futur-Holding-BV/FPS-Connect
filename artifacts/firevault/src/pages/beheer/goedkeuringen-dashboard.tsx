@@ -32,7 +32,7 @@ import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from "@/components/ui/tooltip";
 import {
-  CheckCircle2, XCircle, Clock, AlertTriangle, Bell, ChevronRight, LayoutDashboard,
+  CheckCircle2, XCircle, Clock, AlertTriangle, Bell, ChevronRight, LayoutDashboard, Download,
 } from "lucide-react";
 import { GOEDKEURING_STATUS_INFO } from "@/components/goedkeuring/goedkeuring-widget";
 
@@ -55,6 +55,60 @@ function datumDuur(iso?: string | null) {
   if (uren < 24) return `${uren} uur`;
   const dagen = Math.floor(uren / 24);
   return `${dagen} ${dagen === 1 ? "dag" : "dagen"}`;
+}
+
+function csvCell(waarde: string | number | null | undefined): string {
+  if (waarde == null) return "";
+  const tekst = String(waarde);
+  if (tekst.includes(",") || tekst.includes('"') || tekst.includes("\n")) {
+    return `"${tekst.replace(/"/g, '""')}"`;
+  }
+  return tekst;
+}
+
+function exporteerAlsCsv(items: GoedkeuringDashboardItem[]) {
+  const kopteksten = [
+    "#",
+    "Documenttype",
+    "Omschrijving",
+    "Bedrag",
+    "Ingediend door",
+    "Ingediend op",
+    "Afgehandeld op",
+    "Status",
+    "Reden afwijzing",
+  ];
+
+  const statusLabels: Record<string, string> = {
+    concept: "Concept",
+    ingediend: "Ingediend",
+    goedgekeurd: "Goedgekeurd",
+    afgewezen: "Afgewezen",
+    ingetrokken: "Ingetrokken",
+    vervangen: "Vervangen",
+  };
+
+  const rijen = items.map((item) => [
+    csvCell(item.id),
+    csvCell(item.document_type),
+    csvCell(item.omschrijving),
+    csvCell(item.bedrag != null ? item.bedrag.toFixed(2).replace(".", ",") : null),
+    csvCell(item.ingediend_door_naam),
+    csvCell(item.ingediend_op ? new Date(item.ingediend_op).toLocaleDateString("nl-NL") : null),
+    csvCell(item.afgehandeld_op ? new Date(item.afgehandeld_op).toLocaleDateString("nl-NL") : null),
+    csvCell(statusLabels[item.status] ?? item.status),
+    csvCell(item.afwijzing_reden),
+  ].join(","));
+
+  const inhoud = [kopteksten.map(csvCell).join(","), ...rijen].join("\r\n");
+  const blob = new Blob(["\uFEFF" + inhoud], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  const datumStempel = new Date().toISOString().slice(0, 10);
+  link.download = `goedkeuringen-${datumStempel}.csv`;
+  link.click();
+  URL.revokeObjectURL(url);
 }
 
 const ESCALATIE_TYPE_INFO: Record<string, { label: string; kleur: string }> = {
@@ -274,7 +328,7 @@ export default function GoedkeuringenDashboard() {
       )}
 
       {/* Filters */}
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3 justify-between">
         <div className="flex items-center gap-2 rounded-md border px-3 py-1.5 bg-primary/5 border-primary/20">
           <Switch
             id="alleen-mijn-acties"
@@ -320,6 +374,16 @@ export default function GoedkeuringenDashboard() {
             Alleen verlopen reactietermijn
           </Label>
         </div>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={isLoading || (items ?? []).length === 0}
+          onClick={() => exporteerAlsCsv(items ?? [])}
+          className="ml-auto shrink-0"
+        >
+          <Download className="h-4 w-4 mr-1.5" />
+          Exporteren als CSV
+        </Button>
       </div>
 
       {/* Tabel */}
