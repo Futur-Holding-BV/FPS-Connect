@@ -146,6 +146,7 @@ DB-kolommen (`wbdbo`, `wrd`) en de bijbehorende prop-typevelden blijven bestaan 
 - Alle UI-tekst volledig in het Nederlands
 - Geen emoji's in de code of UI
 - Rode/oranje primaire kleur (HSL 12 90% 50%), donkere sidebar
+- Altijd meerkeuzevragen stellen via de `user_query` tool — nooit als platte tekst in het antwoord
 
 ## Gotchas
 
