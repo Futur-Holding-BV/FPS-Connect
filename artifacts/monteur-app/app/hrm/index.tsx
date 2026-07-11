@@ -67,6 +67,7 @@ export default function HrmDashboard() {
 
   const navKaarten = [
     { titel: "Verlof", omschrijving: "Saldo bekijken en aanvragen", route: "/hrm/verlof" as const, testID: "hrm-verlof-navkaart" },
+    { titel: "Loonstrookjes", omschrijving: "Loonstroken en jaaropgaven bekijken", route: "/hrm/loonstrookjes" as const, testID: "hrm-loonstrookjes-navkaart" },
     { titel: "Opleidingen", omschrijving: "Trainingen, certificaten en bekwaamheden", route: "/hrm/opleidingen" as const, testID: "hrm-opleidingen-navkaart" },
     { titel: "Kennisbank", omschrijving: "Werkafspraken, handboeken en toolboxen", route: "/hrm/kennisbank" as const, testID: "hrm-kennisbank-navkaart" },
   ];

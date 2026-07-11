@@ -9,6 +9,7 @@ import {
 import { requireBevoegdheid } from "../middlewares/auth";
 import { ObjectStorageService } from "../lib/objectStorage";
 import { logger } from "../lib/logger";
+import { extraheerPdfTekst } from "../lib/pdfTekst";
 
 const router = Router();
 const storage = new ObjectStorageService();
@@ -755,6 +756,222 @@ router.get("/sepa-bestanden/:id/download", requireBevoegdheid("salarisarchief", 
     file.createReadStream().pipe(res);
   } catch (err) {
     logger.error({ err }, "SEPA download mislukt");
+    res.status(500).json({ error: "Download mislukt" });
+  }
+});
+
+// ── MEDEWERKER-NAAM MATCHING OP PAGINATEKST ──────────────────────────────────
+
+async function matchMedewerkerOpTekst(tekst: string): Promise<{
+  medewerkerId: number | null;
+  medewerkerNaamAi: string | null;
+  aiZekerheid: number;
+  aiToelichting: string;
+  status: string;
+}> {
+  const medewerkers = await db
+    .select({ id: medewerkersTable.id, naam: medewerkersTable.naam })
+    .from(medewerkersTable);
+
+  if (medewerkers.length === 0) {
+    return { medewerkerId: null, medewerkerNaamAi: null, aiZekerheid: 0, aiToelichting: "Geen medewerkers in systeem", status: "geupload" };
+  }
+
+  const tekstLower = tekst.toLowerCase();
+  let bestMatch: { id: number; naam: string; score: number } | null = null;
+
+  for (const mw of medewerkers) {
+    const naamLower = mw.naam.toLowerCase().trim();
+    const naamDelen = naamLower.split(/\s+/);
+
+    if (tekstLower.includes(naamLower)) {
+      const score = 0.95;
+      if (!bestMatch || score > bestMatch.score) bestMatch = { id: mw.id, naam: mw.naam, score };
+    } else {
+      const hits = naamDelen.filter((d) => d.length > 2 && tekstLower.includes(d));
+      if (hits.length >= 2) {
+        const score = 0.75;
+        if (!bestMatch || score > bestMatch.score) bestMatch = { id: mw.id, naam: mw.naam, score };
+      } else if (hits.length === 1) {
+        const score = 0.4;
+        if (!bestMatch || score > bestMatch.score) bestMatch = { id: mw.id, naam: mw.naam, score };
+      }
+    }
+  }
+
+  if (!bestMatch) {
+    return { medewerkerId: null, medewerkerNaamAi: null, aiZekerheid: 0, aiToelichting: "Naam niet herkend op pagina", status: "geupload" };
+  }
+
+  if (bestMatch.score >= 0.85) {
+    return { medewerkerId: bestMatch.id, medewerkerNaamAi: bestMatch.naam, aiZekerheid: bestMatch.score, aiToelichting: "Naam automatisch herkend op pagina", status: "gekoppeld" };
+  }
+
+  return { medewerkerId: bestMatch.id, medewerkerNaamAi: bestMatch.naam, aiZekerheid: bestMatch.score, aiToelichting: "Mogelijk match — handmatige controle vereist", status: "controle_nodig" };
+}
+
+// ── SPLIT-PDF: één multi-pagina PDF → losse strookjes per medewerker ─────────
+
+router.post(
+  "/salarisarchief/split-pdf",
+  requireBevoegdheid("salarisarchief", 3),
+  upload.single("bestand"),
+  async (req: Request, res: Response): Promise<void> => {
+    const bestand = req.file;
+    if (!bestand) { res.status(400).json({ error: "Geen bestand meegestuurd" }); return; }
+    if (bestand.mimetype !== "application/pdf" && !bestand.originalname.endsWith(".pdf")) {
+      res.status(400).json({ error: "Alleen PDF-bestanden worden ondersteund" });
+      return;
+    }
+
+    const userId = sessieGebruikerId(req);
+    const gebruikerNaam = sessieGebruikerNaam(req);
+    const { omschrijving, periode_jaar, periode_maand, type: opgegeven_type } = req.body as {
+      omschrijving?: string; periode_jaar?: string; periode_maand?: string; type?: string;
+    };
+    const jaar = periode_jaar ? parseInt(periode_jaar, 10) : null;
+    const maand = periode_maand ? parseInt(periode_maand, 10) : null;
+    const type = opgegeven_type ?? "loonstrook";
+
+    // 1. Tekst per pagina extraheren
+    const { paginaTeksten, paginaAantal } = await extraheerPdfTekst(bestand.buffer);
+
+    if (!paginaAantal || paginaAantal === 0) {
+      res.status(422).json({ error: "PDF bevat geen leesbare pagina's" });
+      return;
+    }
+
+    // 2. PDF opsplitsen per pagina via pdf-lib
+    const { PDFDocument } = await import("pdf-lib");
+    const srcDoc = await PDFDocument.load(bestand.buffer, { ignoreEncryption: true });
+    const pageCount = srcDoc.getPageCount();
+
+    // 3. Batch aanmaken
+    const [batch] = await db.insert(salarisbatchesTable).values({
+      omschrijving: omschrijving ?? `Split PDF: ${bestand.originalname}`,
+      periodeJaar: jaar,
+      periodeMaand: maand,
+      status: "verwerken",
+      uploaderId: userId,
+      uploaderNaam: gebruikerNaam,
+      totaalBestanden: pageCount,
+    }).returning();
+
+    let gekoppeld = 0;
+    let ongekoppeld = 0;
+    let controleNodig = 0;
+    const documenten = [];
+
+    // 4. Per pagina: tekst matchen + losse PDF opslaan
+    for (let i = 0; i < pageCount; i++) {
+      const paginaDoc = await PDFDocument.create();
+      const [gekopieerd] = await paginaDoc.copyPagesFrom(srcDoc, [i]);
+      paginaDoc.addPage(gekopieerd);
+      const pageBuffer = Buffer.from(await paginaDoc.save());
+
+      const paginaTekst = paginaTeksten[i] ?? "";
+      const match = await matchMedewerkerOpTekst(paginaTekst);
+
+      const paginaNaam = match.medewerkerNaamAi
+        ? `${match.medewerkerNaamAi.replace(/\s+/g, "_")}_pagina${i + 1}.pdf`
+        : `pagina${i + 1}.pdf`;
+
+      const subPath = `salarisbestanden/${batch.id}/${Date.now()}_${paginaNaam}`;
+      let objectPath: string;
+      try {
+        objectPath = await storage.uploadBestand(subPath, pageBuffer, "application/pdf");
+      } catch (err) {
+        logger.error({ err, pagina: i + 1 }, "PDF-pagina upload naar object storage mislukt");
+        continue;
+      }
+
+      if (match.status === "gekoppeld") gekoppeld++;
+      else if (match.status === "controle_nodig") controleNodig++;
+      else ongekoppeld++;
+
+      const [doc] = await db.insert(salarisbestandenTable).values({
+        batchId: batch.id,
+        type,
+        periodeJaar: jaar,
+        periodeMaand: maand,
+        medewerkerId: match.medewerkerId,
+        medewerkerNaamAi: match.medewerkerNaamAi,
+        status: match.status,
+        zichtbaarMedewerker: false,
+        bestandsnaam: paginaNaam,
+        objectPath,
+        bestandsgrootte: pageBuffer.length,
+        mimeType: "application/pdf",
+        uploaderId: userId,
+        uploaderNaam: gebruikerNaam,
+        aiZekerheid: match.aiZekerheid,
+        aiToelichting: match.aiToelichting,
+        bronbestandNaam: bestand.originalname,
+      }).returning();
+
+      await logAudit({
+        documentId: doc.id,
+        actie: "split-upload",
+        gebruikerId: userId,
+        gebruikerNaam,
+        medewerkerId: match.medewerkerId,
+        documentType: type,
+        batchId: batch.id,
+        extra: { pagina: i + 1, aiZekerheid: match.aiZekerheid },
+      });
+
+      documenten.push(doc);
+    }
+
+    // 5. Batch bijwerken
+    await db.update(salarisbatchesTable).set({
+      status: "gereed",
+      gekoppeld,
+      ongekoppeld,
+      controleNodig,
+      bijgewerktOp: new Date(),
+    }).where(eq(salarisbatchesTable.id, batch.id));
+
+    const [bijgewerktBatch] = await db.select().from(salarisbatchesTable).where(eq(salarisbatchesTable.id, batch.id));
+    res.status(201).json({ ...mapBatch(bijgewerktBatch), documenten: documenten.map((d) => mapDoc(d)) });
+  },
+);
+
+// ── MIJN SALARISDOCUMENT DIRECT DOWNLOAD (bearer-compatibel) ─────────────────
+
+router.get("/mijn/salarisdocumenten/:id/download", async (req: Request, res: Response): Promise<void> => {
+  const userId = sessieGebruikerId(req);
+  if (!userId) { res.status(401).json({ error: "Niet ingelogd" }); return; }
+
+  const docId = parseInt(String(req.params["id"] ?? "0"), 10);
+
+  const [mw] = await db
+    .select({ id: medewerkersTable.id, naam: medewerkersTable.naam })
+    .from(medewerkersTable)
+    .where(eq(medewerkersTable.gebruikerId, userId))
+    .limit(1);
+  if (!mw) { res.status(403).json({ error: "Geen medewerker-account gekoppeld" }); return; }
+
+  const [doc] = await db
+    .select()
+    .from(salarisbestandenTable)
+    .where(and(
+      eq(salarisbestandenTable.id, docId),
+      eq(salarisbestandenTable.medewerkerId, mw.id),
+      eq(salarisbestandenTable.zichtbaarMedewerker, true),
+    ))
+    .limit(1);
+  if (!doc) { res.status(404).json({ error: "Niet gevonden of geen toegang" }); return; }
+
+  try {
+    const file = await storage.getObjectEntityFile(doc.objectPath);
+    const [meta] = await file.getMetadata();
+    res.setHeader("Content-Type", meta.contentType ?? doc.mimeType ?? "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename*=UTF-8''${encodeURIComponent(doc.bestandsnaam)}`);
+    await logAudit({ documentId: docId, actie: "downloaden", gebruikerId: userId, gebruikerNaam: mw.naam, medewerkerId: mw.id, documentType: doc.type });
+    file.createReadStream().pipe(res);
+  } catch (err) {
+    logger.error({ err }, "Mijn salarisdocument download mislukt");
     res.status(500).json({ error: "Download mislukt" });
   }
 });

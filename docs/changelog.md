@@ -1,3 +1,23 @@
+## 2026-07-11 — Loonstrookjes-module: split-PDF + monteur-app self-service
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (additief; geen bestaande routes gewijzigd)
+
+**Nieuw gebouwd:**
+- `POST /api/salarisarchief/split-pdf` — accepteert één multi-pagina PDF, splitst per pagina via pdf-lib, extraheert tekst per pagina via pdfTekst.ts, koppelt medewerker-naam via `matchMedewerkerOpTekst()` (volledige naam ≥ 95% score → gekoppeld; deelnamen ≥ 75% → controle_nodig), slaat losse PDF-pagina's op in object storage, maakt batch + salarisbestand records aan. Vereist `salarisarchief:3` bevoegdheid.
+- `GET /api/mijn/salarisdocumenten/:id/download` — directe download bearer-compatibel (zonder salarisarchief-bevoegdheid), controleert medewerker-eigenaarschap + zichtbaarMedewerker flag.
+- `artifacts/monteur-app/app/hrm/loonstrookjes.tsx` — nieuw scherm: toont eigen loonstroken + jaaropgaven, gesorteerd per type, download via expo-file-system/legacy + expo-sharing (Openen-knop per document).
+- `artifacts/monteur-app/app/hrm/index.tsx` — "Loonstrookjes" nav-kaart toegevoegd (positie 2, na Verlof).
+- `artifacts/firevault/src/pages/salarisarchief/index.tsx` — "PDF splitsen per medewerker" card vóór de reguliere upload-card; boekhouder selecteert één multi-pagina PDF, kiest type/periode, klikt "PDF splitsen", wordt doorgestuurd naar batch-detailpagina.
+
+**Reeds aanwezig (geen wijziging nodig):**
+- Web self-service `/mijn/salarisdocumenten` bestond al volledig (kantoormedewerkers).
+- Bearer-auth middleware zet `req.session.userId` ook bij token-verzoeken → alle `/mijn/`-endpoints werken voor monteur-app.
+
+**Typecheck:** api-server groen (geen nieuwe fouten), monteur-app groen, firevault groen (pre-existerende fout in goedkeuringsbeleid.tsx ongewijzigd).
+**Build:** api-server esbuild groen (6863ms).
+
+---
+
 ## 2026-07-11 — Escalatiebewaking gekoppeld aan offerte & HRM-besluiten (Task #543)
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (additief; motor was al generiek)

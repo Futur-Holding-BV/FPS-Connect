@@ -2,7 +2,7 @@ import { useState, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import {
-  FileUp, CheckCircle2, AlertCircle, Clock, ChevronRight, Archive, Loader2,
+  FileUp, CheckCircle2, AlertCircle, Clock, ChevronRight, Archive, Loader2, Scissors,
 } from "lucide-react";
 import { useGetSalarisarchiefBatches, getGetSalarisarchiefBatchesQueryKey } from "@workspace/api-client-react";
 import { useRol } from "@/context/rol-context";
@@ -56,7 +56,44 @@ export default function SalarisarchiefPagina() {
   const [periodeMaand, setPeriodeMaand] = useState<string>(String(new Date().getMonth() + 1));
   const [beziggUploaden, setBezigUploaden] = useState(false);
 
+  const splitFileInputRef = useRef<HTMLInputElement>(null);
+  const [splitBestand, setSplitBestand] = useState<File | null>(null);
+  const [splitType, setSplitType] = useState("loonstrook");
+  const [splitOmschrijving, setSplitOmschrijving] = useState("");
+  const [splitJaar, setSplitJaar] = useState<string>(String(new Date().getFullYear()));
+  const [splitMaand, setSplitMaand] = useState<string>(String(new Date().getMonth() + 1));
+  const [bezigSplitsen, setBezigSplitsen] = useState(false);
+
   const { data: batches, isLoading } = useGetSalarisarchiefBatches();
+
+  async function splitPdf() {
+    if (!splitBestand) return;
+    setBezigSplitsen(true);
+    try {
+      const form = new FormData();
+      form.append("bestand", splitBestand);
+      form.append("type", splitType);
+      form.append("omschrijving", splitOmschrijving || `Split PDF: ${splitBestand.name}`);
+      form.append("periode_jaar", splitJaar);
+      form.append("periode_maand", splitMaand);
+      const res = await fetch("/api/salarisarchief/split-pdf", { method: "POST", body: form, credentials: "include" });
+      if (!res.ok) throw new Error(await res.text());
+      const batch = await res.json() as { id: number; totaal_bestanden: number; gekoppeld: number; controle_nodig: number };
+      toast({
+        title: "PDF gesplitst",
+        description: `${batch.totaal_bestanden} pagina('s) verwerkt — ${batch.gekoppeld} automatisch gekoppeld, ${batch.controle_nodig} vereisen controle.`,
+      });
+      setSplitBestand(null);
+      setSplitOmschrijving("");
+      if (splitFileInputRef.current) splitFileInputRef.current.value = "";
+      void queryClient.invalidateQueries({ queryKey: getGetSalarisarchiefBatchesQueryKey() });
+      navigate(`/salarisarchief/batch/${batch.id}`);
+    } catch {
+      toast({ title: "Splitsen mislukt", description: "Controleer of het bestand een geldige PDF is.", variant: "destructive" });
+    } finally {
+      setBezigSplitsen(false);
+    }
+  }
 
   async function upload() {
     if (geselecteerdebestanden.length === 0) return;
@@ -95,6 +132,92 @@ export default function SalarisarchiefPagina() {
           Upload loonstroken, jaaropgaven en andere salarisdocumenten voor medewerkers.
         </p>
       </div>
+
+      {magUploaden && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Scissors className="h-4 w-4" /> PDF splitsen per medewerker
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Upload een gecombineerde PDF met meerdere loonstrookjes. Het systeem splitst de PDF
+              per pagina en koppelt elke pagina automatisch aan de juiste medewerker op basis van
+              naamherkenning.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="space-y-1.5">
+                <Label>Documenttype</Label>
+                <Select value={splitType} onValueChange={setSplitType}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {DOCUMENT_TYPEN.map((t) => (
+                      <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Jaar</Label>
+                <Input
+                  type="number"
+                  value={splitJaar}
+                  onChange={(e) => setSplitJaar(e.target.value)}
+                  min={2000}
+                  max={2100}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Maand</Label>
+                <Select value={splitMaand} onValueChange={setSplitMaand}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {MAANDEN.map((m, i) => (
+                      <SelectItem key={i + 1} value={String(i + 1)}>{m}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Omschrijving (optioneel)</Label>
+                <Input
+                  value={splitOmschrijving}
+                  onChange={(e) => setSplitOmschrijving(e.target.value)}
+                  placeholder="bijv. Loonstroken april 2026"
+                />
+              </div>
+            </div>
+
+            <div
+              className="border-2 border-dashed rounded-lg p-6 text-center cursor-pointer hover:bg-muted/30 transition-colors"
+              onClick={() => splitFileInputRef.current?.click()}
+            >
+              <Scissors className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+              {splitBestand ? (
+                <p className="text-sm font-medium">{splitBestand.name} ({(splitBestand.size / 1024).toFixed(0)} KB)</p>
+              ) : (
+                <p className="text-sm text-muted-foreground">Klik om een multi-pagina PDF te selecteren</p>
+              )}
+              <input
+                ref={splitFileInputRef}
+                type="file"
+                accept=".pdf"
+                className="hidden"
+                onChange={(e) => setSplitBestand(e.target.files?.[0] ?? null)}
+              />
+            </div>
+
+            <div className="flex justify-end">
+              <Button onClick={splitPdf} disabled={!splitBestand || bezigSplitsen}>
+                {bezigSplitsen
+                  ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Splitsen...</>
+                  : <><Scissors className="h-4 w-4 mr-2" />PDF splitsen</>}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {magUploaden && (
         <Card>
