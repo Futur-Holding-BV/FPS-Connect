@@ -47,6 +47,7 @@ import {
   TrendingUp, TrendingDown, Edit2, Package, ShoppingCart, Building2, ShoppingBag, MessageSquare, CheckCircle2, HardHat, Printer, Brain, FileCheck2, ShieldAlert, ShieldCheck,
   ChevronDown, ChevronUp,
 } from "lucide-react";
+import { GoedkeuringWidget } from "@/components/goedkeuring/goedkeuring-widget";
 import {
   Tooltip,
   TooltipContent,
@@ -595,6 +596,19 @@ export default function OpdrachtDetailPagina() {
           {opdracht.werknummer && <p className="text-xs text-muted-foreground mt-0.5">{opdracht.werknummer}</p>}
         </div>
       </div>
+
+      {/* Goedkeuring projectafsluiting */}
+      {isGereed && (
+        <div className="print:hidden">
+          <GoedkeuringWidget
+            objectType="projectafsluiting"
+            objectId={opdrachtId}
+            documentType="projectafsluiting"
+            omschrijving={`Projectafsluiting — ${opdracht.titel}${opdracht.werknummer ? ` (${opdracht.werknummer})` : ""}`}
+            toonIndienKnop={true}
+          />
+        </div>
+      )}
 
       {/* Overzichtkaart */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 print:hidden">

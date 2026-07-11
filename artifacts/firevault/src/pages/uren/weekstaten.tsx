@@ -28,6 +28,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { CheckCircle2, XCircle, Eye, ChevronLeft, ChevronRight, CalendarDays, Lock, Unlock, Clock } from "lucide-react";
+import { GoedkeuringWidget } from "@/components/goedkeuring/goedkeuring-widget";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Label } from "@/components/ui/label";
@@ -217,6 +218,16 @@ function WeekStaatDetailDialog({
               Afwijzingsreden: {ws.afwijzing_reden}
             </div>
           )}
+
+          <div>
+            <GoedkeuringWidget
+              objectType="weekstaat"
+              objectId={ws.id}
+              documentType="weekstaat"
+              omschrijving={`Weekstaat week ${ws.week_nummer} ${ws.jaar} — ${ws.medewerker_naam}`}
+              toonIndienKnop={ws.status === "ingediend"}
+            />
+          </div>
 
           <Table>
             <TableHeader>

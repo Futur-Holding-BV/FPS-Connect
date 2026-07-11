@@ -32,6 +32,7 @@ import {
   Send,
   XCircle,
 } from "lucide-react";
+import { GoedkeuringWidget } from "@/components/goedkeuring/goedkeuring-widget";
 
 const RAPPORT_TYPE_LABEL: Record<string, string> = {
   werkpakket_monteur: "Werkpakket monteur",
@@ -578,16 +579,25 @@ export default function RapportenPagina() {
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      {r.gebouw_id && (
-                        <BekijkenKnop gebouwId={r.gebouw_id} rapportId={r.id} />
-                      )}
-                      {r.gebouw_id && r.status === "definitief" && (
-                        <DownloadKnop gebouwId={r.gebouw_id} rapportId={r.id} titel={veiligeTitel} />
-                      )}
-                      {r.gebouw_id && (
-                        <ProjectOpenenKnop gebouwId={r.gebouw_id} />
-                      )}
+                    <div className="flex flex-col items-end gap-1 shrink-0">
+                      <div className="flex items-center gap-2">
+                        {r.gebouw_id && (
+                          <BekijkenKnop gebouwId={r.gebouw_id} rapportId={r.id} />
+                        )}
+                        {r.gebouw_id && r.status === "definitief" && (
+                          <DownloadKnop gebouwId={r.gebouw_id} rapportId={r.id} titel={veiligeTitel} />
+                        )}
+                        {r.gebouw_id && (
+                          <ProjectOpenenKnop gebouwId={r.gebouw_id} />
+                        )}
+                      </div>
+                      <GoedkeuringWidget
+                        objectType="opleverrapport"
+                        objectId={r.id}
+                        documentType="opleverrapport"
+                        omschrijving={`${titel}${r.gebouw_naam ? ` — ${r.gebouw_naam}` : ""}`}
+                        toonIndienKnop={r.status === "concept"}
+                      />
                     </div>
                   </div>
                 );

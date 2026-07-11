@@ -79,6 +79,23 @@
 
 **Bewijs:** `pnpm run typecheck` groen (firevault + api-server); API-server herstart zonder fouten; Vite HMR geladen.
 
+## 2026-07-11 — Governance & Approval Engine — uitbreiding documenttypen (Task #522)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (additief; backend engine was al generiek, geen backend wijzigingen nodig)
+
+**Nieuw gebouwd:**
+- **Inspecties** (`/inspecties/:id`): `GoedkeuringWidget` toegevoegd na de statusworkflow-knoppen (objectType="inspectie", documentType="inspectie"). Indienen-knop alleen zichtbaar als de inspectie afgerond is.
+- **Arbeidsovereenkomsten** (`/personeel/:id`, ContractKaart info-tab): `GoedkeuringWidget` toegevoegd met objectType="arbeidsovereenkomst". Toont het brutosalaris als bedrag. Altijd beschikbaar ongeacht contractstatus.
+- **Weekstaten / Urenstaten** (`/uren/weekstaten`, WeekStaatDetailDialog): `GoedkeuringWidget` toegevoegd na de afwijzingsreden-sectie (objectType="weekstaat"). Indienen-knop alleen bij status "ingediend".
+- **Opleverrapporten** (`/rapporten`, rapportenlijst): `GoedkeuringWidget` per rapport-item in de actieskolo (objectType="opleverrapport"). Indienen-knop bij conceptrapporten.
+- **Certificaten** (`/gebouwen/:id/print`, werkbalk): `GoedkeuringWidget` met objectType="certificaat" toegevoegd naast de bestaande "Certificaat accorderen"-knop. Zichtbaar zodra de certificaat-sectie actief is in de rapportsamensteller. Indienen-knop toont alleen bij definitief rapport vóór accorderen.
+- **Projectafsluitingen** (`/opdrachten/:id`): `GoedkeuringWidget` toegevoegd direct onder de projecttitel (objectType="projectafsluiting"). Zichtbaar + indienen-knop alleen als opdrachtstatus "afgerond" is. Klasse `print:hidden` zodat PDF-export niet beïnvloed wordt.
+- **Beleidsscherm** (`/beheer/goedkeuringsbeleid`): `DOCUMENT_TYPE_LABELS`-map en `documentTypeLabel()`-helper toegevoegd; de kolommen "Documenttype" in zowel de beleidsregelstabel als de aanvragentabel tonen nu een leesbare Nederlandse naam (bijv. "Arbeidsovereenkomst", "Inspectierapport", "Weekstaat / Urenstaat") in plaats van de ruwe sleutelstring.
+
+**Geen backend wijzigingen:** de goedkeuring-engine is volledig generiek; hij accepteert elk `objectType`-string-pair zonder codebaarheid.
+
+**Bewijs:** `pnpm --filter @workspace/firevault run typecheck` groen; beide workflows draaien; API healthcheck 200.
+
 ## 2026-07-11 — Governance & Approval Engine — offertes pilotkoppeling
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (additief op bestaande motor + offerte-routes, geen bestaande transitiepaden gebroken)

@@ -51,6 +51,22 @@ import {
 import { GOEDKEURING_STATUS_INFO } from "@/components/goedkeuring/goedkeuring-widget";
 import { MODULES } from "@workspace/permissies";
 
+const DOCUMENT_TYPE_LABELS: Record<string, string> = {
+  inkoopbon: "Inkoopbon",
+  offerte: "Offerte",
+  factuur: "Factuur",
+  arbeidsovereenkomst: "Arbeidsovereenkomst",
+  inspectie: "Inspectierapport",
+  opleverrapport: "Opleverrapport",
+  certificaat: "Certificaat",
+  weekstaat: "Weekstaat / Urenstaat",
+  projectafsluiting: "Projectafsluiting",
+};
+
+function documentTypeLabel(type: string): string {
+  return DOCUMENT_TYPE_LABELS[type] ?? type;
+}
+
 const LEEG_REGEL: GoedkeuringBeleidsregelInput = {
   naam: "",
   document_type: "",
@@ -187,7 +203,7 @@ function BeleidsregelsTab({ magBeheren }: { magBeheren: boolean }) {
               {(regels ?? []).map((regel) => (
                 <TableRow key={regel.id}>
                   <TableCell className="font-medium">{regel.naam}</TableCell>
-                  <TableCell>{regel.document_type}</TableCell>
+                  <TableCell>{documentTypeLabel(regel.document_type)}</TableCell>
                   <TableCell>{werkgeverNaam(regel.werkmaatschappij_id)}</TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     {euro(regel.ondergrens)} – {euro(regel.bovengrens)}
@@ -472,7 +488,7 @@ function AanvragenTab() {
                   const Icon = info.icon;
                   return (
                     <TableRow key={aanvraag.id}>
-                      <TableCell className="font-medium">{aanvraag.document_type}</TableCell>
+                      <TableCell className="font-medium">{documentTypeLabel(aanvraag.document_type)}</TableCell>
                       <TableCell className="text-sm text-muted-foreground max-w-64 truncate">
                         {aanvraag.omschrijving ?? "—"}
                       </TableCell>

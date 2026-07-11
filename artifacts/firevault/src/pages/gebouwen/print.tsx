@@ -48,6 +48,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useUpload } from "@workspace/object-storage-web";
 import { ArrowLeft, Printer, Loader2, Save, ChevronDown, ChevronRight, Settings2, Mail, Lock, LayoutTemplate, Download, PenLine, CheckCircle2 } from "lucide-react";
 import { resolveAssetUrl } from "@/components/documentopmaak";
+import { GoedkeuringWidget } from "@/components/goedkeuring/goedkeuring-widget";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
@@ -2462,6 +2463,15 @@ export default function GebouwPrint() {
             <span style={{ fontSize: 11, color: "#15803d", display: "flex", alignItems: "center", gap: 4 }}>
               <CheckCircle2 className="h-3.5 w-3.5" /> Certificaat geaccordeerd
             </span>
+          )}
+          {secties.certificaat && rapportId !== null && (
+            <GoedkeuringWidget
+              objectType="certificaat"
+              objectId={rapportId}
+              documentType="certificaat"
+              omschrijving={`FPS Certificaat${huidigRapport ? ` — rapport #${huidigRapport.id}` : ""}`}
+              toonIndienKnop={!!(huidigRapport?.status === "definitief" && !huidigRapport?.certificaat_geaccordeerd)}
+            />
           )}
           <Button size="sm" onClick={() => window.print()} disabled={!allesGereed}>
             {allesGereed ? <Printer className="h-4 w-4" /> : <Loader2 className="h-4 w-4 animate-spin" />}

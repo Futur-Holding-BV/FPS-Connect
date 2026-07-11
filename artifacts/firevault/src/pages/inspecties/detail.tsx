@@ -40,6 +40,7 @@ import {
   ArrowLeft, CheckCircle2, AlertTriangle, XCircle, Plus, Pencil,
   Trash2, Camera, Wrench, RefreshCw, Image, ExternalLink,
 } from "lucide-react";
+import { GoedkeuringWidget } from "@/components/goedkeuring/goedkeuring-widget";
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -545,6 +546,17 @@ export default function InspectieDetail() {
             <RefreshCw className="h-4 w-4 mr-1" /> Herinspectie inplannen
           </Button>
         )}
+      </div>
+
+      {/* Goedkeuring */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <GoedkeuringWidget
+          objectType="inspectie"
+          objectId={inspectieId}
+          documentType="inspectie"
+          omschrijving={`${TYPE_LABEL[inspectie.type ?? ""] ?? inspectie.type}${inspectie.gebouw_naam ? ` — ${inspectie.gebouw_naam}` : ""}`}
+          toonIndienKnop={isAfgerond}
+        />
       </div>
 
       {/* Statistieken */}

@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import { AlertTriangle, ChevronDown, ChevronUp, Plus, Sparkles, CheckCircle2, Clock } from "lucide-react";
+import { GoedkeuringWidget } from "@/components/goedkeuring/goedkeuring-widget";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -600,6 +601,20 @@ function ContractKaart({
                 </div>
               )}
             </dl>
+          )}
+
+          {tab === "info" && (
+            <div className="pt-2">
+              <p className="text-xs text-slate-500 mb-1.5">Goedkeuring</p>
+              <GoedkeuringWidget
+                objectType="arbeidsovereenkomst"
+                objectId={contract.id}
+                documentType="arbeidsovereenkomst"
+                omschrijving={`${CONTRACTTYPE_LABEL[contract.contracttype] ?? contract.contracttype} — ${formatDatum(contract.start_datum)} t/m ${contract.eind_datum ? formatDatum(contract.eind_datum) : "onbepaald"}`}
+                bedrag={contract.salaris_bruto}
+                toonIndienKnop={true}
+              />
+            </div>
           )}
 
           {tab === "signaleringen" && (
