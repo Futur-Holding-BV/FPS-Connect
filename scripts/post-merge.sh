@@ -1,5 +1,8 @@
 #!/bin/bash
 set -e
+# Zorg dat workspace-binaries (waaronder tsc) bereikbaar zijn, ook in non-login
+# omgevingen zoals de post-merge runner (prepare lifecycle roept tsc --build aan).
+export PATH="$PWD/node_modules/.bin:$PATH"
 pnpm install --frozen-lockfile
 # Stap 1: Additieve schemaherstel — voegt ontbrekende tabellen en kolommen toe
 # via idempotente IF NOT EXISTS SQL-statements. Draait vóór reconcile en push
