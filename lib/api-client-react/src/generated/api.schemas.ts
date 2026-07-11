@@ -2950,6 +2950,11 @@ export interface GoedkeuringDashboardItem {
   ingediend_op?: string | null;
   /** @nullable */
   afgehandeld_op?: string | null;
+  /**
+     * Naam van de gebruiker die de aanvraag heeft goedgekeurd of afgewezen.
+     * @nullable
+     */
+  afgehandeld_door_naam?: string | null;
   /** @nullable */
   afwijzing_reden?: string | null;
   mag_goedkeuren?: boolean;

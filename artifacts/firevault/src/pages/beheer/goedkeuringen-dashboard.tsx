@@ -75,6 +75,7 @@ function exporteerAlsCsv(items: GoedkeuringDashboardItem[]) {
     "Ingediend door",
     "Ingediend op",
     "Afgehandeld op",
+    "Afgehandeld door",
     "Status",
     "Reden afwijzing",
   ];
@@ -96,6 +97,7 @@ function exporteerAlsCsv(items: GoedkeuringDashboardItem[]) {
     csvCell(item.ingediend_door_naam),
     csvCell(item.ingediend_op ? new Date(item.ingediend_op).toLocaleDateString("nl-NL") : null),
     csvCell(item.afgehandeld_op ? new Date(item.afgehandeld_op).toLocaleDateString("nl-NL") : null),
+    csvCell(item.afgehandeld_door_naam),
     csvCell(statusLabels[item.status] ?? item.status),
     csvCell(item.afwijzing_reden),
   ].join(","));
@@ -408,6 +410,7 @@ export default function GoedkeuringenDashboard() {
                   <TableHead>Ingediend op</TableHead>
                   <TableHead>Openstaand</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Afgehandeld door</TableHead>
                   <TableHead>Escalatie / bewaking</TableHead>
                   {magGoedkeuren && <TableHead className="w-36" />}
                 </TableRow>
@@ -415,7 +418,7 @@ export default function GoedkeuringenDashboard() {
               <TableBody>
                 {(items ?? []).length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={magGoedkeuren ? 10 : 9} className="text-center text-sm text-muted-foreground py-8">
+                    <TableCell colSpan={magGoedkeuren ? 11 : 10} className="text-center text-sm text-muted-foreground py-8">
                       Geen aanvragen gevonden.
                     </TableCell>
                   </TableRow>
@@ -443,6 +446,11 @@ export default function GoedkeuringenDashboard() {
                           <StatusIcoon className={`h-3.5 w-3.5 ${info.kleur}`} />
                           <span className="text-xs">{info.label}</span>
                         </span>
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {["goedgekeurd", "afgewezen"].includes(item.status)
+                          ? (item.afgehandeld_door_naam ?? "—")
+                          : "—"}
                       </TableCell>
                       <TableCell>
                         <EscalatieBadges item={item} />

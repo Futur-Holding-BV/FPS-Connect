@@ -316,8 +316,32 @@ router.get(
           )
         : new Map<number, string | null>();
 
-      // Verrijken met escalaties in één query
+      // Verrijken met afhandelaar (laatste goedgekeurd/afgewezen stap) in één query
       const aanvraagIds = aanvragen.map((r) => r.aanvraag.id);
+      const afhandelaarMap = new Map<number, string | null>();
+      if (aanvraagIds.length > 0) {
+        const afhandelStappen = await db
+          .select({
+            aanvraagId: goedkeuringStappenTable.aanvraagId,
+            gebruikerNaam: goedkeuringStappenTable.gebruikerNaam,
+          })
+          .from(goedkeuringStappenTable)
+          .where(
+            and(
+              inArray(goedkeuringStappenTable.aanvraagId, aanvraagIds),
+              sql`${goedkeuringStappenTable.actie} IN ('goedgekeurd', 'afgewezen')`,
+            ),
+          )
+          .orderBy(desc(goedkeuringStappenTable.aangemaaktOp), desc(goedkeuringStappenTable.id));
+        // Eerste treffer per aanvraag is de meest recente afhandelstap
+        for (const stap of afhandelStappen) {
+          if (!afhandelaarMap.has(stap.aanvraagId)) {
+            afhandelaarMap.set(stap.aanvraagId, stap.gebruikerNaam ?? null);
+          }
+        }
+      }
+
+      // Verrijken met escalaties in één query
       const escalatieMap = new Map<number, GoedkeuringEscalatie[]>();
       if (aanvraagIds.length > 0) {
         const escalaties = await db
@@ -366,6 +390,7 @@ router.get(
             ingediend_door_naam: indienerMap.get(aanvraag.ingediendDoorId ?? -1) ?? null,
             ingediend_op: aanvraag.ingediendOp?.toISOString() ?? null,
             afgehandeld_op: aanvraag.afgehandeldOp?.toISOString() ?? null,
+            afgehandeld_door_naam: afhandelaarMap.get(aanvraag.id) ?? null,
             afwijzing_reden: aanvraag.afwijzingReden,
             mag_goedkeuren: magGoedkeurenWaarde,
             reactietermijn_uren: reactietermijnUren,

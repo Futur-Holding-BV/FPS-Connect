@@ -6604,6 +6604,7 @@ export const ListGoedkeuringDashboardResponseItem = zod.object({
   "ingediend_door_naam": zod.string().nullish(),
   "ingediend_op": zod.string().nullish(),
   "afgehandeld_op": zod.string().nullish(),
+  "afgehandeld_door_naam": zod.string().nullish().describe('Naam van de gebruiker die de aanvraag heeft goedgekeurd of afgewezen.'),
   "afwijzing_reden": zod.string().nullish(),
   "mag_goedkeuren": zod.boolean().optional(),
   "reactietermijn_uren": zod.number().nullish().describe('Reactietermijn in uren (uit de beleidsregel).'),

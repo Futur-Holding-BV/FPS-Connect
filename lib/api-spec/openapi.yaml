@@ -25510,6 +25510,9 @@ components:
           type: ["string", "null"]
         afgehandeld_op:
           type: ["string", "null"]
+        afgehandeld_door_naam:
+          type: ["string", "null"]
+          description: Naam van de gebruiker die de aanvraag heeft goedgekeurd of afgewezen.
         afwijzing_reden:
           type: ["string", "null"]
         mag_goedkeuren:
