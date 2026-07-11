@@ -34,6 +34,8 @@ import {
   AlertTriangle,
   Files,
 } from "lucide-react";
+import { DemoBanner } from "@/components/ui/demo-banner";
+import { demoDossiers } from "@/lib/demo-data";
 
 const TYPES = [
   { waarde: "handboek",  label: "Handboek" },
@@ -153,10 +155,43 @@ export default function DossiersPagina() {
           {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-32 w-full" />)}
         </div>
       ) : gefilterd.length === 0 ? (
-        <Card><CardContent className="py-12 text-center text-muted-foreground">
-          <FolderOpen className="h-10 w-10 mx-auto mb-3 opacity-40" />
-          <p>Geen organisatiedocumenten gevonden.</p>
-        </CardContent></Card>
+        !dossiers?.length && !zoek ? (
+          <div className="space-y-4">
+            <DemoBanner />
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {demoDossiers.map((d) => (
+                <Card key={d.id} className="h-full opacity-80">
+                  <CardContent className="p-4 space-y-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div className="bg-primary/10 text-primary rounded p-2 flex-shrink-0">
+                          <FolderOpen className="h-4 w-4" />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="font-semibold truncate">{d.naam}</div>
+                          <div className="text-xs text-muted-foreground">{TYPE_LABEL[d.type] ?? d.type}</div>
+                        </div>
+                      </div>
+                      <Badge variant="outline" className={STATUS_KLEUR[d.status] ?? ""}>{STATUS_LABEL[d.status] ?? d.status}</Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground line-clamp-2">{d.omschrijving}</p>
+                    <p className="text-xs text-muted-foreground">{d.document_aantal} documenten</p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+            <div className="text-center pt-1">
+              <Button onClick={() => setOpen(true)}>
+                <Plus className="h-4 w-4" /> Eerste document aanmaken
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <Card><CardContent className="py-12 text-center text-muted-foreground">
+            <FolderOpen className="h-10 w-10 mx-auto mb-3 opacity-40" />
+            <p>Geen organisatiedocumenten gevonden.</p>
+          </CardContent></Card>
+        )
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {gefilterd.map((d) => (

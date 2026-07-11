@@ -1,3 +1,36 @@
+## 2026-07-11 — Demo Data: illustratieve voorbeelddata op lege modulepagina's
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** geen (puur frontend, geen DB-schrijfacties)
+
+**Nieuw gebouwd:**
+
+Alle lege modulepagina's tonen nu illustratieve voorbeelddata in het exacte visuele format van echte data — met een amber "Voorbeeldweergave"-banner. Zodra echte data aanwezig is, verdwijnt de demo automatisch.
+
+**Componenten:**
+- `artifacts/firevault/src/lib/demo-data.ts` — centraal bestand met demo-objecten voor alle modules (negatieve IDs als DEMO_MARKER, tenant-safe)
+- `artifacts/firevault/src/components/ui/demo-banner.tsx` — amber banner met Eye-icoon en "Voorbeeldweergave"-tekst
+
+**Pagina's bijgewerkt (10 modules):**
+1. **Facturen** (`facturen/index.tsx`) — demo factuurkaarten
+2. **CRM Organisaties** (`crm/organisaties.tsx`) — demo organisatiekaarten
+3. **CRM Contactpersonen** (`crm/contactpersonen.tsx`) — demo contactpersoonrijen
+4. **Dossiers** (`dossiers/index.tsx`) — demo dossierkaarten
+5. **Inspecties** (`inspecties/index.tsx`) — demo inspectierijen
+6. **Onderhoud / Werkbonnen** (`onderhoud/werkbonnen-lijst.tsx`) — demo werkbonrijen
+7. **Wagenpark** (`wagenpark/index.tsx`) — demo tabelrijen + colSpan-fix (7→9 na P1-kolommen)
+8. **Gereedschappen** (`gereedschappen/index.tsx`) — demo listcard-rijen; typecheck-fix `!!(formulier...)` TS2322
+9. **Personeel / Medewerkers** (`personeel/index.tsx`) — demo medewerkerkaarten in grid
+10. **Rapporten** (`rapporten/index.tsx`) — demo rapportrijen
+
+**Logica (alle pagina's):**
+- Lege staat + geen filters actief → DemoBanner + demo-items (opacity-80)
+- Filters actief maar geen resultaten → gewone "Geen resultaten"-melding (geen demo)
+- Echte data aanwezig → normale weergave zonder demo
+
+**Typecheck:** schoon (pre-existing fout in `salarisarchief.ts` ongewijzigd).
+
+---
+
 ## 2026-07-11 — P1: Wagenpark vervaldatums + Gereedschappen NEN3140-keuring signalering
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (additief)

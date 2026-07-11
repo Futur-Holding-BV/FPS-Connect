@@ -16,6 +16,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { ClipboardList, Plus, Search, X, Building, Calendar, User, Wrench } from "lucide-react";
+import { DemoBanner } from "@/components/ui/demo-banner";
+import { demoWerkbonnen } from "@/lib/demo-data";
 import { useQueryClient } from "@tanstack/react-query";
 import { getListWerkbonnenQueryKey } from "@workspace/api-client-react";
 
@@ -281,12 +283,42 @@ export default function WerkbonnenLijst() {
           {[1, 2, 3].map((i) => <div key={i} className="h-20 bg-muted animate-pulse rounded-lg" />)}
         </div>
       ) : gefilterd.length === 0 ? (
-        <div className="py-20 text-center text-muted-foreground">
-          <ClipboardList className="h-10 w-10 mx-auto mb-3 opacity-30" />
-          {werkbonnen?.length === 0
-            ? "Nog geen werkbonnen. Maak de eerste aan."
-            : "Geen werkbonnen gevonden voor deze filters."}
-        </div>
+        werkbonnen?.length === 0 && !zoek && statusFilter === "all" && typeFilter === "all" ? (
+          <div className="space-y-4">
+            <DemoBanner />
+            <div className="space-y-2">
+              {demoWerkbonnen.map((w) => (
+                <div key={w.id} className="group flex items-center gap-4 rounded-xl border bg-card px-5 py-4 opacity-80 shadow-sm">
+                  <div className="p-2 bg-muted rounded-md shrink-0">
+                    <Wrench className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-semibold">{w.titel}</span>
+                      <Badge variant="outline" className={statusKleur[w.status] ?? ""}>{statusLabel[w.status] ?? w.status}</Badge>
+                    </div>
+                    <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground flex-wrap">
+                      <span className="font-mono text-xs">{w.nummer}</span>
+                      <span className="flex items-center gap-1"><Building className="h-3 w-3" />{w.gebouw_naam}</span>
+                      <span className="flex items-center gap-1"><User className="h-3 w-3" />{w.toegewezen_aan}</span>
+                      <span className="flex items-center gap-1"><Calendar className="h-3 w-3" />{w.deadline}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="text-center pt-1">
+              <Button onClick={() => setNieuwOpen(true)}>
+                <Plus className="h-4 w-4 mr-1" /> Eerste werkbon aanmaken
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="py-20 text-center text-muted-foreground">
+            <ClipboardList className="h-10 w-10 mx-auto mb-3 opacity-30" />
+            Geen werkbonnen gevonden voor deze filters.
+          </div>
+        )
       ) : (
         <div className="space-y-2">
           {gefilterd.map((w) => (
