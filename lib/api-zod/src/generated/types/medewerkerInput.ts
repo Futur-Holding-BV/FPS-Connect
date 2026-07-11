@@ -48,4 +48,8 @@ export interface MedewerkerInput {
   actief?: boolean;
   opmerkingen?: string;
   bedrijf_uitzendbureau?: string;
+  /** Verlofsoorten waarvoor direct een startsaldo wordt opgebouwd (pro-rata op basis van contracturen/CAO). */
+  verlofsoort_ids?: number[];
+  /** Jaar waarvoor het verlofsaldo wordt aangemaakt (standaard huidig jaar). */
+  jaar?: number;
 }

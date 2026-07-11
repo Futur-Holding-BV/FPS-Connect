@@ -1,3 +1,19 @@
+## 2026-07-11 — Medewerker onboarding: automatische verlofsoort-selectie, uren-preview en geboortedatum
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (additief; POST /medewerkers + frontend onboarding-formulier, geen bestaande endpoints gebroken)
+
+**Nieuw gebouwd:**
+- **Root bug opgelost**: `VastFormulier` gebruikte `useCreateMedewerker()` maar stuurde nooit `verlofsoort_ids` mee → verlofprofiel werd nooit aangemaakt. Nu correct doorgestuurd via uitgebreide `MedewerkerInput`.
+- **OpenAPI + codegen**: `verlofsoort_ids` (integer-array) en `jaar` (integer) toegevoegd aan `MedewerkerInput`; codegen uitgevoerd → hooks en Zod-schemas bijgewerkt.
+- **Server (`POST /medewerkers`)**: roept `maakVerlofprofielAan` aan na medewerker-insert wanneer `verlofsoort_ids` + geldige CAO + geldige contracturen aanwezig zijn.
+- **Automatische verlofsoort-selectie**: `useMemo` + `useEffect` selecteren bij laden en bij elke CAO/dienstverband-wijziging automatisch de juiste verlofsoorten. Oproep/stage → alleen vakantie; vast/tijdelijk → alle soorten die bij de CAO passen of geen CAO-filter hebben.
+- **Uren-preview**: voor elke verlofsoort met een `opbouw_uren_per_jaar`-waarde toont het formulier het pro-rata jaarsaldo bij de ingevulde contracturen (factor = min(contracturen / standaard_uren_cao, 1)), afgerond op 1 decimaal.
+- **Geboortedatum-veld**: nieuw datumveld naast "In dienst sinds"; toont direct de berekende leeftijd in jaren. Veld opgeslagen via `geboortedatum` in `MedewerkerInput`.
+- **Alles / Geen knoppen**: beheerder kan automatische selectie in één klik overschrijven.
+- **UI verlofsoorten**: getoond als nette bordered lijst met naam links en "X uur/jaar" (of "handmatig") rechts; teller in het label.
+
+**Bewijs:** `pnpm run typecheck` groen (firevault + api-server); API-server herstart zonder fouten; Vite HMR geladen.
+
 ## 2026-07-11 — Governance & Approval Engine — offertes pilotkoppeling
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (additief op bestaande motor + offerte-routes, geen bestaande transitiepaden gebroken)

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useLocation } from "wouter";
 import {
   useCreateMedewerker,
@@ -75,6 +75,7 @@ const STROMEN: StRoomsKaart[] = [
 interface VastForm {
   naam: string;
   email: string;
+  geboortedatum: string;
   functie_id: number | null;
   werkmaatschappij: string;
   cao: string;
@@ -109,6 +110,7 @@ interface UitzendForm {
 const LEEG_VAST: VastForm = {
   naam: "",
   email: "",
+  geboortedatum: "",
   functie_id: null,
   werkmaatschappij: WERKMAATSCHAPPIJ_STD,
   cao: caoVoorWerkmaatschappij(WERKMAATSCHAPPIJ_STD) ?? "",
@@ -223,6 +225,19 @@ function TypeKiezer({ onKies }: { onKies: (s: Stroom) => void }) {
   );
 }
 
+// ─── Hulpfunctie: leeftijd berekenen ──────────────────────────────────────────
+
+function berekenLeeftijd(geboortedatum: string): number | null {
+  if (!geboortedatum) return null;
+  const gd = new Date(geboortedatum);
+  if (isNaN(gd.getTime())) return null;
+  const vandaag = new Date();
+  let leeftijd = vandaag.getFullYear() - gd.getFullYear();
+  const maand = vandaag.getMonth() - gd.getMonth();
+  if (maand < 0 || (maand === 0 && vandaag.getDate() < gd.getDate())) leeftijd--;
+  return leeftijd >= 0 ? leeftijd : null;
+}
+
 // ─── Stap 2a: Vast / tijdelijk ────────────────────────────────────────────────
 
 function VastFormulier({
@@ -239,6 +254,52 @@ function VastFormulier({
   const maak = useCreateMedewerker();
   const { toast } = useToast();
 
+  // Bepaal welke verlofsoorten automatisch van toepassing zijn op basis van CAO en dienstverband.
+  // Oproep/stage krijgen alleen vakantieverlof; vast/tijdelijk krijgen alles wat bij de CAO past.
+  const autoSelecteerIds = useMemo(() => {
+    if (!verlofsoorten) return [];
+    const alleenVakantie = form.dienstverband === "oproep" || form.dienstverband === "stage";
+    return verlofsoorten
+      .filter((v) => {
+        if (!v.actief) return false;
+        if (alleenVakantie && v.hoofdcategorie !== "vakantie") return false;
+        if (v.cao && form.cao && v.cao !== form.cao) return false;
+        return true;
+      })
+      .map((v) => v.id);
+  }, [verlofsoorten, form.cao, form.dienstverband]);
+
+  // Zet automatische selectie zodra verlofsoorten beschikbaar zijn (initieel of na CAO/dienstverband-wijziging).
+  useEffect(() => {
+    if (autoSelecteerIds.length > 0) {
+      setForm((f) => ({ ...f, verlofsoort_ids: autoSelecteerIds }));
+    }
+  }, [autoSelecteerIds]);
+
+  // Huidige CAO-optie voor de uren-preview.
+  const huidigeCaoOptie = useMemo(
+    () => (caoOpties ?? []).find((c) => c.naam === form.cao),
+    [caoOpties, form.cao],
+  );
+
+  // Berekende verlofuren per geselecteerde verlofsoort (pro-rata).
+  const urenPreview = useMemo(() => {
+    if (!huidigeCaoOptie || !form.contracturen_per_week) return {};
+    const standaard = huidigeCaoOptie.standaard_uren_per_week ?? 40;
+    const uren = Number(form.contracturen_per_week);
+    if (!Number.isFinite(uren) || uren <= 0) return {};
+    const factor = Math.min(uren / standaard, 1);
+    const preview: Record<number, number> = {};
+    for (const v of verlofsoorten ?? []) {
+      if (v.opbouw_uren_per_jaar != null) {
+        preview[v.id] = Math.round(v.opbouw_uren_per_jaar * factor * 10) / 10;
+      }
+    }
+    return preview;
+  }, [huidigeCaoOptie, form.contracturen_per_week, verlofsoorten]);
+
+  const leeftijd = berekenLeeftijd(form.geboortedatum);
+
   function toggleVerlof(id: number) {
     setForm((f) => ({
       ...f,
@@ -246,6 +307,15 @@ function VastFormulier({
         ? f.verlofsoort_ids.filter((x) => x !== id)
         : [...f.verlofsoort_ids, id],
     }));
+  }
+
+  function selecteerAlle() {
+    const alleIds = (verlofsoorten ?? []).filter((v) => v.actief).map((v) => v.id);
+    setForm((f) => ({ ...f, verlofsoort_ids: alleIds }));
+  }
+
+  function deselecteerAlle() {
+    setForm((f) => ({ ...f, verlofsoort_ids: [] }));
   }
 
   async function opslaan() {
@@ -257,12 +327,15 @@ function VastFormulier({
       const input: MedewerkerInput = {
         naam: form.naam.trim(),
         email: form.email.trim() || undefined,
+        geboortedatum: form.geboortedatum || undefined,
         functie_id: form.functie_id ?? undefined,
         werkmaatschappij: form.werkmaatschappij,
         cao: form.cao || undefined,
         dienstverband: form.dienstverband,
         contracturen_per_week: form.contracturen_per_week ? Number(form.contracturen_per_week) : undefined,
         in_dienst_sinds: form.in_dienst_sinds || undefined,
+        verlofsoort_ids: form.verlofsoort_ids.length > 0 ? form.verlofsoort_ids : undefined,
+        jaar: new Date().getFullYear(),
       };
       const nieuw = await maak.mutateAsync({ data: input });
       onGereed(nieuw.id);
@@ -347,26 +420,78 @@ function VastFormulier({
           </div>
         </div>
 
-        <div className="space-y-1.5">
-          <Label>In dienst sinds</Label>
-          <Input type="date" value={form.in_dienst_sinds} onChange={(e) => setForm({ ...form, in_dienst_sinds: e.target.value })} />
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <Label>In dienst sinds</Label>
+            <Input type="date" value={form.in_dienst_sinds} onChange={(e) => setForm({ ...form, in_dienst_sinds: e.target.value })} />
+          </div>
+          <div className="space-y-1.5">
+            <Label>
+              Geboortedatum{" "}
+              {leeftijd !== null && (
+                <span className="text-muted-foreground text-xs font-normal">({leeftijd} jaar)</span>
+              )}
+            </Label>
+            <Input
+              type="date"
+              value={form.geboortedatum}
+              max={new Date().toISOString().slice(0, 10)}
+              onChange={(e) => setForm({ ...form, geboortedatum: e.target.value })}
+            />
+          </div>
         </div>
 
         {(verlofsoorten ?? []).length > 0 && (
           <div className="space-y-2">
-            <Label>Verlofsoorten met beginsaldo <span className="text-muted-foreground text-xs">(optioneel)</span></Label>
-            <div className="grid grid-cols-2 gap-2">
-              {(verlofsoorten ?? []).map((v) => (
-                <label key={v.id} className="flex items-center gap-2 text-sm cursor-pointer">
-                  <Checkbox
-                    checked={form.verlofsoort_ids.includes(v.id)}
-                    onCheckedChange={() => toggleVerlof(v.id)}
-                  />
-                  {v.naam}
-                </label>
-              ))}
+            <div className="flex items-center justify-between">
+              <Label>
+                Verlofsoorten met beginsaldo{" "}
+                <span className="text-muted-foreground text-xs font-normal">
+                  ({form.verlofsoort_ids.length} geselecteerd)
+                </span>
+              </Label>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  className="text-xs text-primary underline-offset-2 hover:underline"
+                  onClick={selecteerAlle}
+                >
+                  Alles
+                </button>
+                <span className="text-muted-foreground text-xs">/</span>
+                <button
+                  type="button"
+                  className="text-xs text-muted-foreground underline-offset-2 hover:underline"
+                  onClick={deselecteerAlle}
+                >
+                  Geen
+                </button>
+              </div>
             </div>
-            <p className="text-xs text-muted-foreground">Geselecteerde verlofsoorten worden pro rata opgebouwd vanaf de ingangsdatum.</p>
+            <div className="rounded-md border divide-y">
+              {(verlofsoorten ?? []).map((v) => {
+                const uren = urenPreview[v.id];
+                return (
+                  <label key={v.id} className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer hover:bg-muted/30">
+                    <Checkbox
+                      checked={form.verlofsoort_ids.includes(v.id)}
+                      onCheckedChange={() => toggleVerlof(v.id)}
+                    />
+                    <span className="flex-1">{v.naam}</span>
+                    {uren != null ? (
+                      <span className="text-xs text-muted-foreground tabular-nums">
+                        {uren} uur/jaar
+                      </span>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">handmatig</span>
+                    )}
+                  </label>
+                );
+              })}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Voorgeselecteerd op basis van CAO en dienstverband. Uren zijn pro-rata bij {form.contracturen_per_week || "—"} contractuur/week.
+            </p>
           </div>
         )}
       </div>

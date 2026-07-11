@@ -27145,6 +27145,14 @@ components:
           type: string
         bedrijf_uitzendbureau:
           type: string
+        verlofsoort_ids:
+          type: array
+          items:
+            type: integer
+          description: Verlofsoorten waarvoor direct een startsaldo wordt opgebouwd (pro-rata op basis van contracturen/CAO).
+        jaar:
+          type: integer
+          description: Jaar waarvoor het verlofsaldo wordt aangemaakt (standaard huidig jaar).
 
     MedewerkerAanstelling:
       type: object

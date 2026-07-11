@@ -9403,7 +9403,9 @@ export const CreateMedewerkerBody = zod.object({
   "cv_tekst": zod.string().optional(),
   "actief": zod.boolean().optional(),
   "opmerkingen": zod.string().optional(),
-  "bedrijf_uitzendbureau": zod.string().optional()
+  "bedrijf_uitzendbureau": zod.string().optional(),
+  "verlofsoort_ids": zod.array(zod.number()).optional().describe('Verlofsoorten waarvoor direct een startsaldo wordt opgebouwd (pro-rata op basis van contracturen\/CAO).'),
+  "jaar": zod.number().optional().describe('Jaar waarvoor het verlofsaldo wordt aangemaakt (standaard huidig jaar).')
 })
 
 export const CreateMedewerkerResponse = zod.void()
@@ -9518,7 +9520,9 @@ export const UpdateMedewerkerBody = zod.object({
   "cv_tekst": zod.string().optional(),
   "actief": zod.boolean().optional(),
   "opmerkingen": zod.string().optional(),
-  "bedrijf_uitzendbureau": zod.string().optional()
+  "bedrijf_uitzendbureau": zod.string().optional(),
+  "verlofsoort_ids": zod.array(zod.number()).optional().describe('Verlofsoorten waarvoor direct een startsaldo wordt opgebouwd (pro-rata op basis van contracturen\/CAO).'),
+  "jaar": zod.number().optional().describe('Jaar waarvoor het verlofsaldo wordt aangemaakt (standaard huidig jaar).')
 })
 
 export const UpdateMedewerkerResponse = zod.object({

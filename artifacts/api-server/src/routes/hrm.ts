@@ -778,7 +778,7 @@ router.get("/medewerkers", lezen, async (req, res): Promise<void> => {
 
 router.post("/medewerkers", schrijven, async (req, res): Promise<void> => {
   try {
-    const { naam, gebruiker_id, email, telefoon, mobiel, werkmaatschappij, functie_id, leidinggevende_id, cao, dienstverband, bedrijf_uitzendbureau, contracturen_per_week, in_dienst_sinds, uit_dienst_per, noodcontact_naam, noodcontact_telefoon, geboortedatum, geboorteplaats, adres, postcode, woonplaats, rijbewijs, rijbewijs_vervaldatum, vca_vervaldatum, ehbo_vervaldatum, bhv_vervaldatum, cv_tekst, actief, opmerkingen } = req.body;
+    const { naam, gebruiker_id, email, telefoon, mobiel, werkmaatschappij, functie_id, leidinggevende_id, cao, dienstverband, bedrijf_uitzendbureau, contracturen_per_week, in_dienst_sinds, uit_dienst_per, noodcontact_naam, noodcontact_telefoon, geboortedatum, geboorteplaats, adres, postcode, woonplaats, rijbewijs, rijbewijs_vervaldatum, vca_vervaldatum, ehbo_vervaldatum, bhv_vervaldatum, cv_tekst, actief, opmerkingen, verlofsoort_ids, jaar } = req.body;
     if (!naam) return void res.status(400).json({ error: "naam is verplicht" });
     const wm = werkmaatschappij || "FPS Brandpreventie";
     const [m] = await db
@@ -816,6 +816,18 @@ router.post("/medewerkers", schrijven, async (req, res): Promise<void> => {
         opmerkingen,
       })
       .returning();
+
+    // Verlofsaldo opbouwen indien verlofsoort_ids meegegeven én een bekende CAO gebruikt wordt.
+    const ids: number[] = Array.isArray(verlofsoort_ids)
+      ? verlofsoort_ids.map((v: unknown) => parseId(v)).filter((n) => Number.isFinite(n))
+      : [];
+    const caoOptie = CAO_OPTIES.find((c) => c.naam === cao);
+    const uren = typeof contracturen_per_week === "number" ? contracturen_per_week : Number(contracturen_per_week);
+    if (ids.length > 0 && caoOptie && Number.isFinite(uren) && uren > 0) {
+      const saldoJaar = Number.isFinite(Number(jaar)) ? Number(jaar) : new Date().getFullYear();
+      await maakVerlofprofielAan({ medewerkerId: m.id, caoOptie, contracturenPerWeek: uren, verlofsoortIds: ids, jaar: saldoJaar }, db);
+    }
+
     invalideerContext("medewerker", m.id);
     res.status(201).json(await medewerkerNaarJson(m));
   } catch (err) {
