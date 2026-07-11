@@ -35,6 +35,14 @@ function datum(d?: string | null) {
   return new Date(d).toLocaleDateString("nl-NL", { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
+function vervaldatumBadge(vervaldatum?: string | null) {
+  if (!vervaldatum) return null;
+  const dagen = Math.ceil((new Date(vervaldatum).getTime() - Date.now()) / 86_400_000);
+  if (dagen < 0) return { label: `Vervallen (${Math.abs(dagen)}d)`, kleur: "bg-red-100 text-red-700 border-red-200" };
+  if (dagen <= 7) return { label: `Vervalt over ${dagen}d`, kleur: "bg-orange-100 text-orange-700 border-orange-200" };
+  return null;
+}
+
 type BeoordeelActie = "goedkeuren" | "afkeuren" | "doorzetten";
 
 interface BeoordeelDialoogProps {
@@ -198,13 +206,14 @@ function FactuurRij({ factuur, box }: FactuurRijProps) {
         <CardContent className="p-4">
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1 min-w-0 space-y-1">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <span className="font-medium text-sm truncate">
                   {factuur.factuurnummer ?? `Factuur #${factuur.id}`}
                 </span>
                 {factuur.ai_metadata && (
                   <Badge variant="secondary" className="text-xs shrink-0">AI gelezen</Badge>
                 )}
+                {(() => { const b = vervaldatumBadge(factuur.vervaldatum); return b ? <span className={`text-xs px-2 py-0.5 rounded-full border font-medium shrink-0 ${b.kleur}`}>{b.label}</span> : null; })()}
               </div>
               <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
                 {factuur.relatienaam && (
@@ -217,6 +226,12 @@ function FactuurRij({ factuur, box }: FactuurRijProps) {
                   <span className="flex items-center gap-1">
                     <Calendar className="h-3 w-3" />
                     {datum(factuur.factuurdatum)}
+                  </span>
+                )}
+                {factuur.vervaldatum && (
+                  <span className="flex items-center gap-1">
+                    <Calendar className="h-3 w-3 text-orange-400" />
+                    Vervaldatum: {datum(factuur.vervaldatum)}
                   </span>
                 )}
                 {factuur.bedrag_incl_btw && (

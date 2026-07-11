@@ -394,6 +394,8 @@ router.post("/facturen/:id/ai-uitlezen", requireBevoegdheid("financieel", 1), as
     const grootboekPreset = factuur.grootboekrekening ?? leverancier?.grootboekrekening ?? null;
     const kostenplaatsPreset = factuur.kostenplaats ?? leverancier?.kostenplaats ?? null;
     const btwCodePreset = parsed.btw_code ?? factuur.btwCode ?? leverancier?.btwCodeDefault ?? null;
+    // Bekende leverancier → auto-categoriseer de factuur (bijv. Yelloebrick → wagenpark)
+    const categoriePreset = factuur.categorie ?? leverancier?.factuurCategorie ?? null;
 
     // ── Werknummer → opdracht-koppeling ───────────────────────────────────────
     let opdrachtId: number | null = factuur.opdrachtId ?? null;
@@ -433,7 +435,21 @@ router.post("/facturen/:id/ai-uitlezen", requireBevoegdheid("financieel", 1), as
     }
 
     // ── Factuur updaten ───────────────────────────────────────────────────────
-    const nieuweStatus = (parsed.controle_nodig || ibanAfwijking) ? "controle_nodig" : "te_beoordelen_pl";
+    // Auto-akkoord: bekende leverancier + bedrag onder drempel → sla handmatige controle over
+    const bedragCents = parsed.bedrag_incl_btw
+      ? Math.round(parseFloat(String(parsed.bedrag_incl_btw)) * 100)
+      : null;
+    const autoAkkoord =
+      !parsed.controle_nodig &&
+      !ibanAfwijking &&
+      leverancier?.autoAkkoordDrempelCents != null &&
+      bedragCents != null &&
+      bedragCents <= leverancier.autoAkkoordDrempelCents;
+    const nieuweStatus = parsed.controle_nodig || ibanAfwijking
+      ? "controle_nodig"
+      : autoAkkoord
+        ? "klaar_voor_boeking"
+        : "te_beoordelen_pl";
 
     const [updated] = await db.update(facturenTable).set({
       aiMetadata: parsed as Record<string, unknown>,
@@ -449,6 +465,7 @@ router.post("/facturen/:id/ai-uitlezen", requireBevoegdheid("financieel", 1), as
       btwCode: btwCodePreset,
       grootboekrekening: grootboekPreset,
       kostenplaats: kostenplaatsPreset,
+      categorie: categoriePreset,
       // Leverancier & IBAN
       leverancierId: leverancier?.id ?? factuur.leverancierId ?? null,
       ibanUitgelezen: uitgelezenIban ?? factuur.ibanUitgelezen ?? null,

@@ -38237,6 +38237,8 @@ components:
         kostenplaats:             { type: ["string", "null"] }
         btw_code_default:         { type: ["string", "null"] }
         relatiecode:              { type: ["string", "null"] }
+        factuur_categorie:        { type: ["string", "null"] }
+        auto_akkoord_drempel_cents: { type: ["integer", "null"] }
         aangemaakt_op:            { type: string }
         bijgewerkt_op:            { type: string }
 
@@ -38276,6 +38278,8 @@ components:
         kostenplaats:             { type: string }
         btw_code_default:         { type: string }
         relatiecode:              { type: string }
+        factuur_categorie:        { type: string }
+        auto_akkoord_drempel_cents: { type: integer }
 
     # ── ARTIKELEN ──────────────────────────────────────────────────────────────
 

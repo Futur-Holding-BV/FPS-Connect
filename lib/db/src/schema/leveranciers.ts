@@ -58,6 +58,14 @@ export const leveranciersTable = pgTable("leveranciers", {
   gRekeningIban: text("g_rekening_iban"),                 // IBAN van de G-rekening
   gRekeningPercentage: real("g_rekening_percentage"),     // % van loonsom dat naar G-rekening gaat
 
+  // Automatische factuurclassificatie (bekende leveranciers zoals Yelloebrick)
+  // Wanneer een inkomende factuur gematcht wordt aan deze leverancier, wordt
+  // factuur.categorie automatisch ingesteld op factuurCategorie.
+  factuurCategorie: text("factuur_categorie"),
+  // Drempelbedrag (in centen) waaronder facturen van deze leverancier automatisch
+  // worden goedgekeurd (status → klaar_voor_boeking, geen handmatige controle).
+  autoAkkoordDrempelCents: integer("auto_akkoord_drempel_cents"),
+
   // Meta
   notities: text("notities"),
   actief: boolean("actief").notNull().default(true),

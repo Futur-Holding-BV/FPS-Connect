@@ -69,6 +69,10 @@ export interface Leverancier {
   btw_code_default?: string | null;
   /** @nullable */
   relatiecode?: string | null;
+  /** @nullable */
+  factuur_categorie?: string | null;
+  /** @nullable */
+  auto_akkoord_drempel_cents?: number | null;
   aangemaakt_op: string;
   bijgewerkt_op: string;
 }

@@ -10718,6 +10718,10 @@ export interface Leverancier {
   btw_code_default?: string | null;
   /** @nullable */
   relatiecode?: string | null;
+  /** @nullable */
+  factuur_categorie?: string | null;
+  /** @nullable */
+  auto_akkoord_drempel_cents?: number | null;
   aangemaakt_op: string;
   bijgewerkt_op: string;
 }
@@ -10755,6 +10759,8 @@ export interface LeverancierInput {
   kostenplaats?: string;
   btw_code_default?: string;
   relatiecode?: string;
+  factuur_categorie?: string;
+  auto_akkoord_drempel_cents?: number;
 }
 
 export interface Artikel {

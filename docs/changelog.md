@@ -1,3 +1,24 @@
+## 2026-07-11 — Financiële admin: leverancier-intelligentie + betaaltermijn-signalering
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (puur additief op bestaande leveranciers- en facturenmodule)
+
+**Nieuw gebouwd:**
+
+- **Leverancier: factuurcategorie-preset** — nieuw veld `factuur_categorie` op leverancier; inkomende facturen nemen de categorie automatisch over zodat de boekhouder niet meer handmatig hoeft in te stellen
+- **Leverancier: auto-akkoord drempel** — nieuw veld `auto_akkoord_drempel_cents`; facturen onder het ingestelde eurobedrag van die leverancier gaan direct naar `klaar_voor_boeking` (geen handmatige beoordeling nodig)
+- **Leverancier-formulier** — boekhoud-sectie uitgebreid met beide velden: categorie als Select-dropdown (10 opties), drempel als euro-invoer (opgeslagen in centen)
+- **Crediteuren-inbox: betaaltermijn-badges** — rode badge "Vervallen (Xd)" en oranje badge "Vervalt over Xd" zichtbaar op factuurkaarten; vervaldatum ook altijd getoond in metaregel
+- **DB-kolommen** — `factuur_categorie text` + `auto_akkoord_drempel_cents integer` op `leveranciers`-tabel (via directe ALTER, geen drizzle-push nodig)
+- **Typecheck-fixes** — twee pre-existing fouten opgelost: `medewerkersTable.functie` → `functieId`, `copyPagesFrom` → `copyPages` (pdf-lib API)
+
+**Technisch:**
+- OpenAPI `Leverancier` + `LeverancierInput` schema's uitgebreid; codegen uitgevoerd (orval)
+- `facturen.ts` route: auto-akkoord logica toegevoegd op POST/PATCH — vergelijkt `bedrag_incl_btw` met `autoAkkoordDrempelCents` van de leverancier
+- `leveranciers.ts` route: `mapLeverancier` + body-parsing verwerken beide nieuwe velden
+- Typecheck api-server + firevault groen; api-server smoke-test 200 ✓
+
+---
+
 ## 2026-07-11 — Declaratiemodule (web + mobiel)
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (puur additief — nieuwe tabellen, nieuwe routes, geen bestaand gedrag gewijzigd)

@@ -396,6 +396,10 @@ function BewerkModal({
     kostenplaats: leverancier.kostenplaats ?? "",
     btw_code_default: leverancier.btw_code_default ?? "",
     relatiecode: leverancier.relatiecode ?? "",
+    factuur_categorie: leverancier.factuur_categorie ?? "",
+    auto_akkoord_drempel_cents: leverancier.auto_akkoord_drempel_cents != null
+      ? String(leverancier.auto_akkoord_drempel_cents)
+      : "",
   });
 
   function veld(key: string) {
@@ -443,7 +447,9 @@ function BewerkModal({
     const raw: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(form)) {
       if (v !== "") {
-        raw[k] = k === "betalingstermijn_dagen" ? parseInt(v) : v;
+        if (k === "betalingstermijn_dagen") raw[k] = parseInt(v);
+        else if (k === "auto_akkoord_drempel_cents") raw[k] = parseInt(v);
+        else raw[k] = v;
       }
     }
     onOpslaan(raw as unknown as LeverancierInput);
@@ -659,6 +665,55 @@ function BewerkModal({
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+            <div className="space-y-1 col-span-2">
+              <Label>Factuurcategorie (auto-toewijzing)</Label>
+              <Select
+                value={form["factuur_categorie"] ?? ""}
+                onValueChange={(v) => setForm((p) => ({ ...p, factuur_categorie: v }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Niet ingesteld" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Niet ingesteld</SelectItem>
+                  <SelectItem value="projectmateriaal">Projectmateriaal</SelectItem>
+                  <SelectItem value="onderaanneming">Onderaanneming</SelectItem>
+                  <SelectItem value="algemene_kosten">Algemene kosten</SelectItem>
+                  <SelectItem value="investering">Investering</SelectItem>
+                  <SelectItem value="wagenpark">Wagenpark / parkeerkosten</SelectItem>
+                  <SelectItem value="gereedschap">Gereedschap</SelectItem>
+                  <SelectItem value="magazijn">Magazijn</SelectItem>
+                  <SelectItem value="representatie">Representatie</SelectItem>
+                  <SelectItem value="software">Software</SelectItem>
+                  <SelectItem value="verzekering">Verzekering</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Inkomende facturen van deze leverancier krijgen automatisch deze categorie.
+              </p>
+            </div>
+            <div className="space-y-1 col-span-2">
+              <Label>Auto-akkoord drempel (euro)</Label>
+              <Input
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="bijv. 500 (leeglaten = altijd handmatig)"
+                value={form["auto_akkoord_drempel_cents"]
+                  ? String(parseInt(form["auto_akkoord_drempel_cents"] ?? "0") / 100)
+                  : ""}
+                onChange={(e) => {
+                  const euros = parseFloat(e.target.value);
+                  setForm((p) => ({
+                    ...p,
+                    auto_akkoord_drempel_cents: isNaN(euros) ? "" : String(Math.round(euros * 100)),
+                  }));
+                }}
+              />
+              <p className="text-xs text-muted-foreground">
+                Facturen onder dit bedrag van deze leverancier worden automatisch goedgekeurd (geen handmatige controle). Leeglaten voor altijd handmatig.
+              </p>
             </div>
             <div className="mt-2 rounded border border-blue-100 bg-blue-50 px-3 py-2 text-xs text-blue-600">
               Deze waarden worden automatisch overgenomen wanneer AI een factuur van deze leverancier uitleest. De medewerker hoeft ze dan niet meer handmatig in te vullen.

@@ -865,7 +865,7 @@ router.post(
     // 4. Per pagina: tekst matchen + losse PDF opslaan
     for (let i = 0; i < pageCount; i++) {
       const paginaDoc = await PDFDocument.create();
-      const [gekopieerd] = await paginaDoc.copyPagesFrom(srcDoc, [i]);
+      const [gekopieerd] = await paginaDoc.copyPages(srcDoc, [i]);
       paginaDoc.addPage(gekopieerd);
       const pageBuffer = Buffer.from(await paginaDoc.save());
 

@@ -24544,6 +24544,8 @@ export const ListLeveranciersResponseItem = zod.object({
   "kostenplaats": zod.string().nullish(),
   "btw_code_default": zod.string().nullish(),
   "relatiecode": zod.string().nullish(),
+  "factuur_categorie": zod.string().nullish(),
+  "auto_akkoord_drempel_cents": zod.number().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })
@@ -24585,7 +24587,9 @@ export const CreateLeverancierBody = zod.object({
   "grootboekrekening": zod.string().optional(),
   "kostenplaats": zod.string().optional(),
   "btw_code_default": zod.string().optional(),
-  "relatiecode": zod.string().optional()
+  "relatiecode": zod.string().optional(),
+  "factuur_categorie": zod.string().optional(),
+  "auto_akkoord_drempel_cents": zod.number().optional()
 })
 
 export const CreateLeverancierResponse = zod.void()
@@ -24633,6 +24637,8 @@ export const GetLeverancierResponse = zod.object({
   "kostenplaats": zod.string().nullish(),
   "btw_code_default": zod.string().nullish(),
   "relatiecode": zod.string().nullish(),
+  "factuur_categorie": zod.string().nullish(),
+  "auto_akkoord_drempel_cents": zod.number().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })
@@ -24677,7 +24683,9 @@ export const PatchLeverancierBody = zod.object({
   "grootboekrekening": zod.string().optional(),
   "kostenplaats": zod.string().optional(),
   "btw_code_default": zod.string().optional(),
-  "relatiecode": zod.string().optional()
+  "relatiecode": zod.string().optional(),
+  "factuur_categorie": zod.string().optional(),
+  "auto_akkoord_drempel_cents": zod.number().optional()
 })
 
 export const PatchLeverancierResponse = zod.object({
@@ -24715,6 +24723,8 @@ export const PatchLeverancierResponse = zod.object({
   "kostenplaats": zod.string().nullish(),
   "btw_code_default": zod.string().nullish(),
   "relatiecode": zod.string().nullish(),
+  "factuur_categorie": zod.string().nullish(),
+  "auto_akkoord_drempel_cents": zod.number().nullish(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })

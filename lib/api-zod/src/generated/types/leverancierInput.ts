@@ -39,4 +39,6 @@ export interface LeverancierInput {
   kostenplaats?: string;
   btw_code_default?: string;
   relatiecode?: string;
+  factuur_categorie?: string;
+  auto_akkoord_drempel_cents?: number;
 }

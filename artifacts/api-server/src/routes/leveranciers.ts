@@ -164,6 +164,10 @@ function maakLeverancierValues(body: Record<string, unknown>, bron?: string) {
     kostenplaats: str(body.kostenplaats),
     btwCodeDefault: str(body.btw_code_default),
     relatiecode: str(body.relatiecode),
+    factuurCategorie: str(body.factuur_categorie),
+    autoAkkoordDrempelCents: typeof body.auto_akkoord_drempel_cents === "number"
+      ? body.auto_akkoord_drempel_cents
+      : null,
     ...(bron ? { bron } : {}),
   };
 }
@@ -206,6 +210,8 @@ function mapLeverancier(r: LeverancierRij) {
     kostenplaats: r.kostenplaats ?? null,
     btw_code_default: r.btwCodeDefault ?? null,
     relatiecode: r.relatiecode ?? null,
+    factuur_categorie: r.factuurCategorie ?? null,
+    auto_akkoord_drempel_cents: r.autoAkkoordDrempelCents ?? null,
     aangemaakt_op: r.aangemaaktOp.toISOString(),
     bijgewerkt_op: r.bijgewerktOp.toISOString(),
   };

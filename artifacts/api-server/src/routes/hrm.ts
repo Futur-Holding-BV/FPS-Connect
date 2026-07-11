@@ -2944,7 +2944,7 @@ router.get("/mijn/medewerker", async (req, res): Promise<void> => {
       .select({
         id: medewerkersTable.id,
         naam: medewerkersTable.naam,
-        functie: medewerkersTable.functie,
+        functieId: medewerkersTable.functieId,
         werkmaatschappij: medewerkersTable.werkmaatschappij,
       })
       .from(medewerkersTable)
@@ -2953,7 +2953,7 @@ router.get("/mijn/medewerker", async (req, res): Promise<void> => {
     res.json({
       id: m.id,
       naam: m.naam,
-      functie: m.functie ?? null,
+      functie_id: m.functieId ?? null,
       werkmaatschappij: m.werkmaatschappij ?? null,
     });
   } catch (err) {
