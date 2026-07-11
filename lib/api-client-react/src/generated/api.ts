@@ -504,6 +504,8 @@ import type {
   MedewerkerAanstelling,
   MedewerkerAanstellingInput,
   MedewerkerAchievementsResponse,
+  MedewerkerCaoKeuze,
+  MedewerkerCaoKeuzeInput,
   MedewerkerDocument,
   MedewerkerDocumentUploadBody,
   MedewerkerInput,
@@ -516,6 +518,7 @@ import type {
   MeldingOverzichtItem,
   MeldingUpdate,
   MijnCertificaten,
+  MijnMedewerkerInfo,
   MijnOpleidingDetail,
   MijnPrivacyGegevens,
   MijnPrivacyInstellingen,
@@ -6975,6 +6978,83 @@ export const useDeleteConstructieTemplate = <TError = ErrorType<void>,
       > => {
       return useMutation(getDeleteConstructieTemplateMutationOptions(options));
     }
+
+export const getGetMijnMedewerkerUrl = () => {
+
+
+
+
+  return `/api/mijn/medewerker`
+}
+
+/**
+ * @summary Medewerker-basisgegevens van de ingelogde gebruiker
+ */
+export const getMijnMedewerker = async ( options?: RequestInit): Promise<MijnMedewerkerInfo> => {
+
+  return customFetch<MijnMedewerkerInfo>(getGetMijnMedewerkerUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetMijnMedewerkerQueryKey = () => {
+    return [
+    `/api/mijn/medewerker`
+    ] as const;
+    }
+
+
+export const getGetMijnMedewerkerQueryOptions = <TData = Awaited<ReturnType<typeof getMijnMedewerker>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMijnMedewerker>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetMijnMedewerkerQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMijnMedewerker>>> = ({ signal }) => getMijnMedewerker({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMijnMedewerker>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetMijnMedewerkerQueryResult = NonNullable<Awaited<ReturnType<typeof getMijnMedewerker>>>
+export type GetMijnMedewerkerQueryError = ErrorType<void>
+
+
+/**
+ * @summary Medewerker-basisgegevens van de ingelogde gebruiker
+ */
+
+export function useGetMijnMedewerker<TData = Awaited<ReturnType<typeof getMijnMedewerker>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMijnMedewerker>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetMijnMedewerkerQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
 export const getGetMijnCertificatenUrl = () => {
 
@@ -28459,6 +28539,299 @@ export const useOffboardMedewerker = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getOffboardMedewerkerMutationOptions(options));
+    }
+
+export const getListCaoKeuzesUrl = (id: number,) => {
+
+
+
+
+  return `/api/medewerkers/${id}/cao-keuzes`
+}
+
+/**
+ * @summary CAO-keuzes van een medewerker (vakantiegeld, gereedschapsgeld, spaarfonds)
+ */
+export const listCaoKeuzes = async (id: number, options?: RequestInit): Promise<MedewerkerCaoKeuze[]> => {
+
+  return customFetch<MedewerkerCaoKeuze[]>(getListCaoKeuzesUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListCaoKeuzesQueryKey = (id: number,) => {
+    return [
+    `/api/medewerkers/${id}/cao-keuzes`
+    ] as const;
+    }
+
+
+export const getListCaoKeuzesQueryOptions = <TData = Awaited<ReturnType<typeof listCaoKeuzes>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listCaoKeuzes>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListCaoKeuzesQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listCaoKeuzes>>> = ({ signal }) => listCaoKeuzes(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listCaoKeuzes>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListCaoKeuzesQueryResult = NonNullable<Awaited<ReturnType<typeof listCaoKeuzes>>>
+export type ListCaoKeuzesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary CAO-keuzes van een medewerker (vakantiegeld, gereedschapsgeld, spaarfonds)
+ */
+
+export function useListCaoKeuzes<TData = Awaited<ReturnType<typeof listCaoKeuzes>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listCaoKeuzes>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListCaoKeuzesQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateCaoKeuzeUrl = (id: number,) => {
+
+
+
+
+  return `/api/medewerkers/${id}/cao-keuzes`
+}
+
+/**
+ * @summary CAO-keuze vastleggen voor medewerker
+ */
+export const createCaoKeuze = async (id: number,
+    medewerkerCaoKeuzeInput: MedewerkerCaoKeuzeInput, options?: RequestInit): Promise<MedewerkerCaoKeuze> => {
+
+  return customFetch<MedewerkerCaoKeuze>(getCreateCaoKeuzeUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(medewerkerCaoKeuzeInput)
+  }
+);}
+
+
+
+
+export const getCreateCaoKeuzeMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createCaoKeuze>>, TError,{id: number;data: BodyType<MedewerkerCaoKeuzeInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createCaoKeuze>>, TError,{id: number;data: BodyType<MedewerkerCaoKeuzeInput>}, TContext> => {
+
+const mutationKey = ['createCaoKeuze'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createCaoKeuze>>, {id: number;data: BodyType<MedewerkerCaoKeuzeInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  createCaoKeuze(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateCaoKeuzeMutationResult = NonNullable<Awaited<ReturnType<typeof createCaoKeuze>>>
+    export type CreateCaoKeuzeMutationBody = BodyType<MedewerkerCaoKeuzeInput>
+    export type CreateCaoKeuzeMutationError = ErrorType<unknown>
+
+    /**
+ * @summary CAO-keuze vastleggen voor medewerker
+ */
+export const useCreateCaoKeuze = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createCaoKeuze>>, TError,{id: number;data: BodyType<MedewerkerCaoKeuzeInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createCaoKeuze>>,
+        TError,
+        {id: number;data: BodyType<MedewerkerCaoKeuzeInput>},
+        TContext
+      > => {
+      return useMutation(getCreateCaoKeuzeMutationOptions(options));
+    }
+
+export const getUpdateCaoKeuzeUrl = (id: number,
+    keuzeId: number,) => {
+
+
+
+
+  return `/api/medewerkers/${id}/cao-keuzes/${keuzeId}`
+}
+
+/**
+ * @summary CAO-keuze bijwerken
+ */
+export const updateCaoKeuze = async (id: number,
+    keuzeId: number,
+    medewerkerCaoKeuzeInput: MedewerkerCaoKeuzeInput, options?: RequestInit): Promise<MedewerkerCaoKeuze> => {
+
+  return customFetch<MedewerkerCaoKeuze>(getUpdateCaoKeuzeUrl(id,keuzeId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(medewerkerCaoKeuzeInput)
+  }
+);}
+
+
+
+
+export const getUpdateCaoKeuzeMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateCaoKeuze>>, TError,{id: number;keuzeId: number;data: BodyType<MedewerkerCaoKeuzeInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateCaoKeuze>>, TError,{id: number;keuzeId: number;data: BodyType<MedewerkerCaoKeuzeInput>}, TContext> => {
+
+const mutationKey = ['updateCaoKeuze'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateCaoKeuze>>, {id: number;keuzeId: number;data: BodyType<MedewerkerCaoKeuzeInput>}> = (props) => {
+          const {id,keuzeId,data} = props ?? {};
+
+          return  updateCaoKeuze(id,keuzeId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateCaoKeuzeMutationResult = NonNullable<Awaited<ReturnType<typeof updateCaoKeuze>>>
+    export type UpdateCaoKeuzeMutationBody = BodyType<MedewerkerCaoKeuzeInput>
+    export type UpdateCaoKeuzeMutationError = ErrorType<unknown>
+
+    /**
+ * @summary CAO-keuze bijwerken
+ */
+export const useUpdateCaoKeuze = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateCaoKeuze>>, TError,{id: number;keuzeId: number;data: BodyType<MedewerkerCaoKeuzeInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateCaoKeuze>>,
+        TError,
+        {id: number;keuzeId: number;data: BodyType<MedewerkerCaoKeuzeInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateCaoKeuzeMutationOptions(options));
+    }
+
+export const getDeleteCaoKeuzeUrl = (id: number,
+    keuzeId: number,) => {
+
+
+
+
+  return `/api/medewerkers/${id}/cao-keuzes/${keuzeId}`
+}
+
+/**
+ * @summary CAO-keuze verwijderen
+ */
+export const deleteCaoKeuze = async (id: number,
+    keuzeId: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteCaoKeuzeUrl(id,keuzeId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteCaoKeuzeMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteCaoKeuze>>, TError,{id: number;keuzeId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteCaoKeuze>>, TError,{id: number;keuzeId: number}, TContext> => {
+
+const mutationKey = ['deleteCaoKeuze'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteCaoKeuze>>, {id: number;keuzeId: number}> = (props) => {
+          const {id,keuzeId} = props ?? {};
+
+          return  deleteCaoKeuze(id,keuzeId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteCaoKeuzeMutationResult = NonNullable<Awaited<ReturnType<typeof deleteCaoKeuze>>>
+
+    export type DeleteCaoKeuzeMutationError = ErrorType<unknown>
+
+    /**
+ * @summary CAO-keuze verwijderen
+ */
+export const useDeleteCaoKeuze = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteCaoKeuze>>, TError,{id: number;keuzeId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteCaoKeuze>>,
+        TError,
+        {id: number;keuzeId: number},
+        TContext
+      > => {
+      return useMutation(getDeleteCaoKeuzeMutationOptions(options));
     }
 
 export const getListMedewerkerDocumentenUrl = (id: number,) => {

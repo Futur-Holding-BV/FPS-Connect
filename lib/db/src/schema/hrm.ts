@@ -417,6 +417,24 @@ export const medewerkerAanstellingenTable = pgTable("medewerker_aanstellingen", 
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
 });
 
+// ── CAO-keuzes per medewerker ─────────────────────────────────────────────────
+// Registreert de jaarlijkse of structurele arbeidsvoorwaardenkeuzes die per CAO
+// vereist zijn: vakantiegeld-uitkeringsvariant (Bouw 55%/100%), spaarfonds-naam
+// en gereedschapsgeld-keuze (geld of natura). Beheerder legt vast, medewerker
+// heeft inzagerecht via de app.
+export const medewerkerCaoKeuzesTable = pgTable("medewerker_cao_keuzes", {
+  id:            serial("id").primaryKey(),
+  medewerkerId:  integer("medewerker_id").notNull().references(() => medewerkersTable.id, { onDelete: "cascade" }),
+  type:          text("type").notNull(),         // vakantiegeld | gereedschapsgeld | spaarfonds
+  jaar:          integer("jaar"),                // null = structureel/lopend
+  keuze:         text("keuze").notNull(),        // vakantiegeld: 55_uitbetaald|100_spaarfonds|100_uitbetaald; gereedschapsgeld: geld|natura; spaarfonds: naam-tekst
+  fondsNaam:     text("fonds_naam"),             // spaarfondstype: bijv. "Bouw & Infra Spaarfonds"
+  bedragCents:   integer("bedrag_cents"),        // gereedschapsgeld: jaarlijks bedrag in centen
+  toelichting:   text("toelichting"),
+  aangemaaktOp:  timestamp("aangemaakt_op").notNull().defaultNow(),
+  bijgewerktOp:  timestamp("bijgewerkt_op").notNull().defaultNow(),
+});
+
 export const insertZzpOvereenkomstSchema = createInsertSchema(zzpOvereenkomstenTable).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });
 export type InsertZzpOvereenkomst = z.infer<typeof insertZzpOvereenkomstSchema>;
 export type ZzpOvereenkomst = typeof zzpOvereenkomstenTable.$inferSelect;
@@ -498,3 +516,6 @@ export type MedewerkerDocument = typeof medewerkerDocumentenTable.$inferSelect;
 export const insertMedewerkerAanstellingSchema = createInsertSchema(medewerkerAanstellingenTable).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });
 export type InsertMedewerkerAanstelling = z.infer<typeof insertMedewerkerAanstellingSchema>;
 export type MedewerkerAanstelling = typeof medewerkerAanstellingenTable.$inferSelect;
+export const insertMedewerkerCaoKeuzeSchema = createInsertSchema(medewerkerCaoKeuzesTable).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });
+export type InsertMedewerkerCaoKeuze = z.infer<typeof insertMedewerkerCaoKeuzeSchema>;
+export type MedewerkerCaoKeuze = typeof medewerkerCaoKeuzesTable.$inferSelect;

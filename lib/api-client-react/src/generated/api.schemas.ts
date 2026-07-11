@@ -4489,6 +4489,15 @@ export interface MedewerkerAanstellingInput {
   contracturen_per_week?: number | null;
 }
 
+export interface MijnMedewerkerInfo {
+  id: number;
+  naam: string;
+  /** @nullable */
+  functie?: string | null;
+  /** @nullable */
+  werkmaatschappij?: string | null;
+}
+
 export interface MijnCertificaten {
   medewerker_id: number;
   naam: string;
@@ -12406,6 +12415,46 @@ export interface AdviseurVraagInput {
 
 export interface AdviseurAntwoord {
   antwoord: string;
+}
+
+export type MedewerkerCaoKeuzeType = typeof MedewerkerCaoKeuzeType[keyof typeof MedewerkerCaoKeuzeType];
+
+
+export const MedewerkerCaoKeuzeType = {
+  vakantiegeld: 'vakantiegeld',
+  gereedschapsgeld: 'gereedschapsgeld',
+  spaarfonds: 'spaarfonds',
+} as const;
+
+export interface MedewerkerCaoKeuze {
+  id: number;
+  medewerker_id: number;
+  type: MedewerkerCaoKeuzeType;
+  jaar?: number | null;
+  keuze: string;
+  fonds_naam?: string | null;
+  bedrag_cents?: number | null;
+  toelichting?: string | null;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export type MedewerkerCaoKeuzeInputType = typeof MedewerkerCaoKeuzeInputType[keyof typeof MedewerkerCaoKeuzeInputType];
+
+
+export const MedewerkerCaoKeuzeInputType = {
+  vakantiegeld: 'vakantiegeld',
+  gereedschapsgeld: 'gereedschapsgeld',
+  spaarfonds: 'spaarfonds',
+} as const;
+
+export interface MedewerkerCaoKeuzeInput {
+  type: MedewerkerCaoKeuzeInputType;
+  jaar?: number | null;
+  keuze: string;
+  fonds_naam?: string | null;
+  bedrag_cents?: number | null;
+  toelichting?: string | null;
 }
 
 export interface CaoPresetsSyncResultaat {

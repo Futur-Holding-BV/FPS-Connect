@@ -43,6 +43,11 @@ import {
   useSetHoofdAanstelling,
   getListMedewerkerAanstellingenQueryKey,
   getGetGoedkeuringVoorObjectQueryKey,
+  useListCaoKeuzes,
+  useCreateCaoKeuze,
+  useUpdateCaoKeuze,
+  useDeleteCaoKeuze,
+  getListCaoKeuzesQueryKey,
 } from "@workspace/api-client-react";
 import type {
   MedewerkerInput,
@@ -55,6 +60,8 @@ import type {
   MedewerkerDocument,
   MedewerkerAanstelling,
   MedewerkerAanstellingInput,
+  MedewerkerCaoKeuze,
+  MedewerkerCaoKeuzeInput,
 } from "@workspace/api-client-react";
 import { useRol } from "@/context/rol-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -688,6 +695,11 @@ export default function MedewerkerDetailPagina() {
   const delBekwaamheid = useDeleteBekwaamheid();
   const maakAanvraag = useCreateVerlofAanvraag();
   const updAanvraag = useUpdateVerlofAanvraag();
+  const { data: caoKeuzes } = useListCaoKeuzes(id);
+  const maakCaoKeuze = useCreateCaoKeuze();
+  const updCaoKeuze = useUpdateCaoKeuze();
+  const delCaoKeuze = useDeleteCaoKeuze();
+
   const { data: aanstellingen = [] } = useListMedewerkerAanstellingen(id);
   const maakAanstelling = useCreateMedewerkerAanstelling();
   const updAanstelling = useUpdateMedewerkerAanstelling();
@@ -721,6 +733,12 @@ export default function MedewerkerDetailPagina() {
   const [aanvraagOpen, setAanvraagOpen] = useState(false);
   const [aanvraagForm, setAanvraagForm] = useState<VerlofAanvraagInput>({
     verlofsoort_id: 0, start_datum: "", eind_datum: "", aantal_uren: 8,
+  });
+
+  const [caoKeuzeOpen, setCaoKeuzeOpen] = useState(false);
+  const [caoKeuzeBewerkId, setCaoKeuzeBewerkId] = useState<number | null>(null);
+  const [caoKeuzeForm, setCaoKeuzeForm] = useState<MedewerkerCaoKeuzeInput>({
+    type: "vakantiegeld", keuze: "",
   });
 
   async function invalideerMedewerker() {
@@ -982,6 +1000,54 @@ export default function MedewerkerDetailPagina() {
       await queryClient.invalidateQueries({ queryKey: getListBekwaamhedenQueryKey(id) });
       await queryClient.invalidateQueries({ queryKey: getListAlleBekwaamhedenQueryKey() });
       toast({ title: "Bekwaamheid verwijderd" });
+    } catch {
+      toast({ title: "Verwijderen mislukt", variant: "destructive" });
+    }
+  }
+
+  function openCaoKeuze(k?: MedewerkerCaoKeuze) {
+    if (k) {
+      setCaoKeuzeBewerkId(k.id);
+      setCaoKeuzeForm({
+        type: k.type as MedewerkerCaoKeuzeInput["type"],
+        jaar: k.jaar ?? undefined,
+        keuze: k.keuze,
+        fonds_naam: k.fonds_naam ?? "",
+        bedrag_cents: k.bedrag_cents ?? undefined,
+        toelichting: k.toelichting ?? "",
+      });
+    } else {
+      setCaoKeuzeBewerkId(null);
+      setCaoKeuzeForm({ type: "vakantiegeld", keuze: "" });
+    }
+    setCaoKeuzeOpen(true);
+  }
+
+  async function opslaanCaoKeuze() {
+    if (!caoKeuzeForm.keuze.trim()) {
+      toast({ title: "Keuze is verplicht", variant: "destructive" });
+      return;
+    }
+    try {
+      if (caoKeuzeBewerkId) {
+        await updCaoKeuze.mutateAsync({ id: Number(id), keuzeId: caoKeuzeBewerkId, data: caoKeuzeForm });
+      } else {
+        await maakCaoKeuze.mutateAsync({ id: Number(id), data: caoKeuzeForm });
+      }
+      await queryClient.invalidateQueries({ queryKey: getListCaoKeuzesQueryKey(id) });
+      toast({ title: caoKeuzeBewerkId ? "CAO-keuze bijgewerkt" : "CAO-keuze vastgelegd" });
+      setCaoKeuzeOpen(false);
+    } catch {
+      toast({ title: "Opslaan mislukt", variant: "destructive" });
+    }
+  }
+
+  async function verwijderCaoKeuze(kId: number) {
+    if (!window.confirm("Deze CAO-keuze verwijderen?")) return;
+    try {
+      await delCaoKeuze.mutateAsync({ id: Number(id), keuzeId: kId });
+      await queryClient.invalidateQueries({ queryKey: getListCaoKeuzesQueryKey(id) });
+      toast({ title: "CAO-keuze verwijderd" });
     } catch {
       toast({ title: "Verwijderen mislukt", variant: "destructive" });
     }
@@ -1396,6 +1462,7 @@ export default function MedewerkerDetailPagina() {
           <TabsTrigger value="opleidingen">Opleidingen & certificaten</TabsTrigger>
           <TabsTrigger value="bekwaamheden">Bekwaamheden</TabsTrigger>
           <TabsTrigger value="verlof">Verlof</TabsTrigger>
+          <TabsTrigger value="cao-keuzes">CAO-keuzes</TabsTrigger>
           <TabsTrigger value="achtergrond"><FileText className="h-3.5 w-3.5 mr-1.5" />Achtergrond / CV</TabsTrigger>
           <TabsTrigger value="prestaties"><Trophy className="h-3.5 w-3.5 mr-1.5" />Prestaties</TabsTrigger>
           <TabsTrigger value="documenten"><FileText className="h-3.5 w-3.5 mr-1.5" />Documenten</TabsTrigger>
@@ -1680,6 +1747,79 @@ export default function MedewerkerDetailPagina() {
             <SalarisdocumentenTab medewerkerId={Number(id)} magBewerken={(bevoegdheden.salarisarchief ?? 0) >= 2} />
           </TabsContent>
         )}
+        {/* CAO-keuzes */}
+        <TabsContent value="cao-keuzes" className="space-y-3">
+          {magSchrijven && (
+            <div className="flex justify-end">
+              <Button onClick={() => openCaoKeuze()}><Plus className="h-4 w-4 mr-1" />CAO-keuze vastleggen</Button>
+            </div>
+          )}
+          {(caoKeuzes ?? []).length === 0 ? (
+            <Card>
+              <CardContent className="py-10 text-center text-muted-foreground">
+                <p className="text-sm">Nog geen CAO-keuzes vastgelegd voor deze medewerker.</p>
+                {medewerker?.cao === "Bouw & Infra" && (
+                  <p className="text-xs mt-1 text-muted-foreground">
+                    CAO Bouw & Infra vereist jaarlijkse keuzes voor vakantiegeld en gereedschapsgeld.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-2">
+              {(["vakantiegeld", "gereedschapsgeld", "spaarfonds"] as const).map((type) => {
+                const items = (caoKeuzes ?? []).filter((k) => k.type === type);
+                if (items.length === 0) return null;
+                const typeLabel: Record<string, string> = {
+                  vakantiegeld: "Vakantiegeld",
+                  gereedschapsgeld: "Gereedschapsgeld",
+                  spaarfonds: "Spaarfonds",
+                };
+                const keuzeLabel: Record<string, string> = {
+                  "55_uitbetaald":  "55% direct uitbetaald + 45% naar spaarfonds",
+                  "100_spaarfonds": "100% naar spaarfonds",
+                  "100_uitbetaald": "100% direct uitbetaald",
+                  "geld":           "Geldbedrag ontvangen",
+                  "natura":         "Natura (bon / gereedschapsset)",
+                  "registratie":    "Spaarfondsregistratie",
+                };
+                return (
+                  <Card key={type}>
+                    <CardHeader className="py-3 px-4 border-b">
+                      <CardTitle className="text-sm">{typeLabel[type] ?? type}</CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                      {items.map((item, idx) => (
+                        <div key={item.id} className={`flex items-start justify-between gap-3 p-4 ${idx > 0 ? "border-t" : ""}`}>
+                          <div className="min-w-0">
+                            <div className="font-medium text-sm">{keuzeLabel[item.keuze] ?? item.keuze}</div>
+                            <div className="text-xs text-muted-foreground flex flex-wrap gap-x-3 mt-0.5">
+                              {item.jaar != null && <span>Jaar: {item.jaar}</span>}
+                              {item.fonds_naam && <span>Fonds: {item.fonds_naam}</span>}
+                              {item.bedrag_cents != null && (
+                                <span>Bedrag: {new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(item.bedrag_cents / 100)}</span>
+                              )}
+                            </div>
+                            {item.toelichting && (
+                              <div className="text-xs text-muted-foreground mt-1">{item.toelichting}</div>
+                            )}
+                          </div>
+                          {magSchrijven && (
+                            <div className="flex gap-1 shrink-0">
+                              <Button variant="ghost" size="icon" onClick={() => openCaoKeuze(item)}><Pencil className="h-4 w-4" /></Button>
+                              <Button variant="ghost" size="icon" onClick={() => verwijderCaoKeuze(item.id)}><Trash2 className="h-4 w-4" /></Button>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </TabsContent>
+
       </Tabs>
 
       {/* Profiel bewerken */}
@@ -2069,6 +2209,107 @@ export default function MedewerkerDetailPagina() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* CAO-keuze vastleggen / bewerken */}
+      {caoKeuzeOpen && (
+        <Dialog open onOpenChange={(o) => { if (!o) setCaoKeuzeOpen(false); }}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>{caoKeuzeBewerkId ? "CAO-keuze bewerken" : "CAO-keuze vastleggen"}</DialogTitle>
+              <DialogDescription>Registreer de arbeidsvoorwaardenkeuze voor deze medewerker.</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3">
+              <div className="space-y-1.5">
+                <Label>Type *</Label>
+                <Select
+                  value={caoKeuzeForm.type}
+                  onValueChange={(v) => setCaoKeuzeForm({ ...caoKeuzeForm, type: v as MedewerkerCaoKeuzeInput["type"], keuze: "" })}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="vakantiegeld">Vakantiegeld</SelectItem>
+                    <SelectItem value="gereedschapsgeld">Gereedschapsgeld</SelectItem>
+                    <SelectItem value="spaarfonds">Spaarfonds</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Keuze *</Label>
+                {caoKeuzeForm.type === "vakantiegeld" ? (
+                  <Select value={caoKeuzeForm.keuze} onValueChange={(v) => setCaoKeuzeForm({ ...caoKeuzeForm, keuze: v })}>
+                    <SelectTrigger><SelectValue placeholder="Kies variant" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="55_uitbetaald">55% direct uitbetaald + 45% naar spaarfonds</SelectItem>
+                      <SelectItem value="100_spaarfonds">100% naar spaarfonds</SelectItem>
+                      <SelectItem value="100_uitbetaald">100% direct uitbetaald</SelectItem>
+                    </SelectContent>
+                  </Select>
+                ) : caoKeuzeForm.type === "gereedschapsgeld" ? (
+                  <Select value={caoKeuzeForm.keuze} onValueChange={(v) => setCaoKeuzeForm({ ...caoKeuzeForm, keuze: v })}>
+                    <SelectTrigger><SelectValue placeholder="Kies variant" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="geld">Geldbedrag ontvangen</SelectItem>
+                      <SelectItem value="natura">Natura (bon / gereedschapsset)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Input
+                    placeholder="bijv. naam van het spaarfonds"
+                    value={caoKeuzeForm.keuze}
+                    onChange={(e) => setCaoKeuzeForm({ ...caoKeuzeForm, keuze: e.target.value })}
+                  />
+                )}
+              </div>
+              <div className="space-y-1.5">
+                <Label>Jaar <span className="text-muted-foreground text-xs">(leeg = structureel)</span></Label>
+                <Input
+                  type="number"
+                  placeholder={String(new Date().getFullYear())}
+                  value={caoKeuzeForm.jaar ?? ""}
+                  onChange={(e) => setCaoKeuzeForm({ ...caoKeuzeForm, jaar: e.target.value ? Number(e.target.value) : undefined })}
+                />
+              </div>
+              {(caoKeuzeForm.type === "spaarfonds" || caoKeuzeForm.type === "vakantiegeld") && (
+                <div className="space-y-1.5">
+                  <Label>Fondsnaam <span className="text-muted-foreground text-xs">(optioneel)</span></Label>
+                  <Input
+                    placeholder="bijv. Bouw & Infra Spaarfonds"
+                    value={caoKeuzeForm.fonds_naam ?? ""}
+                    onChange={(e) => setCaoKeuzeForm({ ...caoKeuzeForm, fonds_naam: e.target.value })}
+                  />
+                </div>
+              )}
+              {caoKeuzeForm.type === "gereedschapsgeld" && caoKeuzeForm.keuze === "geld" && (
+                <div className="space-y-1.5">
+                  <Label>Bedrag (€) <span className="text-muted-foreground text-xs">(optioneel)</span></Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    step={0.01}
+                    placeholder="0,00"
+                    value={caoKeuzeForm.bedrag_cents != null ? caoKeuzeForm.bedrag_cents / 100 : ""}
+                    onChange={(e) => setCaoKeuzeForm({ ...caoKeuzeForm, bedrag_cents: e.target.value ? Math.round(Number(e.target.value) * 100) : undefined })}
+                  />
+                </div>
+              )}
+              <div className="space-y-1.5">
+                <Label>Toelichting <span className="text-muted-foreground text-xs">(optioneel)</span></Label>
+                <Textarea
+                  placeholder="Aanvullende informatie..."
+                  value={caoKeuzeForm.toelichting ?? ""}
+                  onChange={(e) => setCaoKeuzeForm({ ...caoKeuzeForm, toelichting: e.target.value })}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setCaoKeuzeOpen(false)}>Annuleren</Button>
+              <Button onClick={opslaanCaoKeuze} disabled={maakCaoKeuze.isPending || updCaoKeuze.isPending}>
+                {maakCaoKeuze.isPending || updCaoKeuze.isPending ? "Bezig…" : "Opslaan"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }

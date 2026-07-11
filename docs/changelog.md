@@ -1,3 +1,35 @@
+## 2026-07-11 — CAO Bouw & Infra keuzes (vakantiegeld / gereedschapsgeld / spaarfonds)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (puur additief — nieuwe tabel, nieuwe routes, geen bestaand gedrag gewijzigd)
+
+**Nieuw gebouwd:**
+
+**1. DB-tabel `medewerker_cao_keuzes`**
+- Kolommen: `id`, `medewerker_id` (FK), `type` (vakantiegeld/gereedschapsgeld/spaarfonds), `keuze` (variant-code), `jaar` (optioneel), `fonds_naam`, `bedrag_cents`, `toelichting`, `aangemaakt_op`, `bijgewerkt_op`
+- Aangemaakt via `CREATE TABLE IF NOT EXISTS` (additief, geen Drizzle push)
+
+**2. OpenAPI spec + codegen**
+- 4 endpoints: `GET/POST /medewerkers/{id}/cao-keuzes`, `PATCH/DELETE /medewerkers/{id}/cao-keuzes/{keuzeId}`
+- Nieuw endpoint `GET /mijn/medewerker` → `MijnMedewerkerInfo` (id, naam, functie, werkmaatschappij)
+- Hooks gegenereerd: `useListCaoKeuzes`, `useCreateCaoKeuze`, `useUpdateCaoKeuze`, `useDeleteCaoKeuze`, `useGetMijnMedewerker`
+
+**3. Backend routes (`artifacts/api-server/src/routes/hrm.ts`)**
+- 4 CAO-keuze route handlers (lijst, aanmaken, bijwerken, verwijderen) met bevoegdheidscheck
+- `/mijn/medewerker` handler — opzoeken via `getMijnMedewerkerId` (sessie → gebruiker_id → medewerker)
+
+**4. Web medewerker detail (`artifacts/firevault/src/pages/personeel/detail.tsx`)**
+- Tab "CAO-keuzes" toegevoegd naast Verlof
+- TabsContent: keuzes gegroepeerd per type (Vakantiegeld / Gereedschapsgeld / Spaarfonds), keuze-labels, jaar-badge, fonds naam, bedrag in euro's, toelichting; per rij bewerken/verwijderen voor beheerders
+- Dialog voor toevoegen/bewerken: type-select (3 opties), keuze-select (afhankelijk van type), jaar, fondsnaam, bedrag en toelichting
+
+**5. Mobiel scherm (`artifacts/monteur-app/app/hrm/keuzes.tsx`)**
+- Read-only inzage voor de monteur van zijn eigen CAO-keuzes
+- Opzoeken via `useGetMijnMedewerker` (nieuw endpoint) → medewerker-id → `useListCaoKeuzes`
+- Gegroepeerd per type, keuze-label, jaar-badge, fonds/bedrag/toelichting
+- Navkaart "Mijn CAO-keuzes" toegevoegd aan `artifacts/monteur-app/app/hrm/index.tsx`
+
+---
+
 ## 2026-07-11 — Factuur-briefpapier template (DDS Familie A)
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (puur additief — nieuwe component + nieuwe route, geen bestaand gedrag gewijzigd)

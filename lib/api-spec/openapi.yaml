@@ -2060,6 +2060,21 @@ paths:
         "404":
           description: Niet gevonden
 
+  /mijn/medewerker:
+    get:
+      operationId: getMijnMedewerker
+      tags: [mijn]
+      summary: Medewerker-basisgegevens van de ingelogde gebruiker
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MijnMedewerkerInfo"
+        "404":
+          description: Geen medewerker gekoppeld aan dit account
+
   /mijn/certificaten:
     get:
       operationId: getMijnCertificaten
@@ -8208,6 +8223,98 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Medewerker"
+
+  /medewerkers/{id}/cao-keuzes:
+    get:
+      operationId: listCaoKeuzes
+      tags: [personeel]
+      summary: CAO-keuzes van een medewerker (vakantiegeld, gereedschapsgeld, spaarfonds)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MedewerkerCaoKeuze"
+    post:
+      operationId: createCaoKeuze
+      tags: [personeel]
+      summary: CAO-keuze vastleggen voor medewerker
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MedewerkerCaoKeuzeInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MedewerkerCaoKeuze"
+
+  /medewerkers/{id}/cao-keuzes/{keuzeId}:
+    patch:
+      operationId: updateCaoKeuze
+      tags: [personeel]
+      summary: CAO-keuze bijwerken
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: keuzeId
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MedewerkerCaoKeuzeInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MedewerkerCaoKeuze"
+    delete:
+      operationId: deleteCaoKeuze
+      tags: [personeel]
+      summary: CAO-keuze verwijderen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: keuzeId
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Verwijderd
 
   /medewerkers/{id}/documenten:
     get:
@@ -27666,6 +27773,19 @@ components:
         contracturen_per_week:
           type: ["number", "null"]
 
+    MijnMedewerkerInfo:
+      type: object
+      required: [id, naam]
+      properties:
+        id:
+          type: integer
+        naam:
+          type: string
+        functie:
+          type: ["string", "null"]
+        werkmaatschappij:
+          type: ["string", "null"]
+
     MijnCertificaten:
       type: object
       required: [medewerker_id, naam]
@@ -39566,6 +39686,36 @@ components:
       properties:
         antwoord:
           type: string
+
+    MedewerkerCaoKeuze:
+      type: object
+      required: [id, medewerker_id, type, keuze, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id:            { type: integer }
+        medewerker_id: { type: integer }
+        type:
+          type: string
+          enum: [vakantiegeld, gereedschapsgeld, spaarfonds]
+        jaar:          { type: integer, nullable: true }
+        keuze:         { type: string }
+        fonds_naam:    { type: string, nullable: true }
+        bedrag_cents:  { type: integer, nullable: true }
+        toelichting:   { type: string, nullable: true }
+        aangemaakt_op: { type: string }
+        bijgewerkt_op: { type: string }
+
+    MedewerkerCaoKeuzeInput:
+      type: object
+      required: [type, keuze]
+      properties:
+        type:
+          type: string
+          enum: [vakantiegeld, gereedschapsgeld, spaarfonds]
+        jaar:         { type: integer, nullable: true }
+        keuze:        { type: string }
+        fonds_naam:   { type: string, nullable: true }
+        bedrag_cents: { type: integer, nullable: true }
+        toelichting:  { type: string, nullable: true }
 
     CaoPresetsSyncResultaat:
       type: object

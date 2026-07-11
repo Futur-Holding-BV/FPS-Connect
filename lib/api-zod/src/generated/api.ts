@@ -2451,6 +2451,17 @@ export const DeleteConstructieTemplateResponse = zod.void()
 
 
 /**
+ * @summary Medewerker-basisgegevens van de ingelogde gebruiker
+ */
+export const GetMijnMedewerkerResponse = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "functie": zod.string().nullish(),
+  "werkmaatschappij": zod.string().nullish()
+})
+
+
+/**
  * @summary VCA/EHBO/BHV vervaldatums van de ingelogde medewerker
  */
 export const GetMijnCertificatenResponse = zod.object({
@@ -10293,6 +10304,89 @@ export const OffboardMedewerkerResponse = zod.object({
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })
+
+
+/**
+ * @summary CAO-keuzes van een medewerker (vakantiegeld, gereedschapsgeld, spaarfonds)
+ */
+export const ListCaoKeuzesParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListCaoKeuzesResponseItem = zod.object({
+  "id": zod.number(),
+  "medewerker_id": zod.number(),
+  "type": zod.enum(['vakantiegeld', 'gereedschapsgeld', 'spaarfonds']),
+  "jaar": zod.number().nullish(),
+  "keuze": zod.string(),
+  "fonds_naam": zod.string().nullish(),
+  "bedrag_cents": zod.number().nullish(),
+  "toelichting": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+export const ListCaoKeuzesResponse = zod.array(ListCaoKeuzesResponseItem)
+
+
+/**
+ * @summary CAO-keuze vastleggen voor medewerker
+ */
+export const CreateCaoKeuzeParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const CreateCaoKeuzeBody = zod.object({
+  "type": zod.enum(['vakantiegeld', 'gereedschapsgeld', 'spaarfonds']),
+  "jaar": zod.number().nullish(),
+  "keuze": zod.string(),
+  "fonds_naam": zod.string().nullish(),
+  "bedrag_cents": zod.number().nullish(),
+  "toelichting": zod.string().nullish()
+})
+
+export const CreateCaoKeuzeResponse = zod.void()
+
+
+/**
+ * @summary CAO-keuze bijwerken
+ */
+export const UpdateCaoKeuzeParams = zod.object({
+  "id": zod.coerce.number(),
+  "keuzeId": zod.coerce.number()
+})
+
+export const UpdateCaoKeuzeBody = zod.object({
+  "type": zod.enum(['vakantiegeld', 'gereedschapsgeld', 'spaarfonds']),
+  "jaar": zod.number().nullish(),
+  "keuze": zod.string(),
+  "fonds_naam": zod.string().nullish(),
+  "bedrag_cents": zod.number().nullish(),
+  "toelichting": zod.string().nullish()
+})
+
+export const UpdateCaoKeuzeResponse = zod.object({
+  "id": zod.number(),
+  "medewerker_id": zod.number(),
+  "type": zod.enum(['vakantiegeld', 'gereedschapsgeld', 'spaarfonds']),
+  "jaar": zod.number().nullish(),
+  "keuze": zod.string(),
+  "fonds_naam": zod.string().nullish(),
+  "bedrag_cents": zod.number().nullish(),
+  "toelichting": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary CAO-keuze verwijderen
+ */
+export const DeleteCaoKeuzeParams = zod.object({
+  "id": zod.coerce.number(),
+  "keuzeId": zod.coerce.number()
+})
+
+export const DeleteCaoKeuzeResponse = zod.void()
 
 
 /**

@@ -36,6 +36,7 @@ import {
   medewerkerAanstellingenTable,
   poortwachterDossiersTable,
   poortwachterMijlpalenTable,
+  medewerkerCaoKeuzesTable,
 } from "@workspace/db";
 import { ObjectStorageService } from "../lib/objectStorage";
 import { eq, desc, and, ne, inArray, or, isNull, gte, lte, sql, getTableColumns } from "drizzle-orm";
@@ -1218,6 +1219,107 @@ router.post("/medewerkers/:id/bekwaamheden", schrijven, async (req, res): Promis
       })
       .returning();
     res.status(201).json(mapBekwaamheid(b));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// ── CAO-keuzes ───────────────────────────────────────────────────────────────
+const mapCaoKeuze = (k: typeof medewerkerCaoKeuzesTable.$inferSelect) => ({
+  id:           k.id,
+  medewerker_id: k.medewerkerId,
+  type:          k.type,
+  jaar:          k.jaar,
+  keuze:         k.keuze,
+  fonds_naam:    k.fondsNaam,
+  bedrag_cents:  k.bedragCents,
+  toelichting:   k.toelichting,
+  aangemaakt_op: iso(k.aangemaaktOp),
+  bijgewerkt_op: iso(k.bijgewerktOp),
+});
+
+router.get("/medewerkers/:id/cao-keuzes", lezen, async (req, res): Promise<void> => {
+  try {
+    const rijen = await db
+      .select()
+      .from(medewerkerCaoKeuzesTable)
+      .where(eq(medewerkerCaoKeuzesTable.medewerkerId, parseId(req.params.id)))
+      .orderBy(medewerkerCaoKeuzesTable.type, desc(medewerkerCaoKeuzesTable.jaar));
+    res.json(rijen.map(mapCaoKeuze));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+router.post("/medewerkers/:id/cao-keuzes", schrijven, async (req, res): Promise<void> => {
+  try {
+    const { type, jaar, keuze, fonds_naam, bedrag_cents, toelichting } = req.body as Record<string, unknown>;
+    if (!type || !keuze) return void res.status(400).json({ error: "type en keuze zijn verplicht" });
+    const TOEGESTANE_TYPES = ["vakantiegeld", "gereedschapsgeld", "spaarfonds"];
+    if (!TOEGESTANE_TYPES.includes(String(type))) return void res.status(400).json({ error: "Ongeldig type" });
+    const [k] = await db
+      .insert(medewerkerCaoKeuzesTable)
+      .values({
+        medewerkerId: parseId(req.params.id),
+        type:       String(type),
+        jaar:       typeof jaar === "number" ? jaar : null,
+        keuze:      String(keuze),
+        fondsNaam:  typeof fonds_naam === "string" ? fonds_naam : null,
+        bedragCents: typeof bedrag_cents === "number" ? bedrag_cents : null,
+        toelichting: typeof toelichting === "string" ? toelichting : null,
+      })
+      .returning();
+    res.status(201).json(mapCaoKeuze(k));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+router.patch("/medewerkers/:id/cao-keuzes/:keuzeId", schrijven, async (req, res): Promise<void> => {
+  try {
+    const keuzeId = parseId(req.params.keuzeId);
+    const mid     = parseId(req.params.id);
+    const bestaand = await db
+      .select()
+      .from(medewerkerCaoKeuzesTable)
+      .where(and(eq(medewerkerCaoKeuzesTable.id, keuzeId), eq(medewerkerCaoKeuzesTable.medewerkerId, mid)))
+      .then((r) => r[0]);
+    if (!bestaand) return void res.status(404).json({ error: "CAO-keuze niet gevonden" });
+    const body = req.body as Record<string, unknown>;
+    const update: Partial<typeof medewerkerCaoKeuzesTable.$inferInsert> = { bijgewerktOp: new Date() };
+    if ("type"        in body) update.type       = String(body.type);
+    if ("jaar"        in body) update.jaar        = typeof body.jaar === "number" ? body.jaar : null;
+    if ("keuze"       in body) update.keuze       = String(body.keuze);
+    if ("fonds_naam"  in body) update.fondsNaam   = typeof body.fonds_naam === "string" ? body.fonds_naam : null;
+    if ("bedrag_cents" in body) update.bedragCents = typeof body.bedrag_cents === "number" ? body.bedrag_cents : null;
+    if ("toelichting" in body) update.toelichting = typeof body.toelichting === "string" ? body.toelichting : null;
+    const [bijgewerkt] = await db
+      .update(medewerkerCaoKeuzesTable)
+      .set(update)
+      .where(eq(medewerkerCaoKeuzesTable.id, keuzeId))
+      .returning();
+    res.json(mapCaoKeuze(bijgewerkt));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+router.delete("/medewerkers/:id/cao-keuzes/:keuzeId", schrijven, async (req, res): Promise<void> => {
+  try {
+    const keuzeId = parseId(req.params.keuzeId);
+    const mid     = parseId(req.params.id);
+    const bestaand = await db
+      .select()
+      .from(medewerkerCaoKeuzesTable)
+      .where(and(eq(medewerkerCaoKeuzesTable.id, keuzeId), eq(medewerkerCaoKeuzesTable.medewerkerId, mid)))
+      .then((r) => r[0]);
+    if (!bestaand) return void res.status(404).json({ error: "CAO-keuze niet gevonden" });
+    await db.delete(medewerkerCaoKeuzesTable).where(eq(medewerkerCaoKeuzesTable.id, keuzeId));
+    res.status(204).end();
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });
@@ -2831,6 +2933,33 @@ router.get("/hrm/cao-opties", lezen, async (_req, res) => {
       toelichting: c.toelichting,
     })),
   );
+});
+
+// ── Mijn medewerker ───────────────────────────────────────────────────────────
+router.get("/mijn/medewerker", async (req, res): Promise<void> => {
+  try {
+    const medewerkerId = await getMijnMedewerkerId(req);
+    if (!medewerkerId) return void res.status(404).json({ error: "Geen medewerker-koppeling" });
+    const [m] = await db
+      .select({
+        id: medewerkersTable.id,
+        naam: medewerkersTable.naam,
+        functie: medewerkersTable.functie,
+        werkmaatschappij: medewerkersTable.werkmaatschappij,
+      })
+      .from(medewerkersTable)
+      .where(eq(medewerkersTable.id, medewerkerId));
+    if (!m) return void res.status(404).json({ error: "Niet gevonden" });
+    res.json({
+      id: m.id,
+      naam: m.naam,
+      functie: m.functie ?? null,
+      werkmaatschappij: m.werkmaatschappij ?? null,
+    });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
 });
 
 // ── Mijn certificaten ─────────────────────────────────────────────────────────
