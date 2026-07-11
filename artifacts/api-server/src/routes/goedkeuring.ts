@@ -412,6 +412,183 @@ router.get(
   },
 );
 
+// ── CSV-export dashboard ────────────────────────────────────────────────────
+
+router.get(
+  "/goedkeuring/dashboard/export.csv",
+  requireBevoegdheid("goedkeuring", 1),
+  async (req, res): Promise<void> => {
+    try {
+      const statusFilter = typeof req.query.status === "string" ? req.query.status : undefined;
+      const documentTypeFilter = typeof req.query.document_type === "string" ? req.query.document_type : undefined;
+      const alleenVerlopen = req.query.alleen_verlopen === "true";
+      const vensterRaw = typeof req.query.venster === "string" ? parseInt(req.query.venster, 10) : NaN;
+      // Bij export: standaard 0 (volledig archief) tenzij expliciet opgegeven
+      const vensterDagen = Number.isFinite(vensterRaw) && vensterRaw >= 0 ? vensterRaw : 0;
+      const alleenMijnActies = req.query.alleen_mijn_acties === "true";
+
+      const whereCondities = [];
+      if (statusFilter) {
+        whereCondities.push(eq(goedkeuringAanvragenTable.status, statusFilter));
+      } else {
+        const afgehandeldConditie =
+          vensterDagen === 0
+            ? sql`${goedkeuringAanvragenTable.status} IN ('goedgekeurd', 'afgewezen')`
+            : and(
+                sql`${goedkeuringAanvragenTable.status} IN ('goedgekeurd', 'afgewezen')`,
+                sql`${goedkeuringAanvragenTable.afgehandeldOp} > now() - (${vensterDagen} || ' days')::interval`,
+              );
+        whereCondities.push(
+          or(
+            eq(goedkeuringAanvragenTable.status, "ingediend"),
+            afgehandeldConditie,
+          ),
+        );
+      }
+      if (documentTypeFilter) {
+        whereCondities.push(eq(goedkeuringAanvragenTable.documentType, documentTypeFilter));
+      }
+
+      const aanvragen = await db
+        .select({
+          aanvraag: goedkeuringAanvragenTable,
+          beleid: {
+            reactietermijnUren: goedkeuringBeleidsregelsTable.reactietermijnUren,
+          },
+        })
+        .from(goedkeuringAanvragenTable)
+        .leftJoin(
+          goedkeuringBeleidsregelsTable,
+          eq(goedkeuringAanvragenTable.beleidsregelId, goedkeuringBeleidsregelsTable.id),
+        )
+        .where(and(...(whereCondities.length ? whereCondities : [sql`true`])))
+        .orderBy(desc(goedkeuringAanvragenTable.ingediendOp));
+
+      const indienerIds = [
+        ...new Set(
+          aanvragen
+            .map((r) => r.aanvraag.ingediendDoorId)
+            .filter((id): id is number => id != null),
+        ),
+      ];
+      const indienerMap = indienerIds.length > 0
+        ? new Map(
+            (await db
+              .select({ id: gebruikersTable.id, naam: gebruikersTable.naam })
+              .from(gebruikersTable)
+              .where(inArray(gebruikersTable.id, indienerIds)))
+              .map((g) => [g.id, g.naam]),
+          )
+        : new Map<number, string | null>();
+
+      // Verrijken met afhandelaar (laatste goedgekeurd/afgewezen stap) in één query
+      const csvAanvraagIds = aanvragen.map((r) => r.aanvraag.id);
+      const csvAfhandelaarMap = new Map<number, string | null>();
+      if (csvAanvraagIds.length > 0) {
+        const afhandelStappen = await db
+          .select({
+            aanvraagId: goedkeuringStappenTable.aanvraagId,
+            gebruikerNaam: goedkeuringStappenTable.gebruikerNaam,
+          })
+          .from(goedkeuringStappenTable)
+          .where(
+            and(
+              inArray(goedkeuringStappenTable.aanvraagId, csvAanvraagIds),
+              sql`${goedkeuringStappenTable.actie} IN ('goedgekeurd', 'afgewezen')`,
+            ),
+          )
+          .orderBy(desc(goedkeuringStappenTable.aangemaaktOp), desc(goedkeuringStappenTable.id));
+        for (const stap of afhandelStappen) {
+          if (!csvAfhandelaarMap.has(stap.aanvraagId)) {
+            csvAfhandelaarMap.set(stap.aanvraagId, stap.gebruikerNaam ?? null);
+          }
+        }
+      }
+
+      const actor = await maakGoedkeuringActor(req, db);
+
+      const nu = Date.now();
+      const STATUS_LABELS: Record<string, string> = {
+        concept: "Concept",
+        ingediend: "Ingediend",
+        goedgekeurd: "Goedgekeurd",
+        afgewezen: "Afgewezen",
+        ingetrokken: "Ingetrokken",
+        vervangen: "Vervangen",
+      };
+
+      const escapeCell = (val: string | number | null | undefined): string => {
+        if (val == null) return "";
+        let s = String(val);
+        if (s.length > 0 && "=+-@\t\r".includes(s[0]!)) {
+          s = `'${s}`;
+        }
+        if (s.includes(",") || s.includes('"') || s.includes("\n")) {
+          return `"${s.replace(/"/g, '""')}"`;
+        }
+        return s;
+      };
+
+      const header = ["#", "Documenttype", "Omschrijving", "Bedrag", "Ingediend door", "Ingediend op", "Afgehandeld op", "Afgehandeld door", "Status", "Reden afwijzing"].join(",");
+
+      const rijen = aanvragen
+        .map(({ aanvraag, beleid }) => {
+          const reactietermijnUren = beleid?.reactietermijnUren ?? null;
+          const deadlineOp =
+            aanvraag.ingediendOp && reactietermijnUren
+              ? new Date(aanvraag.ingediendOp.getTime() + reactietermijnUren * 3_600_000)
+              : null;
+          const isVerlopen =
+            aanvraag.status === "ingediend" && deadlineOp != null && nu > deadlineOp.getTime();
+
+          const snapshot = (aanvraag.beleidSnapshot as BeleidSnapshot | null) ?? null;
+          const magGoedkeurenWaarde =
+            Boolean(actor) && aanvraag.status === "ingediend" && snapshot != null
+              ? magGoedkeuren(actor as GoedkeuringActor, aanvraag, snapshot)
+              : false;
+
+          return { aanvraag, isVerlopen, magGoedkeurenWaarde };
+        })
+        .filter(({ isVerlopen }) => !alleenVerlopen || isVerlopen)
+        .filter(({ magGoedkeurenWaarde }) => !alleenMijnActies || magGoedkeurenWaarde)
+        .map(({ aanvraag }) => {
+          const ingediendDatum = aanvraag.ingediendOp
+            ? aanvraag.ingediendOp.toLocaleDateString("nl-NL", { day: "2-digit", month: "2-digit", year: "numeric" })
+            : null;
+          const afgehandeldDatum = aanvraag.afgehandeldOp
+            ? aanvraag.afgehandeldOp.toLocaleDateString("nl-NL", { day: "2-digit", month: "2-digit", year: "numeric" })
+            : null;
+          const bedrag = aanvraag.bedrag != null
+            ? aanvraag.bedrag.toFixed(2).replace(".", ",")
+            : null;
+          return [
+            escapeCell(aanvraag.id),
+            escapeCell(aanvraag.documentType),
+            escapeCell(aanvraag.omschrijving),
+            escapeCell(bedrag),
+            escapeCell(indienerMap.get(aanvraag.ingediendDoorId ?? -1) ?? null),
+            escapeCell(ingediendDatum),
+            escapeCell(afgehandeldDatum),
+            escapeCell(csvAfhandelaarMap.get(aanvraag.id) ?? null),
+            escapeCell(STATUS_LABELS[aanvraag.status] ?? aanvraag.status),
+            escapeCell(aanvraag.afwijzingReden),
+          ].join(",");
+        });
+
+      const datumStempel = new Date().toISOString().slice(0, 10);
+      const bestandsnaam = `goedkeuringen-${datumStempel}.csv`;
+
+      res.setHeader("Content-Type", "text/csv; charset=utf-8");
+      res.setHeader("Content-Disposition", `attachment; filename="${bestandsnaam}"`);
+      // BOM zodat Excel UTF-8 herkent
+      res.send("\uFEFF" + [header, ...rijen].join("\r\n"));
+    } catch (err) {
+      req.log.error(err);
+      res.status(500).json({ error: "Interne serverfout" });
+    }
+  },
+);
+
 // ── Aanvragen (lezen: niveau 1, acties: niveau 3) ───────────────────────────
 
 router.get(

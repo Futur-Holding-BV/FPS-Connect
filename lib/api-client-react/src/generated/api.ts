@@ -183,6 +183,7 @@ import type {
   EenheidsPrijsInput,
   ErrorEnvelope,
   ExportAiAanroepenCsvParams,
+  ExportGoedkeuringDashboardParams,
   ExportlogRegel,
   Fabrikant,
   FabrikantInput,
@@ -18591,6 +18592,90 @@ export function useListGoedkeuringDashboard<TData = Awaited<ReturnType<typeof li
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getListGoedkeuringDashboardQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getExportGoedkeuringDashboardUrl = (params?: ExportGoedkeuringDashboardParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/goedkeuring/dashboard/export.csv?${stringifiedParams}` : `/api/goedkeuring/dashboard/export.csv`
+}
+
+/**
+ * @summary Server-side CSV-export van het goedkeuringsdashboard. Accepteert dezelfde filterparameters als GET /goedkeuring/dashboard en retourneert altijd de volledige dataset als downloadbestand.
+ */
+export const exportGoedkeuringDashboard = async (params?: ExportGoedkeuringDashboardParams, options?: RequestInit): Promise<string> => {
+
+  return customFetch<string>(getExportGoedkeuringDashboardUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getExportGoedkeuringDashboardQueryKey = (params?: ExportGoedkeuringDashboardParams,) => {
+    return [
+    `/api/goedkeuring/dashboard/export.csv`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getExportGoedkeuringDashboardQueryOptions = <TData = Awaited<ReturnType<typeof exportGoedkeuringDashboard>>, TError = ErrorType<void>>(params?: ExportGoedkeuringDashboardParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof exportGoedkeuringDashboard>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getExportGoedkeuringDashboardQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof exportGoedkeuringDashboard>>> = ({ signal }) => exportGoedkeuringDashboard(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof exportGoedkeuringDashboard>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ExportGoedkeuringDashboardQueryResult = NonNullable<Awaited<ReturnType<typeof exportGoedkeuringDashboard>>>
+export type ExportGoedkeuringDashboardQueryError = ErrorType<void>
+
+
+/**
+ * @summary Server-side CSV-export van het goedkeuringsdashboard. Accepteert dezelfde filterparameters als GET /goedkeuring/dashboard en retourneert altijd de volledige dataset als downloadbestand.
+ */
+
+export function useExportGoedkeuringDashboard<TData = Awaited<ReturnType<typeof exportGoedkeuringDashboard>>, TError = ErrorType<void>>(
+ params?: ExportGoedkeuringDashboardParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof exportGoedkeuringDashboard>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getExportGoedkeuringDashboardQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

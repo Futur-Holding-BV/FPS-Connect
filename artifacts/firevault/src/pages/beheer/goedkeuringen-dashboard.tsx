@@ -57,60 +57,27 @@ function datumDuur(iso?: string | null) {
   return `${dagen} ${dagen === 1 ? "dag" : "dagen"}`;
 }
 
-function csvCell(waarde: string | number | null | undefined): string {
-  if (waarde == null) return "";
-  const tekst = String(waarde);
-  if (tekst.includes(",") || tekst.includes('"') || tekst.includes("\n")) {
-    return `"${tekst.replace(/"/g, '""')}"`;
+function maakExportUrl(
+  statusFilter: string,
+  alleenVerlopen: boolean,
+  venster: string,
+  alleenMijnActies: boolean,
+): string {
+  const params = new URLSearchParams();
+  if (statusFilter !== "alle") {
+    params.set("status", statusFilter);
   }
-  return tekst;
-}
-
-function exporteerAlsCsv(items: GoedkeuringDashboardItem[]) {
-  const kopteksten = [
-    "#",
-    "Documenttype",
-    "Omschrijving",
-    "Bedrag",
-    "Ingediend door",
-    "Ingediend op",
-    "Afgehandeld op",
-    "Afgehandeld door",
-    "Status",
-    "Reden afwijzing",
-  ];
-
-  const statusLabels: Record<string, string> = {
-    concept: "Concept",
-    ingediend: "Ingediend",
-    goedgekeurd: "Goedgekeurd",
-    afgewezen: "Afgewezen",
-    ingetrokken: "Ingetrokken",
-    vervangen: "Vervangen",
-  };
-
-  const rijen = items.map((item) => [
-    csvCell(item.id),
-    csvCell(item.document_type),
-    csvCell(item.omschrijving),
-    csvCell(item.bedrag != null ? item.bedrag.toFixed(2).replace(".", ",") : null),
-    csvCell(item.ingediend_door_naam),
-    csvCell(item.ingediend_op ? new Date(item.ingediend_op).toLocaleDateString("nl-NL") : null),
-    csvCell(item.afgehandeld_op ? new Date(item.afgehandeld_op).toLocaleDateString("nl-NL") : null),
-    csvCell(item.afgehandeld_door_naam),
-    csvCell(statusLabels[item.status] ?? item.status),
-    csvCell(item.afwijzing_reden),
-  ].join(","));
-
-  const inhoud = [kopteksten.map(csvCell).join(","), ...rijen].join("\r\n");
-  const blob = new Blob(["\uFEFF" + inhoud], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  const datumStempel = new Date().toISOString().slice(0, 10);
-  link.download = `goedkeuringen-${datumStempel}.csv`;
-  link.click();
-  URL.revokeObjectURL(url);
+  if (alleenVerlopen) {
+    params.set("alleen_verlopen", "true");
+  }
+  if (statusFilter === "alle" && venster !== "7") {
+    params.set("venster", venster);
+  }
+  if (alleenMijnActies) {
+    params.set("alleen_mijn_acties", "true");
+  }
+  const query = params.toString();
+  return `/api/goedkeuring/dashboard/export.csv${query ? `?${query}` : ""}`;
 }
 
 const ESCALATIE_TYPE_INFO: Record<string, { label: string; kleur: string }> = {
@@ -376,16 +343,23 @@ export default function GoedkeuringenDashboard() {
             Alleen verlopen reactietermijn
           </Label>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={isLoading || (items ?? []).length === 0}
-          onClick={() => exporteerAlsCsv(items ?? [])}
+        <a
+          href={maakExportUrl(statusFilter, alleenVerlopen, venster, alleenMijnActies)}
+          download
           className="ml-auto shrink-0"
+          aria-disabled={isLoading}
+          tabIndex={isLoading ? -1 : undefined}
         >
-          <Download className="h-4 w-4 mr-1.5" />
-          Exporteren als CSV
-        </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={isLoading}
+            asChild={false}
+          >
+            <Download className="h-4 w-4 mr-1.5" />
+            Exporteren als CSV
+          </Button>
+        </a>
       </div>
 
       {/* Tabel */}

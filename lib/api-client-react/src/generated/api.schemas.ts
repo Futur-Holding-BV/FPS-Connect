@@ -12669,6 +12669,46 @@ export const ListGoedkeuringDashboardAlleenVerlopen = {
   false: 'false',
 } as const;
 
+export type ExportGoedkeuringDashboardParams = {
+/**
+ * Filter op status (standaard alle open + volledig archief).
+ */
+status?: ExportGoedkeuringDashboardStatus;
+document_type?: string;
+/**
+ * Exporteer alleen aanvragen waarvan de reactietermijn verstreken is.
+ */
+alleen_verlopen?: ExportGoedkeuringDashboardAlleenVerlopen;
+/**
+ * Aantal dagen terug voor afgehandelde aanvragen. 0 = volledig archief (standaard bij export).
+ * @minimum 0
+ */
+venster?: number;
+/**
+ * Exporteer alleen aanvragen die de ingelogde gebruiker mag goedkeuren/afwijzen.
+ */
+alleen_mijn_acties?: boolean;
+};
+
+export type ExportGoedkeuringDashboardStatus = typeof ExportGoedkeuringDashboardStatus[keyof typeof ExportGoedkeuringDashboardStatus];
+
+
+export const ExportGoedkeuringDashboardStatus = {
+  ingediend: 'ingediend',
+  goedgekeurd: 'goedgekeurd',
+  afgewezen: 'afgewezen',
+  ingetrokken: 'ingetrokken',
+  vervangen: 'vervangen',
+} as const;
+
+export type ExportGoedkeuringDashboardAlleenVerlopen = typeof ExportGoedkeuringDashboardAlleenVerlopen[keyof typeof ExportGoedkeuringDashboardAlleenVerlopen];
+
+
+export const ExportGoedkeuringDashboardAlleenVerlopen = {
+  true: 'true',
+  false: 'false',
+} as const;
+
 export type UitnodigingActiveren200 = {
   status?: string;
 };

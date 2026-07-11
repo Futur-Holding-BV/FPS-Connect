@@ -6626,6 +6626,24 @@ export const ListGoedkeuringDashboardResponse = zod.array(ListGoedkeuringDashboa
 
 
 /**
+ * @summary Server-side CSV-export van het goedkeuringsdashboard. Accepteert dezelfde filterparameters als GET /goedkeuring/dashboard en retourneert altijd de volledige dataset als downloadbestand.
+ */
+export const exportGoedkeuringDashboardQueryVensterMin = 0;
+
+
+
+export const ExportGoedkeuringDashboardQueryParams = zod.object({
+  "status": zod.enum(['ingediend', 'goedgekeurd', 'afgewezen', 'ingetrokken', 'vervangen']).optional().describe('Filter op status (standaard alle open + volledig archief).'),
+  "document_type": zod.coerce.string().optional(),
+  "alleen_verlopen": zod.enum(['true', 'false']).optional().describe('Exporteer alleen aanvragen waarvan de reactietermijn verstreken is.'),
+  "venster": zod.coerce.number().min(exportGoedkeuringDashboardQueryVensterMin).optional().describe('Aantal dagen terug voor afgehandelde aanvragen. 0 = volledig archief (standaard bij export).'),
+  "alleen_mijn_acties": zod.coerce.boolean().optional().describe('Exporteer alleen aanvragen die de ingelogde gebruiker mag goedkeuren\/afwijzen.')
+})
+
+export const ExportGoedkeuringDashboardResponse = zod.unknown()
+
+
+/**
  * @summary Laatste goedkeuringsaanvraag + status voor een specifiek document ophalen (voor de statuswidget in het brondocument)
  */
 export const GetGoedkeuringVoorObjectParams = zod.object({

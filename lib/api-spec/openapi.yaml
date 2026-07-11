@@ -5503,6 +5503,53 @@ paths:
                 items:
                   $ref: "#/components/schemas/GoedkeuringDashboardItem"
 
+  /goedkeuring/dashboard/export.csv:
+    get:
+      operationId: exportGoedkeuringDashboard
+      tags: [goedkeuring]
+      summary: >-
+        Server-side CSV-export van het goedkeuringsdashboard. Accepteert
+        dezelfde filterparameters als GET /goedkeuring/dashboard en retourneert
+        altijd de volledige dataset als downloadbestand.
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [ingediend, goedgekeurd, afgewezen, ingetrokken, vervangen]
+          description: Filter op status (standaard alle open + volledig archief).
+        - in: query
+          name: document_type
+          schema:
+            type: string
+        - in: query
+          name: alleen_verlopen
+          schema:
+            type: string
+            enum: ["true", "false"]
+          description: Exporteer alleen aanvragen waarvan de reactietermijn verstreken is.
+        - in: query
+          name: venster
+          schema:
+            type: integer
+            minimum: 0
+          description: >-
+            Aantal dagen terug voor afgehandelde aanvragen. 0 = volledig archief (standaard bij export).
+        - in: query
+          name: alleen_mijn_acties
+          schema:
+            type: boolean
+          description: Exporteer alleen aanvragen die de ingelogde gebruiker mag goedkeuren/afwijzen.
+      responses:
+        "200":
+          description: UTF-8 CSV-bestand als downloadrespons
+          content:
+            text/csv:
+              schema:
+                type: string
+        "403":
+          description: Geen toegang
+
   /goedkeuring/object/{object_type}/{object_id}:
     get:
       operationId: getGoedkeuringVoorObject
