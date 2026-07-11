@@ -13637,6 +13637,17 @@ export const VerzendInkoopbonResponse = zod.object({
 
 
 /**
+ * @summary Inkoopbon ter goedkeuring indienen via de Governance & Approval Engine
+ */
+export const TerGoedkeuringIndienenInkoopbonParams = zod.object({
+  "id": zod.coerce.number(),
+  "bonId": zod.coerce.number()
+})
+
+export const TerGoedkeuringIndienenInkoopbonResponse = zod.void()
+
+
+/**
  * @summary FPS One aanvraagstroom — maakt opdracht en PIM in één stap aan
  */
 export const MaakAanvraagBody = zod.object({
@@ -20493,6 +20504,16 @@ export const AccorderenFactuurResponse = zod.object({
   "iban_uitgelezen": zod.string().nullish(),
   "iban_afwijking": zod.boolean().optional()
 })
+
+
+/**
+ * @summary Factuur ter goedkeuring indienen via de Governance & Approval Engine
+ */
+export const TerGoedkeuringIndienenParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const TerGoedkeuringIndienenResponse = zod.void()
 
 
 /**

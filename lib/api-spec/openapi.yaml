@@ -11027,6 +11027,34 @@ paths:
               schema:
                 $ref: "#/components/schemas/Inkoopbon"
 
+  /opdrachten/{id}/inkoopplanning/inkoopbonnen/{bonId}/ter-goedkeuring-indienen:
+    post:
+      operationId: terGoedkeuringIndienenInkoopbon
+      tags: [opdrachten]
+      summary: Inkoopbon ter goedkeuring indienen via de Governance & Approval Engine
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: bonId
+          required: true
+          schema:
+            type: integer
+      responses:
+        "201":
+          description: Goedkeuringsaanvraag aangemaakt of bestaand teruggegeven
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GoedkeuringAanvraag"
+        "404":
+          description: Inkoopbon niet gevonden
+        "422":
+          description: Geen passend goedkeuringsbeleid gevonden
+
   # ── PIM — Project Intelligence Model ────────────────────────────────────────
 
   /aanvragen:
@@ -16338,6 +16366,31 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Factuur"
+
+  /facturen/{id}/ter-goedkeuring-indienen:
+    post:
+      operationId: terGoedkeuringIndienen
+      summary: Factuur ter goedkeuring indienen via de Governance & Approval Engine
+      tags: [Facturen]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "201":
+          description: Goedkeuringsaanvraag aangemaakt of bestaand teruggegeven
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GoedkeuringAanvraag"
+        "404":
+          description: Factuur niet gevonden
+        "409":
+          description: Factuur is geblokkeerd
+        "422":
+          description: Geen passend goedkeuringsbeleid gevonden
 
   /facturen/{id}/blokkeren:
     post:

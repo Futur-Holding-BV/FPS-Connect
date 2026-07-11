@@ -38534,6 +38534,78 @@ export const useVerzendInkoopbon = <TError = ErrorType<unknown>,
       return useMutation(getVerzendInkoopbonMutationOptions(options));
     }
 
+export const getTerGoedkeuringIndienenInkoopbonUrl = (id: number,
+    bonId: number,) => {
+
+
+
+
+  return `/api/opdrachten/${id}/inkoopplanning/inkoopbonnen/${bonId}/ter-goedkeuring-indienen`
+}
+
+/**
+ * @summary Inkoopbon ter goedkeuring indienen via de Governance & Approval Engine
+ */
+export const terGoedkeuringIndienenInkoopbon = async (id: number,
+    bonId: number, options?: RequestInit): Promise<GoedkeuringAanvraag> => {
+
+  return customFetch<GoedkeuringAanvraag>(getTerGoedkeuringIndienenInkoopbonUrl(id,bonId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getTerGoedkeuringIndienenInkoopbonMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof terGoedkeuringIndienenInkoopbon>>, TError,{id: number;bonId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof terGoedkeuringIndienenInkoopbon>>, TError,{id: number;bonId: number}, TContext> => {
+
+const mutationKey = ['terGoedkeuringIndienenInkoopbon'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof terGoedkeuringIndienenInkoopbon>>, {id: number;bonId: number}> = (props) => {
+          const {id,bonId} = props ?? {};
+
+          return  terGoedkeuringIndienenInkoopbon(id,bonId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type TerGoedkeuringIndienenInkoopbonMutationResult = NonNullable<Awaited<ReturnType<typeof terGoedkeuringIndienenInkoopbon>>>
+
+    export type TerGoedkeuringIndienenInkoopbonMutationError = ErrorType<void>
+
+    /**
+ * @summary Inkoopbon ter goedkeuring indienen via de Governance & Approval Engine
+ */
+export const useTerGoedkeuringIndienenInkoopbon = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof terGoedkeuringIndienenInkoopbon>>, TError,{id: number;bonId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof terGoedkeuringIndienenInkoopbon>>,
+        TError,
+        {id: number;bonId: number},
+        TContext
+      > => {
+      return useMutation(getTerGoedkeuringIndienenInkoopbonMutationOptions(options));
+    }
+
 export const getMaakAanvraagUrl = () => {
 
 
@@ -56846,6 +56918,76 @@ export const useAccorderenFactuur = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getAccorderenFactuurMutationOptions(options));
+    }
+
+export const getTerGoedkeuringIndienenUrl = (id: number,) => {
+
+
+
+
+  return `/api/facturen/${id}/ter-goedkeuring-indienen`
+}
+
+/**
+ * @summary Factuur ter goedkeuring indienen via de Governance & Approval Engine
+ */
+export const terGoedkeuringIndienen = async (id: number, options?: RequestInit): Promise<GoedkeuringAanvraag> => {
+
+  return customFetch<GoedkeuringAanvraag>(getTerGoedkeuringIndienenUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getTerGoedkeuringIndienenMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof terGoedkeuringIndienen>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof terGoedkeuringIndienen>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['terGoedkeuringIndienen'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof terGoedkeuringIndienen>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  terGoedkeuringIndienen(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type TerGoedkeuringIndienenMutationResult = NonNullable<Awaited<ReturnType<typeof terGoedkeuringIndienen>>>
+
+    export type TerGoedkeuringIndienenMutationError = ErrorType<void>
+
+    /**
+ * @summary Factuur ter goedkeuring indienen via de Governance & Approval Engine
+ */
+export const useTerGoedkeuringIndienen = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof terGoedkeuringIndienen>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof terGoedkeuringIndienen>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getTerGoedkeuringIndienenMutationOptions(options));
     }
 
 export const getBlokkerenFactuurUrl = (id: number,) => {

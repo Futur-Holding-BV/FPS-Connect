@@ -685,14 +685,16 @@ export default function GoedkeuringsbeleidBeheer() {
       <Tabs value={tabActief} onValueChange={setTabActief}>
         <TabsList>
           <TabsTrigger value="aanvragen">Aanvragen</TabsTrigger>
-          <TabsTrigger value="beleidsregels">Beleidsregels</TabsTrigger>
+          {magBeheren && <TabsTrigger value="beleidsregels">Beleidsregels</TabsTrigger>}
         </TabsList>
         <TabsContent value="aanvragen" className="mt-4">
           <AanvragenTab />
         </TabsContent>
-        <TabsContent value="beleidsregels" className="mt-4">
-          <BeleidsregelsTab magBeheren={magBeheren} />
-        </TabsContent>
+        {magBeheren && (
+          <TabsContent value="beleidsregels" className="mt-4">
+            <BeleidsregelsTab magBeheren={magBeheren} />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );

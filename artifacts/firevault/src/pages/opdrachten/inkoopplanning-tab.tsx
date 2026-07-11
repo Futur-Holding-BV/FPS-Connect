@@ -18,7 +18,7 @@ import {
   useListLeveranciers,
   useCorrectieVoorraad,
   useListArtikelen,
-  useDienGoedkeuringAanvraagIn,
+  useTerGoedkeuringIndienenInkoopbon,
   ApiError,
 } from "@workspace/api-client-react";
 import type { InkoopplanRegel, Inkoopbon, InkoopbonAiSuggestieResultaat } from "@workspace/api-client-react";
@@ -753,7 +753,7 @@ function InkoopbonKaart({ bon, opdrachtId, leverancierEmail }: InkoopbonKaartPro
   const qc = useQueryClient();
   const statusInfo = BON_STATUS_LABELS[bon.status] ?? BON_STATUS_LABELS.concept;
 
-  const dienGoedkeuringIn = useDienGoedkeuringAanvraagIn({
+  const terGoedkeuringIndienen = useTerGoedkeuringIndienenInkoopbon({
     mutation: {
       onSuccess: () => {
         qc.invalidateQueries({ queryKey: getListInkoopbonnenQueryKey(opdrachtId) });
@@ -778,15 +778,7 @@ function InkoopbonKaart({ bon, opdrachtId, leverancierEmail }: InkoopbonKaartPro
               <ToastAction
                 altText="Ter goedkeuring indienen"
                 onClick={() =>
-                  dienGoedkeuringIn.mutate({
-                    data: {
-                      object_type: "inkoopbon",
-                      object_id: bon.id,
-                      document_type: "inkoopbon",
-                      omschrijving: `Inkoopbon${bon.bon_nummer ? ` ${bon.bon_nummer}` : ""} — ${bon.leverancier}`,
-                      bedrag: bon.totaal_bedrag,
-                    },
-                  })
+                  terGoedkeuringIndienen.mutate({ id: opdrachtId, bonId: bon.id })
                 }
               >
                 Indienen

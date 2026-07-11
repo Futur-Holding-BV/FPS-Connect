@@ -28,6 +28,8 @@ import {
   checkVereistGoedkeuring,
   haalGoedgekeurdeAanvraag,
   haalOpenAanvraag,
+  maakGoedkeuringActor,
+  dienIn,
 } from "../services/goedkeuring-engine";
 
 const router = Router();
@@ -936,6 +938,49 @@ router.delete("/opdrachten/:id/inkoopplanning/inkoopbonnen/:bonId", schrijven, a
     res.status(204).end();
   } catch (err) {
     logger.error({ err }, "deleteInkoopbon fout");
+    res.status(500).json({ error: "Serverfout" });
+  }
+});
+
+// ── POST /opdrachten/:id/inkoopplanning/inkoopbonnen/:bonId/ter-goedkeuring-indienen ─────
+// Dient een inkoopbon ter goedkeuring in via de generieke Governance & Approval Engine.
+// De route leidt het bedrag, document_type en omschrijving zelf af zodat de client
+// geen van deze velden hoeft te kennen. Na goedkeuring door de motor wordt de
+// inkoopbon automatisch naar status "goedgekeurd" gezet (via OBJECT_WORKFLOW_ACTIE).
+
+router.post("/opdrachten/:id/inkoopplanning/inkoopbonnen/:bonId/ter-goedkeuring-indienen", requireBevoegdheid("offertes", 1), async (req, res): Promise<void> => {
+  const opdrachtId = parseInt(String(req.params.id), 10);
+  const bonId = parseInt(String(req.params.bonId), 10);
+  if (isNaN(opdrachtId) || isNaN(bonId)) { res.status(400).json({ error: "Ongeldig id" }); return; }
+
+  try {
+    const [bon] = await db.select().from(inkoopbonnenTable)
+      .where(and(eq(inkoopbonnenTable.id, bonId), eq(inkoopbonnenTable.opdrachtId, opdrachtId)));
+    if (!bon) { res.status(404).json({ error: "Inkoopbon niet gevonden" }); return; }
+
+    const actor = await maakGoedkeuringActor(req as { session: { userId?: number | null } }, db);
+    if (!actor) { res.status(401).json({ error: "Niet ingelogd" }); return; }
+
+    const omschrijving = `Inkoopbon${bon.bonNummer ? ` ${bon.bonNummer}` : ""}${bon.leverancier ? ` — ${bon.leverancier}` : ""}`;
+
+    const resultaat = await dienIn(db, {
+      objectType: "inkoopbon",
+      objectId: bonId,
+      documentType: "inkoopbon",
+      omschrijving,
+      bedrag: bon.totaalBedrag ?? null,
+      werkmaatschappijId: null,
+      actor,
+    });
+
+    if (!resultaat.ok) {
+      res.status(resultaat.error!.httpStatus ?? 422).json({ error: resultaat.error!.bericht });
+      return;
+    }
+
+    res.status(201).json(resultaat.aanvraag);
+  } catch (err) {
+    logger.error({ err }, "terGoedkeuringIndienen inkoopbon fout");
     res.status(500).json({ error: "Serverfout" });
   }
 });
