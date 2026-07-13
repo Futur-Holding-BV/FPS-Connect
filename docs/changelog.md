@@ -1,3 +1,22 @@
+## 2026-07-13 — Sidebar hoofdmenu: alle hoofdstukken inklapbaar + zichtbare sleepgreep
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (alleen frontend-layout, geen API-/DB-wijziging)
+
+**Aanleiding:** de versleepbare hoofdstukvolgorde bestond al, maar de greep was een onvindbaar dun hover-balkje; bovendien waren slechts 4 van de 13 hoofdstukken inklapbaar (Inkoop, Magazijn, Communicatie, Veiligheid).
+
+**Wat is er gebouwd:**
+- Nieuw component `InklapbaarHoofdstuk` (in `herschikbaar-hoofdstuk.tsx`): elke hoofdstukkop heeft nu een **altijd zichtbare sleepgreep** (grip-icoon links van de titel) en een **chevron** om in/uit te klappen; `HerschikbaarHoofdstuk` is teruggebracht tot pure dropzone.
+- Alle 13 hoofdstukken in de beheerder-sidebar omgebouwd naar dit component: Projectaanpak, Inkoop, Magazijn, Commercie (kreeg hierbij een titelkop), Communicatie, Veiligheid, Financieel, Goedkeuring, Declaraties, Organisatie, Personeel, Loon en Instellingen. Open/dicht-staat was al gepersisteerd per gebruiker (`hoofdstukOpen`/`setHoofdstukOpen`) en geldt nu overal.
+- Scheidingslijnen (Loon, Instellingen) en de Magazijn-kritiekbadge behouden via props (`metScheiding`, `kopExtra`); Dashboard blijft vast bovenaan; "Standaardvolgorde herstellen" ongewijzigd.
+- **Slepen herbouwd zonder HTML5 drag-and-drop:** diagnose toonde aan dat Chromium/Blink voor elementen binnen de scrollbare sidebar-inhoud nooit een native `dragstart` afvuurt (browser-quirk, raakt ook echte gebruikers). Het verslepen werkt nu pointer-gebaseerd (mousedown → beweging met 4px-drempel → mouseup), met doel-highlight tijdens het slepen, Escape om te annuleren, automatisch randscrollen bovenin/onderin de sidebar en een "grabbing"-cursor.
+
+**Bewijs:**
+- Typecheck firevault groen; ongebruikte imports (Collapsible, ChevronDown, SidebarGroupLabel) opgeschoond
+- Playwright-verificatie ingelogd (TOTP): alle hoofdstuktitels zichtbaar, Projectaanpak in- en weer uitgeklapt (menu-items verdwijnen/verschijnen aantoonbaar), screenshots van beide staten beoordeeld — sleepgreep duidelijk zichtbaar per hoofdstuk
+- Playwright-sleeptest pointer-implementatie geslaagd: hoofdstuk via de grip versleept (doel-highlight zichtbaar tijdens sleep), nieuwe volgorde blijft na herladen bewaard, standaardvolgorde daarna hersteld
+
+---
+
 ## 2026-07-13 — Slim Upload structureel hersteld: fail-loud opslag, beter AI-lezen, tabblad Slim Uploadpunt vervallen + productie-objectopslag (MinIO)
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** middel (opslagpad en productie-infrastructuur geraakt; elk increment afzonderlijk terugdraaibaar)
