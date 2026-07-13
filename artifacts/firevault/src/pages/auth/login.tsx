@@ -7,6 +7,7 @@ import {
   tweeFactorActiveren,
   tweeFactorVerify,
   taalWijzigen,
+  ApiError,
   type TweeFactorSetup,
 } from "@workspace/api-client-react";
 import { Input } from "@/components/ui/input";
@@ -199,11 +200,24 @@ export default function LoginPagina() {
       } else {
         setStap("verify");
       }
-    } catch {
-      setFout(t("auth.foutInlog"));
+    } catch (err) {
+      setFout(inlogFoutMelding(err));
     } finally {
       setBezig(false);
     }
+  }
+
+  // Vertaalt een mislukte inlogpoging naar een begrijpelijke, onderscheidende
+  // melding. Zonder dit onderscheid kreeg de gebruiker bij een tijdelijk
+  // vergrendeld account (423) of te veel pogingen (429) dezelfde tekst als bij
+  // een verkeerd wachtwoord (401), waardoor doorproberen het probleem verergerde.
+  function inlogFoutMelding(err: unknown): string {
+    if (err instanceof ApiError) {
+      if (err.status === 423) return t("auth.foutVergrendeld");
+      if (err.status === 429) return t("auth.foutTeVeelPogingen");
+      if (err.status >= 500) return t("auth.foutServer");
+    }
+    return t("auth.foutInlog");
   }
 
   async function bevestigCode(huidigeCode: string) {
@@ -232,8 +246,12 @@ export default function LoginPagina() {
         }
       }
       herlaad();
-    } catch {
-      setFout(t("auth.foutCode"));
+    } catch (err) {
+      if (err instanceof ApiError && (err.status === 423 || err.status === 429)) {
+        setFout(inlogFoutMelding(err));
+      } else {
+        setFout(t("auth.foutCode"));
+      }
       setCode("");
     } finally {
       setBezig(false);
@@ -257,7 +275,7 @@ export default function LoginPagina() {
   }
 
   return (
-    <div className="relative min-h-screen flex items-center justify-center p-4">
+    <div className="fps-auth relative min-h-screen flex items-center justify-center p-4">
       <AchtergrondCanvas />
 
       {/* Taalkeuzebalk — rechtsbovenin */}
@@ -348,7 +366,7 @@ export default function LoginPagina() {
                       type="button"
                       tabIndex={-1}
                       onClick={() => setToonWachtwoord((v) => !v)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 transition-colors hover:text-white/60 focus:outline-none"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-0.5 text-white/60 transition-colors hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#F23B0D]/50"
                       title={toonWachtwoord ? "Wachtwoord verbergen" : "Wachtwoord tonen"}
                       aria-label={toonWachtwoord ? "Wachtwoord verbergen" : "Wachtwoord tonen"}
                     >

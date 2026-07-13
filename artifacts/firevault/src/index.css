@@ -301,3 +301,18 @@
   0%, 100% { opacity: 0.10; transform: scale(1); }
   50%       { opacity: 0.16; transform: scale(1.08); }
 }
+
+/* Onderdruk de gele browser-autofill achtergrond op de donkere auth-schermen,
+   zodat de glaslook behouden blijft en het wachtwoord + het oogje leesbaar
+   blijven. Bewust gescoped op .fps-auth zodat de lichte portalformulieren
+   ongemoeid blijven. De 'transition'-truc houdt de autofill-achtergrond
+   permanent uitgesteld (de enige betrouwbare manier om de gele vlek te
+   onderdrukken zonder de achtergrond hard te overschrijven). */
+.fps-auth input:-webkit-autofill,
+.fps-auth input:-webkit-autofill:hover,
+.fps-auth input:-webkit-autofill:focus,
+.fps-auth input:-webkit-autofill:active {
+  -webkit-text-fill-color: #ffffff;
+  caret-color: #ffffff;
+  transition: background-color 9999s ease-in-out 0s;
+}
