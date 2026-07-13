@@ -283,37 +283,23 @@ export default function InboxDetailPagina() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <p className="text-xs text-muted-foreground font-medium">Categorie</p>
-              <p className="text-sm font-medium mt-0.5">{typedItem.document_categorie?.replace(/_/g, " ") ?? "Onbekend"}</p>
+          {/* Bestemming — hero: waar dit bestand naartoe gaat */}
+          <div className="rounded-lg border border-amber-300 bg-white/70 p-3">
+            <div className="flex items-center gap-1.5 text-xs font-medium text-amber-700">
+              <ArrowRight className="w-3.5 h-3.5" /> Dit bestand hoort thuis in
             </div>
-            <div>
-              <p className="text-xs text-muted-foreground font-medium">Bestemming</p>
-              <p className="text-sm font-medium mt-0.5">{typedItem.bestemming ?? "Onbekend"}</p>
-            </div>
+            <p className="text-xl font-bold text-amber-900 mt-1 leading-tight">
+              {typedItem.bestemming ?? "Onbekend"}
+            </p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Categorie: {typedItem.document_categorie?.replace(/_/g, " ") ?? "onbekend"}
+            </p>
           </div>
-
-          {typedItem.ai_betrouwbaarheid && (
-            <div>
-              <p className="text-xs text-muted-foreground font-medium">AI-betrouwbaarheid</p>
-              <Badge variant="outline" className={`text-xs border mt-0.5 ${BETROUW_KLEUR[typedItem.ai_betrouwbaarheid] ?? ""}`}>
-                {typedItem.ai_betrouwbaarheid}
-              </Badge>
-            </div>
-          )}
 
           {typedItem.ai_samenvatting && (
             <div>
               <p className="text-xs text-muted-foreground font-medium">Samenvatting</p>
               <p className="text-sm mt-0.5">{typedItem.ai_samenvatting}</p>
-            </div>
-          )}
-
-          {typedItem.ai_redenering && (
-            <div>
-              <p className="text-xs text-muted-foreground font-medium">Redenering</p>
-              <p className="text-xs text-muted-foreground mt-0.5">{typedItem.ai_redenering}</p>
             </div>
           )}
 
@@ -359,22 +345,6 @@ export default function InboxDetailPagina() {
             />
           )}
 
-          {typedItem.ai_bewijs && typedItem.ai_bewijs.length > 0 && (
-            <div>
-              <p className="text-xs text-muted-foreground font-medium mb-1">Bewijsketen (hoe de AI tot dit resultaat kwam)</p>
-              <ol className="space-y-1.5">
-                {typedItem.ai_bewijs.map((stap, i) => (
-                  <li key={i} className="text-xs bg-white/60 border border-amber-100 rounded p-1.5">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="font-medium text-amber-900">{stap.stap}</span>
-                      <span className="text-muted-foreground">{stap.resultaat}</span>
-                    </div>
-                    {stap.detail && <p className="text-muted-foreground mt-0.5">{stap.detail}</p>}
-                  </li>
-                ))}
-              </ol>
-            </div>
-          )}
         </CardContent>
       </Card>
 
