@@ -716,99 +716,30 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
               </HerschikbaarHoofdstuk>
               )}
 
-              {/* Commercie */}
+              {/* CRM — één centraal menu-item; alle onderdelen bereikbaar via het CRM-dashboard */}
               {toonCrm && (
               <HerschikbaarHoofdstuk
                 sleutel="commercie"
                 positie={hoofdstukPositie("commercie")}
                 onVerplaats={verplaatsHoofdstuk}
               >
-                <Collapsible
-                  open={hoofdstukOpen("commercie")}
-                  onOpenChange={(open) => setHoofdstukOpen("commercie", open)}
-                  className="group/collapsible"
-                >
-                  <SidebarGroup>
-                    <SidebarGroupLabel asChild>
-                      <CollapsibleTrigger className="flex w-full items-center">
-                        Commercie
-                        <ChevronDown className="ml-auto h-4 w-4 transition-transform group-data-[state=open]/collapsible:rotate-180 group-data-[collapsible=icon]:hidden" />
-                      </CollapsibleTrigger>
-                    </SidebarGroupLabel>
-                    <CollapsibleContent>
-                      <SidebarGroupContent>
-                        <SidebarMenu>
-                          <SidebarMenuItem className="pl-5">
-                            <SidebarMenuButton
-                              asChild
-                              isActive={location === "/crm/projectkansen"}
-                            >
-                              <Link href="/crm/projectkansen">
-                                <Target />
-                                <span>Projectkansen</span>
-                              </Link>
-                            </SidebarMenuButton>
-                          </SidebarMenuItem>
-                          <SidebarMenuItem className="pl-5">
-                            <SidebarMenuButton
-                              asChild
-                              isActive={location === "/crm" && !location.startsWith("/crm/")}
-                            >
-                              <Link href="/crm">
-                                <Contact />
-                                <span>Klanten</span>
-                              </Link>
-                            </SidebarMenuButton>
-                          </SidebarMenuItem>
-                          <SidebarMenuItem className="pl-5">
-                            <SidebarMenuButton
-                              asChild
-                              isActive={location === "/crm/organisaties" || location.startsWith("/crm/organisaties")}
-                            >
-                              <Link href="/crm/organisaties">
-                                <Building2 />
-                                <span>Organisaties</span>
-                              </Link>
-                            </SidebarMenuButton>
-                          </SidebarMenuItem>
-                          <SidebarMenuItem className="pl-5">
-                            <SidebarMenuButton
-                              asChild
-                              isActive={location === "/crm/concurrenten"}
-                            >
-                              <Link href="/crm/concurrenten">
-                                <Handshake />
-                                <span>Concurrenten</span>
-                              </Link>
-                            </SidebarMenuButton>
-                          </SidebarMenuItem>
-                          <SidebarMenuItem className="pl-5">
-                            <SidebarMenuButton
-                              asChild
-                              isActive={location === "/crm/marktintelligentie"}
-                            >
-                              <Link href="/crm/marktintelligentie">
-                                <Newspaper />
-                                <span>Marktinzicht</span>
-                              </Link>
-                            </SidebarMenuButton>
-                          </SidebarMenuItem>
-                          <SidebarMenuItem className="pl-5">
-                            <SidebarMenuButton
-                              asChild
-                              isActive={location === "/crm/kennisbibliotheek"}
-                            >
-                              <Link href="/crm/kennisbibliotheek">
-                                <BookOpen />
-                                <span>Kennisbibliotheek</span>
-                              </Link>
-                            </SidebarMenuButton>
-                          </SidebarMenuItem>
-                        </SidebarMenu>
-                      </SidebarGroupContent>
-                    </CollapsibleContent>
-                  </SidebarGroup>
-                </Collapsible>
+                <SidebarGroup>
+                  <SidebarGroupContent>
+                    <SidebarMenu>
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={location === "/crm" || location.startsWith("/crm/")}
+                        >
+                          <Link href="/crm">
+                            <Contact />
+                            <span>CRM</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    </SidebarMenu>
+                  </SidebarGroupContent>
+                </SidebarGroup>
               </HerschikbaarHoofdstuk>
               )}
 

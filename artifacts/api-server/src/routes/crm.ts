@@ -10,13 +10,15 @@ import {
   crmFinancieelTable,
   crmConcurrentenTable,
   crmMarktintelligentieTable,
+  crmTakenTable,
+  crmRelatievoorstellenTable,
   gebouwenTable,
   gebruikersTable,
 } from "@workspace/db";
-import { eq, desc, ilike, or, and, count } from "drizzle-orm";
+import { eq, desc, ilike, or, and, count, inArray } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
-import { CRM_CONCURRENT_PROFIEL_PROMPT } from "../lib/aiPrompts";
+import { CRM_CONCURRENT_PROFIEL_PROMPT, CRM_RELATIEVOORSTEL_PROMPT } from "../lib/aiPrompts";
 import { invalideerContext } from "../lib/aiContext/cache";
 
 const router = Router();
@@ -810,6 +812,329 @@ Geef coaching voor deze gebruiker.`;
   } catch (err) {
     req.log.error({ err }, "CRM AI Coach fout");
     res.status(503).json({ error: "AI niet beschikbaar" });
+  }
+});
+
+// ── TAKEN ─────────────────────────────────────────────────────────────────────
+const KOPPELING_TYPES = ["crm_organisatie", "crm_contactpersoon", "crm_projectkans"] as const;
+
+async function koppelingNaam(type: string | null, id: number | null): Promise<string | null> {
+  if (!type || id == null) return null;
+  try {
+    if (type === "crm_organisatie") {
+      const [r] = await db.select({ naam: crmKlantenTable.naam }).from(crmKlantenTable).where(eq(crmKlantenTable.id, id));
+      return r?.naam ?? null;
+    }
+    if (type === "crm_contactpersoon") {
+      const [r] = await db.select({ naam: crmContactpersonenTable.naam }).from(crmContactpersonenTable).where(eq(crmContactpersonenTable.id, id));
+      return r?.naam ?? null;
+    }
+    if (type === "crm_projectkans") {
+      const [r] = await db.select({ naam: crmCommercieelTable.titel }).from(crmCommercieelTable).where(eq(crmCommercieelTable.id, id));
+      return r?.naam ?? null;
+    }
+  } catch { /* naam-cache optioneel */ }
+  return null;
+}
+
+function mapTaak(
+  t: typeof crmTakenTable.$inferSelect,
+  namen?: { toegewezen?: string | null; aangemaaktDoor?: string | null; koppeling?: string | null },
+) {
+  return {
+    id: t.id,
+    titel: t.titel,
+    omschrijving: t.omschrijving,
+    status: t.status,
+    prioriteit: t.prioriteit,
+    vervaldatum: t.vervaldatum,
+    toegewezen_aan_id: t.toegewezenAanId,
+    toegewezen_aan_naam: namen?.toegewezen ?? null,
+    koppeling_type: t.koppelingType,
+    koppeling_id: t.koppelingId,
+    koppeling_naam: namen?.koppeling ?? null,
+    aangemaakt_door_id: t.aangemaaktDoorId,
+    aangemaakt_door_naam: namen?.aangemaaktDoor ?? null,
+    afgerond_op: t.afgerondOp ? iso(t.afgerondOp) : null,
+    aangemaakt_op: iso(t.aangemaaktOp),
+    bijgewerkt_op: iso(t.bijgewerktOp),
+  };
+}
+
+router.get("/crm/taken", lezen, async (req, res): Promise<void> => {
+  try {
+    const status = req.query.status ? String(req.query.status) : undefined;
+    const koppelingType = req.query.koppeling_type ? String(req.query.koppeling_type) : undefined;
+    const koppelingId = req.query.koppeling_id ? parseId(req.query.koppeling_id) : undefined;
+    const mijn = req.query.mijn === "true" || req.query.mijn === "1";
+    const toegewezenAanId = req.query.toegewezen_aan_id ? parseId(req.query.toegewezen_aan_id) : undefined;
+
+    let rijen = await db.select().from(crmTakenTable).orderBy(desc(crmTakenTable.aangemaaktOp));
+
+    if (status) rijen = rijen.filter((t) => t.status === status);
+    if (koppelingType) rijen = rijen.filter((t) => t.koppelingType === koppelingType);
+    if (koppelingId != null && !Number.isNaN(koppelingId)) rijen = rijen.filter((t) => t.koppelingId === koppelingId);
+    if (mijn && req.session.userId) rijen = rijen.filter((t) => t.toegewezenAanId === req.session.userId);
+    if (toegewezenAanId != null && !Number.isNaN(toegewezenAanId)) rijen = rijen.filter((t) => t.toegewezenAanId === toegewezenAanId);
+
+    const gebruikerIds = Array.from(new Set(rijen.flatMap((t) => [t.toegewezenAanId, t.aangemaaktDoorId]).filter((x): x is number => x != null)));
+    const gebruikers = gebruikerIds.length
+      ? await db.select({ id: gebruikersTable.id, naam: gebruikersTable.naam }).from(gebruikersTable).where(inArray(gebruikersTable.id, gebruikerIds))
+      : [];
+    const naamPerId = new Map(gebruikers.map((g) => [g.id, g.naam]));
+
+    const uitkomst = await Promise.all(
+      rijen.map(async (t) => mapTaak(t, {
+        toegewezen: t.toegewezenAanId != null ? naamPerId.get(t.toegewezenAanId) ?? null : null,
+        aangemaaktDoor: t.aangemaaktDoorId != null ? naamPerId.get(t.aangemaaktDoorId) ?? null : null,
+        koppeling: await koppelingNaam(t.koppelingType, t.koppelingId),
+      })),
+    );
+    res.json(uitkomst);
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+router.post("/crm/taken", schrijven, async (req, res): Promise<void> => {
+  try {
+    const { titel, omschrijving, status, prioriteit, vervaldatum, toegewezen_aan_id, koppeling_type, koppeling_id } = req.body;
+    if (!titel?.trim()) return void res.status(400).json({ error: "titel is verplicht" });
+    if (koppeling_type && !KOPPELING_TYPES.includes(koppeling_type)) return void res.status(400).json({ error: "ongeldig koppeling_type" });
+    const [t] = await db
+      .insert(crmTakenTable)
+      .values({
+        titel: titel.trim(),
+        omschrijving: omschrijving || null,
+        status: status || "open",
+        prioriteit: prioriteit || "normaal",
+        vervaldatum: vervaldatum || null,
+        toegewezenAanId: toegewezen_aan_id ?? null,
+        koppelingType: koppeling_type || null,
+        koppelingId: koppeling_id ?? null,
+        aangemaaktDoorId: req.session.userId ?? null,
+      })
+      .returning();
+    res.status(201).json(mapTaak(t, { koppeling: await koppelingNaam(t.koppelingType, t.koppelingId) }));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+router.patch("/crm/taken/:id", schrijven, async (req, res): Promise<void> => {
+  try {
+    const { titel, omschrijving, status, prioriteit, vervaldatum, toegewezen_aan_id, koppeling_type, koppeling_id } = req.body;
+    if (koppeling_type && !KOPPELING_TYPES.includes(koppeling_type)) return void res.status(400).json({ error: "ongeldig koppeling_type" });
+    const wordtAfgerond = status === "afgerond";
+    const [t] = await db
+      .update(crmTakenTable)
+      .set({
+        ...(titel !== undefined && { titel }),
+        ...(omschrijving !== undefined && { omschrijving }),
+        ...(status !== undefined && { status }),
+        ...(prioriteit !== undefined && { prioriteit }),
+        ...(vervaldatum !== undefined && { vervaldatum }),
+        ...(toegewezen_aan_id !== undefined && { toegewezenAanId: toegewezen_aan_id }),
+        ...(koppeling_type !== undefined && { koppelingType: koppeling_type }),
+        ...(koppeling_id !== undefined && { koppelingId: koppeling_id }),
+        ...(status !== undefined && { afgerondOp: wordtAfgerond ? new Date() : null }),
+        bijgewerktOp: new Date(),
+      })
+      .where(eq(crmTakenTable.id, parseId(req.params.id)))
+      .returning();
+    if (!t) return void res.status(404).json({ error: "Taak niet gevonden" });
+    res.json(mapTaak(t, { koppeling: await koppelingNaam(t.koppelingType, t.koppelingId) }));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+router.delete("/crm/taken/:id", schrijven, async (req, res): Promise<void> => {
+  try {
+    await db.delete(crmTakenTable).where(eq(crmTakenTable.id, parseId(req.params.id)));
+    res.status(204).end();
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// ── AI-RELATIEVOORSTELLEN (goedkeuringswachtrij) ───────────────────────────────
+const mapRelatievoorstel = (
+  v: typeof crmRelatievoorstellenTable.$inferSelect,
+  organisatieNaam?: string | null,
+) => ({
+  id: v.id,
+  organisatie_id: v.organisatieId,
+  organisatie_naam: organisatieNaam ?? null,
+  type: v.type,
+  status: v.status,
+  naam: v.naam,
+  functie: v.functie,
+  voorgestelde_data: v.voorgesteldeData,
+  bron: v.bron,
+  bron_url: v.bronUrl,
+  ai_toelichting: v.aiToelichting,
+  beoordeeld_door_id: v.beoordeeldDoorId,
+  beoordeeld_op: v.beoordeeldOp ? iso(v.beoordeeldOp) : null,
+  aangemaakt_op: iso(v.aangemaaktOp),
+});
+
+router.get("/crm/relatievoorstellen", lezen, async (req, res): Promise<void> => {
+  try {
+    const status = req.query.status ? String(req.query.status) : undefined;
+    const organisatieId = req.query.organisatie_id ? parseId(req.query.organisatie_id) : undefined;
+
+    let rijen = await db.select().from(crmRelatievoorstellenTable).orderBy(desc(crmRelatievoorstellenTable.aangemaaktOp));
+    if (status) rijen = rijen.filter((v) => v.status === status);
+    if (organisatieId != null && !Number.isNaN(organisatieId)) rijen = rijen.filter((v) => v.organisatieId === organisatieId);
+
+    const orgIds = Array.from(new Set(rijen.map((v) => v.organisatieId).filter((x): x is number => x != null)));
+    const orgs = orgIds.length
+      ? await db.select({ id: crmKlantenTable.id, naam: crmKlantenTable.naam }).from(crmKlantenTable).where(inArray(crmKlantenTable.id, orgIds))
+      : [];
+    const naamPerId = new Map(orgs.map((o) => [o.id, o.naam]));
+    res.json(rijen.map((v) => mapRelatievoorstel(v, v.organisatieId != null ? naamPerId.get(v.organisatieId) ?? null : null)));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+router.post("/crm/relatievoorstellen/genereer", schrijven, async (req, res): Promise<void> => {
+  if (!heeftGateway()) return void res.status(503).json({ error: "AI niet beschikbaar" });
+  try {
+    const organisatieId = parseId(req.body.organisatie_id);
+    if (Number.isNaN(organisatieId)) return void res.status(400).json({ error: "organisatie_id is verplicht" });
+    const [org] = await db.select().from(crmKlantenTable).where(eq(crmKlantenTable.id, organisatieId));
+    if (!org) return void res.status(404).json({ error: "Organisatie niet gevonden" });
+
+    const systeemPrompt = CRM_RELATIEVOORSTEL_PROMPT.tekst;
+    const locatie = [org.stad, org.regio].filter(Boolean).join(", ");
+    const gebruikerPrompt = `Zoek zakelijke contactpersonen bij de organisatie: ${org.naam}${locatie ? ` (${locatie})` : ""}${org.website ? ` — website ${org.website}` : ""}. Sector: brandpreventie en bouw, Nederland.`;
+
+    let voorstellenRuw: Array<Record<string, unknown>> = [];
+    const web = await aiGateway.responses("default", {
+      tools: [{ type: "web_search_preview" }],
+      input: `${systeemPrompt}\n\n${gebruikerPrompt}`,
+      text: { format: { type: "json_object" } },
+    });
+    if (web.ok) {
+      try { voorstellenRuw = (JSON.parse(web.inhoud).voorstellen as Array<Record<string, unknown>>) ?? []; } catch { voorstellenRuw = []; }
+    } else {
+      req.log.warn({ fout: web.fout }, "Web search niet beschikbaar voor relatievoorstellen, fallback naar kennismodel");
+      const chat = await aiGateway.chat("default", {
+        max_tokens: 1200,
+        response_format: { type: "json_object" },
+        messages: [
+          { role: "system", content: systeemPrompt },
+          { role: "user", content: gebruikerPrompt },
+        ],
+      });
+      if (chat.ok) {
+        try { voorstellenRuw = (JSON.parse(chat.inhoud).voorstellen as Array<Record<string, unknown>>) ?? []; } catch { voorstellenRuw = []; }
+      }
+    }
+
+    const bestaand = await db.select({ naam: crmContactpersonenTable.naam }).from(crmContactpersonenTable).where(eq(crmContactpersonenTable.klantId, organisatieId));
+    const bestaandeNamen = new Set(bestaand.map((c) => c.naam.trim().toLowerCase()));
+
+    const teBewaren = voorstellenRuw
+      .map((v) => ({
+        naam: typeof v.naam === "string" ? v.naam.trim() : "",
+        functie: typeof v.functie === "string" ? v.functie.trim() : null,
+        linkedin: typeof v.linkedin_url === "string" ? v.linkedin_url : null,
+        bron: typeof v.bron === "string" ? v.bron : null,
+        bronUrl: typeof v.bron_url === "string" ? v.bron_url : null,
+        toelichting: typeof v.toelichting === "string" ? v.toelichting : null,
+      }))
+      .filter((v) => v.naam.length > 1 && !bestaandeNamen.has(v.naam.toLowerCase()));
+
+    if (teBewaren.length === 0) return void res.json([]);
+
+    const ingevoegd = await db
+      .insert(crmRelatievoorstellenTable)
+      .values(teBewaren.map((v) => ({
+        organisatieId,
+        type: "contactpersoon",
+        status: "open",
+        naam: v.naam,
+        functie: v.functie,
+        voorgesteldeData: JSON.stringify({ linkedin_url: v.linkedin }),
+        bron: v.bron,
+        bronUrl: v.bronUrl,
+        aiToelichting: v.toelichting,
+        aangemaaktId: req.session.userId ?? null,
+      })))
+      .returning();
+    res.json(ingevoegd.map((v) => mapRelatievoorstel(v, org.naam)));
+  } catch (err) {
+    req.log.error(err);
+    res.status(503).json({ error: "AI niet beschikbaar" });
+  }
+});
+
+router.post("/crm/relatievoorstellen/:id/accepteer", schrijven, async (req, res): Promise<void> => {
+  try {
+    const id = parseId(req.params.id);
+    const [voorstel] = await db.select().from(crmRelatievoorstellenTable).where(eq(crmRelatievoorstellenTable.id, id));
+    if (!voorstel) return void res.status(404).json({ error: "Voorstel niet gevonden" });
+    if (voorstel.status === "geaccepteerd") return void res.status(409).json({ error: "Voorstel is al geaccepteerd" });
+
+    // Pas bij goedkeuring wordt de echte contactpersoon aangemaakt.
+    if (voorstel.type === "contactpersoon" && voorstel.organisatieId != null && voorstel.naam) {
+      let linkedin: string | null = null;
+      try { linkedin = (JSON.parse(voorstel.voorgesteldeData ?? "{}").linkedin_url as string) ?? null; } catch { linkedin = null; }
+      await db.insert(crmContactpersonenTable).values({
+        klantId: voorstel.organisatieId,
+        naam: voorstel.naam,
+        functie: voorstel.functie,
+        linkedinUrl: linkedin,
+        beslisrol: "onbekend",
+        relatiesterkte: "onbekend",
+        opmerkingen: voorstel.bron ? `Toegevoegd via AI-relatievoorstel (bron: ${voorstel.bron})` : "Toegevoegd via AI-relatievoorstel",
+      });
+      invalideerContext("klant", voorstel.organisatieId);
+    }
+
+    const [bijgewerkt] = await db
+      .update(crmRelatievoorstellenTable)
+      .set({ status: "geaccepteerd", beoordeeldDoorId: req.session.userId ?? null, beoordeeldOp: new Date(), bijgewerktOp: new Date() })
+      .where(eq(crmRelatievoorstellenTable.id, id))
+      .returning();
+    res.json(mapRelatievoorstel(bijgewerkt));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+router.post("/crm/relatievoorstellen/:id/afwijs", schrijven, async (req, res): Promise<void> => {
+  try {
+    const id = parseId(req.params.id);
+    const [bijgewerkt] = await db
+      .update(crmRelatievoorstellenTable)
+      .set({ status: "afgewezen", beoordeeldDoorId: req.session.userId ?? null, beoordeeldOp: new Date(), bijgewerktOp: new Date() })
+      .where(eq(crmRelatievoorstellenTable.id, id))
+      .returning();
+    if (!bijgewerkt) return void res.status(404).json({ error: "Voorstel niet gevonden" });
+    res.json(mapRelatievoorstel(bijgewerkt));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+router.delete("/crm/relatievoorstellen/:id", schrijven, async (req, res): Promise<void> => {
+  try {
+    await db.delete(crmRelatievoorstellenTable).where(eq(crmRelatievoorstellenTable.id, parseId(req.params.id)));
+    res.status(204).end();
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
   }
 });
 

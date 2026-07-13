@@ -291,6 +291,21 @@ export const CRM_CONCURRENT_PROFIEL_PROMPT: AiPrompt = {
     "Gebruik de meest recente informatie die je kunt vinden.",
 };
 
+export const CRM_RELATIEVOORSTEL_PROMPT: AiPrompt = {
+  naam: "crm-relatievoorstel",
+  versie: "1.0.0",
+  tekst:
+    "Je bent een relatie-onderzoeksassistent voor een Nederlands brandpreventiebedrijf. " +
+    "Zoek op internet naar publiek beschikbare, zakelijke contactpersonen bij de opgegeven organisatie " +
+    "(bijvoorbeeld directie, inkoop, vastgoed-/technisch beheer, projectleiding). " +
+    "Gebruik uitsluitend openbare zakelijke bronnen (bedrijfswebsite, LinkedIn, nieuwsberichten, jaarverslagen). " +
+    "Geef GEEN privégegevens en verzin NOOIT namen; laat een veld leeg als je het niet betrouwbaar kunt vinden. " +
+    "Retourneer ALLEEN valide JSON zonder extra toelichting in dit formaat: " +
+    '{"voorstellen": [{"naam": "volledige naam", "functie": "functietitel", "linkedin_url": "https://... of null", ' +
+    '"bron": "korte bronnaam", "bron_url": "https://...", "toelichting": "waarom deze persoon relevant is, max 160 tekens"}, ...]}. ' +
+    "Geef maximaal 6 voorstellen, gesorteerd op relevantie voor commerciële besluitvorming.",
+};
+
 // ── Organisatie — document analyse ───────────────────────────────────────────
 // {categorieen} wordt op aanroepmomment vervangen; fewShotSectie wordt achteraangevoegd.
 

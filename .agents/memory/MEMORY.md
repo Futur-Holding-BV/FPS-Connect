@@ -113,5 +113,10 @@
 - [AI context cache invalidation coverage](ai-context-cache-invalidation.md) — invalideerContext(type,id) wired into 8 core entities' primary mutation routes; sub-resources not in resolvers.ts payload deliberately skipped, re-check before assuming coverage.
 - [Uitloggen = volledige herlaad](logout-full-reload.md) — web-uitlog moet window.location.assign(BASE_URL) na sessie-vernietiging; React Query cache-only (clear/invalidate/setQueryData null) flipt isAuthenticated niet betrouwbaar; +onboarding-key fps.welkom.afgerond, NieuwsTicker pb-16, impersonatie needs gebouwen:1.
 - [Governance & Approval Engine](goedkeuring-engine.md) — generieke goedkeuringsmotor; pilot-pattern om een bestaande workflow-transitie te gaten via 422+viaGoedkeuring-bypass zonder de workflow-engine te herschrijven.
+- [CRM-module herontwikkeling](crm-herontwikkeling.md) — relatienetwerk (SVG node-edge), taken als eigen entiteit (crm_taken), AI-relatievoorstellen met goedkeuringswachtrij; menu-consolidatie onder één centraal sidebar-item.
 - [Multi-functie toegangsprofiel](multi-functie-toegangsprofiel.md) — functies dragen profiel_id; rechten additief afgeleid uit alle functies (increment 4=risicovol, zelf-escalatiecheck); GET /profielen gate = gebruikers OF personeel.
+<<<<<<< HEAD
 - [AI-slot keuze interactief](ai-slot-keuze.md) — interactieve AI-knoppen NIET op "reasoning"/gpt-5 (7+ min hang); gebruik "default"/gpt-4o + max_tokens; veiligheid altijd server-side clampen.
+=======
+- [CRM-module herontwikkeling](crm-module-herontwikkeling.md) — 4 werkstromen; crm_taken (polymorf) + crm_relatievoorstellen (AI stelt voor, mens keurt goed → pas dan echte contactpersoon); alle CRM onder één sidebar-item, subpagina's = nav-kaarten op /crm; route vóór /crm/:id.
+>>>>>>> 333ee06 (CRM-module herontwikkeling: relatienetwerk, taken, AI-voorstellen, menu-consolidatie)

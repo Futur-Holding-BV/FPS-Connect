@@ -6877,6 +6877,208 @@ paths:
         "204":
           description: Verwijderd
 
+  /crm/taken:
+    get:
+      operationId: listCrmTaken
+      tags: [crm]
+      summary: CRM-taken ophalen
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+        - in: query
+          name: toegewezen_aan_id
+          schema:
+            type: integer
+        - in: query
+          name: mijn
+          schema:
+            type: boolean
+        - in: query
+          name: koppeling_type
+          schema:
+            type: string
+        - in: query
+          name: koppeling_id
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CrmTaak"
+    post:
+      operationId: createCrmTaak
+      tags: [crm]
+      summary: CRM-taak aanmaken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CrmTaakInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CrmTaak"
+
+  /crm/taken/{id}:
+    patch:
+      operationId: updateCrmTaak
+      tags: [crm]
+      summary: CRM-taak bijwerken
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CrmTaakInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CrmTaak"
+    delete:
+      operationId: deleteCrmTaak
+      tags: [crm]
+      summary: CRM-taak verwijderen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Verwijderd
+
+  /crm/relatievoorstellen:
+    get:
+      operationId: listCrmRelatievoorstellen
+      tags: [crm]
+      summary: AI-relatievoorstellen ophalen (goedkeuringswachtrij)
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+        - in: query
+          name: organisatie_id
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CrmRelatievoorstel"
+
+  /crm/relatievoorstellen/genereer:
+    post:
+      operationId: genereerCrmRelatievoorstellen
+      tags: [crm]
+      summary: AI genereert relatievoorstellen uit publieke bronnen (mens keurt goed)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CrmRelatievoorstelGenereerInput"
+      responses:
+        "200":
+          description: Voorstellen aangemaakt (status open)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CrmRelatievoorstel"
+        "503":
+          description: AI niet beschikbaar
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+
+  /crm/relatievoorstellen/{id}/accepteer:
+    post:
+      operationId: accepteerCrmRelatievoorstel
+      tags: [crm]
+      summary: Relatievoorstel goedkeuren (maakt pas dan de echte contactpersoon aan)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Goedgekeurd en aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CrmRelatievoorstel"
+        "404":
+          description: Niet gevonden
+
+  /crm/relatievoorstellen/{id}/afwijs:
+    post:
+      operationId: afwijsCrmRelatievoorstel
+      tags: [crm]
+      summary: Relatievoorstel afwijzen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Afgewezen
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CrmRelatievoorstel"
+        "404":
+          description: Niet gevonden
+
+  /crm/relatievoorstellen/{id}:
+    delete:
+      operationId: deleteCrmRelatievoorstel
+      tags: [crm]
+      summary: Relatievoorstel verwijderen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Verwijderd
+
   /inbox/stats:
     get:
       operationId: getInboxStats
@@ -23386,6 +23588,104 @@ components:
           type: string
         datum:
           type: string
+
+    CrmTaak:
+      type: object
+      required: [id, titel, status, prioriteit, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id:
+          type: integer
+        titel:
+          type: string
+        omschrijving:
+          type: ["string", "null"]
+        status:
+          type: string
+        prioriteit:
+          type: string
+        vervaldatum:
+          type: ["string", "null"]
+        toegewezen_aan_id:
+          type: ["integer", "null"]
+        toegewezen_aan_naam:
+          type: ["string", "null"]
+        koppeling_type:
+          type: ["string", "null"]
+        koppeling_id:
+          type: ["integer", "null"]
+        koppeling_naam:
+          type: ["string", "null"]
+        aangemaakt_door_id:
+          type: ["integer", "null"]
+        aangemaakt_door_naam:
+          type: ["string", "null"]
+        afgerond_op:
+          type: ["string", "null"]
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+
+    CrmTaakInput:
+      type: object
+      required: [titel]
+      properties:
+        titel:
+          type: string
+        omschrijving:
+          type: string
+        status:
+          type: string
+        prioriteit:
+          type: string
+        vervaldatum:
+          type: ["string", "null"]
+        toegewezen_aan_id:
+          type: ["integer", "null"]
+        koppeling_type:
+          type: ["string", "null"]
+        koppeling_id:
+          type: ["integer", "null"]
+
+    CrmRelatievoorstel:
+      type: object
+      required: [id, type, status, aangemaakt_op]
+      properties:
+        id:
+          type: integer
+        organisatie_id:
+          type: ["integer", "null"]
+        organisatie_naam:
+          type: ["string", "null"]
+        type:
+          type: string
+        status:
+          type: string
+        naam:
+          type: ["string", "null"]
+        functie:
+          type: ["string", "null"]
+        voorgestelde_data:
+          type: ["string", "null"]
+        bron:
+          type: ["string", "null"]
+        bron_url:
+          type: ["string", "null"]
+        ai_toelichting:
+          type: ["string", "null"]
+        beoordeeld_door_id:
+          type: ["integer", "null"]
+        beoordeeld_op:
+          type: ["string", "null"]
+        aangemaakt_op:
+          type: string
+
+    CrmRelatievoorstelGenereerInput:
+      type: object
+      required: [organisatie_id]
+      properties:
+        organisatie_id:
+          type: integer
 
     CrmCoachInput:
       type: object

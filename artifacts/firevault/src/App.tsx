@@ -52,6 +52,8 @@ import CrmConcurrenten from "@/pages/crm/concurrenten";
 import CrmMarktintelligentie from "@/pages/crm/marktintelligentie";
 import CrmContactpersonen from "@/pages/crm/contactpersonen";
 import CrmKennisbibliotheek from "@/pages/crm/kennisbibliotheek";
+import CrmTaken from "@/pages/crm/taken";
+import CrmRelatievoorstellen from "@/pages/crm/relatievoorstellen";
 import InboxOverzicht from "@/pages/inbox/index";
 import InboxDetail from "@/pages/inbox/detail";
 import WerkInboxPagina from "@/pages/werk-inbox/index";
@@ -421,6 +423,8 @@ function ConnectPortal() {
         <Route path="/crm/concurrenten" component={CrmConcurrenten} />
         <Route path="/crm/marktintelligentie" component={CrmMarktintelligentie} />
         <Route path="/crm/contactpersonen" component={CrmContactpersonen} />
+        <Route path="/crm/taken" component={CrmTaken} />
+        <Route path="/crm/relatievoorstellen" component={CrmRelatievoorstellen} />
         <Route path="/crm/kennisbibliotheek" component={CrmKennisbibliotheek} />
         <Route path="/crm/:id" component={CrmKlantDetail} />
         <Route path="/crm" component={CrmKlanten} />

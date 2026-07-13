@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   Building2, Users, Target, AlertCircle, Clock,
   ChevronRight, ArrowRight, Handshake, Newspaper, TrendingUp,
+  ClipboardList, Sparkles, BookOpen,
 } from "lucide-react";
 
 const FASE_KLEUR: Record<string, string> = {
@@ -41,6 +42,9 @@ export default function CrmDashboardPagina() {
     { href: "/crm/projectkansen", label: "Projectkansen", icon: Target, beschrijving: "Pipeline en lopende trajecten" },
     { href: "/crm/concurrenten", label: "Concurrenten", icon: Handshake, beschrijving: "Marktpositie en analyse" },
     { href: "/crm/marktintelligentie", label: "Marktinzicht", icon: Newspaper, beschrijving: "Nieuws, aanbestedingen en signalen" },
+    { href: "/crm/taken", label: "Taken", icon: ClipboardList, beschrijving: "Acties en opvolging" },
+    { href: "/crm/relatievoorstellen", label: "AI-relatievoorstellen", icon: Sparkles, beschrijving: "Voorgestelde contacten ter beoordeling" },
+    { href: "/crm/kennisbibliotheek", label: "Kennisbibliotheek", icon: BookOpen, beschrijving: "Documenten en naslag" },
   ];
 
   return (

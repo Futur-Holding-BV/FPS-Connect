@@ -163,6 +163,46 @@ export const crmMarktintelligentieTable = pgTable("crm_marktintelligentie", {
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
 });
 
+export const TAAK_STATUSSEN = ["open", "bezig", "afgerond", "geannuleerd"] as const;
+export const TAAK_PRIORITEITEN = ["laag", "normaal", "hoog"] as const;
+export const TAAK_KOPPELING_TYPES = ["crm_organisatie", "crm_contactpersoon", "crm_projectkans"] as const;
+export const RELATIEVOORSTEL_TYPES = ["contactpersoon", "organisatie", "relatie"] as const;
+export const RELATIEVOORSTEL_STATUSSEN = ["open", "geaccepteerd", "afgewezen"] as const;
+
+export const crmTakenTable = pgTable("crm_taken", {
+  id: serial("id").primaryKey(),
+  titel: text("titel").notNull(),
+  omschrijving: text("omschrijving"),
+  status: text("status").notNull().default("open"),
+  prioriteit: text("prioriteit").notNull().default("normaal"),
+  vervaldatum: text("vervaldatum"),
+  toegewezenAanId: integer("toegewezen_aan_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
+  koppelingType: text("koppeling_type"),
+  koppelingId: integer("koppeling_id"),
+  aangemaaktDoorId: integer("aangemaakt_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
+  afgerondOp: timestamp("afgerond_op"),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+  bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+});
+
+export const crmRelatievoorstellenTable = pgTable("crm_relatievoorstellen", {
+  id: serial("id").primaryKey(),
+  organisatieId: integer("organisatie_id").references(() => crmKlantenTable.id, { onDelete: "cascade" }),
+  type: text("type").notNull().default("contactpersoon"),
+  status: text("status").notNull().default("open"),
+  voorgesteldeData: text("voorgestelde_data"),
+  naam: text("naam"),
+  functie: text("functie"),
+  bron: text("bron"),
+  bronUrl: text("bron_url"),
+  aiToelichting: text("ai_toelichting"),
+  aangemaaktId: integer("aangemaakt_id"),
+  beoordeeldDoorId: integer("beoordeeld_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
+  beoordeeldOp: timestamp("beoordeeld_op"),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+  bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+});
+
 export const crmScoutRunsTable = pgTable("crm_scout_runs", {
   id: serial("id").primaryKey(),
   gestartOp: timestamp("gestart_op").notNull().defaultNow(),
@@ -190,6 +230,14 @@ export type CrmConcurrent = typeof crmConcurrentenTable.$inferSelect;
 
 export const insertCrmMarktintelligentieSchema = createInsertSchema(crmMarktintelligentieTable).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });
 export type InsertCrmMarktintelligentie = z.infer<typeof insertCrmMarktintelligentieSchema>;
+
+export const insertCrmTaakSchema = createInsertSchema(crmTakenTable).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });
+export type InsertCrmTaak = z.infer<typeof insertCrmTaakSchema>;
+export type CrmTaak = typeof crmTakenTable.$inferSelect;
+
+export const insertCrmRelatievoorstelSchema = createInsertSchema(crmRelatievoorstellenTable).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });
+export type InsertCrmRelatievoorstel = z.infer<typeof insertCrmRelatievoorstelSchema>;
+export type CrmRelatievoorstel = typeof crmRelatievoorstellenTable.$inferSelect;
 
 export type CrmOpdracht = typeof crmOpdrachtenTable.$inferSelect;
 export type CrmCommunicatie = typeof crmCommunicatieTable.$inferSelect;

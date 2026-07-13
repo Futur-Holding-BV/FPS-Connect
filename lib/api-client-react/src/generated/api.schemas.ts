@@ -1034,6 +1034,81 @@ export interface CrmMarktintelligentieInput {
   datum?: string;
 }
 
+export interface CrmTaak {
+  id: number;
+  titel: string;
+  /** @nullable */
+  omschrijving?: string | null;
+  status: string;
+  prioriteit: string;
+  /** @nullable */
+  vervaldatum?: string | null;
+  /** @nullable */
+  toegewezen_aan_id?: number | null;
+  /** @nullable */
+  toegewezen_aan_naam?: string | null;
+  /** @nullable */
+  koppeling_type?: string | null;
+  /** @nullable */
+  koppeling_id?: number | null;
+  /** @nullable */
+  koppeling_naam?: string | null;
+  /** @nullable */
+  aangemaakt_door_id?: number | null;
+  /** @nullable */
+  aangemaakt_door_naam?: string | null;
+  /** @nullable */
+  afgerond_op?: string | null;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export interface CrmTaakInput {
+  titel: string;
+  omschrijving?: string;
+  status?: string;
+  prioriteit?: string;
+  /** @nullable */
+  vervaldatum?: string | null;
+  /** @nullable */
+  toegewezen_aan_id?: number | null;
+  /** @nullable */
+  koppeling_type?: string | null;
+  /** @nullable */
+  koppeling_id?: number | null;
+}
+
+export interface CrmRelatievoorstel {
+  id: number;
+  /** @nullable */
+  organisatie_id?: number | null;
+  /** @nullable */
+  organisatie_naam?: string | null;
+  type: string;
+  status: string;
+  /** @nullable */
+  naam?: string | null;
+  /** @nullable */
+  functie?: string | null;
+  /** @nullable */
+  voorgestelde_data?: string | null;
+  /** @nullable */
+  bron?: string | null;
+  /** @nullable */
+  bron_url?: string | null;
+  /** @nullable */
+  ai_toelichting?: string | null;
+  /** @nullable */
+  beoordeeld_door_id?: number | null;
+  /** @nullable */
+  beoordeeld_op?: string | null;
+  aangemaakt_op: string;
+}
+
+export interface CrmRelatievoorstelGenereerInput {
+  organisatie_id: number;
+}
+
 export type CrmCoachInputContext = {[key: string]: unknown};
 
 export interface CrmCoachInput {
@@ -12930,6 +13005,23 @@ export type ScanCrmMarktintelligentieAi503 = {
 };
 
 export type GetCrmAiCoach503 = {
+  error?: string;
+};
+
+export type ListCrmTakenParams = {
+status?: string;
+toegewezen_aan_id?: number;
+mijn?: boolean;
+koppeling_type?: string;
+koppeling_id?: number;
+};
+
+export type ListCrmRelatievoorstellenParams = {
+status?: string;
+organisatie_id?: number;
+};
+
+export type GenereerCrmRelatievoorstellen503 = {
   error?: string;
 };
 

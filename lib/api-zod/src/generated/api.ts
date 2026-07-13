@@ -8222,6 +8222,216 @@ export const DeleteCrmMarktintelligentieResponse = zod.void()
 
 
 /**
+ * @summary CRM-taken ophalen
+ */
+export const ListCrmTakenQueryParams = zod.object({
+  "status": zod.coerce.string().optional(),
+  "toegewezen_aan_id": zod.coerce.number().optional(),
+  "mijn": zod.coerce.boolean().optional(),
+  "koppeling_type": zod.coerce.string().optional(),
+  "koppeling_id": zod.coerce.number().optional()
+})
+
+export const ListCrmTakenResponseItem = zod.object({
+  "id": zod.number(),
+  "titel": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "status": zod.string(),
+  "prioriteit": zod.string(),
+  "vervaldatum": zod.string().nullish(),
+  "toegewezen_aan_id": zod.number().nullish(),
+  "toegewezen_aan_naam": zod.string().nullish(),
+  "koppeling_type": zod.string().nullish(),
+  "koppeling_id": zod.number().nullish(),
+  "koppeling_naam": zod.string().nullish(),
+  "aangemaakt_door_id": zod.number().nullish(),
+  "aangemaakt_door_naam": zod.string().nullish(),
+  "afgerond_op": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+export const ListCrmTakenResponse = zod.array(ListCrmTakenResponseItem)
+
+
+/**
+ * @summary CRM-taak aanmaken
+ */
+export const CreateCrmTaakBody = zod.object({
+  "titel": zod.string(),
+  "omschrijving": zod.string().optional(),
+  "status": zod.string().optional(),
+  "prioriteit": zod.string().optional(),
+  "vervaldatum": zod.string().nullish(),
+  "toegewezen_aan_id": zod.number().nullish(),
+  "koppeling_type": zod.string().nullish(),
+  "koppeling_id": zod.number().nullish()
+})
+
+export const CreateCrmTaakResponse = zod.void()
+
+
+/**
+ * @summary CRM-taak bijwerken
+ */
+export const UpdateCrmTaakParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateCrmTaakBody = zod.object({
+  "titel": zod.string(),
+  "omschrijving": zod.string().optional(),
+  "status": zod.string().optional(),
+  "prioriteit": zod.string().optional(),
+  "vervaldatum": zod.string().nullish(),
+  "toegewezen_aan_id": zod.number().nullish(),
+  "koppeling_type": zod.string().nullish(),
+  "koppeling_id": zod.number().nullish()
+})
+
+export const UpdateCrmTaakResponse = zod.object({
+  "id": zod.number(),
+  "titel": zod.string(),
+  "omschrijving": zod.string().nullish(),
+  "status": zod.string(),
+  "prioriteit": zod.string(),
+  "vervaldatum": zod.string().nullish(),
+  "toegewezen_aan_id": zod.number().nullish(),
+  "toegewezen_aan_naam": zod.string().nullish(),
+  "koppeling_type": zod.string().nullish(),
+  "koppeling_id": zod.number().nullish(),
+  "koppeling_naam": zod.string().nullish(),
+  "aangemaakt_door_id": zod.number().nullish(),
+  "aangemaakt_door_naam": zod.string().nullish(),
+  "afgerond_op": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary CRM-taak verwijderen
+ */
+export const DeleteCrmTaakParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteCrmTaakResponse = zod.void()
+
+
+/**
+ * @summary AI-relatievoorstellen ophalen (goedkeuringswachtrij)
+ */
+export const ListCrmRelatievoorstellenQueryParams = zod.object({
+  "status": zod.coerce.string().optional(),
+  "organisatie_id": zod.coerce.number().optional()
+})
+
+export const ListCrmRelatievoorstellenResponseItem = zod.object({
+  "id": zod.number(),
+  "organisatie_id": zod.number().nullish(),
+  "organisatie_naam": zod.string().nullish(),
+  "type": zod.string(),
+  "status": zod.string(),
+  "naam": zod.string().nullish(),
+  "functie": zod.string().nullish(),
+  "voorgestelde_data": zod.string().nullish(),
+  "bron": zod.string().nullish(),
+  "bron_url": zod.string().nullish(),
+  "ai_toelichting": zod.string().nullish(),
+  "beoordeeld_door_id": zod.number().nullish(),
+  "beoordeeld_op": zod.string().nullish(),
+  "aangemaakt_op": zod.string()
+})
+export const ListCrmRelatievoorstellenResponse = zod.array(ListCrmRelatievoorstellenResponseItem)
+
+
+/**
+ * @summary AI genereert relatievoorstellen uit publieke bronnen (mens keurt goed)
+ */
+export const GenereerCrmRelatievoorstellenBody = zod.object({
+  "organisatie_id": zod.number()
+})
+
+export const GenereerCrmRelatievoorstellenResponseItem = zod.object({
+  "id": zod.number(),
+  "organisatie_id": zod.number().nullish(),
+  "organisatie_naam": zod.string().nullish(),
+  "type": zod.string(),
+  "status": zod.string(),
+  "naam": zod.string().nullish(),
+  "functie": zod.string().nullish(),
+  "voorgestelde_data": zod.string().nullish(),
+  "bron": zod.string().nullish(),
+  "bron_url": zod.string().nullish(),
+  "ai_toelichting": zod.string().nullish(),
+  "beoordeeld_door_id": zod.number().nullish(),
+  "beoordeeld_op": zod.string().nullish(),
+  "aangemaakt_op": zod.string()
+})
+export const GenereerCrmRelatievoorstellenResponse = zod.array(GenereerCrmRelatievoorstellenResponseItem)
+
+
+/**
+ * @summary Relatievoorstel goedkeuren (maakt pas dan de echte contactpersoon aan)
+ */
+export const AccepteerCrmRelatievoorstelParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AccepteerCrmRelatievoorstelResponse = zod.object({
+  "id": zod.number(),
+  "organisatie_id": zod.number().nullish(),
+  "organisatie_naam": zod.string().nullish(),
+  "type": zod.string(),
+  "status": zod.string(),
+  "naam": zod.string().nullish(),
+  "functie": zod.string().nullish(),
+  "voorgestelde_data": zod.string().nullish(),
+  "bron": zod.string().nullish(),
+  "bron_url": zod.string().nullish(),
+  "ai_toelichting": zod.string().nullish(),
+  "beoordeeld_door_id": zod.number().nullish(),
+  "beoordeeld_op": zod.string().nullish(),
+  "aangemaakt_op": zod.string()
+})
+
+
+/**
+ * @summary Relatievoorstel afwijzen
+ */
+export const AfwijsCrmRelatievoorstelParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AfwijsCrmRelatievoorstelResponse = zod.object({
+  "id": zod.number(),
+  "organisatie_id": zod.number().nullish(),
+  "organisatie_naam": zod.string().nullish(),
+  "type": zod.string(),
+  "status": zod.string(),
+  "naam": zod.string().nullish(),
+  "functie": zod.string().nullish(),
+  "voorgestelde_data": zod.string().nullish(),
+  "bron": zod.string().nullish(),
+  "bron_url": zod.string().nullish(),
+  "ai_toelichting": zod.string().nullish(),
+  "beoordeeld_door_id": zod.number().nullish(),
+  "beoordeeld_op": zod.string().nullish(),
+  "aangemaakt_op": zod.string()
+})
+
+
+/**
+ * @summary Relatievoorstel verwijderen
+ */
+export const DeleteCrmRelatievoorstelParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteCrmRelatievoorstelResponse = zod.void()
+
+
+/**
  * @summary Inbox statistieken
  */
 export const GetInboxStatsResponse = zod.object({

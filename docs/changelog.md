@@ -59,6 +59,31 @@
 
 ---
 
+## 2026-07-13 — CRM-module herontwikkeling: relatienetwerk, taken, AI-relatievoorstellen, menu-consolidatie
+
+- **Uitvoering:** volledig (4 werkstromen) | **Kwaliteit:** hoog | **Risico:** middel (nieuwe DB-tabellen + OpenAPI + routes, additief; sidebar-consolidatie raakt navigatie)
+
+**Aanleiding:** de CRM-module was verspreid over losse sidebar-items met een gegroepeerde-lijst-relatiekaart. Volledige herontwikkeling gevraagd: interactief relatienetwerk, taken als eigen entiteit, AI-relatievoorstellen met goedkeuringswachtrij, en één centraal CRM-menu-item.
+
+**1. Interactief relatienetwerk (`crm-relatienetwerk.tsx` + `crm/detail.tsx`):**
+- SVG node-edge graaf vervangt de oude gegroepeerde `RelatieKaart`: organisatie als centrale node (#212631), contactpersonen radiaal eromheen
+- Kleur per beslisrol, lijndikte/streepjes per relatiesterkte (onbekend/zwak/normaal/sterk), hover-highlight, legenda
+
+**2. Taken als eigen CRM-entiteit (`crm_taken` tabel, `crm/taken.tsx`):**
+- Polymorfe koppeling (organisatie/contactpersoon/projectkans); volledige CRUD, status- en prioriteitsfilters, checkbox-afronden, toewijzing via toewijsbare-gebruikers
+
+**3. AI-relatievoorstellen (`crm_relatievoorstellen` tabel, `crm/relatievoorstellen.tsx`):**
+- AI zoekt op openbare bronnen en stelt contactpersonen voor; goedkeuringswachtrij — een voorstel wordt pas een echte `crm_contactpersoon` ná menselijke goedkeuring (AI creëert nooit zelf)
+- Genereren per organisatie, goedkeuren/afwijzen/verwijderen; gated op AI-gateway (503 zonder gateway)
+
+**4. Menu-consolidatie (`beheerder-layout.tsx` + `crm/index.tsx`):**
+- Alle CRM zit nu onder één centraal "CRM"-menu-item (voorheen los: Projectkansen/Klanten/Organisaties/Concurrenten/Marktinzicht/Kennisbibliotheek)
+- CRM-dashboard is de hub; nav-kaarten toegevoegd voor Taken, AI-relatievoorstellen en Kennisbibliotheek
+
+**Verificatie:** volledige typecheck groen; end-to-end geverifieerd via geauthenticeerde sessie (login + TOTP): taken CRUD (201/200/204) en relatievoorstellen-lijst (200) werken tegen de echte API.
+
+---
+
 ## 2026-07-13 — Meerdere functies zichtbaar/bewerkbaar in Profiel bewerken (increment 1)
 
 - **Uitvoering:** volledig (increment 1 van 4) | **Kwaliteit:** hoog | **Risico:** laag (alleen frontend, geen API-/DB-wijziging, hergebruikt bestaande aanstellingen-CRUD)
