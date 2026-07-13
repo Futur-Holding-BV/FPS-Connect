@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { useLocation } from "wouter";
 import {
   useCreateGebouw,
   useAiAnalyseGebouw,
@@ -82,6 +83,7 @@ function metHoofdletters(v: string): string {
 
 export function GebouwAanmakenDialog() {
   const queryClient = useQueryClient();
+  const [, setLocation] = useLocation();
   const maakGebouw = useCreateGebouw();
   const aiAnalyse = useAiAnalyseGebouw();
   const { data: werkgevers } = useListWerkgevers();
@@ -267,7 +269,7 @@ export function GebouwAanmakenDialog() {
       return;
     }
     try {
-      await maakGebouw.mutateAsync({
+      const nieuwGebouw = await maakGebouw.mutateAsync({
         data: {
           projectnummer: velden.projectnummer.trim() || undefined,
           naam: metHoofdletters(velden.naam),
@@ -287,6 +289,9 @@ export function GebouwAanmakenDialog() {
       await queryClient.invalidateQueries();
       herstel();
       setOpen(false);
+      if (nieuwGebouw?.id != null) {
+        setLocation(`/gebouwen/${nieuwGebouw.id}`);
+      }
     } catch (err) {
       const fout = err as { status?: number; data?: { error?: string } };
       if (fout?.status === 409) {
