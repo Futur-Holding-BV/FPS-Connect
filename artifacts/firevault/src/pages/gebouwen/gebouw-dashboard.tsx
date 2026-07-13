@@ -19,6 +19,7 @@ import {
   Calendar,
   Users,
   ClipboardList,
+  Scale,
   CheckCircle2,
   Circle,
   AlertCircle,
@@ -61,6 +62,17 @@ interface Signaal {
   tab?: string;
 }
 
+interface ProjectFinancien {
+  aantalOpdrachten: number;
+  opdrachtsom: number | null;
+  gefactureerd: number | null;
+  nogTeFactureren: number | null;
+  begroteKosten: number | null;
+  waardeOhw: number | null;
+  margeEuro: number | null;
+  margePct: number | null;
+}
+
 interface DashboardProps {
   gebouw: any;
   toewijzingen: any[];
@@ -68,6 +80,10 @@ interface DashboardProps {
   gebouwOffertes: any[];
   gebouwOpnames: any[];
   gebouwFacturen: any[];
+  gebouwOpdrachten?: any[];
+  gebouwDocumenten?: any[];
+  financien?: ProjectFinancien | null;
+  meerMinderwerkAantal?: number;
   openActiepunten: any[];
   onNavigeer: (tab: string) => void;
   isBeheerder: boolean;
@@ -358,6 +374,37 @@ function KpiKaart({
   );
 }
 
+function DossierRegel({
+  label,
+  aantal,
+  icoon,
+  onClick,
+}: {
+  label: string;
+  aantal: number;
+  icoon: React.ReactNode;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="group flex items-center gap-2.5 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-left transition-colors hover:border-primary/40 hover:bg-slate-50"
+    >
+      <span className="shrink-0 rounded-md bg-slate-100 p-1.5 text-slate-500">
+        {icoon}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-xs font-medium text-slate-700">
+          {label}
+        </span>
+        <span className="text-sm font-semibold text-slate-900">{aantal}</span>
+      </span>
+      <ArrowRight className="h-3.5 w-3.5 shrink-0 text-slate-300 transition-colors group-hover:text-primary" />
+    </button>
+  );
+}
+
 export function GebouwDashboard({
   gebouw,
   toewijzingen = [],
@@ -365,6 +412,10 @@ export function GebouwDashboard({
   gebouwOffertes = [],
   gebouwOpnames = [],
   gebouwFacturen = [],
+  gebouwOpdrachten = [],
+  gebouwDocumenten = [],
+  financien = null,
+  meerMinderwerkAantal = 0,
   openActiepunten = [],
   onNavigeer,
   isBeheerder,
@@ -599,6 +650,62 @@ export function GebouwDashboard({
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 items-start">
         {/* Financieel (links, 2/3) */}
         <div className="xl:col-span-2 space-y-4">
+          {/* Projectdossier — centraal overzicht met doorklik */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+                <FileText className="h-4 w-4 text-muted-foreground" />
+                Projectdossier
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                <DossierRegel
+                  label="Calculaties"
+                  aantal={gebouwCalcs.length}
+                  icoon={<BarChart3 className="h-4 w-4" />}
+                  onClick={() => onNavigeer("calculaties")}
+                />
+                <DossierRegel
+                  label="Offertes"
+                  aantal={gebouwOffertes.length}
+                  icoon={<Euro className="h-4 w-4" />}
+                  onClick={() => onNavigeer("offertes")}
+                />
+                <DossierRegel
+                  label="Opdrachten"
+                  aantal={gebouwOpdrachten.length}
+                  icoon={<ClipboardList className="h-4 w-4" />}
+                  onClick={() => onNavigeer("opdrachten")}
+                />
+                <DossierRegel
+                  label="Meer-/minderwerk"
+                  aantal={meerMinderwerkAantal}
+                  icoon={<Scale className="h-4 w-4" />}
+                  onClick={() => onNavigeer("meerwerk")}
+                />
+                <DossierRegel
+                  label="Opnames"
+                  aantal={gebouwOpnames.length}
+                  icoon={<ListChecks className="h-4 w-4" />}
+                  onClick={() => onNavigeer("opnames")}
+                />
+                <DossierRegel
+                  label="Documenten"
+                  aantal={gebouwDocumenten.length}
+                  icoon={<FileText className="h-4 w-4" />}
+                  onClick={() => onNavigeer("project")}
+                />
+                <DossierRegel
+                  label="Facturen"
+                  aantal={gebouwFacturen.length}
+                  icoon={<Receipt className="h-4 w-4" />}
+                  onClick={() => onNavigeer("facturen")}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
           {heeftFinancieelInzicht && (
             <Card>
               <CardHeader className="pb-3">
@@ -610,19 +717,35 @@ export function GebouwDashboard({
               <CardContent>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                   <KpiKaart
-                    label={geaccepteerdeOfferte ? "Opdrachtsom" : "Offerte waarde"}
+                    label={
+                      financien?.opdrachtsom != null
+                        ? "Opdrachtsom"
+                        : geaccepteerdeOfferte
+                          ? "Opdrachtsom"
+                          : "Offerte waarde"
+                    }
                     waarde={
-                      offerteWaarde != null ? EURO_FMT.format(offerteWaarde) : "—"
+                      financien?.opdrachtsom != null
+                        ? EURO_FMT.format(financien.opdrachtsom)
+                        : offerteWaarde != null
+                          ? EURO_FMT.format(offerteWaarde)
+                          : "—"
                     }
                     sublabel={
-                      geaccepteerdeOfferte
-                        ? "excl. BTW (geaccepteerd)"
-                        : gebouwOffertes.length > 0
-                          ? `${gebouwOffertes.length} offerte(s) in voorbereiding`
-                          : "Nog geen offerte"
+                      financien?.opdrachtsom != null
+                        ? `excl. BTW (${financien.aantalOpdrachten} opdracht${financien.aantalOpdrachten === 1 ? "" : "en"})`
+                        : geaccepteerdeOfferte
+                          ? "excl. BTW (geaccepteerd)"
+                          : gebouwOffertes.length > 0
+                            ? `${gebouwOffertes.length} offerte(s) in voorbereiding`
+                            : "Nog geen offerte"
                     }
                     icoon={<Euro className="h-4 w-4" />}
-                    onClick={() => onNavigeer("offertes")}
+                    onClick={() =>
+                      onNavigeer(
+                        financien?.opdrachtsom != null ? "opdrachten" : "offertes",
+                      )
+                    }
                   />
                   <KpiKaart
                     label="Calculatie"
@@ -650,21 +773,74 @@ export function GebouwDashboard({
                   />
                   <KpiKaart
                     label="Werkbegroting"
-                    waarde="—"
-                    sublabel="Nog niet ingevoerd"
+                    waarde={
+                      financien?.begroteKosten != null
+                        ? EURO_FMT.format(financien.begroteKosten)
+                        : "—"
+                    }
+                    sublabel={
+                      financien?.begroteKosten != null
+                        ? "Begrote kosten"
+                        : "Nog niet ingevoerd"
+                    }
                     icoon={<FileText className="h-4 w-4" />}
+                    onClick={
+                      financien?.begroteKosten != null
+                        ? () => onNavigeer("opdrachten")
+                        : undefined
+                    }
                   />
                   <KpiKaart
                     label="Actuele marge"
-                    waarde="—"
-                    sublabel="Beschikbaar na werkbegroting"
+                    waarde={
+                      financien?.margeEuro != null
+                        ? EURO_FMT.format(financien.margeEuro)
+                        : "—"
+                    }
+                    sublabel={
+                      financien?.margePct != null
+                        ? `${financien.margePct.toFixed(1)}% van opdrachtsom`
+                        : financien?.margeEuro != null
+                          ? "Actuele marge"
+                          : "Beschikbaar na werkbegroting"
+                    }
                     icoon={<TrendingUp className="h-4 w-4" />}
+                    trend={
+                      financien?.margeEuro != null
+                        ? financien.margeEuro < 0
+                          ? "neer"
+                          : "op"
+                        : null
+                    }
+                    waarschuwing={
+                      financien?.margeEuro != null && financien.margeEuro < 0
+                    }
+                    onClick={
+                      financien?.margeEuro != null
+                        ? () => onNavigeer("opdrachten")
+                        : undefined
+                    }
                   />
                   <KpiKaart
                     label="Onderhanden werk"
-                    waarde="—"
-                    sublabel="Nog niet berekend"
+                    waarde={
+                      financien?.waardeOhw != null
+                        ? EURO_FMT.format(financien.waardeOhw)
+                        : "—"
+                    }
+                    sublabel={
+                      financien?.waardeOhw != null
+                        ? financien?.nogTeFactureren != null
+                          ? `Nog te factureren: ${EURO_FMT.format(financien.nogTeFactureren)}`
+                          : "Onderhanden werk"
+                        : "Nog niet berekend"
+                    }
                     icoon={<Package className="h-4 w-4" />}
+                    onClick={
+                      financien?.waardeOhw != null
+                        ? () => onNavigeer("opdrachten")
+                        : undefined
+                    }
                   />
                 </div>
               </CardContent>

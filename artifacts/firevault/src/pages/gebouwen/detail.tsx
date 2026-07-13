@@ -17,9 +17,15 @@ import {
   useListOffertes,
   useListOpnames,
   useListGebouwFacturen,
+  useListOpdrachten,
+  useListOnderhandenWerk,
+  useListPlanningItems,
+  useListPlanningMeerwerk,
+  getListOfferteUitgangspuntenQueryOptions,
   type Document,
+  type OfferteUitgangspunt,
 } from "@workspace/api-client-react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useQueries } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -66,6 +72,7 @@ import {
   Calendar,
   Hash,
   ClipboardList,
+  Scale,
   Printer,
   HelpCircle,
   AlertTriangle,
@@ -382,6 +389,84 @@ export default function GebouwDetail() {
   const { data: gebouwFacturen = [] } = useListGebouwFacturen(gebouwId ?? 0, {
     query: { enabled: !!gebouwId, queryKey: ["gebouw-facturen", gebouwId] },
   });
+  const { data: gebouwOpdrachten = [] } = useListOpdrachten(
+    { gebouw_id: gebouwId },
+    { query: { enabled: !!gebouwId, queryKey: ["opdrachten", gebouwId] } },
+  );
+  const { data: alleOhw = [] } = useListOnderhandenWerk(undefined, {
+    query: { queryKey: ["onderhanden-werk"] },
+  });
+  const { data: gekoppeldeDocumenten = [] } = useListGekoppeldeDocumenten(
+    { doel_type: "gebouw", doel_id: gebouwId ?? 0 },
+    { query: { enabled: !!gebouwId, queryKey: ["gekoppelde-documenten", "gebouw", gebouwId] } },
+  );
+  const gebouwDocumenten = ((gekoppeldeDocumenten ?? []) as Document[]).filter(
+    (d) => !d.gearchiveerd,
+  );
+
+  // Meer-/minderwerk komt uit twee bronnen: planning-meerwerk (per planning-item
+  // van dit gebouw) en offerte meer-/minderwerkpunten (uitgangspunten met type
+  // meerwerk/minderwerk op de offertes van dit gebouw).
+  const { data: allePlanningItems = [] } = useListPlanningItems(undefined, {
+    query: { queryKey: ["planning-items"] },
+  });
+  const { data: allePlanningMeerwerk = [] } = useListPlanningMeerwerk(undefined, {
+    query: { queryKey: ["planning-meerwerk"] },
+  });
+  const gebouwPlanningItems = (Array.isArray(allePlanningItems) ? allePlanningItems : []).filter(
+    (p: any) => p.gebouw_id === gebouwId,
+  );
+  const gebouwPlanningItemIds = new Set(gebouwPlanningItems.map((p: any) => p.id));
+  const planningItemMap = new Map(gebouwPlanningItems.map((p: any) => [p.id, p]));
+  const gebouwPlanningMeerwerk = (Array.isArray(allePlanningMeerwerk) ? allePlanningMeerwerk : [])
+    .filter((m: any) => gebouwPlanningItemIds.has(m.planning_item_id))
+    .map((m: any) => ({
+      ...m,
+      planning_titel: planningItemMap.get(m.planning_item_id)?.titel ?? null,
+    }));
+
+  const offerteUitgangspuntenResultaten = useQueries({
+    queries: gebouwOffertes.map((o: any) => getListOfferteUitgangspuntenQueryOptions(o.id)),
+  });
+  const gebouwOfferteMeerMinderwerk = gebouwOffertes.flatMap((o: any, idx: number) =>
+    ((offerteUitgangspuntenResultaten[idx]?.data ?? []) as OfferteUitgangspunt[])
+      .filter((p) => p.type === "meerwerk" || p.type === "minderwerk")
+      .map((p) => ({
+        ...p,
+        offerte_id: o.id,
+        offerte_titel: o.referentie ?? o.titel ?? `Offerte ${o.id}`,
+      })),
+  );
+  const meerMinderwerkAantal =
+    gebouwPlanningMeerwerk.length + gebouwOfferteMeerMinderwerk.length;
+
+  const opdrachtIds = new Set(
+    (Array.isArray(gebouwOpdrachten) ? gebouwOpdrachten : []).map((o: any) => o.id),
+  );
+  const ohwVoorGebouw = (Array.isArray(alleOhw) ? alleOhw : []).filter(
+    (item: any) =>
+      opdrachtIds.has(item.opdracht_id) ||
+      (!!gebouw?.naam && item.gebouw_naam === gebouw.naam),
+  );
+  const financien =
+    ohwVoorGebouw.length > 0
+      ? (() => {
+          const som = (fn: (i: any) => number | null | undefined) =>
+            ohwVoorGebouw.reduce((acc: number, i: any) => acc + (fn(i) ?? 0), 0);
+          const opdrachtsom = som((i) => i.opdrachtsom);
+          const margeEuro = som((i) => i.actuele_marge);
+          return {
+            aantalOpdrachten: gebouwOpdrachten.length || ohwVoorGebouw.length,
+            opdrachtsom,
+            gefactureerd: som((i) => i.gefactureerd),
+            nogTeFactureren: som((i) => i.nog_te_factureren),
+            begroteKosten: som((i) => i.begrote_kosten),
+            waardeOhw: som((i) => i.waarde_ohw),
+            margeEuro,
+            margePct: opdrachtsom > 0 ? (margeEuro / opdrachtsom) * 100 : null,
+          };
+        })()
+      : null;
   const afgeleidStatus = bepaalAfgeleidStatus(gebouwCalcs, gebouwOffertes);
 
   const [gekozenGebruikerId, setGekozenGebruikerId] = useState<string>("");
@@ -704,7 +789,7 @@ export default function GebouwDetail() {
           ════════════════════════════════════════════════════ */}
       <Tabs value={segment} onValueChange={setSegment} className="w-full">
         <div className="flex items-start justify-between gap-4">
-          <TabsList className="grid w-full max-w-5xl min-w-0 grid-cols-9">
+          <TabsList className="grid w-full max-w-5xl min-w-0 grid-cols-11">
             <TabsTrigger value="dashboard" className="gap-1.5">
               <LayoutDashboard className="h-4 w-4 shrink-0" />
               <span className="hidden sm:inline">Dashboard</span>
@@ -734,6 +819,14 @@ export default function GebouwDetail() {
             <TabsTrigger value="offertes" className="gap-1.5">
               <Euro className="h-4 w-4 shrink-0" />
               <span className="hidden sm:inline">Offertes</span>
+            </TabsTrigger>
+            <TabsTrigger value="opdrachten" className="gap-1.5">
+              <ClipboardList className="h-4 w-4 shrink-0" />
+              <span className="hidden sm:inline">Opdrachten</span>
+            </TabsTrigger>
+            <TabsTrigger value="meerwerk" className="gap-1.5">
+              <Scale className="h-4 w-4 shrink-0" />
+              <span className="hidden sm:inline">Meer/min.</span>
             </TabsTrigger>
             <TabsTrigger value="opnames" className="gap-1.5">
               <ListChecks className="h-4 w-4 shrink-0" />
@@ -838,6 +931,10 @@ export default function GebouwDetail() {
           gebouwOffertes={gebouwOffertes}
           gebouwOpnames={gebouwOpnames}
           gebouwFacturen={gebouwFacturen}
+          gebouwOpdrachten={gebouwOpdrachten}
+          gebouwDocumenten={gebouwDocumenten}
+          financien={financien}
+          meerMinderwerkAantal={meerMinderwerkAantal}
           openActiepunten={actiepunten}
           onNavigeer={setSegment}
           isBeheerder={isBeheerder}
@@ -1365,6 +1462,116 @@ export default function GebouwDetail() {
                           <span className="text-xs text-muted-foreground ml-1">excl.</span>
                         </span>
                       )}
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </TabsContent>
+
+      {/* ════════════════════════════════════════════════════
+          SEGMENT — Opdrachten
+          ════════════════════════════════════════════════════ */}
+      <TabsContent value="opdrachten" className="space-y-6 mt-6">
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base flex items-center gap-2">
+                <ClipboardList className="h-4 w-4" />
+                Opdrachten
+              </CardTitle>
+              <Button size="sm" variant="outline" asChild>
+                <Link href="/opdrachten">Alle opdrachten</Link>
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="p-0">
+            {gebouwOpdrachten.length === 0 ? (
+              <div className="py-10 text-center text-muted-foreground text-sm">
+                <ClipboardList className="h-8 w-8 mx-auto mb-2 opacity-20" />
+                <p>Geen opdrachten gekoppeld aan dit gebouw</p>
+              </div>
+            ) : (
+              <div className="divide-y">
+                {gebouwOpdrachten.map((o: any) => (
+                  <Link key={o.id} href={`/opdrachten/${o.id}`}>
+                    <div className="flex items-center gap-3 px-6 py-3 hover:bg-muted/50 cursor-pointer transition-colors">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{o.titel}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {o.werknummer && <>{o.werknummer}</>}
+                          {o.werknummer && o.opdrachtgever && <> · </>}
+                          {o.opdrachtgever && <>{o.opdrachtgever}</>}
+                        </p>
+                      </div>
+                      <Badge variant="outline" className="text-xs shrink-0 capitalize">
+                        {o.status}
+                      </Badge>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </TabsContent>
+
+      {/* ════════════════════════════════════════════════════
+          SEGMENT — Meer- en minderwerk
+          ════════════════════════════════════════════════════ */}
+      <TabsContent value="meerwerk" className="space-y-6 mt-6">
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Scale className="h-4 w-4" />
+              Meer- en minderwerk
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            {meerMinderwerkAantal === 0 ? (
+              <div className="py-10 text-center text-muted-foreground text-sm">
+                <Scale className="h-8 w-8 mx-auto mb-2 opacity-20" />
+                <p>Geen meer- of minderwerk gekoppeld aan dit gebouw</p>
+              </div>
+            ) : (
+              <div className="divide-y">
+                {gebouwOfferteMeerMinderwerk.map((p: any) => (
+                  <Link key={`o-${p.id}`} href={`/offertes/${p.offerte_id}`}>
+                    <div className="flex items-start gap-3 px-6 py-3 hover:bg-muted/50 cursor-pointer transition-colors">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium">{p.tekst}</p>
+                        <p className="text-xs text-muted-foreground">
+                          Offerte · {p.offerte_titel}
+                          {p.snag_referentie && <> · {p.snag_referentie}</>}
+                        </p>
+                      </div>
+                      <Badge
+                        variant="outline"
+                        className={`text-xs shrink-0 ${p.type === "minderwerk" ? "text-amber-700 border-amber-300" : ""}`}
+                      >
+                        {p.type === "minderwerk" ? "Minderwerk" : "Meerwerk"}
+                      </Badge>
+                    </div>
+                  </Link>
+                ))}
+                {gebouwPlanningMeerwerk.map((m: any) => (
+                  <Link key={`p-${m.id}`} href="/modules/planning">
+                    <div className="flex items-start gap-3 px-6 py-3 hover:bg-muted/50 cursor-pointer transition-colors">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">
+                          {m.omschrijving || m.meerwerk_nummer || "Meerwerk"}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Planning
+                          {m.planning_titel && <> · {m.planning_titel}</>}
+                          {m.meerwerk_nummer && <> · {m.meerwerk_nummer}</>}
+                        </p>
+                      </div>
+                      <Badge variant="outline" className="text-xs shrink-0 capitalize">
+                        {m.status}
+                      </Badge>
                     </div>
                   </Link>
                 ))}

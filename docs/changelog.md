@@ -29,6 +29,21 @@
 
 ---
 
+## 2026-07-13 — Meer- en minderwerk als projectdossierregel op de Projectkaart
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (alleen frontend, hergebruikt bestaande hooks; geen API-/DB-wijziging)
+
+**Aanleiding:** de Projectkaart (`gebouwen/detail.tsx`) surfacete meerwerk nog niet als losse sectie (vastgelegd als follow-up #569). Op verzoek van de gebruiker is meer- én minderwerk nu als één dossierregel toegevoegd, met een eigen overzichtstab en doorklik naar de bron.
+
+**Wijzigingen:**
+- `gebouwen/detail.tsx`: nieuwe tab "Meer/min." (Scale-icoon) met een overzicht dat twee bronnen samenvoegt — planning-meerwerk (`useListPlanningMeerwerk`, aan het gebouw gekoppeld via het bijbehorende planning-item uit `useListPlanningItems`, client-side gefilterd op `gebouw_id`) en offerte meer-/minderwerkpunten (`offerte_uitgangspunten` met type meerwerk/minderwerk, per offerte opgehaald via `useQueries` + `getListOfferteUitgangspuntenQueryOptions`)
+- Doorklik: offertepunt → `/offertes/:id`, planning-meerwerk → `/modules/planning`
+- `gebouw-dashboard.tsx`: nieuwe dossierregel "Meer-/minderwerk" met aantal, klikt door naar de nieuwe tab
+- Geen backend-, OpenAPI- of DB-wijziging; puur presentatie op bestaande data
+- Hiermee is follow-up #569 ("Meerwerk expliciet surfacen") afgehandeld
+
+---
+
 ## 2026-07-13 — Toegangsprofiel per functie (multi-functie increment 3)
 
 - **Uitvoering:** volledig (increment 3 van 4) | **Kwaliteit:** hoog | **Risico:** laag (additief; verandert nog GEEN runtime-rechten)

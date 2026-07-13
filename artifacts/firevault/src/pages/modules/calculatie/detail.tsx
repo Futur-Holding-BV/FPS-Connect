@@ -2387,6 +2387,12 @@ export default function ModulesCalculatieDetail() {
           <Button variant="ghost" size="icon" onClick={() => navigate("/modules/calculatie")}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
+          {data.gebouw_id && (
+            <Button variant="outline" size="sm" onClick={() => navigate(`/gebouwen/${data.gebouw_id}`)}>
+              <Building2 className="h-4 w-4 mr-1.5" />
+              Terug naar project
+            </Button>
+          )}
           <div>
             <div className="flex items-center gap-2 flex-wrap">
               {data.referentie && (

@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useGetRecenteActiviteit } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -32,6 +32,7 @@ export default function GebouwActiviteit({
   gebouwNaam: string;
 }) {
   const { data, refetch } = useGetRecenteActiviteit({ limit: 100 });
+  const [typeFilter, setTypeFilter] = useState<string>("alle");
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -40,9 +41,20 @@ export default function GebouwActiviteit({
     return () => clearInterval(interval);
   }, [refetch]);
 
-  const activiteit = (data ?? []).filter(
+  const alleActiviteit = (data ?? []).filter(
     (a) => a.gebouw_naam === gebouwNaam,
   );
+
+  const beschikbareTypes = useMemo(() => {
+    const set = new Set<string>();
+    alleActiviteit.forEach((a) => set.add(a.type));
+    return Array.from(set);
+  }, [alleActiviteit]);
+
+  const activiteit =
+    typeFilter === "alle"
+      ? alleActiviteit
+      : alleActiviteit.filter((a) => a.type === typeFilter);
 
   const nu = Date.now();
   const dag = 24 * 3600 * 1000;
@@ -79,6 +91,36 @@ export default function GebouwActiviteit({
         <p className="text-xs text-muted-foreground">
           Recente wijzigingen op dit project
         </p>
+
+        {beschikbareTypes.length > 1 && (
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            <button
+              type="button"
+              onClick={() => setTypeFilter("alle")}
+              className={`rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors ${
+                typeFilter === "alle"
+                  ? "border-primary bg-primary/10 text-primary"
+                  : "border-border text-muted-foreground hover:bg-muted"
+              }`}
+            >
+              Alle
+            </button>
+            {beschikbareTypes.map((t) => (
+              <button
+                key={t}
+                type="button"
+                onClick={() => setTypeFilter(t)}
+                className={`rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors ${
+                  typeFilter === t
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "border-border text-muted-foreground hover:bg-muted"
+                }`}
+              >
+                {TYPE_LABELS[t] ?? t}
+              </button>
+            ))}
+          </div>
+        )}
 
         {recentActief.length > 0 && (
           <div className="mt-2 space-y-1">

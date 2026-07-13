@@ -572,6 +572,14 @@ export default function OpdrachtDetailPagina() {
         <Link href={opdracht.offerte_id ? `/offertes/${opdracht.offerte_id}` : "/offertes"}>
           <Button variant="outline" size="icon"><ArrowLeft className="h-4 w-4" /></Button>
         </Link>
+        {opdracht.gebouw_id && (
+          <Link href={`/gebouwen/${opdracht.gebouw_id}`}>
+            <Button variant="outline" size="sm">
+              <Building2 className="h-4 w-4 mr-1.5" />
+              Terug naar project
+            </Button>
+          </Link>
+        )}
         <div className="flex-1">
           <div className="flex items-center gap-2 flex-wrap">
             <h1 className="text-xl font-bold tracking-tight">{opdracht.titel}</h1>
