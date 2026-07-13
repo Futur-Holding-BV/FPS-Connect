@@ -1,3 +1,20 @@
+## 2026-07-13 — GitHub-synchronisatie: deploy-workflow geaccordeerd en repo gelijkgetrokken
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (geen codewijziging; alleen git-synchronisatie)
+
+**Aanleiding:** de gebruiker heeft formeel akkoord gegeven op de deploy-workflow (`.github/workflows/deploy.yml`) en het serverzijdige deployscript (`scripts/deploy-production.sh`).
+
+**Vaststelling:** beide bestanden stonden al op origin/main (eerdere synchronisatietaak) en zijn byte-identiek aan de lokale versie — het akkoord bevestigt de bestaande situatie.
+
+**Uitgevoerd:**
+- Lokale main (8 nieuwe commits: o.a. HRM CV-upload, versie-informatie, deploy-documentatie, afbeeldingen) gemerged met origin/main en gepusht; merge was triviaal (identieke bomen), geen force-push
+- Volledige typecheck vooraf groen (exit 0)
+- **Bewijs:** `merge-base --is-ancestor` bevestigt dat alle lokale commits op origin/main staan; deploy.yml en deploy-production.sh aanwezig op origin/main
+
+**Openstaand voor de gebruiker:** de GitHub-repo-secrets `PROD_SSH_HOST`, `PROD_SSH_USER`, `PROD_SSH_KEY` (en evt. `PROD_SSH_PORT`) moeten in GitHub → Settings → Secrets and variables → Actions staan, anders faalt de deploy-stap met "missing server host". Dit kon niet automatisch geverifieerd worden (token heeft geen admin-leesrecht op secrets).
+
+---
+
 ## 2026-07-13 — HRM Personeel: CV-upload en certificaat-upload
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (alleen frontend, geen API-/DB-wijziging)
