@@ -28,6 +28,16 @@ remote-ssh-strings; draai zo'n commando via code_execution (execSync).
 server (server pullt zelf van GitHub) → compose build → eenmalige migrate-run →
 up -d → healthz-check. De ongetrackte productie-envfile op de server moet blijven staan.
 
+**Migrate-image ALTIJD zelf `--no-cache` herbouwen vóór de migrate-run.** Het
+schema zit in het image gebakken; een stale migrate-image vergelijkt het OUDE
+schema met de DB en meldt "Changes applied" + exit 0 terwijl er niets is
+doorgevoerd (stille schema-drift → 500 op login/alle routes met nieuwe kolommen).
+**Why:** dit brak de login op productie na de grote release van juli 2026; het
+API-image was wel `--no-cache` gebouwd, het migrate-image niet.
+**How to apply:** bij elke deploy expliciet `compose build --no-cache migrate`
+vóór `compose run --rm migrate`, en na de run de nieuwe kolommen/tabellen
+verifiëren via psql (information_schema) — exit 0 is geen bewijs.
+
 **Valkuilen (bevestigd):**
 - `.dockerignore` moet `scripts/*` + `!scripts/package.json` bevatten (caddy-build
   kopieert scripts/package.json); kaal `scripts` breekt de build.

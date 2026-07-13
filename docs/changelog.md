@@ -1,3 +1,18 @@
+## 2026-07-13 — Hotfix productie: login-500 door achtergebleven databaseschema
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (alleen additieve schemawijzigingen op productie; geen codewijziging)
+
+**Aanleiding:** direct na de grote deploy faalde elke loginpoging op connect.fps-one.nl met HTTP 500 "Interne serverfout" (in elke browser).
+
+**Oorzaak:** de migrate-stap draaide op een verouderd migrate-image uit een eerdere deploy (het API-image werd met `--no-cache` gebouwd, het migrate-image niet). Drizzle vergeleek daardoor het oude schema met de database, meldde "Changes applied" met exit 0, maar liet productie feitelijk op het oude schema staan. De nieuwe API-code crashte vervolgens op o.a. `gebruikers.gedeactiveerd_op` (ontbrekend → 500 op login én `/auth/me`), `app_instellingen.heatmap_tracking_ingeschakeld` en de ontbrekende `goedkeuring_*`-tabellen.
+
+**Herstel:**
+- Migrate-image opnieuw gebouwd met `--no-cache` en de migratie opnieuw gedraaid: schema van 257 → 285 tabellen, alle ontbrekende kolommen aangevuld
+- API-container herstart; foutenlog sindsdien schoon
+- **Bewijs:** login met fout wachtwoord geeft weer HTTP 401 "Onjuiste inloggegevens" (was 500); healthz HTTP 200; alle 12 drizzle-fouten in het log dateren van vóór de herstart
+
+---
+
 ## 2026-07-13 — Productie-deploy connect.fps-one.nl (163 commits) + GitHub-push
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** middel (grote release: tientallen nieuwe tabellen en modules in één deploy; pre-release back-up gemaakt en geverifieerd)

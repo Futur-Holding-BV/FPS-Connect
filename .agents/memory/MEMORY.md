@@ -105,7 +105,7 @@
 - [pdf-parse v2 API](pdf-parse-v2.md) — pdf-parse >=2.x heeft alleen PDFParse-class (geen default-functie); alle PDF-extractie via lib/pdfTekst.ts, @types/pdf-parse nooit herinstalleren.
 - [GitHub push-synchronisatie](github-push-sync.md) — verlopen token via integratie vernieuwen (GIT_ASKPASS); divergente origin-commits eerst op tree-identiteit checken → merge i.p.v. force-push.
 - [Bewijs vs. inferentie](bewijs-vs-inferentie.md) — stilte in logs/tabellen is pas bewijs ná positieve kanaalcontrole + dekkingscheck; volledige regels in docs/diagnose-methodologie.md.
-- [Productie-VPS SSH-toegang](prod-vps-toegang.md) — PROD_SSH_KEY werkt (platte regel → reconstrueren); volledige deploy end-to-end bewezen; servergit kan divergeren → diff-bewijs + reset via code_execution.
+- [Productie-VPS SSH-toegang](prod-vps-toegang.md) — PROD_SSH_KEY werkt (platte regel → reconstrueren); migrate-image ALTIJD --no-cache herbouwen (stale image = "Changes applied" zonder effect → login-500); schema na run verifiëren.
 - [AI Context Service](ai-context-service.md) — centrale contextbundel-motor (§4.1) in lib/aiContext; scoping via PermissieService nooit rolnaam; autorisatiegrens stopt graaf-expansie; sinds 10 juli 2026 aangesloten op analyseerSpot (bewezen via echte flow).
 - [AI Decision Engine (Fase 0)](ai-decision-engine.md) — passthrough-laag boven aiGateway; passthrough==directe gateway, human-in-the-loop via token; token-endpoints fail-closed op module-matrix.
 - [Handgeschreven route dubbel /api-prefix](handgeschreven-route-dubbel-prefix.md) — niet-OpenAPI routes mogen pad NOOIT met "/api/" beginnen (router mount al onder /api); anders 404, compileert wel; backups.ts heeft 'm nog.
