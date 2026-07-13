@@ -1,4 +1,6 @@
 import { Link, useLocation } from "wouter";
+import logoFps from "@/assets/logo-fps.png";
+import logoFpsConnect from "@/assets/logo-fps-connect.png";
 import { useTranslation } from "react-i18next";
 import { BerichtNotificatieToast } from "@/components/bericht-notificatie-toast";
 import { AdviseurChat } from "@/components/adviseur-chat";
@@ -42,7 +44,7 @@ export default function MonteurLayout({ children }: { children: React.ReactNode 
         <SidebarHeader className="py-3">
           <div className="flex items-center justify-center px-2">
             <img
-              src="/logo-fps.png"
+              src={logoFps}
               alt="FPS Brandpreventie"
               className="group-data-[collapsible=icon]:hidden h-9 w-auto object-contain bg-white rounded px-2 py-1"
             />
@@ -87,7 +89,7 @@ export default function MonteurLayout({ children }: { children: React.ReactNode 
       <main className="flex-1 min-h-screen overflow-auto bg-background">
         <div className="sticky top-0 z-10 flex items-center gap-3 px-3 py-2 bg-background border-b border-border md:hidden">
           <SidebarTrigger title="Menu openen" />
-          <img src="/logo-fps-connect.png" alt="FPS Connect" className="h-6 w-auto" />
+          <img src={logoFpsConnect} alt="FPS Connect" className="h-6 w-auto" />
         </div>
         <div className="p-3 md:p-4 xl:p-6">
           {children}

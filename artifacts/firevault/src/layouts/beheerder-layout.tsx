@@ -1,4 +1,5 @@
 import { Link, useLocation } from "wouter";
+import logoFpsConnect from "@/assets/logo-fps-connect.png";
 import { useState, useEffect } from "react";
 import { SlimUploadBalk } from "@/components/slim-upload-balk";
 import { AdviseurChat } from "@/components/adviseur-chat";
@@ -248,7 +249,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
         <SidebarHeader className="py-3">
           <div className="flex items-center px-2 gap-2 group-data-[collapsible=icon]:justify-center">
             <img
-              src="/logo-fps-connect.png"
+              src={logoFpsConnect}
               alt="FPS Connect"
               className="h-8 w-auto flex-shrink-0 group-data-[collapsible=icon]:hidden"
             />
@@ -2066,7 +2067,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
         {/* Universele topbalk — terugknop altijd zichtbaar, menu toggle alleen mobiel */}
         <div className="sticky top-0 z-20 flex items-center gap-2 px-2 py-1.5 bg-background border-b border-border">
           <SidebarTrigger className="md:hidden" title="Menu openen" />
-          <img src="/logo-fps-connect.png" alt="FPS Connect" className="h-5 w-auto md:hidden" />
+          <img src={logoFpsConnect} alt="FPS Connect" className="h-5 w-auto md:hidden" />
           <TerugKnop />
           <div className="ml-auto flex items-center gap-2">
             <VersieBadge />
