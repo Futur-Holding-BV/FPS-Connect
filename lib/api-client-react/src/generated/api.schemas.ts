@@ -6823,6 +6823,26 @@ export interface InkoopplanRegelAanmaken {
   prijs_geldig_tot?: string;
 }
 
+export type InkoopcoachAdviesCategorie = typeof InkoopcoachAdviesCategorie[keyof typeof InkoopcoachAdviesCategorie];
+
+
+export const InkoopcoachAdviesCategorie = {
+  prijs: 'prijs',
+  leverancier: 'leverancier',
+  planning: 'planning',
+  risico: 'risico',
+  algemeen: 'algemeen',
+} as const;
+
+export interface InkoopcoachAdvies {
+  categorie: InkoopcoachAdviesCategorie;
+  tekst: string;
+  /** @nullable */
+  besparing_indicatie?: number | null;
+  /** @nullable */
+  regel_omschrijving?: string | null;
+}
+
 /**
  * @nullable
  */
@@ -6836,6 +6856,9 @@ export type InkoopcoachInkoopplan = {
   aantal_regels?: number;
   prijsbron_verdeling?: {[key: string]: number};
   verlopen_prijzen?: number;
+  ai_adviezen?: InkoopcoachAdvies[];
+  /** @nullable */
+  ai_adviezen_op?: string | null;
 } | null;
 
 export type InkoopcoachBestellingenStatusVerdeling = {[key: string]: number};
@@ -6866,6 +6889,12 @@ export interface Inkoopcoach {
   inkoopplan?: InkoopcoachInkoopplan;
   bestellingen: InkoopcoachBestellingen;
   aandachtspunten: InkoopcoachAandachtspuntenItem[];
+}
+
+export interface InkoopcoachAdviezen {
+  ai_adviezen: InkoopcoachAdvies[];
+  /** @nullable */
+  ai_adviezen_op: string | null;
 }
 
 export type OnderaannemerOrderStatus = typeof OnderaannemerOrderStatus[keyof typeof OnderaannemerOrderStatus];

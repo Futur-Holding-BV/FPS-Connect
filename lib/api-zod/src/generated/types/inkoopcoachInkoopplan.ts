@@ -5,6 +5,7 @@
  * FPS Brandpreventie - Platform voor brandpreventieve gebouwvoorzieningen
  * OpenAPI spec version: 0.1.0
  */
+import type { InkoopcoachAdvies } from './inkoopcoachAdvies';
 
 /**
  * @nullable
@@ -19,4 +20,7 @@ export type InkoopcoachInkoopplan = {
   aantal_regels?: number;
   prijsbron_verdeling?: {[key: string]: number};
   verlopen_prijzen?: number;
+  ai_adviezen?: InkoopcoachAdvies[];
+  /** @nullable */
+  ai_adviezen_op?: string | null;
 } | null;

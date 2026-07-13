@@ -384,6 +384,7 @@ import type {
   InkoopbonPatch,
   InkoopbonVerzendInput,
   Inkoopcoach,
+  InkoopcoachAdviezen,
   InkoopoverzichtItem,
   InkoopplanRegel,
   InkoopplanRegelAanmaken,
@@ -39612,6 +39613,76 @@ export function useGetInkoopcoach<TData = Awaited<ReturnType<typeof getInkoopcoa
 
 
 
+
+export const getGenereerInkoopcoachAdviesUrl = (id: number,) => {
+
+
+
+
+  return `/api/opdrachten/${id}/inkoopcoach/advies`
+}
+
+/**
+ * @summary AI genereert inhoudelijke inkoopadviezen voor de inkoopcoach (voorstellen; mens beslist)
+ */
+export const genereerInkoopcoachAdvies = async (id: number, options?: RequestInit): Promise<InkoopcoachAdviezen> => {
+
+  return customFetch<InkoopcoachAdviezen>(getGenereerInkoopcoachAdviesUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getGenereerInkoopcoachAdviesMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof genereerInkoopcoachAdvies>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof genereerInkoopcoachAdvies>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['genereerInkoopcoachAdvies'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof genereerInkoopcoachAdvies>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  genereerInkoopcoachAdvies(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type GenereerInkoopcoachAdviesMutationResult = NonNullable<Awaited<ReturnType<typeof genereerInkoopcoachAdvies>>>
+
+    export type GenereerInkoopcoachAdviesMutationError = ErrorType<void>
+
+    /**
+ * @summary AI genereert inhoudelijke inkoopadviezen voor de inkoopcoach (voorstellen; mens beslist)
+ */
+export const useGenereerInkoopcoachAdvies = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof genereerInkoopcoachAdvies>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof genereerInkoopcoachAdvies>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getGenereerInkoopcoachAdviesMutationOptions(options));
+    }
 
 export const getGenereerInkoopplanningUrl = (id: number,) => {
 

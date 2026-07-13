@@ -850,3 +850,16 @@ Ga naar Beheer › Goedkeuringsbeleid → Nieuwe beleidsregel. Stel `documenttyp
 - Meerstappenflow (stap 0/1/2), `actieModus` (direct/later), zekerheidspercentage, vertrouwenslabels, bewijsketen en gevonden-gegevens-tabel volledig verwijderd.
 - Nieuw: één scherm met categorie-card (icoon + label + omschrijving), AI-voorstel naam, korte redenering, impact-waarschuwing (alleen midden/hoog), personeelsdossier-selectors, bevestigingscheckbox (hoog impact), "Andere bestemming kiezen" als opvouwbare `<details>`, en één grote bevestigknop.
 - Navigatie is altijd "direct" — de tussenliggende keuze "direct vs. later" is niet meer aanwezig.
+
+## [2026-07-13] AI-inkoopcoach — inhoudelijke AI-inkoopadviezen (Task #584)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (additieve kolommen + nieuw endpoint; bestaande deterministische signalen ongewijzigd)
+
+**Nieuw gebouwd:**
+- `POST /opdrachten/:id/inkoopcoach/advies` (bevoegdheid offertes:2): AI genereert maximaal 6 concrete inkoopadviezen per opdracht (categorieën prijs/leverancier/planning/risico/algemeen) op basis van inkoopplan-regels, bestellingen, matchende jaarprijslijst-artikelen en bekende leveranciers. Slot `"default"` + `max_tokens` (interactief, geen reasoning-slot). Server-side sanering (`saneerInkoopAdviezen`): categorie-whitelist, tekst-clamp, besparing ≥ 0, max 6 items (gelijkgetrokken met de prompt n.a.v. code review).
+- Persistentie: `inkoopplannen.ai_adviezen` (jsonb) + `ai_adviezen_op` (timestamp), additief via ALTER. `GET /opdrachten/:id/inkoopcoach` geeft ze terug in het `inkoopplan`-blok.
+- Frontend (`inkoopcoach-tab.tsx`): nieuwe kaart "AI-inkoopadviezen" met amber AI-voorstel-styling (Sparkles + badge "AI-voorstel"), genereer-/opnieuw-genereren-knop, categoriebadge, regelverwijzing, indicatieve besparing, generatietijdstip en expliciete disclaimer "Er wordt niets automatisch gewijzigd; u beoordeelt en beslist zelf." Knop uitgeschakeld zonder inkoopplanning met regels.
+- Foutpaden: 422 zonder plan/regels, 503 zonder AI-gateway, 502 bij onbruikbaar AI-antwoord; destructieve toast bij falen.
+- Drift-fix dev-DB: ontbrekende kolommen `inkoopplan_regels.prijs_bron`/`prijs_geldig_tot` additief toegevoegd (stonden al in het Drizzle-schema).
+
+**Bewijs:** `pnpm run typecheck` groen (alle packages). E2E tegen dev (admin-login + TOTP): GET vooraf `ai_adviezen: []` → POST 200 met 6 gevalideerde adviezen → GET achteraf 6 gepersisteerde adviezen met tijdstip; DB-bewijs `jsonb_array_length(ai_adviezen)=6`; 422-pad bevestigd op opdracht zonder plan.

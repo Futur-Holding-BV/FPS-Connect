@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer, real, timestamp, boolean } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, real, timestamp, boolean, jsonb } from "drizzle-orm/pg-core";
 import { gebruikersTable } from "./gebruikers";
 import { opdrachtenTable } from "./opdrachten";
 import { werkbegrotingRegelsTable } from "./planning";
@@ -17,6 +17,9 @@ export const inkoopplannenTable = pgTable("inkoopplannen", {
   aiGegeneerdOp: timestamp("ai_gegenereerd_op"),
   // Samenvatting van AI (totale besparing, aandachtspunten)
   aiSamenvatting: text("ai_samenvatting"),
+  // AI-inkoopadviezen (voorstellen; mens beslist): [{ categorie, tekst, besparing_indicatie, regel_omschrijving }]
+  aiAdviezen: jsonb("ai_adviezen"),
+  aiAdviezenOp: timestamp("ai_adviezen_op"),
   totaleBesparing: real("totale_besparing"),
   vastgesteldOp: timestamp("vastgesteld_op"),
   vastgesteldDoorId: integer("vastgesteld_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),

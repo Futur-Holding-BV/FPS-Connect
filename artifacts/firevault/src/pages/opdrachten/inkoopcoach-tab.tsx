@@ -1,14 +1,29 @@
-import { useGetInkoopcoach } from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
+import {
+  useGetInkoopcoach,
+  useGenereerInkoopcoachAdvies,
+  getGetInkoopcoachQueryKey,
+} from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Brain, AlertTriangle, Info, Package, Truck, Wallet } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { Brain, AlertTriangle, Info, Package, Truck, Wallet, Sparkles, Loader2 } from "lucide-react";
 
 const PRIJSBRON_LABELS: Record<string, string> = {
   jaarprijslijst: "Jaarprijslijst",
   leveranciersofferte: "Leveranciersofferte",
   vrij: "Vrije prijs",
   onbekend: "Bron onbekend",
+};
+
+const ADVIES_CATEGORIE_LABELS: Record<string, string> = {
+  prijs: "Prijs",
+  leverancier: "Leverancier",
+  planning: "Planning",
+  risico: "Risico",
+  algemeen: "Algemeen",
 };
 
 const BON_STATUS_LABELS: Record<string, string> = {
@@ -23,8 +38,33 @@ function euro(bedrag: number | null | undefined): string {
   return new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(bedrag);
 }
 
+function datumTijd(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return "";
+  return new Intl.DateTimeFormat("nl-NL", { dateStyle: "medium", timeStyle: "short" }).format(d);
+}
+
 export function InkoopcoachTab({ opdrachtId }: { opdrachtId: number }) {
   const { data, isLoading, isError } = useGetInkoopcoach(opdrachtId);
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  const genereerAdvies = useGenereerInkoopcoachAdvies({
+    mutation: {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getGetInkoopcoachQueryKey(opdrachtId) });
+        toast({ title: "AI-adviezen gegenereerd", description: "De inkoopadviezen zijn bijgewerkt. AI stelt voor; u beslist." });
+      },
+      onError: () => {
+        toast({
+          title: "AI-adviezen genereren mislukt",
+          description: "Probeer het later opnieuw. Controleer of er een inkoopplanning met regels bestaat.",
+          variant: "destructive",
+        });
+      },
+    },
+  });
 
   if (isLoading) {
     return (
@@ -45,6 +85,8 @@ export function InkoopcoachTab({ opdrachtId }: { opdrachtId: number }) {
 
   const plan = data.inkoopplan;
   const bestellingen = data.bestellingen;
+  const aiAdviezen = plan?.ai_adviezen ?? [];
+  const kanGenereren = !!plan && (plan.aantal_regels ?? 0) > 0;
 
   return (
     <div className="mt-4 space-y-4">
@@ -92,6 +134,80 @@ export function InkoopcoachTab({ opdrachtId }: { opdrachtId: number }) {
                 );
               })}
             </ul>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* AI-inkoopadviezen (voorstellen; mens beslist) */}
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <CardTitle className="flex items-center gap-2 text-sm">
+              <Sparkles className="h-4 w-4 text-amber-600" />
+              AI-inkoopadviezen
+              <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100 border-transparent">AI-voorstel</Badge>
+            </CardTitle>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={!kanGenereren || genereerAdvies.isPending}
+              onClick={() => genereerAdvies.mutate({ id: opdrachtId })}
+            >
+              {genereerAdvies.isPending ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                  Adviezen genereren...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="h-3.5 w-3.5 mr-1.5" />
+                  {aiAdviezen.length > 0 ? "Adviezen opnieuw genereren" : "AI-adviezen genereren"}
+                </>
+              )}
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {aiAdviezen.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              {kanGenereren
+                ? "Nog geen AI-adviezen gegenereerd. Klik op \u201CAI-adviezen genereren\u201D voor concrete inkoopoptimalisaties voor deze opdracht."
+                : "AI-adviezen zijn beschikbaar zodra er een inkoopplanning met regels bestaat."}
+            </p>
+          ) : (
+            <>
+              <ul className="space-y-2">
+                {aiAdviezen.map((advies, i) => (
+                  <li
+                    key={i}
+                    className="rounded-md border border-amber-200 bg-amber-50 p-2.5 text-sm text-amber-900"
+                  >
+                    <div className="flex items-start gap-2">
+                      <Sparkles className="h-4 w-4 shrink-0 mt-0.5 text-amber-600" />
+                      <div className="min-w-0 space-y-1">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <Badge variant="outline" className="border-amber-300 text-amber-700 text-[10px] px-1.5 py-0">
+                            {ADVIES_CATEGORIE_LABELS[advies.categorie] ?? advies.categorie}
+                          </Badge>
+                          {advies.regel_omschrijving && (
+                            <span className="text-xs text-amber-700 truncate">{advies.regel_omschrijving}</span>
+                          )}
+                          {advies.besparing_indicatie != null && advies.besparing_indicatie > 0 && (
+                            <span className="text-xs font-medium text-amber-800">
+                              Indicatieve besparing: {euro(advies.besparing_indicatie)}
+                            </span>
+                          )}
+                        </div>
+                        <p>{advies.tekst}</p>
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-3 text-xs text-muted-foreground">
+                Dit zijn AI-voorstellen{plan?.ai_adviezen_op ? ` (gegenereerd op ${datumTijd(plan.ai_adviezen_op)})` : ""}. Er wordt niets automatisch gewijzigd; u beoordeelt en beslist zelf.
+              </p>
+            </>
           )}
         </CardContent>
       </Card>

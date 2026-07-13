@@ -11320,6 +11320,29 @@ paths:
               schema:
                 $ref: "#/components/schemas/Inkoopcoach"
 
+  /opdrachten/{id}/inkoopcoach/advies:
+    post:
+      operationId: genereerInkoopcoachAdvies
+      tags: [opdrachten]
+      summary: AI genereert inhoudelijke inkoopadviezen voor de inkoopcoach (voorstellen; mens beslist)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InkoopcoachAdviezen"
+        "422":
+          description: Geen inkoopplanning of geen regels aanwezig
+        "503":
+          description: AI-gateway niet beschikbaar
+
   /opdrachten/{id}/inkoopplanning/genereer:
     post:
       operationId: genereerInkoopplanning
@@ -31752,6 +31775,12 @@ components:
                 type: integer
             verlopen_prijzen:
               type: integer
+            ai_adviezen:
+              type: array
+              items:
+                $ref: "#/components/schemas/InkoopcoachAdvies"
+            ai_adviezen_op:
+              type: ["string", "null"]
         bestellingen:
           type: object
           required: [aantal, status_verdeling, verlopen, aankomend]
@@ -31777,6 +31806,31 @@ components:
                 enum: [info, waarschuwing]
               tekst:
                 type: string
+
+    InkoopcoachAdvies:
+      type: object
+      required: [categorie, tekst]
+      properties:
+        categorie:
+          type: string
+          enum: [prijs, leverancier, planning, risico, algemeen]
+        tekst:
+          type: string
+        besparing_indicatie:
+          type: ["number", "null"]
+        regel_omschrijving:
+          type: ["string", "null"]
+
+    InkoopcoachAdviezen:
+      type: object
+      required: [ai_adviezen, ai_adviezen_op]
+      properties:
+        ai_adviezen:
+          type: array
+          items:
+            $ref: "#/components/schemas/InkoopcoachAdvies"
+        ai_adviezen_op:
+          type: ["string", "null"]
 
     OnderaannemerOrder:
       type: object

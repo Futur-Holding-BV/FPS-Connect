@@ -109,6 +109,39 @@ async function buildHoofdstukMap(
   return map;
 }
 
+// AI-inkoopadviezen saneren: alleen gevalideerde velden doorlaten (server-side clamp)
+const ADVIES_CATEGORIEEN = new Set(["prijs", "leverancier", "planning", "risico", "algemeen"]);
+
+interface InkoopAdvies {
+  categorie: string;
+  tekst: string;
+  besparing_indicatie: number | null;
+  regel_omschrijving: string | null;
+}
+
+function saneerInkoopAdviezen(ruw: unknown): InkoopAdvies[] {
+  if (!Array.isArray(ruw)) return [];
+  const resultaat: InkoopAdvies[] = [];
+  for (const item of ruw) {
+    if (resultaat.length >= 6) break;
+    if (item == null || typeof item !== "object") continue;
+    const obj = item as Record<string, unknown>;
+    const tekst = typeof obj.tekst === "string" ? obj.tekst.trim().slice(0, 600) : "";
+    if (!tekst) continue;
+    const categorie = typeof obj.categorie === "string" && ADVIES_CATEGORIEEN.has(obj.categorie)
+      ? obj.categorie
+      : "algemeen";
+    const besparing = typeof obj.besparing_indicatie === "number" && isFinite(obj.besparing_indicatie)
+      ? Math.max(0, Math.round(obj.besparing_indicatie * 100) / 100)
+      : null;
+    const regelOmschrijving = typeof obj.regel_omschrijving === "string" && obj.regel_omschrijving.trim()
+      ? obj.regel_omschrijving.trim().slice(0, 200)
+      : null;
+    resultaat.push({ categorie, tekst, besparing_indicatie: besparing, regel_omschrijving: regelOmschrijving });
+  }
+  return resultaat;
+}
+
 function mapOnderaannemer(r: typeof onderaannemeOrdersTable.$inferSelect) {
   return {
     id: r.id,
@@ -426,6 +459,8 @@ router.get("/opdrachten/:id/inkoopcoach", lezen, async (req, res): Promise<void>
             aantal_regels: regels.length,
             prijsbron_verdeling: prijsbronVerdeling,
             verlopen_prijzen: verlopenPrijzen,
+            ai_adviezen: saneerInkoopAdviezen(plan.aiAdviezen),
+            ai_adviezen_op: iso(plan.aiAdviezenOp),
           }
         : null,
       bestellingen: {
@@ -438,6 +473,171 @@ router.get("/opdrachten/:id/inkoopcoach", lezen, async (req, res): Promise<void>
     });
   } catch (err) {
     logger.error({ err }, "getInkoopcoach fout");
+    res.status(500).json({ error: "Serverfout" });
+  }
+});
+
+// ── POST /opdrachten/:id/inkoopcoach/advies ─────────────────────────────────
+// AI genereert concrete, inhoudelijke inkoopadviezen voor deze opdracht
+// (bijv. "artikel X kan goedkoper via jaarprijslijst leverancier Y").
+// Human-in-the-loop: AI stelt alleen voor; er wordt niets automatisch gewijzigd.
+
+router.post("/opdrachten/:id/inkoopcoach/advies", schrijven, async (req, res): Promise<void> => {
+  const id = parseInt(String(req.params.id), 10);
+  if (isNaN(id)) { res.status(400).json({ error: "Ongeldig id" }); return; }
+
+  try {
+    if (!heeftGateway()) {
+      res.status(503).json({ error: "AI-gateway niet beschikbaar" });
+      return;
+    }
+
+    const [plan] = await db.select().from(inkoopplannenTable)
+      .where(eq(inkoopplannenTable.opdrachtId, id));
+    if (!plan) {
+      res.status(422).json({ error: "Er is nog geen inkoopplanning voor deze opdracht" });
+      return;
+    }
+
+    const regels = await db.select().from(inkoopplanRegelsTable)
+      .where(eq(inkoopplanRegelsTable.inkoopplanId, plan.id))
+      .orderBy(asc(inkoopplanRegelsTable.volgorde), asc(inkoopplanRegelsTable.id));
+    if (regels.length === 0) {
+      res.status(422).json({ error: "De inkoopplanning bevat nog geen regels" });
+      return;
+    }
+
+    const [opdracht] = await db.select().from(opdrachtenTable).where(eq(opdrachtenTable.id, id));
+    if (!opdracht) { res.status(404).json({ error: "Opdracht niet gevonden" }); return; }
+
+    const bonnen = await db.select().from(inkoopbonnenTable)
+      .where(eq(inkoopbonnenTable.opdrachtId, id));
+
+    // Jaarprijslijst-context: actieve artikelen die (los) matchen op de regelomschrijvingen
+    const artikelContext: string[] = [];
+    for (const regel of regels.slice(0, 25)) {
+      const kern = regel.omschrijving.trim().split(/\s+/).filter(w => w.length > 3)[0];
+      if (!kern) continue;
+      const matches = await db.select({
+        naam: artikelenTable.naam,
+        inkoopprijs: artikelenTable.inkoopprijs,
+        eenheid: artikelenTable.eenheid,
+        leverancier: leveranciersTable.naam,
+      })
+        .from(artikelenTable)
+        .leftJoin(leveranciersTable, eq(artikelenTable.leverancierId, leveranciersTable.id))
+        .where(and(eq(artikelenTable.actief, true), ilike(artikelenTable.naam, `%${kern}%`)))
+        .limit(3);
+      for (const a of matches) {
+        const r = `- ${a.naam}: €${a.inkoopprijs ?? "?"} per ${a.eenheid ?? "st"}${a.leverancier ? ` (leverancier: ${a.leverancier})` : ""}`;
+        if (!artikelContext.includes(r)) artikelContext.push(r);
+      }
+      if (artikelContext.length >= 30) break;
+    }
+
+    const leveranciers = await db.select({
+      naam: leveranciersTable.naam,
+    }).from(leveranciersTable).limit(30);
+
+    const nu = new Date();
+    const regelSectie = regels.map((r, i) => {
+      const delen = [
+        `${i + 1}. ${r.omschrijving}: ${r.hoeveelheid} ${r.eenheid}`,
+        `type ${r.type}`,
+        `status ${r.status}`,
+        `prijsbron ${r.prijsBron}`,
+        r.calcPrijs != null ? `calcprijs €${r.calcPrijs}` : null,
+        r.inkoopprijs != null ? `inkoopprijs €${r.inkoopprijs}` : r.inkoopprijsVerwacht != null ? `verwachte inkoopprijs €${r.inkoopprijsVerwacht}` : null,
+        r.leverancier ? `leverancier ${r.leverancier}` : r.aanbevolenLeverancier ? `aanbevolen leverancier ${r.aanbevolenLeverancier}` : null,
+        r.levertijdWeken != null ? `levertijd ${r.levertijdWeken} wk` : null,
+        r.gewensteLeverdatum ? `gewenste leverdatum ${r.gewensteLeverdatum}` : null,
+        r.prijsGeldigTot ? `prijs geldig tot ${r.prijsGeldigTot}${new Date(r.prijsGeldigTot) < nu ? " (VERLOPEN)" : ""}` : null,
+      ].filter(Boolean);
+      return delen.join(", ");
+    }).join("\n");
+
+    const bonSectie = bonnen.length === 0
+      ? "Nog geen bestellingen."
+      : bonnen.map(b => `- Bon #${b.id}: status ${b.status}${b.leverancier ? `, leverancier ${b.leverancier}` : ""}${b.gewensteLeverdatum ? `, gewenste leverdatum ${b.gewensteLeverdatum}` : ""}`).join("\n");
+
+    const prompt = `Je bent een ervaren inkoper bij een brandpreventie-installatiebedrijf in Nederland.
+Analyseer het inkooptraject van deze opdracht en geef maximaal 6 concrete, inhoudelijke inkoopadviezen.
+Denk aan: goedkoper inkopen via de jaarprijslijst, betere leverancierskeuze, prijzen opnieuw opvragen,
+bestellingen bundelen per leverancier, tijdig bestellen bij lange levertijden, en prijs- of leverrisico's.
+
+Opdracht: ${opdracht.titel}
+Datum vandaag: ${nu.toISOString().slice(0, 10)}
+Inkoopplanstatus: ${plan.status}
+
+INKOOPPLAN-REGELS:
+${regelSectie}
+
+BESTELLINGEN:
+${bonSectie}
+
+JAARPRIJSLIJST (relevante artikelen met vaste inkoopprijs):
+${artikelContext.length > 0 ? artikelContext.join("\n") : "Geen matchende jaarprijslijst-artikelen gevonden."}
+
+BEKENDE LEVERANCIERS: ${leveranciers.map(l => l.naam).join(", ") || "geen"}
+
+Regels voor je adviezen:
+- Alleen adviezen die concreet en direct uitvoerbaar zijn voor deze opdracht; geen algemene inkooptips.
+- Verwijs waar mogelijk naar de exacte regelomschrijving.
+- Geef een besparingsindicatie in euro's alleen als die uit de cijfers hierboven af te leiden is, anders null.
+- Alle teksten in het Nederlands.
+
+Geef uitsluitend geldige JSON:
+{
+  "adviezen": [
+    {
+      "categorie": "prijs|leverancier|planning|risico|algemeen",
+      "tekst": "concreet advies",
+      "besparing_indicatie": 0.00,
+      "regel_omschrijving": "exacte regelomschrijving of null"
+    }
+  ]
+}`;
+
+    const aiResultaat = await aiGateway.chat("default", {
+      messages: [
+        { role: "system", content: INKOOP_PROMPT.tekst },
+        { role: "user", content: prompt },
+      ],
+      response_format: { type: "json_object" },
+      max_tokens: 2000,
+    }, undefined, {
+      module: "werkvoorbereiding",
+      functie: "inkoopcoach-advies",
+      gebruikerId: req.session.userId ?? null,
+      project_id: id,
+    });
+
+    if (!aiResultaat.ok) {
+      res.status(502).json({ error: "AI-advies genereren mislukt; probeer het later opnieuw" });
+      return;
+    }
+
+    let geparsed: unknown;
+    try {
+      geparsed = JSON.parse(aiResultaat.inhoud);
+    } catch {
+      res.status(502).json({ error: "AI gaf een ongeldig antwoord; probeer het opnieuw" });
+      return;
+    }
+    const adviezen = saneerInkoopAdviezen((geparsed as Record<string, unknown>)?.adviezen);
+    if (adviezen.length === 0) {
+      res.status(502).json({ error: "AI gaf geen bruikbare adviezen; probeer het opnieuw" });
+      return;
+    }
+
+    const adviezenOp = new Date();
+    await db.update(inkoopplannenTable)
+      .set({ aiAdviezen: adviezen, aiAdviezenOp: adviezenOp, bijgewerktOp: adviezenOp })
+      .where(eq(inkoopplannenTable.id, plan.id));
+
+    res.json({ ai_adviezen: adviezen, ai_adviezen_op: adviezenOp.toISOString() });
+  } catch (err) {
+    logger.error({ err }, "genereerInkoopcoachAdvies fout");
     res.status(500).json({ error: "Serverfout" });
   }
 });

@@ -13850,7 +13850,14 @@ export const GetInkoopcoachResponse = zod.object({
   "totale_besparing": zod.number().nullish(),
   "aantal_regels": zod.number().optional(),
   "prijsbron_verdeling": zod.record(zod.string(), zod.number()).optional(),
-  "verlopen_prijzen": zod.number().optional()
+  "verlopen_prijzen": zod.number().optional(),
+  "ai_adviezen": zod.array(zod.object({
+  "categorie": zod.enum(['prijs', 'leverancier', 'planning', 'risico', 'algemeen']),
+  "tekst": zod.string(),
+  "besparing_indicatie": zod.number().nullish(),
+  "regel_omschrijving": zod.string().nullish()
+})).optional(),
+  "ai_adviezen_op": zod.string().nullish()
 }).nullish(),
   "bestellingen": zod.object({
   "aantal": zod.number(),
@@ -13862,6 +13869,24 @@ export const GetInkoopcoachResponse = zod.object({
   "niveau": zod.enum(['info', 'waarschuwing']),
   "tekst": zod.string()
 }))
+})
+
+
+/**
+ * @summary AI genereert inhoudelijke inkoopadviezen voor de inkoopcoach (voorstellen; mens beslist)
+ */
+export const GenereerInkoopcoachAdviesParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GenereerInkoopcoachAdviesResponse = zod.object({
+  "ai_adviezen": zod.array(zod.object({
+  "categorie": zod.enum(['prijs', 'leverancier', 'planning', 'risico', 'algemeen']),
+  "tekst": zod.string(),
+  "besparing_indicatie": zod.number().nullish(),
+  "regel_omschrijving": zod.string().nullish()
+})),
+  "ai_adviezen_op": zod.string().nullable()
 })
 
 
