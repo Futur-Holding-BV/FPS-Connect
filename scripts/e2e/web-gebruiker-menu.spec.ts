@@ -136,7 +136,7 @@ test("Web: gebruikersmenu — alle knoppen werken (Bekijken als, taal, wachtwoor
   });
 
   await test.step("Taalkeuze: wissel naar English (POST /auth/taal) en zet terug naar Nederlands", async () => {
-    await page.getByRole("button", { name: /Nederlands/ }).click();
+    await page.locator('button[title="Taal"]').click();
     const [respEn] = await Promise.all([
       page.waitForResponse(
         (r) => r.url().includes("/api/auth/taal") && r.request().method() === "POST",
@@ -159,7 +159,7 @@ test("Web: gebruikersmenu — alle knoppen werken (Bekijken als, taal, wachtwoor
       page.getByRole("menuitem", { name: /Nederlands/ }).click(),
     ]);
     expect([200, 204]).toContain(respNl.status());
-    await expect(page.getByRole("button", { name: /Nederlands/ })).toBeVisible({
+    await expect(page.locator('button[title="Taal"]')).toBeVisible({
       timeout: INHOUD_TIMEOUT,
     });
   });
