@@ -8,7 +8,6 @@ import {
   RotateCcw, Clock, History, Shield, UserPlus, CalendarClock, Inbox,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
@@ -270,31 +269,7 @@ const CATEGORIE_INFO: Record<CategorieUitgebreid, {
   onbekend:          { label: "Onbekend — handmatig kiezen",   icoon: <HelpCircle className="h-4 w-4" />,    pad: "/documenten",           kleur: "bg-gray-50 text-gray-600 border-gray-200",        omschrijving: "AI kon het type niet vaststellen" },
 };
 
-const VERTROUWEN_KLEUR: Record<Vertrouwen, string> = {
-  hoog:  "text-emerald-600",
-  midden:"text-amber-600",
-  laag:  "text-gray-500",
-};
 
-const VERTROUWEN_LABEL: Record<Vertrouwen, string> = {
-  hoog:  "Hoge zekerheid",
-  midden:"Gemiddelde zekerheid",
-  laag:  "Lage zekerheid",
-};
-
-const GEVONDEN_LABELS: Record<string, string> = {
-  leverancier: "Leverancier", klant: "Klant", bedrag: "Bedrag",
-  factuurnummer: "Factuurnummer", datum: "Datum", betalingstermijn: "Betalingstermijn",
-  locatie: "Locatie", contactpersoon: "Contactpersoon", projectnaam: "Projectnaam",
-  omschrijving: "Omschrijving", fabrikant: "Fabrikant", productnaam: "Productnaam",
-  normen: "Normen", geldig_tot: "Geldig tot", geldig_van: "Geldig van", classificatie: "Classificatie",
-  naam_medewerker: "Medewerker", type_document: "Documenttype",
-  gewenste_functie: "Gewenste functie", opleiding_niveau: "Opleidingsniveau", jaren_ervaring: "Jaren ervaring",
-  soort_verzekering: "Soort verzekering", polisnummer: "Polisnummer", verzekeraar: "Verzekeraar", jaar: "Jaar",
-  inspectiedatum: "Inspectiedatum", rapporttype: "Rapporttype", opdrachtgever: "Opdrachtgever",
-  project: "Project", schaal: "Schaal", revisie: "Revisie", referentie: "Referentie",
-  organisatie: "Organisatie", accountant: "Accountant", bedrijf: "Bedrijf",
-};
 
 // ── LocalStorage helpers ──────────────────────────────────────────────────────
 
@@ -372,25 +347,6 @@ function SlimUploadKnop({ onClick, actieveAutomatiseringen }: {
   );
 }
 
-// ── Gevonden-gegevens kaart ───────────────────────────────────────────────────
-
-function GevondenGegevens({ gegevens }: { gegevens: Record<string, string> }) {
-  const items = Object.entries(gegevens).filter(([, v]) => v?.trim());
-  if (items.length === 0) return null;
-  return (
-    <div className="rounded-md border bg-muted/30 divide-y text-sm">
-      {items.map(([k, v]) => (
-        <div key={k} className="flex gap-2 px-3 py-1.5">
-          <span className="text-muted-foreground text-xs min-w-[110px] shrink-0 pt-0.5">
-            {GEVONDEN_LABELS[k] ?? k}
-          </span>
-          <span className="font-medium text-xs leading-relaxed">{v}</span>
-        </div>
-      ))}
-    </div>
-  );
-}
-
 // ── Beslisscherm per file ─────────────────────────────────────────────────────
 
 const PERSONEEL_DOC_TYPEN: { value: string; label: string }[] = [
@@ -442,8 +398,6 @@ function BeslisScherm({
   onLogActie?: (data: LogActieData) => void;
   onGeconsolideerd?: (val: boolean) => void;
 }) {
-  const [stap, setStap] = useState<0 | 1 | 2>(0);
-  const [actieModus, setActieModus] = useState<"direct" | "later">("direct");
   const [bevestigdAkkoord, setBevestigdAkkoord] = useState(false);
   const [gekozenMedewerker, setGekozenMedewerker] = useState("");
   const [gekozenDocType, setGekozenDocType] = useState("");
@@ -461,63 +415,47 @@ function BeslisScherm({
       )
     );
 
-  const verzekeringJaar = (() => {
-    if (effectiefeCat !== "verzekering") return null;
-    const raw =
-      suggestie?.gevonden_gegevens?.jaar ??
-      suggestie?.gevonden_gegevens?.geldig_tot ??
-      suggestie?.gevonden_gegevens?.geldig_van;
-    if (!raw) return null;
-    const match = raw.match(/\d{4}/);
-    return match ? parseInt(match[0]) : null;
-  })();
-  const isActueelePolis = verzekeringJaar !== null && verzekeringJaar >= new Date().getFullYear();
-
   const impactNiveau = (suggestie?.impact_niveau ?? "laag") as "geen" | "laag" | "midden" | "hoog";
   const vereistBevestiging = suggestie?.vereist_bevestiging ?? (impactNiveau === "midden" || impactNiveau === "hoog");
   const magUploaden = suggestie?.mag_uploaden !== false;
   const beperkingen = suggestie?.beperkingen ?? [];
 
-  const kanDirectNavigeren = Boolean(catInfo.pad) || isCV || effectiefeCat === "snagstream";
-
   function voerActieUit() {
     onLogActie?.({
       bestandsnaam: item.bestand.name,
       categorie: effectiefeCat,
-      actie: actieModus === "direct" ? "direct_gestart" : "later_klaargezet",
+      actie: "direct_gestart",
       impactNiveau,
       bevestigd: vereistBevestiging ? bevestigdAkkoord : true,
       geweigerd: false,
     });
 
-    if (effectiefeCat === "personeelsdocument" && !isCV && actieModus === "direct" && gekozenMedewerker && gekozenDocType) {
+    if (effectiefeCat === "personeelsdocument" && !isCV && gekozenMedewerker && gekozenDocType) {
       onBevestigenPersoneel?.(Number(gekozenMedewerker), gekozenDocType);
       return;
     }
-    if (isCV && actieModus === "direct") {
+    if (isCV) {
       onBevestigen(effectiefeCat);
       setTimeout(() => onNavigeer?.("/personeel/onboarden"), 300);
       return;
     }
-    if (effectiefeCat === "snagstream" && actieModus === "direct") {
+    if (effectiefeCat === "snagstream") {
       onBevestigen(effectiefeCat);
       setTimeout(() => onNavigeer?.("/snagstream"), 300);
       return;
     }
-    if (effectiefeCat === "document_sjabloon" && actieModus === "direct") {
+    if (effectiefeCat === "document_sjabloon") {
       onBevestigen(effectiefeCat);
       setTimeout(() => onNavigeer?.("/organisatie/studio"), 300);
       return;
     }
-    if (actieModus === "direct" && catInfo.pad) {
+    if (catInfo.pad) {
       onBevestigen(effectiefeCat);
       setTimeout(() => onNavigeer?.(catInfo.pad), 300);
       return;
     }
     onBevestigen(effectiefeCat);
   }
-
-  // ── Technische fout ───────────────────────────────────────────────────────
 
   if (status === "fout" || fout) {
     return (
@@ -540,375 +478,143 @@ function BeslisScherm({
 
   if (!suggestie) return null;
 
-  // ── Stap 0: Analyseresultaat ──────────────────────────────────────────────
-
-  if (stap === 0) {
-    return (
-      <div className="space-y-4">
-        {!suggestie.ai_beschikbaar && suggestie.redenering.startsWith("Automatisch herkend") && (
-          <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-3">
-            <Zap className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
-            <p className="text-xs text-amber-700">Automatisch herkend op basis van een eerder ingestelde regel.</p>
-          </div>
-        )}
-
-        <div className={cn("rounded-lg border p-4 space-y-3", catInfo.kleur)}>
-          <div className="flex items-start gap-2">
-            <div className="mt-0.5">{catInfo.icoon}</div>
-            <div className="flex-1 min-w-0">
-              <p className="font-semibold text-sm leading-tight">{catInfo.label}</p>
-              <p className="text-[11px] opacity-70">{catInfo.omschrijving}</p>
-            </div>
-            <div className="flex flex-col items-end gap-1 shrink-0">
-              <span className={cn("text-xs font-medium", VERTROUWEN_KLEUR[suggestie.vertrouwen])}>
-                {VERTROUWEN_LABEL[suggestie.vertrouwen]}
-              </span>
-              {(impactNiveau === "midden" || impactNiveau === "hoog") && (
-                <span className={cn("text-[10px] font-semibold px-1.5 py-0.5 rounded border", IMPACT_KLEUR[impactNiveau])}>
-                  {IMPACT_LABEL[impactNiveau]}
-                </span>
-              )}
-            </div>
-          </div>
-          {suggestie.voorstel_naam && (
-            <div>
-              <p className="text-[10px] uppercase tracking-wide font-semibold opacity-60 mb-0.5">AI benoemt als</p>
-              <p className="text-sm font-medium">{suggestie.voorstel_naam}</p>
-            </div>
-          )}
-          {suggestie.redenering && (
-            <p className="text-xs opacity-75 leading-relaxed">{suggestie.redenering}</p>
-          )}
-          {suggestie.ai_beschikbaar && suggestie.vision_gebruikt && (
-            <p className="text-[10px] opacity-60 flex items-center gap-1">
-              <Sparkles className="h-3 w-3" />
-              Visuele lay-out geanalyseerd
-            </p>
-          )}
-          {!suggestie.ai_beschikbaar && (
-            <p className="text-[10px] opacity-50 italic">Geclassificeerd op bestandsnaam (AI niet actief)</p>
-          )}
-        </div>
-
-        {Object.entries(suggestie.gevonden_gegevens ?? {}).filter(([k]) => k !== "document_subtype").length > 0 && (
-          <div>
-            <p className="text-xs font-semibold text-muted-foreground mb-1.5">Herkende gegevens</p>
-            <GevondenGegevens gegevens={Object.fromEntries(
-              Object.entries(suggestie.gevonden_gegevens).filter(([k]) => k !== "document_subtype")
-            )} />
-          </div>
-        )}
-
-        {suggestie.bewijs && suggestie.bewijs.length > 0 && (
-          <div>
-            <p className="text-xs font-semibold text-muted-foreground mb-1.5">Bewijsketen</p>
-            <ol className="space-y-1">
-              {suggestie.bewijs.map((stap, i) => (
-                <li key={i} className="text-[11px] rounded border bg-muted/30 p-1.5">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-medium">{stap.stap}</span>
-                    <span className="opacity-70">{stap.resultaat}</span>
-                  </div>
-                  {stap.detail && <p className="opacity-60 mt-0.5">{stap.detail}</p>}
-                </li>
-              ))}
-            </ol>
-          </div>
-        )}
-
-        {effectiefeCat === "jaarrekening" && (
-          <div className="rounded-md border border-slate-200 bg-slate-50 p-3 space-y-2">
-            <p className="text-xs font-semibold text-slate-700">Subtype jaarrekening</p>
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="text-xs text-slate-600">
-                  {(item.geconsolideerd_override ?? suggestie.subtype === "geconsolideerd")
-                    ? "Geconsolideerd (groep/holding)"
-                    : "Enkelvoudig (enkele entiteit)"}
-                </p>
-                {suggestie.opslaglocatie && (
-                  <p className="text-[10px] text-muted-foreground mt-0.5">
-                    {(item.geconsolideerd_override ?? suggestie.subtype === "geconsolideerd")
-                      ? suggestie.opslaglocatie.replace("Jaarrekeningen", "Geconsolideerde jaarrekeningen")
-                      : suggestie.opslaglocatie.replace("Geconsolideerde jaarrekeningen", "Jaarrekeningen")}
-                  </p>
-                )}
-              </div>
-              <div className="flex items-center gap-2 shrink-0">
-                <span className="text-xs text-muted-foreground">Geconsolideerd</span>
-                <Switch
-                  checked={item.geconsolideerd_override ?? suggestie.subtype === "geconsolideerd"}
-                  onCheckedChange={(val) => onGeconsolideerd?.(val)}
-                />
-              </div>
-            </div>
-          </div>
-        )}
-
-        {effectiefeCat === "personeelsdocument" && (
-          <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-3">
-            <ShieldAlert className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
-            <div>
-              <p className="text-xs font-semibold text-amber-700">AVG — Privacygevoelig document</p>
-              <p className="text-xs text-amber-600 mt-0.5">Sla dit op bij Personeel / HRM en maak het niet breed zichtbaar.</p>
-            </div>
-          </div>
-        )}
-
-        {beperkingen.length > 0 && (
-          <div className="rounded-md border border-amber-200 bg-amber-50 p-3 space-y-1">
-            <p className="text-xs font-semibold text-amber-700 flex items-center gap-1">
-              <ShieldAlert className="h-3.5 w-3.5" />
-              Toegangsbeperking
-            </p>
-            {beperkingen.map((b, i) => (
-              <p key={i} className="text-xs text-amber-600">{b}</p>
-            ))}
-          </div>
-        )}
-
-        {!magUploaden ? (
-          <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3">
-            <p className="text-xs font-semibold text-destructive">Geen toestemming om dit bestand te uploaden</p>
-            <p className="text-xs text-muted-foreground mt-0.5">Neem contact op met de hoofdbeheerder.</p>
-          </div>
-        ) : (
-          <Button size="sm" className="w-full gap-1.5" onClick={() => setStap(1)}>
-            Kies wat u wilt doen
-            <ChevronRight className="h-3.5 w-3.5" />
-          </Button>
-        )}
-      </div>
-    );
-  }
-
-  // ── Stap 1: Actie kiezen ──────────────────────────────────────────────────
-
-  if (stap === 1) {
-    return (
-      <div className="space-y-4">
-        {suggestie.directe_actie_beschrijving && (
-          <div className="rounded-md border bg-muted/30 p-3">
-            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-1">Aanbevolen actie</p>
-            <p className="text-sm font-medium leading-snug">{suggestie.directe_actie_beschrijving}</p>
-          </div>
-        )}
-
-        {kanDirectNavigeren && (
-          <div>
-            <p className="text-xs font-semibold mb-2">Wanneer oppakken?</p>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                className={cn(
-                  "flex flex-col items-center gap-1.5 rounded-lg border p-3 text-xs transition-colors",
-                  actieModus === "direct"
-                    ? "border-primary bg-primary/5 text-primary font-semibold"
-                    : "border-border bg-background text-muted-foreground hover:bg-muted/50",
-                )}
-                onClick={() => setActieModus("direct")}
-              >
-                <Zap className="h-4 w-4" />
-                Direct starten
-              </button>
-              <button
-                className={cn(
-                  "flex flex-col items-center gap-1.5 rounded-lg border p-3 text-xs transition-colors",
-                  actieModus === "later"
-                    ? "border-primary bg-primary/5 text-primary font-semibold"
-                    : "border-border bg-background text-muted-foreground hover:bg-muted/50",
-                )}
-                onClick={() => setActieModus("later")}
-              >
-                <Clock className="h-4 w-4" />
-                Klaarzetten voor later
-              </button>
-            </div>
-            <p className="text-[10px] text-muted-foreground mt-2">
-              {actieModus === "direct"
-                ? `Direct navigeren naar ${catInfo.label}.`
-                : "Bestand in inbox plaatsen — later opgepakt."}
-            </p>
-          </div>
-        )}
-
-        {isCV && (
-          <div className="rounded-md border border-purple-200 bg-purple-50 p-3">
-            <div className="flex items-center gap-2 mb-1.5">
-              <UserPlus className="h-3.5 w-3.5 text-purple-600 shrink-0" />
-              <p className="text-xs font-semibold text-purple-700">CV herkend</p>
-            </div>
-            {suggestie.gevonden_gegevens?.naam_medewerker && (
-              <p className="text-xs text-purple-600">
-                <span className="font-medium">{suggestie.gevonden_gegevens.naam_medewerker}</span>
-                {suggestie.gevonden_gegevens.gewenste_functie && (
-                  <> &middot; {suggestie.gevonden_gegevens.gewenste_functie}</>
-                )}
-              </p>
-            )}
-            {actieModus === "direct" && (
-              <p className="text-[10px] text-purple-500 mt-1">U wordt naar het onboarding-formulier geleid.</p>
-            )}
-          </div>
-        )}
-
-        {effectiefeCat === "verzekering" && (
-          <div className="rounded-md border border-blue-200 bg-blue-50 p-3">
-            <div className="flex items-center gap-2 mb-1">
-              <Shield className="h-3.5 w-3.5 text-blue-600 shrink-0" />
-              <p className="text-xs font-semibold text-blue-700">
-                {verzekeringJaar !== null
-                  ? `Jaar ${verzekeringJaar} — ${isActueelePolis ? "actuele polis" : "archiefversie"}`
-                  : "Polis — jaar niet herkend"}
-              </p>
-            </div>
-            <p className="text-[10px] text-blue-500">
-              {isActueelePolis
-                ? "Wordt opgeslagen als actuele verzekeringspolis."
-                : verzekeringJaar
-                  ? `Wordt gearchiveerd als polis ${verzekeringJaar}.`
-                  : "Kies zelf hoe op te slaan."}
-            </p>
-          </div>
-        )}
-
-        {effectiefeCat === "personeelsdocument" && !isCV && actieModus === "direct" && (
-          <div className="space-y-2 rounded-lg border border-purple-200 bg-purple-50/40 p-3">
-            <p className="text-xs font-semibold text-purple-700">Direct opslaan in personeelsdossier</p>
-            <div>
-              <Label className="text-xs">Medewerker <span className="text-destructive">*</span></Label>
-              <Select value={gekozenMedewerker} onValueChange={setGekozenMedewerker}>
-                <SelectTrigger className="mt-1 h-8 text-xs">
-                  <SelectValue placeholder="Selecteer medewerker…" />
-                </SelectTrigger>
-                <SelectContent>
-                  {(medewerkerLijst as Array<{ id: number; naam: string }> | undefined)?.map((m) => (
-                    <SelectItem key={m.id} value={String(m.id)}>{m.naam}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label className="text-xs">Documenttype <span className="text-destructive">*</span></Label>
-              <Select value={gekozenDocType} onValueChange={setGekozenDocType}>
-                <SelectTrigger className="mt-1 h-8 text-xs">
-                  <SelectValue placeholder="Selecteer type…" />
-                </SelectTrigger>
-                <SelectContent>
-                  {PERSONEEL_DOC_TYPEN.map((t) => (
-                    <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        )}
-
-        <details className="group">
-          <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors select-none">
-            Andere bestemming kiezen
-          </summary>
-          <div className="mt-2 space-y-1.5">
-            {(suggestie.alternatieven ?? []).slice(0, 3).map((cat) => {
-              const info = CATEGORIE_INFO[cat];
-              return (
-                <button
-                  key={cat}
-                  onClick={() => onWijzigCategorie(cat)}
-                  className={cn(
-                    "w-full flex items-center gap-2 rounded-md border px-3 py-2 text-xs text-left transition-colors",
-                    item.gekozenCategorie === cat
-                      ? info.kleur + " font-semibold"
-                      : "border-border bg-background hover:bg-muted/50",
-                  )}
-                >
-                  {info.icoon}
-                  <div className="flex-1">
-                    <p className="font-medium">{info.label}</p>
-                    <p className="text-muted-foreground text-[10px]">{info.omschrijving}</p>
-                  </div>
-                  {item.gekozenCategorie === cat && <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />}
-                </button>
-              );
-            })}
-            <details className="group">
-              <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground mt-1 select-none">
-                Alle opties tonen
-              </summary>
-              <div className="mt-2">
-                <HandmatigKiezen huidig={effectiefeCat} onKiezen={onWijzigCategorie} />
-              </div>
-            </details>
-          </div>
-        </details>
-
-        <div className="flex gap-2">
-          <Button size="sm" variant="outline" onClick={() => setStap(0)} className="gap-1 shrink-0">
-            <ChevronLeft className="h-3.5 w-3.5" />
-            Terug
-          </Button>
-          <Button
-            size="sm"
-            className="flex-1 gap-1.5"
-            disabled={
-              effectiefeCat === "personeelsdocument" && !isCV && actieModus === "direct"
-                ? !gekozenMedewerker || !gekozenDocType
-                : false
-            }
-            onClick={() => vereistBevestiging ? setStap(2) : voerActieUit()}
-          >
-            {vereistBevestiging ? "Volgende" : actieModus === "direct" ? "Starten" : "Klaarzetten"}
-            <ChevronRight className="h-3.5 w-3.5" />
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
-  // ── Stap 2: Bevestigen ────────────────────────────────────────────────────
-
   return (
     <div className="space-y-4">
-      <div className={cn("rounded-md border p-3 space-y-2", IMPACT_KLEUR[impactNiveau])}>
+      {/* Hoofdvoorstel */}
+      <div className={cn("rounded-lg border p-4 space-y-2", catInfo.kleur)}>
         <div className="flex items-center gap-2">
-          <AlertTriangle className="h-4 w-4 shrink-0" />
-          <p className="text-sm font-semibold">Impact: {IMPACT_LABEL[impactNiveau]}</p>
+          <div className="shrink-0">{catInfo.icoon}</div>
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold text-sm">{catInfo.label}</p>
+            <p className="text-[11px] opacity-70">{catInfo.omschrijving}</p>
+          </div>
         </div>
-        {suggestie.impact_omschrijving && (
-          <p className="text-xs leading-relaxed">{suggestie.impact_omschrijving}</p>
+        {suggestie.voorstel_naam && (
+          <p className="text-xs opacity-75 font-medium">{suggestie.voorstel_naam}</p>
+        )}
+        {suggestie.redenering && (
+          <p className="text-xs opacity-60 leading-snug">{suggestie.redenering}</p>
         )}
       </div>
 
-      <label className="flex items-start gap-2.5 cursor-pointer select-none">
-        <input
-          type="checkbox"
-          checked={bevestigdAkkoord}
-          onChange={(e) => setBevestigdAkkoord(e.target.checked)}
-          className="mt-0.5 shrink-0"
-        />
-        <span className="text-xs text-muted-foreground leading-relaxed">
-          Ik begrijp de gevolgen en wil doorgaan met{" "}
-          <span className="font-medium text-foreground">
-            {actieModus === "direct" ? `direct starten → ${catInfo.label}` : "klaarzetten voor later"}
-          </span>
-          .
-        </span>
-      </label>
+      {/* Impact-waarschuwing (alleen bij midden/hoog) */}
+      {(impactNiveau === "midden" || impactNiveau === "hoog") && (
+        <div className={cn("rounded-md border p-3 space-y-1", IMPACT_KLEUR[impactNiveau])}>
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+            <p className="text-xs font-semibold">{IMPACT_LABEL[impactNiveau]}</p>
+          </div>
+          {suggestie.impact_omschrijving && (
+            <p className="text-xs leading-relaxed opacity-85">{suggestie.impact_omschrijving}</p>
+          )}
+        </div>
+      )}
 
-      <div className="flex gap-2">
-        <Button size="sm" variant="outline" onClick={() => setStap(1)} className="gap-1 shrink-0">
-          <ChevronLeft className="h-3.5 w-3.5" />
-          Terug
-        </Button>
+      {/* Toegangsbeperkingen */}
+      {beperkingen.length > 0 && (
+        <div className="rounded-md border border-amber-200 bg-amber-50 p-3 space-y-1">
+          <p className="text-xs font-semibold text-amber-700 flex items-center gap-1">
+            <ShieldAlert className="h-3.5 w-3.5" />
+            Toegangsbeperking
+          </p>
+          {beperkingen.map((b, i) => (
+            <p key={i} className="text-xs text-amber-600">{b}</p>
+          ))}
+        </div>
+      )}
+
+      {/* Geen toestemming */}
+      {!magUploaden && (
+        <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3">
+          <p className="text-xs font-semibold text-destructive">Geen toestemming om dit bestand te uploaden</p>
+          <p className="text-xs text-muted-foreground mt-0.5">Neem contact op met de hoofdbeheerder.</p>
+        </div>
+      )}
+
+      {/* Jaarrekening subtype */}
+      {effectiefeCat === "jaarrekening" && (
+        <div className="flex items-center justify-between gap-3 rounded-md border bg-muted/30 px-3 py-2.5">
+          <span className="text-xs">Geconsolideerde jaarrekening</span>
+          <Switch
+            checked={item.geconsolideerd_override ?? suggestie.subtype === "geconsolideerd"}
+            onCheckedChange={(val) => onGeconsolideerd?.(val)}
+          />
+        </div>
+      )}
+
+      {/* Personeelsdocument: medewerker + doctype selectors */}
+      {effectiefeCat === "personeelsdocument" && !isCV && (
+        <div className="space-y-2 rounded-lg border border-purple-200 bg-purple-50/40 p-3">
+          <p className="text-xs font-semibold text-purple-700">Opslaan in personeelsdossier</p>
+          <div>
+            <Label className="text-xs">Medewerker <span className="text-destructive">*</span></Label>
+            <Select value={gekozenMedewerker} onValueChange={setGekozenMedewerker}>
+              <SelectTrigger className="mt-1 h-8 text-xs">
+                <SelectValue placeholder="Selecteer medewerker…" />
+              </SelectTrigger>
+              <SelectContent>
+                {(medewerkerLijst as Array<{ id: number; naam: string }> | undefined)?.map((m) => (
+                  <SelectItem key={m.id} value={String(m.id)}>{m.naam}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label className="text-xs">Documenttype <span className="text-destructive">*</span></Label>
+            <Select value={gekozenDocType} onValueChange={setGekozenDocType}>
+              <SelectTrigger className="mt-1 h-8 text-xs">
+                <SelectValue placeholder="Selecteer type…" />
+              </SelectTrigger>
+              <SelectContent>
+                {PERSONEEL_DOC_TYPEN.map((t) => (
+                  <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      )}
+
+      {/* Bevestigingscheckbox (alleen bij midden/hoog impact) */}
+      {vereistBevestiging && (
+        <label className="flex items-start gap-2.5 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={bevestigdAkkoord}
+            onChange={(e) => setBevestigdAkkoord(e.target.checked)}
+            className="mt-0.5 shrink-0"
+          />
+          <span className="text-xs text-muted-foreground leading-relaxed">
+            Ik begrijp de gevolgen en wil doorgaan.
+          </span>
+        </label>
+      )}
+
+      {/* Andere bestemming kiezen */}
+      <details className="group">
+        <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors select-none">
+          Andere bestemming kiezen
+        </summary>
+        <div className="mt-2">
+          <HandmatigKiezen huidig={effectiefeCat} onKiezen={onWijzigCategorie} />
+        </div>
+      </details>
+
+      {/* Bevestigknop */}
+      {magUploaden && (
         <Button
           size="sm"
-          className="flex-1 gap-1.5"
-          disabled={!bevestigdAkkoord}
+          className="w-full gap-1.5"
+          disabled={
+            (vereistBevestiging && !bevestigdAkkoord) ||
+            (effectiefeCat === "personeelsdocument" && !isCV && (!gekozenMedewerker || !gekozenDocType))
+          }
           onClick={voerActieUit}
         >
           <CheckCircle2 className="h-3.5 w-3.5" />
-          Bevestigen
+          Bevestigen en opslaan
         </Button>
-      </div>
+      )}
     </div>
   );
 }
@@ -1235,7 +941,7 @@ export function SlimUploadBalk() {
       }
     }
 
-    // Sheet altijd openen — ook als alles al auto-gerouteerd is
+    // Dialoog altijd openen — ook als alles al auto-gerouteerd is
     setQueue(queueItems);
     setHuidigId(queueItems.find((i) => !i.actieGenomen)?.id ?? queueItems[0]?.id ?? null);
     setToonDialoog(true);
@@ -1546,17 +1252,17 @@ export function SlimUploadBalk() {
         }}
       />
 
-      {/* ── Upload wachtrij (zijpaneel) ───────────────────────────────────── */}
-      <Sheet open={toonDialoog} onOpenChange={(open) => { if (!open) opSluiten(); }}>
-        <SheetContent side="right" className="w-[440px] sm:max-w-[440px] p-0 flex flex-col gap-0">
-          <SheetHeader className="px-4 pt-4 pb-3 border-b shrink-0">
-            <SheetTitle className="flex items-center gap-2 text-base">
+      {/* ── Upload wachtrij (gecentreerd dialoogvenster) ──────────────────── */}
+      <Dialog open={toonDialoog} onOpenChange={(open) => { if (!open) opSluiten(); }}>
+        <DialogContent className="max-w-[500px] p-0 flex flex-col gap-0 max-h-[85vh] overflow-hidden">
+          <DialogHeader className="px-4 pt-4 pb-3 border-b shrink-0">
+            <DialogTitle className="flex items-center gap-2 text-base">
               <Sparkles className="h-4 w-4 text-primary" />
               Upload wachtrij
               <Badge variant="secondary" className="ml-auto text-xs font-normal">
                 {aantalKlaar}/{queue.length} verwerkt
               </Badge>
-            </SheetTitle>
+            </DialogTitle>
             {queue.some((i) => i.status === "wacht") && (
               <Button
                 size="sm"
@@ -1568,7 +1274,7 @@ export function SlimUploadBalk() {
                 Analyseer alle wachtende bestanden ({queue.filter((i) => i.status === "wacht").length})
               </Button>
             )}
-          </SheetHeader>
+          </DialogHeader>
 
           <div className="flex-1 overflow-y-auto divide-y">
             {queue.map((item) => (
@@ -1613,8 +1319,8 @@ export function SlimUploadBalk() {
               </p>
             </div>
           )}
-        </SheetContent>
-      </Sheet>
+        </DialogContent>
+      </Dialog>
 
       {/* ── Automatiseer-dialoog ──────────────────────────────────────────── */}
       <Dialog open={!!toonAutomatiseren} onOpenChange={(open) => { if (!open) setToonAutomatiseren(null); }}>

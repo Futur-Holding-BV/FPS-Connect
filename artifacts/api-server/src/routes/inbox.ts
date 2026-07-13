@@ -10,6 +10,7 @@ import {
   offertesTable,
   opnamesTable,
   werkgeversTable,
+  gebruikersTable,
 } from "@workspace/db";
 import { eq, desc, and, isNull, or, sql } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
@@ -132,7 +133,16 @@ const mapItem = (item: typeof inboxItemsTable.$inferSelect) => ({
 // ── STATS ─────────────────────────────────────────────────────────────────────
 router.get("/inbox/stats", lezen, async (req, res): Promise<void> => {
   try {
-    const items = await db.select().from(inboxItemsTable);
+    const userId = req.session.userId ?? null;
+    let items = await db.select().from(inboxItemsTable);
+
+    if (userId) {
+      const [g] = await db.select({ rol: gebruikersTable.rol }).from(gebruikersTable).where(eq(gebruikersTable.id, userId));
+      if (g?.rol !== "hoofdbeheerder") {
+        items = items.filter((i) => i.geuploadDoor === userId);
+      }
+    }
+
     const totaal = items.length;
     const nieuw = items.filter((i) => i.status === "nieuw").length;
     const terBeoordeling = items.filter((i) => i.status === "ter_beoordeling").length;
@@ -154,8 +164,17 @@ router.get("/inbox/items", lezen, async (req, res): Promise<void> => {
   try {
     const status = req.query.status ? String(req.query.status) : undefined;
     const bestemming = req.query.bestemming ? String(req.query.bestemming) : undefined;
+    const userId = req.session.userId ?? null;
 
     let rijen = await db.select().from(inboxItemsTable).orderBy(desc(inboxItemsTable.geuploadOp));
+
+    // Privacy: niet-beheerders zien alleen hun eigen uploads
+    if (userId) {
+      const [g] = await db.select({ rol: gebruikersTable.rol }).from(gebruikersTable).where(eq(gebruikersTable.id, userId));
+      if (g?.rol !== "hoofdbeheerder") {
+        rijen = rijen.filter((i) => i.geuploadDoor === userId);
+      }
+    }
 
     if (status) rijen = rijen.filter((i) => i.status === status);
     if (bestemming) rijen = rijen.filter((i) => i.bestemming === bestemming);

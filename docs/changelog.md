@@ -507,3 +507,18 @@ Ga naar Beheer › Goedkeuringsbeleid → Nieuwe beleidsregel. Stel `documenttyp
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (additieve tabellen/module + één pilot-integratie, generieke motor niet gekoppeld aan bestaande transitiepaden buiten de pilot)
 
 **Nieuw gebouwd:**
+
+## [2026-07-13] Slim Uploaden — drie verbeteringen
+
+### Privacy
+- `GET /inbox/items` en `GET /inbox/stats` filteren nu per gebruiker: niet-hoofdbeheerders zien uitsluitend hun eigen uploads; hoofdbeheerder ziet alles.
+- `gebruikersTable` geïmporteerd in `inbox.ts`; rol-check via directe DB-query.
+
+### UX — Sheet → Dialog
+- Upload-wachtrij verschijnt nu als gecentreerd dialoogvenster (max-w-500px, max-h-85vh) in plaats van een rechterzijpaneel.
+- Dialoog opent direct bij het uploaden.
+
+### Vereenvoudiging BeslisScherm
+- Meerstappenflow (stap 0/1/2), `actieModus` (direct/later), zekerheidspercentage, vertrouwenslabels, bewijsketen en gevonden-gegevens-tabel volledig verwijderd.
+- Nieuw: één scherm met categorie-card (icoon + label + omschrijving), AI-voorstel naam, korte redenering, impact-waarschuwing (alleen midden/hoog), personeelsdossier-selectors, bevestigingscheckbox (hoog impact), "Andere bestemming kiezen" als opvouwbare `<details>`, en één grote bevestigknop.
+- Navigatie is altijd "direct" — de tussenliggende keuze "direct vs. later" is niet meer aanwezig.
