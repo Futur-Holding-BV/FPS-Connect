@@ -1,3 +1,16 @@
+## 2026-07-13 — Meerdere functies per medewerker: end-to-end bewezen + prominent zichtbaar op profielkaart
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (additieve UI-wijziging; backend ongewijzigd en aantoonbaar werkend)
+
+**Aanleiding:** melding dat er bij Jacqueline "geen mogelijkheden" te zien waren om meerdere functies toe te voegen. Onderzoek: de volledige multi-functie-functionaliteit (Aanstellingen-kaart + "Extra functies" in Profiel bewerken) stond al op main en de backend-routes werkten; maar het Functies-overzicht op de profielkaart was verborgen zolang een medewerker nul aanstellingen had — precies de situatie bij Jacqueline (0 rijen in `medewerker_aanstellingen`), waardoor de ingang moeilijk vindbaar was.
+
+**Wijzigingen:**
+- `personeel/detail.tsx`: het Functies-blok op de profielkaart wordt nu **altijd** getoond, met (a) een directe knop "Functie toevoegen" (bij schrijfrechten) die de aanstellingsdialoog opent, (b) bij nul aanstellingen de hoofdfunctie uit het medewerkersprofiel als "Hoofd"-chip, en (c) een hintregel dat een medewerker meerdere functies kan vervullen
+- `scripts/src/verificatie-aanstellingen.ts` (nieuw): herbruikbaar bewijsscript dat via echte login (wachtwoord + TOTP, e2e-webaccount) de aanstellingen-flow end-to-end test: GET → POST extra functie → GET (zichtbaar) → DELETE (opruimen); wijzigt per saldo geen data
+- **Bewijs:** bewijsscript ALLE STAPPEN PASS tegen de draaiende dev-omgeving voor medewerker 5 (Jacqueline): login 200, GET 200, POST 201 (aanstelling aangemaakt), lijst +1, DELETE 204, lijst weer gelijk; firevault typecheck exit 0
+
+---
+
 ## 2026-07-13 — Inlogproblemen René: ruimere rate-limit, wachtwoord-oogje en duidelijke foutmeldingen
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (limiet-verruiming is bewust gekozen door de gebruiker; per-account-vergrendeling na 5 foute pogingen blijft onverkort staan)

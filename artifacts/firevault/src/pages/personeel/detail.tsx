@@ -1250,29 +1250,49 @@ export default function MedewerkerDetailPagina() {
               <div className="text-sm">{medewerker.noodcontact_naam ?? "—"}{medewerker.noodcontact_telefoon ? ` (${medewerker.noodcontact_telefoon})` : ""}</div>
             </div>
           )}
-          {/* Functies / aanstellingen overzicht */}
-          {aanstellingen.length > 0 && (
-            <div className="space-y-1.5 sm:col-span-2 lg:col-span-3 border-t pt-3 mt-1">
-              <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-1.5">
+          {/* Functies / aanstellingen overzicht — altijd zichtbaar zodat "meerdere
+              functies" direct vindbaar is, ook als er nog geen extra aanstellingen zijn */}
+          <div className="space-y-1.5 sm:col-span-2 lg:col-span-3 border-t pt-3 mt-1">
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
                 <Building2 className="h-3.5 w-3.5" /> Functies
               </div>
-              <div className="flex flex-wrap gap-2">
-                {aanstellingen.map((a) => (
-                  <div key={a.id} className={`flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-sm ${a.is_hoofd ? "border-amber-200 bg-amber-50" : "bg-muted/40"}`}>
-                    <span className="font-medium">{a.functie_naam ?? "Geen functie"}</span>
-                    <span className="text-muted-foreground text-xs">— {a.werkmaatschappij}</span>
-                    {a.is_hoofd && (
-                      <span className="ml-1 text-[10px] font-semibold text-amber-700 uppercase tracking-wide">Hoofd</span>
-                    )}
-                    {a.cao && <span className="text-muted-foreground text-xs">· {a.cao}</span>}
-                    {a.contracturen_per_week != null && (
-                      <span className="text-muted-foreground text-xs">· {a.contracturen_per_week}u</span>
-                    )}
-                  </div>
-                ))}
-              </div>
+              {magSchrijven && (
+                <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => openAanstelling()}>
+                  <Plus className="h-3.5 w-3.5 mr-1" /> Functie toevoegen
+                </Button>
+              )}
             </div>
-          )}
+            <div className="flex flex-wrap gap-2">
+              {/* Hoofdfunctie uit het profiel tonen zolang geen enkele aanstelling
+                  als hoofd gemarkeerd is (dus ook bij 1+ niet-hoofd-aanstellingen) */}
+              {!aanstellingen.some((a) => a.is_hoofd) && (
+                <div className="flex items-center gap-1.5 rounded-md border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-sm">
+                  <span className="font-medium">{medewerker.functie_naam ?? "Geen functie"}</span>
+                  <span className="text-muted-foreground text-xs">— {medewerker.werkmaatschappij}</span>
+                  <span className="ml-1 text-[10px] font-semibold text-amber-700 uppercase tracking-wide">Hoofd</span>
+                </div>
+              )}
+              {aanstellingen.map((a) => (
+                <div key={a.id} className={`flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-sm ${a.is_hoofd ? "border-amber-200 bg-amber-50" : "bg-muted/40"}`}>
+                  <span className="font-medium">{a.functie_naam ?? "Geen functie"}</span>
+                  <span className="text-muted-foreground text-xs">— {a.werkmaatschappij}</span>
+                  {a.is_hoofd && (
+                    <span className="ml-1 text-[10px] font-semibold text-amber-700 uppercase tracking-wide">Hoofd</span>
+                  )}
+                  {a.cao && <span className="text-muted-foreground text-xs">· {a.cao}</span>}
+                  {a.contracturen_per_week != null && (
+                    <span className="text-muted-foreground text-xs">· {a.contracturen_per_week}u</span>
+                  )}
+                </div>
+              ))}
+            </div>
+            {aanstellingen.length === 0 && magSchrijven && (
+              <p className="text-xs text-muted-foreground">
+                Een medewerker kan meerdere functies vervullen. Gebruik "Functie toevoegen" of de kaart Aanstellingen hieronder.
+              </p>
+            )}
+          </div>
 
           {medewerker.opmerkingen && (
             <div className="space-y-1.5 sm:col-span-2 lg:col-span-3">
