@@ -316,3 +316,14 @@
   caret-color: #ffffff;
   transition: background-color 9999s ease-in-out 0s;
 }
+
+/* Firefox-variant: Firefox kent de WebKit-transitietruc niet en gebruikt de
+   standaard :autofill-pseudoclass. Bewust een apart blok (een onbekende
+   selector in een groep laat de hele regel vervallen). De inset-schaduw dekt
+   de gele vlek af met de donkere glaskleur van het auth-scherm. */
+.fps-auth input:autofill {
+  box-shadow: inset 0 0 0 1000px rgba(33, 38, 49, 0.92);
+  -webkit-text-fill-color: #ffffff;
+  color: #ffffff;
+  caret-color: #ffffff;
+}

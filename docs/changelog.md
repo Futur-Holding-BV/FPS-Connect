@@ -1,3 +1,18 @@
+## 2026-07-13 — Inlogproblemen René: ruimere rate-limit, wachtwoord-oogje en duidelijke foutmeldingen
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (limiet-verruiming is bewust gekozen door de gebruiker; per-account-vergrendeling na 5 foute pogingen blijft onverkort staan)
+
+**Aanleiding:** René kon "weer niet inloggen" ondanks een correct wachtwoord, en het oogje om het wachtwoord te tonen ontbrak. Diagnose (dev + productie-DB): account actief, niet vergrendeld, 0 mislukte pogingen, `login_pogingen` leeg — het IP-gebaseerde rate-limit (10 pogingen per 15 min, gedeeld kantoor-IP) blokkeerde vóór logging en was daarmee de meest waarschijnlijke oorzaak. De gebruiker koos expliciet voor het verhogen van de limiet; later meldde hij dat Firefox waarschijnlijk meespeelt.
+
+**Wijzigingen:**
+- `auth.ts`: IP-rate-limit `RL_MAX` van 10 naar 50 per 15 minuten (met uitleg-commentaar); geldt voor `/auth/login`, `/auth/2fa/verify` en `/auth/mobile/login`. De per-account-vergrendeling (5 foute pogingen) blijft de eigenlijke brute-force-rem
+- `login.tsx`: wachtwoord-oogje (tonen/verbergen) toegevoegd, zichtbaar op de donkere achtergrond (`text-white/60`); foutafhandeling onderscheidt nu 423 (account vergrendeld), 429 (te veel pogingen, probeer later) en ≥500 (serverfout) met aparte meldingen
+- `vertalingen.ts`: 3 nieuwe auth-meldingen × 6 talen
+- `index.css`: autofill-overrides gescoped op `.fps-auth` — WebKit-blok (transitietruc + witte tekst) én een apart Firefox-blok (`input:autofill` met donkere inset-schaduw), omdat Firefox de WebKit-truc niet kent en een onbekende selector in een groep de hele regel laat vervallen
+- **Bewijs:** screenshot bevestigt zichtbaar oogje; api-server + firevault typecheck exit 0 (na hergeneratie van verouderde lib-declaraties door eerdere task-merges); api-server herstart zodat de nieuwe limiet actief is en het oude limiet-venster gewist is
+
+---
+
 ## 2026-07-13 — AI stelt profielen voor op de Bevoegdheidsprofielen-pagina
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (additief, opt-in; hergebruikt bestaand hoofdbeheerder-only endpoint; AI stelt alleen voor, mens bevestigt; veiligheid server-side geborgd)

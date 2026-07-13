@@ -28,7 +28,11 @@ interface RateLimitEntry {
 }
 
 const loginRateMap = new Map<string, RateLimitEntry>();
-const RL_MAX = 10;
+// 50 mislukte pogingen per 15 min per IP. Bewust ruim: een heel kantoor deelt
+// vaak één IP-adres, dus een te lage limiet blokkeert legitieme gebruikers met
+// een juist wachtwoord (429 leek dan op "onjuiste inloggegevens"). De echte
+// brute-force-bescherming per account blijft de lockout na 5 mislukte pogingen.
+const RL_MAX = 50;
 const RL_VENSTER_MS = 15 * 60 * 1000;
 
 function checkLoginRateLimit(req: import("express").Request, res: import("express").Response): boolean {
