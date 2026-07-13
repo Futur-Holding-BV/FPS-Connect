@@ -37,6 +37,44 @@ Typecheck: volledig groen (alle packages).
 
 ---
 
+## 2026-07-13 — FIE Fase 3: Continue jaarbedrijfsprognose + AI-observaties (verificatie & oplevering)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (geen schema-wijziging; additieve feature)
+
+**Wat is opgeleverd (FIE Fase 3):**
+
+De volledige continue jaarbedrijfsprognose is geimplementeerd en geverifieerd:
+
+1. **Prognose-service** (`artifacts/api-server/src/services/fie-service.ts`):
+   - `berekenJaarprognose(boekjaar)` berekent bevestigde omzet (100%), gewogen pipeline (concept 20%/verzonden 40%/bekeken 60%), OHW-restwaarde, AK-dekkingsgraad, break-even en kwartaalverdeling.
+   - `leesPrognoseObservaties(boekjaar)` leest gepersisteerde observaties terug inclusief impact/advies/betrouwbaarheidsscore uit `OBSERVATIE_META`.
+
+2. **AI-observaties engine** (ingebouwd in `berekenJaarprognose`):
+   - 5 observatietypen: `omzet_risico`, `break_even_risico`, `ak_onderdekking`, `lege_pipeline`, `geen_begroting`.
+   - Observaties worden bij elke prognose-aanroep gepersisteerd in `fie_observaties` (boekjaar, type, ernst, omschrijving, waarde, drempelwaarde, afwijking_pct).
+
+3. **API routes** (`artifacts/api-server/src/routes/fie.ts`):
+   - `GET /fie/prognose/:boekjaar` — berekent en retourneert volledige prognose + kwartaalverdeling + observaties.
+   - `GET /fie/observaties/:boekjaar` — retourneert gepersisteerde observaties verrijkt met impact/advies/betrouwbaarheidsscore.
+   - Beide routes beveiligd via `requireBevoegdheid("financieel", 2)`.
+
+4. **OpenAPI spec + codegen** (`lib/api-spec/openapi.yaml`):
+   - Schemas `FieJaarprognose`, `FiePrognoseObservatie`, `FieKwartaalPrognose`, `FieObservatiesResponse` volledig gedefinieerd.
+   - Gegenereerde hooks `useGetFiePrognose` en `useGetFieObservaties` beschikbaar.
+
+5. **Frontend** (`artifacts/firevault/src/pages/beheer/bedrijfskompas.tsx`):
+   - `PrognoseTab` component (regel 580–827): 8 KPI-tiles, coverage-balk, kwartaalverdeling met begroting-overlay, observatielijst (live + historisch), toelichting.
+   - Tab "Prognose" wired in `BegrotingDetail` als zesde tabblad (regel 928, 1158–1161).
+
+6. **DB-schema** (`lib/db/src/schema/fie.ts`): `fieObservatiesTable` aanwezig en gepusht.
+
+**Verificatie:**
+- `pnpm run typecheck` — groen (0 fouten).
+- DB-tabel `fie_observaties` bevestigd aanwezig met alle kolommen.
+- Workflows API-server + firevault draaien.
+
+---
+
 ## 2026-07-13 — Fix Docker-build-blokkade: conflict-markers verwijderd uit firevault-componenten
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (geen logica gewijzigd)
