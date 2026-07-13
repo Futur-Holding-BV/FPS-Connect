@@ -121,5 +121,6 @@
 - [Offerte-sectie foto's](offerte-sectie-fotos.md) — hoofdstuk-foto's in offerte_secties.fotos jsonb; url = kant-en-klare /api/storage/files?path=... (NIET rauw objectPath); AI stelt voor, mens accepteert, tonen alleen bij toon_fotos.
 - [Governance blokkeert kritieke acties: sessie mist rol](governance-sessie-rol.md) — req.session.rol wordt nooit gezet bij login; governance-middleware ziet rol=null en blokkeert "kritiek" (o.a. DELETE /gebouwen/:id) met 403, ook voor hoofdbeheerder; e2e-cleanup dus via DB.
 - [BIAE centrale event-bus](biae-engine.md) — 7 motoren als dunne capability-adapters op één bus; onderliggende engines ongewijzigd; nieuwe proceskoppeling = event publiceren; compliance_signalen faalt stil zonder db push.
+- [Toolbox categorie-whitelist](toolbox-categorie-canoniek.md) — canonieke categorielijst synchroon houden tussen frontend/batch-endpoint/scripts; endpoint valideert (400) en normaliseert AI-uitvoer naar overig.
 - [Blink dragstart in scrollbare sidebar](blink-dragstart-sidebar.md) — HTML5-dnd start nooit in scrollbare SidebarContent; pointer-gebaseerd slepen gebruiken (e2e-valkuil in topicfile).
 - [MinIO objectopslag prod](minio-objectopslag-prod.md) — presign-client op publiek domein + Caddy Host-behoud; mc alias op publiek domein werkt niet; backup-minio + bucket-race depends_on.

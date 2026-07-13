@@ -2231,13 +2231,6 @@ veiligheidRouter.post("/veiligheid/toolboxen/ai-batch-genereer", schrijvenVeilig
       aantal: number;
       toelichting?: string;
     };
-    if (!categorieen || !Array.isArray(categorieen) || categorieen.length === 0) {
-      return void res.status(400).json({ error: "categorieen verplicht" });
-    }
-    const aantalGeldig = Math.min(Math.max(1, Number(aantal) || 10), 50);
-    const sess = req.session as { gebruikerId?: number };
-    const batchId = `batch-${Date.now()}`;
-
     const CATEGORIE_BESCHRIJVING: Record<string, string> = {
       brandveiligheid: "brandpreventie, blusmiddelen, vluchtroutes, brandmelding",
       werken_op_hoogte: "ladders, steigers, valbescherming, dakwerkzaamheden",
@@ -2249,6 +2242,22 @@ veiligheidRouter.post("/veiligheid/toolboxen/ai-batch-genereer", schrijvenVeilig
       machines: "machine-veiligheid, noodstop, onderhoud, vergrendeling",
       overig: "algemene veiligheid op de werkplek",
     };
+    if (!categorieen || !Array.isArray(categorieen) || categorieen.length === 0) {
+      return void res.status(400).json({ error: "categorieen verplicht" });
+    }
+    // Alleen canonieke categorieën toestaan: onbekende waarden zouden in de
+    // review-UI als rauwe labels verschijnen en buiten elk categoriefilter vallen.
+    const onbekend = categorieen.filter((c) => !(c in CATEGORIE_BESCHRIJVING));
+    if (onbekend.length > 0) {
+      return void res.status(400).json({
+        error: `Onbekende categorie(ën): ${onbekend.join(", ")}. Toegestaan: ${Object.keys(CATEGORIE_BESCHRIJVING).join(", ")}`,
+      });
+    }
+    if (!heeftGateway()) {
+      return void res.status(503).json({ error: "AI niet beschikbaar — configureer de AI-integratie om concepten te kunnen genereren" });
+    }
+    const aantalGeldig = Math.min(Math.max(1, Number(aantal) || 10), 50);
+    const batchId = `batch-${Date.now()}`;
 
     type ToolboxItem = {
       titel: string; categorie: string; moeilijkheid: string; intro: string;
@@ -2257,23 +2266,40 @@ veiligheidRouter.post("/veiligheid/toolboxen/ai-batch-genereer", schrijvenVeilig
       tags: string[]; foto_suggesties: string[];
     };
 
-    let items: ToolboxItem[] = [];
+    // Bestaande titels ophalen zodat AI geen duplicaten aanmaakt
+    const bestaandeRijen = await db
+      .select({ titel: veiligheidToolboxenTable.titel })
+      .from(veiligheidToolboxenTable);
+    const bekendeTitels = new Set(bestaandeRijen.map((r) => r.titel.trim().toLowerCase()));
+    const vermijdLijst: string[] = bestaandeRijen.map((r) => r.titel.trim());
 
-    if (heeftGateway()) {
-      const catsOmschrijving = categorieen
-        .map((c) => `${c}: ${CATEGORIE_BESCHRIJVING[c] ?? c}`)
-        .join("\n");
-      const batchResultaat = await aiGateway.chat("default", {
-        max_tokens: 16000,
+    const catsOmschrijving = categorieen
+      .map((c) => `${c}: ${CATEGORIE_BESCHRIJVING[c] ?? c}`)
+      .join("\n");
+
+    // Genereer in delen van maximaal 10 per AI-aanroep: grotere aantallen worden
+    // door het tokenbudget afgekapt en leveren dan onbruikbare JSON op.
+    const DEEL_GROOTTE = 10;
+    const items: ToolboxItem[] = [];
+    let misluktePogingen = 0;
+    const MAX_MISLUKT = 2;
+
+    while (items.length < aantalGeldig && misluktePogingen < MAX_MISLUKT) {
+      const nodig = Math.min(DEEL_GROOTTE, aantalGeldig - items.length);
+      const vermijdTekst = vermijdLijst.length
+        ? `\nVermijd deze reeds bestaande onderwerpen (geen duplicaten of sterk gelijkende titels):\n${vermijdLijst.slice(-150).map((t) => `- ${t}`).join("\n")}`
+        : "";
+      const deelResultaat = await aiGateway.chat("default", {
+        max_tokens: 8000,
         messages: [
           { role: "system", content: TOOLBOX_GENEREER_PROMPT.tekst },
           {
             role: "user",
-            content: `Genereer ${aantalGeldig} unieke toolbox-onderwerpen voor brandpreventie- en bouwplaatsmonteurs.
+            content: `Genereer ${nodig} unieke toolbox-onderwerpen voor brandpreventie- en bouwplaatsmonteurs.
 
 Categorieën:
 ${catsOmschrijving}
-${toelichting ? `\nExtra context: ${toelichting}` : ""}
+${toelichting ? `\nExtra context: ${toelichting}` : ""}${vermijdTekst}
 
 Verspreid de onderwerpen evenredig over de categorieën. Geef output als JSON-array:
 [{
@@ -2293,33 +2319,40 @@ Verspreid de onderwerpen evenredig over de categorieën. Geef output als JSON-ar
           },
         ],
       });
-      const raw = batchResultaat.ok ? batchResultaat.inhoud : "[]";
+      const raw = deelResultaat.ok ? deelResultaat.inhoud : "";
+      let deelItems: ToolboxItem[] = [];
       try {
         const cleaned = raw.replace(/^```json\s*/m, "").replace(/\s*```\s*$/m, "").trim();
         const parsed = JSON.parse(cleaned);
-        if (Array.isArray(parsed)) items = parsed.slice(0, aantalGeldig) as ToolboxItem[];
+        if (Array.isArray(parsed)) deelItems = parsed.slice(0, nodig) as ToolboxItem[];
       } catch {
-        logger.warn({ raw: raw.slice(0, 500) }, "AI batch parse mislukt");
+        logger.warn({ raw: raw.slice(0, 500) }, "AI batch parse mislukt (deel)");
       }
+      const nieuw = deelItems.filter((item) => {
+        const sleutel = String(item.titel ?? "").trim().toLowerCase();
+        if (!sleutel || bekendeTitels.has(sleutel)) return false;
+        bekendeTitels.add(sleutel);
+        vermijdLijst.push(String(item.titel).trim());
+        return true;
+      });
+      if (nieuw.length === 0) {
+        misluktePogingen += 1;
+        continue;
+      }
+      misluktePogingen = 0;
+      items.push(...nieuw);
     }
 
     if (items.length === 0) {
-      for (let i = 0; i < aantalGeldig; i++) {
-        const cat = categorieen[i % categorieen.length] ?? "overig";
-        items.push({
-          titel: `AI-concept ${i + 1} — ${cat}`, categorie: cat, moeilijkheid: "gemiddeld",
-          intro: "Concept door AI gegenereerd. Pas aan voor publicatie.",
-          ai_samenvatting: "", ai_risicos: [], ai_maatregelen: [], ai_stoppen: "",
-          geschatte_leestijd: 5, zoekwoorden: [], tags: [], foto_suggesties: [],
-        });
-      }
+      return void res.status(502).json({ error: "AI-generatie mislukt — geen bruikbare concepten ontvangen. Probeer het opnieuw." });
     }
 
     const rijen = await Promise.all(
       items.map((item) =>
         db.insert(veiligheidToolboxenTable).values({
           titel: item.titel,
-          categorie: item.categorie,
+          // AI-uitvoer normaliseren: onbekende categorie valt terug op "overig"
+          categorie: item.categorie in CATEGORIE_BESCHRIJVING ? item.categorie : "overig",
           moeilijkheid: item.moeilijkheid,
           intro: item.intro,
           aiSamenvatting: item.ai_samenvatting || null,
@@ -2336,8 +2369,8 @@ Verspreid de onderwerpen evenredig over de categorieën. Geef output als JSON-ar
           tags: item.tags,
           minScore: 70,
           geldigheidMaanden: 12,
-          aangemaaktDoorId: sess.gebruikerId ?? null,
-          aiVerwerktOp: heeftGateway() ? new Date() : null,
+          aangemaaktDoorId: req.session.userId ?? null,
+          aiVerwerktOp: new Date(),
         }).returning({ id: veiligheidToolboxenTable.id })
       )
     );

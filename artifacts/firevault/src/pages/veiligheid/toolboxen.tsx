@@ -363,7 +363,8 @@ export default function VeiligheidToolboxenPagina() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [batchDialogOpen, setBatchDialogOpen] = useState(false);
   const [batchBezig, setBatchBezig] = useState(false);
-  const [batchAantal, setBatchAantal] = useState(10);
+  const [batchAantal, setBatchAantal] = useState(50);
+  const [batchVoortgang, setBatchVoortgang] = useState(0);
   const [batchCats, setBatchCats] = useState<string[]>(["brandveiligheid"]);
   const [batchToelichting, setBatchToelichting] = useState("");
   const [reviewBezig, setReviewBezig] = useState<number | null>(null);
@@ -492,16 +493,36 @@ export default function VeiligheidToolboxenPagina() {
 
   async function startBatch() {
     setBatchBezig(true);
+    setBatchVoortgang(0);
+    let totaal = 0;
     try {
-      const res = await aiBatchMut.mutateAsync({ data: { categorieen: batchCats, aantal: batchAantal, toelichting: batchToelichting || undefined } });
-      invaliderenLijst();
-      setBatchDialogOpen(false);
-      setBatchToelichting("");
-      toast({ title: `${(res as any).aangemaakt ?? batchAantal} toolbox-concepten aangemaakt voor review` });
+      // In stappen van 10 genereren: elk verzoek blijft kort en de wachtrij
+      // vult zichtbaar aan terwijl de generatie loopt.
+      while (totaal < batchAantal) {
+        const stap = Math.min(10, batchAantal - totaal);
+        const res = await aiBatchMut.mutateAsync({ data: { categorieen: batchCats, aantal: stap, toelichting: batchToelichting || undefined } });
+        const aangemaakt = (res as any).aangemaakt ?? 0;
+        totaal += aangemaakt;
+        setBatchVoortgang(totaal);
+        invaliderenLijst();
+        if (aangemaakt === 0) break;
+      }
+      if (totaal === 0) {
+        toast({ title: "Batch generatie mislukt", variant: "destructive" });
+      } else {
+        setBatchDialogOpen(false);
+        setBatchToelichting("");
+        toast({ title: `${totaal} toolbox-concepten aangemaakt voor review` });
+      }
     } catch {
-      toast({ title: "Batch generatie mislukt", variant: "destructive" });
+      if (totaal > 0) {
+        toast({ title: `Generatie onderbroken: ${totaal} van ${batchAantal} concepten aangemaakt`, variant: "destructive" });
+      } else {
+        toast({ title: "Batch generatie mislukt", variant: "destructive" });
+      }
     } finally {
       setBatchBezig(false);
+      setBatchVoortgang(0);
     }
   }
 
@@ -1420,7 +1441,7 @@ export default function VeiligheidToolboxenPagina() {
               className="gap-1.5"
             >
               {batchBezig ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-              {batchBezig ? "Genereren..." : `${batchAantal} onderwerpen genereren`}
+              {batchBezig ? `Genereren... (${batchVoortgang} van ${batchAantal})` : `${batchAantal} onderwerpen genereren`}
             </Button>
           </DialogFooter>
         </DialogContent>
