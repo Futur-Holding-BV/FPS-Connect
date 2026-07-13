@@ -57,6 +57,24 @@
 - Frontend (`personeel/index.tsx`): "Toegangsprofiel"-dropdown in het functie-dialoog (aanmaken + bewerken), gevuld uit `useListProfielen`, met uitleg dat rechten bij meerdere functies samen gelden (hoogste niveau per module) en handmatige extra rechten mogelijk blijven
 - **Nog geen effect op het rechtensysteem** — het koppelen is voorbereidend; het daadwerkelijk afleiden/combineren van rechten uit functies volgt in increment 4 (`PermissieService` + `combineerBevoegdheden`, met sync + audit + zelf-escalatiecheck)
 
+## 2026-07-13 — AI Factuurcentrum: mailbox-import, afkeur-conceptmail, zelflerende categorisatie, contractcontrole & directie-tegel
+
+- **Uitvoering:** volledig (5 increments) | **Kwaliteit:** hoog | **Risico:** laag (additief op bestaande facturen-module; AI verstuurt/boekt nooit zelfstandig) | **Bewijs:** volledige typecheck groen (alle packages), api-server + firevault booten schoon, en een geauthenticeerde end-to-end smoketest (login + TOTP via vast e2e-web-account) bevestigt HTTP 200 met correcte responsvorm op `/facturen/analyse`, `/facturen/:id/contractcontrole`, `/facturen/:id/categorisatie-voorstel` en `/facturen/:id/correspondentie`.
+
+**Aanleiding:** het factuurcentrum verwerkte alleen handmatig geüploade facturen. Er was geen automatische postbus-import, geen gestructureerde afkeurcommunicatie naar leveranciers, geen geheugen voor terugkerende boekingspatronen, geen automatische toets tegen onderhoudscontracten, en geen managementoverzicht op het directie-dashboard.
+
+**T1 — Mailbox-import (`services/factuurImport.ts`, `factuurUitlezen.ts`, `routes/facturen.ts`):** een postbus wordt uitgelezen en per bijlage/bericht automatisch een factuur aangemaakt (meerdere formaten), met `bron="mailbox"` en importlog. Beheer via `GET/PATCH /facturen/import-instellingen`, handmatig triggeren via `POST /facturen/mailbox-sync`, log via `GET /facturen/import-log`.
+
+**T2 — Afkeur-flow met AI-conceptmail (`routes/facturen.ts`, `controlebox.tsx`):** afkeuren gebeurt nu met verplichte redencategorie (9 categorieën) + toelichting. `POST /facturen/:id/afkeur-concept` laat AI een nette, zakelijke Nederlandse afkeurmail opstellen als **concept** (terugval-sjabloon zonder AI); een mens bewerkt onderwerp/tekst/ontvanger en verstuurt zelf via `POST /facturen/:id/correspondentie/:cid/verzenden`. AI verstuurt nooit. Vervangt de oude `prompt()`-afwijzing door de `AfwijzenDialog`.
+
+**T3 — Zelflerende leverancier-categorisatie (`routes/facturen.ts`, `controlebox.tsx`):** bevestigde boekingen (grootboek/kostenplaats/categorie/btw) worden per leverancier geleerd; `GET /facturen/:id/categorisatie-voorstel` stelt het meest voorkomende patroon voor (drempel: minimaal 2 bevestigingen). AI stelt voor, mens bevestigt.
+
+**T4 — Contractcontrole (`routes/facturen.ts`, `controlebox.tsx`):** `GET /facturen/:id/contractcontrole` vergelijkt een factuur met het gekoppelde onderhoudscontract en signaleert afwijkingen op bedrag (incl. indexering, drempels 2%/10%), verlopen looptijd, ontbrekend indexpercentage en opzegtermijn. Keurt niets automatisch goed.
+
+**T5 — Factuuranalyse-tegel op directie-dashboard (`directie/kompas.tsx`):** nieuwe tegel toont te beoordelen / afgekeurd / via postbus / IBAN-afwijkingen, openstaand bedrag incl. btw en afkeur per redencategorie, met doorklik naar de controlebox.
+
+**Contract & data:** OpenAPI uitgebreid (categorie op `FactuurAfkeurenInput` + 11 nieuwe schemas/paden), codegen uitgevoerd. Nieuwe tabellen/kolommen: `factuur_correspondentie`, `leverancier_categorisatie`, en op `facturen` o.a. `bron`, `afkeur_categorie`, `iban_afwijking`.
+
 ---
 
 ## 2026-07-13 — CRM-module herontwikkeling: relatienetwerk, taken, AI-relatievoorstellen, menu-consolidatie

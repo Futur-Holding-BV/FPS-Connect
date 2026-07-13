@@ -116,6 +116,14 @@ function veiligFoutdetail(tekst: string | null | undefined, max = 500): string |
 }
 
 // ── Microsoft Graph ──────────────────────────────────────────────────────────
+/**
+ * Client-credentials app-token voor Microsoft Graph. Gedeeld met de automatische
+ * factuur-mailbox-import (Mail.Read op de gedeelde postbus).
+ */
+export async function haalGraphAppToken(): Promise<string> {
+  return haalAccessToken();
+}
+
 async function haalAccessToken(): Promise<string> {
   const url = `https://login.microsoftonline.com/${TENANT_ID}/oauth2/v2.0/token`;
   const body = new URLSearchParams({

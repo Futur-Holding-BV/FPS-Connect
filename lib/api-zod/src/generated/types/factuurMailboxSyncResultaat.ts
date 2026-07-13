@@ -6,7 +6,11 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface FactuurAfkeurenInput {
-  reden: string;
-  categorie?: string | null;
+export interface FactuurMailboxSyncResultaat {
+  ok?: boolean;
+  gecontroleerd?: number;
+  aangemaakt?: number;
+  overgeslagen?: number;
+  mislukt?: number;
+  melding?: string;
 }

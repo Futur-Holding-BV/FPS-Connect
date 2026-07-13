@@ -6,7 +6,8 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface FactuurAfkeurenInput {
-  reden: string;
-  categorie?: string | null;
-}
+export type FactuurContractcontroleSignalenItem = {
+  code?: string;
+  ernst?: string;
+  bericht?: string;
+};

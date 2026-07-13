@@ -9381,6 +9381,119 @@ export interface ExportlogRegel {
 
 export interface FactuurAfkeurenInput {
   reden: string;
+  categorie?: string | null;
+}
+
+export interface FactuurImportInstellingen {
+  actief?: boolean;
+  mailbox_adres?: string | null;
+  laatste_sync_op?: string | null;
+  laatste_sync_resultaat?: string | null;
+  mail_geconfigureerd?: boolean;
+}
+
+export interface FactuurImportInstellingenInput {
+  actief?: boolean;
+  mailbox_adres?: string | null;
+}
+
+export interface FactuurMailboxSyncResultaat {
+  ok?: boolean;
+  gecontroleerd?: number;
+  aangemaakt?: number;
+  overgeslagen?: number;
+  mislukt?: number;
+  melding?: string;
+}
+
+export interface FactuurImportLogItem {
+  id?: number;
+  factuur_id?: number | null;
+  bijlage_naam?: string;
+  formaat?: string;
+  afzender?: string | null;
+  onderwerp?: string | null;
+  status?: string;
+  foutmelding?: string | null;
+  aangemaakt_op?: string;
+}
+
+export type FactuurAnalyseAfkeurPerCategorieItem = {
+  categorie?: string | null;
+  aantal?: number;
+};
+
+export interface FactuurAnalyse {
+  te_beoordelen?: number;
+  afgekeurd?: number;
+  via_mailbox?: number;
+  iban_afwijkingen?: number;
+  open_bedrag_incl_btw?: string;
+  afkeur_per_categorie?: FactuurAnalyseAfkeurPerCategorieItem[];
+}
+
+export interface FactuurCorrespondentie {
+  id?: number;
+  factuur_id?: number;
+  richting?: string;
+  soort?: string;
+  status?: string;
+  ontvanger_email?: string | null;
+  ontvanger_naam?: string | null;
+  onderwerp?: string;
+  bericht?: string;
+  afkeur_categorie?: string | null;
+  ai_gegenereerd?: boolean;
+  verzonden_op?: string | null;
+  foutmelding?: string | null;
+  aangemaakt_op?: string;
+}
+
+export interface FactuurAfkeurConceptInput {
+  categorie?: string | null;
+  reden?: string | null;
+}
+
+export interface FactuurCorrespondentieUpdateInput {
+  onderwerp?: string;
+  bericht?: string;
+  ontvanger_email?: string | null;
+  ontvanger_naam?: string | null;
+}
+
+export type FactuurCategorisatieVoorstelVoorstel = {
+  grootboekrekening?: string | null;
+  kostenplaats?: string | null;
+  categorie?: string | null;
+  btw_code?: string | null;
+  aantal?: number;
+  laatst_bevestigd_op?: string;
+} | null;
+
+export interface FactuurCategorisatieVoorstel {
+  voorstel?: FactuurCategorisatieVoorstelVoorstel;
+}
+
+export type FactuurContractcontroleContract = {
+  id?: number;
+  contractnummer?: string;
+  contractwaarde?: string | null;
+  indexering?: string;
+  indexering_percentage?: string | null;
+  einddatum?: string | null;
+  opzegtermijn_maanden?: number | null;
+} | null;
+
+export type FactuurContractcontroleSignalenItem = {
+  code?: string;
+  ernst?: string;
+  bericht?: string;
+};
+
+export interface FactuurContractcontrole {
+  contract_gekoppeld?: boolean;
+  contract?: FactuurContractcontroleContract;
+  signalen?: FactuurContractcontroleSignalenItem[];
 }
 
 export type BeoordelenInputActie = typeof BeoordelenInputActie[keyof typeof BeoordelenInputActie];
@@ -13303,6 +13416,17 @@ klaar_voor_export?: boolean;
 export type GetFactuurUploadUrl200 = {
   upload_url: string;
   object_path: string;
+};
+
+export type UpdateFactuurCorrespondentie200 = {
+  id?: number;
+  status?: string;
+};
+
+export type VerstuurFactuurCorrespondentie200 = {
+  id?: number;
+  status?: string;
+  verzonden_op?: string | null;
 };
 
 export type ListExportlogParams = {

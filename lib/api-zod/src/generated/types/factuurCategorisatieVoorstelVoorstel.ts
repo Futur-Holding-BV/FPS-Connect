@@ -6,7 +6,11 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface FactuurAfkeurenInput {
-  reden: string;
+export type FactuurCategorisatieVoorstelVoorstel = {
+  grootboekrekening?: string | null;
+  kostenplaats?: string | null;
   categorie?: string | null;
-}
+  btw_code?: string | null;
+  aantal?: number;
+  laatst_bevestigd_op?: string;
+} | null;

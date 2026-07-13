@@ -21017,7 +21017,8 @@ export const AfkeurenFactuurParams = zod.object({
 })
 
 export const AfkeurenFactuurBody = zod.object({
-  "reden": zod.string()
+  "reden": zod.string(),
+  "categorie": zod.string().nullish()
 })
 
 export const AfkeurenFactuurResponse = zod.object({
@@ -21081,6 +21082,203 @@ export const AfkeurenFactuurResponse = zod.object({
   "iban_afwijking": zod.boolean().optional(),
   "incasso_datum": zod.string().nullish(),
   "incasso_referentie": zod.string().nullish()
+})
+
+
+/**
+ * @summary Instellingen mailbox-import ophalen
+ */
+export const GetFactuurImportInstellingenResponse = zod.object({
+  "actief": zod.boolean().optional(),
+  "mailbox_adres": zod.string().nullish(),
+  "laatste_sync_op": zod.string().nullish(),
+  "laatste_sync_resultaat": zod.string().nullish(),
+  "mail_geconfigureerd": zod.boolean().optional()
+})
+
+
+/**
+ * @summary Instellingen mailbox-import bijwerken
+ */
+export const UpdateFactuurImportInstellingenBody = zod.object({
+  "actief": zod.boolean().optional(),
+  "mailbox_adres": zod.string().nullish()
+})
+
+export const UpdateFactuurImportInstellingenResponse = zod.object({
+  "actief": zod.boolean().optional(),
+  "mailbox_adres": zod.string().nullish(),
+  "laatste_sync_op": zod.string().nullish(),
+  "laatste_sync_resultaat": zod.string().nullish(),
+  "mail_geconfigureerd": zod.boolean().optional()
+})
+
+
+/**
+ * @summary Financiële postbus ophalen en facturen aanmaken uit bijlagen
+ */
+export const SyncFactuurMailboxResponse = zod.object({
+  "ok": zod.boolean().optional(),
+  "gecontroleerd": zod.number().optional(),
+  "aangemaakt": zod.number().optional(),
+  "overgeslagen": zod.number().optional(),
+  "mislukt": zod.number().optional(),
+  "melding": zod.string().optional()
+})
+
+
+/**
+ * @summary Logboek van mailbox-import
+ */
+export const GetFactuurImportLogResponseItem = zod.object({
+  "id": zod.number().optional(),
+  "factuur_id": zod.number().nullish(),
+  "bijlage_naam": zod.string().optional(),
+  "formaat": zod.string().optional(),
+  "afzender": zod.string().nullish(),
+  "onderwerp": zod.string().nullish(),
+  "status": zod.string().optional(),
+  "foutmelding": zod.string().nullish(),
+  "aangemaakt_op": zod.string().optional()
+})
+export const GetFactuurImportLogResponse = zod.array(GetFactuurImportLogResponseItem)
+
+
+/**
+ * @summary Geaggregeerde factuuranalyse voor het directiedashboard
+ */
+export const GetFactuurAnalyseResponse = zod.object({
+  "te_beoordelen": zod.number().optional(),
+  "afgekeurd": zod.number().optional(),
+  "via_mailbox": zod.number().optional(),
+  "iban_afwijkingen": zod.number().optional(),
+  "open_bedrag_incl_btw": zod.string().optional(),
+  "afkeur_per_categorie": zod.array(zod.object({
+  "categorie": zod.string().nullish(),
+  "aantal": zod.number().optional()
+})).optional()
+})
+
+
+/**
+ * @summary Correspondentie bij een factuur ophalen
+ */
+export const GetFactuurCorrespondentieParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetFactuurCorrespondentieResponseItem = zod.object({
+  "id": zod.number().optional(),
+  "factuur_id": zod.number().optional(),
+  "richting": zod.string().optional(),
+  "soort": zod.string().optional(),
+  "status": zod.string().optional(),
+  "ontvanger_email": zod.string().nullish(),
+  "ontvanger_naam": zod.string().nullish(),
+  "onderwerp": zod.string().optional(),
+  "bericht": zod.string().optional(),
+  "afkeur_categorie": zod.string().nullish(),
+  "ai_gegenereerd": zod.boolean().optional(),
+  "verzonden_op": zod.string().nullish(),
+  "foutmelding": zod.string().nullish(),
+  "aangemaakt_op": zod.string().optional()
+})
+export const GetFactuurCorrespondentieResponse = zod.array(GetFactuurCorrespondentieResponseItem)
+
+
+/**
+ * @summary AI-conceptmail voor afkeuring opstellen (opgeslagen als concept)
+ */
+export const MaakFactuurAfkeurConceptParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const MaakFactuurAfkeurConceptBody = zod.object({
+  "categorie": zod.string().nullish(),
+  "reden": zod.string().nullish()
+})
+
+export const MaakFactuurAfkeurConceptResponse = zod.void()
+
+
+/**
+ * @summary Conceptcorrespondentie bijwerken
+ */
+export const UpdateFactuurCorrespondentieParams = zod.object({
+  "id": zod.coerce.number(),
+  "cid": zod.coerce.number()
+})
+
+export const UpdateFactuurCorrespondentieBody = zod.object({
+  "onderwerp": zod.string().optional(),
+  "bericht": zod.string().optional(),
+  "ontvanger_email": zod.string().nullish(),
+  "ontvanger_naam": zod.string().nullish()
+})
+
+export const UpdateFactuurCorrespondentieResponse = zod.object({
+  "id": zod.number().optional(),
+  "status": zod.string().optional()
+})
+
+
+/**
+ * @summary Conceptcorrespondentie verzenden (mens-actie)
+ */
+export const VerstuurFactuurCorrespondentieParams = zod.object({
+  "id": zod.coerce.number(),
+  "cid": zod.coerce.number()
+})
+
+export const VerstuurFactuurCorrespondentieResponse = zod.object({
+  "id": zod.number().optional(),
+  "status": zod.string().optional(),
+  "verzonden_op": zod.string().nullish()
+})
+
+
+/**
+ * @summary Geleerd boekingspatroon voor de leverancier van deze factuur
+ */
+export const GetFactuurCategorisatieVoorstelParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetFactuurCategorisatieVoorstelResponse = zod.object({
+  "voorstel": zod.object({
+  "grootboekrekening": zod.string().nullish(),
+  "kostenplaats": zod.string().nullish(),
+  "categorie": zod.string().nullish(),
+  "btw_code": zod.string().nullish(),
+  "aantal": zod.number().optional(),
+  "laatst_bevestigd_op": zod.string().optional()
+}).nullish()
+})
+
+
+/**
+ * @summary Factuur vergelijken met gekoppeld onderhoudscontract
+ */
+export const GetFactuurContractcontroleParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetFactuurContractcontroleResponse = zod.object({
+  "contract_gekoppeld": zod.boolean().optional(),
+  "contract": zod.object({
+  "id": zod.number().optional(),
+  "contractnummer": zod.string().optional(),
+  "contractwaarde": zod.string().nullish(),
+  "indexering": zod.string().optional(),
+  "indexering_percentage": zod.string().nullish(),
+  "einddatum": zod.string().nullish(),
+  "opzegtermijn_maanden": zod.number().nullish()
+}).nullish(),
+  "signalen": zod.array(zod.object({
+  "code": zod.string().optional(),
+  "ernst": zod.string().optional(),
+  "bericht": zod.string().optional()
+})).optional()
 })
 
 

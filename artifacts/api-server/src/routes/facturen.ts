@@ -15,6 +15,11 @@ import {
   gebruikersTable,
   leveranciersTable,
   opdrachtenTable,
+  factuurCorrespondentieTable,
+  leverancierCategorisatieTable,
+  factuurImportInstellingenTable,
+  factuurImportLogTable,
+  onderhoudscontractenTable,
 } from "@workspace/db";
 import { eq, and, desc, sql, or, gte, count, isNull, isNotNull, ne, lt, sum, ilike } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
@@ -30,6 +35,9 @@ import {
   dienIn,
   maakGoedkeuringActor,
 } from "../services/goedkeuring-engine";
+import { leesFactuurUitMetAi } from "../services/factuurUitlezen";
+import { synchroniseerMailboxFacturen } from "../services/factuurImport";
+import { verstuurMail, isGeconfigureerd as mailIsGeconfigureerd } from "../services/email";
 
 const router = Router();
 const objectStorage = new ObjectStorageService();
@@ -246,6 +254,122 @@ router.get("/facturen/historisch-archief/excel", requireBevoegdheid("financieel"
   res.send(buf);
 });
 
+// ══════════════════════════════════════════════════════════════════════════════
+// AI Factuurcentrum — mailbox-import (T1) + factuuranalyse (T5)
+// Deze statische routes staan bewust vóór GET/PATCH /facturen/:id: de :id-handler
+// geeft 404 op niet-numerieke id's zonder next(), dus latere statische routes
+// zouden anders nooit bereikt worden.
+// ══════════════════════════════════════════════════════════════════════════════
+
+// ── GET /facturen/import-instellingen ─────────────────────────────────────────
+router.get("/facturen/import-instellingen", requireBevoegdheid("financieel", 4), async (_req: Request, res: Response): Promise<void> => {
+  const [inst] = await db.select().from(factuurImportInstellingenTable).limit(1);
+  res.json({
+    actief: inst?.actief ?? false,
+    mailbox_adres: inst?.mailboxAdres ?? null,
+    laatste_sync_op: inst?.laatsteSyncOp?.toISOString() ?? null,
+    laatste_sync_resultaat: inst?.laatsteSyncResultaat ?? null,
+    mail_geconfigureerd: mailIsGeconfigureerd(),
+  });
+});
+
+// ── PATCH /facturen/import-instellingen ───────────────────────────────────────
+router.patch("/facturen/import-instellingen", requireBevoegdheid("financieel", 4), async (req: Request, res: Response): Promise<void> => {
+  const body = req.body as { actief?: boolean; mailbox_adres?: string | null };
+  const [bestaand] = await db.select().from(factuurImportInstellingenTable).limit(1);
+  if (bestaand) {
+    const [updated] = await db.update(factuurImportInstellingenTable).set({
+      ...(body.actief !== undefined ? { actief: body.actief } : {}),
+      ...(body.mailbox_adres !== undefined ? { mailboxAdres: body.mailbox_adres?.trim() || null } : {}),
+      bijgewerktOp: new Date(),
+    }).where(eq(factuurImportInstellingenTable.id, bestaand.id)).returning();
+    res.json({
+      actief: updated?.actief ?? false,
+      mailbox_adres: updated?.mailboxAdres ?? null,
+      laatste_sync_op: updated?.laatsteSyncOp?.toISOString() ?? null,
+      laatste_sync_resultaat: updated?.laatsteSyncResultaat ?? null,
+      mail_geconfigureerd: mailIsGeconfigureerd(),
+    });
+    return;
+  }
+  const [created] = await db.insert(factuurImportInstellingenTable).values({
+    actief: body.actief ?? false,
+    mailboxAdres: body.mailbox_adres?.trim() || null,
+  }).returning();
+  res.json({
+    actief: created?.actief ?? false,
+    mailbox_adres: created?.mailboxAdres ?? null,
+    laatste_sync_op: null,
+    laatste_sync_resultaat: null,
+    mail_geconfigureerd: mailIsGeconfigureerd(),
+  });
+});
+
+// ── POST /facturen/mailbox-sync ───────────────────────────────────────────────
+// Haalt handmatig de financiële postbus op en maakt facturen aan uit bijlagen.
+router.post("/facturen/mailbox-sync", requireBevoegdheid("financieel", 4), async (req: Request, res: Response): Promise<void> => {
+  const resultaat = await synchroniseerMailboxFacturen(req.log);
+  res.status(resultaat.ok ? 200 : 422).json({
+    ok: resultaat.ok,
+    gecontroleerd: resultaat.gecontroleerd,
+    aangemaakt: resultaat.aangemaakt,
+    overgeslagen: resultaat.overgeslagen,
+    mislukt: resultaat.mislukt,
+    melding: resultaat.melding,
+  });
+});
+
+// ── GET /facturen/import-log ──────────────────────────────────────────────────
+router.get("/facturen/import-log", requireBevoegdheid("financieel", 4), async (_req: Request, res: Response): Promise<void> => {
+  const rijen = await db.select().from(factuurImportLogTable)
+    .orderBy(desc(factuurImportLogTable.aangemaaktOp)).limit(100);
+  res.json(rijen.map((r) => ({
+    id: r.id,
+    factuur_id: r.factuurId,
+    bijlage_naam: r.bijlageNaam,
+    formaat: r.formaat,
+    afzender: r.afzender,
+    onderwerp: r.onderwerp,
+    status: r.status,
+    foutmelding: r.foutmelding,
+    aangemaakt_op: r.aangemaaktOp.toISOString(),
+  })));
+});
+
+// ── GET /facturen/analyse ─────────────────────────────────────────────────────
+// T5: geaggregeerde cijfers voor de Factuuranalyse-tegel op het directiedashboard.
+router.get("/facturen/analyse", requireBevoegdheid("financieel", 1), async (_req: Request, res: Response): Promise<void> => {
+  const [teBeoordelen] = await db.select({ n: count() }).from(facturenTable)
+    .where(and(eq(facturenTable.type, "inkoop"), isNull(facturenTable.geaccordeerdOp), ne(facturenTable.status, "afgekeurd")));
+  const [afgekeurd] = await db.select({ n: count() }).from(facturenTable)
+    .where(eq(facturenTable.status, "afgekeurd"));
+  const [viaMailbox] = await db.select({ n: count() }).from(facturenTable)
+    .where(eq(facturenTable.bron, "mailbox"));
+  const [ibanAfw] = await db.select({ n: count() }).from(facturenTable)
+    .where(eq(facturenTable.ibanAfwijking, true));
+  const [openBedrag] = await db.select({
+    som: sql<string>`COALESCE(SUM(CAST(bedrag_incl_btw AS numeric)), 0)`,
+  }).from(facturenTable)
+    .where(and(eq(facturenTable.type, "inkoop"), isNull(facturenTable.geaccordeerdOp), ne(facturenTable.status, "afgekeurd")));
+
+  // Afkeurredenen gegroepeerd op categorie
+  const afkeurPerCategorie = await db.select({
+    categorie: facturenTable.afkeurCategorie,
+    n: count(),
+  }).from(facturenTable)
+    .where(and(eq(facturenTable.status, "afgekeurd"), isNotNull(facturenTable.afkeurCategorie)))
+    .groupBy(facturenTable.afkeurCategorie);
+
+  res.json({
+    te_beoordelen: teBeoordelen?.n ?? 0,
+    afgekeurd: afgekeurd?.n ?? 0,
+    via_mailbox: viaMailbox?.n ?? 0,
+    iban_afwijkingen: ibanAfw?.n ?? 0,
+    open_bedrag_incl_btw: openBedrag?.som ?? "0",
+    afkeur_per_categorie: afkeurPerCategorie.map((r) => ({ categorie: r.categorie, aantal: r.n })),
+  });
+});
+
 // ── GET /facturen/:id ──────────────────────────────────────────────────────────
 router.get("/facturen/:id", requireBevoegdheid("financieel", 1), async (req: Request, res: Response): Promise<void> => {
   const id = paramInt(req.params["id"]);
@@ -300,203 +424,12 @@ router.delete("/facturen/:id", requireBevoegdheid("financieel", 4), async (req: 
 // G-rekening-signalering. AI stelt voor; administratie keurt goed.
 router.post("/facturen/:id/ai-uitlezen", requireBevoegdheid("financieel", 1), async (req: Request, res: Response): Promise<void> => {
   const id = paramInt(req.params["id"]);
-  const [factuur] = await db.select().from(facturenTable).where(eq(facturenTable.id, id)).limit(1);
-  if (!factuur) { res.status(404).json({ error: "Niet gevonden" }); return; }
-  if (!factuur.pdfUrl) { res.status(422).json({ error: "Geen PDF gekoppeld aan deze factuur" }); return; }
-
-  const devDomain = process.env["REPLIT_DEV_DOMAIN"];
-  const downloadUrl = devDomain
-    ? `https://${devDomain}/api/storage/files?path=${encodeURIComponent(factuur.pdfUrl)}`
-    : factuur.pdfUrl;
-
-  try {
-    await db.update(facturenTable).set({ status: "ai_gelezen", bijgewerktOp: new Date() }).where(eq(facturenTable.id, id));
-
-    const facturenChatResultaat = await aiGateway.chat("default", {
-      max_tokens: 4000,
-      messages: [
-        {
-          role: "system",
-          content: FACTUUR_UITLEZEN_PROMPT.tekst,
-        },
-        {
-          role: "user",
-          content: [
-            { type: "text", text: "Lees deze factuur volledig uit inclusief alle regellijnen en het IBAN van de leverancier." },
-            { type: "image_url", image_url: { url: downloadUrl, detail: "high" } },
-          ],
-        },
-      ],
-    });
-
-    const rawText = facturenChatResultaat.ok ? facturenChatResultaat.inhoud : "{}";
-    const jsonMatch = rawText.match(/\{[\s\S]*\}/);
-
-    type ParsedRegel = {
-      regelnummer?: number; omschrijving?: string; hoeveelheid?: number | null;
-      eenheid?: string | null; stukprijs?: string | null; bedrag_excl_btw?: string | null;
-      btw_code?: string | null; btw_percentage?: number | null; btw_bedrag?: string | null;
-      grootboekrekening?: string | null;
-    };
-    type ParsedFactuur = {
-      factuurnummer?: string | null; factuurdatum?: string | null; vervaldatum?: string | null;
-      relatienaam?: string | null; relatie_adres?: string | null; relatie_iban?: string | null;
-      relatie_btwnummer?: string | null; omschrijving?: string | null;
-      bedrag_excl_btw?: string | null; btw_bedrag?: string | null; bedrag_incl_btw?: string | null;
-      btw_code?: string | null; type?: string; regels?: ParsedRegel[];
-      controle_nodig?: boolean; controle_reden?: string | null; confidence?: number;
-      werknummer?: string | null;
-    };
-    let parsed: ParsedFactuur = {};
-    if (jsonMatch) {
-      try { parsed = JSON.parse(jsonMatch[0]) as ParsedFactuur; } catch { /* laat leeg */ }
-    }
-
-    // ── Leverancierherkenning: IBAN-match → naam-match (fuzzy) ────────────────
-    let leverancier: typeof leveranciersTable.$inferSelect | null = null;
-    const uitgelezenIban = parsed.relatie_iban?.replace(/\s/g, "") ?? null;
-
-    if (uitgelezenIban) {
-      const [gevonden] = await db.select().from(leveranciersTable)
-        .where(eq(leveranciersTable.iban, uitgelezenIban)).limit(1);
-      leverancier = gevonden ?? null;
-    }
-    if (!leverancier && parsed.relatienaam) {
-      const naam = parsed.relatienaam.trim();
-      const [gevonden] = await db.select().from(leveranciersTable)
-        .where(ilike(leveranciersTable.naam, `%${naam}%`)).limit(1);
-      leverancier = gevonden ?? null;
-      // Nauwere match als fuzzy te breed is
-      if (!gevonden) {
-        const [gevondenNauw] = await db.select().from(leveranciersTable)
-          .where(ilike(leveranciersTable.naam, `${naam.split(" ")[0]}%`)).limit(1);
-        leverancier = gevondenNauw ?? null;
-      }
-    }
-
-    // ── IBAN-verificatie ──────────────────────────────────────────────────────
-    const leveranciersIban = leverancier?.iban?.replace(/\s/g, "") ?? null;
-    const ibanAfwijking = !!(uitgelezenIban && leveranciersIban && uitgelezenIban !== leveranciersIban);
-
-    // ── G-rekening-signalering (voorstel, niet definitief) ────────────────────
-    let gRekeningVanToepassing = leverancier?.gRekeningVanToepassing ?? false;
-    let gRekeningBedrag: string | null = null;
-    let normaalBedrag: string | null = null;
-    const totaalInclBtw = parsed.bedrag_incl_btw ? parseFloat(parsed.bedrag_incl_btw) : null;
-
-    if (gRekeningVanToepassing && leverancier?.gRekeningPercentage && totaalInclBtw) {
-      const perc = leverancier.gRekeningPercentage / 100;
-      gRekeningBedrag = (totaalInclBtw * perc).toFixed(2);
-      normaalBedrag = (totaalInclBtw * (1 - perc)).toFixed(2);
-    }
-
-    // ── Leverancier-presets overnemen (alleen als factuur nog geen waarde heeft) ─
-    const grootboekPreset = factuur.grootboekrekening ?? leverancier?.grootboekrekening ?? null;
-    const kostenplaatsPreset = factuur.kostenplaats ?? leverancier?.kostenplaats ?? null;
-    const btwCodePreset = parsed.btw_code ?? factuur.btwCode ?? leverancier?.btwCodeDefault ?? null;
-    // Bekende leverancier → auto-categoriseer de factuur (bijv. Yelloebrick → wagenpark)
-    const categoriePreset = factuur.categorie ?? leverancier?.factuurCategorie ?? null;
-
-    // ── Werknummer → opdracht-koppeling ───────────────────────────────────────
-    let opdrachtId: number | null = factuur.opdrachtId ?? null;
-    if (!opdrachtId && parsed.werknummer) {
-      const [gevondenOpdracht] = await db
-        .select({ id: opdrachtenTable.id })
-        .from(opdrachtenTable)
-        .where(ilike(opdrachtenTable.werknummer, `%${parsed.werknummer}%`))
-        .limit(1);
-      if (gevondenOpdracht) opdrachtId = gevondenOpdracht.id;
-    }
-
-    // ── Factuurregels opslaan (verwijder oude AI-regels, voeg nieuwe in) ──────
-    const regels = Array.isArray(parsed.regels) ? parsed.regels : [];
-    if (regels.length > 0) {
-      await db.delete(factuurRegelsTable).where(
-        and(eq(factuurRegelsTable.factuurId, id), eq(factuurRegelsTable.bron, "ai")),
-      );
-      for (let i = 0; i < regels.length; i++) {
-        const r = regels[i]!;
-        await db.insert(factuurRegelsTable).values({
-          factuurId: id,
-          regelnummer: r.regelnummer ?? i + 1,
-          omschrijving: r.omschrijving?.trim() || `Regel ${i + 1}`,
-          hoeveelheid: r.hoeveelheid ?? null,
-          eenheid: r.eenheid ?? null,
-          stukprijs: r.stukprijs ?? null,
-          bedragExclBtw: r.bedrag_excl_btw ?? null,
-          btwCode: r.btw_code ?? null,
-          btwPercentage: r.btw_percentage ?? null,
-          btwBedrag: r.btw_bedrag ?? null,
-          grootboekrekening: r.grootboekrekening ?? null,
-          bron: "ai",
-          aiVertrouwen: parsed.confidence ?? null,
-        });
-      }
-    }
-
-    // ── Factuur updaten ───────────────────────────────────────────────────────
-    // Auto-akkoord: bekende leverancier + bedrag onder drempel → sla handmatige controle over
-    const bedragCents = parsed.bedrag_incl_btw
-      ? Math.round(parseFloat(String(parsed.bedrag_incl_btw)) * 100)
-      : null;
-    const autoAkkoord =
-      !parsed.controle_nodig &&
-      !ibanAfwijking &&
-      leverancier?.autoAkkoordDrempelCents != null &&
-      bedragCents != null &&
-      bedragCents <= leverancier.autoAkkoordDrempelCents;
-    const nieuweStatus = parsed.controle_nodig || ibanAfwijking
-      ? "controle_nodig"
-      : autoAkkoord
-        ? "klaar_voor_boeking"
-        : "te_beoordelen_pl";
-
-    const [updated] = await db.update(facturenTable).set({
-      aiMetadata: parsed as Record<string, unknown>,
-      factuurnummer: parsed.factuurnummer ?? factuur.factuurnummer ?? null,
-      factuurdatum: parsed.factuurdatum ?? factuur.factuurdatum ?? null,
-      vervaldatum: parsed.vervaldatum ?? factuur.vervaldatum ?? null,
-      relatienaam: parsed.relatienaam ?? factuur.relatienaam ?? null,
-      relatieAdres: parsed.relatie_adres ?? factuur.relatieAdres ?? null,
-      omschrijving: parsed.omschrijving ?? factuur.omschrijving ?? null,
-      bedragExclBtw: parsed.bedrag_excl_btw ?? factuur.bedragExclBtw ?? null,
-      btwBedrag: parsed.btw_bedrag ?? factuur.btwBedrag ?? null,
-      bedragInclBtw: parsed.bedrag_incl_btw ?? factuur.bedragInclBtw ?? null,
-      btwCode: btwCodePreset,
-      grootboekrekening: grootboekPreset,
-      kostenplaats: kostenplaatsPreset,
-      categorie: categoriePreset,
-      // Leverancier & IBAN
-      leverancierId: leverancier?.id ?? factuur.leverancierId ?? null,
-      ibanUitgelezen: uitgelezenIban ?? factuur.ibanUitgelezen ?? null,
-      ibanAfwijking,
-      // G-rekening
-      gRekeningVanToepassing,
-      gRekeningBedrag: gRekeningBedrag ?? factuur.gRekeningBedrag ?? null,
-      normaalBedrag: normaalBedrag ?? factuur.normaalBedrag ?? null,
-      // Opdrachtkoppeling via werknummer (AI-voorstel)
-      opdrachtId,
-      projectCode: factuur.projectCode ?? parsed.werknummer ?? null,
-      status: nieuweStatus,
-      bijgewerktOp: new Date(),
-    }).where(eq(facturenTable.id, id)).returning();
-
-    res.json({
-      ...(await mapFactuur(updated)),
-      _ai_samenvatting: {
-        regels_gevonden: regels.length,
-        leverancier_herkend: !!leverancier,
-        leverancier_naam: leverancier?.naam ?? null,
-        iban_afwijking: ibanAfwijking,
-        g_rekening_van_toepassing: gRekeningVanToepassing,
-        confidence: parsed.confidence ?? null,
-      },
-    });
-  } catch (err) {
-    req.log.error(err);
-    await db.update(facturenTable).set({ status: "controle_nodig", bijgewerktOp: new Date() }).where(eq(facturenTable.id, id));
-    res.status(500).json({ error: "AI-uitlezing mislukt" });
-  }
+  const resultaat = await leesFactuurUitMetAi(id, req.log);
+  if (!resultaat.ok) { res.status(resultaat.status).json({ error: resultaat.error }); return; }
+  res.json({
+    ...(await mapFactuur(resultaat.factuur)),
+    _ai_samenvatting: resultaat.samenvatting,
+  });
 });
 
 // ── GET /facturen/:id/afwijkingen ─────────────────────────────────────────────
@@ -663,6 +596,38 @@ router.post("/facturen/:id/accorderen", requireBevoegdheid("financieel", 4), asy
     bijgewerktOp: new Date(),
   }).where(eq(facturenTable.id, id)).returning();
 
+  // T3 — Zelflerende categorisatie: leg de bevestigde boekingskeuzes per leverancier
+  // vast zodat een volgende factuur van dezelfde leverancier voorgesteld kan worden.
+  // Puur leren van menselijke bevestiging; AI/systeem boekt nooit zelfstandig.
+  try {
+    if (updated?.leverancierId &&
+      (updated.grootboekrekening || updated.kostenplaats || updated.categorie || updated.btwCode)) {
+      await db.insert(leverancierCategorisatieTable).values({
+        leverancierId: updated.leverancierId,
+        grootboekrekening: updated.grootboekrekening ?? null,
+        kostenplaats: updated.kostenplaats ?? null,
+        categorie: updated.categorie ?? null,
+        btwCode: updated.btwCode ?? null,
+        aantal: 1,
+        laatstBevestigdOp: new Date(),
+      }).onConflictDoUpdate({
+        target: [
+          leverancierCategorisatieTable.leverancierId,
+          leverancierCategorisatieTable.grootboekrekening,
+          leverancierCategorisatieTable.kostenplaats,
+          leverancierCategorisatieTable.categorie,
+          leverancierCategorisatieTable.btwCode,
+        ],
+        set: {
+          aantal: sql`${leverancierCategorisatieTable.aantal} + 1`,
+          laatstBevestigdOp: new Date(),
+        },
+      });
+    }
+  } catch (err) {
+    req.log.error(err, "leren van leverancier-categorisatie mislukt (niet-blokkerend)");
+  }
+
   res.json(await mapFactuur(updated));
 });
 
@@ -820,7 +785,7 @@ router.get("/facturen/:id/export-logs", requireBevoegdheid("financieel", 1), asy
 // ── POST /facturen/:id/afkeuren ────────────────────────────────────────────────
 router.post("/facturen/:id/afkeuren", requireBevoegdheid("financieel", 4), async (req: Request, res: Response): Promise<void> => {
   const id = paramInt(req.params["id"]);
-  const { reden } = req.body as { reden?: string };
+  const { reden, categorie } = req.body as { reden?: string; categorie?: string };
   if (!reden?.trim()) { res.status(400).json({ error: "Afkeuringsreden is verplicht" }); return; }
 
   const [factuur] = await db.select().from(facturenTable).where(eq(facturenTable.id, id)).limit(1);
@@ -831,6 +796,7 @@ router.post("/facturen/:id/afkeuren", requireBevoegdheid("financieel", 4), async
   const [updated] = await db.update(facturenTable).set({
     status: "afgekeurd",
     afgekeurdReden: reden.trim(),
+    afkeurCategorie: categorie?.trim() || null,
     afgekeurdOp: new Date(),
     afgekeurdDoor: userId,
     bijgewerktOp: new Date(),
@@ -846,6 +812,297 @@ router.post("/facturen/:id/afkeuren", requireBevoegdheid("financieel", 4), async
   });
 
   res.json(await mapFactuur(updated));
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// AI Factuurcentrum — afkeur-correspondentie (T2), categorisatie-voorstel (T3),
+// contractcontrole (T4)
+// ══════════════════════════════════════════════════════════════════════════════
+
+// Vaste afkeurcategorieën — gedeeld tussen afkeur-flow en AI-conceptmail.
+const AFKEUR_CATEGORIEEN: Record<string, string> = {
+  prijsafwijking: "Prijs wijkt af van opdracht/contract",
+  ontbrekende_gegevens: "Ontbrekende of onjuiste factuurgegevens",
+  geen_opdracht: "Geen (geldige) opdracht of order aanwezig",
+  dubbele_factuur: "Dubbele of reeds betaalde factuur",
+  verkeerde_geadresseerde: "Gericht aan verkeerde entiteit",
+  kwaliteit: "Geleverde werk/goederen niet conform",
+  overig: "Overige reden",
+};
+
+// ── GET /facturen/:id/correspondentie ─────────────────────────────────────────
+router.get("/facturen/:id/correspondentie", requireBevoegdheid("financieel", 1), async (req: Request, res: Response): Promise<void> => {
+  const id = paramInt(req.params["id"]);
+  const rijen = await db.select().from(factuurCorrespondentieTable)
+    .where(eq(factuurCorrespondentieTable.factuurId, id))
+    .orderBy(desc(factuurCorrespondentieTable.aangemaaktOp));
+  res.json(rijen.map((r) => ({
+    id: r.id,
+    factuur_id: r.factuurId,
+    richting: r.richting,
+    soort: r.soort,
+    status: r.status,
+    ontvanger_email: r.ontvangerEmail,
+    ontvanger_naam: r.ontvangerNaam,
+    onderwerp: r.onderwerp,
+    bericht: r.bericht,
+    afkeur_categorie: r.afkeurCategorie,
+    ai_gegenereerd: r.aiGegenereerd,
+    verzonden_op: r.verzondenOp?.toISOString() ?? null,
+    foutmelding: r.foutmelding,
+    aangemaakt_op: r.aangemaaktOp.toISOString(),
+  })));
+});
+
+// ── POST /facturen/:id/afkeur-concept ─────────────────────────────────────────
+// T2: AI stelt een nette afkeurmail aan de leverancier op en slaat die op als
+// CONCEPT. Een mens beoordeelt en verstuurt daarna zelf; AI verstuurt nooit.
+router.post("/facturen/:id/afkeur-concept", requireBevoegdheid("financieel", 4), async (req: Request, res: Response): Promise<void> => {
+  const id = paramInt(req.params["id"]);
+  const body = req.body as { categorie?: string; reden?: string };
+  const [factuur] = await db.select().from(facturenTable).where(eq(facturenTable.id, id)).limit(1);
+  if (!factuur) { res.status(404).json({ error: "Niet gevonden" }); return; }
+
+  const categorie = body.categorie?.trim() || factuur.afkeurCategorie || "overig";
+  const reden = body.reden?.trim() || factuur.afgekeurdReden || AFKEUR_CATEGORIEEN[categorie] || "Onbekende reden";
+  const categorieLabel = AFKEUR_CATEGORIEEN[categorie] ?? categorie;
+
+  // Ontvanger: leverancier-contact indien beschikbaar
+  let ontvangerEmail: string | null = null;
+  let ontvangerNaam: string | null = factuur.relatienaam ?? null;
+  if (factuur.leverancierId) {
+    const [lev] = await db.select().from(leveranciersTable).where(eq(leveranciersTable.id, factuur.leverancierId)).limit(1);
+    if (lev) {
+      ontvangerEmail = lev.email ?? lev.contactEmail ?? null;
+      ontvangerNaam = lev.naam ?? ontvangerNaam;
+    }
+  }
+
+  const onderwerp = `Afkeuring factuur ${factuur.factuurnummer ?? `#${id}`}`;
+  let bericht = "";
+  let aiGegenereerd = false;
+
+  if (heeftGateway()) {
+    const prompt = [
+      "Je bent een medewerker crediteurenadministratie bij FPS Brandpreventie.",
+      "Schrijf een korte, zakelijke en beleefde e-mail in het Nederlands aan een leverancier",
+      "om een factuur af te keuren. Gebruik geen emoji's. Gebruik een neutrale, professionele toon.",
+      "Verzin geen bedragen of feiten die niet zijn gegeven. Sluit af met een verzoek om een",
+      "gecorrigeerde factuur of reactie. Onderteken met 'FPS Brandpreventie, crediteurenadministratie'.",
+      "",
+      `Leverancier: ${ontvangerNaam ?? "onbekend"}`,
+      `Factuurnummer: ${factuur.factuurnummer ?? "onbekend"}`,
+      `Factuurdatum: ${factuur.factuurdatum ?? "onbekend"}`,
+      `Bedrag incl. BTW: ${factuur.bedragInclBtw ?? "onbekend"}`,
+      `Afkeurcategorie: ${categorieLabel}`,
+      `Reden: ${reden}`,
+      "",
+      "Geef ALLEEN de e-mailtekst terug, zonder onderwerpregel.",
+    ].join("\n");
+    const res2 = await aiGateway.chat("default", {
+      max_tokens: 700,
+      messages: [{ role: "user", content: prompt }],
+    });
+    if (res2.ok) {
+      bericht = res2.inhoud.trim();
+      aiGegenereerd = true;
+    }
+  }
+
+  if (!bericht) {
+    // Terugval-sjabloon wanneer AI niet beschikbaar is
+    bericht = [
+      `Geachte ${ontvangerNaam ?? "heer/mevrouw"},`,
+      "",
+      `Wij hebben uw factuur ${factuur.factuurnummer ?? ""} ontvangen, maar kunnen deze helaas niet in behandeling nemen.`,
+      `Reden van afkeuring: ${categorieLabel} — ${reden}.`,
+      "",
+      "Wij verzoeken u vriendelijk een gecorrigeerde factuur toe te sturen of contact met ons op te nemen.",
+      "",
+      "Met vriendelijke groet,",
+      "FPS Brandpreventie, crediteurenadministratie",
+    ].join("\n");
+  }
+
+  const [concept] = await db.insert(factuurCorrespondentieTable).values({
+    factuurId: id,
+    richting: "uitgaand",
+    soort: "afkeur",
+    status: "concept",
+    ontvangerEmail,
+    ontvangerNaam,
+    onderwerp,
+    bericht,
+    afkeurCategorie: categorie,
+    aiGegenereerd,
+    opgesteldDoor: sessionUserId(req),
+  }).returning();
+
+  res.status(201).json({
+    id: concept?.id,
+    factuur_id: id,
+    onderwerp,
+    bericht,
+    ontvanger_email: ontvangerEmail,
+    ontvanger_naam: ontvangerNaam,
+    afkeur_categorie: categorie,
+    ai_gegenereerd: aiGegenereerd,
+    status: "concept",
+  });
+});
+
+// ── PATCH /facturen/:id/correspondentie/:cid ──────────────────────────────────
+// Concept bijwerken (onderwerp/bericht/ontvanger) vóór verzenden.
+router.patch("/facturen/:id/correspondentie/:cid", requireBevoegdheid("financieel", 4), async (req: Request, res: Response): Promise<void> => {
+  const cid = paramInt(req.params["cid"]);
+  const body = req.body as { onderwerp?: string; bericht?: string; ontvanger_email?: string | null; ontvanger_naam?: string | null };
+  const [rij] = await db.select().from(factuurCorrespondentieTable).where(eq(factuurCorrespondentieTable.id, cid)).limit(1);
+  if (!rij) { res.status(404).json({ error: "Niet gevonden" }); return; }
+  if (rij.status === "verzonden") { res.status(409).json({ error: "Verzonden correspondentie kan niet worden gewijzigd" }); return; }
+  const [updated] = await db.update(factuurCorrespondentieTable).set({
+    ...(body.onderwerp !== undefined ? { onderwerp: body.onderwerp } : {}),
+    ...(body.bericht !== undefined ? { bericht: body.bericht } : {}),
+    ...(body.ontvanger_email !== undefined ? { ontvangerEmail: body.ontvanger_email?.trim() || null } : {}),
+    ...(body.ontvanger_naam !== undefined ? { ontvangerNaam: body.ontvanger_naam?.trim() || null } : {}),
+    bijgewerktOp: new Date(),
+  }).where(eq(factuurCorrespondentieTable.id, cid)).returning();
+  res.json({ id: updated?.id, status: updated?.status });
+});
+
+// ── POST /facturen/:id/correspondentie/:cid/verzenden ─────────────────────────
+// T2: verstuurt de (mogelijk bijgewerkte) conceptmail. Alleen een mens triggert dit.
+router.post("/facturen/:id/correspondentie/:cid/verzenden", requireBevoegdheid("financieel", 4), async (req: Request, res: Response): Promise<void> => {
+  const cid = paramInt(req.params["cid"]);
+  const [rij] = await db.select().from(factuurCorrespondentieTable).where(eq(factuurCorrespondentieTable.id, cid)).limit(1);
+  if (!rij) { res.status(404).json({ error: "Niet gevonden" }); return; }
+  if (rij.status === "verzonden") { res.status(409).json({ error: "Deze correspondentie is al verzonden" }); return; }
+  if (!rij.ontvangerEmail?.trim()) { res.status(422).json({ error: "Geen ontvanger-e-mailadres ingevuld" }); return; }
+  if (!mailIsGeconfigureerd()) { res.status(503).json({ error: "E-mail is niet geconfigureerd" }); return; }
+
+  const html = rij.bericht.split("\n").map((r) => r.length ? `<p>${r.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>` : "<br>").join("");
+  try {
+    await verstuurMail({
+      naarEmail: rij.ontvangerEmail,
+      naarNaam: rij.ontvangerNaam,
+      onderwerp: rij.onderwerp,
+      html,
+      soort: "afwijzing",
+      verstuurdDoorId: sessionUserId(req),
+    });
+  } catch (err) {
+    const melding = err instanceof Error ? err.message : "Onbekende fout";
+    await db.update(factuurCorrespondentieTable).set({ status: "mislukt", foutmelding: melding, bijgewerktOp: new Date() })
+      .where(eq(factuurCorrespondentieTable.id, cid));
+    res.status(502).json({ error: "Verzenden mislukt", detail: melding });
+    return;
+  }
+
+  const [updated] = await db.update(factuurCorrespondentieTable).set({
+    status: "verzonden",
+    verzondenOp: new Date(),
+    verzondenDoor: sessionUserId(req),
+    foutmelding: null,
+    bijgewerktOp: new Date(),
+  }).where(eq(factuurCorrespondentieTable.id, cid)).returning();
+  res.json({ id: updated?.id, status: "verzonden", verzonden_op: updated?.verzondenOp?.toISOString() ?? null });
+});
+
+// ── GET /facturen/:id/categorisatie-voorstel ──────────────────────────────────
+// T3: geeft het geleerde boekingspatroon terug voor de leverancier van deze factuur.
+router.get("/facturen/:id/categorisatie-voorstel", requireBevoegdheid("financieel", 1), async (req: Request, res: Response): Promise<void> => {
+  const id = paramInt(req.params["id"]);
+  const [factuur] = await db.select().from(facturenTable).where(eq(facturenTable.id, id)).limit(1);
+  if (!factuur) { res.status(404).json({ error: "Niet gevonden" }); return; }
+  if (!factuur.leverancierId) { res.json({ voorstel: null }); return; }
+
+  const [patroon] = await db.select().from(leverancierCategorisatieTable)
+    .where(eq(leverancierCategorisatieTable.leverancierId, factuur.leverancierId))
+    .orderBy(desc(leverancierCategorisatieTable.aantal), desc(leverancierCategorisatieTable.laatstBevestigdOp))
+    .limit(1);
+
+  if (!patroon || patroon.aantal < 2) { res.json({ voorstel: null }); return; }
+  res.json({
+    voorstel: {
+      grootboekrekening: patroon.grootboekrekening,
+      kostenplaats: patroon.kostenplaats,
+      categorie: patroon.categorie,
+      btw_code: patroon.btwCode,
+      aantal: patroon.aantal,
+      laatst_bevestigd_op: patroon.laatstBevestigdOp.toISOString(),
+    },
+  });
+});
+
+// ── GET /facturen/:id/contractcontrole ────────────────────────────────────────
+// T4: vergelijkt de factuur met het gekoppelde onderhoudscontract (bedrag, index,
+// looptijd, opzegtermijn). Signaleert afwijkingen; keurt niets automatisch goed.
+router.get("/facturen/:id/contractcontrole", requireBevoegdheid("financieel", 1), async (req: Request, res: Response): Promise<void> => {
+  const id = paramInt(req.params["id"]);
+  const [factuur] = await db.select().from(facturenTable).where(eq(facturenTable.id, id)).limit(1);
+  if (!factuur) { res.status(404).json({ error: "Niet gevonden" }); return; }
+  if (!factuur.onderhoudscontractId) {
+    res.json({ contract_gekoppeld: false, signalen: [] });
+    return;
+  }
+  const [contract] = await db.select().from(onderhoudscontractenTable)
+    .where(eq(onderhoudscontractenTable.id, factuur.onderhoudscontractId)).limit(1);
+  if (!contract) {
+    res.json({ contract_gekoppeld: false, signalen: [{ code: "contract_niet_gevonden", ernst: "waarschuwing", bericht: "Het gekoppelde onderhoudscontract bestaat niet meer." }] });
+    return;
+  }
+
+  const signalen: Array<{ code: string; ernst: string; bericht: string }> = [];
+
+  // 1. Bedrag t.o.v. contractwaarde (met eventuele indexering)
+  if (contract.contractwaarde && factuur.bedragExclBtw) {
+    const contractwaarde = parseFloat(contract.contractwaarde);
+    const indexPct = contract.indexering !== "geen" && contract.indexeringPercentage ? parseFloat(contract.indexeringPercentage) : 0;
+    const verwacht = contractwaarde * (1 + indexPct / 100);
+    const gefactureerd = parseFloat(factuur.bedragExclBtw);
+    const afwijkingPct = verwacht > 0 ? ((gefactureerd - verwacht) / verwacht) * 100 : 0;
+    if (Math.abs(afwijkingPct) > 2) {
+      signalen.push({
+        code: "contract_bedrag_afwijking",
+        ernst: Math.abs(afwijkingPct) > 10 ? "kritisch" : "waarschuwing",
+        bericht: `Gefactureerd bedrag (${gefactureerd.toFixed(2)}) wijkt ${afwijkingPct.toFixed(1)}% af van de verwachte contractwaarde${indexPct ? ` incl. ${indexPct}% indexering` : ""} (${verwacht.toFixed(2)}).`,
+      });
+    } else {
+      signalen.push({ code: "contract_bedrag_ok", ernst: "info", bericht: `Bedrag komt overeen met de contractwaarde${indexPct ? ` incl. ${indexPct}% indexering` : ""}.` });
+    }
+  }
+
+  // 2. Indexering geconfigureerd maar geen percentage
+  if (contract.indexering !== "geen" && !contract.indexeringPercentage) {
+    signalen.push({ code: "contract_index_ontbreekt", ernst: "waarschuwing", bericht: `Contract kent indexering (${contract.indexering}) maar er is geen percentage vastgelegd. Controleer de prijsberekening handmatig.` });
+  }
+
+  // 3. Looptijd/einddatum verstreken
+  if (contract.einddatum) {
+    const eind = new Date(contract.einddatum);
+    const factuurDatum = factuur.factuurdatum ? new Date(factuur.factuurdatum) : new Date();
+    if (!isNaN(eind.getTime()) && factuurDatum > eind) {
+      signalen.push({ code: "contract_verlopen", ernst: "kritisch", bericht: `Factuurdatum (${factuur.factuurdatum ?? "onbekend"}) ligt na de contract-einddatum (${contract.einddatum}). Controleer of het contract nog geldig is.` });
+    }
+  }
+
+  // 4. Opzegtermijn ter info
+  if (contract.opzegtermijnMaanden) {
+    signalen.push({ code: "contract_opzegtermijn", ernst: "info", bericht: `Contract kent een opzegtermijn van ${contract.opzegtermijnMaanden} maand(en)${contract.automatischeVerlenging ? " en verlengt automatisch" : ""}.` });
+  }
+
+  res.json({
+    contract_gekoppeld: true,
+    contract: {
+      id: contract.id,
+      contractnummer: contract.contractnummer,
+      contractwaarde: contract.contractwaarde,
+      indexering: contract.indexering,
+      indexering_percentage: contract.indexeringPercentage,
+      einddatum: contract.einddatum,
+      opzegtermijn_maanden: contract.opzegtermijnMaanden,
+    },
+    signalen,
+  });
 });
 
 // ── POST /facturen/:id/beoordelen-pl ──────────────────────────────────────────

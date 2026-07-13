@@ -155,6 +155,18 @@ export const facturenTable = pgTable("facturen", {
   incassoDatum: text("incasso_datum"),
   incassoReferentie: text("incasso_referentie"),
 
+  // Herkomst van de factuur (hoe kwam de factuur binnen)
+  bron: text("bron").notNull().default("handmatig"), // handmatig | upload | mailbox
+
+  // Afkeuring — gekozen categorie (naast de vrije reden)
+  // verkeerde_prijs | verkeerd_aantal | levering_ontbreekt | verkeerde_leverancier |
+  // dubbele_factuur | onbekende_kosten | project_klopt_niet | overig
+  afkeurCategorie: text("afkeur_categorie"),
+
+  // Koppeling aan een onderhoudscontract (soft ref — geen FK, cross-schema).
+  // Wordt door de gebruiker gelegd; AI vergelijkt de factuur vervolgens met het contract.
+  onderhoudscontractId: integer("onderhoudscontract_id"),
+
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
 });
@@ -323,3 +335,94 @@ export const insertFactuurTermijnSchema = createInsertSchema(factuurTermijnenTab
 });
 export type InsertFactuurTermijn = z.infer<typeof insertFactuurTermijnSchema>;
 export type FactuurTermijn = typeof factuurTermijnenTable.$inferSelect;
+
+// ── Factuur-correspondentie ───────────────────────────────────────────────────
+// Legt correspondentie met de leverancier vast die aan een factuur hangt, in het
+// bijzonder afkeur-mails. AI stelt een concept op (richting = uitgaand, status =
+// concept); een mens controleert en verstuurt (status = verzonden). AI verstuurt
+// nooit zelfstandig.
+export const factuurCorrespondentieTable = pgTable("factuur_correspondentie", {
+  id: serial("id").primaryKey(),
+  factuurId: integer("factuur_id").notNull().references(() => facturenTable.id, { onDelete: "cascade" }),
+
+  richting: text("richting").notNull().default("uitgaand"), // uitgaand | inkomend
+  soort: text("soort").notNull().default("afkeur"),          // afkeur | vraag | overig
+  status: text("status").notNull().default("concept"),       // concept | verzonden | mislukt
+
+  ontvangerEmail: text("ontvanger_email"),
+  ontvangerNaam: text("ontvanger_naam"),
+  onderwerp: text("onderwerp").notNull(),
+  bericht: text("bericht").notNull(),
+
+  // Context waaruit het concept is opgesteld
+  afkeurCategorie: text("afkeur_categorie"),
+  aiGegenereerd: boolean("ai_gegenereerd").notNull().default(false),
+
+  opgesteldDoor: integer("opgesteld_door").references(() => gebruikersTable.id, { onDelete: "set null" }),
+  verzondenDoor: integer("verzonden_door").references(() => gebruikersTable.id, { onDelete: "set null" }),
+  verzondenOp: timestamp("verzonden_op"),
+  foutmelding: text("foutmelding"),
+
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+  bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+});
+
+export type FactuurCorrespondentie = typeof factuurCorrespondentieTable.$inferSelect;
+
+// ── Zelflerende leverancierscategorisatie ─────────────────────────────────────
+// Telt per leverancier hoe vaak een bepaalde combinatie van grootboekrekening,
+// kostenplaats, categorie en BTW-code door mensen is bevestigd. De meest gekozen
+// combinatie wordt door AI voorgesteld bij een volgende factuur van dezelfde
+// leverancier. Puur leren op basis van menselijke bevestiging (geen autonome AI).
+export const leverancierCategorisatieTable = pgTable("leverancier_categorisatie", {
+  id: serial("id").primaryKey(),
+  leverancierId: integer("leverancier_id").notNull(),
+
+  grootboekrekening: text("grootboekrekening"),
+  kostenplaats: text("kostenplaats"),
+  categorie: text("categorie"),
+  btwCode: text("btw_code"),
+
+  aantal: integer("aantal").notNull().default(1),
+  laatstBevestigdOp: timestamp("laatst_bevestigd_op").notNull().defaultNow(),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+}, (t) => ({
+  uniekePatroon: unique().on(t.leverancierId, t.grootboekrekening, t.kostenplaats, t.categorie, t.btwCode),
+}));
+
+export type LeverancierCategorisatie = typeof leverancierCategorisatieTable.$inferSelect;
+
+// ── Factuur-import instellingen (singleton) ───────────────────────────────────
+// Configuratie van de automatische mailbox-import: welke financiële postbus wordt
+// gepolld en of de import actief is.
+export const factuurImportInstellingenTable = pgTable("factuur_import_instellingen", {
+  id: serial("id").primaryKey(),
+  actief: boolean("actief").notNull().default(false),
+  mailboxAdres: text("mailbox_adres"),        // gedeelde postbus, bijv. facturen@...
+  laatsteSyncOp: timestamp("laatste_sync_op"),
+  laatsteSyncResultaat: text("laatste_sync_resultaat"),
+  bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+});
+
+export type FactuurImportInstellingen = typeof factuurImportInstellingenTable.$inferSelect;
+
+// ── Factuur-import log (dedupe + audittrail mailbox-import) ────────────────────
+// Elke verwerkte bijlage krijgt één regel. De unieke sleutel (messageId +
+// bijlagenaam) voorkomt dat dezelfde bijlage twee keer een factuur aanmaakt.
+export const factuurImportLogTable = pgTable("factuur_import_log", {
+  id: serial("id").primaryKey(),
+  messageId: text("message_id").notNull(),
+  bijlageNaam: text("bijlage_naam").notNull(),
+  bijlageHash: text("bijlage_hash"),
+  formaat: text("formaat"),                    // pdf | ubl_xml | afbeelding | overig
+  afzender: text("afzender"),
+  onderwerp: text("onderwerp"),
+  factuurId: integer("factuur_id").references(() => facturenTable.id, { onDelete: "set null" }),
+  status: text("status").notNull().default("verwerkt"), // verwerkt | overgeslagen | mislukt
+  foutmelding: text("foutmelding"),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+}, (t) => ({
+  uniekeBijlage: unique().on(t.messageId, t.bijlageNaam),
+}));
+
+export type FactuurImportLog = typeof factuurImportLogTable.$inferSelect;

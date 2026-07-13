@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import {
   TrendingUp, TrendingDown, AlertTriangle, Info, ChevronLeft, ChevronRight,
   Target, Euro, BarChart3, Activity, Building2, RefreshCw, BookOpen, Pencil, Check, X,
-  ChevronDown, ChevronRight as ChevronRightIcon, ExternalLink,
+  ChevronDown, ChevronRight as ChevronRightIcon, ExternalLink, Receipt,
 } from "lucide-react";
 import {
   ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -27,6 +27,7 @@ import {
   useListFieNacalculaties,
   getListFieNacalculatiesQueryKey,
   useHerberekeenVerouderdeNacalculaties,
+  useGetFactuurAnalyse,
   type FieJaarprognose,
   type FieWerkmaatschappijPrognose,
   type FieLeermoment,
@@ -758,6 +759,72 @@ function GeenToegang() {
 
 // ─── Dashboard inhoud (hooks alleen renderen bij toegang) ─────────────────────
 
+function FactuuranalyseTegel() {
+  const [, setLocation] = useLocation();
+  const { data } = useGetFactuurAnalyse({
+    query: { queryKey: ["factuur-analyse"] },
+  });
+  const teBeoordelen = data?.te_beoordelen ?? 0;
+  const afgekeurd = data?.afgekeurd ?? 0;
+  const viaMailbox = data?.via_mailbox ?? 0;
+  const ibanAfwijkingen = data?.iban_afwijkingen ?? 0;
+  const openBedrag = data?.open_bedrag_incl_btw ?? null;
+  const afkeurPerCategorie = data?.afkeur_per_categorie ?? [];
+
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <div className="flex items-center justify-between gap-2">
+          <CardTitle className="text-sm font-semibold flex items-center gap-1.5">
+            <Receipt className="h-4 w-4 text-primary" />
+            Factuuranalyse
+          </CardTitle>
+          <Button
+            variant="ghost" size="sm" className="h-7 text-xs gap-1"
+            onClick={() => setLocation("/facturen/controlebox")}
+          >
+            Naar controlebox
+            <ExternalLink className="h-3 w-3" />
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="rounded-md border p-3">
+            <p className="text-[11px] text-muted-foreground font-medium">Te beoordelen</p>
+            <p className="text-xl font-bold mt-0.5 leading-tight">{teBeoordelen}</p>
+          </div>
+          <div className="rounded-md border p-3">
+            <p className="text-[11px] text-muted-foreground font-medium">Afgekeurd</p>
+            <p className={cn("text-xl font-bold mt-0.5 leading-tight", afgekeurd > 0 && "text-red-600")}>{afgekeurd}</p>
+          </div>
+          <div className="rounded-md border p-3">
+            <p className="text-[11px] text-muted-foreground font-medium">Via postbus</p>
+            <p className="text-xl font-bold mt-0.5 leading-tight">{viaMailbox}</p>
+          </div>
+          <div className="rounded-md border p-3">
+            <p className="text-[11px] text-muted-foreground font-medium">IBAN-afwijkingen</p>
+            <p className={cn("text-xl font-bold mt-0.5 leading-tight", ibanAfwijkingen > 0 && "text-amber-600")}>{ibanAfwijkingen}</p>
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-1 text-xs text-muted-foreground">
+          <span>Openstaand (incl. btw): <strong className="text-foreground">{fmt(openBedrag != null ? Number(openBedrag) : null)}</strong></span>
+          {afkeurPerCategorie.length > 0 && (
+            <span className="flex flex-wrap items-center gap-2">
+              Afkeur per reden:
+              {afkeurPerCategorie.map((c, i) => (
+                <Badge key={i} variant="secondary" className="text-[10px] font-normal">
+                  {(c.categorie ?? "Overig")}: {c.aantal ?? 0}
+                </Badge>
+              ))}
+            </span>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 function KompasInhoud() {
   const [boekjaar, setBoekjaar] = useState(() => new Date().getFullYear());
   const [actieveTab, setActieveTab] = useState("prognose");
@@ -889,6 +956,9 @@ function KompasInhoud() {
               icon={Target}
             />
           </div>
+
+          {/* Factuuranalyse */}
+          <FactuuranalyseTegel />
 
           {/* Bezettingsgraad + Break-even + Kwartaalchart */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">

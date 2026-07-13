@@ -6,7 +6,9 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface FactuurAfkeurenInput {
-  reden: string;
-  categorie?: string | null;
+export interface FactuurCorrespondentieUpdateInput {
+  onderwerp?: string;
+  bericht?: string;
+  ontvanger_email?: string | null;
+  ontvanger_naam?: string | null;
 }

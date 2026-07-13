@@ -6,7 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface FactuurAfkeurenInput {
-  reden: string;
+export interface FactuurAfkeurConceptInput {
   categorie?: string | null;
+  reden?: string | null;
 }

@@ -5,6 +5,11 @@ import {
   useAiUitlezenFactuur,
   useAccorderenFactuur,
   useAfkeurenFactuur,
+  useMaakFactuurAfkeurConcept,
+  useUpdateFactuurCorrespondentie,
+  useVerstuurFactuurCorrespondentie,
+  useGetFactuurCategorisatieVoorstel,
+  useGetFactuurContractcontrole,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -14,12 +19,40 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
+} from "@/components/ui/dialog";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import {
   Inbox, AlertTriangle, CheckCircle2, ArrowUpRight, Sparkles,
   Eye, Loader2, ShieldAlert, Info, Landmark, Ban, Clock,
   XCircle, TriangleAlert, ChevronDown, ChevronUp,
-  TrendingDown, Banknote, Target, Zap, CircleDot,
+  TrendingDown, Banknote, Target, Zap, CircleDot, Mail, Send,
 } from "lucide-react";
-import type { Factuur } from "@workspace/api-client-react";
+import type { Factuur, FactuurCorrespondentie } from "@workspace/api-client-react";
+
+// ── Afkeurcategorieën ────────────────────────────────────────────────────────
+
+const AFKEUR_CATEGORIEEN: { waarde: string; label: string }[] = [
+  { waarde: "onjuist_bedrag", label: "Onjuist bedrag" },
+  { waarde: "onjuiste_btw", label: "Onjuiste btw" },
+  { waarde: "geen_opdracht", label: "Geen opdracht / bestelling" },
+  { waarde: "dubbele_factuur", label: "Dubbele factuur" },
+  { waarde: "onjuiste_gegevens", label: "Onjuiste factuurgegevens" },
+  { waarde: "onjuist_iban", label: "Afwijkend IBAN" },
+  { waarde: "prijsafspraak", label: "Wijkt af van prijsafspraak" },
+  { waarde: "reeds_betaald", label: "Reeds betaald" },
+  { waarde: "anders", label: "Anders" },
+];
+
+function afkeurCategorieLabel(waarde?: string | null): string {
+  if (!waarde) return "—";
+  return AFKEUR_CATEGORIEEN.find((c) => c.waarde === waarde)?.label ?? waarde;
+}
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -279,6 +312,85 @@ function AiControllerPanel({ factuur }: { factuur: Factuur }) {
           </div>
         </div>
       )}
+
+      {/* Geleerd boekingspatroon (T3) + contractcontrole (T4) */}
+      <CategorisatieVoorstelBlok factuur={factuur} />
+      <ContractcontroleBlok factuur={factuur} />
+    </div>
+  );
+}
+
+// ── Geleerd boekingspatroon (zelflerende categorisatie) ────────────────────────
+
+function CategorisatieVoorstelBlok({ factuur }: { factuur: Factuur }) {
+  const { data } = useGetFactuurCategorisatieVoorstel(factuur.id, {
+    query: {
+      queryKey: ["factuur-categorisatie-voorstel", factuur.id],
+      enabled: !!factuur.leverancier_id,
+    },
+  });
+  const voorstel = data?.voorstel;
+  if (!voorstel) return null;
+  return (
+    <div className="rounded-md border border-amber-100 bg-amber-50 px-3 py-2">
+      <div className="flex items-start gap-2">
+        <Sparkles className="h-3.5 w-3.5 text-amber-500 shrink-0 mt-0.5" />
+        <div className="space-y-0.5">
+          <p className="text-xs font-medium text-amber-700">
+            Geleerd boekingspatroon voor deze leverancier
+          </p>
+          <p className="text-xs text-amber-700">
+            {[
+              voorstel.grootboekrekening ? `Grootboek ${voorstel.grootboekrekening}` : null,
+              voorstel.kostenplaats ? `Kostenplaats ${voorstel.kostenplaats}` : null,
+              voorstel.categorie ? voorstel.categorie : null,
+              voorstel.btw_code ? `Btw ${voorstel.btw_code}` : null,
+            ].filter(Boolean).join(" · ") || "Nog geen volledig patroon"}
+          </p>
+          <p className="text-[11px] text-amber-600/80">
+            Gebaseerd op {voorstel.aantal ?? 0} eerdere goedkeuring(en). AI stelt voor — controleer bij het accorderen.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Contractcontrole tegen onderhoudscontract ──────────────────────────────────
+
+function ContractcontroleBlok({ factuur }: { factuur: Factuur }) {
+  const { data } = useGetFactuurContractcontrole(factuur.id, {
+    query: {
+      queryKey: ["factuur-contractcontrole", factuur.id],
+      enabled: !!factuur.gebouw_id || !!factuur.leverancier_id,
+    },
+  });
+  if (!data || !data.contract_gekoppeld) return null;
+  const signalen = data.signalen ?? [];
+  const heeftAfwijking = signalen.some((s) => s.ernst === "kritisch" || s.ernst === "waarschuwing");
+  return (
+    <div className={`rounded-md border px-3 py-2 ${heeftAfwijking ? "border-red-100 bg-red-50" : "border-emerald-100 bg-emerald-50"}`}>
+      <div className="flex items-start gap-2">
+        {heeftAfwijking
+          ? <TriangleAlert className="h-3.5 w-3.5 text-red-500 shrink-0 mt-0.5" />
+          : <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0 mt-0.5" />}
+        <div className="space-y-1">
+          <p className={`text-xs font-medium ${heeftAfwijking ? "text-red-700" : "text-emerald-700"}`}>
+            Contractcontrole{data.contract?.contractnummer ? ` — contract ${data.contract.contractnummer}` : ""}
+          </p>
+          {signalen.length > 0 ? (
+            signalen.map((s, i) => (
+              <p key={i} className={`text-xs ${
+                s.ernst === "kritisch" ? "text-red-600 font-medium"
+                : s.ernst === "waarschuwing" ? "text-amber-700"
+                : "text-slate-600"
+              }`}>{s.bericht}</p>
+            ))
+          ) : (
+            <p className="text-xs text-emerald-700">Factuur komt overeen met het onderhoudscontract.</p>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
@@ -559,9 +671,8 @@ export default function ControleboxPagina() {
   const akkoordMut = useAccorderenFactuur({
     mutation: { onSuccess: () => queryClient.invalidateQueries({ queryKey: ["facturen-controlebox"] }) },
   });
-  const afwijzenMut = useAfkeurenFactuur({
-    mutation: { onSuccess: () => queryClient.invalidateQueries({ queryKey: ["facturen-controlebox"] }) },
-  });
+
+  const [afwijzenFactuur, setAfwijzenFactuur] = useState<Factuur | null>(null);
 
   function handleAi(id: number) {
     setAiBezig(id);
@@ -572,10 +683,8 @@ export default function ControleboxPagina() {
     akkoordMut.mutate({ id }, { onSettled: () => setBezig((p) => ({ ...p, akkoord: null })) });
   }
   function handleAfwijzen(id: number) {
-    const reden = prompt("Reden voor afwijzing (verplicht):");
-    if (!reden?.trim()) return;
-    setBezig((p) => ({ ...p, afwijzen: id }));
-    afwijzenMut.mutate({ id, data: { reden } }, { onSettled: () => setBezig((p) => ({ ...p, afwijzen: null })) });
+    const f = (facturen as Factuur[]).find((x) => x.id === id) ?? null;
+    setAfwijzenFactuur(f);
   }
 
   const alle = facturen as Factuur[];
@@ -768,6 +877,204 @@ export default function ControleboxPagina() {
           </div>
         </Card>
       )}
+
+      {afwijzenFactuur && (
+        <AfwijzenDialog
+          factuur={afwijzenFactuur}
+          onClose={() => setAfwijzenFactuur(null)}
+          onAfgekeurd={() => queryClient.invalidateQueries({ queryKey: ["facturen-controlebox"] })}
+        />
+      )}
     </div>
+  );
+}
+
+// ── Afwijzen-dialoog met AI-conceptmail ────────────────────────────────────────
+
+function AfwijzenDialog({
+  factuur,
+  onClose,
+  onAfgekeurd,
+}: {
+  factuur: Factuur;
+  onClose: () => void;
+  onAfgekeurd: () => void;
+}) {
+  const { toast } = useToast();
+  const [categorie, setCategorie] = useState<string>("");
+  const [reden, setReden] = useState<string>("");
+  const [afgekeurd, setAfgekeurd] = useState<boolean>(["afgekeurd"].includes(factuur.status));
+  const [concept, setConcept] = useState<FactuurCorrespondentie | null>(null);
+  const [onderwerp, setOnderwerp] = useState<string>("");
+  const [bericht, setBericht] = useState<string>("");
+  const [ontvangerEmail, setOntvangerEmail] = useState<string>("");
+  const [verzonden, setVerzonden] = useState<boolean>(false);
+
+  const afwijzenMut = useAfkeurenFactuur();
+  const conceptMut = useMaakFactuurAfkeurConcept();
+  const updateMut = useUpdateFactuurCorrespondentie();
+  const verzendMut = useVerstuurFactuurCorrespondentie();
+
+  function handleAfkeuren() {
+    if (!reden.trim()) {
+      toast({ title: "Reden verplicht", description: "Geef een reden voor de afwijzing op.", variant: "destructive" });
+      return;
+    }
+    afwijzenMut.mutate(
+      { id: factuur.id, data: { reden, categorie: categorie || null } },
+      {
+        onSuccess: () => {
+          setAfgekeurd(true);
+          onAfgekeurd();
+          toast({ title: "Factuur afgekeurd", description: "Je kunt nu een conceptmail voor de leverancier opstellen." });
+        },
+        onError: () => toast({ title: "Afkeuren mislukt", variant: "destructive" }),
+      },
+    );
+  }
+
+  function handleConcept() {
+    conceptMut.mutate(
+      { id: factuur.id, data: { categorie: categorie || null, reden: reden || null } },
+      {
+        onSuccess: (data) => {
+          const c = data as FactuurCorrespondentie;
+          setConcept(c);
+          setOnderwerp(c.onderwerp ?? "");
+          setBericht(c.bericht ?? "");
+          setOntvangerEmail(c.ontvanger_email ?? "");
+        },
+        onError: () => toast({ title: "Concept opstellen mislukt", description: "AI is mogelijk niet bereikbaar.", variant: "destructive" }),
+      },
+    );
+  }
+
+  function handleVerzenden() {
+    if (!concept || concept.id == null) return;
+    const cid = concept.id;
+    if (!ontvangerEmail.trim()) {
+      toast({ title: "E-mailadres ontbreekt", description: "Vul het e-mailadres van de leverancier in.", variant: "destructive" });
+      return;
+    }
+    updateMut.mutate(
+      { id: factuur.id, cid, data: { onderwerp, bericht, ontvanger_email: ontvangerEmail } },
+      {
+        onSuccess: () => {
+          verzendMut.mutate(
+            { id: factuur.id, cid },
+            {
+              onSuccess: () => {
+                setVerzonden(true);
+                toast({ title: "Verzonden", description: "De afkeurmail is naar de leverancier verstuurd." });
+              },
+              onError: () => toast({ title: "Verzenden mislukt", description: "Controleer het e-mailadres en probeer opnieuw.", variant: "destructive" }),
+            },
+          );
+        },
+        onError: () => toast({ title: "Opslaan mislukt", variant: "destructive" }),
+      },
+    );
+  }
+
+  return (
+    <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <XCircle className="h-5 w-5 text-red-600" />
+            Factuur afwijzen
+          </DialogTitle>
+          <DialogDescription>
+            {factuur.factuurnummer ?? factuur.bestandsnaam ?? `Factuur #${factuur.id}`} — {factuur.relatienaam ?? "onbekende leverancier"}
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          {!afgekeurd && (
+            <>
+              <div className="space-y-1.5">
+                <Label>Reden-categorie</Label>
+                <Select value={categorie} onValueChange={setCategorie}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Kies een categorie" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {AFKEUR_CATEGORIEEN.map((c) => (
+                      <SelectItem key={c.waarde} value={c.waarde}>{c.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Toelichting (verplicht)</Label>
+                <Textarea
+                  value={reden}
+                  onChange={(e) => setReden(e.target.value)}
+                  placeholder="Beschrijf waarom de factuur wordt afgewezen"
+                  rows={3}
+                />
+              </div>
+            </>
+          )}
+
+          {afgekeurd && !concept && (
+            <div className="rounded-md border border-slate-200 bg-slate-50 p-3 space-y-2">
+              <p className="text-sm text-slate-700 flex items-center gap-1.5">
+                <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                Factuur afgekeurd{categorie ? ` — ${afkeurCategorieLabel(categorie)}` : ""}.
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Laat AI een conceptmail voor de leverancier opstellen. Je controleert en verzendt de mail zelf; er wordt niets automatisch verstuurd.
+              </p>
+            </div>
+          )}
+
+          {concept && (
+            <div className="space-y-3">
+              <div className="rounded-md border border-amber-200 bg-amber-50 p-2.5 text-xs text-amber-800 flex items-center gap-1.5">
+                <Sparkles className="h-3.5 w-3.5" />
+                AI-concept — controleer en pas aan vóór verzenden.
+              </div>
+              <div className="space-y-1.5">
+                <Label>E-mailadres leverancier</Label>
+                <Input value={ontvangerEmail} onChange={(e) => setOntvangerEmail(e.target.value)} placeholder="naam@leverancier.nl" />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Onderwerp</Label>
+                <Input value={onderwerp} onChange={(e) => setOnderwerp(e.target.value)} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Bericht</Label>
+                <Textarea value={bericht} onChange={(e) => setBericht(e.target.value)} rows={8} />
+              </div>
+            </div>
+          )}
+        </div>
+
+        <DialogFooter className="gap-2 sm:gap-2">
+          <Button variant="outline" onClick={onClose}>
+            {verzonden ? "Sluiten" : "Annuleren"}
+          </Button>
+          {!afgekeurd && (
+            <Button variant="destructive" onClick={handleAfkeuren} disabled={afwijzenMut.isPending}>
+              {afwijzenMut.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : <XCircle className="h-4 w-4 mr-1.5" />}
+              Afkeuren
+            </Button>
+          )}
+          {afgekeurd && !concept && (
+            <Button onClick={handleConcept} disabled={conceptMut.isPending}>
+              {conceptMut.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : <Mail className="h-4 w-4 mr-1.5" />}
+              AI-conceptmail opstellen
+            </Button>
+          )}
+          {concept && !verzonden && (
+            <Button onClick={handleVerzenden} disabled={updateMut.isPending || verzendMut.isPending}>
+              {(updateMut.isPending || verzendMut.isPending) ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : <Send className="h-4 w-4 mr-1.5" />}
+              Verzenden naar leverancier
+            </Button>
+          )}
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

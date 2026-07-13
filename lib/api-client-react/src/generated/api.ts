@@ -199,16 +199,26 @@ import type {
   FabrikantInput,
   FabrikantUpdate,
   Factuur,
+  FactuurAfkeurConceptInput,
   FactuurAfkeurenInput,
   FactuurAfwijkingen,
+  FactuurAnalyse,
   FactuurBatchExportInput,
   FactuurBlokkerenInput,
+  FactuurCategorisatieVoorstel,
+  FactuurContractcontrole,
+  FactuurCorrespondentie,
+  FactuurCorrespondentieUpdateInput,
   FactuurDoorstuurInput,
   FactuurHerexportInput,
   FactuurHerinnering,
   FactuurHerinneringInput,
+  FactuurImportInstellingen,
+  FactuurImportInstellingenInput,
+  FactuurImportLogItem,
   FactuurIncassoInput,
   FactuurInput,
+  FactuurMailboxSyncResultaat,
   FactuurOpmerking,
   FactuurOpmerkingAfhandelenInput,
   FactuurOpmerkingInput,
@@ -789,6 +799,7 @@ import type {
   UitvoeringsplanTaak,
   UitvoeringsplanTaakPatch,
   Uitvoeringsplanning,
+  UpdateFactuurCorrespondentie200,
   UpdateFactuurRegel200,
   UpdateFactuurTermijn200,
   UploadUrlRequest,
@@ -824,6 +835,7 @@ import type {
   VerlofSaldoInput,
   Verlofsoort,
   VerlofsoortInput,
+  VerstuurFactuurCorrespondentie200,
   Vervaldag,
   Vervalsignaal,
   VerzendOfferte200,
@@ -58552,6 +58564,824 @@ export const useAfkeurenFactuur = <TError = ErrorType<unknown>,
       > => {
       return useMutation(getAfkeurenFactuurMutationOptions(options));
     }
+
+export const getGetFactuurImportInstellingenUrl = () => {
+
+
+
+
+  return `/api/facturen/import-instellingen`
+}
+
+/**
+ * @summary Instellingen mailbox-import ophalen
+ */
+export const getFactuurImportInstellingen = async ( options?: RequestInit): Promise<FactuurImportInstellingen> => {
+
+  return customFetch<FactuurImportInstellingen>(getGetFactuurImportInstellingenUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetFactuurImportInstellingenQueryKey = () => {
+    return [
+    `/api/facturen/import-instellingen`
+    ] as const;
+    }
+
+
+export const getGetFactuurImportInstellingenQueryOptions = <TData = Awaited<ReturnType<typeof getFactuurImportInstellingen>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getFactuurImportInstellingen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetFactuurImportInstellingenQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getFactuurImportInstellingen>>> = ({ signal }) => getFactuurImportInstellingen({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getFactuurImportInstellingen>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetFactuurImportInstellingenQueryResult = NonNullable<Awaited<ReturnType<typeof getFactuurImportInstellingen>>>
+export type GetFactuurImportInstellingenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Instellingen mailbox-import ophalen
+ */
+
+export function useGetFactuurImportInstellingen<TData = Awaited<ReturnType<typeof getFactuurImportInstellingen>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getFactuurImportInstellingen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetFactuurImportInstellingenQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUpdateFactuurImportInstellingenUrl = () => {
+
+
+
+
+  return `/api/facturen/import-instellingen`
+}
+
+/**
+ * @summary Instellingen mailbox-import bijwerken
+ */
+export const updateFactuurImportInstellingen = async (factuurImportInstellingenInput: FactuurImportInstellingenInput, options?: RequestInit): Promise<FactuurImportInstellingen> => {
+
+  return customFetch<FactuurImportInstellingen>(getUpdateFactuurImportInstellingenUrl(),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(factuurImportInstellingenInput)
+  }
+);}
+
+
+
+
+export const getUpdateFactuurImportInstellingenMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateFactuurImportInstellingen>>, TError,{data: BodyType<FactuurImportInstellingenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateFactuurImportInstellingen>>, TError,{data: BodyType<FactuurImportInstellingenInput>}, TContext> => {
+
+const mutationKey = ['updateFactuurImportInstellingen'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateFactuurImportInstellingen>>, {data: BodyType<FactuurImportInstellingenInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  updateFactuurImportInstellingen(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateFactuurImportInstellingenMutationResult = NonNullable<Awaited<ReturnType<typeof updateFactuurImportInstellingen>>>
+    export type UpdateFactuurImportInstellingenMutationBody = BodyType<FactuurImportInstellingenInput>
+    export type UpdateFactuurImportInstellingenMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Instellingen mailbox-import bijwerken
+ */
+export const useUpdateFactuurImportInstellingen = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateFactuurImportInstellingen>>, TError,{data: BodyType<FactuurImportInstellingenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateFactuurImportInstellingen>>,
+        TError,
+        {data: BodyType<FactuurImportInstellingenInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateFactuurImportInstellingenMutationOptions(options));
+    }
+
+export const getSyncFactuurMailboxUrl = () => {
+
+
+
+
+  return `/api/facturen/mailbox-sync`
+}
+
+/**
+ * @summary Financiële postbus ophalen en facturen aanmaken uit bijlagen
+ */
+export const syncFactuurMailbox = async ( options?: RequestInit): Promise<FactuurMailboxSyncResultaat> => {
+
+  return customFetch<FactuurMailboxSyncResultaat>(getSyncFactuurMailboxUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getSyncFactuurMailboxMutationOptions = <TError = ErrorType<FactuurMailboxSyncResultaat>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof syncFactuurMailbox>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof syncFactuurMailbox>>, TError,void, TContext> => {
+
+const mutationKey = ['syncFactuurMailbox'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof syncFactuurMailbox>>, void> = () => {
+
+
+          return  syncFactuurMailbox(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SyncFactuurMailboxMutationResult = NonNullable<Awaited<ReturnType<typeof syncFactuurMailbox>>>
+
+    export type SyncFactuurMailboxMutationError = ErrorType<FactuurMailboxSyncResultaat>
+
+    /**
+ * @summary Financiële postbus ophalen en facturen aanmaken uit bijlagen
+ */
+export const useSyncFactuurMailbox = <TError = ErrorType<FactuurMailboxSyncResultaat>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof syncFactuurMailbox>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof syncFactuurMailbox>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getSyncFactuurMailboxMutationOptions(options));
+    }
+
+export const getGetFactuurImportLogUrl = () => {
+
+
+
+
+  return `/api/facturen/import-log`
+}
+
+/**
+ * @summary Logboek van mailbox-import
+ */
+export const getFactuurImportLog = async ( options?: RequestInit): Promise<FactuurImportLogItem[]> => {
+
+  return customFetch<FactuurImportLogItem[]>(getGetFactuurImportLogUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetFactuurImportLogQueryKey = () => {
+    return [
+    `/api/facturen/import-log`
+    ] as const;
+    }
+
+
+export const getGetFactuurImportLogQueryOptions = <TData = Awaited<ReturnType<typeof getFactuurImportLog>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getFactuurImportLog>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetFactuurImportLogQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getFactuurImportLog>>> = ({ signal }) => getFactuurImportLog({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getFactuurImportLog>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetFactuurImportLogQueryResult = NonNullable<Awaited<ReturnType<typeof getFactuurImportLog>>>
+export type GetFactuurImportLogQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Logboek van mailbox-import
+ */
+
+export function useGetFactuurImportLog<TData = Awaited<ReturnType<typeof getFactuurImportLog>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getFactuurImportLog>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetFactuurImportLogQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetFactuurAnalyseUrl = () => {
+
+
+
+
+  return `/api/facturen/analyse`
+}
+
+/**
+ * @summary Geaggregeerde factuuranalyse voor het directiedashboard
+ */
+export const getFactuurAnalyse = async ( options?: RequestInit): Promise<FactuurAnalyse> => {
+
+  return customFetch<FactuurAnalyse>(getGetFactuurAnalyseUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetFactuurAnalyseQueryKey = () => {
+    return [
+    `/api/facturen/analyse`
+    ] as const;
+    }
+
+
+export const getGetFactuurAnalyseQueryOptions = <TData = Awaited<ReturnType<typeof getFactuurAnalyse>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getFactuurAnalyse>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetFactuurAnalyseQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getFactuurAnalyse>>> = ({ signal }) => getFactuurAnalyse({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getFactuurAnalyse>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetFactuurAnalyseQueryResult = NonNullable<Awaited<ReturnType<typeof getFactuurAnalyse>>>
+export type GetFactuurAnalyseQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Geaggregeerde factuuranalyse voor het directiedashboard
+ */
+
+export function useGetFactuurAnalyse<TData = Awaited<ReturnType<typeof getFactuurAnalyse>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getFactuurAnalyse>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetFactuurAnalyseQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetFactuurCorrespondentieUrl = (id: number,) => {
+
+
+
+
+  return `/api/facturen/${id}/correspondentie`
+}
+
+/**
+ * @summary Correspondentie bij een factuur ophalen
+ */
+export const getFactuurCorrespondentie = async (id: number, options?: RequestInit): Promise<FactuurCorrespondentie[]> => {
+
+  return customFetch<FactuurCorrespondentie[]>(getGetFactuurCorrespondentieUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetFactuurCorrespondentieQueryKey = (id: number,) => {
+    return [
+    `/api/facturen/${id}/correspondentie`
+    ] as const;
+    }
+
+
+export const getGetFactuurCorrespondentieQueryOptions = <TData = Awaited<ReturnType<typeof getFactuurCorrespondentie>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getFactuurCorrespondentie>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetFactuurCorrespondentieQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getFactuurCorrespondentie>>> = ({ signal }) => getFactuurCorrespondentie(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getFactuurCorrespondentie>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetFactuurCorrespondentieQueryResult = NonNullable<Awaited<ReturnType<typeof getFactuurCorrespondentie>>>
+export type GetFactuurCorrespondentieQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Correspondentie bij een factuur ophalen
+ */
+
+export function useGetFactuurCorrespondentie<TData = Awaited<ReturnType<typeof getFactuurCorrespondentie>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getFactuurCorrespondentie>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetFactuurCorrespondentieQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getMaakFactuurAfkeurConceptUrl = (id: number,) => {
+
+
+
+
+  return `/api/facturen/${id}/afkeur-concept`
+}
+
+/**
+ * @summary AI-conceptmail voor afkeuring opstellen (opgeslagen als concept)
+ */
+export const maakFactuurAfkeurConcept = async (id: number,
+    factuurAfkeurConceptInput?: FactuurAfkeurConceptInput, options?: RequestInit): Promise<FactuurCorrespondentie> => {
+
+  return customFetch<FactuurCorrespondentie>(getMaakFactuurAfkeurConceptUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(factuurAfkeurConceptInput)
+  }
+);}
+
+
+
+
+export const getMaakFactuurAfkeurConceptMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof maakFactuurAfkeurConcept>>, TError,{id: number;data?: BodyType<FactuurAfkeurConceptInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof maakFactuurAfkeurConcept>>, TError,{id: number;data?: BodyType<FactuurAfkeurConceptInput>}, TContext> => {
+
+const mutationKey = ['maakFactuurAfkeurConcept'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof maakFactuurAfkeurConcept>>, {id: number;data?: BodyType<FactuurAfkeurConceptInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  maakFactuurAfkeurConcept(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type MaakFactuurAfkeurConceptMutationResult = NonNullable<Awaited<ReturnType<typeof maakFactuurAfkeurConcept>>>
+    export type MaakFactuurAfkeurConceptMutationBody = BodyType<FactuurAfkeurConceptInput> | undefined
+    export type MaakFactuurAfkeurConceptMutationError = ErrorType<unknown>
+
+    /**
+ * @summary AI-conceptmail voor afkeuring opstellen (opgeslagen als concept)
+ */
+export const useMaakFactuurAfkeurConcept = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof maakFactuurAfkeurConcept>>, TError,{id: number;data?: BodyType<FactuurAfkeurConceptInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof maakFactuurAfkeurConcept>>,
+        TError,
+        {id: number;data?: BodyType<FactuurAfkeurConceptInput>},
+        TContext
+      > => {
+      return useMutation(getMaakFactuurAfkeurConceptMutationOptions(options));
+    }
+
+export const getUpdateFactuurCorrespondentieUrl = (id: number,
+    cid: number,) => {
+
+
+
+
+  return `/api/facturen/${id}/correspondentie/${cid}`
+}
+
+/**
+ * @summary Conceptcorrespondentie bijwerken
+ */
+export const updateFactuurCorrespondentie = async (id: number,
+    cid: number,
+    factuurCorrespondentieUpdateInput: FactuurCorrespondentieUpdateInput, options?: RequestInit): Promise<UpdateFactuurCorrespondentie200> => {
+
+  return customFetch<UpdateFactuurCorrespondentie200>(getUpdateFactuurCorrespondentieUrl(id,cid),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(factuurCorrespondentieUpdateInput)
+  }
+);}
+
+
+
+
+export const getUpdateFactuurCorrespondentieMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateFactuurCorrespondentie>>, TError,{id: number;cid: number;data: BodyType<FactuurCorrespondentieUpdateInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateFactuurCorrespondentie>>, TError,{id: number;cid: number;data: BodyType<FactuurCorrespondentieUpdateInput>}, TContext> => {
+
+const mutationKey = ['updateFactuurCorrespondentie'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateFactuurCorrespondentie>>, {id: number;cid: number;data: BodyType<FactuurCorrespondentieUpdateInput>}> = (props) => {
+          const {id,cid,data} = props ?? {};
+
+          return  updateFactuurCorrespondentie(id,cid,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateFactuurCorrespondentieMutationResult = NonNullable<Awaited<ReturnType<typeof updateFactuurCorrespondentie>>>
+    export type UpdateFactuurCorrespondentieMutationBody = BodyType<FactuurCorrespondentieUpdateInput>
+    export type UpdateFactuurCorrespondentieMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Conceptcorrespondentie bijwerken
+ */
+export const useUpdateFactuurCorrespondentie = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateFactuurCorrespondentie>>, TError,{id: number;cid: number;data: BodyType<FactuurCorrespondentieUpdateInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateFactuurCorrespondentie>>,
+        TError,
+        {id: number;cid: number;data: BodyType<FactuurCorrespondentieUpdateInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateFactuurCorrespondentieMutationOptions(options));
+    }
+
+export const getVerstuurFactuurCorrespondentieUrl = (id: number,
+    cid: number,) => {
+
+
+
+
+  return `/api/facturen/${id}/correspondentie/${cid}/verzenden`
+}
+
+/**
+ * @summary Conceptcorrespondentie verzenden (mens-actie)
+ */
+export const verstuurFactuurCorrespondentie = async (id: number,
+    cid: number, options?: RequestInit): Promise<VerstuurFactuurCorrespondentie200> => {
+
+  return customFetch<VerstuurFactuurCorrespondentie200>(getVerstuurFactuurCorrespondentieUrl(id,cid),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getVerstuurFactuurCorrespondentieMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof verstuurFactuurCorrespondentie>>, TError,{id: number;cid: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof verstuurFactuurCorrespondentie>>, TError,{id: number;cid: number}, TContext> => {
+
+const mutationKey = ['verstuurFactuurCorrespondentie'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof verstuurFactuurCorrespondentie>>, {id: number;cid: number}> = (props) => {
+          const {id,cid} = props ?? {};
+
+          return  verstuurFactuurCorrespondentie(id,cid,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type VerstuurFactuurCorrespondentieMutationResult = NonNullable<Awaited<ReturnType<typeof verstuurFactuurCorrespondentie>>>
+
+    export type VerstuurFactuurCorrespondentieMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Conceptcorrespondentie verzenden (mens-actie)
+ */
+export const useVerstuurFactuurCorrespondentie = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof verstuurFactuurCorrespondentie>>, TError,{id: number;cid: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof verstuurFactuurCorrespondentie>>,
+        TError,
+        {id: number;cid: number},
+        TContext
+      > => {
+      return useMutation(getVerstuurFactuurCorrespondentieMutationOptions(options));
+    }
+
+export const getGetFactuurCategorisatieVoorstelUrl = (id: number,) => {
+
+
+
+
+  return `/api/facturen/${id}/categorisatie-voorstel`
+}
+
+/**
+ * @summary Geleerd boekingspatroon voor de leverancier van deze factuur
+ */
+export const getFactuurCategorisatieVoorstel = async (id: number, options?: RequestInit): Promise<FactuurCategorisatieVoorstel> => {
+
+  return customFetch<FactuurCategorisatieVoorstel>(getGetFactuurCategorisatieVoorstelUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetFactuurCategorisatieVoorstelQueryKey = (id: number,) => {
+    return [
+    `/api/facturen/${id}/categorisatie-voorstel`
+    ] as const;
+    }
+
+
+export const getGetFactuurCategorisatieVoorstelQueryOptions = <TData = Awaited<ReturnType<typeof getFactuurCategorisatieVoorstel>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getFactuurCategorisatieVoorstel>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetFactuurCategorisatieVoorstelQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getFactuurCategorisatieVoorstel>>> = ({ signal }) => getFactuurCategorisatieVoorstel(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getFactuurCategorisatieVoorstel>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetFactuurCategorisatieVoorstelQueryResult = NonNullable<Awaited<ReturnType<typeof getFactuurCategorisatieVoorstel>>>
+export type GetFactuurCategorisatieVoorstelQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Geleerd boekingspatroon voor de leverancier van deze factuur
+ */
+
+export function useGetFactuurCategorisatieVoorstel<TData = Awaited<ReturnType<typeof getFactuurCategorisatieVoorstel>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getFactuurCategorisatieVoorstel>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetFactuurCategorisatieVoorstelQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetFactuurContractcontroleUrl = (id: number,) => {
+
+
+
+
+  return `/api/facturen/${id}/contractcontrole`
+}
+
+/**
+ * @summary Factuur vergelijken met gekoppeld onderhoudscontract
+ */
+export const getFactuurContractcontrole = async (id: number, options?: RequestInit): Promise<FactuurContractcontrole> => {
+
+  return customFetch<FactuurContractcontrole>(getGetFactuurContractcontroleUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetFactuurContractcontroleQueryKey = (id: number,) => {
+    return [
+    `/api/facturen/${id}/contractcontrole`
+    ] as const;
+    }
+
+
+export const getGetFactuurContractcontroleQueryOptions = <TData = Awaited<ReturnType<typeof getFactuurContractcontrole>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getFactuurContractcontrole>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetFactuurContractcontroleQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getFactuurContractcontrole>>> = ({ signal }) => getFactuurContractcontrole(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getFactuurContractcontrole>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetFactuurContractcontroleQueryResult = NonNullable<Awaited<ReturnType<typeof getFactuurContractcontrole>>>
+export type GetFactuurContractcontroleQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Factuur vergelijken met gekoppeld onderhoudscontract
+ */
+
+export function useGetFactuurContractcontrole<TData = Awaited<ReturnType<typeof getFactuurContractcontrole>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getFactuurContractcontrole>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetFactuurContractcontroleQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
 export const getBeoordelenFactuurPLUrl = (id: number,) => {
 

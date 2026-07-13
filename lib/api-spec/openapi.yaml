@@ -16877,6 +16877,234 @@ paths:
               schema:
                 $ref: "#/components/schemas/Factuur"
 
+  /facturen/import-instellingen:
+    get:
+      operationId: getFactuurImportInstellingen
+      summary: Instellingen mailbox-import ophalen
+      tags: [Facturen]
+      responses:
+        "200":
+          description: Import-instellingen
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FactuurImportInstellingen"
+    patch:
+      operationId: updateFactuurImportInstellingen
+      summary: Instellingen mailbox-import bijwerken
+      tags: [Facturen]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FactuurImportInstellingenInput"
+      responses:
+        "200":
+          description: Bijgewerkte instellingen
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FactuurImportInstellingen"
+
+  /facturen/mailbox-sync:
+    post:
+      operationId: syncFactuurMailbox
+      summary: Financiële postbus ophalen en facturen aanmaken uit bijlagen
+      tags: [Facturen]
+      responses:
+        "200":
+          description: Import-resultaat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FactuurMailboxSyncResultaat"
+        "422":
+          description: Import niet mogelijk
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FactuurMailboxSyncResultaat"
+
+  /facturen/import-log:
+    get:
+      operationId: getFactuurImportLog
+      summary: Logboek van mailbox-import
+      tags: [Facturen]
+      responses:
+        "200":
+          description: Importlogboek
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FactuurImportLogItem"
+
+  /facturen/analyse:
+    get:
+      operationId: getFactuurAnalyse
+      summary: Geaggregeerde factuuranalyse voor het directiedashboard
+      tags: [Facturen]
+      responses:
+        "200":
+          description: Analysecijfers
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FactuurAnalyse"
+
+  /facturen/{id}/correspondentie:
+    get:
+      operationId: getFactuurCorrespondentie
+      summary: Correspondentie bij een factuur ophalen
+      tags: [Facturen]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Correspondentie-items
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FactuurCorrespondentie"
+
+  /facturen/{id}/afkeur-concept:
+    post:
+      operationId: maakFactuurAfkeurConcept
+      summary: AI-conceptmail voor afkeuring opstellen (opgeslagen als concept)
+      tags: [Facturen]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FactuurAfkeurConceptInput"
+      responses:
+        "201":
+          description: Aangemaakt concept
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FactuurCorrespondentie"
+
+  /facturen/{id}/correspondentie/{cid}:
+    patch:
+      operationId: updateFactuurCorrespondentie
+      summary: Conceptcorrespondentie bijwerken
+      tags: [Facturen]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: cid
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FactuurCorrespondentieUpdateInput"
+      responses:
+        "200":
+          description: Bijgewerkt
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  status:
+                    type: string
+
+  /facturen/{id}/correspondentie/{cid}/verzenden:
+    post:
+      operationId: verstuurFactuurCorrespondentie
+      summary: Conceptcorrespondentie verzenden (mens-actie)
+      tags: [Facturen]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: cid
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Verzonden
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  status:
+                    type: string
+                  verzonden_op:
+                    type: string
+                    nullable: true
+
+  /facturen/{id}/categorisatie-voorstel:
+    get:
+      operationId: getFactuurCategorisatieVoorstel
+      summary: Geleerd boekingspatroon voor de leverancier van deze factuur
+      tags: [Facturen]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Voorstel of null
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FactuurCategorisatieVoorstel"
+
+  /facturen/{id}/contractcontrole:
+    get:
+      operationId: getFactuurContractcontrole
+      summary: Factuur vergelijken met gekoppeld onderhoudscontract
+      tags: [Facturen]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Contractcontrole-resultaat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FactuurContractcontrole"
+
   /facturen/{id}/beoordelen-pl:
     post:
       operationId: beoordelenFactuurPL
@@ -36461,6 +36689,225 @@ components:
       properties:
         reden:
           type: string
+        categorie:
+          type: string
+          nullable: true
+
+    FactuurImportInstellingen:
+      type: object
+      properties:
+        actief:
+          type: boolean
+        mailbox_adres:
+          type: string
+          nullable: true
+        laatste_sync_op:
+          type: string
+          nullable: true
+        laatste_sync_resultaat:
+          type: string
+          nullable: true
+        mail_geconfigureerd:
+          type: boolean
+
+    FactuurImportInstellingenInput:
+      type: object
+      properties:
+        actief:
+          type: boolean
+        mailbox_adres:
+          type: string
+          nullable: true
+
+    FactuurMailboxSyncResultaat:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        gecontroleerd:
+          type: integer
+        aangemaakt:
+          type: integer
+        overgeslagen:
+          type: integer
+        mislukt:
+          type: integer
+        melding:
+          type: string
+
+    FactuurImportLogItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        factuur_id:
+          type: integer
+          nullable: true
+        bijlage_naam:
+          type: string
+        formaat:
+          type: string
+        afzender:
+          type: string
+          nullable: true
+        onderwerp:
+          type: string
+          nullable: true
+        status:
+          type: string
+        foutmelding:
+          type: string
+          nullable: true
+        aangemaakt_op:
+          type: string
+
+    FactuurAnalyse:
+      type: object
+      properties:
+        te_beoordelen:
+          type: integer
+        afgekeurd:
+          type: integer
+        via_mailbox:
+          type: integer
+        iban_afwijkingen:
+          type: integer
+        open_bedrag_incl_btw:
+          type: string
+        afkeur_per_categorie:
+          type: array
+          items:
+            type: object
+            properties:
+              categorie:
+                type: string
+                nullable: true
+              aantal:
+                type: integer
+
+    FactuurCorrespondentie:
+      type: object
+      properties:
+        id:
+          type: integer
+        factuur_id:
+          type: integer
+        richting:
+          type: string
+        soort:
+          type: string
+        status:
+          type: string
+        ontvanger_email:
+          type: string
+          nullable: true
+        ontvanger_naam:
+          type: string
+          nullable: true
+        onderwerp:
+          type: string
+        bericht:
+          type: string
+        afkeur_categorie:
+          type: string
+          nullable: true
+        ai_gegenereerd:
+          type: boolean
+        verzonden_op:
+          type: string
+          nullable: true
+        foutmelding:
+          type: string
+          nullable: true
+        aangemaakt_op:
+          type: string
+
+    FactuurAfkeurConceptInput:
+      type: object
+      properties:
+        categorie:
+          type: string
+          nullable: true
+        reden:
+          type: string
+          nullable: true
+
+    FactuurCorrespondentieUpdateInput:
+      type: object
+      properties:
+        onderwerp:
+          type: string
+        bericht:
+          type: string
+        ontvanger_email:
+          type: string
+          nullable: true
+        ontvanger_naam:
+          type: string
+          nullable: true
+
+    FactuurCategorisatieVoorstel:
+      type: object
+      properties:
+        voorstel:
+          nullable: true
+          type: object
+          properties:
+            grootboekrekening:
+              type: string
+              nullable: true
+            kostenplaats:
+              type: string
+              nullable: true
+            categorie:
+              type: string
+              nullable: true
+            btw_code:
+              type: string
+              nullable: true
+            aantal:
+              type: integer
+            laatst_bevestigd_op:
+              type: string
+
+    FactuurContractcontrole:
+      type: object
+      properties:
+        contract_gekoppeld:
+          type: boolean
+        contract:
+          nullable: true
+          type: object
+          properties:
+            id:
+              type: integer
+            contractnummer:
+              type: string
+            contractwaarde:
+              type: string
+              nullable: true
+            indexering:
+              type: string
+            indexering_percentage:
+              type: string
+              nullable: true
+            einddatum:
+              type: string
+              nullable: true
+            opzegtermijn_maanden:
+              type: integer
+              nullable: true
+        signalen:
+          type: array
+          items:
+            type: object
+            properties:
+              code:
+                type: string
+              ernst:
+                type: string
+              bericht:
+                type: string
 
     BeoordelenInput:
       type: object
