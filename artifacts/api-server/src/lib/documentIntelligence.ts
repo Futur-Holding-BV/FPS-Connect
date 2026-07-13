@@ -600,7 +600,27 @@ export async function classificeerDocument(input: {
     detail: jaarUitBestandsnaam ? "afgeleid uit bestandsnaam (minder betrouwbaar)" : undefined,
   });
 
-  const subtype = basis.subtype ?? (basis.gevonden_gegevens.document_subtype ?? null);
+  let subtype = basis.subtype ?? (basis.gevonden_gegevens.document_subtype ?? null);
+  // Deterministische vangnet-stap: de AI vergeet soms document_subtype="cv" mee te
+  // geven terwijl het document overduidelijk een CV is. De CV-onboardingflow hangt
+  // op dit subtype, dus we leiden het zo nodig zelf af uit tekst/bestandsnaam.
+  if (!subtype && basis.categorie === "personeelsdocument") {
+    const tekstLower = (extractie.tekst ?? "").toLowerCase();
+    const naamLower = bestandsnaam.toLowerCase();
+    const isCv =
+      tekstLower.includes("curriculum vitae") ||
+      /\bcv\b/.test(naamLower.replace(/[-_.]/g, " ")) ||
+      (tekstLower.includes("werkervaring") && tekstLower.includes("opleiding")) ||
+      tekstLower.includes("solliciteer");
+    if (isCv) {
+      subtype = "cv";
+      bewijs.push({
+        stap: "subtype_afgeleid",
+        resultaat: "cv",
+        detail: "CV-kenmerken in tekst/bestandsnaam (vangnet: AI gaf geen subtype)",
+      });
+    }
+  }
   const module = CATEGORIE_MODULE[basis.categorie];
   bewijs.push({ stap: "module_bepaald", resultaat: module });
 

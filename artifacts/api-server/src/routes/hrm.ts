@@ -47,6 +47,7 @@ import { workflowService, maakTransitieContext } from "../services/workflow-engi
 import { medewerkerIdVoorGebruiker } from "../services/medewerker-lookup";
 import { maakVerlofprofielAan } from "../services/verlofprofiel";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
+import { analyseerCvBestand } from "../lib/cvAnalyse";
 import { ZZP_JURIDISCH_PROMPT, HRM_CAPACITEIT_SIGNALEN_PROMPT } from "../lib/aiPrompts";
 import { logger } from "../lib/logger";
 
@@ -3494,86 +3495,15 @@ router.post(
         return void res.status(422).json({ error: "Geen bestand ontvangen. Stuur een PDF." });
       }
 
-      let tekst = "";
-      const isPdf =
-        bestand.mimetype === "application/pdf" ||
-        bestand.originalname.toLowerCase().endsWith(".pdf");
-      if (isPdf) {
-        try {
-          const parsed = await extraheerPdfTekst(bestand.buffer);
-          tekst = parsed.tekst ?? "";
-        } catch {
-          return void res
-            .status(422)
-            .json({ error: "PDF kon niet worden gelezen. Gebruik een niet-gescand PDF-bestand." });
-        }
-      } else {
-        tekst = bestand.buffer.toString("utf-8");
-      }
-
-      if (!tekst.trim() || tekst.trim().length < 50) {
-        return void res.status(422).json({ error: "Te weinig tekst gevonden in het bestand." });
-      }
-
-      if (!heeftGateway()) {
-        return void res.status(503).json({ error: "AI is niet beschikbaar. Vul de velden handmatig in." });
-      }
-
-      const extractiePrompt = `Analyseer het volgende CV en extraheer de gevraagde velden. Antwoord UITSLUITEND met een geldig JSON-object (geen markdown, geen tekst buiten het object).
-
-CV-TEKST:
-${tekst.slice(0, 6000)}
-
-Extraheer exact deze velden (gebruik null als iets ontbreekt of onduidelijk is):
-{
-  "naam": "volledige naam",
-  "email": "e-mailadres of null",
-  "telefoon": "vast telefoonnummer incl. netnummer of null",
-  "mobiel": "mobiel nummer of null",
-  "geboortedatum": "YYYY-MM-DD of null",
-  "adres": "straatnaam + huisnummer of null",
-  "postcode": "Nederlandse postcode (1234 AB formaat) of null",
-  "woonplaats": "woonplaats of null",
-  "rijbewijs": "rijbewijscategorieën (bijv. B, BE, C) of null",
-  "vca_vervaldatum": "VCA vervaldatum YYYY-MM-DD of null",
-  "bhv_vervaldatum": "BHV vervaldatum YYYY-MM-DD of null",
-  "ehbo_vervaldatum": "EHBO vervaldatum YYYY-MM-DD of null",
-  "werkervaring_samenvatting": "max 2 zinnen over werkervaring of null",
-  "ai_toelichting": "opmerking over leesbaarheid of null (max 1 zin)"
-}`;
-
-      const cvResultaat = await aiGateway.chat("default", {
-        messages: [{ role: "user", content: extractiePrompt }],
-        max_tokens: 500,
-        response_format: { type: "json_object" },
+      const uitkomst = await analyseerCvBestand({
+        buffer: bestand.buffer,
+        bestandsnaam: bestand.originalname,
+        mimetype: bestand.mimetype ?? null,
       });
-      if (!cvResultaat.ok) {
-        return void res.status(503).json({ error: "AI-analyse mislukt. Probeer opnieuw." });
+      if (!uitkomst.ok) {
+        return void res.status(uitkomst.status).json({ error: uitkomst.fout });
       }
-
-      let resultaat: Record<string, unknown> = {};
-      try {
-        resultaat = JSON.parse(cvResultaat.inhoud);
-      } catch {
-        return void res.status(500).json({ error: "AI gaf een ongeldig antwoord. Probeer opnieuw." });
-      }
-
-      return void res.json({
-        naam: resultaat.naam ?? null,
-        email: resultaat.email ?? null,
-        telefoon: resultaat.telefoon ?? null,
-        mobiel: resultaat.mobiel ?? null,
-        geboortedatum: resultaat.geboortedatum ?? null,
-        adres: resultaat.adres ?? null,
-        postcode: resultaat.postcode ?? null,
-        woonplaats: resultaat.woonplaats ?? null,
-        rijbewijs: resultaat.rijbewijs ?? null,
-        vca_vervaldatum: resultaat.vca_vervaldatum ?? null,
-        bhv_vervaldatum: resultaat.bhv_vervaldatum ?? null,
-        ehbo_vervaldatum: resultaat.ehbo_vervaldatum ?? null,
-        werkervaring_samenvatting: resultaat.werkervaring_samenvatting ?? null,
-        ai_toelichting: resultaat.ai_toelichting ?? null,
-      });
+      return void res.json(uitkomst.resultaat);
     } catch (err) {
       req.log.error(err);
       res.status(500).json({ error: "Interne serverfout" });

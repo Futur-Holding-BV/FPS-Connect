@@ -16,8 +16,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
 import { useListMedewerkers } from "@workspace/api-client-react";
+import type { CvAnalyseResultaat } from "@workspace/api-client-react";
 import { Switch } from "@/components/ui/switch";
+import { slaCvOnboardingOp } from "@/lib/cv-onboarding-stash";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -401,14 +404,22 @@ function BeslisScherm({
   const [bevestigdAkkoord, setBevestigdAkkoord] = useState(false);
   const [gekozenMedewerker, setGekozenMedewerker] = useState("");
   const [gekozenDocType, setGekozenDocType] = useState("");
+  const [cvBezig, setCvBezig] = useState(false);
   const { data: medewerkerLijst } = useListMedewerkers();
+  const { toast } = useToast();
+  const { heeftNiveau } = useBevoegdheid();
+  const magOnboarden = heeftNiveau("personeel", 2);
 
   const { suggestie, fout, status } = item;
   const effectiefeCat = item.gekozenCategorie ?? suggestie?.categorie ?? "algemeen";
   const catInfo = CATEGORIE_INFO[effectiefeCat];
 
+  // Zonder schrijfrecht personeel (niveau 2) valt een CV terug op de standaard
+  // personeelsdocument-flow; de onboardingvraag verschijnt dan niet.
   const isCV =
+    magOnboarden &&
     effectiefeCat === "personeelsdocument" && (
+      suggestie?.subtype === "cv" ||
       suggestie?.gevonden_gegevens?.document_subtype === "cv" ||
       ["cv", "curriculum", "vitae", "resume", "sollicitatie"].some((k) =>
         item.bestand.name.toLowerCase().includes(k)
@@ -434,11 +445,6 @@ function BeslisScherm({
       onBevestigenPersoneel?.(Number(gekozenMedewerker), gekozenDocType);
       return;
     }
-    if (isCV) {
-      onBevestigen(effectiefeCat);
-      setTimeout(() => onNavigeer?.("/personeel/onboarden"), 300);
-      return;
-    }
     if (effectiefeCat === "snagstream") {
       onBevestigen(effectiefeCat);
       setTimeout(() => onNavigeer?.("/snagstream"), 300);
@@ -454,6 +460,61 @@ function BeslisScherm({
       setTimeout(() => onNavigeer?.(catInfo.pad), 300);
       return;
     }
+    onBevestigen(effectiefeCat);
+  }
+
+  // CV herkend: expliciete vraag — AI stelt voor, de mens bevestigt in het formulier
+  async function startCvOnboarding() {
+    if (cvBezig) return;
+    setCvBezig(true);
+    onLogActie?.({
+      bestandsnaam: item.bestand.name,
+      categorie: effectiefeCat,
+      actie: "cv_onboarding_gestart",
+      impactNiveau,
+      bevestigd: true,
+      geweigerd: false,
+    });
+    onBevestigen(effectiefeCat);
+    try {
+      const fd = new FormData();
+      fd.append("cv", item.bestand);
+      const res = await fetch("/api/medewerkers/ai-cv-analyse", {
+        method: "POST",
+        body: fd,
+        credentials: "include",
+      });
+      if (res.ok) {
+        const voorstel = (await res.json()) as CvAnalyseResultaat;
+        slaCvOnboardingOp({ bestandsnaam: item.bestand.name, bron: "slim-upload", voorstel });
+      } else {
+        toast({
+          title: "CV-analyse niet beschikbaar",
+          description: "Het onboardingformulier opent zonder vooraf ingevulde gegevens.",
+          variant: "destructive",
+        });
+      }
+    } catch {
+      toast({
+        title: "CV-analyse niet beschikbaar",
+        description: "Het onboardingformulier opent zonder vooraf ingevulde gegevens.",
+        variant: "destructive",
+      });
+    } finally {
+      setCvBezig(false);
+      onNavigeer?.("/personeel/onboarden");
+    }
+  }
+
+  function bewaarCvZonderOnboarding() {
+    onLogActie?.({
+      bestandsnaam: item.bestand.name,
+      categorie: effectiefeCat,
+      actie: "cv_bewaard_zonder_onboarding",
+      impactNiveau,
+      bevestigd: true,
+      geweigerd: false,
+    });
     onBevestigen(effectiefeCat);
   }
 
@@ -575,6 +636,49 @@ function BeslisScherm({
         </div>
       )}
 
+      {/* CV herkend: expliciete onboardingvraag */}
+      {isCV && magUploaden && (
+        <div className="space-y-2.5 rounded-lg border border-amber-300 bg-amber-50 p-3">
+          <div className="flex items-start gap-2">
+            <UserPlus className="h-4 w-4 text-amber-700 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-xs font-semibold text-amber-800">CV herkend — onboarding starten?</p>
+              <p className="text-xs text-amber-700 mt-0.5 leading-relaxed">
+                De AI leest het CV en vult het onboardingformulier alvast in. U controleert en
+                bevestigt alles zelf voordat er iets wordt aangemaakt.
+              </p>
+            </div>
+          </div>
+          <Button
+            size="sm"
+            className="w-full gap-1.5"
+            onClick={startCvOnboarding}
+            disabled={cvBezig || (vereistBevestiging && !bevestigdAkkoord)}
+          >
+            {cvBezig ? (
+              <>
+                <span className="h-3.5 w-3.5 rounded-full border-2 border-current border-t-transparent animate-spin" />
+                CV wordt gelezen…
+              </>
+            ) : (
+              <>
+                <UserPlus className="h-3.5 w-3.5" />
+                Ja, onboarding starten
+              </>
+            )}
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="w-full"
+            onClick={bewaarCvZonderOnboarding}
+            disabled={cvBezig || (vereistBevestiging && !bevestigdAkkoord)}
+          >
+            Niet nu — alleen in de inbox bewaren
+          </Button>
+        </div>
+      )}
+
       {/* Bevestigingscheckbox (alleen bij midden/hoog impact) */}
       {vereistBevestiging && (
         <label className="flex items-start gap-2.5 cursor-pointer select-none">
@@ -601,7 +705,7 @@ function BeslisScherm({
       </details>
 
       {/* Bevestigknop */}
-      {magUploaden && (
+      {magUploaden && !isCV && (
         <Button
           size="sm"
           className="w-full gap-1.5"

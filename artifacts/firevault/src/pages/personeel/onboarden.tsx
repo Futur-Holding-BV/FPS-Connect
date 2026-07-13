@@ -1,14 +1,16 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useLocation } from "wouter";
 import {
   useCreateMedewerker,
   useListFuncties,
   useListVerlofsoorten,
   useListCaoOpties,
+  useListMedewerkers,
   getListMedewerkersQueryKey,
   getGetHrmStatsQueryKey,
 } from "@workspace/api-client-react";
-import type { MedewerkerInput } from "@workspace/api-client-react";
+import type { MedewerkerInput, CvAnalyseResultaat } from "@workspace/api-client-react";
+import { leesEnWisCvOnboarding, type CvOnboardingStash } from "@/lib/cv-onboarding-stash";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -24,7 +26,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import {
   UserCheck, Handshake, Building2, ArrowLeft, ArrowRight,
-  CheckCircle2, ExternalLink, RotateCcw,
+  CheckCircle2, ExternalLink, RotateCcw, Sparkles, X, AlertTriangle,
 } from "lucide-react";
 import { WERKMAATSCHAPPIJEN, caoVoorWerkmaatschappij } from "@/lib/werkmaatschappijen";
 
@@ -238,21 +240,174 @@ function berekenLeeftijd(geboortedatum: string): number | null {
   return leeftijd >= 0 ? leeftijd : null;
 }
 
+// ─── CV-voorstel hulpfuncties ─────────────────────────────────────────────────
+
+function geldigeDatum(s: string | null | undefined): string {
+  if (!s) return "";
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return "";
+  const d = new Date(s);
+  return isNaN(d.getTime()) ? "" : s;
+}
+
+interface CvExtraVelden {
+  telefoon?: string;
+  mobiel?: string;
+  adres?: string;
+  postcode?: string;
+  woonplaats?: string;
+  rijbewijs?: string;
+  vca_vervaldatum?: string;
+  bhv_vervaldatum?: string;
+  ehbo_vervaldatum?: string;
+  cv_tekst?: string;
+}
+
+function bouwCvExtra(voorstel: CvAnalyseResultaat | null | undefined): CvExtraVelden {
+  if (!voorstel) return {};
+  const extra: CvExtraVelden = {};
+  if (voorstel.telefoon) extra.telefoon = voorstel.telefoon;
+  if (voorstel.mobiel) extra.mobiel = voorstel.mobiel;
+  if (voorstel.adres) extra.adres = voorstel.adres;
+  if (voorstel.postcode) extra.postcode = voorstel.postcode;
+  if (voorstel.woonplaats) extra.woonplaats = voorstel.woonplaats;
+  if (voorstel.rijbewijs) extra.rijbewijs = voorstel.rijbewijs;
+  const vca = geldigeDatum(voorstel.vca_vervaldatum);
+  const bhv = geldigeDatum(voorstel.bhv_vervaldatum);
+  const ehbo = geldigeDatum(voorstel.ehbo_vervaldatum);
+  if (vca) extra.vca_vervaldatum = vca;
+  if (bhv) extra.bhv_vervaldatum = bhv;
+  if (ehbo) extra.ehbo_vervaldatum = ehbo;
+  if (voorstel.werkervaring_samenvatting) extra.cv_tekst = voorstel.werkervaring_samenvatting;
+  return extra;
+}
+
+const CV_EXTRA_LABELS: Record<keyof CvExtraVelden, string> = {
+  telefoon: "Telefoon",
+  mobiel: "Mobiel",
+  adres: "Adres",
+  postcode: "Postcode",
+  woonplaats: "Woonplaats",
+  rijbewijs: "Rijbewijs",
+  vca_vervaldatum: "VCA geldig tot",
+  bhv_vervaldatum: "BHV geldig tot",
+  ehbo_vervaldatum: "EHBO geldig tot",
+  cv_tekst: "Werkervaring",
+};
+
+function CvVoorstelBanner({
+  bestandsnaam,
+  voorstel,
+  extra,
+  duplicaatNaam,
+  onWissen,
+}: {
+  bestandsnaam: string;
+  voorstel: CvAnalyseResultaat;
+  extra: CvExtraVelden;
+  duplicaatNaam: string | null;
+  onWissen: () => void;
+}) {
+  const basis: Array<[string, string]> = [];
+  if (voorstel.naam) basis.push(["Naam", voorstel.naam]);
+  if (voorstel.email) basis.push(["E-mail", voorstel.email]);
+  const geb = geldigeDatum(voorstel.geboortedatum);
+  if (geb) basis.push(["Geboortedatum", geb]);
+  const extraRegels = (Object.keys(extra) as Array<keyof CvExtraVelden>)
+    .filter((k) => extra[k])
+    .map((k): [string, string] => [CV_EXTRA_LABELS[k], String(extra[k])]);
+
+  return (
+    <div className="rounded-lg border border-amber-300 bg-amber-50 p-4 space-y-3">
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex items-start gap-2">
+          <Sparkles className="h-4 w-4 text-amber-700 shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-semibold text-amber-800">Vooraf ingevuld vanuit CV</p>
+            <p className="text-xs text-amber-700 mt-0.5">
+              {bestandsnaam} — controleer alle gegevens voordat u opslaat. Dit is een AI-voorstel;
+              er is nog niets aangemaakt.
+            </p>
+          </div>
+        </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 gap-1 text-amber-800 hover:bg-amber-100 shrink-0"
+          onClick={onWissen}
+        >
+          <X className="h-3.5 w-3.5" /> Alles wissen
+        </Button>
+      </div>
+      {(basis.length > 0 || extraRegels.length > 0) && (
+        <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+          {[...basis, ...extraRegels].map(([label, waarde]) => (
+            <div key={label} className={label === "Werkervaring" ? "col-span-2" : ""}>
+              <span className="text-[10px] font-medium text-amber-700 uppercase tracking-wide">{label}</span>
+              <p className="text-xs text-amber-900 leading-snug">{waarde}</p>
+            </div>
+          ))}
+        </div>
+      )}
+      {duplicaatNaam && (
+        <div className="flex items-start gap-2 rounded border border-red-300 bg-red-50 px-2.5 py-2">
+          <AlertTriangle className="h-3.5 w-3.5 text-red-600 shrink-0 mt-0.5" />
+          <p className="text-xs text-red-700">
+            Let op: er bestaat al een medewerker met deze naam of dit e-mailadres
+            ({duplicaatNaam}). Controleer of dit geen dubbele registratie is.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Stap 2a: Vast / tijdelijk ────────────────────────────────────────────────
 
 function VastFormulier({
   onTerug,
   onGereed,
+  cvStash,
+  onWisCv,
 }: {
   onTerug: () => void;
   onGereed: (id: number) => void;
+  cvStash?: CvOnboardingStash | null;
+  onWisCv?: () => void;
 }) {
-  const [form, setForm] = useState<VastForm>(LEEG_VAST);
+  const voorstel = cvStash?.voorstel ?? null;
+  const [form, setForm] = useState<VastForm>(() => ({
+    ...LEEG_VAST,
+    naam: voorstel?.naam ?? "",
+    email: voorstel?.email ?? "",
+    geboortedatum: geldigeDatum(voorstel?.geboortedatum),
+  }));
+  const [cvExtra, setCvExtra] = useState<CvExtraVelden>(() => bouwCvExtra(voorstel));
   const { data: functies } = useListFuncties();
   const { data: verlofsoorten } = useListVerlofsoorten();
   const { data: caoOpties } = useListCaoOpties();
+  const { data: bestaandeMedewerkers } = useListMedewerkers();
   const maak = useCreateMedewerker();
   const { toast } = useToast();
+
+  // Duplicaatwaarschuwing: zelfde naam of e-mailadres als bestaande medewerker
+  const duplicaatNaam = useMemo(() => {
+    if (!bestaandeMedewerkers) return null;
+    const naam = form.naam.trim().toLowerCase();
+    const email = form.email.trim().toLowerCase();
+    const lijst = bestaandeMedewerkers as Array<{ naam?: string | null; email?: string | null }>;
+    const match = lijst.find(
+      (m) =>
+        (naam && m.naam?.trim().toLowerCase() === naam) ||
+        (email && m.email?.trim().toLowerCase() === email),
+    );
+    return match?.naam ?? null;
+  }, [bestaandeMedewerkers, form.naam, form.email]);
+
+  function wisCvGegevens() {
+    setForm((f) => ({ ...f, naam: "", email: "", geboortedatum: "" }));
+    setCvExtra({});
+    onWisCv?.();
+  }
 
   // Bepaal welke verlofsoorten automatisch van toepassing zijn op basis van CAO en dienstverband.
   // Oproep/stage krijgen alleen vakantieverlof; vast/tijdelijk krijgen alles wat bij de CAO past.
@@ -336,6 +491,16 @@ function VastFormulier({
         in_dienst_sinds: form.in_dienst_sinds || undefined,
         verlofsoort_ids: form.verlofsoort_ids.length > 0 ? form.verlofsoort_ids : undefined,
         jaar: new Date().getFullYear(),
+        telefoon: cvExtra.telefoon || undefined,
+        mobiel: cvExtra.mobiel || undefined,
+        adres: cvExtra.adres || undefined,
+        postcode: cvExtra.postcode || undefined,
+        woonplaats: cvExtra.woonplaats || undefined,
+        rijbewijs: cvExtra.rijbewijs || undefined,
+        vca_vervaldatum: cvExtra.vca_vervaldatum || undefined,
+        bhv_vervaldatum: cvExtra.bhv_vervaldatum || undefined,
+        ehbo_vervaldatum: cvExtra.ehbo_vervaldatum || undefined,
+        cv_tekst: cvExtra.cv_tekst || undefined,
       };
       const nieuw = await maak.mutateAsync({ data: input });
       onGereed(nieuw.id);
@@ -355,6 +520,16 @@ function VastFormulier({
           <p className="text-sm text-muted-foreground">In loondienst via FPS — CAO en verlofopbouw van toepassing</p>
         </div>
       </div>
+
+      {cvStash && voorstel && (
+        <CvVoorstelBanner
+          bestandsnaam={cvStash.bestandsnaam}
+          voorstel={voorstel}
+          extra={cvExtra}
+          duplicaatNaam={duplicaatNaam}
+          onWissen={wisCvGegevens}
+        />
+      )}
 
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
@@ -511,11 +686,13 @@ function VastFormulier({
 function ZzpFormulier({
   onTerug,
   onGereed,
+  cvNaam,
 }: {
   onTerug: () => void;
   onGereed: (id: number) => void;
+  cvNaam?: string;
 }) {
-  const [form, setForm] = useState<ZzpForm>(LEEG_ZZP);
+  const [form, setForm] = useState<ZzpForm>(() => ({ ...LEEG_ZZP, naam: cvNaam ?? "" }));
   const { data: functies } = useListFuncties();
   const maak = useCreateMedewerker();
   const { toast } = useToast();
@@ -634,11 +811,13 @@ function ZzpFormulier({
 function UitzendFormulier({
   onTerug,
   onGereed,
+  cvNaam,
 }: {
   onTerug: () => void;
   onGereed: (id: number) => void;
+  cvNaam?: string;
 }) {
-  const [form, setForm] = useState<UitzendForm>(LEEG_UITZEND);
+  const [form, setForm] = useState<UitzendForm>(() => ({ ...LEEG_UITZEND, naam: cvNaam ?? "" }));
   const [soort, setSoort] = useState<"uitzend" | "inhuur">("uitzend");
   const { data: functies } = useListFuncties();
   const maak = useCreateMedewerker();
@@ -836,6 +1015,17 @@ export default function OnboardenPagina() {
   const queryClient = useQueryClient();
   const [stroom, setStroom] = useState<Stroom | null>(null);
   const [afrondMedewerkerId, setAfrondMedewerkerId] = useState<number | null>(null);
+  const [cvStash, setCvStash] = useState<CvOnboardingStash | null>(null);
+  const stashGelezen = useRef(false);
+
+  // CV-voorstel eenmalig uit sessionStorage lezen (wist bij lezen).
+  // Ref-guard voorkomt dubbel lezen bij React StrictMode remount.
+  useEffect(() => {
+    if (stashGelezen.current) return;
+    stashGelezen.current = true;
+    const stash = leesEnWisCvOnboarding();
+    if (stash) setCvStash(stash);
+  }, []);
 
   async function gereed(id: number) {
     setAfrondMedewerkerId(id);
@@ -846,6 +1036,7 @@ export default function OnboardenPagina() {
   function reset() {
     setStroom(null);
     setAfrondMedewerkerId(null);
+    setCvStash(null);
   }
 
   if (afrondMedewerkerId !== null && stroom !== null) {
@@ -853,14 +1044,47 @@ export default function OnboardenPagina() {
   }
 
   if (stroom === null) {
-    return <TypeKiezer onKies={setStroom} />;
+    return (
+      <div className="space-y-4">
+        {cvStash && (
+          <div className="flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 p-3 max-w-3xl">
+            <Sparkles className="h-4 w-4 text-amber-700 shrink-0 mt-0.5" />
+            <p className="text-xs text-amber-800">
+              <span className="font-semibold">CV geladen:</span> {cvStash.bestandsnaam} — kies
+              hieronder het type indiensttreding; het formulier wordt vooraf ingevuld met het
+              AI-voorstel. U controleert en bevestigt alles zelf.
+            </p>
+          </div>
+        )}
+        <TypeKiezer onKies={setStroom} />
+      </div>
+    );
   }
 
   if (stroom === "vast") {
-    return <VastFormulier onTerug={() => setStroom(null)} onGereed={gereed} />;
+    return (
+      <VastFormulier
+        onTerug={() => setStroom(null)}
+        onGereed={gereed}
+        cvStash={cvStash}
+        onWisCv={() => setCvStash(null)}
+      />
+    );
   }
   if (stroom === "zzp") {
-    return <ZzpFormulier onTerug={() => setStroom(null)} onGereed={gereed} />;
+    return (
+      <ZzpFormulier
+        onTerug={() => setStroom(null)}
+        onGereed={gereed}
+        cvNaam={cvStash?.voorstel.naam ?? undefined}
+      />
+    );
   }
-  return <UitzendFormulier onTerug={() => setStroom(null)} onGereed={gereed} />;
+  return (
+    <UitzendFormulier
+      onTerug={() => setStroom(null)}
+      onGereed={gereed}
+      cvNaam={cvStash?.voorstel.naam ?? undefined}
+    />
+  );
 }

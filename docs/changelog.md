@@ -1,3 +1,21 @@
+## 2026-07-13 — CV herkend in Slim Upload/Inbox: expliciete onboardingvraag + vooringevuld formulier
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (AI stelt alleen voor; een mens controleert en bevestigt — er wordt nooit automatisch een medewerker aangemaakt)
+
+**Aanleiding:** wanneer een CV werd herkend in Slim Upload navigeerde de app automatisch naar het lege onboardingformulier, zonder vraag en zonder de CV-gegevens mee te nemen. Gewenst: een expliciete vraag "onboarding starten?" en een vooringevuld formulier op basis van het AI-voorstel.
+
+**Wijzigingen:**
+- `api-server/routes/inbox.ts`: nieuw endpoint `POST /inbox/items/:id/cv-analyse` — hergebruikt de bestaande CV-analyse (`cvAnalyse.ts`) op het opgeslagen inboxbestand; 422 als het item geen CV is (`document_categorie !== "hr_document"` of `document_subtype !== "cv"`)
+- DB/OpenAPI: `document_subtype`-kolom op inbox-items (additief), `CvAnalyseResultaat`-schema + hook `useAnalyseerInboxCv` via codegen
+- `lib/cv-onboarding-stash.ts` (nieuw): AI-voorstel wordt via sessionStorage doorgegeven aan het onboardingformulier (eenmalig gelezen, gewist bij lezen; versie- en bronvalidatie)
+- `slim-upload-balk.tsx`: bij een herkend CV verschijnt een amber vraagblok "CV herkend — onboarding starten?" met twee keuzes: "Ja, onboarding starten" (CV wordt door de AI gelezen, bestand blijft in de inbox bewaard, formulier opent vooringevuld) en "Niet nu — alleen in de inbox bewaren"; de automatische navigatie is verwijderd; CV-herkenning primair op AI-subtype in plaats van bestandsnaam
+- `inbox/detail.tsx`: zelfde vraagblok op de inbox-detailpagina voor CV-items (knop alleen zichtbaar met schrijfrecht personeel), analyse via het nieuwe endpoint
+- `personeel/onboarden.tsx`: leest het CV-voorstel eenmalig in; amber banner "Vooraf ingevuld vanuit CV" toont álle overgenomen velden (naam, e-mail, geboortedatum, telefoon, mobiel, adres, postcode, woonplaats, rijbewijs, VCA/BHV/EHBO-vervaldatums, werkervaring) met een "Alles wissen"-knop; duplicaatwaarschuwing bij bestaande medewerker met dezelfde naam of e-mail; datums alleen overgenomen bij geldig `JJJJ-MM-DD`-formaat; ZZP/uitzend-formulieren krijgen alleen de naam vooringevuld
+- Mislukt de CV-analyse, dan opent het formulier gewoon leeg met een duidelijke melding (geen blokkade)
+- **Bewijs:** volledige monorepo-typecheck exit 0; endpointgedrag (200 bij CV, 422 bij niet-CV) eerder aangetoond bij de backend-bouw
+
+---
+
 ## 2026-07-13 — Leidinggevende-veld verborgen bij onboarding en profiel bewerken
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (alleen UI verborgen; backend en bestaande data ongewijzigd)

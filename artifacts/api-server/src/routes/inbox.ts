@@ -20,6 +20,7 @@ import { aiGateway, heeftGateway } from "../lib/aiGateway";
 import { ObjectStorageService } from "../lib/objectStorage";
 import { stuurAanvraagBevestiging } from "../services/email";
 import { classificeerDocument, type DocCategorie, type BewijsStap } from "../lib/documentIntelligence";
+import { analyseerCvBestand } from "../lib/cvAnalyse";
 
 const objectStorage = new ObjectStorageService();
 
@@ -73,6 +74,9 @@ const router = Router();
 
 const lezen = requireBevoegdheid("crm", 1);
 const schrijven = requireBevoegdheid("crm", 2);
+// CV-analyse voor onboarding raakt personeelsgegevens; daarom personeel-schrijfrecht
+// vereist in plaats van inbox/crm-recht.
+const personeelSchrijven = requireBevoegdheid("personeel", 2);
 
 const iso = (d: Date | null) => (d ? d.toISOString() : null);
 
@@ -100,6 +104,7 @@ const mapItem = (item: typeof inboxItemsTable.$inferSelect) => ({
   geupload_op: iso(item.geuploadOp),
   status: item.status,
   document_categorie: item.documentCategorie,
+  document_subtype: item.documentSubtype,
   bestemming: item.bestemming,
   gekoppelde_entiteit_type: item.gekoppeldeEntiteitType,
   gekoppelde_entiteit_id: item.gekoppeldeEntiteitId,
@@ -263,6 +268,7 @@ router.post("/inbox/items", schrijven, uploadEnkel.single("bestand"), async (req
         geuploadDoor: gebruikerId,
         status: "geanalyseerd",
         documentCategorie,
+        documentSubtype: analyse.subtype ?? null,
         bestemming,
         aiBetrouwbaarheid: analyse.vertrouwen,
         aiSamenvatting: analyse.redenering,
@@ -312,6 +318,57 @@ router.get("/inbox/items/:id", lezen, async (req, res): Promise<void> => {
       ...mapItem(item),
       auditlog: auditlog.map((a) => ({ id: a.id, actie: a.actie, gebruiker_id: a.gebruikerId, details: a.details, aangemaakt_op: iso(a.aangemaaktOp) })),
     });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// ── CV-ANALYSE VOOR ONBOARDING ────────────────────────────────────────────────
+// AI stelt onboarding-velden voor op basis van een als CV herkend inbox-bestand.
+// Er wordt hier NOOIT een medewerker of gebruiker aangemaakt; de mens bevestigt
+// in het onboardingformulier. Vereist personeel-schrijfrecht.
+router.post("/inbox/items/:id/cv-analyse", personeelSchrijven, async (req, res): Promise<void> => {
+  try {
+    const id = parseId(req.params.id);
+    const [item] = await db.select().from(inboxItemsTable).where(eq(inboxItemsTable.id, id));
+    if (!item) return void res.status(404).json({ error: "Item niet gevonden" });
+
+    if (item.documentCategorie !== "hr_document" || item.documentSubtype !== "cv") {
+      return void res.status(422).json({ error: "Dit inbox-item is niet als CV herkend. Onboarding-voorstel is alleen beschikbaar voor CV's." });
+    }
+
+    if (!item.bestandspad || !item.bestandspad.startsWith("/objects/")) {
+      return void res.status(404).json({ error: "Het bestand van dit inbox-item is niet beschikbaar in de opslag." });
+    }
+
+    let buffer: Buffer;
+    try {
+      const storageFile = await objectStorage.getObjectEntityFile(item.bestandspad);
+      const downloadResponse = await objectStorage.downloadObject(storageFile);
+      buffer = Buffer.from(await downloadResponse.arrayBuffer());
+    } catch {
+      return void res.status(404).json({ error: "Het bestand van dit inbox-item is niet beschikbaar in de opslag." });
+    }
+
+    const uitkomst = await analyseerCvBestand({
+      buffer,
+      bestandsnaam: item.bestandsnaam,
+      mimetype: item.mimetype,
+    });
+    if (!uitkomst.ok) {
+      return void res.status(uitkomst.status).json({ error: uitkomst.fout });
+    }
+
+    const gebruikerId = req.session.userId ?? null;
+    await db.insert(inboxAuditLogTable).values({
+      inboxItemId: id,
+      actie: "cv_analyse",
+      gebruikerId,
+      details: "Onboarding gestart vanuit CV: AI-voorstel voor onboarding-velden opgehaald (geen medewerker aangemaakt).",
+    });
+
+    return void res.json(uitkomst.resultaat);
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });
@@ -1099,6 +1156,7 @@ router.post("/inbox/herclassificeer", schrijven, async (req, res): Promise<void>
         await db
           .update(inboxItemsTable)
           .set({
+            documentSubtype: analyse.subtype ?? null,
             aiBetrouwbaarheid: analyse.vertrouwen,
             aiSamenvatting: analyse.redenering,
             aiRedenering: analyse.redenering,

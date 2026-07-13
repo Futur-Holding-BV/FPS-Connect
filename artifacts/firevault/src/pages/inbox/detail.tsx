@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useParams, Link } from "wouter";
+import { useParams, Link, useLocation } from "wouter";
 import {
   useGetInboxItem,
   useUpdateInboxItem,
@@ -9,6 +9,7 @@ import {
   useTerBeoordelingInboxItem,
   useGetInboxItemPlanning,
   usePatchInboxItemPlanning,
+  useAnalyseerInboxCv,
   getGetInboxItemQueryKey,
   getGetInboxItemPlanningQueryKey,
   getListInboxItemsQueryKey,
@@ -16,6 +17,8 @@ import {
   useListCrmKlanten,
 } from "@workspace/api-client-react";
 import type { InboxItem } from "@workspace/api-client-react";
+import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
+import { slaCvOnboardingOp } from "@/lib/cv-onboarding-stash";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -30,7 +33,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Switch } from "@/components/ui/switch";
 import {
   ArrowLeft, Sparkles, CheckCircle2, XCircle, ArrowRight,
-  FileText, Clock, AlertTriangle, History, Edit2, CalendarClock,
+  FileText, Clock, AlertTriangle, History, Edit2, CalendarClock, UserPlus,
 } from "lucide-react";
 
 const STATUS_KLEUR: Record<string, string> = {
@@ -121,6 +124,26 @@ export default function InboxDetailPagina() {
   const verplaatsen = useVerplaatsenInboxItem();
   const terBeoordeling = useTerBeoordelingInboxItem();
   const bijwerken = useUpdateInboxItem();
+  const cvAnalyse = useAnalyseerInboxCv();
+  const [, navigate] = useLocation();
+  const { heeftNiveau } = useBevoegdheid();
+  const magOnboarden = heeftNiveau("personeel", 2);
+
+  // CV herkend: AI leest het CV en vult het onboardingformulier alvast in;
+  // de mens controleert en bevestigt — er wordt niets automatisch aangemaakt.
+  async function handleCvOnboarding(bestandsnaam: string) {
+    try {
+      const voorstel = await cvAnalyse.mutateAsync({ id: numId });
+      slaCvOnboardingOp({ bestandsnaam, bron: "inbox", inbox_item_id: numId, voorstel });
+    } catch {
+      toast({
+        title: "CV-analyse niet beschikbaar",
+        description: "Het onboardingformulier opent zonder vooraf ingevulde gegevens.",
+        variant: "destructive",
+      });
+    }
+    navigate("/personeel/onboarden");
+  }
 
   async function invalideer() {
     await qc.invalidateQueries({ queryKey: getGetInboxItemQueryKey(numId) });
@@ -342,6 +365,42 @@ export default function InboxDetailPagina() {
 
         </CardContent>
       </Card>
+
+      {/* CV herkend: expliciete onboardingvraag */}
+      {typedItem.document_categorie === "hr_document" && typedItem.document_subtype === "cv" && magOnboarden && (
+        <Card className="border-amber-300 bg-amber-50">
+          <CardContent className="p-4 space-y-3">
+            <div className="flex items-start gap-2">
+              <UserPlus className="h-4 w-4 text-amber-700 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-semibold text-amber-800">CV herkend — onboarding starten?</p>
+                <p className="text-xs text-amber-700 mt-0.5 leading-relaxed">
+                  De AI leest het CV en vult het onboardingformulier alvast in. U controleert en
+                  bevestigt alles zelf voordat er iets wordt aangemaakt.
+                </p>
+              </div>
+            </div>
+            <Button
+              size="sm"
+              className="gap-1.5"
+              onClick={() => handleCvOnboarding(typedItem.bestandsnaam)}
+              disabled={cvAnalyse.isPending}
+            >
+              {cvAnalyse.isPending ? (
+                <>
+                  <span className="h-3.5 w-3.5 rounded-full border-2 border-current border-t-transparent animate-spin" />
+                  CV wordt gelezen…
+                </>
+              ) : (
+                <>
+                  <UserPlus className="h-3.5 w-3.5" />
+                  Onboarding starten met dit CV
+                </>
+              )}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Snagstream-velden */}
       {typedItem.document_categorie === "snagstream_rapport" && (
