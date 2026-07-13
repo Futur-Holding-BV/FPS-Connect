@@ -1,6 +1,7 @@
 // Herbruikbaar goedkeuringsstatuswidget — generiek voor elk document/object_type
 // (inkoopbon, offerte, ...). Toont de laatste aanvraag + acties (goedkeuren/
-// afwijzen/intrekken/indienen) op basis van de server-berekende `mag_goedkeuren`.
+// afwijzen/intrekken/indienen) op basis van de server-berekende `mag_goedkeuren`,
+// plus een chronologische tijdlijn van alle stappen (wie deed wat en wanneer).
 import { useState } from "react";
 import {
   useGetGoedkeuringVoorObject,
@@ -11,7 +12,7 @@ import {
   getGetGoedkeuringVoorObjectQueryKey,
   ApiError,
 } from "@workspace/api-client-react";
-import type { GoedkeuringAanvraag } from "@workspace/api-client-react";
+import type { GoedkeuringAanvraag, GoedkeuringStap } from "@workspace/api-client-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -20,7 +21,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CheckCircle2, XCircle, Clock, Undo2, ShieldCheck } from "lucide-react";
+import { CheckCircle2, XCircle, Clock, Undo2, ShieldCheck, ChevronDown, ChevronUp, Send, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/auth-context";
 import { useRol } from "@/context/rol-context";
@@ -45,6 +46,47 @@ export const GOEDKEURING_STATUS_INFO: Record<string, { label: string; kleur: str
   vervangen: { label: "Vervangen door nieuwe versie", kleur: "bg-secondary text-muted-foreground border-transparent", icon: Undo2 },
 };
 
+const STAP_ACTIE_INFO: Record<string, { label: string; kleur: string; icon: typeof Clock }> = {
+  indienen: { label: "Ingediend", kleur: "text-amber-700", icon: Send },
+  goedkeuren: { label: "Goedgekeurd", kleur: "text-green-700", icon: CheckCircle2 },
+  afwijzen: { label: "Afgewezen", kleur: "text-red-700", icon: XCircle },
+  intrekken: { label: "Ingetrokken", kleur: "text-muted-foreground", icon: Undo2 },
+  vervangen: { label: "Vervangen", kleur: "text-muted-foreground", icon: AlertCircle },
+};
+
+function StapTijdlijn({ stappen }: { stappen: GoedkeuringStap[] }) {
+  if (stappen.length === 0) return null;
+  return (
+    <ol className="mt-2 border-l-2 border-border pl-4 space-y-2">
+      {stappen.map((stap) => {
+        const info = STAP_ACTIE_INFO[stap.actie] ?? STAP_ACTIE_INFO.indienen;
+        const Icon = info.icon;
+        const datum = new Date(stap.aangemaakt_op).toLocaleString("nl-NL", {
+          day: "2-digit", month: "2-digit", year: "numeric",
+          hour: "2-digit", minute: "2-digit",
+        });
+        return (
+          <li key={stap.id} className="relative -ml-[1.15rem] flex items-start gap-2">
+            <span className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-background border border-border ${info.kleur}`}>
+              <Icon className="h-2.5 w-2.5" />
+            </span>
+            <div className="min-w-0">
+              <span className={`text-xs font-medium ${info.kleur}`}>{info.label}</span>
+              {stap.gebruiker_naam && (
+                <span className="text-xs text-muted-foreground"> door {stap.gebruiker_naam}</span>
+              )}
+              <span className="block text-xs text-muted-foreground">{datum}</span>
+              {stap.reden && (
+                <span className="block text-xs text-foreground/70 italic mt-0.5">"{stap.reden}"</span>
+              )}
+            </div>
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
 export function GoedkeuringWidget({
   objectType,
   objectId,
@@ -61,6 +103,7 @@ export function GoedkeuringWidget({
   const { rol } = useRol();
   const [afwijzenOpen, setAfwijzenOpen] = useState(false);
   const [afwijzenReden, setAfwijzenReden] = useState("");
+  const [tijdlijnOpen, setTijdlijnOpen] = useState(false);
 
   const { data: aanvraag, isLoading } = useGetGoedkeuringVoorObject(objectType, objectId);
 
@@ -149,6 +192,7 @@ export function GoedkeuringWidget({
   const info = GOEDKEURING_STATUS_INFO[aanvraag.status] ?? GOEDKEURING_STATUS_INFO.ingediend;
   const Icon = info.icon;
   const magIntrekken = aanvraag.status === "ingediend" && (rol === "hoofdbeheerder" || gebruiker?.id === aanvraag.ingediend_door_id);
+  const stappen: GoedkeuringStap[] = aanvraag.stappen ?? [];
 
   return (
     <div className="flex flex-col gap-1">
@@ -164,6 +208,16 @@ export function GoedkeuringWidget({
         )}
         {aanvraag.ingediend_door_naam && (
           <span className="text-xs text-muted-foreground">door {aanvraag.ingediend_door_naam}</span>
+        )}
+        {stappen.length > 0 && (
+          <button
+            type="button"
+            className="inline-flex items-center gap-0.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+            onClick={() => setTijdlijnOpen((v) => !v)}
+          >
+            {tijdlijnOpen ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+            Tijdlijn ({stappen.length})
+          </button>
         )}
       </div>
       {aanvraag.status === "afgewezen" && aanvraag.afwijzing_reden && (
@@ -208,6 +262,10 @@ export function GoedkeuringWidget({
             </Button>
           )}
         </div>
+      )}
+
+      {tijdlijnOpen && stappen.length > 0 && (
+        <StapTijdlijn stappen={stappen} />
       )}
 
       <Dialog open={afwijzenOpen} onOpenChange={setAfwijzenOpen}>

@@ -16,6 +16,7 @@ import {
 import { and, eq, desc, inArray, or, sql } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { heeftNiveau } from "@workspace/permissies";
+import { logAudit } from "../lib/audit";
 import {
   maakGoedkeuringActor,
   magGoedkeuren,
@@ -169,11 +170,22 @@ router.post(
         return;
       }
       const gebruikerId = req.session?.userId ?? null;
+      const gebruikerNaam = (req.session as unknown as Record<string, unknown>)?.naam as string | null ?? null;
       const nu = new Date();
       const [regel] = await db
         .insert(goedkeuringBeleidsregelsTable)
         .values({ ...parsed.data, aangemaaktDoorId: gebruikerId, aangemaaktOp: nu, bijgewerktOp: nu })
         .returning();
+      logAudit({
+        gebruikerId,
+        gebruikerNaam,
+        module: "goedkeuring",
+        actie: "aanmaken",
+        entiteit: "beleidsregel",
+        entiteitId: regel!.id,
+        entiteitNaam: regel!.naam,
+        nieuweWaarde: serialiseerBeleidsregel(regel!) as unknown as Record<string, unknown>,
+      });
       res.status(201).json(serialiseerBeleidsregel(regel!));
     } catch (err) {
       req.log.error(err);
@@ -192,11 +204,11 @@ router.patch(
         res.status(400).json({ error: "Ongeldig id" });
         return;
       }
-      const [bestaand] = await db
-        .select({ id: goedkeuringBeleidsregelsTable.id })
+      const [oudeRegel] = await db
+        .select()
         .from(goedkeuringBeleidsregelsTable)
         .where(eq(goedkeuringBeleidsregelsTable.id, id));
-      if (!bestaand) {
+      if (!oudeRegel) {
         res.status(404).json({ error: "Beleidsregel niet gevonden" });
         return;
       }
@@ -205,11 +217,24 @@ router.patch(
         res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Ongeldige invoer" });
         return;
       }
+      const gebruikerId = req.session?.userId ?? null;
+      const gebruikerNaam = (req.session as unknown as Record<string, unknown>)?.naam as string | null ?? null;
       const [regel] = await db
         .update(goedkeuringBeleidsregelsTable)
         .set({ ...parsed.data, bijgewerktOp: new Date() })
         .where(eq(goedkeuringBeleidsregelsTable.id, id))
         .returning();
+      logAudit({
+        gebruikerId,
+        gebruikerNaam,
+        module: "goedkeuring",
+        actie: "wijzigen",
+        entiteit: "beleidsregel",
+        entiteitId: id,
+        entiteitNaam: regel!.naam,
+        oudeWaarde: serialiseerBeleidsregel(oudeRegel) as unknown as Record<string, unknown>,
+        nieuweWaarde: serialiseerBeleidsregel(regel!) as unknown as Record<string, unknown>,
+      });
       res.json(serialiseerBeleidsregel(regel!));
     } catch (err) {
       req.log.error(err);
@@ -228,15 +253,27 @@ router.delete(
         res.status(400).json({ error: "Ongeldig id" });
         return;
       }
-      const [bestaand] = await db
-        .select({ id: goedkeuringBeleidsregelsTable.id })
+      const [oudeRegel] = await db
+        .select()
         .from(goedkeuringBeleidsregelsTable)
         .where(eq(goedkeuringBeleidsregelsTable.id, id));
-      if (!bestaand) {
+      if (!oudeRegel) {
         res.status(404).json({ error: "Beleidsregel niet gevonden" });
         return;
       }
+      const gebruikerId = req.session?.userId ?? null;
+      const gebruikerNaam = (req.session as unknown as Record<string, unknown>)?.naam as string | null ?? null;
       await db.delete(goedkeuringBeleidsregelsTable).where(eq(goedkeuringBeleidsregelsTable.id, id));
+      logAudit({
+        gebruikerId,
+        gebruikerNaam,
+        module: "goedkeuring",
+        actie: "verwijderen",
+        entiteit: "beleidsregel",
+        entiteitId: id,
+        entiteitNaam: oudeRegel.naam,
+        oudeWaarde: serialiseerBeleidsregel(oudeRegel) as unknown as Record<string, unknown>,
+      });
       res.status(204).end();
     } catch (err) {
       req.log.error(err);

@@ -1,22 +1,4 @@
-## 2026-07-13 — Governance & Approval Engine: audit beleidswijzigingen, tijdlijn, offerte-koppeling + documenten
-
-- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (additief; geen bestaande endpoints gewijzigd)
-
-**Audit logging beleidswijzigingen:**
-- POST/PATCH/DELETE `/goedkeuring/beleidsregels` roepen nu `logAudit()` aan met `oudeWaarde`/`nieuweWaarde`, zodat elke beleidswijziging (aanmaken, aanpassen, verwijderen) volledig herleidbaar is in `audit_log` — inclusief wie de wijziging deed en wat de vorige beleidsversie was.
-
-**Chronologische tijdlijn in GoedkeuringWidget:**
-- De `GoedkeuringWidget` toont nu een inklapbare "Tijdlijn (N)"-sectie onder de statusbadge. Per stap: actie-icoon (Ingediend/Goedgekeurd/Afgewezen/Ingetrokken), naam goedkeurder, datum/tijd en reden bij afwijzing. De data was al aanwezig in de API-response (`stappen[]`), maar werd niet getoond; nu wel.
-
-**Roadmap docs bijgewerkt:**
-- `docs/roadmap/gebouwd.md`: Governance & Approval Engine sectie volledig herschreven; verwijdering van stale "nog niet gebouwd" (offertes) — de offerte-koppeling, e-mailnotificaties, escalatie-bewaking, tijdlijn en beleidswijzigingsaudit zijn wél gebouwd.
-
-**Deliverables aangemaakt:**
-- `docs/goedkeuring-impactanalyse.md` — architectuuroverzicht, state machine, impact per module (inkoopbon/offerte/bevoegdheden/audit), risico-inventarisatie (R01–R05 incl. vier-ogen-bypass en materiële wijziging), aanbevelingen voor toekomstige koppelingen.
-- `docs/goedkeuring-bewijsvoering.md` — business scenario bewijsvoering: live DB-schema verificatie (4 tabellen, volledige kolommen), audit_log entries 219+220 als bewijs van inkoopbon end-to-end flow (10 juli 2026), code-trace offerte-koppeling, scenario beleidswijziging audit, DoD-checklijst.
-
----
-
+<<<<<<< HEAD
 ## 2026-07-13 — Proposal Studio: voltooiing kern (editor, AI, PDF, versiediff, sectielijst)
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (puur additieve front-end uitbreiding op bestaande Fase 1-basis)
@@ -28,69 +10,6 @@
 - **Versiediff/vergelijk**: "Vergelijk"-knop op elk versiekaartje + "Vergelijk" knop in de versie-header opent een dialoog met side-by-side sectie-inhoud (rood=oud, groen=nieuw, gewijzigd gemarkeerd); valt terug op samenvatting-vergelijking als snapshot ontbreekt
 - **"Studio openen"-knop** op elke offertekaart in de offertenlijst (naast de bestaande "Uit spots"-knop)
 - Typecheck: alle 5 workspace-packages schoon
-
----
-
-## 2026-07-13 — Document Studio: AI template-generatie & Model 0
-
-- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (additief, geen bestaande logica gewijzigd)
-
-**Wat is er gebouwd (taak #619):**
-
-Backend (`artifacts/api-server/src/routes/studio.ts`):
-- `POST /studio/modellen/:id/genereer` — AI genereert een Connect-template JSON op basis van het referentiedocument (PDF-tekst via pdf-parse) en werkgever-branding (kleur, voettekst). Strikte Zod-schema-validatie op de AI-output; valt bij ongeldige JSON terug op 503.
-- `POST /studio/modellen/:id/bijstuur` — verfijnt het bestaande concept-template via een vrije bijstuur-instructie. Overschrijft de huidige concept-JSON; geen versieboom in deze fase.
-- `POST /studio/modellen/:id/goedkeuren` — zet status op `goedgekeurd`, archiveert het vorige actieve model in dezelfde transactie, registreert goedkeurder en tijdstip, schrijft activiteitslog. Race-beschermd via partial-unique-index (23505 → 409).
-
-Frontend (`artifacts/firevault/src/components/documentopmaak/StudioTemplatePreview.tsx`):
-- Zelfstandige A4-preview-component die de `connect_template_json` (familie A/B/C, koptekst, kleurschema, secties, voettekst) rendert via `DocumentFrame`. Defensieve normalisatie: ongeldige/ontbrekende velden worden stilzwijgend gevuld.
-
-UI (`artifacts/firevault/src/pages/organisatie/studio.tsx`):
-- Per documenttype-kaart: "Genereer met AI"-knop (of "Template verfijnen"/"Template bekijken" afhankelijk van status).
-- Generatiedialoog: live preview links (StudioTemplatePreview), bijstuur-paneel rechts, bijstuur-geschiedenis, "Verfijnen"-knop, "Goedkeuren als Model 0"-knop met bevestigingsdialoog.
-- Na goedkeuring: groene badge + goedkeuringsdatum op de documenttype-kaart, bibliotheekoverzicht updated.
-
-OpenAPI + codegen: alle studio-endpoints gedefinieerd, hooks gegenereerd (`useGenereerStudioTemplate`, `useBijstuurStudioTemplate`, `useGoedkeurenStudioTemplate`).
-
-Typecheck: volledig groen (alle packages).
-
----
-
-## 2026-07-13 — FIE Fase 3: Continue jaarbedrijfsprognose + AI-observaties (verificatie & oplevering)
-
-- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (geen schema-wijziging; additieve feature)
-
-**Wat is opgeleverd (FIE Fase 3):**
-
-De volledige continue jaarbedrijfsprognose is geimplementeerd en geverifieerd:
-
-1. **Prognose-service** (`artifacts/api-server/src/services/fie-service.ts`):
-   - `berekenJaarprognose(boekjaar)` berekent bevestigde omzet (100%), gewogen pipeline (concept 20%/verzonden 40%/bekeken 60%), OHW-restwaarde, AK-dekkingsgraad, break-even en kwartaalverdeling.
-   - `leesPrognoseObservaties(boekjaar)` leest gepersisteerde observaties terug inclusief impact/advies/betrouwbaarheidsscore uit `OBSERVATIE_META`.
-
-2. **AI-observaties engine** (ingebouwd in `berekenJaarprognose`):
-   - 5 observatietypen: `omzet_risico`, `break_even_risico`, `ak_onderdekking`, `lege_pipeline`, `geen_begroting`.
-   - Observaties worden bij elke prognose-aanroep gepersisteerd in `fie_observaties` (boekjaar, type, ernst, omschrijving, waarde, drempelwaarde, afwijking_pct).
-
-3. **API routes** (`artifacts/api-server/src/routes/fie.ts`):
-   - `GET /fie/prognose/:boekjaar` — berekent en retourneert volledige prognose + kwartaalverdeling + observaties.
-   - `GET /fie/observaties/:boekjaar` — retourneert gepersisteerde observaties verrijkt met impact/advies/betrouwbaarheidsscore.
-   - Beide routes beveiligd via `requireBevoegdheid("financieel", 2)`.
-
-4. **OpenAPI spec + codegen** (`lib/api-spec/openapi.yaml`):
-   - Schemas `FieJaarprognose`, `FiePrognoseObservatie`, `FieKwartaalPrognose`, `FieObservatiesResponse` volledig gedefinieerd.
-   - Gegenereerde hooks `useGetFiePrognose` en `useGetFieObservaties` beschikbaar.
-
-5. **Frontend** (`artifacts/firevault/src/pages/beheer/bedrijfskompas.tsx`):
-   - `PrognoseTab` component (regel 580–827): 8 KPI-tiles, coverage-balk, kwartaalverdeling met begroting-overlay, observatielijst (live + historisch), toelichting.
-   - Tab "Prognose" wired in `BegrotingDetail` als zesde tabblad (regel 928, 1158–1161).
-
-6. **DB-schema** (`lib/db/src/schema/fie.ts`): `fieObservatiesTable` aanwezig en gepusht.
-
-**Verificatie:**
-- `pnpm run typecheck` — groen (0 fouten).
-- DB-tabel `fie_observaties` bevestigd aanwezig met alle kolommen.
-- Workflows API-server + firevault draaien.
 
 ---
 
@@ -173,7 +92,7 @@ De volledige continue jaarbedrijfsprognose is geimplementeerd en geverifieerd:
 
 **Rootoorzaak (drieledig, bevestigd via productie-DB en SSH-onderzoek):**
 
-1. **AI staat op productie volledig uit** (`CONNECT_AI_ENABLED=false` in `.env.production`). De echte Document Intelligence-AI heeft op productie nog nooit gedraaid; alle classificaties werden gedaan door de heuristische noodoplossing die alleen op trefwoorden in de bestandsnaam zoekt. De OpenAI-sleutel op the server is geldig en was ongebruikt.
+1. **AI staat op productie volledig uit** (`CONNECT_AI_ENABLED=false` in `.env.production`). De echte Document Intelligence-AI heeft op productie nog nooit gedraaid; alle classificaties werden gedaan door de heuristische noodoplossing die alleen op trefwoorden in de bestandsnaam zoekt. De OpenAI-sleutel op de server is geldig en was ongebruikt.
 
 2. **Vision-terugval werkt niet op productie**: bij gescande PDF's (nauwelijks leesbare tekst) zet de engine de eerste pagina om naar een afbeelding voor AI-beeldanalyse — maar `pdftoppm` (uit `poppler-utils`) ontbrak in het productie-Docker-image. Gescande documenten zijn op productie dus per definitie onleesbaar geweest.
 
@@ -221,7 +140,7 @@ De volledige continue jaarbedrijfsprognose is geimplementeerd en geverifieerd:
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (migrate-pijplijn en healthcheck structureel gelijkgetrokken; route-volgordefout hersteld; geen datamigratie)
 
-**Aanleiding:** de GitHub-deploy faalde op `schema-healthcheck.mjs`: the UNIQUE-controle op `gebruiker_profielen (gebruiker_id, profiel_id)` sloeg aan omdat productie de unieke index mist. Daarnaast meldde de gebruiker dat de facturenpagina "Kon dashboard niet laden" toonde.
+**Aanleiding:** de GitHub-deploy faalde op `schema-healthcheck.mjs`: de UNIQUE-controle op `gebruiker_profielen (gebruiker_id, profiel_id)` sloeg aan omdat productie de unieke index mist. Daarnaast meldde de gebruiker dat de facturenpagina "Kon dashboard niet laden" toonde.
 
 **Rootoorzaak deploy:**
 - `deploy/Dockerfile.migrate` draaide alleen `drizzle-kit push` en nooit `apply-additive.mjs`, dus de unieke index werd op productie nooit aangelegd.
@@ -233,8 +152,8 @@ De volledige continue jaarbedrijfsprognose is geimplementeerd en geverifieerd:
 - `lib/db/scripts/schema-healthcheck.mjs`: controleert de unieke index nu via `pg_indexes` in plaats van `pg_constraint`.
 - Schema-commentaar in `lib/db/src/schema/gebruikers.ts` geactualiseerd naar de werkelijke werking.
 - **Facturen-dashboard fix:** `GET /facturen/financieel-dashboard` en `GET /facturen/exportlog` stonden in `facturen.ts` ná de wildcard-route `/facturen/:id`, waardoor Express "financieel-dashboard" als factuur-ID parste en de pagina's faalden. Beide routes zijn vóór de wildcard geplaatst (met waarschuwingscommentaar).
-- **Opname plattegrond-laag fix (zelfde foutklasse, gevonden bij review):** `GET /opname/plattegrond-items` stond in `opname.ts` ná de wildcard `/opname/:id` en gaf daardoor altijd 404 — de opname-laag op the web-plattegrond was stil kapot. Route vóór de wildcard geplaatst (met waarschuwingscommentaar).
-- **Monteur-app typecheck hersteld:** `TYPE_LABELS` in `app/documenten.tsx` en `app/documenten/[id].tsx` misten the documenttypes tekening/contract/verzekering/overig (enum eerder uitgebreid zonder the mobiele label-maps bij te werken).
+- **Opname plattegrond-laag fix (zelfde foutklasse, gevonden bij review):** `GET /opname/plattegrond-items` stond in `opname.ts` ná de wildcard `/opname/:id` en gaf daardoor altijd 404 — de opname-laag op de web-plattegrond was stil kapot. Route vóór de wildcard geplaatst (met waarschuwingscommentaar).
+- **Monteur-app typecheck hersteld:** `TYPE_LABELS` in `app/documenten.tsx` en `app/documenten/[id].tsx` misten de documenttypes tekening/contract/verzekering/overig (enum eerder uitgebreid zonder de mobiele label-maps bij te werken).
 
 **Bewijs (run 2026-07-13):**
 - `apply-additive.mjs` groen (index "reeds aanwezig"), `schema-healthcheck.mjs` alle 11 checks groen tegen dev
@@ -252,16 +171,16 @@ De volledige continue jaarbedrijfsprognose is geimplementeerd en geverifieerd:
 **Aanleiding:** de opdracht "AI zet 50 toolboxen klaar; hoofdbeheerder beoordeelt enkel; daarna 1 toolbox per maand inplanbaar + vervolgacties op telefoons" moest niet alleen gebouwd maar ook daadwerkelijk uitgevoerd en bewezen worden (kwaliteitskader: business-scenario-validatie).
 
 **Wat is er gebouwd:**
-- `POST /veiligheid/toolboxen/ai-batch-genereer` robuust gemaakt: genereert in interne stukken, dedupliceert op bestaande titels (ook binnen de batch), en faalt expliciet met foutdetails in plaats van stil gedeeltelijk resultaat; respons bevat `aangemaakt`, `batch_id` en `onderwerpen`. Categorieën worden gevalideerd tegen the canonieke lijst uit de frontend (400 bij onbekende waarden) en AI-uitvoer met een onbekende categorie valt terug op `overig`; bestaande wachtrij-concepten met niet-canonieke categorieën zijn eenmalig genormaliseerd (26 rijen).
-- Frontend batch-dialoog (`veiligheid/toolboxen.tsx`): standaardaantal 50, verstuurt in stukken van 10 met zichtbare voortgang, toont per stuk the resultaat en telt totalen op.
-- Bewijsscript `scripts/src/toolbox-50-klaarzetten.ts` (npm: `toolbox-50-klaarzetten`): logt in als echte hoofdbeheerder (TOTP), vult de AI-wachtrij aan tot 50 concepten via the echte API, bewijst review (goedkeuren → gepubliceerd, DB-verificatie), maakt the maandopdracht voor the huidige maand aan, logt in als monteur en haalt `/mijn/toolbox-maandopdracht` op (zelfde endpoint als the FPS Monteur-app) en voltooit the opdracht (DB-bewijs `voltooid_op`), en ruimt the testopdracht daarna op. Succes van the generatie wordt aan the DB-teller gemeten omdat de dev-tunnel lange AI-verzoeken kan verbreken; het script draait daarom direct tegen `localhost:8080` met `X-Forwarded-Proto: https`.
+- `POST /veiligheid/toolboxen/ai-batch-genereer` robuust gemaakt: genereert in interne stukken, dedupliceert op bestaande titels (ook binnen de batch), en faalt expliciet met foutdetails in plaats van stil gedeeltelijk resultaat; respons bevat `aangemaakt`, `batch_id` en `onderwerpen`. Categorieën worden gevalideerd tegen de canonieke lijst uit de frontend (400 bij onbekende waarden) en AI-uitvoer met een onbekende categorie valt terug op `overig`; bestaande wachtrij-concepten met niet-canonieke categorieën zijn eenmalig genormaliseerd (26 rijen).
+- Frontend batch-dialoog (`veiligheid/toolboxen.tsx`): standaardaantal 50, verstuurt in stukken van 10 met zichtbare voortgang, toont per stuk het resultaat en telt totalen op.
+- Bewijsscript `scripts/src/toolbox-50-klaarzetten.ts` (npm: `toolbox-50-klaarzetten`): logt in als echte hoofdbeheerder (TOTP), vult de AI-wachtrij aan tot 50 concepten via de echte API, bewijst review (goedkeuren → gepubliceerd, DB-verificatie), maakt de maandopdracht voor de huidige maand aan, logt in als monteur en haalt `/mijn/toolbox-maandopdracht` op (zelfde endpoint als de FPS Monteur-app) en voltooit de opdracht (DB-bewijs `voltooid_op`), en ruimt de testopdracht daarna op. Succes van de generatie wordt aan de DB-teller gemeten omdat de dev-tunnel lange AI-verzoeken kan verbreken; het script draait daarom direct tegen `localhost:8080` met `X-Forwarded-Proto: https`.
 
 **Bewijs (run 2026-07-13):**
-- STAP 1 PASS — 50 AI-concepten staan in the reviewwachtrij (DB-teller: `ai_gegenereerd=true, gepubliceerd=false` = 50)
+- STAP 1 PASS — 50 AI-concepten staan in de reviewwachtrij (DB-teller: `ai_gegenereerd=true, gepubliceerd=false` = 50)
 - STAP 2 PASS — concept #104 goedgekeurd via `PATCH .../review` → `gepubliceerd=true` (DB-bewijs)
 - STAP 3 PASS — maandopdracht aangemaakt voor 2026-7 via `POST /veiligheid/toolbox-maandopdrachten`
-- STAP 4 PASS — monteur-account zag the opdracht via `GET /mijn/toolbox-maandopdracht` en voltooide deze (DB-bewijs `voltooid_op`)
-- STAP 5 PASS — testopdracht opgeruimd (cascade wist statusrijen), bewijs-concept terug in the wachtrij: eindstand 50 concepten klaar voor beoordeling
+- STAP 4 PASS — monteur-account zag de opdracht via `GET /mijn/toolbox-maandopdracht` en voltooide deze (DB-bewijs `voltooid_op`)
+- STAP 5 PASS — testopdracht opgeruimd (cascade wist statusrijen), bewijs-concept terug in de wachtrij: eindstand 50 concepten klaar voor beoordeling
 - Typecheck scripts + api-server + firevault groen
 
 ---
@@ -274,9 +193,9 @@ De volledige continue jaarbedrijfsprognose is geimplementeerd en geverifieerd:
 
 **Wat is er gebouwd:**
 - Nieuw component `InklapbaarHoofdstuk` (in `herschikbaar-hoofdstuk.tsx`): elke hoofdstukkop heeft nu een **altijd zichtbare sleepgreep** (grip-icoon links van de titel) en een **chevron** om in/uit te klappen; `HerschikbaarHoofdstuk` is teruggebracht tot pure dropzone.
-- Alle 13 hoofdstukken in the beheerder-sidebar omgebouwd naar dit component: Projectaanpak, Inkoop, Magazijn, Commercie (kreeg hierbij een titelkop), Communicatie, Veiligheid, Financieel, Goedkeuring, Declaraties, Organisatie, Personeel, Loon en Instellingen. Open/dicht-staat was al gepersisteerd per gebruiker (`hoofdstukOpen`/`setHoofdstukOpen`) en geldt nu overal.
+- Alle 13 hoofdstukken in de beheerder-sidebar omgebouwd naar dit component: Projectaanpak, Inkoop, Magazijn, Commercie (kreeg hierbij een titelkop), Communicatie, Veiligheid, Financieel, Goedkeuring, Declaraties, Organisatie, Personeel, Loon en Instellingen. Open/dicht-staat was al gepersisteerd per gebruiker (`hoofdstukOpen`/`setHoofdstukOpen`) en geldt nu overal.
 - Scheidingslijnen (Loon, Instellingen) en de Magazijn-kritiekbadge behouden via props (`metScheiding`, `kopExtra`); Dashboard blijft vast bovenaan; "Standaardvolgorde herstellen" ongewijzigd.
-- **Slepen herbouwd zonder HTML5 drag-and-drop:** diagnose toonde aan dat Chromium/Blink voor elementen binnen the scrollbare sidebar-inhoud nooit een native `dragstart` afvuurt (browser-quirk, raakt ook echte gebruikers). Het verslepen werkt nu pointer-gebaseerd (mousedown → beweging met 4px-drempel → mouseup), met doel-highlight tijdens het slepen, Escape om te annuleren, automatisch randscrollen bovenin/onderin the sidebar and a "grabbing"-cursor.
+- **Slepen herbouwd zonder HTML5 drag-and-drop:** diagnose toonde aan dat Chromium/Blink voor elementen binnen de scrollbare sidebar-inhoud nooit een native `dragstart` afvuurt (browser-quirk, raakt ook echte gebruikers). Het verslepen werkt nu pointer-gebaseerd (mousedown → beweging met 4px-drempel → mouseup), met doel-highlight tijdens het slepen, Escape om te annuleren, automatisch randscrollen bovenin/onderin de sidebar en een "grabbing"-cursor.
 
 **Bewijs:**
 - Typecheck firevault groen; ongebruikte imports (Collapsible, ChevronDown, SidebarGroupLabel) opgeschoond
@@ -289,21 +208,21 @@ De volledige continue jaarbedrijfsprognose is geimplementeerd en geverifieerd:
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** middel (opslagpad en productie-infrastructuur geraakt; elk increment afzonderlijk terugdraaibaar)
 
-**Aanleiding:** uploads faalden op productie met "Opslaan mislukt" — de oorzaak was tweeledig: (1) de code verborg opslagfouten (stil doorgaan zonder bestand), and (2) productie had géén objectopslag (geen S3/GCS geconfigureerd), waardoor elk bestand permanent verloren ging (o.a. jaarrekening id=1).
+**Aanleiding:** uploads faalden op productie met "Opslaan mislukt" — de oorzaak was tweeledig: (1) de code verborg opslagfouten (stil doorgaan zonder bestand), en (2) productie had géén objectopslag (geen S3/GCS geconfigureerd), waardoor elk bestand permanent verloren ging (o.a. jaarrekening id=1).
 
-**I1 — Fail-loud opslag:** alle uploadpaden geven nu een expliciete fout aan the gebruiker zodra objectopslag ontbreekt of wegschrijven faalt; er wordt nooit meer een databaserecord aangemaakt zonder dat het bestand aantoonbaar is opgeslagen.
+**I1 — Fail-loud opslag:** alle uploadpaden geven nu een expliciete fout aan de gebruiker zodra objectopslag ontbreekt of wegschrijven faalt; er wordt nooit meer een databaserecord aangemaakt zonder dat het bestand aantoonbaar is opgeslagen.
 
 **I2 — AI-begrijpend lezen verbeterd:** documentclassificatie (documentIntelligence + financiële extractie) inhoudelijk verbeterd; 59 unit-tests groen.
 
 **I3 — `POST /documenten/aanleveren`:** nieuw contract-first endpoint (OpenAPI + codegen) als centrale, gevalideerde aanleverroute voor documenten.
 
-**I4 — Tabblad "Slim Uploadpunt" (/inbox) geheel vervallen:** nav-item, routes, pagina's (`pages/inbox/`), dashboard-widget en offerte-aanvraag-wizard verplaatst/verwijderd; upload loopt nu via the Slim Upload-balk en het documentenbeheer.
+**I4 — Tabblad "Slim Uploadpunt" (/inbox) geheel vervallen:** nav-item, routes, pagina's (`pages/inbox/`), dashboard-widget en offerte-aanvraag-wizard verplaatst/verwijderd; upload loopt nu via de Slim Upload-balk en het documentenbeheer.
 
 **I5 — Productie-objectopslag (MinIO) + presigned uploads via eigen domein:**
 - `docker-compose.production.yml`: minio-service (healthcheck, `minio_data`-volume), minio-init (bucket `fps-production` automatisch aanmaken), api wacht op minio-healthy
 - `Caddyfile`: `/fps-production/*` → minio:9000 met behoud van Host-header (SigV4), max 100 MB body, read_timeout 300s
-- `objectStorageS3.ts`: aparte presign-client op `S3_PUBLIC_ENDPOINT` (https://connect.fps-one.nl) zodat presigned URL's voor the browser op het publieke domein staan; interne opslag blijft via `S3_ENDPOINT` (http://minio:9000)
-- `.env.production` op the server aangevuld met S3_/MINIO_-variabelen en `OPENAI_API_KEY` (sleutel vooraf getest: geldige completion op gpt-4o-mini)
+- `objectStorageS3.ts`: aparte presign-client op `S3_PUBLIC_ENDPOINT` (https://connect.fps-one.nl) zodat presigned URL's voor de browser op het publieke domein staan; interne opslag blijft via `S3_ENDPOINT` (http://minio:9000)
+- `.env.production` op de server aangevuld met S3_/MINIO_-variabelen en `OPENAI_API_KEY` (sleutel vooraf getest: geldige completion op gpt-4o-mini)
 - Gedeployed via bestandspatch bovenop servercommit (origin/main); DB-back-up vooraf (`fps_20260713_140504.sql.gz`); api- en caddy-image herbouwd; migratie overgeslagen (geen schemawijziging t.o.v. productie-DB, UNIQUE-constraint bestond al)
 
 **Bewijs:**
@@ -314,13 +233,41 @@ De volledige continue jaarbedrijfsprognose is geimplementeerd en geverifieerd:
 
 **Architect-review (PASS) — twee punten direct verwerkt:**
 - Bucket-race gedicht: api wacht nu ook op `minio-init` (`service_completed_successfully`), niet alleen op minio-healthy
-<<<<<<< HEAD
-=======
 - Objectopslag-back-up toegevoegd: nieuwe `backup-minio`-dienst (mc mirror naar `deploy/minio-backups/`) onder het backup-profiel; werkend bewezen op productie
 - Bonus: de server had géén back-upcron — dagelijkse cron ingesteld (03:00 database, 03:30 objectopslag, 03:15 opschoning >30 dagen) met schrijfbaar logbestand `/var/log/fps-backup.log`
 - Follow-up (niet blokkerend): MinIO service-account met bucket-scoped policy i.p.v. root-credentials; obsolete `version:`-regel uit compose
 
 **Openstaand:** de verloren jaarrekening (id=1) moet door de gebruiker opnieuw geüpload worden — het oorspronkelijke bestand is onherstelbaar. GitHub-push van deze wijzigingen loopt via de follow-uptaak GitHub-synchronisatie; de server draait tot die tijd op een bestandspatch bovenop origin/main.
+=======
+## 2026-07-13 — Proposal Studio: voltooiing kern (editor, AI, PDF, versiediff, sectielijst)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (puur additieve front-end uitbreiding op bestaande Fase 1-basis)
+
+**Wat is gedaan:**
+- `SECTIE_TYPEN` uitgebreid van 8 naar 25 typen: Cover, Over FPS, Aanleiding, Huidige situatie, Inspectievindingen, Aanbevolen oplossing, Technische toelichting, Gebruikte producten, Uitvoeringsmethode, Kwaliteitsborging, Certificaten, Garantie, Onderhoudsadvies, Optioneel werk, Prijsoverzicht, Bijlagen, Ondertekeningspagina (+ bestaande typen)
+- `BIJLAGE_TYPEN` vervangen door 10 correcte categorieën uit het taakvereiste: ETA, DoP, Certificaat, Productblad, Foto, Inspectierapport, Tekening, Planning, Garantiedocument, Referentieproject, Overig
+- **html2canvas-pro PDF export** toegevoegd: "PDF opslaan"-knop in de Controletab capturet de inline OffertePremiumPreview via `html2canvas-pro` (oklch-safe) en slaat op als genummerd PDF-bestand via `jsPDF` (meerdere pagina's)
+- **Versiediff/vergelijk**: "Vergelijk"-knop op elk versiekaartje + "Vergelijk" knop in de versie-header opent een dialoog met side-by-side sectie-inhoud (rood=oud, groen=nieuw, gewijzigd gemarkeerd); valt terug op samenvatting-vergelijking als snapshot ontbreekt
+- **"Studio openen"-knop** op elke offertekaart in de offertenlijst (naast de bestaande "Uit spots"-knop)
+- Typecheck: alle 5 workspace-packages schoon
+=======
+## 2026-07-13 — Governance & Approval Engine: audit beleidswijzigingen, tijdlijn, offerte-koppeling + documenten
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (additief; geen bestaande endpoints gewijzigd)
+
+**Audit logging beleidswijzigingen:**
+- POST/PATCH/DELETE `/goedkeuring/beleidsregels` roepen nu `logAudit()` aan met `oudeWaarde`/`nieuweWaarde`, zodat elke beleidswijziging (aanmaken, aanpassen, verwijderen) volledig herleidbaar is in `audit_log` — inclusief wie de wijziging deed en wat de vorige beleidsversie was.
+
+**Chronologische tijdlijn in GoedkeuringWidget:**
+- De `GoedkeuringWidget` toont nu een inklapbare "Tijdlijn (N)"-sectie onder de statusbadge. Per stap: actie-icoon (Ingediend/Goedgekeurd/Afgewezen/Ingetrokken), naam goedkeurder, datum/tijd en reden bij afwijzing. De data was al aanwezig in de API-response (`stappen[]`), maar werd niet getoond; nu wel.
+
+**Roadmap docs bijgewerkt:**
+- `docs/roadmap/gebouwd.md`: Governance & Approval Engine sectie volledig herschreven; verwijdering van stale "nog niet gebouwd" (offertes) — de offerte-koppeling, e-mailnotificaties, escalatie-bewaking, tijdlijn en beleidswijzigingsaudit zijn wél gebouwd.
+
+**Deliverables aangemaakt:**
+- `docs/goedkeuring-impactanalyse.md` — architectuuroverzicht, state machine, impact per module (inkoopbon/offerte/bevoegdheden/audit), risico-inventarisatie (R01–R05 incl. vier-ogen-bypass en materiële wijziging), aanbevelingen voor toekomstige koppelingen.
+- `docs/goedkeuring-bewijsvoering.md` — business scenario bewijsvoering: live DB-schema verificatie (4 tabellen, volledige kolommen), audit_log entries 219+220 als bewijs van inkoopbon end-to-end flow (10 juli 2026), code-trace offerte-koppeling, scenario beleidswijziging audit, DoD-checklijst.
+>>>>>>> eca0183 (Governance & Approval Engine: audit beleidswijzigingen, tijdlijn widget, docs)
 
 ---
 
@@ -450,4 +397,3 @@ De volledige continue jaarbedrijfsprognose is geimplementeerd en geverifieerd:
 - OpenAPI: `GET/POST /avg/verwerkers` en `PATCH/DELETE /avg/verwerkers/{id}` + schemas `AvgVerwerker`/`AvgVerwerkerInput`; hooks/Zod-schemas hergegenereerd
 - API (`routes/avg.ts`): CRUD-handlers achter `requireBevoegdheid("systeem",1)`; camelCase→snake_case-mapping; PATCH stuurt `bijgewerktOp`; eerste GET zaait 3 standaardverwerkers (OpenAI, Google Maps, Microsoft 365) bij een leeg register
 - Frontend (`beheer/avg.tsx`): nieuwe tab "Verwerkersregister" met kaartlijst, toevoegen/bewerken-dialoog, verwijderbevestiging en CSV-export (BOM + quote-escaping)
->>>>>>> a8ff40b (Governance & Approval Engine: audit beleidswijzigingen, tijdlijn widget, docs)
