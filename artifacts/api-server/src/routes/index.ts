@@ -106,6 +106,7 @@ import kantoorReleaseRouter from "./kantoor-release";
 import financieelJaarrekeningenRouter from "./financieel-jaarrekeningen";
 import goedkeuringRouter from "./goedkeuring";
 import declaratiesRouter from "./declaraties";
+import directiecockpitRouter from "./directiecockpit";
 import "../services/workflow-configs";
 
 const router: IRouter = Router();
@@ -232,6 +233,7 @@ router.use(kantoorReleaseRouter);
 router.use(financieelJaarrekeningenRouter);
 router.use(goedkeuringRouter);
 router.use(declaratiesRouter);
+router.use(directiecockpitRouter);
 router.use(adviseurRouter);
 
 export default router;

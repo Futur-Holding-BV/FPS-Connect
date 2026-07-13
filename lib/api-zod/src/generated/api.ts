@@ -27457,6 +27457,75 @@ export const DeleteBeheerVisualResponse = zod.void()
 
 
 /**
+ * Berekent de liquiditeitspositie: banksaldo (via AccountView, fail-soft), openstaande debiteuren en crediteuren met aging, verwachte cashflow over 7/30/90 dagen, netto liquiditeitspositie en drempelsignalen. Vereist het directieniveau (financieel niveau 2).
+ * @summary Liquiditeitsdashboard (bank/kas, debiteuren, crediteuren, cashflow)
+ */
+export const GetLiquiditeitResponse = zod.object({
+  "peildatum": zod.string(),
+  "banksaldo": zod.number().nullable(),
+  "banksaldo_bron": zod.string(),
+  "banksaldo_reden": zod.string().nullish(),
+  "openstaande_debiteuren": zod.number(),
+  "aantal_debiteuren": zod.number(),
+  "openstaande_crediteuren": zod.number(),
+  "aantal_crediteuren": zod.number(),
+  "werkkapitaal": zod.number(),
+  "netto_liquiditeit": zod.number().nullable(),
+  "debiteuren_aging": zod.object({
+  "niet_vervallen": zod.number(),
+  "vervallen_1_30": zod.number(),
+  "vervallen_31_60": zod.number(),
+  "vervallen_60_plus": zod.number()
+}),
+  "crediteuren_aging": zod.object({
+  "niet_vervallen": zod.number(),
+  "vervallen_1_30": zod.number(),
+  "vervallen_31_60": zod.number(),
+  "vervallen_60_plus": zod.number()
+}),
+  "cashflow": zod.array(zod.object({
+  "horizon_dagen": zod.number(),
+  "verwachte_inkomsten": zod.number(),
+  "verwachte_uitgaven": zod.number(),
+  "netto": zod.number()
+})),
+  "drempel_liquiditeit": zod.number(),
+  "signalen": zod.array(zod.object({
+  "type": zod.string(),
+  "ernst": zod.string(),
+  "omschrijving": zod.string(),
+  "waarde": zod.number().nullish(),
+  "drempelwaarde": zod.number().nullish(),
+  "afwijking_pct": zod.number().nullish(),
+  "impact": zod.string().nullish(),
+  "advies": zod.string().nullish()
+}))
+})
+
+
+/**
+ * Geeft maximaal tien samenvattende tegels terug die de bestaande dashboards bundelen (omzetprognose, liquiditeit, cashflow, debiteuren, crediteuren, onderhanden werk, facturen ter controle, openstaande goedkeuringen, AK-dekkingsgraad). Elke tegel heeft een kleurcode en een doorklikpad. Resilient: een falende bron levert een neutrale tegel op.
+ * @summary Geconsolideerde Directiecockpit met gekleurde tegels
+ */
+export const GetDirectiecockpitQueryParams = zod.object({
+  "boekjaar": zod.coerce.number().optional()
+})
+
+export const GetDirectiecockpitResponse = zod.object({
+  "boekjaar": zod.number(),
+  "tegels": zod.array(zod.object({
+  "sleutel": zod.string(),
+  "titel": zod.string(),
+  "waarde": zod.string(),
+  "subtitel": zod.string().nullish(),
+  "kleur": zod.string(),
+  "pad": zod.string(),
+  "ernst": zod.string().nullish()
+}))
+})
+
+
+/**
  * @summary Vertrouwelijke financiele jaarstukken ophalen (recht financieel_vertrouwelijk)
  */
 export const ListFinancieleDocumentenQueryParams = zod.object({

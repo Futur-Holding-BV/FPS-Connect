@@ -27,7 +27,7 @@ import {
   ClipboardCheck, AlertTriangle, TriangleAlert, FileArchive, Receipt, ArrowUpRight, ScrollText,
   UserPlus, UserMinus, UserX, Car, GitBranch, ArrowLeft, ChevronDown, Palette, Monitor,
   Package, Upload, MapPin, Archive, ArrowLeftRight, BookmarkCheck, ScanSearch, Bot, ShoppingCart,
-  TrendingUp, ImageIcon, LineChart, GalleryHorizontal, RotateCcw,
+  TrendingUp, ImageIcon, LineChart, GalleryHorizontal, RotateCcw, Wallet,
 } from "lucide-react";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { Badge } from "@/components/ui/badge";
@@ -915,6 +915,26 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                   <SidebarGroupLabel>Financieel</SidebarGroupLabel>
                   <SidebarGroupContent>
                     <SidebarMenu>
+                      {heeftNiveau("financieel", 2) && (
+                        <SidebarMenuItem className="pl-5">
+                          <SidebarMenuButton asChild isActive={location === "/directie/cockpit"}>
+                            <Link href="/directie/cockpit">
+                              <LayoutDashboard />
+                              <span>Directiecockpit</span>
+                            </Link>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      )}
+                      {heeftNiveau("financieel", 2) && (
+                        <SidebarMenuItem className="pl-5">
+                          <SidebarMenuButton asChild isActive={location === "/financieel/liquiditeit"}>
+                            <Link href="/financieel/liquiditeit">
+                              <Wallet />
+                              <span>Liquiditeit</span>
+                            </Link>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      )}
                       {heeftNiveau("financieel", 2) && (
                         <SidebarMenuItem className="pl-5">
                           <SidebarMenuButton asChild isActive={location === "/directie/kompas"}>

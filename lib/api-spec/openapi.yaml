@@ -22165,6 +22165,53 @@ paths:
         '404':
           description: Niet gevonden
 
+  /financieel/liquiditeit:
+    get:
+      operationId: getLiquiditeit
+      tags: [financieel]
+      summary: Liquiditeitsdashboard (bank/kas, debiteuren, crediteuren, cashflow)
+      description: >
+        Berekent de liquiditeitspositie: banksaldo (via AccountView, fail-soft),
+        openstaande debiteuren en crediteuren met aging, verwachte cashflow over
+        7/30/90 dagen, netto liquiditeitspositie en drempelsignalen.
+        Vereist het directieniveau (financieel niveau 2).
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LiquiditeitDashboard"
+        "403":
+          description: Onvoldoende rechten
+
+  /directie/cockpit:
+    get:
+      operationId: getDirectiecockpit
+      tags: [financieel]
+      summary: Geconsolideerde Directiecockpit met gekleurde tegels
+      description: >
+        Geeft maximaal tien samenvattende tegels terug die de bestaande
+        dashboards bundelen (omzetprognose, liquiditeit, cashflow, debiteuren,
+        crediteuren, onderhanden werk, facturen ter controle, openstaande
+        goedkeuringen, AK-dekkingsgraad). Elke tegel heeft een kleurcode en een
+        doorklikpad. Resilient: een falende bron levert een neutrale tegel op.
+      parameters:
+        - in: query
+          name: boekjaar
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DirectiecockpitResponse"
+        "403":
+          description: Onvoldoende rechten
+
   /financieel/jaarrekeningen:
     get:
       operationId: listFinancieleDocumenten
@@ -40576,6 +40623,88 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/FieWerkmaatschappijPrognose"
+
+    LiquiditeitAging:
+      type: object
+      required: [niet_vervallen, vervallen_1_30, vervallen_31_60, vervallen_60_plus]
+      properties:
+        niet_vervallen:    { type: number }
+        vervallen_1_30:    { type: number }
+        vervallen_31_60:   { type: number }
+        vervallen_60_plus: { type: number }
+
+    LiquiditeitCashflow:
+      type: object
+      required: [horizon_dagen, verwachte_inkomsten, verwachte_uitgaven, netto]
+      properties:
+        horizon_dagen:       { type: integer }
+        verwachte_inkomsten: { type: number }
+        verwachte_uitgaven:  { type: number }
+        netto:               { type: number }
+
+    LiquiditeitSignaal:
+      type: object
+      required: [type, ernst, omschrijving]
+      properties:
+        type:          { type: string }
+        ernst:         { type: string }
+        omschrijving:  { type: string }
+        waarde:        { type: ["number", "null"] }
+        drempelwaarde: { type: ["number", "null"] }
+        afwijking_pct: { type: ["number", "null"] }
+        impact:        { type: ["string", "null"] }
+        advies:        { type: ["string", "null"] }
+
+    LiquiditeitDashboard:
+      type: object
+      required:
+        [peildatum, banksaldo, banksaldo_bron, openstaande_debiteuren, aantal_debiteuren,
+         openstaande_crediteuren, aantal_crediteuren, werkkapitaal, netto_liquiditeit,
+         debiteuren_aging, crediteuren_aging, cashflow, drempel_liquiditeit, signalen]
+      properties:
+        peildatum:               { type: string }
+        banksaldo:               { type: ["number", "null"] }
+        banksaldo_bron:          { type: string }
+        banksaldo_reden:         { type: ["string", "null"] }
+        openstaande_debiteuren:  { type: number }
+        aantal_debiteuren:       { type: integer }
+        openstaande_crediteuren: { type: number }
+        aantal_crediteuren:      { type: integer }
+        werkkapitaal:            { type: number }
+        netto_liquiditeit:       { type: ["number", "null"] }
+        debiteuren_aging:        { $ref: "#/components/schemas/LiquiditeitAging" }
+        crediteuren_aging:       { $ref: "#/components/schemas/LiquiditeitAging" }
+        cashflow:
+          type: array
+          items:
+            $ref: "#/components/schemas/LiquiditeitCashflow"
+        drempel_liquiditeit:     { type: number }
+        signalen:
+          type: array
+          items:
+            $ref: "#/components/schemas/LiquiditeitSignaal"
+
+    CockpitTegel:
+      type: object
+      required: [sleutel, titel, waarde, kleur, pad]
+      properties:
+        sleutel:   { type: string }
+        titel:     { type: string }
+        waarde:    { type: string }
+        subtitel:  { type: ["string", "null"] }
+        kleur:     { type: string }
+        pad:       { type: string }
+        ernst:     { type: ["string", "null"] }
+
+    DirectiecockpitResponse:
+      type: object
+      required: [boekjaar, tegels]
+      properties:
+        boekjaar: { type: integer }
+        tegels:
+          type: array
+          items:
+            $ref: "#/components/schemas/CockpitTegel"
 
     VisualGuidanceSlot:
       type: object

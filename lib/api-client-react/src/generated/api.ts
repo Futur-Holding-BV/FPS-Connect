@@ -163,6 +163,7 @@ import type {
   Declaratiebeleid,
   DeclaratiebeleidInput,
   DeleteEenheidsprijs200,
+  DirectiecockpitResponse,
   Document,
   DocumentAiAnalyseInput,
   DocumentAiAnalyseResultaat,
@@ -304,6 +305,7 @@ import type {
   GetBoekhouderUploadsParams,
   GetCapaciteitBezettingParams,
   GetCrmAiCoach503,
+  GetDirectiecockpitParams,
   GetFactuurUploadUrl200,
   GetFieNacalculatiesVerouderdAantal200,
   GetFinancieelMeerjarenoverzichtParams,
@@ -419,6 +421,7 @@ import type {
   LeverancierInput,
   LeverancierPrestatie,
   LeverancierPrestatieInput,
+  LiquiditeitDashboard,
   ListActieveDocumentStudioModellen200,
   ListAiAanroepenParams,
   ListAlleVerlofAanvragenParams,
@@ -77494,6 +77497,169 @@ export const useDeleteBeheerVisual = <TError = ErrorType<void>,
       > => {
       return useMutation(getDeleteBeheerVisualMutationOptions(options));
     }
+
+export const getGetLiquiditeitUrl = () => {
+
+
+
+
+  return `/api/financieel/liquiditeit`
+}
+
+/**
+ * Berekent de liquiditeitspositie: banksaldo (via AccountView, fail-soft), openstaande debiteuren en crediteuren met aging, verwachte cashflow over 7/30/90 dagen, netto liquiditeitspositie en drempelsignalen. Vereist het directieniveau (financieel niveau 2).
+ * @summary Liquiditeitsdashboard (bank/kas, debiteuren, crediteuren, cashflow)
+ */
+export const getLiquiditeit = async ( options?: RequestInit): Promise<LiquiditeitDashboard> => {
+
+  return customFetch<LiquiditeitDashboard>(getGetLiquiditeitUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetLiquiditeitQueryKey = () => {
+    return [
+    `/api/financieel/liquiditeit`
+    ] as const;
+    }
+
+
+export const getGetLiquiditeitQueryOptions = <TData = Awaited<ReturnType<typeof getLiquiditeit>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getLiquiditeit>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetLiquiditeitQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getLiquiditeit>>> = ({ signal }) => getLiquiditeit({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getLiquiditeit>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetLiquiditeitQueryResult = NonNullable<Awaited<ReturnType<typeof getLiquiditeit>>>
+export type GetLiquiditeitQueryError = ErrorType<void>
+
+
+/**
+ * @summary Liquiditeitsdashboard (bank/kas, debiteuren, crediteuren, cashflow)
+ */
+
+export function useGetLiquiditeit<TData = Awaited<ReturnType<typeof getLiquiditeit>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getLiquiditeit>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetLiquiditeitQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetDirectiecockpitUrl = (params?: GetDirectiecockpitParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/directie/cockpit?${stringifiedParams}` : `/api/directie/cockpit`
+}
+
+/**
+ * Geeft maximaal tien samenvattende tegels terug die de bestaande dashboards bundelen (omzetprognose, liquiditeit, cashflow, debiteuren, crediteuren, onderhanden werk, facturen ter controle, openstaande goedkeuringen, AK-dekkingsgraad). Elke tegel heeft een kleurcode en een doorklikpad. Resilient: een falende bron levert een neutrale tegel op.
+ * @summary Geconsolideerde Directiecockpit met gekleurde tegels
+ */
+export const getDirectiecockpit = async (params?: GetDirectiecockpitParams, options?: RequestInit): Promise<DirectiecockpitResponse> => {
+
+  return customFetch<DirectiecockpitResponse>(getGetDirectiecockpitUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetDirectiecockpitQueryKey = (params?: GetDirectiecockpitParams,) => {
+    return [
+    `/api/directie/cockpit`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetDirectiecockpitQueryOptions = <TData = Awaited<ReturnType<typeof getDirectiecockpit>>, TError = ErrorType<void>>(params?: GetDirectiecockpitParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getDirectiecockpit>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetDirectiecockpitQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getDirectiecockpit>>> = ({ signal }) => getDirectiecockpit(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getDirectiecockpit>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetDirectiecockpitQueryResult = NonNullable<Awaited<ReturnType<typeof getDirectiecockpit>>>
+export type GetDirectiecockpitQueryError = ErrorType<void>
+
+
+/**
+ * @summary Geconsolideerde Directiecockpit met gekleurde tegels
+ */
+
+export function useGetDirectiecockpit<TData = Awaited<ReturnType<typeof getDirectiecockpit>>, TError = ErrorType<void>>(
+ params?: GetDirectiecockpitParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getDirectiecockpit>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetDirectiecockpitQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
 export const getListFinancieleDocumentenUrl = (params?: ListFinancieleDocumentenParams,) => {
   const normalizedParams = new URLSearchParams();

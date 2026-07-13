@@ -248,6 +248,28 @@
 
 ---
 
+## 2026-07-13 — Directiecockpit & Liquiditeitsdashboard (Projectcontrol)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (additief; bestaande dashboards ongewijzigd, alle endpoints allSettled/fail-soft)
+
+**Aanleiding:** de directie/hoofdbeheerder had geen geconsolideerd startoverzicht en geen zicht op de liquiditeit (bank/kas, openstaande debiteuren/crediteuren, cashflow).
+
+**Backend:**
+- Nieuw `liquiditeit-service.ts`: berekent netto liquiditeitspositie, openstaande debiteuren (verkoop) en crediteuren (inkoop, betaalstatus ≠ betaald), ouderdomsanalyse (aging), verwachte cashflow op 7/30/90 dagen en drempelsignalen. Banksaldo via nieuwe `leesBankSaldo()` in `accountview-client.ts` (fail-soft: testmodus/geen koppeling → `null`, nooit nepgetallen).
+- Nieuwe routes `GET /financieel/liquiditeit` en `GET /directie/cockpit` (9 tegels, `Promise.allSettled`-resilient, gate `requireBevoegdheid("financieel", 2)`).
+- OpenAPI-schemas toegevoegd + codegen uitgevoerd.
+
+**AI-observatiespaneel:** liquiditeitssignalen (tekort, achterstallige crediteuren/debiteuren, negatieve cashflow 30d) worden alleen voor het huidige boekjaar in `fie-service.ts` in de observaties geïnjecteerd; fail-soft zodat de jaarprognose nooit crasht.
+
+**Frontend:**
+- `directie/cockpit.tsx`: max 10 kleurgecodeerde tegels (rood/oranje/groen/blauw) met click-through naar de onderliggende dashboards.
+- `directie/liquiditeit.tsx`: KPI-kaarten, cashflow, aging-tabellen en signalen.
+- Nav-items "Directiecockpit" en "Liquiditeit" toegevoegd onder Financieel (gate `financieel` niveau 2).
+
+**Verificatie:** volledige typecheck groen; beide endpoints geven geauthenticeerd 200 met echte berekende data (debiteuren/crediteuren/cashflow uit facturen), ongeauthenticeerd 401.
+
+---
+
 ## 2026-07-13 — Meerdere functies zichtbaar/bewerkbaar in Profiel bewerken (increment 1)
 
 - **Uitvoering:** volledig (increment 1 van 4) | **Kwaliteit:** hoog | **Risico:** laag (alleen frontend, geen API-/DB-wijziging, hergebruikt bestaande aanstellingen-CRUD)

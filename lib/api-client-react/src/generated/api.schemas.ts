@@ -12486,6 +12486,74 @@ export interface FieJaarprognose {
   werkmaatschappij_verdeling?: FieWerkmaatschappijPrognose[];
 }
 
+export interface LiquiditeitAging {
+  niet_vervallen: number;
+  vervallen_1_30: number;
+  vervallen_31_60: number;
+  vervallen_60_plus: number;
+}
+
+export interface LiquiditeitCashflow {
+  horizon_dagen: number;
+  verwachte_inkomsten: number;
+  verwachte_uitgaven: number;
+  netto: number;
+}
+
+export interface LiquiditeitSignaal {
+  type: string;
+  ernst: string;
+  omschrijving: string;
+  /** @nullable */
+  waarde?: number | null;
+  /** @nullable */
+  drempelwaarde?: number | null;
+  /** @nullable */
+  afwijking_pct?: number | null;
+  /** @nullable */
+  impact?: string | null;
+  /** @nullable */
+  advies?: string | null;
+}
+
+export interface LiquiditeitDashboard {
+  peildatum: string;
+  /** @nullable */
+  banksaldo: number | null;
+  banksaldo_bron: string;
+  /** @nullable */
+  banksaldo_reden?: string | null;
+  openstaande_debiteuren: number;
+  aantal_debiteuren: number;
+  openstaande_crediteuren: number;
+  aantal_crediteuren: number;
+  werkkapitaal: number;
+  /** @nullable */
+  netto_liquiditeit: number | null;
+  debiteuren_aging: LiquiditeitAging;
+  crediteuren_aging: LiquiditeitAging;
+  cashflow: LiquiditeitCashflow[];
+  drempel_liquiditeit: number;
+  signalen: LiquiditeitSignaal[];
+}
+
+export interface CockpitTegel {
+  sleutel: string;
+  titel: string;
+  waarde: string;
+  /** @nullable */
+  subtitel?: string | null;
+  kleur: string;
+  pad: string;
+  /** @nullable */
+  ernst?: string | null;
+}
+
+export interface DirectiecockpitResponse {
+  boekjaar: number;
+  tegels: CockpitTegel[];
+}
+
 export interface VisualGuidanceSlot {
   visual_id: number;
   naam: string;
@@ -13841,6 +13909,10 @@ export const GetVisualsGuidanceStapType = {
   controle: 'controle',
   foto: 'foto',
 } as const;
+
+export type GetDirectiecockpitParams = {
+boekjaar?: number;
+};
 
 export type ListFinancieleDocumentenParams = {
 /**

@@ -165,6 +165,78 @@ export class AccountViewClient {
   }
 
   /**
+   * Leest het actuele banksaldo (bank + kas) uit AccountView.
+   *
+   * Fail-soft: bij testmodus, ontbrekende configuratie, een niet-ondersteund
+   * endpoint of een verbindingsfout wordt GEEN saldo verzonnen — er wordt
+   * { beschikbaar: false } teruggegeven met een leesbare reden. Het dashboard
+   * toont dan expliciet "niet beschikbaar" in plaats van een misleidend cijfer.
+   */
+  async leesBankSaldo(): Promise<{ beschikbaar: boolean; saldo?: number; reden?: string }> {
+    if (this.config.testmodus) {
+      return { beschikbaar: false, reden: "AccountView staat in testmodus — banksaldo wordt niet opgehaald." };
+    }
+    if (!this.config.apiEndpoint || !this.config.apiGebruiker || !this.config.apiKey) {
+      return { beschikbaar: false, reden: "AccountView-koppeling is niet volledig geconfigureerd." };
+    }
+
+    // Grootboeksaldi van de liquide middelen (bank + kas). Het exacte pad is
+    // configureerbaar in de AccountView-omgeving; we vragen de saldibalans op
+    // en sommeren de liquide-middelen-rekeningen.
+    const base = this.config.apiEndpoint.replace(/\/$/, "");
+    const url = `${base}/api/banksaldi?administratie=${encodeURIComponent(this.config.administratiecode)}`;
+    const credentials = Buffer.from(`${this.config.apiGebruiker}:${this.config.apiKey}`).toString("base64");
+
+    try {
+      const resp = await fetch(url, {
+        method: "GET",
+        headers: { "Authorization": `Basic ${credentials}`, "Accept": "application/json" },
+        signal: AbortSignal.timeout(8000),
+      });
+      if (!resp.ok) {
+        return { beschikbaar: false, reden: `AccountView gaf HTTP ${resp.status} terug voor het banksaldo.` };
+      }
+      const data = (await resp.json()) as unknown;
+
+      // Ondersteun zowel een enkel totaalveld als een lijst rekeningen die
+      // gesommeerd moet worden.
+      let saldo: number | null = null;
+      if (data && typeof data === "object") {
+        const obj = data as Record<string, unknown>;
+        const direct = obj["Saldo"] ?? obj["saldo"] ?? obj["TotaalSaldo"] ?? obj["totaal"];
+        if (typeof direct === "number" && Number.isFinite(direct)) {
+          saldo = direct;
+        } else {
+          const lijst = (obj["Rekeningen"] ?? obj["rekeningen"] ?? obj["items"] ?? (Array.isArray(data) ? data : null)) as unknown;
+          if (Array.isArray(lijst)) {
+            saldo = lijst.reduce<number>((som, r) => {
+              const rr = r as Record<string, unknown>;
+              const v = rr["Saldo"] ?? rr["saldo"] ?? rr["Bedrag"] ?? rr["bedrag"];
+              return som + (typeof v === "number" && Number.isFinite(v) ? v : 0);
+            }, 0);
+          }
+        }
+      } else if (Array.isArray(data)) {
+        saldo = (data as unknown[]).reduce<number>((som, r) => {
+          const rr = r as Record<string, unknown>;
+          const v = rr["Saldo"] ?? rr["saldo"] ?? rr["Bedrag"] ?? rr["bedrag"];
+          return som + (typeof v === "number" && Number.isFinite(v) ? v : 0);
+        }, 0);
+      }
+
+      if (saldo == null || !Number.isFinite(saldo)) {
+        return { beschikbaar: false, reden: "AccountView leverde geen bruikbaar banksaldo terug." };
+      }
+      return { beschikbaar: true, saldo };
+    } catch (err) {
+      return {
+        beschikbaar: false,
+        reden: `Banksaldo niet opgehaald: ${err instanceof Error ? err.message : String(err)}`,
+      };
+    }
+  }
+
+  /**
    * Ping AccountView om te controleren of de configuratie klopt.
    */
   async pingVerbinding(): Promise<{ bereikbaar: boolean; fout?: string }> {

@@ -17,6 +17,7 @@ import {
   voorzieningenTable,
 } from "@workspace/db";
 import { logger } from "../lib/logger";
+import { berekenLiquiditeitSignalen } from "./liquiditeit-service";
 import { medewerkersTable } from "@workspace/db/schema";
 import { eq, and, desc, gte, lt, inArray, isNull } from "drizzle-orm";
 
@@ -541,6 +542,10 @@ const OBSERVATIE_META: Record<string, { impact: string; advies: string; score: n
   break_even_risico:{ impact: "Algemene kosten (AK) worden niet volledig gedekt bij doelmarge.", advies: "Vul de orderportefeuille aan of verlaag de AK-basis.", score: 92 },
   ak_onderdekking:  { impact: "Verliesgevend resultaat bij huidige omzetprognose en kostprijzen.", advies: "Verhoog uurtarieven of verlaag de AK-posten.", score: 88 },
   lege_pipeline:    { impact: "Geen zichtbaar orderboek voor dit boekjaar.", advies: "Controleer of offertes in het juiste boekjaar zijn aangemaakt.", score: 95 },
+  liquiditeit_tekort:        { impact: "Onvoldoende middelen om lopende verplichtingen te dekken.", advies: "Versnel debiteureninning, stel crediteurenbetalingen uit of regel aanvullende financiering.", score: 95 },
+  crediteuren_achterstallig: { impact: "Risico op aanmaningen, rente of verstoorde leveranciersrelaties.", advies: "Plan de openstaande crediteuren in of maak betaalafspraken met leveranciers.", score: 80 },
+  debiteuren_achterstallig:  { impact: "Vertraagde binnenkomst van geld drukt op de liquiditeit.", advies: "Verstuur herinneringen of aanmaningen voor de vervallen debiteuren.", score: 80 },
+  cashflow_negatief_30d:     { impact: "Uitgaven overtreffen de verwachte inkomsten op korte termijn.", advies: "Bewaak de betaalkalender en stem inkoop- en betaalmomenten af op binnenkomende gelden.", score: 88 },
 };
 
 function observatieMetadata(type: string): { impact: string | null; advies: string | null; betrouwbaarheidsscore: number | null } {
@@ -786,6 +791,31 @@ export async function berekenJaarprognose(boekjaar: number): Promise<FieJaarprog
       waarde: 0, drempelwaarde: null, afwijking_pct: null,
       ...observatieMetadata(t),
     });
+  }
+
+  // 5b. Liquiditeitssignalen injecteren in het observatiespaneel — alleen voor
+  // het huidige boekjaar (liquiditeit is een actuele momentopname, geen
+  // historische boekjaargrootheid). DB-only en fail-soft, zodat de prognose
+  // nooit crasht als de liquiditeitsberekening faalt.
+  if (boekjaar === new Date().getFullYear()) {
+    try {
+      const liquiditeitSignalen = await berekenLiquiditeitSignalen();
+      for (const s of liquiditeitSignalen) {
+        observaties.push({
+          type: s.type,
+          ernst: s.ernst,
+          omschrijving: s.omschrijving,
+          waarde: s.waarde,
+          drempelwaarde: s.drempelwaarde,
+          afwijking_pct: s.afwijking_pct,
+          impact: s.impact,
+          advies: s.advies,
+          betrouwbaarheidsscore: observatieMetadata(s.type).betrouwbaarheidsscore,
+        });
+      }
+    } catch {
+      // Liquiditeitssignalen zijn aanvullend; falen mag de prognose niet blokkeren.
+    }
   }
 
   // Afgeleid: brutowinst, nettoresultaat, break-even status, begroting-kwartaalverdeling
