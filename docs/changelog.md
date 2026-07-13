@@ -1,3 +1,18 @@
+## 2026-07-13 — HRM Personeel: CV-upload en certificaat-upload
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (alleen frontend, geen API-/DB-wijziging)
+
+**Achtergrond / CV-tab:**
+- Lege staat verwees naar een "Bewerken"-knop die niet zichtbaar was op de tab zelf. Vervangen door twee directe knoppen: "CV uploaden" (PDF/Word) en "Tekst invullen" (opent profielformulier).
+- Als cv_tekst al ingevuld is: knoppen "CV uploaden" en "Bewerken" rechtsboven in de kaart.
+- Upload gaat naar `/api/medewerkers/:id/documenten` met type `cv`; het bestand verschijnt daarna op het tabblad Documenten.
+
+**Opleidingen & certificaten-tab:**
+- Per certificaatkaart een upload-icoon toegevoegd (paperclip-stijl) waarmee een bijlage (PDF/foto) geüpload kan worden als `diploma`-document met de opleidingsnaam als label.
+- Na upload toast-bevestiging; het bestand verschijnt op het tabblad Documenten.
+
+---
+
 ## 2026-07-13 — Hotfix productie: login-500 door achtergebleven databaseschema
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (alleen additieve schemawijzigingen op productie; geen codewijziging)

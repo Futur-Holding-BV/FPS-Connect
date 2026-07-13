@@ -741,6 +741,45 @@ export default function MedewerkerDetailPagina() {
     type: "vakantiegeld", keuze: "",
   });
 
+  const cvFileInputRef = useRef<HTMLInputElement>(null);
+  const [cvUploadBezig, setCvUploadBezig] = useState(false);
+  const certFileInputRef = useRef<HTMLInputElement>(null);
+  const [certUploadBezigId, setCertUploadBezigId] = useState<number | null>(null);
+
+  async function cvUploaden(bestand: File) {
+    setCvUploadBezig(true);
+    try {
+      const form = new FormData();
+      form.append("bestand", bestand);
+      form.append("type", "cv");
+      form.append("label", "CV");
+      const resp = await fetch(`/api/medewerkers/${id}/documenten`, { method: "POST", body: form });
+      if (!resp.ok) throw new Error(await resp.text());
+      await queryClient.invalidateQueries({ queryKey: getListMedewerkerDocumentenQueryKey(Number(id)) });
+      toast({ title: "CV-bestand geüpload", description: "Te vinden op het tabblad Documenten." });
+    } catch {
+      toast({ title: "Uploaden mislukt", variant: "destructive" });
+    } finally {
+      setCvUploadBezig(false);
+    }
+  }
+
+  async function certificaatUploaden(bestand: File, opleidingNaam: string) {
+    setCertUploadBezigId(null);
+    try {
+      const form = new FormData();
+      form.append("bestand", bestand);
+      form.append("type", "diploma");
+      form.append("label", opleidingNaam);
+      const resp = await fetch(`/api/medewerkers/${id}/documenten`, { method: "POST", body: form });
+      if (!resp.ok) throw new Error(await resp.text());
+      await queryClient.invalidateQueries({ queryKey: getListMedewerkerDocumentenQueryKey(Number(id)) });
+      toast({ title: "Certificaat geüpload", description: "Te vinden op het tabblad Documenten." });
+    } catch {
+      toast({ title: "Uploaden mislukt", variant: "destructive" });
+    }
+  }
+
   async function invalideerMedewerker() {
     await queryClient.invalidateQueries({ queryKey: getGetMedewerkerQueryKey(id) });
     await queryClient.invalidateQueries({ queryKey: getListMedewerkersQueryKey() });
@@ -1522,6 +1561,21 @@ export default function MedewerkerDetailPagina() {
 
         {/* Opleidingen */}
         <TabsContent value="opleidingen" className="space-y-3">
+          <input
+            ref={certFileInputRef}
+            type="file"
+            accept=".pdf,.jpg,.jpeg,.png"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) {
+                const naam = (medewerkerOpleidingen ?? []).find((o) => o.id === certUploadBezigId)?.opleiding_naam ?? "Certificaat";
+                certificaatUploaden(f, naam);
+              }
+              e.target.value = "";
+              setCertUploadBezigId(null);
+            }}
+          />
           {magSchrijven && (
             <div className="flex justify-end">
               <Button onClick={() => openOpleiding()}><Plus className="h-4 w-4" /> Certificaat toekennen</Button>
@@ -1555,6 +1609,17 @@ export default function MedewerkerDetailPagina() {
                         {binnenkort && <Badge variant="outline" className="border-amber-200 text-amber-700"><CalendarClock className="h-3 w-3" /> Nog {dagen} dagen</Badge>}
                         {magSchrijven && (
                           <>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              title="Certificaat uploaden"
+                              onClick={() => {
+                                setCertUploadBezigId(o.id);
+                                certFileInputRef.current?.click();
+                              }}
+                            >
+                              <Upload className="h-4 w-4" />
+                            </Button>
                             <Button variant="ghost" size="icon" onClick={() => openOpleiding(o)}><Pencil className="h-4 w-4" /></Button>
                             <Button variant="ghost" size="icon" onClick={() => verwijderOpleiding(o.id)}><Trash2 className="h-4 w-4" /></Button>
                           </>
@@ -1691,12 +1756,35 @@ export default function MedewerkerDetailPagina() {
 
         {/* Achtergrond / CV */}
         <TabsContent value="achtergrond" className="space-y-4">
+          <input
+            ref={cvFileInputRef}
+            type="file"
+            accept=".pdf,.doc,.docx"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) cvUploaden(f);
+              e.target.value = "";
+            }}
+          />
           <Card>
             <CardContent className="p-5">
               {medewerker.cv_tekst ? (
                 <div>
-                  <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3 flex items-center gap-1.5">
-                    <FileText className="h-3.5 w-3.5" /> CV / Werkachtergrond
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+                      <FileText className="h-3.5 w-3.5" /> CV / Werkachtergrond
+                    </div>
+                    {magSchrijven && (
+                      <div className="flex items-center gap-2">
+                        <Button variant="ghost" size="sm" onClick={() => cvFileInputRef.current?.click()} disabled={cvUploadBezig}>
+                          <Upload className="h-3.5 w-3.5" /> CV uploaden
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={openProfiel}>
+                          <Pencil className="h-3.5 w-3.5" /> Bewerken
+                        </Button>
+                      </div>
+                    )}
                   </div>
                   <p className="text-sm whitespace-pre-wrap leading-relaxed">{medewerker.cv_tekst}</p>
                 </div>
@@ -1705,7 +1793,14 @@ export default function MedewerkerDetailPagina() {
                   <FileText className="h-10 w-10 mx-auto mb-3 opacity-40" />
                   <p className="text-sm">Nog geen CV of werkachtergrond ingevuld.</p>
                   {magSchrijven && (
-                    <p className="text-xs mt-1">Klik op <span className="font-medium">Bewerken</span> om dit aan te vullen.</p>
+                    <div className="flex items-center justify-center gap-2 mt-3">
+                      <Button variant="outline" size="sm" onClick={() => cvFileInputRef.current?.click()} disabled={cvUploadBezig}>
+                        <Upload className="h-3.5 w-3.5" />{cvUploadBezig ? "Uploaden…" : "CV uploaden"}
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={openProfiel}>
+                        <Pencil className="h-3.5 w-3.5" /> Tekst invullen
+                      </Button>
+                    </div>
                   )}
                 </div>
               )}
