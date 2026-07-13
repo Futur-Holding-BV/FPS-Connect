@@ -15,6 +15,22 @@
 - `docs/goedkeuring-impactanalyse.md` — architectuuroverzicht, state machine, impact per module (inkoopbon/offerte/bevoegdheden/audit), risico-inventarisatie (R01–R05 incl. vier-ogen-bypass en materiële wijziging), aanbevelingen voor toekomstige koppelingen.
 - `docs/goedkeuring-bewijsvoering.md` — business scenario bewijsvoering: live DB-schema verificatie (4 tabellen, volledige kolommen), audit_log entries 219+220 als bewijs van inkoopbon end-to-end flow (10 juli 2026), code-trace offerte-koppeling, scenario beleidswijziging audit, DoD-checklijst.
 
+## 2026-07-13 — Document Studio: Connect-integratie (templates in modules)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (additief; bestaande DocumentFrame-opmaak is fallback)
+
+**Wat is er geverifieerd en afgerond (taak #620):**
+
+Alle vijf stappen zijn aantoonbaar geïmplementeerd en typecheck-schoon:
+
+1. **Template-resolver API** — `GET /studio/modellen/actief?werkgever_id=&document_type=` en bulk `GET /studio/werkgevers/:id/modellen/actief` bestaan in `studio.ts` en zijn gegenereerd in `api-client-react`.
+2. **Shared hook** — `useActiefStudioModel(werkgeverId, documentType)` in `artifacts/firevault/src/hooks/use-actief-studio-model.ts`; gebruikt `useListActieveDocumentStudioModellen` (bulk, één call per werkgever), retourneert `null` bij geen actief model zodat modules veilig terugvallen.
+3. **Offertes integratie** — `offertes/print.tsx` past logo-positie, primaire kleur en voettekst uit de goedgekeurde template toe; toont groene "Opmaak: Model 0" badge. Verzonden offertes pinnen het model via `offerte.studio_model_id` (model blijft vast ook na huisstijlwijziging).
+4. **Opleverrapporten integratie** — `gebouwen/print.tsx` past `studioAccentKleur`, `studioVoettekst` en `studioLogoPositie` toe op het coverblad; toont dezelfde "Opmaak: Model 0" badge in de topbar.
+5. **Studio-pagina gebruiksoverzicht** — `DOCUMENT_TYPE_MODULES`-mapping in `studio.tsx` toont per goedgekeurd template als badge-lijst welke modules het actief gebruiken ("Actief in: Offertes").
+
+Typecheck: firevault en api-server beide schoon.
+
 ---
 
 ## 2026-07-13 — Proposal Studio: voltooiing kern (editor, AI, PDF, versiediff, sectielijst)
