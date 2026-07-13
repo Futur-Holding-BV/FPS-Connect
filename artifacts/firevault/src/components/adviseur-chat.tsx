@@ -11,8 +11,11 @@ interface Bericht {
   inhoud: string;
 }
 
-export function AdviseurChat() {
+export function AdviseurChat({ verhoogd = false }: { verhoogd?: boolean }) {
   const [open, setOpen] = useState(false);
+  // Op pagina's met de NieuwsTicker (beheerder) moet de knop hoger staan zodat
+  // hij niet achter/over de balk onderaan valt.
+  const positie = verhoogd ? "bottom-20 right-5" : "bottom-5 right-5";
   const [berichten, setBerichten] = useState<Bericht[]>([]);
   const [invoer, setInvoer] = useState("");
   const [bezig, setBezig] = useState(false);
@@ -81,7 +84,8 @@ export function AdviseurChat() {
       <button
         onClick={() => setOpen((v) => !v)}
         className={cn(
-          "fixed bottom-5 right-5 z-50 flex h-12 w-12 items-center justify-center rounded-full shadow-lg transition-all duration-200",
+          "fixed z-50 flex h-12 w-12 items-center justify-center rounded-full shadow-lg transition-all duration-200",
+          positie,
           "bg-[hsl(12,90%,50%)] text-white hover:bg-[hsl(12,90%,44%)]",
           "focus:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(12,90%,50%)] focus-visible:ring-offset-2",
           open && "opacity-0 pointer-events-none",
@@ -95,7 +99,8 @@ export function AdviseurChat() {
       {/* Chat-paneel */}
       <div
         className={cn(
-          "fixed bottom-5 right-5 z-50 flex flex-col rounded-2xl shadow-2xl border border-border bg-background",
+          "fixed z-50 flex flex-col rounded-2xl shadow-2xl border border-border bg-background",
+          positie,
           "transition-all duration-200 origin-bottom-right",
           open
             ? "opacity-100 scale-100 w-[360px] h-[520px] max-h-[calc(100vh-88px)]"

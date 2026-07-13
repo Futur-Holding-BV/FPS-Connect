@@ -2109,7 +2109,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
       <BerichtNotificatieToast />
       <SlimUploadBalk />
       <NieuwsTicker />
-      <AdviseurChat />
+      <AdviseurChat verhoogd />
     </SidebarProvider>
   );
 }
