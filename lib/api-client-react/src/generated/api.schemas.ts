@@ -435,6 +435,33 @@ export interface AvgVerzoek {
   bijgewerkt_op?: string | null;
 }
 
+export interface AvgVerwerker {
+  id: number;
+  naam: string;
+  land?: string | null;
+  doel?: string | null;
+  categorie_persoonsgegevens?: string | null;
+  grondslag?: string | null;
+  vwo_aanwezig: boolean;
+  vwo_datum?: string | null;
+  contactpersoon?: string | null;
+  notities?: string | null;
+  aangemaakt_op: string;
+  bijgewerkt_op?: string | null;
+}
+
+export interface AvgVerwerkerInput {
+  naam: string;
+  land?: string | null;
+  doel?: string | null;
+  categorie_persoonsgegevens?: string | null;
+  grondslag?: string | null;
+  vwo_aanwezig?: boolean;
+  vwo_datum?: string | null;
+  contactpersoon?: string | null;
+  notities?: string | null;
+}
+
 export interface InactiefAccount {
   id: number;
   naam: string;

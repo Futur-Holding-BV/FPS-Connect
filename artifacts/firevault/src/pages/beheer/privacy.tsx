@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { ShieldCheck, Check, AlertTriangle, Minus, X, Pencil, Save } from "lucide-react";
+import { Link } from "wouter";
+import { ShieldCheck, Check, AlertTriangle, Minus, X, Pencil, Save, Network } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -193,23 +194,30 @@ export default function BeheerPrivacyPagina() {
             <p className="text-sm text-muted-foreground">AVG-privacyvereisten per module in FPS Connect</p>
           </div>
         </div>
-        {magBewerken && (
-          <div className="flex items-center gap-2">
-            {opgeslagen && <span className="text-xs text-green-700">Opgeslagen</span>}
-            {bewerkMode ? (
-              <>
-                <Button variant="outline" size="sm" onClick={annuleren}>Annuleren</Button>
-                <Button size="sm" onClick={opslaan} className="gap-1.5">
-                  <Save className="h-3.5 w-3.5" />Opslaan
+        <div className="flex items-center gap-2">
+          <Link href="/beheer/avg">
+            <Button variant="outline" size="sm" className="gap-1.5">
+              <Network className="h-3.5 w-3.5" />Bekijk verwerkersregister
+            </Button>
+          </Link>
+          {magBewerken && (
+            <>
+              {opgeslagen && <span className="text-xs text-green-700">Opgeslagen</span>}
+              {bewerkMode ? (
+                <>
+                  <Button variant="outline" size="sm" onClick={annuleren}>Annuleren</Button>
+                  <Button size="sm" onClick={opslaan} className="gap-1.5">
+                    <Save className="h-3.5 w-3.5" />Opslaan
+                  </Button>
+                </>
+              ) : (
+                <Button variant="outline" size="sm" onClick={() => setBewerkMode(true)} className="gap-1.5">
+                  <Pencil className="h-3.5 w-3.5" />Bewerken
                 </Button>
-              </>
-            ) : (
-              <Button variant="outline" size="sm" onClick={() => setBewerkMode(true)} className="gap-1.5">
-                <Pencil className="h-3.5 w-3.5" />Bewerken
-              </Button>
-            )}
-          </div>
-        )}
+              )}
+            </>
+          )}
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-3 text-sm">

@@ -3,6 +3,7 @@ import { db } from "@workspace/db";
 import {
   gebruikersTable,
   avgInzageverzoekTable,
+  avgVerwerkersTable,
   activiteitenTable,
   medewerkersTable,
   verlofSaldiTable,
@@ -608,6 +609,173 @@ router.get("/avg/opschoon-status", alleenBeheer, async (req, res): Promise<void>
           }
         : null,
     });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// ── Verwerkersregister (AVG art. 30 lid 2) ───────────────────────────────────
+
+function leegNaarNull(v: unknown): string | null {
+  if (typeof v !== "string") return null;
+  const t = v.trim();
+  return t ? t : null;
+}
+
+function mapVerwerker(r: typeof avgVerwerkersTable.$inferSelect) {
+  return {
+    id: r.id,
+    naam: r.naam,
+    land: r.land ?? null,
+    doel: r.doel ?? null,
+    categorie_persoonsgegevens: r.categoriePersoonsgegevens ?? null,
+    grondslag: r.grondslag ?? null,
+    vwo_aanwezig: r.vwoAanwezig,
+    vwo_datum: r.vwoDatum ?? null,
+    contactpersoon: r.contactpersoon ?? null,
+    notities: r.notities ?? null,
+    aangemaakt_op: r.aangemaaktOp.toISOString(),
+    bijgewerkt_op: r.bijgewerktOp.toISOString(),
+  };
+}
+
+// Standaard-verwerkers die in FPS Connect worden gebruikt. Bij een leeg register
+// worden deze eenmalig voorgezaaid zodat het register direct bruikbaar is.
+const STANDAARD_VERWERKERS: (typeof avgVerwerkersTable.$inferInsert)[] = [
+  {
+    naam: "OpenAI, L.L.C.",
+    land: "Verenigde Staten",
+    doel: "AI-analyse (formulierinvullen, spotherkenning, documentclassificatie, tekstgeneratie)",
+    categoriePersoonsgegevens:
+      "Vrije-tekstinvoer en documentinhoud die persoonsgegevens kunnen bevatten (namen, contactgegevens)",
+    grondslag: "Uitvoering van de overeenkomst / gerechtvaardigd belang",
+    vwoAanwezig: false,
+    contactpersoon: "privacy@openai.com",
+    notities:
+      "Ingezet via de Replit AI-integratieproxy. Controleer de actuele verwerkersovereenkomst (DPA) van OpenAI.",
+  },
+  {
+    naam: "Google Ireland Limited (Google Maps Platform)",
+    land: "Ierland (EU)",
+    doel: "Gebouwlocaties, geocoding, kaart- en satellietbeelden en Street View-gevelbeelden",
+    categoriePersoonsgegevens: "Adres- en locatiegegevens van gebouwen",
+    grondslag: "Uitvoering van de overeenkomst",
+    vwoAanwezig: false,
+    contactpersoon: "https://support.google.com/policies",
+    notities: "Google Maps Platform API. Controleer de actuele Google Cloud DPA.",
+  },
+  {
+    naam: "Microsoft Ireland Operations Limited (Microsoft 365)",
+    land: "Ierland (EU)",
+    doel: "Verzenden en ontvangen van e-mail (Microsoft Graph) namens FPS",
+    categoriePersoonsgegevens: "E-mailadressen, namen en inhoud van e-mailberichten",
+    grondslag: "Uitvoering van de overeenkomst",
+    vwoAanwezig: false,
+    contactpersoon: "https://www.microsoft.com/licensing/docs",
+    notities: "Microsoft 365 / Azure. Controleer het Microsoft Products and Services DPA (DPA).",
+  },
+];
+
+// GET /avg/verwerkers — lijst; zaait standaard-verwerkers bij een leeg register
+router.get("/avg/verwerkers", alleenBeheer, async (req, res): Promise<void> => {
+  try {
+    let rijen = await db
+      .select()
+      .from(avgVerwerkersTable)
+      .orderBy(avgVerwerkersTable.naam);
+
+    if (rijen.length === 0) {
+      await db.insert(avgVerwerkersTable).values(STANDAARD_VERWERKERS).onConflictDoNothing();
+      rijen = await db.select().from(avgVerwerkersTable).orderBy(avgVerwerkersTable.naam);
+    }
+
+    res.json(rijen.map(mapVerwerker));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// POST /avg/verwerkers — nieuwe verwerker toevoegen
+router.post("/avg/verwerkers", alleenBeheer, async (req, res): Promise<void> => {
+  try {
+    const b = req.body ?? {};
+    const naam = typeof b.naam === "string" ? b.naam.trim() : "";
+    if (!naam) return void res.status(400).json({ error: "Naam is verplicht" });
+
+    const [rij] = await db
+      .insert(avgVerwerkersTable)
+      .values({
+        naam,
+        land: leegNaarNull(b.land),
+        doel: leegNaarNull(b.doel),
+        categoriePersoonsgegevens: leegNaarNull(b.categorie_persoonsgegevens),
+        grondslag: leegNaarNull(b.grondslag),
+        vwoAanwezig: b.vwo_aanwezig === true,
+        vwoDatum: leegNaarNull(b.vwo_datum),
+        contactpersoon: leegNaarNull(b.contactpersoon),
+        notities: leegNaarNull(b.notities),
+      })
+      .returning();
+
+    res.status(201).json(mapVerwerker(rij));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// PATCH /avg/verwerkers/:id — verwerker bijwerken
+router.patch("/avg/verwerkers/:id", alleenBeheer, async (req, res): Promise<void> => {
+  try {
+    const id = parseInt(String(req.params.id), 10);
+    if (isNaN(id)) return void res.status(400).json({ error: "Ongeldig id" });
+
+    const b = req.body ?? {};
+    const wijziging: Partial<typeof avgVerwerkersTable.$inferInsert> = { bijgewerktOp: new Date() };
+    if (typeof b.naam === "string") {
+      const naam = b.naam.trim();
+      if (!naam) return void res.status(400).json({ error: "Naam mag niet leeg zijn" });
+      wijziging.naam = naam;
+    }
+    if ("land" in b) wijziging.land = leegNaarNull(b.land);
+    if ("doel" in b) wijziging.doel = leegNaarNull(b.doel);
+    if ("categorie_persoonsgegevens" in b)
+      wijziging.categoriePersoonsgegevens = leegNaarNull(b.categorie_persoonsgegevens);
+    if ("grondslag" in b) wijziging.grondslag = leegNaarNull(b.grondslag);
+    if ("vwo_aanwezig" in b) wijziging.vwoAanwezig = b.vwo_aanwezig === true;
+    if ("vwo_datum" in b) wijziging.vwoDatum = leegNaarNull(b.vwo_datum);
+    if ("contactpersoon" in b) wijziging.contactpersoon = leegNaarNull(b.contactpersoon);
+    if ("notities" in b) wijziging.notities = leegNaarNull(b.notities);
+
+    const [rij] = await db
+      .update(avgVerwerkersTable)
+      .set(wijziging)
+      .where(eq(avgVerwerkersTable.id, id))
+      .returning();
+
+    if (!rij) return void res.status(404).json({ error: "Verwerker niet gevonden" });
+    res.json(mapVerwerker(rij));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// DELETE /avg/verwerkers/:id — verwerker verwijderen
+router.delete("/avg/verwerkers/:id", alleenBeheer, async (req, res): Promise<void> => {
+  try {
+    const id = parseInt(String(req.params.id), 10);
+    if (isNaN(id)) return void res.status(400).json({ error: "Ongeldig id" });
+
+    const [rij] = await db
+      .delete(avgVerwerkersTable)
+      .where(eq(avgVerwerkersTable.id, id))
+      .returning();
+
+    if (!rij) return void res.status(404).json({ error: "Verwerker niet gevonden" });
+    res.status(204).end();
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });

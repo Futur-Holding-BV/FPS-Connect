@@ -1,4 +1,4 @@
-import { pgTable, serial, integer, text, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, serial, integer, text, timestamp, boolean } from "drizzle-orm/pg-core";
 import { gebruikersTable } from "./gebruikers";
 
 export const avgInzageverzoekTable = pgTable("avg_inzageverzoeken", {
@@ -28,3 +28,22 @@ export const avgOpschoonLogTable = pgTable("avg_opschoon_log", {
 });
 
 export type AvgOpschoonLog = typeof avgOpschoonLogTable.$inferSelect;
+
+// Verwerkersregister (AVG art. 30 lid 2): externe (sub-)verwerkers die namens
+// de verwerkingsverantwoordelijke persoonsgegevens verwerken.
+export const avgVerwerkersTable = pgTable("avg_verwerkers", {
+  id: serial("id").primaryKey(),
+  naam: text("naam").notNull(),
+  land: text("land"),
+  doel: text("doel"),
+  categoriePersoonsgegevens: text("categorie_persoonsgegevens"),
+  grondslag: text("grondslag"),
+  vwoAanwezig: boolean("vwo_aanwezig").notNull().default(false),
+  vwoDatum: text("vwo_datum"),
+  contactpersoon: text("contactpersoon"),
+  notities: text("notities"),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+  bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+});
+
+export type AvgVerwerker = typeof avgVerwerkersTable.$inferSelect;

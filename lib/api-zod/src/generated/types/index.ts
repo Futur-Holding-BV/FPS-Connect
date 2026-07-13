@@ -88,6 +88,8 @@ export * from './authGebruikerTaal';
 export * from './avgOpschoonRun';
 export * from './avgOpschoonStatus';
 export * from './avgStats';
+export * from './avgVerwerker';
+export * from './avgVerwerkerInput';
 export * from './avgVerzoek';
 export * from './avgVerzoekInput';
 export * from './avgVerzoekInputType';

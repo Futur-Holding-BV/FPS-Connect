@@ -2575,6 +2575,70 @@ paths:
               schema:
                 $ref: "#/components/schemas/AvgOpschoonStatus"
 
+  /avg/verwerkers:
+    get:
+      operationId: listAvgVerwerkers
+      tags: [avg]
+      summary: Verwerkersregister (AVG art. 30 lid 2) — externe (sub-)verwerkers (beheerder)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AvgVerwerker"
+    post:
+      operationId: createAvgVerwerker
+      tags: [avg]
+      summary: Verwerker toevoegen aan het register (beheerder)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AvgVerwerkerInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AvgVerwerker"
+
+  /avg/verwerkers/{id}:
+    patch:
+      operationId: updateAvgVerwerker
+      tags: [avg]
+      summary: Verwerker bijwerken (beheerder)
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AvgVerwerkerInput"
+      responses:
+        "200":
+          description: Bijgewerkt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AvgVerwerker"
+        "404":
+          description: Niet gevonden
+    delete:
+      operationId: deleteAvgVerwerker
+      tags: [avg]
+      summary: Verwerker verwijderen uit het register (beheerder)
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        "204":
+          description: Verwijderd
+
   /mijn-werk:
     get:
       operationId: getMijnWerk
@@ -23122,6 +23186,37 @@ components:
         geanonimiseerd_op:   { type: string, format: date-time, nullable: true }
         aangemaakt_op:       { type: string, format: date-time }
         bijgewerkt_op:       { type: string, format: date-time, nullable: true }
+
+    AvgVerwerker:
+      type: object
+      required: [id, naam, vwo_aanwezig, aangemaakt_op]
+      properties:
+        id:                          { type: integer }
+        naam:                        { type: string }
+        land:                        { type: string, nullable: true }
+        doel:                        { type: string, nullable: true }
+        categorie_persoonsgegevens:  { type: string, nullable: true }
+        grondslag:                   { type: string, nullable: true }
+        vwo_aanwezig:                { type: boolean }
+        vwo_datum:                   { type: string, nullable: true }
+        contactpersoon:              { type: string, nullable: true }
+        notities:                    { type: string, nullable: true }
+        aangemaakt_op:               { type: string, format: date-time }
+        bijgewerkt_op:               { type: string, format: date-time, nullable: true }
+
+    AvgVerwerkerInput:
+      type: object
+      required: [naam]
+      properties:
+        naam:                        { type: string }
+        land:                        { type: string, nullable: true }
+        doel:                        { type: string, nullable: true }
+        categorie_persoonsgegevens:  { type: string, nullable: true }
+        grondslag:                   { type: string, nullable: true }
+        vwo_aanwezig:                { type: boolean }
+        vwo_datum:                   { type: string, nullable: true }
+        contactpersoon:              { type: string, nullable: true }
+        notities:                    { type: string, nullable: true }
 
     InactiefAccount:
       type: object

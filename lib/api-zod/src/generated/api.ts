@@ -2976,6 +2976,89 @@ export const GetAvgOpschoonStatusResponse = zod.object({
 
 
 /**
+ * @summary Verwerkersregister (AVG art. 30 lid 2) — externe (sub-)verwerkers (beheerder)
+ */
+export const ListAvgVerwerkersResponseItem = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "land": zod.string().nullish(),
+  "doel": zod.string().nullish(),
+  "categorie_persoonsgegevens": zod.string().nullish(),
+  "grondslag": zod.string().nullish(),
+  "vwo_aanwezig": zod.boolean(),
+  "vwo_datum": zod.string().nullish(),
+  "contactpersoon": zod.string().nullish(),
+  "notities": zod.string().nullish(),
+  "aangemaakt_op": zod.coerce.date(),
+  "bijgewerkt_op": zod.coerce.date().nullish()
+})
+export const ListAvgVerwerkersResponse = zod.array(ListAvgVerwerkersResponseItem)
+
+
+/**
+ * @summary Verwerker toevoegen aan het register (beheerder)
+ */
+export const CreateAvgVerwerkerBody = zod.object({
+  "naam": zod.string(),
+  "land": zod.string().nullish(),
+  "doel": zod.string().nullish(),
+  "categorie_persoonsgegevens": zod.string().nullish(),
+  "grondslag": zod.string().nullish(),
+  "vwo_aanwezig": zod.boolean().optional(),
+  "vwo_datum": zod.string().nullish(),
+  "contactpersoon": zod.string().nullish(),
+  "notities": zod.string().nullish()
+})
+
+export const CreateAvgVerwerkerResponse = zod.void()
+
+
+/**
+ * @summary Verwerker bijwerken (beheerder)
+ */
+export const UpdateAvgVerwerkerParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateAvgVerwerkerBody = zod.object({
+  "naam": zod.string(),
+  "land": zod.string().nullish(),
+  "doel": zod.string().nullish(),
+  "categorie_persoonsgegevens": zod.string().nullish(),
+  "grondslag": zod.string().nullish(),
+  "vwo_aanwezig": zod.boolean().optional(),
+  "vwo_datum": zod.string().nullish(),
+  "contactpersoon": zod.string().nullish(),
+  "notities": zod.string().nullish()
+})
+
+export const UpdateAvgVerwerkerResponse = zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "land": zod.string().nullish(),
+  "doel": zod.string().nullish(),
+  "categorie_persoonsgegevens": zod.string().nullish(),
+  "grondslag": zod.string().nullish(),
+  "vwo_aanwezig": zod.boolean(),
+  "vwo_datum": zod.string().nullish(),
+  "contactpersoon": zod.string().nullish(),
+  "notities": zod.string().nullish(),
+  "aangemaakt_op": zod.coerce.date(),
+  "bijgewerkt_op": zod.coerce.date().nullish()
+})
+
+
+/**
+ * @summary Verwerker verwijderen uit het register (beheerder)
+ */
+export const DeleteAvgVerwerkerParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteAvgVerwerkerResponse = zod.void()
+
+
+/**
  * @summary Overzicht van aan de ingelogde monteur toegewezen spots, gegroepeerd per gebouw
  */
 export const GetMijnWerkResponseItem = zod.object({

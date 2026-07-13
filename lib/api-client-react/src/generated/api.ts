@@ -70,6 +70,8 @@ import type {
   AuthGebruiker,
   AvgOpschoonStatus,
   AvgStats,
+  AvgVerwerker,
+  AvgVerwerkerInput,
   AvgVerzoek,
   AvgVerzoekInput,
   AvgVerzoekPatch,
@@ -8994,6 +8996,294 @@ export function useGetAvgOpschoonStatus<TData = Awaited<ReturnType<typeof getAvg
 
 
 
+
+export const getListAvgVerwerkersUrl = () => {
+
+
+
+
+  return `/api/avg/verwerkers`
+}
+
+/**
+ * @summary Verwerkersregister (AVG art. 30 lid 2) — externe (sub-)verwerkers (beheerder)
+ */
+export const listAvgVerwerkers = async ( options?: RequestInit): Promise<AvgVerwerker[]> => {
+
+  return customFetch<AvgVerwerker[]>(getListAvgVerwerkersUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListAvgVerwerkersQueryKey = () => {
+    return [
+    `/api/avg/verwerkers`
+    ] as const;
+    }
+
+
+export const getListAvgVerwerkersQueryOptions = <TData = Awaited<ReturnType<typeof listAvgVerwerkers>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAvgVerwerkers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAvgVerwerkersQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAvgVerwerkers>>> = ({ signal }) => listAvgVerwerkers({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAvgVerwerkers>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListAvgVerwerkersQueryResult = NonNullable<Awaited<ReturnType<typeof listAvgVerwerkers>>>
+export type ListAvgVerwerkersQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Verwerkersregister (AVG art. 30 lid 2) — externe (sub-)verwerkers (beheerder)
+ */
+
+export function useListAvgVerwerkers<TData = Awaited<ReturnType<typeof listAvgVerwerkers>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAvgVerwerkers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListAvgVerwerkersQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateAvgVerwerkerUrl = () => {
+
+
+
+
+  return `/api/avg/verwerkers`
+}
+
+/**
+ * @summary Verwerker toevoegen aan het register (beheerder)
+ */
+export const createAvgVerwerker = async (avgVerwerkerInput: AvgVerwerkerInput, options?: RequestInit): Promise<AvgVerwerker> => {
+
+  return customFetch<AvgVerwerker>(getCreateAvgVerwerkerUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(avgVerwerkerInput)
+  }
+);}
+
+
+
+
+export const getCreateAvgVerwerkerMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAvgVerwerker>>, TError,{data: BodyType<AvgVerwerkerInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createAvgVerwerker>>, TError,{data: BodyType<AvgVerwerkerInput>}, TContext> => {
+
+const mutationKey = ['createAvgVerwerker'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createAvgVerwerker>>, {data: BodyType<AvgVerwerkerInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createAvgVerwerker(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateAvgVerwerkerMutationResult = NonNullable<Awaited<ReturnType<typeof createAvgVerwerker>>>
+    export type CreateAvgVerwerkerMutationBody = BodyType<AvgVerwerkerInput>
+    export type CreateAvgVerwerkerMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Verwerker toevoegen aan het register (beheerder)
+ */
+export const useCreateAvgVerwerker = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAvgVerwerker>>, TError,{data: BodyType<AvgVerwerkerInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createAvgVerwerker>>,
+        TError,
+        {data: BodyType<AvgVerwerkerInput>},
+        TContext
+      > => {
+      return useMutation(getCreateAvgVerwerkerMutationOptions(options));
+    }
+
+export const getUpdateAvgVerwerkerUrl = (id: number,) => {
+
+
+
+
+  return `/api/avg/verwerkers/${id}`
+}
+
+/**
+ * @summary Verwerker bijwerken (beheerder)
+ */
+export const updateAvgVerwerker = async (id: number,
+    avgVerwerkerInput: AvgVerwerkerInput, options?: RequestInit): Promise<AvgVerwerker> => {
+
+  return customFetch<AvgVerwerker>(getUpdateAvgVerwerkerUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(avgVerwerkerInput)
+  }
+);}
+
+
+
+
+export const getUpdateAvgVerwerkerMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAvgVerwerker>>, TError,{id: number;data: BodyType<AvgVerwerkerInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateAvgVerwerker>>, TError,{id: number;data: BodyType<AvgVerwerkerInput>}, TContext> => {
+
+const mutationKey = ['updateAvgVerwerker'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateAvgVerwerker>>, {id: number;data: BodyType<AvgVerwerkerInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateAvgVerwerker(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateAvgVerwerkerMutationResult = NonNullable<Awaited<ReturnType<typeof updateAvgVerwerker>>>
+    export type UpdateAvgVerwerkerMutationBody = BodyType<AvgVerwerkerInput>
+    export type UpdateAvgVerwerkerMutationError = ErrorType<void>
+
+    /**
+ * @summary Verwerker bijwerken (beheerder)
+ */
+export const useUpdateAvgVerwerker = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAvgVerwerker>>, TError,{id: number;data: BodyType<AvgVerwerkerInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateAvgVerwerker>>,
+        TError,
+        {id: number;data: BodyType<AvgVerwerkerInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateAvgVerwerkerMutationOptions(options));
+    }
+
+export const getDeleteAvgVerwerkerUrl = (id: number,) => {
+
+
+
+
+  return `/api/avg/verwerkers/${id}`
+}
+
+/**
+ * @summary Verwerker verwijderen uit het register (beheerder)
+ */
+export const deleteAvgVerwerker = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteAvgVerwerkerUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteAvgVerwerkerMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteAvgVerwerker>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteAvgVerwerker>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteAvgVerwerker'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteAvgVerwerker>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteAvgVerwerker(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteAvgVerwerkerMutationResult = NonNullable<Awaited<ReturnType<typeof deleteAvgVerwerker>>>
+
+    export type DeleteAvgVerwerkerMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Verwerker verwijderen uit het register (beheerder)
+ */
+export const useDeleteAvgVerwerker = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteAvgVerwerker>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteAvgVerwerker>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteAvgVerwerkerMutationOptions(options));
+    }
 
 export const getGetMijnWerkUrl = () => {
 

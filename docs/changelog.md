@@ -1,3 +1,20 @@
+## 2026-07-13 — Verwerkersregister (AVG art. 30 lid 2)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (additief; nieuwe tabel + endpoints + tab, raakt bestaande AVG-functies niet)
+
+**Aanleiding:** de AVG verplicht (art. 30 lid 2) een register van externe (sub-)verwerkers die persoonsgegevens verwerken namens FPS. Dit ontbrak in FPS Connect.
+
+**Wijzigingen:**
+- DB: nieuwe tabel `avg_verwerkers` (`lib/db/src/schema/avg.ts`) met naam, land, doel, categorie persoonsgegevens, grondslag, `vwo_aanwezig` (bool) + `vwo_datum`, contactpersoon, notities, tijdstempels; aangemaakt via drizzle push
+- OpenAPI: `GET/POST /avg/verwerkers` en `PATCH/DELETE /avg/verwerkers/{id}` + schemas `AvgVerwerker`/`AvgVerwerkerInput`; hooks/Zod-schemas hergegenereerd
+- API (`routes/avg.ts`): CRUD-handlers achter `requireBevoegdheid("systeem",1)`; camelCase→snake_case-mapping; PATCH stuurt `bijgewerktOp`; eerste GET zaait 3 standaardverwerkers (OpenAI, Google Maps, Microsoft 365) bij een leeg register
+- Frontend (`beheer/avg.tsx`): nieuwe tab "Verwerkersregister" met kaartlijst, toevoegen/bewerken-dialoog, verwijderbevestiging en CSV-export (BOM + quote-escaping)
+- Frontend (`beheer/privacy.tsx`): knop "Bekijk verwerkersregister" in de AVG-matrix-header, linkt naar `/beheer/avg`
+- **Buiten scope (bewust):** digitale ondertekening, externe compliance-tools
+- **Bewijs:** end-to-end geverifieerd tegen dev via ingelogde admin (TOTP): seed=3, POST=201, PATCH=200 (bijgewerkt_op ververst), DELETE=204, defaults blijven na delete
+
+---
+
 ## 2026-07-13 — Onboarding koppelt automatisch salarismutatie + afrondscherm met vervolgstap
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (concept-mutatie; een mens controleert en verzendt naar SCAB — niets gaat automatisch de deur uit)
@@ -87,6 +104,8 @@
 - `index.css`: autofill-overrides gescoped op `.fps-auth` — WebKit-blok (transitietruc + witte tekst) én een apart Firefox-blok (`input:autofill` met donkere inset-schaduw), omdat Firefox de WebKit-truc niet kent en een onbekende selector in een groep de hele regel laat vervallen
 - **Bewijs:** screenshot bevestigt zichtbaar oogje; api-server + firevault typecheck exit 0 (na hergeneratie van verouderde lib-declaraties door eerdere task-merges); api-server herstart zodat de nieuwe limiet actief is en het oude limiet-venster gewist is
 
+---
+
 ## 2026-07-13 — AI-werkbegrotingvoorstel expliciet als voorstel met bevestigen/negeren
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (additief; AI stelt voor, mens bevestigt; status in bestaand jsonb-veld, geen DB-migratie)
@@ -98,7 +117,6 @@
 - API (`routes/opdrachten.ts`): `genereerWerkbegrotingAiAnalyse` zet nu `voorstel_status: "voorstel"` op elke AI-gegenereerde analyse; nieuwe beoordelingsroute (achter `schrijven`) valideert de beslissing (400), geeft 404 zonder begroting/analyse, en schrijft `voorstel_status` + `beoordeeld_op` in het bestaande `ai_analyse` jsonb-veld (geen DB-migratie)
 - Frontend (`opdrachten/detail.tsx`): werkbegroting-tab toont bovenaan een amber voorstelkaart (Sparkles, "AI-voorstel — nog te bevestigen") met samenvatting, "Voorstel bevestigen", "Negeren" en link naar de volledige analyse; na bevestigen een neutrale secondary-badge "AI-voorstel bevestigd op …" (conform AI-state-kleurconventie: voorstel = amber, bevestigd = neutraal, niet groen); AI-analyse-tab krijgt dezelfde statusbanner (amber met acties / neutrale badge / muted "genegeerd"-notitie). Analyses zonder status (legacy) tellen als onbevestigd voorstel
 - **Bewijs:** end-to-end via echte login (wachtwoord + TOTP) tegen dev: GET toont `voorstel_status: "voorstel"` → POST geaccepteerd → GET toont `geaccepteerd` + `beoordeeld_op` (persist bevestigd in DB); genegeerd-pad idem; ongeldige beslissing → 400; opdracht zonder begroting → 404; firevault + api-server typecheck exit 0
-
 
 ---
 
