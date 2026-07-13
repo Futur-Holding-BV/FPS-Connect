@@ -1,18 +1,24 @@
 name: Deploy naar productie
 
 # ─── Automatische deploy ─────────────────────────────────────────────────────
-# Elke push naar main deployt automatisch naar de productie-VPS; er is bewust
-# GEEN handmatige goedkeuringsstap. De server bouwt de images zelf (lokaal build,
-# geen registry-images) volgens de bewezen volgorde:
-#   git pull  ->  docker compose build  ->  migrate  ->  up -d
-# Bij elke fout stopt de deploy onmiddellijk (set -euo pipefail).
+# Elke push naar main deployt automatisch naar de productie-VPS
+# (connect.fps-one.nl); er is bewust GEEN handmatige goedkeuringsstap.
+# De feitelijke deploystappen staan in scripts/deploy-production.sh — dat
+# script wordt naar de server gekopieerd en daar uitgevoerd, zodat de versie
+# uit de zojuist gepushte commit draait en de `git reset --hard` op de server
+# het lopende script niet kan overschrijven.
 #
-# ─── Deploybeleid (vastgesteld 10 juli 2026): geen aparte goedkeuring meer ────
+# Benodigde GitHub Secrets (Settings -> Secrets and variables -> Actions):
+#   PROD_SSH_KEY  — private SSH-sleutel (volledige meerregelige PEM-inhoud)
+#   PROD_HOST     — 149.210.181.47
+#   PROD_USER     — rene
+# Optioneel voor de faalmelding per e-mail:
+#   AZURE_TENANT_ID / AZURE_CLIENT_ID / AZURE_CLIENT_SECRET
+#   MAIL_FROM / MAIL_MAILBOX / RENE_ALERT_EMAIL
+#
+# ─── Deploybeleid (vastgesteld 10 juli 2026): geen aparte goedkeuring ────────
 # Productie is de actieve acceptatieomgeving; fixes gaan direct naar productie
-# zodra de gates groen zijn (zie docs/PRODUCTION_RUNBOOK.md). Het oude proces met
-# Required reviewers op het `production`-environment is VERVALLEN. Staan er op
-# GitHub -> Settings -> Environments -> production nog Required reviewers, verwijder
-# die dan, zodat er geen aparte goedkeuring meer wordt afgedwongen.
+# zodra de gates groen zijn (zie docs/PRODUCTION_RUNBOOK.md).
 
 on:
   # Automatisch bij elke push naar main
@@ -22,143 +28,82 @@ on:
   # Of handmatig starten vanuit de GitHub Actions-tab
   workflow_dispatch:
 
+# Nooit twee deployments tegelijk; een lopende deploy wordt nooit geannuleerd,
+# een nieuwe push wacht netjes tot de vorige klaar is.
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
 jobs:
   deploy:
     name: Deploy naar productie
     runs-on: ubuntu-latest
-    concurrency:
-      group: production
-      cancel-in-progress: false    # nooit een lopende deploy annuleren
 
     steps:
-      - name: Deploy via SSH
-        id: deploy
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.PROD_SSH_HOST }}
-          username: ${{ secrets.PROD_SSH_USER }}
-          key: ${{ secrets.PROD_SSH_KEY }}
-          port: ${{ secrets.PROD_SSH_PORT || 22 }}
-          script: |
-            set -euo pipefail
+      # Checkout is nodig om scripts/deploy-production.sh (en de commit-
+      # omschrijving voor de faalmelding) beschikbaar te hebben.
+      - uses: actions/checkout@v4
 
-            # De productie-stack draait vanuit deze map (lokaal gebouwde images)
-            cd /opt/fps-one/deploy
+      - name: SSH-sleutel en hostkey instellen
+        env:
+          PROD_SSH_KEY: ${{ secrets.PROD_SSH_KEY }}
+          PROD_HOST: ${{ secrets.PROD_HOST }}
+        run: |
+          set -euo pipefail
 
-            # Vorige (huidige, nog gezonde) commit onthouden vóór de pull, zodat
-            # we hier automatisch naar kunnen terugrollen als de nieuwe release
-            # de healthcheck niet haalt.
-            VORIGE_COMMIT="$(git rev-parse HEAD)"
-            echo "Huidige (mogelijk terug te rollen) commit: $VORIGE_COMMIT"
-
-            # 1. Nieuwste code van de productiebranch ophalen (de server pullt zelf van GitHub)
-            git pull --ff-only origin main
-
-            # Alle compose-commando's delen dezelfde env-file en compose-file.
-            # --env-file is vereist: docker-compose.production.yml interpoleert
-            # ${DATABASE_URL} en ${POSTGRES_PASSWORD} uit .env.production.
-            COMPOSE="docker compose --env-file .env.production -f docker-compose.production.yml"
-
-            # Post-deploy healthcheck als functie: bevestigt dat de release ook
-            # echt gezond draait. `up -d` slaagt al zodra de containers zijn
-            # gestart, maar zegt niets over een halve migratie of een api die
-            # niet opstart. We pollen daarom de healthz-route BINNEN de
-            # api-container (poort 8080 is intern, niet op de host gepubliceerd)
-            # met dezelfde node-check die de container-healthcheck gebruikt,
-            # plus de publieke route via caddy. Wordt ook hergebruikt om ná een
-            # automatische rollback te bevestigen dat productie weer gezond is.
-            healthcheck() {
-              echo "Healthcheck gestart..."
-              HEALTH_POGINGEN=30   # 30 pogingen x 5s = max ~150s wachttijd
-              HEALTH_OK=0
-              for i in $(seq 1 "$HEALTH_POGINGEN"); do
-                if $COMPOSE exec -T api node -e "require('http').get('http://localhost:8080/api/healthz', r => process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"; then
-                  HEALTH_OK=1
-                  echo "API gezond (poging $i/$HEALTH_POGINGEN)"
-                  break
-                fi
-                echo "API nog niet gezond (poging $i/$HEALTH_POGINGEN), 5s wachten..."
-                sleep 5
-              done
-
-              if [ "$HEALTH_OK" -ne 1 ]; then
-                echo "FOUT: API werd niet gezond binnen de timeout." >&2
-                $COMPOSE ps || true
-                echo "--- Laatste api-logs ---" >&2
-                $COMPOSE logs --tail=80 api || true
-                return 1
-              fi
-
-              # Publieke route via caddy controleren (proxy /api/* -> api:8080).
-              # -k: caddy serveert een cert voor de productiedomeinnaam, niet voor
-              # localhost; we testen hier alleen dat de proxy-keten werkt.
-              echo "Publieke healthz via caddy controleren..."
-              if ! curl -fsSk --max-time 10 https://localhost/api/healthz >/dev/null; then
-                echo "FOUT: healthz niet bereikbaar via caddy." >&2
-                $COMPOSE ps || true
-                echo "--- Laatste caddy-logs ---" >&2
-                $COMPOSE logs --tail=80 caddy || true
-                return 1
-              fi
-              echo "Healthcheck geslaagd: release is gezond."
-              return 0
-            }
-
-            # 2. Images lokaal op de VPS bouwen (geen registry-images)
-            $COMPOSE build
-
-            # 3. Database-migraties draaien vóór de cutover (eenmalige run)
-            $COMPOSE run --rm migrate
-
-            # 4. Stack starten/bijwerken (langlopende services)
-            $COMPOSE up -d --remove-orphans db api caddy
-
-            # 5. Post-deploy healthcheck van de nieuwe release
-            if healthcheck; then
-              # 6. Opschonen van oude images (ouder dan 72u) — alleen bij een gezonde release
-              docker image prune -f --filter "until=72h"
-              echo "Deploy voltooid"
-              exit 0
-            fi
-
-            # ─── Automatische rollback ──────────────────────────────────────
-            # De nieuwe release is NIET gezond. In plaats van de kapotte stack
-            # te laten draaien, rollen we terug naar de vorige gezonde commit
-            # en herstarten we de stack daarmee. LET OP: dit rolt alleen de
-            # applicatiecode terug (Niveau 1 uit ROLLBACK_PRODUCTION.md); een
-            # rollback met schema-/database-wijzigingen (Niveau 2) blijft
-            # handmatig, zie dat document.
-            echo "Release is NIET gezond. Automatische rollback naar $VORIGE_COMMIT gestart..." >&2
-
-            if [ "$VORIGE_COMMIT" = "$(git rev-parse HEAD)" ]; then
-              echo "WAARSCHUWING: er was geen vorige commit om naar terug te rollen (eerste deploy?)." >&2
-            else
-              # `git checkout <commit> --` is ongeldig zonder pathspec en faalt
-              # onder `set -e`. `reset --hard` verplaatst de lokale main-branch
-              # terug naar de vorige gezonde commit (geen detached HEAD), zodat
-              # een volgende deploy gewoon weer `git pull --ff-only` kan draaien.
-              git reset --hard "$VORIGE_COMMIT"
-              $COMPOSE build
-              $COMPOSE up -d --remove-orphans db api caddy
-            fi
-
-            echo "Healthcheck na rollback gestart..."
-            if healthcheck; then
-              echo "Rollback geslaagd: productie draait weer op de vorige gezonde versie ($VORIGE_COMMIT)." >&2
-            else
-              echo "FOUT: rollback-healthcheck faalt OOK. Handmatige interventie vereist — zie deploy/ROLLBACK_PRODUCTION.md (Niveau 2)." >&2
-            fi
-
-            # De run faalt altijd als de oorspronkelijke healthcheck faalde,
-            # ook als de rollback zelf slaagde: de deploy an sich is mislukt en
-            # dat moet zichtbaar zijn in GitHub Actions.
+          if [ -z "${PROD_SSH_KEY:-}" ] || [ -z "${PROD_HOST:-}" ]; then
+            echo "FOUT: GitHub Secrets PROD_SSH_KEY en/of PROD_HOST ontbreken." >&2
             exit 1
+          fi
 
-      # ─── Meldingen bij falen/slagen ──────────────────────────────────────────
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+
+          # Sleutel naar bestand schrijven zonder hem ooit te tonen.
+          printf '%s\n' "${PROD_SSH_KEY}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+
+          # Host key veilig vastleggen: ssh-keyscan haalt de publieke hostkey
+          # op en pint die in known_hosts (StrictHostKeyChecking blijft aan).
+          ssh-keyscan -H "${PROD_HOST}" >> ~/.ssh/known_hosts 2>/dev/null
+          chmod 644 ~/.ssh/known_hosts
+
+          if ! grep -q . ~/.ssh/known_hosts; then
+            echo "FOUT: ssh-keyscan leverde geen hostkey op voor de server." >&2
+            exit 1
+          fi
+
+      - name: Deployscript naar de server kopiëren
+        env:
+          PROD_HOST: ${{ secrets.PROD_HOST }}
+          PROD_USER: ${{ secrets.PROD_USER }}
+        run: |
+          set -euo pipefail
+          if [ -z "${PROD_USER:-}" ]; then
+            echo "FOUT: GitHub Secret PROD_USER ontbreekt." >&2
+            exit 1
+          fi
+          scp -i ~/.ssh/deploy_key \
+            scripts/deploy-production.sh \
+            "${PROD_USER}@${PROD_HOST}:/tmp/deploy-production.sh"
+
+      - name: Deploy uitvoeren op de VPS
+        id: deploy
+        env:
+          PROD_HOST: ${{ secrets.PROD_HOST }}
+          PROD_USER: ${{ secrets.PROD_USER }}
+        run: |
+          set -euo pipefail
+          # De exitcode van het script op de server bepaalt direct het
+          # resultaat van deze stap: iedere fout stopt de workflow.
+          ssh -i ~/.ssh/deploy_key "${PROD_USER}@${PROD_HOST}" \
+            'bash /tmp/deploy-production.sh'
+
+      # ─── Meldingen bij falen ────────────────────────────────────────────────
       # René moet een kapotte release direct horen, niet later ontdekken via de
-      # Actions-tab. Verstuurt via dezelfde Microsoft 365/Graph-mailkoppeling als
-      # de app zelf (client-credentials, geen wachtwoord). Bij een geslaagde
-      # deploy géén melding (voorkomt mailmoeheid).
+      # Actions-tab. Verstuurt via dezelfde Microsoft 365/Graph-mailkoppeling
+      # als de app zelf (client-credentials, geen wachtwoord). Bij een
+      # geslaagde deploy géén melding (voorkomt mailmoeheid).
       - name: Faalmelding e-mailen naar René
         if: failure()
         env:
