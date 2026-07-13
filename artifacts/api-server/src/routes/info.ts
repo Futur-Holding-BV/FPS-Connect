@@ -1,7 +1,7 @@
 import { Router } from "express";
-import { db, appInstellingenTable } from "@workspace/db";
+import { db, appInstellingenTable, gebruikersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
-import { requireRol } from "../middlewares/auth";
+import { requireBevoegdheid } from "../middlewares/auth";
 
 const router = Router();
 
@@ -27,7 +27,17 @@ router.get("/info/instellingen", async (req, res): Promise<void> => {
         ai_kostendrempel_eur: null,
         bijgewerkt_op: new Date().toISOString(),
         bijgewerkt_door_id: null,
+        bijgewerkt_door_naam: null,
       });
+    }
+
+    let bijgewerktDoorNaam: string | null = null;
+    if (instelling.bijgewerktDoorId) {
+      const [gebruiker] = await db
+        .select({ naam: gebruikersTable.naam })
+        .from(gebruikersTable)
+        .where(eq(gebruikersTable.id, instelling.bijgewerktDoorId));
+      bijgewerktDoorNaam = gebruiker?.naam ?? null;
     }
 
     res.json({
@@ -42,6 +52,7 @@ router.get("/info/instellingen", async (req, res): Promise<void> => {
       ai_kostendrempel_eur: instelling.aiKostendrempelEur != null ? parseFloat(instelling.aiKostendrempelEur) : null,
       bijgewerkt_op: instelling.bijgewerktOp.toISOString(),
       bijgewerkt_door_id: instelling.bijgewerktDoorId,
+      bijgewerkt_door_naam: bijgewerktDoorNaam,
     });
   } catch (err) {
     req.log.error(err);
@@ -49,10 +60,10 @@ router.get("/info/instellingen", async (req, res): Promise<void> => {
   }
 });
 
-// PUT /info/instellingen — alleen hoofdbeheerder
+// PUT /info/instellingen — systeem-bevoegdheid (niveau 1) of hoofdbeheerder
 router.put(
   "/info/instellingen",
-  requireRol("hoofdbeheerder"),
+  requireBevoegdheid("systeem", 1),
   async (req, res): Promise<void> => {
     try {
       const {
@@ -163,6 +174,7 @@ router.put(
         ai_maandelijkse_export_email: result.aiMaandelijkseExportEmail,
         bijgewerkt_op: result.bijgewerktOp.toISOString(),
         bijgewerkt_door_id: result.bijgewerktDoorId,
+        bijgewerkt_door_naam: null,
       });
     } catch (err) {
       req.log.error(err);

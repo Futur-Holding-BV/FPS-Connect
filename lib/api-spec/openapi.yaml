@@ -28120,6 +28120,9 @@ components:
           type: string
         bijgewerkt_door_id:
           type: ["integer", "null"]
+        bijgewerkt_door_naam:
+          type: ["string", "null"]
+          description: Naam van de beheerder die de instelling het laatste heeft gewijzigd.
 
     AppInstellingenInput:
       type: object

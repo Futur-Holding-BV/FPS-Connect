@@ -833,15 +833,15 @@ function HoeGebruiktTab() {
             </Badge>
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-2">
           <p className="text-sm text-muted-foreground leading-relaxed">
             {heatmapActief ? (
               <>
-                Een beheerder heeft de heatmap-tracker ingeschakeld. Dit betekent dat uw klikken en
-                muisbewegingen binnen FPS Connect worden geregistreerd en aan uw account gekoppeld,
-                uitsluitend om de schermindeling te verbeteren (interne productontwikkeling). De
-                grondslag is gerechtvaardigd belang. U kunt hiertegen bezwaar maken via het tabblad
-                'AVG-verzoeken'.
+                De heatmap-tracker is ingeschakeld. Uw klikken en muisbewegingen binnen FPS Connect
+                worden geregistreerd en aan uw account gekoppeld, uitsluitend om de schermindeling
+                te verbeteren (interne productontwikkeling). Grondslag: gerechtvaardigd belang.
+                Bewaartermijn: brongegevens maximaal 12 maanden. U kunt hiertegen bezwaar maken via
+                het tabblad 'AVG-verzoeken'.
               </>
             ) : (
               <>
@@ -851,6 +851,16 @@ function HoeGebruiktTab() {
               </>
             )}
           </p>
+          {heatmapActief && (instellingen?.bijgewerkt_door_naam || instellingen?.bijgewerkt_op) && (
+            <p className="text-xs text-muted-foreground border-t pt-2">
+              {instellingen.bijgewerkt_door_naam
+                ? <>Ingeschakeld door <span className="font-medium">{instellingen.bijgewerkt_door_naam}</span></>
+                : "Ingeschakeld"}
+              {instellingen.bijgewerkt_op
+                ? <> op {new Date(instellingen.bijgewerkt_op).toLocaleDateString("nl-NL", { day: "2-digit", month: "long", year: "numeric" })}</>
+                : null}
+            </p>
+          )}
         </CardContent>
       </Card>
 

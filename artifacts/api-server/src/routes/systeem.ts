@@ -7,6 +7,7 @@ import {
   muisGebeurtenissenTable,
   moduleBeoordelingenTable,
   gebruikersTable,
+  appInstellingenTable,
 } from "@workspace/db";
 import { eq, desc, and } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
@@ -177,6 +178,15 @@ router.post("/feedback", async (req, res): Promise<void> => {
 // ── HEATMAPS (muisgebeurtenissen) ────────────────────────────────────────────
 router.post("/muis-gebeurtenissen", async (req, res): Promise<void> => {
   try {
+    // AVG-grondslag: alleen opslaan als de beheerder de tracker expliciet heeft ingeschakeld.
+    const [instelling] = await db.select({ heatmapTrackingIngeschakeld: appInstellingenTable.heatmapTrackingIngeschakeld })
+      .from(appInstellingenTable)
+      .orderBy(appInstellingenTable.id)
+      .limit(1);
+    if (!instelling?.heatmapTrackingIngeschakeld) {
+      return void res.status(204).send();
+    }
+
     const { gebeurtenissen } = req.body ?? {};
     if (!Array.isArray(gebeurtenissen) || gebeurtenissen.length === 0) {
       return void res.status(204).send();

@@ -7144,7 +7144,8 @@ export const GetInfoInstellingenResponse = zod.object({
   "ai_maandelijkse_export_dag": zod.number().nullish().describe('Dag van de maand (1-28) waarop het AI-logboek automatisch als CSV per e-mail wordt verstuurd. Null betekent uitgeschakeld.'),
   "ai_maandelijkse_export_email": zod.string().nullish().describe('E-mailadres dat de maandelijkse AI-logboek-CSV ontvangt. Null betekent uitgeschakeld.'),
   "bijgewerkt_op": zod.string(),
-  "bijgewerkt_door_id": zod.number().nullish()
+  "bijgewerkt_door_id": zod.number().nullish(),
+  "bijgewerkt_door_naam": zod.string().nullish().describe('Naam van de beheerder die de instelling het laatste heeft gewijzigd.')
 })
 
 
@@ -7177,7 +7178,8 @@ export const UpdateInfoInstellingenResponse = zod.object({
   "ai_maandelijkse_export_dag": zod.number().nullish().describe('Dag van de maand (1-28) waarop het AI-logboek automatisch als CSV per e-mail wordt verstuurd. Null betekent uitgeschakeld.'),
   "ai_maandelijkse_export_email": zod.string().nullish().describe('E-mailadres dat de maandelijkse AI-logboek-CSV ontvangt. Null betekent uitgeschakeld.'),
   "bijgewerkt_op": zod.string(),
-  "bijgewerkt_door_id": zod.number().nullish()
+  "bijgewerkt_door_id": zod.number().nullish(),
+  "bijgewerkt_door_naam": zod.string().nullish().describe('Naam van de beheerder die de instelling het laatste heeft gewijzigd.')
 })
 
 

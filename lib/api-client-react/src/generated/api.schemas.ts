@@ -3893,6 +3893,11 @@ export interface AppInstellingen {
   bijgewerkt_op: string;
   /** @nullable */
   bijgewerkt_door_id?: number | null;
+  /**
+     * Naam van de beheerder die de instelling het laatste heeft gewijzigd.
+     * @nullable
+     */
+  bijgewerkt_door_naam?: string | null;
 }
 
 export interface AppInstellingenInput {
