@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Trash2, ArchiveRestore } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { PaginaHulp } from "@/components/pagina-hulp";
 
 const CONDITIE_LABELS: Record<string, string> = {
   goed: "Goed — terugplaatsen",
@@ -104,6 +105,7 @@ export default function MagazijnRetourenPagina() {
 
   return (
     <div className="p-6 space-y-6">
+      <PaginaHulp pagina="magazijn-retouren" />
       <h1 className="text-2xl font-bold">Retour</h1>
 
       <form onSubmit={handleSubmit} className="space-y-6">

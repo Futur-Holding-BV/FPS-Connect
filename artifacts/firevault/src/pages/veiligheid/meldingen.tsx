@@ -34,6 +34,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
+import { PaginaHulp } from "@/components/pagina-hulp";
 import {
   AlertTriangle, Plus, Trash2, Loader2, Pencil, CheckCircle2,
   Clock, MessageSquarePlus, ArrowRight, ChevronRight, Filter,
@@ -319,6 +320,7 @@ export default function VeiligheidMeldingenPagina() {
 
   return (
     <div className="p-6 space-y-6">
+      <PaginaHulp pagina="veiligheid-meldingen" />
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">

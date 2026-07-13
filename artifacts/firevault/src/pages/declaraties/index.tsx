@@ -20,6 +20,7 @@ import {
   type DeclaratieInputCategorie,
 } from "@workspace/api-client-react";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
+import { PaginaHulp } from "@/components/pagina-hulp";
 
 const CATEGORIEEN = [
   { value: "reiskosten",     label: "Reiskosten" },
@@ -192,6 +193,7 @@ export default function DeclaratiesPagina() {
 
   return (
     <div className="p-6 max-w-5xl mx-auto space-y-6">
+      <PaginaHulp pagina="declaraties" />
       <div className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">

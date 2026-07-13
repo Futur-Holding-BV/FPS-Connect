@@ -33,6 +33,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { PaginaHulp } from "@/components/pagina-hulp";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
@@ -1519,6 +1520,7 @@ export default function BedrijfskompasPage() {
 
   return (
     <div className="p-6 max-w-5xl mx-auto space-y-6">
+      <PaginaHulp pagina="bedrijfskompas" />
       {/* Koptekst */}
       <div className="flex items-start justify-between">
         <div>

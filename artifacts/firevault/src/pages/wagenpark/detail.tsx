@@ -40,6 +40,7 @@ import {
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { WagenparkOnderhoud } from "@workspace/api-client-react";
+import { PaginaHulp } from "@/components/pagina-hulp";
 
 // ── Helpers ────────────────────────────────────────────────
 
@@ -367,6 +368,7 @@ export default function WagenparkDetailPagina() {
 
   return (
     <div className="p-6 space-y-6 max-w-screen-xl">
+      <PaginaHulp pagina="wagenpark-detail" />
       <div>
         <Button variant="ghost" size="sm" asChild>
           <Link href="/wagenpark">

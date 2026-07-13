@@ -6,6 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import { PaginaHulp } from "@/components/pagina-hulp";
 import {
   CheckCircle, Clock, ChevronDown, ChevronRight, BarChart3,
 } from "lucide-react";
@@ -119,6 +120,7 @@ export default function ToolboxCompliancePagina() {
 
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-6">
+      <PaginaHulp pagina="veiligheid-toolbox-compliance" />
       {/* Koptekst */}
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>

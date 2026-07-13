@@ -42,6 +42,7 @@ import {
   BrandstofRegel,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { PaginaHulp } from "@/components/pagina-hulp";
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -446,6 +447,7 @@ export default function BrandstofImportPage() {
 
   return (
     <div className="p-6 space-y-6 max-w-6xl mx-auto">
+      <PaginaHulp pagina="wagenpark-brandstof-import" />
       {/* Navigatie */}
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
         <Link href="/wagenpark" className="hover:text-foreground flex items-center gap-1">

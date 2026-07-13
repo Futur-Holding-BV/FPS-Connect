@@ -23,6 +23,7 @@ import {
 import type { Factuur } from "@workspace/api-client-react";
 import { DemoBanner } from "@/components/ui/demo-banner";
 import { demoFacturen } from "@/lib/demo-data";
+import { PaginaHulp } from "@/components/pagina-hulp";
 
 const STATUS_LABEL: Record<string, string> = {
   ontvangen: "Ontvangen",
@@ -115,6 +116,7 @@ export default function FacturenPagina() {
 
   return (
     <div className="p-6 space-y-5 max-w-5xl">
+      <PaginaHulp pagina="facturen" />
       {/* Koptekst */}
       <div className="flex items-center justify-between">
         <div>

@@ -23,6 +23,7 @@ import {
   Euro, Calendar, Building2, FileText,
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { PaginaHulp } from "@/components/pagina-hulp";
 import { getListFacturenQueryKey } from "@workspace/api-client-react";
 
 function euro(v?: string | null) {
@@ -322,6 +323,7 @@ export default function CredieurenInboxPagina() {
 
   return (
     <div className="space-y-6 p-6">
+      <PaginaHulp pagina="crediteuren" />
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Crediteuren — Inbox</h1>

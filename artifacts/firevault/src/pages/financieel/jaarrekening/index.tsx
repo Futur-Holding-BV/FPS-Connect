@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertTriangle, ArrowLeft, BookOpen } from "lucide-react";
+import { PaginaHulp } from "@/components/pagina-hulp";
 
 const eur = (n: number | null | undefined) =>
   n == null ? "—" : new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(n);
@@ -39,6 +40,7 @@ export default function JarrekeningPagina() {
 
   return (
     <div className="space-y-6 p-6">
+      <PaginaHulp pagina="jaarrekening" />
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" asChild>

@@ -18,6 +18,7 @@ import {
   Ban, Loader2, Eye, Info, Layers,
 } from "lucide-react";
 import type { Factuur, AccountviewExportResultaat, BatchExportResultaat } from "@workspace/api-client-react";
+import { PaginaHulp } from "@/components/pagina-hulp";
 
 function euro(v?: string | null) {
   if (!v) return "—";
@@ -117,6 +118,7 @@ export default function KlaarVoorExportPagina() {
 
   return (
     <div className="p-6 space-y-5 max-w-5xl">
+      <PaginaHulp pagina="facturen-export" />
       {/* Navigatie */}
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
         <Link href="/facturen">

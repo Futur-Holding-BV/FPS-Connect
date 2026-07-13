@@ -31,7 +31,54 @@ export type PaginaSleutel =
   | "planning"
   | "inbox"
   | "documentopmaak"
-  | "abonnementen";
+  | "abonnementen"
+  // Inkoop
+  | "inkoop-overzicht"
+  // Magazijn
+  | "magazijn"
+  | "magazijn-artikelen"
+  | "magazijn-locaties"
+  | "magazijn-voorraad"
+  | "magazijn-stellingscans"
+  | "magazijn-mutaties"
+  | "magazijn-reserveringen"
+  | "magazijn-uitgiftes"
+  | "magazijn-retouren"
+  // Veiligheid
+  | "veiligheid-toolboxen"
+  | "veiligheid-lmra"
+  | "veiligheid-meldingen"
+  | "veiligheid-incidenten"
+  | "veiligheid-pbm"
+  | "veiligheid-toolbox-compliance"
+  // Financieel
+  | "directie-kompas"
+  | "bedrijfskompas"
+  | "boekhouding"
+  | "facturen"
+  | "factuur-detail"
+  | "facturen-dashboard"
+  | "facturen-controlebox"
+  | "facturen-export"
+  | "facturen-exportlog"
+  | "crediteuren"
+  | "bedrijfsresultaten"
+  | "onderhanden-werk"
+  | "jaarrekening"
+  | "jaarrekeningen"
+  | "meerjarenoverzicht"
+  | "sepa-bestanden"
+  // Goedkeuring
+  | "goedkeuringen-dashboard"
+  | "goedkeuringsbeleid"
+  // Declaraties
+  | "declaraties"
+  | "declaratie-detail"
+  // Wagenpark
+  | "wagenpark"
+  | "wagenpark-meldingen"
+  | "wagenpark-detail"
+  | "wagenpark-brandstof-import";
 
 type RolTekst = Partial<Record<Rol | "default", string>>;
 
@@ -214,6 +261,258 @@ export const PAGINA_HULP: Record<PaginaSleutel, RolTekst> = {
   "abonnementen": {
     hoofdbeheerder:
       "Abonnementsbeheer: kies het pakket dat past bij uw organisatie. Basis (€149/maand) voor kleine teams, Beheer (€349/maand) met uitgebreid gebruikersbeheer en Volledig (€699/maand) inclusief alle modules.",
+  },
+
+  // ══════════ Inkoop ══════════
+
+  "inkoop-overzicht": {
+    hoofdbeheerder:
+      "Inkoopoverzicht: alle inkoopbonnen met hun status en gekoppelde leverancier. Maak een nieuwe inkoopbon aan, keur openstaande bonnen goed en volg de levering. Een goedkeuringsbeleid kan een statuswijziging blokkeren tot de bon is goedgekeurd.",
+    gebruiker:
+      "Hier ziet u de inkoopbonnen. Dien een inkoopaanvraag in en volg de status. Goedkeuring verloopt via de verantwoordelijke beheerder.",
+  },
+
+  // ══════════ Magazijn ══════════
+
+  "magazijn": {
+    hoofdbeheerder:
+      "Magazijndashboard: live overzicht van voorraadniveaus, kritieke artikelen, openstaande reserveringen en recente mutaties. Klik op een tegel om direct naar het bijbehorende overzicht te gaan. Kritieke voorraad wordt rood gemarkeerd.",
+    gebruiker:
+      "Overzicht van het magazijn: voorraad, uitgiftes en reserveringen. Klik op een tegel voor de details.",
+  },
+
+  "magazijn-artikelen": {
+    hoofdbeheerder:
+      "Magazijnartikelen: beheer alle voorraadartikelen met minimum- en bestelniveaus, eenheid en locatie. Stel per artikel het kritieke niveau in zodat u tijdig een signalering krijgt. Koppel artikelen aan een magazijnlocatie voor snelle terugvindbaarheid.",
+    gebruiker:
+      "Overzicht van de magazijnartikelen. Zoek op code of naam om snel het juiste artikel en de voorraad te vinden.",
+  },
+
+  "magazijn-locaties": {
+    hoofdbeheerder:
+      "Magazijnlocaties: beheer de fysieke opslagplaatsen (stellingen, vakken, ruimtes). Koppel artikelen aan een locatie zodat voorraad snel terug te vinden is. Locaties vormen de basis voor de stellingscans.",
+  },
+
+  "magazijn-voorraad": {
+    hoofdbeheerder:
+      "Voorraadoverzicht: de actuele voorraad per artikel en locatie. Corrigeer voorraad handmatig via een mutatie. Artikelen onder het kritieke niveau worden gemarkeerd zodat u tijdig kunt bijbestellen.",
+    gebruiker:
+      "Actuele voorraad per artikel. Controleer hier of een artikel op voorraad is voordat u het reserveert of uitgeeft.",
+  },
+
+  "magazijn-stellingscans": {
+    hoofdbeheerder:
+      "Stellingscans: leg fysieke tellingen per stelling vast en vergelijk ze met de administratieve voorraad. Verschillen worden zichtbaar gemaakt zodat u ze kunt onderzoeken en corrigeren. Gebruik dit voor periodieke voorraadcontrole.",
+    gebruiker:
+      "Scan een stelling om de aanwezige artikelen te tellen. Verschillen met de administratie worden automatisch gesignaleerd.",
+  },
+
+  "magazijn-mutaties": {
+    hoofdbeheerder:
+      "Voorraadmutaties: het volledige logboek van alle voorraadwijzigingen (inname, uitgifte, correctie, retour). Elke mutatie is herleidbaar naar gebruiker en tijdstip. Gebruik de filters om per artikel, type of periode te zoeken.",
+  },
+
+  "magazijn-reserveringen": {
+    hoofdbeheerder:
+      "Reserveringen: gereserveerde artikelen voor een project of werkorder. Gereserveerde voorraad blijft geboekt tot uitgifte of vrijgave. Zo voorkomt u dat materiaal dubbel wordt toegewezen.",
+    gebruiker:
+      "Reserveer artikelen voor uw project of werkorder. Gereserveerde voorraad wordt voor u apart gehouden tot u ze ophaalt.",
+  },
+
+  "magazijn-uitgiftes": {
+    hoofdbeheerder:
+      "Uitgiftes: geef artikelen uit aan een medewerker, project of werkorder. Elke uitgifte verlaagt de voorraad en wordt vastgelegd in het mutatielogboek. Koppel een uitgifte aan een project voor correcte kostentoerekening.",
+    gebruiker:
+      "Registreer welke artikelen u meeneemt voor uw werk. De voorraad wordt automatisch bijgewerkt en aan uw project gekoppeld.",
+  },
+
+  "magazijn-retouren": {
+    hoofdbeheerder:
+      "Retouren: registreer teruggebrachte artikelen. Ongebruikt materiaal wordt teruggeboekt in de voorraad; beschadigd materiaal kunt u afkeuren. Elke retour wordt vastgelegd in het mutatielogboek.",
+    gebruiker:
+      "Breng ongebruikte artikelen terug naar het magazijn. Geef aan of het materiaal herbruikbaar of beschadigd is.",
+  },
+
+  // ══════════ Veiligheid ══════════
+
+  "veiligheid-toolboxen": {
+    hoofdbeheerder:
+      "Toolboxen: beheer veiligheidsonderwerpen en instructies voor het team. Publiceer een toolbox en volg per medewerker de leesbevestiging. Gebruik de compliance-weergave om te zien wie nog moet bevestigen.",
+    gebruiker:
+      "Lees de toolboxonderwerpen die voor u klaarstaan en bevestig 'gelezen en begrepen'. Zo houdt de organisatie zicht op ieders veiligheidskennis.",
+  },
+
+  "veiligheid-lmra": {
+    hoofdbeheerder:
+      "LMRA (Laatste Minuut Risico Analyse): overzicht van de op locatie ingevulde risicochecks. Controleer of medewerkers vóór aanvang van het werk de risico's beoordelen. Openstaande of afgekeurde LMRA's worden gemarkeerd.",
+    gebruiker:
+      "Vul vóór aanvang van het werk een LMRA in: beoordeel de actuele risico's op de werkplek en bevestig dat het veilig is om te beginnen.",
+  },
+
+  "veiligheid-meldingen": {
+    hoofdbeheerder:
+      "Veiligheidsmeldingen: overzicht van gemelde onveilige situaties, bijna-ongevallen en verbeterpunten. Wijs een verantwoordelijke toe en volg de afhandeling tot afronding. Open meldingen worden bovenaan getoond.",
+    gebruiker:
+      "Meld een onveilige situatie of bijna-ongeval. Uw melding komt direct bij de verantwoordelijke terecht voor opvolging.",
+  },
+
+  "veiligheid-incidenten": {
+    hoofdbeheerder:
+      "Incidentenregister: leg ongevallen en incidenten vast met oorzaak, letsel en genomen maatregelen. Dit register vormt de basis voor rapportage en preventie. Houd de afhandeling en eventuele meldingsplicht bij.",
+    gebruiker:
+      "Registreer een incident of ongeval zo volledig mogelijk. Beschrijf wat er gebeurde en welke directe maatregelen zijn genomen.",
+  },
+
+  "veiligheid-pbm": {
+    hoofdbeheerder:
+      "PBM-beheer (persoonlijke beschermingsmiddelen): houd per medewerker bij welke beschermingsmiddelen zijn verstrekt en wanneer ze vervangen moeten worden. Verlopen of ontbrekende PBM's worden gesignaleerd.",
+    gebruiker:
+      "Overzicht van uw persoonlijke beschermingsmiddelen. Controleer de vervangingsdatum en meld ontbrekende of versleten middelen.",
+  },
+
+  "veiligheid-toolbox-compliance": {
+    hoofdbeheerder:
+      "Toolbox-compliance: zie per medewerker en per toolbox wie de leesbevestiging al heeft gegeven en wie nog achterloopt. Gebruik dit overzicht om herinneringen te sturen en aantoonbaar aan de veiligheidsverplichting te voldoen.",
+  },
+
+  // ══════════ Financieel ══════════
+
+  "directie-kompas": {
+    hoofdbeheerder:
+      "Directiekompas: strategisch dashboard met de belangrijkste bedrijfskengetallen (omzet, marge, onderhanden werk, liquiditeit). Bedoeld voor directie en management om in één oogopslag de gezondheid van de organisatie te beoordelen.",
+  },
+
+  "bedrijfskompas": {
+    hoofdbeheerder:
+      "Bedrijfskompas: overzicht van de operationele en financiële kernprestaties. Volg trends per periode en signaleer afwijkingen vroegtijdig. Bedoeld voor beheerders en directie die sturen op bedrijfsresultaat.",
+  },
+
+  "boekhouding": {
+    hoofdbeheerder:
+      "Boekhoudkoppeling: beheer de verbinding met het boekhoudpakket (o.a. AccountView). Connect levert de gegevens aan; het boekhoudpakket blijft leidend. Controleer hier de koppelingsstatus en exportinstellingen.",
+  },
+
+  "facturen": {
+    hoofdbeheerder:
+      "Facturenoverzicht: alle inkoop- en verkoopfacturen met status. Filter op leverancier, periode of status. Klik op een factuur voor de details en de controlestappen vóór export naar de boekhouding.",
+  },
+
+  "factuur-detail": {
+    hoofdbeheerder:
+      "Factuurdetail: bekijk de factuurregels, gekoppelde inkoopbon of project en de controlestatus. Keur de factuur goed of markeer een afwijking. Een goedgekeurde factuur kan mee in de export naar de boekhouding.",
+  },
+
+  "facturen-dashboard": {
+    hoofdbeheerder:
+      "Facturendashboard: live overzicht van openstaande, gecontroleerde en geëxporteerde facturen. Zie in één oogopslag wat nog controle of goedkeuring vereist voordat het naar de boekhouding gaat.",
+  },
+
+  "facturen-controlebox": {
+    hoofdbeheerder:
+      "Controlebox: facturen die nog inhoudelijk gecontroleerd moeten worden. Vergelijk de factuur met de inkoopbon of het project, keur goed of stuur terug bij een afwijking. Alleen gecontroleerde facturen komen in aanmerking voor export.",
+  },
+
+  "facturen-export": {
+    hoofdbeheerder:
+      "Klaar voor export: gecontroleerde en goedgekeurde facturen die klaarstaan om naar de boekhouding te worden verzonden. Controleer de selectie en start de export. Na export verschijnen ze in het exportlogboek.",
+  },
+
+  "facturen-exportlog": {
+    hoofdbeheerder:
+      "Exportlogboek: historie van alle facturenexports naar de boekhouding, met tijdstip, aantal en status. Gebruik dit om achteraf te controleren welke facturen wanneer zijn doorgezet.",
+  },
+
+  "crediteuren": {
+    hoofdbeheerder:
+      "Crediteurenoverzicht: openstaande verplichtingen aan leveranciers. Zie per crediteur het openstaande saldo en de vervaldatums. Gebruik dit voor betaalvoorbereiding en het opstellen van SEPA-bestanden.",
+  },
+
+  "bedrijfsresultaten": {
+    hoofdbeheerder:
+      "Bedrijfsresultaten: overzicht van omzet, kosten en marge per periode. Vergelijk realisatie met eerdere perioden om trends te herkennen. Bedoeld voor beheerders en directie die op resultaat sturen.",
+  },
+
+  "onderhanden-werk": {
+    hoofdbeheerder:
+      "Onderhanden werk (OHW): de waarde van lopende projecten die nog niet is gefactureerd. Zie per project de bestede kosten tegenover de gefactureerde bedragen, zodat u het resultaat en de nog te factureren waarde bewaakt.",
+  },
+
+  "jaarrekening": {
+    hoofdbeheerder:
+      "Jaarrekening: het financiële jaaroverzicht met balans en resultatenrekening. Bedoeld voor directie, boekhouder en accountant. Het boekhoudpakket blijft leidend voor de definitieve cijfers.",
+  },
+
+  "jaarrekeningen": {
+    hoofdbeheerder:
+      "Jaarrekeningen: archief van de opgestelde jaarrekeningen per boekjaar. Open een boekjaar voor de balans en resultatenrekening van dat jaar.",
+  },
+
+  "meerjarenoverzicht": {
+    hoofdbeheerder:
+      "Meerjarenoverzicht: de financiële kerncijfers over meerdere jaren naast elkaar. Herken lange-termijntrends in omzet, marge en resultaat. Bedoeld voor directie en management.",
+  },
+
+  "sepa-bestanden": {
+    hoofdbeheerder:
+      "SEPA-bestanden: stel betaalbestanden samen voor de bank op basis van openstaande crediteuren. Controleer de selectie, genereer het SEPA-bestand en upload dit in uw bankomgeving. Elk gegenereerd bestand wordt vastgelegd.",
+  },
+
+  // ══════════ Goedkeuring ══════════
+
+  "goedkeuringen-dashboard": {
+    hoofdbeheerder:
+      "Goedkeuringendashboard: alle openstaande en afgehandelde goedkeuringsaanvragen. Keur aanvragen goed of wijs ze af; de motor voert de bijbehorende actie daarna zelf uit. Aanvragen die op uw actie wachten worden bovenaan getoond.",
+    gebruiker:
+      "Overzicht van uw goedkeuringsaanvragen en de aanvragen die op uw actie wachten. Open een aanvraag om de details te bekijken en te beslissen.",
+  },
+
+  "goedkeuringsbeleid": {
+    hoofdbeheerder:
+      "Goedkeuringsbeleid: bepaal welke acties (bijvoorbeeld een inkoopbon boven een bedrag) een goedkeuring vereisen en wie mag goedkeuren. Zolang een beleidsregel geldt, wordt de directe actie geblokkeerd tot goedkeuring is verleend.",
+  },
+
+  // ══════════ Declaraties ══════════
+
+  "declaraties": {
+    hoofdbeheerder:
+      "Declaraties: overzicht van ingediende onkostendeclaraties van medewerkers. Controleer bonnen en bedragen, keur goed of wijs af. Goedgekeurde declaraties kunnen mee in de betaal- en boekhoudverwerking.",
+    gebruiker:
+      "Dien uw onkosten in met een omschrijving, bedrag en bon. Volg de status van uw declaratie tot deze is goedgekeurd en uitbetaald.",
+  },
+
+  "declaratie-detail": {
+    hoofdbeheerder:
+      "Declaratiedetail: bekijk de declaratieregels, bijgevoegde bonnen en de status. Keur de declaratie goed of wijs af met een reden. De indiener ziet de statuswijziging direct.",
+    gebruiker:
+      "Details van uw declaratie: regels, bedragen en bijgevoegde bonnen. Volg hier de status en de eventuele reden bij afwijzing.",
+  },
+
+  // ══════════ Wagenpark ══════════
+
+  "wagenpark": {
+    hoofdbeheerder:
+      "Wagenpark: overzicht van alle voertuigen met kenteken, toegewezen bestuurder en onderhoudsstatus. Beheer keuringen (APK), onderhoudsbeurten en brandstofverbruik. Aankomende of verlopen keuringen worden gesignaleerd.",
+    gebruiker:
+      "Overzicht van de voertuigen. Bekijk de gegevens en onderhoudsstatus van het voertuig dat aan u is toegewezen.",
+  },
+
+  "wagenpark-meldingen": {
+    hoofdbeheerder:
+      "Wagenparkmeldingen: aankomende en verlopen keuringen, onderhoudsbeurten en schademeldingen. Wijs opvolging toe en houd de afhandeling bij. Zo blijft het wagenpark keuringsplichtig en verkeersveilig.",
+    gebruiker:
+      "Meld schade, storingen of onderhoud aan uw voertuig. Uw melding komt direct bij de wagenparkbeheerder terecht.",
+  },
+
+  "wagenpark-detail": {
+    hoofdbeheerder:
+      "Voertuigdetail: kenteken, bestuurder, keuringsdata, onderhoudshistorie en brandstofverbruik. Registreer een onderhoudsbeurt of pas de toegewezen bestuurder aan. Gebruik de historie voor kosteninzicht per voertuig.",
+    gebruiker:
+      "Details van het voertuig: keuringsdata, onderhoud en brandstof. Meld hier bijzonderheden aan de wagenparkbeheerder.",
+  },
+
+  "wagenpark-brandstof-import": {
+    hoofdbeheerder:
+      "Brandstofimport: lees tankpas-transacties in uit een bestand van uw brandstofleverancier. De transacties worden gekoppeld aan het juiste voertuig zodat u het verbruik en de kosten per voertuig kunt volgen.",
   },
 };
 

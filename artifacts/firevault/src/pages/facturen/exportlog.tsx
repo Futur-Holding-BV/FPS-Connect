@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/table";
 import { Link } from "wouter";
 import { ScrollText, CheckCircle2, XCircle, Clock, ExternalLink, RefreshCw } from "lucide-react";
+import { PaginaHulp } from "@/components/pagina-hulp";
 
 const ACTIES: Record<string, string> = {
   export: "Export",
@@ -68,6 +69,7 @@ export default function ExportlogPagina() {
 
   return (
     <div className="flex flex-col gap-6 p-6">
+      <PaginaHulp pagina="facturen-exportlog" />
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">

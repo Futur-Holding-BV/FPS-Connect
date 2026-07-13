@@ -29,6 +29,7 @@ import type {
   AccountviewRelatieMapping,
   AccountviewProjectMapping,
 } from "@workspace/api-client-react";
+import { PaginaHulp } from "@/components/pagina-hulp";
 
 export default function BoekhoudingBeheer() {
   const queryClient = useQueryClient();
@@ -93,6 +94,7 @@ export default function BoekhoudingBeheer() {
 
   return (
     <div className="p-6 space-y-6 max-w-4xl">
+      <PaginaHulp pagina="boekhouding" />
       {/* Koptekst */}
       <div>
         <h1 className="text-2xl font-semibold text-slate-900 flex items-center gap-2">

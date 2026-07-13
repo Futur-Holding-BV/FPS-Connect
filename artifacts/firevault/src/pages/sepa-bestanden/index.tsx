@@ -19,6 +19,7 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import { PaginaHulp } from "@/components/pagina-hulp";
 
 const MAANDEN = [
   "", "Januari", "Februari", "Maart", "April", "Mei", "Juni",
@@ -99,6 +100,7 @@ export default function SepaBestandenPagina() {
 
   return (
     <div className="p-6 space-y-6 max-w-5xl">
+      <PaginaHulp pagina="sepa-bestanden" />
       <div>
         <h1 className="text-2xl font-semibold">SEPA-betaalbestanden</h1>
         <p className="text-muted-foreground text-sm mt-1">

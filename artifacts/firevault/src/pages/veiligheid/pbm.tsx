@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
+import { PaginaHulp } from "@/components/pagina-hulp";
 import { useQuery as useListMedewerkers } from "@tanstack/react-query";
 
 // ── Types ───────────────────────────────────────────────────────────────────
@@ -177,6 +178,7 @@ export default function PbmPagina() {
 
   return (
     <div className="space-y-6">
+      <PaginaHulp pagina="veiligheid-pbm" />
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">PBM & Veiligheidsbeheer</h1>

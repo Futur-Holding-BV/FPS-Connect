@@ -34,6 +34,7 @@ import {
   TrendingDown, Banknote, Target, Zap, CircleDot, Mail, Send,
 } from "lucide-react";
 import type { Factuur, FactuurCorrespondentie } from "@workspace/api-client-react";
+import { PaginaHulp } from "@/components/pagina-hulp";
 
 // ── Afkeurcategorieën ────────────────────────────────────────────────────────
 
@@ -710,6 +711,7 @@ export default function ControleboxPagina() {
 
   return (
     <div className="p-6 space-y-5 max-w-6xl">
+      <PaginaHulp pagina="facturen-controlebox" />
       {/* Koptekst */}
       <div className="flex items-center justify-between">
         <div>

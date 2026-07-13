@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ShoppingCart, ExternalLink, Search } from "lucide-react";
+import { PaginaHulp } from "@/components/pagina-hulp";
 
 const statusLabel: Record<string, string> = {
   concept: "Concept",
@@ -57,6 +58,7 @@ export default function InkoopOverzicht() {
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
+      <PaginaHulp pagina="inkoop-overzicht" />
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">

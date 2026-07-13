@@ -35,6 +35,7 @@ import {
   CheckCircle2, XCircle, Clock, AlertTriangle, Bell, ChevronRight, LayoutDashboard, Download,
 } from "lucide-react";
 import { GOEDKEURING_STATUS_INFO } from "@/components/goedkeuring/goedkeuring-widget";
+import { PaginaHulp } from "@/components/pagina-hulp";
 
 // ── Label-helpers ──────────────────────────────────────────────────────────────
 
@@ -281,6 +282,7 @@ export default function GoedkeuringenDashboard() {
 
   return (
     <div className="flex flex-col gap-5 p-6">
+      <PaginaHulp pagina="goedkeuringen-dashboard" />
       {/* Header */}
       <div className="flex items-center gap-2">
         <LayoutDashboard className="h-5 w-5 text-primary" />

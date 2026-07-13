@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
+import { PaginaHulp } from "@/components/pagina-hulp";
 import {
   ClipboardCheck, Plus, Trash2, CheckCircle2, XCircle, MapPin,
   ChevronDown, ChevronUp, Loader2, Eye, Pencil, AlertTriangle, Briefcase,
@@ -261,6 +262,7 @@ export default function VeiligheidLmraPagina() {
 
   return (
     <div className="p-6 space-y-6">
+      <PaginaHulp pagina="veiligheid-lmra" />
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">

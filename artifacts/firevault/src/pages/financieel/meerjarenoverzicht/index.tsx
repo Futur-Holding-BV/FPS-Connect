@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 import {
   ArrowLeft, TrendingUp, TrendingDown, Minus, Info, AlertTriangle, ShieldCheck, ShieldAlert,
 } from "lucide-react";
+import { PaginaHulp } from "@/components/pagina-hulp";
 
 const eur = (n: number | null | undefined, eenheid: string) => {
   if (n == null) return "—";
@@ -58,6 +59,7 @@ export default function MeerjarenoverzichtPagina() {
 
   return (
     <div className="space-y-6 p-6">
+      <PaginaHulp pagina="meerjarenoverzicht" />
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" asChild>

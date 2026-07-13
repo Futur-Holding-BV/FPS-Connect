@@ -7,6 +7,7 @@ import {
   Receipt, ArrowUpRight, XCircle, CheckCircle2, AlertTriangle,
   TrendingUp, ScrollText, Euro, Clock, Calendar,
 } from "lucide-react";
+import { PaginaHulp } from "@/components/pagina-hulp";
 
 export default function FinancieelDashboardPagina() {
   const { data, isLoading, error } = useGetFinancieelDashboard();
@@ -72,6 +73,7 @@ export default function FinancieelDashboardPagina() {
 
   return (
     <div className="flex flex-col gap-6 p-6">
+      <PaginaHulp pagina="facturen-dashboard" />
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Financieel overzicht</h1>

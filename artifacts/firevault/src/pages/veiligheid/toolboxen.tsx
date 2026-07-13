@@ -40,6 +40,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
+import { PaginaHulp } from "@/components/pagina-hulp";
 import {
   ShieldCheck, Plus, Trash2, Sparkles, Upload, FileText,
   CheckCircle, Clock, AlertTriangle, Loader2, ChevronRight,
@@ -543,6 +544,7 @@ export default function VeiligheidToolboxenPagina() {
 
   return (
     <div className="p-6 max-w-5xl mx-auto space-y-6">
+      <PaginaHulp pagina="veiligheid-toolboxen" />
       {/* Koptekst */}
       <div className="flex items-center justify-between gap-4">
         <div>

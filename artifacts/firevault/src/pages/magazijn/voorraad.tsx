@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Search, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { PaginaHulp } from "@/components/pagina-hulp";
 
 export default function MagazijnVoorraadPagina() {
   const { heeftNiveau } = useBevoegdheid();
@@ -39,6 +40,7 @@ export default function MagazijnVoorraadPagina() {
 
   return (
     <div className="p-6 space-y-4">
+      <PaginaHulp pagina="magazijn-voorraad" />
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Voorraad</h1>
         {kanSchrijven && (

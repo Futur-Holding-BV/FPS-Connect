@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { DemoBanner } from "@/components/ui/demo-banner";
 import { demoVoertuigen } from "@/lib/demo-data";
+import { PaginaHulp } from "@/components/pagina-hulp";
 
 // ── Helpers ────────────────────────────────────────────────
 
@@ -101,6 +102,7 @@ export default function WagenparkPagina() {
 
   return (
     <div className="p-6 space-y-6 max-w-screen-xl">
+      <PaginaHulp pagina="wagenpark" />
       {/* Privacytekst — altijd zichtbaar */}
       <Alert className="border-blue-200 bg-blue-50">
         <ShieldAlert className="h-4 w-4 text-blue-600" />

@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
+import { PaginaHulp } from "@/components/pagina-hulp";
 import {
   AlertTriangle, Trash2, Loader2, CheckCircle2, Clock,
   MapPin, User, Briefcase, Calendar, Filter, ChevronRight,
@@ -109,6 +110,7 @@ export default function VeiligheidIncidentenPagina() {
 
   return (
     <div className="p-6 max-w-5xl mx-auto space-y-6">
+      <PaginaHulp pagina="veiligheid-incidenten" />
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">

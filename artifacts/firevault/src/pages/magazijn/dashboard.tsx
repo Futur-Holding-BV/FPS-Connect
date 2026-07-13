@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/popover";
 import { AlertTriangle, Package, Archive, ShoppingCart, TrendingUp, Euro, Clock, Settings2, X } from "lucide-react";
 import { Link } from "wouter";
+import { PaginaHulp } from "@/components/pagina-hulp";
 
 function StatKaart({
   titel, waarde, icoon: Icoon, kleur, link,
@@ -279,6 +280,7 @@ export default function MagazijnDashboard() {
 
   return (
     <div className="p-6 space-y-6">
+      <PaginaHulp pagina="magazijn" />
       <h1 className="text-2xl font-bold">Magazijn dashboard</h1>
 
       {/* Stat-kaarten */}

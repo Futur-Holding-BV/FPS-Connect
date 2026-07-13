@@ -22,6 +22,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertTriangle, Calculator, Edit2, ExternalLink, TrendingDown, TrendingUp } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
+import { PaginaHulp } from "@/components/pagina-hulp";
 
 const eur = (n: number | null | undefined) =>
   n == null ? "—" : new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(n);
@@ -183,6 +184,7 @@ export default function OnderhandenWerkPagina() {
 
   return (
     <div className="space-y-6 p-6">
+      <PaginaHulp pagina="onderhanden-werk" />
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold">Onderhanden werk</h1>

@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Plus, Pencil, Trash2, MapPin, ChevronRight } from "lucide-react";
+import { PaginaHulp } from "@/components/pagina-hulp";
 
 const TYPE_LABELS: Record<string, string> = {
   rek: "Rek / stelling", bus: "Bus / voertuig", vak: "Vak / lade", ruimte: "Ruimte", extern: "Externe locatie",
@@ -154,6 +155,7 @@ export default function MagazijnLocatiesPagina() {
 
   return (
     <div className="p-6 space-y-4">
+      <PaginaHulp pagina="magazijn-locaties" />
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Locaties</h1>
         {kanSchrijven && (

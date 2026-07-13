@@ -37,6 +37,7 @@ import { useRol } from "@/context/rol-context";
 import { useToast } from "@/hooks/use-toast";
 import { Separator } from "@/components/ui/separator";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { PaginaHulp } from "@/components/pagina-hulp";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -839,6 +840,7 @@ function KompasInhoud() {
 
   return (
     <div className="space-y-5 p-1">
+      <PaginaHulp pagina="directie-kompas" />
       {/* Paginakop */}
       {aantalVerouderd > 0 && (
         <div className="flex items-center justify-between gap-3 bg-amber-50 border border-amber-200 rounded-lg p-3 text-amber-800 text-sm">

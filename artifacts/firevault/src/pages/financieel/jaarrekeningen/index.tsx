@@ -28,6 +28,7 @@ import {
   ArrowLeft, ShieldCheck, FileText, Download, Sparkles, CheckCircle2, XCircle,
   RotateCcw, Ban, Lock, TrendingUp, Search, Pencil,
 } from "lucide-react";
+import { PaginaHulp } from "@/components/pagina-hulp";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -397,6 +398,7 @@ export default function JaarrekeningenValidatiePagina() {
 
   return (
     <div className="space-y-6 p-6">
+      <PaginaHulp pagina="jaarrekeningen" />
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" asChild>

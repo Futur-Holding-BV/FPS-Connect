@@ -49,6 +49,7 @@ import {
   ShieldCheck, Plus, Pencil, Trash2, CheckCircle2, XCircle,
 } from "lucide-react";
 import { GOEDKEURING_STATUS_INFO } from "@/components/goedkeuring/goedkeuring-widget";
+import { PaginaHulp } from "@/components/pagina-hulp";
 import { MODULES } from "@workspace/permissies";
 
 // Documenttypes die exact overeenkomen met de objectType-sleutels in de goedkeuringsmotor.
@@ -680,6 +681,7 @@ export default function GoedkeuringsbeleidBeheer() {
 
   return (
     <div className="flex flex-col gap-6 p-6">
+      <PaginaHulp pagina="goedkeuringsbeleid" />
       <div className="flex items-center gap-3">
         <ShieldCheck className="h-6 w-6 text-primary" />
         <div>

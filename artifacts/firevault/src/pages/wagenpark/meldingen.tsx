@@ -16,6 +16,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { ArrowLeft, ClipboardList } from "lucide-react";
+import { PaginaHulp } from "@/components/pagina-hulp";
 
 export default function WagenparkMeldingenPagina() {
   const [typeFilter, setTypeFilter] = useState<string>("alle");
@@ -65,6 +66,7 @@ export default function WagenparkMeldingenPagina() {
 
   return (
     <div className="p-6 space-y-6 max-w-screen-xl">
+      <PaginaHulp pagina="wagenpark-meldingen" />
       <div>
         <Button variant="ghost" size="sm" asChild>
           <Link href="/wagenpark">

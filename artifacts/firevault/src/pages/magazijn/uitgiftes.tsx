@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Plus, Trash2, PackageCheck, Search, AlertTriangle, X, ChevronDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { PaginaHulp } from "@/components/pagina-hulp";
 
 interface UitgifteRegel {
   artikel_id: number;
@@ -219,6 +220,7 @@ export default function MagazijnUitgiftesPagina() {
 
   return (
     <div className="p-6 space-y-6">
+      <PaginaHulp pagina="magazijn-uitgiftes" />
       <h1 className="text-2xl font-bold">Uitgifte</h1>
 
       {voorraadFout && (

@@ -24,6 +24,7 @@ import {
 import type { FactuurHerinnering } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { PaginaHulp } from "@/components/pagina-hulp";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -305,6 +306,7 @@ export default function FactuurDetailPagina() {
 
   return (
     <div className="p-6 space-y-5 max-w-4xl">
+      <PaginaHulp pagina="factuur-detail" />
       {/* Navigatie */}
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
         <Link href="/facturen">

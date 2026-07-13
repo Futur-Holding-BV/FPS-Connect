@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { ArrowUp, ArrowDown, Minus } from "lucide-react";
+import { PaginaHulp } from "@/components/pagina-hulp";
 
 const TYPE_LABELS: Record<string, string> = {
   inkoop: "Inkoop",
@@ -50,6 +51,7 @@ export default function MagazijnMutatiesPagina() {
 
   return (
     <div className="p-6 space-y-4">
+      <PaginaHulp pagina="magazijn-mutaties" />
       <h1 className="text-2xl font-bold">Mutaties</h1>
 
       {/* Filters */}

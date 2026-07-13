@@ -15,6 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { PaginaHulp } from "@/components/pagina-hulp";
 
 const STATUS_LABELS: Record<string, string> = {
   open: "Open", gedeeltelijk: "Gedeeltelijk", volledig: "Volledig", geannuleerd: "Geannuleerd",
@@ -51,6 +52,7 @@ export default function MagazijnReserveringenPagina() {
 
   return (
     <div className="p-6 space-y-4">
+      <PaginaHulp pagina="magazijn-reserveringen" />
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Reserveringen</h1>
         {kanSchrijven && (

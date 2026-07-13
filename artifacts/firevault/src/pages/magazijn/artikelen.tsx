@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Search, AlertTriangle, Package, Eye, Barcode } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { bewaarBulkBarcodeSelectie } from "@/pages/magazijn/artikelen-barcodes-bulk";
+import { PaginaHulp } from "@/components/pagina-hulp";
 
 function formatBedrag(n: number | null | undefined) {
   if (n == null) return "—";
@@ -56,6 +57,7 @@ export default function MagazijnArtikelenPagina() {
 
   return (
     <div className="p-6 space-y-4">
+      <PaginaHulp pagina="magazijn-artikelen" />
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Artikelen</h1>
         <div className="flex items-center gap-2">

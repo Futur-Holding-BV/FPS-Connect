@@ -17,6 +17,7 @@ import {
   BarChart3, TrendingUp, TrendingDown, AlertTriangle, Euro,
   Receipt, ArrowUpRight, ExternalLink, Search, ChevronUp, ChevronDown,
 } from "lucide-react";
+import { PaginaHulp } from "@/components/pagina-hulp";
 
 const eur = (n: number | null | undefined) =>
   n == null ? "—" : new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(n);
@@ -149,6 +150,7 @@ export default function BedrijfsresultatenPagina() {
 
   return (
     <div className="space-y-6">
+      <PaginaHulp pagina="bedrijfsresultaten" />
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Bedrijfsresultaten</h1>

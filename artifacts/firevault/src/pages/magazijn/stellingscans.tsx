@@ -34,6 +34,7 @@ import {
   RotateCcw,
   MapPin,
 } from "lucide-react";
+import { PaginaHulp } from "@/components/pagina-hulp";
 
 type Suggestie = {
   artikel_id: number;
@@ -406,6 +407,7 @@ export default function MagazijnStellingsscansPagina() {
 
   return (
     <div className="p-6 space-y-6 max-w-3xl">
+      <PaginaHulp pagina="magazijn-stellingscans" />
       {/* Paginakop */}
       <div className="flex items-center gap-3">
         <ScanSearch className="h-6 w-6 text-primary" />
