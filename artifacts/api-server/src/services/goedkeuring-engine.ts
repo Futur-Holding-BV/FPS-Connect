@@ -58,6 +58,37 @@ const OBJECT_DIRECTE_ACTIE: Record<string, { naarStatus: string; setGeaccordeerd
   prijsafwijking: { naarStatus: "klaar_voor_accountview", setGeaccordeerd: true },
 };
 
+// Directe DB-statusovergang na AFWIJZING voor financiële documenten op de facturenTable.
+// Een afgewezen factuur gaat terug naar "controle_nodig" zodat de indiener de
+// afwijzingsreden ziet (GoedkeuringWidget toont de reden), de factuur herstelt
+// en opnieuw ter goedkeuring indient.
+const OBJECT_DIRECTE_AFWIJZING: Record<string, { naarStatus: string }> = {
+  verkoop_factuur: { naarStatus: "controle_nodig" },
+  inkoop_factuur: { naarStatus: "controle_nodig" },
+  creditnota: { naarStatus: "controle_nodig" },
+  prijsafwijking: { naarStatus: "controle_nodig" },
+};
+
+// Zet, ná AFWIJZING, een financieel document terug naar "controle_nodig" zodat
+// de indiener het document kan corrigeren en opnieuw ter goedkeuring indienen.
+async function pasObjectStatusAfwijzenToe(
+  db: Db,
+  aanvraag: GoedkeuringAanvraag,
+): Promise<void> {
+  const afwijzing = OBJECT_DIRECTE_AFWIJZING[aanvraag.objectType];
+  if (!afwijzing) return;
+  try {
+    await db.update(facturenTable)
+      .set({ status: afwijzing.naarStatus, bijgewerktOp: new Date() })
+      .where(eq(facturenTable.id, aanvraag.objectId));
+  } catch (err) {
+    logger.error(
+      { err, aanvraagId: aanvraag.id, objectType: aanvraag.objectType },
+      "Kon factuur niet automatisch bijwerken na afwijzing (directe DB-update)",
+    );
+  }
+}
+
 // Zet, ná volledige goedkeuring, het onderliggende document automatisch door
 // via de bestaande WorkflowService (voor inkoopbonnen e.d.) of via een directe
 // DB-update (voor facturen e.d.). `viaGoedkeuring: true` laat de workflow-config
@@ -801,6 +832,10 @@ export async function afwijzen(
   } catch (err) {
     logger.warn({ err, aanvraagId }, "Goedkeuring afgewezen-notificatie niet verstuurd");
   }
+
+  // Zet het onderliggende financiële document terug naar "controle_nodig"
+  // zodat de indiener het document kan corrigeren en opnieuw indienen.
+  await pasObjectStatusAfwijzenToe(db, aanvraag);
 
   return { ok: true, aanvraag: bijgewerkt };
 }

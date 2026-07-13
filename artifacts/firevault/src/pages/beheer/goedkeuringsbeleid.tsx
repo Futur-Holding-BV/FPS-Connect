@@ -298,6 +298,23 @@ function BeleidsregelsTab({ magBeheren }: { magBeheren: boolean }) {
                   Voor verlofaanvragen geldt: ondergrens en bovengrens zijn in <strong>werkdagen</strong> (bijv. ondergrens 10 = meer dan 10 werkdagen vereist directeursgoedkeuring).
                 </p>
               )}
+              {(form.document_type === "creditnota" || form.document_type === "prijsafwijking") && (
+                <p className="text-xs text-muted-foreground">
+                  {form.document_type === "creditnota"
+                    ? "Creditnota's worden als apart type bijgehouden. Stel een lage bovengrens in (bijv. 0) om alle creditnota's ter goedkeuring te sturen, of een drempelwaarde voor grote creditbedragen."
+                    : "Prijsafwijkingen zijn facturen met een afwijkend bedrag t.o.v. de opdracht. Stel de bovengrens op 0 om altijd directeursgoedkeuring te vereisen, ongeacht het bedrag."}
+                </p>
+              )}
+              {(form.document_type === "inkoop_factuur" || form.document_type === "verkoop_factuur") && (
+                <p className="text-xs text-muted-foreground">
+                  Na goedkeuring wordt de factuur automatisch op <strong>klaar voor AccountView</strong> gezet en geaccordeerd. Creditnota&apos;s en prijsafwijkingen zijn aparte documenttypes met eigen beleidsregels.
+                </p>
+              )}
+              {form.document_type === "inkoopbon" && (
+                <p className="text-xs text-muted-foreground">
+                  Inkoopbonnen boven de ingestelde drempel kunnen pas verzonden worden naar de leverancier nadat de goedkeuringsaanvraag is gehonoreerd.
+                </p>
+              )}
             </div>
             <div className="space-y-1.5">
               <Label>Werkmaatschappij</Label>

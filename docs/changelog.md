@@ -19,6 +19,29 @@
 - **DB-schema:** nieuwe tabellen `wagenpark_meldingen` (polymorf), `wagenpark_kwartaalcontrole` en `push_tokens`.
 - **API-server:** nieuwe routes onder `/wagenpark/...` met Zod-validatie en `requireBevoegdheid("wagenpark", 1)`.
 
+## 2026-07-13 — Governance: facturatie & inkoop volledig geïntegreerd (afwijzing, export-gate, beleidsscherm-hints)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (additief op bestaande engine; geen schemawijziging)
+
+**Afwijzing factuur → automatische terugplaatsing:**
+- `OBJECT_DIRECTE_AFWIJZING` record toegevoegd in `goedkeuring-engine.ts` voor alle 4 financiële documenttypes (verkoop_factuur, inkoop_factuur, creditnota, prijsafwijking).
+- Nieuwe `pasObjectStatusAfwijzenToe()` functie: zet the factuur na governance-afwijzing automatisch terug naar status `controle_nodig` zodat de indiener de afwijzingsreden in de GoedkeuringWidget ziet, the factuur kan herstellen en opnieuw ter goedkeuring indienen.
+- Aangeroepen aan het einde van `afwijzen()` in de engine, vóór de return — na de e-mailnotificatie.
+
+**AccountView-export governance-gate versterkt:**
+- `POST /facturen/:id/export-accountview` controleert nu _expliciet_ op openstaande of vereiste governance-aanvragen. Geeft een duidelijke 422 terug ("Goedkeuring vereist voor AccountView-export") met onderscheid tussen: openstaande aanvraag loopt (wacht op uitkomst) vs. nog niet ingediend (verwijs naar detailpagina). Was al indirect geblokkeerd via `!geaccordeerd`, nu met heldere governance-boodschap inclusief `viaGoedkeuring: true`.
+
+**Beleidsscherm-hints per documenttype:**
+- Uitlegsteksten toegevoegd in `goedkeuringsbeleid.tsx` bij het selecteren van een documenttype in het beleidsregel-formulier:
+  - `creditnota`: uitleg over lage drempel voor alle creditnota's vs. drempelwaarde voor grote creditbedragen.
+  - `prijsafwijking`: uitleg dat bovengrens=0 altijd directeursgoedkeuring afdwingt.
+  - `inkoop_factuur` / `verkoop_factuur`: toelichting dat goedkeuring automatisch akkord + klaar_voor_accountview zet; verwijzing naar apart creditnota/prijsafwijking-type.
+  - `inkoopbon`: uitleg dat verzenden naar leverancier geblokkeerd blijft tot goedkeuring.
+
+**Wat al gebouwd was (geen wijziging nodig):**
+- Kernmotor compleet: `OBJECT_DIRECTE_ACTIE` (goedkeuring → klaar_voor_accountview + geaccordeerd), `OBJECT_WORKFLOW_ACTIE` (inkoopbon → goedgekeurd), GoedkeuringWidget op factuur-detailpagina en inkoopplanning-tab, `POST /facturen/:id/ter-goedkeuring-indienen`, accorderen-gate, inkoopbon-verzenden-gate, beleidsscherm met alle documenttypes.
+
+
 ---
 
 ## 2026-07-13 — Governance & Approval Engine: audit beleidswijzigingen, tijdlijn, offerte-koppeling + documenten

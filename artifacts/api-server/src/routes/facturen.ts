@@ -771,6 +771,25 @@ router.post("/facturen/:id/export-accountview", requireBevoegdheid("financieel",
     return;
   }
 
+  // Governance-gate: als er een actieve goedkeuringsaanvraag loopt of vereist is,
+  // geef een expliciete melding zodat de exportknop niet cryptisch faalt.
+  {
+    const documentType = bepaalFactuurDocumentType(factuur);
+    const bedrag = factuur.bedragInclBtw ? parseFloat(factuur.bedragInclBtw) : null;
+    const { vereist: govVereist } = await checkVereistGoedkeuring(db, documentType, bedrag, null);
+    if (govVereist && !factuur.geaccordeerd) {
+      const open = await haalOpenAanvraag(db, documentType, id);
+      res.status(422).json({
+        error: "Goedkeuring vereist voor AccountView-export",
+        detail: open
+          ? "Er loopt een openstaande goedkeuringsaanvraag voor deze factuur. Wacht op de uitkomst voor u naar AccountView exporteert."
+          : "Deze factuur vereist goedkeuring. Dien de factuur ter goedkeuring in via de knop op de detailpagina.",
+        viaGoedkeuring: true,
+      });
+      return;
+    }
+  }
+
   // Valideer verplichte velden
   const fouten: string[] = [];
   if (!factuur.factuurnummer) fouten.push("Factuurnummer ontbreekt");
