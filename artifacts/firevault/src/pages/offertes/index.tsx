@@ -355,13 +355,16 @@ export default function OffertesPagina() {
                   <div className="text-sm font-medium">{euro(o.bedrag_excl_btw)} <span className="text-xs text-muted-foreground">excl. btw</span></div>
                   <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                 </div>
-                {o.gebouw_id && o.status === "concept" && (
-                  <div onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
-                    <Button size="sm" variant="outline" onClick={() => bereidVoorUitSpots(o.id)} disabled={uitSpots.isPending}>
+                <div className="flex items-center gap-2 flex-wrap" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+                  <Button size="sm" variant="outline" onClick={() => navigate(`/offertes/${o.id}`)}>
+                    <PenLine className="h-3.5 w-3.5" /> Studio openen
+                  </Button>
+                  {o.gebouw_id && o.status === "concept" && (
+                    <Button size="sm" variant="ghost" onClick={() => bereidVoorUitSpots(o.id)} disabled={uitSpots.isPending}>
                       <Sparkles className="h-3.5 w-3.5" /> Uit spots
                     </Button>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
             </div>
           ))}

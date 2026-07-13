@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, Link } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -65,6 +65,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
 import { PaginaHulp } from "@/components/pagina-hulp";
 import { cn } from "@/lib/utils";
+import html2canvas from "html2canvas-pro";
+import jsPDF from "jspdf";
 
 const STATUS_KLEUR: Record<string, string> = {
   concept: "bg-amber-100 text-amber-800 border-amber-200",
@@ -104,21 +106,44 @@ const VOLGENDE_STATUSSEN: Record<string, string[]> = {
 const IRREVERSIBELE_STATUSSEN = new Set(["ondertekend", "vervallen"]);
 
 const SECTIE_TYPEN = [
+  { value: "cover", label: "Cover" },
   { value: "aanbiedingsbrief", label: "Aanbiedingsbrief" },
+  { value: "over_fps", label: "Over FPS Brandpreventie" },
+  { value: "aanleiding", label: "Aanleiding" },
+  { value: "huidige_situatie", label: "Huidige situatie" },
+  { value: "inspectievindingen", label: "Inspectievindingen" },
+  { value: "aanbevolen_oplossing", label: "Aanbevolen oplossing" },
+  { value: "technische_toelichting", label: "Technische toelichting" },
+  { value: "gebruikte_producten", label: "Gebruikte producten" },
+  { value: "planning", label: "Planning" },
+  { value: "uitvoeringsmethode", label: "Uitvoeringsmethode" },
+  { value: "kwaliteitsborging", label: "Kwaliteitsborging" },
+  { value: "certificaten", label: "Certificaten" },
+  { value: "garantie", label: "Garantie" },
+  { value: "onderhoudsadvies", label: "Onderhoudsadvies" },
+  { value: "optioneel_werk", label: "Optioneel werk" },
+  { value: "prijsoverzicht", label: "Prijsoverzicht" },
+  { value: "bijlagen", label: "Bijlagen" },
+  { value: "voorwaarden", label: "Algemene voorwaarden" },
+  { value: "ondertekeningspagina", label: "Ondertekeningspagina" },
   { value: "projectomschrijving", label: "Projectomschrijving" },
   { value: "aanpak", label: "Aanpak en methodiek" },
   { value: "team", label: "Team en organisatie" },
-  { value: "planning", label: "Planning" },
-  { value: "voorwaarden", label: "Algemene voorwaarden" },
   { value: "slotwoord", label: "Slotwoord" },
   { value: "vrij", label: "Vrije sectie" },
 ];
 
 const BIJLAGE_TYPEN = [
-  { value: "referentie", label: "Referentie" },
+  { value: "eta", label: "ETA (Europese Technische Beoordeling)" },
+  { value: "dop", label: "DoP (Prestatieverklaring)" },
   { value: "certificaat", label: "Certificaat" },
+  { value: "productblad", label: "Productblad" },
   { value: "foto", label: "Foto" },
+  { value: "inspectierapport", label: "Inspectierapport" },
   { value: "tekening", label: "Tekening" },
+  { value: "planning", label: "Planning" },
+  { value: "garantie", label: "Garantiedocument" },
+  { value: "referentieproject", label: "Referentieproject" },
   { value: "overig", label: "Overig" },
 ];
 
@@ -261,6 +286,10 @@ export default function ProposalStudio() {
   const [bewerkRegelId, setBewerkRegelId] = useState<number | null>(null);
   const [bewerkPrijs, setBewerkPrijs] = useState("");
   const [initialiserend, setInitialiserend] = useState(false);
+  const [pdfExporting, setPdfExporting] = useState(false);
+  const [vergelijkDialoogOpen, setVergelijkDialoogOpen] = useState(false);
+  const [vergelijkVersieIds, setVergelijkVersieIds] = useState<[number | null, number | null]>([null, null]);
+  const previewRef = useRef<HTMLDivElement>(null);
 
   const [conditiesForm, setConditiesForm] = useState({
     betalingstermijn_dagen: 30,
@@ -409,6 +438,39 @@ export default function ProposalStudio() {
       }
     } finally {
       setStatusWijzigenBusy(false);
+    }
+  }
+
+  async function exporteerPdf() {
+    const el = previewRef.current;
+    if (!el) {
+      toast({ title: "Preview niet gevonden — scroll naar de inline voorvertoning", variant: "destructive" });
+      return;
+    }
+    setPdfExporting(true);
+    try {
+      const canvas = await html2canvas(el, { useCORS: true, scale: 2, backgroundColor: "#ffffff" });
+      const imgData = canvas.toDataURL("image/jpeg", 0.92);
+      const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+      const pageW = pdf.internal.pageSize.getWidth();
+      const pageH = pdf.internal.pageSize.getHeight();
+      const imgW = pageW;
+      const imgH = (canvas.height * pageW) / canvas.width;
+      let yOffset = 0;
+      let remaining = imgH;
+      while (remaining > 0) {
+        pdf.addImage(imgData, "JPEG", 0, -yOffset, imgW, imgH);
+        remaining -= pageH;
+        yOffset += pageH;
+        if (remaining > 0) pdf.addPage();
+      }
+      const bestandsnaam = `Offerte-${offerte?.offertenummer ?? offerteId}.pdf`;
+      pdf.save(bestandsnaam);
+      toast({ title: "PDF opgeslagen" });
+    } catch {
+      toast({ title: "PDF genereren mislukt", variant: "destructive" });
+    } finally {
+      setPdfExporting(false);
     }
   }
 
@@ -1634,7 +1696,16 @@ export default function ProposalStudio() {
                   );
                 })()}
 
-                <div className="flex justify-end mb-3 gap-2">
+                <div className="flex justify-end mb-3 gap-2 flex-wrap">
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={() => void exporteerPdf()}
+                    disabled={pdfExporting}
+                  >
+                    <FileDown className="h-3.5 w-3.5" />
+                    {pdfExporting ? "Bezig…" : "PDF opslaan"}
+                  </Button>
                   <a
                     href={`/offertes/${offerteId}/print`}
                     target="_blank"
@@ -1661,12 +1732,14 @@ export default function ProposalStudio() {
                   />
                 </div>
 
-                <OfferteVoorbeeldInline
-                  offerte={offerte}
-                  secties={gesorteerdeSecties.filter((s) => s.actief)}
-                  regels={regels ?? []}
-                  bijlagen={bijlagen ?? []}
-                />
+                <div ref={previewRef}>
+                  <OfferteVoorbeeldInline
+                    offerte={offerte}
+                    secties={gesorteerdeSecties.filter((s) => s.actief)}
+                    regels={regels ?? []}
+                    bijlagen={bijlagen ?? []}
+                  />
+                </div>
               </TabsContent>
 
               <TabsContent value="bijlagen">
@@ -1728,9 +1801,20 @@ export default function ProposalStudio() {
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <h2 className="font-semibold">Versiehistorie</h2>
-                    <Button size="sm" onClick={() => setVersieDialoogOpen(true)}>
-                      <Plus className="h-3.5 w-3.5" /> Versie opslaan
-                    </Button>
+                    <div className="flex gap-2">
+                      {(versies ?? []).length >= 2 && (
+                        <Button size="sm" variant="outline" onClick={() => {
+                          const vs = versies ?? [];
+                          setVergelijkVersieIds([vs[vs.length - 1].id, vs[vs.length - 2].id]);
+                          setVergelijkDialoogOpen(true);
+                        }}>
+                          <History className="h-3.5 w-3.5" /> Vergelijk
+                        </Button>
+                      )}
+                      <Button size="sm" onClick={() => setVersieDialoogOpen(true)}>
+                        <Plus className="h-3.5 w-3.5" /> Versie opslaan
+                      </Button>
+                    </div>
                   </div>
                   {(versies ?? []).length === 0 ? (
                     <Card>
@@ -1756,6 +1840,21 @@ export default function ProposalStudio() {
                                 {v.aangemaakt_door_naam && ` door ${v.aangemaakt_door_naam}`}
                               </div>
                             </div>
+                            {(versies ?? []).length >= 2 && (
+                              <button
+                                className="text-xs text-muted-foreground hover:text-primary underline shrink-0"
+                                onClick={() => {
+                                  const vs = versies ?? [];
+                                  const ander = vs.find((x) => x.id !== v.id);
+                                  if (ander) {
+                                    setVergelijkVersieIds([v.id, ander.id]);
+                                    setVergelijkDialoogOpen(true);
+                                  }
+                                }}
+                              >
+                                Vergelijk
+                              </button>
+                            )}
                           </CardContent>
                         </Card>
                       ))}
@@ -1886,6 +1985,108 @@ export default function ProposalStudio() {
           </div>
         </div>
       </div>
+
+      <Dialog open={vergelijkDialoogOpen} onOpenChange={setVergelijkDialoogOpen}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Versies vergelijken</DialogTitle>
+          </DialogHeader>
+          {(() => {
+            const vs = versies ?? [];
+            const v1 = vs.find((v) => v.id === vergelijkVersieIds[0]);
+            const v2 = vs.find((v) => v.id === vergelijkVersieIds[1]);
+            if (!v1 || !v2) return null;
+            const snap1 = (v1 as unknown as Record<string, unknown>).snapshot_json as Record<string, unknown> | null | undefined;
+            const snap2 = (v2 as unknown as Record<string, unknown>).snapshot_json as Record<string, unknown> | null | undefined;
+            const secties1: Array<{titel: string; inhoud?: string}> = Array.isArray((snap1 as Record<string, unknown> | null | undefined)?.secties) ? ((snap1 as Record<string, unknown>).secties as Array<{titel: string; inhoud?: string}>) : [];
+            const secties2: Array<{titel: string; inhoud?: string}> = Array.isArray((snap2 as Record<string, unknown> | null | undefined)?.secties) ? ((snap2 as Record<string, unknown>).secties as Array<{titel: string; inhoud?: string}>) : [];
+            const heeftSnapshot = secties1.length > 0 || secties2.length > 0;
+            return (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-3 mb-2">
+                  {[{v: v1, ids: [0, 1] as [number, number]}, {v: v2, ids: [1, 0] as [number, number]}].map(({v, ids}) => (
+                    <div key={v.id} className="rounded-md border p-3 space-y-1.5">
+                      <div className="font-semibold text-sm">Versie {v.versienummer}</div>
+                      {v.samenvatting && <div className="text-xs text-muted-foreground">{v.samenvatting}</div>}
+                      <div className="text-xs text-muted-foreground">{datumNl(v.aangemaakt_op)}{v.aangemaakt_door_naam ? ` — ${v.aangemaakt_door_naam}` : ""}</div>
+                      <div className="flex flex-col gap-1 mt-2">
+                        {(vs.filter((x) => x.id !== v.id)).map((ander) => (
+                          <button
+                            key={ander.id}
+                            className="text-xs text-primary hover:underline text-left"
+                            onClick={() => setVergelijkVersieIds((prev) => {
+                              const copy: [number | null, number | null] = [...prev];
+                              copy[ids[0]] = ander.id;
+                              return copy;
+                            })}
+                          >
+                            Vervang door versie {ander.versienummer}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {heeftSnapshot ? (
+                  <div className="space-y-3">
+                    {(() => {
+                      const alleTitels = Array.from(new Set([...secties1.map((s) => s.titel), ...secties2.map((s) => s.titel)]));
+                      return alleTitels.map((titel) => {
+                        const s1 = secties1.find((s) => s.titel === titel);
+                        const s2 = secties2.find((s) => s.titel === titel);
+                        const tekst1 = s1?.inhoud ?? "";
+                        const tekst2 = s2?.inhoud ?? "";
+                        const gewijzigd = tekst1 !== tekst2;
+                        return (
+                          <div key={titel} className={`rounded-md border p-3 ${gewijzigd ? "border-amber-300 bg-amber-50" : ""}`}>
+                            <div className="font-medium text-sm mb-2 flex items-center gap-2">
+                              {titel}
+                              {gewijzigd && <span className="text-xs text-amber-700 font-normal">(gewijzigd)</span>}
+                              {!s1 && <span className="text-xs text-emerald-600 font-normal">(nieuw in v{v2?.versienummer})</span>}
+                              {!s2 && <span className="text-xs text-rose-600 font-normal">(verwijderd na v{v1?.versienummer})</span>}
+                            </div>
+                            {gewijzigd && (
+                              <div className="grid grid-cols-2 gap-2 text-xs">
+                                <div className="bg-rose-50 rounded p-2 border border-rose-200">
+                                  <div className="text-rose-700 font-medium mb-1">v{v1.versienummer}</div>
+                                  <div className="whitespace-pre-wrap text-muted-foreground">{tekst1 || <em>(leeg)</em>}</div>
+                                </div>
+                                <div className="bg-emerald-50 rounded p-2 border border-emerald-200">
+                                  <div className="text-emerald-700 font-medium mb-1">v{v2.versienummer}</div>
+                                  <div className="whitespace-pre-wrap text-muted-foreground">{tekst2 || <em>(leeg)</em>}</div>
+                                </div>
+                              </div>
+                            )}
+                            {!gewijzigd && (
+                              <div className="text-xs text-muted-foreground whitespace-pre-wrap">{tekst1 || <em>(leeg in beide versies)</em>}</div>
+                            )}
+                          </div>
+                        );
+                      });
+                    })()}
+                  </div>
+                ) : (
+                  <div className="rounded-md border p-4 space-y-2">
+                    <div className="font-medium text-sm">Samenvattingen</div>
+                    <div className="grid grid-cols-2 gap-2 text-sm text-muted-foreground">
+                      <div className="bg-muted/40 rounded p-2">
+                        <span className="font-medium text-foreground">v{v1.versienummer}: </span>{v1.samenvatting || "(geen samenvatting)"}
+                      </div>
+                      <div className="bg-muted/40 rounded p-2">
+                        <span className="font-medium text-foreground">v{v2.versienummer}: </span>{v2.samenvatting || "(geen samenvatting)"}
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground">Gedetailleerde sectie-inhoud is beschikbaar voor versies die zijn opgeslagen nadat de snapshotfunctie werd ingeschakeld.</p>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setVergelijkDialoogOpen(false)}>Sluiten</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={maakOpdrachtDialoog} onOpenChange={setMaakOpdrachtDialoog}>
         <DialogContent>
