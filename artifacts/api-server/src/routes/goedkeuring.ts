@@ -27,6 +27,7 @@ import {
   type BeleidSnapshot,
   type GoedkeuringActor,
 } from "../services/goedkeuring-engine";
+import { verwerkOpenAanvragen } from "../lib/goedkeuringBewaking";
 
 const router = Router();
 
@@ -948,6 +949,32 @@ router.post(
     } catch (err) {
       req.log.error(err);
       res.status(500).json({ error: "Interne serverfout" });
+    }
+  },
+);
+
+// ── Handmatige bewaking uitvoeren (niveau 4 — admin/testgebruik) ─────────────
+// Triggert de deterministische escalatie-/herinneringsbewaking direct,
+// zonder te wachten op de uurlijkse automatische run. Nuttig voor testen,
+// demonstraties en urgente situaties waar niet gewacht kan worden.
+
+router.post(
+  "/goedkeuring/bewaking/uitvoeren",
+  requireBevoegdheid("goedkeuring", 4),
+  async (req, res): Promise<void> => {
+    try {
+      const verwerkt = await verwerkOpenAanvragen();
+      req.log.info({ verwerkt }, "Goedkeuring-bewaking handmatig uitgevoerd");
+      res.json({
+        verwerkt,
+        bericht: verwerkt === 0
+          ? "Geen openstaande aanvragen met verlopen termijnen gevonden."
+          : `${verwerkt} aanvra${verwerkt === 1 ? "ag" : "gen"} verwerkt — herinneringen en/of escalaties verstuurd.`,
+        uitgevoerd_op: new Date().toISOString(),
+      });
+    } catch (err) {
+      req.log.error(err);
+      res.status(500).json({ error: "Interne serverfout bij bewaking" });
     }
   },
 );

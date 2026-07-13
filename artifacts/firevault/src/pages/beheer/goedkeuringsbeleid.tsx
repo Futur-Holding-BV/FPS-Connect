@@ -362,6 +362,24 @@ function BeleidsregelsTab({ magBeheren }: { magBeheren: boolean }) {
                 </SelectContent>
               </Select>
             </div>
+            <div className="col-span-2 space-y-1.5">
+              <Label>Vervanger bij afwezigheid (optioneel)</Label>
+              <Select
+                value={form.vervanger_gebruiker_id ? String(form.vervanger_gebruiker_id) : "geen"}
+                onValueChange={(v) => setForm({ ...form, vervanger_gebruiker_id: v === "geen" ? null : Number(v) })}
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="geen">Geen vervanger</SelectItem>
+                  {(gebruikers ?? []).filter((g) => g.actief).map((g) => (
+                    <SelectItem key={g.id} value={String(g.id)}>{g.naam}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Wordt aangesproken als de goedkeurder niet bereikbaar is. De bewaking stuurt herinneringen en escalaties naar de vervanger als de goedkeurder niet gevonden wordt.
+              </p>
+            </div>
             {!form.goedkeurder_gebruiker_id && (
               <>
                 <div className="space-y-1.5">

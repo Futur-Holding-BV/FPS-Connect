@@ -98,7 +98,7 @@ async function zoekGebruiker(id: number): Promise<{ id: number; naam: string | n
 
 // ── Kerncheck ─────────────────────────────────────────────────────────────────
 
-async function verwerkOpenAanvragen(): Promise<number> {
+export async function verwerkOpenAanvragen(): Promise<number> {
   // Haal alle ingediende aanvragen op met een beleidsregel die escalatieconfiguratie heeft
   const aanvragen = await db
     .select({

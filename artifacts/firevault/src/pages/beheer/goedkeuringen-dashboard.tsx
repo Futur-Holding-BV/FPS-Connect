@@ -2,6 +2,7 @@
 // Toont alle open, verlopen en recent afgehandelde aanvragen met
 // escalatiestatus. Zichtbaar voor iedereen met goedkeuring-bevoegdheid niveau 1.
 import { useMemo, useState } from "react";
+import { Link } from "wouter";
 import {
   useListGoedkeuringDashboard,
   useGoedkeuringAanvraagGoedkeuren,
@@ -32,10 +33,58 @@ import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from "@/components/ui/tooltip";
 import {
-  CheckCircle2, XCircle, Clock, AlertTriangle, Bell, ChevronRight, LayoutDashboard, Download,
+  CheckCircle2, XCircle, Clock, AlertTriangle, Bell, ChevronRight, LayoutDashboard, Download, Play,
 } from "lucide-react";
 import { GOEDKEURING_STATUS_INFO } from "@/components/goedkeuring/goedkeuring-widget";
 import { PaginaHulp } from "@/components/pagina-hulp";
+
+// ── Object-doorklik routering ─────────────────────────────────────────────────
+// Mapt een object_type + object_id naar een frontend-URL zodat de beheerder
+// direct vanuit het dashboard naar het onderliggende document kan navigeren.
+function maakObjectUrl(objectType: string, objectId: number): string | null {
+  switch (objectType) {
+    case "verkoop_factuur":
+    case "inkoop_factuur":
+    case "creditnota":
+    case "prijsafwijking":
+      return `/facturen/${objectId}`;
+    case "offerte":
+      return `/offertes/${objectId}`;
+    case "inkoopbon":
+      return `/inkoop/overzicht`;
+    case "verlofaanvraag":
+      return `/personeel/verlof`;
+    case "arbeidsovereenkomst":
+    case "hrm_besluit":
+      return `/personeel/contracten`;
+    case "inspectie":
+    case "opleverrapport":
+    case "certificaat":
+      return null;
+    default:
+      return null;
+  }
+}
+
+// ── Prioriteit — afgeleid uit escalatiestatus ─────────────────────────────────
+function bepaalPrioriteit(item: GoedkeuringDashboardItem): "kritiek" | "hoog" | "normaal" {
+  const types = new Set(item.escalaties.map((e) => e.type));
+  if (types.has("max_doorlooptijd") || types.has("escalatie_2")) return "kritiek";
+  if (types.has("escalatie_1") || item.is_verlopen) return "hoog";
+  return "normaal";
+}
+
+const PRIORITEIT_STIJL: Record<string, string> = {
+  kritiek: "bg-destructive/10 text-destructive border-destructive/20",
+  hoog: "bg-orange-100 text-orange-800 border-orange-200",
+  normaal: "bg-muted text-muted-foreground border-border",
+};
+
+const PRIORITEIT_LABEL: Record<string, string> = {
+  kritiek: "Kritiek",
+  hoog: "Hoog",
+  normaal: "Normaal",
+};
 
 // ── Label-helpers ──────────────────────────────────────────────────────────────
 
@@ -226,8 +275,10 @@ export default function GoedkeuringenDashboard() {
   const [venster, setVenster] = useState<string>("7");
   const [alleenMijnActies, setAlleenMijnActies] = useState(true);
   const [afwijzenAanvraag, setAfwijzenAanvraag] = useState<GoedkeuringDashboardItem | null>(null);
+  const [bewakingBezig, setBewakingBezig] = useState(false);
 
   const magGoedkeuren = heeftNiveau("goedkeuring", 3);
+  const magBewaking = heeftNiveau("goedkeuring", 4);
 
   const params = useMemo((): ListGoedkeuringDashboardParams | undefined => {
     const p: ListGoedkeuringDashboardParams = {};
@@ -272,6 +323,24 @@ export default function GoedkeuringenDashboard() {
     },
   });
 
+  async function voerBewakingUit() {
+    setBewakingBezig(true);
+    try {
+      const resp = await fetch("/api/goedkeuring/bewaking/uitvoeren", { method: "POST" });
+      const json = await resp.json() as { verwerkt?: number; bericht?: string; error?: string };
+      if (!resp.ok) {
+        toast({ title: "Bewaking mislukt", description: json.error ?? "Onbekende fout", variant: "destructive" });
+        return;
+      }
+      toast({ title: `Bewaking uitgevoerd`, description: json.bericht ?? `${json.verwerkt ?? 0} aanvragen verwerkt` });
+      verversen();
+    } catch {
+      toast({ title: "Bewaking mislukt", description: "Verbindingsfout", variant: "destructive" });
+    } finally {
+      setBewakingBezig(false);
+    }
+  }
+
   if (!heeftNiveau("goedkeuring", 1)) {
     return (
       <div className="p-6 text-sm text-muted-foreground">
@@ -284,9 +353,32 @@ export default function GoedkeuringenDashboard() {
     <div className="flex flex-col gap-5 p-6">
       <PaginaHulp pagina="goedkeuringen-dashboard" />
       {/* Header */}
-      <div className="flex items-center gap-2">
-        <LayoutDashboard className="h-5 w-5 text-primary" />
-        <h1 className="text-xl font-semibold">Goedkeuringen — dashboard</h1>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <LayoutDashboard className="h-5 w-5 text-primary" />
+          <h1 className="text-xl font-semibold">Goedkeuringen — dashboard</h1>
+        </div>
+        {magBewaking && (
+          <TooltipProvider delayDuration={200}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={voerBewakingUit}
+                  disabled={bewakingBezig}
+                >
+                  <Play className="h-3.5 w-3.5 mr-1.5" />
+                  {bewakingBezig ? "Bezig..." : "Bewaking uitvoeren"}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="max-w-60 text-xs">
+                Voert de escalatie-/herinneringsbewaking direct uit (normaal elk uur automatisch).
+                Stuurt herinneringen en escalaties voor verlopen aanvragen.
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
       </div>
 
       {/* Statistieken */}
@@ -382,12 +474,12 @@ export default function GoedkeuringenDashboard() {
                   <TableHead>Documenttype</TableHead>
                   <TableHead>Omschrijving</TableHead>
                   <TableHead>Bedrag</TableHead>
+                  <TableHead>Prioriteit</TableHead>
                   <TableHead>Ingediend door</TableHead>
-                  <TableHead>Ingediend op</TableHead>
-                  <TableHead>Openstaand</TableHead>
+                  <TableHead>Deadline</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Afgehandeld door</TableHead>
                   <TableHead>Escalatie / bewaking</TableHead>
+                  <TableHead className="w-10" />
                   {magGoedkeuren && <TableHead className="w-36" />}
                 </TableRow>
               </TableHeader>
@@ -402,6 +494,8 @@ export default function GoedkeuringenDashboard() {
                 {(items ?? []).map((item) => {
                   const info = GOEDKEURING_STATUS_INFO[item.status] ?? GOEDKEURING_STATUS_INFO.ingediend;
                   const StatusIcoon = info.icon;
+                  const prioriteit = bepaalPrioriteit(item);
+                  const objectUrl = maakObjectUrl(item.object_type, item.object_id);
                   return (
                     <TableRow key={item.id} className={item.is_verlopen ? "bg-amber-50/50" : undefined}>
                       <TableCell className="font-mono text-xs text-muted-foreground">#{item.id}</TableCell>
@@ -412,10 +506,22 @@ export default function GoedkeuringenDashboard() {
                       <TableCell className="text-sm">
                         {euro(item.bedrag) ?? "—"}
                       </TableCell>
+                      <TableCell>
+                        {item.status === "ingediend" ? (
+                          <span className={`inline-flex items-center rounded border px-1.5 py-0.5 text-xs font-medium ${PRIORITEIT_STIJL[prioriteit]}`}>
+                            {PRIORITEIT_LABEL[prioriteit]}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
                       <TableCell className="text-sm">{item.ingediend_door_naam ?? "—"}</TableCell>
-                      <TableCell className="text-sm">{datumKort(item.ingediend_op)}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {item.status === "ingediend" ? datumDuur(item.ingediend_op) : "—"}
+                      <TableCell className="text-sm">
+                        {item.deadline_op ? (
+                          <span className={item.is_verlopen ? "text-destructive font-medium" : "text-muted-foreground"}>
+                            {datumKort(item.deadline_op)}
+                          </span>
+                        ) : "—"}
                       </TableCell>
                       <TableCell>
                         <span className="inline-flex items-center gap-1">
@@ -423,13 +529,26 @@ export default function GoedkeuringenDashboard() {
                           <span className="text-xs">{info.label}</span>
                         </span>
                       </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {["goedgekeurd", "afgewezen"].includes(item.status)
-                          ? (item.afgehandeld_door_naam ?? "—")
-                          : "—"}
-                      </TableCell>
                       <TableCell>
                         <EscalatieBadges item={item} />
+                      </TableCell>
+                      <TableCell>
+                        {objectUrl ? (
+                          <TooltipProvider delayDuration={200}>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Link href={objectUrl}>
+                                  <Button variant="ghost" size="icon" className="h-7 w-7">
+                                    <ChevronRight className="h-4 w-4" />
+                                  </Button>
+                                </Link>
+                              </TooltipTrigger>
+                              <TooltipContent side="left" className="text-xs">
+                                Ga naar het document
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        ) : null}
                       </TableCell>
                       {magGoedkeuren && (
                         <TableCell>
