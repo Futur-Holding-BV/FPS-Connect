@@ -1,11 +1,15 @@
-// E2E: firevault web-app — gebruikersmenu linksonder in de sidebar.
+// E2E: firevault web-app — gebruikersmenu linksonder in de sidebar + taakbalk.
 // Bewijst per knop dat hij werkt (business-scenario-validatie, Kwaliteitskader):
 //   - Bekijken als (alleen hoofdbeheerder): wisselt weergave en zet terug
-//   - Taalkeuze: wisselt taal (POST /auth/taal) en zet terug naar Nederlands
-//   - Wachtwoord: opent de dialoog en sluit weer (niet-destructief)
 //   - Privacy: navigeert naar /mijn/privacy
 //   - App-informatie: navigeert naar /info
-//   - Uitloggen: POST /auth/logout (204) en beland op het loginscherm
+//   - Uitloggen (taakbalk, helemaal links): POST /auth/logout (204) en beland
+//     op het loginscherm
+//
+// Opmerking (2026-07-13): de knoppen "Wachtwoord" en de taalkeuze zijn op
+// verzoek van de gebruiker uit het menu verwijderd (taal wordt op het
+// inlogscherm gekozen; wachtwoord via "wachtwoord vergeten" of de beheerder).
+// "Uitloggen" is in de kantooromgeving verplaatst naar de taakbalk.
 //
 // Draaien: pnpm --filter @workspace/scripts run e2e-web
 // Vereist: lopende workflows api-server + firevault web, env DATABASE_URL en
@@ -68,7 +72,7 @@ test.beforeAll(async () => {
   await setupE2eWachtwoordAccounts();
 });
 
-test("Web: gebruikersmenu — alle knoppen werken (Bekijken als, taal, wachtwoord, privacy, info, uitloggen)", async ({ page }) => {
+test("Web: gebruikersmenu — alle knoppen werken (Bekijken als, privacy, info, uitloggen via taakbalk)", async ({ page }) => {
   // Een frisse Playwright-context heeft het welkom-scherm nog niet afgerond
   // (localStorage-sleutel "fps.welkom.afgerond"); zonder deze vlag landt de
   // gebruiker na login op /welkom in plaats van op het platform met de sidebar.
@@ -87,7 +91,8 @@ test("Web: gebruikersmenu — alle knoppen werken (Bekijken als, taal, wachtwoor
     if (await naarPlatform.isVisible().catch(() => false)) {
       await naarPlatform.click();
     }
-    // Sidebar-menu zichtbaar: de uitlogknop (met vast title-attribuut) is de anker.
+    // Platform zichtbaar: de uitlogknop op de taakbalk (vast title-attribuut)
+    // is de anker; in de kantooromgeving staat hij niet meer in de sidebar.
     await expect(page.getByTitle("Uitloggen")).toBeVisible({ timeout: INHOUD_TIMEOUT });
   });
 
@@ -114,13 +119,9 @@ test("Web: gebruikersmenu — alle knoppen werken (Bekijken als, taal, wachtwoor
     });
   });
 
-  await test.step("Wachtwoord: dialoog opent en sluit (niet-destructief)", async () => {
-    await page.getByTitle("Wachtwoord wijzigen").click();
-    const dialoog = page.getByRole("dialog");
-    await expect(dialoog).toBeVisible({ timeout: INHOUD_TIMEOUT });
-    await expect(dialoog.getByText("Wachtwoord wijzigen")).toBeVisible();
-    await dialoog.getByRole("button", { name: "Annuleren" }).click();
-    await expect(page.getByRole("dialog")).not.toBeVisible({ timeout: INHOUD_TIMEOUT });
+  await test.step("Verwijderde knoppen: geen Wachtwoord- of Taal-knop meer in het menu", async () => {
+    await expect(page.getByTitle("Wachtwoord wijzigen")).toHaveCount(0);
+    await expect(page.locator('button[title="Taal"]')).toHaveCount(0);
   });
 
   await test.step("Privacy: navigeert naar /mijn/privacy", async () => {
@@ -135,36 +136,7 @@ test("Web: gebruikersmenu — alle knoppen werken (Bekijken als, taal, wachtwoor
     await expect(page.getByTitle("Uitloggen")).toBeVisible();
   });
 
-  await test.step("Taalkeuze: wissel naar English (POST /auth/taal) en zet terug naar Nederlands", async () => {
-    await page.locator('button[title="Taal"]').click();
-    const [respEn] = await Promise.all([
-      page.waitForResponse(
-        (r) => r.url().includes("/api/auth/taal") && r.request().method() === "POST",
-        { timeout: INHOUD_TIMEOUT },
-      ),
-      page.getByRole("menuitem", { name: /English/ }).click(),
-    ]);
-    expect([200, 204]).toContain(respEn.status());
-    await expect(page.getByRole("button", { name: /English/ })).toBeVisible({
-      timeout: INHOUD_TIMEOUT,
-    });
-
-    // Terug naar Nederlands zodat de rest van de app-tekst weer NL is.
-    await page.getByRole("button", { name: /English/ }).click();
-    const [respNl] = await Promise.all([
-      page.waitForResponse(
-        (r) => r.url().includes("/api/auth/taal") && r.request().method() === "POST",
-        { timeout: INHOUD_TIMEOUT },
-      ),
-      page.getByRole("menuitem", { name: /Nederlands/ }).click(),
-    ]);
-    expect([200, 204]).toContain(respNl.status());
-    await expect(page.locator('button[title="Taal"]')).toBeVisible({
-      timeout: INHOUD_TIMEOUT,
-    });
-  });
-
-  await test.step("Uitloggen: POST /auth/logout (204) en beland op het loginscherm", async () => {
+  await test.step("Uitloggen (taakbalk): POST /auth/logout (204) en beland op het loginscherm", async () => {
     const [resp] = await Promise.all([
       page.waitForResponse(
         (r) => r.url().includes("/api/auth/logout") && r.request().method() === "POST",
