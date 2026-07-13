@@ -2058,7 +2058,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
-          <GebruikerMenu />
+          <GebruikerMenu toonUitloggen={false} />
         </SidebarFooter>
       </Sidebar>
 

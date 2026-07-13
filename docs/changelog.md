@@ -1,3 +1,16 @@
+## 2026-07-13 — Gebruikersmenu opgeschoond: uitloggen naar de taakbalk
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (alleen frontend, geen API-/DB-wijziging)
+
+**Op verzoek van de gebruiker:**
+- Knop "Wachtwoord" verwijderd uit het gebruikersmenu onderin de sidebar (incl. de wijzig-dialoog); wachtwoord wijzigen loopt via "wachtwoord vergeten" op het inlogscherm of via de beheerder.
+- Taalkeuze verwijderd uit het gebruikersmenu; de taal wordt al gekozen op het inlogscherm.
+- Knop "Uitloggen" verplaatst naar helemaal links op de taakbalk, links naast het Nieuws-blok (altijd zichtbaar, ook als de nieuwsbalk verborgen is).
+
+**Behoud voor portalen zonder taakbalk:** de taakbalk bestaat alleen in de kantooromgeving (beheerder-layout). In het monteur- en klantportaal blijft de uitlogknop daarom in het gebruikersmenu staan (`toonUitloggen`-instelling per layout), anders zouden die gebruikers niet meer kunnen uitloggen.
+
+---
+
 ## 2026-07-13 — GitHub-synchronisatie: deploy-workflow geaccordeerd en repo gelijkgetrokken
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (geen codewijziging; alleen git-synchronisatie)

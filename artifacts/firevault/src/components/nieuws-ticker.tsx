@@ -1,13 +1,17 @@
 import { useRef, useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { useListNieuws, getListNieuwsQueryKey } from "@workspace/api-client-react";
-import { Newspaper, Pause, Play, X } from "lucide-react";
+import { LogOut, Newspaper, Pause, Play, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/context/auth-context";
 import { RadioSpeler } from "@/components/radio-speler";
 import { PauzeKnopTaakbalk } from "@/components/pauze/pauze-modal";
 import { WeergaveKnopTaakbalk } from "@/components/weergave/weergave-modal";
 import { OnlineGebruikersTaakbalk } from "@/components/online-gebruikers/online-gebruikers";
 
 export function NieuwsTicker() {
+  const { uitloggen } = useAuth();
+  const { t } = useTranslation();
   const { data: nieuws = [], isLoading, refetch } = useListNieuws({
     query: {
       queryKey: getListNieuwsQueryKey(),
@@ -43,6 +47,17 @@ export function NieuwsTicker() {
       `}</style>
 
       <div className="fixed bottom-0 left-0 z-40 h-14 flex items-stretch bg-[#1a1f2b] border-t border-white/10 text-white select-none w-full">
+
+        {/* Uitloggen — altijd helemaal links */}
+        <button
+          type="button"
+          title={t("menu.uitloggen")}
+          onClick={() => void uitloggen()}
+          className="flex-shrink-0 flex items-center gap-2 px-5 border-r border-white/10 text-white/50 hover:text-white transition-colors"
+        >
+          <LogOut className="w-5 h-5" />
+          <span className="text-sm font-medium">{t("menu.uitloggen")}</span>
+        </button>
 
         {/* Nieuws-sectie — alleen wanneer niet verborgen */}
         {!nieuwsVerborgen ? (
