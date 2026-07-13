@@ -19,8 +19,9 @@ const router = Router();
 
 // ── In-memory rate-limiter voor login-endpoints ───────────────────────────────
 // Beschermt /auth/login, /auth/2fa/verify en /auth/mobile/login tegen
-// brute-force aanvallen. Per IP maximaal 10 pogingen per 15 minuten.
-// Bij overschrijding: 429 + Retry-After header.
+// brute-force aanvallen. Per IP maximaal RL_MAX pogingen per 15 minuten
+// (zie de toelichting bij RL_MAX hieronder). Bij overschrijding: 429 +
+// Retry-After header.
 
 interface RateLimitEntry {
   count: number;
