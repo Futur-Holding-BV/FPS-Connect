@@ -45,6 +45,22 @@
 
 ---
 
+## 2026-07-13 — E2E-test: nieuw gebouw opent direct de detailpagina
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (alleen testcode + testaccount-infrastructuur; geen wijziging aan app-code)
+
+**Aanleiding:** na "Gebouw opslaan" in de dialoog "Nieuw gebouw" wordt de gebruiker direct doorgestuurd naar de detailpagina `/gebouwen/:id`. Deze flow leunt op de returnwaarde van de create-mutatie en op wouter-navigatie na het sluiten van de dialoog, maar had geen geautomatiseerde regressietest.
+
+**Wijzigingen:**
+- Nieuwe Playwright-spec `scripts/e2e/web-gebouw-aanmaken.spec.ts`: logt in met TOTP, opent de dialoog "Nieuw gebouw" op `/gebouwen`, vult naam (uniek per run) + adres in, klikt "Gebouw opslaan" en verifieert: URL wordt `/gebouwen/:id`, de dialoog is dicht, de detailpagina toont de gebouwnaam; daarna terug naar `/gebouwen`, zoekt op de unieke naam en verifieert dat het gebouw in de lijst staat
+- Nieuw vast e2e-beheerdersaccount `e2e-web-admin@fps.local` (rol hoofdbeheerder) in `scripts/src/e2e-monteur-testaccount.ts`: de knop "Nieuw gebouw" is beheerder-only, en het bestaande web-account houdt bewust rol "gebruiker" zodat de overige web-specs het niet-beheerder-perspectief blijven testen; runner `e2e-web-run.ts` archiveert dit account ook in het finally-blok
+- Opruiming van het testgebouw gebeurt in `afterEach` direct via de database (niet via `DELETE /api/gebouwen/:id`): de governance-middleware classificeert die verwijdering als "kritiek" en blokkeert hem met 403 omdat de sessie geen rol bevat — ook voor een hoofdbeheerder (bekende beperking, zie hieronder)
+- **Bewijs:** volledige e2e-web-suite groen (9 tests: 8 passed, 1 skipped, 4.5m), inclusief de nieuwe spec; dev-database na afloop gecontroleerd — geen achtergebleven testgebouwen
+
+**Aandachtspunt (niet in deze taak opgelost):** `DELETE /gebouwen/:id` wordt door de governance-middleware voor iedereen geblokkeerd (403), ook voor hoofdbeheerders, omdat `req.session.rol` nooit wordt gezet bij login (alleen `userId`). Als gebouwen verwijderen via de UI gewenst is, moet de rol in de sessie of via de permissieservice aan de governance-context worden doorgegeven.
+
+---
+
 ## 2026-07-13 — Meerdere functies per medewerker: end-to-end bewezen + prominent zichtbaar op profielkaart
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (additieve UI-wijziging; backend ongewijzigd en aantoonbaar werkend)

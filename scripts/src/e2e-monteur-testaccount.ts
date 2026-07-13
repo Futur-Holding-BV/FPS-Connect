@@ -33,6 +33,14 @@ export const E2E_WEB_EMAIL = "e2e-web@fps.local";
 export const E2E_WEB_WACHTWOORD = "E2eWebTest!2026";
 export const E2E_WEB_TOTP_SECRET = "KJ4WWZLNMNXW4RTF";
 
+// Vast beheerdersaccount voor web-e2e-specs die beheerder-only UI nodig hebben
+// (o.a. de knop "Nieuw gebouw" in web-gebouw-aanmaken.spec.ts). Bewust een
+// APART account: het gewone web-account houdt rol "gebruiker" zodat de overige
+// web-specs het niet-beheerder-perspectief blijven testen.
+export const E2E_WEB_ADMIN_EMAIL = "e2e-web-admin@fps.local";
+export const E2E_WEB_ADMIN_WACHTWOORD = "E2eWebAdmin!2026";
+export const E2E_WEB_ADMIN_TOTP_SECRET = "GJ3XA2LDN5UW45DF";
+
 // Veiligheidsgrendel: e2e-accounts mogen uitsluitend in de dev-omgeving
 // worden aangemaakt of geheractiveerd — nooit in een deployment/productie.
 function weigerBuitenDev(): void {
@@ -56,8 +64,10 @@ async function maakOfUpdateE2eAccount(opties: {
   naam: string;
   wachtwoord: string;
   totpSecret: string;
+  rol?: "gebruiker" | "hoofdbeheerder";
 }): Promise<number> {
   weigerBuitenDev();
+  const rol = opties.rol ?? "gebruiker";
   const hash = await bcrypt.hash(opties.wachtwoord, 10);
   const bevoegdheden = Object.fromEntries(MODULE_IDS.map((m) => [m, 4]));
 
@@ -71,7 +81,7 @@ async function maakOfUpdateE2eAccount(opties: {
       .update(gebruikersTable)
       .set({
         naam: opties.naam,
-        rol: "gebruiker",
+        rol,
         wachtwoord: hash,
         totpSecret: opties.totpSecret,
         tweeFactorIngeschakeld: true,
@@ -88,7 +98,7 @@ async function maakOfUpdateE2eAccount(opties: {
     .values({
       naam: opties.naam,
       email: opties.email,
-      rol: "gebruiker",
+      rol,
       wachtwoord: hash,
       totpSecret: opties.totpSecret,
       tweeFactorIngeschakeld: true,
@@ -153,6 +163,17 @@ export async function setupE2eWebAccount(): Promise<number> {
   });
 }
 
+// Vast beheerdersaccount voor de web-suite (web-gebouw-aanmaken).
+export async function setupE2eWebAdminAccount(): Promise<number> {
+  return maakOfUpdateE2eAccount({
+    email: E2E_WEB_ADMIN_EMAIL,
+    naam: "E2E Test Web Beheerder",
+    wachtwoord: E2E_WEB_ADMIN_WACHTWOORD,
+    totpSecret: E2E_WEB_ADMIN_TOTP_SECRET,
+    rol: "hoofdbeheerder",
+  });
+}
+
 // Archiveert en deactiveert een vast e2e-account ná een testrun, zodat het
 // niet zichtbaar blijft in Gebruikersbeheer en niet kan inloggen buiten een
 // test om. De eerstvolgende testrun zet het via de setup-functie (idempotent)
@@ -170,6 +191,10 @@ export async function archiveerE2eAccount(): Promise<void> {
 
 export async function archiveerE2eWebAccount(): Promise<void> {
   await archiveerAccount(E2E_WEB_EMAIL);
+}
+
+export async function archiveerE2eWebAdminAccount(): Promise<void> {
+  await archiveerAccount(E2E_WEB_ADMIN_EMAIL);
 }
 
 // Wacht tot het huidige TOTP-venster voldoende resttijd heeft en geeft dan een
@@ -191,6 +216,15 @@ export async function genereerVersWebTotp(minResterendeSec = 20): Promise<string
     await new Promise((r) => setTimeout(r, (resterend + 1) * 1000));
   }
   return authenticator.generate(E2E_WEB_TOTP_SECRET);
+}
+
+// Zelfde als genereerVersTotp maar voor het web-beheerdersaccount.
+export async function genereerVersWebAdminTotp(minResterendeSec = 20): Promise<string> {
+  const resterend = authenticator.timeRemaining();
+  if (resterend < minResterendeSec) {
+    await new Promise((r) => setTimeout(r, (resterend + 1) * 1000));
+  }
+  return authenticator.generate(E2E_WEB_ADMIN_TOTP_SECRET);
 }
 
 // Wacht tot het volgende 30s-venster begint. Gebruikt tussen mislukte

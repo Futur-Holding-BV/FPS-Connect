@@ -12,7 +12,10 @@ import { spawn, type ChildProcess } from "node:child_process";
 import http from "node:http";
 import https from "node:https";
 
-import { archiveerE2eWebAccount } from "./e2e-monteur-testaccount";
+import {
+  archiveerE2eWebAccount,
+  archiveerE2eWebAdminAccount,
+} from "./e2e-monteur-testaccount";
 import { archiveerE2eWachtwoordAccounts } from "./e2e-wachtwoord-testaccounts";
 
 const WORKSPACE_ROOT = new URL("../../", import.meta.url).pathname;
@@ -175,6 +178,7 @@ async function main(): Promise<void> {
       // haar eigen account.
       await archiveerE2eWachtwoordAccounts();
       await archiveerE2eWebAccount();
+      await archiveerE2eWebAdminAccount();
       log("E2e-testaccounts gearchiveerd en gedeactiveerd.");
     } catch (err) {
       log(`Waarschuwing: opruimen e2e-testaccounts mislukt: ${(err as Error).message}`);
