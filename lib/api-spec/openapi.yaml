@@ -7190,6 +7190,25 @@ paths:
         "204":
           description: Verwijderd
 
+  /inbox/items/{id}/cv-analyse:
+    post:
+      operationId: analyseerInboxCv
+      tags: [inbox]
+      summary: CV uit inbox-item met AI analyseren voor onboarding-voorstel (geen medewerker wordt aangemaakt)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CvAnalyseResultaat"
+
   /inbox/items/{id}/goedkeuren:
     post:
       operationId: goedkeurenInboxItem
@@ -24028,6 +24047,9 @@ components:
           type: string
         document_categorie:
           type: ["string", "null"]
+        document_subtype:
+          type: ["string", "null"]
+          description: AI-herkend subtype binnen de categorie (bijv. "cv" bij hr_document).
         bestemming:
           type: ["string", "null"]
         gekoppelde_entiteit_type:

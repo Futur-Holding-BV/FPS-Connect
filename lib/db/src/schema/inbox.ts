@@ -29,6 +29,7 @@ export const inboxItemsTable = pgTable("inbox_items", {
   geuploadOp: timestamp("geupload_op").notNull().defaultNow(),
   status: text("status").notNull().default("nieuw"),
   documentCategorie: text("document_categorie").default("onbekend"),
+  documentSubtype: text("document_subtype"),
   bestemming: text("bestemming").default("Onbekend"),
   gekoppeldeEntiteitType: text("gekoppelde_entiteit_type"),
   gekoppeldeEntiteitId: integer("gekoppelde_entiteit_id"),

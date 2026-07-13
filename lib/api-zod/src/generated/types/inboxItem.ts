@@ -23,6 +23,11 @@ export interface InboxItem {
   status: string;
   /** @nullable */
   document_categorie?: string | null;
+  /**
+     * AI-herkend subtype binnen de categorie (bijv. "cv" bij hr_document).
+     * @nullable
+     */
+  document_subtype?: string | null;
   /** @nullable */
   bestemming?: string | null;
   /** @nullable */

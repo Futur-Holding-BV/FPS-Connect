@@ -8467,6 +8467,7 @@ export const ListInboxItemsResponseItem = zod.object({
   "geupload_op": zod.string().nullish(),
   "status": zod.string(),
   "document_categorie": zod.string().nullish(),
+  "document_subtype": zod.string().nullish().describe('AI-herkend subtype binnen de categorie (bijv. \"cv\" bij hr_document).'),
   "bestemming": zod.string().nullish(),
   "gekoppelde_entiteit_type": zod.string().nullish(),
   "gekoppelde_entiteit_id": zod.number().nullish(),
@@ -8536,6 +8537,7 @@ export const GetInboxItemResponse = zod.object({
   "geupload_op": zod.string().nullish(),
   "status": zod.string(),
   "document_categorie": zod.string().nullish(),
+  "document_subtype": zod.string().nullish().describe('AI-herkend subtype binnen de categorie (bijv. \"cv\" bij hr_document).'),
   "bestemming": zod.string().nullish(),
   "gekoppelde_entiteit_type": zod.string().nullish(),
   "gekoppelde_entiteit_id": zod.number().nullish(),
@@ -8606,6 +8608,7 @@ export const UpdateInboxItemResponse = zod.object({
   "geupload_op": zod.string().nullish(),
   "status": zod.string(),
   "document_categorie": zod.string().nullish(),
+  "document_subtype": zod.string().nullish().describe('AI-herkend subtype binnen de categorie (bijv. \"cv\" bij hr_document).'),
   "bestemming": zod.string().nullish(),
   "gekoppelde_entiteit_type": zod.string().nullish(),
   "gekoppelde_entiteit_id": zod.number().nullish(),
@@ -8654,6 +8657,31 @@ export const DeleteInboxItemResponse = zod.void()
 
 
 /**
+ * @summary CV uit inbox-item met AI analyseren voor onboarding-voorstel (geen medewerker wordt aangemaakt)
+ */
+export const AnalyseerInboxCvParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AnalyseerInboxCvResponse = zod.object({
+  "naam": zod.string().nullable(),
+  "email": zod.string().nullish(),
+  "telefoon": zod.string().nullish(),
+  "mobiel": zod.string().nullish(),
+  "geboortedatum": zod.string().nullish(),
+  "adres": zod.string().nullish(),
+  "postcode": zod.string().nullish(),
+  "woonplaats": zod.string().nullish(),
+  "rijbewijs": zod.string().nullish(),
+  "vca_vervaldatum": zod.string().nullish(),
+  "bhv_vervaldatum": zod.string().nullish(),
+  "ehbo_vervaldatum": zod.string().nullish(),
+  "werkervaring_samenvatting": zod.string().nullish(),
+  "ai_toelichting": zod.string().nullish()
+})
+
+
+/**
  * @summary Inbox item goedkeuren
  */
 export const GoedkeurenInboxItemParams = zod.object({
@@ -8674,6 +8702,7 @@ export const GoedkeurenInboxItemResponse = zod.object({
   "geupload_op": zod.string().nullish(),
   "status": zod.string(),
   "document_categorie": zod.string().nullish(),
+  "document_subtype": zod.string().nullish().describe('AI-herkend subtype binnen de categorie (bijv. \"cv\" bij hr_document).'),
   "bestemming": zod.string().nullish(),
   "gekoppelde_entiteit_type": zod.string().nullish(),
   "gekoppelde_entiteit_id": zod.number().nullish(),
@@ -8732,6 +8761,7 @@ export const AfwijzenInboxItemResponse = zod.object({
   "geupload_op": zod.string().nullish(),
   "status": zod.string(),
   "document_categorie": zod.string().nullish(),
+  "document_subtype": zod.string().nullish().describe('AI-herkend subtype binnen de categorie (bijv. \"cv\" bij hr_document).'),
   "bestemming": zod.string().nullish(),
   "gekoppelde_entiteit_type": zod.string().nullish(),
   "gekoppelde_entiteit_id": zod.number().nullish(),
@@ -8793,6 +8823,7 @@ export const VerplaatsenInboxItemResponse = zod.object({
   "geupload_op": zod.string().nullish(),
   "status": zod.string(),
   "document_categorie": zod.string().nullish(),
+  "document_subtype": zod.string().nullish().describe('AI-herkend subtype binnen de categorie (bijv. \"cv\" bij hr_document).'),
   "bestemming": zod.string().nullish(),
   "gekoppelde_entiteit_type": zod.string().nullish(),
   "gekoppelde_entiteit_id": zod.number().nullish(),
@@ -8847,6 +8878,7 @@ export const TerBeoordelingInboxItemResponse = zod.object({
   "geupload_op": zod.string().nullish(),
   "status": zod.string(),
   "document_categorie": zod.string().nullish(),
+  "document_subtype": zod.string().nullish().describe('AI-herkend subtype binnen de categorie (bijv. \"cv\" bij hr_document).'),
   "bestemming": zod.string().nullish(),
   "gekoppelde_entiteit_type": zod.string().nullish(),
   "gekoppelde_entiteit_id": zod.number().nullish(),

@@ -155,6 +155,7 @@ import type {
   CrmScoutStatus,
   CrmTaak,
   CrmTaakInput,
+  CvAnalyseResultaat,
   DashboardStats,
   Declaratie,
   DeclaratieAfwijzingInput,
@@ -24853,6 +24854,76 @@ export const useDeleteInboxItem = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getDeleteInboxItemMutationOptions(options));
+    }
+
+export const getAnalyseerInboxCvUrl = (id: number,) => {
+
+
+
+
+  return `/api/inbox/items/${id}/cv-analyse`
+}
+
+/**
+ * @summary CV uit inbox-item met AI analyseren voor onboarding-voorstel (geen medewerker wordt aangemaakt)
+ */
+export const analyseerInboxCv = async (id: number, options?: RequestInit): Promise<CvAnalyseResultaat> => {
+
+  return customFetch<CvAnalyseResultaat>(getAnalyseerInboxCvUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getAnalyseerInboxCvMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof analyseerInboxCv>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof analyseerInboxCv>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['analyseerInboxCv'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof analyseerInboxCv>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  analyseerInboxCv(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AnalyseerInboxCvMutationResult = NonNullable<Awaited<ReturnType<typeof analyseerInboxCv>>>
+
+    export type AnalyseerInboxCvMutationError = ErrorType<unknown>
+
+    /**
+ * @summary CV uit inbox-item met AI analyseren voor onboarding-voorstel (geen medewerker wordt aangemaakt)
+ */
+export const useAnalyseerInboxCv = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof analyseerInboxCv>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof analyseerInboxCv>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getAnalyseerInboxCvMutationOptions(options));
     }
 
 export const getGoedkeurenInboxItemUrl = (id: number,) => {
