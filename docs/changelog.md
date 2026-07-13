@@ -1,3 +1,25 @@
+## 2026-07-13 — Jaarrekeningen: metadatacorrectie met cascade naar meerjarenoverzicht + jaargroepering
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (additief; geen schema- of OpenAPI-wijziging, contract ondersteunde de velden al)
+
+**Aanleiding:** gebruikersmelding uit productie: een jaarrekening 2023 ("FPS 2023 Geconsolideeerd-def.pdf") stond als "Enkelvoudig" geclassificeerd en de data leek niet bruikbaar voor het meerjarenoverzicht — "een jaarrekening van 2023 moet geplaatst worden bij 2023".
+
+**Rootoorzaak (drieledig):**
+- Het document is destijds geüpload vóór het typo-tolerante "geconsolideerd"-vangnet (dat herkent "Geconsolideeerd" met tikfout inmiddels wel); de foute classificatie bleef staan.
+- De pagina Jaarrekeningen bood géén mogelijkheid om boekjaar/entiteit/soort te corrigeren — de PATCH-API ondersteunde die velden al, maar de UI niet.
+- De PATCH-route cascadeerde metadata-wijzigingen niet naar de gedenormaliseerde kerncijfers (entiteit/boekjaar/geconsolideerd), terwijl het meerjarenoverzicht precies die kolommen leest. Een correctie zou het overzicht dus nooit bereiken.
+
+**Wat is er gewijzigd:**
+- `artifacts/api-server/src/routes/financieel-jaarrekeningen.ts`: PATCH cascadeert wijzigingen in entiteit/boekjaar/subtype nu naar álle kerncijfers van het document (incl. auditlogregel "Kerncijfers meegetrokken naar …").
+- `artifacts/firevault/src/pages/financieel/jaarrekeningen/index.tsx`: nieuwe knop "Gegevens corrigeren" in het detailpaneel (boekjaar/entiteit/soort jaarrekening, met validatie 1990–2100); documentenlijst nu gegroepeerd per boekjaar (recentste bovenaan, "Boekjaar onbekend" onderaan).
+- `artifacts/firevault/src/pages/financieel/meerjarenoverzicht/index.tsx`: lege-staat legt nu uit dat de schakelaar "Geconsolideerd" bepaalt welke jaarrekeningen meetellen.
+- `scripts/src/verificatie-jaarrekening-cascade.ts`: nieuw herbruikbaar verificatiescript dat het volledige businessscenario end-to-end bewijst.
+- **Na architect-review aangescherpt:** alle schrijfacties van de PATCH (documentupdate, dataset-statuscascade, metadatacascade, auditlog) zitten nu in één databasetransactie — een fout halverwege kan de gedenormaliseerde kerncijferkolommen niet meer van het document laten afwijken. Ook wordt de opslaglocatie nu correct herberekend wanneer het boekjaar wordt leeggemaakt (was: bleef op het oude jaar staan).
+
+**Bewijs (run 2026-07-13, dev):** seed document met foute metadata (2022/enkelvoudig) + 2 kerncijfers → PATCH naar 2023/geconsolideerd → DB-bewijs: beide kerncijfers boekjaar=2023, geconsolideerd=true, entiteit gecorrigeerd → dataset goedgekeurd → meerjarenoverzicht (geconsolideerd) toont boekjaar 2023 met omzet 1.500.000. RESULTAAT: PASS. Typecheck api-server, firevault en scripts groen.
+
+**Voor productie betekent dit:** na deploy kan het bestaande 2023-document via "Gegevens corrigeren" op Geconsolideerd/2023 gezet worden; daarna kerncijfers goedkeuren en het meerjarenoverzicht toont 2023 correct.
+
 ## 2026-07-13 — Productie-deploy hersteld (schema-healthcheck) + facturen-dashboard reparatie
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (migrate-pijplijn en healthcheck structureel gelijkgetrokken; route-volgordefout hersteld; geen datamigratie)

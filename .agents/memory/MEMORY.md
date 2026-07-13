@@ -125,3 +125,4 @@
 - [Toolbox categorie-whitelist](toolbox-categorie-canoniek.md) — canonieke categorielijst synchroon houden tussen frontend/batch-endpoint/scripts; endpoint valideert (400) en normaliseert AI-uitvoer naar overig.
 - [Blink dragstart in scrollbare sidebar](blink-dragstart-sidebar.md) — HTML5-dnd start nooit in scrollbare SidebarContent; pointer-gebaseerd slepen gebruiken (e2e-valkuil in topicfile).
 - [MinIO objectopslag prod](minio-objectopslag-prod.md) — presign-client op publiek domein + Caddy Host-behoud; mc alias op publiek domein werkt niet; backup-minio + bucket-race depends_on.
+- [Financiele kerncijfers denormalisatie](financieel-kerncijfers-denormalisatie.md) — meerjarenoverzicht leest denorm-kolommen op kerncijfers; metadata-wijziging moet atomair cascaderen (tx); bewijs via verificatie-jaarrekening-cascade.ts.

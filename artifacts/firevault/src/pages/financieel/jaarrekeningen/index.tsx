@@ -11,6 +11,7 @@ import type {
   FinancieelDocument,
   FinancieelKerncijfer,
   FinancieelDatasetStatus,
+  FinancieelSubtype,
 } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -26,7 +27,7 @@ import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
 import { cn } from "@/lib/utils";
 import {
   ArrowLeft, ShieldCheck, FileText, Download, Sparkles, CheckCircle2, XCircle,
-  RotateCcw, Ban, Lock, TrendingUp, Search, Pencil,
+  RotateCcw, Ban, Lock, TrendingUp, Search, Pencil, CalendarDays,
 } from "lucide-react";
 import { PaginaHulp } from "@/components/pagina-hulp";
 
@@ -77,6 +78,23 @@ const SUBTYPE_LABEL: Record<string, string> = {
   geconsolideerd: "Geconsolideerd",
   enkelvoudig: "Enkelvoudig",
 };
+
+// Groepeer documenten per boekjaar: recentste jaar bovenaan, "Boekjaar onbekend" onderaan.
+function groepeerPerBoekjaar(documenten: FinancieelDocument[]): { jaar: number | null; docs: FinancieelDocument[] }[] {
+  const perJaar = new Map<number | null, FinancieelDocument[]>();
+  for (const doc of documenten) {
+    const jaar = doc.boekjaar ?? null;
+    const lijst = perJaar.get(jaar);
+    if (lijst) lijst.push(doc);
+    else perJaar.set(jaar, [doc]);
+  }
+  const jaren = [...perJaar.keys()].sort((a, b) => {
+    if (a === null) return 1;
+    if (b === null) return -1;
+    return b - a;
+  });
+  return jaren.map((jaar) => ({ jaar, docs: perJaar.get(jaar)! }));
+}
 
 // ── Kerncijfer-rij ──────────────────────────────────────────────────────────────
 
@@ -209,6 +227,11 @@ function DocumentDetail({ documentId, magSchrijven }: { documentId: number; magS
   const extraheer = useExtraheerFinancieleKerncijfers();
   const patchDoc = useUpdateFinancieelDocument();
 
+  const [bewerkMetadata, setBewerkMetadata] = useState(false);
+  const [invoerBoekjaar, setInvoerBoekjaar] = useState("");
+  const [invoerEntiteit, setInvoerEntiteit] = useState("");
+  const [invoerSubtype, setInvoerSubtype] = useState<FinancieelSubtype>("enkelvoudig");
+
   const bezig = patchCijfer.isPending || extraheer.isPending || patchDoc.isPending;
 
   if (isLoading || !detail) {
@@ -260,6 +283,35 @@ function DocumentDetail({ documentId, magSchrijven }: { documentId: number; magS
       toast({ title: "Bijwerken mislukt", variant: "destructive" });
     }
   }
+  function openMetadataBewerken() {
+    if (!detail) return;
+    setInvoerBoekjaar(detail.boekjaar ? String(detail.boekjaar) : "");
+    setInvoerEntiteit(detail.entiteit ?? "");
+    setInvoerSubtype(detail.subtype);
+    setBewerkMetadata(true);
+  }
+  async function metadataOpslaan() {
+    const boekjaarGetal = invoerBoekjaar.trim() === "" ? null : Number(invoerBoekjaar.trim());
+    if (boekjaarGetal !== null && (!Number.isInteger(boekjaarGetal) || boekjaarGetal < 1990 || boekjaarGetal > 2100)) {
+      toast({ title: "Ongeldig boekjaar", description: "Vul een jaartal in tussen 1990 en 2100.", variant: "destructive" });
+      return;
+    }
+    try {
+      await patchDoc.mutateAsync({
+        id: documentId,
+        data: {
+          boekjaar: boekjaarGetal,
+          entiteit: invoerEntiteit.trim() === "" ? null : invoerEntiteit.trim(),
+          subtype: invoerSubtype,
+        },
+      });
+      await refetch();
+      setBewerkMetadata(false);
+      toast({ title: "Gegevens bijgewerkt", description: "De kerncijfers zijn meegetrokken naar het nieuwe boekjaar en de nieuwe entiteit." });
+    } catch {
+      toast({ title: "Opslaan mislukt", variant: "destructive" });
+    }
+  }
 
   return (
     <div className="space-y-4">
@@ -286,12 +338,71 @@ function DocumentDetail({ documentId, magSchrijven }: { documentId: number; magS
             </a>
           </Button>
           {magSchrijven && (
+            <Button variant="outline" size="sm" onClick={openMetadataBewerken} disabled={bezig}>
+              <Pencil className="h-4 w-4 mr-1" /> Gegevens corrigeren
+            </Button>
+          )}
+          {magSchrijven && (
             <Button variant="outline" size="sm" onClick={opnieuwExtraheren} disabled={bezig}>
               <Sparkles className="h-4 w-4 mr-1" /> Opnieuw extraheren
             </Button>
           )}
         </div>
       </div>
+
+      {bewerkMetadata && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm">Gegevens corrigeren</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="metadata-boekjaar">Boekjaar</Label>
+                <Input
+                  id="metadata-boekjaar"
+                  inputMode="numeric"
+                  placeholder="bijv. 2023"
+                  value={invoerBoekjaar}
+                  onChange={(e) => setInvoerBoekjaar(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="metadata-entiteit">Entiteit</Label>
+                <Input
+                  id="metadata-entiteit"
+                  placeholder="bijv. FPS Brandpreventie"
+                  value={invoerEntiteit}
+                  onChange={(e) => setInvoerEntiteit(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Soort jaarrekening</Label>
+                <Select value={invoerSubtype} onValueChange={(v) => setInvoerSubtype(v as FinancieelSubtype)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="enkelvoudig">Enkelvoudig</SelectItem>
+                    <SelectItem value="geconsolideerd">Geconsolideerd</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              De kerncijfers van dit document bewegen automatisch mee, zodat het meerjarenoverzicht het juiste boekjaar en de juiste entiteit toont.
+            </p>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" size="sm" onClick={() => setBewerkMetadata(false)} disabled={bezig}>
+                Annuleren
+              </Button>
+              <Button size="sm" onClick={() => void metadataOpslaan()} disabled={bezig}>
+                Opslaan
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {detail.extractie_status === "mislukt" && (
         <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-700">
@@ -454,34 +565,43 @@ export default function JaarrekeningenValidatiePagina() {
               Nog geen jaarrekeningen. Gebruik &ldquo;Slim uploaden&rdquo; om een jaarrekening vertrouwelijk toe te voegen.
             </div>
           ) : (
-            <ul className="space-y-2">
-              {documenten.map((doc) => (
-                <li key={doc.id}>
-                  <button
-                    onClick={() => setGeselecteerd(doc.id)}
-                    className={cn(
-                      "w-full text-left rounded-md border p-3 transition-colors hover:bg-muted/50",
-                      actief === doc.id ? "border-primary bg-primary/5" : "border-border",
-                    )}
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <span className="font-medium text-sm truncate" title={doc.titel}>{doc.titel}</span>
-                      <Badge variant="outline" className={cn("text-[10px] shrink-0", DATASET_KLEUR[doc.dataset_status])}>
-                        {DATASET_LABEL[doc.dataset_status] ?? doc.dataset_status}
-                      </Badge>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-1.5 mt-1 text-[11px] text-muted-foreground">
-                      {doc.boekjaar && <span>{doc.boekjaar}</span>}
-                      <span>· {SUBTYPE_LABEL[doc.subtype] ?? doc.subtype}</span>
-                      {doc.entiteit && <span className="truncate">· {doc.entiteit}</span>}
-                    </div>
-                    <div className="text-[11px] text-muted-foreground mt-0.5">
-                      {(doc.aantal_goedgekeurd ?? 0)}/{doc.aantal_kerncijfers ?? 0} kerncijfers goedgekeurd
-                    </div>
-                  </button>
-                </li>
+            <div className="space-y-4">
+              {groepeerPerBoekjaar(documenten).map((groep) => (
+                <div key={groep.jaar ?? "onbekend"}>
+                  <div className="flex items-center gap-1.5 mb-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                    <CalendarDays className="h-3.5 w-3.5" />
+                    {groep.jaar ?? "Boekjaar onbekend"}
+                  </div>
+                  <ul className="space-y-2">
+                    {groep.docs.map((doc) => (
+                      <li key={doc.id}>
+                        <button
+                          onClick={() => setGeselecteerd(doc.id)}
+                          className={cn(
+                            "w-full text-left rounded-md border p-3 transition-colors hover:bg-muted/50",
+                            actief === doc.id ? "border-primary bg-primary/5" : "border-border",
+                          )}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <span className="font-medium text-sm truncate" title={doc.titel}>{doc.titel}</span>
+                            <Badge variant="outline" className={cn("text-[10px] shrink-0", DATASET_KLEUR[doc.dataset_status])}>
+                              {DATASET_LABEL[doc.dataset_status] ?? doc.dataset_status}
+                            </Badge>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-1.5 mt-1 text-[11px] text-muted-foreground">
+                            <span>{SUBTYPE_LABEL[doc.subtype] ?? doc.subtype}</span>
+                            {doc.entiteit && <span className="truncate">· {doc.entiteit}</span>}
+                          </div>
+                          <div className="text-[11px] text-muted-foreground mt-0.5">
+                            {(doc.aantal_goedgekeurd ?? 0)}/{doc.aantal_kerncijfers ?? 0} kerncijfers goedgekeurd
+                          </div>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               ))}
-            </ul>
+            </div>
           )}
         </div>
 

@@ -180,8 +180,16 @@ async function vervangKerncijfers(
   return cijfers.length;
 }
 
-async function logActie(documentId: number | null, actie: string, gebruikerId: number | null, details?: string): Promise<void> {
-  await db.insert(financieleDocumentLogTable).values({ documentId, actie, gebruikerId, details: details ?? null });
+type DbOfTx = typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+async function logActie(
+  documentId: number | null,
+  actie: string,
+  gebruikerId: number | null,
+  details?: string,
+  uitvoerder: DbOfTx = db,
+): Promise<void> {
+  await uitvoerder.insert(financieleDocumentLogTable).values({ documentId, actie, gebruikerId, details: details ?? null });
 }
 
 // Haalt aantallen kerncijfers + goedgekeurd per document op.
@@ -514,45 +522,80 @@ router.patch("/financieel/jaarrekeningen/:id", requireAuth, schrijven, async (re
     if (req.body.subtype !== undefined) set.subtype = req.body.subtype;
     if (req.body.documentstatus !== undefined) set.documentstatus = req.body.documentstatus;
 
-    // Opslaglocatie meebewegen als subtype/boekjaar wijzigt.
+    // Opslaglocatie meebewegen als subtype/boekjaar wijzigt (ook bij leegmaken naar null).
     if (req.body.subtype !== undefined || req.body.boekjaar !== undefined) {
-      const nieuwSubtype = (req.body.subtype ?? bestaand.subtype) as string;
-      const nieuwBoekjaar = (req.body.boekjaar ?? bestaand.boekjaar) as number | null;
+      const nieuwSubtype = (req.body.subtype !== undefined ? req.body.subtype : bestaand.subtype) as string;
+      const nieuwBoekjaar = (req.body.boekjaar !== undefined ? req.body.boekjaar : bestaand.boekjaar) as number | null;
       set.opslaglocatie = bepaalOpslaglocatie(nieuwSubtype, nieuwBoekjaar);
     }
 
     const nieuweDatasetStatus = req.body.dataset_status as string | undefined;
-    if (nieuweDatasetStatus !== undefined) {
-      set.datasetStatus = nieuweDatasetStatus;
-      if (nieuweDatasetStatus === "approved") {
-        set.goedgekeurdDoor = gebruikerId;
-        set.goedgekeurdOp = new Date();
-        // Alle niet-uitgesloten, niet-afgewezen cijfers meenemen naar approved.
-        await db
-          .update(financieleKerncijfersTable)
-          .set({ status: "approved", beoordeeldDoor: gebruikerId, beoordeeldOp: new Date(), bijgewerktOp: new Date() })
-          .where(
-            and(
-              eq(financieleKerncijfersTable.documentId, id),
-              eq(financieleKerncijfersTable.uitgesloten, false),
-              sql`${financieleKerncijfersTable.status} not in ('rejected')`,
-            ),
-          );
-        await logActie(id, "dataset_goedgekeurd", gebruikerId, "Dataset goedgekeurd; kerncijfers voeden het meerjarenoverzicht");
-      } else if (nieuweDatasetStatus === "rejected") {
-        await db
-          .update(financieleKerncijfersTable)
-          .set({ status: "rejected", beoordeeldDoor: gebruikerId, beoordeeldOp: new Date(), bijgewerktOp: new Date() })
-          .where(eq(financieleKerncijfersTable.documentId, id));
-        await logActie(id, "dataset_afgewezen", gebruikerId, "Dataset afgewezen");
-      } else if (nieuweDatasetStatus === "reviewed") {
-        await logActie(id, "dataset_beoordeeld", gebruikerId, "Dataset gemarkeerd als beoordeeld");
-      }
-    } else {
-      await logActie(id, "metadata_gewijzigd", gebruikerId, "Metadata bijgewerkt");
-    }
 
-    await db.update(financieleDocumentenTable).set(set).where(eq(financieleDocumentenTable.id, id));
+    // Alle schrijfacties in één transactie: documentupdate, dataset-statuscascade en
+    // metadatacascade horen atomair te zijn — anders kunnen de gedenormaliseerde
+    // kerncijferkolommen (entiteit/boekjaar/geconsolideerd) van het document afwijken.
+    await db.transaction(async (tx) => {
+      if (nieuweDatasetStatus !== undefined) {
+        set.datasetStatus = nieuweDatasetStatus;
+        if (nieuweDatasetStatus === "approved") {
+          set.goedgekeurdDoor = gebruikerId;
+          set.goedgekeurdOp = new Date();
+          // Alle niet-uitgesloten, niet-afgewezen cijfers meenemen naar approved.
+          await tx
+            .update(financieleKerncijfersTable)
+            .set({ status: "approved", beoordeeldDoor: gebruikerId, beoordeeldOp: new Date(), bijgewerktOp: new Date() })
+            .where(
+              and(
+                eq(financieleKerncijfersTable.documentId, id),
+                eq(financieleKerncijfersTable.uitgesloten, false),
+                sql`${financieleKerncijfersTable.status} not in ('rejected')`,
+              ),
+            );
+          await logActie(id, "dataset_goedgekeurd", gebruikerId, "Dataset goedgekeurd; kerncijfers voeden het meerjarenoverzicht", tx);
+        } else if (nieuweDatasetStatus === "rejected") {
+          await tx
+            .update(financieleKerncijfersTable)
+            .set({ status: "rejected", beoordeeldDoor: gebruikerId, beoordeeldOp: new Date(), bijgewerktOp: new Date() })
+            .where(eq(financieleKerncijfersTable.documentId, id));
+          await logActie(id, "dataset_afgewezen", gebruikerId, "Dataset afgewezen", tx);
+        } else if (nieuweDatasetStatus === "reviewed") {
+          await logActie(id, "dataset_beoordeeld", gebruikerId, "Dataset gemarkeerd als beoordeeld", tx);
+        }
+      } else {
+        await logActie(id, "metadata_gewijzigd", gebruikerId, "Metadata bijgewerkt", tx);
+      }
+
+      await tx.update(financieleDocumentenTable).set(set).where(eq(financieleDocumentenTable.id, id));
+
+      // Cascade: de kerncijfers zijn gedenormaliseerd (entiteit/boekjaar/geconsolideerd)
+      // voor het meerjarenoverzicht. Als die metadata op het document wijzigt, moeten
+      // ALLE bijbehorende kerncijfers meebewegen — anders blijven goedgekeurde cijfers
+      // onder het oude boekjaar/de oude entiteit staan en klopt het meerjarenoverzicht niet.
+      const metadataGewijzigd =
+        req.body.entiteit !== undefined || req.body.boekjaar !== undefined || req.body.subtype !== undefined;
+      if (metadataGewijzigd) {
+        const nieuweEntiteit = req.body.entiteit !== undefined ? (req.body.entiteit as string | null) : bestaand.entiteit;
+        const nieuwBoekjaarCascade = req.body.boekjaar !== undefined ? (req.body.boekjaar as number | null) : bestaand.boekjaar;
+        const nieuwSubtypeCascade = req.body.subtype !== undefined ? (req.body.subtype as string) : bestaand.subtype;
+        await tx
+          .update(financieleKerncijfersTable)
+          .set({
+            entiteit: nieuweEntiteit,
+            boekjaar: nieuwBoekjaarCascade,
+            geconsolideerd: nieuwSubtypeCascade === "geconsolideerd",
+            bijgewerktOp: new Date(),
+          })
+          .where(eq(financieleKerncijfersTable.documentId, id));
+        await logActie(
+          id,
+          "metadata_gewijzigd",
+          gebruikerId,
+          `Kerncijfers meegetrokken naar ${nieuweEntiteit ?? "onbekende entiteit"} / boekjaar ${nieuwBoekjaarCascade ?? "onbekend"} / ${nieuwSubtypeCascade}`,
+          tx,
+        );
+      }
+    });
+
     const detail = await bouwDetail(id);
     res.json(detail);
   } catch (err) {

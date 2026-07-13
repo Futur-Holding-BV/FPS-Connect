@@ -125,9 +125,16 @@ export default function MeerjarenoverzichtPagina() {
           {isLoading ? (
             <p className="text-sm text-muted-foreground py-6 text-center">Laden…</p>
           ) : rijen.length === 0 || boekjaren.length === 0 ? (
-            <div className="rounded-md border border-dashed p-10 text-center text-sm text-muted-foreground">
-              Nog geen goedgekeurde kerncijfers. Keur eerst kerncijfers goed bij{" "}
-              <Link href="/financieel/jaarrekeningen" className="text-primary underline">Jaarrekeningen</Link>.
+            <div className="rounded-md border border-dashed p-10 text-center text-sm text-muted-foreground space-y-2">
+              <p>
+                Geen goedgekeurde kerncijfers voor deze selectie. Keur eerst kerncijfers goed bij{" "}
+                <Link href="/financieel/jaarrekeningen" className="text-primary underline">Jaarrekeningen</Link>.
+              </p>
+              <p className="text-xs">
+                {geconsolideerd
+                  ? "De schakelaar 'Geconsolideerd' staat aan: alleen geconsolideerde jaarrekeningen tellen mee. Zet hem uit om enkelvoudige jaarrekeningen te zien."
+                  : "De schakelaar 'Geconsolideerd' staat uit: alleen enkelvoudige jaarrekeningen tellen mee. Zet hem aan om geconsolideerde jaarrekeningen te zien."}
+              </p>
             </div>
           ) : (
             <Table>
