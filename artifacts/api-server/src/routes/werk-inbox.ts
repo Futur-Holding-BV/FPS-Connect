@@ -25,6 +25,10 @@ import {
   syncMailboxen,
   haalVolledigeMail,
   markeerGelezen,
+  verplaatsMail,
+  archiveerMail,
+  beantwoordMail,
+  verstuurNieuwDelegatedMail,
   GeenToegang,
   type TokenResponse,
 } from "../services/werkInboxGraph";
@@ -545,6 +549,142 @@ router.get("/werk-inbox/relatie/:emailAdres", requireAuth, async (req, res): Pro
   }
 
   res.json({ gevonden: false });
+});
+
+// ─── Verplaatsen ──────────────────────────────────────────────────────────────
+router.post("/werk-inbox/mails/:messageId/verplaats", requireAuth, async (req, res): Promise<void> => {
+  const uid       = gebruikerId(req);
+  const messageId = String(req.params.messageId);
+  const { doelMap } = req.body as { doelMap?: string };
+
+  if (!doelMap || typeof doelMap !== "string" || doelMap.trim() === "") {
+    res.status(400).json({ error: "doelMap is verplicht (bijv. 'archive', 'deleteditems', 'inbox')." });
+    return;
+  }
+
+  const [mail] = await db.select({
+    mailboxAdres: werkInboxMailsTable.mailboxAdres,
+    microsoftEmail: werkInboxTokensTable.microsoftEmail,
+  })
+    .from(werkInboxMailsTable)
+    .leftJoin(werkInboxTokensTable, eq(werkInboxTokensTable.gebruikerId, werkInboxMailsTable.gebruikerId))
+    .where(and(eq(werkInboxMailsTable.gebruikerId, uid), eq(werkInboxMailsTable.messageId, messageId)))
+    .limit(1);
+
+  if (!mail) { res.status(404).json({ error: "Mail niet gevonden." }); return; }
+
+  const isPersonlijk = mail.mailboxAdres === mail.microsoftEmail;
+  const ok = await verplaatsMail(uid, mail.mailboxAdres, messageId, isPersonlijk, doelMap.trim());
+  if (!ok) { res.status(502).json({ error: "Verplaatsen via Microsoft Graph mislukt. Controleer uw mailkoppeling." }); return; }
+
+  res.json({ ok: true });
+});
+
+// ─── Archiveren ───────────────────────────────────────────────────────────────
+router.post("/werk-inbox/mails/:messageId/archiveer", requireAuth, async (req, res): Promise<void> => {
+  const uid       = gebruikerId(req);
+  const messageId = String(req.params.messageId);
+
+  const [mail] = await db.select({
+    mailboxAdres:   werkInboxMailsTable.mailboxAdres,
+    microsoftEmail: werkInboxTokensTable.microsoftEmail,
+  })
+    .from(werkInboxMailsTable)
+    .leftJoin(werkInboxTokensTable, eq(werkInboxTokensTable.gebruikerId, werkInboxMailsTable.gebruikerId))
+    .where(and(eq(werkInboxMailsTable.gebruikerId, uid), eq(werkInboxMailsTable.messageId, messageId)))
+    .limit(1);
+
+  if (!mail) { res.status(404).json({ error: "Mail niet gevonden." }); return; }
+
+  const isPersonlijk = mail.mailboxAdres === mail.microsoftEmail;
+  const ok = await archiveerMail(uid, mail.mailboxAdres, messageId, isPersonlijk);
+  if (!ok) { res.status(502).json({ error: "Archiveren via Microsoft Graph mislukt. Controleer uw mailkoppeling." }); return; }
+
+  res.json({ ok: true });
+});
+
+// ─── Beantwoorden ─────────────────────────────────────────────────────────────
+router.post("/werk-inbox/mails/:messageId/beantwoord", requireAuth, async (req, res): Promise<void> => {
+  const uid       = gebruikerId(req);
+  const messageId = String(req.params.messageId);
+  const { htmlBody, extraOntvangers } = req.body as {
+    htmlBody?: string;
+    extraOntvangers?: Array<{ emailAddress: { address: string; name?: string } }>;
+  };
+
+  if (!htmlBody || typeof htmlBody !== "string" || htmlBody.trim() === "") {
+    res.status(400).json({ error: "htmlBody is verplicht." });
+    return;
+  }
+
+  const [mail] = await db.select({
+    mailboxAdres:   werkInboxMailsTable.mailboxAdres,
+    microsoftEmail: werkInboxTokensTable.microsoftEmail,
+  })
+    .from(werkInboxMailsTable)
+    .leftJoin(werkInboxTokensTable, eq(werkInboxTokensTable.gebruikerId, werkInboxMailsTable.gebruikerId))
+    .where(and(eq(werkInboxMailsTable.gebruikerId, uid), eq(werkInboxMailsTable.messageId, messageId)))
+    .limit(1);
+
+  if (!mail) { res.status(404).json({ error: "Mail niet gevonden." }); return; }
+
+  const isPersonlijk = mail.mailboxAdres === mail.microsoftEmail;
+  const resultaat = await beantwoordMail(uid, mail.mailboxAdres, messageId, isPersonlijk, {
+    htmlBody: htmlBody.trim(),
+    extraOntvangers,
+  });
+
+  if (!resultaat.ok) {
+    res.status(502).json({ error: resultaat.fout ?? "Beantwoorden via Microsoft Graph mislukt." });
+    return;
+  }
+  res.json({ ok: true });
+});
+
+// ─── Nieuw bericht versturen ──────────────────────────────────────────────────
+router.post("/werk-inbox/mails/nieuw", requireAuth, async (req, res): Promise<void> => {
+  const uid = gebruikerId(req);
+  const { naarEmail, naarNaam, onderwerp, htmlBody, mailboxAdres } = req.body as {
+    naarEmail?: string;
+    naarNaam?: string;
+    onderwerp?: string;
+    htmlBody?: string;
+    mailboxAdres?: string;
+  };
+
+  if (!naarEmail || !onderwerp || !htmlBody) {
+    res.status(400).json({ error: "naarEmail, onderwerp en htmlBody zijn verplicht." });
+    return;
+  }
+
+  // Mailbox bepalen: expliciet opgegeven of persoonlijk
+  const [tokenRec] = await db.select({ microsoftEmail: werkInboxTokensTable.microsoftEmail })
+    .from(werkInboxTokensTable)
+    .where(eq(werkInboxTokensTable.gebruikerId, uid))
+    .limit(1);
+
+  if (!tokenRec) {
+    res.status(400).json({ error: "Geen Microsoft-account gekoppeld." });
+    return;
+  }
+
+  const effectiefMailbox  = mailboxAdres ?? tokenRec.microsoftEmail;
+  const isPersonlijk      = effectiefMailbox === tokenRec.microsoftEmail;
+
+  const resultaat = await verstuurNieuwDelegatedMail(uid, {
+    naarEmail,
+    naarNaam,
+    onderwerp,
+    htmlBody,
+    mailboxAdres: effectiefMailbox,
+    isPersonlijk,
+  });
+
+  if (!resultaat.ok) {
+    res.status(502).json({ error: resultaat.fout ?? "Versturen via Microsoft Graph mislukt." });
+    return;
+  }
+  res.json({ ok: true });
 });
 
 // ─── AI-analyse per mail ──────────────────────────────────────────────────────

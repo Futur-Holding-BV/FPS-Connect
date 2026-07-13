@@ -1,3 +1,30 @@
+## 2026-07-13 — Werk-inbox: verplaatsen, archiveren, beantwoorden + deploybuild-fix
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (puur additief op bestaande werk-inbox module)
+
+**Deploybuild-fix (blokkade):**
+- `declaraties.tsx` had twee kapotte imports: `../../lib/auth` (module bestaat niet) en `../../lib/api` (module bestaat niet)
+- Beide gefixed: `useAuth` via `@/context/auth` (conform rest monteur-app), `apiFetch` vervangen door directe `fetch()` met `Bearer ${token}` header en `EXPO_PUBLIC_DOMAIN` basis-URL
+- Typecheck monteur-app + api-server + firevault volledig groen
+
+**Werk-inbox uitbreiding — stap 3 (verplaatsen/archiveren):**
+- `verplaatsMail(gebruikerId, mailboxAdres, messageId, isPersonlijk, doelMap)` in `werkInboxGraph.ts` — POST `/messages/{id}/move` met well-known folder-naam (`"archive"`, `"deleteditems"`, `"inbox"` etc.)
+- `archiveerMail(...)` — shorthand die `verplaatsMail` aanroept met `doelMap="archive"`
+- Route `POST /werk-inbox/mails/:messageId/verplaats` — body: `{ doelMap: string }`
+- Route `POST /werk-inbox/mails/:messageId/archiveer` — geen body nodig
+- Beide routes bepalen automatisch `isPersonlijk` door `mailboxAdres` te vergelijken met `token.microsoftEmail`
+
+**Werk-inbox uitbreiding — stap 4 (beantwoorden/nieuw bericht):**
+- `beantwoordMail(...)` — 3-staps Graph-flow: `createReply` (draft) → PATCH body (HTML) → `send`; ondersteunt `extraOntvangers` (CC)
+- `verstuurNieuwDelegatedMail(gebruikerId, opties)` — POST `/me/sendMail` (persoonlijk) of `/users/{mb}/sendMail` (gedeeld); `saveToSentItems: true`
+- Route `POST /werk-inbox/mails/:messageId/beantwoord` — body: `{ htmlBody: string, extraOntvangers?: [...] }`
+- Route `POST /werk-inbox/mails/nieuw` — body: `{ naarEmail, onderwerp, htmlBody, naarNaam?, mailboxAdres? }`
+
+**Nog wachten (stap 2):**
+- `DELEGATED_SCOPES` in `werkInboxGraph.ts` NIET gewijzigd — wacht op Entra-configuratie door Denko; wijziging is dan één regel (`Mail.Read` → `Mail.ReadWrite Mail.Send`)
+
+---
+
 ## 2026-07-11 — Financiële admin: leverancier-intelligentie + betaaltermijn-signalering
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (puur additief op bestaande leveranciers- en facturenmodule)

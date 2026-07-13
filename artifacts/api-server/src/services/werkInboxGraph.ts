@@ -283,6 +283,166 @@ export async function markeerGelezen(
   return res.ok;
 }
 
+// ── Verplaatsen / Archiveren ──────────────────────────────────────────────────
+
+/**
+ * Verplaatst een bericht naar een andere map.
+ * doelMap kan een well-known naam zijn: "archive", "deleteditems", "inbox",
+ * "junkemail", "sentitems", of een specifieke map-ID uit Graph.
+ */
+export async function verplaatsMail(
+  gebruikerId: number,
+  mailboxAdres: string,
+  messageId: string,
+  isPersonlijk: boolean,
+  doelMap: string,
+): Promise<boolean> {
+  const token = await haalGeldigToken(gebruikerId);
+  if (!token) return false;
+
+  const basis = isPersonlijk
+    ? "https://graph.microsoft.com/v1.0/me/messages"
+    : `https://graph.microsoft.com/v1.0/users/${encodeURIComponent(mailboxAdres)}/messages`;
+
+  const res = await fetch(`${basis}/${encodeURIComponent(messageId)}/move`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ destinationId: doelMap }),
+  });
+  return res.ok;
+}
+
+/**
+ * Archiveert een bericht (verplaatst naar de Archive-map).
+ */
+export async function archiveerMail(
+  gebruikerId: number,
+  mailboxAdres: string,
+  messageId: string,
+  isPersonlijk: boolean,
+): Promise<boolean> {
+  return verplaatsMail(gebruikerId, mailboxAdres, messageId, isPersonlijk, "archive");
+}
+
+// ── Beantwoorden ──────────────────────────────────────────────────────────────
+
+export interface BeantwoordOpties {
+  htmlBody: string;
+  extraOntvangers?: Array<{ emailAddress: { address: string; name?: string } }>;
+}
+
+/**
+ * Beantwoordt een bericht via de Graph createReply-flow (ondersteunt HTML).
+ * 1. createReply-concept aanmaken  2. body patchen  3. versturen
+ */
+export async function beantwoordMail(
+  gebruikerId: number,
+  mailboxAdres: string,
+  messageId: string,
+  isPersonlijk: boolean,
+  opties: BeantwoordOpties,
+): Promise<{ ok: boolean; fout?: string }> {
+  const token = await haalGeldigToken(gebruikerId);
+  if (!token) return { ok: false, fout: "Geen geldig Microsoft-token. Koppel uw account opnieuw." };
+
+  const basis = isPersonlijk
+    ? "https://graph.microsoft.com/v1.0/me/messages"
+    : `https://graph.microsoft.com/v1.0/users/${encodeURIComponent(mailboxAdres)}/messages`;
+
+  // Stap 1: concept aanmaken
+  const conceptRes = await fetch(`${basis}/${encodeURIComponent(messageId)}/createReply`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({}),
+  });
+  if (!conceptRes.ok) {
+    const detail = await conceptRes.text().catch(() => "");
+    return { ok: false, fout: `Concept aanmaken mislukt (${conceptRes.status}): ${detail.slice(0, 100)}` };
+  }
+  const concept = (await conceptRes.json()) as { id: string };
+
+  // Stap 2: body patchen
+  const patchPayload: Record<string, unknown> = {
+    body: { contentType: "HTML", content: opties.htmlBody },
+  };
+  if (opties.extraOntvangers && opties.extraOntvangers.length > 0) {
+    patchPayload.ccRecipients = opties.extraOntvangers;
+  }
+
+  const conceptBasis = isPersonlijk
+    ? "https://graph.microsoft.com/v1.0/me/messages"
+    : `https://graph.microsoft.com/v1.0/users/${encodeURIComponent(mailboxAdres)}/messages`;
+
+  const patchRes = await fetch(`${conceptBasis}/${encodeURIComponent(concept.id)}`, {
+    method: "PATCH",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify(patchPayload),
+  });
+  if (!patchRes.ok) {
+    return { ok: false, fout: `Body patchen mislukt (${patchRes.status})` };
+  }
+
+  // Stap 3: versturen
+  const sendRes = await fetch(`${conceptBasis}/${encodeURIComponent(concept.id)}/send`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!sendRes.ok) {
+    return { ok: false, fout: `Versturen mislukt (${sendRes.status})` };
+  }
+  return { ok: true };
+}
+
+// ── Nieuw bericht versturen ───────────────────────────────────────────────────
+
+export interface NieuwBerichtOpties {
+  naarEmail: string;
+  naarNaam?: string;
+  onderwerp: string;
+  htmlBody: string;
+  isPersonlijk: boolean;
+  mailboxAdres: string;
+}
+
+/**
+ * Verstuurt een nieuw bericht namens de gekoppelde gebruiker via delegated token.
+ * Gebruikt /me/sendMail (persoonlijk) of /users/{mb}/sendMail (gedeeld).
+ */
+export async function verstuurNieuwDelegatedMail(
+  gebruikerId: number,
+  opties: NieuwBerichtOpties,
+): Promise<{ ok: boolean; fout?: string }> {
+  const token = await haalGeldigToken(gebruikerId);
+  if (!token) return { ok: false, fout: "Geen geldig Microsoft-token. Koppel uw account opnieuw." };
+
+  const sendUrl = opties.isPersonlijk
+    ? "https://graph.microsoft.com/v1.0/me/sendMail"
+    : `https://graph.microsoft.com/v1.0/users/${encodeURIComponent(opties.mailboxAdres)}/sendMail`;
+
+  const bericht = {
+    message: {
+      subject: opties.onderwerp,
+      body: { contentType: "HTML", content: opties.htmlBody },
+      toRecipients: [
+        { emailAddress: { address: opties.naarEmail, name: opties.naarNaam ?? opties.naarEmail } },
+      ],
+    },
+    saveToSentItems: true,
+  };
+
+  const res = await fetch(sendUrl, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify(bericht),
+  });
+
+  if (!res.ok) {
+    const detail = await res.text().catch(() => "");
+    return { ok: false, fout: `Versturen mislukt (${res.status}): ${detail.slice(0, 100)}` };
+  }
+  return { ok: true };
+}
+
 // ── Sync ──────────────────────────────────────────────────────────────────────
 
 export interface SyncResultaat {

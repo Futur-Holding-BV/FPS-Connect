@@ -1,8 +1,9 @@
 import { useState, useCallback } from "react";
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, ScrollView, Modal, ActivityIndicator, Alert } from "react-native";
 import { useFocusEffect } from "expo-router";
-import { useAuth } from "../../lib/auth";
-import { apiFetch } from "../../lib/api";
+import { useAuth } from "@/context/auth";
+
+const DOMEIN = process.env["EXPO_PUBLIC_DOMAIN"] ?? "";
 
 type DeclaratieStatus = "concept" | "ingediend" | "goedgekeurd" | "afgekeurd" | "verwerkt";
 
@@ -84,7 +85,11 @@ export default function DeclaratiesScherm() {
   async function laadDeclaraties() {
     setLaden(true);
     try {
-      const data = await apiFetch<Declaratie[]>("/api/mijn/declaraties", { token });
+      const res = await fetch(`https://${DOMEIN}/api/mijn/declaraties`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error(`${res.status}`);
+      const data = (await res.json()) as Declaratie[];
       setDeclaraties(data);
     } catch {
       // stil falen
@@ -102,11 +107,12 @@ export default function DeclaratiesScherm() {
     }
     setOpslaan(true);
     try {
-      await apiFetch("/api/declaraties", {
-        token,
+      const res = await fetch(`https://${DOMEIN}/api/declaraties`, {
         method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         body: JSON.stringify({ categorie, omschrijving: omschrijving.trim(), bedrag_totaal_cents: bedragCents, datum }),
       });
+      if (!res.ok) throw new Error(`${res.status}`);
       setNieuwOpen(false);
       setOmschrijving("");
       setBedrag("");
@@ -122,7 +128,11 @@ export default function DeclaratiesScherm() {
 
   async function dienIn(id: number) {
     try {
-      await apiFetch(`/api/declaraties/${id}/indienen`, { token, method: "POST" });
+      const res = await fetch(`https://${DOMEIN}/api/declaraties/${id}/indienen`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error(`${res.status}`);
       await laadDeclaraties();
       setGeselecteerd(null);
     } catch {
