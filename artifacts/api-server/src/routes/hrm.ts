@@ -37,6 +37,7 @@ import {
   poortwachterDossiersTable,
   poortwachterMijlpalenTable,
   medewerkerCaoKeuzesTable,
+  salarisMutatiesTable,
 } from "@workspace/db";
 import { ObjectStorageService } from "../lib/objectStorage";
 import { eq, desc, and, ne, inArray, or, isNull, gte, lte, sql, getTableColumns } from "drizzle-orm";
@@ -967,6 +968,30 @@ router.post("/medewerkers/onboarding", schrijven, async (req, res): Promise<void
       },
       db,
     );
+
+    // Loondienst: concept-salarismutatie "Verloning nieuwe medewerker" klaarzetten voor SCAB.
+    // Niet-blokkerend: als aanmaken mislukt gaat de onboarding gewoon door.
+    const onboardingSess = req.session as { userId?: number; gebruikerNaam?: string };
+    const inDienstDate = inDienstDatum ?? new Date(in_dienst_sinds as string);
+    try {
+      await db.insert(salarisMutatiesTable).values({
+        medewerkerId: m.id,
+        medewerkerNaam: m.naam,
+        werkmaatschappij: m.werkmaatschappij,
+        werkgeverId: m.werkgeverId ?? null,
+        periodeJaar: inDienstDate.getFullYear(),
+        periodeMaand: inDienstDate.getMonth() + 1,
+        type: "Verloning nieuwe medewerker",
+        omschrijving: `Aangemaakt via onboarding. Ingangsdatum: ${m.inDienstSinds ?? in_dienst_sinds}.`,
+        ingangsdatum: m.inDienstSinds ?? (in_dienst_sinds as string) ?? null,
+        bron: "onboarding",
+        status: "concept",
+        aangemaaktDoorId: onboardingSess.userId ?? null,
+        aangemaaktDoorNaam: onboardingSess.gebruikerNaam ?? null,
+      });
+    } catch (mutatieErr) {
+      req.log.warn({ err: mutatieErr, medewerkerId: m.id }, "onboarding: auto-salarismutatie aanmaken mislukt");
+    }
 
     invalideerContext("medewerker", m.id);
     res.status(201).json(await medewerkerNaarJson(m));

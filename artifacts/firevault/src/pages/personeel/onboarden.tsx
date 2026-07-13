@@ -26,7 +26,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import {
   UserCheck, Handshake, Building2, ArrowLeft, ArrowRight,
-  CheckCircle2, ExternalLink, RotateCcw, Sparkles, X, AlertTriangle,
+  CheckCircle2, ExternalLink, RotateCcw, Sparkles, X, AlertTriangle, Receipt,
 } from "lucide-react";
 import { WERKMAATSCHAPPIJEN, caoVoorWerkmaatschappij } from "@/lib/werkmaatschappijen";
 
@@ -993,6 +993,19 @@ function Succes({ stroom, medewerkerId, onNogEen }: { stroom: Stroom; medewerker
           <RotateCcw className="h-3.5 w-3.5" /> Nog iemand onboarden
         </Button>
       </div>
+
+      {stroom === "vast" && (
+        <div className="rounded-md border border-blue-200 bg-blue-50/50 px-4 py-3 text-xs text-blue-800 space-y-2">
+          <div className="flex items-center gap-2">
+            <Receipt className="h-4 w-4 shrink-0" />
+            <p className="font-medium">Salarismutatie klaargezet</p>
+          </div>
+          <p>Er is automatisch een concept-salarismutatie &ldquo;Verloning nieuwe medewerker&rdquo; aangemaakt voor de salarisverwerker. Controleer en bevestig deze vóór de eerstvolgende loonperiode.</p>
+          <Button size="sm" variant="outline" onClick={() => navigate("/salaris-mutaties")} className="gap-1.5 mt-1">
+            Naar Salarismutaties <ExternalLink className="h-3 w-3" />
+          </Button>
+        </div>
+      )}
 
       {stroom === "zzp" && (
         <div className="rounded-md border border-amber-200 bg-amber-50/50 px-4 py-3 text-xs text-amber-800 space-y-1">

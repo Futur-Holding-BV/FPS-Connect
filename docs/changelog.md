@@ -1,3 +1,17 @@
+## 2026-07-13 — Onboarding koppelt automatisch salarismutatie + afrondscherm met vervolgstap
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (concept-mutatie; een mens controleert en verzendt naar SCAB — niets gaat automatisch de deur uit)
+
+**Aanleiding:** bij onboarding van een loondienst-medewerker werd geen salarismutatie aangemaakt. Daarmee kon een nieuwe medewerker vergeten worden in de verloning.
+
+**Wijzigingen:**
+- `api-server/routes/hrm.ts`: `POST /medewerkers/onboarding` maakt direct na verlofprofielopbouw een concept-salarismutatie "Verloning nieuwe medewerker" aan (ingangsdatum = datum in dienst, periode = jaar/maand van indiensttreding, bron = "onboarding"); niet-blokkerend (warn-log bij falen, onboarding gaat door)
+- `personeel/onboarden.tsx`: afrondscherm voor "loondienst"-stroom toont een extra kaart "Salarismutatie klaargezet" met directe knop naar `/salaris-mutaties`
+- Codegen gedraaid na merge van taak #582 (beoordeelWerkbegrotingAiVoorstel); stale lib opgelost
+- **Bewijs:** api-server typecheck exit 0; firevault typecheck exit 0; api-server gecompileerd en actief
+
+---
+
 ## 2026-07-13 — CV herkend in Slim Upload/Inbox: expliciete onboardingvraag + vooringevuld formulier
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (AI stelt alleen voor; een mens controleert en bevestigt — er wordt nooit automatisch een medewerker aangemaakt)
