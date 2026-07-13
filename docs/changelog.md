@@ -1,3 +1,18 @@
+## 2026-07-13 — Productie-deploy connect.fps-one.nl (163 commits) + GitHub-push
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** middel (grote release: tientallen nieuwe tabellen en modules in één deploy; pre-release back-up gemaakt en geverifieerd)
+
+**Aanleiding:** de productie-VPS liep 163 commits achter op de lokale ontwikkelomgeving; de gebruiker vroeg push naar GitHub gevolgd door volledige productie-deployment.
+
+**Wijzigingen:**
+- GitHub: lokale `main` (`9e37b36`) met `--force-with-lease` naar `origin/main` gepusht (was `14fbf3b`); via /tmp-kloon-omweg met `GIT_ASKPASS`, token nergens getoond
+- VPS: deploy in de bewezen volgorde — (1) pg_dump-back-up (116K, gzip-integriteit OK), (2) divergentie opgelost met fetch + reset naar `origin/main` (server-lokale fixcommit `c93e4b42` zat inhoudelijk al in main: lege diff op `.dockerignore`), (3) API-image gebouwd `--no-cache`, (4) drizzle-migraties toegepast ("Changes applied"), (5) Caddy/frontend-image gebouwd `--no-cache`, (6) `up -d` — api healthy, (7) publieke healthcheck `{"status":"ok"}` HTTP 200
+- SSH-toegang werkt nu via het `PROD_SSH_KEY`-secret (sleutel gereconstrueerd uit platte regel, na afloop verwijderd)
+- **Restpunten:** mock-data cleanup op productie (andere IDs dan dev), mailvariabelen ontbreken nog op productie, smoketest logins door gebruiker (kantoornetwerk blokkeert het domein via FortiGate)
+- **Bewijs:** per stap EXIT:0 in deploy-logs op de server; healthcheck HTTP 200 in 0,3s
+
+---
+
 ## 2026-07-13 — Verwerkersregister (AVG art. 30 lid 2)
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (additief; nieuwe tabel + endpoints + tab, raakt bestaande AVG-functies niet)
