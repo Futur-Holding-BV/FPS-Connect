@@ -1902,11 +1902,15 @@ export default function MedewerkerDetailPagina() {
             <Card>
               <CardContent className="py-10 text-center text-muted-foreground">
                 <p className="text-sm">Nog geen CAO-keuzes vastgelegd voor deze medewerker.</p>
-                {medewerker?.cao === "Bouw & Infra" && (
+                {medewerker?.cao === "Bouw & Infra" ? (
                   <p className="text-xs mt-1 text-muted-foreground">
-                    CAO Bouw & Infra vereist jaarlijkse keuzes voor vakantiegeld en gereedschapsgeld.
+                    CAO Bouw &amp; Infra vereist jaarlijkse keuzes voor vakantiegeld en gereedschapsgeld.
                   </p>
-                )}
+                ) : medewerker?.cao === "Metaal & Techniek" ? (
+                  <p className="text-xs mt-1 text-muted-foreground">
+                    CAO Metaal &amp; Techniek kent jaarlijkse keuzes voor vakantiegeld en het PLB-budget.
+                  </p>
+                ) : null}
               </CardContent>
             </Card>
           ) : (
@@ -1914,18 +1918,26 @@ export default function MedewerkerDetailPagina() {
               {(["vakantiegeld", "gereedschapsgeld", "spaarfonds"] as const).map((type) => {
                 const items = (caoKeuzes ?? []).filter((k) => k.type === type);
                 if (items.length === 0) return null;
+                const isMetaal = medewerker?.cao === "Metaal & Techniek";
                 const typeLabel: Record<string, string> = {
-                  vakantiegeld: "Vakantiegeld",
+                  vakantiegeld:     "Vakantiegeld",
                   gereedschapsgeld: "Gereedschapsgeld",
-                  spaarfonds: "Spaarfonds",
+                  spaarfonds:       isMetaal ? "PLB-budget" : "Spaarfonds",
                 };
                 const keuzeLabel: Record<string, string> = {
+                  // CAO Bouw & Infra — vakantiegeld
                   "55_uitbetaald":  "55% direct uitbetaald + 45% naar spaarfonds",
                   "100_spaarfonds": "100% naar spaarfonds",
                   "100_uitbetaald": "100% direct uitbetaald",
+                  // CAO Bouw & Infra — gereedschapsgeld
                   "geld":           "Geldbedrag ontvangen",
                   "natura":         "Natura (bon / gereedschapsset)",
+                  // CAO Bouw & Infra — spaarfonds
                   "registratie":    "Spaarfondsregistratie",
+                  // CAO Metaal & Techniek — vakantiegeld en PLB-budget
+                  "uitbetalen":     "Uitbetalen",
+                  "verlof_kopen":   "Omzetten in verlofuren",
+                  "pensioen":       "Storting pensioen (PMT)",
                 };
                 return (
                   <Card key={type}>
@@ -2412,89 +2424,142 @@ export default function MedewerkerDetailPagina() {
               <DialogTitle>{caoKeuzeBewerkId ? "CAO-keuze bewerken" : "CAO-keuze vastleggen"}</DialogTitle>
               <DialogDescription>Registreer de arbeidsvoorwaardenkeuze voor deze medewerker.</DialogDescription>
             </DialogHeader>
-            <div className="space-y-3">
-              <div className="space-y-1.5">
-                <Label>Type *</Label>
-                <Select
-                  value={caoKeuzeForm.type}
-                  onValueChange={(v) => setCaoKeuzeForm({ ...caoKeuzeForm, type: v as MedewerkerCaoKeuzeInput["type"], keuze: "" })}
-                >
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="vakantiegeld">Vakantiegeld</SelectItem>
-                    <SelectItem value="gereedschapsgeld">Gereedschapsgeld</SelectItem>
-                    <SelectItem value="spaarfonds">Spaarfonds</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label>Keuze *</Label>
-                {caoKeuzeForm.type === "vakantiegeld" ? (
-                  <Select value={caoKeuzeForm.keuze} onValueChange={(v) => setCaoKeuzeForm({ ...caoKeuzeForm, keuze: v })}>
-                    <SelectTrigger><SelectValue placeholder="Kies variant" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="55_uitbetaald">55% direct uitbetaald + 45% naar spaarfonds</SelectItem>
-                      <SelectItem value="100_spaarfonds">100% naar spaarfonds</SelectItem>
-                      <SelectItem value="100_uitbetaald">100% direct uitbetaald</SelectItem>
-                    </SelectContent>
-                  </Select>
-                ) : caoKeuzeForm.type === "gereedschapsgeld" ? (
-                  <Select value={caoKeuzeForm.keuze} onValueChange={(v) => setCaoKeuzeForm({ ...caoKeuzeForm, keuze: v })}>
-                    <SelectTrigger><SelectValue placeholder="Kies variant" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="geld">Geldbedrag ontvangen</SelectItem>
-                      <SelectItem value="natura">Natura (bon / gereedschapsset)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                ) : (
-                  <Input
-                    placeholder="bijv. naam van het spaarfonds"
-                    value={caoKeuzeForm.keuze}
-                    onChange={(e) => setCaoKeuzeForm({ ...caoKeuzeForm, keuze: e.target.value })}
-                  />
-                )}
-              </div>
-              <div className="space-y-1.5">
-                <Label>Jaar <span className="text-muted-foreground text-xs">(leeg = structureel)</span></Label>
-                <Input
-                  type="number"
-                  placeholder={String(new Date().getFullYear())}
-                  value={caoKeuzeForm.jaar ?? ""}
-                  onChange={(e) => setCaoKeuzeForm({ ...caoKeuzeForm, jaar: e.target.value ? Number(e.target.value) : undefined })}
-                />
-              </div>
-              {(caoKeuzeForm.type === "spaarfonds" || caoKeuzeForm.type === "vakantiegeld") && (
-                <div className="space-y-1.5">
-                  <Label>Fondsnaam <span className="text-muted-foreground text-xs">(optioneel)</span></Label>
-                  <Input
-                    placeholder="bijv. Bouw & Infra Spaarfonds"
-                    value={caoKeuzeForm.fonds_naam ?? ""}
-                    onChange={(e) => setCaoKeuzeForm({ ...caoKeuzeForm, fonds_naam: e.target.value })}
-                  />
+            {(() => {
+              const isMetaal = medewerker?.cao === "Metaal & Techniek";
+              const isBouw   = medewerker?.cao === "Bouw & Infra";
+
+              // Beschikbare types per CAO
+              const typeOpties: { value: MedewerkerCaoKeuzeInput["type"]; label: string }[] = isMetaal
+                ? [
+                    { value: "vakantiegeld", label: "Vakantiegeld" },
+                    { value: "spaarfonds",   label: "PLB-budget (Persoonlijk Leefstijlbudget)" },
+                  ]
+                : isBouw
+                ? [
+                    { value: "vakantiegeld",     label: "Vakantiegeld" },
+                    { value: "gereedschapsgeld", label: "Gereedschapsgeld" },
+                    { value: "spaarfonds",       label: "Spaarfonds" },
+                  ]
+                : [
+                    { value: "vakantiegeld",     label: "Vakantiegeld" },
+                    { value: "gereedschapsgeld", label: "Gereedschapsgeld" },
+                    { value: "spaarfonds",       label: "Spaarfonds" },
+                  ];
+
+              // Keuze-opties per type per CAO
+              const keuzeOpties: Partial<Record<MedewerkerCaoKeuzeInput["type"], { value: string; label: string }[]>> = isMetaal
+                ? {
+                    vakantiegeld: [
+                      { value: "uitbetalen",   label: "Uitbetalen (standaard, in mei)" },
+                      { value: "verlof_kopen", label: "Omzetten in verlofuren" },
+                      { value: "pensioen",     label: "Storting aanvullend pensioen (PMT)" },
+                    ],
+                    spaarfonds: [
+                      { value: "uitbetalen",   label: "Uitbetalen in december" },
+                      { value: "verlof_kopen", label: "Extra verlofuren kopen" },
+                      { value: "pensioen",     label: "Bijdrage pensioen (PMT)" },
+                    ],
+                  }
+                : {
+                    vakantiegeld: [
+                      { value: "55_uitbetaald",  label: "55% direct uitbetaald + 45% naar spaarfonds" },
+                      { value: "100_spaarfonds", label: "100% naar spaarfonds" },
+                      { value: "100_uitbetaald", label: "100% direct uitbetaald" },
+                    ],
+                    gereedschapsgeld: [
+                      { value: "geld",   label: "Geldbedrag ontvangen" },
+                      { value: "natura", label: "Natura (bon / gereedschapsset)" },
+                    ],
+                  };
+
+              const keuzeDropdown = keuzeOpties[caoKeuzeForm.type];
+
+              const fondsNaamPlaceholder = isMetaal
+                ? "bijv. PMT Pensioenfonds Metaal & Techniek"
+                : "bijv. Bouw & Infra Spaarfonds";
+
+              const toonFondsNaam =
+                caoKeuzeForm.type === "spaarfonds" ||
+                (caoKeuzeForm.type === "vakantiegeld" && !isMetaal);
+
+              return (
+                <div className="space-y-3">
+                  <div className="space-y-1.5">
+                    <Label>Type *</Label>
+                    <Select
+                      value={caoKeuzeForm.type}
+                      onValueChange={(v) => setCaoKeuzeForm({ ...caoKeuzeForm, type: v as MedewerkerCaoKeuzeInput["type"], keuze: "" })}
+                    >
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {typeOpties.map((o) => (
+                          <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Keuze *</Label>
+                    {keuzeDropdown ? (
+                      <Select value={caoKeuzeForm.keuze} onValueChange={(v) => setCaoKeuzeForm({ ...caoKeuzeForm, keuze: v })}>
+                        <SelectTrigger><SelectValue placeholder="Kies variant" /></SelectTrigger>
+                        <SelectContent>
+                          {keuzeDropdown.map((o) => (
+                            <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <Input
+                        placeholder="bijv. naam van het spaarfonds"
+                        value={caoKeuzeForm.keuze}
+                        onChange={(e) => setCaoKeuzeForm({ ...caoKeuzeForm, keuze: e.target.value })}
+                      />
+                    )}
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Jaar <span className="text-muted-foreground text-xs">(leeg = structureel)</span></Label>
+                    <Input
+                      type="number"
+                      placeholder={String(new Date().getFullYear())}
+                      value={caoKeuzeForm.jaar ?? ""}
+                      onChange={(e) => setCaoKeuzeForm({ ...caoKeuzeForm, jaar: e.target.value ? Number(e.target.value) : undefined })}
+                    />
+                  </div>
+                  {toonFondsNaam && (
+                    <div className="space-y-1.5">
+                      <Label>Fondsnaam <span className="text-muted-foreground text-xs">(optioneel)</span></Label>
+                      <Input
+                        placeholder={fondsNaamPlaceholder}
+                        value={caoKeuzeForm.fonds_naam ?? ""}
+                        onChange={(e) => setCaoKeuzeForm({ ...caoKeuzeForm, fonds_naam: e.target.value })}
+                      />
+                    </div>
+                  )}
+                  {caoKeuzeForm.type === "gereedschapsgeld" && caoKeuzeForm.keuze === "geld" && (
+                    <div className="space-y-1.5">
+                      <Label>Bedrag (€) <span className="text-muted-foreground text-xs">(optioneel)</span></Label>
+                      <Input
+                        type="number"
+                        min={0}
+                        step={0.01}
+                        placeholder="0,00"
+                        value={caoKeuzeForm.bedrag_cents != null ? caoKeuzeForm.bedrag_cents / 100 : ""}
+                        onChange={(e) => setCaoKeuzeForm({ ...caoKeuzeForm, bedrag_cents: e.target.value ? Math.round(Number(e.target.value) * 100) : undefined })}
+                      />
+                    </div>
+                  )}
+                  <div className="space-y-1.5">
+                    <Label>Toelichting <span className="text-muted-foreground text-xs">(optioneel)</span></Label>
+                    <Textarea
+                      placeholder="Aanvullende informatie..."
+                      value={caoKeuzeForm.toelichting ?? ""}
+                      onChange={(e) => setCaoKeuzeForm({ ...caoKeuzeForm, toelichting: e.target.value })}
+                    />
+                  </div>
                 </div>
-              )}
-              {caoKeuzeForm.type === "gereedschapsgeld" && caoKeuzeForm.keuze === "geld" && (
-                <div className="space-y-1.5">
-                  <Label>Bedrag (€) <span className="text-muted-foreground text-xs">(optioneel)</span></Label>
-                  <Input
-                    type="number"
-                    min={0}
-                    step={0.01}
-                    placeholder="0,00"
-                    value={caoKeuzeForm.bedrag_cents != null ? caoKeuzeForm.bedrag_cents / 100 : ""}
-                    onChange={(e) => setCaoKeuzeForm({ ...caoKeuzeForm, bedrag_cents: e.target.value ? Math.round(Number(e.target.value) * 100) : undefined })}
-                  />
-                </div>
-              )}
-              <div className="space-y-1.5">
-                <Label>Toelichting <span className="text-muted-foreground text-xs">(optioneel)</span></Label>
-                <Textarea
-                  placeholder="Aanvullende informatie..."
-                  value={caoKeuzeForm.toelichting ?? ""}
-                  onChange={(e) => setCaoKeuzeForm({ ...caoKeuzeForm, toelichting: e.target.value })}
-                />
-              </div>
-            </div>
+              );
+            })()}
             <DialogFooter>
               <Button variant="outline" onClick={() => setCaoKeuzeOpen(false)}>Annuleren</Button>
               <Button onClick={opslaanCaoKeuze} disabled={maakCaoKeuze.isPending || updCaoKeuze.isPending}>

@@ -1,3 +1,32 @@
+## 2026-07-13 — CAO-keuze dialog: opties per CAO correct gemaakt (Metaal & Techniek vs. Bouw & Infra)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (alleen frontend, geen schema/API-wijziging)
+
+**Aanleiding:** de CAO-keuze dialog toonde voor alle medewerkers dezelfde opties uit de CAO Bouw & Infra (Tijdspaarfonds-varianten), ongeacht welke CAO de medewerker daadwerkelijk valt. Jacqueline (FPS Bouw → CAO Metaal & Techniek) kreeg Bouw-opties te zien. De fondsnaam-placeholder luidde altijd "bijv. Bouw & Infra Spaarfonds" ook voor Metaal & Techniek.
+
+**Wat is er gewijzigd (`artifacts/firevault/src/pages/personeel/detail.tsx`):**
+
+- **Type-dropdown is nu CAO-afhankelijk:**
+  - *Metaal & Techniek:* Vakantiegeld + PLB-budget (Persoonlijk Leefstijlbudget) — geen "Gereedschapsgeld" (niet van toepassing in M&T)
+  - *Bouw & Infra:* Vakantiegeld + Gereedschapsgeld + Spaarfonds (ongewijzigd)
+- **Keuze-opties per type zijn nu CAO-afhankelijk:**
+  - *M&T Vakantiegeld:* Uitbetalen (standaard, in mei) / Omzetten in verlofuren / Storting aanvullend pensioen (PMT)
+  - *M&T PLB-budget:* Uitbetalen in december / Extra verlofuren kopen / Bijdrage pensioen (PMT)
+  - *Bouw Vakantiegeld:* 55% uitbetaald + 45% spaarfonds / 100% spaarfonds / 100% uitbetaald (ongewijzigd)
+  - *Bouw Gereedschapsgeld:* Geldbedrag / Natura (ongewijzigd)
+- **Fondsnaam-placeholder is CAO-afhankelijk:**
+  - M&T: "bijv. PMT Pensioenfonds Metaal & Techniek"
+  - Bouw: "bijv. Bouw & Infra Spaarfonds" (ongewijzigd)
+- **Lege-staat hint** toont nu ook een toepasselijke tekst voor Metaal & Techniek
+- **Weergave van bestaande keuzes:** keuzeLabel-map uitgebreid met M&T-waarden (uitbetalen / verlof_kopen / pensioen); "spaarfonds"-type wordt voor M&T weergegeven als "PLB-budget"
+- Fondsnaam-veld verdwijnt bij M&T Vakantiegeld (niet relevant); blijft zichtbaar bij spaarfonds/PLB-budget en bij Bouw-vakantiegeld
+
+**Werkmaatschappij → CAO mapping (ongewijzigd, ter referentie):**
+- FPS Brandpreventie / FPS Bouw / FPS Onderhoud → Metaal & Techniek
+- FPS Bouw & Renovatie → Bouw & Infra
+
+**Bewijs:** typecheck firevault groen; geen backend/OpenAPI-wijzigingen nodig (keuze wordt als vrije tekst opgeslagen, type-enum ongewijzigd).
+
 ## 2026-07-13 — AI-kwaliteit structureel hersteld: classificatie-engine + productie-enablement
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (env-wijziging + verbeterde heuristiek; geen schema- of API-wijziging)
