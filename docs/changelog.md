@@ -1,3 +1,22 @@
+## 2026-07-13 — Fix Docker-build-blokkade: conflict-markers verwijderd uit firevault-componenten
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (geen logica gewijzigd)
+
+**Aanleiding:** GitHub Actions-deploy faalde tijdens `pnpm --filter @workspace/firevault run build` (exit code 1). Oorzaak: drie firevault-componenten op GitHub (`gebruiker-menu.tsx`, `nieuws-ticker.tsx`, `beheerder-layout.tsx`) bevatten letterlijke Git-conflict-markers (`<<<<<<<`, `=======`, `>>>>>>>`) die als eerder slechte merge waren gecommit. Vite/Rollup kon deze bestanden niet parsen.
+
+**Herstelstap:**
+1. Lokale workspace-versies (zonder conflict-markers) opgehaald en vergeleken met GitHub.
+2. Commits uit GitHub-main die lokaal ontbraken gemerged in `/tmp-push-kloon`.
+3. Drie gecorrigeerde bestanden via GitHub Contents API direct op `main` gepusht (aparte commit per bestand, sha's: `dac18dd2a942`, `b4398cf4316e`, `51a8f6476c5d`).
+4. GitHub Actions triggert opnieuw; Docker-build gebruikt nu schone TSX-bronnen.
+
+**Getroffen bestanden (alleen GitHub-zijde gecorrigeerd):**
+- `artifacts/firevault/src/components/gebruiker-menu.tsx` (18 conflict-markers verwijderd)
+- `artifacts/firevault/src/components/nieuws-ticker.tsx` (9 conflict-markers verwijderd)
+- `artifacts/firevault/src/layouts/beheerder-layout.tsx` (3 conflict-markers verwijderd)
+
+---
+
 ## 2026-07-13 — Functiehuis: bevoegdheidsprofielen gekoppeld aan Administratie- en Project-functies
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (additief DB-record + koppelingen; geen schema-wijziging)
