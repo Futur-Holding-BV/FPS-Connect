@@ -441,11 +441,20 @@ const SLEUTELWOORDEN: Array<{ categorie: DocCategorie; woorden: string[] }> = [
   { categorie: "offerte", woorden: ["offerte", "aanbieding", "prijsopgave", "quotation", "geldig tot"] },
   { categorie: "factuur", woorden: ["factuur", "invoice", "creditnota", "btw-bedrag", "betalingstermijn"] },
   { categorie: "aanvraag", woorden: ["offerteaanvraag", "rfq", "bestek", "aanvraag"] },
-  { categorie: "personeelsdocument", woorden: ["curriculum vitae", "arbeidsovereenkomst", "arbeidscontract", "loonstrook", "diploma", "vog "] },
+  // personeelsdocument staat bewust VÓÓR contract: "arbeidscontract" en
+  // "onbepaalde/bepaalde tijd" zijn sterker dan het generieke woord "contract".
+  { categorie: "personeelsdocument", woorden: [
+    "curriculum vitae", "arbeidsovereenkomst", "arbeidscontract",
+    "loonstrook", "diploma", "vog ",
+    "onbepaalde tijd", "bepaalde tijd", "proeftijd", "arbeidsvoorwaarden",
+    "dienstverband", "salaris", "functieomschrijving", "functie beschrijving",
+  ] },
   { categorie: "verzekering", woorden: ["polisnummer", "verzekeringspolis", "assurantie", "premie", "dekking"] },
   { categorie: "snagstream", woorden: ["opleverrapport", "inspectierapport", "onderhoudsrapport", "punchlijst", "snagstream", "bevindingen"] },
   { categorie: "tekening", woorden: ["schaal 1:", "noordpijl", "plattegrond", "situatietekening"] },
-  { categorie: "contract", woorden: ["contract", "overeenkomst", "sla "] },
+  // "contract" als generiek woord staat ACHTERAAN: alleen als geen
+  // specifieker type matcht (zo wint "arbeidscontract" op "personeelsdocument").
+  { categorie: "contract", woorden: ["overeenkomst", "sla "] },
 ];
 
 // ── Typo-tolerante geconsolideerd-detectie ────────────────────────────────────
@@ -472,7 +481,9 @@ function heuristischClassificeerInhoud(
 ): { categorie: DocCategorie; redenering: string; vertrouwen: "laag" | "midden"; gevonden_gegevens: Record<string, string>; alternatieven: DocCategorie[] } {
   const naam = bestandsnaam.toLowerCase();
   const tekstLower = (tekst ?? "").toLowerCase();
-  const heeftTekst = tekstLower.trim().length > 80;
+  // Drempel verlaagd naar 20 tekens: zelfs korte tekst (koptekst, stempel)
+  // is betrouwbaarder dan de bestandsnaam als classificatiebron.
+  const heeftTekst = tekstLower.trim().length > 20;
 
   // Inhoud weegt zwaarder dan bestandsnaam: eerst op tekst zoeken.
   if (heeftTekst) {
@@ -489,12 +500,13 @@ function heuristischClassificeerInhoud(
     }
   }
 
-  // Geen bruikbare tekst gevonden — terugvallen op bestandsnaam, met lager vertrouwen.
+  // Geen bruikbare tekst — terugvallen op bestandsnaam. Hier controleren we ook
+  // op personeelsdocument-signalen in de naam die een generiek "contract" overschrijven.
   for (const { categorie, woorden } of SLEUTELWOORDEN) {
     if (woorden.some((w) => naam.includes(w.trim()))) {
       return {
         categorie,
-        redenering: `Geen leesbare inhoud beschikbaar; classificatie gebaseerd op bestandsnaam ("${categorie}") — lage betrouwbaarheid.`,
+        redenering: `Classificatie gebaseerd op bestandsnaam (AI niet beschikbaar) — controleer de bestemming voor opslaan.`,
         vertrouwen: "laag",
         gevonden_gegevens: {},
         alternatieven: ["bibliotheek", "algemeen"],

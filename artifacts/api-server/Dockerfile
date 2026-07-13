@@ -33,6 +33,8 @@ RUN pnpm --filter @workspace/api-server --prod deploy --legacy /deploy/api-serve
 
 # ─── Stage 3: Finale image ────────────────────────────────────────────────────
 FROM node:24-alpine
+# poppler-utils levert pdftoppm: nodig voor AI-vision op gescande PDF's.
+RUN apk add --no-cache poppler-utils
 WORKDIR /app
 
 # Kopieer runtime-dependencies (sharp, @aws-sdk/*, nodemailer, etc.)
