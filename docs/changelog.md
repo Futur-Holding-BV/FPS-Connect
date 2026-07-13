@@ -1,3 +1,26 @@
+## 2026-07-13 — Functiehuis: bevoegdheidsprofielen gekoppeld aan Administratie- en Project-functies
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (additief DB-record + koppelingen; geen schema-wijziging)
+
+**Aanleiding:** de 4 functies "Algemene Administratie" (FPS Bouw/Brandpreventie) en "Project Administratie" / "Project administratie" (FPS Bouw/Brandpreventie) hadden geen `profiel_id` gekoppeld. Bevoegdheden moesten daardoor altijd handmatig per persoon worden ingesteld.
+
+**Wat is er gewijzigd (DB-operaties):**
+
+- **Nieuw preset aangemaakt:** profiel "Administratie" (id=12, systeem=true) met bevoegdheden exact uit de PRESETS-definitie in `lib/permissies/src/index.ts`:
+  - financieel: 4, goedkeuring: 3, declaraties: 4, rapportages: 3, dossiers: 3
+  - personeel: 2, crm: 2, gebouwen: 2, onderhoud: 2, financieel_vertrouwelijk: 2, salarisarchief: 2
+  - offertes: 1, planning: 1, inspecties: 1 (rest: 0)
+
+- **Profielkoppelingen gelegd:**
+  - "Algemene Administratie" (FPS Bouw, id=9) → Administratie (id=12)
+  - "Algemene Administratie" (FPS Brandpreventie, id=11) → Administratie (id=12)
+  - "Project administratie" (FPS Bouw, id=8) → Project-admin (id=3)
+  - "Project Administratie" (FPS Brandpreventie, id=10) → Project-admin (id=3)
+
+**Effect:** een nieuwe medewerker met aanstelling in een van deze 4 functies krijgt automatisch de bijbehorende bevoegdheden afgeleid — geen handmatige instelling meer nodig. Bestaande accounts zijn niet geraakt (tabel `medewerker_aanstellingen` had nog geen koppelingen met deze functies).
+
+**Bewijs:** DB-verificatie — alle 4 functies tonen nu correct profiel + niveaus; geen medewerkers getroffen (lege medewerkers-kolom bevestigt puur forward-only impact).
+
 ## 2026-07-13 — CAO-keuze dialog: opties per CAO correct gemaakt (Metaal & Techniek vs. Bouw & Infra)
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (alleen frontend, geen schema/API-wijziging)
