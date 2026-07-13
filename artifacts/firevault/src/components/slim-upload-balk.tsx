@@ -674,7 +674,7 @@ function BeslisScherm({
             onClick={bewaarCvZonderOnboarding}
             disabled={cvBezig || (vereistBevestiging && !bevestigdAkkoord)}
           >
-            Niet nu — alleen in de inbox bewaren
+            Niet nu — alleen het document bewaren
           </Button>
         </div>
       )}
@@ -851,7 +851,7 @@ function WachtrijKaart({
           <p className="text-xs font-medium">
             {item.gekozenCategorie === "personeelsdocument"
               ? "Opgeslagen in personeelsdossier"
-              : `Opgeslagen in inbox → ${CATEGORIE_INFO[item.gekozenCategorie ?? item.suggestie?.categorie ?? "algemeen"].label}`}
+              : `Opgeslagen → ${CATEGORIE_INFO[item.gekozenCategorie ?? item.suggestie?.categorie ?? "algemeen"].label}`}
           </p>
         </div>
       )}
@@ -859,24 +859,35 @@ function WachtrijKaart({
   );
 }
 
-// ── Bestand naar inbox uploaden ───────────────────────────────────────────────
+// ── Bestand direct naar de documentbibliotheek aanleveren ────────────────────
+// Het document komt binnen als "ter goedkeuring" en wordt door een beheerder
+// beoordeeld in Documenten. Fail-loud: de servermelding wordt doorgegeven.
 
-async function uploadNaarInbox(bestand: File, toelichting?: string, geconsolideerd_override?: boolean): Promise<boolean> {
+async function uploadNaarBibliotheek(
+  bestand: File,
+  categorie: string,
+  toelichting?: string,
+): Promise<{ ok: boolean; status: number; foutmelding: string | null }> {
   try {
     const form = new FormData();
     form.append("bestand", bestand);
-    if (toelichting?.trim()) form.append("opmerkingen", toelichting.trim());
-    if (geconsolideerd_override !== undefined) {
-      form.append("geconsolideerd_override", geconsolideerd_override ? "true" : "false");
-    }
-    const res = await fetch("/api/inbox/items", {
+    form.append("categorie", categorie);
+    if (toelichting?.trim()) form.append("toelichting", toelichting.trim());
+    const res = await fetch("/api/documenten/aanleveren", {
       method: "POST",
       body: form,
       credentials: "include",
     });
-    return res.ok;
+    let foutmelding: string | null = null;
+    if (!res.ok) {
+      try {
+        const body = (await res.json()) as { error?: string };
+        foutmelding = typeof body.error === "string" ? body.error : null;
+      } catch { /* geen JSON-body */ }
+    }
+    return { ok: res.ok, status: res.status, foutmelding };
   } catch {
-    return false;
+    return { ok: false, status: 0, foutmelding: null };
   }
 }
 
@@ -886,7 +897,7 @@ async function uploadNaarInbox(bestand: File, toelichting?: string, geconsolidee
 async function uploadNaarFinancieel(
   bestand: File,
   opties: { toelichting?: string; geconsolideerd?: boolean; boekjaar?: number | null; entiteit?: string | null },
-): Promise<{ ok: boolean; status: number }> {
+): Promise<{ ok: boolean; status: number; foutmelding: string | null }> {
   try {
     const form = new FormData();
     form.append("bestand", bestand);
@@ -899,9 +910,16 @@ async function uploadNaarFinancieel(
       body: form,
       credentials: "include",
     });
-    return { ok: res.ok, status: res.status };
+    let foutmelding: string | null = null;
+    if (!res.ok) {
+      try {
+        const body = (await res.json()) as { error?: string };
+        foutmelding = typeof body.error === "string" ? body.error : null;
+      } catch { /* geen JSON-body */ }
+    }
+    return { ok: res.ok, status: res.status, foutmelding };
   } catch {
-    return { ok: false, status: 0 };
+    return { ok: false, status: 0, foutmelding: null };
   }
 }
 
@@ -1133,25 +1151,28 @@ export function SlimUploadBalk() {
         geconsolideerd,
         boekjaar: item.suggestie?.jaar ?? null,
         entiteit: item.suggestie?.organisatie ?? null,
-      }).then(({ ok, status }) => {
+      }).then(({ ok, status, foutmelding }) => {
         toast({
           title: ok ? "Opgeslagen bij Financieel" : "Opslaan mislukt",
           description: ok
             ? `${bestand.name} staat nu vertrouwelijk onder Financieel › ${geconsolideerd ? "Geconsolideerde jaarrekeningen" : "Jaarrekeningen"}.`
             : status === 401 || status === 403
               ? "Je hebt geen recht op vertrouwelijke financiële documenten. Neem contact op met de hoofdbeheerder."
-              : `${bestand.name} kon niet worden opgeslagen. Probeer het opnieuw.`,
+              : foutmelding ?? `${bestand.name} kon niet worden opgeslagen. Probeer het opnieuw.`,
           variant: ok ? undefined : "destructive",
         });
       });
     } else {
-      // Upload het bestand naar de inbox (fire and forget)
-      void uploadNaarInbox(bestand, item.toelichting, item.geconsolideerd_override).then((ok) => {
+      // Lever het bestand direct aan bij de documentbibliotheek (fire and forget)
+      void uploadNaarBibliotheek(bestand, cat, item.toelichting).then(({ ok, status, foutmelding }) => {
         toast({
-          title: ok ? "Opgeslagen in inbox" : "Categorisering bevestigd",
+          title: ok ? "Opgeslagen in Documenten" : "Opslaan mislukt",
           description: ok
-            ? `${bestand.name} staat nu in Slim uploaden › Inbox.`
-            : `${bestand.name} → ${info.label}. Opslaan mislukt — upload het bestand handmatig.`,
+            ? `${bestand.name} (${info.label}) staat nu in Documenten, klaar ter goedkeuring.`
+            : status === 401 || status === 403
+              ? "Je hebt geen schrijfrecht op de documentbibliotheek. Neem contact op met de hoofdbeheerder."
+              : foutmelding ?? `${bestand.name} kon niet worden opgeslagen. Probeer het opnieuw.`,
+          variant: ok ? undefined : "destructive",
         });
       });
     }
@@ -1189,7 +1210,7 @@ export function SlimUploadBalk() {
         ));
         toast({ title: "Opgeslagen in personeelsdossier", description: `${item.bestand.name} staat nu in het dossier.` });
       } else {
-        toast({ title: "Opslaan mislukt", description: "Probeer het opnieuw of kies 'Liever via inbox opslaan'.", variant: "destructive" });
+        toast({ title: "Opslaan mislukt", description: "Probeer het opnieuw of sla het document op via de documentbibliotheek.", variant: "destructive" });
       }
     } catch {
       toast({ title: "Verbindingsfout", variant: "destructive" });
@@ -1402,7 +1423,7 @@ export function SlimUploadBalk() {
                 <div>
                   <p className="text-sm font-semibold">Alle bestanden opgeslagen</p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    De bestanden staan nu in Slim uploaden › Inbox.
+                    De bestanden staan nu op hun eindbestemming.
                   </p>
                 </div>
                 <Button size="sm" variant="outline" onClick={opSluiten}>

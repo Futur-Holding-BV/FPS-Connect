@@ -243,15 +243,18 @@ router.post("/inbox/items", schrijven, uploadEnkel.single("bestand"), async (req
         })()
       : analyse.opslaglocatie;
 
-    // Upload het bestand naar object storage als bytes aanwezig zijn
+    // Upload het bestand naar object storage als bytes aanwezig zijn — fail-loud:
+    // bij storage-uitval weigeren we het verzoek in plaats van een dood pad te bewaren.
     let bestandspad: string;
     if (bestand) {
       const subPath = opslagSubPath(documentCategorie, bestandsnaam);
       try {
         bestandspad = await objectStorage.uploadBestand(subPath, bestand.buffer, mimetype);
-      } catch {
-        req.log.warn("Object storage niet beschikbaar — pad zonder upload opslaan");
-        bestandspad = `/objects/${subPath}`;
+      } catch (err) {
+        req.log.error({ err }, "Object storage niet beschikbaar — inbox-upload geweigerd");
+        return void res.status(503).json({
+          error: "De bestandsopslag is momenteel niet beschikbaar. Het document is niet opgeslagen — probeer het later opnieuw of waarschuw de beheerder.",
+        });
       }
     } else {
       // Metadata-only fallback (backward compatibility)

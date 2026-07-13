@@ -17,7 +17,6 @@ import {
   useListFacturen,
   useGetOnderhoudscontractenStatistieken,
   useListFeedback,
-  useGetInboxStats,
   useGetVeiligheidDashboard,
   useGetCapaciteitBezetting,
   useListRapporten,
@@ -30,7 +29,7 @@ import {
   Building, ShieldCheck, AlertTriangle, Calendar, TrendingUp, Clock, Hammer,
   Users, HeartPulse, ChevronRight, TriangleAlert, BrainCircuit,
   LayoutDashboard, FolderOpen, FileText, Bug, Euro, BarChart3,
-  CheckCircle2, XCircle, Inbox, Star, ArrowUpRight, HardHat,
+  CheckCircle2, XCircle, Star, ArrowUpRight, HardHat,
   Activity, Percent, ShieldAlert, Wrench, AlertCircle,
 } from "lucide-react";
 import { useRol } from "@/context/rol-context";
@@ -1132,7 +1131,6 @@ function HrmDashboardView() {
 
 function BugreportsDashboard() {
   const { data: feedback }      = useListFeedback();
-  const { data: inboxStats }    = useGetInboxStats();
   const { data: veiligheid }    = useGetVeiligheidDashboard();
 
   const alleFeedback = feedback ?? [];
@@ -1183,30 +1181,8 @@ function BugreportsDashboard() {
           </CardContent>
         </Card>
 
-        {/* Inbox + veiligheid */}
+        {/* Veiligheid */}
         <div className="space-y-4">
-          {inboxStats && (
-            <Card>
-              <CardHeader><CardTitle className="flex items-center gap-2 text-base"><Inbox className="h-4 w-4" /> Inbox statistieken</CardTitle></CardHeader>
-              <CardContent className="space-y-2">
-                {[
-                  { label: "Totaal",          waarde: inboxStats.totaal },
-                  { label: "Nieuw",           waarde: inboxStats.nieuw,              kleur: "text-blue-600" },
-                  { label: "Ter beoordeling", waarde: inboxStats.ter_beoordeling,   kleur: "text-amber-600" },
-                  { label: "Goedgekeurd",     waarde: inboxStats.goedgekeurd,        kleur: "text-green-600" },
-                  { label: "Afgewezen",       waarde: inboxStats.afgewezen,          kleur: "text-destructive" },
-                ].map(({ label, waarde, kleur }) => (
-                  <div key={label} className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">{label}</span>
-                    <span className={`text-sm font-bold ${kleur ?? ""}`}>{waarde}</span>
-                  </div>
-                ))}
-                <Link href="/inbox">
-                  <Button variant="outline" size="sm" className="gap-1 w-full text-xs mt-1">Inbox openen <ChevronRight className="h-3 w-3" /></Button>
-                </Link>
-              </CardContent>
-            </Card>
-          )}
           {veiligheid && (
             <Card>
               <CardHeader><CardTitle className="flex items-center gap-2 text-base"><ShieldAlert className="h-4 w-4 text-orange-500" /> Veiligheid</CardTitle></CardHeader>

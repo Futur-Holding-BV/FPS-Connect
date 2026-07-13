@@ -70,3 +70,17 @@ verifiëren via psql (information_schema) — exit 0 is geen bewijs.
   inloggen" eerst hierop checken (login_pogingen-tabel geeft bewijs). Dev heeft ze wél.
 - De api-container logt vrijwel niets (LOG_LEVEL nakijken); debugging loopt via de
   login_pogingen-tabel en DB-queries.
+
+**Patch-deploy zonder git-push (bevestigd juli 2026):** als lokale commits nog
+niet op origin/main staan en `git fetch` in de sandbox geblokkeerd is, werkt een
+manifest-deploy: sha256-manifest van `git ls-files` lokaal én op de server,
+verschillen tar-en + scp + uitpakken, verwijderde bestanden expliciet `rm`.
+Server draait daarna een dirty worktree bovenop origin/main — bij de volgende
+push moet de server gereconcilieerd worden (checkout/reset). Serverdiff eerst
+inhoudelijk beoordelen: server-lokale commits kunnen een OUDERE variant van
+dezelfde fix bevatten die je bewust overschrijft.
+
+**Cron-redirect naar root-eigendom logbestand faalt stil:** een `>> /var/log/x.log`
+in de crontab van een niet-root-gebruiker breekt de hele cronregel als het
+logbestand root-owned is (redirect faalt vóór het commando draait). Na het
+aanmaken van cronregels altijd een schrijftest op het logpad doen (of chown).

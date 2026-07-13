@@ -18,4 +18,8 @@ export const DocumentType = {
   verwerkingsvoorschrift: 'verwerkingsvoorschrift',
   productblad: 'productblad',
   opleverrapport: 'opleverrapport',
+  tekening: 'tekening',
+  contract: 'contract',
+  verzekering: 'verzekering',
+  overig: 'overig',
 } as const;

@@ -22,6 +22,7 @@ import { ObjectNotFoundError, type StorageFile } from "./objectStorageTypes";
 import {
   S3StorageFile,
   createS3Client,
+  createS3PresignClient,
   getS3File,
   s3PresignedPut,
 } from "./objectStorageS3";
@@ -77,6 +78,13 @@ let _s3Client: S3Client | null = null;
 function getS3Client(): S3Client {
   if (!_s3Client) _s3Client = createS3Client();
   return _s3Client;
+}
+
+// Aparte client voor presigned URLs richting de browser (S3_PUBLIC_ENDPOINT).
+let _s3PresignClient: S3Client | null = null;
+function getS3PresignClient(): S3Client {
+  if (!_s3PresignClient) _s3PresignClient = createS3PresignClient();
+  return _s3PresignClient;
 }
 
 // ─── GCS-hulpfuncties ─────────────────────────────────────────────────────────
@@ -273,7 +281,7 @@ export class ObjectStorageService {
 
     if (isS3Mode()) {
       const uploadURL = await s3PresignedPut(
-        getS3Client(),
+        getS3PresignClient(),
         getS3Bucket(),
         subPath,
         900,

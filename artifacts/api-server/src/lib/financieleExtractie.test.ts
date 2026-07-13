@@ -104,3 +104,58 @@ describe("berekenAfgeleideKengetallen — solvabiliteit/current ratio/werkkapita
     expect(afgeleid).toEqual([]);
   });
 });
+
+describe("bepaalSchaalfactor — ×€1.000-notatie", () => {
+  const { bepaalSchaalfactor } = _test;
+
+  it("herkent 'bedragen in duizenden euro's'", () => {
+    expect(bepaalSchaalfactor("Alle bedragen zijn vermeld in duizenden euro's, tenzij anders aangegeven.")).toBe(1000);
+  });
+
+  it("herkent '(× € 1.000)'", () => {
+    expect(bepaalSchaalfactor("Geconsolideerde balans (× € 1.000)")).toBe(1000);
+  });
+
+  it("herkent 'x € 1.000'", () => {
+    expect(bepaalSchaalfactor("Winst-en-verliesrekening x € 1.000")).toBe(1000);
+  });
+
+  it("herkent EUR '000", () => {
+    expect(bepaalSchaalfactor("Amounts in EUR '000")).toBe(1000);
+  });
+
+  it("geeft 1 zonder expliciete vermelding", () => {
+    expect(bepaalSchaalfactor("Netto-omzet 12.500.000")).toBe(1);
+  });
+});
+
+describe("extraheerKerncijfersHeuristisch — ×1.000-schaal toegepast op eurobedragen", () => {
+  const tekst = [
+    "Geconsolideerde jaarrekening 2023",
+    "Alle bedragen x € 1.000",
+    "Winst-en-verliesrekening",
+    "Netto-omzet                     1.766        1.542",
+    "Balans",
+    "Balanstotaal                    2.400        2.100",
+    "Eigen vermogen                    960          850",
+    "Gemiddeld aantal werknemers (fte)  12           11",
+  ].join("\n");
+
+  it("vermenigvuldigt eurobedragen met 1.000", () => {
+    const cijfers = extraheerKerncijfersHeuristisch(tekst);
+    expect(cijfers.find((c) => c.sleutel === "netto_omzet")!.waarde).toBe(1766000);
+    expect(cijfers.find((c) => c.sleutel === "balanstotaal")!.waarde).toBe(2400000);
+  });
+
+  it("schaalt aantallen (FTE) niet mee", () => {
+    const cijfers = extraheerKerncijfersHeuristisch(tekst);
+    const fte = cijfers.find((c) => c.eenheid === "aantal");
+    if (fte) expect(fte.waarde).toBeLessThan(1000);
+  });
+
+  it("legt de toegepaste schaal vast in het bronbewijs", () => {
+    const cijfers = extraheerKerncijfersHeuristisch(tekst);
+    const omzet = cijfers.find((c) => c.sleutel === "netto_omzet");
+    expect(omzet!.bronTekst).toContain("×1.000-notatie");
+  });
+});

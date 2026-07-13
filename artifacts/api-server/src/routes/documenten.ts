@@ -1,5 +1,7 @@
 import { Router } from "express";
 import type { Request, Response } from "express";
+import multer from "multer";
+import crypto from "node:crypto";
 import {
   db,
   documentenTable,
@@ -29,8 +31,38 @@ import { logDocumentActie } from "../lib/document-logboek";
 import { invalideerContext } from "../lib/aiContext/cache";
 import { analyseerDocumentTekst, stelToepassingenVoor } from "../services/document-ai";
 import { scanBestandMetadata, koppelDocumentAanScan } from "../services/security-intake-engine";
+import { ObjectStorageService } from "../lib/objectStorage";
+import type { DocumentType } from "../lib/documenten";
 
 const router = Router();
+
+const objectStorage = new ObjectStorageService();
+const uploadEnkel = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 } });
+
+/** Slim Upload-categorie → documenttype in de bibliotheek. Technische categorieën
+ * behouden hun specifieke type; algemene bedrijfsdocumenten krijgen een eigen
+ * generiek type (tekening/contract/verzekering) of vallen terug op "overig".
+ * Jaarrekeningen horen hier bewust NIET in: die gaan via /financieel/jaarrekeningen.
+ */
+const AANLEVER_CATEGORIE_NAAR_TYPE: Record<string, DocumentType> = {
+  eta: "eta",
+  dop: "dop",
+  testrapport: "testrapport",
+  certificaat: "productcertificaat",
+  productdocument: "productblad",
+  snagstream: "opleverrapport",
+  tekening: "tekening",
+  contract: "contract",
+  verzekering: "verzekering",
+  bibliotheek: "overig",
+  offerte: "overig",
+  factuur: "overig",
+  aanvraag: "overig",
+  personeelsdocument: "overig",
+  document_sjabloon: "overig",
+  algemeen: "overig",
+  onbekend: "overig",
+};
 
 // POST /documenten/ai-analyse — AI-voorstel voor documentmetadata o.b.v. tekst (beheerder)
 router.post("/documenten/ai-analyse", requireBevoegdheid("bibliotheek", 3), async (req, res): Promise<void> => {
@@ -403,6 +435,104 @@ router.post("/documenten", requireBevoegdheid("bibliotheek", 3), async (req, res
     return void res.status(500).json({ error: "Interne serverfout" });
   }
 });
+
+// POST /documenten/aanleveren — Slim Upload levert een document direct aan bij de
+// bibliotheek (multipart). Het bestand gaat fail-loud naar object storage en het
+// document komt binnen met goedkeuringsstatus "ter_goedkeuring", zodat een beheerder
+// het beoordeelt vóór het als goedgekeurd in de bibliotheek staat.
+router.post(
+  "/documenten/aanleveren",
+  requireBevoegdheid("bibliotheek", 2),
+  uploadEnkel.single("bestand"),
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const bestand = req.file;
+      if (!bestand || !bestand.buffer?.length) {
+        return void res.status(400).json({ error: "bestand is verplicht" });
+      }
+      const categorie = typeof req.body?.categorie === "string" ? req.body.categorie.trim() : "";
+      if (!categorie) {
+        return void res.status(400).json({ error: "categorie is verplicht" });
+      }
+      if (categorie === "jaarrekening") {
+        return void res.status(422).json({
+          error:
+            "Jaarrekeningen horen niet in de documentbibliotheek. Gebruik de financiële module (Financieel › Jaarrekeningen).",
+        });
+      }
+      const documenttype = AANLEVER_CATEGORIE_NAAR_TYPE[categorie] ?? "overig";
+      const toelichting =
+        typeof req.body?.toelichting === "string" && req.body.toelichting.trim()
+          ? req.body.toelichting.trim()
+          : null;
+
+      const bestandsnaam = bestand.originalname || "document";
+      const veilig = bestandsnaam.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 120);
+      const subPath = `bibliotheek/aanlevering/${Date.now()}_${veilig}`;
+
+      // Fail-loud: bij storage-uitval weigeren we het verzoek in plaats van een
+      // dood pad te bewaren.
+      let pdfUrl: string;
+      try {
+        pdfUrl = await objectStorage.uploadBestand(
+          subPath,
+          bestand.buffer,
+          bestand.mimetype || "application/octet-stream",
+        );
+      } catch (err) {
+        req.log.error({ err }, "Object storage niet beschikbaar — documentaanlevering geweigerd");
+        return void res.status(503).json({
+          error:
+            "De bestandsopslag is momenteel niet beschikbaar. Het document is niet opgeslagen — probeer het later opnieuw of waarschuw de beheerder.",
+        });
+      }
+
+      const naam = bestandsnaam.replace(/\.[^.]+$/, "").trim() || bestandsnaam;
+      const bestandsHash = crypto.createHash("sha256").update(bestand.buffer).digest("hex");
+
+      const [d] = await db
+        .insert(documentenTable)
+        .values({
+          naam,
+          documenttype,
+          pdfUrl,
+          bestandsHash,
+          bestandsgrootte: bestand.buffer.length,
+          goedkeuringStatus: "ter_goedkeuring",
+          aiMetadata: {
+            bron: "slim_upload",
+            categorie,
+            ...(toelichting ? { toelichting } : {}),
+          },
+        })
+        .returning();
+
+      await logDocumentActie({
+        documentId: d.id,
+        documentNaam: d.naam,
+        gebruikerId: req.session.userId ?? null,
+        actie: "geupload",
+      });
+
+      // Poort 2 — security scan (fire-and-forget, blokkeert de upload niet)
+      scanBestandMetadata({
+        bestandsnaam,
+        bestandsgrootte: bestand.buffer.length,
+        gebruikerId: req.session.userId ?? null,
+        gebruikerNaam: null,
+        uploadBron: "document",
+      })
+        .then((scan) => (scan.dbId != null ? koppelDocumentAanScan(scan.dbId, d.id) : undefined))
+        .catch(() => {});
+
+      invalideerContext("document", d.id);
+      return void res.status(201).json(await mapDocument(d));
+    } catch (err) {
+      req.log.error(err);
+      return void res.status(500).json({ error: "Interne serverfout" });
+    }
+  },
+);
 
 // PATCH /documenten/:id — alleen status/gearchiveerd (inhoud is onveranderlijk) (beheerder)
 router.patch("/documenten/:id", requireBevoegdheid("bibliotheek", 2), async (req, res): Promise<void> => {

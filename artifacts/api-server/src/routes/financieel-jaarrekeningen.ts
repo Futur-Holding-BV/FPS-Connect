@@ -347,15 +347,18 @@ router.post(
         ? parseInt(String(req.body.vervangt_document_id), 10)
         : null;
 
-      // Upload naar object storage (fail-soft: pad zonder upload bij storage-uitval).
+      // Upload naar object storage — fail-loud: als het bestand niet opgeslagen kan
+      // worden, weigeren we het hele verzoek. Nooit stilzwijgend een dood pad bewaren.
       let bestandspad: string;
       if (bestand) {
         const subPath = opslagSubPath(bestandsnaam);
         try {
           bestandspad = await objectStorage.uploadBestand(subPath, bestand.buffer, mimetype);
-        } catch {
-          req.log.warn("Object storage niet beschikbaar — pad zonder upload opslaan");
-          bestandspad = `/objects/${subPath}`;
+        } catch (err) {
+          req.log.error({ err }, "Object storage niet beschikbaar — jaarrekening-upload geweigerd");
+          return void res.status(503).json({
+            error: "De bestandsopslag is momenteel niet beschikbaar. Het document is niet opgeslagen — probeer het later opnieuw of waarschuw de beheerder.",
+          });
         }
       } else {
         bestandspad = (req.body.bestandspad as string | undefined) ?? `financieel/${Date.now()}_${bestandsnaam}`;

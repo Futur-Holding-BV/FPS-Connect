@@ -24,6 +24,11 @@ export const DOCUMENT_TYPES = [
   "verwerkingsvoorschrift",
   "productblad",
   "opleverrapport",
+  // Algemene bedrijfsdocumenten (Slim Upload levert direct aan de bibliotheek):
+  "tekening",
+  "contract",
+  "verzekering",
+  "overig",
 ] as const;
 
 export const DOCUMENT_STATUSSEN = [

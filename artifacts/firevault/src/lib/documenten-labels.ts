@@ -11,6 +11,10 @@ export const TYPE_LABELS: Record<string, string> = {
   verwerkingsvoorschrift: "Verwerkingsvoorschrift",
   productblad: "Productblad",
   opleverrapport: "Opleverrapport",
+  tekening: "Tekening",
+  contract: "Contract",
+  verzekering: "Verzekering",
+  overig: "Overig",
 };
 
 export const STATUS_LABELS: Record<string, string> = {

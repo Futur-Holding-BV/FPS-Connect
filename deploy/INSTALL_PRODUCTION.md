@@ -127,6 +127,11 @@ Direct na installatie, vóór het invoeren van echte data:
 docker compose -f deploy/docker-compose.production.yml --env-file deploy/.env.production \
   --profile backup run --rm backup
 ls -lh deploy/db-backups/
+
+# Objectopslag (geüploade bestanden) spiegelen naar deploy/minio-backups/
+docker compose -f deploy/docker-compose.production.yml --env-file deploy/.env.production \
+  --profile backup run --rm backup-minio
+ls -lh deploy/minio-backups/
 ```
 
 ---
@@ -235,35 +240,32 @@ git add .gitignore && git commit -m "gitignore: productie-secrets en backups uit
 
 ## Object Storage — fasegericht advies
 
-### Fase 1 — MinIO lokaal op dezelfde VPS (aanbevolen startpunt)
+### Fase 1 — MinIO lokaal op dezelfde VPS (aanbevolen startpunt; standaard ingebouwd)
 
 **Wanneer:** bij opstart, weinig data, beperkt budget.
 
-```yaml
-# Toevoegen aan docker-compose.production.yml
-  minio:
-    image: minio/minio:latest
-    restart: always
-    command: server /data --console-address ":9001"
-    environment:
-      MINIO_ROOT_USER: fps_minio
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
-    volumes:
-      - minio_data:/data
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
-      interval: 30s
-      retries: 3
-```
+De services `minio` en `minio-init` (bucket-aanmaak) zitten standaard in
+`deploy/docker-compose.production.yml`, inclusief het volume `minio_data` en
+een Caddy-route voor presigned browser-uploads
+(`/fps-production/*` → `minio:9000`). Er hoeft niets aan de compose-file
+toegevoegd te worden.
 
-Configureer in `.env.production`:
+Configureer in `.env.production` (zie `ENV_PRODUCTION.example`):
 ```
 S3_BUCKET=fps-production
-AWS_REGION=us-east-1
-AWS_ACCESS_KEY_ID=fps_app_key
-AWS_SECRET_ACCESS_KEY=CHANGEME
+S3_REGION=us-east-1
+S3_ACCESS_KEY_ID=fps_minio
+S3_SECRET_ACCESS_KEY=<zelfde als MINIO_ROOT_PASSWORD>
 S3_ENDPOINT=http://minio:9000
+S3_PUBLIC_ENDPOINT=https://connect.fps-one.nl
+MINIO_ROOT_USER=fps_minio
+MINIO_ROOT_PASSWORD=<sterk wachtwoord, bijv. openssl rand -hex 24>
 ```
+
+`S3_ENDPOINT` is het interne adres (server-side lezen/schrijven binnen het
+Docker-netwerk); `S3_PUBLIC_ENDPOINT` is het publieke domein waarop de
+browser presigned uploads aanlevert — Caddy stuurt die door naar MinIO met
+behoud van de Host-header, anders klopt de SigV4-handtekening niet.
 
 **Voordelen:** volledig lokaal, geen externe afhankelijkheden, S3-compatibel API.
 **Nadelen:** data op dezelfde schijf als de applicatie — enkelvoudig foutpunt.
@@ -316,6 +318,9 @@ crontab -e
 ```
 # Database backup dagelijks 03:00
 0 3 * * * cd /opt/fps-connect && docker compose -f deploy/docker-compose.production.yml --env-file deploy/.env.production --profile backup run --rm backup >> /var/log/fps-backup.log 2>&1
+
+# Objectopslag-backup (geüploade bestanden) dagelijks 03:30
+30 3 * * * cd /opt/fps-connect && docker compose -f deploy/docker-compose.production.yml --env-file deploy/.env.production --profile backup run --rm backup-minio >> /var/log/fps-backup.log 2>&1
 
 # Opschoning: bewaar maximaal 30 dumps
 15 3 * * * find /opt/fps-connect/deploy/db-backups -name "fps_*.sql.gz" -mtime +30 -delete

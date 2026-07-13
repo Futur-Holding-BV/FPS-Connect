@@ -210,6 +210,7 @@ export * from './declaratieStatus';
 export * from './deleteEenheidsprijs200';
 export * from './directiecockpitResponse';
 export * from './document';
+export * from './documentAanleverenInput';
 export * from './documentAiAnalyseInput';
 export * from './documentAiAnalyseResultaat';
 export * from './documentAiAnalyseResultaatToepassingSuggestiesItem';

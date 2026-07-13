@@ -19,6 +19,21 @@ connect.fps-one.nl {
         }
     }
 
+    # Presigned S3-uploads (browser → MinIO). Pad = /{S3_BUCKET}/*.
+    # Host-header NIET herschrijven: de SigV4-handtekening is ondertekend
+    # voor het publieke domein (S3_PUBLIC_ENDPOINT) en MinIO valideert die
+    # tegen de ontvangen Host-header. Caddy behoudt de Host standaard.
+    handle /fps-production/* {
+        request_body {
+            max_size 100MB
+        }
+        reverse_proxy minio:9000 {
+            transport http {
+                read_timeout 300s
+            }
+        }
+    }
+
     # Statische bestanden: deterministisch op pad en extensie gematcht,
     # geen file-existence check, geen try_files, geen not file.
     @static {

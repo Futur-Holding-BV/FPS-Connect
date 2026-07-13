@@ -54,8 +54,6 @@ import CrmContactpersonen from "@/pages/crm/contactpersonen";
 import CrmKennisbibliotheek from "@/pages/crm/kennisbibliotheek";
 import CrmTaken from "@/pages/crm/taken";
 import CrmRelatievoorstellen from "@/pages/crm/relatievoorstellen";
-import InboxOverzicht from "@/pages/inbox/index";
-import InboxDetail from "@/pages/inbox/detail";
 import WerkInboxPagina from "@/pages/werk-inbox/index";
 import Abonnementen from "@/pages/abonnementen/index";
 import LoginPogingen from "@/pages/beheer/login-pogingen";
@@ -432,10 +430,6 @@ function ConnectPortal() {
         <Route path="/crm/kennisbibliotheek" component={CrmKennisbibliotheek} />
         <Route path="/crm/:id" component={CrmKlantDetail} />
         <Route path="/crm" component={CrmKlanten} />
-
-        {/* ── Inbox ── */}
-        <Route path="/inbox/:id" component={InboxDetail} />
-        <Route path="/inbox" component={InboxOverzicht} />
 
         {/* ── Werk-inbox ── */}
         <Route path="/werk-inbox" component={WerkInboxPagina} />

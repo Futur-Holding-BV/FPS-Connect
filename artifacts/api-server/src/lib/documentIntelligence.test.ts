@@ -252,3 +252,31 @@ describe("berekenVertrouwen", () => {
     expect(met.score).toBeGreaterThan(zonder.score);
   });
 });
+
+describe("bevatGeconsolideerd — typo-tolerante detectie", () => {
+  const { bevatGeconsolideerd } = _test;
+
+  it("herkent de correcte spelling", () => {
+    expect(bevatGeconsolideerd("De geconsolideerde jaarrekening over 2023")).toBe(true);
+  });
+
+  it("herkent de typo met drie e's uit de bestandsnaam (productie-incident)", () => {
+    expect(bevatGeconsolideerd("FPS 2023 Geconsolideeerd-def.pdf")).toBe(true);
+  });
+
+  it("herkent een dubbele l-typo", () => {
+    expect(bevatGeconsolideerd("geconsollideerde cijfers")).toBe(true);
+  });
+
+  it("herkent het losse woord zonder 'jaarrekening' erachter", () => {
+    expect(bevatGeconsolideerd("Dit betreft geconsolideerd 2024")).toBe(true);
+  });
+
+  it("matcht niet op een enkelvoudige jaarrekening", () => {
+    expect(bevatGeconsolideerd("Enkelvoudige jaarrekening FPS Holding 2023")).toBe(false);
+  });
+
+  it("matcht niet op lege invoer", () => {
+    expect(bevatGeconsolideerd("")).toBe(false);
+  });
+});

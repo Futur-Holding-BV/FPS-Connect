@@ -4051,7 +4051,18 @@ export const DocumentType = {
   verwerkingsvoorschrift: 'verwerkingsvoorschrift',
   productblad: 'productblad',
   opleverrapport: 'opleverrapport',
+  tekening: 'tekening',
+  contract: 'contract',
+  verzekering: 'verzekering',
+  overig: 'overig',
 } as const;
+
+export interface DocumentAanleverenInput {
+  /** Slim Upload-categorie (bijv. tekening, contract, certificaat). Jaarrekeningen worden geweigerd; die gaan via /financieel/jaarrekeningen. */
+  categorie: string;
+  toelichting?: string;
+  bestand?: Blob;
+}
 
 export type DocumentStatus = typeof DocumentStatus[keyof typeof DocumentStatus];
 

@@ -1,3 +1,40 @@
+## 2026-07-13 — Slim Upload structureel hersteld: fail-loud opslag, beter AI-lezen, tabblad Slim Uploadpunt vervallen + productie-objectopslag (MinIO)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** middel (opslagpad en productie-infrastructuur geraakt; elk increment afzonderlijk terugdraaibaar)
+
+**Aanleiding:** uploads faalden op productie met "Opslaan mislukt" — de oorzaak was tweeledig: (1) de code verborg opslagfouten (stil doorgaan zonder bestand), en (2) productie had géén objectopslag (geen S3/GCS geconfigureerd), waardoor elk bestand permanent verloren ging (o.a. jaarrekening id=1).
+
+**I1 — Fail-loud opslag:** alle uploadpaden geven nu een expliciete fout aan de gebruiker zodra objectopslag ontbreekt of wegschrijven faalt; er wordt nooit meer een databaserecord aangemaakt zonder dat het bestand aantoonbaar is opgeslagen.
+
+**I2 — AI-begrijpend lezen verbeterd:** documentclassificatie (documentIntelligence + financiële extractie) inhoudelijk verbeterd; 59 unit-tests groen.
+
+**I3 — `POST /documenten/aanleveren`:** nieuw contract-first endpoint (OpenAPI + codegen) als centrale, gevalideerde aanleverroute voor documenten.
+
+**I4 — Tabblad "Slim Uploadpunt" (/inbox) geheel vervallen:** nav-item, routes, pagina's (`pages/inbox/`), dashboard-widget en offerte-aanvraag-wizard verplaatst/verwijderd; upload loopt nu via de Slim Upload-balk en het documentenbeheer.
+
+**I5 — Productie-objectopslag (MinIO) + presigned uploads via eigen domein:**
+- `docker-compose.production.yml`: minio-service (healthcheck, `minio_data`-volume), minio-init (bucket `fps-production` automatisch aanmaken), api wacht op minio-healthy
+- `Caddyfile`: `/fps-production/*` → minio:9000 met behoud van Host-header (SigV4), max 100 MB body, read_timeout 300s
+- `objectStorageS3.ts`: aparte presign-client op `S3_PUBLIC_ENDPOINT` (https://connect.fps-one.nl) zodat presigned URL's voor de browser op het publieke domein staan; interne opslag blijft via `S3_ENDPOINT` (http://minio:9000)
+- `.env.production` op de server aangevuld met S3_/MINIO_-variabelen en `OPENAI_API_KEY` (sleutel vooraf getest: geldige completion op gpt-4o-mini)
+- Gedeployed via bestandspatch bovenop servercommit (origin/main); DB-back-up vooraf (`fps_20260713_140504.sql.gz`); api- en caddy-image herbouwd; migratie overgeslagen (geen schemawijziging t.o.v. productie-DB, UNIQUE-constraint bestond al)
+
+**Bewijs:**
+- `pnpm run typecheck` groen (alle packages); 59 AI-tests groen
+- Productie: alle containers healthy (api, caddy, db, minio); healthz HTTP 200
+- End-to-end presigned-bewijs op productie: PUT via `https://connect.fps-one.nl/fps-production/...` → HTTP 200, aansluitend GET → HTTP 200 met identieke inhoud; testobject daarna opgeruimd
+- Bucket-init log: "Bucket created successfully fps/fps-production"
+
+**Architect-review (PASS) — twee punten direct verwerkt:**
+- Bucket-race gedicht: api wacht nu ook op `minio-init` (`service_completed_successfully`), niet alleen op minio-healthy
+- Objectopslag-back-up toegevoegd: nieuwe `backup-minio`-dienst (mc mirror naar `deploy/minio-backups/`) onder het backup-profiel; werkend bewezen op productie
+- Bonus: de server had géén back-upcron — dagelijkse cron ingesteld (03:00 database, 03:30 objectopslag, 03:15 opschoning >30 dagen) met schrijfbaar logbestand `/var/log/fps-backup.log`
+- Follow-up (niet blokkerend): MinIO service-account met bucket-scoped policy i.p.v. root-credentials; obsolete `version:`-regel uit compose
+
+**Openstaand:** de verloren jaarrekening (id=1) moet door de gebruiker opnieuw geüpload worden — het oorspronkelijke bestand is onherstelbaar. GitHub-push van deze wijzigingen loopt via de follow-uptaak GitHub-synchronisatie; de server draait tot die tijd op een bestandspatch bovenop origin/main.
+
+---
+
 ## 2026-07-13 — Gebruikersmenu opgeschoond: uitloggen naar de taakbalk
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (alleen frontend, geen API-/DB-wijziging)

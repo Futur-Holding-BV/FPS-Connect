@@ -18,6 +18,9 @@ version: "3.9"
 #
 #   db         — PostgreSQL 16 (intern, niet publiek)
 #
+#   minio      — S3-compatibele objectopslag (intern; presigned uploads lopen
+#                via caddy: /fps-production/* → minio:9000)
+#   minio-init — maakt de bucket eenmalig aan (restart: no)
 #   migrate    — Drizzle push (eenmalig bij deployment, restart: no)
 #   backup     — pg_dump + gzip (profiel "backup", handmatig of via cron)
 
@@ -43,6 +46,44 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+
+  minio:
+    image: minio/minio:latest
+    restart: always
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-fps_minio}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  minio-init:
+    image: minio/mc:latest
+    restart: "no"
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set fps http://minio:9000 $${MINIO_ROOT_USER:-fps_minio} $${MINIO_ROOT_PASSWORD} &&
+      mc mb --ignore-existing fps/$${S3_BUCKET:-fps-production} &&
+      echo 'MinIO bucket gereed'
+      "
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-fps_minio}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      S3_BUCKET: ${S3_BUCKET:-fps-production}
 
   migrate:
     build:
@@ -70,6 +111,10 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      minio:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "node", "-e",
         "require('http').get('http://localhost:8080/api/healthz', r => process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"]
@@ -118,7 +163,27 @@ services:
     command: >
       sh -c "pg_dump -h db -U fps_app fps_production | gzip > /backups/fps_$(date +%Y%m%d_%H%M%S).sql.gz && echo 'Backup klaar'"
 
+  # Spiegelt de volledige objectopslag (geüploade bestanden) naar ./minio-backups.
+  # Draaien naast de Postgres-backup: docker compose ... run --rm backup-minio
+  backup-minio:
+    image: minio/mc:latest
+    restart: "no"
+    profiles: ["backup"]
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-fps_minio}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      S3_BUCKET: ${S3_BUCKET:-fps-production}
+    volumes:
+      - ./minio-backups:/backups
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set fps http://minio:9000 $${MINIO_ROOT_USER:-fps_minio} $${MINIO_ROOT_PASSWORD} &&
+      mc mirror --overwrite fps/$${S3_BUCKET:-fps-production} /backups/$${S3_BUCKET:-fps-production} &&
+      echo 'MinIO-backup klaar'
+      "
+
 volumes:
   db_data:
+  minio_data:
   caddy_data:
   caddy_config:

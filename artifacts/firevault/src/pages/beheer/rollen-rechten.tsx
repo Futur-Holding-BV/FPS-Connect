@@ -75,7 +75,6 @@ const ROUTE_RAPPORT: RouteRapportRegel[] = [
   { module: "crm",            label: "Projectkansen",         route: "/crm/projectkansen",           navItem: true,  gate: "crm:1",            sectie: "CRM" },
   { module: "crm",            label: "Concurrenten",          route: "/crm/concurrenten",            navItem: true,  gate: "crm:1",            sectie: "CRM" },
   { module: "crm",            label: "Marktinzicht",          route: "/crm/marktintelligentie",      navItem: true,  gate: "crm:1",            sectie: "CRM" },
-  { module: "crm",            label: "Slim Uploadpunt",       route: "/inbox",                       navItem: true,  gate: "crm:1",            sectie: "CRM" },
   { module: "personeel",      label: "Personeel",             route: "/personeel",                   navItem: true,  gate: "personeel:1",      sectie: "HRM" },
   { module: "personeel",      label: "Verlofoverzicht",       route: "/personeel/verlof",            navItem: true,  gate: "personeel:1",      sectie: "HRM" },
   { module: "personeel",      label: "Capaciteitsplanning",   route: "/personeel/capaciteitsplanning", navItem: true, gate: "personeel:1",     sectie: "HRM" },

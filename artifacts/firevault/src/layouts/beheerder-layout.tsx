@@ -789,19 +789,6 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                             </Link>
                           </SidebarMenuButton>
                         </SidebarMenuItem>
-                        {toonCrm && (
-                          <SidebarMenuItem className="pl-5">
-                            <SidebarMenuButton
-                              asChild
-                              isActive={location === "/inbox" || location.startsWith("/inbox/")}
-                            >
-                              <Link href="/inbox">
-                                <Inbox />
-                                <span>Slim Uploadpunt</span>
-                              </Link>
-                            </SidebarMenuButton>
-                          </SidebarMenuItem>
-                        )}
                       </SidebarMenu>
                     </SidebarGroupContent>
                   </CollapsibleContent>

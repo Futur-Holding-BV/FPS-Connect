@@ -448,6 +448,23 @@ const SLEUTELWOORDEN: Array<{ categorie: DocCategorie; woorden: string[] }> = [
   { categorie: "contract", woorden: ["contract", "overeenkomst", "sla "] },
 ];
 
+// ── Typo-tolerante geconsolideerd-detectie ────────────────────────────────────
+// Vergelijkt op "samengevouwen" letters (runs van dezelfde letter worden één
+// letter), zodat tikfouten als "Geconsolideeerd" of "geconsollideerd" ook
+// herkend worden. Matcht per woord op het voorvoegsel, zodat verbuigingen
+// ("geconsolideerde") meetellen.
+function vouwLetters(s: string): string {
+  return s.toLowerCase().replace(/(.)\1+/g, "$1");
+}
+
+const GECONSOLIDEERD_GEVOUWEN = vouwLetters("geconsolideerd");
+
+export function bevatGeconsolideerd(bron: string): boolean {
+  if (!bron) return false;
+  const woorden = bron.toLowerCase().split(/[^a-zà-ÿ]+/);
+  return woorden.some((w) => vouwLetters(w).startsWith(GECONSOLIDEERD_GEVOUWEN));
+}
+
 function heuristischClassificeerInhoud(
   bestandsnaam: string,
   mime: string,
@@ -621,6 +638,19 @@ export async function classificeerDocument(input: {
       });
     }
   }
+  // Deterministisch vangnet voor geconsolideerde jaarrekeningen: typo-tolerante
+  // detectie op tekst én bestandsnaam (bijv. "Geconsolideeerd" met een extra e),
+  // zodat het subtype ook zonder AI correct wordt gezet.
+  if (basis.categorie === "jaarrekening" && subtype !== "geconsolideerd") {
+    if (bevatGeconsolideerd(`${bestandsnaam} ${extractie.tekst ?? ""}`)) {
+      subtype = "geconsolideerd";
+      bewijs.push({
+        stap: "subtype_afgeleid",
+        resultaat: "geconsolideerd",
+        detail: "Geconsolideerd-kenmerk in tekst/bestandsnaam (typo-tolerant vangnet)",
+      });
+    }
+  }
   const module = CATEGORIE_MODULE[basis.categorie];
   bewijs.push({ stap: "module_bepaald", resultaat: module });
 
@@ -681,4 +711,4 @@ export async function classificeerDocument(input: {
 }
 
 // Puur-functionele exports voor unit tests (geen DB/AI-netwerkcall nodig).
-export const _test = { heuristischClassificeerInhoud, herkenJaarUitTekst, herkenJaarUitBestandsnaam, bepaalOpslaglocatie, berekenVertrouwen, herkenFinancieleStatus, CATEGORIE_MODULE };
+export const _test = { heuristischClassificeerInhoud, herkenJaarUitTekst, herkenJaarUitBestandsnaam, bepaalOpslaglocatie, berekenVertrouwen, herkenFinancieleStatus, bevatGeconsolideerd, CATEGORIE_MODULE };

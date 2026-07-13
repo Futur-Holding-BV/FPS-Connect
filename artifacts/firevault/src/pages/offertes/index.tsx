@@ -27,7 +27,8 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { PaginaHulp } from "@/components/pagina-hulp";
-import { FileText, Plus, Search, Sparkles, PenLine, TrendingUp, CheckCircle, Send, Eye, Clock, FolderOpen, XCircle, AlertTriangle, Download, Euro, ArrowRight } from "lucide-react";
+import { OfferteAanvraagWizard } from "@/components/offerte-aanvraag-wizard";
+import { FileText, Plus, Search, Sparkles, PenLine, TrendingUp, CheckCircle, Send, Eye, Clock, FolderOpen, XCircle, AlertTriangle, Download, Euro, ArrowRight, Mail } from "lucide-react";
 import { Link } from "wouter";
 
 const STATUS_KLEUR: Record<string, string> = {
@@ -86,6 +87,7 @@ export default function OffertesPagina() {
   const [zoek, setZoek] = useState("");
   const [doelgroepFilter, setDoelgroepFilter] = useState("alle");
   const [open, setOpen] = useState(false);
+  const [aanvraagOpen, setAanvraagOpen] = useState(false);
   const [form, setForm] = useState<OfferteInput>(LEEG);
   const [gekozenDoelgroep, setGekozenDoelgroep] = useState("algemeen");
 
@@ -154,10 +156,17 @@ export default function OffertesPagina() {
             Offertes voorbereiden — begrotingsregels uit spots, handmatig afronden. Geen automatische verzending.
           </p>
         </div>
-        <Button onClick={() => setOpen(true)}>
-          <Plus className="h-4 w-4" /> Nieuwe offerte
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setAanvraagOpen(true)}>
+            <Mail className="h-4 w-4" /> Offerte-aanvraag (e-mail)
+          </Button>
+          <Button onClick={() => setOpen(true)}>
+            <Plus className="h-4 w-4" /> Nieuwe offerte
+          </Button>
+        </div>
       </div>
+
+      <OfferteAanvraagWizard open={aanvraagOpen} onOpenChange={setAanvraagOpen} />
 
       {analytics && (
         <div className="space-y-3">

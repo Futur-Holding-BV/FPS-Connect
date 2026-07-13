@@ -138,12 +138,31 @@ function bepaalPagina(paginas: string[] | null, regel: string): number | null {
   return null;
 }
 
+// ── Schaalfactor (×1.000-notatie) ─────────────────────────────────────────────
+// Nederlandse jaarrekeningen vermelden vaak "bedragen in duizenden euro's",
+// "alle bedragen × € 1.000" of "EUR '000". Zonder correctie zijn heuristisch
+// gevonden eurobedragen dan een factor 1.000 te laag. Detectie alleen bij een
+// expliciete vermelding in de tekst; nooit gokken.
+const SCHAAL_PATRONEN: RegExp[] = [
+  /bedragen\s+(?:zijn\s+)?(?:vermeld\s+|weergegeven\s+|uitgedrukt\s+)?in\s+(?:€\s*)?duizenden/i,
+  /in\s+duizenden\s+euro/i,
+  /[x×]\s*€?\s*1\.000\b/i,
+  /\(\s*€?\s*1\.000\s*\)/i,
+  /\beur\s*['’]000\b/i,
+  /€\s*['’]000\b/i,
+];
+
+export function bepaalSchaalfactor(tekst: string): 1 | 1000 {
+  return SCHAAL_PATRONEN.some((p) => p.test(tekst)) ? 1000 : 1;
+}
+
 // ── Heuristisch pad ───────────────────────────────────────────────────────────
 export function extraheerKerncijfersHeuristisch(tekst: string): GeextraheerdKerncijfer[] {
   const cijfers: GeextraheerdKerncijfer[] = [];
   if (!tekst || tekst.trim().length === 0) return cijfers;
   const paginas = splitsPaginas(tekst);
   const regels = tekst.split(/\r?\n/).map((r) => r.trim()).filter((r) => r.length > 0);
+  const schaalfactor = bepaalSchaalfactor(tekst);
 
   for (const item of KERNCIJFER_CATALOGUS) {
     let gevonden: GeextraheerdKerncijfer | null = null;
@@ -154,17 +173,21 @@ export function extraheerKerncijfersHeuristisch(tekst: string): GeextraheerdKern
       // Eerste getal ná het label = huidig boekjaar (kolom links); prior jaar staat rechts.
       const waarde = parseNederlandsGetal(getallen[0]);
       if (waarde === null) continue;
+      // Schaal alleen eurobedragen; percentages, ratio's en aantallen (FTE) nooit.
+      const schalen = item.eenheid === "euro" && schaalfactor !== 1;
       // Confidence: meer signalen (meerdere kolommen = duidelijke tabelregel) = hoger.
       const confidence = Math.min(0.55 + (getallen.length >= 2 ? 0.15 : 0) + 0.1, 0.8);
       gevonden = {
         sleutel: item.sleutel,
         label: item.label,
-        waarde,
+        waarde: schalen ? waarde * schaalfactor : waarde,
         eenheid: item.eenheid,
         isBerekend: false,
         bronPagina: bepaalPagina(paginas, regel),
         bronTabel: item.sectie,
-        bronTekst: regel.slice(0, 300),
+        bronTekst: schalen
+          ? `${regel.slice(0, 250)} [×1.000-notatie in document toegepast]`
+          : regel.slice(0, 300),
         extractieMethode: "heuristiek",
         confidence,
       };
@@ -349,5 +372,6 @@ export const _test = {
   parseNederlandsGetal,
   extraheerKerncijfersHeuristisch,
   berekenAfgeleideKengetallen,
+  bepaalSchaalfactor,
   KERNCIJFER_CATALOGUS,
 };

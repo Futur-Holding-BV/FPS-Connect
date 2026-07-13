@@ -171,6 +171,7 @@ import type {
   DeleteEenheidsprijs200,
   DirectiecockpitResponse,
   Document,
+  DocumentAanleverenInput,
   DocumentAiAnalyseInput,
   DocumentAiAnalyseResultaat,
   DocumentDuplicaatInput,
@@ -11008,6 +11009,84 @@ export const useCreateDocument = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getCreateDocumentMutationOptions(options));
+    }
+
+export const getAanleverenDocumentUrl = () => {
+
+
+
+
+  return `/api/documenten/aanleveren`
+}
+
+/**
+ * @summary Document direct aanleveren bij de bibliotheek (Slim Upload; komt binnen als ter goedkeuring)
+ */
+export const aanleverenDocument = async (documentAanleverenInput: DocumentAanleverenInput, options?: RequestInit): Promise<Document> => {
+    const formData = new FormData();
+formData.append(`categorie`, documentAanleverenInput.categorie);
+if(documentAanleverenInput.toelichting !== undefined) {
+ formData.append(`toelichting`, documentAanleverenInput.toelichting);
+ }
+if(documentAanleverenInput.bestand !== undefined) {
+ formData.append(`bestand`, documentAanleverenInput.bestand);
+ }
+
+  return customFetch<Document>(getAanleverenDocumentUrl(),
+  {
+    ...options,
+    method: 'POST'
+    ,
+    body: formData
+  }
+);}
+
+
+
+
+export const getAanleverenDocumentMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof aanleverenDocument>>, TError,{data: BodyType<DocumentAanleverenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof aanleverenDocument>>, TError,{data: BodyType<DocumentAanleverenInput>}, TContext> => {
+
+const mutationKey = ['aanleverenDocument'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof aanleverenDocument>>, {data: BodyType<DocumentAanleverenInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  aanleverenDocument(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AanleverenDocumentMutationResult = NonNullable<Awaited<ReturnType<typeof aanleverenDocument>>>
+    export type AanleverenDocumentMutationBody = BodyType<DocumentAanleverenInput>
+    export type AanleverenDocumentMutationError = ErrorType<void>
+
+    /**
+ * @summary Document direct aanleveren bij de bibliotheek (Slim Upload; komt binnen als ter goedkeuring)
+ */
+export const useAanleverenDocument = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof aanleverenDocument>>, TError,{data: BodyType<DocumentAanleverenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof aanleverenDocument>>,
+        TError,
+        {data: BodyType<DocumentAanleverenInput>},
+        TContext
+      > => {
+      return useMutation(getAanleverenDocumentMutationOptions(options));
     }
 
 export const getGetDocumentUrl = (id: number,) => {

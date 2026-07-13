@@ -9,6 +9,13 @@
  *   S3_ACCESS_KEY_ID     - access key
  *   S3_SECRET_ACCESS_KEY - secret key
  *   S3_ENDPOINT          - custom endpoint (verplicht voor R2/MinIO/DO Spaces)
+ *   S3_PUBLIC_ENDPOINT   - optioneel: publiek bereikbaar endpoint voor presigned
+ *                          URLs (browser-uploads). Nodig wanneer S3_ENDPOINT een
+ *                          intern adres is (bijv. http://minio:9000 in Docker):
+ *                          de browser kan dat niet bereiken. De reverse proxy
+ *                          moet {S3_PUBLIC_ENDPOINT}/{bucket}/* doorsturen naar
+ *                          de interne S3-server MET behoud van de Host-header
+ *                          (anders klopt de SigV4-handtekening niet).
  *
  * Objectpaden: {gebouwId}/{type}s/{uuid} of algemeen/{uuid}
  */
@@ -40,6 +47,33 @@ export function createS3Client(): S3Client {
   return new S3Client({
     region,
     ...(endpoint ? { endpoint, forcePathStyle: true } : {}),
+    credentials: { accessKeyId, secretAccessKey },
+  });
+}
+
+/**
+ * Bouw een S3Client die uitsluitend gebruikt wordt voor het ondertekenen van
+ * presigned URLs richting de browser. Gebruikt S3_PUBLIC_ENDPOINT als die is
+ * ingesteld, anders identiek aan createS3Client().
+ */
+export function createS3PresignClient(): S3Client {
+  const publicEndpoint = process.env.S3_PUBLIC_ENDPOINT;
+  if (!publicEndpoint) return createS3Client();
+
+  const region = process.env.S3_REGION ?? "auto";
+  const accessKeyId = process.env.S3_ACCESS_KEY_ID;
+  const secretAccessKey = process.env.S3_SECRET_ACCESS_KEY;
+
+  if (!accessKeyId || !secretAccessKey) {
+    throw new Error(
+      "S3_ACCESS_KEY_ID en S3_SECRET_ACCESS_KEY zijn verplicht voor de S3-backend.",
+    );
+  }
+
+  return new S3Client({
+    region,
+    endpoint: publicEndpoint,
+    forcePathStyle: true,
     credentials: { accessKeyId, secretAccessKey },
   });
 }

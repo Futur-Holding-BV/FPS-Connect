@@ -3139,6 +3139,31 @@ paths:
               schema:
                 $ref: "#/components/schemas/Document"
 
+  /documenten/aanleveren:
+    post:
+      operationId: aanleverenDocument
+      tags: [bibliotheek]
+      summary: Document direct aanleveren bij de bibliotheek (Slim Upload; komt binnen als ter goedkeuring)
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/DocumentAanleverenInput"
+      responses:
+        "201":
+          description: Aangeleverd
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Document"
+        "400":
+          description: Ongeldige invoer
+        "422":
+          description: Categorie hoort niet in de bibliotheek (bijv. jaarrekening)
+        "503":
+          description: Bestandsopslag niet beschikbaar
+
   /documenten/{id}:
     get:
       operationId: getDocument
@@ -28377,7 +28402,20 @@ components:
 
     DocumentType:
       type: string
-      enum: [eta, classificatierapport, testrapport, productcertificaat, dop, verwerkingsvoorschrift, productblad, opleverrapport]
+      enum: [eta, classificatierapport, testrapport, productcertificaat, dop, verwerkingsvoorschrift, productblad, opleverrapport, tekening, contract, verzekering, overig]
+
+    DocumentAanleverenInput:
+      type: object
+      required: [categorie]
+      properties:
+        categorie:
+          type: string
+          description: Slim Upload-categorie (bijv. tekening, contract, certificaat). Jaarrekeningen worden geweigerd; die gaan via /financieel/jaarrekeningen.
+        toelichting:
+          type: string
+        bestand:
+          type: string
+          format: binary
 
     DocumentStatus:
       type: string
