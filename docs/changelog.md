@@ -256,6 +256,46 @@
 
 ---
 
+## 2026-07-13 — FIE Fase 1+2: Financial Intelligence Engine — jaarbegroting, AK-posten en live calculatieblok
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (additieve tabellen, geen breaking changes)
+
+**DB (6 nieuwe tabellen):**
+- `fie_jaarbegrotingen` — boekjaar, status (concept/actief/gesloten), omzetdoel, doelmarge%, AK-norm per uur, productieve uren, verdeelsleutel (uren/omzet/ftes)
+- `fie_ak_posten` — AK-kostenposten per begroting, per werkgever (FK set null), per categorie (huisvesting/personeel_indirect/voertuigen/ict/verzekeringen/marketing/overig)
+- `fie_capaciteit_snapshots` — momentopnames productieve uren + FTE per boekjaar/werkgever
+- `fie_observaties` — auto-gegenereerde prognose-observaties (info/waarschuwing/kritiek)
+- `fie_nacalculaties` — nacalculatie-records per opdracht (Fase 5 voorbereiding)
+- `fie_leermomenten` — geaggregeerde afwijkingen per werktype (Fase 5 voorbereiding)
+
+**API (`artifacts/api-server/src/routes/fie.ts`, geregistreerd in routes/index.ts):**
+- `GET/POST /fie/begrotingen`, `GET/PATCH /fie/begrotingen/:id`
+- `GET/POST /fie/begrotingen/:id/ak-posten`, `PATCH/DELETE /fie/ak-posten/:id`
+- `GET /fie/capaciteit/:boekjaar`, `GET /fie/capaciteit/:boekjaar/hrm`, `POST /fie/capaciteit/:boekjaar`
+- `GET /fie/begrotingen/:id/doelmarge`
+- `GET /fie/context/calculatie/:id` — live context + AI-advies per calculatie
+- `GET /fie/prognose/:boekjaar`, `GET /fie/observaties/:boekjaar`
+- `GET/POST /fie/leermomenten`, `PATCH/DELETE /fie/leermomenten/:id`, `POST /fie/leermomenten/herbereken`
+- `GET /fie/nacalculaties`, `POST /fie/nacalculaties/herbereken-verouderd`, `GET /fie/nacalculaties/verouderd-aantal`
+- Bevoegdheid beheer: `financieel:2`; calculatiecontext: `calculaties:1`
+
+**Service-laag (`artifacts/api-server/src/services/fie-service.ts`):**
+- `berekenCapaciteit(boekjaar)` — HRM-afgeleid (contracturen × aanwezigheidspercentage)
+- `berekenDoelmarge(begrotingId)` — benodigde brutowinst / omzetdoel
+- `berekenFieContext(calculatieId)` — omzet, kostprijs, BW, BW%, doelmarge%, AK-bijdrage, AI-advies
+- `berekenJaarprognose(boekjaar)` — kwartaalprognose uit opdrachten-pipeline + gewogen kansen
+- `berekenEnSlaOpNacalculatie(opdrachtId)`, `herberekeenLeermomenten()`, `herberekeenVerouderdeNacalculaties()`
+
+**Frontend:**
+- `/beheer/bedrijfskompas` (`bedrijfskompas.tsx`, 1676 regels) — beheer-UI: tabbladen Begrotingen, Prognose, Leermomenten, Nacalculaties; volledige CRUD voor begrotingen en AK-posten; CapaciteitSectie (HRM-afgeleid); PrognoseTab met kwartaalbalken; leermoment-aanpassing met correctiefactor
+- `/directie/kompas` (`kompas.tsx`) — directiekompas-view gated op financieel:2
+- `<FieContextBlok calculatieId={id}>` in `detail.tsx` — compact blok onder calculatietabel: omzet, kostprijs, BW, BW%, doelmarge, AK-bijdrage, AI-advies; live refetch bij elke mutatiesucces
+- Navigatie: "Bedrijfskompas" in Beheer-sidebar (`beheerder-layout.tsx`)
+
+**Bewijs:** `pnpm run typecheck` groen (alle packages). `pnpm --filter @workspace/scripts run kwaliteitscheck` groen (0 kritiek, 0 hoog). DB-tabellen aanwezig (6×). OpenAPI-paden aanwezig + codegen gedraaid. Workflows: api-server 200 OK op `/api/healthz`.
+
+---
+
 ## 2026-07-13 — HRM Personeel: CV-upload en certificaat-upload
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (alleen frontend, geen API-/DB-wijziging)
