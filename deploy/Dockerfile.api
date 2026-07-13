@@ -61,6 +61,13 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
 ENV NODE_ENV=production
 ENV PORT=8080
 
+# Versie-informatie, bij de build meegegeven door scripts/deploy-production.sh
+# via docker-compose build-args; zichtbaar in de app via GET /api/versie.
+ARG GIT_COMMIT=onbekend
+ARG BUILD_TIJD=""
+ENV GIT_COMMIT=${GIT_COMMIT}
+ENV BUILD_TIJD=${BUILD_TIJD}
+
 EXPOSE 8080
 
 CMD ["node", "--enable-source-maps", "dist/index.mjs"]

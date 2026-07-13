@@ -35,6 +35,13 @@ RUN pnpm install --frozen-lockfile --ignore-scripts
 COPY lib/ lib/
 COPY artifacts/firevault/ artifacts/firevault/
 
+# Versie-informatie, bij de build meegegeven door scripts/deploy-production.sh
+# via docker-compose build-args; Vite bakt de VITE_-varianten in de webbundel.
+ARG GIT_COMMIT=onbekend
+ARG BUILD_TIJD=""
+ENV VITE_GIT_COMMIT=${GIT_COMMIT}
+ENV VITE_BUILD_TIJD=${BUILD_TIJD}
+
 # Stap 3: Vite bouwt de frontend
 RUN pnpm --filter @workspace/firevault run build
 

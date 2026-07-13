@@ -17,6 +17,16 @@ export const HealthCheckResponse = zod.object({
 
 
 /**
+ * @summary Versie-informatie van de draaiende backend (commit + buildtijd)
+ */
+export const GetVersieResponse = zod.object({
+  "versie": zod.string().describe('Leesbaar versienummer, bijv. \"2026.07.13-458fd39\"'),
+  "commit": zod.string().describe('Korte git-commithash van de build'),
+  "gebouwd_op": zod.string().describe('ISO-tijdstip waarop het image gebouwd is (leeg in dev)')
+})
+
+
+/**
  * @summary Platform-brede statistieken
  */
 export const GetDashboardStatsResponse = zod.object({

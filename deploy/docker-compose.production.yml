@@ -59,6 +59,9 @@ services:
     build:
       context: ..
       dockerfile: deploy/Dockerfile.api
+      args:
+        GIT_COMMIT: ${GIT_COMMIT:-onbekend}
+        BUILD_TIJD: ${BUILD_TIJD:-}
     restart: always
     env_file: .env.production
     environment:
@@ -84,6 +87,9 @@ services:
     build:
       context: ..
       dockerfile: deploy/Dockerfile.caddy
+      args:
+        GIT_COMMIT: ${GIT_COMMIT:-onbekend}
+        BUILD_TIJD: ${BUILD_TIJD:-}
     restart: always
     ports:
       - "80:80"

@@ -90,6 +90,19 @@ paths:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
 
+  /versie:
+    get:
+      operationId: getVersie
+      tags: [health]
+      summary: Versie-informatie van de draaiende backend (commit + buildtijd)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VersieInfo"
+
   # ── DASHBOARD ────────────────────────────────────────────────────────────
   /dashboard/stats:
     get:
@@ -24080,6 +24093,20 @@ components:
       properties:
         status:
           type: string
+
+    VersieInfo:
+      type: object
+      required: [versie, commit, gebouwd_op]
+      properties:
+        versie:
+          type: string
+          description: Leesbaar versienummer, bijv. "2026.07.13-458fd39"
+        commit:
+          type: string
+          description: Korte git-commithash van de build
+        gebouwd_op:
+          type: string
+          description: ISO-tijdstip waarop het image gebouwd is (leeg in dev)
 
     # ── CRM ───────────────────────────────────────────────────────────────
     CrmOrganisatie:

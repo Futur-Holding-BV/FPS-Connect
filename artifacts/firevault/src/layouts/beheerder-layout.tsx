@@ -11,6 +11,7 @@ import {
 } from "@workspace/api-client-react";
 import { BerichtNotificatieToast } from "@/components/bericht-notificatie-toast";
 import { NieuwsTicker } from "@/components/nieuws-ticker";
+import { VersieBadge } from "@/components/versie-badge";
 import {
   SidebarProvider, Sidebar, SidebarHeader, SidebarContent, SidebarFooter,
   SidebarGroup, SidebarGroupLabel, SidebarGroupContent,
@@ -2067,7 +2068,8 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
           <SidebarTrigger className="md:hidden" title="Menu openen" />
           <img src="/logo-fps-connect.png" alt="FPS Connect" className="h-5 w-auto md:hidden" />
           <TerugKnop />
-          <div className="ml-auto">
+          <div className="ml-auto flex items-center gap-2">
+            <VersieBadge />
             <OnlineGebruikersTaakbalk />
           </div>
         </div>

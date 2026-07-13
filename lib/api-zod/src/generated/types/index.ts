@@ -1146,6 +1146,7 @@ export * from './verlofsoort';
 export * from './verlofsoortHoofdcategorie';
 export * from './verlofsoortInput';
 export * from './verlofsoortInputHoofdcategorie';
+export * from './versieInfo';
 export * from './verstuurFactuurCorrespondentie200';
 export * from './vervaldag';
 export * from './vervalsignaal';

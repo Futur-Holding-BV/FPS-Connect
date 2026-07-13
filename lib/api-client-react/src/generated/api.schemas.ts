@@ -948,6 +948,15 @@ export interface HealthStatus {
   status: string;
 }
 
+export interface VersieInfo {
+  /** Leesbaar versienummer, bijv. "2026.07.13-458fd39" */
+  versie: string;
+  /** Korte git-commithash van de build */
+  commit: string;
+  /** ISO-tijdstip waarop het image gebouwd is (leeg in dev) */
+  gebouwd_op: string;
+}
+
 export interface CrmContactpersoon {
   id: number;
   /** @nullable */

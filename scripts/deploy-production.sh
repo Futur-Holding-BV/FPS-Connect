@@ -84,6 +84,14 @@ echo "=== STAP 4: git reset --hard origin/main ==="
 git reset --hard origin/main
 echo "Server staat nu op commit: $(git rev-parse HEAD)"
 
+# Versie-informatie voor de images: wordt via build-args in beide images
+# gebakken (zie docker-compose.production.yml) en is daarna zichtbaar in de
+# taakbalk van de app en via GET /api/versie — zo is controleerbaar dat deze
+# release ook echt draait.
+export GIT_COMMIT="$(git rev-parse --short HEAD)"
+export BUILD_TIJD="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+echo "Release-versie: ${BUILD_TIJD%%T*} — commit ${GIT_COMMIT}"
+
 # ─── STAP 5: API bouwen zonder cache ─────────────────────────────────────────
 echo "=== STAP 5: API-image bouwen (--no-cache) ==="
 ${COMPOSE} build --no-cache api

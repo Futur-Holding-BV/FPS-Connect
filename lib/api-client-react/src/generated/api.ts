@@ -861,6 +861,7 @@ import type {
   VerlofSaldoInput,
   Verlofsoort,
   VerlofsoortInput,
+  VersieInfo,
   VerstuurFactuurCorrespondentie200,
   Vervaldag,
   Vervalsignaal,
@@ -1018,6 +1019,83 @@ export function useHealthCheck<TData = Awaited<ReturnType<typeof healthCheck>>, 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getHealthCheckQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetVersieUrl = () => {
+
+
+
+
+  return `/api/versie`
+}
+
+/**
+ * @summary Versie-informatie van de draaiende backend (commit + buildtijd)
+ */
+export const getVersie = async ( options?: RequestInit): Promise<VersieInfo> => {
+
+  return customFetch<VersieInfo>(getGetVersieUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetVersieQueryKey = () => {
+    return [
+    `/api/versie`
+    ] as const;
+    }
+
+
+export const getGetVersieQueryOptions = <TData = Awaited<ReturnType<typeof getVersie>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getVersie>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetVersieQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getVersie>>> = ({ signal }) => getVersie({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getVersie>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetVersieQueryResult = NonNullable<Awaited<ReturnType<typeof getVersie>>>
+export type GetVersieQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Versie-informatie van de draaiende backend (commit + buildtijd)
+ */
+
+export function useGetVersie<TData = Awaited<ReturnType<typeof getVersie>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getVersie>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetVersieQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
