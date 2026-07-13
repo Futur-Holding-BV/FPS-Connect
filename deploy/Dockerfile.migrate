@@ -30,4 +30,8 @@ RUN pnpm install --frozen-lockfile --ignore-scripts
 # Stap 2: alleen de db-bronbestanden kopiëren (drizzle-kit werkt direct op TS)
 COPY lib/db/ lib/db/
 
-CMD ["pnpm", "--filter", "@workspace/db", "run", "push"]
+# Volgorde is bewust: apply-additive legt additieve stappen (incl. unieke
+# indexes) aan vóórdat push draait, zodat push ze als bestaand ziet en ze
+# NIET dropt of wijzigt. Daarna herhaalt apply-additive (idempotent) zodat
+# ook eventuele push-drops hersteld worden.
+CMD ["sh", "-c", "pnpm --filter @workspace/db run apply-additive && pnpm --filter @workspace/db run push && pnpm --filter @workspace/db run apply-additive"]

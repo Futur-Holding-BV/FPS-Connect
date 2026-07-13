@@ -85,12 +85,11 @@ export const profielenTable = pgTable("profielen", {
 //
 // UNIQUE-constraint: staat nu wél in het Drizzle-schema (uniqueIndex) zodat
 // drizzle-kit push de constraint als "aanwezig, geen actie nodig" beschouwt
-// en hem nooit als drift dropt. apply-additive.mjs legt hem aan vóór push
-// (met expliciete dubbele-rijen-check) zodat push altijd een bestaande
-// constraint aantreft. Eerder gaf uniqueIndex in het schema validatiefouten
-// omdat de constraint dan een '_key'-naam had (Postgres inline-UNIQUE) en
-// reconcile-unique.mjs hem nog niet naar '_unique' had hernoemd; dat probleem
-// bestaat niet meer nu apply-additive de constraint met de exacte naam aanmaakt.
+// Drizzle genereert voor uniqueIndex(...) een CREATE UNIQUE INDEX (zichtbaar in
+// pg_indexes). apply-additive.mjs draait vóór én na drizzle-kit push
+// (Dockerfile.migrate) om dezelfde index idempotent aan te leggen, zodat push
+// hem als bestaand herkent en niet dropt. schema-healthcheck.mjs verifieert
+// de aanwezigheid via pg_indexes na afloop van de migrate-run.
 export const gebruikerProfielenTable = pgTable(
   "gebruiker_profielen",
   {
