@@ -1,3 +1,18 @@
+## 2026-07-13 — Toegangsprofiel per functie (multi-functie increment 3)
+
+- **Uitvoering:** volledig (increment 3 van 4) | **Kwaliteit:** hoog | **Risico:** laag (additief; verandert nog GEEN runtime-rechten)
+
+**Aanleiding:** een functie in het functiehuis had geen koppeling naar een toegangsprofiel. Om functies straks (increment 4) automatisch de juiste Connect-rechten te laten bepalen, moet elke functie eerst een standaard toegangsprofiel kunnen dragen.
+
+**Wijzigingen:**
+- DB: `functies.profiel_id` toegevoegd (nullable FK → `profielen`, `ON DELETE SET NULL`) via directe ALTER + Drizzle-schema (`lib/db/src/schema/hrm.ts`)
+- OpenAPI: `profiel_id` toegevoegd aan `Functie` en `FunctieInput`; hooks/Zod-schemas hergegenereerd
+- API (`routes/hrm.ts`): `mapFunctie` geeft `profiel_id` terug; POST/PATCH `/functies` lezen en bewaren het veld (PATCH alleen wanneer meegestuurd)
+- Frontend (`personeel/index.tsx`): "Toegangsprofiel"-dropdown in het functie-dialoog (aanmaken + bewerken), gevuld uit `useListProfielen`, met uitleg dat rechten bij meerdere functies samen gelden (hoogste niveau per module) en handmatige extra rechten mogelijk blijven
+- **Nog geen effect op het rechtensysteem** — het koppelen is voorbereidend; het daadwerkelijk afleiden/combineren van rechten uit functies volgt in increment 4 (`PermissieService` + `combineerBevoegdheden`, met sync + audit + zelf-escalatiecheck)
+
+---
+
 ## 2026-07-13 — Meerdere functies zichtbaar/bewerkbaar in Profiel bewerken (increment 1)
 
 - **Uitvoering:** volledig (increment 1 van 4) | **Kwaliteit:** hoog | **Risico:** laag (alleen frontend, geen API-/DB-wijziging, hergebruikt bestaande aanstellingen-CRUD)

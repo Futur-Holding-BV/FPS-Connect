@@ -292,6 +292,7 @@ const mapFunctie = (f: typeof functiesTable.$inferSelect) => ({
   competenties: f.competenties,
   opleidingsvereisten: f.opleidingsvereisten,
   doorgroeipad: f.doorgroeipad,
+  profiel_id: f.profielId,
   uitvoerend: f.uitvoerend,
   actief: f.actief,
   minimale_bezetting: f.minimaleBezetting,
@@ -311,7 +312,7 @@ router.get("/functies", lezen, async (req, res): Promise<void> => {
 
 router.post("/functies", schrijven, async (req, res): Promise<void> => {
   try {
-    const { naam, werkmaatschappij, omschrijving, taken, verantwoordelijkheden, competenties, opleidingsvereisten, doorgroeipad, uitvoerend, actief, minimale_bezetting } = req.body;
+    const { naam, werkmaatschappij, omschrijving, taken, verantwoordelijkheden, competenties, opleidingsvereisten, doorgroeipad, uitvoerend, actief, minimale_bezetting, profiel_id } = req.body;
     if (!naam) return void res.status(400).json({ error: "naam is verplicht" });
     const wm = werkmaatschappij || "FPS Brandpreventie";
     const [f] = await db
@@ -326,6 +327,7 @@ router.post("/functies", schrijven, async (req, res): Promise<void> => {
         competenties,
         opleidingsvereisten,
         doorgroeipad,
+        profielId: profiel_id ?? null,
         uitvoerend: uitvoerend ?? false,
         actief: actief ?? true,
         minimaleBezetting: minimale_bezetting ?? null,
@@ -351,7 +353,7 @@ router.get("/functies/:id", lezen, async (req, res): Promise<void> => {
 
 router.patch("/functies/:id", schrijven, async (req, res): Promise<void> => {
   try {
-    const { naam, werkmaatschappij, omschrijving, taken, verantwoordelijkheden, competenties, opleidingsvereisten, doorgroeipad, uitvoerend, actief, minimale_bezetting } = req.body;
+    const { naam, werkmaatschappij, omschrijving, taken, verantwoordelijkheden, competenties, opleidingsvereisten, doorgroeipad, uitvoerend, actief, minimale_bezetting, profiel_id } = req.body;
     const werkgeverId = werkmaatschappij !== undefined ? await werkgeverIdVoor(werkmaatschappij) : undefined;
     const [f] = await db
       .update(functiesTable)
@@ -367,6 +369,7 @@ router.patch("/functies/:id", schrijven, async (req, res): Promise<void> => {
         doorgroeipad,
         uitvoerend,
         actief,
+        ...(profiel_id !== undefined ? { profielId: profiel_id } : {}),
         ...(minimale_bezetting !== undefined ? { minimaleBezetting: minimale_bezetting } : {}),
         bijgewerktOp: new Date(),
       })

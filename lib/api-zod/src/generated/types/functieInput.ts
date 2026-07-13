@@ -15,6 +15,8 @@ export interface FunctieInput {
   competenties?: string;
   opleidingsvereisten?: string;
   doorgroeipad?: string;
+  /** @nullable */
+  profiel_id?: number | null;
   uitvoerend?: boolean;
   actief?: boolean;
   /** @nullable */

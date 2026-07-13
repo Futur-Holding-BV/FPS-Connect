@@ -4171,6 +4171,11 @@ export interface Functie {
   opleidingsvereisten?: string | null;
   /** @nullable */
   doorgroeipad?: string | null;
+  /**
+     * Standaard toegangsprofiel voor deze functie (FK naar profielen).
+     * @nullable
+     */
+  profiel_id?: number | null;
   actief: boolean;
   uitvoerend?: boolean;
   /**
@@ -4191,6 +4196,8 @@ export interface FunctieInput {
   competenties?: string;
   opleidingsvereisten?: string;
   doorgroeipad?: string;
+  /** @nullable */
+  profiel_id?: number | null;
   uitvoerend?: boolean;
   actief?: boolean;
   /** @nullable */

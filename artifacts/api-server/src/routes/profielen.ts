@@ -8,7 +8,7 @@ import {
   PRESETS,
   combineerBevoegdheden,
 } from "@workspace/permissies";
-import { requireBevoegdheid, requireRol } from "../middlewares/auth";
+import { requireBevoegdheid, requireEnigeBevoegdheid, requireRol } from "../middlewares/auth";
 
 const router = Router();
 
@@ -70,7 +70,9 @@ function serialiseer(
   };
 }
 
-router.get("/profielen", requireBevoegdheid("gebruikers", 1), async (req, res): Promise<void> => {
+// Profielen worden gelezen door zowel gebruikersbeheer (rol/rechten toewijzen) als
+// personeelsbeheer (toegangsprofiel per functie kiezen in het functiehuis).
+router.get("/profielen", requireEnigeBevoegdheid([["gebruikers", 1], ["personeel", 1]]), async (req, res): Promise<void> => {
   try {
     const [profielen, gebruikers, koppelingen] = await Promise.all([
       db.select().from(profielenTable).orderBy(asc(profielenTable.id)),

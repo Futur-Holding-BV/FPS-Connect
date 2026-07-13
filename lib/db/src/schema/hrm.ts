@@ -8,7 +8,7 @@
 import { pgTable, serial, text, integer, real, boolean, timestamp, date, numeric, type AnyPgColumn } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
-import { gebruikersTable } from "./gebruikers";
+import { gebruikersTable, profielenTable } from "./gebruikers";
 import { documentenTable } from "./documenten";
 
 // Werkgever — hoofdentiteit binnen de FPS Groep. Elke werkmaatschappij is een
@@ -68,6 +68,11 @@ export const functiesTable = pgTable("functies", {
   competenties: text("competenties"),
   opleidingsvereisten: text("opleidingsvereisten"),
   doorgroeipad: text("doorgroeipad"),
+  // Standaard toegangsprofiel voor deze functie. Bij aanstelling worden de
+  // bevoegdheden van dit profiel additief aan de medewerker toegekend
+  // (increment 4: combineerBevoegdheden, hoogste niveau per module). null = geen
+  // automatisch toegangsprofiel.
+  profielId: integer("profiel_id").references(() => profielenTable.id, { onDelete: "set null" }),
   // uitvoerend = veldmedewerker (monteur, timmerman, voorman, leerling, ingehuurd uitvoerend).
   // true → medewerker verschijnt automatisch in de planning; kantoor-functies blijven verborgen.
   uitvoerend: boolean("uitvoerend").notNull().default(false),

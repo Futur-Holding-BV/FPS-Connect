@@ -27570,6 +27570,9 @@ components:
           type: ["string", "null"]
         doorgroeipad:
           type: ["string", "null"]
+        profiel_id:
+          type: ["integer", "null"]
+          description: Standaard toegangsprofiel voor deze functie (FK naar profielen).
         actief:
           type: boolean
         uitvoerend:
@@ -27602,6 +27605,8 @@ components:
           type: string
         doorgroeipad:
           type: string
+        profiel_id:
+          type: ["integer", "null"]
         uitvoerend:
           type: boolean
         actief:

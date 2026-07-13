@@ -11,6 +11,7 @@ import {
   useCreateFunctie,
   useUpdateFunctie,
   useDeleteFunctie,
+  useListProfielen,
   useListOpleidingen,
   useCreateOpleiding,
   useUpdateOpleiding,
@@ -157,6 +158,7 @@ export default function PersoneelPagina() {
   const onboard = useOnboardMedewerker();
   const maakFunctie = useCreateFunctie();
   const wijzigFunctie = useUpdateFunctie();
+  const { data: profielen } = useListProfielen();
   const verwijderFunctieMut = useDeleteFunctie();
   const maakOpleiding = useCreateOpleiding();
   const wijzigOpleiding = useUpdateOpleiding();
@@ -469,6 +471,7 @@ export default function PersoneelPagina() {
       omschrijving: f.omschrijving ?? undefined,
       uitvoerend: f.uitvoerend ?? false,
       minimale_bezetting: f.minimale_bezetting ?? undefined,
+      profiel_id: f.profiel_id ?? undefined,
     });
     setFunctieOpen(true);
   }
@@ -1819,6 +1822,24 @@ export default function PersoneelPagina() {
             <div className="space-y-1.5">
               <Label>Omschrijving</Label>
               <Textarea value={functieForm.omschrijving ?? ""} onChange={(e) => setFunctieForm({ ...functieForm, omschrijving: e.target.value })} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Toegangsprofiel</Label>
+              <Select
+                value={functieForm.profiel_id != null ? String(functieForm.profiel_id) : "geen"}
+                onValueChange={(v) => setFunctieForm({ ...functieForm, profiel_id: v === "geen" ? null : Number(v) })}
+              >
+                <SelectTrigger><SelectValue placeholder="Geen toegangsprofiel" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="geen">Geen toegangsprofiel</SelectItem>
+                  {(profielen ?? []).map((p) => (
+                    <SelectItem key={p.id} value={String(p.id)}>{p.naam}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Standaard rechten die een medewerker met deze functie krijgt. Bij meerdere functies gelden de rechten samen (hoogste niveau per module). Handmatige extra rechten blijven mogelijk.
+              </p>
             </div>
             <div className="flex items-center gap-2 pt-1">
               <Checkbox
