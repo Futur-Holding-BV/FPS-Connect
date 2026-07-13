@@ -9,9 +9,10 @@ name: Deploy naar productie
 # het lopende script niet kan overschrijven.
 #
 # Benodigde GitHub Secrets (Settings -> Secrets and variables -> Actions):
-#   PROD_SSH_KEY  — private SSH-sleutel (volledige meerregelige PEM-inhoud)
-#   PROD_HOST     — 149.210.181.47
-#   PROD_USER     — rene
+#   PROD_SSH_KEY   — private SSH-sleutel (volledige meerregelige PEM-inhoud)
+#   PROD_SSH_HOST  — 149.210.181.47
+#   PROD_SSH_USER  — rene
+#   PROD_SSH_PORT  — SSH-poort (optioneel; standaard 22)
 # Optioneel voor de faalmelding per e-mail:
 #   AZURE_TENANT_ID / AZURE_CLIENT_ID / AZURE_CLIENT_SECRET
 #   MAIL_FROM / MAIL_MAILBOX / RENE_ALERT_EMAIL
@@ -47,12 +48,13 @@ jobs:
       - name: SSH-sleutel en hostkey instellen
         env:
           PROD_SSH_KEY: ${{ secrets.PROD_SSH_KEY }}
-          PROD_HOST: ${{ secrets.PROD_HOST }}
+          PROD_SSH_HOST: ${{ secrets.PROD_SSH_HOST }}
+          PROD_SSH_PORT: ${{ secrets.PROD_SSH_PORT || '22' }}
         run: |
           set -euo pipefail
 
-          if [ -z "${PROD_SSH_KEY:-}" ] || [ -z "${PROD_HOST:-}" ]; then
-            echo "FOUT: GitHub Secrets PROD_SSH_KEY en/of PROD_HOST ontbreken." >&2
+          if [ -z "${PROD_SSH_KEY:-}" ] || [ -z "${PROD_SSH_HOST:-}" ]; then
+            echo "FOUT: GitHub Secrets PROD_SSH_KEY en/of PROD_SSH_HOST ontbreken." >&2
             exit 1
           fi
 
@@ -65,7 +67,7 @@ jobs:
 
           # Host key veilig vastleggen: ssh-keyscan haalt de publieke hostkey
           # op en pint die in known_hosts (StrictHostKeyChecking blijft aan).
-          ssh-keyscan -H "${PROD_HOST}" >> ~/.ssh/known_hosts 2>/dev/null
+          ssh-keyscan -p "${PROD_SSH_PORT}" -H "${PROD_SSH_HOST}" >> ~/.ssh/known_hosts 2>/dev/null
           chmod 644 ~/.ssh/known_hosts
 
           if ! grep -q . ~/.ssh/known_hosts; then
@@ -75,28 +77,31 @@ jobs:
 
       - name: Deployscript naar de server kopiëren
         env:
-          PROD_HOST: ${{ secrets.PROD_HOST }}
-          PROD_USER: ${{ secrets.PROD_USER }}
+          PROD_SSH_HOST: ${{ secrets.PROD_SSH_HOST }}
+          PROD_SSH_USER: ${{ secrets.PROD_SSH_USER }}
+          PROD_SSH_PORT: ${{ secrets.PROD_SSH_PORT || '22' }}
         run: |
           set -euo pipefail
-          if [ -z "${PROD_USER:-}" ]; then
-            echo "FOUT: GitHub Secret PROD_USER ontbreekt." >&2
+          if [ -z "${PROD_SSH_USER:-}" ]; then
+            echo "FOUT: GitHub Secret PROD_SSH_USER ontbreekt." >&2
             exit 1
           fi
-          scp -i ~/.ssh/deploy_key \
+          scp -i ~/.ssh/deploy_key -P "${PROD_SSH_PORT}" \
             scripts/deploy-production.sh \
-            "${PROD_USER}@${PROD_HOST}:/tmp/deploy-production.sh"
+            "${PROD_SSH_USER}@${PROD_SSH_HOST}:/tmp/deploy-production.sh"
 
       - name: Deploy uitvoeren op de VPS
         id: deploy
         env:
-          PROD_HOST: ${{ secrets.PROD_HOST }}
-          PROD_USER: ${{ secrets.PROD_USER }}
+          PROD_SSH_HOST: ${{ secrets.PROD_SSH_HOST }}
+          PROD_SSH_USER: ${{ secrets.PROD_SSH_USER }}
+          PROD_SSH_PORT: ${{ secrets.PROD_SSH_PORT || '22' }}
         run: |
           set -euo pipefail
           # De exitcode van het script op de server bepaalt direct het
           # resultaat van deze stap: iedere fout stopt de workflow.
-          ssh -i ~/.ssh/deploy_key "${PROD_USER}@${PROD_HOST}" \
+          ssh -i ~/.ssh/deploy_key -p "${PROD_SSH_PORT}" \
+            "${PROD_SSH_USER}@${PROD_SSH_HOST}" \
             'bash /tmp/deploy-production.sh'
 
       # ─── Meldingen bij falen ────────────────────────────────────────────────
