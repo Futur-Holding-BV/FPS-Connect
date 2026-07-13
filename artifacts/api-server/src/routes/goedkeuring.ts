@@ -7,6 +7,13 @@ import {
   goedkeuringEscalatiesTable,
   gebruikersTable,
   facturenTable,
+  inspectiesTable,
+  opleverrapportenTable,
+  arbeidsovereenkomstenTable,
+  weekStatenTable,
+  projectenTable,
+  dossiersTable,
+  medewerkerOpleidingenTable,
   insertGoedkeuringBeleidsregelSchema,
   type GoedkeuringBeleidsregel,
   type GoedkeuringAanvraag,
@@ -748,6 +755,60 @@ router.post(
         // (c) documentType server-side overschrijven — client-input wordt genegeerd
         // zodat een aanvaller niet via document_type een zwakker beleid kan activeren.
         effectiefDocumentType = afgeleidType;
+      }
+
+      // Object-bestaan validatie voor niet-financiële types:
+      // Controleer dat het objectId daadwerkelijk bestaat in de juiste tabel
+      // voordat een aanvraag wordt aangemaakt. Vereist geen extra bevoegdheden
+      // bovenop goedkeuring:1 — de module-toegang regelt de zichtbaarheid van
+      // het onderliggende document.
+      const NIET_FINANCIELE_OBJECT_CHECKS: Record<string, () => Promise<boolean>> = {
+        inspectie: async () => {
+          const [r] = await db.select({ id: inspectiesTable.id }).from(inspectiesTable)
+            .where(eq(inspectiesTable.id, objectId)).limit(1);
+          return Boolean(r);
+        },
+        opleverrapport: async () => {
+          const [r] = await db.select({ id: opleverrapportenTable.id }).from(opleverrapportenTable)
+            .where(eq(opleverrapportenTable.id, objectId)).limit(1);
+          return Boolean(r);
+        },
+        arbeidsovereenkomst: async () => {
+          const [r] = await db.select({ id: arbeidsovereenkomstenTable.id }).from(arbeidsovereenkomstenTable)
+            .where(eq(arbeidsovereenkomstenTable.id, objectId)).limit(1);
+          return Boolean(r);
+        },
+        weekstaat: async () => {
+          const [r] = await db.select({ id: weekStatenTable.id }).from(weekStatenTable)
+            .where(eq(weekStatenTable.id, objectId)).limit(1);
+          return Boolean(r);
+        },
+        project: async () => {
+          const [r] = await db.select({ id: projectenTable.id }).from(projectenTable)
+            .where(eq(projectenTable.id, objectId)).limit(1);
+          return Boolean(r);
+        },
+        dossier: async () => {
+          const [r] = await db.select({ id: dossiersTable.id }).from(dossiersTable)
+            .where(eq(dossiersTable.id, objectId)).limit(1);
+          return Boolean(r);
+        },
+        medewerker_opleiding: async () => {
+          const [r] = await db.select({ id: medewerkerOpleidingenTable.id }).from(medewerkerOpleidingenTable)
+            .where(eq(medewerkerOpleidingenTable.id, objectId)).limit(1);
+          return Boolean(r);
+        },
+        hrm_besluit: async () => true,  // besluit-validatie loopt via eigen routes
+        verlofaanvraag: async () => true, // reeds geregistreerd in OBJECT_WORKFLOW_ACTIE
+        inkoopbon: async () => true,      // reeds geregistreerd in OBJECT_WORKFLOW_ACTIE
+      };
+      const objectCheck = NIET_FINANCIELE_OBJECT_CHECKS[objectType];
+      if (!FINANCIELE_TYPES.has(objectType) && objectCheck) {
+        const bestaat = await objectCheck();
+        if (!bestaat) {
+          res.status(404).json({ error: `${objectType} niet gevonden` });
+          return;
+        }
       }
 
       const resultaat = await dienIn(db, {

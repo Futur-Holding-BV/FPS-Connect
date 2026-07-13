@@ -15,10 +15,17 @@ import {
   workflowTransitieLogTable,
   gebruikersTable,
   facturenTable,
+  inspectiesTable,
+  opleverrapportenTable,
+  arbeidsovereenkomstenTable,
+  weekStatenTable,
+  projectenTable,
+  dossiersTable,
+  medewerkerOpleidingenTable,
   type GoedkeuringBeleidsregel,
   type GoedkeuringAanvraag,
 } from "@workspace/db";
-import { and, eq, or, isNull, desc, inArray } from "drizzle-orm";
+import { and, eq, or, isNull, desc, inArray, sql } from "drizzle-orm";
 import { heeftNiveau, MODULE_IDS, type ModuleId } from "@workspace/permissies";
 import { logAudit } from "../lib/audit";
 import { workflowService } from "./workflow-engine";
@@ -89,10 +96,84 @@ async function pasObjectStatusAfwijzenToe(
   }
 }
 
+// Generieke object-statusovergang na goedkeuring — voor alle overige documenttypen
+// die niet op de facturenTable leven en geen eigen WorkflowService hebben. Elke handler
+// schrijft alleen als het onderliggende document nog in de verwachte beginstatus staat
+// (idempotent). Volgorde van evaluatie: OBJECT_WORKFLOW_ACTIE → OBJECT_DIRECTE_ACTIE →
+// OBJECT_GENERIEKE_ACTIE.
+type GeneriekeActieHandler = (db: Db, aanvraag: GoedkeuringAanvraag, actor: GoedkeuringActor) => Promise<void>;
+
+const OBJECT_GENERIEKE_ACTIE: Record<string, GeneriekeActieHandler> = {
+  // Opleverrapport: concept → definitief + bevriezingstijdstip
+  opleverrapport: async (db, aanvraag, _actor) => {
+    const nu = new Date();
+    await db.update(opleverrapportenTable)
+      .set({ status: "definitief", bevrorenOp: nu, bijgewerktOp: nu })
+      .where(and(
+        eq(opleverrapportenTable.id, aanvraag.objectId),
+        sql`${opleverrapportenTable.status} = 'concept'`,
+      ));
+  },
+
+  // Arbeidsovereenkomst: concept → actief na formele goedkeuring
+  arbeidsovereenkomst: async (db, aanvraag, _actor) => {
+    const nu = new Date();
+    await db.update(arbeidsovereenkomstenTable)
+      .set({ status: "actief", bijgewerktOp: nu })
+      .where(and(
+        eq(arbeidsovereenkomstenTable.id, aanvraag.objectId),
+        sql`${arbeidsovereenkomstenTable.status} = 'concept'`,
+      ));
+  },
+
+  // Weekstaat: ingediend → goedgekeurd + goedkeurdermetadata
+  weekstaat: async (db, aanvraag, actor) => {
+    const nu = new Date();
+    await db.update(weekStatenTable)
+      .set({
+        status: "goedgekeurd",
+        goedgekeurdOp: nu,
+        goedgekeurdDoorId: actor.gebruikerId,
+        bijgewerktOp: nu,
+      })
+      .where(and(
+        eq(weekStatenTable.id, aanvraag.objectId),
+        sql`${weekStatenTable.status} = 'ingediend'`,
+      ));
+  },
+
+  // Project: actief → afgerond na goedkeuring projectafsluiting
+  project: async (db, aanvraag, _actor) => {
+    const nu = new Date();
+    await db.update(projectenTable)
+      .set({ status: "afgerond", bijgewerktOp: nu })
+      .where(and(
+        eq(projectenTable.id, aanvraag.objectId),
+        sql`${projectenTable.status} = 'actief'`,
+      ));
+  },
+
+  // Dossier: concept → definitief + bevriezingstijdstip (projectafsluiting)
+  dossier: async (db, aanvraag, _actor) => {
+    const nu = new Date();
+    await db.update(dossiersTable)
+      .set({ status: "definitief", definitiefOp: nu, bijgewerktOp: nu })
+      .where(and(
+        eq(dossiersTable.id, aanvraag.objectId),
+        sql`${dossiersTable.status} = 'concept'`,
+      ));
+  },
+
+  // Inspectie: geen statuswijziging — inspectie is al "afgerond" bij indiening;
+  // de goedkeuring is een formeel teken van ontvangst bovenop de bestaande status.
+  // medewerker_opleiding: geen statuswijziging — certificaat blijft "behaald";
+  // de goedkeuring bevestigt formeel de geldigheid.
+};
 // Zet, ná volledige goedkeuring, het onderliggende document automatisch door
 // via de bestaande WorkflowService (voor inkoopbonnen e.d.) of via een directe
-// DB-update (voor facturen e.d.). `viaGoedkeuring: true` laat de workflow-config
-// weten dat de bevoegdheids-/beleidscheck al is afgehandeld door de motor zelf.
+// DB-update (voor facturen e.d.) of via de generieke handler-tabel voor overige types.
+// `viaGoedkeuring: true` laat de workflow-config weten dat de bevoegdheids-/beleidscheck
+// al is afgehandeld door de motor zelf.
 async function pasObjectStatusToe(
   db: Db,
   aanvraag: GoedkeuringAanvraag,
@@ -127,6 +208,7 @@ async function pasObjectStatusToe(
         "Kon onderliggend document niet automatisch bijwerken na goedkeuring",
       );
     }
+    return;
   }
 
   // Directe DB-pad (facturen en andere entiteiten zonder WorkflowService)
@@ -147,6 +229,21 @@ async function pasObjectStatusToe(
       logger.error(
         { err, aanvraagId: aanvraag.id, objectType: aanvraag.objectType },
         "Kon factuur niet automatisch bijwerken na goedkeuring (directe DB-update)",
+      );
+    }
+    return;
+  }
+
+  // Generieke handler-pad (opleverrapporten, arbeidsovereenkomsten, weekstaten,
+  // projecten, dossiers, e.a. overige documenttypen)
+  const generiekeHandler = OBJECT_GENERIEKE_ACTIE[aanvraag.objectType];
+  if (generiekeHandler) {
+    try {
+      await generiekeHandler(db, aanvraag, actor);
+    } catch (err) {
+      logger.error(
+        { err, aanvraagId: aanvraag.id, objectType: aanvraag.objectType },
+        "Kon onderliggend document niet automatisch bijwerken na goedkeuring (generieke handler)",
       );
     }
   }

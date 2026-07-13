@@ -57,7 +57,28 @@
   - `inkoopbon`: uitleg dat verzenden naar leverancier geblokkeerd blijft tot goedkeuring.
 
 **Wat al gebouwd was (geen wijziging nodig):**
-- Kernmotor compleet: `OBJECT_DIRECTE_ACTIE` (goedkeuring → klaar_voor_accountview + geaccordeerd), `OBJECT_WORKFLOW_ACTIE` (inkoopbon → goedgekeurd), GoedkeuringWidget op factuur-detailpagina and inkoopplanning-tab, `POST /facturen/:id/ter-goedkeuring-indienen`, accorderen-gate, inkoopbon-verzenden-gate, beleidsscherm met alle documenttypes.
+- Kernmotor compleet: `OBJECT_DIRECTE_ACTIE` (goedkeuring → klaar_voor_accountview + geaccordeerd), `OBJECT_WORKFLOW_ACTIE` (inkoopbon → goedgekeurd), GoedkeuringWidget op factuur-detailpagina en inkoopplanning-tab, `POST /facturen/:id/ter-goedkeuring-indienen`, accorderen-gate, inkoopbon-verzenden-gate, beleidsscherm met alle documenttypes.
+
+## 2026-07-13 — Governance-integratie overige documenttypen
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (additief; geen bestaande statuslogica gewijzigd)
+
+**Backend — goedkeuring-engine.ts:**
+- Nieuw `OBJECT_GENERIEKE_ACTIE`-map toegevoegd met typed handlers voor alle overige documenttypen: `opleverrapport` (concept → definitief + bevrorenOp), `arbeidsovereenkomst` (concept → actief), `weekstaat` (ingediend → goedgekeurd + goedgekeurdOp/goedgekeurdDoorId), `project` (actief → afgerond), `dossier` (concept → definitief + definitiefOp). Alle handlers zijn idempotent (schrijven alleen als het document nog in de verwachte beginstatus staat).
+- `pasObjectStatusToe()` uitgebreid met een derde tak die OBJECT_GENERIEKE_ACTIE raadpleegt na de bestaande WorkflowService- en directe DB-paden. Elk pad retourneert vroeg (`return`) zodat er geen dubbele verwerking optreedt.
+- Tabellen geïmporteerd vanuit `@workspace/db`: `inspectiesTable`, `opleverrapportenTable`, `arbeidsovereenkomstenTable`, `weekStatenTable`, `projectenTable`, `dossiersTable`, `medewerkerOpleidingenTable`.
+
+**Backend — goedkeuring.ts route:**
+- Zelfde tabel-imports toegevoegd aan de route.
+- Object-bestaansvalidatie (404) voor niet-financiële objecttypen toegevoegd in `POST /goedkeuring/aanvragen`: inspectie, opleverrapport, arbeidsovereenkomst, weekstaat, project, dossier, medewerker_opleiding. Financiële types (die al hun eigen validatie hadden) worden overgeslagen; workflow-types (inkoopbon, verlofaanvraag) worden gewhitelist via altijd-true fallback.
+
+**Frontend — personeel/detail.tsx (opleidingen-tab):**
+- `GoedkeuringWidget` toegevoegd aan elk certificaatkaartje in de opleidingen-tab: `objectType="medewerker_opleiding"`, `documentType="medewerker_opleiding"`, `toonIndienKnop` alleen bij `status === "behaald"`. Kaartlayout aangepast naar `space-y-3` om de widget netjes onder de bestaande info te plaatsen.
+
+**Frontend — dossiers/index.tsx:**
+- `GoedkeuringWidget` geïmporteerd en toegevoegd aan elk dossierkaartje: `objectType="dossier"`, `documentType="dossier"`, `toonIndienKnop` alleen bij `status === "concept"`. Widget staat onder de actieknoppen zodat de bestaande "Definitief"/"Archiveren"-knoppen intact blijven.
+
+**Typecheck:** alle packages schoon (typecheck:libs + api-server + firevault).
 
 ---
 

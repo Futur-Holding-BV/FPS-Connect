@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { GoedkeuringWidget } from "@/components/goedkeuring/goedkeuring-widget";
 import {
   useListDossiers,
   useCreateDossier,
@@ -236,6 +237,13 @@ export default function DossiersPagina() {
                     </Button>
                   )}
                 </div>
+                <GoedkeuringWidget
+                  objectType="dossier"
+                  objectId={d.id}
+                  documentType="dossier"
+                  omschrijving={`Dossier: ${d.naam}`}
+                  toonIndienKnop={d.status === "concept"}
+                />
               </CardContent>
             </Card>
           ))}

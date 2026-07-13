@@ -1594,37 +1594,46 @@ export default function MedewerkerDetailPagina() {
                 const binnenkort = dagen != null && dagen >= 0 && dagen <= 60;
                 return (
                   <Card key={o.id}>
-                    <CardContent className="p-4 flex items-center justify-between gap-3">
-                      <div className="min-w-0">
-                        <div className="font-medium truncate">{o.opleiding_naam ?? `Opleiding #${o.opleiding_id}`}</div>
-                        <div className="text-xs text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5">
-                          <span>Status: {o.status}</span>
-                          {o.behaald_op && <span>Behaald: {fmtDatum(o.behaald_op)}</span>}
-                          {o.verloopt_op && <span>Verloopt: {fmtDatum(o.verloopt_op)}</span>}
+                    <CardContent className="p-4 space-y-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="font-medium truncate">{o.opleiding_naam ?? `Opleiding #${o.opleiding_id}`}</div>
+                          <div className="text-xs text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5">
+                            <span>Status: {o.status}</span>
+                            {o.behaald_op && <span>Behaald: {fmtDatum(o.behaald_op)}</span>}
+                            {o.verloopt_op && <span>Verloopt: {fmtDatum(o.verloopt_op)}</span>}
+                          </div>
+                          {o.opmerking && <div className="text-xs text-muted-foreground mt-1">{o.opmerking}</div>}
                         </div>
-                        {o.opmerking && <div className="text-xs text-muted-foreground mt-1">{o.opmerking}</div>}
+                        <div className="flex items-center gap-2 shrink-0">
+                          {verlopen && <Badge variant="outline" className="border-destructive/40 text-destructive"><AlertTriangle className="h-3 w-3" /> Verlopen</Badge>}
+                          {binnenkort && <Badge variant="outline" className="border-amber-200 text-amber-700"><CalendarClock className="h-3 w-3" /> Nog {dagen} dagen</Badge>}
+                          {magSchrijven && (
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                title="Certificaat uploaden"
+                                onClick={() => {
+                                  setCertUploadBezigId(o.id);
+                                  certFileInputRef.current?.click();
+                                }}
+                              >
+                                <Upload className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="icon" onClick={() => openOpleiding(o)}><Pencil className="h-4 w-4" /></Button>
+                              <Button variant="ghost" size="icon" onClick={() => verwijderOpleiding(o.id)}><Trash2 className="h-4 w-4" /></Button>
+                            </>
+                          )}
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        {verlopen && <Badge variant="outline" className="border-destructive/40 text-destructive"><AlertTriangle className="h-3 w-3" /> Verlopen</Badge>}
-                        {binnenkort && <Badge variant="outline" className="border-amber-200 text-amber-700"><CalendarClock className="h-3 w-3" /> Nog {dagen} dagen</Badge>}
-                        {magSchrijven && (
-                          <>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              title="Certificaat uploaden"
-                              onClick={() => {
-                                setCertUploadBezigId(o.id);
-                                certFileInputRef.current?.click();
-                              }}
-                            >
-                              <Upload className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon" onClick={() => openOpleiding(o)}><Pencil className="h-4 w-4" /></Button>
-                            <Button variant="ghost" size="icon" onClick={() => verwijderOpleiding(o.id)}><Trash2 className="h-4 w-4" /></Button>
-                          </>
-                        )}
-                      </div>
+                      <GoedkeuringWidget
+                        objectType="medewerker_opleiding"
+                        objectId={o.id}
+                        documentType="medewerker_opleiding"
+                        omschrijving={`Certificaat ${o.opleiding_naam ?? `opleiding #${o.opleiding_id}`}${o.behaald_op ? ` (behaald ${fmtDatum(o.behaald_op)})` : ""}`}
+                        toonIndienKnop={o.status === "behaald"}
+                      />
                     </CardContent>
                   </Card>
                 );
