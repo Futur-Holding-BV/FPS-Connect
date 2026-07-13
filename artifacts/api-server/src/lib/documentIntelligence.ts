@@ -170,6 +170,7 @@ export function herkenFinancieleStatus(
 async function herkenOrganisatie(
   tekst: string | null,
   gevonden: Record<string, string>,
+  werkmaatschappijNaam?: string | null,
 ): Promise<string | null> {
   // Directe AI-hint heeft voorrang (klant/leverancier/opdrachtgever/bedrijf).
   const directeVelden = ["organisatie", "klant", "opdrachtgever", "leverancier", "bedrijf", "verzekeraar", "accountant"];
@@ -177,19 +178,21 @@ async function herkenOrganisatie(
     const w = gevonden[veld];
     if (w && w.trim().length > 1) return w.trim();
   }
-  if (!tekst) return null;
-  try {
-    const werkgevers = await db.select({ naam: werkgeversTable.naam }).from(werkgeversTable);
-    const tekstLower = tekst.toLowerCase();
-    for (const w of werkgevers) {
-      if (w.naam && w.naam.trim().length > 2 && tekstLower.includes(w.naam.toLowerCase())) {
-        return w.naam;
+  if (tekst) {
+    try {
+      const werkgevers = await db.select({ naam: werkgeversTable.naam }).from(werkgeversTable);
+      const tekstLower = tekst.toLowerCase();
+      for (const w of werkgevers) {
+        if (w.naam && w.naam.trim().length > 2 && tekstLower.includes(w.naam.toLowerCase())) {
+          return w.naam;
+        }
       }
+    } catch (err) {
+      logger.warn({ err }, "documentIntelligence: organisatie-matching tegen werkgevers mislukt");
     }
-  } catch (err) {
-    logger.warn({ err }, "documentIntelligence: organisatie-matching tegen werkgevers mislukt");
   }
-  return null;
+  // Fallback: gebruik de werkmaatschappij van de uploadende gebruiker.
+  return werkmaatschappijNaam ?? null;
 }
 
 // ── Stap 7+8: module/bestemming + opslaglocatie ───────────────────────────────
@@ -320,6 +323,7 @@ async function aiContentAnalyse(
   afbeeldingBase64: string | null,
   toelichting: string | null | undefined,
   bewijs: BewijsStap[],
+  werkmaatschappijNaam?: string | null,
 ): Promise<{
   categorie: DocCategorie;
   subtype: string | null;
@@ -345,7 +349,10 @@ async function aiContentAnalyse(
   const toelichtingInfo = toelichting && toelichting.trim().length > 0
     ? `\nGebruikerscontext: ${toelichting.trim().slice(0, 500)}`
     : "";
-  const bericht = [`Bestandsnaam: ${bestandsnaam}`, `MIME-type: ${mime}`, tekstInfo, toelichtingInfo].filter(Boolean).join("\n");
+  const werkmaatschappijInfo = werkmaatschappijNaam
+    ? `\nOrganisatiecontext: dit document is geüpload door een medewerker van ${werkmaatschappijNaam}.`
+    : "";
+  const bericht = [`Bestandsnaam: ${bestandsnaam}`, `MIME-type: ${mime}`, tekstInfo, toelichtingInfo, werkmaatschappijInfo].filter(Boolean).join("\n");
 
   type ContentBlock =
     | { type: "text"; text: string }
@@ -518,6 +525,7 @@ export async function classificeerDocument(input: {
   bestandsnaam: string;
   mime: string;
   toelichting?: string | null;
+  werkmaatschappijNaam?: string | null;
 }): Promise<DocumentIntelligenceResultaat> {
   const bewijs: BewijsStap[] = [];
   const { bestandsnaam } = input;
@@ -555,7 +563,7 @@ export async function classificeerDocument(input: {
     });
   }
 
-  const aiAnalyse = await aiContentAnalyse(bestandsnaam, mime, extractie.tekst, afbeeldingBase64, input.toelichting, bewijs);
+  const aiAnalyse = await aiContentAnalyse(bestandsnaam, mime, extractie.tekst, afbeeldingBase64, input.toelichting, bewijs, input.werkmaatschappijNaam);
 
   const basis = aiAnalyse ?? {
     ...heuristischClassificeerInhoud(bestandsnaam, mime, extractie.tekst),
@@ -571,7 +579,7 @@ export async function classificeerDocument(input: {
     bewijs.push({ stap: "heuristische_classificatie", resultaat: basis.categorie, detail: basis.redenering });
   }
 
-  const organisatie = await herkenOrganisatie(extractie.tekst, basis.gevonden_gegevens);
+  const organisatie = await herkenOrganisatie(extractie.tekst, basis.gevonden_gegevens, input.werkmaatschappijNaam);
   bewijs.push({
     stap: "organisatie_herkend",
     resultaat: organisatie ?? "niet gevonden",

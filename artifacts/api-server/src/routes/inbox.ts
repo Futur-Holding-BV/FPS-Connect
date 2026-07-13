@@ -1,8 +1,8 @@
 import { Router } from "express";
 import multer from "multer";
 import crypto from "crypto";
-import { db } from "@workspace/db";
 import {
+  db,
   inboxItemsTable,
   inboxAuditLogTable,
   aanvraagPlanningenTable,
@@ -11,6 +11,7 @@ import {
   opnamesTable,
   werkgeversTable,
   gebruikersTable,
+  medewerkersTable,
 } from "@workspace/db";
 import { eq, desc, and, isNull, or, sql } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
@@ -202,11 +203,24 @@ router.post("/inbox/items", schrijven, uploadEnkel.single("bestand"), async (req
 
     const geconsolideerd_override: string | undefined = req.body.geconsolideerd_override as string | undefined;
 
+    let werkmaatschappijNaam: string | null = null;
+    if (gebruikerId) {
+      try {
+        const [wm] = await db
+          .select({ naam: werkgeversTable.naam })
+          .from(medewerkersTable)
+          .innerJoin(werkgeversTable, eq(medewerkersTable.werkgeverId, werkgeversTable.id))
+          .where(eq(medewerkersTable.gebruikerId, gebruikerId));
+        werkmaatschappijNaam = wm?.naam ?? null;
+      } catch { /* niet blokkeren als gebruiker geen medewerker is */ }
+    }
+
     const analyse = await classificeerDocument({
       buffer: bestand?.buffer ?? null,
       bestandsnaam,
       mime: mimetype,
       toelichting: opmerkingen,
+      werkmaatschappijNaam,
     });
     const documentCategorie = DOC_CATEGORIE_NAAR_INBOX[analyse.categorie];
     const bestemming = analyse.module_bestemming;

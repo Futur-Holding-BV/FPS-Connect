@@ -1,3 +1,27 @@
+## 2026-07-13 — Slim Uploaden: UI vereenvoudigd + werkmaatschappij-context voor AI
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (additief op bestaande inbox-module)
+
+**Toegangsbeheer (bevestigd, niet gewijzigd):**
+- Inbox (Slim Uploadpunt) is uitsluitend zichtbaar voor gebruikers met `crm: 1` bevoegdheid — zowel nav-item (`{toonCrm && ...}`) als API-routes (`requireBevoegdheid("crm", 1/2)`)
+
+**UI inbox-detail vereenvoudigd (`inbox/detail.tsx`):**
+- Bestemming gepromoveerd tot hero-element: groot + bold blok "Dit bestand hoort thuis in [Bestemming]" met categorie als subtekst
+- Bewijsketen (technische AI-stappen) volledig verwijderd uit de gebruikersinterface
+- `AI-betrouwbaarheid`-badge en losse Redenering-sectie verwijderd
+- Ongebruikte `BETROUW_KLEUR`-constante opgeruimd
+
+**Vision-fix (`documentIntelligence.ts`):**
+- `haalAfbeelding()` vraagt niet langer de AI-gateway — PDF→afbeelding conversie kan altijd; alleen de `aiContentAnalyse` stap heeft de gateway nodig
+
+**Werkmaatschappij-context voor AI-classificatie:**
+- `classificeerDocument()` accepteert nu `werkmaatschappijNaam?: string | null`
+- Inbox POST-handler zoekt automatisch de werkmaatschappij van de uploadende gebruiker op via `medewerkers JOIN werkgevers`
+- Werkmaatschappij wordt meegegeven aan de AI-prompt als organisatiecontext
+- `herkenOrganisatie()` gebruikt de werkmaatschappij als fallback wanneer geen expliciete organisatie gevonden wordt — "organisatie niet herkend" verdwijnt bij uploads door medewerkers
+
+---
+
 ## 2026-07-13 — Werk-inbox: verplaatsen, archiveren, beantwoorden + deploybuild-fix
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (puur additief op bestaande werk-inbox module)

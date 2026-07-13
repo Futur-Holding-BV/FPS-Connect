@@ -45,11 +45,6 @@ const STATUS_LABEL: Record<string, string> = {
   nieuw: "Nieuw", geanalyseerd: "Geanalyseerd", ter_beoordeling: "Ter beoordeling",
   goedgekeurd: "Goedgekeurd", verplaatst: "Verplaatst", afgewezen: "Afgewezen",
 };
-const BETROUW_KLEUR: Record<string, string> = {
-  hoog: "bg-emerald-100 text-emerald-700 border-emerald-200",
-  midden: "bg-amber-100 text-amber-700 border-amber-200",
-  laag: "bg-red-100 text-red-600 border-red-200",
-};
 
 const BESTEMMINGEN = [
   "Gebouwen", "Projecten", "Opnames", "Calculaties", "Offertes", "Uitvoering",
