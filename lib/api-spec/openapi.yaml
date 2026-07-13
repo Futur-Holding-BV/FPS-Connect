@@ -10298,6 +10298,27 @@ paths:
         "503":
           description: AI niet beschikbaar
 
+  /offerte-secties/{id}/ai-fotos-voorstel:
+    post:
+      operationId: aiFotosVoorstelOfferteSectie
+      tags: [offertes]
+      summary: AI-voorstel voor referentiefoto's bij een hoofdstuk
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OfferteAiFotosVoorstel"
+        "503":
+          description: AI niet beschikbaar
+
   /offertes/{id}/versies:
     get:
       operationId: listOfferteVersies
@@ -30325,10 +30346,31 @@ components:
           type: ["string", "null"]
         ai_gegenereerd:
           type: boolean
+        fotos:
+          type: array
+          items:
+            $ref: "#/components/schemas/OfferteSectieFoto"
         aangemaakt_op:
           type: string
         bijgewerkt_op:
           type: string
+
+    OfferteSectieFoto:
+      type: object
+      required: [visual_id, naam, url]
+      properties:
+        visual_id:
+          type: integer
+        naam:
+          type: string
+        url:
+          type: string
+        thumbnail_url:
+          type: ["string", "null"]
+        motivatie:
+          type: ["string", "null"]
+        privacy_waarschuwing:
+          type: ["string", "null"]
 
     OfferteSectieInput:
       type: object
@@ -30345,6 +30387,21 @@ components:
           type: string
         ai_gegenereerd:
           type: boolean
+        fotos:
+          type: array
+          items:
+            $ref: "#/components/schemas/OfferteSectieFoto"
+
+    OfferteAiFotosVoorstel:
+      type: object
+      required: [voorstellen]
+      properties:
+        voorstellen:
+          type: array
+          items:
+            $ref: "#/components/schemas/OfferteSectieFoto"
+        boodschap:
+          type: ["string", "null"]
 
     OfferteAiSchrijvenInput:
       type: object

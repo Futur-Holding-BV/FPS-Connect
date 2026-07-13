@@ -5830,6 +5830,18 @@ export interface OfferteUitgangspuntInput {
   ai_voorstel?: boolean;
 }
 
+export interface OfferteSectieFoto {
+  visual_id: number;
+  naam: string;
+  url: string;
+  /** @nullable */
+  thumbnail_url?: string | null;
+  /** @nullable */
+  motivatie?: string | null;
+  /** @nullable */
+  privacy_waarschuwing?: string | null;
+}
+
 export interface OfferteSectie {
   id: number;
   offerte_id: number;
@@ -5840,6 +5852,7 @@ export interface OfferteSectie {
   /** @nullable */
   inhoud?: string | null;
   ai_gegenereerd: boolean;
+  fotos?: OfferteSectieFoto[];
   aangemaakt_op: string;
   bijgewerkt_op: string;
 }
@@ -5851,6 +5864,13 @@ export interface OfferteSectieInput {
   titel?: string;
   inhoud?: string;
   ai_gegenereerd?: boolean;
+  fotos?: OfferteSectieFoto[];
+}
+
+export interface OfferteAiFotosVoorstel {
+  voorstellen: OfferteSectieFoto[];
+  /** @nullable */
+  boodschap?: string | null;
 }
 
 export interface OfferteAiSchrijvenInput {

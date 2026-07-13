@@ -115,8 +115,6 @@
 - [Governance & Approval Engine](goedkeuring-engine.md) — generieke goedkeuringsmotor; pilot-pattern om een bestaande workflow-transitie te gaten via 422+viaGoedkeuring-bypass zonder de workflow-engine te herschrijven.
 - [CRM-module herontwikkeling](crm-herontwikkeling.md) — relatienetwerk (SVG node-edge), taken als eigen entiteit (crm_taken), AI-relatievoorstellen met goedkeuringswachtrij; menu-consolidatie onder één centraal sidebar-item.
 - [Multi-functie toegangsprofiel](multi-functie-toegangsprofiel.md) — functies dragen profiel_id; rechten additief afgeleid uit alle functies (increment 4=risicovol, zelf-escalatiecheck); GET /profielen gate = gebruikers OF personeel.
-<<<<<<< HEAD
 - [AI-slot keuze interactief](ai-slot-keuze.md) — interactieve AI-knoppen NIET op "reasoning"/gpt-5 (7+ min hang); gebruik "default"/gpt-4o + max_tokens; veiligheid altijd server-side clampen.
-=======
 - [CRM-module herontwikkeling](crm-module-herontwikkeling.md) — 4 werkstromen; crm_taken (polymorf) + crm_relatievoorstellen (AI stelt voor, mens keurt goed → pas dan echte contactpersoon); alle CRM onder één sidebar-item, subpagina's = nav-kaarten op /crm; route vóór /crm/:id.
->>>>>>> 333ee06 (CRM-module herontwikkeling: relatienetwerk, taken, AI-voorstellen, menu-consolidatie)
+- [Offerte-sectie foto's](offerte-sectie-fotos.md) — hoofdstuk-foto's in offerte_secties.fotos jsonb; url = kant-en-klare /api/storage/files?path=... (NIET rauw objectPath); AI stelt voor, mens accepteert, tonen alleen bij toon_fotos.

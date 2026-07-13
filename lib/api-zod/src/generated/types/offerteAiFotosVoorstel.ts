@@ -7,12 +7,8 @@
  */
 import type { OfferteSectieFoto } from './offerteSectieFoto';
 
-export interface OfferteSectieInput {
-  sectie_type?: string;
-  volgorde?: number;
-  actief?: boolean;
-  titel?: string;
-  inhoud?: string;
-  ai_gegenereerd?: boolean;
-  fotos?: OfferteSectieFoto[];
+export interface OfferteAiFotosVoorstel {
+  voorstellen: OfferteSectieFoto[];
+  /** @nullable */
+  boodschap?: string | null;
 }

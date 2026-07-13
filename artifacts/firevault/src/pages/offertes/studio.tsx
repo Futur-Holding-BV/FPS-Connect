@@ -34,7 +34,7 @@ import {
   getListOfferteTransitieLogQueryKey,
   useIntrekkenOfferte,
 } from "@workspace/api-client-react";
-import type { OfferteSectie } from "@workspace/api-client-react";
+import type { OfferteSectie, OfferteSectieFoto } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -55,7 +55,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
-  ArrowLeft, Sparkles, ChevronUp, ChevronDown, Eye, Printer, Plus,
+  ArrowLeft, Sparkles, ChevronUp, ChevronDown, Eye, Printer, Plus, AlertTriangle,
   Trash2, BookOpen, Clock, Paperclip, Check, X, GripVertical, ToggleLeft, ToggleRight, Send,
   FolderOpen, CreditCard, FileText, Hammer, Layers, FileDown, History, ArrowRight, User,
 } from "lucide-react";
@@ -121,6 +121,36 @@ const BIJLAGE_TYPEN = [
   { value: "tekening", label: "Tekening" },
   { value: "overig", label: "Overig" },
 ];
+
+// Presentatieniveaus (deliverable 5) — drie herkenbare sjabloonnamen.
+// Opgeslagen ints blijven 1/3/5; oudere waarden 2/4 blijven backward-compatible
+// renderen (print.tsx). Compact=1, Standaard=3, Technisch Advies=5.
+const PRESENTATIE_NIVEAUS = [
+  { niveau: 1, naam: "Compact", omschrijving: "Alleen categoriesubtotalen en eindtotaal. Geen regelitems zichtbaar voor de klant." },
+  { niveau: 3, naam: "Standaard", omschrijving: "Volledige begroting met omschrijvingen, aantallen, eenheidsprijzen en totalen. Dit is de standaardweergave." },
+  { niveau: 5, naam: "Technisch Advies", omschrijving: "Volledige begroting inclusief technische onderbouwing en uitgangspunten per regel." },
+] as const;
+
+function niveauNaam(niveau: number): string {
+  if (niveau <= 1) return "Compact";
+  if (niveau >= 5) return "Technisch Advies";
+  if (niveau === 2) return "Compact (omschrijvingen)";
+  if (niveau === 4) return "Technisch Advies";
+  return "Standaard";
+}
+
+// Geleide wizard (deliverable 1) — de primaire opbouw-/verzendflow in vaste
+// volgorde met Vorige/Volgende. Ondersteunende schermen (versies, historie,
+// goedkeuring) staan buiten de lineaire flow en blijven los bereikbaar.
+const WIZARD_STAPPEN = [
+  { id: "studio", label: "Opbouw" },
+  { id: "prijzen", label: "Begroting" },
+  { id: "bijlagen", label: "Bijlagen" },
+  { id: "condities", label: "Condities" },
+  { id: "weergave", label: "Weergave" },
+  { id: "voorbeeld", label: "Controle" },
+  { id: "verzenden", label: "Verzenden" },
+] as const;
 
 function euro(bedrag: number) {
   return new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(bedrag ?? 0);
@@ -211,6 +241,7 @@ export default function ProposalStudio() {
     },
   });
 
+  const [stap, setStap] = useState("studio");
   const [activeSectieId, setActiveSectieId] = useState<number | null>(null);
   const [localInhoud, setLocalInhoud] = useState("");
   const [localTitel, setLocalTitel] = useState("");
@@ -218,6 +249,8 @@ export default function ProposalStudio() {
   const [aiLoading, setAiLoading] = useState(false);
   const [aiVoorstel, setAiVoorstel] = useState<string | null>(null);
   const [aiContextExtra, setAiContextExtra] = useState("");
+  const [fotoLoading, setFotoLoading] = useState(false);
+  const [fotoVoorstellen, setFotoVoorstellen] = useState<OfferteSectieFoto[] | null>(null);
   const [sectieDialoogOpen, setSectieDialoogOpen] = useState(false);
   const [nieuwSectieType, setNieuwSectieType] = useState("vrij");
   const [nieuwSectieNaam, setNieuwSectieNaam] = useState("");
@@ -302,6 +335,17 @@ export default function ProposalStudio() {
     } catch {
       toast({ title: "Opslaan mislukt", variant: "destructive" });
     }
+  }
+
+  const klantWeergave: BegrotingWeergave = { ...WEERGAVE_STANDAARD, ...(((offerte as any)?.begroting_weergave as Partial<BegrotingWeergave> | undefined) ?? {}) };
+
+  function slaKlantWeergaveOp(wijziging: Partial<BegrotingWeergave>) {
+    if (!offerte) return;
+    const nieuw = { ...klantWeergave, ...wijziging };
+    werkOfferte.mutate(
+      { id: offerteId, data: { begroting_weergave: nieuw } as any },
+      { onSuccess: () => queryClient.invalidateQueries({ queryKey: getGetOfferteQueryKey(offerteId) }) },
+    );
   }
 
   async function haalAiNiveauOp() {
@@ -530,6 +574,57 @@ export default function ProposalStudio() {
     setLocalInhoud(aiVoorstel);
     setHeeftWijzigingen(true);
     setAiVoorstel(null);
+  }
+
+  async function geneerAiFotos() {
+    if (!activeSectieId) return;
+    setFotoLoading(true);
+    try {
+      const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+      const resp = await fetch(`${BASE}/api/offerte-secties/${activeSectieId}/ai-fotos-voorstel`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+      });
+      if (!resp.ok) throw new Error("AI niet beschikbaar");
+      const data = (await resp.json()) as { voorstellen: OfferteSectieFoto[]; boodschap?: string | null };
+      const reedsGekozen = new Set((activeSectie?.fotos ?? []).map((f) => f.visual_id));
+      const nieuwe = (data.voorstellen ?? []).filter((v) => !reedsGekozen.has(v.visual_id));
+      setFotoVoorstellen(nieuwe);
+      if (nieuwe.length === 0) {
+        toast({ title: data.boodschap ?? "Geen nieuwe foto's gevonden voor dit hoofdstuk" });
+      }
+    } catch {
+      toast({ title: "AI-fotoselectie niet beschikbaar op dit moment", variant: "destructive" });
+    } finally {
+      setFotoLoading(false);
+    }
+  }
+
+  async function bewaarSectieFotos(fotos: OfferteSectieFoto[]) {
+    if (!activeSectieId) return;
+    try {
+      await werkSectie.mutateAsync({ id: activeSectieId, data: { fotos } });
+      await herlaad();
+    } catch {
+      toast({ title: "Foto's opslaan mislukt", variant: "destructive" });
+    }
+  }
+
+  async function accepteerFoto(foto: OfferteSectieFoto) {
+    const huidige = activeSectie?.fotos ?? [];
+    if (huidige.some((f) => f.visual_id === foto.visual_id)) return;
+    await bewaarSectieFotos([...huidige, foto]);
+    setFotoVoorstellen((prev) => (prev ? prev.filter((v) => v.visual_id !== foto.visual_id) : prev));
+  }
+
+  function verwerpFoto(foto: OfferteSectieFoto) {
+    setFotoVoorstellen((prev) => (prev ? prev.filter((v) => v.visual_id !== foto.visual_id) : prev));
+  }
+
+  async function verwijderSectieFoto(foto: OfferteSectieFoto) {
+    const huidige = activeSectie?.fotos ?? [];
+    await bewaarSectieFotos(huidige.filter((f) => f.visual_id !== foto.visual_id));
   }
 
   async function slaVersieOp() {
@@ -903,30 +998,67 @@ export default function ProposalStudio() {
           </div>
 
           <div className="flex-1 min-w-0">
-            <Tabs defaultValue="studio">
-              <TabsList className="mb-4 flex-wrap">
-                <TabsTrigger value="studio"><BookOpen className="h-3.5 w-3.5 mr-1.5" />Studio</TabsTrigger>
-                <TabsTrigger value="prijzen"><span className="mr-1.5">&#8364;</span>Prijzen</TabsTrigger>
-                <TabsTrigger value="condities"><CreditCard className="h-3.5 w-3.5 mr-1.5" />Condities</TabsTrigger>
-                <TabsTrigger value="weergave"><Layers className="h-3.5 w-3.5 mr-1.5" />Weergave</TabsTrigger>
-                <TabsTrigger value="voorbeeld"><Eye className="h-3.5 w-3.5 mr-1.5" />Voorbeeld</TabsTrigger>
-                <TabsTrigger value="bijlagen"><Paperclip className="h-3.5 w-3.5 mr-1.5" />Bijlagen</TabsTrigger>
-                <TabsTrigger value="versies"><Clock className="h-3.5 w-3.5 mr-1.5" />Versies</TabsTrigger>
-                <TabsTrigger value="historie"><History className="h-3.5 w-3.5 mr-1.5" />Historie</TabsTrigger>
-                <TabsTrigger value="goedkeuring">
-                  <Check className="h-3.5 w-3.5 mr-1.5" />
-                  Goedkeuring
-                </TabsTrigger>
-                <TabsTrigger value="verzenden" className="relative">
-                  <Send className="h-3.5 w-3.5 mr-1.5" />
-                  Verzenden
-                  {aantalOnbeantwoord > 0 && (
-                    <span className="ml-1.5 inline-flex items-center justify-center rounded-full bg-rose-600 text-white text-[10px] font-bold leading-none h-4 min-w-4 px-1">
-                      {aantalOnbeantwoord}
-                    </span>
-                  )}
-                </TabsTrigger>
-              </TabsList>
+            <Tabs value={stap} onValueChange={setStap}>
+              {(() => {
+                const huidigeIndex = WIZARD_STAPPEN.findIndex((w) => w.id === stap);
+                const inWizard = huidigeIndex >= 0;
+                return (
+                  <div className="mb-4 space-y-3">
+                    <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
+                      {WIZARD_STAPPEN.map((w, i) => {
+                        const actief = w.id === stap;
+                        const voltooid = inWizard && i < huidigeIndex;
+                        return (
+                          <div key={w.id} className="flex items-center gap-1.5 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => setStap(w.id)}
+                              className={
+                                "flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium transition-colors " +
+                                (actief
+                                  ? "bg-primary text-primary-foreground"
+                                  : voltooid
+                                    ? "bg-primary/10 text-primary"
+                                    : "bg-muted text-muted-foreground hover:bg-muted/70")
+                              }
+                            >
+                              <span
+                                className={
+                                  "flex h-5 w-5 items-center justify-center rounded-full text-[11px] " +
+                                  (actief ? "bg-primary-foreground/20" : voltooid ? "bg-primary/20" : "bg-background")
+                                }
+                              >
+                                {voltooid ? <Check className="h-3 w-3" /> : i + 1}
+                              </span>
+                              {w.label}
+                              {w.id === "verzenden" && aantalOnbeantwoord > 0 && (
+                                <span className="inline-flex items-center justify-center rounded-full bg-rose-600 text-white text-[10px] font-bold leading-none h-4 min-w-4 px-1">
+                                  {aantalOnbeantwoord}
+                                </span>
+                              )}
+                            </button>
+                            {i < WIZARD_STAPPEN.length - 1 && (
+                              <ArrowRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <span>Extra:</span>
+                      <button type="button" onClick={() => setStap("versies")} className={"inline-flex items-center gap-1 rounded px-2 py-1 hover:bg-muted " + (stap === "versies" ? "text-primary font-medium" : "")}>
+                        <Clock className="h-3.5 w-3.5" />Versies
+                      </button>
+                      <button type="button" onClick={() => setStap("historie")} className={"inline-flex items-center gap-1 rounded px-2 py-1 hover:bg-muted " + (stap === "historie" ? "text-primary font-medium" : "")}>
+                        <History className="h-3.5 w-3.5" />Historie
+                      </button>
+                      <button type="button" onClick={() => setStap("goedkeuring")} className={"inline-flex items-center gap-1 rounded px-2 py-1 hover:bg-muted " + (stap === "goedkeuring" ? "text-primary font-medium" : "")}>
+                        <Check className="h-3.5 w-3.5" />Goedkeuring
+                      </button>
+                    </div>
+                  </div>
+                );
+              })()}
 
               <TabsContent value="studio">
                 {!activeSectie ? (
@@ -1000,6 +1132,94 @@ export default function ProposalStudio() {
                         {telWoorden(localInhoud)} woorden
                       </p>
                     </div>
+
+                    <Card>
+                      <CardHeader className="pb-2 flex flex-row items-center justify-between gap-3 space-y-0">
+                        <div>
+                          <CardTitle className="text-sm">Foto's bij dit hoofdstuk</CardTitle>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Referentiefoto's uit de Beeldbibliotheek. Zichtbaar in het klantdocument wanneer "Foto's tonen" aanstaat.
+                          </p>
+                        </div>
+                        <Button size="sm" variant="outline" onClick={geneerAiFotos} disabled={fotoLoading}>
+                          <Sparkles className="h-3.5 w-3.5" />
+                          {fotoLoading ? "Bezig..." : "AI-fotoselectie"}
+                        </Button>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        {(activeSectie.fotos ?? []).length === 0 ? (
+                          <p className="text-xs text-muted-foreground">Nog geen foto's gekoppeld.</p>
+                        ) : (
+                          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                            {(activeSectie.fotos ?? []).map((foto) => (
+                              <div key={foto.visual_id} className="rounded-md border overflow-hidden">
+                                <img
+                                  src={foto.thumbnail_url ?? foto.url}
+                                  alt={foto.naam}
+                                  className="h-28 w-full object-cover bg-muted"
+                                />
+                                <div className="p-2 space-y-1">
+                                  <p className="text-xs font-medium truncate" title={foto.naam}>{foto.naam}</p>
+                                  {foto.privacy_waarschuwing && (
+                                    <p className="text-[11px] text-amber-700 flex items-start gap-1">
+                                      <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" />
+                                      {foto.privacy_waarschuwing}
+                                    </p>
+                                  )}
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-7 w-full text-destructive"
+                                    onClick={() => verwijderSectieFoto(foto)}
+                                  >
+                                    <X className="h-3.5 w-3.5" /> Verwijderen
+                                  </Button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {fotoVoorstellen && fotoVoorstellen.length > 0 && (
+                          <div className="space-y-2">
+                            <p className="text-xs font-medium text-amber-800 flex items-center gap-1.5">
+                              <Sparkles className="h-3.5 w-3.5" /> AI-voorstellen — beoordeel per foto
+                            </p>
+                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                              {fotoVoorstellen.map((foto) => (
+                                <div key={foto.visual_id} className="rounded-md border border-amber-200 bg-amber-50 overflow-hidden">
+                                  <img
+                                    src={foto.thumbnail_url ?? foto.url}
+                                    alt={foto.naam}
+                                    className="h-32 w-full object-cover bg-muted"
+                                  />
+                                  <div className="p-2 space-y-1.5">
+                                    <p className="text-xs font-medium truncate" title={foto.naam}>{foto.naam}</p>
+                                    {foto.motivatie && (
+                                      <p className="text-[11px] text-amber-900">{foto.motivatie}</p>
+                                    )}
+                                    {foto.privacy_waarschuwing && (
+                                      <p className="text-[11px] text-red-700 flex items-start gap-1">
+                                        <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" />
+                                        {foto.privacy_waarschuwing}
+                                      </p>
+                                    )}
+                                    <div className="flex gap-2 pt-0.5">
+                                      <Button size="sm" className="h-7 flex-1" onClick={() => accepteerFoto(foto)}>
+                                        <Check className="h-3.5 w-3.5" /> Overnemen
+                                      </Button>
+                                      <Button size="sm" variant="outline" className="h-7 flex-1" onClick={() => verwerpFoto(foto)}>
+                                        <X className="h-3.5 w-3.5" /> Verwerpen
+                                      </Button>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
                   </div>
                 )}
               </TabsContent>
@@ -1141,7 +1361,7 @@ export default function ProposalStudio() {
                     </CardHeader>
                     <CardContent className="space-y-4">
                       <p className="text-xs text-muted-foreground">
-                        Bepaal hoeveel budgetdetail de klant ziet in de offerte-PDF. Niveau 3 is de standaard.
+                        Bepaal hoeveel budgetdetail de klant ziet in de offerte-PDF. Standaard is de gebruikelijke weergave.
                       </p>
 
                       {weergaveAiVoorstel && (
@@ -1149,7 +1369,7 @@ export default function ProposalStudio() {
                           <CardContent className="py-3 space-y-2">
                             <div className="flex items-center gap-2 text-amber-800 font-semibold text-sm">
                               <Sparkles className="h-4 w-4" />
-                              AI-voorstel: Niveau {weergaveAiVoorstel.niveau}
+                              AI-voorstel: {niveauNaam(weergaveAiVoorstel.niveau)}
                             </div>
                             <p className="text-xs text-amber-900">{weergaveAiVoorstel.motivatie}</p>
                             <div className="flex gap-2">
@@ -1165,31 +1385,30 @@ export default function ProposalStudio() {
                       )}
 
                       <div className="space-y-2">
-                        {[
-                          { niveau: 1, label: "Niveau 1 — Alleen totalen", omschrijving: "Uitsluitend categoriesubtotalen en eindtotaal. Geen regelitems zichtbaar." },
-                          { niveau: 2, label: "Niveau 2 — Omschrijvingen, geen prijzen", omschrijving: "Regelomschrijvingen getoond zonder aantallen en eenheidsprijzen." },
-                          { niveau: 3, label: "Niveau 3 — Volledig (standaard)", omschrijving: "Volledige begroting met omschrijvingen, aantallen, eenheidsprijzen en totalen." },
-                          { niveau: 4, label: "Niveau 4 — Uitgebreid", omschrijving: "Volledig inclusief uitgangspunten en aanvullende technische informatie." },
-                          { niveau: 5, label: "Niveau 5 — Maximaal detail", omschrijving: "Alle beschikbare informatie — voor interne verwerking of technische adviseurs." },
-                        ].map(({ niveau, label, omschrijving }) => (
-                          <label
-                            key={niveau}
-                            className={`flex items-start gap-3 rounded-lg border p-3 cursor-pointer transition-colors ${weergaveForm.presentatie_niveau === niveau ? "border-primary bg-primary/5" : "border-border hover:bg-muted/40"}`}
-                          >
-                            <input
-                              type="radio"
-                              name="presentatie_niveau"
-                              value={niveau}
-                              checked={weergaveForm.presentatie_niveau === niveau}
-                              onChange={() => setWeergaveForm((f) => ({ ...f, presentatie_niveau: niveau }))}
-                              className="mt-0.5 accent-primary"
-                            />
-                            <div>
-                              <div className="text-sm font-medium">{label}</div>
-                              <div className="text-xs text-muted-foreground mt-0.5">{omschrijving}</div>
-                            </div>
-                          </label>
-                        ))}
+                        {PRESENTATIE_NIVEAUS.map(({ niveau, naam, omschrijving }) => {
+                          const actief = weergaveForm.presentatie_niveau === niveau
+                            || (niveau === 1 && weergaveForm.presentatie_niveau === 2)
+                            || (niveau === 5 && weergaveForm.presentatie_niveau === 4);
+                          return (
+                            <label
+                              key={niveau}
+                              className={`flex items-start gap-3 rounded-lg border p-3 cursor-pointer transition-colors ${actief ? "border-primary bg-primary/5" : "border-border hover:bg-muted/40"}`}
+                            >
+                              <input
+                                type="radio"
+                                name="presentatie_niveau"
+                                value={niveau}
+                                checked={actief}
+                                onChange={() => setWeergaveForm((f) => ({ ...f, presentatie_niveau: niveau }))}
+                                className="mt-0.5 accent-primary"
+                              />
+                              <div>
+                                <div className="text-sm font-medium">{naam}</div>
+                                <div className="text-xs text-muted-foreground mt-0.5">{omschrijving}</div>
+                              </div>
+                            </label>
+                          );
+                        })}
                       </div>
 
                       <div className="grid grid-cols-2 gap-4">
@@ -1228,6 +1447,63 @@ export default function ProposalStudio() {
                           </Button>
                         </div>
                       </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm flex items-center gap-2">
+                        <Eye className="h-4 w-4" /> Klantweergave — wat de klant ziet
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <p className="text-xs text-muted-foreground">
+                        Fijnafstelling bovenop het presentatieniveau. Schakel per onderdeel aan of uit wat in de klant-PDF verschijnt.
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {(
+                          [
+                            { key: "toon_hoofdstukken" as const, label: "Hoofdstukken (teksten)" },
+                            { key: "toon_regelomschrijving" as const, label: "Regelomschrijvingen" },
+                            { key: "toon_ruimte" as const, label: "Locatie / ruimte" },
+                            { key: "toon_spotnummer" as const, label: "Spotnummer / referentie" },
+                            { key: "toon_fotos" as const, label: "Referentiefoto's" },
+                            { key: "toon_aantal" as const, label: "Aantallen" },
+                            { key: "toon_eenheid" as const, label: "Eenheden" },
+                          ] as const
+                        ).map(({ key, label }) => (
+                          <button
+                            key={key}
+                            onClick={() => slaKlantWeergaveOp({ [key]: !klantWeergave[key] })}
+                            disabled={werkOfferte.isPending}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md border text-xs font-medium transition-colors ${
+                              klantWeergave[key]
+                                ? "bg-primary text-primary-foreground border-primary"
+                                : "bg-background text-muted-foreground border-border hover:border-primary/50"
+                            }`}
+                          >
+                            {klantWeergave[key] ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
+                            {label}
+                          </button>
+                        ))}
+                      </div>
+                      <div className="space-y-1.5 max-w-xs">
+                        <Label className="text-xs">Regels samenvoegen / groeperen</Label>
+                        <Select
+                          value={klantWeergave.groepering}
+                          onValueChange={(v) => slaKlantWeergaveOp({ groepering: v as BegrotingWeergave["groepering"] })}
+                          disabled={werkOfferte.isPending}
+                        >
+                          <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="categorie">Per categorie (Maatregelen / Algemene kosten)</SelectItem>
+                            <SelectItem value="geen">Geen groepering — alles in volgorde</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground">
+                        Deze instellingen worden direct opgeslagen en gelden alleen voor deze offerte.
+                      </p>
                     </CardContent>
                   </Card>
 
@@ -1318,6 +1594,46 @@ export default function ProposalStudio() {
               </TabsContent>
 
               <TabsContent value="voorbeeld">
+                {(() => {
+                  const actieveSecties = gesorteerdeSecties.filter((s) => s.actief);
+                  const legeSecties = actieveSecties.filter((s) => !(s.inhoud ?? "").trim());
+                  const punten: { ok: boolean; label: string }[] = [
+                    { ok: !!(offerte.opdrachtgever || (offerte as any).klant_naam), label: "Opdrachtgever ingevuld" },
+                    { ok: actieveSecties.length > 0, label: "Minstens één hoofdstuk actief" },
+                    { ok: legeSecties.length === 0, label: legeSecties.length === 0 ? "Alle actieve hoofdstukken hebben tekst" : `Hoofdstuk zonder tekst: ${legeSecties.map((s) => s.titel).join(", ")}` },
+                    { ok: (regels ?? []).length > 0, label: "Minstens één begrotingsregel" },
+                    { ok: !!conditiesForm.betalingstermijn_dagen || !!conditiesForm.betaalwijze, label: "Betaalconditie ingesteld" },
+                    { ok: !!conditiesForm.voorwaarden_set_id || !!conditiesForm.vrije_voorwaarden.trim(), label: "Algemene voorwaarden gekozen" },
+                  ];
+                  const ontbreekt = punten.filter((p) => !p.ok);
+                  return (
+                    <Card className={"mb-4 " + (ontbreekt.length === 0 ? "border-emerald-200 bg-emerald-50" : "border-amber-200 bg-amber-50")}>
+                      <CardHeader className="pb-2">
+                        <CardTitle className={"text-sm flex items-center gap-2 " + (ontbreekt.length === 0 ? "text-emerald-800" : "text-amber-800")}>
+                          {ontbreekt.length === 0 ? <Check className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
+                          {ontbreekt.length === 0
+                            ? "Volledigheidscontrole: alles compleet"
+                            : `Volledigheidscontrole: ${ontbreekt.length} aandachtspunt${ontbreekt.length === 1 ? "" : "en"}`}
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <ul className="space-y-1.5">
+                          {punten.map((p, i) => (
+                            <li key={i} className="flex items-start gap-2 text-sm">
+                              {p.ok ? (
+                                <Check className="h-4 w-4 text-emerald-600 mt-0.5 shrink-0" />
+                              ) : (
+                                <X className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+                              )}
+                              <span className={p.ok ? "text-muted-foreground" : "text-amber-900 font-medium"}>{p.label}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </CardContent>
+                    </Card>
+                  );
+                })()}
+
                 <div className="flex justify-end mb-3 gap-2">
                   <a
                     href={`/offertes/${offerteId}/print`}
@@ -1331,6 +1647,20 @@ export default function ProposalStudio() {
                     <Printer className="h-3.5 w-3.5" /> Eenvoudig afdrukken
                   </Button>
                 </div>
+
+                <div className="mb-4 rounded-lg border overflow-hidden bg-muted/30">
+                  <div className="flex items-center gap-2 border-b bg-background px-3 py-2 text-xs font-medium text-muted-foreground">
+                    <Eye className="h-3.5 w-3.5" /> Live PDF-voorvertoning (definitieve opmaak)
+                  </div>
+                  <iframe
+                    key={stap === "voorbeeld" ? "actief" : "inactief"}
+                    src={`/offertes/${offerteId}/print`}
+                    title="Live PDF-voorvertoning"
+                    className="w-full bg-white"
+                    style={{ height: 720, border: "none" }}
+                  />
+                </div>
+
                 <OfferteVoorbeeldInline
                   offerte={offerte}
                   secties={gesorteerdeSecties.filter((s) => s.actief)}
@@ -1523,6 +1853,35 @@ export default function ProposalStudio() {
                   verzendType={(offerte as unknown as Record<string, string>).verzend_type ?? "ondertekening"}
                 />
               </TabsContent>
+
+              {(() => {
+                const huidigeIndex = WIZARD_STAPPEN.findIndex((w) => w.id === stap);
+                if (huidigeIndex < 0) return null;
+                const vorige = WIZARD_STAPPEN[huidigeIndex - 1];
+                const volgende = WIZARD_STAPPEN[huidigeIndex + 1];
+                return (
+                  <div className="mt-6 flex items-center justify-between border-t pt-4">
+                    <Button
+                      variant="outline"
+                      disabled={!vorige}
+                      onClick={() => vorige && setStap(vorige.id)}
+                    >
+                      <ArrowLeft className="h-4 w-4" />
+                      {vorige ? `Vorige: ${vorige.label}` : "Vorige"}
+                    </Button>
+                    <span className="text-xs text-muted-foreground">
+                      Stap {huidigeIndex + 1} van {WIZARD_STAPPEN.length}
+                    </span>
+                    <Button
+                      disabled={!volgende}
+                      onClick={() => volgende && setStap(volgende.id)}
+                    >
+                      {volgende ? `Volgende: ${volgende.label}` : "Laatste stap"}
+                      <ArrowRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                );
+              })()}
             </Tabs>
           </div>
         </div>
@@ -1694,6 +2053,11 @@ type BegrotingWeergave = {
   optionele_posten: "altijd" | "samengevat" | "verbergen";
   alleen_totaal: boolean;
   titel: string;
+  // Granulaire klantweergave (deliverable 2) — verfijning bovenop het presentatieniveau.
+  toon_hoofdstukken: boolean;
+  toon_regelomschrijving: boolean;
+  toon_spotnummer: boolean;
+  toon_fotos: boolean;
 };
 
 const WEERGAVE_STANDAARD: BegrotingWeergave = {
@@ -1709,6 +2073,10 @@ const WEERGAVE_STANDAARD: BegrotingWeergave = {
   optionele_posten: "altijd",
   alleen_totaal: false,
   titel: "Begroting",
+  toon_hoofdstukken: true,
+  toon_regelomschrijving: true,
+  toon_spotnummer: false,
+  toon_fotos: false,
 };
 
 function PrijzenTab({

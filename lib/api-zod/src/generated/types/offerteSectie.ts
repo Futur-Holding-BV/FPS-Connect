@@ -5,6 +5,7 @@
  * FPS Brandpreventie - Platform voor brandpreventieve gebouwvoorzieningen
  * OpenAPI spec version: 0.1.0
  */
+import type { OfferteSectieFoto } from './offerteSectieFoto';
 
 export interface OfferteSectie {
   id: number;
@@ -16,6 +17,7 @@ export interface OfferteSectie {
   /** @nullable */
   inhoud?: string | null;
   ai_gegenereerd: boolean;
+  fotos?: OfferteSectieFoto[];
   aangemaakt_op: string;
   bijgewerkt_op: string;
 }

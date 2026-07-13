@@ -39,6 +39,7 @@ import {
   offerteContractAdviezenTable,
   documentStudioModellenTable,
   modCalcHeadersTable,
+  fpsVisualsTable,
 } from "@workspace/db";
 import { ObjectStorageService } from "../lib/objectStorage";
 import { eq, desc, count, sql, and, not, inArray } from "drizzle-orm";
@@ -1174,6 +1175,7 @@ function mapSectie(s: typeof offerteSectiesTable.$inferSelect) {
     titel: s.titel,
     inhoud: s.inhoud,
     ai_gegenereerd: s.aiGegenereerd,
+    fotos: (s.fotos ?? []) as unknown[],
     aangemaakt_op: iso(s.aangemaaktOp),
     bijgewerkt_op: iso(s.bijgewerktOp),
   };
@@ -1288,7 +1290,7 @@ router.patch("/offerte-secties/:id", schrijven, async (req, res): Promise<void> 
       .where(eq(offerteSectiesTable.id, sectieId));
     if (!bestaandeSectie) return void res.status(404).json({ error: "Sectie niet gevonden" });
     if (await isOfferteBlokkeerd(bestaandeSectie.offerteId)) return void res.status(409).json({ error: "Ondertekende of afgewezen offerte kan niet worden gewijzigd." });
-    const { sectie_type, volgorde, actief, titel, inhoud, ai_gegenereerd } = req.body;
+    const { sectie_type, volgorde, actief, titel, inhoud, ai_gegenereerd, fotos } = req.body;
 
     // Materiële-wijzigingsguard: als de inhoud of titel van een sectie wijzigt
     // wordt een goedgekeurde aanvraag automatisch als "vervangen" gemarkeerd.
@@ -1316,6 +1318,7 @@ router.patch("/offerte-secties/:id", schrijven, async (req, res): Promise<void> 
           ...(titel !== undefined && { titel }),
           ...(inhoud !== undefined && { inhoud }),
           ...(ai_gegenereerd !== undefined && { aiGegenereerd: ai_gegenereerd }),
+          ...(fotos !== undefined && { fotos }),
           bijgewerktOp: new Date(),
         })
         .where(eq(offerteSectiesTable.id, sectieId))
@@ -1441,6 +1444,127 @@ Schrijf een professionele, overtuigende tekst voor deze sectie. Gebruik alinea's
 
     const tekst = sectieResultaat.ok ? sectieResultaat.inhoud : "";
     res.json({ tekst });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// POST /offerte-secties/:id/ai-fotos-voorstel
+// AI selecteert per hoofdstuk passende referentiefoto's uit de Visual Library,
+// met motivatie per foto en een privacycontrole (personen/kentekens). De gebruiker
+// accepteert of verwerpt elk voorstel afzonderlijk in de Proposal Studio.
+router.post("/offerte-secties/:id/ai-fotos-voorstel", schrijven, async (req, res): Promise<void> => {
+  try {
+    const sectieId = parseId(req.params.id);
+    const [sectie] = await db
+      .select()
+      .from(offerteSectiesTable)
+      .where(eq(offerteSectiesTable.id, sectieId));
+    if (!sectie) return void res.status(404).json({ error: "Sectie niet gevonden" });
+
+    if (!heeftGateway()) {
+      return void res.status(503).json({ error: "AI is niet beschikbaar. Controleer de AI-configuratie." });
+    }
+
+    const [offerte] = await db
+      .select({ id: offertesTable.id, gebouwId: offertesTable.gebouwId, titel: offertesTable.titel, klantId: offertesTable.klantId })
+      .from(offertesTable)
+      .where(eq(offertesTable.id, sectie.offerteId));
+
+    // Spot-types uit de gekoppelde gebouwvoorzieningen bepalen de relevante beeldbank.
+    const spotTypeRijen = offerte?.gebouwId
+      ? await db
+          .select({ type: voorzieningenTable.type })
+          .from(voorzieningenTable)
+          .where(eq(voorzieningenTable.gebouwId, offerte.gebouwId))
+      : [];
+    const spotTypes = Array.from(new Set(spotTypeRijen.map((r) => r.type).filter(Boolean))) as string[];
+
+    // Kandidaat-visuals: actief, en indien mogelijk overlappend met de spot-types.
+    const kandidaten = await db
+      .select()
+      .from(fpsVisualsTable)
+      .where(
+        spotTypes.length > 0
+          ? and(eq(fpsVisualsTable.actief, true), sql`${fpsVisualsTable.spotType} && ${spotTypes}`)
+          : eq(fpsVisualsTable.actief, true),
+      )
+      .limit(24);
+
+    if (kandidaten.length === 0) {
+      return void res.json({ voorstellen: [], boodschap: "Geen passende beelden in de Visual Library gevonden." });
+    }
+
+    const kandidatenLijst = kandidaten
+      .map((v) => `- id=${v.id} | ${v.naam} | type=${v.visualType} | bron=${v.bronType} | spots=[${(v.spotType ?? []).join(", ")}]`)
+      .join("\n");
+
+    const systeemPrompt = `Je bent een assistent die referentiebeelden selecteert voor een offerte-hoofdstuk in een Nederlands brandpreventiebedrijf. Kies uitsluitend beelden die het hoofdstuk inhoudelijk versterken. Antwoord uitsluitend met geldige JSON, zonder toelichting eromheen.`;
+
+    const gebruikersPrompt = `Hoofdstuk: "${sectie.titel}" (type: ${sectie.sectieType}).
+Offerte: ${offerte?.titel ?? ""}.
+
+Beschikbare beelden uit de Visual Library:
+${kandidatenLijst}
+
+Selecteer maximaal 4 beelden die het beste bij dit hoofdstuk passen. Geef per gekozen beeld een korte, zakelijke motivatie (max 25 woorden) waarom het past.
+
+Antwoord met JSON in dit formaat:
+{"keuzes":[{"visual_id":123,"motivatie":"..."}]}
+Als geen enkel beeld past, antwoord met {"keuzes":[]}.`;
+
+    const resultaat = await aiGateway.chat("reasoning", {
+      max_completion_tokens: 1024,
+      response_format: { type: "json_object" },
+      messages: [
+        { role: "system", content: systeemPrompt },
+        { role: "user", content: gebruikersPrompt },
+      ],
+    }, undefined, {
+      module: "offertes",
+      functie: "sectie-fotos-voorstel",
+      gebruikerId: req.session.userId ?? null,
+      offerte_id: sectie.offerteId,
+      klant_id: offerte?.klantId ?? null,
+    });
+
+    let keuzes: Array<{ visual_id: number; motivatie: string }> = [];
+    if (resultaat.ok) {
+      try {
+        const parsed = JSON.parse(resultaat.inhoud) as { keuzes?: Array<{ visual_id?: number; motivatie?: string }> };
+        keuzes = (parsed.keuzes ?? [])
+          .filter((k) => typeof k.visual_id === "number")
+          .map((k) => ({ visual_id: k.visual_id as number, motivatie: String(k.motivatie ?? "").trim() }));
+      } catch {
+        keuzes = [];
+      }
+    }
+
+    const kandidaatMap = new Map(kandidaten.map((v) => [v.id, v]));
+    const voorstellen = keuzes
+      .map((k) => {
+        const v = kandidaatMap.get(k.visual_id);
+        if (!v) return null;
+        // Privacycontrole: echte praktijkfoto's kunnen personen of kentekens bevatten
+        // en vragen om handmatige controle vóór opname in een klantdocument.
+        const isPraktijkfoto = v.visualType === "referentiefoto" || v.bronType === "praktijkfoto";
+        const storageUrl = (pad: string) => `/api/storage/files?path=${encodeURIComponent(pad)}`;
+        return {
+          visual_id: v.id,
+          naam: v.naam,
+          url: storageUrl(v.objectPath),
+          thumbnail_url: storageUrl(v.thumbnailPath ?? v.objectPath),
+          visual_type: v.visualType,
+          motivatie: k.motivatie,
+          privacy_waarschuwing: isPraktijkfoto
+            ? "Praktijkfoto: controleer op herkenbare personen of kentekens vóór opname in het klantdocument."
+            : null,
+        };
+      })
+      .filter((v): v is NonNullable<typeof v> => v !== null);
+
+    res.json({ voorstellen });
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });

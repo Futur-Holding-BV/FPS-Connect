@@ -569,6 +569,7 @@ import type {
   OffboardInput,
   OffboardSamenvatting,
   Offerte,
+  OfferteAiFotosVoorstel,
   OfferteAiSchrijvenInput,
   OfferteAiSchrijvenResultaat,
   OfferteAnalytics,
@@ -36218,6 +36219,76 @@ export const useAiSchrijfOfferteSectie = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getAiSchrijfOfferteSectieMutationOptions(options));
+    }
+
+export const getAiFotosVoorstelOfferteSectieUrl = (id: number,) => {
+
+
+
+
+  return `/api/offerte-secties/${id}/ai-fotos-voorstel`
+}
+
+/**
+ * @summary AI-voorstel voor referentiefoto's bij een hoofdstuk
+ */
+export const aiFotosVoorstelOfferteSectie = async (id: number, options?: RequestInit): Promise<OfferteAiFotosVoorstel> => {
+
+  return customFetch<OfferteAiFotosVoorstel>(getAiFotosVoorstelOfferteSectieUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getAiFotosVoorstelOfferteSectieMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof aiFotosVoorstelOfferteSectie>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof aiFotosVoorstelOfferteSectie>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['aiFotosVoorstelOfferteSectie'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof aiFotosVoorstelOfferteSectie>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  aiFotosVoorstelOfferteSectie(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AiFotosVoorstelOfferteSectieMutationResult = NonNullable<Awaited<ReturnType<typeof aiFotosVoorstelOfferteSectie>>>
+
+    export type AiFotosVoorstelOfferteSectieMutationError = ErrorType<void>
+
+    /**
+ * @summary AI-voorstel voor referentiefoto's bij een hoofdstuk
+ */
+export const useAiFotosVoorstelOfferteSectie = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof aiFotosVoorstelOfferteSectie>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof aiFotosVoorstelOfferteSectie>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getAiFotosVoorstelOfferteSectieMutationOptions(options));
     }
 
 export const getListOfferteVersiesUrl = (id: number,) => {

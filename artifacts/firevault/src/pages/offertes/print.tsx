@@ -101,7 +101,7 @@ export default function OffertePrintPagina() {
     );
   }
 
-  const actieveSecties = [...(secties ?? [])].sort((a, b) => a.volgorde - b.volgorde).filter((s) => s.actief);
+  const alleActieveSecties = [...(secties ?? [])].sort((a, b) => a.volgorde - b.volgorde).filter((s) => s.actief);
   const alleMaatregelen = (regels ?? []).filter((r) => r.categorie !== "algemene_kosten");
   const alleAlgemeenKosten = (regels ?? []).filter((r) => r.categorie === "algemene_kosten");
   const totaal = (regels ?? []).reduce((s, r) => s + (r.kosten ?? 0), 0);
@@ -116,16 +116,24 @@ export default function OffertePrintPagina() {
     groepering: "categorie" as "categorie" | "geen",
     optionele_posten: "altijd" as "altijd" | "samengevat" | "verbergen",
     alleen_totaal: false, titel: "Begroting",
+    toon_hoofdstukken: true, toon_regelomschrijving: true, toon_spotnummer: false, toon_fotos: false,
     ...((offerte as any).begroting_weergave ?? {}),
   };
 
+  // Presentatieniveau (deliverable 5): Compact=1 (alleen totalen), Standaard=3 (volledig),
+  // Technisch Advies=5 (volledig + uitgangspunten). Legacy 2/4 blijven backward-compatible.
   const niveauOverrides = (() => {
-    if (presentatieNiveau === 1) return { alleen_totaal: true, toon_subtotalen: true, toon_subtotaal_excl: true, toon_btw: true, toon_totaal_incl: true };
+    if (presentatieNiveau <= 1) return { alleen_totaal: true, toon_subtotalen: true, toon_subtotaal_excl: true, toon_btw: true, toon_totaal_incl: true };
     if (presentatieNiveau === 2) return { toon_aantal: false, toon_eenheid: false, toon_prijs_per_eenheid: false };
     return {};
   })();
 
+  const toonUitgangspunten = presentatieNiveau >= 4;
+
   const w = { ...wBase, ...niveauOverrides };
+
+  // Klantweergave (deliverable 2): hoofdstukteksten geheel verbergen indien uitgeschakeld.
+  const actieveSecties = w.toon_hoofdstukken ? alleActieveSecties : [];
 
   function filterRegelNiveau(r: any) {
     const ovr = (r as any).weergave_override as string | null | undefined;
@@ -259,6 +267,21 @@ export default function OffertePrintPagina() {
             <div className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">
               {s.inhoud ?? ""}
             </div>
+            {w.toon_fotos && (s.fotos ?? []).length > 0 && (
+              <div className="mt-8 grid grid-cols-2 gap-4">
+                {(s.fotos ?? []).map((foto) => (
+                  <figure key={foto.visual_id} className="overflow-hidden rounded-md border border-slate-200">
+                    <img
+                      src={foto.url}
+                      alt={foto.naam}
+                      className="h-48 w-full object-cover"
+                      onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                    />
+                    <figcaption className="px-2 py-1.5 text-xs text-slate-500">{foto.naam}</figcaption>
+                  </figure>
+                ))}
+              </div>
+            )}
           </div>
           <DocumentVoet meta={{ ...meta, paginaNummer: idx + 2 }} mij={mij} />
         </DocumentFrame>
@@ -303,11 +326,16 @@ export default function OffertePrintPagina() {
                     : null;
 
                   function RegelRijPrint({ r }: { r: any }) {
+                    const omschrijving = w.toon_regelomschrijving
+                      ? r.maatregel
+                      : (r.categorie === "algemene_kosten" ? "Algemene kosten" : "Brandwerende maatregel");
                     return (
                       <tr className="border-b border-slate-100">
                         <td className="py-2 px-3">
-                          <div>{r.maatregel}</div>
+                          <div>{omschrijving}</div>
+                          {w.toon_spotnummer && r.snag_referentie && <div className="text-xs text-slate-400">Ref. {r.snag_referentie}</div>}
                           {w.toon_ruimte && r.ruimte && <div className="text-xs text-slate-400">{r.ruimte}</div>}
+                          {toonUitgangspunten && r.uitgangspunten && <div className="text-xs text-slate-500 mt-0.5 italic">{r.uitgangspunten}</div>}
                           {r.is_optioneel && <div className="text-xs text-amber-600">Optioneel</div>}
                         </td>
                         {w.toon_aantal && <td className="py-2 px-3 text-right">{r.aantal}</td>}

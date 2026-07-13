@@ -163,6 +163,9 @@ export const offerteSectiesTable = pgTable("offerte_secties", {
   titel: text("titel").notNull().default(""),
   inhoud: text("inhoud"),
   aiGegenereerd: boolean("ai_gegenereerd").notNull().default(false),
+  // Geaccepteerde referentiefoto's per hoofdstuk (AI-fotoselectie, deliverable 3).
+  // [{ visual_id, naam, url, motivatie, privacy_waarschuwing }]
+  fotos: jsonb("fotos").notNull().default([]),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
 });

@@ -12629,6 +12629,14 @@ export const ListOfferteSectiesResponseItem = zod.object({
   "titel": zod.string(),
   "inhoud": zod.string().nullish(),
   "ai_gegenereerd": zod.boolean(),
+  "fotos": zod.array(zod.object({
+  "visual_id": zod.number(),
+  "naam": zod.string(),
+  "url": zod.string(),
+  "thumbnail_url": zod.string().nullish(),
+  "motivatie": zod.string().nullish(),
+  "privacy_waarschuwing": zod.string().nullish()
+})).optional(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })
@@ -12648,7 +12656,15 @@ export const CreateOfferteSectieBody = zod.object({
   "actief": zod.boolean().optional(),
   "titel": zod.string().optional(),
   "inhoud": zod.string().optional(),
-  "ai_gegenereerd": zod.boolean().optional()
+  "ai_gegenereerd": zod.boolean().optional(),
+  "fotos": zod.array(zod.object({
+  "visual_id": zod.number(),
+  "naam": zod.string(),
+  "url": zod.string(),
+  "thumbnail_url": zod.string().nullish(),
+  "motivatie": zod.string().nullish(),
+  "privacy_waarschuwing": zod.string().nullish()
+})).optional()
 })
 
 export const CreateOfferteSectieResponse = zod.void()
@@ -12667,7 +12683,15 @@ export const UpdateOfferteSectieBody = zod.object({
   "actief": zod.boolean().optional(),
   "titel": zod.string().optional(),
   "inhoud": zod.string().optional(),
-  "ai_gegenereerd": zod.boolean().optional()
+  "ai_gegenereerd": zod.boolean().optional(),
+  "fotos": zod.array(zod.object({
+  "visual_id": zod.number(),
+  "naam": zod.string(),
+  "url": zod.string(),
+  "thumbnail_url": zod.string().nullish(),
+  "motivatie": zod.string().nullish(),
+  "privacy_waarschuwing": zod.string().nullish()
+})).optional()
 })
 
 export const UpdateOfferteSectieResponse = zod.object({
@@ -12679,6 +12703,14 @@ export const UpdateOfferteSectieResponse = zod.object({
   "titel": zod.string(),
   "inhoud": zod.string().nullish(),
   "ai_gegenereerd": zod.boolean(),
+  "fotos": zod.array(zod.object({
+  "visual_id": zod.number(),
+  "naam": zod.string(),
+  "url": zod.string(),
+  "thumbnail_url": zod.string().nullish(),
+  "motivatie": zod.string().nullish(),
+  "privacy_waarschuwing": zod.string().nullish()
+})).optional(),
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string()
 })
@@ -12707,6 +12739,26 @@ export const AiSchrijfOfferteSectieBody = zod.object({
 
 export const AiSchrijfOfferteSectieResponse = zod.object({
   "tekst": zod.string()
+})
+
+
+/**
+ * @summary AI-voorstel voor referentiefoto's bij een hoofdstuk
+ */
+export const AiFotosVoorstelOfferteSectieParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AiFotosVoorstelOfferteSectieResponse = zod.object({
+  "voorstellen": zod.array(zod.object({
+  "visual_id": zod.number(),
+  "naam": zod.string(),
+  "url": zod.string(),
+  "thumbnail_url": zod.string().nullish(),
+  "motivatie": zod.string().nullish(),
+  "privacy_waarschuwing": zod.string().nullish()
+})),
+  "boodschap": zod.string().nullish()
 })
 
 
