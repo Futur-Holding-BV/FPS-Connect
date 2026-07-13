@@ -714,6 +714,8 @@ export default function MedewerkerDetailPagina() {
   const [aanstellingAiBezig, setAanstellingAiBezig] = useState(false);
   const [aanstellingAiVoorstel, setAanstellingAiVoorstel] = useState(false);
   const [aanstellingAiToelichting, setAanstellingAiToelichting] = useState<string | null>(null);
+  // Snel toevoegen van een extra functie vanuit het Profiel-bewerken-dialoog.
+  const [snelFunctieId, setSnelFunctieId] = useState<string>("");
 
   const [profielOpen, setProfielOpen] = useState(false);
   const [profielForm, setProfielForm] = useState<MedewerkerInput | null>(null);
@@ -903,6 +905,33 @@ export default function MedewerkerDetailPagina() {
       toast({ title: "Hoofdaanstelling ingesteld" });
     } catch {
       toast({ title: "Instellen mislukt", variant: "destructive" });
+    }
+  }
+
+  // Voegt vanuit het Profiel-bewerken-dialoog snel een extra functie toe als
+  // aanstelling binnen de huidige werkmaatschappij van de medewerker.
+  async function snelFunctieToevoegen() {
+    if (!snelFunctieId || !profielForm) return;
+    const wm = profielForm.werkmaatschappij || medewerker?.werkmaatschappij || "";
+    if (!wm.trim()) {
+      toast({ title: "Kies eerst een werkmaatschappij", variant: "destructive" });
+      return;
+    }
+    try {
+      await maakAanstelling.mutateAsync({
+        id,
+        data: {
+          werkmaatschappij: wm,
+          functie_id: Number(snelFunctieId),
+          cao: profielForm.cao ?? "",
+          contracturen_per_week: null,
+        },
+      });
+      await queryClient.invalidateQueries({ queryKey: getListMedewerkerAanstellingenQueryKey(id) });
+      setSnelFunctieId("");
+      toast({ title: "Functie toegevoegd" });
+    } catch {
+      toast({ title: "Toevoegen mislukt", variant: "destructive" });
     }
   }
 
@@ -1872,7 +1901,7 @@ export default function MedewerkerDetailPagina() {
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label>Functie</Label>
+                <Label>Hoofdfunctie</Label>
                 <Select
                   value={profielForm.functie_id ? String(profielForm.functie_id) : "geen"}
                   onValueChange={(v) => setProfielForm({ ...profielForm, functie_id: v === "geen" ? null : Number(v) })}
@@ -1905,6 +1934,71 @@ export default function MedewerkerDetailPagina() {
                     in het functiehuis.
                   </p>
                 )}
+              </div>
+              {/* Extra functies — een medewerker kan meerdere functies vervullen (aanstellingen) */}
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label className="flex items-center gap-1.5"><Building2 className="h-3.5 w-3.5" /> Extra functies</Label>
+                <p className="text-xs text-muted-foreground">
+                  Een medewerker kan meerdere functies vervullen. De hoofdfunctie hierboven is de standaard; voeg hier extra functies toe.
+                </p>
+                {aanstellingen.length > 0 && (
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    {aanstellingen.map((a) => (
+                      <div
+                        key={a.id}
+                        className={`flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-sm ${a.is_hoofd ? "border-amber-200 bg-amber-50" : "bg-muted/40"}`}
+                      >
+                        <span className="font-medium">{a.functie_naam ?? "Geen functie"}</span>
+                        <span className="text-muted-foreground text-xs">— {a.werkmaatschappij}</span>
+                        {a.is_hoofd ? (
+                          <span className="ml-0.5 text-[10px] font-semibold text-amber-700 uppercase tracking-wide">Hoofd</span>
+                        ) : (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => stelAlsHoofd(a.id)}
+                              className="ml-0.5 text-[10px] font-medium text-muted-foreground hover:text-amber-700 uppercase tracking-wide"
+                            >
+                              Als hoofd
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => verwijderAanstelling(a.id)}
+                              className="text-muted-foreground hover:text-destructive"
+                              title="Functie verwijderen"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {(functies ?? []).length > 0 && (
+                  <div className="flex items-center gap-2 pt-1">
+                    <Select value={snelFunctieId} onValueChange={setSnelFunctieId}>
+                      <SelectTrigger className="flex-1"><SelectValue placeholder="Kies een functie om toe te voegen" /></SelectTrigger>
+                      <SelectContent>
+                        {(functies ?? []).map((f) => (
+                          <SelectItem key={f.id} value={String(f.id)}>{f.naam}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={!snelFunctieId || maakAanstelling.isPending}
+                      onClick={snelFunctieToevoegen}
+                    >
+                      <Plus className="h-3.5 w-3.5 mr-1" /> Toevoegen
+                    </Button>
+                  </div>
+                )}
+                <p className="text-[11px] text-muted-foreground">
+                  Voor een andere werkmaatschappij, CAO of contracturen per functie: gebruik de kaart <span className="font-medium">Aanstellingen</span> op deze pagina.
+                </p>
               </div>
               <div className="space-y-1.5">
                 <Label>Leidinggevende</Label>

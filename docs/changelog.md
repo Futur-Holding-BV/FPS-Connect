@@ -1,3 +1,17 @@
+## 2026-07-13 — Meerdere functies zichtbaar/bewerkbaar in Profiel bewerken (increment 1)
+
+- **Uitvoering:** volledig (increment 1 van 4) | **Kwaliteit:** hoog | **Risico:** laag (alleen frontend, geen API-/DB-wijziging, hergebruikt bestaande aanstellingen-CRUD)
+
+**Aanleiding:** een medewerker kan al aan meerdere functies gekoppeld worden via de bestaande aanstellingen-M2M, maar dat was alleen zichtbaar in de losse kaart "Aanstellingen" op de detailpagina. Het "Profiel bewerken"-dialoog toonde slechts één enkele Functie-dropdown, waardoor het leek alsof maar één functie mogelijk was.
+
+**Wijzigingen (`personeel/detail.tsx`):**
+- De enkelvoudige "Functie"-dropdown is hernoemd naar "Hoofdfunctie" (verduidelijkt het datamodel: één hoofdfunctie + extra functies)
+- Nieuw blok "Extra functies" in het profiel-dialoog: toont bestaande aanstellingen als chips (functie — werkmaatschappij, met Hoofd-markering), met inline acties "Als hoofd" instellen en verwijderen
+- Snel toevoegen: functie-dropdown + "Toevoegen" maakt direct een aanstelling binnen de huidige werkmaatschappij (hergebruikt `useCreateMedewerkerAanstelling`); CAO/contracturen/andere werkmaatschappij blijven beschikbaar via de bestaande kaart "Aanstellingen"
+- Geen wijziging aan het rechtensysteem — functies bepalen (nog) niet de Connect-toegang; dat is increment 2+ en volgt na productbeslissing
+
+---
+
 ## 2026-07-13 — Slim Uploaden: UI vereenvoudigd + werkmaatschappij-context voor AI
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (additief op bestaande inbox-module)
