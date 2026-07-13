@@ -4,8 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "tsc --build",
-    "prepare": "tsc --build"
+    "build": "tsc --build"
   },
   "exports": {
     ".": "./src/index.ts"
