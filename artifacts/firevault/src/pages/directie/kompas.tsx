@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import {
   TrendingUp, TrendingDown, AlertTriangle, Info, ChevronLeft, ChevronRight,
   Target, Euro, BarChart3, Activity, Building2, RefreshCw, BookOpen, Pencil, Check, X,
-  ChevronDown, ChevronRight as ChevronRightIcon, ExternalLink, Receipt,
+  ChevronDown, ChevronRight as ChevronRightIcon, ExternalLink, Receipt, Lightbulb,
 } from "lucide-react";
 import {
   ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -29,6 +29,7 @@ import {
   useHerberekeenVerouderdeNacalculaties,
   useGetFactuurAnalyse,
   useGetBiaeKpiFeed,
+  useGetFinancieleBesparingskansen,
   type FieJaarprognose,
   type FieWerkmaatschappijPrognose,
   type FieLeermoment,
@@ -841,6 +842,9 @@ function KompasInhoud() {
 
   // BIAE-feed: geaggregeerde KPI- en risicosignalen via de centrale bus.
   const { data: kpi } = useGetBiaeKpiFeed(boekjaar);
+  const [, navigeer] = useLocation();
+  const { data: besparingen } = useGetFinancieleBesparingskansen();
+  const besparingBedrag = besparingen?.totaal_geschatte_besparing ?? 0;
 
   return (
     <div className="space-y-5 p-1">
@@ -934,6 +938,25 @@ function KompasInhoud() {
             </CardContent>
           </Card>
         </div>
+      )}
+
+      {besparingBedrag > 0 && (
+        <button
+          type="button"
+          onClick={() => navigeer("/financieel/contracten")}
+          className="w-full text-left flex items-center justify-between gap-3 bg-amber-50 border border-amber-200 rounded-lg p-3 hover:bg-amber-100 transition-colors"
+        >
+          <div className="flex items-center gap-2 text-amber-800">
+            <Lightbulb className="h-4 w-4 shrink-0" />
+            <p className="text-sm">
+              AI ziet <strong>{besparingen?.aantal ?? 0}</strong> besparingskansen in contracten &amp; polissen — geschat{" "}
+              <strong>{new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(besparingBedrag)}</strong> per jaar.
+            </p>
+          </div>
+          <span className="text-xs font-medium text-amber-700 whitespace-nowrap flex items-center gap-1">
+            Bekijken <ChevronRightIcon className="h-3.5 w-3.5" />
+          </span>
+        </button>
       )}
 
       <Tabs value={actieveTab} onValueChange={setActieveTab}>

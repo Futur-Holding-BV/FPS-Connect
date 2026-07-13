@@ -22,6 +22,7 @@ import emailsRouter from "./emails";
 import profielenRouter from "./profielen";
 import hrmRouter from "./hrm";
 import dossiersRouter from "./dossiers";
+import financieleContractenRouter from "./financiele-contracten";
 import offertesRouter from "./offertes";
 import portaalRouter from "./portaal";
 import mailRouter from "./mail";
@@ -237,5 +238,6 @@ router.use(declaratiesRouter);
 router.use(directiecockpitRouter);
 router.use(biaeRouter);
 router.use(adviseurRouter);
+router.use(financieleContractenRouter);
 
 export default router;

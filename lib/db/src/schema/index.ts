@@ -45,6 +45,7 @@ export * from "./artikelen";
 export * from "./import_logs";
 export * from "./onderhanden-werk";
 export * from "./financieel-jaarrekeningen";
+export * from "./financiele-contracten";
 export * from "./magazijn";
 export * from "./materiaal-aanvragen";
 export * from "./uitvoerder";

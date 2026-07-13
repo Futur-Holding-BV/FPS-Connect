@@ -256,6 +256,15 @@ import type {
   FieLeermomentPatch,
   FieNacalculatieOverzicht,
   FieObservatiesResponse,
+  FinancieelBesparingskansen,
+  FinancieelBewaakResultaat,
+  FinancieelContract,
+  FinancieelContractCoach,
+  FinancieelContractInput,
+  FinancieelContractKosten,
+  FinancieelContractKostenInput,
+  FinancieelContractSignalering,
+  FinancieelContractSignaleringPatch,
   FinancieelDashboard,
   FinancieelDocument,
   FinancieelDocumentDetail,
@@ -267,6 +276,8 @@ import type {
   FinancieelKerncijfer,
   FinancieelKerncijferPatch,
   FinancieelMeerjarenoverzicht,
+  FinancieelPolisAnalyse,
+  FinancieelPolisAnalyseInput,
   Foto,
   FotoInput,
   FpsVisualEffectiviteit,
@@ -78027,6 +78038,962 @@ export function useGetDirectiecockpit<TData = Awaited<ReturnType<typeof getDirec
 
 
 
+
+export const getListFinancieleContractenUrl = () => {
+
+
+
+
+  return `/api/financiele-contracten`
+}
+
+/**
+ * @summary Alle financiele contracten & polissen ophalen (recht financieel)
+ */
+export const listFinancieleContracten = async ( options?: RequestInit): Promise<FinancieelContract[]> => {
+
+  return customFetch<FinancieelContract[]>(getListFinancieleContractenUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListFinancieleContractenQueryKey = () => {
+    return [
+    `/api/financiele-contracten`
+    ] as const;
+    }
+
+
+export const getListFinancieleContractenQueryOptions = <TData = Awaited<ReturnType<typeof listFinancieleContracten>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listFinancieleContracten>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListFinancieleContractenQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listFinancieleContracten>>> = ({ signal }) => listFinancieleContracten({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listFinancieleContracten>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListFinancieleContractenQueryResult = NonNullable<Awaited<ReturnType<typeof listFinancieleContracten>>>
+export type ListFinancieleContractenQueryError = ErrorType<void>
+
+
+/**
+ * @summary Alle financiele contracten & polissen ophalen (recht financieel)
+ */
+
+export function useListFinancieleContracten<TData = Awaited<ReturnType<typeof listFinancieleContracten>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listFinancieleContracten>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListFinancieleContractenQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateFinancieelContractUrl = () => {
+
+
+
+
+  return `/api/financiele-contracten`
+}
+
+/**
+ * @summary Nieuw contract aanmaken (recht financieel, schrijfniveau)
+ */
+export const createFinancieelContract = async (financieelContractInput: FinancieelContractInput, options?: RequestInit): Promise<FinancieelContract> => {
+
+  return customFetch<FinancieelContract>(getCreateFinancieelContractUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(financieelContractInput)
+  }
+);}
+
+
+
+
+export const getCreateFinancieelContractMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createFinancieelContract>>, TError,{data: BodyType<FinancieelContractInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createFinancieelContract>>, TError,{data: BodyType<FinancieelContractInput>}, TContext> => {
+
+const mutationKey = ['createFinancieelContract'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createFinancieelContract>>, {data: BodyType<FinancieelContractInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createFinancieelContract(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateFinancieelContractMutationResult = NonNullable<Awaited<ReturnType<typeof createFinancieelContract>>>
+    export type CreateFinancieelContractMutationBody = BodyType<FinancieelContractInput>
+    export type CreateFinancieelContractMutationError = ErrorType<void>
+
+    /**
+ * @summary Nieuw contract aanmaken (recht financieel, schrijfniveau)
+ */
+export const useCreateFinancieelContract = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createFinancieelContract>>, TError,{data: BodyType<FinancieelContractInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createFinancieelContract>>,
+        TError,
+        {data: BodyType<FinancieelContractInput>},
+        TContext
+      > => {
+      return useMutation(getCreateFinancieelContractMutationOptions(options));
+    }
+
+export const getGetFinancieelContractUrl = (id: number,) => {
+
+
+
+
+  return `/api/financiele-contracten/${id}`
+}
+
+/**
+ * @summary Detail van een contract
+ */
+export const getFinancieelContract = async (id: number, options?: RequestInit): Promise<FinancieelContract> => {
+
+  return customFetch<FinancieelContract>(getGetFinancieelContractUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetFinancieelContractQueryKey = (id: number,) => {
+    return [
+    `/api/financiele-contracten/${id}`
+    ] as const;
+    }
+
+
+export const getGetFinancieelContractQueryOptions = <TData = Awaited<ReturnType<typeof getFinancieelContract>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getFinancieelContract>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetFinancieelContractQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getFinancieelContract>>> = ({ signal }) => getFinancieelContract(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getFinancieelContract>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetFinancieelContractQueryResult = NonNullable<Awaited<ReturnType<typeof getFinancieelContract>>>
+export type GetFinancieelContractQueryError = ErrorType<void>
+
+
+/**
+ * @summary Detail van een contract
+ */
+
+export function useGetFinancieelContract<TData = Awaited<ReturnType<typeof getFinancieelContract>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getFinancieelContract>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetFinancieelContractQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUpdateFinancieelContractUrl = (id: number,) => {
+
+
+
+
+  return `/api/financiele-contracten/${id}`
+}
+
+/**
+ * @summary Contract bijwerken
+ */
+export const updateFinancieelContract = async (id: number,
+    financieelContractInput: FinancieelContractInput, options?: RequestInit): Promise<FinancieelContract> => {
+
+  return customFetch<FinancieelContract>(getUpdateFinancieelContractUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(financieelContractInput)
+  }
+);}
+
+
+
+
+export const getUpdateFinancieelContractMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateFinancieelContract>>, TError,{id: number;data: BodyType<FinancieelContractInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateFinancieelContract>>, TError,{id: number;data: BodyType<FinancieelContractInput>}, TContext> => {
+
+const mutationKey = ['updateFinancieelContract'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateFinancieelContract>>, {id: number;data: BodyType<FinancieelContractInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateFinancieelContract(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateFinancieelContractMutationResult = NonNullable<Awaited<ReturnType<typeof updateFinancieelContract>>>
+    export type UpdateFinancieelContractMutationBody = BodyType<FinancieelContractInput>
+    export type UpdateFinancieelContractMutationError = ErrorType<void>
+
+    /**
+ * @summary Contract bijwerken
+ */
+export const useUpdateFinancieelContract = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateFinancieelContract>>, TError,{id: number;data: BodyType<FinancieelContractInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateFinancieelContract>>,
+        TError,
+        {id: number;data: BodyType<FinancieelContractInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateFinancieelContractMutationOptions(options));
+    }
+
+export const getDeleteFinancieelContractUrl = (id: number,) => {
+
+
+
+
+  return `/api/financiele-contracten/${id}`
+}
+
+/**
+ * @summary Contract verwijderen
+ */
+export const deleteFinancieelContract = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteFinancieelContractUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteFinancieelContractMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteFinancieelContract>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteFinancieelContract>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteFinancieelContract'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteFinancieelContract>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteFinancieelContract(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteFinancieelContractMutationResult = NonNullable<Awaited<ReturnType<typeof deleteFinancieelContract>>>
+
+    export type DeleteFinancieelContractMutationError = ErrorType<void>
+
+    /**
+ * @summary Contract verwijderen
+ */
+export const useDeleteFinancieelContract = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteFinancieelContract>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteFinancieelContract>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteFinancieelContractMutationOptions(options));
+    }
+
+export const getListFinancieelContractKostenUrl = (id: number,) => {
+
+
+
+
+  return `/api/financiele-contracten/${id}/kosten`
+}
+
+/**
+ * @summary Jaarlijkse kostensnapshots van een contract
+ */
+export const listFinancieelContractKosten = async (id: number, options?: RequestInit): Promise<FinancieelContractKosten[]> => {
+
+  return customFetch<FinancieelContractKosten[]>(getListFinancieelContractKostenUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListFinancieelContractKostenQueryKey = (id: number,) => {
+    return [
+    `/api/financiele-contracten/${id}/kosten`
+    ] as const;
+    }
+
+
+export const getListFinancieelContractKostenQueryOptions = <TData = Awaited<ReturnType<typeof listFinancieelContractKosten>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listFinancieelContractKosten>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListFinancieelContractKostenQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listFinancieelContractKosten>>> = ({ signal }) => listFinancieelContractKosten(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listFinancieelContractKosten>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListFinancieelContractKostenQueryResult = NonNullable<Awaited<ReturnType<typeof listFinancieelContractKosten>>>
+export type ListFinancieelContractKostenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Jaarlijkse kostensnapshots van een contract
+ */
+
+export function useListFinancieelContractKosten<TData = Awaited<ReturnType<typeof listFinancieelContractKosten>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listFinancieelContractKosten>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListFinancieelContractKostenQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUpsertFinancieelContractKostenUrl = (id: number,) => {
+
+
+
+
+  return `/api/financiele-contracten/${id}/kosten`
+}
+
+/**
+ * @summary Kostensnapshot voor een jaar toevoegen of bijwerken
+ */
+export const upsertFinancieelContractKosten = async (id: number,
+    financieelContractKostenInput: FinancieelContractKostenInput, options?: RequestInit): Promise<FinancieelContractKosten> => {
+
+  return customFetch<FinancieelContractKosten>(getUpsertFinancieelContractKostenUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(financieelContractKostenInput)
+  }
+);}
+
+
+
+
+export const getUpsertFinancieelContractKostenMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof upsertFinancieelContractKosten>>, TError,{id: number;data: BodyType<FinancieelContractKostenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof upsertFinancieelContractKosten>>, TError,{id: number;data: BodyType<FinancieelContractKostenInput>}, TContext> => {
+
+const mutationKey = ['upsertFinancieelContractKosten'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof upsertFinancieelContractKosten>>, {id: number;data: BodyType<FinancieelContractKostenInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  upsertFinancieelContractKosten(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpsertFinancieelContractKostenMutationResult = NonNullable<Awaited<ReturnType<typeof upsertFinancieelContractKosten>>>
+    export type UpsertFinancieelContractKostenMutationBody = BodyType<FinancieelContractKostenInput>
+    export type UpsertFinancieelContractKostenMutationError = ErrorType<void>
+
+    /**
+ * @summary Kostensnapshot voor een jaar toevoegen of bijwerken
+ */
+export const useUpsertFinancieelContractKosten = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof upsertFinancieelContractKosten>>, TError,{id: number;data: BodyType<FinancieelContractKostenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof upsertFinancieelContractKosten>>,
+        TError,
+        {id: number;data: BodyType<FinancieelContractKostenInput>},
+        TContext
+      > => {
+      return useMutation(getUpsertFinancieelContractKostenMutationOptions(options));
+    }
+
+export const getAnalyseerFinancieelContractUrl = (id: number,) => {
+
+
+
+
+  return `/api/financiele-contracten/${id}/ai-analyse`
+}
+
+/**
+ * @summary AI-polisanalyse uitvoeren op het gekoppelde document of aangeleverde tekst
+ */
+export const analyseerFinancieelContract = async (id: number,
+    financieelPolisAnalyseInput?: FinancieelPolisAnalyseInput, options?: RequestInit): Promise<FinancieelPolisAnalyse> => {
+
+  return customFetch<FinancieelPolisAnalyse>(getAnalyseerFinancieelContractUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(financieelPolisAnalyseInput)
+  }
+);}
+
+
+
+
+export const getAnalyseerFinancieelContractMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof analyseerFinancieelContract>>, TError,{id: number;data?: BodyType<FinancieelPolisAnalyseInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof analyseerFinancieelContract>>, TError,{id: number;data?: BodyType<FinancieelPolisAnalyseInput>}, TContext> => {
+
+const mutationKey = ['analyseerFinancieelContract'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof analyseerFinancieelContract>>, {id: number;data?: BodyType<FinancieelPolisAnalyseInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  analyseerFinancieelContract(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AnalyseerFinancieelContractMutationResult = NonNullable<Awaited<ReturnType<typeof analyseerFinancieelContract>>>
+    export type AnalyseerFinancieelContractMutationBody = BodyType<FinancieelPolisAnalyseInput> | undefined
+    export type AnalyseerFinancieelContractMutationError = ErrorType<void>
+
+    /**
+ * @summary AI-polisanalyse uitvoeren op het gekoppelde document of aangeleverde tekst
+ */
+export const useAnalyseerFinancieelContract = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof analyseerFinancieelContract>>, TError,{id: number;data?: BodyType<FinancieelPolisAnalyseInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof analyseerFinancieelContract>>,
+        TError,
+        {id: number;data?: BodyType<FinancieelPolisAnalyseInput>},
+        TContext
+      > => {
+      return useMutation(getAnalyseerFinancieelContractMutationOptions(options));
+    }
+
+export const getGetFinancieelContractCoachUrl = (id: number,) => {
+
+
+
+
+  return `/api/financiele-contracten/${id}/coach`
+}
+
+/**
+ * @summary AI-contractcoach advies voor een contract
+ */
+export const getFinancieelContractCoach = async (id: number, options?: RequestInit): Promise<FinancieelContractCoach> => {
+
+  return customFetch<FinancieelContractCoach>(getGetFinancieelContractCoachUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetFinancieelContractCoachQueryKey = (id: number,) => {
+    return [
+    `/api/financiele-contracten/${id}/coach`
+    ] as const;
+    }
+
+
+export const getGetFinancieelContractCoachQueryOptions = <TData = Awaited<ReturnType<typeof getFinancieelContractCoach>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getFinancieelContractCoach>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetFinancieelContractCoachQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getFinancieelContractCoach>>> = ({ signal }) => getFinancieelContractCoach(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getFinancieelContractCoach>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetFinancieelContractCoachQueryResult = NonNullable<Awaited<ReturnType<typeof getFinancieelContractCoach>>>
+export type GetFinancieelContractCoachQueryError = ErrorType<void>
+
+
+/**
+ * @summary AI-contractcoach advies voor een contract
+ */
+
+export function useGetFinancieelContractCoach<TData = Awaited<ReturnType<typeof getFinancieelContractCoach>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getFinancieelContractCoach>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetFinancieelContractCoachQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetFinancieleBesparingskansenUrl = () => {
+
+
+
+
+  return `/api/financiele-contracten-besparingskansen`
+}
+
+/**
+ * @summary Deterministische besparingskansen over alle contracten
+ */
+export const getFinancieleBesparingskansen = async ( options?: RequestInit): Promise<FinancieelBesparingskansen> => {
+
+  return customFetch<FinancieelBesparingskansen>(getGetFinancieleBesparingskansenUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetFinancieleBesparingskansenQueryKey = () => {
+    return [
+    `/api/financiele-contracten-besparingskansen`
+    ] as const;
+    }
+
+
+export const getGetFinancieleBesparingskansenQueryOptions = <TData = Awaited<ReturnType<typeof getFinancieleBesparingskansen>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getFinancieleBesparingskansen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetFinancieleBesparingskansenQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getFinancieleBesparingskansen>>> = ({ signal }) => getFinancieleBesparingskansen({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getFinancieleBesparingskansen>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetFinancieleBesparingskansenQueryResult = NonNullable<Awaited<ReturnType<typeof getFinancieleBesparingskansen>>>
+export type GetFinancieleBesparingskansenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Deterministische besparingskansen over alle contracten
+ */
+
+export function useGetFinancieleBesparingskansen<TData = Awaited<ReturnType<typeof getFinancieleBesparingskansen>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getFinancieleBesparingskansen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetFinancieleBesparingskansenQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListFinancieleContractSignaleringenUrl = () => {
+
+
+
+
+  return `/api/financiele-contract-signaleringen`
+}
+
+/**
+ * @summary Alle contract-signaleringen ophalen
+ */
+export const listFinancieleContractSignaleringen = async ( options?: RequestInit): Promise<FinancieelContractSignalering[]> => {
+
+  return customFetch<FinancieelContractSignalering[]>(getListFinancieleContractSignaleringenUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListFinancieleContractSignaleringenQueryKey = () => {
+    return [
+    `/api/financiele-contract-signaleringen`
+    ] as const;
+    }
+
+
+export const getListFinancieleContractSignaleringenQueryOptions = <TData = Awaited<ReturnType<typeof listFinancieleContractSignaleringen>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listFinancieleContractSignaleringen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListFinancieleContractSignaleringenQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listFinancieleContractSignaleringen>>> = ({ signal }) => listFinancieleContractSignaleringen({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listFinancieleContractSignaleringen>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListFinancieleContractSignaleringenQueryResult = NonNullable<Awaited<ReturnType<typeof listFinancieleContractSignaleringen>>>
+export type ListFinancieleContractSignaleringenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Alle contract-signaleringen ophalen
+ */
+
+export function useListFinancieleContractSignaleringen<TData = Awaited<ReturnType<typeof listFinancieleContractSignaleringen>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listFinancieleContractSignaleringen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListFinancieleContractSignaleringenQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getBewaakFinancieleContractenUrl = () => {
+
+
+
+
+  return `/api/financiele-contract-signaleringen/bewaak`
+}
+
+/**
+ * @summary Voer de deterministische contractbewaking uit en persisteer nieuwe signaleringen
+ */
+export const bewaakFinancieleContracten = async ( options?: RequestInit): Promise<FinancieelBewaakResultaat> => {
+
+  return customFetch<FinancieelBewaakResultaat>(getBewaakFinancieleContractenUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getBewaakFinancieleContractenMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bewaakFinancieleContracten>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof bewaakFinancieleContracten>>, TError,void, TContext> => {
+
+const mutationKey = ['bewaakFinancieleContracten'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof bewaakFinancieleContracten>>, void> = () => {
+
+
+          return  bewaakFinancieleContracten(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type BewaakFinancieleContractenMutationResult = NonNullable<Awaited<ReturnType<typeof bewaakFinancieleContracten>>>
+
+    export type BewaakFinancieleContractenMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Voer de deterministische contractbewaking uit en persisteer nieuwe signaleringen
+ */
+export const useBewaakFinancieleContracten = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bewaakFinancieleContracten>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof bewaakFinancieleContracten>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getBewaakFinancieleContractenMutationOptions(options));
+    }
+
+export const getUpdateFinancieelContractSignaleringUrl = (id: number,) => {
+
+
+
+
+  return `/api/financiele-contract-signaleringen/${id}`
+}
+
+/**
+ * @summary Status van een signalering bijwerken (bijv. gezien/afgehandeld)
+ */
+export const updateFinancieelContractSignalering = async (id: number,
+    financieelContractSignaleringPatch: FinancieelContractSignaleringPatch, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getUpdateFinancieelContractSignaleringUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(financieelContractSignaleringPatch)
+  }
+);}
+
+
+
+
+export const getUpdateFinancieelContractSignaleringMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateFinancieelContractSignalering>>, TError,{id: number;data: BodyType<FinancieelContractSignaleringPatch>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateFinancieelContractSignalering>>, TError,{id: number;data: BodyType<FinancieelContractSignaleringPatch>}, TContext> => {
+
+const mutationKey = ['updateFinancieelContractSignalering'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateFinancieelContractSignalering>>, {id: number;data: BodyType<FinancieelContractSignaleringPatch>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateFinancieelContractSignalering(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateFinancieelContractSignaleringMutationResult = NonNullable<Awaited<ReturnType<typeof updateFinancieelContractSignalering>>>
+    export type UpdateFinancieelContractSignaleringMutationBody = BodyType<FinancieelContractSignaleringPatch>
+    export type UpdateFinancieelContractSignaleringMutationError = ErrorType<void>
+
+    /**
+ * @summary Status van een signalering bijwerken (bijv. gezien/afgehandeld)
+ */
+export const useUpdateFinancieelContractSignalering = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateFinancieelContractSignalering>>, TError,{id: number;data: BodyType<FinancieelContractSignaleringPatch>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateFinancieelContractSignalering>>,
+        TError,
+        {id: number;data: BodyType<FinancieelContractSignaleringPatch>},
+        TContext
+      > => {
+      return useMutation(getUpdateFinancieelContractSignaleringMutationOptions(options));
+    }
 
 export const getListFinancieleDocumentenUrl = (params?: ListFinancieleDocumentenParams,) => {
   const normalizedParams = new URLSearchParams();

@@ -306,6 +306,28 @@
 
 ---
 
+## 2026-07-13 — AI Financieel Adviseur & Contractenbibliotheek (Contracten & polissen)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag-middel (nieuwe module, additief; hergebruikt bestaande financieel-bevoegdheid, DMS-documenten en AI-gateway; geen wijziging aan bestaande routes/schema's)
+
+**Aanleiding:** de directie wil grip op vaste lasten (verzekeringen, lease, onderhoud, software, telecom, abonnementen): centraal beheer, AI-polisanalyse met bronvermelding, jaarlijkse kostenvergelijking + besparingsadvies, per-contract contractcoach, en automatische signalering van aflopende contracten, opzegtermijnen en indexering. AI adviseert altijd met onderbouwing; een mens beslist — AI zegt nooit zelf op en wijzigt nooit een contract.
+
+**Data (`lib/db/src/schema/financiele-contracten.ts`):**
+- 3 tabellen: `financiele_contracten` (contract + kosten + opzeg/indexering + optionele documentkoppeling + gepersisteerde `ai_analyse`), `financiele_contract_kosten` (jaarlijkse kostensnapshots voor vergelijking) en `financiele_contract_signaleringen` (bewaking)
+
+**API (`artifacts/api-server`):**
+- `contractIntelligence.ts`: deterministische besparingskansen (kostenstijging boven indexering, ongebruikte licenties, aflopend zonder verlenging) én bewaking (aflopend/opzegtermijn/indexering); AI-polisanalyse en contractcoach via de bestaande aiGateway met bronvermelding + zekerheid per bevinding
+- `routes/financiele-contracten.ts`: CRUD, `/kosten` upsert, `/ai-analyse`, `/coach`, `/financiele-contracten-besparingskansen`, `/financiele-contract-signaleringen` (+ `/bewaak`, PATCH afhandelen); alles achter `requireBevoegdheid("financieel", 1/2)`
+- OpenAPI-spec uitgebreid + codegen uitgevoerd (hooks + Zod)
+
+**Frontend (`artifacts/firevault`):**
+- Nieuwe pagina `/financieel/contracten` (Contracten & polissen): overzichtstegels (actieve jaarlast, besparingskansen, openstaande signaleringen), besparings- en signaleringslijsten, zoek/filter, CRUD-dialoog en een contractdetail-dialoog met tabs Overzicht / Kostenhistorie / Polisanalyse / Contractcoach (elke AI-bevinding toont bron + zekerheid)
+- Nav-item toegevoegd onder Financieel; "Besparingskansen"-tegel op het directiedashboard (`directie/kompas.tsx`) die doorlinkt naar de module
+
+**Verificatie:** volledige `pnpm run typecheck` groen; geauthenticeerde end-to-end CRUD-test (admin login + TOTP) doorlopen create → lijst → detail → patch → kosten (2 jaren) → besparingskansen → bewaak → signaleringen → delete, alle stappen geslaagd tegen de draaiende dev-server.
+
+---
+
 ## 2026-07-13 — Meerdere functies zichtbaar/bewerkbaar in Profiel bewerken (increment 1)
 
 - **Uitvoering:** volledig (increment 1 van 4) | **Kwaliteit:** hoog | **Risico:** laag (alleen frontend, geen API-/DB-wijziging, hergebruikt bestaande aanstellingen-CRUD)

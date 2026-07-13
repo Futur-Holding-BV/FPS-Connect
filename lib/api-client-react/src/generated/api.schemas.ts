@@ -115,6 +115,241 @@ export const FinancieelExtractieStatus = {
   mislukt: 'mislukt',
 } as const;
 
+export type FinancieelContractCategorie = typeof FinancieelContractCategorie[keyof typeof FinancieelContractCategorie];
+
+
+export const FinancieelContractCategorie = {
+  verzekering: 'verzekering',
+  lease: 'lease',
+  onderhoud: 'onderhoud',
+  software: 'software',
+  telecom: 'telecom',
+  abonnement: 'abonnement',
+  overig: 'overig',
+} as const;
+
+export type FinancieelContractStatus = typeof FinancieelContractStatus[keyof typeof FinancieelContractStatus];
+
+
+export const FinancieelContractStatus = {
+  actief: 'actief',
+  opgezegd: 'opgezegd',
+  verlopen: 'verlopen',
+  concept: 'concept',
+} as const;
+
+export type FinancieelContractPeriode = typeof FinancieelContractPeriode[keyof typeof FinancieelContractPeriode];
+
+
+export const FinancieelContractPeriode = {
+  maand: 'maand',
+  jaar: 'jaar',
+  eenmalig: 'eenmalig',
+} as const;
+
+export type FinancieelContractAiAnalyse = { [key: string]: unknown } | null;
+
+export interface FinancieelContract {
+  id: number;
+  categorie: FinancieelContractCategorie;
+  naam: string;
+  leverancier?: string | null;
+  werkgever_id?: number | null;
+  werkgever_naam?: string | null;
+  contractnummer?: string | null;
+  ingangsdatum?: string | null;
+  einddatum?: string | null;
+  opzegtermijn_maanden?: number | null;
+  kosten_bedrag?: number | null;
+  kosten_periode: FinancieelContractPeriode;
+  indexering_percentage?: number | null;
+  indexering_maand?: number | null;
+  contractwaarde?: number | null;
+  automatische_verlenging?: boolean;
+  verlengingsduur_maanden?: number | null;
+  aantal_licenties?: number | null;
+  aantal_in_gebruik?: number | null;
+  laatst_gebruikt_op?: string | null;
+  status: FinancieelContractStatus;
+  document_id?: number | null;
+  document_naam?: string | null;
+  notities?: string | null;
+  ai_samenvatting?: string | null;
+  ai_analyse?: FinancieelContractAiAnalyse;
+  ai_geanalyseerd_op?: string | null;
+  aangemaakt_door_id?: number | null;
+  aangemaakt_door_naam?: string | null;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+}
+
+export interface FinancieelContractInput {
+  categorie?: FinancieelContractCategorie;
+  naam: string;
+  leverancier?: string | null;
+  werkgever_id?: number | null;
+  contractnummer?: string | null;
+  ingangsdatum?: string | null;
+  einddatum?: string | null;
+  opzegtermijn_maanden?: number | null;
+  kosten_bedrag?: number | null;
+  kosten_periode?: FinancieelContractPeriode;
+  indexering_percentage?: number | null;
+  indexering_maand?: number | null;
+  contractwaarde?: number | null;
+  automatische_verlenging?: boolean;
+  verlengingsduur_maanden?: number | null;
+  aantal_licenties?: number | null;
+  aantal_in_gebruik?: number | null;
+  laatst_gebruikt_op?: string | null;
+  status?: FinancieelContractStatus;
+  document_id?: number | null;
+  notities?: string | null;
+}
+
+export type FinancieelContractPatch = FinancieelContractInput;
+
+export interface FinancieelContractKosten {
+  id: number;
+  contract_id: number;
+  jaar: number;
+  bedrag: number;
+  bron?: string | null;
+  document_id?: number | null;
+  notitie?: string | null;
+  aangemaakt_op: string;
+}
+
+export interface FinancieelContractKostenInput {
+  jaar: number;
+  bedrag: number;
+  bron?: string | null;
+  document_id?: number | null;
+  notitie?: string | null;
+}
+
+export interface FinancieelPolisOnderdeel {
+  waarde: string;
+  bron?: string | null;
+  zekerheid: number;
+}
+
+export type FinancieelPolisAnalyseMethode = typeof FinancieelPolisAnalyseMethode[keyof typeof FinancieelPolisAnalyseMethode];
+
+
+export const FinancieelPolisAnalyseMethode = {
+  ai: 'ai',
+  'geen-ai': 'geen-ai',
+} as const;
+
+export interface FinancieelPolisAnalyse {
+  methode: FinancieelPolisAnalyseMethode;
+  aiBeschikbaar?: boolean;
+  samenvatting: string;
+  dekking: FinancieelPolisOnderdeel[];
+  uitsluitingen: FinancieelPolisOnderdeel[];
+  eigenRisico?: FinancieelPolisOnderdeel | null;
+  looptijd?: FinancieelPolisOnderdeel | null;
+  premie?: FinancieelPolisOnderdeel | null;
+  clausules: FinancieelPolisOnderdeel[];
+  waarschuwing?: string | null;
+  [key: string]: unknown;
+ }
+
+export interface FinancieelPolisAnalyseInput {
+  /** Optionele ruwe tekst; indien leeg wordt het gekoppelde document gebruikt. */
+  tekst?: string;
+}
+
+export type FinancieelContractCoachMethode = typeof FinancieelContractCoachMethode[keyof typeof FinancieelContractCoachMethode];
+
+
+export const FinancieelContractCoachMethode = {
+  ai: 'ai',
+  'geen-ai': 'geen-ai',
+} as const;
+
+export interface FinancieelContractCoach {
+  methode: FinancieelContractCoachMethode;
+  aiBeschikbaar: boolean;
+  advies: string;
+  risicos: string[];
+  besteOpzegmoment?: string | null;
+  financieleGevolgen?: string | null;
+  bron: string;
+  waarschuwing?: string | null;
+}
+
+export type FinancieelBesparingskansType = typeof FinancieelBesparingskansType[keyof typeof FinancieelBesparingskansType];
+
+
+export const FinancieelBesparingskansType = {
+  prijsstijging: 'prijsstijging',
+  ongebruikt: 'ongebruikt',
+  overlap: 'overlap',
+  indexering: 'indexering',
+} as const;
+
+export type FinancieelBesparingskansZekerheid = typeof FinancieelBesparingskansZekerheid[keyof typeof FinancieelBesparingskansZekerheid];
+
+
+export const FinancieelBesparingskansZekerheid = {
+  hoog: 'hoog',
+  middel: 'middel',
+  laag: 'laag',
+} as const;
+
+export interface FinancieelBesparingskans {
+  type: FinancieelBesparingskansType;
+  contractId: number;
+  contractNaam: string;
+  leverancier?: string | null;
+  boodschap: string;
+  bedrag?: number | null;
+  zekerheid: FinancieelBesparingskansZekerheid;
+  bron: string;
+  documentId?: number | null;
+}
+
+export interface FinancieelBesparingskansen {
+  totaal_geschatte_besparing: number;
+  aantal: number;
+  kansen: FinancieelBesparingskans[];
+}
+
+export type FinancieelContractSignaleringErnst = typeof FinancieelContractSignaleringErnst[keyof typeof FinancieelContractSignaleringErnst];
+
+
+export const FinancieelContractSignaleringErnst = {
+  info: 'info',
+  waarschuwing: 'waarschuwing',
+  kritiek: 'kritiek',
+} as const;
+
+export interface FinancieelContractSignalering {
+  id: number;
+  contract_id: number;
+  contract_naam?: string | null;
+  type: string;
+  ernst: FinancieelContractSignaleringErnst;
+  boodschap: string;
+  ai_advies?: string | null;
+  bedrag?: number | null;
+  zekerheid?: string | null;
+  status: string;
+  gezien_op?: string | null;
+  aangemaakt_op: string;
+}
+
+export interface FinancieelContractSignaleringPatch {
+  status: string;
+}
+
+export interface FinancieelBewaakResultaat {
+  gecontroleerd: number;
+  nieuwe_signaleringen: number;
+}
+
 export interface FinancieelBewijsStap {
   stap: string;
   resultaat: string;

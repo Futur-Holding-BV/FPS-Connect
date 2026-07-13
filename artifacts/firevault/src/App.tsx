@@ -139,6 +139,7 @@ import OnderhandenWerkPagina from "@/pages/financieel/onderhanden-werk/index";
 import JarrekeningPagina from "@/pages/financieel/jaarrekening/index";
 import JaarrekeningenValidatiePagina from "@/pages/financieel/jaarrekeningen/index";
 import MeerjarenoverzichtPagina from "@/pages/financieel/meerjarenoverzicht/index";
+import ContractenPagina from "@/pages/financieel/contracten/index";
 import DossiersPagina from "@/pages/dossiers/index";
 import OffertesPagina from "@/pages/offertes/index";
 import ProposalStudio from "@/pages/offertes/studio";
@@ -480,6 +481,7 @@ function ConnectPortal() {
         <Route path="/financieel/jaarrekening" component={JarrekeningPagina} />
         <Route path="/financieel/jaarrekeningen" component={JaarrekeningenValidatiePagina} />
         <Route path="/financieel/meerjarenoverzicht" component={MeerjarenoverzichtPagina} />
+        <Route path="/financieel/contracten" component={ContractenPagina} />
 
         {/* ── Organisatie ── */}
         <Route path="/organisatie/autopark" component={AutoparkPagina} />

@@ -22299,6 +22299,266 @@ paths:
         "403":
           description: Onvoldoende rechten
 
+  /financiele-contracten:
+    get:
+      operationId: listFinancieleContracten
+      tags: [financiele-contracten]
+      summary: Alle financiele contracten & polissen ophalen (recht financieel)
+      security: [{ cookieAuth: [] }]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FinancieelContract"
+        "403":
+          description: Geen toegang
+    post:
+      operationId: createFinancieelContract
+      tags: [financiele-contracten]
+      summary: Nieuw contract aanmaken (recht financieel, schrijfniveau)
+      security: [{ cookieAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FinancieelContractInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FinancieelContract"
+        "403":
+          description: Geen toegang
+
+  /financiele-contracten/{id}:
+    get:
+      operationId: getFinancieelContract
+      tags: [financiele-contracten]
+      summary: Detail van een contract
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FinancieelContract"
+        "404":
+          description: Niet gevonden
+    patch:
+      operationId: updateFinancieelContract
+      tags: [financiele-contracten]
+      summary: Contract bijwerken
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FinancieelContractPatch"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FinancieelContract"
+        "404":
+          description: Niet gevonden
+    delete:
+      operationId: deleteFinancieelContract
+      tags: [financiele-contracten]
+      summary: Contract verwijderen
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "204":
+          description: Verwijderd
+        "404":
+          description: Niet gevonden
+
+  /financiele-contracten/{id}/kosten:
+    get:
+      operationId: listFinancieelContractKosten
+      tags: [financiele-contracten]
+      summary: Jaarlijkse kostensnapshots van een contract
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FinancieelContractKosten"
+    post:
+      operationId: upsertFinancieelContractKosten
+      tags: [financiele-contracten]
+      summary: Kostensnapshot voor een jaar toevoegen of bijwerken
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FinancieelContractKostenInput"
+      responses:
+        "201":
+          description: Opgeslagen
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FinancieelContractKosten"
+        "404":
+          description: Niet gevonden
+
+  /financiele-contracten/{id}/ai-analyse:
+    post:
+      operationId: analyseerFinancieelContract
+      tags: [financiele-contracten]
+      summary: AI-polisanalyse uitvoeren op het gekoppelde document of aangeleverde tekst
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FinancieelPolisAnalyseInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FinancieelPolisAnalyse"
+        "422":
+          description: Geen brondocument-tekst beschikbaar
+
+  /financiele-contracten/{id}/coach:
+    get:
+      operationId: getFinancieelContractCoach
+      tags: [financiele-contracten]
+      summary: AI-contractcoach advies voor een contract
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FinancieelContractCoach"
+        "404":
+          description: Niet gevonden
+
+  /financiele-contracten-besparingskansen:
+    get:
+      operationId: getFinancieleBesparingskansen
+      tags: [financiele-contracten]
+      summary: Deterministische besparingskansen over alle contracten
+      security: [{ cookieAuth: [] }]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FinancieelBesparingskansen"
+
+  /financiele-contract-signaleringen:
+    get:
+      operationId: listFinancieleContractSignaleringen
+      tags: [financiele-contracten]
+      summary: Alle contract-signaleringen ophalen
+      security: [{ cookieAuth: [] }]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FinancieelContractSignalering"
+
+  /financiele-contract-signaleringen/bewaak:
+    post:
+      operationId: bewaakFinancieleContracten
+      tags: [financiele-contracten]
+      summary: Voer de deterministische contractbewaking uit en persisteer nieuwe signaleringen
+      security: [{ cookieAuth: [] }]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FinancieelBewaakResultaat"
+
+  /financiele-contract-signaleringen/{id}:
+    patch:
+      operationId: updateFinancieelContractSignalering
+      tags: [financiele-contracten]
+      summary: Status van een signalering bijwerken (bijv. gezien/afgehandeld)
+      security: [{ cookieAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FinancieelContractSignaleringPatch"
+      responses:
+        "200":
+          description: OK
+        "404":
+          description: Niet gevonden
+
   /financieel/jaarrekeningen:
     get:
       operationId: listFinancieleDocumenten
@@ -22948,6 +23208,222 @@ components:
     FinancieelExtractieStatus:
       type: string
       enum: [niet_gestart, bezig, voltooid, mislukt]
+
+    FinancieelContractCategorie:
+      type: string
+      enum: [verzekering, lease, onderhoud, software, telecom, abonnement, overig]
+    FinancieelContractStatus:
+      type: string
+      enum: [actief, opgezegd, verlopen, concept]
+    FinancieelContractPeriode:
+      type: string
+      enum: [maand, jaar, eenmalig]
+
+    FinancieelContract:
+      type: object
+      required: [id, categorie, naam, status, kosten_periode, aangemaakt_op, bijgewerkt_op]
+      properties:
+        id: { type: integer }
+        categorie: { $ref: "#/components/schemas/FinancieelContractCategorie" }
+        naam: { type: string }
+        leverancier: { type: string, nullable: true }
+        werkgever_id: { type: integer, nullable: true }
+        werkgever_naam: { type: string, nullable: true }
+        contractnummer: { type: string, nullable: true }
+        ingangsdatum: { type: string, nullable: true }
+        einddatum: { type: string, nullable: true }
+        opzegtermijn_maanden: { type: integer, nullable: true }
+        kosten_bedrag: { type: number, nullable: true }
+        kosten_periode: { $ref: "#/components/schemas/FinancieelContractPeriode" }
+        indexering_percentage: { type: number, nullable: true }
+        indexering_maand: { type: integer, nullable: true }
+        contractwaarde: { type: number, nullable: true }
+        automatische_verlenging: { type: boolean }
+        verlengingsduur_maanden: { type: integer, nullable: true }
+        aantal_licenties: { type: integer, nullable: true }
+        aantal_in_gebruik: { type: integer, nullable: true }
+        laatst_gebruikt_op: { type: string, nullable: true }
+        status: { $ref: "#/components/schemas/FinancieelContractStatus" }
+        document_id: { type: integer, nullable: true }
+        document_naam: { type: string, nullable: true }
+        notities: { type: string, nullable: true }
+        ai_samenvatting: { type: string, nullable: true }
+        ai_analyse:
+          type: object
+          additionalProperties: true
+          nullable: true
+        ai_geanalyseerd_op: { type: string, nullable: true }
+        aangemaakt_door_id: { type: integer, nullable: true }
+        aangemaakt_door_naam: { type: string, nullable: true }
+        aangemaakt_op: { type: string }
+        bijgewerkt_op: { type: string }
+
+    FinancieelContractInput:
+      type: object
+      required: [naam]
+      properties:
+        categorie: { $ref: "#/components/schemas/FinancieelContractCategorie" }
+        naam: { type: string }
+        leverancier: { type: string, nullable: true }
+        werkgever_id: { type: integer, nullable: true }
+        contractnummer: { type: string, nullable: true }
+        ingangsdatum: { type: string, nullable: true }
+        einddatum: { type: string, nullable: true }
+        opzegtermijn_maanden: { type: integer, nullable: true }
+        kosten_bedrag: { type: number, nullable: true }
+        kosten_periode: { $ref: "#/components/schemas/FinancieelContractPeriode" }
+        indexering_percentage: { type: number, nullable: true }
+        indexering_maand: { type: integer, nullable: true }
+        contractwaarde: { type: number, nullable: true }
+        automatische_verlenging: { type: boolean }
+        verlengingsduur_maanden: { type: integer, nullable: true }
+        aantal_licenties: { type: integer, nullable: true }
+        aantal_in_gebruik: { type: integer, nullable: true }
+        laatst_gebruikt_op: { type: string, nullable: true }
+        status: { $ref: "#/components/schemas/FinancieelContractStatus" }
+        document_id: { type: integer, nullable: true }
+        notities: { type: string, nullable: true }
+
+    FinancieelContractPatch:
+      $ref: "#/components/schemas/FinancieelContractInput"
+
+    FinancieelContractKosten:
+      type: object
+      required: [id, contract_id, jaar, bedrag, aangemaakt_op]
+      properties:
+        id: { type: integer }
+        contract_id: { type: integer }
+        jaar: { type: integer }
+        bedrag: { type: number }
+        bron: { type: string, nullable: true }
+        document_id: { type: integer, nullable: true }
+        notitie: { type: string, nullable: true }
+        aangemaakt_op: { type: string }
+
+    FinancieelContractKostenInput:
+      type: object
+      required: [jaar, bedrag]
+      properties:
+        jaar: { type: integer }
+        bedrag: { type: number }
+        bron: { type: string, nullable: true }
+        document_id: { type: integer, nullable: true }
+        notitie: { type: string, nullable: true }
+
+    FinancieelPolisOnderdeel:
+      type: object
+      required: [waarde, zekerheid]
+      properties:
+        waarde: { type: string }
+        bron: { type: string, nullable: true }
+        zekerheid: { type: number }
+
+    FinancieelPolisAnalyse:
+      type: object
+      required: [methode, ai_beschikbaar, samenvatting, dekking, uitsluitingen, clausules]
+      properties:
+        methode: { type: string, enum: [ai, geen-ai] }
+        aiBeschikbaar: { type: boolean }
+        samenvatting: { type: string }
+        dekking:
+          type: array
+          items: { $ref: "#/components/schemas/FinancieelPolisOnderdeel" }
+        uitsluitingen:
+          type: array
+          items: { $ref: "#/components/schemas/FinancieelPolisOnderdeel" }
+        eigenRisico:
+          oneOf:
+            - $ref: "#/components/schemas/FinancieelPolisOnderdeel"
+          nullable: true
+        looptijd:
+          oneOf:
+            - $ref: "#/components/schemas/FinancieelPolisOnderdeel"
+          nullable: true
+        premie:
+          oneOf:
+            - $ref: "#/components/schemas/FinancieelPolisOnderdeel"
+          nullable: true
+        clausules:
+          type: array
+          items: { $ref: "#/components/schemas/FinancieelPolisOnderdeel" }
+        waarschuwing: { type: string, nullable: true }
+      additionalProperties: true
+
+    FinancieelPolisAnalyseInput:
+      type: object
+      properties:
+        tekst:
+          type: string
+          description: Optionele ruwe tekst; indien leeg wordt het gekoppelde document gebruikt.
+
+    FinancieelContractCoach:
+      type: object
+      required: [methode, aiBeschikbaar, advies, risicos, bron]
+      properties:
+        methode: { type: string, enum: [ai, geen-ai] }
+        aiBeschikbaar: { type: boolean }
+        advies: { type: string }
+        risicos:
+          type: array
+          items: { type: string }
+        besteOpzegmoment: { type: string, nullable: true }
+        financieleGevolgen: { type: string, nullable: true }
+        bron: { type: string }
+        waarschuwing: { type: string, nullable: true }
+
+    FinancieelBesparingskans:
+      type: object
+      required: [type, contractId, contractNaam, boodschap, zekerheid, bron]
+      properties:
+        type: { type: string, enum: [prijsstijging, ongebruikt, overlap, indexering] }
+        contractId: { type: integer }
+        contractNaam: { type: string }
+        leverancier: { type: string, nullable: true }
+        boodschap: { type: string }
+        bedrag: { type: number, nullable: true }
+        zekerheid: { type: string, enum: [hoog, middel, laag] }
+        bron: { type: string }
+        documentId: { type: integer, nullable: true }
+
+    FinancieelBesparingskansen:
+      type: object
+      required: [totaal_geschatte_besparing, aantal, kansen]
+      properties:
+        totaal_geschatte_besparing: { type: number }
+        aantal: { type: integer }
+        kansen:
+          type: array
+          items: { $ref: "#/components/schemas/FinancieelBesparingskans" }
+
+    FinancieelContractSignalering:
+      type: object
+      required: [id, contract_id, type, ernst, boodschap, status, aangemaakt_op]
+      properties:
+        id: { type: integer }
+        contract_id: { type: integer }
+        contract_naam: { type: string, nullable: true }
+        type: { type: string }
+        ernst: { type: string, enum: [info, waarschuwing, kritiek] }
+        boodschap: { type: string }
+        ai_advies: { type: string, nullable: true }
+        bedrag: { type: number, nullable: true }
+        zekerheid: { type: string, nullable: true }
+        status: { type: string }
+        gezien_op: { type: string, nullable: true }
+        aangemaakt_op: { type: string }
+
+    FinancieelContractSignaleringPatch:
+      type: object
+      required: [status]
+      properties:
+        status: { type: string }
+
+    FinancieelBewaakResultaat:
+      type: object
+      required: [gecontroleerd, nieuwe_signaleringen]
+      properties:
+        gecontroleerd: { type: integer }
+        nieuwe_signaleringen: { type: integer }
 
     FinancieelBewijsStap:
       type: object

@@ -27634,6 +27634,362 @@ export const GetDirectiecockpitResponse = zod.object({
 
 
 /**
+ * @summary Alle financiele contracten & polissen ophalen (recht financieel)
+ */
+export const ListFinancieleContractenResponseItem = zod.object({
+  "id": zod.number(),
+  "categorie": zod.enum(['verzekering', 'lease', 'onderhoud', 'software', 'telecom', 'abonnement', 'overig']),
+  "naam": zod.string(),
+  "leverancier": zod.string().nullish(),
+  "werkgever_id": zod.number().nullish(),
+  "werkgever_naam": zod.string().nullish(),
+  "contractnummer": zod.string().nullish(),
+  "ingangsdatum": zod.string().nullish(),
+  "einddatum": zod.string().nullish(),
+  "opzegtermijn_maanden": zod.number().nullish(),
+  "kosten_bedrag": zod.number().nullish(),
+  "kosten_periode": zod.enum(['maand', 'jaar', 'eenmalig']),
+  "indexering_percentage": zod.number().nullish(),
+  "indexering_maand": zod.number().nullish(),
+  "contractwaarde": zod.number().nullish(),
+  "automatische_verlenging": zod.boolean().optional(),
+  "verlengingsduur_maanden": zod.number().nullish(),
+  "aantal_licenties": zod.number().nullish(),
+  "aantal_in_gebruik": zod.number().nullish(),
+  "laatst_gebruikt_op": zod.string().nullish(),
+  "status": zod.enum(['actief', 'opgezegd', 'verlopen', 'concept']),
+  "document_id": zod.number().nullish(),
+  "document_naam": zod.string().nullish(),
+  "notities": zod.string().nullish(),
+  "ai_samenvatting": zod.string().nullish(),
+  "ai_analyse": zod.record(zod.string(), zod.unknown()).nullish(),
+  "ai_geanalyseerd_op": zod.string().nullish(),
+  "aangemaakt_door_id": zod.number().nullish(),
+  "aangemaakt_door_naam": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+export const ListFinancieleContractenResponse = zod.array(ListFinancieleContractenResponseItem)
+
+
+/**
+ * @summary Nieuw contract aanmaken (recht financieel, schrijfniveau)
+ */
+export const CreateFinancieelContractBody = zod.object({
+  "categorie": zod.enum(['verzekering', 'lease', 'onderhoud', 'software', 'telecom', 'abonnement', 'overig']).optional(),
+  "naam": zod.string(),
+  "leverancier": zod.string().nullish(),
+  "werkgever_id": zod.number().nullish(),
+  "contractnummer": zod.string().nullish(),
+  "ingangsdatum": zod.string().nullish(),
+  "einddatum": zod.string().nullish(),
+  "opzegtermijn_maanden": zod.number().nullish(),
+  "kosten_bedrag": zod.number().nullish(),
+  "kosten_periode": zod.enum(['maand', 'jaar', 'eenmalig']).optional(),
+  "indexering_percentage": zod.number().nullish(),
+  "indexering_maand": zod.number().nullish(),
+  "contractwaarde": zod.number().nullish(),
+  "automatische_verlenging": zod.boolean().optional(),
+  "verlengingsduur_maanden": zod.number().nullish(),
+  "aantal_licenties": zod.number().nullish(),
+  "aantal_in_gebruik": zod.number().nullish(),
+  "laatst_gebruikt_op": zod.string().nullish(),
+  "status": zod.enum(['actief', 'opgezegd', 'verlopen', 'concept']).optional(),
+  "document_id": zod.number().nullish(),
+  "notities": zod.string().nullish()
+})
+
+export const CreateFinancieelContractResponse = zod.void()
+
+
+/**
+ * @summary Detail van een contract
+ */
+export const GetFinancieelContractParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetFinancieelContractResponse = zod.object({
+  "id": zod.number(),
+  "categorie": zod.enum(['verzekering', 'lease', 'onderhoud', 'software', 'telecom', 'abonnement', 'overig']),
+  "naam": zod.string(),
+  "leverancier": zod.string().nullish(),
+  "werkgever_id": zod.number().nullish(),
+  "werkgever_naam": zod.string().nullish(),
+  "contractnummer": zod.string().nullish(),
+  "ingangsdatum": zod.string().nullish(),
+  "einddatum": zod.string().nullish(),
+  "opzegtermijn_maanden": zod.number().nullish(),
+  "kosten_bedrag": zod.number().nullish(),
+  "kosten_periode": zod.enum(['maand', 'jaar', 'eenmalig']),
+  "indexering_percentage": zod.number().nullish(),
+  "indexering_maand": zod.number().nullish(),
+  "contractwaarde": zod.number().nullish(),
+  "automatische_verlenging": zod.boolean().optional(),
+  "verlengingsduur_maanden": zod.number().nullish(),
+  "aantal_licenties": zod.number().nullish(),
+  "aantal_in_gebruik": zod.number().nullish(),
+  "laatst_gebruikt_op": zod.string().nullish(),
+  "status": zod.enum(['actief', 'opgezegd', 'verlopen', 'concept']),
+  "document_id": zod.number().nullish(),
+  "document_naam": zod.string().nullish(),
+  "notities": zod.string().nullish(),
+  "ai_samenvatting": zod.string().nullish(),
+  "ai_analyse": zod.record(zod.string(), zod.unknown()).nullish(),
+  "ai_geanalyseerd_op": zod.string().nullish(),
+  "aangemaakt_door_id": zod.number().nullish(),
+  "aangemaakt_door_naam": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Contract bijwerken
+ */
+export const UpdateFinancieelContractParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateFinancieelContractBody = zod.object({
+  "categorie": zod.enum(['verzekering', 'lease', 'onderhoud', 'software', 'telecom', 'abonnement', 'overig']).optional(),
+  "naam": zod.string(),
+  "leverancier": zod.string().nullish(),
+  "werkgever_id": zod.number().nullish(),
+  "contractnummer": zod.string().nullish(),
+  "ingangsdatum": zod.string().nullish(),
+  "einddatum": zod.string().nullish(),
+  "opzegtermijn_maanden": zod.number().nullish(),
+  "kosten_bedrag": zod.number().nullish(),
+  "kosten_periode": zod.enum(['maand', 'jaar', 'eenmalig']).optional(),
+  "indexering_percentage": zod.number().nullish(),
+  "indexering_maand": zod.number().nullish(),
+  "contractwaarde": zod.number().nullish(),
+  "automatische_verlenging": zod.boolean().optional(),
+  "verlengingsduur_maanden": zod.number().nullish(),
+  "aantal_licenties": zod.number().nullish(),
+  "aantal_in_gebruik": zod.number().nullish(),
+  "laatst_gebruikt_op": zod.string().nullish(),
+  "status": zod.enum(['actief', 'opgezegd', 'verlopen', 'concept']).optional(),
+  "document_id": zod.number().nullish(),
+  "notities": zod.string().nullish()
+})
+
+export const UpdateFinancieelContractResponse = zod.object({
+  "id": zod.number(),
+  "categorie": zod.enum(['verzekering', 'lease', 'onderhoud', 'software', 'telecom', 'abonnement', 'overig']),
+  "naam": zod.string(),
+  "leverancier": zod.string().nullish(),
+  "werkgever_id": zod.number().nullish(),
+  "werkgever_naam": zod.string().nullish(),
+  "contractnummer": zod.string().nullish(),
+  "ingangsdatum": zod.string().nullish(),
+  "einddatum": zod.string().nullish(),
+  "opzegtermijn_maanden": zod.number().nullish(),
+  "kosten_bedrag": zod.number().nullish(),
+  "kosten_periode": zod.enum(['maand', 'jaar', 'eenmalig']),
+  "indexering_percentage": zod.number().nullish(),
+  "indexering_maand": zod.number().nullish(),
+  "contractwaarde": zod.number().nullish(),
+  "automatische_verlenging": zod.boolean().optional(),
+  "verlengingsduur_maanden": zod.number().nullish(),
+  "aantal_licenties": zod.number().nullish(),
+  "aantal_in_gebruik": zod.number().nullish(),
+  "laatst_gebruikt_op": zod.string().nullish(),
+  "status": zod.enum(['actief', 'opgezegd', 'verlopen', 'concept']),
+  "document_id": zod.number().nullish(),
+  "document_naam": zod.string().nullish(),
+  "notities": zod.string().nullish(),
+  "ai_samenvatting": zod.string().nullish(),
+  "ai_analyse": zod.record(zod.string(), zod.unknown()).nullish(),
+  "ai_geanalyseerd_op": zod.string().nullish(),
+  "aangemaakt_door_id": zod.number().nullish(),
+  "aangemaakt_door_naam": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string()
+})
+
+
+/**
+ * @summary Contract verwijderen
+ */
+export const DeleteFinancieelContractParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteFinancieelContractResponse = zod.void()
+
+
+/**
+ * @summary Jaarlijkse kostensnapshots van een contract
+ */
+export const ListFinancieelContractKostenParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListFinancieelContractKostenResponseItem = zod.object({
+  "id": zod.number(),
+  "contract_id": zod.number(),
+  "jaar": zod.number(),
+  "bedrag": zod.number(),
+  "bron": zod.string().nullish(),
+  "document_id": zod.number().nullish(),
+  "notitie": zod.string().nullish(),
+  "aangemaakt_op": zod.string()
+})
+export const ListFinancieelContractKostenResponse = zod.array(ListFinancieelContractKostenResponseItem)
+
+
+/**
+ * @summary Kostensnapshot voor een jaar toevoegen of bijwerken
+ */
+export const UpsertFinancieelContractKostenParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpsertFinancieelContractKostenBody = zod.object({
+  "jaar": zod.number(),
+  "bedrag": zod.number(),
+  "bron": zod.string().nullish(),
+  "document_id": zod.number().nullish(),
+  "notitie": zod.string().nullish()
+})
+
+export const UpsertFinancieelContractKostenResponse = zod.void()
+
+
+/**
+ * @summary AI-polisanalyse uitvoeren op het gekoppelde document of aangeleverde tekst
+ */
+export const AnalyseerFinancieelContractParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AnalyseerFinancieelContractBody = zod.object({
+  "tekst": zod.string().optional().describe('Optionele ruwe tekst; indien leeg wordt het gekoppelde document gebruikt.')
+})
+
+export const AnalyseerFinancieelContractResponse = zod.object({
+  "methode": zod.enum(['ai', 'geen-ai']),
+  "aiBeschikbaar": zod.boolean().optional(),
+  "samenvatting": zod.string(),
+  "dekking": zod.array(zod.object({
+  "waarde": zod.string(),
+  "bron": zod.string().nullish(),
+  "zekerheid": zod.number()
+})),
+  "uitsluitingen": zod.array(zod.object({
+  "waarde": zod.string(),
+  "bron": zod.string().nullish(),
+  "zekerheid": zod.number()
+})),
+  "eigenRisico": zod.object({
+  "waarde": zod.string(),
+  "bron": zod.string().nullish(),
+  "zekerheid": zod.number()
+}).nullish(),
+  "looptijd": zod.object({
+  "waarde": zod.string(),
+  "bron": zod.string().nullish(),
+  "zekerheid": zod.number()
+}).nullish(),
+  "premie": zod.object({
+  "waarde": zod.string(),
+  "bron": zod.string().nullish(),
+  "zekerheid": zod.number()
+}).nullish(),
+  "clausules": zod.array(zod.object({
+  "waarde": zod.string(),
+  "bron": zod.string().nullish(),
+  "zekerheid": zod.number()
+})),
+  "waarschuwing": zod.string().nullish()
+})
+
+
+/**
+ * @summary AI-contractcoach advies voor een contract
+ */
+export const GetFinancieelContractCoachParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetFinancieelContractCoachResponse = zod.object({
+  "methode": zod.enum(['ai', 'geen-ai']),
+  "aiBeschikbaar": zod.boolean(),
+  "advies": zod.string(),
+  "risicos": zod.array(zod.string()),
+  "besteOpzegmoment": zod.string().nullish(),
+  "financieleGevolgen": zod.string().nullish(),
+  "bron": zod.string(),
+  "waarschuwing": zod.string().nullish()
+})
+
+
+/**
+ * @summary Deterministische besparingskansen over alle contracten
+ */
+export const GetFinancieleBesparingskansenResponse = zod.object({
+  "totaal_geschatte_besparing": zod.number(),
+  "aantal": zod.number(),
+  "kansen": zod.array(zod.object({
+  "type": zod.enum(['prijsstijging', 'ongebruikt', 'overlap', 'indexering']),
+  "contractId": zod.number(),
+  "contractNaam": zod.string(),
+  "leverancier": zod.string().nullish(),
+  "boodschap": zod.string(),
+  "bedrag": zod.number().nullish(),
+  "zekerheid": zod.enum(['hoog', 'middel', 'laag']),
+  "bron": zod.string(),
+  "documentId": zod.number().nullish()
+}))
+})
+
+
+/**
+ * @summary Alle contract-signaleringen ophalen
+ */
+export const ListFinancieleContractSignaleringenResponseItem = zod.object({
+  "id": zod.number(),
+  "contract_id": zod.number(),
+  "contract_naam": zod.string().nullish(),
+  "type": zod.string(),
+  "ernst": zod.enum(['info', 'waarschuwing', 'kritiek']),
+  "boodschap": zod.string(),
+  "ai_advies": zod.string().nullish(),
+  "bedrag": zod.number().nullish(),
+  "zekerheid": zod.string().nullish(),
+  "status": zod.string(),
+  "gezien_op": zod.string().nullish(),
+  "aangemaakt_op": zod.string()
+})
+export const ListFinancieleContractSignaleringenResponse = zod.array(ListFinancieleContractSignaleringenResponseItem)
+
+
+/**
+ * @summary Voer de deterministische contractbewaking uit en persisteer nieuwe signaleringen
+ */
+export const BewaakFinancieleContractenResponse = zod.object({
+  "gecontroleerd": zod.number(),
+  "nieuwe_signaleringen": zod.number()
+})
+
+
+/**
+ * @summary Status van een signalering bijwerken (bijv. gezien/afgehandeld)
+ */
+export const UpdateFinancieelContractSignaleringParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateFinancieelContractSignaleringBody = zod.object({
+  "status": zod.string()
+})
+
+export const UpdateFinancieelContractSignaleringResponse = zod.unknown()
+
+
+/**
  * @summary Vertrouwelijke financiele jaarstukken ophalen (recht financieel_vertrouwelijk)
  */
 export const ListFinancieleDocumentenQueryParams = zod.object({
