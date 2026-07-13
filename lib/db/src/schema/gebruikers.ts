@@ -1,4 +1,4 @@
-import { pgTable, serial, integer, text, boolean, timestamp, jsonb, index } from "drizzle-orm/pg-core";
+import { pgTable, serial, integer, text, boolean, timestamp, jsonb, index, uniqueIndex } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -82,9 +82,15 @@ export const profielenTable = pgTable("profielen", {
 // bevoegdheden zijn per module het hoogste niveau over alle gekoppelde
 // profielen (zie combineerBevoegdheden in @workspace/permissies).
 // Increment 1: alleen de tabel — nog niet in gebruik door runtime-code.
-// Let op: de UNIQUE-constraint op (gebruiker_id, profiel_id) wordt bewust NIET
-// hier gedeclareerd maar via idempotente SQL in lib/db/scripts/apply-additive.mjs
-// (uniqueIndex in het drizzle-schema gaf eerder deployment-validatiefouten).
+//
+// UNIQUE-constraint: staat nu wél in het Drizzle-schema (uniqueIndex) zodat
+// drizzle-kit push de constraint als "aanwezig, geen actie nodig" beschouwt
+// en hem nooit als drift dropt. apply-additive.mjs legt hem aan vóór push
+// (met expliciete dubbele-rijen-check) zodat push altijd een bestaande
+// constraint aantreft. Eerder gaf uniqueIndex in het schema validatiefouten
+// omdat de constraint dan een '_key'-naam had (Postgres inline-UNIQUE) en
+// reconcile-unique.mjs hem nog niet naar '_unique' had hernoemd; dat probleem
+// bestaat niet meer nu apply-additive de constraint met de exacte naam aanmaakt.
 export const gebruikerProfielenTable = pgTable(
   "gebruiker_profielen",
   {
@@ -97,7 +103,11 @@ export const gebruikerProfielenTable = pgTable(
       .references(() => profielenTable.id, { onDelete: "cascade" }),
     aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
   },
-  (t) => [index("gp_gebruiker_idx").on(t.gebruikerId), index("gp_profiel_idx").on(t.profielId)],
+  (t) => [
+    index("gp_gebruiker_idx").on(t.gebruikerId),
+    index("gp_profiel_idx").on(t.profielId),
+    uniqueIndex("gebruiker_profielen_gebruiker_id_profiel_id_unique").on(t.gebruikerId, t.profielId),
+  ],
 );
 
 // Tokens voor het resetten van een vergeten wachtwoord. Eenmalig gebruik,
