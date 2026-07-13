@@ -27,8 +27,9 @@ import {
   AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
   AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { ShieldCheck, Plus, Pencil, Trash2, Lock, Loader2, Users, RefreshCw, AlertTriangle, ListChecks } from "lucide-react";
+import { ShieldCheck, Plus, Pencil, Trash2, Lock, Loader2, Users, RefreshCw, AlertTriangle, ListChecks, Sparkles } from "lucide-react";
 import { MODULES, NIVEAUS } from "@workspace/permissies";
+import { AiVoorstelDialog } from "@/components/ai-rollen-voorstel-dialog";
 
 const NIVEAU_LABEL: Record<number, string> = Object.fromEntries(
   NIVEAUS.map((n) => [n.waarde, n.kort]),
@@ -68,6 +69,7 @@ export default function ProfielenBeheer() {
     useState<{ id: number; naam: string; aantal: number } | null>(null);
   const [toepassenBezigId, setToepassenBezigId] = useState<number | null>(null);
   const [aanvullenBezigId, setAanvullenBezigId] = useState<number | null>(null);
+  const [aiOpen, setAiOpen] = useState(false);
 
   const invalideer = () =>
     queryClient.invalidateQueries({ queryKey: getListProfielenQueryKey() });
@@ -207,6 +209,9 @@ export default function ProfielenBeheer() {
               Alle profielen aanvullen
             </Button>
           )}
+          <Button variant="outline" onClick={() => setAiOpen(true)}>
+            <Sparkles className="h-4 w-4 text-amber-500" /> Laat AI profielen voorstellen
+          </Button>
           <Button onClick={openNieuw}>
             <Plus className="h-4 w-4" /> Nieuw profiel
           </Button>
@@ -454,6 +459,8 @@ export default function ProfielenBeheer() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <AiVoorstelDialog open={aiOpen} onOpenChange={setAiOpen} onOpgeslagen={invalideer} />
     </div>
   );
 }

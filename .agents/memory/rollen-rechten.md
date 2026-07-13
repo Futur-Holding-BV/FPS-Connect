@@ -35,6 +35,16 @@ Drie tabs:
 
 Nav-item: Beheer > Rollen & Rechten (isHoofdbeheerder gate, KeyRound icoon).
 
+## AI-profielvoorstel (gedeeld component)
+`components/ai-rollen-voorstel-dialog.tsx` exporteert `AiVoorstelDialog` (AI stelt
+profielen/rollen voor, mens bevestigt+slaat op). Wordt gebruikt door ZOWEL
+`/beheer/rollen-rechten` (Rollenmatrix-tab) ALS `/beheer/profielen`
+("Bevoegdheidsprofielen") — beide beheren dezelfde `profielen`-entiteit. Wijzig je
+de dialoog, dan raakt dat beide pagina's. Het component is zelfstandig (eigen
+`NiveauBadge` + niveau-constants); rollen-rechten.tsx houdt bewust een eigen
+`NiveauBadge` voor de matrixrender. Backend: `POST /profielen/ai-voorstel`
+(hoofdbeheerder-only), opslaan via bestaand `POST /profielen`.
+
 ## Weekstaten
 Route `/weekstaten` bestond maar had geen nav-item.
 Opgelost: nav-item toegevoegd in HRM-sectie naast Urenregistratie (gate: `personeel:1 || isHoofdbeheerder`).

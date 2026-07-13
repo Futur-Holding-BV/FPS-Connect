@@ -1,3 +1,18 @@
+## 2026-07-13 — AI stelt profielen voor op de Bevoegdheidsprofielen-pagina
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (additief, opt-in; hergebruikt bestaand hoofdbeheerder-only endpoint; AI stelt alleen voor, mens bevestigt; veiligheid server-side geborgd)
+
+**Aanleiding:** de AI-voorstelfunctie voor rollen/rechten stond alleen op de Rollenmatrix-tab van `/beheer/rollen-rechten`. De aparte pagina `/beheer/profielen` ("Bevoegdheidsprofielen") beheert dezelfde `profielen`-entiteit maar had de knop nog niet. Verzoek: "idem voor bevoegdheidsprofielen, graag door ai laten opzetten".
+
+**Wijzigingen:**
+- Frontend: de privé `AiVoorstelDialog` uit `beheer/rollen-rechten.tsx` geëxtraheerd naar een gedeeld, zelfstandig component `components/ai-rollen-voorstel-dialog.tsx` (met eigen interne `NiveauBadge` + niveau-constants, zodat de stabiele matrix-render in rollen-rechten.tsx ongemoeid blijft). De dialooglogica is byte-identiek overgenomen (auto-voorstel bij openen, kaart per rol met opnemen-checkbox, bewerkbare naam, klikbare module-chips 0→4→0, sequentieel opslaan met 409 → "Naam bestaat al")
+- `beheer/rollen-rechten.tsx`: lokale dialogdefinitie + types verwijderd, ongebruikte imports opgeschoond, en de dialog nu geïmporteerd uit het gedeelde component; beide bestaande usages ongewijzigd
+- `beheer/profielen.tsx`: knop "Laat AI profielen voorstellen" (outline, Sparkles) naast "Nieuw profiel", plus de gedeelde dialog met `onOpgeslagen` → invalidatie van `getListProfielenQueryKey()` zodat de profielenlijst ververst na opslaan
+- **Geen backend-/OpenAPI-/DB-/codegen-wijziging:** hergebruikt het bestaande `POST /profielen/ai-voorstel` (hoofdbeheerder-only) en het bestaande `POST /profielen` (met `valideerBevoegdheden`); `saneerBevoegdheden` forceert gevoelige modules op 0
+- **Bewijs:** firevault typecheck exit 0; architect code-review (evaluate_task, git diff) → PASS: extractie byte-identiek, geen gedragsverandering op rollen-rechten, wiring op profielen correct, geen gedeelde-state-risico (elke pagina mount een eigen dialoginstantie)
+
+---
+
 ## 2026-07-13 — AI stelt rollen voor in Rollen & Rechten beheer
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (nieuw, opt-in; AI stelt alleen voor, mens bevestigt; veiligheid server-side geborgd)
