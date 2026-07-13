@@ -1,3 +1,26 @@
+## 2026-07-13 — Wagenparkmeldingen: kwartaalcontrole, schade & storing (Taak #615)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (additief; nieuwe tabellen/routes)
+
+**Mobiele wagenpark-module (FPS Monteur-app):**
+- **Nieuwe startscherm-snelkoppeling:** "Mijn Voertuig" (zichtbaar voor iedereen met een actieve auto-toewijzing).
+- **Kwartaalcontrole:** stap-voor-stap checklist (vloeistoffen, banden, verlichting, km-stand). Verplichting om bij afwijkingen foto's toe te voegen.
+- **Schademelding:** formulier met datum, omschrijving en AI-ondersteunde foto-upload (herkent voertuigonderdelen en schade-ernst).
+- **Storingsmelding:** direct doorgeven van dashboardlampjes of mechanische gebreken.
+- **Offline support:** meldingen worden lokaal opgeslagen in de sync-wachtrij als er geen bereik is in de bus.
+
+**Kantoor-beheer (firevault):**
+- **Centraal dashboard:** `/wagenpark/meldingen` met filters op type, status (open/garage/afgehandeld) en medewerker.
+- **Voertuig-historie:** nieuwe tab "Meldingen" op the voertuigdetailpagina toont alle historische kwartaalcontroles en schades van dat specifieke kenteken.
+- **Status-workflow:** beheerder kan meldingen doorzetten naar "Garage", inclusief PDF-export van de schadefoto's voor de verzekeraar.
+
+**Techniek & Notificaties:**
+- **Push-notificaties:** integratie met Expo Notification Service. Gebruikers krijgen een herinnering als de kwartaalcontrole >90 dagen geleden is.
+- **DB-schema:** nieuwe tabellen `wagenpark_meldingen` (polymorf), `wagenpark_kwartaalcontrole` en `push_tokens`.
+- **API-server:** nieuwe routes onder `/wagenpark/...` met Zod-validatie en `requireBevoegdheid("wagenpark", 1)`.
+
+---
+
 ## 2026-07-13 — Governance & Approval Engine: audit beleidswijzigingen, tijdlijn, offerte-koppeling + documenten
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (additief; geen bestaande endpoints gewijzigd)
@@ -114,7 +137,7 @@ De volledige continue jaarbedrijfsprognose is geimplementeerd en geverifieerd:
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (geen logica gewijzigd)
 
-**Aanleiding:** GitHub Actions-deploy faalde tijdens `pnpm --filter @workspace/firevault run build` (exit code 1). Oorzaak: drie firevault-componenten op GitHub (`gebruiker-menu.tsx`, `nieuws-ticker.tsx`, `beheerder-layout.tsx`) bevatten letterlijke Git-conflict-markers (`<<<<<<<`, `=======`, `>>>>>>>`) die als eerder slechte merge waren gecommit. Vite/Rollup kon deze bestanden niet parsen.
+**Aanleiding:** GitHub Actions-deploy faalde tijdens `pnpm --filter @workspace/firevault run build` (exit code 1). Oorzaak: drie firevault-componenten op GitHub (`gebruiker-menu.tsx`, `nieuws-ticker.tsx`, `beheerder-layout.tsx`) bevatten letterlijke Git-conflict-markers die als eerder slechte merge waren gecommit. Vite/Rollup kon deze bestanden niet parsen.
 
 **Herstelstap:**
 1. Lokale workspace-versies (zonder conflict-markers) opgehaald en vergeleken met GitHub.
@@ -330,8 +353,6 @@ De volledige continue jaarbedrijfsprognose is geimplementeerd en geverifieerd:
 
 **Architect-review (PASS) — twee punten direct verwerkt:**
 - Bucket-race gedicht: api wacht nu ook op `minio-init` (`service_completed_successfully`), niet alleen op minio-healthy
-<<<<<<< HEAD
-=======
 - Objectopslag-back-up toegevoegd: nieuwe `backup-minio`-dienst (mc mirror naar `deploy/minio-backups/`) onder het backup-profiel; werkend bewezen op productie
 - Bonus: de server had géén back-upcron — dagelijkse cron ingesteld (03:00 database, 03:30 objectopslag, 03:15 opschoning >30 dagen) met schrijfbaar logbestand `/var/log/fps-backup.log`
 - Follow-up (niet blokkerend): MinIO service-account met bucket-scoped policy i.p.v. root-credentials; obsolete `version:`-regel uit compose
@@ -407,6 +428,48 @@ De volledige continue jaarbedrijfsprognose is geimplementeerd en geverifieerd:
 - Navigatie: "Bedrijfskompas" in Beheer-sidebar (`beheerder-layout.tsx`)
 
 **Bewijs:** `pnpm run typecheck` groen (alle packages). `pnpm --filter @workspace/scripts run kwaliteitscheck` groen (0 kritiek, 0 hoog). DB-tabellen aanwezig (6×). OpenAPI-paden aanwezig + codegen gedraaid. Workflows: api-server 200 OK op `/api/healthz`.
+
+## 2026-07-13 — Wagenparkmeldingenmodule volledig uitgebouwd (Task #615)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (additieve tabellen + nieuwe routes; bestaande wagenpark-module ongewijzigd)
+
+**Nieuw gebouwd:**
+
+**Drie meldingtypen (mobiel + web):**
+- **Kwartaalcontrole:** monteur fotografeert dashboard vanuit de app, AI leest km-stand en waarschuwingslampjes af (`POST /wagenpark/kwartaalcontrole/foto-check`), monteur bevestigt en dient in. Aparte stap-voor-stap-flow met AI-controle en terugkoppeling. Mobiel scherm: `artifacts/monteur-app/app/kwartaalcontrole.tsx`
+- **Schade:** meldingformulier met locatiekeuze (voor/achter/links/rechts/dak/onderzijde/interieur/overig), fotobijlage en AI-diagnose
+- **Storing:** meldingformulier met type-keuze (motor/transmissie/elektra/banden/remmen/verlichting/airco/anders), fotobijlage en AI-diagnose
+- Mobile scherm `voertuig-melding.tsx` bevat alle drie workflows met offline-fallback via de sync-wachtrij
+
+**Push-notificaties:**
+- `pushService.ts`: registratie Expo push-tokens (`POST /wagenpark/push-tokens`), versturen naar specifieke gebruiker of alle wagenparkbeheerders, scheduled kwartaalcontrole-cyclus (dagelijks 07:30)
+- Escalerende herinneringen: week 1 vrijblijvend (eenmalig), daarna elke 3 dagen, laatste 3 dagen dagelijks + urgente toon
+- Bij nieuwe melding: alle wagenparkbeheerders (wagenpark:2) en hoofdbeheerders ontvangen een push-notificatie
+
+**Offline concept opslaan:**
+- Foto wordt altijd als eerste geüpload; als de uiteindelijke POST mislukt, wordt de melding in de sync-wachtrij gezet (`type: "create_melding"`) en automatisch verstuurd bij herstel verbinding
+- Bevestiging "Opgeslagen (offline)" met duidelijke instructie in de app
+
+**Kantoorbeheerschermen (web):**
+- `/wagenpark/meldingen`: centraal meldingenoverzicht voor alle voertuigen, filterbaar op type (storing/schade/kwartaalcontrole/overige) en status; auto-refresh 30 seconden; openstaande-teller in de paginatitel
+- Herbruikbare `MeldingKaart`-component: AI-diagnose sectie, ernst-indicator, duplicaatmelding, doorzetten naar garage (met e-mail), toewijzen beheerder, koppelen aan werkorder, status bijwerken
+- `/wagenpark/:id` tabblad Meldingen toont meldingen per voertuig met dezelfde kaart
+- Sidebar-navigatie linkt direct naar het centrale overzicht
+
+**API-routes (`/wagenpark/...`):**
+- `POST /wagenpark/meldingen` — monteur dient melding in (auto-voertuigselectie via chauffeur_id)
+- `GET /wagenpark/meldingen` — beheerder bekijkt alle meldingen (filterbaar)
+- `POST /wagenpark/meldingen/:id/doorzetten-garage` — stuurt e-mail naar garage met AI-diagnose + foto-info
+- `PATCH /wagenpark/meldingen/:id` — status/toewijzing/opvolgnotitie bijwerken (wagenpark:2)
+- `POST /wagenpark/kwartaalcontrole/foto-check` — AI analyseert dashboardfoto (OpenAI vision)
+- `GET /wagenpark/kwartaalcontrole/mijn` — monteur checkt eigen open kwartaalcontrole-cyclus
+- `POST /wagenpark/push-tokens` — registreer Expo push-token voor notificaties
+
+**DB:** `wagenpark_meldingen`, `wagenpark_kwartaalcontrole`, `push_tokens` tabellen aangemaakt en schema gepusht.
+
+**Bevoegdheden:** `wagenpark`-module (niveau 1 = inzien, 2 = opvolgen/doorzetten, 4 = volledig beheer); preset "Wagenparkbeheerder" heeft niveau 4.
+
+**Bewijs:** `pnpm run typecheck` groen (alle 5 packages); `pnpm --filter @workspace/db run push` → `[✓] Changes applied`; alle routes geregistreerd in `routes/index.ts`; `planDagelijkseKwartaalcontrole()` wired in `index.ts`.
 
 ---
 
