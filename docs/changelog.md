@@ -1,3 +1,31 @@
+## 2026-07-13 — Productie-deploy hersteld (schema-healthcheck) + facturen-dashboard reparatie
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (migrate-pijplijn en healthcheck structureel gelijkgetrokken; route-volgordefout hersteld; geen datamigratie)
+
+**Aanleiding:** de GitHub-deploy faalde op `schema-healthcheck.mjs`: de UNIQUE-controle op `gebruiker_profielen (gebruiker_id, profiel_id)` sloeg aan omdat productie de unieke index mist. Daarnaast meldde de gebruiker dat de facturenpagina "Kon dashboard niet laden" toonde.
+
+**Rootoorzaak deploy:**
+- `deploy/Dockerfile.migrate` draaide alleen `drizzle-kit push` en nooit `apply-additive.mjs`, dus de unieke index werd op productie nooit aangelegd.
+- De healthcheck controleerde bovendien `pg_constraint`, terwijl Drizzle's `uniqueIndex` een `CREATE UNIQUE INDEX` genereert die alleen in `pg_indexes` zichtbaar is — de check kon dus zelfs op een correcte database vals alarm geven.
+
+**Wat is er gewijzigd:**
+- `deploy/Dockerfile.migrate`: CMD is nu `apply-additive && push && apply-additive` — de index bestaat al vóór push (zodat push hem niet als drift dropt) en wordt na push gegarandeerd aanwezig gecontroleerd.
+- `lib/db/scripts/apply-additive.mjs`: legt de unieke index aan via `pg_indexes`-detectie + `CREATE UNIQUE INDEX`; hard-fail (exit 1) bij duplicaten of aanlegfout blijft van kracht.
+- `lib/db/scripts/schema-healthcheck.mjs`: controleert de unieke index nu via `pg_indexes` in plaats van `pg_constraint`.
+- Schema-commentaar in `lib/db/src/schema/gebruikers.ts` geactualiseerd naar de werkelijke werking.
+- **Facturen-dashboard fix:** `GET /facturen/financieel-dashboard` en `GET /facturen/exportlog` stonden in `facturen.ts` ná de wildcard-route `/facturen/:id`, waardoor Express "financieel-dashboard" als factuur-ID parste en de pagina's faalden. Beide routes zijn vóór de wildcard geplaatst (met waarschuwingscommentaar).
+- **Opname plattegrond-laag fix (zelfde foutklasse, gevonden bij review):** `GET /opname/plattegrond-items` stond in `opname.ts` ná de wildcard `/opname/:id` en gaf daardoor altijd 404 — de opname-laag op de web-plattegrond was stil kapot. Route vóór de wildcard geplaatst (met waarschuwingscommentaar).
+- **Monteur-app typecheck hersteld:** `TYPE_LABELS` in `app/documenten.tsx` en `app/documenten/[id].tsx` misten de documenttypes tekening/contract/verzekering/overig (enum eerder uitgebreid zonder de mobiele label-maps bij te werken).
+
+**Bewijs (run 2026-07-13):**
+- `apply-additive.mjs` groen (index "reeds aanwezig"), `schema-healthcheck.mjs` alle 11 checks groen tegen dev
+- Geen duplicaten in `gebruiker_profielen` (0 rijen dubbel — index kan veilig op productie worden aangelegd)
+- Echte TOTP-loginsessie: `GET /api/facturen/financieel-dashboard` → 200 met correcte tellingen; `GET /api/facturen/exportlog` → 200
+- Echte TOTP-loginsessie: `GET /api/opname/plattegrond-items?verdieping_id=1` → 200 (JSON-array); zonder parameter → 400 uit de eigen handler (bewijst routematch)
+- Volledige `pnpm run typecheck` groen (inclusief monteur-app)
+
+---
+
 ## 2026-07-13 — Toolboxen: 50 AI-concepten daadwerkelijk klaargezet + volledige keten end-to-end bewezen
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (batch-endpoint robuuster, frontend-dialoog aangepast, verder alleen bewijs-tooling)

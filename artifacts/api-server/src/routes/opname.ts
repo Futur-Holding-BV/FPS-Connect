@@ -204,6 +204,74 @@ router.post("/opname", requireAuth, async (req, res): Promise<void> => {
   res.status(201).json(volledig);
 });
 
+// ─── GET /opname/plattegrond-items ────────────────────────────────────────────
+// Geeft alle opname-items terug die een tekening-positie hebben op een verdieping.
+// Gebruikt door de plattegrond-laag in de uitvoeringstekening.
+// LET OP: dit blok moet VÓÓR de wildcard-route /opname/:id blijven staan, anders
+// matcht Express "plattegrond-items" als :id en faalt dit endpoint.
+
+router.get("/opname/plattegrond-items", requireAuth, async (req, res): Promise<void> => {
+  const verdiepingId = Number(req.query.verdieping_id);
+  if (!verdiepingId || isNaN(verdiepingId)) {
+    res.status(400).json({ fout: "verdieping_id is verplicht" });
+    return;
+  }
+
+  const items = await db
+    .select({
+      id: opnameItemsTable.id,
+      opname_id: opnameItemsTable.opnameId,
+      spot_type: opnameItemsTable.spotType,
+      ruimte: opnameItemsTable.ruimte,
+      verdieping_id: opnameItemsTable.verdiepingId,
+      verdieping_naam: verdiepingenTable.naam,
+      beschrijving: opnameItemsTable.beschrijving,
+      actie: opnameItemsTable.actie,
+      bereikbaarheid: opnameItemsTable.bereikbaarheid,
+      aantal: opnameItemsTable.aantal,
+      afmetingen: opnameItemsTable.afmetingen,
+      prioriteit: opnameItemsTable.prioriteit,
+      notities: opnameItemsTable.notities,
+      afgerond: opnameItemsTable.afgerond,
+      tekening_x: opnameItemsTable.tekeningX,
+      tekening_y: opnameItemsTable.tekeningY,
+      aangemaakt_op: opnameItemsTable.aangemaaktOp,
+      bijgewerkt_op: opnameItemsTable.bijgewerktOp,
+    })
+    .from(opnameItemsTable)
+    .leftJoin(verdiepingenTable, eq(opnameItemsTable.verdiepingId, verdiepingenTable.id))
+    .where(
+      and(
+        eq(opnameItemsTable.verdiepingId, verdiepingId),
+        sql`${opnameItemsTable.tekeningX} IS NOT NULL`,
+      ),
+    )
+    .orderBy(opnameItemsTable.id);
+
+  const itemsMetFotos = await Promise.all(
+    items.map(async (item) => {
+      const fotos = await db
+        .select()
+        .from(opnameFotosTable)
+        .where(eq(opnameFotosTable.itemId, item.id))
+        .orderBy(opnameFotosTable.id);
+      return {
+        ...item,
+        fotos: fotos.map((f) => ({
+          id: f.id,
+          item_id: f.itemId,
+          object_path: f.objectPath,
+          url: fotoUrl(f.objectPath),
+          bijschrift: f.bijschrift,
+          aangemaakt_op: f.aangemaaktOp,
+        })),
+      };
+    }),
+  );
+
+  res.json(itemsMetFotos);
+});
+
 // ─── GET /opname/:id ──────────────────────────────────────────────────────────
 
 router.get("/opname/:id", requireAuth, async (req, res): Promise<void> => {
@@ -535,72 +603,6 @@ router.patch("/opname/items/:itemId", requireAuth, async (req, res): Promise<voi
       aangemaakt_op: f.aangemaaktOp,
     })),
   });
-});
-
-// ─── GET /opname/plattegrond-items ────────────────────────────────────────────
-// Geeft alle opname-items terug die een tekening-positie hebben op een verdieping.
-// Gebruikt door de plattegrond-laag in de uitvoeringstekening.
-
-router.get("/opname/plattegrond-items", requireAuth, async (req, res): Promise<void> => {
-  const verdiepingId = Number(req.query.verdieping_id);
-  if (!verdiepingId || isNaN(verdiepingId)) {
-    res.status(400).json({ fout: "verdieping_id is verplicht" });
-    return;
-  }
-
-  const items = await db
-    .select({
-      id: opnameItemsTable.id,
-      opname_id: opnameItemsTable.opnameId,
-      spot_type: opnameItemsTable.spotType,
-      ruimte: opnameItemsTable.ruimte,
-      verdieping_id: opnameItemsTable.verdiepingId,
-      verdieping_naam: verdiepingenTable.naam,
-      beschrijving: opnameItemsTable.beschrijving,
-      actie: opnameItemsTable.actie,
-      bereikbaarheid: opnameItemsTable.bereikbaarheid,
-      aantal: opnameItemsTable.aantal,
-      afmetingen: opnameItemsTable.afmetingen,
-      prioriteit: opnameItemsTable.prioriteit,
-      notities: opnameItemsTable.notities,
-      afgerond: opnameItemsTable.afgerond,
-      tekening_x: opnameItemsTable.tekeningX,
-      tekening_y: opnameItemsTable.tekeningY,
-      aangemaakt_op: opnameItemsTable.aangemaaktOp,
-      bijgewerkt_op: opnameItemsTable.bijgewerktOp,
-    })
-    .from(opnameItemsTable)
-    .leftJoin(verdiepingenTable, eq(opnameItemsTable.verdiepingId, verdiepingenTable.id))
-    .where(
-      and(
-        eq(opnameItemsTable.verdiepingId, verdiepingId),
-        sql`${opnameItemsTable.tekeningX} IS NOT NULL`,
-      ),
-    )
-    .orderBy(opnameItemsTable.id);
-
-  const itemsMetFotos = await Promise.all(
-    items.map(async (item) => {
-      const fotos = await db
-        .select()
-        .from(opnameFotosTable)
-        .where(eq(opnameFotosTable.itemId, item.id))
-        .orderBy(opnameFotosTable.id);
-      return {
-        ...item,
-        fotos: fotos.map((f) => ({
-          id: f.id,
-          item_id: f.itemId,
-          object_path: f.objectPath,
-          url: fotoUrl(f.objectPath),
-          bijschrift: f.bijschrift,
-          aangemaakt_op: f.aangemaaktOp,
-        })),
-      };
-    }),
-  );
-
-  res.json(itemsMetFotos);
 });
 
 // ─── DELETE /opname/items/:itemId ─────────────────────────────────────────────
