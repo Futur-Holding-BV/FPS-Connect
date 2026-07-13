@@ -523,6 +523,7 @@ Geef je analyse als JSON met deze structuur:
         analyse = JSON.parse(begrotingAnalyseResultaat.inhoud) as Record<string, unknown>;
         analyse.gegenereerd_op = new Date().toISOString();
         analyse.automatisch = true;
+        analyse.voorstel_status = "voorstel";
       } catch {
         logger.warn("AI analyse JSON parsen mislukt — fallback zonder AI");
       }
@@ -557,6 +558,49 @@ router.post("/opdrachten/:id/werkbegroting/ai-analyse", schrijven, async (req, r
     res.json(mapBegroting(begroting, regels));
   } catch (err) {
     logger.error({ err }, "aiAnalyseWerkbegroting fout");
+    res.status(500).json({ error: "Serverfout" });
+  }
+});
+
+// ── POST /opdrachten/:id/werkbegroting/ai-analyse/beoordeling ─────────────
+
+router.post("/opdrachten/:id/werkbegroting/ai-analyse/beoordeling", schrijven, async (req, res): Promise<void> => {
+  const id = parseInt(String(req.params.id), 10);
+  if (isNaN(id)) { res.status(400).json({ error: "Ongeldig id" }); return; }
+
+  const { beslissing } = req.body as { beslissing?: string };
+  if (beslissing !== "geaccepteerd" && beslissing !== "genegeerd") {
+    res.status(400).json({ error: "Ongeldige beslissing (geaccepteerd of genegeerd)" });
+    return;
+  }
+
+  try {
+    const [begroting] = await db.select().from(projectBegrotingenTable)
+      .where(eq(projectBegrotingenTable.opdrachtId, id));
+    if (!begroting) { res.status(404).json({ error: "Werkbegroting niet gevonden" }); return; }
+
+    const analyse = begroting.aiAnalyse as Record<string, unknown> | null;
+    if (!analyse) { res.status(404).json({ error: "Geen AI-voorstel aanwezig" }); return; }
+
+    const bijgewerkt: Record<string, unknown> = {
+      ...analyse,
+      voorstel_status: beslissing,
+      beoordeeld_op: new Date().toISOString(),
+    };
+
+    await db.update(projectBegrotingenTable)
+      .set({ aiAnalyse: bijgewerkt, bijgewerktOp: new Date() })
+      .where(eq(projectBegrotingenTable.id, begroting.id));
+
+    const [vers] = await db.select().from(projectBegrotingenTable)
+      .where(eq(projectBegrotingenTable.id, begroting.id));
+    const regels = await db.select().from(werkbegrotingRegelsTable)
+      .where(eq(werkbegrotingRegelsTable.begrotingId, begroting.id))
+      .orderBy(asc(werkbegrotingRegelsTable.id));
+
+    res.json(mapBegroting(vers, regels));
+  } catch (err) {
+    logger.error({ err }, "beoordeelWerkbegrotingAiVoorstel fout");
     res.status(500).json({ error: "Serverfout" });
   }
 });

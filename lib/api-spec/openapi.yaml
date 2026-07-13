@@ -11018,6 +11018,33 @@ paths:
               schema:
                 $ref: "#/components/schemas/Werkbegroting"
 
+  /opdrachten/{id}/werkbegroting/ai-analyse/beoordeling:
+    post:
+      operationId: beoordeelWerkbegrotingAiVoorstel
+      tags: [Opdrachten]
+      summary: AI-werkbegrotingvoorstel beoordelen (accepteren of negeren)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WerkbegrotingAiVoorstelBeoordeling"
+      responses:
+        "200":
+          description: Werkbegroting met bijgewerkte voorstelstatus
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Werkbegroting"
+        "404":
+          description: Werkbegroting of AI-voorstel niet gevonden
+
   /opdrachten/{id}/werkbegroting/ai-chat:
     post:
       operationId: aiChatWerkbegroting
@@ -31413,6 +31440,15 @@ components:
           type: string
 
     # ── Werkvoorbereiding ─────────────────────────────────────────────────────
+
+    WerkbegrotingAiVoorstelBeoordeling:
+      type: object
+      required: [beslissing]
+      properties:
+        beslissing:
+          type: string
+          enum: [geaccepteerd, genegeerd]
+          description: Beslissing van de werkvoorbereider over het AI-voorstel
 
     WerkbegrotingRegelPatch:
       type: object

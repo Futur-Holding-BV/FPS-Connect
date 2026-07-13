@@ -13479,6 +13479,52 @@ export const AiAnalyseWerkbegrotingResponse = zod.object({
 
 
 /**
+ * @summary AI-werkbegrotingvoorstel beoordelen (accepteren of negeren)
+ */
+export const BeoordeelWerkbegrotingAiVoorstelParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const BeoordeelWerkbegrotingAiVoorstelBody = zod.object({
+  "beslissing": zod.enum(['geaccepteerd', 'genegeerd']).describe('Beslissing van de werkvoorbereider over het AI-voorstel')
+})
+
+export const BeoordeelWerkbegrotingAiVoorstelResponse = zod.object({
+  "id": zod.number(),
+  "opdracht_id": zod.number().nullish(),
+  "calculatie_id": zod.number().nullish(),
+  "gebouw_id": zod.number().nullish(),
+  "werknummer": zod.string().nullish(),
+  "hoofd_uren_begroot": zod.number(),
+  "totaal_arbeid_uren": zod.number(),
+  "totaal_materiaal_bedrag": zod.number(),
+  "omschrijving": zod.string().nullish(),
+  "status": zod.string(),
+  "vastgesteld_op": zod.string().nullish(),
+  "ai_analyse": zod.object({
+
+}).passthrough().nullish(),
+  "ai_analyse_op": zod.string().nullish(),
+  "aangemaakt_op": zod.string().optional(),
+  "bijgewerkt_op": zod.string().optional(),
+  "regels": zod.array(zod.object({
+  "id": zod.number(),
+  "begroting_id": zod.number(),
+  "calc_regel_id": zod.number().nullish(),
+  "categorie": zod.string(),
+  "omschrijving": zod.string(),
+  "eenheid": zod.string(),
+  "hoeveelheid": zod.number(),
+  "tarief": zod.number(),
+  "totaal": zod.number(),
+  "hoofdstuk": zod.string(),
+  "ai_inkoop_voorstel": zod.string().nullish(),
+  "ai_arbeid_voorstel": zod.string().nullish()
+}))
+})
+
+
+/**
  * @summary AI-chatgesprek over een werkbegroting (technische uitvoering, volledigheid, eenheden)
  */
 export const AiChatWerkbegrotingParams = zod.object({

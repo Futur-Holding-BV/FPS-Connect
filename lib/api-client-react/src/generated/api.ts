@@ -886,6 +886,7 @@ import type {
   WeekStaatInput,
   WeekStaatPatch,
   Werkbegroting,
+  WerkbegrotingAiVoorstelBeoordeling,
   WerkbegrotingRegel,
   WerkbegrotingRegelPatch,
   Werkbon,
@@ -38574,6 +38575,77 @@ export const useAiAnalyseWerkbegroting = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getAiAnalyseWerkbegrotingMutationOptions(options));
+    }
+
+export const getBeoordeelWerkbegrotingAiVoorstelUrl = (id: number,) => {
+
+
+
+
+  return `/api/opdrachten/${id}/werkbegroting/ai-analyse/beoordeling`
+}
+
+/**
+ * @summary AI-werkbegrotingvoorstel beoordelen (accepteren of negeren)
+ */
+export const beoordeelWerkbegrotingAiVoorstel = async (id: number,
+    werkbegrotingAiVoorstelBeoordeling: WerkbegrotingAiVoorstelBeoordeling, options?: RequestInit): Promise<Werkbegroting> => {
+
+  return customFetch<Werkbegroting>(getBeoordeelWerkbegrotingAiVoorstelUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(werkbegrotingAiVoorstelBeoordeling)
+  }
+);}
+
+
+
+
+export const getBeoordeelWerkbegrotingAiVoorstelMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof beoordeelWerkbegrotingAiVoorstel>>, TError,{id: number;data: BodyType<WerkbegrotingAiVoorstelBeoordeling>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof beoordeelWerkbegrotingAiVoorstel>>, TError,{id: number;data: BodyType<WerkbegrotingAiVoorstelBeoordeling>}, TContext> => {
+
+const mutationKey = ['beoordeelWerkbegrotingAiVoorstel'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof beoordeelWerkbegrotingAiVoorstel>>, {id: number;data: BodyType<WerkbegrotingAiVoorstelBeoordeling>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  beoordeelWerkbegrotingAiVoorstel(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type BeoordeelWerkbegrotingAiVoorstelMutationResult = NonNullable<Awaited<ReturnType<typeof beoordeelWerkbegrotingAiVoorstel>>>
+    export type BeoordeelWerkbegrotingAiVoorstelMutationBody = BodyType<WerkbegrotingAiVoorstelBeoordeling>
+    export type BeoordeelWerkbegrotingAiVoorstelMutationError = ErrorType<void>
+
+    /**
+ * @summary AI-werkbegrotingvoorstel beoordelen (accepteren of negeren)
+ */
+export const useBeoordeelWerkbegrotingAiVoorstel = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof beoordeelWerkbegrotingAiVoorstel>>, TError,{id: number;data: BodyType<WerkbegrotingAiVoorstelBeoordeling>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof beoordeelWerkbegrotingAiVoorstel>>,
+        TError,
+        {id: number;data: BodyType<WerkbegrotingAiVoorstelBeoordeling>},
+        TContext
+      > => {
+      return useMutation(getBeoordeelWerkbegrotingAiVoorstelMutationOptions(options));
     }
 
 export const getAiChatWerkbegrotingUrl = (id: number,) => {

@@ -6,6 +6,7 @@ import {
   useGetWerkbegroting,
   useVaststellenWerkbegroting,
   useAiAnalyseWerkbegroting,
+  useBeoordeelWerkbegrotingAiVoorstel,
   useGetNacalculatie,
   useListOpdrachtPlanningUren,
   usePatchWerkbegrotingRegel,
@@ -529,6 +530,20 @@ export default function OpdrachtDetailPagina() {
     },
   });
 
+  const beoordeelMutatie = useBeoordeelWerkbegrotingAiVoorstel({
+    mutation: {
+      onSuccess: (_data, vars) => {
+        qc.invalidateQueries({ queryKey: getGetWerkbegrotingQueryKey(opdrachtId) });
+        toast({
+          title: vars.data.beslissing === "geaccepteerd"
+            ? "AI-voorstel bevestigd"
+            : "AI-voorstel genegeerd",
+        });
+      },
+      onError: () => toast({ title: "Beoordelen mislukt", variant: "destructive" }),
+    },
+  });
+
   const aiChatMut = useAiChatWerkbegroting();
 
   const isGereed = opdracht?.status === "afgerond";
@@ -560,6 +575,11 @@ export default function OpdrachtDetailPagina() {
   const isVastgesteld = werkbegroting?.status === "vastgesteld";
   const groepen = werkbegroting ? groepeerOpHoofdstuk(werkbegroting) : {};
   const aiAnalyse = werkbegroting?.ai_analyse as Record<string, unknown> | null | undefined;
+  const voorstelStatus = (aiAnalyse?.voorstel_status as string | undefined)
+    ?? (aiAnalyse ? "voorstel" : undefined);
+  const isVoorstel = !!aiAnalyse && voorstelStatus === "voorstel";
+  const isVoorstelBevestigd = !!aiAnalyse && voorstelStatus === "geaccepteerd";
+  const isVoorstelGenegeerd = !!aiAnalyse && voorstelStatus === "genegeerd";
 
   const arbeidRegels = werkbegroting?.regels?.filter(r => r.categorie === "arbeid") ?? [];
   const materiaalRegels = werkbegroting?.regels?.filter(r => r.categorie === "materiaal") ?? [];
@@ -698,6 +718,73 @@ export default function OpdrachtDetailPagina() {
 
         {/* ── Werkbegroting ── */}
         <TabsContent value="werkbegroting" className="space-y-4 mt-4">
+          {/* ── AI-werkbegrotingvoorstel (nog te bevestigen) ── */}
+          {isVoorstel && (
+            <Card className="border-amber-200 bg-amber-50/60">
+              <CardHeader className="pb-2 pt-3">
+                <CardTitle className="text-sm font-medium text-amber-800 flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-amber-600 shrink-0" />
+                  AI-voorstel — nog te bevestigen
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pb-3 space-y-3">
+                {typeof aiAnalyse?.samenvatting === "string" && aiAnalyse.samenvatting && (
+                  <p className="text-sm text-amber-900">{aiAnalyse.samenvatting as string}</p>
+                )}
+                <p className="text-xs text-amber-700">
+                  De AI heeft deze werkbegroting automatisch geanalyseerd en doet voorstellen voor inkoop en arbeid.
+                  Dit is een voorstel: beoordeel het en bevestig of negeer het.
+                </p>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Button
+                    size="sm"
+                    className="h-7 text-xs"
+                    disabled={beoordeelMutatie.isPending}
+                    onClick={() => beoordeelMutatie.mutate({ id: opdrachtId, data: { beslissing: "geaccepteerd" } })}
+                  >
+                    <Check className="h-3 w-3 mr-1" />
+                    {beoordeelMutatie.isPending ? "Bezig..." : "Voorstel bevestigen"}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-7 text-xs"
+                    disabled={beoordeelMutatie.isPending}
+                    onClick={() => beoordeelMutatie.mutate({ id: opdrachtId, data: { beslissing: "genegeerd" } })}
+                  >
+                    Negeren
+                  </Button>
+                  <Button
+                    variant="link"
+                    size="sm"
+                    className="h-7 p-0 text-xs text-amber-700"
+                    onClick={() => setActiveTab("ai")}
+                  >
+                    Volledig voorstel bekijken
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+          {isVoorstelBevestigd && (
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary" className="text-muted-foreground">
+                <Check className="h-3 w-3 mr-1" />
+                AI-voorstel bevestigd
+                {typeof aiAnalyse?.beoordeeld_op === "string" && (
+                  <span className="ml-1">op {new Date(aiAnalyse.beoordeeld_op as string).toLocaleDateString("nl-NL")}</span>
+                )}
+              </Badge>
+              <Button
+                variant="link"
+                size="sm"
+                className="h-auto p-0 text-xs text-muted-foreground"
+                onClick={() => setActiveTab("ai")}
+              >
+                Bekijken
+              </Button>
+            </div>
+          )}
           {/* ── Inklapbare PIM-analysekaart (fase B + C context) ─────────────────── */}
           {pim?.advies_context && (() => {
             const ctx = pim.advies_context as Record<string, unknown>;
@@ -1250,6 +1337,57 @@ export default function OpdrachtDetailPagina() {
         {/* ── AI-analyse ── */}
         {aiAnalyse && (
           <TabsContent value="ai" className="mt-4 space-y-4">
+            {isVoorstel && (
+              <Card className="border-amber-200 bg-amber-50/60">
+                <CardContent className="py-3 flex items-center gap-3 flex-wrap">
+                  <Badge variant="outline" className="bg-amber-100 text-amber-700 border-amber-200">
+                    <Sparkles className="h-3 w-3 mr-1" />
+                    Voorstel — nog te bevestigen
+                  </Badge>
+                  <p className="text-xs text-amber-700 flex-1 min-w-40">
+                    Deze analyse is een AI-voorstel. Bevestig of negeer het voorstel.
+                  </p>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      className="h-7 text-xs"
+                      disabled={beoordeelMutatie.isPending}
+                      onClick={() => beoordeelMutatie.mutate({ id: opdrachtId, data: { beslissing: "geaccepteerd" } })}
+                    >
+                      <Check className="h-3 w-3 mr-1" />
+                      {beoordeelMutatie.isPending ? "Bezig..." : "Bevestigen"}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-xs"
+                      disabled={beoordeelMutatie.isPending}
+                      onClick={() => beoordeelMutatie.mutate({ id: opdrachtId, data: { beslissing: "genegeerd" } })}
+                    >
+                      Negeren
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+            {isVoorstelBevestigd && (
+              <Badge variant="secondary" className="text-muted-foreground">
+                <Check className="h-3 w-3 mr-1" />
+                Voorstel bevestigd
+                {typeof aiAnalyse.beoordeeld_op === "string" && (
+                  <span className="ml-1">op {new Date(aiAnalyse.beoordeeld_op as string).toLocaleDateString("nl-NL")}</span>
+                )}
+              </Badge>
+            )}
+            {isVoorstelGenegeerd && (
+              <p className="text-xs text-muted-foreground">
+                Dit voorstel is genegeerd
+                {typeof aiAnalyse.beoordeeld_op === "string" && (
+                  <> op {new Date(aiAnalyse.beoordeeld_op as string).toLocaleDateString("nl-NL")}</>
+                )}
+                . Voer opnieuw een AI-analyse uit voor een nieuw voorstel.
+              </p>
+            )}
             {(aiAnalyse.samenvatting as string) && (
               <Card>
                 <CardHeader className="pb-2 pt-4">

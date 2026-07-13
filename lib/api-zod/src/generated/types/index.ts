@@ -1164,6 +1164,8 @@ export * from './weekStaatInput';
 export * from './weekStaatPatch';
 export * from './werkbegroting';
 export * from './werkbegrotingAiAnalyse';
+export * from './werkbegrotingAiVoorstelBeoordeling';
+export * from './werkbegrotingAiVoorstelBeoordelingBeslissing';
 export * from './werkbegrotingRegel';
 export * from './werkbegrotingRegelPatch';
 export * from './werkbon';

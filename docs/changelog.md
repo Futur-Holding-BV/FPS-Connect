@@ -57,6 +57,19 @@
 - `index.css`: autofill-overrides gescoped op `.fps-auth` — WebKit-blok (transitietruc + witte tekst) én een apart Firefox-blok (`input:autofill` met donkere inset-schaduw), omdat Firefox de WebKit-truc niet kent en een onbekende selector in een groep de hele regel laat vervallen
 - **Bewijs:** screenshot bevestigt zichtbaar oogje; api-server + firevault typecheck exit 0 (na hergeneratie van verouderde lib-declaraties door eerdere task-merges); api-server herstart zodat de nieuwe limiet actief is en het oude limiet-venster gewist is
 
+## 2026-07-13 — AI-werkbegrotingvoorstel expliciet als voorstel met bevestigen/negeren
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (additief; AI stelt voor, mens bevestigt; status in bestaand jsonb-veld, geen DB-migratie)
+
+**Aanleiding:** bij het aanmaken van een opdracht draait automatisch een AI-werkbegrotinganalyse (`genereerWerkbegrotingAiAnalyse`), opgeslagen in `project_begrotingen.ai_analyse`. De werkbegroting-tab toonde die analyse zonder expliciete voorstelstatus — er was geen "AI-voorstel — nog te bevestigen"-weergave en geen accepteren/negeren-actie, in strijd met de kwaliteitsregel "AI stelt voor, mens bevestigt".
+
+**Wijzigingen:**
+- OpenAPI: nieuw `POST /opdrachten/{id}/werkbegroting/ai-analyse/beoordeling` (operationId `beoordeelWerkbegrotingAiVoorstel`, body = named schema `WerkbegrotingAiVoorstelBeoordeling` {beslissing: geaccepteerd|genegeerd}, 200 → `Werkbegroting`); hooks/Zod hergegenereerd
+- API (`routes/opdrachten.ts`): `genereerWerkbegrotingAiAnalyse` zet nu `voorstel_status: "voorstel"` op elke AI-gegenereerde analyse; nieuwe beoordelingsroute (achter `schrijven`) valideert de beslissing (400), geeft 404 zonder begroting/analyse, en schrijft `voorstel_status` + `beoordeeld_op` in het bestaande `ai_analyse` jsonb-veld (geen DB-migratie)
+- Frontend (`opdrachten/detail.tsx`): werkbegroting-tab toont bovenaan een amber voorstelkaart (Sparkles, "AI-voorstel — nog te bevestigen") met samenvatting, "Voorstel bevestigen", "Negeren" en link naar de volledige analyse; na bevestigen een neutrale secondary-badge "AI-voorstel bevestigd op …" (conform AI-state-kleurconventie: voorstel = amber, bevestigd = neutraal, niet groen); AI-analyse-tab krijgt dezelfde statusbanner (amber met acties / neutrale badge / muted "genegeerd"-notitie). Analyses zonder status (legacy) tellen als onbevestigd voorstel
+- **Bewijs:** end-to-end via echte login (wachtwoord + TOTP) tegen dev: GET toont `voorstel_status: "voorstel"` → POST geaccepteerd → GET toont `geaccepteerd` + `beoordeeld_op` (persist bevestigd in DB); genegeerd-pad idem; ongeldige beslissing → 400; opdracht zonder begroting → 404; firevault + api-server typecheck exit 0
+
+
 ---
 
 ## 2026-07-13 — AI stelt profielen voor op de Bevoegdheidsprofielen-pagina

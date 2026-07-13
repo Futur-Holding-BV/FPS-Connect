@@ -6631,6 +6631,22 @@ export interface PlanningUrenRegel {
   status?: string;
 }
 
+/**
+ * Beslissing van de werkvoorbereider over het AI-voorstel
+ */
+export type WerkbegrotingAiVoorstelBeoordelingBeslissing = typeof WerkbegrotingAiVoorstelBeoordelingBeslissing[keyof typeof WerkbegrotingAiVoorstelBeoordelingBeslissing];
+
+
+export const WerkbegrotingAiVoorstelBeoordelingBeslissing = {
+  geaccepteerd: 'geaccepteerd',
+  genegeerd: 'genegeerd',
+} as const;
+
+export interface WerkbegrotingAiVoorstelBeoordeling {
+  /** Beslissing van de werkvoorbereider over het AI-voorstel */
+  beslissing: WerkbegrotingAiVoorstelBeoordelingBeslissing;
+}
+
 export interface WerkbegrotingRegelPatch {
   omschrijving?: string;
   hoeveelheid?: number;
