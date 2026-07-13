@@ -11191,6 +11191,25 @@ paths:
         "404":
           description: Nog geen inkoopplanning
 
+  /opdrachten/{id}/inkoopcoach:
+    get:
+      operationId: getInkoopcoach
+      tags: [opdrachten]
+      summary: AI-inkoopcoach overzicht van het inkooptraject per opdracht
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Inkoopcoach"
+
   /opdrachten/{id}/inkoopplanning/genereer:
     post:
       operationId: genereerInkoopplanning
@@ -31437,6 +31456,13 @@ components:
         bron:
           type: string
           enum: [calculatie, vrij]
+        prijs_bron:
+          type: string
+          enum: [onbekend, jaarprijslijst, leveranciersofferte, vrij]
+          description: "Artikelbron van de gehanteerde prijs"
+        prijs_geldig_tot:
+          type: ["string", "null"]
+          description: "Geldigheidsdatum (ISO) van de leveranciersofferteprijs"
         volgorde:
           type: integer
         aangemaakt_op:
@@ -31469,6 +31495,11 @@ components:
           type: string
         type:
           type: string
+        prijs_bron:
+          type: string
+          enum: [onbekend, jaarprijslijst, leveranciersofferte, vrij]
+        prijs_geldig_tot:
+          type: string
 
     InkoopplanRegelAanmaken:
       type: object
@@ -31490,6 +31521,62 @@ components:
           type: string
         opmerkingen:
           type: string
+        prijs_bron:
+          type: string
+          enum: [onbekend, jaarprijslijst, leveranciersofferte, vrij]
+        prijs_geldig_tot:
+          type: string
+
+    Inkoopcoach:
+      type: object
+      required: [opdracht_id, bestellingen, aandachtspunten]
+      properties:
+        opdracht_id:
+          type: integer
+        inkoopplan:
+          type: ["object", "null"]
+          properties:
+            status:
+              type: string
+            ai_gegenereerd:
+              type: boolean
+            ai_samenvatting:
+              type: ["string", "null"]
+            totale_besparing:
+              type: ["number", "null"]
+            aantal_regels:
+              type: integer
+            prijsbron_verdeling:
+              type: object
+              additionalProperties:
+                type: integer
+            verlopen_prijzen:
+              type: integer
+        bestellingen:
+          type: object
+          required: [aantal, status_verdeling, verlopen, aankomend]
+          properties:
+            aantal:
+              type: integer
+            status_verdeling:
+              type: object
+              additionalProperties:
+                type: integer
+            verlopen:
+              type: integer
+            aankomend:
+              type: integer
+        aandachtspunten:
+          type: array
+          items:
+            type: object
+            required: [niveau, tekst]
+            properties:
+              niveau:
+                type: string
+                enum: [info, waarschuwing]
+              tekst:
+                type: string
 
     OnderaannemerOrder:
       type: object

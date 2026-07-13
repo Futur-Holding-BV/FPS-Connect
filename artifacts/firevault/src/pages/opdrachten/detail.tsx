@@ -56,6 +56,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import InkoopplanningTab from "./inkoopplanning-tab";
+import { InkoopcoachTab } from "./inkoopcoach-tab";
 import UitvoeringsplanningTab from "./uitvoeringsplanning-tab";
 import OnderaannemeringTab from "./onderaanneming-tab";
 import MateriaaltabTab from "./materiaal-tab";
@@ -662,6 +663,10 @@ export default function OpdrachtDetailPagina() {
             <ShoppingCart className="h-3.5 w-3.5 mr-1.5" />
             Inkoopplanning
           </TabsTrigger>
+          <TabsTrigger value="inkoopcoach">
+            <Brain className="h-3.5 w-3.5 mr-1.5" />
+            AI-inkoopcoach
+          </TabsTrigger>
           <TabsTrigger value="onderaanneming">
             <Building2 className="h-3.5 w-3.5 mr-1.5" />
             Onderaanneming
@@ -965,6 +970,11 @@ export default function OpdrachtDetailPagina() {
         {/* ── Inkoopplanning ── */}
         <TabsContent value="inkoopplanning">
           <InkoopplanningTab opdrachtId={opdrachtId} />
+        </TabsContent>
+
+        {/* ── AI-inkoopcoach ── */}
+        <TabsContent value="inkoopcoach">
+          <InkoopcoachTab opdrachtId={opdrachtId} />
         </TabsContent>
 
         {/* ── Onderaanneming ── */}

@@ -5,6 +5,7 @@ import { planDagelijksBackup } from "./lib/backupService";
 import { planDagelijksePortaalOpruiming } from "./lib/portaalOpruimen";
 import { planDagelijkseAvgOpruiming } from "./lib/avgOpruiming";
 import { planDagelijkseMagazijnSignalering } from "./lib/magazijnSignalering";
+import { planDagelijkseLeverbewaking } from "./lib/leverbewaking";
 import { planDagelijksePlanningMeldingen } from "./lib/planningMeldingenService";
 import { planDagelijkseReactietermijnSignalering } from "./lib/reactietermijnSignalering";
 import { planDagelijkseScout } from "./lib/scoutService";
@@ -54,6 +55,7 @@ ensureSessionTable()
       planDagelijksePortaalOpruiming();
       planDagelijkseAvgOpruiming();
       planDagelijkseMagazijnSignalering();
+      planDagelijkseLeverbewaking();
       planDagelijksePlanningMeldingen();
       planDagelijkseReactietermijnSignalering();
       planDagelijkseScout();

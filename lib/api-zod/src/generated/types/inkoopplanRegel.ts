@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { InkoopplanRegelBron } from './inkoopplanRegelBron';
+import type { InkoopplanRegelPrijsBron } from './inkoopplanRegelPrijsBron';
 import type { InkoopplanRegelStatus } from './inkoopplanRegelStatus';
 import type { InkoopplanRegelType } from './inkoopplanRegelType';
 
@@ -49,6 +50,13 @@ export interface InkoopplanRegel {
   /** @nullable */
   opmerkingen?: string | null;
   bron?: InkoopplanRegelBron;
+  /** Artikelbron van de gehanteerde prijs */
+  prijs_bron?: InkoopplanRegelPrijsBron;
+  /**
+     * Geldigheidsdatum (ISO) van de leveranciersofferteprijs
+     * @nullable
+     */
+  prijs_geldig_tot?: string | null;
   volgorde: number;
   aangemaakt_op?: string;
   bijgewerkt_op?: string;

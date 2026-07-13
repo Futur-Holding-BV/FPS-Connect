@@ -54,6 +54,10 @@ export const inkoopplanRegelsTable = pgTable("inkoopplan_regels", {
   opmerkingen: text("opmerkingen"),
   // calculatie = afgeleid uit werkbegroting/AI; vrij = handmatig toegevoegd
   bron: text("bron").notNull().default("calculatie"),
+  // artikelbron van de gehanteerde prijs: onbekend | jaarprijslijst | leveranciersofferte | vrij
+  prijsBron: text("prijs_bron").notNull().default("onbekend"),
+  // geldig tot (ISO-date) — relevant bij leveranciersofferteprijzen
+  prijsGeldigTot: text("prijs_geldig_tot"),
   volgorde: integer("volgorde").notNull().default(0),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),

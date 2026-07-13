@@ -237,6 +237,15 @@ router.post("/offertes/:id/maak-opdracht", schrijven, async (req, res): Promise<
         .where(eq(projectBegrotingenTable.id, begroting.id));
     }
 
+    // AI stelt automatisch een werkbegrotinganalyse voor op de achtergrond,
+    // zodat de werkvoorbereider bij het openen van de opdracht direct een
+    // voorstel ziet. Niet-blokkerend; de mens bevestigt/wijzigt altijd zelf.
+    if (totaalArbeidUren > 0 || totaalMateriaalBedrag > 0) {
+      void genereerWerkbegrotingAiAnalyse(opdracht.id).catch((err) => {
+        logger.warn({ err, opdrachtId: opdracht.id }, "Automatische AI-werkbegrotinganalyse mislukt");
+      });
+    }
+
     res.status(201).json(mapOpdracht(opdracht, begroting.id, begroting.status, totaalArbeidUren));
   } catch (err) {
     logger.error({ err }, "maak-opdracht fout");
@@ -460,28 +469,27 @@ router.post("/opdrachten/:id/werkbegroting/vaststellen", schrijven, async (req, 
   }
 });
 
-// ── POST /opdrachten/:id/werkbegroting/ai-analyse ─────────────────────────
+// ── Helper: AI-werkbegrotinganalyse uitvoeren ──────────────────────────────
+// Voert de AI-analyse van de werkbegroting uit en schrijft het resultaat weg.
+// Herbruikt door het ai-analyse-endpoint (handmatig) én door maak-opdracht
+// (automatisch op de achtergrond). Gooit niet: bij ontbrekende gateway of
+// mislukte AI wordt een fallback-analyse opgeslagen. De mens blijft in control.
+async function genereerWerkbegrotingAiAnalyse(opdrachtId: number): Promise<Record<string, unknown> | null> {
+  const [begroting] = await db.select().from(projectBegrotingenTable)
+    .where(eq(projectBegrotingenTable.opdrachtId, opdrachtId));
+  if (!begroting) return null;
 
-router.post("/opdrachten/:id/werkbegroting/ai-analyse", schrijven, async (req, res): Promise<void> => {
-  const id = parseInt(String(req.params.id), 10);
-  if (isNaN(id)) { res.status(400).json({ error: "Ongeldig id" }); return; }
+  const regels = await db.select().from(werkbegrotingRegelsTable)
+    .where(eq(werkbegrotingRegelsTable.begrotingId, begroting.id))
+    .orderBy(asc(werkbegrotingRegelsTable.id));
 
-  try {
-    const [begroting] = await db.select().from(projectBegrotingenTable)
-      .where(eq(projectBegrotingenTable.opdrachtId, id));
-    if (!begroting) { res.status(404).json({ error: "Werkbegroting niet gevonden" }); return; }
+  const arbeidRegels = regels.filter(r => r.categorie === "arbeid");
+  const materiaalRegels = regels.filter(r => r.categorie === "materiaal");
 
-    const regels = await db.select().from(werkbegrotingRegelsTable)
-      .where(eq(werkbegrotingRegelsTable.begrotingId, begroting.id))
-      .orderBy(asc(werkbegrotingRegelsTable.id));
+  let analyse: Record<string, unknown> = { handmatig: true, gegenereerd_op: new Date().toISOString() };
 
-    const arbeidRegels = regels.filter(r => r.categorie === "arbeid");
-    const materiaalRegels = regels.filter(r => r.categorie === "materiaal");
-
-    let analyse: Record<string, unknown> = { handmatig: true, gegenereerd_op: new Date().toISOString() };
-
-    if (heeftGateway()) {
-      const prompt = `Je bent een kritische werkvoorbereider in de brandpreventiesector. Analyseer de onderstaande werkbegroting en geef concrete voorstellen om winst te maximaliseren via inkoop en arbeid.
+  if (heeftGateway()) {
+    const prompt = `Je bent een kritische werkvoorbereider in de brandpreventiesector. Analyseer de onderstaande werkbegroting en geef concrete voorstellen om winst te maximaliseren via inkoop en arbeid.
 
 ARBEID (${arbeidRegels.length} regels):
 ${arbeidRegels.map(r => `- ${r.omschrijving}: ${r.hoeveelheid} ${r.eenheid} @ €${r.tarief}/uur = €${r.totaal}`).join('\n')}
@@ -501,33 +509,52 @@ Geef je analyse als JSON met deze structuur:
   "risicos": ["risico 1"]
 }`;
 
-      const begrotingAnalyseResultaat = await aiGateway.chat("default", {
-        response_format: { type: "json_object" },
-        max_tokens: 1500,
-        messages: [
-          { role: "system", content: BEGROTING_ANALYSE_PROMPT.tekst },
-          { role: "user", content: prompt },
-        ],
-      });
+    const begrotingAnalyseResultaat = await aiGateway.chat("default", {
+      response_format: { type: "json_object" },
+      max_tokens: 1500,
+      messages: [
+        { role: "system", content: BEGROTING_ANALYSE_PROMPT.tekst },
+        { role: "user", content: prompt },
+      ],
+    });
 
-      if (begrotingAnalyseResultaat.ok) {
-        try {
-          analyse = JSON.parse(begrotingAnalyseResultaat.inhoud) as Record<string, unknown>;
-          analyse.gegenereerd_op = new Date().toISOString();
-        } catch {
-          logger.warn("AI analyse JSON parsen mislukt — fallback zonder AI");
-        }
-      } else {
-        logger.warn({ fout: begrotingAnalyseResultaat.fout }, "AI analyse mislukt — fallback zonder AI");
+    if (begrotingAnalyseResultaat.ok) {
+      try {
+        analyse = JSON.parse(begrotingAnalyseResultaat.inhoud) as Record<string, unknown>;
+        analyse.gegenereerd_op = new Date().toISOString();
+        analyse.automatisch = true;
+      } catch {
+        logger.warn("AI analyse JSON parsen mislukt — fallback zonder AI");
       }
+    } else {
+      logger.warn({ fout: begrotingAnalyseResultaat.fout }, "AI analyse mislukt — fallback zonder AI");
     }
+  }
 
-    const [updated] = await db.update(projectBegrotingenTable)
-      .set({ aiAnalyse: analyse, aiAnalyseOp: new Date(), bijgewerktOp: new Date() })
-      .where(eq(projectBegrotingenTable.id, begroting.id))
-      .returning();
+  await db.update(projectBegrotingenTable)
+    .set({ aiAnalyse: analyse, aiAnalyseOp: new Date(), bijgewerktOp: new Date() })
+    .where(eq(projectBegrotingenTable.id, begroting.id));
 
-    res.json(mapBegroting(updated, regels));
+  return analyse;
+}
+
+// ── POST /opdrachten/:id/werkbegroting/ai-analyse ─────────────────────────
+
+router.post("/opdrachten/:id/werkbegroting/ai-analyse", schrijven, async (req, res): Promise<void> => {
+  const id = parseInt(String(req.params.id), 10);
+  if (isNaN(id)) { res.status(400).json({ error: "Ongeldig id" }); return; }
+
+  try {
+    const analyse = await genereerWerkbegrotingAiAnalyse(id);
+    if (analyse === null) { res.status(404).json({ error: "Werkbegroting niet gevonden" }); return; }
+
+    const [begroting] = await db.select().from(projectBegrotingenTable)
+      .where(eq(projectBegrotingenTable.opdrachtId, id));
+    const regels = await db.select().from(werkbegrotingRegelsTable)
+      .where(eq(werkbegrotingRegelsTable.begrotingId, begroting.id))
+      .orderBy(asc(werkbegrotingRegelsTable.id));
+
+    res.json(mapBegroting(begroting, regels));
   } catch (err) {
     logger.error({ err }, "aiAnalyseWerkbegroting fout");
     res.status(500).json({ error: "Serverfout" });

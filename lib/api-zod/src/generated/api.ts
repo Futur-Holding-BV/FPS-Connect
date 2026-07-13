@@ -13664,9 +13664,42 @@ export const GetInkoopplanningResponse = zod.object({
   "ai_motivatie": zod.string().nullish(),
   "opmerkingen": zod.string().nullish(),
   "bron": zod.enum(['calculatie', 'vrij']).optional(),
+  "prijs_bron": zod.enum(['onbekend', 'jaarprijslijst', 'leveranciersofferte', 'vrij']).optional().describe('Artikelbron van de gehanteerde prijs'),
+  "prijs_geldig_tot": zod.string().nullish().describe('Geldigheidsdatum (ISO) van de leveranciersofferteprijs'),
   "volgorde": zod.number(),
   "aangemaakt_op": zod.string().optional(),
   "bijgewerkt_op": zod.string().optional()
+}))
+})
+
+
+/**
+ * @summary AI-inkoopcoach overzicht van het inkooptraject per opdracht
+ */
+export const GetInkoopcoachParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetInkoopcoachResponse = zod.object({
+  "opdracht_id": zod.number(),
+  "inkoopplan": zod.object({
+  "status": zod.string().optional(),
+  "ai_gegenereerd": zod.boolean().optional(),
+  "ai_samenvatting": zod.string().nullish(),
+  "totale_besparing": zod.number().nullish(),
+  "aantal_regels": zod.number().optional(),
+  "prijsbron_verdeling": zod.record(zod.string(), zod.number()).optional(),
+  "verlopen_prijzen": zod.number().optional()
+}).nullish(),
+  "bestellingen": zod.object({
+  "aantal": zod.number(),
+  "status_verdeling": zod.record(zod.string(), zod.number()),
+  "verlopen": zod.number(),
+  "aankomend": zod.number()
+}),
+  "aandachtspunten": zod.array(zod.object({
+  "niveau": zod.enum(['info', 'waarschuwing']),
+  "tekst": zod.string()
 }))
 })
 
@@ -13713,6 +13746,8 @@ export const GenereerInkoopplanningResponse = zod.object({
   "ai_motivatie": zod.string().nullish(),
   "opmerkingen": zod.string().nullish(),
   "bron": zod.enum(['calculatie', 'vrij']).optional(),
+  "prijs_bron": zod.enum(['onbekend', 'jaarprijslijst', 'leveranciersofferte', 'vrij']).optional().describe('Artikelbron van de gehanteerde prijs'),
+  "prijs_geldig_tot": zod.string().nullish().describe('Geldigheidsdatum (ISO) van de leveranciersofferteprijs'),
   "volgorde": zod.number(),
   "aangemaakt_op": zod.string().optional(),
   "bijgewerkt_op": zod.string().optional()
@@ -13762,6 +13797,8 @@ export const VaststellenInkoopplanningResponse = zod.object({
   "ai_motivatie": zod.string().nullish(),
   "opmerkingen": zod.string().nullish(),
   "bron": zod.enum(['calculatie', 'vrij']).optional(),
+  "prijs_bron": zod.enum(['onbekend', 'jaarprijslijst', 'leveranciersofferte', 'vrij']).optional().describe('Artikelbron van de gehanteerde prijs'),
+  "prijs_geldig_tot": zod.string().nullish().describe('Geldigheidsdatum (ISO) van de leveranciersofferteprijs'),
   "volgorde": zod.number(),
   "aangemaakt_op": zod.string().optional(),
   "bijgewerkt_op": zod.string().optional()
@@ -13784,7 +13821,9 @@ export const CreateInkoopplanRegelBody = zod.object({
   "inkoopprijs": zod.number().optional(),
   "gewenste_leverdatum": zod.string().optional(),
   "type": zod.string().optional(),
-  "opmerkingen": zod.string().optional()
+  "opmerkingen": zod.string().optional(),
+  "prijs_bron": zod.enum(['onbekend', 'jaarprijslijst', 'leveranciersofferte', 'vrij']).optional(),
+  "prijs_geldig_tot": zod.string().optional()
 })
 
 export const CreateInkoopplanRegelResponse = zod.void()
@@ -13809,7 +13848,9 @@ export const PatchInkoopplanRegelBody = zod.object({
   "levertijd_weken": zod.number().optional(),
   "status": zod.string().optional(),
   "opmerkingen": zod.string().optional(),
-  "type": zod.string().optional()
+  "type": zod.string().optional(),
+  "prijs_bron": zod.enum(['onbekend', 'jaarprijslijst', 'leveranciersofferte', 'vrij']).optional(),
+  "prijs_geldig_tot": zod.string().optional()
 })
 
 export const PatchInkoopplanRegelResponse = zod.object({
@@ -13835,6 +13876,8 @@ export const PatchInkoopplanRegelResponse = zod.object({
   "ai_motivatie": zod.string().nullish(),
   "opmerkingen": zod.string().nullish(),
   "bron": zod.enum(['calculatie', 'vrij']).optional(),
+  "prijs_bron": zod.enum(['onbekend', 'jaarprijslijst', 'leveranciersofferte', 'vrij']).optional().describe('Artikelbron van de gehanteerde prijs'),
+  "prijs_geldig_tot": zod.string().nullish().describe('Geldigheidsdatum (ISO) van de leveranciersofferteprijs'),
   "volgorde": zod.number(),
   "aangemaakt_op": zod.string().optional(),
   "bijgewerkt_op": zod.string().optional()

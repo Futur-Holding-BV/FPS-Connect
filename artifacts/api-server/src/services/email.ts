@@ -53,7 +53,7 @@ export class MailFout extends Error {
   }
 }
 
-export type MailSoort = "test" | "uitnodiging" | "wachtwoord_reset" | "offerte" | "klantvraag" | "afwijzing" | "ondertekening" | "inkoopbon" | "opdrachtbevestiging" | "magazijn_signalering" | "magazijn_bestelbon" | "aanvraag_bevestiging" | "planning_melding" | "incident_melding" | "ai_drempel" | "reactietermijn_melding" | "rapport_melding" | "avg_verzoek_bevestiging" | "avg_verzoek_afgehandeld" | "voertuig_melding_garage" | "goedkeuring_escalatie" | "goedkeuring_indiening" | "goedkeuring_goedgekeurd" | "goedkeuring_afgewezen" | "declaratie_ingediend" | "declaratie_afgewezen";
+export type MailSoort = "test" | "uitnodiging" | "wachtwoord_reset" | "offerte" | "klantvraag" | "afwijzing" | "ondertekening" | "inkoopbon" | "opdrachtbevestiging" | "magazijn_signalering" | "magazijn_bestelbon" | "leverbewaking_signalering" | "aanvraag_bevestiging" | "planning_melding" | "incident_melding" | "ai_drempel" | "reactietermijn_melding" | "rapport_melding" | "avg_verzoek_bevestiging" | "avg_verzoek_afgehandeld" | "voertuig_melding_garage" | "goedkeuring_escalatie" | "goedkeuring_indiening" | "goedkeuring_goedgekeurd" | "goedkeuring_afgewezen" | "declaratie_ingediend" | "declaratie_afgewezen";
 
 // ── Configuratie-helpers ─────────────────────────────────────────────────────
 export function isGeconfigureerd(): boolean {
@@ -1076,6 +1076,86 @@ export async function stuurMagazijnSignalering(opties: {
   });
 
   await verstuurMail({ naarEmail, naarNaam: naarNaam ?? undefined, onderwerp, html, soort: "magazijn_signalering" });
+}
+
+// ── Leverbewaking-signalering ─────────────────────────────────────────────────
+
+export async function stuurLeverbewakingSignalering(opties: {
+  naarEmail: string;
+  naarNaam?: string | null;
+  verlopen: Array<{ bonNummer: string | null; leverancier: string; opdrachtTitel: string; gewensteLeverdatum: string; dagenTe: number }>;
+  aankomend: Array<{ bonNummer: string | null; leverancier: string; opdrachtTitel: string; gewensteLeverdatum: string; dagenTe: number }>;
+}): Promise<void> {
+  const { naarEmail, naarNaam, verlopen, aankomend } = opties;
+  const aantalVerlopen = verlopen.length;
+  const aantalAankomend = aankomend.length;
+  const onderwerp =
+    aantalVerlopen > 0
+      ? `Leverbewaking: ${aantalVerlopen} bestelling${aantalVerlopen === 1 ? "" : "en"} over de leverdatum`
+      : `Leverbewaking: ${aantalAankomend} bestelling${aantalAankomend === 1 ? "" : "en"} met naderende leverdatum`;
+
+  function tabel(
+    titel: string,
+    rijen: Array<{ bonNummer: string | null; leverancier: string; opdrachtTitel: string; gewensteLeverdatum: string; dagenTe: number }>,
+    verlopenStijl: boolean,
+  ): string {
+    if (rijen.length === 0) return "";
+    const regelHtml = rijen
+      .map((r) => {
+        const dagtekst = verlopenStijl
+          ? `${r.dagenTe} ${r.dagenTe === 1 ? "dag" : "dagen"} te laat`
+          : `over ${r.dagenTe} ${r.dagenTe === 1 ? "dag" : "dagen"}`;
+        const dagKleur = verlopenStijl ? "#e11d48" : "#b45309";
+        return `<tr>
+          <td style="padding:8px 12px;border-bottom:1px solid #e4e4e7;font-size:14px;color:#18181b;">${escapeHtml(r.bonNummer ?? "-")}</td>
+          <td style="padding:8px 12px;border-bottom:1px solid #e4e4e7;font-size:14px;color:#18181b;">${escapeHtml(r.leverancier)}</td>
+          <td style="padding:8px 12px;border-bottom:1px solid #e4e4e7;font-size:14px;color:#71717a;">${escapeHtml(r.opdrachtTitel)}</td>
+          <td style="padding:8px 12px;border-bottom:1px solid #e4e4e7;font-size:14px;color:#71717a;">${escapeHtml(r.gewensteLeverdatum)}</td>
+          <td style="padding:8px 12px;border-bottom:1px solid #e4e4e7;font-size:14px;text-align:right;color:${dagKleur};font-weight:600;">${dagtekst}</td>
+        </tr>`;
+      })
+      .join("\n");
+    return `
+      <p style="margin:0 0 8px;font-size:14px;font-weight:600;color:#212631;">${titel}</p>
+      <table cellpadding="0" cellspacing="0" width="100%" style="border-collapse:collapse;border:1px solid #e4e4e7;border-radius:6px;margin-bottom:24px;overflow:hidden;">
+        <thead>
+          <tr style="background:#f4f4f5;">
+            <th style="padding:8px 12px;font-size:12px;font-weight:600;color:#71717a;text-align:left;text-transform:uppercase;letter-spacing:.5px;">Bon</th>
+            <th style="padding:8px 12px;font-size:12px;font-weight:600;color:#71717a;text-align:left;text-transform:uppercase;letter-spacing:.5px;">Leverancier</th>
+            <th style="padding:8px 12px;font-size:12px;font-weight:600;color:#71717a;text-align:left;text-transform:uppercase;letter-spacing:.5px;">Opdracht</th>
+            <th style="padding:8px 12px;font-size:12px;font-weight:600;color:#71717a;text-align:left;text-transform:uppercase;letter-spacing:.5px;">Leverdatum</th>
+            <th style="padding:8px 12px;font-size:12px;font-weight:600;color:#71717a;text-align:right;text-transform:uppercase;letter-spacing:.5px;">Status</th>
+          </tr>
+        </thead>
+        <tbody>${regelHtml}</tbody>
+      </table>`;
+  }
+
+  const paragrafen: string[] = [];
+  if (aantalVerlopen > 0) {
+    paragrafen.push(
+      `Van <strong>${aantalVerlopen} bestelling${aantalVerlopen === 1 ? "" : "en"}</strong> is de gewenste leverdatum verstreken zonder dat de levering is geregistreerd. Controleer de status bij de leverancier.`,
+    );
+    paragrafen.push(tabel("Over de leverdatum", verlopen, true));
+  }
+  if (aantalAankomend > 0) {
+    paragrafen.push(
+      `${aantalAankomend} bestelling${aantalAankomend === 1 ? "" : "en"} nader${aantalAankomend === 1 ? "t" : "en"} de gewenste leverdatum.`,
+    );
+    paragrafen.push(tabel("Naderende leverdatum", aankomend, false));
+  }
+  paragrafen.push("Log in op FPS Connect om de leveringen bij te werken.");
+
+  const html = mailShell({
+    titel: onderwerp,
+    kopje: "Leverbewaking bestellingen",
+    paragrafen,
+    knop: { label: "Ga naar Opdrachten", link: "https://fpsbrandpreventie.nl/opdrachten" },
+    voettekst:
+      "Dit is een automatische dagelijkse signalering van FPS Connect &bull; U ontvangt dit bericht omdat u inkoop-/opdrachtbevoegdheden heeft.",
+  });
+
+  await verstuurMail({ naarEmail, naarNaam: naarNaam ?? undefined, onderwerp, html, soort: "leverbewaking_signalering" });
 }
 
 // ── Aanvraag-bevestigingsmail ─────────────────────────────────────────────────

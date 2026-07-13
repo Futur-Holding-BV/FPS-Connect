@@ -6661,6 +6661,19 @@ export const InkoopplanRegelBron = {
   vrij: 'vrij',
 } as const;
 
+/**
+ * Artikelbron van de gehanteerde prijs
+ */
+export type InkoopplanRegelPrijsBron = typeof InkoopplanRegelPrijsBron[keyof typeof InkoopplanRegelPrijsBron];
+
+
+export const InkoopplanRegelPrijsBron = {
+  onbekend: 'onbekend',
+  jaarprijslijst: 'jaarprijslijst',
+  leveranciersofferte: 'leveranciersofferte',
+  vrij: 'vrij',
+} as const;
+
 export interface InkoopplanRegel {
   id: number;
   inkoopplan_id: number;
@@ -6701,10 +6714,27 @@ export interface InkoopplanRegel {
   /** @nullable */
   opmerkingen?: string | null;
   bron?: InkoopplanRegelBron;
+  /** Artikelbron van de gehanteerde prijs */
+  prijs_bron?: InkoopplanRegelPrijsBron;
+  /**
+     * Geldigheidsdatum (ISO) van de leveranciersofferteprijs
+     * @nullable
+     */
+  prijs_geldig_tot?: string | null;
   volgorde: number;
   aangemaakt_op?: string;
   bijgewerkt_op?: string;
 }
+
+export type InkoopplanRegelPatchPrijsBron = typeof InkoopplanRegelPatchPrijsBron[keyof typeof InkoopplanRegelPatchPrijsBron];
+
+
+export const InkoopplanRegelPatchPrijsBron = {
+  onbekend: 'onbekend',
+  jaarprijslijst: 'jaarprijslijst',
+  leveranciersofferte: 'leveranciersofferte',
+  vrij: 'vrij',
+} as const;
 
 export interface InkoopplanRegelPatch {
   omschrijving?: string;
@@ -6718,7 +6748,19 @@ export interface InkoopplanRegelPatch {
   status?: string;
   opmerkingen?: string;
   type?: string;
+  prijs_bron?: InkoopplanRegelPatchPrijsBron;
+  prijs_geldig_tot?: string;
 }
+
+export type InkoopplanRegelAanmakenPrijsBron = typeof InkoopplanRegelAanmakenPrijsBron[keyof typeof InkoopplanRegelAanmakenPrijsBron];
+
+
+export const InkoopplanRegelAanmakenPrijsBron = {
+  onbekend: 'onbekend',
+  jaarprijslijst: 'jaarprijslijst',
+  leveranciersofferte: 'leveranciersofferte',
+  vrij: 'vrij',
+} as const;
 
 export interface InkoopplanRegelAanmaken {
   omschrijving: string;
@@ -6729,6 +6771,53 @@ export interface InkoopplanRegelAanmaken {
   gewenste_leverdatum?: string;
   type?: string;
   opmerkingen?: string;
+  prijs_bron?: InkoopplanRegelAanmakenPrijsBron;
+  prijs_geldig_tot?: string;
+}
+
+/**
+ * @nullable
+ */
+export type InkoopcoachInkoopplan = {
+  status?: string;
+  ai_gegenereerd?: boolean;
+  /** @nullable */
+  ai_samenvatting?: string | null;
+  /** @nullable */
+  totale_besparing?: number | null;
+  aantal_regels?: number;
+  prijsbron_verdeling?: {[key: string]: number};
+  verlopen_prijzen?: number;
+} | null;
+
+export type InkoopcoachBestellingenStatusVerdeling = {[key: string]: number};
+
+export type InkoopcoachBestellingen = {
+  aantal: number;
+  status_verdeling: InkoopcoachBestellingenStatusVerdeling;
+  verlopen: number;
+  aankomend: number;
+};
+
+export type InkoopcoachAandachtspuntenItemNiveau = typeof InkoopcoachAandachtspuntenItemNiveau[keyof typeof InkoopcoachAandachtspuntenItemNiveau];
+
+
+export const InkoopcoachAandachtspuntenItemNiveau = {
+  info: 'info',
+  waarschuwing: 'waarschuwing',
+} as const;
+
+export type InkoopcoachAandachtspuntenItem = {
+  niveau: InkoopcoachAandachtspuntenItemNiveau;
+  tekst: string;
+};
+
+export interface Inkoopcoach {
+  opdracht_id: number;
+  /** @nullable */
+  inkoopplan?: InkoopcoachInkoopplan;
+  bestellingen: InkoopcoachBestellingen;
+  aandachtspunten: InkoopcoachAandachtspuntenItem[];
 }
 
 export type OnderaannemerOrderStatus = typeof OnderaannemerOrderStatus[keyof typeof OnderaannemerOrderStatus];

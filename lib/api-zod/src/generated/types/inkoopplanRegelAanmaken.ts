@@ -5,6 +5,7 @@
  * FPS Brandpreventie - Platform voor brandpreventieve gebouwvoorzieningen
  * OpenAPI spec version: 0.1.0
  */
+import type { InkoopplanRegelAanmakenPrijsBron } from './inkoopplanRegelAanmakenPrijsBron';
 
 export interface InkoopplanRegelAanmaken {
   omschrijving: string;
@@ -15,4 +16,6 @@ export interface InkoopplanRegelAanmaken {
   gewenste_leverdatum?: string;
   type?: string;
   opmerkingen?: string;
+  prijs_bron?: InkoopplanRegelAanmakenPrijsBron;
+  prijs_geldig_tot?: string;
 }

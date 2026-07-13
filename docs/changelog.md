@@ -117,6 +117,33 @@
 
 ---
 
+## 2026-07-13 — AI Werkvoorbereiding & Inkoopautomatisering (opdracht → werkbegroting → inkoop)
+
+- **Uitvoering:** volledig (4 increments) | **Kwaliteit:** hoog | **Risico:** laag (additief; geen wijziging aan "vaststellen"/PIM; mens blijft altijd in controle; AI verstuurt nooit zelfstandig)
+
+**Aanleiding:** het traject opdracht → werkbegroting → inkoop werd handmatig voorbereid. Doel: AI stelt voor en signaleert, de werkvoorbereider bevestigt en beslist altijd zelf.
+
+**1. Automatische AI-werkbegrotinganalyse bij opdracht aanmaken (`opdrachten.ts`):**
+- AI-analyse van de werkbegroting is uitgetrokken naar een herbruikbare helper `genereerWerkbegrotingAiAnalyse(opdrachtId)` (gebruikt door zowel het bestaande handmatige `POST .../ai-analyse`-endpoint als de nieuwe automatische aanroep)
+- Bij `maak-opdracht` wordt de analyse niet-blokkerend op de achtergrond gestart zodra er arbeids- of materiaalregels zijn; de werkvoorbereider ziet bij openen direct een voorstel. Faalt de AI (geen gateway / parse-fout), dan wordt een fallback-analyse opgeslagen en gaat het aanmaken gewoon door
+
+**2. Artikelbron & prijsgeldigheid per inkoopregel (`werkvoorbereiding.ts`, `lib/db`, `openapi.yaml`):**
+- Nieuwe kolommen `prijs_bron` (jaarprijslijst / leveranciersofferte / vrij) en `prijs_geldig_tot` op inkoopplanregels (additief via ALTER)
+- Bij genereren matcht de regelomschrijving tegen de artikelencatalogus (actief + naam-ilike) → `prijs_bron="jaarprijslijst"` + inkoopprijs overgenomen; anders "vrij"
+- PATCH en vrije-regel-POST zetten `prijsBron`/`prijsGeldigTot`; frontend toont bronbadges, bewerkbare bron/geldigheid en een waarschuwing bij verlopen prijs (`inkoopplanning-tab.tsx`)
+
+**3. Leverbewaking met proactieve AI-vertragingssignalering (`lib/leverbewaking.ts`, `services/email.ts`, `index.ts`):**
+- Dagelijkse taak (07:30) controleert bestelde inkoopbonnen op overschreden of naderende (≤3 dagen) leverdatum en e-mailt gebruikers met `offertes:2`
+- Nieuwe mailsoort `leverbewaking_signalering` + `stuurLeverbewakingSignalering`
+
+**4. AI-inkoopcoach overzicht per opdracht (`werkvoorbereiding.ts`, `inkoopcoach-tab.tsx`, `detail.tsx`):**
+- Nieuw endpoint `GET /opdrachten/:id/inkoopcoach` aggregeert prijsbron-verdeling, verlopen prijzen, verwachte besparing, bestellingstatus en leverbewaking, met deterministische aandachtspunten (info/waarschuwing)
+- Nieuwe tab "AI-inkoopcoach" op de opdrachtdetailpagina met samenvatting, aandachtspunten, inkoopplan- en bestellingenkaarten
+
+**Verificatie:** volledige workspace-typecheck groen; api-server + firevault herstart; geauthenticeerde end-to-end smoketest (login + TOTP via HTTPS dev-domein) bevestigt `GET /opdrachten/:id/inkoopcoach` → 200 met correcte structuur (leeg-data-scenario: `inkoopplan: null`, lege bestellingen, deterministisch info-aandachtspunt).
+
+---
+
 ## 2026-07-13 — Meerdere functies zichtbaar/bewerkbaar in Profiel bewerken (increment 1)
 
 - **Uitvoering:** volledig (increment 1 van 4) | **Kwaliteit:** hoog | **Risico:** laag (alleen frontend, geen API-/DB-wijziging, hergebruikt bestaande aanstellingen-CRUD)

@@ -55,6 +55,21 @@ const TYPE_LABELS: Record<string, { label: string; kleur: string; omschrijving: 
   maatwerk: { label: "Maatwerk", kleur: "bg-rose-50 text-rose-800 border-rose-200", omschrijving: ">4 weken" },
 };
 
+const PRIJS_BRON_LABELS: Record<string, { label: string; kleur: string }> = {
+  jaarprijslijst: { label: "Jaarprijslijst", kleur: "bg-slate-100 text-slate-700 border-slate-200" },
+  leveranciersofferte: { label: "Leveranciersofferte", kleur: "bg-slate-100 text-slate-700 border-slate-200" },
+  vrij: { label: "Vrije prijs", kleur: "bg-amber-50 text-amber-800 border-amber-200" },
+  onbekend: { label: "Bron onbekend", kleur: "bg-slate-50 text-slate-500 border-slate-200" },
+};
+
+function prijsGeldigVerlopen(datum: string | null | undefined): boolean {
+  if (!datum) return false;
+  const d = new Date(datum);
+  if (isNaN(d.getTime())) return false;
+  d.setHours(23, 59, 59, 999);
+  return d.getTime() < Date.now();
+}
+
 const STATUS_LABELS: Record<string, { label: string; kleur: string }> = {
   open: { label: "Open", kleur: "bg-slate-100 text-slate-700 border-slate-200" },
   uit_voorraad: { label: "Uit voorraad", kleur: "bg-emerald-50 text-emerald-700 border-emerald-200" },
@@ -84,6 +99,8 @@ function InkoopRegelRij({ regel, opdrachtId, planId }: InkoopRegelRijProps) {
   const [type, setType] = useState<string>(regel.type);
   const [status, setStatus] = useState<string>(regel.status);
   const [datum, setDatum] = useState(regel.gewenste_leverdatum ?? "");
+  const [prijsBron, setPrijsBron] = useState<string>((regel as { prijs_bron?: string }).prijs_bron ?? "onbekend");
+  const [prijsGeldigTot, setPrijsGeldigTot] = useState((regel as { prijs_geldig_tot?: string | null }).prijs_geldig_tot ?? "");
   const [opslaan, setOpslaan] = useState(false);
   const { toast } = useToast();
   const qc = useQueryClient();
@@ -124,6 +141,8 @@ function InkoopRegelRij({ regel, opdrachtId, planId }: InkoopRegelRijProps) {
         type,
         status,
         gewenste_leverdatum: datum || undefined,
+        prijs_bron: (prijsBron || undefined) as "onbekend" | "jaarprijslijst" | "leveranciersofferte" | "vrij" | undefined,
+        prijs_geldig_tot: prijsGeldigTot || undefined,
       },
     });
   }
@@ -150,6 +169,18 @@ function InkoopRegelRij({ regel, opdrachtId, planId }: InkoopRegelRijProps) {
               </Badge>
             )}
             <Badge variant="outline" className={`text-xs ${statusInfo.kleur}`}>{statusInfo.label}</Badge>
+            {(() => {
+              const pb = (regel as { prijs_bron?: string }).prijs_bron ?? "onbekend";
+              if (pb === "onbekend") return null;
+              const info = PRIJS_BRON_LABELS[pb] ?? PRIJS_BRON_LABELS.onbekend;
+              return <Badge variant="outline" className={`text-xs ${info.kleur}`}>{info.label}</Badge>;
+            })()}
+            {prijsGeldigVerlopen((regel as { prijs_geldig_tot?: string | null }).prijs_geldig_tot) && (
+              <Badge variant="outline" className="text-xs bg-rose-50 text-rose-700 border-rose-200">
+                <AlertTriangle className="h-2.5 w-2.5 mr-1" />
+                Prijs verlopen
+              </Badge>
+            )}
             {regel.ai_motivatie && (
               <Sparkles className="h-3 w-3 text-amber-500 shrink-0" />
             )}
@@ -254,6 +285,35 @@ function InkoopRegelRij({ regel, opdrachtId, planId }: InkoopRegelRijProps) {
                   <SelectItem value="geleverd">Geleverd</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="text-xs text-muted-foreground mb-1 block">Prijsbron</label>
+              <Select value={prijsBron} onValueChange={setPrijsBron}>
+                <SelectTrigger className="h-8 text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="jaarprijslijst">Jaarprijslijst</SelectItem>
+                  <SelectItem value="leveranciersofferte">Leveranciersofferte</SelectItem>
+                  <SelectItem value="vrij">Vrije prijs</SelectItem>
+                  <SelectItem value="onbekend">Bron onbekend</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground mb-1 block">Prijs geldig tot</label>
+              <Input
+                type="date"
+                value={prijsGeldigTot}
+                onChange={e => setPrijsGeldigTot(e.target.value)}
+                className="h-8 text-sm"
+              />
+              {prijsGeldigVerlopen(prijsGeldigTot) && (
+                <p className="text-xs text-rose-600 mt-1">Deze prijs is verlopen; opnieuw opvragen.</p>
+              )}
             </div>
           </div>
 

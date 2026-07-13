@@ -17,8 +17,9 @@ import {
   leveranciersTable,
   onderaannemeOrdersTable,
   pimModellenTable,
+  artikelenTable,
 } from "@workspace/db";
-import { eq, and, asc, inArray } from "drizzle-orm";
+import { eq, and, asc, inArray, ilike } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { logger } from "../lib/logger";
 import { verstuurMail, isGeconfigureerd } from "../services/email";
@@ -84,6 +85,8 @@ function mapInkoopRegel(
     ai_motivatie: r.aiMotivatie ?? null,
     opmerkingen: r.opmerkingen ?? null,
     bron: r.bron,
+    prijs_bron: (r as Record<string, unknown>).prijsBron ?? "onbekend",
+    prijs_geldig_tot: (r as Record<string, unknown>).prijsGeldigTot ?? null,
     volgorde: r.volgorde,
     aangemaakt_op: iso(r.aangemaaktOp)!,
     bijgewerkt_op: iso(r.bijgewerktOp)!,
@@ -325,6 +328,120 @@ router.get("/opdrachten/:id/inkoopplanning", lezen, async (req, res): Promise<vo
   }
 });
 
+// ── GET /opdrachten/:id/inkoopcoach ────────────────────────────────────────
+// Geaggregeerd overzicht van het inkooptraject per opdracht: werkbegroting-status,
+// inkoopplan (prijsbron-verdeling, verlopen prijzen, besparing), bestellingen
+// (statusverdeling, verlopen/naderende leverdatums) en AI-aandachtspunten.
+// Signaleert alleen; de mens blijft in control.
+
+router.get("/opdrachten/:id/inkoopcoach", lezen, async (req, res): Promise<void> => {
+  const id = parseInt(String(req.params.id), 10);
+  if (isNaN(id)) { res.status(400).json({ error: "Ongeldig id" }); return; }
+
+  try {
+    const [plan] = await db.select().from(inkoopplannenTable)
+      .where(eq(inkoopplannenTable.opdrachtId, id));
+
+    const regels = plan
+      ? await db.select().from(inkoopplanRegelsTable)
+          .where(eq(inkoopplanRegelsTable.inkoopplanId, plan.id))
+      : [];
+
+    const bonnen = await db.select().from(inkoopbonnenTable)
+      .where(eq(inkoopbonnenTable.opdrachtId, id));
+
+    const nu = new Date();
+    const isVerlopen = (d: string | null): boolean => {
+      if (!d) return false;
+      const dt = new Date(d);
+      if (isNaN(dt.getTime())) return false;
+      dt.setHours(23, 59, 59, 999);
+      return dt.getTime() < nu.getTime();
+    };
+    const dagenTot = (d: string): number => {
+      const dt = new Date(d);
+      const a = new Date(dt.getFullYear(), dt.getMonth(), dt.getDate());
+      const b = new Date(nu.getFullYear(), nu.getMonth(), nu.getDate());
+      return Math.round((a.getTime() - b.getTime()) / 86_400_000);
+    };
+
+    // Prijsbron-verdeling
+    const prijsbronVerdeling: Record<string, number> = { jaarprijslijst: 0, leveranciersofferte: 0, vrij: 0, onbekend: 0 };
+    let verlopenPrijzen = 0;
+    let totaleBesparing = 0;
+    for (const r of regels) {
+      const pb = r.prijsBron ?? "onbekend";
+      prijsbronVerdeling[pb] = (prijsbronVerdeling[pb] ?? 0) + 1;
+      if (isVerlopen(r.prijsGeldigTot)) verlopenPrijzen += 1;
+      if (r.besparing != null) totaleBesparing += r.besparing;
+    }
+
+    // Bestellingen-statusverdeling + leverbewaking
+    const bonStatusVerdeling: Record<string, number> = {};
+    let bestellingenVerlopen = 0;
+    let bestellingenAankomend = 0;
+    for (const b of bonnen) {
+      bonStatusVerdeling[b.status] = (bonStatusVerdeling[b.status] ?? 0) + 1;
+      if (b.status === "besteld" && b.gewensteLeverdatum) {
+        const dag = dagenTot(b.gewensteLeverdatum);
+        if (dag < 0) bestellingenVerlopen += 1;
+        else if (dag <= 3) bestellingenAankomend += 1;
+      }
+    }
+
+    // AI-aandachtspunten (afgeleid, deterministisch — geen autonome AI-actie)
+    const aandachtspunten: Array<{ niveau: string; tekst: string }> = [];
+    if (!plan) {
+      aandachtspunten.push({ niveau: "info", tekst: "Er is nog geen inkoopplanning gegenereerd voor deze opdracht." });
+    } else {
+      if (regels.length === 0) {
+        aandachtspunten.push({ niveau: "info", tekst: "De inkoopplanning bevat nog geen regels." });
+      }
+      if (verlopenPrijzen > 0) {
+        aandachtspunten.push({ niveau: "waarschuwing", tekst: `${verlopenPrijzen} regel${verlopenPrijzen === 1 ? "" : "s"} met een verlopen prijs; vraag een actuele prijs op.` });
+      }
+      const vrijeEnOnbekend = (prijsbronVerdeling.vrij ?? 0) + (prijsbronVerdeling.onbekend ?? 0);
+      if (regels.length > 0 && vrijeEnOnbekend > 0) {
+        aandachtspunten.push({ niveau: "info", tekst: `${vrijeEnOnbekend} regel${vrijeEnOnbekend === 1 ? "" : "s"} zonder vaste jaarprijslijst- of leveranciersofferteprijs.` });
+      }
+      if (plan.status !== "gereed") {
+        aandachtspunten.push({ niveau: "info", tekst: "De inkoopplanning is nog niet vastgesteld." });
+      }
+    }
+    if (bestellingenVerlopen > 0) {
+      aandachtspunten.push({ niveau: "waarschuwing", tekst: `${bestellingenVerlopen} bestelling${bestellingenVerlopen === 1 ? "" : "en"} over de gewenste leverdatum; controleer bij de leverancier.` });
+    }
+    if (bestellingenAankomend > 0) {
+      aandachtspunten.push({ niveau: "info", tekst: `${bestellingenAankomend} bestelling${bestellingenAankomend === 1 ? "" : "en"} met een naderende leverdatum (binnen 3 dagen).` });
+    }
+
+    res.json({
+      opdracht_id: id,
+      inkoopplan: plan
+        ? {
+            status: plan.status,
+            ai_gegenereerd: plan.aiGegenereerd,
+            ai_samenvatting: plan.aiSamenvatting ?? null,
+            totale_besparing: plan.totaleBesparing ?? (totaleBesparing || null),
+            aantal_regels: regels.length,
+            prijsbron_verdeling: prijsbronVerdeling,
+            verlopen_prijzen: verlopenPrijzen,
+          }
+        : null,
+      bestellingen: {
+        aantal: bonnen.length,
+        status_verdeling: bonStatusVerdeling,
+        verlopen: bestellingenVerlopen,
+        aankomend: bestellingenAankomend,
+      },
+      aandachtspunten,
+    });
+  } catch (err) {
+    logger.error({ err }, "getInkoopcoach fout");
+    res.status(500).json({ error: "Serverfout" });
+  }
+});
+
 // ── POST /opdrachten/:id/inkoopplanning/genereer ───────────────────────────
 
 router.post("/opdrachten/:id/inkoopplanning/genereer", schrijven, async (req, res): Promise<void> => {
@@ -483,7 +600,26 @@ Geef je analyse als JSON:
         (r: AiInkoopRegel) => r.omschrijving.toLowerCase().includes(regel.omschrijving.toLowerCase().slice(0, 10))
       ) ?? aiResultaat?.regels?.[i] ?? null;
 
-      const inkoopprijsVerwacht = aiRegel?.inkoopprijs_verwacht ?? null;
+      // Artikelbron bepalen: bestaat dit artikel in de jaarprijslijst (artikelen)?
+      // Zo ja, dan is de bron "jaarprijslijst" en gebruiken we die vaste inkoopprijs.
+      // Anders blijft het een vrije (AI-geschatte) prijs.
+      let prijsBron = "vrij";
+      let inkoopprijsVerwacht = aiRegel?.inkoopprijs_verwacht ?? null;
+      const [artikel] = await db.select({
+        naam: artikelenTable.naam,
+        inkoopprijs: artikelenTable.inkoopprijs,
+      })
+        .from(artikelenTable)
+        .where(and(
+          eq(artikelenTable.actief, true),
+          ilike(artikelenTable.naam, regel.omschrijving.trim()),
+        ))
+        .limit(1);
+      if (artikel && artikel.inkoopprijs != null) {
+        prijsBron = "jaarprijslijst";
+        inkoopprijsVerwacht = artikel.inkoopprijs;
+      }
+
       const besparingPerEenheid = aiRegel?.besparing_per_eenheid ?? null;
       const besparing = aiRegel?.besparing ?? null;
 
@@ -501,6 +637,7 @@ Geef je analyse als JSON:
         besparing,
         levertijdWeken: aiRegel?.levertijd_weken ?? null,
         aiMotivatie: aiRegel?.motivatie ?? null,
+        prijsBron,
         status: "open",
         volgorde: i,
       });
@@ -613,6 +750,8 @@ router.patch("/opdrachten/:id/inkoopplanning/regels/:regelId", schrijven, async 
       status: "status",
       opmerkingen: "opmerkingen",
       type: "type",
+      prijs_bron: "prijsBron",
+      prijs_geldig_tot: "prijsGeldigTot",
     };
     void velden;
     for (const [bodyKey, dbKey] of Object.entries(bodyMap)) {
@@ -1482,6 +1621,8 @@ router.post("/opdrachten/:id/inkoopplanning/regels", schrijven, async (req, res)
       type: typeof body.type === "string" ? body.type : "standaard",
       opmerkingen: typeof body.opmerkingen === "string" ? body.opmerkingen : undefined,
       bron: "vrij",
+      prijsBron: typeof body.prijs_bron === "string" ? body.prijs_bron : "vrij",
+      prijsGeldigTot: typeof body.prijs_geldig_tot === "string" ? body.prijs_geldig_tot : undefined,
       bijgewerktOp: new Date(),
     });
 
