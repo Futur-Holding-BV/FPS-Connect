@@ -1,3 +1,18 @@
+## 2026-07-13 — Leidinggevende-veld verborgen bij onboarding en profiel bewerken
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (alleen UI verborgen; backend en bestaande data ongewijzigd)
+
+**Aanleiding:** het veld "Leidinggevende" verscheen bij elke onboarding en in elk profielformulier, terwijl er één hoofdbeheerder is (en er geen tweede komt) die verlofaanvragen sowieso altijd kan behandelen. Het veld voegde daardoor niets toe en zorgde voor ruis.
+
+**Wijzigingen:**
+- `personeel/index.tsx` (onboarding/nieuwe medewerker): Leidinggevende-selectie verwijderd uit het formulier
+- `personeel/detail.tsx` (Profiel bewerken): Leidinggevende-selectie verwijderd; een eerder ingestelde leidinggevende blijft behouden (het formulier stuurt de bestaande waarde ongewijzigd mee) en wordt in de kop alleen nog getoond als er daadwerkelijk één is ingesteld
+- Ongebruikte ophaling van de volledige medewerkerslijst op de detailpagina opgeruimd (was alleen voor deze dropdown)
+- Verlofafhandeling blijft ongewijzigd: zonder leidinggevende behandelt de hoofdbeheerder de aanvragen (bestaande terugval)
+- **Bewijs:** firevault typecheck exit 0
+
+---
+
 ## 2026-07-13 — Meerdere functies per medewerker: end-to-end bewezen + prominent zichtbaar op profielkaart
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (additieve UI-wijziging; backend ongewijzigd en aantoonbaar werkend)

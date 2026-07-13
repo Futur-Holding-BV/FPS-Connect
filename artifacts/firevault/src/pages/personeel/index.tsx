@@ -1462,24 +1462,9 @@ export default function PersoneelPagina() {
                 </Select>
               )}
             </div>
-            <div className="space-y-1.5">
-              <Label>Leidinggevende</Label>
-              <Select
-                value={medewerkerForm.leidinggevende_id ? String(medewerkerForm.leidinggevende_id) : "geen"}
-                onValueChange={(v) => setMedewerkerForm({ ...medewerkerForm, leidinggevende_id: v === "geen" ? undefined : Number(v) })}
-              >
-                <SelectTrigger><SelectValue placeholder="Geen (hoofdbeheerder behandelt verlof)" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="geen">Geen — hoofdbeheerder behandelt verlof</SelectItem>
-                  {(medewerkers ?? []).map((m) => (
-                    <SelectItem key={m.id} value={String(m.id)}>{m.naam}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">
-                De leidinggevende beoordeelt verlofaanvragen van deze medewerker; de hoofdbeheerder kan altijd behandelen.
-              </p>
-            </div>
+            {/* Leidinggevende-veld bewust verborgen: er is één hoofdbeheerder die
+                verlof altijd kan behandelen; nieuwe medewerkers krijgen dus geen
+                aparte leidinggevende toegewezen. */}
             <div className="space-y-1.5">
               <Label>Dienstverband</Label>
               <Select value={medewerkerForm.dienstverband} onValueChange={(v) => setMedewerkerForm({ ...medewerkerForm, dienstverband: v, bedrijf_uitzendbureau: (v === "uitzend" || v === "inhuur" || v === "zzp") ? (medewerkerForm.bedrijf_uitzendbureau ?? "") : undefined })}>
