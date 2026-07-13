@@ -238,7 +238,6 @@ function bepaalOpslaglocatie(
 // ── Stap 3: AI-vision voorbereiden ────────────────────────────────────────────
 
 async function haalAfbeelding(buffer: Buffer, mime: string): Promise<string | null> {
-  if (!heeftGateway()) return null;
   if (mime === "application/pdf") return renderPdfPagina(buffer);
   if (mime.startsWith("image/") && !["image/svg+xml", "image/tiff", "image/bmp"].includes(mime)) {
     return resizeAfbeelding(buffer);
