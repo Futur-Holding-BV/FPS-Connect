@@ -5164,6 +5164,45 @@ paths:
                   sleutels_toegevoegd:
                     type: integer
 
+  /profielen/synchroniseer-standaard:
+    post:
+      operationId: synchroniseerStandaardProfielen
+      tags: [gebruikers]
+      summary: >-
+        Ontbrekende standaardrollen (systeem-presets) aanmaken en bestaande
+        systeem-presets bijwerken naar de definitie (hoofdbeheerder)
+      responses:
+        "200":
+          description: Gesynchroniseerd
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [aangemaakt, bijgewerkt]
+                properties:
+                  aangemaakt:
+                    type: integer
+                  bijgewerkt:
+                    type: integer
+
+  /profielen/ai-voorstel:
+    post:
+      operationId: aiRollenVoorstel
+      tags: [gebruikers]
+      summary: >-
+        AI stelt een set rollen met bijbehorende rechten voor op basis van de
+        modules en het functiehuis (hoofdbeheerder). Slaat niets op; de
+        beheerder beoordeelt, past aan en bevestigt zelf.
+      responses:
+        "200":
+          description: Voorstel gegenereerd
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AiRollenVoorstelResultaat"
+        "503":
+          description: AI niet beschikbaar
+
   /profielen/{id}:
     patch:
       operationId: updateProfiel
@@ -25731,6 +25770,32 @@ components:
           type: object
           additionalProperties:
             type: integer
+
+    AiRolVoorstel:
+      type: object
+      required: [naam, omschrijving, bevoegdheden]
+      properties:
+        naam:
+          type: string
+        omschrijving:
+          type: string
+          nullable: true
+        bevoegdheden:
+          type: object
+          additionalProperties:
+            type: integer
+
+    AiRollenVoorstelResultaat:
+      type: object
+      required: [voorstellen, toelichting]
+      properties:
+        voorstellen:
+          type: array
+          items:
+            $ref: "#/components/schemas/AiRolVoorstel"
+        toelichting:
+          type: string
+          nullable: true
 
     GoedkeuringBeleidsregel:
       type: object

@@ -6163,6 +6163,28 @@ export const ProfielenAanvullenResponse = zod.object({
 
 
 /**
+ * @summary Ontbrekende standaardrollen (systeem-presets) aanmaken en bestaande systeem-presets bijwerken naar de definitie (hoofdbeheerder)
+ */
+export const SynchroniseerStandaardProfielenResponse = zod.object({
+  "aangemaakt": zod.number(),
+  "bijgewerkt": zod.number()
+})
+
+
+/**
+ * @summary AI stelt een set rollen met bijbehorende rechten voor op basis van de modules en het functiehuis (hoofdbeheerder). Slaat niets op; de beheerder beoordeelt, past aan en bevestigt zelf.
+ */
+export const AiRollenVoorstelResponse = zod.object({
+  "voorstellen": zod.array(zod.object({
+  "naam": zod.string(),
+  "omschrijving": zod.string().nullable(),
+  "bevoegdheden": zod.record(zod.string(), zod.number())
+})),
+  "toelichting": zod.string().nullable()
+})
+
+
+/**
  * @summary Bevoegdheidsprofiel bijwerken (hoofdbeheerder)
  */
 export const UpdateProfielParams = zod.object({

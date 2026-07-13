@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db, profielenTable, gebruikersTable, gebruikerProfielenTable } from "@workspace/db";
+import { db, profielenTable, gebruikersTable, gebruikerProfielenTable, functiesTable } from "@workspace/db";
 import { asc, eq, inArray, and, notInArray } from "drizzle-orm";
 import {
   MODULE_IDS,
@@ -9,6 +9,8 @@ import {
   combineerBevoegdheden,
 } from "@workspace/permissies";
 import { requireBevoegdheid, requireEnigeBevoegdheid, requireRol } from "../middlewares/auth";
+import { heeftGateway } from "../lib/aiGateway";
+import { stelRollenVoor } from "../services/profiel-ai";
 
 const router = Router();
 
@@ -245,6 +247,43 @@ router.post("/profielen/aanvullen", requireRol("hoofdbeheerder"), async (req, re
       profielen_aangevuld: profielenAangevuld,
       sleutels_toegevoegd: sleutelsToegevoegd,
     });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// POST /profielen/ai-voorstel — AI stelt een set rollen met rechten voor op basis
+// van de modules en het functiehuis. Slaat NIETS op (AI stelt voor, mens
+// bevestigt): de hoofdbeheerder beoordeelt en past het voorstel aan en slaat de
+// gekozen rollen daarna zelf op via POST /profielen. Moet vóór /profielen/:id
+// staan zodat "ai-voorstel" niet als id wordt geïnterpreteerd.
+router.post("/profielen/ai-voorstel", requireRol("hoofdbeheerder"), async (req, res): Promise<void> => {
+  try {
+    if (!heeftGateway()) {
+      res.status(503).json({
+        error:
+          "AI is niet beschikbaar. Configureer een AI-integratie of stel de rollen handmatig samen.",
+      });
+      return;
+    }
+    const functies = await db
+      .select({
+        naam: functiesTable.naam,
+        omschrijving: functiesTable.omschrijving,
+        taken: functiesTable.taken,
+        verantwoordelijkheden: functiesTable.verantwoordelijkheden,
+      })
+      .from(functiesTable)
+      .where(eq(functiesTable.actief, true))
+      .orderBy(asc(functiesTable.naam));
+    const bestaande = await db.select({ naam: profielenTable.naam }).from(profielenTable);
+    const resultaat = await stelRollenVoor(
+      functies,
+      bestaande.map((p) => p.naam),
+      { gebruikerId: req.session.userId ?? null },
+    );
+    res.json(resultaat);
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });

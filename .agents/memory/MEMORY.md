@@ -114,3 +114,4 @@
 - [Uitloggen = volledige herlaad](logout-full-reload.md) — web-uitlog moet window.location.assign(BASE_URL) na sessie-vernietiging; React Query cache-only (clear/invalidate/setQueryData null) flipt isAuthenticated niet betrouwbaar; +onboarding-key fps.welkom.afgerond, NieuwsTicker pb-16, impersonatie needs gebouwen:1.
 - [Governance & Approval Engine](goedkeuring-engine.md) — generieke goedkeuringsmotor; pilot-pattern om een bestaande workflow-transitie te gaten via 422+viaGoedkeuring-bypass zonder de workflow-engine te herschrijven.
 - [Multi-functie toegangsprofiel](multi-functie-toegangsprofiel.md) — functies dragen profiel_id; rechten additief afgeleid uit alle functies (increment 4=risicovol, zelf-escalatiecheck); GET /profielen gate = gebruikers OF personeel.
+- [AI-slot keuze interactief](ai-slot-keuze.md) — interactieve AI-knoppen NIET op "reasoning"/gpt-5 (7+ min hang); gebruik "default"/gpt-4o + max_tokens; veiligheid altijd server-side clampen.

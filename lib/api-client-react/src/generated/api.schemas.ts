@@ -2798,6 +2798,19 @@ export interface ProfielInput {
   bevoegdheden: ProfielInputBevoegdheden;
 }
 
+export type AiRolVoorstelBevoegdheden = {[key: string]: number};
+
+export interface AiRolVoorstel {
+  naam: string;
+  omschrijving: string | null;
+  bevoegdheden: AiRolVoorstelBevoegdheden;
+}
+
+export interface AiRollenVoorstelResultaat {
+  voorstellen: AiRolVoorstel[];
+  toelichting: string | null;
+}
+
 export interface GoedkeuringBeleidsregel {
   id: number;
   naam: string;
@@ -12785,6 +12798,11 @@ export type GebruikersAanvullen200 = {
 export type ProfielenAanvullen200 = {
   profielen_aangevuld: number;
   sleutels_toegevoegd: number;
+};
+
+export type SynchroniseerStandaardProfielen200 = {
+  aangemaakt: number;
+  bijgewerkt: number;
 };
 
 export type ProfielToepassen200 = {

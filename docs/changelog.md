@@ -1,3 +1,19 @@
+## 2026-07-13 — AI stelt rollen voor in Rollen & Rechten beheer
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (nieuw, opt-in; AI stelt alleen voor, mens bevestigt; veiligheid server-side geborgd)
+
+**Aanleiding:** het inrichten van een functiehuis met rollen was volledig handwerk. Een hoofdbeheerder kan nu de AI een passende set rollen (met rechten) laten *voorstellen* op basis van het functiehuis; de mens beoordeelt, past aan en slaat de gewenste rollen zelf op. Daarnaast was de kapotte knop "Standaardrollen aanmaken" hersteld (server-route `POST /profielen/synchroniseer-standaard`).
+
+**Wijzigingen:**
+- OpenAPI: nieuw `POST /profielen/ai-voorstel` (operationId `aiRollenVoorstel`, lege body, 200 → `AiRollenVoorstelResultaat` {voorstellen: `AiRolVoorstel`[], toelichting?}, 503 als AI niet geconfigureerd); hooks/Zod hergegenereerd
+- API (`routes/profielen.ts`): route achter `requireRol("hoofdbeheerder")`; service `services/profiel-ai.ts` `stelRollenVoor()` met `PROFIEL_VOORSTEL_PROMPT` (`lib/aiPrompts.ts`)
+- **Veiligheid server-side (onafhankelijk van modelkwaliteit):** `saneerBevoegdheden` vult alle modules met 0, dropt onbekende sleutels, clampt niveaus 0..MAX_NIVEAU, en forceert gevoelige modules (systeem, financieel_vertrouwelijk, salarisarchief, salaris_mutaties, scab_mail, boekhouder_portaal) altijd op 0. Namen die botsen met PRESET- of bestaande profielnamen worden uitgefilterd (case-insensitive). Het daadwerkelijk opslaan loopt via het bestaande `POST /profielen` (hoofdbeheerder + `valideerBevoegdheden`)
+- Frontend (`beheer/rollen-rechten.tsx`): `AiVoorstelDialog` — vraagt bij openen automatisch een voorstel, toont kaart per rol met opnemen-checkbox, bewerkbare naam en klikbare module-chips (niveau 0→4→0); slaat de aangevinkte rollen sequentieel op (409 → "Naam bestaat al"); AI-knop in lege staat én hoofdweergave
+- **Latency-fix:** de AI-call gebruikte slot `reasoning` (gpt-5) en hing 7+ minuten — onbruikbaar voor een interactieve knop. Gewijzigd naar slot `default` (gpt-4o) met `max_tokens: 4000`, conform de bestaande structured-JSON pattern in `documentIntelligence.ts`. Reactietijd nu enkele seconden
+- **Bewijs:** end-to-end getest als hoofdbeheerder tegen het echte endpoint — 4 rollen voorgesteld, alle 28 modules gevuld (0..4), gevoelige modules op 0, geen naamcollisie, een voorgestelde rol daadwerkelijk opgeslagen en weer opgeruimd; api-server + firevault typecheck exit 0
+
+---
+
 ## 2026-07-13 — Toegangsprofiel per functie (multi-functie increment 3)
 
 - **Uitvoering:** volledig (increment 3 van 4) | **Kwaliteit:** hoog | **Risico:** laag (additief; verandert nog GEEN runtime-rechten)

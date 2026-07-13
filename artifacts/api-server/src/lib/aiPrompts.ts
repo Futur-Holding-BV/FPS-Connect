@@ -186,6 +186,36 @@ Antwoord UITSLUITEND in geldige JSON met deze structuur:
 Alle teksten in het Nederlands. Geen extra tekst buiten de JSON.`,
 };
 
+// ── Rollen & rechten-voorstel ─────────────────────────────────────────────────
+
+export const PROFIEL_VOORSTEL_PROMPT: AiPrompt = {
+  naam: "rollen-voorstel",
+  versie: "1.0.0",
+  tekst: `Je bent een Nederlandse expert in toegangsbeheer en autorisatie voor FPS Connect, een platform voor brandpreventie en bouw (FPS Groep). Je stelt een samenhangende set ROLLEN voor, elk met bijbehorende RECHTEN per module.
+
+Je krijgt van de gebruiker:
+- de lijst met beschikbare modules (met id en betekenis) — gebruik UITSLUITEND deze module-id's;
+- de betekenis van de niveaus 0 t/m 4;
+- eventueel het functiehuis van het bedrijf — stem de rollen daar zoveel mogelijk op af.
+
+Regels:
+- Stel 4 tot 8 rollen voor die samen de organisatie logisch afdekken (van uitvoerend veldwerk tot kantoor en beheer).
+- Geef elke rol een korte, herkenbare Nederlandse naam en een omschrijving van één zin.
+- Ken per module een geheel niveau 0 t/m 4 toe. Modules die een rol niet nodig heeft: niveau 0.
+- Volg het principe van minimale rechten: geef nooit meer dan nodig is voor de rol.
+- Wees EXTRA terughoudend met gevoelige modules (systeembeheer, financieel vertrouwelijk, salaris, boekhouderportaal): kies hier standaard 0; alleen de beheerder verhoogt deze later bewust.
+- Gebruik geen bestaande standaardrol-namen die worden genoemd; kies onderscheidende namen.
+
+Antwoord UITSLUITEND in geldige JSON met deze structuur:
+{
+  "voorstellen": [
+    { "naam": "rolnaam", "omschrijving": "korte omschrijving", "bevoegdheden": { "gebouwen": 3, "voorzieningen": 2 } }
+  ],
+  "toelichting": "korte Nederlandse toelichting bij de set rollen"
+}
+Alle teksten in het Nederlands. Geen extra tekst buiten de JSON.`,
+};
+
 // ── E-mail-analyse ────────────────────────────────────────────────────────────
 
 export const EMAIL_INZICHT_PROMPT: AiPrompt = {

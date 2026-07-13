@@ -53,6 +53,7 @@ import type {
   AiInvullenResultaat,
   AiModCalcRegels200,
   AiProfielCrmConcurrent200,
+  AiRollenVoorstelResultaat,
   AiSuggestiesOrgVerzekeringen200,
   AiTaakInvoer,
   AiTaakResultaat,
@@ -745,6 +746,7 @@ import type {
   StudioGenereerInput,
   StudioHuisstijlAnalyseResponse,
   SynchroniseerStandaardCalculatieData200,
+  SynchroniseerStandaardProfielen200,
   TaalWijzigen,
   Tekening,
   TekeningAiAnalyseInput,
@@ -17656,6 +17658,146 @@ export const useProfielenAanvullen = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getProfielenAanvullenMutationOptions(options));
+    }
+
+export const getSynchroniseerStandaardProfielenUrl = () => {
+
+
+
+
+  return `/api/profielen/synchroniseer-standaard`
+}
+
+/**
+ * @summary Ontbrekende standaardrollen (systeem-presets) aanmaken en bestaande systeem-presets bijwerken naar de definitie (hoofdbeheerder)
+ */
+export const synchroniseerStandaardProfielen = async ( options?: RequestInit): Promise<SynchroniseerStandaardProfielen200> => {
+
+  return customFetch<SynchroniseerStandaardProfielen200>(getSynchroniseerStandaardProfielenUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getSynchroniseerStandaardProfielenMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof synchroniseerStandaardProfielen>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof synchroniseerStandaardProfielen>>, TError,void, TContext> => {
+
+const mutationKey = ['synchroniseerStandaardProfielen'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof synchroniseerStandaardProfielen>>, void> = () => {
+
+
+          return  synchroniseerStandaardProfielen(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SynchroniseerStandaardProfielenMutationResult = NonNullable<Awaited<ReturnType<typeof synchroniseerStandaardProfielen>>>
+
+    export type SynchroniseerStandaardProfielenMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Ontbrekende standaardrollen (systeem-presets) aanmaken en bestaande systeem-presets bijwerken naar de definitie (hoofdbeheerder)
+ */
+export const useSynchroniseerStandaardProfielen = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof synchroniseerStandaardProfielen>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof synchroniseerStandaardProfielen>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getSynchroniseerStandaardProfielenMutationOptions(options));
+    }
+
+export const getAiRollenVoorstelUrl = () => {
+
+
+
+
+  return `/api/profielen/ai-voorstel`
+}
+
+/**
+ * @summary AI stelt een set rollen met bijbehorende rechten voor op basis van de modules en het functiehuis (hoofdbeheerder). Slaat niets op; de beheerder beoordeelt, past aan en bevestigt zelf.
+ */
+export const aiRollenVoorstel = async ( options?: RequestInit): Promise<AiRollenVoorstelResultaat> => {
+
+  return customFetch<AiRollenVoorstelResultaat>(getAiRollenVoorstelUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getAiRollenVoorstelMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof aiRollenVoorstel>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof aiRollenVoorstel>>, TError,void, TContext> => {
+
+const mutationKey = ['aiRollenVoorstel'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof aiRollenVoorstel>>, void> = () => {
+
+
+          return  aiRollenVoorstel(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AiRollenVoorstelMutationResult = NonNullable<Awaited<ReturnType<typeof aiRollenVoorstel>>>
+
+    export type AiRollenVoorstelMutationError = ErrorType<void>
+
+    /**
+ * @summary AI stelt een set rollen met bijbehorende rechten voor op basis van de modules en het functiehuis (hoofdbeheerder). Slaat niets op; de beheerder beoordeelt, past aan en bevestigt zelf.
+ */
+export const useAiRollenVoorstel = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof aiRollenVoorstel>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof aiRollenVoorstel>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getAiRollenVoorstelMutationOptions(options));
     }
 
 export const getUpdateProfielUrl = (id: number,) => {
