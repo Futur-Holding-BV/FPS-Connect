@@ -87,6 +87,10 @@ import type {
   BeoordelenInput,
   BevindingFotoInput,
   BevindingHerstellInput,
+  BiaeCapability,
+  BiaeComplianceSignaal,
+  BiaeEvent,
+  BiaeKpiFeed,
   BoekhouderDashboard,
   BoekhouderUpload,
   BoekhouderUploadInput,
@@ -434,6 +438,8 @@ import type {
   ListAvgInzageverzoeken200,
   ListAvgInzageverzoekenParams,
   ListBedrijfssluitingenParams,
+  ListBiaeComplianceSignalenParams,
+  ListBiaeEventsParams,
   ListBrandstofImportenParams,
   ListCrmContactpersonenAllParams,
   ListCrmProjectkansenParams,
@@ -79851,6 +79857,328 @@ export function useListMijnDeclaraties<TData = Awaited<ReturnType<typeof listMij
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getListMijnDeclaratiesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListBiaeEventsUrl = (params?: ListBiaeEventsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/biae/events?${stringifiedParams}` : `/api/biae/events`
+}
+
+/**
+ * @summary Recente BIAE-events (event-feed voor het beheerscherm).
+ */
+export const listBiaeEvents = async (params?: ListBiaeEventsParams, options?: RequestInit): Promise<BiaeEvent[]> => {
+
+  return customFetch<BiaeEvent[]>(getListBiaeEventsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListBiaeEventsQueryKey = (params?: ListBiaeEventsParams,) => {
+    return [
+    `/api/biae/events`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListBiaeEventsQueryOptions = <TData = Awaited<ReturnType<typeof listBiaeEvents>>, TError = ErrorType<unknown>>(params?: ListBiaeEventsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listBiaeEvents>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListBiaeEventsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listBiaeEvents>>> = ({ signal }) => listBiaeEvents(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listBiaeEvents>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListBiaeEventsQueryResult = NonNullable<Awaited<ReturnType<typeof listBiaeEvents>>>
+export type ListBiaeEventsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Recente BIAE-events (event-feed voor het beheerscherm).
+ */
+
+export function useListBiaeEvents<TData = Awaited<ReturnType<typeof listBiaeEvents>>, TError = ErrorType<unknown>>(
+ params?: ListBiaeEventsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listBiaeEvents>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListBiaeEventsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListBiaeCapabilitiesUrl = () => {
+
+
+
+
+  return `/api/biae/capabilities`
+}
+
+/**
+ * @summary Geregistreerde BIAE-capabilities met verwerkingsstatus.
+ */
+export const listBiaeCapabilities = async ( options?: RequestInit): Promise<BiaeCapability[]> => {
+
+  return customFetch<BiaeCapability[]>(getListBiaeCapabilitiesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListBiaeCapabilitiesQueryKey = () => {
+    return [
+    `/api/biae/capabilities`
+    ] as const;
+    }
+
+
+export const getListBiaeCapabilitiesQueryOptions = <TData = Awaited<ReturnType<typeof listBiaeCapabilities>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listBiaeCapabilities>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListBiaeCapabilitiesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listBiaeCapabilities>>> = ({ signal }) => listBiaeCapabilities({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listBiaeCapabilities>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListBiaeCapabilitiesQueryResult = NonNullable<Awaited<ReturnType<typeof listBiaeCapabilities>>>
+export type ListBiaeCapabilitiesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Geregistreerde BIAE-capabilities met verwerkingsstatus.
+ */
+
+export function useListBiaeCapabilities<TData = Awaited<ReturnType<typeof listBiaeCapabilities>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listBiaeCapabilities>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListBiaeCapabilitiesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListBiaeComplianceSignalenUrl = (params?: ListBiaeComplianceSignalenParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/biae/compliance-signalen?${stringifiedParams}` : `/api/biae/compliance-signalen`
+}
+
+/**
+ * @summary Openstaande compliance-signaleringen (van de compliance-job).
+ */
+export const listBiaeComplianceSignalen = async (params?: ListBiaeComplianceSignalenParams, options?: RequestInit): Promise<BiaeComplianceSignaal[]> => {
+
+  return customFetch<BiaeComplianceSignaal[]>(getListBiaeComplianceSignalenUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListBiaeComplianceSignalenQueryKey = (params?: ListBiaeComplianceSignalenParams,) => {
+    return [
+    `/api/biae/compliance-signalen`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListBiaeComplianceSignalenQueryOptions = <TData = Awaited<ReturnType<typeof listBiaeComplianceSignalen>>, TError = ErrorType<unknown>>(params?: ListBiaeComplianceSignalenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listBiaeComplianceSignalen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListBiaeComplianceSignalenQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listBiaeComplianceSignalen>>> = ({ signal }) => listBiaeComplianceSignalen(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listBiaeComplianceSignalen>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListBiaeComplianceSignalenQueryResult = NonNullable<Awaited<ReturnType<typeof listBiaeComplianceSignalen>>>
+export type ListBiaeComplianceSignalenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Openstaande compliance-signaleringen (van de compliance-job).
+ */
+
+export function useListBiaeComplianceSignalen<TData = Awaited<ReturnType<typeof listBiaeComplianceSignalen>>, TError = ErrorType<unknown>>(
+ params?: ListBiaeComplianceSignalenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listBiaeComplianceSignalen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListBiaeComplianceSignalenQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetBiaeKpiFeedUrl = (boekjaar: number,) => {
+
+
+
+
+  return `/api/biae/kpi/${boekjaar}`
+}
+
+/**
+ * @summary Geaggregeerde KPI- en risicofeed voor het Directiecockpit.
+ */
+export const getBiaeKpiFeed = async (boekjaar: number, options?: RequestInit): Promise<BiaeKpiFeed> => {
+
+  return customFetch<BiaeKpiFeed>(getGetBiaeKpiFeedUrl(boekjaar),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetBiaeKpiFeedQueryKey = (boekjaar: number,) => {
+    return [
+    `/api/biae/kpi/${boekjaar}`
+    ] as const;
+    }
+
+
+export const getGetBiaeKpiFeedQueryOptions = <TData = Awaited<ReturnType<typeof getBiaeKpiFeed>>, TError = ErrorType<unknown>>(boekjaar: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getBiaeKpiFeed>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetBiaeKpiFeedQueryKey(boekjaar);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getBiaeKpiFeed>>> = ({ signal }) => getBiaeKpiFeed(boekjaar, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: boekjaar !== null && boekjaar !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getBiaeKpiFeed>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetBiaeKpiFeedQueryResult = NonNullable<Awaited<ReturnType<typeof getBiaeKpiFeed>>>
+export type GetBiaeKpiFeedQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Geaggregeerde KPI- en risicofeed voor het Directiecockpit.
+ */
+
+export function useGetBiaeKpiFeed<TData = Awaited<ReturnType<typeof getBiaeKpiFeed>>, TError = ErrorType<unknown>>(
+ boekjaar: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getBiaeKpiFeed>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetBiaeKpiFeedQueryOptions(boekjaar,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

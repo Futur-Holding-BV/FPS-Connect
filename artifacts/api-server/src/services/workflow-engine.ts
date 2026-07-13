@@ -1,6 +1,7 @@
 import { db as _mainDb, workflowTransitieLogTable, gebruikersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { logAudit } from "../lib/audit";
+import { biae } from "./biae";
 
 type Db = typeof _mainDb;
 
@@ -184,6 +185,23 @@ export class WorkflowService {
       meta: typeof ctx.params?.reden === "string"
         ? ({ reden: ctx.params.reden } as Record<string, unknown>)
         : null,
+    });
+
+    // Publiceer de transitie op de centrale BIAE-bus zodat capabilities
+    // cross-module reacties kunnen triggeren. Fire-and-forget: de BIAE-kern
+    // isoleert fouten en breekt deze transitie nooit.
+    biae.publiceerEvent({
+      categorie: "workflow",
+      type: "workflow_transitie",
+      gebruikerId: ctx.gebruikerId,
+      gebruikerNaam: ctx.gebruikerNaam ?? null,
+      payload: {
+        workflowId: config.id,
+        entityType: config.naam,
+        entityId,
+        vanStatus: entity.status,
+        naarStatus,
+      },
     });
 
     return { ok: true, entity: updatedEntity };

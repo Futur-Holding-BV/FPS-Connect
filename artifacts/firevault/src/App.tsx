@@ -87,6 +87,7 @@ import BeheerPrivacy from "@/pages/beheer/privacy";
 import AvgBeheer from "@/pages/beheer/avg";
 import RollenRechtenBeheer from "@/pages/beheer/rollen-rechten";
 import GoedkeuringsbeleidBeheer from "@/pages/beheer/goedkeuringsbeleid";
+import BiaeBeheer from "@/pages/beheer/biae";
 import GoedkeuringenDashboard from "@/pages/beheer/goedkeuringen-dashboard";
 import DeclaratiesPagina from "@/pages/declaraties/index";
 import DeclaratieDetailPagina from "@/pages/declaraties/detail";
@@ -517,6 +518,7 @@ function ConnectPortal() {
         <Route path="/beheer/rollen-rechten" component={RollenRechtenBeheer} />
         <Route path="/beheer/goedkeuringen-dashboard" component={GoedkeuringenDashboard} />
         <Route path="/beheer/goedkeuringsbeleid" component={GoedkeuringsbeleidBeheer} />
+        <Route path="/beheer/biae" component={BiaeBeheer} />
         <Route path="/declaraties/:id" component={DeclaratieDetailPagina} />
         <Route path="/declaraties" component={DeclaratiesPagina} />
         <Route path="/beheer/object-rechten" component={ObjectRechtenBeheer} />

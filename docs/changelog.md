@@ -120,6 +120,24 @@
 
 ---
 
+## 2026-07-13 — Business Intelligence & Automation Engine (BIAE) — centrale event-bus
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag-middel (nieuw, additief; bestaande engines blijven ongewijzigd en draaien door; BIAE is een dunne overkoepelende laag; beheerscherm systeem-gated)
+
+**Aanleiding:** de losse motoren (workflow, governance, goedkeuring, FIE, AI-decision, AI-context, security-intake) hadden geen gedeelde in-proces event-laag. BIAE introduceert één centrale bus waarop deze motoren als dunne capability-adapters zijn aangesloten, zonder de onderliggende engine-bestanden te wijzigen (geen regressie).
+
+**Wijzigingen:**
+- Kern: `services/biae/` — event-bus (`index.ts`), `types.ts`, recall/impact-analyse (`impact.ts`), `init.ts` registreert 7 capability-adapters (`capabilities/`): workflow, governance, goedkeuring, fie, ai-decision, ai-context (delegeert `invalideerContext`), security-intake
+- WorkflowService: na een geslaagde transitie (na `logAudit`, vóór return) publiceert de service nu `biae.publiceerEvent({categorie:"workflow", type:"workflow_transitie"})` — enige aanpassing aan bestaande engine, verder ongemoeid
+- Jobs: `jobs/deadline-bewaking.ts` (delegeert naar `planUurlijkseGoedkeuringBewaking`) en `jobs/compliance-monitoring.ts` (3 regels: certificaat_verlopen, spot_zonder_document, verlofsaldo_buiten_cao) met dedup naar nieuwe tabel `compliance_signalen`
+- DB: nieuwe schema `lib/db/src/schema/compliance.ts` (tabel `compliance_signalen`), geregistreerd in de barrel; via `db push` naar dev toegepast
+- KPI: `capabilities/kpi-aggregatie.ts` levert geaggregeerde directie-KPI's; Directiecockpit (`pages/directie/kompas.tsx`) toont nu vier KPI-kaarten via de BIAE-feed (`useGetBiaeKpiFeed`) naast de bestaande FIE-queries
+- API: OpenAPI-paden `/biae/events`, `/biae/capabilities`, `/biae/compliance-signalen`, `/biae/kpi/{boekjaar}` + schemas; codegen uitgevoerd; `routes/biae.ts` gated op `requireBevoegdheid("systeem",1)`, geregistreerd in `routes/index.ts`
+- Frontend: beheerscherm `pages/beheer/biae.tsx` (3 tabs), route `/beheer/biae` in `App.tsx`, nav-item "Automation Engine" in de systeem-gated sidebar-sectie (`beheerder-layout.tsx`)
+- **Bewijs:** api-server + firevault typecheck exit 0; `scripts/e2e-biae-bewijs.ts` (3 scenario's tegen dev, wachtwoord+TOTP-login): (1) alle 4 endpoints 401 zonder sessie — fail-closed gating; (2) 7 capabilities geregistreerd; (3) compliance-signalen lijst + volledige kpi-feed 2026 → ALLE SCENARIO'S GESLAAGD. Init-log bevestigt "capabilities geregistreerd (7)", deadline-bewaking en dagelijkse compliance-controle gepland
+
+---
+
 ## 2026-07-13 — AI stelt profielen voor op de Bevoegdheidsprofielen-pagina
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (additief, opt-in; hergebruikt bestaand hoofdbeheerder-only endpoint; AI stelt alleen voor, mens bevestigt; veiligheid server-side geborgd)

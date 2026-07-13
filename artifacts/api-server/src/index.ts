@@ -14,7 +14,9 @@ import { planUurlijkseAiDrempelCheck } from "./lib/aiDrempelCheck";
 import { planDagelijkseKwartaalcontrole } from "./lib/pushService";
 import { startVerlofPresets } from "./lib/verlofPresets";
 import { startVerlofVervalService } from "./lib/verlofVervalService";
-import { planUurlijkseGoedkeuringBewaking } from "./lib/goedkeuringBewaking";
+import { initBiae } from "./services/biae/init";
+import { planCentraleDeadlineBewaking } from "./services/biae/jobs/deadline-bewaking";
+import { planDagelijkseComplianceControle } from "./services/biae/jobs/compliance-monitoring";
 
 const rawPort = process.env["PORT"];
 
@@ -64,7 +66,12 @@ ensureSessionTable()
       planDagelijkseKwartaalcontrole();
       startVerlofPresets();
       startVerlofVervalService();
-      planUurlijkseGoedkeuringBewaking();
+      // BIAE — centrale bus: capabilities registreren en centrale jobs starten.
+      // De deadline-bewaking delegeert naar de bestaande goedkeuringsbewaking,
+      // dus die wordt hier niet meer los aangeroepen (voorkomt dubbel plannen).
+      initBiae();
+      planCentraleDeadlineBewaking();
+      planDagelijkseComplianceControle();
     });
   })
   .catch((err) => {

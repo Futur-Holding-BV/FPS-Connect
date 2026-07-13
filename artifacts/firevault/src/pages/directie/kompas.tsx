@@ -28,6 +28,7 @@ import {
   getListFieNacalculatiesQueryKey,
   useHerberekeenVerouderdeNacalculaties,
   useGetFactuurAnalyse,
+  useGetBiaeKpiFeed,
   type FieJaarprognose,
   type FieWerkmaatschappijPrognose,
   type FieLeermoment,
@@ -838,6 +839,9 @@ function KompasInhoud() {
   const { data: verouderdAantalData } = useGetFieNacalculatiesVerouderdAantal();
   const aantalVerouderd = verouderdAantalData?.aantal ?? 0;
 
+  // BIAE-feed: geaggregeerde KPI- en risicosignalen via de centrale bus.
+  const { data: kpi } = useGetBiaeKpiFeed(boekjaar);
+
   return (
     <div className="space-y-5 p-1">
       <PaginaHulp pagina="directie-kompas" />
@@ -888,6 +892,49 @@ function KompasInhoud() {
           </div>
         )}
       </div>
+
+      {kpi && (
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+          <Card>
+            <CardContent className="p-3">
+              <p className="text-xs text-muted-foreground">Open goedkeuringen</p>
+              <p className="text-2xl font-bold">{kpi.open_goedkeuringen}</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-3">
+              <p className="text-xs text-muted-foreground">Compliance-signalen (open)</p>
+              <p className="text-2xl font-bold">
+                {kpi.compliance_signalen.open}
+                {kpi.compliance_signalen.kritiek > 0 && (
+                  <span className="ml-1 text-sm font-medium text-red-600">
+                    ({kpi.compliance_signalen.kritiek} kritiek)
+                  </span>
+                )}
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-3">
+              <p className="text-xs text-muted-foreground">FIE-observaties</p>
+              <p className="text-2xl font-bold">
+                {kpi.fie_observaties.totaal}
+                {kpi.fie_observaties.kritiek > 0 && (
+                  <span className="ml-1 text-sm font-medium text-red-600">
+                    ({kpi.fie_observaties.kritiek} kritiek)
+                  </span>
+                )}
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-3">
+              <p className="text-xs text-muted-foreground">Nacalculatie-afwijkingen &gt;15%</p>
+              <p className="text-2xl font-bold">{kpi.nacalculatie_afwijkingen.hoog}</p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       <Tabs value={actieveTab} onValueChange={setActieveTab}>
         <TabsList className="h-8">

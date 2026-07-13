@@ -22789,8 +22789,149 @@ paths:
                 type: array
                 items: { $ref: '#/components/schemas/Declaratie' }
 
+  /biae/events:
+    get:
+      operationId: listBiaeEvents
+      tags: [biae]
+      summary: Recente BIAE-events (event-feed voor het beheerscherm).
+      parameters:
+        - in: query
+          name: limiet
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 500
+          description: Aantal recente events (standaard 100).
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/BiaeEvent' }
+
+  /biae/capabilities:
+    get:
+      operationId: listBiaeCapabilities
+      tags: [biae]
+      summary: Geregistreerde BIAE-capabilities met verwerkingsstatus.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/BiaeCapability' }
+
+  /biae/compliance-signalen:
+    get:
+      operationId: listBiaeComplianceSignalen
+      tags: [biae]
+      summary: Openstaande compliance-signaleringen (van de compliance-job).
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [open, opgelost, genegeerd]
+          description: Filter op status (standaard open).
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/BiaeComplianceSignaal' }
+
+  /biae/kpi/{boekjaar}:
+    get:
+      operationId: getBiaeKpiFeed
+      tags: [biae]
+      summary: Geaggregeerde KPI- en risicofeed voor het Directiecockpit.
+      parameters:
+        - in: path
+          name: boekjaar
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BiaeKpiFeed' }
+
 components:
   schemas:
+    BiaeEvent:
+      type: object
+      required: [id, categorie, type, payload, tijdstip]
+      properties:
+        id: { type: integer }
+        categorie: { type: string }
+        type: { type: string }
+        gebruiker_id: { type: integer, nullable: true }
+        gebruiker_naam: { type: string, nullable: true }
+        payload:
+          type: object
+          additionalProperties: true
+        tijdstip: { type: string }
+    BiaeCapability:
+      type: object
+      required: [naam, omschrijving, categorieen, types, verwerkte_events]
+      properties:
+        naam: { type: string }
+        omschrijving: { type: string }
+        categorieen:
+          type: array
+          items: { type: string }
+        types:
+          type: array
+          items: { type: string }
+        verwerkte_events: { type: integer }
+        laatste_fout: { type: string, nullable: true }
+        laatst_actief_op: { type: string, nullable: true }
+    BiaeComplianceSignaal:
+      type: object
+      required: [id, regel, ernst, entiteit_type, titel, omschrijving, status, aangemaakt_op]
+      properties:
+        id: { type: integer }
+        regel: { type: string }
+        ernst: { type: string }
+        entiteit_type: { type: string }
+        entiteit_id: { type: integer, nullable: true }
+        titel: { type: string }
+        omschrijving: { type: string }
+        status: { type: string }
+        aangemaakt_op: { type: string }
+    BiaeKpiFeed:
+      type: object
+      required: [boekjaar, fie_observaties, open_goedkeuringen, compliance_signalen, nacalculatie_afwijkingen, gegenereerd_op]
+      properties:
+        boekjaar: { type: integer }
+        fie_observaties:
+          type: object
+          required: [totaal, kritiek, waarschuwing]
+          properties:
+            totaal: { type: integer }
+            kritiek: { type: integer }
+            waarschuwing: { type: integer }
+        open_goedkeuringen: { type: integer }
+        compliance_signalen:
+          type: object
+          required: [open, kritiek]
+          properties:
+            open: { type: integer }
+            kritiek: { type: integer }
+        nacalculatie_afwijkingen:
+          type: object
+          required: [hoog]
+          properties:
+            hoog: { type: integer }
+        gegenereerd_op: { type: string }
     FinancieelSubtype:
       type: string
       enum: [geconsolideerd, enkelvoudig]

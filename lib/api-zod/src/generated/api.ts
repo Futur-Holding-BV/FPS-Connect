@@ -28482,3 +28482,88 @@ export const ListMijnDeclaratiesResponseItem = zod.object({
 export const ListMijnDeclaratiesResponse = zod.array(ListMijnDeclaratiesResponseItem)
 
 
+/**
+ * @summary Recente BIAE-events (event-feed voor het beheerscherm).
+ */
+export const listBiaeEventsQueryLimietMax = 500;
+
+
+
+export const ListBiaeEventsQueryParams = zod.object({
+  "limiet": zod.coerce.number().min(1).max(listBiaeEventsQueryLimietMax).optional().describe('Aantal recente events (standaard 100).')
+})
+
+export const ListBiaeEventsResponseItem = zod.object({
+  "id": zod.number(),
+  "categorie": zod.string(),
+  "type": zod.string(),
+  "gebruiker_id": zod.number().nullish(),
+  "gebruiker_naam": zod.string().nullish(),
+  "payload": zod.record(zod.string(), zod.unknown()),
+  "tijdstip": zod.string()
+})
+export const ListBiaeEventsResponse = zod.array(ListBiaeEventsResponseItem)
+
+
+/**
+ * @summary Geregistreerde BIAE-capabilities met verwerkingsstatus.
+ */
+export const ListBiaeCapabilitiesResponseItem = zod.object({
+  "naam": zod.string(),
+  "omschrijving": zod.string(),
+  "categorieen": zod.array(zod.string()),
+  "types": zod.array(zod.string()),
+  "verwerkte_events": zod.number(),
+  "laatste_fout": zod.string().nullish(),
+  "laatst_actief_op": zod.string().nullish()
+})
+export const ListBiaeCapabilitiesResponse = zod.array(ListBiaeCapabilitiesResponseItem)
+
+
+/**
+ * @summary Openstaande compliance-signaleringen (van de compliance-job).
+ */
+export const ListBiaeComplianceSignalenQueryParams = zod.object({
+  "status": zod.enum(['open', 'opgelost', 'genegeerd']).optional().describe('Filter op status (standaard open).')
+})
+
+export const ListBiaeComplianceSignalenResponseItem = zod.object({
+  "id": zod.number(),
+  "regel": zod.string(),
+  "ernst": zod.string(),
+  "entiteit_type": zod.string(),
+  "entiteit_id": zod.number().nullish(),
+  "titel": zod.string(),
+  "omschrijving": zod.string(),
+  "status": zod.string(),
+  "aangemaakt_op": zod.string()
+})
+export const ListBiaeComplianceSignalenResponse = zod.array(ListBiaeComplianceSignalenResponseItem)
+
+
+/**
+ * @summary Geaggregeerde KPI- en risicofeed voor het Directiecockpit.
+ */
+export const GetBiaeKpiFeedParams = zod.object({
+  "boekjaar": zod.coerce.number()
+})
+
+export const GetBiaeKpiFeedResponse = zod.object({
+  "boekjaar": zod.number(),
+  "fie_observaties": zod.object({
+  "totaal": zod.number(),
+  "kritiek": zod.number(),
+  "waarschuwing": zod.number()
+}),
+  "open_goedkeuringen": zod.number(),
+  "compliance_signalen": zod.object({
+  "open": zod.number(),
+  "kritiek": zod.number()
+}),
+  "nacalculatie_afwijkingen": zod.object({
+  "hoog": zod.number()
+}),
+  "gegenereerd_op": zod.string()
+})
+
+

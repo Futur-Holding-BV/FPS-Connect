@@ -5,6 +5,64 @@
  * FPS Brandpreventie - Platform voor brandpreventieve gebouwvoorzieningen
  * OpenAPI spec version: 0.1.0
  */
+export type BiaeEventPayload = { [key: string]: unknown };
+
+export interface BiaeEvent {
+  id: number;
+  categorie: string;
+  type: string;
+  gebruiker_id?: number | null;
+  gebruiker_naam?: string | null;
+  payload: BiaeEventPayload;
+  tijdstip: string;
+}
+
+export interface BiaeCapability {
+  naam: string;
+  omschrijving: string;
+  categorieen: string[];
+  types: string[];
+  verwerkte_events: number;
+  laatste_fout?: string | null;
+  laatst_actief_op?: string | null;
+}
+
+export interface BiaeComplianceSignaal {
+  id: number;
+  regel: string;
+  ernst: string;
+  entiteit_type: string;
+  entiteit_id?: number | null;
+  titel: string;
+  omschrijving: string;
+  status: string;
+  aangemaakt_op: string;
+}
+
+export type BiaeKpiFeedFieObservaties = {
+  totaal: number;
+  kritiek: number;
+  waarschuwing: number;
+};
+
+export type BiaeKpiFeedComplianceSignalen = {
+  open: number;
+  kritiek: number;
+};
+
+export type BiaeKpiFeedNacalculatieAfwijkingen = {
+  hoog: number;
+};
+
+export interface BiaeKpiFeed {
+  boekjaar: number;
+  fie_observaties: BiaeKpiFeedFieObservaties;
+  open_goedkeuringen: number;
+  compliance_signalen: BiaeKpiFeedComplianceSignalen;
+  nacalculatie_afwijkingen: BiaeKpiFeedNacalculatieAfwijkingen;
+  gegenereerd_op: string;
+}
+
 export type FinancieelSubtype = typeof FinancieelSubtype[keyof typeof FinancieelSubtype];
 
 
@@ -13989,4 +14047,29 @@ export type GetFinancieelMeerjarenoverzichtParams = {
 entiteit?: string;
 geconsolideerd?: boolean;
 };
+
+export type ListBiaeEventsParams = {
+/**
+ * Aantal recente events (standaard 100).
+ * @minimum 1
+ * @maximum 500
+ */
+limiet?: number;
+};
+
+export type ListBiaeComplianceSignalenParams = {
+/**
+ * Filter op status (standaard open).
+ */
+status?: ListBiaeComplianceSignalenStatus;
+};
+
+export type ListBiaeComplianceSignalenStatus = typeof ListBiaeComplianceSignalenStatus[keyof typeof ListBiaeComplianceSignalenStatus];
+
+
+export const ListBiaeComplianceSignalenStatus = {
+  open: 'open',
+  opgelost: 'opgelost',
+  genegeerd: 'genegeerd',
+} as const;
 

@@ -20,6 +20,7 @@
     "broncode-export": "tsx ./src/broncode-export.ts",
     "valideer-installatie": "tsx ./src/valideer-installatie.ts",
     "pre-publish-validatie": "tsx ./src/pre-publish-validatie.ts",
+    "e2e-biae-bewijs": "tsx ./src/e2e-biae-bewijs.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {

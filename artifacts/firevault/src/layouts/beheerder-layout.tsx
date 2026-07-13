@@ -1754,6 +1754,14 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                               </Link>
                             </SidebarMenuButton>
                           </SidebarMenuItem>
+                          <SidebarMenuItem className="pl-5">
+                            <SidebarMenuButton asChild isActive={location === "/beheer/biae"}>
+                              <Link href="/beheer/biae">
+                                <Activity />
+                                <span>Automation Engine</span>
+                              </Link>
+                            </SidebarMenuButton>
+                          </SidebarMenuItem>
                           {isHoofdbeheerder && (
                             <SidebarMenuItem className="pl-5">
                               <SidebarMenuButton asChild isActive={location === "/beheer/ai-aanroepen"}>

@@ -120,3 +120,4 @@
 - [AI-slot keuze interactief](ai-slot-keuze.md) — interactieve AI-knoppen NIET op "reasoning"/gpt-5 (7+ min hang); gebruik "default"/gpt-4o + max_tokens; veiligheid altijd server-side clampen.
 - [Offerte-sectie foto's](offerte-sectie-fotos.md) — hoofdstuk-foto's in offerte_secties.fotos jsonb; url = kant-en-klare /api/storage/files?path=... (NIET rauw objectPath); AI stelt voor, mens accepteert, tonen alleen bij toon_fotos.
 - [Governance blokkeert kritieke acties: sessie mist rol](governance-sessie-rol.md) — req.session.rol wordt nooit gezet bij login; governance-middleware ziet rol=null en blokkeert "kritiek" (o.a. DELETE /gebouwen/:id) met 403, ook voor hoofdbeheerder; e2e-cleanup dus via DB.
+- [BIAE centrale event-bus](biae-engine.md) — 7 motoren als dunne capability-adapters op één bus; onderliggende engines ongewijzigd; nieuwe proceskoppeling = event publiceren; compliance_signalen faalt stil zonder db push.
