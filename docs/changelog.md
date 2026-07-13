@@ -42,6 +42,21 @@
 - Geen backend-, OpenAPI- of DB-wijziging; puur presentatie op bestaande data
 - Hiermee is follow-up #569 ("Meerwerk expliciet surfacen") afgehandeld
 
+## 2026-07-13 — Heatmap-tracker AVG-conform (opt-in door beheerder)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (standaard uit; tracker registreert niets tenzij expliciet ingeschakeld)
+
+**Aanleiding:** de heatmap-tracker registreerde klik- en muisbewegingdata gekoppeld aan het gebruikersaccount (persoonsgegevens) zonder dat dit was af te schakelen, zonder DB-persistente schakelaar, zonder vermelding op de AVG-matrix en zonder transparantie richting de gebruiker. Dat is niet AVG-conform.
+
+**Wijzigingen:**
+- DB: `app_instellingen.heatmap_tracking_ingeschakeld` (boolean, `NOT NULL DEFAULT false`) toegevoegd via directe ALTER + Drizzle-schema (`lib/db/src/schema/systeem.ts`)
+- OpenAPI: veld toegevoegd aan `AppInstellingen` en `AppInstellingenInput`; hooks/Zod-schemas hergegenereerd
+- API (`routes/info.ts`): GET geeft het veld terug (default false zonder rij); PUT (`requireRol("hoofdbeheerder")`) leest en bewaart het alleen wanneer meegestuurd
+- Frontend tracker (`components/heatmap-tracker.tsx`): leest de schakelaar via `useGetInfoInstellingen` en registreert/verstuurt uitsluitend events wanneer de vlag `true` is; anders worden er geen listeners aangehangen
+- Beheer (`pages/info/index.tsx`): schakelaar "Klikgedrag registreren" onder Instellingen, alleen zichtbaar/bedienbaar voor de hoofdbeheerder, met uitleg over grondslag en transparantie
+- AVG-matrix (`pages/beheer/privacy.tsx`): module "Heatmap" toegevoegd met grondslag gerechtvaardigd belang (interne productontwikkeling) en bewaartermijn
+- Privacycentrum (`pages/mijn/privacy.tsx`): kaart "Klikgedrag (heatmap)" toont per gebruiker of de tracker actief is, wat er wordt geregistreerd, op welke grondslag en dat alleen een beheerder dit kan inschakelen
+
 ---
 
 ## 2026-07-13 — Toegangsprofiel per functie (multi-functie increment 3)

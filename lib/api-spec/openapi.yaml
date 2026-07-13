@@ -27181,6 +27181,9 @@ components:
         moments_verjaardag_ingeschakeld:
           type: boolean
           description: Organisatiebrede schakelaar voor FPS Moments — verjaardag. Uit = geen enkele verjaardag wordt getoond, ook niet aan de jarige zelf. Standaard aan.
+        heatmap_tracking_ingeschakeld:
+          type: boolean
+          description: Organisatiebrede schakelaar voor de heatmap-tracker (klik-/muisbeweging-registratie). Standaard uit; alleen een beheerder mag dit inschakelen. AVG-grondslag gerechtvaardigd belang.
         ai_kostendrempel_eur:
           type: ["number", "null"]
           description: Maandelijks kostenplafond voor AI-gebruik in euro. Null betekent geen drempel.
@@ -27211,6 +27214,9 @@ components:
         moments_verjaardag_ingeschakeld:
           type: boolean
           description: Organisatiebrede schakelaar voor FPS Moments — verjaardag (alleen hoofdbeheerder).
+        heatmap_tracking_ingeschakeld:
+          type: boolean
+          description: Organisatiebrede schakelaar voor de heatmap-tracker (alleen hoofdbeheerder). Standaard uit.
         ai_kostendrempel_eur:
           type: ["number", "null"]
           description: Maandelijks kostenplafond voor AI-gebruik in euro. Null of weglaten om drempel te verwijderen.

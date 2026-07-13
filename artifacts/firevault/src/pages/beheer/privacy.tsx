@@ -95,6 +95,11 @@ const STANDAARD_MODULES: { naam: string; toelichting: string; scores: ModuleScor
     toelichting: "Documentenbeheer, audittrail, goedkeuringsflows, downloadlogging",
     scores: { doel: "ja", grondslag: "ja", minimalisatie: "ja", bewaartermijn: "ja", beveiliging: "ja", transparantie: "ja", rechten: "gedeeltelijk" },
   },
+  {
+    naam: "Heatmap",
+    toelichting: "Klik-/muisbeweging-registratie gekoppeld aan account. Grondslag: gerechtvaardigd belang (interne productontwikkeling). Standaard uit; alleen actief na expliciete inschakeling door beheerder. Bewaartermijn: geanonimiseerde geaggregeerde weergave, brongegevens max. 12 maanden.",
+    scores: { doel: "ja", grondslag: "ja", minimalisatie: "gedeeltelijk", bewaartermijn: "gedeeltelijk", beveiliging: "ja", transparantie: "ja", rechten: "gedeeltelijk" },
+  },
 ];
 
 const STORAGE_KEY = "fps_privacy_avg_matrix_v1";

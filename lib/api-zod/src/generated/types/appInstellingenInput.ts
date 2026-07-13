@@ -14,6 +14,8 @@ export interface AppInstellingenInput {
   opdrachtbevestiging_auto_verzenden?: boolean;
   /** Organisatiebrede schakelaar voor FPS Moments — verjaardag (alleen hoofdbeheerder). */
   moments_verjaardag_ingeschakeld?: boolean;
+  /** Organisatiebrede schakelaar voor de heatmap-tracker (alleen hoofdbeheerder). Standaard uit. */
+  heatmap_tracking_ingeschakeld?: boolean;
   /**
      * Maandelijks kostenplafond voor AI-gebruik in euro. Null of weglaten om drempel te verwijderen.
      * @nullable

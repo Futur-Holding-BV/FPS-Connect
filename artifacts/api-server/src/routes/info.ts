@@ -23,6 +23,7 @@ router.get("/info/instellingen", async (req, res): Promise<void> => {
         extra_disclaimer: null,
         opdrachtbevestiging_auto_verzenden: false,
         moments_verjaardag_ingeschakeld: true,
+        heatmap_tracking_ingeschakeld: false,
         ai_kostendrempel_eur: null,
         bijgewerkt_op: new Date().toISOString(),
         bijgewerkt_door_id: null,
@@ -37,6 +38,7 @@ router.get("/info/instellingen", async (req, res): Promise<void> => {
       extra_disclaimer: instelling.extraDisclaimer,
       opdrachtbevestiging_auto_verzenden: instelling.opdrachtbevestigingAutoVerzenden,
       moments_verjaardag_ingeschakeld: instelling.momentsVerjaardagIngeschakeld,
+      heatmap_tracking_ingeschakeld: instelling.heatmapTrackingIngeschakeld,
       ai_kostendrempel_eur: instelling.aiKostendrempelEur != null ? parseFloat(instelling.aiKostendrempelEur) : null,
       bijgewerkt_op: instelling.bijgewerktOp.toISOString(),
       bijgewerkt_door_id: instelling.bijgewerktDoorId,
@@ -60,6 +62,7 @@ router.put(
         extra_disclaimer,
         opdrachtbevestiging_auto_verzenden,
         moments_verjaardag_ingeschakeld,
+        heatmap_tracking_ingeschakeld,
         ai_kostendrempel_eur,
         ai_maandelijkse_export_dag,
         ai_maandelijkse_export_email,
@@ -70,6 +73,7 @@ router.put(
           extra_disclaimer?: string;
           opdrachtbevestiging_auto_verzenden?: boolean;
           moments_verjaardag_ingeschakeld?: boolean;
+          heatmap_tracking_ingeschakeld?: boolean;
           ai_kostendrempel_eur?: number | null;
           ai_maandelijkse_export_dag?: number | null;
           ai_maandelijkse_export_email?: string | null;
@@ -98,6 +102,9 @@ router.put(
           : {}),
         ...(typeof moments_verjaardag_ingeschakeld === "boolean"
           ? { momentsVerjaardagIngeschakeld: moments_verjaardag_ingeschakeld }
+          : {}),
+        ...(typeof heatmap_tracking_ingeschakeld === "boolean"
+          ? { heatmapTrackingIngeschakeld: heatmap_tracking_ingeschakeld }
           : {}),
       };
 
@@ -150,6 +157,7 @@ router.put(
         extra_disclaimer: result.extraDisclaimer,
         opdrachtbevestiging_auto_verzenden: result.opdrachtbevestigingAutoVerzenden,
         moments_verjaardag_ingeschakeld: result.momentsVerjaardagIngeschakeld,
+        heatmap_tracking_ingeschakeld: result.heatmapTrackingIngeschakeld,
         ai_kostendrempel_eur: result.aiKostendrempelEur != null ? parseFloat(result.aiKostendrempelEur) : null,
         ai_maandelijkse_export_dag: result.aiMaandelijkseExportDag,
         ai_maandelijkse_export_email: result.aiMaandelijkseExportEmail,

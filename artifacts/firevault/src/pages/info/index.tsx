@@ -85,6 +85,13 @@ export default function InfoPagina() {
     queryClient.invalidateQueries();
   }
 
+  async function toggleHeatmapTracking(checked: boolean) {
+    await updateInstellingen.mutateAsync({
+      data: { heatmap_tracking_ingeschakeld: checked },
+    });
+    queryClient.invalidateQueries();
+  }
+
   const heeftSupportInfo =
     instellingen &&
     (instellingen.support_email ||
@@ -407,6 +414,37 @@ export default function InfoPagina() {
               <Switch
                 checked={instellingen?.moments_verjaardag_ingeschakeld ?? true}
                 onCheckedChange={toggleMomentsVerjaardag}
+                disabled={updateInstellingen.isPending}
+              />
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Heatmap-tracker */}
+      {isHoofdBeheerder && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <ShieldCheck className="h-5 w-5 text-primary" />
+              Heatmap-tracker
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="text-sm font-medium">Klikgedrag registreren</p>
+                <p className="text-xs text-muted-foreground max-w-md">
+                  Staat standaard uit. Als u dit aanzet, worden klikken en muisbewegingen
+                  van ingelogde gebruikers geregistreerd (gekoppeld aan het account) om de
+                  schermindeling te verbeteren. Dit zijn persoonsgegevens; de grondslag is
+                  gerechtvaardigd belang (interne productontwikkeling). Gebruikers zien in hun
+                  privacycentrum dat dit actief is.
+                </p>
+              </div>
+              <Switch
+                checked={instellingen?.heatmap_tracking_ingeschakeld ?? false}
+                onCheckedChange={toggleHeatmapTracking}
                 disabled={updateInstellingen.isPending}
               />
             </div>

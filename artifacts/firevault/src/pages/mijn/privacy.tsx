@@ -13,6 +13,7 @@ import {
   useListAvgMijnVerzoeken,
   useCreateAvgInzageverzoek,
   useUpdateMijnPrivacyInstellingen,
+  useGetInfoInstellingen,
   type AvgVerzoek,
   type AvgVerzoekInputType,
 } from "@workspace/api-client-react";
@@ -755,6 +756,9 @@ function WieZietTab() {
 }
 
 function HoeGebruiktTab() {
+  const { data: instellingen } = useGetInfoInstellingen();
+  const heatmapActief = instellingen?.heatmap_tracking_ingeschakeld === true;
+
   const secties = [
     {
       titel: "Verwerkingsdoel",
@@ -812,6 +816,44 @@ function HoeGebruiktTab() {
       <p className="text-sm text-muted-foreground">
         Informatie over hoe FPS Connect uw gegevens gebruikt — in gewone taal, zonder juridisch jargon.
       </p>
+
+      <Card className={heatmapActief ? "border-amber-300 bg-amber-50/60" : undefined}>
+        <CardHeader className="pb-2 pt-4">
+          <CardTitle className="text-sm font-semibold flex items-center gap-2">
+            <AlertTriangle className={`h-4 w-4 ${heatmapActief ? "text-amber-600" : "text-muted-foreground"}`} />
+            Klikgedrag (heatmap)
+            <Badge
+              className={
+                heatmapActief
+                  ? "text-[11px] px-1.5 py-0 bg-amber-100 text-amber-800 border-amber-200 font-normal"
+                  : "text-[11px] px-1.5 py-0 bg-muted text-muted-foreground border-transparent font-normal"
+              }
+            >
+              {heatmapActief ? "Actief" : "Uit"}
+            </Badge>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            {heatmapActief ? (
+              <>
+                Een beheerder heeft de heatmap-tracker ingeschakeld. Dit betekent dat uw klikken en
+                muisbewegingen binnen FPS Connect worden geregistreerd en aan uw account gekoppeld,
+                uitsluitend om de schermindeling te verbeteren (interne productontwikkeling). De
+                grondslag is gerechtvaardigd belang. U kunt hiertegen bezwaar maken via het tabblad
+                'AVG-verzoeken'.
+              </>
+            ) : (
+              <>
+                De heatmap-tracker staat uit. Er worden op dit moment geen klikken of muisbewegingen
+                geregistreerd. Alleen een beheerder kan dit inschakelen; zodra dat gebeurt, wordt het
+                hier zichtbaar.
+              </>
+            )}
+          </p>
+        </CardContent>
+      </Card>
+
       {secties.map((s) => (
         <Card key={s.titel} className={s.accent ? "border-primary/20 bg-primary/5" : undefined}>
           <CardHeader className="pb-2 pt-4">

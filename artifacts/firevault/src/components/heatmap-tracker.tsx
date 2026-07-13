@@ -1,13 +1,23 @@
 import { useEffect, useRef } from "react";
-import { createMuisGebeurtenissen } from "@workspace/api-client-react";
+import {
+  createMuisGebeurtenissen,
+  useGetInfoInstellingen,
+} from "@workspace/api-client-react";
 
 type Gebeurtenis = { pagina: string; type: string; x: number; y: number };
 
 export function HeatmapTracker() {
+  const { data: instellingen } = useGetInfoInstellingen();
+  const ingeschakeld = instellingen?.heatmap_tracking_ingeschakeld === true;
+
   const buffer = useRef<Gebeurtenis[]>([]);
   const laatsteMove = useRef(0);
 
   useEffect(() => {
+    // Zolang een beheerder de heatmap-tracker niet expliciet heeft ingeschakeld,
+    // worden er geen events geregistreerd en geen data verstuurd (AVG).
+    if (!ingeschakeld) return;
+
     function huidigePagina() {
       return window.location.pathname;
     }
@@ -55,7 +65,7 @@ export function HeatmapTracker() {
       window.removeEventListener("beforeunload", flush);
       flush();
     };
-  }, []);
+  }, [ingeschakeld]);
 
   return null;
 }

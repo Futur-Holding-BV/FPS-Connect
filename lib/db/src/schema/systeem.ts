@@ -79,6 +79,9 @@ export const appInstellingenTable = pgTable("app_instellingen", {
   // FPS Moments — organisatiebrede schakelaar (standaard aan); alleen de hoofdbeheerder mag dit wijzigen.
   // Uit = geen enkel Moment (verjaardag, later evt. andere types) wordt getoond, ook niet aan de jarige zelf.
   momentsVerjaardagIngeschakeld: boolean("moments_verjaardag_ingeschakeld").notNull().default(true),
+  // Heatmap-tracker (klik-/muisbeweging-registratie). AVG: persoonsgegevens gekoppeld aan account.
+  // Standaard UIT; alleen een beheerder mag dit expliciet inschakelen (grondslag gerechtvaardigd belang).
+  heatmapTrackingIngeschakeld: boolean("heatmap_tracking_ingeschakeld").notNull().default(false),
   aiKostendrempelEur: numeric("ai_kostendrempel_eur", { precision: 10, scale: 4 }),
   aiDrempelMeldingGestuurdMaand: text("ai_drempel_melding_gestuurd_maand"),
   aiMaandelijkseExportDag: integer("ai_maandelijkse_export_dag"), // 1-28, null = uit

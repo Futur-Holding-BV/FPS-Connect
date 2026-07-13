@@ -7034,6 +7034,7 @@ export const GetInfoInstellingenResponse = zod.object({
   "extra_disclaimer": zod.string().nullish(),
   "opdrachtbevestiging_auto_verzenden": zod.boolean().describe('Als true wordt de opdrachtbevestigingsmail automatisch naar de klant verstuurd na ondertekening. Als false wordt de mail niet verstuurd.'),
   "moments_verjaardag_ingeschakeld": zod.boolean().optional().describe('Organisatiebrede schakelaar voor FPS Moments — verjaardag. Uit = geen enkele verjaardag wordt getoond, ook niet aan de jarige zelf. Standaard aan.'),
+  "heatmap_tracking_ingeschakeld": zod.boolean().optional().describe('Organisatiebrede schakelaar voor de heatmap-tracker (klik-\/muisbeweging-registratie). Standaard uit; alleen een beheerder mag dit inschakelen. AVG-grondslag gerechtvaardigd belang.'),
   "ai_kostendrempel_eur": zod.number().nullish().describe('Maandelijks kostenplafond voor AI-gebruik in euro. Null betekent geen drempel.'),
   "ai_maandelijkse_export_dag": zod.number().nullish().describe('Dag van de maand (1-28) waarop het AI-logboek automatisch als CSV per e-mail wordt verstuurd. Null betekent uitgeschakeld.'),
   "ai_maandelijkse_export_email": zod.string().nullish().describe('E-mailadres dat de maandelijkse AI-logboek-CSV ontvangt. Null betekent uitgeschakeld.'),
@@ -7052,6 +7053,7 @@ export const UpdateInfoInstellingenBody = zod.object({
   "extra_disclaimer": zod.string().optional(),
   "opdrachtbevestiging_auto_verzenden": zod.boolean().optional(),
   "moments_verjaardag_ingeschakeld": zod.boolean().optional().describe('Organisatiebrede schakelaar voor FPS Moments — verjaardag (alleen hoofdbeheerder).'),
+  "heatmap_tracking_ingeschakeld": zod.boolean().optional().describe('Organisatiebrede schakelaar voor de heatmap-tracker (alleen hoofdbeheerder). Standaard uit.'),
   "ai_kostendrempel_eur": zod.number().nullish().describe('Maandelijks kostenplafond voor AI-gebruik in euro. Null of weglaten om drempel te verwijderen.'),
   "ai_maandelijkse_export_dag": zod.number().nullish().describe('Dag van de maand (1-28) waarop het AI-logboek automatisch als CSV per e-mail wordt verstuurd. Null of weglaten om uit te schakelen.'),
   "ai_maandelijkse_export_email": zod.string().nullish().describe('E-mailadres dat de maandelijkse AI-logboek-CSV ontvangt.')
@@ -7065,6 +7067,7 @@ export const UpdateInfoInstellingenResponse = zod.object({
   "extra_disclaimer": zod.string().nullish(),
   "opdrachtbevestiging_auto_verzenden": zod.boolean().describe('Als true wordt de opdrachtbevestigingsmail automatisch naar de klant verstuurd na ondertekening. Als false wordt de mail niet verstuurd.'),
   "moments_verjaardag_ingeschakeld": zod.boolean().optional().describe('Organisatiebrede schakelaar voor FPS Moments — verjaardag. Uit = geen enkele verjaardag wordt getoond, ook niet aan de jarige zelf. Standaard aan.'),
+  "heatmap_tracking_ingeschakeld": zod.boolean().optional().describe('Organisatiebrede schakelaar voor de heatmap-tracker (klik-\/muisbeweging-registratie). Standaard uit; alleen een beheerder mag dit inschakelen. AVG-grondslag gerechtvaardigd belang.'),
   "ai_kostendrempel_eur": zod.number().nullish().describe('Maandelijks kostenplafond voor AI-gebruik in euro. Null betekent geen drempel.'),
   "ai_maandelijkse_export_dag": zod.number().nullish().describe('Dag van de maand (1-28) waarop het AI-logboek automatisch als CSV per e-mail wordt verstuurd. Null betekent uitgeschakeld.'),
   "ai_maandelijkse_export_email": zod.string().nullish().describe('E-mailadres dat de maandelijkse AI-logboek-CSV ontvangt. Null betekent uitgeschakeld.'),
