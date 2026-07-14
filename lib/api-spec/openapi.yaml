@@ -21516,6 +21516,10 @@ paths:
         - name: opdracht_id
           in: query
           schema: { type: integer }
+        - name: mijn_opdrachten
+          in: query
+          description: Filter op picklijsten van opdrachten waaraan de ingelogde gebruiker is toegewezen (via planning).
+          schema: { type: boolean }
       responses:
         "200":
           description: Lijst picklijsten

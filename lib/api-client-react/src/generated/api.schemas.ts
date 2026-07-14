@@ -14620,6 +14620,10 @@ leverancier_id?: number;
 export type ListMagazijnPicklijstenParams = {
 status?: string;
 opdracht_id?: number;
+/**
+ * Filter op picklijsten van opdrachten waaraan de ingelogde gebruiker is toegewezen (via planning).
+ */
+mijn_opdrachten?: boolean;
 };
 
 export type GetMagazijnStellingsscanUploadUrl200 = {

@@ -19,8 +19,10 @@ import {
   magazijnInkooporderRegelsTable,
   magazijnPicklijstenTable,
   magazijnPicklijstRegelsTable,
+  medewerkersTable,
+  planningItemsTable,
 } from "@workspace/db";
-import { eq, and, asc, desc, ilike, lt, lte, sql, gt } from "drizzle-orm";
+import { eq, and, asc, desc, ilike, lt, lte, sql, gt, inArray, isNotNull } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { logger } from "../lib/logger";
 import { verstuurMail, MailFout } from "../services/email";
@@ -2147,10 +2149,42 @@ function mapPicklijst(r: typeof magazijnPicklijstenTable.$inferSelect & {
 // GET /magazijn/picklijsten
 router.get("/picklijsten", lezen, async (req, res) => {
   try {
-    const { status, opdracht_id } = req.query;
+    const { status, opdracht_id, mijn_opdrachten } = req.query;
     const conditions = [];
     if (status) conditions.push(eq(magazijnPicklijstenTable.status, String(status)));
     if (opdracht_id) conditions.push(eq(magazijnPicklijstenTable.opdrachtId, Number(opdracht_id)));
+
+    if (mijn_opdrachten === "true" || mijn_opdrachten === "1") {
+      const userId = req.session.userId!;
+      const [medewerker] = await db
+        .select({ id: medewerkersTable.id })
+        .from(medewerkersTable)
+        .where(eq(medewerkersTable.gebruikerId, userId))
+        .limit(1);
+
+      // Opdrachten waaraan de ingelogde gebruiker via planning is toegewezen.
+      const opdrachtRijen = medewerker
+        ? await db
+            .selectDistinct({ opdrachtId: planningItemsTable.opdrachtId })
+            .from(planningItemsTable)
+            .where(
+              and(
+                eq(planningItemsTable.medewerkerId, medewerker.id),
+                isNotNull(planningItemsTable.opdrachtId),
+              ),
+            )
+        : [];
+
+      const opdrachtIds = opdrachtRijen
+        .map((r) => r.opdrachtId)
+        .filter((id): id is number => id != null);
+
+      if (opdrachtIds.length === 0) {
+        // Geen toegewezen opdrachten → geen picklijsten binnen de monteur-scope.
+        return void res.json([]);
+      }
+      conditions.push(inArray(magazijnPicklijstenTable.opdrachtId, opdrachtIds));
+    }
 
     const rows = await db
       .select({

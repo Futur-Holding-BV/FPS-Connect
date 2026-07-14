@@ -127,7 +127,7 @@ export default function PicklijstenScherm() {
   const [filter, setFilter] = useState<StatusFilter>("open");
 
   const { data: picklijsten = [], isLoading, refetch } = useListMagazijnPicklijsten(
-    {},
+    { mijn_opdrachten: true },
     { query: { enabled: !!token } } as any,
   );
 

@@ -26807,7 +26807,8 @@ export const GenereerMagazijnBestelsuggestiesResponse = zod.object({
  */
 export const ListMagazijnPicklijstenQueryParams = zod.object({
   "status": zod.coerce.string().optional(),
-  "opdracht_id": zod.coerce.number().optional()
+  "opdracht_id": zod.coerce.number().optional(),
+  "mijn_opdrachten": zod.coerce.boolean().optional().describe('Filter op picklijsten van opdrachten waaraan de ingelogde gebruiker is toegewezen (via planning).')
 })
 
 export const ListMagazijnPicklijstenResponseItem = zod.object({
