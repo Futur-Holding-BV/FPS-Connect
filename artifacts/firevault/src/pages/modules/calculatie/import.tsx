@@ -444,6 +444,28 @@ export default function ModulesCalculatieImport() {
               </div>
             )}
 
+            {verwerking === "inclusief" && (
+              <div className="rounded-lg border bg-muted/40 p-4 space-y-2">
+                <p className="text-sm font-medium">
+                  {analyse.opslagen_bron === "gedetecteerd"
+                    ? "ENK-opslagen (herkend uit het bestand)"
+                    : "Standaard ENK-opslagen (aangenomen)"}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Deze opslagen zitten al in de regelbedragen verwerkt en worden daarom niet nogmaals
+                  verrekend. Ze worden wel op de calculatie vastgelegd.
+                </p>
+                <div className="grid grid-cols-3 md:grid-cols-7 gap-3 pt-1">
+                  {OPSLAG_VELDEN.map(({ sleutel, label }) => (
+                    <div key={sleutel}>
+                      <p className="text-xs text-muted-foreground">{label}</p>
+                      <p className="text-sm font-medium tabular-nums">{opslagen[sleutel]}%</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="rounded-lg border bg-muted/40 p-4 grid md:grid-cols-3 gap-4 text-sm">
               <div>
                 <p className="text-muted-foreground">Totaal volgens ENK-bestand</p>
@@ -463,6 +485,19 @@ export default function ModulesCalculatieImport() {
                 </p>
               </div>
             </div>
+
+            {enkCenten != null && verschilCenten !== 0 && (
+              <Alert className="border-amber-300 bg-amber-50 text-amber-900">
+                <AlertTriangle className="h-4 w-4 !text-amber-700" />
+                <AlertTitle>Reken- of afrondingsverschil in het ENK-bestand</AlertTitle>
+                <AlertDescription className="text-amber-900/90">
+                  De calculatie is correct geïmporteerd, maar de oorspronkelijke ENK-calculatie
+                  bevat waarschijnlijk een reken- of afrondingsverschil. Connect heeft de regels
+                  exact opnieuw berekend; het verschil wordt hieronder getoond en niet stilzwijgend
+                  overgenomen.
+                </AlertDescription>
+              </Alert>
+            )}
 
             {enkCenten != null && verschilCenten !== 0 && (
               <div className="space-y-2">

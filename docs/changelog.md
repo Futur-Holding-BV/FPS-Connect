@@ -10,6 +10,11 @@ Nieuwe importflow waarmee een ENK-begroting (PDF, Excel of CSV) direct als Conne
 3. **Frontend** (`modules/calculatie/import.tsx`): dropzone (pdf/csv/xlsx/xls, max 25 MB), controlescherm met herkende gegevens, hoofdstukken-tabellen, verwerkingskeuze (opslagen inclusief in regelprijzen of bovenop), live totaalvergelijking, keuzeblok met correctieregel-uitleg, waarschuwingen/duplicaten/bewijs. Entry-knop "ENK-import" op het calculatie-overzicht; detailpagina toont "Geïmporteerd uit: bestand (nummer)".
 4. **Bewijs:** `scripts/src/verificatie-enk-import.ts` (8 API-stappen, allemaal groen, incl. DB-verificatie van de correctieregel van € 0,01) en Playwright-UI-test `scripts/e2e/web-enk-import.spec.ts` (volledige browserflow met echte PDF: upload → controlescherm → aanmaken → detailpagina + DB-bewijs) — beide geslaagd. Volledige typecheck groen.
 
+**Aanvulling (opslagen herkennen + afrondingsmelding):** na herspecificatie van de eisen twee hiaten gedicht.
+- **Standaard ENK-opslagen (25/4/8/0/4/0):** de fallback voor niet-herkende opslagen was leeg (nullen). Nieuwe constante `STANDAARD_OPSLAGEN` (materiaal 25%, arbeid 4%, AK 8%, risico 0%, winst 4%, korting 0%) wordt nu vastgelegd en getoond in alle parse-paden (PDF, Excel/CSV, AI-vangnet). Cruciaal: deze opslagen zijn **informatief** — ze zitten al in de ENK-regelprijzen en worden bij verwerking "inclusief" niet nogmaals verrekend (rekenpad blijft `LEGE_OPSLAGEN`, geen dubbeltelling). Het bewezen resultaat (ENK € 165.463,74 vs Connect € 165.463,73, verschil € 0,01, advies=inclusief) blijft ongewijzigd. De opslagen worden bij elke inclusief-import in de kopopmerkingen vastgelegd.
+- **Afrondingsmelding:** bij een verschil toont het controlescherm nu een expliciete melding: "De calculatie is correct geïmporteerd, maar de oorspronkelijke ENK-calculatie bevat waarschijnlijk een reken- of afrondingsverschil." Plus een read-only weergave van de aangenomen opslagen bij inclusief.
+- **Bewijs aanvulling:** verificatiescript blijft 8/8 groen (€ 0,01 behouden); Playwright uitgebreid met assertions voor de standaard-opslagen-weergave en de afrondingsmelding — groen. Beide typechecks groen (opslagen-defaults zijn backend-intern, geen OpenAPI/codegen nodig).
+
 ---
 
 ## 2026-07-14 — Productie-noodfix: MinIO crash-loop (plattegronden niet zichtbaar)

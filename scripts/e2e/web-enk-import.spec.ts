@@ -142,11 +142,20 @@ test("Web: ENK-PDF importeren — analyse, totaalvergelijking en calculatie met 
     await expect(page.getByText("FPS-BP-00098")).toBeVisible();
     await expect(page.getByText("BPC-00091")).toBeVisible();
 
+    // Standaard ENK-opslagen (25/4/8/0/4/0) worden getoond, informatief bij "inclusief".
+    await expect(page.getByText("Standaard ENK-opslagen (aangenomen)")).toBeVisible();
+    await expect(page.getByText("25%")).toBeVisible();
+
     // Totaalvergelijking: ENK € 165.463,74 vs Connect € 165.463,73, verschil € 0,01.
     await expect(page.getByText("Totaal volgens ENK-bestand")).toBeVisible();
     await expect(page.getByText(/165\.463,74/).first()).toBeVisible();
     await expect(page.getByText(/165\.463,73/).first()).toBeVisible();
-    await expect(page.getByText("Verschil")).toBeVisible();
+    await expect(page.getByText("Verschil", { exact: true })).toBeVisible();
+
+    // Melding over het reken-/afrondingsverschil in het ENK-bestand.
+    await expect(
+      page.getByText(/De calculatie is correct geïmporteerd, maar de oorspronkelijke ENK-calculatie/),
+    ).toBeVisible();
 
     // Keuzeblok met zichtbare-correctieregel-uitleg (standaardkeuze = ENK).
     await expect(page.getByText("Welk totaal moet de calculatie krijgen?")).toBeVisible();

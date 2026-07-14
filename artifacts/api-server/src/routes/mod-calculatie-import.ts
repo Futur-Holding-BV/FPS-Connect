@@ -514,9 +514,12 @@ router.post("/modules/calculaties/import/:id/bevestig", aanmakenCalc, async (req
     const verschilCenten = enkCenten !== null ? enkCenten - connectCenten : 0;
     const correctieNodig = totaalKeuze === "enk" && enkCenten !== null && verschilCenten !== 0;
 
-    // Informatieve ENK-percentages bewaren wanneer regels al verkoopprijzen zijn
-    const opslagenInfo = parse.opslagenBron === "gedetecteerd" && verwerking === "inclusief"
-      ? `ENK-opslagen (informatief, al in de regelprijzen verwerkt): materiaal ${parse.opslagen.materiaal}%, arbeid ${parse.opslagen.arbeid}%, AK ${parse.opslagen.ak}%, ABK ${parse.opslagen.abk}%, risico ${parse.opslagen.risico}%, winst ${parse.opslagen.winst}%, korting ${parse.opslagen.korting}%.`
+    // Informatieve ENK-percentages bewaren wanneer regels al verkoopprijzen zijn.
+    // Bij verwerking "inclusief" worden de opslagen niet opnieuw verrekend (dat zou
+    // dubbeltellen), maar wel vastgelegd zodat zichtbaar blijft welke ENK-opslagen
+    // gelden — of ze nu uit het bestand zijn herkend of standaard zijn aangenomen.
+    const opslagenInfo = verwerking === "inclusief"
+      ? `${parse.opslagenBron === "gedetecteerd" ? "ENK-opslagen" : "Standaard ENK-opslagen"} (informatief, al in de regelprijzen verwerkt): materiaal ${parse.opslagen.materiaal}%, arbeid ${parse.opslagen.arbeid}%, AK ${parse.opslagen.ak}%, ABK ${parse.opslagen.abk}%, risico ${parse.opslagen.risico}%, winst ${parse.opslagen.winst}%, korting ${parse.opslagen.korting}%.`
       : null;
 
     const resultaat = await db.transaction(async (tx) => {

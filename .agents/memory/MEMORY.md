@@ -128,4 +128,4 @@
 - [Blink dragstart in scrollbare sidebar](blink-dragstart-sidebar.md) — HTML5-dnd start nooit in scrollbare SidebarContent; pointer-gebaseerd slepen gebruiken (e2e-valkuil in topicfile).
 - [MinIO objectopslag prod](minio-objectopslag-prod.md) — presign-client op publiek domein + Caddy Host-behoud; mc alias op publiek domein werkt niet; backup-minio + bucket-race depends_on.
 - [Financiele kerncijfers denormalisatie](financieel-kerncijfers-denormalisatie.md) — meerjarenoverzicht leest denorm-kolommen op kerncijfers; metadata-wijziging moet atomair cascaderen (tx); bewijs via verificatie-jaarrekening-cascade.ts.
-- [ENK-import calculatiemodule](enk-import.md) — verschil ENK/Connect = zichtbare correctieregel (nooit stil aanpassen); float4-grens €167k; claim-update tegen dubbelklik; e2e: 2 file-inputs door slim-upload-balk.
+- [ENK-import calculatiemodule](enk-import.md) — verschil = zichtbare correctieregel; standaard opslagen 25/4/8/0/4/0 zijn informatief, nooit verrekenen bij inclusief (dubbeltelling); float4-grens €167k; e2e: 2 file-inputs.

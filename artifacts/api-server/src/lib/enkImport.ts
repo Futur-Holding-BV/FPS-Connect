@@ -51,6 +51,15 @@ export const LEGE_OPSLAGEN: EnkOpslagen = {
   materiaal: 0, arbeid: 0, ak: 0, abk: 0, risico: 0, winst: 0, korting: 0,
 };
 
+// Standaard ENK-opslagen die worden aangenomen wanneer het bestand geen expliciete
+// percentages bevat. Dit zijn de door de gebruiker vastgestelde ENK-standaardwaarden.
+// Let op: deze waarden zijn informatief bij verwerking "inclusief" (de regelprijzen
+// bevatten de opslagen dan al); ze worden alleen daadwerkelijk verrekend bij
+// verwerking "bovenop". Voor de daadwerkelijke rekenpaden geldt LEGE_OPSLAGEN.
+export const STANDAARD_OPSLAGEN: EnkOpslagen = {
+  materiaal: 25, arbeid: 4, ak: 8, abk: 0, risico: 0, winst: 4, korting: 0,
+};
+
 const BOUWPLAATS_HOOFDSTUK = /^(abk|bouwplaats|algemene bouwplaatskosten)/i;
 
 function isBouwplaatsHoofdstuk(naam: string): boolean {
@@ -106,7 +115,13 @@ export function detecteerOpslagen(tekst: string): { opslagen: EnkOpslagen; bron:
     bewijs.push(`Opslag gedetecteerd in bestand: ${m[1]} ${m[2]}%`);
   }
   if (aantal >= 2) return { opslagen, bron: "gedetecteerd", bewijs };
-  return { opslagen: { ...LEGE_OPSLAGEN }, bron: "standaard", bewijs: [] };
+  return {
+    opslagen: { ...STANDAARD_OPSLAGEN },
+    bron: "standaard",
+    bewijs: [
+      `Geen expliciete opslagpercentages in het bestand; standaard ENK-opslagen aangenomen: materiaal ${STANDAARD_OPSLAGEN.materiaal}%, arbeid ${STANDAARD_OPSLAGEN.arbeid}%, AK ${STANDAARD_OPSLAGEN.ak}%, risico ${STANDAARD_OPSLAGEN.risico}%, winst ${STANDAARD_OPSLAGEN.winst}%, korting ${STANDAARD_OPSLAGEN.korting}%.`,
+    ],
+  };
 }
 
 // ── Deterministische PDF-tekstparser ──────────────────────────────────────────
@@ -348,6 +363,7 @@ export function parseEnkRijen(rijen: unknown[][], bewijsBron: string): EnkParseR
   const geprijsd = volgorde.reduce((s, h) => s + h.regels.filter((r) => r.totaalCenten !== 0).length, 0);
   const totaal = somCenten(volgorde.map((h) => h.somRegelsCenten));
   bewijs.push(`${geprijsd} geprijsde regels herkend; regelsom € ${centenNaarEuroTekst(totaal)}.`);
+  bewijs.push(`Geen expliciete opslagpercentages in het bestand; standaard ENK-opslagen aangenomen: materiaal ${STANDAARD_OPSLAGEN.materiaal}%, arbeid ${STANDAARD_OPSLAGEN.arbeid}%, AK ${STANDAARD_OPSLAGEN.ak}%, risico ${STANDAARD_OPSLAGEN.risico}%, winst ${STANDAARD_OPSLAGEN.winst}%, korting ${STANDAARD_OPSLAGEN.korting}%.`);
   waarschuwingen.push("Tabulaire import bevat geen eindtotaal van ENK zelf; de regelsom is als ENK-totaal aangehouden.");
   voegPrecisieWaarschuwingToe(volgorde, waarschuwingen);
 
@@ -355,7 +371,7 @@ export function parseEnkRijen(rijen: unknown[][], bewijsBron: string): EnkParseR
     succes: geprijsd > 0,
     calculatienummer: null, projectnummer: null, naam: null, opdrachtgever: null, datum: null,
     hoofdstukken: volgorde,
-    opslagen: { ...LEGE_OPSLAGEN },
+    opslagen: { ...STANDAARD_OPSLAGEN },
     opslagenBron: "standaard",
     totaalEnkCenten: geprijsd > 0 ? totaal : null,
     waarschuwingen,
@@ -432,6 +448,7 @@ export async function parseEnkMetAi(tekst: string): Promise<EnkParseResultaat | 
     korting: num(opslagenRuw["korting"]),
   };
   const opslagenGedetecteerd = Object.values(opslagen).some((v) => v > 0);
+  const effectieveOpslagen = opslagenGedetecteerd ? opslagen : { ...STANDAARD_OPSLAGEN };
 
   const geprijsd = hoofdstukken.reduce((s, h) => s + h.regels.filter((r) => r.totaalCenten !== 0).length, 0);
   const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : null);
@@ -444,7 +461,7 @@ export async function parseEnkMetAi(tekst: string): Promise<EnkParseResultaat | 
     opdrachtgever: str(parsed["opdrachtgever"]),
     datum: str(parsed["datum"]),
     hoofdstukken,
-    opslagen,
+    opslagen: effectieveOpslagen,
     opslagenBron: opslagenGedetecteerd ? "gedetecteerd" : "standaard",
     totaalEnkCenten: typeof parsed["totaal_eur"] === "number" && Number.isFinite(parsed["totaal_eur"]) ? euroGetalNaarCenten(parsed["totaal_eur"] as number) : null,
     waarschuwingen: ["De structuur is met AI-hulp uitgelezen; controleer de regels en totalen extra zorgvuldig."],
