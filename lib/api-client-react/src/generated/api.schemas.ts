@@ -3226,6 +3226,18 @@ export interface AiRollenVoorstelResultaat {
   toelichting: string | null;
 }
 
+export interface AiVoorstelFunctieInput {
+  functie_id: number;
+}
+
+export type ProfielAiVoorstelFunctieResultaatBevoegdheden = {[key: string]: number};
+
+export interface ProfielAiVoorstelFunctieResultaat {
+  profiel_naam: string;
+  bevoegdheden: ProfielAiVoorstelFunctieResultaatBevoegdheden;
+  toelichting: string | null;
+}
+
 export interface GoedkeuringBeleidsregel {
   id: number;
   naam: string;
@@ -5398,6 +5410,29 @@ export interface VerlofSaldoInput {
   saldo_uren?: number;
   /** @nullable */
   vervalt_op?: string | null;
+}
+
+export interface SaldoCorrectieInput {
+  verlofsoort_id: number;
+  jaar: number;
+  /** Positief = meer opgenomen (uren afschrijven), negatief = terugboeken */
+  delta_uren: number;
+  /** @minLength 3 */
+  reden: string;
+}
+
+export interface VerlofCorrectie {
+  id: number;
+  medewerker_id: number;
+  verlofsoort_id: number;
+  /** @nullable */
+  verlofsoort_naam?: string | null;
+  jaar: number;
+  delta_uren: number;
+  reden: string;
+  /** @nullable */
+  uitgevoerd_door_naam?: string | null;
+  aangemaakt_op: string;
 }
 
 export interface VerlofAanvraag {
@@ -13572,6 +13607,10 @@ gebouw_id?: number;
 opdracht_id?: number;
 };
 
+export type ListMijnVerlofCorrectiesParams = {
+jaar?: number;
+};
+
 export type ListMijnActiviteitenParams = {
 limit?: number;
 offset?: number;
@@ -13876,6 +13915,10 @@ export type GenereerCrmRelatievoorstellen503 = {
 export type ListInboxItemsParams = {
 status?: string;
 bestemming?: string;
+};
+
+export type CreateSaldoCorrectie200 = {
+  ok: boolean;
 };
 
 export type GetMedewerkerDocumentDownloadUrl200 = {

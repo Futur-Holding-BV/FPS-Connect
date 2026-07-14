@@ -278,6 +278,19 @@ export const verlofAanvragenTable = pgTable("verlofaanvragen", {
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
 });
 
+// Handmatige saldocorrecties door HRM. Append-only auditlog — niet wijzigen of verwijderen.
+// Elke rij is zichtbaar voor de betrokken medewerker (via /mijn/verlof-correcties).
+export const verlofCorrectiesTable = pgTable("verlof_correcties", {
+  id: serial("id").primaryKey(),
+  medewerkerId: integer("medewerker_id").notNull().references(() => medewerkersTable.id, { onDelete: "cascade" }),
+  verlofsoortId: integer("verlofsoort_id").notNull().references(() => verlofsoortenTable.id, { onDelete: "cascade" }),
+  jaar: integer("jaar").notNull(),
+  deltaUren: real("delta_uren").notNull(),
+  reden: text("reden").notNull(),
+  uitgevoerdDoorId: integer("uitgevoerd_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+});
+
 // Audit-log voor alle statusovergangen en wijzigingen op verlofaanvragen.
 // Onveranderlijk (geen UPDATE/DELETE): append-only. Schrijf altijd via logVerlofMutatie().
 export const verlofAanvraagLogTable = pgTable("verlof_aanvraag_log", {
@@ -510,6 +523,9 @@ export type Verlofsoort = typeof verlofsoortenTable.$inferSelect;
 export type VerlofSaldo = typeof verlofSaldiTable.$inferSelect;
 export type VerlofAanvraag = typeof verlofAanvragenTable.$inferSelect;
 export type VerlofAanvraagLog = typeof verlofAanvraagLogTable.$inferSelect;
+export const insertVerlofCorrectieSchema = createInsertSchema(verlofCorrectiesTable).omit({ id: true, aangemaaktOp: true });
+export type InsertVerlofCorrectie = z.infer<typeof insertVerlofCorrectieSchema>;
+export type VerlofCorrectie = typeof verlofCorrectiesTable.$inferSelect;
 export type VerlofInstellingen = typeof verlofInstellingenTable.$inferSelect;
 export type Feestdag = typeof feestdagenTable.$inferSelect;
 export type JaarAfsluitingRegel = typeof jaarAfsluitingRegelsTable.$inferSelect;

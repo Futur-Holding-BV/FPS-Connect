@@ -17,6 +17,7 @@ import {
   useUpdateOpleiding,
   useDeleteOpleiding,
   useVoorstelOpleidingenVoorFunctie,
+  useAiVoorstelVoorFunctie,
   useListVerlofsoorten,
   useListCaoOpties,
   useListToewijsbareGebruikers,
@@ -52,6 +53,7 @@ import type {
   WerkgeverInput,
   ZiekmeldingenInput,
   CvAnalyseResultaat,
+  ProfielAiVoorstelFunctieResultaat,
 } from "@workspace/api-client-react";
 import { PoortwachterSheet } from "@/components/hrm/poortwachter-sheet";
 import { useRol } from "@/context/rol-context";
@@ -315,6 +317,11 @@ export default function PersoneelPagina() {
   const [gekozenVoorstellen, setGekozenVoorstellen] = useState<Set<number>>(new Set());
   const [voorstelGedaan, setVoorstelGedaan] = useState(false);
   const voorstelMutatie = useVoorstelOpleidingenVoorFunctie();
+
+  const [aiBevoegdhedenOpen, setAiBevoegdhedenOpen] = useState(false);
+  const [aiBevoegdhedenFunctieNaam, setAiBevoegdhedenFunctieNaam] = useState<string>("");
+  const [aiBevoegdhedenResultaat, setAiBevoegdhedenResultaat] = useState<ProfielAiVoorstelFunctieResultaat | null>(null);
+  const aiVoorstelFunctieMut = useAiVoorstelVoorFunctie();
   const [onboardForm, setOnboardForm] = useState<MedewerkerOnboardingInput>({
     gebruiker_id: 0,
     functie_id: 0,
@@ -942,6 +949,27 @@ export default function PersoneelPagina() {
                             Uitvoerend
                           </Badge>
                         )}
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-6 w-6 text-amber-600 hover:text-amber-700"
+                          title="AI-bevoegdheden voorstel"
+                          onClick={async () => {
+                            setAiBevoegdhedenFunctieNaam(f.naam);
+                            setAiBevoegdhedenResultaat(null);
+                            setAiBevoegdhedenOpen(true);
+                            try {
+                              const res = await aiVoorstelFunctieMut.mutateAsync({ data: { functie_id: f.id } });
+                              setAiBevoegdhedenResultaat(res);
+                            } catch {
+                              toast({ title: "AI-voorstel mislukt", variant: "destructive" });
+                              setAiBevoegdhedenOpen(false);
+                            }
+                          }}
+                          disabled={aiVoorstelFunctieMut.isPending}
+                        >
+                          <Sparkles className="h-3.5 w-3.5" />
+                        </Button>
                         {magSchrijven && (
                           <>
                             <Button
@@ -2284,6 +2312,63 @@ export default function PersoneelPagina() {
           void queryClient.invalidateQueries({ queryKey: getGetHrmStatsQueryKey() });
         }}
       />
+
+      {/* AI-bevoegdheden voorstel per functie */}
+      <Dialog open={aiBevoegdhedenOpen} onOpenChange={setAiBevoegdhedenOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-amber-500" />
+              AI-bevoegdheden voor: {aiBevoegdhedenFunctieNaam}
+            </DialogTitle>
+          </DialogHeader>
+          {aiVoorstelFunctieMut.isPending || !aiBevoegdhedenResultaat ? (
+            <div className="py-8 flex flex-col items-center gap-3 text-muted-foreground">
+              <Loader2 className="h-6 w-6 animate-spin text-amber-500" />
+              <p className="text-sm">AI analyseert de functie en bepaalt passende toegangsrechten…</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {aiBevoegdhedenResultaat.toelichting && (
+                <div className="rounded-lg border border-amber-200 bg-amber-50/60 p-3 text-sm text-amber-800">
+                  {aiBevoegdhedenResultaat.toelichting}
+                </div>
+              )}
+              <div className="text-xs text-muted-foreground">
+                Voorgesteld profiel: <span className="font-medium text-foreground">{aiBevoegdhedenResultaat.profiel_naam}</span>
+              </div>
+              <div className="space-y-1.5">
+                {Object.entries(aiBevoegdhedenResultaat.bevoegdheden)
+                  .sort(([a], [b]) => a.localeCompare(b))
+                  .map(([moduleId, niveau]) => (
+                    <div key={moduleId} className="flex items-center justify-between rounded-md border px-3 py-2">
+                      <span className="text-sm font-medium">{moduleId}</span>
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                        niveau === 0 ? "bg-muted text-muted-foreground" :
+                        niveau === 1 ? "bg-blue-50 text-blue-700 border border-blue-200" :
+                        niveau === 2 ? "bg-green-50 text-green-700 border border-green-200" :
+                        niveau === 3 ? "bg-orange-50 text-orange-700 border border-orange-200" :
+                        "bg-red-50 text-red-700 border border-red-200"
+                      }`}>
+                        {niveau === 0 ? "Geen toegang" :
+                         niveau === 1 ? "Lezen" :
+                         niveau === 2 ? "Lezen + schrijven" :
+                         niveau === 3 ? "Lezen + schrijven + beheren" :
+                         "Volledig beheer"}
+                      </span>
+                    </div>
+                  ))}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Dit is een voorstel van de AI — u kunt het zelf aanpassen via Instellingen &rsaquo; Rollen &amp; Rechten.
+              </p>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAiBevoegdhedenOpen(false)}>Sluiten</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

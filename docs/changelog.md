@@ -1,3 +1,26 @@
+## 2026-07-14 — HRM verlof-saldocorrectie en AI-bevoegdheden per functie
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+**Feature 1 — HRM saldocorrectie door beheerder:**
+- `POST /medewerkers/:id/saldocorrectie` — HRM past verlof-saldo bij met delta_uren + reden + jaar; correctie wordt gelogd in nieuwe tabel `verlof_correcties`
+- `GET /medewerkers/:id/verlof-correcties` — beheerder ziet historiek per medewerker
+- `GET /mijn/verlof-correcties` — medewerker/monteur ziet eigen ontvangen correcties
+- Frontend (`verlof-overzicht.tsx`): per saldo-rij knop "Aanpassen" (correctiedialog, delta + reden + jaar) en "Historiek" (lijst van uitgevoerde correcties)
+- Monteur-app (`hrm/verlof.tsx`): sectie "Saldo-aanpassingen" toont correcties met kleurcode (groen = positief, rood = negatief)
+- DB-migratie op VPS uitgevoerd: tabel `verlof_correcties` aangemaakt
+
+**Feature 2 — AI-bepaalde toegangsrechten per functie:**
+- `POST /profielen/ai-voorstel-functie` — AI analyseert functienaam en geeft profiel_naam + bevoegdheden per module (niveaus 0–4) + toelichting
+- Frontend (`personeel/index.tsx`): Sparkles-knop per functie-kaart opent dialoog met AI-voorstel; toont module-niveaus met kleurcodering; geen automatisch opslaan (informatief voorstel)
+
+**Technisch:**
+- OpenAPI schema uitgebreid: `AiVoorstelFunctieInput`, `VerlofCorrectie`, `SaldoCorrectieInput`, `ProfielAiVoorstelFunctieResultaat`
+- Codegen gedraaid; typecheck frontend + backend + monteur-app groen
+- VPS: api + caddy herbouwd en herstart
+
+---
+
 ## 2026-07-14 — Hoofdbeheerder kan zichzelf als teamlid toevoegen aan project
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag

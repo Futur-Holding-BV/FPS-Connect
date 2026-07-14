@@ -10,7 +10,7 @@ import {
 } from "@workspace/permissies";
 import { requireBevoegdheid, requireEnigeBevoegdheid, requireRol } from "../middlewares/auth";
 import { heeftGateway } from "../lib/aiGateway";
-import { stelRollenVoor } from "../services/profiel-ai";
+import { stelRollenVoor, stelBevoegdhedenVoorPerFunctie } from "../services/profiel-ai";
 
 const router = Router();
 
@@ -258,6 +258,34 @@ router.post("/profielen/aanvullen", requireRol("hoofdbeheerder"), async (req, re
 // bevestigt): de hoofdbeheerder beoordeelt en past het voorstel aan en slaat de
 // gekozen rollen daarna zelf op via POST /profielen. Moet vóór /profielen/:id
 // staan zodat "ai-voorstel" niet als id wordt geïnterpreteerd.
+router.post("/profielen/ai-voorstel-functie", requireRol("hoofdbeheerder"), async (req, res): Promise<void> => {
+  try {
+    if (!heeftGateway()) {
+      res.status(503).json({ error: "AI is niet beschikbaar." });
+      return;
+    }
+    const functieId = Number(req.body?.functie_id);
+    if (!Number.isInteger(functieId) || functieId <= 0) {
+      res.status(400).json({ error: "functie_id is verplicht" });
+      return;
+    }
+    const [functie] = await db
+      .select({ naam: functiesTable.naam, omschrijving: functiesTable.omschrijving, taken: functiesTable.taken, verantwoordelijkheden: functiesTable.verantwoordelijkheden })
+      .from(functiesTable)
+      .where(eq(functiesTable.id, functieId))
+      .limit(1);
+    if (!functie) {
+      res.status(404).json({ error: "Functie niet gevonden" });
+      return;
+    }
+    const resultaat = await stelBevoegdhedenVoorPerFunctie(functie, { gebruikerId: req.session.userId ?? null });
+    res.json(resultaat);
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
 router.post("/profielen/ai-voorstel", requireRol("hoofdbeheerder"), async (req, res): Promise<void> => {
   try {
     if (!heeftGateway()) {

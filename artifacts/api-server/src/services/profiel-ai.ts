@@ -97,6 +97,98 @@ function bouwContextTekst(functies: FunctieBron[]): string {
   return regels.join("\n");
 }
 
+export interface FunctieBevoegdhedenResultaat {
+  profiel_naam: string;
+  bevoegdheden: Record<string, number>;
+  toelichting: string | null;
+}
+
+// Stelt bevoegdheden voor voor één specifieke functie. Gebruikt dezelfde sanitisatie
+// als stelRollenVoor maar retourneert slechts één voorstel voor de opgegeven functie.
+export async function stelBevoegdhedenVoorPerFunctie(
+  functie: FunctieBron,
+  logCtx?: Partial<LogContext>,
+): Promise<FunctieBevoegdhedenResultaat> {
+  if (!heeftGateway()) {
+    return {
+      profiel_naam: functie.naam,
+      bevoegdheden: Object.fromEntries(MODULE_IDS.map((id) => [id, 0])),
+      toelichting: "AI is niet geconfigureerd. Stel de rechten handmatig in.",
+    };
+  }
+
+  const moduleRegels = MODULES.map((m) => `- ${m.id} (${m.label}): ${m.omschrijving}`).join("\n");
+  const niveauRegels = NIVEAUS.map((n) => `- ${n.waarde} = ${n.label}: ${n.omschrijving}`).join("\n");
+  const functieTekst = [
+    `Functie: ${functie.naam}`,
+    functie.omschrijving ? `Omschrijving: ${functie.omschrijving}` : null,
+    functie.taken ? `Taken: ${functie.taken}` : null,
+    functie.verantwoordelijkheden ? `Verantwoordelijkheden: ${functie.verantwoordelijkheden}` : null,
+  ].filter(Boolean).join("\n");
+
+  const prompt = `Je bepaalt de systeemtoegangsrechten voor één specifieke functie binnen een brandpreventie-/bouwbedrijf.
+
+BESCHIKBARE MODULES (gebruik uitsluitend deze id's):
+${moduleRegels}
+
+NIVEAUS (per module een geheel getal 0 t/m 4):
+${niveauRegels}
+
+Stel het toegangsniveau in voor de volgende functie. Geef een JSON-object terug met:
+- profiel_naam: een duidelijke naam voor het profiel (bijv. "Timmerman")
+- bevoegdheden: een object met per module-id het aanbevolen niveau (0–4)
+- toelichting: korte uitleg van je keuzes (max 2 zinnen)
+
+${functieTekst}`;
+
+  const aiResultaat = await aiGateway.chat(
+    "default",
+    {
+      response_format: { type: "json_object" },
+      max_tokens: 1500,
+      messages: [
+        { role: "system", content: "Je bent een toegangsbeheer-assistent voor een brandbeveiligingsbedrijf. Geef altijd een valide JSON-object terug." },
+        { role: "user", content: prompt },
+      ],
+    },
+    undefined,
+    {
+      module: "gebruikers",
+      functie: "bevoegdheden-voorstel-per-functie",
+      promptNaam: "bevoegdheden-per-functie-v1",
+      promptVersie: "1.0.0",
+      ...logCtx,
+    },
+  );
+
+  if (!aiResultaat.ok) {
+    logger.error({ fout: aiResultaat.fout }, "AI-bevoegdhedenvoorstel mislukt");
+    return {
+      profiel_naam: functie.naam,
+      bevoegdheden: Object.fromEntries(MODULE_IDS.map((id) => [id, 0])),
+      toelichting: "Het AI-voorstel kon niet worden opgehaald. Probeer het later opnieuw.",
+    };
+  }
+
+  let parsed: Record<string, unknown>;
+  try {
+    parsed = JSON.parse(aiResultaat.inhoud);
+  } catch {
+    logger.error({ tekst: aiResultaat.inhoud }, "Kon AI-JSON niet parsen (bevoegdhedenvoorstel)");
+    return {
+      profiel_naam: functie.naam,
+      bevoegdheden: Object.fromEntries(MODULE_IDS.map((id) => [id, 0])),
+      toelichting: "Het AI-antwoord was onleesbaar.",
+    };
+  }
+
+  return {
+    profiel_naam: strOfNull(parsed.profiel_naam) ?? functie.naam,
+    bevoegdheden: saneerBevoegdheden(parsed.bevoegdheden),
+    toelichting: strOfNull(parsed.toelichting),
+  };
+}
+
 // Stelt een set rollen met rechten voor. `bestaandeProfielNamen` zijn de namen van
 // reeds bestaande profielen; samen met de PRESET-namen worden deze uitgesloten,
 // zodat een AI-voorstel nooit een naam voorstelt die botst met een bestaand of

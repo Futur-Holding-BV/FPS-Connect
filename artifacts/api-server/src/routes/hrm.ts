@@ -26,6 +26,7 @@ import {
   verlofSaldiTable,
   verlofAanvragenTable,
   verlofAanvraagLogTable,
+  verlofCorrectiesTable,
   verlofInstellingenTable,
   feestdagenTable,
   jaarAfsluitingRegelsTable,
@@ -2558,6 +2559,16 @@ router.post("/medewerkers/:id/saldocorrectie", alleenBeheerder, async (req, res)
         .set({ opgenomenUren: nieuweOpgenomen, saldoUren: nieuwSaldo, bijgewerktOp: new Date() })
         .where(eq(verlofSaldiTable.id, s.id));
 
+      // Zichtbaar in verlofoverzicht medewerker (append-only auditlog)
+      await tx.insert(verlofCorrectiesTable).values({
+        medewerkerId,
+        verlofsoortId: parseId(verlofsoort_id),
+        jaar: Number(jaar),
+        deltaUren,
+        reden: String(reden).trim(),
+        uitgevoerdDoorId: gebruikerId ?? undefined,
+      });
+
       logger.info(
         { saldo_id: s.id, medewerker_id: medewerkerId, verlofsoort_id: parseId(verlofsoort_id), jaar: Number(jaar), delta_uren: deltaUren, oud_opgenomen: oudOpgenomen, oud_saldo: oudSaldo, nieuw_opgenomen: nieuweOpgenomen, nieuw_saldo: nieuwSaldo, reden: String(reden).trim(), uitgevoerd_door: gebruikerId },
         "verlof-saldo handmatige correctie",
@@ -2569,6 +2580,77 @@ router.post("/medewerkers/:id/saldocorrectie", alleenBeheerder, async (req, res)
     if (err instanceof Error && err.message === "saldo_niet_gevonden") {
       return void res.status(404).json({ error: "Geen verlof-saldo gevonden voor dit jaar en verlofsoort" });
     }
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// ── Verlof-correcties ophalen (HRM + medewerker) ────────────────────────────
+
+router.get("/medewerkers/:id/verlof-correcties", lezen, async (req, res): Promise<void> => {
+  try {
+    const medewerkerId = parseId(req.params.id);
+    const jaar = req.query.jaar ? Number(req.query.jaar) : undefined;
+    const uitvoerderAlias = alias(gebruikersTable, "uitvoerder");
+    const q = db
+      .select({
+        id: verlofCorrectiesTable.id,
+        medewerker_id: verlofCorrectiesTable.medewerkerId,
+        verlofsoort_id: verlofCorrectiesTable.verlofsoortId,
+        verlofsoort_naam: verlofsoortenTable.naam,
+        jaar: verlofCorrectiesTable.jaar,
+        delta_uren: verlofCorrectiesTable.deltaUren,
+        reden: verlofCorrectiesTable.reden,
+        uitgevoerd_door_naam: uitvoerderAlias.naam,
+        aangemaakt_op: verlofCorrectiesTable.aangemaaktOp,
+      })
+      .from(verlofCorrectiesTable)
+      .leftJoin(verlofsoortenTable, eq(verlofCorrectiesTable.verlofsoortId, verlofsoortenTable.id))
+      .leftJoin(uitvoerderAlias, eq(verlofCorrectiesTable.uitgevoerdDoorId, uitvoerderAlias.id))
+      .where(
+        jaar !== undefined
+          ? and(eq(verlofCorrectiesTable.medewerkerId, medewerkerId), eq(verlofCorrectiesTable.jaar, jaar))
+          : eq(verlofCorrectiesTable.medewerkerId, medewerkerId),
+      )
+      .orderBy(desc(verlofCorrectiesTable.aangemaaktOp));
+    const rijen = await q;
+    res.json(rijen.map((r) => ({ ...r, aangemaakt_op: iso(r.aangemaakt_op) })));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+router.get("/mijn/verlof-correcties", async (req, res): Promise<void> => {
+  try {
+    const medewerkerId = await medewerkerIdVoorGebruiker(req.session.userId ?? null);
+    if (!medewerkerId) return void res.status(404).json({ error: "Geen medewerker gekoppeld aan dit account" });
+    const jaar = req.query.jaar ? Number(req.query.jaar) : undefined;
+    const uitvoerderAlias = alias(gebruikersTable, "uitvoerder");
+    const q = db
+      .select({
+        id: verlofCorrectiesTable.id,
+        medewerker_id: verlofCorrectiesTable.medewerkerId,
+        verlofsoort_id: verlofCorrectiesTable.verlofsoortId,
+        verlofsoort_naam: verlofsoortenTable.naam,
+        jaar: verlofCorrectiesTable.jaar,
+        delta_uren: verlofCorrectiesTable.deltaUren,
+        reden: verlofCorrectiesTable.reden,
+        uitgevoerd_door_naam: uitvoerderAlias.naam,
+        aangemaakt_op: verlofCorrectiesTable.aangemaaktOp,
+      })
+      .from(verlofCorrectiesTable)
+      .leftJoin(verlofsoortenTable, eq(verlofCorrectiesTable.verlofsoortId, verlofsoortenTable.id))
+      .leftJoin(uitvoerderAlias, eq(verlofCorrectiesTable.uitgevoerdDoorId, uitvoerderAlias.id))
+      .where(
+        jaar !== undefined
+          ? and(eq(verlofCorrectiesTable.medewerkerId, medewerkerId), eq(verlofCorrectiesTable.jaar, jaar))
+          : eq(verlofCorrectiesTable.medewerkerId, medewerkerId),
+      )
+      .orderBy(desc(verlofCorrectiesTable.aangemaaktOp));
+    const rijen = await q;
+    res.json(rijen.map((r) => ({ ...r, aangemaakt_op: iso(r.aangemaakt_op) })));
+  } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });
   }

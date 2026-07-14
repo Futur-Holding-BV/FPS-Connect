@@ -3,6 +3,8 @@ import {
   useListMijnVerlofaanvragen,
   useListMijnVerlofsaldi,
   useListMijnVerlofsoorten,
+  useListMijnVerlofCorrecties,
+  getListMijnVerlofCorrectiesQueryKey,
   type VerlofAanvraagInput,
 } from "@workspace/api-client-react";
 import DateTimePicker, { type DateTimePickerEvent } from "@react-native-community/datetimepicker";
@@ -172,6 +174,7 @@ export default function VerlofScherm() {
   const { data: saldi, isLoading: ladenSaldi, isError: foutSaldi, refetch: herlaadSaldi, isRefetching: herladenSaldi } = useListMijnVerlofsaldi({ query: { queryKey: ["mijn", "verlofsaldi"] } });
   const { data: aanvragen, isLoading: ladenAanvragen, isError: foutAanvragen, refetch: herlaadAanvragen, isRefetching: herladenAanvragen } = useListMijnVerlofaanvragen({ query: { queryKey: ["mijn", "verlofaanvragen"] } });
   const { data: verlofsoorten } = useListMijnVerlofsoorten({ query: { queryKey: ["mijn", "verlofsoorten"] } });
+  const { data: correcties = [] } = useListMijnVerlofCorrecties(undefined, { query: { queryKey: getListMijnVerlofCorrectiesQueryKey() } });
   const { mutate: dienIn, isPending: bezigIndienen } = useCreateMijnVerlofaanvraag();
 
   const [modalOpen, setModalOpen] = useState(false);
@@ -376,6 +379,68 @@ export default function VerlofScherm() {
                 </View>
               ))}
             </View>
+          )}
+
+          {correcties.length > 0 && (
+            <>
+              <Text style={{ color: c.foreground, fontSize: 16, fontFamily: "Inter_700Bold", marginTop: 8, marginBottom: 2 }}>
+                Saldo-aanpassingen
+              </Text>
+              <View style={{ gap: 8 }}>
+                {correcties.map((c2) => {
+                  const positief = Number(c2.delta_uren) >= 0;
+                  return (
+                    <View
+                      key={c2.id}
+                      style={{
+                        backgroundColor: c.card,
+                        borderRadius: c.radius,
+                        borderWidth: 1,
+                        borderColor: c.border,
+                        padding: 14,
+                        flexDirection: "row",
+                        alignItems: "flex-start",
+                        gap: 12,
+                      }}
+                    >
+                      <View
+                        style={{
+                          width: 36,
+                          height: 36,
+                          borderRadius: 18,
+                          backgroundColor: positief ? "#d1fae5" : "#fee2e2",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          marginTop: 1,
+                        }}
+                      >
+                        <Text style={{ fontSize: 18, lineHeight: 22, color: positief ? "#065f46" : "#991b1b" }}>
+                          {positief ? "+" : "−"}
+                        </Text>
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                          <Text style={{ color: c.foreground, fontSize: 14, fontFamily: "Inter_600SemiBold" }}>
+                            {c2.verlofsoort_naam ?? "Verlof"} {c2.jaar}
+                          </Text>
+                          <Text style={{ color: positief ? "#065f46" : "#991b1b", fontSize: 15, fontFamily: "Inter_700Bold" }}>
+                            {positief ? "+" : ""}{c2.delta_uren} u
+                          </Text>
+                        </View>
+                        <Text style={{ color: c.mutedForeground, fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 3 }}>
+                          {c2.reden}
+                        </Text>
+                        {c2.aangemaakt_op && (
+                          <Text style={{ color: c.mutedForeground, fontSize: 11, fontFamily: "Inter_400Regular", marginTop: 2 }}>
+                            {new Date(c2.aangemaakt_op).toLocaleDateString("nl-NL", { day: "numeric", month: "short", year: "numeric" })}
+                          </Text>
+                        )}
+                      </View>
+                    </View>
+                  );
+                })}
+              </View>
+            </>
           )}
 
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 8 }}>

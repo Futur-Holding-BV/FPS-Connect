@@ -2720,6 +2720,27 @@ export const CreateMijnVerlofaanvraagResponse = zod.void()
 
 
 /**
+ * @summary Verlof-saldocorrecties van de ingelogde medewerker
+ */
+export const ListMijnVerlofCorrectiesQueryParams = zod.object({
+  "jaar": zod.coerce.number().optional()
+})
+
+export const ListMijnVerlofCorrectiesResponseItem = zod.object({
+  "id": zod.number(),
+  "medewerker_id": zod.number(),
+  "verlofsoort_id": zod.number(),
+  "verlofsoort_naam": zod.string().nullish(),
+  "jaar": zod.number(),
+  "delta_uren": zod.number(),
+  "reden": zod.string(),
+  "uitgevoerd_door_naam": zod.string().nullish(),
+  "aangemaakt_op": zod.string()
+})
+export const ListMijnVerlofCorrectiesResponse = zod.array(ListMijnVerlofCorrectiesResponseItem)
+
+
+/**
  * @summary Actieve collega's in de afgelopen 5 minuten (exclusief jezelf en klanten)
  */
 export const listOnlineGebruikersResponseInitialenMax = 3;
@@ -6286,6 +6307,20 @@ export const ProfielenAanvullenResponse = zod.object({
 export const SynchroniseerStandaardProfielenResponse = zod.object({
   "aangemaakt": zod.number(),
   "bijgewerkt": zod.number()
+})
+
+
+/**
+ * @summary AI stelt bevoegdheden voor voor één specifieke functie op basis van naam, omschrijving en taken. Slaat niets op; de beheerder beoordeelt en bevestigt.
+ */
+export const AiVoorstelVoorFunctieBody = zod.object({
+  "functie_id": zod.number()
+})
+
+export const AiVoorstelVoorFunctieResponse = zod.object({
+  "profiel_naam": zod.string(),
+  "bevoegdheden": zod.record(zod.string(), zod.number()),
+  "toelichting": zod.string().nullable()
 })
 
 
@@ -10546,6 +10581,50 @@ export const DeleteVerlofSaldoParams = zod.object({
 })
 
 export const DeleteVerlofSaldoResponse = zod.void()
+
+
+/**
+ * @summary Handmatige verlof-saldocorrectie door HRM (reden verplicht; gelogd voor medewerker)
+ */
+export const CreateSaldoCorrectieParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const createSaldoCorrectieBodyRedenMin = 3;
+
+
+
+export const CreateSaldoCorrectieBody = zod.object({
+  "verlofsoort_id": zod.number(),
+  "jaar": zod.number(),
+  "delta_uren": zod.number().describe('Positief = meer opgenomen (uren afschrijven), negatief = terugboeken'),
+  "reden": zod.string().min(createSaldoCorrectieBodyRedenMin)
+})
+
+export const CreateSaldoCorrectieResponse = zod.object({
+  "ok": zod.boolean()
+})
+
+
+/**
+ * @summary Verlof-saldocorrecties van een medewerker (HRM-inzage)
+ */
+export const ListVerlofCorrectiesVanMedewerkerParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListVerlofCorrectiesVanMedewerkerResponseItem = zod.object({
+  "id": zod.number(),
+  "medewerker_id": zod.number(),
+  "verlofsoort_id": zod.number(),
+  "verlofsoort_naam": zod.string().nullish(),
+  "jaar": zod.number(),
+  "delta_uren": zod.number(),
+  "reden": zod.string(),
+  "uitgevoerd_door_naam": zod.string().nullish(),
+  "aangemaakt_op": zod.string()
+})
+export const ListVerlofCorrectiesVanMedewerkerResponse = zod.array(ListVerlofCorrectiesVanMedewerkerResponseItem)
 
 
 /**

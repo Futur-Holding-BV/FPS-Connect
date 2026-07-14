@@ -2285,6 +2285,28 @@ paths:
         "404":
           description: Geen medewerker gekoppeld aan dit account
 
+  /mijn/verlof-correcties:
+    get:
+      operationId: listMijnVerlofCorrecties
+      tags: [mijn]
+      summary: Verlof-saldocorrecties van de ingelogde medewerker
+      parameters:
+        - in: query
+          name: jaar
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/VerlofCorrectie"
+        "404":
+          description: Geen medewerker gekoppeld aan dit account
+
   /mijn/online-gebruikers:
     get:
       operationId: listOnlineGebruikers
@@ -5305,6 +5327,31 @@ paths:
                     type: integer
                   bijgewerkt:
                     type: integer
+
+  /profielen/ai-voorstel-functie:
+    post:
+      operationId: aiVoorstelVoorFunctie
+      tags: [gebruikers]
+      summary: >-
+        AI stelt bevoegdheden voor voor één specifieke functie op basis van naam,
+        omschrijving en taken. Slaat niets op; de beheerder beoordeelt en bevestigt.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AiVoorstelFunctieInput"
+      responses:
+        "200":
+          description: Voorstel gegenereerd
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProfielAiVoorstelFunctieResultaat"
+        "404":
+          description: Functie niet gevonden
+        "503":
+          description: AI niet beschikbaar
 
   /profielen/ai-voorstel:
     post:
@@ -8491,6 +8538,60 @@ paths:
       responses:
         "204":
           description: Verwijderd
+
+  /medewerkers/{id}/saldocorrectie:
+    post:
+      operationId: createSaldoCorrectie
+      tags: [personeel]
+      summary: Handmatige verlof-saldocorrectie door HRM (reden verplicht; gelogd voor medewerker)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SaldoCorrectieInput"
+      responses:
+        "200":
+          description: Correctie verwerkt
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok]
+                properties:
+                  ok:
+                    type: boolean
+        "400":
+          description: Ongeldige invoer
+        "404":
+          description: Medewerker of saldo niet gevonden
+
+  /medewerkers/{id}/verlof-correcties:
+    get:
+      operationId: listVerlofCorrectiesVanMedewerker
+      tags: [personeel]
+      summary: Verlof-saldocorrecties van een medewerker (HRM-inzage)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/VerlofCorrectie"
 
   /medewerkers/{id}/verlofaanvragen:
     get:
@@ -27543,6 +27644,27 @@ components:
           type: string
           nullable: true
 
+    AiVoorstelFunctieInput:
+      type: object
+      required: [functie_id]
+      properties:
+        functie_id:
+          type: integer
+
+    ProfielAiVoorstelFunctieResultaat:
+      type: object
+      required: [profiel_naam, bevoegdheden, toelichting]
+      properties:
+        profiel_naam:
+          type: string
+        bevoegdheden:
+          type: object
+          additionalProperties:
+            type: integer
+        toelichting:
+          type: string
+          nullable: true
+
     GoedkeuringBeleidsregel:
       type: object
       required:
@@ -30427,6 +30549,44 @@ components:
           type: number
         vervalt_op:
           type: ["string", "null"]
+
+    SaldoCorrectieInput:
+      type: object
+      required: [verlofsoort_id, jaar, delta_uren, reden]
+      properties:
+        verlofsoort_id:
+          type: integer
+        jaar:
+          type: integer
+        delta_uren:
+          type: number
+          description: Positief = meer opgenomen (uren afschrijven), negatief = terugboeken
+        reden:
+          type: string
+          minLength: 3
+
+    VerlofCorrectie:
+      type: object
+      required: [id, medewerker_id, verlofsoort_id, jaar, delta_uren, reden, aangemaakt_op]
+      properties:
+        id:
+          type: integer
+        medewerker_id:
+          type: integer
+        verlofsoort_id:
+          type: integer
+        verlofsoort_naam:
+          type: ["string", "null"]
+        jaar:
+          type: integer
+        delta_uren:
+          type: number
+        reden:
+          type: string
+        uitgevoerd_door_naam:
+          type: ["string", "null"]
+        aangemaakt_op:
+          type: string
 
     VerlofAanvraag:
       type: object

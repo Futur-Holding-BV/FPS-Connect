@@ -1,5 +1,15 @@
 import { useState } from "react";
-import { useGetVerlofOverzicht, useListAlleVerlofAanvragen, useUpdateVerlofAanvraag, useGetVerlofVervalsignalen, getListAlleVerlofAanvragenQueryKey } from "@workspace/api-client-react";
+import {
+  useGetVerlofOverzicht,
+  useListAlleVerlofAanvragen,
+  useUpdateVerlofAanvraag,
+  useGetVerlofVervalsignalen,
+  useCreateSaldoCorrectie,
+  useListVerlofsoorten,
+  useListVerlofCorrectiesVanMedewerker,
+  getListVerlofCorrectiesVanMedewerkerQueryKey,
+  getListAlleVerlofAanvragenQueryKey,
+} from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -7,6 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import {
   Table,
   TableBody,
@@ -23,7 +34,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { CheckCircle, XCircle, Clock, Search, Calendar, AlertTriangle, Users } from "lucide-react";
+import { CheckCircle, XCircle, Clock, Search, Calendar, AlertTriangle, Users, SlidersHorizontal, History } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
 
@@ -88,6 +99,30 @@ export default function VerlofOverzichtPagina() {
   const [opmerkingInput, setOpmerkingInput] = useState("");
   const [bezettingWaarschuwing, setBezettingWaarschuwing] = useState<{ bericht: string; ids: number[] } | null>(null);
   const [mijnTeamFilter, setMijnTeamFilter] = useState(false);
+
+  const [correctieDialog, setCorrectieDialog] = useState<{
+    medewerkerId: number;
+    verlofsoortId: number;
+    medewerkerNaam: string;
+    verlofsoortNaam: string;
+  } | null>(null);
+  const [correctieDeltaUren, setCorrectieJaarField] = useState<string>("");
+  const [correctieJaar, setCorrectieJaar] = useState<string>(String(HUIDIG_JAAR));
+  const [correctieReden, setCorrectieReden] = useState<string>("");
+  const correctieMutatie = useCreateSaldoCorrectie();
+
+  const [historiekDialog, setHistoriekDialog] = useState<{ medewerkerId: number; naam: string } | null>(null);
+  const { data: historiekData = [] } = useListVerlofCorrectiesVanMedewerker(
+    historiekDialog?.medewerkerId ?? 0,
+    {
+      query: {
+        enabled: historiekDialog != null,
+        queryKey: getListVerlofCorrectiesVanMedewerkerQueryKey(historiekDialog?.medewerkerId ?? 0),
+      },
+    }
+  );
+
+  const { data: verlofsoorten = [] } = useListVerlofsoorten();
 
   const { data: overzicht, isLoading } = useGetVerlofOverzicht({ jaar });
   const { data: alleAanvragenData } = useListAlleVerlofAanvragen(
@@ -551,6 +586,7 @@ export default function VerlofOverzichtPagina() {
                       <TableHead className="text-right">Opgenomen</TableHead>
                       <TableHead className="text-right">Saldo</TableHead>
                       <TableHead>Vervalt</TableHead>
+                      <TableHead></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -571,6 +607,38 @@ export default function VerlofOverzichtPagina() {
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">
                           {s.vervalt_op ?? "—"}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1">
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-7 w-7"
+                              title="Saldo corrigeren"
+                              onClick={() => {
+                                setCorrectieDialog({
+                                  medewerkerId: s.medewerker_id,
+                                  verlofsoortId: s.verlofsoort_id,
+                                  medewerkerNaam: s.medewerker_naam ?? "—",
+                                  verlofsoortNaam: s.verlofsoort_naam ?? "—",
+                                });
+                                setCorrectieJaarField("");
+                                setCorrectieJaar(String(jaar));
+                                setCorrectieReden("");
+                              }}
+                            >
+                              <SlidersHorizontal className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-7 w-7 text-muted-foreground"
+                              title="Correctiehistoriek"
+                              onClick={() => setHistoriekDialog({ medewerkerId: s.medewerker_id, naam: s.medewerker_naam ?? "—" })}
+                            >
+                              <History className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -636,6 +704,149 @@ export default function VerlofOverzichtPagina() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Saldo-correctie dialog */}
+      {correctieDialog && (
+        <Dialog open onOpenChange={() => setCorrectieDialog(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Saldo corrigeren</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="rounded-lg border p-3 text-sm space-y-1 bg-muted/40">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Medewerker</span>
+                  <span className="font-medium">{correctieDialog.medewerkerNaam}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Verlofsoort</span>
+                  <span>{correctieDialog.verlofsoortNaam}</span>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label>Verlofsoort</Label>
+                  <Select
+                    value={String(correctieDialog.verlofsoortId)}
+                    onValueChange={(v) => setCorrectieDialog((d) => d ? { ...d, verlofsoortId: Number(v) } : null)}
+                  >
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {verlofsoorten.map((vs) => (
+                        <SelectItem key={vs.id} value={String(vs.id)}>{vs.naam}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Jaar</Label>
+                  <Select value={correctieJaar} onValueChange={setCorrectieJaar}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {JAREN.map((j) => <SelectItem key={j} value={String(j)}>{j}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label>
+                  Aanpassing in uren{" "}
+                  <span className="text-muted-foreground font-normal">(positief = extra verlof, negatief = intrekking)</span>
+                </Label>
+                <Input
+                  type="number"
+                  step="0.5"
+                  placeholder="Bijv. 8 of -4"
+                  value={correctieDeltaUren}
+                  onChange={(e) => setCorrectieJaarField(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Reden <span className="text-red-500">*</span></Label>
+                <Textarea
+                  placeholder="Verplicht: beschrijf de reden voor de correctie"
+                  value={correctieReden}
+                  onChange={(e) => setCorrectieReden(e.target.value)}
+                  rows={3}
+                />
+              </div>
+            </div>
+            <DialogFooter className="gap-2">
+              <Button variant="outline" onClick={() => setCorrectieDialog(null)}>Annuleren</Button>
+              <Button
+                disabled={!correctieDeltaUren || !correctieReden.trim() || correctieMutatie.isPending}
+                onClick={async () => {
+                  if (!correctieDialog) return;
+                  try {
+                    await correctieMutatie.mutateAsync({
+                      id: correctieDialog.medewerkerId,
+                      data: {
+                        verlofsoort_id: correctieDialog.verlofsoortId,
+                        jaar: Number(correctieJaar),
+                        delta_uren: Number(correctieDeltaUren),
+                        reden: correctieReden.trim(),
+                      },
+                    });
+                    toast({ title: "Correctie opgeslagen" });
+                    qc.invalidateQueries({ queryKey: ["getVerlofOverzicht"] });
+                    setCorrectieDialog(null);
+                  } catch {
+                    toast({ title: "Opslaan mislukt", variant: "destructive" });
+                  }
+                }}
+              >
+                Opslaan
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Correctie-historiek dialog */}
+      {historiekDialog && (
+        <Dialog open onOpenChange={() => setHistoriekDialog(null)}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Correctiehistoriek — {historiekDialog.naam}</DialogTitle>
+            </DialogHeader>
+            {historiekData.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-4 text-center">Geen correcties geregistreerd</p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Datum</TableHead>
+                    <TableHead>Verlofsoort</TableHead>
+                    <TableHead>Jaar</TableHead>
+                    <TableHead className="text-right">Aanpassing</TableHead>
+                    <TableHead>Reden</TableHead>
+                    <TableHead>Door</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {historiekData.map((c) => (
+                    <TableRow key={c.id}>
+                      <TableCell className="text-sm tabular-nums text-muted-foreground">
+                        {new Date(c.aangemaakt_op).toLocaleDateString("nl-NL")}
+                      </TableCell>
+                      <TableCell className="text-sm">{c.verlofsoort_naam ?? "—"}</TableCell>
+                      <TableCell className="text-sm tabular-nums">{c.jaar}</TableCell>
+                      <TableCell className={`text-right tabular-nums font-semibold ${c.delta_uren < 0 ? "text-red-600" : "text-green-700"}`}>
+                        {c.delta_uren > 0 ? "+" : ""}{c.delta_uren}u
+                      </TableCell>
+                      <TableCell className="text-sm max-w-48 truncate" title={c.reden}>{c.reden}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{c.uitgevoerd_door_naam ?? "—"}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setHistoriekDialog(null)}>Sluiten</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
 
       <Dialog open={dialogActie !== null} onOpenChange={(open) => { if (!open) sluitDialog(); }}>
         <DialogContent>

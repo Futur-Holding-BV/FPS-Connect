@@ -58,6 +58,7 @@ import type {
   AiSuggestiesOrgVerzekeringen200,
   AiTaakInvoer,
   AiTaakResultaat,
+  AiVoorstelFunctieInput,
   AnonimiseerAvgGebruiker200,
   AppInstellingen,
   AppInstellingenInput,
@@ -134,6 +135,7 @@ import type {
   CreateBevindingHerstel201,
   CreateFactuurRegel201,
   CreateFactuurTermijn201,
+  CreateSaldoCorrectie200,
   CrmCoachAntwoord,
   CrmCoachInput,
   CrmCommercieel,
@@ -485,6 +487,7 @@ import type {
   ListMagazijnPicklijstenParams,
   ListMeldingenParams,
   ListMijnActiviteitenParams,
+  ListMijnVerlofCorrectiesParams,
   ListModCalculatiesParams,
   ListMuisGebeurtenissenParams,
   ListOnderhandenWerkParams,
@@ -736,6 +739,7 @@ import type {
   PortaalTrackingInput,
   PortaalVraagInput,
   Profiel,
+  ProfielAiVoorstelFunctieResultaat,
   ProfielInput,
   ProfielToepassen200,
   ProfielenAanvullen200,
@@ -766,6 +770,7 @@ import type {
   SalarisbestandPatch,
   SalarisbestandRegel,
   SalarisdocumentAuditRegel,
+  SaldoCorrectieInput,
   ScabMail,
   ScabMailBijlage,
   ScabMailBijlageInput,
@@ -867,6 +872,7 @@ import type {
   VerlofAanvraag,
   VerlofAanvraagInput,
   VerlofAanvraagLogRegel,
+  VerlofCorrectie,
   VerlofInstellingen,
   VerlofInstellingenInput,
   VerlofOverzicht,
@@ -8033,6 +8039,90 @@ export const useCreateMijnVerlofaanvraag = <TError = ErrorType<void>,
       > => {
       return useMutation(getCreateMijnVerlofaanvraagMutationOptions(options));
     }
+
+export const getListMijnVerlofCorrectiesUrl = (params?: ListMijnVerlofCorrectiesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/mijn/verlof-correcties?${stringifiedParams}` : `/api/mijn/verlof-correcties`
+}
+
+/**
+ * @summary Verlof-saldocorrecties van de ingelogde medewerker
+ */
+export const listMijnVerlofCorrecties = async (params?: ListMijnVerlofCorrectiesParams, options?: RequestInit): Promise<VerlofCorrectie[]> => {
+
+  return customFetch<VerlofCorrectie[]>(getListMijnVerlofCorrectiesUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListMijnVerlofCorrectiesQueryKey = (params?: ListMijnVerlofCorrectiesParams,) => {
+    return [
+    `/api/mijn/verlof-correcties`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListMijnVerlofCorrectiesQueryOptions = <TData = Awaited<ReturnType<typeof listMijnVerlofCorrecties>>, TError = ErrorType<void>>(params?: ListMijnVerlofCorrectiesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMijnVerlofCorrecties>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListMijnVerlofCorrectiesQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listMijnVerlofCorrecties>>> = ({ signal }) => listMijnVerlofCorrecties(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listMijnVerlofCorrecties>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListMijnVerlofCorrectiesQueryResult = NonNullable<Awaited<ReturnType<typeof listMijnVerlofCorrecties>>>
+export type ListMijnVerlofCorrectiesQueryError = ErrorType<void>
+
+
+/**
+ * @summary Verlof-saldocorrecties van de ingelogde medewerker
+ */
+
+export function useListMijnVerlofCorrecties<TData = Awaited<ReturnType<typeof listMijnVerlofCorrecties>>, TError = ErrorType<void>>(
+ params?: ListMijnVerlofCorrectiesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMijnVerlofCorrecties>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListMijnVerlofCorrectiesQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
 export const getListOnlineGebruikersUrl = () => {
 
@@ -18301,6 +18391,76 @@ export const useSynchroniseerStandaardProfielen = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getSynchroniseerStandaardProfielenMutationOptions(options));
+    }
+
+export const getAiVoorstelVoorFunctieUrl = () => {
+
+
+
+
+  return `/api/profielen/ai-voorstel-functie`
+}
+
+/**
+ * @summary AI stelt bevoegdheden voor voor één specifieke functie op basis van naam, omschrijving en taken. Slaat niets op; de beheerder beoordeelt en bevestigt.
+ */
+export const aiVoorstelVoorFunctie = async (aiVoorstelFunctieInput: AiVoorstelFunctieInput, options?: RequestInit): Promise<ProfielAiVoorstelFunctieResultaat> => {
+
+  return customFetch<ProfielAiVoorstelFunctieResultaat>(getAiVoorstelVoorFunctieUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(aiVoorstelFunctieInput)
+  }
+);}
+
+
+
+
+export const getAiVoorstelVoorFunctieMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof aiVoorstelVoorFunctie>>, TError,{data: BodyType<AiVoorstelFunctieInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof aiVoorstelVoorFunctie>>, TError,{data: BodyType<AiVoorstelFunctieInput>}, TContext> => {
+
+const mutationKey = ['aiVoorstelVoorFunctie'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof aiVoorstelVoorFunctie>>, {data: BodyType<AiVoorstelFunctieInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  aiVoorstelVoorFunctie(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AiVoorstelVoorFunctieMutationResult = NonNullable<Awaited<ReturnType<typeof aiVoorstelVoorFunctie>>>
+    export type AiVoorstelVoorFunctieMutationBody = BodyType<AiVoorstelFunctieInput>
+    export type AiVoorstelVoorFunctieMutationError = ErrorType<void>
+
+    /**
+ * @summary AI stelt bevoegdheden voor voor één specifieke functie op basis van naam, omschrijving en taken. Slaat niets op; de beheerder beoordeelt en bevestigt.
+ */
+export const useAiVoorstelVoorFunctie = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof aiVoorstelVoorFunctie>>, TError,{data: BodyType<AiVoorstelFunctieInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof aiVoorstelVoorFunctie>>,
+        TError,
+        {data: BodyType<AiVoorstelFunctieInput>},
+        TContext
+      > => {
+      return useMutation(getAiVoorstelVoorFunctieMutationOptions(options));
     }
 
 export const getAiRollenVoorstelUrl = () => {
@@ -29622,6 +29782,154 @@ export const useDeleteVerlofSaldo = <TError = ErrorType<unknown>,
       > => {
       return useMutation(getDeleteVerlofSaldoMutationOptions(options));
     }
+
+export const getCreateSaldoCorrectieUrl = (id: number,) => {
+
+
+
+
+  return `/api/medewerkers/${id}/saldocorrectie`
+}
+
+/**
+ * @summary Handmatige verlof-saldocorrectie door HRM (reden verplicht; gelogd voor medewerker)
+ */
+export const createSaldoCorrectie = async (id: number,
+    saldoCorrectieInput: SaldoCorrectieInput, options?: RequestInit): Promise<CreateSaldoCorrectie200> => {
+
+  return customFetch<CreateSaldoCorrectie200>(getCreateSaldoCorrectieUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(saldoCorrectieInput)
+  }
+);}
+
+
+
+
+export const getCreateSaldoCorrectieMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createSaldoCorrectie>>, TError,{id: number;data: BodyType<SaldoCorrectieInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createSaldoCorrectie>>, TError,{id: number;data: BodyType<SaldoCorrectieInput>}, TContext> => {
+
+const mutationKey = ['createSaldoCorrectie'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createSaldoCorrectie>>, {id: number;data: BodyType<SaldoCorrectieInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  createSaldoCorrectie(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateSaldoCorrectieMutationResult = NonNullable<Awaited<ReturnType<typeof createSaldoCorrectie>>>
+    export type CreateSaldoCorrectieMutationBody = BodyType<SaldoCorrectieInput>
+    export type CreateSaldoCorrectieMutationError = ErrorType<void>
+
+    /**
+ * @summary Handmatige verlof-saldocorrectie door HRM (reden verplicht; gelogd voor medewerker)
+ */
+export const useCreateSaldoCorrectie = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createSaldoCorrectie>>, TError,{id: number;data: BodyType<SaldoCorrectieInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createSaldoCorrectie>>,
+        TError,
+        {id: number;data: BodyType<SaldoCorrectieInput>},
+        TContext
+      > => {
+      return useMutation(getCreateSaldoCorrectieMutationOptions(options));
+    }
+
+export const getListVerlofCorrectiesVanMedewerkerUrl = (id: number,) => {
+
+
+
+
+  return `/api/medewerkers/${id}/verlof-correcties`
+}
+
+/**
+ * @summary Verlof-saldocorrecties van een medewerker (HRM-inzage)
+ */
+export const listVerlofCorrectiesVanMedewerker = async (id: number, options?: RequestInit): Promise<VerlofCorrectie[]> => {
+
+  return customFetch<VerlofCorrectie[]>(getListVerlofCorrectiesVanMedewerkerUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListVerlofCorrectiesVanMedewerkerQueryKey = (id: number,) => {
+    return [
+    `/api/medewerkers/${id}/verlof-correcties`
+    ] as const;
+    }
+
+
+export const getListVerlofCorrectiesVanMedewerkerQueryOptions = <TData = Awaited<ReturnType<typeof listVerlofCorrectiesVanMedewerker>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listVerlofCorrectiesVanMedewerker>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListVerlofCorrectiesVanMedewerkerQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listVerlofCorrectiesVanMedewerker>>> = ({ signal }) => listVerlofCorrectiesVanMedewerker(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listVerlofCorrectiesVanMedewerker>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListVerlofCorrectiesVanMedewerkerQueryResult = NonNullable<Awaited<ReturnType<typeof listVerlofCorrectiesVanMedewerker>>>
+export type ListVerlofCorrectiesVanMedewerkerQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Verlof-saldocorrecties van een medewerker (HRM-inzage)
+ */
+
+export function useListVerlofCorrectiesVanMedewerker<TData = Awaited<ReturnType<typeof listVerlofCorrectiesVanMedewerker>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listVerlofCorrectiesVanMedewerker>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListVerlofCorrectiesVanMedewerkerQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
 export const getListVerlofAanvragenUrl = (id: number,) => {
 
