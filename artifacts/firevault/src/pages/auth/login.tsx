@@ -165,6 +165,7 @@ export default function LoginPagina() {
   const { taal, zetTaal } = useTaal();
   const { toast } = useToast();
   const [stap, setStap] = useState<Stap>("inloggen");
+  const [gekopieerd, setGekopieerd] = useState(false);
   const [email, setEmail] = useState("");
   const [wachtwoord, setWachtwoord] = useState("");
   const [code, setCode] = useState("");
@@ -173,7 +174,6 @@ export default function LoginPagina() {
   const [fout, setFout] = useState<string | null>(null);
   const [taalGekozen, setTaalGekozen] = useState(false);
   const [toonWachtwoord, setToonWachtwoord] = useState(false);
-  const [gekopieerd, setGekopieerd] = useState(false);
   const emailRef = useRef<HTMLInputElement>(null);
   const wachtwoordRef = useRef<HTMLInputElement>(null);
 
@@ -438,30 +438,38 @@ export default function LoginPagina() {
                 </div>
               </div>
 
-              <div className="rounded-xl border border-white/10 bg-white/[0.06] px-4 py-3">
-                <div className="flex items-center justify-between mb-1">
-                  <p className="text-xs text-white/40">Handmatige sleutel</p>
+              <div className="space-y-1.5">
+                <p className="text-center text-xs font-medium text-white/40">
+                  {t("auth.handmatigeSleutelLabel")}
+                </p>
+                <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.06] px-4 py-3">
+                  <code className="min-w-0 flex-1 break-all font-mono text-sm text-white/80">
+                    {setupData.secret}
+                  </code>
                   <button
                     type="button"
                     onClick={() => {
                       navigator.clipboard.writeText(setupData.secret).then(() => {
                         setGekopieerd(true);
                         setTimeout(() => setGekopieerd(false), 2000);
-                      });
+                      }).catch(() => {});
                     }}
-                    className="flex items-center gap-1 rounded px-2 py-0.5 text-xs text-white/50 hover:text-white/80 hover:bg-white/10 transition-colors"
-                    title="Sleutel kopiëren"
+                    title={t("auth.handmatigeSleutelKopieer")}
+                    aria-label={t("auth.handmatigeSleutelKopieer")}
+                    className="shrink-0 rounded-lg p-1.5 text-white/40 transition-colors hover:bg-white/10 hover:text-white/80"
                   >
                     {gekopieerd ? (
-                      <><Check className="h-3 w-3 text-green-400" /><span className="text-green-400">Gekopieerd</span></>
+                      <Check className="h-4 w-4 text-green-400" />
                     ) : (
-                      <><Copy className="h-3 w-3" />Kopieer</>
+                      <Copy className="h-4 w-4" />
                     )}
                   </button>
                 </div>
-                <code className="break-all font-mono text-sm text-white/80 text-center block">
-                  {setupData.secret}
-                </code>
+                {gekopieerd && (
+                  <p className="text-center text-xs text-green-400">
+                    {t("auth.gekopieerd")}
+                  </p>
+                )}
               </div>
 
               <div className="flex flex-col items-center gap-2">

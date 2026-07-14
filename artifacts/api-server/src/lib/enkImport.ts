@@ -122,6 +122,7 @@ export function detecteerOpslagen(tekst: string): { opslagen: EnkOpslagen; bron:
       `Geen expliciete opslagpercentages in het bestand; standaard ENK-opslagen aangenomen: materiaal ${STANDAARD_OPSLAGEN.materiaal}%, arbeid ${STANDAARD_OPSLAGEN.arbeid}%, AK ${STANDAARD_OPSLAGEN.ak}%, risico ${STANDAARD_OPSLAGEN.risico}%, winst ${STANDAARD_OPSLAGEN.winst}%, korting ${STANDAARD_OPSLAGEN.korting}%.`,
     ],
   };
+
 }
 
 // ── Deterministische PDF-tekstparser ──────────────────────────────────────────
@@ -367,11 +368,13 @@ export function parseEnkRijen(rijen: unknown[][], bewijsBron: string): EnkParseR
   waarschuwingen.push("Tabulaire import bevat geen eindtotaal van ENK zelf; de regelsom is als ENK-totaal aangehouden.");
   voegPrecisieWaarschuwingToe(volgorde, waarschuwingen);
 
+
   return {
     succes: geprijsd > 0,
     calculatienummer: null, projectnummer: null, naam: null, opdrachtgever: null, datum: null,
     hoofdstukken: volgorde,
     opslagen: { ...STANDAARD_OPSLAGEN },
+
     opslagenBron: "standaard",
     totaalEnkCenten: geprijsd > 0 ? totaal : null,
     waarschuwingen,
@@ -450,6 +453,7 @@ export async function parseEnkMetAi(tekst: string): Promise<EnkParseResultaat | 
   const opslagenGedetecteerd = Object.values(opslagen).some((v) => v > 0);
   const effectieveOpslagen = opslagenGedetecteerd ? opslagen : { ...STANDAARD_OPSLAGEN };
 
+
   const geprijsd = hoofdstukken.reduce((s, h) => s + h.regels.filter((r) => r.totaalCenten !== 0).length, 0);
   const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : null);
 
@@ -462,6 +466,7 @@ export async function parseEnkMetAi(tekst: string): Promise<EnkParseResultaat | 
     datum: str(parsed["datum"]),
     hoofdstukken,
     opslagen: effectieveOpslagen,
+
     opslagenBron: opslagenGedetecteerd ? "gedetecteerd" : "standaard",
     totaalEnkCenten: typeof parsed["totaal_eur"] === "number" && Number.isFinite(parsed["totaal_eur"]) ? euroGetalNaarCenten(parsed["totaal_eur"] as number) : null,
     waarschuwingen: ["De structuur is met AI-hulp uitgelezen; controleer de regels en totalen extra zorgvuldig."],

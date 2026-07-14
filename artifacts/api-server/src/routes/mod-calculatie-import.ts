@@ -48,7 +48,6 @@ class AlVerwerktError extends Error {
     this.name = "AlVerwerktError";
   }
 }
-
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function bepaalBronType(mime: string, bestandsnaam: string): "enk_pdf" | "excel" | "csv" | null {
