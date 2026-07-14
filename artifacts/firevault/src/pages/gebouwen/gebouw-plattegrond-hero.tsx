@@ -278,6 +278,7 @@ function PlattegrondCanvas({
   const [pdfBeeld, setPdfBeeld] = useState<string | null>(null);
   const [pdfDims, setPdfDims] = useState<{ w: number; h: number } | null>(null);
   const [pdfLaden, setPdfLaden] = useState(false);
+  const [laadFout, setLaadFout] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const [containerDims, setContainerDims] = useState<{ w: number; h: number } | null>(null);
 
@@ -303,12 +304,13 @@ function PlattegrondCanvas({
     let geannuleerd = false;
     let laadTaak: ReturnType<typeof pdfjsLib.getDocument> | null = null;
     (async () => {
+      setLaadFout(false);
       setPdfLaden(true);
       try {
         let dataUrl: string;
         let dims: { w: number; h: number };
         try {
-          laadTaak = pdfjsLib.getDocument({ url: `/api/storage${plattegrondUrl}` });
+          laadTaak = pdfjsLib.getDocument({ url: `/api/storage${plattegrondUrl}`, withCredentials: true });
           const pdf = await laadTaak.promise;
           const page = await pdf.getPage(1);
           const viewport = page.getViewport({ scale: 2 });
@@ -323,6 +325,7 @@ function PlattegrondCanvas({
         } catch {
           const img = await new Promise<HTMLImageElement>((resolve, reject) => {
             const i = new Image();
+            i.crossOrigin = "use-credentials";
             i.onload = () => resolve(i);
             i.onerror = () => reject(new Error("Afbeelding laden mislukt"));
             i.src = `/api/storage${plattegrondUrl}`;
@@ -343,6 +346,7 @@ function PlattegrondCanvas({
         if (!geannuleerd) {
           setPdfBeeld(null);
           setPdfDims(null);
+          setLaadFout(true);
         }
       } finally {
         if (!geannuleerd) setPdfLaden(false);
@@ -475,9 +479,15 @@ function PlattegrondCanvas({
         </div>
       )}
 
-      {!pdfBeeld && !pdfLaden && (
+      {!pdfBeeld && !pdfLaden && !plattegrondUrl && (
         <div className="absolute top-3 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-white/90 border rounded-md px-3 py-1.5 text-xs text-muted-foreground shadow-sm whitespace-nowrap">
           Nog geen plattegrond — voeg er een toe via de sectie Plattegronden.
+        </div>
+      )}
+
+      {!pdfBeeld && !pdfLaden && laadFout && (
+        <div className="absolute top-3 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-md px-3 py-1.5 text-xs text-amber-700 shadow-sm whitespace-nowrap">
+          Plattegrond kon niet worden geladen — open de editor om opnieuw te uploaden.
         </div>
       )}
 
@@ -521,8 +531,15 @@ export default function GebouwPlattegrondHero({
 
   const geselecteerdeVerdieping = gesorteerd.find((v) => v.id === geselecteerdId) ?? gesorteerd[0];
 
+  // Sync geselecteerdId zodra verdiepingen data binnenkomt (eerste render = lege prop).
+  useEffect(() => {
+    if (geselecteerdId === 0 && gesorteerd.length > 0) {
+      setGeselecteerdId(gesorteerd[0].id);
+    }
+  }, [gesorteerd.length, geselecteerdId]);
+
   const { data: voorzieningen } = useListVoorzieningenOpVerdieping(
-    geselecteerdId > 0 ? geselecteerdId : 0,
+    geselecteerdeVerdieping?.id ?? 0,
   );
 
   const { data: alleClusters } = useListClusters(gebouwId);
@@ -565,8 +582,8 @@ export default function GebouwPlattegrondHero({
             </span>
           </div>
 
-          {geselecteerdId > 0 && (
-            <Link href={`/gebouwen/${gebouwId}/plattegrond/${geselecteerdId}`}>
+          {geselecteerdeVerdieping != null && (
+            <Link href={`/gebouwen/${gebouwId}/plattegrond/${geselecteerdeVerdieping.id}`}>
               <Button variant="outline" size="sm" className="gap-1.5">
                 <ExternalLink className="h-3.5 w-3.5" />
                 Plattegrond openen
@@ -619,11 +636,11 @@ export default function GebouwPlattegrondHero({
 
       <CardContent className="p-0">
         <div className="h-[440px] w-full">
-          {geselecteerdId > 0 && (
+          {geselecteerdeVerdieping != null && (
             <PlattegrondCanvas
-              key={geselecteerdId}
-              plattegrondUrl={geselecteerdeVerdieping?.plattegrond_url}
-              verdiepingId={geselecteerdId}
+              key={geselecteerdeVerdieping.id}
+              plattegrondUrl={geselecteerdeVerdieping.plattegrond_url}
+              verdiepingId={geselecteerdeVerdieping.id}
               clusters={clustersVoorVerdieping}
             />
           )}

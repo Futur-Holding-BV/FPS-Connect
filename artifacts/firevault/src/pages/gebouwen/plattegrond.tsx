@@ -546,6 +546,7 @@ export default function Plattegrond() {
   const [pdfBeeld, setPdfBeeld] = useState<string | null>(null);
   const [pdfDims, setPdfDims] = useState<{ w: number; h: number } | null>(null);
   const [pdfLaden, setPdfLaden] = useState(false);
+  const [laadFout, setLaadFout] = useState(false);
 
   const [tekenModus, setTekenModus] = useState(false);
   const [huidigePunten, setHuidigePunten] = useState<{ x: number; y: number }[]>([]);
@@ -770,12 +771,13 @@ export default function Plattegrond() {
     }
     let geannuleerd = false;
     (async () => {
+      setLaadFout(false);
       setPdfLaden(true);
       try {
         let dataUrl: string;
         let dims: { w: number; h: number };
         try {
-          const taak = pdfjsLib.getDocument({ url: `/api/storage${url}` });
+          const taak = pdfjsLib.getDocument({ url: `/api/storage${url}`, withCredentials: true });
           const pdf = await taak.promise;
           const page = await pdf.getPage(1);
           const viewport = page.getViewport({ scale: 2 });
@@ -791,6 +793,7 @@ export default function Plattegrond() {
           // Val terug op een afbeeldingsplattegrond (PNG/JPG)
           const img = await new Promise<HTMLImageElement>((resolve, reject) => {
             const i = new Image();
+            i.crossOrigin = "use-credentials";
             i.onload = () => resolve(i);
             i.onerror = () => reject(new Error("Afbeelding laden mislukt"));
             i.src = `/api/storage${url}`;
@@ -811,6 +814,7 @@ export default function Plattegrond() {
         if (!geannuleerd) {
           setPdfBeeld(null);
           setPdfDims(null);
+          setLaadFout(true);
         }
       } finally {
         if (!geannuleerd) setPdfLaden(false);
@@ -2008,10 +2012,18 @@ export default function Plattegrond() {
           )}
 
           {/* Geen plattegrond */}
-          {!pdfBeeld && !pdfLaden && (
+          {!pdfBeeld && !pdfLaden && !laadFout && !(verdieping as any)?.plattegrond_url && (
             <div className="absolute top-3 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-white/90 border rounded-md px-3 py-1.5 text-xs text-muted-foreground shadow-sm">
               <FileText className="h-3.5 w-3.5" />
               Nog geen plattegrond — voeg er één toe via de sectie Plattegronden op de gebouwpagina.
+            </div>
+          )}
+
+          {/* Laad-fout */}
+          {!pdfBeeld && !pdfLaden && laadFout && (
+            <div className="absolute top-3 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-md px-3 py-1.5 text-xs text-amber-700 shadow-sm">
+              <FileText className="h-3.5 w-3.5" />
+              Plattegrond kon niet worden geladen — probeer opnieuw te uploaden via Plattegronden.
             </div>
           )}
 

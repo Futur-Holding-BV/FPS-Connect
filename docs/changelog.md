@@ -1,3 +1,23 @@
+## 2026-07-14 — Plattegrond-hero: init-bug en foutmelding
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (UI-only)
+
+**Root cause:** `geselecteerdId` werd geïnitialiseerd op `0` omdat `verdiepingen` prop leeg is tijdens de eerste render (query nog bezig). De render-gate `geselecteerdId > 0` blockte daarna permanent de `PlattegrondCanvas` — ook nadat de data binnenkwam, reset React een `useState` niet op prop-wijzigingen.
+
+**Fixes `gebouw-plattegrond-hero.tsx`:**
+- `useEffect` toegevoegd: zodra `gesorteerd.length > 0` en `geselecteerdId === 0` wordt het ID gesynchroniseerd
+- Render-gates `geselecteerdId > 0` vervangen door `geselecteerdeVerdieping != null` (gebruikt al correcte `?? gesorteerd[0]` fallback)
+- `key` en `verdiepingId` props gebruiken nu `geselecteerdeVerdieping.id`
+- Detaillink ("Plattegrond openen") gebruikt `geselecteerdeVerdieping.id`
+- `laadFout` state toegevoegd: onderscheid tussen "geen URL aanwezig" (grijs) en "laden mislukt" (amber)
+- `withCredentials: true` en `crossOrigin: "use-credentials"` voor pdfjs en Image-fallback
+
+**Fixes `plattegrond.tsx` (editor, zelfde laadpatroon):**
+- `laadFout` state toegevoegd; amber melding bij laad-fout, grijs alleen bij echt ontbrekende URL
+- `withCredentials: true` en `crossOrigin: "use-credentials"` toegevoegd
+
+---
+
 ## 2026-07-14 — App QR-code, onboarding-teksten & biometrisch-advies
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (additief)
