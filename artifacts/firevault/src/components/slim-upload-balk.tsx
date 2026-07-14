@@ -97,6 +97,7 @@ interface UploadItem {
   gekozenCategorie: CategorieUitgebreid | null;
   toelichting: string;
   geconsolideerd_override?: boolean;
+  regelCategorie?: CategorieUitgebreid;
 }
 
 interface AutomatiseringsRegel {
@@ -539,8 +540,29 @@ function BeslisScherm({
 
   if (!suggestie) return null;
 
+  const aiOverschreeftRegel =
+    suggestie.ai_beschikbaar &&
+    item.regelCategorie &&
+    item.regelCategorie !== suggestie.categorie;
+
   return (
     <div className="space-y-4">
+      {/* AI-herkenning wijkt af van automatiseringsregel */}
+      {aiOverschreeftRegel && (
+        <div className="rounded-md border border-sky-200 bg-sky-50 p-3 flex items-start gap-2">
+          <Sparkles className="h-3.5 w-3.5 text-sky-600 shrink-0 mt-0.5" />
+          <div>
+            <p className="text-xs font-semibold text-sky-800">AI herkende een andere categorie</p>
+            <p className="text-xs text-sky-700 mt-0.5 leading-relaxed">
+              De automatiseringsregel stelde{" "}
+              <span className="font-medium">{CATEGORIE_INFO[item.regelCategorie!].label}</span>{" "}
+              voor op basis van het bestandstype, maar de AI herkent de inhoud als{" "}
+              <span className="font-medium">{catInfo.label}</span>. De AI-herkenning heeft voorrang.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Hoofdvoorstel */}
       <div className={cn("rounded-lg border p-4 space-y-2", catInfo.kleur)}>
         <div className="flex items-center gap-2">
@@ -549,6 +571,9 @@ function BeslisScherm({
             <p className="font-semibold text-sm">{catInfo.label}</p>
             <p className="text-[11px] opacity-70">{catInfo.omschrijving}</p>
           </div>
+          {suggestie.ai_beschikbaar && (
+            <Sparkles className="h-3.5 w-3.5 opacity-50 shrink-0" aria-label="AI-herkenning" />
+          )}
         </div>
         {suggestie.voorstel_naam && (
           <p className="text-xs opacity-75 font-medium">{suggestie.voorstel_naam}</p>
@@ -1026,37 +1051,17 @@ export function SlimUploadBalk() {
       toelichting: "",
     }));
 
-    // Automatiseringsregels verwerken — pre-fill de categorie maar altijd
-    // bevestiging vragen zodat de gebruiker een toelichting kan toevoegen.
+    // Automatiseringsregels verwerken — sla de regel op als voorselectie-hint
+    // maar laat de AI-analyse altijd draaien. De regel is alleen een terugval
+    // wanneer de AI niets kan bepalen.
     const queueItems: UploadItem[] = [];
     for (const item of nieuweItems) {
       const ext    = haalExtensie(item.bestand.name);
       const actief = regelsHuidig.find((r) => r.extensie === ext && r.geautomatiseerd);
-      const catInfo = actief ? CATEGORIE_INFO[actief.categorie] : undefined;
-      if (actief && catInfo) {
-        // Synthetische suggestie zodat de beslisscherm-UI normaal rendert
-        const synthetischeSuggestie: SlimUploadSuggestie = {
-          categorie: actief.categorie,
-          voorstel_naam: item.bestand.name.replace(/\.[^.]+$/, "").replace(/[-_]/g, " ").trim(),
-          redenering: `Automatisch herkend op basis van eerder bevestigde regelinstelling voor ${actief.extensie}-bestanden.`,
-          vertrouwen: "hoog",
-          ai_beschikbaar: false,
-          vision_gebruikt: false,
-          gevonden_gegevens: {},
-          alternatieven: [],
-          impact_niveau: "laag",
-          impact_omschrijving: "",
-          vereist_bevestiging: false,
-          directe_actie_beschrijving: "",
-          mag_uploaden: true,
-          beperkingen: [],
-        };
+      if (actief) {
         queueItems.push({
           ...item,
-          status: "klaar" as const,
-          actieGenomen: false,
-          gekozenCategorie: actief.categorie,
-          suggestie: synthetischeSuggestie,
+          regelCategorie: actief.categorie,
         });
       } else {
         queueItems.push(item);
@@ -1099,10 +1104,24 @@ export function SlimUploadBalk() {
 
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
-      const suggestie = (await res.json()) as SlimUploadSuggestie;
+      const suggestieBasis = (await res.json()) as SlimUploadSuggestie;
+
+      // Regelterugval: als de AI-engine niets kon vaststellen (ai_beschikbaar: false)
+      // maar er is een onthouden regel voor dit bestandstype, gebruik dan de regel
+      // als categorie-terugval. Als de AI wél iets heeft bepaald, wint de AI altijd.
+      const effectieveSuggestie: SlimUploadSuggestie =
+        !suggestieBasis.ai_beschikbaar && item.regelCategorie
+          ? {
+              ...suggestieBasis,
+              categorie: item.regelCategorie,
+              redenering: suggestieBasis.redenering
+                ? suggestieBasis.redenering
+                : `AI niet beschikbaar — categorie op basis van eerdere bevestigingen voor ${haalExtensie(item.bestand.name)}-bestanden.`,
+            }
+          : suggestieBasis;
 
       setQueue((prev) => prev.map((i) =>
-        i.id === id ? { ...i, status: "klaar" as const, suggestie } : i,
+        i.id === id ? { ...i, status: "klaar" as const, suggestie: effectieveSuggestie } : i,
       ));
     } catch {
       setQueue((prev) => prev.map((i) =>
@@ -1317,7 +1336,7 @@ export function SlimUploadBalk() {
                   <div className="p-3 border-b">
                     <p className="text-sm font-semibold">Automatiseringsregels</p>
                     <p className="text-xs text-muted-foreground mt-0.5">
-                      Regels worden aangemaakt zodra u meerdere keren hetzelfde type bestand op dezelfde plek plaatst.
+                      Regels slaan een voorkeurs-categorie op per bestandstype. De AI-analyse draait altijd en heeft voorrang op de regel.
                     </p>
                   </div>
                   {regels.length === 0 ? (
@@ -1472,7 +1491,11 @@ export function SlimUploadBalk() {
                 gestuurd.
               </p>
               <p className="text-sm text-muted-foreground">
-                Mag dit voortaan automatisch worden toegepast zonder vragen?
+                Mag dit bestandstype voortaan worden voorgeselecteerd als{" "}
+                <span className="font-medium text-foreground">
+                  {CATEGORIE_INFO[toonAutomatiseren.categorie].label}
+                </span>?
+                De AI-analyse draait altijd en kan de voorselectie nog overschrijven als de inhoud anders is.
               </p>
               <div className="rounded-md bg-muted/50 p-3 flex items-start gap-2">
                 <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
