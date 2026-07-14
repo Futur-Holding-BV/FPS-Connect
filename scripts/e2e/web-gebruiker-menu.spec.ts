@@ -1,8 +1,10 @@
-// E2E: firevault web-app — gebruikersmenu linksonder in de sidebar + taakbalk.
+// E2E: firevault web-app — gebruikersmenu (taakbalk) + Instellingen-pagina.
 // Bewijst per knop dat hij werkt (business-scenario-validatie, Kwaliteitskader):
 //   - Bekijken als (alleen hoofdbeheerder): wisselt weergave en zet terug
-//   - Privacy: navigeert naar /mijn/privacy
-//   - App-informatie: navigeert naar /info
+//   - Privacy: navigeert via /instellingen naar /mijn/privacy
+//     (Privacy & App-informatie zijn verplaatst van sidebar-footer naar
+//      Instellingen-pagina, Ondersteuning-groep — 2026-07-14)
+//   - App-informatie: navigeert via /instellingen naar /info
 //   - Uitloggen (taakbalk, helemaal links): POST /auth/logout (204) en beland
 //     op het loginscherm
 //
@@ -124,14 +126,24 @@ test("Web: gebruikersmenu — alle knoppen werken (Bekijken als, privacy, info, 
     await expect(page.locator('button[title="Taal"]')).toHaveCount(0);
   });
 
-  await test.step("Privacy: navigeert naar /mijn/privacy", async () => {
-    await page.getByTitle("Privacy & transparantie").click();
+  await test.step("Privacy: navigeert via Instellingen naar /mijn/privacy", async () => {
+    // Privacy & transparantie staat nu op de Instellingen-pagina (Ondersteuning-groep).
+    await page.goto("/instellingen");
+    await expect(page.getByRole("link", { name: /Privacy & transparantie/ })).toBeVisible({
+      timeout: INHOUD_TIMEOUT,
+    });
+    await page.getByRole("link", { name: /Privacy & transparantie/ }).click();
     await expect(page).toHaveURL(/\/mijn\/privacy$/, { timeout: INHOUD_TIMEOUT });
     await expect(page.getByTitle("Uitloggen")).toBeVisible();
   });
 
-  await test.step("App-informatie: navigeert naar /info", async () => {
-    await page.getByTitle("App-informatie").click();
+  await test.step("App-informatie: navigeert via Instellingen naar /info", async () => {
+    // App-informatie staat nu op de Instellingen-pagina (Ondersteuning-groep).
+    await page.goto("/instellingen");
+    await expect(page.getByRole("link", { name: /App-informatie/ })).toBeVisible({
+      timeout: INHOUD_TIMEOUT,
+    });
+    await page.getByRole("link", { name: /App-informatie/ }).click();
     await expect(page).toHaveURL(/\/info$/, { timeout: INHOUD_TIMEOUT });
     await expect(page.getByTitle("Uitloggen")).toBeVisible();
   });
