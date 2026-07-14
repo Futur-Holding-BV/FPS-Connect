@@ -1,3 +1,43 @@
+## 2026-07-14 — Catalogusdata vanuit dev naar productie overgezet
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+Alle catalogustabellen vanuit de testomgeving naar connect.fps-one.nl overgezet:
+
+| Tabel | Records |
+|---|---|
+| `voorziening_types` (Applicaties) | 61 |
+| `fabrikanten` | 12 |
+| `labels` (Toepassingen) | 110 |
+| `label_applicaties` (koppelingen) | 194 |
+
+Aanpak: `pg_dump --column-inserts` vanuit dev → SCP naar VPS → `psql` via DB-container.
+Sequences daarna correct gereset (fabrikanten, labels, label_applicaties).
+
+---
+
+## 2026-07-14 — Eigen medewerkers niet meer als betrokken partij voorgesteld
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+**Bug — AI stelt eigen FPS-medewerkers voor als "Installateur" onder Betrokken partijen:**
+De e-mailsamenvatting-AI extraheert contactpersonen uit projectcorrespondentie. Omdat eigen
+medewerkers (bijv. rene@fpsbouw.nl) de e-mails zelf schrijven, stelde de AI ze voor als
+"Installateur · FPS Bouw B.V." — technisch juist, maar eigen personeel is de uitvoerende
+organisatie en hoort niet tussen de externe betrokken partijen.
+
+**Fix (dubbele vangrail):**
+1. **Promptinstructie** (`aiPrompts.ts`, email-samenvatting v1.1.0): AI mag personen met een
+   FPS-e-mailadres of FPS-organisatie nooit opnemen als contactpersoon.
+2. **Deterministisch serverfilter** (`routes/emails.ts`): voorstellen worden verwijderd als het
+   e-mailadres matcht met een interne gebruiker (rol ≠ klant) of HRM-medewerker, het e-maildomein
+   een intern domein is (freemail-domeinen uitgezonderd), of de organisatienaam een eigen
+   werkmaatschappij (werkgevers-tabel) is. Handmatig bevestigde/afgewezen contacten blijven staan.
+3. **Auto-opschoning**: bestaande eigen-voorstellen in de database worden bij het eerstvolgende
+   bekijken van de samenvatting automatisch verwijderd.
+
+---
+
 ## 2026-07-14 — AI-verrijking bij Slim Upload (koppelvoorstellen fix)
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag

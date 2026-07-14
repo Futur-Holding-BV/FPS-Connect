@@ -236,7 +236,7 @@ Antwoord in het Nederlands. Alleen JSON, geen extra tekst.`,
 
 export const EMAIL_SAMENVATTING_PROMPT: AiPrompt = {
   naam: "email-samenvatting",
-  versie: "1.0.0",
+  versie: "1.1.0",
   tekst: `Je analyseert de gecombineerde e-mailcorrespondentie van een brandpreventie-project (FPS Brandpreventie: passieve brandpreventie, branddoorvoering, branddeuren, brandkleppen etc.).
 Maak een overzichtelijke projectsamenvatting. Geef uitsluitend geldige JSON terug met deze velden (null als onbekend):
 
@@ -258,6 +258,7 @@ Maak een overzichtelijke projectsamenvatting. Geef uitsluitend geldige JSON teru
   - relevantie: "relevant" als de persoon/organisatie een actieve rol speelt in opdracht, uitvoering, planning, communicatie of oplevering van het FPS-project; "ter_controle" als ze uitsluitend in CC staan, een onduidelijke of marginale rol hebben, of het twijfelgevallen zijn die de beheerder zelf moet beoordelen
   - bron_email_nr: het e-mailnummer (1, 2, 3...) waaruit de informatie voornamelijk afkomstig is
   Neem alleen echte personen of bedrijven op die daadwerkelijk in de e-mails voorkomen. Geen algemene mailboxen (info@, noreply@). Lege array als niets gevonden.
+  BELANGRIJK: FPS zelf (FPS Brandpreventie, FPS Bouw en andere FPS-werkmaatschappijen) is de uitvoerende organisatie waarvoor jij werkt. Eigen FPS-medewerkers zijn GEEN betrokken partij: neem personen met een FPS-e-mailadres of een FPS-organisatie NOOIT op in contactpersonen, ook niet als installateur of aannemer.
 
 Antwoord in het Nederlands. Alleen JSON, geen extra tekst.`,
 };

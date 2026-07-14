@@ -6,9 +6,11 @@ import {
   gebouwEmailSamenvattingenTable,
   gebouwenTable,
   gebruikersTable,
+  medewerkersTable,
+  werkgeversTable,
 } from "@workspace/db";
 import type { EmailContactpersoon } from "@workspace/db";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, ne } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { ObjectStorageService, ObjectNotFoundError } from "../lib/objectStorage";
 import {
@@ -103,6 +105,90 @@ function mergeContactpersonen(
   return [...vast, ...oudVoorstelBehouden, ...nieuwToevoegen];
 }
 
+// ── Eigen-organisatie filter ──────────────────────────────────────────────────
+// De AI mag eigen FPS-medewerkers nooit als betrokken partij voorstellen (de
+// eigen organisatie is de uitvoerende partij, geen externe betrokkene).
+// Deterministische vangrail naast de promptinstructie: voorstellen met een
+// intern e-mailadres, intern e-maildomein of eigen werkmaatschappij-naam worden
+// verwijderd. Handmatig bevestigde of afgewezen contacten blijven altijd staan.
+
+const FREEMAIL_DOMEINEN = new Set([
+  "gmail.com", "googlemail.com", "hotmail.com", "hotmail.nl", "outlook.com",
+  "outlook.nl", "live.nl", "live.com", "msn.com", "yahoo.com", "yahoo.nl",
+  "icloud.com", "me.com", "ziggo.nl", "kpnmail.nl", "planet.nl", "hetnet.nl",
+  "casema.nl", "home.nl", "upcmail.nl", "chello.nl", "xs4all.nl",
+  "protonmail.com", "proton.me",
+]);
+
+const normaliseerOrganisatieNaam = (s: string) =>
+  s.toLowerCase().replace(/[^a-z0-9]/g, "").replace(/(bv|vof|nv)$/, "");
+
+const emailDomein = (email: string): string | null => {
+  const apenstaart = email.lastIndexOf("@");
+  return apenstaart === -1 ? null : email.slice(apenstaart + 1).toLowerCase().trim();
+};
+
+type EigenOrganisatie = {
+  emails: Set<string>;
+  domeinen: Set<string>;
+  namen: Set<string>;
+};
+
+async function bepaalEigenOrganisatie(): Promise<EigenOrganisatie> {
+  const emails = new Set<string>();
+  const domeinen = new Set<string>();
+  const namen = new Set<string>();
+
+  const [interneGebruikers, medewerkers, werkgevers] = await Promise.all([
+    db
+      .select({ email: gebruikersTable.email })
+      .from(gebruikersTable)
+      .where(ne(gebruikersTable.rol, "klant")),
+    db.select({ email: medewerkersTable.email }).from(medewerkersTable),
+    db.select({ naam: werkgeversTable.naam, email: werkgeversTable.email }).from(werkgeversTable),
+  ]);
+
+  const voegEmailToe = (email: string | null) => {
+    if (!email) return;
+    const genormaliseerd = email.toLowerCase().trim();
+    if (!genormaliseerd.includes("@")) return;
+    emails.add(genormaliseerd);
+    const domein = emailDomein(genormaliseerd);
+    if (domein && !FREEMAIL_DOMEINEN.has(domein)) domeinen.add(domein);
+  };
+
+  for (const g of interneGebruikers) voegEmailToe(g.email);
+  for (const m of medewerkers) voegEmailToe(m.email);
+  for (const w of werkgevers) {
+    voegEmailToe(w.email);
+    if (w.naam) namen.add(normaliseerOrganisatieNaam(w.naam));
+  }
+  return { emails, domeinen, namen };
+}
+
+function isEigenContact(c: EmailContactpersoon, eigen: EigenOrganisatie): boolean {
+  const email = c.email?.toLowerCase().trim() ?? null;
+  if (email) {
+    if (eigen.emails.has(email)) return true;
+    const domein = emailDomein(email);
+    if (domein && eigen.domeinen.has(domein)) return true;
+  }
+  if (c.organisatie && eigen.namen.has(normaliseerOrganisatieNaam(c.organisatie))) return true;
+  return false;
+}
+
+// Verwijdert eigen-organisatie-contacten met status "voorstel"; bewust
+// bevestigde of afgewezen contacten blijven behouden (beslissing van de mens).
+async function verwijderEigenVoorstellen(
+  contacten: EmailContactpersoon[],
+): Promise<EmailContactpersoon[]> {
+  if (contacten.length === 0) return contacten;
+  const eigen = await bepaalEigenOrganisatie();
+  return contacten.filter(
+    (c) => (c.status ?? "voorstel") !== "voorstel" || !isEigenContact(c, eigen),
+  );
+}
+
 // herbereken de AI-samenvatting. Wanneer een beheerder de samenvatting heeft
 // geverifieerd (handmatig gecontroleerd/aangepast) overschrijft de automatische
 // herberekening de tekstvelden NIET (tenzij forceer=true), maar worden
@@ -147,9 +233,8 @@ async function herberekeningUitvoeren(
           bijlagen: [] as GeparseerdeBijlage[],
         }));
         const nieuweSamenvatting = await genereerProjectSamenvatting(emailsMetId, { ...logCtx, gebouw_id: gebouwId });
-        const gemergd = mergeContactpersonen(
-          bestaandeContacten,
-          nieuweSamenvatting.contactpersonen,
+        const gemergd = await verwijderEigenVoorstellen(
+          mergeContactpersonen(bestaandeContacten, nieuweSamenvatting.contactpersonen),
         );
         await db
           .update(gebouwEmailSamenvattingenTable)
@@ -174,9 +259,8 @@ async function herberekeningUitvoeren(
     const samenvatting = await genereerProjectSamenvatting(emailsMetId, { ...logCtx, gebouw_id: gebouwId });
 
     // Merge: bewaar bevestigde/afgewezen contacten, voeg nieuwe AI-voorstellen toe
-    const gemergdContacten = mergeContactpersonen(
-      bestaandeContacten,
-      samenvatting.contactpersonen,
+    const gemergdContacten = await verwijderEigenVoorstellen(
+      mergeContactpersonen(bestaandeContacten, samenvatting.contactpersonen),
     );
 
     const nieuweWaarden = {
@@ -307,6 +391,16 @@ router.get("/gebouwen/:id/emails/samenvatting", beheerderPlus, async (req, res):
       .from(gebouwEmailSamenvattingenTable)
       .where(eq(gebouwEmailSamenvattingenTable.gebouwId, gebouwId));
     if (!s) return void res.status(404).json({ error: "Nog geen samenvatting beschikbaar" });
+    // Opschonen van bestaande eigen-organisatie-voorstellen (data van vóór het filter)
+    const bestaandeContacten = s.contactpersonen ?? [];
+    const opgeschoond = await verwijderEigenVoorstellen(bestaandeContacten);
+    if (opgeschoond.length !== bestaandeContacten.length) {
+      await db
+        .update(gebouwEmailSamenvattingenTable)
+        .set({ contactpersonen: opgeschoond, bijgewerktOp: new Date() })
+        .where(eq(gebouwEmailSamenvattingenTable.gebouwId, gebouwId));
+      s.contactpersonen = opgeschoond;
+    }
     res.json(mapSamenvatting(s));
   } catch (err) {
     req.log.error(err);
