@@ -1,3 +1,13 @@
+## 2026-07-14 — Werkscherm scroll-afkap door NieuwsTicker
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+De onderste content op alle beheer-schermen werd afgekapt door de vaste NieuwsTicker (56px hoog). De content-wrapper had slechts `pb-10` (40px) bottom-padding, waardoor de laatste ~16px niet bereikbaar was door te scrollen.
+
+- **Fix** (`beheerder-layout.tsx`): `pb-10` verhoogd naar `pb-20` (80px), zodat content altijd volledig voorbij de ticker scrollbaar is op alle pagina's.
+
+---
+
 ## 2026-07-14 — Foto-galerij upload per gebouw + sidebar AI-statistieken
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag

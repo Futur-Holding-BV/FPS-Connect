@@ -2007,7 +2007,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
           </div>
         </div>
         {toonToolboxen && <VeiligheidMeldingBanner />}
-        <div className="p-3 md:p-4 xl:p-6 pb-10">
+        <div className="p-3 md:p-4 xl:p-6 pb-20">
           {children}
         </div>
       </main>
