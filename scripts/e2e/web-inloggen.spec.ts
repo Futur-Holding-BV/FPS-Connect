@@ -207,4 +207,7 @@ test("UI: volledige login via browser leidt naar dashboard", async ({ page }) =>
 
   // Het loginscherm is verdwenen.
   await expect(page.locator("#email")).not.toBeVisible();
+
+  // De app is geladen — geen lege pagina of foutpagina.
+  await expect(page.locator("body")).not.toBeEmpty();
 });

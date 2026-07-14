@@ -253,12 +253,10 @@ export default function GereedschappenPagina() {
             <p className="text-xs mt-1">Registreer het eerste gereedschap.</p>
           </div>
           {magSchrijven && (
-            <div className="text-center pt-1">
-              <Button variant="outline" size="sm" onClick={() => setNieuwOpen(true)}>
-                <Plus className="h-4 w-4 mr-1" />
-                Eerste gereedschap registreren
-              </Button>
-            </div>
+            <Button variant="outline" size="sm" onClick={() => setNieuwOpen(true)}>
+              <Plus className="h-4 w-4 mr-1" />
+              Gereedschap registreren
+            </Button>
           )}
         </div>
       ) : (

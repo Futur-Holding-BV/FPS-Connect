@@ -805,9 +805,12 @@ export default function PersoneelPagina() {
               {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-28 w-full" />)}
             </div>
           ) : (medewerkers ?? []).length === 0 ? (
-            <div className="text-center py-16">
-              <p className="text-muted-foreground">Nog geen medewerkers gevonden.</p>
-            </div>
+            <Card>
+              <CardContent className="py-12 text-center text-muted-foreground">
+                <Users className="h-10 w-10 mx-auto mb-3 opacity-40" />
+                <p>Nog geen medewerkers gevonden.</p>
+              </CardContent>
+            </Card>
           ) : (
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {(medewerkers ?? []).map((m) => (

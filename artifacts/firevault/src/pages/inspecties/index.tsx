@@ -199,7 +199,7 @@ export default function Inspecties() {
           {!inspecties?.length && !filterActief && (
             <LegeStatus
               icoon={ClipboardList}
-              titel="Nog geen inspecties"
+              titel="Nog geen inspecties gevonden"
               beschrijving="Er zijn nog geen inspecties aangemaakt."
               variant="kaart"
             />
