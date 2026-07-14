@@ -1,3 +1,13 @@
+## 2026-07-14 — Tabbalk gebouw-detail sticky bij scrollen
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+- `artifacts/firevault/src/pages/gebouwen/detail.tsx` — wrapper-div van de tabbalk uitgebreid met `sticky top-9 z-10 bg-background border-b -mx-3 px-3 md:-mx-4 md:px-4 xl:-mx-6 xl:px-6 py-2`; de tabbalk blijft nu zichtbaar bij omlaag scrollen in het gebouw-detail scherm; `top-9` (36px) is berekend op de hoogte van de bestaande sticky breadcrumb-balk in de beheerder-layout
+
+**Bewijs:** `pnpm --filter @workspace/firevault run typecheck` → volledig groen.
+
+---
+
 ## 2026-07-14 — Privacy & App-informatie verplaatst naar Instellingen
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
