@@ -93,10 +93,13 @@ router.post("/documenten/ai-analyse", requireBevoegdheid("bibliotheek", 3), asyn
   }
 });
 
-// POST /documenten/ai-koppelvoorstellen — AI-voorstellen om bestaande, reeds geanalyseerde
-// documenten aan toepassingen te koppelen. Herbruikt de deterministische matcher op de
-// opgeslagen documentvelden (geen nieuwe PDF-extractie of LLM-aanroep nodig). Voorstellen;
-// de beheerder neemt over. (beheerder)
+// POST /documenten/ai-koppelvoorstellen — AI-voorstellen om bestaande bibliotheekdocumenten
+// aan toepassingen te koppelen. Ongeanaliseerde PDFs worden automatisch eerst verrijkt
+// (fabrikant/product/norm extractie) zodat de matcher iets heeft om mee te werken.
+// Maximaal MAX_AUTO_ANALYSE documenten per aanroep om de responstijd beheersbaar te houden.
+// Voorstellen; de beheerder neemt over. (beheerder)
+const MAX_AUTO_ANALYSE = 15;
+
 router.post(
   "/documenten/ai-koppelvoorstellen",
   requireBevoegdheid("bibliotheek", 3),
@@ -123,6 +126,57 @@ router.post(
       for (const k of koppelingen) {
         if (!reedsGekoppeld.has(k.documentId)) reedsGekoppeld.set(k.documentId, new Set());
         reedsGekoppeld.get(k.documentId)!.add(k.labelId);
+      }
+
+      // Automatisch verrijken: documenten zonder enige opgeslagen metadata worden
+      // opgehaald uit object storage, geanalyseerd en bijgewerkt zodat de matcher
+      // iets heeft om op te scoren. Cap zodat de responstijd beheersbaar blijft.
+      const teAnalyseren = actueel
+        .filter((d) => !d.fabrikant && !d.product && !d.enNorm && d.pdfUrl)
+        .slice(0, MAX_AUTO_ANALYSE);
+
+      for (const d of teAnalyseren) {
+        try {
+          const file = await objectStorage.getObjectEntityFile(d.pdfUrl!);
+          const stream = file.createReadStream();
+          const pdfBuffer = await new Promise<Buffer>((resolve, reject) => {
+            const chunks: Buffer[] = [];
+            stream.on("data", (chunk: unknown) =>
+              chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk as ArrayBufferLike)),
+            );
+            stream.on("end", () => resolve(Buffer.concat(chunks)));
+            stream.on("error", (err: Error) => reject(err));
+          });
+          const extractie = await extraheerPdfTekst(pdfBuffer);
+          if (!extractie.tekst) continue;
+          const analyse = await analyseerDocumentTekst(extractie.tekst, d.naam, {
+            module: "bibliotheek",
+            functie: "koppelvoorstel-verrijking",
+          });
+          const verrijking: {
+            fabrikant?: string | null;
+            product?: string | null;
+            enNorm?: string | null;
+            rapportnummer?: string | null;
+          } = {};
+          if (analyse.fabrikant) verrijking.fabrikant = analyse.fabrikant;
+          if (analyse.product) verrijking.product = analyse.product;
+          if (analyse.en_norm) verrijking.enNorm = analyse.en_norm;
+          if (analyse.rapportnummer) verrijking.rapportnummer = analyse.rapportnummer;
+          if (Object.keys(verrijking).length > 0) {
+            await db
+              .update(documentenTable)
+              .set(verrijking)
+              .where(eq(documentenTable.id, d.id));
+            // In-memory bijwerken zodat de matcher hieronder de verse waarden ziet.
+            Object.assign(d, verrijking);
+          }
+        } catch (err) {
+          req.log.warn(
+            { err, documentId: d.id },
+            "Auto-verrijking bij koppelvoorstel mislukt — document overgeslagen",
+          );
+        }
       }
 
       const voorstellen = [];
