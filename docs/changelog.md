@@ -1,3 +1,14 @@
+## 2026-07-14 — Privacy & App-informatie verplaatst naar Instellingen
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+- `artifacts/firevault/src/components/gebruiker-menu.tsx` — knoppen "Privacy" en "App-informatie" uit de sidebar-footer verwijderd; ongebruikte `Info` en `ShieldCheck` imports verwijderd
+- `artifacts/firevault/src/pages/instellingen/index.tsx` — "Privacy & transparantie" (pad: /mijn/privacy) en "App-informatie" (pad: /info) toegevoegd aan de groep "Ondersteuning", zichtbaar: true (voor alle rollen); "Info" hernoemd naar "App-informatie" voor consistentie
+
+**Bewijs:** `pnpm --filter @workspace/firevault run typecheck` → volledig groen.
+
+---
+
 ## 2026-07-14 — Multi-applicatie per spot (tot 5 doorvoeren)
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag

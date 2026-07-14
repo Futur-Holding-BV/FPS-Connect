@@ -301,7 +301,14 @@ export default function InstellingenPagina() {
           zichtbaar: true,
         },
         {
-          label: "Info",
+          label: "Privacy & transparantie",
+          pad: "/mijn/privacy",
+          icoon: ShieldCheck,
+          beschrijving: "Uw persoonsgegevens en privacy-instellingen inzien",
+          zichtbaar: true,
+        },
+        {
+          label: "App-informatie",
           pad: "/info",
           icoon: Info,
           beschrijving: "Versie-informatie, licenties en builddetails",

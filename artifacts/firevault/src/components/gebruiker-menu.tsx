@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
-import { Eye, ChevronsUpDown, Info, LogOut, ShieldCheck } from "lucide-react";
+import { Eye, ChevronsUpDown, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
@@ -66,28 +66,6 @@ export function GebruikerMenu({ toonUitloggen = true }: { toonUitloggen?: boolea
           </div>
         )}
 
-        <div className="mt-2 space-y-0.5">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setLocation("/mijn/privacy")}
-            className="w-full justify-start gap-2 text-muted-foreground group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
-            title="Privacy & transparantie"
-          >
-            <ShieldCheck className="h-4 w-4 flex-shrink-0" />
-            <span className="group-data-[collapsible=icon]:hidden">Privacy</span>
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setLocation("/info")}
-            className="w-full justify-start gap-2 text-muted-foreground group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
-            title="App-informatie"
-          >
-            <Info className="h-4 w-4 flex-shrink-0" />
-            <span className="group-data-[collapsible=icon]:hidden">App-informatie</span>
-          </Button>
-        </div>
       </div>
     </>
   );
