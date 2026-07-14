@@ -1,3 +1,20 @@
+## 2026-07-14 — Sidebar Instellingen samengevoegd tot overzichtspagina
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+**Wat:** de 37-item Instellingen-sectie in de sidebar is vervangen door één "Instellingen"-knop. Die opent `/instellingen` — een overzichtspagina met zoekbalk en vijf logische groepen (Toegang & Rechten / Systeem & Beveiliging / AI-tools / Data & Export / Ondersteuning). Patroon: GitHub Settings / Linear Preferences.
+
+**Details:**
+- Nieuw: `artifacts/firevault/src/pages/instellingen/index.tsx` — kaartgrid per groep, permission-aware (items verdwijnen voor gebruikers zonder toegang), real-time zoekfilter op label + beschrijving.
+- `beheerder-layout.tsx`: InklapbaarHoofdstuk "Instellingen" (380 regels) → één SidebarMenuItem → `/instellingen`; isActive dekt `/beheer/*`, `/gebruikers`, `/toolbox`, `/personeel/verlof-instellingen`.
+- `App.tsx`: import + route `/instellingen` toegevoegd.
+- `"instellingen"` verwijderd uit `useSidebarHoofdstukken`-array (geen stale state meer).
+- Dubbele "AI-aanroepen"-items correct benoemd: "AI-aanroepen" (/beheer/ai-aanroepen) en "AI-statistieken" (/beheer/ai-log).
+
+**Bewijs:** typecheck groen (firevault), server hergestart.
+
+---
+
 ## 2026-07-14 — Increment 4: functie-profielen leiden runtime rechten af (multi-functie toegang)
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** middel

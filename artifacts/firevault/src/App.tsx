@@ -75,6 +75,7 @@ import MailBeheer from "@/pages/beheer/mail";
 import BackupBeheer from "@/pages/beheer/backup";
 import HerstelDashboard from "@/pages/beheer/herstel";
 import ImportPagina from "@/pages/beheer/import";
+import InstellingenPagina from "@/pages/instellingen/index";
 import LeveranciersPagina from "@/pages/leveranciers/index";
 import LeverancierDetailPagina from "@/pages/leveranciers/detail";
 import ArtikelenPagina from "@/pages/artikelen/index";
@@ -549,6 +550,7 @@ function ConnectPortal() {
         <Route path="/beheer/meldingen" component={MeldingenBeheerPage} />
         <Route path="/beheer/projectstatus" component={ProjectstatusPagina} />
         <Route path="/beheer/pwa-test" component={PwaTest} />
+        <Route path="/instellingen" component={InstellingenPagina} />
         <Route path="/beheer/ai-log" component={AiLogBeheer} />
         <Route path="/beheer/governance-risico" component={GovernancePagina} />
         <Route path="/beheer/security-intake" component={SecurityIntakePagina} />
