@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { Loader2, KeyRound, ArrowLeft, Eye, EyeOff, Globe, ChevronDown, Copy, Check } from "lucide-react";
+import { Loader2, KeyRound, ArrowLeft, Eye, EyeOff, Globe, ChevronDown, Copy, Check, Smartphone } from "lucide-react";
 import {
   login,
   tweeFactorSetup,
@@ -469,6 +469,15 @@ export default function LoginPagina() {
                   <p className="text-center text-xs text-green-400">
                     {t("auth.gekopieerd")}
                   </p>
+                )}
+                {navigator.maxTouchPoints > 0 && (
+                  <a
+                    href={`otpauth://totp/${encodeURIComponent("FPS Connect:" + email)}?secret=${encodeURIComponent(setupData.secret)}&issuer=${encodeURIComponent("FPS Connect")}`}
+                    className="mt-1 flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.06] px-4 py-3 text-sm text-white/70 transition-colors hover:bg-white/10 hover:text-white/90"
+                  >
+                    <Smartphone className="h-4 w-4 shrink-0" />
+                    {t("auth.openInAuthApp")}
+                  </a>
                 )}
               </div>
 
