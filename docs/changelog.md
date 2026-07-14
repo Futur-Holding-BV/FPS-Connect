@@ -117,6 +117,21 @@ Typecheck: firevault en api-server beide schoon.
 
 ---
 
+## 2026-07-13 — Proposal Studio: portaal, ondertekening & opdracht
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (additief op Fase 1-basis; bestaande routes ongewijzigd)
+
+**Wat is gedaan:**
+- **DB:** nieuwe tabellen `offerte_portaal_tokens`, `offerte_handtekeningen`, `offerte_vragen`, `offerte_email_log`, `offerte_tracking` (push: "Changes applied"); `portaal_status`-veld op `offertes`; unieke constraint op `offerte_handtekeningen.offerte_id` als doublure-veiligheidsnet
+- **Backend publiek portaal** (`routes/portaal.ts`): `GET /portaal/:token`, `GET /portaal/:token/pixel`, `PATCH /portaal/:token/tracking`, `POST /portaal/:token/vraag`, `POST /portaal/:token/ondertekenen` (atomaire transactie: status-claim + handtekening + gebouwstatus + auto-project + CRM-activiteit), `POST /portaal/:token/afwijzen`, `POST /portaal/:token/ai-uitleg`, `POST /portaal/:token/optioneel-werk`
+- **Backend admin** (`routes/offertes.ts`): `POST /offertes/:id/portaal-token`, `GET /offertes/:id/portaal-tokens`, `GET /offertes/:id/tracking`, `POST /offertes/:id/ai-email`, `POST /offertes/:id/verzenden` (Graph Mail + tracking pixel), `GET /offertes/analytics`
+- **Frontend klantportaal** (`pages/portaal/index.tsx`): premium brochure-view, canvas-handtekening (muis/touch), afwijzingsformulier, vragen-chatbox, optioneel-werk checkboxes, AI-uitlegknop, succespagina na ondertekening
+- **Frontend verzend-tab** (`pages/offertes/verzend-tab.tsx`): portaallink genereren, AI-e-mailvoorstel, tracking-tijdlijn, klantvragen beantwoorden, klantcontract uploaden + AI-contractadvies
+- **Frontend analytics** (`pages/offertes/index.tsx`): KPI-kaarten (verzonden/bekeken/geaccepteerd/afgewezen/vervallen/conversie%/gem.waarde/gem.doorlooptijd), AI-acceptatiescore badge, onbeantwoorde-vragen badge
+- **App.tsx**: `/portaal/:token` route buiten de beheerder-layout (publieke pagina)
+
+---
+
 ## 2026-07-13 — Proposal Studio: voltooiing kern (editor, AI, PDF, versiediff, sectielijst)
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (puur additieve front-end uitbreiding op bestaande Fase 1-basis)
