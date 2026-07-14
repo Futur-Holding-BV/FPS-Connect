@@ -1,3 +1,11 @@
+## 2026-07-14 — Uitvoeringsmodule architectuurplan geschreven
+
+- **Uitvoering:** planning | **Kwaliteit:** n.v.t. | **Risico:** geen (document, geen code)
+
+Volledig architectuurplan opgesteld voor de uitvoeringsmodule inclusief AI-integratie: `docs/uitvoering-module-architectuurplan.md`. Omvat 7 onderdelen (PL-cockpit, meerwerk-flow, inkoop-bewaking, bewoners-coördinatie, termijnfacturatie, dagelijkse planningsbrief, voortgangsmeting), integratie-overzicht met alle bestaande modules, AI-functiematrix en aanbevolen bouwvolgorde in 6 fasen.
+
+---
+
 ## 2026-07-13 — Wagenparkmeldingen: kwartaalcontrole, schade & storing (Taak #615)
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (additief; nieuwe tabellen/routes)
