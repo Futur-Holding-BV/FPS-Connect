@@ -8035,6 +8035,37 @@ paths:
               schema:
                 $ref: "#/components/schemas/OnboardingFout"
 
+  /medewerkers/ai-onboarding-voorstel:
+    post:
+      operationId: aiOnboardingVoorstel
+      tags: [personeel]
+      summary: AI-onboarding-voorstel uit geplakte tekst (e-mail/contract). Stelt alleen voor; maakt geen medewerker of gebruiker aan en bevat nooit bevoegdheden.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OnboardingVoorstelInvoer"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CvAnalyseResultaat"
+        "422":
+          description: Te weinig of onbruikbare tekst
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "503":
+          description: AI niet beschikbaar
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+
   /medewerkers/{id}:
     get:
       operationId: getMedewerker
@@ -30058,6 +30089,29 @@ components:
           type: ["string", "null"]
         ai_toelichting:
           type: ["string", "null"]
+        functie_suggestie:
+          type: ["string", "null"]
+          description: Voorgestelde functienaam (best effort, wordt in het formulier op een bestaande functie gematcht). Nooit een rechten/bevoegdheden-voorstel.
+        werkmaatschappij:
+          type: ["string", "null"]
+          description: Voorgestelde werkmaatschappij binnen de FPS Groep.
+        contracturen_per_week:
+          type: ["string", "null"]
+          description: Voorgesteld aantal contracturen per week (numeriek als tekst).
+        startdatum:
+          type: ["string", "null"]
+          description: Voorgestelde startdatum (YYYY-MM-DD).
+        dienstverband:
+          type: ["string", "null"]
+          description: Voorgesteld dienstverband (vast, tijdelijk, oproep of stage).
+
+    OnboardingVoorstelInvoer:
+      type: object
+      required: [tekst]
+      properties:
+        tekst:
+          type: string
+          description: Geplakte brontekst (bijv. e-mail of arbeidsovereenkomst) waaruit de AI onboarding-velden voorstelt.
 
     OffboardSamenvatting:
       type: object

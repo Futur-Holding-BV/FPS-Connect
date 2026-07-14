@@ -31,3 +31,8 @@ pnpm --filter @workspace/db run apply-additive
 pnpm --filter @workspace/db run schema-healthcheck
 # Stap 5: Seed Document Studio-model voor opleverrapport (idempotent; slaat over als reeds aanwezig).
 pnpm --filter @workspace/scripts run seed-studio-opleverrapport
+# Stap 6: Seed standaard rechten-profielen (presets). INSERT-ONLY en idempotent:
+# ontbrekende systeem-presets worden aangemaakt, bestaande NOOIT overschreven
+# (handmatige aanpassingen blijven behouden). Voorkomt lege profielen-tabel →
+# "kies functie" die geen bevoegdheden vult.
+pnpm --filter @workspace/scripts run seed-profielen

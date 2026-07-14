@@ -839,6 +839,7 @@ export * from './offerteVerzendenInput';
 export * from './offerteVraag';
 export * from './offerteVraagAntwoordInput';
 export * from './onboardingFout';
+export * from './onboardingVoorstelInvoer';
 export * from './onderaannemerOrder';
 export * from './onderaannemerOrderInput';
 export * from './onderaannemerOrderPatch';

@@ -8832,7 +8832,12 @@ export const AnalyseerInboxCvResponse = zod.object({
   "bhv_vervaldatum": zod.string().nullish(),
   "ehbo_vervaldatum": zod.string().nullish(),
   "werkervaring_samenvatting": zod.string().nullish(),
-  "ai_toelichting": zod.string().nullish()
+  "ai_toelichting": zod.string().nullish(),
+  "functie_suggestie": zod.string().nullish().describe('Voorgestelde functienaam (best effort, wordt in het formulier op een bestaande functie gematcht). Nooit een rechten\/bevoegdheden-voorstel.'),
+  "werkmaatschappij": zod.string().nullish().describe('Voorgestelde werkmaatschappij binnen de FPS Groep.'),
+  "contracturen_per_week": zod.string().nullish().describe('Voorgesteld aantal contracturen per week (numeriek als tekst).'),
+  "startdatum": zod.string().nullish().describe('Voorgestelde startdatum (YYYY-MM-DD).'),
+  "dienstverband": zod.string().nullish().describe('Voorgesteld dienstverband (vast, tijdelijk, oproep of stage).')
 })
 
 
@@ -9966,6 +9971,36 @@ export const OnboardMedewerkerBody = zod.object({
 })
 
 export const OnboardMedewerkerResponse = zod.void()
+
+
+/**
+ * @summary AI-onboarding-voorstel uit geplakte tekst (e-mail/contract). Stelt alleen voor; maakt geen medewerker of gebruiker aan en bevat nooit bevoegdheden.
+ */
+export const AiOnboardingVoorstelBody = zod.object({
+  "tekst": zod.string().describe('Geplakte brontekst (bijv. e-mail of arbeidsovereenkomst) waaruit de AI onboarding-velden voorstelt.')
+})
+
+export const AiOnboardingVoorstelResponse = zod.object({
+  "naam": zod.string().nullable(),
+  "email": zod.string().nullish(),
+  "telefoon": zod.string().nullish(),
+  "mobiel": zod.string().nullish(),
+  "geboortedatum": zod.string().nullish(),
+  "adres": zod.string().nullish(),
+  "postcode": zod.string().nullish(),
+  "woonplaats": zod.string().nullish(),
+  "rijbewijs": zod.string().nullish(),
+  "vca_vervaldatum": zod.string().nullish(),
+  "bhv_vervaldatum": zod.string().nullish(),
+  "ehbo_vervaldatum": zod.string().nullish(),
+  "werkervaring_samenvatting": zod.string().nullish(),
+  "ai_toelichting": zod.string().nullish(),
+  "functie_suggestie": zod.string().nullish().describe('Voorgestelde functienaam (best effort, wordt in het formulier op een bestaande functie gematcht). Nooit een rechten\/bevoegdheden-voorstel.'),
+  "werkmaatschappij": zod.string().nullish().describe('Voorgestelde werkmaatschappij binnen de FPS Groep.'),
+  "contracturen_per_week": zod.string().nullish().describe('Voorgesteld aantal contracturen per week (numeriek als tekst).'),
+  "startdatum": zod.string().nullish().describe('Voorgestelde startdatum (YYYY-MM-DD).'),
+  "dienstverband": zod.string().nullish().describe('Voorgesteld dienstverband (vast, tijdelijk, oproep of stage).')
+})
 
 
 /**

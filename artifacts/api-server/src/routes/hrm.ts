@@ -49,9 +49,10 @@ import { workflowService, maakTransitieContext } from "../services/workflow-engi
 import { medewerkerIdVoorGebruiker } from "../services/medewerker-lookup";
 import { maakVerlofprofielAan } from "../services/verlofprofiel";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
-import { analyseerCvBestand } from "../lib/cvAnalyse";
+import { analyseerCvBestand, analyseerOnboardingTekst } from "../lib/cvAnalyse";
 import { ZZP_JURIDISCH_PROMPT, HRM_CAPACITEIT_SIGNALEN_PROMPT } from "../lib/aiPrompts";
 import { logger } from "../lib/logger";
+import { logAudit } from "../lib/audit";
 
 const uploadGeheugem = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 } });
 const hrmStorage = new ObjectStorageService();
@@ -357,6 +358,40 @@ router.get("/functies/:id", lezen, async (req, res): Promise<void> => {
 router.patch("/functies/:id", schrijven, async (req, res): Promise<void> => {
   try {
     const { naam, werkmaatschappij, omschrijving, taken, verantwoordelijkheden, competenties, opleidingsvereisten, doorgroeipad, uitvoerend, actief, minimale_bezetting, profiel_id } = req.body;
+    const functieId = parseId(req.params.id);
+
+    // Hardening (defense-in-depth): het koppelen of wijzigen van een
+    // toegangsprofiel aan een functie is een rechten-gevoelige actie. Het
+    // bepaalt welke bevoegdheden de functie richtinggevend voorstelt (de
+    // onboarding-preview) en is de logische haak voor toekomstige automatische
+    // toepassing. Een personeel:2-beheerder mag de overige functievelden
+    // bewerken, maar alleen een hoofdbeheerder of iemand met volledig
+    // gebruikersbeheer (gebruikers:4) mag profiel_id wijzigen. Een gelijk
+    // gebleven profiel_id (bv. bij het opslaan van een ongewijzigd formulier)
+    // vereist geen verhoogde rechten.
+    let profielWijziging: { oud: number | null; nieuw: number | null } | null = null;
+    if (profiel_id !== undefined) {
+      const [huidig] = await db
+        .select({ profielId: functiesTable.profielId })
+        .from(functiesTable)
+        .where(eq(functiesTable.id, functieId));
+      const oud = huidig?.profielId ?? null;
+      const nieuw = (profiel_id ?? null) as number | null;
+      if (oud !== nieuw) {
+        const magRechtenKoppelen =
+          !!req.permissies &&
+          (req.permissies.isHoofdbeheerder ||
+            req.permissies.heeftModuleRecht("gebruikers", 4));
+        if (!magRechtenKoppelen) {
+          return void res.status(403).json({
+            error:
+              "Alleen een hoofdbeheerder of gebruikersbeheerder mag een toegangsprofiel aan een functie koppelen.",
+          });
+        }
+        profielWijziging = { oud, nieuw };
+      }
+    }
+
     const werkgeverId = werkmaatschappij !== undefined ? await werkgeverIdVoor(werkmaatschappij) : undefined;
     const [f] = await db
       .update(functiesTable)
@@ -376,9 +411,38 @@ router.patch("/functies/:id", schrijven, async (req, res): Promise<void> => {
         ...(minimale_bezetting !== undefined ? { minimaleBezetting: minimale_bezetting } : {}),
         bijgewerktOp: new Date(),
       })
-      .where(eq(functiesTable.id, parseId(req.params.id)))
+      .where(eq(functiesTable.id, functieId))
       .returning();
     if (!f) return void res.status(404).json({ error: "Functie niet gevonden" });
+
+    if (profielWijziging) {
+      const sessie = req.session as unknown as Record<string, unknown> | undefined;
+      logAudit({
+        gebruikerId: (sessie?.userId as number | null | undefined) ?? null,
+        gebruikerNaam:
+          (sessie?.gebruikerNaam as string | null | undefined) ??
+          (sessie?.naam as string | null | undefined) ??
+          null,
+        ipAdres: req.ip ?? null,
+        sessieId: null,
+        module: "functies",
+        actie: "profiel-koppelen",
+        entiteit: "functies",
+        entiteitId: functieId,
+        entiteitNaam: f.naam ?? null,
+        oudeWaarde: null,
+        nieuweWaarde: null,
+        workflowStatus: null,
+        gebouwId: null,
+        medewerkerId: null,
+        documentId: null,
+        meta: {
+          oudProfielId: profielWijziging.oud,
+          nieuwProfielId: profielWijziging.nieuw,
+        } as Record<string, unknown>,
+      });
+    }
+
     res.json(mapFunctie(f));
   } catch (err) {
     req.log.error(err);
@@ -3638,6 +3702,27 @@ router.post(
     }
   }
 );
+
+// ─── AI ONBOARDING VOORSTEL (geplakte tekst) ─────────────────────────────────
+// Leest geplakte brontekst (e-mail/arbeidsovereenkomst) en stelt onboarding-velden
+// voor. Stelt alleen voor; maakt geen medewerker/gebruiker aan en bevat nooit
+// rechten of bevoegdheden (die volgen uit de gekozen functie).
+router.post("/medewerkers/ai-onboarding-voorstel", schrijven, async (req, res): Promise<void> => {
+  try {
+    const tekst = typeof req.body?.tekst === "string" ? req.body.tekst : "";
+    if (!tekst.trim()) {
+      return void res.status(422).json({ error: "Geen tekst ontvangen. Plak een e-mail of arbeidsovereenkomst." });
+    }
+    const uitkomst = await analyseerOnboardingTekst(tekst);
+    if (!uitkomst.ok) {
+      return void res.status(uitkomst.status).json({ error: uitkomst.fout });
+    }
+    return void res.json(uitkomst.resultaat);
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
 
 // ─── OFFBOARD SAMENVATTING ────────────────────────────────────────────────────
 router.get("/medewerkers/:id/offboard-samenvatting", lezen, async (req, res): Promise<void> => {

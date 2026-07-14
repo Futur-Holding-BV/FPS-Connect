@@ -35,4 +35,29 @@ export interface CvAnalyseResultaat {
   werkervaring_samenvatting?: string | null;
   /** @nullable */
   ai_toelichting?: string | null;
+  /**
+     * Voorgestelde functienaam (best effort, wordt in het formulier op een bestaande functie gematcht). Nooit een rechten/bevoegdheden-voorstel.
+     * @nullable
+     */
+  functie_suggestie?: string | null;
+  /**
+     * Voorgestelde werkmaatschappij binnen de FPS Groep.
+     * @nullable
+     */
+  werkmaatschappij?: string | null;
+  /**
+     * Voorgesteld aantal contracturen per week (numeriek als tekst).
+     * @nullable
+     */
+  contracturen_per_week?: string | null;
+  /**
+     * Voorgestelde startdatum (YYYY-MM-DD).
+     * @nullable
+     */
+  startdatum?: string | null;
+  /**
+     * Voorgesteld dienstverband (vast, tijdelijk, oproep of stage).
+     * @nullable
+     */
+  dienstverband?: string | null;
 }

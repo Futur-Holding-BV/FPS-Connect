@@ -641,6 +641,7 @@ import type {
   OfferteVraag,
   OfferteVraagAntwoordInput,
   OnboardingFout,
+  OnboardingVoorstelInvoer,
   OnderaannemerOrder,
   OnderaannemerOrderInput,
   OnderaannemerOrderPatch,
@@ -27966,6 +27967,76 @@ export const useOnboardMedewerker = <TError = ErrorType<OnboardingFout>,
         TContext
       > => {
       return useMutation(getOnboardMedewerkerMutationOptions(options));
+    }
+
+export const getAiOnboardingVoorstelUrl = () => {
+
+
+
+
+  return `/api/medewerkers/ai-onboarding-voorstel`
+}
+
+/**
+ * @summary AI-onboarding-voorstel uit geplakte tekst (e-mail/contract). Stelt alleen voor; maakt geen medewerker of gebruiker aan en bevat nooit bevoegdheden.
+ */
+export const aiOnboardingVoorstel = async (onboardingVoorstelInvoer: OnboardingVoorstelInvoer, options?: RequestInit): Promise<CvAnalyseResultaat> => {
+
+  return customFetch<CvAnalyseResultaat>(getAiOnboardingVoorstelUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(onboardingVoorstelInvoer)
+  }
+);}
+
+
+
+
+export const getAiOnboardingVoorstelMutationOptions = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof aiOnboardingVoorstel>>, TError,{data: BodyType<OnboardingVoorstelInvoer>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof aiOnboardingVoorstel>>, TError,{data: BodyType<OnboardingVoorstelInvoer>}, TContext> => {
+
+const mutationKey = ['aiOnboardingVoorstel'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof aiOnboardingVoorstel>>, {data: BodyType<OnboardingVoorstelInvoer>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  aiOnboardingVoorstel(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AiOnboardingVoorstelMutationResult = NonNullable<Awaited<ReturnType<typeof aiOnboardingVoorstel>>>
+    export type AiOnboardingVoorstelMutationBody = BodyType<OnboardingVoorstelInvoer>
+    export type AiOnboardingVoorstelMutationError = ErrorType<ErrorEnvelope>
+
+    /**
+ * @summary AI-onboarding-voorstel uit geplakte tekst (e-mail/contract). Stelt alleen voor; maakt geen medewerker of gebruiker aan en bevat nooit bevoegdheden.
+ */
+export const useAiOnboardingVoorstel = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof aiOnboardingVoorstel>>, TError,{data: BodyType<OnboardingVoorstelInvoer>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof aiOnboardingVoorstel>>,
+        TError,
+        {data: BodyType<OnboardingVoorstelInvoer>},
+        TContext
+      > => {
+      return useMutation(getAiOnboardingVoorstelMutationOptions(options));
     }
 
 export const getGetMedewerkerUrl = (id: number,) => {

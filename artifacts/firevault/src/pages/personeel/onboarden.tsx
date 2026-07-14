@@ -5,6 +5,7 @@ import {
   useListFuncties,
   useListVerlofsoorten,
   useListCaoOpties,
+  useListProfielen,
   useListMedewerkers,
   getListMedewerkersQueryKey,
   getGetHrmStatsQueryKey,
@@ -26,11 +27,16 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import {
   UserCheck, Handshake, Building2, ArrowLeft, ArrowRight,
-  CheckCircle2, ExternalLink, RotateCcw, Sparkles, X, AlertTriangle, Receipt,
+  CheckCircle2, ExternalLink, RotateCcw, Sparkles, X, AlertTriangle, Receipt, ShieldCheck,
 } from "lucide-react";
 import { WERKMAATSCHAPPIJEN, caoVoorWerkmaatschappij } from "@/lib/werkmaatschappijen";
+import { MODULES, NIVEAUS } from "@workspace/permissies";
 
 const WERKMAATSCHAPPIJ_STD = WERKMAATSCHAPPIJEN[0];
+
+function niveauKort(n: number): string {
+  return NIVEAUS.find((x) => x.waarde === n)?.kort ?? "";
+}
 
 // ─── Typen ────────────────────────────────────────────────────────────────────
 
@@ -385,9 +391,32 @@ function VastFormulier({
   const { data: functies } = useListFuncties();
   const { data: verlofsoorten } = useListVerlofsoorten();
   const { data: caoOpties } = useListCaoOpties();
+  const { data: profielen } = useListProfielen();
   const { data: bestaandeMedewerkers } = useListMedewerkers();
   const maak = useCreateMedewerker();
   const { toast } = useToast();
+
+  // Toegangsrechten-preview: de gekozen functie kan een standaard toegangsprofiel
+  // dragen (functies.profiel_id). We tonen wat dat profiel inhoudt zodat de
+  // invoerder in één oogopslag ziet welke rechten bij deze functie horen.
+  const gekozenFunctie = useMemo(
+    () => (functies ?? []).find((f) => f.id === form.functie_id),
+    [functies, form.functie_id],
+  );
+  const functieProfiel = useMemo(() => {
+    const pid = gekozenFunctie?.profiel_id;
+    if (pid == null) return null;
+    return (profielen ?? []).find((p) => p.id === pid) ?? null;
+  }, [gekozenFunctie, profielen]);
+  const rechtenLijst = useMemo(() => {
+    const bev = functieProfiel?.bevoegdheden as Record<string, number> | null | undefined;
+    if (!bev) return [];
+    return MODULES.filter((m) => (bev[m.id] ?? 0) > 0).map((m) => ({
+      id: m.id,
+      label: m.label,
+      niveau: bev[m.id],
+    }));
+  }, [functieProfiel]);
 
   // Duplicaatwaarschuwing: zelfde naam of e-mailadres als bestaande medewerker
   const duplicaatNaam = useMemo(() => {
@@ -551,6 +580,45 @@ function VastFormulier({
             onChange={(id) => setForm({ ...form, functie_id: id })}
           />
         </div>
+
+        {form.functie_id != null && (
+          <div className="rounded-md border bg-muted/30 px-4 py-3 space-y-2">
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="h-4 w-4 text-primary" />
+              <span className="text-sm font-medium">Toegangsrechten bij deze functie</span>
+            </div>
+            {functieProfiel ? (
+              <>
+                <p className="text-xs text-muted-foreground">
+                  Standaard toegangsprofiel:{" "}
+                  <span className="font-medium text-foreground">{functieProfiel.naam}</span>
+                </p>
+                {rechtenLijst.length > 0 ? (
+                  <div className="flex flex-wrap gap-1.5">
+                    {rechtenLijst.map((r) => (
+                      <Badge key={r.id} variant="secondary" className="text-xs font-normal">
+                        {r.label}
+                        <span className="ml-1 text-muted-foreground">{niveauKort(r.niveau)}</span>
+                      </Badge>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    Dit profiel bevat nog geen actieve modulerechten.
+                  </p>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  Dit is richtinggevend. De definitieve rechten stelt u in bij het account (Gebruikers).
+                </p>
+              </>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                Aan deze functie is nog geen standaard toegangsprofiel gekoppeld. Stel de rechten
+                handmatig in bij het account, of koppel een profiel via Beheer &rsaquo; Rollen &amp; rechten.
+              </p>
+            )}
+          </div>
+        )}
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1.5">
