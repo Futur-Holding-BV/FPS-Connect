@@ -1,3 +1,30 @@
+## 2026-07-14 — Fix & Verify module Inloggen: effectieve bevoegdheden in auth-responses + 8 e2e-tests
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+**Bug (gefixed):** `mapAuthGebruiker` in `routes/auth.ts` retourneerde ruwe opgeslagen `bevoegdheden` uit de DB — na de PermissieService-refactor zag de frontend minder rechten dan de server toestond voor gebruikers met functie-profielen. Alle 5 endpoints die `mapAuthGebruiker` aanroepen zijn gecorrigeerd:
+- `POST /auth/2fa/activeren` — loginresponse na 2FA-inrichting
+- `POST /auth/2fa/verify` — loginresponse na TOTP-verificatie
+- `POST /auth/mobile/login` — mobiel logintoken
+- `PATCH /auth/taal` — taalwijziging retourneert bijgewerkte gebruiker
+- `GET /auth/me` — sessiecheck bij elke app-load
+
+**Fix:** `berekenEffectieveBevoegdheden(gebruikerId)` wordt nu in elk van deze handlers aangeroepen; het resultaat wordt als `effectieveBev`-parameter meegegeven aan `mapAuthGebruiker`. Gebruikers met functie-profielen zien nu correcte navigatie direct na inloggen.
+
+**Nieuwe testfile:** `scripts/e2e/web-inloggen.spec.ts` — 8 Playwright-tests:
+1. API: correct wachtwoord → 200 met status-veld
+2. API: verkeerd wachtwoord → 401
+3. API: onbekend e-mailadres → 401 (geen email-enumeratie)
+4. API: wachtwoord-vergeten altijd 204 (ook voor onbekend adres)
+5. API: /auth/me zonder sessie → 401
+6. API: volledige login + /auth/me geeft correcte structuur incl. effectieve bevoegdheden
+7. API: uitloggen vernietigt sessie, daarna /auth/me → 401
+8. UI: volledige login via browser leidt naar dashboard (sidebar zichtbaar, loginscherm verdwenen)
+
+**Bewijs:** `pnpm exec playwright test e2e/web-inloggen.spec.ts` → **8/8 geslaagd** (51s). Typecheck api-server + scripts groen.
+
+---
+
 ## 2026-07-14 — Centrale PermissieService: effectieve bevoegdheden als enige bron van waarheid
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** middel

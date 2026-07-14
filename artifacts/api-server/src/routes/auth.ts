@@ -14,6 +14,7 @@ import {
   resetMislukteInlogpogingen,
 } from "../lib/lockout";
 import { beeindigSessiesVanGebruiker } from "../lib/session";
+import { berekenEffectieveBevoegdheden } from "../lib/effectieve-bevoegdheden";
 
 const router = Router();
 
@@ -82,7 +83,10 @@ authenticator.options = { window: 1 };
 
 const TALEN = ["nl", "en", "de", "fr", "ar", "tr"] as const;
 
-const mapAuthGebruiker = (g: typeof gebruikersTable.$inferSelect) => ({
+const mapAuthGebruiker = (
+  g: typeof gebruikersTable.$inferSelect,
+  effectieveBev?: Record<string, number>,
+) => ({
   id: g.id,
   naam: g.naam,
   email: g.email,
@@ -91,7 +95,7 @@ const mapAuthGebruiker = (g: typeof gebruikersTable.$inferSelect) => ({
   bedrijfskleuren: g.bedrijfskleuren ?? null,
   taal: g.taal ?? "nl",
   functietitels: g.functietitels ?? [],
-  bevoegdheden: (g.bevoegdheden as Record<string, number>) ?? {},
+  bevoegdheden: effectieveBev ?? (g.bevoegdheden as Record<string, number>) ?? {},
   is_hoofdtester: g.isHoofdtester ?? false,
   moet_wachtwoord_wijzigen: g.moetWachtwoordWijzigen ?? false,
 });
@@ -242,7 +246,8 @@ router.post("/auth/2fa/activeren", async (req, res): Promise<void> => {
       userAgent: verzoekUserAgent(req),
       gelukt: true,
     });
-    res.json({ ...mapAuthGebruiker(g), nieuw_apparaat: risico.nieuwApparaat, nieuw_ip: risico.nieuwIp });
+    const bev = await berekenEffectieveBevoegdheden(g!.id);
+    res.json({ ...mapAuthGebruiker(g, bev), nieuw_apparaat: risico.nieuwApparaat, nieuw_ip: risico.nieuwIp });
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });
@@ -304,7 +309,8 @@ router.post("/auth/2fa/verify", async (req, res): Promise<void> => {
     });
     // Auth-routes worden bewust NIET geauditlogd — wachtwoorden, tokens en
     // TOTP-secrets mogen nooit in audit_log terechtkomen.
-    res.json({ ...mapAuthGebruiker(g), nieuw_apparaat: risico.nieuwApparaat, nieuw_ip: risico.nieuwIp });
+    const bev2fa = await berekenEffectieveBevoegdheden(g.id);
+    res.json({ ...mapAuthGebruiker(g, bev2fa), nieuw_apparaat: risico.nieuwApparaat, nieuw_ip: risico.nieuwIp });
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });
@@ -365,9 +371,10 @@ router.post("/auth/mobile/login", async (req, res): Promise<void> => {
       .set({ laatstOnline: new Date() })
       .where(eq(gebruikersTable.id, g.id));
     const token = maakToken(g.id, g.tokenVersie);
+    const bevMobiel = await berekenEffectieveBevoegdheden(g.id);
     return void res.json({
       token,
-      gebruiker: mapAuthGebruiker(g),
+      gebruiker: mapAuthGebruiker(g, bevMobiel),
     });
   } catch (err) {
     req.log.error(err);
@@ -544,7 +551,8 @@ router.post("/auth/taal", async (req, res): Promise<void> => {
     if (!g) {
       return void res.status(404).json({ error: "Gebruiker niet gevonden" });
     }
-    res.json(mapAuthGebruiker(g));
+    const bevTaal = await berekenEffectieveBevoegdheden(g.id);
+    res.json(mapAuthGebruiker(g, bevTaal));
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });
@@ -624,7 +632,8 @@ router.get("/auth/me", async (req, res): Promise<void> => {
       req.session.destroy(() => {});
       return void res.status(401).json({ error: "Niet ingelogd" });
     }
-    res.json(mapAuthGebruiker(g));
+    const bevMe = await berekenEffectieveBevoegdheden(g.id);
+    res.json(mapAuthGebruiker(g, bevMe));
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });
