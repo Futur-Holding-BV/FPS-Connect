@@ -119,6 +119,24 @@ Oplossing: "Activatielink kopiëren" — beheerder genereert link handmatig, dee
 - Gebruikerskaart: knop "Activatielink kopiëren" (zichtbaar voor niet-geaccepteerde gebruikers)
 - Dialog met klikbare link + "Kopieer en sluiten" knop (clipboard API)
 
+## 2026-07-14 — Magazijn: picklijsten en inkooporders in monteur-app
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (nieuwe schermen, geen bestaande code gewijzigd)
+
+**Nieuwe schermen in de FPS Monteur-app:**
+- `app/magazijn/picklijsten.tsx` — overzicht van picklijsten met status-filter (Openstaand / Alle / Voltooid) en voortgangsbalk per picklijst
+- `app/magazijn/picklijst/[id].tsx` — detail-scherm met per-artikel-checkbox om "gepickt" te markeren, "Alles aanvinken"-knop en "Verwerk"-knop; offline-ondersteuning via SyncQueue
+- `app/magazijn/inkooporders.tsx` — leesrechten voor inkooporderstatus (alleen inzien) met status-filter
+
+**Offline-ondersteuning:**
+- Nieuw actie-type `verwerk_picklijst` toegevoegd aan `lib/syncQueue.ts`
+- Handler voor dit type toegevoegd aan `context/sync.tsx` (POST naar `/api/magazijn/picklijsten/:id/verwerk`)
+- Bij geen verbinding: pick-actie gebufferd, OfflineBanner getoond, melding "wordt verstuurd zodra online"
+
+**Navigatie:**
+- Twee nieuwe routes geregistreerd in `app/_layout.tsx`
+- Twee nieuwe menu-items toegevoegd aan `app/menu.tsx` (Picklijsten + Inkooporders)
+
 ---
 
 ## 2026-07-14 — Plattegrond-hero: init-bug en foutmelding

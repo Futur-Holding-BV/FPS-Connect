@@ -128,6 +128,14 @@ export type SyncActie =
         opdracht_id: number | null;
         regels: { artikel_id: number; hoeveelheid: number; locatie_id: number | null; conditie: string }[];
       };
+    }
+  // Picklijst verwerken (pick-acties offline bufferen)
+  | {
+      type: "verwerk_picklijst";
+      picklijstId: number;
+      payload: {
+        regels: { regel_id: number; gepickt_hoeveelheid: number; status: string }[];
+      };
     };
 
 export type WachtrijItem = SyncActie & {

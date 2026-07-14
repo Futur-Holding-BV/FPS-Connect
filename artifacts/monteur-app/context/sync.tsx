@@ -464,6 +464,16 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
           break;
         }
 
+        case "verwerk_picklijst": {
+          const r = await fetch(`${basis}/api/magazijn/picklijsten/${item.picklijstId}/verwerk`, {
+            method: "POST",
+            headers,
+            body: JSON.stringify(item.payload),
+          });
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          break;
+        }
+
         default:
           // Onbekend type — verwijder uit queue zodat het niet eindeloos retried
           break;

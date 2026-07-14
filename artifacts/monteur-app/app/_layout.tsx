@@ -413,6 +413,9 @@ function RootLayoutNav() {
         <Stack.Screen name="pbm" />
         <Stack.Screen name="onboarding" options={{ gestureEnabled: false }} />
         <Stack.Screen name="uitvoering/[opdrachtId]" />
+        <Stack.Screen name="magazijn/picklijsten" />
+        <Stack.Screen name="magazijn/picklijst/[id]" />
+        <Stack.Screen name="magazijn/inkooporders" />
       </Stack>
     </>
   );
