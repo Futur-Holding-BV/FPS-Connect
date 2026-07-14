@@ -851,10 +851,10 @@ function HoeGebruiktTab() {
               </>
             )}
           </p>
-          {heatmapActief && (instellingen?.bijgewerkt_door_naam || instellingen?.bijgewerkt_op) && (
+          {heatmapActief && ((instellingen as any)?.bijgewerkt_door_naam || instellingen?.bijgewerkt_op) && (
             <p className="text-xs text-muted-foreground border-t pt-2">
-              {instellingen.bijgewerkt_door_naam
-                ? <>Ingeschakeld door <span className="font-medium">{instellingen.bijgewerkt_door_naam}</span></>
+              {(instellingen as any).bijgewerkt_door_naam
+                ? <>Ingeschakeld door <span className="font-medium">{(instellingen as any).bijgewerkt_door_naam}</span></>
                 : "Ingeschakeld"}
               {instellingen.bijgewerkt_op
                 ? <> op {new Date(instellingen.bijgewerkt_op).toLocaleDateString("nl-NL", { day: "2-digit", month: "long", year: "numeric" })}</>
