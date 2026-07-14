@@ -31,6 +31,7 @@ import { requireBevoegdheid } from "../middlewares/auth";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
 import { BEGROTING_ANALYSE_PROMPT, WERKVOORBEREIDING_ADVIES_PROMPT, WERKBEGROTING_CHAT_BASE_PROMPT } from "../lib/aiPrompts";
 import { logger } from "../lib/logger";
+import { berekenEnSlaOpNacalculatie } from "../services/fie-service";
 
 const router = Router();
 const iso = (d: Date | null | undefined) => d?.toISOString() ?? null;
@@ -384,6 +385,13 @@ router.patch("/opdrachten/:id", schrijven, async (req, res): Promise<void> => {
       const ctx = await maakTransitieContext(req, db);
       const result = await workflowService.transiteer("opdracht", id, status, ctx);
       if (!result.ok) { res.status(result.error!.httpStatus).json({ error: result.error!.bericht }); return; }
+
+      // Na sluiting/oplevering: nacalculatie automatisch berekenen (niet-blokkerend)
+      if (status === "afgerond" || status === "opgeleverd" || status === "gesloten") {
+        void berekenEnSlaOpNacalculatie(id).catch((err: unknown) => {
+          logger.warn({ err, opdrachtId: id }, "fie: automatische nacalculatie na statuswijziging mislukt");
+        });
+      }
     }
 
     // Overige veldwijzigingen

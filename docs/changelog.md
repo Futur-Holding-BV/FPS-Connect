@@ -244,6 +244,25 @@ De volledige continue jaarbedrijfsprognose is geimplementeerd en geverifieerd:
 - DB-tabel `fie_observaties` bevestigd aanwezig met alle kolommen.
 - Workflows API-server + firevault draaien.
 
+## 2026-07-13 — FIE Fase 5 — nacalculatie-terugkoppeling & leereffect
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (additief — nieuwe tabellen, geen bestaande logica gewijzigd)
+
+**Wat is er gebouwd:**
+
+FIE Fase 5 voltooit de nacalculatiecyclus na projectafsluiting. Calculatie vs. werkbegroting vs. gerealiseerde uren/materialen worden automatisch vergeleken, leermomenten opgeslagen en weergegeven als AI-hints op de calculatiedetailpagina. Beheerstab "Leereffecten" is toegevoegd aan `/beheer/bedrijfskompas`.
+
+**Gebouwde onderdelen:**
+- **DB-tabellen aangemaakt:** `fie_nacalculaties` en `fie_leermomenten` via directe SQL (drizzle push hangt op TTY)
+- **FIE Service** (`artifacts/api-server/src/services/fie-service.ts`): `berekenEnSlaOpNacalculatie()`, `herberekeenLeermomenten()`, achtergrondtaak `planDagelijkseLeermomenten()` (dagelijks 04:00), leermoment-hints in `berekenFieContext()`
+- **API routes** (`artifacts/api-server/src/routes/fie.ts`): GET/POST leermomenten, PATCH/DELETE leermoment, GET nacalculaties, POST nacalculaties/herbereken-verouderd, GET nacalculaties/verouderd-aantal
+- **Automatische trigger**: `berekenEnSlaOpNacalculatie` aangeroepen (niet-blokkerend) bij statuswijziging naar "afgerond"/"opgeleverd"/"gesloten" in PATCH /opdrachten/:id
+- **Frontend**: `LeereffectenBeheerTab` in `bedrijfskompas.tsx` (1676 regels) met beheer-UI, `FieContextBlok` op calculatiedetailpagina
+- **OpenAPI + codegen**: alle FIE-endpoints in spec, gegenereerde hooks beschikbaar (`useListFieLeermomenten`, `useHerberekeenFieLeermomenten`, etc.)
+
+**Gewijzigde bestanden:**
+- `artifacts/api-server/src/routes/opdrachten.ts` — nacalculatie-trigger toegevoegd, `berekenEnSlaOpNacalculatie` geïmporteerd
+
 ---
 
 ## 2026-07-13 — Fix Docker-build-blokkade: conflict-markers verwijderd uit firevault-componenten
@@ -327,19 +346,19 @@ De volledige continue jaarbedrijfsprognose is geimplementeerd en geverifieerd:
 
 1. **AI staat op productie volledig uit** (`CONNECT_AI_ENABLED=false` in `.env.production`). De echte Document Intelligence-AI heeft op productie nog nooit gedraaid; alle classificaties werden gedaan door de heuristische noodoplossing die alleen op trefwoorden in de bestandsnaam zoekt. De OpenAI-sleutel op the server is geldig en was ongebruikt.
 
-2. **Vision-terugval werkt niet op productie**: bij gescande PDF's (nauwelijks leesbare tekst) zet de engine de eerste pagina om naar een afbeelding voor AI-beeldanalyse — maar `pdftoppm` (uit `poppler-utils`) ontbrak in het productie-Docker-image. Gescande documenten zijn op productie dus per definitie onleesbaar geweest.
+2. **Vision-terugval werkt niet op productie**: bij gescande PDF's (nauwelijks leesbare tekst) zet the engine the eerste pagina om naar een afbeelding voor AI-beeldanalyse — maar `pdftoppm` (uit `poppler-utils`) ontbrak in het productie-Docker-image. Gescande documenten zijn op productie dus per definitie onleesbaar geweest.
 
-3. **Heuristische volgorde fout**: het generieke woord "contract" matcht eerder dan "onbepaalde tijd" (personeelsdocument-kenmerk) omdat `personeelsdocument`-sleutelwoorden de bestandsnaam-fallback niet domineerden over het generieke `contract`-trefwoord.
+3. **Heuristische volgorde fout**: het generieke woord "contract" matcht eerder dan "onbepaalde tijd" (personeelsdocument-kenmerk) omdat `personeelsdocument`-sleutelwoorden the bestandsnaam-fallback niet domineerden over het generieke `contract`-trefwoord.
 
 **Wat is er gewijzigd:**
 
 - **Productie: AI ingeschakeld** — `CONNECT_AI_ENABLED=true` in `/opt/fps-one/deploy/.env.production`; API-container direct herstart. AI-voorstel rollen & rechten werkt hierdoor ook direct weer.
 - `artifacts/api-server/Dockerfile` — `poppler-utils` toegevoegd aan het finale image-stage: gescande PDF's kunnen nu via AI-vision worden geanalyseerd.
-- `artifacts/api-server/src/lib/documentIntelligence.ts` — drie verbeteringen in de heuristische noodoplossing (actief wanneer AI onbereikbaar is):
-  - `personeelsdocument` staat nu bewust **vóór** `contract` in de sleutelwoordtabel; nieuwe arbeidscontract-signalen toegevoegd: "onbepaalde tijd", "bepaalde tijd", "proeftijd", "arbeidsvoorwaarden", "dienstverband", "salaris", "functieomschrijving".
-  - Het generieke woord "contract" is verwijderd uit de contract-categorie (alleen "overeenkomst" en "sla " blijven); hierdoor wint "arbeidscontract" → HRM altijd van "contract" → CRM.
-  - Drempel voor "heeft bruikbare tekst" verlaagd van 80 naar 20 tekens: zelfs een korte koptekst of stempel helpt al bij de classificatie.
-  - Foutmelding bij lage betrouwbaarheid is nu neutraal ("controleer de bestemming voor opslaan") in plaats van stellig.
+- `artifacts/api-server/src/lib/documentIntelligence.ts` — drie verbeteringen in the heuristische noodoplossing (actief wanneer AI onbereikbaar is):
+  - `personeelsdocument` staat nu bewust **vóór** `contract` in the sleutelwoordtabel; nieuwe arbeidscontract-signalen toegevoegd: "onbepaalde tijd", "bepaalde tijd", "proeftijd", "arbeidsvoorwaarden", "dienstverband", "salaris", "functieomschrijving".
+  - Het generieke woord "contract" is verwijderd uit the contract-categorie (alleen "overeenkomst" en "sla " blijven); hierdoor wint "arbeidscontract" → HRM altijd van "contract" → CRM.
+  - Drempel voor "heeft bruikbare tekst" verlaagd van 80 naar 20 tekens: zelfs een korte koptekst of stempel helpt al bij the classificatie.
+  - Foutmelding bij lage betrouwbaarheid is nu neutraal ("controleer the bestemming voor opslaan") in plaats van stellig.
 
 **Bewijs:**
 - `CONNECT_AI_ENABLED=true` bevestigd via `docker exec deploy-api-1 sh -c 'echo [$CONNECT_AI_ENABLED]'` → `[true]`
