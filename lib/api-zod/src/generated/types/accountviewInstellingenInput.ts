@@ -24,4 +24,7 @@ export interface AccountviewInstellingenInput {
   debiteur_mapping?: AccountviewInstellingenInputDebiteurMapping;
   crediteur_mapping?: AccountviewInstellingenInputCrediteurMapping;
   export_actief?: boolean;
+  grootboek_voorraad?: string | null;
+  grootboek_inkoop_kosten?: string | null;
+  magazijn_export_actief?: boolean;
 }

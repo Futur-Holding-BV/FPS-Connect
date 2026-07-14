@@ -311,6 +311,48 @@ export default function BoekhoudingBeheer() {
             </CardContent>
           </Card>
 
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Magazijn</CardTitle>
+              <CardDescription>Grootboekrekeningen en exportinstellingen voor voorraadmutaties</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Grootboekrekening voorraad</Label>
+                  <Input
+                    className="mt-1 font-mono"
+                    placeholder="3000"
+                    value={veld("grootboek_voorraad", inst?.grootboek_voorraad) as string}
+                    onChange={(e) => setVeld("grootboek_voorraad", e.target.value)}
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">Debet-rekening bij inkoop (bijv. 3000)</p>
+                </div>
+                <div>
+                  <Label>Grootboekrekening inkoopkosten</Label>
+                  <Input
+                    className="mt-1 font-mono"
+                    placeholder="7000"
+                    value={veld("grootboek_inkoop_kosten", inst?.grootboek_inkoop_kosten) as string}
+                    onChange={(e) => setVeld("grootboek_inkoop_kosten", e.target.value)}
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">Credit-rekening bij inkoop (bijv. 7000)</p>
+                </div>
+              </div>
+              <Separator />
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium">Magazijnmutaties automatisch exporteren</p>
+                  <p className="text-xs text-muted-foreground">Sta toe dat magazijnmutaties handmatig of via batch naar AccountView worden gezonden</p>
+                </div>
+                <Switch
+                  checked={veld("magazijn_export_actief", inst?.magazijn_export_actief) as boolean}
+                  onCheckedChange={(v) => setVeld("magazijn_export_actief", v)}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
           <div className="flex items-center gap-3 pb-4">
             <Button onClick={opslaan} disabled={updateMut.isPending}>
               {updateMut.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}

@@ -32,6 +32,9 @@ function mapInstellingen(r: typeof accountviewInstellingenTable.$inferSelect) {
     debiteur_mapping: r.debiteuerMapping,
     crediteur_mapping: r.crediteurMapping,
     export_actief: r.exportActief,
+    grootboek_voorraad: r.grootboekVoorraad ?? null,
+    grootboek_inkoop_kosten: r.grootboekInkoopKosten ?? null,
+    magazijn_export_actief: r.magazijnExportActief,
     bijgewerkt_op: r.bijgewerktOp.toISOString(),
   };
 }
@@ -62,6 +65,9 @@ router.patch("/instellingen/accountview", requireBevoegdheid("systeem", 2), asyn
   if ("debiteur_mapping" in body) updateData.debiteuerMapping = body["debiteur_mapping"] as Record<string, unknown> | null;
   if ("crediteur_mapping" in body) updateData.crediteurMapping = body["crediteur_mapping"] as Record<string, unknown> | null;
   if ("export_actief" in body) updateData.exportActief = Boolean(body["export_actief"]);
+  if ("grootboek_voorraad" in body) updateData.grootboekVoorraad = body["grootboek_voorraad"] as string | null;
+  if ("grootboek_inkoop_kosten" in body) updateData.grootboekInkoopKosten = body["grootboek_inkoop_kosten"] as string | null;
+  if ("magazijn_export_actief" in body) updateData.magazijnExportActief = Boolean(body["magazijn_export_actief"]);
 
   // Zorg dat rij 1 bestaat
   await getOrCreateInstellingen();

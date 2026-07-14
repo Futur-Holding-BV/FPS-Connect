@@ -31,7 +31,8 @@ export interface AccountviewBoeking {
   btwBedrag: number;
   bedragInclBtw: number;
   btwCode?: string;
-  grootboekrekening?: string;
+  grootboekrekening?: string;    // debet-rekening
+  creditRekening?: string;       // credit-rekening (tegenboeking)
   kostenplaats?: string;
   projectCode?: string;
   pdfVerwijzing?: string;        // URL of pad naar de PDF (indien ondersteund)
@@ -67,6 +68,7 @@ function bouwPayload(boeking: AccountviewBoeking): Record<string, unknown> {
     BedragInclBtw: boeking.bedragInclBtw,
     BtwCode: boeking.btwCode ?? "",
     GrootboekRekening: boeking.grootboekrekening ?? "",
+    CreditRekening: boeking.creditRekening ?? "",
     KostenPlaats: boeking.kostenplaats ?? "",
     ProjectCode: boeking.projectCode ?? "",
     PdfVerwijzing: boeking.pdfVerwijzing ?? "",

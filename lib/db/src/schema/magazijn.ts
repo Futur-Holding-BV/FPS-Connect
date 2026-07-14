@@ -54,8 +54,9 @@ export const voorraadMutatiesTable = pgTable("voorraad_mutaties", {
   referentieId:    integer("referentie_id"),
   opdrachtId:      integer("opdracht_id").references(() => opdrachtenTable.id, { onDelete: "set null" }),
   gebruikerId:     integer("gebruiker_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
-  omschrijving:    text("omschrijving"),
-  aangemaaktOp:    timestamp("aangemaakt_op").notNull().defaultNow(),
+  omschrijving:        text("omschrijving"),
+  aangemaaktOp:        timestamp("aangemaakt_op").notNull().defaultNow(),
+  accountviewExportOp: timestamp("accountview_export_op"),
 });
 
 // ═══════════════════════════════════════════════════════════

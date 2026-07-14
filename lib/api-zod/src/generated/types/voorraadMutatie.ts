@@ -31,4 +31,6 @@ export interface VoorraadMutatie {
   /** @nullable */
   omschrijving?: string | null;
   aangemaakt_op: string;
+  /** @nullable */
+  accountview_export_op?: string | null;
 }

@@ -21,6 +21,9 @@ export const accountviewInstellingenTable = pgTable("accountview_instellingen", 
   debiteuerMapping: jsonb("debiteur_mapping").default("{}"),
   crediteurMapping: jsonb("crediteur_mapping").default("{}"),
   exportActief: boolean("export_actief").notNull().default(false),
+  grootboekVoorraad: text("grootboek_voorraad"),
+  grootboekInkoopKosten: text("grootboek_inkoop_kosten"),
+  magazijnExportActief: boolean("magazijn_export_actief").notNull().default(false),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
 });
 

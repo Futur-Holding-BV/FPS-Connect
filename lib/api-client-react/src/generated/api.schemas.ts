@@ -9910,6 +9910,9 @@ export interface AccountviewInstellingen {
   debiteur_mapping?: AccountviewInstellingenDebiteurMapping;
   crediteur_mapping?: AccountviewInstellingenCrediteurMapping;
   export_actief?: boolean;
+  grootboek_voorraad?: string | null;
+  grootboek_inkoop_kosten?: string | null;
+  magazijn_export_actief?: boolean;
   bijgewerkt_op?: string;
 }
 
@@ -9935,6 +9938,9 @@ export interface AccountviewInstellingenInput {
   debiteur_mapping?: AccountviewInstellingenInputDebiteurMapping;
   crediteur_mapping?: AccountviewInstellingenInputCrediteurMapping;
   export_actief?: boolean;
+  grootboek_voorraad?: string | null;
+  grootboek_inkoop_kosten?: string | null;
+  magazijn_export_actief?: boolean;
 }
 
 export type FactuurAiMetadata = { [key: string]: unknown } | null;
@@ -11957,6 +11963,31 @@ export interface VoorraadCorrectieInput {
   omschrijving?: string;
 }
 
+export interface MagazijnExportResultaat {
+  geslaagd: boolean;
+  mutatie_id: number;
+  /** @nullable */
+  boeking_id?: string | null;
+  /** @nullable */
+  foutmelding?: string | null;
+  testmodus: boolean;
+}
+
+export interface MagazijnBatchExportInput {
+  /** ISO-datumstring (YYYY-MM-DD) */
+  van_datum: string;
+  /** ISO-datumstring (YYYY-MM-DD, inclusief) */
+  tot_datum: string;
+}
+
+export interface MagazijnBatchExportResultaat {
+  totaal: number;
+  geslaagd: number;
+  mislukt: number;
+  overgeslagen: number;
+  regels: MagazijnExportResultaat[];
+}
+
 export interface VoorraadMutatie {
   id: number;
   artikel_id: number;
@@ -11982,6 +12013,8 @@ export interface VoorraadMutatie {
   /** @nullable */
   omschrijving?: string | null;
   aangemaakt_op: string;
+  /** @nullable */
+  accountview_export_op?: string | null;
 }
 
 export interface Reservering {

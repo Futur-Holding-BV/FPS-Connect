@@ -542,10 +542,13 @@ import type {
   MaakOpdrachtInput,
   MagazijnArtikelInput,
   MagazijnArtikelItem,
+  MagazijnBatchExportInput,
+  MagazijnBatchExportResultaat,
   MagazijnBestelbonInput,
   MagazijnBestelbonResultaat,
   MagazijnBestelsuggestieResultaat,
   MagazijnDashboard,
+  MagazijnExportResultaat,
   MagazijnInkooporder,
   MagazijnInkooporderDetail,
   MagazijnInkooporderInput,
@@ -74055,6 +74058,146 @@ export const useCorrectieVoorraad = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getCorrectieVoorraadMutationOptions(options));
+    }
+
+export const getExporteerMagazijnMutatieUrl = (id: number,) => {
+
+
+
+
+  return `/api/magazijn/mutaties/${id}/exporteer-accountview`
+}
+
+/**
+ * @summary Exporteer een voorraadmutatie naar AccountView als journaalpost
+ */
+export const exporteerMagazijnMutatie = async (id: number, options?: RequestInit): Promise<MagazijnExportResultaat> => {
+
+  return customFetch<MagazijnExportResultaat>(getExporteerMagazijnMutatieUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getExporteerMagazijnMutatieMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof exporteerMagazijnMutatie>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof exporteerMagazijnMutatie>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['exporteerMagazijnMutatie'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof exporteerMagazijnMutatie>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  exporteerMagazijnMutatie(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ExporteerMagazijnMutatieMutationResult = NonNullable<Awaited<ReturnType<typeof exporteerMagazijnMutatie>>>
+
+    export type ExporteerMagazijnMutatieMutationError = ErrorType<void>
+
+    /**
+ * @summary Exporteer een voorraadmutatie naar AccountView als journaalpost
+ */
+export const useExporteerMagazijnMutatie = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof exporteerMagazijnMutatie>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof exporteerMagazijnMutatie>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getExporteerMagazijnMutatieMutationOptions(options));
+    }
+
+export const getBatchExportMagazijnMutatiesUrl = () => {
+
+
+
+
+  return `/api/magazijn/mutaties/batch-export`
+}
+
+/**
+ * @summary Exporteer alle niet-geëxporteerde mutaties binnen een datumbereik naar AccountView
+ */
+export const batchExportMagazijnMutaties = async (magazijnBatchExportInput: MagazijnBatchExportInput, options?: RequestInit): Promise<MagazijnBatchExportResultaat> => {
+
+  return customFetch<MagazijnBatchExportResultaat>(getBatchExportMagazijnMutatiesUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(magazijnBatchExportInput)
+  }
+);}
+
+
+
+
+export const getBatchExportMagazijnMutatiesMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof batchExportMagazijnMutaties>>, TError,{data: BodyType<MagazijnBatchExportInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof batchExportMagazijnMutaties>>, TError,{data: BodyType<MagazijnBatchExportInput>}, TContext> => {
+
+const mutationKey = ['batchExportMagazijnMutaties'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof batchExportMagazijnMutaties>>, {data: BodyType<MagazijnBatchExportInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  batchExportMagazijnMutaties(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type BatchExportMagazijnMutatiesMutationResult = NonNullable<Awaited<ReturnType<typeof batchExportMagazijnMutaties>>>
+    export type BatchExportMagazijnMutatiesMutationBody = BodyType<MagazijnBatchExportInput>
+    export type BatchExportMagazijnMutatiesMutationError = ErrorType<void>
+
+    /**
+ * @summary Exporteer alle niet-geëxporteerde mutaties binnen een datumbereik naar AccountView
+ */
+export const useBatchExportMagazijnMutaties = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof batchExportMagazijnMutaties>>, TError,{data: BodyType<MagazijnBatchExportInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof batchExportMagazijnMutaties>>,
+        TError,
+        {data: BodyType<MagazijnBatchExportInput>},
+        TContext
+      > => {
+      return useMutation(getBatchExportMagazijnMutatiesMutationOptions(options));
     }
 
 export const getListVoorraadMutatiesUrl = (params?: ListVoorraadMutatiesParams,) => {

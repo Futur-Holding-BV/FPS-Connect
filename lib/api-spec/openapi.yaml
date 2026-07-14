@@ -21214,6 +21214,50 @@ paths:
         "201":
           description: Aangemaakt
 
+  /magazijn/mutaties/{id}/exporteer-accountview:
+    post:
+      operationId: exporteerMagazijnMutatie
+      tags: [magazijn]
+      summary: Exporteer een voorraadmutatie naar AccountView als journaalpost
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Exportresultaat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MagazijnExportResultaat"
+        "400":
+          description: Inkoopprijs ontbreekt of configuratiefout
+        "404":
+          description: Mutatie niet gevonden
+
+  /magazijn/mutaties/batch-export:
+    post:
+      operationId: batchExportMagazijnMutaties
+      tags: [magazijn]
+      summary: Exporteer alle niet-geëxporteerde mutaties binnen een datumbereik naar AccountView
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MagazijnBatchExportInput"
+      responses:
+        "200":
+          description: Batch-exportresultaat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MagazijnBatchExportResultaat"
+        "400":
+          description: Configuratiefout of ongeldig datumbereik
+
   /magazijn/mutaties:
     get:
       operationId: listVoorraadMutaties
@@ -38212,6 +38256,14 @@ components:
           nullable: true
         export_actief:
           type: boolean
+        grootboek_voorraad:
+          type: string
+          nullable: true
+        grootboek_inkoop_kosten:
+          type: string
+          nullable: true
+        magazijn_export_actief:
+          type: boolean
         bijgewerkt_op:
           type: string
 
@@ -38258,6 +38310,14 @@ components:
           additionalProperties: true
           nullable: true
         export_actief:
+          type: boolean
+        grootboek_voorraad:
+          type: string
+          nullable: true
+        grootboek_inkoop_kosten:
+          type: string
+          nullable: true
+        magazijn_export_actief:
           type: boolean
 
     Factuur:
@@ -41343,6 +41403,36 @@ components:
         type:        { type: string }
         omschrijving: { type: string }
 
+    MagazijnExportResultaat:
+      type: object
+      required: [geslaagd, mutatie_id, testmodus]
+      properties:
+        geslaagd:    { type: boolean }
+        mutatie_id:  { type: integer }
+        boeking_id:  { type: ["string", "null"] }
+        foutmelding: { type: ["string", "null"] }
+        testmodus:   { type: boolean }
+
+    MagazijnBatchExportInput:
+      type: object
+      required: [van_datum, tot_datum]
+      properties:
+        van_datum: { type: string, description: "ISO-datumstring (YYYY-MM-DD)" }
+        tot_datum: { type: string, description: "ISO-datumstring (YYYY-MM-DD, inclusief)" }
+
+    MagazijnBatchExportResultaat:
+      type: object
+      required: [totaal, geslaagd, mislukt, overgeslagen, regels]
+      properties:
+        totaal:      { type: integer }
+        geslaagd:    { type: integer }
+        mislukt:     { type: integer }
+        overgeslagen: { type: integer }
+        regels:
+          type: array
+          items:
+            $ref: "#/components/schemas/MagazijnExportResultaat"
+
     VoorraadMutatie:
       type: object
       required: [id, artikel_id, type, hoeveelheid, delta, aangemaakt_op]
@@ -41361,7 +41451,8 @@ components:
         gebruiker_id:    { type: ["integer", "null"] }
         gebruiker_naam:  { type: ["string", "null"] }
         omschrijving:    { type: ["string", "null"] }
-        aangemaakt_op:   { type: string }
+        aangemaakt_op:              { type: string }
+        accountview_export_op:      { type: ["string", "null"] }
 
     Reservering:
       type: object

@@ -21083,6 +21083,9 @@ export const GetAccountviewInstellingenResponse = zod.object({
   "debiteur_mapping": zod.record(zod.string(), zod.unknown()).nullish(),
   "crediteur_mapping": zod.record(zod.string(), zod.unknown()).nullish(),
   "export_actief": zod.boolean().optional(),
+  "grootboek_voorraad": zod.string().nullish(),
+  "grootboek_inkoop_kosten": zod.string().nullish(),
+  "magazijn_export_actief": zod.boolean().optional(),
   "bijgewerkt_op": zod.string().optional()
 })
 
@@ -21103,7 +21106,10 @@ export const UpdateAccountviewInstellingenBody = zod.object({
   "kostenplaatsen": zod.record(zod.string(), zod.unknown()).nullish(),
   "debiteur_mapping": zod.record(zod.string(), zod.unknown()).nullish(),
   "crediteur_mapping": zod.record(zod.string(), zod.unknown()).nullish(),
-  "export_actief": zod.boolean().optional()
+  "export_actief": zod.boolean().optional(),
+  "grootboek_voorraad": zod.string().nullish(),
+  "grootboek_inkoop_kosten": zod.string().nullish(),
+  "magazijn_export_actief": zod.boolean().optional()
 })
 
 export const UpdateAccountviewInstellingenResponse = zod.object({
@@ -21120,6 +21126,9 @@ export const UpdateAccountviewInstellingenResponse = zod.object({
   "debiteur_mapping": zod.record(zod.string(), zod.unknown()).nullish(),
   "crediteur_mapping": zod.record(zod.string(), zod.unknown()).nullish(),
   "export_actief": zod.boolean().optional(),
+  "grootboek_voorraad": zod.string().nullish(),
+  "grootboek_inkoop_kosten": zod.string().nullish(),
+  "magazijn_export_actief": zod.boolean().optional(),
   "bijgewerkt_op": zod.string().optional()
 })
 
@@ -26470,6 +26479,45 @@ export const CorrectieVoorraadResponse = zod.void()
 
 
 /**
+ * @summary Exporteer een voorraadmutatie naar AccountView als journaalpost
+ */
+export const ExporteerMagazijnMutatieParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ExporteerMagazijnMutatieResponse = zod.object({
+  "geslaagd": zod.boolean(),
+  "mutatie_id": zod.number(),
+  "boeking_id": zod.string().nullish(),
+  "foutmelding": zod.string().nullish(),
+  "testmodus": zod.boolean()
+})
+
+
+/**
+ * @summary Exporteer alle niet-geëxporteerde mutaties binnen een datumbereik naar AccountView
+ */
+export const BatchExportMagazijnMutatiesBody = zod.object({
+  "van_datum": zod.string().describe('ISO-datumstring (YYYY-MM-DD)'),
+  "tot_datum": zod.string().describe('ISO-datumstring (YYYY-MM-DD, inclusief)')
+})
+
+export const BatchExportMagazijnMutatiesResponse = zod.object({
+  "totaal": zod.number(),
+  "geslaagd": zod.number(),
+  "mislukt": zod.number(),
+  "overgeslagen": zod.number(),
+  "regels": zod.array(zod.object({
+  "geslaagd": zod.boolean(),
+  "mutatie_id": zod.number(),
+  "boeking_id": zod.string().nullish(),
+  "foutmelding": zod.string().nullish(),
+  "testmodus": zod.boolean()
+}))
+})
+
+
+/**
  * @summary Voorraadmutaties ophalen
  */
 export const listVoorraadMutatiesQueryLimitDefault = 100;
@@ -26496,7 +26544,8 @@ export const ListVoorraadMutatiesResponseItem = zod.object({
   "gebruiker_id": zod.number().nullish(),
   "gebruiker_naam": zod.string().nullish(),
   "omschrijving": zod.string().nullish(),
-  "aangemaakt_op": zod.string()
+  "aangemaakt_op": zod.string(),
+  "accountview_export_op": zod.string().nullish()
 })
 export const ListVoorraadMutatiesResponse = zod.array(ListVoorraadMutatiesResponseItem)
 

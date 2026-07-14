@@ -101,6 +101,7 @@ function mapMutatie(r: typeof voorraadMutatiesTable.$inferSelect, extra?: { arti
     gebruiker_naam: extra?.gebruiker_naam ?? null,
     omschrijving: r.omschrijving ?? null,
     aangemaakt_op: iso(r.aangemaaktOp)!,
+    accountview_export_op: iso(r.accountviewExportOp ?? null),
   };
 }
 
@@ -850,6 +851,51 @@ router.post("/magazijn/voorraad/correctie", aanmaken, async (req, res): Promise<
 // ═══════════════════════════════════════════════════════════
 // MUTATIES
 // ═══════════════════════════════════════════════════════════
+
+// ── AccountView export: enkelvoudig ──────────────────────────────────────────
+// BELANGRIJK: dit pad moet VOOR /magazijn/mutaties staan zodat Express het eerst matcht.
+
+router.post("/magazijn/mutaties/batch-export", beheer, async (req, res): Promise<void> => {
+  try {
+    const { van_datum, tot_datum } = req.body as { van_datum?: string; tot_datum?: string };
+    if (!van_datum || !tot_datum) {
+      res.status(400).json({ error: "van_datum en tot_datum zijn verplicht (YYYY-MM-DD)" });
+      return;
+    }
+    const van  = new Date(`${van_datum}T00:00:00Z`);
+    const tot  = new Date(`${tot_datum}T23:59:59Z`);
+    if (isNaN(van.getTime()) || isNaN(tot.getTime()) || van > tot) {
+      res.status(400).json({ error: "Ongeldig datumbereik" });
+      return;
+    }
+    const { batchExportMutaties } = await import("../services/magazijn-accountview-export");
+    const resultaat = await batchExportMutaties(van, tot);
+    res.json(resultaat);
+  } catch (err) {
+    logger.error({ err }, "magazijn batch-export accountview fout");
+    const msg = err instanceof Error ? err.message : "Serverfout";
+    res.status(400).json({ error: msg });
+  }
+});
+
+router.post("/magazijn/mutaties/:id/exporteer-accountview", beheer, async (req, res): Promise<void> => {
+  try {
+    const id = Number(req.params.id);
+    if (isNaN(id)) {
+      res.status(400).json({ error: "Ongeldig mutatie-id" });
+      return;
+    }
+    const { exporteerMutatie } = await import("../services/magazijn-accountview-export");
+    const resultaat = await exporteerMutatie(id);
+    res.json(resultaat);
+  } catch (err) {
+    logger.error({ err }, "magazijn exporteer-accountview fout");
+    const msg = err instanceof Error ? err.message : "Serverfout";
+    const code = (err as { code?: string }).code;
+    const status = code === "AL_GEEXPORTEERD" ? 409 : code === "AV_GEWEIGERD" ? 422 : msg.includes("niet gevonden") ? 404 : 400;
+    res.status(status).json({ error: msg.replace(/^AL_GEEXPORTEERD: /, "") });
+  }
+});
 
 router.get("/magazijn/mutaties", lezen, async (req, res): Promise<void> => {
   try {
