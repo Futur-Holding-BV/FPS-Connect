@@ -33,6 +33,7 @@ export type RadiaalActie = {
   icoon: keyof typeof Ionicons.glyphMap;
   onPress: () => void;
   binnenkort?: boolean;
+  badge?: number;
 };
 
 export type RadiaalMenuProps = {
@@ -157,6 +158,28 @@ function RadiaalItem({
                   }}
                 >
                   <Ionicons name="time-outline" size={10} color={c.darkForeground} />
+                </View>
+              )}
+              {!actie.binnenkort && (actie.badge ?? 0) > 0 && (
+                <View
+                  style={{
+                    position: "absolute",
+                    top: -4,
+                    right: -4,
+                    backgroundColor: c.primary,
+                    borderRadius: 11,
+                    minWidth: 22,
+                    height: 22,
+                    paddingHorizontal: 5,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    borderWidth: 2,
+                    borderColor: c.card,
+                  }}
+                >
+                  <Text style={{ color: "#fff", fontSize: 11, fontFamily: "Inter_700Bold" }}>
+                    {(actie.badge ?? 0) > 9 ? "9+" : actie.badge}
+                  </Text>
                 </View>
               )}
             </Animated.View>
@@ -535,6 +558,28 @@ export function RadiaalMenu({ acties, meerActies = [] }: RadiaalMenuProps) {
                           }}
                         >
                           <Ionicons name={actie.icoon} size={22} color={c.darkForeground} />
+                          {(actie.badge ?? 0) > 0 && (
+                            <View
+                              style={{
+                                position: "absolute",
+                                top: -4,
+                                right: -4,
+                                backgroundColor: c.primary,
+                                borderRadius: 10,
+                                minWidth: 20,
+                                height: 20,
+                                paddingHorizontal: 5,
+                                alignItems: "center",
+                                justifyContent: "center",
+                                borderWidth: 2,
+                                borderColor: c.dark,
+                              }}
+                            >
+                              <Text style={{ color: "#fff", fontSize: 10, fontFamily: "Inter_700Bold" }}>
+                                {(actie.badge ?? 0) > 9 ? "9+" : actie.badge}
+                              </Text>
+                            </View>
+                          )}
                         </View>
                         <Text
                           numberOfLines={2}

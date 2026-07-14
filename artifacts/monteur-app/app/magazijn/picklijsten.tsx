@@ -4,7 +4,7 @@ import {
 } from "@workspace/api-client-react";
 import { Ionicons } from "@expo/vector-icons";
 import { Redirect, useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -17,6 +17,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { bovenInset } from "@/components/ui";
 import { useAuth } from "@/context/auth";
 import { useColors } from "@/hooks/useColors";
+import { usePicklijstMelding } from "@/hooks/usePicklijstMelding";
 
 const STATUS_LABELS: Record<string, string> = {
   concept: "Concept",
@@ -130,6 +131,13 @@ export default function PicklijstenScherm() {
     { mijn_opdrachten: true },
     { query: { enabled: !!token } } as any,
   );
+
+  const { markeerGezien } = usePicklijstMelding();
+
+  useEffect(() => {
+    if (isLoading) return;
+    void markeerGezien();
+  }, [isLoading, picklijsten.length, markeerGezien]);
 
   if (!token) return <Redirect href="/login" />;
 

@@ -20,6 +20,7 @@ import { RadiaalMenu, type RadiaalActie } from "@/components/RadiaalMenu";
 import { bovenInset } from "@/components/ui";
 import { useAuth } from "@/context/auth";
 import { useColors } from "@/hooks/useColors";
+import { usePicklijstMelding } from "@/hooks/usePicklijstMelding";
 import { BirthdayCelebration } from "@/components/BirthdayCelebration";
 import {
   useGetMijnToolboxMaandopdracht,
@@ -72,6 +73,8 @@ export default function MenuScherm() {
 
   const jarigeCollegas = ((momentenVandaag as Moment[]) ?? []).filter((m) => !m.geldt_voor_jou);
 
+  const { nieuwAantal: picklijstNieuw } = usePicklijstMelding();
+
   const uitstellenMut = useUitstellenToolboxMaandopdracht();
   const voltooienMut = useVoltooienToolboxMaandopdracht();
 
@@ -110,7 +113,7 @@ export default function MenuScherm() {
     { sleutel: "magazijn", label: "Magazijn scan", icoon: "barcode-outline", onPress: () => router.push("/magazijn/scan" as "/werkdag") },
     { sleutel: "magazijn_artikelen", label: "Artikelen", icoon: "cube-outline", onPress: () => router.push("/magazijn/artikelen" as "/werkdag") },
     { sleutel: "magazijn_inkoop", label: "Inkoop aanvragen", icoon: "cart-outline", onPress: () => router.push("/magazijn/inkoop" as "/werkdag") },
-    { sleutel: "magazijn_picklijsten", label: "Picklijsten", icoon: "list-circle-outline", onPress: () => router.push("/magazijn/picklijsten" as "/werkdag") },
+    { sleutel: "magazijn_picklijsten", label: "Picklijsten", icoon: "list-circle-outline", badge: picklijstNieuw, onPress: () => router.push("/magazijn/picklijsten" as "/werkdag") },
     { sleutel: "magazijn_inkooporders", label: "Inkooporders", icoon: "receipt-outline", onPress: () => router.push("/magazijn/inkooporders" as "/werkdag") },
     { sleutel: "voertuig_melding", label: "Voertuig melden", icoon: "car-outline", onPress: () => router.push("/voertuig-melding") },
   ];

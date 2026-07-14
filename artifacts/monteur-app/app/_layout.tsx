@@ -30,6 +30,7 @@ import {
   type AiDrempelStatus,
 } from "@workspace/api-client-react";
 import { useMeldingGeluid } from "@/hooks/useMeldingGeluid";
+import { usePicklijstMelding } from "@/hooks/usePicklijstMelding";
 
 setBaseUrl(`https://${process.env.EXPO_PUBLIC_DOMAIN}`);
 setAuthTokenGetter(() => getHuidigToken());
@@ -354,6 +355,30 @@ function BerichtMeldingMonitor() {
   return null;
 }
 
+function PicklijstBewaker() {
+  const { token } = useAuth();
+  const { speel } = useMeldingGeluid();
+  const { nieuwAantal } = usePicklijstMelding();
+  const vorigAantal = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (!token) {
+      vorigAantal.current = null;
+      return;
+    }
+    if (vorigAantal.current === null) {
+      vorigAantal.current = nieuwAantal;
+      return;
+    }
+    if (nieuwAantal > vorigAantal.current) {
+      void speel();
+    }
+    vorigAantal.current = nieuwAantal;
+  }, [token, nieuwAantal, speel]);
+
+  return null;
+}
+
 function RootLayoutNav() {
   const { bezigLaden, vergrendeld, token } = useAuth();
   const pathname = usePathname();
@@ -381,6 +406,7 @@ function RootLayoutNav() {
       <AiDrempelBewaker />
       <LmraBewaker />
       <ToolboxPopupBewaker />
+      <PicklijstBewaker />
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="index" />
         <Stack.Screen name="login" />
