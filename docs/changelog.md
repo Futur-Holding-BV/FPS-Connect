@@ -1,3 +1,21 @@
+## 2026-07-14 — AI-knop bepaalt toegangsprofiel per functie (personeel/index.tsx)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+De bestaande AI-endpoint (`POST /profielen/ai-voorstel-functie`) was al beschikbaar maar nog nergens aan de UI gekoppeld. Nu volledig afgerond:
+
+**Wat is gebouwd:**
+- Sparkles-knop per functierij in de functiecatalogus triggert de AI — al aanwezig maar miste de `functie_id`-tracking voor het "Overnemen"-pad.
+- "AI bepaalt passend toegangsprofiel"-knop toegevoegd in het functie-bewerkformulier (alleen zichtbaar bij bestaande functies; bij nieuwe functies moet je eerst opslaan voor de AI het profiel kan bepalen).
+- "Overnemen"/"Profiel instellen"-knop toegevoegd aan het AI-resultaatdialoog:
+  - Vanuit het bewerkformulier: zet `profiel_id` in het formulier (bevestig zelf met Opslaan).
+  - Vanuit de functiecatalogus: PATCHt de functie direct en invalideert de lijst.
+  - Als het voorgestelde profiel nog niet bestaat: foutmelding met verwijzing naar Rollen & Rechten.
+
+**Geen backend-wijziging nodig** — endpoint en hook (`useAiVoorstelVoorFunctie`) bestonden al.
+
+---
+
 ## 2026-07-14 — Slimmere gebruikers-onboarding met AI (traject nieuwe medewerker → rechten → CAO → verlof)
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag

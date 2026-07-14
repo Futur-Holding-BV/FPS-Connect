@@ -321,6 +321,7 @@ export default function PersoneelPagina() {
   const [aiBevoegdhedenOpen, setAiBevoegdhedenOpen] = useState(false);
   const [aiBevoegdhedenFunctieNaam, setAiBevoegdhedenFunctieNaam] = useState<string>("");
   const [aiBevoegdhedenResultaat, setAiBevoegdhedenResultaat] = useState<ProfielAiVoorstelFunctieResultaat | null>(null);
+  const [aiBevoegdhedenFunctieId, setAiBevoegdhedenFunctieId] = useState<number | null>(null);
   const aiVoorstelFunctieMut = useAiVoorstelVoorFunctie();
   const [onboardForm, setOnboardForm] = useState<MedewerkerOnboardingInput>({
     gebruiker_id: 0,
@@ -956,6 +957,7 @@ export default function PersoneelPagina() {
                           title="AI-bevoegdheden voorstel"
                           onClick={async () => {
                             setAiBevoegdhedenFunctieNaam(f.naam);
+                            setAiBevoegdhedenFunctieId(f.id);
                             setAiBevoegdhedenResultaat(null);
                             setAiBevoegdhedenOpen(true);
                             try {
@@ -1853,6 +1855,33 @@ export default function PersoneelPagina() {
               <p className="text-xs text-muted-foreground">
                 Standaard rechten die een medewerker met deze functie krijgt. Bij meerdere functies gelden de rechten samen (hoogste niveau per module). Handmatige extra rechten blijven mogelijk.
               </p>
+              {functieBewerkenId !== null && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="w-full mt-1 gap-1.5 border-amber-200 text-amber-700 hover:bg-amber-50"
+                  disabled={aiVoorstelFunctieMut.isPending}
+                  onClick={async () => {
+                    setAiBevoegdhedenFunctieNaam(functieForm.naam);
+                    setAiBevoegdhedenFunctieId(functieBewerkenId);
+                    setAiBevoegdhedenResultaat(null);
+                    setAiBevoegdhedenOpen(true);
+                    try {
+                      const res = await aiVoorstelFunctieMut.mutateAsync({ data: { functie_id: functieBewerkenId } });
+                      setAiBevoegdhedenResultaat(res);
+                    } catch {
+                      toast({ title: "AI-voorstel mislukt", variant: "destructive" });
+                      setAiBevoegdhedenOpen(false);
+                    }
+                  }}
+                >
+                  {aiVoorstelFunctieMut.isPending
+                    ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> AI analyseert…</>
+                    : <><Sparkles className="h-3.5 w-3.5" /> AI bepaalt passend toegangsprofiel</>
+                  }
+                </Button>
+              )}
             </div>
             <div className="flex items-center gap-2 pt-1">
               <Checkbox
@@ -2366,6 +2395,59 @@ export default function PersoneelPagina() {
           )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setAiBevoegdhedenOpen(false)}>Sluiten</Button>
+            {aiBevoegdhedenResultaat && (
+              <Button
+                onClick={async () => {
+                  const profiel = (profielen ?? []).find(
+                    (p) => p.naam === aiBevoegdhedenResultaat.profiel_naam,
+                  );
+                  if (!profiel) {
+                    toast({
+                      title: "Profiel niet gevonden",
+                      description: `Maak eerst een profiel aan met de naam "${aiBevoegdhedenResultaat.profiel_naam}" via Instellingen › Rollen & Rechten.`,
+                      variant: "destructive",
+                    });
+                    return;
+                  }
+                  if (functieOpen && functieBewerkenId !== null) {
+                    setFunctieForm((prev) => ({ ...prev, profiel_id: profiel.id }));
+                    setAiBevoegdhedenOpen(false);
+                    toast({
+                      title: "Profiel ingesteld",
+                      description: `${aiBevoegdhedenFunctieNaam} → ${profiel.naam}. Klik op Opslaan om te bevestigen.`,
+                    });
+                  } else if (aiBevoegdhedenFunctieId !== null) {
+                    const functie = (functies ?? []).find((f) => f.id === aiBevoegdhedenFunctieId);
+                    if (!functie) return;
+                    try {
+                      await wijzigFunctie.mutateAsync({
+                        id: aiBevoegdhedenFunctieId,
+                        data: {
+                          naam: functie.naam,
+                          werkmaatschappij: functie.werkmaatschappij,
+                          omschrijving: functie.omschrijving ?? undefined,
+                          uitvoerend: functie.uitvoerend ?? false,
+                          profiel_id: profiel.id,
+                        },
+                      });
+                      await queryClient.invalidateQueries({ queryKey: getListFunctiesQueryKey() });
+                      setAiBevoegdhedenOpen(false);
+                      toast({
+                        title: "Toegangsprofiel opgeslagen",
+                        description: `${aiBevoegdhedenFunctieNaam} → ${profiel.naam}`,
+                      });
+                    } catch {
+                      toast({ title: "Opslaan mislukt", variant: "destructive" });
+                    }
+                  }
+                }}
+                disabled={wijzigFunctie.isPending}
+                className="gap-1.5"
+              >
+                <CheckCircle2 className="h-4 w-4" />
+                {functieOpen ? "Overnemen in formulier" : "Profiel instellen"}
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
