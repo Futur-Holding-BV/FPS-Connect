@@ -1,3 +1,16 @@
+## 2026-07-14 — Inplannen-paneel: knoppen altijd zichtbaar (hoogte-correctie)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+**Probleem:** de "Toevoegen"/"Opslaan"-knoppen in het Inplannen-zijpaneel waren nauwelijks zichtbaar omdat het paneel `height: 100vh` gebruikte terwijl het pas ná de 36px-taakbalk begint — de onderkant viel daardoor 36px buiten het scherm.
+
+**Opgelost in `artifacts/firevault/src/pages/modules/planning/index.tsx`:**
+- `aside` style gewijzigd: `top: 0, height: 100vh` → `top: "2.25rem", height: "calc(100vh - 2.25rem)"`
+- 2.25rem = h-9 = hoogte van de universele taakbalk in `beheerder-layout.tsx`
+- Knoppen ("Annuleren" / "Toevoegen") zijn nu altijd volledig zichtbaar
+
+---
+
 ## 2026-07-14 — Teamkoppeling gebouw: vaste projectrollen + leesbaar rol-label
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag

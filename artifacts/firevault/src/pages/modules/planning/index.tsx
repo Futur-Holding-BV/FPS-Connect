@@ -1821,7 +1821,7 @@ export default function ModulesPlanning() {
 
         {/* ═══ INLINE ZIJPANEEL ═══ */}
         {dialoog && (
-          <aside className="w-[400px] shrink-0 border-l bg-white flex flex-col" style={{ position: "sticky", top: 0, height: "100vh", overflow: "hidden" }}>
+          <aside className="w-[400px] shrink-0 border-l bg-white flex flex-col" style={{ position: "sticky", top: "2.25rem", height: "calc(100vh - 2.25rem)", overflow: "hidden" }}>
             {/* Paneel-kop */}
             <div className="flex items-center justify-between px-5 py-4 border-b bg-slate-50/80">
               <h2 className="text-sm font-semibold text-slate-800">
