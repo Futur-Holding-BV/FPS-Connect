@@ -30,7 +30,7 @@ const STAPPEN: Stap[] = [
     icoon: "flame-outline",
     titel: "Welkom bij FPS Monteur",
     inhoud:
-      "Dit is jouw werkomgeving voor brandpreventieve installaties. In een paar stappen laten we je zien hoe de app werkt.",
+      "Dit is jouw werkomgeving voor bouwkundige en installatietechnische brandveiligheidsvoorzieningen. In een paar stappen laten we je zien hoe de app werkt.",
   },
   {
     sleutel: "expo-go",
@@ -61,31 +61,36 @@ const STAPPEN: Stap[] = [
         tekst: "Gebruik de inloggegevens die je van je beheerder hebt ontvangen.",
       },
       {
-        titel: "Authenticator-app vereist",
+        titel: "Eerste keer: verificatiecode",
         tekst:
-          "Na het inloggen wordt een verificatiecode gevraagd. Installeer hiervoor Google Authenticator, Microsoft Authenticator of Authy.",
+          "Bij de allereerste inlog op een nieuw toestel wordt eenmalig een 6-cijferige verificatiecode gevraagd. Je beheerder helpt je hier bij de start mee.",
       },
       {
-        titel: "QR-code scannen",
+        titel: "Daarna: vingerafdruk of gezichtsherkenning",
         tekst:
-          "Bij je eerste inlog scan je een QR-code in de web-app (FPS Connect) om de authenticator-app te koppelen.",
+          "Na de eerste inlog vergrendelt de app zich automatisch. Je ontgrendelt daarna met je vingerafdruk of gezichtsherkenning \u2014 geen code meer nodig.",
       },
     ],
   },
   {
     sleutel: "totp",
-    icoon: "shield-checkmark-outline",
-    titel: "Tweestapsverificatie",
+    icoon: "finger-print-outline",
+    titel: "Snel ontgrendelen",
     inhoud: [
       {
-        titel: "Elke keer een code",
+        titel: "Vingerafdruk of gezichtsherkenning",
         tekst:
-          "Bij elke inlog vul je een 6-cijferige code in uit je authenticator-app. De code verloopt elke 30 seconden.",
+          "De app gebruikt de biometrische beveiliging van jouw telefoon. Druk je vinger op de sensor of kijk in de camera om direct toegang te krijgen.",
       },
       {
-        titel: "Code kwijt?",
+        titel: "Veilig en snel",
         tekst:
-          "Neem contact op met je beheerder. Die kan de tweestapsverificatie opnieuw instellen.",
+          "Je vingerafdruk of gezicht verlaat nooit je telefoon. FPS heeft hier geen toegang toe. Dit is de snelste en veiligste manier om in te loggen in het veld.",
+      },
+      {
+        titel: "Biometrie niet beschikbaar?",
+        tekst:
+          "Neem contact op met je beheerder. Die kan de instellingen aanpassen of een alternatieve inlogmethode instellen.",
       },
     ],
   },
@@ -96,7 +101,7 @@ const STAPPEN: Stap[] = [
     inhoud: [
       { titel: "Mijn werk", tekst: "Bekijk je werkzaamheden voor vandaag en de rest van de week." },
       { titel: "Gebouwen", tekst: "Zoek en bekijk gebouwen die aan jou zijn toegewezen." },
-      { titel: "Spots", tekst: "Registreer en bewerk brandpreventieve spots per gebouw." },
+      { titel: "Spots", tekst: "Registreer en bewerk brandveiligheidsvoorzieningen (spots) per gebouw." },
       { titel: "Foto's", tekst: "Maak voor- en nafoto's van een spot direct vanuit de app." },
       { titel: "Uren", tekst: "Registreer je gewerkte uren per opdracht." },
       { titel: "Documenten", tekst: "Bekijk tekeningen en documenten die door de beheerder zijn gedeeld." },

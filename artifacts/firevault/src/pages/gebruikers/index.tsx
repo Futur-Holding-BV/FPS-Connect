@@ -49,6 +49,7 @@ import {
   RefreshCw, ShieldCheck, Eye, User, Crown, Upload, Palette, SendHorizonal, X,
   Layers, Search, RotateCcw, Check, CheckCheck, Briefcase, Hammer, Wrench, TrendingUp,
   ListChecks, Loader2, AlertTriangle, MoreVertical, KeyRound, LogOut, Lock, Unlock, Copy,
+  QrCode, Download,
 } from "lucide-react";
 import { MODULES, NIVEAUS, combineerBevoegdheden } from "@workspace/permissies";
 import { useQueryClient } from "@tanstack/react-query";
@@ -326,6 +327,7 @@ export default function Gebruikers() {
   const [bulkBevestigOpen, setBulkBevestigOpen] = useState<boolean>(false);
   const [bulkResultaat, setBulkResultaat] = useState<string | null>(null);
   const [herkomstToepassenTarget, setHerkomstToepassenTarget] = useState<Gebruiker | null>(null);
+  const [appQrGebruiker, setAppQrGebruiker] = useState<Gebruiker | null>(null);
 
   const invalideer = () => queryClient.invalidateQueries({ queryKey: getListGebruikersQueryKey() });
 
@@ -877,6 +879,16 @@ export default function Gebruikers() {
                     : status === "geaccepteerd"
                     ? "Opnieuw uitnodigen"
                     : "Uitnodigen"}
+                </button>
+              )}
+              {isHoofd && g.rol !== "klant" && !g.gearchiveerd && (
+                <button
+                  type="button"
+                  className="mt-1.5 h-7 text-xs w-full gap-1.5 font-medium rounded-md flex items-center justify-center px-2 transition-colors bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200"
+                  onClick={() => setAppQrGebruiker(g)}
+                >
+                  <QrCode className="h-3 w-3 mr-1 flex-shrink-0" />
+                  App QR-code
                 </button>
               )}
             </div>
@@ -1499,6 +1511,58 @@ export default function Gebruikers() {
               </DialogFooter>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialoog: App QR-code voor Expo Go */}
+      <Dialog open={!!appQrGebruiker} onOpenChange={(o) => { if (!o) setAppQrGebruiker(null); }}>
+        <DialogContent className="max-w-sm" aria-describedby="app-qr-beschr">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <QrCode className="h-5 w-5" /> FPS Monteur-app installeren
+            </DialogTitle>
+          </DialogHeader>
+          <p id="app-qr-beschr" className="sr-only">
+            QR-code om de FPS Monteur-app te openen via Expo Go op een telefoon.
+          </p>
+          <div className="space-y-4 py-2">
+            <p className="text-sm text-muted-foreground">
+              Scan deze code met de <strong>Expo Go</strong>-app op de telefoon van{" "}
+              <strong>{appQrGebruiker?.naam}</strong>. De app opent direct zonder handmatige installatie.
+            </p>
+            <div className="flex justify-center">
+              <img
+                src="/api/auth/app-qr"
+                alt="QR-code FPS Monteur-app"
+                className="rounded-lg border border-border shadow-sm"
+                width={240}
+                height={240}
+              />
+            </div>
+            <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
+              <li>Installeer <strong>Expo Go</strong> via de App Store of Google Play</li>
+              <li>Open Expo Go en tik op <em>Scan QR-code</em></li>
+              <li>Scan bovenstaande code — de app start direct</li>
+              <li>Log in met het e-mailadres <strong>{appQrGebruiker?.email}</strong></li>
+            </ol>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const a = document.createElement("a");
+                  a.href = "/api/auth/app-qr";
+                  a.download = `fps-app-qr-${appQrGebruiker?.naam?.toLowerCase().replace(/\s+/g, "-") ?? "code"}.png`;
+                  a.click();
+                }}
+              >
+                <Download className="h-4 w-4 mr-1.5" /> Downloaden
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => setAppQrGebruiker(null)}>
+                Sluiten
+              </Button>
+            </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
 

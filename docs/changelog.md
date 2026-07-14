@@ -1,3 +1,19 @@
+## 2026-07-14 — App QR-code, onboarding-teksten & biometrisch-advies
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (additief)
+
+**App QR-code per medewerker (FPS Connect → Gebruikers):**
+- `GET /auth/app-qr` — nieuwe route in auth.ts genereert PNG QR-code met Expo Go URL (`exp://<domain>`); vereist authenticatie, geen codegen nodig
+- Gebruikerskaart (hoofdbeheerder, niet-klant, niet-gearchiveerd): knop "App QR-code" opent dialog
+- Dialog toont stap-voor-stap installatie-instructies (Expo Go → scan → inloggen op naam medewerker), download-knop voor PNG
+
+**Onboarding-teksten monteur-app bijgewerkt:**
+- Welkomststap: "brandpreventieve installaties" → "bouwkundige en installatietechnische brandveiligheidsvoorzieningen"
+- App-tour: "brandpreventieve spots" → "brandveiligheidsvoorzieningen"
+- Login-stap en TOTP-stap: biometrie-uitleg toegevoegd (vingerafdruk/Face ID dagelijks, TOTP alleen bij eerste installatie op nieuw toestel)
+
+---
+
 ## 2026-07-14 — Magazijnmodule: inkooporders, picklijsten & AI-bestelsuggesties
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (additief; nieuwe tabellen/routes/pagina's)

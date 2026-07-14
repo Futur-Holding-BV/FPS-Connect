@@ -573,6 +573,28 @@ router.get("/auth/pwa-qr", async (req, res): Promise<void> => {
   }
 });
 
+// GET /auth/app-qr — QR-code afbeelding voor FPS Monteur-app via Expo Go (alleen ingelogd)
+router.get("/auth/app-qr", async (req, res): Promise<void> => {
+  try {
+    if (!req.session.userId) return void res.status(401).json({ error: "Niet ingelogd" });
+    const expoDomain = process.env.REPLIT_EXPO_DEV_DOMAIN ?? "";
+    if (!expoDomain) return void res.status(503).json({ error: "Expo-domein niet geconfigureerd" });
+    const url = `exp://${expoDomain}`;
+    const qrBuffer = await QRCode.toBuffer(url, {
+      type: "png",
+      width: 360,
+      margin: 2,
+      color: { dark: "#212631", light: "#FFFFFF" },
+    });
+    res.setHeader("Content-Type", "image/png");
+    res.setHeader("Cache-Control", "public, max-age=300");
+    res.end(qrBuffer);
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
 // GET /auth/pwa-url — geeft de PWA-URL als JSON terug
 router.get("/auth/pwa-url", async (req, res): Promise<void> => {
   try {
