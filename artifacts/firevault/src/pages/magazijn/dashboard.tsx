@@ -456,7 +456,7 @@ export default function MagazijnDashboard() {
           waarde={formatBedrag(data?.totaal_waarde ?? 0)}
           icoon={Euro}
           kleur="bg-blue-100 text-blue-700"
-          link="/magazijn/voorraad"
+          link="/magazijn/voorraadwaarde"
         />
         <StatKaart
           titel="Onder minimumvoorraad"

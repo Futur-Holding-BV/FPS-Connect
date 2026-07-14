@@ -20976,6 +20976,19 @@ paths:
               schema:
                 $ref: "#/components/schemas/MagazijnDashboard"
 
+  /magazijn/voorraadwaarde:
+    get:
+      operationId: getMagazijnVoorraadwaarde
+      tags: [magazijn]
+      summary: Voorraadwaarde-overzicht uitgesplitst per categorie, leverancier en locatie
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MagazijnVoorraadwaarde"
+
   /magazijn/locaties:
     get:
       operationId: listMagazijnLocaties
@@ -43074,3 +43087,46 @@ components:
             $ref: "#/components/schemas/MagazijnBestelsuggestie"
         samenvatting: { type: string }
         gegenereerd_op: { type: string }
+
+    MagazijnVoorraadwaardeGroep:
+      type: object
+      required: [naam, artikel_aantal, waarde, percentage]
+      properties:
+        naam:           { type: string }
+        artikel_aantal: { type: integer }
+        waarde:         { type: number }
+        percentage:     { type: number }
+
+    MagazijnVoorraadwaardeOnbekend:
+      type: object
+      required: [artikel_id, naam, eenheid, hoeveelheid]
+      properties:
+        artikel_id:       { type: integer }
+        naam:             { type: string }
+        eenheid:          { type: string }
+        hoeveelheid:      { type: number }
+        categorie:        { type: ["string", "null"] }
+        leverancier_naam: { type: ["string", "null"] }
+
+    MagazijnVoorraadwaarde:
+      type: object
+      required: [totaal_waarde, per_categorie, per_leverancier, per_locatie, onbekende_prijs]
+      properties:
+        totaal_waarde:
+          type: number
+        per_categorie:
+          type: array
+          items:
+            $ref: "#/components/schemas/MagazijnVoorraadwaardeGroep"
+        per_leverancier:
+          type: array
+          items:
+            $ref: "#/components/schemas/MagazijnVoorraadwaardeGroep"
+        per_locatie:
+          type: array
+          items:
+            $ref: "#/components/schemas/MagazijnVoorraadwaardeGroep"
+        onbekende_prijs:
+          type: array
+          items:
+            $ref: "#/components/schemas/MagazijnVoorraadwaardeOnbekend"

@@ -565,6 +565,7 @@ import type {
   MagazijnStellingsscanGoedkeuringInput,
   MagazijnStellingsscanInput,
   MagazijnVerplaatsingInput,
+  MagazijnVoorraadwaarde,
   MailActieResultaat,
   MailLogregel,
   MailOpdrachtbevestigingDemoInput,
@@ -73082,6 +73083,83 @@ export function useGetMagazijnDashboard<TData = Awaited<ReturnType<typeof getMag
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetMagazijnDashboardQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetMagazijnVoorraadwaardeUrl = () => {
+
+
+
+
+  return `/api/magazijn/voorraadwaarde`
+}
+
+/**
+ * @summary Voorraadwaarde-overzicht uitgesplitst per categorie, leverancier en locatie
+ */
+export const getMagazijnVoorraadwaarde = async ( options?: RequestInit): Promise<MagazijnVoorraadwaarde> => {
+
+  return customFetch<MagazijnVoorraadwaarde>(getGetMagazijnVoorraadwaardeUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetMagazijnVoorraadwaardeQueryKey = () => {
+    return [
+    `/api/magazijn/voorraadwaarde`
+    ] as const;
+    }
+
+
+export const getGetMagazijnVoorraadwaardeQueryOptions = <TData = Awaited<ReturnType<typeof getMagazijnVoorraadwaarde>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMagazijnVoorraadwaarde>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetMagazijnVoorraadwaardeQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMagazijnVoorraadwaarde>>> = ({ signal }) => getMagazijnVoorraadwaarde({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMagazijnVoorraadwaarde>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetMagazijnVoorraadwaardeQueryResult = NonNullable<Awaited<ReturnType<typeof getMagazijnVoorraadwaarde>>>
+export type GetMagazijnVoorraadwaardeQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Voorraadwaarde-overzicht uitgesplitst per categorie, leverancier en locatie
+ */
+
+export function useGetMagazijnVoorraadwaarde<TData = Awaited<ReturnType<typeof getMagazijnVoorraadwaarde>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMagazijnVoorraadwaarde>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetMagazijnVoorraadwaardeQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

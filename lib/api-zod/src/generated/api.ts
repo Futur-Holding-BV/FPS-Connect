@@ -26187,6 +26187,40 @@ export const GetMagazijnDashboardResponse = zod.object({
 
 
 /**
+ * @summary Voorraadwaarde-overzicht uitgesplitst per categorie, leverancier en locatie
+ */
+export const GetMagazijnVoorraadwaardeResponse = zod.object({
+  "totaal_waarde": zod.number(),
+  "per_categorie": zod.array(zod.object({
+  "naam": zod.string(),
+  "artikel_aantal": zod.number(),
+  "waarde": zod.number(),
+  "percentage": zod.number()
+})),
+  "per_leverancier": zod.array(zod.object({
+  "naam": zod.string(),
+  "artikel_aantal": zod.number(),
+  "waarde": zod.number(),
+  "percentage": zod.number()
+})),
+  "per_locatie": zod.array(zod.object({
+  "naam": zod.string(),
+  "artikel_aantal": zod.number(),
+  "waarde": zod.number(),
+  "percentage": zod.number()
+})),
+  "onbekende_prijs": zod.array(zod.object({
+  "artikel_id": zod.number(),
+  "naam": zod.string(),
+  "eenheid": zod.string(),
+  "hoeveelheid": zod.number(),
+  "categorie": zod.string().nullish(),
+  "leverancier_naam": zod.string().nullish()
+}))
+})
+
+
+/**
  * @summary Lijst van magazijnlocaties
  */
 export const ListMagazijnLocatiesResponseItem = zod.object({

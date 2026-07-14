@@ -487,6 +487,133 @@ router.get("/magazijn/dashboard", lezen, async (req, res): Promise<void> => {
 });
 
 // ═══════════════════════════════════════════════════════════
+// VOORRAADWAARDE
+// ═══════════════════════════════════════════════════════════
+
+router.get("/magazijn/voorraadwaarde", lezen, async (req, res): Promise<void> => {
+  try {
+    // Haal alle actieve artikelen op met prijsinformatie, categorie en leverancier
+    const artikelen = await db
+      .select({
+        id: artikelenTable.id,
+        naam: artikelenTable.naam,
+        eenheid: artikelenTable.eenheid,
+        categorie: artikelenTable.categorie,
+        leverancierId: artikelenTable.leverancierId,
+        inkoopprijs: artikelenTable.inkoopprijs,
+      })
+      .from(artikelenTable)
+      .where(eq(artikelenTable.actief, true));
+
+    // Haal leveranciersnamen op
+    const leveranciers = await db.select({ id: leveranciersTable.id, naam: leveranciersTable.naam }).from(leveranciersTable);
+    const leverancierMap = new Map<number, string>(leveranciers.map((l) => [l.id, l.naam]));
+
+    // Haal alle voorraadregels op (per artikel × locatie)
+    const voorraadRegels = await db
+      .select({
+        artikelId: voorraadTable.artikelId,
+        locatieId: voorraadTable.locatieId,
+        hoeveelheid: voorraadTable.hoeveelheid,
+      })
+      .from(voorraadTable);
+
+    // Haal locatienamen op
+    const locaties = await db.select({ id: magazijnLocatiesTable.id, naam: magazijnLocatiesTable.naam }).from(magazijnLocatiesTable);
+    const locatieMap = new Map<number, string>(locaties.map((l) => [l.id, l.naam]));
+
+    // Bouw een map: artikelId → totale hoeveelheid per locatieId
+    type LocatieHoeveelheid = { locatieId: number | null; hoeveelheid: number };
+    const voorraadPerArtikel = new Map<number, LocatieHoeveelheid[]>();
+    for (const r of voorraadRegels) {
+      const bestaand = voorraadPerArtikel.get(r.artikelId) ?? [];
+      bestaand.push({ locatieId: r.locatieId ?? null, hoeveelheid: r.hoeveelheid ?? 0 });
+      voorraadPerArtikel.set(r.artikelId, bestaand);
+    }
+
+    // Hulpfuncties
+    const effectievePrijs = (a: { inkoopprijs: number | null }) => {
+      const gemiddeld = (a as Record<string, unknown>).gemiddeldInkoopprijs as number | null ?? null;
+      return gemiddeld ?? a.inkoopprijs ?? null;
+    };
+
+    // Accumulatoren
+    const categorieMap = new Map<string, { artikel_aantal: number; waarde: number }>();
+    const leverancierWaardeMap = new Map<string, { artikel_aantal: number; waarde: number }>();
+    const locatieWaardeMap = new Map<string, { artikel_aantal: number; waarde: number }>();
+    const onbekendePrijs: Array<{ artikel_id: number; naam: string; eenheid: string; hoeveelheid: number; categorie: string | null; leverancier_naam: string | null }> = [];
+    let totaalWaarde = 0;
+
+    for (const artikel of artikelen) {
+      const prijs = effectievePrijs(artikel);
+      const regels = voorraadPerArtikel.get(artikel.id) ?? [];
+      const totaalHoeveelheid = regels.reduce((s, r) => s + r.hoeveelheid, 0);
+
+      if (prijs == null || prijs === 0) {
+        // Artikel zonder bekende inkoopprijs — apart tonen
+        if (totaalHoeveelheid > 0) {
+          onbekendePrijs.push({
+            artikel_id: artikel.id,
+            naam: artikel.naam,
+            eenheid: artikel.eenheid,
+            hoeveelheid: totaalHoeveelheid,
+            categorie: artikel.categorie ?? null,
+            leverancier_naam: artikel.leverancierId ? (leverancierMap.get(artikel.leverancierId) ?? null) : null,
+          });
+        }
+        continue;
+      }
+
+      const artikelWaarde = totaalHoeveelheid * prijs;
+      totaalWaarde += artikelWaarde;
+
+      // Per categorie
+      const catKey = artikel.categorie ?? "Overig";
+      const catExisting = categorieMap.get(catKey) ?? { artikel_aantal: 0, waarde: 0 };
+      categorieMap.set(catKey, { artikel_aantal: catExisting.artikel_aantal + 1, waarde: catExisting.waarde + artikelWaarde });
+
+      // Per leverancier
+      const levNaam = artikel.leverancierId ? (leverancierMap.get(artikel.leverancierId) ?? "Onbekend") : "Geen leverancier";
+      const levExisting = leverancierWaardeMap.get(levNaam) ?? { artikel_aantal: 0, waarde: 0 };
+      leverancierWaardeMap.set(levNaam, { artikel_aantal: levExisting.artikel_aantal + 1, waarde: levExisting.waarde + artikelWaarde });
+
+      // Per locatie — splits de waarde proportioneel over locaties
+      if (regels.length === 0) continue;
+      for (const regel of regels) {
+        if (regel.hoeveelheid <= 0) continue;
+        const regelWaarde = regel.hoeveelheid * prijs;
+        const locNaam = regel.locatieId != null ? (locatieMap.get(regel.locatieId) ?? "Onbekende locatie") : "Geen locatie";
+        const locExisting = locatieWaardeMap.get(locNaam) ?? { artikel_aantal: 0, waarde: 0 };
+        locatieWaardeMap.set(locNaam, { artikel_aantal: locExisting.artikel_aantal + 1, waarde: locExisting.waarde + regelWaarde });
+      }
+    }
+
+    const totaalRound = Math.round(totaalWaarde * 100) / 100;
+
+    const groepNaarArray = (map: Map<string, { artikel_aantal: number; waarde: number }>) =>
+      [...map.entries()]
+        .map(([naam, v]) => ({
+          naam,
+          artikel_aantal: v.artikel_aantal,
+          waarde: Math.round(v.waarde * 100) / 100,
+          percentage: totaalWaarde > 0 ? Math.round((v.waarde / totaalWaarde) * 10000) / 100 : 0,
+        }))
+        .sort((a, b) => b.waarde - a.waarde);
+
+    res.json({
+      totaal_waarde: totaalRound,
+      per_categorie: groepNaarArray(categorieMap),
+      per_leverancier: groepNaarArray(leverancierWaardeMap),
+      per_locatie: groepNaarArray(locatieWaardeMap),
+      onbekende_prijs: onbekendePrijs.sort((a, b) => b.hoeveelheid - a.hoeveelheid),
+    });
+  } catch (err) {
+    logger.error({ err }, "magazijn voorraadwaarde fout");
+    res.status(500).json({ error: "Serverfout" });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════
 // LOCATIES
 // ═══════════════════════════════════════════════════════════
 

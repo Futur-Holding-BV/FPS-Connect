@@ -122,6 +122,25 @@
 
 ---
 
+## 2026-07-14 — Voorraadwaarde-overzicht in het magazijn
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+**Functie:** Nieuwe subpagina Magazijn → Voorraadwaarde toont de totale inkoopwaarde van de voorraad, uitgesplitst per categorie, leverancier en locatie. Artikelen zonder inkoopprijs worden apart getoond zodat de beheerder ze kan aanvullen. Export naar CSV ingebouwd.
+
+**Wijzigingen:**
+- `lib/api-spec/openapi.yaml` — nieuw endpoint `GET /magazijn/voorraadwaarde` + drie nieuwe schemas: `MagazijnVoorraadwaarde`, `MagazijnVoorraadwaardeGroep`, `MagazijnVoorraadwaardeOnbekend`
+- Codegen uitgevoerd (`pnpm --filter @workspace/api-spec run codegen`) — libs typecheck groen
+- `artifacts/api-server/src/routes/magazijn.ts` — route handler `GET /magazijn/voorraadwaarde`: haalt alle actieve artikelen, voorraadregels and locaties op; groepeert waarden (hoeveelheid × effectieve prijs) per categorie, leverancier en locatie; artikelen zonder prijs worden apart teruggegeven; alles gesorteerd op waarde aflopend
+- `artifacts/firevault/src/pages/magazijn/voorraadwaarde.tsx` — nieuwe subpagina met totaalkaart (prominente euro-waarde), drie uitsplitsingstabellen (categorie/leverancier/locatie) met voortgangsbalk per rij, sectie "Artikelen zonder inkoopprijs" met directe link naar artikelbewerking, CSV-downloadknop
+- `artifacts/firevault/src/App.tsx` — route `/magazijn/voorraadwaarde` geregistreerd
+- `artifacts/firevault/src/pages/magazijn/dashboard.tsx` — "Totale voorraadwaarde"-kaart linkt nu naar `/magazijn/voorraadwaarde` (was `/magazijn/voorraad`)
+
+**Bewijs:** `pnpm run typecheck:libs` groen; frontend typecheck: geen nieuwe fouten; backend endpoint retourneert 401 (auth vereist — correct); beide workflows draaien.
+
+
+---
+
 ## 2026-07-14 — Rollenmatrix: rijen gegroepeerd op functiecategorie
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag

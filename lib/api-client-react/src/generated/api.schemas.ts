@@ -13719,6 +13719,32 @@ export interface MagazijnBestelsuggestieResultaat {
   gegenereerd_op: string;
 }
 
+export interface MagazijnVoorraadwaardeGroep {
+  naam: string;
+  artikel_aantal: number;
+  waarde: number;
+  percentage: number;
+}
+
+export interface MagazijnVoorraadwaardeOnbekend {
+  artikel_id: number;
+  naam: string;
+  eenheid: string;
+  hoeveelheid: number;
+  /** @nullable */
+  categorie?: string | null;
+  /** @nullable */
+  leverancier_naam?: string | null;
+}
+
+export interface MagazijnVoorraadwaarde {
+  totaal_waarde: number;
+  per_categorie: MagazijnVoorraadwaardeGroep[];
+  per_leverancier: MagazijnVoorraadwaardeGroep[];
+  per_locatie: MagazijnVoorraadwaardeGroep[];
+  onbekende_prijs: MagazijnVoorraadwaardeOnbekend[];
+}
+
 export type GetRecenteActiviteitParams = {
 limit?: number;
 };

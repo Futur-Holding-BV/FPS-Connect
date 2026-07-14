@@ -128,6 +128,7 @@ import MagazijnInkoopordersPagina from "@/pages/magazijn/inkooporders";
 import MagazijnInkooporderDetailPagina from "@/pages/magazijn/inkooporder-detail";
 import MagazijnPicklijstenPagina from "@/pages/magazijn/picklijsten";
 import MagazijnPicklijstDetailPagina from "@/pages/magazijn/picklijst-detail";
+import MagazijnVoorraadwaardePagina from "@/pages/magazijn/voorraadwaarde";
 import HallOfFamePagina from "@/pages/hall-of-fame";
 import AutoparkPagina from "@/pages/organisatie/autopark";
 import VerzekeringenPagina from "@/pages/organisatie/verzekeringen";
@@ -481,6 +482,7 @@ function ConnectPortal() {
         <Route path="/magazijn/inkooporders/:id" component={MagazijnInkooporderDetailPagina} />
         <Route path="/magazijn/picklijsten" component={MagazijnPicklijstenPagina} />
         <Route path="/magazijn/picklijsten/:id" component={MagazijnPicklijstDetailPagina} />
+        <Route path="/magazijn/voorraadwaarde" component={MagazijnVoorraadwaardePagina} />
 
         {/* ── Financieel extra ── */}
         <Route path="/financieel/crediteuren" component={CredieurenInboxPagina} />
