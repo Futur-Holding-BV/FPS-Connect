@@ -155,7 +155,6 @@ import RegiePagina from "@/pages/regie/index";
 import RegieDetailPagina from "@/pages/regie/detail";
 import DocumentenPagina from "@/pages/documenten/index";
 import { OndersteuningWidget } from "@/components/ondersteuning-widget";
-import { MeldingKnop } from "@/components/melding-knop";
 import WelkomWizard, { isWelkomAfgerond } from "@/pages/welkom/index";
 import RapportenPagina from "@/pages/rapporten/index";
 import UrenPagina from "@/pages/uren/index";
@@ -748,7 +747,6 @@ function Gate() {
           <AchievementProvider>
             <Portalen />
             <OndersteuningWidget />
-            <MeldingKnop />
             <HeatmapTracker />
           </AchievementProvider>
         </Route>
