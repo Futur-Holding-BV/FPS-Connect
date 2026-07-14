@@ -1,3 +1,21 @@
+## 2026-07-14 — Fix: 2FA-code vakjes onleesbaar bij inloggen
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+**Probleem:** de zes invoervakjes voor de authenticator-code (TOTP) waren niet leesbaar op de donkere loginpagina. De `InputOTPSlot`-component gebruikte standaard shadcn-klassen (`border-input`, `ring-ring`, geen achtergrondkleur, geen tekstkleur) die niet contrasteren tegen de donkere glassmorphism-achtergrond (`#080d1a`).
+
+**Fix** (`components/ui/input-otp.tsx`):
+- Rand: `border-white/20` (zichtbaar op donker)
+- Achtergrond: `bg-white/[0.07]` (passend bij de andere invoervelden op de loginpagina)
+- Tekst: `text-white font-semibold text-base` (duidelijk leesbaar)
+- Actieve slot: oranje rand + lichte achtergrond (`border-[#F23B0D]/60`, `bg-white/[0.13]`, `ring-[#F23B0D]/50`)
+- Cursor: `bg-white` (was `bg-foreground`, onzichtbaar op donker)
+- Iets groter: `h-10 w-10` (was `h-9 w-9`), afgeronde hoeken via `rounded-l-lg`/`rounded-r-lg`
+
+**Bewijs:** typecheck groen; component wordt uitsluitend gebruikt op de donkere loginpagina.
+
+---
+
 ## 2026-07-14 — ENK-import in de calculatiemodule (upload → controle → calculatie)
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** middel
