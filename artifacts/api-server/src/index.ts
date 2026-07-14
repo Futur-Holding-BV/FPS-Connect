@@ -13,6 +13,7 @@ import { planDagelijkseLeermomenten } from "./services/fie-service";
 import { planUurlijkseAiDrempelCheck } from "./lib/aiDrempelCheck";
 import { planDagelijkseKwartaalcontrole } from "./lib/pushService";
 import { startVerlofPresets } from "./lib/verlofPresets";
+import { startStandaardProfielen } from "./lib/standaardProfielen";
 import { startVerlofVervalService } from "./lib/verlofVervalService";
 import { initBiae } from "./services/biae/init";
 import { planCentraleDeadlineBewaking } from "./services/biae/jobs/deadline-bewaking";
@@ -65,6 +66,7 @@ ensureSessionTable()
       planUurlijkseAiDrempelCheck();
       planDagelijkseKwartaalcontrole();
       startVerlofPresets();
+      startStandaardProfielen();
       startVerlofVervalService();
       // BIAE — centrale bus: capabilities registreren en centrale jobs starten.
       // De deadline-bewaking delegeert naar de bestaande goedkeuringsbewaking,
