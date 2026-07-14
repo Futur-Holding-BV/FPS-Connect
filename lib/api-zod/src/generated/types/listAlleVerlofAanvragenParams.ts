@@ -8,4 +8,8 @@
 
 export type ListAlleVerlofAanvragenParams = {
 status?: string;
+/**
+ * Als true: toon alleen verlofaanvragen van medewerkers waarvoor de ingelogde gebruiker leidinggevende is.
+ */
+mijn_team?: boolean;
 };

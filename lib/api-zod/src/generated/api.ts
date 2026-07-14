@@ -11002,7 +11002,8 @@ export const AiVulZzpOvereenkomstResponse = zod.object({
  * @summary Alle verlofaanvragen (centrale beoordelingslijst)
  */
 export const ListAlleVerlofAanvragenQueryParams = zod.object({
-  "status": zod.coerce.string().optional()
+  "status": zod.coerce.string().optional(),
+  "mijn_team": zod.coerce.boolean().optional().describe('Als true: toon alleen verlofaanvragen van medewerkers waarvoor de ingelogde gebruiker leidinggevende is.')
 })
 
 export const ListAlleVerlofAanvragenResponseItem = zod.object({

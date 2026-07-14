@@ -7,6 +7,7 @@ import {
   useDeleteMedewerker,
   useListFuncties,
   useListCaoOpties,
+  useListMedewerkers,
   useListToewijsbareGebruikers,
   useListOpleidingen,
   useListMedewerkerOpleidingen,
@@ -675,6 +676,7 @@ export default function MedewerkerDetailPagina() {
   const { data: medewerker, isLoading, isError } = useGetMedewerker(id);
   const { data: functies } = useListFuncties();
   const { data: caoOpties } = useListCaoOpties();
+  const { data: alleMedewerkers } = useListMedewerkers();
   const { data: gebruikers } = useListToewijsbareGebruikers();
   const { data: opleidingCatalogus } = useListOpleidingen();
   const { data: medewerkerOpleidingen } = useListMedewerkerOpleidingen(id);
@@ -2136,9 +2138,24 @@ export default function MedewerkerDetailPagina() {
                   Voor een andere werkmaatschappij, CAO of contracturen per functie: gebruik de kaart <span className="font-medium">Aanstellingen</span> op deze pagina.
                 </p>
               </div>
-              {/* Leidinggevende-veld bewust verborgen: er is één hoofdbeheerder die
-                  verlof altijd kan behandelen; een reeds ingestelde waarde blijft
-                  behouden (profielForm stuurt leidinggevende_id ongewijzigd mee). */}
+              <div className="space-y-1.5">
+                <Label>Leidinggevende</Label>
+                <Select
+                  value={profielForm.leidinggevende_id ? String(profielForm.leidinggevende_id) : "geen"}
+                  onValueChange={(v) => setProfielForm({ ...profielForm, leidinggevende_id: v === "geen" ? undefined : Number(v) })}
+                >
+                  <SelectTrigger><SelectValue placeholder="Geen leidinggevende" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="geen">Geen</SelectItem>
+                    {(alleMedewerkers ?? [])
+                      .filter((m) => m.id !== Number(id) && m.actief !== false)
+                      .map((m) => (
+                        <SelectItem key={m.id} value={String(m.id)}>{m.naam}</SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-[11px] text-muted-foreground">Bepaalt de primaire beoordelaar voor verlofaanvragen van deze medewerker.</p>
+              </div>
               <div className="space-y-1.5">
                 <Label>Dienstverband</Label>
                 <Select value={profielForm.dienstverband} onValueChange={(v) => setProfielForm({ ...profielForm, dienstverband: v, bedrijf_uitzendbureau: (v === "uitzend" || v === "inhuur") ? (profielForm.bedrijf_uitzendbureau ?? "") : undefined })}>

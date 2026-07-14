@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useGetVerlofOverzicht, useListAlleVerlofAanvragen, useUpdateVerlofAanvraag, useGetVerlofVervalsignalen } from "@workspace/api-client-react";
+import { useGetVerlofOverzicht, useListAlleVerlofAanvragen, useUpdateVerlofAanvraag, useGetVerlofVervalsignalen, getListAlleVerlofAanvragenQueryKey } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -86,13 +86,25 @@ export default function VerlofOverzichtPagina() {
   const [dialogAanvraagId, setDialogAanvraagId] = useState<number | null>(null);
   const [redenInput, setRedenInput] = useState("");
   const [opmerkingInput, setOpmerkingInput] = useState("");
+  const [bezettingWaarschuwing, setBezettingWaarschuwing] = useState<{ bericht: string; ids: number[] } | null>(null);
+  const [mijnTeamFilter, setMijnTeamFilter] = useState(false);
 
   const { data: overzicht, isLoading } = useGetVerlofOverzicht({ jaar });
-  const { data: alleAanvragenData } = useListAlleVerlofAanvragen();
+  const { data: alleAanvragenData } = useListAlleVerlofAanvragen(
+    undefined,
+    { query: { queryKey: getListAlleVerlofAanvragenQueryKey() } }
+  );
+  const { data: mijnTeamAanvragen } = useListAlleVerlofAanvragen(
+    { mijn_team: true },
+    { query: { queryKey: getListAlleVerlofAanvragenQueryKey({ mijn_team: true }) } }
+  );
   const updateAanvraag = useUpdateVerlofAanvraag();
   const { data: vervalsignalen = [] } = useGetVerlofVervalsignalen();
 
-  const aanvragen = overzicht?.aanvragen ?? [];
+  const overzichtAanvragen = overzicht?.aanvragen ?? [];
+  const aanvragen = mijnTeamFilter
+    ? overzichtAanvragen.filter((a) => (mijnTeamAanvragen ?? []).some((m) => m.id === a.id))
+    : overzichtAanvragen;
   const saldi = overzicht?.saldi ?? [];
 
   const gefilterd = aanvragen.filter((a) => {
@@ -138,6 +150,7 @@ export default function VerlofOverzichtPagina() {
     setDialogAanvraagId(aanvraagId);
     setRedenInput("");
     setOpmerkingInput("");
+    setBezettingWaarschuwing(null);
   }
 
   function openBulkDialog(actie: "bulk-goedkeuren" | "bulk-afwijzen") {
@@ -145,9 +158,16 @@ export default function VerlofOverzichtPagina() {
     setDialogAanvraagId(null);
     setRedenInput("");
     setOpmerkingInput("");
+    setBezettingWaarschuwing(null);
   }
 
-  async function voerDialogUit() {
+  function sluitDialog() {
+    setDialogActie(null);
+    setDialogAanvraagId(null);
+    setBezettingWaarschuwing(null);
+  }
+
+  async function voerDialogUit(negeerBezetting = false) {
     if (!dialogActie) return;
     const isAfwijzen = dialogActie === "afwijzen" || dialogActie === "bulk-afwijzen";
     if (isAfwijzen && !redenInput.trim()) {
@@ -159,7 +179,7 @@ export default function VerlofOverzichtPagina() {
     try {
       if (dialogActie === "goedkeuren" || dialogActie === "afwijzen") {
         if (!dialogAanvraagId) return;
-        const aanvraag = aanvragen.find((a) => a.id === dialogAanvraagId);
+        const aanvraag = overzichtAanvragen.find((a) => a.id === dialogAanvraagId);
         if (!aanvraag) return;
         await updateAanvraag.mutateAsync({
           id: dialogAanvraagId,
@@ -170,37 +190,60 @@ export default function VerlofOverzichtPagina() {
             status: nieuweStatus,
             reden: isAfwijzen ? redenInput : undefined,
             opmerking: opmerkingInput || undefined,
+            negeer_bezetting: negeerBezetting || undefined,
           },
         });
         toast({ title: nieuweStatus === "goedgekeurd" ? "Verlofaanvraag goedgekeurd" : "Verlofaanvraag afgewezen" });
       } else {
         // Bulk
         const ids = [...geselecteerdeIds];
+        const mislukt: number[] = [];
+        let bezettingBericht = "";
         await Promise.all(
-          ids.map((id) => {
-            const aanvraag = aanvragen.find((a) => a.id === id);
-            if (!aanvraag) return Promise.resolve();
-            return updateAanvraag.mutateAsync({
-              id,
-              data: {
-                verlofsoort_id: aanvraag.verlofsoort_id,
-                start_datum: aanvraag.start_datum,
-                eind_datum: aanvraag.eind_datum,
-                status: nieuweStatus,
-                reden: isAfwijzen ? redenInput : undefined,
-                opmerking: opmerkingInput || undefined,
-              },
-            });
+          ids.map(async (id) => {
+            const aanvraag = overzichtAanvragen.find((a) => a.id === id);
+            if (!aanvraag) return;
+            try {
+              await updateAanvraag.mutateAsync({
+                id,
+                data: {
+                  verlofsoort_id: aanvraag.verlofsoort_id,
+                  start_datum: aanvraag.start_datum,
+                  eind_datum: aanvraag.eind_datum,
+                  status: nieuweStatus,
+                  reden: isAfwijzen ? redenInput : undefined,
+                  opmerking: opmerkingInput || undefined,
+                  negeer_bezetting: negeerBezetting || undefined,
+                },
+              });
+            } catch (err) {
+              const e = err as { status?: number; data?: { bericht?: string } };
+              if (e?.status === 422 && e?.data?.bericht?.includes("bezetting")) {
+                mislukt.push(id);
+                bezettingBericht = e.data?.bericht ?? "Minimale bezetting niet gehaald";
+              }
+            }
           }),
         );
-        toast({ title: `${ids.length} aanvragen ${nieuweStatus === "goedgekeurd" ? "goedgekeurd" : "afgewezen"}` });
+        const verwerkt = ids.length - mislukt.length;
+        if (verwerkt > 0) {
+          toast({ title: `${verwerkt} aanvra${verwerkt === 1 ? "ag" : "gen"} ${nieuweStatus === "goedgekeurd" ? "goedgekeurd" : "afgewezen"}` });
+        }
+        if (mislukt.length > 0) {
+          setBezettingWaarschuwing({ bericht: bezettingBericht, ids: mislukt });
+          return;
+        }
         setGeselecteerdeIds(new Set());
       }
-      setDialogActie(null);
-      setDialogAanvraagId(null);
+      sluitDialog();
       qc.invalidateQueries({ queryKey: ["getVerlofOverzicht"] });
       qc.invalidateQueries({ queryKey: ["listAlleVerlofAanvragen"] });
-    } catch {
+    } catch (err) {
+      const e = err as { status?: number; data?: { bericht?: string } };
+      if (e?.status === 422 && e?.data?.bericht?.includes("bezetting")) {
+        setBezettingWaarschuwing({ bericht: e.data?.bericht ?? "Minimale bezetting niet gehaald", ids: dialogAanvraagId ? [dialogAanvraagId] : [] });
+        return;
+      }
       toast({ title: "Fout bij verwerken", variant: "destructive" });
     }
   }
@@ -369,6 +412,15 @@ export default function VerlofOverzichtPagina() {
                     <SelectItem value="ingetrokken">Ingetrokken</SelectItem>
                   </SelectContent>
                 </Select>
+                <Button
+                  size="sm"
+                  variant={mijnTeamFilter ? "default" : "outline"}
+                  onClick={() => { setMijnTeamFilter((v) => !v); setGeselecteerdeIds(new Set()); }}
+                  className="gap-1.5"
+                >
+                  <Users className="h-3.5 w-3.5" />
+                  Mijn team
+                </Button>
                 {geselecteerdeIds.size > 0 && (
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-muted-foreground">{geselecteerdeIds.size} geselecteerd</span>
@@ -585,7 +637,7 @@ export default function VerlofOverzichtPagina() {
         </TabsContent>
       </Tabs>
 
-      <Dialog open={dialogActie !== null} onOpenChange={() => setDialogActie(null)}>
+      <Dialog open={dialogActie !== null} onOpenChange={(open) => { if (!open) sluitDialog(); }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
@@ -643,15 +695,35 @@ export default function VerlofOverzichtPagina() {
                 onChange={(e) => setOpmerkingInput(e.target.value)}
               />
             </div>
+            {bezettingWaarschuwing && (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 space-y-2">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium text-amber-800">Minimale bezetting</p>
+                    <p className="text-xs text-amber-700">{bezettingWaarschuwing.bericht}</p>
+                  </div>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="w-full border-amber-300 text-amber-800 hover:bg-amber-100"
+                  onClick={() => voerDialogUit(true)}
+                  disabled={updateAanvraag.isPending}
+                >
+                  Toch goedkeuren (bezetting overschrijven)
+                </Button>
+              </div>
+            )}
           </div>
 
           <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setDialogActie(null)}>
+            <Button variant="outline" onClick={sluitDialog}>
               Annuleren
             </Button>
             <Button
               variant={isAfwijsDialog ? "destructive" : "default"}
-              onClick={voerDialogUit}
+              onClick={() => voerDialogUit()}
               disabled={updateAanvraag.isPending || (isAfwijsDialog && !redenInput.trim())}
             >
               {isAfwijsDialog ? (

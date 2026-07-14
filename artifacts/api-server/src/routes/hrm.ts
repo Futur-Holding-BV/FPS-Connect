@@ -1869,10 +1869,29 @@ async function koppelZiekteAanAdv(
   }
 }
 
-// Centrale beoordelingslijst: alle verlofaanvragen, optioneel gefilterd op status.
+// Centrale beoordelingslijst: alle verlofaanvragen, optioneel gefilterd op status en/of team.
 router.get("/verlofaanvragen", lezen, async (req, res): Promise<void> => {
   try {
     const statusFilter = typeof req.query.status === "string" ? req.query.status : null;
+    const mijnTeam = req.query.mijn_team === "true";
+
+    // Bij mijn_team=true: alleen aanvragen van medewerkers waarvoor de ingelogde
+    // gebruiker leidinggevende is. Beheerder met personeel:2 ziet altijd alles tenzij
+    // expliciet mijn_team=true is gevraagd.
+    let medewerkerFilter: Set<number> | null = null;
+    if (mijnTeam) {
+      const mijnMedewerkerId = await medewerkerIdVoorGebruiker(req.session.userId ?? null);
+      if (mijnMedewerkerId != null) {
+        const teamleden = await db
+          .select({ id: medewerkersTable.id })
+          .from(medewerkersTable)
+          .where(eq(medewerkersTable.leidinggevendeId, mijnMedewerkerId));
+        medewerkerFilter = new Set(teamleden.map((t) => t.id));
+      } else {
+        medewerkerFilter = new Set(); // geen medewerkerrecord: geen team zichtbaar
+      }
+    }
+
     const rijen = await db
       .select({ a: verlofAanvragenTable, verlofsoortNaam: verlofsoortenTable.naam, medewerkerNaam: medewerkersTable.naam })
       .from(verlofAanvragenTable)
@@ -1882,6 +1901,7 @@ router.get("/verlofaanvragen", lezen, async (req, res): Promise<void> => {
     res.json(
       rijen
         .filter((r) => !statusFilter || r.a.status === statusFilter)
+        .filter((r) => !medewerkerFilter || medewerkerFilter.has(r.a.medewerkerId))
         .map((r) => ({
           id: r.a.id,
           medewerker_id: r.a.medewerkerId,
@@ -1896,6 +1916,7 @@ router.get("/verlofaanvragen", lezen, async (req, res): Promise<void> => {
           opmerking: r.a.opmerking,
           beoordeeld_door_id: r.a.beoordeeldDoorId,
           beoordeeld_op: isoOf(r.a.beoordeeldOp),
+          bezetting_overschreden: r.a.bezettingOverschreden ?? null,
           aangemaakt_op: iso(r.a.aangemaaktOp),
           bijgewerkt_op: iso(r.a.bijgewerktOp),
         })),

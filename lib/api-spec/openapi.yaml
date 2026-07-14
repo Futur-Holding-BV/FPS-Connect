@@ -8895,6 +8895,12 @@ paths:
           required: false
           schema:
             type: string
+        - in: query
+          name: mijn_team
+          required: false
+          schema:
+            type: boolean
+          description: "Als true: toon alleen verlofaanvragen van medewerkers waarvoor de ingelogde gebruiker leidinggevende is."
       responses:
         "200":
           description: OK
