@@ -1,3 +1,15 @@
+## 2026-07-14 — Productie-noodfix: gebouwen-API crashte door ontbrekende DB-kolom
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** hoog (was)
+
+Na de deploy van de galerij-upload feature (kolom `galerij_upload_toegestaan`) was de code al live maar de DB-migratie nog niet uitgevoerd. Daardoor crashte **elke** `GET /gebouwen` met een Postgres-fout (column does not exist). Alle monteurs (o.a. Patrick en Eduard) kregen een lege gebouwenlijst en konden niet bij de plattegrond.
+
+- **Fix (productie-DB):** `ALTER TABLE gebouwen ADD COLUMN IF NOT EXISTS galerij_upload_toegestaan boolean NOT NULL DEFAULT false` uitgevoerd op `fps_production`.
+- **API-server herstart** zodat de error-state geleegd werd.
+- **Gebouwen bereikbaar** — `Hospice Leendert Vriel Twente` zichtbaar, kolom bevat `false` (standaard).
+
+---
+
 ## 2026-07-14 — Werkscherm scroll-afkap door NieuwsTicker
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
