@@ -1755,9 +1755,9 @@ function KoppelVoorstellenDialog({
             AI-koppelvoorstellen
           </DialogTitle>
           <DialogDescription>
-            De AI vergelijkt de fabrikant, het product en de norm van elk actueel document
-            met de bestaande toepassingen en stelt nieuwe koppelingen voor. De voorstellen
-            zijn een hulpmiddel; u beslist welke u overneemt.
+            De AI analyseert ongeanaliseerde documenten automatisch en vergelijkt daarna
+            fabrikant, product en norm met de bestaande toepassingen. De voorstellen zijn
+            een hulpmiddel; u beslist welke u overneemt.
           </DialogDescription>
         </DialogHeader>
 
@@ -1779,10 +1779,14 @@ function KoppelVoorstellenDialog({
         )}
 
         {voorstellen.length === 0 ? (
-          <div className="p-8 text-center text-muted-foreground text-sm">
-            Geen nieuwe koppelvoorstellen gevonden. De actuele documenten zijn al gekoppeld,
-            of er is geen passende toepassing herkend. Voeg eerst documenten toe of laat ze
-            analyseren.
+          <div className="p-8 text-center text-muted-foreground text-sm space-y-1.5">
+            <p className="font-medium text-foreground/70">Geen nieuwe koppelingen gevonden</p>
+            <p>
+              Alle actuele documenten zijn al gekoppeld, of de inhoud kon niet worden
+              herkend. Mogelijke oorzaken: de PDF bevat geen leesbare tekst (gescand
+              zonder tekstlaag), of er is nog geen passende toepassing aangemaakt in de
+              catalogus.
+            </p>
           </div>
         ) : (
           <div className="space-y-4">

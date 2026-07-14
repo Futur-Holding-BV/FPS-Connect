@@ -3330,7 +3330,7 @@ paths:
     post:
       operationId: aiKoppelvoorstellenDocumenten
       tags: [bibliotheek]
-      summary: AI-voorstellen om bestaande bibliotheekdocumenten aan toepassingen te koppelen, op basis van de eerder herkende fabrikant, product en norm. Voorstellen; de beheerder neemt over (beheerder).
+      summary: AI-voorstellen om bestaande bibliotheekdocumenten aan toepassingen te koppelen. Ongeanaliseerde PDFs worden automatisch eerst verrijkt (fabrikant/product/norm extractie) voordat de matcher draait. Voorstellen; de beheerder neemt over (beheerder).
       responses:
         "200":
           description: OK
