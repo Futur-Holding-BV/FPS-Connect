@@ -114,6 +114,22 @@ import { GebouwDashboard } from "./gebouw-dashboard";
 
 const BEHEERDER_ROLLEN = ["beheerder", "hoofdbeheerder"];
 const TEAM_UITGESLOTEN_ROLLEN = ["klant"];
+const PROJECT_ROLLEN = [
+  "Projectleider",
+  "Projectbegeleider",
+  "Werkvoorbereider",
+  "Uitvoerder",
+  "Adviseur",
+  "Project-admin",
+];
+const ROL_DISPLAY: Record<string, string> = {
+  hoofdbeheerder: "Beheerder",
+  beheerder: "Beheerder",
+  gebruiker: "Gebruiker",
+  monteur: "Monteur",
+  controleur: "Controleur",
+  klant: "Klant",
+};
 
 const CALC_STATUS_LABEL: Record<string, string> = {
   concept: "Concept",
@@ -173,7 +189,7 @@ function ProjectStatusBadge({ status }: { status: string }) {
 }
 
 function rolLabelVan(g: { rol?: string | null }): string {
-  return g.rol ?? "";
+  return ROL_DISPLAY[g.rol ?? ""] ?? g.rol ?? "";
 }
 
 const PRIORITEIT_KLEUR: Record<string, string> = {
@@ -502,7 +518,7 @@ export default function GebouwDetail() {
   );
   const isGekozenBeheerder =
     !!gekozenGebruiker?.rol && BEHEERDER_ROLLEN.includes(gekozenGebruiker.rol);
-  const gekozenFuncties = gekozenGebruiker?.functietitels ?? [];
+  const gekozenFuncties = isGekozenBeheerder ? PROJECT_ROLLEN : [];
 
   const aantalLagen = Math.max(
     1,
@@ -1265,7 +1281,7 @@ export default function GebouwDetail() {
                           ))}
                         </SelectContent>
                       </Select>
-                      {isGekozenBeheerder && gekozenFuncties.length > 0 && (
+                      {isGekozenBeheerder && (
                         <Select
                           value={gekozenProjectRol}
                           onValueChange={setGekozenProjectRol}
@@ -1274,18 +1290,13 @@ export default function GebouwDetail() {
                             <SelectValue placeholder="Kies projectfunctie" />
                           </SelectTrigger>
                           <SelectContent>
-                            {gekozenFuncties.map((pr) => (
+                            {PROJECT_ROLLEN.map((pr) => (
                               <SelectItem key={pr} value={pr}>
                                 {pr}
                               </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
-                      )}
-                      {isGekozenBeheerder && gekozenFuncties.length === 0 && (
-                        <p className="text-xs text-muted-foreground">
-                          Deze beheerder heeft geen projectfuncties in het profiel.
-                        </p>
                       )}
                       <Button
                         onClick={voegToe}

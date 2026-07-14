@@ -1,3 +1,21 @@
+## 2026-07-14 — Teamkoppeling gebouw: vaste projectrollen + leesbaar rol-label
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+**Probleem:** beheerders/hoofdbeheerders konden zichzelf niet aan een project koppelen als "Projectleider" omdat het systeem hun HRM-functietitels als bron gebruikte — bij lege functietitels was de knop geblokkeerd.
+
+**Opgelost in `artifacts/firevault/src/pages/gebouwen/detail.tsx`:**
+- `PROJECT_ROLLEN` constante toegevoegd: Projectleider / Projectbegeleider / Werkvoorbereider / Uitvoerder / Adviseur / Project-admin — vaste lijst, onafhankelijk van HRM-functietitels
+- `ROL_DISPLAY` mapping toegevoegd: platform-rollen vertaald naar leesbare labels (hoofdbeheerder → "Beheerder" i.p.v. "hoofdbeheerder")
+- `rolLabelVan()` bijgewerkt om `ROL_DISPLAY` te gebruiken
+- `gekozenFuncties` staat nu vast op `PROJECT_ROLLEN` voor beheerders (niet meer afhankelijk van `gebruiker.functietitels`)
+- Melding "geen projectfuncties in het profiel" verwijderd — niet meer van toepassing
+- UI-sectie vereenvoudigd: altijd `PROJECT_ROLLEN`-dropdown tonen bij beheerder-selectie
+
+**Bewijs:** `pnpm --filter @workspace/firevault run typecheck` → volledig groen.
+
+---
+
 ## 2026-07-14 — Tabbalk gebouw-detail sticky bij scrollen
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
