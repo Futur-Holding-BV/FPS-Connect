@@ -37,6 +37,7 @@ const aanmaken = requireBevoegdheid("magazijn", 3);
 const beheer   = requireBevoegdheid("magazijn", 4);
 
 const iso = (d: Date | null | undefined) => d?.toISOString() ?? null;
+const escapeHtml = (t: string) => t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
 // Transaction-aware executor type (drizzle tx or plain db)
 type DbExec = Parameters<Parameters<typeof db.transaction>[0]>[0] | typeof db;
@@ -1961,10 +1962,11 @@ router.post("/inkooporders/:id/verstuur", schrijven, async (req, res) => {
 
     await verstuurMail({
       naarEmail: order.leverancierEmail!,
+      naarNaam: order.leverancierNaam ?? undefined,
       onderwerp: `Inkooporder ${order.nummer} — FPS Brandpreventie`,
       soort: "magazijn_bestelbon",
       html: `<h2>Inkooporder ${order.nummer}</h2>
-<p>Geachte leverancier,</p>
+<p>Geachte ${order.leverancierNaam ? escapeHtml(order.leverancierNaam) : "leverancier"},</p>
 <p>Hierbij ontvangt u onze inkooporder. Wij verzoeken u vriendelijk de onderstaande materialen te leveren.</p>
 ${order.verwachteLeverdatum ? `<p><strong>Gewenste leverdatum:</strong> ${new Date(order.verwachteLeverdatum).toLocaleDateString("nl-NL")}</p>` : ""}
 ${order.notities ? `<p><strong>Notities:</strong> ${order.notities}</p>` : ""}
