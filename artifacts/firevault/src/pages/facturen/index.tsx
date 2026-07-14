@@ -21,8 +21,6 @@ import {
   CheckCircle2, Clock, ArrowUpRight, XCircle, Ban, ChevronRight, FileDown, Archive, Gavel,
 } from "lucide-react";
 import type { Factuur } from "@workspace/api-client-react";
-import { DemoBanner } from "@/components/ui/demo-banner";
-import { demoFacturen } from "@/lib/demo-data";
 import { PaginaHulp } from "@/components/pagina-hulp";
 
 const STATUS_LABEL: Record<string, string> = {
@@ -180,45 +178,10 @@ export default function FacturenPagina() {
         </div>
       ) : lijst.length === 0 ? (
         <div className="space-y-4">
-          <DemoBanner />
-          <div className="rounded-lg border overflow-hidden">
-            <table className="w-full text-sm">
-              <thead className="bg-slate-50 border-b">
-                <tr>
-                  <th className="px-4 py-2.5 text-left font-medium text-slate-600">Factuur</th>
-                  <th className="px-4 py-2.5 text-left font-medium text-slate-600">Relatie</th>
-                  <th className="px-4 py-2.5 text-left font-medium text-slate-600">Datum</th>
-                  <th className="px-4 py-2.5 text-right font-medium text-slate-600">Bedrag incl.</th>
-                  <th className="px-4 py-2.5 text-left font-medium text-slate-600">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {demoFacturen.map((f) => (
-                  <tr key={f.id} className="hover:bg-slate-50/50 opacity-80">
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${f.type === "inkoop" ? "bg-slate-100 text-slate-600" : "bg-blue-50 text-blue-600"}`}>
-                          {f.type === "inkoop" ? "INK" : "VRK"}
-                        </span>
-                        <div>
-                          <p className="font-medium text-slate-900 truncate max-w-48">{f.factuurnummer}</p>
-                          <p className="text-xs text-muted-foreground truncate max-w-48">{f.bestandsnaam}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground">{f.relatienaam}</td>
-                    <td className="px-4 py-3 text-muted-foreground text-xs">{f.factuurdatum}</td>
-                    <td className="px-4 py-3 text-right font-mono text-sm">{euro(f.bedrag_incl_btw)}</td>
-                    <td className="px-4 py-3">
-                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${STATUS_KLEUR[f.status] ?? "bg-slate-100 text-slate-600"}`}>
-                        {STATUS_ICOON[f.status]}
-                        {STATUS_LABEL[f.status] ?? f.status}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="rounded-lg border border-dashed p-8 text-center text-muted-foreground">
+            <Receipt className="h-8 w-8 mx-auto mb-2 opacity-30" />
+            <p className="font-medium">Nog geen facturen</p>
+            <p className="text-xs mt-1">Upload de eerste factuur.</p>
           </div>
           <div className="text-center pt-2">
             <Button size="sm" variant="outline" onClick={() => setUploadOpen(true)}>

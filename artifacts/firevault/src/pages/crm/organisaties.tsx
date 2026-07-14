@@ -19,8 +19,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { Building2, Plus, Search, Phone, Mail, MapPin, ChevronRight, ArrowLeft } from "lucide-react";
 import { AiInvullenKnop } from "@/components/ai-invullen-knop";
-import { DemoBanner } from "@/components/ui/demo-banner";
-import { demoOrganisaties } from "@/lib/demo-data";
 
 const ORG_TYPES = [
   { value: "woningcorporatie", label: "Woningcorporatie" },
@@ -137,37 +135,11 @@ export default function OrganisatiesPagina() {
         <div className="space-y-3">{Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-20" />)}</div>
       ) : gefilterd.length === 0 ? (
         orgs.length === 0 && !zoek && typeFilter === "alle" && relatieFilter === "alle" ? (
-          <div className="space-y-4">
-            <DemoBanner />
-            <div className="space-y-2">
-              {demoOrganisaties.map((org) => (
-                <div key={org.id} className="opacity-80">
-                  <Card>
-                    <CardContent className="p-4 flex items-center gap-4">
-                      <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                        <Building2 className="w-4 h-4 text-primary" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-semibold text-sm">{org.naam}</span>
-                          <Badge variant="outline" className={`text-xs border ${RELATIE_KLEUR[org.relatie_status] ?? ""}`}>
-                            {RELATIE_STATUSSEN.find((s) => s.value === org.relatie_status)?.label ?? org.relatie_status}
-                          </Badge>
-                          <span className="text-xs text-muted-foreground">{ORG_TYPES.find((t) => t.value === org.type)?.label ?? org.type}</span>
-                        </div>
-                        <div className="flex items-center gap-3 mt-1 flex-wrap">
-                          <span className="text-xs text-muted-foreground flex items-center gap-1"><MapPin className="w-3 h-3" />{[org.stad, org.regio].filter(Boolean).join(", ")}</span>
-                          <span className="text-xs text-muted-foreground flex items-center gap-1"><Phone className="w-3 h-3" />{org.telefoon}</span>
-                          <span className="text-xs text-muted-foreground flex items-center gap-1"><Mail className="w-3 h-3" />{org.email}</span>
-                        </div>
-                      </div>
-                      <Badge variant="outline" className={`text-xs border ${STATUS_KLEUR[org.status] ?? ""}`}>{org.status}</Badge>
-                    </CardContent>
-                  </Card>
-                </div>
-              ))}
-            </div>
-            <div className="text-center pt-1">
+          <div className="text-center py-16">
+            <Building2 className="w-10 h-10 mx-auto text-muted-foreground opacity-40 mb-3" />
+            <p className="font-medium text-muted-foreground">Nog geen organisaties</p>
+            <p className="text-sm text-muted-foreground mt-1">Voeg de eerste organisatie toe.</p>
+            <div className="mt-4">
               <Button size="sm" onClick={() => setNieuwOpen(true)}>
                 <Plus className="w-4 h-4 mr-1" /> Eerste organisatie toevoegen
               </Button>

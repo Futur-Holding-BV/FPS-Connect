@@ -26,8 +26,6 @@ import {
   Truck, AlertTriangle, Wrench, CheckCircle, RefreshCw,
   ShieldAlert, Sparkles, Search, Plus, Eye, FileInput,
 } from "lucide-react";
-import { DemoBanner } from "@/components/ui/demo-banner";
-import { demoVoertuigen } from "@/lib/demo-data";
 import { PaginaHulp } from "@/components/pagina-hulp";
 
 // ── Helpers ────────────────────────────────────────────────
@@ -310,36 +308,11 @@ export default function WagenparkPagina() {
                 voertuigen.length === 0 && !zoek && statusFilter === "alle" ? (
                   <>
                     <TableRow>
-                      <TableCell colSpan={9} className="pb-0 pt-3">
-                        <DemoBanner />
+                      <TableCell colSpan={9} className="py-12 text-center text-muted-foreground">
+                        <p className="font-medium">Nog geen voertuigen</p>
+                        <p className="text-xs mt-1">Er zijn nog geen voertuigen geregistreerd.</p>
                       </TableCell>
                     </TableRow>
-                    {demoVoertuigen.map((v) => (
-                      <TableRow key={v.id} className="opacity-80">
-                        <TableCell className="font-mono font-semibold">{v.kenteken}</TableCell>
-                        <TableCell>
-                          <div className="font-medium">{v.merk} {v.type}</div>
-                          {v.bouwjaar && <div className="text-xs text-muted-foreground">{v.bouwjaar}</div>}
-                        </TableCell>
-                        <TableCell>
-                          <Badge className={STATUS_KLEUR[v.status] ?? "bg-gray-100 text-gray-700"}>
-                            {STATUS_LABELS[v.status] ?? v.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right font-mono">{v.km_stand.toLocaleString("nl-NL")} km</TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {v.apk_datum ? new Date(v.apk_datum).toLocaleDateString("nl-NL") : "—"}
-                        </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {v.verzekering_verval_dat ? new Date(v.verzekering_verval_dat).toLocaleDateString("nl-NL") : "—"}
-                        </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {v.lease_eind_datum ? new Date(v.lease_eind_datum).toLocaleDateString("nl-NL") : "—"}
-                        </TableCell>
-                        <TableCell className="text-xs text-muted-foreground capitalize">{v.eigendoms_type ?? "—"}</TableCell>
-                        <TableCell></TableCell>
-                      </TableRow>
-                    ))}
                     {magAanmaken && (
                       <TableRow>
                         <TableCell colSpan={9} className="text-center py-3">

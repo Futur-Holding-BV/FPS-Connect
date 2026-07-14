@@ -7,8 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar, Building, CheckCircle, Clock, AlertCircle, FileText, X, ClipboardList, ChevronUp, ChevronDown } from "lucide-react";
 import { LegeStatus } from "@/components/lege-status";
-import { DemoBanner } from "@/components/ui/demo-banner";
-import { demoInspecties } from "@/lib/demo-data";
 import { useVoorkeur } from "@/hooks/use-voorkeur";
 import { PaginaHulp } from "@/components/pagina-hulp";
 
@@ -199,37 +197,12 @@ export default function Inspecties() {
             </Card>
           ))}
           {!inspecties?.length && !filterActief && (
-            <div className="space-y-4">
-              <DemoBanner />
-              {demoInspecties.map((inspectie) => (
-                <Card key={inspectie.id} className="opacity-80">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <div className="p-2 bg-muted rounded-md">
-                          {statusIcon(inspectie.status)}
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-semibold">{typeLabel[inspectie.type] ?? inspectie.type}</span>
-                            <Badge variant="outline" className={statusKleur[inspectie.status]}>
-                              {statusLabel[inspectie.status] ?? inspectie.status}
-                            </Badge>
-                          </div>
-                          <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
-                            <span className="flex items-center gap-1"><Building className="h-3 w-3" />{inspectie.gebouw_naam}</span>
-                            {inspectie.geplande_datum && (
-                              <span className="flex items-center gap-1"><Calendar className="h-3 w-3" />Gepland: {new Date(inspectie.geplande_datum).toLocaleDateString("nl-NL")}</span>
-                            )}
-                            {inspectie.inspecteur_naam && <span>Inspecteur: {inspectie.inspecteur_naam}</span>}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+            <LegeStatus
+              icoon={ClipboardList}
+              titel="Nog geen inspecties"
+              beschrijving="Er zijn nog geen inspecties aangemaakt."
+              variant="kaart"
+            />
           )}
           {!inspecties?.length && filterActief && (
             <LegeStatus

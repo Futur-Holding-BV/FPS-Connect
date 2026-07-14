@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { Loader2, KeyRound, ArrowLeft, Eye, EyeOff, Globe, ChevronDown } from "lucide-react";
+import { Loader2, KeyRound, ArrowLeft, Eye, EyeOff, Globe, ChevronDown, Copy, Check } from "lucide-react";
 import {
   login,
   tweeFactorSetup,
@@ -173,6 +173,7 @@ export default function LoginPagina() {
   const [fout, setFout] = useState<string | null>(null);
   const [taalGekozen, setTaalGekozen] = useState(false);
   const [toonWachtwoord, setToonWachtwoord] = useState(false);
+  const [gekopieerd, setGekopieerd] = useState(false);
   const emailRef = useRef<HTMLInputElement>(null);
   const wachtwoordRef = useRef<HTMLInputElement>(null);
 
@@ -437,9 +438,28 @@ export default function LoginPagina() {
                 </div>
               </div>
 
-              <div className="rounded-xl border border-white/10 bg-white/[0.06] px-4 py-3 text-center">
-                <p className="mb-1 text-xs text-white/40">Handmatige sleutel</p>
-                <code className="break-all font-mono text-sm text-white/80">
+              <div className="rounded-xl border border-white/10 bg-white/[0.06] px-4 py-3">
+                <div className="flex items-center justify-between mb-1">
+                  <p className="text-xs text-white/40">Handmatige sleutel</p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(setupData.secret).then(() => {
+                        setGekopieerd(true);
+                        setTimeout(() => setGekopieerd(false), 2000);
+                      });
+                    }}
+                    className="flex items-center gap-1 rounded px-2 py-0.5 text-xs text-white/50 hover:text-white/80 hover:bg-white/10 transition-colors"
+                    title="Sleutel kopiëren"
+                  >
+                    {gekopieerd ? (
+                      <><Check className="h-3 w-3 text-green-400" /><span className="text-green-400">Gekopieerd</span></>
+                    ) : (
+                      <><Copy className="h-3 w-3" />Kopieer</>
+                    )}
+                  </button>
+                </div>
+                <code className="break-all font-mono text-sm text-white/80 text-center block">
                   {setupData.secret}
                 </code>
               </div>

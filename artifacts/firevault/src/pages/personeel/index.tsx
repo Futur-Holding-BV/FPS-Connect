@@ -82,8 +82,6 @@ import {
 } from "lucide-react";
 import { WERKMAATSCHAPPIJEN, caoVoorWerkmaatschappij } from "@/lib/werkmaatschappijen";
 import { OffboardDialog } from "./offboard-dialog";
-import { DemoBanner } from "@/components/ui/demo-banner";
-import { demoMedewerkers } from "@/lib/demo-data";
 
 const WERKMAATSCHAPPIJ_STD = WERKMAATSCHAPPIJEN[0];
 const DIENSTVERBANDEN = ["vast", "tijdelijk", "oproep", "stage", "inhuur", "zzp", "uitzend"] as const;
@@ -807,25 +805,8 @@ export default function PersoneelPagina() {
               {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-28 w-full" />)}
             </div>
           ) : (medewerkers ?? []).length === 0 ? (
-            <div className="space-y-4">
-              <DemoBanner />
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {demoMedewerkers.map((m) => (
-                  <Card key={m.id} className="opacity-80">
-                    <CardContent className="p-4 space-y-2">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="font-semibold truncate">{m.naam}</div>
-                        <Badge variant="outline" className="border-emerald-200 text-emerald-700">actief</Badge>
-                      </div>
-                      <div className="text-xs text-muted-foreground space-y-0.5">
-                        <div>{m.functie}</div>
-                        <div>{m.afdeling}</div>
-                        {m.email && <div>{m.email}</div>}
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+            <div className="text-center py-16">
+              <p className="text-muted-foreground">Nog geen medewerkers gevonden.</p>
             </div>
           ) : (
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

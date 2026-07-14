@@ -1,3 +1,30 @@
+## 2026-07-14 — TOTP kopieerknop + demo-data verwijderd
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+**TOTP setup-stap — kopieerknop handmatige sleutel:**
+- `artifacts/firevault/src/pages/auth/login.tsx` — `Copy`/`Check` aan lucide-imports toegevoegd; `gekopieerd` state; kopieerknop naast "Handmatige sleutel" label met 2s-terugkeer; secret centreert via `block text-center`
+- `artifacts/firevault/src/i18n/vertalingen.ts` — `auth.setupUitleg` bijgewerkt in alle 6 talen (nl/en/de/fr/ar/tr): QR-scan instructie + terugvalzin naar handmatige sleutel
+
+**Demo-data volledig verwijderd:**
+- `artifacts/firevault/src/lib/demo-data.ts` — verwijderd (558 regels nep-data)
+- `artifacts/firevault/src/components/ui/demo-banner.tsx` — verwijderd
+- 10 pagina's opgeschoond (imports verwijderd, demo-blokken vervangen door echte lege staten):
+  - `inspecties/index.tsx` → `<LegeStatus>` (aansluiting op bestaand filterpatroon)
+  - `onderhoud/werkbonnen-lijst.tsx` → tekst + "Eerste werkbon aanmaken" knop
+  - `crm/organisaties.tsx` → Building2-icoon + "Eerste organisatie toevoegen" knop
+  - `crm/contactpersonen.tsx` → Users-icoon + doorverwijzing naar organisatie
+  - `personeel/index.tsx` → tekst lege staat
+  - `dossiers/index.tsx` → FolderOpen-icoon + "Eerste document aanmaken" knop
+  - `rapporten/index.tsx` → FileText-icoon
+  - `gereedschappen/index.tsx` → Wrench-icoon + "Eerste gereedschap registreren" knop
+  - `facturen/index.tsx` → Receipt-icoon + "Eerste factuur uploaden" knop
+  - `wagenpark/index.tsx` → tekst lege staat in TableRow
+
+**Bewijs:** `pnpm run typecheck` → volledig groen (alle artifacts).
+
+---
+
 ## 2026-07-14 — Rollenmatrix: rijen gegroepeerd op functiecategorie
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag

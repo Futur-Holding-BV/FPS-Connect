@@ -11,8 +11,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Users, ArrowLeft, Phone, Mail, Search, Building2, Star } from "lucide-react";
-import { DemoBanner } from "@/components/ui/demo-banner";
-import { demoContactpersonen } from "@/lib/demo-data";
 
 const BESLISROL_LABEL: Record<string, string> = {
   beslisser: "Beslisser",
@@ -59,33 +57,10 @@ export default function ContactpersonenPagina() {
         <div className="space-y-2">{Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-20" />)}</div>
       ) : (contacten as CrmContactpersoon[]).length === 0 ? (
         !zoek ? (
-          <div className="space-y-4">
-            <DemoBanner />
-            <div className="space-y-2">
-              {demoContactpersonen.map((c) => (
-                <Card key={c.id} className="opacity-80">
-                  <CardContent className="p-4 flex items-center gap-4">
-                    <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                      <Users className="w-4 h-4 text-primary" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-semibold text-sm">{c.naam}</span>
-                        {c.primair_contact && <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />}
-                        <span className="text-xs text-muted-foreground">{c.functie}</span>
-                      </div>
-                      <div className="flex items-center gap-3 mt-0.5 flex-wrap">
-                        <span className="text-xs text-muted-foreground flex items-center gap-1"><Building2 className="w-3 h-3" />{c.organisatie_naam}</span>
-                      </div>
-                      <div className="flex items-center gap-3 mt-1 flex-wrap">
-                        {c.email && <span className="text-xs text-muted-foreground flex items-center gap-1"><Mail className="w-3 h-3" />{c.email}</span>}
-                        {c.telefoon && <span className="text-xs text-muted-foreground flex items-center gap-1"><Phone className="w-3 h-3" />{c.telefoon}</span>}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+          <div className="text-center py-16">
+            <Users className="w-10 h-10 mx-auto text-muted-foreground opacity-40 mb-3" />
+            <p className="font-medium text-muted-foreground">Nog geen contactpersonen</p>
+            <p className="text-sm text-muted-foreground mt-1">Voeg contactpersonen toe via een organisatie.</p>
           </div>
         ) : (
           <div className="text-center py-16">

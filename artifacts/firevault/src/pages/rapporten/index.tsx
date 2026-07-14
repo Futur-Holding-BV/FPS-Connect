@@ -33,8 +33,6 @@ import {
   XCircle,
 } from "lucide-react";
 import { GoedkeuringWidget } from "@/components/goedkeuring/goedkeuring-widget";
-import { DemoBanner } from "@/components/ui/demo-banner";
-import { demoRapporten } from "@/lib/demo-data";
 
 const RAPPORT_TYPE_LABEL: Record<string, string> = {
   werkpakket_monteur: "Werkpakket monteur",
@@ -505,34 +503,10 @@ export default function RapportenPagina() {
             </div>
           ) : gefilterdeRapporten.length === 0 ? (
             rapporten.length === 0 && !filtersActief && opleverstatusFilter === ALLE_STATUSSEN ? (
-              <div className="space-y-3">
-                <DemoBanner />
-                <div className="divide-y">
-                  {demoRapporten.map((r) => (
-                    <div key={r.id} className="flex items-start justify-between gap-4 py-3 first:pt-0 last:pb-0 flex-wrap opacity-80">
-                      <div className="flex items-start gap-3 min-w-0">
-                        <FileText className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
-                        <div className="min-w-0">
-                          <div className="font-medium text-sm truncate">{r.titel}</div>
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5 flex-wrap">
-                            <span className="flex items-center gap-1">
-                              <Building2 className="h-3 w-3" />
-                              {r.gebouw_naam}
-                            </span>
-                            <span>{r.aangemaakt_op ? new Date(r.aangemaakt_op).toLocaleDateString("nl-NL") : "—"}</span>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <Badge variant="outline" className="text-amber-600 border-amber-200 bg-amber-50 text-xs">
-                          <Clock className="h-3 w-3 mr-1" />
-                          Concept
-                        </Badge>
-                        <Lock className="h-3.5 w-3.5 text-muted-foreground/40" />
-                      </div>
-                    </div>
-                  ))}
-                </div>
+              <div className="rounded-lg border border-dashed p-8 text-center text-muted-foreground">
+                <FileText className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                <p className="font-medium">Nog geen rapporten</p>
+                <p className="text-xs mt-1">Er zijn nog geen rapporten aangemaakt.</p>
               </div>
             ) : (
               <div className="rounded-lg border border-dashed p-8 text-center text-muted-foreground">

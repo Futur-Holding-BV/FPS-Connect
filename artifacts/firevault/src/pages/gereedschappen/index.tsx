@@ -21,8 +21,6 @@ import {
 import { Label } from "@/components/ui/label";
 import { ListCard } from "@/components/ui/list-card";
 import { Plus, Wrench, Search, User, Camera, Sparkles, CheckCircle, AlertTriangle } from "lucide-react";
-import { DemoBanner } from "@/components/ui/demo-banner";
-import { demoGereedschappen } from "@/lib/demo-data";
 
 const STATUSSEN = [
   "Beschikbaar", "In bruikleen", "Defect gemeld", "Beschadigd",
@@ -249,28 +247,10 @@ export default function GereedschappenPagina() {
         </div>
       ) : !gereedschappen || gereedschappen.length === 0 ? (
         <div className="space-y-4">
-          <DemoBanner />
-          <div className="space-y-2">
-            {demoGereedschappen.map((item) => (
-              <div key={item.id} className="flex items-center gap-4 rounded-xl border bg-card px-5 py-4 opacity-80 shadow-sm">
-                <div className={`w-1 self-stretch rounded-full ${statusStreep(item.status)}`} />
-                <span className="font-mono text-sm font-semibold text-primary shrink-0 w-20">{item.volgnummer}</span>
-                <div className="flex-1 min-w-0">
-                  <div className="font-medium truncate">{item.omschrijving}</div>
-                  {item.gegraveerd_nummer && <div className="text-xs text-muted-foreground">Gegraveerd: {item.gegraveerd_nummer}</div>}
-                </div>
-                <div className="hidden sm:block text-sm text-muted-foreground w-40 shrink-0 truncate">
-                  {[item.merk, item.type].filter(Boolean).join(" / ") || "—"}
-                </div>
-                <div className="hidden md:block text-sm text-muted-foreground w-28 shrink-0 capitalize">{item.categorie}</div>
-                <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium shrink-0 ${statusKleur(item.status)}`}>
-                  {item.status}
-                </span>
-                {item.keuringsplichtig && item.keuring_norm && (
-                  <span className="text-xs text-muted-foreground shrink-0">{item.keuring_norm}</span>
-                )}
-              </div>
-            ))}
+          <div className="py-12 text-center text-muted-foreground">
+            <Wrench className="h-10 w-10 mx-auto mb-3 opacity-30" />
+            <p className="font-medium">Nog geen gereedschappen</p>
+            <p className="text-xs mt-1">Registreer het eerste gereedschap.</p>
           </div>
           {magSchrijven && (
             <div className="text-center pt-1">
