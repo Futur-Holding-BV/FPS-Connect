@@ -1,5 +1,21 @@
 # FPS Connect — Production Runbook
 
+## Omgevingsscheiding: één productie-URL (vastgesteld 14 juli 2026)
+
+**`connect.fps-one.nl` is de enige productieomgeving.** Er zijn drie losstaande omgevingen:
+
+| Omgeving | URL | Database | Gebruik |
+|---|---|---|---|
+| VPS productie | `https://connect.fps-one.nl` | VPS PostgreSQL | Eindgebruikers, echte data |
+| Replit autoscale | Replit-publieke URL | Replit PostgreSQL | **Niet voor eindgebruikers** |
+| Replit dev | `localhost` / Replit-preview | Replit PostgreSQL | Ontwikkeling & testen |
+
+**Automatische doorstuur:** De frontend (`firevault`) stuurt elk verzoek dat binnenkomt op een andere hostname dan `localhost`, `127.0.0.1` of `connect.fps-one.nl` automatisch door naar `https://connect.fps-one.nl` (inclusief pad en querystring). Eindgebruikers die per ongeluk de Replit-URL openen, worden daardoor direct doorgestuurd naar de juiste omgeving.
+
+**Let op bij agent-tools:** `executeSql { environment: "production" }` in de Replit-agent raadpleegt de **Replit**-database, niet de VPS-database. Voor productiedata: SSH naar de VPS of gebruik de productie-backups.
+
+---
+
 ## Deploybeleid: productie als acceptatieomgeving (vastgesteld 10 juli 2026)
 
 Dit beleid is leidend voor het hele runbook en voor alle deploys.

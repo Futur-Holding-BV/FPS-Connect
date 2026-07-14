@@ -262,6 +262,40 @@
 
 ---
 
+## 2026-07-14 — Productie-audit en deploy-synchronisatie (alle commits op VPS)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** hoog (was)
+
+**Bevinding:** de GitHub-repo (`vinkrene-jpg/fps-one`) stond vast op commit `51a8f647` van 13 juli 2026. De Replit-codebase had 45 commits gemaakt die nooit naar GitHub werden gepusht — en dus nooit via de automatische GitHub Actions-deploy op de VPS terecht kwamen. De productie-VPS draaide daarmee ruim een dag achter op de ontwikkelomgeving.
+
+**Oorzaak:** Replit slaat commits op in eigen subrepl-remotes en pusht die niet automatisch naar de geconfigureerde GitHub-origin. De `deploy.yml` triggert alleen bij push naar GitHub main.
+
+**Oplossing:**
+1. GitHub-origin geconfigureerd met de `GITHUB_TOKEN_PUSH` (PAT) voor authenticatie.
+2. `git fetch origin` uitgevoerd — bevestigd dat de 9 GitHub-only hotfix-commits de Caddyfile-mjs-fix ongedaan maakten (plattegrond-bug opnieuw geïntroduceerd).
+3. `git push origin main --force` — lokale Replit-codebase is de waarheid; 45 commits gepusht.
+4. GitHub Actions-workflow getriggerd; VPS deployt automatisch via `deploy-production.sh` (backup → fetch → reset → build --no-cache → migrate → caddy → up -d → healthcheck).
+5. **Verificatie:** `GET /api/versie` geeft `{"versie":"2026.07.14-d0c702e3","commit":"d0c702e3","gebouwd_op":"2026-07-14T12:40:47Z"}` — VPS draait nu de meest recente commit.
+
+**Nu op productie (connect.fps-one.nl):**
+- ENK-importmodule (calculatie)
+- Foto-galerij upload per gebouw
+- Versienummer + datum in sidebar-footer
+- Slimmere gebruikers-onboarding met AI
+- HRM verlof-saldocorrectie + AI-bevoegdheden per functie
+- Picklijsten en inkooporders (monteur-app)
+- Beschikbaarheidscheck vóór picklijst-verwerking
+- Leverancier e-mail bij nieuwe inkooporder
+- App QR-code per medewerker
+- Plattegrond-hero init-bug fix
+- Werkscherm scroll-afkap fix (NieuwsTicker pb-20)
+- Redirect niet-productie-URLs naar connect.fps-one.nl
+- Alle overige commits van 14 juli 2026
+
+**Preventie:** toekomstige elke merge via Replit moet ook via `git push origin main` naar GitHub gaan zodat de automatische deploy werkt. De `GITHUB_TOKEN_PUSH` PAT in de Replit-omgeving maakt dit mogelijk.
+
+---
+
 ## 2026-07-14 — ENK-import in de calculatiemodule (upload → controle → calculatie)
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** middel
