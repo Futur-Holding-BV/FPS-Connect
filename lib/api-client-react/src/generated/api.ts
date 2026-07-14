@@ -203,6 +203,11 @@ import type {
   DownloadUrlResultaat,
   EenheidsPrijs,
   EenheidsPrijsInput,
+  EnkBronbestand,
+  EnkImportAnalyse,
+  EnkImportAnalyseInput,
+  EnkImportBevestigInput,
+  EnkImportBevestigResultaat,
   ErrorEnvelope,
   ExportAiAanroepenCsvParams,
   ExportGoedkeuringDashboardParams,
@@ -464,6 +469,7 @@ import type {
   ListDocumentStudioModellenParams,
   ListDocumentenParams,
   ListEenheidsprijzenParams,
+  ListEnkBronbestandenParams,
   ListExportlogParams,
   ListFabrikantenParams,
   ListFacturenParams,
@@ -49917,6 +49923,380 @@ export const useGenerateRfqConceptMail = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getGenerateRfqConceptMailMutationOptions(options));
+    }
+
+export const getAnalyseEnkImportUrl = () => {
+
+
+
+
+  return `/api/modules/calculaties/import/analyse`
+}
+
+/**
+ * @summary ENK-calculatiebestand uploaden en analyseren (maakt nog geen calculatie aan)
+ */
+export const analyseEnkImport = async (enkImportAnalyseInput: EnkImportAnalyseInput, options?: RequestInit): Promise<EnkImportAnalyse> => {
+    const formData = new FormData();
+formData.append(`bestand`, enkImportAnalyseInput.bestand);
+
+  return customFetch<EnkImportAnalyse>(getAnalyseEnkImportUrl(),
+  {
+    ...options,
+    method: 'POST'
+    ,
+    body: formData
+  }
+);}
+
+
+
+
+export const getAnalyseEnkImportMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof analyseEnkImport>>, TError,{data: BodyType<EnkImportAnalyseInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof analyseEnkImport>>, TError,{data: BodyType<EnkImportAnalyseInput>}, TContext> => {
+
+const mutationKey = ['analyseEnkImport'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof analyseEnkImport>>, {data: BodyType<EnkImportAnalyseInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  analyseEnkImport(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AnalyseEnkImportMutationResult = NonNullable<Awaited<ReturnType<typeof analyseEnkImport>>>
+    export type AnalyseEnkImportMutationBody = BodyType<EnkImportAnalyseInput>
+    export type AnalyseEnkImportMutationError = ErrorType<void>
+
+    /**
+ * @summary ENK-calculatiebestand uploaden en analyseren (maakt nog geen calculatie aan)
+ */
+export const useAnalyseEnkImport = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof analyseEnkImport>>, TError,{data: BodyType<EnkImportAnalyseInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof analyseEnkImport>>,
+        TError,
+        {data: BodyType<EnkImportAnalyseInput>},
+        TContext
+      > => {
+      return useMutation(getAnalyseEnkImportMutationOptions(options));
+    }
+
+export const getListEnkBronbestandenUrl = (params?: ListEnkBronbestandenParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/modules/calculaties/import/bronbestanden?${stringifiedParams}` : `/api/modules/calculaties/import/bronbestanden`
+}
+
+/**
+ * @summary ENK-bronbestanden (bibliotheek) ophalen
+ */
+export const listEnkBronbestanden = async (params?: ListEnkBronbestandenParams, options?: RequestInit): Promise<EnkBronbestand[]> => {
+
+  return customFetch<EnkBronbestand[]>(getListEnkBronbestandenUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListEnkBronbestandenQueryKey = (params?: ListEnkBronbestandenParams,) => {
+    return [
+    `/api/modules/calculaties/import/bronbestanden`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListEnkBronbestandenQueryOptions = <TData = Awaited<ReturnType<typeof listEnkBronbestanden>>, TError = ErrorType<unknown>>(params?: ListEnkBronbestandenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listEnkBronbestanden>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListEnkBronbestandenQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listEnkBronbestanden>>> = ({ signal }) => listEnkBronbestanden(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listEnkBronbestanden>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListEnkBronbestandenQueryResult = NonNullable<Awaited<ReturnType<typeof listEnkBronbestanden>>>
+export type ListEnkBronbestandenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary ENK-bronbestanden (bibliotheek) ophalen
+ */
+
+export function useListEnkBronbestanden<TData = Awaited<ReturnType<typeof listEnkBronbestanden>>, TError = ErrorType<unknown>>(
+ params?: ListEnkBronbestandenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listEnkBronbestanden>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListEnkBronbestandenQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetEnkImportAnalyseUrl = (id: number,) => {
+
+
+
+
+  return `/api/modules/calculaties/import/${id}/analyse`
+}
+
+/**
+ * @summary Opgeslagen analyse van een ENK-bronbestand ophalen
+ */
+export const getEnkImportAnalyse = async (id: number, options?: RequestInit): Promise<EnkImportAnalyse> => {
+
+  return customFetch<EnkImportAnalyse>(getGetEnkImportAnalyseUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetEnkImportAnalyseQueryKey = (id: number,) => {
+    return [
+    `/api/modules/calculaties/import/${id}/analyse`
+    ] as const;
+    }
+
+
+export const getGetEnkImportAnalyseQueryOptions = <TData = Awaited<ReturnType<typeof getEnkImportAnalyse>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getEnkImportAnalyse>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetEnkImportAnalyseQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getEnkImportAnalyse>>> = ({ signal }) => getEnkImportAnalyse(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getEnkImportAnalyse>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetEnkImportAnalyseQueryResult = NonNullable<Awaited<ReturnType<typeof getEnkImportAnalyse>>>
+export type GetEnkImportAnalyseQueryError = ErrorType<void>
+
+
+/**
+ * @summary Opgeslagen analyse van een ENK-bronbestand ophalen
+ */
+
+export function useGetEnkImportAnalyse<TData = Awaited<ReturnType<typeof getEnkImportAnalyse>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getEnkImportAnalyse>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetEnkImportAnalyseQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getBevestigEnkImportUrl = (id: number,) => {
+
+
+
+
+  return `/api/modules/calculaties/import/${id}/bevestig`
+}
+
+/**
+ * @summary Geanalyseerd ENK-bronbestand bevestigen en calculatie aanmaken
+ */
+export const bevestigEnkImport = async (id: number,
+    enkImportBevestigInput: EnkImportBevestigInput, options?: RequestInit): Promise<EnkImportBevestigResultaat> => {
+
+  return customFetch<EnkImportBevestigResultaat>(getBevestigEnkImportUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(enkImportBevestigInput)
+  }
+);}
+
+
+
+
+export const getBevestigEnkImportMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bevestigEnkImport>>, TError,{id: number;data: BodyType<EnkImportBevestigInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof bevestigEnkImport>>, TError,{id: number;data: BodyType<EnkImportBevestigInput>}, TContext> => {
+
+const mutationKey = ['bevestigEnkImport'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof bevestigEnkImport>>, {id: number;data: BodyType<EnkImportBevestigInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  bevestigEnkImport(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type BevestigEnkImportMutationResult = NonNullable<Awaited<ReturnType<typeof bevestigEnkImport>>>
+    export type BevestigEnkImportMutationBody = BodyType<EnkImportBevestigInput>
+    export type BevestigEnkImportMutationError = ErrorType<void>
+
+    /**
+ * @summary Geanalyseerd ENK-bronbestand bevestigen en calculatie aanmaken
+ */
+export const useBevestigEnkImport = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bevestigEnkImport>>, TError,{id: number;data: BodyType<EnkImportBevestigInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof bevestigEnkImport>>,
+        TError,
+        {id: number;data: BodyType<EnkImportBevestigInput>},
+        TContext
+      > => {
+      return useMutation(getBevestigEnkImportMutationOptions(options));
+    }
+
+export const getHergebruikEnkBronbestandUrl = (id: number,) => {
+
+
+
+
+  return `/api/modules/calculaties/import/${id}/hergebruik`
+}
+
+/**
+ * @summary Bestaand bronbestand hergebruiken voor een nieuwe import (kopieert de analyse)
+ */
+export const hergebruikEnkBronbestand = async (id: number, options?: RequestInit): Promise<EnkImportAnalyse> => {
+
+  return customFetch<EnkImportAnalyse>(getHergebruikEnkBronbestandUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getHergebruikEnkBronbestandMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof hergebruikEnkBronbestand>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof hergebruikEnkBronbestand>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['hergebruikEnkBronbestand'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof hergebruikEnkBronbestand>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  hergebruikEnkBronbestand(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type HergebruikEnkBronbestandMutationResult = NonNullable<Awaited<ReturnType<typeof hergebruikEnkBronbestand>>>
+
+    export type HergebruikEnkBronbestandMutationError = ErrorType<void>
+
+    /**
+ * @summary Bestaand bronbestand hergebruiken voor een nieuwe import (kopieert de analyse)
+ */
+export const useHergebruikEnkBronbestand = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof hergebruikEnkBronbestand>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof hergebruikEnkBronbestand>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getHergebruikEnkBronbestandMutationOptions(options));
     }
 
 export const getListEenheidsprijzenUrl = (params?: ListEenheidsprijzenParams,) => {

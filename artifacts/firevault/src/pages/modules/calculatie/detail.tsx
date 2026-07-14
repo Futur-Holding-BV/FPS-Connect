@@ -33,6 +33,7 @@ import {
   type EenheidsPrijs,
   useGetFieContextCalculatie,
   getGetFieContextCalculatieQueryKey,
+  useListEnkBronbestanden,
 } from "@workspace/api-client-react";
 import AiChatPanel from "@/components/ai-chat-panel";
 import AiSeniorCalculatorPanel from "@/components/ai-senior-calculator-panel";
@@ -2030,6 +2031,11 @@ export default function ModulesCalculatieDetail() {
   const { data: inkoopItems = [] } = useListModCalcInkoopItems(id, { query: { queryKey: getListModCalcInkoopItemsQueryKey(id), enabled: id > 0 } });
   const { data: eenheden = [] } = useListModCalcEenheden(id, { query: { queryKey: getListModCalcEenhedenQueryKey(id), enabled: id > 0 } });
   const { data: offertes = [] } = (useListOffertes as any)({ calculatie_id: id }, { query: { enabled: id > 0 } });
+  const { data: bronbestanden = [] } = useListEnkBronbestanden(
+    { calculatie_id: id },
+    { query: { queryKey: ["enk-bronbestanden-calc", id], enabled: id > 0 } },
+  );
+  const bronbestand = bronbestanden[0];
   const maakEenheidMut    = useCreateModCalcEenheid({ mutation: { onSuccess: invalidate } });
   const updateEenheidMut  = useUpdateModCalcEenheid({ mutation: { onSuccess: invalidate } });
   const verwijderEenheidMut = useDeleteModCalcEenheid({ mutation: { onSuccess: invalidate } });
@@ -2463,7 +2469,7 @@ export default function ModulesCalculatieDetail() {
       </div>
 
       {/* Projectgegevens strip */}
-      {(data.referentie || (data as any).werknummer || data.klant_naam || data.project_naam || data.gebouw_naam || (data as any).opname_naam || data.aangemaakt_door_naam) && (
+      {(data.referentie || (data as any).werknummer || data.klant_naam || data.project_naam || data.gebouw_naam || (data as any).opname_naam || data.aangemaakt_door_naam || bronbestand) && (
         <div className="flex flex-wrap items-center gap-x-6 gap-y-1 px-6 py-2.5 border-b bg-muted/40 text-sm">
           {data.referentie && (
             <div className="flex gap-1.5 items-center">
@@ -2509,6 +2515,17 @@ export default function ModulesCalculatieDetail() {
             <div className="flex gap-1.5 items-center">
               <span className="text-muted-foreground text-xs">Opname:</span>
               <span className="font-medium">{(data as any).opname_naam}</span>
+            </div>
+          )}
+          {bronbestand && (
+            <div className="flex gap-1.5 items-center">
+              <span className="text-muted-foreground text-xs">Geïmporteerd uit:</span>
+              <Link href="/modules/calculatie/import" className="font-medium text-blue-600 hover:underline" title="Naar bronbestanden-bibliotheek">
+                {bronbestand.bestandsnaam}
+              </Link>
+              {bronbestand.calculatienummer && (
+                <span className="font-mono text-xs text-muted-foreground">({bronbestand.calculatienummer})</span>
+              )}
             </div>
           )}
           {data.aangemaakt_door_naam && (

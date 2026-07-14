@@ -14518,6 +14518,126 @@ paths:
                   concept_mail:
                     type: string
 
+  /modules/calculaties/import/analyse:
+    post:
+      operationId: analyseEnkImport
+      summary: ENK-calculatiebestand uploaden en analyseren (maakt nog geen calculatie aan)
+      tags: [CalulatieModule]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/EnkImportAnalyseInput'
+      responses:
+        '200':
+          description: Analyse gereed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnkImportAnalyse'
+        '400':
+          description: Ongeldige invoer
+        '422':
+          description: Bestand kon niet als ENK-calculatie worden uitgelezen
+        '503':
+          description: Bestandsopslag niet beschikbaar
+
+  /modules/calculaties/import/bronbestanden:
+    get:
+      operationId: listEnkBronbestanden
+      summary: ENK-bronbestanden (bibliotheek) ophalen
+      tags: [CalulatieModule]
+      parameters:
+        - in: query
+          name: zoek
+          schema:
+            type: string
+        - in: query
+          name: calculatie_id
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EnkBronbestand'
+
+  /modules/calculaties/import/{id}/analyse:
+    get:
+      operationId: getEnkImportAnalyse
+      summary: Opgeslagen analyse van een ENK-bronbestand ophalen
+      tags: [CalulatieModule]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnkImportAnalyse'
+        '404':
+          description: Niet gevonden
+
+  /modules/calculaties/import/{id}/bevestig:
+    post:
+      operationId: bevestigEnkImport
+      summary: Geanalyseerd ENK-bronbestand bevestigen en calculatie aanmaken
+      tags: [CalulatieModule]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EnkImportBevestigInput'
+      responses:
+        '201':
+          description: Calculatie aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnkImportBevestigResultaat'
+        '404':
+          description: Niet gevonden
+        '409':
+          description: Bronbestand is al verwerkt
+
+  /modules/calculaties/import/{id}/hergebruik:
+    post:
+      operationId: hergebruikEnkBronbestand
+      summary: Bestaand bronbestand hergebruiken voor een nieuwe import (kopieert de analyse)
+      tags: [CalulatieModule]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Nieuwe analyse gereed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnkImportAnalyse'
+        '404':
+          description: Niet gevonden
+
   /eenheidsprijzen:
     get:
       operationId: listEenheidsprijzen
@@ -34917,6 +35037,238 @@ components:
         toepassing_tekst:
           type: string
           nullable: true
+
+    EnkImportAnalyseInput:
+      type: object
+      required: [bestand]
+      properties:
+        bestand:
+          type: string
+          format: binary
+
+    EnkImportRegel:
+      type: object
+      required: [omschrijving, hoeveelheid, eenheid, totaal_centen]
+      properties:
+        omschrijving:
+          type: string
+        hoeveelheid:
+          type: number
+        eenheid:
+          type: string
+        totaal_centen:
+          type: integer
+        opmerkingen:
+          type: string
+          nullable: true
+        is_bouwplaatskosten:
+          type: boolean
+
+    EnkImportHoofdstuk:
+      type: object
+      required: [naam, som_regels_centen, regels]
+      properties:
+        naam:
+          type: string
+        totaal_enk_centen:
+          type: integer
+          nullable: true
+        som_regels_centen:
+          type: integer
+        regels:
+          type: array
+          items:
+            $ref: '#/components/schemas/EnkImportRegel'
+
+    EnkImportOpslagen:
+      type: object
+      required: [materiaal, arbeid, ak, abk, risico, winst, korting]
+      properties:
+        materiaal:
+          type: number
+        arbeid:
+          type: number
+        ak:
+          type: number
+        abk:
+          type: number
+        risico:
+          type: number
+        winst:
+          type: number
+        korting:
+          type: number
+
+    EnkImportDuplicaat:
+      type: object
+      required: [bronbestand_id, bestandsnaam, reden]
+      properties:
+        bronbestand_id:
+          type: integer
+        bestandsnaam:
+          type: string
+        reden:
+          type: string
+        calculatie_id:
+          type: integer
+          nullable: true
+        aangemaakt_op:
+          type: string
+          nullable: true
+
+    EnkImportAnalyse:
+      type: object
+      required: [bronbestand_id, bestandsnaam, bron_type, voorstel_naam, hoofdstukken, opslagen, opslagen_bron, verwerking_advies, totaal_connect_centen, verschil_centen, duplicaten, waarschuwingen, bewijs, ai_gebruikt]
+      properties:
+        bronbestand_id:
+          type: integer
+        bestandsnaam:
+          type: string
+        bron_type:
+          type: string
+        calculatienummer:
+          type: string
+          nullable: true
+        projectnummer:
+          type: string
+          nullable: true
+        voorstel_naam:
+          type: string
+        opdrachtgever:
+          type: string
+          nullable: true
+        datum:
+          type: string
+          nullable: true
+        hoofdstukken:
+          type: array
+          items:
+            $ref: '#/components/schemas/EnkImportHoofdstuk'
+        opslagen:
+          $ref: '#/components/schemas/EnkImportOpslagen'
+        opslagen_bron:
+          type: string
+          enum: [gedetecteerd, standaard]
+        verwerking_advies:
+          type: string
+          enum: [inclusief, bovenop]
+        totaal_enk_centen:
+          type: integer
+          nullable: true
+        totaal_connect_centen:
+          type: integer
+        verschil_centen:
+          type: integer
+        duplicaten:
+          type: array
+          items:
+            $ref: '#/components/schemas/EnkImportDuplicaat'
+        waarschuwingen:
+          type: array
+          items:
+            type: string
+        bewijs:
+          type: array
+          items:
+            type: string
+        ai_gebruikt:
+          type: boolean
+
+    EnkImportBevestigInput:
+      type: object
+      required: [verwerking, totaal_keuze, opslagen]
+      properties:
+        naam:
+          type: string
+        klant_naam:
+          type: string
+          nullable: true
+        project_naam:
+          type: string
+          nullable: true
+        werknummer:
+          type: string
+          nullable: true
+        referentie:
+          type: string
+          nullable: true
+        gebouw_id:
+          type: integer
+          nullable: true
+        verwerking:
+          type: string
+          enum: [inclusief, bovenop]
+        opslagen:
+          $ref: '#/components/schemas/EnkImportOpslagen'
+        totaal_keuze:
+          type: string
+          enum: [connect, enk]
+
+    EnkImportBevestigResultaat:
+      type: object
+      required: [calculatie_id, totaal_connect_centen, verschil_centen, correctieregel_toegevoegd]
+      properties:
+        calculatie_id:
+          type: integer
+        totaal_enk_centen:
+          type: integer
+          nullable: true
+        totaal_connect_centen:
+          type: integer
+        verschil_centen:
+          type: integer
+        correctieregel_toegevoegd:
+          type: boolean
+
+    EnkBronbestand:
+      type: object
+      required: [id, bestandsnaam, bestandsgrootte, sha256, bron_type, status, object_path, aangemaakt_op]
+      properties:
+        id:
+          type: integer
+        bestandsnaam:
+          type: string
+        bestandsgrootte:
+          type: integer
+        sha256:
+          type: string
+        mime:
+          type: string
+        bron_type:
+          type: string
+        calculatienummer:
+          type: string
+          nullable: true
+        projectnummer:
+          type: string
+          nullable: true
+        opdrachtgever:
+          type: string
+          nullable: true
+        status:
+          type: string
+        gekozen_verwerking:
+          type: string
+          nullable: true
+        totaal_keuze:
+          type: string
+          nullable: true
+        totaal_enk_centen:
+          type: integer
+          nullable: true
+        calculatie_id:
+          type: integer
+          nullable: true
+        calculatie_naam:
+          type: string
+          nullable: true
+        uploader_naam:
+          type: string
+          nullable: true
+        object_path:
+          type: string
+        aangemaakt_op:
+          type: string
 
     ModCalcInkoopItem:
       type: object

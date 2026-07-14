@@ -17385,6 +17385,235 @@ export const GenerateRfqConceptMailResponse = zod.object({
 
 
 /**
+ * @summary ENK-calculatiebestand uploaden en analyseren (maakt nog geen calculatie aan)
+ */
+export const AnalyseEnkImportBody = zod.object({
+  "bestand": zod.instanceof(File)
+})
+
+export const AnalyseEnkImportResponse = zod.object({
+  "bronbestand_id": zod.number(),
+  "bestandsnaam": zod.string(),
+  "bron_type": zod.string(),
+  "calculatienummer": zod.string().nullish(),
+  "projectnummer": zod.string().nullish(),
+  "voorstel_naam": zod.string(),
+  "opdrachtgever": zod.string().nullish(),
+  "datum": zod.string().nullish(),
+  "hoofdstukken": zod.array(zod.object({
+  "naam": zod.string(),
+  "totaal_enk_centen": zod.number().nullish(),
+  "som_regels_centen": zod.number(),
+  "regels": zod.array(zod.object({
+  "omschrijving": zod.string(),
+  "hoeveelheid": zod.number(),
+  "eenheid": zod.string(),
+  "totaal_centen": zod.number(),
+  "opmerkingen": zod.string().nullish(),
+  "is_bouwplaatskosten": zod.boolean().optional()
+}))
+})),
+  "opslagen": zod.object({
+  "materiaal": zod.number(),
+  "arbeid": zod.number(),
+  "ak": zod.number(),
+  "abk": zod.number(),
+  "risico": zod.number(),
+  "winst": zod.number(),
+  "korting": zod.number()
+}),
+  "opslagen_bron": zod.enum(['gedetecteerd', 'standaard']),
+  "verwerking_advies": zod.enum(['inclusief', 'bovenop']),
+  "totaal_enk_centen": zod.number().nullish(),
+  "totaal_connect_centen": zod.number(),
+  "verschil_centen": zod.number(),
+  "duplicaten": zod.array(zod.object({
+  "bronbestand_id": zod.number(),
+  "bestandsnaam": zod.string(),
+  "reden": zod.string(),
+  "calculatie_id": zod.number().nullish(),
+  "aangemaakt_op": zod.string().nullish()
+})),
+  "waarschuwingen": zod.array(zod.string()),
+  "bewijs": zod.array(zod.string()),
+  "ai_gebruikt": zod.boolean()
+})
+
+
+/**
+ * @summary ENK-bronbestanden (bibliotheek) ophalen
+ */
+export const ListEnkBronbestandenQueryParams = zod.object({
+  "zoek": zod.coerce.string().optional(),
+  "calculatie_id": zod.coerce.number().optional()
+})
+
+export const ListEnkBronbestandenResponseItem = zod.object({
+  "id": zod.number(),
+  "bestandsnaam": zod.string(),
+  "bestandsgrootte": zod.number(),
+  "sha256": zod.string(),
+  "mime": zod.string().optional(),
+  "bron_type": zod.string(),
+  "calculatienummer": zod.string().nullish(),
+  "projectnummer": zod.string().nullish(),
+  "opdrachtgever": zod.string().nullish(),
+  "status": zod.string(),
+  "gekozen_verwerking": zod.string().nullish(),
+  "totaal_keuze": zod.string().nullish(),
+  "totaal_enk_centen": zod.number().nullish(),
+  "calculatie_id": zod.number().nullish(),
+  "calculatie_naam": zod.string().nullish(),
+  "uploader_naam": zod.string().nullish(),
+  "object_path": zod.string(),
+  "aangemaakt_op": zod.string()
+})
+export const ListEnkBronbestandenResponse = zod.array(ListEnkBronbestandenResponseItem)
+
+
+/**
+ * @summary Opgeslagen analyse van een ENK-bronbestand ophalen
+ */
+export const GetEnkImportAnalyseParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetEnkImportAnalyseResponse = zod.object({
+  "bronbestand_id": zod.number(),
+  "bestandsnaam": zod.string(),
+  "bron_type": zod.string(),
+  "calculatienummer": zod.string().nullish(),
+  "projectnummer": zod.string().nullish(),
+  "voorstel_naam": zod.string(),
+  "opdrachtgever": zod.string().nullish(),
+  "datum": zod.string().nullish(),
+  "hoofdstukken": zod.array(zod.object({
+  "naam": zod.string(),
+  "totaal_enk_centen": zod.number().nullish(),
+  "som_regels_centen": zod.number(),
+  "regels": zod.array(zod.object({
+  "omschrijving": zod.string(),
+  "hoeveelheid": zod.number(),
+  "eenheid": zod.string(),
+  "totaal_centen": zod.number(),
+  "opmerkingen": zod.string().nullish(),
+  "is_bouwplaatskosten": zod.boolean().optional()
+}))
+})),
+  "opslagen": zod.object({
+  "materiaal": zod.number(),
+  "arbeid": zod.number(),
+  "ak": zod.number(),
+  "abk": zod.number(),
+  "risico": zod.number(),
+  "winst": zod.number(),
+  "korting": zod.number()
+}),
+  "opslagen_bron": zod.enum(['gedetecteerd', 'standaard']),
+  "verwerking_advies": zod.enum(['inclusief', 'bovenop']),
+  "totaal_enk_centen": zod.number().nullish(),
+  "totaal_connect_centen": zod.number(),
+  "verschil_centen": zod.number(),
+  "duplicaten": zod.array(zod.object({
+  "bronbestand_id": zod.number(),
+  "bestandsnaam": zod.string(),
+  "reden": zod.string(),
+  "calculatie_id": zod.number().nullish(),
+  "aangemaakt_op": zod.string().nullish()
+})),
+  "waarschuwingen": zod.array(zod.string()),
+  "bewijs": zod.array(zod.string()),
+  "ai_gebruikt": zod.boolean()
+})
+
+
+/**
+ * @summary Geanalyseerd ENK-bronbestand bevestigen en calculatie aanmaken
+ */
+export const BevestigEnkImportParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const BevestigEnkImportBody = zod.object({
+  "naam": zod.string().optional(),
+  "klant_naam": zod.string().nullish(),
+  "project_naam": zod.string().nullish(),
+  "werknummer": zod.string().nullish(),
+  "referentie": zod.string().nullish(),
+  "gebouw_id": zod.number().nullish(),
+  "verwerking": zod.enum(['inclusief', 'bovenop']),
+  "opslagen": zod.object({
+  "materiaal": zod.number(),
+  "arbeid": zod.number(),
+  "ak": zod.number(),
+  "abk": zod.number(),
+  "risico": zod.number(),
+  "winst": zod.number(),
+  "korting": zod.number()
+}),
+  "totaal_keuze": zod.enum(['connect', 'enk'])
+})
+
+export const BevestigEnkImportResponse = zod.void()
+
+
+/**
+ * @summary Bestaand bronbestand hergebruiken voor een nieuwe import (kopieert de analyse)
+ */
+export const HergebruikEnkBronbestandParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const HergebruikEnkBronbestandResponse = zod.object({
+  "bronbestand_id": zod.number(),
+  "bestandsnaam": zod.string(),
+  "bron_type": zod.string(),
+  "calculatienummer": zod.string().nullish(),
+  "projectnummer": zod.string().nullish(),
+  "voorstel_naam": zod.string(),
+  "opdrachtgever": zod.string().nullish(),
+  "datum": zod.string().nullish(),
+  "hoofdstukken": zod.array(zod.object({
+  "naam": zod.string(),
+  "totaal_enk_centen": zod.number().nullish(),
+  "som_regels_centen": zod.number(),
+  "regels": zod.array(zod.object({
+  "omschrijving": zod.string(),
+  "hoeveelheid": zod.number(),
+  "eenheid": zod.string(),
+  "totaal_centen": zod.number(),
+  "opmerkingen": zod.string().nullish(),
+  "is_bouwplaatskosten": zod.boolean().optional()
+}))
+})),
+  "opslagen": zod.object({
+  "materiaal": zod.number(),
+  "arbeid": zod.number(),
+  "ak": zod.number(),
+  "abk": zod.number(),
+  "risico": zod.number(),
+  "winst": zod.number(),
+  "korting": zod.number()
+}),
+  "opslagen_bron": zod.enum(['gedetecteerd', 'standaard']),
+  "verwerking_advies": zod.enum(['inclusief', 'bovenop']),
+  "totaal_enk_centen": zod.number().nullish(),
+  "totaal_connect_centen": zod.number(),
+  "verschil_centen": zod.number(),
+  "duplicaten": zod.array(zod.object({
+  "bronbestand_id": zod.number(),
+  "bestandsnaam": zod.string(),
+  "reden": zod.string(),
+  "calculatie_id": zod.number().nullish(),
+  "aangemaakt_op": zod.string().nullish()
+})),
+  "waarschuwingen": zod.array(zod.string()),
+  "bewijs": zod.array(zod.string()),
+  "ai_gebruikt": zod.boolean()
+})
+
+
+/**
  * @summary Eenheidsprijzen ophalen
  */
 export const ListEenheidsprijzenQueryParams = zod.object({

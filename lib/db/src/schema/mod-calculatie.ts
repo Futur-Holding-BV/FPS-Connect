@@ -128,6 +128,30 @@ export const modCalcVersiesTable = pgTable("mod_calc_versies", {
   aangemaaktDoorId: integer("aangemaakt_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
 });
 
+// ENK-bronbestanden: geüploade ENK-calculatiebestanden (PDF/Excel/CSV) met parse-resultaat.
+// Statusflow: geanalyseerd → verwerkt | fout. parseResultaat bevat de canonieke bedragen in
+// centen-integers (DB-geldkolommen zijn real/float4 en dus niet autoritair).
+export const modCalcBronbestandenTable = pgTable("mod_calc_bronbestanden", {
+  id: serial("id").primaryKey(),
+  bestandsnaam: text("bestandsnaam").notNull(),
+  bestandsgrootte: integer("bestandsgrootte").notNull().default(0),
+  sha256: text("sha256").notNull(),
+  mime: text("mime").notNull().default("application/pdf"),
+  objectPath: text("object_path").notNull(),
+  bronType: text("bron_type").notNull().default("enk_pdf"), // enk_pdf | excel | csv
+  calculatienummer: text("calculatienummer"),
+  projectnummer: text("projectnummer"),
+  opdrachtgever: text("opdrachtgever"),
+  status: text("status").notNull().default("geanalyseerd"), // geanalyseerd | verwerkt | fout
+  parseResultaat: jsonb("parse_resultaat").$type<Record<string, unknown>>(),
+  gekozenVerwerking: text("gekozen_verwerking"), // inclusief | bovenop (audit van de opslagen-keuze)
+  totaalKeuze: text("totaal_keuze"), // connect | enk (audit van de totaalkeuze)
+  calculatieId: integer("calculatie_id").references(() => modCalcHeadersTable.id, { onDelete: "set null" }),
+  uploaderId: integer("uploader_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+  bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+});
+
 // Adviezen van de AI Senior Calculator per calculatie-run
 export const modCalcAdviezenTable = pgTable("mod_calc_adviezen", {
   id: serial("id").primaryKey(),

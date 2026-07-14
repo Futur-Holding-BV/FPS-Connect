@@ -21,7 +21,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Plus, Search, MoreHorizontal, Copy, Trash2, Calculator, TrendingUp, Building2,
-  ArrowRight,
+  ArrowRight, FileUp,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
@@ -104,6 +104,10 @@ export default function ModulesCalculatie() {
           </p>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" onClick={() => navigate("/modules/calculatie/import")}>
+            <FileUp className="h-4 w-4 mr-2" />
+            ENK-import
+          </Button>
           <Button variant="outline" onClick={() => navigate("/modules/calculatie/leveranciers")}>
             <Building2 className="h-4 w-4 mr-2" />
             Leveranciers & artikelen

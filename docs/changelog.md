@@ -1,3 +1,17 @@
+## 2026-07-14 — ENK-import in de calculatiemodule (upload → controle → calculatie)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** middel
+
+Nieuwe importflow waarmee een ENK-begroting (PDF, Excel of CSV) direct als Connect-calculatie wordt ingelezen, inclusief controlescherm en totaalvergelijking.
+
+**Gebouwd:**
+1. **Backend** (`mod-calculatie-import.ts` + `lib/enkImport.ts`): analyse-endpoint parseert ENK-PDF's (kopgegevens, hoofdstukken, regels) en Excel/CSV-varianten; bevestig-endpoint maakt de calculatie aan; hergebruik-endpoint maakt een nieuwe import van een bestaand bronbestand; bronbestanden-bibliotheek met zoekfilter en importlog. Duplicaatdetectie op identiek bestand (hash) én op hetzelfde ENK-calculatienummer; tweede bevestiging van dezelfde analyse geeft 409.
+2. **Totaalvergelijking ENK/Connect:** ENK rekent op regelniveau soms met andere afronding dan Connect (voorbeeldbestand: ENK € 165.463,74 vs Connect € 165.463,73). De gebruiker kiest welk totaal leidend is; bij keuze "ENK-totaal" wordt het verschil als **zichtbare correctieregel** opgenomen zodat de calculatie exact op het ENK-totaal uitkomt — geen stille aanpassing van regelbedragen.
+3. **Frontend** (`modules/calculatie/import.tsx`): dropzone (pdf/csv/xlsx/xls, max 25 MB), controlescherm met herkende gegevens, hoofdstukken-tabellen, verwerkingskeuze (opslagen inclusief in regelprijzen of bovenop), live totaalvergelijking, keuzeblok met correctieregel-uitleg, waarschuwingen/duplicaten/bewijs. Entry-knop "ENK-import" op het calculatie-overzicht; detailpagina toont "Geïmporteerd uit: bestand (nummer)".
+4. **Bewijs:** `scripts/src/verificatie-enk-import.ts` (8 API-stappen, allemaal groen, incl. DB-verificatie van de correctieregel van € 0,01) en Playwright-UI-test `scripts/e2e/web-enk-import.spec.ts` (volledige browserflow met echte PDF: upload → controlescherm → aanmaken → detailpagina + DB-bewijs) — beide geslaagd. Volledige typecheck groen.
+
+---
+
 ## 2026-07-14 — Productie-noodfix: MinIO crash-loop (plattegronden niet zichtbaar)
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** hoog (was)

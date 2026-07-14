@@ -51,7 +51,7 @@ type RegelCalcInput = {
   totaal: number;
 };
 
-function berekenTotalen(
+export function berekenTotalen(
   regels: RegelCalcInput[],
   header: {
     opslagMateriaal: number;

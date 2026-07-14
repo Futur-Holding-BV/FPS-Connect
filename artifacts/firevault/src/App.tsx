@@ -200,6 +200,7 @@ import LoonOutputPagina from "@/pages/loon-output/index";
 import BerichtenPagina from "@/pages/berichten/index";
 import ModulesCalculatie from "@/pages/modules/calculatie/index";
 import ModulesCalculatieNieuw from "@/pages/modules/calculatie/nieuw";
+import ModulesCalculatieImport from "@/pages/modules/calculatie/import";
 import ModulesCalculatieDetail from "@/pages/modules/calculatie/detail";
 import ModulesCalculatieLeveranciers from "@/pages/modules/calculatie/leveranciers";
 import ModulesCalculatieEenheidsprijzen from "@/pages/modules/calculatie/eenheidsprijzen";
@@ -329,6 +330,10 @@ function ConnectPortal() {
         <Route
           path="/modules/calculatie/nieuw"
           component={featureFlags.calculatie ? ModulesCalculatieNieuw : CalculatieNietBeschikbaar}
+        />
+        <Route
+          path="/modules/calculatie/import"
+          component={featureFlags.calculatie ? ModulesCalculatieImport : CalculatieNietBeschikbaar}
         />
         <Route
           path="/modules/calculatie/leveranciers"

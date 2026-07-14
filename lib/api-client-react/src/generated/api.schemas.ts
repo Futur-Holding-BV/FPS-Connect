@@ -8424,6 +8424,139 @@ export interface ModCalcRegelInput {
   toepassing_tekst?: string | null;
 }
 
+export interface EnkImportAnalyseInput {
+  bestand: Blob;
+}
+
+export interface EnkImportRegel {
+  omschrijving: string;
+  hoeveelheid: number;
+  eenheid: string;
+  totaal_centen: number;
+  opmerkingen?: string | null;
+  is_bouwplaatskosten?: boolean;
+}
+
+export interface EnkImportHoofdstuk {
+  naam: string;
+  totaal_enk_centen?: number | null;
+  som_regels_centen: number;
+  regels: EnkImportRegel[];
+}
+
+export interface EnkImportOpslagen {
+  materiaal: number;
+  arbeid: number;
+  ak: number;
+  abk: number;
+  risico: number;
+  winst: number;
+  korting: number;
+}
+
+export interface EnkImportDuplicaat {
+  bronbestand_id: number;
+  bestandsnaam: string;
+  reden: string;
+  calculatie_id?: number | null;
+  aangemaakt_op?: string | null;
+}
+
+export type EnkImportAnalyseOpslagenBron = typeof EnkImportAnalyseOpslagenBron[keyof typeof EnkImportAnalyseOpslagenBron];
+
+
+export const EnkImportAnalyseOpslagenBron = {
+  gedetecteerd: 'gedetecteerd',
+  standaard: 'standaard',
+} as const;
+
+export type EnkImportAnalyseVerwerkingAdvies = typeof EnkImportAnalyseVerwerkingAdvies[keyof typeof EnkImportAnalyseVerwerkingAdvies];
+
+
+export const EnkImportAnalyseVerwerkingAdvies = {
+  inclusief: 'inclusief',
+  bovenop: 'bovenop',
+} as const;
+
+export interface EnkImportAnalyse {
+  bronbestand_id: number;
+  bestandsnaam: string;
+  bron_type: string;
+  calculatienummer?: string | null;
+  projectnummer?: string | null;
+  voorstel_naam: string;
+  opdrachtgever?: string | null;
+  datum?: string | null;
+  hoofdstukken: EnkImportHoofdstuk[];
+  opslagen: EnkImportOpslagen;
+  opslagen_bron: EnkImportAnalyseOpslagenBron;
+  verwerking_advies: EnkImportAnalyseVerwerkingAdvies;
+  totaal_enk_centen?: number | null;
+  totaal_connect_centen: number;
+  verschil_centen: number;
+  duplicaten: EnkImportDuplicaat[];
+  waarschuwingen: string[];
+  bewijs: string[];
+  ai_gebruikt: boolean;
+}
+
+export type EnkImportBevestigInputVerwerking = typeof EnkImportBevestigInputVerwerking[keyof typeof EnkImportBevestigInputVerwerking];
+
+
+export const EnkImportBevestigInputVerwerking = {
+  inclusief: 'inclusief',
+  bovenop: 'bovenop',
+} as const;
+
+export type EnkImportBevestigInputTotaalKeuze = typeof EnkImportBevestigInputTotaalKeuze[keyof typeof EnkImportBevestigInputTotaalKeuze];
+
+
+export const EnkImportBevestigInputTotaalKeuze = {
+  connect: 'connect',
+  enk: 'enk',
+} as const;
+
+export interface EnkImportBevestigInput {
+  naam?: string;
+  klant_naam?: string | null;
+  project_naam?: string | null;
+  werknummer?: string | null;
+  referentie?: string | null;
+  gebouw_id?: number | null;
+  verwerking: EnkImportBevestigInputVerwerking;
+  opslagen: EnkImportOpslagen;
+  totaal_keuze: EnkImportBevestigInputTotaalKeuze;
+}
+
+export interface EnkImportBevestigResultaat {
+  calculatie_id: number;
+  totaal_enk_centen?: number | null;
+  totaal_connect_centen: number;
+  verschil_centen: number;
+  correctieregel_toegevoegd: boolean;
+}
+
+export interface EnkBronbestand {
+  id: number;
+  bestandsnaam: string;
+  bestandsgrootte: number;
+  sha256: string;
+  mime?: string;
+  bron_type: string;
+  calculatienummer?: string | null;
+  projectnummer?: string | null;
+  opdrachtgever?: string | null;
+  status: string;
+  gekozen_verwerking?: string | null;
+  totaal_keuze?: string | null;
+  totaal_enk_centen?: number | null;
+  calculatie_id?: number | null;
+  calculatie_naam?: string | null;
+  uploader_naam?: string | null;
+  object_path: string;
+  aangemaakt_op: string;
+}
+
 export interface ModCalcInkoopItem {
   id: number;
   calculatie_id: number;
@@ -14121,6 +14254,11 @@ export type AiModCalcRegels200 = {
 
 export type GenerateRfqConceptMail200 = {
   concept_mail: string;
+};
+
+export type ListEnkBronbestandenParams = {
+zoek?: string;
+calculatie_id?: number;
 };
 
 export type ListEenheidsprijzenParams = {
