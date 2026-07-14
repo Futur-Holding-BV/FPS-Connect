@@ -23,7 +23,7 @@ import {
   magAutomatischKoppelen,
 } from "../lib/herkomst";
 import { maakGebruikerAan, isEmailConflictFout } from "../lib/gebruiker-aanmaken";
-import { haalFunctieBevoegdhedenVoorGebruiker } from "../lib/functie-bevoegdheden";
+import { berekenEffectieveBevoegdheden } from "../lib/effectieve-bevoegdheden";
 import { beeindigSessiesVanGebruiker } from "../lib/session";
 import { genereerTijdelijkWachtwoord } from "../lib/wachtwoord";
 import { logAudit } from "../lib/audit";
@@ -226,8 +226,11 @@ async function isBeheerder(userId: number | undefined): Promise<boolean> {
     .where(eq(gebruikersTable.id, userId));
   if (!g) return false;
   if (g.rol === "hoofdbeheerder") return true;
-  const bev = (g.bevoegdheden as Record<string, number> | null) ?? {};
-  return heeftNiveau(bev, "gebruikers", 1);
+  const { berekenEffectieveBevoegdhedenBatch } = await import("../lib/effectieve-bevoegdheden");
+  const kaart = await berekenEffectieveBevoegdhedenBatch([
+    { id: userId, rol: g.rol, storedBevoegdheden: g.bevoegdheden },
+  ]);
+  return heeftNiveau(kaart.get(userId) ?? {}, "gebruikers", 1);
 }
 
 function domein(): string {
@@ -397,8 +400,14 @@ router.get("/gebruikers/:id", async (req, res): Promise<void> => {
     // Beheerders en het eigen account zien volledige gegevens; anderen alleen veilig.
     const volledig = id === req.session.userId || (await isBeheerder(req.session.userId));
     if (!volledig) return void res.json(mapGebruikerPubliek(g));
-    const koppel = await profielIdsPerGebruiker([id]);
-    res.json(mapGebruiker(g, koppel.get(id) ?? []));
+    const [koppel, effectieveBev] = await Promise.all([
+      profielIdsPerGebruiker([id]),
+      berekenEffectieveBevoegdheden(id),
+    ]);
+    res.json({
+      ...mapGebruiker(g, koppel.get(id) ?? []),
+      effectieve_bevoegdheden: effectieveBev,
+    });
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });
@@ -500,14 +509,9 @@ router.patch("/gebruikers/:id", alleenBeheerder, async (req, res): Promise<void>
           }
         }
       }
-      // Increment 4: functie-afgeleide profielen toevoegen ná de escalatiecheck,
-      // zodat de opgeslagen matrix de werkelijke effectieve rechten weerspiegelt.
-      // Functie-profielen worden niet door de beheerder toegewezen maar door het
-      // functiehuis bepaald; ze vallen buiten de zelf-escalatiebeveiliging.
-      const functieBev = await haalFunctieBevoegdhedenVoorGebruiker(id);
-      if (functieBev.length > 0) {
-        nieuweMatrix = combineerBevoegdheden([nieuweMatrix, ...functieBev]);
-      }
+      // Functie-profielen worden op-het-vlak berekend (berekenEffectieveBevoegdhedenBatch)
+      // en NIET in de stored matrix opgeslagen — anders zou de on-the-fly berekening
+      // ze dubbel meenemen. De stored matrix bevat uitsluitend expliciet toegewezen rechten.
       wijziging.bevoegdheden = nieuweMatrix;
     }
     // Herkomst (preset) alleen wijzigen wanneer expliciet meegestuurd: null wist

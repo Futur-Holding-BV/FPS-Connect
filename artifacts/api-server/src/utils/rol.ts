@@ -1,11 +1,8 @@
 import type { Request } from "express";
 import { db, gebruikersTable, gebouwToewijzingenTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
-import {
-  niveauVan,
-  bevoegdhedenVoorLegacyRol,
-  type Bevoegdheden,
-} from "@workspace/permissies";
+import { niveauVan, type Bevoegdheden } from "@workspace/permissies";
+import { berekenEffectieveBevoegdhedenBatch } from "../lib/effectieve-bevoegdheden";
 
 async function gebruikerVan(
   userId: number,
@@ -19,21 +16,14 @@ async function gebruikerVan(
     .from(gebruikersTable)
     .where(eq(gebruikersTable.id, userId));
   if (!g) return null;
+  const kaart = await berekenEffectieveBevoegdhedenBatch([
+    { id: userId, rol: g.rol, storedBevoegdheden: g.bevoegdheden },
+  ]);
   return {
     rol: g.rol,
     actief: g.actief,
-    bevoegdheden: effectieveBevoegdheden(g.rol, g.bevoegdheden),
+    bevoegdheden: kaart.get(userId) ?? {},
   };
-}
-
-// Leidt de effectieve bevoegdheden-matrix af voor een gebruiker, identiek aan de
-// requireBevoegdheid-middleware: klant heeft geen interne toegang; niet-gemigreerde
-// accounts (lege matrix) vallen terug op de legacy-rolvertaling.
-function effectieveBevoegdheden(rol: string, ruwe: unknown): Bevoegdheden {
-  if (rol === "klant") return {};
-  const bev = (ruwe as Bevoegdheden | null) ?? {};
-  if (Object.keys(bev).length === 0) return bevoegdhedenVoorLegacyRol(rol);
-  return bev;
 }
 
 // Drempel voor projectbrede gebouwtoegang: wie de gebouwen-module mag beheren

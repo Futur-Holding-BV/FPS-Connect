@@ -27,6 +27,7 @@ import {
 } from "@workspace/db";
 import { and, eq, or, isNull, desc, inArray, sql } from "drizzle-orm";
 import { heeftNiveau, MODULE_IDS, type ModuleId } from "@workspace/permissies";
+import { berekenEffectieveBevoegdhedenBatch } from "../lib/effectieve-bevoegdheden";
 import { logAudit } from "../lib/audit";
 import { workflowService } from "./workflow-engine";
 import { logger } from "../lib/logger";
@@ -266,10 +267,13 @@ export async function maakGoedkeuringActor(
     .from(gebruikersTable)
     .where(eq(gebruikersTable.id, gebruikerId));
   if (!g) return null;
+  const kaart = await berekenEffectieveBevoegdhedenBatch([
+    { id: gebruikerId, rol: g.rol, storedBevoegdheden: g.bevoegdheden },
+  ]);
   return {
     gebruikerId,
     gebruikerNaam: g.naam ?? null,
-    bevoegdheden: (g.bevoegdheden as Record<string, number> | null) ?? {},
+    bevoegdheden: kaart.get(gebruikerId) ?? {},
     isHoofdbeheerder: g.rol === "hoofdbeheerder",
   };
 }
@@ -695,9 +699,12 @@ export async function dienIn(
         .where(eq(gebruikersTable.actief, true));
       const moduleId = regel.goedkeurderModule as ModuleId;
       const minNiveau = regel.goedkeurderMinNiveau;
+      const effectief = await berekenEffectieveBevoegdhedenBatch(
+        alleGebruikers.map((g) => ({ id: g.id, rol: g.rol, storedBevoegdheden: g.bevoegdheden })),
+      );
       for (const g of alleGebruikers) {
         const isHb = g.rol === "hoofdbeheerder";
-        const bev = (g.bevoegdheden as Record<string, number> | null) ?? {};
+        const bev = effectief.get(g.id) ?? {};
         if (isHb || heeftNiveau(bev, moduleId, minNiveau)) {
           ontvangerIds.push(g.id);
         }

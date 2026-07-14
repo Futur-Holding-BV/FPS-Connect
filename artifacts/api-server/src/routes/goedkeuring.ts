@@ -720,18 +720,8 @@ router.post(
       const FINANCIELE_TYPES = new Set(["inkoop_factuur", "verkoop_factuur", "creditnota", "prijsafwijking"]);
       let effectiefDocumentType = documentType;
       if (FINANCIELE_TYPES.has(objectType)) {
-        // (a) Bevoegdheidscheck financieel:1
-        const userId = req.session?.userId as number | undefined;
-        if (!userId) { res.status(401).json({ error: "Niet ingelogd" }); return; }
-        const [gebruiker] = await db
-          .select({ rol: gebruikersTable.rol, bevoegdheden: gebruikersTable.bevoegdheden })
-          .from(gebruikersTable)
-          .where(eq(gebruikersTable.id, userId))
-          .limit(1);
-        if (!gebruiker) { res.status(403).json({ error: "Geen toegang" }); return; }
-        const isHoofdbeheerder = gebruiker.rol === "hoofdbeheerder";
-        const bev = (gebruiker.bevoegdheden as Record<string, number> | null) ?? {};
-        if (!isHoofdbeheerder && !heeftNiveau(bev, "financieel", 1)) {
+        // (a) Bevoegdheidscheck financieel:1 — via centrale PermissieService
+        if (!req.permissies!.isHoofdbeheerder && !req.permissies!.heeftModuleRecht("financieel", 1)) {
           res.status(403).json({ error: "Financieel module-toegang vereist voor dit type goedkeuringsaanvraag" });
           return;
         }

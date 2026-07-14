@@ -4,6 +4,7 @@
 // De melding wordt maximaal éénmaal per rapport verstuurd (reactietermijn_melding_verzond_op).
 import { db, opleverrapportenTable, gebouwenTable, gebruikersTable } from "@workspace/db";
 import { eq, and, isNotNull, isNull, lt } from "drizzle-orm";
+import { berekenEffectieveBevoegdhedenBatch } from "./effectieve-bevoegdheden";
 import { logger } from "./logger";
 import { stuurReactietermijnMelding } from "../services/email";
 
@@ -53,13 +54,23 @@ async function haalVerstrekenRapporten(): Promise<VerstrekenRapport[]> {
 
 async function haalBeheerderOntvangers(): Promise<Array<{ naam: string; email: string }>> {
   const gebruikers = await db
-    .select({ naam: gebruikersTable.naam, email: gebruikersTable.email, bevoegdheden: gebruikersTable.bevoegdheden })
+    .select({
+      id: gebruikersTable.id,
+      naam: gebruikersTable.naam,
+      email: gebruikersTable.email,
+      rol: gebruikersTable.rol,
+      bevoegdheden: gebruikersTable.bevoegdheden,
+    })
     .from(gebruikersTable)
     .where(and(eq(gebruikersTable.actief, true), eq(gebruikersTable.gearchiveerd, false)));
 
+  const effectief = await berekenEffectieveBevoegdhedenBatch(
+    gebruikers.map((g) => ({ id: g.id, rol: g.rol, storedBevoegdheden: g.bevoegdheden })),
+  );
+
   return gebruikers.filter((g) => {
-    const bev = g.bevoegdheden as Record<string, number> | null;
-    return (bev?.["rapportages"] ?? 0) >= 2 && g.email;
+    const bev = effectief.get(g.id) ?? {};
+    return (bev["rapportages"] ?? 0) >= 2 && g.email;
   }) as Array<{ naam: string; email: string }>;
 }
 

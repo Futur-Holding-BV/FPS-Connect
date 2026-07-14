@@ -417,6 +417,30 @@ router.patch("/functies/:id", schrijven, async (req, res): Promise<void> => {
 
     if (profielWijziging) {
       const sessie = req.session as unknown as Record<string, unknown> | undefined;
+
+      // Cascade (Optie D): tel alle medewerkers wiens effectieve bevoegdheden nu
+      // direct zijn vernieuwd door de profielwijziging. Omdat bevoegdheden altijd
+      // on-the-fly worden berekend (geen stored cache), is de cascade onmiddellijk
+      // actief zonder DB-schrijfacties op gebruikersniveau.
+      let aantalBetrokken = 0;
+      try {
+        const primair = await db
+          .select({ medewerkerId: medewerkersTable.id })
+          .from(medewerkersTable)
+          .where(eq(medewerkersTable.functieId, functieId));
+        const nevenstellingen = await db
+          .select({ medewerkerId: medewerkerAanstellingenTable.medewerkerId })
+          .from(medewerkerAanstellingenTable)
+          .where(eq(medewerkerAanstellingenTable.functieId, functieId));
+        const unieke = new Set([
+          ...primair.map((r) => r.medewerkerId),
+          ...nevenstellingen.map((r) => r.medewerkerId),
+        ]);
+        aantalBetrokken = unieke.size;
+      } catch {
+        // Cascade-telling is niet-kritisch; cascade zelf is per definitie actief.
+      }
+
       logAudit({
         gebruikerId: (sessie?.userId as number | null | undefined) ?? null,
         gebruikerNaam:
@@ -439,6 +463,7 @@ router.patch("/functies/:id", schrijven, async (req, res): Promise<void> => {
         meta: {
           oudProfielId: profielWijziging.oud,
           nieuwProfielId: profielWijziging.nieuw,
+          aantalBetrokkenMedewerkers: aantalBetrokken,
         } as Record<string, unknown>,
       });
     }

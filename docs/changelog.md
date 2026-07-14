@@ -1,3 +1,33 @@
+## 2026-07-14 — Centrale PermissieService: effectieve bevoegdheden als enige bron van waarheid
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** middel
+
+**Wat:** alle stale reads van `gebruikersTable.bevoegdheden` als definitieve rechtenmatrix zijn vervangen door de centrale `berekenEffectieveBevoegdhedenBatch()` / `berekenEffectieveBevoegdheden()`. Functie-profielen (via medewerker → aanstellingen → functies → profielen) worden altijd on-the-fly meegenomen — overal in de applicatie.
+
+**Nieuw centraal bestand:** `artifacts/api-server/src/lib/effectieve-bevoegdheden.ts`
+- `berekenEffectieveBevoegdhedenBatch(gebruikers[])` — max 4 DB-queries voor N gebruikers; combineert stored bevoegdheden + functie-profiel bevoegdheden additief via `combineerBevoegdheden`.
+- `berekenEffectieveBevoegdheden(gebruikerId)` — single-user wrapper die intern de batch functie gebruikt.
+
+**Bijgewerkte bestanden (stale reads vervangen):**
+- `lib/permissie-service.ts` — `laad()` gebruikt nu batch; verouderde `haalFunctieBevoegdhedenVoorGebruiker` + `combineerBevoegdheden` verwijderd.
+- `utils/rol.ts` — `gebruikerVan()` gebruikt batch; inline `effectieveBevoegdheden()` hulpfunctie verwijderd.
+- `lib/planningMeldingenService.ts` — `haalPlOntvangers()` past batch toe; select uitgebreid met `id` + `rol`.
+- `lib/reactietermijnSignalering.ts` — `haalBeheerderOntvangers()` zelfde patroon.
+- `lib/leverbewaking.ts` — `haalOntvangers()` zelfde patroon.
+- `lib/magazijnSignalering.ts` — `haalOntvangers()` zelfde patroon.
+- `lib/pushService.ts` — wagenparkbeheerder-filter via batch.
+- `services/goedkeuring-engine.ts` — `haalActorVoorRequest()` en `haalOntvangerIds()` beide via batch.
+- `services/workflow-engine.ts` — `maakTransitieContext()` via batch.
+- `routes/goedkeuring.ts` — handmatige DB-check financieel:1 vervangen door `req.permissies!.heeftModuleRecht("financieel", 1)`.
+- `routes/gebruikers.ts` — GET /:id geeft nu `effectieve_bevoegdheden` terug (bewijs van effectieve rechten voor beheerder); PATCH verwijdert stale functie-bev opslag (de on-the-fly berekening voegt ze toe; opslaan was dubbeltelling); `isBeheerder()` via batch.
+- `routes/hrm.ts` — PATCH /functies/:id logt cascade: telt betrokken medewerkers (primaire + nevenstellingen) en noteert `aantalBetrokkenMedewerkers` in audit-log meta.
+
+**Architectuurkeuze:** altijd on-the-fly berekenen (geen stored cache bijwerken). Cascade is onmiddellijk actief bij de volgende permissie-check — geen achtergrondworker nodig.
+
+**Bewijs:** `pnpm --filter @workspace/api-server run typecheck` groen (0 fouten); api-server hergestart en draait schoon.
+
+---
+
 ## 2026-07-14 — Sidebar Instellingen samengevoegd tot overzichtspagina
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag

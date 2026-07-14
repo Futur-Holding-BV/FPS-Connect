@@ -1,5 +1,6 @@
 import { db as _mainDb, workflowTransitieLogTable, gebruikersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
+import { berekenEffectieveBevoegdhedenBatch } from "../lib/effectieve-bevoegdheden";
 import { logAudit } from "../lib/audit";
 import { biae } from "./biae";
 
@@ -268,11 +269,14 @@ export async function maakTransitieContext(
     })
     .from(gebruikersTable)
     .where(eq(gebruikersTable.id, gebruikerId));
+  const kaart = await berekenEffectieveBevoegdhedenBatch([
+    { id: gebruikerId, rol: g?.rol ?? "gebruiker", storedBevoegdheden: g?.bevoegdheden ?? {} },
+  ]);
   return {
     db,
     gebruikerId,
     gebruikerNaam: g?.naam ?? null,
-    bevoegdheden: (g?.bevoegdheden as Record<string, number> | null) ?? {},
+    bevoegdheden: kaart.get(gebruikerId) ?? {},
     isHoofdbeheerder: g?.rol === "hoofdbeheerder",
     params,
   };

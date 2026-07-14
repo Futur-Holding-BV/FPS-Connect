@@ -2,6 +2,7 @@
 // Stuurt een overzicht van aanstaande / verlopen deadlines naar PL-gebruikers.
 import { db, aanvraagPlanningenTable, gebruikersTable, inboxItemsTable } from "@workspace/db";
 import { eq, and, isNotNull, or, lte, isNull } from "drizzle-orm";
+import { berekenEffectieveBevoegdhedenBatch } from "./effectieve-bevoegdheden";
 import { logger } from "./logger";
 import { stuurPlanningMelding } from "../services/email";
 
@@ -69,13 +70,23 @@ async function haalVervallendePlanningen(): Promise<PlanningRegel[]> {
 
 async function haalPlOntvangers(): Promise<Array<{ naam: string; email: string }>> {
   const gebruikers = await db
-    .select({ naam: gebruikersTable.naam, email: gebruikersTable.email, bevoegdheden: gebruikersTable.bevoegdheden })
+    .select({
+      id: gebruikersTable.id,
+      naam: gebruikersTable.naam,
+      email: gebruikersTable.email,
+      rol: gebruikersTable.rol,
+      bevoegdheden: gebruikersTable.bevoegdheden,
+    })
     .from(gebruikersTable)
     .where(and(eq(gebruikersTable.actief, true), eq(gebruikersTable.gearchiveerd, false)));
 
+  const effectief = await berekenEffectieveBevoegdhedenBatch(
+    gebruikers.map((g) => ({ id: g.id, rol: g.rol, storedBevoegdheden: g.bevoegdheden })),
+  );
+
   return gebruikers.filter((g) => {
-    const bev = g.bevoegdheden as Record<string, number> | null;
-    return (bev?.["offertes"] ?? 0) >= 2 && g.email;
+    const bev = effectief.get(g.id) ?? {};
+    return (bev["offertes"] ?? 0) >= 2 && g.email;
   }) as Array<{ naam: string; email: string }>;
 }
 

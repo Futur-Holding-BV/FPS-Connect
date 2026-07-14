@@ -5,6 +5,7 @@
 import { db, pushTokensTable, wagenparkKwartaalcontroleTable, voertuigenTable, gebruikersTable } from "@workspace/db";
 import { eq, and, isNotNull, ne } from "drizzle-orm";
 import { heeftNiveau } from "@workspace/permissies";
+import { berekenEffectieveBevoegdhedenBatch } from "./effectieve-bevoegdheden";
 import { logger } from "./logger";
 
 const EXPO_PUSH_URL = "https://exp.host/--/api/v2/push/send";
@@ -249,10 +250,12 @@ export async function meldNieuweMeldingAanBeheerders(
     .from(gebruikersTable)
     .where(ne(gebruikersTable.actief, false));
 
+  const effectief = await berekenEffectieveBevoegdhedenBatch(
+    gebruikers.map((g) => ({ id: g.id, rol: g.rol, storedBevoegdheden: g.bevoegdheden })),
+  );
   const beheerders = gebruikers.filter((g) => {
     if (g.rol === "hoofdbeheerder") return true;
-    const bev = (g.bevoegdheden as Record<string, number> | null) ?? {};
-    return heeftNiveau(bev, "wagenpark", 2);
+    return heeftNiveau(effectief.get(g.id) ?? {}, "wagenpark", 2);
   });
 
   for (const b of beheerders) {

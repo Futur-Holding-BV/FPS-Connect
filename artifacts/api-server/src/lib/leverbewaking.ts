@@ -6,6 +6,7 @@
 // controleert bij de leverancier en werkt de status bij.
 import { db, inkoopbonnenTable, opdrachtenTable, gebruikersTable } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
+import { berekenEffectieveBevoegdhedenBatch } from "./effectieve-bevoegdheden";
 import { logger } from "./logger";
 import { stuurLeverbewakingSignalering } from "../services/email";
 
@@ -71,12 +72,22 @@ async function haalSignalen(): Promise<{ verlopen: BonSignaal[]; aankomend: BonS
 
 async function haalOntvangers(): Promise<Array<{ naam: string; email: string }>> {
   const gebruikers = await db
-    .select({ naam: gebruikersTable.naam, email: gebruikersTable.email, bevoegdheden: gebruikersTable.bevoegdheden })
+    .select({
+      id: gebruikersTable.id,
+      naam: gebruikersTable.naam,
+      email: gebruikersTable.email,
+      rol: gebruikersTable.rol,
+      bevoegdheden: gebruikersTable.bevoegdheden,
+    })
     .from(gebruikersTable)
     .where(and(eq(gebruikersTable.actief, true), eq(gebruikersTable.gearchiveerd, false)));
 
+  const effectief = await berekenEffectieveBevoegdhedenBatch(
+    gebruikers.map((g) => ({ id: g.id, rol: g.rol, storedBevoegdheden: g.bevoegdheden })),
+  );
+
   return gebruikers.filter((g) => {
-    const niveau = (g.bevoegdheden as Record<string, number> | null)?.["offertes"] ?? 0;
+    const niveau = (effectief.get(g.id) ?? {})["offertes"] ?? 0;
     return niveau >= 2 && g.email;
   }) as Array<{ naam: string; email: string }>;
 }
