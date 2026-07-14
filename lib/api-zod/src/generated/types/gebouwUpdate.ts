@@ -25,4 +25,5 @@ export interface GebouwUpdate {
   longitude?: number | null;
   werkgever_id?: number | null;
   project_status?: string | null;
+  galerij_upload_toegestaan?: boolean;
 }

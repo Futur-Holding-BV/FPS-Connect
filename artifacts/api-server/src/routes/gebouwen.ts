@@ -118,6 +118,7 @@ function gebouwRij(
     werkgever_id: g.werkgeverId ?? null,
     werkmaatschappij_naam: werkmaatschappijNaam,
     project_status: g.projectStatus ?? null,
+    galerij_upload_toegestaan: g.galerijUploadToegestaan,
   };
 }
 
@@ -633,6 +634,7 @@ router.get("/gebouwen/:id", lezenGebouwenOfKlant, async (req, res): Promise<void
       werkgever_id: gebouw.werkgeverId ?? null,
       werkmaatschappij_naam: werkgeverNaamDetail,
       project_status: gebouw.projectStatus ?? null,
+      galerij_upload_toegestaan: gebouw.galerijUploadToegestaan,
       verdiepingen: verdiepingenMet,
       stats,
     });
@@ -665,6 +667,7 @@ router.patch("/gebouwen/:id", requireBevoegdheid("gebouwen", 2), async (req, res
       longitude,
       werkgever_id,
       project_status,
+      galerij_upload_toegestaan,
     } = req.body;
     const [gebouw] = await db
       .update(gebouwenTable)
@@ -701,6 +704,7 @@ router.patch("/gebouwen/:id", requireBevoegdheid("gebouwen", 2), async (req, res
         longitude,
         ...(werkgever_id !== undefined ? { werkgeverId: werkgever_id ?? null } : {}),
         ...(project_status !== undefined ? { projectStatus: project_status ?? null } : {}),
+        ...(galerij_upload_toegestaan !== undefined ? { galerijUploadToegestaan: Boolean(galerij_upload_toegestaan) } : {}),
         bijgewerktOp: new Date(),
       })
       .where(eq(gebouwenTable.id, id))

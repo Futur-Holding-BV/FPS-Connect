@@ -11638,7 +11638,7 @@ export const getAiKoppelvoorstellenDocumentenUrl = () => {
 }
 
 /**
- * @summary AI-voorstellen om bestaande bibliotheekdocumenten aan toepassingen te koppelen, op basis van de eerder herkende fabrikant, product en norm. Voorstellen; de beheerder neemt over (beheerder).
+ * @summary AI-voorstellen om bestaande bibliotheekdocumenten aan toepassingen te koppelen. Ongeanaliseerde PDFs worden automatisch eerst verrijkt (fabrikant/product/norm extractie) voordat de matcher draait. Voorstellen; de beheerder neemt over (beheerder).
  */
 export const aiKoppelvoorstellenDocumenten = async ( options?: RequestInit): Promise<DocumentKoppelVoorstel[]> => {
 
@@ -11686,7 +11686,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type AiKoppelvoorstellenDocumentenMutationError = ErrorType<unknown>
 
     /**
- * @summary AI-voorstellen om bestaande bibliotheekdocumenten aan toepassingen te koppelen, op basis van de eerder herkende fabrikant, product en norm. Voorstellen; de beheerder neemt over (beheerder).
+ * @summary AI-voorstellen om bestaande bibliotheekdocumenten aan toepassingen te koppelen. Ongeanaliseerde PDFs worden automatisch eerst verrijkt (fabrikant/product/norm extractie) voordat de matcher draait. Voorstellen; de beheerder neemt over (beheerder).
  */
 export const useAiKoppelvoorstellenDocumenten = <TError = ErrorType<unknown>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof aiKoppelvoorstellenDocumenten>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}

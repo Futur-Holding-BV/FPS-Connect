@@ -25,4 +25,5 @@ export interface GebouwInput {
   longitude?: number;
   werkgever_id?: number;
   project_status?: string;
+  galerij_upload_toegestaan?: boolean;
 }

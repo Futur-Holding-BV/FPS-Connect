@@ -150,7 +150,8 @@ export const ListGebouwenResponseItem = zod.object({
   "gearchiveerd_op": zod.string().nullish(),
   "werkgever_id": zod.number().nullish(),
   "werkmaatschappij_naam": zod.string().nullish(),
-  "project_status": zod.string().nullish()
+  "project_status": zod.string().nullish(),
+  "galerij_upload_toegestaan": zod.boolean().optional()
 })
 export const ListGebouwenResponse = zod.array(ListGebouwenResponseItem)
 
@@ -176,7 +177,8 @@ export const CreateGebouwBody = zod.object({
   "latitude": zod.number().optional(),
   "longitude": zod.number().optional(),
   "werkgever_id": zod.number().optional(),
-  "project_status": zod.string().optional()
+  "project_status": zod.string().optional(),
+  "galerij_upload_toegestaan": zod.boolean().optional()
 })
 
 export const CreateGebouwResponse = zod.void()
@@ -334,6 +336,7 @@ export const GetGebouwResponse = zod.object({
   "werkgever_id": zod.number().nullish(),
   "werkmaatschappij_naam": zod.string().nullish(),
   "project_status": zod.string().nullish(),
+  "galerij_upload_toegestaan": zod.boolean().optional(),
   "verdiepingen": zod.array(zod.object({
   "id": zod.number(),
   "gebouw_id": zod.number(),
@@ -383,7 +386,8 @@ export const UpdateGebouwBody = zod.object({
   "latitude": zod.number().nullish(),
   "longitude": zod.number().nullish(),
   "werkgever_id": zod.number().nullish(),
-  "project_status": zod.string().nullish()
+  "project_status": zod.string().nullish(),
+  "galerij_upload_toegestaan": zod.boolean().optional()
 })
 
 export const UpdateGebouwResponse = zod.object({
@@ -420,7 +424,8 @@ export const UpdateGebouwResponse = zod.object({
   "gearchiveerd_op": zod.string().nullish(),
   "werkgever_id": zod.number().nullish(),
   "werkmaatschappij_naam": zod.string().nullish(),
-  "project_status": zod.string().nullish()
+  "project_status": zod.string().nullish(),
+  "galerij_upload_toegestaan": zod.boolean().optional()
 })
 
 
@@ -479,7 +484,8 @@ export const MeldGebouwGereedResponse = zod.object({
   "gearchiveerd_op": zod.string().nullish(),
   "werkgever_id": zod.number().nullish(),
   "werkmaatschappij_naam": zod.string().nullish(),
-  "project_status": zod.string().nullish()
+  "project_status": zod.string().nullish(),
+  "galerij_upload_toegestaan": zod.boolean().optional()
 })
 
 
@@ -524,7 +530,8 @@ export const HerstelGebouwActiefResponse = zod.object({
   "gearchiveerd_op": zod.string().nullish(),
   "werkgever_id": zod.number().nullish(),
   "werkmaatschappij_naam": zod.string().nullish(),
-  "project_status": zod.string().nullish()
+  "project_status": zod.string().nullish(),
+  "galerij_upload_toegestaan": zod.boolean().optional()
 })
 
 
@@ -583,6 +590,7 @@ export const ArchiveerGebouwResponse = zod.object({
   "werkgever_id": zod.number().nullish(),
   "werkmaatschappij_naam": zod.string().nullish(),
   "project_status": zod.string().nullish(),
+  "galerij_upload_toegestaan": zod.boolean().optional(),
   "verdiepingen": zod.array(zod.object({
   "id": zod.number(),
   "gebouw_id": zod.number(),
@@ -3967,7 +3975,7 @@ export const AiAnalyseDocumentResponse = zod.object({
 
 
 /**
- * @summary AI-voorstellen om bestaande bibliotheekdocumenten aan toepassingen te koppelen, op basis van de eerder herkende fabrikant, product en norm. Voorstellen; de beheerder neemt over (beheerder).
+ * @summary AI-voorstellen om bestaande bibliotheekdocumenten aan toepassingen te koppelen. Ongeanaliseerde PDFs worden automatisch eerst verrijkt (fabrikant/product/norm extractie) voordat de matcher draait. Voorstellen; de beheerder neemt over (beheerder).
  */
 export const AiKoppelvoorstellenDocumentenResponseItem = zod.object({
   "document_id": zod.number(),

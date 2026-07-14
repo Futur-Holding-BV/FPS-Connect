@@ -1924,6 +1924,7 @@ export interface Gebouw {
   werkmaatschappij_naam?: string | null;
   /** @nullable */
   project_status?: string | null;
+  galerij_upload_toegestaan?: boolean;
 }
 
 export interface Verdieping {
@@ -2005,6 +2006,7 @@ export interface GebouwDetail {
   werkmaatschappij_naam?: string | null;
   /** @nullable */
   project_status?: string | null;
+  galerij_upload_toegestaan?: boolean;
   verdiepingen: Verdieping[];
   stats?: GebouwStats;
 }
@@ -2227,6 +2229,7 @@ export interface GebouwInput {
   longitude?: number;
   werkgever_id?: number;
   project_status?: string;
+  galerij_upload_toegestaan?: boolean;
 }
 
 export interface GebouwPublicatieStatus {
@@ -2260,6 +2263,7 @@ export interface GebouwUpdate {
   longitude?: number | null;
   werkgever_id?: number | null;
   project_status?: string | null;
+  galerij_upload_toegestaan?: boolean;
 }
 
 export interface GebouwAiAnalyseInput {

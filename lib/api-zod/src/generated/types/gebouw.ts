@@ -63,4 +63,5 @@ export interface Gebouw {
   werkmaatschappij_naam?: string | null;
   /** @nullable */
   project_status?: string | null;
+  galerij_upload_toegestaan?: boolean;
 }

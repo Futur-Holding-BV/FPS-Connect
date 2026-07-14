@@ -25919,6 +25919,8 @@ components:
           type: ["string", "null"]
         project_status:
           type: ["string", "null"]
+        galerij_upload_toegestaan:
+          type: boolean
 
     GebouwDetail:
       type: object
@@ -25978,6 +25980,8 @@ components:
           type: ["string", "null"]
         project_status:
           type: ["string", "null"]
+        galerij_upload_toegestaan:
+          type: boolean
         verdiepingen:
           type: array
           items:
@@ -26371,6 +26375,8 @@ components:
           type: integer
         project_status:
           type: string
+        galerij_upload_toegestaan:
+          type: boolean
 
     GebouwPublicatieStatus:
       type: object
@@ -26458,6 +26464,8 @@ components:
         project_status:
           type: string
           nullable: true
+        galerij_upload_toegestaan:
+          type: boolean
 
     GebouwAiAnalyseInput:
       type: object
