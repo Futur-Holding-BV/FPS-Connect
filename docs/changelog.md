@@ -1,3 +1,31 @@
+## 2026-07-14 — Increment 4: functie-profielen leiden runtime rechten af (multi-functie toegang)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** middel
+
+**Probleem:** medewerkers met meerdere functies (via `medewerker_aanstellingen` M2M) hadden via hun functies profielen gekoppeld (increment 3), maar die rechten werden nergens omgezet naar daadwerkelijke toegang. `PermissieService.laad()` las alleen `gebruikersTable.bevoegdheden` (de handmatig opgeslagen matrix); `functiesTable.profielId` werd volledig genegeerd.
+
+**Oorzaak:** increment 4 (runtime afleiding) was nog niet geïmplementeerd. Incrementen 1 en 3 waren al gebouwd, maar de koppeling van functies → profielen → effectieve rechten ontbrak.
+
+**Fix (drie bestanden):**
+
+1. **`artifacts/api-server/src/lib/functie-bevoegdheden.ts`** (nieuw):  
+   Helper `haalFunctieBevoegdhedenVoorGebruiker(gebruikerId)` — haalt via `medewerker.gebruikerId → medewerker → (primaire `functieId` + alle `medewerker_aanstellingen.functieId`) → `functiesTable.profielId` → `profielenTable.bevoegdheden`` de volledige set functie-afgeleide bevoegdhedenmatrices op.
+
+2. **`artifacts/api-server/src/lib/permissie-service.ts`** (gewijzigd):  
+   `laad()` roept nu `haalFunctieBevoegdhedenVoorGebruiker` aan en combineert het resultaat via `combineerBevoegdheden([opgeslagen, ...functieBevoegdheden])`. Dit werkt runtime, per request, ongeacht wat er in de stored cache staat.
+
+3. **`artifacts/api-server/src/routes/gebruikers.ts`** (gewijzigd):  
+   `PATCH /gebruikers/:id` voegt na de bestaande zelf-escalatiecheck de functie-afgeleide matrices toe aan `nieuweMatrix`, zodat de stored cache ook actueel wordt bij elke expliciete profielupdate.
+
+**Beveiliging:**
+- Zelf-escalatiecheck blijft ongewijzigd voor handmatig toegewezen profielen.
+- Functie-profielen worden NA de escalatiecheck toegevoegd (systeemgekoppeld, niet door de beheerder gekozen).
+- `PATCH /functies/:id` had al een escalatiecheck bij het koppelen van `profiel_id` aan een functie (bestaande code).
+
+**Bewijs:** typecheck groen (libs + api-server); api-server hergestart en actief; geen startup-fouten in logs.
+
+---
+
 ## 2026-07-14 — Fix: 2FA-code vakjes onleesbaar bij inloggen
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag

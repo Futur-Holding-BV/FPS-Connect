@@ -9,11 +9,13 @@ Productkeuzes: Keuze 1 = A (additief; NIET "hoogste rol wint"-vervanging). Keuze
 
 Increments:
 - 1 (gedaan): Profiel-bewerken toont/bewerkt meerdere functies via bestaande aanstellingen-M2M (alleen frontend, personeel/detail.tsx).
-- 3 (gedaan): functies.profiel_id (nullable FK -> profielen, ON DELETE SET NULL). OpenAPI Functie/FunctieInput; backend mapFunctie/POST/PATCH (PATCH alleen bij meegestuurd); frontend Toegangsprofiel-dropdown in functiehuis-form (personeel/index.tsx). Additief; verandert nog GEEN runtime-rechten.
-- 4 (volgende, RISICOVOL — eigen test + architect): PermissieService (artifacts/api-server/src/lib/permissie-service.ts) leidt rechten af uit gebruiker_profielen + functie-afgeleide profielen; combineerBevoegdheden bestaat al (max-per-module, lib/permissies/src/index.ts); sync in tx bij medewerker<->functie-wijziging (medewerkersTable.functieId); audit via logAudit (lib/audit.ts).
+- 3 (gedaan): functies.profiel_id (nullable FK -> profielen, ON DELETE SET NULL). OpenAPI Functie/FunctieInput; backend mapFunctie/POST/PATCH; frontend Toegangsprofiel-dropdown.
+- 4 (GEDAAN — 14 juli 2026): PermissieService.laad() combineert opgeslagen matrix met functie-afgeleide profielen via haalFunctieBevoegdhedenVoorGebruiker() (nieuw bestand lib/functie-bevoegdheden.ts). Bron: medewerker.gebruikerId → medewerkersTable → (functieId + medewerkerAanstellingenTable.functieId) → functiesTable.profielId → profielenTable.bevoegdheden → combineerBevoegdheden. PATCH /gebruikers/:id voegt functie-bev NA escalatiecheck toe aan stored cache.
 
-**Why increment 4 apart:** het koppelen wordt daar een privilege-escalatie-oppervlak (een personeel-writer die zichzelf/zijn functie een systeem-profiel toekent). Verplicht: zelf-escalatiecheck.
+**Beveiliging increment 4:** functie-profielen toegevoegd NA zelf-escalatiecheck (systeemgekoppeld); PATCH /functies/:id had al escalatiecheck voor profiel_id-koppeling. Open punt: profiel_id-bestaanvalidatie (400 i.p.v. FK-500) bij POST/PATCH /functies.
 
-Gotcha (increment 3): de profielenlijst (GET /profielen) wordt door TWEE modules gelezen — gebruikersbeheer EN personeelsbeheer (functiehuis). Gate = requireEnigeBevoegdheid([["gebruikers",1],["personeel",1]]); niet terug-versmallen naar alleen gebruikers, anders krijgt een personeelsbeheerder een lege dropdown en kan hij ongemerkt een profiel wissen.
+**Open follow-up (stored cache sync):** medewerker PATCH + aanstelling PATCH triggeren geen resync van linked gebruiker. Stored cache wordt alleen bijgewerkt bij expliciet PATCH /gebruikers. Runtime (PermissieService) is altijd correct ongeacht stored cache.
 
-Increment 4 open punt (architect-advies): overweeg profiel_id-bestaanvalidatie (400/422 i.p.v. FK-500) bij POST/PATCH /functies.
+Gotcha (increment 3): profielenlijst (GET /profielen) vereist requireEnigeBevoegdheid([[gebruikers,1],[personeel,1]]); niet terug-versmallen naar alleen gebruikers.
+
+**UI-discrepantie:** GET /gebruikers/:id geeft stored bevoegdheden terug (zonder functie-bev); dialoog toont daardoor "Geen" voor functie-afgeleide modules. Toegang is correct; weergave is een follow-up.
