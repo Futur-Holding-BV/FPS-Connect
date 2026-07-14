@@ -1,3 +1,23 @@
+## 2026-07-14 — Planning: proporti­onele dag-blokken, rood niet-ingepland, AI-reistijd en dag-bewaking
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+**Wijzigingen in `artifacts/firevault/src/pages/modules/planning/index.tsx`:**
+
+1. **Proporti­onele tijdlijn per dag-cel** — `renderDagCelInhoud` volledig herschreven. Dag-cel (128px hoog) toont nu een `flex`-kolom waarbij elk segment (item / gap / reistijd) hoogte krijgt proportioneel aan zijn duur in minuten t.o.v. de werkdag 07:30–16:00 (510 min totaal).
+
+2. **Rood niet-ingepland gebied** — Onbezette tijdsloten in de dag-cel zijn rood gemarkeerd (`border-l-2 border-red-300 bg-red-50/80`). Bij ≥ 60 min wordt het label "X.Xu vrij" getoond; bij ≥ 30 min "Xm vrij".
+
+3. **AI-reistijdblokken** — Via een achtergrond-`useEffect` worden voor opeenvolgende planning-items op dezelfde dag met verschillende gebouwen de reistijden opgehaald via het bestaande `POST /api/modules/planning/reistijd-schatting` endpoint (AI-based). Resultaten worden in een `Map` gecached zodat er geen dubbele API-calls worden gemaakt. In de dag-cel verschijnen amber-gekleurde reistijdblokken met autoicoon en `~Nm`.
+
+4. **Dag-bewakingsbadge** — Per dag-kolom in de tabelkop berekent `onvolledeDagenMap` (useMemo) hoeveel medewerkers ≥ 2u niet ingepland hebben. Als er ≥ 1 medewerker onvolledig is, verschijnt een rood `AlertCircle`-icoon met teller in de kolomkop. Tooltip: "N medewerkers heeft onvolledige dag (>2u vrij)".
+
+5. **Constanten toegevoegd:** `WERKDAG_START_MIN` (450), `WERKDAG_EIND_MIN` (960), `WERKDAG_TOTAAL_MIN` (510), `tijdNaarMin()`, `bouwDagSegmenten()`, types `DagSegment` en `ReistijdResult`.
+
+**Bewijs:** `pnpm --filter @workspace/firevault run typecheck` → volledig groen.
+
+---
+
 ## 2026-07-14 — Inplannen-paneel: knoppen altijd zichtbaar (hoogte-correctie)
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag

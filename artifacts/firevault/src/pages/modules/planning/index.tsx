@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { Link } from "wouter";
 import {
   useListPlanningItems,
@@ -37,7 +37,7 @@ import {
   ChevronLeft, ChevronRight, Plus, AlertTriangle, Users,
   Briefcase, Clock, RefreshCw, X,
   CalendarDays, ChevronDown, Lock, Trash2, MapPin, LayoutGrid,
-  CheckCircle2, XCircle, Wrench,
+  CheckCircle2, XCircle, Wrench, Car, AlertCircle,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -106,6 +106,65 @@ const WEERGAVE_MODI: { key: WeergaveModus; label: string }[] = [
   { key: "4weken", label: "4 Weken" },
   { key: "maand",  label: "Maand" },
 ];
+
+// ── Proportionele werkdag-helpers ────────────────────────────────────────────
+
+const WERKDAG_START_MIN  = 7 * 60 + 30; // 07:30 = 450 min
+const WERKDAG_EIND_MIN   = 16 * 60;     // 16:00 = 960 min
+const WERKDAG_TOTAAL_MIN = WERKDAG_EIND_MIN - WERKDAG_START_MIN; // 510 min
+
+function tijdNaarMin(t: string): number {
+  const [h, m] = t.split(":").map(Number) as [number, number];
+  return h * 60 + m;
+}
+
+type ReistijdResult = { minuten: number; beschrijving: string; onzeker: boolean };
+
+type DagSegment =
+  | { type: "item";     item: PlanItem; duurMin: number }
+  | { type: "gap";      duurMin: number }
+  | { type: "reistijd"; duurMin: number; beschrijving: string; onzeker: boolean };
+
+function bouwDagSegmenten(
+  dagItems: PlanItem[],
+  reistijdenMap: Map<string, ReistijdResult>,
+): DagSegment[] {
+  if (dagItems.length === 0) {
+    return [{ type: "gap", duurMin: WERKDAG_TOTAAL_MIN }];
+  }
+  const seg: DagSegment[] = [];
+  let cursor = WERKDAG_START_MIN;
+
+  for (let i = 0; i < dagItems.length; i++) {
+    const item = dagItems[i]!;
+    const itemStart = item.tijd_start ? tijdNaarMin(item.tijd_start) : cursor;
+    const itemDuur  = Math.round(item.uren * 60);
+
+    if (itemStart > cursor) {
+      const gapMin  = itemStart - cursor;
+      const vorige  = i > 0 ? dagItems[i - 1]! : null;
+      const rtKey   = vorige?.gebouw_naam && item.gebouw_naam && vorige.gebouw_naam !== item.gebouw_naam
+        ? `${vorige.gebouw_naam}|${item.gebouw_naam}`
+        : null;
+      const rt = rtKey ? reistijdenMap.get(rtKey) : null;
+      if (rt && rt.minuten > 0) {
+        const rtMin = Math.min(rt.minuten, gapMin);
+        seg.push({ type: "reistijd", duurMin: rtMin, beschrijving: rt.beschrijving, onzeker: rt.onzeker });
+        if (gapMin - rtMin >= 1) seg.push({ type: "gap", duurMin: gapMin - rtMin });
+      } else {
+        seg.push({ type: "gap", duurMin: gapMin });
+      }
+    }
+
+    seg.push({ type: "item", item, duurMin: itemDuur });
+    cursor = itemStart + itemDuur;
+  }
+
+  if (cursor < WERKDAG_EIND_MIN) {
+    seg.push({ type: "gap", duurMin: WERKDAG_EIND_MIN - cursor });
+  }
+  return seg;
+}
 
 // ── Hulpfuncties ────────────────────────────────────────────────────────────
 
@@ -618,6 +677,8 @@ export default function ModulesPlanning() {
   const [reistijdSchatting, setReistijdSchatting] = useState<{ minuten: number; beschrijving: string; onzeker?: boolean | null } | null>(null);
   const [filterWerkmaatschappij, setFilterWerkmaatschappij] = useState<string>("alle");
   const [filterAlleenUitvoerend, setFilterAlleenUitvoerend] = useState(true);
+  const [reistijden, setReistijden] = useState<Map<string, ReistijdResult>>(new Map());
+  const reistijdFetched = useRef(new Set<string>());
 
   // ── Gesloten-dag override flow ────────────────────────────────────────────
   const [overrideDialoog, setOverrideDialoog] = useState<{
@@ -661,6 +722,41 @@ export default function ModulesPlanning() {
     { van, tot },
     { query: { queryKey: ["planning-items", van, tot] } }
   );
+
+  // ── Reistijd achtergrond-fetch ────────────────────────────────────────────
+  useEffect(() => {
+    if (items.length === 0) return;
+    const groepen = new Map<string, PlanItem[]>();
+    for (const it of items as PlanItem[]) {
+      const sleutel = `${it.medewerker_id}_${it.datum_start}`;
+      if (!groepen.has(sleutel)) groepen.set(sleutel, []);
+      groepen.get(sleutel)!.push(it);
+    }
+    for (const dagItems of groepen.values()) {
+      const gesorteerd = [...dagItems].sort((a, b) => (a.tijd_start ?? "").localeCompare(b.tijd_start ?? ""));
+      for (let i = 0; i < gesorteerd.length - 1; i++) {
+        const vanItem = gesorteerd[i]!;
+        const naarItem = gesorteerd[i + 1]!;
+        if (vanItem.gebouw_naam && naarItem.gebouw_naam && vanItem.gebouw_naam !== naarItem.gebouw_naam) {
+          const key = `${vanItem.gebouw_naam}|${naarItem.gebouw_naam}`;
+          if (reistijdFetched.current.has(key)) continue;
+          reistijdFetched.current.add(key);
+          fetch("/api/modules/planning/reistijd-schatting", {
+            method: "POST",
+            credentials: "include",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ locatie_a: vanItem.gebouw_naam, locatie_b: naarItem.gebouw_naam }),
+          })
+            .then((r) => (r.ok ? r.json() : null))
+            .then((data: ReistijdResult | null) => {
+              if (data) setReistijden((prev) => new Map(prev).set(key, data));
+            })
+            .catch(() => undefined);
+        }
+      }
+    }
+  }, [items]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const medewerkersParams = {
     ...(filterAlleenUitvoerend ? { alleen_uitvoerend: true } : {}),
     ...(filterWerkmaatschappij !== "alle" ? { werkmaatschappij: filterWerkmaatschappij } : {}),
@@ -947,6 +1043,26 @@ export default function ModulesPlanning() {
     return kaart;
   }, [afwezigheid, alleDatumStrings]);
 
+  // Telt per dag hoeveel medewerkers ≥ 120 min niet ingepland hebben (AI-bewaking)
+  const onvolledeDagenMap = useMemo(() => {
+    const kaart = new Map<string, number>();
+    for (const dag of alleDatumStrings) {
+      if (geslotenDagenMap.has(dag)) continue;
+      let aantalOnvolledig = 0;
+      for (const med of medewerkers as Medewerker[]) {
+        if (afwezigheidDagen.has(`${med.id}_${dag}`)) continue;
+        const dagItems = (items as PlanItem[])
+          .filter((it) => it.medewerker_id === med.id && it.datum_start <= dag && it.datum_eind >= dag)
+          .sort((a, b) => (a.tijd_start ?? "00:00").localeCompare(b.tijd_start ?? "00:00"));
+        const segmenten = bouwDagSegmenten(dagItems, reistijden);
+        const ongeplandeMin = segmenten.filter((s) => s.type === "gap").reduce((s, g) => s + g.duurMin, 0);
+        if (ongeplandeMin >= 120) aantalOnvolledig++;
+      }
+      if (aantalOnvolledig > 0) kaart.set(dag, aantalOnvolledig);
+    }
+    return kaart;
+  }, [items, medewerkers, afwezigheidDagen, geslotenDagenMap, alleDatumStrings, reistijden]);
+
   const projectGroepen = useMemo(() => {
     const map = new Map<string, { sleutel: string; naam: string; gebouw_id?: number | null; items: PlanItem[] }>();
     for (const item of items as PlanItem[]) {
@@ -984,43 +1100,125 @@ export default function ModulesPlanning() {
     return `Week ${weekNummer(weken[0]!)} – ${weekNummer(weken[weken.length - 1]!)}`;
   }, [weergaveModus, weken, referentieDatum]);
 
-  // ── Dag-cel inhoud ────────────────────────────────────────────────────────
+  // ── Dag-cel inhoud (proporti­onele tijdlijn) ─────────────────────────────
 
   function renderDagCelInhoud(med: Medewerker, dag: string) {
     const dagItems = (items as PlanItem[])
       .filter((it) => it.medewerker_id === med.id && it.datum_start <= dag && it.datum_eind >= dag)
       .sort((a, b) => (a.tijd_start ?? "00:00").localeCompare(b.tijd_start ?? "00:00"));
-    const isAfwezig = afwezigheidDagen.has(`${med.id}_${dag}`);
+    const isAfwezig  = afwezigheidDagen.has(`${med.id}_${dag}`);
     const geslotenInfo = geslotenDagenMap.get(dag);
+
+    // Speciale statussen zonder proporti­onele tijdlijn
+    if (isAfwezig && dagItems.length === 0) {
+      return (
+        <div
+          className="flex items-center justify-center rounded border border-orange-200 bg-orange-50 text-[10px] text-orange-700"
+          style={{ height: 128 }}
+        >
+          Afwezig
+        </div>
+      );
+    }
+    if (geslotenInfo && dagItems.length === 0) {
+      return (
+        <div
+          className="flex items-center justify-center gap-1 rounded border border-slate-200 bg-slate-50 text-[10px] text-slate-500"
+          style={{ height: 128 }}
+        >
+          <Lock className="h-2.5 w-2.5" />
+          <span className="truncate max-w-[70px]">{geslotenInfo.naam}</span>
+        </div>
+      );
+    }
+
+    const segmenten = bouwDagSegmenten(dagItems, reistijden);
+    const ongeplandeMin = segmenten
+      .filter((s) => s.type === "gap")
+      .reduce((sum, s) => sum + s.duurMin, 0);
+
     return (
-      <div className="space-y-0.5">
-        {isAfwezig && dagItems.length === 0 && (
-          <div className="rounded border border-orange-200 bg-orange-50 px-1.5 py-1 text-[10px] text-orange-700">
-            Afwezig
-          </div>
-        )}
-        {dagItems.map((item) => {
+      <div
+        className="flex flex-col overflow-hidden rounded relative group cursor-pointer"
+        style={{ height: 128 }}
+        onClick={() => handleDagKlik(med.id, dag)}
+      >
+        {segmenten.map((seg, idx) => {
+          // ── Niet-ingepland (rood) ──────────────────────────────────────
+          if (seg.type === "gap") {
+            const label = seg.duurMin >= 60
+              ? `${Math.round(seg.duurMin / 60 * 10) / 10}u vrij`
+              : seg.duurMin >= 30
+                ? `${seg.duurMin}m vrij`
+                : null;
+            return (
+              <div
+                key={idx}
+                className="border-l-2 border-red-300 bg-red-50/80 flex items-start pl-1 overflow-hidden"
+                style={{ flex: seg.duurMin }}
+                title={`${seg.duurMin >= 60 ? (Math.round(seg.duurMin / 60 * 10) / 10) + "u" : seg.duurMin + "m"} niet ingepland`}
+              >
+                {label && (
+                  <span className="text-[8px] text-red-400 leading-tight mt-0.5 select-none">
+                    {label}
+                  </span>
+                )}
+              </div>
+            );
+          }
+
+          // ── Reistijd (amber) ───────────────────────────────────────────
+          if (seg.type === "reistijd") {
+            return (
+              <div
+                key={idx}
+                className="border-l-2 border-amber-400 bg-amber-50 flex items-center gap-0.5 pl-1 overflow-hidden"
+                style={{ flex: seg.duurMin }}
+                title={seg.beschrijving}
+              >
+                <Car className="h-2 w-2 text-amber-600 shrink-0" />
+                {seg.duurMin >= 25 && (
+                  <span className="text-[8px] text-amber-700 leading-none select-none">
+                    ~{seg.duurMin}m{seg.onzeker ? "?" : ""}
+                  </span>
+                )}
+              </div>
+            );
+          }
+
+          // ── Ingepland item ────────────────────────────────────────────
+          const item = seg.item;
           const ddLabel = dagdeelLabel(item.tijd_start, item.tijd_eind);
           const dd = dagdeelUitTijd(item.tijd_start, item.tijd_eind);
           const projectLabel = item.gebouw_naam ?? item.project_naam ?? item.titel;
           const isOpGeslotenDag = (item as unknown as Record<string, unknown>).op_gesloten_dag === true;
+          const toonDetails = seg.duurMin >= 55;
+
           return (
             <Tooltip key={item.id}>
               <TooltipTrigger asChild>
                 <button
-                  className={`w-full rounded border px-1 py-0.5 text-left text-[10px] transition-all hover:opacity-80 ${STATUS_KLEUR[item.status] ?? STATUS_KLEUR["concept"]}`}
+                  className={`w-full border-l-2 px-1 py-0.5 text-left transition-all hover:opacity-80 overflow-hidden flex-shrink-0 ${STATUS_KLEUR[item.status] ?? STATUS_KLEUR["concept"]}`}
+                  style={{ flex: seg.duurMin }}
                   onClick={(e) => { e.stopPropagation(); openBewerken(item); }}
                 >
-                  {isOpGeslotenDag && (
-                    <Lock className="h-2.5 w-2.5 inline mr-0.5 text-amber-600" />
+                  {toonDetails && (
+                    <div className="flex items-center gap-0.5 flex-wrap mb-0.5">
+                      {isOpGeslotenDag && <Lock className="h-2.5 w-2.5 text-amber-600 shrink-0" />}
+                      {ddLabel && (
+                        <span className={`rounded px-0.5 text-[8px] font-mono border ${DAGDEEL_KLEUR[dd] ?? "bg-slate-50 text-slate-500 border-slate-200"}`}>
+                          {ddLabel}
+                        </span>
+                      )}
+                    </div>
                   )}
-                  {ddLabel && (
-                    <span className={`inline-block rounded px-1 py-0 text-[9px] font-mono mr-0.5 border ${DAGDEEL_KLEUR[dd] ?? "bg-slate-50 text-slate-500 border-slate-200"}`}>
-                      {ddLabel}
-                    </span>
+                  <span className={`font-medium truncate block leading-tight ${toonDetails ? "text-[10px]" : "text-[8px]"}`}>
+                    {isOpGeslotenDag && !toonDetails && <Lock className="h-2 w-2 inline mr-0.5 text-amber-600" />}
+                    {projectLabel}
+                  </span>
+                  {toonDetails && (
+                    <span className="text-[8px] text-current opacity-60">{item.uren}u</span>
                   )}
-                  <span className="font-medium truncate block leading-tight">{projectLabel}</span>
-                  <span className="text-[9px] text-muted-foreground">{item.uren}u</span>
                 </button>
               </TooltipTrigger>
               <TooltipContent>
@@ -1036,18 +1234,11 @@ export default function ModulesPlanning() {
             </Tooltip>
           );
         })}
-        {!geslotenInfo && (
-          <button
-            className="w-full rounded p-0.5 text-[10px] text-muted-foreground opacity-0 hover:opacity-100 hover:bg-slate-200 hover:text-slate-700 transition-all"
-            onClick={(e) => { e.stopPropagation(); handleDagKlik(med.id, dag); }}
-          >
-            <Plus className="h-3 w-3 inline" />
-          </button>
-        )}
-        {geslotenInfo && dagItems.length === 0 && (
-          <div className="rounded border border-slate-200 bg-slate-50 px-1.5 py-1 text-[10px] text-slate-500 flex items-center gap-1">
-            <Lock className="h-2.5 w-2.5 shrink-0" />
-            <span className="truncate">{geslotenInfo.naam}</span>
+
+        {/* Inplan-knop bij niet-gesloten dag (hover) */}
+        {!geslotenInfo && ongeplandeMin > 0 && (
+          <div className="absolute inset-x-0 bottom-0 flex justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+            <Plus className="h-3 w-3 text-slate-400" />
           </div>
         )}
       </div>
@@ -1269,6 +1460,23 @@ export default function ModulesPlanning() {
                                   {geslotenDagenMap.get(dag)!.naam}
                                 </div>
                               )}
+                              {onvolledeDagenMap.has(dag) && !geslotenDagenMap.has(dag) && (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <div className="flex items-center justify-center gap-0.5 mt-0.5 cursor-default">
+                                      <AlertCircle className="h-2.5 w-2.5 text-red-400" />
+                                      <span className="text-[8px] font-normal normal-case text-red-400">
+                                        {onvolledeDagenMap.get(dag)}
+                                      </span>
+                                    </div>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p className="text-xs">
+                                      {onvolledeDagenMap.get(dag)} medewerker{(onvolledeDagenMap.get(dag) ?? 0) !== 1 ? "s" : ""} heeft onvolledige dag (&gt;2u vrij)
+                                    </p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              )}
                             </th>
                           ))
                         )}
@@ -1323,7 +1531,7 @@ export default function ModulesPlanning() {
                                 <td
                                   key={dag}
                                   className={`px-1 py-1 align-top cursor-pointer hover:bg-slate-50 transition-colors ${dag === vandaagStr ? "bg-primary/5 hover:bg-primary/10" : ""} ${geslotenDagenMap.has(dag) ? "bg-slate-50/70" : ""} ${di === 0 && wi > 0 ? "border-l-2 border-l-slate-300" : "border-l border-l-slate-100"}`}
-                                  style={{ minHeight: 64, verticalAlign: "top", minWidth: 90 }}
+                                  style={{ height: 128, verticalAlign: "top", minWidth: 90, padding: 2 }}
                                   onClick={() => handleDagKlik(med.id, dag)}
                                 >
                                   {renderDagCelInhoud(med, dag)}
