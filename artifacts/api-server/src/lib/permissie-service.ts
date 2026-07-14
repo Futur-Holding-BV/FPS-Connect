@@ -3,10 +3,12 @@ import { eq } from "drizzle-orm";
 import {
   PermissieEngine,
   bevoegdhedenVoorLegacyRol,
+  combineerBevoegdheden,
   type Bevoegdheden,
   type ObjectRecht,
   type PermissieContext,
 } from "@workspace/permissies";
+import { haalFunctieBevoegdhedenVoorGebruiker } from "./functie-bevoegdheden";
 
 /**
  * PermissieService — request-scoped autorisatieservice.
@@ -45,9 +47,16 @@ export class PermissieService {
     const gebruiker = gebruikerRows[0];
     if (!gebruiker) throw new Error(`Gebruiker ${this.gebruikerId} niet gevonden`);
 
+    // Increment 4: functie-afgeleide profielen additief meenemen.
+    const functieBevoegdheden = await haalFunctieBevoegdhedenVoorGebruiker(this.gebruikerId);
+
     const ruwe = (gebruiker.bevoegdheden as Bevoegdheden | null) ?? {};
-    const effectief: Bevoegdheden =
+    const opgeslagen: Bevoegdheden =
       Object.keys(ruwe).length === 0 ? bevoegdhedenVoorLegacyRol(gebruiker.rol) : ruwe;
+    const effectief: Bevoegdheden =
+      functieBevoegdheden.length > 0
+        ? combineerBevoegdheden([opgeslagen, ...functieBevoegdheden])
+        : opgeslagen;
 
     const objectRechten: ObjectRecht[] = objectRechtenRows.map((r) => ({
       id: r.id,

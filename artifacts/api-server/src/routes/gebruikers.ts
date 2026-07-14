@@ -23,6 +23,7 @@ import {
   magAutomatischKoppelen,
 } from "../lib/herkomst";
 import { maakGebruikerAan, isEmailConflictFout } from "../lib/gebruiker-aanmaken";
+import { haalFunctieBevoegdhedenVoorGebruiker } from "../lib/functie-bevoegdheden";
 import { beeindigSessiesVanGebruiker } from "../lib/session";
 import { genereerTijdelijkWachtwoord } from "../lib/wachtwoord";
 import { logAudit } from "../lib/audit";
@@ -498,6 +499,14 @@ router.patch("/gebruikers/:id", alleenBeheerder, async (req, res): Promise<void>
             });
           }
         }
+      }
+      // Increment 4: functie-afgeleide profielen toevoegen ná de escalatiecheck,
+      // zodat de opgeslagen matrix de werkelijke effectieve rechten weerspiegelt.
+      // Functie-profielen worden niet door de beheerder toegewezen maar door het
+      // functiehuis bepaald; ze vallen buiten de zelf-escalatiebeveiliging.
+      const functieBev = await haalFunctieBevoegdhedenVoorGebruiker(id);
+      if (functieBev.length > 0) {
+        nieuweMatrix = combineerBevoegdheden([nieuweMatrix, ...functieBev]);
       }
       wijziging.bevoegdheden = nieuweMatrix;
     }
