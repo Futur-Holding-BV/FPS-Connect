@@ -635,8 +635,6 @@ export default function GebouwDetail() {
     ontbrekendeUitvoeringsdata.push("bouwlagen");
   if (!heeftPlattegrond)
     ontbrekendeUitvoeringsdata.push("plattegrond(en)");
-  if (aantalSpots === 0)
-    ontbrekendeUitvoeringsdata.push("geregistreerde spots");
 
   const gegroepeerdeTeamleden = Object.values(
     (toewijzingen ?? []).reduce<
