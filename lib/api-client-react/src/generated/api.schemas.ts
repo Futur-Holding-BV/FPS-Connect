@@ -3091,6 +3091,12 @@ export interface OnderhoudVoltooien {
   voltooid_datum?: string;
 }
 
+export interface ActivatielinkResponse {
+  /** Activatielink die de beheerder handmatig kan delen */
+  link: string;
+  verloopt_op: string;
+}
+
 export type GebruikerRol = typeof GebruikerRol[keyof typeof GebruikerRol];
 
 

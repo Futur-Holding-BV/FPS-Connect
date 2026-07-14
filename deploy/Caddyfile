@@ -38,7 +38,7 @@ connect.fps-one.nl {
     # geen file-existence check, geen try_files, geen not file.
     @static {
         path /assets/* /icons/* /favicon* /manifest* /sw.js
-        path_regexp ext \.(js|css|png|jpg|jpeg|gif|svg|ico|webp|avif|woff|woff2|ttf|eot|map|webmanifest|json|txt|xml)$
+        path_regexp ext \.(js|mjs|css|png|jpg|jpeg|gif|svg|ico|webp|avif|woff|woff2|ttf|eot|map|webmanifest|json|txt|xml)$
     }
 
     handle @static {

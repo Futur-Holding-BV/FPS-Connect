@@ -1,3 +1,25 @@
+## 2026-07-14 — Plattegrond productie-fix (mjs) + Activatielink voor onboarding
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+**Bug 1 — Plattegrond toont niet op connect.fps-one.nl:**
+Root cause: Caddyfile `@static` matcher had `mjs` NIET in de extensie-regexp. Daardoor werd
+`pdf.worker.min-CrMmvqMo.mjs` door de SPA-fallback afgehandeld (→ `text/html`), pdfjs-worker
+laadde niet, PDF-render faalde, afbeelding-fallback faalde ook.
+- Caddyfile regel 44: `\.(js|css|...)$` → `\.(js|mjs|css|...)$`
+- Api + caddy Docker images herbouwd met `--no-cache`; containers herstart op VPS
+- Verificatie: `curl -I .../assets/pdf.worker.min-CrMmvqMo.mjs` → `200 text/javascript`
+
+**Bug 2 — Gebruiker aanmaken leidt niet tot onboarding (e-mail niet geconfigureerd):**
+Root cause: `stuurUitnodigingsmail` vereist MAIL_* env vars (niet op productie) → `POST /gebruikers/:id/uitnodigen` geeft 502.
+Oplossing: "Activatielink kopiëren" — beheerder genereert link handmatig, deelt via WhatsApp/chat.
+- `POST /gebruikers/:id/activatielink` — nieuw endpoint (hoofdbeheerder), genereert token, 7 dagen geldig, stuurt GEEN mail
+- OpenAPI schema `ActivatielinkResponse` + codegen uitgevoerd
+- Gebruikerskaart: knop "Activatielink kopiëren" (zichtbaar voor niet-geaccepteerde gebruikers)
+- Dialog met klikbare link + "Kopieer en sluiten" knop (clipboard API)
+
+---
+
 ## 2026-07-14 — Plattegrond-hero: init-bug en foutmelding
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (UI-only)

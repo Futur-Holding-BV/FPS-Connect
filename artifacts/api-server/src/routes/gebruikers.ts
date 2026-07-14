@@ -877,6 +877,36 @@ router.post("/gebruikers/:id/uitnodigen/opnieuw", alleenBeheerder, async (req, r
   }
 });
 
+// POST /gebruikers/:id/activatielink — token genereren zonder e-mail te sturen.
+// De beheerder kan de link handmatig delen (bv. via WhatsApp/chat) wanneer
+// e-mailconfiguratie ontbreekt of de gebruiker geen uitnodigingsmail ontvangt.
+router.post("/gebruikers/:id/activatielink", alleenBeheerder, async (req, res): Promise<void> => {
+  try {
+    const id = parseInt(String(req.params.id), 10);
+    const [bestaande] = await db
+      .select()
+      .from(gebruikersTable)
+      .where(eq(gebruikersTable.id, id));
+    if (!bestaande) return void res.status(404).json({ error: "Gebruiker niet gevonden" });
+    const token = crypto.randomBytes(32).toString("hex");
+    const verlooptOp = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    const activatieLink = `https://${domein()}/uitnodiging/${token}`;
+    await db
+      .update(gebruikersTable)
+      .set({
+        uitnodigingStatus: "uitgenodigd",
+        uitnodigingVerstuurdOp: bestaande.uitnodigingVerstuurdOp ?? new Date(),
+        uitnodigingToken: token,
+        uitnodigingVerlooptOp: verlooptOp,
+      })
+      .where(eq(gebruikersTable.id, id));
+    res.json({ link: activatieLink, verloopt_op: verlooptOp.toISOString() });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
 // POST /gebruikers/:id/herkomst-toepassen — het herkomst-profiel van deze ene
 // gebruiker opnieuw doorvoeren (bevoegdheden terugzetten naar de preset).
 router.post(

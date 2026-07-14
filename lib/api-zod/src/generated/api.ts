@@ -6040,6 +6040,19 @@ export const UitnodigingVersturenResponse = zod.object({
 
 
 /**
+ * @summary Activatielink genereren zonder e-mail (voor handmatig delen)
+ */
+export const ActivatielinkGenererenParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ActivatielinkGenererenResponse = zod.object({
+  "link": zod.string().describe('Activatielink die de beheerder handmatig kan delen'),
+  "verloopt_op": zod.coerce.date()
+})
+
+
+/**
  * @summary Uitnodiging opnieuw sturen naar gebruiker
  */
 export const UitnodigingOpnieuwVersturenParams = zod.object({

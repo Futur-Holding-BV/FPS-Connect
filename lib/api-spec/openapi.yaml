@@ -5075,6 +5075,25 @@ paths:
               schema:
                 $ref: "#/components/schemas/Gebruiker"
 
+  /gebruikers/{id}/activatielink:
+    post:
+      operationId: activatielinkGenereren
+      tags: [gebruikers]
+      summary: Activatielink genereren zonder e-mail (voor handmatig delen)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActivatielinkResponse"
+
   /gebruikers/{id}/uitnodigen/opnieuw:
     post:
       operationId: uitnodigingOpnieuwVersturen
@@ -27347,6 +27366,17 @@ components:
           type: string
 
     # ── GEBRUIKER ────────────────────────────────────────────────────────
+    ActivatielinkResponse:
+      type: object
+      required: [link, verloopt_op]
+      properties:
+        link:
+          type: string
+          description: Activatielink die de beheerder handmatig kan delen
+        verloopt_op:
+          type: string
+          format: date-time
+
     Gebruiker:
       type: object
       required: [id, naam, email, rol, actief, gearchiveerd, aangemaakt_op, uitnodiging_status, bevoegdheden]

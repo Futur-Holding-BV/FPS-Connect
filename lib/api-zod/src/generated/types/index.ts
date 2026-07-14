@@ -35,6 +35,7 @@ export * from './accountviewRelatieMapping';
 export * from './accountviewRelatieMappingInput';
 export * from './achievement';
 export * from './achievementControleerResponse';
+export * from './activatielinkResponse';
 export * from './activiteit';
 export * from './adviseurAntwoord';
 export * from './adviseurVraagInput';

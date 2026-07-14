@@ -36,6 +36,7 @@ import type {
   AccountviewRelatieMapping,
   AccountviewRelatieMappingInput,
   AchievementControleerResponse,
+  ActivatielinkResponse,
   Activiteit,
   AdviseurAntwoord,
   AdviseurVraagInput,
@@ -17523,6 +17524,76 @@ export const useUitnodigingVersturen = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getUitnodigingVersturenMutationOptions(options));
+    }
+
+export const getActivatielinkGenererenUrl = (id: number,) => {
+
+
+
+
+  return `/api/gebruikers/${id}/activatielink`
+}
+
+/**
+ * @summary Activatielink genereren zonder e-mail (voor handmatig delen)
+ */
+export const activatielinkGenereren = async (id: number, options?: RequestInit): Promise<ActivatielinkResponse> => {
+
+  return customFetch<ActivatielinkResponse>(getActivatielinkGenererenUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getActivatielinkGenererenMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof activatielinkGenereren>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof activatielinkGenereren>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['activatielinkGenereren'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof activatielinkGenereren>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  activatielinkGenereren(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ActivatielinkGenererenMutationResult = NonNullable<Awaited<ReturnType<typeof activatielinkGenereren>>>
+
+    export type ActivatielinkGenererenMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Activatielink genereren zonder e-mail (voor handmatig delen)
+ */
+export const useActivatielinkGenereren = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof activatielinkGenereren>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof activatielinkGenereren>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getActivatielinkGenererenMutationOptions(options));
     }
 
 export const getUitnodigingOpnieuwVersturenUrl = (id: number,) => {

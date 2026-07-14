@@ -8,6 +8,7 @@ import {
   useHerstellenGebruiker,
   useUitnodigingVersturen,
   useUitnodigingOpnieuwVersturen,
+  useActivatielinkGenereren,
   useGebruikerHerkomstToepassen,
   useGebruikerHerkomstBevestigen,
   useGebruikerHerkomstBevestigenBulk,
@@ -49,7 +50,7 @@ import {
   RefreshCw, ShieldCheck, Eye, User, Crown, Upload, Palette, SendHorizonal, X,
   Layers, Search, RotateCcw, Check, CheckCheck, Briefcase, Hammer, Wrench, TrendingUp,
   ListChecks, Loader2, AlertTriangle, MoreVertical, KeyRound, LogOut, Lock, Unlock, Copy,
-  QrCode, Download,
+  QrCode, Download, Link2,
 } from "lucide-react";
 import { MODULES, NIVEAUS, combineerBevoegdheden } from "@workspace/permissies";
 import { useQueryClient } from "@tanstack/react-query";
@@ -289,6 +290,7 @@ export default function Gebruikers() {
   const herstellenMutatie   = useHerstellenGebruiker();
   const uitnodigingVersturen = useUitnodigingVersturen();
   const uitnodigingOpnieuwVersturen = useUitnodigingOpnieuwVersturen();
+  const activatielinkMutatie = useActivatielinkGenereren();
   const herkomstToepassen   = useGebruikerHerkomstToepassen();
   const herkomstBevestigen  = useGebruikerHerkomstBevestigen();
   const herkomstBevestigenBulk = useGebruikerHerkomstBevestigenBulk();
@@ -312,6 +314,8 @@ export default function Gebruikers() {
 
   const [uitnodigingBezig, setUitnodigingBezig] = useState<number | null>(null);
   const [herkomstBezig, setHerkomstBezig]       = useState<number | null>(null);
+  const [activatielinkBezig, setActivatielinkBezig] = useState<number | null>(null);
+  const [activatielinkResultaat, setActivatielinkResultaat] = useState<{ link: string; verloopt_op: string } | null>(null);
 
   const [wwResetTarget, setWwResetTarget]     = useState<Gebruiker | null>(null);
   const [wwResetMethode, setWwResetMethode]   = useState<"link" | "tijdelijk">("link");
@@ -554,6 +558,18 @@ export default function Gebruikers() {
         variant: "destructive",
       });
     } finally { setUitnodigingBezig(null); }
+  }
+
+  async function kopieerActivatielink(g: Gebruiker) {
+    setActivatielinkBezig(g.id);
+    try {
+      const resultaat = await activatielinkMutatie.mutateAsync({ id: g.id });
+      setActivatielinkResultaat(resultaat);
+    } catch {
+      toast({ title: "Activatielink mislukt", description: "Probeer het later opnieuw.", variant: "destructive" });
+    } finally {
+      setActivatielinkBezig(null);
+    }
   }
 
   function openWachtwoordReset(g: Gebruiker) {
@@ -879,6 +895,17 @@ export default function Gebruikers() {
                     : status === "geaccepteerd"
                     ? "Opnieuw uitnodigen"
                     : "Uitnodigen"}
+                </button>
+              )}
+              {isHoofd && status !== "geaccepteerd" && !g.gearchiveerd && (
+                <button
+                  type="button"
+                  className="mt-1.5 h-7 text-xs w-full gap-1.5 font-medium rounded-md flex items-center justify-center px-2 transition-colors bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200 disabled:opacity-60"
+                  disabled={activatielinkBezig === g.id}
+                  onClick={() => kopieerActivatielink(g)}
+                >
+                  <Link2 className="h-3 w-3 mr-1 flex-shrink-0" />
+                  {activatielinkBezig === g.id ? "Bezig..." : "Activatielink kopiëren"}
                 </button>
               )}
               {isHoofd && g.rol !== "klant" && !g.gearchiveerd && (
@@ -1563,6 +1590,49 @@ export default function Gebruikers() {
               </Button>
             </DialogFooter>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialoog: activatielink */}
+      <Dialog open={!!activatielinkResultaat} onOpenChange={(o) => { if (!o) setActivatielinkResultaat(null); }}>
+        <DialogContent className="max-w-sm" aria-describedby="activatielink-beschr">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Link2 className="h-4 w-4 text-primary" />
+              Activatielink gegenereerd
+            </DialogTitle>
+          </DialogHeader>
+          <p id="activatielink-beschr" className="text-sm text-muted-foreground">
+            Deel deze link handmatig met de medewerker. De link is 7 dagen geldig.
+          </p>
+          <div className="flex items-center gap-2 rounded-md border bg-slate-50 px-3 py-2">
+            <span className="flex-1 text-xs break-all font-mono text-slate-700 select-all">
+              {activatielinkResultaat?.link}
+            </span>
+            <button
+              type="button"
+              className="shrink-0 text-slate-500 hover:text-slate-800 transition-colors"
+              onClick={() => {
+                if (activatielinkResultaat?.link) {
+                  navigator.clipboard.writeText(activatielinkResultaat.link);
+                  toast({ title: "Gekopieerd", description: "De activatielink staat in het klembord." });
+                }
+              }}
+            >
+              <Copy className="h-4 w-4" />
+            </button>
+          </div>
+          <DialogFooter>
+            <Button variant="default" onClick={() => {
+              if (activatielinkResultaat?.link) {
+                navigator.clipboard.writeText(activatielinkResultaat.link);
+                toast({ title: "Gekopieerd", description: "De activatielink staat in het klembord." });
+              }
+              setActivatielinkResultaat(null);
+            }}>
+              <Copy className="h-4 w-4 mr-1.5" /> Kopieer en sluiten
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
