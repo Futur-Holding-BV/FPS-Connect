@@ -15,6 +15,7 @@ import {
   Pressable,
   ScrollView,
   Text,
+  TextInput,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -68,6 +69,7 @@ function RegelRij({
 }) {
   const c = useColors();
   const isGepickt = regel.status === "gepickt";
+  const toonInvoer = state.gepickt && !isGepickt && !gesloten;
 
   function toggle() {
     if (gesloten) return;
@@ -76,6 +78,18 @@ function RegelRij({
       gepickt: !state.gepickt,
       gepicktHoeveelheid: !state.gepickt ? regel.gevraagd_hoeveelheid : 0,
     });
+  }
+
+  function wijzigHoeveelheid(tekst: string) {
+    const genormaliseerd = tekst.replace(/[^0-9]/g, "");
+    if (genormaliseerd === "") {
+      onChange({ ...state, gepicktHoeveelheid: 0 });
+      return;
+    }
+    let waarde = parseInt(genormaliseerd, 10);
+    if (isNaN(waarde) || waarde < 0) waarde = 0;
+    if (waarde > regel.gevraagd_hoeveelheid) waarde = regel.gevraagd_hoeveelheid;
+    onChange({ ...state, gepicktHoeveelheid: waarde });
   }
 
   return (
@@ -150,6 +164,30 @@ function RegelRij({
         {isGepickt ? (
           <Text style={{ color: "#22c55e", fontSize: 11, marginTop: 2 }}>gepickt</Text>
         ) : null}
+        {toonInvoer ? (
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 6 }}>
+            <Text style={{ color: c.mutedForeground, fontSize: 11 }}>gepickt:</Text>
+            <TextInput
+              value={String(state.gepicktHoeveelheid)}
+              onChangeText={wijzigHoeveelheid}
+              keyboardType="number-pad"
+              selectTextOnFocus
+              style={{
+                minWidth: 44,
+                paddingHorizontal: 8,
+                paddingVertical: 4,
+                borderWidth: 1,
+                borderColor: state.gepicktHoeveelheid === 0 ? "#f59e0b" : c.border,
+                borderRadius: 8,
+                color: c.text,
+                fontSize: 14,
+                fontWeight: "700",
+                textAlign: "center",
+                backgroundColor: c.background,
+              }}
+            />
+          </View>
+        ) : null}
       </View>
     </Pressable>
   );
@@ -210,8 +248,15 @@ export default function PicklijstDetailScherm() {
   }) ?? false;
 
   const aantalGepickt = picklijst?.regels?.filter((r) => {
+    if (r.status === "gepickt") return true;
     const s = regelStaten.get(r.id);
-    return s?.gepickt === true || r.status === "gepickt";
+    return s?.gepickt === true && (s?.gepicktHoeveelheid ?? 0) > 0;
+  }).length ?? 0;
+
+  const aantalTeVerwerken = picklijst?.regels?.filter((r) => {
+    if (r.status === "gepickt") return false;
+    const s = regelStaten.get(r.id);
+    return s?.gepickt === true && (s?.gepicktHoeveelheid ?? 0) > 0;
   }).length ?? 0;
 
   const totaalRegels = picklijst?.regels?.length ?? 0;
@@ -221,7 +266,7 @@ export default function PicklijstDetailScherm() {
     const teVerwerkenRegels = picklijst.regels
       .filter((r) => {
         const s = regelStaten.get(r.id);
-        return s?.gepickt === true && r.status !== "gepickt";
+        return s?.gepickt === true && r.status !== "gepickt" && (s?.gepicktHoeveelheid ?? 0) > 0;
       })
       .map((r) => {
         const s = regelStaten.get(r.id);
@@ -398,10 +443,10 @@ export default function PicklijstDetailScherm() {
               )}
               <Pressable
                 onPress={() => void verwerk()}
-                disabled={bezigVerwerken || aantalGepickt === 0}
+                disabled={bezigVerwerken || aantalTeVerwerken === 0}
                 style={({ pressed }) => ({
                   backgroundColor:
-                    bezigVerwerken || aantalGepickt === 0
+                    bezigVerwerken || aantalTeVerwerken === 0
                       ? "#6b7280"
                       : pressed
                         ? "#ea580c"
@@ -422,7 +467,7 @@ export default function PicklijstDetailScherm() {
                 <Text style={{ color: "#fff", fontWeight: "700", fontSize: 16 }}>
                   {bezigVerwerken
                     ? "Bezig..."
-                    : `Verwerk ${aantalGepickt} artikel${aantalGepickt !== 1 ? "en" : ""}`}
+                    : `Verwerk ${aantalTeVerwerken} artikel${aantalTeVerwerken !== 1 ? "en" : ""}`}
                 </Text>
               </Pressable>
             </View>
