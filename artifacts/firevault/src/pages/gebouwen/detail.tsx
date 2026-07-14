@@ -110,7 +110,7 @@ import GebouwRapporten from "./gebouw-rapporten";
 import { GebouwDashboard } from "./gebouw-dashboard";
 
 const BEHEERDER_ROLLEN = ["beheerder", "hoofdbeheerder"];
-const TEAM_UITGESLOTEN_ROLLEN = ["hoofdbeheerder", "klant"];
+const TEAM_UITGESLOTEN_ROLLEN = ["klant"];
 
 const CALC_STATUS_LABEL: Record<string, string> = {
   concept: "Concept",

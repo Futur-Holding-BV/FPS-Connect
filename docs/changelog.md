@@ -1,3 +1,20 @@
+## 2026-07-14 — Hoofdbeheerder kan zichzelf als teamlid toevoegen aan project
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+**Bug — hoofdbeheerder verschijnt niet in de teamlid-keuzelijst (Beheer-tab gebouw):**
+`TEAM_UITGESLOTEN_ROLLEN = ["hoofdbeheerder", "klant"]` filterde de hoofdbeheerder altijd
+weg uit de dropdown "Kies teamlid". De server-side logica klopte al: bij hoofdbeheerder
+is een projectfunctie uit de eigen `functietitels` verplicht. René heeft "Projectleider"
+in zijn productie-profiel staan, maar het formulier toonde hem gewoon niet.
+
+**Fix (`artifacts/firevault/src/pages/gebouwen/detail.tsx`):**
+`TEAM_UITGESLOTEN_ROLLEN` beperkt tot `["klant"]`. Hoofdbeheerders verschijnen nu in de
+keuzelijst; de UI dwingt dan (via `BEHEERDER_ROLLEN`) het kiezen van een projectfunctie
+af vóór het activeren van de knop.
+
+---
+
 ## 2026-07-14 — Catalogusdata vanuit dev naar productie overgezet
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
