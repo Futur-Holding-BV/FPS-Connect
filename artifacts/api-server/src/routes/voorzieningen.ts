@@ -167,6 +167,7 @@ async function mapVoorziening(v: typeof voorzieningenTable.$inferSelect) {
     bijgewerkt_op: v.bijgewerktOp.toISOString(),
     parent_spot_id: v.parentSpotId ?? null,
     heeft_onderdelen: (await db.select({ id: voorzieningenTable.id }).from(voorzieningenTable).where(eq(voorzieningenTable.parentSpotId, v.id))).length > 0,
+    applicaties: (v.applicaties as {type_code: string; label_ids: number[]}[] | null) ?? null,
   };
 }
 
@@ -253,12 +254,21 @@ router.get("/gebouwen/:id/volgend-spotnummer", lezenVoorzieningen, async (req, r
 router.post("/voorzieningen", requireBevoegdheid("voorzieningen", 3), async (req, res): Promise<void> => {
   try {
     const {
-      objectnummer, qr_code, type, status, classificatie, gebouw_id,
+      objectnummer, qr_code, type: typeBody, status, classificatie, gebouw_id,
       verdieping_id, ruimte, huisnummer, locatie_omschrijving, locatie_x, locatie_y,
       materialen, opmerkingen, monteur_id, controleur_id,
       installatie_datum, volgende_inspectie,
       wbdbo, wrd, wand_of_plafond, cluster_id, label_ids, parent_spot_id,
+      applicaties: applicatiesBody,
     } = req.body;
+
+    // Als `applicaties` meegestuurd is, leiden we het primaire type af uit het eerste item.
+    const geldigeApplicaties = Array.isArray(applicatiesBody)
+      ? (applicatiesBody as {type_code: string; label_ids?: number[]}[])
+          .filter((a) => a && typeof a.type_code === "string" && a.type_code.trim())
+          .slice(0, 5)
+      : [];
+    const type = geldigeApplicaties.length > 0 ? geldigeApplicaties[0].type_code : typeBody;
 
     // De aanmaker (maker) wordt altijd afgeleid uit de ingelogde sessie,
     // nooit vanuit de request body — voorkomt vervalsen van de creator-attributie.
@@ -305,6 +315,10 @@ router.post("/voorzieningen", requireBevoegdheid("voorzieningen", 3), async (req
             clusterId: cluster_id != null ? Number(cluster_id) : null,
             makerMonteurId: maker_monteur_id,
             parentSpotId: parent_spot_id != null ? Number(parent_spot_id) : null,
+            applicaties: geldigeApplicaties.length > 0 ? geldigeApplicaties.map((a) => ({
+              type_code: a.type_code,
+              label_ids: Array.isArray(a.label_ids) ? a.label_ids.map(Number).filter((n) => n > 0) : [],
+            })) : null,
           })
           .returning();
         break;
@@ -323,7 +337,17 @@ router.post("/voorzieningen", requireBevoegdheid("voorzieningen", 3), async (req
       return void res.status(409).json({ error: "Kon geen uniek spotnummer toekennen" });
     }
 
-    if (Array.isArray(label_ids)) {
+    if (geldigeApplicaties.length > 0) {
+      // Sync alle labels uit alle applicaties (flat union); voorziening_labels blijft backwards-compat index.
+      const alleLabels = [
+        ...new Set(
+          geldigeApplicaties.flatMap((a) =>
+            Array.isArray(a.label_ids) ? a.label_ids.map(Number).filter((n) => n > 0) : [],
+          ),
+        ),
+      ];
+      await syncVoorzieningLabels(v.id, alleLabels);
+    } else if (Array.isArray(label_ids)) {
       await syncVoorzieningLabels(v.id, label_ids.map((n: unknown) => Number(n)));
     }
 
@@ -462,7 +486,14 @@ router.patch("/voorzieningen/:id", requireBevoegdheid("voorzieningen", 2), async
       materialen, opmerkingen, monteur_id, controleur_id,
       installatie_datum, volgende_inspectie,
       wbdbo, wrd, wand_of_plafond, cluster_id, maker_monteur_id, label_ids, parent_spot_id,
+      applicaties: applicatiesBody,
     } = req.body;
+
+    const geldigeApplicatiesPatch = Array.isArray(applicatiesBody)
+      ? (applicatiesBody as {type_code: string; label_ids?: number[]}[])
+          .filter((a) => a && typeof a.type_code === "string" && a.type_code.trim())
+          .slice(0, 5)
+      : [];
 
     // Integriteit: een meegestuurde verdieping moet bij het gebouw van deze
     // voorziening horen (geen cross-gebouw koppeling via verdieping_id).
@@ -487,6 +518,12 @@ router.patch("/voorzieningen/:id", requireBevoegdheid("voorzieningen", 2), async
         clusterId: cluster_id === undefined ? undefined : cluster_id === null ? null : Number(cluster_id),
         makerMonteurId: maker_monteur_id,
         parentSpotId: parent_spot_id === undefined ? undefined : parent_spot_id === null ? null : Number(parent_spot_id),
+        applicaties: geldigeApplicatiesPatch.length > 0
+          ? geldigeApplicatiesPatch.map((a) => ({
+              type_code: a.type_code,
+              label_ids: Array.isArray(a.label_ids) ? a.label_ids.map(Number).filter((n) => n > 0) : [],
+            }))
+          : undefined,
         bijgewerktOp: new Date(),
       })
       .where(eq(voorzieningenTable.id, id))
@@ -494,7 +531,16 @@ router.patch("/voorzieningen/:id", requireBevoegdheid("voorzieningen", 2), async
 
     if (!v) return void res.status(404).json({ error: "Voorziening niet gevonden" });
 
-    if (Array.isArray(label_ids)) {
+    if (geldigeApplicatiesPatch.length > 0) {
+      const alleLabels = [
+        ...new Set(
+          geldigeApplicatiesPatch.flatMap((a) =>
+            Array.isArray(a.label_ids) ? a.label_ids.map(Number).filter((n) => n > 0) : [],
+          ),
+        ),
+      ];
+      await syncVoorzieningLabels(v.id, alleLabels);
+    } else if (Array.isArray(label_ids)) {
       await syncVoorzieningLabels(v.id, label_ids.map((n: unknown) => Number(n)));
     }
 

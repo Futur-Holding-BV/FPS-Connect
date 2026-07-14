@@ -32,6 +32,9 @@ export const voorzieningenTable = pgTable("voorzieningen", {
   volgendeInspectie: text("volgende_inspectie"),
   aiTeControleren: boolean("ai_te_controleren").notNull().default(false),
   aiVoorstelId: integer("ai_voorstel_id"),
+  // Gestructureerde lijst van doorvoer/applicaties (max 5) met hun toepassingen.
+  // null = legacy spot (één type + voorziening_labels). Array = meerdere doorvoeren.
+  applicaties: jsonb("applicaties").$type<SpotApplicatieItem[]>(),
   // Samengestelde constructie: als ingesteld is deze spot een onderdeel van de parent spot
   parentSpotId: integer("parent_spot_id"),
   gearchiveerd: boolean("gearchiveerd").notNull().default(false),
@@ -134,6 +137,13 @@ export const voorzieningLabelsTable = pgTable("voorziening_labels", {
   uniekePaar: unique().on(t.voorzieningId, t.labelId),
 }));
 export type VoorzieningLabel = typeof voorzieningLabelsTable.$inferSelect;
+
+// Type voor de gestructureerde applicaties-kolom op een voorziening.
+// Elk item vertegenwoordigt één doorvoer/applicatie met de bijbehorende toepassingen.
+export interface SpotApplicatieItem {
+  type_code: string;
+  label_ids: number[];
+}
 
 export const fotosTable = pgTable("fotos", {
   id: serial("id").primaryKey(),

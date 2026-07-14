@@ -1,3 +1,28 @@
+## 2026-07-14 — Multi-applicatie per spot (tot 5 doorvoeren)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+**Datamodel:**
+- `lib/db/src/schema/voorzieningen.ts` — `SpotApplicatieItem` interface + `applicaties: jsonb` kolom op `voorzieningenTable`
+- `ALTER TABLE voorzieningen ADD COLUMN IF NOT EXISTS applicaties jsonb` — uitgevoerd op dev-DB
+- `lib/api-spec/openapi.yaml` — `SpotApplicatieItem` schema + `applicaties` veld op `Voorziening`, `VoorzieningInput` en `VoorzieningUpdate`
+
+**Backend:**
+- `artifacts/api-server/src/routes/voorzieningen.ts` — `mapVoorziening` geeft `applicaties` terug; POST/PATCH verwerken `applicaties` (JSONB opslaan + flat label-sync via `syncVoorzieningLabels`)
+
+**Frontend (`artifacts/firevault/src/pages/gebouwen/plattegrond.tsx`):**
+- `extraApplicaties` + `serieExtraApplicaties` state (inclusief refs + useEffect)
+- Helperfuncties: `updateExtraApplicatie`, `voegExtraApplicatieToe`, `verwijderExtraApplicatie` + serie-varianten
+- `bouwSerieSpotData`: bouwt `alleApplicaties` array vanuit sjabloon + extras (ref-based)
+- `maakNieuw` submit: bouwt `alleApplicaties` array; stuurt `applicaties` bij meerdere slots, anders `label_ids` (legacy-pad)
+- Reset-logica: `setExtraApplicaties([])` in `maakNieuw`, `sluitDialoog` en `openSerie` (serie)
+- UI nieuw-spot dialoog: "Doorvoer 1"-badge bij meerdere slots, extra slots met verwijder-knop, "Doorvoer toevoegen"-knop (max 5)
+- UI serie-dialoog: zelfde patroon voor serie-spots
+
+**Bewijs:** `pnpm --filter @workspace/firevault run typecheck` → volledig groen.
+
+---
+
 ## 2026-07-14 — TOTP kopieerknop + demo-data verwijderd
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag

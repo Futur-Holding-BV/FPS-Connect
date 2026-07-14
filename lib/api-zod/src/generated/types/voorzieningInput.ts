@@ -5,6 +5,7 @@
  * FPS Brandpreventie - Platform voor brandpreventieve gebouwvoorzieningen
  * OpenAPI spec version: 0.1.0
  */
+import type { SpotApplicatieItem } from './spotApplicatieItem';
 
 export interface VoorzieningInput {
   objectnummer?: string;
@@ -32,6 +33,11 @@ export interface VoorzieningInput {
   cluster_id?: number | null;
   maker_monteur_id?: number;
   label_ids?: number[];
+  /**
+     * Geordende lijst van doorvoer/applicaties (max 5). Vervangt label_ids als aanwezig.
+     * @maxItems 5
+     */
+  applicaties?: SpotApplicatieItem[];
   /** @nullable */
   parent_spot_id?: number | null;
 }

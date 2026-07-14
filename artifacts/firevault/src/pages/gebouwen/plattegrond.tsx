@@ -503,6 +503,7 @@ export default function Plattegrond() {
   const [nieuwLocatie, setNieuwLocatie] = useState({ x: 400, y: 300 });
   const [nieuwForm, setNieuwForm] = useState({ ...LEEG_FORM });
   const [nieuwLabelIds, setNieuwLabelIds] = useState<number[]>([]);
+  const [extraApplicaties, setExtraApplicaties] = useState<{type_code: string; label_ids: number[]}[]>([]);
   const [voorFotos, setVoorFotos] = useState<string[]>([]);
   const [naFotos, setNaFotos] = useState<string[]>([]);
   const [aiVoorstel, setAiVoorstel] = useState<SpotAiVoorstelResultaat | null>(null);
@@ -525,6 +526,7 @@ export default function Plattegrond() {
     cluster_id: "",
   });
   const [serieLabelIds, setSerieLabelIds] = useState<number[]>([]);
+  const [serieExtraApplicaties, setSerieExtraApplicaties] = useState<{type_code: string; label_ids: number[]}[]>([]);
   const [serieTeller, setSerieTeller] = useState(0);
   // Plaatsmethode binnen de serie: "klik" = één spot per klik, "lijn" = een
   // lijn trekken (twee klikken) waarna N spots gelijkmatig verdeeld worden,
@@ -540,8 +542,10 @@ export default function Plattegrond() {
   const [serieMuis, setSerieMuis] = useState<{ x: number; y: number } | null>(null);
   const serieFormRef = useRef(serieForm);
   const serieLabelIdsRef = useRef(serieLabelIds);
+  const serieExtraApplicatiesRef = useRef(serieExtraApplicaties);
   useEffect(() => { serieFormRef.current = serieForm; }, [serieForm]);
   useEffect(() => { serieLabelIdsRef.current = serieLabelIds; }, [serieLabelIds]);
+  useEffect(() => { serieExtraApplicatiesRef.current = serieExtraApplicaties; }, [serieExtraApplicaties]);
 
   const [pdfBeeld, setPdfBeeld] = useState<string | null>(null);
   const [pdfDims, setPdfDims] = useState<{ w: number; h: number } | null>(null);
@@ -955,8 +959,13 @@ export default function Plattegrond() {
   const bouwSerieSpotData = useCallback((x: number, y: number) => {
     const sjabloon = serieFormRef.current;
     const labels = serieLabelIdsRef.current;
+    const extras = serieExtraApplicatiesRef.current;
     const nu = new Date();
     const vandaag = `${nu.getFullYear()}-${String(nu.getMonth() + 1).padStart(2, "0")}-${String(nu.getDate()).padStart(2, "0")}`;
+    const geldigeExtras = extras.filter((a) => a.type_code.trim());
+    const alleApplicaties = sjabloon.type
+      ? [{ type_code: sjabloon.type, label_ids: labels }, ...geldigeExtras]
+      : [];
     return {
       objectnummer: "",
       type: sjabloon.type,
@@ -965,7 +974,8 @@ export default function Plattegrond() {
       wand_of_plafond: sjabloon.wand_of_plafond || undefined,
       ruimte: sjabloon.ruimte && sjabloon.ruimte !== GEEN_RUIMTE_VAL ? sjabloon.ruimte : undefined,
       installatie_datum: vandaag,
-      label_ids: labels,
+      applicaties: alleApplicaties.length > 0 ? alleApplicaties : undefined,
+      label_ids: alleApplicaties.length > 0 ? undefined : labels,
       monteur_id: sjabloon.monteur_id ? Number(sjabloon.monteur_id) : undefined,
       cluster_id: sjabloon.cluster_id ? Number(sjabloon.cluster_id) : undefined,
       maker_monteur_id: gebruiker?.id != null ? Number(gebruiker.id) : undefined,
@@ -1231,6 +1241,26 @@ export default function Plattegrond() {
       return n;
     });
   }
+
+  // ---- Helpers voor extra doorvoer-applicaties (slots 2-5) ----
+  function updateExtraApplicatie(idx: number, delta: Partial<{type_code: string; label_ids: number[]}>) {
+    setExtraApplicaties((prev) => prev.map((a, i) => i === idx ? { ...a, ...delta } : a));
+  }
+  function voegExtraApplicatieToe() {
+    setExtraApplicaties((prev) => prev.length < 4 ? [...prev, { type_code: "", label_ids: [] }] : prev);
+  }
+  function verwijderExtraApplicatie(idx: number) {
+    setExtraApplicaties((prev) => prev.filter((_, i) => i !== idx));
+  }
+  function updateSerieExtraApplicatie(idx: number, delta: Partial<{type_code: string; label_ids: number[]}>) {
+    setSerieExtraApplicaties((prev) => prev.map((a, i) => i === idx ? { ...a, ...delta } : a));
+  }
+  function voegSerieExtraApplicatieToe() {
+    setSerieExtraApplicaties((prev) => prev.length < 4 ? [...prev, { type_code: "", label_ids: [] }] : prev);
+  }
+  function verwijderSerieExtraApplicatie(idx: number) {
+    setSerieExtraApplicaties((prev) => prev.filter((_, i) => i !== idx));
+  }
   // Het AI-voorstel hoort bij specifieke foto's; zodra de foto's wijzigen is het
   // voorstel niet meer geldig. Ook een eventueel lopend AI-verzoek wordt geïnvalideerd.
   function wisAiVoorstel() {
@@ -1309,6 +1339,12 @@ export default function Plattegrond() {
     if (nieuwForm.ruimte && nieuwForm.ruimte !== GEEN_RUIMTE_VAL) {
       registreerRuimteGebruik(nieuwForm.ruimte);
     }
+    const geldigeExtras = extraApplicaties.filter((a) => a.type_code.trim());
+    const alleApplicaties = [
+      { type_code: nieuwForm.type, label_ids: nieuwLabelIds },
+      ...geldigeExtras,
+    ].filter((a) => a.type_code.trim());
+
     const aangemaakt: any = await maakVoorziening.mutateAsync({
       data: {
         objectnummer: nieuwForm.objectnummer,
@@ -1320,7 +1356,8 @@ export default function Plattegrond() {
         huisnummer: nieuwForm.huisnummer.trim() || undefined,
         opmerkingen: nieuwForm.opmerkingen.trim() || undefined,
         installatie_datum: nieuwForm.installatie_datum || undefined,
-        label_ids: nieuwLabelIds,
+        applicaties: alleApplicaties.length > 0 ? alleApplicaties : undefined,
+        label_ids: alleApplicaties.length > 0 ? undefined : nieuwLabelIds,
         monteur_id: nieuwForm.monteur_id ? Number(nieuwForm.monteur_id) : undefined,
         maker_monteur_id: gebruiker?.id != null ? Number(gebruiker.id) : undefined,
         locatie_x: nieuwLocatie.x,
@@ -1367,6 +1404,7 @@ export default function Plattegrond() {
     setPlaatsenModus(false);
     setNieuwForm({ ...LEEG_FORM });
     setNieuwLabelIds([]);
+    setExtraApplicaties([]);
     setVoorFotos([]);
     setNaFotos([]);
     setAiVoorstel(null);
@@ -1383,6 +1421,7 @@ export default function Plattegrond() {
     if (!open) {
       setPlaatsenModus(false);
       setNieuwLabelIds([]);
+      setExtraApplicaties([]);
       setVoorFotos([]);
       setNaFotos([]);
       setAiVoorstel(null);
@@ -1409,6 +1448,7 @@ export default function Plattegrond() {
       cluster_id: "",
     });
     setSerieLabelIds([]);
+    setSerieExtraApplicaties([]);
     setSerieMethode("klik");
     setSerieAantal(5);
     setSerieRijen(3);
@@ -2230,55 +2270,112 @@ export default function Plattegrond() {
               )}
             </div>
 
-            {/* Applicatie */}
-            <div>
-              <div className="flex items-center gap-2">
-                <Label>Applicatie *</Label>
-                {isAi("type") && <AiBadge />}
-              </div>
-              <div className={isAi("type") ? "rounded-md ring-1 ring-amber-300" : undefined}>
-                <ApplicatiePicker
-                  value={nieuwForm.type}
-                  onValueChange={(v) => {
-                    setNieuwForm((f) => ({ ...f, type: v }));
-                    setNieuwLabelIds([]);
-                    raakAanAi("type");
-                    raakAanAi("toepassing");
-                  }}
-                />
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                Kies de applicatie uit de centrale bibliotheek.
-              </p>
-            </div>
-
-            {/* Toepassing (alleen als applicatie gekozen) */}
-            {nieuwForm.type && (
-              <div className="border rounded-lg p-4 space-y-2">
-                <div className="flex items-center gap-2">
-                  <p className="text-sm font-medium">Toepassing</p>
-                  {isAi("toepassing") && <AiBadge />}
+            {/* Applicaties (doorvoer 1 t/m 5) */}
+            <div className="space-y-3">
+              {/* Slot 1: primaire applicatie (behoudt bestaande AI-flow) */}
+              <div className={extraApplicaties.length > 0 ? "border rounded-lg p-3 space-y-3" : "space-y-3"}>
+                {extraApplicaties.length > 0 && (
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Doorvoer 1</p>
+                )}
+                <div>
+                  <div className="flex items-center gap-2">
+                    <Label>Applicatie *</Label>
+                    {isAi("type") && <AiBadge />}
+                  </div>
+                  <div className={isAi("type") ? "rounded-md ring-1 ring-amber-300" : undefined}>
+                    <ApplicatiePicker
+                      value={nieuwForm.type}
+                      onValueChange={(v) => {
+                        setNieuwForm((f) => ({ ...f, type: v }));
+                        setNieuwLabelIds([]);
+                        raakAanAi("type");
+                        raakAanAi("toepassing");
+                      }}
+                    />
+                  </div>
+                  {extraApplicaties.length === 0 && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Kies de applicatie uit de centrale bibliotheek.
+                    </p>
+                  )}
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Selecteer de gebruikte producten of systemen bij deze spot.
-                </p>
-                <ToepassingMultiSelect
-                  typeCode={nieuwForm.type}
-                  selectedIds={nieuwLabelIds}
-                  onSelectionChange={(ids) => {
-                    setNieuwLabelIds(ids);
-                    raakAanAi("toepassing");
-                  }}
-                  magLabelsAanmaken={isBeheerder}
-                />
-                {nieuwFabrikanten.length > 0 && (
-                  <p className="text-xs text-muted-foreground pt-1 border-t">
-                    <span className="font-medium">Fabrikant(en):</span>{" "}
-                    {nieuwFabrikanten.join(", ")}
-                  </p>
+                {nieuwForm.type && (
+                  <div className="border rounded-lg p-3 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-medium">Toepassing</p>
+                      {isAi("toepassing") && <AiBadge />}
+                    </div>
+                    {extraApplicaties.length === 0 && (
+                      <p className="text-xs text-muted-foreground">
+                        Selecteer de gebruikte producten of systemen bij deze spot.
+                      </p>
+                    )}
+                    <ToepassingMultiSelect
+                      typeCode={nieuwForm.type}
+                      selectedIds={nieuwLabelIds}
+                      onSelectionChange={(ids) => {
+                        setNieuwLabelIds(ids);
+                        raakAanAi("toepassing");
+                      }}
+                      magLabelsAanmaken={isBeheerder}
+                    />
+                    {nieuwFabrikanten.length > 0 && (
+                      <p className="text-xs text-muted-foreground pt-1 border-t">
+                        <span className="font-medium">Fabrikant(en):</span>{" "}
+                        {nieuwFabrikanten.join(", ")}
+                      </p>
+                    )}
+                  </div>
                 )}
               </div>
-            )}
+
+              {/* Extra slots (doorvoer 2-5) */}
+              {extraApplicaties.map((appl, idx) => (
+                <div key={idx} className="border rounded-lg p-3 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Doorvoer {idx + 2}</p>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => verwijderExtraApplicatie(idx)}
+                      className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                  <ApplicatiePicker
+                    value={appl.type_code}
+                    onValueChange={(v) => updateExtraApplicatie(idx, { type_code: v, label_ids: [] })}
+                  />
+                  {appl.type_code && (
+                    <div className="border rounded-lg p-3 space-y-2">
+                      <p className="text-sm font-medium">Toepassing</p>
+                      <ToepassingMultiSelect
+                        typeCode={appl.type_code}
+                        selectedIds={appl.label_ids}
+                        onSelectionChange={(ids) => updateExtraApplicatie(idx, { label_ids: ids })}
+                        magLabelsAanmaken={isBeheerder}
+                      />
+                    </div>
+                  )}
+                </div>
+              ))}
+
+              {/* Doorvoer toevoegen (tot max 5 slots) */}
+              {nieuwForm.type && extraApplicaties.length < 4 && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={voegExtraApplicatieToe}
+                  className="w-full"
+                >
+                  <Plus className="h-3.5 w-3.5 mr-1.5" />
+                  Doorvoer toevoegen
+                </Button>
+              )}
+            </div>
 
             <div className="grid grid-cols-2 gap-3">
               {/* Wand of plafond */}
@@ -2571,33 +2668,88 @@ export default function Plattegrond() {
               )}
             </div>
 
-            {/* Applicatie */}
-            <div>
-              <Label>Applicatie *</Label>
-              <ApplicatiePicker
-                value={serieForm.type}
-                onValueChange={(v) => {
-                  setSerieForm((f) => ({ ...f, type: v }));
-                  setSerieLabelIds([]);
-                }}
-              />
-            </div>
-
-            {/* Toepassing */}
-            {serieForm.type && (
-              <div className="border rounded-lg p-4 space-y-2">
-                <p className="text-sm font-medium">Toepassing</p>
-                <p className="text-xs text-muted-foreground">
-                  Selecteer de gebruikte producten of systemen voor deze reeks.
-                </p>
-                <ToepassingMultiSelect
-                  typeCode={serieForm.type}
-                  selectedIds={serieLabelIds}
-                  onSelectionChange={setSerieLabelIds}
-                  magLabelsAanmaken={isBeheerder}
-                />
+            {/* Applicaties (doorvoer 1 t/m 5) */}
+            <div className="space-y-3">
+              {/* Slot 1: primaire applicatie */}
+              <div className={serieExtraApplicaties.length > 0 ? "border rounded-lg p-3 space-y-3" : "space-y-3"}>
+                {serieExtraApplicaties.length > 0 && (
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Doorvoer 1</p>
+                )}
+                <div>
+                  <Label>Applicatie *</Label>
+                  <ApplicatiePicker
+                    value={serieForm.type}
+                    onValueChange={(v) => {
+                      setSerieForm((f) => ({ ...f, type: v }));
+                      setSerieLabelIds([]);
+                    }}
+                  />
+                </div>
+                {serieForm.type && (
+                  <div className="border rounded-lg p-3 space-y-2">
+                    <p className="text-sm font-medium">Toepassing</p>
+                    {serieExtraApplicaties.length === 0 && (
+                      <p className="text-xs text-muted-foreground">
+                        Selecteer de gebruikte producten of systemen voor deze reeks.
+                      </p>
+                    )}
+                    <ToepassingMultiSelect
+                      typeCode={serieForm.type}
+                      selectedIds={serieLabelIds}
+                      onSelectionChange={setSerieLabelIds}
+                      magLabelsAanmaken={isBeheerder}
+                    />
+                  </div>
+                )}
               </div>
-            )}
+
+              {/* Extra slots (doorvoer 2-5) */}
+              {serieExtraApplicaties.map((appl, idx) => (
+                <div key={idx} className="border rounded-lg p-3 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Doorvoer {idx + 2}</p>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => verwijderSerieExtraApplicatie(idx)}
+                      className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                  <ApplicatiePicker
+                    value={appl.type_code}
+                    onValueChange={(v) => updateSerieExtraApplicatie(idx, { type_code: v, label_ids: [] })}
+                  />
+                  {appl.type_code && (
+                    <div className="border rounded-lg p-3 space-y-2">
+                      <p className="text-sm font-medium">Toepassing</p>
+                      <ToepassingMultiSelect
+                        typeCode={appl.type_code}
+                        selectedIds={appl.label_ids}
+                        onSelectionChange={(ids) => updateSerieExtraApplicatie(idx, { label_ids: ids })}
+                        magLabelsAanmaken={isBeheerder}
+                      />
+                    </div>
+                  )}
+                </div>
+              ))}
+
+              {/* Doorvoer toevoegen (tot max 5 slots) */}
+              {serieForm.type && serieExtraApplicaties.length < 4 && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={voegSerieExtraApplicatieToe}
+                  className="w-full"
+                >
+                  <Plus className="h-3.5 w-3.5 mr-1.5" />
+                  Doorvoer toevoegen
+                </Button>
+              )}
+            </div>
 
             <div className="grid grid-cols-2 gap-3">
               {/* Wand of plafond */}

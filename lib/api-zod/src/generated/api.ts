@@ -1584,7 +1584,11 @@ export const ListVoorzieningenResponse = zod.object({
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string().optional(),
   "parent_spot_id": zod.number().nullish().describe('Indien ingesteld is dit een onderdeel van de opgegeven samengestelde spot'),
-  "heeft_onderdelen": zod.boolean().optional().describe('Afgeleid - true als er onderdelen aan deze spot zijn gekoppeld')
+  "heeft_onderdelen": zod.boolean().optional().describe('Afgeleid - true als er onderdelen aan deze spot zijn gekoppeld'),
+  "applicaties": zod.array(zod.object({
+  "type_code": zod.string().describe('Code van de applicatie (voorziening-type).'),
+  "label_ids": zod.array(zod.number()).optional()
+}).describe('Één doorvoer\/applicatie met de bijbehorende toepassingen.')).nullish().describe('Gestructureerde lijst van doorvoer\/applicaties (max 5). null bij legacy spots.')
 })),
   "totaal": zod.number(),
   "pagina": zod.number(),
@@ -1595,6 +1599,10 @@ export const ListVoorzieningenResponse = zod.object({
 /**
  * @summary Nieuwe voorziening registreren
  */
+export const createVoorzieningBodyApplicatiesMax = 5;
+
+
+
 export const CreateVoorzieningBody = zod.object({
   "objectnummer": zod.string().optional(),
   "qr_code": zod.string().optional(),
@@ -1620,6 +1628,10 @@ export const CreateVoorzieningBody = zod.object({
   "cluster_id": zod.number().nullish(),
   "maker_monteur_id": zod.number().optional(),
   "label_ids": zod.array(zod.number()).optional(),
+  "applicaties": zod.array(zod.object({
+  "type_code": zod.string().describe('Code van de applicatie (voorziening-type).'),
+  "label_ids": zod.array(zod.number()).optional()
+}).describe('Één doorvoer\/applicatie met de bijbehorende toepassingen.')).max(createVoorzieningBodyApplicatiesMax).optional().describe('Geordende lijst van doorvoer\/applicaties (max 5). Vervangt label_ids als aanwezig.'),
   "parent_spot_id": zod.number().nullish()
 })
 
@@ -1751,6 +1763,10 @@ export const UpdateVoorzieningParams = zod.object({
   "id": zod.coerce.number()
 })
 
+export const updateVoorzieningBodyApplicatiesMax = 5;
+
+
+
 export const UpdateVoorzieningBody = zod.object({
   "objectnummer": zod.string().optional(),
   "qr_code": zod.string().optional(),
@@ -1775,6 +1791,10 @@ export const UpdateVoorzieningBody = zod.object({
   "cluster_id": zod.number().nullish(),
   "maker_monteur_id": zod.number().optional(),
   "label_ids": zod.array(zod.number()).optional(),
+  "applicaties": zod.array(zod.object({
+  "type_code": zod.string().describe('Code van de applicatie (voorziening-type).'),
+  "label_ids": zod.array(zod.number()).optional()
+}).describe('Één doorvoer\/applicatie met de bijbehorende toepassingen.')).max(updateVoorzieningBodyApplicatiesMax).optional().describe('Geordende lijst van doorvoer\/applicaties (max 5). Vervangt label_ids als aanwezig.'),
   "parent_spot_id": zod.number().nullish()
 })
 
@@ -1816,7 +1836,11 @@ export const UpdateVoorzieningResponse = zod.object({
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string().optional(),
   "parent_spot_id": zod.number().nullish().describe('Indien ingesteld is dit een onderdeel van de opgegeven samengestelde spot'),
-  "heeft_onderdelen": zod.boolean().optional().describe('Afgeleid - true als er onderdelen aan deze spot zijn gekoppeld')
+  "heeft_onderdelen": zod.boolean().optional().describe('Afgeleid - true als er onderdelen aan deze spot zijn gekoppeld'),
+  "applicaties": zod.array(zod.object({
+  "type_code": zod.string().describe('Code van de applicatie (voorziening-type).'),
+  "label_ids": zod.array(zod.number()).optional()
+}).describe('Één doorvoer\/applicatie met de bijbehorende toepassingen.')).nullish().describe('Gestructureerde lijst van doorvoer\/applicaties (max 5). null bij legacy spots.')
 })
 
 
@@ -1925,7 +1949,11 @@ export const UpdateVoorzieningStatusResponse = zod.object({
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string().optional(),
   "parent_spot_id": zod.number().nullish().describe('Indien ingesteld is dit een onderdeel van de opgegeven samengestelde spot'),
-  "heeft_onderdelen": zod.boolean().optional().describe('Afgeleid - true als er onderdelen aan deze spot zijn gekoppeld')
+  "heeft_onderdelen": zod.boolean().optional().describe('Afgeleid - true als er onderdelen aan deze spot zijn gekoppeld'),
+  "applicaties": zod.array(zod.object({
+  "type_code": zod.string().describe('Code van de applicatie (voorziening-type).'),
+  "label_ids": zod.array(zod.number()).optional()
+}).describe('Één doorvoer\/applicatie met de bijbehorende toepassingen.')).nullish().describe('Gestructureerde lijst van doorvoer\/applicaties (max 5). null bij legacy spots.')
 })
 
 
@@ -1978,7 +2006,11 @@ export const ArchiveerVoorzieningResponse = zod.object({
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string().optional(),
   "parent_spot_id": zod.number().nullish().describe('Indien ingesteld is dit een onderdeel van de opgegeven samengestelde spot'),
-  "heeft_onderdelen": zod.boolean().optional().describe('Afgeleid - true als er onderdelen aan deze spot zijn gekoppeld')
+  "heeft_onderdelen": zod.boolean().optional().describe('Afgeleid - true als er onderdelen aan deze spot zijn gekoppeld'),
+  "applicaties": zod.array(zod.object({
+  "type_code": zod.string().describe('Code van de applicatie (voorziening-type).'),
+  "label_ids": zod.array(zod.number()).optional()
+}).describe('Één doorvoer\/applicatie met de bijbehorende toepassingen.')).nullish().describe('Gestructureerde lijst van doorvoer\/applicaties (max 5). null bij legacy spots.')
 })
 
 
@@ -2027,7 +2059,11 @@ export const ListSpotOnderdelenResponseItem = zod.object({
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string().optional(),
   "parent_spot_id": zod.number().nullish().describe('Indien ingesteld is dit een onderdeel van de opgegeven samengestelde spot'),
-  "heeft_onderdelen": zod.boolean().optional().describe('Afgeleid - true als er onderdelen aan deze spot zijn gekoppeld')
+  "heeft_onderdelen": zod.boolean().optional().describe('Afgeleid - true als er onderdelen aan deze spot zijn gekoppeld'),
+  "applicaties": zod.array(zod.object({
+  "type_code": zod.string().describe('Code van de applicatie (voorziening-type).'),
+  "label_ids": zod.array(zod.number()).optional()
+}).describe('Één doorvoer\/applicatie met de bijbehorende toepassingen.')).nullish().describe('Gestructureerde lijst van doorvoer\/applicaties (max 5). null bij legacy spots.')
 })
 export const ListSpotOnderdelenResponse = zod.array(ListSpotOnderdelenResponseItem)
 
@@ -4948,7 +4984,11 @@ export const GetInspectieResponse = zod.object({
   "aangemaakt_op": zod.string(),
   "bijgewerkt_op": zod.string().optional(),
   "parent_spot_id": zod.number().nullish().describe('Indien ingesteld is dit een onderdeel van de opgegeven samengestelde spot'),
-  "heeft_onderdelen": zod.boolean().optional().describe('Afgeleid - true als er onderdelen aan deze spot zijn gekoppeld')
+  "heeft_onderdelen": zod.boolean().optional().describe('Afgeleid - true als er onderdelen aan deze spot zijn gekoppeld'),
+  "applicaties": zod.array(zod.object({
+  "type_code": zod.string().describe('Code van de applicatie (voorziening-type).'),
+  "label_ids": zod.array(zod.number()).optional()
+}).describe('Één doorvoer\/applicatie met de bijbehorende toepassingen.')).nullish().describe('Gestructureerde lijst van doorvoer\/applicaties (max 5). null bij legacy spots.')
 }))
 })
 

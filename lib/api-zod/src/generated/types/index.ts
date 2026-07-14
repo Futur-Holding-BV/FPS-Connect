@@ -1071,6 +1071,7 @@ export * from './spotAiVoorstelInput';
 export * from './spotAiVoorstelPersistInput';
 export * from './spotAiVoorstelRecord';
 export * from './spotAiVoorstelResultaat';
+export * from './spotApplicatieItem';
 export * from './spotDossierItem';
 export * from './spotDossierItemData';
 export * from './spotDossierUpdate';

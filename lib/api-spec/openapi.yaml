@@ -26832,6 +26832,11 @@ components:
         heeft_onderdelen:
           type: boolean
           description: Afgeleid - true als er onderdelen aan deze spot zijn gekoppeld
+        applicaties:
+          type: ["array", "null"]
+          description: Gestructureerde lijst van doorvoer/applicaties (max 5). null bij legacy spots.
+          items:
+            $ref: "#/components/schemas/SpotApplicatieItem"
 
     VoorzieningDetail:
       type: object
@@ -27003,6 +27008,19 @@ components:
       properties:
         spotnummer:
           type: string
+    SpotApplicatieItem:
+      type: object
+      required: [type_code]
+      description: Één doorvoer/applicatie met de bijbehorende toepassingen.
+      properties:
+        type_code:
+          type: string
+          description: Code van de applicatie (voorziening-type).
+        label_ids:
+          type: array
+          items:
+            type: integer
+
     VoorzieningInput:
       type: object
       required: [type, status, classificatie, gebouw_id]
@@ -27057,6 +27075,12 @@ components:
           type: array
           items:
             type: integer
+        applicaties:
+          type: array
+          maxItems: 5
+          description: Geordende lijst van doorvoer/applicaties (max 5). Vervangt label_ids als aanwezig.
+          items:
+            $ref: "#/components/schemas/SpotApplicatieItem"
         parent_spot_id:
           type: ["integer", "null"]
 
@@ -27111,6 +27135,12 @@ components:
           type: array
           items:
             type: integer
+        applicaties:
+          type: array
+          maxItems: 5
+          description: Geordende lijst van doorvoer/applicaties (max 5). Vervangt label_ids als aanwezig.
+          items:
+            $ref: "#/components/schemas/SpotApplicatieItem"
         parent_spot_id:
           type: ["integer", "null"]
 

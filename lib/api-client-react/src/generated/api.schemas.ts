@@ -2381,6 +2381,15 @@ export const VoorzieningClassificatie = {
   NUMBER_120: '120',
 } as const;
 
+/**
+ * Één doorvoer/applicatie met de bijbehorende toepassingen.
+ */
+export interface SpotApplicatieItem {
+  /** Code van de applicatie (voorziening-type). */
+  type_code: string;
+  label_ids?: number[];
+}
+
 export interface Voorziening {
   id: number;
   objectnummer: string;
@@ -2451,6 +2460,11 @@ export interface Voorziening {
   parent_spot_id?: number | null;
   /** Afgeleid - true als er onderdelen aan deze spot zijn gekoppeld */
   heeft_onderdelen?: boolean;
+  /**
+     * Gestructureerde lijst van doorvoer/applicaties (max 5). null bij legacy spots.
+     * @nullable
+     */
+  applicaties?: SpotApplicatieItem[] | null;
 }
 
 export type FotoFase = typeof FotoFase[keyof typeof FotoFase];
@@ -2754,6 +2768,11 @@ export interface VoorzieningInput {
   cluster_id?: number | null;
   maker_monteur_id?: number;
   label_ids?: number[];
+  /**
+     * Geordende lijst van doorvoer/applicaties (max 5). Vervangt label_ids als aanwezig.
+     * @maxItems 5
+     */
+  applicaties?: SpotApplicatieItem[];
   /** @nullable */
   parent_spot_id?: number | null;
 }
@@ -2783,6 +2802,11 @@ export interface VoorzieningUpdate {
   cluster_id?: number | null;
   maker_monteur_id?: number;
   label_ids?: number[];
+  /**
+     * Geordende lijst van doorvoer/applicaties (max 5). Vervangt label_ids als aanwezig.
+     * @maxItems 5
+     */
+  applicaties?: SpotApplicatieItem[];
   /** @nullable */
   parent_spot_id?: number | null;
 }
