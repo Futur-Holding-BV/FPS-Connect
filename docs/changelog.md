@@ -1,3 +1,30 @@
+## 2026-07-14 — Versienummer + datum in sidebar-footer
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+Elke productiebuild toont automatisch het versienummer en de builddatum onderaan de sidebar.
+
+- `vite.config.ts`: injecteert `__APP_VERSION__` (uit `package.json`) en `__BUILD_DATE__` (huidige datum in nl-NL formaat) via Vite `define` bij elke build.
+- `package.json`: versie gezet op `1.5.0`; `prebuild`-script bumpt automatisch het patch-nummer vóór elke `npm run build` (dus elke deploy).
+- `beheerder-layout.tsx`: versieregel toegevoegd onderin `SidebarFooter` — klein, grijs, niet-selecteerbaar (bijv. `v1.5.1 · 14 jul. 2026`).
+- `vite-env.d.ts`: TypeScript-declaraties voor `__APP_VERSION__` en `__BUILD_DATE__`.
+
+**Productie:** bij de volgende deploy (git pull → compose build) bumpt het patch-nummer automatisch en verschijnt de nieuwe datum.
+
+---
+
+## 2026-07-14 — Productie-fix: bevoegdheden Jacqueline, Eduard en Patrick
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+Directe DB-correctie op productie via SSH (geen code-aanpassing, alleen data):
+
+- **Eduard Nijhuis (id=3)** en **Patrick Oostendorp (id=4)**: alle bevoegdheden stonden op 0 → kunnen niet inloggen. Nu gezet op `gebouwen:1, voorzieningen:2, onderhoud:2, planning:1, inspecties:1, rapportages:1`.
+- **Jacqueline van Ijll (id=2)**: miste `personeel`, `financieel`, `dossiers`, `declaraties`, `goedkeuring`, `salarisarchief`. Nu aangevuld met `personeel:4, financieel:4, dossiers:3, declaraties:4, goedkeuring:3, salarisarchief:3`.
+- **Oorzaak**: geen profielen gesynchroniseerd op productie (tabel leeg) → René kon niets toewijzen via de UI; accounts aangemaakt zonder rechten.
+
+---
+
 ## 2026-07-14 — AI-knop bepaalt toegangsprofiel per functie (personeel/index.tsx)
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag

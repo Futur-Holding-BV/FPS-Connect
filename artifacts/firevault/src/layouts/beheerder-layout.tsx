@@ -1989,6 +1989,9 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
             </SidebarMenuItem>
           </SidebarMenu>
           <GebruikerMenu toonUitloggen={false} />
+          <div className="px-3 py-1.5 text-[10px] text-muted-foreground/50 select-none">
+            v{__APP_VERSION__} &middot; {__BUILD_DATE__}
+          </div>
         </SidebarFooter>
       </Sidebar>
 
