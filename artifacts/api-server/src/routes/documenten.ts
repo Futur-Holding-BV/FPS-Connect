@@ -32,6 +32,8 @@ import { invalideerContext } from "../lib/aiContext/cache";
 import { analyseerDocumentTekst, stelToepassingenVoor } from "../services/document-ai";
 import { scanBestandMetadata, koppelDocumentAanScan } from "../services/security-intake-engine";
 import { ObjectStorageService } from "../lib/objectStorage";
+import { extraheerPdfTekst } from "../lib/pdfTekst";
+import { logger } from "../lib/logger";
 import type { DocumentType } from "../lib/documenten";
 
 const router = Router();
@@ -524,6 +526,39 @@ router.post(
       })
         .then((scan) => (scan.dbId != null ? koppelDocumentAanScan(scan.dbId, d.id) : undefined))
         .catch(() => {});
+
+      // AI-verrijking — extraheert fabrikant/product/norm/rapportnummer uit de PDF
+      // zodat ai-koppelvoorstellen later kan matchen. Fire-and-forget: blokkeert de
+      // upload-respons niet en faalt stil bij AI-problemen.
+      if (bestand.buffer?.length && (bestand.mimetype === "application/pdf" || bestandsnaam.toLowerCase().endsWith(".pdf"))) {
+        const documentId = d.id;
+        const pdfBuffer = bestand.buffer;
+        (async () => {
+          try {
+            const extractie = await extraheerPdfTekst(pdfBuffer);
+            if (!extractie.tekst) return;
+            const analyse = await analyseerDocumentTekst(extractie.tekst, bestandsnaam, {
+              module: "bibliotheek",
+              functie: "aanleveren-verrijking",
+            });
+            const verrijking: Partial<{
+              fabrikant: string | null;
+              product: string | null;
+              enNorm: string | null;
+              rapportnummer: string | null;
+            }> = {};
+            if (analyse.fabrikant) verrijking.fabrikant = analyse.fabrikant;
+            if (analyse.product) verrijking.product = analyse.product;
+            if (analyse.en_norm) verrijking.enNorm = analyse.en_norm;
+            if (analyse.rapportnummer) verrijking.rapportnummer = analyse.rapportnummer;
+            if (Object.keys(verrijking).length > 0) {
+              await db.update(documentenTable).set(verrijking).where(eq(documentenTable.id, documentId));
+            }
+          } catch (err) {
+            logger.warn({ err, documentId }, "AI-verrijking bij aanleveren mislukt (niet kritiek)");
+          }
+        })();
+      }
 
       invalideerContext("document", d.id);
       return void res.status(201).json(await mapDocument(d));

@@ -1,3 +1,24 @@
+## 2026-07-14 — AI-verrijking bij Slim Upload (koppelvoorstellen fix)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+**Bug — AI-koppelvoorstellen suggereert niets voor nieuw geüploade bestanden:**
+Root cause: `POST /documenten/aanleveren` (Slim Upload) sloeg `fabrikant`, `product`, `en_norm` en
+`rapportnummer` NIET op. `stelToepassingenVoor()` heeft die velden nodig voor matching — bij NULL
+zijn er nooit matches, zelfs als de AI bij analyse-stap de waarden herkende.
+
+**Fix `artifacts/api-server/src/routes/documenten.ts`:**
+- Na het opslaan van het document: fire-and-forget async AI-verrijking toegevoegd
+- Extraheert PDF-tekst via `extraheerPdfTekst()`, analyseert via `analyseerDocumentTekst()`
+- Schrijft `fabrikant`, `product`, `enNorm`, `rapportnummer` asynchroon terug naar DB
+- Blokkeert de upload-respons NIET; faalt stil (logt warning bij AI-fout)
+- Uitgerold op connect.fps-one.nl via `--no-cache` Docker rebuild + herstart
+
+**Effect:** Binnen seconden na upload zijn de velden gevuld. Daarna geeft
+"AI-koppelvoorstellen" correcte suggesties voor productrapporten en classificatierapporten.
+
+---
+
 ## 2026-07-14 — Plattegrond productie-fix (mjs) + Activatielink voor onboarding
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
