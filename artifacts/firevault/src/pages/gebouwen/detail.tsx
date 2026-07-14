@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useParams, Link, useSearch } from "wouter";
 import {
   useGetGebouw,
+  useUpdateGebouw,
   useGetGebouwKaart,
   useListGebouwToewijzingen,
   useCreateGebouwToewijzing,
@@ -57,6 +58,8 @@ import {
   TooltipTrigger,
   TooltipContent,
 } from "@/components/ui/tooltip";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import {
   ArrowLeft,
   Layers,
@@ -376,6 +379,7 @@ export default function GebouwDetail() {
   const gereedMelden = useMeldGebouwGereed();
   const herstelGereed = useHerstelGebouwActief();
   const archiveerMutatie = useArchiveerGebouw();
+  const updateGebouw = useUpdateGebouw();
   const { toast } = useToast();
 
   const { data: alleCalculaties = [] } = useListModCalculaties(undefined, { query: { queryKey: ["mod-calculaties"] } });
@@ -1347,6 +1351,36 @@ export default function GebouwDetail() {
                       ? ` · ${gebouw.breedte}×${gebouw.diepte} m`
                       : ""}
                   </p>
+                </CardContent>
+              </Card>
+
+              {/* Foto-instellingen */}
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm">Foto-instellingen</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center justify-between gap-4">
+                    <Label htmlFor="galerij-toggle" className="text-sm text-muted-foreground leading-snug">
+                      Galerij-upload inschakelen voor monteurs
+                    </Label>
+                    <Switch
+                      id="galerij-toggle"
+                      checked={!!gebouw.galerij_upload_toegestaan}
+                      disabled={updateGebouw.isPending}
+                      onCheckedChange={(aan) => {
+                        updateGebouw.mutate(
+                          { id: gebouwId, data: { galerij_upload_toegestaan: aan } },
+                          {
+                            onSuccess: () =>
+                              toast({ title: aan ? "Galerij-upload ingeschakeld" : "Galerij-upload uitgeschakeld" }),
+                            onError: () =>
+                              toast({ title: "Opslaan mislukt", variant: "destructive" }),
+                          },
+                        );
+                      }}
+                    />
+                  </div>
                 </CardContent>
               </Card>
 

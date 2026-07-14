@@ -4,6 +4,7 @@ import {
   useBewaarSpotAiVoorstel,
   useCreateVoorziening,
   useGetVerdieping,
+  useGetGebouw,
   useGetVolgendSpotnummer,
   useListFotos,
   useListScheidingen,
@@ -116,6 +117,8 @@ export default function Plattegrond() {
   const gId = Number(gebouwId);
 
   const { data: verdieping } = useGetVerdieping(vId);
+  const { data: gebouwData } = useGetGebouw(gId);
+  const galerijToegestaan = gebouwData?.galerij_upload_toegestaan ?? false;
   const { data: voorzieningen, refetch } = useListVoorzieningenOpVerdieping(vId);
   const { data: scheidingenData } = useListScheidingen(vId);
 
@@ -573,6 +576,7 @@ export default function Plattegrond() {
               fotos={voorFotos}
               bezig={fotoBezig}
               token={token ?? ""}
+              galerijToegestaan={galerijToegestaan}
               onCamera={() => kiesFoto("voor", "camera")}
               onGalerij={() => kiesFoto("voor", "galerij")}
               onVerwijder={(i) => setVoorFotos((a) => a.filter((_, idx) => idx !== i))}
@@ -583,6 +587,7 @@ export default function Plattegrond() {
               fotos={naFotos}
               bezig={fotoBezig}
               token={token ?? ""}
+              galerijToegestaan={galerijToegestaan}
               onCamera={() => kiesFoto("na", "camera")}
               onGalerij={() => kiesFoto("na", "galerij")}
               onVerwijder={(i) => setNaFotos((a) => a.filter((_, idx) => idx !== i))}
@@ -1096,6 +1101,7 @@ function FotoSectie({
   fotos,
   bezig,
   token,
+  galerijToegestaan,
   onCamera,
   onGalerij,
   onVerwijder,
@@ -1104,6 +1110,7 @@ function FotoSectie({
   fotos: string[];
   bezig: boolean;
   token: string;
+  galerijToegestaan: boolean;
   onCamera: () => void;
   onGalerij: () => void;
   onVerwijder: (index: number) => void;
@@ -1130,23 +1137,25 @@ function FotoSectie({
             Camera
           </Text>
         </Pressable>
-        <Pressable
-          onPress={onGalerij}
-          disabled={bezig}
-          style={{
-            flex: 1,
-            backgroundColor: c.secondary,
-            borderRadius: c.radius,
-            paddingVertical: 14,
-            alignItems: "center",
-            borderWidth: 1.5,
-            borderColor: c.border,
-          }}
-        >
-          <Text style={{ color: c.foreground, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>
-            Galerij
-          </Text>
-        </Pressable>
+        {galerijToegestaan && (
+          <Pressable
+            onPress={onGalerij}
+            disabled={bezig}
+            style={{
+              flex: 1,
+              backgroundColor: c.secondary,
+              borderRadius: c.radius,
+              paddingVertical: 14,
+              alignItems: "center",
+              borderWidth: 1.5,
+              borderColor: c.border,
+            }}
+          >
+            <Text style={{ color: c.foreground, fontFamily: "Inter_600SemiBold", fontSize: 15 }}>
+              Galerij
+            </Text>
+          </Pressable>
+        )}
       </View>
       {(fotos.length > 0 || bezig) && (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10 }}>

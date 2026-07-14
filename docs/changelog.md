@@ -1,3 +1,18 @@
+## 2026-07-14 — Foto-galerij upload per gebouw + sidebar AI-statistieken
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+Galerij-upload in de monteur-app is nu per gebouw in te schakelen door een beheerder.
+
+- **DB**: kolom `galerij_upload_toegestaan boolean not null default false` toegevoegd aan `gebouwen` tabel (Drizzle push geslaagd).
+- **OpenAPI**: veld toegevoegd aan `Gebouw`, `GebouwDetail`, `GebouwInput` en `GebouwUpdate` schemas; codegen uitgevoerd.
+- **API** (`gebouwen.ts`): `gebouwRij()`, GET `/gebouwen/:id` en PATCH `/gebouwen/:id` geven het veld mee; PATCH accepteert `galerij_upload_toegestaan` en slaat het op.
+- **Web** (`detail.tsx`, beheer-tab): nieuwe kaart "Foto-instellingen" met Switch-toggle; zichtbaar voor beheerders; sla op via `useUpdateGebouw` met toast-feedback.
+- **Mobiel** (`plattegrond/[verdiepingId].tsx`): `useGetGebouw(gId)` geladen; `FotoSectie` krijgt `galerijToegestaan`-prop; Galerij-knop verschijnt alleen als het gebouw dit toestaat.
+- **Sidebar**: tweede "AI-aanroepen" item hernoemd naar "AI-statistieken" (verwees naar `/beheer/ai-log`).
+
+---
+
 ## 2026-07-14 — Versienummer + datum in sidebar-footer
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag

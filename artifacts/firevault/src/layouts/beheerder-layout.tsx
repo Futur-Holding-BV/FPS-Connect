@@ -1720,7 +1720,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                             <SidebarMenuButton asChild isActive={location === "/beheer/ai-log"}>
                               <Link href="/beheer/ai-log">
                                 <Bot />
-                                <span>AI-aanroepen</span>
+                                <span>AI-statistieken</span>
                               </Link>
                             </SidebarMenuButton>
                           </SidebarMenuItem>
