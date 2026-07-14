@@ -27734,6 +27734,8 @@ components:
           type: integer
         naam:
           type: string
+        groep:
+          type: ["string", "null"]
         bevoegdheden:
           type: object
           additionalProperties:
@@ -27772,6 +27774,8 @@ components:
         naam:
           type: string
           minLength: 1
+        groep:
+          type: ["string", "null"]
         bevoegdheden:
           type: object
           additionalProperties:

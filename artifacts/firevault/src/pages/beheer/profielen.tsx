@@ -28,7 +28,7 @@ import {
   AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { ShieldCheck, Plus, Pencil, Trash2, Lock, Loader2, Users, RefreshCw, AlertTriangle, ListChecks, Sparkles } from "lucide-react";
-import { MODULES, NIVEAUS } from "@workspace/permissies";
+import { MODULES, NIVEAUS, GROEP_OPTIES } from "@workspace/permissies";
 import { AiVoorstelDialog } from "@/components/ai-rollen-voorstel-dialog";
 
 const NIVEAU_LABEL: Record<number, string> = Object.fromEntries(
@@ -43,10 +43,11 @@ const AANVUL_NIVEAU = 0;
 type ProfielForm = {
   id: number | null;
   naam: string;
+  groep: string | null;
   bevoegdheden: Record<string, number>;
 };
 
-const LEEG_FORM: ProfielForm = { id: null, naam: "", bevoegdheden: {} };
+const LEEG_FORM: ProfielForm = { id: null, naam: "", groep: null, bevoegdheden: {} };
 
 export default function ProfielenBeheer() {
   const { toast } = useToast();
@@ -80,8 +81,8 @@ export default function ProfielenBeheer() {
     setDialoogOpen(true);
   }
 
-  function openBewerk(p: { id: number; naam: string; bevoegdheden: Record<string, number> }) {
-    setForm({ id: p.id, naam: p.naam, bevoegdheden: { ...p.bevoegdheden } });
+  function openBewerk(p: { id: number; naam: string; groep?: string | null; bevoegdheden: Record<string, number> }) {
+    setForm({ id: p.id, naam: p.naam, groep: p.groep ?? null, bevoegdheden: { ...p.bevoegdheden } });
     setFout(null);
     setDialoogOpen(true);
   }
@@ -96,12 +97,12 @@ export default function ProfielenBeheer() {
     try {
       if (form.id === null) {
         await maakProfiel.mutateAsync({
-          data: { naam, bevoegdheden: form.bevoegdheden },
+          data: { naam, groep: form.groep, bevoegdheden: form.bevoegdheden },
         });
       } else {
         await werkBijProfiel.mutateAsync({
           id: form.id,
-          data: { naam, bevoegdheden: form.bevoegdheden },
+          data: { naam, groep: form.groep, bevoegdheden: form.bevoegdheden },
         });
       }
       await invalideer();
@@ -365,6 +366,23 @@ export default function ProfielenBeheer() {
                 onChange={(e) => setForm((f) => ({ ...f, naam: e.target.value }))}
                 placeholder="Bijv. Projectleider"
               />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Categorie</Label>
+              <Select
+                value={form.groep ?? ""}
+                onValueChange={(v) => setForm((f) => ({ ...f, groep: v || null }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Geen categorie" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Geen categorie</SelectItem>
+                  {GROEP_OPTIES.map((g) => (
+                    <SelectItem key={g} value={g}>{g}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="rounded-lg border p-3 space-y-3">
               <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">

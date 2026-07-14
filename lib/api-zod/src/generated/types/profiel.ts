@@ -11,6 +11,8 @@ import type { ProfielGebruiker } from './profielGebruiker';
 export interface Profiel {
   id: number;
   naam: string;
+  /** @nullable */
+  groep?: string | null;
   bevoegdheden: ProfielBevoegdheden;
   systeem: boolean;
   aangemaakt_op: string;

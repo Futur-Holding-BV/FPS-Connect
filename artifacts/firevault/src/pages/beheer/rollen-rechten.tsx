@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, Fragment } from "react";
 import { Link } from "wouter";
 import {
   useListProfielen,
@@ -6,7 +6,7 @@ import {
   useSynchroniseerStandaardProfielen,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { MODULES, NIVEAUS, PRESETS, niveauVan } from "@workspace/permissies";
+import { MODULES, NIVEAUS, PRESETS, GROEP_OPTIES, niveauVan } from "@workspace/permissies";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
 import { useRol } from "@/context/rol-context";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -132,6 +132,20 @@ function RollenmatrixTab() {
   const ontbrekendePresets = PRESETS.filter(
     (p) => !profielen.some((pr) => pr.naam === p.naam),
   );
+
+  const GROEP_VOLGORDE: string[] = [...GROEP_OPTIES];
+  const profielenPerGroep = new Map<string, typeof profielen>();
+  for (const p of profielen) {
+    const key = p.groep || "Overige rollen";
+    if (!profielenPerGroep.has(key)) profielenPerGroep.set(key, []);
+    profielenPerGroep.get(key)!.push(p);
+  }
+  const groepen = [
+    ...GROEP_VOLGORDE.filter((g) => profielenPerGroep.has(g)),
+    ...[...profielenPerGroep.keys()].filter((g) => !GROEP_VOLGORDE.includes(g) && g !== "Overige rollen").sort(),
+    ...(profielenPerGroep.has("Overige rollen") ? ["Overige rollen"] : []),
+  ];
+  const toonGroepen = groepen.length > 1 || (groepen.length === 1 && groepen[0] !== "Overige rollen");
 
   if (!isLoading && profielen.length === 0) {
     return (
@@ -279,40 +293,57 @@ function RollenmatrixTab() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {profielen.map((profiel) => {
-              const bevoegdheden = profiel.bevoegdheden as Record<string, number>;
-              const aantalGebruikers = (profiel as unknown as Record<string, unknown>).gebruiker_aantal as number | undefined;
-              const isSystemProfiel = (profiel as unknown as Record<string, unknown>).systeem as boolean | undefined;
+            {groepen.map((groep) => {
+              const items = profielenPerGroep.get(groep) ?? [];
               return (
-                <TableRow key={profiel.id} className="hover:bg-muted/30">
-                  <TableCell className="sticky left-0 bg-background z-10 font-medium">
-                    <div className="flex items-center gap-2">
-                      {isSystemProfiel && (
-                        <ShieldCheck className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                      )}
-                      <span>{profiel.naam}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-center text-sm text-muted-foreground">
-                    {aantalGebruikers ?? 0}
-                  </TableCell>
-                  {zichtbareModules.map((m) => {
-                    const niveau = niveauVan(bevoegdheden, m.id as Parameters<typeof niveauVan>[1]);
-                    return (
-                      <TableCell key={m.id} className="text-center px-1 py-1">
-                        <NiveauBadge niveau={niveau} kort />
+                <Fragment key={groep}>
+                  {toonGroepen && (
+                    <TableRow className="bg-muted/40 hover:bg-muted/40 border-t">
+                      <TableCell
+                        colSpan={zichtbareModules.length + 3}
+                        className="py-1 px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider"
+                      >
+                        {groep}
                       </TableCell>
+                    </TableRow>
+                  )}
+                  {items.map((profiel) => {
+                    const bevoegdheden = profiel.bevoegdheden as Record<string, number>;
+                    const aantalGebruikers = (profiel as unknown as Record<string, unknown>).gebruiker_aantal as number | undefined;
+                    const isSystemProfiel = (profiel as unknown as Record<string, unknown>).systeem as boolean | undefined;
+                    return (
+                      <TableRow key={profiel.id} className="hover:bg-muted/30">
+                        <TableCell className="sticky left-0 bg-background z-10 font-medium">
+                          <div className="flex items-center gap-2">
+                            {isSystemProfiel && (
+                              <ShieldCheck className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                            )}
+                            <span>{profiel.naam}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-center text-sm text-muted-foreground">
+                          {aantalGebruikers ?? 0}
+                        </TableCell>
+                        {zichtbareModules.map((m) => {
+                          const niveau = niveauVan(bevoegdheden, m.id as Parameters<typeof niveauVan>[1]);
+                          return (
+                            <TableCell key={m.id} className="text-center px-1 py-1">
+                              <NiveauBadge niveau={niveau} kort />
+                            </TableCell>
+                          );
+                        })}
+                        <TableCell className="text-right">
+                          <Button variant="ghost" size="sm" asChild className="h-7 text-xs">
+                            <Link href="/beheer/profielen">
+                              Bewerken
+                              <ExternalLink className="ml-1 h-3 w-3" />
+                            </Link>
+                          </Button>
+                        </TableCell>
+                      </TableRow>
                     );
                   })}
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="sm" asChild className="h-7 text-xs">
-                      <Link href="/beheer/profielen">
-                        Bewerken
-                        <ExternalLink className="ml-1 h-3 w-3" />
-                      </Link>
-                    </Button>
-                  </TableCell>
-                </TableRow>
+                </Fragment>
               );
             })}
           </TableBody>

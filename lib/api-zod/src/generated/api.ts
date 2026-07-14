@@ -6272,6 +6272,7 @@ export const GebruikerHerkomstVerwijderenResponse = zod.object({
 export const ListProfielenResponseItem = zod.object({
   "id": zod.number(),
   "naam": zod.string(),
+  "groep": zod.string().nullish(),
   "bevoegdheden": zod.record(zod.string(), zod.number()),
   "systeem": zod.boolean(),
   "aangemaakt_op": zod.string(),
@@ -6294,6 +6295,7 @@ export const ListProfielenResponse = zod.array(ListProfielenResponseItem)
 
 export const CreateProfielBody = zod.object({
   "naam": zod.string().min(1),
+  "groep": zod.string().nullish(),
   "bevoegdheden": zod.record(zod.string(), zod.number())
 })
 
@@ -6357,12 +6359,14 @@ export const UpdateProfielParams = zod.object({
 
 export const UpdateProfielBody = zod.object({
   "naam": zod.string().min(1),
+  "groep": zod.string().nullish(),
   "bevoegdheden": zod.record(zod.string(), zod.number())
 })
 
 export const UpdateProfielResponse = zod.object({
   "id": zod.number(),
   "naam": zod.string(),
+  "groep": zod.string().nullish(),
   "bevoegdheden": zod.record(zod.string(), zod.number()),
   "systeem": zod.boolean(),
   "aangemaakt_op": zod.string(),

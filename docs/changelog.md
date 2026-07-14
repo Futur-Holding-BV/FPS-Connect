@@ -1,3 +1,23 @@
+## 2026-07-14 — Rollenmatrix: rijen gegroepeerd op functiecategorie
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+**Functie:** Rijen in de Rollenmatrix-tab (Beheer → Rollen & Rechten) worden nu gegroepeerd op functiecategorie, met een sectiekop per groep. Volgorde: Uitvoering → Projecten → Commercieel → HRM & Personeel → Financieel & Directie → Operationeel → Overige rollen.
+
+**Wijzigingen:**
+- `lib/db/src/schema/gebruikers.ts` — `groep text` kolom toegevoegd aan `profielenTable` (additief, nullable)
+- `ALTER TABLE profielen ADD COLUMN IF NOT EXISTS groep text` uitgevoerd op dev-DB
+- `lib/permissies/src/index.ts` — `groep: string` veld toegevoegd aan `Preset` interface; alle 18 standaard-presets voorzien van groep; `GROEP_OPTIES` en `ProfielGroep` type geëxporteerd; PRESETS geherordend per categorie
+- `lib/api-spec/openapi.yaml` — `groep: string | null` toegevoegd aan `Profiel` en `ProfielInput` schemas
+- Codegen uitgevoerd (`pnpm --filter @workspace/api-spec run codegen`) — libs typecheck groen
+- `artifacts/api-server/src/routes/profielen.ts` — `serialiseer()` retourneert `groep`; POST/PATCH accepteren `groep`; `synchroniseer-standaard` zet/synct `groep` vanuit PRESETS; alle 18 bestaande systeemprofielen voorzien van groep via directe SQL UPDATE
+- `artifacts/firevault/src/pages/beheer/rollen-rechten.tsx` — `GROEP_OPTIES` geïmporteerd; groepeerlogica (Map per groep, sortering op GROEP_VOLGORDE); sectiekoprijen als `<Fragment>` in TableBody; `Fragment` geïmporteerd
+- `artifacts/firevault/src/pages/beheer/profielen.tsx` — `ProfielForm.groep` veld; `LEEG_FORM` bijgewerkt; `openBewerk`/`bewaar()` passeren `groep`; Categorie-Select toegevoegd in dialoogformulier
+
+**Bewijs:** `pnpm run typecheck:libs` + `pnpm --filter @workspace/firevault run typecheck` → groen. Beide workflows draaien.
+
+---
+
 ## 2026-07-14 — Fix & Verify module Inloggen: effectieve bevoegdheden in auth-responses + 8 e2e-tests
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag

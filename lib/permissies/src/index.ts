@@ -240,12 +240,62 @@ export const KLANT_BEVOEGDHEDEN: Bevoegdheden = matrix({});
 // De functietitel en de feitelijke bevoegdheden staan los van elkaar.
 export interface Preset {
   naam: string;
+  groep: string;
   bevoegdheden: Bevoegdheden;
 }
 
 export const PRESETS: Preset[] = [
   {
+    naam: "Monteur",
+    groep: "Uitvoering",
+    bevoegdheden: matrix({
+      gebouwen: 1, voorzieningen: 3, inspecties: 3, onderhoud: 3,
+      rapportages: 1, bibliotheek: 1, planning: 1, toolbox: 1, declaraties: 2,
+    }),
+  },
+  {
+    naam: "Timmerman",
+    groep: "Uitvoering",
+    bevoegdheden: matrix({
+      gebouwen: 1, voorzieningen: 3, inspecties: 2, onderhoud: 3,
+      rapportages: 1, bibliotheek: 1, declaraties: 2,
+    }),
+  },
+  {
+    naam: "Uitvoerder",
+    groep: "Uitvoering",
+    bevoegdheden: matrix({
+      gebouwen: 2, voorzieningen: 3, inspecties: 3, onderhoud: 3,
+      rapportages: 2, bibliotheek: 1, planning: 2, toolbox: 1, declaraties: 2,
+    }),
+  },
+  {
+    naam: "Onderhoudsmonteur",
+    groep: "Uitvoering",
+    bevoegdheden: matrix({
+      gebouwen: 1, voorzieningen: 2, inspecties: 2, onderhoud: 4,
+      rapportages: 1, bibliotheek: 1, planning: 1, toolbox: 1, declaraties: 2,
+    }),
+  },
+  {
+    naam: "Controleur",
+    groep: "Uitvoering",
+    bevoegdheden: matrix({
+      gebouwen: 1, voorzieningen: 1, inspecties: 3, onderhoud: 3,
+      rapportages: 1, bibliotheek: 1,
+    }),
+  },
+  {
+    naam: "Externe inhuur",
+    groep: "Uitvoering",
+    bevoegdheden: matrix({
+      gebouwen: 1, voorzieningen: 2, inspecties: 1, onderhoud: 2,
+      rapportages: 1, bibliotheek: 1, toolbox: 1,
+    }),
+  },
+  {
     naam: "Projectleider",
+    groep: "Projecten",
     bevoegdheden: matrix({
       gebouwen: 4, voorzieningen: 4, inspecties: 4, onderhoud: 4,
       rapportages: 4, bibliotheek: 3, crm: 3,
@@ -255,6 +305,7 @@ export const PRESETS: Preset[] = [
   },
   {
     naam: "Werkvoorbereider",
+    groep: "Projecten",
     bevoegdheden: matrix({
       gebouwen: 3, voorzieningen: 3, inspecties: 2, onderhoud: 3,
       rapportages: 2, bibliotheek: 3, crm: 1,
@@ -263,61 +314,46 @@ export const PRESETS: Preset[] = [
   },
   {
     naam: "Project-admin",
+    groep: "Projecten",
     bevoegdheden: matrix({
       gebouwen: 2, voorzieningen: 2, inspecties: 2, onderhoud: 2,
       rapportages: 3, bibliotheek: 2, crm: 2,
     }),
   },
   {
-    naam: "Monteur",
+    naam: "Planner",
+    groep: "Projecten",
     bevoegdheden: matrix({
-      gebouwen: 1, voorzieningen: 3, inspecties: 3, onderhoud: 3,
-      rapportages: 1, bibliotheek: 1, planning: 1, toolbox: 1, declaraties: 2,
-    }),
-  },
-  {
-    naam: "Timmerman",
-    bevoegdheden: matrix({
-      gebouwen: 1, voorzieningen: 3, inspecties: 2, onderhoud: 3,
-      rapportages: 1, bibliotheek: 1, declaraties: 2,
-    }),
-  },
-  {
-    naam: "Uitvoerder",
-    bevoegdheden: matrix({
-      gebouwen: 2, voorzieningen: 3, inspecties: 3, onderhoud: 3,
-      rapportages: 2, bibliotheek: 1, planning: 2, toolbox: 1, declaraties: 2,
-    }),
-  },
-  {
-    naam: "Controleur",
-    bevoegdheden: matrix({
-      gebouwen: 1, voorzieningen: 1, inspecties: 3, onderhoud: 3,
-      rapportages: 1, bibliotheek: 1,
+      planning: 4, toolbox: 2, gebouwen: 2,
+      voorzieningen: 1, onderhoud: 1, personeel: 1,
     }),
   },
   {
     naam: "Commercieel",
+    groep: "Commercieel",
     bevoegdheden: matrix({
       gebouwen: 1, voorzieningen: 1, rapportages: 1, bibliotheek: 1,
       crm: 4, abonnementen: 4, offertes: 3,
     }),
   },
   {
-    naam: "HRM-adviseur",
-    bevoegdheden: matrix({
-      personeel: 4, dossiers: 1, rapportages: 1, salarisarchief: 3,
-    }),
-  },
-  {
     naam: "Calculatie",
+    groep: "Commercieel",
     bevoegdheden: matrix({
       gebouwen: 1, voorzieningen: 1, rapportages: 1, bibliotheek: 2,
       offertes: 4, dossiers: 2, crm: 1, calculaties: 4,
     }),
   },
   {
+    naam: "HRM-adviseur",
+    groep: "HRM & Personeel",
+    bevoegdheden: matrix({
+      personeel: 4, dossiers: 1, rapportages: 1, salarisarchief: 3,
+    }),
+  },
+  {
     naam: "Directie",
+    groep: "Financieel & Directie",
     bevoegdheden: matrix({
       gebouwen: 2, voorzieningen: 2, inspecties: 2, onderhoud: 2,
       rapportages: 4, bibliotheek: 2, crm: 4, abonnementen: 4,
@@ -328,6 +364,7 @@ export const PRESETS: Preset[] = [
   },
   {
     naam: "Administratie",
+    groep: "Financieel & Directie",
     bevoegdheden: matrix({
       gebouwen: 2, inspecties: 1, onderhoud: 2, rapportages: 3,
       crm: 2, personeel: 2, dossiers: 3, offertes: 1, planning: 1,
@@ -336,21 +373,8 @@ export const PRESETS: Preset[] = [
     }),
   },
   {
-    naam: "Onderhoudsmonteur",
-    bevoegdheden: matrix({
-      gebouwen: 1, voorzieningen: 2, inspecties: 2, onderhoud: 4,
-      rapportages: 1, bibliotheek: 1, planning: 1, toolbox: 1, declaraties: 2,
-    }),
-  },
-  {
-    naam: "Externe inhuur",
-    bevoegdheden: matrix({
-      gebouwen: 1, voorzieningen: 2, inspecties: 1, onderhoud: 2,
-      rapportages: 1, bibliotheek: 1, toolbox: 1,
-    }),
-  },
-  {
     naam: "Externe boekhouder",
+    groep: "Financieel & Directie",
     bevoegdheden: matrix({
       rapportages: 1,
       financieel: 4,
@@ -362,6 +386,7 @@ export const PRESETS: Preset[] = [
   },
   {
     naam: "Wagenparkbeheerder",
+    groep: "Operationeel",
     bevoegdheden: matrix({
       wagenpark: 4,
       gereedschappen: 1,
@@ -370,16 +395,10 @@ export const PRESETS: Preset[] = [
   },
   {
     naam: "Magazijnbeheerder",
+    groep: "Operationeel",
     bevoegdheden: matrix({
       magazijn: 4,
       offertes: 1,
-    }),
-  },
-  {
-    naam: "Planner",
-    bevoegdheden: matrix({
-      planning: 4, toolbox: 2, gebouwen: 2,
-      voorzieningen: 1, onderhoud: 1, personeel: 1,
     }),
   },
 ];
@@ -407,6 +426,17 @@ export function combineerBevoegdheden(
   }
   return out;
 }
+
+export const GROEP_OPTIES = [
+  "Uitvoering",
+  "Projecten",
+  "Commercieel",
+  "HRM & Personeel",
+  "Financieel & Directie",
+  "Operationeel",
+] as const;
+
+export type ProfielGroep = (typeof GROEP_OPTIES)[number];
 
 // ── Re-exports centrale rechtenstructuur ──────────────────────────────────
 export type { ObjectType, ObjectRecht, PermissieContext } from "./types";

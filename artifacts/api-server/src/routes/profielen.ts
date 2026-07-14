@@ -64,6 +64,7 @@ function serialiseer(
   return {
     id: p.id,
     naam: p.naam,
+    groep: p.groep ?? null,
     bevoegdheden: (p.bevoegdheden as Record<string, number>) ?? {},
     systeem: p.systeem,
     aangemaakt_op: p.aangemaaktOp.toISOString(),
@@ -162,9 +163,12 @@ router.post("/profielen", requireRol("hoofdbeheerder"), async (req, res): Promis
       res.status(409).json({ error: "Er bestaat al een profiel met deze naam" });
       return;
     }
+    const groep = typeof req.body?.groep === "string" && req.body.groep.trim()
+      ? req.body.groep.trim()
+      : null;
     const [nieuw] = await db
       .insert(profielenTable)
-      .values({ naam, bevoegdheden, systeem: false })
+      .values({ naam, bevoegdheden, groep, systeem: false })
       .returning();
     res.status(201).json(serialiseer(nieuw));
   } catch (err) {
@@ -193,20 +197,22 @@ router.post("/profielen/synchroniseer-standaard", requireRol("hoofdbeheerder"), 
         await db.insert(profielenTable).values({
           naam: preset.naam,
           bevoegdheden: preset.bevoegdheden,
+          groep: preset.groep,
           systeem: true,
         });
         aangemaakt++;
       } else {
-        // Update bevoegdheden als ze afwijken van de huidige PRESETS-definitie
+        // Update bevoegdheden en groep als ze afwijken van de huidige PRESETS-definitie
         const huidig = (bestaandeProfiel.bevoegdheden as Record<string, number>) ?? {};
         const gewenst = preset.bevoegdheden as Record<string, number>;
         const isGelijk = JSON.stringify(
           Object.fromEntries(Object.entries(huidig).sort()),
         ) === JSON.stringify(Object.fromEntries(Object.entries(gewenst).sort()));
-        if (!isGelijk) {
+        const groepGelijk = bestaandeProfiel.groep === preset.groep;
+        if (!isGelijk || !groepGelijk) {
           await db
             .update(profielenTable)
-            .set({ bevoegdheden: preset.bevoegdheden })
+            .set({ bevoegdheden: preset.bevoegdheden, groep: preset.groep })
             .where(eq(profielenTable.id, bestaandeProfiel.id));
           bijgewerkt++;
         }
@@ -351,9 +357,12 @@ router.patch("/profielen/:id", requireRol("hoofdbeheerder"), async (req, res): P
       res.status(409).json({ error: "Er bestaat al een profiel met deze naam" });
       return;
     }
+    const groep = typeof req.body?.groep === "string" && req.body.groep.trim()
+      ? req.body.groep.trim()
+      : null;
     const [bijgewerkt] = await db
       .update(profielenTable)
-      .set({ naam, bevoegdheden })
+      .set({ naam, bevoegdheden, groep })
       .where(eq(profielenTable.id, id))
       .returning();
     res.json(serialiseer(bijgewerkt));

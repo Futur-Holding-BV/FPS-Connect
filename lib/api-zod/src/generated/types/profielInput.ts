@@ -10,5 +10,7 @@ import type { ProfielInputBevoegdheden } from './profielInputBevoegdheden';
 export interface ProfielInput {
   /** @minLength 1 */
   naam: string;
+  /** @nullable */
+  groep?: string | null;
   bevoegdheden: ProfielInputBevoegdheden;
 }

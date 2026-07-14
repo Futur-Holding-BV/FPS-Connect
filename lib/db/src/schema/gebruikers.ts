@@ -74,6 +74,7 @@ export const profielenTable = pgTable("profielen", {
   naam: text("naam").notNull().unique(),
   bevoegdheden: jsonb("bevoegdheden").$type<Record<string, number>>().notNull().default({}),
   systeem: boolean("systeem").notNull().default(false),
+  groep: text("groep"),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
 });
 

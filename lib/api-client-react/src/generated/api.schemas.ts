@@ -3202,6 +3202,8 @@ export interface ProfielGebruiker {
 export interface Profiel {
   id: number;
   naam: string;
+  /** @nullable */
+  groep?: string | null;
   bevoegdheden: ProfielBevoegdheden;
   systeem: boolean;
   aangemaakt_op: string;
@@ -3214,6 +3216,8 @@ export type ProfielInputBevoegdheden = {[key: string]: number};
 export interface ProfielInput {
   /** @minLength 1 */
   naam: string;
+  /** @nullable */
+  groep?: string | null;
   bevoegdheden: ProfielInputBevoegdheden;
 }
 
