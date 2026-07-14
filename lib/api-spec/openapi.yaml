@@ -21077,6 +21077,265 @@ paths:
               schema:
                 $ref: "#/components/schemas/MagazijnBestelbonResultaat"
 
+  # ── MAGAZIJN INKOOPORDERS ────────────────────────────────────────────────────
+
+  /magazijn/inkooporders:
+    get:
+      operationId: listMagazijnInkooporders
+      tags: [magazijn]
+      summary: Lijst van inkooporders voor magazijnvulling
+      parameters:
+        - name: status
+          in: query
+          schema: { type: string }
+        - name: leverancier_id
+          in: query
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Lijst inkooporders
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MagazijnInkooporder"
+    post:
+      operationId: createMagazijnInkooporder
+      tags: [magazijn]
+      summary: Nieuwe inkooporder aanmaken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MagazijnInkooporderInput"
+      responses:
+        "201":
+          description: Inkooporder aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MagazijnInkooporder"
+
+  /magazijn/inkooporders/{id}:
+    get:
+      operationId: getMagazijnInkooporder
+      tags: [magazijn]
+      summary: Detail inkooporder inclusief regels
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Inkooporder detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MagazijnInkooporderDetail"
+    patch:
+      operationId: updateMagazijnInkooporder
+      tags: [magazijn]
+      summary: Inkooporder bijwerken
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MagazijnInkooporderInput"
+      responses:
+        "200":
+          description: Bijgewerkte inkooporder
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MagazijnInkooporder"
+    delete:
+      operationId: deleteMagazijnInkooporder
+      tags: [magazijn]
+      summary: Inkooporder verwijderen (alleen concept)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "204":
+          description: Verwijderd
+
+  /magazijn/inkooporders/{id}/verstuur:
+    post:
+      operationId: verstuurMagazijnInkooporder
+      tags: [magazijn]
+      summary: Inkooporder versturen naar leverancier per e-mail
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Verstuurd
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MagazijnInkooporder"
+
+  /magazijn/inkooporders/{id}/ontvang:
+    post:
+      operationId: ontvangMagazijnInkooporder
+      tags: [magazijn]
+      summary: Ontvangst registreren — boekt hoeveelheden in voorraad
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MagazijnInkooporderOntvangstInput"
+      responses:
+        "200":
+          description: Ontvangst verwerkt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MagazijnInkooporder"
+
+  # ── MAGAZIJN AI-BESTELSUGGESTIES ─────────────────────────────────────────────
+
+  /magazijn/ai-bestelsuggesties:
+    post:
+      operationId: genereerMagazijnBestelsuggesties
+      tags: [magazijn]
+      summary: Genereer AI-bestelsuggesties op basis van voorraad en verbruik
+      responses:
+        "200":
+          description: Suggesties gegenereerd
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MagazijnBestelsuggestieResultaat"
+        "403":
+          description: Geen toegang
+        "503":
+          description: AI niet beschikbaar
+
+  # ── MAGAZIJN PICKLIJSTEN ──────────────────────────────────────────────────────
+
+  /magazijn/picklijsten:
+    get:
+      operationId: listMagazijnPicklijsten
+      tags: [magazijn]
+      summary: Lijst van picklijsten (materiaalvoorbereiding per project)
+      parameters:
+        - name: status
+          in: query
+          schema: { type: string }
+        - name: opdracht_id
+          in: query
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Lijst picklijsten
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MagazijnPicklijst"
+    post:
+      operationId: createMagazijnPicklijst
+      tags: [magazijn]
+      summary: Nieuwe picklijst aanmaken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MagazijnPicklijstInput"
+      responses:
+        "201":
+          description: Picklijst aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MagazijnPicklijstDetail"
+
+  /magazijn/picklijsten/{id}:
+    get:
+      operationId: getMagazijnPicklijst
+      tags: [magazijn]
+      summary: Detail picklijst inclusief regels
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Picklijst detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MagazijnPicklijstDetail"
+    patch:
+      operationId: updateMagazijnPicklijst
+      tags: [magazijn]
+      summary: Picklijst bijwerken
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MagazijnPicklijstInput"
+      responses:
+        "200":
+          description: Bijgewerkte picklijst
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MagazijnPicklijst"
+
+  /magazijn/picklijsten/{id}/verwerk:
+    post:
+      operationId: verwerkMagazijnPicklijst
+      tags: [magazijn]
+      summary: Picklijst verwerken — boekt uitgifte en sluit picklijst
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MagazijnPicklijstVerwerkInput"
+      responses:
+        "200":
+          description: Picklijst verwerkt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MagazijnPicklijst"
+
   # ── MAGAZIJN STELLINGSCANS ───────────────────────────────────────────────────
 
   /magazijn/stellingscans/upload-url:
@@ -41949,3 +42208,204 @@ components:
       required: [inhoud]
       properties:
         inhoud: { type: string }
+
+    # ── MAGAZIJN INKOOPORDERS ───────────────────────────────────────────────────
+
+    MagazijnInkooporderRegel:
+      type: object
+      required: [id, artikel_id, gevraagd_hoeveelheid, ontvangen_hoeveelheid, btw_percentage, aangemaakt_op]
+      properties:
+        id: { type: integer }
+        artikel_id: { type: integer }
+        artikel_naam: { type: string, nullable: true }
+        artikel_eenheid: { type: string, nullable: true }
+        artikel_code: { type: string, nullable: true }
+        gevraagd_hoeveelheid: { type: number }
+        ontvangen_hoeveelheid: { type: number }
+        eenheidsprijs: { type: number, nullable: true }
+        btw_percentage: { type: integer }
+        omschrijving: { type: string, nullable: true }
+        aangemaakt_op: { type: string }
+
+    MagazijnInkooporderRegelInput:
+      type: object
+      required: [artikel_id, gevraagd_hoeveelheid]
+      properties:
+        artikel_id: { type: integer }
+        gevraagd_hoeveelheid: { type: number }
+        eenheidsprijs: { type: number, nullable: true }
+        btw_percentage: { type: integer }
+        omschrijving: { type: string, nullable: true }
+
+    MagazijnInkooporder:
+      type: object
+      required: [id, status, aangemaakt_op, bijgewerkt_op, totaal_regels]
+      properties:
+        id: { type: integer }
+        nummer: { type: string, nullable: true }
+        status: { type: string }
+        leverancier_id: { type: integer, nullable: true }
+        leverancier_naam: { type: string, nullable: true }
+        leverancier_email: { type: string, nullable: true }
+        verwachte_leverdatum: { type: string, nullable: true }
+        werkelijke_leverdatum: { type: string, nullable: true }
+        notities: { type: string, nullable: true }
+        referentie: { type: string, nullable: true }
+        aangemaakt_door_id: { type: integer, nullable: true }
+        aangemaakt_door_naam: { type: string, nullable: true }
+        aangemaakt_op: { type: string }
+        bijgewerkt_op: { type: string }
+        verstuurd_op: { type: string, nullable: true }
+        bevestigd_op: { type: string, nullable: true }
+        ontvangen_op: { type: string, nullable: true }
+        totaal_regels: { type: integer }
+
+    MagazijnInkooporderDetail:
+      allOf:
+        - $ref: "#/components/schemas/MagazijnInkooporder"
+        - type: object
+          properties:
+            regels:
+              type: array
+              items:
+                $ref: "#/components/schemas/MagazijnInkooporderRegel"
+
+    MagazijnInkooporderInput:
+      type: object
+      properties:
+        leverancier_id: { type: integer, nullable: true }
+        verwachte_leverdatum: { type: string, nullable: true }
+        notities: { type: string, nullable: true }
+        referentie: { type: string, nullable: true }
+        regels:
+          type: array
+          items:
+            $ref: "#/components/schemas/MagazijnInkooporderRegelInput"
+
+    MagazijnInkooporderOntvangstRegelInput:
+      type: object
+      required: [regel_id, ontvangen_hoeveelheid]
+      properties:
+        regel_id: { type: integer }
+        ontvangen_hoeveelheid: { type: number }
+        locatie_id: { type: integer, nullable: true }
+
+    MagazijnInkooporderOntvangstInput:
+      type: object
+      required: [regels]
+      properties:
+        werkelijke_leverdatum: { type: string, nullable: true }
+        regels:
+          type: array
+          items:
+            $ref: "#/components/schemas/MagazijnInkooporderOntvangstRegelInput"
+
+    # ── MAGAZIJN PICKLIJSTEN ────────────────────────────────────────────────────
+
+    MagazijnPicklijstRegel:
+      type: object
+      required: [id, artikel_id, gevraagd_hoeveelheid, gepickt_hoeveelheid, status, aangemaakt_op]
+      properties:
+        id: { type: integer }
+        artikel_id: { type: integer }
+        artikel_naam: { type: string, nullable: true }
+        artikel_eenheid: { type: string, nullable: true }
+        artikel_code: { type: string, nullable: true }
+        locatie_id: { type: integer, nullable: true }
+        locatie_naam: { type: string, nullable: true }
+        gevraagd_hoeveelheid: { type: number }
+        gepickt_hoeveelheid: { type: number }
+        vrije_voorraad: { type: number, nullable: true }
+        status: { type: string }
+        aangemaakt_op: { type: string }
+
+    MagazijnPicklijstRegelInput:
+      type: object
+      required: [artikel_id, gevraagd_hoeveelheid]
+      properties:
+        artikel_id: { type: integer }
+        gevraagd_hoeveelheid: { type: number }
+        locatie_id: { type: integer, nullable: true }
+
+    MagazijnPicklijst:
+      type: object
+      required: [id, status, aangemaakt_op, bijgewerkt_op, totaal_regels, gepickt_regels]
+      properties:
+        id: { type: integer }
+        opdracht_id: { type: integer, nullable: true }
+        opdracht_titel: { type: string, nullable: true }
+        status: { type: string }
+        geplande_uitgifte_op: { type: string, nullable: true }
+        notities: { type: string, nullable: true }
+        aangemaakt_door_id: { type: integer, nullable: true }
+        aangemaakt_door_naam: { type: string, nullable: true }
+        aangemaakt_op: { type: string }
+        bijgewerkt_op: { type: string }
+        verwerkt_op: { type: string, nullable: true }
+        totaal_regels: { type: integer }
+        gepickt_regels: { type: integer }
+
+    MagazijnPicklijstDetail:
+      allOf:
+        - $ref: "#/components/schemas/MagazijnPicklijst"
+        - type: object
+          properties:
+            regels:
+              type: array
+              items:
+                $ref: "#/components/schemas/MagazijnPicklijstRegel"
+
+    MagazijnPicklijstInput:
+      type: object
+      properties:
+        opdracht_id: { type: integer, nullable: true }
+        geplande_uitgifte_op: { type: string, nullable: true }
+        notities: { type: string, nullable: true }
+        regels:
+          type: array
+          items:
+            $ref: "#/components/schemas/MagazijnPicklijstRegelInput"
+
+    MagazijnPicklijstVerwerkRegelInput:
+      type: object
+      required: [regel_id]
+      properties:
+        regel_id: { type: integer }
+        gepickt_hoeveelheid: { type: number }
+        status: { type: string }
+
+    MagazijnPicklijstVerwerkInput:
+      type: object
+      required: [regels]
+      properties:
+        regels:
+          type: array
+          items:
+            $ref: "#/components/schemas/MagazijnPicklijstVerwerkRegelInput"
+
+    MagazijnBestelsuggestie:
+      type: object
+      required: [artikel_id, artikel_naam, huidig_voorraad, minimum_voorraad, gesuggereerde_hoeveelheid, reden]
+      properties:
+        artikel_id: { type: integer }
+        artikel_naam: { type: string }
+        artikel_code: { type: string, nullable: true }
+        eenheid: { type: string, nullable: true }
+        leverancier_id: { type: integer, nullable: true }
+        leverancier_naam: { type: string, nullable: true }
+        huidig_voorraad: { type: number }
+        minimum_voorraad: { type: number }
+        gesuggereerde_hoeveelheid: { type: number }
+        reden: { type: string }
+        urgentie: { type: string, enum: [hoog, middel, laag] }
+
+    MagazijnBestelsuggestieResultaat:
+      type: object
+      required: [suggesties, samenvatting, gegenereerd_op]
+      properties:
+        suggesties:
+          type: array
+          items:
+            $ref: "#/components/schemas/MagazijnBestelsuggestie"
+        samenvatting: { type: string }
+        gegenereerd_op: { type: string }

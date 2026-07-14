@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useLocation } from "wouter";
 import {
   useGetMagazijnDashboard,
   useGetMagazijnInstellingen,
@@ -6,10 +7,13 @@ import {
   useListMagazijnSnoozes,
   useSnoozeMagazijnArtikel,
   useVerwijderMagazijnSnooze,
+  useGenereerMagazijnBestelsuggesties,
+  useCreateMagazijnInkooporder,
   getGetMagazijnInstellingenQueryKey,
   getListMagazijnSnoozesQueryKey,
   getGetMagazijnDashboardQueryKey,
   getGetMagazijnSignaleringQueryKey,
+  type MagazijnBestelsuggestie,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
@@ -23,7 +27,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   Popover, PopoverContent, PopoverTrigger,
 } from "@/components/ui/popover";
-import { AlertTriangle, Package, Archive, ShoppingCart, TrendingUp, Euro, Clock, Settings2, X } from "lucide-react";
+import { AlertTriangle, Package, Archive, ShoppingCart, TrendingUp, Euro, Clock, Settings2, X, Sparkles, RefreshCw, Plus } from "lucide-react";
 import { Link } from "wouter";
 import { PaginaHulp } from "@/components/pagina-hulp";
 
@@ -259,6 +263,168 @@ function GesnoozedeArtikelen() {
   );
 }
 
+const URGENTIE_KLEUR: Record<string, string> = {
+  hoog: "bg-red-100 text-red-700",
+  middel: "bg-amber-100 text-amber-700",
+  laag: "bg-blue-100 text-blue-700",
+};
+
+function AiBestelsuggestieKaart() {
+  const [, navigate] = useLocation();
+  const { toast } = useToast();
+  const { heeftNiveau } = useBevoegdheid();
+  const kanBestellen = heeftNiveau("magazijn", 3);
+
+  const [resultaat, setResultaat] = useState<{
+    suggesties: MagazijnBestelsuggestie[];
+    samenvatting: string;
+    gegenereerd_op: string;
+  } | null>(null);
+  const [geselecteerd, setGeselecteerd] = useState<Set<number>>(new Set());
+
+  const { mutate: genereer, isPending: bezig } = useGenereerMagazijnBestelsuggesties({
+    mutation: {
+      onSuccess: (data) => {
+        setResultaat(data);
+        setGeselecteerd(new Set(data.suggesties.map((s) => s.artikel_id)));
+      },
+      onError: () => toast({ title: "AI niet beschikbaar", variant: "destructive" }),
+    },
+  });
+
+  const { mutate: aanmaken, isPending: aBezig } = useCreateMagazijnInkooporder({
+    mutation: {
+      onSuccess: (data) => {
+        toast({ title: "Inkooporder aangemaakt" });
+        navigate(`/magazijn/inkooporders/${data.id}`);
+      },
+      onError: () => toast({ title: "Aanmaken mislukt", variant: "destructive" }),
+    },
+  });
+
+  function handleInkooporder() {
+    if (!resultaat) return;
+    const regels = resultaat.suggesties
+      .filter((s) => geselecteerd.has(s.artikel_id))
+      .map((s) => ({
+        artikel_id: s.artikel_id,
+        gevraagd_hoeveelheid: s.gesuggereerde_hoeveelheid,
+        eenheidsprijs: null,
+        btw_percentage: 21,
+      }));
+    if (regels.length === 0) return;
+    aanmaken({ data: { regels, notities: `AI-bestelsuggestie — ${new Date().toLocaleDateString("nl-NL")}` } });
+  }
+
+  function toggleSuggestie(artikelId: number) {
+    setGeselecteerd((prev) => {
+      const s = new Set(prev);
+      if (s.has(artikelId)) s.delete(artikelId);
+      else s.add(artikelId);
+      return s;
+    });
+  }
+
+  return (
+    <Card className="col-span-2">
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Sparkles className="h-4 w-4 text-amber-500" />
+            AI-bestelsuggesties
+          </CardTitle>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => genereer()}
+            disabled={bezig}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${bezig ? "animate-spin" : ""}`} />
+            {bezig ? "Analyseren..." : resultaat ? "Opnieuw analyseren" : "Analyseer voorraad"}
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent>
+        {!resultaat && !bezig && (
+          <p className="text-sm text-muted-foreground">
+            Klik op "Analyseer voorraad" om AI-besteladviezen te genereren op basis van de huidige voorraad en het verbruik van de afgelopen 30 dagen.
+          </p>
+        )}
+        {bezig && (
+          <div className="space-y-2">
+            {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
+          </div>
+        )}
+        {resultaat && !bezig && (
+          <div className="space-y-4">
+            {resultaat.samenvatting && (
+              <p className="text-sm text-muted-foreground italic">{resultaat.samenvatting}</p>
+            )}
+            {resultaat.suggesties.length === 0 ? (
+              <p className="text-sm text-green-700 bg-green-50 p-3 rounded-md">
+                Alle artikelen zijn ruim voldoende op voorraad. Geen besteladviezen.
+              </p>
+            ) : (
+              <>
+                <div className="space-y-2">
+                  {resultaat.suggesties.map((s) => (
+                    <div
+                      key={s.artikel_id}
+                      className={`flex items-center gap-3 p-2.5 rounded-md border cursor-pointer transition-colors ${
+                        geselecteerd.has(s.artikel_id)
+                          ? "bg-amber-50 border-amber-200"
+                          : "bg-muted/20 border-border opacity-60"
+                      }`}
+                      onClick={() => toggleSuggestie(s.artikel_id)}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={geselecteerd.has(s.artikel_id)}
+                        onChange={() => toggleSuggestie(s.artikel_id)}
+                        className="h-4 w-4 shrink-0"
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-sm font-medium truncate">{s.artikel_naam}</span>
+                          {s.urgentie && (
+                            <Badge className={`text-xs ${URGENTIE_KLEUR[s.urgentie] ?? "bg-gray-100 text-gray-600"}`}>
+                              {s.urgentie}
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-0.5">{s.reden}</p>
+                        <p className="text-xs text-muted-foreground">
+                          Voorraad: {s.huidig_voorraad} / min. {s.minimum_voorraad} {s.eenheid ?? ""}
+                        </p>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <p className="text-sm font-semibold">{s.gesuggereerde_hoeveelheid}</p>
+                        <p className="text-xs text-muted-foreground">{s.eenheid ?? "stuks"}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {kanBestellen && geselecteerd.size > 0 && (
+                  <Button onClick={handleInkooporder} disabled={aBezig} className="w-full">
+                    <Plus className="h-4 w-4 mr-2" />
+                    {aBezig
+                      ? "Aanmaken..."
+                      : `Inkooporder aanmaken voor ${geselecteerd.size} artikel${geselecteerd.size !== 1 ? "en" : ""}`}
+                  </Button>
+                )}
+              </>
+            )}
+            <p className="text-xs text-muted-foreground text-right">
+              Gegenereerd op {new Date(resultaat.gegenereerd_op).toLocaleString("nl-NL")}
+            </p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function MagazijnDashboard() {
   const { heeftNiveau } = useBevoegdheid();
   const kanLezen = heeftNiveau("magazijn", 1);
@@ -376,6 +542,10 @@ export default function MagazijnDashboard() {
             )}
           </CardContent>
         </Card>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <AiBestelsuggestieKaart />
       </div>
 
       {kanSnoozen && <GesnoozedeArtikelen />}

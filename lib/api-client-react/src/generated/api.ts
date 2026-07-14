@@ -480,6 +480,8 @@ import type {
   ListKbBedrijfsstandaardenParams,
   ListLabelsParams,
   ListLeveranciersParams,
+  ListMagazijnInkoopordersParams,
+  ListMagazijnPicklijstenParams,
   ListMeldingenParams,
   ListMijnActiviteitenParams,
   ListModCalculatiesParams,
@@ -532,11 +534,20 @@ import type {
   MagazijnArtikelItem,
   MagazijnBestelbonInput,
   MagazijnBestelbonResultaat,
+  MagazijnBestelsuggestieResultaat,
   MagazijnDashboard,
+  MagazijnInkooporder,
+  MagazijnInkooporderDetail,
+  MagazijnInkooporderInput,
+  MagazijnInkooporderOntvangstInput,
   MagazijnInstellingen,
   MagazijnInstellingenInput,
   MagazijnLocatie,
   MagazijnLocatieInput,
+  MagazijnPicklijst,
+  MagazijnPicklijstDetail,
+  MagazijnPicklijstInput,
+  MagazijnPicklijstVerwerkInput,
   MagazijnSignalering,
   MagazijnSnooze,
   MagazijnSnoozeInput,
@@ -73654,6 +73665,962 @@ export const useCreateMagazijnBestelbon = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getCreateMagazijnBestelbonMutationOptions(options));
+    }
+
+export const getListMagazijnInkoopordersUrl = (params?: ListMagazijnInkoopordersParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/magazijn/inkooporders?${stringifiedParams}` : `/api/magazijn/inkooporders`
+}
+
+/**
+ * @summary Lijst van inkooporders voor magazijnvulling
+ */
+export const listMagazijnInkooporders = async (params?: ListMagazijnInkoopordersParams, options?: RequestInit): Promise<MagazijnInkooporder[]> => {
+
+  return customFetch<MagazijnInkooporder[]>(getListMagazijnInkoopordersUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListMagazijnInkoopordersQueryKey = (params?: ListMagazijnInkoopordersParams,) => {
+    return [
+    `/api/magazijn/inkooporders`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListMagazijnInkoopordersQueryOptions = <TData = Awaited<ReturnType<typeof listMagazijnInkooporders>>, TError = ErrorType<unknown>>(params?: ListMagazijnInkoopordersParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMagazijnInkooporders>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListMagazijnInkoopordersQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listMagazijnInkooporders>>> = ({ signal }) => listMagazijnInkooporders(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listMagazijnInkooporders>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListMagazijnInkoopordersQueryResult = NonNullable<Awaited<ReturnType<typeof listMagazijnInkooporders>>>
+export type ListMagazijnInkoopordersQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Lijst van inkooporders voor magazijnvulling
+ */
+
+export function useListMagazijnInkooporders<TData = Awaited<ReturnType<typeof listMagazijnInkooporders>>, TError = ErrorType<unknown>>(
+ params?: ListMagazijnInkoopordersParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMagazijnInkooporders>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListMagazijnInkoopordersQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateMagazijnInkooporderUrl = () => {
+
+
+
+
+  return `/api/magazijn/inkooporders`
+}
+
+/**
+ * @summary Nieuwe inkooporder aanmaken
+ */
+export const createMagazijnInkooporder = async (magazijnInkooporderInput: MagazijnInkooporderInput, options?: RequestInit): Promise<MagazijnInkooporder> => {
+
+  return customFetch<MagazijnInkooporder>(getCreateMagazijnInkooporderUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(magazijnInkooporderInput)
+  }
+);}
+
+
+
+
+export const getCreateMagazijnInkooporderMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createMagazijnInkooporder>>, TError,{data: BodyType<MagazijnInkooporderInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createMagazijnInkooporder>>, TError,{data: BodyType<MagazijnInkooporderInput>}, TContext> => {
+
+const mutationKey = ['createMagazijnInkooporder'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createMagazijnInkooporder>>, {data: BodyType<MagazijnInkooporderInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createMagazijnInkooporder(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateMagazijnInkooporderMutationResult = NonNullable<Awaited<ReturnType<typeof createMagazijnInkooporder>>>
+    export type CreateMagazijnInkooporderMutationBody = BodyType<MagazijnInkooporderInput>
+    export type CreateMagazijnInkooporderMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Nieuwe inkooporder aanmaken
+ */
+export const useCreateMagazijnInkooporder = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createMagazijnInkooporder>>, TError,{data: BodyType<MagazijnInkooporderInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createMagazijnInkooporder>>,
+        TError,
+        {data: BodyType<MagazijnInkooporderInput>},
+        TContext
+      > => {
+      return useMutation(getCreateMagazijnInkooporderMutationOptions(options));
+    }
+
+export const getGetMagazijnInkooporderUrl = (id: number,) => {
+
+
+
+
+  return `/api/magazijn/inkooporders/${id}`
+}
+
+/**
+ * @summary Detail inkooporder inclusief regels
+ */
+export const getMagazijnInkooporder = async (id: number, options?: RequestInit): Promise<MagazijnInkooporderDetail> => {
+
+  return customFetch<MagazijnInkooporderDetail>(getGetMagazijnInkooporderUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetMagazijnInkooporderQueryKey = (id: number,) => {
+    return [
+    `/api/magazijn/inkooporders/${id}`
+    ] as const;
+    }
+
+
+export const getGetMagazijnInkooporderQueryOptions = <TData = Awaited<ReturnType<typeof getMagazijnInkooporder>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMagazijnInkooporder>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetMagazijnInkooporderQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMagazijnInkooporder>>> = ({ signal }) => getMagazijnInkooporder(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMagazijnInkooporder>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetMagazijnInkooporderQueryResult = NonNullable<Awaited<ReturnType<typeof getMagazijnInkooporder>>>
+export type GetMagazijnInkooporderQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Detail inkooporder inclusief regels
+ */
+
+export function useGetMagazijnInkooporder<TData = Awaited<ReturnType<typeof getMagazijnInkooporder>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMagazijnInkooporder>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetMagazijnInkooporderQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUpdateMagazijnInkooporderUrl = (id: number,) => {
+
+
+
+
+  return `/api/magazijn/inkooporders/${id}`
+}
+
+/**
+ * @summary Inkooporder bijwerken
+ */
+export const updateMagazijnInkooporder = async (id: number,
+    magazijnInkooporderInput: MagazijnInkooporderInput, options?: RequestInit): Promise<MagazijnInkooporder> => {
+
+  return customFetch<MagazijnInkooporder>(getUpdateMagazijnInkooporderUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(magazijnInkooporderInput)
+  }
+);}
+
+
+
+
+export const getUpdateMagazijnInkooporderMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateMagazijnInkooporder>>, TError,{id: number;data: BodyType<MagazijnInkooporderInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateMagazijnInkooporder>>, TError,{id: number;data: BodyType<MagazijnInkooporderInput>}, TContext> => {
+
+const mutationKey = ['updateMagazijnInkooporder'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateMagazijnInkooporder>>, {id: number;data: BodyType<MagazijnInkooporderInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateMagazijnInkooporder(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateMagazijnInkooporderMutationResult = NonNullable<Awaited<ReturnType<typeof updateMagazijnInkooporder>>>
+    export type UpdateMagazijnInkooporderMutationBody = BodyType<MagazijnInkooporderInput>
+    export type UpdateMagazijnInkooporderMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Inkooporder bijwerken
+ */
+export const useUpdateMagazijnInkooporder = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateMagazijnInkooporder>>, TError,{id: number;data: BodyType<MagazijnInkooporderInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateMagazijnInkooporder>>,
+        TError,
+        {id: number;data: BodyType<MagazijnInkooporderInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateMagazijnInkooporderMutationOptions(options));
+    }
+
+export const getDeleteMagazijnInkooporderUrl = (id: number,) => {
+
+
+
+
+  return `/api/magazijn/inkooporders/${id}`
+}
+
+/**
+ * @summary Inkooporder verwijderen (alleen concept)
+ */
+export const deleteMagazijnInkooporder = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteMagazijnInkooporderUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteMagazijnInkooporderMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteMagazijnInkooporder>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteMagazijnInkooporder>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteMagazijnInkooporder'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteMagazijnInkooporder>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteMagazijnInkooporder(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteMagazijnInkooporderMutationResult = NonNullable<Awaited<ReturnType<typeof deleteMagazijnInkooporder>>>
+
+    export type DeleteMagazijnInkooporderMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Inkooporder verwijderen (alleen concept)
+ */
+export const useDeleteMagazijnInkooporder = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteMagazijnInkooporder>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteMagazijnInkooporder>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteMagazijnInkooporderMutationOptions(options));
+    }
+
+export const getVerstuurMagazijnInkooporderUrl = (id: number,) => {
+
+
+
+
+  return `/api/magazijn/inkooporders/${id}/verstuur`
+}
+
+/**
+ * @summary Inkooporder versturen naar leverancier per e-mail
+ */
+export const verstuurMagazijnInkooporder = async (id: number, options?: RequestInit): Promise<MagazijnInkooporder> => {
+
+  return customFetch<MagazijnInkooporder>(getVerstuurMagazijnInkooporderUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getVerstuurMagazijnInkooporderMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof verstuurMagazijnInkooporder>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof verstuurMagazijnInkooporder>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['verstuurMagazijnInkooporder'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof verstuurMagazijnInkooporder>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  verstuurMagazijnInkooporder(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type VerstuurMagazijnInkooporderMutationResult = NonNullable<Awaited<ReturnType<typeof verstuurMagazijnInkooporder>>>
+
+    export type VerstuurMagazijnInkooporderMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Inkooporder versturen naar leverancier per e-mail
+ */
+export const useVerstuurMagazijnInkooporder = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof verstuurMagazijnInkooporder>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof verstuurMagazijnInkooporder>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getVerstuurMagazijnInkooporderMutationOptions(options));
+    }
+
+export const getOntvangMagazijnInkooporderUrl = (id: number,) => {
+
+
+
+
+  return `/api/magazijn/inkooporders/${id}/ontvang`
+}
+
+/**
+ * @summary Ontvangst registreren — boekt hoeveelheden in voorraad
+ */
+export const ontvangMagazijnInkooporder = async (id: number,
+    magazijnInkooporderOntvangstInput: MagazijnInkooporderOntvangstInput, options?: RequestInit): Promise<MagazijnInkooporder> => {
+
+  return customFetch<MagazijnInkooporder>(getOntvangMagazijnInkooporderUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(magazijnInkooporderOntvangstInput)
+  }
+);}
+
+
+
+
+export const getOntvangMagazijnInkooporderMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof ontvangMagazijnInkooporder>>, TError,{id: number;data: BodyType<MagazijnInkooporderOntvangstInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof ontvangMagazijnInkooporder>>, TError,{id: number;data: BodyType<MagazijnInkooporderOntvangstInput>}, TContext> => {
+
+const mutationKey = ['ontvangMagazijnInkooporder'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof ontvangMagazijnInkooporder>>, {id: number;data: BodyType<MagazijnInkooporderOntvangstInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  ontvangMagazijnInkooporder(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type OntvangMagazijnInkooporderMutationResult = NonNullable<Awaited<ReturnType<typeof ontvangMagazijnInkooporder>>>
+    export type OntvangMagazijnInkooporderMutationBody = BodyType<MagazijnInkooporderOntvangstInput>
+    export type OntvangMagazijnInkooporderMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Ontvangst registreren — boekt hoeveelheden in voorraad
+ */
+export const useOntvangMagazijnInkooporder = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof ontvangMagazijnInkooporder>>, TError,{id: number;data: BodyType<MagazijnInkooporderOntvangstInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof ontvangMagazijnInkooporder>>,
+        TError,
+        {id: number;data: BodyType<MagazijnInkooporderOntvangstInput>},
+        TContext
+      > => {
+      return useMutation(getOntvangMagazijnInkooporderMutationOptions(options));
+    }
+
+export const getGenereerMagazijnBestelsuggestiesUrl = () => {
+
+
+
+
+  return `/api/magazijn/ai-bestelsuggesties`
+}
+
+/**
+ * @summary Genereer AI-bestelsuggesties op basis van voorraad en verbruik
+ */
+export const genereerMagazijnBestelsuggesties = async ( options?: RequestInit): Promise<MagazijnBestelsuggestieResultaat> => {
+
+  return customFetch<MagazijnBestelsuggestieResultaat>(getGenereerMagazijnBestelsuggestiesUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getGenereerMagazijnBestelsuggestiesMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof genereerMagazijnBestelsuggesties>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof genereerMagazijnBestelsuggesties>>, TError,void, TContext> => {
+
+const mutationKey = ['genereerMagazijnBestelsuggesties'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof genereerMagazijnBestelsuggesties>>, void> = () => {
+
+
+          return  genereerMagazijnBestelsuggesties(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type GenereerMagazijnBestelsuggestiesMutationResult = NonNullable<Awaited<ReturnType<typeof genereerMagazijnBestelsuggesties>>>
+
+    export type GenereerMagazijnBestelsuggestiesMutationError = ErrorType<void>
+
+    /**
+ * @summary Genereer AI-bestelsuggesties op basis van voorraad en verbruik
+ */
+export const useGenereerMagazijnBestelsuggesties = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof genereerMagazijnBestelsuggesties>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof genereerMagazijnBestelsuggesties>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getGenereerMagazijnBestelsuggestiesMutationOptions(options));
+    }
+
+export const getListMagazijnPicklijstenUrl = (params?: ListMagazijnPicklijstenParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/magazijn/picklijsten?${stringifiedParams}` : `/api/magazijn/picklijsten`
+}
+
+/**
+ * @summary Lijst van picklijsten (materiaalvoorbereiding per project)
+ */
+export const listMagazijnPicklijsten = async (params?: ListMagazijnPicklijstenParams, options?: RequestInit): Promise<MagazijnPicklijst[]> => {
+
+  return customFetch<MagazijnPicklijst[]>(getListMagazijnPicklijstenUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListMagazijnPicklijstenQueryKey = (params?: ListMagazijnPicklijstenParams,) => {
+    return [
+    `/api/magazijn/picklijsten`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListMagazijnPicklijstenQueryOptions = <TData = Awaited<ReturnType<typeof listMagazijnPicklijsten>>, TError = ErrorType<unknown>>(params?: ListMagazijnPicklijstenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMagazijnPicklijsten>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListMagazijnPicklijstenQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listMagazijnPicklijsten>>> = ({ signal }) => listMagazijnPicklijsten(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listMagazijnPicklijsten>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListMagazijnPicklijstenQueryResult = NonNullable<Awaited<ReturnType<typeof listMagazijnPicklijsten>>>
+export type ListMagazijnPicklijstenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Lijst van picklijsten (materiaalvoorbereiding per project)
+ */
+
+export function useListMagazijnPicklijsten<TData = Awaited<ReturnType<typeof listMagazijnPicklijsten>>, TError = ErrorType<unknown>>(
+ params?: ListMagazijnPicklijstenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMagazijnPicklijsten>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListMagazijnPicklijstenQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateMagazijnPicklijstUrl = () => {
+
+
+
+
+  return `/api/magazijn/picklijsten`
+}
+
+/**
+ * @summary Nieuwe picklijst aanmaken
+ */
+export const createMagazijnPicklijst = async (magazijnPicklijstInput: MagazijnPicklijstInput, options?: RequestInit): Promise<MagazijnPicklijstDetail> => {
+
+  return customFetch<MagazijnPicklijstDetail>(getCreateMagazijnPicklijstUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(magazijnPicklijstInput)
+  }
+);}
+
+
+
+
+export const getCreateMagazijnPicklijstMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createMagazijnPicklijst>>, TError,{data: BodyType<MagazijnPicklijstInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createMagazijnPicklijst>>, TError,{data: BodyType<MagazijnPicklijstInput>}, TContext> => {
+
+const mutationKey = ['createMagazijnPicklijst'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createMagazijnPicklijst>>, {data: BodyType<MagazijnPicklijstInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createMagazijnPicklijst(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateMagazijnPicklijstMutationResult = NonNullable<Awaited<ReturnType<typeof createMagazijnPicklijst>>>
+    export type CreateMagazijnPicklijstMutationBody = BodyType<MagazijnPicklijstInput>
+    export type CreateMagazijnPicklijstMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Nieuwe picklijst aanmaken
+ */
+export const useCreateMagazijnPicklijst = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createMagazijnPicklijst>>, TError,{data: BodyType<MagazijnPicklijstInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createMagazijnPicklijst>>,
+        TError,
+        {data: BodyType<MagazijnPicklijstInput>},
+        TContext
+      > => {
+      return useMutation(getCreateMagazijnPicklijstMutationOptions(options));
+    }
+
+export const getGetMagazijnPicklijstUrl = (id: number,) => {
+
+
+
+
+  return `/api/magazijn/picklijsten/${id}`
+}
+
+/**
+ * @summary Detail picklijst inclusief regels
+ */
+export const getMagazijnPicklijst = async (id: number, options?: RequestInit): Promise<MagazijnPicklijstDetail> => {
+
+  return customFetch<MagazijnPicklijstDetail>(getGetMagazijnPicklijstUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetMagazijnPicklijstQueryKey = (id: number,) => {
+    return [
+    `/api/magazijn/picklijsten/${id}`
+    ] as const;
+    }
+
+
+export const getGetMagazijnPicklijstQueryOptions = <TData = Awaited<ReturnType<typeof getMagazijnPicklijst>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMagazijnPicklijst>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetMagazijnPicklijstQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMagazijnPicklijst>>> = ({ signal }) => getMagazijnPicklijst(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMagazijnPicklijst>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetMagazijnPicklijstQueryResult = NonNullable<Awaited<ReturnType<typeof getMagazijnPicklijst>>>
+export type GetMagazijnPicklijstQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Detail picklijst inclusief regels
+ */
+
+export function useGetMagazijnPicklijst<TData = Awaited<ReturnType<typeof getMagazijnPicklijst>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMagazijnPicklijst>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetMagazijnPicklijstQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUpdateMagazijnPicklijstUrl = (id: number,) => {
+
+
+
+
+  return `/api/magazijn/picklijsten/${id}`
+}
+
+/**
+ * @summary Picklijst bijwerken
+ */
+export const updateMagazijnPicklijst = async (id: number,
+    magazijnPicklijstInput: MagazijnPicklijstInput, options?: RequestInit): Promise<MagazijnPicklijst> => {
+
+  return customFetch<MagazijnPicklijst>(getUpdateMagazijnPicklijstUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(magazijnPicklijstInput)
+  }
+);}
+
+
+
+
+export const getUpdateMagazijnPicklijstMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateMagazijnPicklijst>>, TError,{id: number;data: BodyType<MagazijnPicklijstInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateMagazijnPicklijst>>, TError,{id: number;data: BodyType<MagazijnPicklijstInput>}, TContext> => {
+
+const mutationKey = ['updateMagazijnPicklijst'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateMagazijnPicklijst>>, {id: number;data: BodyType<MagazijnPicklijstInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateMagazijnPicklijst(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateMagazijnPicklijstMutationResult = NonNullable<Awaited<ReturnType<typeof updateMagazijnPicklijst>>>
+    export type UpdateMagazijnPicklijstMutationBody = BodyType<MagazijnPicklijstInput>
+    export type UpdateMagazijnPicklijstMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Picklijst bijwerken
+ */
+export const useUpdateMagazijnPicklijst = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateMagazijnPicklijst>>, TError,{id: number;data: BodyType<MagazijnPicklijstInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateMagazijnPicklijst>>,
+        TError,
+        {id: number;data: BodyType<MagazijnPicklijstInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateMagazijnPicklijstMutationOptions(options));
+    }
+
+export const getVerwerkMagazijnPicklijstUrl = (id: number,) => {
+
+
+
+
+  return `/api/magazijn/picklijsten/${id}/verwerk`
+}
+
+/**
+ * @summary Picklijst verwerken — boekt uitgifte en sluit picklijst
+ */
+export const verwerkMagazijnPicklijst = async (id: number,
+    magazijnPicklijstVerwerkInput: MagazijnPicklijstVerwerkInput, options?: RequestInit): Promise<MagazijnPicklijst> => {
+
+  return customFetch<MagazijnPicklijst>(getVerwerkMagazijnPicklijstUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(magazijnPicklijstVerwerkInput)
+  }
+);}
+
+
+
+
+export const getVerwerkMagazijnPicklijstMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof verwerkMagazijnPicklijst>>, TError,{id: number;data: BodyType<MagazijnPicklijstVerwerkInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof verwerkMagazijnPicklijst>>, TError,{id: number;data: BodyType<MagazijnPicklijstVerwerkInput>}, TContext> => {
+
+const mutationKey = ['verwerkMagazijnPicklijst'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof verwerkMagazijnPicklijst>>, {id: number;data: BodyType<MagazijnPicklijstVerwerkInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  verwerkMagazijnPicklijst(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type VerwerkMagazijnPicklijstMutationResult = NonNullable<Awaited<ReturnType<typeof verwerkMagazijnPicklijst>>>
+    export type VerwerkMagazijnPicklijstMutationBody = BodyType<MagazijnPicklijstVerwerkInput>
+    export type VerwerkMagazijnPicklijstMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Picklijst verwerken — boekt uitgifte en sluit picklijst
+ */
+export const useVerwerkMagazijnPicklijst = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof verwerkMagazijnPicklijst>>, TError,{id: number;data: BodyType<MagazijnPicklijstVerwerkInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof verwerkMagazijnPicklijst>>,
+        TError,
+        {id: number;data: BodyType<MagazijnPicklijstVerwerkInput>},
+        TContext
+      > => {
+      return useMutation(getVerwerkMagazijnPicklijstMutationOptions(options));
     }
 
 export const getGetMagazijnStellingsscanUploadUrlUrl = () => {

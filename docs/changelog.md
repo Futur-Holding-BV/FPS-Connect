@@ -1,3 +1,33 @@
+## 2026-07-14 — Magazijnmodule: inkooporders, picklijsten & AI-bestelsuggesties
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (additief; nieuwe tabellen/routes/pagina's)
+
+**DB-schema (4 nieuwe tabellen via direct SQL):**
+- `magazijn_inkooporders` — bestelorders met statusmachine (concept→verstuurd→bevestigd→gedeeltelijk_ontvangen→volledig_ontvangen)
+- `magazijn_inkooporder_regels` — artikelregels per order met ontvangen hoeveelheden
+- `magazijn_picklijsten` — materiaalvoorbereiding per project met voortgangsmeting
+- `magazijn_picklijst_regels` — per-artikel uitgifte tracking (gepickt/niet_beschikbaar)
+
+**API-routes (statusmachine + voorraadkoppeling):**
+- `GET/POST /magazijn/inkooporders` — lijst + aanmaken
+- `GET/PATCH/DELETE /magazijn/inkooporders/:id` — detail, bewerken, verwijderen (alleen concept)
+- `POST /magazijn/inkooporders/:id/verstuur` — verstuurt per e-mail naar leverancier, status→verstuurd
+- `POST /magazijn/inkooporders/:id/ontvang` — boekt ontvangen hoeveelheden bij in voorraad, status→gedeeltelijk/volledig ontvangen
+- `GET/POST /magazijn/picklijsten` — lijst + aanmaken (koppelt aan opdracht)
+- `GET/PATCH /magazijn/picklijsten/:id` — detail + bewerken
+- `POST /magazijn/picklijsten/:id/verwerk` — verwerkt uitgifte per regel, boekt af van vrije voorraad
+- `POST /magazijn/ai-bestelsuggesties` — AI analyseert voorraad + verbruik (30d) en geeft besteladviezen met urgentie
+
+**Frontend (4 nieuwe pagina's + dashboard-widget):**
+- `/magazijn/inkooporders` — lijstpagina met statusfilter + nieuw-dialog (artikelselectie, leverancier, leverdatum)
+- `/magazijn/inkooporders/:id` — detailpagina met statusacties (versturen/ontvangen) + voortgangsbalk per artikel
+- `/magazijn/picklijsten` — lijstpagina met voortgangsbalk per lijst + nieuw-dialog
+- `/magazijn/picklijsten/:id` — detailpagina met verwerk-dialog (per artikel hoeveelheid + status invullen)
+- **Dashboard AI-widget:** "Analyseer voorraad"-knop genereert besteladviezen per artikel (urgentie hoog/middel/laag), selecteerbaar, converteert direct naar inkooporder
+- Sidebar nav-items "Inkooporders" en "Picklijsten" toegevoegd aan het magazijn-hoofdstuk
+
+---
+
 ## 2026-07-14 — Uitvoeringsmodule architectuurplan geschreven
 
 - **Uitvoering:** planning | **Kwaliteit:** n.v.t. | **Risico:** geen (document, geen code)

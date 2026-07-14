@@ -26159,6 +26159,391 @@ export const CreateMagazijnBestelbonResponse = zod.object({
 
 
 /**
+ * @summary Lijst van inkooporders voor magazijnvulling
+ */
+export const ListMagazijnInkoopordersQueryParams = zod.object({
+  "status": zod.coerce.string().optional(),
+  "leverancier_id": zod.coerce.number().optional()
+})
+
+export const ListMagazijnInkoopordersResponseItem = zod.object({
+  "id": zod.number(),
+  "nummer": zod.string().nullish(),
+  "status": zod.string(),
+  "leverancier_id": zod.number().nullish(),
+  "leverancier_naam": zod.string().nullish(),
+  "leverancier_email": zod.string().nullish(),
+  "verwachte_leverdatum": zod.string().nullish(),
+  "werkelijke_leverdatum": zod.string().nullish(),
+  "notities": zod.string().nullish(),
+  "referentie": zod.string().nullish(),
+  "aangemaakt_door_id": zod.number().nullish(),
+  "aangemaakt_door_naam": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string(),
+  "verstuurd_op": zod.string().nullish(),
+  "bevestigd_op": zod.string().nullish(),
+  "ontvangen_op": zod.string().nullish(),
+  "totaal_regels": zod.number()
+})
+export const ListMagazijnInkoopordersResponse = zod.array(ListMagazijnInkoopordersResponseItem)
+
+
+/**
+ * @summary Nieuwe inkooporder aanmaken
+ */
+export const CreateMagazijnInkooporderBody = zod.object({
+  "leverancier_id": zod.number().nullish(),
+  "verwachte_leverdatum": zod.string().nullish(),
+  "notities": zod.string().nullish(),
+  "referentie": zod.string().nullish(),
+  "regels": zod.array(zod.object({
+  "artikel_id": zod.number(),
+  "gevraagd_hoeveelheid": zod.number(),
+  "eenheidsprijs": zod.number().nullish(),
+  "btw_percentage": zod.number().optional(),
+  "omschrijving": zod.string().nullish()
+})).optional()
+})
+
+export const CreateMagazijnInkooporderResponse = zod.void()
+
+
+/**
+ * @summary Detail inkooporder inclusief regels
+ */
+export const GetMagazijnInkooporderParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetMagazijnInkooporderResponse = zod.object({
+  "id": zod.number(),
+  "nummer": zod.string().nullish(),
+  "status": zod.string(),
+  "leverancier_id": zod.number().nullish(),
+  "leverancier_naam": zod.string().nullish(),
+  "leverancier_email": zod.string().nullish(),
+  "verwachte_leverdatum": zod.string().nullish(),
+  "werkelijke_leverdatum": zod.string().nullish(),
+  "notities": zod.string().nullish(),
+  "referentie": zod.string().nullish(),
+  "aangemaakt_door_id": zod.number().nullish(),
+  "aangemaakt_door_naam": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string(),
+  "verstuurd_op": zod.string().nullish(),
+  "bevestigd_op": zod.string().nullish(),
+  "ontvangen_op": zod.string().nullish(),
+  "totaal_regels": zod.number()
+}).and(zod.object({
+  "regels": zod.array(zod.object({
+  "id": zod.number(),
+  "artikel_id": zod.number(),
+  "artikel_naam": zod.string().nullish(),
+  "artikel_eenheid": zod.string().nullish(),
+  "artikel_code": zod.string().nullish(),
+  "gevraagd_hoeveelheid": zod.number(),
+  "ontvangen_hoeveelheid": zod.number(),
+  "eenheidsprijs": zod.number().nullish(),
+  "btw_percentage": zod.number(),
+  "omschrijving": zod.string().nullish(),
+  "aangemaakt_op": zod.string()
+})).optional()
+}))
+
+
+/**
+ * @summary Inkooporder bijwerken
+ */
+export const UpdateMagazijnInkooporderParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateMagazijnInkooporderBody = zod.object({
+  "leverancier_id": zod.number().nullish(),
+  "verwachte_leverdatum": zod.string().nullish(),
+  "notities": zod.string().nullish(),
+  "referentie": zod.string().nullish(),
+  "regels": zod.array(zod.object({
+  "artikel_id": zod.number(),
+  "gevraagd_hoeveelheid": zod.number(),
+  "eenheidsprijs": zod.number().nullish(),
+  "btw_percentage": zod.number().optional(),
+  "omschrijving": zod.string().nullish()
+})).optional()
+})
+
+export const UpdateMagazijnInkooporderResponse = zod.object({
+  "id": zod.number(),
+  "nummer": zod.string().nullish(),
+  "status": zod.string(),
+  "leverancier_id": zod.number().nullish(),
+  "leverancier_naam": zod.string().nullish(),
+  "leverancier_email": zod.string().nullish(),
+  "verwachte_leverdatum": zod.string().nullish(),
+  "werkelijke_leverdatum": zod.string().nullish(),
+  "notities": zod.string().nullish(),
+  "referentie": zod.string().nullish(),
+  "aangemaakt_door_id": zod.number().nullish(),
+  "aangemaakt_door_naam": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string(),
+  "verstuurd_op": zod.string().nullish(),
+  "bevestigd_op": zod.string().nullish(),
+  "ontvangen_op": zod.string().nullish(),
+  "totaal_regels": zod.number()
+})
+
+
+/**
+ * @summary Inkooporder verwijderen (alleen concept)
+ */
+export const DeleteMagazijnInkooporderParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteMagazijnInkooporderResponse = zod.void()
+
+
+/**
+ * @summary Inkooporder versturen naar leverancier per e-mail
+ */
+export const VerstuurMagazijnInkooporderParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const VerstuurMagazijnInkooporderResponse = zod.object({
+  "id": zod.number(),
+  "nummer": zod.string().nullish(),
+  "status": zod.string(),
+  "leverancier_id": zod.number().nullish(),
+  "leverancier_naam": zod.string().nullish(),
+  "leverancier_email": zod.string().nullish(),
+  "verwachte_leverdatum": zod.string().nullish(),
+  "werkelijke_leverdatum": zod.string().nullish(),
+  "notities": zod.string().nullish(),
+  "referentie": zod.string().nullish(),
+  "aangemaakt_door_id": zod.number().nullish(),
+  "aangemaakt_door_naam": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string(),
+  "verstuurd_op": zod.string().nullish(),
+  "bevestigd_op": zod.string().nullish(),
+  "ontvangen_op": zod.string().nullish(),
+  "totaal_regels": zod.number()
+})
+
+
+/**
+ * @summary Ontvangst registreren — boekt hoeveelheden in voorraad
+ */
+export const OntvangMagazijnInkooporderParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const OntvangMagazijnInkooporderBody = zod.object({
+  "werkelijke_leverdatum": zod.string().nullish(),
+  "regels": zod.array(zod.object({
+  "regel_id": zod.number(),
+  "ontvangen_hoeveelheid": zod.number(),
+  "locatie_id": zod.number().nullish()
+}))
+})
+
+export const OntvangMagazijnInkooporderResponse = zod.object({
+  "id": zod.number(),
+  "nummer": zod.string().nullish(),
+  "status": zod.string(),
+  "leverancier_id": zod.number().nullish(),
+  "leverancier_naam": zod.string().nullish(),
+  "leverancier_email": zod.string().nullish(),
+  "verwachte_leverdatum": zod.string().nullish(),
+  "werkelijke_leverdatum": zod.string().nullish(),
+  "notities": zod.string().nullish(),
+  "referentie": zod.string().nullish(),
+  "aangemaakt_door_id": zod.number().nullish(),
+  "aangemaakt_door_naam": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string(),
+  "verstuurd_op": zod.string().nullish(),
+  "bevestigd_op": zod.string().nullish(),
+  "ontvangen_op": zod.string().nullish(),
+  "totaal_regels": zod.number()
+})
+
+
+/**
+ * @summary Genereer AI-bestelsuggesties op basis van voorraad en verbruik
+ */
+export const GenereerMagazijnBestelsuggestiesResponse = zod.object({
+  "suggesties": zod.array(zod.object({
+  "artikel_id": zod.number(),
+  "artikel_naam": zod.string(),
+  "artikel_code": zod.string().nullish(),
+  "eenheid": zod.string().nullish(),
+  "leverancier_id": zod.number().nullish(),
+  "leverancier_naam": zod.string().nullish(),
+  "huidig_voorraad": zod.number(),
+  "minimum_voorraad": zod.number(),
+  "gesuggereerde_hoeveelheid": zod.number(),
+  "reden": zod.string(),
+  "urgentie": zod.enum(['hoog', 'middel', 'laag']).optional()
+})),
+  "samenvatting": zod.string(),
+  "gegenereerd_op": zod.string()
+})
+
+
+/**
+ * @summary Lijst van picklijsten (materiaalvoorbereiding per project)
+ */
+export const ListMagazijnPicklijstenQueryParams = zod.object({
+  "status": zod.coerce.string().optional(),
+  "opdracht_id": zod.coerce.number().optional()
+})
+
+export const ListMagazijnPicklijstenResponseItem = zod.object({
+  "id": zod.number(),
+  "opdracht_id": zod.number().nullish(),
+  "opdracht_titel": zod.string().nullish(),
+  "status": zod.string(),
+  "geplande_uitgifte_op": zod.string().nullish(),
+  "notities": zod.string().nullish(),
+  "aangemaakt_door_id": zod.number().nullish(),
+  "aangemaakt_door_naam": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string(),
+  "verwerkt_op": zod.string().nullish(),
+  "totaal_regels": zod.number(),
+  "gepickt_regels": zod.number()
+})
+export const ListMagazijnPicklijstenResponse = zod.array(ListMagazijnPicklijstenResponseItem)
+
+
+/**
+ * @summary Nieuwe picklijst aanmaken
+ */
+export const CreateMagazijnPicklijstBody = zod.object({
+  "opdracht_id": zod.number().nullish(),
+  "geplande_uitgifte_op": zod.string().nullish(),
+  "notities": zod.string().nullish(),
+  "regels": zod.array(zod.object({
+  "artikel_id": zod.number(),
+  "gevraagd_hoeveelheid": zod.number(),
+  "locatie_id": zod.number().nullish()
+})).optional()
+})
+
+export const CreateMagazijnPicklijstResponse = zod.void()
+
+
+/**
+ * @summary Detail picklijst inclusief regels
+ */
+export const GetMagazijnPicklijstParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetMagazijnPicklijstResponse = zod.object({
+  "id": zod.number(),
+  "opdracht_id": zod.number().nullish(),
+  "opdracht_titel": zod.string().nullish(),
+  "status": zod.string(),
+  "geplande_uitgifte_op": zod.string().nullish(),
+  "notities": zod.string().nullish(),
+  "aangemaakt_door_id": zod.number().nullish(),
+  "aangemaakt_door_naam": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string(),
+  "verwerkt_op": zod.string().nullish(),
+  "totaal_regels": zod.number(),
+  "gepickt_regels": zod.number()
+}).and(zod.object({
+  "regels": zod.array(zod.object({
+  "id": zod.number(),
+  "artikel_id": zod.number(),
+  "artikel_naam": zod.string().nullish(),
+  "artikel_eenheid": zod.string().nullish(),
+  "artikel_code": zod.string().nullish(),
+  "locatie_id": zod.number().nullish(),
+  "locatie_naam": zod.string().nullish(),
+  "gevraagd_hoeveelheid": zod.number(),
+  "gepickt_hoeveelheid": zod.number(),
+  "vrije_voorraad": zod.number().nullish(),
+  "status": zod.string(),
+  "aangemaakt_op": zod.string()
+})).optional()
+}))
+
+
+/**
+ * @summary Picklijst bijwerken
+ */
+export const UpdateMagazijnPicklijstParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateMagazijnPicklijstBody = zod.object({
+  "opdracht_id": zod.number().nullish(),
+  "geplande_uitgifte_op": zod.string().nullish(),
+  "notities": zod.string().nullish(),
+  "regels": zod.array(zod.object({
+  "artikel_id": zod.number(),
+  "gevraagd_hoeveelheid": zod.number(),
+  "locatie_id": zod.number().nullish()
+})).optional()
+})
+
+export const UpdateMagazijnPicklijstResponse = zod.object({
+  "id": zod.number(),
+  "opdracht_id": zod.number().nullish(),
+  "opdracht_titel": zod.string().nullish(),
+  "status": zod.string(),
+  "geplande_uitgifte_op": zod.string().nullish(),
+  "notities": zod.string().nullish(),
+  "aangemaakt_door_id": zod.number().nullish(),
+  "aangemaakt_door_naam": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string(),
+  "verwerkt_op": zod.string().nullish(),
+  "totaal_regels": zod.number(),
+  "gepickt_regels": zod.number()
+})
+
+
+/**
+ * @summary Picklijst verwerken — boekt uitgifte en sluit picklijst
+ */
+export const VerwerkMagazijnPicklijstParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const VerwerkMagazijnPicklijstBody = zod.object({
+  "regels": zod.array(zod.object({
+  "regel_id": zod.number(),
+  "gepickt_hoeveelheid": zod.number().optional(),
+  "status": zod.string().optional()
+}))
+})
+
+export const VerwerkMagazijnPicklijstResponse = zod.object({
+  "id": zod.number(),
+  "opdracht_id": zod.number().nullish(),
+  "opdracht_titel": zod.string().nullish(),
+  "status": zod.string(),
+  "geplande_uitgifte_op": zod.string().nullish(),
+  "notities": zod.string().nullish(),
+  "aangemaakt_door_id": zod.number().nullish(),
+  "aangemaakt_door_naam": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string(),
+  "verwerkt_op": zod.string().nullish(),
+  "totaal_regels": zod.number(),
+  "gepickt_regels": zod.number()
+})
+
+
+/**
  * @summary Presigned upload-URL ophalen voor stellingfoto
  */
 export const GetMagazijnStellingsscanUploadUrlResponse = zod.object({

@@ -1,5 +1,6 @@
 // Magazijn- en Voorraadbeheer (Fase 1 — Kern)
 // Routes: locaties, artikelen-magazijn, voorraad, mutaties, reserveringen, uitgiftes, retouren, dashboard
+// Fase 2 — Inkooporders + Picklijsten (statusmachine, voorraad-koppeling)
 import { Router } from "express";
 import {
   db,
@@ -9,10 +10,15 @@ import {
   reserveringenTable,
   artikelenTable,
   leveranciersTable,
+  gebruikersTable,
   opdrachtenTable,
   magazijnStellingscansTable,
   magazijnInstellingenTable,
   magazijnSnoozesTable,
+  magazijnInkoopordersTable,
+  magazijnInkooporderRegelsTable,
+  magazijnPicklijstenTable,
+  magazijnPicklijstRegelsTable,
 } from "@workspace/db";
 import { eq, and, asc, desc, ilike, lt, lte, sql, gt } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
@@ -20,7 +26,7 @@ import { logger } from "../lib/logger";
 import { verstuurMail, MailFout } from "../services/email";
 import { ObjectStorageService } from "../lib/objectStorage";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
-import { MAGAZIJN_RETOUR_SCAN_BASE_PROMPT, MAGAZIJN_STELLING_SCAN_BASE_PROMPT } from "../lib/aiPrompts";
+import { MAGAZIJN_RETOUR_SCAN_BASE_PROMPT, MAGAZIJN_STELLING_SCAN_BASE_PROMPT, MAGAZIJN_BESTELSUGGESTIE_PROMPT } from "../lib/aiPrompts";
 import { herplanMagazijnSignalering } from "../lib/magazijnSignalering";
 
 const router = Router();
@@ -1659,6 +1665,889 @@ router.post("/magazijn/stellingscans/:id/goedkeuren", schrijven, async (req, res
     return void res.json(mapStellingsscan(updated));
   } catch (err) {
     logger.error({ err }, "magazijn stellingsscan goedkeuren fout");
+    return void res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// ── Inkooporders ───────────────────────────────────────────────────────────────
+
+function mapInkooporderRegel(r: typeof magazijnInkooporderRegelsTable.$inferSelect & {
+  artikel_naam?: string | null;
+  artikel_eenheid?: string | null;
+  artikel_code?: string | null;
+}) {
+  return {
+    id: r.id,
+    artikel_id: r.artikelId,
+    artikel_naam: r.artikel_naam ?? null,
+    artikel_eenheid: r.artikel_eenheid ?? null,
+    artikel_code: r.artikel_code ?? null,
+    gevraagd_hoeveelheid: r.gevraagdHoeveelheid,
+    ontvangen_hoeveelheid: r.ontvangenHoeveelheid,
+    eenheidsprijs: r.eenheidsprijs ?? null,
+    btw_percentage: r.btwPercentage,
+    omschrijving: r.omschrijving ?? null,
+    aangemaakt_op: iso(r.aangemaaktOp)!,
+  };
+}
+
+function mapInkooporder(r: typeof magazijnInkoopordersTable.$inferSelect & {
+  aangemaakt_door_naam?: string | null;
+  totaal_regels?: number;
+}) {
+  return {
+    id: r.id,
+    nummer: r.nummer ?? null,
+    status: r.status,
+    leverancier_id: r.leverancierId ?? null,
+    leverancier_naam: r.leverancierNaam ?? null,
+    leverancier_email: r.leverancierEmail ?? null,
+    verwachte_leverdatum: iso(r.verwachteLeverdatum),
+    werkelijke_leverdatum: iso(r.werkelijkeLeverdatum),
+    notities: r.notities ?? null,
+    referentie: r.referentie ?? null,
+    aangemaakt_door_id: r.aangemaaktDoorId ?? null,
+    aangemaakt_door_naam: r.aangemaakt_door_naam ?? null,
+    aangemaakt_op: iso(r.aangemaaktOp)!,
+    bijgewerkt_op: iso(r.bijgewerktOp)!,
+    verstuurd_op: iso(r.verstuurdOp),
+    bevestigd_op: iso(r.bevestigdOp),
+    ontvangen_op: iso(r.ontvangenOp),
+    totaal_regels: r.totaal_regels ?? 0,
+  };
+}
+
+async function genereerInkooporderNummer(): Promise<string> {
+  const jaar = new Date().getFullYear();
+  const [row] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(magazijnInkoopordersTable);
+  const volgnr = String((row?.count ?? 0) + 1).padStart(4, "0");
+  return `INK-${jaar}-${volgnr}`;
+}
+
+// GET /magazijn/inkooporders
+router.get("/inkooporders", lezen, async (req, res) => {
+  try {
+    const { status, leverancier_id } = req.query;
+    const conditions = [];
+    if (status) conditions.push(eq(magazijnInkoopordersTable.status, String(status)));
+    if (leverancier_id) conditions.push(eq(magazijnInkoopordersTable.leverancierId, Number(leverancier_id)));
+
+    const rows = await db
+      .select({
+        order: magazijnInkoopordersTable,
+        aangemaakt_door_naam: gebruikersTable.naam,
+        totaal_regels: sql<number>`count(${magazijnInkooporderRegelsTable.id})`,
+      })
+      .from(magazijnInkoopordersTable)
+      .leftJoin(gebruikersTable, eq(magazijnInkoopordersTable.aangemaaktDoorId, gebruikersTable.id))
+      .leftJoin(magazijnInkooporderRegelsTable, eq(magazijnInkooporderRegelsTable.inkooporderId, magazijnInkoopordersTable.id))
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .groupBy(magazijnInkoopordersTable.id, gebruikersTable.naam)
+      .orderBy(desc(magazijnInkoopordersTable.aangemaaktOp));
+
+    return void res.json(rows.map((r) => mapInkooporder({
+      ...r.order,
+      aangemaakt_door_naam: r.aangemaakt_door_naam,
+      totaal_regels: Number(r.totaal_regels),
+    })));
+  } catch (err) {
+    logger.error({ err }, "lijst inkooporders ophalen fout");
+    return void res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// POST /magazijn/inkooporders
+router.post("/inkooporders", aanmaken, async (req, res) => {
+  try {
+    const userId = req.session.userId!;
+    const { leverancier_id, verwachte_leverdatum, notities, referentie, regels } = req.body as {
+      leverancier_id?: number | null;
+      verwachte_leverdatum?: string | null;
+      notities?: string | null;
+      referentie?: string | null;
+      regels?: Array<{ artikel_id: number; gevraagd_hoeveelheid: number; eenheidsprijs?: number | null; btw_percentage?: number; omschrijving?: string | null }>;
+    };
+
+    let leverancierNaam: string | null = null;
+    let leverancierEmail: string | null = null;
+    if (leverancier_id) {
+      const [lev] = await db.select().from(leveranciersTable).where(eq(leveranciersTable.id, leverancier_id)).limit(1);
+      if (lev) { leverancierNaam = lev.naam; leverancierEmail = str(lev.email); }
+    }
+
+    const nummer = await genereerInkooporderNummer();
+
+    const [order] = await db.insert(magazijnInkoopordersTable).values({
+      nummer,
+      status: "concept",
+      leverancierId: leverancier_id ?? null,
+      leverancierNaam,
+      leverancierEmail,
+      verwachteLeverdatum: verwachte_leverdatum ? new Date(verwachte_leverdatum) : null,
+      notities: str(notities),
+      referentie: str(referentie),
+      aangemaaktDoorId: userId,
+    }).returning();
+
+    if (regels && regels.length > 0) {
+      await db.insert(magazijnInkooporderRegelsTable).values(
+        regels.map((r) => ({
+          inkooporderId: order.id,
+          artikelId: r.artikel_id,
+          gevraagdHoeveelheid: r.gevraagd_hoeveelheid,
+          eenheidsprijs: r.eenheidsprijs ?? null,
+          btwPercentage: r.btw_percentage ?? 21,
+          omschrijving: str(r.omschrijving),
+        }))
+      );
+    }
+
+    return void res.status(201).json(mapInkooporder({ ...order, totaal_regels: regels?.length ?? 0 }));
+  } catch (err) {
+    logger.error({ err }, "inkooporder aanmaken fout");
+    return void res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// GET /magazijn/inkooporders/:id
+router.get("/inkooporders/:id", lezen, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const [order] = await db
+      .select({
+        order: magazijnInkoopordersTable,
+        aangemaakt_door_naam: gebruikersTable.naam,
+      })
+      .from(magazijnInkoopordersTable)
+      .leftJoin(gebruikersTable, eq(magazijnInkoopordersTable.aangemaaktDoorId, gebruikersTable.id))
+      .where(eq(magazijnInkoopordersTable.id, id))
+      .limit(1);
+
+    if (!order) return void res.status(404).json({ error: "Niet gevonden" });
+
+    const regels = await db
+      .select({
+        regel: magazijnInkooporderRegelsTable,
+        artikel_naam: artikelenTable.naam,
+        artikel_eenheid: artikelenTable.eenheid,
+        artikel_code: artikelenTable.code,
+      })
+      .from(magazijnInkooporderRegelsTable)
+      .leftJoin(artikelenTable, eq(magazijnInkooporderRegelsTable.artikelId, artikelenTable.id))
+      .where(eq(magazijnInkooporderRegelsTable.inkooporderId, id))
+      .orderBy(asc(magazijnInkooporderRegelsTable.id));
+
+    return void res.json({
+      ...mapInkooporder({
+        ...order.order,
+        aangemaakt_door_naam: order.aangemaakt_door_naam,
+        totaal_regels: regels.length,
+      }),
+      regels: regels.map((r) => mapInkooporderRegel({
+        ...r.regel,
+        artikel_naam: r.artikel_naam,
+        artikel_eenheid: r.artikel_eenheid,
+        artikel_code: r.artikel_code,
+      })),
+    });
+  } catch (err) {
+    logger.error({ err }, "inkooporder detail ophalen fout");
+    return void res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// PATCH /magazijn/inkooporders/:id
+router.patch("/inkooporders/:id", schrijven, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const [bestaand] = await db.select().from(magazijnInkoopordersTable).where(eq(magazijnInkoopordersTable.id, id)).limit(1);
+    if (!bestaand) return void res.status(404).json({ error: "Niet gevonden" });
+    if (bestaand.status !== "concept") return void res.status(409).json({ error: "Alleen concept-orders kunnen worden bijgewerkt" });
+
+    const { leverancier_id, verwachte_leverdatum, notities, referentie, regels } = req.body as {
+      leverancier_id?: number | null;
+      verwachte_leverdatum?: string | null;
+      notities?: string | null;
+      referentie?: string | null;
+      regels?: Array<{ artikel_id: number; gevraagd_hoeveelheid: number; eenheidsprijs?: number | null; btw_percentage?: number; omschrijving?: string | null }>;
+    };
+
+    let leverancierNaam = bestaand.leverancierNaam;
+    let leverancierEmail = bestaand.leverancierEmail;
+    if (leverancier_id !== undefined) {
+      if (leverancier_id) {
+        const [lev] = await db.select().from(leveranciersTable).where(eq(leveranciersTable.id, leverancier_id)).limit(1);
+        if (lev) { leverancierNaam = lev.naam; leverancierEmail = str(lev.email); }
+      } else {
+        leverancierNaam = null; leverancierEmail = null;
+      }
+    }
+
+    const [updated] = await db
+      .update(magazijnInkoopordersTable)
+      .set({
+        leverancierId: leverancier_id !== undefined ? (leverancier_id ?? null) : bestaand.leverancierId,
+        leverancierNaam,
+        leverancierEmail,
+        verwachteLeverdatum: verwachte_leverdatum !== undefined ? (verwachte_leverdatum ? new Date(verwachte_leverdatum) : null) : bestaand.verwachteLeverdatum,
+        notities: notities !== undefined ? str(notities) : bestaand.notities,
+        referentie: referentie !== undefined ? str(referentie) : bestaand.referentie,
+        bijgewerktOp: new Date(),
+      })
+      .where(eq(magazijnInkoopordersTable.id, id))
+      .returning();
+
+    if (regels !== undefined) {
+      await db.delete(magazijnInkooporderRegelsTable).where(eq(magazijnInkooporderRegelsTable.inkooporderId, id));
+      if (regels.length > 0) {
+        await db.insert(magazijnInkooporderRegelsTable).values(
+          regels.map((r) => ({
+            inkooporderId: id,
+            artikelId: r.artikel_id,
+            gevraagdHoeveelheid: r.gevraagd_hoeveelheid,
+            eenheidsprijs: r.eenheidsprijs ?? null,
+            btwPercentage: r.btw_percentage ?? 21,
+            omschrijving: str(r.omschrijving),
+          }))
+        );
+      }
+    }
+
+    const totaalRegels = await db.select({ count: sql<number>`count(*)` }).from(magazijnInkooporderRegelsTable).where(eq(magazijnInkooporderRegelsTable.inkooporderId, id));
+    return void res.json(mapInkooporder({ ...updated, totaal_regels: Number(totaalRegels[0]?.count ?? 0) }));
+  } catch (err) {
+    logger.error({ err }, "inkooporder bijwerken fout");
+    return void res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// DELETE /magazijn/inkooporders/:id
+router.delete("/inkooporders/:id", beheer, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const [order] = await db.select().from(magazijnInkoopordersTable).where(eq(magazijnInkoopordersTable.id, id)).limit(1);
+    if (!order) return void res.status(404).json({ error: "Niet gevonden" });
+    if (order.status !== "concept") return void res.status(409).json({ error: "Alleen concept-orders kunnen worden verwijderd" });
+    await db.delete(magazijnInkoopordersTable).where(eq(magazijnInkoopordersTable.id, id));
+    return void res.status(204).send();
+  } catch (err) {
+    logger.error({ err }, "inkooporder verwijderen fout");
+    return void res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// POST /magazijn/inkooporders/:id/verstuur
+router.post("/inkooporders/:id/verstuur", schrijven, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const [order] = await db.select().from(magazijnInkoopordersTable).where(eq(magazijnInkoopordersTable.id, id)).limit(1);
+    if (!order) return void res.status(404).json({ error: "Niet gevonden" });
+    if (order.status !== "concept") return void res.status(409).json({ error: "Inkooporder is niet meer in concept-status" });
+    if (!order.leverancierEmail) return void res.status(422).json({ error: "Geen e-mailadres bekend voor deze leverancier" });
+
+    const regels = await db
+      .select({ regel: magazijnInkooporderRegelsTable, artikel_naam: artikelenTable.naam, artikel_eenheid: artikelenTable.eenheid })
+      .from(magazijnInkooporderRegelsTable)
+      .leftJoin(artikelenTable, eq(magazijnInkooporderRegelsTable.artikelId, artikelenTable.id))
+      .where(eq(magazijnInkooporderRegelsTable.inkooporderId, id));
+
+    if (regels.length === 0) return void res.status(422).json({ error: "Inkooporder bevat geen regels" });
+
+    const regelsHtml = regels.map((r) =>
+      `<tr><td>${r.artikel_naam ?? `Artikel #${r.regel.artikelId}`}</td><td>${r.regel.gevraagdHoeveelheid} ${r.artikel_eenheid ?? ""}</td><td>${r.regel.eenheidsprijs != null ? `€ ${r.regel.eenheidsprijs.toFixed(2)}` : "—"}</td></tr>`
+    ).join("");
+
+    await verstuurMail({
+      naarEmail: order.leverancierEmail!,
+      onderwerp: `Inkooporder ${order.nummer} — FPS Brandpreventie`,
+      soort: "magazijn_bestelbon",
+      html: `<h2>Inkooporder ${order.nummer}</h2>
+<p>Geachte leverancier,</p>
+<p>Hierbij ontvangt u onze inkooporder. Wij verzoeken u vriendelijk de onderstaande materialen te leveren.</p>
+${order.verwachteLeverdatum ? `<p><strong>Gewenste leverdatum:</strong> ${new Date(order.verwachteLeverdatum).toLocaleDateString("nl-NL")}</p>` : ""}
+${order.notities ? `<p><strong>Notities:</strong> ${order.notities}</p>` : ""}
+<table border="1" cellpadding="4" cellspacing="0" style="border-collapse:collapse;">
+  <thead><tr><th>Artikel</th><th>Hoeveelheid</th><th>Prijs/eenheid</th></tr></thead>
+  <tbody>${regelsHtml}</tbody>
+</table>
+<p>Met vriendelijke groet,<br/>FPS Brandpreventie</p>`,
+    });
+
+    const [updated] = await db
+      .update(magazijnInkoopordersTable)
+      .set({ status: "verstuurd", verstuurdOp: new Date(), bijgewerktOp: new Date() })
+      .where(eq(magazijnInkoopordersTable.id, id))
+      .returning();
+
+    return void res.json(mapInkooporder({ ...updated, totaal_regels: regels.length }));
+  } catch (err) {
+    if (err instanceof MailFout) return void res.status(502).json({ error: "E-mail kon niet worden verstuurd" });
+    logger.error({ err }, "inkooporder versturen fout");
+    return void res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// POST /magazijn/inkooporders/:id/ontvang
+router.post("/inkooporders/:id/ontvang", schrijven, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const userId = req.session.userId!;
+    const [order] = await db.select().from(magazijnInkoopordersTable).where(eq(magazijnInkoopordersTable.id, id)).limit(1);
+    if (!order) return void res.status(404).json({ error: "Niet gevonden" });
+    if (["volledig_ontvangen", "geannuleerd"].includes(order.status)) {
+      return void res.status(409).json({ error: "Deze inkooporder kan niet meer worden ontvangen" });
+    }
+
+    const { werkelijke_leverdatum, regels } = req.body as {
+      werkelijke_leverdatum?: string | null;
+      regels: Array<{ regel_id: number; ontvangen_hoeveelheid: number; locatie_id?: number | null }>;
+    };
+
+    if (!regels || regels.length === 0) return void res.status(422).json({ error: "Geen ontvangstregels opgegeven" });
+
+    await db.transaction(async (tx) => {
+      for (const inkomend of regels) {
+        const [bestaandeRegel] = await tx
+          .select()
+          .from(magazijnInkooporderRegelsTable)
+          .where(and(eq(magazijnInkooporderRegelsTable.id, inkomend.regel_id), eq(magazijnInkooporderRegelsTable.inkooporderId, id)))
+          .limit(1);
+
+        if (!bestaandeRegel) continue;
+        const nieuwOntvangen = bestaandeRegel.ontvangenHoeveelheid + inkomend.ontvangen_hoeveelheid;
+
+        await tx.update(magazijnInkooporderRegelsTable)
+          .set({ ontvangenHoeveelheid: nieuwOntvangen })
+          .where(eq(magazijnInkooporderRegelsTable.id, inkomend.regel_id));
+
+        if (inkomend.ontvangen_hoeveelheid > 0) {
+          const locatieId = inkomend.locatie_id ?? null;
+          const [bestaandVoorraad] = await tx
+            .select()
+            .from(voorraadTable)
+            .where(and(eq(voorraadTable.artikelId, bestaandeRegel.artikelId), locatieId ? eq(voorraadTable.locatieId, locatieId) : sql`locatie_id IS NULL`))
+            .limit(1);
+
+          if (bestaandVoorraad) {
+            await tx.update(voorraadTable)
+              .set({
+                hoeveelheid: sql`${voorraadTable.hoeveelheid} + ${inkomend.ontvangen_hoeveelheid}`,
+                besteld: sql`GREATEST(0, ${voorraadTable.besteld} - ${inkomend.ontvangen_hoeveelheid})`,
+                bijgewerktOp: new Date(),
+              })
+              .where(eq(voorraadTable.id, bestaandVoorraad.id));
+          } else {
+            await tx.insert(voorraadTable).values({
+              artikelId: bestaandeRegel.artikelId,
+              locatieId,
+              hoeveelheid: inkomend.ontvangen_hoeveelheid,
+              gereserveerd: 0,
+              besteld: 0,
+            });
+          }
+
+          await tx.insert(voorraadMutatiesTable).values({
+            artikelId: bestaandeRegel.artikelId,
+            locatieId,
+            type: "inkoop",
+            hoeveelheid: inkomend.ontvangen_hoeveelheid,
+            delta: inkomend.ontvangen_hoeveelheid,
+            referentieType: "inkooporder",
+            referentieId: id,
+            gebruikerId: userId,
+            omschrijving: `Inkooporder ${order.nummer} ontvangen`,
+          });
+        }
+      }
+
+      const alleRegels = await tx
+        .select()
+        .from(magazijnInkooporderRegelsTable)
+        .where(eq(magazijnInkooporderRegelsTable.inkooporderId, id));
+
+      const volledigOntvangen = alleRegels.every((r) => r.ontvangenHoeveelheid >= r.gevraagdHoeveelheid);
+      const deelsOntvangen = alleRegels.some((r) => r.ontvangenHoeveelheid > 0);
+      const nieuweStatus = volledigOntvangen ? "volledig_ontvangen" : deelsOntvangen ? "gedeeltelijk_ontvangen" : "verstuurd";
+
+      await tx.update(magazijnInkoopordersTable)
+        .set({
+          status: nieuweStatus,
+          werkelijkeLeverdatum: werkelijke_leverdatum ? new Date(werkelijke_leverdatum) : null,
+          ontvangenOp: volledigOntvangen ? new Date() : order.ontvangenOp,
+          bijgewerktOp: new Date(),
+        })
+        .where(eq(magazijnInkoopordersTable.id, id));
+    });
+
+    const [final] = await db
+      .select({ order: magazijnInkoopordersTable, totaal_regels: sql<number>`count(${magazijnInkooporderRegelsTable.id})` })
+      .from(magazijnInkoopordersTable)
+      .leftJoin(magazijnInkooporderRegelsTable, eq(magazijnInkooporderRegelsTable.inkooporderId, magazijnInkoopordersTable.id))
+      .where(eq(magazijnInkoopordersTable.id, id))
+      .groupBy(magazijnInkoopordersTable.id);
+
+    return void res.json(mapInkooporder({ ...final.order, totaal_regels: Number(final.totaal_regels) }));
+  } catch (err) {
+    logger.error({ err }, "inkooporder ontvangen fout");
+    return void res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// ── Picklijsten ─────────────────────────────────────────────────────────────────
+
+function mapPicklijstRegel(r: typeof magazijnPicklijstRegelsTable.$inferSelect & {
+  artikel_naam?: string | null;
+  artikel_eenheid?: string | null;
+  artikel_code?: string | null;
+  locatie_naam?: string | null;
+  vrije_voorraad?: number | null;
+}) {
+  return {
+    id: r.id,
+    artikel_id: r.artikelId,
+    artikel_naam: r.artikel_naam ?? null,
+    artikel_eenheid: r.artikel_eenheid ?? null,
+    artikel_code: r.artikel_code ?? null,
+    locatie_id: r.locatieId ?? null,
+    locatie_naam: r.locatie_naam ?? null,
+    gevraagd_hoeveelheid: r.gevraagdHoeveelheid,
+    gepickt_hoeveelheid: r.gepicktHoeveelheid,
+    vrije_voorraad: r.vrije_voorraad ?? null,
+    status: r.status,
+    aangemaakt_op: iso(r.aangemaaktOp)!,
+  };
+}
+
+function mapPicklijst(r: typeof magazijnPicklijstenTable.$inferSelect & {
+  aangemaakt_door_naam?: string | null;
+  totaal_regels?: number;
+  gepickt_regels?: number;
+}) {
+  return {
+    id: r.id,
+    opdracht_id: r.opdrachtId ?? null,
+    opdracht_titel: r.opdrachtTitel ?? null,
+    status: r.status,
+    geplande_uitgifte_op: iso(r.geplandeUitgifteOp),
+    notities: r.notities ?? null,
+    aangemaakt_door_id: r.aangemaaktDoorId ?? null,
+    aangemaakt_door_naam: r.aangemaakt_door_naam ?? null,
+    aangemaakt_op: iso(r.aangemaaktOp)!,
+    bijgewerkt_op: iso(r.bijgewerktOp)!,
+    verwerkt_op: iso(r.verwerktOp),
+    totaal_regels: r.totaal_regels ?? 0,
+    gepickt_regels: r.gepickt_regels ?? 0,
+  };
+}
+
+// GET /magazijn/picklijsten
+router.get("/picklijsten", lezen, async (req, res) => {
+  try {
+    const { status, opdracht_id } = req.query;
+    const conditions = [];
+    if (status) conditions.push(eq(magazijnPicklijstenTable.status, String(status)));
+    if (opdracht_id) conditions.push(eq(magazijnPicklijstenTable.opdrachtId, Number(opdracht_id)));
+
+    const rows = await db
+      .select({
+        pick: magazijnPicklijstenTable,
+        aangemaakt_door_naam: gebruikersTable.naam,
+        totaal_regels: sql<number>`count(${magazijnPicklijstRegelsTable.id})`,
+        gepickt_regels: sql<number>`count(case when ${magazijnPicklijstRegelsTable.status} = 'gepickt' then 1 end)`,
+      })
+      .from(magazijnPicklijstenTable)
+      .leftJoin(gebruikersTable, eq(magazijnPicklijstenTable.aangemaaktDoorId, gebruikersTable.id))
+      .leftJoin(magazijnPicklijstRegelsTable, eq(magazijnPicklijstRegelsTable.picklijstId, magazijnPicklijstenTable.id))
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .groupBy(magazijnPicklijstenTable.id, gebruikersTable.naam)
+      .orderBy(desc(magazijnPicklijstenTable.aangemaaktOp));
+
+    return void res.json(rows.map((r) => mapPicklijst({
+      ...r.pick,
+      aangemaakt_door_naam: r.aangemaakt_door_naam,
+      totaal_regels: Number(r.totaal_regels),
+      gepickt_regels: Number(r.gepickt_regels),
+    })));
+  } catch (err) {
+    logger.error({ err }, "lijst picklijsten ophalen fout");
+    return void res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// POST /magazijn/picklijsten
+router.post("/picklijsten", aanmaken, async (req, res) => {
+  try {
+    const userId = req.session.userId!;
+    const { opdracht_id, geplande_uitgifte_op, notities, regels } = req.body as {
+      opdracht_id?: number | null;
+      geplande_uitgifte_op?: string | null;
+      notities?: string | null;
+      regels?: Array<{ artikel_id: number; gevraagd_hoeveelheid: number; locatie_id?: number | null }>;
+    };
+
+    let opdrachtTitel: string | null = null;
+    if (opdracht_id) {
+      const [odr] = await db.select({ titel: opdrachtenTable.titel }).from(opdrachtenTable).where(eq(opdrachtenTable.id, opdracht_id)).limit(1);
+      if (odr) opdrachtTitel = str(odr.titel);
+    }
+
+    const [pick] = await db.insert(magazijnPicklijstenTable).values({
+      opdrachtId: opdracht_id ?? null,
+      opdrachtTitel,
+      status: "concept",
+      geplandeUitgifteOp: geplande_uitgifte_op ? new Date(geplande_uitgifte_op) : null,
+      notities: str(notities),
+      aangemaaktDoorId: userId,
+    }).returning();
+
+    if (regels && regels.length > 0) {
+      const regelValues = await Promise.all(regels.map(async (r) => {
+        const [v] = await db.select({ hoeveelheid: voorraadTable.hoeveelheid, gereserveerd: voorraadTable.gereserveerd })
+          .from(voorraadTable)
+          .where(eq(voorraadTable.artikelId, r.artikel_id))
+          .limit(1);
+        return {
+          picklijstId: pick.id,
+          artikelId: r.artikel_id,
+          locatieId: r.locatie_id ?? null,
+          gevraagdHoeveelheid: r.gevraagd_hoeveelheid,
+          gepicktHoeveelheid: 0,
+          status: "open" as const,
+        };
+      }));
+      await db.insert(magazijnPicklijstRegelsTable).values(regelValues);
+    }
+
+    const detail = await db
+      .select({
+        pick: magazijnPicklijstenTable,
+        aangemaakt_door_naam: gebruikersTable.naam,
+        totaal_regels: sql<number>`count(${magazijnPicklijstRegelsTable.id})`,
+        gepickt_regels: sql<number>`count(case when ${magazijnPicklijstRegelsTable.status} = 'gepickt' then 1 end)`,
+      })
+      .from(magazijnPicklijstenTable)
+      .leftJoin(gebruikersTable, eq(magazijnPicklijstenTable.aangemaaktDoorId, gebruikersTable.id))
+      .leftJoin(magazijnPicklijstRegelsTable, eq(magazijnPicklijstRegelsTable.picklijstId, magazijnPicklijstenTable.id))
+      .where(eq(magazijnPicklijstenTable.id, pick.id))
+      .groupBy(magazijnPicklijstenTable.id, gebruikersTable.naam);
+
+    if (detail.length === 0) return void res.status(500).json({ error: "Interne serverfout" });
+    const d = detail[0];
+    return void res.status(201).json({
+      ...mapPicklijst({ ...d.pick, aangemaakt_door_naam: d.aangemaakt_door_naam, totaal_regels: Number(d.totaal_regels), gepickt_regels: Number(d.gepickt_regels) }),
+      regels: [],
+    });
+  } catch (err) {
+    logger.error({ err }, "picklijst aanmaken fout");
+    return void res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// GET /magazijn/picklijsten/:id
+router.get("/picklijsten/:id", lezen, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const [detail] = await db
+      .select({
+        pick: magazijnPicklijstenTable,
+        aangemaakt_door_naam: gebruikersTable.naam,
+        totaal_regels: sql<number>`count(${magazijnPicklijstRegelsTable.id})`,
+        gepickt_regels: sql<number>`count(case when ${magazijnPicklijstRegelsTable.status} = 'gepickt' then 1 end)`,
+      })
+      .from(magazijnPicklijstenTable)
+      .leftJoin(gebruikersTable, eq(magazijnPicklijstenTable.aangemaaktDoorId, gebruikersTable.id))
+      .leftJoin(magazijnPicklijstRegelsTable, eq(magazijnPicklijstRegelsTable.picklijstId, magazijnPicklijstenTable.id))
+      .where(eq(magazijnPicklijstenTable.id, id))
+      .groupBy(magazijnPicklijstenTable.id, gebruikersTable.naam);
+
+    if (!detail) return void res.status(404).json({ error: "Niet gevonden" });
+
+    const regels = await db
+      .select({
+        regel: magazijnPicklijstRegelsTable,
+        artikel_naam: artikelenTable.naam,
+        artikel_eenheid: artikelenTable.eenheid,
+        artikel_code: artikelenTable.code,
+        locatie_naam: magazijnLocatiesTable.naam,
+        vrije_voorraad: sql<number>`coalesce(sum(${voorraadTable.hoeveelheid} - ${voorraadTable.gereserveerd}), null)`,
+      })
+      .from(magazijnPicklijstRegelsTable)
+      .leftJoin(artikelenTable, eq(magazijnPicklijstRegelsTable.artikelId, artikelenTable.id))
+      .leftJoin(magazijnLocatiesTable, eq(magazijnPicklijstRegelsTable.locatieId, magazijnLocatiesTable.id))
+      .leftJoin(voorraadTable, eq(voorraadTable.artikelId, magazijnPicklijstRegelsTable.artikelId))
+      .where(eq(magazijnPicklijstRegelsTable.picklijstId, id))
+      .groupBy(magazijnPicklijstRegelsTable.id, artikelenTable.naam, artikelenTable.eenheid, artikelenTable.code, magazijnLocatiesTable.naam)
+      .orderBy(asc(magazijnPicklijstRegelsTable.id));
+
+    return void res.json({
+      ...mapPicklijst({ ...detail.pick, aangemaakt_door_naam: detail.aangemaakt_door_naam, totaal_regels: Number(detail.totaal_regels), gepickt_regels: Number(detail.gepickt_regels) }),
+      regels: regels.map((r) => mapPicklijstRegel({
+        ...r.regel,
+        artikel_naam: r.artikel_naam,
+        artikel_eenheid: r.artikel_eenheid,
+        artikel_code: r.artikel_code,
+        locatie_naam: r.locatie_naam,
+        vrije_voorraad: r.vrije_voorraad != null ? Number(r.vrije_voorraad) : null,
+      })),
+    });
+  } catch (err) {
+    logger.error({ err }, "picklijst detail ophalen fout");
+    return void res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// PATCH /magazijn/picklijsten/:id
+router.patch("/picklijsten/:id", schrijven, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const [bestaand] = await db.select().from(magazijnPicklijstenTable).where(eq(magazijnPicklijstenTable.id, id)).limit(1);
+    if (!bestaand) return void res.status(404).json({ error: "Niet gevonden" });
+    if (["voltooid", "geannuleerd"].includes(bestaand.status)) return void res.status(409).json({ error: "Gesloten picklijst kan niet worden bijgewerkt" });
+
+    const { geplande_uitgifte_op, notities, regels } = req.body as {
+      geplande_uitgifte_op?: string | null;
+      notities?: string | null;
+      regels?: Array<{ artikel_id: number; gevraagd_hoeveelheid: number; locatie_id?: number | null }>;
+    };
+
+    const [updated] = await db
+      .update(magazijnPicklijstenTable)
+      .set({
+        geplandeUitgifteOp: geplande_uitgifte_op !== undefined ? (geplande_uitgifte_op ? new Date(geplande_uitgifte_op) : null) : bestaand.geplandeUitgifteOp,
+        notities: notities !== undefined ? str(notities) : bestaand.notities,
+        bijgewerktOp: new Date(),
+      })
+      .where(eq(magazijnPicklijstenTable.id, id))
+      .returning();
+
+    if (regels !== undefined && bestaand.status === "concept") {
+      await db.delete(magazijnPicklijstRegelsTable).where(eq(magazijnPicklijstRegelsTable.picklijstId, id));
+      if (regels.length > 0) {
+        await db.insert(magazijnPicklijstRegelsTable).values(
+          regels.map((r) => ({
+            picklijstId: id,
+            artikelId: r.artikel_id,
+            locatieId: r.locatie_id ?? null,
+            gevraagdHoeveelheid: r.gevraagd_hoeveelheid,
+            gepicktHoeveelheid: 0,
+            status: "open" as const,
+          }))
+        );
+      }
+    }
+
+    const [summary] = await db
+      .select({ totaal_regels: sql<number>`count(${magazijnPicklijstRegelsTable.id})`, gepickt_regels: sql<number>`count(case when ${magazijnPicklijstRegelsTable.status} = 'gepickt' then 1 end)` })
+      .from(magazijnPicklijstRegelsTable)
+      .where(eq(magazijnPicklijstRegelsTable.picklijstId, id));
+
+    return void res.json(mapPicklijst({ ...updated, totaal_regels: Number(summary?.totaal_regels ?? 0), gepickt_regels: Number(summary?.gepickt_regels ?? 0) }));
+  } catch (err) {
+    logger.error({ err }, "picklijst bijwerken fout");
+    return void res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// POST /magazijn/picklijsten/:id/verwerk
+router.post("/picklijsten/:id/verwerk", schrijven, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const userId = req.session.userId!;
+    const [pick] = await db.select().from(magazijnPicklijstenTable).where(eq(magazijnPicklijstenTable.id, id)).limit(1);
+    if (!pick) return void res.status(404).json({ error: "Niet gevonden" });
+    if (["voltooid", "deels_voltooid", "geannuleerd"].includes(pick.status)) {
+      return void res.status(409).json({ error: "Picklijst is al verwerkt of geannuleerd" });
+    }
+
+    const { regels } = req.body as {
+      regels: Array<{ regel_id: number; gepickt_hoeveelheid?: number; status?: string }>;
+    };
+
+    await db.transaction(async (tx) => {
+      for (const inkomend of regels) {
+        const [bestaandeRegel] = await tx
+          .select()
+          .from(magazijnPicklijstRegelsTable)
+          .where(and(eq(magazijnPicklijstRegelsTable.id, inkomend.regel_id), eq(magazijnPicklijstRegelsTable.picklijstId, id)))
+          .limit(1);
+
+        if (!bestaandeRegel) continue;
+        const gepickt = inkomend.gepickt_hoeveelheid ?? bestaandeRegel.gevraagdHoeveelheid;
+        const status = inkomend.status ?? (gepickt >= bestaandeRegel.gevraagdHoeveelheid ? "gepickt" : gepickt > 0 ? "gepickt" : "niet_beschikbaar");
+
+        await tx.update(magazijnPicklijstRegelsTable)
+          .set({ gepicktHoeveelheid: gepickt, status })
+          .where(eq(magazijnPicklijstRegelsTable.id, inkomend.regel_id));
+
+        if (gepickt > 0) {
+          const [bestaandVoorraad] = await tx
+            .select()
+            .from(voorraadTable)
+            .where(bestaandeRegel.locatieId
+              ? and(eq(voorraadTable.artikelId, bestaandeRegel.artikelId), eq(voorraadTable.locatieId, bestaandeRegel.locatieId))
+              : eq(voorraadTable.artikelId, bestaandeRegel.artikelId))
+            .limit(1);
+
+          if (bestaandVoorraad) {
+            await tx.update(voorraadTable)
+              .set({
+                hoeveelheid: sql`GREATEST(0, ${voorraadTable.hoeveelheid} - ${gepickt})`,
+                bijgewerktOp: new Date(),
+              })
+              .where(eq(voorraadTable.id, bestaandVoorraad.id));
+          }
+
+          await tx.insert(voorraadMutatiesTable).values({
+            artikelId: bestaandeRegel.artikelId,
+            locatieId: bestaandeRegel.locatieId ?? null,
+            type: "uitgifte",
+            hoeveelheid: gepickt,
+            delta: -gepickt,
+            referentieType: "picklijst",
+            referentieId: id,
+            opdrachtId: pick.opdrachtId ?? null,
+            gebruikerId: userId,
+            omschrijving: `Picklijst #${id}${pick.opdrachtTitel ? ` — ${pick.opdrachtTitel}` : ""} verwerkt`,
+          });
+        }
+      }
+
+      const alleRegels = await tx.select().from(magazijnPicklijstRegelsTable).where(eq(magazijnPicklijstRegelsTable.picklijstId, id));
+      const allesGepickt = alleRegels.every((r) => r.status === "gepickt");
+      const deelsGepickt = alleRegels.some((r) => r.status === "gepickt");
+      const nieuweStatus = allesGepickt ? "voltooid" : deelsGepickt ? "deels_voltooid" : "concept";
+
+      await tx.update(magazijnPicklijstenTable)
+        .set({ status: nieuweStatus, verwerktOp: new Date(), verwerktDoorId: userId, bijgewerktOp: new Date() })
+        .where(eq(magazijnPicklijstenTable.id, id));
+    });
+
+    const [final] = await db
+      .select({
+        pick: magazijnPicklijstenTable,
+        totaal_regels: sql<number>`count(${magazijnPicklijstRegelsTable.id})`,
+        gepickt_regels: sql<number>`count(case when ${magazijnPicklijstRegelsTable.status} = 'gepickt' then 1 end)`,
+      })
+      .from(magazijnPicklijstenTable)
+      .leftJoin(magazijnPicklijstRegelsTable, eq(magazijnPicklijstRegelsTable.picklijstId, magazijnPicklijstenTable.id))
+      .where(eq(magazijnPicklijstenTable.id, id))
+      .groupBy(magazijnPicklijstenTable.id);
+
+    return void res.json(mapPicklijst({ ...final.pick, totaal_regels: Number(final.totaal_regels), gepickt_regels: Number(final.gepickt_regels) }));
+  } catch (err) {
+    logger.error({ err }, "picklijst verwerken fout");
+    return void res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// ── AI BESTELSUGGESTIES ────────────────────────────────────────────────────────
+
+router.post("/ai-bestelsuggesties", requireBevoegdheid("magazijn", 1), async (req, res) => {
+  try {
+    if (!heeftGateway()) return void res.status(503).json({ error: "AI niet beschikbaar" });
+
+    // Haal alle artikelen op met voorraad, minimum en verbruik (30 dagen)
+    const artikelen = await db
+      .select({
+        id: artikelenTable.id,
+        naam: artikelenTable.naam,
+        code: artikelenTable.code,
+        eenheid: artikelenTable.eenheid,
+        minimumVoorraad: artikelenTable.minimumVoorraad,
+        leverancierId: artikelenTable.leverancierId,
+        leverancierNaam: leveranciersTable.naam,
+        huidigVoorraad: sql<number>`coalesce(sum(${voorraadTable.hoeveelheid}), 0)`,
+        verbruik30d: sql<number>`coalesce((
+          select sum(abs(${voorraadMutatiesTable.hoeveelheid}))
+          from ${voorraadMutatiesTable}
+          where ${voorraadMutatiesTable.artikelId} = ${artikelenTable.id}
+            and ${voorraadMutatiesTable.type} in ('uitgifte', 'retour')
+            and ${voorraadMutatiesTable.aangemaaktOp} >= now() - interval '30 days'
+        ), 0)`,
+      })
+      .from(artikelenTable)
+      .leftJoin(voorraadTable, eq(voorraadTable.artikelId, artikelenTable.id))
+      .leftJoin(leveranciersTable, eq(leveranciersTable.id, artikelenTable.leverancierId))
+      .where(eq(artikelenTable.actief, true))
+      .groupBy(artikelenTable.id, leveranciersTable.naam);
+
+    // Filter op artikelen die relevant zijn (onder minimum of op weg naar minimum)
+    const relevantArtikel = (a: typeof artikelen[0]) => {
+      const huidig = Number(a.huidigVoorraad);
+      const minimum = Number(a.minimumVoorraad ?? 0);
+      const verbruik = Number(a.verbruik30d);
+      if (minimum <= 0 && verbruik <= 0) return false;
+      // Onder of op het minimum
+      if (huidig <= minimum) return true;
+      // Verbruik suggereert dat minimum binnen 14 dagen bereikt wordt
+      const dagenTotMinimum = verbruik > 0 ? ((huidig - minimum) / (verbruik / 30)) : Infinity;
+      return dagenTotMinimum <= 14;
+    };
+
+    const teAnalyseren = artikelen.filter(relevantArtikel).slice(0, 50);
+
+    if (teAnalyseren.length === 0) {
+      return void res.json({
+        suggesties: [],
+        samenvatting: "Alle artikelen zijn ruim voldoende op voorraad. Geen besteladviezen nodig.",
+        gegenereerd_op: new Date().toISOString(),
+      });
+    }
+
+    const artikelContext = teAnalyseren.map((a) =>
+      `${a.id} | ${a.code ?? "—"} | ${a.naam} | ${a.eenheid ?? "st"} | ${Number(a.huidigVoorraad)} | ${Number(a.minimumVoorraad ?? 0)} | ${Number(a.verbruik30d)} | ${a.leverancierNaam ?? "—"}`
+    ).join("\n");
+
+    const prompt = MAGAZIJN_BESTELSUGGESTIE_PROMPT.tekst.replace("{ARTIKEL_CONTEXT}", artikelContext);
+
+    const aiResultaat = await aiGateway.chat("default", {
+      messages: [{ role: "user", content: prompt }],
+      max_tokens: 1500,
+    });
+
+    let parsed: { suggesties: Array<{ artikel_id: number; gesuggereerde_hoeveelheid: number; urgentie: string; reden: string }>; samenvatting: string };
+    if (!aiResultaat.ok) {
+      return void res.status(503).json({ error: "AI niet beschikbaar" });
+    }
+    try {
+      const raw = aiResultaat.inhoud ?? "{}";
+      const jsonMatch = raw.match(/\{[\s\S]*\}/);
+      parsed = JSON.parse(jsonMatch?.[0] ?? "{}");
+      if (!Array.isArray(parsed.suggesties)) parsed = { suggesties: [], samenvatting: "Geen suggesties beschikbaar." };
+    } catch {
+      parsed = { suggesties: [], samenvatting: "Kon AI-antwoord niet verwerken." };
+    }
+
+    // Verrijken met artikel-gegevens
+    const artikelMap = Object.fromEntries(teAnalyseren.map((a) => [a.id, a]));
+    const suggesties = parsed.suggesties
+      .filter((s) => artikelMap[s.artikel_id])
+      .map((s) => {
+        const a = artikelMap[s.artikel_id];
+        return {
+          artikel_id: s.artikel_id,
+          artikel_naam: a.naam,
+          artikel_code: a.code ?? null,
+          eenheid: a.eenheid ?? null,
+          leverancier_id: a.leverancierId ?? null,
+          leverancier_naam: a.leverancierNaam ?? null,
+          huidig_voorraad: Number(a.huidigVoorraad),
+          minimum_voorraad: Number(a.minimumVoorraad ?? 0),
+          gesuggereerde_hoeveelheid: Number(s.gesuggereerde_hoeveelheid),
+          reden: s.reden ?? "",
+          urgentie: (["hoog", "middel", "laag"].includes(s.urgentie) ? s.urgentie : "middel") as "hoog" | "middel" | "laag",
+        };
+      });
+
+    return void res.json({
+      suggesties,
+      samenvatting: parsed.samenvatting ?? "",
+      gegenereerd_op: new Date().toISOString(),
+    });
+  } catch (err) {
+    logger.error({ err }, "AI bestelsuggesties fout");
     return void res.status(500).json({ error: "Interne serverfout" });
   }
 });

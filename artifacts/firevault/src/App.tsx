@@ -123,6 +123,10 @@ import MagazijnMutatiesPagina from "@/pages/magazijn/mutaties";
 import MagazijnReserveringenPagina from "@/pages/magazijn/reserveringen";
 import MagazijnUitgiftesPagina from "@/pages/magazijn/uitgiftes";
 import MagazijnRetourenPagina from "@/pages/magazijn/retouren";
+import MagazijnInkoopordersPagina from "@/pages/magazijn/inkooporders";
+import MagazijnInkooporderDetailPagina from "@/pages/magazijn/inkooporder-detail";
+import MagazijnPicklijstenPagina from "@/pages/magazijn/picklijsten";
+import MagazijnPicklijstDetailPagina from "@/pages/magazijn/picklijst-detail";
 import HallOfFamePagina from "@/pages/hall-of-fame";
 import AutoparkPagina from "@/pages/organisatie/autopark";
 import VerzekeringenPagina from "@/pages/organisatie/verzekeringen";
@@ -467,6 +471,10 @@ function ConnectPortal() {
         <Route path="/magazijn/reserveringen" component={MagazijnReserveringenPagina} />
         <Route path="/magazijn/uitgiftes" component={MagazijnUitgiftesPagina} />
         <Route path="/magazijn/retouren" component={MagazijnRetourenPagina} />
+        <Route path="/magazijn/inkooporders" component={MagazijnInkoopordersPagina} />
+        <Route path="/magazijn/inkooporders/:id" component={MagazijnInkooporderDetailPagina} />
+        <Route path="/magazijn/picklijsten" component={MagazijnPicklijstenPagina} />
+        <Route path="/magazijn/picklijsten/:id" component={MagazijnPicklijstDetailPagina} />
 
         {/* ── Financieel extra ── */}
         <Route path="/financieel/crediteuren" component={CredieurenInboxPagina} />

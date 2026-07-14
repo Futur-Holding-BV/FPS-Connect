@@ -13330,6 +13330,159 @@ export interface DeclaratiebeleidInput {
   inhoud: string;
 }
 
+export interface MagazijnInkooporderRegel {
+  id: number;
+  artikel_id: number;
+  artikel_naam?: string | null;
+  artikel_eenheid?: string | null;
+  artikel_code?: string | null;
+  gevraagd_hoeveelheid: number;
+  ontvangen_hoeveelheid: number;
+  eenheidsprijs?: number | null;
+  btw_percentage: number;
+  omschrijving?: string | null;
+  aangemaakt_op: string;
+}
+
+export interface MagazijnInkooporderRegelInput {
+  artikel_id: number;
+  gevraagd_hoeveelheid: number;
+  eenheidsprijs?: number | null;
+  btw_percentage?: number;
+  omschrijving?: string | null;
+}
+
+export interface MagazijnInkooporder {
+  id: number;
+  nummer?: string | null;
+  status: string;
+  leverancier_id?: number | null;
+  leverancier_naam?: string | null;
+  leverancier_email?: string | null;
+  verwachte_leverdatum?: string | null;
+  werkelijke_leverdatum?: string | null;
+  notities?: string | null;
+  referentie?: string | null;
+  aangemaakt_door_id?: number | null;
+  aangemaakt_door_naam?: string | null;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+  verstuurd_op?: string | null;
+  bevestigd_op?: string | null;
+  ontvangen_op?: string | null;
+  totaal_regels: number;
+}
+
+export type MagazijnInkooporderDetail = MagazijnInkooporder & {
+  regels?: MagazijnInkooporderRegel[];
+};
+
+export interface MagazijnInkooporderInput {
+  leverancier_id?: number | null;
+  verwachte_leverdatum?: string | null;
+  notities?: string | null;
+  referentie?: string | null;
+  regels?: MagazijnInkooporderRegelInput[];
+}
+
+export interface MagazijnInkooporderOntvangstRegelInput {
+  regel_id: number;
+  ontvangen_hoeveelheid: number;
+  locatie_id?: number | null;
+}
+
+export interface MagazijnInkooporderOntvangstInput {
+  werkelijke_leverdatum?: string | null;
+  regels: MagazijnInkooporderOntvangstRegelInput[];
+}
+
+export interface MagazijnPicklijstRegel {
+  id: number;
+  artikel_id: number;
+  artikel_naam?: string | null;
+  artikel_eenheid?: string | null;
+  artikel_code?: string | null;
+  locatie_id?: number | null;
+  locatie_naam?: string | null;
+  gevraagd_hoeveelheid: number;
+  gepickt_hoeveelheid: number;
+  vrije_voorraad?: number | null;
+  status: string;
+  aangemaakt_op: string;
+}
+
+export interface MagazijnPicklijstRegelInput {
+  artikel_id: number;
+  gevraagd_hoeveelheid: number;
+  locatie_id?: number | null;
+}
+
+export interface MagazijnPicklijst {
+  id: number;
+  opdracht_id?: number | null;
+  opdracht_titel?: string | null;
+  status: string;
+  geplande_uitgifte_op?: string | null;
+  notities?: string | null;
+  aangemaakt_door_id?: number | null;
+  aangemaakt_door_naam?: string | null;
+  aangemaakt_op: string;
+  bijgewerkt_op: string;
+  verwerkt_op?: string | null;
+  totaal_regels: number;
+  gepickt_regels: number;
+}
+
+export type MagazijnPicklijstDetail = MagazijnPicklijst & {
+  regels?: MagazijnPicklijstRegel[];
+};
+
+export interface MagazijnPicklijstInput {
+  opdracht_id?: number | null;
+  geplande_uitgifte_op?: string | null;
+  notities?: string | null;
+  regels?: MagazijnPicklijstRegelInput[];
+}
+
+export interface MagazijnPicklijstVerwerkRegelInput {
+  regel_id: number;
+  gepickt_hoeveelheid?: number;
+  status?: string;
+}
+
+export interface MagazijnPicklijstVerwerkInput {
+  regels: MagazijnPicklijstVerwerkRegelInput[];
+}
+
+export type MagazijnBestelsuggestieUrgentie = typeof MagazijnBestelsuggestieUrgentie[keyof typeof MagazijnBestelsuggestieUrgentie];
+
+
+export const MagazijnBestelsuggestieUrgentie = {
+  hoog: 'hoog',
+  middel: 'middel',
+  laag: 'laag',
+} as const;
+
+export interface MagazijnBestelsuggestie {
+  artikel_id: number;
+  artikel_naam: string;
+  artikel_code?: string | null;
+  eenheid?: string | null;
+  leverancier_id?: number | null;
+  leverancier_naam?: string | null;
+  huidig_voorraad: number;
+  minimum_voorraad: number;
+  gesuggereerde_hoeveelheid: number;
+  reden: string;
+  urgentie?: MagazijnBestelsuggestieUrgentie;
+}
+
+export interface MagazijnBestelsuggestieResultaat {
+  suggesties: MagazijnBestelsuggestie[];
+  samenvatting: string;
+  gegenereerd_op: string;
+}
+
 export type GetRecenteActiviteitParams = {
 limit?: number;
 };
@@ -14208,6 +14361,16 @@ export type ListReserveringenParams = {
 artikel_id?: number;
 opdracht_id?: number;
 status?: string;
+};
+
+export type ListMagazijnInkoopordersParams = {
+status?: string;
+leverancier_id?: number;
+};
+
+export type ListMagazijnPicklijstenParams = {
+status?: string;
+opdracht_id?: number;
 };
 
 export type GetMagazijnStellingsscanUploadUrl200 = {
