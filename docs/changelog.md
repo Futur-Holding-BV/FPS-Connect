@@ -1,3 +1,46 @@
+## 2026-07-14 — Slimmere gebruikers-onboarding met AI (traject nieuwe medewerker → rechten → CAO → verlof)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+Het onboardingtraject (nieuwe medewerker → onboarden → rechtenniveau → CAO → verlof) is
+versimpeld en doordrenkt met AI volgens het principe *de AI stelt voor, een mens bevestigt*.
+Er wordt nooit iets aangemaakt zonder bevestiging en de AI stelt nooit rechten of
+bevoegdheden voor — die volgen uit de gekozen functie.
+
+**Fundament (functie → rechten → CAO):**
+- Standaard toegangsprofielen (presets) worden idempotent gezaaid; ontbrekende systeem-presets
+  worden aangevuld via `POST /profielen/synchroniseer-standaard`.
+- Een functie kan een toegangsprofiel dragen (`functies.profiel_id`). Bij het kiezen van een
+  functie in het onboardingformulier toont de rechten-preview direct welke module-rechten daarbij
+  horen — afgeleid uit het gekoppelde profiel, niet uit een losse rolnaam.
+
+**AI-onboardingassistent (nieuw):**
+- `POST /medewerkers/ai-onboarding-voorstel` — leest geplakte brontekst (e-mail of
+  arbeidsovereenkomst) en stelt onboarding-velden voor: naam, e-mail, NAW/certificaten én de
+  sturende velden functie, werkmaatschappij, contracturen per week, startdatum en dienstverband.
+  Stelt nooit rechten of bevoegdheden voor.
+- Frontend (`personeel/onboarden.tsx`): amber AI-paneel met plak-tekstveld en knop
+  "AI-voorstel invullen". Het voorstel vult het formulier (functie-match triggert de rechten-preview,
+  werkmaatschappij zet automatisch de bijbehorende CAO voor, uren/startdatum/dienstverband ingevuld).
+  Een niet-herkende functie wordt apart gemeld zodat de invoerder zelf kiest. Alles blijft
+  bewerkbaar en wordt pas bij expliciet opslaan aangemaakt.
+
+**Beveiliging/hardening:**
+- `PATCH /functies` — het koppelen/wijzigen van een toegangsprofiel aan een functie vereist
+  `gebruikers`-niveau 4 (of hoofdbeheerder) en wordt geaudit als "profiel-koppelen".
+
+**Technisch:**
+- OpenAPI additief uitgebreid: `CvAnalyseResultaat` met `functie_suggestie`, `werkmaatschappij`,
+  `contracturen_per_week`, `startdatum`, `dienstverband` (alle nullable) en nieuw schema
+  `OnboardingVoorstelInvoer`; nieuw pad `POST /medewerkers/ai-onboarding-voorstel`. Codegen gedraaid.
+- `cvAnalyse.ts` gerefactord met gedeelde AI-helper; `analyseerCvTekst` (CV) en
+  `analyseerOnboardingTekst` (geplakte tekst) delen dezelfde gateway/JSON-afhandeling.
+- Bewijs: `pnpm --filter @workspace/scripts run verificatie-onboarding-voorstel` — echte login + TOTP,
+  functie→profiel→bevoegdheden-cascade met niet-lege rechten, en 5/5 sturende velden correct herkend
+  uit een realistische aanstellingsmail. Typecheck api-server + firevault + scripts groen.
+
+---
+
 ## 2026-07-14 — HRM verlof-saldocorrectie en AI-bevoegdheden per functie
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag

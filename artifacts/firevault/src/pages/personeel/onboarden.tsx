@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import { useLocation } from "wouter";
 import {
   useCreateMedewerker,
+  useAiOnboardingVoorstel,
   useListFuncties,
   useListVerlofsoorten,
   useListCaoOpties,
@@ -16,6 +17,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
@@ -27,7 +29,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import {
   UserCheck, Handshake, Building2, ArrowLeft, ArrowRight,
-  CheckCircle2, ExternalLink, RotateCcw, Sparkles, X, AlertTriangle, Receipt, ShieldCheck,
+  CheckCircle2, ExternalLink, RotateCcw, Sparkles, X, AlertTriangle, Receipt, ShieldCheck, Loader2,
 } from "lucide-react";
 import { WERKMAATSCHAPPIJEN, caoVoorWerkmaatschappij } from "@/lib/werkmaatschappijen";
 import { MODULES, NIVEAUS } from "@workspace/permissies";
@@ -396,6 +398,97 @@ function VastFormulier({
   const maak = useCreateMedewerker();
   const { toast } = useToast();
 
+  // AI-onboarding uit geplakte tekst: de AI stelt onboarding-velden voor
+  // (naam, functie, werkmaatschappij, uren, startdatum), de mens bevestigt in
+  // het formulier. Er worden nooit rechten of bevoegdheden voorgesteld — die
+  // volgen uit de gekozen functie (rechten-preview + CAO-voorselectie hieronder).
+  const onboardingAi = useAiOnboardingVoorstel();
+  const [bronTekst, setBronTekst] = useState("");
+  const [aiToegepast, setAiToegepast] = useState<string[]>([]);
+  const [aiOnbekendeFunctie, setAiOnbekendeFunctie] = useState<string | null>(null);
+
+  function pasOnboardingVoorstelToe(v: CvAnalyseResultaat) {
+    // Functie-match vooraf berekenen (geen side effects in de setForm-updater).
+    let gematchteFunctieId: number | null = null;
+    let onbekendeFunctie: string | null = null;
+    if (v.functie_suggestie) {
+      const zoek = v.functie_suggestie.trim().toLowerCase();
+      const lijst = functies ?? [];
+      // Exacte match heeft voorrang; pas daarna substring (voorkomt dat bij
+      // meerdere "monteur"-functies de verkeerde wordt voorgeselecteerd).
+      const match =
+        lijst.find((fn) => fn.naam.trim().toLowerCase() === zoek) ??
+        lijst.find((fn) => {
+          const naam = fn.naam.trim().toLowerCase();
+          return naam.includes(zoek) || zoek.includes(naam);
+        });
+      if (match) gematchteFunctieId = match.id;
+      else onbekendeFunctie = v.functie_suggestie;
+    }
+    const geldigeWm = v.werkmaatschappij && (WERKMAATSCHAPPIJEN as readonly string[]).includes(v.werkmaatschappij);
+    const geldigDv = v.dienstverband && ["vast", "tijdelijk", "oproep", "stage"].includes(v.dienstverband);
+    const uren = v.contracturen_per_week ? Number(v.contracturen_per_week) : NaN;
+    const geldigeUren = Number.isFinite(uren) && uren > 0 && uren <= 48;
+    const startdatum = geldigeDatum(v.startdatum);
+    const geboortedatum = geldigeDatum(v.geboortedatum);
+
+    setForm((f) => {
+      const next = { ...f };
+      if (v.naam) next.naam = v.naam;
+      if (v.email) next.email = v.email;
+      if (geboortedatum) next.geboortedatum = geboortedatum;
+      if (gematchteFunctieId != null) next.functie_id = gematchteFunctieId;
+      if (geldigeWm && v.werkmaatschappij) {
+        next.werkmaatschappij = v.werkmaatschappij;
+        next.cao = caoVoorWerkmaatschappij(v.werkmaatschappij) ?? next.cao;
+      }
+      if (geldigDv && v.dienstverband) next.dienstverband = v.dienstverband;
+      if (geldigeUren) next.contracturen_per_week = String(uren);
+      if (startdatum) next.in_dienst_sinds = startdatum;
+      return next;
+    });
+
+    const extra = bouwCvExtra(v);
+    if (Object.keys(extra).length > 0) setCvExtra((prev) => ({ ...prev, ...extra }));
+
+    const toegepast: string[] = [];
+    if (v.naam) toegepast.push("Naam");
+    if (v.email) toegepast.push("E-mail");
+    if (geboortedatum) toegepast.push("Geboortedatum");
+    if (gematchteFunctieId != null) toegepast.push("Functie");
+    if (geldigeWm) toegepast.push("Werkmaatschappij");
+    if (geldigDv) toegepast.push("Dienstverband");
+    if (geldigeUren) toegepast.push("Contracturen");
+    if (startdatum) toegepast.push("Startdatum");
+    if (Object.keys(extra).length > 0) toegepast.push("Contactgegevens");
+
+    setAiToegepast(toegepast);
+    setAiOnbekendeFunctie(onbekendeFunctie);
+  }
+
+  async function vraagOnboardingVoorstel() {
+    const tekst = bronTekst.trim();
+    if (tekst.length < 30) {
+      toast({
+        title: "Plak eerst wat tekst",
+        description: "Bijvoorbeeld een e-mail of arbeidsovereenkomst.",
+        variant: "destructive",
+      });
+      return;
+    }
+    try {
+      const v = await onboardingAi.mutateAsync({ data: { tekst } });
+      pasOnboardingVoorstelToe(v);
+      toast({ title: "AI-voorstel ingevuld", description: "Controleer alle velden voordat u opslaat." });
+    } catch {
+      toast({
+        title: "AI-voorstel niet beschikbaar",
+        description: "Vul de velden handmatig in.",
+        variant: "destructive",
+      });
+    }
+  }
+
   // Toegangsrechten-preview: de gekozen functie kan een standaard toegangsprofiel
   // dragen (functies.profiel_id). We tonen wat dat profiel inhoudt zodat de
   // invoerder in één oogopslag ziet welke rechten bij deze functie horen.
@@ -559,6 +652,73 @@ function VastFormulier({
           onWissen={wisCvGegevens}
         />
       )}
+
+      {/* AI-onboarding uit geplakte tekst — stelt voor, de mens bevestigt hieronder */}
+      <div className="rounded-lg border border-amber-300 bg-amber-50/60 p-4 space-y-3">
+        <div className="flex items-start gap-2">
+          <Sparkles className="h-4 w-4 text-amber-700 shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-semibold text-amber-800">Sneller invullen met AI (optioneel)</p>
+            <p className="text-xs text-amber-700 mt-0.5">
+              Plak een e-mail of arbeidsovereenkomst. De AI stelt naam, functie, werkmaatschappij,
+              uren en startdatum voor. Er wordt niets aangemaakt en er worden geen rechten voorgesteld —
+              u controleert en bevestigt alles hieronder.
+            </p>
+          </div>
+        </div>
+        <Textarea
+          rows={4}
+          placeholder="Plak hier de e-mail of arbeidsovereenkomst..."
+          value={bronTekst}
+          onChange={(e) => setBronTekst(e.target.value)}
+          className="bg-white"
+        />
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            size="sm"
+            className="gap-1.5"
+            disabled={onboardingAi.isPending || bronTekst.trim().length < 30}
+            onClick={vraagOnboardingVoorstel}
+          >
+            {onboardingAi.isPending ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Sparkles className="h-3.5 w-3.5" />
+            )}
+            AI-voorstel invullen
+          </Button>
+          {bronTekst && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-8 gap-1 text-amber-800 hover:bg-amber-100"
+              onClick={() => {
+                setBronTekst("");
+                setAiToegepast([]);
+                setAiOnbekendeFunctie(null);
+              }}
+            >
+              <X className="h-3.5 w-3.5" /> Wissen
+            </Button>
+          )}
+        </div>
+        {aiToegepast.length > 0 && (
+          <p className="text-xs text-amber-900">
+            Voorgesteld en ingevuld: {aiToegepast.join(", ")}. Controleer de velden hieronder voordat u opslaat.
+          </p>
+        )}
+        {aiOnbekendeFunctie && (
+          <div className="flex items-start gap-2 rounded border border-amber-300 bg-amber-100/60 px-2.5 py-2">
+            <AlertTriangle className="h-3.5 w-3.5 text-amber-700 shrink-0 mt-0.5" />
+            <p className="text-xs text-amber-800">
+              De AI stelde functie &quot;{aiOnbekendeFunctie}&quot; voor, maar die bestaat nog niet.
+              Kies zelf een functie hieronder of voeg de functie eerst toe via het Functiehuis.
+            </p>
+          </div>
+        )}
+      </div>
 
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
