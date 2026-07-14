@@ -4451,6 +4451,34 @@ export const DownloadDocumentResponse = zod.void()
 
 
 /**
+ * @summary PDF-tekst ophalen uit object storage en metadatavelden invullen via AI (beheerder)
+ */
+export const AiInvullenDocumentParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AiInvullenDocumentResponse = zod.object({
+  "naam": zod.string().nullish(),
+  "fabrikant": zod.string().nullish(),
+  "product": zod.string().nullish(),
+  "documenttype": zod.union([zod.enum(['eta', 'classificatierapport', 'testrapport', 'productcertificaat', 'dop', 'verwerkingsvoorschrift', 'productblad', 'opleverrapport', 'tekening', 'contract', 'verzekering', 'overig']),zod.null()]).optional(),
+  "en_norm": zod.string().nullish(),
+  "rapportnummer": zod.string().nullish(),
+  "revisie": zod.string().nullish(),
+  "datum": zod.string().nullish(),
+  "getest_voor": zod.union([zod.enum(['wand', 'plafond', 'beide']),zod.null()]).optional(),
+  "toelichting": zod.string().nullish(),
+  "betrouwbaarheid": zod.string().nullable().describe('laag, midden of hoog'),
+  "toepassing_suggesties": zod.array(zod.object({
+  "label_id": zod.number(),
+  "naam": zod.string(),
+  "score": zod.number(),
+  "reden": zod.string().nullish()
+})).optional().describe('AI-voorstellen voor te koppelen toepassingen op basis van de herkende fabrikant, product en norm. Suggesties; een mens bevestigt of past aan.')
+})
+
+
+/**
  * @summary Voorzieningen op een verdieping (voor plattegrond)
  */
 export const ListVoorzieningenOpVerdiepingParams = zod.object({

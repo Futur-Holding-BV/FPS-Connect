@@ -3627,6 +3627,29 @@ paths:
         "404":
           description: Niet gevonden
 
+  /documenten/{id}/ai-invullen:
+    post:
+      operationId: aiInvullenDocument
+      tags: [bibliotheek]
+      summary: PDF-tekst ophalen uit object storage en metadatavelden invullen via AI (beheerder)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK — herkende velden zijn opgeslagen en teruggegeven
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentAiAnalyseResultaat"
+        "404":
+          description: Document niet gevonden
+        "422":
+          description: Document heeft geen PDF of de PDF-tekst kon niet worden gelezen
+
   /verdiepingen/{id}/voorzieningen:
     get:
       operationId: listVoorzieningenOpVerdieping

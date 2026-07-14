@@ -12684,6 +12684,76 @@ export function useDownloadDocument<TData = Awaited<ReturnType<typeof downloadDo
 
 
 
+export const getAiInvullenDocumentUrl = (id: number,) => {
+
+
+
+
+  return `/api/documenten/${id}/ai-invullen`
+}
+
+/**
+ * @summary PDF-tekst ophalen uit object storage en metadatavelden invullen via AI (beheerder)
+ */
+export const aiInvullenDocument = async (id: number, options?: RequestInit): Promise<DocumentAiAnalyseResultaat> => {
+
+  return customFetch<DocumentAiAnalyseResultaat>(getAiInvullenDocumentUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getAiInvullenDocumentMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof aiInvullenDocument>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof aiInvullenDocument>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['aiInvullenDocument'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof aiInvullenDocument>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  aiInvullenDocument(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AiInvullenDocumentMutationResult = NonNullable<Awaited<ReturnType<typeof aiInvullenDocument>>>
+
+    export type AiInvullenDocumentMutationError = ErrorType<void>
+
+    /**
+ * @summary PDF-tekst ophalen uit object storage en metadatavelden invullen via AI (beheerder)
+ */
+export const useAiInvullenDocument = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof aiInvullenDocument>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof aiInvullenDocument>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getAiInvullenDocumentMutationOptions(options));
+    }
+
 export const getListVoorzieningenOpVerdiepingUrl = (id: number,) => {
 
 

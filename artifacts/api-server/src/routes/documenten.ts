@@ -428,6 +428,105 @@ router.get("/documenten/:id/revisies", requireBevoegdheid("bibliotheek", 1), asy
   }
 });
 
+// POST /documenten/:id/ai-invullen — PDF uit object storage ophalen, AI-analyse uitvoeren en velden opslaan (beheerder)
+router.post("/documenten/:id/ai-invullen", requireBevoegdheid("bibliotheek", 3), async (req, res): Promise<void> => {
+  try {
+    const id = parseInt(String(req.params.id));
+    const [d] = await db.select().from(documentenTable).where(eq(documentenTable.id, id));
+    if (!d) return void res.status(404).json({ error: "Document niet gevonden" });
+    if (!d.pdfUrl) {
+      return void res.status(422).json({ error: "Dit document heeft geen PDF-bestand." });
+    }
+
+    // PDF ophalen uit object storage
+    let pdfBuffer: Buffer;
+    try {
+      const file = await objectStorage.getObjectEntityFile(d.pdfUrl);
+      const stream = file.createReadStream();
+      pdfBuffer = await new Promise<Buffer>((resolve, reject) => {
+        const chunks: Buffer[] = [];
+        stream.on("data", (chunk: unknown) =>
+          chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk as ArrayBufferLike)),
+        );
+        stream.on("end", () => resolve(Buffer.concat(chunks)));
+        stream.on("error", (err: Error) => reject(err));
+      });
+    } catch (err) {
+      req.log.warn({ err, documentId: id }, "PDF niet beschikbaar in object storage");
+      return void res.status(422).json({ error: "Het PDF-bestand is niet beschikbaar in de opslag." });
+    }
+
+    // Tekst extraheren
+    const extractie = await extraheerPdfTekst(pdfBuffer);
+    if (!extractie.tekst) {
+      return void res.status(422).json({
+        error: "De PDF bevat geen leesbare tekst (mogelijk een gescand document zonder tekstlaag).",
+      });
+    }
+
+    // AI-analyse
+    const analyse = await analyseerDocumentTekst(extractie.tekst, d.naam, {
+      gebruikerId: req.session.userId ?? null,
+      document_id: id,
+    });
+
+    // Controleer of de AI überhaupt iets herkende
+    const heeftResultaat =
+      analyse.fabrikant != null ||
+      analyse.product != null ||
+      analyse.en_norm != null ||
+      analyse.rapportnummer != null ||
+      analyse.revisie != null ||
+      analyse.datum != null ||
+      analyse.getest_voor != null;
+
+    if (!heeftResultaat) {
+      return void res.status(422).json({
+        error:
+          analyse.toelichting ??
+          "De AI kon geen metadatavelden herkennen in dit document. Vul de velden handmatig in.",
+      });
+    }
+
+    // Gevonden velden opslaan (alleen niet-null waarden overschrijven)
+    const update: Partial<{
+      fabrikant: string | null;
+      product: string | null;
+      enNorm: string | null;
+      rapportnummer: string | null;
+      revisie: string | null;
+      datum: string | null;
+      getestVoor: string | null;
+      aiGeanalyseerd: boolean;
+      bijgewerktOp: Date;
+    }> = { aiGeanalyseerd: true, bijgewerktOp: new Date() };
+    if (analyse.fabrikant != null) update.fabrikant = analyse.fabrikant;
+    if (analyse.product != null) update.product = analyse.product;
+    if (analyse.en_norm != null) update.enNorm = analyse.en_norm;
+    if (analyse.rapportnummer != null) update.rapportnummer = analyse.rapportnummer;
+    if (analyse.revisie != null) update.revisie = analyse.revisie;
+    if (analyse.datum != null) update.datum = analyse.datum;
+    if (analyse.getest_voor != null) update.getestVoor = analyse.getest_voor;
+
+    await db.update(documentenTable).set(update).where(eq(documentenTable.id, id));
+
+    await logDocumentActie({
+      documentId: id,
+      documentNaam: d.naam,
+      gebruikerId: req.session.userId ?? null,
+      actie: "ai_invullen",
+      detail: `Betrouwbaarheid: ${analyse.betrouwbaarheid ?? "onbekend"}`,
+    });
+
+    invalideerContext("document", id);
+
+    return void res.json(analyse);
+  } catch (err) {
+    req.log.error(err);
+    return void res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
 // POST /documenten — nieuw document (beheerder)
 router.post("/documenten", requireBevoegdheid("bibliotheek", 3), async (req, res): Promise<void> => {
   try {

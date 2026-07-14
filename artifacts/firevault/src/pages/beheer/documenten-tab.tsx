@@ -15,6 +15,7 @@ import {
   useCreateDocumentRevisie,
   useSetDocumentToepassingen,
   useAiAnalyseDocument,
+  useAiInvullenDocument,
   useAiKoppelvoorstellenDocumenten,
   useControleerDocumentDuplicaat,
   useListDocumentKoppelingen,
@@ -921,6 +922,8 @@ function DocumentDetail({
   const { data: revisies = [] } = useListDocumentRevisies(document.id);
   const wijzigDocument = useUpdateDocument();
   const setToepassingen = useSetDocumentToepassingen();
+  const aiInvullen = useAiInvullenDocument();
+  const [aiResultaat, setAiResultaat] = useState<DocumentAiAnalyseResultaat | null>(null);
   const [toep, setToep] = useState<number[]>(document.toepassing_ids ?? []);
   const [geldigTot, setGeldigTot] = useState<string>(doc.geldig_tot ?? "");
 
@@ -1005,6 +1008,26 @@ function DocumentDetail({
     }
   }
 
+  async function voerAiInvullenUit() {
+    setAiResultaat(null);
+    try {
+      const resultaat = await aiInvullen.mutateAsync({ id: document.id });
+      setAiResultaat(resultaat);
+      await queryClient.invalidateQueries({ queryKey: getGetDocumentQueryKey(document.id) });
+      await queryClient.invalidateQueries({ queryKey: getListDocumentenQueryKey() });
+      toast({
+        title: "AI-analyse voltooid",
+        description: `De herkende velden zijn ingevuld voor "${doc.naam}".`,
+      });
+    } catch (err) {
+      toast({
+        title: "AI invullen mislukt",
+        description: foutmelding(err, "Controleer of de PDF beschikbaar is en probeer het opnieuw."),
+        variant: "destructive",
+      });
+    }
+  }
+
   async function bewaarKoppelingen() {
     try {
       await setToepassingen.mutateAsync({ id: document.id, data: { label_ids: toep } });
@@ -1042,28 +1065,50 @@ function DocumentDetail({
 
         <div className="space-y-5">
           <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-            <Info label="Fabrikant" waarde={doc.fabrikant} />
-            <Info label="Product" waarde={doc.product} />
-            <Info label="EN-norm" waarde={doc.en_norm} />
-            <Info label="Rapportnummer" waarde={doc.rapportnummer} />
-            <Info label="Revisie" waarde={doc.revisie} />
-            <Info label="Datum" waarde={doc.datum} />
+            <Info label="Fabrikant" waarde={doc.fabrikant} aiVoorstel={aiResultaat?.fabrikant != null} />
+            <Info label="Product" waarde={doc.product} aiVoorstel={aiResultaat?.product != null} />
+            <Info label="EN-norm" waarde={doc.en_norm} aiVoorstel={aiResultaat?.en_norm != null} />
+            <Info label="Rapportnummer" waarde={doc.rapportnummer} aiVoorstel={aiResultaat?.rapportnummer != null} />
+            <Info label="Revisie" waarde={doc.revisie} aiVoorstel={aiResultaat?.revisie != null} />
+            <Info label="Datum" waarde={doc.datum} aiVoorstel={aiResultaat?.datum != null} />
             <Info
               label="Getest voor"
               waarde={doc.getest_voor ? GETEST_VOOR_LABELS[doc.getest_voor] : null}
+              aiVoorstel={aiResultaat?.getest_voor != null}
             />
           </div>
 
           {doc.pdf_url && (
-            <a
-              href={`/api/documenten/${doc.id}/download`}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-1.5 text-sm text-primary"
-            >
-              <Download className="h-4 w-4" />
-              PDF openen
-            </a>
+            <div className="flex flex-wrap items-center gap-3">
+              <a
+                href={`/api/documenten/${doc.id}/download`}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1.5 text-sm text-primary"
+              >
+                <Download className="h-4 w-4" />
+                PDF openen
+              </a>
+              {magBeheren && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 text-amber-700 border-amber-300 bg-amber-50 hover:bg-amber-100"
+                  disabled={aiInvullen.isPending}
+                  onClick={voerAiInvullenUit}
+                >
+                  {aiInvullen.isPending ? (
+                    <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                    </svg>
+                  ) : (
+                    <Sparkles className="h-4 w-4" />
+                  )}
+                  AI invullen
+                </Button>
+              )}
+            </div>
           )}
 
           {/* Goedkeuringsflow */}
@@ -1634,7 +1679,18 @@ function DocumentLogboekSectie({ documentId }: { documentId: number }) {
   );
 }
 
-function Info({ label, waarde }: { label: string; waarde?: string | null }) {
+function Info({ label, waarde, aiVoorstel }: { label: string; waarde?: string | null; aiVoorstel?: boolean }) {
+  if (aiVoorstel && waarde) {
+    return (
+      <div className="rounded bg-amber-50 border border-amber-200 px-2 py-1.5">
+        <p className="text-xs text-amber-700 flex items-center gap-1">
+          <Sparkles className="h-3 w-3" />
+          {label}
+        </p>
+        <p className="font-medium text-amber-900">{waarde}</p>
+      </div>
+    );
+  }
   return (
     <div>
       <p className="text-xs text-muted-foreground">{label}</p>
