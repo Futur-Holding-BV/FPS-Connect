@@ -2376,30 +2376,46 @@ router.post("/picklijsten/:id/verwerk", schrijven, async (req, res) => {
           .limit(1);
 
         if (!bestaandeRegel) continue;
-        const gepickt = inkomend.gepickt_hoeveelheid ?? bestaandeRegel.gevraagdHoeveelheid;
-        const status = inkomend.status ?? (gepickt >= bestaandeRegel.gevraagdHoeveelheid ? "gepickt" : gepickt > 0 ? "gepickt" : "niet_beschikbaar");
+
+        // Bepaal de vrije voorraad (hoeveelheid - gereserveerd) voor dit artikel/locatie
+        const [bestaandVoorraad] = await tx
+          .select()
+          .from(voorraadTable)
+          .where(bestaandeRegel.locatieId
+            ? and(eq(voorraadTable.artikelId, bestaandeRegel.artikelId), eq(voorraadTable.locatieId, bestaandeRegel.locatieId))
+            : eq(voorraadTable.artikelId, bestaandeRegel.artikelId))
+          .limit(1);
+
+        const vrijeVoorraad = bestaandVoorraad
+          ? Math.max(0, bestaandVoorraad.hoeveelheid - bestaandVoorraad.gereserveerd)
+          : 0;
+
+        // Gevraagde hoeveelheid begrenzen op de vrije voorraad
+        const gevraagd = inkomend.gepickt_hoeveelheid ?? bestaandeRegel.gevraagdHoeveelheid;
+        const gepickt = Math.min(gevraagd, vrijeVoorraad);
+
+        // Status bepalen: als er niets beschikbaar was → niet_beschikbaar,
+        // anders de status uit de aanvraag of afgeleid uit de gepickte hoeveelheid.
+        let status: string;
+        if (vrijeVoorraad <= 0) {
+          status = "niet_beschikbaar";
+        } else if (inkomend.status === "niet_beschikbaar") {
+          status = "niet_beschikbaar";
+        } else {
+          status = inkomend.status ?? (gepickt > 0 ? "gepickt" : "niet_beschikbaar");
+        }
 
         await tx.update(magazijnPicklijstRegelsTable)
           .set({ gepicktHoeveelheid: gepickt, status })
           .where(eq(magazijnPicklijstRegelsTable.id, inkomend.regel_id));
 
-        if (gepickt > 0) {
-          const [bestaandVoorraad] = await tx
-            .select()
-            .from(voorraadTable)
-            .where(bestaandeRegel.locatieId
-              ? and(eq(voorraadTable.artikelId, bestaandeRegel.artikelId), eq(voorraadTable.locatieId, bestaandeRegel.locatieId))
-              : eq(voorraadTable.artikelId, bestaandeRegel.artikelId))
-            .limit(1);
-
-          if (bestaandVoorraad) {
-            await tx.update(voorraadTable)
-              .set({
-                hoeveelheid: sql`GREATEST(0, ${voorraadTable.hoeveelheid} - ${gepickt})`,
-                bijgewerktOp: new Date(),
-              })
-              .where(eq(voorraadTable.id, bestaandVoorraad.id));
-          }
+        if (gepickt > 0 && bestaandVoorraad) {
+          await tx.update(voorraadTable)
+            .set({
+              hoeveelheid: sql`GREATEST(0, ${voorraadTable.hoeveelheid} - ${gepickt})`,
+              bijgewerktOp: new Date(),
+            })
+            .where(eq(voorraadTable.id, bestaandVoorraad.id));
 
           await tx.insert(voorraadMutatiesTable).values({
             artikelId: bestaandeRegel.artikelId,

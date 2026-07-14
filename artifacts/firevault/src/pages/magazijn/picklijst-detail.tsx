@@ -26,7 +26,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ArrowLeft, Play, CheckCircle2, AlertCircle, Package } from "lucide-react";
+import { ArrowLeft, Play, CheckCircle2, AlertCircle, Package, TriangleAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const STATUS_LABELS: Record<string, string> = {
@@ -141,8 +141,10 @@ export default function PicklijstDetailPagina() {
     const init: Record<number, string> = {};
     const initStatus: Record<number, string> = {};
     regels.filter((r) => r.status === "open").forEach((r) => {
-      init[r.id] = String(r.gevraagd_hoeveelheid);
-      initStatus[r.id] = "gepickt";
+      const beschikbaar = r.vrije_voorraad ?? r.gevraagd_hoeveelheid;
+      const voorgepickt = Math.min(r.gevraagd_hoeveelheid, Math.max(0, beschikbaar));
+      init[r.id] = String(voorgepickt);
+      initStatus[r.id] = voorgepickt <= 0 ? "niet_beschikbaar" : "gepickt";
     });
     setGepickt(init);
     setRegelStatus(initStatus);
@@ -165,8 +167,10 @@ export default function PicklijstDetailPagina() {
     const nieuweGepickt: Record<number, string> = {};
     const nieuweStatus: Record<number, string> = {};
     openRegels.forEach((r) => {
-      nieuweGepickt[r.id] = String(r.gevraagd_hoeveelheid);
-      nieuweStatus[r.id] = "gepickt";
+      const beschikbaar = r.vrije_voorraad ?? r.gevraagd_hoeveelheid;
+      const voorgepickt = Math.min(r.gevraagd_hoeveelheid, Math.max(0, beschikbaar));
+      nieuweGepickt[r.id] = String(voorgepickt);
+      nieuweStatus[r.id] = voorgepickt <= 0 ? "niet_beschikbaar" : "gepickt";
     });
     setGepickt(nieuweGepickt);
     setRegelStatus(nieuweStatus);
@@ -323,43 +327,77 @@ export default function PicklijstDetailPagina() {
                 Alles gepickt
               </Button>
             </div>
-            {regels.filter((r) => r.status === "open").map((r) => (
-              <div key={r.id} className="space-y-2 p-3 border rounded-md">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="text-sm font-medium">{r.artikel_naam ?? `Artikel #${r.id}`}</p>
-                    <p className="text-xs text-muted-foreground">
-                      Gevraagd: {r.gevraagd_hoeveelheid} {r.artikel_eenheid ?? ""}
-                      {r.vrije_voorraad != null && ` · Beschikbaar: ${r.vrije_voorraad} ${r.artikel_eenheid ?? ""}`}
-                    </p>
+            {regels.filter((r) => r.status === "open").map((r) => {
+              const beschikbaar = r.vrije_voorraad ?? null;
+              const tekort = beschikbaar != null && beschikbaar < r.gevraagd_hoeveelheid;
+              const geenVoorraad = beschikbaar != null && beschikbaar <= 0;
+              const gepicktWaarde = Number(gepickt[r.id] ?? 0);
+              const overschrijdtVoorraad = beschikbaar != null && gepicktWaarde > beschikbaar;
+              return (
+                <div key={r.id} className={cn("space-y-2 p-3 border rounded-md", geenVoorraad && "border-red-200 bg-red-50/50", tekort && !geenVoorraad && "border-amber-200 bg-amber-50/50")}>
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <p className="text-sm font-medium">{r.artikel_naam ?? `Artikel #${r.id}`}</p>
+                      <p className="text-xs text-muted-foreground">
+                        Gevraagd: {r.gevraagd_hoeveelheid} {r.artikel_eenheid ?? ""}
+                        {beschikbaar != null && (
+                          <span className={cn("ml-1", tekort ? "text-red-600 font-medium" : "text-muted-foreground")}>
+                            · Beschikbaar: {beschikbaar} {r.artikel_eenheid ?? ""}
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                    {geenVoorraad && (
+                      <Badge className="bg-red-100 text-red-700 shrink-0 text-xs">
+                        <TriangleAlert className="h-3 w-3 mr-1" />
+                        Geen voorraad
+                      </Badge>
+                    )}
+                    {tekort && !geenVoorraad && (
+                      <Badge className="bg-amber-100 text-amber-700 shrink-0 text-xs">
+                        <TriangleAlert className="h-3 w-3 mr-1" />
+                        Tekort
+                      </Badge>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <Label className="text-xs">Gepickt</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        max={beschikbaar != null ? Math.min(r.gevraagd_hoeveelheid, beschikbaar) : r.gevraagd_hoeveelheid}
+                        step="any"
+                        value={gepickt[r.id] ?? ""}
+                        className={cn(overschrijdtVoorraad && "border-red-400 focus-visible:ring-red-400")}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setGepickt((prev) => ({ ...prev, [r.id]: val }));
+                          const n = Number(val);
+                          if (beschikbaar != null && n > beschikbaar) {
+                            setGepickt((prev) => ({ ...prev, [r.id]: String(Math.max(0, beschikbaar)) }));
+                          }
+                        }}
+                      />
+                      {overschrijdtVoorraad && (
+                        <p className="text-xs text-red-600">Maximaal {beschikbaar} beschikbaar</p>
+                      )}
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Status</Label>
+                      <select
+                        className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm"
+                        value={regelStatus[r.id] ?? "gepickt"}
+                        onChange={(e) => setRegelStatus((prev) => ({ ...prev, [r.id]: e.target.value }))}
+                      >
+                        <option value="gepickt">Gepickt</option>
+                        <option value="niet_beschikbaar">Niet beschikbaar</option>
+                      </select>
+                    </div>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="space-y-1">
-                    <Label className="text-xs">Gepickt</Label>
-                    <Input
-                      type="number"
-                      min="0"
-                      max={r.gevraagd_hoeveelheid}
-                      step="any"
-                      value={gepickt[r.id] ?? ""}
-                      onChange={(e) => setGepickt((prev) => ({ ...prev, [r.id]: e.target.value }))}
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs">Status</Label>
-                    <select
-                      className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm"
-                      value={regelStatus[r.id] ?? "gepickt"}
-                      onChange={(e) => setRegelStatus((prev) => ({ ...prev, [r.id]: e.target.value }))}
-                    >
-                      <option value="gepickt">Gepickt</option>
-                      <option value="niet_beschikbaar">Niet beschikbaar</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-            ))}
+              );
+            })}
             {regels.filter((r) => r.status === "open").length === 0 && (
               <p className="text-sm text-muted-foreground text-center py-4">
                 Alle regels zijn al verwerkt.
