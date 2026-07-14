@@ -897,7 +897,7 @@ export default function Gebruikers() {
                     : "Uitnodigen"}
                 </button>
               )}
-              {isHoofd && status !== "geaccepteerd" && !g.gearchiveerd && (
+              {isHoofd && g.rol !== "klant" && !g.gearchiveerd && (
                 <button
                   type="button"
                   className="mt-1.5 h-7 text-xs w-full gap-1.5 font-medium rounded-md flex items-center justify-center px-2 transition-colors bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200 disabled:opacity-60"

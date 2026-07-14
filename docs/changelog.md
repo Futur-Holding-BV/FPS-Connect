@@ -1,3 +1,19 @@
+## 2026-07-14 — Productie-noodfix: MinIO crash-loop (plattegronden niet zichtbaar)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** hoog (was)
+
+MinIO (objectopslag voor plattegronden, foto's en documenten) zat in een crash-loop van **190 herstarts** doordat `MINIO_ROOT_PASSWORD` leeg was bij elke containerstart. De bestanden stonden wel degelijk in de volume (75 MB), maar waren niet bereikbaar.
+
+Bijkomend probleem: na het herstarten van MinIO via `docker compose` kwam de container op het verkeerde Docker-netwerk (`deploy_internal` i.p.v. `deploy_default`), waardoor de API-server MinIO niet kon bereiken via hostname `minio`.
+
+**Fixes (productie):**
+1. **`.env` aangemaakt** in `/opt/fps-one/deploy/` met `MINIO_ROOT_USER`, `MINIO_ROOT_PASSWORD`, `S3_BUCKET`, `POSTGRES_PASSWORD` en `DATABASE_URL` — docker-compose leest dit voortaan automatisch bij elke `docker compose up`.
+2. **MinIO herstart** via `docker compose -p deploy up -d minio` met de juiste credentials.
+3. **Netwerk-alias `minio` toegevoegd** op het `deploy_default` netwerk zodat de API-server MinIO via `http://minio:9000` kan bereiken (containeraliassen blijven persistent bij herstart).
+4. **Verificatie:** MinIO health 200, storage endpoint geeft nu correct 401 (authenticatie vereist) i.p.v. `ObjectNotFoundError`. Plattegronden Hospice (Begane Grond + eerste verdieping) zijn weer beschikbaar.
+
+---
+
 ## 2026-07-14 — Productie-noodfix: gebouwen-API crashte door ontbrekende DB-kolom
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** hoog (was)
