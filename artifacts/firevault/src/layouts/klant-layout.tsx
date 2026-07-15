@@ -11,6 +11,7 @@ import { GebruikerMenu } from "@/components/gebruiker-menu";
 import { PauzeKnop } from "@/components/pauze/pauze-modal";
 import { OnlineGebruikers } from "@/components/online-gebruikers/online-gebruikers";
 import { useRol } from "@/context/rol-context";
+import { MeldingKnop } from "@/components/melding-knop";
 
 const ROUTES = [
   { href: "/", labelKey: "nav.mijnPortaal", icoon: LayoutDashboard },
@@ -96,6 +97,12 @@ export default function KlantLayout({ children }: { children: React.ReactNode })
             </div>
             <span className="font-semibold text-zinc-900">One</span>
           </div>
+          <div className="ml-auto">
+            <MeldingKnop />
+          </div>
+        </div>
+        <div className="hidden md:flex items-center justify-end px-6 py-2 border-b border-zinc-200/50">
+          <MeldingKnop />
         </div>
         <div className="p-4 md:p-8 xl:p-12 max-w-[1600px] mx-auto animate-in fade-in duration-500">
           {children}

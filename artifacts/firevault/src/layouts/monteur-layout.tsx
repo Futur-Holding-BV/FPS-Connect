@@ -14,6 +14,7 @@ import { useRol } from "@/context/rol-context";
 import { GebruikerMenu } from "@/components/gebruiker-menu";
 import { PauzeKnop } from "@/components/pauze/pauze-modal";
 import { OnlineGebruikers } from "@/components/online-gebruikers/online-gebruikers";
+import { MeldingKnop } from "@/components/melding-knop";
 
 const ROUTES_MONTEUR = [
   { href: "/", labelKey: "nav.mijnOpdrachten", icoon: Home },
@@ -90,6 +91,12 @@ export default function MonteurLayout({ children }: { children: React.ReactNode 
         <div className="sticky top-0 z-10 flex items-center gap-3 px-3 py-2 bg-background border-b border-border md:hidden">
           <SidebarTrigger title="Menu openen" />
           <img src={logoFpsConnect} alt="FPS Connect" className="h-6 w-auto" />
+          <div className="ml-auto">
+            <MeldingKnop />
+          </div>
+        </div>
+        <div className="hidden md:flex items-center justify-end px-4 py-2 border-b border-border">
+          <MeldingKnop />
         </div>
         <div className="p-3 md:p-4 xl:p-6">
           {children}
