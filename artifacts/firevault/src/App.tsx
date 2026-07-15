@@ -7,6 +7,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import { AuthProvider, useAuth } from "@/context/auth-context";
+import { useWachtwoordWijzigen } from "@workspace/api-client-react";
 import { WerkmaatschappijProvider } from "@/context/werkmaatschappij-context";
 import { TaalProvider } from "@/context/taal-context";
 import { useRol, RolProvider } from "@/context/rol-context";
@@ -670,8 +671,130 @@ function Portalen() {
   return <GeenToegang />;
 }
 
+/**
+ * Blokkerende wachtwoord-wijzig-pagina. Wordt getoond wanneer de gebruiker
+ * is ingelogd maar `moet_wachtwoord_wijzigen = true` heeft staan (bijv. na
+ * een admin-reset met tijdelijk wachtwoord). De server blokkeert intussen
+ * alle data-routes met 403 WACHTWOORD_WIJZIGEN_VEREIST; deze UI geeft een
+ * duidelijk herstelpad zodat de gebruiker niet met lege schermen blijft zitten.
+ */
+function WachtwoordWijzigenScherm() {
+  const { herlaad } = useAuth();
+  const [huidig, setHuidig] = React.useState("");
+  const [nieuw, setNieuw] = React.useState("");
+  const [bevestig, setBevestig] = React.useState("");
+  const [fout, setFout] = React.useState<string | null>(null);
+
+  const { mutate, isPending, isSuccess } = useWachtwoordWijzigen({
+    mutation: {
+      onSuccess: () => {
+        herlaad();
+      },
+      onError: () => {
+        setFout(
+          "Huidig wachtwoord is onjuist of het nieuwe wachtwoord voldoet niet aan de eisen (minimaal 8 tekens).",
+        );
+      },
+    },
+  });
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setFout(null);
+    if (nieuw !== bevestig) {
+      setFout("De nieuwe wachtwoorden komen niet overeen.");
+      return;
+    }
+    if (nieuw.length < 8) {
+      setFout("Nieuw wachtwoord moet minimaal 8 tekens bevatten.");
+      return;
+    }
+    mutate({ data: { huidig_wachtwoord: huidig, nieuw_wachtwoord: nieuw } });
+  }
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background px-4">
+      <div className="w-full max-w-sm space-y-6">
+        <div className="flex flex-col items-center gap-2 text-center">
+          <div className="w-12 h-12 rounded-full bg-amber-50 flex items-center justify-center">
+            <Lock className="w-5 h-5 text-amber-600" />
+          </div>
+          <h1 className="text-xl font-semibold">Wachtwoord wijzigen vereist</h1>
+          <p className="text-sm text-muted-foreground">
+            Uw account vereist een wachtwoordwijziging voordat u verder kunt.
+            Stel hieronder een nieuw wachtwoord in.
+          </p>
+        </div>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-1.5">
+            <label htmlFor="ww-huidig" className="text-sm font-medium">
+              Huidig wachtwoord
+            </label>
+            <input
+              id="ww-huidig"
+              type="password"
+              required
+              autoComplete="current-password"
+              value={huidig}
+              onChange={(e) => setHuidig(e.target.value)}
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label htmlFor="ww-nieuw" className="text-sm font-medium">
+              Nieuw wachtwoord
+            </label>
+            <input
+              id="ww-nieuw"
+              type="password"
+              required
+              autoComplete="new-password"
+              value={nieuw}
+              onChange={(e) => setNieuw(e.target.value)}
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+            <p className="text-xs text-muted-foreground">Minimaal 8 tekens</p>
+          </div>
+          <div className="space-y-1.5">
+            <label htmlFor="ww-bevestig" className="text-sm font-medium">
+              Bevestig nieuw wachtwoord
+            </label>
+            <input
+              id="ww-bevestig"
+              type="password"
+              required
+              autoComplete="new-password"
+              value={bevestig}
+              onChange={(e) => setBevestig(e.target.value)}
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+          </div>
+          {fout && (
+            <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
+              {fout}
+            </p>
+          )}
+          {isSuccess && (
+            <p className="rounded-md bg-green-50 px-3 py-2 text-sm text-green-700">
+              Wachtwoord gewijzigd. Een moment...
+            </p>
+          )}
+          <button
+            type="submit"
+            disabled={isPending || isSuccess}
+            className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+            {isPending ? "Opslaan..." : "Wachtwoord instellen"}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 function Gate() {
-  const { isLoading, isAuthenticated } = useAuth();
+  const { isLoading, isAuthenticated, gebruiker } = useAuth();
 
   const base = import.meta.env.BASE_URL.replace(/\/$/, "");
   const pad = window.location.pathname.slice(base.length) || "/";
@@ -735,6 +858,13 @@ function Gate() {
       );
     }
     return <LoginPagina />;
+  }
+
+  // Verplichte wachtwoordwijziging vóór toegang tot het portaal. De server
+  // blokkeert alle data-routes met 403 WACHTWOORD_WIJZIGEN_VEREIST; de UI
+  // geeft hier een duidelijk herstelpad zodat de gebruiker niet vastraakt.
+  if (gebruiker?.moet_wachtwoord_wijzigen) {
+    return <WachtwoordWijzigenScherm />;
   }
 
   return (

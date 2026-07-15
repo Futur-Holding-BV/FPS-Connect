@@ -1,3 +1,22 @@
+## 2026-07-15 — Ontbrekende wachtwoord-wijzigen gate in de frontend
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+**Aanleiding:** Productie-analyse van het inlogprobleem van Jacqueline van Ijll. Haar account heeft `moet_wachtwoord_wijzigen = true` in de productie-database (ingesteld na een admin-reset). Na succesvolle login (wachtwoord + TOTP) blokkeerde de server alle data-routes correct met `403 WACHTWOORD_WIJZIGEN_VEREIST`, maar de bijbehorende UI voor wachtwoord wijzigen ontbrak volledig in de frontend. Jacqueline zag lege schermen zonder uitleg of herstelpad.
+
+**Rootprobleem:** De middleware-commentaar in `auth.ts` verwees al naar "de frontend toont een blokkerende modal", maar die modal was nooit geïmplementeerd.
+
+**Wijziging:**
+
+1. **`artifacts/firevault/src/App.tsx`** — twee aanpassingen:
+   - Import toegevoegd: `useWachtwoordWijzigen` uit `@workspace/api-client-react`
+   - Nieuw component `WachtwoordWijzigenScherm`: full-screen wachtwoord-wijzig-formulier (huidig + nieuw + bevestig wachtwoord). Na succesvol wijzigen wordt `herlaad()` aangeroepen zodat de user-query vers wordt opgehaald en `moet_wachtwoord_wijzigen` nu `false` toont, waarna het portaal normaal laadt.
+   - In `Gate()`: check `gebruiker?.moet_wachtwoord_wijzigen` na de `isAuthenticated`-check; bij `true` wordt `<WachtwoordWijzigenScherm />` getoond in plaats van het portaal.
+
+**Benodigde operationele actie:** Jacqueline moet nog steeds haar huidig wachtwoord weten om in te kunnen loggen en het te wijzigen. Indien ze dat niet weet: René kan via de gebruikersbeheer-pagina een nieuw tijdelijk wachtwoord instellen (PATCH /gebruikers/:id met nieuw wachtwoord, `moetWachtwoordWijzigen` blijft dan `true` zodat ze verplicht wordt het te wijzigen bij inloggen).
+
+---
+
 ## 2026-07-15 — E-mailmelding bij mislukte GitHub push in post-merge.sh
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
