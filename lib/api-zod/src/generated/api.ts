@@ -7056,7 +7056,8 @@ export const TaalWijzigenResponse = zod.object({
   "nieuw_ip": zod.boolean().optional(),
   "functietitels": zod.array(zod.string()).optional(),
   "bevoegdheden": zod.record(zod.string(), zod.number()),
-  "is_hoofdtester": zod.boolean().optional()
+  "is_hoofdtester": zod.boolean().optional(),
+  "moet_wachtwoord_wijzigen": zod.boolean().optional().describe('Geeft aan dat de gebruiker verplicht is zijn wachtwoord te wijzigen voordat hij het portaal kan gebruiken (bijv. na een admin-reset).\n')
 })
 
 
@@ -7204,7 +7205,8 @@ export const TweeFactorActiverenResponse = zod.object({
   "nieuw_ip": zod.boolean().optional(),
   "functietitels": zod.array(zod.string()).optional(),
   "bevoegdheden": zod.record(zod.string(), zod.number()),
-  "is_hoofdtester": zod.boolean().optional()
+  "is_hoofdtester": zod.boolean().optional(),
+  "moet_wachtwoord_wijzigen": zod.boolean().optional().describe('Geeft aan dat de gebruiker verplicht is zijn wachtwoord te wijzigen voordat hij het portaal kan gebruiken (bijv. na een admin-reset).\n')
 })
 
 
@@ -7227,7 +7229,8 @@ export const TweeFactorVerifyResponse = zod.object({
   "nieuw_ip": zod.boolean().optional(),
   "functietitels": zod.array(zod.string()).optional(),
   "bevoegdheden": zod.record(zod.string(), zod.number()),
-  "is_hoofdtester": zod.boolean().optional()
+  "is_hoofdtester": zod.boolean().optional(),
+  "moet_wachtwoord_wijzigen": zod.boolean().optional().describe('Geeft aan dat de gebruiker verplicht is zijn wachtwoord te wijzigen voordat hij het portaal kan gebruiken (bijv. na een admin-reset).\n')
 })
 
 
@@ -7252,7 +7255,8 @@ export const GetHuidigeGebruikerResponse = zod.object({
   "nieuw_ip": zod.boolean().optional(),
   "functietitels": zod.array(zod.string()).optional(),
   "bevoegdheden": zod.record(zod.string(), zod.number()),
-  "is_hoofdtester": zod.boolean().optional()
+  "is_hoofdtester": zod.boolean().optional(),
+  "moet_wachtwoord_wijzigen": zod.boolean().optional().describe('Geeft aan dat de gebruiker verplicht is zijn wachtwoord te wijzigen voordat hij het portaal kan gebruiken (bijv. na een admin-reset).\n')
 })
 
 

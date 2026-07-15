@@ -28680,6 +28680,11 @@ components:
             type: integer
         is_hoofdtester:
           type: boolean
+        moet_wachtwoord_wijzigen:
+          type: boolean
+          description: >
+            Geeft aan dat de gebruiker verplicht is zijn wachtwoord te wijzigen
+            voordat hij het portaal kan gebruiken (bijv. na een admin-reset).
 
     # ── ABONNEMENT ───────────────────────────────────────────────────────
     Abonnement:

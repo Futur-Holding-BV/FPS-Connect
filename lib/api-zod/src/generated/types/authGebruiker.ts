@@ -24,4 +24,6 @@ export interface AuthGebruiker {
   functietitels?: string[];
   bevoegdheden: AuthGebruikerBevoegdheden;
   is_hoofdtester?: boolean;
+  /** Geeft aan dat de gebruiker verplicht is zijn wachtwoord te wijzigen voordat hij het portaal kan gebruiken (bijv. na een admin-reset). */
+  moet_wachtwoord_wijzigen?: boolean;
 }
