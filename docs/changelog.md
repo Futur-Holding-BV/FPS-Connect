@@ -1,3 +1,27 @@
+## 2026-07-15 — Geautomatiseerde smoketest na elke productiedeploy
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+**Wijzigingen:**
+
+1. **`.github/workflows/deploy.yml`** — nieuwe stap `Smoketest uitvoeren` toegevoegd na de deploy-stap. Voert drie API-checks uit vanaf de Actions runner (externe toegang, zelfde route als een eindgebruiker):
+   - `GET /api/healthz` → verwacht `{"status":"ok"}`
+   - `POST /api/auth/login` met credentials uit GitHub Secrets `SMOKETEST_EMAIL` + `SMOKETEST_PASSWORD` → verwacht HTTP 200 + sessiecookie
+   - `GET /api/gebruikers` met die sessie → verwacht niet-lege lijst
+   Als de secrets ontbreken: smoketest wordt overgeslagen met waarschuwing (deploy mislukt er niet door).
+
+2. **Faalmelding verbeterd** — de bestaande `if: failure()` faalmelding-stap triggert nu ook bij smoketest-falen. De e-mailtekst onderscheidt nu expliciet of het een deploy-fout of een smoketest-fout betreft.
+
+3. **Header-comment bijgewerkt** — `SMOKETEST_EMAIL` en `SMOKETEST_PASSWORD` gedocumenteerd als benodigde GitHub Secrets.
+
+4. **`docs/PRODUCTION_RUNBOOK.md`** — smoketest-sectie bijgewerkt: beschrijft de drie geautomatiseerde checks, de benodigde secrets, en wat er overblijft als handmatige check.
+
+**Benodigde actie (eenmalig, door René):** Voeg `SMOKETEST_EMAIL` en `SMOKETEST_PASSWORD` toe als GitHub Actions secrets onder Settings → Secrets and variables → Actions.
+
+**Bewijs:** workflow-definitie gevalideerd via YAML-structuur; geen uitvoerbare code in de repo gewijzigd.
+
+---
+
 ## 2026-07-14 — Planning: proporti­onele dag-blokken, rood niet-ingepland, AI-reistijd en dag-bewaking
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag

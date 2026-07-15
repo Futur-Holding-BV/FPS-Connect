@@ -34,12 +34,25 @@ proces "deploy pas ná goedkeuring van een reviewer".
    pullt zelf van GitHub; volgorde: back-up → git pull → compose build → migrate → up -d
    → healthz).
 
-**Minimale smoketest na elke deploy:**
+**Geautomatiseerde smoketest (GitHub Actions):**
 
-- [ ] `/api/healthz` geeft `{"status":"ok"}`
-- [ ] René login werkt
+Na elke deploy via `deploy.yml` voert de workflow automatisch drie API-checks uit vanaf de Actions runner (externe toegang, zelfde route als een eindgebruiker):
+
+1. `GET /api/healthz` → verwacht `{"status":"ok"}`
+2. `POST /api/auth/login` met de smoketest-credentials (GitHub Secret `SMOKETEST_EMAIL` + `SMOKETEST_PASSWORD`) → verwacht HTTP 200 + sessiecookie
+3. `GET /api/gebruikers` met die sessie → verwacht een niet-lege lijst
+
+Bij falen stuurt de workflow automatisch een e-mail naar René (via de Graph/mail-koppeling). Bij succes geen e-mail.
+
+**Benodigde GitHub Secrets voor de smoketest:**
+- `SMOKETEST_EMAIL` — e-mailadres van het smoketest-account
+- `SMOKETEST_PASSWORD` — wachtwoord van dat account
+
+Als de secrets ontbreken, wordt de smoketest overgeslagen met een waarschuwing (de deploy mislukt er niet door).
+
+**Aanvullende handmatige smoketest na elke deploy:**
+
 - [ ] Jacqueline login werkt
-- [ ] Gebruikersbeheer opent
 - [ ] De geraakte functionaliteit werkt
 
 **Bij falende smoketest:** direct fixen → opnieuw deployen → opnieuw testen.

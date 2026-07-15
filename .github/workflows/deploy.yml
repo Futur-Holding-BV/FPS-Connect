@@ -13,6 +13,9 @@ name: Deploy naar productie
 #   PROD_SSH_HOST  — 149.210.181.47
 #   PROD_SSH_USER  — rene
 #   PROD_SSH_PORT  — SSH-poort (optioneel; standaard 22)
+# Voor de post-deploy smoketest (stap na de containers-up):
+#   SMOKETEST_EMAIL    — e-mailadres van het smoketest-account (bijv. René's login)
+#   SMOKETEST_PASSWORD — wachtwoord van dat account
 # Optioneel voor de faalmelding per e-mail:
 #   AZURE_TENANT_ID / AZURE_CLIENT_ID / AZURE_CLIENT_SECRET
 #   MAIL_FROM / MAIL_MAILBOX / RENE_ALERT_EMAIL
@@ -104,6 +107,88 @@ jobs:
             "${PROD_SSH_USER}@${PROD_SSH_HOST}" \
             'bash /tmp/deploy-production.sh'
 
+      # ─── Smoketest na deploy ─────────────────────────────────────────────────
+      # Drie kritieke API-controles uitgevoerd vanaf de Actions runner (extern,
+      # dezelfde route als een echte gebruiker). Geeft direct zekerheid dat de
+      # release niet heeft inloggen of de kernapplicatie gebroken heeft.
+      # Credentials staan als GitHub Actions secrets, nooit als platte tekst.
+      - name: Smoketest uitvoeren
+        id: smoketest
+        env:
+          SMOKETEST_EMAIL: ${{ secrets.SMOKETEST_EMAIL }}
+          SMOKETEST_PASSWORD: ${{ secrets.SMOKETEST_PASSWORD }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${SMOKETEST_EMAIL:-}" ] || [ -z "${SMOKETEST_PASSWORD:-}" ]; then
+            echo "WAARSCHUWING: SMOKETEST_EMAIL en/of SMOKETEST_PASSWORD ontbreekt als GitHub Actions secret; smoketest wordt overgeslagen." >&2
+            exit 0
+          fi
+
+          BASE_URL="https://connect.fps-one.nl"
+          COOKIEJAR=$(mktemp)
+          FAIL=0
+
+          # 1. Healthcheck
+          echo "--- Stap 1: GET /api/healthz ---"
+          HEALTH=$(curl -fsS "${BASE_URL}/api/healthz" 2>&1) || { echo "FOUT: /api/healthz niet bereikbaar: ${HEALTH}" >&2; FAIL=1; }
+          if [ $FAIL -eq 0 ]; then
+            STATUS=$(echo "$HEALTH" | node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{try{console.log(JSON.parse(d).status||'')}catch(e){console.log('')}})")
+            if [ "$STATUS" != "ok" ]; then
+              echo "FOUT: /api/healthz antwoordde niet met {\"status\":\"ok\"} — ontvangen: ${HEALTH}" >&2
+              FAIL=1
+            else
+              echo "OK: healthz geeft status=ok"
+            fi
+          fi
+
+          # 2. Login
+          echo "--- Stap 2: POST /api/auth/login ---"
+          if [ $FAIL -eq 0 ]; then
+            LOGIN_BODY=$(node -e "console.log(JSON.stringify({email:process.env.SMOKETEST_EMAIL,wachtwoord:process.env.SMOKETEST_PASSWORD}))")
+            LOGIN_HTTP=$(curl -sS -o /tmp/login-response.json -w "%{http_code}" \
+              -c "$COOKIEJAR" \
+              -X POST "${BASE_URL}/api/auth/login" \
+              -H "Content-Type: application/json" \
+              -d "$LOGIN_BODY")
+            if [ "$LOGIN_HTTP" -ne 200 ]; then
+              echo "FOUT: POST /api/auth/login gaf HTTP ${LOGIN_HTTP}" >&2
+              cat /tmp/login-response.json >&2 || true
+              FAIL=1
+            else
+              echo "OK: login geeft HTTP 200"
+            fi
+          fi
+
+          # 3. Gebruikerslijst
+          echo "--- Stap 3: GET /api/gebruikers ---"
+          if [ $FAIL -eq 0 ]; then
+            USERS_HTTP=$(curl -sS -o /tmp/users-response.json -w "%{http_code}" \
+              -b "$COOKIEJAR" \
+              "${BASE_URL}/api/gebruikers")
+            if [ "$USERS_HTTP" -ne 200 ]; then
+              echo "FOUT: GET /api/gebruikers gaf HTTP ${USERS_HTTP}" >&2
+              cat /tmp/users-response.json >&2 || true
+              FAIL=1
+            else
+              COUNT=$(node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{try{const a=JSON.parse(d);console.log(Array.isArray(a)?a.length:0)}catch(e){console.log(0)}})" < /tmp/users-response.json)
+              if [ "$COUNT" -eq 0 ]; then
+                echo "FOUT: GET /api/gebruikers gaf een lege lijst" >&2
+                FAIL=1
+              else
+                echo "OK: gebruikerslijst geeft ${COUNT} gebruikers"
+              fi
+            fi
+          fi
+
+          rm -f "$COOKIEJAR"
+
+          if [ $FAIL -ne 0 ]; then
+            echo "SMOKETEST GEFAALD." >&2
+            exit 1
+          fi
+          echo "Smoketest geslaagd."
+
       # ─── Meldingen bij falen ────────────────────────────────────────────────
       # René moet een kapotte release direct horen, niet later ontdekken via de
       # Actions-tab. Verstuurt via dezelfde Microsoft 365/Graph-mailkoppeling
@@ -140,12 +225,18 @@ jobs:
           fi
 
           COMMIT_MSG=$(git log -1 --pretty=%s 2>/dev/null || echo "onbekend")
+          SMOKETEST_OK="${{ steps.smoketest.outcome }}"
+          if [ "$SMOKETEST_OK" = "failure" ]; then
+            REDEN="Post-deploy smoketest gefaald: /api/healthz, login of /api/gebruikers reageert niet correct op connect.fps-one.nl."
+          else
+            REDEN="Deploy-stap gefaald (build, migratie of containers-up op de VPS)."
+          fi
           BODY=$(cat <<EOF
           Productie-release GEFAALD.
 
           Commit: ${GITHUB_SHA}
           Omschrijving: ${COMMIT_MSG}
-          Reden: post-deploy healthcheck (of een eerdere deploy-stap) is mislukt.
+          Reden: ${REDEN}
           Actions-run: ${RUN_URL}
 
           Controleer de run-logs en de productiestatus zo snel mogelijk.
