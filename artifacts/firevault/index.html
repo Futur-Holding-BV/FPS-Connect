@@ -27,6 +27,18 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   </head>
   <body>
+    <script>
+      (function () {
+        var h = window.location.hostname;
+        if (h !== 'localhost' && h !== '127.0.0.1' && h !== 'connect.fps-one.nl') {
+          window.location.replace(
+            'https://connect.fps-one.nl' +
+              window.location.pathname +
+              window.location.search
+          );
+        }
+      })();
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
     <script>

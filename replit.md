@@ -105,7 +105,9 @@ Zie [`docs/roadmap/README.md`](docs/roadmap/README.md) voor het volledige overzi
 
 ## Deploybeleid
 
-Productie is momenteel de actieve acceptatie-/testomgeving: noodzakelijke fixes gaan direct naar productie zodra GitHub CI groen is, zonder aparte staging-cyclus of aparte reviewer-goedkeuring per fix (uitzonderingen: destructieve migratie, beveiligingsrisico, deploymentfout). Het leidende beleid — de vijf gates, de smoketest en de bekende aandachtspunten — staat in [`docs/PRODUCTION_RUNBOOK.md`](docs/PRODUCTION_RUNBOOK.md); de deploymenthandleiding is [`docs/deployment.md`](docs/deployment.md).
+**Replit is uitsluitend een ontwikkel- en testomgeving.** De Replit autoscale-deployment is uitgeschakeld. Productie is `connect.fps-one.nl` (VPS), bereikbaar via het automatische pad: Agent-merge → `scripts/post-merge.sh` → `git push` naar GitHub → `deploy.yml` triggert → VPS bouwt en herstart (10–15 minuten).
+
+Noodzakelijke fixes gaan direct naar productie zodra GitHub CI groen is, zonder aparte staging-cyclus of aparte reviewer-goedkeuring per fix (uitzonderingen: destructieve migratie, beveiligingsrisico, deploymentfout). Het leidende beleid — de gates, de smoketest en de bekende aandachtspunten — staat in [`docs/PRODUCTION_RUNBOOK.md`](docs/PRODUCTION_RUNBOOK.md); de deploymenthandleiding is [`docs/deployment.md`](docs/deployment.md).
 
 ## Pointers
 

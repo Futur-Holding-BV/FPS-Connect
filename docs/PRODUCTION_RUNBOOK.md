@@ -1,16 +1,17 @@
 # FPS Connect — Production Runbook
 
-## Omgevingsscheiding: één productie-URL (vastgesteld 14 juli 2026)
+## Omgevingsscheiding: één productie-URL (vastgesteld 15 juli 2026)
 
-**`connect.fps-one.nl` is de enige productieomgeving.** Er zijn drie losstaande omgevingen:
+**`connect.fps-one.nl` is de enige productieomgeving.** Er zijn twee omgevingen:
 
 | Omgeving | URL | Database | Gebruik |
 |---|---|---|---|
 | VPS productie | `https://connect.fps-one.nl` | VPS PostgreSQL | Eindgebruikers, echte data |
-| Replit autoscale | Replit-publieke URL | Replit PostgreSQL | **Niet voor eindgebruikers** |
 | Replit dev | `localhost` / Replit-preview | Replit PostgreSQL | Ontwikkeling & testen |
 
-**Automatische doorstuur:** De frontend (`firevault`) stuurt elk verzoek dat binnenkomt op een andere hostname dan `localhost`, `127.0.0.1` of `connect.fps-one.nl` automatisch door naar `https://connect.fps-one.nl` (inclusief pad en querystring). Eindgebruikers die per ongeluk de Replit-URL openen, worden daardoor direct doorgestuurd naar de juiste omgeving.
+**Replit autoscale-deployment is uitgeschakeld.** De Replit-deployment (`deploymentTarget = "autoscale"`) is verwijderd uit de configuratie. Replit dient uitsluitend als ontwikkel- en testomgeving. De enige weg naar productie is via het automatische pad Agent-merge → `scripts/post-merge.sh` → `git push` naar GitHub → `deploy.yml` triggert → VPS bouwt en herstart.
+
+**Server-side redirect:** De frontend (`firevault`) stuurt via een inline script in `index.html` elk verzoek dat binnenkomt op een andere hostname dan `localhost`, `127.0.0.1` of `connect.fps-one.nl` direct door naar `https://connect.fps-one.nl` (inclusief pad en querystring). Deze redirect werkt ook als React niet laadt of de JS-bundle stuk is — het script staat vóór de React-bundle in de HTML.
 
 **Let op bij agent-tools:** `executeSql { environment: "production" }` in de Replit-agent raadpleegt de **Replit**-database, niet de VPS-database. Voor productiedata: SSH naar de VPS of gebruik de productie-backups.
 
