@@ -112,3 +112,4 @@ Noodzakelijke fixes gaan direct naar productie zodra GitHub CI groen is, zonder 
 ## Pointers
 
 - Zie de `pnpm-workspace` skill voor workspace structuur, TypeScript setup en package details
+Deploytest uitgevoerd op 15 juli 2026.
