@@ -1,3 +1,24 @@
+## 2026-07-15 — Verlopen GitHub push-token detecteren en melden
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+**Probleem:** `GITHUB_TOKEN_PUSH` is een persoonlijk access-token (PAT) met vervaldatum. Als het verloopt geeft de git push in `post-merge.sh` een fout, maar door de niet-fatale opzet was die fout alleen zichtbaar in de post-merge logs — niet voor de gebruiker. Na verloop was de automatische deploy-keten gebroken zonder dat iemand het merkte.
+
+**Wijzigingen:**
+
+1. **`.github/workflows/token-health-check.yml`** — nieuwe dagelijkse health-check workflow. Draait elke dag om 08:00 UTC; roept GitHub API aan om te controleren of `GITHUB_TOKEN_PUSH` geldig is en of het binnen 14 dagen verloopt. Stuurt bij verlopen of bijna-verlopen token een e-mail naar René via Microsoft Graph (zelfde mailkoppeling als `deploy.yml`). Kan ook handmatig gestart worden via "Run workflow".
+
+2. **`scripts/post-merge.sh` (Stap 7)** — token-validatie toegevoegd vóór elke push. Het script roept nu eerst `GET https://api.github.com/user` aan met het token:
+   - HTTP 401/403 → expliciete blokvormige foutmelding met stap-voor-stap vernieuwingsinstructies; push wordt niet geprobeerd
+   - Geldig token met vervaldatum ≤ 14 dagen → waarschuwing in logs
+   - GitHub API onbereikbaar → push wordt toch geprobeerd (geen blokkade)
+
+3. **`docs/PRODUCTION_RUNBOOK.md`** — nieuwe sectie "GITHUB_TOKEN_PUSH vernieuwen": stappenplan voor het aanmaken/verlengen van het PAT, welke twee plekken gesynchroniseerd moeten blijven (Replit Secrets + GitHub Actions Secrets), en wat te doen als een merge al mislukt was.
+
+**Benodigde actie (eenmalig, door René):** Voeg `GITHUB_TOKEN_PUSH` ook toe als GitHub Actions secret (`github.com/vinkrene-jpg/fps-one` > Settings > Secrets and variables > Actions) zodat de dagelijkse health-check het token kan controleren.
+
+---
+
 ## 2026-07-15 — Geautomatiseerde smoketest na elke productiedeploy
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag

@@ -21,9 +21,63 @@
 
 Na elke taakmerge in Replit pusht het post-merge script (`scripts/post-merge.sh`, Stap 7) automatisch naar `github.com/vinkrene-jpg/fps-one` (main branch). GitHub Actions (`deploy.yml`) triggert hierop direct en de VPS draait binnen 10-15 minuten op de nieuwe code.
 
-- **Vereist secret:** `GITHUB_TOKEN_PUSH` (al geconfigureerd in Replit Secrets)
+- **Vereist secret:** `GITHUB_TOKEN_PUSH` (al geconfigureerd in Replit Secrets en als GitHub Actions secret)
 - **Niet-fataal:** als de push mislukt, waarschuwt het script maar stopt het post-merge proces niet
-- **Handmatig herstellen bij mislukking:** `git push origin main` (met geldig `GITHUB_TOKEN_PUSH`)
+- **Token-validatie:** vóór elke push valideert het script het token via de GitHub API (`/user`); een verlopen token geeft een expliciete foutmelding met vernieuwingsinstructies (geen stille fout)
+- **Bijna-verlopen waarschuwing:** als de vervaldatum binnen 14 dagen valt, print Stap 7 een waarschuwing in de post-merge logs
+- **Dagelijkse health-check:** `.github/workflows/token-health-check.yml` controleert elke dag om 08:00 UTC of het token nog geldig is en stuurt een e-mail aan René als het verlopen of bijna-verlopen is
+- **Handmatig herstellen bij mislukking:** zie de sectie "GITHUB_TOKEN_PUSH vernieuwen" hieronder
+
+---
+
+## GITHUB_TOKEN_PUSH vernieuwen
+
+`GITHUB_TOKEN_PUSH` is een persoonlijk access-token (PAT) van het GitHub-account `vinkrene-jpg`. PAT's hebben een vervaldatum. Als het token verloopt stopt de automatische deploy-keten. De dagelijkse health-check (`token-health-check.yml`) stuurt een e-mail zodra het token verlopen is of binnen 14 dagen verloopt.
+
+### Stappen om het token te vernieuwen
+
+1. **Nieuw token aanmaken of bestaande verlengen**
+   - Ga naar [github.com/settings/personal-access-tokens](https://github.com/settings/personal-access-tokens) (ingelogd als `vinkrene-jpg`)
+   - Kies het bestaande `fps-one-deploy` token en verleng het, of maak een nieuw token aan
+   - Vereiste scope: **Contents: Write** op de `fps-one` repository (fine-grained PAT) of `repo` (classic PAT)
+   - Stel de vervaldatum in op maximaal 1 jaar; noteer de nieuwe vervaldatum
+
+2. **Replit Secret bijwerken**
+   - Open de Replit-editor voor dit project
+   - Ga naar het slotje (Secrets) in de linker zijbalk
+   - Zoek `GITHUB_TOKEN_PUSH` en vervang de waarde door het nieuwe token
+
+3. **GitHub Actions Secret bijwerken**
+   - Ga naar `github.com/vinkrene-jpg/fps-one` > Settings > Secrets and variables > Actions
+   - Zoek `GITHUB_TOKEN_PUSH` en vervang de waarde door het nieuwe token
+   - Dit secret is nodig voor de dagelijkse health-check workflow
+
+4. **Controleer de werking**
+   - Open een Replit-shell en voer uit:
+     ```bash
+     curl -sS -H "Authorization: token $GITHUB_TOKEN_PUSH" https://api.github.com/user
+     ```
+   - Verwacht: JSON met `"login": "vinkrene-jpg"` en HTTP 200
+   - Of start de health-check handmatig via GitHub Actions > "GitHub push-token gezondheidscheck" > "Run workflow"
+
+### Welke twee plekken moeten gesynchroniseerd blijven
+
+| Locatie | Waarde | Gebruikt door |
+|---|---|---|
+| Replit Secrets > `GITHUB_TOKEN_PUSH` | Actueel token | `scripts/post-merge.sh` (Stap 7) |
+| GitHub repo Secrets > `GITHUB_TOKEN_PUSH` | Actueel token | `.github/workflows/token-health-check.yml` |
+
+### Wat te doen als de push al mislukt is
+
+Als er een merge heeft plaatsgevonden met een verlopen token is de VPS niet bijgewerkt. Herstel:
+
+```bash
+# In een Replit-shell, nadat het token vernieuwd is:
+git push https://github.com/vinkrene-jpg/fps-one.git main
+# (het script gebruikt GIT_ASKPASS; handmatig: voeg token toe aan de URL of stel GIT_ASKPASS in)
+```
+
+Of trigger de deploy handmatig via GitHub Actions > `deploy.yml` > "Run workflow".
 
 ---
 
