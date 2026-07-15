@@ -16,6 +16,16 @@
 
 ---
 
+## Automatische deploy na Replit-merge (vastgesteld 15 juli 2026)
+
+Na elke taakmerge in Replit pusht het post-merge script (`scripts/post-merge.sh`, Stap 7) automatisch naar `github.com/vinkrene-jpg/fps-one` (main branch). GitHub Actions (`deploy.yml`) triggert hierop direct en de VPS draait binnen 10-15 minuten op de nieuwe code.
+
+- **Vereist secret:** `GITHUB_TOKEN_PUSH` (al geconfigureerd in Replit Secrets)
+- **Niet-fataal:** als de push mislukt, waarschuwt het script maar stopt het post-merge proces niet
+- **Handmatig herstellen bij mislukking:** `git push origin main` (met geldig `GITHUB_TOKEN_PUSH`)
+
+---
+
 ## Deploybeleid: productie als acceptatieomgeving (vastgesteld 10 juli 2026)
 
 Dit beleid is leidend voor het hele runbook en voor alle deploys.

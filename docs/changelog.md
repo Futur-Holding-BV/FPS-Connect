@@ -22,6 +22,25 @@
 
 ---
 
+## 2026-07-15 — Automatische GitHub push na elke Replit-merge
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+**Probleem:** Na elke taakmerge in Replit werden commits opgeslagen in de Replit-eigen git, maar niet automatisch naar GitHub gepusht. GitHub Actions (deploy.yml) triggert alleen bij een push naar GitHub main. Hierdoor liep de productie-VPS structureel achter — 8 commits die maandenlang niet op productie kwamen.
+
+**Oplossing in `scripts/post-merge.sh` (Stap 7 toegevoegd):**
+
+- Na alle bestaande stappen (install, schema, seeding) voert het script automatisch `git push origin main` uit naar `https://github.com/vinkrene-jpg/fps-one.git`
+- Authenticatie via het bestaande `GITHUB_TOKEN_PUSH` secret (was al geconfigureerd)
+- De remote URL wordt tijdelijk ingesteld op `https://x-access-token:${TOKEN}@github.com/...` en daarna direct teruggezet naar de kale URL (token nooit persistent in git config)
+- **Niet-fataal:** als de push mislukt, print het script een waarschuwing maar stopt het post-merge proces NIET (`set +e` rondom de push, `set -e` daarna hersteld)
+- Bij succes: "GitHub push geslaagd (commit: XXXXXXXX) — deploy.yml wordt automatisch gestart."
+- Bij mislukking: heldere instructie hoe handmatig te herstellen
+
+**Effect:** Elke merge in Replit triggert nu automatisch GitHub Actions deploy.yml → de VPS draait binnen 10-15 minuten op de nieuwe code.
+
+---
+
 ## 2026-07-14 — Planning: proporti­onele dag-blokken, rood niet-ingepland, AI-reistijd en dag-bewaking
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag

@@ -36,3 +36,46 @@ pnpm --filter @workspace/scripts run seed-studio-opleverrapport
 # (handmatige aanpassingen blijven behouden). Voorkomt lege profielen-tabel →
 # "kies functie" die geen bevoegdheden vult.
 pnpm --filter @workspace/scripts run seed-profielen
+# Stap 7: Push naar GitHub zodat GitHub Actions (deploy.yml) automatisch triggert
+# en de productie-VPS (connect.fps-one.nl) binnen 15 minuten de nieuwe code draait.
+# Faalt niet-fataal: als de push mislukt wordt een waarschuwing geprint maar stopt
+# het post-merge script NIET (set -e wordt tijdelijk uitgeschakeld).
+#
+# Beveiligingsaanpak: authenticatie via GIT_ASKPASS (tijdelijk hulpscript in /tmp).
+# Het token wordt NOOIT in .git/config of de remote-URL opgeslagen. Het hulpscript
+# wordt altijd opgeruimd via een trap, ook bij onderbreking (SIGINT/SIGTERM/EXIT).
+if [ -z "${GITHUB_TOKEN_PUSH:-}" ]; then
+  echo "WAARSCHUWING: GITHUB_TOKEN_PUSH is niet ingesteld — push naar GitHub overgeslagen." >&2
+else
+  LOCAL_SHA=$(git rev-parse HEAD)
+  # Maak een tijdelijk GIT_ASKPASS-hulpscript aan dat het token uitvoert.
+  # Git roept dit script aan voor de gebruikersnaam (geeft "x-access-token") en
+  # het wachtwoord (geeft het token). Het script staat in /tmp zodat het nooit
+  # in de git working tree terechtkomt.
+  _ASKPASS_FILE=$(mktemp /tmp/fps-git-askpass-XXXXXX)
+  chmod 700 "$_ASKPASS_FILE"
+  # Schrijf het hulpscript; 'Username' → statisch; 'Password' → token
+  cat > "$_ASKPASS_FILE" <<'ASKPASS_EOF'
+#!/bin/bash
+case "$1" in
+  Username*) echo "x-access-token" ;;
+  Password*) echo "${GITHUB_TOKEN_PUSH}" ;;
+esac
+ASKPASS_EOF
+  # Ruim het hulpscript altijd op, ook bij EXIT/SIGINT/SIGTERM
+  trap 'rm -f "$_ASKPASS_FILE"' EXIT INT TERM
+  export GIT_ASKPASS="$_ASKPASS_FILE"
+  set +e
+  git push https://github.com/vinkrene-jpg/fps-one.git main 2>&1
+  PUSH_EXIT=$?
+  set -e
+  unset GIT_ASKPASS
+  rm -f "$_ASKPASS_FILE"
+  trap - EXIT INT TERM
+  if [ "$PUSH_EXIT" -eq 0 ]; then
+    echo "GitHub push geslaagd (commit: ${LOCAL_SHA:0:8}) — deploy.yml wordt automatisch gestart."
+  else
+    echo "WAARSCHUWING: GitHub push mislukt (exit $PUSH_EXIT). De VPS wordt NIET automatisch bijgewerkt." >&2
+    echo "Handmatig herstellen: git push origin main (met geldig GITHUB_TOKEN_PUSH)." >&2
+  fi
+fi
