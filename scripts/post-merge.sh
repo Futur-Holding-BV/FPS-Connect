@@ -130,6 +130,73 @@ ASKPASS_EOF
     else
       echo "WAARSCHUWING: GitHub push mislukt (exit $PUSH_EXIT). De VPS wordt NIET automatisch bijgewerkt." >&2
       echo "Handmatig herstellen: controleer GITHUB_TOKEN_PUSH en voer 'git push origin main' uit." >&2
+
+      # ─── E-mailmelding bij mislukte push ────────────────────────────────────
+      # Verstuurt via Microsoft 365/Graph (client-credentials), dezelfde aanpak
+      # als de faalmelding in .github/workflows/deploy.yml. Alle benodigde waarden
+      # worden gelezen uit de Replit-omgevingsvariabelen (nooit hardcoded).
+      # Bij ontbrekende config of een Graph-fout: stille waarschuwing, geen abort.
+      if [ -z "${AZURE_TENANT_ID:-}" ] || [ -z "${AZURE_CLIENT_ID:-}" ] || \
+         [ -z "${AZURE_CLIENT_SECRET:-}" ] || [ -z "${RENE_ALERT_EMAIL:-}" ]; then
+        echo "INFO: AZURE_TENANT_ID/AZURE_CLIENT_ID/AZURE_CLIENT_SECRET/RENE_ALERT_EMAIL niet ingesteld — e-mailmelding overgeslagen." >&2
+      else
+        _MAIL_FROM="${MAIL_FROM:-noreply@fpsbrandpreventie.nl}"
+        _MAIL_MAILBOX="${MAIL_MAILBOX:-app@fpsbrandpreventie.nl}"
+        _TIJDSTIP=$(date -u '+%Y-%m-%d %H:%M:%S UTC')
+
+        _GRAPH_TOKEN=$(curl -fsS -X POST \
+          "https://login.microsoftonline.com/${AZURE_TENANT_ID}/oauth2/v2.0/token" \
+          -d "client_id=${AZURE_CLIENT_ID}" \
+          -d "client_secret=${AZURE_CLIENT_SECRET}" \
+          -d "scope=https://graph.microsoft.com/.default" \
+          -d "grant_type=client_credentials" 2>/dev/null \
+          | node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{try{console.log(JSON.parse(d).access_token||'')}catch(e){console.log('')}})" 2>/dev/null || true)
+
+        if [ -z "${_GRAPH_TOKEN:-}" ]; then
+          echo "WAARSCHUWING: Kon geen Graph-token ophalen; e-mailmelding overgeslagen." >&2
+        else
+          _MAIL_BODY="GitHub push naar productie MISLUKT.
+
+Commit:    ${LOCAL_SHA}
+Tijdstip:  ${_TIJDSTIP}
+Exit-code: ${PUSH_EXIT}
+
+Herstelprocedure:
+  1. Controleer of GITHUB_TOKEN_PUSH geldig is (niet verlopen).
+  2. Voer handmatig uit: git push https://github.com/vinkrene-jpg/fps-one.git main
+  3. Controleer daarna of GitHub Actions (deploy.yml) is gestart en groen is.
+  4. Zie docs/PRODUCTION_RUNBOOK.md voor het volledige deploybeleid.
+
+De productie-VPS (connect.fps-one.nl) is NIET automatisch bijgewerkt."
+
+          _PAYLOAD=$(MAIL_BODY="$_MAIL_BODY" RENE_EMAIL="$RENE_ALERT_EMAIL" MAIL_FROM="$_MAIL_FROM" node -e "
+            const body = {
+              message: {
+                subject: 'FPS Connect: GitHub push naar productie MISLUKT',
+                body: { contentType: 'Text', content: process.env.MAIL_BODY },
+                toRecipients: [{ emailAddress: { address: process.env.RENE_EMAIL } }],
+                from: { emailAddress: { address: process.env.MAIL_FROM, name: 'FPS Connect' } },
+              },
+              saveToSentItems: false,
+            };
+            console.log(JSON.stringify(body));
+          " 2>/dev/null || true)
+
+          if [ -n "${_PAYLOAD:-}" ]; then
+            _HTTP=$(curl -sS -o /tmp/fps-graph-mail-response.json -w "%{http_code}" \
+              -X POST "https://graph.microsoft.com/v1.0/users/${_MAIL_MAILBOX}/sendMail" \
+              -H "Authorization: Bearer ${_GRAPH_TOKEN}" \
+              -H "Content-Type: application/json" \
+              -d "$_PAYLOAD" 2>/dev/null || echo "000")
+            if [ "${_HTTP:-000}" -ge 200 ] && [ "${_HTTP:-000}" -lt 300 ]; then
+              echo "E-mailmelding verzonden naar ${RENE_ALERT_EMAIL}."
+            else
+              echo "WAARSCHUWING: Graph sendMail gaf HTTP ${_HTTP:-000}; e-mailmelding niet bezorgd." >&2
+            fi
+            rm -f /tmp/fps-graph-mail-response.json
+          fi
+        fi
+      fi
+      # ────────────────────────────────────────────────────────────────────────
     fi
-  fi
 fi
