@@ -1,3 +1,24 @@
+## 2026-07-16 — Post-merge faalmelding altijd bezorgd via fallback-kanaal
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+**Aanleiding:** Als `AZURE_TENANT_ID`/`AZURE_CLIENT_ID`/`AZURE_CLIENT_SECRET`/`RENE_ALERT_EMAIL` niet ingesteld zijn (of als het Graph-token mislukt of `sendMail` een fout geeft), sloeg `scripts/post-merge.sh` de faalmelding stilzwijgend over. René werd dan niet gewaarschuwd bij een mislukte post-merge stap of een mislukte GitHub push.
+
+**Wijziging:**
+1. `scripts/post-merge.sh` — nieuwe `_stuur_fallback_melding`-hulpfunctie toegevoegd (vóór `_stuur_faalmelding`):
+   - Probeert eerst `SLACK_WEBHOOK_URL` (Slack Incoming Webhook, POST JSON `{text}`).
+   - Als dat mislukt of niet ingesteld is, probeert het `NTFY_URL` (ntfy push-service, POST met `Title`/`Priority`/`Tags`-headers).
+   - Logt een waarschuwing maar stopt het script nooit bij een fout.
+2. `_stuur_faalmelding` roept nu `_stuur_fallback_melding` aan op alle drie de plekken waar voorheen stilzwijgend werd teruggekeerd:
+   - Ontbrekende AZURE-variabelen
+   - Mislukt Graph-token-verzoek
+   - Graph `sendMail` HTTP-fout
+3. `docs/PRODUCTION_RUNBOOK.md` — nieuwe aandachtspunt toegevoegd over de fallback-volgorde en vereiste secrets.
+
+**Benodigde actie (optioneel, door René):** Stel `SLACK_WEBHOOK_URL` of `NTFY_URL` in als Replit-secret voor een gegarandeerd alternatief kanaal naast Graph-e-mail.
+
+---
+
 ## 2026-07-15 — Ontbrekende wachtwoord-wijzigen gate in de frontend
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
