@@ -289,6 +289,36 @@ ASKPASS_EOF
     # Ruim het hulpscript altijd op, ook bij EXIT/SIGINT/SIGTERM
     trap 'rm -f "$_ASKPASS_FILE"' EXIT INT TERM
     export GIT_ASKPASS="$_ASKPASS_FILE"
+
+    # ─── Stap 7a: remote-sync vóór push ──────────────────────────────────────
+    # Als GitHub main commits bevat die lokaal ontbreken (bijv. door directe
+    # VPS-pushes of parallelle taak-merges die tegelijk worden verwerkt),
+    # wordt de push afgewezen met "fetch first". Dit blok haalt die commits op
+    # en mergt ze automatisch zodat de push altijd kan slagen zonder force-push.
+    set +e
+    git fetch https://github.com/vinkrene-jpg/fps-one.git \
+      "main:refs/remotes/fps-postsync/main" 2>&1
+    SYNC_FETCH_EXIT=$?
+    set -e
+    if [ "$SYNC_FETCH_EXIT" -eq 0 ]; then
+      REMOTE_MAIN_SHA=$(git rev-parse refs/remotes/fps-postsync/main 2>/dev/null || echo "")
+      if [ -n "$REMOTE_MAIN_SHA" ] && \
+         ! git merge-base --is-ancestor "$REMOTE_MAIN_SHA" HEAD 2>/dev/null; then
+        echo "Remote main (${REMOTE_MAIN_SHA:0:8}) bevat commits die lokaal ontbreken; auto-merge..."
+        git -c user.email="post-merge@fps-one.nl" -c user.name="FPS Post-merge" \
+          merge --no-edit refs/remotes/fps-postsync/main 2>&1 || {
+            echo "WAARSCHUWING: Auto-merge mislukt; push wordt toch geprobeerd." >&2
+          }
+        # LOCAL_SHA bijwerken na merge zodat de log het juiste commit-SHA toont
+        LOCAL_SHA=$(git rev-parse HEAD)
+      else
+        echo "Lokale commits bevatten alle remote-commits; directe push."
+      fi
+    else
+      echo "WAARSCHUWING: Pre-push sync-fetch mislukt (exit $SYNC_FETCH_EXIT); push wordt toch geprobeerd." >&2
+    fi
+    # ─── Einde stap 7a ───────────────────────────────────────────────────────
+
     set +e
     git push https://github.com/vinkrene-jpg/fps-one.git main 2>&1
     PUSH_EXIT=$?
