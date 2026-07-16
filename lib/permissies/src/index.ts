@@ -348,7 +348,7 @@ export const PRESETS: Preset[] = [
     naam: "HRM-adviseur",
     groep: "HRM & Personeel",
     bevoegdheden: matrix({
-      personeel: 4, dossiers: 1, rapportages: 1, salarisarchief: 3,
+      personeel: 4, gebruikers: 4, dossiers: 1, rapportages: 1, salarisarchief: 3,
     }),
   },
   {

@@ -99,6 +99,10 @@ const opgestart: ChildProcess[] = [];
 
 // Zorgt dat één service draait. Hergebruikt een al draaiende instantie; start
 // hem anders zelf op en wacht tot hij gezond is.
+// Meerdere pogingen vóórdat we concluderen dat de service niet draait — dit
+// voorkomt dat een momenteel-herbouwende workflow-service (die even niet
+// antwoordt) onterecht als "niet draaiend" wordt beschouwd en we een tweede
+// instantie starten die een poortconflict veroorzaakt.
 async function zorgServiceDraait(service: Service): Promise<void> {
   if (!service.healthUrl) {
     throw new Error(
@@ -106,12 +110,19 @@ async function zorgServiceDraait(service: Service): Promise<void> {
     );
   }
 
-  if (await isBereikbaar(service.healthUrl)) {
-    log(`${service.naam}: draait al, hergebruiken.`);
-    return;
+  for (let poging = 0; poging < 3; poging++) {
+    if (await isBereikbaar(service.healthUrl)) {
+      log(`${service.naam}: draait al, hergebruiken.`);
+      return;
+    }
+    if (poging < 2) {
+      log(`${service.naam}: niet bereikbaar (poging ${poging + 1}/3), 5s wachten...`);
+      await wacht(5_000);
+    }
   }
 
   log(`${service.naam}: niet bereikbaar, opstarten...`);
+  const startTijd = Date.now();
   const kind = spawn("bash", ["-lc", service.startCommando], {
     cwd: WORKSPACE_ROOT,
     env: { ...process.env, ...service.startEnv },
@@ -119,6 +130,16 @@ async function zorgServiceDraait(service: Service): Promise<void> {
     detached: true,
   });
   opgestart.push(kind);
+
+  // Detecteer vroegtijdige exit (poortconflict bij parallelle runners).
+  // Als het kindproces binnen 10 seconden afsluit met fout, verwijder het
+  // uit opgestart zodat stopOpgestarteServices() geen concurrent-service doodt.
+  kind.on("exit", (code) => {
+    if (code !== 0 && code !== null && Date.now() - startTijd < 10_000) {
+      const idx = opgestart.indexOf(kind);
+      if (idx !== -1) opgestart.splice(idx, 1);
+    }
+  });
 
   const gezond = await wachtTotGezond(service, service.startTimeoutMs);
   if (!gezond) {

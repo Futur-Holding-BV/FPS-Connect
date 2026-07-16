@@ -13,7 +13,7 @@
 // Draaien: pnpm --filter @workspace/scripts run e2e-web
 // Vereist: lopende workflows api-server + firevault web, env DATABASE_URL en
 // REPLIT_DEV_DOMAIN.
-import { test } from "@playwright/test";
+import { devices, test } from "@playwright/test";
 
 import {
   resetE2eWachtwoordGateAccount,
@@ -38,9 +38,33 @@ test.afterEach(async () => {
 });
 
 // ── Desktop scenario (1280×800) ───────────────────────────────────────────────
-test(
-  "Web [desktop]: Wachtwoord-wijzigen gate — gate → fouten → succesvol",
-  async ({ page }) => {
-    await voerGateScenarioUit(page);
-  },
-);
+test.describe("Desktop (1280×800)", () => {
+  test(
+    "Web [desktop]: Wachtwoord-wijzigen gate — gate → fouten → succesvol",
+    async ({ page }) => {
+      await voerGateScenarioUit(page);
+    },
+  );
+});
+
+// ── Mobiel scenario (iPhone 13, 390×844) ─────────────────────────────────────
+//
+// Op dit viewport is de shadcn-sidebar standaard verborgen achter een
+// hamburgermenu. De assertions in voerGateScenarioUit zijn exclusief gebaseerd
+// op gate-specifieke elementen en de /auth/me API, zodat ze ook hier betrouwbaar
+// werken zonder van de desktop-sidebar afhankelijk te zijn.
+// defaultBrowserType mag niet binnen een describe-block (dwingt een nieuwe worker
+// af, wat Playwright verbiedt). Destructureer het eruit en gebruik alleen de
+// viewport/UA/touch-instellingen voor device-emulatie.
+const { defaultBrowserType: _ignored, ...iphone13Device } = devices["iPhone 13"];
+
+test.describe("Mobiel (iPhone 13, 390×844)", () => {
+  test.use(iphone13Device);
+
+  test(
+    "Web [mobiel]: Wachtwoord-wijzigen gate — gate → fouten → succesvol",
+    async ({ page }) => {
+      await voerGateScenarioUit(page);
+    },
+  );
+});

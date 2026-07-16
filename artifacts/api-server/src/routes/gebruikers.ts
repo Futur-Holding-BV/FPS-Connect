@@ -327,11 +327,15 @@ router.post("/gebruikers", alleenBeheerder, async (req, res): Promise<void> => {
     }
     // Zelf-escalatiebeveiliging: niemand mag hogere niveaus toekennen dan eigen
     // matrix — geldt ook voor de uit rollen afgeleide matrix.
-    if (!req.permissies!.isHoofdbeheerder) {
+    // Uitzondering: wie volledig gebruikersbeheer heeft (gebruikers: 4) mag elk
+    // profiel toewijzen, ook als dat hogere rechten in andere modules bevat.
+    const heeftVolledigGebruikersbeheer = req.permissies!.heeftModuleRecht("gebruikers", 4);
+    if (!req.permissies!.isHoofdbeheerder && !heeftVolledigGebruikersbeheer) {
       for (const [mod, lvl] of Object.entries(toegestaanBevoegdheden)) {
         if (typeof lvl === "number" && !req.permissies!.heeftModuleRecht(mod, lvl)) {
+          const moduleLabel = mod;
           return void res.status(403).json({
-            error: "Geen toegang: bevoegdheid kan niet hoger zijn dan uw eigen niveau",
+            error: `Geen toegang: u kunt niveau ${lvl} voor module '${moduleLabel}' niet toewijzen omdat uw eigen toegangsniveau lager is. Vraag een beheerder met volledige gebruikersbeheer-rechten om dit profiel te koppelen.`,
           });
         }
       }
@@ -500,11 +504,15 @@ router.patch("/gebruikers/:id", alleenBeheerder, async (req, res): Promise<void>
     if (nieuweMatrix !== undefined) {
       // Zelf-escalatiebeveiliging: niemand mag hogere niveaus toekennen dan
       // eigen matrix — geldt ook voor de uit rollen afgeleide matrix.
-      if (!req.permissies!.isHoofdbeheerder) {
+      // Uitzondering: wie volledig gebruikersbeheer heeft (gebruikers: 4) mag elk
+      // profiel toewijzen, ook als dat hogere rechten in andere modules bevat.
+      const heeftVolledigGebruikersbeheerPatch = req.permissies!.heeftModuleRecht("gebruikers", 4);
+      if (!req.permissies!.isHoofdbeheerder && !heeftVolledigGebruikersbeheerPatch) {
         for (const [mod, lvl] of Object.entries(nieuweMatrix)) {
           if (typeof lvl === "number" && !req.permissies!.heeftModuleRecht(mod, lvl)) {
+            const moduleLabel = mod;
             return void res.status(403).json({
-              error: "Geen toegang: bevoegdheid kan niet hoger zijn dan uw eigen niveau",
+              error: `Geen toegang: u kunt niveau ${lvl} voor module '${moduleLabel}' niet toewijzen omdat uw eigen toegangsniveau lager is. Vraag een beheerder met volledige gebruikersbeheer-rechten om dit profiel te koppelen.`,
             });
           }
         }

@@ -97,7 +97,6 @@ import {
   Inbox,
 } from "lucide-react";
 import { useAuth } from "@/context/auth-context";
-import { useRol } from "@/context/rol-context";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
 import { useToast } from "@/hooks/use-toast";
 import { PaginaHulp } from "@/components/pagina-hulp";
@@ -447,9 +446,9 @@ export default function GebouwDetail() {
   const { id } = useParams<{ id: string }>();
   const gebouwId = Number(id);
   const { gebruiker } = useAuth();
-  const { rol: effectieveRol } = useRol();
+  const { heeftNiveau } = useBevoegdheid();
   const queryClient = useQueryClient();
-  const isBeheerder = BEHEERDER_ROLLEN.includes(effectieveRol as string);
+  const isBeheerder = heeftNiveau("gebouwen", 2);
 
   const { data: gebouw, isLoading } = useGetGebouw(gebouwId);
   const { data: kaartData } = useGetGebouwKaart(gebouwId);
@@ -461,8 +460,6 @@ export default function GebouwDetail() {
     gebouw_id: gebouwId,
     status: "open",
   });
-
-  const { heeftNiveau } = useBevoegdheid();
   const maakToewijzing = useCreateGebouwToewijzing();
   const verwijderToewijzing = useDeleteGebouwToewijzing();
   const gereedMelden = useMeldGebouwGereed();
