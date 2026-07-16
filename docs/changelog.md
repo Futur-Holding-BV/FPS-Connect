@@ -759,6 +759,8 @@ Totaal af te trekken op desktop: ~136px. De chat trok maar 64px af, waardoor de 
 
 **Benodigde operationele actie:** Jacqueline moet nog steeds haar huidig wachtwoord weten om in te kunnen loggen en het te wijzigen. Indien ze dat niet weet: René kan via de gebruikersbeheer-pagina een nieuw tijdelijk wachtwoord instellen (PATCH /gebruikers/:id met nieuw wachtwoord, `moetWachtwoordWijzigen` blijft dan `true` zodat ze verplicht wordt het te wijzigen bij inloggen).
 
+---
+
 ## 2026-07-15 — E-mailmelding bij mislukte GitHub push in post-merge.sh
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
@@ -777,6 +779,22 @@ Totaal af te trekken op desktop: ~136px. De chat trok maar 64px af, waardoor de 
 **Benodigde actie (eenmalig, door René):** Zorg dat `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, `RENE_ALERT_EMAIL`, `MAIL_FROM` en `MAIL_MAILBOX` als Replit-omgevingsvariabelen zijn ingesteld. Ze zijn al nodig voor de app-mailkoppeling; controleer of ze ook in de post-merge-omgeving beschikbaar zijn.
 
 ---
+## 2026-07-15 — E-mailmelding bij mislukte GitHub push in post-merge.sh
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+**Probleem:** Als de GitHub push in stap 7 van `scripts/post-merge.sh` mislukte, werd alleen een waarschuwing naar stderr geprint — René merkte dit niet actief. Een mislukte push betekent dat de productie-VPS stil achterloopt zonder enige melding.
+
+**Wijzigingen:**
+
+1. **`scripts/post-merge.sh`** — in de faaltak van stap 7 (PUSH_EXIT != 0) een e-mailmelding toegevoegd via Microsoft 365/Graph (client-credentials, zelfde aanpak als `deploy.yml`):
+   - Haalt een OAuth-token op bij Azure AD via `AZURE_TENANT_ID` / `AZURE_CLIENT_ID` / `AZURE_CLIENT_SECRET`
+   - Verstuurt een e-mail naar `RENE_ALERT_EMAIL` met: volledige commit-SHA, tijdstip (UTC), exit-code en een vierpoints herstelprocedure
+   - Gebruikt `MAIL_FROM` en `MAIL_MAILBOX` (met fallback naar de standaardadressen)
+   - Nooit een melding bij een geslaagde push (geen mailmoeheid)
+   - Fail-safe: ontbrekende env vars of Graph-fouten geven een INFO/WAARSCHUWING naar stderr, stoppen het script niet
+
+**Benodigde actie (eenmalig, door René):** Zorg dat `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, `RENE_ALERT_EMAIL`, `MAIL_FROM` en `MAIL_MAILBOX` als Replit-omgevingsvariabelen zijn ingesteld. Ze zijn al nodig voor de app-mailkoppeling; controleer of ze ook in de post-merge-omgeving beschikbaar zijn.
 
 ---
 
