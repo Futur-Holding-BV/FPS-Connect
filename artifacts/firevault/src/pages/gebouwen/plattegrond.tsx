@@ -50,10 +50,7 @@ import { ApplicatiePicker } from "@/components/applicatie-picker";
 import { ToepassingMultiSelect } from "@/components/toepassing-multi-select";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/context/auth-context";
-import { useRol } from "@/context/rol-context";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
-
-const BEHEERDER_ROLLEN = ["beheerder", "hoofdbeheerder"];
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
@@ -575,12 +572,8 @@ export default function Plattegrond() {
   const [opnameVerplaatsModus, setOpnameVerplaatsModus] = useState(false);
 
   const { gebruiker } = useAuth();
-  // isBeheerder volgt de EFFECTIEVE rol ("bekijken als" toont de teamlid-weergave);
-  // bewerkrechten komen uit de echte bevoegdheden-matrix. Backend dwingt schrijven
-  // sowieso server-side af.
-  const { rol: effectieveRol } = useRol();
   const { heeftNiveau } = useBevoegdheid();
-  const isBeheerder = BEHEERDER_ROLLEN.includes(effectieveRol as string);
+  const isBeheerder = heeftNiveau("gebouwen", 2);
   // Spots plaatsen, scheidingen tekenen en clusters beheren komt uit de
   // bevoegdheden-matrix (Spots-module, "Aanmaken en wijzigen" = niveau 3), niet
   // uit een rolnaam. De rol-enum kent alleen nog hoofdbeheerder/gebruiker/klant,
