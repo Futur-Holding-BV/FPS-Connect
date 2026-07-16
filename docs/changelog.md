@@ -1,3 +1,22 @@
+## 2026-07-16 — Vervang hardcoded rolchecks door bevoegdheidschecks (gebouwen detail & plattegrond)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+**Aanleiding:** `detail.tsx` en `plattegrond.tsx` gebruikten `BEHEERDER_ROLLEN.includes(effectieveRol)` om te bepalen of beheeracties zichtbaar zijn. Gebruikers met `rol=gebruiker` en een hoog gebouwen-bevoegdheidsniveau (bijv. René Vink, gebouwen=4) werden hierdoor onterecht geblokkeerd.
+
+**Wijzigingen:**
+- `artifacts/firevault/src/pages/gebouwen/detail.tsx` — `isBeheerder = heeftNiveau("gebouwen", 2)` (was: `BEHEERDER_ROLLEN.includes(effectieveRol)`)
+- `artifacts/firevault/src/pages/gebouwen/plattegrond.tsx` — idem; `useRol` import en `effectieveRol` verwijderd
+- `scripts/src/e2e-monteur-run.ts` + `e2e-web-run.ts` — vroege exit-detectie (< 10s + non-zero) voorkomt dat parallelle runners elkaars api-server beëindigen
+
+**Bewijsvoering (productie connect.fps-one.nl):**
+- GitHub compare `bf00bca → 43a38209`: `status: ahead, behind_by: 0` — mijn commit zit in de gedeployde build
+- `/api/versie`: `2026.07.16-43a38209` — build actief
+- Productie DB: 4 gebruikers (René Vink gebouwen=4, Tessa Vink 4, Jacqueline 3, Ruben 3) waren geblokkeerd, zijn nu vrijgegeven via `heeftNiveau`
+- Negatief geval: Tester Monteur (gebouwen=1) correct geblokkeerd
+
+---
+
 ## 2026-07-18 — CONSOLIDATE_EMPLOYEE_ONBOARDING: onboarding uitsluitend via rij-actie met userId
 
 - **Uitvoering:** refactor + contractverharding | **Kwaliteit:** hoog | **Risico:** laag
