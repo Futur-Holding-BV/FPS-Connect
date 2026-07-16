@@ -6,27 +6,23 @@
 
 **Wijzigingen:**
 
-1. **`lib/db/src/schema/organisatie.ts`** — nieuw: `documentClassificatieCorrectiesTable` (id, bestandshash, originele\_categorie, gecorrigeerde\_categorie, werkmaatschappij, bewijs\_signalen jsonb, aangemaakt\_op). DB-tabel direct aangemaakt via ALTER SQL + index op werkmaatschappij/datum. TypeScript-type `DocumentClassificatieCorrectie` geëxporteerd.
+1. **`lib/db/src/schema/organisatie.ts`** — nieuw: `documentClassificatieCorrectiesTable`
+2. **`artifacts/api-server/src/lib/documentIntelligence.ts`** — kern-engine: inspecteerDocument + multi-pagina vision + Studio-modellen + correctie-leerloop + ai_model veld
+3. **`artifacts/api-server/src/routes/inbox.ts`** — document_sjabloon fix + correctie-opname
+4. **`artifacts/api-server/src/routes/slim-upload.ts`** — tekst_gevonden + ai_model
+5. **`artifacts/firevault/src/components/slim-upload-balk.tsx`** — Analyse-details UI-blok
+6. **`lib/db/scripts/apply-additive.mjs`** + **`schema-healthcheck.mjs`** — document_classificatie_correcties in post-merge migratie
 
-2. **`artifacts/api-server/src/lib/documentIntelligence.ts`** — kern-engine herschreven:
-   - Importeert nu `inspecteerDocument` (uit `./documentInspectie`) en `renderPdfPaginas` (uit `./pdfVisie`).
-   - `ExtractieResultaat` uitgebreid met `paginaTeksten: string[]`; PDF-extractie geeft die door vanuit `extraheerPdfTekst()`.
-   - `DocumentIntelligenceResultaat` heeft nieuw veld `ai_model: string | null`.
-   - Vaste 80-tekens drempel verwijderd; stap 3a gebruikt `inspecteerDocument()` met `paginaTeksten` om te bepalen of visuele analyse nodig is en welke pagina's prioriteit hebben.
-   - Stap 3 (vision): pixel-based PDFs renderen nu tot 3 prioriteitspagina's via `renderPdfPaginas()`; afbeeldingsbestanden gebruiken `haalAfbeeldingVoorAfbeeldingsbestand()`.
-   - Stap 3b: Document Studio-modellen worden opgehaald voor de werkmaatschappij (status='goedgekeurd') en meegegeven aan het AI-prompt.
-   - Stap 3c: tot 10 recente correcties voor de werkmaatschappij worden opgehaald en als leervoorbeelden aan het AI-prompt toegevoegd.
-   - `aiContentAnalyse()` accepteert nu `afbeeldingen: Array<{paginaNummer, base64}>` (meerdere afbeeldingen), `studioContext` en `correctieContext`; retourneert ook `ai_model: "gpt-4o-mini"`.
+---
 
-3. **`artifacts/api-server/src/routes/inbox.ts`** — twee fixes:
-   - `DOC_CATEGORIE_NAAR_INBOX`: `document_sjabloon` mapt nu correct naar `"document_sjabloon"` (was: `"onbekend"`).
-   - PATCH `/inbox/items/:id`: bij categorie-wijziging wordt een rij in `document_classificatie_correcties` ingevoegd. Werkmaatschappij wordt live via DB opgehaald (medewerker-join), net als bij de POST-upload. Niet-kritiek: fouten worden gelogd maar blokkeren de response niet.
+## 2026-07-16 — Herstel chatfunctie: invoerveld buiten beeld door verkeerde hoogte-berekening
 
-4. **`artifacts/api-server/src/routes/slim-upload.ts`** — `SlimUploadSuggestie` interface heeft nieuwe velden `tekst_gevonden: boolean` en `ai_model: string | null`; `classificeerBestand()` mapt ze vanuit het analyse-resultaat.
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
 
-5. **`artifacts/firevault/src/components/slim-upload-balk.tsx`** — `SlimUploadSuggestie` interface bijgewerkt met `tekst_gevonden?` en `ai_model?`; nieuw inklapbaar "Analyse-details" blok toont tekst gevonden / vision gebruikt / AI-model direct in de bevestigingsstap.
+**Wijzigingen:**
 
-6. **`lib/db/scripts/apply-additive.mjs`** + **`schema-healthcheck.mjs`** — `document_classificatie_correcties` tabel toegevoegd aan de post-merge DB-migratie en healthcheck.
+1. **`artifacts/firevault/src/layouts/beheerder-layout.tsx`** — chat-layout fix (overflow-hidden, flex-shrink-0, flex-1 min-h-0)
+2. **`artifacts/firevault/src/pages/berichten/index.tsx`** — h-full i.p.v. h-[calc(100vh-64px)]
 
 ---
 
