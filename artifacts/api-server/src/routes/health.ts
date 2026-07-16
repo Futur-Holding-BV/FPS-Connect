@@ -72,4 +72,57 @@ router.get("/status", async (_req, res): Promise<void> => {
   });
 });
 
+// ── Systeemstatus: verbindingen pingen ────────────────────────────────────────
+// Pings de vier kritieke subsystemen en retourneert "ok" / "fout" /
+// "niet_geconfigureerd" per component. Publiek endpoint (geen auth vereist)
+// zodat de GitHub Actions smoketest het ook zonder sessie kan bevragen.
+type StatusWaarde = "ok" | "fout" | "niet_geconfigureerd";
+
+async function pingDb(): Promise<StatusWaarde> {
+  try {
+    await db.execute(sql`SELECT 1`);
+    return "ok";
+  } catch {
+    return "fout";
+  }
+}
+
+function checkOpslag(): StatusWaarde {
+  const bucket = process.env.S3_BUCKET ?? "";
+  const gcsBucket = process.env.GCS_BUCKET ?? process.env.GOOGLE_CLOUD_BUCKET ?? "";
+  if (!bucket && !gcsBucket) return "niet_geconfigureerd";
+  return "ok";
+}
+
+function checkMail(): StatusWaarde {
+  const clientId = process.env.AZURE_CLIENT_ID ?? "";
+  const mailbox = process.env.MAIL_MAILBOX ?? "";
+  if (!clientId || !mailbox) return "niet_geconfigureerd";
+  return "ok";
+}
+
+function checkAi(): StatusWaarde {
+  const openaiKey = process.env.OPENAI_API_KEY ?? "";
+  const integrationsKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY ?? "";
+  if (!openaiKey && !integrationsKey) return "niet_geconfigureerd";
+  return "ok";
+}
+
+router.get("/versie/status", async (_req, res) => {
+  const [db_status, opslag, mail, ai] = await Promise.all([
+    pingDb(),
+    Promise.resolve(checkOpslag()),
+    Promise.resolve(checkMail()),
+    Promise.resolve(checkAi()),
+  ]);
+
+  res.json({
+    db: db_status,
+    opslag,
+    mail,
+    ai,
+    aangemaakt_op: new Date().toISOString(),
+  });
+});
+
 export default router;

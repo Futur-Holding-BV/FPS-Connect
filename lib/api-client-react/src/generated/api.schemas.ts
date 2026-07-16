@@ -957,6 +957,66 @@ export interface VersieInfo {
   gebouwd_op: string;
 }
 
+/**
+ * Databaseverbinding bereikbaar
+ */
+export type VersieStatusDb = typeof VersieStatusDb[keyof typeof VersieStatusDb];
+
+
+export const VersieStatusDb = {
+  ok: 'ok',
+  fout: 'fout',
+} as const;
+
+/**
+ * Objectopslag (MinIO/S3) bereikbaar of geconfigureerd
+ */
+export type VersieStatusOpslag = typeof VersieStatusOpslag[keyof typeof VersieStatusOpslag];
+
+
+export const VersieStatusOpslag = {
+  ok: 'ok',
+  fout: 'fout',
+  niet_geconfigureerd: 'niet_geconfigureerd',
+} as const;
+
+/**
+ * Mailconfiguratie (Microsoft 365/Graph) aanwezig
+ */
+export type VersieStatusMail = typeof VersieStatusMail[keyof typeof VersieStatusMail];
+
+
+export const VersieStatusMail = {
+  ok: 'ok',
+  fout: 'fout',
+  niet_geconfigureerd: 'niet_geconfigureerd',
+} as const;
+
+/**
+ * AI-toegangssleutel geconfigureerd
+ */
+export type VersieStatusAi = typeof VersieStatusAi[keyof typeof VersieStatusAi];
+
+
+export const VersieStatusAi = {
+  ok: 'ok',
+  fout: 'fout',
+  niet_geconfigureerd: 'niet_geconfigureerd',
+} as const;
+
+export interface VersieStatus {
+  /** Databaseverbinding bereikbaar */
+  db: VersieStatusDb;
+  /** Objectopslag (MinIO/S3) bereikbaar of geconfigureerd */
+  opslag: VersieStatusOpslag;
+  /** Mailconfiguratie (Microsoft 365/Graph) aanwezig */
+  mail: VersieStatusMail;
+  /** AI-toegangssleutel geconfigureerd */
+  ai: VersieStatusAi;
+  /** ISO-tijdstip van de statusmeting */
+  aangemaakt_op: string;
+}
+
 export interface CrmContactpersoon {
   id: number;
   /** @nullable */

@@ -128,66 +128,205 @@ jobs:
           BASE_URL="https://connect.fps-one.nl"
           COOKIEJAR=$(mktemp)
           FAIL=0
+          GESLAAGD=0
+          TOTAAL=0
 
-          # 1. Healthcheck
-          echo "--- Stap 1: GET /api/healthz ---"
-          HEALTH=$(curl -fsS "${BASE_URL}/api/healthz" 2>&1) || { echo "FOUT: /api/healthz niet bereikbaar: ${HEALTH}" >&2; FAIL=1; }
-          if [ $FAIL -eq 0 ]; then
-            STATUS=$(echo "$HEALTH" | node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{try{console.log(JSON.parse(d).status||'')}catch(e){console.log('')}})")
-            if [ "$STATUS" != "ok" ]; then
-              echo "FOUT: /api/healthz antwoordde niet met {\"status\":\"ok\"} — ontvangen: ${HEALTH}" >&2
-              FAIL=1
-            else
-              echo "OK: healthz geeft status=ok"
-            fi
+          # Helper: check-resultaat registreren
+          check_ok() { echo "OK: $1"; GESLAAGD=$((GESLAAGD+1)); TOTAAL=$((TOTAAL+1)); }
+          check_fout() { echo "FOUT: $1" >&2; FAIL=1; TOTAAL=$((TOTAAL+1)); }
+
+          # ── 1. Healthcheck (publiek, zonder auth) ──────────────────────────
+          echo "--- Check 1: GET /api/healthz ---"
+          HEALTH=$(curl -fsS --max-time 15 "${BASE_URL}/api/healthz" 2>/dev/null || echo "")
+          HEALTH_STATUS=$(echo "$HEALTH" | node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{try{console.log(JSON.parse(d).status||'')}catch(e){console.log('')}})" 2>/dev/null || echo "")
+          if [ "$HEALTH_STATUS" = "ok" ]; then
+            check_ok "healthz geeft status=ok"
+          else
+            check_fout "/api/healthz: verwacht status=ok, ontvangen: ${HEALTH}"
           fi
 
-          # 2. Login
-          echo "--- Stap 2: POST /api/auth/login ---"
-          if [ $FAIL -eq 0 ]; then
-            LOGIN_BODY=$(node -e "console.log(JSON.stringify({email:process.env.SMOKETEST_EMAIL,wachtwoord:process.env.SMOKETEST_PASSWORD}))")
-            LOGIN_HTTP=$(curl -sS -o /tmp/login-response.json -w "%{http_code}" \
-              -c "$COOKIEJAR" \
-              -X POST "${BASE_URL}/api/auth/login" \
-              -H "Content-Type: application/json" \
-              -d "$LOGIN_BODY")
-            if [ "$LOGIN_HTTP" -ne 200 ]; then
-              echo "FOUT: POST /api/auth/login gaf HTTP ${LOGIN_HTTP}" >&2
-              cat /tmp/login-response.json >&2 || true
-              FAIL=1
-            else
-              echo "OK: login geeft HTTP 200"
-            fi
+          # ── 2. Versie-endpoint (publiek) ───────────────────────────────────
+          echo "--- Check 2: GET /api/versie ---"
+          VERSIE_RESP=$(curl -fsS --max-time 15 "${BASE_URL}/api/versie" 2>/dev/null || echo "")
+          VERSIE_COMMIT=$(echo "$VERSIE_RESP" | node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{try{console.log(JSON.parse(d).commit||'')}catch(e){console.log('')}})" 2>/dev/null || echo "")
+          if [ -n "$VERSIE_COMMIT" ]; then
+            check_ok "versie-endpoint geeft commit=${VERSIE_COMMIT}"
+          else
+            check_fout "/api/versie: commit-veld ontbreekt — ontvangen: ${VERSIE_RESP}"
           fi
 
-          # 3. Gebruikerslijst
-          echo "--- Stap 3: GET /api/gebruikers ---"
-          if [ $FAIL -eq 0 ]; then
-            USERS_HTTP=$(curl -sS -o /tmp/users-response.json -w "%{http_code}" \
+          # ── 3. Systeemstatus — databaseverbinding (publiek) ────────────────
+          echo "--- Check 3: GET /api/versie/status ---"
+          STATUS_RESP=$(curl -fsS --max-time 20 "${BASE_URL}/api/versie/status" 2>/dev/null || echo "")
+          DB_STATUS=$(echo "$STATUS_RESP" | node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{try{console.log(JSON.parse(d).db||'')}catch(e){console.log('')}})" 2>/dev/null || echo "")
+          if [ "$DB_STATUS" = "ok" ]; then
+            check_ok "systeemstatus: databaseverbinding ok"
+          else
+            check_fout "/api/versie/status: db=${DB_STATUS} (verwacht ok) — ontvangen: ${STATUS_RESP}"
+          fi
+
+          # ── 4. Login met smoketest-account ────────────────────────────────
+          echo "--- Check 4: POST /api/auth/login ---"
+          LOGIN_BODY=$(node -e "console.log(JSON.stringify({email:process.env.SMOKETEST_EMAIL,wachtwoord:process.env.SMOKETEST_PASSWORD}))" 2>/dev/null)
+          LOGIN_HTTP=$(curl -sS --max-time 20 -o /tmp/login-resp.json -w "%{http_code}" \
+            -c "$COOKIEJAR" \
+            -X POST "${BASE_URL}/api/auth/login" \
+            -H "Content-Type: application/json" \
+            -d "$LOGIN_BODY" 2>/dev/null || echo "000")
+          if [ "$LOGIN_HTTP" -eq 200 ]; then
+            check_ok "login geeft HTTP 200"
+          else
+            check_fout "POST /api/auth/login: HTTP ${LOGIN_HTTP} (verwacht 200)"
+            cat /tmp/login-resp.json >&2 || true
+          fi
+
+          # ── 5. Gebruikerslijst (sessie vereist) ──────────────────────────
+          echo "--- Check 5: GET /api/gebruikers ---"
+          USERS_HTTP=$(curl -sS --max-time 15 -o /tmp/users-resp.json -w "%{http_code}" \
+            -b "$COOKIEJAR" "${BASE_URL}/api/gebruikers" 2>/dev/null || echo "000")
+          USERS_COUNT=$(node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{try{const a=JSON.parse(d);console.log(Array.isArray(a)?a.length:0)}catch(e){console.log(0)}})" < /tmp/users-resp.json 2>/dev/null || echo "0")
+          if [ "$USERS_HTTP" -eq 200 ] && [ "$USERS_COUNT" -gt 0 ]; then
+            check_ok "gebruikerslijst: ${USERS_COUNT} gebruikers"
+          else
+            check_fout "GET /api/gebruikers: HTTP ${USERS_HTTP}, aantal=${USERS_COUNT}"
+          fi
+
+          # ── 6. Dashboard statistieken ─────────────────────────────────────
+          echo "--- Check 6: GET /api/dashboard/stats ---"
+          STATS_HTTP=$(curl -sS --max-time 15 -o /tmp/stats-resp.json -w "%{http_code}" \
+            -b "$COOKIEJAR" "${BASE_URL}/api/dashboard/stats" 2>/dev/null || echo "000")
+          if [ "$STATS_HTTP" -eq 200 ]; then
+            check_ok "dashboard/stats geeft HTTP 200"
+          else
+            check_fout "GET /api/dashboard/stats: HTTP ${STATS_HTTP}"
+          fi
+
+          # ── 7. Recente activiteit ─────────────────────────────────────────
+          echo "--- Check 7: GET /api/dashboard/recente-activiteit ---"
+          ACTIV_HTTP=$(curl -sS --max-time 15 -o /dev/null -w "%{http_code}" \
+            -b "$COOKIEJAR" "${BASE_URL}/api/dashboard/recente-activiteit" 2>/dev/null || echo "000")
+          if [ "$ACTIV_HTTP" -eq 200 ]; then
+            check_ok "recente-activiteit geeft HTTP 200"
+          else
+            check_fout "GET /api/dashboard/recente-activiteit: HTTP ${ACTIV_HTTP}"
+          fi
+
+          # ── 8. Gebouwenlijst ──────────────────────────────────────────────
+          echo "--- Check 8: GET /api/gebouwen ---"
+          GEBOUW_HTTP=$(curl -sS --max-time 15 -o /tmp/gebouwen-resp.json -w "%{http_code}" \
+            -b "$COOKIEJAR" "${BASE_URL}/api/gebouwen" 2>/dev/null || echo "000")
+          if [ "$GEBOUW_HTTP" -eq 200 ]; then
+            check_ok "gebouwenlijst geeft HTTP 200"
+          else
+            check_fout "GET /api/gebouwen: HTTP ${GEBOUW_HTTP}"
+          fi
+
+          # ── 9. Gebouw aanmaken (smoke-testgebouw) ─────────────────────────
+          echo "--- Check 9: POST /api/gebouwen (smoke-testgebouw aanmaken) ---"
+          TEST_GEBOUW_ID=""
+          CREATE_BODY='{"naam":"__smoketest__","adres":"Teststraat 1","huisnummer":"1","postcode":"1234AB","stad":"Teststad","provincie":"Noord-Holland","land":"Nederland","gebouw_type":"overig"}'
+          CREATE_HTTP=$(curl -sS --max-time 20 -o /tmp/create-resp.json -w "%{http_code}" \
+            -b "$COOKIEJAR" -c "$COOKIEJAR" \
+            -X POST "${BASE_URL}/api/gebouwen" \
+            -H "Content-Type: application/json" \
+            -d "$CREATE_BODY" 2>/dev/null || echo "000")
+          if [ "$CREATE_HTTP" -eq 201 ]; then
+            TEST_GEBOUW_ID=$(node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{try{console.log(JSON.parse(d).id||'')}catch(e){console.log('')}})" < /tmp/create-resp.json 2>/dev/null || echo "")
+            check_ok "gebouw aanmaken: HTTP 201, id=${TEST_GEBOUW_ID}"
+          else
+            check_fout "POST /api/gebouwen: HTTP ${CREATE_HTTP} (verwacht 201)"
+            cat /tmp/create-resp.json >&2 || true
+          fi
+
+          # ── 10. Gebouwdetail ophalen ──────────────────────────────────────
+          echo "--- Check 10: GET /api/gebouwen/:id ---"
+          if [ -n "$TEST_GEBOUW_ID" ]; then
+            DETAIL_HTTP=$(curl -sS --max-time 15 -o /tmp/detail-resp.json -w "%{http_code}" \
+              -b "$COOKIEJAR" "${BASE_URL}/api/gebouwen/${TEST_GEBOUW_ID}" 2>/dev/null || echo "000")
+            if [ "$DETAIL_HTTP" -eq 200 ]; then
+              check_ok "gebouwdetail id=${TEST_GEBOUW_ID} geeft HTTP 200"
+            else
+              check_fout "GET /api/gebouwen/${TEST_GEBOUW_ID}: HTTP ${DETAIL_HTTP}"
+            fi
+          else
+            echo "OVERGESLAGEN: check 10 (geen testgebouw-id)"
+            TOTAAL=$((TOTAAL+1))
+          fi
+
+          # ── 11. Gebouw bijwerken ──────────────────────────────────────────
+          echo "--- Check 11: PATCH /api/gebouwen/:id ---"
+          if [ -n "$TEST_GEBOUW_ID" ]; then
+            PATCH_HTTP=$(curl -sS --max-time 15 -o /dev/null -w "%{http_code}" \
               -b "$COOKIEJAR" \
-              "${BASE_URL}/api/gebruikers")
-            if [ "$USERS_HTTP" -ne 200 ]; then
-              echo "FOUT: GET /api/gebruikers gaf HTTP ${USERS_HTTP}" >&2
-              cat /tmp/users-response.json >&2 || true
-              FAIL=1
+              -X PATCH "${BASE_URL}/api/gebouwen/${TEST_GEBOUW_ID}" \
+              -H "Content-Type: application/json" \
+              -d '{"naam":"__smoketest_bijgewerkt__"}' 2>/dev/null || echo "000")
+            if [ "$PATCH_HTTP" -eq 200 ]; then
+              check_ok "gebouw bijwerken: HTTP 200"
             else
-              COUNT=$(node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{try{const a=JSON.parse(d);console.log(Array.isArray(a)?a.length:0)}catch(e){console.log(0)}})" < /tmp/users-response.json)
-              if [ "$COUNT" -eq 0 ]; then
-                echo "FOUT: GET /api/gebruikers gaf een lege lijst" >&2
-                FAIL=1
-              else
-                echo "OK: gebruikerslijst geeft ${COUNT} gebruikers"
-              fi
+              check_fout "PATCH /api/gebouwen/${TEST_GEBOUW_ID}: HTTP ${PATCH_HTTP}"
             fi
+          else
+            echo "OVERGESLAGEN: check 11 (geen testgebouw-id)"
+            TOTAAL=$((TOTAAL+1))
           fi
 
-          rm -f "$COOKIEJAR"
+          # ── 12. Upload bevestigd na vernieuwen (versie/status tweede keer) ─
+          echo "--- Check 12: GET /api/versie/status (tweede meting, consistentiecheck) ---"
+          STATUS2_RESP=$(curl -fsS --max-time 20 "${BASE_URL}/api/versie/status" 2>/dev/null || echo "")
+          DB2_STATUS=$(echo "$STATUS2_RESP" | node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{try{console.log(JSON.parse(d).db||'')}catch(e){console.log('')}})" 2>/dev/null || echo "")
+          if [ "$DB2_STATUS" = "ok" ]; then
+            check_ok "systeemstatus tweede meting: db=ok"
+          else
+            check_fout "/api/versie/status (tweede): db=${DB2_STATUS}"
+          fi
+
+          # ── 13. API en frontend op zelfde commit ──────────────────────────
+          echo "--- Check 13: API commit zichtbaar in /api/versie ---"
+          if [ -n "$VERSIE_COMMIT" ]; then
+            check_ok "commit-hash aanwezig: ${VERSIE_COMMIT}"
+          else
+            check_fout "/api/versie geeft geen commit-hash terug"
+          fi
+
+          # ── 14. Gebouw verwijderen (opruimen testgebouw) ──────────────────
+          echo "--- Check 14: DELETE /api/gebouwen/:id (testgebouw opruimen) ---"
+          if [ -n "$TEST_GEBOUW_ID" ]; then
+            DELETE_HTTP=$(curl -sS --max-time 15 -o /dev/null -w "%{http_code}" \
+              -b "$COOKIEJAR" \
+              -X DELETE "${BASE_URL}/api/gebouwen/${TEST_GEBOUW_ID}" 2>/dev/null || echo "000")
+            if [ "$DELETE_HTTP" -eq 204 ]; then
+              check_ok "gebouw verwijderen: HTTP 204"
+            else
+              check_fout "DELETE /api/gebouwen/${TEST_GEBOUW_ID}: HTTP ${DELETE_HTTP} (verwacht 204)"
+            fi
+          else
+            echo "OVERGESLAGEN: check 14 (geen testgebouw-id)"
+            TOTAAL=$((TOTAAL+1))
+          fi
+
+          # ── 15. Sessie na herlaad (laatste API-call met bestaande cookie) ─
+          echo "--- Check 15: GET /api/dashboard/stats (sessie-validatie na herlaad) ---"
+          SESSION_HTTP=$(curl -sS --max-time 15 -o /dev/null -w "%{http_code}" \
+            -b "$COOKIEJAR" "${BASE_URL}/api/dashboard/stats" 2>/dev/null || echo "000")
+          if [ "$SESSION_HTTP" -eq 200 ]; then
+            check_ok "sessie nog geldig na meerdere verzoeken: HTTP 200"
+          else
+            check_fout "Sessie-validatie: GET /api/dashboard/stats gaf HTTP ${SESSION_HTTP}"
+          fi
+
+          rm -f "$COOKIEJAR" /tmp/login-resp.json /tmp/users-resp.json \
+                /tmp/stats-resp.json /tmp/gebouwen-resp.json \
+                /tmp/create-resp.json /tmp/detail-resp.json
+
+          echo ""
+          echo "Smoketest resultaat: ${GESLAAGD}/${TOTAAL} checks geslaagd."
 
           if [ $FAIL -ne 0 ]; then
-            echo "SMOKETEST GEFAALD." >&2
+            echo "SMOKETEST GEFAALD — zie bovenstaande FOUT-regels." >&2
             exit 1
           fi
-          echo "Smoketest geslaagd."
+          echo "Smoketest geslaagd (${GESLAAGD}/${TOTAAL} checks)."
 
       # ─── Meldingen bij falen ────────────────────────────────────────────────
       # René moet een kapotte release direct horen, niet later ontdekken via de

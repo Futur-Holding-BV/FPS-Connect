@@ -1,3 +1,27 @@
+## 2026-07-16 — Productiecontrole herstel: versie-endpoint, systeemstatus-pagina, uitgebreide smoketest, env-check, rollback-documentatie
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+**Aanleiding:** Vier structurele hiaten in de deployment-infrastructuur: geen pre-deployment env-check, geen versie-endpoint, beperkte smoketest (3 checks) en geen systeemstatus-pagina voor de hoofdbeheerder.
+
+**Wijzigingen:**
+
+1. **`GET /api/versie/status` (nieuw endpoint)** — publiek endpoint dat DB (SELECT 1), objectopslag (env-check), mail (Azure env-check) en AI (OpenAI key env-check) pingt en `{db, opslag, mail, ai, aangemaakt_op}` teruggeeft. Toegevoegd aan OpenAPI spec (`/versie/status` + `VersieStatus` schema), codegen hergedraaid, geïmplementeerd in `artifacts/api-server/src/routes/health.ts`.
+
+2. **`/beheer/systeemstatus` (nieuwe beheer-pagina)** — zichtbaar voor hoofdbeheerder via Instellingen-menu. Toont actieve Git-commit (met GitHub-link), versienummer, builddatum en vier statusbollen (DB, objectopslag, mail, AI). Route toegevoegd aan `App.tsx`, nav-item in `instellingen/index.tsx`.
+
+3. **GitHub Actions smoketest uitgebreid van 3 naar 15 checks** — `deploy.yml` smoketest voert nu: healthz, versie, versie/status (db=ok), login, gebruikerslijst, dashboard/stats, recente-activiteit, gebouwenlijst, gebouw aanmaken (201), gebouwdetail, gebouw bijwerken, versie/status (consistentiecheck), commit aanwezig, gebouw verwijderen (cleanup), sessie na herlaad.
+
+4. **Pre-deployment env-variabelecheck in `scripts/deploy-production.sh`** — controleert 10 verplichte variabelen in `.env.production` vóór de eerste container start. Bij ontbrekende variabele: exit 1 met duidelijke foutmelding en verwijzing naar checklist.
+
+5. **Pre-taak sync-verificatie in `scripts/post-merge.sh`** — controleert bovenaan het script of GitHub main commits bevat die lokaal ontbreken. Niet-blokkerend: waarschuwing met divergente commits als ze er zijn.
+
+6. **`docs/productie-env-checklist.md` (nieuw)** — volledige tabel van alle verplichte/aanbevolen variabelen, locatie (VPS / GitHub Actions / beide), beveiligingsregels (wat nooit in Git mag).
+
+7. **`docs/PRODUCTION_RUNBOOK.md` uitgebreid** — nieuwe secties: automatische rollback-procedure, versie controleren (pagina + API), smoketest handmatig triggeren, omgevingsvariabelen-checklist verwijzing, Definition of Done.
+
+---
+
 ## 2026-07-16 — Herstel deployment-keten: Replit → GitHub → VPS (structureel)
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
@@ -88,6 +112,8 @@ Totaal af te trekken op desktop: ~136px. De chat trok maar 64px af, waardoor de 
 
 2. **`artifacts/firevault/src/pages/berichten/index.tsx`** — root-div `h-[calc(100vh-64px)]` → `h-full`
 
+---
+
 ## 2026-07-16 — Post-merge faalmelding altijd bezorgd via fallback-kanaal
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
@@ -105,7 +131,7 @@ Totaal af te trekken op desktop: ~136px. De chat trok maar 64px af, waardoor de 
    - Graph `sendMail` HTTP-fout
 3. `docs/PRODUCTION_RUNBOOK.md` — nieuwe aandachtspunt toegevoegd over de fallback-volgorde en vereiste secrets.
 
-**Benodigde actie (optioneel, door René):** Stel `SLACK_WEBHOOK_URL` of `NTFY_URL` in als Replit-secret voor een gegarandeerd alternatief kanaal naast Graph-e-mail.
+**Benodigde actie (optioneel, door René):** Stel `SLACK_WEBHOOK_URL` of `NTFY_URL` in als Replit-secret for een gegarandeerd alternatief kanaal naast Graph-e-mail.
 
 ## 2026-07-16 — Slim-upload aanvraag-mail koppelen aan gebouw en offerte aanmaken
 
@@ -124,7 +150,7 @@ Totaal af te trekken op desktop: ~136px. De chat trok maar 64px af, waardoor de 
 3. **`artifacts/firevault/src/components/slim-upload-balk.tsx`** — aanvraag-formulier in `BeslisScherm`:
    - Wanneer de categorie "aanvraag" is, verschijnt een formulier met werkmaatschappij-dropdown en optioneel gebouw-dropdown (inclusief AI-herkend gebouwnaam als hint).
    - `verzendAanvraag()` stuurt een `FormData` POST naar `/api/inbox/offerte-aanvraag` en navigeert daarna naar de nieuwe offerte of het gebouw.
-   - `opBevestigen` slaat de documentbibliotheek-upload over voor categorie "aanvraag" (de API-call is al gedaan in `verzendAanvraag`).
+   - `opBevestigen` slaat de documentbibliotheek-upload over for categorie "aanvraag" (de API-call is al gedaan in `verzendAanvraag`).
 
 4. **`artifacts/firevault/src/pages/gebouwen/detail.tsx`** — nieuw `GebouwInboxAanvragen` component:
    - Toont alle inbox-items met `document_categorie === "aanvraag"` gekoppeld aan het gebouw.
@@ -149,8 +175,8 @@ Totaal af te trekken op desktop: ~136px. De chat trok maar 64px af, waardoor de 
    - `DocumentIntelligenceResultaat` heeft nieuw veld `ai_model: string | null`.
    - Vaste 80-tekens drempel verwijderd; stap 3a gebruikt `inspecteerDocument()` met `paginaTeksten` om te bepalen of visuele analyse nodig is en welke pagina's prioriteit hebben.
    - Stap 3 (vision): pixel-based PDFs renderen nu tot 3 prioriteitspagina's via `renderPdfPaginas()`; afbeeldingsbestanden gebruiken `haalAfbeeldingVoorAfbeeldingsbestand()`.
-   - Stap 3b: Document Studio-modellen worden opgehaald voor de werkmaatschappij (status='goedgekeurd') en meegegeven aan het AI-prompt.
-   - Stap 3c: tot 10 recente correcties voor de werkmaatschappij worden opgehaald en als leervoorbeelden aan het AI-prompt toegevoegd.
+   - Stap 3b: Document Studio-modellen worden opgehaald for de werkmaatschappij (status='goedgekeurd') en meegegeven aan het AI-prompt.
+   - Stap 3c: tot 10 recente correcties for de werkmaatschappij worden opgehaald en als leervoorbeelden aan het AI-prompt toegevoegd.
    - `aiContentAnalyse()` accepteert nu `afbeeldingen: Array<{paginaNummer, base64}>` (meerdere afbeeldingen), `studioContext` en `correctieContext`; retourneert ook `ai_model: "gpt-4o-mini"`.
 
 3. **`artifacts/api-server/src/routes/inbox.ts`** — twee fixes:
@@ -162,55 +188,6 @@ Totaal af te trekken op desktop: ~136px. De chat trok maar 64px af, waardoor de 
 5. **`artifacts/firevault/src/components/slim-upload-balk.tsx`** — `SlimUploadSuggestie` interface bijgewerkt met `tekst_gevonden?` en `ai_model?`; nieuw inklapbaar "Analyse-details" blok toont tekst gevonden / vision gebruikt / AI-model direct in de bevestigingsstap.
 
 6. **`lib/db/scripts/apply-additive.mjs`** + **`schema-healthcheck.mjs`** — document_classificatie_correcties in post-merge migratie.
-
----
-
-## 2026-07-16 — Herstel chatfunctie: invoerveld buiten beeld door verkeerde hoogte-berekening
-
-- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
-
-**Rootprobleem:** De `BerichtenPagina` gebruikte `h-[calc(100vh-64px)]` als vaste hoogte, maar de `beheerder-layout.tsx` heeft geen vaste 64px-header. De werkelijke structuur is:
-- `<main className="flex-1 min-h-screen overflow-auto">` — de hele main scrollt
-- Topbalk (`py-1.5 flex items-center`) ≈ 40px
-- Contentomhulling `<div className="p-3 md:p-4 xl:p-6 pb-20">` — op desktop p-4 + pb-20 = 96px extra
-
-Totaal af te trekken op desktop: ~136px. De chat trok maar 64px af, waardoor de pagina groter was dan de beschikbare ruimte, de `main` ging scrollen in plaats van de interne chatscroll, en het invoerveld verdween buiten beeld.
-
-**Diagnosestappen bevestigd:**
-- Chat-tabellen (`chat_gesprekken`, `chat_deelnemers`, `chat_berichten`) bestaan in productie ✓
-- `chatRouter` correct geregistreerd in `routes/index.ts` (regels 45 en 176) ✓
-- Chat-endpoints aanwezig in `openapi.yaml` en gegenereerde hooks kloppen ✓
-- Productie-DB is leeg (nog geen gesprekken aangemaakt) — verwacht gedrag voor eerste gebruik ✓
-
-**Wijzigingen:**
-
-1. **`artifacts/firevault/src/layouts/beheerder-layout.tsx`** — `location === "/berichten"` detectie:
-   - `main` krijgt `overflow-hidden flex flex-col h-screen` i.p.v. `min-h-screen overflow-auto`
-   - Topbalk wordt `flex-shrink-0` i.p.v. `sticky top-0` (overflow-hidden maakt sticky irrelevant)
-   - Contentomhulling wordt `flex-1 min-h-0` zonder padding voor de berichten-pagina
-
-2. **`artifacts/firevault/src/pages/berichten/index.tsx`** — root-div `h-[calc(100vh-64px)]` → `h-full`
-
----
-
-## 2026-07-16 — Post-merge faalmelding altijd bezorgd via fallback-kanaal
-
-- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
-
-**Aanleiding:** Als `AZURE_TENANT_ID`/`AZURE_CLIENT_ID`/`AZURE_CLIENT_SECRET`/`RENE_ALERT_EMAIL` niet ingesteld zijn (of als het Graph-token mislukt of `sendMail` een fout geeft), sloeg `scripts/post-merge.sh` de faalmelding stilzwijgend over. René werd dan niet gewaarschuwd bij een mislukte post-merge stap of een mislukte GitHub push.
-
-**Wijziging:**
-1. `scripts/post-merge.sh` — nieuwe `_stuur_fallback_melding`-hulpfunctie toegevoegd (vóór `_stuur_faalmelding`):
-   - Probeert eerst `SLACK_WEBHOOK_URL` (Slack Incoming Webhook, POST JSON `{text}`).
-   - Als dat mislukt of niet ingesteld is, probeert het `NTFY_URL` (ntfy push-service, POST met `Title`/`Priority`/`Tags`-headers).
-   - Logt een waarschuwing maar stopt het script nooit bij een fout.
-2. `_stuur_faalmelding` roept nu `_stuur_fallback_melding` aan op alle drie de plekken waar voorheen stilzwijgend werd teruggekeerd:
-   - Ontbrekende AZURE-variabelen
-   - Mislukt Graph-token-verzoek
-   - Graph `sendMail` HTTP-fout
-3. `docs/PRODUCTION_RUNBOOK.md` — nieuwe aandachtspunt toegevoegd over de fallback-vorgorde en vereiste secrets.
-
-**Benodigde actie (optioneel, door René):** Stel `SLACK_WEBHOOK_URL` of `NTFY_URL` in als Replit-secret voor een gegarandeerd alternatief kanaal naast Graph-e-mail.
 
 ---
 

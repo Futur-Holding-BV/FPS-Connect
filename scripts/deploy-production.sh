@@ -18,6 +18,50 @@ set -euo pipefail
 # ─── STAP 1: naar de productiemap ────────────────────────────────────────────
 cd /opt/fps-one
 
+# ─── PRE-DEPLOYMENT: verplichte omgevingsvariabelen controleren ───────────────
+# Stopt de deployment met exit 1 als een verplichte variabele ontbreekt of leeg
+# is in deploy/.env.production. Verstuurt geen e-mail hier (mail-config zelf
+# kan de ontbrekende variabele zijn) — de foutmelding in de Actions-run is
+# de primaire signalering.
+echo "=== PRE-CHECK: verplichte omgevingsvariabelen ==="
+ENV_BESTAND="deploy/.env.production"
+if [ ! -f "${ENV_BESTAND}" ]; then
+  echo "FOUT: ${ENV_BESTAND} ontbreekt op de server." >&2
+  echo "Zie docs/productie-env-checklist.md voor de installatie-instructies." >&2
+  exit 1
+fi
+
+VERPLICHTE_VARS=(
+  "DATABASE_URL"
+  "SESSION_SECRET"
+  "OPENAI_API_KEY"
+  "GOOGLE_MAPS_API_KEY"
+  "MINIO_ROOT_PASSWORD"
+  "AZURE_CLIENT_ID"
+  "AZURE_CLIENT_SECRET"
+  "AZURE_TENANT_ID"
+  "MAIL_FROM"
+  "MAIL_MAILBOX"
+)
+
+ONTBREKENDE_VARS=()
+for _VAR in "${VERPLICHTE_VARS[@]}"; do
+  _WAARDE=$(grep -E "^${_VAR}=" "${ENV_BESTAND}" 2>/dev/null | head -1 | cut -d'=' -f2- || true)
+  if [ -z "${_WAARDE}" ]; then
+    ONTBREKENDE_VARS+=("${_VAR}")
+  fi
+done
+
+if [ "${#ONTBREKENDE_VARS[@]}" -gt 0 ]; then
+  echo "FOUT: De volgende verplichte variabelen ontbreken of zijn leeg in ${ENV_BESTAND}:" >&2
+  for _VAR in "${ONTBREKENDE_VARS[@]}"; do
+    echo "  - ${_VAR}" >&2
+  done
+  echo "Zie docs/productie-env-checklist.md voor de volledige documentatie." >&2
+  exit 1
+fi
+echo "Pre-check geslaagd: alle ${#VERPLICHTE_VARS[@]} verplichte variabelen aanwezig."
+
 # Alle compose-commando's delen dezelfde compose-file en env-file.
 # --env-file is vereist: de compose-file interpoleert ${DATABASE_URL} en
 # ${POSTGRES_PASSWORD} uit .env.production.

@@ -27,6 +27,18 @@ export const GetVersieResponse = zod.object({
 
 
 /**
+ * @summary Systeemstatus — verbinding DB, objectopslag, mail en AI pingen
+ */
+export const GetVersieStatusResponse = zod.object({
+  "db": zod.enum(['ok', 'fout']).describe('Databaseverbinding bereikbaar'),
+  "opslag": zod.enum(['ok', 'fout', 'niet_geconfigureerd']).describe('Objectopslag (MinIO\/S3) bereikbaar of geconfigureerd'),
+  "mail": zod.enum(['ok', 'fout', 'niet_geconfigureerd']).describe('Mailconfiguratie (Microsoft 365\/Graph) aanwezig'),
+  "ai": zod.enum(['ok', 'fout', 'niet_geconfigureerd']).describe('AI-toegangssleutel geconfigureerd'),
+  "aangemaakt_op": zod.string().describe('ISO-tijdstip van de statusmeting')
+})
+
+
+/**
  * @summary Platform-brede statistieken
  */
 export const GetDashboardStatsResponse = zod.object({

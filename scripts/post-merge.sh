@@ -4,6 +4,49 @@ set -e
 # omgevingen zoals de post-merge runner (prepare lifecycle roept tsc --build aan).
 export PATH="$PWD/node_modules/.bin:$PATH"
 
+# ─── Pre-taak sync-verificatie ───────────────────────────────────────────────
+# Niet-blokkerend: controleert of GitHub main commits bevat die lokaal
+# ontbreken. Als dat zo is, worden de divergente commits getoond als
+# waarschuwing zodat afwijkingen zichtbaar zijn vóór de merge wordt verwerkt.
+# Slaat de check over als GITHUB_TOKEN_PUSH niet beschikbaar is.
+if [ -n "${GITHUB_TOKEN_PUSH:-}" ]; then
+  _PRESYNC_ASKPASS=$(mktemp /tmp/fps-presync-askpass-XXXXXX)
+  chmod 700 "$_PRESYNC_ASKPASS"
+  cat > "$_PRESYNC_ASKPASS" << 'PRESYNC_ASKPASS_EOF'
+#!/bin/bash
+case "$1" in
+  Username*) echo "x-access-token" ;;
+  Password*) echo "${GITHUB_TOKEN_PUSH}" ;;
+esac
+PRESYNC_ASKPASS_EOF
+  export GIT_ASKPASS="$_PRESYNC_ASKPASS"
+  trap 'rm -f "$_PRESYNC_ASKPASS"; unset GIT_ASKPASS' EXIT INT TERM
+
+  set +e
+  git fetch "https://github.com/vinkrene-jpg/fps-one.git" \
+    "main:refs/remotes/fps-presync/main" 2>/dev/null
+  _PRESYNC_FETCH_EXIT=$?
+  set -e
+
+  unset GIT_ASKPASS
+  rm -f "$_PRESYNC_ASKPASS"
+  trap - EXIT INT TERM
+
+  if [ "$_PRESYNC_FETCH_EXIT" -eq 0 ]; then
+    _REMOTE_SHA=$(git rev-parse refs/remotes/fps-presync/main 2>/dev/null || echo "")
+    if [ -n "$_REMOTE_SHA" ] && \
+       ! git merge-base --is-ancestor "$_REMOTE_SHA" HEAD 2>/dev/null; then
+      echo "====================================================" >&2
+      echo "WAARSCHUWING: GitHub main (${_REMOTE_SHA:0:8}) bevat commits die" >&2
+      echo "lokaal ontbreken. De merge gaat door, maar de werkruimte wijkt af." >&2
+      echo "Divergente remote commits:" >&2
+      git log --oneline HEAD.."refs/remotes/fps-presync/main" 2>/dev/null \
+        | head -10 || true
+      echo "====================================================" >&2
+    fi
+  fi
+fi
+
 # ─── Fallback-melding-hulpfunctie ────────────────────────────────────────────
 # Probeert een tekstmelding te sturen via Slack of ntfy als de Graph-e-mail
 # niet beschikbaar is. Stopt het script NIET bij een fout.

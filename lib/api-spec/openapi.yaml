@@ -103,6 +103,19 @@ paths:
               schema:
                 $ref: "#/components/schemas/VersieInfo"
 
+  /versie/status:
+    get:
+      operationId: getVersieStatus
+      tags: [health]
+      summary: Systeemstatus — verbinding DB, objectopslag, mail en AI pingen
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VersieStatus"
+
   # ── DASHBOARD ────────────────────────────────────────────────────────────
   /dashboard/stats:
     get:
@@ -24757,6 +24770,30 @@ components:
         gebouwd_op:
           type: string
           description: ISO-tijdstip waarop het image gebouwd is (leeg in dev)
+
+    VersieStatus:
+      type: object
+      required: [db, opslag, mail, ai, aangemaakt_op]
+      properties:
+        db:
+          type: string
+          enum: [ok, fout]
+          description: Databaseverbinding bereikbaar
+        opslag:
+          type: string
+          enum: [ok, fout, niet_geconfigureerd]
+          description: Objectopslag (MinIO/S3) bereikbaar of geconfigureerd
+        mail:
+          type: string
+          enum: [ok, fout, niet_geconfigureerd]
+          description: Mailconfiguratie (Microsoft 365/Graph) aanwezig
+        ai:
+          type: string
+          enum: [ok, fout, niet_geconfigureerd]
+          description: AI-toegangssleutel geconfigureerd
+        aangemaakt_op:
+          type: string
+          description: ISO-tijdstip van de statusmeting
 
     # ── CRM ───────────────────────────────────────────────────────────────
     CrmOrganisatie:

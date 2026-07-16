@@ -308,3 +308,112 @@ Bij een mislukte deploy:
 1. Noteer het backup-bestandsnaam van vóór de deploy
 2. Voer de rollback-procedure uit
 3. Controleer healthcheck na rollback
+
+### Automatische rollback (deploy-script)
+
+`scripts/deploy-production.sh` voert na containers-start een health-poll uit (max 150 seconden, elke 5 seconden `GET /api/healthz`). Als de healthcheck na de timeout geen `{"status":"ok"}` geeft, rolt het script **automatisch** terug:
+
+1. `git reset --hard <vorige-commit>` — applicatiecode terug naar de vorige versie
+2. `docker compose build api caddy` — images opnieuw bouwen
+3. `docker compose up -d` — containers herstarten
+4. Opnieuw healthcheck na rollback
+
+De automatische rollback dekt alleen Niveau 1 (applicatiecode). Een rollback mét schemawijzigingen (Niveau 2) blijft handmatig — zie `deploy/ROLLBACK_PRODUCTION.md`.
+
+---
+
+## Versie controleren
+
+### Via de Systeemstatus-pagina
+
+Log in als hoofdbeheerder op `https://connect.fps-one.nl` en ga naar **Instellingen → Systeemstatus**. De pagina toont:
+- Actieve Git-commit (met link naar GitHub)
+- Versienummer en builddatum
+- Verbindingsstatus van DB, objectopslag, mail en AI
+
+### Via de API (publiek, geen auth vereist)
+
+```bash
+# Versie-informatie
+curl -s https://connect.fps-one.nl/api/versie | python3 -m json.tool
+
+# Verbindingsstatus
+curl -s https://connect.fps-one.nl/api/versie/status | python3 -m json.tool
+```
+
+Verwachte output `/api/versie`:
+```json
+{
+  "versie": "2026.07.16-a1b2c3d",
+  "commit": "a1b2c3d",
+  "gebouwd_op": "2026-07-16T14:23:00Z"
+}
+```
+
+Verwachte output `/api/versie/status`:
+```json
+{
+  "db": "ok",
+  "opslag": "ok",
+  "mail": "ok",
+  "ai": "ok",
+  "aangemaakt_op": "2026-07-16T14:25:00.000Z"
+}
+```
+
+---
+
+## Smoketest handmatig triggeren
+
+### Via GitHub Actions UI
+
+1. Ga naar `https://github.com/vinkrene-jpg/fps-one/actions/workflows/deploy.yml`
+2. Klik op **"Run workflow"** → branch `main` → **"Run workflow"**
+3. De deploy-workflow start opnieuw inclusief de volledige smoketest (15 checks)
+
+### Handmatig via curl (lokaal)
+
+```bash
+BASE="https://connect.fps-one.nl"
+
+# 1. Healthcheck
+curl -s "$BASE/api/healthz"
+
+# 2. Versie
+curl -s "$BASE/api/versie"
+
+# 3. Systeemstatus
+curl -s "$BASE/api/versie/status"
+
+# 4. Login (gebruik smoketest-account)
+curl -c /tmp/cookie.txt -s -X POST "$BASE/api/auth/login" \
+  -H "Content-Type: application/json" \
+  -d '{"email":"SMOKETEST_EMAIL","wachtwoord":"SMOKETEST_PASSWORD"}'
+
+# 5. Dashboard stats (met sessie)
+curl -b /tmp/cookie.txt -s "$BASE/api/dashboard/stats"
+
+rm -f /tmp/cookie.txt
+```
+
+---
+
+## Omgevingsvariabelen checklist
+
+Zie [`docs/productie-env-checklist.md`](productie-env-checklist.md) voor de volledige tabel van verplichte en optionele productie-omgevingsvariabelen, inclusief welke uitsluitend op de VPS staan en welke ook als GitHub Actions secret moeten worden ingesteld.
+
+`scripts/deploy-production.sh` controleert automatisch de tien verplichte variabelen vóór elke deployment. Ontbreekt er één, dan stopt de deployment met een duidelijke foutmelding.
+
+---
+
+## Definition of Done (voor toekomstige taken)
+
+Een taak is pas **gereed voor productie** wanneer:
+
+1. **GitHub CI groen** — typecheck + build slagen
+2. **Post-merge stap 4 (schema-healthcheck) groen** — alle kritieke kolommen aanwezig
+3. **GitHub Actions smoketest groen** — alle 15 checks slagen op `connect.fps-one.nl`
+4. **Systeemstatus zichtbaar** — `/beheer/systeemstatus` toont de nieuwe commit
+5. **Geen rollback getriggerd** — automatische rollback is niet geactiveerd
+
+Kortweg: **pas gereed na geslaagde smoketests op `connect.fps-one.nl` met de nieuwe commit zichtbaar op `/beheer/systeemstatus`.**

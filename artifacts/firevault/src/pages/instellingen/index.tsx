@@ -266,6 +266,13 @@ export default function InstellingenPagina() {
           zichtbaar: isHoofdbeheerder,
         },
         {
+          label: "Systeemstatus",
+          pad: "/beheer/systeemstatus",
+          icoon: Activity,
+          beschrijving: "Actieve commit, builddatum en verbindingsstatus van DB, opslag, mail en AI",
+          zichtbaar: isHoofdbeheerder,
+        },
+        {
           label: "Kantoor Release",
           pad: "/beheer/kantoor-release",
           icoon: Package,

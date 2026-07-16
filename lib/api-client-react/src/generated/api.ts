@@ -892,6 +892,7 @@ import type {
   Verlofsoort,
   VerlofsoortInput,
   VersieInfo,
+  VersieStatus,
   VerstuurFactuurCorrespondentie200,
   Vervaldag,
   Vervalsignaal,
@@ -1126,6 +1127,83 @@ export function useGetVersie<TData = Awaited<ReturnType<typeof getVersie>>, TErr
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetVersieQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetVersieStatusUrl = () => {
+
+
+
+
+  return `/api/versie/status`
+}
+
+/**
+ * @summary Systeemstatus — verbinding DB, objectopslag, mail en AI pingen
+ */
+export const getVersieStatus = async ( options?: RequestInit): Promise<VersieStatus> => {
+
+  return customFetch<VersieStatus>(getGetVersieStatusUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetVersieStatusQueryKey = () => {
+    return [
+    `/api/versie/status`
+    ] as const;
+    }
+
+
+export const getGetVersieStatusQueryOptions = <TData = Awaited<ReturnType<typeof getVersieStatus>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getVersieStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetVersieStatusQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getVersieStatus>>> = ({ signal }) => getVersieStatus({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getVersieStatus>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetVersieStatusQueryResult = NonNullable<Awaited<ReturnType<typeof getVersieStatus>>>
+export type GetVersieStatusQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Systeemstatus — verbinding DB, objectopslag, mail en AI pingen
+ */
+
+export function useGetVersieStatus<TData = Awaited<ReturnType<typeof getVersieStatus>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getVersieStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetVersieStatusQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
