@@ -28,7 +28,7 @@ export default function KlantLayout({ children }: { children: React.ReactNode })
   const defaultSidebarOpen = false;
 
   return (
-    <SidebarProvider defaultOpen={defaultSidebarOpen}>
+    <SidebarProvider defaultOpen={defaultSidebarOpen} className="h-dvh">
       <Sidebar variant="inset" collapsible="icon" className="border-r-0 shadow-[1px_0_10px_rgba(0,0,0,0.02)] bg-zinc-50">
         <SidebarHeader className="py-6">
           <div className="flex items-center justify-center px-4">
@@ -89,7 +89,7 @@ export default function KlantLayout({ children }: { children: React.ReactNode })
         </SidebarFooter>
       </Sidebar>
 
-      <main className="flex-1 min-h-screen bg-zinc-50/50">
+      <main className="flex-1 min-h-0 overflow-y-auto bg-zinc-50/50">
         <div className="sticky top-0 z-10 flex items-center gap-3 px-4 py-3 bg-zinc-50/80 backdrop-blur-xl md:hidden border-b border-zinc-200/50">
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 rounded bg-[#0EA5E9] flex items-center justify-center">

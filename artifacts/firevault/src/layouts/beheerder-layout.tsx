@@ -243,7 +243,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
   ]);
 
   return (
-    <SidebarProvider defaultOpen={true}>
+    <SidebarProvider defaultOpen={true} className="h-dvh">
       <Sidebar variant="inset" collapsible="icon">
         <SidebarHeader className="py-3">
           <div className="flex items-center px-2 gap-2 group-data-[collapsible=icon]:justify-center">
@@ -1642,15 +1642,15 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
       </Sidebar>
 
       <main className={cn(
-        "flex-1 bg-background",
-        location.startsWith("/berichten")
-          ? "overflow-hidden flex flex-col h-screen"
-          : "min-h-screen overflow-auto",
+        "flex-1 bg-background min-h-0",
+        (location.startsWith("/berichten") || location.startsWith("/werk-inbox"))
+          ? "overflow-hidden flex flex-col"
+          : "overflow-y-auto",
       )}>
         {/* Universele topbalk — terugknop altijd zichtbaar, menu toggle alleen mobiel */}
         <div className={cn(
           "z-20 flex items-center gap-2 px-2 py-1.5 bg-background border-b border-border",
-          location.startsWith("/berichten") ? "flex-shrink-0" : "sticky top-0",
+          (location.startsWith("/berichten") || location.startsWith("/werk-inbox")) ? "flex-shrink-0" : "sticky top-0",
         )}>
           <SidebarTrigger className="md:hidden" title="Menu openen" />
           <img src={logoFpsConnect} alt="FPS Connect" className="h-5 w-auto md:hidden" />
@@ -1662,12 +1662,12 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
           </div>
         </div>
         {toonToolboxen && <VeiligheidMeldingBanner />}
-        {location.startsWith("/berichten") ? (
+        {(location.startsWith("/berichten") || location.startsWith("/werk-inbox")) ? (
           <div className="flex-1 min-h-0">
             {children}
           </div>
         ) : (
-          <div className="p-3 md:p-4 xl:p-6 pb-20">
+          <div className="p-3 md:p-4 xl:p-6 pb-28">
             {children}
           </div>
         )}

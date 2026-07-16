@@ -40,7 +40,7 @@ export default function MonteurLayout({ children }: { children: React.ReactNode 
     typeof window !== "undefined" ? window.innerWidth >= 1200 : true;
 
   return (
-    <SidebarProvider defaultOpen={defaultSidebarOpen}>
+    <SidebarProvider defaultOpen={defaultSidebarOpen} className="h-dvh">
       <Sidebar variant="inset" collapsible="icon">
         <SidebarHeader className="py-3">
           <div className="flex items-center justify-center px-2">
@@ -87,7 +87,7 @@ export default function MonteurLayout({ children }: { children: React.ReactNode 
         </SidebarFooter>
       </Sidebar>
 
-      <main className="flex-1 min-h-screen overflow-auto bg-background">
+      <main className="flex-1 min-h-0 overflow-y-auto bg-background">
         <div className="sticky top-0 z-10 flex items-center gap-3 px-3 py-2 bg-background border-b border-border md:hidden">
           <SidebarTrigger title="Menu openen" />
           <img src={logoFpsConnect} alt="FPS Connect" className="h-6 w-auto" />

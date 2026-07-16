@@ -30,6 +30,23 @@
 
 ---
 
+## 2026-07-16 — Herstel scrollgedrag structureel applicatiebreed
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+**Rootprobleem:** De `SidebarProvider`-wrapper gebruikte `min-h-svh` (geen vaste hoogte) waardoor de `<main>` met `min-h-screen overflow-auto` nooit een scroll-container werd — het document scrollde. Dit zorgde voor conflicten met split-panel pagina's (`h-full overflow-hidden`) en maakte `overflow-auto` op `<main>` inactief/misleidend. Onderkant-knoppen en content verdwenen achter vaste elementen (NieuwsTicker, SlimUploadBalk, AdviseurChat).
+
+**Wijzigingen:**
+
+1. **`beheerder-layout.tsx`** — `SidebarProvider` krijgt `className="h-dvh"` zodat de wrapper exact viewporthoogte heeft. `<main>` van `flex-1 min-h-screen overflow-auto` naar `flex-1 min-h-0 overflow-y-auto` (normale pagina's) en `flex-1 min-h-0 overflow-hidden flex flex-col` (split-panel: `/berichten` + `/werk-inbox`). Content-wrapper bodempading verhoogd van `pb-20` naar `pb-28`. Topbar shrink-logica uitgebreid met `/werk-inbox`.
+
+2. **`klant-layout.tsx`** — `SidebarProvider` krijgt `className="h-dvh"`. `<main>` van `flex-1 min-h-screen` naar `flex-1 min-h-0 overflow-y-auto`.
+
+3. **`monteur-layout.tsx`** — `SidebarProvider` krijgt `className="h-dvh"`. `<main>` van `flex-1 min-h-screen overflow-auto` naar `flex-1 min-h-0 overflow-y-auto`.
+
+**Effect:** Elke pagina is nu volledig scrollbaar tot de onderkant. `sticky top-0` topbar werkt correct als scroll-anker op `<main>`. Split-panel pagina's (berichten, werk-inbox) houden hun viewport-begrensde full-height layout. Vaste onderste elementen zijn nooit meer afgesneden.
+
+
 ## 2026-07-16 — Herstel Maps Static API 403: fout zichtbaar als Nederlandse melding
 
 - **Uitvoering:** volledig (code) + deels (GCP fix vereist menselijke handeling) | **Kwaliteit:** hoog | **Risico:** laag
@@ -69,7 +86,9 @@ Totaal af te trekken op desktop: ~136px. De chat trok maar 64px af, waardoor de 
    - Topbalk wordt `flex-shrink-0` i.p.v. `sticky top-0` (overflow-hidden maakt sticky irrelevant)
    - Contentomhulling wordt `flex-1 min-h-0` zonder padding voor de berichten-pagina
 
-2. **`artifacts/firevault/src/pages/berichten/index.tsx`** — root-div `h-[calc(100vh-64px)]` → `h-full`## 2026-07-16 — Post-merge faalmelding altijd bezorgd via fallback-kanaal
+2. **`artifacts/firevault/src/pages/berichten/index.tsx`** — root-div `h-[calc(100vh-64px)]` → `h-full`
+
+## 2026-07-16 — Post-merge faalmelding altijd bezorgd via fallback-kanaal
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
 
@@ -86,7 +105,8 @@ Totaal af te trekken op desktop: ~136px. De chat trok maar 64px af, waardoor de 
    - Graph `sendMail` HTTP-fout
 3. `docs/PRODUCTION_RUNBOOK.md` — nieuwe aandachtspunt toegevoegd over de fallback-volgorde en vereiste secrets.
 
-**Benodigde actie (optioneel, door René):** Stel `SLACK_WEBHOOK_URL` of `NTFY_URL` in als Replit-secret voor een gegarandeerd alternatief kanaal naast Graph-e-mail.>>>>>>> c60d97c (fix: post-merge faalmelding altijd bezorgd via Slack/ntfy fallback)
+**Benodigde actie (optioneel, door René):** Stel `SLACK_WEBHOOK_URL` of `NTFY_URL` in als Replit-secret voor een gegarandeerd alternatief kanaal naast Graph-e-mail.
+
 
 ---
 
@@ -204,8 +224,6 @@ Totaal af te trekken op desktop: ~136px. De chat trok maar 64px af, waardoor de 
    - Fail-safe: ontbrekende env vars of Graph-fouten geven een INFO/WAARSCHUWING naar stderr, stoppen het script niet
 
 **Benodigde actie (eenmalig, door René):** Zorg dat `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, `RENE_ALERT_EMAIL`, `MAIL_FROM` en `MAIL_MAILBOX` als Replit-omgevingsvariabelen zijn ingesteld. Ze zijn al nodig voor de app-mailkoppeling; controleer of ze ook in de post-merge-omgeving beschikbaar zijn.
-
----
 
 ---
 
