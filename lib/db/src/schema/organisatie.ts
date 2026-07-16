@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer, boolean, timestamp, numeric, uniqueIndex } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, boolean, timestamp, numeric, uniqueIndex, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { sql } from "drizzle-orm";
 import { z } from "zod/v4";
@@ -77,6 +77,18 @@ export const aiVeldCorrectiesTable = pgTable("ai_veld_correcties", {
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
 });
 
+// Document Intelligence correctie-leerloop — bewaart handmatige categorie-aanpassingen
+// als referentievoorbeelden voor toekomstige vergelijkbare uploads.
+export const documentClassificatieCorrectiesTable = pgTable("document_classificatie_correcties", {
+  id: serial("id").primaryKey(),
+  bestandshash: text("bestandshash"),
+  origineleCategorie: text("originele_categorie").notNull(),
+  gecorrigeerdeCategorie: text("gecorrigeerde_categorie").notNull(),
+  werkmaatschappij: text("werkmaatschappij"),
+  bewijsSignalen: jsonb("bewijs_signalen"),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+});
+
 // Document Studio — versiebeheerde modellen per (werkgever, documenttype).
 // Meerdere rijen per (werkgever_id, document_type) zijn toegestaan (volledige
 // versiehistorie: concept/goedgekeurd/gearchiveerd); een nieuwe upload maakt altijd
@@ -134,3 +146,4 @@ export type OrgBedrijfsdocument = typeof orgBedrijfsdocumentenTable.$inferSelect
 export type InsertOrgBedrijfsdocument = z.infer<typeof insertOrgBedrijfsdocumentSchema>;
 export type DocumentStudioModel = typeof documentStudioModellenTable.$inferSelect;
 export type InsertDocumentStudioModel = z.infer<typeof insertDocumentStudioModelSchema>;
+export type DocumentClassificatieCorrectie = typeof documentClassificatieCorrectiesTable.$inferSelect;
