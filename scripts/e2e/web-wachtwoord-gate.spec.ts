@@ -215,10 +215,13 @@ test.describe("Desktop (1280×800)", () => {
 // hamburgermenu. De assertions in voerGateScenarioUit zijn exclusief gebaseerd
 // op gate-specifieke elementen en de /auth/me API, zodat ze ook hier betrouwbaar
 // werken zonder van de desktop-sidebar afhankelijk te zijn.
+// defaultBrowserType mag niet binnen een describe-block (dwingt een nieuwe worker
+// af, wat Playwright verbiedt). Destructureer het eruit en gebruik alleen de
+// viewport/UA/touch-instellingen voor device-emulatie.
+const { defaultBrowserType: _ignored, ...iphone13Device } = devices["iPhone 13"];
+
 test.describe("Mobiel (iPhone 13, 390×844)", () => {
-  test.use({
-    ...devices["iPhone 13"],
-  });
+  test.use(iphone13Device);
 
   test(
     "Web [mobiel]: Wachtwoord-wijzigen gate — gate → fouten → succesvol",

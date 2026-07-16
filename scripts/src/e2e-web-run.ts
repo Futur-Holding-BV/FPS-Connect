@@ -102,9 +102,15 @@ async function zorgServiceDraait(service: Service): Promise<void> {
     throw new Error(`Geen health-URL voor ${service.naam}.`);
   }
 
-  if (await isBereikbaar(service.healthUrl)) {
-    log(`${service.naam}: draait al, hergebruiken.`);
-    return;
+  for (let poging = 0; poging < 3; poging++) {
+    if (await isBereikbaar(service.healthUrl)) {
+      log(`${service.naam}: draait al, hergebruiken.`);
+      return;
+    }
+    if (poging < 2) {
+      log(`${service.naam}: niet bereikbaar (poging ${poging + 1}/3), 5s wachten...`);
+      await wacht(5_000);
+    }
   }
 
   log(`${service.naam}: niet bereikbaar, opstarten...`);
