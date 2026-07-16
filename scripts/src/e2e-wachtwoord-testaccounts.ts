@@ -124,7 +124,79 @@ export async function archiveerE2eWachtwoordAccounts(): Promise<void> {
   await db
     .update(gebruikersTable)
     .set({ actief: false, gearchiveerd: true })
-    .where(inArray(gebruikersTable.email, [E2E_WW_ADMIN_EMAIL, E2E_WW_TARGET_EMAIL]));
+    .where(
+      inArray(gebruikersTable.email, [
+        E2E_WW_ADMIN_EMAIL,
+        E2E_WW_TARGET_EMAIL,
+        E2E_WW_GATE_EMAIL,
+      ]),
+    );
+}
+
+// ── Gate-testaccount (wachtwoord-wijzigen gate) ──────────────────────────────
+//
+// Een apart account specifiek voor de "Wachtwoord wijzigen vereist"-gate test.
+// Dit account heeft `moetWachtwoordWijzigen: true` als startpunt, zodat de
+// spec de gate kan testen zonder een admin-handeling te simuleren.
+//
+// TOTP is ingeschakeld (met vaste secret) zodat de volledige loginflow kan
+// worden doorlopen. Na een succesvol wachtwoord wijzigen reset de spec het
+// account via DB zodat de volgende testrun opnieuw de gate kan testen.
+export const E2E_WW_GATE_EMAIL = "e2e-ww-gate@fps.local";
+export const E2E_WW_GATE_WACHTWOORD = "E2eWwGate!2026";
+export const E2E_WW_GATE_TOTP_SECRET = "JBSWY3DPEHPK3PXP";
+
+export async function setupE2eWachtwoordGateAccount(): Promise<number> {
+  weigerBuitenDev();
+  const hash = await bcrypt.hash(E2E_WW_GATE_WACHTWOORD, 10);
+
+  // maakOfUpdate zet moetWachtwoordWijzigen altijd op false; daarna expliciet
+  // op true zetten zodat de gate bij elke testrun actief is.
+  const id = await maakOfUpdate(E2E_WW_GATE_EMAIL, {
+    naam: "E2E Gate Test Gebruiker",
+    rol: "gebruiker",
+    wachtwoordHash: hash,
+    totpSecret: E2E_WW_GATE_TOTP_SECRET,
+    tweeFactorIngeschakeld: true,
+    // Leesrecht op gebouwen zodat het portaal laadt (en niet het "Geen
+    // toegang"-scherm toont) zodra moetWachtwoordWijzigen wordt opgeheven.
+    bevoegdheden: { gebouwen: 1 },
+  });
+
+  await db
+    .update(gebruikersTable)
+    .set({ moetWachtwoordWijzigen: true })
+    .where(eq(gebruikersTable.email, E2E_WW_GATE_EMAIL));
+
+  return id;
+}
+
+// Geeft een verse TOTP-code voor het gate-testaccount.
+export async function genereerVersGateTotp(minResterendeSec = 20): Promise<string> {
+  const resterend = authenticator.timeRemaining();
+  if (resterend < minResterendeSec) {
+    await new Promise((r) => setTimeout(r, (resterend + 1) * 1000));
+  }
+  return authenticator.generate(E2E_WW_GATE_TOTP_SECRET);
+}
+
+// Zet het gate-account terug naar de begintoestand: origineel wachtwoord +
+// moetWachtwoordWijzigen=true. Wordt door de spec aangeroepen na een
+// succesvolle wachtwoord-wissel zodat de volgende run opnieuw de gate test.
+export async function resetE2eWachtwoordGateAccount(): Promise<void> {
+  weigerBuitenDev();
+  const hash = await bcrypt.hash(E2E_WW_GATE_WACHTWOORD, 10);
+  await db
+    .update(gebruikersTable)
+    .set({
+      wachtwoord: hash,
+      moetWachtwoordWijzigen: true,
+      misluktePogingen: 0,
+      vergrendeldTot: null,
+      actief: true,
+      gearchiveerd: false,
+    })
+    .where(eq(gebruikersTable.email, E2E_WW_GATE_EMAIL));
 }
 
 // Wacht tot het huidige TOTP-venster voldoende resttijd heeft en geeft dan een
