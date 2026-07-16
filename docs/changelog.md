@@ -13,40 +13,6 @@
 
 **Nog openstaand (menselijke handeling):** de Maps Static API staat nog niet op de API-restrictielijst. Zodra René dit toevoegt in Google Cloud Console werkt de satellietkaart ook echt (zie instructie hieronder).
 
----
-
-## 2026-07-16 — Document Intelligence Pipeline hersteld (pixel-PDF, multi-pagina vision, Studio-modellen, correctie-leerloop, UI-transparantie)
-
-- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
-
-**Aanleiding:** De Document Intelligence-engine classificeerde pixel-based PDFs slecht omdat (1) er een vaste 80-tekens drempel was in plaats van een per-pagina analyse, (2) alleen pagina 1 werd gerenderd, (3) Document Studio referentiemodellen en handmatige correcties niet als context aan de AI werden meegegeven, (4) `document_sjabloon` fout naar `"onbekend"` werd gemapt, en (5) de Slim Upload-balk geen transparantie bood over hoe de classificatie tot stand is gekomen.
-
-**Wijzigingen:**
-
-1. **`lib/db/src/schema/organisatie.ts`** — nieuw: `documentClassificatieCorrectiesTable` (id, bestandshash, originele\_categorie, gecorrigeerde\_categorie, werkmaatschappij, bewijs\_signalen jsonb, aangemaakt\_op). DB-tabel direct aangemaakt via ALTER SQL + index op werkmaatschappij/datum. TypeScript-type `DocumentClassificatieCorrectie` geëxporteerd.
-
-2. **`artifacts/api-server/src/lib/documentIntelligence.ts`** — kern-engine herschreven:
-   - Importeert nu `inspecteerDocument` (uit `./documentInspectie`) en `renderPdfPaginas` (uit `./pdfVisie`).
-   - `ExtractieResultaat` uitgebreid met `paginaTeksten: string[]`; PDF-extractie geeft die door vanuit `extraheerPdfTekst()`.
-   - `DocumentIntelligenceResultaat` heeft nieuw veld `ai_model: string | null`.
-   - Vaste 80-tekens drempel verwijderd; stap 3a gebruikt `inspecteerDocument()` met `paginaTeksten` om te bepalen of visuele analyse nodig is en welke pagina's prioriteit hebben.
-   - Stap 3 (vision): pixel-based PDFs renderen nu tot 3 prioriteitspagina's via `renderPdfPaginas()`; afbeeldingsbestanden gebruiken `haalAfbeeldingVoorAfbeeldingsbestand()`.
-   - Stap 3b: Document Studio-modellen worden opgehaald voor de werkmaatschappij (status='goedgekeurd') en meegegeven aan het AI-prompt.
-   - Stap 3c: tot 10 recente correcties voor de werkmaatschappij worden opgehaald en als leervoorbeelden aan het AI-prompt toegevoegd.
-   - `aiContentAnalyse()` accepteert nu `afbeeldingen: Array<{paginaNummer, base64}>` (meerdere afbeeldingen), `studioContext` en `correctieContext`; retourneert ook `ai_model: "gpt-4o-mini"`.
-
-3. **`artifacts/api-server/src/routes/inbox.ts`** — twee fixes:
-   - `DOC_CATEGORIE_NAAR_INBOX`: `document_sjabloon` mapt nu correct naar `"document_sjabloon"` (was: `"onbekend"`).
-   - PATCH `/inbox/items/:id`: bij categorie-wijziging wordt een rij in `document_classificatie_correcties` ingevoegd. Werkmaatschappij wordt live via DB opgehaald (medewerker-join), net als bij de POST-upload. Niet-kritiek: fouten worden gelogd maar blokkeren de response niet.
-
-4. **`artifacts/api-server/src/routes/slim-upload.ts`** — `SlimUploadSuggestie` interface heeft nieuwe velden `tekst_gevonden: boolean` en `ai_model: string | null`; `classificeerBestand()` mapt ze vanuit het analyse-resultaat.
-
-5. **`artifacts/firevault/src/components/slim-upload-balk.tsx`** — `SlimUploadSuggestie` interface bijgewerkt met `tekst_gevonden?` en `ai_model?`; nieuw inklapbaar "Analyse-details" blok toont tekst gevonden / vision gebruikt / AI-model direct in de bevestigingsstap.
-
-6. **`lib/db/scripts/apply-additive.mjs`** + **`schema-healthcheck.mjs`** — document_classificatie_correcties in post-merge migratie.
-
----
-
 ## 2026-07-16 — Herstel chatfunctie: invoerveld buiten beeld door verkeerde hoogte-berekening
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
@@ -71,11 +37,7 @@ Totaal af te trekken op desktop: ~136px. De chat trok maar 64px af, waardoor de 
    - Topbalk wordt `flex-shrink-0` i.p.v. `sticky top-0` (overflow-hidden maakt sticky irrelevant)
    - Contentomhulling wordt `flex-1 min-h-0` zonder padding voor de berichten-pagina
 
-2. **`artifacts/firevault/src/pages/berichten/index.tsx`** — root-div `h-[calc(100vh-64px)]` → `h-full`
-
----
-
-## 2026-07-16 — Post-merge faalmelding altijd bezorgd via fallback-kanaal
+2. **`artifacts/firevault/src/pages/berichten/index.tsx`** — root-div `h-[calc(100vh-64px)]` → `h-full`## 2026-07-16 — Post-merge faalmelding altijd bezorgd via fallback-kanaal
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
 
@@ -90,9 +52,9 @@ Totaal af te trekken op desktop: ~136px. De chat trok maar 64px af, waardoor de 
    - Ontbrekende AZURE-variabelen
    - Mislukt Graph-token-verzoek
    - Graph `sendMail` HTTP-fout
-3. `docs/PRODUCTION_RUNBOOK.md` — nieuwe aandachtspunt toegevoegd over de fallback-vorgorde en vereiste secrets.
+3. `docs/PRODUCTION_RUNBOOK.md` — nieuwe aandachtspunt toegevoegd over de fallback-volgorde en vereiste secrets.
 
-**Benodigde actie (optioneel, door René):** Stel `SLACK_WEBHOOK_URL` of `NTFY_URL` in als Replit-secret voor een gegarandeerd alternatief kanaal naast Graph-e-mail.
+**Benodigde actie (optioneel, door René):** Stel `SLACK_WEBHOOK_URL` of `NTFY_URL` in als Replit-secret voor een gegarandeerd alternatief kanaal naast Graph-e-mail.>>>>>>> c60d97c (fix: post-merge faalmelding altijd bezorgd via Slack/ntfy fallback)
 
 ---
 
@@ -113,6 +75,8 @@ Totaal af te trekken op desktop: ~136px. De chat trok maar 64px af, waardoor de 
 
 **Benodigde operationele actie:** Jacqueline moet nog steeds haar huidig wachtwoord weten om in te kunnen loggen en het te wijzigen. Indien ze dat niet weet: René kan via de gebruikersbeheer-pagina een nieuw tijdelijk wachtwoord instellen (PATCH /gebruikers/:id met nieuw wachtwoord, `moetWachtwoordWijzigen` blijft dan `true` zodat ze verplicht wordt het te wijzigen bij inloggen).
 
+---
+
 ## 2026-07-15 — E-mailmelding bij mislukte GitHub push in post-merge.sh
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
@@ -131,6 +95,22 @@ Totaal af te trekken op desktop: ~136px. De chat trok maar 64px af, waardoor de 
 **Benodigde actie (eenmalig, door René):** Zorg dat `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, `RENE_ALERT_EMAIL`, `MAIL_FROM` en `MAIL_MAILBOX` als Replit-omgevingsvariabelen zijn ingesteld. Ze zijn al nodig voor de app-mailkoppeling; controleer of ze ook in de post-merge-omgeving beschikbaar zijn.
 
 ---
+## 2026-07-15 — E-mailmelding bij mislukte GitHub push in post-merge.sh
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+**Probleem:** Als de GitHub push in stap 7 van `scripts/post-merge.sh` mislukte, werd alleen een waarschuwing naar stderr geprint — René merkte dit niet actief. Een mislukte push betekent dat de productie-VPS stil achterloopt zonder enige melding.
+
+**Wijzigingen:**
+
+1. **`scripts/post-merge.sh`** — in de faaltak van stap 7 (PUSH_EXIT != 0) een e-mailmelding toegevoegd via Microsoft 365/Graph (client-credentials, zelfde aanpak als `deploy.yml`):
+   - Haalt een OAuth-token op bij Azure AD via `AZURE_TENANT_ID` / `AZURE_CLIENT_ID` / `AZURE_CLIENT_SECRET`
+   - Verstuurt een e-mail naar `RENE_ALERT_EMAIL` met: volledige commit-SHA, tijdstip (UTC), exit-code en een vierpoints herstelprocedure
+   - Gebruikt `MAIL_FROM` en `MAIL_MAILBOX` (met fallback naar de standaardadressen)
+   - Nooit een melding bij een geslaagde push (geen mailmoeheid)
+   - Fail-safe: ontbrekende env vars of Graph-fouten geven een INFO/WAARSCHUWING naar stderr, stoppen het script niet
+
+**Benodigde actie (eenmalig, door René):** Zorg dat `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, `RENE_ALERT_EMAIL`, `MAIL_FROM` en `MAIL_MAILBOX` als Replit-omgevingsvariabelen zijn ingesteld. Ze zijn al nodig voor de app-mailkoppeling; controleer of ze ook in de post-merge-omgeving beschikbaar zijn.
 
 ---
 
