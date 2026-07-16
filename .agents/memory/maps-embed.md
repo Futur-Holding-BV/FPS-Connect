@@ -24,6 +24,21 @@ De app roept server-side meerdere losse Google API's aan: **Geocoding** + **Maps
 - Diagnose: roep de 3-4 endpoints direct aan met de sleutel via node fetch om per API status te zien (geen login nodig).
 - Street View: check eerst `streetview/metadata` (gratis, status !== "OK" → geen dekking → null, AI valt terug op schatting). Bereken `heading` uit pano-locatie → gebouw zodat de gevel in beeld komt.
 
+## API-status per endpoint (juli 2026 productie-diagnose)
+| API | Status | Gebruikt door |
+|---|---|---|
+| Geocoding API | ✅ OK | AI-invullen adres/coördinaten (gebouw-ai.ts) |
+| Maps Embed API | ✅ HTTP 200 | Kaartweergave gebouwdetail (GET /gebouwen/:id/kaart) |
+| Street View Static API | ✅ HTTP 200 | Gevelbeeld opleverrapport (GET /gebouwen/:id/gevelbeeld) |
+| Static Maps API | ❌ HTTP 403 | AI-satellietvisie (haalSatellietBeeld in gebouw-ai.ts) → graceful null |
+
+**Static Maps 403 gevolg:** `haalSatellietBeeld()` geeft null terug (regel 261-263 gebouw-ai.ts); de AI-analyse gaat door zonder satellietafbeelding. Geen zichtbare fout in de UI — alleen degraded AI-kwaliteit. Fix: Static Maps API inschakelen in Google Cloud Console + toevoegen aan sleutel-witte lijst.
+
+## GOOGLE_MAPS_API_KEY ligging
+- Replit secrets: aanwezig als `GOOGLE_MAPS_API_KEY` (bevestigd juli 2026)
+- VPS `.env.production`: was afwezig (root cause rode melding); hersteld via Replit → VPS SSH-tunnel (base64-stdin, nooit gelogd)
+- VPS container: afdwingen met `docker compose up -d --no-deps --force-recreate api` (NIET `restart` — die leest env_file NIET opnieuw)
+
 ## Geocoding `region` is slechts een zachte voorkeur
 Zet bij geocoding altijd `components=country:NL`, niet alleen `region=nl`.
 
