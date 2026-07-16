@@ -26,6 +26,19 @@ Onboarding is nu uitsluitend bereikbaar via de rij-actie op `/personeel?tab=mede
 
 ---
 
+## 2026-07-18 — Gebouwen-bevoegdheidscheck gefixeerd: René Vink (rol=gebruiker, gb=4) hersteld
+
+- **Uitvoering:** bugfix | **Kwaliteit:** hoog | **Risico:** laag
+
+**Probleem:** Gebruikers met `rol="gebruiker"` werden in `gebouwen/detail.tsx` en `plattegrond.tsx` hard geblokkeerd voor beheer-acties (zoals plattegrond bewerken) omdat de check `BEHEERDER_ROLLEN.includes(effectieveRol)` was. Gebruikers zoals René Vink (gebouwen-bevoegdheid 4) konden hierdoor hun werk niet doen.
+
+**Oplossing:**
+- Harde rolchecks vervangen door `heeftNiveau("gebouwen", 2)` (of hoger).
+- `useRol` en `effectieveRol` imports/constanten verwijderd waar niet meer nodig.
+- Hierdoor zijn René Vink (gb=4), Tessa Vink (gb=4), Jacqueline (gb=3) en Ruben (gb=3) weer geautoriseerd voor gebouwenbeheer, ongeacht hun basisrol.
+
+---
+
 ## 2026-07-18 — Auto-deploy hersteld: SSH-sleutelformaat + backup-profiel
 
 - **Uitvoering:** bugfix deploy-pipeline | **Kwaliteit:** hoog | **Risico:** laag
@@ -699,11 +712,38 @@ Totaal af te trekken op desktop: ~136px. De chat trok maar 64px af, waardoor de 
 
 5. **`artifacts/firevault/src/components/slim-upload-balk.tsx`** — `SlimUploadSuggestie` interface bijgewerkt met `tekst_gevonden?` en `ai_model?`; nieuw inklapbaar "Analyse-details" blok toont tekst gevonden / vision gebruikt / AI-model direct in de bevestigingsstap.
 
+<<<<<<< HEAD
 6. **`lib/db/scripts/apply-additive.mjs`** + **`schema-healthcheck.mjs`** — document_classificatie_correcties in post-merge migratie.
 
 ---
 
 ## 2026-07-16 — Slim-upload aanvraag-mail koppelen aan gebouw en offerte aanmaken
+=======
+---
+
+## 2026-07-16 — Post-merge faalmelding altijd bezorgd via fallback-kanaal
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+**Aanleiding:** Als `AZURE_TENANT_ID`/`AZURE_CLIENT_ID`/`AZURE_CLIENT_SECRET`/`RENE_ALERT_EMAIL` niet ingesteld zijn (of als het Graph-token mislukt of `sendMail` een fout geeft), sloeg `scripts/post-merge.sh` de faalmelding stilzwijgend over. René werd dan niet gewaarschuwd bij een mislukte post-merge stap of een mislukte GitHub push.
+
+**Wijziging:**
+1. `scripts/post-merge.sh` — nieuwe `_stuur_fallback_melding`-hulpfunctie toegevoegd (vóór `_stuur_faalmelding`):
+   - Probeert eerst `SLACK_WEBHOOK_URL` (Slack Incoming Webhook, POST JSON `{text}`).
+   - Als dat mislukt of niet ingesteld is, probeert het `NTFY_URL` (ntfy push-service, POST met `Title`/`Priority`/`Tags`-headers).
+   - Logt een waarschuwing maar stopt het script nooit bij een fout.
+2. `_stuur_faalmelding` roept nu `_stuur_fallback_melding` aan op alle drie de plekken waar voorheen stilzwijgend werd teruggekeerd:
+   - Ontbrekende AZURE-variabelen
+   - Mislukt Graph-token-verzoek
+   - Graph `sendMail` HTTP-fout
+3. `docs/PRODUCTION_RUNBOOK.md` — nieuwe aandachtspunt toegevoegd over de fallback-volgorde en vereiste secrets.
+
+**Benodigde actie (optioneel, door René):** Stel `SLACK_WEBHOOK_URL` of `NTFY_URL` in als Replit-secret voor een gegarandeerd alternatief kanaal naast Graph-e-mail.
+
+---
+
+## 2026-07-15 — Ontbrekende wachtwoord-wijzigen gate in de frontend
+>>>>>>> 5564f86 (fix: post-merge faalmelding altijd bezorgd via Slack/ntfy fallback)
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
 

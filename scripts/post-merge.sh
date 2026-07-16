@@ -86,7 +86,7 @@ _stuur_fallback_melding() {
       -H "Tags: warning,fps" \
       --data-raw "$_BERICHT" 2>/dev/null || echo "000")
     if [ "${_NTFY_HTTP:-000}" -ge 200 ] && [ "${_NTFY_HTTP:-000}" -lt 300 ]; then
-      echo "Fallback-melding verzonden via ntfy."
+      echo "Fallback-melding verzonden via ntfy (${NTFY_URL})."
       _GESLAAGD=1
     else
       echo "WAARSCHUWING: ntfy gaf HTTP ${_NTFY_HTTP:-000}; ntfy-melding niet bezorgd." >&2
