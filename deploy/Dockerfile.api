@@ -65,8 +65,10 @@ ENV PORT=8080
 # via docker-compose build-args; zichtbaar in de app via GET /api/versie.
 ARG GIT_COMMIT=onbekend
 ARG BUILD_TIJD=""
+ARG DEPLOY_NUMMER=""
 ENV GIT_COMMIT=${GIT_COMMIT}
 ENV BUILD_TIJD=${BUILD_TIJD}
+ENV DEPLOY_NUMMER=${DEPLOY_NUMMER}
 
 EXPOSE 8080
 

@@ -28,6 +28,8 @@ export interface SlimUploadSuggestie {
   vertrouwen: "laag" | "midden" | "hoog";
   ai_beschikbaar: boolean;
   vision_gebruikt: boolean;
+  tekst_gevonden: boolean;
+  ai_model: string | null;
   gevonden_gegevens: Record<string, string>;
   alternatieven: SlimUploadCategorie[];
   organisatie: string | null;
@@ -71,6 +73,8 @@ async function classificeerBestand(
     vertrouwen: analyse.vertrouwen,
     ai_beschikbaar: analyse.ai_beschikbaar,
     vision_gebruikt: analyse.vision_gebruikt,
+    tekst_gevonden: analyse.tekst_gevonden,
+    ai_model: analyse.ai_model,
     gevonden_gegevens: analyse.gevonden_gegevens,
     alternatieven: analyse.alternatieven,
     organisatie: analyse.organisatie,

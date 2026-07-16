@@ -12,6 +12,7 @@ import {
   werkgeversTable,
   gebruikersTable,
   medewerkersTable,
+  documentClassificatieCorrectiesTable,
 } from "@workspace/db";
 import { eq, desc, and, isNull, or, sql } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
@@ -45,7 +46,7 @@ const DOC_CATEGORIE_NAAR_INBOX: Record<DocCategorie, string> = {
   jaarrekening: "jaarrekening",
   contract: "contract",
   bibliotheek: "product_certificaat",
-  document_sjabloon: "onbekend",
+  document_sjabloon: "document_sjabloon",
   algemeen: "onbekend",
   onbekend: "onbekend",
 };
@@ -440,6 +441,16 @@ router.patch("/inbox/items/:id", schrijven, async (req, res): Promise<void> => {
       }
     }
 
+    // Haal het huidige item op voor correctie-opname (vóór update)
+    const [huidigItem] = await db
+      .select({
+        documentCategorie: inboxItemsTable.documentCategorie,
+        aiOpslaglocatie: inboxItemsTable.aiOpslaglocatie,
+        aiBewijs: inboxItemsTable.aiBewijs,
+      })
+      .from(inboxItemsTable)
+      .where(eq(inboxItemsTable.id, id));
+
     const [item] = await db
       .update(inboxItemsTable)
       .set(setValues)
@@ -447,6 +458,44 @@ router.patch("/inbox/items/:id", schrijven, async (req, res): Promise<void> => {
       .returning();
 
     if (!item) return void res.status(404).json({ error: "Item niet gevonden" });
+
+    // Correctie-leerloop: sla handmatige categorie-aanpassing op als referentie
+    if (
+      document_categorie &&
+      huidigItem?.documentCategorie &&
+      document_categorie !== huidigItem.documentCategorie
+    ) {
+      let werkmaatschappijNaam: string | null = null;
+      const correctieGebruikerId = req.session.userId ?? null;
+      if (correctieGebruikerId) {
+        try {
+          const [wm] = await db
+            .select({ naam: werkgeversTable.naam })
+            .from(medewerkersTable)
+            .innerJoin(werkgeversTable, eq(medewerkersTable.werkgeverId, werkgeversTable.id))
+            .where(eq(medewerkersTable.gebruikerId, correctieGebruikerId));
+          werkmaatschappijNaam = wm?.naam ?? null;
+        } catch { /* niet blokkeren */ }
+      }
+      const bestandshash = item.bestandsnaam
+        ? crypto.createHash("sha256").update(item.bestandsnaam + (item.mimetype ?? "")).digest("hex")
+        : null;
+      let bewijsSignalen: unknown[] | null = null;
+      if (huidigItem.aiBewijs) {
+        try { bewijsSignalen = JSON.parse(huidigItem.aiBewijs); } catch { /* niet parseerbaar */ }
+      }
+      try {
+        await db.insert(documentClassificatieCorrectiesTable).values({
+          bestandshash,
+          origineleCategorie: huidigItem.documentCategorie,
+          gecorrigeerdeCategorie: document_categorie,
+          werkmaatschappij: werkmaatschappijNaam,
+          bewijsSignalen: Array.isArray(bewijsSignalen) ? bewijsSignalen : null,
+        });
+      } catch (err) {
+        req.log.warn({ err }, "inbox PATCH: correctie opslaan mislukt (niet-kritiek)");
+      }
+    }
 
     const gebruikerId = req.session.userId ?? null;
     const auditDetails = ai_geconsolideerd !== undefined
