@@ -1643,14 +1643,14 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
 
       <main className={cn(
         "flex-1 bg-background",
-        location === "/berichten"
+        location.startsWith("/berichten")
           ? "overflow-hidden flex flex-col h-screen"
           : "min-h-screen overflow-auto",
       )}>
         {/* Universele topbalk — terugknop altijd zichtbaar, menu toggle alleen mobiel */}
         <div className={cn(
           "z-20 flex items-center gap-2 px-2 py-1.5 bg-background border-b border-border",
-          location === "/berichten" ? "flex-shrink-0" : "sticky top-0",
+          location.startsWith("/berichten") ? "flex-shrink-0" : "sticky top-0",
         )}>
           <SidebarTrigger className="md:hidden" title="Menu openen" />
           <img src={logoFpsConnect} alt="FPS Connect" className="h-5 w-auto md:hidden" />
@@ -1662,7 +1662,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
           </div>
         </div>
         {toonToolboxen && <VeiligheidMeldingBanner />}
-        {location === "/berichten" ? (
+        {location.startsWith("/berichten") ? (
           <div className="flex-1 min-h-0">
             {children}
           </div>
