@@ -1641,9 +1641,17 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
         </SidebarFooter>
       </Sidebar>
 
-      <main className="flex-1 min-h-screen overflow-auto bg-background">
+      <main className={cn(
+        "flex-1 bg-background",
+        location === "/berichten"
+          ? "overflow-hidden flex flex-col h-screen"
+          : "min-h-screen overflow-auto",
+      )}>
         {/* Universele topbalk — terugknop altijd zichtbaar, menu toggle alleen mobiel */}
-        <div className="sticky top-0 z-20 flex items-center gap-2 px-2 py-1.5 bg-background border-b border-border">
+        <div className={cn(
+          "z-20 flex items-center gap-2 px-2 py-1.5 bg-background border-b border-border",
+          location === "/berichten" ? "flex-shrink-0" : "sticky top-0",
+        )}>
           <SidebarTrigger className="md:hidden" title="Menu openen" />
           <img src={logoFpsConnect} alt="FPS Connect" className="h-5 w-auto md:hidden" />
           <TerugKnop />
@@ -1654,9 +1662,15 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
           </div>
         </div>
         {toonToolboxen && <VeiligheidMeldingBanner />}
-        <div className="p-3 md:p-4 xl:p-6 pb-20">
-          {children}
-        </div>
+        {location === "/berichten" ? (
+          <div className="flex-1 min-h-0">
+            {children}
+          </div>
+        ) : (
+          <div className="p-3 md:p-4 xl:p-6 pb-20">
+            {children}
+          </div>
+        )}
       </main>
       <BerichtNotificatieToast />
       <SlimUploadBalk />

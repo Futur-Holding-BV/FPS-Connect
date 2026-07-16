@@ -1,3 +1,31 @@
+## 2026-07-16 — Herstel chatfunctie: invoerveld buiten beeld door verkeerde hoogte-berekening
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+**Rootprobleem:** De `BerichtenPagina` gebruikte `h-[calc(100vh-64px)]` als vaste hoogte, maar de `beheerder-layout.tsx` heeft geen vaste 64px-header. De werkelijke structuur is:
+- `<main className="flex-1 min-h-screen overflow-auto">` — de hele main scrollt
+- Topbalk (`py-1.5 flex items-center`) ≈ 40px
+- Contentomhulling `<div className="p-3 md:p-4 xl:p-6 pb-20">` — op desktop p-4 + pb-20 = 96px extra
+
+Totaal af te trekken op desktop: ~136px. De chat trok maar 64px af, waardoor de pagina groter was dan de beschikbare ruimte, de `main` ging scrollen in plaats van de interne chatscroll, en het invoerveld verdween buiten beeld.
+
+**Diagnosestappen bevestigd:**
+- Chat-tabellen (`chat_gesprekken`, `chat_deelnemers`, `chat_berichten`) bestaan in productie ✓
+- `chatRouter` correct geregistreerd in `routes/index.ts` (regels 45 en 176) ✓
+- Chat-endpoints aanwezig in `openapi.yaml` en gegenereerde hooks kloppen ✓
+- Productie-DB is leeg (nog geen gesprekken aangemaakt) — verwacht gedrag voor eerste gebruik ✓
+
+**Wijzigingen:**
+
+1. **`artifacts/firevault/src/layouts/beheerder-layout.tsx`** — `location === "/berichten"` detectie:
+   - `main` krijgt `overflow-hidden flex flex-col h-screen` i.p.v. `min-h-screen overflow-auto`
+   - Topbalk wordt `flex-shrink-0` i.p.v. `sticky top-0` (overflow-hidden maakt sticky irrelevant)
+   - Contentomhulling wordt `flex-1 min-h-0` zonder padding voor de berichten-pagina
+
+2. **`artifacts/firevault/src/pages/berichten/index.tsx`** — root-div `h-[calc(100vh-64px)]` → `h-full`
+
+---
+
 ## 2026-07-15 — Ontbrekende wachtwoord-wijzigen gate in de frontend
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
