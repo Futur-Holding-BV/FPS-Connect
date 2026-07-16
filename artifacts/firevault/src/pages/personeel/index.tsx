@@ -1514,6 +1514,49 @@ export default function PersoneelPagina() {
               <DatePicker value={medewerkerForm.in_dienst_sinds ?? ""} onChange={(v) => setMedewerkerForm({ ...medewerkerForm, in_dienst_sinds: v })} />
             </div>
           </div>
+
+          {/* Toegang tot FPS Connect */}
+          <div className="rounded-md border bg-muted/30 p-3 space-y-2.5">
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="connect-uitnodigen"
+                checked={medewerkerForm.connect_uitnodigen ?? false}
+                onCheckedChange={(v) => setMedewerkerForm({ ...medewerkerForm, connect_uitnodigen: v === true })}
+              />
+              <label htmlFor="connect-uitnodigen" className="flex items-center gap-1.5 text-sm font-medium cursor-pointer select-none">
+                <Shield className="h-3.5 w-3.5 text-primary" />
+                Toegang tot FPS Connect aanmaken
+              </label>
+            </div>
+            {medewerkerForm.connect_uitnodigen && (
+              <div className="space-y-2 pl-6">
+                {!medewerkerForm.email && (
+                  <p className="text-xs text-destructive">Een e-mailadres is verplicht voor de uitnodigingsmail.</p>
+                )}
+                <div className="space-y-1">
+                  <Label className="text-xs">Toegangsprofiel</Label>
+                  <Select
+                    value={medewerkerForm.connect_profiel_id != null ? String(medewerkerForm.connect_profiel_id) : "geen"}
+                    onValueChange={(v) => setMedewerkerForm({ ...medewerkerForm, connect_profiel_id: v === "geen" ? null : Number(v) })}
+                  >
+                    <SelectTrigger className="h-8 text-sm">
+                      <SelectValue placeholder="Lege bevoegdheden" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="geen">Lege bevoegdheden</SelectItem>
+                      {(profielen ?? []).map((p) => (
+                        <SelectItem key={p.id} value={String(p.id)}>{p.naam}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Direct na opslaan ontvangt de medewerker een uitnodigingsmail.
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+
           <DialogFooter>
             <Button variant="outline" onClick={() => setMedewerkerOpen(false)}>Annuleren</Button>
             <Button onClick={opslaanMedewerker} disabled={maakMedewerker.isPending}>

@@ -56,6 +56,22 @@ const FUNCTIETITELS_TOEGESTAAN = [
   "Financieel",
 ];
 
+// Veld-functies voor medewerkers met rol "gebruiker" (buitendienst en staf).
+// Maximaal één per gebruiker; komt overeen met de FUNCTIE_GROEPEN in de frontend.
+const VELD_FUNCTIETITELS_TOEGESTAAN = [
+  "Projectleider",
+  "Werkvoorbereider",
+  "Project-admin",
+  "Uitvoerder",
+  "Monteur",
+  "Timmerman",
+  "Controleur",
+  "Commercieel",
+  "Financieel",
+  "Externe boekhouder",
+  "HRM-adviseur",
+];
+
 const isBeheerderRol = (rol: unknown) => rol === "hoofdbeheerder";
 
 // Normaliseer en valideer projectfuncties: alleen toegestane waarden, ontdubbeld.
@@ -68,6 +84,16 @@ const schoonFunctietitels = (waarde: unknown): string[] => {
       .filter((f) => FUNCTIETITELS_TOEGESTAAN.includes(f)),
   );
   return [...uniek];
+};
+
+// Normaliseer en valideer veld-functietitels: maximaal één toegestane waarde.
+const schoonVeldFunctietitels = (waarde: unknown): string[] => {
+  if (!Array.isArray(waarde)) return [];
+  const geldig = waarde
+    .filter((f): f is string => typeof f === "string")
+    .map((f) => f.trim())
+    .filter((f) => VELD_FUNCTIETITELS_TOEGESTAAN.includes(f));
+  return geldig.slice(0, 1);
 };
 
 const mapGebruiker = (g: typeof gebruikersTable.$inferSelect, profielIds?: number[]) => ({
@@ -299,7 +325,9 @@ router.post("/gebruikers", alleenBeheerder, async (req, res): Promise<void> => {
     }
     const functies = isBeheerderRol(rol)
       ? schoonFunctietitels(functietitels)
-      : [];
+      : rol === "gebruiker"
+        ? schoonVeldFunctietitels(functietitels)
+        : [];
     // P2: meerdere rollen (profielen). profiel_ids vervangt de volledige set
     // koppelingen; de matrices zijn nodig voor de afgeleide effectieve matrix.
     const { ids: profielIds, fout: profielFout } = parseProfielIds(profiel_ids);
@@ -464,8 +492,20 @@ router.patch("/gebruikers/:id", alleenBeheerder, async (req, res): Promise<void>
           : rolGewijzigd
             ? schoonFunctietitels(bestaandeFuncties)
             : undefined;
+    } else if (effectieveRol === "gebruiker") {
+      // Gebruiker: maximaal één veld-functie (Timmerman, Monteur, etc.).
+      // Niet meegestuurd = bestaande waarde ongemoeid laten, behalve bij rolwissel
+      // waarbij kantoor-functies moeten worden opgeschoond.
+      if (functietitels !== undefined) {
+        functies = schoonVeldFunctietitels(functietitels);
+      } else if (rolGewijzigd) {
+        // Rolwissel ván hoofdbeheerder: kantoor-functies opschonen, veld-functies
+        // zijn er dan nog niet — leeg is correct.
+        functies = [];
+      }
+      // undefined: geen veld in de update → bestaande waarde blijft staan
     } else {
-      // Gebruiker/klant (ook bij rolwissel): nooit een functie.
+      // Klant: geen functietitel.
       functies = [];
     }
     const wijziging: Partial<typeof gebruikersTable.$inferInsert> = {

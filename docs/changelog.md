@@ -1,3 +1,25 @@
+## 2026-07-16 — Herstel functietellers, medewerker-Connect-koppeling en uitnodigingsstroom
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+**Aanleiding:** Vier gekoppelde problemen: (1) Timmerman/Monteur-functietellers toonden 0 ondanks dat Fred van Wallinga de rol had; (2) personeelslid aanmaken was losgekoppeld van gebruikersaccount aanmaken; (3) uitnodigingsmail en onboarding startten niet automatisch; (4) GitHub push geblokkeerd door merge-conflict.
+
+**Wijzigingen:**
+
+1. **`artifacts/api-server/src/routes/gebruikers.ts`** — `isBeheerderRol` gaf ten onrechte `functietitels = []` voor ALLE niet-hoofdbeheerder rollen. Fix: `VELD_FUNCTIETITELS_TOEGESTAAN` whitelist + `schoonVeldFunctietitels()` zodat veldmedewerkers (Timmerman, Monteur, Uitvoerder, etc.) hun functietitels behouden bij POST en PATCH.
+
+2. **`lib/api-spec/openapi.yaml`** — `connect_uitnodigen: boolean` en `connect_profiel_id: integer|null` toegevoegd aan `MedewerkerInput` schema; codegen bijgewerkt (orval + zod).
+
+3. **`artifacts/api-server/src/routes/hrm.ts`** — POST /medewerkers ondersteunt nu `connect_uitnodigen`/`connect_profiel_id`: maakt atomair een FPS Connect gebruikersaccount aan (in transactie, inclusief bevoegdheden uit opgegeven profiel en functietitel), koppelt het aan de medewerker, en verstuurt de uitnodigingsmail. Niet-fataal: medewerker wordt altijd aangemaakt; account-aanmaak is best-effort.
+
+4. **`artifacts/firevault/src/pages/personeel/index.tsx`** — "Toegang tot FPS Connect aanmaken" sectie toegevoegd aan het medewerker-aanmaak dialog: checkbox met profielselectie, validatie op e-mailadres en toelichting.
+
+5. **`scripts/post-merge.sh`** — `git checkout --ours` conflict-resolutie toegevoegd voor `web-wachtwoord-gate.spec.ts` merge-conflict.
+
+**Typecheck:** volledig groen (api-server + firevault + typecheck:libs). Workflows herstart.
+
+---
+
 ## 2026-07-16 — Herstel HRM-medewerker gebruikersbeheer (403) + e2e-infra stabiliteit
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag

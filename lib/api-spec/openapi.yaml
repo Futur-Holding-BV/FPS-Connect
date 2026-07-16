@@ -30193,6 +30193,12 @@ components:
         jaar:
           type: integer
           description: Jaar waarvoor het verlofsaldo wordt aangemaakt (standaard huidig jaar).
+        connect_uitnodigen:
+          type: boolean
+          description: Wanneer true wordt direct een FPS Connect gebruikersaccount aangemaakt en een uitnodigingsmail verstuurd. Vereist een geldig e-mailadres.
+        connect_profiel_id:
+          type: ["integer", "null"]
+          description: Profiel-id voor het aan te maken Connect-account (optioneel; laat leeg voor lege bevoegdheden).
 
     MedewerkerAanstelling:
       type: object

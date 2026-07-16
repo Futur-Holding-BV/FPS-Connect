@@ -7,7 +7,10 @@
 // salarisadministratie. Uitzondering (op expliciet verzoek vooruit gebouwd): AI
 // stelt opleidingen/cursussen voor per functie. Conform het projectprincipe stelt
 // de AI alleen voor; een mens bevestigt en bewaart (geen automatische opslag).
+import crypto from "node:crypto";
 import { Router } from "express";
+import { maakGebruikerAan } from "../lib/gebruiker-aanmaken";
+import { stuurUitnodigingsmail } from "../services/email";
 import multer from "multer";
 import { extraheerPdfTekst } from "../lib/pdfTekst";
 import { invalideerContext } from "../lib/aiContext/cache";
@@ -32,6 +35,7 @@ import {
   jaarAfsluitingRegelsTable,
   ziekmeldingenTable,
   gebruikersTable,
+  profielenTable,
   medewerkerDocumentenTable,
   zzpOvereenkomstenTable,
   medewerkerAanstellingenTable,
@@ -58,6 +62,10 @@ const uploadGeheugem = multer({ storage: multer.memoryStorage(), limits: { fileS
 const hrmStorage = new ObjectStorageService();
 
 const router = Router();
+
+function domein(): string {
+  return (process.env.REPLIT_DOMAINS ?? "").split(",")[0]?.trim() || "localhost";
+}
 
 const lezen = requireBevoegdheid("personeel", 1);
 const schrijven = requireBevoegdheid("personeel", 2);
@@ -878,8 +886,23 @@ router.get("/medewerkers", lezen, async (req, res): Promise<void> => {
 
 router.post("/medewerkers", schrijven, async (req, res): Promise<void> => {
   try {
-    const { naam, gebruiker_id, email, telefoon, mobiel, werkmaatschappij, functie_id, leidinggevende_id, cao, dienstverband, bedrijf_uitzendbureau, contracturen_per_week, in_dienst_sinds, uit_dienst_per, noodcontact_naam, noodcontact_telefoon, geboortedatum, geboorteplaats, adres, postcode, woonplaats, rijbewijs, rijbewijs_vervaldatum, vca_vervaldatum, ehbo_vervaldatum, bhv_vervaldatum, cv_tekst, actief, opmerkingen, verlofsoort_ids, jaar } = req.body;
+    const {
+      naam, gebruiker_id, email, telefoon, mobiel, werkmaatschappij, functie_id,
+      leidinggevende_id, cao, dienstverband, bedrijf_uitzendbureau, contracturen_per_week,
+      in_dienst_sinds, uit_dienst_per, noodcontact_naam, noodcontact_telefoon, geboortedatum,
+      geboorteplaats, adres, postcode, woonplaats, rijbewijs, rijbewijs_vervaldatum,
+      vca_vervaldatum, ehbo_vervaldatum, bhv_vervaldatum, cv_tekst, actief, opmerkingen,
+      verlofsoort_ids, jaar,
+      // Connect-toegang: optioneel FPS Connect account aanmaken + uitnodigen
+      connect_uitnodigen, connect_profiel_id,
+    } = req.body;
     if (!naam) return void res.status(400).json({ error: "naam is verplicht" });
+
+    // Validatie: connect_uitnodigen vereist een e-mailadres
+    if (connect_uitnodigen && !email) {
+      return void res.status(400).json({ error: "E-mailadres is verplicht om een Connect-uitnodiging te versturen." });
+    }
+
     const wm = werkmaatschappij || "FPS Brandpreventie";
     const [m] = await db
       .insert(medewerkersTable)
@@ -926,6 +949,84 @@ router.post("/medewerkers", schrijven, async (req, res): Promise<void> => {
     if (ids.length > 0 && caoOptie && Number.isFinite(uren) && uren > 0) {
       const saldoJaar = Number.isFinite(Number(jaar)) ? Number(jaar) : new Date().getFullYear();
       await maakVerlofprofielAan({ medewerkerId: m.id, caoOptie, contracturenPerWeek: uren, verlofsoortIds: ids, jaar: saldoJaar }, db);
+    }
+
+    // Connect-toegang: gebruikersaccount aanmaken, koppelen en uitnodigingsmail versturen.
+    // Niet-fataal: medewerker is altijd aangemaakt; account-aanmaak is best-effort.
+    if (connect_uitnodigen && email) {
+      try {
+        // Bevoegdheden ophalen uit het opgegeven profiel (optioneel).
+        let bevoegdheden: Record<string, number> = {};
+        let herkomstProfielId: number | null = null;
+        const profielId = typeof connect_profiel_id === "number" && Number.isFinite(connect_profiel_id)
+          ? connect_profiel_id : null;
+        if (profielId !== null) {
+          const [profiel] = await db
+            .select({ bevoegdheden: profielenTable.bevoegdheden })
+            .from(profielenTable)
+            .where(eq(profielenTable.id, profielId));
+          if (profiel) {
+            bevoegdheden = (profiel.bevoegdheden as Record<string, number>) ?? {};
+            herkomstProfielId = profielId;
+          }
+        }
+
+        // Functienaam ophalen voor de functietitels van het gebruikersaccount.
+        let functietitels: string[] = [];
+        if (functie_id) {
+          const [f] = await db
+            .select({ naam: functiesTable.naam })
+            .from(functiesTable)
+            .where(eq(functiesTable.id, parseId(functie_id)));
+          if (f?.naam) functietitels = [f.naam];
+        }
+
+        // Gebruiker aanmaken in transactie + medewerker koppelen.
+        const nieuwGebruiker = await db.transaction(async (tx) => {
+          const g = await maakGebruikerAan(tx, {
+            naam: m.naam,
+            email,
+            rol: "gebruiker",
+            functietitels,
+            bevoegdheden,
+            herkomstProfielId,
+            herkomstAutomatisch: false,
+            uitnodigingStatus: "niet_uitgenodigd",
+            dienstverband: (dienstverband || "vast") as "intern" | "inhuur" | "uitzend" | "zzp",
+          });
+          await tx
+            .update(medewerkersTable)
+            .set({ gebruikerId: g.id, bijgewerktOp: new Date() })
+            .where(eq(medewerkersTable.id, m.id));
+          return g;
+        });
+
+        // Uitnodigingsmail versturen (niet-fataal: account bestaat al, mail is slechts notificatie).
+        try {
+          const token = crypto.randomBytes(32).toString("hex");
+          const verlooptOp = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+          const activatieLink = `https://${domein()}/uitnodiging/${token}`;
+          await stuurUitnodigingsmail({
+            naarEmail: nieuwGebruiker.email,
+            naarNaam: nieuwGebruiker.naam,
+            activatieLink,
+            verstuurdDoorId: req.session.userId ?? null,
+          });
+          await db
+            .update(gebruikersTable)
+            .set({
+              uitnodigingStatus: "uitgenodigd",
+              uitnodigingVerstuurdOp: new Date(),
+              uitnodigingToken: token,
+              uitnodigingVerlooptOp: verlooptOp,
+            })
+            .where(eq(gebruikersTable.id, nieuwGebruiker.id));
+        } catch (mailErr) {
+          req.log.warn({ mailErr, gebruikerId: nieuwGebruiker.id }, "connect_uitnodigen: uitnodigingsmail mislukt; account is wél aangemaakt");
+        }
+      } catch (connectErr) {
+        req.log.warn({ connectErr, medewerkerId: m.id }, "connect_uitnodigen: gebruikersaccount aanmaken mislukt; medewerker is wél opgeslagen");
+      }
     }
 
     invalideerContext("medewerker", m.id);

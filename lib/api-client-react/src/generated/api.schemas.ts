@@ -5024,6 +5024,13 @@ export interface MedewerkerInput {
   verlofsoort_ids?: number[];
   /** Jaar waarvoor het verlofsaldo wordt aangemaakt (standaard huidig jaar). */
   jaar?: number;
+  /** Wanneer true wordt direct een FPS Connect gebruikersaccount aangemaakt en een uitnodigingsmail verstuurd. Vereist een geldig e-mailadres. */
+  connect_uitnodigen?: boolean;
+  /**
+     * Profiel-id voor het aan te maken Connect-account (optioneel; laat leeg voor lege bevoegdheden).
+     * @nullable
+     */
+  connect_profiel_id?: number | null;
 }
 
 export interface MedewerkerAanstelling {

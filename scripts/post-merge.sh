@@ -350,7 +350,19 @@ ASKPASS_EOF
         echo "Remote main (${REMOTE_MAIN_SHA:0:8}) bevat commits die lokaal ontbreken; auto-merge..."
         git -c user.email="post-merge@fps-one.nl" -c user.name="FPS Post-merge" \
           merge --no-edit refs/remotes/fps-postsync/main 2>&1 || {
-            echo "WAARSCHUWING: Auto-merge mislukt; push wordt toch geprobeerd." >&2
+            # Bij conflict: bewaar altijd de lokale (inkomende task-merge) versie.
+            CONFLICTING=$(git diff --name-only --diff-filter=U 2>/dev/null || echo "")
+            if [ -n "$CONFLICTING" ]; then
+              echo "Conflicten gevonden in: $CONFLICTING"
+              echo "Lokale versie wordt bewaard (--ours)..."
+              echo "$CONFLICTING" | tr '\n' '\0' | xargs -0 git checkout --ours --
+              git add -A
+              git -c user.email="post-merge@fps-one.nl" -c user.name="FPS Post-merge" \
+                commit -m "Merge remote-sync: conflicten opgelost via --ours" 2>&1 || \
+                echo "WAARSCHUWING: Conflict-commit mislukt; push toch geprobeerd." >&2
+            else
+              echo "WAARSCHUWING: Auto-merge mislukt zonder detecteerbaar conflict; push wordt toch geprobeerd." >&2
+            fi
           }
         # LOCAL_SHA bijwerken na merge zodat de log het juiste commit-SHA toont
         LOCAL_SHA=$(git rev-parse HEAD)
