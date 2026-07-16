@@ -258,8 +258,14 @@ async function haalSatellietBeeld(
 
   const res = await fetch(url.toString());
   if (!res.ok) {
-    logger.error({ status: res.status }, "Static Maps HTTP-fout");
-    return null;
+    const melding =
+      res.status === 403
+        ? "Satellietkaart niet beschikbaar: de Maps Static API is niet geautoriseerd voor deze API-sleutel. " +
+          "Voeg 'Maps Static API' toe aan de API-restricties in Google Cloud Console " +
+          "(APIs & Services → Credentials → sleutel bewerken → API-restricties)."
+        : `Satellietkaart niet beschikbaar: Google Maps gaf HTTP ${res.status} terug.`;
+    logger.error({ status: res.status, melding }, "Static Maps HTTP-fout");
+    throw new Error(melding);
   }
   const buffer = Buffer.from(await res.arrayBuffer());
   const dataUrl = `data:image/png;base64,${buffer.toString("base64")}`;
@@ -899,12 +905,22 @@ export async function analyseerGebouwVrijeTekst(beschrijving: string, logCtx?: P
   if (!result.naam && (geo.adres ?? delen.adres)) result.naam = geo.adres ?? delen.adres;
 
   // Stap 4: satellietbeeld (bovenaanzicht) + Street View (zijaanzicht) ophalen en via AI analyseren.
+  // Satellite-fouten worden niet stil doorgegeven: de throw van haalSatellietBeeld wordt hier
+  // opgevangen en als duidelijke Nederlandse melding in result.toelichting gezet, zodat de
+  // gebruiker exact weet waarom het satellietbeeld ontbreekt.
+  let satellietFout: string | null = null;
   const [beeld, straatbeeld] = await Promise.all([
-    haalSatellietBeeld(geo.lat, geo.lng),
+    haalSatellietBeeld(geo.lat, geo.lng).catch((e: unknown) => {
+      satellietFout = e instanceof Error ? e.message : "Satellietkaart kon niet worden opgehaald.";
+      logger.error({ err: e }, "Satellietkaart ophalen mislukt — toelichting ingesteld");
+      return null;
+    }),
     HEEFT_OPENAI ? haalStreetViewBeeld(geo.lat, geo.lng) : Promise.resolve(null),
   ]);
   if (beeld) {
     result.satelliet_url = beeld.dataUrl;
+  } else if (satellietFout) {
+    result.toelichting = satellietFout;
   }
   // Vision draait zodra er minstens één beeld beschikbaar is (satelliet en/of
   // Street View). Street View alleen is voldoende om gebouwtype en bouwlagen te

@@ -1,3 +1,20 @@
+## 2026-07-16 — Herstel Maps Static API 403: fout zichtbaar als Nederlandse melding
+
+- **Uitvoering:** volledig (code) + deels (GCP fix vereist menselijke handeling) | **Kwaliteit:** hoog | **Risico:** laag
+
+**Aanleiding:** Op de productieomgeving connect.fps-one.nl gaf de Maps Static API HTTP 403 terug (`API key not authorized`). De oorzaak: `Maps Static API` stond niet in de API-restrictielijst van de Google-sleutel. Eerder gaf `haalSatellietBeeld()` bij HTTP-fout stil `null` terug — de gebruiker zag geen foutmelding en de gebouwanalyse werkte gedeeltelijk zonder uitleg.
+
+**Wijziging (`artifacts/api-server/src/services/gebouw-ai.ts`):**
+
+1. **`haalSatellietBeeld()`** — `return null` bij HTTP-fout vervangen door `throw new Error(melding)` met een specifieke Nederlandse melding per statuscode. Bij HTTP 403 staat de exacte GCP Console-instructie in de foutmelding.
+2. **`analyseerGebouwVrijeTekst()`** — de `Promise.all` voor satelliet- en Street View-afhaling geeft de throw nu niet meer door; een `.catch()` vangt hem op en zet de Nederlandse melding als `result.toelichting`. Zo is de fout zichtbaar in de API-respons én blijft de Street View-analyse doorlopen.
+
+**Deploy:** commit `66ddb23b` gepusht naar GitHub main; Docker image herbouwd op VPS met `--no-cache`; container opnieuw gestart. Bundle-verificatie bevestigt dat de Nederlandse foutmelding aanwezig is.
+
+**Nog openstaand (menselijke handeling):** de Maps Static API staat nog niet op de API-restrictielijst. Zodra René dit toevoegt in Google Cloud Console werkt de satellietkaart ook echt (zie instructie hieronder).
+
+---
+
 ## 2026-07-15 — Ontbrekende wachtwoord-wijzigen gate in de frontend
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
