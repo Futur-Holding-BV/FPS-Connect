@@ -818,7 +818,7 @@ export default function BerichtenPagina() {
   const geselecteerdGesprek = gesprekken?.find((g) => g.id === selectedId);
 
   return (
-    <div className="flex h-[calc(100vh-64px)]">
+    <div className="flex h-full">
       <div className="w-80 flex flex-col border-r flex-shrink-0">
         <div className="p-3 border-b flex items-center gap-2">
           <div className="flex-1 flex items-center gap-2 border rounded-md px-2.5 py-1.5 bg-muted/40">
