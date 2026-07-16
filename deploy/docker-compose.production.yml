@@ -103,6 +103,7 @@ services:
       args:
         GIT_COMMIT: ${GIT_COMMIT:-onbekend}
         BUILD_TIJD: ${BUILD_TIJD:-}
+        DEPLOY_NUMMER: ${DEPLOY_NUMMER:-}
     restart: always
     env_file: .env.production
     environment:

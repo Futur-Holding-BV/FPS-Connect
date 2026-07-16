@@ -17,12 +17,40 @@
 
 ---
 
-## Automatische deploy na Replit-merge (vastgesteld 15 juli 2026)
+## Automatische deploy na Replit-merge (vastgesteld 15 juli 2026; bijgewerkt 16 juli 2026)
 
-Na elke taakmerge in Replit pusht het post-merge script (`scripts/post-merge.sh`, Stap 7) automatisch naar `github.com/vinkrene-jpg/fps-one` (main branch). GitHub Actions (`deploy.yml`) triggert hierop direct en de VPS draait binnen 10-15 minuten op de nieuwe code.
+Na elke taakmerge in Replit pusht het post-merge script (`scripts/post-merge.sh`, Stap 7a+7) automatisch naar `github.com/vinkrene-jpg/fps-one` (main branch). GitHub Actions (`deploy.yml`) triggert hierop direct en de VPS draait binnen 10-15 minuten op de nieuwe code.
 
-- **Vereist secret:** `GITHUB_TOKEN_PUSH` (al geconfigureerd in Replit Secrets en als GitHub Actions secret)
-- **Niet-fataal:** als de push mislukt, waarschuwt het script maar stopt het post-merge proces niet
+### Stap 7a: auto-sync vóór GitHub-push (structurele fix 16 juli 2026)
+
+Vóór elke `git push` fetcht het post-merge script automatisch `origin/main`. Als GitHub commits heeft die Replit niet kent (divergentie), wordt automatisch `git merge --no-edit` uitgevoerd vóór de push. Hierdoor worden "fetch first"-afwijzingen structureel voorkomen.
+
+### Vereiste Replit Secrets
+
+| Secret | Gebruik |
+|---|---|
+| `GITHUB_TOKEN_PUSH` | Git-push naar GitHub vanuit post-merge.sh |
+
+### Vereiste GitHub Repository Secrets (voor automatische deploy via GitHub Actions)
+
+GitHub Actions (`deploy.yml`) SSHt naar de VPS om `deploy-production.sh` te draaien. Daarvoor zijn drie GitHub Repository Secrets verplicht — **deze worden niet automatisch ingesteld, René moet ze handmatig configureren** via GitHub.com > Settings > Secrets and variables > Actions:
+
+| Secret | Waarde | Verplicht |
+|---|---|---|
+| `PROD_SSH_KEY` | Volledige PEM-inhoud van de SSH-privésleutel (inclusief `-----BEGIN`/`-----END`-regels) | **Ja** |
+| `PROD_SSH_HOST` | `149.210.181.47` | **Ja** |
+| `PROD_SSH_USER` | `rene` | **Ja** |
+| `PROD_SSH_PORT` | `22` (optioneel; standaard 22) | Nee |
+| `SMOKETEST_EMAIL` | E-mailadres smoketest-account | Nee |
+| `SMOKETEST_PASSWORD` | Wachtwoord smoketest-account | Nee |
+
+Als `PROD_SSH_KEY` of `PROD_SSH_HOST` ontbreken, stopt de GitHub Actions workflow onmiddellijk met een foutmelding maar mislukt de _merge_ er niet door.
+
+**Tijdelijke workaround als GitHub Actions niet geconfigureerd is:** Voer `scripts/deploy-production.sh` direct op de VPS uit (SSH naar `rene@149.210.181.47`, zie sectie "Handmatig deployen" hieronder).
+
+### Overige eigenschappen
+
+- **Niet-fataal voor merge:** als de push mislukt, waarschuwt het script maar stopt het post-merge proces niet
 - **Token-validatie:** vóór elke push valideert het script het token via de GitHub API (`/user`); een verlopen token geeft een expliciete foutmelding met vernieuwingsinstructies (geen stille fout)
 - **Bijna-verlopen waarschuwing:** als de vervaldatum binnen 14 dagen valt, print Stap 7 een waarschuwing in de post-merge logs
 - **Dagelijkse health-check:** `.github/workflows/token-health-check.yml` controleert elke dag om 08:00 UTC of het token nog geldig is en stuurt een e-mail aan René als het verlopen of bijna-verlopen is
