@@ -131,6 +131,10 @@ uitzonderingen: destructieve migratie, beveiligingsrisico of deploymentfout.
   Graph-variabelen (`AZURE_TENANT_ID`/`AZURE_CLIENT_ID`/`AZURE_CLIENT_SECRET`/`MAIL_FROM`/
   `MAIL_MAILBOX`); uitnodigings- en wachtwoord-vergeten-mails komen daardoor niet aan. Test
   loginflows daarom met accounts die al een wachtwoord hebben.
+- **Post-merge faalmelding-fallback.** Als de Graph-e-mailconfiguratie ontbreekt of faalt,
+  probeert `scripts/post-merge.sh` een melding via `SLACK_WEBHOOK_URL` (Slack Incoming Webhook)
+  en daarna via `NTFY_URL` (ntfy push-service). Stel minstens één van deze als Replit-secret in
+  om zeker te zijn dat faalberichten aankomen. Volgorde: Graph-e-mail → Slack → ntfy.
 - **Api-container logt 0 regels op productie.** Bewijsvoering van geslaagde/mislukte logins
   loopt via de `login_pogingen`-tabel (read-only DB-query), niet via de container-logs.
 
