@@ -112,6 +112,7 @@ async function zorgServiceDraait(service: Service): Promise<void> {
   }
 
   log(`${service.naam}: niet bereikbaar, opstarten...`);
+  const startTijd = Date.now();
   const kind = spawn("bash", ["-lc", service.startCommando], {
     cwd: WORKSPACE_ROOT,
     env: { ...process.env, ...service.startEnv },
@@ -119,6 +120,16 @@ async function zorgServiceDraait(service: Service): Promise<void> {
     detached: true,
   });
   opgestart.push(kind);
+
+  // Detecteer vroegtijdige exit (poortconflict bij parallelle runners).
+  // Als het kindproces binnen 10 seconden afsluit met fout, verwijder het
+  // uit opgestart zodat stopOpgestarteServices() geen concurrent-service doodt.
+  kind.on("exit", (code) => {
+    if (code !== 0 && code !== null && Date.now() - startTijd < 10_000) {
+      const idx = opgestart.indexOf(kind);
+      if (idx !== -1) opgestart.splice(idx, 1);
+    }
+  });
 
   const gezond = await wachtTotGezond(service, service.startTimeoutMs);
   if (!gezond) {
