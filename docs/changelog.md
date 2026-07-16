@@ -1,3 +1,63 @@
+## 2026-07-16 — Herstel Maps Static API 403: fout zichtbaar als Nederlandse melding
+
+- **Uitvoering:** volledig (code) + deels (GCP fix vereist menselijke handeling) | **Kwaliteit:** hoog | **Risico:** laag
+
+**Aanleiding:** Op de productieomgeving connect.fps-one.nl gaf de Maps Static API HTTP 403 terug (`API key not authorized`). De oorzaak: `Maps Static API` stond niet in de API-restrictielijst van de Google-sleutel. Eerder gaf `haalSatellietBeeld()` bij HTTP-fout stil `null` terug — de gebruiker zag geen foutmelding en de gebouwanalyse werkte gedeeltelijk zonder uitleg.
+
+**Wijziging (`artifacts/api-server/src/services/gebouw-ai.ts`):**
+
+1. **`haalSatellietBeeld()`** — `return null` bij HTTP-fout vervangen door `throw new Error(melding)` met een specifieke Nederlandse melding per statuscode. Bij HTTP 403 staat de exacte GCP Console-instructie in de foutmelding.
+2. **`analyseerGebouwVrijeTekst()`** — de `Promise.all` voor satelliet- en Street View-afhaling geeft de throw nu niet meer door; een `.catch()` vangt hem op en zet de Nederlandse melding als `result.toelichting`. Zo is de fout zichtbaar in de API-respons én blijft de Street View-analyse doorlopen.
+
+**Deploy:** commit `66ddb23b` gepusht naar GitHub main; Docker image herbouwd op VPS met `--no-cache`; container opnieuw gestart. Bundle-verificatie bevestigt dat de Nederlandse foutmelding aanwezig is.
+
+**Nog openstaand (menselijke handeling):** de Maps Static API staat nog niet op de API-restrictielijst. Zodra René dit toevoegt in Google Cloud Console werkt de satellietkaart ook echt (zie instructie hieronder).
+
+## 2026-07-16 — Herstel chatfunctie: invoerveld buiten beeld door verkeerde hoogte-berekening
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+**Rootprobleem:** De `BerichtenPagina` gebruikte `h-[calc(100vh-64px)]` als vaste hoogte, maar de `beheerder-layout.tsx` heeft geen vaste 64px-header. De werkelijke structuur is:
+- `<main className="flex-1 min-h-screen overflow-auto">` — de hele main scrollt
+- Topbalk (`py-1.5 flex items-center`) ≈ 40px
+- Contentomhulling `<div className="p-3 md:p-4 xl:p-6 pb-20">` — op desktop p-4 + pb-20 = 96px extra
+
+Totaal af te trekken op desktop: ~136px. De chat trok maar 64px af, waardoor de pagina groter was dan de beschikbare ruimte, de `main` ging scrollen in plaats van de interne chatscroll, en het invoerveld verdween buiten beeld.
+
+**Diagnosestappen bevestigd:**
+- Chat-tabellen (`chat_gesprekken`, `chat_deelnemers`, `chat_berichten`) bestaan in productie ✓
+- `chatRouter` correct geregistreerd in `routes/index.ts` (regels 45 en 176) ✓
+- Chat-endpoints aanwezig in `openapi.yaml` en gegenereerde hooks kloppen ✓
+- Productie-DB is leeg (nog geen gesprekken aangemaakt) — verwacht gedrag voor eerste gebruik ✓
+
+**Wijzigingen:**
+
+1. **`artifacts/firevault/src/layouts/beheerder-layout.tsx`** — `location === "/berichten"` detectie:
+   - `main` krijgt `overflow-hidden flex flex-col h-screen` i.p.v. `min-h-screen overflow-auto`
+   - Topbalk wordt `flex-shrink-0` i.p.v. `sticky top-0` (overflow-hidden maakt sticky irrelevant)
+   - Contentomhulling wordt `flex-1 min-h-0` zonder padding voor de berichten-pagina
+
+2. **`artifacts/firevault/src/pages/berichten/index.tsx`** — root-div `h-[calc(100vh-64px)]` → `h-full`## 2026-07-16 — Post-merge faalmelding altijd bezorgd via fallback-kanaal
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+**Aanleiding:** Als `AZURE_TENANT_ID`/`AZURE_CLIENT_ID`/`AZURE_CLIENT_SECRET`/`RENE_ALERT_EMAIL` niet ingesteld zijn (of als het Graph-token mislukt of `sendMail` een fout geeft), sloeg `scripts/post-merge.sh` de faalmelding stilzwijgend over. René werd dan niet gewaarschuwd bij een mislukte post-merge stap of een mislukte GitHub push.
+
+**Wijziging:**
+1. `scripts/post-merge.sh` — nieuwe `_stuur_fallback_melding`-hulpfunctie toegevoegd (vóór `_stuur_faalmelding`):
+   - Probeert eerst `SLACK_WEBHOOK_URL` (Slack Incoming Webhook, POST JSON `{text}`).
+   - Als dat mislukt of niet ingesteld is, probeert het `NTFY_URL` (ntfy push-service, POST met `Title`/`Priority`/`Tags`-headers).
+   - Logt een waarschuwing maar stopt het script nooit bij een fout.
+2. `_stuur_faalmelding` roept nu `_stuur_fallback_melding` aan op alle drie de plekken waar voorheen stilzwijgend werd teruggekeerd:
+   - Ontbrekende AZURE-variabelen
+   - Mislukt Graph-token-verzoek
+   - Graph `sendMail` HTTP-fout
+3. `docs/PRODUCTION_RUNBOOK.md` — nieuwe aandachtspunt toegevoegd over de fallback-volgorde en vereiste secrets.
+
+**Benodigde actie (optioneel, door René):** Stel `SLACK_WEBHOOK_URL` of `NTFY_URL` in als Replit-secret voor een gegarandeerd alternatief kanaal naast Graph-e-mail.>>>>>>> c60d97c (fix: post-merge faalmelding altijd bezorgd via Slack/ntfy fallback)
+
+---
+
 ## 2026-07-15 — Ontbrekende wachtwoord-wijzigen gate in de frontend
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag

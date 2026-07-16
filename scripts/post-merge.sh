@@ -4,10 +4,63 @@ set -e
 # omgevingen zoals de post-merge runner (prepare lifecycle roept tsc --build aan).
 export PATH="$PWD/node_modules/.bin:$PATH"
 
+# ─── Fallback-melding-hulpfunctie ────────────────────────────────────────────
+# Probeert een tekstmelding te sturen via Slack of ntfy als de Graph-e-mail
+# niet beschikbaar is. Stopt het script NIET bij een fout.
+# Gebruik: _stuur_fallback_melding "<titel>" "<berichttekst>"
+_stuur_fallback_melding() {
+  local _TITEL="${1:-FPS Connect: post-merge FOUT}"
+  local _BERICHT="${2:-Onbekende fout}"
+  local _GESLAAGD=0
+
+  if [ -n "${SLACK_WEBHOOK_URL:-}" ]; then
+    local _SLACK_PAYLOAD
+    _SLACK_PAYLOAD=$(TITEL="$_TITEL" BERICHT="$_BERICHT" node -e "
+      const tekst = process.env.TITEL + '\n' + process.env.BERICHT;
+      console.log(JSON.stringify({ text: tekst }));
+    " 2>/dev/null || true)
+    if [ -n "${_SLACK_PAYLOAD:-}" ]; then
+      local _SLACK_HTTP
+      _SLACK_HTTP=$(curl -sS -o /dev/null -w "%{http_code}" \
+        -X POST "${SLACK_WEBHOOK_URL}" \
+        -H "Content-Type: application/json" \
+        -d "$_SLACK_PAYLOAD" 2>/dev/null || echo "000")
+      if [ "${_SLACK_HTTP:-000}" -ge 200 ] && [ "${_SLACK_HTTP:-000}" -lt 300 ]; then
+        echo "Fallback-melding verzonden via Slack webhook."
+        _GESLAAGD=1
+      else
+        echo "WAARSCHUWING: Slack webhook gaf HTTP ${_SLACK_HTTP:-000}; Slack-melding niet bezorgd." >&2
+      fi
+    fi
+  fi
+
+  if [ "$_GESLAAGD" -eq 0 ] && [ -n "${NTFY_URL:-}" ]; then
+    local _NTFY_HTTP
+    _NTFY_HTTP=$(curl -sS -o /dev/null -w "%{http_code}" \
+      -X POST "${NTFY_URL}" \
+      -H "Title: ${_TITEL}" \
+      -H "Priority: high" \
+      -H "Tags: warning,fps" \
+      --data-raw "$_BERICHT" 2>/dev/null || echo "000")
+    if [ "${_NTFY_HTTP:-000}" -ge 200 ] && [ "${_NTFY_HTTP:-000}" -lt 300 ]; then
+      echo "Fallback-melding verzonden via ntfy."
+      _GESLAAGD=1
+    else
+      echo "WAARSCHUWING: ntfy gaf HTTP ${_NTFY_HTTP:-000}; ntfy-melding niet bezorgd." >&2
+    fi
+  fi
+
+  if [ "$_GESLAAGD" -eq 0 ]; then
+    echo "WAARSCHUWING: Geen fallback-kanaal beschikbaar (SLACK_WEBHOOK_URL en NTFY_URL zijn niet ingesteld of bereikbaar). Stel minstens één in als Replit-secret." >&2
+  fi
+}
+
 # ─── Faalmelding-hulpfunctie ─────────────────────────────────────────────────
 # Verstuurt een e-mail via Microsoft 365/Graph (client-credentials) wanneer een
 # post-merge stap mislukt. Wordt aangeroepen vanuit de ERR-trap hieronder én
 # vanuit de push-mislukking-handler in stap 7.
+# Als de Graph-e-mail niet beschikbaar is, wordt _stuur_fallback_melding
+# aangeroepen zodat de melding altijd ergens aankomt.
 # Gebruik: _stuur_faalmelding "<stapnaam>" "<commit-sha>" "<extra-tekst>"
 _stuur_faalmelding() {
   local _STAP="${1:-onbekend}"
@@ -22,9 +75,27 @@ _stuur_faalmelding() {
   echo "Tijdstip:  ${_TIJDSTIP}" >&2
   echo "========================================================" >&2
 
+  local _MAIL_BODY="Post-merge stap MISLUKT op de Replit-omgeving.
+
+Stap:      ${_STAP}
+Commit:    ${_SHA}
+Tijdstip:  ${_TIJDSTIP}${_EXTRA:+
+${_EXTRA}}
+
+Herstelprocedure:
+  1. Controleer de Replit workflow-logs voor de exacte foutmelding van bovenstaande stap.
+  2. Los het probleem op (bijv. ontbrekende kolom, mislukte seed, schema-mismatch).
+  3. Voer de stap handmatig opnieuw uit of start een nieuwe merge om het script opnieuw te draaien.
+  4. Zie docs/PRODUCTION_RUNBOOK.md voor het volledige deploybeleid.
+
+De productie-VPS (connect.fps-one.nl) is mogelijk NIET bijgewerkt met de laatste wijzigingen."
+
+  local _MAIL_TITEL="FPS Connect: post-merge stap MISLUKT"
+
   if [ -z "${AZURE_TENANT_ID:-}" ] || [ -z "${AZURE_CLIENT_ID:-}" ] || \
      [ -z "${AZURE_CLIENT_SECRET:-}" ] || [ -z "${RENE_ALERT_EMAIL:-}" ]; then
-    echo "INFO: AZURE_TENANT_ID/AZURE_CLIENT_ID/AZURE_CLIENT_SECRET/RENE_ALERT_EMAIL niet ingesteld — e-mailmelding overgeslagen." >&2
+    echo "INFO: AZURE_TENANT_ID/AZURE_CLIENT_ID/AZURE_CLIENT_SECRET/RENE_ALERT_EMAIL niet ingesteld — e-mailmelding overgeslagen, fallback wordt geprobeerd." >&2
+    _stuur_fallback_melding "$_MAIL_TITEL" "$_MAIL_BODY"
     return
   fi
 
@@ -41,24 +112,10 @@ _stuur_faalmelding() {
     | node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{try{console.log(JSON.parse(d).access_token||'')}catch(e){console.log('')}})" 2>/dev/null || true)
 
   if [ -z "${_GRAPH_TOKEN:-}" ]; then
-    echo "WAARSCHUWING: Kon geen Graph-token ophalen; e-mailmelding overgeslagen." >&2
+    echo "WAARSCHUWING: Kon geen Graph-token ophalen; e-mailmelding overgeslagen, fallback wordt geprobeerd." >&2
+    _stuur_fallback_melding "$_MAIL_TITEL" "$_MAIL_BODY"
     return
   fi
-
-  local _MAIL_BODY="Post-merge stap MISLUKT op de Replit-omgeving.
-
-Stap:      ${_STAP}
-Commit:    ${_SHA}
-Tijdstip:  ${_TIJDSTIP}${_EXTRA:+
-${_EXTRA}}
-
-Herstelprocedure:
-  1. Controleer de Replit workflow-logs voor de exacte foutmelding van bovenstaande stap.
-  2. Los het probleem op (bijv. ontbrekende kolom, mislukte seed, schema-mismatch).
-  3. Voer de stap handmatig opnieuw uit of start een nieuwe merge om het script opnieuw te draaien.
-  4. Zie docs/PRODUCTION_RUNBOOK.md voor het volledige deploybeleid.
-
-De productie-VPS (connect.fps-one.nl) is mogelijk NIET bijgewerkt met de laatste wijzigingen."
 
   local _PAYLOAD
   _PAYLOAD=$(MAIL_BODY="$_MAIL_BODY" RENE_EMAIL="$RENE_ALERT_EMAIL" MAIL_FROM="$_MAIL_FROM" node -e "
@@ -84,7 +141,8 @@ De productie-VPS (connect.fps-one.nl) is mogelijk NIET bijgewerkt met de laatste
     if [ "${_HTTP:-000}" -ge 200 ] && [ "${_HTTP:-000}" -lt 300 ]; then
       echo "E-mailmelding verzonden naar ${RENE_ALERT_EMAIL}."
     else
-      echo "WAARSCHUWING: Graph sendMail gaf HTTP ${_HTTP:-000}; e-mailmelding niet bezorgd." >&2
+      echo "WAARSCHUWING: Graph sendMail gaf HTTP ${_HTTP:-000}; e-mailmelding niet bezorgd, fallback wordt geprobeerd." >&2
+      _stuur_fallback_melding "$_MAIL_TITEL" "$_MAIL_BODY"
     fi
     rm -f /tmp/fps-graph-mail-response.json
   fi
@@ -231,6 +289,36 @@ ASKPASS_EOF
     # Ruim het hulpscript altijd op, ook bij EXIT/SIGINT/SIGTERM
     trap 'rm -f "$_ASKPASS_FILE"' EXIT INT TERM
     export GIT_ASKPASS="$_ASKPASS_FILE"
+
+    # ─── Stap 7a: remote-sync vóór push ──────────────────────────────────────
+    # Als GitHub main commits bevat die lokaal ontbreken (bijv. door directe
+    # VPS-pushes of parallelle taak-merges die tegelijk worden verwerkt),
+    # wordt de push afgewezen met "fetch first". Dit blok haalt die commits op
+    # en mergt ze automatisch zodat de push altijd kan slagen zonder force-push.
+    set +e
+    git fetch https://github.com/vinkrene-jpg/fps-one.git \
+      "main:refs/remotes/fps-postsync/main" 2>&1
+    SYNC_FETCH_EXIT=$?
+    set -e
+    if [ "$SYNC_FETCH_EXIT" -eq 0 ]; then
+      REMOTE_MAIN_SHA=$(git rev-parse refs/remotes/fps-postsync/main 2>/dev/null || echo "")
+      if [ -n "$REMOTE_MAIN_SHA" ] && \
+         ! git merge-base --is-ancestor "$REMOTE_MAIN_SHA" HEAD 2>/dev/null; then
+        echo "Remote main (${REMOTE_MAIN_SHA:0:8}) bevat commits die lokaal ontbreken; auto-merge..."
+        git -c user.email="post-merge@fps-one.nl" -c user.name="FPS Post-merge" \
+          merge --no-edit refs/remotes/fps-postsync/main 2>&1 || {
+            echo "WAARSCHUWING: Auto-merge mislukt; push wordt toch geprobeerd." >&2
+          }
+        # LOCAL_SHA bijwerken na merge zodat de log het juiste commit-SHA toont
+        LOCAL_SHA=$(git rev-parse HEAD)
+      else
+        echo "Lokale commits bevatten alle remote-commits; directe push."
+      fi
+    else
+      echo "WAARSCHUWING: Pre-push sync-fetch mislukt (exit $SYNC_FETCH_EXIT); push wordt toch geprobeerd." >&2
+    fi
+    # ─── Einde stap 7a ───────────────────────────────────────────────────────
+
     set +e
     git push https://github.com/vinkrene-jpg/fps-one.git main 2>&1
     PUSH_EXIT=$?

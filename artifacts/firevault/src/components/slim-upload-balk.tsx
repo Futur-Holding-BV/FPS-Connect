@@ -46,6 +46,8 @@ interface SlimUploadSuggestie {
   vertrouwen: Vertrouwen;
   ai_beschikbaar: boolean;
   vision_gebruikt: boolean;
+  tekst_gevonden?: boolean;
+  ai_model?: string | null;
   gevonden_gegevens: Record<string, string>;
   alternatieven: CategorieUitgebreid[];
   organisatie?: string | null;
@@ -717,6 +719,28 @@ function BeslisScherm({
             Ik begrijp de gevolgen en wil doorgaan.
           </span>
         </label>
+      )}
+
+      {/* Analyse-transparantie */}
+      {(suggestie.ai_beschikbaar || suggestie.vision_gebruikt) && (
+        <details className="group">
+          <summary className="text-[11px] text-muted-foreground cursor-pointer select-none hover:text-foreground transition-colors">
+            Analyse-details
+          </summary>
+          <div className="mt-1.5 rounded border bg-muted/20 px-3 py-2 space-y-0.5">
+            <p className="text-[10px] text-muted-foreground">
+              Tekst gevonden: <span className="font-medium">{suggestie.tekst_gevonden ? "ja" : "nee"}</span>
+            </p>
+            <p className="text-[10px] text-muted-foreground">
+              Vision gebruikt: <span className="font-medium">{suggestie.vision_gebruikt ? "ja" : "nee"}</span>
+            </p>
+            {suggestie.ai_model && (
+              <p className="text-[10px] text-muted-foreground">
+                AI-model: <span className="font-medium">{suggestie.ai_model}</span>
+              </p>
+            )}
+          </div>
+        </details>
       )}
 
       {/* Andere bestemming kiezen */}
