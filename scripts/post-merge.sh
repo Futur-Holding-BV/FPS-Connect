@@ -3,39 +3,152 @@ set -e
 # Zorg dat workspace-binaries (waaronder tsc) bereikbaar zijn, ook in non-login
 # omgevingen zoals de post-merge runner (prepare lifecycle roept tsc --build aan).
 export PATH="$PWD/node_modules/.bin:$PATH"
+
+# ─── Faalmelding-hulpfunctie ─────────────────────────────────────────────────
+# Verstuurt een e-mail via Microsoft 365/Graph (client-credentials) wanneer een
+# post-merge stap mislukt. Wordt aangeroepen vanuit de ERR-trap hieronder én
+# vanuit de push-mislukking-handler in stap 7.
+# Gebruik: _stuur_faalmelding "<stapnaam>" "<commit-sha>" "<extra-tekst>"
+_stuur_faalmelding() {
+  local _STAP="${1:-onbekend}"
+  local _SHA="${2:-onbekend}"
+  local _EXTRA="${3:-}"
+  local _TIJDSTIP
+  _TIJDSTIP=$(date -u '+%Y-%m-%d %H:%M:%S UTC')
+
+  echo "========================================================" >&2
+  echo "FOUT: Post-merge stap mislukt: ${_STAP}" >&2
+  echo "Commit:    ${_SHA}" >&2
+  echo "Tijdstip:  ${_TIJDSTIP}" >&2
+  echo "========================================================" >&2
+
+  if [ -z "${AZURE_TENANT_ID:-}" ] || [ -z "${AZURE_CLIENT_ID:-}" ] || \
+     [ -z "${AZURE_CLIENT_SECRET:-}" ] || [ -z "${RENE_ALERT_EMAIL:-}" ]; then
+    echo "INFO: AZURE_TENANT_ID/AZURE_CLIENT_ID/AZURE_CLIENT_SECRET/RENE_ALERT_EMAIL niet ingesteld — e-mailmelding overgeslagen." >&2
+    return
+  fi
+
+  local _MAIL_FROM="${MAIL_FROM:-noreply@fpsbrandpreventie.nl}"
+  local _MAIL_MAILBOX="${MAIL_MAILBOX:-app@fpsbrandpreventie.nl}"
+
+  local _GRAPH_TOKEN
+  _GRAPH_TOKEN=$(curl -fsS -X POST \
+    "https://login.microsoftonline.com/${AZURE_TENANT_ID}/oauth2/v2.0/token" \
+    -d "client_id=${AZURE_CLIENT_ID}" \
+    -d "client_secret=${AZURE_CLIENT_SECRET}" \
+    -d "scope=https://graph.microsoft.com/.default" \
+    -d "grant_type=client_credentials" 2>/dev/null \
+    | node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{try{console.log(JSON.parse(d).access_token||'')}catch(e){console.log('')}})" 2>/dev/null || true)
+
+  if [ -z "${_GRAPH_TOKEN:-}" ]; then
+    echo "WAARSCHUWING: Kon geen Graph-token ophalen; e-mailmelding overgeslagen." >&2
+    return
+  fi
+
+  local _MAIL_BODY="Post-merge stap MISLUKT op de Replit-omgeving.
+
+Stap:      ${_STAP}
+Commit:    ${_SHA}
+Tijdstip:  ${_TIJDSTIP}${_EXTRA:+
+${_EXTRA}}
+
+Herstelprocedure:
+  1. Controleer de Replit workflow-logs voor de exacte foutmelding van bovenstaande stap.
+  2. Los het probleem op (bijv. ontbrekende kolom, mislukte seed, schema-mismatch).
+  3. Voer de stap handmatig opnieuw uit of start een nieuwe merge om het script opnieuw te draaien.
+  4. Zie docs/PRODUCTION_RUNBOOK.md voor het volledige deploybeleid.
+
+De productie-VPS (connect.fps-one.nl) is mogelijk NIET bijgewerkt met de laatste wijzigingen."
+
+  local _PAYLOAD
+  _PAYLOAD=$(MAIL_BODY="$_MAIL_BODY" RENE_EMAIL="$RENE_ALERT_EMAIL" MAIL_FROM="$_MAIL_FROM" node -e "
+    const body = {
+      message: {
+        subject: 'FPS Connect: post-merge stap MISLUKT',
+        body: { contentType: 'Text', content: process.env.MAIL_BODY },
+        toRecipients: [{ emailAddress: { address: process.env.RENE_EMAIL } }],
+        from: { emailAddress: { address: process.env.MAIL_FROM, name: 'FPS Connect' } },
+      },
+      saveToSentItems: false,
+    };
+    console.log(JSON.stringify(body));
+  " 2>/dev/null || true)
+
+  if [ -n "${_PAYLOAD:-}" ]; then
+    local _HTTP
+    _HTTP=$(curl -sS -o /tmp/fps-graph-mail-response.json -w "%{http_code}" \
+      -X POST "https://graph.microsoft.com/v1.0/users/${_MAIL_MAILBOX}/sendMail" \
+      -H "Authorization: Bearer ${_GRAPH_TOKEN}" \
+      -H "Content-Type: application/json" \
+      -d "$_PAYLOAD" 2>/dev/null || echo "000")
+    if [ "${_HTTP:-000}" -ge 200 ] && [ "${_HTTP:-000}" -lt 300 ]; then
+      echo "E-mailmelding verzonden naar ${RENE_ALERT_EMAIL}."
+    else
+      echo "WAARSCHUWING: Graph sendMail gaf HTTP ${_HTTP:-000}; e-mailmelding niet bezorgd." >&2
+    fi
+    rm -f /tmp/fps-graph-mail-response.json
+  fi
+}
+
+# ─── ERR-trap voor stappen 1-6 ───────────────────────────────────────────────
+# Wordt door bash aangeroepen zodra een commando een niet-nul exitcode geeft
+# (gecombineerd met set -e). _HUIDIGE_STAP bijhouden zodat de melding vermeldt
+# welke stap precies faalde.
+_HUIDIGE_STAP="pnpm install"
+_MERGE_SHA=$(git rev-parse HEAD 2>/dev/null || echo "onbekend")
+trap '_stuur_faalmelding "$_HUIDIGE_STAP" "$_MERGE_SHA"' ERR
+
 pnpm install --frozen-lockfile
+
 # Stap 1: Additieve schemaherstel — voegt ontbrekende tabellen en kolommen toe
 # via idempotente IF NOT EXISTS SQL-statements. Draait vóór reconcile en push
 # zodat het drizzle-diff klein blijft en geen interactieve prompts triggert.
+_HUIDIGE_STAP="Stap 1: apply-additive (schemaherstel)"
 pnpm --filter @workspace/db run apply-additive
+
 # Stap 2: Trek Postgres' standaard '<tabel>_<kolom>_key' unique-constraintnamen gelijk met de
 # door Drizzle verwachte '_unique'-conventie. Zonder deze stap breekt 'drizzle-kit push'
 # tijdens een merge (non-TTY) af op de defensieve "truncate?"-prompt bij een naam-mismatch,
 # waardoor geen enkele additieve wijziging wordt toegepast. Hernoemen is niet-destructief.
+_HUIDIGE_STAP="Stap 2: reconcile (constraint-namen)"
 pnpm --filter @workspace/db run reconcile
+
 # Stap 3: --force: sla interactieve data-loss prompts over (non-TTY omgeving). Stale kolommen
 # die Drizzle wil droppen worden vooraf handmatig via directe SQL verwijderd zodat
 # --force nooit onbedoeld echte data verwijdert.
+_HUIDIGE_STAP="Stap 3: push-force (drizzle-kit schema push)"
 pnpm --filter @workspace/db run push-force
+
 # Stap 3b: 'drizzle-kit push --force' kan de handmatig aangemaakte
 # gebruiker_profielen-UNIQUE-constraint (en vergelijkbare additieve constraints)
 # als "drift" beschouwen en droppen. apply-additive is idempotent (IF NOT EXISTS /
 # DO-block met pg_constraint-check), dus opnieuw draaien ná de push herstelt dit
 # zonder gevolgen als er niets ontbreekt. Voorkomt dat elke merge opnieuw handmatig
 # hersteld moet worden.
+_HUIDIGE_STAP="Stap 3b: apply-additive (post-push herstel constraints)"
 pnpm --filter @workspace/db run apply-additive
+
 # Stap 4: Schema-healthcheck — voert een lees-only SELECT uit op de kerntabellen om te
 # bevestigen dat alle kritieke kolommen daadwerkelijk aanwezig zijn in de database.
 # Faalt met exit 1 en een duidelijke foutmelding als een tabel of kolom ontbreekt.
 # De merge wordt alleen groen gerapporteerd als deze stap slaagt.
+_HUIDIGE_STAP="Stap 4: schema-healthcheck"
 pnpm --filter @workspace/db run schema-healthcheck
+
 # Stap 5: Seed Document Studio-model voor opleverrapport (idempotent; slaat over als reeds aanwezig).
+_HUIDIGE_STAP="Stap 5: seed-studio-opleverrapport"
 pnpm --filter @workspace/scripts run seed-studio-opleverrapport
+
 # Stap 6: Seed standaard rechten-profielen (presets). INSERT-ONLY en idempotent:
 # ontbrekende systeem-presets worden aangemaakt, bestaande NOOIT overschreven
 # (handmatige aanpassingen blijven behouden). Voorkomt lege profielen-tabel →
 # "kies functie" die geen bevoegdheden vult.
+_HUIDIGE_STAP="Stap 6: seed-profielen"
 pnpm --filter @workspace/scripts run seed-profielen
+
+# Stappen 1-6 voltooid — verwijder de ERR-trap; stap 7 heeft eigen foutafhandeling.
+trap - ERR
+
 # Stap 7: Push naar GitHub zodat GitHub Actions (deploy.yml) automatisch triggert
 # en de productie-VPS (connect.fps-one.nl) binnen 15 minuten de nieuwe code draait.
 # Faalt niet-fataal: als de push mislukt wordt een waarschuwing geprint maar stopt
@@ -132,71 +245,15 @@ ASKPASS_EOF
       echo "Handmatig herstellen: controleer GITHUB_TOKEN_PUSH en voer 'git push origin main' uit." >&2
 
       # ─── E-mailmelding bij mislukte push ────────────────────────────────────
-      # Verstuurt via Microsoft 365/Graph (client-credentials), dezelfde aanpak
-      # als de faalmelding in .github/workflows/deploy.yml. Alle benodigde waarden
-      # worden gelezen uit de Replit-omgevingsvariabelen (nooit hardcoded).
-      # Bij ontbrekende config of een Graph-fout: stille waarschuwing, geen abort.
-      if [ -z "${AZURE_TENANT_ID:-}" ] || [ -z "${AZURE_CLIENT_ID:-}" ] || \
-         [ -z "${AZURE_CLIENT_SECRET:-}" ] || [ -z "${RENE_ALERT_EMAIL:-}" ]; then
-        echo "INFO: AZURE_TENANT_ID/AZURE_CLIENT_ID/AZURE_CLIENT_SECRET/RENE_ALERT_EMAIL niet ingesteld — e-mailmelding overgeslagen." >&2
-      else
-        _MAIL_FROM="${MAIL_FROM:-noreply@fpsbrandpreventie.nl}"
-        _MAIL_MAILBOX="${MAIL_MAILBOX:-app@fpsbrandpreventie.nl}"
-        _TIJDSTIP=$(date -u '+%Y-%m-%d %H:%M:%S UTC')
+      _stuur_faalmelding \
+        "Stap 7: GitHub push naar productie" \
+        "${LOCAL_SHA}" \
+        "Exit-code: ${PUSH_EXIT}
 
-        _GRAPH_TOKEN=$(curl -fsS -X POST \
-          "https://login.microsoftonline.com/${AZURE_TENANT_ID}/oauth2/v2.0/token" \
-          -d "client_id=${AZURE_CLIENT_ID}" \
-          -d "client_secret=${AZURE_CLIENT_SECRET}" \
-          -d "scope=https://graph.microsoft.com/.default" \
-          -d "grant_type=client_credentials" 2>/dev/null \
-          | node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{try{console.log(JSON.parse(d).access_token||'')}catch(e){console.log('')}})" 2>/dev/null || true)
-
-        if [ -z "${_GRAPH_TOKEN:-}" ]; then
-          echo "WAARSCHUWING: Kon geen Graph-token ophalen; e-mailmelding overgeslagen." >&2
-        else
-          _MAIL_BODY="GitHub push naar productie MISLUKT.
-
-Commit:    ${LOCAL_SHA}
-Tijdstip:  ${_TIJDSTIP}
-Exit-code: ${PUSH_EXIT}
-
-Herstelprocedure:
   1. Controleer of GITHUB_TOKEN_PUSH geldig is (niet verlopen).
   2. Voer handmatig uit: git push https://github.com/vinkrene-jpg/fps-one.git main
   3. Controleer daarna of GitHub Actions (deploy.yml) is gestart en groen is.
-  4. Zie docs/PRODUCTION_RUNBOOK.md voor het volledige deploybeleid.
-
-De productie-VPS (connect.fps-one.nl) is NIET automatisch bijgewerkt."
-
-          _PAYLOAD=$(MAIL_BODY="$_MAIL_BODY" RENE_EMAIL="$RENE_ALERT_EMAIL" MAIL_FROM="$_MAIL_FROM" node -e "
-            const body = {
-              message: {
-                subject: 'FPS Connect: GitHub push naar productie MISLUKT',
-                body: { contentType: 'Text', content: process.env.MAIL_BODY },
-                toRecipients: [{ emailAddress: { address: process.env.RENE_EMAIL } }],
-                from: { emailAddress: { address: process.env.MAIL_FROM, name: 'FPS Connect' } },
-              },
-              saveToSentItems: false,
-            };
-            console.log(JSON.stringify(body));
-          " 2>/dev/null || true)
-
-          if [ -n "${_PAYLOAD:-}" ]; then
-            _HTTP=$(curl -sS -o /tmp/fps-graph-mail-response.json -w "%{http_code}" \
-              -X POST "https://graph.microsoft.com/v1.0/users/${_MAIL_MAILBOX}/sendMail" \
-              -H "Authorization: Bearer ${_GRAPH_TOKEN}" \
-              -H "Content-Type: application/json" \
-              -d "$_PAYLOAD" 2>/dev/null || echo "000")
-            if [ "${_HTTP:-000}" -ge 200 ] && [ "${_HTTP:-000}" -lt 300 ]; then
-              echo "E-mailmelding verzonden naar ${RENE_ALERT_EMAIL}."
-            else
-              echo "WAARSCHUWING: Graph sendMail gaf HTTP ${_HTTP:-000}; e-mailmelding niet bezorgd." >&2
-            fi
-            rm -f /tmp/fps-graph-mail-response.json
-          fi
-        fi
-      fi
+  4. Zie docs/PRODUCTION_RUNBOOK.md voor het volledige deploybeleid."
       # ────────────────────────────────────────────────────────────────────────
     fi
   fi
