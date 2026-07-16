@@ -1,3 +1,35 @@
+## 2026-07-16 — Herstel deployment-keten: Replit → GitHub → VPS (structureel)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+**Aanleiding:** De Replit → GitHub → VPS deployment-keten was niet betrouwbaar: `git push` uit `post-merge.sh` mislukte met "fetch first" als GitHub divergente commits had, `/api/status` bestond niet (geen actief productie-commit zichtbaar), en `DEPLOY_NUMMER` werd niet doorgegeven aan de Docker-build.
+
+**Wijzigingen:**
+
+1. **`scripts/post-merge.sh` — stap 7a: auto-sync voor GitHub-push** (nieuw)
+   - Vóór elke `git push` wordt nu automatisch `origin/main` gefetcht
+   - Als er divergentie is (GitHub heeft commits die Replit niet heeft), wordt automatisch `git merge --no-edit` uitgevoerd
+   - Daarna pas de push — "fetch first"-afwijzingen worden structureel voorkomen
+
+2. **`artifacts/api-server/src/routes/health.ts` — nieuw endpoint `GET /api/status`**
+   - Retourneert: `api_status`, `commit`, `versie`, `gebouwd_op`, `deploy_nummer`, `db_verbinding` (live DB-ping), `db_latency_ms`, `timestamp`, `omgeving`
+   - Publiek bereikbaar (geen auth vereist), bruikbaar als monitoring-endpoint
+   - `GET /api/versie` blijft bestaan voor achterwaartse compatibiliteit
+
+3. **`scripts/deploy-production.sh` — DEPLOY_NUMMER en GIT_COMMIT_LANG**
+   - Exporteert `DEPLOY_NUMMER` (timestamp-formaat `YYYYMMDDHHmmss`) als build-arg
+   - Exporteert `GIT_COMMIT_LANG` (volledig SHA) als build-arg
+   - Beide beschikbaar als ENV in de API-container
+
+4. **`deploy/docker-compose.production.yml`** — `DEPLOY_NUMMER` toegevoegd als build-arg
+5. **`deploy/Dockerfile.api`** — `ARG DEPLOY_NUMMER` + `ENV DEPLOY_NUMMER` toegevoegd
+
+**Deploy:** commits `dd19ccbc` (post-merge fix) en `43a38209` (FASE 4 status endpoint + DEPLOY_NUMMER) gepusht naar GitHub main; VPS deployt nu op `43a38209` via `deploy-production.sh` (Docker build --no-cache).
+
+**GitHub Actions (deploy.yml):** Triggert automatisch bij push naar main. Vereist GitHub repository secrets: `PROD_SSH_KEY`, `PROD_SSH_HOST`, `PROD_SSH_USER` (voor SSH naar VPS) en optioneel `SMOKETEST_EMAIL`/`SMOKETEST_PASSWORD` (voor smoketest na deploy).
+
+---
+
 ## 2026-07-16 — Herstel Maps Static API 403: fout zichtbaar als Nederlandse melding
 
 - **Uitvoering:** volledig (code) + deels (GCP fix vereist menselijke handeling) | **Kwaliteit:** hoog | **Risico:** laag
