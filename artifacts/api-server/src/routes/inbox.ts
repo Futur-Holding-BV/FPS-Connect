@@ -171,11 +171,12 @@ router.get("/inbox/items", lezen, async (req, res): Promise<void> => {
   try {
     const status = req.query.status ? String(req.query.status) : undefined;
     const bestemming = req.query.bestemming ? String(req.query.bestemming) : undefined;
+    const gebouwId = req.query.gebouw_id ? parseInt(String(req.query.gebouw_id), 10) : undefined;
     const userId = req.session.userId ?? null;
 
     let rijen = await db.select().from(inboxItemsTable).orderBy(desc(inboxItemsTable.geuploadOp));
 
-    // Privacy: niet-beheerders zien alleen hun eigen uploads
+    // Privacy: niet-beheerders zien alleen hun eigen uploads, ook bij gebouw_id-filter
     if (userId) {
       const [g] = await db.select({ rol: gebruikersTable.rol }).from(gebruikersTable).where(eq(gebruikersTable.id, userId));
       if (g?.rol !== "hoofdbeheerder") {
@@ -185,6 +186,20 @@ router.get("/inbox/items", lezen, async (req, res): Promise<void> => {
 
     if (status) rijen = rijen.filter((i) => i.status === status);
     if (bestemming) rijen = rijen.filter((i) => i.bestemming === bestemming);
+
+    // Gebouw-filter: inbox-items waarbij de gekoppelde offerte bij dit gebouw hoort
+    if (gebouwId && !isNaN(gebouwId)) {
+      const gebouwOffertes = await db
+        .select({ id: offertesTable.id })
+        .from(offertesTable)
+        .where(eq(offertesTable.gebouwId, gebouwId));
+      const offerteIds = new Set(gebouwOffertes.map((o) => o.id));
+      rijen = rijen.filter(
+        (i) =>
+          (i.gekoppeldeEntiteitType === "offerte" && i.gekoppeldeEntiteitId !== null && offerteIds.has(i.gekoppeldeEntiteitId)) ||
+          (i.gekoppeldeEntiteitType === "gebouw" && i.gekoppeldeEntiteitId === gebouwId),
+      );
+    }
 
     res.json(rijen.map(mapItem));
   } catch (err) {
@@ -713,6 +728,10 @@ router.post(
         return void res.status(400).json({ error: "werkmaatschappij_id is verplicht" });
       }
 
+      const bestaandGebouwId = req.body?.bestaand_gebouw_id
+        ? parseInt(String(req.body.bestaand_gebouw_id), 10)
+        : null;
+
       const files = req.files as Record<string, Express.Multer.File[]> | undefined;
       const emailBestand = files?.["email"]?.[0] ?? null;
 
@@ -725,6 +744,17 @@ router.post(
 
       if (!werkgever) {
         return void res.status(400).json({ error: "Werkmaatschappij niet gevonden" });
+      }
+
+      // Valideer bestaand gebouw als opgegeven
+      if (bestaandGebouwId && !isNaN(bestaandGebouwId)) {
+        const [bestaandGebouw] = await db
+          .select({ id: gebouwenTable.id })
+          .from(gebouwenTable)
+          .where(eq(gebouwenTable.id, bestaandGebouwId));
+        if (!bestaandGebouw) {
+          return void res.status(400).json({ error: "Gebouw niet gevonden" });
+        }
       }
 
       let ai: AiAanvraagExtractie = {
@@ -770,7 +800,17 @@ router.post(
       let aangemaaktGebouwNaam: string | null = null;
       let aangemaaktOpnameId: number | null = null;
 
-      if (ai.adres) {
+      if (bestaandGebouwId && !isNaN(bestaandGebouwId)) {
+        // Gebruik het meegegeven bestaande gebouw
+        const [bestaand] = await db
+          .select({ id: gebouwenTable.id, naam: gebouwenTable.naam })
+          .from(gebouwenTable)
+          .where(eq(gebouwenTable.id, bestaandGebouwId));
+        if (bestaand) {
+          aangemaaktGebouwId = bestaand.id;
+          aangemaaktGebouwNaam = bestaand.naam;
+        }
+      } else if (ai.adres) {
         const gebouwNaam =
           ai.gebouw_naam ??
           ([ai.opdrachtgever, ai.adres].filter(Boolean).join(" — ") ||

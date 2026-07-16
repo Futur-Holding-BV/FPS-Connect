@@ -1556,6 +1556,8 @@ export interface InboxItem {
 
 export interface InboxOfferteavanvraagInput {
   werkmaatschappij_id: number;
+  /** Als opgegeven, wordt dit bestaande gebouw gebruikt in plaats van een nieuw gebouw aan te maken */
+  bestaand_gebouw_id?: number;
 }
 
 export type InboxOfferteverwerkingResultaatAangemaakt = {
@@ -14171,6 +14173,10 @@ export type GenereerCrmRelatievoorstellen503 = {
 export type ListInboxItemsParams = {
 status?: string;
 bestemming?: string;
+/**
+ * Filter op inbox-items die via een offerte aan dit gebouw gekoppeld zijn
+ */
+gebouw_id?: number;
 };
 
 export type CreateSaldoCorrectie200 = {

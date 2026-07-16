@@ -22,6 +22,8 @@ import {
   useListOnderhandenWerk,
   useListPlanningItems,
   useListPlanningMeerwerk,
+  useListInboxItems,
+  getListInboxItemsQueryKey,
   getListOfferteUitgangspuntenQueryOptions,
   type Document,
   type OfferteUitgangspunt,
@@ -92,6 +94,7 @@ import {
   Receipt,
   ExternalLink,
   LayoutDashboard,
+  Inbox,
 } from "lucide-react";
 import { useAuth } from "@/context/auth-context";
 import { useRol } from "@/context/rol-context";
@@ -359,6 +362,76 @@ function GebouwDocumenten({ gebouwId }: { gebouwId: number }) {
                     >
                       <Download className="h-4 w-4" /> Openen
                     </a>
+                  </Button>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function GebouwInboxAanvragen({ gebouwId }: { gebouwId: number }) {
+  const { heeftNiveau } = useBevoegdheid();
+  const magLezen = heeftNiveau("offertes", 1);
+  const params = { gebouw_id: gebouwId };
+  const { data, isLoading } = useListInboxItems(
+    params,
+    { query: { queryKey: getListInboxItemsQueryKey(params), enabled: magLezen && gebouwId > 0 } },
+  );
+  if (!magLezen) return null;
+  const items = (data ?? []).filter((i) => i.document_categorie === "offerte_aanvraag");
+  if (!isLoading && items.length === 0) return null;
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2 text-base">
+          <Inbox className="h-4 w-4" /> Inbox-aanvragen
+          {items.length > 0 && (
+            <Badge variant="secondary">{items.length}</Badge>
+          )}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {isLoading ? (
+          <div className="flex justify-center py-4">
+            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+          </div>
+        ) : (
+          <ul className="space-y-2">
+            {items.map((item) => (
+              <li
+                key={item.id}
+                className="flex items-start gap-3 rounded-md border p-2.5 text-sm"
+              >
+                <Inbox className="h-4 w-4 shrink-0 mt-0.5 text-muted-foreground" />
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium truncate">{item.bestandsnaam}</div>
+                  {item.ai_samenvatting && (
+                    <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{item.ai_samenvatting}</p>
+                  )}
+                  {!item.ai_samenvatting && item.ai_organisatie && (
+                    <p className="text-xs text-muted-foreground mt-0.5">{item.ai_organisatie}</p>
+                  )}
+                  <div className="flex flex-wrap gap-x-2 gap-y-1 mt-1 text-xs text-muted-foreground">
+                    <Badge variant="outline" className="text-xs">
+                      Offerte-aanvraag
+                    </Badge>
+                    {item.gekoppelde_entiteit_naam && (
+                      <span>{item.gekoppelde_entiteit_naam}</span>
+                    )}
+                    {item.geupload_op && (
+                      <span>{new Date(item.geupload_op).toLocaleDateString("nl-NL")}</span>
+                    )}
+                  </div>
+                </div>
+                {item.gekoppelde_entiteit_type === "offerte" && item.gekoppelde_entiteit_id && (
+                  <Button asChild variant="outline" size="sm">
+                    <Link href={`/offertes/${item.gekoppelde_entiteit_id}`}>
+                      <ExternalLink className="h-4 w-4" /> Offerte
+                    </Link>
                   </Button>
                 )}
               </li>
@@ -1019,6 +1092,7 @@ export default function GebouwDetail() {
             )}
 
             <GebouwDocumenten gebouwId={gebouwId} />
+            <GebouwInboxAanvragen gebouwId={gebouwId} />
           </div>
 
           <div className="space-y-6">

@@ -7297,6 +7297,11 @@ paths:
           name: bestemming
           schema:
             type: string
+        - in: query
+          name: gebouw_id
+          schema:
+            type: integer
+          description: Filter op inbox-items die via een offerte aan dit gebouw gekoppeld zijn
       responses:
         "200":
           description: OK
@@ -25610,6 +25615,9 @@ components:
       properties:
         werkmaatschappij_id:
           type: integer
+        bestaand_gebouw_id:
+          type: integer
+          description: Als opgegeven, wordt dit bestaande gebouw gebruikt in plaats van een nieuw gebouw aan te maken
 
     InboxOfferteverwerkingResultaat:
       type: object

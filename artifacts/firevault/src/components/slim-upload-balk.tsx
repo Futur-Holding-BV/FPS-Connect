@@ -17,7 +17,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useBevoegdheid } from "@/hooks/use-bevoegdheid";
-import { useListMedewerkers } from "@workspace/api-client-react";
+import { useListMedewerkers, useListGebouwen, useListWerkgevers } from "@workspace/api-client-react";
 import type { CvAnalyseResultaat } from "@workspace/api-client-react";
 import { Switch } from "@/components/ui/switch";
 import { slaCvOnboardingOp } from "@/lib/cv-onboarding-stash";
@@ -408,7 +408,12 @@ function BeslisScherm({
   const [gekozenMedewerker, setGekozenMedewerker] = useState("");
   const [gekozenDocType, setGekozenDocType] = useState("");
   const [cvBezig, setCvBezig] = useState(false);
+  const [aanvraagWerkmaatschappijId, setAanvraagWerkmaatschappijId] = useState("");
+  const [aanvraagGebouwId, setAanvraagGebouwId] = useState("");
+  const [aanvraagBezig, setAanvraagBezig] = useState(false);
   const { data: medewerkerLijst } = useListMedewerkers();
+  const { data: werkgeversLijst } = useListWerkgevers();
+  const { data: gebouwenLijst } = useListGebouwen();
   const { toast } = useToast();
   const { heeftNiveau } = useBevoegdheid();
   const magOnboarden = heeftNiveau("personeel", 2);
@@ -464,6 +469,59 @@ function BeslisScherm({
       return;
     }
     onBevestigen(effectiefeCat);
+  }
+
+  async function verzendAanvraag() {
+    if (!aanvraagWerkmaatschappijId) return;
+    setAanvraagBezig(true);
+    try {
+      const form = new FormData();
+      form.append("email", item.bestand);
+      form.append("werkmaatschappij_id", aanvraagWerkmaatschappijId);
+      if (aanvraagGebouwId) {
+        form.append("bestaand_gebouw_id", aanvraagGebouwId);
+      }
+      const res = await fetch("/api/inbox/offerte-aanvraag", {
+        method: "POST",
+        body: form,
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({})) as { error?: string };
+        toast({
+          title: "Verwerken mislukt",
+          description: body.error ?? "Probeer het opnieuw.",
+          variant: "destructive",
+        });
+        return;
+      }
+      const resultaat = await res.json() as {
+        offerte_id?: number | null;
+        gebouw_id?: number | null;
+        offerte_titel?: string | null;
+        gebouw_naam?: string | null;
+      };
+      onBevestigen(effectiefeCat);
+      onLogActie?.({
+        bestandsnaam: item.bestand.name,
+        categorie: effectiefeCat,
+        actie: "aanvraag_verwerkt",
+        impactNiveau,
+        bevestigd: true,
+        geweigerd: false,
+      });
+      if (resultaat.offerte_id) {
+        setTimeout(() => onNavigeer?.(`/offertes/${resultaat.offerte_id}`), 300);
+      } else if (resultaat.gebouw_id) {
+        setTimeout(() => onNavigeer?.(`/gebouwen/${resultaat.gebouw_id}`), 300);
+      } else {
+        setTimeout(() => onNavigeer?.("/offertes"), 300);
+      }
+    } catch {
+      toast({ title: "Verbindingsfout", description: "Controleer uw internetverbinding.", variant: "destructive" });
+    } finally {
+      setAanvraagBezig(false);
+    }
   }
 
   // CV herkend: expliciete vraag — AI stelt voor, de mens bevestigt in het formulier
@@ -753,8 +811,55 @@ function BeslisScherm({
         </div>
       </details>
 
+      {/* Aanvraag-formulier */}
+      {effectiefeCat === "aanvraag" && (
+        <div className="space-y-2 rounded border border-border bg-muted/30 p-3">
+          <p className="text-xs font-medium text-foreground">Offerte-aanvraag verwerken</p>
+          {suggestie?.gevonden_gegevens?.gebouw_naam || suggestie?.organisatie ? (
+            <p className="text-xs text-muted-foreground">
+              AI herkend: <span className="font-medium">{suggestie.gevonden_gegevens?.gebouw_naam ?? suggestie.organisatie}</span>
+            </p>
+          ) : null}
+          <div className="space-y-1.5">
+            <label className="text-xs text-muted-foreground">Werkmaatschappij</label>
+            <Select value={aanvraagWerkmaatschappijId} onValueChange={setAanvraagWerkmaatschappijId}>
+              <SelectTrigger className="h-8 text-xs">
+                <SelectValue placeholder="Kies werkmaatschappij..." />
+              </SelectTrigger>
+              <SelectContent>
+                {(werkgeversLijst ?? []).map((w) => (
+                  <SelectItem key={w.id} value={String(w.id)} className="text-xs">{w.naam}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs text-muted-foreground">Koppelen aan bestaand gebouw <span className="opacity-60">(optioneel)</span></label>
+            <Select value={aanvraagGebouwId} onValueChange={setAanvraagGebouwId}>
+              <SelectTrigger className="h-8 text-xs">
+                <SelectValue placeholder="Nieuw gebouw aanmaken..." />
+              </SelectTrigger>
+              <SelectContent>
+                {(gebouwenLijst ?? []).map((g) => (
+                  <SelectItem key={g.id} value={String(g.id)} className="text-xs">{g.naam}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <Button
+            size="sm"
+            className="w-full gap-1.5"
+            disabled={!aanvraagWerkmaatschappijId || aanvraagBezig}
+            onClick={() => void verzendAanvraag()}
+          >
+            <CheckCircle2 className="h-3.5 w-3.5" />
+            {aanvraagBezig ? "Verwerken..." : "Aanvraag verwerken"}
+          </Button>
+        </div>
+      )}
+
       {/* Bevestigknop */}
-      {magUploaden && !isCV && (
+      {magUploaden && !isCV && effectiefeCat !== "aanvraag" && (
         <Button
           size="sm"
           className="w-full gap-1.5"
@@ -1185,6 +1290,15 @@ export function SlimUploadBalk() {
     };
     voegRecentToe(recentItem);
     herlaadRecente();
+
+    if (cat === "aanvraag") {
+      // De BeslisScherm heeft de aanvraag al verwerkt via POST /inbox/offerte-aanvraag.
+      // Geen extra upload naar de documentbibliotheek nodig.
+      setQueue((prev) =>
+        prev.map((i) => i.id === itemId ? { ...i, actieGenomen: true, gekozenCategorie: cat } : i),
+      );
+      return;
+    }
 
     if (cat === "jaarrekening") {
       // Vertrouwelijke route: sla op onder Financieel › Jaarrekeningen (niet in het algemene archief).

@@ -8693,7 +8693,8 @@ export const GetInboxStatsResponse = zod.object({
  */
 export const ListInboxItemsQueryParams = zod.object({
   "status": zod.coerce.string().optional(),
-  "bestemming": zod.coerce.string().optional()
+  "bestemming": zod.coerce.string().optional(),
+  "gebouw_id": zod.coerce.number().optional().describe('Filter op inbox-items die via een offerte aan dit gebouw gekoppeld zijn')
 })
 
 export const ListInboxItemsResponseItem = zod.object({
@@ -9164,7 +9165,8 @@ export const TerBeoordelingInboxItemResponse = zod.object({
  * @summary Offerte-aanvraag uploaden en AI laten verwerken
  */
 export const VerwerkInboxOfferteavanvraagBody = zod.object({
-  "werkmaatschappij_id": zod.number()
+  "werkmaatschappij_id": zod.number(),
+  "bestaand_gebouw_id": zod.number().optional().describe('Als opgegeven, wordt dit bestaande gebouw gebruikt in plaats van een nieuw gebouw aan te maken')
 })
 
 export const VerwerkInboxOfferteavanvraagResponse = zod.void()

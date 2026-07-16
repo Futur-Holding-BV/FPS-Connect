@@ -9,4 +9,8 @@
 export type ListInboxItemsParams = {
 status?: string;
 bestemming?: string;
+/**
+ * Filter op inbox-items die via een offerte aan dit gebouw gekoppeld zijn
+ */
+gebouw_id?: number;
 };

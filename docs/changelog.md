@@ -107,6 +107,29 @@ Totaal af te trekken op desktop: ~136px. De chat trok maar 64px af, waardoor de 
 
 **Benodigde actie (optioneel, door René):** Stel `SLACK_WEBHOOK_URL` of `NTFY_URL` in als Replit-secret voor een gegarandeerd alternatief kanaal naast Graph-e-mail.
 
+## 2026-07-16 — Slim-upload aanvraag-mail koppelen aan gebouw en offerte aanmaken
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+**Aanleiding:** Drie gaps in de slim-upload aanvraag-flow: (1) de "aanvraag"-bevestiging deed niets nuttigs; (2) `POST /inbox/offerte-aanvraag` ondersteunde geen bestaand gebouw; (3) de gebouwdetailpagina toonde geen inbox-aanvragen.
+
+**Wijzigingen:**
+
+1. **`lib/api-spec/openapi.yaml`** — `GET /inbox/items` heeft nu een optionele `gebouw_id` query-parameter; `InboxOfferteavanvraagInput` heeft een optioneel `bestaand_gebouw_id` veld.
+
+2. **`artifacts/api-server/src/routes/inbox.ts`** — twee updates:
+   - `GET /inbox/items`: filtert nu op `gebouw_id` (via offertesTable.gebouwId + entiteitType=gebouw fallback).
+   - `POST /inbox/offerte-aanvraag`: parseert en valideert `bestaand_gebouw_id`; bij aanwezigheid wordt het bestaande gebouw hergebruikt in plaats van een nieuw gebouw aan te maken.
+
+3. **`artifacts/firevault/src/components/slim-upload-balk.tsx`** — aanvraag-formulier in `BeslisScherm`:
+   - Wanneer de categorie "aanvraag" is, verschijnt een formulier met werkmaatschappij-dropdown en optioneel gebouw-dropdown (inclusief AI-herkend gebouwnaam als hint).
+   - `verzendAanvraag()` stuurt een `FormData` POST naar `/api/inbox/offerte-aanvraag` en navigeert daarna naar de nieuwe offerte of het gebouw.
+   - `opBevestigen` slaat de documentbibliotheek-upload over voor categorie "aanvraag" (de API-call is al gedaan in `verzendAanvraag`).
+
+4. **`artifacts/firevault/src/pages/gebouwen/detail.tsx`** — nieuw `GebouwInboxAanvragen` component:
+   - Toont alle inbox-items met `document_categorie === "aanvraag"` gekoppeld aan het gebouw.
+   - Geplaatst in het "Project & Gebouwgegevens" tabblad, na de documentenlijst.
+   - Toont bestandsnaam, status, datum en een directe link naar de offerte.
 
 ---
 
@@ -219,7 +242,7 @@ Totaal af te trekken op desktop: ~136px. De chat trok maar 64px af, waardoor de 
 1. **`scripts/post-merge.sh`** — in de faaltak van stap 7 (PUSH_EXIT != 0) een e-mailmelding toegevoegd via Microsoft 365/Graph (client-credentials, zelfde aanpak als `deploy.yml`):
    - Haalt een OAuth-token op bij Azure AD via `AZURE_TENANT_ID` / `AZURE_CLIENT_ID` / `AZURE_CLIENT_SECRET`
    - Verstuurt een e-mail naar `RENE_ALERT_EMAIL` met: volledige commit-SHA, tijdstip (UTC), exit-code en een vierpoints herstelprocedure
-   - Gebruikt `MAIL_FROM` en `MAIL_MAILBOX` (met fallback naar de standaardadressen)
+   - Gebruikt `MAIL_FROM` en `MAIL_MAILBOX` (met fallback naar the standaardadressen)
    - Nooit een melding bij een geslaagde push (geen mailmoeheid)
    - Fail-safe: ontbrekende env vars of Graph-fouten geven een INFO/WAARSCHUWING naar stderr, stoppen het script niet
 

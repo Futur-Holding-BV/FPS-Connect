@@ -26015,6 +26015,9 @@ export const getVerwerkInboxOfferteavanvraagUrl = () => {
 export const verwerkInboxOfferteavanvraag = async (inboxOfferteavanvraagInput: InboxOfferteavanvraagInput, options?: RequestInit): Promise<InboxOfferteverwerkingResultaat> => {
     const formData = new FormData();
 formData.append(`werkmaatschappij_id`, inboxOfferteavanvraagInput.werkmaatschappij_id.toString())
+if(inboxOfferteavanvraagInput.bestaand_gebouw_id !== undefined) {
+ formData.append(`bestaand_gebouw_id`, inboxOfferteavanvraagInput.bestaand_gebouw_id.toString())
+ }
 
   return customFetch<InboxOfferteverwerkingResultaat>(getVerwerkInboxOfferteavanvraagUrl(),
   {

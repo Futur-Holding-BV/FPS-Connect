@@ -8,4 +8,6 @@
 
 export interface InboxOfferteavanvraagInput {
   werkmaatschappij_id: number;
+  /** Als opgegeven, wordt dit bestaande gebouw gebruikt in plaats van een nieuw gebouw aan te maken */
+  bestaand_gebouw_id?: number;
 }
