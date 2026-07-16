@@ -13,10 +13,12 @@
 //
 // Elke stap voegt een item toe aan `bewijs` — de traceerbare bewijsvoering die zichtbaar
 // wordt in het Inbox-detailscherm/auditlog en de Slim Upload-bevestiging.
-import { db, werkgeversTable } from "@workspace/db";
+import { db, werkgeversTable, documentStudioModellenTable, documentClassificatieCorrectiesTable } from "@workspace/db";
+import { eq, and, desc } from "drizzle-orm";
 import { aiGateway, heeftGateway } from "./aiGateway";
-import { renderPdfPagina, haalPdfTekst, resizeAfbeelding } from "./pdfVisie";
+import { renderPdfPagina, renderPdfPaginas, haalPdfTekst, resizeAfbeelding } from "./pdfVisie";
 import { extraheerPdfTekst } from "./pdfTekst";
+import { inspecteerDocument } from "./documentInspectie";
 import { logger } from "./logger";
 
 // ── Canonieke categorie-taxonomie ─────────────────────────────────────────────
@@ -66,6 +68,7 @@ export interface DocumentIntelligenceResultaat {
   ai_beschikbaar: boolean;
   vision_gebruikt: boolean;
   tekst_gevonden: boolean;
+  ai_model: string | null;
   gevonden_gegevens: Record<string, string>;
   alternatieven: DocCategorie[];
   organisatie: string | null;
@@ -88,6 +91,7 @@ export interface ExtractieResultaat {
   tekst: string | null;
   bron: "tekstlaag" | "docx" | "platte_tekst" | "geen";
   paginaAantal: number | null;
+  paginaTeksten: string[];
 }
 
 async function extraheerTekst(buffer: Buffer, mime: string, bestandsnaam: string): Promise<ExtractieResultaat> {
@@ -95,10 +99,15 @@ async function extraheerTekst(buffer: Buffer, mime: string, bestandsnaam: string
   if (mime === "application/pdf") {
     try {
       const result = await extraheerPdfTekst(buffer);
-      return { tekst: result.tekst, bron: result.tekst ? "tekstlaag" : "geen", paginaAantal: result.paginaAantal };
+      return {
+        tekst: result.tekst,
+        bron: result.tekst ? "tekstlaag" : "geen",
+        paginaAantal: result.paginaAantal,
+        paginaTeksten: result.paginaTeksten,
+      };
     } catch (err) {
       logger.warn({ err }, "documentIntelligence: PDF-tekstextractie mislukt");
-      return { tekst: null, bron: "geen", paginaAantal: null };
+      return { tekst: null, bron: "geen", paginaAantal: null, paginaTeksten: [] };
     }
   }
   if (
@@ -109,16 +118,16 @@ async function extraheerTekst(buffer: Buffer, mime: string, bestandsnaam: string
       const mammoth = (await import("mammoth")).default;
       const result = await mammoth.extractRawText({ buffer });
       const tekst = result.value?.trim() || null;
-      return { tekst, bron: tekst ? "docx" : "geen", paginaAantal: null };
+      return { tekst, bron: tekst ? "docx" : "geen", paginaAantal: null, paginaTeksten: [] };
     } catch (err) {
       logger.warn({ err }, "documentIntelligence: DOCX-tekstextractie mislukt");
-      return { tekst: null, bron: "geen", paginaAantal: null };
+      return { tekst: null, bron: "geen", paginaAantal: null, paginaTeksten: [] };
     }
   }
   if (mime.startsWith("text/") || mime === "message/rfc822") {
-    return { tekst: buffer.toString("utf8").slice(0, 8000), bron: "platte_tekst", paginaAantal: null };
+    return { tekst: buffer.toString("utf8").slice(0, 8000), bron: "platte_tekst", paginaAantal: null, paginaTeksten: [] };
   }
-  return { tekst: null, bron: "geen", paginaAantal: null };
+  return { tekst: null, bron: "geen", paginaAantal: null, paginaTeksten: [] };
 }
 
 // ── Stap 6: jaar herkennen ─────────────────────────────────────────────────────
@@ -240,8 +249,7 @@ function bepaalOpslaglocatie(
 
 // ── Stap 3: AI-vision voorbereiden ────────────────────────────────────────────
 
-async function haalAfbeelding(buffer: Buffer, mime: string): Promise<string | null> {
-  if (mime === "application/pdf") return renderPdfPagina(buffer);
+async function haalAfbeeldingVoorAfbeeldingsbestand(buffer: Buffer, mime: string): Promise<string | null> {
   if (mime.startsWith("image/") && !["image/svg+xml", "image/tiff", "image/bmp"].includes(mime)) {
     return resizeAfbeelding(buffer);
   }
@@ -320,10 +328,12 @@ async function aiContentAnalyse(
   bestandsnaam: string,
   mime: string,
   tekst: string | null,
-  afbeeldingBase64: string | null,
+  afbeeldingen: Array<{ paginaNummer: number; base64: string }>,
   toelichting: string | null | undefined,
   bewijs: BewijsStap[],
   werkmaatschappijNaam?: string | null,
+  studioContext?: string | null,
+  correctieContext?: string | null,
 ): Promise<{
   categorie: DocCategorie;
   subtype: string | null;
@@ -337,6 +347,7 @@ async function aiContentAnalyse(
   vereist_bevestiging: boolean;
   directe_actie_beschrijving: string;
   ai_beschikbaar: boolean;
+  ai_model: string;
 } | null> {
   if (!heeftGateway()) {
     bewijs.push({ stap: "ai_content_analyse", resultaat: "overgeslagen", detail: "AI-gateway niet beschikbaar" });
@@ -352,18 +363,28 @@ async function aiContentAnalyse(
   const werkmaatschappijInfo = werkmaatschappijNaam
     ? `\nOrganisatiecontext: dit document is geüpload door een medewerker van ${werkmaatschappijNaam}.`
     : "";
-  const bericht = [`Bestandsnaam: ${bestandsnaam}`, `MIME-type: ${mime}`, tekstInfo, toelichtingInfo, werkmaatschappijInfo].filter(Boolean).join("\n");
+  const studioInfo = studioContext
+    ? `\nDocument Studio referentiemodellen voor deze werkmaatschappij:\n${studioContext}`
+    : "";
+  const correctieInfo = correctieContext
+    ? `\nEerdere handmatige correcties (leer van deze voorbeelden bij vergelijkbare documenten):\n${correctieContext}`
+    : "";
+  const bericht = [`Bestandsnaam: ${bestandsnaam}`, `MIME-type: ${mime}`, tekstInfo, toelichtingInfo, werkmaatschappijInfo, studioInfo, correctieInfo].filter(Boolean).join("\n");
 
   type ContentBlock =
     | { type: "text"; text: string }
     | { type: "image_url"; image_url: { url: string; detail: "low" } };
   const content: ContentBlock[] = [{ type: "text", text: bericht }];
-  if (afbeeldingBase64) {
-    content.push({ type: "image_url", image_url: { url: `data:image/jpeg;base64,${afbeeldingBase64}`, detail: "low" } });
+  for (const afb of afbeeldingen) {
+    content.push({
+      type: "image_url",
+      image_url: { url: `data:image/jpeg;base64,${afb.base64}`, detail: "low" },
+    });
   }
 
+  const slot = "fast" as const;
   const resultaat = await aiGateway.chat(
-    "fast",
+    slot,
     {
       response_format: { type: "json_object" },
       max_tokens: 900,
@@ -424,6 +445,7 @@ async function aiContentAnalyse(
     vereist_bevestiging: typeof parsed.vereist_bevestiging === "boolean" ? parsed.vereist_bevestiging : impactNiveau === "midden" || impactNiveau === "hoog",
     directe_actie_beschrijving: typeof parsed.directe_actie_beschrijving === "string" ? parsed.directe_actie_beschrijving.trim().slice(0, 200) : "",
     ai_beschikbaar: true,
+    ai_model: "gpt-4o-mini",
   };
 }
 
@@ -567,7 +589,7 @@ export async function classificeerDocument(input: {
   });
   bewijs.push({ stap: "bestandstype_herkend", resultaat: mime, detail: bestandsnaam });
 
-  let extractie: ExtractieResultaat = { tekst: null, bron: "geen", paginaAantal: null };
+  let extractie: ExtractieResultaat = { tekst: null, bron: "geen", paginaAantal: null, paginaTeksten: [] };
   if (input.buffer) {
     extractie = await extraheerTekst(input.buffer, mime, bestandsnaam);
     bewijs.push({
@@ -581,18 +603,132 @@ export async function classificeerDocument(input: {
     bewijs.push({ stap: "tekstextractie", resultaat: "overgeslagen", detail: "geen bestandsbuffer beschikbaar" });
   }
 
-  let afbeeldingBase64: string | null = null;
-  const tekstTeKort = !extractie.tekst || extractie.tekst.trim().length < 80;
-  if (input.buffer && tekstTeKort) {
-    afbeeldingBase64 = await haalAfbeelding(input.buffer, mime);
+  // ── Stap 3a: per-pagina inspectie → bepaal vision-strategie ─────────────────
+  const inspectie = inspecteerDocument({
+    mime,
+    paginaAantal: extractie.paginaAantal,
+    paginaTeksten: extractie.paginaTeksten,
+    totaleTekst: extractie.tekst,
+  });
+
+  let afbeeldingen: Array<{ paginaNummer: number; base64: string }> = [];
+  if (input.buffer && inspectie.vereistVisueleAnalyse) {
+    if (mime === "application/pdf" && inspectie.visuelePrioriteitPaginas.length > 0) {
+      // Multi-pagina vision: render de prioriteitspagina's (max 3)
+      const teRenderen = inspectie.visuelePrioriteitPaginas.slice(0, 3);
+      try {
+        afbeeldingen = await renderPdfPaginas(input.buffer, teRenderen);
+        bewijs.push({
+          stap: "vision_multi_pagina",
+          resultaat: `${afbeeldingen.length} pagina('s) gerenderd`,
+          detail: `pagina's ${teRenderen.join(", ")} omgezet naar afbeelding (pixel-based PDF of tekst ontbreekt)`,
+        });
+      } catch (err) {
+        logger.warn({ err }, "documentIntelligence: multi-pagina vision mislukt");
+        bewijs.push({ stap: "vision_multi_pagina", resultaat: "mislukt", detail: "PDF-rendering niet beschikbaar" });
+      }
+    } else {
+      // Afbeeldingsbestand of enkel-pagina fallback
+      const base64 = await haalAfbeeldingVoorAfbeeldingsbestand(input.buffer, mime);
+      if (base64) {
+        afbeeldingen = [{ paginaNummer: 1, base64 }];
+        bewijs.push({
+          stap: "vision_afbeelding",
+          resultaat: "beeld gerenderd",
+          detail: "afbeeldingsbestand omgezet naar AI-vision invoer",
+        });
+      } else {
+        bewijs.push({ stap: "vision_afbeelding", resultaat: "niet toegepast", detail: inspectie.isPixelBased ? "pixel-based maar rendering niet beschikbaar" : "tekst aanwezig, geen vision nodig" });
+      }
+    }
+  } else if (!inspectie.vereistVisueleAnalyse) {
     bewijs.push({
-      stap: "vision_fallback",
-      resultaat: afbeeldingBase64 ? "beeld gerenderd" : "niet toegepast",
-      detail: afbeeldingBase64 ? "eerste pagina omgezet naar afbeelding voor AI-vision" : undefined,
+      stap: "vision_strategie",
+      resultaat: "overgeslagen",
+      detail: "voldoende tekst aanwezig voor tekstgebaseerde classificatie",
     });
   }
 
-  const aiAnalyse = await aiContentAnalyse(bestandsnaam, mime, extractie.tekst, afbeeldingBase64, input.toelichting, bewijs, input.werkmaatschappijNaam);
+  // ── Stap 3b: Studio referentiemodellen ophalen ────────────────────────────
+  let studioContext: string | null = null;
+  if (input.werkmaatschappijNaam) {
+    try {
+      const werkgeverRij = await db
+        .select({ id: werkgeversTable.id })
+        .from(werkgeversTable)
+        .where(eq(werkgeversTable.naam, input.werkmaatschappijNaam))
+        .limit(1);
+      if (werkgeverRij.length > 0) {
+        const studioModellen = await db
+          .select({
+            documentType: documentStudioModellenTable.documentType,
+            naam: documentStudioModellenTable.naam,
+          })
+          .from(documentStudioModellenTable)
+          .where(
+            and(
+              eq(documentStudioModellenTable.werkgeverId, werkgeverRij[0].id),
+              eq(documentStudioModellenTable.status, "goedgekeurd"),
+            ),
+          )
+          .limit(10);
+        if (studioModellen.length > 0) {
+          studioContext = studioModellen
+            .map((m) => `- ${m.documentType}: "${m.naam ?? "zonder naam"}"`)
+            .join("\n");
+          bewijs.push({
+            stap: "studio_context",
+            resultaat: `${studioModellen.length} referentiemodellen gevonden`,
+            detail: studioModellen.map((m) => m.documentType).join(", "),
+          });
+        }
+      }
+    } catch (err) {
+      logger.warn({ err }, "documentIntelligence: Studio-modellen ophalen mislukt");
+    }
+  }
+
+  // ── Stap 3c: Eerdere correcties ophalen ──────────────────────────────────
+  let correctieContext: string | null = null;
+  try {
+    const correcties = await db
+      .select({
+        origineleCategorie: documentClassificatieCorrectiesTable.origineleCategorie,
+        gecorrigeerdeCategorie: documentClassificatieCorrectiesTable.gecorrigeerdeCategorie,
+        werkmaatschappij: documentClassificatieCorrectiesTable.werkmaatschappij,
+      })
+      .from(documentClassificatieCorrectiesTable)
+      .where(
+        input.werkmaatschappijNaam
+          ? eq(documentClassificatieCorrectiesTable.werkmaatschappij, input.werkmaatschappijNaam)
+          : eq(documentClassificatieCorrectiesTable.id, 0), // geen match bij ontbrekende naam
+      )
+      .orderBy(desc(documentClassificatieCorrectiesTable.aangemaaktOp))
+      .limit(10);
+    if (correcties.length > 0) {
+      correctieContext = correcties
+        .map((c) => `- Was: ${c.origineleCategorie} → Gecorrigeerd naar: ${c.gecorrigeerdeCategorie}`)
+        .join("\n");
+      bewijs.push({
+        stap: "correctie_context",
+        resultaat: `${correcties.length} eerdere correcties gevonden`,
+      });
+    }
+  } catch (err) {
+    logger.warn({ err }, "documentIntelligence: Correcties ophalen mislukt");
+  }
+
+  const aiAnalyse = await aiContentAnalyse(
+    bestandsnaam,
+    mime,
+    extractie.tekst,
+    afbeeldingen,
+    input.toelichting,
+    bewijs,
+    input.werkmaatschappijNaam,
+    studioContext,
+    correctieContext,
+  );
 
   const basis = aiAnalyse ?? {
     ...heuristischClassificeerInhoud(bestandsnaam, mime, extractie.tekst),
@@ -681,11 +817,12 @@ export async function classificeerDocument(input: {
     });
   }
 
+  const visionGebruikt = afbeeldingen.length > 0;
   const vertrouwen = berekenVertrouwen({
     aiBeschikbaar: basis.ai_beschikbaar,
     aiVertrouwen: aiAnalyse ? aiAnalyse.vertrouwen : null,
     tekstGevonden: !!extractie.tekst,
-    visionGebruikt: !!afbeeldingBase64,
+    visionGebruikt,
     organisatieGevonden: !!organisatie,
     jaarGevonden: !!jaar,
     jaarUitBestandsnaam,
@@ -704,8 +841,9 @@ export async function classificeerDocument(input: {
     vertrouwen: vertrouwen.label,
     vertrouwen_score: vertrouwen.score,
     ai_beschikbaar: basis.ai_beschikbaar,
-    vision_gebruikt: !!afbeeldingBase64,
+    vision_gebruikt: visionGebruikt,
     tekst_gevonden: !!extractie.tekst,
+    ai_model: aiAnalyse?.ai_model ?? null,
     gevonden_gegevens: basis.gevonden_gegevens,
     alternatieven: basis.alternatieven,
     organisatie,
