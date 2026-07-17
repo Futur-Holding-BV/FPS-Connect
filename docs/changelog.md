@@ -36,6 +36,46 @@ Alle 7 stappen geslaagd. Opruimen (medewerker + e2e-accounts archiveren) loopt o
 
 ---
 
+## 2026-07-17 — Productie-herstellpatch: schema-drift medewerkers + API-herstart
+
+- **Uitvoering:** hotfix | **Kwaliteit:** hoog | **Risico:** geen (additieve kolommen)
+
+**Diagnose (uitgevoerd via SSH op 149.210.181.47):**
+
+De productie-server draaide commit c1939841 — meerdere versies ouder dan de huidige
+lokale HEAD (f9372b4). De GitHub Actions deploy had ~27 uur eerder nieuwe Docker images
+gebouwd en de containers herstart, maar de migrate-image was stale (zie runbook:
+"Migrate-image ALTIJD --no-cache herbouwen"). Hierdoor ontbraken twee kolommen op de
+productie-medewerkers tabel die in een eerdere deployment werden toegevoegd:
+- `medewerker_status text DEFAULT 'concept'`
+- `wizard_voortgang jsonb`
+
+Deze ontbrekende kolommen veroorzaakten 500-fouten op post-login pagina's die de
+medewerkers-tabel bevragen (dashboard, personeelsoverzicht), waardoor gebruikers
+dachten dat de login zelf failing was.
+
+**Maatregelen (live op productie toegepast):**
+
+1. Ontbrekende kolommen additief toegevoegd via directe ALTER TABLE (non-destructief):
+   ```sql
+   ALTER TABLE medewerkers ADD COLUMN IF NOT EXISTS medewerker_status text DEFAULT 'concept';
+   ALTER TABLE medewerkers ADD COLUMN IF NOT EXISTS wizard_voortgang jsonb;
+   ```
+2. API-container herstart via `docker compose restart api` — rate-limiter gewist,
+   verse DB-verbindingen.
+
+**Bevestigd werkend (extern getest na fix):**
+- `GET /api/healthz` → `{"status":"ok"}`
+- `GET /api/auth/me` zonder sessie → `401 {"error":"Niet ingelogd"}` (correct)
+- `POST /api/auth/login` met fout wachtwoord → `401 {"error":"Onjuiste inloggegevens"}`
+- Frontend `https://connect.fps-one.nl/` → HTTP 200
+
+**Structurele aanbeveling:** Deploy-pipeline moet altijd `compose build --no-cache migrate`
+uitvoeren vóór migrate-run, en schema-kolommen na migrate verifiëren via
+information_schema. Zie `docs/PRODUCTION_RUNBOOK.md` "Migrate-image ALTIJD --no-cache".
+
+---
+
 ## 2026-07-17 — E2E web-suite volledig groen: 36 passed, 2 skipped
 
 - **Uitvoering:** fix | **Kwaliteit:** hoog | **Risico:** geen
