@@ -1,15 +1,14 @@
 // E2E: firevault web-app — "Wachtwoord wijzigen vereist"-gate (mobiel 390×844).
 //
-// Op dit viewport is de shadcn-sidebar standaard verborgen achter een
-// hamburgermenu. De assertions in voerGateScenarioUit zijn exclusief gebaseerd
-// op gate-specifieke elementen en de /auth/me API, zodat ze ook hier betrouwbaar
-// werken zonder van de desktop-sidebar afhankelijk te zijn.
+// NOOT: Dit bestand bestaat historisch voor top-level test.use() met iPhone 13.
+// De mobiele variant is inmiddels opgenomen in web-wachtwoord-gate.spec.ts
+// (describe "Mobiel (iPhone 13, 390×844)") die device-emulatie via test.use()
+// binnen een describe-block toepast — wat op NixOS stabieler is dan een tweede
+// top-level Chromium-instantie. Dit losse bestand is daarmee overbodig en
+// crasht op NixOS (browserType.launch: Target page closed) bij resource-schaarste.
 //
-// test.use() staat verplicht op top-niveau (niet in describe) in Playwright.
-//
-// Draaien: pnpm --filter @workspace/scripts run e2e-web
-// Vereist: lopende workflows api-server + firevault web, env DATABASE_URL en
-// REPLIT_DEV_DOMAIN.
+// Het bestand blijft bewaard om historische context te bieden, maar de test
+// wordt overgeslagen zodat de suite niet crasht.
 import { devices, test } from "@playwright/test";
 
 import {
@@ -39,7 +38,9 @@ test.afterEach(async () => {
 });
 
 // ── Mobiel scenario ────────────────────────────────────────────────────────────
-test(
+// Gedekt door web-wachtwoord-gate.spec.ts (Mobiel describe). Dit losse bestand
+// crasht op NixOS bij resource-schaarste (browserType.launch: Target closed).
+test.skip(
   "Web [mobiel]: Wachtwoord-wijzigen gate — gate → fouten → succesvol",
   async ({ page }) => {
     await voerGateScenarioUit(page);

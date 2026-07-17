@@ -20,14 +20,13 @@ import { expect, test, type Page } from "@playwright/test";
 import { eq } from "drizzle-orm";
 
 import { db, gebouwenTable } from "@workspace/db";
-import { setupApiProxy } from "./web-api-proxy";
+import { programmatischInloggen } from "./web-api-proxy";
 
 import {
   E2E_WEB_ADMIN_EMAIL,
   E2E_WEB_ADMIN_WACHTWOORD,
-  genereerVersWebAdminTotp,
+  E2E_WEB_ADMIN_TOTP_SECRET,
   setupE2eWebAdminAccount,
-  wachtOpNieuwTotpVenster,
 } from "../src/e2e-monteur-testaccount";
 
 const INHOUD_TIMEOUT = 20_000;
@@ -37,60 +36,14 @@ const GEBOUW_NAAM = `E2E Testgebouw ${Date.now()}`;
 const GEBOUW_ADRES = "Teststraat 1";
 
 // ── Login ────────────────────────────────────────────────────────────────────
-// De web-login verloopt in twee stappen: e-mail + wachtwoord → TOTP-verificatie.
-// InputOTP rendert een verborgen <input data-input-otp> waarop we direct typen.
 async function logIn(page: Page): Promise<void> {
-  await setupApiProxy(page);
-  await page.addInitScript(() => {
-    localStorage.setItem("fps.welkom.afgerond", "true");
-    localStorage.setItem("fps_onboarding_voltooid", "true");
-  });
+  await programmatischInloggen(
+    page,
+    E2E_WEB_ADMIN_EMAIL,
+    E2E_WEB_ADMIN_WACHTWOORD,
+    E2E_WEB_ADMIN_TOTP_SECRET,
+  );
   await page.goto("/");
-
-  // Wacht tot het e-mailveld zichtbaar is (koude Vite-load kan even duren).
-  await expect(page.locator("#email")).toBeVisible({ timeout: 60_000 });
-
-  await page.locator("#email").fill(E2E_WEB_ADMIN_EMAIL);
-  await page.locator("#wachtwoord").fill(E2E_WEB_ADMIN_WACHTWOORD);
-
-  // Meerdere pogingen: als de TOTP-code verloopt tijdens een trage load,
-  // genereren we in het volgende venster een nieuwe.
-  for (let poging = 1; poging <= 3; poging++) {
-    if (poging > 1) {
-      await wachtOpNieuwTotpVenster();
-      // Terug naar de inlogstap bij een mislukte TOTP.
-      if (await page.locator("#email").isVisible().catch(() => false)) {
-        await page.locator("#email").fill(E2E_WEB_ADMIN_EMAIL);
-        await page.locator("#wachtwoord").fill(E2E_WEB_ADMIN_WACHTWOORD);
-      }
-    }
-
-    // Klik Inloggen (stap 1: e-mail + wachtwoord).
-    if (await page.getByRole("button", { name: "Inloggen" }).isVisible()) {
-      await page.getByRole("button", { name: "Inloggen" }).click();
-    }
-
-    // Wacht op de TOTP-invoer (stap 2).
-    try {
-      await page.locator("[data-input-otp]").waitFor({ state: "attached", timeout: 15_000 });
-    } catch {
-      if (poging === 3) throw new Error("TOTP-invoer niet verschenen na 3 pogingen.");
-      continue;
-    }
-
-    // Type de 6-cijferige TOTP-code direct in de verborgen OTP-input.
-    const code = await genereerVersWebAdminTotp();
-    await page.locator("[data-input-otp]").focus();
-    await page.keyboard.type(code);
-
-    // Wacht tot de applicatie het TOTP-scherm verlaat (succesvol ingelogd).
-    try {
-      await page.locator("[data-input-otp]").waitFor({ state: "detached", timeout: 15_000 });
-      return; // Inloggen geslaagd.
-    } catch {
-      if (poging === 3) throw new Error("Inloggen mislukt na 3 pogingen (TOTP/login).");
-    }
-  }
 }
 
 // ── Setup & opruiming ─────────────────────────────────────────────────────────

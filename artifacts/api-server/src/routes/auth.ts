@@ -617,6 +617,20 @@ router.get("/auth/pwa-url", async (req, res): Promise<void> => {
   }
 });
 
+// DELETE /auth/e2e-rate-reset — wist de in-memory login-rate-limiter.
+// Alleen beschikbaar in development; geeft 404 in productie.
+// Bedoeld voor de e2e-web-runner zodat de limiter leeg is vóór de testsuite
+// zonder dat de server herstart hoeft te worden (waardoor sessies verloren gaan).
+router.delete("/auth/e2e-rate-reset", (req, res): void => {
+  if (process.env.NODE_ENV === "production") {
+    res.status(404).json({ error: "Niet gevonden" });
+    return;
+  }
+  loginRateMap.clear();
+  req.log.info("e2e-rate-reset: loginRateMap gewist");
+  res.status(204).end();
+});
+
 // GET /auth/me
 router.get("/auth/me", async (req, res): Promise<void> => {
   try {

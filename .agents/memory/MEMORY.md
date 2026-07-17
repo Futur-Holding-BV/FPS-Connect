@@ -7,6 +7,7 @@
 - [FPS Brandpreventie quirks](firevault-quirks.md) — queryKey-verplichting, TS7030 nu groen (returnstijl consistent), pdfjs v6, storage paths, spot-coords scale:2, mobiel = HMAC bearer.
 - [Playwright div-filter .first() vs .last()](playwright-filter-first-vs-last.md) — nested divs matching same filter: .first()=outer wrapper (all descendants), .last()=innermost (may miss sibling content like a badge row).
 - [Playwright route ordering (last-wins)](playwright-route-ordering.md) — LAATSTE page.route() wint bij overlap; catch-all na specifieke route overrijdt die route; gebruik één catch-all met if-branches.
+- [E2E proxy multipart upload](e2e-proxy-multipart.md) — route.fetch() verbruikt multipart/form-data stream → zero bytes op server; detecteer content-type en gebruik route.continue() voor file uploads.
 - [E2E-web stale dev-server](e2e-web-stale-devserver.md) — e2e-runner hergebruikt bestaande firevault server (isBereikbaar); stop de workflow vóór e2e-web anders loopt de test tegen stale compilatie.
 - [Wagenparkmodule architectuur](wagenpark-module.md) — router.use("/wagenpark", wagenparkRouter) prefix; hook=useBevoegdheid (enkelvoud); mutation sig={id,data} niet {params:{id},data}; WagenparkOnderhoudInput vereist type+omschrijving ook bij PATCH.
 - [Opdracht/Werkbegroting flow](opdracht-werkbegroting.md) — offerte→opdracht→werkbegroting (zonder opslagen); vaststellen→planning→uurstaten→nacalculatie; bevoegdheid=offertes niet aparte module.

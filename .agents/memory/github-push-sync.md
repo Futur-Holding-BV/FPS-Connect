@@ -35,6 +35,14 @@ curl https://connect.fps-one.nl/api/versie
 ```
 Verwacht: `{"versie":"2026.07.14-<sha8>","commit":"<sha8>","gebouwd_op":"..."}`. `"commit":"onbekend"` = deploy loopt nog of image is oud.
 
+## GIT_ASKPASS race-condition in post-merge sandbox
+
+`GIT_ASKPASS` werkt NIET in de post-merge runner: het tijdelijke `/tmp/fps-git-askpass-*` bestand verdwijnt vóórdat git het kan uitvoeren → `cannot exec ... No such file or directory` (exit 128). Fix: gebruik directe token-URL `https://x-access-token:${GITHUB_TOKEN_PUSH}@github.com/...` in zowel `git fetch` als `git push`. De URL leeft alleen in bash-geheugen en wordt nooit in `.git/config` opgeslagen.
+
+**Why:** post-merge sandbox heeft een andere bestandssysteem-sandbox dan de bash-shell die het script schrijft; `/tmp` bestanden die vóór de git-aanroep zijn aangemaakt zijn mogelijk niet zichtbaar.
+
+**How to apply:** in `scripts/post-merge.sh` altijd `_GH_URL="https://x-access-token:${GITHUB_TOKEN_PUSH}@github.com/..."` en die variabele doorgeven aan `git fetch $_GH_URL ...` en `git push $_GH_URL main`.
+
 ## Deploy-workflow op GitHub vereist repo-secrets
 
 Een push naar main triggert `.github/workflows/deploy.yml` (Docker-images bouwen → SSH-deploy naar VPS). De SSH-stap leest `secrets.PROD_SSH_HOST/USER/KEY/PORT` uit de GitHub-repo-secrets. Bij ontbrekende secrets faalt de job.

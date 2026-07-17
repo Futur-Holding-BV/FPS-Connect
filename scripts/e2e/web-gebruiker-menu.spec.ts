@@ -18,58 +18,25 @@
 // REPLIT_DEV_DOMAIN.
 import { expect, test, type Page } from "@playwright/test";
 
-import { setupApiProxy } from "./web-api-proxy";
+import { programmatischInloggen } from "./web-api-proxy";
 import {
   E2E_WW_ADMIN_EMAIL,
   E2E_WW_ADMIN_WACHTWOORD,
+  E2E_WW_ADMIN_TOTP_SECRET,
   E2E_WW_TARGET_NAAM,
-  genereerVersAdminTotp,
   setupE2eWachtwoordAccounts,
-  wachtOpNieuwTotpVenster,
 } from "../src/e2e-wachtwoord-testaccounts";
 
 const INHOUD_TIMEOUT = 20_000;
 
-// ── Login (zelfde patroon als web-wachtwoord-beheer.spec.ts) ────────────────
 async function logIn(page: Page): Promise<void> {
-  await setupApiProxy(page);
+  await programmatischInloggen(
+    page,
+    E2E_WW_ADMIN_EMAIL,
+    E2E_WW_ADMIN_WACHTWOORD,
+    E2E_WW_ADMIN_TOTP_SECRET,
+  );
   await page.goto("/");
-
-  await expect(page.locator("#email")).toBeVisible({ timeout: 60_000 });
-  await page.locator("#email").fill(E2E_WW_ADMIN_EMAIL);
-  await page.locator("#wachtwoord").fill(E2E_WW_ADMIN_WACHTWOORD);
-
-  for (let poging = 1; poging <= 3; poging++) {
-    if (poging > 1) {
-      await wachtOpNieuwTotpVenster();
-      if (await page.locator("#email").isVisible().catch(() => false)) {
-        await page.locator("#email").fill(E2E_WW_ADMIN_EMAIL);
-        await page.locator("#wachtwoord").fill(E2E_WW_ADMIN_WACHTWOORD);
-      }
-    }
-
-    if (await page.getByRole("button", { name: "Inloggen" }).isVisible()) {
-      await page.getByRole("button", { name: "Inloggen" }).click();
-    }
-
-    try {
-      await page.locator("[data-input-otp]").waitFor({ state: "attached", timeout: 15_000 });
-    } catch {
-      if (poging === 3) throw new Error("TOTP-invoer niet verschenen na 3 pogingen.");
-      continue;
-    }
-
-    const code = await genereerVersAdminTotp();
-    await page.locator("[data-input-otp]").focus();
-    await page.keyboard.type(code);
-
-    try {
-      await page.locator("[data-input-otp]").waitFor({ state: "detached", timeout: 15_000 });
-      return;
-    } catch {
-      if (poging === 3) throw new Error("Inloggen mislukt na 3 pogingen (TOTP/login).");
-    }
-  }
 }
 
 test.beforeAll(async () => {
@@ -91,14 +58,19 @@ test("Web: gebruikersmenu — alle knoppen werken (Bekijken als, privacy, info, 
 
   await test.step("login als hoofdbeheerder met verplichte TOTP", async () => {
     await logIn(page);
-    // Mocht het welkom-scherm toch verschijnen, ga dan door naar het platform.
+    // Als het welkom-scherm verschijnt (fps.welkom.afgerond soms niet opgepikt
+    // vóór de eerste goto), wacht dan actief op de knop en klik hem.
     const naarPlatform = page.getByRole("button", { name: "Naar het platform" });
-    if (await naarPlatform.isVisible().catch(() => false)) {
+    try {
+      await naarPlatform.waitFor({ state: "visible", timeout: 5_000 });
       await naarPlatform.click();
+    } catch {
+      // Scherm verscheen niet — al op het platform.
     }
-    // Platform zichtbaar: de uitlogknop op de taakbalk (vast title-attribuut)
-    // is de anker; in de kantooromgeving staat hij niet meer in de sidebar.
-    await expect(page.getByTitle("Uitloggen")).toBeVisible({ timeout: INHOUD_TIMEOUT });
+    // Platform zichtbaar: wacht op de sidebar (altijd aanwezig na login).
+    await expect(page.locator('[data-sidebar="sidebar"]').first()).toBeAttached({ timeout: 30_000 });
+    // NieuwsTicker laadt async — wacht op de uitlogknop.
+    await expect(page.getByTitle("Uitloggen").first()).toBeVisible({ timeout: 15_000 });
   });
 
   await test.step("Bekijken als: wissel naar een teamlid en zet terug", async () => {

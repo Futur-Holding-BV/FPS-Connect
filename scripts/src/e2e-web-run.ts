@@ -97,6 +97,31 @@ async function wachtTotGezond(service: Service, timeoutMs: number): Promise<bool
 
 const opgestart: ChildProcess[] = [];
 
+// Roep het development-only reset-endpoint aan om de in-memory login-rate-limiter
+// te legen zonder de api-server te herstarten (herstart verbreekt sessies waardoor
+// TOTP-stap-2 mislukt voor lopende browser-tests).
+async function resetRateLimiter(): Promise<void> {
+  const url = "http://localhost:80/api/auth/e2e-rate-reset";
+  const gelukt = await new Promise<boolean>((resolve) => {
+    const req = http.request(
+      url,
+      { method: "DELETE", timeout: 5_000 },
+      (res) => {
+        res.resume();
+        resolve(res.statusCode === 204);
+      },
+    );
+    req.on("timeout", () => { req.destroy(); resolve(false); });
+    req.on("error", () => resolve(false));
+    req.end();
+  });
+  if (gelukt) {
+    log("api-server: rate-limiter gewist via /auth/e2e-rate-reset.");
+  } else {
+    log("WAARSCHUWING: rate-limiter reset mislukt (endpoint niet bereikbaar?); doorgaan.");
+  }
+}
+
 async function zorgServiceDraait(service: Service): Promise<void> {
   if (!service.healthUrl) {
     throw new Error(`Geen health-URL voor ${service.naam}.`);
@@ -179,6 +204,10 @@ async function main(): Promise<void> {
     for (const service of services) {
       await zorgServiceDraait(service);
     }
+    // Wis de in-memory login-rate-limiter via het development-only endpoint.
+    // Vorige runs kunnen de teller hebben opgebouwd → 429 → TOTP nooit zichtbaar.
+    // Geen server-herstart nodig: sessies blijven intact voor browser-TOTP-tests.
+    await resetRateLimiter();
     log("Alle services gezond, Playwright starten.");
     exitCode = await draaiPlaywright();
   } catch (err) {

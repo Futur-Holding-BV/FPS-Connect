@@ -10,59 +10,19 @@
 // REPLIT_DEV_DOMAIN.
 import { expect, test, type Page } from "@playwright/test";
 
-import { setupApiProxy } from "./web-api-proxy";
+import { programmatischInloggen } from "./web-api-proxy";
 import {
   E2E_WEB_EMAIL,
   E2E_WEB_WACHTWOORD,
-  genereerVersWebTotp,
+  E2E_WEB_TOTP_SECRET,
   setupE2eWebAccount,
-  wachtOpNieuwTotpVenster,
 } from "../src/e2e-monteur-testaccount";
 
 const INHOUD_TIMEOUT = 20_000;
 
 async function logIn(page: Page): Promise<void> {
-  await setupApiProxy(page);
-  await page.addInitScript(() => {
-    localStorage.setItem("fps.welkom.afgerond", "true");
-    localStorage.setItem("fps_onboarding_voltooid", "true");
-  });
+  await programmatischInloggen(page, E2E_WEB_EMAIL, E2E_WEB_WACHTWOORD, E2E_WEB_TOTP_SECRET);
   await page.goto("/");
-  await expect(page.locator("#email")).toBeVisible({ timeout: 60_000 });
-  await page.locator("#email").fill(E2E_WEB_EMAIL);
-  await page.locator("#wachtwoord").fill(E2E_WEB_WACHTWOORD);
-
-  for (let poging = 1; poging <= 3; poging++) {
-    if (poging > 1) {
-      await wachtOpNieuwTotpVenster();
-      if (await page.locator("#email").isVisible().catch(() => false)) {
-        await page.locator("#email").fill(E2E_WEB_EMAIL);
-        await page.locator("#wachtwoord").fill(E2E_WEB_WACHTWOORD);
-      }
-    }
-
-    if (await page.getByRole("button", { name: "Inloggen" }).isVisible()) {
-      await page.getByRole("button", { name: "Inloggen" }).click();
-    }
-
-    try {
-      await page.locator("[data-input-otp]").waitFor({ state: "attached", timeout: 15_000 });
-    } catch {
-      if (poging === 3) throw new Error("TOTP-invoer niet verschenen na 3 pogingen.");
-      continue;
-    }
-
-    const code = await genereerVersWebTotp();
-    await page.locator("[data-input-otp]").focus();
-    await page.keyboard.type(code);
-
-    try {
-      await page.locator("[data-input-otp]").waitFor({ state: "detached", timeout: 15_000 });
-      return;
-    } catch {
-      if (poging === 3) throw new Error("Inloggen mislukt na 3 pogingen (TOTP/login).");
-    }
-  }
 }
 
 test.beforeAll(async () => {

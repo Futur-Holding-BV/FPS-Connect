@@ -9,59 +9,23 @@ import { expect, test, type Page } from "@playwright/test";
 import { eq } from "drizzle-orm";
 
 import { db, gebouwenTable, opleverrapportenTable } from "@workspace/db";
-import { setupApiProxy } from "./web-api-proxy";
+import { programmatischInloggen } from "./web-api-proxy";
 
 import {
   E2E_WW_ADMIN_EMAIL,
   E2E_WW_ADMIN_WACHTWOORD,
-  genereerVersAdminTotp,
+  E2E_WW_ADMIN_TOTP_SECRET,
   setupE2eWachtwoordAccounts,
-  wachtOpNieuwTotpVenster,
 } from "../src/e2e-wachtwoord-testaccounts";
 
 async function logIn(page: Page): Promise<void> {
-  await setupApiProxy(page);
-  await page.addInitScript(() => {
-    localStorage.setItem("fps.welkom.afgerond", "true");
-    localStorage.setItem("fps_onboarding_voltooid", "true");
-  });
+  await programmatischInloggen(
+    page,
+    E2E_WW_ADMIN_EMAIL,
+    E2E_WW_ADMIN_WACHTWOORD,
+    E2E_WW_ADMIN_TOTP_SECRET,
+  );
   await page.goto("/");
-
-  await expect(page.locator("#email")).toBeVisible({ timeout: 60_000 });
-  await page.locator("#email").fill(E2E_WW_ADMIN_EMAIL);
-  await page.locator("#wachtwoord").fill(E2E_WW_ADMIN_WACHTWOORD);
-
-  for (let poging = 1; poging <= 3; poging++) {
-    if (poging > 1) {
-      await wachtOpNieuwTotpVenster();
-      if (await page.locator("#email").isVisible().catch(() => false)) {
-        await page.locator("#email").fill(E2E_WW_ADMIN_EMAIL);
-        await page.locator("#wachtwoord").fill(E2E_WW_ADMIN_WACHTWOORD);
-      }
-    }
-
-    if (await page.getByRole("button", { name: "Inloggen" }).isVisible()) {
-      await page.getByRole("button", { name: "Inloggen" }).click();
-    }
-
-    try {
-      await page.locator("[data-input-otp]").waitFor({ state: "attached", timeout: 15_000 });
-    } catch {
-      if (poging === 3) throw new Error("TOTP-invoer niet verschenen na 3 pogingen.");
-      continue;
-    }
-
-    const code = await genereerVersAdminTotp();
-    await page.locator("[data-input-otp]").focus();
-    await page.keyboard.type(code);
-
-    try {
-      await page.locator("[data-input-otp]").waitFor({ state: "detached", timeout: 15_000 });
-      return;
-    } catch {
-      if (poging === 3) throw new Error("Inloggen mislukt na 3 pogingen (TOTP/login).");
-    }
-  }
 }
 
 // De test moet data-onafhankelijk blijven: de dev-database kan op elk moment
