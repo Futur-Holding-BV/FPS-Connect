@@ -1,3 +1,22 @@
+## 2026-07-17 — 14-stappen onboarding-wizard visueel verbeterd en onboarding-taken opgeslagen
+
+- **Uitvoering:** feature/fix | **Kwaliteit:** hoog | **Risico:** geen
+
+**Wijzigingen in `artifacts/firevault/src/pages/personeel/onboarden.tsx`:**
+
+1. **WizardStapIndicator — genummerde stepper**: de eenvoudige voortgangsbalk is vervangen door
+   een rij van genummerde cirkels (1–14). Voltooide stappen tonen een vinkje en worden in
+   primaire kleur weergegeven; de huidige stap heeft een subtiel ring-effect; toekomstige stappen
+   zijn grijs. Tooltips tonen de stapnaam bij hover. GeneriekeWizard (7 stappen) gebruikt nu
+   dezelfde component.
+
+2. **Onboarding-taken opgeslagen bij bevestiging**: de `opslaan`-functie in `VastFormulier`
+   maakte al middelen aan via de API, maar riep `POST /medewerkers/:id/onboarding-taken` nooit
+   aan. De geselecteerde taken uit stap 13 (inclusief aangepaste deadlines) worden nu ook
+   server-side opgeslagen na bevestiging, zodat ze direct zichtbaar zijn in het medewerkerdossier.
+
+---
+
 ## 2026-07-17 — E2E web-suite volledig groen: 36 passed, 2 skipped
 
 - **Uitvoering:** fix | **Kwaliteit:** hoog | **Risico:** geen

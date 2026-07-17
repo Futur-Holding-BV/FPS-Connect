@@ -469,18 +469,49 @@ const STANDAARD_ONBOARDING_TAKEN: Array<{
   { id: "evaluatie_3m", taak: "3-maands evaluatiegesprek inplannen", categorie: "HR", deadlineDagen: 90 },
 ];
 
-function WizardStapIndicator({ huidigStap, totaal }: { huidigStap: number; totaal: number }) {
+function WizardStapIndicator({ huidigStap, stappen }: { huidigStap: number; stappen: readonly string[] }) {
+  const totaal = stappen.length;
   return (
     <div className="space-y-2">
-      <div className="flex items-center justify-between text-xs">
-        <span className="font-semibold text-foreground">{WIZARD_STAPPEN[huidigStap - 1]}</span>
-        <span className="text-muted-foreground">Stap {huidigStap} van {totaal}</span>
+      {/* Genummerde stappen */}
+      <div className="flex items-center">
+        {stappen.map((naam, i) => {
+          const nr = i + 1;
+          const voltooid = nr < huidigStap;
+          const huidig = nr === huidigStap;
+          const isLaatste = i === totaal - 1;
+          return (
+            <div
+              key={nr}
+              className={`flex items-center${isLaatste ? "" : " flex-1"}`}
+              title={naam}
+            >
+              <div
+                className={`h-5 w-5 rounded-full text-[9px] font-bold flex items-center justify-center shrink-0 transition-colors${
+                  voltooid
+                    ? " bg-primary text-primary-foreground"
+                    : huidig
+                    ? " bg-primary text-primary-foreground ring-2 ring-primary/30 ring-offset-1"
+                    : " bg-muted text-muted-foreground"
+                }`}
+              >
+                {voltooid ? <Check className="h-2.5 w-2.5" /> : nr}
+              </div>
+              {!isLaatste && (
+                <div
+                  className={`flex-1 h-px mx-0.5 min-w-[3px] transition-colors${
+                    nr < huidigStap ? " bg-primary" : " bg-border"
+                  }`}
+                />
+              )}
+            </div>
+          );
+        })}
       </div>
-      <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-        <div
-          className="h-full rounded-full bg-primary transition-all duration-300"
-          style={{ width: `${Math.round((huidigStap / totaal) * 100)}%` }}
-        />
+      {/* Huidige stap naam + teller */}
+      <div className="flex items-center justify-between text-xs">
+        <span className="font-semibold text-foreground">{stappen[huidigStap - 1]}</span>
+        <span className="text-muted-foreground">Stap {huidigStap} van {totaal}</span>
       </div>
     </div>
   );
@@ -717,15 +748,7 @@ function GeneriekeWizard({
         </div>
       </div>
 
-      <div className="space-y-2">
-        <div className="flex items-center justify-between text-xs">
-          <span className="font-semibold">{GENERIEKE_STAPPEN[huidigStap - 1]}</span>
-          <span className="text-muted-foreground">Stap {huidigStap} van {TOTAAL}</span>
-        </div>
-        <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-          <div className="h-full rounded-full bg-primary transition-all duration-300" style={{ width: `${Math.round((huidigStap / TOTAAL) * 100)}%` }} />
-        </div>
-      </div>
+      <WizardStapIndicator huidigStap={huidigStap} stappen={GENERIEKE_STAPPEN} />
 
       {huidigStap === 1 && (
         <div className="space-y-4">
@@ -1338,6 +1361,32 @@ function VastFormulier({
         }
       }
 
+      async function maakOnboardingTakenAan(mwId: number) {
+        const startdatumStr = form.in_dienst_sinds || new Date().toISOString().slice(0, 10);
+        const startdatum = new Date(startdatumStr);
+        for (let idx = 0; idx < STANDAARD_ONBOARDING_TAKEN.length; idx++) {
+          const t = STANDAARD_ONBOARDING_TAKEN[idx];
+          if (!onboardingTaken[t.id]) continue;
+          const standaard = new Date(startdatum);
+          standaard.setDate(standaard.getDate() + t.deadlineDagen);
+          const deadline = onboardingDeadlines[t.id] ?? standaard.toISOString().slice(0, 10);
+          try {
+            await fetch(`${import.meta.env.BASE_URL}api/medewerkers/${mwId}/onboarding-taken`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              credentials: "include",
+              body: JSON.stringify({
+                naam: t.taak,
+                categorie: t.categorie,
+                deadline,
+                status: "open",
+                volgorde: idx,
+              }),
+            });
+          } catch { /* Niet fataal — taken zijn later toe te voegen via het medewerkerdossier */ }
+        }
+      }
+
       if (medewerkerDraftId) {
         // Concept bestaat al — bijwerken met definitieve gegevens en afsluiten
         await bijwerk.mutateAsync({ id: medewerkerDraftId, data: input });
@@ -1350,10 +1399,12 @@ function VastFormulier({
           },
         });
         await maakGeselecteerdeMiddelenAan(medewerkerDraftId);
+        await maakOnboardingTakenAan(medewerkerDraftId);
         onGereed(medewerkerDraftId);
       } else {
         const nieuw = await maak.mutateAsync({ data: input });
         await maakGeselecteerdeMiddelenAan(nieuw.id);
+        await maakOnboardingTakenAan(nieuw.id);
         onGereed(nieuw.id);
       }
     } catch {
@@ -1375,7 +1426,7 @@ function VastFormulier({
       </div>
 
       {/* Voortgangsindicator */}
-      <WizardStapIndicator huidigStap={huidigStap} totaal={TOTAAL_STAPPEN} />
+      <WizardStapIndicator huidigStap={huidigStap} stappen={WIZARD_STAPPEN} />
 
       {/* ── STAP 1: AI-voorbereiding ── */}
       {huidigStap === 1 && (
