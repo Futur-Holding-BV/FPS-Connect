@@ -236,6 +236,75 @@ pnpm --filter @workspace/db run apply-additive
 _HUIDIGE_STAP="Stap 4: schema-healthcheck"
 pnpm --filter @workspace/db run schema-healthcheck
 
+# Stap 4b: Additieve DB-migraties onboarding-wizard (idempotent; IF NOT EXISTS).
+# Nieuwe kolommen op medewerkers + drie nieuwe tabellen voor de 14-stappen wizard.
+_HUIDIGE_STAP="Stap 4b: onboarding-wizard migraties"
+psql "$DATABASE_URL" <<'WIZARD_SQL'
+-- medewerkers: wizard-kolommen (additief)
+ALTER TABLE medewerkers ADD COLUMN IF NOT EXISTS medewerker_status TEXT DEFAULT 'concept';
+ALTER TABLE medewerkers ADD COLUMN IF NOT EXISTS wizard_voortgang JSONB;
+
+-- hrm_middelen
+CREATE TABLE IF NOT EXISTS hrm_middelen (
+  id SERIAL PRIMARY KEY,
+  medewerker_id INTEGER NOT NULL REFERENCES medewerkers(id) ON DELETE CASCADE,
+  categorie TEXT NOT NULL DEFAULT 'overig',
+  naam TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'aangevraagd',
+  retour_vereist BOOLEAN NOT NULL DEFAULT FALSE,
+  gekoppeld_module TEXT,
+  aangevraagd_op TIMESTAMP,
+  uitgegeven_op TIMESTAMP,
+  ontvangst_bevestigd_op TIMESTAMP,
+  opmerking TEXT,
+  aangevraagd_door_id INTEGER REFERENCES gebruikers(id) ON DELETE SET NULL,
+  aangemaakt_op TIMESTAMP NOT NULL DEFAULT NOW(),
+  bijgewerkt_op TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+-- hrm_onboarding_taken
+CREATE TABLE IF NOT EXISTS hrm_onboarding_taken (
+  id SERIAL PRIMARY KEY,
+  medewerker_id INTEGER NOT NULL REFERENCES medewerkers(id) ON DELETE CASCADE,
+  naam TEXT NOT NULL,
+  verantwoordelijke_id INTEGER REFERENCES gebruikers(id) ON DELETE SET NULL,
+  deadline TEXT,
+  status TEXT NOT NULL DEFAULT 'openstaand',
+  bewijs_document_id INTEGER REFERENCES documenten(id) ON DELETE SET NULL,
+  opmerking TEXT,
+  herinnering_op TIMESTAMP,
+  categorie TEXT DEFAULT 'overig',
+  volgorde INTEGER DEFAULT 0,
+  aangemaakt_op TIMESTAMP NOT NULL DEFAULT NOW(),
+  bijgewerkt_op TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+-- hrm_ai_voorstellen
+CREATE TABLE IF NOT EXISTS hrm_ai_voorstellen (
+  id SERIAL PRIMARY KEY,
+  medewerker_id INTEGER NOT NULL REFERENCES medewerkers(id) ON DELETE CASCADE,
+  document_id INTEGER REFERENCES documenten(id) ON DELETE SET NULL,
+  medewerker_document_id INTEGER,
+  veld TEXT NOT NULL,
+  huidige_waarde TEXT,
+  voorgestelde_waarde TEXT,
+  reden TEXT,
+  brondocument TEXT,
+  paginanummer INTEGER,
+  confidence REAL,
+  vertrouwen_score REAL,
+  bewijskenmerken JSONB,
+  impact TEXT DEFAULT 'laag',
+  status TEXT NOT NULL DEFAULT 'open',
+  beoordeeld_door_id INTEGER REFERENCES gebruikers(id) ON DELETE SET NULL,
+  beoordeeld_op TIMESTAMP,
+  model_gebruikt TEXT,
+  correctie_tekst TEXT,
+  aangemaakt_op TIMESTAMP NOT NULL DEFAULT NOW(),
+  bijgewerkt_op TIMESTAMP NOT NULL DEFAULT NOW()
+);
+WIZARD_SQL
+
 # Stap 5: Seed Document Studio-model voor opleverrapport (idempotent; slaat over als reeds aanwezig).
 _HUIDIGE_STAP="Stap 5: seed-studio-opleverrapport"
 pnpm --filter @workspace/scripts run seed-studio-opleverrapport

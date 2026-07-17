@@ -13,6 +13,7 @@ import { maakGebruikerAan } from "../lib/gebruiker-aanmaken";
 import { stuurUitnodigingsmail } from "../services/email";
 import multer from "multer";
 import { extraheerPdfTekst } from "../lib/pdfTekst";
+import { analyseerEnSlaVoorstellenOp, extracteerHrmVeldenUitBuffer } from "../lib/hrm-ai-analyse";
 import { invalideerContext } from "../lib/aiContext/cache";
 import { haalVervalsignalen } from "../lib/verlofVervalService";
 import { zaaiVerlofPresets } from "../lib/verlofPresets";
@@ -4565,9 +4566,51 @@ router.post(
 
       req.log.info({ medewerker_id: medewerkerId, type, bestandsnaam: bestand.originalname }, "Medewerker document geupload");
       res.status(201).json(mapMedewerkerDoc(doc));
+
+      // Fire-and-forget: analyseer het document op achtergrond voor AI-voorstellen
+      const _log = req.log;
+      const _doc = doc;
+      const _buf = Buffer.from(bestand.buffer);
+      void (async () => {
+        try {
+          const [mw] = await db
+            .select()
+            .from(medewerkersTable)
+            .where(eq(medewerkersTable.id, medewerkerId));
+          if (mw) await analyseerEnSlaVoorstellenOp(mw, _doc, _buf);
+        } catch (analyseErr) {
+          _log.warn({ err: analyseErr, doc_id: _doc.id }, "Auto-trigger AI-analyse document mislukt");
+        }
+      })();
     } catch (err) {
       req.log.error(err);
       res.status(500).json({ error: "Interne serverfout" });
+    }
+  },
+);
+
+// ─── Tijdelijk analyseren zonder opslag (wizard stap 1) ─────────────────────
+
+router.post(
+  "/hrm/analyseer-bestand",
+  lezen,
+  uploadGeheugem.single("bestand"),
+  async (req, res): Promise<void> => {
+    try {
+      const bestand = req.file;
+      if (!bestand) return void res.status(400).json({ ok: false, error: "Geen bestand meegestuurd" });
+
+      const velden = await extracteerHrmVeldenUitBuffer(
+        Buffer.from(bestand.buffer),
+        bestand.originalname,
+        bestand.mimetype,
+      );
+
+      // succes=false = classificatie niet beschikbaar (Onbekend/laag+leeg)
+      res.json({ ok: velden.succes, velden, foutmelding: velden.foutmelding ?? null });
+    } catch (err) {
+      req.log.warn({ err }, "Analyseer-bestand mislukt");
+      res.json({ ok: false, velden: {}, error: "Analyse mislukt" });
     }
   },
 );

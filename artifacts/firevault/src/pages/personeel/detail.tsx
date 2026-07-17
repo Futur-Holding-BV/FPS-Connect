@@ -48,6 +48,20 @@ import {
   useUpdateCaoKeuze,
   useDeleteCaoKeuze,
   getListCaoKeuzesQueryKey,
+  useListAiVoorstellen,
+  usePatchAiVoorstel,
+  useHeranalyseerDossier,
+  useListHrmMiddelen,
+  useCreateHrmMiddel,
+  usePatchHrmMiddel,
+  useDeleteHrmMiddel,
+  useListOnboardingTaken,
+  useCreateOnboardingTaak,
+  usePatchOnboardingTaak,
+  useDeleteOnboardingTaak,
+  getListAiVoorstellenQueryKey,
+  getListHrmMiddelenQueryKey,
+  getListOnboardingTakenQueryKey,
 } from "@workspace/api-client-react";
 import type {
   MedewerkerInput,
@@ -82,13 +96,14 @@ import { caoVoorWerkmaatschappij, werkmaatschappijOpties } from "@/lib/werkmaats
 import { GoedkeuringWidget } from "@/components/goedkeuring/goedkeuring-widget";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
+import { AiVoorstelKaart } from "@/components/hrm/ai-voorstel-kaart";
 import { useToast } from "@/hooks/use-toast";
 import { MedewerkerContractenTab } from "@/pages/personeel/medewerker-contracten";
 import {
   ArrowLeft, Pencil, Trash2, Plus, GraduationCap, Award, CalendarClock,
   Mail, Phone, Briefcase, ShieldCheck, AlertTriangle, Check, X,
   MapPin, Car, FileText, Cake, Trophy, Upload, Download, FolderOpen,
-  Building2, Star, Sparkles,
+  Building2, Star, Sparkles, CheckCircle2,
 } from "lucide-react";
 
 const NIVEAUS = [
@@ -743,6 +758,118 @@ export default function MedewerkerDetailPagina() {
     type: "vakantiegeld", keuze: "",
   });
 
+  // ─── AI-voorstellen + heranalyseer ──────────────────────────────────────────
+  const { data: aiVoorstellen = [] } = useListAiVoorstellen(id);
+  const heranalyseer = useHeranalyseerDossier();
+  const beoordeelVoorstel = usePatchAiVoorstel();
+
+  async function heranalyseerDossier() {
+    try {
+      await heranalyseer.mutateAsync({ id });
+      await queryClient.invalidateQueries({ queryKey: getListAiVoorstellenQueryKey(id) });
+      toast({ title: "Dossier hergeanalyseerd", description: "AI-voorstellen zijn bijgewerkt." });
+    } catch {
+      toast({ title: "Heranalyse mislukt", variant: "destructive" });
+    }
+  }
+
+  async function voorstelBeoordelen(voorstelId: number, status: string, correctie_tekst?: string) {
+    try {
+      await beoordeelVoorstel.mutateAsync({ voorstelId, data: { status, correctie_tekst } });
+      await queryClient.invalidateQueries({ queryKey: getListAiVoorstellenQueryKey(id) });
+    } catch {
+      toast({ title: "Beoordeling mislukt", variant: "destructive" });
+    }
+  }
+
+  // ─── Middelen ────────────────────────────────────────────────────────────────
+  const { data: middelen = [] } = useListHrmMiddelen(id);
+  const maakMiddel = useCreateHrmMiddel();
+  const updMiddel = usePatchHrmMiddel();
+  const delMiddel = useDeleteHrmMiddel();
+  const [middelOpen, setMiddelOpen] = useState(false);
+  const [middelBewerkId, setMiddelBewerkId] = useState<number | null>(null);
+  const [middelForm, setMiddelForm] = useState({ categorie: "", naam: "", opmerking: "", uitgegeven_op: "" });
+
+  async function opslaanMiddel() {
+    const payload = {
+      categorie: middelForm.categorie,
+      naam: middelForm.naam,
+      opmerking: middelForm.opmerking || undefined,
+      uitgegeven_op: middelForm.uitgegeven_op || undefined,
+    };
+    try {
+      if (middelBewerkId) {
+        await updMiddel.mutateAsync({ id: middelBewerkId, data: payload });
+      } else {
+        await maakMiddel.mutateAsync({ id, data: payload });
+      }
+      await queryClient.invalidateQueries({ queryKey: getListHrmMiddelenQueryKey(id) });
+      setMiddelOpen(false);
+      toast({ title: middelBewerkId ? "Middel bijgewerkt" : "Middel toegevoegd" });
+    } catch {
+      toast({ title: "Opslaan mislukt", variant: "destructive" });
+    }
+  }
+
+  async function verwijderMiddel(middelId: number) {
+    if (!window.confirm("Middel verwijderen?")) return;
+    try {
+      await delMiddel.mutateAsync({ id: middelId });
+      await queryClient.invalidateQueries({ queryKey: getListHrmMiddelenQueryKey(id) });
+    } catch {
+      toast({ title: "Verwijderen mislukt", variant: "destructive" });
+    }
+  }
+
+  // ─── Onboarding-taken ────────────────────────────────────────────────────────
+  const { data: onboardingTaken = [] } = useListOnboardingTaken(id);
+  const maakTaak = useCreateOnboardingTaak();
+  const updTaak = usePatchOnboardingTaak();
+  const delTaak = useDeleteOnboardingTaak();
+  const [taakOpen, setTaakOpen] = useState(false);
+  const [taakBewerkId, setTaakBewerkId] = useState<number | null>(null);
+  const [taakForm, setTaakForm] = useState({ naam: "", categorie: "administratief", opmerking: "", deadline: "" });
+
+  async function opslaanTaak() {
+    const payload = {
+      naam: taakForm.naam,
+      categorie: taakForm.categorie || undefined,
+      opmerking: taakForm.opmerking || undefined,
+      deadline: taakForm.deadline || undefined,
+    };
+    try {
+      if (taakBewerkId) {
+        await updTaak.mutateAsync({ taakId: taakBewerkId, data: payload });
+      } else {
+        await maakTaak.mutateAsync({ id, data: payload });
+      }
+      await queryClient.invalidateQueries({ queryKey: getListOnboardingTakenQueryKey(id) });
+      setTaakOpen(false);
+      toast({ title: taakBewerkId ? "Taak bijgewerkt" : "Taak toegevoegd" });
+    } catch {
+      toast({ title: "Opslaan mislukt", variant: "destructive" });
+    }
+  }
+
+  async function taakAfvinken(taakId: number, afgerond: boolean) {
+    try {
+      await updTaak.mutateAsync({ taakId, data: { naam: onboardingTaken.find(t => t.id === taakId)?.naam ?? "", status: afgerond ? "afgerond" : "openstaand" } });
+      await queryClient.invalidateQueries({ queryKey: getListOnboardingTakenQueryKey(id) });
+    } catch {
+      toast({ title: "Bijwerken mislukt", variant: "destructive" });
+    }
+  }
+
+  async function verwijderTaak(taakId: number) {
+    try {
+      await delTaak.mutateAsync({ taakId });
+      await queryClient.invalidateQueries({ queryKey: getListOnboardingTakenQueryKey(id) });
+    } catch {
+      toast({ title: "Verwijderen mislukt", variant: "destructive" });
+    }
+  }
+
   const cvFileInputRef = useRef<HTMLInputElement>(null);
   const [cvUploadBezig, setCvUploadBezig] = useState(false);
   const certFileInputRef = useRef<HTMLInputElement>(null);
@@ -1224,8 +1351,17 @@ export default function MedewerkerDetailPagina() {
           </div>
         </div>
         {magSchrijven && (
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-2 shrink-0 flex-wrap">
             <Button variant="outline" onClick={openProfiel}><Pencil className="h-4 w-4" /> Bewerken</Button>
+            <Button
+              variant="outline"
+              onClick={heranalyseerDossier}
+              disabled={heranalyseer.isPending}
+              className="text-amber-700 border-amber-300 hover:bg-amber-50"
+            >
+              <Sparkles className="h-4 w-4" />
+              {heranalyseer.isPending ? "Analyseren…" : "Heranalyseer dossier"}
+            </Button>
             <Button variant="outline" onClick={verwijderMedewerker} className="text-destructive hover:text-destructive">
               <Trash2 className="h-4 w-4" /> Verwijderen
             </Button>
@@ -1558,6 +1694,11 @@ export default function MedewerkerDetailPagina() {
           <TabsTrigger value="documenten"><FileText className="h-3.5 w-3.5 mr-1.5" />Documenten</TabsTrigger>
           {(bevoegdheden.salarisarchief ?? 0) >= 1 && (
             <TabsTrigger value="salarisdocumenten">Salarisdocumenten</TabsTrigger>
+          )}
+          <TabsTrigger value="middelen"><Briefcase className="h-3.5 w-3.5 mr-1.5" />Middelen</TabsTrigger>
+          <TabsTrigger value="onboarding-taken"><Check className="h-3.5 w-3.5 mr-1.5" />Onboarding</TabsTrigger>
+          {aiVoorstellen.length > 0 && (
+            <TabsTrigger value="ai-voorstellen"><Sparkles className="h-3.5 w-3.5 mr-1.5" />AI-voorstellen <Badge className="ml-1 h-4 px-1 text-xs bg-amber-100 text-amber-700 border-amber-200">{aiVoorstellen.filter(v => v.status === "open").length}</Badge></TabsTrigger>
           )}
         </TabsList>
 
@@ -1986,6 +2127,151 @@ export default function MedewerkerDetailPagina() {
             </div>
           )}
         </TabsContent>
+
+        {/* Middelen */}
+        <TabsContent value="middelen" className="space-y-3">
+          {magSchrijven && (
+            <div className="flex justify-end">
+              <Button onClick={() => { setMiddelBewerkId(null); setMiddelForm({ categorie: "", naam: "", opmerking: "", uitgegeven_op: "" }); setMiddelOpen(true); }}>
+                <Plus className="h-4 w-4 mr-1" />Middel toevoegen
+              </Button>
+            </div>
+          )}
+          {middelen.length === 0 ? (
+            <Card><CardContent className="py-10 text-center text-muted-foreground text-sm">Geen middelen geregistreerd voor deze medewerker.</CardContent></Card>
+          ) : (
+            <div className="space-y-2">
+              {middelen.map((m) => (
+                <Card key={m.id}>
+                  <CardContent className="p-4 flex items-start justify-between gap-3">
+                    <div className="space-y-0.5">
+                      <div className="flex items-center gap-2">
+                        <div className="font-medium text-sm">{m.naam}</div>
+                        <Badge variant="outline" className="text-xs">{m.categorie}</Badge>
+                        {m.status && m.status !== "actief" && <Badge variant="secondary" className="text-xs">{m.status}</Badge>}
+                      </div>
+                      {m.opmerking && <div className="text-xs text-muted-foreground">{m.opmerking}</div>}
+                      <div className="flex gap-3 text-xs text-muted-foreground mt-1">
+                        {m.uitgegeven_op && <span>Uitgegeven: {new Date(m.uitgegeven_op).toLocaleDateString("nl-NL")}</span>}
+                        {m.aangevraagd_op && <span>Aangevraagd: {new Date(m.aangevraagd_op).toLocaleDateString("nl-NL")}</span>}
+                      </div>
+                    </div>
+                    {magSchrijven && (
+                      <div className="flex gap-1 shrink-0">
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setMiddelBewerkId(m.id); setMiddelForm({ categorie: m.categorie, naam: m.naam, opmerking: m.opmerking ?? "", uitgegeven_op: m.uitgegeven_op ?? "" }); setMiddelOpen(true); }}><Pencil className="h-3.5 w-3.5" /></Button>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => verwijderMiddel(m.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+          <Dialog open={middelOpen} onOpenChange={setMiddelOpen}>
+            <DialogContent>
+              <DialogHeader><DialogTitle>{middelBewerkId ? "Middel bewerken" : "Middel toevoegen"}</DialogTitle></DialogHeader>
+              <div className="space-y-3 py-2">
+                <div className="space-y-1.5"><Label>Categorie <span className="text-destructive">*</span></Label><Input placeholder="bijv. Laptop, Voertuig, Sleutel, Kleding" value={middelForm.categorie} onChange={(e) => setMiddelForm({ ...middelForm, categorie: e.target.value })} /></div>
+                <div className="space-y-1.5"><Label>Naam / omschrijving <span className="text-destructive">*</span></Label><Input placeholder="bijv. Dell Latitude 5520, grijs" value={middelForm.naam} onChange={(e) => setMiddelForm({ ...middelForm, naam: e.target.value })} /></div>
+                <div className="space-y-1.5"><Label>Opmerking</Label><Input placeholder="bijv. serienummer, locatie…" value={middelForm.opmerking} onChange={(e) => setMiddelForm({ ...middelForm, opmerking: e.target.value })} /></div>
+                <div className="space-y-1.5"><Label>Uitgegeven op</Label><Input type="date" value={middelForm.uitgegeven_op} onChange={(e) => setMiddelForm({ ...middelForm, uitgegeven_op: e.target.value })} /></div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setMiddelOpen(false)}>Annuleren</Button>
+                <Button onClick={opslaanMiddel} disabled={!middelForm.categorie || !middelForm.naam || maakMiddel.isPending || updMiddel.isPending}>Opslaan</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </TabsContent>
+
+        {/* Onboarding-taken */}
+        <TabsContent value="onboarding-taken" className="space-y-3">
+          {magSchrijven && (
+            <div className="flex justify-end">
+              <Button onClick={() => { setTaakBewerkId(null); setTaakForm({ naam: "", categorie: "administratief", opmerking: "", deadline: "" }); setTaakOpen(true); }}>
+                <Plus className="h-4 w-4 mr-1" />Taak toevoegen
+              </Button>
+            </div>
+          )}
+          {onboardingTaken.length === 0 ? (
+            <Card><CardContent className="py-10 text-center text-muted-foreground text-sm">Nog geen onboarding-taken aangemaakt.</CardContent></Card>
+          ) : (
+            <div className="space-y-2">
+              {onboardingTaken.map((t) => (
+                <Card key={t.id} className={t.status === "afgerond" ? "opacity-60" : ""}>
+                  <CardContent className="p-4 flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-3">
+                      <Checkbox checked={t.status === "afgerond"} onCheckedChange={(v) => taakAfvinken(t.id, !!v)} className="mt-0.5" />
+                      <div className="space-y-0.5">
+                        <div className={`font-medium text-sm ${t.status === "afgerond" ? "line-through text-muted-foreground" : ""}`}>{t.naam}</div>
+                        <div className="flex gap-2 text-xs text-muted-foreground">
+                          {t.categorie && <Badge variant="outline" className="text-xs h-5">{t.categorie}</Badge>}
+                          {t.verantwoordelijke_naam && <span>{t.verantwoordelijke_naam}</span>}
+                          {t.opmerking && <span>{t.opmerking}</span>}
+                          {t.deadline && <span>Deadline: {new Date(t.deadline).toLocaleDateString("nl-NL")}</span>}
+                        </div>
+                      </div>
+                    </div>
+                    {magSchrijven && (
+                      <div className="flex gap-1 shrink-0">
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setTaakBewerkId(t.id); setTaakForm({ naam: t.naam, categorie: t.categorie ?? "administratief", opmerking: t.opmerking ?? "", deadline: t.deadline ?? "" }); setTaakOpen(true); }}><Pencil className="h-3.5 w-3.5" /></Button>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => verwijderTaak(t.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+          <Dialog open={taakOpen} onOpenChange={setTaakOpen}>
+            <DialogContent>
+              <DialogHeader><DialogTitle>{taakBewerkId ? "Taak bewerken" : "Onboarding-taak toevoegen"}</DialogTitle></DialogHeader>
+              <div className="space-y-3 py-2">
+                <div className="space-y-1.5"><Label>Naam / taak <span className="text-destructive">*</span></Label><Input placeholder="bijv. Laptop inrichten, toegangspas aanvragen" value={taakForm.naam} onChange={(e) => setTaakForm({ ...taakForm, naam: e.target.value })} /></div>
+                <div className="space-y-1.5">
+                  <Label>Categorie</Label>
+                  <Select value={taakForm.categorie} onValueChange={(v) => setTaakForm({ ...taakForm, categorie: v })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {["administratief","it","veiligheid","introductie","overig"].map((c) => (
+                        <SelectItem key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5"><Label>Opmerking / verantwoordelijke</Label><Input placeholder="bijv. IT-beheer, HR" value={taakForm.opmerking} onChange={(e) => setTaakForm({ ...taakForm, opmerking: e.target.value })} /></div>
+                <div className="space-y-1.5"><Label>Deadline</Label><Input type="date" value={taakForm.deadline} onChange={(e) => setTaakForm({ ...taakForm, deadline: e.target.value })} /></div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setTaakOpen(false)}>Annuleren</Button>
+                <Button onClick={opslaanTaak} disabled={!taakForm.naam || maakTaak.isPending || updTaak.isPending}>Opslaan</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </TabsContent>
+
+        {/* AI-voorstellen */}
+        {aiVoorstellen.length > 0 && (
+          <TabsContent value="ai-voorstellen" className="space-y-3">
+            <AiVoorstelKaart
+              voorstellen={aiVoorstellen}
+              onBeoordeel={(id, status) => voorstelBeoordelen(id, status)}
+              magSchrijven={magSchrijven}
+              onBulkAccepteerAanvullingen={
+                magSchrijven
+                  ? async () => {
+                      const aanvullingen = aiVoorstellen.filter(
+                        (v) => v.status === "open" && !(v.reden?.startsWith("Afwijking") ?? false),
+                      );
+                      for (const v of aanvullingen) {
+                        await voorstelBeoordelen(v.id, "goedgekeurd");
+                      }
+                    }
+                  : undefined
+              }
+            />
+          </TabsContent>
+        )}
 
       </Tabs>
 

@@ -1284,7 +1284,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                 onOpenChange={(open) => setHoofdstukOpen("personeel", open)}
               >
                     <SidebarMenu>
-                      {toonPersoneel && (
+                      {toonPersoneel && featureFlags.wizardOnboarding && (
                         <SidebarMenuItem className="pl-5">
                           <SidebarMenuButton
                             asChild
@@ -1322,6 +1322,19 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                             <Link href="/personeel/uitboarden">
                               <UserMinus />
                               <span>Uitboarden</span>
+                            </Link>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      )}
+                      {toonPersoneel && featureFlags.wizardOnboarding && heeftNiveau("personeel", 2) && (
+                        <SidebarMenuItem className="pl-5">
+                          <SidebarMenuButton
+                            asChild
+                            isActive={location === "/personeel/integriteitstools"}
+                          >
+                            <Link href="/personeel/integriteitstools">
+                              <ShieldCheck />
+                              <span>Integriteitstools</span>
                             </Link>
                           </SidebarMenuButton>
                         </SidebarMenuItem>

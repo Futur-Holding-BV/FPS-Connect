@@ -39,6 +39,9 @@ export default defineConfig({
     ignoreHTTPSErrors: true,
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
+    // Blokkeer service workers: voorkomt dat gecachte production-builds (SW
+    // stale-while-revalidate) de actuele Vite dev-code overschrijven in tests.
+    serviceWorkers: "block",
   },
   projects: [
     {
@@ -47,6 +50,7 @@ export default defineConfig({
         ...devices["Desktop Chrome"],
         viewport: { width: 1280, height: 800 },
         launchOptions: chromiumPad ? { executablePath: chromiumPad } : {},
+        serviceWorkers: "block",
       },
     },
   ],

@@ -20,6 +20,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { eq } from "drizzle-orm";
 
 import { db, gebouwenTable } from "@workspace/db";
+import { setupApiProxy } from "./web-api-proxy";
 
 import {
   E2E_WEB_ADMIN_EMAIL,
@@ -39,6 +40,11 @@ const GEBOUW_ADRES = "Teststraat 1";
 // De web-login verloopt in twee stappen: e-mail + wachtwoord → TOTP-verificatie.
 // InputOTP rendert een verborgen <input data-input-otp> waarop we direct typen.
 async function logIn(page: Page): Promise<void> {
+  await setupApiProxy(page);
+  await page.addInitScript(() => {
+    localStorage.setItem("fps.welkom.afgerond", "true");
+    localStorage.setItem("fps_onboarding_voltooid", "true");
+  });
   await page.goto("/");
 
   // Wacht tot het e-mailveld zichtbaar is (koude Vite-load kan even duren).
@@ -66,9 +72,7 @@ async function logIn(page: Page): Promise<void> {
 
     // Wacht op de TOTP-invoer (stap 2).
     try {
-      await expect(page.locator("[data-input-otp]")).toBeVisible({
-        timeout: 15_000,
-      });
+      await page.locator("[data-input-otp]").waitFor({ state: "attached", timeout: 15_000 });
     } catch {
       if (poging === 3) throw new Error("TOTP-invoer niet verschenen na 3 pogingen.");
       continue;
@@ -81,9 +85,7 @@ async function logIn(page: Page): Promise<void> {
 
     // Wacht tot de applicatie het TOTP-scherm verlaat (succesvol ingelogd).
     try {
-      await expect(page.locator("[data-input-otp]")).not.toBeVisible({
-        timeout: 15_000,
-      });
+      await page.locator("[data-input-otp]").waitFor({ state: "detached", timeout: 15_000 });
       return; // Inloggen geslaagd.
     } catch {
       if (poging === 3) throw new Error("Inloggen mislukt na 3 pogingen (TOTP/login).");

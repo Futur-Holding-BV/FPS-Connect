@@ -13849,6 +13849,169 @@ export interface MagazijnVoorraadwaarde {
   onbekende_prijs: MagazijnVoorraadwaardeOnbekend[];
 }
 
+export interface DuplicaatCheckInput {
+  naam?: string;
+  email?: string;
+  geboortedatum?: string;
+}
+
+export type DuplicaatCheckResultaatMogelijkeDuplicatenItem = {
+  id: number;
+  naam: string;
+  /** @nullable */
+  email?: string | null;
+  /** @nullable */
+  geboortedatum?: string | null;
+  gelijkenis_score: number;
+  type: string;
+};
+
+export interface DuplicaatCheckResultaat {
+  mogelijke_duplicaten: DuplicaatCheckResultaatMogelijkeDuplicatenItem[];
+}
+
+export type WizardStatusWizardVoortgang = { [key: string]: unknown };
+
+export interface WizardStatus {
+  id: number;
+  /** @nullable */
+  medewerker_status: string | null;
+  huidig_stap: number;
+  wizard_voortgang?: WizardStatusWizardVoortgang;
+  /** Tijdstip van de laatste aanpassing (gebruik voor optimistic locking) */
+  bijgewerkt_op?: string;
+}
+
+export type WizardVoortgangInputVoortgangData = { [key: string]: unknown };
+
+export interface WizardVoortgangInput {
+  stap: number;
+  medewerker_status?: string;
+  voortgang_data?: WizardVoortgangInputVoortgangData;
+  /** Tijdstip van de laatste bekende versie (optimistic locking — stuur mee om conflicten te detecteren) */
+  bijgewerkt_op?: string;
+}
+
+export interface HrmMiddel {
+  id: number;
+  medewerker_id: number;
+  categorie: string;
+  naam: string;
+  status: string;
+  retour_vereist: boolean;
+  /** @nullable */
+  gekoppeld_module?: string | null;
+  /** @nullable */
+  aangevraagd_op?: string | null;
+  /** @nullable */
+  uitgegeven_op?: string | null;
+  /** @nullable */
+  ontvangst_bevestigd_op?: string | null;
+  /** @nullable */
+  opmerking?: string | null;
+  aangemaakt_op?: string;
+  bijgewerkt_op?: string;
+}
+
+export interface HrmMiddelInput {
+  categorie: string;
+  naam: string;
+  status?: string;
+  retour_vereist?: boolean;
+  /** @nullable */
+  opmerking?: string | null;
+  /** @nullable */
+  aangevraagd_op?: string | null;
+  /** @nullable */
+  uitgegeven_op?: string | null;
+}
+
+export interface HrmOnboardingTaak {
+  id: number;
+  medewerker_id: number;
+  naam: string;
+  /** @nullable */
+  verantwoordelijke_id?: number | null;
+  /** @nullable */
+  verantwoordelijke_naam?: string | null;
+  /** @nullable */
+  deadline?: string | null;
+  status: string;
+  /** @nullable */
+  categorie?: string | null;
+  /** @nullable */
+  volgorde?: number | null;
+  /** @nullable */
+  opmerking?: string | null;
+  aangemaakt_op?: string;
+  bijgewerkt_op?: string;
+}
+
+export interface HrmOnboardingTaakInput {
+  naam: string;
+  /** @nullable */
+  verantwoordelijke_id?: number | null;
+  /** @nullable */
+  deadline?: string | null;
+  status?: string;
+  /** @nullable */
+  categorie?: string | null;
+  /** @nullable */
+  volgorde?: number | null;
+  /** @nullable */
+  opmerking?: string | null;
+}
+
+/**
+ * @nullable
+ */
+export type HrmAiVoorstelBewijskenmerken = { [key: string]: unknown } | null;
+
+export interface HrmAiVoorstel {
+  id: number;
+  medewerker_id: number;
+  /** @nullable */
+  document_id?: number | null;
+  /** @nullable */
+  medewerker_document_id?: number | null;
+  veld: string;
+  /** @nullable */
+  huidige_waarde?: string | null;
+  /** @nullable */
+  voorgestelde_waarde?: string | null;
+  /** @nullable */
+  reden?: string | null;
+  /** @nullable */
+  brondocument?: string | null;
+  /** @nullable */
+  paginanummer?: number | null;
+  /** @nullable */
+  confidence?: number | null;
+  /** @nullable */
+  vertrouwen_score?: number | null;
+  /** @nullable */
+  bewijskenmerken?: HrmAiVoorstelBewijskenmerken;
+  /** @nullable */
+  impact?: string | null;
+  status: string;
+  /** @nullable */
+  beoordeeld_door_id?: number | null;
+  /** @nullable */
+  beoordeeld_op?: string | null;
+  /** @nullable */
+  model_gebruikt?: string | null;
+  /** @nullable */
+  correctie_tekst?: string | null;
+  aangemaakt_op: string;
+  bijgewerkt_op?: string;
+}
+
+export interface HrmAiVoorstelBeoordelingInput {
+  status: string;
+  /** @nullable */
+  correctie_tekst?: string | null;
+}
+
 export type GetRecenteActiviteitParams = {
 limit?: number;
 };
@@ -14252,6 +14415,16 @@ export type CreateSaldoCorrectie200 = {
 
 export type GetMedewerkerDocumentDownloadUrl200 = {
   download_url: string;
+};
+
+export type ListAiVoorstellenParams = {
+status?: string;
+};
+
+export type HeranalyseerDossier200 = {
+  aangemaakt: number;
+  overgeslagen: number;
+  fout: number;
 };
 
 export type ListZzpOvereenkomstenParams = {

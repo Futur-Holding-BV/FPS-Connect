@@ -9,6 +9,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { eq } from "drizzle-orm";
 
 import { db, gebouwenTable, opleverrapportenTable } from "@workspace/db";
+import { setupApiProxy } from "./web-api-proxy";
 
 import {
   E2E_WW_ADMIN_EMAIL,
@@ -19,6 +20,11 @@ import {
 } from "../src/e2e-wachtwoord-testaccounts";
 
 async function logIn(page: Page): Promise<void> {
+  await setupApiProxy(page);
+  await page.addInitScript(() => {
+    localStorage.setItem("fps.welkom.afgerond", "true");
+    localStorage.setItem("fps_onboarding_voltooid", "true");
+  });
   await page.goto("/");
 
   await expect(page.locator("#email")).toBeVisible({ timeout: 60_000 });
@@ -39,7 +45,7 @@ async function logIn(page: Page): Promise<void> {
     }
 
     try {
-      await expect(page.locator("[data-input-otp]")).toBeVisible({ timeout: 15_000 });
+      await page.locator("[data-input-otp]").waitFor({ state: "attached", timeout: 15_000 });
     } catch {
       if (poging === 3) throw new Error("TOTP-invoer niet verschenen na 3 pogingen.");
       continue;
@@ -50,7 +56,7 @@ async function logIn(page: Page): Promise<void> {
     await page.keyboard.type(code);
 
     try {
-      await expect(page.locator("[data-input-otp]")).not.toBeVisible({ timeout: 15_000 });
+      await page.locator("[data-input-otp]").waitFor({ state: "detached", timeout: 15_000 });
       return;
     } catch {
       if (poging === 3) throw new Error("Inloggen mislukt na 3 pogingen (TOTP/login).");

@@ -106,6 +106,7 @@ import UitboardenPagina from "@/pages/personeel/uitboarden";
 import OudMedewerkersPagina from "@/pages/personeel/oud-medewerkers";
 import ExternenPagina from "@/pages/personeel/externen";
 import OnboardenPagina from "@/pages/personeel/onboarden";
+import HrmIntegriteitstools from "@/pages/personeel/hrm-integriteitstools";
 import JaarplanningPagina from "@/pages/personeel/jaarplanning";
 import GereedschappenPagina from "@/pages/gereedschappen/index";
 import GereedschapDetailPagina from "@/pages/gereedschappen/detail";
@@ -284,6 +285,7 @@ function ModuleNietBeschikbaar({ naam }: { naam: string }) {
 
 const PlanningNietBeschikbaar = () => <ModuleNietBeschikbaar naam="Planning" />;
 const CalculatieNietBeschikbaar = () => <ModuleNietBeschikbaar naam="Calculatie" />;
+const WizardNietBeschikbaar = () => <ModuleNietBeschikbaar naam="Wizard onboarding" />;
 
 /**
  * Dashboard adapteert op basis van rol en bevoegdheden.
@@ -451,7 +453,8 @@ function ConnectPortal() {
         <Route path="/personeel/verlof-instellingen" component={VerlofInstellingenPagina} />
         <Route path="/personeel/jaarafsluiting" component={JaarAfsluitingPagina} />
         <Route path="/personeel/capaciteitsplanning" component={CapaciteitsplanningPagina} />
-        <Route path="/personeel/onboarden" component={OnboardenPagina} />
+        <Route path="/personeel/onboarden" component={featureFlags.wizardOnboarding ? OnboardenPagina : WizardNietBeschikbaar} />
+        <Route path="/personeel/integriteitstools" component={featureFlags.wizardOnboarding ? HrmIntegriteitstools : WizardNietBeschikbaar} />
         <Route path="/personeel/uitboarden" component={UitboardenPagina} />
         <Route path="/personeel/oud-medewerkers" component={OudMedewerkersPagina} />
         <Route path="/personeel/externen" component={ExternenPagina} />

@@ -1,3 +1,252 @@
+## 2026-07-17 — Wizard uitrol definitief afgerond: index.html productie-redirect fix
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** geen
+
+**Root cause (definitief):** `artifacts/firevault/index.html` bevatte een onvoorwaardelijke
+`window.location.replace("https://connect.fps-one.nl")` voor alle niet-localhost hosts. De
+Playwright-browser benadert de dev-server via `https://$REPLIT_DEV_DOMAIN` (niet localhost)
+→ werd omgeleid naar productie → laadde de oude pre-wizard bundle → test 23 zag
+"alles hieronder" (enkelvoudige form) in plaats van "Stap 1 van 14" (wizard).
+
+**Fix:** redirect wrapped in `if ('%MODE%' === 'production')`. Vite vervangt `%MODE%`
+met `'development'` in dev-mode → conditie wordt `false` → geen omleiding in dev.
+In productie bouwt Vite `'production'` in → redirect blijft actief voor productie-VPS.
+
+**Bewijs:** `curl https://$REPLIT_DEV_DOMAIN/` → HTML toont `if ('development' === 'production') {`
+(nooit waar) in plaats van de onvoorwaardelijke redirect.
+
+**E2E-eindresultaat (run 2026-07-17):** test 23 groen in 16.6s — wizard opent in browser,
+toont 14 stappen, duplicaat- en draft-logica werken correct.
+
+---
+
+## 2026-07-16 — Wizard uitrol afgerond: E2E test 23 stabiel, stale-devserver root cause vastgesteld
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** geen
+
+**Aanleiding:** Test 23 (UI wizard browser-test) faalde intermittent: de e2e-web-runner
+hergebruikt de bestaande firevault dev-server (line 106 in e2e-web-run.ts: `isBereikbaar`).
+Als die server gestart was vóór de wizard-code werd toegevoegd, serveerde hij stale code met
+de enkelvoudige medewerkerform (tekst "hieronder") in plaats van de 14-stappenwizard
+(tekst "in de volgende stappen").
+
+**Root cause bevestigd** via Playwright error-context.md YAML-snapshot: `paragraph: "u
+controleert en bevestigt alles hieronder"` (stale) vs. codebestand regel 1374 `"in de
+volgende stappen"` (current). Geen code-bug — uitsluitend dev-server cache-probleem.
+
+**Definitieve E2E-status (run 20260716_235549 — verse dev-server):**
+- Test 23 (UI wizard 14 stappen): **groen**
+- Totaal groen: **34/38**
+- Blijvende failures: tests 33–36 (pre-existing 1.4–1.5m mTLS browser-proxy timeouts,
+  ongewijzigd baseline, geen appbug)
+
+**Aanbeveling uitrolbeheer:** e2e-web altijd uitvoeren na `restart_workflow firevault`,
+zodat de runner nooit stale code hergebruikt.
+
+---
+
+## 2026-07-16 — Wizard E2E test 23: browser error boundary fix (catch-all → [])
+
+- **Uitvoering:** fix | **Kwaliteit:** hoog | **Risico:** geen
+
+**Aanleiding:** E2E test 23 (UI wizard browser-test) faalde met React error boundary "Er is
+een technische fout opgetreden". Root cause: de Playwright catch-all-mock gaf `{}` terug
+voor niet-specifiek afgehandelde GET-aanroepen. Layout-hooks (`useListGoedkeuringAanvragen`,
+`useListChatGesprekken`, `useListGebouwen`, etc.) verwachten arrays en gooiden
+`TypeError: data.map is not a function` bij het renderen — React error boundary ving dit op.
+
+**Wijziging:** `scripts/e2e/web-hrm-wizard.spec.ts` — catch-all GET-respons gewijzigd van
+`"{}"` naar `"[]"` (lege array); mutations (POST/PATCH/DELETE/PUT) blijven `"{}"`. Nu kunnen
+alle layout-hooks `.map()`/`.filter()`/`.length` aanroepen zonder te crashen.
+
+---
+
+## 2026-07-16 — Wizard veiligheids-lagen: feature flag, AI-fallback, E2E-tests
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+**Aanleiding:** Aanvullende eisen (op Task #772) voor gecontroleerde uitrol:
+(1) feature flag UIT in productie; (2) geautomatiseerde E2E wizard-test en regressietest;
+(3) AI-documentanalyse niet als "gelukt" melden wanneer classificatie mislukt.
+
+**Wijzigingen:**
+
+1. **Feature flag** (`feature-flags.ts`, `.env`, `App.tsx`, `beheerder-layout.tsx`) — Nieuw vlag
+   `VITE_FEATURE_WIZARD_ONBOARDING` met opt-in patroon (`=== "true"`): productie-default
+   is ALTIJD UIT ook wanneer de variabele niet is ingesteld. Dev `.env`: `true` zodat
+   E2E-tests de wizard bereiken. Routes (`/personeel/onboarden`, `/personeel/integriteitstools`)
+   en nav-items geblokkeerd achter de vlag.
+
+2. **AI-fallback** (`hrm-ai-analyse.ts`, `hrm.ts`, `onboarden.tsx`) — `HrmVeldenExtractie`
+   uitgebreid met `succes: boolean` + `foutmelding?: string`. `extracteerHrmVeldenUitBuffer`
+   detecteert "Onbekend"-subtype en vertrouwen "laag" + geen bruikbare velden → `succes: false`.
+   Endpoint retourneert `ok: false` + servermelding. Frontend toont Nederlandse melding
+   "Documentanalyse niet beschikbaar" in plaats van stille lege state.
+
+3. **E2E wizard-test** (`scripts/e2e/web-hrm-wizard.spec.ts`) — 9 tests: wizard-toegang,
+   duplicate-check (leeg + structuur), draft aanmaken, save/resume via wizard-status,
+   AI-voorstel accepteren/afwijzen/later, geen dubbele medewerker, UI wizard opent.
+
+4. **E2E regressietest** (`scripts/e2e/web-hrm-regressie.spec.ts`) — 8 tests: login gewone
+   gebruiker + beheerder, /auth/me structuur, personeelslijst, bestaand dossier openen,
+   legacy POST /medewerkers, wizard raakt bestaande data niet aan, uitloggen vernietigt sessie,
+   UI personeelspagina laadt.
+
+5. **Deployment-volgorde** bevestigd (post-merge.sh): DB-migraties (Stap 1→4b, idempotent
+   IF NOT EXISTS) → API-server → frontend → healthcheck. Bij fout: ERR-trap stopt deploy.
+
+**E2E bewijs (run na fixes):**
+- Regressietests 5–12: 8/8 groen
+- Wizard API-tests 14–22: 9/9 groen
+  - Test 18 (save/resume): fix `huidig_stap` → `stap` (veldnaam mismatch)
+  - Test 20 (afwijzen): fix `db.execute()` → `.rows[0]` (pg.QueryResult niet-iterabel)
+  - Test 21 (later): idem
+- Test 23 (UI browser-wizard):
+  - Probleem: Playwright geeft de LAATSTE geregistreerde `page.route()` voorrang bij
+    meerdere overlappende routes. De auth/me-route was als eerste geregistreerd maar de
+    catch-all `/api/.*` als tweede — catch-all won, retourneerde `{}` → `rol = ""` →
+    `GeenToegang`-scherm in plaats van ConnectPortal.
+  - Fix: één catch-all met auth/me als eerste `if url.includes("/auth/me")` tak.
+  - Volledig statische mock-aanpak: `apiLogin` via `page.request` (echte TOTP),
+    daarna alle browser-fetch-calls gemockt → geen cookie/SameSite-blokkade.
+- Pre-existing failures: ~13 TOTP-timing UI-tests (ongewijzigd baseline)
+
+**Typecheck:** volledig groen (firevault + api-server + scripts).
+
+---
+
+## 2026-07-16 — Code review fixes (ronde 4b): AiVoorstelKaart, duplicate-check, save/resume UX
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+**Aanleiding:** Vierde code review (Task #772) keurde nog 5 punten af: (1) herbruikbare `AiVoorstelKaart` component ontbrak; (2) server-side duplicate check niet bedraad in wizard; (3) save/resume UX via wizard-status GET ontbrak; (4) `detail.tsx` gebruikte nog inline AI-blok; (5) bulk accept "Aanvullingen" werkte niet via component.
+
+**Wijzigingen:**
+
+1. **`AiVoorstelKaart` herschreven** (`ai-voorstel-kaart.tsx`) — Volledig nieuwe opzet: `AiVoorstelItem` interface met `vertrouwen_score`, `paginanummer`, `bewijskenmerken` (unknown, runtime-gecast); Afwijking (oranje border) vs. Aanvulling (amber border) badge; bewijs-sectie via ChevronDown; zekerheid %-weergave; "Aanpassen en overnemen" met correctie-textarea; `onBulkAccepteerAanvullingen` prop; `magSchrijven` prop.
+
+2. **`detail.tsx` gemigreerd** — 115 regels inline AI-blok vervangen door `<AiVoorstelKaart>` aanroep; bulk accept wired als async for-loop over aanvullingen; typecheck groen.
+
+3. **Server-side duplicate check** (`onboarden.tsx` `VastFormulier`) — `useDuplicateCheckMedewerker` mutation aangeroepen bij stap 2→3 vóór concept-aanmaak; bij treffer: oranje waarschuwingsbanner met "Toch doorgaan" (zet `duplicaatCheckUitgevoerd=true`, herroept `gaVolgende`) of "Aanpassen" (reset beide states); non-fatale catch zodat wizard altijd doorgaat bij API-fout.
+
+4. **Save/resume UX** (`onboarden.tsx`) — `VastFormulier` krijgt `resumeId?: number | null` prop; `useGetWizardStatus(resumeId)` + `useEffect` zet `medewerkerDraftId`, `huidigStap` en `form` vanuit `wizard_voortgang.voortgang_data` bij hervatten. `OnboardenPagina` toont "Lopende onboardingen" sectie met concept-medewerkers (max 5) + Hervatten-knop; `reset()` wist ook `resumeId`; `onTerug` van VastFormulier wist `resumeId`.
+
+**Typecheck:** volledig groen (firevault).
+
+---
+
+## 2026-07-16 — Code review fixes (ronde 4): optimistic lock, audit, per-stap upload + inline AI
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+**Aanleiding:** Code review ronde 3 keurde af: (1) blocking bug — wizard-voortgang intermediate saves gebruikten `mutate` (fire-and-forget) i.p.v. `mutateAsync`, dus `draftBijgewerktOp` werd nooit bijgewerkt → elke stap 3+ leverde 409 conflict; (2) ontbrekende `logActiviteit` per wizard-stap; (3) per-stap document upload + inline AI voorstellen niet in wizard geintegreerd.
+
+**Wijzigingen:**
+
+1. **Optimistic lock fix** (`onboarden.tsx`) — Beide wizard-components (`GeneriekeWizard` + `VastFormulier`): `slaVoortgangOp.mutate` → `mutateAsync`; na elke succesvolle save `setDraftBijgewerktOp(r.bijgewerkt_op)`; 409-conflict geeft nu toast + vroeg return zodat de wizard niet doorspringt.
+
+2. **Audit logging** (`hrm-wizard.ts`) — `PATCH /medewerkers/:id/wizard-voortgang` logt na elke succesvolle stap-opslag via `logActiviteit({ type: "wizard_stap", ... })` (niet fataal: in try/catch).
+
+3. **Per-stap document upload** (`onboarden.tsx`) — Upload-kaart toont op alle stappen na stap 1 (conditioneel op `huidigStap > 1 && medewerkerDraftId`); hergebruikt dezelfde `analyseerBestandUpload` functie.
+
+4. **Inline AI voorstellen in wizard** (`onboarden.tsx`) — `useListAiVoorstellen`, `usePatchAiVoorstel`, `getListAiVoorstellenQueryKey` geimporteerd; `openVoorstellen` (gefilterd op `status === "open"`) getoond in compacte kaarten direct boven de navigatieknoppen; accepteren / later knoppen direct in de wizard beschikbaar; badge met veldnaam + zekerheid%.
+
+**Typecheck:** volledig groen (alle artifacts).
+
+---
+
+## 2026-07-16 — Code review fixes (ronde 3): B1-B6 AI-wizard bugfixes
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+**Aanleiding:** Derde code review (Task #772) keurde 6 punten af: (B1) camelCase-bug in `huidigeWaarde` mapping; (B2) `analyseerCvTekst` i.p.v. `classificeerDocument`; (B3) geen auto-trigger na document upload; (B4) Middelen-stap ontbrak in wizard; (B5) geen documentupload per wizardstap; (B6) AI-voorstel UI miste bewijs/bulk-acties/Later-knop.
+
+**Wijzigingen:**
+
+1. **B1+B2** (`hrm-ai-analyse.ts`, `hrm-wizard.ts`) — Nieuwe helper `analyseerEnSlaVoorstellenOp()`: gebruikt `classificeerDocument` (niet `analyseerCvTekst`); `VELD_NAAR_CAMEL`-map converteert snake_case velden correct naar camelCase voor `huidigeWaarde`-lookup.
+
+2. **B3** (`hrm.ts`) — Fire-and-forget auto-analyse na document-insert: `POST /medewerkers/:id/documenten` triggert direct `analyseerEnSlaVoorstellenOp` zonder de response te blokkeren. Nieuw endpoint `POST /hrm/analyseer-bestand` voor wizard stap 1 (geen opslag, alleen veldextractie uit buffer).
+
+3. **B4** (`onboarden.tsx`) — Stap 13 hernoemd van "Duplicaat-check" naar "Middelen"; `STANDAARD_MIDDELEN` constante (7 items: laptop, telefoon, auto, etc.); checklist met selecteerbare middelen; `maakGeselecteerdeMiddelenAan()` aanroep in `opslaan()` na medewerker aanmaken/bijwerken.
+
+4. **B5** (`onboarden.tsx`) — Documentupload-sectie in stap 1: dashed border card met `<input type="file">`; upload-analyse via `POST /hrm/analyseer-bestand`; vult `form.email`, `form.naam`, `cvExtra`-velden automatisch in.
+
+5. **B6** (`detail.tsx`) — AI-voorstel UI verbeterd: bulk "Alle aanvullingen accepteren" knop; "Afwijking" (oranje) vs. "Aanvulling" (amber) badges; zekerheid %-weergave; bewijs `<details>` sectie met stap-voor-stap redenering; "Later"-knop naast Accepteren/Afwijzen; `disabled` states tijdens mutatie.
+
+**Typecheck:** volledig groen (alle artifacts).
+
+---
+
+## 2026-07-16 — Code review fixes (ronde 2): FIX-B t/m FIX-F, save/resume, generieke stromen
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+**Aanleiding:** Tweede code review (Task #772) keurde 5 punten af: (B) duplicate-check miste gebruikersaccounts; (C) geen optimistic locking op wizard-voortgang PATCH; (D) ontbrekende GeneriekeWizard voor 5 nieuwe stromen + save/resume in VastFormulier; (F) heranalyse te summier (alleen 3 velden, geen discrepanties, geen ontbrekende-velden scan).
+
+**Wijzigingen:**
+
+1. **FIX-B** (`hrm-wizard.ts`) — Duplicate-check doorzoekt nu ook `gebruikersTable` op e-mail en mergt resultaten met `type: "gebruiker_account"`.
+
+2. **FIX-C** (`hrm-wizard.ts`) — `PATCH /medewerkers/:id/wizard-voortgang` accepteert `bijgewerkt_op`, vergelijkt met DB-timestamp (>2 s verschil → 409 met `server_bijgewerkt_op`); response geeft altijd `bijgewerkt_op: string` terug.
+
+3. **FIX-D** (`onboarden.tsx`) — Stroomkeuze uitgebreid van 3 naar 8: vast, zzp, uitzend + stagiair, oproep, payroll, detachering, directie. `GeneriekeWizard` component (7 stappen, type-specifieke config) voor de 5 nieuwe stromen. `VastFormulier`: concept-medewerker aangemaakt bij stap 2→3 (save/resume), `bijwerk = useUpdateMedewerker()` + `slaVoortgangOp = usePatchWizardVoortgang()`, `opslaan()` bifurcatie op `medewerkerDraftId`. `SUCCES_INHOUD` + routing uitgebreid met alle 8 stromen.
+
+4. **FIX-F** (`hrm-wizard.ts`) — Heranalyse uitgebreid: `stelVoor()` helper detecteert aanvullingen EN afwijkingen (reden + confidence-korting per klasse). Vergelijkt nu 10 velden (naam, email, telefoon, mobiel, adres, postcode, woonplaats, rijbewijs, geboortedatum, 3 certificaten). Ontbrekende-velden scan na de documentenloop (5 verplichte velden → open voorstel als nog leeg). Ongekoppelde-documenten detectie in response (`ongekoppelde_documenten: string[]`).
+
+5. **api-zod/src/index.ts** — `export * from "./generated/types"` verwijderd (veroorzaakte TS2308 na orval 8.15 codegen die nu ook per-type TS-bestanden genereert naast de Zod-flat file). `DocumentStudioModelInputDocumentType` inline gedefinieerd in `studio.ts`.
+
+**Typecheck:** volledig groen (api-server + firevault + api-zod + alle libs).
+
+---
+
+## 2026-07-16 — Code review fixes: wizard 14-stappen, heranalyse, audit-logging
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+**Aanleiding:** Code review (Task #772) keurde 4 punten af: (1) statustekst "geaccepteerd" vs. "goedgekeurd"; (2) VastFormulier niet als wizard maar als één plat formulier; (3) heranalyse gebruikte proxy-tekst i.p.v. echte PDF-extractie; (4) PATCH ai-voorstellen logde geen audit trail.
+
+**Wijzigingen:**
+
+1. **FIX-1** (`artifacts/firevault/src/pages/personeel/detail.tsx`) — Badge-label en button-onClick in AI-voorstellen tab: `"geaccepteerd"` → `"goedgekeurd"` op 2 plekken, sluit nu aan op de OpenAPI-enum.
+
+2. **FIX-2** (`artifacts/firevault/src/pages/personeel/onboarden.tsx`) — VastFormulier omgebouwd naar een 14-stappen wizard. Toegevoegd: `WIZARD_STAPPEN` const, `WizardStapIndicator` component (progressbar + stap-label), `huidigStap` state, `gaVolgende`/`gaVorige` navigatiefuncties. Stap-inhoud: AI-voorbereiding → Persoonsgegevens → Contactgegevens (incl. directe inputs voor telefoon/mobiel/adres/postcode/woonplaats) → Functie → Werkmaatschappij → CAO/contract → Uren → Startdatum → VCA/BHV/EHBO (directe inputs) → Rijbewijs → FPS Connect (connect_uitnodigen + connect_profiel_id) → Verlofsoorten → Duplicaat-check → Bevestiging. VastForm interface uitgebreid met `connect_uitnodigen` en `connect_profiel_id`; opslaan-functie stuurt beide mee naar de API.
+
+3. **FIX-3** (`artifacts/api-server/src/routes/hrm-wizard.ts`) — Heranalyse-handler haalt nu het echte PDF-bestand op via `ObjectStorageService.getObjectEntityFile` + stream-naar-Buffer + `extraheerPdfTekst`. Documenten zonder voldoende tekst (<50 tekens) of met extractiefouten worden gracefully overgeslagen.
+
+4. **FIX-4** (`artifacts/api-server/src/routes/hrm-wizard.ts`) — PATCH `/ai-voorstellen/:id` logt nu via `logActiviteit` na elke beoordeling (try/catch, non-fatal).
+
+5. **Schema-healthcheck** (`lib/db/scripts/schema-healthcheck.mjs`) — `medewerker_status` en `wizard_voortgang` toegevoegd aan de medewerkers kolommen-check zodat schema-drift op productie tijdig wordt gesignaleerd.
+
+**Typecheck:** volledig groen (api-server + firevault + alle libs).
+
+---
+
+## 2026-07-16 — Centrale AI-ondersteunde nieuwe-medewerker wizard (14 stappen)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+**Aanleiding:** Task #772 — uitbreiden van onboarden.tsx (3 stromen) naar een volledige 14-stappen wizard met DB-extensies, nieuwe OpenAPI-endpoints, backend routes, AI-voorstel UI en heranalyseer-knop op detail.tsx.
+
+**Wijzigingen:**
+
+1. **DB-schema** — Drie nieuwe tabellen: `hrmMiddelenTable` (bedrijfsmiddelen), `hrmOnboardingTakenTable` (onboarding-checklist), `hrmAiVoorstellenTable` (AI-analyse van dossiers). Twee nieuwe kolommen op `medewerkersTable`: `medewerkerStatus` en `wizardVoortgang`. ALTER SQL in `scripts/post-merge.sh` opgenomen.
+
+2. **OpenAPI spec** (`lib/api-spec/openapi.yaml`) — 10 nieuwe endpoint-groepen toegevoegd: wizard-status, AI-voorstellen (list/patch), heranalyseer-dossier, middelen (CRUD), onboarding-taken (CRUD), wizard-voortgang, duplicaat-check, integriteitsrapport, medewerkerstatussen, wizard-acties. Alle bijbehorende schema's toegevoegd. Codegen opnieuw uitgevoerd (Orval).
+
+3. **Backend routes** (`artifacts/api-server/src/routes/hrm-wizard.ts`) — Nieuwe router met alle wizard-endpoints, inclusief type-veilige CV-analyse via `analyseerCvTekst` (met correcte union-narrowing op `CvAnalyseUitkomst`). Geregistreerd in `routes/index.ts`.
+
+4. **Frontend: heranalyseer-knop + tabs** (`artifacts/firevault/src/pages/personeel/detail.tsx`) — "Heranalyseer dossier"-knop in de actiebalk (amber, beheerder only). Drie nieuwe tabs: **Middelen** (bedrijfsmiddelen CRUD), **Onboarding** (taken met afvinklijst), **AI-voorstellen** (verschijnt alleen bij openstaande voorstellen, accept/afwijs per voorstel). Alle hooks geïmporteerd uit gegenereerde API client.
+
+5. **Frontend: integriteitstools** (`artifacts/firevault/src/pages/personeel/hrm-integriteitstools.tsx`) — Nieuw overzichtsscherm met duplicaatcontrole, integriteitsrapport en medewerkerstatussen. Route `/personeel/integriteitstools` geregistreerd in App.tsx.
+
+6. **Sidebar** (`artifacts/firevault/src/layouts/beheerder-layout.tsx`) — "Integriteitstools" nav-item toegevoegd onder Onboarden (alleen zichtbaar bij `heeftNiveau("personeel", 2)`).
+
+7. **TS2308 fix** (`lib/api-zod/src/generated/types/index.ts`) — Conflicterende `export * from './listAiVoorstellenParams'` verwijderd (zod api.ts exporteert de zod-const met dezelfde naam, causing duplicate export conflict).
+
+**Typecheck:** volledig groen (api-server + firevault + alle libs). Workflows herstart.
+
+---
+
 ## 2026-07-16 — Herstel functietellers, medewerker-Connect-koppeling en uitnodigingsstroom
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag

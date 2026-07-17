@@ -2,6 +2,7 @@
 // Geïmporteerd door zowel het desktop- als mobiel-spec-bestand.
 import { expect, test, type Page } from "@playwright/test";
 
+import { setupApiProxy } from "./web-api-proxy";
 import {
   E2E_WW_GATE_EMAIL,
   E2E_WW_GATE_WACHTWOORD,
@@ -13,6 +14,7 @@ const INHOUD_TIMEOUT = 20_000;
 const PORTAAL_TIMEOUT = 30_000;
 
 export async function logInAlsGateGebruiker(page: Page): Promise<void> {
+  await setupApiProxy(page);
   await page.goto("/");
 
   await expect(page.locator("#email")).toBeVisible({ timeout: 60_000 });
@@ -33,7 +35,7 @@ export async function logInAlsGateGebruiker(page: Page): Promise<void> {
     }
 
     try {
-      await expect(page.locator("[data-input-otp]")).toBeVisible({ timeout: 15_000 });
+      await page.locator("[data-input-otp]").waitFor({ state: "attached", timeout: 15_000 });
     } catch {
       if (poging === 3) throw new Error("TOTP-invoer niet verschenen na 3 pogingen.");
       continue;
@@ -44,7 +46,7 @@ export async function logInAlsGateGebruiker(page: Page): Promise<void> {
     await page.keyboard.type(code);
 
     try {
-      await expect(page.locator("[data-input-otp]")).not.toBeVisible({ timeout: 15_000 });
+      await page.locator("[data-input-otp]").waitFor({ state: "detached", timeout: 15_000 });
       return;
     } catch {
       if (poging === 3) throw new Error("Inloggen mislukt na 3 pogingen (TOTP/login).");

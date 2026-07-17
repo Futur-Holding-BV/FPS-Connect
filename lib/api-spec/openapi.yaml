@@ -8962,6 +8962,313 @@ paths:
         "204":
           description: Verwijderd
 
+  /medewerkers/duplicate-check:
+    post:
+      operationId: duplicateCheckMedewerker
+      tags: [personeel]
+      summary: Controleer of een vergelijkbare medewerker al bestaat (naam/e-mail/geboortedatum)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DuplicaatCheckInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DuplicaatCheckResultaat"
+
+  /medewerkers/{id}/wizard-status:
+    get:
+      operationId: getWizardStatus
+      tags: [personeel]
+      summary: Huidige wizard-voortgang en status van een medewerker ophalen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WizardStatus"
+        "404":
+          description: Niet gevonden
+
+  /medewerkers/{id}/wizard-voortgang:
+    patch:
+      operationId: patchWizardVoortgang
+      tags: [personeel]
+      summary: Wizard-voortgang opslaan (tussentijds, per stap)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WizardVoortgangInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WizardStatus"
+
+  /medewerkers/{id}/ai-voorstellen:
+    get:
+      operationId: listAiVoorstellen
+      tags: [personeel]
+      summary: AI-voorstellen voor een medewerker ophalen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - in: query
+          name: status
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/HrmAiVoorstel"
+
+  /medewerkers/ai-voorstellen/{voorstelId}:
+    patch:
+      operationId: patchAiVoorstel
+      tags: [personeel]
+      summary: AI-voorstel beoordelen (goedkeuren/afwijzen/later/aanpassen)
+      parameters:
+        - in: path
+          name: voorstelId
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/HrmAiVoorstelBeoordelingInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HrmAiVoorstel"
+
+  /medewerkers/{id}/heranalyseer-dossier:
+    post:
+      operationId: heranalyseerDossier
+      tags: [personeel]
+      summary: Alle documenten van medewerker retroactief analyseren en AI-voorstellen aanmaken
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [aangemaakt, overgeslagen, fout]
+                properties:
+                  aangemaakt:
+                    type: integer
+                  overgeslagen:
+                    type: integer
+                  fout:
+                    type: integer
+
+  /medewerkers/{id}/middelen:
+    get:
+      operationId: listHrmMiddelen
+      tags: [personeel]
+      summary: Middelen van een medewerker ophalen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/HrmMiddel"
+    post:
+      operationId: createHrmMiddel
+      tags: [personeel]
+      summary: Middel toevoegen aan medewerker
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/HrmMiddelInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HrmMiddel"
+
+  /hrm/middelen/{id}:
+    patch:
+      operationId: patchHrmMiddel
+      tags: [personeel]
+      summary: Middel bijwerken
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/HrmMiddelInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HrmMiddel"
+    delete:
+      operationId: deleteHrmMiddel
+      tags: [personeel]
+      summary: Middel verwijderen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Verwijderd
+
+  /medewerkers/{id}/onboarding-taken:
+    get:
+      operationId: listOnboardingTaken
+      tags: [personeel]
+      summary: Onboarding-taken van een medewerker ophalen
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/HrmOnboardingTaak"
+    post:
+      operationId: createOnboardingTaak
+      tags: [personeel]
+      summary: Onboarding-taak aanmaken voor medewerker
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/HrmOnboardingTaakInput"
+      responses:
+        "201":
+          description: Aangemaakt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HrmOnboardingTaak"
+
+  /hrm/onboarding-taken/{taakId}:
+    patch:
+      operationId: patchOnboardingTaak
+      tags: [personeel]
+      summary: Onboarding-taak bijwerken (status, opmerking, deadline)
+      parameters:
+        - in: path
+          name: taakId
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/HrmOnboardingTaakInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HrmOnboardingTaak"
+    delete:
+      operationId: deleteOnboardingTaak
+      tags: [personeel]
+      summary: Onboarding-taak verwijderen
+      parameters:
+        - in: path
+          name: taakId
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Verwijderd
+
   /zzp-overeenkomsten:
     get:
       operationId: listZzpOvereenkomsten
@@ -43277,3 +43584,226 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/MagazijnVoorraadwaardeOnbekend"
+
+    DuplicaatCheckInput:
+      type: object
+      properties:
+        naam:
+          type: string
+        email:
+          type: string
+        geboortedatum:
+          type: string
+      required: []
+
+    DuplicaatCheckResultaat:
+      type: object
+      required: [mogelijke_duplicaten]
+      properties:
+        mogelijke_duplicaten:
+          type: array
+          items:
+            type: object
+            required: [id, naam, gelijkenis_score, type]
+            properties:
+              id:
+                type: integer
+              naam:
+                type: string
+              email:
+                type: ["string", "null"]
+              geboortedatum:
+                type: ["string", "null"]
+              gelijkenis_score:
+                type: number
+              type:
+                type: string
+
+    WizardStatus:
+      type: object
+      required: [id, medewerker_status, huidig_stap]
+      properties:
+        id:
+          type: integer
+        medewerker_status:
+          type: ["string", "null"]
+        huidig_stap:
+          type: integer
+        wizard_voortgang:
+          type: object
+          additionalProperties: true
+        bijgewerkt_op:
+          type: string
+          format: date-time
+          description: Tijdstip van de laatste aanpassing (gebruik voor optimistic locking)
+
+    WizardVoortgangInput:
+      type: object
+      required: [stap]
+      properties:
+        stap:
+          type: integer
+        medewerker_status:
+          type: string
+        voortgang_data:
+          type: object
+          additionalProperties: true
+        bijgewerkt_op:
+          type: string
+          format: date-time
+          description: Tijdstip van de laatste bekende versie (optimistic locking — stuur mee om conflicten te detecteren)
+
+    HrmMiddel:
+      type: object
+      required: [id, medewerker_id, categorie, naam, status, retour_vereist]
+      properties:
+        id:
+          type: integer
+        medewerker_id:
+          type: integer
+        categorie:
+          type: string
+        naam:
+          type: string
+        status:
+          type: string
+        retour_vereist:
+          type: boolean
+        gekoppeld_module:
+          type: ["string", "null"]
+        aangevraagd_op:
+          type: ["string", "null"]
+        uitgegeven_op:
+          type: ["string", "null"]
+        ontvangst_bevestigd_op:
+          type: ["string", "null"]
+        opmerking:
+          type: ["string", "null"]
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+
+    HrmMiddelInput:
+      type: object
+      required: [categorie, naam]
+      properties:
+        categorie:
+          type: string
+        naam:
+          type: string
+        status:
+          type: string
+        retour_vereist:
+          type: boolean
+        opmerking:
+          type: ["string", "null"]
+        aangevraagd_op:
+          type: ["string", "null"]
+        uitgegeven_op:
+          type: ["string", "null"]
+
+    HrmOnboardingTaak:
+      type: object
+      required: [id, medewerker_id, naam, status]
+      properties:
+        id:
+          type: integer
+        medewerker_id:
+          type: integer
+        naam:
+          type: string
+        verantwoordelijke_id:
+          type: ["integer", "null"]
+        verantwoordelijke_naam:
+          type: ["string", "null"]
+        deadline:
+          type: ["string", "null"]
+        status:
+          type: string
+        categorie:
+          type: ["string", "null"]
+        volgorde:
+          type: ["integer", "null"]
+        opmerking:
+          type: ["string", "null"]
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+
+    HrmOnboardingTaakInput:
+      type: object
+      required: [naam]
+      properties:
+        naam:
+          type: string
+        verantwoordelijke_id:
+          type: ["integer", "null"]
+        deadline:
+          type: ["string", "null"]
+        status:
+          type: string
+        categorie:
+          type: ["string", "null"]
+        volgorde:
+          type: ["integer", "null"]
+        opmerking:
+          type: ["string", "null"]
+
+    HrmAiVoorstel:
+      type: object
+      required: [id, medewerker_id, veld, status, aangemaakt_op]
+      properties:
+        id:
+          type: integer
+        medewerker_id:
+          type: integer
+        document_id:
+          type: ["integer", "null"]
+        medewerker_document_id:
+          type: ["integer", "null"]
+        veld:
+          type: string
+        huidige_waarde:
+          type: ["string", "null"]
+        voorgestelde_waarde:
+          type: ["string", "null"]
+        reden:
+          type: ["string", "null"]
+        brondocument:
+          type: ["string", "null"]
+        paginanummer:
+          type: ["integer", "null"]
+        confidence:
+          type: ["number", "null"]
+        vertrouwen_score:
+          type: ["number", "null"]
+        bewijskenmerken:
+          type: ["object", "null"]
+          additionalProperties: true
+        impact:
+          type: ["string", "null"]
+        status:
+          type: string
+        beoordeeld_door_id:
+          type: ["integer", "null"]
+        beoordeeld_op:
+          type: ["string", "null"]
+        model_gebruikt:
+          type: ["string", "null"]
+        correctie_tekst:
+          type: ["string", "null"]
+        aangemaakt_op:
+          type: string
+        bijgewerkt_op:
+          type: string
+
+    HrmAiVoorstelBeoordelingInput:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+        correctie_tekst:
+          type: ["string", "null"]

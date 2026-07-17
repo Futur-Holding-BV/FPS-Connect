@@ -6,6 +6,8 @@
 - [Offline-first monteur app patroon](offline-first-monteur.md) — AsyncStorage cache + SyncQueue; expo-file-system/legacy; WachtrijItem id-conflict (gebruik urenId/etc nooit id:number); create_uren payload-based.
 - [FPS Brandpreventie quirks](firevault-quirks.md) — queryKey-verplichting, TS7030 nu groen (returnstijl consistent), pdfjs v6, storage paths, spot-coords scale:2, mobiel = HMAC bearer.
 - [Playwright div-filter .first() vs .last()](playwright-filter-first-vs-last.md) — nested divs matching same filter: .first()=outer wrapper (all descendants), .last()=innermost (may miss sibling content like a badge row).
+- [Playwright route ordering (last-wins)](playwright-route-ordering.md) — LAATSTE page.route() wint bij overlap; catch-all na specifieke route overrijdt die route; gebruik één catch-all met if-branches.
+- [E2E-web stale dev-server](e2e-web-stale-devserver.md) — e2e-runner hergebruikt bestaande firevault server (isBereikbaar); stop de workflow vóór e2e-web anders loopt de test tegen stale compilatie.
 - [Wagenparkmodule architectuur](wagenpark-module.md) — router.use("/wagenpark", wagenparkRouter) prefix; hook=useBevoegdheid (enkelvoud); mutation sig={id,data} niet {params:{id},data}; WagenparkOnderhoudInput vereist type+omschrijving ook bij PATCH.
 - [Opdracht/Werkbegroting flow](opdracht-werkbegroting.md) — offerte→opdracht→werkbegroting (zonder opslagen); vaststellen→planning→uurstaten→nacalculatie; bevoegdheid=offertes niet aparte module.
 - [Sync context patroon](sync-context.md) — SyncProvider + AbortSignal.timeout voor connectiviteitscheck; forceerSync direct aanroepen na bewaar().
@@ -82,6 +84,7 @@
 - [Mail via Microsoft 365](mail-microsoft365.md) — MAIL_FROM=zichtbare afzender (alias) vs MAIL_MAILBOX=gedeelde postbus die via Graph verzendt; Azure send-as/Mail.Send vereist; redacteer upstream foutteksten vóór DB/log/respons.
 - [Kwaliteitscheck script](kwaliteitscheck.md) — pnpm audit severity via "Severity: X low | Y moderate | Z high" (plain-text, geen JSON); route-teller: `import \w+Router from` vs `router.use(\w+Router)` — middleware-imports niet meerekenen.
 - [OpenAPI inline body TS2308](openapi-inline-body-conflict.md) — inline request bodies genereren dubbele exports (Zod const + TS type) → TS2308; altijd named $ref schemas gebruiken voor PATCH/POST bodies.
+- [api-zod index types-map conflict](api-zod-types-conflict.md) — orval 8.15 genereert types/ submap naast api.ts; export * from beide → TS2308; fix: index.ts alleen export * from "./generated/api", type-only consts inline in server-route.
 - [OpenAPI paden zonder /api/ prefix](openapi-pad-prefix.md) — alle paden in openapi.yaml beginnen ZONDER `/api/` (bijv. `/gebouwen`, `/mijn/verlofsaldi`); Orval baseUrl "/api" voegt het toe. Paden MET `/api/` → gegenereerde URL wordt `/api/api/...` → 404.
 - [Zombie node processen](zombie-node.md) — als `node --version` hangt (exit 124), zijn er zombie node-pids (ps aux|grep node); fix: kill -9 pids + restart_workflow; NIET oplosbaar door esbuild/code debuggen.
 - [Api-server middleware importpad](api-server-middlewares-pad.md) — api-server middleware map heet `middlewares` (meervoud), NIET `middleware`; nieuwe routes importeren uit `"../middlewares/auth"` anders faalt esbuild-build.

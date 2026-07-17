@@ -2,6 +2,8 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import { useLocation } from "wouter";
 import {
   useCreateMedewerker,
+  useUpdateMedewerker,
+  usePatchWizardVoortgang,
   useAiOnboardingVoorstel,
   useListFuncties,
   useListVerlofsoorten,
@@ -10,8 +12,14 @@ import {
   useListMedewerkers,
   getListMedewerkersQueryKey,
   getGetHrmStatsQueryKey,
+  useListAiVoorstellen,
+  usePatchAiVoorstel,
+  getListAiVoorstellenQueryKey,
+  useGetWizardStatus,
+  getGetWizardStatusQueryKey,
+  useDuplicateCheckMedewerker,
 } from "@workspace/api-client-react";
-import type { MedewerkerInput, CvAnalyseResultaat } from "@workspace/api-client-react";
+import type { MedewerkerInput, CvAnalyseResultaat, WizardStatus } from "@workspace/api-client-react";
 import { leesEnWisCvOnboarding, type CvOnboardingStash } from "@/lib/cv-onboarding-stash";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
@@ -30,6 +38,7 @@ import { useToast } from "@/hooks/use-toast";
 import {
   UserCheck, Handshake, Building2, ArrowLeft, ArrowRight,
   CheckCircle2, ExternalLink, RotateCcw, Sparkles, X, AlertTriangle, Receipt, ShieldCheck, Loader2,
+  GraduationCap, Clock3, CreditCard, ArrowLeftRight, Crown, Upload, Check,
 } from "lucide-react";
 import { WERKMAATSCHAPPIJEN, caoVoorWerkmaatschappij } from "@/lib/werkmaatschappijen";
 import { MODULES, NIVEAUS } from "@workspace/permissies";
@@ -42,7 +51,8 @@ function niveauKort(n: number): string {
 
 // ─── Typen ────────────────────────────────────────────────────────────────────
 
-type Stroom = "vast" | "zzp" | "uitzend";
+type Stroom = "vast" | "zzp" | "uitzend" | "stagiair" | "oproep" | "payroll" | "detachering" | "directie";
+type GenerieveStroom = "stagiair" | "oproep" | "payroll" | "detachering" | "directie";
 
 interface StRoomsKaart {
   id: Stroom;
@@ -78,6 +88,46 @@ const STROMEN: StRoomsKaart[] = [
     kenmerken: ["Ingehuurd via uitzendbureau of onderaannemer", "Contract loopt via het bureau", "Tijdelijke inzet op projecten", "Einddatum doorgaans verplicht"],
     accent: "border-purple-200 hover:border-purple-400 hover:bg-purple-50/40",
   },
+  {
+    id: "stagiair",
+    titel: "Stagiair / BBL-leerling",
+    subtitel: "Stage of beroepsopleiding",
+    icoon: <GraduationCap className="h-7 w-7" />,
+    kenmerken: ["Stageovereenkomst verplicht", "Begeleider toewijzen", "Geen cao-loon (evt. stagevergoeding)", "Duur: enkele weken tot 4 jaar"],
+    accent: "border-green-200 hover:border-green-400 hover:bg-green-50/40",
+  },
+  {
+    id: "oproep",
+    titel: "Oproepkracht / 0-uren",
+    subtitel: "Flexibele inzet op afroep",
+    icoon: <Clock3 className="h-7 w-7" />,
+    kenmerken: ["Geen vaste werkuren", "Oproeptermijn conform wet", "Max. 3 jaar oproepcontract (Wet Toelating)", "CAO van toepassing"],
+    accent: "border-yellow-200 hover:border-yellow-400 hover:bg-yellow-50/40",
+  },
+  {
+    id: "payroll",
+    titel: "Payrolling",
+    subtitel: "Loondienst via payrollbedrijf",
+    icoon: <CreditCard className="h-7 w-7" />,
+    kenmerken: ["Contract via payrollbedrijf", "FPS is inlener", "Gelijke arbeidsvoorwaarden (inlenersbeloning)", "Arbeidsongeschiktheid bij payrollbedrijf"],
+    accent: "border-cyan-200 hover:border-cyan-400 hover:bg-cyan-50/40",
+  },
+  {
+    id: "detachering",
+    titel: "Gedetacheerde",
+    subtitel: "Ingeleend van ander bedrijf",
+    icoon: <ArrowLeftRight className="h-7 w-7" />,
+    kenmerken: ["Werknemer van andere organisatie", "Detacheringsovereenkomst verplicht", "Aansprakelijkheid bij detacheerder", "Eigen arbeidsvoorwaarden"],
+    accent: "border-indigo-200 hover:border-indigo-400 hover:bg-indigo-50/40",
+  },
+  {
+    id: "directie",
+    titel: "Directeur / bestuurder",
+    subtitel: "Bijzondere arbeidsrelatie (DGA, bestuurder)",
+    icoon: <Crown className="h-7 w-7" />,
+    kenmerken: ["DGA of statutair bestuurder", "Managementovereenkomst mogelijk", "Afwijkend regime WW / WIA", "Geen arbeidsovereenkomst bij DGA"],
+    accent: "border-rose-200 hover:border-rose-400 hover:bg-rose-50/40",
+  },
 ];
 
 // ─── Forms ────────────────────────────────────────────────────────────────────
@@ -93,6 +143,8 @@ interface VastForm {
   contracturen_per_week: string;
   in_dienst_sinds: string;
   verlofsoort_ids: number[];
+  connect_uitnodigen: boolean;
+  connect_profiel_id: number | null;
 }
 
 interface ZzpForm {
@@ -128,6 +180,8 @@ const LEEG_VAST: VastForm = {
   contracturen_per_week: "38",
   in_dienst_sinds: new Date().toISOString().slice(0, 10),
   verlofsoort_ids: [],
+  connect_uitnodigen: false,
+  connect_profiel_id: null,
 };
 
 const LEEG_ZZP: ZzpForm = {
@@ -369,6 +423,495 @@ function CvVoorstelBanner({
   );
 }
 
+// ─── Wizard stappen definitie ─────────────────────────────────────────────────
+
+const WIZARD_STAPPEN = [
+  "AI-voorbereiding",
+  "Persoonsgegevens",
+  "Contactgegevens",
+  "Functie",
+  "Werkmaatschappij",
+  "CAO / contract",
+  "Uren",
+  "Startdatum",
+  "VCA / BHV / EHBO",
+  "Rijbewijs",
+  "FPS Connect",
+  "Verlofsoorten",
+  "Middelen",
+  "Bevestiging",
+] as const;
+
+const STANDAARD_MIDDELEN: Array<{ id: string; naam: string; categorie: string }> = [
+  { id: "laptop", naam: "Laptop / tablet", categorie: "apparatuur" },
+  { id: "telefoon", naam: "Mobiele telefoon", categorie: "apparatuur" },
+  { id: "auto", naam: "Bedrijfsauto / reiskosten", categorie: "vervoer" },
+  { id: "pas", naam: "Toegangspas / sleutel", categorie: "beveiliging" },
+  { id: "schoenen", naam: "Veiligheidsschoenen (S3)", categorie: "kleding" },
+  { id: "kleding", naam: "Werkkleding / overalls", categorie: "kleding" },
+  { id: "gereedschap", naam: "Gereedschapskoffer", categorie: "gereedschap" },
+  { id: "badge", naam: "FPS-pasje / ID-badge", categorie: "beveiliging" },
+];
+
+const STANDAARD_ONBOARDING_TAKEN: Array<{
+  id: string;
+  taak: string;
+  categorie: string;
+  deadlineDagen: number;
+}> = [
+  { id: "werkplek", taak: "Werkplek inrichten", categorie: "Facilitair", deadlineDagen: -1 },
+  { id: "it_account", taak: "IT-account aanmaken (e-mail, intranet)", categorie: "IT", deadlineDagen: -1 },
+  { id: "toegangspas", taak: "Toegangspas uitreiken", categorie: "Beveiliging", deadlineDagen: 0 },
+  { id: "fps_connect", taak: "FPS Connect-account activeren", categorie: "IT", deadlineDagen: 1 },
+  { id: "introductie", taak: "Introductiegesprek plannen", categorie: "HR", deadlineDagen: 1 },
+  { id: "vca_check", taak: "Certificaten controleren (VCA/BHV/EHBO)", categorie: "Veiligheid", deadlineDagen: 7 },
+  { id: "cao_info", taak: "CAO-informatie aanreiken", categorie: "HR", deadlineDagen: 0 },
+  { id: "evaluatie_3m", taak: "3-maands evaluatiegesprek inplannen", categorie: "HR", deadlineDagen: 90 },
+];
+
+function WizardStapIndicator({ huidigStap, totaal }: { huidigStap: number; totaal: number }) {
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between text-xs">
+        <span className="font-semibold text-foreground">{WIZARD_STAPPEN[huidigStap - 1]}</span>
+        <span className="text-muted-foreground">Stap {huidigStap} van {totaal}</span>
+      </div>
+      <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+        <div
+          className="h-full rounded-full bg-primary transition-all duration-300"
+          style={{ width: `${Math.round((huidigStap / totaal) * 100)}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
+// ─── Generieke wizard (stagiair / oproep / payroll / detachering / directie) ──
+
+interface GeneriekeStapConfig {
+  extra1Label: string;
+  extra1Placeholder: string;
+  extra2Label: string | null;
+  extra2Placeholder: string | null;
+  certificatenToepasselijk: boolean;
+  dienstverband: string;
+  titel: string;
+  subtitel: string;
+}
+
+const GENERIEKE_CONFIGS: Record<GenerieveStroom, GeneriekeStapConfig> = {
+  stagiair: {
+    extra1Label: "Stageverlenende instelling",
+    extra1Placeholder: "bijv. ROC Mondriaan, TU Delft",
+    extra2Label: "Praktijkbegeleider",
+    extra2Placeholder: "Naam begeleider bij de instelling",
+    certificatenToepasselijk: true,
+    dienstverband: "stage",
+    titel: "Stagiair / BBL-leerling",
+    subtitel: "Stage of beroepsopleiding — stageovereenkomst verplicht",
+  },
+  oproep: {
+    extra1Label: "Contractvorm",
+    extra1Placeholder: "bijv. 0-uren contract, min-max 8–32 uur",
+    extra2Label: null,
+    extra2Placeholder: null,
+    certificatenToepasselijk: false,
+    dienstverband: "oproep",
+    titel: "Oproepkracht / 0-uren",
+    subtitel: "Flexibele inzet op afroep — CAO van toepassing",
+  },
+  payroll: {
+    extra1Label: "Payrollbedrijf",
+    extra1Placeholder: "bijv. Tentoo, HR Group, Loon Snel",
+    extra2Label: "Contactpersoon payrollbedrijf",
+    extra2Placeholder: "Naam + telefoonnummer contactpersoon",
+    certificatenToepasselijk: true,
+    dienstverband: "payroll",
+    titel: "Payrolling",
+    subtitel: "Loondienst via payrollbedrijf — inlenersbeloning van toepassing",
+  },
+  detachering: {
+    extra1Label: "Detacheringsbedrijf",
+    extra1Placeholder: "bijv. YACHT, Brunel, Sweco",
+    extra2Label: "Contactpersoon detacheerder",
+    extra2Placeholder: "Naam + telefoonnummer",
+    certificatenToepasselijk: true,
+    dienstverband: "detachering",
+    titel: "Gedetacheerde",
+    subtitel: "Ingeleend van ander bedrijf — detacheringsovereenkomst verplicht",
+  },
+  directie: {
+    extra1Label: "Arbeidsrelatie",
+    extra1Placeholder: "bijv. DGA, statutair bestuurder, management BV",
+    extra2Label: null,
+    extra2Placeholder: null,
+    certificatenToepasselijk: false,
+    dienstverband: "directie",
+    titel: "Directeur / bestuurder",
+    subtitel: "Bijzondere arbeidsrelatie — afwijkend regime WW / WIA",
+  },
+};
+
+const GENERIEKE_STAPPEN = [
+  "Persoonsgegevens",
+  "Contactgegevens",
+  "Functie & organisatie",
+  "Periode & details",
+  "Certificaten",
+  "FPS Connect",
+  "Bevestiging",
+] as const;
+
+interface GeneriekeForm {
+  naam: string;
+  geboortedatum: string;
+  email: string;
+  telefoon: string;
+  functie_id: number | null;
+  werkmaatschappij: string;
+  start_datum: string;
+  eind_datum: string;
+  extra_1: string;
+  extra_2: string;
+  opmerkingen: string;
+  vca_vervaldatum: string;
+  bhv_vervaldatum: string;
+  ehbo_vervaldatum: string;
+  rijbewijs: string;
+  connect_uitnodigen: boolean;
+  connect_profiel_id: number | null;
+}
+
+const LEEG_GENERIEK: GeneriekeForm = {
+  naam: "", geboortedatum: "", email: "", telefoon: "",
+  functie_id: null, werkmaatschappij: WERKMAATSCHAPPIJ_STD,
+  start_datum: new Date().toISOString().slice(0, 10), eind_datum: "",
+  extra_1: "", extra_2: "", opmerkingen: "",
+  vca_vervaldatum: "", bhv_vervaldatum: "", ehbo_vervaldatum: "", rijbewijs: "",
+  connect_uitnodigen: false, connect_profiel_id: null,
+};
+
+function GeneriekeWizard({
+  soort,
+  onTerug,
+  onGereed,
+  cvNaam,
+}: {
+  soort: GenerieveStroom;
+  onTerug: () => void;
+  onGereed: (id: number) => void;
+  cvNaam?: string;
+}) {
+  const config = GENERIEKE_CONFIGS[soort];
+  const [form, setForm] = useState<GeneriekeForm>(() => ({ ...LEEG_GENERIEK, naam: cvNaam ?? "" }));
+  const [huidigStap, setHuidigStap] = useState(1);
+  const TOTAAL = GENERIEKE_STAPPEN.length;
+  const { data: functies } = useListFuncties();
+  const { data: profielen } = useListProfielen();
+  const maak = useCreateMedewerker();
+  const slaVoortgangOp = usePatchWizardVoortgang();
+  const bijwerk = useUpdateMedewerker();
+  const { toast } = useToast();
+  const [medewerkerDraftId, setMedewerkerDraftId] = useState<number | null>(null);
+  const [draftBijgewerktOp, setDraftBijgewerktOp] = useState<string | null>(null);
+
+  async function gaVolgende() {
+    if (huidigStap === 1 && !form.naam.trim()) {
+      toast({ title: "Naam is verplicht voor de volgende stap", variant: "destructive" });
+      return;
+    }
+    if (huidigStap === 1 && !medewerkerDraftId) {
+      try {
+        const concept = await maak.mutateAsync({ data: { naam: form.naam.trim() } });
+        setMedewerkerDraftId(concept.id);
+        const r = await slaVoortgangOp.mutateAsync({ id: concept.id, data: { stap: 2, medewerker_status: "concept" } });
+        if (r.bijgewerkt_op) setDraftBijgewerktOp(r.bijgewerkt_op);
+      } catch {
+        // Non-fataal: wizard loopt door zonder server-side persistentie
+      }
+    } else if (medewerkerDraftId) {
+      const volgende = Math.min(huidigStap + 1, TOTAAL);
+      try {
+        const r = await slaVoortgangOp.mutateAsync({
+          id: medewerkerDraftId,
+          data: {
+            stap: volgende,
+            voortgang_data: form as unknown as Record<string, unknown>,
+            ...(draftBijgewerktOp ? { bijgewerkt_op: draftBijgewerktOp } : {}),
+          },
+        });
+        if (r.bijgewerkt_op) setDraftBijgewerktOp(r.bijgewerkt_op);
+      } catch (err: unknown) {
+        if (err && typeof err === "object" && "status" in err && (err as { status: number }).status === 409) {
+          toast({ title: "Voortgang conflict", description: "De wizard is elders bijgewerkt. Ververs de pagina.", variant: "destructive" });
+          return;
+        }
+        // Andere fouten zijn niet fataal — wizard loopt door
+      }
+    }
+    setHuidigStap((s) => Math.min(s + 1, TOTAAL));
+  }
+
+  function gaVorige() {
+    if (huidigStap === 1) { onTerug(); return; }
+    setHuidigStap((s) => Math.max(s - 1, 1));
+  }
+
+  async function opslaan() {
+    if (!form.naam.trim()) { toast({ title: "Naam is verplicht", variant: "destructive" }); return; }
+    try {
+      const input: MedewerkerInput = {
+        naam: form.naam.trim(),
+        email: form.email.trim() || undefined,
+        geboortedatum: form.geboortedatum || undefined,
+        telefoon: form.telefoon || undefined,
+        functie_id: form.functie_id ?? undefined,
+        werkmaatschappij: form.werkmaatschappij,
+        dienstverband: config.dienstverband,
+        in_dienst_sinds: form.start_datum || undefined,
+        uit_dienst_per: form.eind_datum || undefined,
+        bedrijf_uitzendbureau: form.extra_1.trim() || undefined,
+        cv_tekst: [
+          form.extra_2 && config.extra2Label ? `${config.extra2Label}: ${form.extra_2}` : null,
+          form.opmerkingen ? `Opmerkingen: ${form.opmerkingen}` : null,
+        ].filter(Boolean).join("\n") || undefined,
+        vca_vervaldatum: form.vca_vervaldatum || undefined,
+        bhv_vervaldatum: form.bhv_vervaldatum || undefined,
+        ehbo_vervaldatum: form.ehbo_vervaldatum || undefined,
+        rijbewijs: form.rijbewijs || undefined,
+        connect_uitnodigen: form.connect_uitnodigen || undefined,
+        connect_profiel_id: form.connect_profiel_id ?? undefined,
+        jaar: new Date().getFullYear(),
+      };
+      if (medewerkerDraftId) {
+        await bijwerk.mutateAsync({ id: medewerkerDraftId, data: input });
+        await slaVoortgangOp.mutateAsync({
+          id: medewerkerDraftId,
+          data: {
+            stap: TOTAAL,
+            medewerker_status: "actief",
+            ...(draftBijgewerktOp ? { bijgewerkt_op: draftBijgewerktOp } : {}),
+          },
+        });
+        onGereed(medewerkerDraftId);
+      } else {
+        const nieuw = await maak.mutateAsync({ data: input });
+        onGereed(nieuw.id);
+      }
+    } catch {
+      toast({ title: "Aanmaken mislukt", variant: "destructive" });
+    }
+  }
+
+  const isPending = maak.isPending || bijwerk.isPending || slaVoortgangOp.isPending;
+
+  return (
+    <div className="space-y-6 max-w-xl">
+      <div className="flex items-center gap-3">
+        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={gaVorige}>
+          <ArrowLeft className="h-4 w-4" />
+        </Button>
+        <div>
+          <h1 className="text-xl font-bold">{config.titel}</h1>
+          <p className="text-sm text-muted-foreground">{config.subtitel}</p>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <div className="flex items-center justify-between text-xs">
+          <span className="font-semibold">{GENERIEKE_STAPPEN[huidigStap - 1]}</span>
+          <span className="text-muted-foreground">Stap {huidigStap} van {TOTAAL}</span>
+        </div>
+        <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+          <div className="h-full rounded-full bg-primary transition-all duration-300" style={{ width: `${Math.round((huidigStap / TOTAAL) * 100)}%` }} />
+        </div>
+      </div>
+
+      {huidigStap === 1 && (
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <Label>Naam *</Label>
+            <Input placeholder="Voor- en achternaam" value={form.naam} onChange={(e) => setForm({ ...form, naam: e.target.value })} />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Geboortedatum</Label>
+            <Input type="date" value={form.geboortedatum} max={new Date().toISOString().slice(0, 10)} onChange={(e) => setForm({ ...form, geboortedatum: e.target.value })} />
+          </div>
+        </div>
+      )}
+
+      {huidigStap === 2 && (
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <Label>E-mailadres</Label>
+            <Input type="email" placeholder="naam@voorbeeld.nl" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Telefoonnummer</Label>
+            <Input placeholder="010-…" value={form.telefoon} onChange={(e) => setForm({ ...form, telefoon: e.target.value })} />
+          </div>
+        </div>
+      )}
+
+      {huidigStap === 3 && (
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <Label>Functie</Label>
+            <FunctieSelect functieId={form.functie_id} functies={functies ?? []} onChange={(id) => setForm({ ...form, functie_id: id })} />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Werkmaatschappij</Label>
+            <Select value={form.werkmaatschappij} onValueChange={(v) => setForm({ ...form, werkmaatschappij: v })}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>{WERKMAATSCHAPPIJEN.map((w) => <SelectItem key={w} value={w}>{w}</SelectItem>)}</SelectContent>
+            </Select>
+          </div>
+        </div>
+      )}
+
+      {huidigStap === 4 && (
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label>Startdatum</Label>
+              <Input type="date" value={form.start_datum} onChange={(e) => setForm({ ...form, start_datum: e.target.value })} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Einddatum</Label>
+              <Input type="date" value={form.eind_datum} onChange={(e) => setForm({ ...form, eind_datum: e.target.value })} />
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label>{config.extra1Label}</Label>
+            <Input placeholder={config.extra1Placeholder} value={form.extra_1} onChange={(e) => setForm({ ...form, extra_1: e.target.value })} />
+          </div>
+          {config.extra2Label && (
+            <div className="space-y-1.5">
+              <Label>{config.extra2Label}</Label>
+              <Input placeholder={config.extra2Placeholder ?? ""} value={form.extra_2} onChange={(e) => setForm({ ...form, extra_2: e.target.value })} />
+            </div>
+          )}
+          <div className="space-y-1.5">
+            <Label>Opmerkingen</Label>
+            <Input placeholder="Optionele toelichting" value={form.opmerkingen} onChange={(e) => setForm({ ...form, opmerkingen: e.target.value })} />
+          </div>
+        </div>
+      )}
+
+      {huidigStap === 5 && (
+        <div className="space-y-4">
+          {config.certificatenToepasselijk ? (
+            <>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label>VCA geldig tot</Label>
+                  <Input type="date" value={form.vca_vervaldatum} onChange={(e) => setForm({ ...form, vca_vervaldatum: e.target.value })} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>BHV geldig tot</Label>
+                  <Input type="date" value={form.bhv_vervaldatum} onChange={(e) => setForm({ ...form, bhv_vervaldatum: e.target.value })} />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label>EHBO geldig tot</Label>
+                  <Input type="date" value={form.ehbo_vervaldatum} onChange={(e) => setForm({ ...form, ehbo_vervaldatum: e.target.value })} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Rijbewijs categorie(s)</Label>
+                  <Input placeholder="bijv. B, BE, C" value={form.rijbewijs} onChange={(e) => setForm({ ...form, rijbewijs: e.target.value })} />
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="rounded-md border px-4 py-3 text-sm text-muted-foreground">
+              Certificaten zijn niet van toepassing voor {config.titel}. U kunt ze later toevoegen via het medewerkerprofiel.
+            </div>
+          )}
+        </div>
+      )}
+
+      {huidigStap === 6 && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-3">
+            <Checkbox
+              id="connect-gen"
+              checked={form.connect_uitnodigen}
+              onCheckedChange={(v) => setForm({ ...form, connect_uitnodigen: !!v })}
+            />
+            <label htmlFor="connect-gen" className="text-sm leading-tight cursor-pointer">
+              Stuur een uitnodiging voor FPS Connect (app-toegang)
+            </label>
+          </div>
+          {form.connect_uitnodigen && (
+            <div className="space-y-1.5">
+              <Label>Toegangsprofiel</Label>
+              <Select
+                value={form.connect_profiel_id ? String(form.connect_profiel_id) : ""}
+                onValueChange={(v) => setForm({ ...form, connect_profiel_id: v ? Number(v) : null })}
+              >
+                <SelectTrigger><SelectValue placeholder="Kies profiel (optioneel)" /></SelectTrigger>
+                <SelectContent>
+                  {(profielen ?? []).map((p) => (
+                    <SelectItem key={p.id} value={String(p.id)}>{p.naam}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+        </div>
+      )}
+
+      {huidigStap === 7 && (
+        <div className="rounded-lg border p-4 space-y-3">
+          <p className="text-sm font-semibold">Samenvatting — controleer voordat u aanmaakt</p>
+          <div className="space-y-0 text-sm divide-y">
+            {(
+              [
+                ["Naam", form.naam || "—"],
+                ["E-mail", form.email || "—"],
+                ["Geboortedatum", form.geboortedatum || "—"],
+                ["Telefoon", form.telefoon || "—"],
+                ["Functie", (functies ?? []).find((f) => f.id === form.functie_id)?.naam ?? "—"],
+                ["Werkmaatschappij", form.werkmaatschappij],
+                ["Startdatum", form.start_datum || "—"],
+                ["Einddatum", form.eind_datum || "—"],
+                [config.extra1Label, form.extra_1 || "—"],
+                ...(config.extra2Label ? [[config.extra2Label, form.extra_2 || "—"] as [string, string]] : []),
+                ["FPS Connect", form.connect_uitnodigen ? "Ja" : "Nee"],
+              ] as [string, string][]
+            ).map(([label, waarde]) => (
+              <div key={label} className="flex justify-between py-1.5">
+                <span className="text-muted-foreground">{label}</span>
+                <span className="font-medium text-right">{waarde}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="flex items-center gap-3 pt-2">
+        {huidigStap < TOTAAL ? (
+          <Button onClick={gaVolgende} disabled={huidigStap === 1 && (maak.isPending || slaVoortgangOp.isPending)}>
+            {huidigStap === 1 && (maak.isPending || slaVoortgangOp.isPending) ? (
+              <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Opslaan...</>
+            ) : (
+              <>Volgende <ArrowRight className="h-4 w-4 ml-1.5" /></>
+            )}
+          </Button>
+        ) : (
+          <Button onClick={opslaan} disabled={isPending}>
+            {isPending ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Aanmaken...</> : "Medewerker registreren"}
+          </Button>
+        )}
+        <Button variant="outline" size="sm" onClick={gaVorige}>
+          {huidigStap === 1 ? "Annuleren" : "Vorige"}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 // ─── Stap 2a: Vast / tijdelijk ────────────────────────────────────────────────
 
 function VastFormulier({
@@ -376,11 +919,13 @@ function VastFormulier({
   onGereed,
   cvStash,
   onWisCv,
+  resumeId,
 }: {
   onTerug: () => void;
   onGereed: (id: number) => void;
   cvStash?: CvOnboardingStash | null;
   onWisCv?: () => void;
+  resumeId?: number | null;
 }) {
   const voorstel = cvStash?.voorstel ?? null;
   const [form, setForm] = useState<VastForm>(() => ({
@@ -396,6 +941,10 @@ function VastFormulier({
   const { data: profielen } = useListProfielen();
   const { data: bestaandeMedewerkers } = useListMedewerkers();
   const maak = useCreateMedewerker();
+  const bijwerk = useUpdateMedewerker();
+  const slaVoortgangOp = usePatchWizardVoortgang();
+  const beoordeelVoorstel = usePatchAiVoorstel();
+  const queryClient = useQueryClient();
   const { toast } = useToast();
 
   // AI-onboarding uit geplakte tekst: de AI stelt onboarding-velden voor
@@ -406,6 +955,154 @@ function VastFormulier({
   const [bronTekst, setBronTekst] = useState("");
   const [aiToegepast, setAiToegepast] = useState<string[]>([]);
   const [aiOnbekendeFunctie, setAiOnbekendeFunctie] = useState<string | null>(null);
+  const [huidigStap, setHuidigStap] = useState(1);
+  const [medewerkerDraftId, setMedewerkerDraftId] = useState<number | null>(null);
+  const [draftBijgewerktOp, setDraftBijgewerktOp] = useState<string | null>(null);
+  const [geselecteerdeMiddelen, setGeselecteerdeMiddelen] = useState<string[]>([]);
+  const [onboardingTaken, setOnboardingTaken] = useState<Record<string, boolean>>(() =>
+    Object.fromEntries(STANDAARD_ONBOARDING_TAKEN.map((t) => [t.id, true])),
+  );
+  const [onboardingDeadlines, setOnboardingDeadlines] = useState<Record<string, string>>({});
+  const [bestandUploadActief, setBestandUploadActief] = useState(false);
+  const [bestandAnalyseLoading, setBestandAnalyseLoading] = useState(false);
+  const uploadRef = useRef<HTMLInputElement>(null);
+  const TOTAAL_STAPPEN = WIZARD_STAPPEN.length;
+  const duplicateCheck = useDuplicateCheckMedewerker();
+  const [duplicaatMelding, setDuplicaatMelding] = useState<string | null>(null);
+  const [duplicaatCheckUitgevoerd, setDuplicaatCheckUitgevoerd] = useState(false);
+  const { data: wizardStatus } = useGetWizardStatus(resumeId ?? 0, {
+    query: { enabled: !!resumeId, queryKey: getGetWizardStatusQueryKey(resumeId ?? 0) },
+  });
+  const { data: alleVoorstellen = [] } = useListAiVoorstellen(medewerkerDraftId ?? 0);
+  const openVoorstellen = alleVoorstellen.filter((v) => v.status === "open");
+
+  useEffect(() => {
+    if (!wizardStatus || !resumeId || medewerkerDraftId) return;
+    setMedewerkerDraftId(resumeId);
+    setHuidigStap((wizardStatus as WizardStatus).huidig_stap ?? 1);
+    const data = ((wizardStatus as WizardStatus).wizard_voortgang as Record<string, unknown> | null) ?? {};
+    const vd = (data.voortgang_data as Partial<VastForm> | null) ?? {};
+    if (Object.keys(vd).length > 0) {
+      setForm((f) => ({ ...f, ...vd }));
+    }
+    const restoredTaken = data.onboardingTaken as Record<string, boolean> | null;
+    if (restoredTaken) setOnboardingTaken(restoredTaken);
+    const restoredDeadlines = data.onboardingDeadlines as Record<string, string> | null;
+    if (restoredDeadlines) setOnboardingDeadlines(restoredDeadlines);
+    const restoredMiddelen = data.geselecteerdeMiddelen as string[] | null;
+    if (restoredMiddelen) setGeselecteerdeMiddelen(restoredMiddelen);
+  }, [wizardStatus, resumeId, medewerkerDraftId]);
+
+  async function voorstelBeoordelen(voorstelId: number, status: string) {
+    try {
+      await beoordeelVoorstel.mutateAsync({ voorstelId, data: { status } });
+      await queryClient.invalidateQueries({ queryKey: getListAiVoorstellenQueryKey(medewerkerDraftId ?? 0) });
+    } catch {
+      toast({ title: "Beoordelen mislukt", variant: "destructive" });
+    }
+  }
+
+
+  async function analyseerBestandUpload(bestand: File) {
+    setBestandAnalyseLoading(true);
+    try {
+      const formData = new FormData();
+      formData.append("bestand", bestand);
+      const resp = await fetch(`${import.meta.env.BASE_URL}api/hrm/analyseer-bestand`, {
+        method: "POST",
+        body: formData,
+        credentials: "include",
+      });
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const data = await resp.json() as { ok: boolean; velden?: Record<string, string>; foutmelding?: string | null };
+      if (data.ok && data.velden) {
+        const v = data.velden;
+        if (v.naam && !form.naam.trim()) setForm((f) => ({ ...f, naam: v.naam ?? f.naam }));
+        if (v.geboortedatum) setForm((f) => ({ ...f, geboortedatum: v.geboortedatum ?? f.geboortedatum }));
+        if (v.email && !form.email.trim()) setForm((f) => ({ ...f, email: v.email ?? f.email }));
+        const extraUpdate: Partial<CvExtraVelden> = {};
+        if (v.telefoon) extraUpdate.telefoon = v.telefoon;
+        if (v.mobiel) extraUpdate.mobiel = v.mobiel;
+        if (v.adres) extraUpdate.adres = v.adres;
+        if (v.postcode) extraUpdate.postcode = v.postcode;
+        if (v.woonplaats) extraUpdate.woonplaats = v.woonplaats;
+        if (v.rijbewijs) extraUpdate.rijbewijs = v.rijbewijs;
+        if (v.vca_vervaldatum) extraUpdate.vca_vervaldatum = v.vca_vervaldatum;
+        if (v.bhv_vervaldatum) extraUpdate.bhv_vervaldatum = v.bhv_vervaldatum;
+        if (v.ehbo_vervaldatum) extraUpdate.ehbo_vervaldatum = v.ehbo_vervaldatum;
+        if (Object.keys(extraUpdate).length > 0) setCvExtra((e) => ({ ...e, ...extraUpdate }));
+        toast({ title: "Document geanalyseerd", description: "Velden zijn ingevuld vanuit uw document. Controleer en pas aan." });
+      } else {
+        // data.ok=false: analyse niet beschikbaar (Onbekend type, pixelgebaseerd PDF, e.d.)
+        // Toon de servermelding als die er is, anders een generieke Dutch fallback.
+        const melding = data.foutmelding ??
+          "Documentanalyse is niet beschikbaar voor dit bestand. Voer de gegevens handmatig in.";
+        toast({ title: "Documentanalyse niet beschikbaar", description: melding, variant: "default" });
+      }
+    } catch {
+      toast({ title: "Analyse mislukt", description: "Probeer het opnieuw of voer gegevens handmatig in.", variant: "destructive" });
+    } finally {
+      setBestandAnalyseLoading(false);
+    }
+  }
+
+  async function gaVolgende() {
+    if (huidigStap === 2 && !form.naam.trim()) {
+      toast({ title: "Naam is verplicht voor de volgende stap", variant: "destructive" });
+      return;
+    }
+    // Stap 2→3: server-side duplicate check, daarna concept-medewerker aanmaken
+    if (huidigStap === 2 && !medewerkerDraftId) {
+      if (!duplicaatCheckUitgevoerd) {
+        setDuplicaatCheckUitgevoerd(true);
+        try {
+          const dc = await duplicateCheck.mutateAsync({
+            data: { naam: form.naam.trim(), email: form.email.trim() },
+          });
+          const dupes =
+            (dc as { mogelijke_duplicaten?: Array<{ naam: string }> }).mogelijke_duplicaten ?? [];
+          if (dupes.length > 0) {
+            setDuplicaatMelding(dupes.map((d) => d.naam).join(", "));
+            return;
+          }
+        } catch {
+          // Non-fataal: doorgaan zonder duplicate check
+        }
+      }
+      try {
+        const concept = await maak.mutateAsync({ data: { naam: form.naam.trim() } });
+        setMedewerkerDraftId(concept.id);
+        const r = await slaVoortgangOp.mutateAsync({ id: concept.id, data: { stap: 3, medewerker_status: "concept" } });
+        if (r.bijgewerkt_op) setDraftBijgewerktOp(r.bijgewerkt_op);
+      } catch {
+        // Non-fataal: wizard loopt door zonder server-side persistentie
+      }
+    } else if (medewerkerDraftId && huidigStap > 2) {
+      const volgende = Math.min(huidigStap + 1, TOTAAL_STAPPEN);
+      try {
+        const r = await slaVoortgangOp.mutateAsync({
+          id: medewerkerDraftId,
+          data: {
+            stap: volgende,
+            voortgang_data: { voortgang_data: { ...form }, cvExtra, geselecteerdeMiddelen, onboardingTaken, onboardingDeadlines } as unknown as Record<string, unknown>,
+            ...(draftBijgewerktOp ? { bijgewerkt_op: draftBijgewerktOp } : {}),
+          },
+        });
+        if (r.bijgewerkt_op) setDraftBijgewerktOp(r.bijgewerkt_op);
+      } catch (err: unknown) {
+        if (err && typeof err === "object" && "status" in err && (err as { status: number }).status === 409) {
+          toast({ title: "Voortgang conflict", description: "De wizard is elders bijgewerkt. Ververs de pagina.", variant: "destructive" });
+          return;
+        }
+      }
+    }
+    setHuidigStap((s) => Math.min(s + 1, TOTAAL_STAPPEN));
+  }
+
+  function gaVorige() {
+    if (huidigStap === 1) { onTerug(); return; }
+    setHuidigStap((s) => Math.max(s - 1, 1));
+  }
 
   function pasOnboardingVoorstelToe(v: CvAnalyseResultaat) {
     // Functie-match vooraf berekenen (geen side effects in de setForm-updater).
@@ -623,9 +1320,42 @@ function VastFormulier({
         bhv_vervaldatum: cvExtra.bhv_vervaldatum || undefined,
         ehbo_vervaldatum: cvExtra.ehbo_vervaldatum || undefined,
         cv_tekst: cvExtra.cv_tekst || undefined,
+        connect_uitnodigen: form.connect_uitnodigen || undefined,
+        connect_profiel_id: form.connect_profiel_id ?? undefined,
       };
-      const nieuw = await maak.mutateAsync({ data: input });
-      onGereed(nieuw.id);
+      async function maakGeselecteerdeMiddelenAan(mwId: number) {
+        for (const middelId of geselecteerdeMiddelen) {
+          const m = STANDAARD_MIDDELEN.find((x) => x.id === middelId);
+          if (!m) continue;
+          try {
+            await fetch(`${import.meta.env.BASE_URL}api/medewerkers/${mwId}/middelen`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              credentials: "include",
+              body: JSON.stringify({ naam: m.naam, categorie: m.categorie, status: "aangevraagd" }),
+            });
+          } catch { /* Niet fataal — middelen zijn altijd later toe te voegen */ }
+        }
+      }
+
+      if (medewerkerDraftId) {
+        // Concept bestaat al — bijwerken met definitieve gegevens en afsluiten
+        await bijwerk.mutateAsync({ id: medewerkerDraftId, data: input });
+        await slaVoortgangOp.mutateAsync({
+          id: medewerkerDraftId,
+          data: {
+            stap: TOTAAL_STAPPEN,
+            medewerker_status: "actief",
+            ...(draftBijgewerktOp ? { bijgewerkt_op: draftBijgewerktOp } : {}),
+          },
+        });
+        await maakGeselecteerdeMiddelenAan(medewerkerDraftId);
+        onGereed(medewerkerDraftId);
+      } else {
+        const nieuw = await maak.mutateAsync({ data: input });
+        await maakGeselecteerdeMiddelenAan(nieuw.id);
+        onGereed(nieuw.id);
+      }
     } catch {
       toast({ title: "Aanmaken mislukt", variant: "destructive" });
     }
@@ -633,8 +1363,9 @@ function VastFormulier({
 
   return (
     <div className="space-y-6 max-w-xl">
+      {/* Header */}
       <div className="flex items-center gap-3">
-        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onTerug}>
+        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={gaVorige}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div>
@@ -643,163 +1374,268 @@ function VastFormulier({
         </div>
       </div>
 
-      {cvStash && voorstel && (
-        <CvVoorstelBanner
-          bestandsnaam={cvStash.bestandsnaam}
-          voorstel={voorstel}
-          extra={cvExtra}
-          duplicaatNaam={duplicaatNaam}
-          onWissen={wisCvGegevens}
-        />
+      {/* Voortgangsindicator */}
+      <WizardStapIndicator huidigStap={huidigStap} totaal={TOTAAL_STAPPEN} />
+
+      {/* ── STAP 1: AI-voorbereiding ── */}
+      {huidigStap === 1 && (
+        <div className="space-y-4">
+          {cvStash && voorstel && (
+            <CvVoorstelBanner
+              bestandsnaam={cvStash.bestandsnaam}
+              voorstel={voorstel}
+              extra={cvExtra}
+              duplicaatNaam={null}
+              onWissen={wisCvGegevens}
+            />
+          )}
+          <div className="rounded-lg border border-amber-300 bg-amber-50/60 p-4 space-y-3">
+            <div className="flex items-start gap-2">
+              <Sparkles className="h-4 w-4 text-amber-700 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-semibold text-amber-800">Sneller invullen met AI (optioneel)</p>
+                <p className="text-xs text-amber-700 mt-0.5">
+                  Plak een e-mail of arbeidsovereenkomst. De AI stelt naam, functie, werkmaatschappij,
+                  uren en startdatum voor. Er wordt niets aangemaakt en er worden geen rechten voorgesteld —
+                  u controleert en bevestigt alles in de volgende stappen.
+                </p>
+              </div>
+            </div>
+            <Textarea
+              rows={4}
+              placeholder="Plak hier de e-mail of arbeidsovereenkomst..."
+              value={bronTekst}
+              onChange={(e) => setBronTekst(e.target.value)}
+              className="bg-white"
+            />
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                size="sm"
+                className="gap-1.5"
+                disabled={onboardingAi.isPending || bronTekst.trim().length < 30}
+                onClick={vraagOnboardingVoorstel}
+              >
+                {onboardingAi.isPending ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Sparkles className="h-3.5 w-3.5" />
+                )}
+                AI-voorstel invullen
+              </Button>
+              {bronTekst && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 gap-1 text-amber-800 hover:bg-amber-100"
+                  onClick={() => { setBronTekst(""); setAiToegepast([]); setAiOnbekendeFunctie(null); }}
+                >
+                  <X className="h-3.5 w-3.5" /> Wissen
+                </Button>
+              )}
+            </div>
+            {aiToegepast.length > 0 && (
+              <p className="text-xs text-amber-900">
+                Voorgesteld en ingevuld: {aiToegepast.join(", ")}. Controleer de velden in de volgende stappen.
+              </p>
+            )}
+            {aiOnbekendeFunctie && (
+              <div className="flex items-start gap-2 rounded border border-amber-300 bg-amber-100/60 px-2.5 py-2">
+                <AlertTriangle className="h-3.5 w-3.5 text-amber-700 shrink-0 mt-0.5" />
+                <p className="text-xs text-amber-800">
+                  De AI stelde functie &quot;{aiOnbekendeFunctie}&quot; voor, maar die bestaat nog niet.
+                  Kies zelf een functie in stap 4 of voeg de functie eerst toe via het Functiehuis.
+                </p>
+              </div>
+            )}
+          </div>
+          {/* Document uploaden als alternatief */}
+          <div className="rounded-lg border border-dashed px-4 py-3 space-y-2">
+            <div className="flex items-center gap-2">
+              <Upload className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm font-medium">Of upload een document</span>
+              <span className="text-xs text-muted-foreground">(PDF, Word)</span>
+            </div>
+            {!bestandUploadActief ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="text-xs h-7"
+                onClick={() => setBestandUploadActief(true)}
+              >
+                Bestand kiezen
+              </Button>
+            ) : (
+              <div className="flex items-center gap-2 flex-wrap">
+                <input
+                  ref={uploadRef}
+                  type="file"
+                  accept=".pdf,.doc,.docx,.txt"
+                  className="text-xs"
+                  onChange={async (e) => {
+                    const f = e.target.files?.[0];
+                    if (f) await analyseerBestandUpload(f);
+                  }}
+                />
+                {bestandAnalyseLoading && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 text-xs"
+                  onClick={() => { setBestandUploadActief(false); if (uploadRef.current) uploadRef.current.value = ""; }}
+                >
+                  <X className="h-3 w-3 mr-1" /> Annuleren
+                </Button>
+              </div>
+            )}
+            <p className="text-xs text-muted-foreground">
+              Upload een CV, arbeidsovereenkomst of ID-document. De AI probeert velden automatisch in te vullen.
+            </p>
+          </div>
+        </div>
       )}
 
-      {/* AI-onboarding uit geplakte tekst — stelt voor, de mens bevestigt hieronder */}
-      <div className="rounded-lg border border-amber-300 bg-amber-50/60 p-4 space-y-3">
-        <div className="flex items-start gap-2">
-          <Sparkles className="h-4 w-4 text-amber-700 shrink-0 mt-0.5" />
-          <div>
-            <p className="text-sm font-semibold text-amber-800">Sneller invullen met AI (optioneel)</p>
-            <p className="text-xs text-amber-700 mt-0.5">
-              Plak een e-mail of arbeidsovereenkomst. De AI stelt naam, functie, werkmaatschappij,
-              uren en startdatum voor. Er wordt niets aangemaakt en er worden geen rechten voorgesteld —
-              u controleert en bevestigt alles hieronder.
-            </p>
-          </div>
-        </div>
-        <Textarea
-          rows={4}
-          placeholder="Plak hier de e-mail of arbeidsovereenkomst..."
-          value={bronTekst}
-          onChange={(e) => setBronTekst(e.target.value)}
-          className="bg-white"
-        />
-        <div className="flex items-center gap-2">
-          <Button
-            type="button"
-            size="sm"
-            className="gap-1.5"
-            disabled={onboardingAi.isPending || bronTekst.trim().length < 30}
-            onClick={vraagOnboardingVoorstel}
-          >
-            {onboardingAi.isPending ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <Sparkles className="h-3.5 w-3.5" />
-            )}
-            AI-voorstel invullen
-          </Button>
-          {bronTekst && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="h-8 gap-1 text-amber-800 hover:bg-amber-100"
-              onClick={() => {
-                setBronTekst("");
-                setAiToegepast([]);
-                setAiOnbekendeFunctie(null);
-              }}
-            >
-              <X className="h-3.5 w-3.5" /> Wissen
-            </Button>
-          )}
-        </div>
-        {aiToegepast.length > 0 && (
-          <p className="text-xs text-amber-900">
-            Voorgesteld en ingevuld: {aiToegepast.join(", ")}. Controleer de velden hieronder voordat u opslaat.
-          </p>
-        )}
-        {aiOnbekendeFunctie && (
-          <div className="flex items-start gap-2 rounded border border-amber-300 bg-amber-100/60 px-2.5 py-2">
-            <AlertTriangle className="h-3.5 w-3.5 text-amber-700 shrink-0 mt-0.5" />
-            <p className="text-xs text-amber-800">
-              De AI stelde functie &quot;{aiOnbekendeFunctie}&quot; voor, maar die bestaat nog niet.
-              Kies zelf een functie hieronder of voeg de functie eerst toe via het Functiehuis.
-            </p>
-          </div>
-        )}
-      </div>
-
-      <div className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-1.5 col-span-2">
+      {/* ── STAP 2: Persoonsgegevens ── */}
+      {huidigStap === 2 && (
+        <div className="space-y-4">
+          <div className="space-y-1.5">
             <Label>Naam *</Label>
             <Input placeholder="Voor- en achternaam" value={form.naam} onChange={(e) => setForm({ ...form, naam: e.target.value })} />
           </div>
-          <div className="space-y-1.5 col-span-2">
+          <div className="space-y-1.5">
+            <Label>
+              Geboortedatum{" "}
+              {leeftijd !== null && (
+                <span className="text-muted-foreground text-xs font-normal">({leeftijd} jaar)</span>
+              )}
+            </Label>
+            <Input
+              type="date"
+              value={form.geboortedatum}
+              max={new Date().toISOString().slice(0, 10)}
+              onChange={(e) => setForm({ ...form, geboortedatum: e.target.value })}
+            />
+          </div>
+          {duplicaatMelding && (
+            <div className="flex items-start gap-2 rounded border border-orange-300 bg-orange-50 px-3 py-2">
+              <AlertTriangle className="h-3.5 w-3.5 text-orange-700 shrink-0 mt-0.5" />
+              <div className="text-xs text-orange-800 space-y-2">
+                <p>
+                  Bestaande registratie gevonden: <strong>{duplicaatMelding}</strong>.
+                  Controleer of dit geen dubbele inschrijving is.
+                </p>
+                <div className="flex gap-2 flex-wrap">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-7 text-xs border-orange-400 text-orange-800"
+                    onClick={() => { setDuplicaatMelding(null); void gaVolgende(); }}
+                  >
+                    Toch doorgaan
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 text-xs text-muted-foreground"
+                    onClick={() => { setDuplicaatMelding(null); setDuplicaatCheckUitgevoerd(false); }}
+                  >
+                    Aanpassen
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── STAP 3: Contactgegevens ── */}
+      {huidigStap === 3 && (
+        <div className="space-y-4">
+          <div className="space-y-1.5">
             <Label>E-mailadres <span className="text-muted-foreground text-xs">(voor uitnodiging account)</span></Label>
             <Input type="email" placeholder="naam@bedrijf.nl" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
           </div>
-        </div>
-
-        <div className="space-y-1.5">
-          <Label>Functie</Label>
-          <FunctieSelect
-            functieId={form.functie_id}
-            functies={functies ?? []}
-            onChange={(id) => setForm({ ...form, functie_id: id })}
-          />
-        </div>
-
-        {form.functie_id != null && (
-          <div className="rounded-md border bg-muted/30 px-4 py-3 space-y-2">
-            <div className="flex items-center gap-2">
-              <ShieldCheck className="h-4 w-4 text-primary" />
-              <span className="text-sm font-medium">Toegangsrechten bij deze functie</span>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label>Telefoon</Label>
+              <Input placeholder="010-..." value={cvExtra.telefoon || ""} onChange={(e) => setCvExtra((p) => ({ ...p, telefoon: e.target.value }))} />
             </div>
-            {functieProfiel ? (
-              <>
-                <p className="text-xs text-muted-foreground">
-                  Standaard toegangsprofiel:{" "}
-                  <span className="font-medium text-foreground">{functieProfiel.naam}</span>
-                </p>
-                {rechtenLijst.length > 0 ? (
-                  <div className="flex flex-wrap gap-1.5">
-                    {rechtenLijst.map((r) => (
-                      <Badge key={r.id} variant="secondary" className="text-xs font-normal">
-                        {r.label}
-                        <span className="ml-1 text-muted-foreground">{niveauKort(r.niveau)}</span>
-                      </Badge>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-xs text-muted-foreground">
-                    Dit profiel bevat nog geen actieve modulerechten.
-                  </p>
-                )}
-                <p className="text-xs text-muted-foreground">
-                  Dit is richtinggevend. De definitieve rechten stelt u in bij het account (Gebruikers).
-                </p>
-              </>
-            ) : (
-              <p className="text-xs text-muted-foreground">
-                Aan deze functie is nog geen standaard toegangsprofiel gekoppeld. Stel de rechten
-                handmatig in bij het account, of koppel een profiel via Beheer &rsaquo; Rollen &amp; rechten.
-              </p>
-            )}
-          </div>
-        )}
-
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-1.5">
-            <Label>Dienstverband</Label>
-            <Select value={form.dienstverband} onValueChange={(v) => setForm({ ...form, dienstverband: v })}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="vast">Vaste medewerker</SelectItem>
-                <SelectItem value="tijdelijk">Tijdelijk contract</SelectItem>
-                <SelectItem value="oproep">Oproepkracht</SelectItem>
-                <SelectItem value="stage">Stagiair</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="space-y-1.5">
+              <Label>Mobiel</Label>
+              <Input placeholder="06-..." value={cvExtra.mobiel || ""} onChange={(e) => setCvExtra((p) => ({ ...p, mobiel: e.target.value }))} />
+            </div>
           </div>
           <div className="space-y-1.5">
-            <Label>Contracturen/week</Label>
-            <Input type="number" min="0" max="48" value={form.contracturen_per_week} onChange={(e) => setForm({ ...form, contracturen_per_week: e.target.value })} />
+            <Label>Adres</Label>
+            <Input placeholder="Straatnaam 1" value={cvExtra.adres || ""} onChange={(e) => setCvExtra((p) => ({ ...p, adres: e.target.value }))} />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label>Postcode</Label>
+              <Input placeholder="1234 AB" value={cvExtra.postcode || ""} onChange={(e) => setCvExtra((p) => ({ ...p, postcode: e.target.value }))} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Woonplaats</Label>
+              <Input value={cvExtra.woonplaats || ""} onChange={(e) => setCvExtra((p) => ({ ...p, woonplaats: e.target.value }))} />
+            </div>
           </div>
         </div>
+      )}
 
-        <div className="grid grid-cols-2 gap-4">
+      {/* ── STAP 4: Functie ── */}
+      {huidigStap === 4 && (
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <Label>Functie</Label>
+            <FunctieSelect
+              functieId={form.functie_id}
+              functies={functies ?? []}
+              onChange={(id) => setForm({ ...form, functie_id: id })}
+            />
+          </div>
+          {form.functie_id != null && (
+            <div className="rounded-md border bg-muted/30 px-4 py-3 space-y-2">
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="h-4 w-4 text-primary" />
+                <span className="text-sm font-medium">Toegangsrechten bij deze functie</span>
+              </div>
+              {functieProfiel ? (
+                <>
+                  <p className="text-xs text-muted-foreground">
+                    Standaard toegangsprofiel:{" "}
+                    <span className="font-medium text-foreground">{functieProfiel.naam}</span>
+                  </p>
+                  {rechtenLijst.length > 0 ? (
+                    <div className="flex flex-wrap gap-1.5">
+                      {rechtenLijst.map((r) => (
+                        <Badge key={r.id} variant="secondary" className="text-xs font-normal">
+                          {r.label}
+                          <span className="ml-1 text-muted-foreground">{niveauKort(r.niveau)}</span>
+                        </Badge>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">Dit profiel bevat nog geen actieve modulerechten.</p>
+                  )}
+                  <p className="text-xs text-muted-foreground">Dit is richtinggevend. De definitieve rechten stelt u in bij het account (Gebruikers).</p>
+                </>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  Aan deze functie is nog geen standaard toegangsprofiel gekoppeld. Stel de rechten
+                  handmatig in bij het account, of koppel een profiel via Beheer &rsaquo; Rollen &amp; rechten.
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── STAP 5: Werkmaatschappij ── */}
+      {huidigStap === 5 && (
+        <div className="space-y-4">
           <div className="space-y-1.5">
             <Label>Werkmaatschappij *</Label>
             <Select
@@ -822,88 +1658,473 @@ function VastFormulier({
             </Select>
           </div>
         </div>
+      )}
 
-        <div className="grid grid-cols-2 gap-4">
+      {/* ── STAP 6: CAO / contract ── */}
+      {huidigStap === 6 && (
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <Label>Dienstverband</Label>
+            <Select value={form.dienstverband} onValueChange={(v) => setForm({ ...form, dienstverband: v })}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="vast">Vaste medewerker</SelectItem>
+                <SelectItem value="tijdelijk">Tijdelijk contract</SelectItem>
+                <SelectItem value="oproep">Oproepkracht</SelectItem>
+                <SelectItem value="stage">Stagiair</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      )}
+
+      {/* ── STAP 7: Uren ── */}
+      {huidigStap === 7 && (
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <Label>Contracturen per week</Label>
+            <Input
+              type="number"
+              min="0"
+              max="48"
+              value={form.contracturen_per_week}
+              onChange={(e) => setForm({ ...form, contracturen_per_week: e.target.value })}
+            />
+            {huidigeCaoOptie && (
+              <p className="text-xs text-muted-foreground">
+                Standaard {huidigeCaoOptie.standaard_uren_per_week ?? 40} uur/week conform {huidigeCaoOptie.naam}.
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── STAP 8: Startdatum ── */}
+      {huidigStap === 8 && (
+        <div className="space-y-4">
           <div className="space-y-1.5">
             <Label>In dienst sinds</Label>
-            <Input type="date" value={form.in_dienst_sinds} onChange={(e) => setForm({ ...form, in_dienst_sinds: e.target.value })} />
-          </div>
-          <div className="space-y-1.5">
-            <Label>
-              Geboortedatum{" "}
-              {leeftijd !== null && (
-                <span className="text-muted-foreground text-xs font-normal">({leeftijd} jaar)</span>
-              )}
-            </Label>
             <Input
               type="date"
-              value={form.geboortedatum}
-              max={new Date().toISOString().slice(0, 10)}
-              onChange={(e) => setForm({ ...form, geboortedatum: e.target.value })}
+              value={form.in_dienst_sinds}
+              onChange={(e) => setForm({ ...form, in_dienst_sinds: e.target.value })}
             />
           </div>
         </div>
+      )}
 
-        {(verlofsoorten ?? []).length > 0 && (
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label>
-                Verlofsoorten met beginsaldo{" "}
-                <span className="text-muted-foreground text-xs font-normal">
-                  ({form.verlofsoort_ids.length} geselecteerd)
-                </span>
-              </Label>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  className="text-xs text-primary underline-offset-2 hover:underline"
-                  onClick={selecteerAlle}
-                >
-                  Alles
-                </button>
-                <span className="text-muted-foreground text-xs">/</span>
-                <button
-                  type="button"
-                  className="text-xs text-muted-foreground underline-offset-2 hover:underline"
-                  onClick={deselecteerAlle}
-                >
-                  Geen
-                </button>
-              </div>
+      {/* ── STAP 9: VCA / BHV / EHBO ── */}
+      {huidigStap === 9 && (
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <Label>VCA geldig tot</Label>
+            <Input type="date" value={cvExtra.vca_vervaldatum || ""} onChange={(e) => setCvExtra((p) => ({ ...p, vca_vervaldatum: e.target.value }))} />
+          </div>
+          <div className="space-y-1.5">
+            <Label>BHV geldig tot</Label>
+            <Input type="date" value={cvExtra.bhv_vervaldatum || ""} onChange={(e) => setCvExtra((p) => ({ ...p, bhv_vervaldatum: e.target.value }))} />
+          </div>
+          <div className="space-y-1.5">
+            <Label>EHBO geldig tot</Label>
+            <Input type="date" value={cvExtra.ehbo_vervaldatum || ""} onChange={(e) => setCvExtra((p) => ({ ...p, ehbo_vervaldatum: e.target.value }))} />
+          </div>
+          <p className="text-xs text-muted-foreground">Vul in indien van toepassing. Laat leeg als niet relevant voor deze medewerker.</p>
+        </div>
+      )}
+
+      {/* ── STAP 10: Rijbewijs ── */}
+      {huidigStap === 10 && (
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <Label>Rijbewijs categorie(en)</Label>
+            <Input
+              placeholder="bijv. B, BE, C"
+              value={cvExtra.rijbewijs || ""}
+              onChange={(e) => setCvExtra((p) => ({ ...p, rijbewijs: e.target.value }))}
+            />
+            <p className="text-xs text-muted-foreground">Meerdere categorieën kommagescheiden, bijv. B, BE, C. Laat leeg als niet van toepassing.</p>
+          </div>
+        </div>
+      )}
+
+      {/* ── STAP 11: FPS Connect ── */}
+      {huidigStap === 11 && (
+        <div className="space-y-4">
+          <label className="flex items-start gap-3 cursor-pointer">
+            <Checkbox
+              checked={form.connect_uitnodigen}
+              onCheckedChange={(v) => setForm({ ...form, connect_uitnodigen: !!v, connect_profiel_id: v ? form.connect_profiel_id : null })}
+            />
+            <div>
+              <p className="text-sm font-medium">Uitnodigen voor FPS Connect</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Er wordt automatisch een uitnodigingsmail verzonden naar het opgegeven e-mailadres.
+                De medewerker ontvangt toegang tot het klantportaal na acceptatie.
+              </p>
             </div>
-            <div className="rounded-md border divide-y">
-              {(verlofsoorten ?? []).map((v) => {
-                const uren = urenPreview[v.id];
-                return (
-                  <label key={v.id} className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer hover:bg-muted/30">
-                    <Checkbox
-                      checked={form.verlofsoort_ids.includes(v.id)}
-                      onCheckedChange={() => toggleVerlof(v.id)}
-                    />
-                    <span className="flex-1">{v.naam}</span>
-                    {uren != null ? (
-                      <span className="text-xs text-muted-foreground tabular-nums">
-                        {uren} uur/jaar
-                      </span>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">handmatig</span>
-                    )}
+          </label>
+          {form.connect_uitnodigen && (
+            <div className="space-y-1.5">
+              <Label>Toegangsprofiel FPS Connect</Label>
+              <Select
+                value={form.connect_profiel_id ? String(form.connect_profiel_id) : undefined}
+                onValueChange={(v) => setForm({ ...form, connect_profiel_id: v ? Number(v) : null })}
+              >
+                <SelectTrigger><SelectValue placeholder="Kies profiel (optioneel)" /></SelectTrigger>
+                <SelectContent>
+                  {(profielen ?? []).map((p) => (
+                    <SelectItem key={p.id} value={String(p.id)}>{p.naam}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {!form.email && (
+                <p className="text-xs text-destructive">
+                  Let op: geen e-mailadres ingevuld. Ga terug naar stap 3 om een e-mailadres toe te voegen.
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── STAP 12: Verlofsoorten ── */}
+      {huidigStap === 12 && (
+        <div className="space-y-4">
+          {(verlofsoorten ?? []).length === 0 ? (
+            <p className="text-sm text-muted-foreground">Nog geen verlofsoorten geconfigureerd. Sla over of voeg ze toe via Personeel &rsaquo; Verlofsoorten.</p>
+          ) : (
+            <>
+              <div className="flex items-center justify-between">
+                <Label>
+                  Verlofsoorten met beginsaldo{" "}
+                  <span className="text-muted-foreground text-xs font-normal">({form.verlofsoort_ids.length} geselecteerd)</span>
+                </Label>
+                <div className="flex gap-2">
+                  <button type="button" className="text-xs text-primary underline-offset-2 hover:underline" onClick={selecteerAlle}>Alles</button>
+                  <span className="text-muted-foreground text-xs">/</span>
+                  <button type="button" className="text-xs text-muted-foreground underline-offset-2 hover:underline" onClick={deselecteerAlle}>Geen</button>
+                </div>
+              </div>
+              <div className="rounded-md border divide-y">
+                {(verlofsoorten ?? []).map((v) => {
+                  const uren = urenPreview[v.id];
+                  return (
+                    <label key={v.id} className="flex items-center gap-3 px-3 py-2 text-sm cursor-pointer hover:bg-muted/30">
+                      <Checkbox checked={form.verlofsoort_ids.includes(v.id)} onCheckedChange={() => toggleVerlof(v.id)} />
+                      <span className="flex-1">{v.naam}</span>
+                      {uren != null ? (
+                        <span className="text-xs text-muted-foreground tabular-nums">{uren} uur/jaar</span>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">handmatig</span>
+                      )}
+                    </label>
+                  );
+                })}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Voorgeselecteerd op basis van CAO en dienstverband. Uren zijn pro-rata bij {form.contracturen_per_week || "—"} contractuur/week.
+              </p>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* ── STAP 13: Middelen ── */}
+      {huidigStap === 13 && (
+        <div className="space-y-4">
+          <div className="rounded-lg border p-4 space-y-3">
+            <div>
+              <p className="text-sm font-semibold">Standaard uitrusting aanvragen</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Vink aan welke middelen aangevraagd moeten worden voor deze medewerker.
+                De aanvragen worden automatisch aangemaakt na bevestiging.
+              </p>
+            </div>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {STANDAARD_MIDDELEN.map((m) => (
+                <div key={m.id} className="flex items-center gap-2.5 rounded-md border px-3 py-2 hover:bg-muted/40 transition-colors">
+                  <Checkbox
+                    id={`middel-${m.id}`}
+                    checked={geselecteerdeMiddelen.includes(m.id)}
+                    onCheckedChange={(checked) => {
+                      setGeselecteerdeMiddelen((prev) =>
+                        checked ? [...prev, m.id] : prev.filter((x) => x !== m.id),
+                      );
+                    }}
+                  />
+                  <label htmlFor={`middel-${m.id}`} className="text-sm cursor-pointer flex-1">
+                    {m.naam}
                   </label>
+                </div>
+              ))}
+            </div>
+            {geselecteerdeMiddelen.length > 0 ? (
+              <p className="text-xs text-primary font-medium">
+                {geselecteerdeMiddelen.length} middel{geselecteerdeMiddelen.length !== 1 ? "en" : ""} geselecteerd
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground">Geen middelen geselecteerd — u kunt dit later toevoegen via het medewerkerdossier.</p>
+            )}
+          </div>
+          {/* ── Onboardingplan ── */}
+          <div className="rounded-lg border p-4 space-y-3">
+            <div>
+              <p className="text-sm font-semibold">Onboardingplan</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Standaard onboarding-taken. Vink af welke taken aangemaakt moeten worden na bevestiging.
+                Pas de streefdatum aan indien nodig.
+              </p>
+            </div>
+            <div className="divide-y">
+              {STANDAARD_ONBOARDING_TAKEN.map((t) => {
+                const startdatum = form.in_dienst_sinds ? new Date(form.in_dienst_sinds) : new Date();
+                const standaardDatum = new Date(startdatum);
+                standaardDatum.setDate(standaardDatum.getDate() + t.deadlineDagen);
+                const standaardDatumStr = standaardDatum.toISOString().slice(0, 10);
+                const geselecteerd = onboardingTaken[t.id] ?? true;
+                return (
+                  <div key={t.id} className="flex items-center gap-3 py-2">
+                    <Checkbox
+                      id={`taak-${t.id}`}
+                      checked={geselecteerd}
+                      onCheckedChange={(checked) =>
+                        setOnboardingTaken((prev) => ({ ...prev, [t.id]: !!checked }))
+                      }
+                    />
+                    <label htmlFor={`taak-${t.id}`} className="text-sm cursor-pointer flex-1 leading-tight">
+                      <span>{t.taak}</span>
+                      <span className="text-xs text-muted-foreground ml-1.5">{t.categorie}</span>
+                    </label>
+                    {geselecteerd && (
+                      <input
+                        type="date"
+                        className="text-xs border rounded px-1.5 py-1 bg-background"
+                        value={onboardingDeadlines[t.id] ?? standaardDatumStr}
+                        onChange={(e) =>
+                          setOnboardingDeadlines((prev) => ({ ...prev, [t.id]: e.target.value }))
+                        }
+                      />
+                    )}
+                  </div>
                 );
               })}
             </div>
-            <p className="text-xs text-muted-foreground">
-              Voorgeselecteerd op basis van CAO en dienstverband. Uren zijn pro-rata bij {form.contracturen_per_week || "—"} contractuur/week.
-            </p>
+            {Object.values(onboardingTaken).filter(Boolean).length > 0 ? (
+              <p className="text-xs text-primary font-medium">
+                {Object.values(onboardingTaken).filter(Boolean).length}{" "}
+                onboarding-tak{Object.values(onboardingTaken).filter(Boolean).length !== 1 ? "en" : ""} gepland
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground">Geen taken geselecteerd — u kunt ze later aanmaken via het medewerkerdossier.</p>
+            )}
           </div>
-        )}
-      </div>
 
-      <div className="flex gap-3">
-        <Button onClick={opslaan} disabled={maak.isPending}>
-          {maak.isPending ? "Aanmaken…" : "Medewerker onboarden"}
+          {duplicaatNaam && (
+            <div className="flex items-start gap-2 rounded border border-amber-300 bg-amber-50 px-3 py-2">
+              <AlertTriangle className="h-3.5 w-3.5 text-amber-700 shrink-0 mt-0.5" />
+              <p className="text-xs text-amber-800">
+                Mogelijke duplicaat: al een medewerker met naam/e-mail <span className="font-medium">{duplicaatNaam}</span>. Controleer dit in de bevestigingsstap.
+              </p>
+            </div>
+          )}
+          {duplicaatMelding && (
+            <div className="flex items-start gap-2 rounded border border-orange-300 bg-orange-50 px-3 py-2">
+              <AlertTriangle className="h-3.5 w-3.5 text-orange-700 shrink-0 mt-0.5" />
+              <div className="text-xs text-orange-800 space-y-2">
+                <p>
+                  Bestaande registratie gevonden: <strong>{duplicaatMelding}</strong>.
+                  Controleer of dit geen dubbele inschrijving is.
+                </p>
+                <div className="flex gap-2 flex-wrap">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-7 text-xs border-orange-400 text-orange-800"
+                    onClick={() => { setDuplicaatMelding(null); void gaVolgende(); }}
+                  >
+                    Toch doorgaan
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 text-xs text-muted-foreground"
+                    onClick={() => { setDuplicaatMelding(null); setDuplicaatCheckUitgevoerd(false); }}
+                  >
+                    Aanpassen
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── STAP 14: Bevestiging ── */}
+      {huidigStap === 14 && (
+        <div className="space-y-4">
+          <div className="rounded-lg border p-4 space-y-3">
+            <p className="text-sm font-semibold">Samenvatting — controleer voordat u aanmaakt</p>
+            <div className="space-y-0 text-sm divide-y">
+              {(
+                [
+                  ["Naam", form.naam || "—"],
+                  ["E-mail", form.email || "—"],
+                  ["Geboortedatum", form.geboortedatum || "—"],
+                  ["Functie", (functies ?? []).find((f) => f.id === form.functie_id)?.naam ?? "—"],
+                  ["Werkmaatschappij", form.werkmaatschappij],
+                  ["CAO", form.cao || "—"],
+                  ["Dienstverband", form.dienstverband],
+                  ["Contracturen/week", form.contracturen_per_week ? `${form.contracturen_per_week} uur` : "—"],
+                  ["In dienst", form.in_dienst_sinds || "—"],
+                  ["VCA geldig tot", cvExtra.vca_vervaldatum || "—"],
+                  ["BHV geldig tot", cvExtra.bhv_vervaldatum || "—"],
+                  ["EHBO geldig tot", cvExtra.ehbo_vervaldatum || "—"],
+                  ["Rijbewijs", cvExtra.rijbewijs || "—"],
+                  ["FPS Connect uitnodigen", form.connect_uitnodigen ? "Ja" : "Nee"],
+                  ["Verlofsoorten", form.verlofsoort_ids.length > 0 ? `${form.verlofsoort_ids.length} geselecteerd` : "Geen"],
+                ] as [string, string][]
+              ).map(([label, waarde]) => (
+                <div key={label} className="flex justify-between py-1.5">
+                  <span className="text-muted-foreground">{label}</span>
+                  <span className="font-medium text-right">{waarde}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+          {geselecteerdeMiddelen.length > 0 && (
+            <div className="rounded-lg border p-4 space-y-2">
+              <p className="text-sm font-semibold">Aan te vragen middelen</p>
+              <div className="flex flex-wrap gap-1.5">
+                {geselecteerdeMiddelen.map((id) => (
+                  <Badge key={id} variant="secondary" className="text-xs font-normal">
+                    {STANDAARD_MIDDELEN.find((m) => m.id === id)?.naam ?? id}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
+          {Object.values(onboardingTaken).some(Boolean) && (
+            <div className="rounded-lg border p-4 space-y-2">
+              <p className="text-sm font-semibold">Onboardingplan</p>
+              <div className="divide-y">
+                {STANDAARD_ONBOARDING_TAKEN.filter((t) => onboardingTaken[t.id]).map((t) => {
+                  const startdatum = form.in_dienst_sinds ? new Date(form.in_dienst_sinds) : new Date();
+                  const standaardDatum = new Date(startdatum);
+                  standaardDatum.setDate(standaardDatum.getDate() + t.deadlineDagen);
+                  const deadline = onboardingDeadlines[t.id] ?? standaardDatum.toISOString().slice(0, 10);
+                  return (
+                    <div key={t.id} className="flex justify-between text-xs py-1.5">
+                      <span>{t.taak}</span>
+                      <span className="text-muted-foreground tabular-nums">{deadline}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+          {duplicaatNaam && (
+            <div className="flex items-start gap-2 rounded border border-amber-300 bg-amber-50 px-2.5 py-2">
+              <AlertTriangle className="h-3.5 w-3.5 text-amber-700 shrink-0 mt-0.5" />
+              <p className="text-xs text-amber-800">
+                Mogelijke duplicaat: {duplicaatNaam}. Controleer of dit de juiste registratie is.
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Document uploaden (alle stappen na stap 1) ── */}
+      {huidigStap > 1 && medewerkerDraftId && (
+        <div className="rounded-lg border border-dashed px-4 py-3 space-y-2">
+          <div className="flex items-center gap-2">
+            <Upload className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm font-medium">Document toevoegen</span>
+            <span className="text-xs text-muted-foreground">(vult velden automatisch in)</span>
+          </div>
+          {!bestandUploadActief ? (
+            <Button type="button" variant="outline" size="sm" className="text-xs h-7"
+              onClick={() => setBestandUploadActief(true)}>
+              Bestand kiezen
+            </Button>
+          ) : (
+            <div className="flex items-center gap-2 flex-wrap">
+              <input ref={uploadRef} type="file" accept=".pdf,.doc,.docx,.txt" className="text-xs"
+                onChange={async (e) => { const f = e.target.files?.[0]; if (f) await analyseerBestandUpload(f); }} />
+              {bestandAnalyseLoading && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
+              <Button type="button" variant="ghost" size="sm" className="h-7 text-xs"
+                onClick={() => { setBestandUploadActief(false); if (uploadRef.current) uploadRef.current.value = ""; }}>
+                <X className="h-3 w-3 mr-1" /> Annuleren
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Inline AI-voorstellen (wizard) ── */}
+      {openVoorstellen.length > 0 && (
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-amber-600" />
+            <span className="text-sm font-medium text-amber-800">{openVoorstellen.length} AI-voorstel{openVoorstellen.length > 1 ? "len" : ""} beschikbaar</span>
+          </div>
+          <div className="space-y-2">
+            {openVoorstellen.slice(0, 3).map((v) => (
+              <div key={v.id} className="rounded border border-amber-200 bg-amber-50/40 px-3 py-2 flex items-start gap-3">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <Badge variant="outline" className="text-xs font-mono">{v.veld}</Badge>
+                    {v.vertrouwen_score != null && (
+                      <span className="text-xs text-muted-foreground">{Math.round(v.vertrouwen_score * 100)}%</span>
+                    )}
+                  </div>
+                  <div className="text-sm mt-0.5">{v.voorgestelde_waarde}</div>
+                  {v.reden && <div className="text-xs text-muted-foreground">{v.reden}</div>}
+                </div>
+                <div className="flex gap-1 shrink-0">
+                  <Button size="sm" className="h-6 text-xs px-2 bg-green-600 hover:bg-green-700"
+                    onClick={() => voorstelBeoordelen(v.id, "goedgekeurd")}
+                    disabled={beoordeelVoorstel.isPending}>
+                    <Check className="h-3 w-3" />
+                  </Button>
+                  <Button size="sm" variant="outline" className="h-6 text-xs px-2"
+                    onClick={() => voorstelBeoordelen(v.id, "later")}
+                    disabled={beoordeelVoorstel.isPending}>
+                    Later
+                  </Button>
+                </div>
+              </div>
+            ))}
+            {openVoorstellen.length > 3 && (
+              <p className="text-xs text-muted-foreground">
+                + {openVoorstellen.length - 3} meer voorstellen — bekijk ze na het opslaan in het medewerkerprofiel.
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Navigatie ── */}
+      <div className="flex items-center gap-3 pt-2">
+        {huidigStap < TOTAAL_STAPPEN ? (
+          <Button onClick={gaVolgende} disabled={huidigStap === 2 && (maak.isPending || slaVoortgangOp.isPending)}>
+            {huidigStap === 2 && (maak.isPending || slaVoortgangOp.isPending) ? (
+              <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Opslaan...</>
+            ) : (
+              <>Volgende <ArrowRight className="h-4 w-4 ml-1.5" /></>
+            )}
+          </Button>
+        ) : (
+          <Button onClick={opslaan} disabled={maak.isPending || bijwerk.isPending || slaVoortgangOp.isPending}>
+            {(maak.isPending || bijwerk.isPending || slaVoortgangOp.isPending) ? (
+              <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Aanmaken...</>
+            ) : (
+              "Medewerker onboarden"
+            )}
+          </Button>
+        )}
+        <Button variant="outline" size="sm" onClick={gaVorige}>
+          {huidigStap === 1 ? "Annuleren" : "Vorige"}
         </Button>
-        <Button variant="outline" onClick={onTerug}>Terug</Button>
       </div>
     </div>
   );
@@ -1200,6 +2421,41 @@ function Succes({ stroom, medewerkerId, onNogEen }: { stroom: Stroom; medewerker
       ctaLabel: "Profiel bekijken",
       ctaHref: `/personeel/${medewerkerId}`,
     },
+    stagiair: {
+      titel: "Stagiair geregistreerd",
+      tekst: "De stagiair staat in het systeem. Wijs een begeleider toe en bewaar de stageovereenkomst als document in het profiel.",
+      cta: `/personeel/${medewerkerId}`,
+      ctaLabel: "Profiel bekijken",
+      ctaHref: `/personeel/${medewerkerId}`,
+    },
+    oproep: {
+      titel: "Oproepkracht geregistreerd",
+      tekst: "De oproepkracht staat in het systeem. Controleer het oproepcontract en sla het op als document.",
+      cta: `/personeel/${medewerkerId}`,
+      ctaLabel: "Profiel bekijken",
+      ctaHref: `/personeel/${medewerkerId}`,
+    },
+    payroll: {
+      titel: "Payroll-medewerker geregistreerd",
+      tekst: "De medewerker staat in het systeem. Koppel de bevestiging van het payrollbedrijf als document.",
+      cta: `/personeel/${medewerkerId}`,
+      ctaLabel: "Profiel bekijken",
+      ctaHref: `/personeel/${medewerkerId}`,
+    },
+    detachering: {
+      titel: "Gedetacheerde geregistreerd",
+      tekst: "De gedetacheerde staat in het systeem. Bewaar de detacheringsovereenkomst als document.",
+      cta: `/personeel/${medewerkerId}`,
+      ctaLabel: "Profiel bekijken",
+      ctaHref: `/personeel/${medewerkerId}`,
+    },
+    directie: {
+      titel: "Directeur / bestuurder geregistreerd",
+      tekst: "Het profiel is aangemaakt. Leg de arbeidsovereenkomst of managementovereenkomst vast als document.",
+      cta: `/personeel/${medewerkerId}`,
+      ctaLabel: "Profiel bekijken",
+      ctaHref: `/personeel/${medewerkerId}`,
+    },
   };
 
   const inhoud = SUCCES_INHOUD[stroom];
@@ -1255,9 +2511,14 @@ function Succes({ stroom, medewerkerId, onNogEen }: { stroom: Stroom; medewerker
 export default function OnboardenPagina() {
   const queryClient = useQueryClient();
   const [stroom, setStroom] = useState<Stroom | null>(null);
+  const [resumeId, setResumeId] = useState<number | null>(null);
   const [afrondMedewerkerId, setAfrondMedewerkerId] = useState<number | null>(null);
   const [cvStash, setCvStash] = useState<CvOnboardingStash | null>(null);
   const stashGelezen = useRef(false);
+  const { data: alleMedewerkers = [] } = useListMedewerkers();
+  const conceptMedewerkers = (
+    alleMedewerkers as Array<{ id: number; naam: string; medewerker_status?: string | null }>
+  ).filter((m) => m.medewerker_status === "concept");
 
   // CV-voorstel eenmalig uit sessionStorage lezen (wist bij lezen).
   // Ref-guard voorkomt dubbel lezen bij React StrictMode remount.
@@ -1276,6 +2537,7 @@ export default function OnboardenPagina() {
 
   function reset() {
     setStroom(null);
+    setResumeId(null);
     setAfrondMedewerkerId(null);
     setCvStash(null);
   }
@@ -1297,6 +2559,26 @@ export default function OnboardenPagina() {
             </p>
           </div>
         )}
+        {conceptMedewerkers.length > 0 && (
+          <div className="rounded-lg border border-blue-200 bg-blue-50/30 p-3 space-y-2 max-w-3xl">
+            <p className="text-xs font-medium text-blue-800">Lopende onboardingen</p>
+            <div className="space-y-1.5">
+              {conceptMedewerkers.slice(0, 5).map((m) => (
+                <div key={m.id} className="flex items-center justify-between gap-2">
+                  <span className="text-sm">{m.naam}</span>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-7 text-xs shrink-0"
+                    onClick={() => { setResumeId(m.id); setStroom("vast"); }}
+                  >
+                    Hervatten
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
         <TypeKiezer onKies={setStroom} />
       </div>
     );
@@ -1305,10 +2587,11 @@ export default function OnboardenPagina() {
   if (stroom === "vast") {
     return (
       <VastFormulier
-        onTerug={() => setStroom(null)}
+        onTerug={() => { setStroom(null); setResumeId(null); }}
         onGereed={gereed}
         cvStash={cvStash}
         onWisCv={() => setCvStash(null)}
+        resumeId={resumeId}
       />
     );
   }
@@ -1321,11 +2604,24 @@ export default function OnboardenPagina() {
       />
     );
   }
-  return (
-    <UitzendFormulier
-      onTerug={() => setStroom(null)}
-      onGereed={gereed}
-      cvNaam={cvStash?.voorstel.naam ?? undefined}
-    />
-  );
+  if (stroom === "uitzend") {
+    return (
+      <UitzendFormulier
+        onTerug={() => setStroom(null)}
+        onGereed={gereed}
+        cvNaam={cvStash?.voorstel.naam ?? undefined}
+      />
+    );
+  }
+  if (stroom === "stagiair" || stroom === "oproep" || stroom === "payroll" || stroom === "detachering" || stroom === "directie") {
+    return (
+      <GeneriekeWizard
+        soort={stroom}
+        onTerug={() => setStroom(null)}
+        onGereed={gereed}
+        cvNaam={cvStash?.voorstel.naam ?? undefined}
+      />
+    );
+  }
+  return null;
 }

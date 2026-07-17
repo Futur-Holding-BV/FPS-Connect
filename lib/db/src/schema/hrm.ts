@@ -5,7 +5,7 @@
 // werknemerstoelichting) voor de volledige FPS Groep (FPS Bouw, FPS
 // Brandpreventie, FPS Onderhoud, Fuegro). Fase 1 bevat BEWUST GEEN
 // salarisadministratie.
-import { pgTable, serial, text, integer, real, boolean, timestamp, date, numeric, type AnyPgColumn } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, real, boolean, timestamp, date, numeric, jsonb, type AnyPgColumn } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { gebruikersTable, profielenTable } from "./gebruikers";
@@ -136,6 +136,12 @@ export const medewerkersTable = pgTable("medewerkers", {
   verjaardagZichtbaar: boolean("verjaardag_zichtbaar").notNull().default(false),
   actief: boolean("actief").notNull().default(true),
   opmerkingen: text("opmerkingen"),
+  // Onboarding-wizard status en tussentijdse voortgang (jsonb per stap).
+  // medewerker_status: concept | in_voorbereiding | wacht_op_documenten |
+  //   wacht_op_beoordeling | klaar_voor_indiensttreding | actief |
+  //   onboarding_bezig | onboarding_afgerond | uit_dienst
+  medewerkerStatus: text("medewerker_status").default("concept"),
+  wizardVoortgang: jsonb("wizard_voortgang"),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
 });
@@ -540,3 +546,84 @@ export type MedewerkerAanstelling = typeof medewerkerAanstellingenTable.$inferSe
 export const insertMedewerkerCaoKeuzeSchema = createInsertSchema(medewerkerCaoKeuzesTable).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });
 export type InsertMedewerkerCaoKeuze = z.infer<typeof insertMedewerkerCaoKeuzeSchema>;
 export type MedewerkerCaoKeuze = typeof medewerkerCaoKeuzesTable.$inferSelect;
+
+// ── Onboarding-wizard uitbreidingen ──────────────────────────────────────────
+// Drie nieuwe tabellen voor de centrale 14-stappen wizard. Alle wijzigingen
+// zijn additief (geen bestaande kolommen gewijzigd). ALTER SQL staat in
+// post-merge.sh voor de productie-VPS.
+
+// Middelen — werkkleding, PBM, telefoon, laptop, voertuig, sleutels, toegangspas, etc.
+// status: aangevraagd | uitgegeven | ontvangen | retour_aangevraagd | retour_ontvangen
+export const hrmMiddelenTable = pgTable("hrm_middelen", {
+  id: serial("id").primaryKey(),
+  medewerkerId: integer("medewerker_id").notNull().references(() => medewerkersTable.id, { onDelete: "cascade" }),
+  categorie: text("categorie").notNull().default("overig"),
+  naam: text("naam").notNull(),
+  status: text("status").notNull().default("aangevraagd"),
+  retourVereist: boolean("retour_vereist").notNull().default(false),
+  gekoppeldModule: text("gekoppeld_module"),
+  aangevraagdOp: timestamp("aangevraagd_op"),
+  uitgegeven_op: timestamp("uitgegeven_op"),
+  ontvangstBevestigdOp: timestamp("ontvangst_bevestigd_op"),
+  opmerking: text("opmerking"),
+  aangevraagdDoorId: integer("aangevraagd_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+  bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+});
+
+// Onboarding-taken — checklist per medewerker met verantwoordelijke en deadline.
+// status: openstaand | in_uitvoering | afgerond | vervallen
+export const hrmOnboardingTakenTable = pgTable("hrm_onboarding_taken", {
+  id: serial("id").primaryKey(),
+  medewerkerId: integer("medewerker_id").notNull().references(() => medewerkersTable.id, { onDelete: "cascade" }),
+  naam: text("naam").notNull(),
+  verantwoordelijkeId: integer("verantwoordelijke_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
+  deadline: text("deadline"),
+  status: text("status").notNull().default("openstaand"),
+  bewijsDocumentId: integer("bewijs_document_id").references(() => documentenTable.id, { onDelete: "set null" }),
+  opmerking: text("opmerking"),
+  herinneringOp: timestamp("herinnering_op"),
+  categorie: text("categorie").default("overig"),
+  volgorde: integer("volgorde").default(0),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+  bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+});
+
+// AI-voorstellen per medewerker — aangemaakt door document-analyse of wizard.
+// status: open | goedgekeurd | afgewezen | later
+// Nooit automatisch doorvoeren; altijd menselijke beoordeling vereist.
+export const hrmAiVoorstellenTable = pgTable("hrm_ai_voorstellen", {
+  id: serial("id").primaryKey(),
+  medewerkerId: integer("medewerker_id").notNull().references(() => medewerkersTable.id, { onDelete: "cascade" }),
+  documentId: integer("document_id").references(() => documentenTable.id, { onDelete: "set null" }),
+  medewerkerDocumentId: integer("medewerker_document_id"),
+  veld: text("veld").notNull(),
+  huidigeWaarde: text("huidige_waarde"),
+  voorgesteldeWaarde: text("voorgestelde_waarde"),
+  reden: text("reden"),
+  brondocument: text("brondocument"),
+  paginanummer: integer("paginanummer"),
+  confidence: real("confidence"),
+  vertrouwenScore: real("vertrouwen_score"),
+  bewijskenmerken: jsonb("bewijskenmerken"),
+  impact: text("impact").default("laag"),
+  status: text("status").notNull().default("open"),
+  beoordeeldDoorId: integer("beoordeeld_door_id").references(() => gebruikersTable.id, { onDelete: "set null" }),
+  beoordeeldOp: timestamp("beoordeeld_op"),
+  modelGebruikt: text("model_gebruikt"),
+  correctieTekst: text("correctie_tekst"),
+  aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
+  bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
+});
+
+export const insertHrmMiddelSchema = createInsertSchema(hrmMiddelenTable).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });
+export type InsertHrmMiddel = z.infer<typeof insertHrmMiddelSchema>;
+export type HrmMiddel = typeof hrmMiddelenTable.$inferSelect;
+
+export const insertHrmOnboardingTaakSchema = createInsertSchema(hrmOnboardingTakenTable).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });
+export type InsertHrmOnboardingTaak = z.infer<typeof insertHrmOnboardingTaakSchema>;
+export type HrmOnboardingTaak = typeof hrmOnboardingTakenTable.$inferSelect;
+
+export const insertHrmAiVoorstelSchema = createInsertSchema(hrmAiVoorstellenTable).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });
+export type InsertHrmAiVoorstel = z.infer<typeof insertHrmAiVoorstelSchema>;
+export type HrmAiVoorstel = typeof hrmAiVoorstellenTable.$inferSelect;

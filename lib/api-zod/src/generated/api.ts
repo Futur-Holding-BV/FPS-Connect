@@ -11062,6 +11062,330 @@ export const DeleteMedewerkerDocumentResponse = zod.void()
 
 
 /**
+ * @summary Controleer of een vergelijkbare medewerker al bestaat (naam/e-mail/geboortedatum)
+ */
+export const DuplicateCheckMedewerkerBody = zod.object({
+  "naam": zod.string().optional(),
+  "email": zod.string().optional(),
+  "geboortedatum": zod.string().optional()
+})
+
+export const DuplicateCheckMedewerkerResponse = zod.object({
+  "mogelijke_duplicaten": zod.array(zod.object({
+  "id": zod.number(),
+  "naam": zod.string(),
+  "email": zod.string().nullish(),
+  "geboortedatum": zod.string().nullish(),
+  "gelijkenis_score": zod.number(),
+  "type": zod.string()
+}))
+})
+
+
+/**
+ * @summary Huidige wizard-voortgang en status van een medewerker ophalen
+ */
+export const GetWizardStatusParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetWizardStatusResponse = zod.object({
+  "id": zod.number(),
+  "medewerker_status": zod.string().nullable(),
+  "huidig_stap": zod.number(),
+  "wizard_voortgang": zod.record(zod.string(), zod.unknown()).optional(),
+  "bijgewerkt_op": zod.coerce.date().optional().describe('Tijdstip van de laatste aanpassing (gebruik voor optimistic locking)')
+})
+
+
+/**
+ * @summary Wizard-voortgang opslaan (tussentijds, per stap)
+ */
+export const PatchWizardVoortgangParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const PatchWizardVoortgangBody = zod.object({
+  "stap": zod.number(),
+  "medewerker_status": zod.string().optional(),
+  "voortgang_data": zod.record(zod.string(), zod.unknown()).optional(),
+  "bijgewerkt_op": zod.coerce.date().optional().describe('Tijdstip van de laatste bekende versie (optimistic locking — stuur mee om conflicten te detecteren)')
+})
+
+export const PatchWizardVoortgangResponse = zod.object({
+  "id": zod.number(),
+  "medewerker_status": zod.string().nullable(),
+  "huidig_stap": zod.number(),
+  "wizard_voortgang": zod.record(zod.string(), zod.unknown()).optional(),
+  "bijgewerkt_op": zod.coerce.date().optional().describe('Tijdstip van de laatste aanpassing (gebruik voor optimistic locking)')
+})
+
+
+/**
+ * @summary AI-voorstellen voor een medewerker ophalen
+ */
+export const ListAiVoorstellenParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListAiVoorstellenQueryParams = zod.object({
+  "status": zod.coerce.string().optional()
+})
+
+export const ListAiVoorstellenResponseItem = zod.object({
+  "id": zod.number(),
+  "medewerker_id": zod.number(),
+  "document_id": zod.number().nullish(),
+  "medewerker_document_id": zod.number().nullish(),
+  "veld": zod.string(),
+  "huidige_waarde": zod.string().nullish(),
+  "voorgestelde_waarde": zod.string().nullish(),
+  "reden": zod.string().nullish(),
+  "brondocument": zod.string().nullish(),
+  "paginanummer": zod.number().nullish(),
+  "confidence": zod.number().nullish(),
+  "vertrouwen_score": zod.number().nullish(),
+  "bewijskenmerken": zod.record(zod.string(), zod.unknown()).nullish(),
+  "impact": zod.string().nullish(),
+  "status": zod.string(),
+  "beoordeeld_door_id": zod.number().nullish(),
+  "beoordeeld_op": zod.string().nullish(),
+  "model_gebruikt": zod.string().nullish(),
+  "correctie_tekst": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().optional()
+})
+export const ListAiVoorstellenResponse = zod.array(ListAiVoorstellenResponseItem)
+
+
+/**
+ * @summary AI-voorstel beoordelen (goedkeuren/afwijzen/later/aanpassen)
+ */
+export const PatchAiVoorstelParams = zod.object({
+  "voorstelId": zod.coerce.number()
+})
+
+export const PatchAiVoorstelBody = zod.object({
+  "status": zod.string(),
+  "correctie_tekst": zod.string().nullish()
+})
+
+export const PatchAiVoorstelResponse = zod.object({
+  "id": zod.number(),
+  "medewerker_id": zod.number(),
+  "document_id": zod.number().nullish(),
+  "medewerker_document_id": zod.number().nullish(),
+  "veld": zod.string(),
+  "huidige_waarde": zod.string().nullish(),
+  "voorgestelde_waarde": zod.string().nullish(),
+  "reden": zod.string().nullish(),
+  "brondocument": zod.string().nullish(),
+  "paginanummer": zod.number().nullish(),
+  "confidence": zod.number().nullish(),
+  "vertrouwen_score": zod.number().nullish(),
+  "bewijskenmerken": zod.record(zod.string(), zod.unknown()).nullish(),
+  "impact": zod.string().nullish(),
+  "status": zod.string(),
+  "beoordeeld_door_id": zod.number().nullish(),
+  "beoordeeld_op": zod.string().nullish(),
+  "model_gebruikt": zod.string().nullish(),
+  "correctie_tekst": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "bijgewerkt_op": zod.string().optional()
+})
+
+
+/**
+ * @summary Alle documenten van medewerker retroactief analyseren en AI-voorstellen aanmaken
+ */
+export const HeranalyseerDossierParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const HeranalyseerDossierResponse = zod.object({
+  "aangemaakt": zod.number(),
+  "overgeslagen": zod.number(),
+  "fout": zod.number()
+})
+
+
+/**
+ * @summary Middelen van een medewerker ophalen
+ */
+export const ListHrmMiddelenParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListHrmMiddelenResponseItem = zod.object({
+  "id": zod.number(),
+  "medewerker_id": zod.number(),
+  "categorie": zod.string(),
+  "naam": zod.string(),
+  "status": zod.string(),
+  "retour_vereist": zod.boolean(),
+  "gekoppeld_module": zod.string().nullish(),
+  "aangevraagd_op": zod.string().nullish(),
+  "uitgegeven_op": zod.string().nullish(),
+  "ontvangst_bevestigd_op": zod.string().nullish(),
+  "opmerking": zod.string().nullish(),
+  "aangemaakt_op": zod.string().optional(),
+  "bijgewerkt_op": zod.string().optional()
+})
+export const ListHrmMiddelenResponse = zod.array(ListHrmMiddelenResponseItem)
+
+
+/**
+ * @summary Middel toevoegen aan medewerker
+ */
+export const CreateHrmMiddelParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const CreateHrmMiddelBody = zod.object({
+  "categorie": zod.string(),
+  "naam": zod.string(),
+  "status": zod.string().optional(),
+  "retour_vereist": zod.boolean().optional(),
+  "opmerking": zod.string().nullish(),
+  "aangevraagd_op": zod.string().nullish(),
+  "uitgegeven_op": zod.string().nullish()
+})
+
+export const CreateHrmMiddelResponse = zod.void()
+
+
+/**
+ * @summary Middel bijwerken
+ */
+export const PatchHrmMiddelParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const PatchHrmMiddelBody = zod.object({
+  "categorie": zod.string(),
+  "naam": zod.string(),
+  "status": zod.string().optional(),
+  "retour_vereist": zod.boolean().optional(),
+  "opmerking": zod.string().nullish(),
+  "aangevraagd_op": zod.string().nullish(),
+  "uitgegeven_op": zod.string().nullish()
+})
+
+export const PatchHrmMiddelResponse = zod.object({
+  "id": zod.number(),
+  "medewerker_id": zod.number(),
+  "categorie": zod.string(),
+  "naam": zod.string(),
+  "status": zod.string(),
+  "retour_vereist": zod.boolean(),
+  "gekoppeld_module": zod.string().nullish(),
+  "aangevraagd_op": zod.string().nullish(),
+  "uitgegeven_op": zod.string().nullish(),
+  "ontvangst_bevestigd_op": zod.string().nullish(),
+  "opmerking": zod.string().nullish(),
+  "aangemaakt_op": zod.string().optional(),
+  "bijgewerkt_op": zod.string().optional()
+})
+
+
+/**
+ * @summary Middel verwijderen
+ */
+export const DeleteHrmMiddelParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteHrmMiddelResponse = zod.void()
+
+
+/**
+ * @summary Onboarding-taken van een medewerker ophalen
+ */
+export const ListOnboardingTakenParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListOnboardingTakenResponseItem = zod.object({
+  "id": zod.number(),
+  "medewerker_id": zod.number(),
+  "naam": zod.string(),
+  "verantwoordelijke_id": zod.number().nullish(),
+  "verantwoordelijke_naam": zod.string().nullish(),
+  "deadline": zod.string().nullish(),
+  "status": zod.string(),
+  "categorie": zod.string().nullish(),
+  "volgorde": zod.number().nullish(),
+  "opmerking": zod.string().nullish(),
+  "aangemaakt_op": zod.string().optional(),
+  "bijgewerkt_op": zod.string().optional()
+})
+export const ListOnboardingTakenResponse = zod.array(ListOnboardingTakenResponseItem)
+
+
+/**
+ * @summary Onboarding-taak aanmaken voor medewerker
+ */
+export const CreateOnboardingTaakParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const CreateOnboardingTaakBody = zod.object({
+  "naam": zod.string(),
+  "verantwoordelijke_id": zod.number().nullish(),
+  "deadline": zod.string().nullish(),
+  "status": zod.string().optional(),
+  "categorie": zod.string().nullish(),
+  "volgorde": zod.number().nullish(),
+  "opmerking": zod.string().nullish()
+})
+
+export const CreateOnboardingTaakResponse = zod.void()
+
+
+/**
+ * @summary Onboarding-taak bijwerken (status, opmerking, deadline)
+ */
+export const PatchOnboardingTaakParams = zod.object({
+  "taakId": zod.coerce.number()
+})
+
+export const PatchOnboardingTaakBody = zod.object({
+  "naam": zod.string(),
+  "verantwoordelijke_id": zod.number().nullish(),
+  "deadline": zod.string().nullish(),
+  "status": zod.string().optional(),
+  "categorie": zod.string().nullish(),
+  "volgorde": zod.number().nullish(),
+  "opmerking": zod.string().nullish()
+})
+
+export const PatchOnboardingTaakResponse = zod.object({
+  "id": zod.number(),
+  "medewerker_id": zod.number(),
+  "naam": zod.string(),
+  "verantwoordelijke_id": zod.number().nullish(),
+  "verantwoordelijke_naam": zod.string().nullish(),
+  "deadline": zod.string().nullish(),
+  "status": zod.string(),
+  "categorie": zod.string().nullish(),
+  "volgorde": zod.number().nullish(),
+  "opmerking": zod.string().nullish(),
+  "aangemaakt_op": zod.string().optional(),
+  "bijgewerkt_op": zod.string().optional()
+})
+
+
+/**
+ * @summary Onboarding-taak verwijderen
+ */
+export const DeleteOnboardingTaakParams = zod.object({
+  "taakId": zod.coerce.number()
+})
+
+export const DeleteOnboardingTaakResponse = zod.void()
+
+
+/**
  * @summary Alle ZZP-overeenkomsten ophalen
  */
 export const ListZzpOvereenkomstenQueryParams = zod.object({

@@ -6,7 +6,17 @@ import { randomUUID } from "crypto";
 import multer from "multer";
 import { db, documentStudioModellenTable, werkgeversTable, gebruikersTable, gebouwToewijzingenTable } from "@workspace/db";
 import { eq, and, desc, inArray, sql, ne } from "drizzle-orm";
-import { DocumentStudioModelInputDocumentType } from "@workspace/api-zod";
+const DocumentStudioModelInputDocumentType = {
+  offerte: "offerte",
+  opleverrapport: "opleverrapport",
+  brief: "brief",
+  email: "email",
+  lmra: "lmra",
+  toolbox: "toolbox",
+  inkoopbon: "inkoopbon",
+  factuur: "factuur",
+  calculatie: "calculatie",
+} as const;
 import { requireBevoegdheid, requireAuth } from "../middlewares/auth";
 import { ObjectStorageService, ObjectNotFoundError } from "../lib/objectStorage";
 import { isBeperktTotToegewezen } from "../utils/rol";

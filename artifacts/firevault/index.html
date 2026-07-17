@@ -29,13 +29,15 @@
   <body>
     <script>
       (function () {
-        var h = window.location.hostname;
-        if (h !== 'localhost' && h !== '127.0.0.1' && h !== 'connect.fps-one.nl') {
-          window.location.replace(
-            'https://connect.fps-one.nl' +
-              window.location.pathname +
-              window.location.search
-          );
+        if ('%MODE%' === 'production') {
+          var h = window.location.hostname;
+          if (h !== 'localhost' && h !== '127.0.0.1' && h !== 'connect.fps-one.nl') {
+            window.location.replace(
+              'https://connect.fps-one.nl' +
+                window.location.pathname +
+                window.location.search
+            );
+          }
         }
       })();
     </script>

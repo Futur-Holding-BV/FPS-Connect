@@ -30,29 +30,12 @@ export default defineConfig(async ({ command }) => {
   // dus een lege of ontbrekende variabele valt terug op "/".
   const basePath = process.env.BASE_PATH ?? "/";
 
-  // In de Replit-omgeving (REPL_ID aanwezig) injecteert deze plugin een
-  // <meta http-equiv="refresh"> als harde statische fallback.
-  // Dit werkt ook als de JS-bundle niet laadt (kapotte build, netwerk).
-  // In de VPS Docker-build is REPL_ID niet aanwezig → geen meta-tag → geen redirect.
-  const injectReplitRedirectPlugin = process.env.REPL_ID !== undefined
-    ? [{
-        name: "inject-replit-redirect",
-        transformIndexHtml(html: string) {
-          return html.replace(
-            "<head>",
-            '<head>\n    <meta http-equiv="refresh" content="0; url=https://connect.fps-one.nl">',
-          );
-        },
-      }]
-    : [];
-
   return {
     base: basePath,
     plugins: [
       react(),
       tailwindcss(),
       runtimeErrorOverlay(),
-      ...injectReplitRedirectPlugin,
       ...(process.env.NODE_ENV !== "production" &&
       process.env.REPL_ID !== undefined
         ? [

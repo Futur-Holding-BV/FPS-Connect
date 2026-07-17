@@ -201,6 +201,8 @@ import type {
   DossierDocumentInput,
   DossierInput,
   DownloadUrlResultaat,
+  DuplicaatCheckInput,
+  DuplicaatCheckResultaat,
   EenheidsPrijs,
   EenheidsPrijsInput,
   EnkBronbestand,
@@ -382,11 +384,18 @@ import type {
   HelpdeskTicket,
   HelpdeskTicketInput,
   HelpdeskTicketUpdate,
+  HeranalyseerDossier200,
   HerberekeenFieLeermomenten200,
   HerberekeenNacalculatieVoorOpdracht200,
   HerberekeenVerouderdeNacalculaties200,
   HerinspectieInput,
   HerkomstBevestigenBulkInput,
+  HrmAiVoorstel,
+  HrmAiVoorstelBeoordelingInput,
+  HrmMiddel,
+  HrmMiddelInput,
+  HrmOnboardingTaak,
+  HrmOnboardingTaakInput,
   HrmStats,
   ImportLog,
   ImportPreview,
@@ -451,6 +460,7 @@ import type {
   LiquiditeitDashboard,
   ListActieveDocumentStudioModellen200,
   ListAiAanroepenParams,
+  ListAiVoorstellenParams,
   ListAlleVerlofAanvragenParams,
   ListArtikelenParams,
   ListAvgInactieveAccounts200,
@@ -954,6 +964,8 @@ import type {
   Werkgever,
   WerkgeverInput,
   WerkgeverSalarisConfig,
+  WizardStatus,
+  WizardVoortgangInput,
   WorkflowCard,
   WorkflowCardInput,
   WorkflowDefinitie,
@@ -31134,6 +31146,1032 @@ export const useDeleteMedewerkerDocument = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getDeleteMedewerkerDocumentMutationOptions(options));
+    }
+
+export const getDuplicateCheckMedewerkerUrl = () => {
+
+
+
+
+  return `/api/medewerkers/duplicate-check`
+}
+
+/**
+ * @summary Controleer of een vergelijkbare medewerker al bestaat (naam/e-mail/geboortedatum)
+ */
+export const duplicateCheckMedewerker = async (duplicaatCheckInput: DuplicaatCheckInput, options?: RequestInit): Promise<DuplicaatCheckResultaat> => {
+
+  return customFetch<DuplicaatCheckResultaat>(getDuplicateCheckMedewerkerUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(duplicaatCheckInput)
+  }
+);}
+
+
+
+
+export const getDuplicateCheckMedewerkerMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof duplicateCheckMedewerker>>, TError,{data: BodyType<DuplicaatCheckInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof duplicateCheckMedewerker>>, TError,{data: BodyType<DuplicaatCheckInput>}, TContext> => {
+
+const mutationKey = ['duplicateCheckMedewerker'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof duplicateCheckMedewerker>>, {data: BodyType<DuplicaatCheckInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  duplicateCheckMedewerker(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DuplicateCheckMedewerkerMutationResult = NonNullable<Awaited<ReturnType<typeof duplicateCheckMedewerker>>>
+    export type DuplicateCheckMedewerkerMutationBody = BodyType<DuplicaatCheckInput>
+    export type DuplicateCheckMedewerkerMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Controleer of een vergelijkbare medewerker al bestaat (naam/e-mail/geboortedatum)
+ */
+export const useDuplicateCheckMedewerker = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof duplicateCheckMedewerker>>, TError,{data: BodyType<DuplicaatCheckInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof duplicateCheckMedewerker>>,
+        TError,
+        {data: BodyType<DuplicaatCheckInput>},
+        TContext
+      > => {
+      return useMutation(getDuplicateCheckMedewerkerMutationOptions(options));
+    }
+
+export const getGetWizardStatusUrl = (id: number,) => {
+
+
+
+
+  return `/api/medewerkers/${id}/wizard-status`
+}
+
+/**
+ * @summary Huidige wizard-voortgang en status van een medewerker ophalen
+ */
+export const getWizardStatus = async (id: number, options?: RequestInit): Promise<WizardStatus> => {
+
+  return customFetch<WizardStatus>(getGetWizardStatusUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetWizardStatusQueryKey = (id: number,) => {
+    return [
+    `/api/medewerkers/${id}/wizard-status`
+    ] as const;
+    }
+
+
+export const getGetWizardStatusQueryOptions = <TData = Awaited<ReturnType<typeof getWizardStatus>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWizardStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetWizardStatusQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getWizardStatus>>> = ({ signal }) => getWizardStatus(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getWizardStatus>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetWizardStatusQueryResult = NonNullable<Awaited<ReturnType<typeof getWizardStatus>>>
+export type GetWizardStatusQueryError = ErrorType<void>
+
+
+/**
+ * @summary Huidige wizard-voortgang en status van een medewerker ophalen
+ */
+
+export function useGetWizardStatus<TData = Awaited<ReturnType<typeof getWizardStatus>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWizardStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetWizardStatusQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getPatchWizardVoortgangUrl = (id: number,) => {
+
+
+
+
+  return `/api/medewerkers/${id}/wizard-voortgang`
+}
+
+/**
+ * @summary Wizard-voortgang opslaan (tussentijds, per stap)
+ */
+export const patchWizardVoortgang = async (id: number,
+    wizardVoortgangInput: WizardVoortgangInput, options?: RequestInit): Promise<WizardStatus> => {
+
+  return customFetch<WizardStatus>(getPatchWizardVoortgangUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(wizardVoortgangInput)
+  }
+);}
+
+
+
+
+export const getPatchWizardVoortgangMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchWizardVoortgang>>, TError,{id: number;data: BodyType<WizardVoortgangInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof patchWizardVoortgang>>, TError,{id: number;data: BodyType<WizardVoortgangInput>}, TContext> => {
+
+const mutationKey = ['patchWizardVoortgang'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof patchWizardVoortgang>>, {id: number;data: BodyType<WizardVoortgangInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  patchWizardVoortgang(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PatchWizardVoortgangMutationResult = NonNullable<Awaited<ReturnType<typeof patchWizardVoortgang>>>
+    export type PatchWizardVoortgangMutationBody = BodyType<WizardVoortgangInput>
+    export type PatchWizardVoortgangMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Wizard-voortgang opslaan (tussentijds, per stap)
+ */
+export const usePatchWizardVoortgang = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchWizardVoortgang>>, TError,{id: number;data: BodyType<WizardVoortgangInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof patchWizardVoortgang>>,
+        TError,
+        {id: number;data: BodyType<WizardVoortgangInput>},
+        TContext
+      > => {
+      return useMutation(getPatchWizardVoortgangMutationOptions(options));
+    }
+
+export const getListAiVoorstellenUrl = (id: number,
+    params?: ListAiVoorstellenParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/medewerkers/${id}/ai-voorstellen?${stringifiedParams}` : `/api/medewerkers/${id}/ai-voorstellen`
+}
+
+/**
+ * @summary AI-voorstellen voor een medewerker ophalen
+ */
+export const listAiVoorstellen = async (id: number,
+    params?: ListAiVoorstellenParams, options?: RequestInit): Promise<HrmAiVoorstel[]> => {
+
+  return customFetch<HrmAiVoorstel[]>(getListAiVoorstellenUrl(id,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListAiVoorstellenQueryKey = (id: number,
+    params?: ListAiVoorstellenParams,) => {
+    return [
+    `/api/medewerkers/${id}/ai-voorstellen`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListAiVoorstellenQueryOptions = <TData = Awaited<ReturnType<typeof listAiVoorstellen>>, TError = ErrorType<unknown>>(id: number,
+    params?: ListAiVoorstellenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAiVoorstellen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAiVoorstellenQueryKey(id,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAiVoorstellen>>> = ({ signal }) => listAiVoorstellen(id,params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAiVoorstellen>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListAiVoorstellenQueryResult = NonNullable<Awaited<ReturnType<typeof listAiVoorstellen>>>
+export type ListAiVoorstellenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary AI-voorstellen voor een medewerker ophalen
+ */
+
+export function useListAiVoorstellen<TData = Awaited<ReturnType<typeof listAiVoorstellen>>, TError = ErrorType<unknown>>(
+ id: number,
+    params?: ListAiVoorstellenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAiVoorstellen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListAiVoorstellenQueryOptions(id,params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getPatchAiVoorstelUrl = (voorstelId: number,) => {
+
+
+
+
+  return `/api/medewerkers/ai-voorstellen/${voorstelId}`
+}
+
+/**
+ * @summary AI-voorstel beoordelen (goedkeuren/afwijzen/later/aanpassen)
+ */
+export const patchAiVoorstel = async (voorstelId: number,
+    hrmAiVoorstelBeoordelingInput: HrmAiVoorstelBeoordelingInput, options?: RequestInit): Promise<HrmAiVoorstel> => {
+
+  return customFetch<HrmAiVoorstel>(getPatchAiVoorstelUrl(voorstelId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(hrmAiVoorstelBeoordelingInput)
+  }
+);}
+
+
+
+
+export const getPatchAiVoorstelMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchAiVoorstel>>, TError,{voorstelId: number;data: BodyType<HrmAiVoorstelBeoordelingInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof patchAiVoorstel>>, TError,{voorstelId: number;data: BodyType<HrmAiVoorstelBeoordelingInput>}, TContext> => {
+
+const mutationKey = ['patchAiVoorstel'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof patchAiVoorstel>>, {voorstelId: number;data: BodyType<HrmAiVoorstelBeoordelingInput>}> = (props) => {
+          const {voorstelId,data} = props ?? {};
+
+          return  patchAiVoorstel(voorstelId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PatchAiVoorstelMutationResult = NonNullable<Awaited<ReturnType<typeof patchAiVoorstel>>>
+    export type PatchAiVoorstelMutationBody = BodyType<HrmAiVoorstelBeoordelingInput>
+    export type PatchAiVoorstelMutationError = ErrorType<unknown>
+
+    /**
+ * @summary AI-voorstel beoordelen (goedkeuren/afwijzen/later/aanpassen)
+ */
+export const usePatchAiVoorstel = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchAiVoorstel>>, TError,{voorstelId: number;data: BodyType<HrmAiVoorstelBeoordelingInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof patchAiVoorstel>>,
+        TError,
+        {voorstelId: number;data: BodyType<HrmAiVoorstelBeoordelingInput>},
+        TContext
+      > => {
+      return useMutation(getPatchAiVoorstelMutationOptions(options));
+    }
+
+export const getHeranalyseerDossierUrl = (id: number,) => {
+
+
+
+
+  return `/api/medewerkers/${id}/heranalyseer-dossier`
+}
+
+/**
+ * @summary Alle documenten van medewerker retroactief analyseren en AI-voorstellen aanmaken
+ */
+export const heranalyseerDossier = async (id: number, options?: RequestInit): Promise<HeranalyseerDossier200> => {
+
+  return customFetch<HeranalyseerDossier200>(getHeranalyseerDossierUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getHeranalyseerDossierMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof heranalyseerDossier>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof heranalyseerDossier>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['heranalyseerDossier'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof heranalyseerDossier>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  heranalyseerDossier(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type HeranalyseerDossierMutationResult = NonNullable<Awaited<ReturnType<typeof heranalyseerDossier>>>
+
+    export type HeranalyseerDossierMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Alle documenten van medewerker retroactief analyseren en AI-voorstellen aanmaken
+ */
+export const useHeranalyseerDossier = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof heranalyseerDossier>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof heranalyseerDossier>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getHeranalyseerDossierMutationOptions(options));
+    }
+
+export const getListHrmMiddelenUrl = (id: number,) => {
+
+
+
+
+  return `/api/medewerkers/${id}/middelen`
+}
+
+/**
+ * @summary Middelen van een medewerker ophalen
+ */
+export const listHrmMiddelen = async (id: number, options?: RequestInit): Promise<HrmMiddel[]> => {
+
+  return customFetch<HrmMiddel[]>(getListHrmMiddelenUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListHrmMiddelenQueryKey = (id: number,) => {
+    return [
+    `/api/medewerkers/${id}/middelen`
+    ] as const;
+    }
+
+
+export const getListHrmMiddelenQueryOptions = <TData = Awaited<ReturnType<typeof listHrmMiddelen>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listHrmMiddelen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListHrmMiddelenQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listHrmMiddelen>>> = ({ signal }) => listHrmMiddelen(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listHrmMiddelen>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListHrmMiddelenQueryResult = NonNullable<Awaited<ReturnType<typeof listHrmMiddelen>>>
+export type ListHrmMiddelenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Middelen van een medewerker ophalen
+ */
+
+export function useListHrmMiddelen<TData = Awaited<ReturnType<typeof listHrmMiddelen>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listHrmMiddelen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListHrmMiddelenQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateHrmMiddelUrl = (id: number,) => {
+
+
+
+
+  return `/api/medewerkers/${id}/middelen`
+}
+
+/**
+ * @summary Middel toevoegen aan medewerker
+ */
+export const createHrmMiddel = async (id: number,
+    hrmMiddelInput: HrmMiddelInput, options?: RequestInit): Promise<HrmMiddel> => {
+
+  return customFetch<HrmMiddel>(getCreateHrmMiddelUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(hrmMiddelInput)
+  }
+);}
+
+
+
+
+export const getCreateHrmMiddelMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createHrmMiddel>>, TError,{id: number;data: BodyType<HrmMiddelInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createHrmMiddel>>, TError,{id: number;data: BodyType<HrmMiddelInput>}, TContext> => {
+
+const mutationKey = ['createHrmMiddel'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createHrmMiddel>>, {id: number;data: BodyType<HrmMiddelInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  createHrmMiddel(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateHrmMiddelMutationResult = NonNullable<Awaited<ReturnType<typeof createHrmMiddel>>>
+    export type CreateHrmMiddelMutationBody = BodyType<HrmMiddelInput>
+    export type CreateHrmMiddelMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Middel toevoegen aan medewerker
+ */
+export const useCreateHrmMiddel = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createHrmMiddel>>, TError,{id: number;data: BodyType<HrmMiddelInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createHrmMiddel>>,
+        TError,
+        {id: number;data: BodyType<HrmMiddelInput>},
+        TContext
+      > => {
+      return useMutation(getCreateHrmMiddelMutationOptions(options));
+    }
+
+export const getPatchHrmMiddelUrl = (id: number,) => {
+
+
+
+
+  return `/api/hrm/middelen/${id}`
+}
+
+/**
+ * @summary Middel bijwerken
+ */
+export const patchHrmMiddel = async (id: number,
+    hrmMiddelInput: HrmMiddelInput, options?: RequestInit): Promise<HrmMiddel> => {
+
+  return customFetch<HrmMiddel>(getPatchHrmMiddelUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(hrmMiddelInput)
+  }
+);}
+
+
+
+
+export const getPatchHrmMiddelMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchHrmMiddel>>, TError,{id: number;data: BodyType<HrmMiddelInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof patchHrmMiddel>>, TError,{id: number;data: BodyType<HrmMiddelInput>}, TContext> => {
+
+const mutationKey = ['patchHrmMiddel'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof patchHrmMiddel>>, {id: number;data: BodyType<HrmMiddelInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  patchHrmMiddel(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PatchHrmMiddelMutationResult = NonNullable<Awaited<ReturnType<typeof patchHrmMiddel>>>
+    export type PatchHrmMiddelMutationBody = BodyType<HrmMiddelInput>
+    export type PatchHrmMiddelMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Middel bijwerken
+ */
+export const usePatchHrmMiddel = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchHrmMiddel>>, TError,{id: number;data: BodyType<HrmMiddelInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof patchHrmMiddel>>,
+        TError,
+        {id: number;data: BodyType<HrmMiddelInput>},
+        TContext
+      > => {
+      return useMutation(getPatchHrmMiddelMutationOptions(options));
+    }
+
+export const getDeleteHrmMiddelUrl = (id: number,) => {
+
+
+
+
+  return `/api/hrm/middelen/${id}`
+}
+
+/**
+ * @summary Middel verwijderen
+ */
+export const deleteHrmMiddel = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteHrmMiddelUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteHrmMiddelMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteHrmMiddel>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteHrmMiddel>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteHrmMiddel'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteHrmMiddel>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteHrmMiddel(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteHrmMiddelMutationResult = NonNullable<Awaited<ReturnType<typeof deleteHrmMiddel>>>
+
+    export type DeleteHrmMiddelMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Middel verwijderen
+ */
+export const useDeleteHrmMiddel = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteHrmMiddel>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteHrmMiddel>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteHrmMiddelMutationOptions(options));
+    }
+
+export const getListOnboardingTakenUrl = (id: number,) => {
+
+
+
+
+  return `/api/medewerkers/${id}/onboarding-taken`
+}
+
+/**
+ * @summary Onboarding-taken van een medewerker ophalen
+ */
+export const listOnboardingTaken = async (id: number, options?: RequestInit): Promise<HrmOnboardingTaak[]> => {
+
+  return customFetch<HrmOnboardingTaak[]>(getListOnboardingTakenUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListOnboardingTakenQueryKey = (id: number,) => {
+    return [
+    `/api/medewerkers/${id}/onboarding-taken`
+    ] as const;
+    }
+
+
+export const getListOnboardingTakenQueryOptions = <TData = Awaited<ReturnType<typeof listOnboardingTaken>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listOnboardingTaken>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListOnboardingTakenQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listOnboardingTaken>>> = ({ signal }) => listOnboardingTaken(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listOnboardingTaken>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListOnboardingTakenQueryResult = NonNullable<Awaited<ReturnType<typeof listOnboardingTaken>>>
+export type ListOnboardingTakenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Onboarding-taken van een medewerker ophalen
+ */
+
+export function useListOnboardingTaken<TData = Awaited<ReturnType<typeof listOnboardingTaken>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listOnboardingTaken>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListOnboardingTakenQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateOnboardingTaakUrl = (id: number,) => {
+
+
+
+
+  return `/api/medewerkers/${id}/onboarding-taken`
+}
+
+/**
+ * @summary Onboarding-taak aanmaken voor medewerker
+ */
+export const createOnboardingTaak = async (id: number,
+    hrmOnboardingTaakInput: HrmOnboardingTaakInput, options?: RequestInit): Promise<HrmOnboardingTaak> => {
+
+  return customFetch<HrmOnboardingTaak>(getCreateOnboardingTaakUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(hrmOnboardingTaakInput)
+  }
+);}
+
+
+
+
+export const getCreateOnboardingTaakMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createOnboardingTaak>>, TError,{id: number;data: BodyType<HrmOnboardingTaakInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createOnboardingTaak>>, TError,{id: number;data: BodyType<HrmOnboardingTaakInput>}, TContext> => {
+
+const mutationKey = ['createOnboardingTaak'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createOnboardingTaak>>, {id: number;data: BodyType<HrmOnboardingTaakInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  createOnboardingTaak(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateOnboardingTaakMutationResult = NonNullable<Awaited<ReturnType<typeof createOnboardingTaak>>>
+    export type CreateOnboardingTaakMutationBody = BodyType<HrmOnboardingTaakInput>
+    export type CreateOnboardingTaakMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Onboarding-taak aanmaken voor medewerker
+ */
+export const useCreateOnboardingTaak = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createOnboardingTaak>>, TError,{id: number;data: BodyType<HrmOnboardingTaakInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createOnboardingTaak>>,
+        TError,
+        {id: number;data: BodyType<HrmOnboardingTaakInput>},
+        TContext
+      > => {
+      return useMutation(getCreateOnboardingTaakMutationOptions(options));
+    }
+
+export const getPatchOnboardingTaakUrl = (taakId: number,) => {
+
+
+
+
+  return `/api/hrm/onboarding-taken/${taakId}`
+}
+
+/**
+ * @summary Onboarding-taak bijwerken (status, opmerking, deadline)
+ */
+export const patchOnboardingTaak = async (taakId: number,
+    hrmOnboardingTaakInput: HrmOnboardingTaakInput, options?: RequestInit): Promise<HrmOnboardingTaak> => {
+
+  return customFetch<HrmOnboardingTaak>(getPatchOnboardingTaakUrl(taakId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(hrmOnboardingTaakInput)
+  }
+);}
+
+
+
+
+export const getPatchOnboardingTaakMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchOnboardingTaak>>, TError,{taakId: number;data: BodyType<HrmOnboardingTaakInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof patchOnboardingTaak>>, TError,{taakId: number;data: BodyType<HrmOnboardingTaakInput>}, TContext> => {
+
+const mutationKey = ['patchOnboardingTaak'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof patchOnboardingTaak>>, {taakId: number;data: BodyType<HrmOnboardingTaakInput>}> = (props) => {
+          const {taakId,data} = props ?? {};
+
+          return  patchOnboardingTaak(taakId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PatchOnboardingTaakMutationResult = NonNullable<Awaited<ReturnType<typeof patchOnboardingTaak>>>
+    export type PatchOnboardingTaakMutationBody = BodyType<HrmOnboardingTaakInput>
+    export type PatchOnboardingTaakMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Onboarding-taak bijwerken (status, opmerking, deadline)
+ */
+export const usePatchOnboardingTaak = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof patchOnboardingTaak>>, TError,{taakId: number;data: BodyType<HrmOnboardingTaakInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof patchOnboardingTaak>>,
+        TError,
+        {taakId: number;data: BodyType<HrmOnboardingTaakInput>},
+        TContext
+      > => {
+      return useMutation(getPatchOnboardingTaakMutationOptions(options));
+    }
+
+export const getDeleteOnboardingTaakUrl = (taakId: number,) => {
+
+
+
+
+  return `/api/hrm/onboarding-taken/${taakId}`
+}
+
+/**
+ * @summary Onboarding-taak verwijderen
+ */
+export const deleteOnboardingTaak = async (taakId: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteOnboardingTaakUrl(taakId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteOnboardingTaakMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteOnboardingTaak>>, TError,{taakId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteOnboardingTaak>>, TError,{taakId: number}, TContext> => {
+
+const mutationKey = ['deleteOnboardingTaak'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteOnboardingTaak>>, {taakId: number}> = (props) => {
+          const {taakId} = props ?? {};
+
+          return  deleteOnboardingTaak(taakId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteOnboardingTaakMutationResult = NonNullable<Awaited<ReturnType<typeof deleteOnboardingTaak>>>
+
+    export type DeleteOnboardingTaakMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Onboarding-taak verwijderen
+ */
+export const useDeleteOnboardingTaak = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteOnboardingTaak>>, TError,{taakId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteOnboardingTaak>>,
+        TError,
+        {taakId: number},
+        TContext
+      > => {
+      return useMutation(getDeleteOnboardingTaakMutationOptions(options));
     }
 
 export const getListZzpOvereenkomstenUrl = (params?: ListZzpOvereenkomstenParams,) => {
