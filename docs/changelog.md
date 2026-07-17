@@ -1,3 +1,22 @@
+## 2026-07-17 — Smoketest wizard-endpoints: 7 stappen, alle endpoints geverifieerd
+
+- **Uitvoering:** test | **Kwaliteit:** hoog | **Risico:** geen
+
+Nieuw script `scripts/src/smoketest-wizard-endpoints.ts` (commando: `pnpm --filter @workspace/scripts run smoketest-wizard-endpoints`) verifieert het volledige basispad van de medewerker-wizard endpoints:
+
+1. Admin-login via wachtwoord + TOTP (hergebruikt e2e-ww-admin account)
+2. Medewerker aanmaken (`POST /medewerkers`) + DB-bewijs
+3. `GET /medewerkers/:id/wizard-status` — status + huidig_stap aanwezig
+4. `PATCH /medewerkers/:id/wizard-voortgang` — stap + medewerker_status opgeslagen
+5. Middelen: POST → GET → PATCH → DELETE + DB-bewijs na elke stap
+6. Onboarding-taken: POST → GET → PATCH → DELETE + DB-bewijs na elke stap
+7. `GET /medewerkers/:id/ai-voorstellen` — lege lijst op nieuwe medewerker
+8. `POST /medewerkers/:id/heranalyseer-dossier` — 200, aangemaakt/overgeslagen/fout velden aanwezig
+
+Alle 7 stappen geslaagd. Opruimen (medewerker + e2e-accounts archiveren) loopt ook bij falen.
+
+---
+
 ## 2026-07-17 — 14-stappen onboarding-wizard visueel verbeterd en onboarding-taken opgeslagen
 
 - **Uitvoering:** feature/fix | **Kwaliteit:** hoog | **Risico:** geen
