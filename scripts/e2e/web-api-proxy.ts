@@ -39,8 +39,15 @@ export async function setupApiProxy(page: Page): Promise<void> {
     try {
       const response = await route.fetch({ url: localUrl });
       await route.fulfill({ response });
-    } catch {
-      await route.abort("failed");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (!msg.includes("already handled")) {
+        try {
+          await route.abort("failed");
+        } catch {
+          // route.abort() zelf kan ook "already handled" gooien — veilig negeren.
+        }
+      }
     }
   });
 }
@@ -82,8 +89,17 @@ async function installeProxyMetSessie(page: Page, sessionCookieWaarde: string): 
         },
       });
       await route.fulfill({ response });
-    } catch {
-      await route.abort();
+    } catch (err) {
+      // "Route is already handled" treedt op als de route al via continue()/fulfill()
+      // afgehandeld is voordat de catch loopt — veilig negeren.
+      const msg = err instanceof Error ? err.message : String(err);
+      if (!msg.includes("already handled")) {
+        try {
+          await route.abort();
+        } catch {
+          // Tweede catch: route.abort() zelf kan ook "already handled" gooien.
+        }
+      }
     }
   });
 }
