@@ -29,7 +29,7 @@ import {
   BookOpen, HardDriveUpload, CalendarCheck2, Settings2, ArchiveRestore,
   Inbox, Building2, Target, Handshake, Newspaper, CalendarRange, KeyRound,
   ClipboardCheck, AlertTriangle, TriangleAlert, FileArchive, Receipt, ArrowUpRight, ScrollText,
-  UserPlus, UserMinus, UserX, Car, GitBranch, ArrowLeft, Palette, Monitor,
+  UserMinus, UserX, Car, GitBranch, ArrowLeft, Palette, Monitor,
   Package, Upload, MapPin, Archive, ArrowLeftRight, BookmarkCheck, ScanSearch, Bot, ShoppingCart,
   TrendingUp, ImageIcon, LineChart, GalleryHorizontal, RotateCcw, Wallet,
 } from "lucide-react";
@@ -1286,19 +1286,6 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
                 onOpenChange={(open) => setHoofdstukOpen("personeel", open)}
               >
                     <SidebarMenu>
-                      {toonPersoneel && featureFlags.wizardOnboarding && (
-                        <SidebarMenuItem className="pl-5">
-                          <SidebarMenuButton
-                            asChild
-                            isActive={location === "/personeel/onboarden"}
-                          >
-                            <Link href="/personeel/onboarden">
-                              <UserPlus />
-                              <span>Onboarden</span>
-                            </Link>
-                          </SidebarMenuButton>
-                        </SidebarMenuItem>
-                      )}
                       {toonPersoneel && (
                         <SidebarMenuItem className="pl-5">
                           <SidebarMenuButton

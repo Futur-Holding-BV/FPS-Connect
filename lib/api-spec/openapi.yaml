@@ -8050,6 +8050,35 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Medewerker"
+        "400":
+          description: gebruiker_id ontbreekt (medewerker-creatie zonder gekoppeld gebruikersaccount is niet toegestaan)
+        "404":
+          description: Gebruiker niet gevonden (code USER_NOT_FOUND)
+        "409":
+          description: Gebruiker heeft al een medewerkerprofiel (code EMPLOYEE_PROFILE_ALREADY_EXISTS)
+
+  /medewerkers/onboarding-context/{gebruikerId}:
+    get:
+      operationId: getOnboardingContext
+      tags: [personeel]
+      summary: Onboarding-context van een gebruikersaccount (identiteit-prefill + conceptdetectie)
+      parameters:
+        - in: path
+          name: gebruikerId
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OnboardingContext"
+        "404":
+          description: Gebruiker niet gevonden (code USER_NOT_FOUND)
+        "409":
+          description: Gebruiker heeft al een medewerkerprofiel (code EMPLOYEE_PROFILE_ALREADY_EXISTS)
 
   /medewerkers/onboarding:
     post:
@@ -8075,6 +8104,10 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/OnboardingFout"
+        "404":
+          description: Gebruiker niet gevonden (code USER_NOT_FOUND)
+        "409":
+          description: Gebruiker heeft al een medewerkerprofiel (code EMPLOYEE_PROFILE_ALREADY_EXISTS)
 
   /medewerkers/ai-onboarding-voorstel:
     post:
@@ -30500,12 +30533,23 @@ components:
         jaar:
           type: integer
           description: Jaar waarvoor het verlofsaldo wordt aangemaakt (standaard huidig jaar).
-        connect_uitnodigen:
-          type: boolean
-          description: Wanneer true wordt direct een FPS Connect gebruikersaccount aangemaakt en een uitnodigingsmail verstuurd. Vereist een geldig e-mailadres.
-        connect_profiel_id:
+
+    OnboardingContext:
+      type: object
+      required: [gebruiker_id, naam]
+      description: Identiteit van een te onboarden gebruikersaccount; naam/email/telefoon zijn de onveranderlijke prefill-bron voor de onboarding-wizard.
+      properties:
+        gebruiker_id:
+          type: integer
+        naam:
+          type: string
+        email:
+          type: ["string", "null"]
+        telefoon:
+          type: ["string", "null"]
+        concept_medewerker_id:
           type: ["integer", "null"]
-          description: Profiel-id voor het aan te maken Connect-account (optioneel; laat leeg voor lege bevoegdheden).
+          description: Id van een bestaand concept-medewerkerprofiel voor deze gebruiker; de wizard hervat dit concept in plaats van een nieuw aan te maken.
 
     MedewerkerAanstelling:
       type: object

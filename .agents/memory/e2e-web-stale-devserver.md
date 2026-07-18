@@ -5,7 +5,7 @@ description: e2e-web-runner hergebruikt bestaande firevault dev-server (isBereik
 
 ## Regel
 
-`scripts/src/e2e-web-run.ts` regel ~106: als `isBereikbaar(service.healthUrl)` true geeft,
+In `scripts/src/e2e-web-run.ts`: als `isBereikbaar(service.healthUrl)` true geeft,
 wordt de bestaande dev-server hergebruikt — er wordt GEEN nieuwe opgestart.
 
 ## Gevolg

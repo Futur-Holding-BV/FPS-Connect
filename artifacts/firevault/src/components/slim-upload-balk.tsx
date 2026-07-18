@@ -548,22 +548,26 @@ function BeslisScherm({
       if (res.ok) {
         const voorstel = (await res.json()) as CvAnalyseResultaat;
         slaCvOnboardingOp({ bestandsnaam: item.bestand.name, bron: "slim-upload", voorstel });
+        toast({
+          title: "CV-voorstel klaargezet",
+          description: "Kies in de medewerkerslijst de gebruiker om te onboarden; het voorstel wordt dan gebruikt.",
+        });
       } else {
         toast({
           title: "CV-analyse niet beschikbaar",
-          description: "Het onboardingformulier opent zonder vooraf ingevulde gegevens.",
+          description: "Start de onboarding via de medewerkerslijst zonder vooraf ingevulde gegevens.",
           variant: "destructive",
         });
       }
     } catch {
       toast({
         title: "CV-analyse niet beschikbaar",
-        description: "Het onboardingformulier opent zonder vooraf ingevulde gegevens.",
+        description: "Start de onboarding via de medewerkerslijst zonder vooraf ingevulde gegevens.",
         variant: "destructive",
       });
     } finally {
       setCvBezig(false);
-      onNavigeer?.("/personeel/onboarden");
+      onNavigeer?.("/personeel?tab=medewerkers");
     }
   }
 

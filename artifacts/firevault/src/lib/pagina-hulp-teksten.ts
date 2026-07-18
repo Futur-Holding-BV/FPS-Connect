@@ -173,7 +173,7 @@ export const PAGINA_HULP: Record<PaginaSleutel, RolTekst> = {
 
   "personeel": {
     hoofdbeheerder:
-      "HRM-module met medewerkerprofielen, functiehuizen, opleidingen en verlof. Klik 'Medewerker onboarden' om een bestaand account als medewerker te registreren — gegevens worden automatisch overgenomen. Gebruik de bekwaamheidsmatrix om certificaten en vaardigheden bij te houden.",
+      "HRM-module met medewerkerprofielen, functiehuizen, opleidingen en verlof. Onboarden start u per gebruiker via 'Onboarden' in de lijst 'Gebruikers zonder medewerkerprofiel' — naam, e-mail en telefoon worden uit het account overgenomen. Gebruik de bekwaamheidsmatrix om certificaten en vaardigheden bij te houden.",
   },
 
   "medewerker-detail": {

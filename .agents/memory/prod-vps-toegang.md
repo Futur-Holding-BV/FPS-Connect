@@ -60,11 +60,10 @@ verifiëren via psql (information_schema) — exit 0 is geen bewijs.
 - Een net bijgewerkte Replit-secret bereikt NIET de al draaiende bash-tool of code_execution-sandbox (die lezen een stale/lege env). Lees zo'n secret via de validation-runner (start een vers proces) i.p.v. direct in bash.
 - Een meerregelige PEM/OpenSSH private key die in een secret-veld wordt geplakt verliest vaak zijn newlines (wordt één spatie-gescheiden regel) → OpenSSH faalt met `error in libcrypto` / `Permission denied`. Reconstrueer: strip alle whitespace uit de base64-body tussen de BEGIN/END-headers en herwrap op 70 tekens. Sleutelmateriaal nooit printen.
 
-**Automatische GitHub-deploy — root causes gevonden en gefixed (18 juli 2026):**
-- **Root cause 1 (SSH-sleutel):** `printf '%s\n' "${PROD_SSH_KEY}"` in deploy.yml schreef de platte Replit-secret als één regel → `error in libcrypto`. Gefixed naar `printf '%s' … | sed 's/\\n/\n/g'` (werkt voor flat-string én multiline).
-- **Root cause 2 (backup-profiel):** `backup`-service in docker-compose.production.yml staat in `profiles: ["backup"]`; `${COMPOSE} run --rm -T backup` zonder `--profile backup` start een losse postgres → POSTGRES_PASSWORD fout → exit 1 op stap 2. Gefixed naar `${COMPOSE} --profile backup run --rm -T backup`.
-- Beide fixes op main gepusht via Contents API (commits 46f367f1, 6ac6aeb3). De auto-deploy is nog NOOIT succesvol geweest; dit zijn de reden waarom. Na de volgende push naar main zou GitHub Actions eindelijk moeten slagen.
-- Workflow_dispatch vereist `workflow`-scope die GITHUB_TOKEN_PUSH niet heeft; test kan pas bij de volgende echte push. Verifieer via VPS reflog: `git reflog | head` moet een nieuwe "reset: moving to origin/main" tonen na de Actions-run.
+**Automatische GitHub-deploy — bekende valkuilen in deploy.yml (gefixed):**
+- **SSH-sleutel:** `printf '%s\n' "${PROD_SSH_KEY}"` schrijft de platte Replit-secret als één regel → `error in libcrypto`. Juiste vorm: `printf '%s' … | sed 's/\\n/\n/g'` (werkt voor flat-string én multiline).
+- **Backup-profiel:** `backup`-service staat in `profiles: ["backup"]`; `${COMPOSE} run --rm -T backup` zonder `--profile backup` start een losse postgres → POSTGRES_PASSWORD-fout → exit 1. Juiste vorm: `${COMPOSE} --profile backup run --rm -T backup`.
+- Workflow_dispatch vereist `workflow`-scope die GITHUB_TOKEN_PUSH niet heeft; testen kan alleen via een echte push naar main. Verifieer via VPS reflog: `git reflog | head` moet een nieuwe "reset: moving to origin/main" tonen na de Actions-run.
 
 **Structurele productie-config-gaten:**
 - Productie mist mailvariabelen (Azure Graph + afzender/postbus) → uitnodigings-

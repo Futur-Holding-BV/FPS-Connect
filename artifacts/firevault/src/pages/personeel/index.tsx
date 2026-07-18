@@ -596,16 +596,6 @@ export default function PersoneelPagina() {
         </TabsContent>
 
         <TabsContent value="medewerkers" className="space-y-4">
-          {magSchrijven && (
-            <div className="flex items-center justify-end gap-2">
-              <Button asChild>
-                <Link href="/personeel/onboarden">
-                  <UserPlus className="h-4 w-4" /> Medewerker onboarden
-                </Link>
-              </Button>
-            </div>
-          )}
-
           {magSchrijven && ongekoppeld.length > 0 && (
             <Card>
               <CardContent className="p-4 space-y-3">
@@ -626,7 +616,7 @@ export default function PersoneelPagina() {
                         <div className="text-xs text-muted-foreground">{g.rol}</div>
                       </div>
                       <Button size="sm" variant="outline" asChild>
-                        <Link href="/personeel/onboarden">
+                        <Link href={`/personeel/onboarden?userId=${g.id}`}>
                           <UserPlus className="h-4 w-4" /> Onboarden
                         </Link>
                       </Button>

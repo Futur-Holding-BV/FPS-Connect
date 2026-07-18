@@ -10040,12 +10040,26 @@ export const CreateMedewerkerBody = zod.object({
   "opmerkingen": zod.string().optional(),
   "bedrijf_uitzendbureau": zod.string().optional(),
   "verlofsoort_ids": zod.array(zod.number()).optional().describe('Verlofsoorten waarvoor direct een startsaldo wordt opgebouwd (pro-rata op basis van contracturen\/CAO).'),
-  "jaar": zod.number().optional().describe('Jaar waarvoor het verlofsaldo wordt aangemaakt (standaard huidig jaar).'),
-  "connect_uitnodigen": zod.boolean().optional().describe('Wanneer true wordt direct een FPS Connect gebruikersaccount aangemaakt en een uitnodigingsmail verstuurd. Vereist een geldig e-mailadres.'),
-  "connect_profiel_id": zod.number().nullish().describe('Profiel-id voor het aan te maken Connect-account (optioneel; laat leeg voor lege bevoegdheden).')
+  "jaar": zod.number().optional().describe('Jaar waarvoor het verlofsaldo wordt aangemaakt (standaard huidig jaar).')
 })
 
 export const CreateMedewerkerResponse = zod.void()
+
+
+/**
+ * @summary Onboarding-context van een gebruikersaccount (identiteit-prefill + conceptdetectie)
+ */
+export const GetOnboardingContextParams = zod.object({
+  "gebruikerId": zod.coerce.number()
+})
+
+export const GetOnboardingContextResponse = zod.object({
+  "gebruiker_id": zod.number(),
+  "naam": zod.string(),
+  "email": zod.string().nullish(),
+  "telefoon": zod.string().nullish(),
+  "concept_medewerker_id": zod.number().nullish().describe('Id van een bestaand concept-medewerkerprofiel voor deze gebruiker; de wizard hervat dit concept in plaats van een nieuw aan te maken.')
+}).describe('Identiteit van een te onboarden gebruikersaccount; naam\/email\/telefoon zijn de onveranderlijke prefill-bron voor de onboarding-wizard.')
 
 
 /**
@@ -10189,9 +10203,7 @@ export const UpdateMedewerkerBody = zod.object({
   "opmerkingen": zod.string().optional(),
   "bedrijf_uitzendbureau": zod.string().optional(),
   "verlofsoort_ids": zod.array(zod.number()).optional().describe('Verlofsoorten waarvoor direct een startsaldo wordt opgebouwd (pro-rata op basis van contracturen\/CAO).'),
-  "jaar": zod.number().optional().describe('Jaar waarvoor het verlofsaldo wordt aangemaakt (standaard huidig jaar).'),
-  "connect_uitnodigen": zod.boolean().optional().describe('Wanneer true wordt direct een FPS Connect gebruikersaccount aangemaakt en een uitnodigingsmail verstuurd. Vereist een geldig e-mailadres.'),
-  "connect_profiel_id": zod.number().nullish().describe('Profiel-id voor het aan te maken Connect-account (optioneel; laat leeg voor lege bevoegdheden).')
+  "jaar": zod.number().optional().describe('Jaar waarvoor het verlofsaldo wordt aangemaakt (standaard huidig jaar).')
 })
 
 export const UpdateMedewerkerResponse = zod.object({

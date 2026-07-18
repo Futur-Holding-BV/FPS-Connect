@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from "react";
-import { useLocation } from "wouter";
+import { useLocation, useSearch } from "wouter";
 import {
   useCreateMedewerker,
   useUpdateMedewerker,
@@ -17,9 +17,11 @@ import {
   getListAiVoorstellenQueryKey,
   useGetWizardStatus,
   getGetWizardStatusQueryKey,
+  useGetOnboardingContext,
+  getGetOnboardingContextQueryKey,
   useDuplicateCheckMedewerker,
 } from "@workspace/api-client-react";
-import type { MedewerkerInput, CvAnalyseResultaat, WizardStatus } from "@workspace/api-client-react";
+import type { MedewerkerInput, CvAnalyseResultaat, WizardStatus, OnboardingContext } from "@workspace/api-client-react";
 import { leesEnWisCvOnboarding, type CvOnboardingStash } from "@/lib/cv-onboarding-stash";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
@@ -143,8 +145,6 @@ interface VastForm {
   contracturen_per_week: string;
   in_dienst_sinds: string;
   verlofsoort_ids: number[];
-  connect_uitnodigen: boolean;
-  connect_profiel_id: number | null;
 }
 
 interface ZzpForm {
@@ -180,8 +180,6 @@ const LEEG_VAST: VastForm = {
   contracturen_per_week: "38",
   in_dienst_sinds: new Date().toISOString().slice(0, 10),
   verlofsoort_ids: [],
-  connect_uitnodigen: false,
-  connect_profiel_id: null,
 };
 
 const LEEG_ZZP: ZzpForm = {
@@ -436,7 +434,6 @@ const WIZARD_STAPPEN = [
   "Startdatum",
   "VCA / BHV / EHBO",
   "Rijbewijs",
-  "FPS Connect",
   "Verlofsoorten",
   "Middelen",
   "Bevestiging",
@@ -462,7 +459,7 @@ const STANDAARD_ONBOARDING_TAKEN: Array<{
   { id: "werkplek", taak: "Werkplek inrichten", categorie: "Facilitair", deadlineDagen: -1 },
   { id: "it_account", taak: "IT-account aanmaken (e-mail, intranet)", categorie: "IT", deadlineDagen: -1 },
   { id: "toegangspas", taak: "Toegangspas uitreiken", categorie: "Beveiliging", deadlineDagen: 0 },
-  { id: "fps_connect", taak: "FPS Connect-account activeren", categorie: "IT", deadlineDagen: 1 },
+  { id: "fps_connect", taak: "FPS Connect-toegang controleren", categorie: "IT", deadlineDagen: 1 },
   { id: "introductie", taak: "Introductiegesprek plannen", categorie: "HR", deadlineDagen: 1 },
   { id: "vca_check", taak: "Certificaten controleren (VCA/BHV/EHBO)", categorie: "Veiligheid", deadlineDagen: 7 },
   { id: "cao_info", taak: "CAO-informatie aanreiken", categorie: "HR", deadlineDagen: 0 },
@@ -589,7 +586,6 @@ const GENERIEKE_STAPPEN = [
   "Functie & organisatie",
   "Periode & details",
   "Certificaten",
-  "FPS Connect",
   "Bevestiging",
 ] as const;
 
@@ -609,8 +605,6 @@ interface GeneriekeForm {
   bhv_vervaldatum: string;
   ehbo_vervaldatum: string;
   rijbewijs: string;
-  connect_uitnodigen: boolean;
-  connect_profiel_id: number | null;
 }
 
 const LEEG_GENERIEK: GeneriekeForm = {
@@ -619,26 +613,29 @@ const LEEG_GENERIEK: GeneriekeForm = {
   start_datum: new Date().toISOString().slice(0, 10), eind_datum: "",
   extra_1: "", extra_2: "", opmerkingen: "",
   vca_vervaldatum: "", bhv_vervaldatum: "", ehbo_vervaldatum: "", rijbewijs: "",
-  connect_uitnodigen: false, connect_profiel_id: null,
 };
 
 function GeneriekeWizard({
   soort,
   onTerug,
   onGereed,
-  cvNaam,
+  context,
 }: {
   soort: GenerieveStroom;
   onTerug: () => void;
   onGereed: (id: number) => void;
-  cvNaam?: string;
+  context: OnboardingContext;
 }) {
   const config = GENERIEKE_CONFIGS[soort];
-  const [form, setForm] = useState<GeneriekeForm>(() => ({ ...LEEG_GENERIEK, naam: cvNaam ?? "" }));
+  const [form, setForm] = useState<GeneriekeForm>(() => ({
+    ...LEEG_GENERIEK,
+    naam: context.naam,
+    email: context.email ?? "",
+    telefoon: context.telefoon ?? "",
+  }));
   const [huidigStap, setHuidigStap] = useState(1);
   const TOTAAL = GENERIEKE_STAPPEN.length;
   const { data: functies } = useListFuncties();
-  const { data: profielen } = useListProfielen();
   const maak = useCreateMedewerker();
   const slaVoortgangOp = usePatchWizardVoortgang();
   const bijwerk = useUpdateMedewerker();
@@ -653,12 +650,20 @@ function GeneriekeWizard({
     }
     if (huidigStap === 1 && !medewerkerDraftId) {
       try {
-        const concept = await maak.mutateAsync({ data: { naam: form.naam.trim() } });
+        const concept = await maak.mutateAsync({ data: { naam: form.naam.trim(), gebruiker_id: context.gebruiker_id } });
         setMedewerkerDraftId(concept.id);
         const r = await slaVoortgangOp.mutateAsync({ id: concept.id, data: { stap: 2, medewerker_status: "concept" } });
         if (r.bijgewerkt_op) setDraftBijgewerktOp(r.bijgewerkt_op);
-      } catch {
-        // Non-fataal: wizard loopt door zonder server-side persistentie
+      } catch (err: unknown) {
+        if (err && typeof err === "object" && "status" in err && (err as { status: number }).status === 409) {
+          toast({
+            title: "Al gekoppeld",
+            description: "Dit gebruikersaccount heeft al een medewerkerprofiel. Ga terug naar de medewerkerslijst.",
+            variant: "destructive",
+          });
+          return;
+        }
+        // Andere fouten zijn niet fataal: wizard loopt door zonder server-side persistentie
       }
     } else if (medewerkerDraftId) {
       const volgende = Math.min(huidigStap + 1, TOTAAL);
@@ -693,6 +698,7 @@ function GeneriekeWizard({
     try {
       const input: MedewerkerInput = {
         naam: form.naam.trim(),
+        gebruiker_id: context.gebruiker_id,
         email: form.email.trim() || undefined,
         geboortedatum: form.geboortedatum || undefined,
         telefoon: form.telefoon || undefined,
@@ -710,8 +716,6 @@ function GeneriekeWizard({
         bhv_vervaldatum: form.bhv_vervaldatum || undefined,
         ehbo_vervaldatum: form.ehbo_vervaldatum || undefined,
         rijbewijs: form.rijbewijs || undefined,
-        connect_uitnodigen: form.connect_uitnodigen || undefined,
-        connect_profiel_id: form.connect_profiel_id ?? undefined,
         jaar: new Date().getFullYear(),
       };
       if (medewerkerDraftId) {
@@ -729,7 +733,15 @@ function GeneriekeWizard({
         const nieuw = await maak.mutateAsync({ data: input });
         onGereed(nieuw.id);
       }
-    } catch {
+    } catch (err: unknown) {
+      if (err && typeof err === "object" && "status" in err && (err as { status: number }).status === 409) {
+        toast({
+          title: "Al gekoppeld",
+          description: "Dit gebruikersaccount heeft al een medewerkerprofiel.",
+          variant: "destructive",
+        });
+        return;
+      }
       toast({ title: "Aanmaken mislukt", variant: "destructive" });
     }
   }
@@ -754,7 +766,8 @@ function GeneriekeWizard({
         <div className="space-y-4">
           <div className="space-y-1.5">
             <Label>Naam *</Label>
-            <Input placeholder="Voor- en achternaam" value={form.naam} onChange={(e) => setForm({ ...form, naam: e.target.value })} />
+            <Input value={form.naam} disabled readOnly />
+            <p className="text-xs text-muted-foreground">Overgenomen van het gebruikersaccount — niet aanpasbaar tijdens onboarding.</p>
           </div>
           <div className="space-y-1.5">
             <Label>Geboortedatum</Label>
@@ -767,12 +780,13 @@ function GeneriekeWizard({
         <div className="space-y-4">
           <div className="space-y-1.5">
             <Label>E-mailadres</Label>
-            <Input type="email" placeholder="naam@voorbeeld.nl" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+            <Input type="email" value={form.email} disabled readOnly />
           </div>
           <div className="space-y-1.5">
             <Label>Telefoonnummer</Label>
-            <Input placeholder="010-…" value={form.telefoon} onChange={(e) => setForm({ ...form, telefoon: e.target.value })} />
+            <Input value={form.telefoon} disabled readOnly />
           </div>
+          <p className="text-xs text-muted-foreground">Contactgegevens komen uit het gebruikersaccount en zijn hier niet aanpasbaar.</p>
         </div>
       )}
 
@@ -855,37 +869,6 @@ function GeneriekeWizard({
       )}
 
       {huidigStap === 6 && (
-        <div className="space-y-4">
-          <div className="flex items-center gap-3">
-            <Checkbox
-              id="connect-gen"
-              checked={form.connect_uitnodigen}
-              onCheckedChange={(v) => setForm({ ...form, connect_uitnodigen: !!v })}
-            />
-            <label htmlFor="connect-gen" className="text-sm leading-tight cursor-pointer">
-              Stuur een uitnodiging voor FPS Connect (app-toegang)
-            </label>
-          </div>
-          {form.connect_uitnodigen && (
-            <div className="space-y-1.5">
-              <Label>Toegangsprofiel</Label>
-              <Select
-                value={form.connect_profiel_id ? String(form.connect_profiel_id) : ""}
-                onValueChange={(v) => setForm({ ...form, connect_profiel_id: v ? Number(v) : null })}
-              >
-                <SelectTrigger><SelectValue placeholder="Kies profiel (optioneel)" /></SelectTrigger>
-                <SelectContent>
-                  {(profielen ?? []).map((p) => (
-                    <SelectItem key={p.id} value={String(p.id)}>{p.naam}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-        </div>
-      )}
-
-      {huidigStap === 7 && (
         <div className="rounded-lg border p-4 space-y-3">
           <p className="text-sm font-semibold">Samenvatting — controleer voordat u aanmaakt</p>
           <div className="space-y-0 text-sm divide-y">
@@ -901,7 +884,6 @@ function GeneriekeWizard({
                 ["Einddatum", form.eind_datum || "—"],
                 [config.extra1Label, form.extra_1 || "—"],
                 ...(config.extra2Label ? [[config.extra2Label, form.extra_2 || "—"] as [string, string]] : []),
-                ["FPS Connect", form.connect_uitnodigen ? "Ja" : "Nee"],
               ] as [string, string][]
             ).map(([label, waarde]) => (
               <div key={label} className="flex justify-between py-1.5">
@@ -943,21 +925,29 @@ function VastFormulier({
   cvStash,
   onWisCv,
   resumeId,
+  context,
 }: {
   onTerug: () => void;
   onGereed: (id: number) => void;
   cvStash?: CvOnboardingStash | null;
   onWisCv?: () => void;
   resumeId?: number | null;
+  context: OnboardingContext;
 }) {
   const voorstel = cvStash?.voorstel ?? null;
   const [form, setForm] = useState<VastForm>(() => ({
     ...LEEG_VAST,
-    naam: voorstel?.naam ?? "",
-    email: voorstel?.email ?? "",
+    naam: context.naam,
+    email: context.email ?? "",
     geboortedatum: geldigeDatum(voorstel?.geboortedatum),
   }));
-  const [cvExtra, setCvExtra] = useState<CvExtraVelden>(() => bouwCvExtra(voorstel));
+  const [cvExtra, setCvExtra] = useState<CvExtraVelden>(() => {
+    const extra = bouwCvExtra(voorstel);
+    // Telefoon is identiteit: altijd uit het gebruikersaccount, nooit uit het CV.
+    if (context.telefoon) extra.telefoon = context.telefoon;
+    else delete extra.telefoon;
+    return extra;
+  });
   const { data: functies } = useListFuncties();
   const { data: verlofsoorten } = useListVerlofsoorten();
   const { data: caoOpties } = useListCaoOpties();
@@ -1040,11 +1030,10 @@ function VastFormulier({
       const data = await resp.json() as { ok: boolean; velden?: Record<string, string>; foutmelding?: string | null };
       if (data.ok && data.velden) {
         const v = data.velden;
-        if (v.naam && !form.naam.trim()) setForm((f) => ({ ...f, naam: v.naam ?? f.naam }));
+        // Identiteit (naam, e-mail, telefoon) komt uit het gebruikersaccount en
+        // wordt nooit overschreven vanuit een document.
         if (v.geboortedatum) setForm((f) => ({ ...f, geboortedatum: v.geboortedatum ?? f.geboortedatum }));
-        if (v.email && !form.email.trim()) setForm((f) => ({ ...f, email: v.email ?? f.email }));
         const extraUpdate: Partial<CvExtraVelden> = {};
-        if (v.telefoon) extraUpdate.telefoon = v.telefoon;
         if (v.mobiel) extraUpdate.mobiel = v.mobiel;
         if (v.adres) extraUpdate.adres = v.adres;
         if (v.postcode) extraUpdate.postcode = v.postcode;
@@ -1093,12 +1082,20 @@ function VastFormulier({
         }
       }
       try {
-        const concept = await maak.mutateAsync({ data: { naam: form.naam.trim() } });
+        const concept = await maak.mutateAsync({ data: { naam: form.naam.trim(), gebruiker_id: context.gebruiker_id } });
         setMedewerkerDraftId(concept.id);
         const r = await slaVoortgangOp.mutateAsync({ id: concept.id, data: { stap: 3, medewerker_status: "concept" } });
         if (r.bijgewerkt_op) setDraftBijgewerktOp(r.bijgewerkt_op);
-      } catch {
-        // Non-fataal: wizard loopt door zonder server-side persistentie
+      } catch (err: unknown) {
+        if (err && typeof err === "object" && "status" in err && (err as { status: number }).status === 409) {
+          toast({
+            title: "Al gekoppeld",
+            description: "Dit gebruikersaccount heeft al een medewerkerprofiel. Ga terug naar de medewerkerslijst.",
+            variant: "destructive",
+          });
+          return;
+        }
+        // Andere fouten zijn niet fataal: wizard loopt door zonder server-side persistentie
       }
     } else if (medewerkerDraftId && huidigStap > 2) {
       const volgende = Math.min(huidigStap + 1, TOTAAL_STAPPEN);
@@ -1154,8 +1151,8 @@ function VastFormulier({
 
     setForm((f) => {
       const next = { ...f };
-      if (v.naam) next.naam = v.naam;
-      if (v.email) next.email = v.email;
+      // Naam en e-mail zijn identiteit uit het gebruikersaccount — nooit
+      // overschrijven vanuit een AI-voorstel.
       if (geboortedatum) next.geboortedatum = geboortedatum;
       if (gematchteFunctieId != null) next.functie_id = gematchteFunctieId;
       if (geldigeWm && v.werkmaatschappij) {
@@ -1169,11 +1166,11 @@ function VastFormulier({
     });
 
     const extra = bouwCvExtra(v);
+    // Telefoon is identiteit uit het gebruikersaccount — niet overnemen uit het voorstel.
+    delete extra.telefoon;
     if (Object.keys(extra).length > 0) setCvExtra((prev) => ({ ...prev, ...extra }));
 
     const toegepast: string[] = [];
-    if (v.naam) toegepast.push("Naam");
-    if (v.email) toegepast.push("E-mail");
     if (geboortedatum) toegepast.push("Geboortedatum");
     if (gematchteFunctieId != null) toegepast.push("Functie");
     if (geldigeWm) toegepast.push("Werkmaatschappij");
@@ -1246,8 +1243,9 @@ function VastFormulier({
   }, [bestaandeMedewerkers, form.naam, form.email]);
 
   function wisCvGegevens() {
-    setForm((f) => ({ ...f, naam: "", email: "", geboortedatum: "" }));
-    setCvExtra({});
+    // Identiteit (naam, e-mail, telefoon) blijft altijd uit het gebruikersaccount.
+    setForm((f) => ({ ...f, geboortedatum: "" }));
+    setCvExtra(context.telefoon ? { telefoon: context.telefoon } : {});
     onWisCv?.();
   }
 
@@ -1323,6 +1321,7 @@ function VastFormulier({
     try {
       const input: MedewerkerInput = {
         naam: form.naam.trim(),
+        gebruiker_id: context.gebruiker_id,
         email: form.email.trim() || undefined,
         geboortedatum: form.geboortedatum || undefined,
         functie_id: form.functie_id ?? undefined,
@@ -1343,8 +1342,6 @@ function VastFormulier({
         bhv_vervaldatum: cvExtra.bhv_vervaldatum || undefined,
         ehbo_vervaldatum: cvExtra.ehbo_vervaldatum || undefined,
         cv_tekst: cvExtra.cv_tekst || undefined,
-        connect_uitnodigen: form.connect_uitnodigen || undefined,
-        connect_profiel_id: form.connect_profiel_id ?? undefined,
       };
       async function maakGeselecteerdeMiddelenAan(mwId: number) {
         for (const middelId of geselecteerdeMiddelen) {
@@ -1407,7 +1404,15 @@ function VastFormulier({
         await maakOnboardingTakenAan(nieuw.id);
         onGereed(nieuw.id);
       }
-    } catch {
+    } catch (err: unknown) {
+      if (err && typeof err === "object" && "status" in err && (err as { status: number }).status === 409) {
+        toast({
+          title: "Al gekoppeld",
+          description: "Dit gebruikersaccount heeft al een medewerkerprofiel.",
+          variant: "destructive",
+        });
+        return;
+      }
       toast({ title: "Aanmaken mislukt", variant: "destructive" });
     }
   }
@@ -1554,7 +1559,8 @@ function VastFormulier({
         <div className="space-y-4">
           <div className="space-y-1.5">
             <Label>Naam *</Label>
-            <Input placeholder="Voor- en achternaam" value={form.naam} onChange={(e) => setForm({ ...form, naam: e.target.value })} />
+            <Input value={form.naam} disabled readOnly />
+            <p className="text-xs text-muted-foreground">Overgenomen van het gebruikersaccount — niet aanpasbaar tijdens onboarding.</p>
           </div>
           <div className="space-y-1.5">
             <Label>
@@ -1606,13 +1612,14 @@ function VastFormulier({
       {huidigStap === 3 && (
         <div className="space-y-4">
           <div className="space-y-1.5">
-            <Label>E-mailadres <span className="text-muted-foreground text-xs">(voor uitnodiging account)</span></Label>
-            <Input type="email" placeholder="naam@bedrijf.nl" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+            <Label>E-mailadres</Label>
+            <Input type="email" value={form.email} disabled readOnly />
+            <p className="text-xs text-muted-foreground">Overgenomen van het gebruikersaccount — niet aanpasbaar tijdens onboarding.</p>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <Label>Telefoon</Label>
-              <Input placeholder="010-..." value={cvExtra.telefoon || ""} onChange={(e) => setCvExtra((p) => ({ ...p, telefoon: e.target.value }))} />
+              <Input value={cvExtra.telefoon || ""} disabled readOnly />
             </div>
             <div className="space-y-1.5">
               <Label>Mobiel</Label>
@@ -1798,48 +1805,8 @@ function VastFormulier({
         </div>
       )}
 
-      {/* ── STAP 11: FPS Connect ── */}
+      {/* ── STAP 11: Verlofsoorten ── */}
       {huidigStap === 11 && (
-        <div className="space-y-4">
-          <label className="flex items-start gap-3 cursor-pointer">
-            <Checkbox
-              checked={form.connect_uitnodigen}
-              onCheckedChange={(v) => setForm({ ...form, connect_uitnodigen: !!v, connect_profiel_id: v ? form.connect_profiel_id : null })}
-            />
-            <div>
-              <p className="text-sm font-medium">Uitnodigen voor FPS Connect</p>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Er wordt automatisch een uitnodigingsmail verzonden naar het opgegeven e-mailadres.
-                De medewerker ontvangt toegang tot het klantportaal na acceptatie.
-              </p>
-            </div>
-          </label>
-          {form.connect_uitnodigen && (
-            <div className="space-y-1.5">
-              <Label>Toegangsprofiel FPS Connect</Label>
-              <Select
-                value={form.connect_profiel_id ? String(form.connect_profiel_id) : undefined}
-                onValueChange={(v) => setForm({ ...form, connect_profiel_id: v ? Number(v) : null })}
-              >
-                <SelectTrigger><SelectValue placeholder="Kies profiel (optioneel)" /></SelectTrigger>
-                <SelectContent>
-                  {(profielen ?? []).map((p) => (
-                    <SelectItem key={p.id} value={String(p.id)}>{p.naam}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {!form.email && (
-                <p className="text-xs text-destructive">
-                  Let op: geen e-mailadres ingevuld. Ga terug naar stap 3 om een e-mailadres toe te voegen.
-                </p>
-              )}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ── STAP 12: Verlofsoorten ── */}
-      {huidigStap === 12 && (
         <div className="space-y-4">
           {(verlofsoorten ?? []).length === 0 ? (
             <p className="text-sm text-muted-foreground">Nog geen verlofsoorten geconfigureerd. Sla over of voeg ze toe via Personeel &rsaquo; Verlofsoorten.</p>
@@ -1880,8 +1847,8 @@ function VastFormulier({
         </div>
       )}
 
-      {/* ── STAP 13: Middelen ── */}
-      {huidigStap === 13 && (
+      {/* ── STAP 12: Middelen ── */}
+      {huidigStap === 12 && (
         <div className="space-y-4">
           <div className="rounded-lg border p-4 space-y-3">
             <div>
@@ -2010,8 +1977,8 @@ function VastFormulier({
         </div>
       )}
 
-      {/* ── STAP 14: Bevestiging ── */}
-      {huidigStap === 14 && (
+      {/* ── STAP 13: Bevestiging ── */}
+      {huidigStap === 13 && (
         <div className="space-y-4">
           <div className="rounded-lg border p-4 space-y-3">
             <p className="text-sm font-semibold">Samenvatting — controleer voordat u aanmaakt</p>
@@ -2031,7 +1998,6 @@ function VastFormulier({
                   ["BHV geldig tot", cvExtra.bhv_vervaldatum || "—"],
                   ["EHBO geldig tot", cvExtra.ehbo_vervaldatum || "—"],
                   ["Rijbewijs", cvExtra.rijbewijs || "—"],
-                  ["FPS Connect uitnodigen", form.connect_uitnodigen ? "Ja" : "Nee"],
                   ["Verlofsoorten", form.verlofsoort_ids.length > 0 ? `${form.verlofsoort_ids.length} geselecteerd` : "Geen"],
                 ] as [string, string][]
               ).map(([label, waarde]) => (
@@ -2186,13 +2152,13 @@ function VastFormulier({
 function ZzpFormulier({
   onTerug,
   onGereed,
-  cvNaam,
+  context,
 }: {
   onTerug: () => void;
   onGereed: (id: number) => void;
-  cvNaam?: string;
+  context: OnboardingContext;
 }) {
-  const [form, setForm] = useState<ZzpForm>(() => ({ ...LEEG_ZZP, naam: cvNaam ?? "" }));
+  const [form, setForm] = useState<ZzpForm>(() => ({ ...LEEG_ZZP, naam: context.naam }));
   const { data: functies } = useListFuncties();
   const maak = useCreateMedewerker();
   const { toast } = useToast();
@@ -2203,6 +2169,7 @@ function ZzpFormulier({
     try {
       const input: MedewerkerInput = {
         naam: form.naam.trim(),
+        gebruiker_id: context.gebruiker_id,
         functie_id: form.functie_id ?? undefined,
         werkmaatschappij: form.werkmaatschappij,
         dienstverband: "zzp",
@@ -2212,7 +2179,15 @@ function ZzpFormulier({
       };
       const nieuw = await maak.mutateAsync({ data: input });
       onGereed(nieuw.id);
-    } catch {
+    } catch (err: unknown) {
+      if (err && typeof err === "object" && "status" in err && (err as { status: number }).status === 409) {
+        toast({
+          title: "Al gekoppeld",
+          description: "Dit gebruikersaccount heeft al een medewerkerprofiel.",
+          variant: "destructive",
+        });
+        return;
+      }
       toast({ title: "Aanmaken mislukt", variant: "destructive" });
     }
   }
@@ -2240,7 +2215,8 @@ function ZzpFormulier({
       <div className="space-y-4">
         <div className="space-y-1.5">
           <Label>Naam contactpersoon / ZZP-er *</Label>
-          <Input placeholder="Voor- en achternaam" value={form.naam} onChange={(e) => setForm({ ...form, naam: e.target.value })} />
+          <Input value={form.naam} disabled readOnly />
+          <p className="text-xs text-muted-foreground">Overgenomen van het gebruikersaccount — niet aanpasbaar tijdens onboarding.</p>
         </div>
 
         <div className="space-y-1.5">
@@ -2311,13 +2287,13 @@ function ZzpFormulier({
 function UitzendFormulier({
   onTerug,
   onGereed,
-  cvNaam,
+  context,
 }: {
   onTerug: () => void;
   onGereed: (id: number) => void;
-  cvNaam?: string;
+  context: OnboardingContext;
 }) {
-  const [form, setForm] = useState<UitzendForm>(() => ({ ...LEEG_UITZEND, naam: cvNaam ?? "" }));
+  const [form, setForm] = useState<UitzendForm>(() => ({ ...LEEG_UITZEND, naam: context.naam }));
   const [soort, setSoort] = useState<"uitzend" | "inhuur">("uitzend");
   const { data: functies } = useListFuncties();
   const maak = useCreateMedewerker();
@@ -2332,6 +2308,7 @@ function UitzendFormulier({
     try {
       const input: MedewerkerInput = {
         naam: form.naam.trim(),
+        gebruiker_id: context.gebruiker_id,
         functie_id: form.functie_id ?? undefined,
         werkmaatschappij: form.werkmaatschappij,
         dienstverband: soort,
@@ -2342,7 +2319,15 @@ function UitzendFormulier({
       };
       const nieuw = await maak.mutateAsync({ data: input });
       onGereed(nieuw.id);
-    } catch {
+    } catch (err: unknown) {
+      if (err && typeof err === "object" && "status" in err && (err as { status: number }).status === 409) {
+        toast({
+          title: "Al gekoppeld",
+          description: "Dit gebruikersaccount heeft al een medewerkerprofiel.",
+          variant: "destructive",
+        });
+        return;
+      }
       toast({ title: "Aanmaken mislukt", variant: "destructive" });
     }
   }
@@ -2383,7 +2368,8 @@ function UitzendFormulier({
 
         <div className="space-y-1.5">
           <Label>Naam medewerker *</Label>
-          <Input placeholder="Voor- en achternaam" value={form.naam} onChange={(e) => setForm({ ...form, naam: e.target.value })} />
+          <Input value={form.naam} disabled readOnly />
+          <p className="text-xs text-muted-foreground">Overgenomen van het gebruikersaccount — niet aanpasbaar tijdens onboarding.</p>
         </div>
 
         <div className="space-y-1.5">
@@ -2453,7 +2439,7 @@ function Succes({ stroom, medewerkerId, onNogEen }: { stroom: Stroom; medewerker
   const SUCCES_INHOUD: Record<Stroom, { titel: string; tekst: string; cta: string; ctaHref: string; ctaLabel: string }> = {
     vast: {
       titel: "Medewerker geregistreerd",
-      tekst: "Het profiel is aangemaakt. Koppel nu een gebruikersaccount via het medewerkerprofiel om ook app-toegang te geven.",
+      tekst: "Het profiel is aangemaakt en gekoppeld aan het bestaande gebruikersaccount. App-toegang en rechten beheert u via Gebruikers.",
       cta: `/personeel/${medewerkerId}`,
       ctaLabel: "Profiel bekijken",
       ctaHref: `/personeel/${medewerkerId}`,
@@ -2561,15 +2547,33 @@ function Succes({ stroom, medewerkerId, onNogEen }: { stroom: Stroom; medewerker
 
 export default function OnboardenPagina() {
   const queryClient = useQueryClient();
+  const [, navigate] = useLocation();
+  const zoekString = useSearch();
   const [stroom, setStroom] = useState<Stroom | null>(null);
   const [resumeId, setResumeId] = useState<number | null>(null);
   const [afrondMedewerkerId, setAfrondMedewerkerId] = useState<number | null>(null);
   const [cvStash, setCvStash] = useState<CvOnboardingStash | null>(null);
   const stashGelezen = useRef(false);
-  const { data: alleMedewerkers = [] } = useListMedewerkers();
-  const conceptMedewerkers = (
-    alleMedewerkers as Array<{ id: number; naam: string; medewerker_status?: string | null }>
-  ).filter((m) => m.medewerker_status === "concept");
+
+  const userIdParam = new URLSearchParams(zoekString).get("userId");
+  const userId = userIdParam !== null && /^\d+$/.test(userIdParam.trim()) ? Number(userIdParam.trim()) : null;
+  const userIdOngeldig = userIdParam !== null && userId === null;
+
+  // Zonder userId is onboarding niet bereikbaar: terug naar de medewerkerslijst.
+  useEffect(() => {
+    if (userIdParam === null) {
+      navigate("/personeel?tab=medewerkers", { replace: true });
+    }
+  }, [userIdParam, navigate]);
+
+  const contextQuery = useGetOnboardingContext(userId ?? 0, {
+    query: {
+      enabled: userId !== null,
+      retry: false,
+      queryKey: getGetOnboardingContextQueryKey(userId ?? 0),
+    },
+  });
+  const context = contextQuery.data as OnboardingContext | undefined;
 
   // CV-voorstel eenmalig uit sessionStorage lezen (wist bij lezen).
   // Ref-guard voorkomt dubbel lezen bij React StrictMode remount.
@@ -2586,20 +2590,78 @@ export default function OnboardenPagina() {
     await queryClient.invalidateQueries({ queryKey: getGetHrmStatsQueryKey() });
   }
 
-  function reset() {
-    setStroom(null);
-    setResumeId(null);
-    setAfrondMedewerkerId(null);
-    setCvStash(null);
+  if (userIdParam === null) {
+    return null;
+  }
+
+  const foutStatus =
+    contextQuery.error && typeof contextQuery.error === "object" && "status" in contextQuery.error
+      ? (contextQuery.error as { status: number }).status
+      : null;
+
+  if (userIdOngeldig || foutStatus === 404) {
+    return (
+      <div className="space-y-4 max-w-md">
+        <div className="flex items-center gap-3 text-destructive">
+          <AlertTriangle className="h-6 w-6 shrink-0" />
+          <h1 className="text-xl font-bold">Gebruiker niet gevonden</h1>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          Er bestaat geen gebruikersaccount met dit ID. Onboarding start altijd vanuit een bestaand
+          account via de medewerkerslijst.
+        </p>
+        <Button onClick={() => navigate("/personeel?tab=medewerkers")}>Naar medewerkerslijst</Button>
+      </div>
+    );
+  }
+
+  if (foutStatus === 409) {
+    return (
+      <div className="space-y-4 max-w-md">
+        <div className="flex items-center gap-3 text-destructive">
+          <AlertTriangle className="h-6 w-6 shrink-0" />
+          <h1 className="text-xl font-bold">Al gekoppeld</h1>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          Dit gebruikersaccount heeft al een medewerkerprofiel. Een tweede onboarding is niet mogelijk.
+        </p>
+        <Button onClick={() => navigate("/personeel?tab=medewerkers")}>Naar medewerkerslijst</Button>
+      </div>
+    );
+  }
+
+  if (contextQuery.isLoading || !context) {
+    return (
+      <div className="flex items-center gap-2 text-muted-foreground py-12">
+        <Loader2 className="h-5 w-5 animate-spin" />
+        <span className="text-sm">Gegevens laden…</span>
+      </div>
+    );
   }
 
   if (afrondMedewerkerId !== null && stroom !== null) {
-    return <Succes stroom={stroom} medewerkerId={afrondMedewerkerId} onNogEen={reset} />;
+    return (
+      <Succes
+        stroom={stroom}
+        medewerkerId={afrondMedewerkerId}
+        onNogEen={() => navigate("/personeel?tab=medewerkers")}
+      />
+    );
   }
 
   if (stroom === null) {
     return (
       <div className="space-y-4">
+        <div className="rounded-lg border p-3 max-w-3xl">
+          <p className="text-sm">
+            Onboarding voor <span className="font-semibold">{context.naam}</span>
+            {context.email ? <span className="text-muted-foreground"> — {context.email}</span> : null}
+          </p>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Naam, e-mail en telefoon worden overgenomen van het gebruikersaccount en zijn tijdens de
+            onboarding niet aanpasbaar.
+          </p>
+        </div>
         {cvStash && (
           <div className="flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 p-3 max-w-3xl">
             <Sparkles className="h-4 w-4 text-amber-700 shrink-0 mt-0.5" />
@@ -2610,23 +2672,21 @@ export default function OnboardenPagina() {
             </p>
           </div>
         )}
-        {conceptMedewerkers.length > 0 && (
+        {context.concept_medewerker_id != null && (
           <div className="rounded-lg border border-blue-200 bg-blue-50/30 p-3 space-y-2 max-w-3xl">
-            <p className="text-xs font-medium text-blue-800">Lopende onboardingen</p>
-            <div className="space-y-1.5">
-              {conceptMedewerkers.slice(0, 5).map((m) => (
-                <div key={m.id} className="flex items-center justify-between gap-2">
-                  <span className="text-sm">{m.naam}</span>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="h-7 text-xs shrink-0"
-                    onClick={() => { setResumeId(m.id); setStroom("vast"); }}
-                  >
-                    Hervatten
-                  </Button>
-                </div>
-              ))}
+            <p className="text-xs font-medium text-blue-800">Lopende onboarding</p>
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-sm">
+                Er staat nog een onvoltooide onboarding klaar voor {context.naam}.
+              </span>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 text-xs shrink-0"
+                onClick={() => { setResumeId(context.concept_medewerker_id ?? null); setStroom("vast"); }}
+              >
+                Hervatten
+              </Button>
             </div>
           </div>
         )}
@@ -2643,6 +2703,7 @@ export default function OnboardenPagina() {
         cvStash={cvStash}
         onWisCv={() => setCvStash(null)}
         resumeId={resumeId}
+        context={context}
       />
     );
   }
@@ -2651,7 +2712,7 @@ export default function OnboardenPagina() {
       <ZzpFormulier
         onTerug={() => setStroom(null)}
         onGereed={gereed}
-        cvNaam={cvStash?.voorstel.naam ?? undefined}
+        context={context}
       />
     );
   }
@@ -2660,7 +2721,7 @@ export default function OnboardenPagina() {
       <UitzendFormulier
         onTerug={() => setStroom(null)}
         onGereed={gereed}
-        cvNaam={cvStash?.voorstel.naam ?? undefined}
+        context={context}
       />
     );
   }
@@ -2670,7 +2731,7 @@ export default function OnboardenPagina() {
         soort={stroom}
         onTerug={() => setStroom(null)}
         onGereed={gereed}
-        cvNaam={cvStash?.voorstel.naam ?? undefined}
+        context={context}
       />
     );
   }

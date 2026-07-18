@@ -30,6 +30,10 @@ import {
   setupE2eWachtwoordAccounts,
   archiveerE2eWachtwoordAccounts,
 } from "./e2e-wachtwoord-testaccounts";
+import {
+  maakWegwerpOnboardingGebruiker,
+  verwijderWegwerpOnboardingGebruikers,
+} from "./e2e-onboarding-testgebruikers";
 
 const DOMEIN = process.env.REPLIT_DEV_DOMAIN;
 if (!DOMEIN) {
@@ -125,12 +129,16 @@ async function main(): Promise<void> {
   }
 
   // ── STAP 1: Medewerker aanmaken ─────────────────────────────────────────────
+  // POST /medewerkers vereist sinds de onboarding-consolidatie een bestaand
+  // gebruikersaccount (gebruiker_id verplicht) — maak eerst een wegwerp-account.
   let medewerkerId: number;
   {
+    const gebruiker = await maakWegwerpOnboardingGebruiker("Smoketest Wizard");
     const r = await admin.post("/medewerkers", {
       naam: `Smoketest Wizard ${ts}`,
       werkmaatschappij: "FPS Brandpreventie",
       dienstverband: "vast",
+      gebruiker_id: gebruiker.id,
     });
     const b = await json<{ id?: number; naam?: string }>(r);
     eis(r.status === 201 && typeof b.id === "number", "stap 1", `POST /medewerkers gaf ${r.status} ${JSON.stringify(b)}`);
@@ -277,6 +285,11 @@ async function opruimen(): Promise<void> {
     } catch (err) {
       console.warn("Opruimen mislukt voor medewerker:", err);
     }
+  }
+  try {
+    await verwijderWegwerpOnboardingGebruikers();
+  } catch (err) {
+    console.warn("Opruimen: wegwerp-gebruikers verwijderen mislukt:", err);
   }
   try {
     await archiveerE2eWachtwoordAccounts();

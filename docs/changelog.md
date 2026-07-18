@@ -1,3 +1,31 @@
+## 2026-07-18 — CONSOLIDATE_EMPLOYEE_ONBOARDING: onboarding uitsluitend via rij-actie met userId
+
+- **Uitvoering:** refactor + contractverharding | **Kwaliteit:** hoog | **Risico:** laag
+
+Onboarding is nu uitsluitend bereikbaar via de rij-actie op `/personeel?tab=medewerkers` → `/personeel/onboarden?userId=<ID>`. De wizard maakt nooit accounts aan; het medewerkerprofiel wordt altijd aan een bestaand gebruikersaccount gekoppeld.
+
+**Backend/OpenAPI (contract):**
+
+- `POST /medewerkers` zonder `gebruiker_id` → 400 (verplicht veld)
+- Onbekende `gebruiker_id` → 404 `USER_NOT_FOUND`; al gekoppeld → 409 `EMPLOYEE_PROFILE_ALREADY_EXISTS`
+- Nieuw endpoint `GET /medewerkers/onboarding-context/{gebruikerId}`: identiteit (naam/e-mail/telefoon, immutable prefill) + `concept_medewerker_id` voor hervatten
+- Race-afdekking: Postgres unique-violation (23505) op de gebruiker-koppeling wordt op `POST /medewerkers`, `POST /medewerkers/onboarding` én `PATCH /medewerkers/:id` vertaald naar hetzelfde 409-contract
+- Verificatiescript `scripts/src/verificatie-onboarding-contract.ts`: 7/7 contractchecks PASS tegen dev
+
+**Frontend:**
+
+- `onboarden.tsx`: zonder `userId` → redirect naar `/personeel?tab=medewerkers`; ongeldig account → "Gebruiker niet gevonden"-scherm; al gekoppeld → "Al gekoppeld"-scherm; identiteitsvelden immutable geprefilled; hervatten via "Lopende onboarding"-banner
+- `personeel/index.tsx`: losse "Medewerker onboarden"-knop verwijderd; rij-actie navigeert met `?userId=`
+- Sidebar-item "Onboarden" verwijderd uit beheerder-layout; slim-upload navigeert naar de medewerkerslijst
+- E2e-spec `web-hrm-wizard.spec.ts` herschreven op het userId-contract (13 stappen + redirect/404/409-tests)
+
+**Database:**
+
+- Unieke index `medewerkers_gebruiker_id_unique` op `medewerkers(gebruiker_id)` — één medewerkerprofiel per account, NULL blijft toegestaan voor losse/legacy profielen
+- Aangelegd op dev; prod via `apply-additive.mjs` (duplicaatcontrole met NULL-filter) + `schema-healthcheck.mjs`-verificatie in de migrate-flow
+
+---
+
 ## 2026-07-18 — Auto-deploy hersteld: SSH-sleutelformaat + backup-profiel
 
 - **Uitvoering:** bugfix deploy-pipeline | **Kwaliteit:** hoog | **Risico:** laag

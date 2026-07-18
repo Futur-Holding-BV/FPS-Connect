@@ -660,6 +660,7 @@ import type {
   OfferteVerzendenInput,
   OfferteVraag,
   OfferteVraagAntwoordInput,
+  OnboardingContext,
   OnboardingFout,
   OnboardingVoorstelInvoer,
   OnderaannemerOrder,
@@ -28027,7 +28028,7 @@ export const createMedewerker = async (medewerkerInput: MedewerkerInput, options
 
 
 
-export const getCreateMedewerkerMutationOptions = <TError = ErrorType<unknown>,
+export const getCreateMedewerkerMutationOptions = <TError = ErrorType<void>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createMedewerker>>, TError,{data: BodyType<MedewerkerInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof createMedewerker>>, TError,{data: BodyType<MedewerkerInput>}, TContext> => {
 
@@ -28056,12 +28057,12 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type CreateMedewerkerMutationResult = NonNullable<Awaited<ReturnType<typeof createMedewerker>>>
     export type CreateMedewerkerMutationBody = BodyType<MedewerkerInput>
-    export type CreateMedewerkerMutationError = ErrorType<unknown>
+    export type CreateMedewerkerMutationError = ErrorType<void>
 
     /**
  * @summary Medewerker aanmaken
  */
-export const useCreateMedewerker = <TError = ErrorType<unknown>,
+export const useCreateMedewerker = <TError = ErrorType<void>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createMedewerker>>, TError,{data: BodyType<MedewerkerInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof createMedewerker>>,
@@ -28071,6 +28072,83 @@ export const useCreateMedewerker = <TError = ErrorType<unknown>,
       > => {
       return useMutation(getCreateMedewerkerMutationOptions(options));
     }
+
+export const getGetOnboardingContextUrl = (gebruikerId: number,) => {
+
+
+
+
+  return `/api/medewerkers/onboarding-context/${gebruikerId}`
+}
+
+/**
+ * @summary Onboarding-context van een gebruikersaccount (identiteit-prefill + conceptdetectie)
+ */
+export const getOnboardingContext = async (gebruikerId: number, options?: RequestInit): Promise<OnboardingContext> => {
+
+  return customFetch<OnboardingContext>(getGetOnboardingContextUrl(gebruikerId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetOnboardingContextQueryKey = (gebruikerId: number,) => {
+    return [
+    `/api/medewerkers/onboarding-context/${gebruikerId}`
+    ] as const;
+    }
+
+
+export const getGetOnboardingContextQueryOptions = <TData = Awaited<ReturnType<typeof getOnboardingContext>>, TError = ErrorType<void>>(gebruikerId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getOnboardingContext>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetOnboardingContextQueryKey(gebruikerId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getOnboardingContext>>> = ({ signal }) => getOnboardingContext(gebruikerId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: gebruikerId !== null && gebruikerId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getOnboardingContext>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetOnboardingContextQueryResult = NonNullable<Awaited<ReturnType<typeof getOnboardingContext>>>
+export type GetOnboardingContextQueryError = ErrorType<void>
+
+
+/**
+ * @summary Onboarding-context van een gebruikersaccount (identiteit-prefill + conceptdetectie)
+ */
+
+export function useGetOnboardingContext<TData = Awaited<ReturnType<typeof getOnboardingContext>>, TError = ErrorType<void>>(
+ gebruikerId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getOnboardingContext>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetOnboardingContextQueryOptions(gebruikerId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
 export const getOnboardMedewerkerUrl = () => {
 
@@ -28097,7 +28175,7 @@ export const onboardMedewerker = async (medewerkerOnboardingInput: MedewerkerOnb
 
 
 
-export const getOnboardMedewerkerMutationOptions = <TError = ErrorType<OnboardingFout>,
+export const getOnboardMedewerkerMutationOptions = <TError = ErrorType<OnboardingFout | void>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof onboardMedewerker>>, TError,{data: BodyType<MedewerkerOnboardingInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof onboardMedewerker>>, TError,{data: BodyType<MedewerkerOnboardingInput>}, TContext> => {
 
@@ -28126,12 +28204,12 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type OnboardMedewerkerMutationResult = NonNullable<Awaited<ReturnType<typeof onboardMedewerker>>>
     export type OnboardMedewerkerMutationBody = BodyType<MedewerkerOnboardingInput>
-    export type OnboardMedewerkerMutationError = ErrorType<OnboardingFout>
+    export type OnboardMedewerkerMutationError = ErrorType<OnboardingFout | void>
 
     /**
  * @summary Onboarding - medewerker koppelen aan gebruiker met CAO/verlofcontrole
  */
-export const useOnboardMedewerker = <TError = ErrorType<OnboardingFout>,
+export const useOnboardMedewerker = <TError = ErrorType<OnboardingFout | void>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof onboardMedewerker>>, TError,{data: BodyType<MedewerkerOnboardingInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof onboardMedewerker>>,

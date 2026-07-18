@@ -5,7 +5,7 @@
 // werknemerstoelichting) voor de volledige FPS Groep (FPS Bouw, FPS
 // Brandpreventie, FPS Onderhoud, Fuegro). Fase 1 bevat BEWUST GEEN
 // salarisadministratie.
-import { pgTable, serial, text, integer, real, boolean, timestamp, date, numeric, jsonb, type AnyPgColumn } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, real, boolean, timestamp, date, numeric, jsonb, uniqueIndex, type AnyPgColumn } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { gebruikersTable, profielenTable } from "./gebruikers";
@@ -144,7 +144,12 @@ export const medewerkersTable = pgTable("medewerkers", {
   wizardVoortgang: jsonb("wizard_voortgang"),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
-});
+}, (t) => [
+  // Eén medewerkerprofiel per gebruikersaccount (CONSOLIDATE_EMPLOYEE_ONBOARDING).
+  // NULL blijft toegestaan (meerdere keren): losse/legacy profielen zonder account.
+  // Aangelegd via apply-additive.mjs vóór drizzle-kit push (zie gebruiker_profielen-patroon).
+  uniqueIndex("medewerkers_gebruiker_id_unique").on(t.gebruikerId),
+]);
 
 // Opleidingen/certificeringen-catalogus. geldigheidMaanden = null betekent geen
 // verloop; verplicht markeert opleidingen waarop het systeem moet signaleren.

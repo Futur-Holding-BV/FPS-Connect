@@ -9,8 +9,11 @@
 //   6. AI-voorstel afwijzen — status → "afgewezen"
 //   7. AI-voorstel op "Later" zetten — status → "later"
 //   8. Geen dubbele medewerker bij herhaalde create-call
-//   9. UI: wizard opent en toont stap 1 met naamveld
-//  10. Feature flag UIT → /personeel/onboarden toont "niet beschikbaar"
+//   9. UI: wizard opent alléén via ?userId=<ID>, identiteit prefilled+disabled,
+//      13 stappen, POST /medewerkers bevat gebruiker_id, hervatten via context
+//  10. UI: zonder userId → redirect naar /personeel?tab=medewerkers
+//  11. UI: onbekend userId (404) → "Gebruiker niet gevonden"-scherm
+//  12. UI: al gekoppeld userId (409) → "Al gekoppeld"-scherm
 //
 // Draaien: pnpm --filter @workspace/scripts run e2e-web
 // Vereist: lopende workflows api-server + firevault web, env DATABASE_URL en
@@ -25,6 +28,10 @@ import {
   E2E_WEB_ADMIN_TOTP_SECRET,
   setupE2eWebAdminAccount,
 } from "../src/e2e-monteur-testaccount";
+import {
+  maakWegwerpOnboardingGebruiker,
+  verwijderWegwerpOnboardingGebruikers,
+} from "../src/e2e-onboarding-testgebruikers";
 import { authenticator } from "otplib";
 
 const TEST_NAAM_PREFIX = "E2E-WIZARD-TEST";
@@ -44,6 +51,13 @@ test.afterAll(async () => {
     await db.execute(
       sql`DELETE FROM medewerkers WHERE naam LIKE ${TEST_NAAM_PREFIX + "%"} AND medewerker_status = 'concept'`,
     );
+  } catch {
+    // best-effort
+  }
+  // Ruim de wegwerp-gebruikersaccounts op die voor de verplichte
+  // gebruiker_id-koppeling zijn aangemaakt (FK staat op SET NULL).
+  try {
+    await verwijderWegwerpOnboardingGebruikers();
   } catch {
     // best-effort
   }
@@ -154,10 +168,13 @@ test("wizard draft aanmaken (tussentijds opslaan)", async ({ page }) => {
   await apiLogin(page);
 
   // Stap 1: concept-medewerker aanmaken (POST /medewerkers)
+  // gebruiker_id is verplicht: koppel aan een wegwerp-gebruikersaccount.
+  const gebruiker = await maakWegwerpOnboardingGebruiker("E2E Wizard Draft");
   const naam = `${TEST_NAAM_PREFIX}-DRAFT-${Date.now()}`;
   const res = await page.request.post("/api/medewerkers", {
     data: {
       naam,
+      gebruiker_id: gebruiker.id,
       email: `draft-${Date.now()}@${TEST_EMAIL_DOMAIN}`,
       medewerker_status: "concept",
       functie: null,
@@ -183,11 +200,13 @@ test("wizard draft aanmaken (tussentijds opslaan)", async ({ page }) => {
 test("wizard hervatten via wizard-status (save/resume)", async ({ page }) => {
   await apiLogin(page);
 
-  // Maak een concept-medewerker aan
+  // Maak een concept-medewerker aan (gekoppeld aan wegwerp-gebruikersaccount)
+  const gebruiker = await maakWegwerpOnboardingGebruiker("E2E Wizard Resume");
   const naam = `${TEST_NAAM_PREFIX}-RESUME-${Date.now()}`;
   const createRes = await page.request.post("/api/medewerkers", {
     data: {
       naam,
+      gebruiker_id: gebruiker.id,
       email: `resume-${Date.now()}@${TEST_EMAIL_DOMAIN}`,
       medewerker_status: "concept",
       functie: null,
@@ -215,11 +234,13 @@ test("wizard hervatten via wizard-status (save/resume)", async ({ page }) => {
 test("AI-voorstel accepteren wijzigt medewerker-veld NIET automatisch", async ({ page }) => {
   await apiLogin(page);
 
-  // Maak een medewerker en een AI-voorstel aan
+  // Maak een medewerker en een AI-voorstel aan (met wegwerp-gebruikersaccount)
+  const gebruiker = await maakWegwerpOnboardingGebruiker("E2E Wizard AI");
   const naam = `${TEST_NAAM_PREFIX}-AI-${Date.now()}`;
   const createRes = await page.request.post("/api/medewerkers", {
     data: {
       naam,
+      gebruiker_id: gebruiker.id,
       email: `ai-${Date.now()}@${TEST_EMAIL_DOMAIN}`,
       medewerker_status: "concept",
       functie: null,
@@ -252,10 +273,12 @@ test("AI-voorstel accepteren wijzigt medewerker-veld NIET automatisch", async ({
 test("AI-voorstel afwijzen zet status op 'afgewezen'", async ({ page }) => {
   await apiLogin(page);
 
-  // Maak concept-medewerker en voorstel aan
+  // Maak concept-medewerker en voorstel aan (met wegwerp-gebruikersaccount)
+  const gebruiker = await maakWegwerpOnboardingGebruiker("E2E Wizard Afwijs");
   const createRes = await page.request.post("/api/medewerkers", {
     data: {
       naam: `${TEST_NAAM_PREFIX}-AFWIJS-${Date.now()}`,
+      gebruiker_id: gebruiker.id,
       email: `afwijs-${Date.now()}@${TEST_EMAIL_DOMAIN}`,
       medewerker_status: "concept",
       functie: null,
@@ -294,9 +317,11 @@ test("AI-voorstel afwijzen zet status op 'afgewezen'", async ({ page }) => {
 test("AI-voorstel op 'later' beoordelen zet status op 'later'", async ({ page }) => {
   await apiLogin(page);
 
+  const gebruiker = await maakWegwerpOnboardingGebruiker("E2E Wizard Later");
   const createRes = await page.request.post("/api/medewerkers", {
     data: {
       naam: `${TEST_NAAM_PREFIX}-LATER-${Date.now()}`,
+      gebruiker_id: gebruiker.id,
       email: `later-${Date.now()}@${TEST_EMAIL_DOMAIN}`,
       medewerker_status: "concept",
       functie: null,
@@ -334,9 +359,11 @@ test("geen dubbele medewerker bij herhaalde aanmaak met zelfde e-mail", async ({
 
   const email = `dedup-${Date.now()}@${TEST_EMAIL_DOMAIN}`;
 
+  const gebruiker = await maakWegwerpOnboardingGebruiker("E2E Wizard Dedup");
   const res1 = await page.request.post("/api/medewerkers", {
     data: {
       naam: `${TEST_NAAM_PREFIX}-DEDUP1`,
+      gebruiker_id: gebruiker.id,
       email,
       medewerker_status: "concept",
       functie: null,
@@ -377,7 +404,10 @@ test("geen dubbele medewerker bij herhaalde aanmaak met zelfde e-mail", async ({
 // (tekst "niet beschikbaar"), verkeerd stapgedrag, wizard-fout.
 // De functionele API-integratie is bewezen in tests 14-22.
 
-test("UI: wizard opent in browser, toont 14 stappen, duplicaat en draft werken", async ({ page }) => {
+
+const TEST_USER_ID = 424_242;
+
+test("UI: wizard via ?userId — 13 stappen, identiteit disabled, gebruiker_id in POST, hervatten", async ({ page }) => {
   // ── STAP 0: Sessie aanmaken + auth/me-data ophalen via page.request ────────
   await apiLogin(page);
 
@@ -396,6 +426,7 @@ test("UI: wizard opent in browser, toont 14 stappen, duplicaat en draft werken",
   // Daarom één handler met auth/me als expliciete eerste tak — geen twee routes.
   const wizardNaam = `${TEST_NAAM_PREFIX}-UI-${Date.now()}`;
   let conceptId = 0;
+  let laatstePostBody: Record<string, unknown> | null = null;
 
   await page.route(/\/api\/.*/, async (route) => {
     const url = route.request().url();
@@ -412,6 +443,24 @@ test("UI: wizard opent in browser, toont 14 stappen, duplicaat en draft werken",
       return;
     }
 
+    // Onboarding-context: identiteit van het te onboarden gebruikersaccount.
+    // Na het aanmaken van het concept bevat de context concept_medewerker_id,
+    // waarmee de startpagina de "Lopende onboarding"-banner toont (hervatten).
+    if (url.includes(`/medewerkers/onboarding-context/${TEST_USER_ID}`)) {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          gebruiker_id: TEST_USER_ID,
+          naam: wizardNaam,
+          email: `ui@${TEST_EMAIL_DOMAIN}`,
+          telefoon: "0612345678",
+          concept_medewerker_id: conceptId > 0 ? conceptId : null,
+        }),
+      });
+      return;
+    }
+
     // Catalogus-endpoints: lege lijsten (wizard toont lege dropdowns, dat is OK)
     if (url.match(/\/api\/(functies|verlofsoorten|cao-opties|profielen)($|\?)/)) {
       await route.fulfill({ status: 200, contentType: "application/json", body: "[]" });
@@ -424,8 +473,10 @@ test("UI: wizard opent in browser, toont 14 stappen, duplicaat en draft werken",
       return;
     }
 
-    // POST /medewerkers: concept aanmaken — retourneer een fake medewerker
+    // POST /medewerkers: concept aanmaken — leg de body vast zodat we kunnen
+    // bewijzen dat de wizard gebruiker_id meestuurt (accounts maken mag NOOIT)
     if (method === "POST" && url.match(/\/api\/medewerkers$/)) {
+      laatstePostBody = route.request().postDataJSON() as Record<string, unknown>;
       conceptId = 99_999;
       await route.fulfill({
         status: 201,
@@ -433,6 +484,7 @@ test("UI: wizard opent in browser, toont 14 stappen, duplicaat en draft werken",
         body: JSON.stringify({
           id: conceptId,
           naam: wizardNaam,
+          gebruiker_id: TEST_USER_ID,
           medewerker_status: "concept",
           wizard_stap: 2,
           wizard_type: "werknemer",
@@ -449,7 +501,7 @@ test("UI: wizard opent in browser, toont 14 stappen, duplicaat en draft werken",
         contentType: "application/json",
         body: JSON.stringify(
           conceptId > 0
-            ? [{ id: conceptId, naam: wizardNaam, medewerker_status: "concept", wizard_stap: 2, wizard_type: "werknemer" }]
+            ? [{ id: conceptId, naam: wizardNaam, gebruiker_id: TEST_USER_ID, medewerker_status: "concept", wizard_stap: 2, wizard_type: "werknemer" }]
             : [],
         ),
       });
@@ -464,6 +516,7 @@ test("UI: wizard opent in browser, toont 14 stappen, duplicaat en draft werken",
         body: JSON.stringify({
           id: conceptId || 99_999,
           naam: wizardNaam,
+          gebruiker_id: TEST_USER_ID,
           medewerker_status: "concept",
           wizard_stap: 2,
           wizard_type: "werknemer",
@@ -500,8 +553,7 @@ test("UI: wizard opent in browser, toont 14 stappen, duplicaat en draft werken",
     }
 
     // Overige /api/*-calls: generieke lege succesrespons.
-    // GET → "[]" (leeg array) zodat layout-hooks (useListGoedkeuringAanvragen,
-    // useListChatGesprekken, useListGebouwen, enz.) geen TypeError gooien als ze
+    // GET → "[]" (leeg array) zodat layout-hooks geen TypeError gooien als ze
     // .map()/.filter()/.length doen op de response. Object-mutatieresponses
     // (POST/PATCH/DELETE/PUT) krijgen "{}" want die verwachten geen array.
     await route.fulfill({
@@ -511,19 +563,26 @@ test("UI: wizard opent in browser, toont 14 stappen, duplicaat en draft werken",
     });
   });
 
-  // ── STAP 1: Navigeer naar wizard ──────────────────────────────────────────
-  await page.goto("/personeel/onboarden");
+  // ── STAP 1: Navigeer naar wizard MET userId ────────────────────────────────
+  await page.goto(`/personeel/onboarden?userId=${TEST_USER_ID}`);
 
   // FAALCRITERIUM A: wizard-heading ontbreekt.
-  // Vangt: login-redirect (auth/me 401), lege pagina, feature flag UIT.
+  // Vangt: login-redirect (auth/me 401), lege pagina, feature flag UIT,
+  // onterecht redirect ondanks geldige userId.
   await expect(
     page.getByRole("heading", { name: "Onboarden" }),
     "Wizard-heading 'Onboarden' ontbreekt — login-redirect, lege pagina, of feature flag UIT",
   ).toBeVisible({ timeout: 15_000 });
 
-  // FAALCRITERIUM B: wizard staat op UIT (feature flag)
-  const isNietBeschikbaar = await page.getByText(/niet beschikbaar/i).isVisible().catch(() => false);
-  expect(isNietBeschikbaar, "Wizard toont 'niet beschikbaar' — VITE_FEATURE_WIZARD_ONBOARDING staat UIT").toBe(false);
+  // FAALCRITERIUM B: context-kaart met accountidentiteit ontbreekt
+  await expect(
+    page.getByText("Onboarding voor"),
+    "Context-kaart 'Onboarding voor …' ontbreekt — onboarding-context niet geladen",
+  ).toBeVisible({ timeout: 10_000 });
+  await expect(
+    page.getByText(wizardNaam).first(),
+    "Accountnaam uit onboarding-context niet zichtbaar",
+  ).toBeVisible();
 
   // ── STAP 2: Kies wizard-type ───────────────────────────────────────────────
   await expect(
@@ -533,22 +592,22 @@ test("UI: wizard opent in browser, toont 14 stappen, duplicaat en draft werken",
   await page.getByText("Vaste / tijdelijke medewerker").first().click();
   await page.waitForLoadState("networkidle");
 
-  // FAALCRITERIUM C: stapindicator 14 stappen
+  // FAALCRITERIUM C: stapindicator 13 stappen (FPS Connect-stap is vervallen)
   await expect(
-    page.getByText("Stap 1 van 14"),
-    "Stapindicator 'Stap 1 van 14' ontbreekt — wizard opent niet of heeft niet 14 stappen",
+    page.getByText("Stap 1 van 13"),
+    "Stapindicator 'Stap 1 van 13' ontbreekt — wizard opent niet of heeft niet 13 stappen",
   ).toBeVisible({ timeout: 10_000 });
   await expect(
     page.getByText("AI-voorbereiding").first(),
     "Stapnaam 'AI-voorbereiding' (stap 1) niet zichtbaar",
   ).toBeVisible();
 
-  // ── STAP 3: Volgende → stap 2 (Persoonsgegevens) ─────────────────────────
+  // ── STAP 3: Volgende → stap 2 (Persoonsgegevens, identiteit disabled) ─────
   await page.getByRole("button", { name: /Volgende/ }).first().click();
   await page.waitForLoadState("networkidle");
 
   await expect(
-    page.getByText("Stap 2 van 14"),
+    page.getByText("Stap 2 van 13"),
     "Stap 2 niet bereikt — Volgende-knop werkt niet",
   ).toBeVisible({ timeout: 10_000 });
   await expect(
@@ -556,19 +615,24 @@ test("UI: wizard opent in browser, toont 14 stappen, duplicaat en draft werken",
     "Stapnaam 'Persoonsgegevens' (stap 2) niet zichtbaar",
   ).toBeVisible();
 
-  // ── STAP 4: Naam invullen + concept aanmaken ──────────────────────────────
-  await page.locator("input[placeholder='Voor- en achternaam']").fill(wizardNaam);
-  await page.waitForTimeout(400);
+  // FAALCRITERIUM D: naamveld moet prefilled ÉN disabled zijn (immutable identiteit)
+  const naamVeld = page.locator("input[disabled]").first();
+  await expect(
+    naamVeld,
+    "Geen disabled invoerveld op stap 2 — identiteit is niet immutable",
+  ).toBeVisible({ timeout: 5_000 });
+  await expect(
+    naamVeld,
+    "Naamveld bevat niet de accountnaam uit de onboarding-context",
+  ).toHaveValue(wizardNaam);
 
-  const directeFout = await page.getByRole("alert").isVisible().catch(() => false);
-  expect(directeFout, "Foutmelding direct na invullen naam — onverwacht gedrag").toBe(false);
-
+  // ── STAP 4: Volgende → concept aanmaken (POST /medewerkers) ───────────────
   await page.getByRole("button", { name: /Volgende/ }).first().click();
   await page.waitForLoadState("networkidle");
 
-  // FAALCRITERIUM D: stap 3 bereikt (POST /medewerkers + PATCH voortgang)
+  // FAALCRITERIUM E: stap 3 bereikt (POST /medewerkers + PATCH voortgang)
   await expect(
-    page.getByText("Stap 3 van 14"),
+    page.getByText("Stap 3 van 13"),
     "Stap 3 niet bereikt — concept aanmaken of wizard-voortgang opslaan mislukt",
   ).toBeVisible({ timeout: 20_000 });
   await expect(
@@ -576,24 +640,30 @@ test("UI: wizard opent in browser, toont 14 stappen, duplicaat en draft werken",
     "Stapnaam 'Contactgegevens' (stap 3) niet zichtbaar",
   ).toBeVisible();
 
-  // ── STAP 5: Hervatten — terug naar wizard-start ───────────────────────────
-  await page.goto("/personeel/onboarden");
+  // FAALCRITERIUM F: POST /medewerkers moet gebruiker_id van het account bevatten
+  expect(
+    laatstePostBody,
+    "POST /medewerkers is nooit uitgevoerd",
+  ).not.toBeNull();
+  expect(
+    laatstePostBody?.gebruiker_id,
+    "POST /medewerkers bevat geen gebruiker_id — onboarding is losgekoppeld van het account",
+  ).toBe(TEST_USER_ID);
 
-  // FAALCRITERIUM E: login-redirect na terug-navigatie (sessie verloren)
+  // ── STAP 5: Hervatten — terug naar wizard-start met dezelfde userId ───────
+  await page.goto(`/personeel/onboarden?userId=${TEST_USER_ID}`);
+
+  // FAALCRITERIUM G: login-redirect na terug-navigatie (sessie verloren)
   await expect(
     page.getByRole("heading", { name: "Onboarden" }),
     "Wizard-heading weg na terug-navigatie — sessie verloren",
   ).toBeVisible({ timeout: 15_000 });
 
+  // De context bevat nu concept_medewerker_id → "Lopende onboarding"-banner
   await expect(
-    page.getByText("Lopende onboardingen"),
-    "Sectie 'Lopende onboardingen' niet zichtbaar — concept niet opgeslagen",
+    page.getByText("Lopende onboarding").first(),
+    "Banner 'Lopende onboarding' niet zichtbaar — concept_medewerker_id uit context niet gebruikt",
   ).toBeVisible({ timeout: 10_000 });
-
-  await expect(
-    page.getByText(wizardNaam),
-    `Concept '${wizardNaam}' niet zichtbaar in Lopende onboardingen`,
-  ).toBeVisible({ timeout: 5_000 });
 
   // Klik "Hervatten"
   const hervattenKnop = page.getByRole("button", { name: "Hervatten" }).first();
@@ -601,9 +671,95 @@ test("UI: wizard opent in browser, toont 14 stappen, duplicaat en draft werken",
   await hervattenKnop.click();
   await page.waitForLoadState("networkidle");
 
-  // FAALCRITERIUM F: wizard hervat niet (stap-indicator niet zichtbaar)
+  // FAALCRITERIUM H: wizard hervat niet (stap-indicator niet zichtbaar)
   await expect(
-    page.getByText(/Stap \d+ van 14/),
+    page.getByText(/Stap \d+ van 13/),
     "Wizard-stap niet zichtbaar na hervatten — hervatten werkt niet",
   ).toBeVisible({ timeout: 15_000 });
+});
+
+// ── Toegangscontract-tests: zonder/ongeldig/gekoppeld userId ─────────────────
+
+/**
+ * Minimale mock-laag voor de toegangscontract-tests: auth/me krijgt echte
+ * gebruikersdata, onboarding-context wordt per test ingevuld, alle overige
+ * /api/*-calls krijgen een generieke lege respons.
+ */
+async function mockToegangsApi(
+  page: Page,
+  meData: unknown,
+  contextRespons: { status: number; body: string } | null,
+): Promise<void> {
+  await page.addInitScript(() => {
+    localStorage.setItem("fps.welkom.afgerond", "true");
+    localStorage.setItem("fps_onboarding_voltooid", "true");
+  });
+  await page.route(/\/api\/.*/, async (route) => {
+    const url = route.request().url();
+    if (url.includes("/auth/me")) {
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(meData) });
+      return;
+    }
+    if (contextRespons && url.includes("/medewerkers/onboarding-context/")) {
+      await route.fulfill({ status: contextRespons.status, contentType: "application/json", body: contextRespons.body });
+      return;
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: route.request().method() === "GET" ? "[]" : "{}",
+    });
+  });
+}
+
+test("UI: /personeel/onboarden zonder userId → redirect naar medewerkerslijst", async ({ page }) => {
+  await apiLogin(page);
+  const meData = await (await page.request.get("/api/auth/me")).json();
+  await mockToegangsApi(page, meData, null);
+
+  await page.goto("/personeel/onboarden");
+
+  // De pagina moet client-side doorsturen naar de medewerkerslijst
+  await page.waitForURL(/\/personeel\?tab=medewerkers/, { timeout: 15_000 });
+  expect(page.url()).toContain("/personeel?tab=medewerkers");
+});
+
+test("UI: onbekend userId → 'Gebruiker niet gevonden'-scherm", async ({ page }) => {
+  await apiLogin(page);
+  const meData = await (await page.request.get("/api/auth/me")).json();
+  await mockToegangsApi(page, meData, {
+    status: 404,
+    body: JSON.stringify({ code: "USER_NOT_FOUND", melding: "Gebruiker niet gevonden" }),
+  });
+
+  await page.goto("/personeel/onboarden?userId=999999999");
+
+  await expect(
+    page.getByText("Gebruiker niet gevonden"),
+    "404-scherm 'Gebruiker niet gevonden' niet zichtbaar",
+  ).toBeVisible({ timeout: 15_000 });
+  await expect(
+    page.getByRole("button", { name: "Naar medewerkerslijst" }),
+    "Terugknop naar medewerkerslijst ontbreekt op 404-scherm",
+  ).toBeVisible();
+});
+
+test("UI: al gekoppeld userId → 'Al gekoppeld'-scherm", async ({ page }) => {
+  await apiLogin(page);
+  const meData = await (await page.request.get("/api/auth/me")).json();
+  await mockToegangsApi(page, meData, {
+    status: 409,
+    body: JSON.stringify({ code: "EMPLOYEE_PROFILE_ALREADY_EXISTS", melding: "Al gekoppeld" }),
+  });
+
+  await page.goto("/personeel/onboarden?userId=77");
+
+  await expect(
+    page.getByText("Al gekoppeld").first(),
+    "409-scherm 'Al gekoppeld' niet zichtbaar",
+  ).toBeVisible({ timeout: 15_000 });
+  await expect(
+    page.getByText("heeft al een medewerkerprofiel"),
+    "Uitleg over bestaand medewerkerprofiel ontbreekt op 409-scherm",
+  ).toBeVisible();
 });

@@ -5024,13 +5024,23 @@ export interface MedewerkerInput {
   verlofsoort_ids?: number[];
   /** Jaar waarvoor het verlofsaldo wordt aangemaakt (standaard huidig jaar). */
   jaar?: number;
-  /** Wanneer true wordt direct een FPS Connect gebruikersaccount aangemaakt en een uitnodigingsmail verstuurd. Vereist een geldig e-mailadres. */
-  connect_uitnodigen?: boolean;
+}
+
+/**
+ * Identiteit van een te onboarden gebruikersaccount; naam/email/telefoon zijn de onveranderlijke prefill-bron voor de onboarding-wizard.
+ */
+export interface OnboardingContext {
+  gebruiker_id: number;
+  naam: string;
+  /** @nullable */
+  email?: string | null;
+  /** @nullable */
+  telefoon?: string | null;
   /**
-     * Profiel-id voor het aan te maken Connect-account (optioneel; laat leeg voor lege bevoegdheden).
+     * Id van een bestaand concept-medewerkerprofiel voor deze gebruiker; de wizard hervat dit concept in plaats van een nieuw aan te maken.
      * @nullable
      */
-  connect_profiel_id?: number | null;
+  concept_medewerker_id?: number | null;
 }
 
 export interface MedewerkerAanstelling {

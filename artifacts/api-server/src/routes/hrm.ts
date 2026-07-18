@@ -7,10 +7,7 @@
 // salarisadministratie. Uitzondering (op expliciet verzoek vooruit gebouwd): AI
 // stelt opleidingen/cursussen voor per functie. Conform het projectprincipe stelt
 // de AI alleen voor; een mens bevestigt en bewaart (geen automatische opslag).
-import crypto from "node:crypto";
 import { Router } from "express";
-import { maakGebruikerAan } from "../lib/gebruiker-aanmaken";
-import { stuurUitnodigingsmail } from "../services/email";
 import multer from "multer";
 import { extraheerPdfTekst } from "../lib/pdfTekst";
 import { analyseerEnSlaVoorstellenOp, extracteerHrmVeldenUitBuffer } from "../lib/hrm-ai-analyse";
@@ -36,7 +33,6 @@ import {
   jaarAfsluitingRegelsTable,
   ziekmeldingenTable,
   gebruikersTable,
-  profielenTable,
   medewerkerDocumentenTable,
   zzpOvereenkomstenTable,
   medewerkerAanstellingenTable,
@@ -64,8 +60,13 @@ const hrmStorage = new ObjectStorageService();
 
 const router = Router();
 
-function domein(): string {
-  return (process.env.REPLIT_DOMAINS ?? "").split(",")[0]?.trim() || "localhost";
+// Unique-violation (Postgres 23505) op de gebruiker_id-koppeling herkennen,
+// zodat een race tussen twee gelijktijdige onboardings netjes 409 oplevert.
+function isUniekeGebruikerKoppeling(err: unknown): boolean {
+  const code =
+    (err as { code?: string } | null)?.code ??
+    ((err as { cause?: { code?: string } } | null)?.cause?.code ?? null);
+  return code === "23505";
 }
 
 const lezen = requireBevoegdheid("personeel", 1);
@@ -894,14 +895,36 @@ router.post("/medewerkers", schrijven, async (req, res): Promise<void> => {
       geboorteplaats, adres, postcode, woonplaats, rijbewijs, rijbewijs_vervaldatum,
       vca_vervaldatum, ehbo_vervaldatum, bhv_vervaldatum, cv_tekst, actief, opmerkingen,
       verlofsoort_ids, jaar,
-      // Connect-toegang: optioneel FPS Connect account aanmaken + uitnodigen
-      connect_uitnodigen, connect_profiel_id,
     } = req.body;
     if (!naam) return void res.status(400).json({ error: "naam is verplicht" });
 
-    // Validatie: connect_uitnodigen vereist een e-mailadres
-    if (connect_uitnodigen && !email) {
-      return void res.status(400).json({ error: "E-mailadres is verplicht om een Connect-uitnodiging te versturen." });
+    // Geconsolideerde onboarding: een medewerkerprofiel bestaat alleen als
+    // koppeling aan een bestaand gebruikersaccount. Zonder gebruiker_id faalt
+    // het aanmaken; onboarding maakt zelf nooit accounts aan.
+    const gebruikerId = parseId(gebruiker_id);
+    if (gebruiker_id == null || !Number.isFinite(gebruikerId)) {
+      return void res.status(400).json({
+        error: "gebruiker_id is verplicht: een medewerkerprofiel wordt altijd aan een bestaand gebruikersaccount gekoppeld.",
+        velden: ["gebruiker_id"],
+      });
+    }
+    const [bestaandeGebruiker] = await db
+      .select({ id: gebruikersTable.id })
+      .from(gebruikersTable)
+      .where(eq(gebruikersTable.id, gebruikerId));
+    if (!bestaandeGebruiker) {
+      return void res.status(404).json({ error: "Gebruiker niet gevonden", code: "USER_NOT_FOUND" });
+    }
+    const [alGekoppeld] = await db
+      .select({ id: medewerkersTable.id })
+      .from(medewerkersTable)
+      .where(eq(medewerkersTable.gebruikerId, gebruikerId));
+    if (alGekoppeld) {
+      return void res.status(409).json({
+        error: "Deze gebruiker heeft al een medewerkerprofiel.",
+        code: "EMPLOYEE_PROFILE_ALREADY_EXISTS",
+        medewerker_id: alGekoppeld.id,
+      });
     }
 
     const wm = werkmaatschappij || "FPS Brandpreventie";
@@ -909,7 +932,7 @@ router.post("/medewerkers", schrijven, async (req, res): Promise<void> => {
       .insert(medewerkersTable)
       .values({
         naam,
-        gebruikerId: gebruiker_id ?? null,
+        gebruikerId,
         email,
         telefoon,
         mobiel,
@@ -952,86 +975,65 @@ router.post("/medewerkers", schrijven, async (req, res): Promise<void> => {
       await maakVerlofprofielAan({ medewerkerId: m.id, caoOptie, contracturenPerWeek: uren, verlofsoortIds: ids, jaar: saldoJaar }, db);
     }
 
-    // Connect-toegang: gebruikersaccount aanmaken, koppelen en uitnodigingsmail versturen.
-    // Niet-fataal: medewerker is altijd aangemaakt; account-aanmaak is best-effort.
-    if (connect_uitnodigen && email) {
-      try {
-        // Bevoegdheden ophalen uit het opgegeven profiel (optioneel).
-        let bevoegdheden: Record<string, number> = {};
-        let herkomstProfielId: number | null = null;
-        const profielId = typeof connect_profiel_id === "number" && Number.isFinite(connect_profiel_id)
-          ? connect_profiel_id : null;
-        if (profielId !== null) {
-          const [profiel] = await db
-            .select({ bevoegdheden: profielenTable.bevoegdheden })
-            .from(profielenTable)
-            .where(eq(profielenTable.id, profielId));
-          if (profiel) {
-            bevoegdheden = (profiel.bevoegdheden as Record<string, number>) ?? {};
-            herkomstProfielId = profielId;
-          }
-        }
-
-        // Functienaam ophalen voor de functietitels van het gebruikersaccount.
-        let functietitels: string[] = [];
-        if (functie_id) {
-          const [f] = await db
-            .select({ naam: functiesTable.naam })
-            .from(functiesTable)
-            .where(eq(functiesTable.id, parseId(functie_id)));
-          if (f?.naam) functietitels = [f.naam];
-        }
-
-        // Gebruiker aanmaken in transactie + medewerker koppelen.
-        const nieuwGebruiker = await db.transaction(async (tx) => {
-          const g = await maakGebruikerAan(tx, {
-            naam: m.naam,
-            email,
-            rol: "gebruiker",
-            functietitels,
-            bevoegdheden,
-            herkomstProfielId,
-            herkomstAutomatisch: false,
-            uitnodigingStatus: "niet_uitgenodigd",
-            dienstverband: (dienstverband || "vast") as "intern" | "inhuur" | "uitzend" | "zzp",
-          });
-          await tx
-            .update(medewerkersTable)
-            .set({ gebruikerId: g.id, bijgewerktOp: new Date() })
-            .where(eq(medewerkersTable.id, m.id));
-          return g;
-        });
-
-        // Uitnodigingsmail versturen (niet-fataal: account bestaat al, mail is slechts notificatie).
-        try {
-          const token = crypto.randomBytes(32).toString("hex");
-          const verlooptOp = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-          const activatieLink = `https://${domein()}/uitnodiging/${token}`;
-          await stuurUitnodigingsmail({
-            naarEmail: nieuwGebruiker.email,
-            naarNaam: nieuwGebruiker.naam,
-            activatieLink,
-            verstuurdDoorId: req.session.userId ?? null,
-          });
-          await db
-            .update(gebruikersTable)
-            .set({
-              uitnodigingStatus: "uitgenodigd",
-              uitnodigingVerstuurdOp: new Date(),
-              uitnodigingToken: token,
-              uitnodigingVerlooptOp: verlooptOp,
-            })
-            .where(eq(gebruikersTable.id, nieuwGebruiker.id));
-        } catch (mailErr) {
-          req.log.warn({ mailErr, gebruikerId: nieuwGebruiker.id }, "connect_uitnodigen: uitnodigingsmail mislukt; account is wél aangemaakt");
-        }
-      } catch (connectErr) {
-        req.log.warn({ connectErr, medewerkerId: m.id }, "connect_uitnodigen: gebruikersaccount aanmaken mislukt; medewerker is wél opgeslagen");
-      }
-    }
-
     invalideerContext("medewerker", m.id);
     res.status(201).json(await medewerkerNaarJson(m));
+  } catch (err) {
+    // Race met gelijktijdige onboarding: de unieke index op gebruiker_id is de
+    // laatste wacht; vertaal een unique-violation naar hetzelfde 409-contract.
+    if (isUniekeGebruikerKoppeling(err)) {
+      return void res.status(409).json({
+        error: "Deze gebruiker heeft al een medewerkerprofiel.",
+        code: "EMPLOYEE_PROFILE_ALREADY_EXISTS",
+      });
+    }
+    req.log.error(err);
+    res.status(500).json({ error: "Interne serverfout" });
+  }
+});
+
+// Onboarding-context: identiteit van een te onboarden gebruikersaccount plus
+// controle of er al een medewerkerprofiel bestaat. Bewust een eigen endpoint:
+// GET /gebruikers/:id vereist gebruikers-leesbevoegdheid die personeelsbeheer
+// niet altijd heeft, en de toewijsbare-gebruikerslijst bevat bewust geen
+// e-mail/telefoon.
+router.get("/medewerkers/onboarding-context/:gebruikerId", schrijven, async (req, res): Promise<void> => {
+  try {
+    const gebruikerId = parseId(req.params.gebruikerId);
+    if (!Number.isFinite(gebruikerId)) {
+      return void res.status(404).json({ error: "Gebruiker niet gevonden", code: "USER_NOT_FOUND" });
+    }
+    const [g] = await db
+      .select({
+        id: gebruikersTable.id,
+        naam: gebruikersTable.naam,
+        email: gebruikersTable.email,
+        telefoon: gebruikersTable.telefoon,
+        rol: gebruikersTable.rol,
+        actief: gebruikersTable.actief,
+      })
+      .from(gebruikersTable)
+      .where(eq(gebruikersTable.id, gebruikerId));
+    if (!g || !g.actief || g.rol === "klant") {
+      return void res.status(404).json({ error: "Gebruiker niet gevonden", code: "USER_NOT_FOUND" });
+    }
+    const [gekoppeld] = await db
+      .select({ id: medewerkersTable.id, medewerkerStatus: medewerkersTable.medewerkerStatus })
+      .from(medewerkersTable)
+      .where(eq(medewerkersTable.gebruikerId, gebruikerId));
+    if (gekoppeld && gekoppeld.medewerkerStatus !== "concept") {
+      return void res.status(409).json({
+        error: "Deze gebruiker heeft al een medewerkerprofiel.",
+        code: "EMPLOYEE_PROFILE_ALREADY_EXISTS",
+        medewerker_id: gekoppeld.id,
+      });
+    }
+    res.json({
+      gebruiker_id: g.id,
+      naam: g.naam,
+      email: g.email ?? null,
+      telefoon: g.telefoon ?? null,
+      concept_medewerker_id: gekoppeld?.id ?? null,
+    });
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });
@@ -1062,7 +1064,7 @@ router.post("/medewerkers/onboarding", schrijven, async (req, res): Promise<void
 
     const velden: string[] = [];
 
-    // gebruiker
+    // gebruiker: moet bestaan (404) en mag nog geen medewerkerprofiel hebben (409)
     let gebruiker: { id: number; naam: string; email: string | null } | undefined;
     if (gebruiker_id == null) {
       velden.push("gebruiker_id");
@@ -1071,8 +1073,10 @@ router.post("/medewerkers/onboarding", schrijven, async (req, res): Promise<void
         .select({ id: gebruikersTable.id, naam: gebruikersTable.naam, email: gebruikersTable.email })
         .from(gebruikersTable)
         .where(eq(gebruikersTable.id, parseId(gebruiker_id)));
-      if (!g) velden.push("gebruiker_id");
-      else gebruiker = g;
+      if (!g) {
+        return void res.status(404).json({ error: "Gebruiker niet gevonden", code: "USER_NOT_FOUND", velden: ["gebruiker_id"] });
+      }
+      gebruiker = g;
     }
 
     // dubbele medewerker voor dezelfde gebruiker voorkomen
@@ -1082,7 +1086,12 @@ router.post("/medewerkers/onboarding", schrijven, async (req, res): Promise<void
         .from(medewerkersTable)
         .where(eq(medewerkersTable.gebruikerId, gebruiker.id));
       if (bestaand) {
-        return void res.status(400).json({ error: "Deze gebruiker is al als medewerker geregistreerd.", velden: ["gebruiker_id"] });
+        return void res.status(409).json({
+          error: "Deze gebruiker heeft al een medewerkerprofiel.",
+          code: "EMPLOYEE_PROFILE_ALREADY_EXISTS",
+          medewerker_id: bestaand.id,
+          velden: ["gebruiker_id"],
+        });
       }
     }
 
@@ -1188,6 +1197,14 @@ router.post("/medewerkers/onboarding", schrijven, async (req, res): Promise<void
     invalideerContext("medewerker", m.id);
     res.status(201).json(await medewerkerNaarJson(m));
   } catch (err) {
+    // Race met gelijktijdige aanmaak: de unieke index op gebruiker_id is de
+    // laatste wacht; vertaal een unique-violation naar hetzelfde 409-contract.
+    if (isUniekeGebruikerKoppeling(err)) {
+      return void res.status(409).json({
+        error: "Deze gebruiker heeft al een medewerkerprofiel.",
+        code: "EMPLOYEE_PROFILE_ALREADY_EXISTS",
+      });
+    }
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });
   }
@@ -1208,14 +1225,19 @@ router.patch("/medewerkers/:id", schrijven, async (req, res): Promise<void> => {
   try {
     const { naam, gebruiker_id, email, telefoon, mobiel, werkmaatschappij, functie_id, leidinggevende_id, cao, dienstverband, bedrijf_uitzendbureau, contracturen_per_week, deeltijd_percentage, in_dienst_sinds, uit_dienst_per, noodcontact_naam, noodcontact_telefoon, geboortedatum, geboorteplaats, adres, postcode, woonplaats, rijbewijs, rijbewijs_vervaldatum, vca_vervaldatum, ehbo_vervaldatum, bhv_vervaldatum, cv_tekst, actief, opmerkingen } = req.body;
     // Voorkom dat één account aan twee medewerkers gekoppeld raakt (onboarding blokkeert
-    // dit al; hier ook bij profielwijziging, want er is geen unieke DB-constraint).
+    // dit al; hier ook bij profielwijziging, met de unieke index als laatste wacht).
     if (gebruiker_id != null) {
       const [bestaand] = await db
         .select({ id: medewerkersTable.id })
         .from(medewerkersTable)
         .where(and(eq(medewerkersTable.gebruikerId, parseId(gebruiker_id)), ne(medewerkersTable.id, parseId(req.params.id))));
       if (bestaand) {
-        return void res.status(400).json({ error: "Deze gebruiker is al als medewerker geregistreerd.", velden: ["gebruiker_id"] });
+        return void res.status(409).json({
+          error: "Deze gebruiker heeft al een medewerkerprofiel.",
+          code: "EMPLOYEE_PROFILE_ALREADY_EXISTS",
+          medewerker_id: bestaand.id,
+          velden: ["gebruiker_id"],
+        });
       }
     }
     const werkgeverId = werkmaatschappij !== undefined ? await werkgeverIdVoor(werkmaatschappij) : undefined;
@@ -1261,6 +1283,13 @@ router.patch("/medewerkers/:id", schrijven, async (req, res): Promise<void> => {
     invalideerContext("medewerker", m.id);
     res.json(await medewerkerNaarJson(m));
   } catch (err) {
+    // Race met gelijktijdige koppeling: unieke index vangt het; zelfde 409-contract.
+    if (isUniekeGebruikerKoppeling(err)) {
+      return void res.status(409).json({
+        error: "Deze gebruiker heeft al een medewerkerprofiel.",
+        code: "EMPLOYEE_PROFILE_ALREADY_EXISTS",
+      });
+    }
     req.log.error(err);
     res.status(500).json({ error: "Interne serverfout" });
   }

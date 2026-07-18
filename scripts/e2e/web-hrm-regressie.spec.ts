@@ -25,6 +25,10 @@ import {
   setupE2eWebAccount,
   setupE2eWebAdminAccount,
 } from "../src/e2e-monteur-testaccount";
+import {
+  maakWegwerpOnboardingGebruiker,
+  verwijderWegwerpOnboardingGebruikers,
+} from "../src/e2e-onboarding-testgebruikers";
 import { authenticator } from "otplib";
 
 const REGRESSIE_NAAM_PREFIX = "E2E-REGRESSIE-MED";
@@ -42,6 +46,13 @@ test.afterAll(async () => {
     await db.execute(
       sql`DELETE FROM medewerkers WHERE naam LIKE ${REGRESSIE_NAAM_PREFIX + "%"} AND medewerker_status = 'concept'`,
     );
+  } catch {
+    // best-effort
+  }
+  // Ruim wegwerp-gebruikersaccounts op (aangemaakt voor de verplichte
+  // gebruiker_id-koppeling bij POST /medewerkers).
+  try {
+    await verwijderWegwerpOnboardingGebruikers();
   } catch {
     // best-effort
   }
@@ -154,13 +165,30 @@ test("regressie: bestaand personeelsdossier opent via GET /medewerkers/:id", asy
   expect(typeof detail.naam).toBe("string");
 });
 
-test("regressie: legacy POST /medewerkers werkt zonder wizard (direct aanmaken)", async ({ page }) => {
+test("regressie: POST /medewerkers werkt zonder wizard, mét verplichte gebruiker-koppeling", async ({ page }) => {
   await apiLoginBeheerder(page);
 
   const naam = `${REGRESSIE_NAAM_PREFIX}-DIRECT-${Date.now()}`;
+
+  // Nieuw contract: zonder gebruiker_id MOET aanmaken falen (400).
+  const zonderKoppeling = await page.request.post("/api/medewerkers", {
+    data: {
+      naam,
+      email: `direct-${Date.now()}@e2e-regressie.fps.local`,
+      medewerker_status: "concept",
+      functie: null,
+      werkmaatschappij: null,
+      in_dienst_sinds: null,
+    },
+  });
+  expect(zonderKoppeling.status()).toBe(400);
+
+  // Mét gekoppeld gebruikersaccount slaagt het direct aanmaken nog steeds.
+  const gebruiker = await maakWegwerpOnboardingGebruiker("E2E Regressie Direct");
   const res = await page.request.post("/api/medewerkers", {
     data: {
       naam,
+      gebruiker_id: gebruiker.id,
       email: `direct-${Date.now()}@e2e-regressie.fps.local`,
       medewerker_status: "concept",
       functie: null,

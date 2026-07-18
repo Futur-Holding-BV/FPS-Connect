@@ -870,6 +870,7 @@ export * from './offerteVervolgOpties';
 export * from './offerteVerzendenInput';
 export * from './offerteVraag';
 export * from './offerteVraagAntwoordInput';
+export * from './onboardingContext';
 export * from './onboardingFout';
 export * from './onboardingVoorstelInvoer';
 export * from './onderaannemerOrder';
