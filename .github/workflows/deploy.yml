@@ -65,7 +65,9 @@ jobs:
           chmod 700 ~/.ssh
 
           # Sleutel naar bestand schrijven zonder hem ooit te tonen.
-          printf '%s\n' "${PROD_SSH_KEY}" > ~/.ssh/deploy_key
+          # Ondersteunt zowel multiline-secrets (echte newlines) als platte
+          # strings met \n-sequenties (Replit-opslagformaat).
+          printf '%s' "${PROD_SSH_KEY}" | sed 's/\\n/\n/g' > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
 
           # Host key veilig vastleggen: ssh-keyscan haalt de publieke hostkey

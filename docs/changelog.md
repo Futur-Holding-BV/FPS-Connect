@@ -1,3 +1,19 @@
+## 2026-07-18 — Auto-deploy hersteld: SSH-sleutelformaat + backup-profiel
+
+- **Uitvoering:** bugfix deploy-pipeline | **Kwaliteit:** hoog | **Risico:** laag
+
+**Directe actie:** VPS handmatig naar `11b9eab` gereset (scrollfix #776 nu live op connect.fps-one.nl). Caddy+API images herbouwd en herstart via SSH.
+
+**Root cause 1 — SSH-sleutel ongeldig (deploy.yml):**
+`printf '%s\n' "${PROD_SSH_KEY}"` schreef de Replit-secret (platte regel) als één regel naar een bestand → OpenSSH `error in libcrypto` → deploy faalde al voor stap 1. Vervangen door `printf '%s' … | sed 's/\\n/\n/g'` — werkt voor zowel flat-string als multiline GitHub Secrets.
+
+**Root cause 2 — backup-service profile-gating (deploy-production.sh):**
+De `backup`-service in docker-compose.production.yml heeft `profiles: ["backup"]`. `${COMPOSE} run --rm -T backup` zonder `--profile backup` start een losse postgres-container (zonder `POSTGRES_PASSWORD`) → exit 1 → deploy stopte op stap 2, bereikt nooit git-reset/build. Vervangen door `${COMPOSE} --profile backup run --rm -T backup`.
+
+Beide fixes zijn rechtstreeks via GitHub Contents API op main gepusht (`46f367f1`, `6ac6aeb3`); zullen actief zijn bij de volgende push naar GitHub.
+
+---
+
 ## 2026-07-18 — Consolidatie medewerker-aanmaak naar centrale wizard
 
 - **Uitvoering:** refactor | **Kwaliteit:** hoog | **Risico:** laag

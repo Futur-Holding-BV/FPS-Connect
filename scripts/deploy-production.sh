@@ -101,8 +101,10 @@ healthcheck() {
 }
 
 # ─── STAP 2: databaseback-up (bestaande compose backup-opdracht) ─────────────
+# --profile backup is vereist: de backup-service zit in het "backup"-profiel
+# en is standaard uitgesloten van compose-commando's zonder die vlag.
 echo "=== STAP 2: databaseback-up maken ==="
-${COMPOSE} run --rm -T backup
+${COMPOSE} --profile backup run --rm -T backup
 
 # Verifieer dat er daadwerkelijk een bruikbare back-up is weggeschreven:
 # een deploy zonder werkende back-up mag niet doorgaan.

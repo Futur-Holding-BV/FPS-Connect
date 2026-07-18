@@ -60,9 +60,11 @@ verifiëren via psql (information_schema) — exit 0 is geen bewijs.
 - Een net bijgewerkte Replit-secret bereikt NIET de al draaiende bash-tool of code_execution-sandbox (die lezen een stale/lege env). Lees zo'n secret via de validation-runner (start een vers proces) i.p.v. direct in bash.
 - Een meerregelige PEM/OpenSSH private key die in een secret-veld wordt geplakt verliest vaak zijn newlines (wordt één spatie-gescheiden regel) → OpenSSH faalt met `error in libcrypto` / `Permission denied`. Reconstrueer: strip alle whitespace uit de base64-body tussen de BEGIN/END-headers en herwrap op 70 tekens. Sleutelmateriaal nooit printen.
 
-**Automatische GitHub-deploy — status (bevestigd):**
-- De "Deploy naar productie"-workflow is nog NOOIT groen geweest: elke run faalde of werd geskipt. Een recente run faalde bij de SSH-stap met `error: missing server host` — de job las environment-scoped secrets (leeg); repo-level `PROD_SSH_HOST/USER/KEY/PORT` bestaan inmiddels wél en het `production`-environment heeft geen required reviewers meer.
-- De correcte single-job workflow (push→appleboy/ssh-action→`/opt/fps-one/deploy`→pull+build+migrate+up -d) wordt pas actief zodra hij op origin/main staat. Het bevestigen van de eerste échte deploy is daarmee per definitie een POST-MERGE activiteit: vereist GitHub Actions-observatie én servertoegang. Zonder SSH kan de agent alleen healthz + de GitHub-run controleren, niet de VPS-git-HEAD/containers.
+**Automatische GitHub-deploy — root causes gevonden en gefixed (18 juli 2026):**
+- **Root cause 1 (SSH-sleutel):** `printf '%s\n' "${PROD_SSH_KEY}"` in deploy.yml schreef de platte Replit-secret als één regel → `error in libcrypto`. Gefixed naar `printf '%s' … | sed 's/\\n/\n/g'` (werkt voor flat-string én multiline).
+- **Root cause 2 (backup-profiel):** `backup`-service in docker-compose.production.yml staat in `profiles: ["backup"]`; `${COMPOSE} run --rm -T backup` zonder `--profile backup` start een losse postgres → POSTGRES_PASSWORD fout → exit 1 op stap 2. Gefixed naar `${COMPOSE} --profile backup run --rm -T backup`.
+- Beide fixes op main gepusht via Contents API (commits 46f367f1, 6ac6aeb3). De auto-deploy is nog NOOIT succesvol geweest; dit zijn de reden waarom. Na de volgende push naar main zou GitHub Actions eindelijk moeten slagen.
+- Workflow_dispatch vereist `workflow`-scope die GITHUB_TOKEN_PUSH niet heeft; test kan pas bij de volgende echte push. Verifieer via VPS reflog: `git reflog | head` moet een nieuwe "reset: moving to origin/main" tonen na de Actions-run.
 
 **Structurele productie-config-gaten:**
 - Productie mist mailvariabelen (Azure Graph + afzender/postbus) → uitnodigings-
