@@ -5,7 +5,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import {
   useGetHrmStats,
   useListMedewerkers,
-  useCreateMedewerker,
   useOnboardMedewerker,
   useListFuncties,
   useCreateFunctie,
@@ -41,7 +40,6 @@ import {
   getListPlanningMedewerkersQueryKey,
 } from "@workspace/api-client-react";
 import type {
-  MedewerkerInput,
   FunctieInput,
   Functie,
   OpleidingInput,
@@ -154,7 +152,6 @@ export default function PersoneelPagina() {
   const { data: werkgevers } = useListWerkgevers();
   const { data: ziekmeldingen } = useListZiekmeldingen();
 
-  const maakMedewerker = useCreateMedewerker();
   const onboard = useOnboardMedewerker();
   const maakFunctie = useCreateFunctie();
   const wijzigFunctie = useUpdateFunctie();
@@ -253,7 +250,6 @@ export default function PersoneelPagina() {
     }
   }
 
-  const [medewerkerOpen, setMedewerkerOpen] = useState(false);
   const [onboardOpen, setOnboardOpen] = useState(false);
   const [functieOpen, setFunctieOpen] = useState(false);
   const [opleidingOpen, setOpleidingOpen] = useState(false);
@@ -291,12 +287,6 @@ export default function PersoneelPagina() {
     actief: true,
   });
 
-  const [medewerkerForm, setMedewerkerForm] = useState<MedewerkerInput>({
-    naam: "",
-    werkmaatschappij: WERKMAATSCHAPPIJ_STD,
-    dienstverband: "vast",
-    bedrijf_uitzendbureau: undefined,
-  });
   const [functieForm, setFunctieForm] = useState<FunctieInput>({
     naam: "",
     werkmaatschappij: WERKMAATSCHAPPIJ_STD,
@@ -333,24 +323,6 @@ export default function PersoneelPagina() {
     dienstverband: "vast",
     bedrijf_uitzendbureau: undefined,
   });
-
-  async function opslaanMedewerker() {
-    if (!medewerkerForm.naam.trim()) {
-      toast({ title: "Naam is verplicht", variant: "destructive" });
-      return;
-    }
-    try {
-      await maakMedewerker.mutateAsync({ data: { ...medewerkerForm, naam: medewerkerForm.naam.trim() } });
-      await queryClient.invalidateQueries({ queryKey: getListMedewerkersQueryKey() });
-      await queryClient.invalidateQueries({ queryKey: getGetHrmStatsQueryKey() });
-      await queryClient.invalidateQueries({ queryKey: getListPlanningMedewerkersQueryKey() });
-      toast({ title: "Medewerker toegevoegd" });
-      setMedewerkerForm({ naam: "", werkmaatschappij: WERKMAATSCHAPPIJ_STD, dienstverband: "vast", bedrijf_uitzendbureau: undefined });
-      setMedewerkerOpen(false);
-    } catch {
-      toast({ title: "Opslaan mislukt", variant: "destructive" });
-    }
-  }
 
   async function opslaanOnboarding() {
     if (!onboardForm.gebruiker_id || !onboardForm.functie_id || !onboardForm.cao) {
@@ -766,8 +738,10 @@ export default function PersoneelPagina() {
               <Button variant="outline" onClick={() => setOnboardOpen(true)}>
                 <UserPlus className="h-4 w-4" /> Onboarden
               </Button>
-              <Button onClick={() => setMedewerkerOpen(true)}>
-                <Plus className="h-4 w-4" /> Nieuwe medewerker
+              <Button asChild>
+                <Link href="/personeel/onboarden">
+                  <Plus className="h-4 w-4" /> Nieuwe medewerker
+                </Link>
               </Button>
             </div>
           )}
@@ -1408,163 +1382,6 @@ export default function PersoneelPagina() {
           })()}
         </TabsContent>
       </Tabs>
-
-      {/* Nieuwe medewerker */}
-      <Dialog open={medewerkerOpen} onOpenChange={setMedewerkerOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader><DialogTitle>Nieuwe medewerker</DialogTitle></DialogHeader>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="sm:col-span-2 space-y-1.5">
-              <Label>Naam *</Label>
-              <Input value={medewerkerForm.naam} onChange={(e) => setMedewerkerForm({ ...medewerkerForm, naam: e.target.value })} />
-            </div>
-            <div className="space-y-1.5">
-              <Label>E-mail</Label>
-              <Input value={medewerkerForm.email ?? ""} onChange={(e) => setMedewerkerForm({ ...medewerkerForm, email: e.target.value })} />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Telefoon</Label>
-              <Input value={medewerkerForm.telefoon ?? ""} onChange={(e) => setMedewerkerForm({ ...medewerkerForm, telefoon: e.target.value })} />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Werkmaatschappij</Label>
-              <Select
-                value={medewerkerForm.werkmaatschappij || undefined}
-                onValueChange={(v) => setMedewerkerForm({ ...medewerkerForm, werkmaatschappij: v })}
-              >
-                <SelectTrigger><SelectValue placeholder="Kies werkmaatschappij" /></SelectTrigger>
-                <SelectContent>
-                  {WERKMAATSCHAPPIJEN.map((w) => <SelectItem key={w} value={w}>{w}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <Label>Functie</Label>
-                <Button type="button" variant="ghost" size="sm" className="h-6 gap-1 text-xs px-1.5" onClick={startFunctieNieuw}>
-                  <Plus className="h-3 w-3" /> Nieuwe functie
-                </Button>
-              </div>
-              {(functies ?? []).length === 0 ? (
-                <p className="text-xs text-muted-foreground border rounded-md px-3 py-2">
-                  Nog geen functies in het functiehuis. Klik op "Nieuwe functie" om er een toe te voegen.
-                </p>
-              ) : (
-                <Select
-                  value={medewerkerForm.functie_id ? String(medewerkerForm.functie_id) : undefined}
-                  onValueChange={(v) => setMedewerkerForm({ ...medewerkerForm, functie_id: Number(v) })}
-                >
-                  <SelectTrigger><SelectValue placeholder="Kies functie" /></SelectTrigger>
-                  <SelectContent>
-                    {(functies ?? []).some((f) => f.uitvoerend) && (
-                      <SelectGroup>
-                        <SelectLabel className="text-xs font-semibold text-primary">Buitendienst — zichtbaar in planning</SelectLabel>
-                        {(functies ?? []).filter((f) => f.uitvoerend).map((f) => (
-                          <SelectItem key={f.id} value={String(f.id)}>{f.naam}</SelectItem>
-                        ))}
-                      </SelectGroup>
-                    )}
-                    {(functies ?? []).some((f) => !f.uitvoerend) && (
-                      <SelectGroup>
-                        <SelectLabel className="text-xs font-semibold text-muted-foreground">Kantoor / staf — niet in planning</SelectLabel>
-                        {(functies ?? []).filter((f) => !f.uitvoerend).map((f) => (
-                          <SelectItem key={f.id} value={String(f.id)}>{f.naam}</SelectItem>
-                        ))}
-                      </SelectGroup>
-                    )}
-                  </SelectContent>
-                </Select>
-              )}
-            </div>
-            {/* Leidinggevende-veld bewust verborgen: er is één hoofdbeheerder die
-                verlof altijd kan behandelen; nieuwe medewerkers krijgen dus geen
-                aparte leidinggevende toegewezen. */}
-            <div className="space-y-1.5">
-              <Label>Dienstverband</Label>
-              <Select value={medewerkerForm.dienstverband} onValueChange={(v) => setMedewerkerForm({ ...medewerkerForm, dienstverband: v, bedrijf_uitzendbureau: (v === "uitzend" || v === "inhuur" || v === "zzp") ? (medewerkerForm.bedrijf_uitzendbureau ?? "") : undefined })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {DIENSTVERBANDEN.map((d) => <SelectItem key={d} value={d}>{DIENSTVERBAND_LABELS[d] ?? d}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            {(medewerkerForm.dienstverband === "uitzend" || medewerkerForm.dienstverband === "inhuur" || medewerkerForm.dienstverband === "zzp") && (
-              <div className="space-y-1.5">
-                <Label>
-                  {medewerkerForm.dienstverband === "uitzend" ? "Naam uitzendbureau" : medewerkerForm.dienstverband === "zzp" ? "Bedrijfsnaam ZZP" : "Naam bedrijf / onderaannemer"}
-                </Label>
-                <input
-                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                  value={medewerkerForm.bedrijf_uitzendbureau ?? ""}
-                  onChange={(e) => setMedewerkerForm({ ...medewerkerForm, bedrijf_uitzendbureau: e.target.value || undefined })}
-                  placeholder={medewerkerForm.dienstverband === "uitzend" ? "bijv. Randstad" : medewerkerForm.dienstverband === "zzp" ? "bijv. Jansen Installatietechniek" : "Naam van het bedrijf"}
-                />
-              </div>
-            )}
-            <div className="space-y-1.5">
-              <Label>Contracturen/week</Label>
-              <Input
-                type="number"
-                value={medewerkerForm.contracturen_per_week ?? ""}
-                onChange={(e) => setMedewerkerForm({ ...medewerkerForm, contracturen_per_week: e.target.value ? Number(e.target.value) : null })}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label>In dienst sinds</Label>
-              <DatePicker value={medewerkerForm.in_dienst_sinds ?? ""} onChange={(v) => setMedewerkerForm({ ...medewerkerForm, in_dienst_sinds: v })} />
-            </div>
-          </div>
-
-          {/* Toegang tot FPS Connect */}
-          <div className="rounded-md border bg-muted/30 p-3 space-y-2.5">
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id="connect-uitnodigen"
-                checked={medewerkerForm.connect_uitnodigen ?? false}
-                onCheckedChange={(v) => setMedewerkerForm({ ...medewerkerForm, connect_uitnodigen: v === true })}
-              />
-              <label htmlFor="connect-uitnodigen" className="flex items-center gap-1.5 text-sm font-medium cursor-pointer select-none">
-                <Shield className="h-3.5 w-3.5 text-primary" />
-                Toegang tot FPS Connect aanmaken
-              </label>
-            </div>
-            {medewerkerForm.connect_uitnodigen && (
-              <div className="space-y-2 pl-6">
-                {!medewerkerForm.email && (
-                  <p className="text-xs text-destructive">Een e-mailadres is verplicht voor de uitnodigingsmail.</p>
-                )}
-                <div className="space-y-1">
-                  <Label className="text-xs">Toegangsprofiel</Label>
-                  <Select
-                    value={medewerkerForm.connect_profiel_id != null ? String(medewerkerForm.connect_profiel_id) : "geen"}
-                    onValueChange={(v) => setMedewerkerForm({ ...medewerkerForm, connect_profiel_id: v === "geen" ? null : Number(v) })}
-                  >
-                    <SelectTrigger className="h-8 text-sm">
-                      <SelectValue placeholder="Lege bevoegdheden" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="geen">Lege bevoegdheden</SelectItem>
-                      {(profielen ?? []).map((p) => (
-                        <SelectItem key={p.id} value={String(p.id)}>{p.naam}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-muted-foreground">
-                    Direct na opslaan ontvangt de medewerker een uitnodigingsmail.
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setMedewerkerOpen(false)}>Annuleren</Button>
-            <Button onClick={opslaanMedewerker} disabled={maakMedewerker.isPending}>
-              {maakMedewerker.isPending ? "Bezig…" : "Opslaan"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Onboarding */}
       <Dialog open={onboardOpen} onOpenChange={setOnboardOpen}>

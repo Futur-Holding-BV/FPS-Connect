@@ -187,7 +187,7 @@ function RelatiePanel({ email }: { email: string }) {
   });
 
   return (
-    <div className="w-72 shrink-0 border-l bg-muted/20 flex flex-col overflow-y-auto">
+    <div className="w-72 shrink-0 border-l bg-muted/20 flex flex-col overflow-y-auto pb-14">
       <div className="p-3 border-b">
         <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Relatie</h3>
       </div>
@@ -481,7 +481,7 @@ function MailDetailView({
         )}
 
         {/* Mail body */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto pb-14">
           {inhoud.body ? (
             <iframe
               srcDoc={inhoud.body}
@@ -936,7 +936,7 @@ export default function WerkInboxPagina() {
               className="flex-1 flex overflow-hidden mt-0 border-0 data-[state=inactive]:hidden"
             >
               {/* Split panel */}
-              <div className="w-80 shrink-0 border-r overflow-y-auto">
+              <div className="w-80 shrink-0 border-r overflow-y-auto pb-14">
                 {renderMailLijst(lijstItems, leegTitel, leegTekst)}
               </div>
 

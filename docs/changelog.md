@@ -1,3 +1,28 @@
+## 2026-07-17 — Scroll-padding en personeelsinstap productiebugfixes
+
+- **Uitvoering:** bugfix | **Kwaliteit:** hoog | **Risico:** geen
+
+**Bug 1 — NieuwsTicker verbergt onderste inhoud in pagina's met eigen scroll-container:**
+
+Pagina's met een interne `overflow-y-auto` container erven de `pb-28` van de layout-wrapper niet. De NieuwsTicker (56 px, `pb-14`) bedekte daardoor het laatste gedeelte van de inhoud. Opgelost door `pb-14` toe te voegen aan de scrollende container(s) in:
+
+- `berichten/index.tsx` — buitenste div
+- `werk-inbox/index.tsx` — RelatiePanel, e-maillijst, e-mailbody (3 containers)
+- `workflow/index.tsx` — kanban-bord
+- `calculatie/detail.tsx` — rekenblad + zijpaneel
+- `organisatie/studio.tsx` — 3 dialog-scrollcontainers
+
+**Bug 2 — Nieuwe medewerker via personeelspagina opende klein dialoogvenster i.p.v. de volledige wizard:**
+
+De "Nieuwe medewerker"-knop op `/personeel` opende een beperkt dialoogvenster, terwijl de volledige onboarding-wizard op `/personeel/onboarden` al bestaat. Opgelost door:
+
+- Knop vervangen door `<Button asChild><Link href="/personeel/onboarden">` (navigatie naar wizard)
+- Dialoogblok "Nieuwe medewerker" volledig verwijderd uit `personeel/index.tsx`
+- Bijbehorende state (`medewerkerForm`, `medewerkerOpen`), hook (`useCreateMedewerker`) en functie (`opslaanMedewerker`) verwijderd
+- Typecheck groen na wijzigingen
+
+---
+
 ## 2026-07-17 — Smoketest wizard-endpoints: 7 stappen, alle endpoints geverifieerd
 
 - **Uitvoering:** test | **Kwaliteit:** hoog | **Risico:** geen

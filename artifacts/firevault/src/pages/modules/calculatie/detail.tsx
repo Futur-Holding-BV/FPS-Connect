@@ -2593,7 +2593,7 @@ export default function ModulesCalculatieDetail() {
 
           {/* Spreadsheet tabel of andere weergave */}
           {(weergave === "intern" || weergave === "directie") ? (
-            <div className="overflow-auto flex-1 min-h-0">
+            <div className="overflow-auto flex-1 min-h-0 pb-14">
               <table className="w-full text-sm border-collapse" style={{ minWidth: weergave === "intern" ? 1300 : 900 }}>
                 <thead className="sticky top-0 z-10">
                   <tr>
@@ -2900,7 +2900,7 @@ export default function ModulesCalculatieDetail() {
         </div>
 
         {/* === Zijpaneel === */}
-        <div className="w-72 shrink-0 border-l bg-muted/20 flex flex-col gap-0 overflow-y-auto">
+        <div className="w-72 shrink-0 border-l bg-muted/20 flex flex-col gap-0 overflow-y-auto pb-14">
 
           {/* AI-voorstel */}
           <div className="p-4 border-b">

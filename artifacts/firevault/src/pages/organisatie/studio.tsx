@@ -807,7 +807,7 @@ export default function DocumentStudioPagina() {
 
           <div className="flex gap-6 flex-1 min-h-0 overflow-hidden">
             {/* Links: preview */}
-            <div className="flex-1 overflow-y-auto border rounded-lg bg-gray-50 p-4">
+            <div className="flex-1 overflow-y-auto border rounded-lg bg-gray-50 p-4 pb-14">
               {aiBezig && !aiModel?.connect_template_json ? (
                 <div className="flex flex-col items-center justify-center min-h-[300px] gap-3">
                   <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -992,7 +992,7 @@ export default function DocumentStudioPagina() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="flex-1 overflow-y-auto -mx-1 px-1">
+          <div className="flex-1 overflow-y-auto -mx-1 px-1 pb-14">
             {analyseerHuisstijl.isPending ? (
               <div className="flex flex-col items-center justify-center min-h-[200px] gap-3">
                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -1139,7 +1139,7 @@ export default function DocumentStudioPagina() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="flex-1 overflow-y-auto space-y-2 min-h-0">
+          <div className="flex-1 overflow-y-auto space-y-2 min-h-0 pb-14">
             {versiesLijst.length === 0 && (
               <p className="text-sm text-muted-foreground py-6 text-center">Nog geen versies voor dit documenttype.</p>
             )}

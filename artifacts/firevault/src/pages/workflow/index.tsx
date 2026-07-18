@@ -1682,7 +1682,7 @@ export default function WorkflowDesignerPagina() {
       )}
 
       {/* Board */}
-      <div className="flex-1 overflow-auto p-6">
+      <div className="flex-1 overflow-auto p-6 pb-14">
         {isLaden ? (
           <div className="flex gap-4">
             {[1, 2, 3, 4].map((i) => (
