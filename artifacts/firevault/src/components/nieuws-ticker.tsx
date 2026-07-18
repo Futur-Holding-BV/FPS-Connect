@@ -46,7 +46,7 @@ export function NieuwsTicker() {
         }
       `}</style>
 
-      <div className="fixed bottom-0 left-0 z-40 h-14 flex items-stretch bg-[#1a1f2b] border-t border-white/10 text-white select-none w-full">
+      <div data-bottom-bar="nieuws-ticker" className="fixed bottom-0 left-0 z-40 h-14 flex items-stretch bg-[#1a1f2b] border-t border-white/10 text-white select-none w-full">
 
         {/* Uitloggen — altijd helemaal links */}
         <button

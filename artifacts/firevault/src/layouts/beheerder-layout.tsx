@@ -1,6 +1,7 @@
 import { Link, useLocation } from "wouter";
 import logoFpsConnect from "@/assets/logo-fps-connect.png";
 import { useState, useEffect } from "react";
+import { useBottomBarHeight } from "@/hooks/use-bottom-bar-height";
 import { SlimUploadBalk } from "@/components/slim-upload-balk";
 import { AdviseurChat } from "@/components/adviseur-chat";
 import { useTranslation } from "react-i18next";
@@ -105,6 +106,7 @@ export default function BeheerderLayout({ children }: { children: React.ReactNod
 }
 
 function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
+  useBottomBarHeight();
   const [location] = useLocation();
   const { t } = useTranslation();
   const { heeftNiveau } = useBevoegdheid();
@@ -1635,7 +1637,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
 
         </SidebarContent>
 
-        <SidebarFooter className="pb-16">
+        <SidebarFooter style={{ paddingBottom: 'calc(var(--bottom-bar-hoogte, 56px) + 0.25rem)' }}>
           <PwaInstalleerKnop />
           <SidebarMenu>
             <SidebarMenuItem>
@@ -1680,7 +1682,7 @@ function BeheerderLayoutInhoud({ children }: { children: React.ReactNode }) {
             {children}
           </div>
         ) : (
-          <div className="p-3 md:p-4 xl:p-6 pb-28">
+          <div className="p-3 md:p-4 xl:p-6" style={{ paddingBottom: 'calc(var(--bottom-bar-hoogte, 56px) + 1.5rem)' }}>
             {children}
           </div>
         )}

@@ -1446,6 +1446,7 @@ export function SlimUploadBalk() {
 
       {/* ── Taakbalk ─────────────────────────────────────────────────────── */}
       <div
+        data-bottom-bar="slim-upload"
         className="fixed bottom-0 right-0 z-40 flex items-center"
         style={{ left: "var(--sidebar-width, 0px)" }}
       >
