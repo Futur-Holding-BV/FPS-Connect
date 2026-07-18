@@ -5,7 +5,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import {
   useGetHrmStats,
   useListMedewerkers,
-  useOnboardMedewerker,
   useListFuncties,
   useCreateFunctie,
   useUpdateFunctie,
@@ -18,7 +17,6 @@ import {
   useVoorstelOpleidingenVoorFunctie,
   useAiVoorstelVoorFunctie,
   useListVerlofsoorten,
-  useListCaoOpties,
   useListToewijsbareGebruikers,
   useListAlleVerlofAanvragen,
   useUpdateVerlofAanvraag,
@@ -37,7 +35,6 @@ import {
   getListAlleVerlofAanvragenQueryKey,
   getListWerkgeversQueryKey,
   getListZiekmeldingenQueryKey,
-  getListPlanningMedewerkersQueryKey,
 } from "@workspace/api-client-react";
 import type {
   FunctieInput,
@@ -45,12 +42,10 @@ import type {
   OpleidingInput,
   Opleiding,
   OpleidingVoorstel,
-  MedewerkerOnboardingInput,
   VerlofAanvraag,
   Werkgever,
   WerkgeverInput,
   ZiekmeldingenInput,
-  CvAnalyseResultaat,
   ProfielAiVoorstelFunctieResultaat,
 } from "@workspace/api-client-react";
 import { PoortwachterSheet } from "@/components/hrm/poortwachter-sheet";
@@ -76,22 +71,14 @@ import { PaginaHulp } from "@/components/pagina-hulp";
 import {
   Users, Plus, UserPlus, Briefcase, GraduationCap, CalendarClock, AlertTriangle,
   Award, Check, X, ChevronRight, Building2, Pencil, Trash2, HeartPulse,
-  LogOut, Upload, Loader2, Sparkles, CheckCircle2, Shield,
+  LogOut, Shield, Sparkles, Loader2, CheckCircle2,
 } from "lucide-react";
-import { WERKMAATSCHAPPIJEN, caoVoorWerkmaatschappij } from "@/lib/werkmaatschappijen";
+import { WERKMAATSCHAPPIJEN } from "@/lib/werkmaatschappijen";
 import { OffboardDialog } from "./offboard-dialog";
 
 const WERKMAATSCHAPPIJ_STD = WERKMAATSCHAPPIJEN[0];
-const DIENSTVERBANDEN = ["vast", "tijdelijk", "oproep", "stage", "inhuur", "zzp", "uitzend"] as const;
-const DIENSTVERBAND_LABELS: Record<string, string> = {
-  vast: "Vaste medewerker",
-  tijdelijk: "Tijdelijk contract",
-  oproep: "Oproepkracht",
-  stage: "Stagiair",
-  inhuur: "Inhuur / onderaannemer",
-  zzp: "ZZP-er",
-  uitzend: "Uitzendkracht",
-};
+
+const CAO_NAMEN = ["Metaal & Techniek", "Bouw & Infra", "Geen CAO / individueel"] as const;
 
 const SOORT_OPTIES = [
   { value: "cursus", label: "Cursus" },
@@ -128,10 +115,6 @@ function fmtDatum(datum?: string | null) {
   return d.toLocaleDateString("nl-NL", { day: "2-digit", month: "short", year: "numeric" });
 }
 
-function huidigJaar() {
-  return new Date().getFullYear();
-}
-
 export default function PersoneelPagina() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -145,14 +128,12 @@ export default function PersoneelPagina() {
   const { data: functies } = useListFuncties();
   const { data: opleidingen } = useListOpleidingen();
   const { data: verlofsoorten } = useListVerlofsoorten();
-  const { data: caoOpties } = useListCaoOpties();
   const { data: gebruikers } = useListToewijsbareGebruikers();
   const { data: openAanvragen } = useListAlleVerlofAanvragen({ status: "aangevraagd" });
   const { data: alleBekwaamheden } = useListAlleBekwaamheden();
   const { data: werkgevers } = useListWerkgevers();
   const { data: ziekmeldingen } = useListZiekmeldingen();
 
-  const onboard = useOnboardMedewerker();
   const maakFunctie = useCreateFunctie();
   const wijzigFunctie = useUpdateFunctie();
   const { data: profielen } = useListProfielen();
@@ -203,11 +184,6 @@ export default function PersoneelPagina() {
     }
   }
 
-  function startOnboard(gebruikerId: number) {
-    setOnboardForm((f) => ({ ...f, gebruiker_id: gebruikerId }));
-    setOnboardOpen(true);
-  }
-
   async function slaZiekmeldingOp() {
     try {
       if (!ziekForm.medewerker_id || !ziekForm.start_datum) {
@@ -250,7 +226,6 @@ export default function PersoneelPagina() {
     }
   }
 
-  const [onboardOpen, setOnboardOpen] = useState(false);
   const [functieOpen, setFunctieOpen] = useState(false);
   const [opleidingOpen, setOpleidingOpen] = useState(false);
   const [werkgeverOpen, setWerkgeverOpen] = useState(false);
@@ -269,8 +244,6 @@ export default function PersoneelPagina() {
 
   const [offboardOpen, setOffboardOpen] = useState(false);
   const [offboardMedId, setOffboardMedId] = useState<number | null>(null);
-  const [cvAnalyseLaden, setCvAnalyseLaden] = useState(false);
-  const [cvVoorstel, setCvVoorstel] = useState<CvAnalyseResultaat | null>(null);
   const [werkgeverForm, setWerkgeverForm] = useState<WerkgeverInput>({
     naam: "",
     cao: "",
@@ -311,81 +284,6 @@ export default function PersoneelPagina() {
   const [aiBevoegdhedenResultaat, setAiBevoegdhedenResultaat] = useState<ProfielAiVoorstelFunctieResultaat | null>(null);
   const [aiBevoegdhedenFunctieId, setAiBevoegdhedenFunctieId] = useState<number | null>(null);
   const aiVoorstelFunctieMut = useAiVoorstelVoorFunctie();
-  const [onboardForm, setOnboardForm] = useState<MedewerkerOnboardingInput>({
-    gebruiker_id: 0,
-    functie_id: 0,
-    werkmaatschappij: WERKMAATSCHAPPIJ_STD,
-    cao: caoVoorWerkmaatschappij(WERKMAATSCHAPPIJ_STD) ?? "",
-    contracturen_per_week: 38,
-    in_dienst_sinds: new Date().toISOString().slice(0, 10),
-    jaar: huidigJaar(),
-    verlofsoort_ids: [],
-    dienstverband: "vast",
-    bedrijf_uitzendbureau: undefined,
-  });
-
-  async function opslaanOnboarding() {
-    if (!onboardForm.gebruiker_id || !onboardForm.functie_id || !onboardForm.cao) {
-      toast({ title: "Gebruiker, functie en CAO zijn verplicht", variant: "destructive" });
-      return;
-    }
-    try {
-      await onboard.mutateAsync({ data: onboardForm });
-      await queryClient.invalidateQueries({ queryKey: getListMedewerkersQueryKey() });
-      await queryClient.invalidateQueries({ queryKey: getGetHrmStatsQueryKey() });
-      await queryClient.invalidateQueries({ queryKey: getListPlanningMedewerkersQueryKey() });
-      toast({ title: "Medewerker onboarded", description: "Verlofsaldo is automatisch opgebouwd." });
-      setOnboardOpen(false);
-    } catch (err) {
-      const bericht = err instanceof Error ? err.message : "Onboarding mislukt";
-      toast({ title: "Onboarding mislukt", description: bericht, variant: "destructive" });
-    }
-  }
-
-  async function uploadCv(file: File) {
-    setCvAnalyseLaden(true);
-    setCvVoorstel(null);
-    try {
-      const fd = new FormData();
-      fd.append("cv", file);
-      const res = await fetch("/api/medewerkers/ai-cv-analyse", {
-        method: "POST",
-        body: fd,
-        credentials: "include",
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: "Onbekende fout" }));
-        toast({
-          title: "CV analyse mislukt",
-          description: (err as { error?: string }).error ?? "Probeer opnieuw.",
-          variant: "destructive",
-        });
-        return;
-      }
-      const data = (await res.json()) as CvAnalyseResultaat;
-      setCvVoorstel(data);
-    } catch {
-      toast({
-        title: "CV analyse mislukt",
-        description: "Controleer de internetverbinding.",
-        variant: "destructive",
-      });
-    } finally {
-      setCvAnalyseLaden(false);
-    }
-  }
-
-  function accepteerCvVoorstel() {
-    if (!cvVoorstel) return;
-    setOnboardForm((prev) => ({
-      ...prev,
-      ...(cvVoorstel.naam ? { naam: cvVoorstel.naam } : {}),
-      ...(cvVoorstel.email ? { email: cvVoorstel.email } : {}),
-      ...(cvVoorstel.telefoon ? { telefoon: cvVoorstel.telefoon } : {}),
-      ...(cvVoorstel.mobiel ? { mobiel: cvVoorstel.mobiel } : {}),
-    }));
-    setCvVoorstel(null);
-  }
 
   async function opslaanFunctie() {
     if (!functieForm.naam.trim()) {
@@ -397,10 +295,7 @@ export default function PersoneelPagina() {
         await wijzigFunctie.mutateAsync({ id: functieBewerkenId, data: { ...functieForm, naam: functieForm.naam.trim() } });
         toast({ title: "Functie bijgewerkt" });
       } else {
-        const nieuw = await maakFunctie.mutateAsync({ data: { ...functieForm, naam: functieForm.naam.trim() } });
-        if (onboardOpen && nieuw?.id) {
-          setOnboardForm((f) => ({ ...f, functie_id: nieuw.id }));
-        }
+        await maakFunctie.mutateAsync({ data: { ...functieForm, naam: functieForm.naam.trim() } });
         toast({ title: "Functie toegevoegd" });
       }
       await queryClient.invalidateQueries({ queryKey: getListFunctiesQueryKey() });
@@ -452,29 +347,6 @@ export default function PersoneelPagina() {
       profiel_id: f.profiel_id ?? undefined,
     });
     setFunctieOpen(true);
-  }
-
-  async function markeerAlsBuitendienst() {
-    const functie = (functies ?? []).find((f) => f.id === onboardForm.functie_id);
-    if (!functie) return;
-    try {
-      await wijzigFunctie.mutateAsync({
-        id: functie.id,
-        data: {
-          naam: functie.naam,
-          werkmaatschappij: functie.werkmaatschappij,
-          omschrijving: functie.omschrijving ?? undefined,
-          uitvoerend: true,
-        },
-      });
-      await queryClient.invalidateQueries({ queryKey: getListFunctiesQueryKey() });
-      toast({
-        title: "Functie bijgewerkt",
-        description: `${functie.naam} is gemarkeerd als buitendienst en verschijnt nu in de planning.`,
-      });
-    } catch {
-      toast({ title: "Bijwerken mislukt", variant: "destructive" });
-    }
   }
 
   function startOpleidingNieuw() {
@@ -673,15 +545,6 @@ export default function PersoneelPagina() {
     }
   }
 
-  function toggleVerlofsoort(id: number) {
-    setOnboardForm((f) => {
-      const huidig = f.verlofsoort_ids ?? [];
-      return huidig.includes(id)
-        ? { ...f, verlofsoort_ids: huidig.filter((x) => x !== id) }
-        : { ...f, verlofsoort_ids: [...huidig, id] };
-    });
-  }
-
   const statKaarten = [
     { label: "Medewerkers", waarde: stats?.medewerkers ?? 0, icon: Users },
     { label: "Actief", waarde: stats?.actief ?? 0, icon: UserPlus },
@@ -735,12 +598,9 @@ export default function PersoneelPagina() {
         <TabsContent value="medewerkers" className="space-y-4">
           {magSchrijven && (
             <div className="flex items-center justify-end gap-2">
-              <Button variant="outline" onClick={() => setOnboardOpen(true)}>
-                <UserPlus className="h-4 w-4" /> Onboarden
-              </Button>
               <Button asChild>
                 <Link href="/personeel/onboarden">
-                  <Plus className="h-4 w-4" /> Nieuwe medewerker
+                  <UserPlus className="h-4 w-4" /> Medewerker onboarden
                 </Link>
               </Button>
             </div>
@@ -765,8 +625,10 @@ export default function PersoneelPagina() {
                         <div className="text-sm font-medium truncate">{g.naam}</div>
                         <div className="text-xs text-muted-foreground">{g.rol}</div>
                       </div>
-                      <Button size="sm" variant="outline" onClick={() => startOnboard(g.id)}>
-                        <UserPlus className="h-4 w-4" /> Onboarden
+                      <Button size="sm" variant="outline" asChild>
+                        <Link href="/personeel/onboarden">
+                          <UserPlus className="h-4 w-4" /> Onboarden
+                        </Link>
                       </Button>
                     </div>
                   ))}
@@ -1383,280 +1245,6 @@ export default function PersoneelPagina() {
         </TabsContent>
       </Tabs>
 
-      {/* Onboarding */}
-      <Dialog open={onboardOpen} onOpenChange={setOnboardOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Medewerker onboarden</DialogTitle>
-            <DialogDescription>
-              Koppel een bestaande gebruiker, kies de juiste CAO en aanvangsdatum. Het verlofsaldo
-              wordt server-side pro rata opgebouwd.
-            </DialogDescription>
-          </DialogHeader>
-
-          {/* CV upload — AI vult velden in */}
-          <div className="rounded-lg border border-dashed p-3 space-y-2">
-            <div className="flex items-center justify-between">
-              <div className="text-sm font-medium flex items-center gap-1.5">
-                <Upload className="h-4 w-4 text-muted-foreground" />
-                CV uploaden (AI vult velden in)
-              </div>
-              {cvVoorstel && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 text-xs"
-                  onClick={() => setCvVoorstel(null)}
-                >
-                  <X className="h-3 w-3" /> Sluiten
-                </Button>
-              )}
-            </div>
-            {cvVoorstel ? (
-              <div className="rounded-md bg-amber-50 border border-amber-200 p-2 space-y-2">
-                <div className="text-xs font-semibold text-amber-800 flex items-center gap-1">
-                  <Sparkles className="h-3.5 w-3.5" />
-                  AI heeft de volgende velden herkend:
-                </div>
-                <div className="grid grid-cols-2 gap-1 text-xs">
-                  {cvVoorstel.naam && (
-                    <div><span className="text-muted-foreground">Naam:</span> {cvVoorstel.naam}</div>
-                  )}
-                  {cvVoorstel.email && (
-                    <div><span className="text-muted-foreground">E-mail:</span> {cvVoorstel.email}</div>
-                  )}
-                  {cvVoorstel.telefoon && (
-                    <div><span className="text-muted-foreground">Telefoon:</span> {cvVoorstel.telefoon}</div>
-                  )}
-                  {cvVoorstel.mobiel && (
-                    <div><span className="text-muted-foreground">Mobiel:</span> {cvVoorstel.mobiel}</div>
-                  )}
-                  {cvVoorstel.vca_vervaldatum && (
-                    <div><span className="text-muted-foreground">VCA vervalt:</span> {cvVoorstel.vca_vervaldatum}</div>
-                  )}
-                  {cvVoorstel.rijbewijs && (
-                    <div><span className="text-muted-foreground">Rijbewijs:</span> {cvVoorstel.rijbewijs}</div>
-                  )}
-                </div>
-                {cvVoorstel.ai_toelichting && (
-                  <p className="text-xs text-amber-700 italic">{cvVoorstel.ai_toelichting}</p>
-                )}
-                <Button
-                  size="sm"
-                  className="w-full h-7 text-xs"
-                  onClick={accepteerCvVoorstel}
-                >
-                  <CheckCircle2 className="h-3 w-3" />
-                  Voorstel toepassen op formulier
-                </Button>
-              </div>
-            ) : cvAnalyseLaden ? (
-              <div className="flex items-center gap-2 text-xs text-muted-foreground py-1">
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                CV wordt geanalyseerd door AI...
-              </div>
-            ) : (
-              <label className="cursor-pointer block">
-                <input
-                  type="file"
-                  accept=".pdf,.txt"
-                  className="sr-only"
-                  onChange={(e) => {
-                    const f = e.target.files?.[0];
-                    if (f) void uploadCv(f);
-                    e.target.value = "";
-                  }}
-                />
-                <span className="text-xs text-muted-foreground hover:text-foreground transition-colors">
-                  PDF-bestand selecteren — AI herkent naam, e-mail, telefoon, VCA-vervaldatum, rijbewijs en meer
-                </span>
-              </label>
-            )}
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="sm:col-span-2 space-y-1.5">
-              <Label>Gebruiker *</Label>
-              <Select
-                value={onboardForm.gebruiker_id ? String(onboardForm.gebruiker_id) : undefined}
-                onValueChange={(v) => setOnboardForm({ ...onboardForm, gebruiker_id: Number(v) })}
-              >
-                <SelectTrigger><SelectValue placeholder="Kies gebruiker" /></SelectTrigger>
-                <SelectContent>
-                  {(gebruikers ?? []).map((g) => (
-                    <SelectItem key={g.id} value={String(g.id)}>{g.naam} — {g.rol}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <Label>Functie *</Label>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 gap-1 px-2 text-xs"
-                  onClick={startFunctieNieuw}
-                >
-                  <Plus className="h-3 w-3" /> Nieuwe functie
-                </Button>
-              </div>
-              {(functies ?? []).length === 0 ? (
-                <p className="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
-                  Nog geen functies in het functiehuis. Maak er eerst een aan met "Nieuwe functie".
-                </p>
-              ) : (
-                <>
-                  <Select
-                    value={onboardForm.functie_id ? String(onboardForm.functie_id) : undefined}
-                    onValueChange={(v) => setOnboardForm({ ...onboardForm, functie_id: Number(v) })}
-                  >
-                    <SelectTrigger><SelectValue placeholder="Kies functie" /></SelectTrigger>
-                    <SelectContent>
-                      {(functies ?? []).some((f) => f.uitvoerend) && (
-                        <SelectGroup>
-                          <SelectLabel className="text-xs font-semibold text-primary">
-                            Buitendienst — zichtbaar in planning
-                          </SelectLabel>
-                          {(functies ?? []).filter((f) => f.uitvoerend).map((f) => (
-                            <SelectItem key={f.id} value={String(f.id)}>{f.naam}</SelectItem>
-                          ))}
-                        </SelectGroup>
-                      )}
-                      {(functies ?? []).some((f) => !f.uitvoerend) && (
-                        <SelectGroup>
-                          <SelectLabel className="text-xs font-semibold text-muted-foreground">
-                            Kantoor / staf — niet in planning
-                          </SelectLabel>
-                          {(functies ?? []).filter((f) => !f.uitvoerend).map((f) => (
-                            <SelectItem key={f.id} value={String(f.id)}>{f.naam}</SelectItem>
-                          ))}
-                        </SelectGroup>
-                      )}
-                    </SelectContent>
-                  </Select>
-                  {onboardForm.functie_id ? (
-                    (functies ?? []).find((f) => f.id === onboardForm.functie_id)?.uitvoerend ? (
-                      <p className="flex items-center gap-1.5 text-xs text-primary font-medium mt-1">
-                        <span className="inline-block h-2 w-2 rounded-full bg-primary" />
-                        Zichtbaar in de planning (buitendienst)
-                      </p>
-                    ) : ["zzp", "uitzend", "inhuur"].includes(onboardForm.dienstverband ?? "") ? (
-                      <div className="mt-1.5 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
-                        <p className="flex items-center gap-1.5 font-medium">
-                          <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-                          Functie staat niet als buitendienst geregistreerd
-                        </p>
-                        <p className="mt-0.5 text-amber-800">
-                          ZZP / uitzend / inhuur medewerkers voeren doorgaans veldwerk uit. Klik hieronder om de functie als uitvoerend te markeren zodat deze medewerker in de planning verschijnt.
-                        </p>
-                        <button
-                          type="button"
-                          className="mt-1.5 font-medium underline underline-offset-2 hover:text-amber-950 disabled:opacity-50"
-                          disabled={wijzigFunctie.isPending}
-                          onClick={markeerAlsBuitendienst}
-                        >
-                          {wijzigFunctie.isPending ? "Bezig…" : "Markeer als buitendienst"}
-                        </button>
-                      </div>
-                    ) : (
-                      <p className="flex items-center gap-1.5 text-xs text-muted-foreground mt-1">
-                        <span className="inline-block h-2 w-2 rounded-full bg-slate-300" />
-                        Niet zichtbaar in de planning (kantoor/staf)
-                      </p>
-                    )
-                  ) : null}
-                </>
-              )}
-            </div>
-            <div className="space-y-1.5">
-              <Label>Werkmaatschappij *</Label>
-              <Select
-                value={onboardForm.werkmaatschappij || undefined}
-                onValueChange={(v) =>
-                  setOnboardForm({
-                    ...onboardForm,
-                    werkmaatschappij: v,
-                    cao: caoVoorWerkmaatschappij(v) ?? onboardForm.cao,
-                  })
-                }
-              >
-                <SelectTrigger><SelectValue placeholder="Kies werkmaatschappij" /></SelectTrigger>
-                <SelectContent>
-                  {WERKMAATSCHAPPIJEN.map((w) => <SelectItem key={w} value={w}>{w}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label>CAO *</Label>
-              <Select value={onboardForm.cao || undefined} onValueChange={(v) => setOnboardForm({ ...onboardForm, cao: v })}>
-                <SelectTrigger><SelectValue placeholder="Kies CAO" /></SelectTrigger>
-                <SelectContent>
-                  {(caoOpties ?? []).map((c) => <SelectItem key={c.naam} value={c.naam}>{c.naam}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label>Contracturen/week *</Label>
-              <Input
-                type="number"
-                value={onboardForm.contracturen_per_week}
-                onChange={(e) => setOnboardForm({ ...onboardForm, contracturen_per_week: Number(e.target.value) })}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label>In dienst sinds *</Label>
-              <DatePicker value={onboardForm.in_dienst_sinds} onChange={(v) => setOnboardForm({ ...onboardForm, in_dienst_sinds: v })} />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Dienstverband</Label>
-              <Select
-                value={onboardForm.dienstverband ?? "vast"}
-                onValueChange={(v) => setOnboardForm({ ...onboardForm, dienstverband: v, bedrijf_uitzendbureau: (v === "uitzend" || v === "inhuur" || v === "zzp") ? (onboardForm.bedrijf_uitzendbureau ?? "") : undefined })}
-              >
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {DIENSTVERBANDEN.map((d) => <SelectItem key={d} value={d}>{DIENSTVERBAND_LABELS[d] ?? d}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            {(onboardForm.dienstverband === "uitzend" || onboardForm.dienstverband === "inhuur" || onboardForm.dienstverband === "zzp") && (
-              <div className="sm:col-span-2 space-y-1.5">
-                <Label>
-                  {onboardForm.dienstverband === "uitzend" ? "Naam uitzendbureau" : onboardForm.dienstverband === "zzp" ? "Bedrijfsnaam ZZP" : "Naam bedrijf / onderaannemer"}
-                </Label>
-                <Input
-                  value={onboardForm.bedrijf_uitzendbureau ?? ""}
-                  onChange={(e) => setOnboardForm({ ...onboardForm, bedrijf_uitzendbureau: e.target.value || undefined })}
-                  placeholder={onboardForm.dienstverband === "uitzend" ? "bijv. Randstad" : onboardForm.dienstverband === "zzp" ? "bijv. Jansen Installatietechniek" : "Naam van het bedrijf"}
-                />
-              </div>
-            )}
-            <div className="sm:col-span-2 space-y-1.5">
-              <Label>Verlofsoorten met beginsaldo</Label>
-              <div className="grid grid-cols-2 gap-2">
-                {(verlofsoorten ?? []).map((v) => (
-                  <label key={v.id} className="flex items-center gap-2 text-sm">
-                    <Checkbox
-                      checked={(onboardForm.verlofsoort_ids ?? []).includes(v.id)}
-                      onCheckedChange={() => toggleVerlofsoort(v.id)}
-                    />
-                    {v.naam}
-                  </label>
-                ))}
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setOnboardOpen(false)}>Annuleren</Button>
-            <Button onClick={opslaanOnboarding} disabled={onboard.isPending}>
-              {onboard.isPending ? "Bezig…" : "Onboarden"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
       {/* Functie aanmaken / bewerken */}
       <Dialog open={functieOpen} onOpenChange={(open) => { if (!open) setFunctieBewerkenId(null); setFunctieOpen(open); }}>
         <DialogContent className="max-w-lg">
@@ -1968,7 +1556,7 @@ export default function PersoneelPagina() {
               >
                 <SelectTrigger><SelectValue placeholder="Kies CAO" /></SelectTrigger>
                 <SelectContent>
-                  {(caoOpties ?? []).map((c) => <SelectItem key={c.naam} value={c.naam}>{c.naam}</SelectItem>)}
+                  {CAO_NAMEN.map((naam) => <SelectItem key={naam} value={naam}>{naam}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>

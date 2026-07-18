@@ -1,3 +1,30 @@
+## 2026-07-18 — Consolidatie medewerker-aanmaak naar centrale wizard
+
+- **Uitvoering:** refactor | **Kwaliteit:** hoog | **Risico:** laag
+
+Alle losse medewerker-aanmaakingangen op `/personeel` zijn verwijderd; de enige ingang is nu de volledige onboarding-wizard op `/personeel/onboarden`.
+
+**Verwijderd uit `personeel/index.tsx`:**
+
+- Onboarding Dialog (±270 regels JSX inclusief CV-upload, formuliervelden, dienstverband-sectie, verlofsoort-checkboxes)
+- State: `onboardOpen`, `cvAnalyseLaden`, `cvVoorstel`, `onboardForm`
+- Functies: `opslaanOnboarding`, `uploadCv`, `accepteerCvVoorstel`, `markeerAlsBuitendienst`, `toggleVerlofsoort`
+- "Onboarden"-knop in header (onClick → setOnboardOpen)
+- Per-rij "Onboarden"-knop in ongekoppeld-sectie (onClick → startOnboard)
+- Referentie `if (onboardOpen && nieuw?.id)` in `opslaanFunctie`
+- Verwijderde imports: `useOnboardMedewerker`, `useListCaoOpties`, `getListPlanningMedewerkersQueryKey`, `MedewerkerOnboardingInput`, `CvAnalyseResultaat`, `Upload`, `Loader2`, `Sparkles`, `CheckCircle2`, `DIENSTVERBANDEN`, `DIENSTVERBAND_LABELS`, `huidigJaar`, `caoVoorWerkmaatschappij`
+
+**Vervangen door:**
+
+- Enkelvoudige `<Button asChild><Link href="/personeel/onboarden">Medewerker onboarden</Link></Button>` in header
+- Per-rij "Onboarden"-knop → `<Button asChild><Link href="/personeel/onboarden">` (navigatie, geen state)
+- Lokale `CAO_NAMEN`-constante voor het werkgever-CAO-dropdown (vervangt API-hook)
+- Herstelde imports: `Sparkles`, `Loader2`, `CheckCircle2` (nog gebruikt in AI-bevoegdheden-dialoog)
+
+Typecheck groen (0 fouten) na alle wijzigingen.
+
+---
+
 ## 2026-07-17 — Scroll-padding en personeelsinstap productiebugfixes
 
 - **Uitvoering:** bugfix | **Kwaliteit:** hoog | **Risico:** geen
