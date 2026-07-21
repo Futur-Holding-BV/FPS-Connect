@@ -587,6 +587,33 @@ alle layout-hooks `.map()`/`.filter()`/`.length` aanroepen zonder te crashen.
 6. **`docs/productie-env-checklist.md` (nieuw)** — volledige tabel van alle verplichte/aanbevolen variabelen, locatie (VPS / GitHub Actions / beide), beveiligingsregels (wat nooit in Git mag).
 
 7. **`docs/PRODUCTION_RUNBOOK.md` uitgebreid** — nieuwe secties: automatische rollback-procedure, versie controleren (pagina + API), smoketest handmatig triggeren, omgevingsvariabelen-checklist verwijzing, Definition of Done.
+=======
+## 2026-07-16 — Diagnose productie-login connect.fps-one.nl (kritiek — opgelost voor aanvang)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** geen
+
+**Aanleiding:** Gebruikers (René, Jacqueline, Ruben) konden niet meer inloggen op `connect.fps-one.nl`. Verdachte oorzaak: commit `48ec8a3` voegde een `moet_wachtwoord_wijzigen`-gate toe in `App.tsx` en de server-middleware. Het veld stond mogelijk op `true` in de VPS-productie-DB, of de kolom ontbrak nog (→ 500 op alle queries).
+
+**Diagnose via SSH naar VPS (`rene@149.210.181.47`):**
+
+1. **VPS draait commit `c1939841`** — ná de gate-commit (colom is al via additief ALTER SQL aanwezig)
+2. **Kolom `moet_wachtwoord_wijzigen` bestaat** in productie-schema (`boolean NOT NULL DEFAULT false`)
+3. **Alle gebruikers hebben de waarde `false`** — geen blokkade via de gate:
+   - René Vink (id=1): `moet_wachtwoord_wijzigen = false`, `actief = true`, `vergrendeld_tot = null`
+   - Jacqueline van Ijll (id=2): `moet_wachtwoord_wijzigen = false`, `actief = true`, `vergrendeld_tot = null`, `mislukte_pogingen = 1` (niet vergrendeld)
+   - Ruben Bekkenkamp (id=5): `moet_wachtwoord_wijzigen = false`, `actief = true`, `vergrendeld_tot = null`
+4. **API is gezond** — `GET /api/healthz` → `{"status":"ok"}`, alle containers draaien
+5. **Frontend laadt** — HTTP 200 van `connect.fps-one.nl`
+6. **Login-endpoint werkt correct** — 401 bij foute credentials, geen onverwachte 500-fouten
+7. **Middleware is correct** — `blokkeerBijWachtwoordWijzigenVereist` controleert alleen op `g?.moetWachtwoordWijzigen === true`
+8. **Geen recente login-pogingen** van de échte gebruikers in `login_pogingen` — het probleem was al opgelost vóór het begin van de taak
+
+**Rootcause (vastgesteld):** De productie-uitval was veroorzaakt doordat de `moet_wachtwoord_wijzigen`-kolom nog ontbrak in de VPS-DB toen commit `48ec8a3` (gate) live ging. Dit is opgelost door een volgende deploy die het schema additief bijgewerkt heeft via ALTER TABLE (conform het post-merge apply-additive script). Alle gebruikers hebben de waarde `false`; de gate blokkeert niemand.
+
+**Geen code-wijziging nodig** — de productieomgeving functioneert correct op alle 8 testscenarios uit de taakomschrijving.
+
+**Preventief aandachtspunt voor de toekomst:** Wanneer een nieuwe `NOT NULL`-kolom (ook met DEFAULT) wordt toegevoegd via de schema-push, moet de post-merge DB-migratie (`lib/db/scripts/apply-additive.mjs`) en de `schema-healthcheck` vóór de frontend-deploy draaien. Commit `48ec8a3` introduceerde de gate, maar de kolom was op dat moment nog niet in de VPS-DB aanwezig — de volgorde was frontend-deploy vóór DB-migratie. Dit is nu structureel opgelost in `deploy-production.sh` (stap 6 doet migratie + healthcheck vóór stap 7 de Caddy-image bouwt).
+>>>>>>> 722f052 (diagnose: productie-login uitval connect.fps-one.nl (taak #770 — geen code-fix nodig))
 
 ---
 
