@@ -66,9 +66,17 @@ verifiëren via psql (information_schema) — exit 0 is geen bewijs.
 - Workflow_dispatch vereist `workflow`-scope die GITHUB_TOKEN_PUSH niet heeft; testen kan alleen via een echte push naar main. Verifieer via VPS reflog: `git reflog | head` moet een nieuwe "reset: moving to origin/main" tonen na de Actions-run.
 
 **Structurele productie-config-gaten:**
-- Productie mist mailvariabelen (Azure Graph + afzender/postbus) → uitnodigings-
-  en wachtwoord-vergeten-mails komen daar nooit aan; bij "gebruiker kan niet
-  inloggen" eerst hierop checken (login_pogingen-tabel geeft bewijs). Dev heeft ze wél.
+- Mailvariabelen (Azure Graph + afzender/postbus) ontbraken lang op productie;
+  op 25 juli 2026 vanuit de dev-secrets aangevuld in deploy/.env.production —
+  mail zou nu ook op productie moeten werken (nog niet functioneel bewezen).
+- **Deploy-pre-check faalt stil de hele keten:** deploy-production.sh eist 10
+  verplichte variabelen in deploy/.env.production (incl. de 5 mailvars); als er
+  één leeg is stopt ELKE automatische deploy bij de pre-check, vóór back-up of
+  build — de server blijft dan onopgemerkt dagen achter op main. **How to apply:**
+  als de VPS achterloopt terwijl main gepusht is, eerst de pre-check-vars op de
+  server controleren, dan pas Actions/SSH verdenken. De pre-check leest de
+  EERSTE `^VAR=`-regel (grep|head -1): lege duplicaat-regels eerst verwijderen,
+  alleen appenden is niet genoeg.
 - De api-container logt vrijwel niets (LOG_LEVEL nakijken); debugging loopt via de
   login_pogingen-tabel en DB-queries.
 

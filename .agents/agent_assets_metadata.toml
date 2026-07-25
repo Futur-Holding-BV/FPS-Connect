@@ -83,3 +83,9 @@ id = "u7xkRk-mJyED4-H4d0-ms"
 uri = "file://docs/rechtenstructuur-migratie-overzicht.md"
 type = "text"
 title = "Migratie-overzicht Centrale Rechtenstructuur"
+
+[[outputs]]
+id = "as3IQPp_p3LIEzOIpoygn"
+uri = "file://docs/analyse-onnodige-fouten-opdrachten.md"
+type = "text"
+title = "Analyse onnodige fouten door dubbele/onvolledige opdrachten"

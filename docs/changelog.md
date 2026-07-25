@@ -1,3 +1,26 @@
+## 2026-07-25 — Productiedeploy CONSOLIDATE_EMPLOYEE_ONBOARDING + herstel automatische deployketen
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+**Aanleiding:** de onboarding-consolidatie (zie entry 2026-07-18) stond op GitHub main (`3b6900d9`), maar de VPS draaide nog op `11b9eab` van 18 juli — geen enkele automatische deploy van 25 juli was aangekomen.
+
+**Rootcause automatische deploy-uitval:** de pre-check in `scripts/deploy-production.sh` vereist sinds 18 juli tien verplichte variabelen in `deploy/.env.production`; de vijf mailvariabelen (`AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, `MAIL_FROM`, `MAIL_MAILBOX`) ontbraken op de server (bekend structureel gat — mail werkte op productie nooit). Elke Actions-run stopte daardoor bij de pre-check, vóór back-up/reset/build.
+
+**Herstel:**
+- De vijf mailvariabelen veilig vanuit de dev-secrets aangevuld in `deploy/.env.production` (waarden nergens getoond; back-up van het env-bestand gemaakt). Hiermee is ook het structurele mailgat op productie gedicht: uitnodigings- en wachtwoord-vergeten-mails kunnen nu wél verzonden worden.
+- Volledige deploy uitgevoerd conform runbook via `deploy-production.sh` (back-up → reset naar origin/main → API + migrate + Caddy `--no-cache` → migratie + schema-healthcheck → up → healthcheck): "Deploy voltooid: release is gezond."
+
+**Bewijsvoering (productie connect.fps-one.nl):**
+- `/api/versie`: `2026.07.25-3b6900d9` (gebouwd 2026-07-25T14:21:18Z) — versie-informatie nu ook zichtbaar (was "dev-onbekend")
+- Server HEAD: `3b6900d91120…` = GitHub main
+- Schema-healthcheck: 13/13 geslaagd, incl. "unieke index UNIQUE INDEX (gebruiker_id) op medewerkers"
+- Directe psql-verificatie: `medewerkers_gebruiker_id_unique` (UNIQUE btree op `gebruiker_id`) aanwezig in de productie-DB
+- `/api/status`: db ok, omgeving production
+
+**Vervolgpunt:** de eerstvolgende push naar main moet de automatische keten end-to-end bevestigen (pre-check slaagt nu; Actions-logs waren met het huidige token niet leesbaar — PAT mist `actions:read`).
+
+---
+
 ## 2026-07-16 — Vervang hardcoded rolchecks door bevoegdheidschecks (gebouwen detail & plattegrond)
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
@@ -613,7 +636,6 @@ alle layout-hooks `.map()`/`.filter()`/`.length` aanroepen zonder te crashen.
 **Geen code-wijziging nodig** — de productieomgeving functioneert correct op alle 8 testscenarios uit de taakomschrijving.
 
 **Preventief aandachtspunt voor de toekomst:** Wanneer een nieuwe `NOT NULL`-kolom (ook met DEFAULT) wordt toegevoegd via de schema-push, moet de post-merge DB-migratie (`lib/db/scripts/apply-additive.mjs`) en de `schema-healthcheck` vóór de frontend-deploy draaien. Commit `48ec8a3` introduceerde de gate, maar de kolom was op dat moment nog niet in de VPS-DB aanwezig — de volgorde was frontend-deploy vóór DB-migratie. Dit is nu structureel opgelost in `deploy-production.sh` (stap 6 doet migratie + healthcheck vóór stap 7 de Caddy-image bouwt).
->>>>>>> 722f052 (diagnose: productie-login uitval connect.fps-one.nl (taak #770 — geen code-fix nodig))
 
 ---
 
