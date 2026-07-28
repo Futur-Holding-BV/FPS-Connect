@@ -33,6 +33,29 @@ Pas daarna wordt de opdracht als voltooid beschouwd.
 
 ---
 
+## Vóór indienen van een nieuwe opdracht (geleerd uit analyse-onnodige-fouten-opdrachten.md, 25 juli 2026)
+
+1. Doorzoek docs/changelog.md en openstaande taken op identiek of
+   overlappend onderwerp — nooit een opdracht indienen zonder deze
+   check. Blijkt het al (deels) opgelost: eerst verifiëren, dan pas
+   een nieuwe taak.
+2. Bij een gemeld incident of gerapporteerde bug: verifieer eerst de
+   actuele status vóórdat een volledige hersteltaak wordt uitgezet —
+   een tweede volledige diagnosesessie voor een reeds opgelost
+   probleem is verspild werk.
+3. Specificeer het volledige eindmodel in één opdracht (alle ingangen,
+   alle randgevallen, alle afwijzingsregels) — geen iteratieve
+   aanvullingen per reviewronde op eisen die in de oorspronkelijke
+   opdracht hadden moeten staan.
+4. Elke opdracht met een databasewijziging bevat verplicht de eis:
+   migratie aantoonbaar uitgevoerd en bevestigd vóór frontend-/
+   backend-activatie van de afhankelijke functionaliteit.
+5. Eén samenhangend mechanisme (bijv. een meldingsketen) wordt als
+   één volledige opdracht opgesteld, niet in losse fragmenten die
+   elkaar kunnen overlappen of tegenspreken.
+
+---
+
 ## Validatie op vier niveaus
 
 ### Niveau 1 — Codekwaliteit
