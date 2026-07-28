@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer, timestamp, unique } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, timestamp, unique, index } from "drizzle-orm/pg-core";
 import { gebruikersTable } from "./gebruikers";
 
 // Gesprekken — container voor direct (2 deelnemers) of groep (>2, heeft naam)
@@ -42,7 +42,9 @@ export const chatBerichtenTable = pgTable("chat_berichten", {
   bijlageUrl: text("bijlage_url"),    // objectPath in object storage
   bijlageType: text("bijlage_type"), // "foto"
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
-});
+}, (t) => [
+  index("chat_berichten_gesprek_aangemaakt_idx").on(t.gesprekId, t.aangemaaktOp),
+]);
 
 export type ChatGesprek = typeof chatGesprekkenTable.$inferSelect;
 export type ChatDeelnemer = typeof chatDeelnemersTable.$inferSelect;

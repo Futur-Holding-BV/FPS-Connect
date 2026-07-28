@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer, boolean, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, boolean, timestamp, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { gebouwenTable } from "./gebouwen";
@@ -21,7 +21,9 @@ export const inspectiesTable = pgTable("inspecties", {
   rapportUrl: text("rapport_url"),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
-});
+}, (t) => [
+  index("inspecties_gebouw_type_idx").on(t.gebouwId, t.type),
+]);
 
 export const inspectieBevindingen = pgTable("inspectie_bevindingen", {
   id: serial("id").primaryKey(),

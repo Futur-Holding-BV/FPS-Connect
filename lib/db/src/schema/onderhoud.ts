@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer, timestamp, boolean, numeric } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, timestamp, boolean, numeric, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { gebouwenTable } from "./gebouwen";
@@ -19,7 +19,9 @@ export const onderhoudTable = pgTable("onderhoud", {
   resultaat: text("resultaat"),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
-});
+}, (t) => [
+  index("onderhoud_gebouw_status_deadline_idx").on(t.gebouwId, t.status, t.deadline),
+]);
 
 export const insertOnderhoudSchema = createInsertSchema(onderhoudTable).omit({ id: true, aangemaaktOp: true, bijgewerktOp: true });
 export type InsertOnderhoud = z.infer<typeof insertOnderhoudSchema>;

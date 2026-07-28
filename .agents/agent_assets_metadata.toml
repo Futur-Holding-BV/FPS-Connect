@@ -89,3 +89,9 @@ id = "as3IQPp_p3LIEzOIpoygn"
 uri = "file://docs/analyse-onnodige-fouten-opdrachten.md"
 type = "text"
 title = "Analyse onnodige fouten door dubbele/onvolledige opdrachten"
+
+[[outputs]]
+id = "cNEo_h09QtH8k7Ma55_2R"
+uri = "file://scripts/test-results/dossier-keuze-stap3.png"
+type = "image"
+title = "Drieledige keuze bij gebruikersaanmaak (stap 3)"

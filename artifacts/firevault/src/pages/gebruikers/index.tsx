@@ -18,6 +18,8 @@ import {
   useGebruikerSessiesBeeindigen,
   useGebruikerOntgrendelen,
   useListProfielen,
+  useOnboardMedewerker,
+  useListFuncties,
   useGetMailStatus,
   getGetMailStatusQueryKey,
   getListGebruikersQueryKey,
@@ -58,7 +60,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useRol } from "@/context/rol-context";
 import { useVoorkeur } from "@/hooks/use-voorkeur";
 import { PaginaHulp } from "@/components/pagina-hulp";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
+import { WERKMAATSCHAPPIJEN, caoVoorWerkmaatschappij } from "@/lib/werkmaatschappijen";
 
 const ROLLEN = ["hoofdbeheerder", "gebruiker", "klant"] as const;
 type Rol = typeof ROLLEN[number];
@@ -98,6 +101,14 @@ const FUNCTIE_GROEPEN: FunctieGroep[] = [
 ];
 
 const GROEP_NAMEN = new Set(FUNCTIE_GROEPEN.map((g) => g.naam));
+
+// Interne profielen waarvoor bij gebruikersaanmaak de drieledige keuze
+// (alleen account / + medewerkerdossier / + onboarding) wordt getoond.
+// Externe profielen (Klant e.d.) krijgen deze vraag niet: alleen account.
+const DOSSIER_KEUZE_PROFIELEN = new Set([
+  "Monteur", "Uitvoerder", "Werkvoorbereider", "Projectleider",
+  "HRM-adviseur", "Financieel", "Controleur",
+]);
 
 function niveauLabel(n: number): string {
   return NIVEAUS.find((x) => x.waarde === n)?.kort ?? "";
@@ -227,6 +238,14 @@ const leegForm = {
 };
 type GebruikerForm = typeof leegForm;
 
+const leegDossierVelden = {
+  functie_id: null as number | null,
+  werkmaatschappij: "",
+  cao: "",
+  contracturen: "40",
+  in_dienst_sinds: new Date().toISOString().slice(0, 10),
+};
+
 type Gebruiker = {
   id: number;
   naam: string | null;
@@ -299,11 +318,18 @@ export default function Gebruikers() {
   const wachtwoordResetten   = useGebruikerWachtwoordResetten();
   const sessiesBeeindigen    = useGebruikerSessiesBeeindigen();
   const ontgrendelenMutatie  = useGebruikerOntgrendelen();
+  const onboardDossier       = useOnboardMedewerker();
+  const { data: functies }   = useListFuncties();
+  const [, navigeer] = useLocation();
 
   const [toevoegenOpen, setToevoegenOpen] = useState(false);
-  const [toevoegenStap, setToevoegenStap] = useState<1 | 2>(1);
+  const [toevoegenStap, setToevoegenStap] = useState<1 | 2 | 3>(1);
   const [toevoegenForm, setToevoegenForm] = useState<GebruikerForm>(leegForm);
   const [toevoegenFout, setToevoegenFout] = useState<string | null>(null);
+  // Drieledige keuze bij interne profielen (stap 3)
+  const [toevoegenGroep, setToevoegenGroep] = useState<string | null>(null);
+  const [dossierKeuze, setDossierKeuze] = useState<1 | 2 | 3>(1);
+  const [dossierVelden, setDossierVelden] = useState(leegDossierVelden);
 
   const [bewerkGebruiker, setBewerkGebruiker] = useState<Gebruiker | null>(null);
   const [bewerkForm, setBewerkForm]           = useState<GebruikerForm>(leegForm);
@@ -396,6 +422,14 @@ export default function Gebruikers() {
     }
   }
 
+  // Toont stap 3 alleen bij interne profielen met een medewerkerdossier-keuze.
+  // Gekoppeld aan de ACTUELE rol in het formulier: wijzigt de beheerder de rol
+  // in stap 2 alsnog naar klant/hoofdbeheerder, dan vervalt de keuzestap.
+  const toontDossierKeuze =
+    toevoegenForm.rol === "gebruiker" &&
+    toevoegenGroep != null &&
+    DOSSIER_KEUZE_PROFIELEN.has(toevoegenGroep);
+
   async function verstuurToevoegen(e: React.FormEvent) {
     e.preventDefault();
     setToevoegenFout(null);
@@ -403,8 +437,24 @@ export default function Gebruikers() {
       setToevoegenFout("Naam en e-mailadres zijn verplicht.");
       return;
     }
+    // Intern profiel: eerst de drieledige keuze (stap 3), nog niets aanmaken.
+    if (toevoegenStap === 2 && toontDossierKeuze) {
+      setToevoegenStap(3);
+      return;
+    }
+    if (toevoegenStap === 3 && dossierKeuze === 2) {
+      const uren = Number(dossierVelden.contracturen);
+      if (dossierVelden.functie_id == null || !dossierVelden.werkmaatschappij || !dossierVelden.cao) {
+        setToevoegenFout("Functie, werkmaatschappij en CAO zijn verplicht voor een medewerkerdossier.");
+        return;
+      }
+      if (!(uren > 0 && uren <= 40) || !dossierVelden.in_dienst_sinds) {
+        setToevoegenFout("Vul geldige contracturen (1-40) en een datum in dienst in.");
+        return;
+      }
+    }
     try {
-      await maakGebruiker.mutateAsync({
+      const aangemaakt: any = await maakGebruiker.mutateAsync({
         data: {
           naam:             toevoegenForm.naam.trim(),
           email:            toevoegenForm.email.trim(),
@@ -424,9 +474,42 @@ export default function Gebruikers() {
         },
       });
       await invalideer();
+      // Keuze 2: medewerkerdossier aanmaken via de bestaande onboarding-route
+      // (geen aparte flow). Keuze 3: door naar het bestaande onboardingscherm.
+      if (toevoegenStap === 3 && dossierKeuze === 2 && aangemaakt?.id != null) {
+        try {
+          await onboardDossier.mutateAsync({
+            data: {
+              gebruiker_id: aangemaakt.id,
+              functie_id: dossierVelden.functie_id!,
+              werkmaatschappij: dossierVelden.werkmaatschappij,
+              cao: dossierVelden.cao,
+              contracturen_per_week: Number(dossierVelden.contracturen),
+              in_dienst_sinds: dossierVelden.in_dienst_sinds,
+              naam: toevoegenForm.naam.trim(),
+              email: toevoegenForm.email.trim(),
+              telefoon: toevoegenForm.telefoon.trim() || undefined,
+              dienstverband: toevoegenForm.dienstverband || undefined,
+            },
+          });
+          toast({ title: "Gebruiker en medewerkerdossier aangemaakt", description: `${toevoegenForm.naam.trim()} heeft nu een account én een medewerkerdossier.` });
+        } catch (dossierErr: any) {
+          // Gebruiker bestaat al wél: meld expliciet dat het dossier niet lukte.
+          toast({
+            title: "Gebruiker aangemaakt, maar medewerkerdossier mislukt",
+            description: dossierErr?.response?.data?.error ?? dossierErr?.message ?? "Start de onboarding handmatig via Personeel.",
+            variant: "destructive",
+          });
+        }
+      }
+      const startOnboarding = toevoegenStap === 3 && dossierKeuze === 3 && aangemaakt?.id != null;
       setToevoegenOpen(false);
       setToevoegenForm(leegForm);
       setToevoegenStap(1);
+      setToevoegenGroep(null);
+      setDossierKeuze(1);
+      setDossierVelden(leegDossierVelden);
+      if (startOnboarding) navigeer(`/personeel/onboarden?userId=${aangemaakt.id}`);
     } catch (err: any) {
       setToevoegenFout(err?.response?.data?.error ?? err?.message ?? "Onbekende fout");
     }
@@ -972,7 +1055,7 @@ export default function Gebruikers() {
             </Button>
           )}
           {actieveTab === "klanten" && (
-            <Button onClick={() => { setToevoegenForm({ ...leegForm, rol: "klant" }); setToevoegenStap(2); setToevoegenOpen(true); setToevoegenFout(null); }}>
+            <Button onClick={() => { setToevoegenForm({ ...leegForm, rol: "klant" }); setToevoegenGroep(null); setToevoegenStap(2); setToevoegenOpen(true); setToevoegenFout(null); }}>
               <Plus className="h-4 w-4 mr-2" /> Klant toevoegen
             </Button>
           )}
@@ -1249,12 +1332,12 @@ export default function Gebruikers() {
       </Tabs>
 
       {/* Dialoog: toevoegen */}
-      <Dialog open={toevoegenOpen} onOpenChange={(o) => { if (!o) { setToevoegenOpen(false); setToevoegenFout(null); setToevoegenStap(1); } }}>
+      <Dialog open={toevoegenOpen} onOpenChange={(o) => { if (!o) { setToevoegenOpen(false); setToevoegenFout(null); setToevoegenStap(1); setToevoegenGroep(null); setDossierKeuze(1); setDossierVelden(leegDossierVelden); } }}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto" aria-describedby="toevoegen-beschr">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <UserPlus className="h-5 w-5" />
-              {toevoegenStap === 1 ? "Kies een functie" : "Gebruiker toevoegen"}
+              {toevoegenStap === 1 ? "Kies een functie" : toevoegenStap === 2 ? "Gebruiker toevoegen" : "Medewerkerdossier en onboarding"}
             </DialogTitle>
           </DialogHeader>
 
@@ -1285,6 +1368,7 @@ export default function Gebruikers() {
                           herkomst_profiel_id: herkomstProfielId,
                           profiel_ids: herkomstProfielId != null ? [herkomstProfielId] : [],
                         }));
+                        setToevoegenGroep(gr.naam);
                         setToevoegenStap(2);
                       }}
                       className="flex items-center gap-2.5 rounded-lg border bg-background px-3 py-2.5 text-left hover:bg-muted/50 hover:border-primary/30 hover:shadow-sm transition-all"
@@ -1302,7 +1386,7 @@ export default function Gebruikers() {
                 <Button type="button" variant="outline" onClick={() => setToevoegenOpen(false)}>Annuleren</Button>
               </DialogFooter>
             </>
-          ) : (
+          ) : toevoegenStap === 2 ? (
             <>
               <p id="toevoegen-beschr" className="text-sm text-muted-foreground -mt-1">
                 Vul de gegevens in om een nieuw account aan te maken.
@@ -1313,7 +1397,96 @@ export default function Gebruikers() {
                 <DialogFooter className="gap-2 pt-1">
                   <Button type="button" variant="outline" onClick={() => setToevoegenStap(1)}>Terug</Button>
                   <Button type="submit" disabled={maakGebruiker.isPending}>
-                    {maakGebruiker.isPending ? "Opslaan..." : "Toevoegen"}
+                    {maakGebruiker.isPending ? "Opslaan..." : toontDossierKeuze ? "Volgende" : "Toevoegen"}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </>
+          ) : (
+            <>
+              <p id="toevoegen-beschr" className="text-sm text-muted-foreground -mt-1">
+                Wil je voor deze gebruiker ook een medewerkerdossier en onboarding starten?
+              </p>
+              <form onSubmit={verstuurToevoegen} className="space-y-3 pt-1">
+                {([
+                  { nr: 1 as const, titel: "Alleen gebruikersaccount aanmaken", uitleg: "Extern, klant, leverancier of tijdelijke toegang." },
+                  { nr: 2 as const, titel: "Gebruiker + medewerkerdossier aanmaken", uitleg: "Interne medewerker, zonder volledige onboardingflow." },
+                  { nr: 3 as const, titel: "Gebruiker + medewerkerdossier + onboarding starten", uitleg: "Nieuwe medewerker, volledige flow via Personeel." },
+                ]).map((opt) => (
+                  <button
+                    key={opt.nr}
+                    type="button"
+                    data-testid={`dossier-keuze-${opt.nr}`}
+                    onClick={() => setDossierKeuze(opt.nr)}
+                    className={`w-full flex items-start gap-2.5 rounded-lg border px-3 py-2.5 text-left transition-all ${dossierKeuze === opt.nr ? "border-primary bg-primary/5 shadow-sm" : "bg-background hover:bg-muted/50"}`}
+                  >
+                    <span className={`mt-0.5 h-4 w-4 flex-shrink-0 rounded-full border-2 ${dossierKeuze === opt.nr ? "border-primary bg-primary" : "border-muted-foreground/40"}`} />
+                    <span>
+                      <span className="block text-sm font-medium leading-tight">{opt.titel}</span>
+                      <span className="block text-xs text-muted-foreground leading-tight mt-0.5">{opt.uitleg}</span>
+                    </span>
+                  </button>
+                ))}
+
+                {dossierKeuze === 2 && (
+                  <div className="rounded-lg border bg-muted/30 p-3 space-y-3">
+                    <p className="text-xs text-muted-foreground">Minimaal vereiste dossiergegevens:</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1.5">
+                        <Label>Functie</Label>
+                        <Select
+                          value={dossierVelden.functie_id != null ? String(dossierVelden.functie_id) : ""}
+                          onValueChange={(v) => setDossierVelden((d) => ({ ...d, functie_id: Number(v) }))}
+                        >
+                          <SelectTrigger data-testid="dossier-functie"><SelectValue placeholder="Kies functie" /></SelectTrigger>
+                          <SelectContent>
+                            {(functies ?? []).map((f: any) => (
+                              <SelectItem key={f.id} value={String(f.id)}>{f.naam}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label>Werkmaatschappij</Label>
+                        <Select
+                          value={dossierVelden.werkmaatschappij}
+                          onValueChange={(v) => setDossierVelden((d) => ({ ...d, werkmaatschappij: v, cao: caoVoorWerkmaatschappij(v) ?? d.cao }))}
+                        >
+                          <SelectTrigger data-testid="dossier-werkmaatschappij"><SelectValue placeholder="Kies werkmaatschappij" /></SelectTrigger>
+                          <SelectContent>
+                            {WERKMAATSCHAPPIJEN.map((wm) => (
+                              <SelectItem key={wm} value={wm}>{wm}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label>CAO</Label>
+                        <Input value={dossierVelden.cao} onChange={(e) => setDossierVelden((d) => ({ ...d, cao: e.target.value }))} placeholder="Wordt vooringevuld" />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label>Contracturen per week</Label>
+                        <Input type="number" min={1} max={40} value={dossierVelden.contracturen} onChange={(e) => setDossierVelden((d) => ({ ...d, contracturen: e.target.value }))} />
+                      </div>
+                      <div className="space-y-1.5 col-span-2">
+                        <Label>In dienst sinds</Label>
+                        <Input type="date" value={dossierVelden.in_dienst_sinds} onChange={(e) => setDossierVelden((d) => ({ ...d, in_dienst_sinds: e.target.value }))} />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {dossierKeuze === 3 && (
+                  <p className="text-xs text-muted-foreground">
+                    Na het aanmaken ga je direct door naar het onboardingscherm met deze gebruiker vooringevuld.
+                  </p>
+                )}
+
+                {toevoegenFout && <Foutmelding tekst={toevoegenFout} />}
+                <DialogFooter className="gap-2 pt-1">
+                  <Button type="button" variant="outline" onClick={() => { setToevoegenFout(null); setToevoegenStap(2); }}>Terug</Button>
+                  <Button type="submit" disabled={maakGebruiker.isPending || onboardDossier.isPending}>
+                    {maakGebruiker.isPending || onboardDossier.isPending ? "Bezig..." : "Aanmaken"}
                   </Button>
                 </DialogFooter>
               </form>

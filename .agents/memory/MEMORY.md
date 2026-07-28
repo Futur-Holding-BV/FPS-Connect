@@ -133,4 +133,5 @@
 - [MinIO objectopslag prod](minio-objectopslag-prod.md) — presign-client op publiek domein + Caddy Host-behoud; mc alias op publiek domein werkt niet; backup-minio + bucket-race depends_on.
 - [Financiele kerncijfers denormalisatie](financieel-kerncijfers-denormalisatie.md) — meerjarenoverzicht leest denorm-kolommen op kerncijfers; metadata-wijziging moet atomair cascaderen (tx); bewijs via verificatie-jaarrekening-cascade.ts.
 - [ENK-import calculatiemodule](enk-import.md) — verschil = zichtbare correctieregel; standaard opslagen 25/4/8/0/4/0 zijn informatief, nooit verrekenen bij inclusief (dubbeltelling); float4-grens €167k; e2e: 2 file-inputs.
+- [Wizard-flag productie](wizard-feature-flag-prod.md) — /personeel/onboarden "niet beschikbaar in pilot" op prod = VITE_FEATURE_WIZARD_ONBOARDING niet in webbuild (opt-in, build-time); API werkt wel.
 - [Functie→preset naam-matching](functie-preset-matching.md) — koppel-heuristiek moet exacte match eerst rangschikken; bidirectionele includes laat langere preset ("Onderhoudsmonteur") exacte "Monteur" verslaan.

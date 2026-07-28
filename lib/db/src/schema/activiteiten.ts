@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, timestamp, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -14,7 +14,11 @@ export const activiteitenTable = pgTable("activiteiten", {
   gebruikerNaam: text("gebruiker_naam"),
   offerteId: integer("offerte_id"),
   tijdstip: timestamp("tijdstip").notNull().defaultNow(),
-});
+}, (t) => [
+  // Feed-query: activiteiten per gebouw, nieuwste eerst. De tijdkolom heet hier
+  // "tijdstip" (deze tabel heeft geen aangemaakt_op).
+  index("activiteiten_gebouw_tijdstip_idx").on(t.gebouwId, t.tijdstip),
+]);
 
 export const insertActiviteitSchema = createInsertSchema(activiteitenTable).omit({ id: true, tijdstip: true });
 export type InsertActiviteit = z.infer<typeof insertActiviteitSchema>;

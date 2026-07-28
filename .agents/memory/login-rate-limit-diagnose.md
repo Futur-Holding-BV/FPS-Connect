@@ -9,4 +9,6 @@ Regel: bij klachten "correct wachtwoord maar inloggen lukt niet" eerst de IP-rat
 
 **How to apply:** bij zulke meldingen: check `login_pogingen` + accountstatus in dev én prod; beide schoon → rate-limiter. Dev-limiter wissen = api-server herstarten (in-memory Map). Functioneel bewijs: N+2 foute logins met een niet-bestaand e-mailadres (vergrendelt niets) en statuscodes tellen.
 
+Sinds 28 juli 2026 zijn er twee lagen: (1) de ruime per-IP-limiter (50/15min, alleen mislukkingen) en (2) strikte express-rate-limit limiters — 5/15min per IP+account (login/mobile: e-mail uit body; 2FA-routes: uitsluitend `pendingUserId` uit sessie, nooit body — anders sleutelrotatie-bypass) en 3/uur per IP per wachtwoordroute. `DELETE /auth/e2e-rate-reset` (dev-only) wist álle stores; e2e/pre-publish moeten die aanroepen vóór de suite.
+
 Bijvangst autofill: Firefox kent de WebKit-transitietruc niet; standaard `:autofill`-blok (apart blok — onbekende selector in een groep laat de hele regel vervallen) met inset box-shadow in de donkere glaskleur; dat blok matcht ook modern Chrome/Safari.

@@ -1,3 +1,38 @@
+## 2026-07-28 — Drieledige keuze bij gebruikersaanmaak voor interne profielen
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+**Aanleiding:** bij het aanmaken van een interne gebruiker (Monteur, Uitvoerder, Werkvoorbereider, Projectleider, HRM-adviseur, Financieel, Controleur) ontbrak de koppeling met het medewerkerdossier; beheerders moesten dat handmatig via Personeel doen of vergaten het.
+
+**Wijziging (alleen `artifacts/firevault/src/pages/gebruikers/index.tsx`):** extra dialoogstap (stap 3) ná de basisgegevens, uitsluitend bij interne profielen, met drie opties: (1) alleen gebruikersaccount; (2) account + medewerkerdossier via de bestaande `POST /medewerkers/onboarding` (minimale velden: functie, werkmaatschappij met automatische CAO-voorselectie, contracturen, in dienst sinds); (3) account + doornavigeren naar het bestaande onboardingscherm `/personeel/onboarden?userId=<id>`. Externe profielen (Klant e.d.) krijgen de vraag niet; er is géén parallelle medewerker-aanmaakroute toegevoegd en bestaande onboarding-logica is onaangeraakt. Mislukt het dossier na een geslaagd account, dan meldt de UI dat expliciet (geen stille fout).
+
+**Bewijs:** nieuwe e2e-suite `scripts/e2e/web-gebruiker-dossier-keuze.spec.ts` — 4/4 groen: keuze 1 (account zonder dossier, DB-check), keuze 2 (dossier aanwezig én gekoppeld aan nieuwe gebruiker_id, geen onboardingscherm), keuze 3 (redirect naar onboardingscherm met juiste userId, nog geen dossier), extern profiel Klant (geen stap 3). Typecheck groen; screenshot van de keuzestap in `scripts/test-results/dossier-keuze-stap3.png`.
+
+## 2026-07-28 — Ontbrekende indexen toegevoegd (technische-schuld #1-7, P1)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+**Wijziging (puur additief, geen kolom-/constraint-/datawijzigingen):** 5 nieuwe indexen in de Drizzle-schema's: `voorzieningen_gebouw_idx` (gebouw_id), `activiteiten_gebouw_tijdstip_idx` (gebouw_id+tijdstip — de tabel heeft geen aangemaakt_op), `inspecties_gebouw_type_idx`, `onderhoud_gebouw_status_deadline_idx`, `chat_berichten_gesprek_aangemaakt_idx`. Idempotente SQL in `lib/db/sql/ontbrekende-indexen.sql`.
+
+**Afwijkingen t.o.v. de schuldlijst:** #6 `document_koppelingen` heet in werkelijkheid `doel_type`/`doel_id` en had de index al (`document_koppelingen_doel_idx`); #7 `documenten.entiteit_type`/`entiteit_id` bestaan niet als kolommen (polymorfe koppeling zit in `document_koppelingen`) — bewust geen schemawijziging gedaan.
+
+**Bewijs (Replit-testdatabase, niet de VPS):** vóór = Seq Scan op alle 5 tabellen; ná toepassing = Index Scan op elke query (kleine dev-dataset, indexgebruik aangetoond met `enable_seqscan=off`). `drizzle-kit push` daarna schoon ("Changes applied") — productie krijgt de indexen automatisch via de migrate-container in de deploy-keten.
+
+## 2026-07-28 — Strikte rate-limiting op alle auth-routes (technische-schuld #24, P1)
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+**Aanleiding:** brute-force op wachtwoord/TOTP was mogelijk: de bestaande in-memory limiter was bewust ruim (50/15 min per IP) omdat een kantoor één IP deelt, waardoor gerichte aanvallen op één account er praktisch doorheen konden.
+
+**Wijziging (alleen `artifacts/api-server`):**
+- `express-rate-limit` toegevoegd als dependency.
+- Strikte limiter (5 pogingen / 15 min, sleutel = IP + account, alleen mislukte pogingen tellen) op `POST /auth/login` en `/auth/mobile/login` (account = genormaliseerde e-mail uit de body) en apart op `/auth/2fa/verify` en `/auth/2fa/activeren` (account = uitsluitend `pendingUserId` uit de sessie — body-invoer kan de sleutel dus niet roteren).
+- Wachtwoordlimiter (3 pogingen / uur per IP, per endpoint een eigen budget) op `POST /auth/wachtwoord-vergeten` en `/auth/wachtwoord-reset`.
+- Overschrijding geeft HTTP 429 met Nederlandse melding, zonder interne details; `Retry-After` via standaard-headers.
+- Bestaande ruime per-IP-limiter en lockout-logica ongewijzigd; `DELETE /auth/e2e-rate-reset` (dev-only) wist nu ook de nieuwe stores.
+
+**Bewijs:** 6e opeenvolgende mislukte loginpoging → 429 "Te veel pogingen. Probeer het later opnieuw." (pogingen 1–5 gaven 401). Pre-publish-validatie ná de wijziging: alle 10 identiteitsflows PASS — normale login/2FA/reset-flows worden niet geraakt.
+
 ## 2026-07-25 — Productiedeploy CONSOLIDATE_EMPLOYEE_ONBOARDING + herstel automatische deployketen
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag

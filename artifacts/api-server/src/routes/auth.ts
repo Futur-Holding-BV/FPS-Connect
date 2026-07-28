@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { rateLimit, ipKeyGenerator, MemoryStore } from "express-rate-limit";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { authenticator } from "otplib";
@@ -73,6 +74,66 @@ setInterval(() => {
   }
 }, 30 * 60 * 1000).unref();
 
+// ── Strikte limiters (express-rate-limit) op de auth-routes ──────────────────
+// Aanvullend op de ruime per-IP-limiter hierboven (die legitiem kantoorverkeer
+// achter één gedeeld IP beschermt) geldt hieronder een strikte limiet per
+// IP + account: brute-force op één account wordt zo na 5 pogingen per
+// 15 minuten geblokkeerd, zonder dat andere gebruikers achter hetzelfde IP
+// geraakt worden. Succesvolle verzoeken tellen niet mee, zodat normale
+// login/2FA-flows nooit tegen deze limiet aanlopen.
+
+const TE_VEEL_POGINGEN = "Te veel pogingen. Probeer het later opnieuw.";
+
+// Sleutel = IP + account. Voor login/mobile-login is het account het
+// (genormaliseerde) e-mailadres uit de body; voor de 2FA-stappen UITSLUITEND
+// de pendingUserId uit de sessie — nooit body-invoer, anders kan een aanvaller
+// de sleutel roteren door een wisselend e-mailveld mee te sturen.
+function loginSleutel(req: import("express").Request): string {
+  const ip = ipKeyGenerator(req.ip ?? "onbekend");
+  const email = typeof req.body?.email === "string" ? req.body.email.trim().toLowerCase() : "-";
+  return `${ip}|${email}`;
+}
+function tfaSleutel(req: import("express").Request): string {
+  const ip = ipKeyGenerator(req.ip ?? "onbekend");
+  return `${ip}|uid:${req.session?.pendingUserId ?? "-"}`;
+}
+
+const strikteLimiterOpties = {
+  windowMs: 15 * 60 * 1000,
+  limit: 5,
+  skipSuccessfulRequests: true,
+  standardHeaders: true as const,
+  legacyHeaders: false,
+  message: { error: TE_VEEL_POGINGEN },
+};
+const strikteLoginStore = new MemoryStore();
+const strikteLoginLimiter = rateLimit({
+  ...strikteLimiterOpties,
+  store: strikteLoginStore,
+  keyGenerator: loginSleutel,
+});
+const strikteTfaStore = new MemoryStore();
+const strikteTfaLimiter = rateLimit({
+  ...strikteLimiterOpties,
+  store: strikteTfaStore,
+  keyGenerator: tfaSleutel,
+});
+
+// Wachtwoordroutes: 3 pogingen per uur per IP, elk endpoint zijn eigen budget
+// zodat een legitieme "vergeten → reset"-flow elkaar niet uitput.
+const wachtwoordLimiterOpties = {
+  windowMs: 60 * 60 * 1000,
+  limit: 3,
+  standardHeaders: true as const,
+  legacyHeaders: false,
+  message: { error: TE_VEEL_POGINGEN },
+  keyGenerator: (req: import("express").Request) => ipKeyGenerator(req.ip ?? "onbekend"),
+};
+const wachtwoordVergetenStore = new MemoryStore();
+const wachtwoordVergetenLimiter = rateLimit({ ...wachtwoordLimiterOpties, store: wachtwoordVergetenStore });
+const wachtwoordResetStore = new MemoryStore();
+const wachtwoordResetLimiter = rateLimit({ ...wachtwoordLimiterOpties, store: wachtwoordResetStore });
+
 function domein(): string {
   return (process.env.REPLIT_DOMAINS ?? "").split(",")[0]?.trim() || "localhost";
 }
@@ -122,7 +183,7 @@ function verzoekUserAgent(req: { headers: Record<string, unknown> }): string | n
 }
 
 // POST /auth/login — stap 1: e-mail + wachtwoord
-router.post("/auth/login", async (req, res): Promise<void> => {
+router.post("/auth/login", strikteLoginLimiter, async (req, res): Promise<void> => {
   if (!checkLoginRateLimit(req, res)) return;
   try {
     const { email, wachtwoord } = req.body ?? {};
@@ -210,7 +271,7 @@ router.post("/auth/2fa/setup", async (req, res): Promise<void> => {
 });
 
 // POST /auth/2fa/activeren — bevestig eerste code en schakel 2FA in
-router.post("/auth/2fa/activeren", async (req, res): Promise<void> => {
+router.post("/auth/2fa/activeren", strikteTfaLimiter, async (req, res): Promise<void> => {
   try {
     const pendingId = req.session.pendingUserId;
     const secret = req.session.pendingSecret;
@@ -255,7 +316,7 @@ router.post("/auth/2fa/activeren", async (req, res): Promise<void> => {
 });
 
 // POST /auth/2fa/verify — stap 2 bij bestaande 2FA
-router.post("/auth/2fa/verify", async (req, res): Promise<void> => {
+router.post("/auth/2fa/verify", strikteTfaLimiter, async (req, res): Promise<void> => {
   if (!checkLoginRateLimit(req, res)) return;
   try {
     const pendingId = req.session.pendingUserId;
@@ -319,7 +380,7 @@ router.post("/auth/2fa/verify", async (req, res): Promise<void> => {
 
 // POST /auth/mobile/login — login in één stap voor de mobiele monteur-app
 // (e-mail + wachtwoord + bestaande TOTP-code). Retourneert een bearer-token.
-router.post("/auth/mobile/login", async (req, res): Promise<void> => {
+router.post("/auth/mobile/login", strikteLoginLimiter, async (req, res): Promise<void> => {
   if (!checkLoginRateLimit(req, res)) return;
   try {
     const { email, wachtwoord, code } = req.body ?? {};
@@ -391,7 +452,7 @@ router.post("/auth/logout", (req, res) => {
 });
 
 // POST /auth/wachtwoord-vergeten — publiek; altijd 204 (geen e-mail-enumeratie)
-router.post("/auth/wachtwoord-vergeten", async (req, res): Promise<void> => {
+router.post("/auth/wachtwoord-vergeten", wachtwoordVergetenLimiter, async (req, res): Promise<void> => {
   try {
     const { email } = req.body ?? {};
     if (!email) return void res.status(204).send();
@@ -435,7 +496,7 @@ router.post("/auth/wachtwoord-vergeten", async (req, res): Promise<void> => {
 });
 
 // POST /auth/wachtwoord-reset — publiek; token + nieuw wachtwoord
-router.post("/auth/wachtwoord-reset", async (req, res): Promise<void> => {
+router.post("/auth/wachtwoord-reset", wachtwoordResetLimiter, async (req, res): Promise<void> => {
   try {
     const { token, nieuw_wachtwoord } = req.body ?? {};
     if (!token || !nieuw_wachtwoord) {
@@ -627,7 +688,11 @@ router.delete("/auth/e2e-rate-reset", (req, res): void => {
     return;
   }
   loginRateMap.clear();
-  req.log.info("e2e-rate-reset: loginRateMap gewist");
+  strikteLoginStore.resetAll();
+  strikteTfaStore.resetAll();
+  wachtwoordVergetenStore.resetAll();
+  wachtwoordResetStore.resetAll();
+  req.log.info("e2e-rate-reset: loginRateMap + strikte limiters gewist");
   res.status(204).end();
 });
 
