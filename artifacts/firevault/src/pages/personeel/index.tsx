@@ -1,4 +1,5 @@
 import { useState, lazy, Suspense } from "react";
+import { featureFlags } from "@/lib/feature-flags";
 import { Link } from "wouter";
 const HrmWidgets = lazy(() => import("./hrm-widgets"));
 import { useQueryClient } from "@tanstack/react-query";
@@ -615,11 +616,13 @@ export default function PersoneelPagina() {
                         <div className="text-sm font-medium truncate">{g.naam}</div>
                         <div className="text-xs text-muted-foreground">{g.rol}</div>
                       </div>
-                      <Button size="sm" variant="outline" asChild>
-                        <Link href={`/personeel/onboarden?userId=${g.id}`}>
-                          <UserPlus className="h-4 w-4" /> Onboarden
-                        </Link>
-                      </Button>
+                      {featureFlags.wizardOnboarding && (
+                        <Button size="sm" variant="outline" asChild>
+                          <Link href={`/personeel/onboarden?userId=${g.id}`}>
+                            <UserPlus className="h-4 w-4" /> Onboarden
+                          </Link>
+                        </Button>
+                      )}
                     </div>
                   ))}
                 </div>

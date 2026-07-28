@@ -1,3 +1,15 @@
+## 2026-07-28 — Onboarden-knop verborgen zolang wizard-flag uit staat
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag
+
+**Aanleiding:** de "Onboarden"-knop in HRM leidde naar `/personeel/onboarden`, die altijd "niet beschikbaar in pilot" toonde omdat `VITE_FEATURE_WIZARD_ONBOARDING` niet in de productie-build staat. Besluit: knop verbergen zolang de flag uit staat (optie 2 na overleg).
+
+**Wijzigingen:**
+- `artifacts/firevault/src/pages/personeel/index.tsx` — "Onboarden"-knop wordt alleen gerenderd als `featureFlags.wizardOnboarding` actief is.
+- `artifacts/firevault/src/pages/gebruikers/index.tsx` — automatische redirect naar de onboarding-wizard na gebruikersaanmaak is eveneens gegate op de flag.
+
+---
+
 ## 2026-07-28 — Drieledige keuze bij gebruikersaanmaak voor interne profielen
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag

@@ -1,4 +1,5 @@
 import { useState, useRef, useMemo, useEffect } from "react";
+import { featureFlags } from "@/lib/feature-flags";
 import { useTranslation } from "react-i18next";
 import {
   useListGebruikers,
@@ -509,7 +510,7 @@ export default function Gebruikers() {
       setToevoegenGroep(null);
       setDossierKeuze(1);
       setDossierVelden(leegDossierVelden);
-      if (startOnboarding) navigeer(`/personeel/onboarden?userId=${aangemaakt.id}`);
+      if (startOnboarding && featureFlags.wizardOnboarding) navigeer(`/personeel/onboarden?userId=${aangemaakt.id}`);
     } catch (err: any) {
       setToevoegenFout(err?.response?.data?.error ?? err?.message ?? "Onbekende fout");
     }
@@ -1411,7 +1412,7 @@ export default function Gebruikers() {
                 {([
                   { nr: 1 as const, titel: "Alleen gebruikersaccount aanmaken", uitleg: "Extern, klant, leverancier of tijdelijke toegang." },
                   { nr: 2 as const, titel: "Gebruiker + medewerkerdossier aanmaken", uitleg: "Interne medewerker, zonder volledige onboardingflow." },
-                  { nr: 3 as const, titel: "Gebruiker + medewerkerdossier + onboarding starten", uitleg: "Nieuwe medewerker, volledige flow via Personeel." },
+                  ...(featureFlags.wizardOnboarding ? [{ nr: 3 as const, titel: "Gebruiker + medewerkerdossier + onboarding starten", uitleg: "Nieuwe medewerker, volledige flow via Personeel." }] : []),
                 ]).map((opt) => (
                   <button
                     key={opt.nr}
