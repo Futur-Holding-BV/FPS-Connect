@@ -16,10 +16,11 @@
 // (vaste sortering, vaste afronding) zodat twee runs op dezelfde data
 // letterlijk dezelfde cijfers aan de AI meegeven.
 
-import { eq, inArray, isNotNull, ne } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, ne } from "drizzle-orm";
 import {
   db,
   eenheidsprijzenTable,
+  facturenTable,
   factuurRegelsTable,
   modCalcHeadersTable,
   modCalcNormtijdenTable,
@@ -92,24 +93,44 @@ export async function bouwEigenCijfersContext(
         .where(inArray(modCalcRegelsTable.calculatieId, andereHeaderIds))
     : [];
 
-  // Factuurregels alleen ophalen voor omschrijvingen die in deze calculatie voorkomen.
+  // "Werkelijk betaald" mag alleen uit afgehandelde INKOOPfacturen komen:
+  // verkoopfacturen of afgekeurde/onafgeronde facturen zouden een verzonnen
+  // vergelijking opleveren (review-bevinding). Daarom join op de ouder-factuur
+  // met type 'inkoop' en status verwerkt/betaald.
   const factuurRegels = regels.length > 0
-    ? (await db.select().from(factuurRegelsTable).where(isNotNull(factuurRegelsTable.stukprijs)))
+    ? (await db.select({ regel: factuurRegelsTable })
+        .from(factuurRegelsTable)
+        .innerJoin(facturenTable, eq(factuurRegelsTable.factuurId, facturenTable.id))
+        .where(and(
+          isNotNull(factuurRegelsTable.stukprijs),
+          eq(facturenTable.type, "inkoop"),
+          inArray(facturenTable.status, ["verwerkt", "betaald"]),
+        ))).map((r) => r.regel)
     : [];
 
   const epOpCode = new Map(eenheidsprijzen.map((e) => [normaliseer(e.code), e] as const));
-  const epOpOmschrijving = new Map(
-    eenheidsprijzen.map((e) => [regelsoortSleutel(e.omschrijving, e.eenheid), e] as const),
-  );
+  // Omschrijving+eenheid is NIET uniek in de bibliotheek. Bij meerdere kandidaten
+  // is de match ambigu: dan geen norm kiezen (fail closed) maar dát melden —
+  // anders zou de databasevolgorde stilzwijgend bepalen welke norm "wint".
+  const epOpOmschrijving = new Map<string, (typeof eenheidsprijzen)[number] | "ambigu">();
+  for (const e of eenheidsprijzen) {
+    const sleutel = regelsoortSleutel(e.omschrijving, e.eenheid);
+    epOpOmschrijving.set(sleutel, epOpOmschrijving.has(sleutel) ? "ambigu" : e);
+  }
   const normtijdOpId = new Map(normtijden.map((n) => [n.id, n] as const));
 
   // ── Blok A — de eigen norm per regel ─────────────────────────────────────
   const blokA: string[] = [];
   for (const r of [...regels].sort((a, b) => a.volgorde - b.volgorde || a.id - b.id)) {
     const normtijdCode = r.normtijdId != null ? normtijdOpId.get(r.normtijdId)?.code : undefined;
-    const ep = (normtijdCode ? epOpCode.get(normaliseer(normtijdCode)) : undefined)
+    const kandidaat = (normtijdCode ? epOpCode.get(normaliseer(normtijdCode)) : undefined)
       ?? epOpOmschrijving.get(regelsoortSleutel(r.omschrijving, r.eenheid));
     const prijs = regelEenheidsprijs(r);
+    if (kandidaat === "ambigu") {
+      blokA.push(`- "${r.omschrijving}" (${r.eenheid}): meerdere eenheidsprijzen met dezelfde omschrijving en eenheid in de bibliotheek — ambigu, geen norm gekozen. Bevinding voor beheer: maak de bibliotheek eenduidig.`);
+      continue;
+    }
+    const ep = kandidaat;
     if (!ep) {
       blokA.push(`- "${r.omschrijving}" (${r.eenheid}): geen eenheidsprijs gevonden in de bibliotheek — geen norm om aan te toetsen.`);
       continue;

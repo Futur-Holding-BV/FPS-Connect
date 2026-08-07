@@ -75,6 +75,15 @@ async function main(): Promise<void> {
       });
     }
 
+    // Dubbele eenheidsprijs → ambigue match moet fail-closed gemeld worden
+    for (const v of [70, 75]) {
+      const [dup] = await db.insert(eenheidsprijzenTable).values({
+        code: `${MARK}-DUP-${v}`, omschrijving: `${MARK} dubbele bibliotheekregel`, categorie: "overig",
+        eenheid: "st", materiaalcomponent: 10, arbeidscomponent: 10, normtijd: 0.2, kostprijs: 20, verkoopprijs: v, marge: 10,
+      }).returning();
+      epIds.push(dup!.id);
+    }
+
     // ── Seed: werkelijk betaalde inkoopprijs (factuurregel) ──────────────
     const [factuur] = await db.insert(facturenTable).values({
       type: "inkoop", factuurnummer: `${MARK}-F1`, relatienaam: `${MARK} Leverancier BV`, status: "verwerkt",
@@ -84,6 +93,17 @@ async function main(): Promise<void> {
       await db.insert(factuurRegelsTable).values({
         factuurId: factuur!.id, omschrijving: `${MARK} brandwerende doorvoering afdichten`,
         eenheid: "st", hoeveelheid: 20, stukprijs: String(p), bron: "handmatig",
+      });
+    }
+
+    // Verkoopfactuur en afgekeurde inkoopfactuur — mogen Blok C NIET beïnvloeden
+    const [verkoop] = await db.insert(facturenTable).values({ type: "verkoop", factuurnummer: `${MARK}-V1`, relatienaam: `${MARK} Klant BV`, status: "verwerkt" }).returning();
+    const [afgekeurd] = await db.insert(facturenTable).values({ type: "inkoop", factuurnummer: `${MARK}-A1`, relatienaam: `${MARK} Leverancier BV`, status: "afgekeurd" }).returning();
+    factuurIds.push(verkoop!.id, afgekeurd!.id);
+    for (const fid of [verkoop!.id, afgekeurd!.id]) {
+      await db.insert(factuurRegelsTable).values({
+        factuurId: fid, omschrijving: `${MARK} brandwerende doorvoering afdichten`,
+        eenheid: "st", hoeveelheid: 1, stukprijs: "999.99", bron: "handmatig",
       });
     }
 
@@ -100,6 +120,8 @@ async function main(): Promise<void> {
       { calculatieId: huidige!.id, categorie: "materiaal", omschrijving: `${MARK} manchet plaatsen rond kunststof leiding`, eenheid: "st", hoeveelheid: 4, tarief: 30, muPerEenheid: 0.5, arbeidsTarief: 50, normtijdId: normtijd!.id, volgorde: 2 },
       // 3: nergens koppelbaar
       { calculatieId: huidige!.id, categorie: "arbeid", omschrijving: `${MARK} volstrekt uniek specialistisch werk`, eenheid: "uur", hoeveelheid: 8, tarief: 65, muPerEenheid: 0, arbeidsTarief: 0, volgorde: 3 },
+      // 5: ambigue bibliotheekmatch (twee eenheidsprijzen met zelfde omschrijving+eenheid)
+      { calculatieId: huidige!.id, categorie: "materiaal", omschrijving: `${MARK} dubbele bibliotheekregel`, eenheid: "st", hoeveelheid: 2, tarief: 72, muPerEenheid: 0, arbeidsTarief: 0, volgorde: 5 },
       // 4: regelsoort met slechts 2 historische waarnemingen
       { calculatieId: huidige!.id, categorie: "arbeid", omschrijving: `${MARK} kitvoeg aanbrengen`, eenheid: "m1", hoeveelheid: 6, tarief: 22, muPerEenheid: 0, arbeidsTarief: 0, volgorde: 4 },
     ]);
@@ -131,6 +153,10 @@ async function main(): Promise<void> {
       && !run1.includes(`volstrekt uniek specialistisch werk" (uur): werkelijk betaald`));
     check("Blok D: eigen opslagenpraktijk met medianen over eerdere calculaties",
       run1.includes("AK: FPS-praktijk mediaan 12.0%") && run1.includes("over 6 eerdere calculaties"));
+    check("Blok C: verkoop- en afgekeurde facturen tellen niet mee (mediaan blijft € 34.00, geen € 999.99)",
+      run1.includes("mediaan € 34.00 — 3 factuurregel(s)") && !run1.includes("999.99"));
+    check("Blok A: ambigue bibliotheekmatch fail-closed gemeld",
+      run1.includes(`dubbele bibliotheekregel" (st): meerdere eenheidsprijzen`));
     check("Geen vaste 30-45%-norm meer in de prompt", !(await import(apiLib + "aiPrompts")).CALCULATIE_ANALYSE_BASE_PROMPT.tekst.includes("30-45%"));
 
     console.log(fouten === 0 ? "\nALLE CHECKS GESLAAGD" : `\n${fouten} CHECK(S) GEFAALD`);
