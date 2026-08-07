@@ -2585,3 +2585,10 @@ FIE Fase 5 voltooit de nacalculatiecyclus na projectafsluiting. Calculatie vs. w
 **Bevinding:** de inkoperroute kan in de praktijk vrijwel nooit matchen: `inkoopbonnen.leverancier_id` verwijst naar de oude `leveranciers`-tabel, terwijl de factuurrouting met `crm_klanten`-id's zoekt (als follow-up gemeld).
 
 ---
+
+## 7 augustus 2026 — CALCULATIE_AI_01: adviseren op basis van eigen cijfers
+- De senior-calculatoranalyse krijgt nu vier deterministische blokken eigen FPS-cijfers mee: eigen eenheidsprijs per regel (afwijking in € en %), prijsgeschiedenis per regelsoort (mediaan, min. 5 waarnemingen), werkelijk betaalde inkoopprijzen (alleen aantoonbare koppeling) en de eigen opslagenpraktijk (medianen).
+- De vaste 30-45%-marge-norm is uit de prompt verwijderd (v2.0.0); nieuwe aandachtspunten 13-15 + vaste regel: advies op eigen cijfers noemt die cijfers, algemene kennis wordt als zodanig benoemd.
+- Bewijs: `scripts/src/bewijs-calculatie-eigen-cijfers.ts` (9/9 groen, incl. determinisme) en vóór/ná-vergelijking in `docs/calculatie-ai-voor-na.md`.
+- Nulbevinding: dev én prod bevatten nog géén eenheidsprijzen/calculatiehistorie/factuurregels — acceptatie op echte calculaties volgt zodra die data er is.
+- Los meegefixt: ontbrekende import `stuurPushNaarGebruiker` in factuurstroomService (typecheck-breker uit merge).

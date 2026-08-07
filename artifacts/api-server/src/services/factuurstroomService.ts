@@ -10,6 +10,7 @@
 // Betaling zelf is FACTUUR_03 en zit hier bewust niet in.
 
 import { and, desc, eq, inArray, isNull, isNotNull, lt, ne, sql } from "drizzle-orm";
+import { stuurPushNaarGebruiker } from "../lib/pushService";
 import {
   db,
   facturenTable,

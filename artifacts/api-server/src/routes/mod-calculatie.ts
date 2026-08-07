@@ -26,6 +26,7 @@ import {
 import { eq, desc, asc, ilike, or, count, sql, and } from "drizzle-orm";
 import { requireBevoegdheid, requireRol } from "../middlewares/auth";
 import { aiGateway, heeftGateway } from "../lib/aiGateway";
+import { bouwEigenCijfersContext } from "../lib/calculatieEigenCijfers";
 import { CALCULATIE_CHAT_BASE_PROMPT, CALCULATIE_ANALYSE_BASE_PROMPT, CALCULATIE_VULLEN_BASE_PROMPT, CALCULATIE_INKOOP_MAIL_PROMPT } from "../lib/aiPrompts";
 
 const router = Router();
@@ -1895,6 +1896,8 @@ router.post("/modules/calculaties/:id/ai-senior-analyse", lezenCalc, async (req,
       ? inkoopItems.map((i) => `${i.type}: ${i.omschrijving}${(i as any).artikel ? " (" + (i as any).artikel + ")" : ""} — offerte ontvangen: ${(i as any).offerteOntvangen ? "ja" : "nee"}`).join("\n")
       : "(geen inkoopregels)";
 
+    const eigenCijfers = await bouwEigenCijfersContext(header, regels);
+
     const opslagenTekst = [
       `AK: ${header.opslagAk ?? 15}%`,
       `ABK: ${(header as any).opslagAbk ?? 10}%`,
@@ -1917,7 +1920,11 @@ router.post("/modules/calculaties/:id/ai-senior-analyse", lezenCalc, async (req,
       `OPSLAGEN: ${opslagenTekst}`,
       `CALCULATIEREGELS (${regels.length}):\n${regelsTekst}`,
       `INKOOPADMINISTRATIE:\n${inkoopTekst}`,
-    ].filter(Boolean).join("\n");
+      // CALCULATIE_AI_01: de eigen cijfers van FPS (eenheidsprijzen, prijshistorie,
+      // werkelijk betaald, opslagenpraktijk) — deterministisch opgebouwd.
+      ``,
+      eigenCijfers,
+    ].filter((r) => r !== null).join("\n");
     const systeemPrompt = analyseContext + "\n\n" + CALCULATIE_ANALYSE_BASE_PROMPT.tekst;
 
     const aiResultaat = await aiGateway.chat("reasoning", {
