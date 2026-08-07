@@ -1,3 +1,4 @@
+import { veiligeFoutmelding } from "../middlewares/foutafhandelaar";
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { backupRecordsTable } from "@workspace/db";
@@ -75,7 +76,7 @@ router.post("/api/backups", requireBevoegdheid("systeem", 2), async (req, res): 
       .where(eq(backupRecordsTable.id, id));
     res.status(201).json(record);
   } catch (err) {
-    const foutTekst = err instanceof Error ? err.message : String(err);
+    const foutTekst = veiligeFoutmelding(err);
     req.log.error({ err }, "Back-up aanmaken mislukt");
     res.status(500).json({ fout: `Back-up mislukt: ${foutTekst}` });
   }
@@ -169,7 +170,7 @@ router.post(
         .where(eq(backupRecordsTable.id, id));
       res.json(record);
     } catch (err) {
-      const foutTekst = err instanceof Error ? err.message : String(err);
+      const foutTekst = veiligeFoutmelding(err);
       req.log.error({ err }, "Integriteitscontrole mislukt");
       res.status(422).json({ fout: foutTekst });
     }
@@ -204,7 +205,7 @@ router.post(
       await herstelBackup(id);
       res.json({ bericht: "Database succesvol hersteld vanuit back-up" });
     } catch (err) {
-      const foutTekst = err instanceof Error ? err.message : String(err);
+      const foutTekst = veiligeFoutmelding(err);
       req.log.error({ err }, "Herstel mislukt");
       res.status(500).json({ fout: `Herstel mislukt: ${foutTekst}` });
     }
@@ -227,7 +228,7 @@ router.delete(
       await verwijderBackup(id);
       res.status(204).send();
     } catch (err) {
-      const foutTekst = err instanceof Error ? err.message : String(err);
+      const foutTekst = veiligeFoutmelding(err);
       req.log.error({ err }, "Verwijderen back-up mislukt");
       res.status(500).json({ fout: foutTekst });
     }

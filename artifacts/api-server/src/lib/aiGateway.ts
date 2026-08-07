@@ -31,6 +31,68 @@ function sanitiseerFoutmelding(bericht: string): string {
   return s.slice(0, 500);
 }
 
+// ── Punt 25 (SCHULD_01): AI-begrenzing ───────────────────────────────────────
+// Twee remmen, centraal in de gateway zodat élke AI-aanroep eronder valt:
+//  1. per gebruiker per minuut (in-memory glijdend venster);
+//  2. dagplafond in euro's over het geheel, gemeten uit ai_aanroepen (met korte
+//     cache zodat niet elke aanroep een DB-query kost).
+// Bij het raken van een limiet: een nette, herkenbare melding — geen stille fout.
+
+const AI_MAX_PER_GEBRUIKER_PER_MIN = Number(process.env.AI_MAX_PER_GEBRUIKER_PER_MIN ?? 20);
+const AI_DAGPLAFOND_EUR = Number(process.env.AI_DAGPLAFOND_EUR ?? 25);
+const DAGKOSTEN_CACHE_MS = 60_000;
+
+const gebruikersVensters = new Map<string, number[]>();
+let dagkostenCache: { kosten: number; dag: string; opgehaaldOp: number } | null = null;
+
+function binnenGebruikersLimiet(gebruikerId: number | null | undefined): boolean {
+  const sleutel = gebruikerId != null ? `u:${gebruikerId}` : "systeem";
+  const nu = Date.now();
+  const venster = (gebruikersVensters.get(sleutel) ?? []).filter((t) => nu - t < 60_000);
+  if (venster.length >= AI_MAX_PER_GEBRUIKER_PER_MIN) {
+    gebruikersVensters.set(sleutel, venster);
+    return false;
+  }
+  venster.push(nu);
+  gebruikersVensters.set(sleutel, venster);
+  return true;
+}
+
+// Ruim oude vensters op zodat de map niet groeit.
+setInterval(() => {
+  const nu = Date.now();
+  for (const [k, v] of gebruikersVensters) {
+    const vers = v.filter((t) => nu - t < 60_000);
+    if (vers.length === 0) gebruikersVensters.delete(k);
+    else gebruikersVensters.set(k, vers);
+  }
+}, 5 * 60_000).unref();
+
+async function dagplafondBereikt(): Promise<{ bereikt: boolean; kosten: number }> {
+  const vandaag = new Date().toISOString().slice(0, 10);
+  const nu = Date.now();
+  if (!dagkostenCache || dagkostenCache.dag !== vandaag || nu - dagkostenCache.opgehaaldOp > DAGKOSTEN_CACHE_MS) {
+    try {
+      const { sql } = await import("drizzle-orm");
+      const res = await db.execute(
+        sql`SELECT COALESCE(SUM(geschatte_kosten_eur),0) AS s FROM ai_aanroepen WHERE aangemaakt_op >= CURRENT_DATE`,
+      );
+      const rij = (res as unknown as { rows?: Array<{ s: string }> }).rows?.[0];
+      dagkostenCache = { kosten: Number(rij?.s ?? 0), dag: vandaag, opgehaaldOp: nu };
+    } catch (err) {
+      // Meetfout mag AI niet platleggen; log en laat door.
+      logger.warn({ err }, "AI-dagkosten meten mislukt — plafondcontrole overgeslagen");
+      return { bereikt: false, kosten: 0 };
+    }
+  }
+  return { bereikt: dagkostenCache.kosten >= AI_DAGPLAFOND_EUR, kosten: dagkostenCache.kosten };
+}
+
+export const AI_LIMIET_MELDING_GEBRUIKER =
+  "AI-limiet bereikt: te veel AI-verzoeken kort na elkaar. Wacht een minuut en probeer het opnieuw.";
+export const AI_LIMIET_MELDING_DAGPLAFOND =
+  "Het dagelijkse AI-kostenplafond is bereikt. AI-functies zijn tot morgen beperkt; een hoofdbeheerder kan het plafond aanpassen (AI_DAGPLAFOND_EUR).";
+
 // ── Model registry ────────────────────────────────────────────────────────────
 
 export type ModelSlot = "default" | "fast" | "reasoning" | "vision" | "embedding";
@@ -302,6 +364,17 @@ class AiGatewayService {
     timeoutMs: number = STANDAARD_TIMEOUT_MS,
     logCtx?: LogContext,
   ): Promise<ChatResultaat> {
+    // ── Punt 25: begrenzing per gebruiker + dagplafond ───────────────────────
+    if (!binnenGebruikersLimiet(logCtx?.gebruikerId)) {
+      logger.warn({ gebruikerId: logCtx?.gebruikerId, module: logCtx?.module }, "AI-aanroep geblokkeerd: gebruikerslimiet per minuut");
+      return { ok: false, fout: AI_LIMIET_MELDING_GEBRUIKER };
+    }
+    const dagplafond = await dagplafondBereikt();
+    if (dagplafond.bereikt) {
+      logger.warn({ kostenVandaag: dagplafond.kosten, plafond: AI_DAGPLAFOND_EUR, module: logCtx?.module }, "AI-aanroep geblokkeerd: dagplafond bereikt");
+      return { ok: false, fout: AI_LIMIET_MELDING_DAGPLAFOND };
+    }
+
     // ── AI Change Governance check ────────────────────────────────────────────
     const governanceInvoer = {
       promptTekst: extraheerGebruikersPrompt(

@@ -2484,3 +2484,9 @@ FIE Fase 5 voltooit de nacalculatiecyclus na projectafsluiting. Calculatie vs. w
 - OpenAPI: `GET/POST /avg/verwerkers` en `PATCH/DELETE /avg/verwerkers/{id}` + schemas `AvgVerwerker`/`AvgVerwerkerInput`; hooks/Zod-schemas hergegenereerd
 - API (`routes/avg.ts`): CRUD-handlers achter `requireBevoegdheid("systeem",1)`; camelCase→snake_case-mapping; PATCH stuurt `bijgewerktOp`; eerste GET zaait 3 standaardverwerkers (OpenAI, Google Maps, Microsoft 365) bij een leeg register
 - Frontend (`beheer/avg.tsx`): nieuwe tab "Verwerkersregister" met kaartlijst, toevoegen/bewerken-dialoog, verwijderbevestiging en CSV-export (BOM + quote-escaping)
+
+## 7 augustus 2026 — Technische schuld: back-up-alarm, auth/AI-limieten, centrale foutafhandelaar (SCHULD_01 punten 83, 24, 25, 21, 36)
+- **Punt 83 — back-up-alarm:** een mislukte of verdacht kleine back-up (<50KB of <50% van de vorige) maakt nu een blokkerende melding aan voor alle hoofdbeheerders. Bewezen via sabotagescript (`verificatie-backup-alarm.ts`). Restore eenmalig bewezen: meest recente productieback-up foutloos teruggezet in een proefdatabase (298 tabellen, rijaantallen identiek aan live).
+- **Punt 24 — login-bescherming:** de bestaande rate-limiters logden blokkades niet; elke geblokkeerde poging staat nu in het log (ip, e-mail, welke limiter). Bewezen: 6e foute inlogpoging → 429 + logregel.
+- **Punt 25 — AI-begrenzing:** centraal in de AI-gateway: max 20 AI-verzoeken per gebruiker per minuut en een dagplafond van €25 over het geheel (beide instelbaar via env). Nette meldingen in plaats van stille fouten; bewezen via `verificatie-ai-limieten.ts`.
+- **Punten 21+36 — foutafhandeling:** centrale Express-foutafhandelaar met verwijzingscode (FPS-XXXXXXXX): server logt alles, de client ziet nooit database-details meer. 15 routes die letterlijke foutteksten teruggaven gebruiken nu `veiligeFoutmelding()`.

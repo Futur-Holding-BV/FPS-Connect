@@ -4,6 +4,7 @@ import pinoHttp from "pino-http";
 import router from "./routes";
 import { logger } from "./lib/logger";
 import { sessionMiddleware, maakStatelozeSessie } from "./lib/session";
+import { foutafhandelaar } from "./middlewares/foutafhandelaar";
 
 const app: Express = express();
 
@@ -115,5 +116,8 @@ app.use((req, res, next) => {
 });
 
 app.use("/api", router);
+
+// Centrale foutafhandelaar — moet ná alle routes staan (punten 21+36).
+app.use(foutafhandelaar);
 
 export default app;

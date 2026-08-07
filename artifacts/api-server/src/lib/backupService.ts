@@ -12,8 +12,8 @@ import { createHash, randomUUID } from "crypto";
 import { gzip as gzipCb, gunzip as gunzipCb } from "zlib";
 import { promisify } from "util";
 import { db } from "@workspace/db";
-import { backupRecordsTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { backupRecordsTable, gebruikersTable, gebruikersMeldingenTable } from "@workspace/db";
+import { eq, and, ne, desc, inArray } from "drizzle-orm";
 import { ObjectStorageService } from "./objectStorage";
 import { logger } from "./logger";
 
@@ -243,6 +243,17 @@ export async function maakBackup(
       .where(eq(backupRecordsTable.id, id));
 
     logger.info({ slug, grootte: sqlCompressed.length }, "Back-up voltooid");
+
+    // Punt 83: controle op verdacht kleine uitkomst. Absoluut minimum plus een
+    // vergelijking met de vorige geslaagde back-up — een dump die opeens veel
+    // kleiner is dan gisteren wijst op een half mislukte pg_dump.
+    const verdacht = await beoordeelDumpGrootte(id, sqlCompressed.length);
+    if (verdacht) {
+      logger.warn({ slug, grootte: sqlCompressed.length, reden: verdacht }, "Back-up verdacht klein");
+      await meldBackupProbleem(
+        `Back-up (${soort}) is voltooid maar verdacht klein: ${verdacht}. Controleer de back-up via Beheer → Back-ups voordat u erop vertrouwt.`,
+      );
+    }
     return { id, slug };
   } catch (err) {
     const foutTekst = err instanceof Error ? err.message : String(err);
@@ -251,7 +262,58 @@ export async function maakBackup(
       .update(backupRecordsTable)
       .set({ status: "fout", voltooidOp: new Date(), foutTekst })
       .where(eq(backupRecordsTable.id, id));
+    await meldBackupProbleem(`Back-up (${soort}) is MISLUKT: ${foutTekst.slice(0, 300)}. Zonder werkende back-up is er geen herstel mogelijk bij een storing.`);
     throw err;
+  }
+}
+
+// ─── Punt 83: alarm bij mislukte of verdacht kleine back-up ──────────────────
+
+/** Absoluut minimum voor een gecomprimeerde productie-dump. */
+const MIN_DUMP_BYTES = 50_000;
+/** Verdacht als de nieuwe dump kleiner is dan dit aandeel van de vorige geslaagde. */
+const MIN_AANDEEL_VORIGE = 0.5;
+
+async function beoordeelDumpGrootte(huidigeId: number, bytes: number): Promise<string | null> {
+  if (bytes < MIN_DUMP_BYTES) {
+    return `${bytes} bytes (minimum ${MIN_DUMP_BYTES})`;
+  }
+  const [vorige] = await db
+    .select({ grootte: backupRecordsTable.grootteDatabaseBytes })
+    .from(backupRecordsTable)
+    .where(and(inArray(backupRecordsTable.status, ["klaar", "geverifieerd"]), ne(backupRecordsTable.id, huidigeId)))
+    .orderBy(desc(backupRecordsTable.voltooidOp))
+    .limit(1);
+  if (vorige?.grootte && bytes < vorige.grootte * MIN_AANDEEL_VORIGE) {
+    return `${bytes} bytes tegenover ${vorige.grootte} bytes bij de vorige geslaagde back-up`;
+  }
+  return null;
+}
+
+/**
+ * Stuur een in-app melding aan alle hoofdbeheerders (zelfde patroon als de
+ * AI-kostendrempel). Faalt zelf nooit hard — een alarm dat de back-uploop
+ * laat crashen zou het middel erger maken dan de kwaal.
+ */
+async function meldBackupProbleem(omschrijving: string): Promise<void> {
+  try {
+    const hoofdbeheerders = await db
+      .select({ id: gebruikersTable.id, naam: gebruikersTable.naam })
+      .from(gebruikersTable)
+      .where(and(eq(gebruikersTable.rol, "hoofdbeheerder"), eq(gebruikersTable.actief, true)));
+    for (const g of hoofdbeheerders) {
+      await db.insert(gebruikersMeldingenTable).values({
+        type: "backup_alarm",
+        omschrijving,
+        urgentie: "blokkerend",
+        status: "nieuw",
+        gebruikerId: g.id,
+        gebruikerNaam: g.naam,
+      });
+    }
+    logger.warn({ aantal: hoofdbeheerders.length }, "Back-upalarm gemeld aan hoofdbeheerders");
+  } catch (err) {
+    logger.error({ err }, "Back-upalarm melden mislukt");
   }
 }
 
@@ -373,6 +435,8 @@ export function planDagelijksBackup(): void {
         logger.info("Automatische dagelijkse back-up starten");
         await maakBackup("automatisch", null);
       } catch (err) {
+        // De melding aan hoofdbeheerders is al in maakBackup() verstuurd;
+        // hier alleen loggen zodat de planner nooit stopt.
         logger.error({ err }, "Automatische dagelijkse back-up mislukt");
       }
       scheduleNext();

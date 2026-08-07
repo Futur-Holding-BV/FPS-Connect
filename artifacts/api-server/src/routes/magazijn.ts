@@ -1,6 +1,7 @@
 // Magazijn- en Voorraadbeheer (Fase 1 — Kern)
 // Routes: locaties, artikelen-magazijn, voorraad, mutaties, reserveringen, uitgiftes, retouren, dashboard
 // Fase 2 — Inkooporders + Picklijsten (statusmachine, voorraad-koppeling)
+import { veiligeFoutmelding } from "../middlewares/foutafhandelaar";
 import { Router } from "express";
 import {
   db,
@@ -873,7 +874,7 @@ router.post("/magazijn/mutaties/batch-export", beheer, async (req, res): Promise
     res.json(resultaat);
   } catch (err) {
     logger.error({ err }, "magazijn batch-export accountview fout");
-    const msg = err instanceof Error ? err.message : "Serverfout";
+    const msg = veiligeFoutmelding(err, "Serverfout");
     res.status(400).json({ error: msg });
   }
 });
@@ -890,7 +891,7 @@ router.post("/magazijn/mutaties/:id/exporteer-accountview", beheer, async (req, 
     res.json(resultaat);
   } catch (err) {
     logger.error({ err }, "magazijn exporteer-accountview fout");
-    const msg = err instanceof Error ? err.message : "Serverfout";
+    const msg = veiligeFoutmelding(err, "Serverfout");
     const code = (err as { code?: string }).code;
     const status = code === "AL_GEEXPORTEERD" ? 409 : code === "AV_GEWEIGERD" ? 422 : msg.includes("niet gevonden") ? 404 : 400;
     res.status(status).json({ error: msg.replace(/^AL_GEEXPORTEERD: /, "") });
@@ -1394,7 +1395,7 @@ router.post("/magazijn/verplaatsingen", aanmaken, async (req, res): Promise<void
     return void res.status(201).json({ ok: true });
   } catch (err: unknown) {
     logger.error({ err }, "magazijn verplaatsing fout");
-    const msg = err instanceof Error ? err.message : "Serverfout";
+    const msg = veiligeFoutmelding(err, "Serverfout");
     return void res.status(400).json({ error: msg });
   }
 });

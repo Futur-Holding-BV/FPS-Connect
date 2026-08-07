@@ -12,12 +12,12 @@
 
 | # | Item | Impact | Risico | Uren | Prio |
 |---|------|--------|--------|------|------|
-| 1 | Geen index op `voorzieningen.gebouw_id` — full-scan bij spotlijst per gebouw | 5 | 4 | 1 | P1 |
-| 2 | Geen index op `activiteiten.gebouw_id` + `aangemaakt_op` — feed-query full-scan | 5 | 4 | 1 | P1 |
-| 3 | Geen index op `inspecties.gebouw_id` + `type` — inspectiefilter full-scan | 4 | 4 | 1 | P1 |
-| 4 | Geen index op `onderhoud.gebouw_id` + `status` + `deadline` — dashboard full-scan | 5 | 4 | 1 | P1 |
-| 5 | Geen index op `chat_berichten.gesprek_id` + `aangemaakt_op` — polling full-scan | 5 | 5 | 1 | P1 |
-| 6 | Geen index op `document_koppelingen.object_type` + `object_id` — DMS full-scan | 4 | 4 | 1 | P1 |
+| 1 | Geen index op `voorzieningen.gebouw_id` — opgelost: `voorzieningen_gebouw_idx` (geverifieerd 7 aug 2026) | 5 | 4 | 0 | ✅ |
+| 2 | Geen index op `activiteiten.gebouw_id` + `aangemaakt_op` — opgelost: `activiteiten_gebouw_tijdstip_idx` (geverifieerd 7 aug 2026) | 5 | 4 | 0 | ✅ |
+| 3 | Geen index op `inspecties.gebouw_id` + `type` — opgelost: `inspecties_gebouw_type_idx` (geverifieerd 7 aug 2026) | 4 | 4 | 0 | ✅ |
+| 4 | Geen index op `onderhoud` + status + deadline — opgelost: `onderhoud_gebouw_status_deadline_idx` (geverifieerd 7 aug 2026) | 5 | 4 | 0 | ✅ |
+| 5 | Geen index op `chat_berichten.gesprek_id` — opgelost: `chat_berichten_gesprek_aangemaakt_idx` (geverifieerd 7 aug 2026) | 5 | 5 | 0 | ✅ |
+| 6 | Geen index op `document_koppelingen` — opgelost: `document_koppelingen_doel_idx` (geverifieerd 7 aug 2026) | 4 | 4 | 0 | ✅ |
 | 7 | Geen index op `documenten.entiteit_type` + `entiteit_id` | 4 | 4 | 1 | P1 |
 | 8 | Geen index op `dossiers.gebouw_id` + `status` | 3 | 3 | 1 | P2 |
 | 9 | Geen index op `verlof_aanvragen.medewerker_id` + `status` | 3 | 3 | 1 | P2 |
@@ -25,7 +25,7 @@
 | 11 | Geen index op `werkbonnen.opdracht_id` + `status` | 3 | 3 | 1 | P2 |
 | 12 | Geen index op `fotos.voorziening_id` (N+1-fotoqueries) | 4 | 3 | 1 | P2 |
 | 13 | 15 routes schrijven naar meerdere tabellen zonder `db.transaction()` — gedeeltelijke writes mogelijk | 5 | 4 | 20 | P1 |
-| 14 | `POST /dossiers/:id/definitief` — dossier-bevriezing niet atomair (juridisch risico) | 5 | 5 | 4 | P1 |
+| 14 | Dossier-bevriezing niet atomair — opgelost: draait in `db.transaction()` (geverifieerd 7 aug 2026) | 5 | 5 | 0 | ✅ |
 | 15 | `POST /offertes/:id/opdracht` — status-overgang zonder transactie | 4 | 4 | 2 | P1 |
 | 16 | `POST /verlof-aanvragen/:id/goedkeuren` — saldo-mutatie zonder transactie | 4 | 4 | 2 | P1 |
 | 17 | List-endpoints zonder `LIMIT` — 12 endpoints geven onbeperkt veel rijen terug | 4 | 3 | 8 | P2 |
@@ -39,11 +39,11 @@
 
 | # | Item | Impact | Risico | Uren | Prio |
 |---|------|--------|--------|------|------|
-| 21 | DB-foutberichten (tabel/kolom-namen) lekken als HTTP 500 response — ~20 routes | 5 | 4 | 8 | P1 |
+| 21 | DB-foutberichten lekten naar client — opgelost 7 aug 2026: `veiligeFoutmelding()` scrubt DB-details op alle 15 gevonden lekpunten (backups, security-validation, magazijn, facturen, import, wagenpark); rest valt onder centrale handler (#36) | 5 | 4 | 0 | ✅ |
 | 22 | Ruwe `constraint`-namen in 409-responses zichtbaar voor client | 3 | 2 | 4 | P2 |
 | 23 | `magBijGebouw(userId, ...)` in 3 routes ondersteunde geen impersonatie — nu opgelost (Task #180) | 4 | 3 | 0 | ✅ |
-| 24 | Geen rate-limiting op `/auth/*` endpoints — brute-force TOTP mogelijk | 5 | 4 | 4 | P1 |
-| 25 | Geen rate-limiting op `/ai/*` endpoints — LLM-kosten onbeperkt | 4 | 3 | 2 | P1 |
+| 24 | Rate-limiting op `/auth/*` — opgelost (limiters bestonden al: 5/15min per IP+account, 50/15min per IP, 3/uur wachtwoordroutes; account-lockout na 5 fouten). 7 aug 2026 aangevuld: elke blokkade wordt gelogd (WARN met ip+e-mail+limiter). Bewijs: 6e foute poging → HTTP 429 + logregel | 5 | 4 | 0 | ✅ |
+| 25 | AI-begrenzing — opgelost 7 aug 2026, centraal in de AI-gateway (dekt élke AI-aanroep): per gebruiker max 20/min (AI_MAX_PER_GEBRUIKER_PER_MIN) + dagplafond €25 (AI_DAGPLAFOND_EUR) gemeten uit ai_aanroepen; nette meldingen. Bewijs: `scripts/src/verificatie-ai-limieten.ts` (3e aanroep geblokkeerd, andere gebruiker mag wel; plafondtest geblokkeerd met dagplafond-melding) | 4 | 3 | 0 | ✅ |
 | 26 | `X-Gebruiker-Override` header niet geverifieerd op geldig integer — passthrough bij malformed waarde | 3 | 3 | 1 | P2 |
 | 27 | Sessie-cookie `maxAge` niet geconfigureerd — sessie eindigt nooit server-side | 3 | 3 | 2 | P2 |
 | 28 | `MAIL_API_KEY` / `GOOGLE_MAPS_API_KEY` server-side maar niet geroteerd — geen expiry-mechanisme | 3 | 2 | 4 | P3 |
@@ -61,7 +61,7 @@
 |---|------|--------|--------|------|------|
 | 34 | `res.status(404)` op parseer-fouten (moet 400 zijn) — ~8 routes | 3 | 2 | 4 | P2 |
 | 35 | `res.status(500)` op validatiefouten (moet 400 zijn) — ~3 routes | 3 | 2 | 2 | P2 |
-| 36 | Geen centrale Express error-handler — `app.ts` heeft geen `app.use((err, req, res, next) =>` | 4 | 3 | 4 | P1 |
+| 36 | Centrale error-handler — opgelost 7 aug 2026: `middlewares/foutafhandelaar.ts` ná alle routes; onverwachte fout → volledige log met verwijzingscode FPS-XXXXXXXX, client krijgt alleen neutrale melding + code; kapotte JSON → nette 400. Bewijs: testapp met DB-constraintfout → 500 zonder details, code in log | 4 | 3 | 0 | ✅ |
 | 37 | TS7030 "not all code paths return a value" in 80+ route-handlers — stille undefined-responses | 3 | 2 | 16 | P2 |
 | 38 | `try/catch` boilerplate in ~80 routes — duplicaat 40 regels per route | 2 | 1 | 8 | P3 |
 | 39 | `workflowService.transiteer()` gooit bij ongeldige overgang maar caller vangt niet altijd af | 3 | 3 | 4 | P2 |
@@ -136,7 +136,7 @@
 |---|------|--------|--------|------|------|
 | 81 | Geen structured logging voor business-events (offerte verstuurd, dossier definitief) | 3 | 2 | 8 | P2 |
 | 82 | Geen health-check endpoint voor DB-verbinding (alleen `/healthz` die altijd 200 geeft) | 4 | 3 | 2 | P2 |
-| 83 | Geen alerting op backup-failures (dagelijkse backup stil faalt) | 4 | 4 | 4 | P1 |
+| 83 | Geen alerting op backup-failures — opgelost 7 aug 2026: mislukte of verdacht kleine back-up → blokkerende melding aan alle hoofdbeheerders (`gebruikers_meldingen` type `backup_alarm`); bewezen via `scripts/src/verificatie-backup-alarm.ts` (gesaboteerde pg_dump → melding). Restore eenmalig bewezen: meest recente prod-backup teruggezet in proefdatabase (298 tabellen, rijaantallen identiek aan live, 0 fouten) | 4 | 4 | 0 | ✅ |
 | 84 | Geen Sentry/error-tracking in productie | 4 | 3 | 4 | P2 |
 | 85 | Geen performance-monitoring (p95-latency onbekend) | 3 | 2 | 4 | P2 |
 | 86 | `pnpm run typecheck` niet in CI (alleen lokaal) | 3 | 3 | 2 | P2 |

@@ -16,6 +16,7 @@ import {
 } from "../lib/lockout";
 import { beeindigSessiesVanGebruiker } from "../lib/session";
 import { berekenEffectieveBevoegdheden } from "../lib/effectieve-bevoegdheden";
+import { logger } from "../lib/logger";
 
 const router = Router();
 
@@ -49,6 +50,8 @@ function checkLoginRateLimit(req: import("express").Request, res: import("expres
   entry.count++;
   if (entry.count > RL_MAX) {
     const wachtSec = Math.ceil((entry.resetAt - nu) / 1000);
+    // Punt 24: geblokkeerde pogingen zichtbaar maken in het log.
+    logger.warn({ ip, pogingen: entry.count, route: req.path }, "Login geblokkeerd door IP-rate-limiter");
     res.setHeader("Retry-After", String(wachtSec));
     res.status(429).json({ error: "Te veel pogingen, probeer het later opnieuw" });
     return false;
@@ -98,6 +101,16 @@ function tfaSleutel(req: import("express").Request): string {
   return `${ip}|uid:${req.session?.pendingUserId ?? "-"}`;
 }
 
+// Punt 24 (SCHULD_01): elke blokkade wordt gelogd zodat zichtbaar is dát er
+// geprobeerd wordt — een stille 429 verbergt een lopende brute-force-poging.
+function logBlokkade(label: string) {
+  return (req: import("express").Request, res: import("express").Response) => {
+    const email = typeof req.body?.email === "string" ? req.body.email.trim().toLowerCase() : undefined;
+    logger.warn({ ip: req.ip, email, route: req.path, limiter: label }, "Auth-verzoek geblokkeerd door rate limiter");
+    res.status(429).json({ error: TE_VEEL_POGINGEN });
+  };
+}
+
 const strikteLimiterOpties = {
   windowMs: 15 * 60 * 1000,
   limit: 5,
@@ -111,12 +124,14 @@ const strikteLoginLimiter = rateLimit({
   ...strikteLimiterOpties,
   store: strikteLoginStore,
   keyGenerator: loginSleutel,
+  handler: logBlokkade("login"),
 });
 const strikteTfaStore = new MemoryStore();
 const strikteTfaLimiter = rateLimit({
   ...strikteLimiterOpties,
   store: strikteTfaStore,
   keyGenerator: tfaSleutel,
+  handler: logBlokkade("2fa"),
 });
 
 // Wachtwoordroutes: 3 pogingen per uur per IP, elk endpoint zijn eigen budget
@@ -130,9 +145,9 @@ const wachtwoordLimiterOpties = {
   keyGenerator: (req: import("express").Request) => ipKeyGenerator(req.ip ?? "onbekend"),
 };
 const wachtwoordVergetenStore = new MemoryStore();
-const wachtwoordVergetenLimiter = rateLimit({ ...wachtwoordLimiterOpties, store: wachtwoordVergetenStore });
+const wachtwoordVergetenLimiter = rateLimit({ ...wachtwoordLimiterOpties, store: wachtwoordVergetenStore, handler: logBlokkade("wachtwoord-vergeten") });
 const wachtwoordResetStore = new MemoryStore();
-const wachtwoordResetLimiter = rateLimit({ ...wachtwoordLimiterOpties, store: wachtwoordResetStore });
+const wachtwoordResetLimiter = rateLimit({ ...wachtwoordLimiterOpties, store: wachtwoordResetStore, handler: logBlokkade("wachtwoord-reset") });
 
 function domein(): string {
   return (process.env.REPLIT_DOMAINS ?? "").split(",")[0]?.trim() || "localhost";

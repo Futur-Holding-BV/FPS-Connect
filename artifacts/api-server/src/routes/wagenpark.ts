@@ -2,6 +2,7 @@
 // Privacy-by-design: voertuiggericht, geen persoonsgerichte GPS-tijdlijn.
 // Locatiedata alleen voor planners/beheerders (niveau >= 2 op wagenpark).
 
+import { veiligeFoutmelding } from "../middlewares/foutafhandelaar";
 import { Router } from "express";
 import { db } from "@workspace/db";
 import {
@@ -536,7 +537,7 @@ router.post("/sync", beheer, async (req, res): Promise<void> => {
           }
         } catch (err) {
           aantalFouten++;
-          fouten.push(`Voertuig ${v.kenteken}: ${String(err).slice(0, 100)}`);
+          fouten.push(`Voertuig ${v.kenteken}: ${veiligeFoutmelding(err).slice(0, 100)}`);
         }
       }
 

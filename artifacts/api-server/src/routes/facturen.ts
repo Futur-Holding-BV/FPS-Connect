@@ -1,3 +1,4 @@
+import { veiligeFoutmelding } from "../middlewares/foutafhandelaar";
 import { Router } from "express";
 import type { Request, Response } from "express";
 import * as XLSX from "xlsx";
@@ -1296,7 +1297,7 @@ router.post("/facturen/:id/correspondentie/:cid/verzenden", requireBevoegdheid("
       verstuurdDoorId: sessionUserId(req),
     });
   } catch (err) {
-    const melding = err instanceof Error ? err.message : "Onbekende fout";
+    const melding = veiligeFoutmelding(err, "Onbekende fout");
     await db.update(factuurCorrespondentieTable).set({ status: "mislukt", foutmelding: melding, bijgewerktOp: new Date() })
       .where(eq(factuurCorrespondentieTable.id, cid));
     res.status(502).json({ error: "Verzenden mislukt", detail: melding });

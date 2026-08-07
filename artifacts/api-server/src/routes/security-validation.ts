@@ -1,3 +1,4 @@
+import { veiligeFoutmelding } from "../middlewares/foutafhandelaar";
 import { Router } from "express";
 import { db, securityScanRunsTable, securityTestResultatenTable, securityReleasesTable } from "@workspace/db";
 import { desc, eq, and, like, sql } from "drizzle-orm";
@@ -57,7 +58,7 @@ router.post("/security-validation/scan", requireAuth, alleenHoofdbeheerder, asyn
 
     res.status(202).json({ runId, bericht: "Scan gestart. Controleer status via /security-validation/scan/:id" });
   } catch (err) {
-    res.status(500).json({ fout: `Kon scan niet starten: ${String(err)}` });
+    res.status(500).json({ fout: `Kon scan niet starten: ${veiligeFoutmelding(err)}` });
   }
 });
 
@@ -160,7 +161,7 @@ router.get("/security-validation/dashboard", requireAuth, alleenHoofdbeheerder, 
       recenteScans,
     });
   } catch (err) {
-    res.status(500).json({ fout: `Dashboard laden mislukt: ${String(err)}` });
+    res.status(500).json({ fout: `Dashboard laden mislukt: ${veiligeFoutmelding(err)}` });
   }
 });
 

@@ -1,3 +1,4 @@
+import { veiligeFoutmelding } from "../middlewares/foutafhandelaar";
 import { Router } from "express";
 import multer from "multer";
 import * as XLSX from "xlsx";
@@ -108,7 +109,7 @@ router.post("/import/uitvoeren", async (req, res): Promise<void> => {
           await db.insert(leveranciersTable).values({ ...values, bron: "import" });
           verwerkt++;
         } catch (err) {
-          fouten.push({ rij: i + 2, fout: err instanceof Error ? err.message : "Onbekende fout" });
+          fouten.push({ rij: i + 2, fout: veiligeFoutmelding(err, "Onbekende fout") });
           overgeslagen++;
         }
       }
@@ -124,7 +125,7 @@ router.post("/import/uitvoeren", async (req, res): Promise<void> => {
           await db.insert(artikelenTable).values({ ...values, bron: "import" });
           verwerkt++;
         } catch (err) {
-          fouten.push({ rij: i + 2, fout: err instanceof Error ? err.message : "Onbekende fout" });
+          fouten.push({ rij: i + 2, fout: veiligeFoutmelding(err, "Onbekende fout") });
           overgeslagen++;
         }
       }
@@ -140,7 +141,7 @@ router.post("/import/uitvoeren", async (req, res): Promise<void> => {
           await db.insert(crmKlantenTable).values(values);
           verwerkt++;
         } catch (err) {
-          fouten.push({ rij: i + 2, fout: err instanceof Error ? err.message : "Onbekende fout" });
+          fouten.push({ rij: i + 2, fout: veiligeFoutmelding(err, "Onbekende fout") });
           overgeslagen++;
         }
       }
@@ -154,7 +155,7 @@ router.post("/import/uitvoeren", async (req, res): Promise<void> => {
           await db.insert(medewerkersTable).values(values);
           verwerkt++;
         } catch (err) {
-          fouten.push({ rij: i + 2, fout: err instanceof Error ? err.message : "Onbekende fout" });
+          fouten.push({ rij: i + 2, fout: veiligeFoutmelding(err, "Onbekende fout") });
           overgeslagen++;
         }
       }
@@ -174,7 +175,7 @@ router.post("/import/uitvoeren", async (req, res): Promise<void> => {
           await db.insert(gebouwenTable).values(values);
           verwerkt++;
         } catch (err) {
-          fouten.push({ rij: i + 2, fout: err instanceof Error ? err.message : "Onbekende fout" });
+          fouten.push({ rij: i + 2, fout: veiligeFoutmelding(err, "Onbekende fout") });
           overgeslagen++;
         }
       }
@@ -188,7 +189,7 @@ router.post("/import/uitvoeren", async (req, res): Promise<void> => {
           await db.insert(crmContactpersonenTable).values(values);
           verwerkt++;
         } catch (err) {
-          fouten.push({ rij: i + 2, fout: err instanceof Error ? err.message : "Onbekende fout" });
+          fouten.push({ rij: i + 2, fout: veiligeFoutmelding(err, "Onbekende fout") });
           overgeslagen++;
         }
       }
@@ -201,7 +202,7 @@ router.post("/import/uitvoeren", async (req, res): Promise<void> => {
           await db.insert(artikelenTable).values({ ...values, bron: "import", categorie: values.categorie || "magazijn" });
           verwerkt++;
         } catch (err) {
-          fouten.push({ rij: i + 2, fout: err instanceof Error ? err.message : "Onbekende fout" });
+          fouten.push({ rij: i + 2, fout: veiligeFoutmelding(err, "Onbekende fout") });
           overgeslagen++;
         }
       }
@@ -214,7 +215,7 @@ router.post("/import/uitvoeren", async (req, res): Promise<void> => {
           await db.insert(eenheidsprijzenTable).values(values).onConflictDoNothing();
           verwerkt++;
         } catch (err) {
-          fouten.push({ rij: i + 2, fout: err instanceof Error ? err.message : "Onbekende fout" });
+          fouten.push({ rij: i + 2, fout: veiligeFoutmelding(err, "Onbekende fout") });
           overgeslagen++;
         }
       }
@@ -227,7 +228,7 @@ router.post("/import/uitvoeren", async (req, res): Promise<void> => {
           await db.insert(facturenTable).values(values);
           verwerkt++;
         } catch (err) {
-          fouten.push({ rij: i + 2, fout: err instanceof Error ? err.message : "Onbekende fout" });
+          fouten.push({ rij: i + 2, fout: veiligeFoutmelding(err, "Onbekende fout") });
           overgeslagen++;
         }
       }
@@ -240,7 +241,7 @@ router.post("/import/uitvoeren", async (req, res): Promise<void> => {
           await db.insert(gebouwenTable).values(values);
           verwerkt++;
         } catch (err) {
-          fouten.push({ rij: i + 2, fout: err instanceof Error ? err.message : "Onbekende fout" });
+          fouten.push({ rij: i + 2, fout: veiligeFoutmelding(err, "Onbekende fout") });
           overgeslagen++;
         }
       }
