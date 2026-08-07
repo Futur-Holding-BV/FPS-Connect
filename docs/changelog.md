@@ -2527,6 +2527,20 @@ FIE Fase 5 voltooit de nacalculatiecyclus na projectafsluiting. Calculatie vs. w
 - **Opdracht per offerte:** migratie 0006 voegt een unieke index op `opdrachten.offerte_id` toe; twee gelijktijdige "maak opdracht"-verzoeken kunnen niet langer allebei een opdracht aanmaken (race → nette 409).
 
 
+## 2026-08-07 — FACTUUR_02 hardening: geen dubbele facturen of signalen bij crash-en-retry
+
+- **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag (additieve indexen + transactie)
+
+**Aanleiding:** de factuurstroom verwerkte een mail in losse stappen zonder transactie en zonder unieke sleutel op mail+bijlage. Na een crash halverwege (de claim wordt bewust teruggegeven) kon dezelfde bijlage bij een retry een tweede factuur opleveren; parallelle bewakingsruns konden dubbele open signalen maken.
+
+**Wijzigingen:**
+- `lib/db/src/schema/facturen.ts` — partiële unieke index `facturen_mailstroom_bijlage_uniek` op (`mail_message_id`, `bestandsnaam`) voor `bron='mailbox'`; twee partiële unieke indexen op `factuur_signalen`: max één OPEN signaal per (type, factuur) en per (type, mail zonder factuur).
+- `lib/db/scripts/apply-additive.mjs` — indexen ook voor productie (met `WHERE`-ondersteuning + fatale duplicaatcheck vooraf) en een idempotente opruimstap die bestaande dubbele open signalen samenvoegt (oudste blijft open).
+- `artifacts/api-server/src/services/factuurstroomService.ts` — alle databasestappen per bijlage (factuurrij, koppeling, tijdlijn, signalen, afwijzing, routering) draaien nu in één transactie: bij een crash blijft er niets half achter. Vooraf een idempotentiecheck (bijlage al verwerkt → overslaan) en `onConflictDoNothing` op de factuurinsert als race-vangnet. `maakSignaal` dedupliceert nu ook mail-gebonden signalen en is race-veilig via de unieke indexen. Pushmeldingen gaan pas ná de commit.
+
+**Bewijs:** verificatiescript: dezelfde mailbijlage twee keer inserten → tweede insert 0 rijen, exact één factuur; 4 parallelle/herhaalde signaalpogingen per factuur → 1 open signaal; 3 pogingen mail-gebonden → 1 open signaal. Typecheck en esbuild-build groen; indexen aangelegd op dev.
+
+---
 ## 2026-08-07 — Onboarding-wizard standaard AAN in de productie-build
 
 - **Uitvoering:** volledig | **Kwaliteit:** hoog | **Risico:** laag

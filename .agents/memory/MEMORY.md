@@ -1,3 +1,4 @@
+// hint: Logic changed on both sides. Requires understanding intent of each change.
 - [Caddyfile mjs static matcher](caddyfile-mjs.md) — @static matcher moet `mjs` bevatten anders serveert Caddy pdfjs-worker als text/html (SPA-fallback) → plattegrond werkt niet.
 - [Kwaliteitskader (DoD)](kwaliteitskader.md) — docs/kwaliteitskader.md is verplicht; taak pas gereed bij aantoonbaar werkend businessscenario + bewijs; build/typecheck nooit voldoende; nooit zelf naar productie.
 - [Ontwikkelfilosofie](ontwikkelfilosofie.md) — docs/ontwikkelfilosofie.md is verplicht kader; stabiliteit > functionaliteit; elke opdracht beantwoordt 5 vragen (workflow, handmatig werk, samenwerking, noodzaak vóór release, kan het later?).
@@ -143,3 +144,4 @@
 - [Aanvraagstroom AANVRAAG_01](aanvraagstroom.md) — nooit project in dit proces; accepteren claimt voorstel als 1e tx-stap (race); signalen-dedupe via partiële unieke indexes; CRM-ingang voor aanvraag-signalen.
 - [Functie→preset naam-matching](functie-preset-matching.md) — koppel-heuristiek moet exacte match eerst rangschikken; bidirectionele includes laat langere preset ("Onderhoudsmonteur") exacte "Monteur" verslaan.
 - [Schema-migratieketen (SCHEMA_01)](schema-migratieketen.md) — schemawijziging = genummerde migratie + drift-check --update; apply-additive/drizzle-push bevroren; migratierunner draait in deploy.
+- [Metro crasht op verwijderde test-results](e2e-testresults-watcher.md) — Playwright-cleanup die scripts/test-results verwijdert laat expo crashen (exit 7); .gitkeep behouden.

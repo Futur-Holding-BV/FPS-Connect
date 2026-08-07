@@ -1,4 +1,5 @@
-import { pgTable, serial, text, integer, timestamp, boolean, numeric, jsonb, unique, real } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, timestamp, boolean, numeric, jsonb, unique, uniqueIndex, real } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { gebouwenTable } from "./gebouwen";
@@ -193,7 +194,13 @@ export const facturenTable = pgTable("facturen", {
 
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
   bijgewerktOp: timestamp("bijgewerkt_op").notNull().defaultNow(),
-});
+}, (t) => [
+  // FACTUUR_02 idempotentie: dezelfde mailbijlage mag nooit twee facturen
+  // opleveren, ook niet na een crash-en-retry of parallelle verwerkingsruns.
+  uniqueIndex("facturen_mailstroom_bijlage_uniek")
+    .on(t.mailMessageId, t.bestandsnaam)
+    .where(sql`${t.bron} = 'mailbox' AND ${t.mailMessageId} IS NOT NULL AND ${t.bestandsnaam} IS NOT NULL`),
+]);
 
 // FACTUUR_02 §4 — gesloten afwijsredenlijst. De AI kiest eruit; nooit vrije tekst.
 export const FACTUUR_AFWIJSREDENEN = {
@@ -238,7 +245,21 @@ export const factuurSignalenTable = pgTable("factuur_signalen", {
   afgehandeldOp: timestamp("afgehandeld_op"),
   afhandelNotitie: text("afhandel_notitie"),
   aangemaaktOp: timestamp("aangemaakt_op").notNull().defaultNow(),
-});
+}, (t) => [
+  // Maximaal één OPEN signaal per (type, factuur) — parallelle bewakingsruns
+  // mogen geen dubbele open signalen opleveren.
+  uniqueIndex("factuur_signalen_open_factuur_uq")
+    .on(t.type, t.factuurId)
+    .where(sql`${t.status} = 'open' AND ${t.factuurId} IS NOT NULL`),
+  // Idem voor signalen bij een projectkans (AANVRAAG_01, zonder factuur).
+  uniqueIndex("factuur_signalen_open_kans_uq")
+    .on(t.type, t.projectkansId)
+    .where(sql`${t.status} = 'open' AND ${t.factuurId} IS NULL AND ${t.projectkansId} IS NOT NULL`),
+  // Idem voor signalen die alleen aan een mail hangen (geen factuur, geen kans).
+  uniqueIndex("factuur_signalen_open_mail_uq")
+    .on(t.type, t.mailMessageId)
+    .where(sql`${t.status} = 'open' AND ${t.factuurId} IS NULL AND ${t.projectkansId} IS NULL AND ${t.mailMessageId} IS NOT NULL`),
+]);
 export type FactuurSignaal = typeof factuurSignalenTable.$inferSelect;
 
 // ── FACTUUR_02: leesbare tijdlijn per factuur (§7 telefonische toelichting) ───

@@ -36,10 +36,9 @@ import { haalBijlagen } from "./werkInboxGraph";
 // met een gesimuleerde factuurmail. Productiecode raakt dit nooit aan.
 const objectStorage = new ObjectStorageService();
 
-// ── Tijdlijn & signalen (gewone taal, §6/§7) ─────────────────────────────────
-
-export async function schrijfTijdlijn(factuurId: number, tekst: string, gebruikerNaam?: string | null): Promise<void> {
-  await db.insert(factuurTijdlijnTable).values({ factuurId, tekst, gebruikerNaam: gebruikerNaam ?? null });
+type DbOfTx = typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0];
+export async function schrijfTijdlijn(factuurId: number, tekst: string, gebruikerNaam?: string | null, uitvoerder: DbOfTx = db): Promise<void> {
+  await uitvoerder.insert(factuurTijdlijnTable).values({ factuurId, tekst, gebruikerNaam: gebruikerNaam ?? null });
 }
 
 export async function maakSignaal(input: {
@@ -48,26 +47,41 @@ export async function maakSignaal(input: {
   factuurId?: number | null;
   mailMessageId?: string | null;
   projectkansId?: number | null;
-}): Promise<void> {
-  // Dubbele open signalen van hetzelfde type voor dezelfde factuur/projectkans/mail voorkomen
-  if (input.factuurId || input.projectkansId || input.mailMessageId) {
-    const bestaand = await db.select({ id: factuurSignalenTable.id })
-      .from(factuurSignalenTable)
-      .where(and(
+}, uitvoerder: DbOfTx = db): Promise<void> {
+  // Dubbele open signalen van hetzelfde type voor dezelfde factuur/projectkans/mail
+  // voorkomen. Hiërarchie volgt de partiële unieke indexen: factuur > projectkans > mail.
+  const bestaandWaar = input.factuurId
+    ? and(
         eq(factuurSignalenTable.type, input.type),
-        input.factuurId
-          ? eq(factuurSignalenTable.factuurId, input.factuurId)
-          : input.projectkansId
-            ? eq(factuurSignalenTable.projectkansId, input.projectkansId)
-            : eq(factuurSignalenTable.mailMessageId, input.mailMessageId!),
+        eq(factuurSignalenTable.factuurId, input.factuurId),
         eq(factuurSignalenTable.status, "open"),
-      ))
+      )
+    : input.projectkansId
+      ? and(
+          eq(factuurSignalenTable.type, input.type),
+          isNull(factuurSignalenTable.factuurId),
+          eq(factuurSignalenTable.projectkansId, input.projectkansId),
+          eq(factuurSignalenTable.status, "open"),
+        )
+      : input.mailMessageId
+        ? and(
+            eq(factuurSignalenTable.type, input.type),
+            isNull(factuurSignalenTable.factuurId),
+            isNull(factuurSignalenTable.projectkansId),
+            eq(factuurSignalenTable.mailMessageId, input.mailMessageId),
+            eq(factuurSignalenTable.status, "open"),
+          )
+        : null;
+  if (bestaandWaar) {
+    const bestaand = await uitvoerder.select({ id: factuurSignalenTable.id })
+      .from(factuurSignalenTable)
+      .where(bestaandWaar)
       .limit(1);
     if (bestaand.length > 0) return;
   }
-  // onConflictDoNothing + partiële unieke indexes (apply-additive) maken de
-  // dedupe database-atomair: parallelle bewakingsruns geven nooit dubbels.
-  await db.insert(factuurSignalenTable).values({
+  // onConflictDoNothing: de partiële unieke indexen op factuur_signalen vangen
+  // de race af waarin twee parallelle runs tegelijk voorbij de check komen.
+  await uitvoerder.insert(factuurSignalenTable).values({
     type: input.type,
     omschrijving: input.omschrijving,
     factuurId: input.factuurId ?? null,
@@ -123,9 +137,10 @@ async function wijsAutomatischAf(
   contactEmail: string | null,
   leverancierNaam: string | null,
   factuurnummer: string | null,
+  uitvoerder: DbOfTx = db,
 ): Promise<void> {
   const redenTekst = FACTUUR_AFWIJSREDENEN[redenCode];
-  await db.update(facturenTable).set({
+  await uitvoerder.update(facturenTable).set({
     status: "afgekeurd",
     afwijsredenCode: redenCode,
     afgekeurdReden: redenTekst,
@@ -134,12 +149,12 @@ async function wijsAutomatischAf(
     bijgewerktOp: new Date(),
   }).where(eq(facturenTable.id, factuurId));
 
-  await schrijfTijdlijn(factuurId, `De factuur is automatisch afgewezen: ${redenTekst.toLowerCase()}. Er staat een conceptmail klaar voor de leverancier.`);
+  await schrijfTijdlijn(factuurId, `De factuur is automatisch afgewezen: ${redenTekst.toLowerCase()}. Er staat een conceptmail klaar voor de leverancier.`, null, uitvoerder);
 
   // Reactiemail als concept — een mens verstuurt (§4)
   const onderwerp = `Uw factuur ${factuurnummer ?? ""} kan zo niet verwerkt worden`.replace(/\s+/g, " ").trim();
   const bericht = maakAfwijsMailTekst(redenCode, leverancierNaam, factuurnummer);
-  await db.insert(factuurCorrespondentieTable).values({
+  await uitvoerder.insert(factuurCorrespondentieTable).values({
     factuurId,
     richting: "uitgaand",
     soort: "afkeur",
@@ -257,6 +272,20 @@ async function verwerkFactuurBijlage(
 
   const v = analyse.velden;
 
+  // Idempotentie: is deze mailbijlage al eerder tot factuur verwerkt (bv. na een
+  // crash-en-retry of parallelle run)? Dan niets doen — nooit een tweede factuur.
+  const [alVerwerkt] = await db.select({ id: facturenTable.id }).from(facturenTable)
+    .where(and(
+      eq(facturenTable.bron, "mailbox"),
+      eq(facturenTable.mailMessageId, mail.messageId),
+      eq(facturenTable.bestandsnaam, bijlage.name),
+    )).limit(1);
+  if (alVerwerkt) {
+    logger.info({ messageId: mail.messageId, bijlage: bijlage.name, factuurId: alVerwerkt.id },
+      "factuurstroom: bijlage is al verwerkt — overslaan (idempotente retry)");
+    return;
+  }
+
   // PDF opslaan zodat de factuur altijd terug te vinden is
   let pdfUrl: string | null = null;
   try {
@@ -308,8 +337,15 @@ async function verwerkFactuurBijlage(
   const isUitzendbureau = leverancier?.type === "uitzendbureau" || leverancier?.type === "inlener";
   const loondeelOntbreekt = isUitzendbureau && (!v.loondeel_vermeld || v.loondeel_bedrag == null);
 
+  // ── Alle databasestappen in één transactie: bij een crash halverwege blijft
+  // er niets half achter en levert een retry exact één factuur op. De unieke
+  // index facturen_mailstroom_bijlage_uniek + onConflictDoNothing vangt de race
+  // af waarin twee parallelle runs dezelfde bijlage tegelijk verwerken.
+  const pushes: { gebruikerId: number; titel: string; tekst: string; url: string }[] = [];
+
+  await db.transaction(async (tx) => {
   // Factuurrij aanmaken
-  const [factuur] = await db.insert(facturenTable).values({
+  const [factuur] = await tx.insert(facturenTable).values({
     type: "inkoop",
     bron: "mailbox",
     status: "ai_gelezen",
@@ -335,10 +371,18 @@ async function verwerkFactuurBijlage(
     onzekereVelden: onzeker.length > 0 ? onzeker : null,
     aiVoorstelStroom: { ...v, tenaamstelling_bv: bv, leverancier_id: leverancier?.id ?? null, gelezen_op: new Date().toISOString() },
     opmerkingen: v.verwijzing ? `Verwijzing op factuur: ${v.verwijzing}` : null,
-  }).returning();
+  }).onConflictDoNothing().returning();
+
+  if (!factuur) {
+    // Conflict op de unieke index: een parallelle run heeft deze bijlage al
+    // verwerkt. Niets meer te doen — geen tweede factuur, geen extra signalen.
+    logger.info({ messageId: mail.messageId, bijlage: bijlage.name },
+      "factuurstroom: parallelle run heeft deze bijlage al verwerkt — overslaan");
+    return;
+  }
 
   // Mail ↔ factuur koppeling in de werk-inbox
-  await db.insert(werkInboxKoppelingenTable).values({
+  await tx.insert(werkInboxKoppelingenTable).values({
     messageId: mail.messageId,
     gebruikerId: mail.gebruikerId,
     entityType: "factuur",
@@ -348,53 +392,74 @@ async function verwerkFactuurBijlage(
 
   await schrijfTijdlijn(factuur.id,
     `De factuur is binnengekomen via de mail van ${mail.afzenderNaam ?? mail.afzenderEmail} en automatisch gelezen. ` +
-    `${leverancier ? `Herkend als factuur van ${leverancier.naam}.` : "De leverancier kon nog niet met zekerheid worden herkend."}`);
+    `${leverancier ? `Herkend als factuur van ${leverancier.naam}.` : "De leverancier kon nog niet met zekerheid worden herkend."}`, null, tx);
 
   // ── Controles → signalen / automatische afwijzing ──────────────────────────
   if (dubbel) {
     await maakSignaal({ type: "mogelijk_dubbel", factuurId: factuur.id,
-      omschrijving: `Factuur ${v.factuurnummer} van ${leverancier?.naam ?? v.leverancier_naam ?? "onbekende leverancier"} lijkt al eerder ontvangen te zijn.` });
+      omschrijving: `Factuur ${v.factuurnummer} van ${leverancier?.naam ?? v.leverancier_naam ?? "onbekende leverancier"} lijkt al eerder ontvangen te zijn.` }, tx);
   }
   if (ibanGewijzigd) {
     await maakSignaal({ type: "rekeningnummer_gewijzigd", factuurId: factuur.id,
-      omschrijving: `Het rekeningnummer van ${leverancier?.naam ?? "deze leverancier"} is gewijzigd (was ${vorigIban}, nu ${v.iban}). Dit kan op fraude wijzen en moet altijd gecontroleerd worden.` });
-    await schrijfTijdlijn(factuur.id, "Let op: het rekeningnummer wijkt af van eerdere facturen van deze leverancier. Dit wordt gemeld en niet stil afgehandeld.");
+      omschrijving: `Het rekeningnummer van ${leverancier?.naam ?? "deze leverancier"} is gewijzigd (was ${vorigIban}, nu ${v.iban}). Dit kan op fraude wijzen en moet altijd gecontroleerd worden.` }, tx);
+    await schrijfTijdlijn(factuur.id, "Let op: het rekeningnummer wijkt af van eerdere facturen van deze leverancier. Dit wordt gemeld en niet stil afgehandeld.", null, tx);
   }
   if (!leverancier) {
     await maakSignaal({ type: "onbekende_leverancier", factuurId: factuur.id,
-      omschrijving: `De leverancier "${v.leverancier_naam ?? "onbekend"}" is nog niet (eenduidig) bekend in het relatiebestand. Koppel de juiste organisatie voordat de factuur verder kan.` });
+      omschrijving: `De leverancier "${v.leverancier_naam ?? "onbekend"}" is nog niet (eenduidig) bekend in het relatiebestand. Koppel de juiste organisatie voordat de factuur verder kan.` }, tx);
   }
   if (onzeker.length > 0) {
     await maakSignaal({ type: "ai_onzeker", factuurId: factuur.id,
-      omschrijving: `Bij het lezen van factuur ${v.factuurnummer ?? `van ${v.leverancier_naam ?? "onbekend"}`} is het systeem niet zeker over: ${onzeker.join(", ")}. Iemand moet dit nakijken.` });
+      omschrijving: `Bij het lezen van factuur ${v.factuurnummer ?? `van ${v.leverancier_naam ?? "onbekend"}`} is het systeem niet zeker over: ${onzeker.join(", ")}. Iemand moet dit nakijken.` }, tx);
   }
   if (isUitzendbureau && v.loondeel_vermeld && v.loondeel_bedrag != null && v.bedrag_incl_btw != null
       && (v.loondeel_bedrag <= 0 || v.loondeel_bedrag >= v.bedrag_incl_btw)) {
     await maakSignaal({ type: "loondeel_onzeker", factuurId: factuur.id,
-      omschrijving: `Het loondeel (€ ${v.loondeel_bedrag}) op de uitzendfactuur van ${leverancier?.naam} oogt onwaarschijnlijk ten opzichte van het totaalbedrag (€ ${v.bedrag_incl_btw}).` });
+      omschrijving: `Het loondeel (€ ${v.loondeel_bedrag}) op de uitzendfactuur van ${leverancier?.naam} oogt onwaarschijnlijk ten opzichte van het totaalbedrag (€ ${v.bedrag_incl_btw}).` }, tx);
   }
 
   // §4 automatische afwijzingen
   if (dubbel) {
-    await wijsAutomatischAf(factuur.id, "dubbel", "ai_gelezen", mail.afzenderEmail, leverancier?.naam ?? v.leverancier_naam, v.factuurnummer);
+    await wijsAutomatischAf(factuur.id, "dubbel", "ai_gelezen", mail.afzenderEmail, leverancier?.naam ?? v.leverancier_naam, v.factuurnummer, tx);
     return;
   }
   if (loondeelOntbreekt) {
     await maakSignaal({ type: "loondeel_onzeker", factuurId: factuur.id,
-      omschrijving: `Uitzendfactuur van ${leverancier?.naam} zonder G-rekeningverdeling — automatisch afgewezen, conceptmail staat klaar.` });
-    await wijsAutomatischAf(factuur.id, "uitzendbureau_zonder_g", "ai_gelezen", mail.afzenderEmail, leverancier?.naam ?? v.leverancier_naam, v.factuurnummer);
+      omschrijving: `Uitzendfactuur van ${leverancier?.naam} zonder G-rekeningverdeling — automatisch afgewezen, conceptmail staat klaar.` }, tx);
+    await wijsAutomatischAf(factuur.id, "uitzendbureau_zonder_g", "ai_gelezen", mail.afzenderEmail, leverancier?.naam ?? v.leverancier_naam, v.factuurnummer, tx);
     return;
   }
 
   // ── Routering (§5): inkoper bevestigt, daarna keurt René goed ───────────────
-  await routeerNaVerwerking(factuur.id, leverancier?.id ?? null, !leverancier || onzeker.length > 0 || ibanGewijzigd);
+  await routeerNaVerwerking(factuur.id, leverancier?.id ?? null, !leverancier || onzeker.length > 0 || ibanGewijzigd, tx, pushes);
+  }); // einde transactie
+
+  // Pushmeldingen pas ná de commit — nooit een melding over een teruggedraaide factuur.
+  for (const p of pushes) {
+    try {
+      await stuurPushNaarGebruiker(p.gebruikerId, p.titel, p.tekst, { url: p.url });
+    } catch (err) {
+      logger.warn({ err }, "factuurstroom: pushmelding versturen mislukt");
+    }
+  }
 }
 
-async function routeerNaVerwerking(factuurId: number, leverancierId: number | null, naarControle: boolean): Promise<void> {
+async function routeerNaVerwerking(
+  factuurId: number,
+  leverancierId: number | null,
+  naarControle: boolean,
+  uitvoerder: DbOfTx = db,
+  pushes?: { gebruikerId: number; titel: string; tekst: string; url: string }[],
+): Promise<void> {
+  const push = async (gebruikerId: number, titel: string, tekst: string, url: string): Promise<void> => {
+    if (pushes) { pushes.push({ gebruikerId, titel, tekst, url }); return; }
+    await stuurPushNaarGebruiker(gebruikerId, titel, tekst, { url });
+  };
+
   if (naarControle) {
     // Onduidelijkheid → controle door een mens (Jacqueline-route); geen stilzwijgende aannames
-    await db.update(facturenTable).set({ status: "controle_nodig", bijgewerktOp: new Date() }).where(eq(facturenTable.id, factuurId));
-    await schrijfTijdlijn(factuurId, "De factuur wacht op controle door de administratie omdat het systeem niet alles met zekerheid kon vaststellen.");
+    await uitvoerder.update(facturenTable).set({ status: "controle_nodig", bijgewerktOp: new Date() }).where(eq(facturenTable.id, factuurId));
+    await schrijfTijdlijn(factuurId, "De factuur wacht op controle door de administratie omdat het systeem niet alles met zekerheid kon vaststellen.", null, uitvoerder);
     return;
   }
 
@@ -403,7 +468,7 @@ async function routeerNaVerwerking(factuurId: number, leverancierId: number | nu
   if (leverancierId) {
     try {
       const { inkoopbonnenTable } = await import("@workspace/db");
-      const [bon] = await db.select({ goedgekeurdDoorId: inkoopbonnenTable.goedgekeurdDoorId })
+      const [bon] = await uitvoerder.select({ goedgekeurdDoorId: inkoopbonnenTable.goedgekeurdDoorId })
         .from(inkoopbonnenTable)
         .where(and(eq(inkoopbonnenTable.leverancierId, leverancierId), isNotNull(inkoopbonnenTable.goedgekeurdDoorId)))
         .orderBy(desc(inkoopbonnenTable.id)).limit(1);
@@ -412,15 +477,15 @@ async function routeerNaVerwerking(factuurId: number, leverancierId: number | nu
   }
 
   if (inkoperId) {
-    await db.update(facturenTable).set({ status: "wacht_op_inkoper", inkoperId, bijgewerktOp: new Date() }).where(eq(facturenTable.id, factuurId));
-    const [ink] = await db.select({ naam: gebruikersTable.naam }).from(gebruikersTable).where(eq(gebruikersTable.id, inkoperId)).limit(1);
-    await schrijfTijdlijn(factuurId, `De factuur ligt bij ${ink?.naam ?? "de inkoper"} om te bevestigen dat dit klopt met de bestelling.`);
-    await stuurPushNaarGebruiker(inkoperId, "Factuur te bevestigen", "Er staat een inkoopfactuur klaar die op jouw bestelling lijkt aan te sluiten.", { url: `/facturen/${factuurId}` });
+    await uitvoerder.update(facturenTable).set({ status: "wacht_op_inkoper", inkoperId, bijgewerktOp: new Date() }).where(eq(facturenTable.id, factuurId));
+    const [ink] = await uitvoerder.select({ naam: gebruikersTable.naam }).from(gebruikersTable).where(eq(gebruikersTable.id, inkoperId)).limit(1);
+    await schrijfTijdlijn(factuurId, `De factuur ligt bij ${ink?.naam ?? "de inkoper"} om te bevestigen dat dit klopt met de bestelling.`, null, uitvoerder);
+    await push(inkoperId, "Factuur te bevestigen", "Er staat een inkoopfactuur klaar die op jouw bestelling lijkt aan te sluiten.", `/facturen/${factuurId}`);
   } else {
-    await db.update(facturenTable).set({ status: "wacht_op_goedkeuring", bijgewerktOp: new Date() }).where(eq(facturenTable.id, factuurId));
-    await schrijfTijdlijn(factuurId, "Er is geen specifieke inkoper gevonden; de factuur ligt ter goedkeuring bij de directie.");
+    await uitvoerder.update(facturenTable).set({ status: "wacht_op_goedkeuring", bijgewerktOp: new Date() }).where(eq(facturenTable.id, factuurId));
+    await schrijfTijdlijn(factuurId, "Er is geen specifieke inkoper gevonden; de factuur ligt ter goedkeuring bij de directie.", null, uitvoerder);
     for (const id of await hoofdbeheerderIds()) {
-      await stuurPushNaarGebruiker(id, "Factuur ter goedkeuring", "Er staat een nieuwe inkoopfactuur klaar om goed te keuren.", { url: `/facturen/${factuurId}` });
+      await push(id, "Factuur ter goedkeuring", "Er staat een nieuwe inkoopfactuur klaar om goed te keuren.", `/facturen/${factuurId}`);
     }
   }
 }
