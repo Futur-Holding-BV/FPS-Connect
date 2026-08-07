@@ -29,6 +29,8 @@ import type {
   AanvraagPlanning,
   AanvraagPlanningPatch,
   AanvraagResultaat,
+  AanvraagSignaal,
+  AanvraagSignaalAfhandelenInput,
   AanvraagVoorstel,
   Abonnement,
   AbonnementInput,
@@ -390,6 +392,7 @@ import type {
   GoedkeuringBeleidsregelInput,
   GoedkeuringDashboardItem,
   HallOfFameEntry,
+  HandelAanvraagSignaalAf200,
   HealthStatus,
   HelpdeskTicket,
   HelpdeskTicketInput,
@@ -468,6 +471,7 @@ import type {
   LeverancierPrestatie,
   LeverancierPrestatieInput,
   LiquiditeitDashboard,
+  ListAanvraagSignalenParams,
   ListAanvraagVoorstellenParams,
   ListActieveDocumentStudioModellen200,
   ListAiAanroepenParams,
@@ -23705,6 +23709,161 @@ export const useUpdateAanvraagIntakeInstellingen = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getUpdateAanvraagIntakeInstellingenMutationOptions(options));
+    }
+
+export const getListAanvraagSignalenUrl = (params?: ListAanvraagSignalenParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/aanvragen/signalen?${stringifiedParams}` : `/api/aanvragen/signalen`
+}
+
+/**
+ * @summary Signalen van de aanvraagbewaking (CRM-bevoegdheid)
+ */
+export const listAanvraagSignalen = async (params?: ListAanvraagSignalenParams, options?: RequestInit): Promise<AanvraagSignaal[]> => {
+
+  return customFetch<AanvraagSignaal[]>(getListAanvraagSignalenUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListAanvraagSignalenQueryKey = (params?: ListAanvraagSignalenParams,) => {
+    return [
+    `/api/aanvragen/signalen`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListAanvraagSignalenQueryOptions = <TData = Awaited<ReturnType<typeof listAanvraagSignalen>>, TError = ErrorType<unknown>>(params?: ListAanvraagSignalenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAanvraagSignalen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAanvraagSignalenQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAanvraagSignalen>>> = ({ signal }) => listAanvraagSignalen(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAanvraagSignalen>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListAanvraagSignalenQueryResult = NonNullable<Awaited<ReturnType<typeof listAanvraagSignalen>>>
+export type ListAanvraagSignalenQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Signalen van de aanvraagbewaking (CRM-bevoegdheid)
+ */
+
+export function useListAanvraagSignalen<TData = Awaited<ReturnType<typeof listAanvraagSignalen>>, TError = ErrorType<unknown>>(
+ params?: ListAanvraagSignalenParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAanvraagSignalen>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListAanvraagSignalenQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getHandelAanvraagSignaalAfUrl = (id: number,) => {
+
+
+
+
+  return `/api/aanvragen/signalen/${id}/afhandelen`
+}
+
+/**
+ * @summary Aanvraag-signaal afhandelen (optionele notitie)
+ */
+export const handelAanvraagSignaalAf = async (id: number,
+    aanvraagSignaalAfhandelenInput?: AanvraagSignaalAfhandelenInput, options?: RequestInit): Promise<HandelAanvraagSignaalAf200> => {
+
+  return customFetch<HandelAanvraagSignaalAf200>(getHandelAanvraagSignaalAfUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(aanvraagSignaalAfhandelenInput)
+  }
+);}
+
+
+
+
+export const getHandelAanvraagSignaalAfMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof handelAanvraagSignaalAf>>, TError,{id: number;data?: BodyType<AanvraagSignaalAfhandelenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof handelAanvraagSignaalAf>>, TError,{id: number;data?: BodyType<AanvraagSignaalAfhandelenInput>}, TContext> => {
+
+const mutationKey = ['handelAanvraagSignaalAf'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof handelAanvraagSignaalAf>>, {id: number;data?: BodyType<AanvraagSignaalAfhandelenInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  handelAanvraagSignaalAf(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type HandelAanvraagSignaalAfMutationResult = NonNullable<Awaited<ReturnType<typeof handelAanvraagSignaalAf>>>
+    export type HandelAanvraagSignaalAfMutationBody = BodyType<AanvraagSignaalAfhandelenInput> | undefined
+    export type HandelAanvraagSignaalAfMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Aanvraag-signaal afhandelen (optionele notitie)
+ */
+export const useHandelAanvraagSignaalAf = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof handelAanvraagSignaalAf>>, TError,{id: number;data?: BodyType<AanvraagSignaalAfhandelenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof handelAanvraagSignaalAf>>,
+        TError,
+        {id: number;data?: BodyType<AanvraagSignaalAfhandelenInput>},
+        TContext
+      > => {
+      return useMutation(getHandelAanvraagSignaalAfMutationOptions(options));
     }
 
 export const getListCrmProjectkansenUrl = (params?: ListCrmProjectkansenParams,) => {

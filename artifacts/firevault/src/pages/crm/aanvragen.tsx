@@ -7,6 +7,9 @@ import {
   useVerstuurAanvraagAntwoord,
   useGetAanvraagIntakeInstellingen,
   useUpdateAanvraagIntakeInstellingen,
+  useListAanvraagSignalen,
+  useHandelAanvraagSignaalAf,
+  getListAanvraagSignalenQueryKey,
   useListCrmKlanten,
   useListGebouwen,
   useListProjecten,
@@ -32,7 +35,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import {
   Sparkles, Check, X, Mail, Paperclip, Send, Building2, Target,
-  ExternalLink, AlertTriangle, Inbox,
+  ExternalLink, AlertTriangle, Inbox, Clock,
 } from "lucide-react";
 
 const STATUS_LABEL: Record<string, string> = {
@@ -95,6 +98,17 @@ export default function CrmAanvragenPagina() {
     },
   });
 
+  const { data: signalen = [] } = useListAanvraagSignalen({ status: "open" });
+  const handelAf = useHandelAanvraagSignaalAf({
+    mutation: {
+      onSuccess: () => {
+        void qc.invalidateQueries({ queryKey: getListAanvraagSignalenQueryKey({ status: "open" }) });
+        toast({ title: "Signaal afgehandeld" });
+      },
+      onError: () => toast({ title: "Afhandelen mislukt", variant: "destructive" }),
+    },
+  });
+
   const gefilterd = voorstellen.filter((v) => statusFilter === "alle" || v.status === statusFilter);
 
   return (
@@ -138,6 +152,37 @@ export default function CrmAanvragenPagina() {
               onCheckedChange={(aan) => updateIntake.mutate({ data: { persoonlijke_intake: aan } })}
               disabled={updateIntake.isPending}
             />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Bewakingssignalen: reactietermijn of oppaktermijn verstreken */}
+      {signalen.length > 0 && (
+        <Card className="border-destructive/40">
+          <CardContent className="p-4 space-y-3">
+            <p className="text-sm font-semibold flex items-center gap-2">
+              <Clock className="w-4 h-4 text-destructive" /> Bewakingssignalen ({signalen.length})
+            </p>
+            {signalen.map((s) => (
+              <div key={s.id} className="flex items-start justify-between gap-3 flex-wrap border-t pt-3 first:border-t-0 first:pt-0">
+                <div className="min-w-0 text-sm">
+                  <p>{s.omschrijving}</p>
+                  {s.projectkans_id != null && (
+                    <Link href="/crm/projectkansen" className="text-xs text-primary underline">
+                      Naar projectkans{s.kans_titel ? `: ${s.kans_titel}` : ""}
+                    </Link>
+                  )}
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handelAf.mutate({ id: s.id, data: {} })}
+                  disabled={handelAf.isPending}
+                >
+                  Afhandelen
+                </Button>
+              </div>
+            ))}
           </CardContent>
         </Card>
       )}

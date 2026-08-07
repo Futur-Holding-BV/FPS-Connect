@@ -491,6 +491,7 @@ router.get("/facturen/signalen", requireBevoegdheid("financieel", 1), async (req
     type: factuurSignalenTable.type,
     factuur_id: factuurSignalenTable.factuurId,
     mail_message_id: factuurSignalenTable.mailMessageId,
+    projectkans_id: factuurSignalenTable.projectkansId,
     omschrijving: factuurSignalenTable.omschrijving,
     status: factuurSignalenTable.status,
     afhandel_notitie: factuurSignalenTable.afhandelNotitie,

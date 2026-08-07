@@ -62,13 +62,15 @@ export async function maakSignaal(input: {
       .limit(1);
     if (bestaand.length > 0) return;
   }
+  // onConflictDoNothing + partiële unieke indexes (apply-additive) maken de
+  // dedupe database-atomair: parallelle bewakingsruns geven nooit dubbels.
   await db.insert(factuurSignalenTable).values({
     type: input.type,
     omschrijving: input.omschrijving,
     factuurId: input.factuurId ?? null,
     mailMessageId: input.mailMessageId ?? null,
     projectkansId: input.projectkansId ?? null,
-  });
+  }).onConflictDoNothing();
 }
 
 // ── Tenaamstelling → BV ──────────────────────────────────────────────────────

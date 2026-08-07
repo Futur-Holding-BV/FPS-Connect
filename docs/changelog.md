@@ -16,6 +16,11 @@
 
 **Bewijs (dev, `scripts/src/verificatie-aanvraagstroom.ts`):** POST /projecten → 404; accorderen zonder klant → 422 en níets aangemaakt; accorderen → projectkans (fase signaal) + prospect + gebouw + mailkoppelingen, 2e keer → 409; offerte vanuit kans met `projectkans_id`; meerwerk zonder opdracht → 422, mét → gekoppeld; verlopen reactie- én oppaktermijn → signalen, herhaalde bewaking maakt geen dubbels; intake-toggle werkt. Typecheck volledig groen.
 
+**Na code-review aangescherpt (zelfde dag):**
+- Accorderen is nu volledig atomair: het open voorstel wordt als éérste transactiestap geclaimd (conditionele update) en klant/gebouw/opdracht-ID's worden binnen de transactie gevalideerd — twee gelijktijdige accepteer-verzoeken geven bewezen één winnaar (200), één 409 en precies één projectkans.
+- Signaal-dedupe is database-atomair: partiële unieke indexes op open signalen (per factuur, projectkans en mail) + `ON CONFLICT DO NOTHING`; bestaande dubbels worden in de migratie eerst opgeruimd.
+- Aanvraag-signalen zijn nu zichtbaar en afhandelbaar mét CRM-bevoegdheid via `GET/POST /aanvragen/signalen(/:id/afhandelen)` en een bewakingskaart op de Aanvragen-pagina (financieel-bevoegdheid is niet meer nodig); `/facturen/signalen` geeft voortaan ook `projectkans_id` terug.
+
 ---
 
 ## 2026-08-07 — FACTUUR_02: de factuurstroom — van mail tot goedgekeurd of afgewezen

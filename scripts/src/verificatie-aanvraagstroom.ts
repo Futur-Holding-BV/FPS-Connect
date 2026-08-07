@@ -254,6 +254,42 @@ async function main(): Promise<void> {
       console.log("Stap G: verlopen reactie- en oppaktermijn → signalen; herhaalde bewaking maakt geen dubbels");
     }
 
+    // I. Race: twee gelijktijdige accepteer-verzoeken → precies één kans, één 409-achtige fout
+    {
+      const vid = await seedVoorstel(adminId);
+      const [klant] = await db.insert(crmKlantenTable).values({ naam: `${MARK} Race Klant` }).returning({ id: crmKlantenTable.id });
+      klantIds.push(klant.id);
+      const [r1, r2] = await Promise.all([
+        admin.post(`/aanvragen/voorstellen/${vid}/accepteren`, { titel: `${MARK} race`, klant_id: klant.id }),
+        admin.post(`/aanvragen/voorstellen/${vid}/accepteren`, { titel: `${MARK} race`, klant_id: klant.id }),
+      ]);
+      const statussen = [r1.status, r2.status].sort();
+      eis(statussen[0] === 200 && statussen[1] === 409, "I1 race-statussen", `kregen ${r1.status} en ${r2.status}`);
+      const kansen = await db.select({ id: crmCommercieelTable.id }).from(crmCommercieelTable).where(eq(crmCommercieelTable.titel, `${MARK} race`));
+      kansIds.push(...kansen.map((k) => k.id));
+      eis(kansen.length === 1, "I2 één kans", `er ontstonden ${kansen.length} projectkansen`);
+      console.log("Stap I: gelijktijdig accepteren → één winnaar (200), één 409, precies één projectkans");
+    }
+
+    // J. Aanvraag-signalen zichtbaar en afhandelbaar met CRM-bevoegdheid
+    {
+      const oud = await seedVoorstel(adminId, {
+        binnengekomenOp: new Date(Date.now() - 14 * 24 * 3600_000),
+        onderwerp: `${MARK} signaal-check`,
+      });
+      const [rij] = await db.select().from(aanvraagVoorstellenTable).where(eq(aanvraagVoorstellenTable.id, oud));
+      execFileSync("pnpm", ["--filter", "@workspace/api-server", "exec", "tsx", "-e",
+        `import("./src/services/aanvraagstroomService.ts").then(m => m.draaiAanvraagBewaking()).then(() => process.exit(0))`,
+      ], { cwd: "../..", stdio: "pipe", timeout: 120_000 });
+      const lijst = await json(await admin.get("/aanvragen/signalen?status=open"));
+      const signaal = Array.isArray(lijst) ? lijst.find((s: any) => s.mail_message_id === rij.mailMessageId) : undefined;
+      eis(!!signaal, "J1 CRM-lijst", "aanvraag-signaal niet zichtbaar via /aanvragen/signalen");
+      const af = await json(await admin.post(`/aanvragen/signalen/${signaal.id}/afhandelen`, { notitie: "Gezien tijdens verificatie." }));
+      eis(af.status === "afgehandeld", "J2 afhandelen", JSON.stringify(af));
+      await db.delete(factuurSignalenTable).where(eq(factuurSignalenTable.mailMessageId, rij.mailMessageId));
+      console.log("Stap J: aanvraag-signalen zichtbaar en afhandelbaar via CRM-ingang /aanvragen/signalen");
+    }
+
     // H. Intake-instellingen
     {
       const g = await admin.get("/aanvragen/intake-instellingen");

@@ -8282,6 +8282,47 @@ export const UpdateAanvraagIntakeInstellingenResponse = zod.object({
 
 
 /**
+ * @summary Signalen van de aanvraagbewaking (CRM-bevoegdheid)
+ */
+export const ListAanvraagSignalenQueryParams = zod.object({
+  "status": zod.enum(['open', 'afgehandeld']).optional()
+})
+
+export const ListAanvraagSignalenResponseItem = zod.object({
+  "id": zod.number(),
+  "type": zod.string(),
+  "mail_message_id": zod.string().nullish(),
+  "projectkans_id": zod.number().nullish(),
+  "omschrijving": zod.string(),
+  "status": zod.string(),
+  "afhandel_notitie": zod.string().nullish(),
+  "aangemaakt_op": zod.string(),
+  "afgehandeld_op": zod.string().nullish(),
+  "afgehandeld_door_naam": zod.string().nullish(),
+  "kans_titel": zod.string().nullish()
+})
+export const ListAanvraagSignalenResponse = zod.array(ListAanvraagSignalenResponseItem)
+
+
+/**
+ * @summary Aanvraag-signaal afhandelen (optionele notitie)
+ */
+export const HandelAanvraagSignaalAfParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const HandelAanvraagSignaalAfBody = zod.object({
+  "notitie": zod.string().optional()
+})
+
+export const HandelAanvraagSignaalAfResponse = zod.object({
+  "ok": zod.boolean(),
+  "id": zod.number(),
+  "status": zod.string()
+})
+
+
+/**
  * @summary Projectkansen ophalen
  */
 export const ListCrmProjectkansenQueryParams = zod.object({

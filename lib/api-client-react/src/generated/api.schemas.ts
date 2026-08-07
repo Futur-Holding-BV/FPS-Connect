@@ -1345,6 +1345,30 @@ export interface AanvraagVoorstel {
   beoordeel_notitie?: string | null;
 }
 
+export interface AanvraagSignaal {
+  id: number;
+  type: string;
+  /** @nullable */
+  mail_message_id?: string | null;
+  /** @nullable */
+  projectkans_id?: number | null;
+  omschrijving: string;
+  status: string;
+  /** @nullable */
+  afhandel_notitie?: string | null;
+  aangemaakt_op: string;
+  /** @nullable */
+  afgehandeld_op?: string | null;
+  /** @nullable */
+  afgehandeld_door_naam?: string | null;
+  /** @nullable */
+  kans_titel?: string | null;
+}
+
+export interface AanvraagSignaalAfhandelenInput {
+  notitie?: string;
+}
+
 export type AanvraagAccepterenInputNieuweKlant = {
   naam: string;
   email?: string;
@@ -14613,6 +14637,24 @@ q?: string;
 
 export type ListAanvraagVoorstellenParams = {
 status?: string;
+};
+
+export type ListAanvraagSignalenParams = {
+status?: ListAanvraagSignalenStatus;
+};
+
+export type ListAanvraagSignalenStatus = typeof ListAanvraagSignalenStatus[keyof typeof ListAanvraagSignalenStatus];
+
+
+export const ListAanvraagSignalenStatus = {
+  open: 'open',
+  afgehandeld: 'afgehandeld',
+} as const;
+
+export type HandelAanvraagSignaalAf200 = {
+  ok: boolean;
+  id: number;
+  status: string;
 };
 
 export type ListCrmProjectkansenParams = {

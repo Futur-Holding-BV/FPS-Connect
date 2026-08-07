@@ -6844,6 +6844,60 @@ paths:
               schema:
                 $ref: '#/components/schemas/AanvraagIntakeInstellingen'
 
+  /aanvragen/signalen:
+    get:
+      operationId: listAanvraagSignalen
+      summary: Signalen van de aanvraagbewaking (CRM-bevoegdheid)
+      tags: [aanvragen]
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [open, afgehandeld]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AanvraagSignaal'
+
+  /aanvragen/signalen/{id}/afhandelen:
+    post:
+      operationId: handelAanvraagSignaalAf
+      summary: Aanvraag-signaal afhandelen (optionele notitie)
+      tags: [aanvragen]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AanvraagSignaalAfhandelenInput'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  id:
+                    type: integer
+                  status:
+                    type: string
+                required: [ok, id, status]
+
   /crm/projectkansen:
     get:
       operationId: listCrmProjectkansen
@@ -25843,6 +25897,39 @@ components:
           type: ["string", "null"]
         beoordeel_notitie:
           type: ["string", "null"]
+
+    AanvraagSignaal:
+      type: object
+      required: [id, type, omschrijving, status, aangemaakt_op]
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+        mail_message_id:
+          type: ["string", "null"]
+        projectkans_id:
+          type: ["integer", "null"]
+        omschrijving:
+          type: string
+        status:
+          type: string
+        afhandel_notitie:
+          type: ["string", "null"]
+        aangemaakt_op:
+          type: string
+        afgehandeld_op:
+          type: ["string", "null"]
+        afgehandeld_door_naam:
+          type: ["string", "null"]
+        kans_titel:
+          type: ["string", "null"]
+
+    AanvraagSignaalAfhandelenInput:
+      type: object
+      properties:
+        notitie:
+          type: string
 
     AanvraagAccepterenInput:
       type: object

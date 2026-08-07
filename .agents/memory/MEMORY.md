@@ -138,4 +138,5 @@
 - [Prod curl/Playwright sessie-bewijs](prod-curl-sessie-bewijs.md) — Secure-cookies vereisen https; #HttpOnly_ jar-regels; bcrypt-hash via ssh-string wordt door remote shell gemangeld → SQL via stdin pipen.
 - [Uitzendbureau CRM-koppeling](uitzendbureau-koppeling.md) — uitzendbureau_id FK naast tekst-cache bedrijf_uitzendbureau; nieuwe additieve kolommen ALTIJD ook in lib/db/scripts/apply-additive.mjs (losse .sql draait nooit op prod).
 - [Factuurstroom FACTUUR_02](factuurstroom.md) — één mail-ingang, gesloten afwijsredenen, inkoperstap nooit te omzeilen, claim teruggeven bij fout, rekeningwissel nooit stil; restpunten legacy-intake/idempotentie.
+- [Aanvraagstroom AANVRAAG_01](aanvraagstroom.md) — nooit project in dit proces; accepteren claimt voorstel als 1e tx-stap (race); signalen-dedupe via partiële unieke indexes; CRM-ingang voor aanvraag-signalen.
 - [Functie→preset naam-matching](functie-preset-matching.md) — koppel-heuristiek moet exacte match eerst rangschikken; bidirectionele includes laat langere preset ("Onderhoudsmonteur") exacte "Monteur" verslaan.

@@ -11,6 +11,7 @@ import {
   aanvraagVoorstellenTable,
   crmCommercieelTable,
   crmKlantenTable,
+  factuurSignalenTable,
   gebouwenTable,
   gebruikersTable,
   projectenTable,
@@ -19,7 +20,7 @@ import {
   werkInboxTokensTable,
   FPS_BEDRIJVEN,
 } from "@workspace/db";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, or } from "drizzle-orm";
 import { requireBevoegdheid } from "../middlewares/auth";
 import { beantwoordMail } from "../services/werkInboxGraph";
 
@@ -79,10 +80,11 @@ router.post("/aanvragen/voorstellen/:id/accepteren", schrijven, async (req, res)
     gerelateerd_project_id?: number;
   };
 
-  const [voorstel] = await db.select().from(aanvraagVoorstellenTable).where(eq(aanvraagVoorstellenTable.id, id));
-  if (!voorstel) { res.status(404).json({ error: "Voorstel niet gevonden." }); return; }
-  if (voorstel.status !== "open") {
-    res.status(409).json({ error: `Dit voorstel is al beoordeeld (${voorstel.status}).` });
+  const [bestaat] = await db.select({ id: aanvraagVoorstellenTable.id, status: aanvraagVoorstellenTable.status })
+    .from(aanvraagVoorstellenTable).where(eq(aanvraagVoorstellenTable.id, id));
+  if (!bestaat) { res.status(404).json({ error: "Voorstel niet gevonden." }); return; }
+  if (bestaat.status !== "open") {
+    res.status(409).json({ error: `Dit voorstel is al beoordeeld (${bestaat.status}).` });
     return;
   }
 
@@ -92,8 +94,7 @@ router.post("/aanvragen/voorstellen/:id/accepteren", schrijven, async (req, res)
     res.status(400).json({ error: "Onbekende BV." });
     return;
   }
-  const voorstelType = body.voorstel_type ?? voorstel.voorstelType;
-  if (!["nieuwe_aanvraag", "meerwerk"].includes(voorstelType)) {
+  if (body.voorstel_type && !["nieuwe_aanvraag", "meerwerk"].includes(body.voorstel_type)) {
     res.status(400).json({ error: "Ongeldig voorsteltype." });
     return;
   }
@@ -104,24 +105,40 @@ router.post("/aanvragen/voorstellen/:id/accepteren", schrijven, async (req, res)
     return;
   }
 
-  // Meerwerk vereist een expliciet gekozen lopende opdracht.
-  let gerelateerdProjectId: number | null = null;
-  if (voorstelType === "meerwerk") {
-    if (!body.gerelateerd_project_id) {
-      res.status(422).json({ error: "Meerwerk vereist een expliciet gekozen lopende opdracht." });
-      return;
-    }
-    const [project] = await db.select({ id: projectenTable.id }).from(projectenTable).where(eq(projectenTable.id, body.gerelateerd_project_id));
-    if (!project) { res.status(404).json({ error: "De gekozen opdracht bestaat niet." }); return; }
-    gerelateerdProjectId = project.id;
-  }
-
   const beoordelaarId = req.session.userId ?? null;
 
-  const resultaat = await db.transaction(async (tx) => {
-    // Klant
+  class StroomFout extends Error {
+    constructor(public code: number, message: string) { super(message); }
+  }
+
+  let resultaat: { kans: typeof crmCommercieelTable.$inferSelect; voorstel: typeof aanvraagVoorstellenTable.$inferSelect };
+  try {
+    resultaat = await db.transaction(async (tx) => {
+    // Eerst het open voorstel claimen (conditionele update): een tweede gelijktijdig
+    // verzoek faalt hier direct, vóórdat er relaties/gebouwen/kansen ontstaan.
+    const [voorstel] = await tx.update(aanvraagVoorstellenTable)
+      .set({ status: "geaccepteerd", beoordeeldDoorId: beoordelaarId, beoordeeldOp: new Date(), bijgewerktOp: new Date() })
+      .where(and(eq(aanvraagVoorstellenTable.id, id), eq(aanvraagVoorstellenTable.status, "open")))
+      .returning();
+    if (!voorstel) throw new StroomFout(409, "Dit voorstel is al beoordeeld.");
+
+    const voorstelType = body.voorstel_type ?? voorstel.voorstelType;
+
+    // Meerwerk vereist een expliciet gekozen lopende opdracht.
+    let gerelateerdProjectId: number | null = null;
+    if (voorstelType === "meerwerk") {
+      if (!body.gerelateerd_project_id) throw new StroomFout(422, "Meerwerk vereist een expliciet gekozen lopende opdracht.");
+      const [project] = await tx.select({ id: projectenTable.id }).from(projectenTable).where(eq(projectenTable.id, body.gerelateerd_project_id));
+      if (!project) throw new StroomFout(404, "De gekozen opdracht bestaat niet.");
+      gerelateerdProjectId = project.id;
+    }
+
+    // Klant: gekozen id valideren, of expliciet bevestigde nieuwe relatie aanmaken.
     let klantId = body.klant_id ?? null;
-    if (!klantId && body.nieuwe_klant?.naam?.trim()) {
+    if (klantId) {
+      const [klant] = await tx.select({ id: crmKlantenTable.id }).from(crmKlantenTable).where(eq(crmKlantenTable.id, klantId));
+      if (!klant) throw new StroomFout(404, "De gekozen relatie bestaat niet.");
+    } else if (body.nieuwe_klant?.naam?.trim()) {
       const [nieuw] = await tx.insert(crmKlantenTable).values({
         naam: body.nieuwe_klant.naam.trim(),
         email: body.nieuwe_klant.email?.trim() || voorstel.afzenderEmail || null,
@@ -130,11 +147,14 @@ router.post("/aanvragen/voorstellen/:id/accepteren", schrijven, async (req, res)
       }).returning({ id: crmKlantenTable.id });
       klantId = nieuw.id;
     }
-    if (!klantId) throw new Error("klant ontbreekt");
+    if (!klantId) throw new StroomFout(422, "De klant ontbreekt.");
 
-    // Gebouw (optioneel): bestaand of expliciet bevestigd nieuw — nooit vanzelf.
+    // Gebouw (optioneel): bestaand id valideren, of expliciet bevestigd nieuw — nooit vanzelf.
     let gebouwId = body.gebouw_id ?? null;
-    if (!gebouwId && body.nieuw_gebouw?.naam?.trim() && body.nieuw_gebouw?.adres?.trim()) {
+    if (gebouwId) {
+      const [gebouw] = await tx.select({ id: gebouwenTable.id }).from(gebouwenTable).where(eq(gebouwenTable.id, gebouwId));
+      if (!gebouw) throw new StroomFout(404, "Het gekozen gebouw bestaat niet.");
+    } else if (body.nieuw_gebouw?.naam?.trim() && body.nieuw_gebouw?.adres?.trim()) {
       const [nieuwGebouw] = await tx.insert(gebouwenTable).values({
         naam: body.nieuw_gebouw.naam.trim(),
         adres: body.nieuw_gebouw.adres.trim(),
@@ -175,19 +195,15 @@ router.post("/aanvragen/voorstellen/:id/accepteren", schrijven, async (req, res)
     }
 
     const [bijgewerkt] = await tx.update(aanvraagVoorstellenTable)
-      .set({
-        status: "geaccepteerd",
-        voorstelType,
-        projectkansId: kans.id,
-        beoordeeldDoorId: beoordelaarId,
-        beoordeeldOp: new Date(),
-        bijgewerktOp: new Date(),
-      })
-      .where(and(eq(aanvraagVoorstellenTable.id, id), eq(aanvraagVoorstellenTable.status, "open")))
+      .set({ voorstelType, projectkansId: kans.id, bijgewerktOp: new Date() })
+      .where(eq(aanvraagVoorstellenTable.id, id))
       .returning();
-    if (!bijgewerkt) throw new Error("voorstel was al beoordeeld");
     return { kans, voorstel: bijgewerkt };
-  });
+    });
+  } catch (e) {
+    if (e instanceof StroomFout) { res.status(e.code).json({ error: e.message }); return; }
+    throw e;
+  }
 
   res.json({ ...voorstelNaarJson(resultaat.voorstel), projectkans_id: resultaat.kans.id });
 });
@@ -259,6 +275,58 @@ router.post("/aanvragen/voorstellen/:id/verstuur-antwoord", schrijven, async (re
       .where(eq(crmCommercieelTable.id, bijgewerkt.projectkansId));
   }
   res.json(voorstelNaarJson(bijgewerkt));
+});
+
+// ── Signalen van de aanvraagbewaking (CRM-bevoegdheid, §4) ───────────────────
+// De bewaking schrijft in factuur_signalen; deze ingang maakt de aanvraag-
+// signalen zichtbaar en afhandelbaar voor wie CRM mag zien (niet alleen financieel).
+const AANVRAAG_SIGNAAL_FILTER = or(
+  inArray(factuurSignalenTable.type, ["aanvraag_antwoord_te_laat", "aanvraag_niet_opgepakt"]),
+  and(eq(factuurSignalenTable.type, "ai_onzeker"), isNull(factuurSignalenTable.factuurId)),
+);
+
+router.get("/aanvragen/signalen", lezen, async (req, res): Promise<void> => {
+  const status = (req.query["status"] as string | undefined) === "afgehandeld" ? "afgehandeld" : "open";
+  const rijen = await db.select({
+    id: factuurSignalenTable.id,
+    type: factuurSignalenTable.type,
+    mail_message_id: factuurSignalenTable.mailMessageId,
+    projectkans_id: factuurSignalenTable.projectkansId,
+    omschrijving: factuurSignalenTable.omschrijving,
+    status: factuurSignalenTable.status,
+    afhandel_notitie: factuurSignalenTable.afhandelNotitie,
+    aangemaakt_op: factuurSignalenTable.aangemaaktOp,
+    afgehandeld_op: factuurSignalenTable.afgehandeldOp,
+    afgehandeld_door_naam: gebruikersTable.naam,
+    kans_titel: crmCommercieelTable.titel,
+  })
+    .from(factuurSignalenTable)
+    .leftJoin(gebruikersTable, eq(factuurSignalenTable.afgehandeldDoor, gebruikersTable.id))
+    .leftJoin(crmCommercieelTable, eq(factuurSignalenTable.projectkansId, crmCommercieelTable.id))
+    .where(and(eq(factuurSignalenTable.status, status), AANVRAAG_SIGNAAL_FILTER))
+    .orderBy(desc(factuurSignalenTable.aangemaaktOp))
+    .limit(200);
+  res.json(rijen.map((r) => ({
+    ...r,
+    aangemaakt_op: r.aangemaakt_op.toISOString(),
+    afgehandeld_op: r.afgehandeld_op?.toISOString() ?? null,
+  })));
+});
+
+router.post("/aanvragen/signalen/:id/afhandelen", schrijven, async (req, res): Promise<void> => {
+  const id = Number(req.params["id"]);
+  const { notitie } = req.body as { notitie?: string };
+  const [signaal] = await db.select().from(factuurSignalenTable)
+    .where(and(eq(factuurSignalenTable.id, id), AANVRAAG_SIGNAAL_FILTER)).limit(1);
+  if (!signaal) { res.status(404).json({ error: "Signaal niet gevonden (of geen aanvraag-signaal)." }); return; }
+  if (signaal.status === "afgehandeld") { res.status(409).json({ error: "Al afgehandeld." }); return; }
+  const [updated] = await db.update(factuurSignalenTable).set({
+    status: "afgehandeld",
+    afgehandeldDoor: req.session.userId ?? null,
+    afgehandeldOp: new Date(),
+    afhandelNotitie: notitie?.trim() || null,
+  }).where(eq(factuurSignalenTable.id, id)).returning();
+  res.json({ ok: true, id: updated.id, status: updated.status });
 });
 
 // ── Persoonlijke mailbox als aanvraag-ingang (instelling per gebruiker) ──────
