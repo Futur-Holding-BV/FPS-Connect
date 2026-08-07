@@ -15,6 +15,8 @@
 
 **Kosten (gemeten, dev):** classificatie van een 2-pagina-scan ≈ €0,011; volledige factuurextractie (gpt-4o, 2 pagina's, detail=high) ≈ €0,019 — samen ≈ €0,03 per gescand document; bij 5 pagina's naar schatting €0,07. Dat was voorheen vrijwel gratis maar onbruikbaar.
 
+**Na code-review aangescherpt (zelfde dag):** pagina 1–5 worden nu gegarandeerd in volgorde aangeboden (een tekstarme pagina verderop mag pagina 2 niet meer verdringen); factuurextractie probeert bij onbekend pagina-aantal gewoon pagina 1–5; afbeeldingsbestanden gaan door dezelfde verkleiningsroute als PDF's (nooit het rauwe bestand); beide AI-prompts verbieden nu expliciet het overnemen van gegevens uit bestandsnaam/mail-metadata — alleen documentinhoud telt.
+
 **Nog open (acceptatie §5):** de nulmeting met tien échte documenten (gescande facturen, uitzendbureaufactuur met G-verdeling, meerpagina-factuur, de FPS Brandpreventie-storings-PDF, twee prijsaanvragen, één niet-factuur). Documenten in `attached_assets/nulmeting/` plaatsen en het script draaien.
 
 ## 2026-08-07 — AANVRAAG_01: prijsaanvraag per mail — van mail tot projectkans met bewaakte reactietijd

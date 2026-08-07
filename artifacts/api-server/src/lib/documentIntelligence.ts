@@ -260,8 +260,10 @@ async function haalAfbeeldingVoorAfbeeldingsbestand(buffer: Buffer, mime: string
 
 const SYSTEEM_PROMPT = `Je bent de Document Intelligence-engine van FPS Connect, een brandpreventieplatform.
 Je analyseert een geüpload document via bestandsnaam, MIME-type, geëxtraheerde tekst ÉN — indien beschikbaar — een
-visuele weergave van de eerste pagina. Baseer je oordeel UITSLUITEND op de daadwerkelijke inhoud, nooit alleen op
+visuele weergave van de eerste pagina's. Baseer je oordeel UITSLUITEND op de daadwerkelijke inhoud, nooit alleen op
 de bestandsnaam: een misleidende bestandsnaam mag de classificatie niet omleiden als de inhoud iets anders toont.
+Neem in "gevonden_gegevens" NOOIT waarden over uit bestandsnaam of andere metadata — alleen wat op het document
+zelf leesbaar is. Onleesbaar of afwezig = niet opnemen.
 
 CATEGORIEËN:
 "aanvraag"           — Aanvraag, offerteaanvraag of opdrachtverzoek.
@@ -901,6 +903,9 @@ Regels:
 - loondeel: alleen het op de factuur zelf vermelde G-rekening/loondeel-bedrag; nooit zelf schatten. Niet vermeld → loondeel_bedrag null en loondeel_vermeld false.
 - tenaamstelling: de geadresseerde zoals op de factuur staat (bijv. "FPS Bouw B.V.").
 - verwijzing: opdrachtnummer, projectnummer, inkoopbonnummer of referentie zoals vermeld.
+- Bestandsnaam, mail-onderwerp en afzender zijn alleen achtergrondcontext: neem er NOOIT een gegevensveld
+  (factuurnummer, bedrag, datum, IBAN, leverancier, loondeel) uit over. Alleen wat op het document zelf staat telt.
+- Is een gegeven op het document niet leesbaar of niet aanwezig → null. Verzin niets.
 - Twijfel je over een veld, vul je beste lezing in en zet de veldnaam in onzekere_velden. Verzin nooit gegevens.`;
 
 export async function analyseerFactuurVoorStroom(input: {
@@ -931,7 +936,9 @@ export async function analyseerFactuurVoorStroom(input: {
     // Scan zonder tekstlaag → vision op de eerste pagina's (max 5, DOCUMENT_01 §3.5:
     // een specificatie op pagina twee of verder moet volledig gelezen worden)
     try {
-      const aantal = Math.min(Math.max(paginaAantal ?? 2, 1), 5);
+      // Bij onbekend pagina-aantal proberen we gewoon 1..5: renderPdfPaginas
+      // slaat niet-bestaande pagina's stil over.
+      const aantal = Math.min(Math.max(paginaAantal ?? 5, 1), 5);
       const paginas = await renderPdfPaginas(input.buffer, Array.from({ length: aantal }, (_, i) => i + 1));
       if (paginas.length === 0) {
         return { ok: false, is_factuur: false, velden: null, fout: "geen leesbare tekst en rendering mislukt" };
@@ -944,8 +951,14 @@ export async function analyseerFactuurVoorStroom(input: {
       return { ok: false, is_factuur: false, velden: null, fout: "PDF-rendering niet beschikbaar" };
     }
   } else if (input.mime.startsWith("image/")) {
+    // Zelfde verkleiningsroute als PDF's (max 2000px, JPEG 85) — nooit het rauwe
+    // bestand doorsturen (grote/afwijkende formaten falen of kosten onnodig veel).
+    const base64 = await resizeAfbeelding(input.buffer);
+    if (!base64) {
+      return { ok: false, is_factuur: false, velden: null, fout: "afbeelding niet leesbaar of niet ondersteund" };
+    }
     content.push({ type: "text", text: context });
-    content.push({ type: "image_url", image_url: { url: `data:${input.mime};base64,${input.buffer.toString("base64")}`, detail: "high" } });
+    content.push({ type: "image_url", image_url: { url: `data:image/jpeg;base64,${base64}`, detail: "high" } });
   } else {
     return { ok: false, is_factuur: false, velden: null, fout: "geen leesbare inhoud gevonden" };
   }

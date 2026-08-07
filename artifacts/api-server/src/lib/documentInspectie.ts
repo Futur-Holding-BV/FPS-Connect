@@ -90,14 +90,15 @@ export function inspecteerDocument(input: {
     const gemiddelde = totaleTekstlengte / paginas.length;
     const kwaliteit: TekstlaagKwaliteit = totaleTekstlengte === 0 ? "geen" : gemiddelde < MIN_TEKST_PER_PAGINA ? "zwak" : "goed";
 
-    // Prioriteer voor vision: eerste pagina altijd (briefhoofd/logo staat meestal
-    // vooraan), aangevuld met de pixel-based pagina's met de minste tekst
-    // (meest waarschijnlijk puur beeld — bv. handtekeningpagina, tabel-als-scan).
+    // DOCUMENT_01 §3.5: garandeer de EERSTE pagina's in volgorde (1..5) — een
+    // specificatie op pagina 2 mag nooit wijken voor een tekstarme pagina verderop.
+    // Daarná pas aanvullen met pixel-based pagina's buiten de eerste vijf.
+    const eerste = paginas.slice(0, 5).map((p) => p.paginaNummer);
     const overigeOpTekstlengte = pixelPaginas
-      .filter((p) => p.paginaNummer !== 1)
+      .filter((p) => !eerste.includes(p.paginaNummer))
       .sort((a, b) => a.tekstlengte - b.tekstlengte)
       .map((p) => p.paginaNummer);
-    const visuelePrioriteitPaginas = [1, ...overigeOpTekstlengte].filter(
+    const visuelePrioriteitPaginas = [...eerste, ...overigeOpTekstlengte].filter(
       (n, i, arr) => arr.indexOf(n) === i && n <= paginas.length,
     );
 
